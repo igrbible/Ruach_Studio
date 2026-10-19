@@ -77,13 +77,29 @@
           if ((NAT[l] + a + 12) % 12 !== pc) return;
           var f = MAJOR_FIFTHS[l] + 7 * a + mode;
           if (f > 7 || f < -7) return;
-          if (!best || Math.abs(f) < Math.abs(best.fifths) || (Math.abs(f) === Math.abs(best.fifths) && a < 0))
-            best = { letter: l, acc: a, mode: mode, fifths: f };   // a tie of accidentals goes to flats: Ebm, not D#m
+          if (!best || Math.abs(f) < Math.abs(best.fifths) || (Math.abs(f) === Math.abs(best.fifths) && a > 0))
+            best = { letter: l, acc: a, mode: mode, fifths: f };   // HERESY 1479: a tie of accidentals goes to sharps: D#m, not Ebm (C♭ is sung C)
         });
       });
       if (best) out.push(best);
     }
     return out;
+  }
+
+  // HERESY 1479: the spelling the selector gives a key's tonic and mode (the keys probe: the engine sings a C♭ or a B♯ of the signature
+  // as the plain letter); a key with no usual name (a church mode) is its own
+  function usual(k) {
+    if (!k || (k.mode !== 0 && k.mode !== -3)) return k;
+    var pc = pitchClass(k);
+    return choices(k.mode).filter(function (c) { return pitchClass(c) === pc; })[0] || k;
+  }
+  function sameKey(a, b) { return !!a && !!b && pitchClass(a) === pitchClass(b) && a.mode === b.mode; }
+  // the flat name beside a sharp one the selector prefers (D♯ minor (E♭ minor)), for people
+  function aliasLabel(k) {
+    if (!k || Math.abs(k.fifths) !== 6) return "";
+    var other = { letter: LETTERS.charAt((LETTERS.indexOf(k.letter) + (k.acc > 0 ? 1 : 6)) % 7), acc: k.acc > 0 ? -1 : 1, mode: k.mode };
+    if (pitchClass(other) !== pitchClass(k)) other.acc = 0;
+    return keyLabel(other);
   }
 
   var NOTE = /(\^\^|\^|__|_|=)?([A-Ga-g])([,']*)/y;
@@ -165,5 +181,5 @@
   }
 
   window.HeresyTranspose = { parseKey: parseKey, keyName: keyName, keyLabel: keyLabel, scoreKey: scoreKey,
-                             styleKey: styleKey, choices: choices, transpose: transpose };
+                             styleKey: styleKey, choices: choices, transpose: transpose, usual: usual, sameKey: sameKey, aliasLabel: aliasLabel };
 })();

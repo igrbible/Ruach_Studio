@@ -1,0 +1,394 @@
+From 43ddf79958010feeaff861aa8af4767d40d41425 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 17 Oct 2026 13:30:25 -0600
+Subject: [PATCH 1450/1463] =?UTF-8?q?HERESY=201523-1524:=20the=20Engine's?=
+ =?UTF-8?q?=20Refiner=20Room=20tab:=20how=20the=20Refiner=20opens=20(as=20?=
+ =?UTF-8?q?it=20was=20left,=20the=20default=20as=20before;=20always=20the?=
+ =?UTF-8?q?=20list;=20always=20the=20canvas),=20three=20cards=20to=20choos?=
+ =?UTF-8?q?e=20from,=20kept=20under=20yue2.refinerOpens,=20the=20room=20fo?=
+ =?UTF-8?q?llowing=20a=20choice=20at=20once;=20an=20(i)=20names=20what=20i?=
+ =?UTF-8?q?t=20is=20about=20(a=20control=20with=20no=20label=20text=20by?=
+ =?UTF-8?q?=20its=20aria-label=20or=20placeholder,=20never=20its=20element?=
+ =?UTF-8?q?=20id),=20=C2=ABAbout=20models=20and=20LoRAs=C2=BB=20and=20?=
+ =?UTF-8?q?=C2=ABAbout=20folders=C2=BB=20keyed=20in=20all=20eleven=20langu?=
+ =?UTF-8?q?ages?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js            |  2 +-
+ tools/console/help.js           |  3 ++-
+ tools/console/heresy-i18n-be.js | 13 ++++++++++++-
+ tools/console/heresy-i18n-de.js | 13 ++++++++++++-
+ tools/console/heresy-i18n-el.js | 13 ++++++++++++-
+ tools/console/heresy-i18n-es.js | 13 ++++++++++++-
+ tools/console/heresy-i18n-fr.js | 13 ++++++++++++-
+ tools/console/heresy-i18n-it.js | 13 ++++++++++++-
+ tools/console/heresy-i18n-ja.js | 13 ++++++++++++-
+ tools/console/heresy-i18n-pt.js | 13 ++++++++++++-
+ tools/console/heresy-i18n-ru.js | 13 ++++++++++++-
+ tools/console/heresy-i18n-uk.js | 13 ++++++++++++-
+ tools/console/heresy-i18n-zh.js | 13 ++++++++++++-
+ tools/console/heresy-post.js    | 26 ++++++++++++++++++++++++--
+ tools/console/index.html        | 16 ++++++++++++++++
+ 15 files changed, 175 insertions(+), 15 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index b131f48..698d2cf 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -254,7 +254,7 @@
+   // log, the machine, the models, the rooms' helpers, where the work lives and who may open it, the look, the updates. One
+   // tab's cards are shown, the rest stay in the page (their code runs as before); a card no tab names shows with the last
+   var ENGINE_TABS = { server: ["eg-server", "eg-log"], machine: ["eg-hardware", "eg-compute", "eg-gpus"], models: ["eg-models", "eg-vae", "eg-loras"],
+-    rooms: ["eg-writer", "eg-art"], places: ["eg-folders", "eg-access", "eg-c2pa"], look: ["eg-look"], about: ["eg-updates", "eg-about"] };
++    rooms: ["eg-writer", "eg-art"], refiner: ["eg-refiner"], places: ["eg-folders", "eg-access", "eg-c2pa"], look: ["eg-look"], about: ["eg-updates", "eg-about"] };
+   function engineTabOf(card) {
+     for (var k in ENGINE_TABS) if (ENGINE_TABS[k].some(function (c) { return card.classList.contains(c); })) return k;
+     return "about";
+diff --git a/tools/console/help.js b/tools/console/help.js
+index 0c84d84..bfcbc12 100644
+--- a/tools/console/help.js
++++ b/tools/console/help.js
+@@ -282,7 +282,8 @@
+   function labelName(el) {
+     var field = el.closest(".field, label");
+     var label = field && field.querySelector(".label, span, .shape-name");
+-    return ((label && label.firstChild && label.firstChild.textContent) || el.id).trim() || el.id;
++    // HERESY 1524: a control with no label text by its own name for the ear (aria-label), then its placeholder, its id only last
++    return ((label && label.firstChild && label.firstChild.textContent) || "").trim() || el.getAttribute("aria-label") || el.getAttribute("placeholder") || el.id;
+   }
+ 
+   function decorate() {
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 51a723c..2bfa8d6 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5592,5 +5592,16 @@ RuachI18n.add("be", {
+ "Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "Экспарт усяго: кожны дакумент Пісьменніка з яго версіямі, створанымі з яго сэмпламі і кошыкам, і версіі Творцы па кожнай назве, у адным файле (рэзервовая копія)",
+ "Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "Імпарт рэзервовай копіі Пісьменніка: чаго тут няма, прыходзіць; тое ж самае застаецца як ёсць; дакумент, што адрозніваецца ад свайго цёзкі тут, становіцца побач копіяй; назва з версій Творцы атрымлівае версіі, якіх бракуе. Нічога тут не перазапісваецца",
+ "Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "Рэзервовая копія Пісьменніка: дакументаў {0}, у кошыку {1}, версіі Творцы па назвах: {2}, у {3}",
+-"the Creator's versions: {0} new, {1} titles new": "версіі Творцы: новых {0}, новых назваў {1}"
++"the Creator's versions: {0} new, {1} titles new": "версіі Творцы: новых {0}, новых назваў {1}",
++"Refiner Room": "Гранільшчык",
++"How the Refiner room opens: its steps as a list, or its nodes on a canvas. The List and Canvas button in the room's head switches at any time.": "Як адкрываецца пакой Гранільшчыка: крокі спісам або ноды на палатне. Кнопка «Спіс» / «Палатно» ў шапцы пакоя пераключае ў любы момант.",
++"The Refiner opens": "Гранільшчык адкрываецца",
++"As it was left": "Як пакінуты",
++"The view the room had when you last left it.": "Выгляд, у якім ты апошні раз пакінуў пакой.",
++"Always the list": "Заўсёды спісам",
++"The steps one under another, as the Refiner began.": "Крокі адзін пад адным, як Гранільшчык пачынаўся.",
++"Always the canvas": "Заўсёды палатном",
++"The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "Ноды і правады паміж імі; пстрычка адкрывае ноду; на 1080p нічога не пракручваецца.",
++"About models and LoRAs": "Пра мадэлі і LoRA",
++"About folders": "Пра папкі"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 92244d4..c3fb3b5 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5475,5 +5475,16 @@ RuachI18n.add("de", {
+ "Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "Alles exportieren: jedes Dokument des Schreibers, mit seinen Versionen, den daraus gemachten Takes und seinem Papierkorb, dazu die Versionen des Schöpfers zu jedem Titel, in einer Datei (ein Backup)",
+ "Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "Ein Backup des Schreibers importieren: was hier fehlt, kommt herein; Gleiches bleibt, wie es ist; ein Dokument, das von seinem Namensvetter hier abweicht, kommt als Kopie daneben; ein Titel der Versionen des Schöpfers bekommt die Versionen, die ihm fehlen. Hier wird nichts überschrieben",
+ "Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "Backup des Schreibers: {0} Dokumente und {1} im Papierkorb, die Versionen des Schöpfers zu {2} Titeln, nach {3}",
+-"the Creator's versions: {0} new, {1} titles new": "Versionen des Schöpfers: {0} neu, {1} Titel neu"
++"the Creator's versions: {0} new, {1} titles new": "Versionen des Schöpfers: {0} neu, {1} Titel neu",
++"Refiner Room": "Raum des Veredlers",
++"How the Refiner room opens: its steps as a list, or its nodes on a canvas. The List and Canvas button in the room's head switches at any time.": "Wie sich der Raum des Veredlers öffnet: seine Schritte als Liste oder seine Knoten auf einer Leinwand. Die Taste Liste / Leinwand im Kopf des Raums schaltet jederzeit um.",
++"The Refiner opens": "Der Veredler öffnet sich",
++"As it was left": "Wie verlassen",
++"The view the room had when you last left it.": "Die Ansicht, die der Raum hatte, als du ihn zuletzt verlassen hast.",
++"Always the list": "Immer als Liste",
++"The steps one under another, as the Refiner began.": "Die Schritte untereinander, wie der Veredler begann.",
++"Always the canvas": "Immer als Leinwand",
++"The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "Die Knoten und ihre Kabel; ein Klick öffnet einen; bei 1080p nichts zu scrollen.",
++"About models and LoRAs": "Über Modelle und LoRAs",
++"About folders": "Über die Ordner"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 7a93051..ce9090b 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5591,5 +5591,16 @@ RuachI18n.add("el", {
+ "Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "Εξαγωγή όλων: κάθε έγγραφο του Συγγραφέα με τις εκδοχές του, τις λήψεις που έγιναν από αυτό και τον κάδο του, και οι εκδοχές του Δημιουργού για κάθε τίτλο, σε ένα αρχείο (αντίγραφο ασφαλείας)",
+ "Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "Εισαγωγή αντιγράφου του Συγγραφέα: ό,τι λείπει εδώ έρχεται· το ίδιο μένει ως έχει· ένα έγγραφο που διαφέρει από το συνώνυμό του εδώ μπαίνει δίπλα του ως αντίγραφο· ένας τίτλος των εκδοχών του Δημιουργού παίρνει τις εκδοχές που του λείπουν. Τίποτα εδώ δεν αντικαθίσταται",
+ "Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "Αντίγραφο του Συγγραφέα: {0} έγγραφα, {1} στον κάδο, οι εκδοχές του Δημιουργού για {2} τίτλους, στο {3}",
+-"the Creator's versions: {0} new, {1} titles new": "εκδοχές του Δημιουργού: {0} νέες, {1} νέοι τίτλοι"
++"the Creator's versions: {0} new, {1} titles new": "εκδοχές του Δημιουργού: {0} νέες, {1} νέοι τίτλοι",
++"Refiner Room": "Γυαλιστής",
++"How the Refiner room opens: its steps as a list, or its nodes on a canvas. The List and Canvas button in the room's head switches at any time.": "Πώς ανοίγει το δωμάτιο του Γυαλιστή: τα βήματα σε λίστα ή οι κόμβοι σε καμβά. Το κουμπί Λίστα / Καμβάς στην κεφαλή του δωματίου αλλάζει όποτε θέλεις.",
++"The Refiner opens": "Ο Γυαλιστής ανοίγει",
++"As it was left": "Όπως αφέθηκε",
++"The view the room had when you last left it.": "Η όψη που είχε το δωμάτιο όταν το άφησες τελευταία φορά.",
++"Always the list": "Πάντα ως λίστα",
++"The steps one under another, as the Refiner began.": "Τα βήματα το ένα κάτω από το άλλο, όπως ξεκίνησε ο Γυαλιστής.",
++"Always the canvas": "Πάντα ως καμβάς",
++"The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "Οι κόμβοι και τα καλώδιά τους· ένα κλικ ανοίγει έναν· τίποτα δεν κυλά στα 1080p.",
++"About models and LoRAs": "Σχετικά με τα μοντέλα και τις LoRA",
++"About folders": "Σχετικά με τους φακέλους"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 0e3101f..ff491a6 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5591,5 +5591,16 @@ RuachI18n.add("es", {
+ "Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "Exportar todo: cada documento del Escritor, con sus versiones, las tomas hechas con él y su papelera, y las versiones del Creador de cada título, en un solo archivo (una copia de seguridad)",
+ "Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "Importar una copia del Escritor: lo que falta aquí entra; lo igual se deja; un documento que difiere de su homónimo de aquí entra a su lado como copia; un título de las versiones del Creador gana las versiones que le faltan. Aquí no se sobrescribe nada",
+ "Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "Copia del Escritor: {0} documentos y {1} en la papelera, las versiones del Creador de {2} títulos, en {3}",
+-"the Creator's versions: {0} new, {1} titles new": "versiones del Creador: {0} nuevas, {1} títulos nuevos"
++"the Creator's versions: {0} new, {1} titles new": "versiones del Creador: {0} nuevas, {1} títulos nuevos",
++"Refiner Room": "Sala del Pulidor",
++"How the Refiner room opens: its steps as a list, or its nodes on a canvas. The List and Canvas button in the room's head switches at any time.": "Cómo se abre la sala del Pulidor: sus pasos en lista o sus nodos en un lienzo. El botón Lista / Lienzo de la cabecera de la sala cambia en cualquier momento.",
++"The Refiner opens": "El Pulidor se abre",
++"As it was left": "Como se dejó",
++"The view the room had when you last left it.": "La vista que tenía la sala cuando la dejaste por última vez.",
++"Always the list": "Siempre en lista",
++"The steps one under another, as the Refiner began.": "Los pasos uno debajo de otro, como empezó el Pulidor.",
++"Always the canvas": "Siempre en lienzo",
++"The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "Los nodos y sus cables; un clic abre uno; nada que desplazar a 1080p.",
++"About models and LoRAs": "Sobre los modelos y las LoRA",
++"About folders": "Sobre las carpetas"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index 0bc3157..700722d 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5475,5 +5475,16 @@ RuachI18n.add("fr", {
+ "Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "Tout exporter : chaque document de l'Écrivain, avec ses versions, les prises faites à partir de lui et sa corbeille, et les versions du Créateur de chaque titre, dans un seul fichier (une sauvegarde)",
+ "Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "Importer une sauvegarde de l'Écrivain : ce qui manque ici entre ; l'identique reste tel quel ; un document qui diffère de son homonyme d'ici entre à côté comme copie ; un titre des versions du Créateur reçoit les versions qui lui manquent. Rien ici n'est écrasé",
+ "Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "Sauvegarde de l'Écrivain : {0} documents et {1} dans la corbeille, les versions du Créateur de {2} titres, dans {3}",
+-"the Creator's versions: {0} new, {1} titles new": "versions du Créateur : {0} nouvelles, {1} titres nouveaux"
++"the Creator's versions: {0} new, {1} titles new": "versions du Créateur : {0} nouvelles, {1} titres nouveaux",
++"Refiner Room": "Salle de l'Affineur",
++"How the Refiner room opens: its steps as a list, or its nodes on a canvas. The List and Canvas button in the room's head switches at any time.": "Comment s'ouvre la salle de l'Affineur : ses étapes en liste, ou ses nœuds sur une toile. Le bouton Liste / Toile en tête de la salle bascule à tout moment.",
++"The Refiner opens": "L'Affineur s'ouvre",
++"As it was left": "Comme on l'a laissé",
++"The view the room had when you last left it.": "La vue qu'avait la salle quand tu l'as quittée la dernière fois.",
++"Always the list": "Toujours en liste",
++"The steps one under another, as the Refiner began.": "Les étapes l'une sous l'autre, comme l'Affineur a commencé.",
++"Always the canvas": "Toujours en toile",
++"The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "Les nœuds et leurs fils ; un clic en ouvre un ; rien à faire défiler en 1080p.",
++"About models and LoRAs": "À propos des modèles et des LoRA",
++"About folders": "À propos des dossiers"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 766fea7..36b7dcf 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5591,5 +5591,16 @@ RuachI18n.add("it", {
+ "Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "Esporta tutto: ogni documento dello Scrittore, con le sue versioni, i take fatti da esso e il suo cestino, e le versioni del Creatore di ogni titolo, in un solo file (un backup)",
+ "Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "Importa un backup dello Scrittore: ciò che manca qui entra; l'uguale resta com'è; un documento diverso dal suo omonimo di qui entra accanto come copia; un titolo delle versioni del Creatore riceve le versioni che gli mancano. Qui non si sovrascrive nulla",
+ "Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "Backup dello Scrittore: {0} documenti e {1} nel cestino, le versioni del Creatore di {2} titoli, in {3}",
+-"the Creator's versions: {0} new, {1} titles new": "versioni del Creatore: {0} nuove, {1} titoli nuovi"
++"the Creator's versions: {0} new, {1} titles new": "versioni del Creatore: {0} nuove, {1} titoli nuovi",
++"Refiner Room": "Stanza del Rifinitore",
++"How the Refiner room opens: its steps as a list, or its nodes on a canvas. The List and Canvas button in the room's head switches at any time.": "Come si apre la stanza del Rifinitore: i passi in elenco o i nodi su una tela. Il pulsante Elenco / Tela nella testata della stanza cambia in ogni momento.",
++"The Refiner opens": "Il Rifinitore si apre",
++"As it was left": "Come era stato lasciato",
++"The view the room had when you last left it.": "La vista che la stanza aveva quando l'hai lasciata l'ultima volta.",
++"Always the list": "Sempre in elenco",
++"The steps one under another, as the Refiner began.": "I passi uno sotto l'altro, come è nato il Rifinitore.",
++"Always the canvas": "Sempre su tela",
++"The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "I nodi e i loro cavi; un clic ne apre uno; niente da scorrere a 1080p.",
++"About models and LoRAs": "Sui modelli e le LoRA",
++"About folders": "Sulle cartelle"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index be8d14f..c53c59a 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5475,5 +5475,16 @@ RuachI18n.add("ja", {
+ "Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "すべてをエクスポート：ライターの各ドキュメント（そのバージョン、そこから作ったテイク、ゴミ箱）と、各タイトルのクリエイターのバージョンを1つのファイルに（バックアップ）",
+ "Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "ライターのバックアップをインポート：ここにないものは入り、同じものはそのまま、ここの同名と異なるドキュメントはコピーとして隣に入り、クリエイターのバージョンのタイトルには足りないバージョンが加わります。ここでは何も上書きされません",
+ "Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "ライターのバックアップ：ドキュメント {0} 件、ゴミ箱 {1} 件、クリエイターのバージョン {2} タイトル分を {3} へ",
+-"the Creator's versions: {0} new, {1} titles new": "クリエイターのバージョン：新規 {0} 件、新しいタイトル {1} 件"
++"the Creator's versions: {0} new, {1} titles new": "クリエイターのバージョン：新規 {0} 件、新しいタイトル {1} 件",
++"Refiner Room": "仕上げ師のルーム",
++"How the Refiner room opens: its steps as a list, or its nodes on a canvas. The List and Canvas button in the room's head switches at any time.": "仕上げ師のルームの開き方：ステップをリストで、またはノードをキャンバスで。ルーム上部の「リスト / キャンバス」ボタンでいつでも切り替えられます。",
++"The Refiner opens": "仕上げ師の開き方",
++"As it was left": "前回のまま",
++"The view the room had when you last left it.": "最後にルームを離れたときの表示。",
++"Always the list": "常にリスト",
++"The steps one under another, as the Refiner began.": "ステップを縦に並べた、仕上げ師の最初の形。",
++"Always the canvas": "常にキャンバス",
++"The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "ノードとそのワイヤー。クリックで開きます。1080p でもスクロール不要。",
++"About models and LoRAs": "モデルと LoRA について",
++"About folders": "フォルダについて"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index 68be657..56f4f84 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5475,5 +5475,16 @@ RuachI18n.add("pt", {
+ "Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "Exportar tudo: cada documento do Escritor, com suas versões, os takes feitos a partir dele e sua lixeira, e as versões do Criador de cada título, num só arquivo (um backup)",
+ "Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "Importar um backup do Escritor: o que falta aqui entra; o igual fica como está; um documento que difere do seu homônimo daqui entra ao lado como cópia; um título das versões do Criador ganha as versões que lhe faltam. Nada aqui é sobrescrito",
+ "Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "Backup do Escritor: {0} documentos e {1} na lixeira, as versões do Criador de {2} títulos, em {3}",
+-"the Creator's versions: {0} new, {1} titles new": "versões do Criador: {0} novas, {1} títulos novos"
++"the Creator's versions: {0} new, {1} titles new": "versões do Criador: {0} novas, {1} títulos novos",
++"Refiner Room": "Sala do Lapidador",
++"How the Refiner room opens: its steps as a list, or its nodes on a canvas. The List and Canvas button in the room's head switches at any time.": "Como abre a sala do Lapidador: os passos em lista ou os nós numa tela. O botão Lista / Tela no topo da sala alterna a qualquer momento.",
++"The Refiner opens": "O Lapidador abre",
++"As it was left": "Como foi deixado",
++"The view the room had when you last left it.": "A vista que a sala tinha quando você a deixou pela última vez.",
++"Always the list": "Sempre em lista",
++"The steps one under another, as the Refiner began.": "Os passos um abaixo do outro, como o Lapidador começou.",
++"Always the canvas": "Sempre em tela",
++"The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "Os nós e seus fios; um clique abre um; nada a rolar em 1080p.",
++"About models and LoRAs": "Sobre os modelos e as LoRAs",
++"About folders": "Sobre as pastas"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index d0b3278..f390be2 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5597,5 +5597,16 @@ RuachI18n.add("ru", {
+ "Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "Экспортировать всё: каждый документ Писателя с его версиями, сделанными из него семплами и корзиной, и версии Творца по каждому названию — в одном файле (резервная копия)",
+ "Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "Импортировать резервную копию Писателя: чего здесь нет, приходит; то же самое остаётся как есть; документ, отличающийся от своего тёзки здесь, встаёт рядом копией; название из версий Творца получает недостающие версии. Ничто здесь не перезаписывается",
+ "Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "Резервная копия Писателя: {0} документов и {1} в корзине, названий с версиями Творца: {2} — в {3}",
+-"the Creator's versions: {0} new, {1} titles new": "версии Творца: новых {0}, новых названий {1}"
++"the Creator's versions: {0} new, {1} titles new": "версии Творца: новых {0}, новых названий {1}",
++"Refiner Room": "Огранщик",
++"How the Refiner room opens: its steps as a list, or its nodes on a canvas. The List and Canvas button in the room's head switches at any time.": "Как открывается комната Огранщика: шаги списком или ноды на холсте. Кнопка «Список» / «Холст» в шапке комнаты переключает в любой момент.",
++"The Refiner opens": "Огранщик открывается",
++"As it was left": "Как оставлен",
++"The view the room had when you last left it.": "Вид, в котором ты оставил комнату в последний раз.",
++"Always the list": "Всегда списком",
++"The steps one under another, as the Refiner began.": "Шаги один под другим, как Огранщик начинался.",
++"Always the canvas": "Всегда холстом",
++"The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "Ноды и провода между ними; щелчок открывает ноду; на 1080p ничего не прокручивается.",
++"About models and LoRAs": "О моделях и LoRA",
++"About folders": "О папках"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 7fd2372..4df1b69 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5592,5 +5592,16 @@ RuachI18n.add("uk", {
+ "Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "Експорт усього: кожен документ Письменника з його версіями, створеними з нього семплами й кошиком, і версії Творця за кожною назвою, в одному файлі (резервна копія)",
+ "Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "Імпорт резервної копії Письменника: чого тут немає, приходить; те саме лишається як є; документ, що відрізняється від свого тезки тут, стає поруч копією; назва з версій Творця отримує версії, яких бракує. Ніщо тут не перезаписується",
+ "Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "Резервна копія Письменника: документів {0}, у кошику {1}, версії Творця за назвами: {2}, у {3}",
+-"the Creator's versions: {0} new, {1} titles new": "версії Творця: нових {0}, нових назв {1}"
++"the Creator's versions: {0} new, {1} titles new": "версії Творця: нових {0}, нових назв {1}",
++"Refiner Room": "Огранювач",
++"How the Refiner room opens: its steps as a list, or its nodes on a canvas. The List and Canvas button in the room's head switches at any time.": "Як відкривається кімната Огранювача: кроки списком або ноди на полотні. Кнопка «Список» / «Полотно» в шапці кімнати перемикає будь-коли.",
++"The Refiner opens": "Огранювач відкривається",
++"As it was left": "Як залишено",
++"The view the room had when you last left it.": "Вигляд, у якому ти востаннє залишив кімнату.",
++"Always the list": "Завжди списком",
++"The steps one under another, as the Refiner began.": "Кроки один під одним, як Огранювач починався.",
++"Always the canvas": "Завжди полотном",
++"The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "Ноди й дроти між ними; клацання відкриває ноду; на 1080p нічого не прокручується.",
++"About models and LoRAs": "Про моделі й LoRA",
++"About folders": "Про теки"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index ac2175e..92a8982 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5475,5 +5475,16 @@ RuachI18n.add("zh", {
+ "Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "全部导出：写作室的每份文档（含其版本、由它生成的录音和回收站），以及每个标题的创作室版本，存为一个文件（备份）",
+ "Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "导入写作室备份：这里缺少的会加入；相同的保持不变；与这里同名文档不同的文档以副本形式放在旁边；创作室版本中的标题会补上缺少的版本。这里的内容不会被覆盖",
+ "Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "写作室备份：{0} 份文档和回收站中的 {1} 份，{2} 个标题的创作室版本，保存到 {3}",
+-"the Creator's versions: {0} new, {1} titles new": "创作室版本：新增 {0} 个，新标题 {1} 个"
++"the Creator's versions: {0} new, {1} titles new": "创作室版本：新增 {0} 个，新标题 {1} 个",
++"Refiner Room": "精修室",
++"How the Refiner room opens: its steps as a list, or its nodes on a canvas. The List and Canvas button in the room's head switches at any time.": "精修室的打开方式：步骤以列表显示，或节点在画布上显示。房间顶部的“列表 / 画布”按钮随时可以切换。",
++"The Refiner opens": "精修室打开时",
++"As it was left": "保持上次的样子",
++"The view the room had when you last left it.": "你上次离开时房间的视图。",
++"Always the list": "总是列表",
++"The steps one under another, as the Refiner began.": "步骤上下排列，精修室最初的样子。",
++"Always the canvas": "总是画布",
++"The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "节点和连线；单击打开节点；1080p 下无需滚动。",
++"About models and LoRAs": "关于模型和 LoRA",
++"About folders": "关于文件夹"
+ });
+diff --git a/tools/console/heresy-post.js b/tools/console/heresy-post.js
+index 20b826d..e7fcb80 100644
+--- a/tools/console/heresy-post.js
++++ b/tools/console/heresy-post.js
+@@ -263,8 +263,28 @@
+     startChain(body);
+     return true;
+   }
++  // HERESY 1523: how the room opens, the Engine's Refiner Room tab: as it was left (the default), always the list, always the canvas
++  var OPENS_KEY = "yue2.refinerOpens";
++  function recallOpens() { try { return localStorage.getItem(OPENS_KEY) || "last"; } catch (e) { return "last"; } }
++  function openAs() {
++    var o = recallOpens();
++    if (o === "list" || o === "canvas") return o === "canvas";
++    try { return localStorage.getItem(CV_KEY) === "canvas"; } catch (e) { return false; }
++  }
++  function opensInit() {
++    var box = $("refinerOpens");
++    if (!box) return;
++    var now = recallOpens();
++    Array.prototype.forEach.call(box.querySelectorAll('input[name="refinerOpens"]'), function (r) { r.checked = r.value === now; });
++    box.addEventListener("change", function (e) {
++      var r = e.target.closest('input[name="refinerOpens"]');
++      if (!r) return;
++      try { localStorage.setItem(OPENS_KEY, r.value); } catch (x) { /* private mode */ }
++      if (r.value !== "last" && (r.value === "canvas") !== CV.on) cvSet(r.value === "canvas");   // the room as chosen, at once
++    });
++  }
+   function cvRecall() {
+-    try { CV.on = localStorage.getItem(CV_KEY) === "canvas"; CV.pos = JSON.parse(localStorage.getItem(CV_POS) || "{}") || {}; } catch (e) { CV.pos = {}; }
++    try { CV.on = openAs(); CV.pos = JSON.parse(localStorage.getItem(CV_POS) || "{}") || {}; } catch (e) { CV.pos = {}; }
+     clRecall();                                       // HERESY 1516
+   }
+   function cvStore() {
+@@ -714,6 +734,7 @@
+   }
+   function cvInit() {
+     cvRecall();
++    opensInit();                                      // HERESY 1523
+     var head = document.querySelector("#view-post > .post-head"), daw = $("postDaw");
+     if (head && !$("postView")) {
+       var b = document.createElement("button");
+@@ -1104,5 +1125,6 @@
+     canvas: { set: function (on) { cvSet(on); }, on: function () { return CV.on; }, open: cvOpen, close: function () { cvClose(); }, opened: function () { return CV.open; },
+               step: cvStep, paint: cvPaint, until: runUntil, bypass: toggleBypass, bypassed: bypassed, link: cvLink,
+               setup: setupNow, apply: setupApply, profiles: function () { return PF.list.slice(); }, loadProfiles: pfLoad,
+-              clone: cvClone, unclone: cvUnclone, clones: function () { return JSON.parse(JSON.stringify(CV.clones)); } } };   // HERESY 1506, 1508, 1510, 1515, 1516
++              clone: cvClone, unclone: cvUnclone, clones: function () { return JSON.parse(JSON.stringify(CV.clones)); },
++              openAs: openAs } };   // HERESY 1523   // HERESY 1506, 1508, 1510, 1515, 1516
+ })();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 7e1b431..37b50d6 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -219,6 +219,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+     <button type="button" role="tab" class="engine-tab" data-etab="machine" aria-selected="false" tabindex="-1">Hardware</button>
+     <button type="button" role="tab" class="engine-tab" data-etab="models" aria-selected="false" tabindex="-1">Models and LoRAs</button>
+     <button type="button" role="tab" class="engine-tab" data-etab="rooms" aria-selected="false" tabindex="-1">Writer and Artwork</button>
++    <button type="button" role="tab" class="engine-tab" data-etab="refiner" aria-selected="false" tabindex="-1">Refiner Room</button>
+     <button type="button" role="tab" class="engine-tab" data-etab="places" aria-selected="false" tabindex="-1">Folders and Security</button>
+     <button type="button" role="tab" class="engine-tab" data-etab="look" aria-selected="false" tabindex="-1">Appearance</button>
+     <button type="button" role="tab" class="engine-tab" data-etab="about" aria-selected="false" tabindex="-1">Updates and About</button>
+@@ -386,6 +387,21 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+       <p class="row-hint">Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here, and every picture passes a content filter; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.</p>
+     </div>
+ 
++    <!-- HERESY 1523 (Viktor 17.10.2026: «Холст не делай дефолтным пока что, но в настройках Engine предусмотри эту опцию… отдельной вкладкой
++         Refiner Room»): how the Refiner opens; the List / Canvas button in the room's head still switches at any time -->
++    <div class="card wide eg-refiner" id="refinerCard">
++      <h3>Refiner</h3>
++      <p class="hint">How the Refiner room opens: its steps as a list, or its nodes on a canvas. The List and Canvas button in the room's head switches at any time.</p>
++      <div class="modes rf-opens" id="refinerOpens" role="radiogroup" aria-label="The Refiner opens">
++        <label class="mode"><input type="radio" name="refinerOpens" value="last" /><span class="mode-body"><strong>As it was left</strong>
++          <small>The view the room had when you last left it.</small></span></label>
++        <label class="mode"><input type="radio" name="refinerOpens" value="list" /><span class="mode-body"><strong>Always the list</strong>
++          <small>The steps one under another, as the Refiner began.</small></span></label>
++        <label class="mode"><input type="radio" name="refinerOpens" value="canvas" /><span class="mode-body"><strong>Always the canvas</strong>
++          <small>The nodes and their wires; a click opens one; nothing to scroll at 1080p.</small></span></label>
++      </div>
++    </div>
++
+     <div class="card wide lora-card eg-vae">
+       <div class="lora-card-head"><h3>VAEs</h3>
+         <span class="lora-card-note" id="vaeCardNote"></span></div>
+-- 
+2.43.0
+

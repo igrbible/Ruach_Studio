@@ -1,0 +1,1593 @@
+From 8c8412083c9c6c010d9db6517dc8dc77f6354b40 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 18 Oct 2026 14:08:55 -0600
+Subject: [PATCH 1460/1463] =?UTF-8?q?HERESY=201547=E2=80=931550:=20the=20D?=
+ =?UTF-8?q?igital=20Gateway=20as=20a=20step=20of=20the=20Refiner;=20Audio?=
+ =?UTF-8?q?=20I/O's=20monitor=20and=20=C2=ABOn=20Forge=C2=BB=20in=20the=20?=
+ =?UTF-8?q?tree;=20the=20lab's=20work=20as=20bars=20above=20the=20player?=
+ =?UTF-8?q?=20in=20every=20room;=20the=20compare=20window=20at=20equal=20l?=
+ =?UTF-8?q?oudness?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+1547 (Viktor 17.10.2026: «Вот цифровой шлюз в паблик, и обогати его по максимуму»): a step in Finish between the DAW and the Remaster (heresy-gate.js): a character (tape, console, tube, transformer, vinyl) and its own knobs only, eight starting points, the source any file of the tree, POST /lab/gate; its canvas node (fed by the take and the DAW, feeding the Remaster, clonable), its branch said in the tree and in the compare window.
+1548 («допиши в Audio I/O возможность подключения второго устройства как Output/Monitor девайса… И не отключай нативный браузерный выход аудио»): the monitor in Audio I/O (device, rate, Keep, Tone, Stop); with one kept each row of the tree has «On Forge», from where its player stands.
+1549 («Порогресс бары повсюду прикрути… как в Художнике… над плеером отцентрованно, примерно 800px»): heresy-progress.js, fed by the activity app.js already polls (a «heresy-activity» event).
+1550 («нужно сравнить ДО и ПОСЛЕ»): each version's loudness (GET /lab/loudness) on its row; «Equal loudness» on by default, remembered.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css            | 26 +++++++++
+ tools/console/app.js             |  1 +
+ tools/console/heresy-derived.js  | 48 ++++++++++++++---
+ tools/console/heresy-gate.js     | 93 ++++++++++++++++++++++++++++++++
+ tools/console/heresy-i18n-be.js  | 81 +++++++++++++++++++++++++++-
+ tools/console/heresy-i18n-de.js  | 81 +++++++++++++++++++++++++++-
+ tools/console/heresy-i18n-el.js  | 81 +++++++++++++++++++++++++++-
+ tools/console/heresy-i18n-es.js  | 81 +++++++++++++++++++++++++++-
+ tools/console/heresy-i18n-fr.js  | 81 +++++++++++++++++++++++++++-
+ tools/console/heresy-i18n-it.js  | 81 +++++++++++++++++++++++++++-
+ tools/console/heresy-i18n-ja.js  | 81 +++++++++++++++++++++++++++-
+ tools/console/heresy-i18n-pt.js  | 81 +++++++++++++++++++++++++++-
+ tools/console/heresy-i18n-ru.js  | 81 +++++++++++++++++++++++++++-
+ tools/console/heresy-i18n-uk.js  | 81 +++++++++++++++++++++++++++-
+ tools/console/heresy-i18n-zh.js  | 81 +++++++++++++++++++++++++++-
+ tools/console/heresy-post.js     | 82 +++++++++++++++++++++++++---
+ tools/console/heresy-progress.js | 54 +++++++++++++++++++
+ tools/console/index.html         | 37 +++++++++++++
+ 18 files changed, 1207 insertions(+), 25 deletions(-)
+ create mode 100644 tools/console/heresy-gate.js
+ create mode 100644 tools/console/heresy-progress.js
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 7a24d14..ef1fc8c 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -6440,3 +6440,29 @@ html[data-glow] body.daw-full #dawPanel { box-shadow: none; }
+ .dv-vcac { flex: 1 1 480px; }
+ .dv-vname { display: flex; align-items: center; gap: 8px; }
+ .dv-vname input { flex: 0 1 260px; }
++/* HERESY 1547: the Digital Gateway's panel */
++.gt-presets { margin: 8px 0 2px; }
++.gt-knobs { margin-top: 6px; }
++.gt-knobs > .field[hidden] { display: none; }
++/* HERESY 1548: the tree's «On Forge» only with a monitor kept; lit while it plays there */
++body:not(.has-monitor) .dv-mon { display: none; }
++.dv-mon.is-on { border-color: var(--amber); color: var(--amber); }
++.au-mon { margin-top: 14px; }
++/* HERESY 1549: the lab's work above the player, centred, as the Artist's bar */
++.job-strip { position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%); width: min(800px, calc(100vw - 32px)); z-index: 40;
++  display: flex; flex-direction: column; gap: 6px; padding: 8px 12px 9px; pointer-events: none;
++  background: color-mix(in srgb, var(--ground) 82%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
++  border: 1px solid var(--line-a); border-radius: var(--r-md); box-shadow: 0 6px 24px rgba(0, 0, 0, .12); }
++.job-strip[hidden] { display: none; }
++.js-row { display: flex; flex-direction: column; gap: 4px; }
++.js-head { display: flex; align-items: baseline; gap: 8px; font-size: 12px; min-width: 0; }
++.js-head b { font-weight: 600; white-space: nowrap; }
++.js-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dim); }
++.js-gpu, .js-time { flex: none; font-size: 11px; color: var(--dim); }
++.js-row.is-open .js-bar i, .js-row.is-waiting .js-bar i { background: repeating-linear-gradient(-45deg, var(--amber) 0 8px, color-mix(in srgb, var(--amber) 45%, transparent) 8px 16px);
++  background-size: 22.6px 22.6px; animation: js-run 1.2s linear infinite; }
++.js-row.is-waiting .js-bar i { opacity: .5; }
++@keyframes js-run { to { background-position: 22.6px 0; } }
++.js-more { font-size: 11px; text-align: center; }
++/* HERESY 1550: each version's loudness in the compare window */
++.cmp-lufs { flex: none; font-size: 11px; color: var(--dim); white-space: nowrap; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index d00a157..7057c89 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3784,6 +3784,7 @@
+       });
+       if (d && d.seq < ACT.since) ACT.since = 0;                 // the lab restarted: its count began again
+       ACT.running = (d && d.running) || [];
++      window.dispatchEvent(new CustomEvent("heresy-activity", { detail: { running: ACT.running } }));   // HERESY 1549: the bars above the player
+       ACT.queue = (d && d.queue) || [];                           // HERESY 1165: the regenerations the engine has not begun
+       var held = function (a) { return (a || []).map(function (p) { return p.gpu + ":" + p.painter + ":" + !!p.busy; }).join("|"); }, was = held(ACT.painters);
+       ACT.painters = (d && d.painters) || [];                     // HERESY 1370: the Artist's painters kept between runs
+diff --git a/tools/console/heresy-derived.js b/tools/console/heresy-derived.js
+index 30c5e4c..6a9777e 100644
+--- a/tools/console/heresy-derived.js
++++ b/tools/console/heresy-derived.js
+@@ -16,7 +16,7 @@
+   // HERESY 1489: a download signed on the way when Content Credentials are on (app.js holds the switch)
+   function signed(url, fmt, take, path) { return window.HeresyC2pa ? window.HeresyC2pa.url(url, fmt, take, path) : url; }
+   function fileUrl(name, path) { return "/library/file?name=" + encodeURIComponent(name) + "&path=" + encodeURIComponent(path); }
+-  var KIND = { stems: "Stems", remaster: "Remaster", upscale: "Upscale", debuzz: "Debuzz", daw: "DAW mix" };   // HERESY 1471
++  var KIND = { stems: "Stems", remaster: "Remaster", upscale: "Upscale", debuzz: "Debuzz", daw: "DAW mix", gate: "Digital Gateway" };   // HERESY 1471; 1547
+   // HERESY 1471: a DAW mix in a line: its set, its loudness, the stems it played in another version
+   function dawSummary(m) {
+     var l = m.loudness || {}, v = m.versions || {}, other = Object.keys(v).filter(function (k) { return !/^derived\/stems-/.test(v[k]); });
+@@ -72,6 +72,15 @@
+     return parts.join(", ");
+   }
+ 
++  // HERESY 1547: the gateway in a line: its character and drive, what it adds to a −12 dBFS tone, its loudness
++  var GATE_CH = { tape: "tape", console: "console", tube: "tube", transformer: "transformer", vinyl: "vinyl" };
++  function gateSummary(m) {
++    var s = m.settings || {}, r = m.measure || {}, h = r.harmonics || {}, parts = ["from " + String(m.source || "the take").replace("derived/", "")];
++    parts.push((GATE_CH[m.character] || m.character) + (m.character === "tape" ? " " + s.speed + " ips" : "") + ", drive " + s.drive_db + " dB" + (s.mix < 1 ? ", " + Math.round(s.mix * 100) + " % in parallel" : ""));
++    if (h.h2_db != null) parts.push("2nd " + h.h2_db + " dB, 3rd " + h.h3_db + " dB at −12 dBFS");
++    if (r.lufs_out != null) parts.push(r.lufs_out + " LUFS" + (s.level === "came" ? " as it came" : "") + (r.lowered_db ? ", lowered " + r.lowered_db + " dB to −0.3 dBTP" : ""));
++    return parts.join(" · ");
++  }
+   // HERESY 1030: the frame ripple in and out, against the controls
+   function debuzzSummary(m) {
+     var r = m.measure || {}, b = r.before || {}, a = r.after || {};
+@@ -185,6 +194,7 @@
+       '<span class="dv-meta mono">' + (take.seconds ? clock(take.seconds) : "") + "</span>" +
+       player(orig, "/library/peaks?name=" + encodeURIComponent(take.name)) +   // HERESY 1487
+       '<span class="dv-acts"><button type="button" class="btn small primary dv-compare" data-dv-compare="0" data-tip="Every version of this take in one player: switch between them at the same second (1–9, Space)">Compare all</button>' +
++      '<button type="button" class="btn ghost small dv-mon" data-dv-mon="' + esc("") + '" aria-pressed="false" data-tip="Play it through Forge\'s monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before">On Forge</button>' +   // HERESY 1548
+       '<a class="btn ghost small" href="' + esc(signed("/library/flac?name=" + encodeURIComponent(take.name), "flac", take)) + '" download="' + esc((take.label || take.name) + ".flac") + '">FLAC</a></span></div>';   // HERESY 1489; 1513: its buttons one column
+     if (!state.list.length && !state.running.length) html += '<p class="row-hint dv-empty">Nothing made from this take yet.</p>';
+     // HERESY 1129: what runs now stands first: the tree grows upward, the newest on top
+@@ -202,6 +212,7 @@
+         (m.kind === "plugin" && m.summary ? '<span class="dv-say" translate="no"> · ' + esc(m.summary) + "</span>" : "") +   // HERESY 1484
+         (m.mode ? " · " + esc(MODE[m.mode] || m.mode) : "") + esc(stemsFrom(m).replace(", from", " · from")) + (m.kind === "remaster" ? " · " + esc(summary(m)) : "") +
+         (m.kind === "debuzz" ? " · " + esc(debuzzSummary(m)) : "") +
++        (m.kind === "gate" ? " · " + esc(gateSummary(m)) : "") +   // HERESY 1547
+         (m.kind === "daw" ? " · " + esc(dawSummary(m)) : "") +   // HERESY 1471
+         (m.kind === "upscale" ? " · from " + esc(String(m.source || "the take").replace("derived/", "")) + ", above " + Math.round((m.cutoff_hz || 0) / 1000) + " kHz" + (m.keep_low ? ", original kept below" : "") : "") +
+         '<span class="dv-meta">' + esc((m.models || []).join(" + ")) + " · " + esc(m.created || "") + (m.took ? " · " + Math.round(m.took) + " s" : "") + "</span>" +
+@@ -219,6 +230,7 @@
+           player(url, "/lab/peaks?name=" + encodeURIComponent(take.name) + "&path=" + encodeURIComponent(f.path) + "&n=400") +   // HERESY 1487
+           '<span class="dv-acts"><button type="button" class="btn ghost small" data-dv-compare-path="' + esc(f.path) + '" data-tip="Compare it with the original and every other version, at the same second">Compare</button>' +
+           '<button type="button" class="btn ghost small" data-dv-spectrum="' + esc(f.path) + '" data-tip="Lay this file over the take in the spectrum">Spectrum</button>' +
++          '<button type="button" class="btn ghost small dv-mon" data-dv-mon="' + esc(f.path) + '" aria-pressed="false" data-tip="Play it through Forge\'s monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before">On Forge</button>' +   // HERESY 1548
+           (/vocal/i.test(f.name) ? '<button type="button" class="btn ghost small" data-dv-gloss="' + esc(f.path) + '" data-tip="Whisper on this file against the lyrics">Lyrics check</button>' : "") +
+           '<a class="btn ghost small" href="' + esc(signed(url, String(f.file || f.path).split(".").pop().toLowerCase(), take, f.path)) + '" download="' + esc((take.label || take.name) + " - " + title(f) + ".flac") + '">FLAC</a></span></div>';   // HERESY 1489; 1513
+       });
+@@ -249,7 +261,7 @@
+ 
+   // ---- HERESY 1060: progress, estimated: the lab says running or queued, not how far. The rates are
+   // measured on Forge (seconds of work per second of audio); the bar stops at 95 % until the file lands.
+-  var RATE = { debuzz: 0.18, remaster: 0.12, upscale: 1.8, stems: 0.7, daw: 0.05 };   // HERESY 1471: 18 s for 6:37 of eight stems
++  var RATE = { debuzz: 0.18, remaster: 0.12, upscale: 1.8, stems: 0.7, daw: 0.05, gate: 0.12 };   // 1547: 36–50 s for 6:37 at 4×   // HERESY 1471: 18 s for 6:37 of eight stems
+   function progress(j) {
+     var el = Math.max(0, Math.round(Date.now() / 1000 - (j.started || Date.now() / 1000)));
+     var len = state.take && state.take.seconds || 0, rate = RATE[j.kind] * (j.kind === "stems" && j.mode === "four" ? 1.8 : j.kind === "stems" && j.mode === "six" ? 1.1 : j.kind === "stems" && j.mode === "eight" ? 2.1 : 1);   // 1462: six measured 0.75 s a second
+@@ -263,8 +275,8 @@
+   // the step's own block carries its jobs at its top, its tab a beating dot; each step shows what it has made for the
+   // take (a click finds it in the tree), and the step open lights its own branches in the tree. The floating card of
+   // 1060 (it sat over the server log and the takes) is retired.
+-  var PANEL = { stems: "derivedPanel", remaster: "remasterPanel", upscale: "upscalePanel", debuzz: "debuzzPanel" };
+-  var STEP_KIND = { derivedPanel: "stems", remasterPanel: "remaster", upscalePanel: "upscale", debuzzPanel: "debuzz", dawPanel: "daw" };   // 1471
++  var PANEL = { stems: "derivedPanel", remaster: "remasterPanel", upscale: "upscalePanel", debuzz: "debuzzPanel", gate: "gatePanel" };   // 1547
++  var STEP_KIND = { derivedPanel: "stems", remasterPanel: "remaster", upscalePanel: "upscale", debuzzPanel: "debuzz", dawPanel: "daw", gatePanel: "gate" };   // 1471; 1547
+   function slots(kind) {
+     var p = $(PANEL[kind]), body = p && p.querySelector(".drawer-body");
+     if (!body) return null;
+@@ -629,13 +641,13 @@
+     if (!take) return;
+     if (state.hooks.pauseMain) state.hooks.pauseMain();
+     Array.prototype.forEach.call(document.querySelectorAll("#derivedTree audio"), function (a) { a.pause(); });
+-    var GROUP = { debuzz: "Debuzz", remaster: "Remaster", upscale: "Upscale", stems: "Stems", daw: "DAW mix", plugin: "" };   // 1504: the DAW's mixes
++    var GROUP = { debuzz: "Debuzz", remaster: "Remaster", upscale: "Upscale", stems: "Stems", daw: "DAW mix", gate: "Digital Gateway", plugin: "" };   // 1547   // 1504: the DAW's mixes
+     var versions = [{ label: "The original", group: "", url: "/library/listen?name=" + encodeURIComponent(take.name), path: "", seconds: take.seconds, take: take.name }];
+     // HERESY 1311: the take's family (the same music in other takes), the disliked left out, after the original
+     (state.hooks.family ? state.hooks.family(take.name) : []).forEach(function (t) {
+       versions.push({ label: t.label || t.name, group: t.group || "The same music", url: t.url, path: "take:" + t.name, seconds: t.seconds, take: t.name });
+     });
+-    ["debuzz", "remaster", "upscale", "stems", "daw", "plugin"].forEach(function (kind) {   // HERESY 1460: a plugin's too; 1504: the DAW's
++    ["debuzz", "remaster", "upscale", "stems", "daw", "gate", "plugin"].forEach(function (kind) {   // HERESY 1460: a plugin's too; 1504: the DAW's; 1547: the gateway's
+       state.list.filter(function (m) { return m.kind === kind; }).forEach(function (m) {
+         (m.files || []).forEach(function (f) {
+           if (isText(f)) return;                        // HERESY 1484: a report is no version
+@@ -655,6 +667,9 @@
+   // gives way to the next one shown, from the same second
+   var CMP_HIDE = "yue2.cmpHideDisliked";
+   function cmpHide() { try { return localStorage.getItem(CMP_HIDE) !== "0"; } catch (e) { return true; } }
++  function cmpEqual(on) {                             // HERESY 1550: «Equal loudness», on unless turned off, remembered
++    try { if (on != null) localStorage.setItem("yue2.cmpEqual", on ? "1" : "0"); return localStorage.getItem("yue2.cmpEqual") !== "0"; } catch (e) { return on != null ? !!on : true; }
++  }
+   function cmpPeaks(v) {
+     var decode = function () {
+       var Off = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+@@ -705,13 +720,32 @@
+       '<div class="cmp-transport"><button type="button" class="cmp-play" data-cmp="play" aria-label="Play"></button>' +
+       '<span class="cmp-time mono">0:00</span><span class="cmp-fill"></span>' +
+       (rated ? '<label class="cmp-hide"><input type="checkbox" data-cmp-hide="1"' + (hideDis ? " checked" : "") + "> Hide disliked</label>" : "") +
++      '<label class="cmp-hide cmp-eq" data-tip="Each version turned down to the quietest one\'s loudness (BS.1770, measured on Forge), so the ear hears the sound and not the level"><input type="checkbox" data-cmp-eq="1"' + (cmpEqual() ? " checked" : "") + "> Equal loudness</label>" +   // HERESY 1550
+       '<span class="cmp-total mono">0:00</span></div>' +
+       '<ol class="cmp-list">' + versions.map(function (v, i) {
+         return '<li class="cmp-li" data-cmp-li="' + i + '"><button type="button" class="cmp-row" data-cmp-i="' + i + '"><span class="cmp-n mono">' + (i < 9 ? i + 1 : "") + '</span><span class="cmp-name">' + esc(v.label) + "</span>" +
+-          '<span class="cmp-group">' + esc(v.group || "as YuE2 made it") + '</span><span class="cmp-dur mono">' + (v.seconds ? clock(v.seconds) : "") + "</span></button>" + rateHtml(v) + "</li>";
++          '<span class="cmp-group">' + esc(v.group || "as YuE2 made it") + '</span><span class="cmp-lufs mono" data-cmp-lufs="' + i + '">\u2026</span><span class="cmp-dur mono">' + (v.seconds ? clock(v.seconds) : "") + "</span></button>" + rateHtml(v) + "</li>";   // 1550
+       }).join("") + "</ol></div>";
+     document.body.appendChild(back);
+     var box = back.querySelector(".cmp-box"), wave = box.querySelector(".cmp-wave"), playBtn = box.querySelector(".cmp-play"), dragging = false;
++    // HERESY 1550: each version's loudness, and the louder ones turned down to the quietest while «Equal loudness» is on
++    var lufs = versions.map(function () { return null; });
++    function levels() {
++      var on = cmpEqual(), known = lufs.filter(function (x) { return x != null; }), lo = known.length ? Math.min.apply(null, known) : null;
++      audios.forEach(function (a, i) {
++        var l = lufs[i], g = on && l != null && lo != null ? Math.pow(10, (lo - l) / 20) : 1, el = box.querySelector('[data-cmp-lufs="' + i + '"]');
++        a.volume = Math.max(0, Math.min(1, g));
++        if (el) el.textContent = l == null ? (el.textContent === "\u2014" ? "\u2014" : "\u2026") : String(l.toFixed(1)).replace("-", "\u2212") + " LUFS" + (on && g < 0.994 ? " \u00b7 " + String((20 * Math.log10(g)).toFixed(1)).replace("-", "\u2212") + " dB" : "");
++      });
++    }
++    versions.forEach(function (v, i) {
++      var nm = v.take || (state.take && state.take.name) || "", p = v.take ? "" : v.path || "";
++      if (!nm) return;
++      fetch("/lab/loudness?name=" + encodeURIComponent(nm) + (p ? "&path=" + encodeURIComponent(p) : ""), { priority: "low" })
++        .then(function (r) { return r.ok ? r.json() : null; })
++        .then(function (j) { lufs[i] = j && j.lufs != null ? j.lufs : null; if (lufs[i] == null) { var el = box.querySelector('[data-cmp-lufs="' + i + '"]'); if (el) el.textContent = "\u2014"; } levels(); }, function () { /* no lab: as they are */ });
++    });
++    box.addEventListener("change", function (e) { if (e.target.closest && e.target.closest("[data-cmp-eq]")) { cmpEqual(e.target.checked); levels(); } });
+     var peaks = [];
+     function cur() { return audios[active]; }
+     function dur() { var a = cur(); return isFinite(a.duration) && a.duration > 0 ? a.duration : (versions[active].seconds || 0); }
+diff --git a/tools/console/heresy-gate.js b/tools/console/heresy-gate.js
+new file mode 100644
+index 0000000..88cc09b
+--- /dev/null
++++ b/tools/console/heresy-gate.js
+@@ -0,0 +1,93 @@
++// HERESY 1547 (Viktor 17.10.2026: «Вот цифровой шлюз в паблик, и обогати его по максимуму. Аналоговый — это приватный Pro»): the
++// Refiner's Digital Gateway, its panel: a character (tape, console, tube, transformer, vinyl), its own knobs only (the rest out of
++// sight), its defaults as the lab's (lab/digital_gate.py), starting points; the source any file of the tree; run on Forge (POST
++// /lab/gate), a branch of the tree of kind "gate".
++(function () {
++  "use strict";
++  var COMMON = { width: 1, mix: 1, oversample: 4, level: "came", trim_db: 0, azimuth_us: 0, sag: 0, crackle: 0, rumble_db: -120, mono_below_hz: 0, speed: "15" };
++  var DEF = {
++    tape: { drive_db: 4, grain_db: -72, wow: 0.04, flutter: 0.03, crosstalk_db: -120, azimuth_us: 0, speed: "15" },
++    console: { drive_db: 6, grain_db: -92, wow: 0, flutter: 0, crosstalk_db: -50 },
++    tube: { drive_db: 6, grain_db: -86, wow: 0, flutter: 0, crosstalk_db: -120, sag: 0.3 },
++    transformer: { drive_db: 6, grain_db: -100, wow: 0, flutter: 0, crosstalk_db: -120 },
++    vinyl: { drive_db: 2, grain_db: -64, wow: 0.08, flutter: 0.02, crosstalk_db: -30, crackle: 0.3, rumble_db: -62, mono_below_hz: 150 }
++  };
++  var PRESETS = {
++    "Master tape": { character: "tape", speed: "30", drive_db: 3, wow: 0.02, flutter: 0.02, grain_db: -78 },
++    "Studio tape": { character: "tape", speed: "15" },
++    "Cassette": { character: "tape", speed: "3.75", drive_db: 7, wow: 0.12, flutter: 0.08, grain_db: -60, azimuth_us: 8 },
++    "Console": { character: "console" },
++    "Warm tube": { character: "tube" },
++    "Pushed tube": { character: "tube", drive_db: 12, sag: 0.5 },
++    "Iron": { character: "transformer", drive_db: 9 },
++    "Old record": { character: "vinyl", crackle: 0.5 }
++  };
++  var FOR = { speed: ["tape"], wow: ["tape", "vinyl"], flutter: ["tape", "vinyl"], azimuth_us: ["tape"], sag: ["tube"], crackle: ["vinyl"], rumble_db: ["vinyl"],
++              mono_below_hz: ["vinyl"] };
++  var PCT = { width: 100, mix: 100 };                 // shown in %, sent as a fraction
++  var take = "";
++  function $(id) { return document.getElementById(id); }
++  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
++  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
++  function fields() { return Array.prototype.slice.call(document.querySelectorAll("#gatePanel [data-gt]")); }
++  function put(el, v) { el.value = PCT[el.dataset.gt] ? String(Math.round(v * PCT[el.dataset.gt])) : String(v); }
++  function setChar(ch, over) {                         // the character's own values in its knobs, the others out of sight
++    var d = Object.assign({}, COMMON, DEF[ch] || DEF.tape, over || {}), sel = $("gtChar");
++    if (sel && sel.value !== ch) sel.value = ch;
++    fields().forEach(function (el) {
++      var k = el.dataset.gt;
++      if (d[k] != null) put(el, d[k]);
++      var f = el.closest(".field");
++      if (f) f.hidden = !!FOR[k] && FOR[k].indexOf(ch) < 0;
++    });
++  }
++  function params() {
++    var ch = ($("gtChar") || {}).value || "tape", p = { character: ch };
++    fields().forEach(function (el) {
++      var k = el.dataset.gt, f = el.closest(".field");
++      if (f && f.hidden) return;
++      var v = el.tagName === "SELECT" && (k === "speed" || k === "level") ? el.value : parseFloat(el.value);
++      if (typeof v === "number" && !isFinite(v)) return;
++      p[k] = PCT[k] ? v / PCT[k] : v;
++    });
++    return p;
++  }
++  function say(t, bad) { var el = $("gtState"); if (el) { el.textContent = t || ""; el.classList.toggle("is-bad", !!bad); } }
++  function paintSources(files) {                      // any file of the tree: a DAW mix, the remaster, another gateway's…
++    var sel = $("gtSource");
++    if (!sel) return;
++    var keep = sel.value;
++    sel.innerHTML = '<option value="">' + esc(tr("the take")) + "</option>" + (files || []).map(function (f) {
++      return '<option value="' + esc(f.source) + '">' + esc(String(f.label || f.source).replace(/^↳ /, "")) + "</option>"; }).join("");
++    sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }) ? keep : "";
++  }
++  function run() {
++    if (!take) { say(tr("Pick a take on the right first"), true); return; }
++    var b = $("gtRun");
++    b.disabled = true;
++    say(tr("sending to Forge…"));
++    fetch("/lab/gate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: take, source: ($("gtSource") || {}).value || "", params: params() }) })
++      .then(function (r) { return r.json().then(function (j) { if (!r.ok && r.status !== 202) throw new Error(j.error || r.status); return j; }); })
++      .then(function () { say(tr("running on Forge: the bar above says how far; it lands in the tree")); if (window.HeresyDerived) window.HeresyDerived.refresh(); })
++      .catch(function (e) { say(tr("Could not") + ": " + (e.message || e), true); })
++      .then(function () { b.disabled = false; });
++  }
++  function init() {
++    var panel = $("gatePanel");
++    if (!panel) return;
++    setChar("tape");
++    $("gtChar").addEventListener("change", function () { setChar($("gtChar").value); });
++    panel.addEventListener("click", function (e) {
++      var b = e.target.closest("[data-gt-preset]");
++      if (!b) return;
++      var pr = PRESETS[b.dataset.gtPreset];
++      if (pr) { setChar(pr.character, pr); Array.prototype.forEach.call(panel.querySelectorAll("[data-gt-preset]"), function (x) { x.classList.toggle("is-on", x === b); }); }
++    });
++    panel.addEventListener("input", function (e) { if (e.target.closest("[data-gt]")) Array.prototype.forEach.call(panel.querySelectorAll("[data-gt-preset].is-on"), function (x) { x.classList.remove("is-on"); }); });
++    $("gtRun").addEventListener("click", run);
++    window.addEventListener("heresy-derived", function (e) { if (e.detail) { take = e.detail.name || ""; paintSources(e.detail.files); } });
++    if (window.HeresyChoices) window.HeresyChoices.within(panel);
++  }
++  window.HeresyGate = { params: params, setChar: setChar, presets: function () { return Object.keys(PRESETS); }, defaults: function (ch) { return Object.assign({}, COMMON, DEF[ch]); } };
++  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
++})();
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 749d38a..4e71684 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5749,5 +5749,84 @@ RuachI18n.add("be", {
+ "Drive": "Націск",
+ "The highest true peak let through, 4× interpolated": "Найвышэйшы сапраўдны пік, што праходзіць, па 4× інтэрпаляцыі",
+ "How hard the mix is driven into the limiter: louder, and held under the ceiling": "Як моцна зводжанне заганяецца ў ліміцер: гучней, і ўтрымліваецца пад столлю",
+-"How fast it lets go: the time to give back 12 dB": "Як хутка ён адпускае: час, каб вярнуць 12 дБ"
++"How fast it lets go: the time to give back 12 dB": "Як хутка ён адпускае: час, каб вярнуць 12 дБ",
++"Digital Gateway": "Лічбавы шлюз",
++"digital gateway": "лічбавы шлюз",
++"tape, console, tube": "стужка, пульт, лямпа",
++"The take, or any file made from it, through an analog character in numbers on Forge: tape, console, tube, transformer or vinyl. Its curve oversampled, its tone, its noise, its movement in time; as loud as it came. The analog gateway's twin, without the gear.": "Сэмпл або любы файл з яго праз аналагавы характар у лічбах на Кузні: стужка, пульт, лямпа, трансфарматар або вініл. Яго крывая з перадыскрэтызацыяй, яго тон, яго шум, яго рух у часе; гучнасць як прыйшла. Блізнюк аналагавага шлюза, толькі без жалеза.",
++"What goes through: the take, or any file made from it (a DAW mix, a remaster, another gateway's)": "Што пройдзе праз яго: сэмпл або любы файл з яго (мікс DAW, рэмастэр, іншы шлюз)",
++"Character": "Характар",
++"Tape: emphasis into a soft curve, the head bump, hiss, wow and flutter. Console: odd harmonics, crosstalk. Tube: even harmonics and a sag. Transformer: the lows saturate first. Vinyl: lows in mono, the top rolled off, crackle": "Стужка: пад'ём верхоў у мяккую крывую, горб галоўкі, шыпенне, дэтанацыя. Пульт: няцотныя гармонікі, перакрыжаваныя перашкоды. Лямпа: цотныя гармонікі і прасадка. Трансфарматар: першымі насычаюцца нізы. Вініл: нізы ў мона, зрэзаны верх, трэск",
++"Tape": "Стужка",
++"Tube": "Лямпа",
++"Transformer": "Трансфарматар",
++"Vinyl": "Вініл",
++"Master tape": "Майстар-стужка",
++"Studio tape": "Студыйная стужка",
++"Cassette": "Касета",
++"Warm tube": "Цёплая лямпа",
++"Pushed tube": "Лямпа з націскам",
++"Iron": "Жалеза",
++"Old record": "Старая пласцінка",
++"Drive, dB": "Націск, дБ",
++"How hard it goes into the curve, dB; given back after it, so only the colour changes": "Як моцна гук уваходзіць у крывую, дБ; пасля яе вяртаецца, таму мяняецца толькі афарбоўка",
++"The tape's speed: slower, a lower head bump, an earlier top, more emphasis into the curve (3.75 is a cassette's top)": "Хуткасць стужкі: павольней — ніжэйшы горб галоўкі, раней зрэз верху, мацнейшы пад'ём у крывую (3.75 — верх касеты)",
++"Wow, %": "Дэтанацыя павольная, %",
++"The slow wander of the speed, its peak in %": "Павольнае плаванне хуткасці, яго пік у %",
++"Flutter, %": "Дэтанацыя хуткая, %",
++"The fast flutter of the speed, its peak in %": "Хуткае дрыжанне хуткасці, яго пік у %",
++"Azimuth, µs": "Азімут, мкс",
++"One side this many microseconds late: a head not quite square; it dulls the top in mono": "Адзін бок спазняецца на столькі мікрасекунд: галоўка стаіць не зусім роўна; у мона гэта глушыць верх",
++"Sag": "Прасадка",
++"The supply giving a little when it is pushed: a soft, slow compression": "Сілкаванне крыху прасядае, калі лямпу націскаюць: мяккая павольная кампрэсія",
++"Crackle": "Трэск",
++"How often the surface crackles": "Як часта трашчыць паверхня",
++"Rumble, dB": "Гул, дБ",
++"The turntable's rumble, dBFS (−120: none)": "Гул прайгравальніка, dBFS (−120: няма)",
++"Mono below, Hz": "Мона ніжэй, Гц",
++"Below this the two sides become one, as a cut must have them (0: off)": "Ніжэй за гэта абодва бакі становяцца адным, як мусіць быць пры нарэзцы (0: выкл.)",
++"Noise, dB": "Шум, дБ",
++"The character's own noise (hiss, hum of the iron, the surface), dBFS; −120 is none": "Уласны шум характару (шыпенне, гул жалеза, паверхня), dBFS; −120 — без шуму",
++"Crosstalk, dB": "Перакрыжаваныя перашкоды, дБ",
++"The other side's highs leaking in, dB; −120 is none": "Верхі іншага боку прасочваюцца, дБ; −120 — нічога",
++"Width, %": "Шырыня, %",
++"The stereo width after it: 0 % mono, 100 % as it was, 200 % the sides doubled": "Шырыня стэрэа пасля яго: 0 % мона, 100 % як было, 200 % бакі ўдвая",
++"Mix, %": "Сумесь, %",
++"How much of it against the source, in parallel: 100 % all through it": "Колькі яго супраць крыніцы, паралельна: 100 % — усё праз яго",
++"Oversampling": "Перадыскрэтызацыя",
++"The curve runs this many times faster than the file, so its harmonics do not fold back": "Крывая працуе ў столькі разоў хутчэй за файл, каб яе гармонікі не загортваліся назад",
++"As loud as it came, to compare by ear; or as it comes out of the curve": "Гучнасць як прыйшла, каб параўнаць на слых; або як выходзіць з крывой",
++"as it came": "як прыйшла",
++"as it comes out": "як выходзіць",
++"Trim, dB": "Падстройка, дБ",
++"A last trim, dB; the true peak is kept under −0.3 dBTP in any case, and said": "Апошняя падстройка, дБ; сапраўдны пік у любым выпадку трымаецца пад −0.3 dBTP, і гэта сказана",
++"Through the gateway": "Праз шлюз",
++"About a tenth of the song's length on Forge's CPU at 4×. The tree says what it adds to a −12 dBFS tone (the 2nd and 3rd harmonics) and its loudness in and out; a branch of it can be the analog gateway's source, the Remaster's, or another gateway's.": "Каля дзясятай часткі даўжыні песні на працэсары Кузні пры 4×. Дрэва кажа, што ён дадае да тону −12 dBFS (2-я і 3-я гармонікі), і гучнасць на ўваходзе і выхадзе; яго галінка можа стаць крыніцай аналагавага шлюза, Рэмастэра ці іншага шлюза.",
++"Could not": "Не атрымалася",
++"running on Forge: the bar above says how far; it lands in the tree": "ідзе на Кузні: паласа вышэй кажа, колькі засталося; вынік з'явіцца ў дрэве",
++"The monitor": "Манітор",
++"A second output on Forge, to listen there: the analog gateway's return plays through it live while it prints, and any file of the tree plays through it from its «On Forge». The browser's own output stays as it is.": "Другі выхад на Кузні, каб слухаць там: вяртанне аналагавага шлюза грае праз яго ўжывую, пакуль ідзе друк, а любы файл дрэва — па кнопцы «На Кузні». Уласны выхад браўзера застаецца як ёсць.",
++"The interface you listen through on Forge; not the gateway's own output": "Інтэрфейс, праз які слухаеш на Кузні; не ўласны выхад шлюза",
++"Monitor out": "Выхад манітора",
++"The rate it runs at": "Частата, на якой ён працуе",
++"Tone": "Тон",
++"A 1 kHz tone at −20 dBFS through the monitor for a second and a half": "Тон 1 кГц пры −20 dBFS праз манітор на паўтары секунды",
++"Stop what plays through the monitor": "Спыніць тое, што грае праз манітор",
++"Stopped": "Спынена",
++"No monitor: the tree plays in the browser only": "Манітора няма: дрэва грае толькі ў браўзеры",
++"Keep a monitor first": "Спачатку захавай манітор",
++"A 1 kHz tone at −20 dBFS plays through {0} for a second and a half. Turn the monitors down if they are on.": "Тон 1 кГц пры −20 dBFS прагучыць праз {0} паўтары секунды. Сцішы маніторы, калі яны ўключаны.",
++"The tone plays…": "Тон гучыць…",
++"The tone went out through {0}": "Тон пайшоў праз {0}",
++"Not on Forge: {0}": "Не на Кузні: {0}",
++"On Forge": "На Кузні",
++"Play it through Forge's monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before": "Сыграць праз манітор Кузні (Audio I/O) з таго месца, дзе стаіць яго плэер; яшчэ раз — спыніць. Браўзер грае як раней",
++"waiting": "чакае",
++"step {0} of {1}": "крок {0} з {1}",
++"about {0} left": "засталося каля {0}",
++"longer than usual": "даўжэй, чым звычайна",
++"plugin": "плагін",
++"the Artist": "Мастак",
++"Equal loudness": "Роўная гучнасць",
++"Each version turned down to the quietest one's loudness (BS.1770, measured on Forge), so the ear hears the sound and not the level": "Кожная версія сцішана да гучнасці самай ціхай (BS.1770, замер на Кузні), каб вуха чула гук, а не ўзровень"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 11cbb62..8a2a66e 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5632,5 +5632,84 @@ RuachI18n.add("de", {
+ "Drive": "Drive",
+ "The highest true peak let through, 4× interpolated": "Der höchste True Peak, der durchgeht, 4× interpoliert",
+ "How hard the mix is driven into the limiter: louder, and held under the ceiling": "Wie stark der Mix in den Limiter gefahren wird: lauter, und unter der Decke gehalten",
+-"How fast it lets go: the time to give back 12 dB": "Wie schnell er loslässt: die Zeit, um 12 dB zurückzugeben"
++"How fast it lets go: the time to give back 12 dB": "Wie schnell er loslässt: die Zeit, um 12 dB zurückzugeben",
++"Digital Gateway": "Digitales Gateway",
++"digital gateway": "digitales Gateway",
++"tape, console, tube": "Band, Pult, Röhre",
++"The take, or any file made from it, through an analog character in numbers on Forge: tape, console, tube, transformer or vinyl. Its curve oversampled, its tone, its noise, its movement in time; as loud as it came. The analog gateway's twin, without the gear.": "Der Take oder jede Datei daraus durch einen analogen Charakter in Zahlen auf Forge: Band, Pult, Röhre, Übertrager oder Vinyl. Seine Kurve überabgetastet, sein Klang, sein Rauschen, seine Bewegung in der Zeit; so laut, wie er kam. Der Zwilling des analogen Gateways, ohne die Hardware.",
++"What goes through: the take, or any file made from it (a DAW mix, a remaster, another gateway's)": "Was hindurchgeht: der Take oder jede Datei daraus (ein DAW-Mix, ein Remaster, das eines anderen Gateways)",
++"Character": "Charakter",
++"Tape: emphasis into a soft curve, the head bump, hiss, wow and flutter. Console: odd harmonics, crosstalk. Tube: even harmonics and a sag. Transformer: the lows saturate first. Vinyl: lows in mono, the top rolled off, crackle": "Band: Anhebung in eine weiche Kurve, der Kopfbuckel, Rauschen, Wow und Flutter. Pult: ungerade Obertöne, Übersprechen. Röhre: gerade Obertöne und ein Einknicken. Übertrager: die Tiefen sättigen zuerst. Vinyl: Tiefen in Mono, Höhen abgesenkt, Knistern",
++"Tape": "Band",
++"Tube": "Röhre",
++"Transformer": "Übertrager",
++"Vinyl": "Vinyl",
++"Master tape": "Masterband",
++"Studio tape": "Studioband",
++"Cassette": "Kassette",
++"Warm tube": "Warme Röhre",
++"Pushed tube": "Gefahrene Röhre",
++"Iron": "Eisen",
++"Old record": "Alte Platte",
++"Drive, dB": "Drive, dB",
++"How hard it goes into the curve, dB; given back after it, so only the colour changes": "Wie stark es in die Kurve geht, dB; danach zurückgegeben, sodass sich nur die Farbe ändert",
++"The tape's speed: slower, a lower head bump, an earlier top, more emphasis into the curve (3.75 is a cassette's top)": "Die Bandgeschwindigkeit: langsamer, tieferer Kopfbuckel, früher fallende Höhen, mehr Anhebung in die Kurve (3.75 sind die Höhen einer Kassette)",
++"Wow, %": "Wow, %",
++"The slow wander of the speed, its peak in %": "Das langsame Wandern der Geschwindigkeit, seine Spitze in %",
++"Flutter, %": "Flutter, %",
++"The fast flutter of the speed, its peak in %": "Das schnelle Flattern der Geschwindigkeit, seine Spitze in %",
++"Azimuth, µs": "Azimut, µs",
++"One side this many microseconds late: a head not quite square; it dulls the top in mono": "Eine Seite so viele Mikrosekunden später: ein Kopf nicht ganz im Winkel; in Mono dumpft es die Höhen",
++"Sag": "Einknicken",
++"The supply giving a little when it is pushed: a soft, slow compression": "Die Versorgung gibt ein wenig nach, wenn man sie fährt: eine weiche, langsame Kompression",
++"Crackle": "Knistern",
++"How often the surface crackles": "Wie oft die Oberfläche knistert",
++"Rumble, dB": "Rumpeln, dB",
++"The turntable's rumble, dBFS (−120: none)": "Das Rumpeln des Plattenspielers, dBFS (−120: keins)",
++"Mono below, Hz": "Mono unter, Hz",
++"Below this the two sides become one, as a cut must have them (0: off)": "Darunter werden die beiden Seiten eins, wie der Schnitt es verlangt (0: aus)",
++"Noise, dB": "Rauschen, dB",
++"The character's own noise (hiss, hum of the iron, the surface), dBFS; −120 is none": "Das eigene Rauschen des Charakters (Bandrauschen, Brummen des Eisens, die Oberfläche), dBFS; −120 ist keins",
++"Crosstalk, dB": "Übersprechen, dB",
++"The other side's highs leaking in, dB; −120 is none": "Die Höhen der anderen Seite, die hereinsickern, dB; −120 ist nichts",
++"Width, %": "Breite, %",
++"The stereo width after it: 0 % mono, 100 % as it was, 200 % the sides doubled": "Die Stereobreite danach: 0 % Mono, 100 % wie zuvor, 200 % die Seiten verdoppelt",
++"Mix, %": "Mischung, %",
++"How much of it against the source, in parallel: 100 % all through it": "Wie viel davon gegen die Quelle, parallel: 100 % alles hindurch",
++"Oversampling": "Überabtastung",
++"The curve runs this many times faster than the file, so its harmonics do not fold back": "Die Kurve läuft so viel schneller als die Datei, damit ihre Obertöne nicht zurückfalten",
++"As loud as it came, to compare by ear; or as it comes out of the curve": "So laut, wie es kam, zum Vergleich nach Gehör; oder wie es aus der Kurve kommt",
++"as it came": "wie es kam",
++"as it comes out": "wie es herauskommt",
++"Trim, dB": "Trim, dB",
++"A last trim, dB; the true peak is kept under −0.3 dBTP in any case, and said": "Ein letzter Trim, dB; der True Peak bleibt in jedem Fall unter −0.3 dBTP, und es wird gesagt",
++"Through the gateway": "Durch das Gateway",
++"About a tenth of the song's length on Forge's CPU at 4×. The tree says what it adds to a −12 dBFS tone (the 2nd and 3rd harmonics) and its loudness in and out; a branch of it can be the analog gateway's source, the Remaster's, or another gateway's.": "Etwa ein Zehntel der Songlänge auf der CPU von Forge bei 4×. Der Baum sagt, was es einem −12-dBFS-Ton hinzufügt (2. und 3. Oberton) und seine Lautheit rein und raus; ein Zweig davon kann die Quelle des analogen Gateways sein, des Remasters oder eines anderen Gateways.",
++"Could not": "Ging nicht",
++"running on Forge: the bar above says how far; it lands in the tree": "läuft auf Forge: der Balken oben sagt, wie weit; es landet im Baum",
++"The monitor": "Die Abhöre",
++"A second output on Forge, to listen there: the analog gateway's return plays through it live while it prints, and any file of the tree plays through it from its «On Forge». The browser's own output stays as it is.": "Ein zweiter Ausgang auf Forge, um dort zu hören: der Rückweg des analogen Gateways spielt live, während es druckt, und jede Datei des Baums über ihr «Auf Forge». Der eigene Ausgang des Browsers bleibt, wie er ist.",
++"The interface you listen through on Forge; not the gateway's own output": "Das Interface, über das du auf Forge hörst; nicht der eigene Ausgang des Gateways",
++"Monitor out": "Abhörausgang",
++"The rate it runs at": "Die Rate, mit der er läuft",
++"Tone": "Ton",
++"A 1 kHz tone at −20 dBFS through the monitor for a second and a half": "Ein 1-kHz-Ton bei −20 dBFS über die Abhöre für anderthalb Sekunden",
++"Stop what plays through the monitor": "Stoppen, was über die Abhöre spielt",
++"Stopped": "Gestoppt",
++"No monitor: the tree plays in the browser only": "Keine Abhöre: der Baum spielt nur im Browser",
++"Keep a monitor first": "Behalte zuerst eine Abhöre",
++"A 1 kHz tone at −20 dBFS plays through {0} for a second and a half. Turn the monitors down if they are on.": "Ein 1-kHz-Ton bei −20 dBFS spielt über {0} anderthalb Sekunden. Dreh die Monitore herunter, wenn sie an sind.",
++"The tone plays…": "Der Ton spielt…",
++"The tone went out through {0}": "Der Ton ging über {0} hinaus",
++"Not on Forge: {0}": "Nicht auf Forge: {0}",
++"On Forge": "Auf Forge",
++"Play it through Forge's monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before": "Über die Abhöre von Forge spielen (Audio I/O), ab der Stelle seines Players; nochmal zum Stoppen. Der Browser spielt wie zuvor",
++"waiting": "wartet",
++"step {0} of {1}": "Schritt {0} von {1}",
++"about {0} left": "noch etwa {0}",
++"longer than usual": "länger als üblich",
++"plugin": "Plugin",
++"the Artist": "der Künstler",
++"Equal loudness": "Gleiche Lautheit",
++"Each version turned down to the quietest one's loudness (BS.1770, measured on Forge), so the ear hears the sound and not the level": "Jede Version auf die Lautheit der leisesten abgesenkt (BS.1770, auf Forge gemessen), damit das Ohr den Klang hört und nicht den Pegel"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 82b36c7..26995bb 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5748,5 +5748,84 @@ RuachI18n.add("el", {
+ "Drive": "Ώθηση",
+ "The highest true peak let through, 4× interpolated": "Η υψηλότερη πραγματική κορυφή που περνά, με 4× παρεμβολή",
+ "How hard the mix is driven into the limiter: louder, and held under the ceiling": "Πόσο δυνατά οδηγείται η μίξη στον περιοριστή: πιο δυνατά, και κρατιέται κάτω από το ταβάνι",
+-"How fast it lets go: the time to give back 12 dB": "Πόσο γρήγορα αφήνει: ο χρόνος για να επιστρέψει 12 dB"
++"How fast it lets go: the time to give back 12 dB": "Πόσο γρήγορα αφήνει: ο χρόνος για να επιστρέψει 12 dB",
++"Digital Gateway": "Ψηφιακή πύλη",
++"digital gateway": "ψηφιακή πύλη",
++"tape, console, tube": "ταινία, κονσόλα, λυχνία",
++"The take, or any file made from it, through an analog character in numbers on Forge: tape, console, tube, transformer or vinyl. Its curve oversampled, its tone, its noise, its movement in time; as loud as it came. The analog gateway's twin, without the gear.": "Η λήψη, ή οποιοδήποτε αρχείο φτιάχτηκε από αυτήν, μέσα από έναν αναλογικό χαρακτήρα σε αριθμούς στο Forge: ταινία, κονσόλα, λυχνία, μετασχηματιστής ή βινύλιο. Η καμπύλη του με υπερδειγματοληψία, ο τόνος, ο θόρυβος, η κίνησή του στον χρόνο· τόσο δυνατά όσο ήρθε. Το δίδυμο της αναλογικής πύλης, χωρίς τα μηχανήματα.",
++"What goes through: the take, or any file made from it (a DAW mix, a remaster, another gateway's)": "Τι περνά: η λήψη ή οποιοδήποτε αρχείο από αυτήν (μίξη του DAW, remaster, άλλης πύλης)",
++"Character": "Χαρακτήρας",
++"Tape: emphasis into a soft curve, the head bump, hiss, wow and flutter. Console: odd harmonics, crosstalk. Tube: even harmonics and a sag. Transformer: the lows saturate first. Vinyl: lows in mono, the top rolled off, crackle": "Ταινία: έμφαση σε μια μαλακή καμπύλη, το εξόγκωμα της κεφαλής, συριγμός, wow και flutter. Κονσόλα: περιττές αρμονικές, crosstalk. Λυχνία: άρτιες αρμονικές και βύθιση. Μετασχηματιστής: τα μπάσα κορέννυνται πρώτα. Βινύλιο: μπάσα σε mono, κομμένα πρίμα, τριξίματα",
++"Tape": "Ταινία",
++"Tube": "Λυχνία",
++"Transformer": "Μετασχηματιστής",
++"Vinyl": "Βινύλιο",
++"Master tape": "Ταινία master",
++"Studio tape": "Ταινία στούντιο",
++"Cassette": "Κασέτα",
++"Warm tube": "Ζεστή λυχνία",
++"Pushed tube": "Πιεσμένη λυχνία",
++"Iron": "Σίδερο",
++"Old record": "Παλιός δίσκος",
++"Drive, dB": "Ώθηση, dB",
++"How hard it goes into the curve, dB; given back after it, so only the colour changes": "Πόσο δυνατά μπαίνει στην καμπύλη, dB· επιστρέφεται μετά, έτσι αλλάζει μόνο το χρώμα",
++"The tape's speed: slower, a lower head bump, an earlier top, more emphasis into the curve (3.75 is a cassette's top)": "Η ταχύτητα της ταινίας: πιο αργή, χαμηλότερο εξόγκωμα, νωρίτερη πτώση των πρίμων, περισσότερη έμφαση στην καμπύλη (3.75 είναι τα πρίμα μιας κασέτας)",
++"Wow, %": "Wow, %",
++"The slow wander of the speed, its peak in %": "Η αργή περιπλάνηση της ταχύτητας, η κορυφή της σε %",
++"Flutter, %": "Flutter, %",
++"The fast flutter of the speed, its peak in %": "Το γρήγορο τρεμόπαιγμα της ταχύτητας, η κορυφή του σε %",
++"Azimuth, µs": "Αζιμούθιο, µs",
++"One side this many microseconds late: a head not quite square; it dulls the top in mono": "Η μία πλευρά τόσα μικροδευτερόλεπτα αργότερα: μια κεφαλή όχι εντελώς ίσια· στο mono θαμπώνει τα πρίμα",
++"Sag": "Βύθιση",
++"The supply giving a little when it is pushed: a soft, slow compression": "Η τροφοδοσία υποχωρεί λίγο όταν πιέζεται: μια μαλακή, αργή συμπίεση",
++"Crackle": "Τριξίματα",
++"How often the surface crackles": "Πόσο συχνά τρίζει η επιφάνεια",
++"Rumble, dB": "Βουητό, dB",
++"The turntable's rumble, dBFS (−120: none)": "Το βουητό του πικάπ, dBFS (−120: κανένα)",
++"Mono below, Hz": "Mono κάτω από, Hz",
++"Below this the two sides become one, as a cut must have them (0: off)": "Κάτω από αυτό οι δύο πλευρές γίνονται μία, όπως τις θέλει η χάραξη (0: ανενεργό)",
++"Noise, dB": "Θόρυβος, dB",
++"The character's own noise (hiss, hum of the iron, the surface), dBFS; −120 is none": "Ο θόρυβος του ίδιου του χαρακτήρα (συριγμός, βόμβος του σιδήρου, η επιφάνεια), dBFS· −120 είναι κανένας",
++"Crosstalk, dB": "Crosstalk, dB",
++"The other side's highs leaking in, dB; −120 is none": "Τα πρίμα της άλλης πλευράς που διαρρέουν, dB· −120 είναι τίποτα",
++"Width, %": "Πλάτος, %",
++"The stereo width after it: 0 % mono, 100 % as it was, 200 % the sides doubled": "Το στερεοφωνικό πλάτος μετά: 0 % mono, 100 % όπως ήταν, 200 % οι πλευρές διπλές",
++"Mix, %": "Μείξη, %",
++"How much of it against the source, in parallel: 100 % all through it": "Πόσο από αυτό απέναντι στην πηγή, παράλληλα: 100 % όλα μέσα από αυτό",
++"Oversampling": "Υπερδειγματοληψία",
++"The curve runs this many times faster than the file, so its harmonics do not fold back": "Η καμπύλη τρέχει τόσες φορές πιο γρήγορα από το αρχείο, ώστε οι αρμονικές της να μην αναδιπλώνονται",
++"As loud as it came, to compare by ear; or as it comes out of the curve": "Τόσο δυνατά όσο ήρθε, για σύγκριση με το αυτί· ή όπως βγαίνει από την καμπύλη",
++"as it came": "όπως ήρθε",
++"as it comes out": "όπως βγαίνει",
++"Trim, dB": "Trim, dB",
++"A last trim, dB; the true peak is kept under −0.3 dBTP in any case, and said": "Μια τελευταία ρύθμιση, dB· η πραγματική κορυφή κρατιέται κάτω από −0.3 dBTP σε κάθε περίπτωση, και λέγεται",
++"Through the gateway": "Μέσα από την πύλη",
++"About a tenth of the song's length on Forge's CPU at 4×. The tree says what it adds to a −12 dBFS tone (the 2nd and 3rd harmonics) and its loudness in and out; a branch of it can be the analog gateway's source, the Remaster's, or another gateway's.": "Περίπου το ένα δέκατο της διάρκειας του τραγουδιού στον επεξεργαστή του Forge στο 4×. Το δέντρο λέει τι προσθέτει σε έναν τόνο −12 dBFS (2η και 3η αρμονική) και την ακουστότητα μέσα και έξω· ένας κλάδος του μπορεί να γίνει πηγή της αναλογικής πύλης, του Remaster ή άλλης πύλης.",
++"Could not": "Δεν έγινε",
++"running on Forge: the bar above says how far; it lands in the tree": "τρέχει στο Forge: η μπάρα πάνω λέει πόσο έμεινε· θα εμφανιστεί στο δέντρο",
++"The monitor": "Η οθόνη ακρόασης",
++"A second output on Forge, to listen there: the analog gateway's return plays through it live while it prints, and any file of the tree plays through it from its «On Forge». The browser's own output stays as it is.": "Μια δεύτερη έξοδος στο Forge, για ακρόαση εκεί: η επιστροφή της αναλογικής πύλης παίζει ζωντανά όσο τυπώνει, και κάθε αρχείο του δέντρου παίζει από το «Στο Forge». Η έξοδος του ίδιου του προγράμματος περιήγησης μένει όπως είναι.",
++"The interface you listen through on Forge; not the gateway's own output": "Η διεπαφή από την οποία ακούς στο Forge· όχι η έξοδος της ίδιας της πύλης",
++"Monitor out": "Έξοδος ακρόασης",
++"The rate it runs at": "Ο ρυθμός στον οποίο λειτουργεί",
++"Tone": "Τόνος",
++"A 1 kHz tone at −20 dBFS through the monitor for a second and a half": "Ένας τόνος 1 kHz στα −20 dBFS μέσα από την ακρόαση για ενάμισι δευτερόλεπτο",
++"Stop what plays through the monitor": "Σταμάτα ό,τι παίζει στην ακρόαση",
++"Stopped": "Σταμάτησε",
++"No monitor: the tree plays in the browser only": "Χωρίς ακρόαση: το δέντρο παίζει μόνο στο πρόγραμμα περιήγησης",
++"Keep a monitor first": "Κράτησε πρώτα μια ακρόαση",
++"A 1 kHz tone at −20 dBFS plays through {0} for a second and a half. Turn the monitors down if they are on.": "Ένας τόνος 1 kHz στα −20 dBFS παίζει από το {0} για ενάμισι δευτερόλεπτο. Χαμήλωσε τα ηχεία αν είναι ανοιχτά.",
++"The tone plays…": "Ο τόνος παίζει…",
++"The tone went out through {0}": "Ο τόνος βγήκε από το {0}",
++"Not on Forge: {0}": "Όχι στο Forge: {0}",
++"On Forge": "Στο Forge",
++"Play it through Forge's monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before": "Παίξ' το από την ακρόαση του Forge (Audio I/O), από εκεί που στέκεται το πρόγραμμα αναπαραγωγής του· ξανά για διακοπή. Ο περιηγητής παίζει όπως πριν",
++"waiting": "σε αναμονή",
++"step {0} of {1}": "βήμα {0} από {1}",
++"about {0} left": "απομένουν περίπου {0}",
++"longer than usual": "περισσότερο από το συνηθισμένο",
++"plugin": "πρόσθετο",
++"the Artist": "ο Καλλιτέχνης",
++"Equal loudness": "Ίση ακουστότητα",
++"Each version turned down to the quietest one's loudness (BS.1770, measured on Forge), so the ear hears the sound and not the level": "Κάθε εκδοχή χαμηλώνει στην ακουστότητα της πιο ήσυχης (BS.1770, μετρημένη στο Forge), ώστε το αυτί να ακούει τον ήχο και όχι τη στάθμη"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 58ee659..454b95f 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5748,5 +5748,84 @@ RuachI18n.add("es", {
+ "Drive": "Empuje",
+ "The highest true peak let through, 4× interpolated": "El pico real más alto que deja pasar, interpolado 4×",
+ "How hard the mix is driven into the limiter: louder, and held under the ceiling": "Cuánto se empuja la mezcla al limitador: más fuerte, y sujeta bajo el techo",
+-"How fast it lets go: the time to give back 12 dB": "Qué tan rápido suelta: el tiempo para devolver 12 dB"
++"How fast it lets go: the time to give back 12 dB": "Qué tan rápido suelta: el tiempo para devolver 12 dB",
++"Digital Gateway": "Pasarela digital",
++"digital gateway": "pasarela digital",
++"tape, console, tube": "cinta, consola, válvula",
++"The take, or any file made from it, through an analog character in numbers on Forge: tape, console, tube, transformer or vinyl. Its curve oversampled, its tone, its noise, its movement in time; as loud as it came. The analog gateway's twin, without the gear.": "La toma, o cualquier archivo hecho de ella, a través de un carácter analógico en números en Forge: cinta, consola, válvula, transformador o vinilo. Su curva sobremuestreada, su tono, su ruido, su movimiento en el tiempo; tan fuerte como llegó. El gemelo de la pasarela analógica, sin el equipo.",
++"What goes through: the take, or any file made from it (a DAW mix, a remaster, another gateway's)": "Qué pasa por ella: la toma o cualquier archivo hecho de ella (una mezcla del DAW, un remaster, el de otra pasarela)",
++"Character": "Carácter",
++"Tape: emphasis into a soft curve, the head bump, hiss, wow and flutter. Console: odd harmonics, crosstalk. Tube: even harmonics and a sag. Transformer: the lows saturate first. Vinyl: lows in mono, the top rolled off, crackle": "Cinta: énfasis hacia una curva suave, la joroba del cabezal, siseo, wow y flutter. Consola: armónicos impares, diafonía. Válvula: armónicos pares y una caída. Transformador: los graves se saturan primero. Vinilo: graves en mono, agudos recortados, crepitar",
++"Tape": "Cinta",
++"Tube": "Válvula",
++"Transformer": "Transformador",
++"Vinyl": "Vinilo",
++"Master tape": "Cinta máster",
++"Studio tape": "Cinta de estudio",
++"Cassette": "Casete",
++"Warm tube": "Válvula cálida",
++"Pushed tube": "Válvula forzada",
++"Iron": "Hierro",
++"Old record": "Disco viejo",
++"Drive, dB": "Empuje, dB",
++"How hard it goes into the curve, dB; given back after it, so only the colour changes": "Cuánto entra en la curva, dB; se devuelve después, así solo cambia el color",
++"The tape's speed: slower, a lower head bump, an earlier top, more emphasis into the curve (3.75 is a cassette's top)": "La velocidad de la cinta: más lenta, joroba más baja, agudos que caen antes, más énfasis hacia la curva (3.75 es el agudo de un casete)",
++"Wow, %": "Wow, %",
++"The slow wander of the speed, its peak in %": "La deriva lenta de la velocidad, su pico en %",
++"Flutter, %": "Flutter, %",
++"The fast flutter of the speed, its peak in %": "El temblor rápido de la velocidad, su pico en %",
++"Azimuth, µs": "Azimut, µs",
++"One side this many microseconds late: a head not quite square; it dulls the top in mono": "Un lado tantos microsegundos tarde: un cabezal no del todo a escuadra; en mono apaga los agudos",
++"Sag": "Caída",
++"The supply giving a little when it is pushed: a soft, slow compression": "La alimentación cede un poco al empujarla: una compresión suave y lenta",
++"Crackle": "Crepitar",
++"How often the surface crackles": "Con qué frecuencia crepita la superficie",
++"Rumble, dB": "Retumbo, dB",
++"The turntable's rumble, dBFS (−120: none)": "El retumbo del tocadiscos, dBFS (−120: ninguno)",
++"Mono below, Hz": "Mono por debajo, Hz",
++"Below this the two sides become one, as a cut must have them (0: off)": "Por debajo de esto los dos lados se vuelven uno, como los exige el corte (0: apagado)",
++"Noise, dB": "Ruido, dB",
++"The character's own noise (hiss, hum of the iron, the surface), dBFS; −120 is none": "El ruido propio del carácter (siseo, zumbido del hierro, la superficie), dBFS; −120 es ninguno",
++"Crosstalk, dB": "Diafonía, dB",
++"The other side's highs leaking in, dB; −120 is none": "Los agudos del otro lado que se filtran, dB; −120 es nada",
++"Width, %": "Ancho, %",
++"The stereo width after it: 0 % mono, 100 % as it was, 200 % the sides doubled": "El ancho estéreo después: 0 % mono, 100 % como estaba, 200 % los lados al doble",
++"Mix, %": "Mezcla, %",
++"How much of it against the source, in parallel: 100 % all through it": "Cuánto de ella frente al origen, en paralelo: 100 % todo a través de ella",
++"Oversampling": "Sobremuestreo",
++"The curve runs this many times faster than the file, so its harmonics do not fold back": "La curva corre tantas veces más rápido que el archivo, para que sus armónicos no se plieguen",
++"As loud as it came, to compare by ear; or as it comes out of the curve": "Tan fuerte como llegó, para comparar de oído; o como sale de la curva",
++"as it came": "como llegó",
++"as it comes out": "como sale",
++"Trim, dB": "Ajuste, dB",
++"A last trim, dB; the true peak is kept under −0.3 dBTP in any case, and said": "Un último ajuste, dB; el pico real se mantiene bajo −0.3 dBTP en todo caso, y se dice",
++"Through the gateway": "Por la pasarela",
++"About a tenth of the song's length on Forge's CPU at 4×. The tree says what it adds to a −12 dBFS tone (the 2nd and 3rd harmonics) and its loudness in and out; a branch of it can be the analog gateway's source, the Remaster's, or another gateway's.": "Alrededor de una décima parte de la duración de la canción en la CPU de Forge a 4×. El árbol dice lo que añade a un tono de −12 dBFS (los armónicos 2.º y 3.º) y su sonoridad de entrada y salida; una rama suya puede ser el origen de la pasarela analógica, del Remaster o de otra pasarela.",
++"Could not": "No se pudo",
++"running on Forge: the bar above says how far; it lands in the tree": "en marcha en Forge: la barra de arriba dice cuánto falta; llega al árbol",
++"The monitor": "El monitor",
++"A second output on Forge, to listen there: the analog gateway's return plays through it live while it prints, and any file of the tree plays through it from its «On Forge». The browser's own output stays as it is.": "Una segunda salida en Forge, para escuchar allí: el retorno de la pasarela analógica suena en vivo mientras imprime, y cualquier archivo del árbol suena desde su «En Forge». La salida propia del navegador queda como está.",
++"The interface you listen through on Forge; not the gateway's own output": "La interfaz por la que escuchas en Forge; no la salida propia de la pasarela",
++"Monitor out": "Salida de monitor",
++"The rate it runs at": "La frecuencia a la que funciona",
++"Tone": "Tono",
++"A 1 kHz tone at −20 dBFS through the monitor for a second and a half": "Un tono de 1 kHz a −20 dBFS por el monitor durante segundo y medio",
++"Stop what plays through the monitor": "Detener lo que suena por el monitor",
++"Stopped": "Detenido",
++"No monitor: the tree plays in the browser only": "Sin monitor: el árbol suena solo en el navegador",
++"Keep a monitor first": "Guarda primero un monitor",
++"A 1 kHz tone at −20 dBFS plays through {0} for a second and a half. Turn the monitors down if they are on.": "Un tono de 1 kHz a −20 dBFS suena por {0} durante segundo y medio. Baja los monitores si están encendidos.",
++"The tone plays…": "El tono suena…",
++"The tone went out through {0}": "El tono salió por {0}",
++"Not on Forge: {0}": "No en Forge: {0}",
++"On Forge": "En Forge",
++"Play it through Forge's monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before": "Tócalo por el monitor de Forge (Audio I/O), desde donde está su reproductor; otra vez para detener. El navegador suena como antes",
++"waiting": "en espera",
++"step {0} of {1}": "paso {0} de {1}",
++"about {0} left": "faltan unos {0}",
++"longer than usual": "más de lo habitual",
++"plugin": "complemento",
++"the Artist": "el Artista",
++"Equal loudness": "Sonoridad igual",
++"Each version turned down to the quietest one's loudness (BS.1770, measured on Forge), so the ear hears the sound and not the level": "Cada versión bajada a la sonoridad de la más baja (BS.1770, medida en Forge), para que el oído oiga el sonido y no el nivel"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index a1b1ba0..b0a21e7 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5632,5 +5632,84 @@ RuachI18n.add("fr", {
+ "Drive": "Poussée",
+ "The highest true peak let through, 4× interpolated": "La crête vraie la plus haute qu'il laisse passer, interpolée 4×",
+ "How hard the mix is driven into the limiter: louder, and held under the ceiling": "À quel point le mix est poussé dans le limiteur : plus fort, et tenu sous le plafond",
+-"How fast it lets go: the time to give back 12 dB": "À quelle vitesse il relâche : le temps de rendre 12 dB"
++"How fast it lets go: the time to give back 12 dB": "À quelle vitesse il relâche : le temps de rendre 12 dB",
++"Digital Gateway": "Passerelle numérique",
++"digital gateway": "passerelle numérique",
++"tape, console, tube": "bande, console, lampe",
++"The take, or any file made from it, through an analog character in numbers on Forge: tape, console, tube, transformer or vinyl. Its curve oversampled, its tone, its noise, its movement in time; as loud as it came. The analog gateway's twin, without the gear.": "La prise, ou tout fichier fait à partir d'elle, à travers un caractère analogique en nombres sur Forge : bande, console, lampe, transformateur ou vinyle. Sa courbe suréchantillonnée, son ton, son bruit, son mouvement dans le temps ; aussi fort qu'elle est arrivée. Le jumeau de la passerelle analogique, sans le matériel.",
++"What goes through: the take, or any file made from it (a DAW mix, a remaster, another gateway's)": "Ce qui passe : la prise ou tout fichier fait à partir d'elle (un mix du DAW, un remaster, celui d'une autre passerelle)",
++"Character": "Caractère",
++"Tape: emphasis into a soft curve, the head bump, hiss, wow and flutter. Console: odd harmonics, crosstalk. Tube: even harmonics and a sag. Transformer: the lows saturate first. Vinyl: lows in mono, the top rolled off, crackle": "Bande : accentuation vers une courbe douce, la bosse de tête, souffle, pleurage et scintillement. Console : harmoniques impairs, diaphonie. Lampe : harmoniques pairs et un affaissement. Transformateur : les graves saturent d'abord. Vinyle : graves en mono, aigus coupés, craquements",
++"Tape": "Bande",
++"Tube": "Lampe",
++"Transformer": "Transformateur",
++"Vinyl": "Vinyle",
++"Master tape": "Bande master",
++"Studio tape": "Bande de studio",
++"Cassette": "Cassette",
++"Warm tube": "Lampe chaude",
++"Pushed tube": "Lampe poussée",
++"Iron": "Fer",
++"Old record": "Vieux disque",
++"Drive, dB": "Poussée, dB",
++"How hard it goes into the curve, dB; given back after it, so only the colour changes": "À quel point il entre dans la courbe, dB ; rendu après, donc seule la couleur change",
++"The tape's speed: slower, a lower head bump, an earlier top, more emphasis into the curve (3.75 is a cassette's top)": "La vitesse de la bande : plus lente, bosse plus basse, aigus qui tombent plus tôt, plus d'accentuation dans la courbe (3.75 est l'aigu d'une cassette)",
++"Wow, %": "Pleurage, %",
++"The slow wander of the speed, its peak in %": "La dérive lente de la vitesse, son pic en %",
++"Flutter, %": "Scintillement, %",
++"The fast flutter of the speed, its peak in %": "Le tremblement rapide de la vitesse, son pic en %",
++"Azimuth, µs": "Azimut, µs",
++"One side this many microseconds late: a head not quite square; it dulls the top in mono": "Un côté en retard d'autant de microsecondes : une tête pas tout à fait d'équerre ; en mono, elle ternit les aigus",
++"Sag": "Affaissement",
++"The supply giving a little when it is pushed: a soft, slow compression": "L'alimentation cède un peu quand on la pousse : une compression douce et lente",
++"Crackle": "Craquements",
++"How often the surface crackles": "À quelle fréquence la surface craque",
++"Rumble, dB": "Ronflement, dB",
++"The turntable's rumble, dBFS (−120: none)": "Le ronflement de la platine, dBFS (−120 : aucun)",
++"Mono below, Hz": "Mono en dessous, Hz",
++"Below this the two sides become one, as a cut must have them (0: off)": "En dessous, les deux côtés n'en font qu'un, comme la gravure l'exige (0 : désactivé)",
++"Noise, dB": "Bruit, dB",
++"The character's own noise (hiss, hum of the iron, the surface), dBFS; −120 is none": "Le bruit propre du caractère (souffle, ronflement du fer, la surface), dBFS ; −120 : aucun",
++"Crosstalk, dB": "Diaphonie, dB",
++"The other side's highs leaking in, dB; −120 is none": "Les aigus de l'autre côté qui s'infiltrent, dB ; −120 : rien",
++"Width, %": "Largeur, %",
++"The stereo width after it: 0 % mono, 100 % as it was, 200 % the sides doubled": "La largeur stéréo après : 0 % mono, 100 % comme avant, 200 % les côtés doublés",
++"Mix, %": "Mélange, %",
++"How much of it against the source, in parallel: 100 % all through it": "Combien d'elle face à la source, en parallèle : 100 % tout à travers elle",
++"Oversampling": "Suréchantillonnage",
++"The curve runs this many times faster than the file, so its harmonics do not fold back": "La courbe tourne autant de fois plus vite que le fichier, pour que ses harmoniques ne se replient pas",
++"As loud as it came, to compare by ear; or as it comes out of the curve": "Aussi fort qu'il est arrivé, pour comparer à l'oreille ; ou tel qu'il sort de la courbe",
++"as it came": "comme il est arrivé",
++"as it comes out": "tel qu'il sort",
++"Trim, dB": "Ajustement, dB",
++"A last trim, dB; the true peak is kept under −0.3 dBTP in any case, and said": "Un dernier ajustement, dB ; la crête vraie reste sous −0.3 dBTP de toute façon, et c'est dit",
++"Through the gateway": "Par la passerelle",
++"About a tenth of the song's length on Forge's CPU at 4×. The tree says what it adds to a −12 dBFS tone (the 2nd and 3rd harmonics) and its loudness in and out; a branch of it can be the analog gateway's source, the Remaster's, or another gateway's.": "Environ un dixième de la durée du morceau sur le processeur de Forge à 4×. L'arbre dit ce qu'il ajoute à un ton à −12 dBFS (les 2e et 3e harmoniques) et sa sonie en entrée et en sortie ; une de ses branches peut être la source de la passerelle analogique, du Remaster ou d'une autre passerelle.",
++"Could not": "Impossible",
++"running on Forge: the bar above says how far; it lands in the tree": "en cours sur Forge : la barre au-dessus dit où il en est ; il arrive dans l'arbre",
++"The monitor": "L'écoute",
++"A second output on Forge, to listen there: the analog gateway's return plays through it live while it prints, and any file of the tree plays through it from its «On Forge». The browser's own output stays as it is.": "Une deuxième sortie sur Forge, pour écouter là-bas : le retour de la passerelle analogique y joue en direct pendant l'impression, et tout fichier de l'arbre y joue par son « Sur Forge ». La sortie propre du navigateur reste telle quelle.",
++"The interface you listen through on Forge; not the gateway's own output": "L'interface par laquelle tu écoutes sur Forge ; pas la sortie de la passerelle elle-même",
++"Monitor out": "Sortie d'écoute",
++"The rate it runs at": "La fréquence à laquelle il tourne",
++"Tone": "Ton",
++"A 1 kHz tone at −20 dBFS through the monitor for a second and a half": "Un ton de 1 kHz à −20 dBFS par l'écoute pendant une seconde et demie",
++"Stop what plays through the monitor": "Arrêter ce qui joue sur l'écoute",
++"Stopped": "Arrêté",
++"No monitor: the tree plays in the browser only": "Pas d'écoute : l'arbre ne joue que dans le navigateur",
++"Keep a monitor first": "Garde d'abord une écoute",
++"A 1 kHz tone at −20 dBFS plays through {0} for a second and a half. Turn the monitors down if they are on.": "Un ton de 1 kHz à −20 dBFS joue par {0} pendant une seconde et demie. Baisse les enceintes si elles sont allumées.",
++"The tone plays…": "Le ton joue…",
++"The tone went out through {0}": "Le ton est sorti par {0}",
++"Not on Forge: {0}": "Pas sur Forge : {0}",
++"On Forge": "Sur Forge",
++"Play it through Forge's monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before": "Le jouer sur l'écoute de Forge (Audio I/O), depuis là où en est son lecteur ; à nouveau pour arrêter. Le navigateur joue comme avant",
++"waiting": "en attente",
++"step {0} of {1}": "étape {0} sur {1}",
++"about {0} left": "encore environ {0}",
++"longer than usual": "plus long que d'habitude",
++"plugin": "extension",
++"the Artist": "l'Artiste",
++"Equal loudness": "Sonie égale",
++"Each version turned down to the quietest one's loudness (BS.1770, measured on Forge), so the ear hears the sound and not the level": "Chaque version baissée à la sonie de la plus calme (BS.1770, mesurée sur Forge), pour que l'oreille entende le son et non le niveau"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index afbb522..d7f3fbe 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5748,5 +5748,84 @@ RuachI18n.add("it", {
+ "Drive": "Spinta",
+ "The highest true peak let through, 4× interpolated": "Il picco reale più alto che lascia passare, interpolato 4×",
+ "How hard the mix is driven into the limiter: louder, and held under the ceiling": "Quanto il mix è spinto nel limitatore: più forte, e tenuto sotto il tetto",
+-"How fast it lets go: the time to give back 12 dB": "Quanto in fretta rilascia: il tempo per restituire 12 dB"
++"How fast it lets go: the time to give back 12 dB": "Quanto in fretta rilascia: il tempo per restituire 12 dB",
++"Digital Gateway": "Passaggio digitale",
++"digital gateway": "passaggio digitale",
++"tape, console, tube": "nastro, console, valvola",
++"The take, or any file made from it, through an analog character in numbers on Forge: tape, console, tube, transformer or vinyl. Its curve oversampled, its tone, its noise, its movement in time; as loud as it came. The analog gateway's twin, without the gear.": "Il take, o qualsiasi file fatto da esso, attraverso un carattere analogico in numeri su Forge: nastro, console, valvola, trasformatore o vinile. La sua curva sovracampionata, il suo tono, il suo rumore, il suo movimento nel tempo; forte com'è arrivato. Il gemello del passaggio analogico, senza l'hardware.",
++"What goes through: the take, or any file made from it (a DAW mix, a remaster, another gateway's)": "Cosa passa: il take o qualsiasi file fatto da esso (un mix del DAW, un remaster, quello di un altro passaggio)",
++"Character": "Carattere",
++"Tape: emphasis into a soft curve, the head bump, hiss, wow and flutter. Console: odd harmonics, crosstalk. Tube: even harmonics and a sag. Transformer: the lows saturate first. Vinyl: lows in mono, the top rolled off, crackle": "Nastro: enfasi in una curva morbida, la gobba della testina, fruscio, wow e flutter. Console: armoniche dispari, diafonia. Valvola: armoniche pari e un cedimento. Trasformatore: i bassi saturano per primi. Vinile: bassi in mono, acuti tagliati, crepitio",
++"Tape": "Nastro",
++"Tube": "Valvola",
++"Transformer": "Trasformatore",
++"Vinyl": "Vinile",
++"Master tape": "Nastro master",
++"Studio tape": "Nastro da studio",
++"Cassette": "Cassetta",
++"Warm tube": "Valvola calda",
++"Pushed tube": "Valvola spinta",
++"Iron": "Ferro",
++"Old record": "Vecchio disco",
++"Drive, dB": "Spinta, dB",
++"How hard it goes into the curve, dB; given back after it, so only the colour changes": "Quanto entra nella curva, dB; restituito dopo, così cambia solo il colore",
++"The tape's speed: slower, a lower head bump, an earlier top, more emphasis into the curve (3.75 is a cassette's top)": "La velocità del nastro: più lenta, gobba più bassa, acuti che calano prima, più enfasi nella curva (3.75 è l'acuto di una cassetta)",
++"Wow, %": "Wow, %",
++"The slow wander of the speed, its peak in %": "La deriva lenta della velocità, il suo picco in %",
++"Flutter, %": "Flutter, %",
++"The fast flutter of the speed, its peak in %": "Il tremolio veloce della velocità, il suo picco in %",
++"Azimuth, µs": "Azimut, µs",
++"One side this many microseconds late: a head not quite square; it dulls the top in mono": "Un lato in ritardo di tanti microsecondi: una testina non del tutto in squadra; in mono spegne gli acuti",
++"Sag": "Cedimento",
++"The supply giving a little when it is pushed: a soft, slow compression": "L'alimentazione cede un po' quando è spinta: una compressione morbida e lenta",
++"Crackle": "Crepitio",
++"How often the surface crackles": "Quanto spesso crepita la superficie",
++"Rumble, dB": "Rombo, dB",
++"The turntable's rumble, dBFS (−120: none)": "Il rombo del giradischi, dBFS (−120: nessuno)",
++"Mono below, Hz": "Mono sotto, Hz",
++"Below this the two sides become one, as a cut must have them (0: off)": "Sotto questo i due lati diventano uno, come li vuole il taglio (0: spento)",
++"Noise, dB": "Rumore, dB",
++"The character's own noise (hiss, hum of the iron, the surface), dBFS; −120 is none": "Il rumore proprio del carattere (fruscio, ronzio del ferro, la superficie), dBFS; −120 è nessuno",
++"Crosstalk, dB": "Diafonia, dB",
++"The other side's highs leaking in, dB; −120 is none": "Gli acuti dell'altro lato che filtrano, dB; −120 è niente",
++"Width, %": "Larghezza, %",
++"The stereo width after it: 0 % mono, 100 % as it was, 200 % the sides doubled": "La larghezza stereo dopo: 0 % mono, 100 % com'era, 200 % i lati raddoppiati",
++"Mix, %": "Miscela, %",
++"How much of it against the source, in parallel: 100 % all through it": "Quanto di esso rispetto alla sorgente, in parallelo: 100 % tutto attraverso",
++"Oversampling": "Sovracampionamento",
++"The curve runs this many times faster than the file, so its harmonics do not fold back": "La curva gira tante volte più veloce del file, così le sue armoniche non si ripiegano",
++"As loud as it came, to compare by ear; or as it comes out of the curve": "Forte com'è arrivato, per confrontare a orecchio; o come esce dalla curva",
++"as it came": "com'è arrivato",
++"as it comes out": "come esce",
++"Trim, dB": "Trim, dB",
++"A last trim, dB; the true peak is kept under −0.3 dBTP in any case, and said": "Un ultimo ritocco, dB; il picco reale resta sotto −0.3 dBTP in ogni caso, e lo si dice",
++"Through the gateway": "Attraverso il passaggio",
++"About a tenth of the song's length on Forge's CPU at 4×. The tree says what it adds to a −12 dBFS tone (the 2nd and 3rd harmonics) and its loudness in and out; a branch of it can be the analog gateway's source, the Remaster's, or another gateway's.": "Circa un decimo della durata del brano sulla CPU di Forge a 4×. L'albero dice cosa aggiunge a un tono a −12 dBFS (la 2ª e la 3ª armonica) e il suo volume in entrata e in uscita; un suo ramo può essere la sorgente del passaggio analogico, del Remaster o di un altro passaggio.",
++"Could not": "Non è riuscito",
++"running on Forge: the bar above says how far; it lands in the tree": "in corso su Forge: la barra sopra dice quanto manca; arriva nell'albero",
++"The monitor": "Il monitor",
++"A second output on Forge, to listen there: the analog gateway's return plays through it live while it prints, and any file of the tree plays through it from its «On Forge». The browser's own output stays as it is.": "Una seconda uscita su Forge, per ascoltare lì: il ritorno del passaggio analogico suona dal vivo mentre stampa, e ogni file dell'albero suona dal suo «Su Forge». L'uscita del browser resta com'è.",
++"The interface you listen through on Forge; not the gateway's own output": "L'interfaccia da cui ascolti su Forge; non l'uscita stessa del passaggio",
++"Monitor out": "Uscita monitor",
++"The rate it runs at": "La frequenza a cui funziona",
++"Tone": "Tono",
++"A 1 kHz tone at −20 dBFS through the monitor for a second and a half": "Un tono a 1 kHz a −20 dBFS attraverso il monitor per un secondo e mezzo",
++"Stop what plays through the monitor": "Ferma ciò che suona nel monitor",
++"Stopped": "Fermato",
++"No monitor: the tree plays in the browser only": "Nessun monitor: l'albero suona solo nel browser",
++"Keep a monitor first": "Salva prima un monitor",
++"A 1 kHz tone at −20 dBFS plays through {0} for a second and a half. Turn the monitors down if they are on.": "Un tono a 1 kHz a −20 dBFS suona da {0} per un secondo e mezzo. Abbassa i monitor se sono accesi.",
++"The tone plays…": "Il tono suona…",
++"The tone went out through {0}": "Il tono è uscito da {0}",
++"Not on Forge: {0}": "Non su Forge: {0}",
++"On Forge": "Su Forge",
++"Play it through Forge's monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before": "Suonalo nel monitor di Forge (Audio I/O), da dove si trova il suo lettore; di nuovo per fermare. Il browser suona come prima",
++"waiting": "in attesa",
++"step {0} of {1}": "passo {0} di {1}",
++"about {0} left": "mancano circa {0}",
++"longer than usual": "più del solito",
++"plugin": "plugin",
++"the Artist": "l'Artista",
++"Equal loudness": "Volume uguale",
++"Each version turned down to the quietest one's loudness (BS.1770, measured on Forge), so the ear hears the sound and not the level": "Ogni versione abbassata al volume della più quieta (BS.1770, misurato su Forge), così l'orecchio sente il suono e non il livello"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index 3887bde..06d540b 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5632,5 +5632,84 @@ RuachI18n.add("ja", {
+ "Drive": "ドライブ",
+ "The highest true peak let through, 4× interpolated": "通過させる最大のトゥルーピーク（4× 補間）",
+ "How hard the mix is driven into the limiter: louder, and held under the ceiling": "リミッターへどれだけ強く押し込むか：大きくなり、上限の下に保たれます",
+-"How fast it lets go: the time to give back 12 dB": "どれだけ速く離すか：12 dB を戻すまでの時間"
++"How fast it lets go: the time to give back 12 dB": "どれだけ速く離すか：12 dB を戻すまでの時間",
++"Digital Gateway": "デジタルゲートウェイ",
++"digital gateway": "デジタルゲートウェイ",
++"tape, console, tube": "テープ、コンソール、真空管",
++"The take, or any file made from it, through an analog character in numbers on Forge: tape, console, tube, transformer or vinyl. Its curve oversampled, its tone, its noise, its movement in time; as loud as it came. The analog gateway's twin, without the gear.": "テイク、またはそこから作ったどのファイルでも、Forge 上で数値によるアナログの性格を通します：テープ、コンソール、真空管、トランス、レコード。オーバーサンプリングしたカーブ、音色、ノイズ、時間の揺れ。音量は入ったときのまま。機材なしのアナログゲートウェイの双子です。",
++"What goes through: the take, or any file made from it (a DAW mix, a remaster, another gateway's)": "通すもの：テイク、またはそこから作ったどのファイルでも（DAW のミックス、リマスター、別のゲートウェイの出力）",
++"Character": "性格",
++"Tape: emphasis into a soft curve, the head bump, hiss, wow and flutter. Console: odd harmonics, crosstalk. Tube: even harmonics and a sag. Transformer: the lows saturate first. Vinyl: lows in mono, the top rolled off, crackle": "テープ：やわらかなカーブへのエンファシス、ヘッドバンプ、ヒス、ワウとフラッター。コンソール：奇数倍音、クロストーク。真空管：偶数倍音とサグ。トランス：低域が先に飽和。レコード：低域はモノラル、高域はロールオフ、パチパチ音",
++"Tape": "テープ",
++"Tube": "真空管",
++"Transformer": "トランス",
++"Vinyl": "レコード",
++"Master tape": "マスターテープ",
++"Studio tape": "スタジオテープ",
++"Cassette": "カセット",
++"Warm tube": "暖かい真空管",
++"Pushed tube": "押し込んだ真空管",
++"Iron": "アイアン",
++"Old record": "古いレコード",
++"Drive, dB": "ドライブ、dB",
++"How hard it goes into the curve, dB; given back after it, so only the colour changes": "カーブにどれだけ強く入れるか（dB）。後で戻すので、変わるのは色合いだけ",
++"The tape's speed: slower, a lower head bump, an earlier top, more emphasis into the curve (3.75 is a cassette's top)": "テープ速度：遅いほどヘッドバンプは低く、高域は早く落ち、カーブへのエンファシスは強く（3.75 はカセットの高域）",
++"Wow, %": "ワウ、%",
++"The slow wander of the speed, its peak in %": "速度のゆっくりした揺れ、そのピーク（%）",
++"Flutter, %": "フラッター、%",
++"The fast flutter of the speed, its peak in %": "速度の速い震え、そのピーク（%）",
++"Azimuth, µs": "アジマス、µs",
++"One side this many microseconds late: a head not quite square; it dulls the top in mono": "片側をこのマイクロ秒だけ遅らせる：ヘッドが少し傾いた状態。モノラルでは高域が鈍る",
++"Sag": "サグ",
++"The supply giving a little when it is pushed: a soft, slow compression": "押し込むと電源が少したわむ：やわらかくゆっくりしたコンプレッション",
++"Crackle": "パチパチ音",
++"How often the surface crackles": "表面がパチパチいう頻度",
++"Rumble, dB": "ランブル、dB",
++"The turntable's rumble, dBFS (−120: none)": "ターンテーブルのランブル、dBFS（−120：なし）",
++"Mono below, Hz": "この周波数以下をモノラル、Hz",
++"Below this the two sides become one, as a cut must have them (0: off)": "これより下は左右を一つに（カッティングの要件どおり。0：オフ）",
++"Noise, dB": "ノイズ、dB",
++"The character's own noise (hiss, hum of the iron, the surface), dBFS; −120 is none": "性格そのもののノイズ（ヒス、鉄のハム、盤面）dBFS。−120 でなし",
++"Crosstalk, dB": "クロストーク、dB",
++"The other side's highs leaking in, dB; −120 is none": "反対側の高域の漏れ（dB）。−120 でなし",
++"Width, %": "幅、%",
++"The stereo width after it: 0 % mono, 100 % as it was, 200 % the sides doubled": "通した後のステレオ幅：0 % でモノラル、100 % でそのまま、200 % でサイド 2 倍",
++"Mix, %": "ミックス、%",
++"How much of it against the source, in parallel: 100 % all through it": "ソースに対してどれだけ混ぜるか（並列）：100 % ですべて通す",
++"Oversampling": "オーバーサンプリング",
++"The curve runs this many times faster than the file, so its harmonics do not fold back": "カーブをファイルの何倍の速さで回すか：倍音が折り返さないように",
++"As loud as it came, to compare by ear; or as it comes out of the curve": "入ったときの音量で（耳で比べるため）、またはカーブから出たままで",
++"as it came": "入ったまま",
++"as it comes out": "出たまま",
++"Trim, dB": "トリム、dB",
++"A last trim, dB; the true peak is kept under −0.3 dBTP in any case, and said": "最後のトリム（dB）。トゥルーピークはどのみち −0.3 dBTP 未満に保たれ、そのことが表示されます",
++"Through the gateway": "ゲートウェイを通す",
++"About a tenth of the song's length on Forge's CPU at 4×. The tree says what it adds to a −12 dBFS tone (the 2nd and 3rd harmonics) and its loudness in and out; a branch of it can be the analog gateway's source, the Remaster's, or another gateway's.": "4× で Forge の CPU 上、曲の長さのおよそ 10 分の 1。ツリーには −12 dBFS のトーンに加わるもの（2 次と 3 次の倍音）と入出力のラウドネスが表示されます。そのブランチはアナログゲートウェイ、リマスター、別のゲートウェイのソースにできます。",
++"Could not": "できませんでした",
++"running on Forge: the bar above says how far; it lands in the tree": "Forge で実行中：上のバーで進み具合がわかります。結果はツリーに入ります",
++"The monitor": "モニター",
++"A second output on Forge, to listen there: the analog gateway's return plays through it live while it prints, and any file of the tree plays through it from its «On Forge». The browser's own output stays as it is.": "Forge 上の 2 つ目の出力。そこで聴くためのもの：アナログゲートウェイの戻りがプリント中にライブで流れ、ツリーのどのファイルも「Forge で」から流せます。ブラウザ自体の出力はそのままです。",
++"The interface you listen through on Forge; not the gateway's own output": "Forge で聴くためのインターフェース。ゲートウェイ自身の出力ではないもの",
++"Monitor out": "モニター出力",
++"The rate it runs at": "動作するサンプルレート",
++"Tone": "トーン",
++"A 1 kHz tone at −20 dBFS through the monitor for a second and a half": "1 kHz、−20 dBFS のトーンをモニターから 1.5 秒",
++"Stop what plays through the monitor": "モニターで流れているものを止める",
++"Stopped": "停止しました",
++"No monitor: the tree plays in the browser only": "モニターなし：ツリーはブラウザでのみ再生",
++"Keep a monitor first": "まずモニターを保存してください",
++"A 1 kHz tone at −20 dBFS plays through {0} for a second and a half. Turn the monitors down if they are on.": "1 kHz、−20 dBFS のトーンが {0} から 1.5 秒流れます。モニターがオンなら音量を下げてください。",
++"The tone plays…": "トーン再生中…",
++"The tone went out through {0}": "トーンは {0} から出ました",
++"Not on Forge: {0}": "Forge で再生できません：{0}",
++"On Forge": "Forge で",
++"Play it through Forge's monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before": "Forge のモニター（Audio I/O）で、このプレーヤーの位置から再生。もう一度で停止。ブラウザは今まで通り再生します",
++"waiting": "待機中",
++"step {0} of {1}": "{1} 中 {0} ステップ",
++"about {0} left": "残り約 {0}",
++"longer than usual": "いつもより長い",
++"plugin": "プラグイン",
++"the Artist": "アーティスト",
++"Equal loudness": "ラウドネスをそろえる",
++"Each version turned down to the quietest one's loudness (BS.1770, measured on Forge), so the ear hears the sound and not the level": "各バージョンを最も静かなもののラウドネスに下げます（BS.1770、Forge で測定）。耳がレベルではなく音を聴くように"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index 6610327..583ab83 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5632,5 +5632,84 @@ RuachI18n.add("pt", {
+ "Drive": "Empurrão",
+ "The highest true peak let through, 4× interpolated": "O pico real mais alto que deixa passar, interpolado 4×",
+ "How hard the mix is driven into the limiter: louder, and held under the ceiling": "Quanto a mix é empurrada para o limitador: mais alta, e mantida abaixo do teto",
+-"How fast it lets go: the time to give back 12 dB": "Quão rápido ele solta: o tempo para devolver 12 dB"
++"How fast it lets go: the time to give back 12 dB": "Quão rápido ele solta: o tempo para devolver 12 dB",
++"Digital Gateway": "Passagem digital",
++"digital gateway": "passagem digital",
++"tape, console, tube": "fita, console, válvula",
++"The take, or any file made from it, through an analog character in numbers on Forge: tape, console, tube, transformer or vinyl. Its curve oversampled, its tone, its noise, its movement in time; as loud as it came. The analog gateway's twin, without the gear.": "O take, ou qualquer arquivo feito dele, através de um caráter analógico em números no Forge: fita, console, válvula, transformador ou vinil. A sua curva sobreamostrada, o seu tom, o seu ruído, o seu movimento no tempo; tão alto quanto chegou. O gémeo da passagem analógica, sem o equipamento.",
++"What goes through: the take, or any file made from it (a DAW mix, a remaster, another gateway's)": "O que passa: o take ou qualquer arquivo feito dele (uma mix do DAW, um remaster, o de outra passagem)",
++"Character": "Caráter",
++"Tape: emphasis into a soft curve, the head bump, hiss, wow and flutter. Console: odd harmonics, crosstalk. Tube: even harmonics and a sag. Transformer: the lows saturate first. Vinyl: lows in mono, the top rolled off, crackle": "Fita: ênfase para uma curva suave, a corcova da cabeça, chiado, wow e flutter. Console: harmónicos ímpares, diafonia. Válvula: harmónicos pares e um afundamento. Transformador: os graves saturam primeiro. Vinil: graves em mono, agudos cortados, estalidos",
++"Tape": "Fita",
++"Tube": "Válvula",
++"Transformer": "Transformador",
++"Vinyl": "Vinil",
++"Master tape": "Fita master",
++"Studio tape": "Fita de estúdio",
++"Cassette": "Cassete",
++"Warm tube": "Válvula quente",
++"Pushed tube": "Válvula forçada",
++"Iron": "Ferro",
++"Old record": "Disco antigo",
++"Drive, dB": "Empurrão, dB",
++"How hard it goes into the curve, dB; given back after it, so only the colour changes": "Quanto entra na curva, dB; devolvido depois, assim só muda a cor",
++"The tape's speed: slower, a lower head bump, an earlier top, more emphasis into the curve (3.75 is a cassette's top)": "A velocidade da fita: mais lenta, corcova mais baixa, agudos que caem antes, mais ênfase na curva (3.75 é o agudo de uma cassete)",
++"Wow, %": "Wow, %",
++"The slow wander of the speed, its peak in %": "A deriva lenta da velocidade, o seu pico em %",
++"Flutter, %": "Flutter, %",
++"The fast flutter of the speed, its peak in %": "O tremor rápido da velocidade, o seu pico em %",
++"Azimuth, µs": "Azimute, µs",
++"One side this many microseconds late: a head not quite square; it dulls the top in mono": "Um lado atrasado tantos microssegundos: uma cabeça não bem em esquadro; em mono apaga os agudos",
++"Sag": "Afundamento",
++"The supply giving a little when it is pushed: a soft, slow compression": "A alimentação cede um pouco quando é forçada: uma compressão suave e lenta",
++"Crackle": "Estalidos",
++"How often the surface crackles": "Com que frequência a superfície estala",
++"Rumble, dB": "Ronco, dB",
++"The turntable's rumble, dBFS (−120: none)": "O ronco do gira-discos, dBFS (−120: nenhum)",
++"Mono below, Hz": "Mono abaixo, Hz",
++"Below this the two sides become one, as a cut must have them (0: off)": "Abaixo disto os dois lados tornam-se um, como o corte exige (0: desligado)",
++"Noise, dB": "Ruído, dB",
++"The character's own noise (hiss, hum of the iron, the surface), dBFS; −120 is none": "O ruído próprio do caráter (chiado, zumbido do ferro, a superfície), dBFS; −120 é nenhum",
++"Crosstalk, dB": "Diafonia, dB",
++"The other side's highs leaking in, dB; −120 is none": "Os agudos do outro lado que se infiltram, dB; −120 é nada",
++"Width, %": "Largura, %",
++"The stereo width after it: 0 % mono, 100 % as it was, 200 % the sides doubled": "A largura estéreo depois: 0 % mono, 100 % como estava, 200 % os lados ao dobro",
++"Mix, %": "Mistura, %",
++"How much of it against the source, in parallel: 100 % all through it": "Quanto dela frente à fonte, em paralelo: 100 % tudo através dela",
++"Oversampling": "Sobreamostragem",
++"The curve runs this many times faster than the file, so its harmonics do not fold back": "A curva corre tantas vezes mais rápido que o arquivo, para que os harmónicos não se dobrem",
++"As loud as it came, to compare by ear; or as it comes out of the curve": "Tão alto quanto chegou, para comparar de ouvido; ou como sai da curva",
++"as it came": "como chegou",
++"as it comes out": "como sai",
++"Trim, dB": "Ajuste, dB",
++"A last trim, dB; the true peak is kept under −0.3 dBTP in any case, and said": "Um último ajuste, dB; o pico real fica abaixo de −0.3 dBTP em qualquer caso, e diz-se",
++"Through the gateway": "Pela passagem",
++"About a tenth of the song's length on Forge's CPU at 4×. The tree says what it adds to a −12 dBFS tone (the 2nd and 3rd harmonics) and its loudness in and out; a branch of it can be the analog gateway's source, the Remaster's, or another gateway's.": "Cerca de um décimo da duração da música na CPU do Forge a 4×. A árvore diz o que acrescenta a um tom a −12 dBFS (os harmónicos 2.º e 3.º) e a sua loudness à entrada e à saída; um ramo dela pode ser a fonte da passagem analógica, do Remaster ou de outra passagem.",
++"Could not": "Não foi possível",
++"running on Forge: the bar above says how far; it lands in the tree": "a correr no Forge: a barra acima diz quanto falta; chega à árvore",
++"The monitor": "O monitor",
++"A second output on Forge, to listen there: the analog gateway's return plays through it live while it prints, and any file of the tree plays through it from its «On Forge». The browser's own output stays as it is.": "Uma segunda saída no Forge, para ouvir lá: o retorno da passagem analógica toca ao vivo enquanto imprime, e qualquer arquivo da árvore toca pelo seu «No Forge». A saída do próprio navegador fica como está.",
++"The interface you listen through on Forge; not the gateway's own output": "A interface pela qual ouves no Forge; não a saída da própria passagem",
++"Monitor out": "Saída de monitor",
++"The rate it runs at": "A frequência a que funciona",
++"Tone": "Tom",
++"A 1 kHz tone at −20 dBFS through the monitor for a second and a half": "Um tom de 1 kHz a −20 dBFS pelo monitor durante segundo e meio",
++"Stop what plays through the monitor": "Parar o que toca no monitor",
++"Stopped": "Parado",
++"No monitor: the tree plays in the browser only": "Sem monitor: a árvore toca só no navegador",
++"Keep a monitor first": "Guarda primeiro um monitor",
++"A 1 kHz tone at −20 dBFS plays through {0} for a second and a half. Turn the monitors down if they are on.": "Um tom de 1 kHz a −20 dBFS toca por {0} durante segundo e meio. Baixa os monitores se estiverem ligados.",
++"The tone plays…": "O tom toca…",
++"The tone went out through {0}": "O tom saiu por {0}",
++"Not on Forge: {0}": "Não no Forge: {0}",
++"On Forge": "No Forge",
++"Play it through Forge's monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before": "Tocá-lo pelo monitor do Forge (Audio I/O), de onde está o seu leitor; outra vez para parar. O navegador toca como antes",
++"waiting": "à espera",
++"step {0} of {1}": "passo {0} de {1}",
++"about {0} left": "faltam cerca de {0}",
++"longer than usual": "mais do que o habitual",
++"plugin": "plugin",
++"the Artist": "o Artista",
++"Equal loudness": "Loudness igual",
++"Each version turned down to the quietest one's loudness (BS.1770, measured on Forge), so the ear hears the sound and not the level": "Cada versão baixada à loudness da mais baixa (BS.1770, medida no Forge), para o ouvido ouvir o som e não o nível"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index a146792..66e119e 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5754,5 +5754,84 @@ RuachI18n.add("ru", {
+ "Drive": "Нажим",
+ "The highest true peak let through, 4× interpolated": "Наивысший истинный пик, что проходит, по 4× интерполяции",
+ "How hard the mix is driven into the limiter: louder, and held under the ceiling": "Как сильно сведение вгоняется в лимитер: громче, и удерживается под потолком",
+-"How fast it lets go: the time to give back 12 dB": "Как быстро он отпускает: время, чтобы вернуть 12 дБ"
++"How fast it lets go: the time to give back 12 dB": "Как быстро он отпускает: время, чтобы вернуть 12 дБ",
++"Digital Gateway": "Цифровой шлюз",
++"digital gateway": "цифровой шлюз",
++"tape, console, tube": "лента, пульт, лампа",
++"The take, or any file made from it, through an analog character in numbers on Forge: tape, console, tube, transformer or vinyl. Its curve oversampled, its tone, its noise, its movement in time; as loud as it came. The analog gateway's twin, without the gear.": "Семпл или любой файл из него через аналоговый характер в цифрах на Кузне: лента, пульт, лампа, трансформатор или винил. Его кривая с передискретизацией, его тон, его шум, его движение во времени; громкость как пришла. Близнец аналогового шлюза, только без железа.",
++"What goes through: the take, or any file made from it (a DAW mix, a remaster, another gateway's)": "Что пройдёт через него: семпл или любой файл из него (микс DAW, ремастер, другой шлюз)",
++"Character": "Характер",
++"Tape: emphasis into a soft curve, the head bump, hiss, wow and flutter. Console: odd harmonics, crosstalk. Tube: even harmonics and a sag. Transformer: the lows saturate first. Vinyl: lows in mono, the top rolled off, crackle": "Лента: подъём верхов в мягкую кривую, горб головки, шипение, детонация. Пульт: нечётные гармоники, перекрёстные помехи. Лампа: чётные гармоники и просадка. Трансформатор: первыми насыщаются низы. Винил: низы в моно, срезанный верх, треск",
++"Tape": "Лента",
++"Tube": "Лампа",
++"Transformer": "Трансформатор",
++"Vinyl": "Винил",
++"Master tape": "Мастер-лента",
++"Studio tape": "Студийная лента",
++"Cassette": "Кассета",
++"Warm tube": "Тёплая лампа",
++"Pushed tube": "Лампа в нажиме",
++"Iron": "Железо",
++"Old record": "Старая пластинка",
++"Drive, dB": "Нажим, дБ",
++"How hard it goes into the curve, dB; given back after it, so only the colour changes": "Как сильно звук входит в кривую, дБ; после неё возвращается, так что меняется только окраска",
++"The tape's speed: slower, a lower head bump, an earlier top, more emphasis into the curve (3.75 is a cassette's top)": "Скорость ленты: медленнее — ниже горб головки, раньше срез верха, сильнее подъём в кривую (3.75 — верх кассеты)",
++"Wow, %": "Детонация медленная, %",
++"The slow wander of the speed, its peak in %": "Медленное плавание скорости, его пик в %",
++"Flutter, %": "Детонация быстрая, %",
++"The fast flutter of the speed, its peak in %": "Быстрое дрожание скорости, его пик в %",
++"Azimuth, µs": "Азимут, мкс",
++"One side this many microseconds late: a head not quite square; it dulls the top in mono": "Одна сторона опаздывает на столько микросекунд: головка стоит не совсем ровно; в моно это глушит верх",
++"Sag": "Просадка",
++"The supply giving a little when it is pushed: a soft, slow compression": "Питание чуть проседает, когда лампу нажимают: мягкая медленная компрессия",
++"Crackle": "Треск",
++"How often the surface crackles": "Как часто трещит поверхность",
++"Rumble, dB": "Рокот, дБ",
++"The turntable's rumble, dBFS (−120: none)": "Рокот проигрывателя, dBFS (−120: нет)",
++"Mono below, Hz": "Моно ниже, Гц",
++"Below this the two sides become one, as a cut must have them (0: off)": "Ниже этого обе стороны становятся одной, как того требует нарезка (0: выкл.)",
++"Noise, dB": "Шум, дБ",
++"The character's own noise (hiss, hum of the iron, the surface), dBFS; −120 is none": "Собственный шум характера (шипение, гул железа, поверхность), dBFS; −120 — без шума",
++"Crosstalk, dB": "Перекрёстные помехи, дБ",
++"The other side's highs leaking in, dB; −120 is none": "Верха другой стороны просачиваются, дБ; −120 — ничего",
++"Width, %": "Ширина, %",
++"The stereo width after it: 0 % mono, 100 % as it was, 200 % the sides doubled": "Ширина стерео после него: 0 % моно, 100 % как было, 200 % бока вдвое",
++"Mix, %": "Смесь, %",
++"How much of it against the source, in parallel: 100 % all through it": "Сколько его против источника, параллельно: 100 % — всё через него",
++"Oversampling": "Передискретизация",
++"The curve runs this many times faster than the file, so its harmonics do not fold back": "Кривая работает во столько раз быстрее файла, чтобы её гармоники не заворачивались назад",
++"As loud as it came, to compare by ear; or as it comes out of the curve": "Громкость как пришла, чтобы сравнить на слух; или как выходит из кривой",
++"as it came": "как пришла",
++"as it comes out": "как выходит",
++"Trim, dB": "Подстройка, дБ",
++"A last trim, dB; the true peak is kept under −0.3 dBTP in any case, and said": "Последняя подстройка, дБ; истинный пик в любом случае держится под −0.3 dBTP, и это сказано",
++"Through the gateway": "Через шлюз",
++"About a tenth of the song's length on Forge's CPU at 4×. The tree says what it adds to a −12 dBFS tone (the 2nd and 3rd harmonics) and its loudness in and out; a branch of it can be the analog gateway's source, the Remaster's, or another gateway's.": "Около десятой доли длины песни на процессоре Кузни при 4×. Дерево говорит, что он добавляет к тону −12 dBFS (2-я и 3-я гармоники), и громкость на входе и выходе; его ветка может стать источником аналогового шлюза, Ремастера или другого шлюза.",
++"Could not": "Не вышло",
++"running on Forge: the bar above says how far; it lands in the tree": "идёт на Кузне: полоса выше говорит, сколько осталось; результат появится в дереве",
++"The monitor": "Монитор",
++"A second output on Forge, to listen there: the analog gateway's return plays through it live while it prints, and any file of the tree plays through it from its «On Forge». The browser's own output stays as it is.": "Второй выход на Кузне, чтобы слушать там: возврат аналогового шлюза играет через него вживую, пока идёт печать, а любой файл дерева — по кнопке «На Кузне». Собственный выход браузера остаётся как есть.",
++"The interface you listen through on Forge; not the gateway's own output": "Интерфейс, через который слушаешь на Кузне; не собственный выход шлюза",
++"Monitor out": "Выход монитора",
++"The rate it runs at": "Частота, на которой он работает",
++"Tone": "Тон",
++"A 1 kHz tone at −20 dBFS through the monitor for a second and a half": "Тон 1 кГц при −20 dBFS через монитор на полторы секунды",
++"Stop what plays through the monitor": "Остановить то, что играет через монитор",
++"Stopped": "Остановлено",
++"No monitor: the tree plays in the browser only": "Монитора нет: дерево играет только в браузере",
++"Keep a monitor first": "Сначала сохрани монитор",
++"A 1 kHz tone at −20 dBFS plays through {0} for a second and a half. Turn the monitors down if they are on.": "Тон 1 кГц при −20 dBFS прозвучит через {0} полторы секунды. Убавь мониторы, если они включены.",
++"The tone plays…": "Тон звучит…",
++"The tone went out through {0}": "Тон ушёл через {0}",
++"Not on Forge: {0}": "Не на Кузне: {0}",
++"On Forge": "На Кузне",
++"Play it through Forge's monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before": "Сыграть через монитор Кузни (Audio I/O) с того места, где стоит его плеер; ещё раз — остановить. Браузер играет как прежде",
++"waiting": "ждёт",
++"step {0} of {1}": "шаг {0} из {1}",
++"about {0} left": "осталось около {0}",
++"longer than usual": "дольше обычного",
++"plugin": "плагин",
++"the Artist": "Художник",
++"Equal loudness": "Равная громкость",
++"Each version turned down to the quietest one's loudness (BS.1770, measured on Forge), so the ear hears the sound and not the level": "Каждая версия убавлена до громкости самой тихой (BS.1770, замер на Кузне), чтобы ухо слышало звук, а не уровень"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index a0c814b..94ab2b3 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5749,5 +5749,84 @@ RuachI18n.add("uk", {
+ "Drive": "Натиск",
+ "The highest true peak let through, 4× interpolated": "Найвищий справжній пік, що проходить, за 4× інтерполяцією",
+ "How hard the mix is driven into the limiter: louder, and held under the ceiling": "Як сильно зведення заганяється в лімітер: гучніше, і втримується під стелею",
+-"How fast it lets go: the time to give back 12 dB": "Як швидко він відпускає: час, щоб повернути 12 дБ"
++"How fast it lets go: the time to give back 12 dB": "Як швидко він відпускає: час, щоб повернути 12 дБ",
++"Digital Gateway": "Цифровий шлюз",
++"digital gateway": "цифровий шлюз",
++"tape, console, tube": "стрічка, пульт, лампа",
++"The take, or any file made from it, through an analog character in numbers on Forge: tape, console, tube, transformer or vinyl. Its curve oversampled, its tone, its noise, its movement in time; as loud as it came. The analog gateway's twin, without the gear.": "Семпл або будь-який файл із нього через аналоговий характер у цифрах на Кузні: стрічка, пульт, лампа, трансформатор або вініл. Його крива з передискретизацією, його тон, його шум, його рух у часі; гучність як прийшла. Близнюк аналогового шлюзу, тільки без заліза.",
++"What goes through: the take, or any file made from it (a DAW mix, a remaster, another gateway's)": "Що пройде крізь нього: семпл або будь-який файл із нього (мікс DAW, ремастер, інший шлюз)",
++"Character": "Характер",
++"Tape: emphasis into a soft curve, the head bump, hiss, wow and flutter. Console: odd harmonics, crosstalk. Tube: even harmonics and a sag. Transformer: the lows saturate first. Vinyl: lows in mono, the top rolled off, crackle": "Стрічка: підйом верхів у м'яку криву, горб голівки, шипіння, детонація. Пульт: непарні гармоніки, перехресні завади. Лампа: парні гармоніки та просідання. Трансформатор: першими насичуються низи. Вініл: низи в моно, зрізаний верх, тріск",
++"Tape": "Стрічка",
++"Tube": "Лампа",
++"Transformer": "Трансформатор",
++"Vinyl": "Вініл",
++"Master tape": "Майстер-стрічка",
++"Studio tape": "Студійна стрічка",
++"Cassette": "Касета",
++"Warm tube": "Тепла лампа",
++"Pushed tube": "Лампа з натиском",
++"Iron": "Залізо",
++"Old record": "Стара платівка",
++"Drive, dB": "Натиск, дБ",
++"How hard it goes into the curve, dB; given back after it, so only the colour changes": "Як сильно звук входить у криву, дБ; після неї повертається, тож змінюється лише забарвлення",
++"The tape's speed: slower, a lower head bump, an earlier top, more emphasis into the curve (3.75 is a cassette's top)": "Швидкість стрічки: повільніше — нижчий горб голівки, раніший зріз верху, сильніший підйом у криву (3.75 — верх касети)",
++"Wow, %": "Детонація повільна, %",
++"The slow wander of the speed, its peak in %": "Повільне плавання швидкості, його пік у %",
++"Flutter, %": "Детонація швидка, %",
++"The fast flutter of the speed, its peak in %": "Швидке тремтіння швидкості, його пік у %",
++"Azimuth, µs": "Азимут, мкс",
++"One side this many microseconds late: a head not quite square; it dulls the top in mono": "Одна сторона запізнюється на стільки мікросекунд: голівка стоїть не зовсім рівно; у моно це глушить верх",
++"Sag": "Просідання",
++"The supply giving a little when it is pushed: a soft, slow compression": "Живлення трохи просідає, коли лампу натискають: м'яка повільна компресія",
++"Crackle": "Тріск",
++"How often the surface crackles": "Як часто тріщить поверхня",
++"Rumble, dB": "Гуркіт, дБ",
++"The turntable's rumble, dBFS (−120: none)": "Гуркіт програвача, dBFS (−120: немає)",
++"Mono below, Hz": "Моно нижче, Гц",
++"Below this the two sides become one, as a cut must have them (0: off)": "Нижче цього обидві сторони стають однією, як того вимагає нарізка (0: вимк.)",
++"Noise, dB": "Шум, дБ",
++"The character's own noise (hiss, hum of the iron, the surface), dBFS; −120 is none": "Власний шум характеру (шипіння, гул заліза, поверхня), dBFS; −120 — без шуму",
++"Crosstalk, dB": "Перехресні завади, дБ",
++"The other side's highs leaking in, dB; −120 is none": "Верхи іншої сторони просочуються, дБ; −120 — нічого",
++"Width, %": "Ширина, %",
++"The stereo width after it: 0 % mono, 100 % as it was, 200 % the sides doubled": "Ширина стерео після нього: 0 % моно, 100 % як було, 200 % боки вдвічі",
++"Mix, %": "Суміш, %",
++"How much of it against the source, in parallel: 100 % all through it": "Скільки його проти джерела, паралельно: 100 % — усе крізь нього",
++"Oversampling": "Передискретизація",
++"The curve runs this many times faster than the file, so its harmonics do not fold back": "Крива працює в стільки разів швидше за файл, щоб її гармоніки не заверталися назад",
++"As loud as it came, to compare by ear; or as it comes out of the curve": "Гучність як прийшла, щоб порівняти на слух; або як виходить із кривої",
++"as it came": "як прийшла",
++"as it comes out": "як виходить",
++"Trim, dB": "Підстроювання, дБ",
++"A last trim, dB; the true peak is kept under −0.3 dBTP in any case, and said": "Остання підстройка, дБ; справжній пік у будь-якому разі тримається під −0.3 dBTP, і це сказано",
++"Through the gateway": "Крізь шлюз",
++"About a tenth of the song's length on Forge's CPU at 4×. The tree says what it adds to a −12 dBFS tone (the 2nd and 3rd harmonics) and its loudness in and out; a branch of it can be the analog gateway's source, the Remaster's, or another gateway's.": "Близько десятої частини довжини пісні на процесорі Кузні при 4×. Дерево каже, що він додає до тону −12 dBFS (2-га і 3-тя гармоніки), і гучність на вході й виході; його гілка може стати джерелом аналогового шлюзу, Ремастера чи іншого шлюзу.",
++"Could not": "Не вийшло",
++"running on Forge: the bar above says how far; it lands in the tree": "іде на Кузні: смуга вище каже, скільки лишилося; результат з'явиться в дереві",
++"The monitor": "Монітор",
++"A second output on Forge, to listen there: the analog gateway's return plays through it live while it prints, and any file of the tree plays through it from its «On Forge». The browser's own output stays as it is.": "Другий вихід на Кузні, щоб слухати там: повернення аналогового шлюзу грає через нього наживо, поки йде друк, а будь-який файл дерева — за кнопкою «На Кузні». Власний вихід браузера лишається як є.",
++"The interface you listen through on Forge; not the gateway's own output": "Інтерфейс, через який слухаєш на Кузні; не власний вихід шлюзу",
++"Monitor out": "Вихід монітора",
++"The rate it runs at": "Частота, на якій він працює",
++"Tone": "Тон",
++"A 1 kHz tone at −20 dBFS through the monitor for a second and a half": "Тон 1 кГц при −20 dBFS через монітор на півтори секунди",
++"Stop what plays through the monitor": "Зупинити те, що грає через монітор",
++"Stopped": "Зупинено",
++"No monitor: the tree plays in the browser only": "Монітора немає: дерево грає лише в браузері",
++"Keep a monitor first": "Спершу збережи монітор",
++"A 1 kHz tone at −20 dBFS plays through {0} for a second and a half. Turn the monitors down if they are on.": "Тон 1 кГц при −20 dBFS пролунає через {0} півтори секунди. Притиш монітори, якщо вони ввімкнені.",
++"The tone plays…": "Тон звучить…",
++"The tone went out through {0}": "Тон пішов через {0}",
++"Not on Forge: {0}": "Не на Кузні: {0}",
++"On Forge": "На Кузні",
++"Play it through Forge's monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before": "Зіграти через монітор Кузні (Audio I/O) з того місця, де стоїть його плеєр; ще раз — зупинити. Браузер грає як раніше",
++"waiting": "чекає",
++"step {0} of {1}": "крок {0} з {1}",
++"about {0} left": "лишилося близько {0}",
++"longer than usual": "довше, ніж зазвичай",
++"plugin": "плагін",
++"the Artist": "Художник",
++"Equal loudness": "Рівна гучність",
++"Each version turned down to the quietest one's loudness (BS.1770, measured on Forge), so the ear hears the sound and not the level": "Кожна версія притишена до гучності найтихішої (BS.1770, замір на Кузні), щоб вухо чуло звук, а не рівень"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index 664b90a..048dae4 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5632,5 +5632,84 @@ RuachI18n.add("zh", {
+ "Drive": "推动",
+ "The highest true peak let through, 4× interpolated": "允许通过的最高真峰值（4× 插值）",
+ "How hard the mix is driven into the limiter: louder, and held under the ceiling": "把混音推进限幅器的力度：更响，并保持在上限之下",
+-"How fast it lets go: the time to give back 12 dB": "多快放开：恢复 12 dB 所需的时间"
++"How fast it lets go: the time to give back 12 dB": "多快放开：恢复 12 dB 所需的时间",
++"Digital Gateway": "数字网关",
++"digital gateway": "数字网关",
++"tape, console, tube": "磁带、调音台、电子管",
++"The take, or any file made from it, through an analog character in numbers on Forge: tape, console, tube, transformer or vinyl. Its curve oversampled, its tone, its noise, its movement in time; as loud as it came. The analog gateway's twin, without the gear.": "这个录音，或由它生成的任何文件，在 Forge 上通过以数字模拟的模拟特性：磁带、调音台、电子管、变压器或黑胶。曲线经过过采样，有它的音色、噪声和时间上的波动；响度保持原样。模拟网关的孪生，只是不用设备。",
++"What goes through: the take, or any file made from it (a DAW mix, a remaster, another gateway's)": "要通过的内容：这个录音，或由它生成的任何文件（DAW 混音、重制、其他网关的输出）",
++"Character": "特性",
++"Tape: emphasis into a soft curve, the head bump, hiss, wow and flutter. Console: odd harmonics, crosstalk. Tube: even harmonics and a sag. Transformer: the lows saturate first. Vinyl: lows in mono, the top rolled off, crackle": "磁带：预加重进入柔和曲线、磁头凸起、嘶声、抖晃。调音台：奇次谐波、串音。电子管：偶次谐波和压降。变压器：低频先饱和。黑胶：低频为单声道、高频衰减、噼啪声",
++"Tape": "磁带",
++"Tube": "电子管",
++"Transformer": "变压器",
++"Vinyl": "黑胶",
++"Master tape": "母带",
++"Studio tape": "录音室磁带",
++"Cassette": "卡带",
++"Warm tube": "温暖电子管",
++"Pushed tube": "推高的电子管",
++"Iron": "铁芯",
++"Old record": "旧唱片",
++"Drive, dB": "推动，dB",
++"How hard it goes into the curve, dB; given back after it, so only the colour changes": "进入曲线的力度，dB；之后会补回，所以只改变色彩",
++"The tape's speed: slower, a lower head bump, an earlier top, more emphasis into the curve (3.75 is a cassette's top)": "磁带速度：越慢，磁头凸起越低、高频越早衰减、预加重越强（3.75 是卡带的高频）",
++"Wow, %": "慢速抖动，%",
++"The slow wander of the speed, its peak in %": "速度的缓慢漂移，峰值（%）",
++"Flutter, %": "快速抖动，%",
++"The fast flutter of the speed, its peak in %": "速度的快速颤动，峰值（%）",
++"Azimuth, µs": "方位角，µs",
++"One side this many microseconds late: a head not quite square; it dulls the top in mono": "一侧延迟这么多微秒：磁头没有完全对正；在单声道下会使高频发闷",
++"Sag": "压降",
++"The supply giving a little when it is pushed: a soft, slow compression": "推高时电源稍有压降：一种柔和、缓慢的压缩",
++"Crackle": "噼啪声",
++"How often the surface crackles": "表面噼啪的频率",
++"Rumble, dB": "隆隆声，dB",
++"The turntable's rumble, dBFS (−120: none)": "唱机的隆隆声，dBFS（−120：无）",
++"Mono below, Hz": "低于此为单声道，Hz",
++"Below this the two sides become one, as a cut must have them (0: off)": "低于此频率两侧合为一体，正如刻片所要求（0：关闭）",
++"Noise, dB": "噪声，dB",
++"The character's own noise (hiss, hum of the iron, the surface), dBFS; −120 is none": "该特性自身的噪声（嘶声、铁芯嗡声、盘面），dBFS；−120 为无",
++"Crosstalk, dB": "串音，dB",
++"The other side's highs leaking in, dB; −120 is none": "另一侧高频的渗入，dB；−120 为无",
++"Width, %": "宽度，%",
++"The stereo width after it: 0 % mono, 100 % as it was, 200 % the sides doubled": "通过后的立体声宽度：0 % 单声道，100 % 原样，200 % 两侧加倍",
++"Mix, %": "混合，%",
++"How much of it against the source, in parallel: 100 % all through it": "相对来源混入多少（并联）：100 % 表示全部通过",
++"Oversampling": "过采样",
++"The curve runs this many times faster than the file, so its harmonics do not fold back": "曲线以文件的多少倍速率运行，使其谐波不会折叠回来",
++"As loud as it came, to compare by ear; or as it comes out of the curve": "保持进来时的响度，便于用耳朵比较；或按曲线输出的原样",
++"as it came": "保持原响度",
++"as it comes out": "按输出原样",
++"Trim, dB": "微调，dB",
++"A last trim, dB; the true peak is kept under −0.3 dBTP in any case, and said": "最后的微调，dB；真峰值无论如何都保持在 −0.3 dBTP 以下，并会注明",
++"Through the gateway": "通过网关",
++"About a tenth of the song's length on Forge's CPU at 4×. The tree says what it adds to a −12 dBFS tone (the 2nd and 3rd harmonics) and its loudness in and out; a branch of it can be the analog gateway's source, the Remaster's, or another gateway's.": "在 Forge 的 CPU 上以 4× 约需歌曲时长的十分之一。树中会显示它给 −12 dBFS 音调增加了什么（2 次和 3 次谐波），以及输入和输出的响度；它的分支可作为模拟网关、重制或另一个网关的来源。",
++"Could not": "未能完成",
++"running on Forge: the bar above says how far; it lands in the tree": "正在 Forge 上运行：上方进度条显示进度；结果会出现在树中",
++"The monitor": "监听",
++"A second output on Forge, to listen there: the analog gateway's return plays through it live while it prints, and any file of the tree plays through it from its «On Forge». The browser's own output stays as it is.": "Forge 上的第二个输出，用于在那里聆听：模拟网关的返回信号在打印时实时播放，树中任何文件都可通过“在 Forge 上”播放。浏览器自身的输出保持不变。",
++"The interface you listen through on Forge; not the gateway's own output": "在 Forge 上用来聆听的接口；不是网关自身的输出",
++"Monitor out": "监听输出",
++"The rate it runs at": "其运行的采样率",
++"Tone": "测试音",
++"A 1 kHz tone at −20 dBFS through the monitor for a second and a half": "通过监听播放 1 kHz、−20 dBFS 的音调一秒半",
++"Stop what plays through the monitor": "停止通过监听播放的内容",
++"Stopped": "已停止",
++"No monitor: the tree plays in the browser only": "无监听：树仅在浏览器中播放",
++"Keep a monitor first": "请先保存一个监听",
++"A 1 kHz tone at −20 dBFS plays through {0} for a second and a half. Turn the monitors down if they are on.": "1 kHz、−20 dBFS 的音调将通过 {0} 播放一秒半。若监听音箱开着，请调低音量。",
++"The tone plays…": "测试音播放中…",
++"The tone went out through {0}": "测试音已通过 {0} 输出",
++"Not on Forge: {0}": "未能在 Forge 上播放：{0}",
++"On Forge": "在 Forge 上",
++"Play it through Forge's monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before": "通过 Forge 的监听（Audio I/O）从其播放器所在位置播放；再点一次停止。浏览器照常播放",
++"waiting": "等待中",
++"step {0} of {1}": "第 {0} 步，共 {1} 步",
++"about {0} left": "约剩 {0}",
++"longer than usual": "比平常更久",
++"plugin": "插件",
++"the Artist": "画师",
++"Equal loudness": "等响度",
++"Each version turned down to the quietest one's loudness (BS.1770, measured on Forge), so the ear hears the sound and not the level": "每个版本都降到最安静那个的响度（BS.1770，在 Forge 上测量），让耳朵听的是声音而不是电平"
+ });
+diff --git a/tools/console/heresy-post.js b/tools/console/heresy-post.js
+index 37a509b..a200d95 100644
+--- a/tools/console/heresy-post.js
++++ b/tools/console/heresy-post.js
+@@ -15,6 +15,7 @@
+     { id: "upscalePanel", step: "upscale", label: "Upscale", say: "redraw the top", group: "mend" },
+     { id: "derivedPanel", step: "stems", label: "Stems", say: "split", group: "mend" },
+     { id: "dawPanel", step: "daw", label: "DAW", say: "mix the stems", group: "finish" },   // HERESY 1471
++    { id: "gatePanel", step: "gate", label: "Digital Gateway", say: "tape, console, tube", group: "finish" },   // HERESY 1547
+     { id: "remasterPanel", step: "remaster", label: "Remaster", say: "the Debunker", group: "finish" },
+     { id: "audioPanel", step: "audio", label: "Audio I/O", say: "the interfaces", group: "setup" }   // HERESY 1512
+   ];
+@@ -125,7 +126,7 @@
+       (s.hz432 === false ? "440" : "432") + " Hz · " + (s.loudnorm === false ? "no loudnorm" : s.lufs + " LUFS");
+   }
+   var MARK = { waiting: "·", running: "…", done: "✓", failed: "✕" };
+-  var NAMES = { debuzz: "Debuzz", upscale: "Upscale", remaster: "Remaster", inspect: "Artifacts", spectrum: "Spectrum", gloss: "Lyrics", stems: "Stems" };
++  var NAMES = { gate: "Digital Gateway", debuzz: "Debuzz", upscale: "Upscale", remaster: "Remaster", inspect: "Artifacts", spectrum: "Spectrum", gloss: "Lyrics", stems: "Stems" };
+   function paintChain(job) {
+     chain.job = job;                                 // HERESY 1510: for the chain's node
+     if (typeof cvPaint === "function") setTimeout(cvPaint, 0);
+@@ -225,10 +226,14 @@
+       state.done.remaster = !!kinds.remaster;
+       state.done.upscale = !!kinds.upscale;
+       state.done.debuzz = !!kinds.debuzz;
++      state.done.gate = !!kinds.gate;                 // HERESY 1547
+       paint();
+     });
+     select(recall() || STEPS[0].id);
+     window.addEventListener("heresy-derived", paintTree);   // HERESY 1540: its count as the branches come
++    document.addEventListener("click", function (e) { var mb = e.target.closest && e.target.closest("#derivedTree [data-dv-mon]"); if (mb) monRow(mb); });   // HERESY 1548
++    window.addEventListener("heresy-derived", function () { if (MON.on) monPaintRows(MON.on); });
++    fetch("/lab/audio/devices", { priority: "low" }).then(function (r) { return r.json(); }).then(function (d) { monSet((d.monitor || {}).out || ""); }, function () { /* no lab: no monitor */ });
+     loadPlugins();                                   // HERESY 1460
+     cvInit();                                        // HERESY 1506
+   }
+@@ -258,8 +263,8 @@
+   // and after, Esc or a click beside it back. Dragged nodes stay where put (Arrange lays them out anew)
+   var CV = { on: false, pos: {}, open: "", el: null, hold: null, drag: null, quietUntil: 0, timer: 0 };
+   var CV_KEY = "yue2.refinerView", CV_POS = "yue2.refinerCanvasPos", NODE_W = 196, NODE_H = 84;
+-  var KIND_NODE = { debuzz: "debuzzPanel", upscale: "upscalePanel", stems: "derivedPanel", remaster: "remasterPanel", daw: "dawPanel" };
+-  var LANE = { debuzzPanel: [1, 0], upscalePanel: [2, 0], derivedPanel: [3, 0], dawPanel: [4, 0], remasterPanel: [4, 1],
++  var KIND_NODE = { debuzz: "debuzzPanel", upscale: "upscalePanel", stems: "derivedPanel", remaster: "remasterPanel", daw: "dawPanel", gate: "gatePanel" };   // 1547
++  var LANE = { debuzzPanel: [1, 0], upscalePanel: [2, 0], derivedPanel: [3, 0], dawPanel: [4, 0], remasterPanel: [4, 1], gatePanel: [3, 1],   // 1547
+                spectrumPanel: [1, 2], inspectPanel: [2, 2], glossPanel: [3, 2], audioPanel: [4, 2] };   // 1512: the Audio I/O under the Remaster
+   // HERESY 1508: the chain's nodes: what «up to here» names, and the chain's own check a node is bypassed by (the Remaster always runs)
+   var CHAIN_NODE = { debuzzPanel: { until: "debuzz", box: "pcDebuzz", key: "debuzz" }, upscalePanel: { until: "upscale", box: "pcUpscale", key: "upscale" },
+@@ -349,9 +354,9 @@
+     var d = /^derived\/([^/]+)/.exec(String(v || ""));
+     return d && by[d[1]] ? cvNodeOf(by[d[1]]) : "";
+   }
+-  var SRC_SEL = { debuzzPanel: "dbSource", upscalePanel: "upSource", derivedPanel: "stSource", remasterPanel: "rmSource", inspectPanel: "inSource", glossPanel: "glossSource" };
++  var SRC_SEL = { gatePanel: "gtSource", debuzzPanel: "dbSource", upscalePanel: "upSource", derivedPanel: "stSource", remasterPanel: "rmSource", inspectPanel: "inSource", glossPanel: "glossSource" };
+   function srcSelect(id) { return SRC_SEL[id] ? $(SRC_SEL[id]) : /^pl-/.test(id) ? document.querySelector("#" + id + " .pl-source") : null; }
+-  var OUT_NODES = { take: 1, debuzzPanel: 1, upscalePanel: 1, derivedPanel: 1, remasterPanel: 1, dawPanel: 1 };
++  var OUT_NODES = { take: 1, debuzzPanel: 1, upscalePanel: 1, derivedPanel: 1, remasterPanel: 1, dawPanel: 1, gatePanel: 1 };   // 1547
+   function cvLink(from, to) {                           // the newest branch of «from» as «to»'s source, as a pick in its Source would make it
+     var sel = srcSelect(to), by = cvById(), best = null, say = chain.hooks && chain.hooks.toast;
+     if (!sel || from === to) { if (say) say(tr("{0} takes no source").replace("{0}", tr(cvTitle(to).replace(/^\d+ \u00b7 /, ""))), "bad"); return false; }
+@@ -382,6 +387,7 @@
+   }
+   function cvWireList(f) {
+     var w = [["take", "debuzzPanel"], ["debuzzPanel", "upscalePanel"], ["upscalePanel", "derivedPanel"], ["derivedPanel", "dawPanel"], ["derivedPanel", "remasterPanel"],
++             ["dawPanel", "gatePanel", 1], ["gatePanel", "remasterPanel", 1],   // HERESY 1547: a mix through the gateway, the gateway's into the Remaster
+              ["take", "spectrumPanel", 1], ["take", "inspectPanel", 1], ["take", "glossPanel", 1], ["importPanel", "take", 1]];
+     STEPS.forEach(function (st) { if (st.plugin) w.push(st.spec && st.spec.input === "stems" ? ["derivedPanel", st.id] : ["take", st.id, 1]); });
+     CV.clones.forEach(function (c) { w.filter(function (x) { return x[1] === c.of; }).forEach(function (x) { w.push([x[0], c.id, 1]); }); });   // HERESY 1516: a clone's way is its own's
+@@ -544,7 +550,7 @@
+   // ---- HERESY 1516 (Viktor 16.10.2026: «Клонирование некоторых нод»): a step's node cloned: a second Remaster (an Upscale, a Debuzz, a plugin's
+   // step) with its own settings, beside its own. Its window is the step's own panel with the clone's settings in it while it is open (the
+   // step's own are put back on closing), so a run from there runs with them and its file lands in the tree as the step's always does
+-  var CLONES_KEY = "yue2.refinerClones", CLONABLE = { debuzzPanel: 1, upscalePanel: 1, remasterPanel: 1 }, CLONE_MAX = 8;
++  var CLONES_KEY = "yue2.refinerClones", CLONABLE = { debuzzPanel: 1, upscalePanel: 1, remasterPanel: 1, gatePanel: 1 }, CLONE_MAX = 8;   // 1547
+   CV.clones = []; CV.swap = null;
+   function clRecall() {
+     try { CV.clones = (JSON.parse(localStorage.getItem(CLONES_KEY) || "[]") || []).filter(function (c) { return c && c.id && c.of && c.n; }); } catch (e) { CV.clones = []; }
+@@ -1012,17 +1018,76 @@
+       '<button type="button" class="btn ghost small" id="auProbe" data-tip="Two seconds from the input: with nothing playing into it, the converter\'s own noise">Measure the input\'s floor</button>' +
+       '<button type="button" class="btn ghost small" id="auLoop" data-tip="A 1 kHz tone at −20 dBFS out through the output and back from the input: did it come back, its gain, the noise before it, its THD">Loop test</button>' +
+       '<span class="row-hint mono" id="auState"></span></div>' +
+-      '<p class="row-hint">A plugin\'s analog step plays through the output chosen here and records from the input, at this rate.</p></div></div>';
++      '<p class="row-hint">A plugin\'s analog step plays through the output chosen here and records from the input, at this rate.</p></div>' +
++      // HERESY 1548: the monitor, a second output on Forge
++      '<div class="au-gate au-mon"><div class="peek-cap">The monitor</div>' +
++      '<p class="row-hint">A second output on Forge, to listen there: the analog gateway\'s return plays through it live while it prints, and any file of the tree plays through it from its «On Forge». The browser\'s own output stays as it is.</p><div class="rm-grid">' +
++      '<label class="field" data-tip="The interface you listen through on Forge; not the gateway\'s own output"><span class="label">Monitor out</span><select id="auMon"></select></label>' +
++      '<label class="field" data-tip="The rate it runs at"><span class="label">Rate</span><select id="auMonRate"></select></label></div>' +
++      '<div class="dv-actions"><button type="button" class="btn primary small" id="auMonKeep">Keep</button>' +
++      '<button type="button" class="btn ghost small" id="auMonTone" data-tip="A 1 kHz tone at −20 dBFS through the monitor for a second and a half">Tone</button>' +
++      '<button type="button" class="btn ghost small" id="auMonStop" data-tip="Stop what plays through the monitor">Stop</button>' +
++      '<span class="row-hint mono" id="auMonState"></span></div></div></div>';
+     var box = document.querySelector("#view-post > .dv-tree-box");
+     if (box) box.parentNode.insertBefore(d, box); else if ($("view-post")) $("view-post").appendChild(d);
+     $("auLook").addEventListener("click", function () { auLoad(true); });
+     $("auKeep").addEventListener("click", auKeep);
+     $("auProbe").addEventListener("click", auProbe);
+     $("auLoop").addEventListener("click", auLoop);   // HERESY 1514
++    $("auMonKeep").addEventListener("click", monKeep);   // HERESY 1548
++    $("auMonTone").addEventListener("click", monTone);
++    $("auMonStop").addEventListener("click", function () { monCall("/lab/audio/monitor/stop", {}).then(function () { monSay(tr("Stopped")); monPaintRows(false); }); });
++    $("auMon").addEventListener("change", function () { monRates(0); });
+     $("auOut").addEventListener("change", auRates);
+     $("auIn").addEventListener("change", auRates);
+     window.addEventListener("heresy-post-step", function (e) { if (e.detail && e.detail.panel === "audioPanel") auLoad(false); });
+   }
++  // HERESY 1548: the monitor: kept, a tone, and the tree's «On Forge»
++  var MON = { out: "", on: "", timer: 0 };
++  function monSay(text, bad) { var el = $("auMonState"); if (el) { el.textContent = text || ""; el.classList.toggle("is-bad", !!bad); } }
++  function monCall(url, body) {
++    return fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) })
++      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j; }); });
++  }
++  function monSet(out) { MON.out = out; document.body.classList.toggle("has-monitor", !!out); }
++  function monRates(want) {
++    var sel = $("auMonRate"), f = $("auMon")._formats && $("auMon")._formats[$("auMon").value], ok = RATES.filter(function (r) { return !f || !f.rates.length || f.rates.indexOf(r) >= 0; });
++    var keep = want || +sel.value;
++    sel.innerHTML = ok.map(function (r) { return '<option value="' + r + '">' + khz(r) + "</option>"; }).join("");
++    sel.value = ok.indexOf(keep) >= 0 ? String(keep) : ok.indexOf(48000) >= 0 ? "48000" : String(ok[0] || "");
++  }
++  function monKeep() {
++    monCall("/lab/audio/monitor", { out: $("auMon").value, rate: +$("auMonRate").value || 0 }).then(function (j) {
++      if (au.data) au.data.monitor = j.monitor;
++      monSet(j.monitor.out || "");
++      monSay(j.monitor.out ? tr("Kept: {0}").replace("{0}", j.monitor.out + (j.monitor.rate ? " \u00b7 " + khz(j.monitor.rate) : "")) : tr("No monitor: the tree plays in the browser only"));
++    }, function (e) { monSay(tr("Not kept: {0}").replace("{0}", e.message), true); });
++  }
++  function monTone() {
++    if (!MON.out) { monSay(tr("Keep a monitor first"), true); return; }
++    var go = window.HeresyDialog ? window.HeresyDialog.confirm(tr("A 1 kHz tone at \u221220 dBFS plays through {0} for a second and a half. Turn the monitors down if they are on.").replace("{0}", MON.out),
++                                                             { ok: tr("Play it"), cancel: tr("Cancel") }) : Promise.resolve(true);
++    go.then(function (yes) {
++      if (yes !== true) return;
++      monSay(tr("The tone plays\u2026"));
++      monCall("/lab/audio/monitor/tone", {}).then(function () { monSay(tr("The tone went out through {0}").replace("{0}", MON.out)); }, function (e) { monSay(e.message, true); });
++    });
++  }
++  function monPaintRows(on) {
++    MON.on = on || "";
++    Array.prototype.forEach.call(document.querySelectorAll("#derivedTree [data-dv-mon]"), function (b) { var x = b.dataset.dvMon === MON.on; b.classList.toggle("is-on", x); b.setAttribute("aria-pressed", x); });
++    clearInterval(MON.timer);
++    if (on !== false && MON.on !== "") MON.timer = setInterval(function () {   // ended by itself: the button goes dark
++      fetch("/lab/audio/devices", { priority: "low" }).then(function (r) { return r.json(); }).then(function (d) { if (!d.playing || !d.playing.playing) monPaintRows(false); }, function () { /* try again */ });
++    }, 2000);
++  }
++  function monRow(b) {
++    if (!state.take) return;
++    var path = b.dataset.dvMon, row = b.closest(".dv-node"), au2 = row && row.querySelector("audio");
++    if (MON.on === path) { monCall("/lab/audio/monitor/stop", {}).then(function () { monPaintRows(false); }); return; }
++    monCall("/lab/audio/monitor/play", { name: state.take.name, source: path, at: au2 ? au2.currentTime || 0 : 0, label: (row && row.querySelector(".dv-name") || {}).textContent || "" })
++      .then(function () { monPaintRows(path); }, function (e) { if (chain.hooks && chain.hooks.toast) chain.hooks.toast(tr("Not on Forge: {0}").replace("{0}", e.message), "bad"); });
++  }
+   function auSay(text, bad) { var el = $("auState"); if (el) { el.textContent = text || ""; el.classList.toggle("is-bad", !!bad); } }
+   function khz(r) { return (r / 1000).toString().replace(/\.0$/, "") + " kHz"; }
+   function fmt(f) {
+@@ -1064,6 +1129,9 @@
+       list.forEach(function (o) { if (o[2]) sel._formats[o[0]] = o[2]; });
+     }
+     fill($("auOut"), outs, g.out); fill($("auIn"), ins, g.in);
++    var mo = d.monitor || {};                         // HERESY 1548
++    if ($("auMon")) { fill($("auMon"), outs, mo.out); monRates(mo.rate); monSay(mo.out ? tr("Kept: {0}").replace("{0}", mo.out + (mo.rate ? " \u00b7 " + khz(mo.rate) : "")) : ""); }
++    monSet(mo.out || "");
+     auRates(g.rate);
+     auSay(g.out || g.in ? tr("Kept: {0}").replace("{0}", [g.out || "\u2014", g.in || "\u2014", g.rate ? khz(g.rate) : ""].filter(Boolean).join(" \u00b7 ")) : "");
+   }
+diff --git a/tools/console/heresy-progress.js b/tools/console/heresy-progress.js
+new file mode 100644
+index 0000000..a12f88e
+--- /dev/null
++++ b/tools/console/heresy-progress.js
+@@ -0,0 +1,54 @@
++// HERESY 1549 (Viktor 18.10.2026: «Порогресс бары повсюду прикрути где только возможно. Сделай как в Художнике… снизу прямо над
++// плеером отцентрованно, примерно 800px шириной полосу»): what the lab is doing now, in every room, a bar each, centred above the
++// player: a training run and the listener by their steps, a job of the Refiner by its time against what it is expected to take (the
++// lab counts both, so the page's clock does not matter), a job that says nothing of its length striped, its time running. The
++// Artist's own runs keep their bar in its room and are left out there.
++(function () {
++  "use strict";
++  var P = { rows: [], at: 0, timer: 0, hid: {} };
++  function $(id) { return document.getElementById(id); }
++  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
++  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
++  function clock(s) { s = Math.max(0, Math.round(s)); return s >= 3600 ? Math.floor(s / 3600) + ":" + ("0" + Math.floor(s % 3600 / 60)).slice(-2) + ":" + ("0" + s % 60).slice(-2) : Math.floor(s / 60) + ":" + ("0" + s % 60).slice(-2); }
++  function title(name) { return String(name || "").replace(/^\d{8}-\d{6}-(\d+-)?/, ""); }
++  function strip() {
++    var el = $("jobStrip");
++    if (!el) { el = document.createElement("div"); el.id = "jobStrip"; el.className = "job-strip"; el.setAttribute("aria-live", "polite"); el.hidden = true; document.body.appendChild(el); }
++    return el;
++  }
++  function artRoom() { var v = document.getElementById("view-artist"); return !!v && !v.classList.contains("is-hidden") && v.offsetParent !== null; }
++  function paint() {
++    var el = strip(), since = (Date.now() - P.at) / 1000, art = artRoom();
++    var rows = P.rows.filter(function (r) { return !(art && /^(art|artist)\b/.test(r.key || "")); });
++    var bar = $("playbar");
++    var br = bar ? bar.getBoundingClientRect() : null;   // fixed, so no offsetParent: its box says where it stands
++    el.style.bottom = ((br && br.height ? Math.max(0, window.innerHeight - br.top) : 0) + 10) + "px";
++    if (!rows.length) { el.hidden = true; el.innerHTML = ""; return; }
++    el.hidden = false;
++    var shown = rows.slice(0, 4);
++    el.innerHTML = shown.map(function (r) {
++      var pct = null, say = "";
++      if (r.status !== "running") say = tr("waiting");
++      else if (r.steps) { pct = Math.min(1, (r.step || 0) / r.steps); say = tr("step {0} of {1}").replace("{0}", r.step || 0).replace("{1}", r.steps); }
++      else if (r.expect) {
++        var el2 = (r.elapsed || 0) + since;
++        pct = Math.min(0.97, el2 / r.expect);
++        say = clock(el2) + (el2 < r.expect ? " · " + tr("about {0} left").replace("{0}", clock(r.expect - el2)) : " · " + tr("longer than usual"));
++      } else if (r.elapsed != null) say = clock(r.elapsed + since);
++      var what = String(r.what || "").split(" · ").map(tr).join(" · ") + (r.label ? " · " + r.label : "");
++      return '<div class="js-row' + (pct == null ? " is-open" : "") + (r.status !== "running" ? " is-waiting" : "") + '">' +
++        '<div class="js-head"><b>' + esc(what) + '</b><span class="js-name" translate="no">' + esc(title(r.name)) + "</span>" +
++        (r.gpu != null && r.gpu !== "cpu" ? '<span class="js-gpu mono">GPU ' + esc(r.gpu) + "</span>" : "") +
++        '<span class="js-time mono">' + esc(say) + (pct != null ? " · " + Math.round(pct * 100) + "%" : "") + "</span></div>" +
++        '<span class="ar-progress-bar js-bar"><i style="width:' + (pct == null ? 100 : Math.round(pct * 100)) + '%"></i></span></div>';
++    }).join("") + (rows.length > 4 ? '<div class="js-more row-hint">' + esc(tr("and {0} more").replace("{0}", rows.length - 4)) + "</div>" : "");
++  }
++  window.addEventListener("heresy-activity", function (e) {
++    P.rows = ((e.detail && e.detail.running) || []).slice();
++    P.at = Date.now();
++    paint();
++    clearInterval(P.timer);
++    if (P.rows.length) P.timer = setInterval(paint, 1000);        // the seconds run on between the lab's answers
++  });
++  window.HeresyProgress = { paint: paint, rows: function () { return P.rows.slice(); } };
++})();
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 29e0e22..6cb0dc9 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1394,6 +1394,41 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         <div class="drawer-body mx-body" id="mxBody"></div>
+       </details>
+ 
++      <!-- HERESY 1547: the Digital Gateway: tape, console, tube, transformer or vinyl in numbers on Forge (lab/digital_gate.py) -->
++      <details class="drawer" id="gatePanel">
++        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Digital Gateway</span><span class="sum-say">The take, or any file made from it, through an analog character in numbers on Forge: tape, console, tube, transformer or vinyl. Its curve oversampled, its tone, its noise, its movement in time; as loud as it came. The analog gateway's twin, without the gear.</span></span></summary>
++        <div class="drawer-body rm-body">
++          <div class="rm-grid">
++            <label class="field" data-tip="What goes through: the take, or any file made from it (a DAW mix, a remaster, another gateway's)"><span class="label">Source</span><select id="gtSource"><option value="">the take</option></select></label>
++            <label class="field" data-tip="Tape: emphasis into a soft curve, the head bump, hiss, wow and flutter. Console: odd harmonics, crosstalk. Tube: even harmonics and a sag. Transformer: the lows saturate first. Vinyl: lows in mono, the top rolled off, crackle"><span class="label">Character</span><select id="gtChar"><option value="tape">Tape</option><option value="console">Console</option><option value="tube">Tube</option><option value="transformer">Transformer</option><option value="vinyl">Vinyl</option></select></label>
++          </div>
++          <div class="mc-chips gt-presets" role="group" aria-label="Starting points"><button type="button" class="mc-chip" data-gt-preset="Master tape">Master tape</button><button type="button" class="mc-chip" data-gt-preset="Studio tape">Studio tape</button><button type="button" class="mc-chip" data-gt-preset="Cassette">Cassette</button><button type="button" class="mc-chip" data-gt-preset="Console">Console</button><button type="button" class="mc-chip" data-gt-preset="Warm tube">Warm tube</button><button type="button" class="mc-chip" data-gt-preset="Pushed tube">Pushed tube</button><button type="button" class="mc-chip" data-gt-preset="Iron">Iron</button><button type="button" class="mc-chip" data-gt-preset="Old record">Old record</button></div>
++          <div class="rm-grid gt-knobs">
++            <label class="field rm-num" data-tip="How hard it goes into the curve, dB; given back after it, so only the colour changes"><span class="label">Drive, dB</span><input type="number" data-gt="drive_db" min="-6" max="24" step="0.5" /></label>
++            <label class="field rm-num" data-tip="The tape's speed: slower, a lower head bump, an earlier top, more emphasis into the curve (3.75 is a cassette's top)"><span class="label">Speed</span><select data-gt="speed"><option value="30">30 ips</option><option value="15">15 ips</option><option value="7.5">7.5 ips</option><option value="3.75">3.75 ips</option></select></label>
++            <label class="field rm-num" data-tip="The slow wander of the speed, its peak in %"><span class="label">Wow, %</span><input type="number" data-gt="wow" min="0" max="1" step="0.01" /></label>
++            <label class="field rm-num" data-tip="The fast flutter of the speed, its peak in %"><span class="label">Flutter, %</span><input type="number" data-gt="flutter" min="0" max="0.5" step="0.01" /></label>
++            <label class="field rm-num" data-tip="One side this many microseconds late: a head not quite square; it dulls the top in mono"><span class="label">Azimuth, µs</span><input type="number" data-gt="azimuth_us" min="0" max="60" step="1" /></label>
++            <label class="field rm-num" data-tip="The supply giving a little when it is pushed: a soft, slow compression"><span class="label">Sag</span><input type="number" data-gt="sag" min="0" max="1" step="0.05" /></label>
++            <label class="field rm-num" data-tip="How often the surface crackles"><span class="label">Crackle</span><input type="number" data-gt="crackle" min="0" max="1" step="0.05" /></label>
++            <label class="field rm-num" data-tip="The turntable's rumble, dBFS (−120: none)"><span class="label">Rumble, dB</span><input type="number" data-gt="rumble_db" min="-120" max="-40" step="1" /></label>
++            <label class="field rm-num" data-tip="Below this the two sides become one, as a cut must have them (0: off)"><span class="label">Mono below, Hz</span><input type="number" data-gt="mono_below_hz" min="0" max="400" step="10" /></label>
++            <label class="field rm-num" data-tip="The character's own noise (hiss, hum of the iron, the surface), dBFS; −120 is none"><span class="label">Noise, dB</span><input type="number" data-gt="grain_db" min="-120" max="-40" step="1" /></label>
++            <label class="field rm-num" data-tip="The other side's highs leaking in, dB; −120 is none"><span class="label">Crosstalk, dB</span><input type="number" data-gt="crosstalk_db" min="-120" max="-20" step="1" /></label>
++            <label class="field rm-num" data-tip="The stereo width after it: 0 % mono, 100 % as it was, 200 % the sides doubled"><span class="label">Width, %</span><input type="number" data-gt="width" min="0" max="200" step="5" /></label>
++            <label class="field rm-num" data-tip="How much of it against the source, in parallel: 100 % all through it"><span class="label">Mix, %</span><input type="number" data-gt="mix" min="0" max="100" step="5" /></label>
++            <label class="field rm-num" data-tip="The curve runs this many times faster than the file, so its harmonics do not fold back"><span class="label">Oversampling</span><select data-gt="oversample"><option value="4">4×</option><option value="2">2×</option><option value="8">8×</option></select></label>
++            <label class="field rm-num" data-tip="As loud as it came, to compare by ear; or as it comes out of the curve"><span class="label">Level</span><select data-gt="level"><option value="came">as it came</option><option value="out">as it comes out</option></select></label>
++            <label class="field rm-num" data-tip="A last trim, dB; the true peak is kept under −0.3 dBTP in any case, and said"><span class="label">Trim, dB</span><input type="number" data-gt="trim_db" min="-12" max="12" step="0.5" /></label>
++          </div>
++          <div class="dv-actions">
++            <button type="button" class="btn primary small" id="gtRun">Through the gateway</button>
++            <span class="row-hint mono" id="gtState"></span>
++          </div>
++          <p class="row-hint">About a tenth of the song's length on Forge's CPU at 4×. The tree says what it adds to a −12 dBFS tone (the 2nd and 3rd harmonics) and its loudness in and out; a branch of it can be the analog gateway's source, the Remaster's, or another gateway's.</p>
++        </div>
++      </details>
++
+       <!-- HERESY 1022: the Debunker v6 pipeline on the take or its stems (lab/remaster_job.py) -->
+       <details class="drawer" id="remasterPanel">
+         <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Remaster</span><span class="sum-say">The Debunker v6 on Forge: mix the stems or take the take, clean, de-ess, 432 Hz, loudness. Each run is a new branch of the tree.</span></span></summary>
+@@ -2145,6 +2180,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+ <script src="heresy-inspect.js"></script>
+ <script src="heresy-derived.js"></script>
+ <script src="heresy-post.js"></script>
++<script src="heresy-gate.js"></script>   <!-- HERESY 1547: the Digital Gateway's panel -->
++<script src="heresy-progress.js"></script>   <!-- HERESY 1549: the lab's work, a bar each above the player -->
+ <script src="heresy-mixdsp.js"></script>   <!-- HERESY 1531: the mixer's compressor and meters (worklet or script processor) -->
+ <script src="heresy-mixer.js"></script>   <!-- HERESY 1471: the Refiner's DAW -->
+ <script src="heresy-console.js"></script>   <!-- HERESY 1531: the DAW's console and devices -->
+-- 
+2.43.0
+

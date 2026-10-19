@@ -21,6 +21,26 @@ COLORS = {"mix": (217, 157, 16), "vocals": (224, 93, 93), "instrumental": (93, 1
           "score": (160, 120, 200), "lyrics": (150, 150, 150)}
 
 
+
+# HERESY 1475: what waits, muted, when the project opens: the mix beside stems; a set's instrumental or whole voice beside its own
+# parts; every set less detailed than the most detailed one the take has (its parts would double the same sound)
+PARTS = {"instrumental": ("drums", "bass", "other", "guitar", "piano", "winds"), "vocals": ("lead_vocal", "backing_vocals")}
+RANK = {"vocals": 0, "four": 1, "six": 2, "eight": 3}
+
+
+def waiting(sources, modes):
+    top = max([RANK.get(m, 0) for m in modes[1:]] or [-1])
+    have = {}
+    for (label, kind, src), mode in zip(sources, modes):
+        have.setdefault(mode, set()).add(kind)
+    out = []
+    for (label, kind, src), mode in zip(sources, modes):
+        if mode == "mix":
+            out.append(len(sources) > 1)
+        else:
+            out.append(RANK.get(mode, 0) < top or any(n in have[mode] for n in PARTS.get(kind, ())))
+    return out
+
 def _q(s):
     """A string as REAPER quotes it: double quotes, unless the text has them, then single or back quotes."""
     s = str(s).replace("\n", " ").replace("\r", " ")
@@ -139,11 +159,14 @@ def build(kit, outputs, name, midi=None, cache=None):
         kind = m.get("mode") or "vocals"
         if kind not in newest or str(m.get("created") or "") >= str(newest[kind].get("created") or ""):
             newest[kind] = m
+    modes = ["mix"]                                      # HERESY 1475: each track's set, for what sounds when the project opens
     for m in (newest[k] for k in sorted(newest)):
         for f in m.get("files", []):
             p = d / f["path"]
             if p.is_file():
-                sources.append((f["name"].capitalize() + ("" if m.get("mode") in (None, "vocals") else f" ({m['mode']})"), f["name"], p))
+                sources.append(((f.get("title") or f["name"].capitalize()) + ("" if m.get("mode") in (None, "vocals") else f" ({m['mode']})"), f["name"], p))   # 1463
+                modes.append(m.get("mode") or "vocals")
+    mutes = waiting(sources, modes)
     if not sources[0][2].is_file():
         raise FileNotFoundError(f"{name} has no audio (audio.wav, .flac or .mp3)")
     rows = None
@@ -157,11 +180,11 @@ def build(kit, outputs, name, midi=None, cache=None):
     work = out_dir / f".{safe}-{uuid.uuid4().hex[:8]}"
     (work / "audio").mkdir(parents=True)
     said, tracks, length = [], [], 0.0
-    for label, kind, src in sources:
+    for (label, kind, src), muted in zip(sources, mutes):
         wav = work / "audio" / f"{len(tracks):02d}-{kind}.wav"
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-ar", "48000", "-c:a", "pcm_s24le", str(wav)], check=True, timeout=600)
         secs = _seconds(wav); length = max(length, secs)
-        mute = 1 if kind == "mix" and len(sources) > 1 else 0
+        mute = 1 if muted else 0                        # HERESY 1475: the parts sound, the rest waits
         tracks.append([f"<TRACK", f"NAME {_q(label)}", f"PEAKCOL {_col(kind)}", f"MUTESOLO {mute} 0 0",
                        "<ITEM", "POSITION 0", f"LENGTH {secs:.6f}", f"NAME {_q(label)}",
                        "<SOURCE WAVE", f"FILE {_q('audio/' + wav.name)}", ">", ">", ">"])

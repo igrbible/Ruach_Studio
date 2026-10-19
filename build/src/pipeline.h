@@ -68,6 +68,12 @@ struct Yue2Pipeline {
     // it), the set merged for the run in progress, and why the last run failed
     std::string              lora_dir;
     std::shared_ptr<LoraSet> loras;
+    // HERESY 1447: the run's LoRAs that run with the graph (a wave or a budget): their source, opened at strength 1 and
+    // bound to the model; each half's choices; the budgets; each half's set as built on the model it was built for
+    std::shared_ptr<LoraSet>  lora_rt_src;
+    std::vector<LoraRtChoice> lora_rt_choices[2];
+    std::vector<LoraRtGroup>  lora_rt_groups[2];
+    LoraRtSet                 lora_rt[2];
     std::string              last_error;
     std::string              broken_score;  // HERESY 1087: the score a run was stopped for, shown to the user
     DebugDumper        dumper;
@@ -186,6 +192,28 @@ static void pipeline_free(Yue2Pipeline * p) {
 // configured paths, and applies the runtime knobs after every require
 // (idempotent on cache hits). The NAR bakes them into its graph at build
 // time, the LM reads them at every forward.
+// HERESY 1447: the run's set of a half on the model just required: kept when built for this very model (its weights the
+// same), built anew otherwise; false with the reason in last_error
+static bool pipeline_lora_rt(Yue2Pipeline * p, int half, const void * model, ggml_backend_t backend, int n_layers,
+                             const void * weights) {
+    LoraRtSet & set = p->lora_rt[half];
+    if (p->lora_rt_choices[half].empty() || !p->lora_rt_src) {
+        return true;
+    }
+    if (set.allocated && set.owner == model && set.owner_buf == weights) {
+        return true;
+    }
+    std::string error;
+    if (!lora_rt_load(&set, backend, p->lora_rt_src.get(), p->lora_rt_choices[half], p->lora_rt_groups[half], half, n_layers, model,
+                      half == 1 ? p->kv.cfg.max_seq_len : 0, &error)) {
+        fprintf(stderr, "[LoRA] FATAL: %s\n", error.c_str());
+        p->last_error = "LoRA: " + error;
+        return false;
+    }
+    set.owner_buf = weights;
+    return true;
+}
+
 static Qwen3LM * require_lm(Yue2Pipeline * p) {
     ModelKey k = { MODEL_LM, p->model_path };
     if (p->loras && !p->loras->sig[0].empty()) {   // Local addition: the music half's LoRAs
@@ -199,6 +227,12 @@ static Qwen3LM * require_lm(Yue2Pipeline * p) {
     if (m) {
         m->use_flash_attn = m->use_flash_attn && !p->params.no_fa && !p->params.no_fa_lm;
         m->clamp_fp16     = p->params.clamp_fp16;
+        // HERESY 1447: the run's LoRAs that run with the graph, or none (a set of a run before is never left on it)
+        if (!pipeline_lora_rt(p, 0, m, m->backend, m->cfg.n_layers, m->wctx.buffer)) {
+            qw3lm_set_lora_rt(m, nullptr);
+            return nullptr;
+        }
+        qw3lm_set_lora_rt(m, p->lora_rt_choices[0].empty() ? nullptr : &p->lora_rt[0]);
     }
     return m;
 }
@@ -216,6 +250,12 @@ static Yue2NAR * require_nar(Yue2Pipeline * p) {
     if (m) {
         m->use_flash_attn = m->use_flash_attn && !p->params.no_fa;
         m->clamp_fp16     = p->params.clamp_fp16;
+        // HERESY 1447: as the music half's (the graph is built at every evaluation and reads it then)
+        if (!pipeline_lora_rt(p, 1, m, m->backend, m->cfg.n_layers, m->wctx.buffer)) {
+            m->lora_rt = nullptr;
+            return nullptr;
+        }
+        m->lora_rt = p->lora_rt_choices[1].empty() ? nullptr : &p->lora_rt[1];
     }
     return m;
 }
@@ -242,12 +282,15 @@ static bool pipeline_vae_path(const Yue2Pipeline * p, const std::string & name, 
 
 // Local addition: open the run's LoRAs and check every target against the model's
 // shapes before anything loads; false with the reason
-static bool pipeline_open_loras(Yue2Pipeline * p, const std::vector<Yue2LoraChoice> & choices, std::string * error) {
+static bool pipeline_open_loras(Yue2Pipeline * p, const std::vector<Yue2LoraChoice> & choices,
+                                const std::vector<Yue2LoraGroup> & groups, std::string * error) {
     if (p->lora_dir.empty()) {
         *error = "this server was started without a LoRA folder (--loras)";
         return false;
     }
-    std::vector<std::tuple<std::string, double, double>> list;
+    std::vector<std::tuple<std::string, double, double>> list, rt;   // 1447: rt, the graph's, at strength 1
+    std::vector<LoraRtChoice>                            rt_choices[2];
+    std::vector<std::pair<size_t, std::pair<bool, bool>>> skips;   // 1447: a merged file's A and B left to the graph
     for (const Yue2LoraChoice & c : choices) {
         if (c.id.empty() || c.id[0] == '/' || c.id.find("..") != std::string::npos) {
             *error = "bad LoRA id '" + c.id + "'";
@@ -262,11 +305,68 @@ static bool pipeline_open_loras(Yue2Pipeline * p, const std::vector<Yue2LoraChoi
             *error = "LoRA strengths go from 0 to 2";
             return false;
         }
-        list.emplace_back(path, c.ar, c.nar);
+        // HERESY 1447: a wave or a budget takes the adapter off the merge, in each half it reaches with A and B only
+        const bool graph = !c.curve.empty() || (c.group >= 0 && c.group < (int) groups.size());
+        float      merge[2] = { c.ar, c.nar };
+        if (graph) {
+            LoraFile lf;
+            if (!lora_plan(path, &lf)) {
+                *error = c.id + ": " + lf.error;
+                return false;
+            }
+            bool full[2] = { false, false }, low[2] = { false, false };
+            for (const LoraGroup & g : lf.groups) {
+                full[g.half] |= g.kind != LoraGroup::LORA;
+                low[g.half] |= g.kind == LoraGroup::LORA;
+            }
+            float on_graph[2] = { 0.0f, 0.0f };
+            bool  skip[2]     = { false, false };
+            for (int h = 0; h < 2; h++) {
+                const float s = h ? c.nar : c.ar;
+                if (s == 0.0f || !low[h]) {
+                    if (s != 0.0f) {
+                        fprintf(stderr, "[LoRA] %s has no A and B in the %s half: merged there at %.2f, its wave and budget not applied\n",
+                                c.id.c_str(), h ? "sound" : "music", (double) s);
+                    }
+                    continue;
+                }
+                on_graph[h] = s;
+                if (full[h]) {  // its full deltas merged at their flat strength, its A and B on the wave
+                    skip[h] = true;
+                    fprintf(stderr, "[LoRA] %s: its full deltas in the %s half merged at %.2f, its A and B on the wave\n",
+                            c.id.c_str(), h ? "sound" : "music", (double) s);
+                } else {
+                    merge[h] = 0.0f;
+                }
+            }
+            rt.emplace_back(path, 1.0, 1.0);
+            for (int h = 0; h < 2; h++) {
+                LoraRtChoice rc;
+                rc.path     = path;
+                rc.id       = c.id;
+                rc.strength = on_graph[h];
+                rc.curve    = c.curve;
+                rc.group    = c.group;
+                rt_choices[h].push_back(rc);
+            }
+            skips.push_back({ list.size(), { skip[0], skip[1] } });
+        }
+        list.emplace_back(path, merge[0], merge[1]);
     }
     auto set = std::make_shared<LoraSet>();
     if (!lora_set_open(list, set.get(), error)) {
         return false;
+    }
+    if (!skips.empty()) {  // HERESY 1447: those files' A and B out of the merge, and their store keys say so
+        set->lora_skip.assign(set->files.size(), { false, false });
+        for (const auto & sk : skips) {
+            set->lora_skip[sk.first] = sk.second;
+            for (int h = 0; h < 2; h++) {
+                if (h ? sk.second.second : sk.second.first) {
+                    set->sig[h] += "~full-deltas-only:" + std::get<0>(list[sk.first]) + ";";
+                }
+            }
+        }
     }
     GGUFModel gf;
     if (!gf_load(&gf, p->model_path.c_str())) {
@@ -274,9 +374,33 @@ static bool pipeline_open_loras(Yue2Pipeline * p, const std::vector<Yue2LoraChoi
         return false;
     }
     bool ok = lora_bind(set.get(), gf_lora_rows, (void *) &gf, error);
+    std::shared_ptr<LoraSet> rt_set;
+    if (ok && !rt.empty()) {  // HERESY 1447: the graph's, at strength 1, checked against the model as the merge's are
+        rt_set = std::make_shared<LoraSet>();
+        ok     = lora_set_open(rt, rt_set.get(), error) && lora_bind(rt_set.get(), gf_lora_rows, (void *) &gf, error);
+    }
     gf_close(&gf);
     if (ok) {
         p->loras = set;
+        if (rt_set) {
+            p->lora_rt_src = rt_set;
+            for (int h = 0; h < 2; h++) {
+                bool any = false;
+                for (const LoraRtChoice & rc : rt_choices[h]) {
+                    any |= rc.strength != 0.0f;
+                }
+                p->lora_rt_choices[h] = any ? rt_choices[h] : std::vector<LoraRtChoice>{};
+            }
+            for (int h = 0; h < 2; h++) {   // each half its own cap
+                p->lora_rt_groups[h].clear();
+                for (const Yue2LoraGroup & g : groups) {
+                    LoraRtGroup G;
+                    G.cap  = h ? g.cap_nar : g.cap;
+                    G.mode = g.mode;
+                    p->lora_rt_groups[h].push_back(G);
+                }
+            }
+        }
     }
     return ok;
 }
@@ -476,7 +600,15 @@ static bool pipeline_generate(Yue2Pipeline *          p,
     struct LoraScope {
         Yue2Pipeline * p;
 
-        ~LoraScope() { p->loras.reset(); }
+        ~LoraScope() {
+            p->loras.reset();
+            p->lora_rt_src.reset();  // HERESY 1447: and the graph's (a model keeps no pointer past its next require)
+            for (int h = 0; h < 2; h++) {
+                p->lora_rt_choices[h].clear();
+                lora_rt_free(&p->lora_rt[h]);
+                p->lora_rt_groups[h].clear();
+            }
+        }
     } lora_scope = { p };
     p->last_error.clear();
     g_nar_error.clear();   // HERESY 1169
@@ -496,13 +628,14 @@ static bool pipeline_generate(Yue2Pipeline *          p,
     p->broken_score.clear();
     if (!r.loras.empty()) {
         std::string error;
-        if (!pipeline_open_loras(p, r.loras, &error)) {
+        if (!pipeline_open_loras(p, r.loras, r.lora_groups, &error)) {
             fprintf(stderr, "[LoRA] FATAL: %s\n", error.c_str());
             p->last_error = "LoRA: " + error;
             return false;
         }
         for (const Yue2LoraChoice & c : r.loras) {
-            fprintf(stderr, "[LoRA] %s: music %.2f, sound %.2f\n", c.id.c_str(), c.ar, c.nar);
+            fprintf(stderr, "[LoRA] %s: music %.2f, sound %.2f%s%s\n", c.id.c_str(), c.ar, c.nar,
+                    c.curve.empty() ? "" : ", a wave", c.group >= 0 ? ", in a budget" : "");   // HERESY 1447
         }
     }
 
@@ -536,6 +669,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
             return false;
         }
         lm_hold.emplace(p->store, lm);
+        lora_rt_at(&p->lora_rt[0], -1.0f, true, "the plan and the prompt at their own strengths");   // HERESY 1447
     }
     Timer            score_timer;                    // HERESY 1399
     std::vector<int> score_tokens(B, 0);
@@ -624,6 +758,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
     std::vector<Yue2Generation> codes(B);
     SliderSet                   sliders;
     bool                        sliders_used = false;
+    int                         lora_span    = 0;   // HERESY 1447: the frames the LoRAs' waves run over, as the music counted them
     if (replay) {
         std::vector<int> values;
         if (!pipeline_parse_tokens(r.semantic_tokens, &values)) {
@@ -699,6 +834,8 @@ static bool pipeline_generate(Yue2Pipeline *          p,
                     keep.size() / (double) YUE2_FRAME_RATE, semantic.max_tokens);
         }
         sliders.kept     = (int) keep.size();     // HERESY 1166: a curve runs over the whole song, the kept part too
+        p->lora_rt[0].kept = (int) keep.size();   // HERESY 1447: and a LoRA's wave
+        lora_span          = (int) keep.size() + semantic.max_tokens;
         Timer music_timer;                           // HERESY 1399
         music_kept       = (int) keep.size();
         bool semantic_ok = yue2_generate(lm, &p->kv, gen_prefixes, gen_negatives, guidance, semantic, r.lm_seed,
@@ -815,6 +952,11 @@ static bool pipeline_generate(Yue2Pipeline *          p,
                     return false;
                 }
                 ModelHandle lm_chunk_hold(p->store, lm_chunk);
+                {   // HERESY 1447: the music half reads the chunk again with its LoRAs' waves at the chunk's middle
+                    const int   sp  = lora_span > 0 ? lora_span : T_lat;
+                    const float mid = ((float) start + 0.5f * (float) frames) / (float) sp;
+                    lora_rt_at(&p->lora_rt[0], mid > 1.0f ? 1.0f : mid, false, "the music half reads a chunk again at");
+                }
                 qw3lm_kv_trim(&p->kv, i, kept);
                 qw3lm_forward(lm_chunk, &p->kv, sequence.data() + kept, ar_len - kept, i, probe.data(), row0, rows);
             }
@@ -825,6 +967,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
                 }
                 nar_hold.emplace(p->store, nar);
             }
+            lora_rt_frames(&p->lora_rt[1], start, frames, lora_span > 0 ? lora_span : T_lat);   // HERESY 1447: frame by frame
 
             // The first chunk of the first song feeds the cossim harness: the
             // sequence the latent block attends to, then the solver probes

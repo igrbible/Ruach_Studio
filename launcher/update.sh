@@ -14,10 +14,22 @@ step "① the code"
 changed=$(git status --porcelain --untracked-files=no | wc -l)
 [ "$changed" = 0 ] || stop "$changed files git tracks were changed here: an update would mix them; update by hand"
 before=$(cat VERSION 2>/dev/null)
-git fetch --tags --force origin || stop "git could not reach the repository"
 branch=$(git symbolic-ref -q --short HEAD) || { git checkout -q main || stop "git could not go back to main"; branch=main; }   # the page's own update leaves a release tag checked out
-git pull --ff-only origin "$branch" || stop "$branch here has moved apart from the repository's: update by hand"
+was=$(git rev-parse -q --verify "refs/remotes/origin/$branch" 2>/dev/null || true)   # HERESY 1551: the repository's branch as this copy last saw it
+git fetch --tags --force origin || stop "git could not reach the repository"
+if git merge-base --is-ancestor HEAD "origin/$branch" 2>/dev/null; then
+  git pull --ff-only origin "$branch" || stop "$branch here has moved apart from the repository's: update by hand"
+elif [ -n "$was" ] && git merge-base --is-ancestor HEAD "$was" 2>/dev/null; then
+  # HERESY 1551: nothing of this copy's own, and still no way forward: the repository wrote its history anew; follow it, keep the old line
+  keep="ruach-before-$(date +%Y%m%d-%H%M%S)"
+  git branch -f "$keep" HEAD || stop "git could not keep the old line"
+  git reset -q --hard "origin/$branch" || stop "git could not follow the repository's $branch"
+  echo "  the repository wrote its history anew: this copy follows it (nothing of its own was lost; the old line is kept as $keep)"
+else
+  stop "$branch here has commits of its own the repository does not have: update by hand (git log origin/$branch..$branch shows them)"
+fi
 echo "  $before → $(cat VERSION 2>/dev/null)"
+[ -n "${RUACH_UPDATE_CODE_ONLY:-}" ] && { echo "${G}the code only (RUACH_UPDATE_CODE_ONLY).${X}"; exit 0; }
 # HERESY 1352: from here to its last step the update is unfinished, and Pinokio's menu offers to finish it
 mkdir -p tmp && echo "an update to $(cat VERSION 2>/dev/null) began $(date '+%F %T') and has not ended" > tmp/update-unfinished
 

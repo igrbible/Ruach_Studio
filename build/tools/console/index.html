@@ -17,8 +17,9 @@
   if ((!sc || sc === "auto") && window.matchMedia) document.documentElement.dataset.theme = matchMedia("(prefers-color-scheme: dark)").matches
     ? localStorage.getItem("yue2.theme.night") || "igr-night" : localStorage.getItem("yue2.theme.day") || "igr-day";
   // HERESY 1426: a chosen font falls back on the studio's own (app.js FONT_BACK), the heading's «same as the text» on the text's
-  var f = JSON.parse(localStorage.getItem("yue2.fonts") || "{}"), g = { sans: '"Noto Sans", sans-serif', heading: "var(--sans)", mono: '"Noto Sans Mono", monospace', rooms: "var(--sans)" };
+  var f = JSON.parse(localStorage.getItem("yue2.fonts") || "{}"), g = { sans: '"Noto Sans", sans-serif', heading: "var(--sans)", mono: '"Noto Sans Mono", monospace', rooms: "var(--sans)", buttons: "var(--sans)" };
   for (var k in g) if (typeof f[k] === "string") document.documentElement.style.setProperty("--" + k, f[k] ? JSON.stringify(f[k]) + ", " + g[k] : "var(--sans)");
+  if (typeof f.buttons !== "string" || f.buttons) document.documentElement.classList.add("fonts-buttons");   // HERESY 1493: Jura on the buttons unless «Same as the text»
   var L = JSON.parse(localStorage.getItem("yue2.look") || '{"corners":"soft","glow":"on","hover":"accent"}'), o = ["hover", "glow", "motion", "corners"];
   for (var i = 0; i < o.length; i++) if (typeof L[o[i]] === "string") document.documentElement.dataset[o[i]] = L[o[i]];
   var T = JSON.parse(localStorage.getItem("yue2.textSize") || "{}");   // HERESY 1169: the text's size before the first paint
@@ -131,7 +132,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <div class="head-more-items">
           <!-- HERESY 1169 (Viktor 07.10.2026: «кнопку экспорта в DAW перенести в спадающее меню… И наверное продублировать в
                правильных местах в самом Огранщике»): out of the bar into ☰; the Refiner has it beside the take in hand -->
-          <button type="button" class="btn ghost small" id="dawOpen" data-icon="daw" data-tip="Out of the studio: the mixed track as it is, or the whole take into your DAW (REAPER, Waveform, Bitwig)">Export to DAW</button>
+          <button type="button" class="btn ghost small" id="dawOpen" data-icon="daw" data-tip="Out of the studio: the mixed track as it is, or the whole take into your DAW (Bitwig, REAPER)">Export to DAW</button>
           <!-- HERESY 1169 (Viktor 07.10.2026: «глобальный скейл шрифтов с минус 2 и плюс до 4… Три кнопочки глобального -=R в спадающее
                меню в баре»): the page's text, smaller or larger, the layout as it is -->
           <div class="hm-fs" data-tip="The whole page's text smaller or larger (−2 to +4 pt): the layout stays; a lifted frame has its own on top">
@@ -207,7 +208,21 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
   <div class="engine-head">
     <h2 class="engine-title"><span class="engine-gear" aria-hidden="true">&#9881;</span> Engine</h2>
     <p class="engine-sub">models, decoders, add-ons and this machine &middot; settings here apply to every song until you change them</p>
-    <button type="button" class="btn ghost small" id="engineBack" data-tip="Back to the song form (Esc)">&larr; Back to compose</button>
+    <button type="button" class="btn ghost small" id="engineBack" data-tip="Close (Esc)">Close</button>
+  </div>
+  <!-- HERESY 1450 (Viktor 14.10.2026: «все блоки, чтобы не было полотенца, оформить вкладками, но не каждый отдельно. Единой
+       тематики блоки в единую вкладку… Лепестки вкладок расположить слева»): the cards by theme, in the order one goes
+       through them from the start; app.js shows one tab's cards (ENGINE_TABS) -->
+  <div class="engine-body">
+  <div class="engine-tabs" role="tablist" aria-orientation="vertical" aria-label="Engine" id="engineTabs">
+    <button type="button" role="tab" class="engine-tab" data-etab="server" aria-selected="true">Server and log</button>
+    <button type="button" role="tab" class="engine-tab" data-etab="machine" aria-selected="false" tabindex="-1">Hardware</button>
+    <button type="button" role="tab" class="engine-tab" data-etab="models" aria-selected="false" tabindex="-1">Models and LoRAs</button>
+    <button type="button" role="tab" class="engine-tab" data-etab="rooms" aria-selected="false" tabindex="-1">Writer and Artwork</button>
+    <button type="button" role="tab" class="engine-tab" data-etab="refiner" aria-selected="false" tabindex="-1">Refiner Room</button>
+    <button type="button" role="tab" class="engine-tab" data-etab="places" aria-selected="false" tabindex="-1">Folders and Security</button>
+    <button type="button" role="tab" class="engine-tab" data-etab="look" aria-selected="false" tabindex="-1">Appearance</button>
+    <button type="button" role="tab" class="engine-tab" data-etab="about" aria-selected="false" tabindex="-1">Updates and About</button>
   </div>
   <div class="engine-grid">
     <!-- HERESY 1166 (Viktor 04.10.2026: «как всё ужать и передвинуть, чтобы на 1080p всё встало красиво»): the cards in the
@@ -322,9 +337,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <!-- HERESY 1437 (Viktor 14.10.2026: «Разметку секций в плеере над волной — отдельным шрифтом… Отдельный шрифт для всех текстовых
              кнопок… ± масштаб относительно основного шрифта: 2pt по 1pt шага») -->
         <label class="field"><span class="label" data-head="the sections' names on the wave">Section marks</span>
-          <span class="font-row"><select id="fontMarks" data-font="marks" data-tip="The font of the sections' names drawn on the wave and on its scope; IBM Plex Mono, as they were, by default"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="marks"><button type="button" class="btn ghost small icon-btn" data-fstep="marks-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="marks">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="marks+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
+          <span class="font-row"><select id="fontMarks" data-font="marks" data-tip="The font of the sections' names drawn on the wave and on its scope; Raleway by default"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="marks"><button type="button" class="btn ghost small icon-btn" data-fstep="marks-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="marks">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="marks+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
         <label class="field"><span class="label" data-head="every button with words, the toggles, the menus' items">Buttons</span>
-          <span class="font-row"><select id="fontButtons" data-font="buttons" data-tip="The font of every button with words, the toggles and the menus' items; the text's by default"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="buttons"><button type="button" class="btn ghost small icon-btn" data-fstep="buttons-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="buttons">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="buttons+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
+          <span class="font-row"><select id="fontButtons" data-font="buttons" data-tip="The font of every button with words, the toggles and the menus' items; Jura by default"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="buttons"><button type="button" class="btn ghost small icon-btn" data-fstep="buttons-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="buttons">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="buttons+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
         <label class="field"><span class="label" data-head="seeds, scores, the log">Numbers and code</span>
           <select id="fontMono" data-font="mono"></select></label>
         <p class="row-hint" id="fontsHint"></p>
@@ -372,6 +387,21 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       <p class="row-hint">Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here, and every picture passes a content filter; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.</p>
     </div>
 
+    <!-- HERESY 1523 (Viktor 17.10.2026: «Холст не делай дефолтным пока что, но в настройках Engine предусмотри эту опцию… отдельной вкладкой
+         Refiner Room»): how the Refiner opens; the List / Canvas button in the room's head still switches at any time -->
+    <div class="card wide eg-refiner" id="refinerCard">
+      <h3>Refiner</h3>
+      <p class="hint">How the Refiner room opens: its steps as a list, or its nodes on a canvas. The List and Canvas button in the room's head switches at any time.</p>
+      <div class="modes rf-opens" id="refinerOpens" role="radiogroup" aria-label="The Refiner opens">
+        <label class="mode"><input type="radio" name="refinerOpens" value="last" /><span class="mode-body"><strong>As it was left</strong>
+          <small>The view the room had when you last left it.</small></span></label>
+        <label class="mode"><input type="radio" name="refinerOpens" value="list" /><span class="mode-body"><strong>Always the list</strong>
+          <small>The steps one under another, as the Refiner began.</small></span></label>
+        <label class="mode"><input type="radio" name="refinerOpens" value="canvas" /><span class="mode-body"><strong>Always the canvas</strong>
+          <small>The nodes and their wires; a click opens one; nothing to scroll at 1080p.</small></span></label>
+      </div>
+    </div>
+
     <div class="card wide lora-card eg-vae">
       <div class="lora-card-head"><h3>VAEs</h3>
         <span class="lora-card-note" id="vaeCardNote"></span></div>
@@ -387,18 +417,11 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       <div class="lora-group" id="loraGroupHub"><h4 class="lora-sub">From Hugging Face <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span></h4><ul class="lora-list" id="loraCard"></ul></div>
     </div>
 
-    <div class="card wide lora-card eg-sliders">
-      <div class="lora-card-head"><h3>Sliders <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span></h3>
-        <span class="lora-card-note" id="sliderCardNote"></span></div>
-      <div class="tile-src card-src" id="sliderSource"></div>
-      <ul class="lora-list slider-list" id="sliderCard"></ul>
-    </div>
-
     <!-- HERESY 1289 (Viktor 10.10.2026: «И нужно в Engine добавить докачку моделей и LoRA»): what the install brings, part by part,
          as its last whole run found it; a part not whole fetched again from here (a download cut short goes on where it stopped);
          the extras each asked with its size (heresy-weights.js over the lab's weights.py, which runs heresy/fetch-heresy.sh) -->
     <div class="card wide eg-models" id="modelsCard">
-      <h3>Models and LoRAs <span class="info" tabindex="-1" role="img" aria-label="About models and LoRAs" data-tip="What the studio downloads beside itself: the decoders and the sliders, Whisper, the stems' models, UniverSR and the LoRAs, which the install brings, and the extras you ask for. Each file comes from Hugging Face at the revision the release pins and is checked against its size; a download cut short goes on where it stopped. Nothing is downloaded until you press Fetch."></span></h3>
+      <h3>Models and LoRAs <span class="info" tabindex="-1" role="img" aria-label="About models and LoRAs" data-tip="What the studio downloads beside itself: the decoders, Whisper, the stems' models, UniverSR and the LoRAs, which the install brings, and the extras you ask for. Each file comes from Hugging Face at the revision the release pins and is checked against its size; a download cut short goes on where it stopped. Nothing is downloaded until you press Fetch."></span></h3>
       <p class="upd-line wt-line" id="wtLine">Asking the lab…</p>
       <div class="wt-top-prog" id="wtProg" hidden></div>   <!-- HERESY 1302: the progress of «what is missing» -->
       <h4 class="lora-sub">What the install brings</h4>
@@ -407,7 +430,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       <div class="wt-extras" id="wtExtras"></div>
       <pre class="wt-log" id="wtLog" hidden translate="no"></pre>
       <div class="card-actions">
-        <button type="button" class="btn ghost small" id="wtRestart" hidden data-tip="The engine reads its backbones, decoders and sliders when it starts">Restart the engine</button>
+        <button type="button" class="btn ghost small" id="wtRestart" hidden data-tip="The engine reads its backbones and decoders when it starts">Restart the engine</button>
         <button type="button" class="btn ghost small" id="wtCheck" data-tip="Compare what is here with the pinned lists again; nothing is downloaded">Check again</button>
         <button type="button" class="btn primary small" id="wtFetch" hidden>Fetch what is missing</button>
       </div>
@@ -453,6 +476,21 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       <div class="pl-rows" id="plRows"><p class="hint">Asking the lab…</p></div>
       <p class="hint pl-job" id="plJob" hidden></p>
       <div class="card-actions"><button type="button" class="btn ghost small" id="plRefresh" data-tip="Count the folders' files and sizes again">Count again</button></div>
+    </div>
+
+    <!-- HERESY 1489 (Viktor 16.10.2026: «Подпись C2PA поддерживаю»; «для паблика нужен выключатель, и в настройках Engine нужные поля
+         для ввода своей инфы»): Content Credentials on the downloads, signed by the lab (c2pa_sign.py) -->
+    <div class="card wide eg-c2pa" id="c2paCard">
+      <h3>Content Credentials (C2PA) <span class="info" tabindex="-1" role="img" aria-label="About Content Credentials" data-tip="A signed record of where a file came from, inside the file: made by AI (YuE2) in Ruach Studio; refined by a person, with its steps, when the Refiner made it; your name and site when you give them. The sound is not touched. The studio signs with its own certificate, made on this computer: readers say the signer is not verified, and the signature holds. A certificate of your own from an authority on the C2PA trust list is named as verified. A take imported from elsewhere goes out as it came."></span></h3>
+      <label class="check" data-tip="Every download of a take or of a file of its tree, and the Library's ZIP, carries its Content Credentials; off, they go out as the engine makes them"><input type="checkbox" id="c2paOn" /> <span>Sign the downloads (WAV, FLAC, MP3 and the Library's ZIP)</span></label>
+      <div class="c2pa-form">
+        <label class="field" data-tip="Your name as the record gives it; empty: no name in it"><span class="label">Author</span><input type="text" id="c2paAuthor" maxlength="300" placeholder="your name, as readers should see it" /></label>
+        <label class="field" data-tip="A site (https://…) or an e-mail beside the name"><span class="label">Site or contact</span><input type="text" id="c2paContact" maxlength="300" placeholder="https://… or an e-mail" /></label>
+        <label class="field" data-tip="A certificate chain of your own (PEM), e.g. from an authority on the C2PA trust list; empty: the studio's own, made on this computer"><span class="label">Your certificate (PEM)</span><input type="text" id="c2paCert" maxlength="300" placeholder="a file's path; empty: the studio's own" /></label>
+        <label class="field" data-tip="The private key of that certificate (PEM): read by the lab on this computer only, never sent anywhere"><span class="label">Its key (PEM)</span><input type="text" id="c2paKey" maxlength="300" placeholder="the key file's path" /></label>
+      </div>
+      <p class="hint" id="c2paSay">Asking the lab…</p>
+      <div class="card-actions"><button type="button" class="btn primary small" id="c2paSave">Keep it</button></div>
     </div>
 
     <div class="card wide about-card eg-about" id="aboutCard">
@@ -522,6 +560,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     </div>
     <!-- /credits -->
   </div>
+  </div><!-- /engine-body -->
 </section>
 
 <!-- ------------------------------------------------------------- workspace -->
@@ -551,9 +590,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <button class="btn ghost small" id="loadExample" data-icon="example" data-tip="Load an example: a random official demo, or one of ours by name (Readings…)" aria-haspopup="true" aria-expanded="false">Load example</button>
         <div class="menu-pop is-hidden" id="exampleMenu" role="menu"></div>
         </div>
-        <button class="btn ghost small" id="clearForm" data-icon="clear" data-tip="Clear the words: title, style, lyrics, score, seeds and loaded codes. The mode, knobs, sliders and LoRAs stay (New song resets them too, all but Sound and output)">Clear</button>
+        <button class="btn ghost small" id="clearForm" data-icon="clear" data-tip="Clear the words: title, style, lyrics, score, seeds and loaded codes. The mode, knobs and LoRAs stay (New song resets them too, all but Sound and output)">Clear</button>
       </div>
-      <button type="button" class="btn ghost small" id="newSong" data-icon="newsong" data-tip="Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, sliders, LoRAs and Instrumental back to their defaults. Sound and output (VAE, solver, steps, length, format) and the theme stay.">New song</button>
+      <button type="button" class="btn ghost small" id="newSong" data-icon="newsong" data-tip="Start a new song: every field, both seeds, the score, loaded music codes, the mode, sampling, LoRAs and Instrumental back to their defaults. Sound and output (VAE, solver, steps, length, format) and the theme stay.">New song</button>
       <!-- HERESY 1168 (Viktor 06.10.2026: «в комнате Творца прикрути на каждый фрейм — левый и правый — разворот этого фрейма на
            "полный экран", в оверлей окно 95%x95%, с увеличением масштаба всего фрейма здесь на добрых 20%… Также в оверлеях
            кнопку переключения между фреймами»): this frame over the room, larger; from there, the other frame -->
@@ -618,6 +657,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
             <span class="wr-hand-acts">
               <select id="wrHandPick" aria-label="Load a document from the Writer" data-tip="A song from the Writer into this form: its title, style and lyrics. It stays in hand, so the takes made from it are linked to it in the Writer."></select>
               <button type="button" class="btn ghost small" id="wrHandSave">Save to Writer…</button>
+              <button type="button" class="btn ghost small" id="crVersions" data-tip="Every Generate keeps this title's style, lyrics and score apart from the takes: its versions, a diff of two, one back into the form">Versions</button>
             </span>
           </div>
           <!-- HERESY 1006: the title on its own line at full width, the two seeds side by side below it -->
@@ -679,7 +719,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <!-- HERESY 1032: profiles: every knob but the texts. Music 8:00 and Speech 15:00 are built in -->
           <div class="lib-row" id="setupLibRow">
             <span class="label">Profile</span>
-            <select id="setupLib" aria-label="Profiles" data-tip="A profile sets the mode, length, sampling, guidance, steps, VAE, sliders, LoRAs and output; the texts and seeds stay"></select>
+            <select id="setupLib" aria-label="Profiles" data-tip="A profile sets the mode, length, sampling, guidance, steps, VAE, LoRAs and output; the texts and seeds stay"></select>
             <button type="button" class="btn ghost small" id="setupApply">Apply</button>
             <button type="button" class="btn ghost small" id="setupSave" data-tip="Keep every knob of the form under a name, on Forge">Save</button>
             <button type="button" class="btn ghost small" id="setupDel" disabled>Delete</button>
@@ -727,13 +767,6 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <fieldset class="field sound" data-fold="vae">
             <span class="label">VAE <span class="info" tabindex="-1" role="img" aria-label="About the VAE" data-tip-ref="tip-vae" data-tip-head="turns the written song into sound"></span></span>
             <div class="toggles" id="decoders"></div>
-          </fieldset>
-
-          <fieldset class="field sound" data-fold="sliders">
-            <span class="label">Sliders <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="-1" role="img" aria-label="About the sliders" data-tip-ref="tip-sliders" data-tip-head="voice and genre while the music is written; 0 is off, 1 is full"></span></span>
-            <div class="slider-active" id="sliderActive"></div>
-            <div class="slider-chips" id="sliderChips"></div>
-            <p class="row-hint" id="sliderHint"></p>
           </fieldset>
         </section>
         <section class="k-card k-loras">
@@ -915,15 +948,23 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
               <div class="out-sub">
                 <h4><span class="dot dim"></span> Sound and Output</h4>
                 <div class="out-grid">
-                  <label class="field"><span class="label" data-head="sound solver">Denoising steps</span>
-                    <input type="number" id="odeSteps" step="1" min="1" max="160" /></label>
+                  <!-- HERESY 1498 (Viktor 16.10.2026: «Замени поле ввода шагов семплинга в Выводе на ползунок с 8-160 границами. Шаг 8. Дефолт 32»):
+                       nine stops, 8 apart to 32, then 16, then 32; the number field stays as the value's holder for the rest of the page -->
+                  <label class="field steps-field"><span class="label" data-head="sound solver">Denoising steps</span>
+                    <span class="steps-road"><input type="range" id="odeStepsRange" min="0" max="8" step="1" value="3" aria-label="Denoising steps"
+                      data-tip="Denoising steps of the sound half, by Viktor's ear on Heun (16.10.2026): 8 to 24 thin, sand, the voice hurries; 32 the default, where it starts to come; 64 the sweet spot; 128 likely overburn; 160 overburn and wasted GPU time. Midpoint and Heun take two network calls a step, Multistep and Euler one." /><output id="odeStepsOut" class="mono">32</output></span>
+                    <input type="number" id="odeSteps" step="1" min="1" max="160" hidden /></label>
                   <label class="field"><span class="label" data-head="sound ODE">Solver</span>
-                    <select id="odeSolver">
+                    <select id="odeSolver" data-tip="The sound half's solver. Midpoint (the release) and Heun take two network calls a step, second order; Multistep one call a step, second order (it reuses the velocity of the step before); Euler one call, first order, a draft. With one take's codes and one sound seed, Midpoint, Multistep and Euler close in on the same sound as the steps grow (16.10.2026): Midpoint by 64, Multistep by 128, Euler slowly.">   <!-- HERESY 1498b: the calls a step in the tip, the names short -->
                       <option value="midpoint">Midpoint · release</option>
-                      <option value="multistep">Multistep · 1 call/step</option>
+                      <option value="multistep">Multistep</option>
                       <option value="heun">Heun</option>
                       <option value="euler">Euler · draft</option>
                     </select></label>
+                  <!-- HERESY 1498 (Viktor 16.10.2026: «что если сделать опцию для генерации семплов сразу по паре или тройке семпплеров? Например выбрал
+                       2 вариации + 3 семплера с их шагом. В итоге получил 6 семплов»): each take of the run rendered again by the solvers ticked here -->
+                  <div class="field also-field"><span class="label" data-head="the same music, the same sound seed">Also render with</span>
+                    <div class="also-list" id="alsoSolvers"></div></div>
                   <label class="field"><span class="label" data-head="seconds">Max length</span>
                     <input type="number" id="maxLength" step="10" /></label>
                   <label class="field"><span class="label">Format <span class="info" tabindex="-1" role="img" aria-label="About the output format" data-tip-ref="tip-output"></span></span>
@@ -982,6 +1023,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
   <section class="col take-col" id="view-take">
     <div class="col-head">
       <h2 id="takeTitle">Smithery Is Idle</h2>
+      <!-- HERESY 1488: the take's menu from the card (its rows of buttons live there) -->
+      <button type="button" class="btn ghost small take-more is-hidden" id="takeMore" aria-label="Everything for this take" data-tip="Everything for this take: its menu, as a right-click on it opens">⋯</button>
       <!-- HERESY 1432 (Viktor 14.10.2026: «Кнопку "Play this song"… в строку с svg кнопками, оставить её крашеной, шириной в две
            иконки, заменить текст на плеерную svg иконку PLAY») -->
       <button type="button" class="btn primary small is-hidden" id="playHere" data-ui="play" aria-label="Play this song" data-tip="Play this song now (the player keeps what it was playing until you do). Double-clicking a song in the list plays it too."></button>
@@ -1006,7 +1049,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <span class="run-clock mono" id="runClock">0:00</span>
         <span class="run-what" id="runWhat"></span>
         <div class="spacer"></div>
-        <button class="btn ghost small" id="cancelRun">Cancel run</button>
+        <button class="btn ghost small" id="cancelRun" data-tip="Cancel run">Cancel it</button>
       </div>
       <p class="run-seeds mono" id="runSeeds"></p>
       <ol class="stages" id="stages"></ol>
@@ -1022,18 +1065,18 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 
     <div class="take-body is-hidden" id="takeBody">
       <div class="take-tools" id="takeTools">
-        <div class="tool-group tg-dl"><span class="tool-cap">Download</span><div class="tool-row">
-          <a class="btn ghost small" id="dlTakeAudio" download title="Download this song">WAV</a>
-          <a class="btn ghost small" id="dlTakeFlac" download data-tip="FLAC: the same song, lossless (every sample identical to the WAV) at about three quarters of the size. Made on the spot in about a second; the title and lyrics are written into the file.">FLAC</a>
-          <span class="split-btn"><a class="btn ghost small" id="dlTakeMp3" download data-tip="MP3 converter: makes a shareable MP3 from the lossless song on the server (a few seconds the first time, then kept). 320 kbps is near transparent (about 7 MB for 3 minutes); 256 is very good; 192 is good and smaller (about 4 MB); 128 is small, with audible loss on cymbals and reverb. The song title and lyrics are written into the file.">MP3</a>
+        <div class="tool-group tg-dl"><span class="tool-cap"><span class="tl-cap-ico" data-ui="download" aria-hidden="true"></span>Download</span><div class="tool-row">
+          <a class="btn ghost small" id="dlTakeAudio" download title="Download this song"><span class="tl-ico" data-ui="file-down" aria-hidden="true"></span><span class="tl-name">WAV</span></a>
+          <a class="btn ghost small" id="dlTakeFlac" download data-tip="FLAC: the same song, lossless (every sample identical to the WAV) at about three quarters of the size. Made on the spot in about a second; the title and lyrics are written into the file."><span class="tl-ico" data-ui="file-down" aria-hidden="true"></span><span class="tl-name">FLAC</span></a>
+          <span class="split-btn"><a class="btn ghost small" id="dlTakeMp3" download data-tip="MP3 converter: makes a shareable MP3 from the lossless song on the server (a few seconds the first time, then kept). 320 kbps is near transparent (about 7 MB for 3 minutes); 256 is very good; 192 is good and smaller (about 4 MB); 128 is small, with audible loss on cymbals and reverb. The song title and lyrics are written into the file."><span class="tl-ico" data-ui="file-down" aria-hidden="true"></span><span class="tl-name">MP3</span></a>
             <select class="mp3-rate" id="mp3Rate" aria-label="MP3 bitrate" data-tip="MP3 converter: makes a shareable MP3 from the lossless song on the server (a few seconds the first time, then kept). 320 kbps is near transparent (about 7 MB for 3 minutes); 256 is very good; 192 is good and smaller (about 4 MB); 128 is small, with audible loss on cymbals and reverb. The song title and lyrics are written into the file.">
           <option value="320">320k</option><option value="256">256k</option>
           <option value="192">192k</option><option value="128">128k</option>
         </select></span>
         </div></div>
-        <div class="tool-group tg-again"><span class="tool-cap">Make again</span><div class="tool-row">
+        <div class="tool-group tg-again"><span class="tool-cap"><span class="tl-cap-ico" data-ui="refresh" aria-hidden="true"></span>Make again</span><div class="tool-row">
           <button type="button" class="btn ghost small" id="retakeTake" data-tip="Retake: this exact take into the form, with its score, both seeds and its music codes. Generate renders the same music again: try another VAE, sound seed or sound variations">Retake</button>
-          <button type="button" class="btn ghost small" id="reuseTake" data-tip="Reuse: the prompt, lyrics and every setting (mode, sampling, guidance, VAE, sliders, LoRAs, output) for a new song: no score, no seeds, no music codes, so Generate writes new music">Reuse</button>
+          <button type="button" class="btn ghost small" id="reuseTake" data-tip="Reuse: the prompt, lyrics and every setting (mode, sampling, guidance, VAE, LoRAs, output) for a new song: no score, no seeds, no music codes, so Generate writes new music">Reuse</button>
           <button type="button" class="btn ghost small" id="rerenderSound" title="Same music, a new sound seed (seconds)">Re-render sound</button>
           <button type="button" class="btn ghost small" id="regenFrom" data-tip="Regenerate from here: everything before the chosen moment stays exactly as it is (its music codes are kept), and the music is written anew from there with a new music seed. The moment is where the player stands when this take plays; otherwise you are asked. For a song or reading that breaks down after a point.">Regenerate from…</button>
           <button type="button" class="btn ghost small" id="transcribeTake" data-tip="SheetSage2 writes this take's own sound down as a score (the server reads the take itself; nothing is uploaded), into the form for a cover: with chords, or the melody only, as chosen under Cover a recording. Good for a reading made in Direct mode, which has no score.">Transcribe this take</button>
@@ -1042,19 +1085,19 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <button type="button" class="btn ghost small" id="fadeIn" data-tip="Fade the take in: its first seconds rise from silence (2 s unless you say otherwise), for a song that starts too abruptly. From the take's kept latents in seconds (the very sound), else its music codes rendered again. A new take; this one stays.">Fade in…</button>
         </div></div>
         <!-- HERESY 1356 (from SUNO v6): the take's own sound cut on its score's sections or stretched; a new take each time -->
-        <div class="tool-group tg-edit"><span class="tool-cap">Edit</span><div class="tool-row">
-          <button type="button" class="btn ghost small" id="cropTake" data-tip="Crop: keep the stretch from one section to another of this take's own sound, cut on its score's bar lines, the score cut along. A new take; this one stays.">Crop…</button>
-          <button type="button" class="btn ghost small" id="cutSection" data-tip="Remove a section: take one or more sections out of this take's own sound, each cut on its score's bar lines and healed by a short crossfade, the score cut along. A new take; this one stays.">Remove a section…</button>
-          <button type="button" class="btn ghost small" id="speedTake" data-tip="Speed: this take faster or slower, its pitch kept (Rubber Band), its score's tempo written anew. A new take; this one stays.">Speed…</button>
+        <div class="tool-group tg-edit"><span class="tool-cap"><span class="tl-cap-ico" data-ui="pencil" aria-hidden="true"></span>Edit</span><div class="tool-row">
+          <button type="button" class="btn ghost small" id="cropTake" data-tip="Crop: keep the stretch from one section to another of this take's own sound, cut on its score's bar lines, the score cut along. A new take; this one stays."><span class="tl-ico" data-ui="crop" aria-hidden="true"></span><span class="tl-name">Crop…</span></button>
+          <button type="button" class="btn ghost small" id="cutSection" data-tip="Remove a section: take one or more sections out of this take's own sound, each cut on its score's bar lines and healed by a short crossfade, the score cut along. A new take; this one stays."><span class="tl-ico" data-ui="scissors" aria-hidden="true"></span><span class="tl-name">Remove a section…</span></button>
+          <button type="button" class="btn ghost small" id="speedTake" data-tip="Speed: this take faster or slower, its pitch kept (Rubber Band), its score's tempo written anew. A new take; this one stays."><span class="tl-ico" data-ui="gauge" aria-hidden="true"></span><span class="tl-name">Speed…</span></button>
         </div></div>
-        <div class="tool-group tg-refine"><span class="tool-cap">Refiner</span><div class="tool-row">
-          <button type="button" class="btn ghost small" data-post-open="spectrumPanel" data-tip="This take in the Refiner: its spectrum">Spectrum</button>
-          <button type="button" class="btn ghost small" data-post-open="glossPanel" data-tip="This take in the Refiner: Whisper against the lyrics">Lyrics check</button>
+        <div class="tool-group tg-refine"><span class="tool-cap"><span class="tl-cap-ico" data-ui="sparkles" aria-hidden="true"></span>Refiner</span><div class="tool-row">
+          <button type="button" class="btn ghost small" data-post-open="spectrumPanel" data-tip="This take in the Refiner: its spectrum"><span class="tl-ico" data-ui="spectrum" aria-hidden="true"></span><span class="tl-name">Spectrum</span></button>
+          <button type="button" class="btn ghost small" data-post-open="glossPanel" data-tip="This take in the Refiner: Whisper against the lyrics"><span class="tl-ico" data-ui="spell-check" aria-hidden="true"></span><span class="tl-name">Lyrics check</span></button>
         </div></div>
-        <div class="tool-group tg-files"><span class="tool-cap">Files</span><div class="tool-row">
-          <button type="button" class="btn ghost small" id="dlRequest" title="The replay request (.json): prompt, score, codes and both seeds">Request</button>
-          <button type="button" class="btn ghost small" id="dlScore" title="The score as ABC notation (.abc)">Score</button>
-          <button type="button" class="btn ghost small" id="loopTake" data-tip="A loop from this take: 1, 2, 4 or 8 bars on its score's bar lines, from the bar where the player stands (else the first), seamless (its end runs into its start), saved as a WAV named with its tempo and key">Loop…</button>
+        <div class="tool-group tg-files"><span class="tool-cap"><span class="tl-cap-ico" data-ui="folder" aria-hidden="true"></span>Files</span><div class="tool-row">
+          <button type="button" class="btn ghost small" id="dlRequest" title="The replay request (.json): prompt, score, codes and both seeds"><span class="tl-ico" data-ui="braces" aria-hidden="true"></span><span class="tl-name">Request</span></button>
+          <button type="button" class="btn ghost small" id="dlScore" title="The score as ABC notation (.abc)"><span class="tl-ico" data-ui="music" aria-hidden="true"></span><span class="tl-name">Score</span></button>
+          <button type="button" class="btn ghost small" id="loopTake" data-tip="A loop from this take: 1, 2, 4 or 8 bars on its score's bar lines, from the bar where the player stands (else the first), seamless (its end runs into its start), saved as a WAV named with its tempo and key"><span class="tl-ico" data-ui="repeat" aria-hidden="true"></span><span class="tl-name">Loop…</span></button>
         </div></div>
       </div>
 
@@ -1132,9 +1175,10 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <div class="wr-side-bar">
           <button type="button" class="btn primary small" id="wrNew">＋ New</button>
           <button type="button" class="btn ghost small" id="wrFromCreate" title="A new document from the song in the Creator, with every knob">＋ From the Creator</button>
+          <button type="button" class="btn ghost small" id="wrCreatorVersions" data-tip="Every Generate's words, kept under their title apart from the takes: a take deleted never takes them along">Creator's versions</button>
           <!-- HERESY 1168 (Viktor 07.10.2026: «В комнате Писателя добавить глобальный экспорт/импорт всех данных скопом для бекапа») -->
-          <span class="wr-io"><button type="button" class="btn ghost small" id="wrExport" data-icon="save" aria-label="Export all" data-tip="Export all: every document of the Writer, with its versions, the takes made from it and its trash, in one file (a backup)">Export all</button>
-          <button type="button" class="btn ghost small" id="wrImport" data-icon="open" aria-label="Import a backup" data-tip="Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy. Nothing here is written over">Import</button></span>
+          <span class="wr-io"><button type="button" class="btn ghost small" id="wrExport" data-icon="save" aria-label="Export all" data-tip="Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)">Export all</button>
+          <button type="button" class="btn ghost small" id="wrImport" data-icon="open" aria-label="Import a backup" data-tip="Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over">Import</button></span>
           <input type="file" id="wrImportFile" accept=".json,application/json" aria-label="A Writer backup to import" hidden />
           <span class="coll-n" id="wrCount"></span>
         </div>
@@ -1332,11 +1376,56 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
             <!-- HERESY 1169 (Viktor 08.10.2026: «По дефолту стеммер - four»): four first; from the take or a file made from it -->
             <label class="field dv-src" data-tip="What is split: the take, or a debuzzed or upscaled file of it (the chain splits the one before its remaster). Each source keeps its own set."><span class="label">Source</span><select id="stSource"><option value="">the take</option></select></label>
             <button type="button" class="btn ghost small" data-dv-split="four" data-tip="BS-Roformer ep317 (SDR 12.97) for the voice, then htdemucs_ft on the instrumental: vocals, drums, bass, other and the instrumental, about 6 minutes for 7">Split: four stems</button>
+            <!-- HERESY 1462 (Viktor 15.10.2026: «BS-RoFormer-SW на 6 стемов — только ЗА»): the guitar and the piano of their own -->
+            <button type="button" class="btn ghost small" data-dv-split="six" data-tip="BS-Roformer ep317 (SDR 12.97) for the voice, then jarredou&#39;s BS-Roformer-SW on the instrumental: vocals, drums, bass, guitar, piano, other and the instrumental, about 5 minutes for 7 minutes of song on a 3090">Split: six stems</button>
+            <!-- HERESY 1463 (Viktor 15.10.2026: «правильное именование… lead vocal, backing/choir vocals, winds»): the voice in two, the winds apart -->
+            <button type="button" class="btn ghost small" data-dv-split="eight" data-tip="Six, with the voice in two by becruily&#39;s karaoke Mel-Roformer and the winds out of the rest by UVR&#39;s Wind_Inst: Lead Vocal, Backing Vocals, Vocals (whole), Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090">Split: eight stems</button>
             <button type="button" class="btn ghost small" data-dv-split="vocals" data-tip="BS-Roformer ep317 (SDR 12.97): vocals and instrumental, about 4 minutes for 7">Split: vocals + instrumental</button>
             <span class="row-hint mono" id="derivedState"></span>
             <!-- HERESY 1169: where the stems are made, the way out with them -->
             <button type="button" class="btn ghost small dv-daw" data-daw-open="stems" data-tip="The take with every stem split here, into your DAW: a REAPER project or a DAWproject">Export to DAW</button>
           </div>
+        </div>
+      </details>
+
+      <!-- HERESY 1471: the DAW: a set of stems on lanes, Plenio's stem mixer on Forge (lab/daw.py), heard here as it is set -->
+      <details class="drawer" id="dawPanel">
+        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">DAW</span><span class="sum-say">A set of stems on its lanes: level, mute and solo, a version for each stem, silence drawn on a wave, compression, the room and the delay; heard here as you set it, then mixed on Forge into a branch of the tree.</span></span></summary>
+        <div class="drawer-body mx-body" id="mxBody"></div>
+      </details>
+
+      <!-- HERESY 1547: the Digital Gateway: tape, console, tube, transformer or vinyl in numbers on Forge (lab/digital_gate.py) -->
+      <details class="drawer" id="gatePanel">
+        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Digital Gateway</span><span class="sum-say">The take, or any file made from it, through an analog character in numbers on Forge: tape, console, tube, transformer or vinyl. Its curve oversampled, its tone, its noise, its movement in time; as loud as it came. The analog gateway's twin, without the gear.</span></span></summary>
+        <div class="drawer-body rm-body">
+          <div class="rm-grid">
+            <label class="field" data-tip="What goes through: the take, or any file made from it (a DAW mix, a remaster, another gateway's)"><span class="label">Source</span><select id="gtSource"><option value="">the take</option></select></label>
+            <label class="field" data-tip="Tape: emphasis into a soft curve, the head bump, hiss, wow and flutter. Console: odd harmonics, crosstalk. Tube: even harmonics and a sag. Transformer: the lows saturate first. Vinyl: lows in mono, the top rolled off, crackle"><span class="label">Character</span><select id="gtChar"><option value="tape">Tape</option><option value="console">Console</option><option value="tube">Tube</option><option value="transformer">Transformer</option><option value="vinyl">Vinyl</option></select></label>
+          </div>
+          <div class="mc-chips gt-presets" role="group" aria-label="Starting points"><button type="button" class="mc-chip" data-gt-preset="Master tape">Master tape</button><button type="button" class="mc-chip" data-gt-preset="Studio tape">Studio tape</button><button type="button" class="mc-chip" data-gt-preset="Cassette">Cassette</button><button type="button" class="mc-chip" data-gt-preset="Console">Console</button><button type="button" class="mc-chip" data-gt-preset="Warm tube">Warm tube</button><button type="button" class="mc-chip" data-gt-preset="Pushed tube">Pushed tube</button><button type="button" class="mc-chip" data-gt-preset="Iron">Iron</button><button type="button" class="mc-chip" data-gt-preset="Old record">Old record</button></div>
+          <div class="rm-grid gt-knobs">
+            <label class="field rm-num" data-tip="How hard it goes into the curve, dB; given back after it, so only the colour changes"><span class="label">Drive, dB</span><input type="number" data-gt="drive_db" min="-6" max="24" step="0.5" /></label>
+            <label class="field rm-num" data-tip="The tape's speed: slower, a lower head bump, an earlier top, more emphasis into the curve (3.75 is a cassette's top)"><span class="label">Speed</span><select data-gt="speed"><option value="30">30 ips</option><option value="15">15 ips</option><option value="7.5">7.5 ips</option><option value="3.75">3.75 ips</option></select></label>
+            <label class="field rm-num" data-tip="The slow wander of the speed, its peak in %"><span class="label">Wow, %</span><input type="number" data-gt="wow" min="0" max="1" step="0.01" /></label>
+            <label class="field rm-num" data-tip="The fast flutter of the speed, its peak in %"><span class="label">Flutter, %</span><input type="number" data-gt="flutter" min="0" max="0.5" step="0.01" /></label>
+            <label class="field rm-num" data-tip="One side this many microseconds late: a head not quite square; it dulls the top in mono"><span class="label">Azimuth, µs</span><input type="number" data-gt="azimuth_us" min="0" max="60" step="1" /></label>
+            <label class="field rm-num" data-tip="The supply giving a little when it is pushed: a soft, slow compression"><span class="label">Sag</span><input type="number" data-gt="sag" min="0" max="1" step="0.05" /></label>
+            <label class="field rm-num" data-tip="How often the surface crackles"><span class="label">Crackle</span><input type="number" data-gt="crackle" min="0" max="1" step="0.05" /></label>
+            <label class="field rm-num" data-tip="The turntable's rumble, dBFS (−120: none)"><span class="label">Rumble, dB</span><input type="number" data-gt="rumble_db" min="-120" max="-40" step="1" /></label>
+            <label class="field rm-num" data-tip="Below this the two sides become one, as a cut must have them (0: off)"><span class="label">Mono below, Hz</span><input type="number" data-gt="mono_below_hz" min="0" max="400" step="10" /></label>
+            <label class="field rm-num" data-tip="The character's own noise (hiss, hum of the iron, the surface), dBFS; −120 is none"><span class="label">Noise, dB</span><input type="number" data-gt="grain_db" min="-120" max="-40" step="1" /></label>
+            <label class="field rm-num" data-tip="The other side's highs leaking in, dB; −120 is none"><span class="label">Crosstalk, dB</span><input type="number" data-gt="crosstalk_db" min="-120" max="-20" step="1" /></label>
+            <label class="field rm-num" data-tip="The stereo width after it: 0 % mono, 100 % as it was, 200 % the sides doubled"><span class="label">Width, %</span><input type="number" data-gt="width" min="0" max="200" step="5" /></label>
+            <label class="field rm-num" data-tip="How much of it against the source, in parallel: 100 % all through it"><span class="label">Mix, %</span><input type="number" data-gt="mix" min="0" max="100" step="5" /></label>
+            <label class="field rm-num" data-tip="The curve runs this many times faster than the file, so its harmonics do not fold back"><span class="label">Oversampling</span><select data-gt="oversample"><option value="4">4×</option><option value="2">2×</option><option value="8">8×</option></select></label>
+            <label class="field rm-num" data-tip="As loud as it came, to compare by ear; or as it comes out of the curve"><span class="label">Level</span><select data-gt="level"><option value="came">as it came</option><option value="out">as it comes out</option></select></label>
+            <label class="field rm-num" data-tip="A last trim, dB; the true peak is kept under −0.3 dBTP in any case, and said"><span class="label">Trim, dB</span><input type="number" data-gt="trim_db" min="-12" max="12" step="0.5" /></label>
+          </div>
+          <div class="dv-actions">
+            <button type="button" class="btn primary small" id="gtRun">Through the gateway</button>
+            <span class="row-hint mono" id="gtState"></span>
+          </div>
+          <p class="row-hint">About a tenth of the song's length on Forge's CPU at 4×. The tree says what it adds to a −12 dBFS tone (the 2nd and 3rd harmonics) and its loudness in and out; a branch of it can be the analog gateway's source, the Remaster's, or another gateway's.</p>
         </div>
       </details>
 
@@ -1882,6 +1971,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     <button type="button" class="icon-btn pb-tog autoplay-btn" id="runChime" aria-pressed="true" aria-label="A sound when a run ends"
       data-tip="A sound when a run made here ends: two notes up when it is done (a queue of runs once, when its last one ends), two down when one fails. None over a new song that starts playing by itself; as loud as the player. Click to make none." data-ui="bell">🔔</button>
     <!-- HERESY 1169 · 1374 (Viktor 11.10.2026: «выводить спектральный граф полной длиной на весь трек… Максимум анализа по волне»): the wave's scope -->
+    <!-- HERESY 1498 (Viktor 16.10.2026: «В мегаплеер добавь кнопку выключения Whisper отрисовки секций и лирики… Режим минималки в волне плеера») -->
+    <button type="button" class="icon-btn pb-tog autoplay-btn" id="waveEarBtn" aria-pressed="true" aria-label="Sections and lyrics on the wave"
+      data-tip="Sections and lyrics on the wave: Whisper hears a take to find its sections and bind its lines, and they are drawn on the wave. Click for the bare wave: no Whisper, nothing drawn over it (for a run of tests); click again and they come back." data-ui="ear">👂</button>
     <button type="button" class="icon-btn pb-tog autoplay-btn" id="waveScopeBtn" aria-pressed="true" aria-label="Spectrum over the wave"
       data-tip="Spectrum over the wave: the pointer on the wave brings the whole take's spectrogram up over the player, as wide as the wave, the section's words above it. Click to turn it off." data-ui="scope">▥</button>
     <select class="speed-pick mono" id="playSpeed" aria-label="Playback speed" data-tip="Playback speed: slower to hear a detail, faster to skim; the pitch stays">
@@ -1972,17 +2064,6 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     <dt>Blend</dt><dd><code>Mothersuperior/YuE2-Vae-merge-0.666</code><br />community mix, &#8532; Standard + &#8531; Legacy</dd>
   </dl>
   <p>A finished song can get another VAE version from its page, in seconds.</p>
-</template>
-<template id="tip-sliders">
-  <span class="tip-kind">Sliders &middot; add-on, not stock</span>
-  <p>None of these ship with the model: all of them are one outside maker's add-on (its link and
-    details are in Engine &rsaquo; Sliders). Each nudges the song model toward a voice or a genre while
-    it writes the music, so they change what is played, not just how it sounds.</p>
-  <p>A cousin of a LoRA, not a LoRA: a small trained network that adapts its push to the music as it
-    goes, so it runs live beside the model instead of being merged in. Each one active slows the
-    music stage a little.</p>
-  <p>Tap to add; 0 is off, 1 is full; stack as many as you like. Trained in Direct mode; applied only
-    while the music tokens are written, never to the score or the sound. Experimental.</p>
 </template>
 <template id="tip-model">
   <span class="tip-kind">Backbone file</span>
@@ -2087,6 +2168,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 <script src="heresy-complete.js"></script>
 <script src="heresy-menu.js"></script>
 <script src="heresy-writer.js"></script>
+<script src="heresy-versions.js"></script>
 <script src="heresy-train.js"></script>
 <script src="heresy-gpus.js"></script>
 <script src="heresy-guide.js"></script>
@@ -2098,6 +2180,11 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 <script src="heresy-inspect.js"></script>
 <script src="heresy-derived.js"></script>
 <script src="heresy-post.js"></script>
+<script src="heresy-gate.js"></script>   <!-- HERESY 1547: the Digital Gateway's panel -->
+<script src="heresy-progress.js"></script>   <!-- HERESY 1549: the lab's work, a bar each above the player -->
+<script src="heresy-mixdsp.js"></script>   <!-- HERESY 1531: the mixer's compressor and meters (worklet or script processor) -->
+<script src="heresy-mixer.js"></script>   <!-- HERESY 1471: the Refiner's DAW -->
+<script src="heresy-console.js"></script>   <!-- HERESY 1531: the DAW's console and devices -->
 <script src="heresy-artist.js"></script>
 <script src="heresy-canvas.js"></script>   <!-- HERESY 1346: the Artist's canvas -->
 <script src="heresy-zoom.js"></script>

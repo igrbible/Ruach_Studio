@@ -1,0 +1,663 @@
+From 71fc042fd533c2dea70f3b2cc759c5896030200e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 16 Oct 2026 23:54:27 -0600
+Subject: [PATCH 1440/1463] HERESY 1512: the Refiner's Audio I/O: the machine's
+ interfaces physical and virtual, the analog gateway's output, input and rate
+ kept, an input's floor measured; a Setup step of its own, last, and a node on
+ the canvas
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  12 ++++
+ tools/console/heresy-i18n-be.js |  32 ++++++++-
+ tools/console/heresy-i18n-de.js |  32 ++++++++-
+ tools/console/heresy-i18n-el.js |  32 ++++++++-
+ tools/console/heresy-i18n-es.js |  32 ++++++++-
+ tools/console/heresy-i18n-fr.js |  32 ++++++++-
+ tools/console/heresy-i18n-it.js |  32 ++++++++-
+ tools/console/heresy-i18n-ja.js |  32 ++++++++-
+ tools/console/heresy-i18n-pt.js |  32 ++++++++-
+ tools/console/heresy-i18n-ru.js |  32 ++++++++-
+ tools/console/heresy-i18n-uk.js |  32 ++++++++-
+ tools/console/heresy-i18n-zh.js |  32 ++++++++-
+ tools/console/heresy-post.js    | 116 ++++++++++++++++++++++++++++++--
+ 13 files changed, 465 insertions(+), 15 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 7cf535b..84be8ff 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -6160,3 +6160,15 @@ body.daw-full #dawPanel .mx-wave.mx-ruler { height: 22px; }
+ .mx-wave { height: 64px; transition: none; }
+ .mx-lane.is-open .mx-wave { height: 64px; }
+ 
++/* HERESY 1512: the Refiner's Audio I/O: the interfaces in two columns, the gateway's choice under them */
++.au-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
++.au-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
++.au-list { display: flex; flex-direction: column; gap: 8px; max-height: 42vh; overflow: auto; }
++.au-card { padding: 8px 10px; border: 1px solid var(--line-soft); border-radius: var(--r-sm); }
++.au-card-name { font-weight: 600; margin-bottom: 4px; }
++.au-devs { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
++.au-way { font-size: 11px; color: var(--amber); text-transform: uppercase; letter-spacing: .06em; }
++.au-kind { display: inline-block; min-width: 64px; font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
++.au-gate { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
++#auState.is-bad { color: var(--bad, #e06c5a); }
++
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index ed50d20..f8a9809 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5479,5 +5479,35 @@ RuachI18n.add("be", {
+ "The chain runs past this node: its own check in the chain's row, turned off or on": "Ланцужок ідзе міма гэтай ноды: яе ўласная птушка ў радку ланцужка, знятая ці пастаўленая",
+ "{0} takes no source": "{0}: у гэтай ноды няма крыніцы",
+ "Nothing from {0} for this take yet": "Ад «{0}» у гэтага сэмпла пакуль нічога няма",
+-"Drag to another node: its source becomes this one's newest": "Працягні да іншай ноды: яе крыніцай стане найсвяжэйшае адсюль"
++"Drag to another node: its source becomes this one's newest": "Працягні да іншай ноды: яе крыніцай стане найсвяжэйшае адсюль",
++"Audio I/O": "Аўдыя I/O",
++"the interfaces": "інтэрфейсы",
++"Setup": "Налада",
++"The machine's audio interfaces, physical and virtual, and the analog gateway's choice of them": "Аўдыяінтэрфейсы машыны, фізічныя і віртуальныя, і выбар іх для аналагавага шлюза",
++"Look again": "Паглядзець зноў",
++"Physical": "Фізічныя",
++"Virtual": "Віртуальныя",
++"The analog gateway": "Аналагавы шлюз",
++"Out to the gear": "Выхад да жалеза",
++"In from the gear": "Уваход ад жалеза",
++"Rate": "Частата",
++"Measure the input's floor": "Замераць парог уваходу",
++"Two seconds from the input: with nothing playing into it, the converter's own noise": "Дзве секунды з уваходу: калі ў яго нічога не грае — уласны шум пераўтваральніка",
++"A plugin's analog step plays through the output chosen here and records from the input, at this rate.": "Аналагавы крок плагіна грае праз выбраны тут выхад і піша з уваходу, на гэтай частаце.",
++"No sound card is seen here.": "Гукавых карт тут не відаць.",
++"Looking…": "Гляджу…",
++"The lab did not answer: {0}": "Лаба не адказала: {0}",
++"Choose the input first": "Спачатку выберы ўваход",
++"Listening to the input for two seconds…": "Слухаю ўваход дзве секунды…",
++"The input's floor, RMS / peak dBFS: {0}": "Парог уваходу, RMS / пік dBFS: {0}",
++"Not measured: {0}": "Не замерана: {0}",
++"no sound card is seen here (/proc/asound has none)": "гукавых карт тут не відаць (у /proc/asound пуста)",
++"aplay is not here: ALSA's software devices are not listed": "aplay тут няма: праграмныя прылады ALSA не пералічаны",
++"arecord is not here: ALSA's software devices are not listed": "arecord тут няма: праграмныя прылады ALSA не пералічаны",
++"PipeWire / Pulse do not run here (no pactl answer)": "PipeWire / Pulse тут не запушчаныя (pactl не адказвае)",
++"JACK does not run here (no jack_lsp)": "JACK тут не запушчаны (няма jack_lsp)",
++"the lab reaches the sound devices through sg audio: its service started before the audio group was given": "лаба ходзіць да гукавых прылад праз sg audio: яе служба стартавала раней, чым далі групу audio",
++"The interface the gateway plays a take out through, to the gear": "Інтэрфейс, праз які шлюз выводзіць сэмпл да жалеза",
++"The interface the gateway records the gear back from": "Інтэрфейс, з якога шлюз піша жалеза назад",
++"The rate both run at: the ones the chosen output and input both take": "Частата, на якой ідуць абодва: тыя, што бяруць і выбраны выхад, і ўваход"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index fc59ba0..18c7668 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5362,5 +5362,35 @@ RuachI18n.add("de", {
+ "The chain runs past this node: its own check in the chain's row, turned off or on": "Die Kette läuft an diesem Knoten vorbei: sein eigenes Häkchen in der Zeile der Kette, aus oder an",
+ "{0} takes no source": "{0} nimmt keine Quelle",
+ "Nothing from {0} for this take yet": "Noch nichts von „{0}“ für diesen Take",
+-"Drag to another node: its source becomes this one's newest": "Zu einem anderen Knoten ziehen: seine Quelle wird das Neueste von hier"
++"Drag to another node: its source becomes this one's newest": "Zu einem anderen Knoten ziehen: seine Quelle wird das Neueste von hier",
++"Audio I/O": "Audio I/O",
++"the interfaces": "die Schnittstellen",
++"Setup": "Einrichtung",
++"The machine's audio interfaces, physical and virtual, and the analog gateway's choice of them": "Die Audioschnittstellen der Maschine, physisch und virtuell, und ihre Wahl für das analoge Gateway",
++"Look again": "Noch einmal schauen",
++"Physical": "Physisch",
++"Virtual": "Virtuell",
++"The analog gateway": "Das analoge Gateway",
++"Out to the gear": "Ausgang zur Hardware",
++"In from the gear": "Eingang von der Hardware",
++"Rate": "Rate",
++"Measure the input's floor": "Den Grundpegel des Eingangs messen",
++"Two seconds from the input: with nothing playing into it, the converter's own noise": "Zwei Sekunden vom Eingang: spielt nichts hinein, das Eigenrauschen des Wandlers",
++"A plugin's analog step plays through the output chosen here and records from the input, at this rate.": "Der analoge Schritt eines Plugins spielt über den hier gewählten Ausgang und nimmt vom Eingang auf, mit dieser Rate.",
++"No sound card is seen here.": "Hier ist keine Soundkarte zu sehen.",
++"Looking…": "Ich schaue…",
++"The lab did not answer: {0}": "Das Labor hat nicht geantwortet: {0}",
++"Choose the input first": "Wähle zuerst den Eingang",
++"Listening to the input for two seconds…": "Ich höre zwei Sekunden auf den Eingang…",
++"The input's floor, RMS / peak dBFS: {0}": "Der Grundpegel des Eingangs, RMS / Spitze dBFS: {0}",
++"Not measured: {0}": "Nicht gemessen: {0}",
++"no sound card is seen here (/proc/asound has none)": "hier ist keine Soundkarte zu sehen (/proc/asound ist leer)",
++"aplay is not here: ALSA's software devices are not listed": "aplay ist nicht da: die Software-Geräte von ALSA werden nicht aufgeführt",
++"arecord is not here: ALSA's software devices are not listed": "arecord ist nicht da: die Software-Geräte von ALSA werden nicht aufgeführt",
++"PipeWire / Pulse do not run here (no pactl answer)": "PipeWire / Pulse laufen hier nicht (pactl antwortet nicht)",
++"JACK does not run here (no jack_lsp)": "JACK läuft hier nicht (kein jack_lsp)",
++"the lab reaches the sound devices through sg audio: its service started before the audio group was given": "das Labor erreicht die Soundgeräte über sg audio: sein Dienst startete, bevor die Gruppe audio vergeben wurde",
++"The interface the gateway plays a take out through, to the gear": "Die Schnittstelle, über die das Gateway den Take zur Hardware ausgibt",
++"The interface the gateway records the gear back from": "Die Schnittstelle, von der das Gateway die Hardware zurück aufnimmt",
++"The rate both run at: the ones the chosen output and input both take": "Die Rate beider: die, die der gewählte Ausgang und Eingang beide nehmen"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 71434ad..b0d1e0e 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5478,5 +5478,35 @@ RuachI18n.add("el", {
+ "The chain runs past this node: its own check in the chain's row, turned off or on": "Η αλυσίδα περνά δίπλα από αυτόν τον κόμβο: το δικό του τικ στη γραμμή της αλυσίδας, σβηστό ή αναμμένο",
+ "{0} takes no source": "{0}: αυτός ο κόμβος δεν παίρνει πηγή",
+ "Nothing from {0} for this take yet": "Τίποτα ακόμη από «{0}» για αυτή τη λήψη",
+-"Drag to another node: its source becomes this one's newest": "Σύρε σε άλλον κόμβο: πηγή του γίνεται το νεότερο από εδώ"
++"Drag to another node: its source becomes this one's newest": "Σύρε σε άλλον κόμβο: πηγή του γίνεται το νεότερο από εδώ",
++"Audio I/O": "Ήχος I/O",
++"the interfaces": "οι διεπαφές",
++"Setup": "Ρύθμιση",
++"The machine's audio interfaces, physical and virtual, and the analog gateway's choice of them": "Οι διεπαφές ήχου της μηχανής, φυσικές και εικονικές, και η επιλογή τους για την αναλογική πύλη",
++"Look again": "Ξανά ματιά",
++"Physical": "Φυσικές",
++"Virtual": "Εικονικές",
++"The analog gateway": "Η αναλογική πύλη",
++"Out to the gear": "Έξοδος προς τα μηχανήματα",
++"In from the gear": "Είσοδος από τα μηχανήματα",
++"Rate": "Συχνότητα",
++"Measure the input's floor": "Μέτρησε το κατώφλι της εισόδου",
++"Two seconds from the input: with nothing playing into it, the converter's own noise": "Δύο δευτερόλεπτα από την είσοδο: αν δεν παίζει τίποτα μέσα της, ο θόρυβος του ίδιου του μετατροπέα",
++"A plugin's analog step plays through the output chosen here and records from the input, at this rate.": "Το αναλογικό βήμα ενός plugin παίζει από την έξοδο που διαλέγεις εδώ και γράφει από την είσοδο, σε αυτή τη συχνότητα.",
++"No sound card is seen here.": "Δεν φαίνεται κάρτα ήχου εδώ.",
++"Looking…": "Κοιτάζω…",
++"The lab did not answer: {0}": "Το εργαστήριο δεν απάντησε: {0}",
++"Choose the input first": "Διάλεξε πρώτα την είσοδο",
++"Listening to the input for two seconds…": "Ακούω την είσοδο δύο δευτερόλεπτα…",
++"The input's floor, RMS / peak dBFS: {0}": "Το κατώφλι της εισόδου, RMS / κορυφή dBFS: {0}",
++"Not measured: {0}": "Δεν μετρήθηκε: {0}",
++"no sound card is seen here (/proc/asound has none)": "δεν φαίνεται κάρτα ήχου εδώ (το /proc/asound είναι άδειο)",
++"aplay is not here: ALSA's software devices are not listed": "δεν υπάρχει aplay εδώ: οι εικονικές συσκευές του ALSA δεν απαριθμούνται",
++"arecord is not here: ALSA's software devices are not listed": "δεν υπάρχει arecord εδώ: οι εικονικές συσκευές του ALSA δεν απαριθμούνται",
++"PipeWire / Pulse do not run here (no pactl answer)": "Το PipeWire / Pulse δεν τρέχει εδώ (καμία απάντηση από pactl)",
++"JACK does not run here (no jack_lsp)": "Το JACK δεν τρέχει εδώ (δεν υπάρχει jack_lsp)",
++"the lab reaches the sound devices through sg audio: its service started before the audio group was given": "το εργαστήριο φτάνει τις συσκευές ήχου μέσω sg audio: η υπηρεσία του ξεκίνησε πριν δοθεί η ομάδα audio",
++"The interface the gateway plays a take out through, to the gear": "Η διεπαφή από την οποία η πύλη βγάζει τη λήψη προς τα μηχανήματα",
++"The interface the gateway records the gear back from": "Η διεπαφή από την οποία η πύλη γράφει πίσω τα μηχανήματα",
++"The rate both run at: the ones the chosen output and input both take": "Η συχνότητα και των δύο: όσες δέχονται και η έξοδος και η είσοδος που διάλεξες"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index ac992c0..aba3e02 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5478,5 +5478,35 @@ RuachI18n.add("es", {
+ "The chain runs past this node: its own check in the chain's row, turned off or on": "La cadena pasa de largo este nodo: su propia casilla en la fila de la cadena, marcada o no",
+ "{0} takes no source": "{0} no toma fuente",
+ "Nothing from {0} for this take yet": "Aún nada de «{0}» para esta toma",
+-"Drag to another node: its source becomes this one's newest": "Arrástralo a otro nodo: su fuente pasa a ser lo más nuevo de aquí"
++"Drag to another node: its source becomes this one's newest": "Arrástralo a otro nodo: su fuente pasa a ser lo más nuevo de aquí",
++"Audio I/O": "Audio E/S",
++"the interfaces": "las interfaces",
++"Setup": "Ajustes",
++"The machine's audio interfaces, physical and virtual, and the analog gateway's choice of them": "Las interfaces de audio de la máquina, físicas y virtuales, y su elección para la pasarela analógica",
++"Look again": "Mirar de nuevo",
++"Physical": "Físicas",
++"Virtual": "Virtuales",
++"The analog gateway": "La pasarela analógica",
++"Out to the gear": "Salida al equipo",
++"In from the gear": "Entrada del equipo",
++"Rate": "Frecuencia",
++"Measure the input's floor": "Medir el suelo de la entrada",
++"Two seconds from the input: with nothing playing into it, the converter's own noise": "Dos segundos de la entrada: sin nada sonando en ella, el ruido propio del conversor",
++"A plugin's analog step plays through the output chosen here and records from the input, at this rate.": "El paso analógico de un plugin suena por la salida elegida aquí y graba de la entrada, a esta frecuencia.",
++"No sound card is seen here.": "No se ve ninguna tarjeta de sonido aquí.",
++"Looking…": "Mirando…",
++"The lab did not answer: {0}": "El laboratorio no respondió: {0}",
++"Choose the input first": "Elige primero la entrada",
++"Listening to the input for two seconds…": "Escuchando la entrada dos segundos…",
++"The input's floor, RMS / peak dBFS: {0}": "El suelo de la entrada, RMS / pico dBFS: {0}",
++"Not measured: {0}": "No medido: {0}",
++"no sound card is seen here (/proc/asound has none)": "no se ve ninguna tarjeta de sonido aquí (/proc/asound está vacío)",
++"aplay is not here: ALSA's software devices are not listed": "aplay no está aquí: los dispositivos de software de ALSA no se listan",
++"arecord is not here: ALSA's software devices are not listed": "arecord no está aquí: los dispositivos de software de ALSA no se listan",
++"PipeWire / Pulse do not run here (no pactl answer)": "PipeWire / Pulse no corren aquí (pactl no responde)",
++"JACK does not run here (no jack_lsp)": "JACK no corre aquí (no hay jack_lsp)",
++"the lab reaches the sound devices through sg audio: its service started before the audio group was given": "el laboratorio llega a los dispositivos de sonido por sg audio: su servicio arrancó antes de que se diera el grupo audio",
++"The interface the gateway plays a take out through, to the gear": "La interfaz por la que la pasarela saca la toma hacia el equipo",
++"The interface the gateway records the gear back from": "La interfaz desde la que la pasarela graba de vuelta el equipo",
++"The rate both run at: the ones the chosen output and input both take": "La frecuencia de ambas: las que aceptan la salida y la entrada elegidas"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index 6db6649..1dfb3fd 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5362,5 +5362,35 @@ RuachI18n.add("fr", {
+ "The chain runs past this node: its own check in the chain's row, turned off or on": "La chaîne passe à côté de ce nœud : sa propre case dans la ligne de la chaîne, décochée ou cochée",
+ "{0} takes no source": "{0} ne prend pas de source",
+ "Nothing from {0} for this take yet": "Rien encore de « {0} » pour cette prise",
+-"Drag to another node: its source becomes this one's newest": "Glisse vers un autre nœud : sa source devient le plus récent d'ici"
++"Drag to another node: its source becomes this one's newest": "Glisse vers un autre nœud : sa source devient le plus récent d'ici",
++"Audio I/O": "Audio E/S",
++"the interfaces": "les interfaces",
++"Setup": "Réglage",
++"The machine's audio interfaces, physical and virtual, and the analog gateway's choice of them": "Les interfaces audio de la machine, physiques et virtuelles, et leur choix pour la passerelle analogique",
++"Look again": "Regarder de nouveau",
++"Physical": "Physiques",
++"Virtual": "Virtuelles",
++"The analog gateway": "La passerelle analogique",
++"Out to the gear": "Sortie vers le matériel",
++"In from the gear": "Entrée depuis le matériel",
++"Rate": "Fréquence",
++"Measure the input's floor": "Mesurer le plancher de l'entrée",
++"Two seconds from the input: with nothing playing into it, the converter's own noise": "Deux secondes de l'entrée : sans rien qui y joue, le bruit propre du convertisseur",
++"A plugin's analog step plays through the output chosen here and records from the input, at this rate.": "L'étape analogique d'un plugin joue par la sortie choisie ici et enregistre depuis l'entrée, à cette fréquence.",
++"No sound card is seen here.": "Aucune carte son n'est vue ici.",
++"Looking…": "Je regarde…",
++"The lab did not answer: {0}": "Le labo n'a pas répondu : {0}",
++"Choose the input first": "Choisis d'abord l'entrée",
++"Listening to the input for two seconds…": "J'écoute l'entrée deux secondes…",
++"The input's floor, RMS / peak dBFS: {0}": "Le plancher de l'entrée, RMS / crête dBFS : {0}",
++"Not measured: {0}": "Pas mesuré : {0}",
++"no sound card is seen here (/proc/asound has none)": "aucune carte son n'est vue ici (/proc/asound est vide)",
++"aplay is not here: ALSA's software devices are not listed": "aplay n'est pas là : les périphériques logiciels d'ALSA ne sont pas listés",
++"arecord is not here: ALSA's software devices are not listed": "arecord n'est pas là : les périphériques logiciels d'ALSA ne sont pas listés",
++"PipeWire / Pulse do not run here (no pactl answer)": "PipeWire / Pulse ne tournent pas ici (pas de réponse de pactl)",
++"JACK does not run here (no jack_lsp)": "JACK ne tourne pas ici (pas de jack_lsp)",
++"the lab reaches the sound devices through sg audio: its service started before the audio group was given": "le labo atteint les périphériques son par sg audio : son service a démarré avant que le groupe audio soit donné",
++"The interface the gateway plays a take out through, to the gear": "L'interface par laquelle la passerelle envoie la prise vers le matériel",
++"The interface the gateway records the gear back from": "L'interface depuis laquelle la passerelle réenregistre le matériel",
++"The rate both run at: the ones the chosen output and input both take": "La fréquence des deux : celles qu'acceptent la sortie et l'entrée choisies"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 77320cd..7f749b7 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5478,5 +5478,35 @@ RuachI18n.add("it", {
+ "The chain runs past this node: its own check in the chain's row, turned off or on": "La catena passa oltre questo nodo: la sua casella nella riga della catena, tolta o messa",
+ "{0} takes no source": "{0} non prende una sorgente",
+ "Nothing from {0} for this take yet": "Ancora niente da «{0}» per questo take",
+-"Drag to another node: its source becomes this one's newest": "Trascinalo su un altro nodo: la sua sorgente diventa il più recente di qui"
++"Drag to another node: its source becomes this one's newest": "Trascinalo su un altro nodo: la sua sorgente diventa il più recente di qui",
++"Audio I/O": "Audio I/O",
++"the interfaces": "le interfacce",
++"Setup": "Impostazione",
++"The machine's audio interfaces, physical and virtual, and the analog gateway's choice of them": "Le interfacce audio della macchina, fisiche e virtuali, e la loro scelta per il passaggio analogico",
++"Look again": "Guarda di nuovo",
++"Physical": "Fisiche",
++"Virtual": "Virtuali",
++"The analog gateway": "Il passaggio analogico",
++"Out to the gear": "Uscita verso l'hardware",
++"In from the gear": "Ingresso dall'hardware",
++"Rate": "Frequenza",
++"Measure the input's floor": "Misura il fondo dell'ingresso",
++"Two seconds from the input: with nothing playing into it, the converter's own noise": "Due secondi dall'ingresso: senza niente che vi suoni, il rumore proprio del convertitore",
++"A plugin's analog step plays through the output chosen here and records from the input, at this rate.": "Il passo analogico di un plugin suona dall'uscita scelta qui e registra dall'ingresso, a questa frequenza.",
++"No sound card is seen here.": "Nessuna scheda audio si vede qui.",
++"Looking…": "Guardo…",
++"The lab did not answer: {0}": "Il laboratorio non ha risposto: {0}",
++"Choose the input first": "Scegli prima l'ingresso",
++"Listening to the input for two seconds…": "Ascolto l'ingresso per due secondi…",
++"The input's floor, RMS / peak dBFS: {0}": "Il fondo dell'ingresso, RMS / picco dBFS: {0}",
++"Not measured: {0}": "Non misurato: {0}",
++"no sound card is seen here (/proc/asound has none)": "nessuna scheda audio si vede qui (/proc/asound è vuoto)",
++"aplay is not here: ALSA's software devices are not listed": "aplay non c'è qui: i dispositivi software di ALSA non sono elencati",
++"arecord is not here: ALSA's software devices are not listed": "arecord non c'è qui: i dispositivi software di ALSA non sono elencati",
++"PipeWire / Pulse do not run here (no pactl answer)": "PipeWire / Pulse non girano qui (pactl non risponde)",
++"JACK does not run here (no jack_lsp)": "JACK non gira qui (manca jack_lsp)",
++"the lab reaches the sound devices through sg audio: its service started before the audio group was given": "il laboratorio raggiunge i dispositivi audio tramite sg audio: il suo servizio è partito prima che fosse dato il gruppo audio",
++"The interface the gateway plays a take out through, to the gear": "L'interfaccia da cui il passaggio manda il take all'hardware",
++"The interface the gateway records the gear back from": "L'interfaccia da cui il passaggio registra di ritorno l'hardware",
++"The rate both run at: the ones the chosen output and input both take": "La frequenza di entrambe: quelle che prendono sia l'uscita sia l'ingresso scelti"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index 14bd89b..01ce36c 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5362,5 +5362,35 @@ RuachI18n.add("ja", {
+ "The chain runs past this node: its own check in the chain's row, turned off or on": "チェーンがこのノードを通り過ぎます：チェーンの行にある自身のチェックのオン・オフ",
+ "{0} takes no source": "{0} はソースを取りません",
+ "Nothing from {0} for this take yet": "このテイクにはまだ「{0}」からのものがありません",
+-"Drag to another node: its source becomes this one's newest": "別のノードへドラッグ：そのソースがここの最新になります"
++"Drag to another node: its source becomes this one's newest": "別のノードへドラッグ：そのソースがここの最新になります",
++"Audio I/O": "オーディオ I/O",
++"the interfaces": "インターフェース",
++"Setup": "設定",
++"The machine's audio interfaces, physical and virtual, and the analog gateway's choice of them": "マシンのオーディオインターフェース（物理と仮想）と、アナログゲートウェイに使うものの選択",
++"Look again": "もう一度見る",
++"Physical": "物理",
++"Virtual": "仮想",
++"The analog gateway": "アナログゲートウェイ",
++"Out to the gear": "機材への出力",
++"In from the gear": "機材からの入力",
++"Rate": "レート",
++"Measure the input's floor": "入力のフロアを測る",
++"Two seconds from the input: with nothing playing into it, the converter's own noise": "入力から2秒：何も鳴らしていなければ、コンバーター自身のノイズ",
++"A plugin's analog step plays through the output chosen here and records from the input, at this rate.": "プラグインのアナログステップは、ここで選んだ出力から再生し、入力から録音します（このレートで）。",
++"No sound card is seen here.": "ここにはサウンドカードが見えません。",
++"Looking…": "見ています…",
++"The lab did not answer: {0}": "ラボが応答しませんでした：{0}",
++"Choose the input first": "先に入力を選んでください",
++"Listening to the input for two seconds…": "入力を2秒聞いています…",
++"The input's floor, RMS / peak dBFS: {0}": "入力のフロア、RMS / ピーク dBFS：{0}",
++"Not measured: {0}": "測れませんでした：{0}",
++"no sound card is seen here (/proc/asound has none)": "ここにはサウンドカードが見えません（/proc/asound が空です）",
++"aplay is not here: ALSA's software devices are not listed": "aplay がありません：ALSA のソフトウェアデバイスは一覧できません",
++"arecord is not here: ALSA's software devices are not listed": "arecord がありません：ALSA のソフトウェアデバイスは一覧できません",
++"PipeWire / Pulse do not run here (no pactl answer)": "PipeWire / Pulse はここで動いていません（pactl の応答なし）",
++"JACK does not run here (no jack_lsp)": "JACK はここで動いていません（jack_lsp なし）",
++"the lab reaches the sound devices through sg audio: its service started before the audio group was given": "ラボは sg audio 経由でサウンドデバイスに届きます：audio グループが与えられる前にサービスが起動したため",
++"The interface the gateway plays a take out through, to the gear": "ゲートウェイがテイクを機材へ出すインターフェース",
++"The interface the gateway records the gear back from": "ゲートウェイが機材から録り戻すインターフェース",
++"The rate both run at: the ones the chosen output and input both take": "両方が動くレート：選んだ出力と入力の両方が受け付けるもの"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index fd4c4c4..6c82dcd 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5362,5 +5362,35 @@ RuachI18n.add("pt", {
+ "The chain runs past this node: its own check in the chain's row, turned off or on": "A cadeia passa ao lado deste nó: a própria caixa dele na linha da cadeia, marcada ou não",
+ "{0} takes no source": "{0} não recebe fonte",
+ "Nothing from {0} for this take yet": "Nada ainda de «{0}» para este take",
+-"Drag to another node: its source becomes this one's newest": "Arraste até outro nó: a fonte dele passa a ser o mais novo daqui"
++"Drag to another node: its source becomes this one's newest": "Arraste até outro nó: a fonte dele passa a ser o mais novo daqui",
++"Audio I/O": "Áudio E/S",
++"the interfaces": "as interfaces",
++"Setup": "Configuração",
++"The machine's audio interfaces, physical and virtual, and the analog gateway's choice of them": "As interfaces de áudio da máquina, físicas e virtuais, e a escolha delas para a passagem analógica",
++"Look again": "Olhar de novo",
++"Physical": "Físicas",
++"Virtual": "Virtuais",
++"The analog gateway": "A passagem analógica",
++"Out to the gear": "Saída para o equipamento",
++"In from the gear": "Entrada do equipamento",
++"Rate": "Frequência",
++"Measure the input's floor": "Medir o piso da entrada",
++"Two seconds from the input: with nothing playing into it, the converter's own noise": "Dois segundos da entrada: sem nada tocando nela, o ruído próprio do conversor",
++"A plugin's analog step plays through the output chosen here and records from the input, at this rate.": "O passo analógico de um plugin toca pela saída escolhida aqui e grava da entrada, nesta frequência.",
++"No sound card is seen here.": "Nenhuma placa de som é vista aqui.",
++"Looking…": "Olhando…",
++"The lab did not answer: {0}": "O laboratório não respondeu: {0}",
++"Choose the input first": "Escolha a entrada primeiro",
++"Listening to the input for two seconds…": "Ouvindo a entrada por dois segundos…",
++"The input's floor, RMS / peak dBFS: {0}": "O piso da entrada, RMS / pico dBFS: {0}",
++"Not measured: {0}": "Não medido: {0}",
++"no sound card is seen here (/proc/asound has none)": "nenhuma placa de som é vista aqui (/proc/asound está vazio)",
++"aplay is not here: ALSA's software devices are not listed": "aplay não está aqui: os dispositivos de software do ALSA não são listados",
++"arecord is not here: ALSA's software devices are not listed": "arecord não está aqui: os dispositivos de software do ALSA não são listados",
++"PipeWire / Pulse do not run here (no pactl answer)": "PipeWire / Pulse não rodam aqui (pactl não responde)",
++"JACK does not run here (no jack_lsp)": "JACK não roda aqui (sem jack_lsp)",
++"the lab reaches the sound devices through sg audio: its service started before the audio group was given": "o laboratório chega aos dispositivos de som por sg audio: o serviço dele começou antes de o grupo audio ser dado",
++"The interface the gateway plays a take out through, to the gear": "A interface pela qual a passagem manda o take ao equipamento",
++"The interface the gateway records the gear back from": "A interface de onde a passagem grava de volta o equipamento",
++"The rate both run at: the ones the chosen output and input both take": "A frequência das duas: as que a saída e a entrada escolhidas aceitam"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 4db7de3..24513c4 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5484,5 +5484,35 @@ RuachI18n.add("ru", {
+ "The chain runs past this node: its own check in the chain's row, turned off or on": "Цепочка идёт мимо этой ноды: её собственная галочка в строке цепочки, снятая или поставленная",
+ "{0} takes no source": "{0}: у этой ноды нет источника",
+ "Nothing from {0} for this take yet": "От «{0}» у этого семпла пока ничего нет",
+-"Drag to another node: its source becomes this one's newest": "Протяни к другой ноде: её источником станет свежее отсюда"
++"Drag to another node: its source becomes this one's newest": "Протяни к другой ноде: её источником станет свежее отсюда",
++"Audio I/O": "Аудио I/O",
++"the interfaces": "интерфейсы",
++"Setup": "Настройка",
++"The machine's audio interfaces, physical and virtual, and the analog gateway's choice of them": "Аудиоинтерфейсы машины, физические и виртуальные, и выбор их для аналогового шлюза",
++"Look again": "Посмотреть снова",
++"Physical": "Физические",
++"Virtual": "Виртуальные",
++"The analog gateway": "Аналоговый шлюз",
++"Out to the gear": "Выход к железу",
++"In from the gear": "Вход от железа",
++"Rate": "Частота",
++"Measure the input's floor": "Замерить пол входа",
++"Two seconds from the input: with nothing playing into it, the converter's own noise": "Две секунды со входа: если в него ничего не играет — собственный шум преобразователя",
++"A plugin's analog step plays through the output chosen here and records from the input, at this rate.": "Аналоговый шаг плагина играет через выбранный здесь выход и пишет с входа, на этой частоте.",
++"No sound card is seen here.": "Звуковых карт здесь не видно.",
++"Looking…": "Смотрю…",
++"The lab did not answer: {0}": "Лаба не ответила: {0}",
++"Choose the input first": "Сначала выбери вход",
++"Listening to the input for two seconds…": "Слушаю вход две секунды…",
++"The input's floor, RMS / peak dBFS: {0}": "Пол входа, RMS / пик dBFS: {0}",
++"Not measured: {0}": "Не замерено: {0}",
++"no sound card is seen here (/proc/asound has none)": "звуковых карт здесь не видно (в /proc/asound пусто)",
++"aplay is not here: ALSA's software devices are not listed": "aplay здесь нет: программные устройства ALSA не перечислены",
++"arecord is not here: ALSA's software devices are not listed": "arecord здесь нет: программные устройства ALSA не перечислены",
++"PipeWire / Pulse do not run here (no pactl answer)": "PipeWire / Pulse здесь не запущены (pactl не отвечает)",
++"JACK does not run here (no jack_lsp)": "JACK здесь не запущен (нет jack_lsp)",
++"the lab reaches the sound devices through sg audio: its service started before the audio group was given": "лаба ходит к звуковым устройствам через sg audio: её служба стартовала раньше, чем дали группу audio",
++"The interface the gateway plays a take out through, to the gear": "Интерфейс, через который шлюз выводит семпл к железу",
++"The interface the gateway records the gear back from": "Интерфейс, с которого шлюз пишет железо обратно",
++"The rate both run at: the ones the chosen output and input both take": "Частота, на которой идут оба: те, что берут и выбранный выход, и вход"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 8a7b2a0..b9df6b4 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5479,5 +5479,35 @@ RuachI18n.add("uk", {
+ "The chain runs past this node: its own check in the chain's row, turned off or on": "Ланцюжок іде повз цю ноду: її власна позначка в рядку ланцюжка, знята чи поставлена",
+ "{0} takes no source": "{0}: у цієї ноди немає джерела",
+ "Nothing from {0} for this take yet": "Від «{0}» у цього семплу поки нічого немає",
+-"Drag to another node: its source becomes this one's newest": "Протягни до іншої ноди: її джерелом стане найсвіжіше звідси"
++"Drag to another node: its source becomes this one's newest": "Протягни до іншої ноди: її джерелом стане найсвіжіше звідси",
++"Audio I/O": "Аудіо I/O",
++"the interfaces": "інтерфейси",
++"Setup": "Налаштування",
++"The machine's audio interfaces, physical and virtual, and the analog gateway's choice of them": "Аудіоінтерфейси машини, фізичні та віртуальні, і вибір їх для аналогового шлюзу",
++"Look again": "Подивитися знову",
++"Physical": "Фізичні",
++"Virtual": "Віртуальні",
++"The analog gateway": "Аналоговий шлюз",
++"Out to the gear": "Вихід до заліза",
++"In from the gear": "Вхід від заліза",
++"Rate": "Частота",
++"Measure the input's floor": "Заміряти поріг входу",
++"Two seconds from the input: with nothing playing into it, the converter's own noise": "Дві секунди з входу: якщо в нього нічого не грає — власний шум перетворювача",
++"A plugin's analog step plays through the output chosen here and records from the input, at this rate.": "Аналоговий крок плагіна грає через вибраний тут вихід і пише з входу, на цій частоті.",
++"No sound card is seen here.": "Звукових карт тут не видно.",
++"Looking…": "Дивлюся…",
++"The lab did not answer: {0}": "Лаба не відповіла: {0}",
++"Choose the input first": "Спершу вибери вхід",
++"Listening to the input for two seconds…": "Слухаю вхід дві секунди…",
++"The input's floor, RMS / peak dBFS: {0}": "Поріг входу, RMS / пік dBFS: {0}",
++"Not measured: {0}": "Не заміряно: {0}",
++"no sound card is seen here (/proc/asound has none)": "звукових карт тут не видно (у /proc/asound порожньо)",
++"aplay is not here: ALSA's software devices are not listed": "aplay тут немає: програмні пристрої ALSA не перелічено",
++"arecord is not here: ALSA's software devices are not listed": "arecord тут немає: програмні пристрої ALSA не перелічено",
++"PipeWire / Pulse do not run here (no pactl answer)": "PipeWire / Pulse тут не запущені (pactl не відповідає)",
++"JACK does not run here (no jack_lsp)": "JACK тут не запущений (немає jack_lsp)",
++"the lab reaches the sound devices through sg audio: its service started before the audio group was given": "лаба ходить до звукових пристроїв через sg audio: її служба стартувала раніше, ніж дали групу audio",
++"The interface the gateway plays a take out through, to the gear": "Інтерфейс, через який шлюз виводить семпл до заліза",
++"The interface the gateway records the gear back from": "Інтерфейс, з якого шлюз пише залізо назад",
++"The rate both run at: the ones the chosen output and input both take": "Частота, на якій ідуть обидва: ті, що беруть і вибраний вихід, і вхід"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index 62828bc..74191b0 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5362,5 +5362,35 @@ RuachI18n.add("zh", {
+ "The chain runs past this node: its own check in the chain's row, turned off or on": "链从这个节点旁边经过：即链那一行里它自己的勾选，勾上或取消",
+ "{0} takes no source": "{0} 不接收来源",
+ "Nothing from {0} for this take yet": "这个录音还没有来自“{0}”的内容",
+-"Drag to another node: its source becomes this one's newest": "拖到另一个节点：它的来源变成这里最新的"
++"Drag to another node: its source becomes this one's newest": "拖到另一个节点：它的来源变成这里最新的",
++"Audio I/O": "音频 I/O",
++"the interfaces": "接口",
++"Setup": "设置",
++"The machine's audio interfaces, physical and virtual, and the analog gateway's choice of them": "这台机器的音频接口（物理和虚拟），以及为模拟网关选用哪一个",
++"Look again": "再看一次",
++"Physical": "物理",
++"Virtual": "虚拟",
++"The analog gateway": "模拟网关",
++"Out to the gear": "输出到设备",
++"In from the gear": "从设备输入",
++"Rate": "采样率",
++"Measure the input's floor": "测量输入的底噪",
++"Two seconds from the input: with nothing playing into it, the converter's own noise": "从输入取两秒：没有信号输入时，就是转换器自身的噪声",
++"A plugin's analog step plays through the output chosen here and records from the input, at this rate.": "插件的模拟步骤从这里选定的输出播放，并从输入录音，使用这个采样率。",
++"No sound card is seen here.": "这里看不到声卡。",
++"Looking…": "正在查看…",
++"The lab did not answer: {0}": "实验室没有回应：{0}",
++"Choose the input first": "请先选择输入",
++"Listening to the input for two seconds…": "正在听输入两秒…",
++"The input's floor, RMS / peak dBFS: {0}": "输入的底噪，RMS / 峰值 dBFS：{0}",
++"Not measured: {0}": "未测量：{0}",
++"no sound card is seen here (/proc/asound has none)": "这里看不到声卡（/proc/asound 为空）",
++"aplay is not here: ALSA's software devices are not listed": "这里没有 aplay：无法列出 ALSA 的软件设备",
++"arecord is not here: ALSA's software devices are not listed": "这里没有 arecord：无法列出 ALSA 的软件设备",
++"PipeWire / Pulse do not run here (no pactl answer)": "PipeWire / Pulse 未在此运行（pactl 无回应）",
++"JACK does not run here (no jack_lsp)": "JACK 未在此运行（没有 jack_lsp）",
++"the lab reaches the sound devices through sg audio: its service started before the audio group was given": "实验室通过 sg audio 访问声音设备：它的服务在授予 audio 组之前就已启动",
++"The interface the gateway plays a take out through, to the gear": "网关把录音输出到设备所用的接口",
++"The interface the gateway records the gear back from": "网关从设备录回所用的接口",
++"The rate both run at: the ones the chosen output and input both take": "两者共同的采样率：所选输出和输入都支持的"
+ });
+diff --git a/tools/console/heresy-post.js b/tools/console/heresy-post.js
+index 7d95f37..5f17d6b 100644
+--- a/tools/console/heresy-post.js
++++ b/tools/console/heresy-post.js
+@@ -15,9 +15,10 @@
+     { id: "upscalePanel", step: "upscale", label: "Upscale", say: "redraw the top", group: "mend" },
+     { id: "derivedPanel", step: "stems", label: "Stems", say: "split", group: "mend" },
+     { id: "dawPanel", step: "daw", label: "DAW", say: "mix the stems", group: "finish" },   // HERESY 1471
+-    { id: "remasterPanel", step: "remaster", label: "Remaster", say: "the Debunker", group: "finish" }
++    { id: "remasterPanel", step: "remaster", label: "Remaster", say: "the Debunker", group: "finish" },
++    { id: "audioPanel", step: "audio", label: "Audio I/O", say: "the interfaces", group: "setup" }   // HERESY 1512
+   ];
+-  var GROUPS = { look: "Hear and look", mend: "Mend", finish: "Finish" };
++  var GROUPS = { look: "Hear and look", mend: "Mend", finish: "Finish", setup: "Setup" };   // 1512: the machine's own
+   var KEY = "yue2.postStep";
+   var state = { take: null, done: {}, current: "" };
+   function $(id) { return document.getElementById(id); }
+@@ -190,6 +191,7 @@
+       var b = e.target.closest("[data-step-panel]");
+       if (b) select(b.dataset.stepPanel);
+     });
++    auPanel();                                       // HERESY 1512: the Audio I/O's panel, made here (the lab answers it)
+     STEPS.forEach(function (s) { var p = $(s.id); if (p) p.classList.add("is-step"); });
+     window.addEventListener("heresy-step", function (e) {
+       if (!state.take || e.detail.name !== state.take.name) return;
+@@ -237,7 +239,7 @@
+   var CV_KEY = "yue2.refinerView", CV_POS = "yue2.refinerCanvasPos", NODE_W = 196, NODE_H = 84;
+   var KIND_NODE = { debuzz: "debuzzPanel", upscale: "upscalePanel", stems: "derivedPanel", remaster: "remasterPanel", daw: "dawPanel" };
+   var LANE = { debuzzPanel: [1, 0], upscalePanel: [2, 0], derivedPanel: [3, 0], dawPanel: [4, 0], remasterPanel: [4, 1],
+-               spectrumPanel: [1, 2], inspectPanel: [2, 2], glossPanel: [3, 2] };
++               spectrumPanel: [1, 2], inspectPanel: [2, 2], glossPanel: [3, 2], audioPanel: [4, 2] };   // 1512: the Audio I/O under the Remaster
+   // HERESY 1508: the chain's nodes: what «up to here» names, and the chain's own check a node is bypassed by (the Remaster always runs)
+   var CHAIN_NODE = { debuzzPanel: { until: "debuzz", box: "pcDebuzz", key: "debuzz" }, upscalePanel: { until: "upscale", box: "pcUpscale", key: "upscale" },
+                      derivedPanel: { until: "stems", box: "pcStems", key: "stems" }, remasterPanel: { until: "remaster" } };
+@@ -617,7 +619,8 @@
+           var id = "pl-" + pl.id + "-" + st.id + "Panel";
+           if ($(id)) return;
+           var s = { id: id, step: "plugin:" + pl.id + ":" + st.id, label: st.label, say: st.say || pl.name, plugin: pl.id, pstep: st.id, spec: st, name: pl.name, group: "finish" };
+-          STEPS.push(s);
++          var at = STEPS.map(function (x) { return x.group; }).indexOf("setup");   // HERESY 1512: a plugin's steps before the Setup's
++          if (at < 0) STEPS.push(s); else STEPS.splice(at, 0, s);
+           plug.steps[id] = s;
+           var panel = pluginPanel(s);
+           var box = document.querySelector("#view-post > .dv-tree-box");   // HERESY 1461: before what is made, as the studio's own
+@@ -732,6 +735,110 @@
+   }
+   function tr(s) { return window.RuachI18n && window.RuachI18n.t ? window.RuachI18n.t(s) : s; }
+ 
++  // ---- HERESY 1512 (Viktor 16.10.2026: «Предлагаю отдельной вкладкой в Огранщике создать детект и настройку аудио интерфейсов как физических,
++  // так и виртуальных»): the machine's audio interfaces as the lab sees them (GET /lab/audio/devices), the analog gateway's output, input and
++  // rate kept (POST /lab/audio/gateway, user/audio.json, where a plugin's analog step reads them), an input's floor (POST /lab/audio/probe)
++  var au = { data: null, loading: false };
++  var RATES = [44100, 48000, 88200, 96000, 176400, 192000];
++  function auPanel() {
++    if ($("audioPanel")) return;
++    var d = document.createElement("details");
++    d.className = "drawer au-panel";
++    d.id = "audioPanel";
++    d.innerHTML = '<summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Audio I/O</span>' +
++      '<span class="sum-say">The machine\'s audio interfaces, physical and virtual, and the analog gateway\'s choice of them</span></span></summary>' +
++      '<div class="drawer-body au-body"><div class="au-head"><button type="button" class="btn ghost small" id="auLook">Look again</button><span class="row-hint" id="auSaid"></span></div>' +
++      '<div class="au-cols"><section class="au-col"><div class="peek-cap">Physical</div><div id="auPhysical" class="au-list"></div></section>' +
++      '<section class="au-col"><div class="peek-cap">Virtual</div><div id="auVirtual" class="au-list"></div></section></div>' +
++      '<div class="au-gate"><div class="peek-cap">The analog gateway</div><div class="rm-grid">' +
++      '<label class="field" data-tip="The interface the gateway plays a take out through, to the gear"><span class="label">Out to the gear</span><select id="auOut"></select></label>' +
++      '<label class="field" data-tip="The interface the gateway records the gear back from"><span class="label">In from the gear</span><select id="auIn"></select></label>' +
++      '<label class="field" data-tip="The rate both run at: the ones the chosen output and input both take"><span class="label">Rate</span><select id="auRate"></select></label></div>' +
++      '<div class="dv-actions"><button type="button" class="btn primary small" id="auKeep">Keep</button>' +
++      '<button type="button" class="btn ghost small" id="auProbe" data-tip="Two seconds from the input: with nothing playing into it, the converter\'s own noise">Measure the input\'s floor</button>' +
++      '<span class="row-hint mono" id="auState"></span></div>' +
++      '<p class="row-hint">A plugin\'s analog step plays through the output chosen here and records from the input, at this rate.</p></div></div>';
++    var box = document.querySelector("#view-post > .dv-tree-box");
++    if (box) box.parentNode.insertBefore(d, box); else if ($("view-post")) $("view-post").appendChild(d);
++    $("auLook").addEventListener("click", function () { auLoad(true); });
++    $("auKeep").addEventListener("click", auKeep);
++    $("auProbe").addEventListener("click", auProbe);
++    $("auOut").addEventListener("change", auRates);
++    $("auIn").addEventListener("change", auRates);
++    window.addEventListener("heresy-post-step", function (e) { if (e.detail && e.detail.panel === "audioPanel") auLoad(false); });
++  }
++  function auSay(text, bad) { var el = $("auState"); if (el) { el.textContent = text || ""; el.classList.toggle("is-bad", !!bad); } }
++  function khz(r) { return (r / 1000).toString().replace(/\.0$/, "") + " kHz"; }
++  function fmt(f) {
++    if (!f) return "";
++    var r = f.rates || [];
++    return [f.channels ? f.channels + " ch" : "", f.bits ? f.bits + "-bit" : "", r.length ? khz(r[0]) + (r.length > 1 ? "\u2013" + khz(r[r.length - 1]) : "") : ""].filter(Boolean).join(" \u00b7 ");
++  }
++  function auLoad(again) {
++    if (au.loading || (au.data && !again)) return;
++    au.loading = true;
++    $("auSaid").textContent = tr("Looking\u2026");
++    fetch("/lab/audio/devices", { priority: "low" }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j; }); })
++      .then(function (d) { au.data = d; au.loading = false; auPaint(); }, function (e) { au.loading = false; $("auSaid").textContent = tr("The lab did not answer: {0}").replace("{0}", e.message); });
++  }
++  function auPaint() {
++    var d = au.data, cards = {}, order = [];
++    (d.physical || []).forEach(function (p) { if (!cards[p.id]) { cards[p.id] = { name: p.card_name, driver: p.driver, devs: [] }; order.push(p.id); } cards[p.id].devs.push(p); });
++    $("auPhysical").innerHTML = order.length ? order.map(function (id) {
++      var c = cards[id], ways = c.devs.map(function (p) {
++        var w = (p.in ? "in" : "") + (p.in && p.out ? " \u00b7 " : "") + (p.out ? "out" : ""), f = p.formats || {};
++        return '<li translate="no"><b>' + esc(p.name) + '</b> <span class="au-way">' + esc(w) + "</span>" + (f.in || f.out ? ' <span class="row-hint">' + esc(fmt(f.in || f.out)) + "</span>" : "") + "</li>";
++      });
++      return '<div class="au-card"><div class="au-card-name" translate="no">' + esc(c.name) + ' <span class="row-hint">' + esc(id + " \u00b7 " + c.driver) + '</span></div><ul class="au-devs">' + ways.join("") + "</ul></div>";
++    }).join("") : '<p class="row-hint">No sound card is seen here.</p>';
++    var v = d.virtual || [];
++    $("auVirtual").innerHTML = v.length ? '<ul class="au-devs">' + v.map(function (x) {
++      return '<li><span class="au-kind">' + esc(x.kind) + '</span> <b translate="no">' + esc(x.name) + '</b> <span class="au-way">' + esc((x.in ? "in" : "") + (x.in && x.out ? " \u00b7 " : "") + (x.out ? "out" : "")) + "</span>" +
++        (x.description ? ' <span class="row-hint" translate="no">' + esc(x.description) + "</span>" : "") + "</li>";
++    }).join("") + "</ul>" : '<p class="row-hint">None.</p>';
++    $("auSaid").textContent = (d.said || []).map(tr).join(" \u00b7 ");
++    var ins = [], outs = [];
++    (d.physical || []).forEach(function (p) { var lab = p.card_name + " \u00b7 " + p.name; if (p.out) outs.push([p.alsa, lab, p.formats && p.formats.out]); if (p.in) ins.push([p.alsa, lab, p.formats && p.formats.in]); });
++    v.forEach(function (x) { var lab = x.kind + " \u00b7 " + x.name; if (x.out) outs.push([x.name, lab]); if (x.in) ins.push([x.name, lab]); });
++    var g = d.gateway || {};
++    function fill(sel, list, want) {
++      sel.innerHTML = '<option value="">\u2014 none \u2014</option>' + list.map(function (o) { return '<option value="' + esc(o[0]) + '" translate="no">' + esc(o[1]) + "</option>"; }).join("");
++      sel.value = list.some(function (o) { return o[0] === want; }) ? want : "";
++      sel._formats = {};
++      list.forEach(function (o) { if (o[2]) sel._formats[o[0]] = o[2]; });
++    }
++    fill($("auOut"), outs, g.out); fill($("auIn"), ins, g.in);
++    auRates(g.rate);
++    auSay(g.out || g.in ? tr("Kept: {0}").replace("{0}", [g.out || "\u2014", g.in || "\u2014", g.rate ? khz(g.rate) : ""].filter(Boolean).join(" \u00b7 ")) : "");
++  }
++  function auRates(want) {
++    var o = $("auOut")._formats && $("auOut")._formats[$("auOut").value], i = $("auIn")._formats && $("auIn")._formats[$("auIn").value];
++    var ok = RATES.filter(function (r) { return (!o || !o.rates.length || o.rates.indexOf(r) >= 0) && (!i || !i.rates.length || i.rates.indexOf(r) >= 0); });
++    var sel = $("auRate"), keep = typeof want === "number" && want ? want : +sel.value;
++    sel.innerHTML = ok.map(function (r) { return '<option value="' + r + '">' + khz(r) + "</option>"; }).join("");
++    sel.value = ok.indexOf(keep) >= 0 ? String(keep) : ok.indexOf(48000) >= 0 ? "48000" : String(ok[0] || "");
++  }
++  function auKeep() {
++    var body = { out: $("auOut").value, in: $("auIn").value, rate: +$("auRate").value || 0 };
++    fetch("/lab/audio/gateway", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
++      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j; }); })
++      .then(function (j) { if (au.data) au.data.gateway = j.gateway; auSay(tr("Kept: {0}").replace("{0}", [j.gateway.out || "\u2014", j.gateway.in || "\u2014", j.gateway.rate ? khz(j.gateway.rate) : ""].filter(Boolean).join(" \u00b7 "))); },
++            function (e) { auSay(tr("Not kept: {0}").replace("{0}", e.message), true); });
++  }
++  function auProbe() {
++    var dev = $("auIn").value;
++    if (!dev) { auSay(tr("Choose the input first"), true); return; }
++    $("auProbe").disabled = true;
++    auSay(tr("Listening to the input for two seconds\u2026"));
++    fetch("/lab/audio/probe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ device: dev, rate: +$("auRate").value || 48000, seconds: 2 }) })
++      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j; }); })
++      .then(function (j) {
++        $("auProbe").disabled = false;
++        var ch = j.rms_db.map(function (x, k) { return (j.rms_db.length === 2 ? (k ? "R " : "L ") : (k + 1) + ": ") + (x <= -199 ? "silence" : x.toFixed(1)) + " / " + (j.peak_db[k] <= -199 ? "\u2014" : j.peak_db[k].toFixed(1)); });
++        auSay(tr("The input's floor, RMS / peak dBFS: {0}").replace("{0}", ch.join(" \u00b7 ")));
++      }, function (e) { $("auProbe").disabled = false; auSay(tr("Not measured: {0}").replace("{0}", e.message), true); });
++  }
++
+   function setTake(take) {
+     if (state.take && take && state.take.name === take.name) return;
+     state.take = take;
+@@ -755,6 +862,7 @@
+   }
+   window.HeresyPost = { init: init, setTake: setTake, select: select, has: function (id) { return STEPS.some(function (s) { return s.id === id; }); },
+     plugins: loadPlugins, unplug: unplug,   // HERESY 1460
++    audio: { load: function () { au.data = null; auLoad(true); }, data: function () { return au.data; } },   // HERESY 1512
+     canvas: { set: function (on) { cvSet(on); }, on: function () { return CV.on; }, open: cvOpen, close: function () { cvClose(); }, opened: function () { return CV.open; },
+               step: cvStep, paint: cvPaint, until: runUntil, bypass: toggleBypass, bypassed: bypassed, link: cvLink } };   // HERESY 1506, 1508, 1510
+ })();
+-- 
+2.43.0
+

@@ -1,0 +1,281 @@
+From d3c9a3472242e9ca4d462624093ade4a5f769aa6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 15 Oct 2026 17:56:33 -0600
+Subject: [PATCH 1414/1463] HERESY 1461: the Refiner as the Engine and the
+ Guide: its steps in a column at the left in three groups, the open step at
+ the right, what is made under it
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 15.10.2026: «Если считаешь, что нужна переделка дизайна комнаты Огранщика, или несколько вкладок внутри, — одобряю». Wider than 1100 px the room is a grid: the head, the import and the chain across the top; the steps as tabs in a column at the left (the Engine's look), grouped in the chain's order: Hear and look (Spectrum, Artifacts, Lyrics), Mend (Debuzz, Upscale, Stems), Finish (Remaster, and a plugin's steps with a dashed edge); the open step at the right, as tall as it is, and what is made from the take right under it. Narrower, one column as before. A plugin's panels stand before the tree as the studio's own, its fields in a row of their own widths. Three new strings in all eleven catalogs. Kitchen suite 821/0 (one new check).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           | 32 ++++++++++++++++++++++++++++++++
+ tools/console/heresy-i18n-be.js |  5 ++++-
+ tools/console/heresy-i18n-de.js |  5 ++++-
+ tools/console/heresy-i18n-el.js |  5 ++++-
+ tools/console/heresy-i18n-es.js |  5 ++++-
+ tools/console/heresy-i18n-fr.js |  5 ++++-
+ tools/console/heresy-i18n-it.js |  5 ++++-
+ tools/console/heresy-i18n-ja.js |  5 ++++-
+ tools/console/heresy-i18n-pt.js |  5 ++++-
+ tools/console/heresy-i18n-ru.js |  5 ++++-
+ tools/console/heresy-i18n-uk.js |  5 ++++-
+ tools/console/heresy-i18n-zh.js |  5 ++++-
+ tools/console/heresy-post.js    | 24 ++++++++++++++----------
+ 13 files changed, 90 insertions(+), 21 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 55e41cd..ad70364 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -5878,3 +5878,35 @@ body:has(#view-engine:not(.is-hidden)) :is(.topbar, #playbar) { z-index: 37; }
+ .pl-panel .pl-check { flex-direction: row; align-items: center; gap: 6px; }
+ .pl-panel .pl-state.is-bad { color: var(--bad, #e06c5a); }
+ 
++/* HERESY 1461 (Viktor 15.10.2026: «Если считаешь, что нужна переделка дизайна комнаты Огранщика, или несколько вкладок внутри, —
++   одобряю»): the Refiner as the Engine and the Guide: the steps as tabs in a column at the left, grouped in the chain's order, the
++   open step at the right and what is made from the take under it; the room's head, the import and the chain across the top.
++   Narrower than 1100 px it stays one column as it was */
++@media (min-width: 1100px) {
++  #view-post:not(.is-hidden) { display: grid; grid-template-columns: minmax(220px, 260px) minmax(0, 1fr); column-gap: 18px; align-content: start;
++    grid-template-rows: auto auto auto auto 1fr; }   /* the steps' extra height into the tree's row */
++  #view-post > .drawer.is-step:not(.is-step-off), #view-post > .dv-tree-box { align-self: start; }
++  #view-post > * { grid-column: 1 / -1; }
++  #view-post > .post-head { grid-row: 1; }
++  #view-post > #importPanel { grid-row: 2; }
++  #view-post > #postChain { grid-row: 3; }
++  #view-post > #postSteps { grid-column: 1; grid-row: 4 / span 2; align-self: start; position: sticky; top: 8px; flex-direction: column; flex-wrap: nowrap; gap: 3px;
++    margin: 4px 0 0; padding: 10px 8px; border: 1px solid var(--line-a); border-radius: var(--r-md); background: var(--panel); }
++  #view-post > .drawer.is-step:not(.is-step-off) { grid-column: 2; grid-row: 4; margin-top: 4px; }
++  #view-post > .dv-tree-box { grid-column: 2; grid-row: 5; }
++  #postSteps .ps-arrow { display: none; }
++  #postSteps .ps-step { width: 100%; border-radius: var(--r-sm); border-color: transparent; padding: 7px 10px 7px 7px; }
++  #postSteps .ps-step:hover { border-color: transparent; background: color-mix(in srgb, var(--amber) 8%, transparent); }
++  #postSteps .ps-step.is-active { border-color: color-mix(in srgb, var(--amber) 40%, transparent); background: color-mix(in srgb, var(--amber) 12%, transparent);
++    box-shadow: inset 3px 0 0 var(--amber); }
++  #postSteps .ps-step.is-plugin { border-style: dashed; border-color: var(--line-a); }
++  #postSteps .ps-group { margin: 8px 4px 2px; font: 600 10.5px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
++  #postSteps .ps-group:first-child { margin-top: 0; }
++}
++#postSteps .ps-group { display: none; }
++@media (min-width: 1100px) { #postSteps .ps-group { display: block; } }
++.pl-panel .rm-grid > .field:first-child { flex: 1 1 260px; max-width: 460px; }
++.pl-panel .rm-grid > .rm-num { width: auto; min-width: 120px; flex: 0 1 auto; }
++.pl-panel .rm-grid > .rm-num select, .pl-panel .rm-grid > .rm-num input { min-width: 120px; }
++.pl-panel .rm-grid > .pl-check { flex: 0 0 auto; align-self: center; }
++
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 1203d95..84f2cd5 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5289,5 +5289,8 @@ RuachI18n.add("be", {
+ "Shift keeps a point on the grid; a right-click takes a point out.": "Shift трымае кропку на сетцы; правая пстрычка па кропцы прыбірае яе.",
+ "Started: {0}": "Запушчана: {0}",
+ "Done: it is in the tree": "Гатова: яно ў дрэве",
+-"Running… {0}": "Ідзе… {0}"
++"Running… {0}": "Ідзе… {0}",
++"Hear and look": "Разбор",
++"Mend": "Чыстка",
++"Finish": "Мастар"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 3e7a6ad..b5be9bc 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5172,5 +5172,8 @@ RuachI18n.add("de", {
+ "Shift keeps a point on the grid; a right-click takes a point out.": "Shift hält den Punkt auf dem Raster; ein Rechtsklick auf einen Punkt nimmt ihn heraus.",
+ "Started: {0}": "Gestartet: {0}",
+ "Done: it is in the tree": "Fertig: es steht im Baum",
+-"Running… {0}": "Läuft… {0}"
++"Running… {0}": "Läuft… {0}",
++"Hear and look": "Analyse",
++"Mend": "Reparatur",
++"Finish": "Finish"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 84f8411..bdbc525 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5288,5 +5288,8 @@ RuachI18n.add("el", {
+ "Shift keeps a point on the grid; a right-click takes a point out.": "Το Shift κρατά το σημείο πάνω στο πλέγμα· δεξί κλικ σε σημείο το αφαιρεί.",
+ "Started: {0}": "Ξεκίνησε: {0}",
+ "Done: it is in the tree": "Έτοιμο: είναι στο δέντρο",
+-"Running… {0}": "Τρέχει… {0}"
++"Running… {0}": "Τρέχει… {0}",
++"Hear and look": "Ανάλυση",
++"Mend": "Επιδιόρθωση",
++"Finish": "Τελείωμα"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index a62b223..240599f 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5288,5 +5288,8 @@ RuachI18n.add("es", {
+ "Shift keeps a point on the grid; a right-click takes a point out.": "Shift mantiene el punto en la cuadrícula; un clic derecho en un punto lo quita.",
+ "Started: {0}": "En marcha: {0}",
+ "Done: it is in the tree": "Hecho: está en el árbol",
+-"Running… {0}": "En curso… {0}"
++"Running… {0}": "En curso… {0}",
++"Hear and look": "Análisis",
++"Mend": "Reparación",
++"Finish": "Acabado"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index cd00a23..0ffef55 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5172,5 +5172,8 @@ RuachI18n.add("fr", {
+ "Shift keeps a point on the grid; a right-click takes a point out.": "Shift garde le point sur la grille ; un clic droit sur un point le retire.",
+ "Started: {0}": "Lancé : {0}",
+ "Done: it is in the tree": "Fait : c'est dans l'arbre",
+-"Running… {0}": "En cours… {0}"
++"Running… {0}": "En cours… {0}",
++"Hear and look": "Analyse",
++"Mend": "Réparation",
++"Finish": "Finition"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index ed5bfdb..e4aad5c 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5288,5 +5288,8 @@ RuachI18n.add("it", {
+ "Shift keeps a point on the grid; a right-click takes a point out.": "Shift tiene il punto sulla griglia; un clic destro su un punto lo toglie.",
+ "Started: {0}": "Avviato: {0}",
+ "Done: it is in the tree": "Fatto: è nell'albero",
+-"Running… {0}": "In corso… {0}"
++"Running… {0}": "In corso… {0}",
++"Hear and look": "Analisi",
++"Mend": "Ripristino",
++"Finish": "Finitura"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index 2c1f561..f11af45 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5172,5 +5172,8 @@ RuachI18n.add("ja", {
+ "Shift keeps a point on the grid; a right-click takes a point out.": "Shift を押すと点がグリッドに沿います。点を右クリックすると消えます。",
+ "Started: {0}": "開始：{0}",
+ "Done: it is in the tree": "完了：ツリーにあります",
+-"Running… {0}": "実行中… {0}"
++"Running… {0}": "実行中… {0}",
++"Hear and look": "分析",
++"Mend": "修復",
++"Finish": "仕上げ"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index 86b206f..c4063b1 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5172,5 +5172,8 @@ RuachI18n.add("pt", {
+ "Shift keeps a point on the grid; a right-click takes a point out.": "Shift mantém o ponto na grade; um clique direito num ponto o remove.",
+ "Started: {0}": "Iniciado: {0}",
+ "Done: it is in the tree": "Pronto: está na árvore",
+-"Running… {0}": "Em curso… {0}"
++"Running… {0}": "Em curso… {0}",
++"Hear and look": "Análise",
++"Mend": "Reparo",
++"Finish": "Acabamento"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index e3f9c09..463b8f7 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5294,5 +5294,8 @@ RuachI18n.add("ru", {
+ "Shift keeps a point on the grid; a right-click takes a point out.": "Shift держит точку на сетке; правый щелчок по точке убирает её.",
+ "Started: {0}": "Запущено: {0}",
+ "Done: it is in the tree": "Готово: оно в дереве",
+-"Running… {0}": "Идёт… {0}"
++"Running… {0}": "Идёт… {0}",
++"Hear and look": "Разбор",
++"Mend": "Чистка",
++"Finish": "Мастер"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 140e2c3..d526448 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5289,5 +5289,8 @@ RuachI18n.add("uk", {
+ "Shift keeps a point on the grid; a right-click takes a point out.": "Shift тримає точку на сітці; правий клац по точці прибирає її.",
+ "Started: {0}": "Запущено: {0}",
+ "Done: it is in the tree": "Готово: воно в дереві",
+-"Running… {0}": "Іде… {0}"
++"Running… {0}": "Іде… {0}",
++"Hear and look": "Розбір",
++"Mend": "Чистка",
++"Finish": "Мастер"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index 4e0c6b0..99ee1b7 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5172,5 +5172,8 @@ RuachI18n.add("zh", {
+ "Shift keeps a point on the grid; a right-click takes a point out.": "按住 Shift，点会贴合网格；右键点击一个点即可删除它。",
+ "Started: {0}": "已开始：{0}",
+ "Done: it is in the tree": "完成：已在树中",
+-"Running… {0}": "进行中… {0}"
++"Running… {0}": "进行中… {0}",
++"Hear and look": "分析",
++"Mend": "修复",
++"Finish": "收尾"
+ });
+diff --git a/tools/console/heresy-post.js b/tools/console/heresy-post.js
+index dbd3714..7bb816d 100644
+--- a/tools/console/heresy-post.js
++++ b/tools/console/heresy-post.js
+@@ -6,15 +6,17 @@
+ (function () {
+   "use strict";
+ 
++  // HERESY 1461: in three groups, in the chain's order (Debuzz › Upscale › Stems › Remaster); a plugin's steps finish
+   var STEPS = [
+-    { id: "spectrumPanel", step: "spectrum", label: "Spectrum", say: "look" },
+-    { id: "inspectPanel", step: "inspect", label: "Artifacts", say: "find faults" },
+-    { id: "debuzzPanel", step: "debuzz", label: "Debuzz", say: "the frame buzz out" },
+-    { id: "glossPanel", step: "gloss", label: "Lyrics", say: "check the words" },
+-    { id: "derivedPanel", step: "stems", label: "Stems", say: "split" },
+-    { id: "remasterPanel", step: "remaster", label: "Remaster", say: "the Debunker" },
+-    { id: "upscalePanel", step: "upscale", label: "Upscale", say: "redraw the top" }
++    { id: "spectrumPanel", step: "spectrum", label: "Spectrum", say: "look", group: "look" },
++    { id: "inspectPanel", step: "inspect", label: "Artifacts", say: "find faults", group: "look" },
++    { id: "glossPanel", step: "gloss", label: "Lyrics", say: "check the words", group: "look" },
++    { id: "debuzzPanel", step: "debuzz", label: "Debuzz", say: "the frame buzz out", group: "mend" },
++    { id: "upscalePanel", step: "upscale", label: "Upscale", say: "redraw the top", group: "mend" },
++    { id: "derivedPanel", step: "stems", label: "Stems", say: "split", group: "mend" },
++    { id: "remasterPanel", step: "remaster", label: "Remaster", say: "the Debunker", group: "finish" }
+   ];
++  var GROUPS = { look: "Hear and look", mend: "Mend", finish: "Finish" };
+   var KEY = "yue2.postStep";
+   var state = { take: null, done: {}, current: "" };
+   function $(id) { return document.getElementById(id); }
+@@ -205,7 +207,8 @@
+     var bar = $("postSteps");
+     bar.innerHTML = STEPS.map(function (s, i) {
+       var own = s.plugin ? ' translate="no"' : "";   // HERESY 1460: a plugin's words are its own
+-      return (i ? '<span class="ps-arrow" aria-hidden="true">›</span>' : "") +
++      var head = !i || STEPS[i - 1].group !== s.group ? '<span class="ps-group">' + GROUPS[s.group || "finish"] + "</span>" : "";   // HERESY 1461
++      return head + (i ? '<span class="ps-arrow" aria-hidden="true">›</span>' : "") +
+         '<button type="button" role="tab" class="ps-step' + (s.plugin ? " is-plugin" : "") + '" data-step-panel="' + s.id + '"><span class="ps-mark">' + (i + 1) +
+         '</span><span class="ps-text"' + own + '><span class="ps-name">' + esc(s.label) + '</span><span class="ps-say">' + esc(s.say) + "</span></span></button>";
+     }).join("");
+@@ -224,11 +227,12 @@
+         (pl.steps || []).forEach(function (st) {
+           var id = "pl-" + pl.id + "-" + st.id + "Panel";
+           if ($(id)) return;
+-          var s = { id: id, step: "plugin:" + pl.id + ":" + st.id, label: st.label, say: st.say || pl.name, plugin: pl.id, pstep: st.id, spec: st, name: pl.name };
++          var s = { id: id, step: "plugin:" + pl.id + ":" + st.id, label: st.label, say: st.say || pl.name, plugin: pl.id, pstep: st.id, spec: st, name: pl.name, group: "finish" };
+           STEPS.push(s);
+           plug.steps[id] = s;
+           var panel = pluginPanel(s);
+-          if (after && after.parentNode) after.parentNode.appendChild(panel);
++          var box = document.querySelector("#view-post > .dv-tree-box");   // HERESY 1461: before what is made, as the studio's own
++          if (box) box.parentNode.insertBefore(panel, box); else if (after && after.parentNode) after.parentNode.appendChild(panel);
+           panel.classList.add("is-step");
+           added++;
+         });
+-- 
+2.43.0
+

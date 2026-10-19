@@ -18,7 +18,7 @@ If you came looking for a **YuE2 WebUI** or a **YuE studio**: this is one, grown
 > - **Whole songs**, up to eight minutes: a 6:12 song in 126 s, a 7:25 song with its score first in 198 s, on one RTX 3090.
 > - **The score first, and yours to edit**: YuE2 writes the melody and chords as ABC before a note sounds; change them, transpose them, bring your own score or MIDI, and the song follows it.
 > - **Two seeds, not one**: keep the song (music seed), hear it rendered anew (sound seed).
-> - **LoRA training on your own songs**, in the studio, unquantized (bf16), with telemetry that tells you which epochs to hear first; starter sets to try it at once. Adapters stack on measured roads, under a measured ceiling.
+> - **LoRA training on your own songs**, in the studio, unquantized (bf16), with telemetry that tells you which epochs to hear first; starter sets to try it at once. Adapters stack on measured roads, under a measured ceiling, each with its own wave through the song.
 > - **A guard against garbage**: a broken score is caught in seconds and the run stopped, before a minute of GPU is wasted on it.
 > - **Post-production**: spectrum, artifacts, debuzz, stems (BS-Roformer, htdemucs), remaster, upscale (UniverSR), a lyrics check by Whisper; one chain runs them all.
 > - **Into your DAW** (experimental): a REAPER project with the stems, the score as MIDI, the tempo, the sections as regions and the lyrics on the timeline; DAWproject for Waveform and Bitwig.
@@ -58,7 +58,7 @@ Around the model there is a whole studio of six rooms: the **Creator** makes the
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/guide/studio-create.png" alt="Creator"><br><sub><b>Creator</b>: style, lyrics, planning mode, VAE, sliders, LoRAs on a road from green to red; the take with its score, seeds and everything to make it again</sub></td>
+    <td width="50%"><img src="docs/guide/studio-create.png" alt="Creator"><br><sub><b>Creator</b>: style, lyrics, planning mode, VAE, LoRAs on a road from green to red, each with its wave; the take with its score, seeds and everything to make it again</sub></td>
     <td width="50%"><img src="docs/guide/studio-writer.png" alt="Writer"><br><sub><b>Writer</b>: songs as documents with versions, text profiles, and a chat model that drafts and revises with you</sub></td>
   </tr>
   <tr>
@@ -68,6 +68,10 @@ Around the model there is a whole studio of six rooms: the **Creator** makes the
   <tr>
     <td width="50%"><img src="docs/guide/studio-collection.png" alt="Librarian"><br><sub><b>Librarian</b>: every take in workspaces, searched, liked, noted, locked, exported; the heading counts what the open collection holds</sub></td>
     <td width="50%"><img src="docs/guide/studio-train.png" alt="LoRA Trainer"><br><sub><b>LoRA Trainer</b>: LoRA adapters from your own songs: the set, the run, both halves' curves explained, the epochs worth hearing first</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/guide/studio-post-canvas.png" alt="The Refiner as a canvas"><br><sub><b>The Refiner as a canvas</b>: every step a node, wired the way the sound goes, as in ComfyUI; a pipeline's way drawn across it, run up to any node, bypass, clones, profiles</sub></td>
+    <td width="50%"><img src="docs/guide/studio-daw.png" alt="DAW"><br><sub><b>DAW</b> (a preview, in the Refiner): the take's stems on lanes over a console: a version per lane, level, pan, sends, buses and VCAs, automation, cuts with fades, a master chain; <b>Mix</b> renders what you hear</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/guide/studio-engine.png" alt="Engine"><br><sub><b>Engine</b>: the model, memory, which card does what, decoders, adapters, the writer's model, the look, the log</sub></td>
@@ -167,14 +171,14 @@ Everything the studio uses, and what for. The engine comes with the repository; 
 
 **The Artist's Python** (`lab/requirements-art.txt`, its own `.venv-art` by `lab/install-venv.sh --art`): torch 2.11 with torchvision; transformers 5 (Qwen-Image's text encoder, the prompt writer, the content filter); diffusers 0.41 (Qwen-Image 2512 and 2.1) with gguf (the quantized transformers) and peft (the LoRAs); scipy (the Beta schedule); [spandrel](https://github.com/chaiNNer-org/spandrel) 0.4 (the upscalers, MIT).
 
-**Models** (`fetch-models.sh`, and `heresy/fetch-heresy.sh` for the extras), all from [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2) at its pin, each file byte for byte as its author publishes it (the legacy and blend decoders, the sliders and SheetSage2 F32 converted once by the studio), but the stems' models, the Kit's library of adapters and Qwen2.5-Omni-7B whole, which come from their authors; sizes, sources and licences in that repo's card and its `MANIFEST.tsv`:
+**Models** (`fetch-models.sh`, and `heresy/fetch-heresy.sh` for the extras), all from [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2) at its pin, each file byte for byte as its author publishes it (the legacy and blend decoders and SheetSage2 F32 converted once by the studio), but the stems' models, the Kit's three adapters without a licence and Qwen2.5-Omni-7B whole, which come from their authors; sizes, sources and licences in that repo's card and its `MANIFEST.tsv`:
 
 | | what for | licence |
 |---|---|---|
 | YuE2-3B (GGUF: BF16, Q8_0, Q6_K, Q5_K_M) | the songs | CC BY-NC 4.0 |
 | YuE2-Vae, YuE2-Vae-legacy, their 0.666 blend | the sound decoder | CC BY-NC 4.0 |
 | SheetSage2 with MERT-v2-FullSong | a score written from a recording (covers, a take's score from its sound) | CC BY-NC 4.0 |
-| the particle sliders (ntc-ai) · the instrumental LoRA (Mothersuperior) | voice and genre sliders · instrumental pieces | CC BY-NC 4.0 · its own |
+| the Kit's library of LoRAs: Instrumental and Real audio (Mothersuperior), sv-billie, DreamPop v2, J-pop | instrumental pieces, genres, a real-audio sound | CC BY-NC 4.0 |
 | Whisper large-v3 (CTranslate2) | the lyrics check, timing | MIT |
 | BS-Roformer ep317 · htdemucs_ft | stems | not stated by its author · MIT |
 | UniverSR | upscale | CC BY 4.0 |
@@ -280,9 +284,19 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
+### Done › 2.0.0-pre (October 2026)
+
+- **The Refiner as a canvas**: every step a node, wired the way the sound goes; seven pipelines shipped and a plugin's own, run up to any node, bypass, clones, profiles; the chain on many takes at once.
+- **The DAW, a preview**: the take's stems on lanes over a console: a version per lane, EQ, compressor, sends, buses, VCAs, sidechain, automation, fades on a cut, moving and copying, the master's EQ, compressor and limiter, inserts through the Digital Gateway; **Mix** renders it on Forge.
+- **New steps**: Whole lead, Voice upscale, Before and after, Match to a reference, the Digital Gateway; eight stems by their proper names; steps of your own as plugins, on a set of stems and on the GPU too ([docs/PLUGINS.md](docs/PLUGINS.md)).
+- **The Creator**: each LoRA's wave through the song and a budget for the adapters that share their layers; the IRA merge; the denoising steps on a slider; Also render with; the Creator's versions; the song's length by its mode.
+- **Content Credentials (C2PA)** on every download; the Engine and the guide over the room in tabs; every job's progress above the player; new pictures of every room.
+
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
 ### To Do › 2.0.0 and After
 
-2.0.0-rc8 is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
+2.0.0-pre is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
 
 - **Songs edited as the model writes them** (2.0.0): a take extended from any moment; a section written anew with its neighbours' voice, key and bars kept, joined in the model's own tokens and decoded whole, the best joins heard first; an instrumental layer on the take's own score, locked to its bars.
 - **A DAW in the Refiner, an early preview** (2.0.0): [Plenio Music Production System](https://github.com/jplenio/Plenio-Music-Production-System)'s score editor (Apache-2.0): a piano roll, a chord lane, the lyrics over the notes, a MIDI keyboard to play ideas in, the score going both ways.

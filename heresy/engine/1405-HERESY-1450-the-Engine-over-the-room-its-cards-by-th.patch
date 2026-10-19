@@ -1,0 +1,390 @@
+From b812ad05277c5a2e942007b2ac76318b813ba310 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 15 Oct 2026 04:33:31 -0600
+Subject: [PATCH 1405/1463] HERESY 1450: the Engine over the room, its cards by
+ theme behind tabs at the left
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 14.10.2026: «сделать её нашим красивым оверлеем с максимальными высотой и шириной, все блоки, чтобы не было полотенца, оформить вкладками, но не каждый отдельно. Единой тематики блоки в единую вкладку… Лепестки вкладок расположить слева… Блоки во вкладках отцентрировать по вертикали и горизонтали».
+
+#view-engine fixed between the bar and the player, the room dimmed under it (a click there, Esc or Close leaves); seven tabs (Server and log, Hardware, Models and LoRAs, Writer and Artwork, Folders and Security, Appearance, Updates and About), one tab's cards centred, the tab kept; window.ruachEngineTab for the ways in. Four new strings and «Close (Esc)» in eleven languages. Kitchen suite 811/0.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           | 69 ++++++++++++++++++++++++++++++++-
+ tools/console/app.js            | 50 ++++++++++++++++++++++++
+ tools/console/heresy-i18n-be.js |  6 ++-
+ tools/console/heresy-i18n-de.js |  6 ++-
+ tools/console/heresy-i18n-el.js |  6 ++-
+ tools/console/heresy-i18n-es.js |  6 ++-
+ tools/console/heresy-i18n-fr.js |  6 ++-
+ tools/console/heresy-i18n-it.js |  6 ++-
+ tools/console/heresy-i18n-ja.js |  6 ++-
+ tools/console/heresy-i18n-pt.js |  6 ++-
+ tools/console/heresy-i18n-ru.js |  6 ++-
+ tools/console/heresy-i18n-uk.js |  6 ++-
+ tools/console/heresy-i18n-zh.js |  6 ++-
+ tools/console/index.html        | 16 +++++++-
+ 14 files changed, 188 insertions(+), 13 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 7e51efa..8e5211c 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -509,7 +509,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
+    is open, a band names it (and stays in view), the backdrop is dotted and the cards sit tighter;
+    the top bar's Engine button stays lit. Keyed off the panel itself, so every way of opening or
+    closing it (the button, Back, Escape) looks the same. */
+-body:has(#view-engine:not(.is-hidden)) .workspace { display: none; }
++/* HERESY 1450: the room stays under the Engine, dimmed (the rules at the end of this file) */
+ body:has(#view-engine:not(.is-hidden)) #engineToggle { background: var(--amber); border-color: var(--amber); color: var(--on-amber); }
+ .engine-panel {
+   min-height: calc(100vh - var(--bar-h) - var(--playbar-h));
+@@ -5684,3 +5684,70 @@ html.fonts-buttons :is(.btn, .lyr-tog, .menu-pop button, .chip, .head-more-row b
+ .lora-budget-hint { margin: 0 0 0 8px; }
+ .lora-row.is-ordered { cursor: grab; }
+ .lora-row.is-ordered:active { cursor: grabbing; }
++
++/* HERESY 1450 (Viktor 14.10.2026: «сделать её нашим красивым оверлеем с максимальными высотой и шириной… Лепестки вкладок
++   расположить слева, чтобы не съедать вертикальное место. Блоки во вкладках отцентрировать по вертикали и горизонтали»): the
++   Engine over the room between the bar and the player, the room dimmed around it (a click there closes it); the head over
++   the tabs at the left and one tab's cards, centred both ways, scrolled inside when they are taller than the window. The
++   bar and the player stay over it, so their menus open over it too */
++#view-engine.engine-panel {
++  position: fixed; z-index: 36; top: var(--bar-h); bottom: var(--playbar-h); left: 0; right: 0;
++  min-height: 0; padding: 12px 1.5vw; display: flex; flex-direction: column;
++  background: color-mix(in srgb, #050403 58%, transparent); background-image: none; backdrop-filter: blur(3px);
++}
++#view-engine.engine-panel.is-hidden { display: none; }
++body:has(#view-engine:not(.is-hidden)) :is(.topbar, #playbar) { z-index: 37; }
++#view-engine .engine-head {
++  position: static; flex: none; margin: 0; padding: 10px 20px;
++  border: 1px solid var(--line-a); border-bottom: 1px solid var(--line-a); border-radius: var(--r-lg, 14px) var(--r-lg, 14px) 0 0;
++}
++#view-engine .engine-body {
++  flex: 1 1 auto; min-height: 0; display: flex;
++  border: 1px solid var(--line-a); border-top: 0; border-radius: 0 0 var(--r-lg, 14px) var(--r-lg, 14px); overflow: hidden;
++  background-color: var(--sunk);
++  background-image: radial-gradient(color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1.3px);
++  background-size: 16px 16px;
++  box-shadow: 0 24px 70px rgb(0 0 0 / .45);
++}
++#view-engine .engine-tabs {
++  flex: none; width: 250px; display: flex; flex-direction: column; gap: 4px; padding: 14px 10px; overflow-y: auto;
++  background: var(--panel); border-right: 1px solid var(--line-a);
++}
++#view-engine .engine-tab {
++  display: block; width: 100%; padding: 9px 12px; text-align: left; cursor: pointer;
++  border: 1px solid transparent; border-radius: var(--r-sm); background: none; color: var(--muted);
++  font: 500 calc(13.5px + var(--fs, 0px))/1.3 var(--heading); letter-spacing: .01em;
++}
++#view-engine .engine-tab:hover { color: var(--ink); background: color-mix(in srgb, var(--amber) 8%, transparent); }
++#view-engine .engine-tab[aria-selected="true"] {
++  color: var(--amber); background: color-mix(in srgb, var(--amber) 12%, transparent);
++  border-color: color-mix(in srgb, var(--amber) 40%, transparent); box-shadow: inset 3px 0 0 var(--amber);
++}
++#view-engine .engine-tab:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
++#view-engine .engine-grid {
++  flex: 1 1 auto; min-width: 0; overflow: auto; padding: 18px 22px;
++  display: flex; flex-wrap: wrap; gap: 14px; align-items: stretch; align-content: safe center; justify-content: center;
++}
++#view-engine .engine-grid > .card { grid-area: auto; order: 0; flex: 1 1 340px; max-width: 1480px; }
++#view-engine .engine-grid > .card.wide { flex: 1 1 100%; }
++#view-engine .engine-grid > .card.is-tab-off { display: none; }
++/* the server beside its log, the log as tall as the window lets it */
++#view-engine .engine-grid > .card.eg-server { flex: 1 1 300px; max-width: 420px; }
++#view-engine .engine-grid > .card.eg-log { flex: 3 1 620px; }
++#view-engine[data-etab="server"] .eg-log .log-body { flex: none; height: calc(100vh - var(--bar-h) - var(--playbar-h) - 190px); min-height: 260px; }
++/* the machine: the hardware beside Compute, the GPUs under them */
++#view-engine .engine-grid > .card.eg-hardware { flex: 1 1 320px; max-width: 560px; }
++#view-engine .engine-grid > .card.eg-compute { flex: 1.4 1 420px; }
++/* the models: what the install brings first, then the decoders and the adapters */
++#view-engine .engine-grid > .eg-models { order: -1; }
++#view-engine .engine-grid > .eg-vae .vae-list { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
++/* the rooms' helpers side by side */
++#view-engine .engine-grid > .card.eg-writer { flex: 2 1 520px; }
++#view-engine .engine-grid > .card.eg-art { flex: 1 1 360px; }
++@media (max-width: 760px) {
++  #view-engine.engine-panel { padding: 6px; }
++  #view-engine .engine-body { flex-direction: column; }
++  #view-engine .engine-tabs { width: auto; flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line-a); padding: 8px; }
++  #view-engine .engine-tab { width: auto; white-space: nowrap; }
++  #view-engine .engine-grid { padding: 12px; }
++}
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 1b753f7..0f41a2b 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -249,10 +249,59 @@
+     return ask.then(function (ok) { if (ok) v.classList.add("is-hidden"); return ok; });
+   }
+ 
++  // HERESY 1450 (Viktor 14.10.2026: «Единой тематики блоки в единую вкладку. Отсортировать позиции по интуитивному движению с
++  // начала в конец»): the Engine's cards by theme, a tab each theme, in the order one goes through them: the server and its
++  // log, the machine, the models, the rooms' helpers, where the work lives and who may open it, the look, the updates. One
++  // tab's cards are shown, the rest stay in the page (their code runs as before); a card no tab names shows with the last
++  var ENGINE_TABS = { server: ["eg-server", "eg-log"], machine: ["eg-hardware", "eg-compute", "eg-gpus"], models: ["eg-models", "eg-vae", "eg-loras"],
++    rooms: ["eg-writer", "eg-art"], places: ["eg-folders", "eg-access"], look: ["eg-look"], about: ["eg-updates", "eg-about"] };
++  function engineTabOf(card) {
++    for (var k in ENGINE_TABS) if (ENGINE_TABS[k].some(function (c) { return card.classList.contains(c); })) return k;
++    return "about";
++  }
++  function engineTab(name, focus, quiet) {
++    if (!ENGINE_TABS[name]) name = "server";
++    all("#engineTabs [data-etab]").forEach(function (b) {
++      var on = b.dataset.etab === name;
++      b.setAttribute("aria-selected", on ? "true" : "false");
++      b.tabIndex = on ? 0 : -1;
++      if (on && focus) b.focus();
++    });
++    all("#view-engine .engine-grid > .card").forEach(function (c) { c.classList.toggle("is-tab-off", engineTabOf(c) !== name); });
++    $("view-engine").dataset.etab = name;
++    $("view-engine").querySelector(".engine-grid").scrollTop = 0;
++    if (!quiet) store("yue2.engineTab", name);
++    if (name === "server") scrollLogToEnd();
++  }
++  window.ruachEngineTab = function (where) {   // a tab by its name, or the tab of the card an element sits in
++    var card = where && where.closest ? where.closest("#view-engine .engine-grid > .card") : null;
++    engineTab(card ? engineTabOf(card) : where);
++  };
++  (function () {
++    var bar = $("engineTabs");
++    if (!bar) return;
++    bar.addEventListener("click", function (e) { var b = e.target.closest("[data-etab]"); if (b) engineTab(b.dataset.etab); });
++    bar.addEventListener("keydown", function (e) {
++      var tabs = all("#engineTabs [data-etab]"), i = tabs.indexOf(document.activeElement), j = -1;
++      if (i < 0) return;
++      if (e.key === "ArrowDown" || e.key === "ArrowRight") j = (i + 1) % tabs.length;
++      else if (e.key === "ArrowUp" || e.key === "ArrowLeft") j = (i - 1 + tabs.length) % tabs.length;
++      else if (e.key === "Home") j = 0;
++      else if (e.key === "End") j = tabs.length - 1;
++      if (j < 0) return;
++      e.preventDefault();
++      engineTab(tabs[j].dataset.etab, true);
++    });
++    engineTab(recall("yue2.engineTab") || "server", false, true);
++  })();
++  // HERESY 1450: a click on the dimmed room around the Engine closes it, as Esc does
++  $("view-engine").addEventListener("click", function (e) { if (e.target === this) leaveEngine(); });
++
+   function show(view) {
+     if (view === "engine") {
+       if (!$("view-engine").classList.contains("is-hidden")) return void leaveEngine();
+       $("view-engine").classList.remove("is-hidden");
++      engineTab($("view-engine").dataset.etab || recall("yue2.engineTab") || "server", false, true);   // HERESY 1450: the tab it was left on
+       scrollLogToEnd();
+       if (window.HeresyPlaces) window.HeresyPlaces.load();   // HERESY 1283: the Folders card asks the lab when the page is seen
+       if (window.HeresyWeights) window.HeresyWeights.load(); // HERESY 1289: and the Models and LoRAs card
+@@ -3237,6 +3286,7 @@
+     });
+     $("logDockEngine").addEventListener("click", function () {
+       $("engineToggle").click();
++      if (window.ruachEngineTab) window.ruachEngineTab("server");   // HERESY 1450: the log is in the first tab
+       setTimeout(function () { var b = $("logBody"); if (b) b.scrollIntoView({ block: "center" }); }, 120);
+     });
+     $("logDockFollow").addEventListener("change", function () { if (this.checked) $("logDockBody").scrollTop = $("logDockBody").scrollHeight; });
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index acb420d..29af4f3 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5268,5 +5268,9 @@ RuachI18n.add("be", {
+ "{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} і {1} дзеляць слаі ({2}) і цягнуць упоперак адно аднаго: разам яны сягаюць далей за кожнага з іх, але менш за іх суму.",
+ "In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "Па чарзе: верхні радок бярэ сваю сілу першым, наступны — што пакінула чырвоная лінія; што адпусціла хваля, бярэ наступны.",
+ "Share: past the red line, the adapters that share their layers give way, each in proportion.": "Па долях: за чырвонай лініяй адаптары, што дзеляць слаі, саступаюць — кожны прапарцыйна.",
+-"a wave": "хваля"
++"a wave": "хваля",
++"Server and log": "Сервер і лог",
++"Writer and Artwork": "Пісьменнік і вокладка",
++"Folders and Security": "Папкі і бяспека",
++"Updates and About": "Абнаўленні і пра праграму"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index f1c579d..0582504 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5151,5 +5151,9 @@ RuachI18n.add("de", {
+ "{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} und {1} teilen ihre Schichten ({2}) und ziehen quer zueinander: zusammen reichen sie weiter als jeder allein, aber weniger als ihre Summe.",
+ "In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "Der Reihe nach: die oberste Zeile nimmt ihre Stärke zuerst, die nächste, was die rote Linie übrig lässt; was eine Welle loslässt, nimmt der nächste.",
+ "Share: past the red line, the adapters that share their layers give way, each in proportion.": "Teilen: über der roten Linie geben die Adapter, die sich Schichten teilen, nach, jeder anteilig.",
+-"a wave": "eine Welle"
++"a wave": "eine Welle",
++"Server and log": "Server und Protokoll",
++"Writer and Artwork": "Schreiber und Artwork",
++"Folders and Security": "Ordner und Sicherheit",
++"Updates and About": "Updates und Über"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 08458f6..bfa4875 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5267,5 +5267,9 @@ RuachI18n.add("el", {
+ "{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "Οι {0} και {1} μοιράζονται τα στρώματά τους ({2}) και τραβούν εγκάρσια ο ένας στον άλλον: μαζί φτάνουν πιο μακριά από τον καθένα, αλλά λιγότερο από το άθροισμά τους.",
+ "In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "Με τη σειρά: η πάνω γραμμή παίρνει πρώτη τη δύναμή της, η επόμενη ό,τι αφήνει η κόκκινη γραμμή· ό,τι αφήνει ένα κύμα, το παίρνει ο επόμενος.",
+ "Share: past the red line, the adapters that share their layers give way, each in proportion.": "Αναλογικά: πέρα από την κόκκινη γραμμή, οι προσαρμογείς που μοιράζονται στρώματα υποχωρούν, ο καθένας αναλογικά.",
+-"a wave": "ένα κύμα"
++"a wave": "ένα κύμα",
++"Server and log": "Διακομιστής και αρχείο καταγραφής",
++"Writer and Artwork": "Συγγραφέας και εξώφυλλο",
++"Folders and Security": "Φάκελοι και ασφάλεια",
++"Updates and About": "Ενημερώσεις και σχετικά"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index bd14b1f..ea64e9a 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5267,5 +5267,9 @@ RuachI18n.add("es", {
+ "{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} y {1} comparten sus capas ({2}) y tiran en direcciones cruzadas: juntos llegan más lejos que cualquiera de los dos, pero menos que su suma.",
+ "In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "En orden: la fila de arriba toma su fuerza primero, la siguiente lo que deja la línea roja; lo que suelta una onda lo toma el siguiente.",
+ "Share: past the red line, the adapters that share their layers give way, each in proportion.": "Repartir: más allá de la línea roja, los adaptadores que comparten capas ceden, cada uno en proporción.",
+-"a wave": "una onda"
++"a wave": "una onda",
++"Server and log": "Servidor y registro",
++"Writer and Artwork": "Escritor y portada",
++"Folders and Security": "Carpetas y seguridad",
++"Updates and About": "Actualizaciones y acerca de"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index e4e29e1..b14162e 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5151,5 +5151,9 @@ RuachI18n.add("fr", {
+ "{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} et {1} partagent leurs couches ({2}) et tirent en travers l'un de l'autre : ensemble ils vont plus loin que chacun, mais moins que leur somme.",
+ "In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "Dans l'ordre : la ligne du haut prend sa force en premier, la suivante ce que laisse la ligne rouge ; ce qu'une vague lâche, le suivant le prend.",
+ "Share: past the red line, the adapters that share their layers give way, each in proportion.": "Partager : au-delà de la ligne rouge, les adaptateurs qui partagent leurs couches cèdent, chacun en proportion.",
+-"a wave": "une vague"
++"a wave": "une vague",
++"Server and log": "Serveur et journal",
++"Writer and Artwork": "Écrivain et illustration",
++"Folders and Security": "Dossiers et sécurité",
++"Updates and About": "Mises à jour et à propos"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 8744c02..636ba33 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5267,5 +5267,9 @@ RuachI18n.add("it", {
+ "{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} e {1} condividono i loro strati ({2}) e tirano di traverso l'uno all'altro: insieme arrivano più lontano di ciascuno, ma meno della loro somma.",
+ "In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "In ordine: la riga in alto prende per prima la sua forza, la successiva ciò che lascia la linea rossa; ciò che un'onda lascia, lo prende il successivo.",
+ "Share: past the red line, the adapters that share their layers give way, each in proportion.": "Ripartire: oltre la linea rossa, gli adattatori che condividono gli strati cedono, ciascuno in proporzione.",
+-"a wave": "un'onda"
++"a wave": "un'onda",
++"Server and log": "Server e log",
++"Writer and Artwork": "Scrittore e copertina",
++"Folders and Security": "Cartelle e sicurezza",
++"Updates and About": "Aggiornamenti e informazioni"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index 010a09e..73059ab 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5151,5 +5151,9 @@ RuachI18n.add("ja", {
+ "{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} と {1} は層を共有し（{2}）、互いに交差する向きに引きます。合わせるとどちらか一方より遠くまで届きますが、合計よりは小さくなります。",
+ "In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "順番に：上の行が最初に強さを取り、次の行は赤い線が残した分を取ります。波が手放した分は次が受け取ります。",
+ "Share: past the red line, the adapters that share their layers give way, each in proportion.": "按分：赤い線を超えると、層を共有するアダプターがそれぞれ比例して譲ります。",
+-"a wave": "波"
++"a wave": "波",
++"Server and log": "サーバーとログ",
++"Writer and Artwork": "ライターとアートワーク",
++"Folders and Security": "フォルダーとセキュリティ",
++"Updates and About": "アップデートとこのアプリについて"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index 6ee8227..36e6b9f 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5151,5 +5151,9 @@ RuachI18n.add("pt", {
+ "{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} e {1} partilham as suas camadas ({2}) e puxam de través um ao outro: juntos chegam mais longe do que qualquer um, mas menos do que a sua soma.",
+ "In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "Por ordem: a linha de cima toma primeiro a sua força, a seguinte o que a linha vermelha deixa; o que uma onda larga, o seguinte apanha.",
+ "Share: past the red line, the adapters that share their layers give way, each in proportion.": "Repartir: para lá da linha vermelha, os adaptadores que partilham camadas cedem, cada um em proporção.",
+-"a wave": "uma onda"
++"a wave": "uma onda",
++"Server and log": "Servidor e log",
++"Writer and Artwork": "Escritor e arte",
++"Folders and Security": "Pastas e segurança",
++"Updates and About": "Atualizações e sobre"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 4b9a51b..4552558 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5273,5 +5273,9 @@ RuachI18n.add("ru", {
+ "{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} и {1} делят слои ({2}) и тянут поперёк друг друга: вместе они дотягиваются дальше любого из них, но меньше их суммы.",
+ "In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "По порядку: верхняя строка берёт свою силу первой, следующая — что оставила красная линия; что отпустила волна, берёт следующий.",
+ "Share: past the red line, the adapters that share their layers give way, each in proportion.": "В долю: за красной линией адаптеры, делящие слои, уступают — каждый пропорционально.",
+-"a wave": "волна"
++"a wave": "волна",
++"Server and log": "Сервер и лог",
++"Writer and Artwork": "Писатель и обложка",
++"Folders and Security": "Папки и безопасность",
++"Updates and About": "Обновления и о программе"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index f41280f..8589287 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5268,5 +5268,9 @@ RuachI18n.add("uk", {
+ "{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} і {1} ділять шари ({2}) і тягнуть упоперек одне одного: разом вони сягають далі за будь-кого з них, але менше за їхню суму.",
+ "In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "За порядком: верхній рядок бере свою силу першим, наступний — що лишила червона лінія; що відпустила хвиля, бере наступний.",
+ "Share: past the red line, the adapters that share their layers give way, each in proportion.": "Частками: за червоною лінією адаптери, що ділять шари, поступаються — кожен пропорційно.",
+-"a wave": "хвиля"
++"a wave": "хвиля",
++"Server and log": "Сервер і лог",
++"Writer and Artwork": "Письменник і обкладинка",
++"Folders and Security": "Теки й безпека",
++"Updates and About": "Оновлення й про програму"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index 357c161..ffd3417 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5151,5 +5151,9 @@ RuachI18n.add("zh", {
+ "{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} 和 {1} 共享它们的层（{2}），并交叉地拉：合在一起比任何一个走得更远，但少于两者之和。",
+ "In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "按顺序：最上面一行先取其强度，下一行取红线剩下的部分；一个波形放下的部分由下一个接过。",
+ "Share: past the red line, the adapters that share their layers give way, each in proportion.": "按比例：越过红线后，共享层的适配器各自按比例让出。",
+-"a wave": "波形"
++"a wave": "波形",
++"Server and log": "服务器与日志",
++"Writer and Artwork": "写作室与封面图",
++"Folders and Security": "文件夹与安全",
++"Updates and About": "更新与关于"
+ });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 0067e5e..9f2db2e 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -207,7 +207,20 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+   <div class="engine-head">
+     <h2 class="engine-title"><span class="engine-gear" aria-hidden="true">&#9881;</span> Engine</h2>
+     <p class="engine-sub">models, decoders, add-ons and this machine &middot; settings here apply to every song until you change them</p>
+-    <button type="button" class="btn ghost small" id="engineBack" data-tip="Back to the song form (Esc)">&larr; Back to compose</button>
++    <button type="button" class="btn ghost small" id="engineBack" data-tip="Close (Esc)">Close</button>
++  </div>
++  <!-- HERESY 1450 (Viktor 14.10.2026: «все блоки, чтобы не было полотенца, оформить вкладками, но не каждый отдельно. Единой
++       тематики блоки в единую вкладку… Лепестки вкладок расположить слева»): the cards by theme, in the order one goes
++       through them from the start; app.js shows one tab's cards (ENGINE_TABS) -->
++  <div class="engine-body">
++  <div class="engine-tabs" role="tablist" aria-orientation="vertical" aria-label="Engine" id="engineTabs">
++    <button type="button" role="tab" class="engine-tab" data-etab="server" aria-selected="true">Server and log</button>
++    <button type="button" role="tab" class="engine-tab" data-etab="machine" aria-selected="false" tabindex="-1">Hardware</button>
++    <button type="button" role="tab" class="engine-tab" data-etab="models" aria-selected="false" tabindex="-1">Models and LoRAs</button>
++    <button type="button" role="tab" class="engine-tab" data-etab="rooms" aria-selected="false" tabindex="-1">Writer and Artwork</button>
++    <button type="button" role="tab" class="engine-tab" data-etab="places" aria-selected="false" tabindex="-1">Folders and Security</button>
++    <button type="button" role="tab" class="engine-tab" data-etab="look" aria-selected="false" tabindex="-1">Appearance</button>
++    <button type="button" role="tab" class="engine-tab" data-etab="about" aria-selected="false" tabindex="-1">Updates and About</button>
+   </div>
+   <div class="engine-grid">
+     <!-- HERESY 1166 (Viktor 04.10.2026: «как всё ужать и передвинуть, чтобы на 1080p всё встало красиво»): the cards in the
+@@ -515,6 +528,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+     </div>
+     <!-- /credits -->
+   </div>
++  </div><!-- /engine-body -->
+ </section>
+ 
+ <!-- ------------------------------------------------------------- workspace -->
+-- 
+2.43.0
+

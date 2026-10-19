@@ -1,0 +1,278 @@
+From 16de43a76aed95ddfe897552790caf66a43a61df Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 17 Oct 2026 13:01:16 -0600
+Subject: [PATCH 1449/1463] =?UTF-8?q?HERESY=201522:=20the=20Writer's=20Exp?=
+ =?UTF-8?q?ort=20all=20carries=20the=20Creator's=20versions=20and=20its=20?=
+ =?UTF-8?q?toast=20counts=20their=20titles;=20Import=20says=20the=20versio?=
+ =?UTF-8?q?ns=20and=20titles=20it=20brought;=20the=20two=20buttons'=20tips?=
+ =?UTF-8?q?=20say=20so;=201519's=20Chinese=20names=20the=20Creator=20?=
+ =?UTF-8?q?=E5=88=9B=E4=BD=9C=E5=AE=A4=20as=20the=20catalog=20does?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-i18n-be.js |  6 +++++-
+ tools/console/heresy-i18n-de.js |  6 +++++-
+ tools/console/heresy-i18n-el.js |  6 +++++-
+ tools/console/heresy-i18n-es.js |  6 +++++-
+ tools/console/heresy-i18n-fr.js |  6 +++++-
+ tools/console/heresy-i18n-it.js |  6 +++++-
+ tools/console/heresy-i18n-ja.js |  6 +++++-
+ tools/console/heresy-i18n-pt.js |  6 +++++-
+ tools/console/heresy-i18n-ru.js |  6 +++++-
+ tools/console/heresy-i18n-uk.js |  6 +++++-
+ tools/console/heresy-i18n-zh.js | 18 +++++++++++-------
+ tools/console/heresy-writer.js  |  9 +++++++--
+ tools/console/index.html        |  4 ++--
+ 13 files changed, 70 insertions(+), 21 deletions(-)
+
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index b5b5327..51a723c 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5588,5 +5588,9 @@ RuachI18n.add("be", {
+ "Back to the last quarter-minute mark (0:15, 0:30…). The ← key: to the last 5 s mark": "Назад да апошняй пазнакі чвэрці хвіліны (0:15, 0:30…). Клавіша ←: да апошняй пазнакі 5 с",
+ "Same as the text": "Як у тэксту",
+ "Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Qwen-Image 2512": "Да трох частак кадра, у кожнай свае словы: на кожным кроку мастака пытаюцца яшчэ раз пра кожны рэгіён, з промптам і словамі рэгіёна, і адказы змешваюцца мяккімі рамкамі (як у Latent Couple). Кожны рэгіён каштуе цэлага лішняга праходу на крок. Qwen-Image 2512",
+-"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "Партытура запісана ў {0} (прыйшла як {1}): тыя ж ноты, запісаныя так, як іх спявае рухавік"
++"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "Партытура запісана ў {0} (прыйшла як {1}): тыя ж ноты, запісаныя так, як іх спявае рухавік",
++"Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "Экспарт усяго: кожны дакумент Пісьменніка з яго версіямі, створанымі з яго сэмпламі і кошыкам, і версіі Творцы па кожнай назве, у адным файле (рэзервовая копія)",
++"Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "Імпарт рэзервовай копіі Пісьменніка: чаго тут няма, прыходзіць; тое ж самае застаецца як ёсць; дакумент, што адрозніваецца ад свайго цёзкі тут, становіцца побач копіяй; назва з версій Творцы атрымлівае версіі, якіх бракуе. Нічога тут не перазапісваецца",
++"Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "Рэзервовая копія Пісьменніка: дакументаў {0}, у кошыку {1}, версіі Творцы па назвах: {2}, у {3}",
++"the Creator's versions: {0} new, {1} titles new": "версіі Творцы: новых {0}, новых назваў {1}"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 20e9416..92244d4 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5471,5 +5471,9 @@ RuachI18n.add("de", {
+ "Back to the last quarter-minute mark (0:15, 0:30…). The ← key: to the last 5 s mark": "Zurück zur letzten Viertelminutenmarke (0:15, 0:30…). Die Taste ←: zur letzten 5-s-Marke",
+ "Same as the text": "Wie der Text",
+ "Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Qwen-Image 2512": "Bis zu drei Teile des Bildes, jeder mit eigenen Worten: bei jedem Schritt wird der Maler für jede Region erneut gefragt, mit dem Prompt und den Worten der Region, und die Antworten werden durch weich berandete Felder gemischt (nach Latent Couple). Jede Region kostet pro Schritt einen ganzen Durchgang mehr. Qwen-Image 2512",
+-"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "Die Partitur in {0} geschrieben (sie kam als {1}): dieselben Noten, so geschrieben, wie die Engine sie singt"
++"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "Die Partitur in {0} geschrieben (sie kam als {1}): dieselben Noten, so geschrieben, wie die Engine sie singt",
++"Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "Alles exportieren: jedes Dokument des Schreibers, mit seinen Versionen, den daraus gemachten Takes und seinem Papierkorb, dazu die Versionen des Schöpfers zu jedem Titel, in einer Datei (ein Backup)",
++"Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "Ein Backup des Schreibers importieren: was hier fehlt, kommt herein; Gleiches bleibt, wie es ist; ein Dokument, das von seinem Namensvetter hier abweicht, kommt als Kopie daneben; ein Titel der Versionen des Schöpfers bekommt die Versionen, die ihm fehlen. Hier wird nichts überschrieben",
++"Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "Backup des Schreibers: {0} Dokumente und {1} im Papierkorb, die Versionen des Schöpfers zu {2} Titeln, nach {3}",
++"the Creator's versions: {0} new, {1} titles new": "Versionen des Schöpfers: {0} neu, {1} Titel neu"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index a00c187..7a93051 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5587,5 +5587,9 @@ RuachI18n.add("el", {
+ "Back to the last quarter-minute mark (0:15, 0:30…). The ← key: to the last 5 s mark": "Πίσω στο τελευταίο σημάδι τετάρτου του λεπτού (0:15, 0:30…). Το πλήκτρο ←: στο τελευταίο σημάδι των 5 δ",
+ "Same as the text": "Ίδια με του κειμένου",
+ "Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Qwen-Image 2512": "Έως τρία μέρη του κάδρου, το καθένα με δικές του λέξεις: σε κάθε βήμα ο ζωγράφος ρωτιέται ξανά για κάθε περιοχή, με το prompt και τις λέξεις της περιοχής, και οι απαντήσεις αναμειγνύονται με κουτιά μαλακών άκρων (όπως στο Latent Couple). Κάθε περιοχή κοστίζει ένα ολόκληρο πέρασμα ακόμη ανά βήμα. Qwen-Image 2512",
+-"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "Η παρτιτούρα γράφτηκε σε {0} (ήρθε ως {1}): οι ίδιες νότες, γραμμένες όπως τις τραγουδά η μηχανή"
++"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "Η παρτιτούρα γράφτηκε σε {0} (ήρθε ως {1}): οι ίδιες νότες, γραμμένες όπως τις τραγουδά η μηχανή",
++"Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "Εξαγωγή όλων: κάθε έγγραφο του Συγγραφέα με τις εκδοχές του, τις λήψεις που έγιναν από αυτό και τον κάδο του, και οι εκδοχές του Δημιουργού για κάθε τίτλο, σε ένα αρχείο (αντίγραφο ασφαλείας)",
++"Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "Εισαγωγή αντιγράφου του Συγγραφέα: ό,τι λείπει εδώ έρχεται· το ίδιο μένει ως έχει· ένα έγγραφο που διαφέρει από το συνώνυμό του εδώ μπαίνει δίπλα του ως αντίγραφο· ένας τίτλος των εκδοχών του Δημιουργού παίρνει τις εκδοχές που του λείπουν. Τίποτα εδώ δεν αντικαθίσταται",
++"Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "Αντίγραφο του Συγγραφέα: {0} έγγραφα, {1} στον κάδο, οι εκδοχές του Δημιουργού για {2} τίτλους, στο {3}",
++"the Creator's versions: {0} new, {1} titles new": "εκδοχές του Δημιουργού: {0} νέες, {1} νέοι τίτλοι"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 193da1d..0e3101f 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5587,5 +5587,9 @@ RuachI18n.add("es", {
+ "Back to the last quarter-minute mark (0:15, 0:30…). The ← key: to the last 5 s mark": "Volver a la última marca de cuarto de minuto (0:15, 0:30…). La tecla ←: a la última marca de 5 s",
+ "Same as the text": "Igual que el texto",
+ "Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Qwen-Image 2512": "Hasta tres partes del cuadro, cada una con sus propias palabras: en cada paso se le pregunta de nuevo al pintor por cada región, con el prompt y las palabras de la región, y las respuestas se mezclan con cajas de bordes suaves (a la manera de Latent Couple). Cada región cuesta una pasada entera más por paso. Qwen-Image 2512",
+-"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "La partitura escrita en {0} (llegó como {1}): las mismas notas, escritas como las canta el motor"
++"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "La partitura escrita en {0} (llegó como {1}): las mismas notas, escritas como las canta el motor",
++"Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "Exportar todo: cada documento del Escritor, con sus versiones, las tomas hechas con él y su papelera, y las versiones del Creador de cada título, en un solo archivo (una copia de seguridad)",
++"Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "Importar una copia del Escritor: lo que falta aquí entra; lo igual se deja; un documento que difiere de su homónimo de aquí entra a su lado como copia; un título de las versiones del Creador gana las versiones que le faltan. Aquí no se sobrescribe nada",
++"Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "Copia del Escritor: {0} documentos y {1} en la papelera, las versiones del Creador de {2} títulos, en {3}",
++"the Creator's versions: {0} new, {1} titles new": "versiones del Creador: {0} nuevas, {1} títulos nuevos"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index 98d8755..0bc3157 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5471,5 +5471,9 @@ RuachI18n.add("fr", {
+ "Back to the last quarter-minute mark (0:15, 0:30…). The ← key: to the last 5 s mark": "Retour au dernier repère du quart de minute (0:15, 0:30…). La touche ← : au dernier repère de 5 s",
+ "Same as the text": "Comme le texte",
+ "Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Qwen-Image 2512": "Jusqu'à trois parties du cadre, chacune avec ses propres mots : à chaque étape, le peintre est interrogé à nouveau pour chaque région, avec le prompt et les mots de la région, et les réponses sont fondues par des cadres aux bords doux (à la manière de Latent Couple). Chaque région coûte une passe entière de plus par étape. Qwen-Image 2512",
+-"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "La partition écrite en {0} (elle est venue en {1}) : les mêmes notes, écrites comme le moteur les chante"
++"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "La partition écrite en {0} (elle est venue en {1}) : les mêmes notes, écrites comme le moteur les chante",
++"Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "Tout exporter : chaque document de l'Écrivain, avec ses versions, les prises faites à partir de lui et sa corbeille, et les versions du Créateur de chaque titre, dans un seul fichier (une sauvegarde)",
++"Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "Importer une sauvegarde de l'Écrivain : ce qui manque ici entre ; l'identique reste tel quel ; un document qui diffère de son homonyme d'ici entre à côté comme copie ; un titre des versions du Créateur reçoit les versions qui lui manquent. Rien ici n'est écrasé",
++"Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "Sauvegarde de l'Écrivain : {0} documents et {1} dans la corbeille, les versions du Créateur de {2} titres, dans {3}",
++"the Creator's versions: {0} new, {1} titles new": "versions du Créateur : {0} nouvelles, {1} titres nouveaux"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index d5526c9..766fea7 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5587,5 +5587,9 @@ RuachI18n.add("it", {
+ "Back to the last quarter-minute mark (0:15, 0:30…). The ← key: to the last 5 s mark": "Indietro all'ultimo segno di quarto di minuto (0:15, 0:30…). Il tasto ←: all'ultimo segno di 5 s",
+ "Same as the text": "Come il testo",
+ "Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Qwen-Image 2512": "Fino a tre parti dell'inquadratura, ognuna con le sue parole: a ogni passo il pittore viene interrogato di nuovo per ogni regione, con il prompt e le parole della regione, e le risposte si fondono con riquadri dai bordi morbidi (alla maniera di Latent Couple). Ogni regione costa un passaggio intero in più per passo. Qwen-Image 2512",
+-"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "La partitura scritta in {0} (era arrivata come {1}): le stesse note, scritte come le canta il motore"
++"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "La partitura scritta in {0} (era arrivata come {1}): le stesse note, scritte come le canta il motore",
++"Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "Esporta tutto: ogni documento dello Scrittore, con le sue versioni, i take fatti da esso e il suo cestino, e le versioni del Creatore di ogni titolo, in un solo file (un backup)",
++"Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "Importa un backup dello Scrittore: ciò che manca qui entra; l'uguale resta com'è; un documento diverso dal suo omonimo di qui entra accanto come copia; un titolo delle versioni del Creatore riceve le versioni che gli mancano. Qui non si sovrascrive nulla",
++"Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "Backup dello Scrittore: {0} documenti e {1} nel cestino, le versioni del Creatore di {2} titoli, in {3}",
++"the Creator's versions: {0} new, {1} titles new": "versioni del Creatore: {0} nuove, {1} titoli nuovi"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index 059a3f9..be8d14f 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5471,5 +5471,9 @@ RuachI18n.add("ja", {
+ "Back to the last quarter-minute mark (0:15, 0:30…). The ← key: to the last 5 s mark": "直前の15秒区切り（0:15、0:30…）へ戻る。← キー：直前の5秒区切りへ",
+ "Same as the text": "本文と同じ",
+ "Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Qwen-Image 2512": "フレームを最大3つの領域に分け、それぞれに独自の言葉を：各ステップで領域ごとにプロンプトと領域の言葉で画家にもう一度問い、その答えを柔らかい縁のボックスで混ぜ合わせます（Latent Couple 方式）。領域1つにつき、1ステップあたり丸ごと1パス余分にかかります。Qwen-Image 2512",
+-"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "スコアを {0} で書き直しました（届いたのは {1}）：同じ音を、エンジンが歌う綴りで"
++"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "スコアを {0} で書き直しました（届いたのは {1}）：同じ音を、エンジンが歌う綴りで",
++"Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "すべてをエクスポート：ライターの各ドキュメント（そのバージョン、そこから作ったテイク、ゴミ箱）と、各タイトルのクリエイターのバージョンを1つのファイルに（バックアップ）",
++"Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "ライターのバックアップをインポート：ここにないものは入り、同じものはそのまま、ここの同名と異なるドキュメントはコピーとして隣に入り、クリエイターのバージョンのタイトルには足りないバージョンが加わります。ここでは何も上書きされません",
++"Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "ライターのバックアップ：ドキュメント {0} 件、ゴミ箱 {1} 件、クリエイターのバージョン {2} タイトル分を {3} へ",
++"the Creator's versions: {0} new, {1} titles new": "クリエイターのバージョン：新規 {0} 件、新しいタイトル {1} 件"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index b36187b..68be657 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5471,5 +5471,9 @@ RuachI18n.add("pt", {
+ "Back to the last quarter-minute mark (0:15, 0:30…). The ← key: to the last 5 s mark": "Voltar à última marca de quarto de minuto (0:15, 0:30…). A tecla ←: à última marca de 5 s",
+ "Same as the text": "Igual ao texto",
+ "Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Qwen-Image 2512": "Até três partes do quadro, cada uma com as suas próprias palavras: a cada passo o pintor é consultado de novo para cada região, com o prompt e as palavras da região, e as respostas são misturadas por caixas de bordas suaves (à maneira do Latent Couple). Cada região custa uma passada inteira a mais por passo. Qwen-Image 2512",
+-"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "A partitura escrita em {0} (veio como {1}): as mesmas notas, escritas como o motor as canta"
++"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "A partitura escrita em {0} (veio como {1}): as mesmas notas, escritas como o motor as canta",
++"Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "Exportar tudo: cada documento do Escritor, com suas versões, os takes feitos a partir dele e sua lixeira, e as versões do Criador de cada título, num só arquivo (um backup)",
++"Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "Importar um backup do Escritor: o que falta aqui entra; o igual fica como está; um documento que difere do seu homônimo daqui entra ao lado como cópia; um título das versões do Criador ganha as versões que lhe faltam. Nada aqui é sobrescrito",
++"Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "Backup do Escritor: {0} documentos e {1} na lixeira, as versões do Criador de {2} títulos, em {3}",
++"the Creator's versions: {0} new, {1} titles new": "versões do Criador: {0} novas, {1} títulos novos"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 223f4a2..d0b3278 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5593,5 +5593,9 @@ RuachI18n.add("ru", {
+ "Back to the last quarter-minute mark (0:15, 0:30…). The ← key: to the last 5 s mark": "Назад к последней отметке четверти минуты (0:15, 0:30…). Клавиша ←: к последней отметке 5 с",
+ "Same as the text": "Как у текста",
+ "Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Qwen-Image 2512": "До трёх частей кадра, у каждой свои слова: на каждом шаге художника спрашивают ещё раз о каждом регионе, с промптом и словами региона, и ответы смешиваются мягкими рамками (как в Latent Couple). Каждый регион стоит целого лишнего прохода на шаг. Qwen-Image 2512",
+-"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "Партитура записана в {0} (пришла как {1}): те же ноты, записанные так, как их поёт движок"
++"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "Партитура записана в {0} (пришла как {1}): те же ноты, записанные так, как их поёт движок",
++"Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "Экспортировать всё: каждый документ Писателя с его версиями, сделанными из него семплами и корзиной, и версии Творца по каждому названию — в одном файле (резервная копия)",
++"Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "Импортировать резервную копию Писателя: чего здесь нет, приходит; то же самое остаётся как есть; документ, отличающийся от своего тёзки здесь, встаёт рядом копией; название из версий Творца получает недостающие версии. Ничто здесь не перезаписывается",
++"Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "Резервная копия Писателя: {0} документов и {1} в корзине, названий с версиями Творца: {2} — в {3}",
++"the Creator's versions: {0} new, {1} titles new": "версии Творца: новых {0}, новых названий {1}"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index d0c942a..7fd2372 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5588,5 +5588,9 @@ RuachI18n.add("uk", {
+ "Back to the last quarter-minute mark (0:15, 0:30…). The ← key: to the last 5 s mark": "Назад до останньої позначки чверті хвилини (0:15, 0:30…). Клавіша ←: до останньої позначки 5 с",
+ "Same as the text": "Як у тексту",
+ "Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Qwen-Image 2512": "До трьох частин кадру, у кожної свої слова: на кожному кроці художника питають ще раз про кожен регіон, з промптом і словами регіону, і відповіді змішуються м'якими рамками (як у Latent Couple). Кожен регіон коштує цілого зайвого проходу на крок. Qwen-Image 2512",
+-"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "Партитуру записано в {0} (прийшла як {1}): ті самі ноти, записані так, як їх співає рушій"
++"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "Партитуру записано в {0} (прийшла як {1}): ті самі ноти, записані так, як їх співає рушій",
++"Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "Експорт усього: кожен документ Письменника з його версіями, створеними з нього семплами й кошиком, і версії Творця за кожною назвою, в одному файлі (резервна копія)",
++"Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "Імпорт резервної копії Письменника: чого тут немає, приходить; те саме лишається як є; документ, що відрізняється від свого тезки тут, стає поруч копією; назва з версій Творця отримує версії, яких бракує. Ніщо тут не перезаписується",
++"Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "Резервна копія Письменника: документів {0}, у кошику {1}, версії Творця за назвами: {2}, у {3}",
++"the Creator's versions: {0} new, {1} titles new": "версії Творця: нових {0}, нових назв {1}"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index fc8d7df..ac2175e 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5421,9 +5421,9 @@ RuachI18n.add("zh", {
+ "Eight clones of one step are enough": "一个步骤最多八个克隆",
+ "Every Generate keeps this title's style, lyrics and score apart from the takes: its versions, a diff of two, one back into the form": "每次 Generate 都会把这个标题的风格、歌词和乐谱与录音分开保存：它的版本、两版的差异、把某一版放回表单",
+ "Every Generate's words, kept under their title apart from the takes: a take deleted never takes them along": "每次 Generate 的文字，按标题与录音分开保存：删除录音也不会带走这些文字",
+-"Creator's versions": "创作者的版本",
+-"The Creator's version was not kept: {0}": "未能保存创作者的版本：{0}",
+-"The Creator's versions did not come: {0}": "未能取得创作者的版本：{0}",
++"Creator's versions": "创作室的版本",
++"The Creator's version was not kept: {0}": "未能保存创作室的版本：{0}",
++"The Creator's versions did not come: {0}": "未能取得创作室的版本：{0}",
+ "too long to compare line by line": "太长，无法逐行比较",
+ "the same": "相同",
+ "unchanged lines: {0}": "未改动的行：{0}",
+@@ -5436,7 +5436,7 @@ RuachI18n.add("zh", {
+ "Trash ({0})": "回收站（{0}）",
+ "Bring back": "恢复",
+ "deleted from the library; its words are kept here": "已从库中删除；它的文字保存在这里",
+-"Its title, style, lyrics and score into the Creator's form": "把它的标题、风格、歌词和乐谱放进创作者的表单",
++"Its title, style, lyrics and score into the Creator's form": "把它的标题、风格、歌词和乐谱放进创作室的表单",
+ "★ Starred": "★ 已加星",
+ "☆ Star": "☆ 加星",
+ "Label…": "标签…",
+@@ -5451,11 +5451,11 @@ RuachI18n.add("zh", {
+ "A label for version #{0}": "版本 #{0} 的标签",
+ "Delete version #{0}?": "删除版本 #{0}？",
+ "It goes into this title's trash, from where it comes back.": "它会进入这个标题的回收站，可以从那里恢复。",
+-"Put version #{0} into the Creator's form?": "把版本 #{0} 放进创作者的表单？",
++"Put version #{0} into the Creator's form?": "把版本 #{0} 放进创作室的表单？",
+ "The title, style, lyrics and score there now are replaced. What was generated from them is kept here already.": "表单里现在的标题、风格、歌词和乐谱会被替换。由它们生成的内容已经保存在这里。",
+ "Version #{0} is in the form": "版本 #{0} 已在表单中",
+ "No version is kept yet: every Generate keeps its words here": "还没有版本：每次 Generate 都会在这里保存它的文字",
+-"The Creator's versions": "创作者的版本",
++"The Creator's versions": "创作室的版本",
+ "Every Generate keeps its title's words here, apart from the takes: a take deleted never takes them along.": "每次 Generate 都会在这里保存其标题的文字，与录音分开：删除录音也不会带走这些文字。",
+ "Smaller": "缩小",
+ "Larger": "放大",
+@@ -5471,5 +5471,9 @@ RuachI18n.add("zh", {
+ "Back to the last quarter-minute mark (0:15, 0:30…). The ← key: to the last 5 s mark": "回到上一个 15 秒标记（0:15、0:30…）。← 键：回到上一个 5 秒标记",
+ "Same as the text": "与正文相同",
+ "Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Qwen-Image 2512": "画面最多分成三个区域，每个区域有自己的文字：每一步都会针对每个区域，用提示词和该区域的文字再问画家一次，并用柔和边缘的框把结果混合（Latent Couple 的方式）。每个区域每一步要多花一整遍。Qwen-Image 2512",
+-"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "乐谱已按 {0} 记写（原为 {1}）：音相同，按引擎演唱的写法记写"
++"The score written in {0} (it came as {1}): the same notes, spelled as the engine sings them": "乐谱已按 {0} 记写（原为 {1}）：音相同，按引擎演唱的写法记写",
++"Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)": "全部导出：写作室的每份文档（含其版本、由它生成的录音和回收站），以及每个标题的创作室版本，存为一个文件（备份）",
++"Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over": "导入写作室备份：这里缺少的会加入；相同的保持不变；与这里同名文档不同的文档以副本形式放在旁边；创作室版本中的标题会补上缺少的版本。这里的内容不会被覆盖",
++"Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}": "写作室备份：{0} 份文档和回收站中的 {1} 份，{2} 个标题的创作室版本，保存到 {3}",
++"the Creator's versions: {0} new, {1} titles new": "创作室版本：新增 {0} 个，新标题 {1} 个"
+ });
+diff --git a/tools/console/heresy-writer.js b/tools/console/heresy-writer.js
+index b54df0c..c992d00 100644
+--- a/tools/console/heresy-writer.js
++++ b/tools/console/heresy-writer.js
+@@ -322,7 +322,10 @@
+         a.click();
+         a.remove();
+         setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+-        toast(tr("Writer backup: {0} documents and {1} in the trash, into {2}").replace("{0}", (b.docs || []).length)
++        var cv = b.creator_versions || [];                  // HERESY 1522: the Creator's versions in the same file
++        toast(cv.length ? tr("Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}").replace("{0}", (b.docs || []).length)
++          .replace("{1}", (b.trash || []).length).replace("{2}", cv.length).replace("{3}", name)
++          : tr("Writer backup: {0} documents and {1} in the trash, into {2}").replace("{0}", (b.docs || []).length)
+           .replace("{1}", (b.trash || []).length).replace("{2}", name));
+       }).catch(function (e) { toast(e.message, true); });
+     });
+@@ -339,8 +342,10 @@
+         state.docs = d.docs || state.docs;
+         paintList();
+         paintHand();
++        var cv = n.creator_versions;                         // HERESY 1522: and the Creator's versions it brought
+         toast(tr("Writer backup {0}: {1} new, {2} already here, {3} beside their namesakes as copies, {4} into the trash")
+-          .replace("{0}", f.name).replace("{1}", n.added || 0).replace("{2}", n.same || 0).replace("{3}", n.copies || 0).replace("{4}", n.trashed || 0));
++          .replace("{0}", f.name).replace("{1}", n.added || 0).replace("{2}", n.same || 0).replace("{3}", n.copies || 0).replace("{4}", n.trashed || 0) +
++          (cv ? " \u00b7 " + tr("the Creator's versions: {0} new, {1} titles new").replace("{0}", cv.versions || 0).replace("{1}", cv.titles || 0) : ""));
+       }).catch(function (e) { toast(tr("Not imported: {0}").replace("{0}", e.message), true); });
+     });
+     ["wrTitle", "wrStyle", "wrLyrics", "wrNotes"].forEach(function (id) { $(id).addEventListener("input", changed); });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 073da04..7e1b431 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1161,8 +1161,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+           <button type="button" class="btn ghost small" id="wrFromCreate" title="A new document from the song in the Creator, with every knob">＋ From the Creator</button>
+           <button type="button" class="btn ghost small" id="wrCreatorVersions" data-tip="Every Generate's words, kept under their title apart from the takes: a take deleted never takes them along">Creator's versions</button>
+           <!-- HERESY 1168 (Viktor 07.10.2026: «В комнате Писателя добавить глобальный экспорт/импорт всех данных скопом для бекапа») -->
+-          <span class="wr-io"><button type="button" class="btn ghost small" id="wrExport" data-icon="save" aria-label="Export all" data-tip="Export all: every document of the Writer, with its versions, the takes made from it and its trash, in one file (a backup)">Export all</button>
+-          <button type="button" class="btn ghost small" id="wrImport" data-icon="open" aria-label="Import a backup" data-tip="Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy. Nothing here is written over">Import</button></span>
++          <span class="wr-io"><button type="button" class="btn ghost small" id="wrExport" data-icon="save" aria-label="Export all" data-tip="Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)">Export all</button>
++          <button type="button" class="btn ghost small" id="wrImport" data-icon="open" aria-label="Import a backup" data-tip="Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over">Import</button></span>
+           <input type="file" id="wrImportFile" accept=".json,application/json" aria-label="A Writer backup to import" hidden />
+           <span class="coll-n" id="wrCount"></span>
+         </div>
+-- 
+2.43.0
+

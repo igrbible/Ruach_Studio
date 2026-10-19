@@ -27,6 +27,19 @@ struct Yue2LoraChoice {
     std::string id;
     float       ar;
     float       nar;
+    // HERESY 1447: its wave through the song, as a slider's (points (t, k) or flat), on both halves; and the budget it
+    // shares with the adapters that touch its layers (an index into lora_groups, -1: none). Either one takes the adapter
+    // off the merge: it runs with the graph (lora-rt.h)
+    std::vector<std::pair<float, float>> curve = {};
+    int                                  group = -1;
+};
+
+// HERESY 1447: a budget the adapters of a group share at every point of the song: their strengths add up to `cap` at
+// most, each giving way in proportion (mode 0, share) or served in the order of the request's list (mode 1, order)
+struct Yue2LoraGroup {
+    float cap     = 2.0f;   // the music half's
+    float cap_nar = 2.0f;   // the sound half's (its red line is lower: 1.5 against the music's 2.25, HERESY 1166, 1167)
+    int   mode    = 0;
 };
 
 struct Yue2Request {
@@ -114,7 +127,8 @@ struct Yue2Request {
     std::string                   title;      // ""
     std::string                   vae;        // "" = the server's default decoder
     std::vector<Yue2SliderChoice> sliders;    // applied while the music tokens are written
-    std::vector<Yue2LoraChoice>   loras;      // merged into the weights for the whole run
+    std::vector<Yue2LoraChoice>   loras;      // merged into the weights for the whole run (1447: or run with the graph)
+    std::vector<Yue2LoraGroup>    lora_groups;  // HERESY 1447: the budgets the loras' groups name
     bool                          plan_only;  // false; stop after the score
     bool                          score_guard;  // true; a broken score stops the run before the music (HERESY 1087)
     std::string                   parent;     // "" or the library take this re-renders

@@ -15,7 +15,7 @@
 (function (root) {
   "use strict";
 
-  var S = { catalog: [], choice: [], host: null, opts: {}, list: null, note: null, sources: {} };
+  var S = { catalog: [], choice: [], host: null, opts: {}, list: null, note: null, sources: {}, budget: "off", profile: null, profileKey: "" };
 
   // HERESY 1165: a text glued from names and numbers is translated here, whole, from the English it is made as (the
   // page's translator matches whole texts; its catalog holds the patterns); drawn again when the language changes
@@ -188,6 +188,7 @@
       bar.querySelector("output").textContent = fmt(t, 2);
       if (range && dragging !== half) range.value = t;
     });
+    paintHeld();                                     // HERESY 1458: what runs, as the strengths move
   }
   // every music strength moved at once, each in proportion to where it stood when the drag began (all alike when all
   // stood at nought), none past its own max, on the 0.005 grid the run keeps; the grid's remainders go to the largest
@@ -219,6 +220,355 @@
   }
   function overLimit(e, half, v) { return v > zones(e, half).limit + 1e-9; }
 
+  // HERESY 1447 (Viktor 14.10.2026: «LoRA ересь и алхимия»; 15.10.2026: «И не забудь за динамичную волну, именно ту, что ты
+  // воплотил в слайдерах стилей»): an adapter's strength through the song on the sliders' own wave (HERESY 1166: points
+  // [t, k], k the share of its strength, eased by half a cosine; flat: none), one wave for a pair's two files; and the
+  // adapters that push on the same layers (the lab's word, /lab/lora/profile) under one budget a half: off, Share (each
+  // gives way in proportion past the red line) or In order (served from the top row; what one lets go, the next takes). The
+  // engine runs such an adapter with the graph (lora-rt.h) and keeps the budget at every moment of the song
+  var WAVE_ARCH = [[0, 0.15], [0.5, 1], [1, 0.15]], waveOpen = {}, waveDrag = null, WW = 300, WH = 90, WP = 8;
+  function waveAt(c, t) {
+    if (!c || !c.length) return 1;
+    if (t <= c[0][0]) return c[0][1];
+    for (var i = 1; i < c.length; i++) {
+      if (t <= c[i][0]) {
+        var t0 = c[i - 1][0], t1 = c[i][0], u = t1 > t0 ? (t - t0) / (t1 - t0) : 1, e = 0.5 - 0.5 * Math.cos(Math.PI * u);
+        return c[i - 1][1] + (c[i][1] - c[i - 1][1]) * e;
+      }
+    }
+    return c[c.length - 1][1];
+  }
+  function r3(v) { return Math.round(v * 1000) / 1000; }
+  function waveClean(c) {   // as the request carries it: points in order, t and k 0..1, 64 at most; flat is none
+    if (!Array.isArray(c)) return null;
+    var pts = c.filter(function (q) { return Array.isArray(q) && isFinite(q[0]) && isFinite(q[1]); })
+      .map(function (q) { return [r3(Math.min(1, Math.max(0, +q[0]))), r3(Math.min(1, Math.max(0, +q[1])))]; })
+      .sort(function (a, b) { return a[0] - b[0]; }).slice(0, 64);
+    if (pts.length < 2 || pts.every(function (q) { return q[1] === 1; })) return null;
+    return pts;
+  }
+  function waveMode(c) {
+    if (!c.curve) return "flat";
+    return c.curveMode || (JSON.stringify(c.curve) === JSON.stringify(WAVE_ARCH) ? "arch" : "draw");
+  }
+  function wavePath(c, w, h, pad) {
+    var d = "";
+    for (var i = 0; i <= 48; i++) {
+      var t = i / 48, k = Math.min(1, Math.max(0, waveAt(c, t)));
+      d += (i ? " L" : "M") + (pad + t * (w - 2 * pad)).toFixed(1) + "," + (pad + (1 - k) * (h - 2 * pad)).toFixed(1);
+    }
+    return d;
+  }
+  function rowChoices(key) { var ids = String(key).split("|"); return S.choice.filter(function (c) { return ids.indexOf(c.id) >= 0; }); }
+  function setWave(key, curve, mode) {           // a pair's two files ride one wave
+    rowChoices(key).forEach(function (c) {
+      if (curve) { c.curve = curve.map(function (q) { return q.slice(); }); c.curveMode = mode; }
+      else { delete c.curve; delete c.curveMode; }
+    });
+  }
+  function waveButton(key, c, name) {
+    var open = !!waveOpen[key];
+    return '<button type="button" class="slider-curve lora-wave' + (waveClean(c.curve) ? " is-curved" : "") + (open ? " is-open" : "") +
+      '"' + (c.muted ? " disabled" : "") + ' data-wave-toggle="' + escape(key) + '" aria-expanded="' + open + '" aria-label="' + escape(tr(name + ": its curve through the song")) +
+      '" data-tip="' + escape(tr("How its strength runs through the song: flat, an arch, or drawn by hand")) + '"><svg viewBox="0 0 48 18" aria-hidden="true"><path d="' +
+      wavePath(c.curve, 48, 18, 2) + '"/></svg></button>';
+  }
+  // HERESY 1458 (Viktor 15.10.2026: «Не хватает ещё более чёткой сетки в бекграунд редактирования графика… поле для ввода
+  // примерного расчётного по длительности трека генерируемого. Выставлять по этому числу минут и секунд сетку в графе волны,
+  // чтобы по ней, а не на глаз, двигать волну»): the graph drawn at its own size in pixels (round points and one-pixel lines at any
+  // width, in the form and over the page), a grid of the strength's quarters and of minutes and seconds along the length the
+  // engine runs the wave over: the length set in Output (the music half's budget, frames = seconds x 25, and the sound half's
+  // span with it, pipeline.h), not the song's own length; the song's expected end marked from the «Song ≈» field (what lies
+  // past it is not heard), a read-out of where the pointer is, Shift onto the grid
+  var WG = { l: 40, r: 14, t: 12, b: 24 };
+  function songAxis() { var s = S.opts.songLength ? +S.opts.songLength() : 0; return isFinite(s) && s > 0 ? s : 0; }
+  function songGuess() { try { var v = +root.localStorage.getItem("yue2.loraSongLen"); return isFinite(v) && v > 0 ? v : 0; } catch (e) { return 0; } }
+  var LOCK_SVG = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/>' +
+    '<path class="shackle" d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';   // HERESY 1468: the knobs' lock
+  function clockOf(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
+  function parseClock(v) {   // 3:30, 210 (seconds), 3.5 or 3 (minutes, fifteen at most)
+    v = String(v || "").trim().replace(",", ".");
+    var m = /^(\d+):(\d{1,2})$/.exec(v);
+    if (m) return +m[1] * 60 + Math.min(59, +m[2]);
+    if (/^\d+(\.\d+)?$/.test(v)) return +v <= 15 ? Math.round(+v * 60) : Math.round(+v);
+    return 0;
+  }
+  function timeSteps(L) { return L <= 90 ? [5, 15] : L <= 240 ? [10, 30] : L <= 480 ? [15, 60] : [30, 60]; }   // [the fine, the labelled], seconds
+  function waveGeo(svg) {
+    var W = Math.max(160, Math.round(svg.clientWidth || 300)), H = Math.max(80, Math.round(svg.clientHeight || 160));
+    return { W: W, H: H, x0: WG.l, x1: W - WG.r, y0: WG.t, y1: H - WG.b };
+  }
+  function waveX(g, t) { return g.x0 + t * (g.x1 - g.x0); }
+  function waveY(g, k) { return g.y0 + (1 - k) * (g.y1 - g.y0); }
+  function waveLine(g, c) {
+    var d = "";
+    for (var i = 0; i <= 120; i++) {
+      var t = i / 120, k = Math.min(1, Math.max(0, waveAt(c, t)));
+      d += (i ? " L" : "M") + waveX(g, t).toFixed(1) + "," + waveY(g, k).toFixed(1);
+    }
+    return d;
+  }
+  function waveDraw(svg, c) {
+    if (!svg || !c) return;
+    var g = svg._geo = waveGeo(svg), L = songAxis(), est = songGuess(), grid = "", text = "", past = "", ty = g.y1 + 16;
+    svg.setAttribute("viewBox", "0 0 " + g.W + " " + g.H);
+    function h(k, cls) { var y = Math.round(waveY(g, k)) + 0.5; return '<line class="' + cls + '" x1="' + g.x0 + '" y1="' + y + '" x2="' + g.x1 + '" y2="' + y + '"/>'; }
+    function v(t, cls) { var x = Math.round(waveX(g, t)) + 0.5; return '<line class="' + cls + '" x1="' + x + '" y1="' + g.y0 + '" x2="' + x + '" y2="' + g.y1 + '"/>'; }
+    function lab(x, y, words, anchor) { return '<text class="wg-label" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" text-anchor="' + anchor + '">' + words + "</text>"; }
+    for (var q = 1; q < 20; q++) if (q % 5) grid += h(q / 20, "wg-minor");
+    [0.25, 0.5, 0.75].forEach(function (k) { grid += h(k, k === 0.5 ? "wg-half" : "wg-major"); });
+    [0, 0.25, 0.5, 0.75, 1].forEach(function (k) { text += lab(g.x0 - 6, waveY(g, k) + 3.5, Math.round(k * 100) + " %", "end"); });
+    if (L) {
+      var st = timeSteps(L);
+      for (var sec = st[0]; sec < L - 0.5; sec += st[0]) {
+        var big = Math.abs(sec / st[1] - Math.round(sec / st[1])) < 1e-6;
+        grid += v(sec / L, big ? "wg-major" : "wg-minor");
+        if (big && waveX(g, sec / L) < g.x1 - 34) text += lab(waveX(g, sec / L), ty, clockOf(sec), "middle");
+      }
+      text += lab(g.x0, ty, "0:00", "start") + lab(g.x1, ty, clockOf(L), "end");
+    } else {
+      for (var p = 1; p < 20; p++) {
+        grid += v(p / 20, p % 5 ? "wg-minor" : "wg-major");
+        if (!(p % 5)) text += lab(waveX(g, p / 20), ty, p * 5 + " %", "middle");
+      }
+      text += lab(g.x0, ty, escape(tr("start")), "start") + lab(g.x1, ty, escape(tr("end")), "end");
+    }
+    grid += '<rect class="wg-frame" x="' + (g.x0 + 0.5) + '" y="' + (g.y0 + 0.5) + '" width="' + (g.x1 - g.x0 - 1) + '" height="' + (g.y1 - g.y0 - 1) + '"/>';
+    if (L && est && est < L - 0.5) {
+      var xe = waveX(g, est / L);
+      past = '<rect class="wg-past" x="' + xe.toFixed(1) + '" y="' + g.y0 + '" width="' + (g.x1 - xe).toFixed(1) + '" height="' + (g.y1 - g.y0) + '"/>' +
+        '<line class="wg-end" x1="' + xe.toFixed(1) + '" y1="' + g.y0 + '" x2="' + xe.toFixed(1) + '" y2="' + g.y1 + '"/>' +
+        '<text class="wg-end-label" x="' + (xe - 5).toFixed(1) + '" y="' + (g.y0 + 14) + '" text-anchor="end">' + escape(tr("≈ the song's end")) + " " + clockOf(est) + "</text>";
+    }
+    var d = waveLine(g, c.curve);
+    svg.innerHTML = '<g class="wg">' + grid + "</g>" + past + '<path class="curve-area" d="' + d + " L" + g.x1 + "," + g.y1 + " L" + g.x0 + "," + g.y1 + ' Z"/>' +
+      '<path class="curve-line" d="' + d + '"/>' + (c.curve || []).map(function (pt, i) {
+        return '<circle class="curve-pt" data-pt="' + i + '" r="6" cx="' + waveX(g, pt[0]).toFixed(1) + '" cy="' + waveY(g, pt[1]).toFixed(1) + '"/>';
+      }).join("") + '<g class="wg-text">' + text + "</g>";
+    var ed = svg.closest("[data-wave-edit]"), warn = ed && ed.querySelector(".lora-wave-past");
+    if (warn) {
+      warn.hidden = !(L && est > L + 0.5);
+      warn.textContent = warn.hidden ? "" : tr("Longer than the length set in Output (" + clockOf(L) + "): the song stops there, and the wave with it.");
+    }
+  }
+  function layoutWaves() {
+    if (!S.host) return;
+    var L = songAxis();                               // HERESY 1468: Output's length, wherever its field is not being typed in
+    Array.prototype.forEach.call(S.host.querySelectorAll(".lora-wave-out-in"), function (x) { if (root.document.activeElement !== x) x.value = L ? clockOf(L) : ""; });
+    Array.prototype.forEach.call(S.host.querySelectorAll("svg[data-wave-graph]"), function (svg) {
+      if (waveDrag && waveDrag.svg === svg) return;
+      waveDraw(svg, rowChoices(svg.dataset.waveGraph)[0]);
+    });
+  }
+  function waveAtText(at) {
+    var L = songAxis(), t = Math.min(1, Math.max(0, at.t)), k = Math.min(1, Math.max(0, at.k));
+    return (L ? clockOf(t * L) : Math.round(t * 100) + " %") + " · " + Math.round(k * 100) + " %";
+  }
+  function waveSnap(at, on) {   // Shift: the time onto its fine grid (twentieths of the song without a length), the strength onto twentieths
+    if (!on) return at;
+    var L = songAxis(), st = L ? timeSteps(L)[0] / L : 0.05;
+    return { t: Math.round(at.t / st) * st, k: Math.round(at.k * 20) / 20 };
+  }
+  function waveEditor(key, c, name) {
+    var mode = waveMode(c), L = songAxis(), g = songGuess();
+    return '<div class="curve-edit lora-wave-edit" data-wave-edit="' + escape(key) + '">' +
+      '<div class="lora-wave-head"><div class="curve-modes" role="group" aria-label="' + escape(tr(name + ": its curve through the song")) + '">' +
+      [["flat", "Flat"], ["arch", "Arch"], ["draw", "Draw"]].map(function (m) {
+        return '<button type="button" class="curve-mode' + (mode === m[0] ? " is-on" : "") + '" data-wave-mode="' + m[0] + '" aria-pressed="' + (mode === m[0]) + '">' + m[1] + "</button>";
+      }).join("") + "</div>" + '<span class="lora-wave-at mono"></span>' +
+      (L ? '<label class="lora-wave-len" data-tip="' + escape(tr("About how long the song will run, minutes:seconds. The wave runs over the length set in Output (" + clockOf(L) +
+        "): what you draw past the song's end is not heard.")) + '"><span>Song ≈</span><input type="text" class="lora-wave-len-in mono" inputmode="numeric" spellcheck="false" placeholder="m:ss" value="' +
+        (g ? clockOf(g) : "") + '" aria-label="' + escape(tr("About how long the song will run")) + '" /></label>' +
+        // HERESY 1468 (Viktor 15.10.2026: «после поля ввода выводи также время вывода… под замком»): the length the wave runs over
+        '<label class="lora-wave-out is-locked" data-tip="' + escape(tr("Output's length: the wave runs over it. Locked against a stray edit: open the lock to change Max length from here")) +
+        '"><span>' + escape(tr("Output")) + '</span><input type="text" class="lora-wave-out-in mono" inputmode="numeric" spellcheck="false" readonly value="' + clockOf(L) +
+        '" aria-label="' + escape(tr("Output's length")) + '" /><span class="lora-wave-lock" role="button" tabindex="0" data-tip="' + escape(tr("Locked against a stray edit: click to change it")) + '">' +
+        LOCK_SVG + "</span></label>" : "") + "</div>" +
+      '<svg class="curve-graph lora-wave-graph" data-wave-graph="' + escape(key) + '"></svg>' +
+      '<p class="row-hint">Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, ' +
+      "double-click a point to take it out. The strength above is the top of the curve.</p>" +
+      '<p class="row-hint lora-wave-snap">Shift keeps a point on the grid; a right-click takes a point out.</p><p class="row-hint lora-wave-past" hidden></p></div>';
+  }
+  function waveRedraw(svg, c) {   // while a point is dragged: the same elements moved, so the pointer keeps its point
+    var g = svg._geo;
+    if (!g) return waveDraw(svg, c);
+    var d = waveLine(g, c.curve);
+    svg.querySelector(".curve-line").setAttribute("d", d);
+    svg.querySelector(".curve-area").setAttribute("d", d + " L" + g.x1 + "," + g.y1 + " L" + g.x0 + "," + g.y1 + " Z");
+    Array.prototype.forEach.call(svg.querySelectorAll(".curve-pt"), function (el, i) {
+      var q = c.curve && c.curve[i];
+      if (!q) return;
+      el.setAttribute("cx", waveX(g, q[0]).toFixed(1));
+      el.setAttribute("cy", waveY(g, q[1]).toFixed(1));
+    });
+  }
+  function wavePointer(svg, event) {
+    var g = svg._geo || waveGeo(svg), r = svg.getBoundingClientRect();
+    var x = (event.clientX - r.left) * g.W / (r.width || 1), y = (event.clientY - r.top) * g.H / (r.height || 1);
+    return { t: (x - g.x0) / (g.x1 - g.x0), k: 1 - (y - g.y0) / (g.y1 - g.y0) };
+  }
+
+  // the budget: which live adapters push on the same layers (the lab's groups, joined over both halves; one group for them
+  // all while the lab has not answered, as most adapters touch every layer), the caps the measured red lines
+  function liveChoices() { return S.choice.filter(function (c) { var e = entry(c.id); return e && !e.error && !c.muted && (c.ar > 0 || c.nar > 0); }); }
+  function budgetGroups() {
+    var live = liveChoices().map(function (c) { return c.id; });
+    if (S.budget === "off" || live.length < 2) return [];
+    var parent = {};
+    live.forEach(function (id) { parent[id] = id; });
+    function find(x) { while (parent[x] !== x) x = parent[x] = parent[parent[x]]; return x; }
+    var g = S.profile && S.profile.groups;
+    if (g && (g.ar || g.nar)) {
+      ["ar", "nar"].forEach(function (half) {
+        (g[half] || []).forEach(function (members) {
+          var m = members.filter(function (id) { return parent[id] !== undefined; });
+          for (var i = 1; i < m.length; i++) parent[find(m[i])] = find(m[0]);
+        });
+      });
+      liveChoices().forEach(function (c) {   // a pair's two files are one adapter
+        var p = pairOf(entry(c.id));
+        if (p && parent[p.id] !== undefined) parent[find(p.id)] = find(c.id);
+      });
+    } else {
+      for (var i = 1; i < live.length; i++) parent[find(live[i])] = find(live[0]);
+    }
+    var by = {}, order = [];
+    live.forEach(function (id) { var r = find(id); if (!by[r]) { by[r] = []; order.push(r); } by[r].push(id); });
+    return order.map(function (r) { return by[r]; }).filter(function (m) { return m.length > 1; });
+  }
+  function groupOf(id) {
+    var gs = budgetGroups();
+    for (var i = 0; i < gs.length; i++) if (gs[i].indexOf(id) >= 0) return i;
+    return -1;
+  }
+  function loraGroups() {
+    return budgetGroups().map(function () {
+      return { cap: TOTAL.ar.limit, cap_nar: TOTAL.nar.limit, mode: S.budget === "order" ? "order" : "share" };
+    });
+  }
+  // HERESY 1458 (Viktor 15.10.2026: «Твоё предложение принимаю по показу более точных долей применения в выхлопе»): what the budget
+  // lets each strength run with the waves at their top, counted as the engine counts it (lora-rt.h: each half's group in the
+  // request's order or in proportion, capped at the red line); a row that gives way says its share and dims its road past it,
+  // and each half's together says what runs of what is asked: the same sum in both modes, the rows differ
+  function budgetCuts() {
+    var out = {};
+    if (S.budget === "off") return out;
+    budgetGroups().forEach(function (members) {
+      ["ar", "nar"].forEach(function (half) {
+        var cap = TOTAL[half].limit, left = cap, ms = members.map(function (id) { return S.choice.filter(function (c) { return c.id === id; })[0]; })
+          .filter(function (c) { var e = c && entry(c.id); return e && has(e, half) && (c[half] || 0) > 0; });
+        var sum = ms.reduce(function (s, c) { return s + c[half]; }, 0);
+        if (sum <= cap + 1e-9) return;
+        ms.forEach(function (c) {
+          var got = S.budget === "order" ? Math.min(c[half], Math.max(0, left)) : c[half] * cap / sum;
+          left -= got;
+          (out[c.id] = out[c.id] || {})[half] = got;
+        });
+      });
+    });
+    return out;
+  }
+  function paintHeld() {
+    if (!S.host) return;
+    var cuts = budgetCuts(), order = S.budget === "order";
+    function mark(range, got) {
+      if (got === null) { range.style.removeProperty("--cutf"); delete range.dataset.held; return; }
+      range.style.setProperty("--cutf", String(Math.max(0, Math.min(1, got / (+range.max || 1)))));
+      range.dataset.held = String(r3(got));
+    }
+    Array.prototype.forEach.call(S.host.querySelectorAll('.lora-half input[type="range"][data-lora]'), function (r) {
+      var c = S.choice.filter(function (x) { return x.id === r.dataset.lora; })[0], half = r.dataset.half, out = r.nextElementSibling;
+      if (!c || !out || out.tagName !== "OUTPUT") return;
+      var asked = c[half] || 0, got = cuts[c.id] && cuts[c.id][half], held = got !== undefined && got < asked - 1e-6;
+      r.parentNode.classList.toggle("is-held", held);
+      mark(r, held ? got : null);
+      out.textContent = fmt(held ? got : asked, 2);
+      out.dataset.tip = held ? tr(order ? "Runs " + fmt(got, 2) + " of " + fmt(asked, 2) + ": in order, the rows above take theirs first and this one gets what the red line leaves."
+                                        : "Runs " + fmt(got, 2) + " of " + fmt(asked, 2) + ": shared, the adapters on the same layers give way in proportion past the red line.") +
+        "\n" + tr("Double-click to type it") : "Double-click to type it";
+    });
+    ["ar", "nar"].forEach(function (half) {
+      var bar = S.host.querySelector('.lora-total[data-half="' + half + '"]');
+      if (!bar) return;
+      var t = halfTotal(half), got = S.choice.reduce(function (sum, c) {
+        var e = entry(c.id);
+        return e && !c.muted && has(e, half) ? sum + (cuts[c.id] && cuts[c.id][half] !== undefined ? cuts[c.id][half] : c[half] || 0) : sum;
+      }, 0), held = got < t - 1e-6, range = bar.querySelector("input"), out = bar.querySelector("output");
+      if (bar.dataset.baseTip === undefined) bar.dataset.baseTip = bar.dataset.tip || "";
+      bar.className = "lora-total " + totalClass(held ? got : t, half) + (held ? " is-held" : "");
+      if (out) out.textContent = fmt(held ? got : t, 2);
+      if (range) mark(range, held ? got : null);
+      bar.dataset.tip = bar.dataset.baseTip + (held ? "\n\n" + tr("Runs " + fmt(got, 2) + " of the " + fmt(t, 2) + " asked: the budget holds the adapters on shared layers at the red line.") : "");
+    });
+  }
+  function budgetBar() {
+    if (liveChoices().length < 2) return "";
+    var tip = tr("Adapters that push on the same layers share one budget a half, its red line the cap: Share gives way in proportion past it, In order serves them from the top row, and what one lets go, the next one takes. The engine keeps it at every moment of the song.");
+    return '<div class="lora-budget" role="group" aria-label="' + escape(tr("Budget")) + '"><span class="lora-budget-name" data-tip="' + escape(tip) + '">Budget</span>' +
+      // HERESY 1457 (Viktor: «Режимов у нас же два? Тогда ВЫКЛ и не нужен»): two modes; none lit is no budget, the lit one pressed again
+      [["share", "Share"], ["order", "In order"]].map(function (m) {
+        return '<button type="button" class="curve-mode' + (S.budget === m[0] ? " is-on" : "") + '" data-budget="' + m[0] + '" aria-pressed="' + (S.budget === m[0]) +
+          '" data-tip="' + escape(tr("Press it again: no budget, each adapter at its own strength")) + '">' + m[1] + "</button>";
+      }).join("") + (S.budget === "order" ? '<span class="row-hint lora-budget-hint">Drag the rows by their names to set their order</span>' : "") + "</div>";
+  }
+  // the lab's word for the adapters of the form, asked when they change (none: the budget groups them all, the tips say nothing)
+  function wantProfile() {
+    var ids = liveChoices().map(function (c) { return c.id; }).sort(), key = ids.join(",");
+    if (key === S.profileKey) return;
+    S.profileKey = key;
+    if (ids.length < 1 || !root.fetch) { S.profile = null; return; }
+    root.fetch("/lab/lora/profile?ids=" + encodeURIComponent(key)).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (S.profileKey === key) { S.profile = d && d.adapters ? d : null; paintNotes(); paintBudgetTips(); paintHeld(); } })   // 1458: its groups change what runs
+      .catch(function () { /* no lab: the budget groups them all */ });
+  }
+  // where an adapter pushes, from the lab: the layers it reaches on each half, attention against MLP, how far it moves them
+  function footprint(id) {
+    var a = S.profile && S.profile.adapters && S.profile.adapters[id];
+    if (!a) return "";
+    return ["ar", "nar"].map(function (half) {
+      var h = a.halves && a.halves[half];
+      if (!h || !h.bins) return "";
+      var attn = 0, mlp = 0, layers = 0, tot = 0;
+      Object.keys(h.bins).forEach(function (k) { var v = h.bins[k] * h.bins[k]; tot += v; if (/\.attn$/.test(k)) attn += v; else if (/\.mlp$/.test(k)) mlp += v; });
+      Object.keys(h.layers || {}).forEach(function (k) { if (k !== "edge" && h.layers[k] * h.layers[k] > tot * 0.002) layers++; });
+      var moves = h.moves_percent ? Object.keys(h.moves_percent).reduce(function (m, k) { return Math.max(m, h.moves_percent[k]); }, 0) : 0;
+      return tr((half === "ar" ? "Music half" : "Sound half") + ": {0} layers, attention {1} %, MLP {2} %")
+        .replace("{0}", layers).replace("{1}", Math.round(100 * attn / (tot || 1))).replace("{2}", Math.round(100 * mlp / (tot || 1))) +
+        (moves ? " · " + tr("moves a layer by up to {0} % at 1.0").replace("{0}", moves.toFixed(2)) : "");
+    }).filter(Boolean).join("\n");
+  }
+  function paintBudgetTips() {
+    if (!S.host) return;
+    Array.prototype.forEach.call(S.host.querySelectorAll(".lora-row[data-ids]"), function (row) {
+      var name = row.querySelector(".lora-name"), ids = row.dataset.ids.split("|"), fp = ids.map(footprint).filter(Boolean).join("\n");
+      if (!name) return;
+      if (!name.dataset.baseTip) name.dataset.baseTip = name.dataset.tip || "";
+      name.dataset.tip = name.dataset.baseTip + (fp ? "\n\n" + tr("Where it pushes:") + "\n" + fp : "");
+    });
+  }
+  // two adapters on the same layers: how much they share and how they pull, said once a pair
+  function pairNotes() {
+    if (!S.profile || !S.profile.pairs) return [];
+    var out = [], said = {};
+    S.profile.pairs.forEach(function (q) {
+      if (q.overlap < (S.profile.overlap_group || 0.5) || q.cosine === null || q.cosine === undefined) return;
+      var a = nameOf(q.a), b = nameOf(q.b), key = [a, b].sort().join("|");
+      if (a === b || said[key]) return;
+      said[key] = true;
+      var how = q.cosine > 0.5 ? "pull the same way: together they push harder than their strengths say, keep them lower"
+        : q.cosine < -0.3 ? "pull against each other: some of each cancels the other"
+        : "pull across each other: together they reach further than either, yet less than their sum";
+      out.push(tr("{0} and {1} share their layers ({2}) and " + how + ".").replace("{0}", a).replace("{1}", b).replace("{2}", q.overlap.toFixed(2)));
+    });
+    return out;
+  }
+
+  // HERESY 1457 (Viktor 15.10.2026: «Для музыки аккордная svg, для звука — звуковая волна»): a chord (three heads on one stem, drawn
+  // in the line of Lucide's icons) and Lucide's audio-waveform; the label's own tip says which half and what it does
+  var CHORD = '<svg class="ui-ico ui-chord" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15.6 2.5v16"/>' +
+    '<ellipse class="f" cx="12.7" cy="19" rx="3" ry="2" transform="rotate(-20 12.7 19)"/><ellipse class="f" cx="12.7" cy="12.6" rx="3" ry="2" transform="rotate(-20 12.7 12.6)"/>' +
+    '<ellipse class="f" cx="12.7" cy="6.2" rx="3" ry="2" transform="rotate(-20 12.7 6.2)"/></svg>';
+  function halfIcon(half) { return half === "ar" ? CHORD : (root.HeresyIcons ? root.HeresyIcons.ui("waveform") : "~"); }
   function halfControl(choice, e, half) {
     var label = half === "ar" ? "Music" : "Sound", on = has(e, half) || !e;
     if (!on) return "";   // HERESY 1016: a file without this half shows no slider for it
@@ -228,8 +578,8 @@
       ? tr(half === "ar" ? "Strength on the music half: the score and the music tokens (0 off, 1 as trained)"
                          : "Strength on the sound half: the acoustic stage that turns music tokens into sound (0 off, 1 as trained)") +
         " · " + tr("green to " + z.safe + ", amber to " + z.limit + ", red beyond")
-      : tr("This file has no " + label.toLowerCase() + " half")) + '"><span>' + label + "</span>" +
-      '<input type="range" class="zoned" style="' + road + '" min="0" max="' + z.max + '" step="0.025" value="' + value + '"' + (on ? "" : " disabled") +
+      : tr("This file has no " + label.toLowerCase() + " half")) + '"><span class="lora-half-ico" role="img" aria-label="' + escape(tr(label)) + '" data-name="' + label + '">' + halfIcon(half) + "</span>" +
+      '<input type="range" class="zoned" style="' + road + '" min="0" max="' + z.max + '" step="0.025" value="' + value + '"' + (on && !choice.muted ? "" : " disabled") +   // HERESY 1494: skipped, out of reach
       ' data-lora="' + escape(choice.id) + '" data-half="' + half + '" aria-label="' + escape(tr(nameOf(choice.id) + " " + label + " strength")) + '" />' +
       '<output data-tip="Double-click to type it">' + (on ? fmt(value, 2) : "—") + "</output></label>";
   }
@@ -272,6 +622,10 @@
       " together: by ear, 2.0 together brought a heavy bass (05.10.2026). Lower some, or drag Sound, together.");   // HERESY 1167
     if (arStacked() > 1 && arTotal() > AR_TOTAL.limit + 1e-9) notes.push("\u26a0 The music half carries " + fmt(arTotal(), 2) + " together, past the shared ceiling " +
       AR_TOTAL.limit + ": runs this heavy wrote broken scores every time (measured). Lower some, or take one off the music half.");
+    if (S.budget !== "off" && budgetGroups().length) notes.push(S.budget === "order"   // HERESY 1447
+      ? "In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes."
+      : "Share: past the red line, the adapters that share their layers give way, each in proportion.");
+    pairNotes().forEach(function (n) { notes.push(n); });
     return notes.filter(function (n, i) { return notes.indexOf(n) === i; });   // HERESY 1167: a pair's note once
   }
 
@@ -358,22 +712,27 @@
       // HERESY 1018: three columns the same in every row — the name (its trigger word under it,
       // small), the sliders of the halves it has, the remove button — so the rows line up
       var trig = triggerOf(e), inStyle = trig && S.opts.styleText && S.opts.styleText().toLowerCase().indexOf(trig.toLowerCase()) >= 0;
-      return '<div class="lora-row' + (e ? "" : " is-missing") + (muted ? " is-muted" : "") + '" data-ids="' + escape(ids.join("|")) +
-        '"><span class="lora-who"><span class="lora-name" translate="no" data-tip="' + escape(e ? aboutTip(e) + (p ? "\n\n" + aboutTip(p) : "") : tr("Not in loras/ any more")) + '">' +
+      var key = ids.join("|"), name = nameOf(c.id);   // HERESY 1447: its wave; dragged in order
+      return '<div class="lora-row' + (e ? "" : " is-missing") + (muted ? " is-muted" : "") + (S.budget === "order" ? " is-ordered" : "") + '" data-ids="' + escape(key) +
+        '"><span class="lora-who"' + (S.budget === "order" ? ' draggable="true"' : "") + '><span class="lora-name" translate="no" data-tip="' + escape(e ? aboutTip(e) + (p ? "\n\n" + aboutTip(p) : "") : tr("Not in loras/ any more")) + '">' +
         escape(nameOf(c.id)) + "</span>" + (muted ? '<span class="lora-muted-tag" data-tip="Right-click: back in the run">muted</span>' : "") +
         // HERESY 1167 (Viktor: «суффиксом приклинивай все триггеры… кнопка не нужна»): the run puts the word at the style's end
         (trig ? (inStyle ? '<span class="lora-trigger is-in" data-tip="Its trigger word is in the style">\u2713 ' + escape(trig) + "</span>"
                          : '<span class="lora-trigger is-auto" data-tip="Its trigger word goes at the style\u2019s end by itself when the song is made">' + escape(trig) + "</span>") : "") +
-        '</span><span class="lora-halves">' + arPart + narPart + "</span>" +
-        '<button type="button" class="icon-btn" data-remove-lora="' + escape(ids.join("|")) + '" aria-label="' + escape(tr("Remove " + nameOf(c.id))) + '">✕</button></div>';
-    }).join("") + totalBar();
+        '</span><span class="lora-halves">' + arPart + narPart + "</span>" + (e ? waveButton(key, c, name) : "") +
+        '<button type="button" class="icon-btn" data-remove-lora="' + escape(ids.join("|")) + '" aria-label="' + escape(tr("Remove " + nameOf(c.id))) + '">✕</button></div>' +
+        (e && waveOpen[key] && !muted ? waveEditor(key, c, name) : "");   // HERESY 1494: a skipped one's wave stays shut
+    }).join("") + totalBar() + budgetBar();
     // one even grid of buttons: the name, which half it steers, and a few words on what it does
+    var nHidden = 0;                                 // HERESY 1496
     chips.innerHTML = S.catalog.map(function (e) {
       var p = pairOf(e);
       if (p && has(e, "nar")) return "";                // HERESY 1167: a pair drawn once, from its music file
-      var isOn = on[e.id] || (p && on[p.id]);
+      var isOn = on[e.id] || (p && on[p.id]), hid = isHidden(e.id);
+      if (hid) nHidden++;
+      if (hid && !S.showHidden) return "";            // HERESY 1496
       var tag = e.error ? "cannot load" : p ? (tagOf(e) || "music + sound halves") : tagOf(e) || halvesText(e) + (has(e, "ar") && has(e, "nar") ? " halves" : " half");
-      return '<button type="button" class="lora-pick' + (isOn ? " is-on" : "") + '" data-lora-chip="' + escape(e.id) + '"' +
+      return '<button type="button" class="lora-pick' + (isOn ? " is-on" : "") + (hid ? " is-hidden-lora" : "") + '" data-lora-chip="' + escape(e.id) + '"' +
         (e.error ? " disabled" : "") + ' aria-pressed="' + (isOn ? "true" : "false") + '" data-tip="' + escape(aboutTip(e) + (p ? "\n\n" + aboutTip(p) : "")) + '">' +
         '<span class="lora-pick-name" translate="no">' + escape(nameOf(e.id)) + "</span>" +
         (e.error ? "" : '<span class="lora-pick-half">' + (p ? "both" : halfShort(e)) + "</span>") +
@@ -381,6 +740,42 @@
     }).join("");
     paintNotes();
     S.host.querySelector(".lora-lib-count").textContent = S.catalog.length ? String(S.catalog.length) : "";   // HERESY 1167
+    if (S.showBox) {                                 // HERESY 1496: Show hidden, while some are
+      S.showBox.hidden = !nHidden;
+      S.showBox.querySelector(".lora-hidden-n").textContent = String(nHidden);
+      S.showBox.querySelector("input").checked = !!S.showHidden;
+    }
+    wantProfile();                                   // HERESY 1447
+    paintBudgetTips();
+    layoutWaves();                                   // HERESY 1458: the graphs at their size, and what the budget lets run
+    paintHeld();
+  }
+
+  function loraOver(on) {                          // HERESY 1458: the picker over the page and back
+    var host = S.host;
+    if (!host) return;
+    if (on && !S.over) {
+      var back = root.document.createElement("div");
+      back.className = "lora-over";
+      back.innerHTML = '<div class="lora-over-box" role="dialog" aria-label="LoRAs"><div class="lora-over-head"><b>LoRAs</b><span class="spacer"></span>' +
+        '<button type="button" class="btn ghost small icon-btn lora-over-back" aria-label="Back into the form" data-tip="Back into the form (Esc)">' +
+        (root.HeresyIcons ? root.HeresyIcons.ui("minimize") : "\u2921") + '</button></div><div class="lora-over-body"></div></div>';
+      root.document.body.appendChild(back);
+      S.over = { back: back, parent: host.parentNode, next: host.nextSibling };
+      back.querySelector(".lora-over-body").appendChild(host);
+      back.addEventListener("click", function (e) { if (e.target === back) loraOver(false); });
+      back.querySelector(".lora-over-back").addEventListener("click", function () { loraOver(false); });
+      root.document.body.classList.add("lora-over-on");
+    } else if (!on && S.over) {
+      var o = S.over;
+      S.over = null;
+      o.parent.insertBefore(host, o.next);
+      o.back.remove();
+      root.document.body.classList.remove("lora-over-on");
+    }
+    var b = S.set && S.set.querySelector(".lora-big");
+    if (b) b.setAttribute("aria-pressed", S.over ? "true" : "false");
+    layoutWaves();
   }
 
   function changed() {
@@ -388,10 +783,76 @@
     if (S.opts.onChange) S.opts.onChange();
   }
 
+  // HERESY 1496 (Viktor 16.10.2026: «те адаптеры, которые сторонние, либо в попапе согласие на безвозвратное удаление из loras/, либо просто
+  // прятать из вида, а в хедере LORAS справа галочку добавить Show hidden»): adapters hidden from the list, kept with the page's settings
+  // (yue2.lorasHidden); Show hidden in the LoRAs head brings them into sight again, marked
+  function loadHidden() {
+    try { var v = JSON.parse(root.localStorage.getItem("yue2.lorasHidden") || "[]"); S.hidden = Array.isArray(v) ? v.map(String) : []; } catch (e) { S.hidden = S.hidden || []; }
+  }
+  function isHidden(id) { return (S.hidden || []).indexOf(id) >= 0; }
+  function setHidden(ids, on) {
+    S.hidden = (S.hidden || []).filter(function (x) { return ids.indexOf(x) < 0; }).concat(on ? ids : []);
+    try { if (S.hidden.length) root.localStorage.setItem("yue2.lorasHidden", JSON.stringify(S.hidden)); else root.localStorage.removeItem("yue2.lorasHidden"); } catch (e) { /* kept in this view only */ }
+    paint();
+  }
+
+  // HERESY 1496 (Viktor 16.10.2026: «В активных остаётся удалённый адаптер. Нужно допилить сторожа, чтобы поднимал диалоговое окно, извещал об
+  // отсутствии ранее выбранного адаптера, делал поиск по соответствию имён и предлагал заменить зомби на другой, с другой эпохой, суффиксом, либо
+  // удаление из списка активных»): an adapter of the song gone from loras/ is asked about once the list has come: one by a name like its own
+  // in its place (the same run, another epoch or suffix; its strengths, wave and mute kept), or out of the song; «Later» leaves it, marked,
+  // and Generate asks again rather than send it
+  function missingIds() { return S.catalog.length ? S.choice.filter(function (c) { return !entry(c.id); }).map(function (c) { return c.id; }) : []; }
+  function nameTokens(id) {
+    var parts = String(id).replace(/\.safetensors$/i, "").toLowerCase().split("/"), stem = parts[parts.length - 1];
+    if (/^(lora|adapter_model|pytorch_lora_weights|model|adapter)$/.test(stem) && parts.length > 1) stem = parts[parts.length - 2];
+    return stem.split(/[-_.\s]+/).filter(function (t) {
+      return t && !/^(e|ep|epoch|step)\d+$/.test(t) && !/^[rv]\d+$/.test(t) && !/^(final|full)$/.test(t) && !/^\d{3,}$/.test(t);
+    });
+  }
+  function lookalikes(id, c) {
+    var mine = nameTokens(id), folder = String(id).split("/")[0].toLowerCase(), taken = {};
+    S.choice.forEach(function (x) { taken[x.id] = true; });
+    return S.catalog.filter(function (e) {
+      return !e.error && !taken[e.id] && (!(c.ar > 0) || has(e, "ar")) && (!(c.nar > 0) || has(e, "nar"));
+    }).map(function (e) {
+      var t = nameTokens(e.id), score = 0, n = 0;
+      if (e.id.split("/")[0].toLowerCase() === folder) score = 3;
+      else if (mine.length && t.join("-") === mine.join("-")) score = 2;
+      else { while (n < t.length && n < mine.length && t[n] === mine[n]) n++; if (n >= 2) score = 1; }
+      return { e: e, score: score };
+    }).filter(function (x) { return x.score > 0; })
+      .sort(function (a, b) { return b.score - a.score || (a.e.id < b.e.id ? 1 : a.e.id > b.e.id ? -1 : 0); })
+      .map(function (x) { return x.e; });
+  }
+  var asking = false, askedZ = {};
+  function askMissing(which) {                     // which: nothing (the ones not asked yet), true (all of them), or a list of ids
+    if (asking || !root.HeresyDialog || !root.HeresyDialog.choose) return false;
+    var ids = missingIds().filter(function (id) { return which === true || (Array.isArray(which) ? which.indexOf(id) >= 0 : !askedZ[id]); });
+    if (!ids.length) return false;
+    asking = true;
+    (function next() {
+      var id = ids.shift(), c = id && S.choice.filter(function (x) { return x.id === id; })[0];
+      if (!id) { asking = false; return; }
+      askedZ[id] = true;
+      if (!c) return next();
+      var cands = lookalikes(id, c);
+      root.HeresyDialog.choose(tr(fallbackName(id) + " is not in loras/ any more") + "\n\n" +
+        tr(cands.length ? "It is still among the song's adapters. Take one of these in its place (a name like its own: the same run, another epoch or suffix; its strengths kept), or take it out of the song."
+                        : "It is still among the song's adapters, and nothing in loras/ goes by a name like it. Take it out of the song, or leave it for now: the song is not made while it is there."),
+        cands.map(function (e) { return { value: e.id, label: nameOf(e.id), note: e.id }; }),
+        { cancel: tr("Later"), more: [{ label: tr("Take it out of the song"), value: "__out__" }] }).then(function (v) {
+        if (v === "__out__") { S.choice = S.choice.filter(function (x) { return x.id !== id; }); changed(); }
+        else if (v) { S.choice.forEach(function (x) { if (x.id === id) x.id = String(v); }); changed(); }
+        next();
+      }, function () { asking = false; });
+    })();
+    return true;
+  }
+
   // HERESY 1169 (Viktor 08.10.2026: «после свёрнутого блока LoRA выскочил обрезанный параграф объяснений. Он нахер там не нужен»):
   // the picker's notes in a tip beside the LoRAs' name, ⚠ when one warns; the paragraph under the list keeps them, hidden
   function paintNotes() {
-    var list = hints().map(tr), p = S.host.querySelector(".lora-hint"), set = S.host.closest("fieldset"), n = set && set.querySelector(".lora-notes");
+    var list = hints().map(tr), p = S.host.querySelector(".lora-hint"), set = S.set || S.host.closest("fieldset"), n = set && set.querySelector(".lora-notes");   // 1458: over the page too
     if (p) p.textContent = list.join(" ");
     if (!n) return;
     var warn = list.some(function (x) { return x.charAt(0) === "\u26a0"; });
@@ -403,11 +864,48 @@
   }
   function mount(host, opts) {
     S.host = host;
+    // HERESY 1457 (Viktor: «колонку с названием адаптера можно ужать вдвое, обрезать троеточием… при наведении мышью распахивать в
+    // полную длину, не смещая дизайн, — как ты сделал с обрезкой имён в волкспейсах»): as the Librarian's workspaces (1105)
+    var fullName = null;
+    function dropFull() { if (fullName) { fullName.remove(); fullName = null; } }
+    host.addEventListener("mouseover", function (e) {
+      var n = e.target.closest && e.target.closest(".lora-row .lora-name");
+      if (fullName && fullName.owner === n && root.document.body.contains(n)) return;
+      dropFull();
+      if (!n || n.scrollWidth <= n.clientWidth + 1) return;
+      var r = n.getBoundingClientRect(), cs = root.getComputedStyle(n);
+      fullName = root.document.createElement("div");
+      fullName.className = "coll-fullname lora-fullname";
+      fullName.owner = n;
+      fullName.textContent = n.textContent;
+      fullName.style.cssText = "left:" + (r.left - 6) + "px;top:" + (r.top - 3) + "px;font-size:" + cs.fontSize;
+      root.document.body.appendChild(fullName);
+    });
+    host.addEventListener("mouseout", function (e) {
+      var n = e.target.closest && e.target.closest(".lora-name");
+      if (n && !(e.relatedTarget && n.contains(e.relatedTarget))) dropFull();
+    });
+    host.addEventListener("mouseleave", dropFull);
+    root.addEventListener("scroll", dropFull, true);
     S.opts = opts || {};
     // HERESY 1167: the adapters not in use behind one line, open or closed as it was left; the ones in use stay above it
     host.innerHTML = '<div class="lora-active"></div><details class="lora-lib"><summary><span class="chev" aria-hidden="true"></span>' +
       '<span class="lora-lib-name">Add a LoRA</span><span class="lora-lib-count mono"></span></summary>' +
       '<div class="lora-chips"></div></details><p class="row-hint lora-hint"></p>';
+    S.set = host.closest("fieldset");                 // HERESY 1458: its form's place, while it stands over the page
+    loadHidden();                                    // HERESY 1496
+    var head = host.closest("fieldset") && host.closest("fieldset").querySelector(".label");
+    if (head && !head.querySelector(".lora-show-hidden")) {
+      var sh = root.document.createElement("label");
+      sh.className = "lora-show-hidden";
+      sh.hidden = true;
+      sh.setAttribute("data-tip", "The adapters hidden from the list (a right-click on one hides it), back in sight, marked");
+      sh.innerHTML = '<input type="checkbox" /> <span>Show hidden</span> <span class="lora-hidden-n mono"></span>';
+      sh.addEventListener("click", function (e) { e.stopPropagation(); });   // not the LoRAs' fold
+      sh.querySelector("input").addEventListener("change", function () { S.showHidden = this.checked; paint(); });
+      head.appendChild(sh);
+      S.showBox = sh;
+    }
     var lab = host.closest("fieldset") && host.closest("fieldset").querySelector(".label");   // HERESY 1169: the notes' place
     if (lab && !lab.querySelector(".lora-notes")) {
       var nb = root.document.createElement("span");
@@ -418,15 +916,215 @@
       nb.hidden = true;
       lab.appendChild(nb);
     }
+    // HERESY 1458 (Viktor 15.10.2026: «Редактирование параметров с волной адаптеров можно так же в full screen по кнопке — как у
+    // меня с редактором лирики. На 1800px, чтобы чётко можно было бы двигать точки волны, а не на ощупь во второй колонке
+    // Композитора»): the picker over the page, up to 1800 px wide, as the lyrics go over it (1169); ⤡, Esc or a click beside it
+    // puts it back where it stood, and so does another room
+    if (lab && !lab.querySelector(".lora-big")) {
+      var big = root.document.createElement("button");
+      big.type = "button";
+      big.className = "btn ghost small icon-btn lora-big";
+      big.setAttribute("aria-label", "Full screen");
+      big.setAttribute("aria-pressed", "false");
+      big.dataset.tip = "The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back";
+      big.innerHTML = root.HeresyIcons ? root.HeresyIcons.ui("maximize") : "\u2922";
+      big.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); loraOver(!S.over); });
+      big.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") e.stopPropagation(); });   // not the label's fold
+      lab.appendChild(big);
+    }
+    root.document.addEventListener("keydown", function (e) {
+      if (e.key !== "Escape" || !S.over) return;
+      if (root.document.querySelector(".hd-back.is-on")) return;   // a question over it answers first
+      e.preventDefault();
+      e.stopImmediatePropagation();                  // not the frame's Esc as well
+      loraOver(false);
+    }, true);
+    if (root.MutationObserver) new root.MutationObserver(function () { if (S.over && root.document.body.dataset.tab !== "create") loraOver(false); })
+      .observe(root.document.body, { attributes: true, attributeFilter: ["data-tab"] });
+    if (root.ResizeObserver) {                       // HERESY 1458: the graphs drawn again when the picker's width changes
+      var lastW = 0;
+      new root.ResizeObserver(function () { var w = host.clientWidth; if (w && Math.abs(w - lastW) > 1) { lastW = w; layoutWaves(); } }).observe(host);
+    }
+    // HERESY 1458: the song's expected length, kept in this browser (and so in the studio's settings), one for every wave
+    host.addEventListener("change", function (event) {
+      var inp = event.target.closest && event.target.closest(".lora-wave-len-in");
+      if (!inp) return;
+      var len = parseClock(inp.value);
+      try { if (len > 0) root.localStorage.setItem("yue2.loraSongLen", String(len)); else root.localStorage.removeItem("yue2.loraSongLen"); } catch (e) { /* no storage */ }
+      Array.prototype.forEach.call(host.querySelectorAll(".lora-wave-len-in"), function (x) { x.value = len > 0 ? clockOf(len) : ""; });
+      layoutWaves();
+    });
+    host.addEventListener("keydown", function (event) {
+      if (event.key === "Enter" && event.target.closest && event.target.closest(".lora-wave-len-in, .lora-wave-out-in")) { event.preventDefault(); event.target.blur(); }
+      if ((event.key === "Enter" || event.key === " ") && event.target.classList && event.target.classList.contains("lora-wave-lock")) { event.preventDefault(); event.target.click(); }
+    });
+    // HERESY 1468: Output's length from here: the lock opens the field; a length typed in goes to Max length (its field, its guard,
+    // the mode's top), and every wave and every Output field follow it
+    host.addEventListener("click", function (event) {
+      var lock = event.target.closest && event.target.closest(".lora-wave-lock");
+      if (!lock) return;
+      event.preventDefault();
+      var wrap = lock.closest(".lora-wave-out"), inp = wrap.querySelector(".lora-wave-out-in"), open = wrap.classList.toggle("is-locked") === false;
+      inp.readOnly = !open;
+      lock.dataset.tip = tr(open ? "Open: click to lock it again" : "Locked against a stray edit: click to change it");
+      if (open) { inp.focus(); inp.select(); }
+    });
+    host.addEventListener("change", function (event) {
+      var inp = event.target.closest && event.target.closest(".lora-wave-out-in"), max = root.document.querySelector('.knob-secs[data-secs-for="max_tokens"]');
+      if (!inp || inp.readOnly || !max) return;
+      max.value = inp.value;                          // as if typed into Max length: 9 is 9:00, m:ss as written
+      max.dispatchEvent(new Event("change", { bubbles: true }));
+      inp.value = clockOf(songAxis());
+      layoutWaves();
+    });
+    // HERESY 1459 (Viktor 15.10.2026: «правой кнопкой мыши снятие точки с кривой»): a right-click on a point takes it out, as a
+    // double-click does; the first and the last stay
+    host.addEventListener("contextmenu", function (event) {
+      var pt = event.target.closest && event.target.closest(".curve-pt"), svg = pt && pt.ownerSVGElement, key = svg && svg.dataset.waveGraph, c = key && rowChoices(key)[0];
+      if (!c || !c.curve) return;
+      event.preventDefault();
+      event.stopPropagation();
+      var i = +pt.dataset.pt, pts = c.curve.map(function (q) { return q.slice(); });
+      if (i <= 0 || i >= pts.length - 1) return;
+      pts.splice(i, 1);
+      setWave(key, pts, "draw");
+      changed();
+    });
+    host.addEventListener("pointerout", function (event) {
+      var g = event.target.closest && event.target.closest("svg[data-wave-graph]"), ed = g && g.closest("[data-wave-edit]");
+      if (ed && !waveDrag && !(event.relatedTarget && g.contains(event.relatedTarget))) ed.querySelector(".lora-wave-at").textContent = "";
+    });
     var lib = host.querySelector(".lora-lib");
     try { lib.open = root.localStorage.getItem("yue2.loraLib") === "open"; } catch (e) { /* no storage: closed */ }
+    try { S.budget = ["share", "order"].indexOf(root.localStorage.getItem("yue2.loraBudget")) >= 0 ? root.localStorage.getItem("yue2.loraBudget") : "off"; } catch (e) { /* off */ }
     lib.addEventListener("toggle", function () {
       try { root.localStorage.setItem("yue2.loraLib", lib.open ? "open" : "closed"); } catch (e) { /* no storage */ }
     });
+    // HERESY 1447: the wave's picture opens its editor; Flat, Arch and Draw; its points dragged, added and taken out (as the
+    // sliders' are); the budget's three; the rows dragged in order
+    host.addEventListener("click", function (event) {
+      var wt = event.target.closest("[data-wave-toggle]"), wm = event.target.closest("[data-wave-mode]"), bm = event.target.closest("[data-budget]");
+      if (wt) { waveOpen[wt.dataset.waveToggle] = !waveOpen[wt.dataset.waveToggle]; paint(); return; }
+      if (bm) {
+        S.budget = bm.dataset.budget === S.budget ? "off" : bm.dataset.budget;   // HERESY 1457: the lit one again: no budget
+        try { root.localStorage.setItem("yue2.loraBudget", S.budget); } catch (e) { /* no storage */ }
+        return changed();
+      }
+      if (!wm) return;
+      var key = wm.closest("[data-wave-edit]").dataset.waveEdit, c = rowChoices(key)[0];
+      if (!c) return;
+      if (wm.dataset.waveMode === "flat") setWave(key, null);
+      else if (wm.dataset.waveMode === "arch") setWave(key, WAVE_ARCH, "arch");
+      else setWave(key, c.curve || [[0, 1], [0.5, 1], [1, 1]], "draw");
+      changed();
+    });
+    host.addEventListener("pointerdown", function (event) {
+      var pt = event.target.closest(".curve-pt"), svg = pt && pt.ownerSVGElement, key = svg && svg.dataset.waveGraph, c = key && rowChoices(key)[0];
+      if (!c || !c.curve) return;
+      waveDrag = { svg: svg, key: key, c: c, i: +pt.dataset.pt };
+      try { pt.setPointerCapture(event.pointerId); } catch (e) { /* the move still comes through the host */ }
+      event.preventDefault();
+    });
+    host.addEventListener("pointermove", function (event) {
+      if (!waveDrag) {                               // HERESY 1458: where the pointer stands on a graph
+        var over = event.target.closest && event.target.closest("svg[data-wave-graph]"), ed = over && over.closest("[data-wave-edit]");
+        if (ed) ed.querySelector(".lora-wave-at").textContent = waveAtText(waveSnap(wavePointer(over, event), event.shiftKey));
+        return;
+      }
+      var pts = waveDrag.c.curve, i = waveDrag.i, last = pts.length - 1, at = waveSnap(wavePointer(waveDrag.svg, event), event.shiftKey);   // 1458: Shift onto the grid
+      var t = i === 0 ? 0 : i === last ? 1 : Math.min(pts[i + 1][0] - 0.02, Math.max(pts[i - 1][0] + 0.02, at.t));
+      pts[i] = [r3(t), r3(Math.min(1, Math.max(0, at.k)))];
+      waveDrag.c.curveMode = "draw";
+      waveRedraw(waveDrag.svg, waveDrag.c);
+      var de = waveDrag.svg.closest("[data-wave-edit]");
+      if (de) de.querySelector(".lora-wave-at").textContent = waveAtText({ t: pts[i][0], k: pts[i][1] });
+    });
+    ["pointerup", "pointercancel"].forEach(function (type) {
+      host.addEventListener(type, function () {
+        if (!waveDrag) return;
+        var d = waveDrag;
+        waveDrag = null;
+        setWave(d.key, d.c.curve, "draw");
+        changed();
+      });
+    });
+    host.addEventListener("dblclick", function (event) {
+      var svg = event.target.closest("[data-wave-graph]"), key = svg && svg.dataset.waveGraph, c = key && rowChoices(key)[0];
+      if (!c) return;
+      var pts = (c.curve || [[0, 1], [1, 1]]).map(function (q) { return q.slice(); }), pt = event.target.closest(".curve-pt");
+      if (pt) {
+        var i = +pt.dataset.pt;
+        if (i > 0 && i < pts.length - 1) pts.splice(i, 1);
+      } else if (pts.length < 64) {
+        var at = waveSnap(wavePointer(svg, event), event.shiftKey);   // HERESY 1458: Shift onto the grid
+        pts.push([r3(Math.min(0.99, Math.max(0.01, at.t))), r3(Math.min(1, Math.max(0, at.k)))]);
+        pts.sort(function (a, b) { return a[0] - b[0]; });
+      }
+      setWave(key, pts, "draw");
+      event.stopPropagation();
+      changed();
+    });
+    // HERESY 1494 (Viktor 16.10.2026: «при перетаскивании добавь эффект раздвижения между блоками адаптеров — как воронку для
+    // передвигаемого»): while a row is dragged the rows part where it would land, a gap of its height opening and closing smoothly,
+    // the row itself waiting faded in its place; where it stands already no gap opens; the drop goes into the gap
+    var dragRow = null, dragEl = null, gapAt = "same";
+    function dragRows() { return [].slice.call(host.querySelectorAll(".lora-active > .lora-row[data-ids]")); }
+    function slotAt(y) {                            // the row it would land before; null: after the last
+      var rows = dragRows().filter(function (r) { return r !== dragEl; });
+      for (var i = 0; i < rows.length; i++) { var b = rows[i].getBoundingClientRect(); if (y < b.top + b.height / 2) return rows[i]; }
+      return null;
+    }
+    function setGap(before) {
+      var rows = dragRows(), own = rows[rows.indexOf(dragEl) + 1] || null, at = before === own ? "same" : before;
+      if (at === gapAt) return;
+      gapAt = at;
+      rows.forEach(function (r) { r.classList.remove("gap-before", "gap-after"); });
+      var last = rows.filter(function (r) { return r !== dragEl; }).pop();
+      if (at === null && last) last.classList.add("gap-after");
+      else if (at && at !== "same") at.classList.add("gap-before");
+    }
+    function endDrag() {
+      dragRows().forEach(function (r) { r.classList.remove("gap-before", "gap-after", "is-dragging"); });
+      dragRow = null; dragEl = null; gapAt = "same";
+    }
+    host.addEventListener("dragstart", function (event) {
+      // HERESY 1453: only the name and its tag start a drag (the whole row did, and in order its strengths would not move)
+      var who = event.target.closest && event.target.closest(".lora-row.is-ordered > .lora-who"), row = who && who.parentNode;
+      if (!row) return;
+      dragRow = row.dataset.ids; dragEl = row; gapAt = "same";
+      var list = row.parentNode;
+      list.style.setProperty("--lora-gap", (row.offsetHeight + 6) + "px");
+      try { event.dataTransfer.setData("text/plain", dragRow); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setDragImage(row, 24, 18); } catch (e) { /* the row still moves */ }
+      setTimeout(function () { if (dragEl === row) row.classList.add("is-dragging"); }, 0);   // after the drag's picture is taken whole
+    });
+    host.addEventListener("dragover", function (event) {
+      if (!dragRow || !event.target.closest(".lora-active")) return;
+      event.preventDefault();
+      setGap(slotAt(event.clientY));
+    });
+    host.addEventListener("dragleave", function (event) {
+      if (dragRow && !(event.relatedTarget && host.contains(event.relatedTarget))) setGap(dragRows()[dragRows().indexOf(dragEl) + 1] || null);
+    });
+    host.addEventListener("dragend", endDrag);
+    host.addEventListener("drop", function (event) {
+      if (!dragRow) return;
+      event.preventDefault();
+      if (gapAt === "same") setGap(slotAt(event.clientY));
+      var at = gapAt, moved = dragRow.split("|");
+      endDrag();
+      if (at === "same") return;
+      var mine = S.choice.filter(function (c) { return moved.indexOf(c.id) >= 0; });
+      var rest = S.choice.filter(function (c) { return moved.indexOf(c.id) < 0; }), first = at ? at.dataset.ids.split("|") : [], i = rest.length;
+      rest.forEach(function (c, k) { if (i === rest.length && first.indexOf(c.id) >= 0) i = k; });
+      S.choice = rest.slice(0, i).concat(mine, rest.slice(i));
+      changed();
+    });
     host.addEventListener("click", function (event) {
       var chip = event.target.closest("[data-lora-chip]"), remove = event.target.closest("[data-remove-lora]");
-      var trigger = event.target.closest("[data-trigger]");
-      if (chip && !chip.disabled) {
+      var trigger = event.target.closest("[data-trigger]"), zombie = event.target.closest(".lora-row.is-missing > .lora-who");
+      if (zombie && !remove) {                        // HERESY 1496: the question again for the row gone from loras/
+        askMissing(zombie.parentNode.dataset.ids.split("|"));
+      } else if (chip && !chip.disabled) {
         toggle(chip.dataset.loraChip);
       } else if (remove) {
         var gone = remove.dataset.removeLora.split("|");   // HERESY 1167: a pair's ✕ takes both
@@ -456,15 +1154,19 @@
       var e = entry(chip.dataset.loraChip);
       if (!e) return;
       var inSong = S.choice.some(function (c) { return idsOf(e.id).indexOf(c.id) >= 0; });
-      var items = [{ label: inSong ? "Take it out of the song" : "Add it to the song", action: function () { toggle(e.id); } }];
-      if (ownAdapter(e) && S.opts.unpublish) items.push({ sep: true }, { label: "Remove from the list (the adapter stays in its Trainer session)", icon: "\u21a9",
+      var items = [{ label: inSong ? "Take it out of the song" : "Add it to the song", action: function () { toggle(e.id); } }], hid = isHidden(e.id);
+      items.push({ sep: true }, { label: hid ? "Show it in the list again" : "Hide from the list (Show hidden brings it back)", icon: hid ? "\u25c9" : "\u25cc",   // HERESY 1496
+        action: function () { setHidden(idsOf(e.id), !hid); } });
+      if (ownAdapter(e) && S.opts.unpublish) items.push({ label: "Remove from the list (the adapter stays in its Trainer session)", icon: "\u21a9",
         action: function () { S.opts.unpublish(idsOf(e.id)); } });
+      if (S.opts.deleteFiles) items.push({ label: "Delete from loras/ for good\u2026", icon: "\u2715", danger: true,   // HERESY 1496: asked, with what goes
+        action: function () { S.opts.deleteFiles(idsOf(e.id), nameOf(e.id)); } });
       root.HeresyMenu.open(event.clientX, event.clientY, items);
     });
     // HERESY 1081: a double-click on a strength opens a field for it; Enter or leaving it sets, Esc leaves it be
     host.addEventListener("dblclick", function (event) {
       var out = event.target.closest(".lora-half output");
-      if (!out) return;
+      if (!out || out.closest(".lora-row.is-muted")) return;   // HERESY 1494
       var range = out.previousElementSibling, max = parseFloat(range.max), field = document.createElement("input");
       field.type = "number"; field.className = "lora-exact"; field.min = "0"; field.max = String(max); field.step = "0.005";
       field.value = parseFloat(range.value).toFixed(2);
@@ -487,8 +1189,8 @@
     function vtip(range) {
       if (!vt) { vt = document.createElement("div"); vt.className = "lora-vtip"; vt.setAttribute("aria-hidden", "true"); document.body.appendChild(vt); }
       var v = +range.value, max = +range.max || 1, z1 = parseFloat(range.style.getPropertyValue("--z1")) / 100 * max, z2 = parseFloat(range.style.getPropertyValue("--z2")) / 100 * max;
-      var label = range.closest(".lora-half, .lora-total"), name = label && label.querySelector("span") ? label.querySelector("span").textContent : "";
-      vt.textContent = (name ? name + " " : "") + v.toFixed(3).replace(/0+$/, "").replace(/\.$/, ".0");
+      var label = range.closest(".lora-half, .lora-total"), sp = label && label.querySelector("span"), name = sp ? (sp.dataset.name ? tr(sp.dataset.name) : sp.textContent) : "";   // 1457: an icon's name
+      vt.textContent = (name ? name + " " : "") + v.toFixed(3).replace(/0+$/, "").replace(/\.$/, ".0") + (range.dataset.held ? " \u2192 " + range.dataset.held : "");   // 1458: what runs
       vt.className = "lora-vtip " + (v > z2 + 1e-9 ? "is-red" : v > z1 + 1e-9 ? "is-amber" : "is-green");
       vt.style.left = vtXY[0] + "px";
       vt.style.top = vtXY[1] + "px";
@@ -527,7 +1229,7 @@
   function setCatalog(list) {
     var before = JSON.stringify(S.catalog);
     S.catalog = (list || []).slice();
-    if (JSON.stringify(S.catalog) !== before) paint();
+    if (JSON.stringify(S.catalog) !== before) { paint(); askMissing(); }   // HERESY 1496
   }
 
   function setSources(map) {
@@ -536,12 +1238,15 @@
     if (JSON.stringify(S.sources) !== before) paint();
   }
 
-  function set(list) {
+  function set(list, groups) {
     S.choice = (list || []).map(function (c) {
       var o = { id: String(c.id), ar: Number(c.ar) || 0, nar: Number(c.nar) || 0 };
       if (c.muted) o.muted = true;                    // HERESY 1167: a muted one comes back muted
+      var w = waveClean(c.curve);                     // HERESY 1447: its wave, as the take ran it
+      if (w) { o.curve = w; o.curveMode = JSON.stringify(w) === JSON.stringify(WAVE_ARCH) ? "arch" : "draw"; }
       return o;
     }).filter(function (c) { return c.id && (c.ar || c.nar); });
+    if (Array.isArray(groups)) S.budget = groups.length ? (groups[0].mode === "order" ? "order" : "share") : S.budget;   // HERESY 1447
     changed();
   }
 
@@ -558,8 +1263,9 @@
   // HERESY 1167: what the form keeps, the muted too (value() is what the run gets)
   function kept() {
     return S.choice.filter(function (c) { return c.ar || c.nar; }).map(function (c) {
-      var o = { id: c.id, ar: c.ar || 0, nar: c.nar || 0 };
+      var o = { id: c.id, ar: c.ar || 0, nar: c.nar || 0 }, w = waveClean(c.curve);
       if (c.muted) o.muted = true;
+      if (w) o.curve = w;                             // HERESY 1447
       return o;
     });
   }
@@ -568,8 +1274,11 @@
       var e = entry(c.id);
       return e && !e.error && !c.muted && ((has(e, "ar") && c.ar > 0) || (has(e, "nar") && c.nar > 0));
     }).map(function (c) {
-      var e = entry(c.id);
-      return { id: c.id, ar: has(e, "ar") ? Math.round(c.ar * 1000) / 1000 : 0, nar: has(e, "nar") ? Math.round(c.nar * 1000) / 1000 : 0 };
+      var e = entry(c.id), w = waveClean(c.curve), g = groupOf(c.id);
+      var o = { id: c.id, ar: has(e, "ar") ? Math.round(c.ar * 1000) / 1000 : 0, nar: has(e, "nar") ? Math.round(c.nar * 1000) / 1000 : 0 };
+      if (w) o.curve = w;                             // HERESY 1447: its wave and its budget, both run with the graph
+      if (g >= 0) o.group = g;
+      return o;
     });
   }
 
@@ -581,11 +1290,13 @@
       if (!byName[name]) { byName[name] = { music: 0, sound: 0 }; order.push(name); }
       if (Number(c.ar)) byName[name].music = Number(c.ar);
       if (Number(c.nar)) byName[name].sound = Number(c.nar);
+      if (Array.isArray(c.curve) && c.curve.length) byName[name].wave = true;   // HERESY 1447
     });
     return order.map(function (name) {
       var l = byName[name], parts = [];
       if (l.music) parts.push("music " + fmt(l.music, 2));
       if (l.sound) parts.push("sound " + fmt(l.sound, 2));
+      if (l.wave) parts.push("a wave");               // HERESY 1447
       return { name: name, amounts: parts.join(" · ") };
     });
   }
@@ -610,7 +1321,10 @@
   // HERESY 1168: is this adapter in loras/? (null while the catalog has not come: unknown, not «no»)
   // (its own name: has(e, half) above is the halves' question)
   function inCatalog(id) { return S.catalog.length ? !!entry(id) : null; }
-  root.YueLoras = { mount: mount, setCatalog: setCatalog, set: set, value: value, kept: kept, triggersFor: triggersFor, describe: describe, has: inCatalog, lines: lines, repaint: paint,
+  root.YueLoras = { mount: mount, setCatalog: setCatalog, set: set, value: value, kept: kept, groups: loraGroups,   // HERESY 1447: the budgets
+    budget: function () { return S.budget; }, profile: function () { return S.profile; }, triggersFor: triggersFor, describe: describe, has: inCatalog, lines: lines, repaint: paint,
+    relayout: layoutWaves, over: function (on) { if (on !== undefined) loraOver(!!on); return !!S.over; },   // HERESY 1458
     listInto: listInto, setSources: setSources, zone: function (id, half) { return zones(entry(id), half); }, name: nameOf, toGreen: toGreen,
+    missing: missingIds, askMissing: askMissing, hidden: function () { return (S.hidden || []).slice(); },   // HERESY 1496
     total: function () { return { value: arTotal(), stacked: arStacked(), safe: AR_TOTAL.safe, limit: AR_TOTAL.limit }; } };
 })(window);

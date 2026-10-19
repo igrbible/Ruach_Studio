@@ -53,7 +53,7 @@ Q=$(ruach_quant)
 echo "  the backbone for a card of $(ruach_vram) MiB: ${Q:-BF16}"
 # HERESY 1292: what this step brings, measured on fresh installs (10.10.2026): 9.4 GB beside the backbone
 case "${Q:-BF16}" in BF16) GBS=16.5 ;; Q8_0) GBS=13.2 ;; Q6_K) GBS=12.3 ;; *) GBS=12.0 ;; esac
-echo "  about $GBS GB in all: the backbone, three decoders, the transcriber, the sliders, the LoRAs, Whisper, the stems' models, UniverSR"
+echo "  about $GBS GB in all: the backbone, three decoders, the transcriber, the LoRAs, Whisper, the stems' models, UniverSR"
 case "$Q" in Q6_K|Q5_K_M) echo "${Y}  under 7 GB: short songs only (a context of 8 192 rows); the studio is made for 12 GB and more${X}" ;; esac   # HERESY 1304
 # HERESY 1285: what did not come is named above with its reason; the studio starts without it, and Install again goes on from there
 bash fetch-models.sh ${Q:+--quant "$Q"} || stop "a download did not complete (the lines marked failed above say which and why): the studio starts without it; Install again goes on from there"

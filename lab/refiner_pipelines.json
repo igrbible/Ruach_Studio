@@ -1,0 +1,247 @@
+{
+ "about": "HERESY 1553: the Refiner's pipelines the studio ships (Viktor 18.10.2026: «сотвори несколько профилей пайплайна… для Про и Паблик»). Each is the chain's steps in their order; the page lists them beside the profiles one saves. A plugin may bring its own in its plugin.json («pipelines»).",
+ "pipelines": [
+  {
+   "id": "quick",
+   "name": "Quick polish",
+   "say": "debuzz, remaster, look",
+   "tip": "The take as it is, its frame buzz out and remastered whole; no stems. A few minutes.",
+   "pipeline": [
+    {
+     "step": "debuzz",
+     "strength": 0.8
+    },
+    {
+     "step": "remaster",
+     "settings": {
+      "preset": "balanced"
+     }
+    },
+    {
+     "step": "spectrum"
+    }
+   ]
+  },
+  {
+   "id": "song",
+   "name": "Song: stems and remaster",
+   "say": "eight stems, the lead whole, remaster",
+   "tip": "Debuzzed, split into eight stems, the lead voice made whole where the split lost it to the backing, remastered from the mended stems with the balanced preset, its top drawn anew at the end, then looked for faults.",
+   "pipeline": [
+    {
+     "step": "debuzz",
+     "strength": 0.8
+    },
+    {
+     "step": "stems",
+     "mode": "eight"
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "lead"
+    },
+    {
+     "step": "remaster",
+     "settings": {
+      "preset": "balanced",
+      "deess": true
+     }
+    },
+    {
+     "step": "upscale",
+     "mode": "subtle",
+     "end": true
+    },
+    {
+     "step": "inspect"
+    }
+   ]
+  },
+  {
+   "id": "song-daw",
+   "name": "Song: my DAW mix",
+   "say": "eight stems, the lead whole, mixed as the DAW is set",
+   "tip": "As «Song: stems and remaster», but mixed by the DAW as its strips are set now (levels, pans, cuts, sends, the master chain) instead of the remaster's preset; the remaster then brings it to loudness.",
+   "pipeline": [
+    {
+     "step": "debuzz",
+     "strength": 0.8
+    },
+    {
+     "step": "stems",
+     "mode": "eight"
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "lead"
+    },
+    {
+     "step": "daw",
+     "mix": "current"
+    },
+    {
+     "step": "remaster",
+     "settings": {
+      "preset": "flat"
+     }
+    },
+    {
+     "step": "upscale",
+     "mode": "subtle",
+     "end": true
+    },
+    {
+     "step": "inspect"
+    }
+   ]
+  },
+  {
+   "id": "song-air",
+   "name": "Song: full air",
+   "say": "the top redrawn before the split and on the voices",
+   "tip": "As «Song: stems and remaster», with the take's top drawn anew before the split and the voices' own after it: the most air the studio gives. The longest of them: three upscales on a card.",
+   "pipeline": [
+    {
+     "step": "debuzz",
+     "strength": 0.8
+    },
+    {
+     "step": "upscale",
+     "mode": "subtle"
+    },
+    {
+     "step": "stems",
+     "mode": "eight"
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "lead"
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "vupscale",
+     "params": {
+      "which": "voices",
+      "mode": "subtle"
+     }
+    },
+    {
+     "step": "remaster",
+     "settings": {
+      "preset": "balanced",
+      "deess": true
+     }
+    },
+    {
+     "step": "upscale",
+     "mode": "subtle",
+     "end": true
+    },
+    {
+     "step": "spectrum"
+    }
+   ]
+  },
+  {
+   "id": "tape",
+   "name": "Warm tape",
+   "say": "mixed, then through tape at 30 ips",
+   "tip": "Eight stems, the lead whole, mixed as the DAW is set now, printed through the Digital Gateway's master tape at 30 ips, then remastered.",
+   "pipeline": [
+    {
+     "step": "debuzz",
+     "strength": 0.8
+    },
+    {
+     "step": "stems",
+     "mode": "eight"
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "lead"
+    },
+    {
+     "step": "daw",
+     "mix": "current"
+    },
+    {
+     "step": "gate",
+     "params": {
+      "character": "tape",
+      "speed": "30",
+      "drive_db": 3,
+      "wow": 0.02,
+      "flutter": 0.02,
+      "grain_db": -78
+     }
+    },
+    {
+     "step": "remaster",
+     "settings": {
+      "preset": "balanced"
+     }
+    },
+    {
+     "step": "spectrum"
+    }
+   ]
+  },
+  {
+   "id": "spoken",
+   "name": "Spoken word",
+   "say": "voice forward, sibilants tamed, the words checked",
+   "tip": "For readings: debuzzed, split into voice and music, the voice's top drawn anew, remastered with the voice forward and the de-esser on, then every word heard against the text.",
+   "pipeline": [
+    {
+     "step": "debuzz",
+     "strength": 0.8
+    },
+    {
+     "step": "stems",
+     "mode": "vocals"
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "vupscale",
+     "params": {
+      "which": "lead",
+      "mode": "normal"
+     }
+    },
+    {
+     "step": "remaster",
+     "settings": {
+      "preset": "vocal_forward",
+      "deess": true
+     }
+    },
+    {
+     "step": "gloss"
+    }
+   ]
+  },
+  {
+   "id": "look",
+   "name": "Look only",
+   "say": "faults, spectrum, words: nothing changed",
+   "tip": "The take looked at and nothing made from it: its faults, its spectrum and its words.",
+   "pipeline": [
+    {
+     "step": "inspect"
+    },
+    {
+     "step": "spectrum"
+    },
+    {
+     "step": "gloss"
+    }
+   ]
+  }
+ ]
+}

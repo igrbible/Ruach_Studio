@@ -63,9 +63,9 @@ STEM_PATTERNS = {
     # SUNO splits: "0 Lead Vocals", "1 Backing Vocals", "2 Drums", …
     # UVR:        "…_(Vocals)_MDX.wav", "…_(Instrumental)_MDX.wav"
     # Demucs:     vocals.wav / drums.wav / bass.wav / other.wav
-    "lead_vocals":    {"patterns": ["lead vocal", "lead vox", "main vocal",
+    "lead_vocals":    {"patterns": ["lead vocal", "lead_vocal", "lead vox", "main vocal",   # HERESY 1463: the stems' lead_vocal.flac
                                     "(lead vocals)"], "default_db": 0.0},
-    "backing_vocals": {"patterns": ["backing vocal", "back vocal", "bgv",
+    "backing_vocals": {"patterns": ["backing vocal", "backing_vocal", "back vocal", "bgv",
                                     "chorus vocal", "(backing vocals)"], "default_db": -2.0},
     "vocals":         {"patterns": ["(vocals)", "vocal", "vox", "voice", "sing"],
                        "default_db": 0.0},
@@ -75,7 +75,7 @@ STEM_PATTERNS = {
     "guitar":         {"patterns": ["guitar", "gtr"],                    "default_db": -1.0},
     "keyboard":       {"patterns": ["keyboard", "keys", "piano"],        "default_db": -1.5},
     "strings":        {"patterns": ["string", "violin", "cello", "viola"], "default_db": -1.0},
-    "woodwinds":      {"patterns": ["woodwind", "flute", "duduk", "sax",
+    "woodwinds":      {"patterns": ["woodwind", "winds", "flute", "duduk", "sax",
                                     "oboe", "clarinet"],                 "default_db": -1.5},
     "synth":          {"patterns": ["synth", "pad", "electronic"],       "default_db": -2.0},
     "other":          {"patterns": ["(other)", "other", "residual", "misc"], "default_db": -2.0},

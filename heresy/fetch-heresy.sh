@@ -28,6 +28,9 @@
 #   heresy/fetch-heresy.sh --backbone BF16|Q8_0|Q6_K|Q5_K_M [--yes]
 #                                      also another YuE2 backbone beside the one the install took for the card, asked
 #                                      first with its size (HERESY 1285: BF16 where a 16 GB card took Q8_0)
+#   heresy/fetch-heresy.sh --ira BF16|Q8_0|Q6_K [--yes]
+#                                      HERESY 1490: also the IRA merge (YuE2-3B with Mothersuperior's Instrumental and Real Audio
+#                                      folded in, goldhub/YuE2-3B-Ruach_Studio-IRA-Merge) beside m-a-p's backbones, asked first
 #   heresy/fetch-heresy.sh --only extras,whisper,stems,upscale,loras
 #                                      HERESY 1289: those parts of what the install brings, the others left alone; with
 #                                      none, only what the options above ask for (the Engine's Models card fetches so)
@@ -48,20 +51,21 @@
 # Needs: python3, git, the lab venv for audio-separator (lab/install-venv.sh), ~8 GB of disk.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""; QFINE=""; ARTLORAS=""
+MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""; QFINE=""; ARTLORAS=""; IRA=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --check) MODE=check ;; --replace) MODE=replace ;; --yes) YES=1 ;;
     --listener) LISTENER="${2:-}"; shift ;;
     --trainer) TRAINER="${2:-}"; shift ;;
     --backbone) BACKBONE="${2:-}"; shift ;;
+    --ira) IRA="${2:-}"; shift ;;                   # HERESY 1490
     --only) ONLY=",${2:-},"; shift ;;
     --artwork) ARTWORK=1 ;;
     --artwork-q8) ARTWORK=1; ARTQ8=1 ;;
     --qwen) QWEN="${2:-}"; shift ;;
     --qwen-fine) QFINE="${2:-}"; shift ;;           # HERESY 1347
     --art-loras) ARTLORAS="${2:-all}"; shift ;;
-    *) echo "--check, --replace, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --qwen-fine jibmix-v6|intorealism-v1|real-v2|base-fp8, --art-loras all, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
+    *) echo "--check, --replace, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --ira BF16|Q8_0|Q6_K, --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --qwen-fine jibmix-v6|intorealism-v1|real-v2|base-fp8, --art-loras all, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
   esac
   shift
 done
@@ -252,9 +256,10 @@ WORK=(--include "*.safetensors" "*.bin" "*.json" "*.yaml" "*.py" "*.txt")
 # sliders/ where the engine reads them (1.3 GB, converted once: byte for byte what convert-extras.py makes from the pinned
 # checkpoints, which no install fetches any more; convert-models.sh stays for whoever wants to make them on their own machine)
 if want extras; then
-  part extras "The extra decoders and the sliders, converted once (goldhub/Ruach_Studio_Models_v2)"
-  hf_into "legacy and blend decoders, 16 sliders (models/, sliders/)" goldhub/Ruach_Studio_Models_v2 \
-          "models/YuE2-Vae-legacy-F32.gguf" "models/YuE2-Vae-blend-F32.gguf" "sliders/*"
+  # HERESY 1449: the sliders no more (Viktor 15.10.2026: «Нахер убирай это слайдерное говно из нашей Студии»)
+  part extras "The extra decoders, converted once (goldhub/Ruach_Studio_Models_v2)"
+  hf_into "legacy and blend decoders (models/)" goldhub/Ruach_Studio_Models_v2 \
+          "models/YuE2-Vae-legacy-F32.gguf" "models/YuE2-Vae-blend-F32.gguf"
 fi
 
 if want whisper; then
@@ -469,6 +474,20 @@ if [ -n "$BACKBONE" ]; then
       else say_fail "$B_FILE" "(download-models.sh: $(why))"; fi
     fi
   fi
+fi
+
+# HERESY 1490 (Viktor 16.10.2026: «Не забудь прикрутить скачивание этих GGUF в студии и выбор активной модели к базовым m-a-p весам»):
+# the IRA merge beside m-a-p's backbones, from its own repo at its pin, asked with its size
+if [ -n "$IRA" ]; then
+  case "$IRA" in BF16) I_SIZE="7.2 GB" ;; Q8_0) I_SIZE="3.8 GB" ;; Q6_K) I_SIZE="2.9 GB" ;;
+    *) echo "${R}--ira takes BF16, Q8_0 or Q6_K${X}"; exit 2 ;; esac
+  asked ira "The IRA merge $IRA (YuE2-3B with Mothersuperior's Instrumental and Real Audio folded in: goldhub/YuE2-3B-Ruach_Studio-IRA-Merge)"
+  go=1
+  if [ $MODE = fetch ] && [ $YES = 0 ] && [ ! -s "$ROOT/models/YuE2-3B-IRA-$IRA.gguf" ]; then
+    printf "%s" "Download $I_SIZE? The studio's Engine (Compute) chooses it beside m-a-p's backbones after its next start. [y/N] "
+    read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
+  fi
+  [ $go = 1 ] && hf_into_at "models/YuE2-3B-IRA-$IRA.gguf (Ruach Studio's IRA merge)" goldhub/YuE2-3B-Ruach_Studio-IRA-Merge "$ROOT/models" "YuE2-3B-IRA-$IRA.gguf"
 fi
 
 # HERESY 1285 (Viktor 09.10.2026: «LoRA пока что не скачались. Только Standard VAE»): the LoRAs the 💎 sets were made with come

@@ -9,8 +9,9 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 - ✅ **2.0.0-rc1** (06.10.2026), **rc2** (07.10), **rc3** (09.10; cut again the same day with the logo the name alone everywhere, the GitHub pre-release with it).
 - ✅ **2.0.0-rc4**, cut as a whole on Viktor's word of 10.10.2026 («собирай RC4 как unified version с багфиксом по факту воспроизведения поведения развёртывания Студии под Pinokio»): the models converted once in goldhub/Ruach_Studio_Models_v2, the install made whole, the Artist as it stands; tried from a clean clone and by a whole fresh install. The community's gate («при росте Issues и PR, и 100+ stars») moves to rc5.
 - ✅ 2.0.0-rc6 cut and published 12.10.2026 (tag v2.0.0-rc6, the pre-release with its tarball, the card on rc6).
-- ✅ 2.0.0-rc7 cut and published 13.10.2026 (tag v2.0.0-rc7, release commit 34e0b23, the pre-release with its tarball, the card on rc7); the last release candidate before 2.0.0.
-- ☐ RC7: the spectrogram's slice out of the section card's tip, the spectrogram only in the full scope (Viktor 12.10.2026).
+- ✅ 2.0.0-rc7 cut and published 13.10.2026 (tag v2.0.0-rc7, release commit 34e0b23, the pre-release with its tarball, the card on rc7).
+- ✅ 2.0.0-rc8 cut and published in the night of 14–15.10.2026 (Viktor: «смело собирай RC8»; tag v2.0.0-rc8, release commit c1d62e6, the pre-release with its tarball, the card on rc8): every weight from one repo, the release locked against private names.
+- ✅ 1398: the spectrogram out of the section card's tip, only in the full scope (Viktor 12.10.2026).
 - ☐ **2.0.0, the release.** Before it, in one go: every screenshot of the guide, the README and the site taken again (curated: nothing private in them), the new strings in the six other languages, every approved 💎 probe made again full length on its own seeds, and the promo video with everything in.
 - ☐ **2.1.0**: the Videographer room (below) and what SUNO's interface teaches us (below); the working release once issues and pull requests settle.
 - ❓→2.1.0 (Viktor 12.10.2026: the DAW phase of the Refiner «нужно досконально обсудить и обмозговать», with SeedVR). The closing pass of 2.0.0 together, by RC6. Proposed for his choice: Extend from a position (2.0.0), Replace a section and an instrumental layer on the take's score (2.1.0).
@@ -59,11 +60,11 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 - ✅ 1390: the Writer's «Max tokens» (32K), an empty answer or a failure said over the page, the answer scrolled to the top. ✅ 1391: the lyrics' language for Whisper from the sung lines. ☐ Whisper on the vocal stem for the sections and the timing (the mix is the limit: 60 % of the lines heard on «01 v4.0.11», 85 % on its -ds take).
 - ✅ 1316: LoRA adapters in the Artist (a library by folders, pictures, Civitai by hash, strengths, trigger words). ✅ 1365: their strength by steps (keyframes of a multiplier, ⏱ beside each, as Viktor's ComfyUI hooks).
 - ✅ 1353 (Viktor's list of 11.10.2026): eight adapters in the list, four in the run; their trigger words into the prompt by themselves; the LoRA library's menu and an Info window (what an adapter is made for, read from its file; another model's named on its card); adapters into the art's trash and back; a PEFT file without a prefix loads (the bear's «dead» OilPaint was ours to mend); the picture's tip after a moment; the Upscale row centred. ✅ 1354: a run's formats on the lab's cards at once (two cards: Qwen fp8 6.4 min against 8.6). ✅ 1355: the upscalers' notes (what each is for, measured; an i and a window), an upscale in passes as Viktor's ComfyUI stack (his chain one click away), Upscayl looked into (ncnn on Vulkan: ESRGAN-family only; its ideas taken, not its binary); 4x_Nomos8k_atd_jpg mended (float32). ✅ 1364: from Upscayl, TTA (eight orientations averaged) and the pictures picked upscaled in one run; ☐ the painter's second pass over the upscaled picture (his workflow's 2× latent pass: noise 0.6, from step 20 of 60) as a pass of the chain. ✅ 1360: From Civitai… in the LoRA library, for the adapters only Civitai may give (the user's own key, kept local; agreed 11.10: «ПО CivitAI согласен»).
-- ☐ **The most of InvokeAI** (Viktor 09.10: «Для Artist бери максимум фич из InvokeAI»; its code is Apache-2.0 and already runs Krea 2): a reference picture (image to image), repaint and outpaint on a canvas with a mask, regional prompts, a style reference, several LoRAs at once, boards, compare, the upscale (SeedVR), lettering on a cover, the versions of a take's picture. ✅ 1387: regional prompts (Regions, three at most). ✅ 1388: a style reference (Qwen-Image 2.1). ☐ The rest: boards, the upscale by SeedVR, lettering on a cover, the versions of a take's picture.
+- ☐ **The most of InvokeAI** (Viktor 09.10: «Для Artist бери максимум фич из InvokeAI»; its code is Apache-2.0 and already runs Krea 2): a reference picture (image to image), repaint and outpaint on a canvas with a mask, regional prompts, a style reference, several LoRAs at once, boards, compare, the upscale (SeedVR), lettering on a cover, the versions of a take's picture. ✅ 1387: regional prompts (Regions, three at most). ✅ 1388: a style reference (Qwen-Image 2.1). ✅ 1394–1396: lettering on a cover. ☐ The rest: boards, the upscale by SeedVR (2.1.0), the versions of a take's picture.
 - ✅ 1297: a painter no card can hold refused at once with the numbers; why an artwork waits said; the painters' rooms measured again (Krea 2 Muse Q4 12.6 GB, SDXL 14.2, Q8 17.4).
 - ✅ 1305: **a reference picture** (image to image) for Krea 2 Muse: dropped, pasted, chosen, or the stage's «As reference», with how much it may change. ✅ 1306: **a mask** on it (inpaint), painted over the page. ✅ 1307: **painting around it** (outpaint), no seam. ✅ 1308: **two pictures compared** under a divider or side by side. ✅ 1316: several LoRAs at once. ✅ 1318: Qwen-Image 2512 and 2.1 as painters. ✅ 1320: the mask's grow, edge, soft and grain. ✅ 1321: pictures picked and put aside. ✅ 1322: **upscale** (spandrel, any upscaler in artwork/upscalers/). ✅ 1346: **the canvas, as InvokeAI's**: each shape's frame with the picture placed in it by hand or by numbers, the mask painted over it, the bare part painted around it. ✅ 1341: an adapter muted, kept in the list. ✅ 1342: a painter streamed from RAM when it does not fit the card (the fp8 Qwen; Krea 2 and the GGUF painters next, for 16 GB cards). Next of InvokeAI's: a second pass over the upscaled picture (hires fix, by tiles), regional prompts on the canvas, a style reference; one upscaler fetched with the painters (Real-ESRGAN x4plus, BSD-3-Clause) for those who have none.
 - ✅ 1318: Qwen-Image 2512 (GGUF Q4/Q6, fp8 fine-tunes, Lightning) and 2.1 (its licence said) as the Artist's painters. ✅ 1323: their files fetched by heresy/fetch-heresy.sh --qwen and the Models card, sizes asked, 2.1's licence said. ✅ 1370: a painter that stays between runs (in RAM, its card free; let go after ten minutes idle, or by the Bar's Unload).
-- ☐ **Models**: Qwen/Qwen-Image-2.1 as the base (Viktor 09.10; downloaded whole to the Forge 10.10, 33.1 GB at d26bb61, its pipeline in diffusers 0.41.0), a good finetune he picks on Civitai; the Krea 2 Muse finetunes we tried; a portrait adapter he trains himself. Three families by the card: SDXL for old cards, Krea 2 Muse the workhorse, Qwen Image 2.1. First look 10.10 on GPU2 (heresy/MISC/claude-artist/try_qi21.py, the fresh rc4 tree's .venv-art with diffusers 0.41.0, model CPU offload): a 1328² picture from words in 120 s at 30 steps, 16.4 GB at its peak, painterly and fine; an edit by an instruction on a cover («a snowy winter night outside…») in 122 s, 19.1 GB, the figures kept exactly, the scene turned (it made the poster a window). ✅ 1386: on a 16 GB card it streams from RAM (no GGUF needed: 4.1 GB at the peak from words, 7.9 editing). ✅ 1388: «Edit by words» beside the reference (Use it); the Forge's own .venv-art to diffusers 0.41.
+- ☐ **Models**: Qwen/Qwen-Image-2.1 as the base (Viktor 09.10; downloaded whole to the Forge 10.10, 33.1 GB at d26bb61, its pipeline in diffusers 0.41.0), a good finetune he picks on Civitai; the Krea 2 Muse finetunes we tried; a portrait adapter he trains himself. Three families by the card: SDXL for old cards, Krea 2 Muse the workhorse, Qwen Image 2.1. First look 10.10 on GPU2 (heresy/MISC/claude-artist/try_qi21.py, the fresh rc4 tree's .venv-art with diffusers 0.41.0, model CPU offload): a 1328² picture from words in 120 s at 30 steps, 16.4 GB at its peak, painterly and fine; an edit by an instruction on a cover («a snowy winter night outside…») in 122 s, 19.1 GB, the figures kept exactly, the scene turned (it made the poster a window). ✅ 1386: on a 16 GB card it streams from RAM (no GGUF needed: 4.1 GB at the peak from words, 7.9 editing). ✅ 1388: «Edit by words» beside the reference (Use it); the Forge's own .venv-art to diffusers 0.41. SDXL out since 1405 and Krea 2 Muse since 1428: Qwen-Image paints every picture.
 - ✅ 1310: the trash in the room (a Trash look with Restore).
 
 ## Videographer · 2.1.0
@@ -77,15 +78,18 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 
 ## LoRA mixing
 
-- ☐ The per-layer delta measured (‖B·A‖ per module, the overlap of two adapters by the cosine of their deltas): adapters touching the same layers share a budget, apart they are independent (Viktor's «1+2 в общую суммарную силу, либо 3 и 4 — отдельно»); Variant A (the sum capped at the red line, in proportion) and B (a budget by the order dragged).
-- ☐ A LoRA's strength over the song as the sliders' curve (line, curve, parabola, peaks): the engine applies the adapters at run time, not merged into the weights at load.
+- ✅ 1447: the per-layer delta measured by the lab (/lab/lora/profile: ‖B·A‖ by layer and module, attention against MLP, how far an adapter moves a layer at 1.0, the overlap of two and the cosine of their deltas); the adapters that touch the same layers share a budget a half (Viktor's «1+2 в общую суммарную силу, либо 3 и 4 — отдельно»): Off, Share (Variant A: the sum capped at the red line, in proportion), In order (Variant B: the order dragged); the caps the red lines, music 2.25, sound 1.5. The six library adapters all reach the 28 layers (overlap 0.7–0.97), their deltas nearly at right angles (cosine 0.00–0.05).
+- ✅ 1447: a LoRA's strength over the song as a wave (Flat, Arch, Draw; Viktor: «динамичную волну, именно ту, что ты воплотил в слайдерах стилей»), the engine applying the adapters at run time with the graph (lora-rt.h), not merged into the weights at load: token for token the same as merged.
+- ✅ 1449: the voice and genre sliders out of the studio, the install and Models v2 (Viktor: «Нахер убирай это слайдерное говно из нашей Студии, но сами адаптации волнового инджеста забери»), measured first: no pull toward their genre.
+- ✅ The sliders' code stays in the engine (Viktor 15.10.2026: «не чини то, что пока что не сломано. Легче воскресить, чем кремировать»); the LoRA wave lives on its slider_curve_at. ✅ 1451: the page's words that still named them.
+- 💡 Rise and Fall beside Arch in the wave's editor: the request takes them already.
 
 ## LoRA Trainer
 
 - ✅ Our own trainer, a voice's kind by pitch on the raw folder, runs, telemetry, epochs worth hearing first; the duduk and shofar adapters.
 - ✅ 1298: a run's log as wide as its lines, beside the server log. 1299: the two curves one under the other at a click.
 - ❓ **Closed for now, not to the end** (Viktor 10.10: «не на 100%, но Тренера закрываем также на данный момент. Но нужно будет все режимы и типы адаптеров перепроверить»). ☐ Every mode checked again (Direct, Full, Melody, separated vocals; the studio's trainer and AI-Toolkit) and every kind (style, voice, language, artist), each to a heard adapter.
-- ✅ 1300: **a finished run goes on to more epochs** from its ⋯ menu (the studio's own trainer; tried 40 → 60 steps on GPU2); the rank's line is its tip's first line; **the guide explains every field**, and AR weight, anchor and speed as measured (the anchor counts as a share of the weight, the speed is the music half's throttle). ☐ The same «go on» for AI-Toolkit's runs, once its resume is tried.
+- ✅ 1300: **a finished run goes on to more epochs** from its ⋯ menu (the studio's own trainer; tried 40 → 60 steps on GPU2); the rank's line is its tip's first line; **the guide explains every field**, and AR weight, anchor and speed as measured (the anchor counts as a share of the weight, the speed is the music half's throttle). AI-Toolkit out of the studio since 1422, so its runs' «go on» is not needed.
 - ☐ **Diction adapters** from the audiobook archive: one voice at rank 16, cohorts at rank 64 (the music half learns diction at 24 kHz; the sound half wants a source above it). Real readers' voices and Viktor's own stay private.
 - ☐ The material checked in the raw pane for every user: repeats (a loop of the same minutes), what CLAP and the listener hear in each stretch, a VAE round trip (if the decoder cannot carry the sound, no LoRA will).
 - ☐ The lyrics adapter (`heresy/docs/LYRICS-ADAPTER-PLAN.md`).
@@ -93,7 +97,7 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 
 ## Engine and the page
 
-- ☐ The Engine as an overlay, its blocks in tabs at the left by theme, in the order of a first setup (Viktor 14.10.2026).
+- ✅ 1450: the Engine as an overlay, its blocks in tabs at the left by theme, in the order one goes through them, centred (Viktor 14.10.2026).
 
 - ✅ rc3: Updates from GitHub's releases; Folders' code in the lab (where the user's work lives, moved with a checked copy); the cards live as btop draws them. 1266: the logo the name alone, the bar of one height, the favicon the name's first letter in the page's language. 1272: the unfolded server log 180 px narrower.
 - ✅ 1283: **Engine → Folders**: the card to choose and move where the generations, the trash, the Artist's and the Writer's work live (Windows paths through WSL understood; planned, then a second yes; the old copy kept).
@@ -112,7 +116,7 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 - ✅ 1380: The Artist stage's buttons keep the language they were made in when the page's language changes (Spanish left after a switch to Russian; a reload mends it): found by the 1379 probe.
 - ✅ 1274: **the page offline**: abcjs (6.7.1) in the page, the ten font families (Raleway, Roboto and Lato joined at Viktor's word; Latin, Cyrillic, Greek) served by the lab with a year's cache; no CDN left.
 - ✅ 1339: the new strings (the Artist, Stop, the stage, the editor's keys) in Russian, Ukrainian, Belarusian, Greek, Spanish and Italian: the page in all six, wall to wall; each patch since brings its own.
-- ✅ 1273: the logo's words and the favicon's letter ready for the languages planned next: French (ROUAH STUDIO, a proposal), Portuguese (RUACH ESTÚDIO), German, Japanese (ルアハ スタジオ, ル), Chinese (鲁阿赫 工作室, 鲁). ☐ The languages themselves (Chinese first, then French, Portuguese, German, Japanese; right to left only when the page can).
+- ✅ 1273: the logo's words and the favicon's letter ready for the languages planned next: French (ROUAH STUDIO, a proposal), Portuguese (RUACH ESTÚDIO), German, Japanese (ルアハ スタジオ, ル), Chinese (鲁阿赫 工作室, 鲁). ✅ 1379: the five languages themselves; right to left only when the page can.
 - ✅ 1379b: A choice list of words, not data, in the page's language: the updates question's Every week, Every day, Every month, Never stay English in every language (heresy-dialog.js marks a choice's label translate="no", for names and files); found 11.10 while probing 1374.
 - ✅ 1361: the WAV fallback goes on with a take asked to play (Chrome had paused it silently before its error was heard); a take whose sound is all here and that does not start is loaded again in place, then said (the long test's readyState 1, met where it shows).
 - ✅ 1349: the never-break-lines pass over the page's strings and the docs: no newline inside a sentence in the page's strings, no hard-wrapped paragraph in the docs, and the last three boxes measured in ch wrap at their column (code comments stay as they are).
@@ -129,16 +133,17 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 
 ## Models, Hugging Face, data
 
-- ✅ goldhub/Ruach_Studio_Models_v2 rebuilt whole as the studio's own disk (1440), files known by their content (1441); v1 closed once RC8 is out (Viktor 14.10.2026: «Репо v1 можно смело закрывать»).
+- ✅ goldhub/Ruach_Studio_Models_v2 rebuilt whole as the studio's own disk (1440), files known by their content (1441); v1 deleted by Viktor 15.10.2026 (Hugging Face would not make it private); nothing read it since rc8.
 - ✅ Every weight from v2 at one pin (1445): the Trainer's base in it, the listener as the studio reads it; from their authors still the stems' models (audio-separator), the Kit's library of adapters, Qwen2.5-Omni-7B whole.
-- ☐ The Kit's library's four adapters under CC BY-NC (sv-billie, dreampop, jpop, the realaudio NAR) into v2 and its downloader onto v2, on Viktor's word: they are not on the Forge's disk.
-- ❓ Deathmetal, Industrial Rock, Steps from Hell carry no licence: their authors to be asked (a question drafted, posted on Viktor's word).
+- ✅ 1446: the Kit's library's five licensed adapters in v2 (Instrumental, sv-billie, DreamPop v2, J-pop, Real audio v4 and v9) at the Kit's pins, each checked against its author's SHA-256; `tools/download-loras.sh` takes them from v2.
+- ❓ Death metal, Industrial rock, Epic trailer (Steps from Hell) carry no licence: asked on Hugging Face 15.10.2026 ([1](https://huggingface.co/pduncan/YuE2_Deathmetalv1_lora/discussions/1), [2](https://huggingface.co/monsterovich/yue2-industrial-rock-lora/discussions/4), [3](https://huggingface.co/monsterovich/yue2-steps-from-hell/discussions/3)); fetched from their authors until they answer.
+- ✅ 1449: v2 without the sliders, at 094e03a (163 files, 256 GB).
 
 - ✅ The Models, LoRAs and Starter Sets repos and the 💎 bucket public on Hugging Face.
 - ✅ 1289: Engine → Models and LoRAs: what the install brings, here or not, fetched again from the studio (a part at a time or all), and the extras each asked with its size.
 - ✅ 1296: one's own copy of a published LoRA is kept and counted whole («differs», «own copies kept»).
 - ✅ 1302: **Fetch's progress at the row pressed**. 1303: the trainer's base brings MERT-v2-FullSong. ✅ 1339: the Models card's strings in the six other languages.
-- ✅ 1290: the converted models in a repo of their own, [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2): the legacy and blend decoders and the 16 sliders, production only, byte for byte; the install fetches no checkpoints.
+- ✅ 1290: the converted models in a repo of their own, [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2): the legacy and blend decoders and the 16 sliders, production only, byte for byte; the install fetches no checkpoints. The sliders gone again with 1449.
 - ☐ Every approved 💎 probe made again full length on its own seeds before 2.0.0.
 - ☐ Reading examples: Jude in Greek, Hebrew, Russian and Ukrainian, and English from Young's Literal Translation (public domain).
 - ☐ CLAP beside Omni for judging probes.
@@ -149,6 +154,9 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 
 - ✅ README, CHANGELOG, INSTALL, the guide in seven languages, the visiting card in seven languages with its logo and icon in each, six rooms counted.
 - ☐ The screenshots of the guide, the README and the site for 2.0.0, in one go.
+- ✅ 1446: the visiting card counts its visitors (Umami on our own server, no cookies).
+- ✅ 1448: the studio's name in every language as its logo says it, in the page and on the card.
+- ✅ 1449: the guide in twelve languages without the sliders, a LoRA's wave and the budget in their place.
 - ❓ The site's `/favicon.ico` comes from the server's shared icons (nginx): a location of the site's own, on Viktor's word.
 - ☐ Posts (Reddit, Hugging Face, X) when Viktor says.
 
@@ -179,7 +187,7 @@ Viktor's screenshots of SUNO's newest interface, 09.10.2026 (its Studio, a DAW, 
 - ✅ 1409 (13.10.2026): «Wait: binding the lyrics to the wave…» on the wave and in the section card while Whisper binds them.
 - ✅ 1410–1412 (13.10.2026): the Trainer in epochs, its knobs in three rows; Cancel run asks; the guidances a row each; Shape a band in the take's card.
 - ✅ 1413 (13.10.2026): the engine's default output WAV 24-bit.
-- ✅ 1414 (13.10.2026): Replace a section from the wave (early preview); ☐ its guide after we both have tried it.
+- ✅ 1414 (13.10.2026): Replace a section from the wave (early preview); ✅ 1452: its guide, in twelve languages, after we both had tried it.
 - ✅ 1415 (13.10.2026): compare a take with its namesakes, or two to four checked, in one player.
 - ✅ 1416 (13.10.2026): Free tempo (the score's Q: out before the music; on by the Style's own words; a score without Q: native).
 - ✅ 1417 (13.10.2026): the lyrics' timing in two passes (hotwords, the vocal stem); stable-ts tried and dropped (its developer left it in June).

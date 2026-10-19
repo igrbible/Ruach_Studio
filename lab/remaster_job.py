@@ -39,12 +39,22 @@ elif src:
     # the stems the Debunker mixes: with drums, bass and other present, the instrumental is
     # their sum already and would count twice — it stays out
     names = [p.stem for p in sd.glob("*.flac")]
-    use = [x for x in names if not (x == "instrumental" and {"drums", "bass", "other"} <= set(names))]
+    use = [x for x in names if not (x == "instrumental" and {"drums", "bass", "other"} <= set(names))
+           and not (x == "vocals" and "lead_vocal" in names)]   # HERESY 1477: the whole voice beside its lead and backing, once
     mixdir = outdir / ".stems"
     shutil.rmtree(mixdir, ignore_errors=True)
     mixdir.mkdir()
+    given = cfg.get("versions") or {}              # HERESY 1553: a stem's version made before (the chain's), inside the take
     for x in use:
-        os.link(sd / f"{x}.flac", mixdir / f"{x}.flac")
+        v = (take / str(given[x])).resolve() if x in given else None
+        if v is not None and (take.resolve() not in v.parents or not v.is_file()):
+            raise SystemExit(f"bad version of {x}")
+        if v is not None and v.suffix.lower() != ".flac":
+            import soundfile as sf_v
+            a_, r_ = sf_v.read(str(v), dtype="float32", always_2d=True)
+            sf_v.write(str(mixdir / f"{x}.flac"), a_, r_, subtype="PCM_24")
+        else:
+            os.link(v or sd / f"{x}.flac", mixdir / f"{x}.flac")
     stems = db.find_stems(str(mixdir))
     db.apply_preset(stems, cfg.get("preset", "balanced"))
     for s in stems:                                  # the page's own levels win over the preset

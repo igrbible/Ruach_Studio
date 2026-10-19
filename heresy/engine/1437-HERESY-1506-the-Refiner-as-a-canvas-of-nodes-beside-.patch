@@ -1,0 +1,615 @@
+From 601cc40473266f123052106fcc7dc349039f191b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 16 Oct 2026 21:27:00 -0600
+Subject: [PATCH 1437/1463] =?UTF-8?q?HERESY=201506:=20the=20Refiner=20as?=
+ =?UTF-8?q?=20a=20canvas=20of=20nodes=20beside=20its=20list:=20the=20take,?=
+ =?UTF-8?q?=20the=20import=20and=20every=20step=20a=20node,=20wires=20the?=
+ =?UTF-8?q?=20chain's=20way=20and=20the=20way=20the=20take=20went,=20a=20c?=
+ =?UTF-8?q?lick=20lifts=20its=20panel,=20=E2=80=B9=20=E2=80=BA=20and=20Alt?=
+ =?UTF-8?q?+=E2=86=90=20=E2=86=92=20along,=20Esc=20back,=20nodes=20dragged?=
+ =?UTF-8?q?=20and=20kept,=20Arrange?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  48 ++++++
+ tools/console/heresy-derived.js |   1 +
+ tools/console/heresy-i18n-be.js |  11 +-
+ tools/console/heresy-i18n-de.js |  11 +-
+ tools/console/heresy-i18n-el.js |  11 +-
+ tools/console/heresy-i18n-es.js |  11 +-
+ tools/console/heresy-i18n-fr.js |  11 +-
+ tools/console/heresy-i18n-it.js |  11 +-
+ tools/console/heresy-i18n-ja.js |  11 +-
+ tools/console/heresy-i18n-pt.js |  11 +-
+ tools/console/heresy-i18n-ru.js |  11 +-
+ tools/console/heresy-i18n-uk.js |  11 +-
+ tools/console/heresy-i18n-zh.js |  11 +-
+ tools/console/heresy-post.js    | 262 +++++++++++++++++++++++++++++++-
+ 14 files changed, 420 insertions(+), 12 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index a43481e..add8825 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -6054,3 +6054,51 @@ body.daw-full #dawPanel .mx-wave, body.daw-full #dawPanel .mx-lane.is-open .mx-w
+ .mx-wave.mx-ruler { height: 22px; cursor: text; }
+ .mx-wave.mx-ruler canvas { display: block; --mx-wave: var(--dim); }
+ body.daw-full #dawPanel .mx-wave.mx-ruler { height: 22px; }
++
++/* HERESY 1506: the Refiner as a canvas of nodes (ComfyUI's way), beside its list; a node's panel lifted over the room as the Creator's frames */
++.post-head .post-view { margin-left: auto; align-self: center; }
++.post-head .post-view ~ .post-daw { margin-left: 8px; }
++#view-post.is-canvas > #postSteps, #view-post.is-canvas > .drawer.is-step, #view-post.is-canvas > .dv-tree-box, #view-post.is-canvas > #importPanel { display: none; }
++#view-post > #postCanvas { grid-column: 1 / -1; grid-row: 4; }
++.post-canvas { position: relative; margin-top: 4px; min-height: 420px; overflow: hidden; border: 1px solid var(--line-a); border-radius: var(--r-md);
++  background-color: var(--panel); background-image: radial-gradient(color-mix(in srgb, var(--ink) 16%, transparent) 1px, transparent 1.2px); background-size: 22px 22px; }
++.pcv-wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
++.pcv-wire { fill: none; stroke: color-mix(in srgb, var(--ink) 22%, transparent); stroke-width: 1.5; }
++.pcv-wire.is-any { stroke-dasharray: 4 5; }
++.pcv-wire.is-lit { stroke: var(--amber); stroke-width: 2.5; stroke-dasharray: none; }
++.pcv-node { position: absolute; width: 196px; min-height: 84px; display: flex; flex-direction: column; gap: 3px; padding: 8px 10px 8px 11px; text-align: left;
++  border: 1px solid var(--line-strong-a, var(--line-a)); border-top: 3px solid var(--pcv-edge, var(--line-a)); border-radius: var(--r-md); background: var(--ground);
++  color: var(--ink); box-shadow: 0 6px 18px var(--shadow-sm, rgba(0, 0, 0, .12)); cursor: pointer; touch-action: none; user-select: none; }
++.pcv-node:hover { border-color: var(--amber); }
++.pcv-node:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
++.pcv-node.is-dragged { cursor: grabbing; box-shadow: 0 14px 34px var(--shadow-lg, rgba(0, 0, 0, .25)); z-index: 2; }
++.pcv-node.is-active { box-shadow: inset 0 0 0 1px var(--amber), 0 6px 18px var(--shadow-sm, rgba(0, 0, 0, .12)); }
++.pcv-node.is-plugin { border-style: dashed; border-top-style: solid; }
++.pcv-take { --pcv-edge: var(--amber); }
++.pcv-import { --pcv-edge: var(--dim); }
++.pcv-look { --pcv-edge: #4f8fd6; }
++.pcv-mend { --pcv-edge: #c9a227; }
++.pcv-finish { --pcv-edge: #5aa864; }
++.pcv-top { display: flex; align-items: center; gap: 7px; min-width: 0; }
++.pcv-n { flex: none; display: inline-grid; place-items: center; width: 20px; height: 20px; border: 1px solid var(--line-strong-a, var(--line-a)); border-radius: 50%;
++  font-size: 11px; color: var(--dim); }
++.pcv-node.is-done .pcv-n { background: var(--good); border-color: var(--good); color: var(--panel); }
++.pcv-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.pcv-say { font-size: 12px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.pcv-meta { display: flex; gap: 8px; font-size: 11.5px; color: var(--dim); min-height: 14px; }
++.pcv-done { color: var(--good); font-weight: 700; }
++.pcv-live { display: none; width: 8px; height: 8px; margin-left: auto; border-radius: 50%; background: var(--amber); animation: pcvPulse 1.1s ease-in-out infinite; }
++.pcv-node.is-running .pcv-live { display: inline-block; }
++@keyframes pcvPulse { 50% { opacity: .25; transform: scale(.7); } }
++.pcv-tools { position: absolute; right: 10px; bottom: 8px; display: flex; align-items: center; gap: 10px; }
++.nd-veil { position: fixed; left: 0; right: 0; top: 0; bottom: var(--playbar-h); z-index: 26; background: color-mix(in srgb, var(--ground) 45%, rgba(0, 0, 0, .55));
++  backdrop-filter: blur(3px); }
++.nd-box { position: fixed; z-index: 27; left: 1.5vw; width: 97vw; top: calc((100vh - var(--playbar-h)) * .015); height: calc((100vh - var(--playbar-h)) * .97);
++  display: flex; flex-direction: column; background: var(--ground); border: 1px solid var(--line-strong-a, var(--line-a)); border-radius: var(--r-lg);
++  box-shadow: 0 24px 80px var(--shadow-lg, rgba(0, 0, 0, .35)); }
++.nd-box[hidden], .nd-veil[hidden] { display: none; }
++.nd-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line-a); }
++.nd-title { font-size: 16px; }
++.nd-body { flex: 1; min-height: 0; overflow: auto; padding: 14px 18px 18px; }
++.nd-body > .drawer, .nd-body > .dv-tree-box { margin: 0; display: block; }
++
+diff --git a/tools/console/heresy-derived.js b/tools/console/heresy-derived.js
+index deae659..6c85505 100644
+--- a/tools/console/heresy-derived.js
++++ b/tools/console/heresy-derived.js
+@@ -819,5 +819,6 @@
+   // HERESY 1169: the de-esser as set, for the chain when it splits stems (remasterSettings says it for this step's own source)
+   function chainDeess() { return !!($("rmDeess") && $("rmDeess").checked); }
+   window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh, remasterSettings: remasterSettings, chainDeess: chainDeess, compareList: openCompare,
++                           list: function () { return state.list.slice(); },   // 1506: the branches as the lab names them (kind, source), for the Refiner's canvas
+                            marks: function (name) { return Object.assign({}, MARKS[name] || {}); } };   // 1415; 1504
+ })();
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index ecfe7a3..f80e3ab 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5461,5 +5461,14 @@ RuachI18n.add("be", {
+ "Space plays and stops; Home to the start (the loop's, when it is on); L the loop; M and S the lane picked by a click on its name; ↑ ↓ another lane; + − 0 the zoom": "Прабел — іграць і стоп; Home — у пачатак (пятлі, калі яна ўключана); L — пятля; M і S — дарожка, выбраная клікам па імені; ↑ ↓ — іншая дарожка; + − 0 — зум",
+ "The time: a click goes there, a drag draws the loop": "Час: клік — туды, працяжка — пятля",
+ "model": "мадэль",
+-"{0}-bit": "{0}-бітная"
++"{0}-bit": "{0}-бітная",
++"The Refiner as a canvas of nodes: where the work flows, what each step takes and makes; a click on a node opens it": "Гранільшчык палатном нод: куды ідзе справа, што кожны крок бярэ і што стварае; пстрычка па нодзе адкрывае яе",
++"The Refiner as its list of steps": "Гранільшчык спісам крокаў",
++"Arrange": "Раскласці",
++"Lay the nodes out anew": "Раскласці ноды нанова",
++"drag a node where you want it; a click opens it": "перацягні ноду куды хочаш; пстрычка адкрывае яе",
++"The take": "Сэмпл",
++"a track from elsewhere": "трэк звонку",
++"{0} made": "створана: {0}",
++"Alt+← → the step before and after · Esc back": "Alt+← → крок да і пасля · Esc назад"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index b8ab4a8..ab38527 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5344,5 +5344,14 @@ RuachI18n.add("de", {
+ "Space plays and stops; Home to the start (the loop's, when it is on); L the loop; M and S the lane picked by a click on its name; ↑ ↓ another lane; + − 0 the zoom": "Leertaste: spielen und stoppen; Pos1: zum Anfang (der Schleife, wenn sie an ist); L: die Schleife; M und S: die per Klick auf den Namen gewählte Spur; ↑ ↓: eine andere Spur; + − 0: der Zoom",
+ "The time: a click goes there, a drag draws the loop": "Die Zeit: ein Klick geht dorthin, Ziehen setzt die Schleife",
+ "model": "Modell",
+-"{0}-bit": "{0} Bit"
++"{0}-bit": "{0} Bit",
++"The Refiner as a canvas of nodes: where the work flows, what each step takes and makes; a click on a node opens it": "Der Veredler als Leinwand aus Knoten: wohin die Arbeit fließt, was jeder Schritt nimmt und macht; ein Klick auf einen Knoten öffnet ihn",
++"The Refiner as its list of steps": "Der Veredler als Liste der Schritte",
++"Arrange": "Anordnen",
++"Lay the nodes out anew": "Die Knoten neu anordnen",
++"drag a node where you want it; a click opens it": "zieh einen Knoten, wohin du willst; ein Klick öffnet ihn",
++"The take": "Der Take",
++"a track from elsewhere": "ein Track von anderswo",
++"{0} made": "{0} gemacht",
++"Alt+← → the step before and after · Esc back": "Alt+← → der Schritt davor und danach · Esc zurück"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 7a29fd7..ffd6983 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5460,5 +5460,14 @@ RuachI18n.add("el", {
+ "Space plays and stops; Home to the start (the loop's, when it is on); L the loop; M and S the lane picked by a click on its name; ↑ ↓ another lane; + − 0 the zoom": "Διάστημα: παίξιμο και στάση· Home: στην αρχή (του βρόχου, όταν είναι ενεργός)· L: ο βρόχος· M και S: το κανάλι που διάλεξες με κλικ στο όνομά του· ↑ ↓: άλλο κανάλι· + − 0: η μεγέθυνση",
+ "The time: a click goes there, a drag draws the loop": "Ο χρόνος: κλικ εκεί, σύρσιμο για βρόχο",
+ "model": "μοντέλο",
+-"{0}-bit": "{0}-bit"
++"{0}-bit": "{0}-bit",
++"The Refiner as a canvas of nodes: where the work flows, what each step takes and makes; a click on a node opens it": "Ο Γυαλιστής ως καμβάς κόμβων: πού κυλά η ροή, τι παίρνει και τι φτιάχνει κάθε βήμα· ένα κλικ σε κόμβο τον ανοίγει",
++"The Refiner as its list of steps": "Ο Γυαλιστής ως λίστα βημάτων",
++"Arrange": "Τακτοποίηση",
++"Lay the nodes out anew": "Τακτοποίησε τους κόμβους από την αρχή",
++"drag a node where you want it; a click opens it": "σύρε έναν κόμβο όπου θέλεις· ένα κλικ τον ανοίγει",
++"The take": "Η λήψη",
++"a track from elsewhere": "ένα κομμάτι από αλλού",
++"{0} made": "φτιάχτηκαν: {0}",
++"Alt+← → the step before and after · Esc back": "Alt+← → το βήμα πριν και μετά · Esc πίσω"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index fc75df9..2b05c5b 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5460,5 +5460,14 @@ RuachI18n.add("es", {
+ "Space plays and stops; Home to the start (the loop's, when it is on); L the loop; M and S the lane picked by a click on its name; ↑ ↓ another lane; + − 0 the zoom": "Espacio: reproducir y parar; Inicio: al principio (del bucle, si está activo); L: el bucle; M y S: la pista elegida con un clic en su nombre; ↑ ↓: otra pista; + − 0: el zoom",
+ "The time: a click goes there, a drag draws the loop": "El tiempo: un clic va allí, arrastrar marca el bucle",
+ "model": "modelo",
+-"{0}-bit": "{0} bits"
++"{0}-bit": "{0} bits",
++"The Refiner as a canvas of nodes: where the work flows, what each step takes and makes; a click on a node opens it": "El Pulidor como un lienzo de nodos: por dónde va el trabajo, qué toma y qué hace cada paso; un clic en un nodo lo abre",
++"The Refiner as its list of steps": "El Pulidor como su lista de pasos",
++"Arrange": "Ordenar",
++"Lay the nodes out anew": "Ordenar los nodos de nuevo",
++"drag a node where you want it; a click opens it": "arrastra un nodo adonde quieras; un clic lo abre",
++"The take": "La toma",
++"a track from elsewhere": "una pista de otra parte",
++"{0} made": "{0} hechos",
++"Alt+← → the step before and after · Esc back": "Alt+← → el paso anterior y el siguiente · Esc vuelve"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index ee5fd56..ccfedb6 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5344,5 +5344,14 @@ RuachI18n.add("fr", {
+ "Space plays and stops; Home to the start (the loop's, when it is on); L the loop; M and S the lane picked by a click on its name; ↑ ↓ another lane; + − 0 the zoom": "Espace : lire et arrêter ; Début : au début (de la boucle, si elle est active) ; L : la boucle ; M et S : la piste choisie d'un clic sur son nom ; ↑ ↓ : une autre piste ; + − 0 : le zoom",
+ "The time: a click goes there, a drag draws the loop": "Le temps : un clic y va, un glisser trace la boucle",
+ "model": "modèle",
+-"{0}-bit": "{0} bits"
++"{0}-bit": "{0} bits",
++"The Refiner as a canvas of nodes: where the work flows, what each step takes and makes; a click on a node opens it": "L'Affineur en canevas de nœuds : où va le travail, ce que chaque étape prend et fait ; un clic sur un nœud l'ouvre",
++"The Refiner as its list of steps": "L'Affineur en liste d'étapes",
++"Arrange": "Ranger",
++"Lay the nodes out anew": "Ranger les nœuds à nouveau",
++"drag a node where you want it; a click opens it": "glisse un nœud où tu veux ; un clic l'ouvre",
++"The take": "La prise",
++"a track from elsewhere": "une piste d'ailleurs",
++"{0} made": "{0} faits",
++"Alt+← → the step before and after · Esc back": "Alt+← → l'étape d'avant et d'après · Échap retour"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index b28845d..7c8bf28 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5460,5 +5460,14 @@ RuachI18n.add("it", {
+ "Space plays and stops; Home to the start (the loop's, when it is on); L the loop; M and S the lane picked by a click on its name; ↑ ↓ another lane; + − 0 the zoom": "Spazio: suona e ferma; Home: all'inizio (del loop, se è attivo); L: il loop; M e S: la traccia scelta con un clic sul nome; ↑ ↓: un'altra traccia; + − 0: lo zoom",
+ "The time: a click goes there, a drag draws the loop": "Il tempo: un clic va lì, un trascinamento segna il loop",
+ "model": "modello",
+-"{0}-bit": "{0} bit"
++"{0}-bit": "{0} bit",
++"The Refiner as a canvas of nodes: where the work flows, what each step takes and makes; a click on a node opens it": "Il Rifinitore come una tela di nodi: dove scorre il lavoro, cosa prende e cosa fa ogni passo; un clic su un nodo lo apre",
++"The Refiner as its list of steps": "Il Rifinitore come elenco di passi",
++"Arrange": "Disponi",
++"Lay the nodes out anew": "Disponi di nuovo i nodi",
++"drag a node where you want it; a click opens it": "trascina un nodo dove vuoi; un clic lo apre",
++"The take": "Il take",
++"a track from elsewhere": "una traccia da altrove",
++"{0} made": "{0} fatti",
++"Alt+← → the step before and after · Esc back": "Alt+← → il passo prima e dopo · Esc indietro"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index 9f5040f..fce16db 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5344,5 +5344,14 @@ RuachI18n.add("ja", {
+ "Space plays and stops; Home to the start (the loop's, when it is on); L the loop; M and S the lane picked by a click on its name; ↑ ↓ another lane; + − 0 the zoom": "Space：再生と停止、Home：先頭へ（ループがオンならその先頭）、L：ループ、M と S：名前クリックで選んだトラック、↑ ↓：別のトラック、+ − 0：ズーム",
+ "The time: a click goes there, a drag draws the loop": "時間：クリックでその位置へ、ドラッグでループを指定",
+ "model": "モデル",
+-"{0}-bit": "{0}ビット"
++"{0}-bit": "{0}ビット",
++"The Refiner as a canvas of nodes: where the work flows, what each step takes and makes; a click on a node opens it": "仕上げ師をノードのキャンバスで：作業の流れ、各ステップが受け取るものと作るもの。ノードをクリックすると開きます",
++"The Refiner as its list of steps": "仕上げ師をステップのリストで",
++"Arrange": "整列",
++"Lay the nodes out anew": "ノードを並べ直す",
++"drag a node where you want it; a click opens it": "ノードは好きな場所へドラッグ、クリックで開く",
++"The take": "テイク",
++"a track from elsewhere": "よそから来たトラック",
++"{0} made": "{0} 件作成",
++"Alt+← → the step before and after · Esc back": "Alt+← → 前後のステップ · Esc で戻る"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index 2f32975..b792eec 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5344,5 +5344,14 @@ RuachI18n.add("pt", {
+ "Space plays and stops; Home to the start (the loop's, when it is on); L the loop; M and S the lane picked by a click on its name; ↑ ↓ another lane; + − 0 the zoom": "Espaço: tocar e parar; Home: ao início (do loop, se estiver ligado); L: o loop; M e S: a faixa escolhida com um clique no nome; ↑ ↓: outra faixa; + − 0: o zoom",
+ "The time: a click goes there, a drag draws the loop": "O tempo: um clique vai lá, arrastar marca o loop",
+ "model": "modelo",
+-"{0}-bit": "{0} bits"
++"{0}-bit": "{0} bits",
++"The Refiner as a canvas of nodes: where the work flows, what each step takes and makes; a click on a node opens it": "O Lapidador como uma tela de nós: por onde vai o trabalho, o que cada passo pega e faz; um clique num nó o abre",
++"The Refiner as its list of steps": "O Lapidador como lista de passos",
++"Arrange": "Organizar",
++"Lay the nodes out anew": "Organizar os nós de novo",
++"drag a node where you want it; a click opens it": "arraste um nó para onde quiser; um clique o abre",
++"The take": "O take",
++"a track from elsewhere": "uma faixa de outro lugar",
++"{0} made": "{0} feitos",
++"Alt+← → the step before and after · Esc back": "Alt+← → o passo antes e depois · Esc volta"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index d4e82e6..1536cd2 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5466,5 +5466,14 @@ RuachI18n.add("ru", {
+ "Space plays and stops; Home to the start (the loop's, when it is on); L the loop; M and S the lane picked by a click on its name; ↑ ↓ another lane; + − 0 the zoom": "Пробел — играть и стоп; Home — в начало (петли, если она включена); L — петля; M и S — дорожка, выбранная кликом по имени; ↑ ↓ — другая дорожка; + − 0 — зум",
+ "The time: a click goes there, a drag draws the loop": "Время: клик — туда, протяжка — петля",
+ "model": "модель",
+-"{0}-bit": "{0}-битная"
++"{0}-bit": "{0}-битная",
++"The Refiner as a canvas of nodes: where the work flows, what each step takes and makes; a click on a node opens it": "Огранщик холстом нод: куда идёт дело, что каждый шаг берёт и что делает; щелчок по ноде открывает её",
++"The Refiner as its list of steps": "Огранщик списком шагов",
++"Arrange": "Разложить",
++"Lay the nodes out anew": "Разложить ноды заново",
++"drag a node where you want it; a click opens it": "перетащи ноду куда хочешь; щелчок открывает её",
++"The take": "Семпл",
++"a track from elsewhere": "трек со стороны",
++"{0} made": "сделано: {0}",
++"Alt+← → the step before and after · Esc back": "Alt+← → шаг до и после · Esc назад"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index ec1381b..cff7751 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5461,5 +5461,14 @@ RuachI18n.add("uk", {
+ "Space plays and stops; Home to the start (the loop's, when it is on); L the loop; M and S the lane picked by a click on its name; ↑ ↓ another lane; + − 0 the zoom": "Пробіл — грати й стоп; Home — на початок (петлі, якщо вона ввімкнена); L — петля; M і S — доріжка, вибрана кліком по імені; ↑ ↓ — інша доріжка; + − 0 — зум",
+ "The time: a click goes there, a drag draws the loop": "Час: клік — туди, протягування — петля",
+ "model": "модель",
+-"{0}-bit": "{0}-бітна"
++"{0}-bit": "{0}-бітна",
++"The Refiner as a canvas of nodes: where the work flows, what each step takes and makes; a click on a node opens it": "Огранювач полотном нод: куди йде справа, що кожен крок бере і що створює; клацання по ноді відкриває її",
++"The Refiner as its list of steps": "Огранювач списком кроків",
++"Arrange": "Розкласти",
++"Lay the nodes out anew": "Розкласти ноди наново",
++"drag a node where you want it; a click opens it": "перетягни ноду куди хочеш; клацання відкриває її",
++"The take": "Семпл",
++"a track from elsewhere": "трек ззовні",
++"{0} made": "створено: {0}",
++"Alt+← → the step before and after · Esc back": "Alt+← → крок до і після · Esc назад"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index 2d5375a..026370f 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5344,5 +5344,14 @@ RuachI18n.add("zh", {
+ "Space plays and stops; Home to the start (the loop's, when it is on); L the loop; M and S the lane picked by a click on its name; ↑ ↓ another lane; + − 0 the zoom": "空格：播放与停止；Home：回到开头（循环开启时为循环开头）；L：循环；M 和 S：点名字选中的音轨；↑ ↓：换一条音轨；+ − 0：缩放",
+ "The time: a click goes there, a drag draws the loop": "时间：点击跳到那里，拖动画出循环",
+ "model": "模型",
+-"{0}-bit": "{0} 位"
++"{0}-bit": "{0} 位",
++"The Refiner as a canvas of nodes: where the work flows, what each step takes and makes; a click on a node opens it": "以节点画布显示精修室：工作的流向，每一步接收什么、生成什么；点击节点即可打开",
++"The Refiner as its list of steps": "以步骤列表显示精修室",
++"Arrange": "整理",
++"Lay the nodes out anew": "重新排列节点",
++"drag a node where you want it; a click opens it": "把节点拖到你想要的位置；点击即可打开",
++"The take": "录音",
++"a track from elsewhere": "来自别处的音轨",
++"{0} made": "已生成 {0} 个",
++"Alt+← → the step before and after · Esc back": "Alt+← → 前一步和后一步 · Esc 返回"
+ });
+diff --git a/tools/console/heresy-post.js b/tools/console/heresy-post.js
+index 1e518e6..cc8f6c1 100644
+--- a/tools/console/heresy-post.js
++++ b/tools/console/heresy-post.js
+@@ -202,6 +202,7 @@
+     });
+     select(recall() || STEPS[0].id);
+     loadPlugins();                                   // HERESY 1460
++    cvInit();                                        // HERESY 1506
+   }
+ 
+   function paintBar() {
+@@ -213,6 +214,262 @@
+         '<button type="button" role="tab" class="ps-step' + (s.plugin ? " is-plugin" : "") + '" data-step-panel="' + s.id + '"><span class="ps-mark">' + (i + 1) +
+         '</span><span class="ps-text"' + own + '><span class="ps-name">' + esc(s.label) + '</span><span class="ps-say">' + esc(s.say) + "</span></span></button>";
+     }).join("");
++    cvPaint();                                       // HERESY 1506: a plugin's steps are nodes too
++  }
++
++  // ---- HERESY 1506 (Viktor 16.10.2026: «По нодам Огранщика… идею ComfyUI расположения нод на канвасе. Вертикально страница на 1080p
++  // разрешении не прокручивается, всё под рукой и на глазах. Щёлк по ноде - модальное окно как в Творце с Композитором и музыкантом,
++  // навигация вперёд-назад по нодам»): the Refiner as a canvas of nodes beside its list (Canvas / List in the room's head, kept per
++  // browser). The take, the import, every step (the studio's and the plugins') a node where the work flows; thin wires the chain's
++  // way, bright ones the way the take in hand went (each branch's source); a node its number, name, what it does, ✓ when done for
++  // the take, how many branches it made, a pulse while it runs. A click lifts its panel over the room (moved there while open and
++  // put back where it stood: a fixed box inside a transformed ancestor would not hold, 1499); ‹ › and Alt+← → go to the step before
++  // and after, Esc or a click beside it back. Dragged nodes stay where put (Arrange lays them out anew)
++  var CV = { on: false, pos: {}, open: "", el: null, hold: null, drag: null, quietUntil: 0, timer: 0 };
++  var CV_KEY = "yue2.refinerView", CV_POS = "yue2.refinerCanvasPos", NODE_W = 196, NODE_H = 84;
++  var KIND_NODE = { debuzz: "debuzzPanel", upscale: "upscalePanel", stems: "derivedPanel", remaster: "remasterPanel", daw: "dawPanel" };
++  var LANE = { debuzzPanel: [1, 0], upscalePanel: [2, 0], derivedPanel: [3, 0], dawPanel: [4, 0], remasterPanel: [4, 1],
++               spectrumPanel: [1, 2], inspectPanel: [2, 2], glossPanel: [3, 2] };
++  function cvRecall() {
++    try { CV.on = localStorage.getItem(CV_KEY) === "canvas"; CV.pos = JSON.parse(localStorage.getItem(CV_POS) || "{}") || {}; } catch (e) { CV.pos = {}; }
++  }
++  function cvStore() {
++    try { localStorage.setItem(CV_KEY, CV.on ? "canvas" : "list"); localStorage.setItem(CV_POS, JSON.stringify(CV.pos)); } catch (e) { /* private mode */ }
++  }
++  function cvNodes() {
++    var title = state.take ? (($("postTitle") && $("postTitle").textContent.trim()) || state.take.name) : "";   // 1506b: the head's title, the name only without it
++    var out = [{ id: "take", name: "The take", say: state.take ? title : "pick a take on the right", col: 0, row: 0, own: !!state.take },
++               { id: "importPanel", name: "Import a Track", say: "a track from elsewhere", col: 0, row: 2 }];
++    var pl = 0;
++    STEPS.forEach(function (st, i) {
++      var at = LANE[st.id] || [5, pl++];
++      out.push({ id: st.id, name: st.label, say: st.say, n: String(i + 1), col: at[0], row: at[1], step: st, own: !!st.plugin });
++    });
++    return out;
++  }
++  function cvFlows() {
++    var D = window.HeresyDerived, list = D && D.list ? D.list() : [], byId = {}, flows = {}, count = {};
++    list.forEach(function (m) { byId[m.id] = m; });
++    function nodeOf(m) { return !m ? "take" : m.kind === "plugin" ? "pl-" + m.plugin + "-" + m.step + "Panel" : KIND_NODE[m.kind] || ""; }
++    list.forEach(function (m) {
++      var to = nodeOf(m);
++      if (!to) return;
++      count[to] = (count[to] || 0) + 1;
++      var src = String(m.source || m.set || ""), dir = /^derived\/([^/]+)/.exec(src), from = dir ? nodeOf(byId[dir[1]]) : "take";
++      if (from && from !== to) flows[from + ">" + to] = true;
++    });
++    return { flows: flows, count: count, total: list.length };
++  }
++  function cvWireList(f) {
++    var w = [["take", "debuzzPanel"], ["debuzzPanel", "upscalePanel"], ["upscalePanel", "derivedPanel"], ["derivedPanel", "dawPanel"], ["derivedPanel", "remasterPanel"],
++             ["take", "spectrumPanel", 1], ["take", "inspectPanel", 1], ["take", "glossPanel", 1], ["importPanel", "take", 1]];
++    STEPS.forEach(function (st) { if (st.plugin) w.push(st.spec && st.spec.input === "stems" ? ["derivedPanel", st.id] : ["take", st.id, 1]); });
++    var have = {};
++    w.forEach(function (x) { have[x[0] + ">" + x[1]] = true; x[3] = !!f.flows[x[0] + ">" + x[1]]; });
++    Object.keys(f.flows).forEach(function (k) { if (!have[k]) { var a = k.split(">"); w.push([a[0], a[1], 0, true]); } });   // the way it went, where the chain's way does not run
++    return w;
++  }
++  function cvBox() {
++    var box = $("postCanvas");
++    if (box) return box;
++    box = document.createElement("section");
++    box.className = "post-canvas"; box.id = "postCanvas"; box.hidden = true;
++    box.innerHTML = '<svg class="pcv-wires" aria-hidden="true"></svg><div class="pcv-nodes"></div>' +
++      '<div class="pcv-tools"><span class="row-hint">drag a node where you want it; a click opens it</span>' +
++      '<button type="button" class="btn ghost small" id="pcvArrange" data-tip="Lay the nodes out anew">Arrange</button></div>';
++    var chain = $("postChain"), view = $("view-post");
++    if (chain && chain.parentNode) chain.parentNode.insertBefore(box, chain.nextSibling); else if (view) view.appendChild(box);
++    return box;
++  }
++  function cvFit() {
++    var box = $("postCanvas");
++    if (!box || box.hidden) return;
++    var bar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--playbar-h")) || 0;
++    box.style.height = Math.max(420, Math.floor(window.innerHeight - box.getBoundingClientRect().top - bar - 16)) + "px";
++  }
++  function cvPaint() {
++    var box = $("postCanvas");
++    if (!box || box.hidden || CV.drag) return;
++    cvFit();
++    var nodes = cvNodes(), f = cvFlows(), W = box.clientWidth, H = box.clientHeight, PAD = 22;
++    var rows = Math.max(3, nodes.reduce(function (n, x) { return Math.max(n, x.row + 1); }, 0));
++    var cols = Math.max(5, nodes.reduce(function (n, x) { return Math.max(n, x.col + 1); }, 0));   // 1506b: a sixth only for the plugins
++    var row = state.take && window.HeresyCollection && window.HeresyCollection.row ? window.HeresyCollection.row(state.take.name) : null, secs = row && row.seconds;
++    var html = nodes.map(function (nd) {
++      var p = CV.pos[nd.id], x = p ? p[0] * (W - NODE_W) : PAD + nd.col * (W - 2 * PAD - NODE_W) / (cols - 1), y = p ? p[1] * (H - NODE_H) : PAD + nd.row * (H - 2 * PAD - NODE_H) / (rows - 1);
++      var st = nd.step, done = st && state.done[st.step], tab = st && document.querySelector('#postSteps [data-step-panel="' + st.id + '"]');
++      var made = nd.id === "take" ? f.total : f.count[nd.id] || 0, own = nd.own ? ' translate="no"' : "";
++      var meta = (done ? '<span class="pcv-done">\u2713</span>' : "") + (made ? '<span class="pcv-made">' + esc(tr("{0} made").replace("{0}", made)) + "</span>" : "") +
++        (nd.id === "take" && secs ? '<span class="pcv-made mono">' + Math.floor(secs / 60) + ":" + ("0" + Math.floor(secs % 60)).slice(-2) + "</span>" : "");
++      var cls = "pcv-node pcv-" + (st ? st.group || "finish" : nd.id === "take" ? "take" : "import") + (st && st.plugin ? " is-plugin" : "") + (done ? " is-done" : "") +
++        (tab && tab.classList.contains("is-running") ? " is-running" : "") + (st && st.id === state.current ? " is-active" : "") + (nd.id === CV.open ? " is-open" : "");
++      return '<button type="button" class="' + cls + '" data-node="' + esc(nd.id) + '" style="left:' + Math.round(x) + "px;top:" + Math.round(y) + 'px">' +
++        '<span class="pcv-top">' + (nd.n ? '<span class="pcv-n">' + nd.n + "</span>" : "") + '<span class="pcv-name"' + (st && st.plugin ? ' translate="no"' : "") + ">" + esc(nd.name) + "</span>" +
++        '<i class="pcv-live" aria-hidden="true"></i></span><span class="pcv-say"' + own + ">" + esc(nd.say) + '</span><span class="pcv-meta">' + meta + "</span></button>";
++    }).join("");
++    var holder = box.querySelector(".pcv-nodes");
++    if (holder.dataset.html !== html) { holder.innerHTML = html; holder.dataset.html = html; }
++    CV.wires = cvWireList(f);
++    cvWires();
++  }
++  function cvWires() {
++    var box = $("postCanvas"), svg = box && box.querySelector(".pcv-wires");
++    if (!svg) return;
++    var at = {};
++    Array.prototype.forEach.call(box.querySelectorAll(".pcv-node"), function (n) { at[n.dataset.node] = { x: n.offsetLeft, y: n.offsetTop, w: n.offsetWidth, h: n.offsetHeight }; });
++    function path(a, b) {
++      if (Math.abs(a.x - b.x) < a.w * .6) {                // one above the other: from the edge that faces the other
++        var up = b.y < a.y, y1 = up ? a.y : a.y + a.h, y2 = up ? b.y + b.h : b.y, cx = a.x + a.w / 2, bx = b.x + b.w / 2, k = Math.max(24, Math.abs(y2 - y1) / 2) * (up ? -1 : 1);
++        return "M" + cx + "," + y1 + " C" + cx + "," + (y1 + k) + " " + bx + "," + (y2 - k) + " " + bx + "," + y2;
++      }
++      var ltr = b.x >= a.x, x1 = ltr ? a.x + a.w : a.x, x2 = ltr ? b.x : b.x + b.w, y1 = a.y + a.h / 2, y2 = b.y + b.h / 2, d = Math.max(40, Math.abs(x2 - x1) / 2) * (ltr ? 1 : -1);
++      return "M" + x1 + "," + y1 + " C" + (x1 + d) + "," + y1 + " " + (x2 - d) + "," + y2 + " " + x2 + "," + y2;
++    }
++    svg.innerHTML = (CV.wires || []).map(function (w) {
++      var a = at[w[0]], b = at[w[1]];
++      return a && b ? '<path class="pcv-wire' + (w[2] ? " is-any" : "") + (w[3] ? " is-lit" : "") + '" data-wire="' + esc(w[0] + ">" + w[1]) + '" d="' + path(a, b) + '"/>' : "";
++    }).join("");
++  }
++  function cvSet(on) {
++    CV.on = !!on;
++    cvStore();
++    if (!CV.on) cvClose();
++    var view = $("view-post"), box = cvBox(), btn = $("postView");
++    if (view) view.classList.toggle("is-canvas", CV.on);
++    box.hidden = !CV.on;
++    if (btn) {
++      btn.textContent = CV.on ? "List" : "Canvas";
++      btn.setAttribute("aria-pressed", String(CV.on));
++      btn.dataset.tip = CV.on ? "The Refiner as its list of steps" : "The Refiner as a canvas of nodes: where the work flows, what each step takes and makes; a click on a node opens it";
++    }
++    cvPaint();
++    clearInterval(CV.timer);
++    if (CV.on) CV.timer = setInterval(function () { if (!document.hidden && $("view-post") && !$("view-post").classList.contains("is-hidden")) cvPaint(); }, 1000);   // the pulses
++    window.dispatchEvent(new Event("resize"));
++  }
++  function cvOrder() { return ["take"].concat(STEPS.map(function (st) { return st.id; })); }
++  function cvTitle(id) {
++    if (id === "take") return tr("Made from This Take");
++    var st = STEPS.filter(function (x) { return x.id === id; })[0];
++    return st ? (STEPS.indexOf(st) + 1) + " \u00b7 " + tr(st.label) : id === "importPanel" ? tr("Import a Track") : id;
++  }
++  function cvModal() {
++    var back = $("ndVeil"), box = $("ndBox");
++    if (box) return { back: back, box: box, body: box.querySelector(".nd-body") };
++    back = document.createElement("div"); back.className = "nd-veil"; back.id = "ndVeil"; back.hidden = true;
++    box = document.createElement("div"); box.className = "nd-box"; box.id = "ndBox"; box.hidden = true;
++    box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true");
++    box.innerHTML = '<div class="nd-head"><button type="button" class="btn ghost small nd-prev" data-nd="prev"></button><strong class="nd-title"></strong>' +
++      '<button type="button" class="btn ghost small nd-next" data-nd="next"></button><span class="spacer"></span>' +
++      '<span class="row-hint nd-keys">Alt+\u2190 \u2192 the step before and after \u00b7 Esc back</span>' +
++      '<button type="button" class="btn ghost small" data-nd="close">Close</button></div><div class="nd-body"></div>';
++    document.body.appendChild(back); document.body.appendChild(box);
++    back.addEventListener("click", function () { cvClose(); });
++    box.addEventListener("click", function (e) {
++      var b = e.target.closest("[data-nd]");
++      if (!b) return;
++      if (b.dataset.nd === "close") cvClose(); else cvStep(b.dataset.nd === "next" ? 1 : -1);
++    });
++    return { back: back, box: box, body: box.querySelector(".nd-body") };
++  }
++  function cvOpen(id) {
++    var el = id === "take" ? document.querySelector("#view-post > .dv-tree-box") : $(id);
++    if (!el && CV.open === id) el = CV.el;
++    if (!el) return false;
++    cvClose(true);
++    if (STEPS.some(function (st) { return st.id === id; })) select(id);   // the step's own: its events, its place in the list
++    var m = cvModal();
++    CV.hold = document.createComment("node " + id);
++    el.parentNode.insertBefore(CV.hold, el);
++    m.body.appendChild(el);
++    if (el.tagName === "DETAILS") el.open = true;
++    CV.open = id; CV.el = el;
++    var order = cvOrder(), i = order.indexOf(id), prev = order[(i - 1 + order.length) % order.length], next = order[(i + 1) % order.length];
++    m.box.querySelector(".nd-title").textContent = cvTitle(id);
++    m.box.querySelector(".nd-prev").textContent = "\u2039 " + cvTitle(prev).replace(/^\d+ \u00b7 /, "");
++    m.box.querySelector(".nd-next").textContent = cvTitle(next).replace(/^\d+ \u00b7 /, "") + " \u203a";
++    m.back.hidden = false; m.box.hidden = false;
++    document.body.dataset.node = id;
++    cvPaint();
++    window.dispatchEvent(new Event("resize"));            // a picture shown measures its new width
++    return true;
++  }
++  function cvClose(quiet) {
++    if (!CV.open) return;
++    if (CV.hold && CV.hold.parentNode) { CV.hold.parentNode.insertBefore(CV.el, CV.hold); CV.hold.remove(); }
++    CV.open = ""; CV.el = null; CV.hold = null;
++    if (!quiet) {
++      var m = cvModal();
++      m.back.hidden = true; m.box.hidden = true;
++      delete document.body.dataset.node;
++      cvPaint();
++      window.dispatchEvent(new Event("resize"));
++    }
++  }
++  function cvStep(d) {
++    var order = cvOrder(), i = order.indexOf(CV.open);
++    if (i < 0) return;
++    cvOpen(order[(i + d + order.length) % order.length]);
++  }
++  function cvInit() {
++    cvRecall();
++    var head = document.querySelector("#view-post > .post-head"), daw = $("postDaw");
++    if (head && !$("postView")) {
++      var b = document.createElement("button");
++      b.type = "button"; b.className = "btn ghost small post-view"; b.id = "postView";
++      if (daw) head.insertBefore(b, daw); else head.appendChild(b);
++      b.addEventListener("click", function () { cvSet(!CV.on); });
++    }
++    var box = cvBox();
++    box.addEventListener("pointerdown", function (e) {
++      var nd = e.target.closest(".pcv-node");
++      if (!nd || e.button !== 0) return;
++      CV.drag = { el: nd, id: nd.dataset.node, x0: e.clientX, y0: e.clientY, left: nd.offsetLeft, top: nd.offsetTop, moved: false };
++      try { nd.setPointerCapture(e.pointerId); } catch (x) { /* gone */ }
++    });
++    box.addEventListener("pointermove", function (e) {
++      var d = CV.drag;
++      if (!d) return;
++      var dx = e.clientX - d.x0, dy = e.clientY - d.y0;
++      if (!d.moved && Math.abs(dx) + Math.abs(dy) < 5) return;
++      d.moved = true;
++      d.el.classList.add("is-dragged");
++      d.el.style.left = Math.max(0, Math.min(box.clientWidth - d.el.offsetWidth, d.left + dx)) + "px";
++      d.el.style.top = Math.max(0, Math.min(box.clientHeight - d.el.offsetHeight, d.top + dy)) + "px";
++      cvWires();
++    });
++    function drop() {
++      var d = CV.drag;
++      CV.drag = null;
++      if (!d || !d.moved) return;
++      d.el.classList.remove("is-dragged");
++      CV.pos[d.id] = [d.el.offsetLeft / Math.max(1, box.clientWidth - NODE_W), d.el.offsetTop / Math.max(1, box.clientHeight - NODE_H)];
++      CV.quietUntil = Date.now() + 300;                  // the click that ends a drag opens nothing (by time: the node it fell on is drawn anew)
++      cvStore();
++      box.querySelector(".pcv-nodes").dataset.html = "";
++      cvPaint();
++    }
++    box.addEventListener("pointerup", drop);
++    box.addEventListener("pointercancel", drop);
++    box.addEventListener("click", function (e) {
++      if (e.target.closest("#pcvArrange")) { CV.pos = {}; cvStore(); box.querySelector(".pcv-nodes").dataset.html = ""; cvPaint(); return; }
++      var nd = e.target.closest(".pcv-node");
++      if (!nd) return;
++      if (Date.now() < CV.quietUntil) return;
++      cvOpen(nd.dataset.node);
++    });
++    document.addEventListener("keydown", function (e) {
++      if (!CV.open) return;
++      if (document.querySelector(".hd-back, .cmp-back, .ds-back") || document.fullscreenElement || document.body.classList.contains("daw-full")) return;   // theirs first
++      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); cvClose(); return; }
++      if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) { e.preventDefault(); e.stopPropagation(); cvStep(e.key === "ArrowRight" ? 1 : -1); }
++    }, true);
++    window.addEventListener("heresy-derived", function () { cvPaint(); });
++    // another room puts the lifted node back, as the Creator's frames are (a run started there, a tab, a key)
++    if (window.MutationObserver) new MutationObserver(function () { if (CV.open && document.body.dataset.tab !== "post") cvClose(); }).observe(document.body, { attributes: true, attributeFilter: ["data-tab"] });
++    window.addEventListener("heresy-step", function () { cvPaint(); });
++    window.addEventListener("resize", function () { if (!CV.drag) { var h = box.querySelector(".pcv-nodes"); if (h) h.dataset.html = ""; cvPaint(); } });
++    cvSet(CV.on);
+   }
+ 
+   // ---- HERESY 1460 (Viktor 15.10.2026: «написать всё как единый плагин, который мы не выложим в паблик, но он будет висеть у меня
+@@ -349,6 +606,7 @@
+     state.take = take;
+     state.done = {};
+     paint();
++    cvPaint();                                       // HERESY 1506
+     if (take && $("pcDebuzz")) {                         // HERESY 1054: an imported track has no YuE2 buzz
+       $("pcDebuzz").checked = !/-import-/.test(take.name);
+       paintChain(null);
+@@ -365,5 +623,7 @@
+     select(STEPS.some(function (s) { return s.id === state.current; }) ? state.current : STEPS[0].id);
+   }
+   window.HeresyPost = { init: init, setTake: setTake, select: select, has: function (id) { return STEPS.some(function (s) { return s.id === id; }); },
+-    plugins: loadPlugins, unplug: unplug };   // HERESY 1460
++    plugins: loadPlugins, unplug: unplug,   // HERESY 1460
++    canvas: { set: function (on) { cvSet(on); }, on: function () { return CV.on; }, open: cvOpen, close: function () { cvClose(); }, opened: function () { return CV.open; },
++              step: cvStep, paint: cvPaint } };   // HERESY 1506
+ })();
+-- 
+2.43.0
+

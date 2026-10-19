@@ -271,7 +271,7 @@ static void sliders_progress(const SliderSet * set, int step, int budget) {
     const float span = (float) (set->kept + budget);
     float       t    = span > 0.0f ? (float) (set->kept + step) / span : 0.0f;
     t                = t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
-    const bool  say  = step > 0 && (step % 250) == 0;
+    const bool  say  = false;   // HERESY 1447 (Viktor 15.10.2026: «К хуям убери этот лог арки»): the wave moves without a word
     std::string line;
     for (const Slider & s : set->sliders) {
         if (s.curve.empty()) {

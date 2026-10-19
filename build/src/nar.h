@@ -32,7 +32,7 @@
 #include <string>
 #include <vector>
 
-#define YUE2_NAR_GRAPH_NODES 8192
+#define YUE2_NAR_GRAPH_NODES (8192 + 16 * 2048)  // HERESY 1447: and room for the LoRAs that run with the graph
 #define YUE2_TIME_EMBED_DIM  256
 #define YUE2_NAR_MASK_PAD    64
 #define YUE2_NAR_KV_PAD      256  // Local addition: see nar_kv_pad()
@@ -77,6 +77,10 @@ struct Yue2NAR {
     int                  graph_M;     // cached variation count
     int                  graph_ar;    // cached ar_len
     int                  graph_set;   // cached KV set
+
+    // HERESY 1447: the LoRAs that run with the graph (lora-rt.h), NULL otherwise; the graph is built anew at every
+    // evaluation, so a set attached or changed between chunks is read at the next one
+    const LoraRtSet * lora_rt = nullptr;
 
     std::vector<float>   scratch_x;
     std::vector<float>   scratch_pos_emb;
@@ -252,7 +256,9 @@ static struct ggml_tensor * nar_build_attn(struct ggml_context * ctx,
                                            int                   M,
                                            int                   kv_pad,  // Local addition: nar_kv_pad() or 0
                                            bool                  use_flash_attn,
-                                           bool                  clamp_fp16) {
+                                           bool                  clamp_fp16,
+                                           const LoraRtSet *     lora_rt = nullptr,  // HERESY 1447
+                                           int                   layer   = -1) {
     int D   = c.head_dim;
     int Nh  = c.n_heads;
     int Nkv = c.n_kv_heads;
@@ -270,6 +276,11 @@ static struct ggml_tensor * nar_build_attn(struct ggml_context * ctx,
         q = qwen3_linear(ctx, ly->q_proj, x);
         k = qwen3_linear(ctx, ly->k_proj, x);
         v = qwen3_linear(ctx, ly->v_proj, x);
+    }
+    if (lora_rt_active(lora_rt)) {  // HERESY 1447
+        q = lora_rt_apply(ctx, lora_rt, layer, LRT_Q, x, q);
+        k = lora_rt_apply(ctx, lora_rt, layer, LRT_K, x, k);
+        v = lora_rt_apply(ctx, lora_rt, layer, LRT_V, x, v);
     }
 
     q = ggml_reshape_4d(ctx, q, D, Nh, N, M);
@@ -323,7 +334,7 @@ static struct ggml_tensor * nar_build_attn(struct ggml_context * ctx,
     }
 
     attn = ggml_reshape_3d(ctx, attn, Nh * D, N, M);
-    return qwen3_linear(ctx, ly->o_proj, attn);
+    return lora_rt_apply(ctx, lora_rt, layer, LRT_O, attn, qwen3_linear(ctx, ly->o_proj, attn));
 }
 
 // Build the velocity graph of M variations of a T_lat frame block over the
@@ -425,7 +436,8 @@ static bool nar_build_graph(Yue2NAR * n, const Qw3lmKvCache * kv, int T_lat, int
         Qwen3Layer *         ly   = &n->layers[l];
         struct ggml_tensor * norm = qwen3_rms_norm(ctx, hidden, ly->input_layernorm, c.rms_norm_eps);
         struct ggml_tensor * attn = nar_build_attn(ctx, c, ly, norm, n->in_pos, n->in_mask, kv->k[kv_set][l],
-                                                   kv->v[kv_set][l], ar_len, N, M, kv_pad, n->use_flash_attn, n->clamp_fp16);
+                                                   kv->v[kv_set][l], ar_len, N, M, kv_pad, n->use_flash_attn, n->clamp_fp16,
+                                                   n->lora_rt, l);
         if (l == 0) {
             ggml_set_name(attn, "layer0_sa_output");
             ggml_set_output(attn);
@@ -435,7 +447,8 @@ static bool nar_build_graph(Yue2NAR * n, const Qw3lmKvCache * kv, int T_lat, int
             hidden = ggml_clamp(ctx, hidden, -65504.0f, 65504.0f);
         }
         norm   = qwen3_rms_norm(ctx, hidden, ly->post_attn_layernorm, c.rms_norm_eps);
-        hidden = ggml_add(ctx, hidden, qwen3_build_mlp(ctx, ly, norm, N * M));
+        hidden = ggml_add(ctx, hidden, lora_rt_touches_mlp(n->lora_rt, l) ? lora_rt_build_mlp(ctx, ly, norm, n->lora_rt, l) :
+                                                                              qwen3_build_mlp(ctx, ly, norm, N * M));
         if (n->clamp_fp16) {
             hidden = ggml_clamp(ctx, hidden, -65504.0f, 65504.0f);
         }

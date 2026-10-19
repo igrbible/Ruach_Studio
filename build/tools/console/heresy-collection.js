@@ -529,7 +529,8 @@
     $("collBulk").hidden = !n;
     $("collPins").hidden = !!n;
     if (!n) paintPins();
-    $("collSelCount").textContent = n + " selected";
+    $("collSelCount").textContent = n + " selected" + (n && !state.place ? " \u00b7 across ALL workspaces" : "");   // HERESY 1473
+    $("collSelCount").classList.toggle("is-all", !!n && !state.place);
     $("collWsMove").innerHTML = '<option value="">Move to workspace…</option>' + state.ws.filter(function (w) { return w !== state.place; }).map(function (w) { return '<option translate="no">' + esc(w) + "</option>"; }).join("") +
       '<option value="__new">+ a new one…</option>';
     $("collWsPick").innerHTML = '<option value="">Add to workspace…</option>' + state.ws.map(function (w) { return '<option translate="no">' + esc(w) + "</option>"; }).join("") +
@@ -734,8 +735,15 @@
   // HERESY 1101: a move into one workspace, for the menu on a card (the selection when the card is in it)
   function moveTo(w, list, fromHere) {
     var from = fromHere && state.place && state.place.charAt(0) !== "_" ? state.place : "", n = list.length;
-    return act({ op: "ws-move", workspace: w, from: from, names: list }, n + " moved to “" + w + "”" + (from ? " (out of “" + from + "”)" : " (out of every other workspace)"))
-      .then(function (ok) { if (ok) { list.forEach(function (k) { delete state.sel[k]; }); paint(); } return ok; });
+    var go = function () {
+      return act({ op: "ws-move", workspace: w, from: from, names: list }, n + " moved to “" + w + "”" + (from ? " (out of “" + from + "”)" : " (out of every other workspace)"))
+        .then(function (ok) { if (ok) { list.forEach(function (k) { delete state.sel[k]; }); paint(); } return ok; });
+    };
+    // HERESY 1474: from the take's menu as from the bar (1473): several takes, or one that lives in more than one workspace, asked first
+    if (n < 2 && (from || reach(list, false).wss.length < 2)) return go();
+    return guarded(tl(n > 1 ? "Move " + n + " takes to \u201c" + w + "\u201d?" : "Move 1 take to \u201c" + w + "\u201d?") + "\n\n" +
+                   (from ? tl("They leave \u201c" + from + "\u201d.") : tl("They leave every other workspace they are in (a locked one keeps its own).")),
+                   tl("Move them"), list, !!from).then(function (yes) { return yes ? go() : false; });
   }
 
   // the workspace in hand (the header): the list shows it, new takes land in it
@@ -984,6 +992,7 @@
           a.href = "/lab/exportfile?id=" + id; a.download = s.file;
           document.body.appendChild(a); a.click(); a.remove();
           toast("ZIP ready: " + s.file + " (" + (s.bytes / 1e6).toFixed(0) + " MB). The browser saves it where you tell it.");
+          if (s.missing) toast(s.done + " of " + s.total + " takes are in it: " + s.missing + " were no longer in the library while it packed (in the trash, or gone).", true);   // HERESY 1473
           paintBulk(shown());
         });
       };
@@ -1097,8 +1106,13 @@
       var from = state.place && state.place.charAt(0) !== "_" ? state.place : "", n = names().length;
       (w === "__new" ? askName("A new workspace for the " + n + " selected", "", { ok: "Move them there", placeholder: "its name" }) : Promise.resolve(w)).then(function (w) {
         if (!w) return;
-        act({ op: "ws-move", workspace: w, from: from, names: names() }, n + " moved to \u201c" + w + "\u201d" + (from ? " (out of \u201c" + from + "\u201d)" : " (out of every other workspace)"));
-        state.sel = {};
+        // HERESY 1473: a move out of every other workspace (from All Workspaces) asked as the trash is
+        return guarded(tl("Move " + n + " takes to \u201c" + w + "\u201d?") + "\n\n" + (from ? tl("They leave \u201c" + from + "\u201d.") : tl("They leave every other workspace they are in (a locked one keeps its own).")),
+                       tl("Move them"), names(), !!from).then(function (yes) {
+          if (!yes) return;
+          act({ op: "ws-move", workspace: w, from: from, names: names() }, n + " moved to \u201c" + w + "\u201d" + (from ? " (out of \u201c" + from + "\u201d)" : " (out of every other workspace)"));
+          state.sel = {};
+        });
       });
     });
     $("collGrid").addEventListener("click", function (e) {
@@ -1302,18 +1316,21 @@
     $("collWsOut").addEventListener("click", function () {     // HERESY 1108: more than one asks first
       var n = names(), go = function () { act({ op: "ws-remove", workspace: state.place, names: n }, n.length + " taken out of “" + state.place + "”"); state.sel = {}; };
       if (n.length < 2) return go();
-      ask("Take " + n.length + " takes out of “" + state.place + "”?\n\nThey stay in the library and in any other workspace; only this workspace lets them go.", { ok: "Take them out" })
-        .then(function (ok) { if (ok) go(); });
+      guarded(tl("Take " + n.length + " takes out of \u201c" + state.place + "\u201d?") + "\n\n" + tl("They stay in the library and in any other workspace; only this workspace lets them go."), tl("Take them out"), n, true)
+        .then(function (ok) { if (ok) go(); });   // HERESY 1473
     });
     $("collHide").addEventListener("click", function () {
       var show = state.place === "__hidden", n = names().length;
-      act({ op: show ? "show" : "hide", names: names() }, (show ? "Shown again: " : "Hidden from the lists (not deleted): ") + n);
-      state.sel = {};
+      var go = function () { act({ op: show ? "show" : "hide", names: names() }, (show ? "Shown again: " : "Hidden from the lists (not deleted): ") + n); state.sel = {}; };
+      if (show || n < 2) return go();
+      guarded(tl("Hide " + n + " takes from the lists?") + "\n\n" + tl("Nothing is deleted: Hidden on the left shows them again."), tl("Hide them"), names())
+        .then(function (ok) { if (ok) go(); });   // HERESY 1473
     });
     $("collExport").addEventListener("click", exportZip);
     $("collTrash").addEventListener("click", function () {
       var n = names(); if (!n.length) return;
-      ask("Move " + n.length + " take" + (n.length > 1 ? "s" : "") + " to the trash?\n\nNothing is deleted: the trash gives them back until it is emptied.", { ok: "To the trash", danger: true }).then(function (ok) {
+      guarded(tl("Move " + n.length + " take" + (n.length > 1 ? "s" : "") + " to the trash?") + "\n\n" + tl("Nothing is deleted: the trash gives them back until it is emptied."),
+              tl("To the trash"), n).then(function (ok) {   // HERESY 1473
         if (ok) return api("/trash", { op: "move", names: n });
       }).then(function (d) {
         if (!d) return;
@@ -1442,6 +1459,47 @@
     return state.hooks.getRequest(t).then(function (r) { reqCache[name] = r; return r; });
   }
   function rowOf(name) { return state.rows.filter(function (r) { return r.name === name; })[0]; }
+  // HERESY 1473 (Viktor 15.10.2026: «Сторожа на все удаления, перемещения и т.п. По максимуму. Лучше семь раз спросить, чем за один
+  // всё проебать»): where a mass action reaches, said before it goes; a second question when it reaches past the place you stand in
+  function tl(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
+  function reach(list, own) {
+    var byWs = {}, none = 0, gems = 0, seen = {};
+    shown().forEach(function (r) { seen[r.name] = 1; });
+    list.forEach(function (name) {
+      var r = rowOf(name), tops = {};
+      if (!r) return;
+      if (!r.workspaces.length) none++;
+      r.workspaces.forEach(function (w) { tops[w.split(SEP)[0]] = 1; });
+      Object.keys(tops).forEach(function (w) { byWs[w] = (byWs[w] || 0) + 1; });
+      if (Object.keys(tops).some(function (w) { return w.indexOf("\ud83d\udc8e") === 0; })) gems++;
+    });
+    var here = state.place && state.place.charAt(0) !== "_" ? state.place.split(SEP)[0] : "";
+    var wss = Object.keys(byWs).sort(function (a, b) { return byWs[b] - byWs[a]; });
+    var unseen = list.filter(function (x) { return !seen[x]; }).length, foreign = own ? [] : wss.filter(function (w) { return w !== here; });
+    return { n: list.length, byWs: byWs, wss: wss, none: none, gems: gems, here: here, unseen: unseen, foreign: foreign,
+             risky: !here || foreign.length > 0 || gems > 0 || list.length > 50 || unseen > 0 };
+  }
+  function reachText(R) {
+    var L = [!state.place ? tl("You stand in All Workspaces: this reaches every workspace.")
+      : R.here ? tl("You stand in \u201c" + state.place + "\u201d.") : tl("You stand in a view across workspaces.")];
+    if (R.wss.length) {
+      L.push(tl("They are in:"));
+      R.wss.slice(0, 8).forEach(function (w) { L.push("\u00b7 " + w + ": " + R.byWs[w]); });
+      if (R.wss.length > 8) L.push(tl("\u00b7 and " + (R.wss.length - 8) + " more workspaces"));
+    }
+    if (R.none) L.push(tl("\u00b7 in no workspace: " + R.none));
+    if (R.gems) L.push(tl(R.gems + " of them sit in published \ud83d\udc8e sets."));
+    if (R.unseen) L.push(tl(R.unseen + " of them are not shown here: picked in another view."));
+    return L.join("\n");
+  }
+  function guarded(first, ok, list, own) {          // own: the action touches only the place you stand in (a take-out)
+    var R = reach(list, own);
+    return ask(first + "\n\n" + reachText(R), { ok: ok, danger: true }).then(function (yes) {
+      if (!yes || !R.risky) return yes;
+      return ask(tl("Once more: " + R.n + " takes, from " + Math.max(1, R.wss.length) + " workspaces. Sure?") + "\n\n" +
+        tl("Better to ask seven times than to lose them all at once."), { ok: tl("Yes, all " + R.n), danger: true });
+    });
+  }
   // HERESY 1155 (Viktor: \u00ab\u0422\u0443\u043b\u0442\u0438\u043f \u043f\u043e\u043a\u0440\u044b\u0432\u0430\u0435\u0442 \u043f\u0435\u0440\u0432\u044b\u0439 \u0440\u044f\u0434 \u043a\u0430\u0440\u0442\u043e\u0447\u0435\u043a\u2026 \u0434\u0430\u0432\u0430\u0439 \u043c\u0435\u043d\u044c\u0448\u0435 \u0435\u0433\u043e \u043f\u043e \u0432\u044b\u0441\u043e\u0442\u0435\u00bb): the peek's words without
   // empty lines, a run of bare section tags on one line ([Intro] [Verse] [Chorus]: an instrumental's whole text)
   function lyricsTight(text, lines) {
@@ -1663,6 +1721,19 @@
   var MODES = { off: "Direct", plan: "Plan", full: "Full" };
   function kv(k, v) { return v === undefined || v === null || v === "" ? "" : '<div class="ds-kv"><span>' + esc(k) + "</span><b>" + esc(v) + "</b></div>"; }
   // HERESY 1128: a long name (a LoRA's path) wraps under its value instead of pushing it out; the whole id on hover
+  // HERESY 1502 (Viktor 16.10.2026: «В паспорте семпла не указана модель и её разрядность. Добавь прямо над VAE»): the backbone a take
+  // was made with («IRAE-BF16», «Merge3-Q6_K»; the base one only its quant), the quant and the width it keeps in bits; none for imported sound
+  var QUANT_BITS = { F32: 32, BF16: 16, F16: 16, Q8_0: 8, Q6_K: 6, Q5_K_M: 5, Q5_K_S: 5, Q5_0: 5, Q4_K_M: 4, Q4_K_S: 4, Q4_0: 4 };
+  function modelLine(m) {
+    if (!m || m === "import") return null;
+    var parts = String(m).split("-"), quant = QUANT_BITS[parts[parts.length - 1]] ? parts.pop() : "";
+    return { name: parts.join("-") || "YuE2", quant: quant, bits: quant ? QUANT_BITS[quant] : 0 };
+  }
+  function modelRow(m) {
+    var x = modelLine(m);
+    return x ? '<div class="ds-kv" data-ds-model="1"><span>model</span><b><span translate="no">' + esc(x.name + (x.quant ? " \u00b7 " + x.quant : "")) + "</span>" +
+      (x.bits ? " \u00b7 " + esc(tr("{0}-bit").replace("{0}", x.bits)) : "") + "</b></div>" : "";
+  }
   function kvFull(k, v, full) { return '<div class="ds-kv ds-kv-long" title="' + esc(full || k) + '"><span translate="no">' + esc(k) + "</span><b>" + esc(v) + "</b></div>"; }   // 1166: a slider's or a LoRA's name
   function samplingTable(title, s) {
     if (!s) return "";
@@ -1701,19 +1772,19 @@
         (q.abc ? "" : '<div class="ds-noscore row-hint">A Direct take writes no score. <button type="button" class="btn ghost small" data-ds="score">Write it from the sound</button> <span class="ds-score-run mono"></span></div>') +
         "</div>" +
         '<div class="ds-knobs"><div class="ds-group"><div class="peek-cap">Song</div>' + kv("mode", MODES[q.cot] || q.cot) + kv("length asked", q.duration ? h.clock(q.duration) : "") +
-        kv("format", q.output_format + (q.output_format === "mp3" ? " " + q.mp3_bitrate : "")) + kv("VAE", q.vae) + kv("peak clip", q.peak_clip) +
+        kv("format", q.output_format + (q.output_format === "mp3" ? " " + q.mp3_bitrate : "")) + modelRow(t.model || r.model) + kv("VAE", q.vae) + kv("peak clip", q.peak_clip) +
         kv("music codes", codes ? codes + " (" + h.clock(codes / 25) + ")" : "") + kv("kept from the parent", keep ? keep + " codes (" + h.clock(keep / 25) + ")" : "") + "</div>" +
         '<div class="ds-group"><div class="peek-cap">Sound</div>' + kv("guidance", q.cfg_scale) + kv("steps", q.steps) + kv("solver", q.solver) +
         kv("batch", (q.lm_batch_size || 1) + " \u00d7 " + (q.synth_batch_size || 1)) + "</div>" +
         '<div class="ds-group"><div class="peek-cap">Seeds</div>' + kv("music", q.lm_seed) + kv("sound", q.seed) + "</div>" +
         samplingTable("Score sampling", q.abc_sampling) + samplingTable("Music sampling", q.semantic_sampling) +
-        '<div class="ds-group"><div class="peek-cap">Sliders and LoRAs</div>' +
+        '<div class="ds-group"><div class="peek-cap">' + ((q.sliders || []).length ? "Sliders and LoRAs" : "LoRAs") + "</div>" +   // HERESY 1451: sliders only where an old take had them
           // HERESY 1128: as a take keeps them: sliders {id, strength}, LoRAs {id, ar, nar} (the music half's strength and the
           // sound half's); the older names (name, path, scale) still read
           ((q.sliders || []).map(function (s) {
             var v = s.strength != null ? s.strength : (s.scale != null ? s.scale : s.value);
             return kvFull(String(s.id || s.name || s.path || "slider"), v);
-          }).join("") || '<div class="ds-kv"><span>sliders</span><b>none</b></div>') +
+          }).join("")) +
           ((q.loras || []).map(function (l) {
             var id = String(l.id || l.name || l.path || "LoRA"), parts = [];
             if (Number(l.ar)) parts.push("music " + l.ar);
@@ -1855,7 +1926,7 @@
   window.HeresyCollection = { init: init, reload: load, hubOpen: hubOpen, repaint: paint, paintArts: paintArts, isHidden: isHidden, isFresh: isFresh, markPlayed: markPlayed, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
                               current: current, landable: landable, closedWs: closedWs, firstWs: firstWs, absent: function () { return state.loadStatus === 404; }, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, rateMany: rateMany, favMany: favMany, exportChecked: exportZip, note: note, setNote: setNote, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
                               order: function () { return state.place === "__trash" ? [] : shown().map(function (r) { return r.name; }); },
-                              datasheet: openDatasheet, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
+                              datasheet: openDatasheet, modelLine: modelLine, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
                               row: rowOf, workspaces: function () { return state.ws.slice(); }, act: act, openSheet: openSheet, requestOf: requestOf,
                               selected: names, place: function () { return state.place; }, moveTo: moveTo,
                               markFavorite: markFavorite,
@@ -1863,7 +1934,7 @@
                               pinPlaces: pinPlaces, unpinAll: unpinAll, pinTarget: pinTarget, pinIn: pinIn,   // HERESY 1167
                               isFrozen: function (name) { var r = rowOf(name); return !!(r && r.frozen); },   // HERESY 1166
                               isProtected: isProtected, protect: protect, protectMany: protectMany, protTip: function (on) { return on ? PROT_ON : PROT_OFF; },   // HERESY 1368
-                              undoable: undoable, untrash: untrash,
+                              undoable: undoable, untrash: untrash, guard: guarded,   // HERESY 1474: the take's menu asks as the bar does
                               trash: function (names) { return api("/trash", { op: "move", names: names }).then(function (d) { saidProtected(d); ((d && d.moved) || names).forEach(function (n) { delete state.sel[n]; }); return load().then(function () { return d; }); }); },
                               // HERESY 1169 · 1239 (Viktor 08.10.2026: «Я переместил в корзину три трека, а блок так и остался раскрытым, и не исчез обратно в "тень"»): what the menu sends away leaves the choice, as with the bar's own buttons
                               unselect: function (names) { (names || []).forEach(function (n) { delete state.sel[n]; }); paint(); } };

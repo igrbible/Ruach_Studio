@@ -11,9 +11,26 @@
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function clock(t) { var m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ":" + (s < 10 ? "0" : "") + s; }
   // HERESY 1061: from the engine itself (native Range); the lab proxy failed on big files and on seeks
+  // HERESY 1484: a step's report (read, not played)
+  function isText(f) { return f.kind === "text" || /\.(txt|json|md|csv)$/i.test(f.file || f.path || ""); }
+  function isImage(f) { return f.kind === "image" || /\.(png|jpe?g|webp|svg)$/i.test(f.file || f.path || ""); }   // HERESY 1557: a step's picture
+  // HERESY 1489: a download signed on the way when Content Credentials are on (app.js holds the switch)
+  function signed(url, fmt, take, path) { return window.HeresyC2pa ? window.HeresyC2pa.url(url, fmt, take, path) : url; }
   function fileUrl(name, path) { return "/library/file?name=" + encodeURIComponent(name) + "&path=" + encodeURIComponent(path); }
-  var KIND = { stems: "Stems", remaster: "Remaster", upscale: "Upscale", debuzz: "Debuzz" };
-  var MODE = { vocals: "vocals + instrumental", four: "four stems" };
+  var KIND = { stems: "Stems", remaster: "Remaster", upscale: "Upscale", debuzz: "Debuzz", daw: "DAW mix", gate: "Digital Gateway" };   // HERESY 1471; 1547
+  // HERESY 1471: a DAW mix in a line: its set, its loudness, the stems it played in another version
+  function dawSummary(m) {
+    var l = m.loudness || {}, v = m.versions || {}, other = Object.keys(v).filter(function (k) { return !/^derived\/stems-/.test(v[k]); });
+    return ["from " + String(m.source || "").replace("derived/", "")].concat(l.integrated_lufs != null ? [l.integrated_lufs + " LUFS, " + l.true_peak_dbtp + " dBTP"] : [])
+      .concat(other.length ? [other.join(", ") + " in another version"] : []).concat(m.lowered_db ? ["lowered " + m.lowered_db + " dB"] : []).join(", ");
+  }
+  function kindName(m) { return m.kind === "plugin" ? (m.label || "Plugin") : KIND[m.kind] || m.kind; }   // HERESY 1460: a plugin's step names itself (1553: the studio's own translated)
+  function pluginSummary(m) {
+    var p = m.params || {}, from = m.source && m.source !== "the take" ? "from " + String(m.source).replace("derived/", "") : "from the take";
+    return [from].concat(Object.keys(p).map(function (k) { return k + " " + (p[k] === true ? "on" : p[k] === false ? "off" : p[k]); })).join(", ");
+  }
+  var MODE = { vocals: "vocals + instrumental", four: "four stems", six: "six stems", eight: "eight stems" };   // HERESY 1462, 1463
+  function title(f) { return f.title || f.name; }   // HERESY 1463: a stem's proper title (Lead Vocal, Backing Vocals…) where the lab gives one
   // HERESY 1169: a set of stems split from a file of the tree (the chain splits the debuzzed or upscaled take) says which
   function fromWhat(src) {
     var dir = String(src || "").replace(/^derived\//, "").split("/")[0];
@@ -33,8 +50,10 @@
     if (!take) return out;
     state.list.forEach(function (m) {
       (m.files || []).forEach(function (f) {
+        if (isText(f) || isImage(f)) return;            // HERESY 1484: a report is no source (1557: nor a picture)
         out.push({ name: take.name, source: f.path, url: fileUrl(take.name, f.path), kind: m.kind,
-                   label: "↳ " + f.name + " (" + (KIND[m.kind] || m.kind) + (m.mode ? ", " + (MODE[m.mode] || m.mode) : "") + stemsFrom(m) + ")" });
+                   step: m.kind === "plugin" ? "plugin:" + m.plugin + ":" + m.step : undefined,   // HERESY 1460
+                   label: "↳ " + title(f) + " (" + kindName(m) + (m.mode ? ", " + (MODE[m.mode] || m.mode) : "") + stemsFrom(m) + ")" });
       });
     });
     return out;
@@ -54,12 +73,116 @@
     return parts.join(", ");
   }
 
+  // HERESY 1547: the gateway in a line: its character and drive, what it adds to a −12 dBFS tone, its loudness
+  var GATE_CH = { tape: "tape", console: "console", tube: "tube", transformer: "transformer", vinyl: "vinyl" };
+  function gateSummary(m) {
+    var s = m.settings || {}, r = m.measure || {}, h = r.harmonics || {}, parts = ["from " + String(m.source || "the take").replace("derived/", "")];
+    parts.push((GATE_CH[m.character] || m.character) + (m.character === "tape" ? " " + s.speed + " ips" : "") + ", drive " + s.drive_db + " dB" + (s.mix < 1 ? ", " + Math.round(s.mix * 100) + " % in parallel" : ""));
+    if (h.h2_db != null) parts.push("2nd " + h.h2_db + " dB, 3rd " + h.h3_db + " dB at −12 dBFS");
+    if (r.lufs_out != null) parts.push(r.lufs_out + " LUFS" + (s.level === "came" ? " as it came" : "") + (r.lowered_db ? ", lowered " + r.lowered_db + " dB to −0.3 dBTP" : ""));
+    return parts.join(" · ");
+  }
   // HERESY 1030: the frame ripple in and out, against the controls
   function debuzzSummary(m) {
     var r = m.measure || {}, b = r.before || {}, a = r.after || {};
     var from = "from " + String(m.source || "the take").replace("derived/", "") + ", " + Math.round((m.strength || 0) * 100) + " %";
     if (!r.found) return from + " · no frame ripple found (" + (b.frame || 0).toFixed(1) + " % at 1920 against " + (b.control || 0).toFixed(1) + " % by chance)";
     return from + " · ripple " + b.frame.toFixed(1) + " % → " + a.frame.toFixed(1) + " % (by chance " + b.control.toFixed(1) + " %)";
+  }
+
+  // HERESY 1487 (Viktor 15.10.2026: the tree's players as the compare window's: our own wave, its top half, the lower half on
+  // hover): a play button, the wave (the played part lit, a click seeks); the row's own <audio>, hidden, sounds it (1476 hands over)
+  function player(url, peaksUrl) {
+    return '<span class="dv-player" data-dv-peaks="' + esc(peaksUrl) + '"><button type="button" class="dv-play" aria-label="Play"></button>' +
+      '<canvas class="dv-wave" role="slider" aria-label="Position"></canvas><audio preload="none" src="' + esc(url) + '"></audio></span>';
+  }
+  var PEAKS = {};
+  function playIcon(n) { return window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(n) : (n === "pause" ? "\u275a\u275a" : "\u25b6"); }
+  // HERESY 1513 (Viktor 16.10.2026: «в равномерную ширину оформи все волны, чтобы они не бегали вправо-влево»): the buttons' column as wide as
+  // the widest set of them, the names' column narrowed by each row's own indent: every wave starts and ends where the others do
+  function alignTree(host) {
+    if (!host || !host.offsetWidth) return;
+    var rows = host.querySelectorAll(".dv-node:not(.is-text)"), acts = 0, hr = host.getBoundingClientRect();
+    host.style.removeProperty("--dv-acts");
+    Array.prototype.forEach.call(rows, function (r) { var a = r.querySelector(".dv-acts"); if (a) acts = Math.max(acts, a.scrollWidth); });
+    host.style.setProperty("--dv-acts", Math.ceil(acts) + "px");
+    host.style.setProperty("--dv-name", Math.round(Math.max(220, Math.min(440, hr.width * 0.26))) + "px");
+    Array.prototype.forEach.call(rows, function (r) { r.style.setProperty("--dv-off", Math.max(0, Math.round(r.getBoundingClientRect().left - hr.left)) + "px"); });
+  }
+  window.addEventListener("resize", function () { var h = $("derivedTree"); if (h) alignTree(h); });
+  if (window.ResizeObserver) setTimeout(function () { var h = $("derivedTree"); if (h) new ResizeObserver(function () { alignTree(h); }).observe(h); }, 0);
+  function initPlayers(host) {
+    var io = window.IntersectionObserver ? new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { io.unobserve(e.target); loadPeaks(e.target); } });
+    }) : null;
+    Array.prototype.forEach.call(host.querySelectorAll(".dv-player"), function (el) {
+      var a = el.querySelector("audio"), btn = el.querySelector(".dv-play"), cv = el.querySelector(".dv-wave");
+      var draw = function () { drawPlayer(el); };
+      var mark = function () {
+        btn.innerHTML = playIcon(a.paused ? "play" : "pause");
+        btn.setAttribute("aria-label", a.paused ? "Play" : "Pause");
+        el.classList.toggle("is-playing", !a.paused);
+        draw();
+      };
+      mark();
+      btn.addEventListener("click", function () { if (a.paused) a.play().catch(function () {}); else a.pause(); });
+      ["play", "pause", "ended"].forEach(function (k) { a.addEventListener(k, mark); });
+      a.addEventListener("timeupdate", draw);
+      a.addEventListener("loadedmetadata", draw);
+      el.addEventListener("mouseenter", function () { el.classList.add("is-hover"); draw(); });
+      el.addEventListener("mouseleave", function () { el.classList.remove("is-hover"); draw(); });
+      cv.addEventListener("click", function (ev) {
+        var r = cv.getBoundingClientRect(), f = Math.max(0, Math.min(1, (ev.clientX - r.left) / (r.width || 1)));
+        var go = function () { if (isFinite(a.duration) && a.duration > 0) { a.currentTime = f * a.duration; draw(); } };
+        if (isFinite(a.duration) && a.duration > 0) go(); else { a.preload = "metadata"; a.addEventListener("loadedmetadata", go, { once: true }); a.load(); }
+      });
+      if (io) io.observe(el); else loadPeaks(el);
+    });
+  }
+  function loadPeaks(el) {
+    var u = el.dataset.dvPeaks;
+    if (!u) return;
+    if (PEAKS[u]) { el._peaks = PEAKS[u].peaks; el._secs = PEAKS[u].seconds; return drawPlayer(el); }
+    fetch(u).then(function (r) { return r.ok ? r.json() : null; }).then(function (p) {
+      if (!p || !p.peaks || !p.peaks.length) return;
+      PEAKS[u] = p; el._peaks = p.peaks; el._secs = p.seconds; drawPlayer(el);
+    }).catch(function () { /* no wave: the line stays */ });
+  }
+  function drawPlayer(el) {
+    var cv = el.querySelector(".dv-wave"), a = el.querySelector("audio");
+    var w = cv.clientWidth, h = cv.clientHeight, dpr = window.devicePixelRatio || 1;
+    if (!w || !h) return;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+    var ctx = cv.getContext("2d"), css = getComputedStyle(el), lit = css.getPropertyValue("--amber").trim() || "#d9a441", dim = css.getPropertyValue("--dim").trim() || "#888";
+    var d = isFinite(a.duration) && a.duration > 0 ? a.duration : (el._secs || 0), at = d ? Math.min(1, (a.currentTime || 0) / d) : 0;
+    var base = h / 2, p = el._peaks;                 // HERESY 1491: the whole wave about its middle, always
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    if (!p) { ctx.fillStyle = dim; ctx.fillRect(0, base - 0.5, w, 1); ctx.fillStyle = lit; ctx.fillRect(0, base - 1, w * at, 2); return; }
+    var max = 0, k;
+    for (k = 0; k < p.length; k++) if (p[k] > max) max = p[k];
+    var amp = (base - 1) / (max || 1), bw = w / p.length;
+    for (k = 0; k < p.length; k++) {
+      var x = k * bw, v = Math.max(0.5, p[k] * amp);
+      ctx.fillStyle = (k + 0.5) / p.length <= at ? lit : dim;
+      ctx.fillRect(x, base - v, Math.max(1, bw - 0.5), 2 * v);
+    }
+  }
+
+  // HERESY 1486 (Viktor 15.10.2026: «"Сделано из этого семпла" хаотично»): the branches in the chain's order, each under the branch
+  // its source lies in (derived/<id>/…), deeper by one; siblings keep the lab's order (the newest first); a branch whose source is
+  // gone stands at the top
+  function chain(list) {
+    var ids = {}, kids = {}, out = [], seen = {};
+    list.forEach(function (m) { ids[m.id] = true; });
+    list.forEach(function (m) {
+      var p = /^derived\/([^/]+)/.exec(String(m.source || "")), up = p && ids[p[1]] && p[1] !== m.id ? p[1] : "";
+      (kids[up] = kids[up] || []).push(m);
+    });
+    (function walk(up, depth) {
+      (kids[up] || []).forEach(function (m) { if (seen[m.id]) return; seen[m.id] = true; out.push({ m: m, depth: depth }); walk(m.id, depth + 1); });
+    })("", 0);
+    return out;
   }
 
   function paint() {
@@ -70,35 +193,74 @@
     var orig = "/library/listen?name=" + encodeURIComponent(take.name);
     var html = '<div class="dv-node dv-root dv-orig"><span class="dv-name"><span translate="no">' + esc(take.label || take.name) + '</span> <em class="dv-orig-tag">the original</em></span>' +
       '<span class="dv-meta mono">' + (take.seconds ? clock(take.seconds) : "") + "</span>" +
-      '<audio controls preload="none" src="' + esc(orig) + '"></audio>' +
-      '<button type="button" class="btn small primary dv-compare" data-dv-compare="0" data-tip="Every version of this take in one player: switch between them at the same second (1–9, Space)">Compare all</button>' +
-      '<a class="btn ghost small" href="/library/flac?name=' + encodeURIComponent(take.name) + '" download="' + esc((take.label || take.name) + ".flac") + '">FLAC</a></div>';
+      player(orig, "/library/peaks?name=" + encodeURIComponent(take.name)) +   // HERESY 1487
+      '<span class="dv-acts"><button type="button" class="btn small primary dv-compare" data-dv-compare="0" data-tip="Every version of this take in one player: switch between them at the same second (1–9, Space)">Compare all</button>' +
+      '<button type="button" class="btn ghost small dv-mon" data-dv-mon="' + esc("") + '" aria-pressed="false" data-tip="Play it through Forge\'s monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before">On Forge</button>' +   // HERESY 1548
+      '<a class="btn ghost small" href="' + esc(signed("/library/flac?name=" + encodeURIComponent(take.name), "flac", take)) + '" download="' + esc((take.label || take.name) + ".flac") + '">FLAC</a></span></div>';   // HERESY 1489; 1513: its buttons one column
     if (!state.list.length && !state.running.length) html += '<p class="row-hint dv-empty">Nothing made from this take yet.</p>';
     // HERESY 1129: what runs now stands first: the tree grows upward, the newest on top
     state.running.forEach(function (j, i) {
       var failed = j.status === "failed", p = progress(j);
-      html += '<div class="dv-group is-running' + (failed ? " is-failed" : "") + '" data-job="' + i + '" data-kind="' + esc(j.kind || "") + '"><div class="dv-group-head"><strong>' + esc(KIND[j.kind] || j.kind || "Job") + "</strong>" +
+      html += '<div class="dv-group is-running' + (failed ? " is-failed" : "") + '" data-job="' + i + '" data-kind="' + esc(j.kind || "") + '"><div class="dv-group-head"><strong' + (j.kind === "plugin" && !j.builtin ? ' translate="no"' : "") + ">" + esc(kindName(j) || "Job") + "</strong>" +
         (j.mode ? " · " + esc(MODE[j.mode] || j.mode) : "") + '<span class="dv-meta">' + (failed ? "failed: " + esc(j.error || "") : esc(p.say)) + "</span></div>" +
         (failed ? "" : '<div class="job-bar' + (j.status === "queued" ? " is-queued" : "") + '"><i style="width:' + p.pct + '%"></i></div>') + "</div>";
     });
-    state.list.forEach(function (m) {
-      html += '<div class="dv-group" data-dv-id="' + esc(m.id || "") + '" data-kind="' + esc(m.kind || "") + '"><div class="dv-group-head"><strong>' + esc(KIND[m.kind] || m.kind) + "</strong>" +
+    chain(state.list).forEach(function (c) {             // HERESY 1486: in the chain's order
+      var m = c.m;
+      html += '<div class="dv-group" data-dv-id="' + esc(m.id || "") + '" data-kind="' + esc(m.kind || "") + '"' +
+        (c.depth ? ' data-depth="' + c.depth + '" style="--dv-depth:' + c.depth + '"' : "") + '><div class="dv-group-head"><strong' + (m.kind === "plugin" && !m.builtin ? ' translate="no"' : "") + ">" + esc(kindName(m)) + "</strong>" +
+        (m.kind === "plugin" ? '<span translate="no"> · ' + esc(pluginSummary(m)) + "</span>" : "") +
+        (m.kind === "plugin" && m.summary ? '<span class="dv-say" translate="no"> · ' + esc(m.summary) + "</span>" : "") +   // HERESY 1484
         (m.mode ? " · " + esc(MODE[m.mode] || m.mode) : "") + esc(stemsFrom(m).replace(", from", " · from")) + (m.kind === "remaster" ? " · " + esc(summary(m)) : "") +
         (m.kind === "debuzz" ? " · " + esc(debuzzSummary(m)) : "") +
+        (m.kind === "gate" ? " · " + esc(gateSummary(m)) : "") +   // HERESY 1547
+        (m.kind === "daw" ? " · " + esc(dawSummary(m)) : "") +   // HERESY 1471
         (m.kind === "upscale" ? " · from " + esc(String(m.source || "the take").replace("derived/", "")) + ", above " + Math.round((m.cutoff_hz || 0) / 1000) + " kHz" + (m.keep_low ? ", original kept below" : "") : "") +
-        '<span class="dv-meta">' + esc((m.models || []).join(" + ")) + " · " + esc(m.created || "") + (m.took ? " · " + Math.round(m.took) + " s" : "") + "</span></div>";
+        '<span class="dv-meta">' + esc((m.models || []).join(" + ")) + " · " + esc(m.created || "") + (m.took ? " · " + Math.round(m.took) + " s" : "") + "</span>" +
+        (m.kind === "plugin" && m.plugin === "ruach" && m.step === "match" && m.measure && (m.measure.bands || []).length ?   // HERESY 1558
+          '<button type="button" class="btn ghost small" data-dv-eq="' + esc(m.id || "") + '" data-tip="Put the match\'s bands on the DAW\'s master EQ, to hear the match live on the mix in hand">Onto the DAW\'s master</button>' : "") +
+        '<button type="button" class="btn ghost small dv-del" data-dv-del="' + esc(m.id || "") + '" data-tip="Into this take\'s trash, from where it comes back">Delete</button></div>';   // HERESY 1527
       (m.files || []).forEach(function (f) {
         var url = fileUrl(take.name, f.path);
-        html += '<div class="dv-node"><span class="dv-name" translate="no">↳ ' + esc(f.name) + '</span><span class="dv-meta mono">' + (f.seconds ? clock(f.seconds) : "") + "</span>" +
-          '<audio controls preload="none" src="' + esc(url) + '"></audio>' +
-          '<button type="button" class="btn ghost small" data-dv-compare-path="' + esc(f.path) + '" data-tip="Compare it with the original and every other version, at the same second">Compare</button>' +
+        var nm = m.builtin ? '<span class="dv-name">↳ <span>' + esc(title(f)) + "</span></span>" : '<span class="dv-name" translate="no">↳ ' + esc(title(f)) + "</span>";   // HERESY 1557: the studio's own in the page's words
+        if (isImage(f)) {                               // HERESY 1557: a step's picture, looked at here, or its file
+          html += '<div class="dv-node is-image">' + nm + '<a class="dv-pic" href="' + esc(url) + '" target="_blank" rel="noopener"><img src="' + esc(url) + '" alt="" loading="lazy" /></a>' +
+            '<a class="btn ghost small" translate="no" href="' + esc(url) + '" download="' + esc((take.label || take.name) + " - " + (f.file || title(f))) + '">' +
+            esc(String(f.file || f.path).split(".").pop().toUpperCase()) + "</a></div>";
+          return;
+        }
+        if (isText(f)) {                                // HERESY 1484: a report: read here, or its file
+          html += '<div class="dv-node is-text">' + nm +
+            '<button type="button" class="btn ghost small" data-dv-read="' + esc(f.path) + '" data-dv-read-title="' + esc(title(f)) + '">Read</button>' +
+            '<a class="btn ghost small" translate="no" href="' + esc(url) + '" download="' + esc((take.label || take.name) + " - " + (f.file || title(f))) + '">' +
+            esc(String(f.file || f.path).split(".").pop().toUpperCase()) + "</a></div>";
+          return;
+        }
+        html += '<div class="dv-node">' + nm + '<span class="dv-meta mono">' + (f.seconds ? clock(f.seconds) : "") + "</span>" +
+          player(url, "/lab/peaks?name=" + encodeURIComponent(take.name) + "&path=" + encodeURIComponent(f.path) + "&n=400") +   // HERESY 1487
+          '<span class="dv-acts"><button type="button" class="btn ghost small" data-dv-compare-path="' + esc(f.path) + '" data-tip="Compare it with the original and every other version, at the same second">Compare</button>' +
           '<button type="button" class="btn ghost small" data-dv-spectrum="' + esc(f.path) + '" data-tip="Lay this file over the take in the spectrum">Spectrum</button>' +
+          (window.HeresyPost && window.HeresyPost.has && window.HeresyPost.has("pl-ruach-reportPanel") ?   // HERESY 1557
+            '<button type="button" class="btn ghost small" data-dv-report="' + esc(f.path) + '" data-tip="Measure this file against what it was made from: loudness, true peak, range, width, bands, the spectra at equal loudness; a page and a picture in the tree">Before / after</button>' : "") +
+          '<button type="button" class="btn ghost small dv-mon" data-dv-mon="' + esc(f.path) + '" aria-pressed="false" data-tip="Play it through Forge\'s monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before">On Forge</button>' +   // HERESY 1548
           (/vocal/i.test(f.name) ? '<button type="button" class="btn ghost small" data-dv-gloss="' + esc(f.path) + '" data-tip="Whisper on this file against the lyrics">Lyrics check</button>' : "") +
-          '<a class="btn ghost small" href="' + esc(url) + '" download="' + esc((take.label || take.name) + " - " + f.name + ".flac") + '">FLAC</a></div>';
+          '<a class="btn ghost small" href="' + esc(signed(url, String(f.file || f.path).split(".").pop().toLowerCase(), take, f.path)) + '" download="' + esc((take.label || take.name) + " - " + title(f) + ".flac") + '">FLAC</a></span></div>';   // HERESY 1489; 1513
       });
       html += "</div>";
     });
+    var bin = state.trash || [];                        // HERESY 1527: the take's trash, under its tree
+    if (bin.length) {
+      html += '<div class="dv-trash"><button type="button" class="btn ghost small" data-dv-trash="1" aria-expanded="' + !!state.trashOpen + '">' + esc(tt("Trash ({0})").replace("{0}", bin.length)) + "</button>" +
+        (state.trashOpen ? bin.map(function (x) {
+          var m = x.manifest || {};
+          return '<div class="dv-trash-row"><span class="dv-name"><strong' + (m.kind === "plugin" && !m.builtin ? ' translate="no"' : "") + ">" + esc(kindName(m)) + "</strong>" + (m.mode ? " · " + esc(MODE[m.mode] || m.mode) : "") +
+            '</span><span class="dv-meta">' + esc(m.created || "") + (x.with ? " · " + esc(tt("deleted with {0}").replace("{0}", x.with)) : "") + "</span>" +
+            '<button type="button" class="btn ghost small" data-dv-back="' + esc(x.trash_id) + '">Bring back</button></div>';
+        }).join("") + '<button type="button" class="btn ghost small danger dv-empty" data-dv-empty="1">Empty the trash</button>' : "") + "</div>";
+    }
     host.innerHTML = html;
+    alignTree(host);                                    // HERESY 1513: every wave from one x to one x
+    initPlayers(host);                                  // HERESY 1487
     if (!state.lit) {                                   // the step open when the page loaded lights its branches too
       var open = document.querySelector("#postSteps .is-active[data-step-panel]");
       if (open) state.lit = STEP_KIND[open.dataset.stepPanel] || "";
@@ -111,10 +273,10 @@
 
   // ---- HERESY 1060: progress, estimated: the lab says running or queued, not how far. The rates are
   // measured on Forge (seconds of work per second of audio); the bar stops at 95 % until the file lands.
-  var RATE = { debuzz: 0.18, remaster: 0.12, upscale: 1.8, stems: 0.7 };
+  var RATE = { debuzz: 0.18, remaster: 0.12, upscale: 1.8, stems: 0.7, daw: 0.05, gate: 0.12 };   // 1547: 36–50 s for 6:37 at 4×   // HERESY 1471: 18 s for 6:37 of eight stems
   function progress(j) {
     var el = Math.max(0, Math.round(Date.now() / 1000 - (j.started || Date.now() / 1000)));
-    var len = state.take && state.take.seconds || 0, rate = RATE[j.kind] * (j.kind === "stems" && j.mode === "four" ? 1.8 : 1);
+    var len = state.take && state.take.seconds || 0, rate = RATE[j.kind] * (j.kind === "stems" && j.mode === "four" ? 1.8 : j.kind === "stems" && j.mode === "six" ? 1.1 : j.kind === "stems" && j.mode === "eight" ? 2.1 : 1);   // 1462: six measured 0.75 s a second
     var clockS = function (s) { return s >= 60 ? Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2) : s + " s"; };
     if (j.status === "queued") return { pct: 3, say: "waiting for Forge\u2026 " + clockS(el) };
     if (!len || !rate) return { pct: 50, say: "running\u2026 " + clockS(el) };
@@ -125,8 +287,8 @@
   // the step's own block carries its jobs at its top, its tab a beating dot; each step shows what it has made for the
   // take (a click finds it in the tree), and the step open lights its own branches in the tree. The floating card of
   // 1060 (it sat over the server log and the takes) is retired.
-  var PANEL = { stems: "derivedPanel", remaster: "remasterPanel", upscale: "upscalePanel", debuzz: "debuzzPanel" };
-  var STEP_KIND = { derivedPanel: "stems", remasterPanel: "remaster", upscalePanel: "upscale", debuzzPanel: "debuzz" };
+  var PANEL = { stems: "derivedPanel", remaster: "remasterPanel", upscale: "upscalePanel", debuzz: "debuzzPanel", gate: "gatePanel" };   // 1547
+  var STEP_KIND = { derivedPanel: "stems", remasterPanel: "remaster", upscalePanel: "upscale", debuzzPanel: "debuzz", dawPanel: "daw", gatePanel: "gate" };   // 1471; 1547
   function slots(kind) {
     var p = $(PANEL[kind]), body = p && p.querySelector(".drawer-body");
     if (!body) return null;
@@ -195,6 +357,26 @@
     if (state.running.length) paintLive();
   }, 1000);
 
+  // HERESY 1504: the marks on the files made from each take, as the lab keeps them ({take: {path: {rating, fav}}})
+  var MARKS = {};
+  function markOf(m) { return (MARKS[m.take] || {})[m.path] || {}; }
+  function putMark(m, change) {
+    var was = markOf(m), now = Object.assign({}, was, change);
+    if (!now.rating) delete now.rating;
+    if (!now.fav) delete now.fav;
+    MARKS[m.take] = Object.assign({}, MARKS[m.take] || {});
+    if (now.rating || now.fav) MARKS[m.take][m.path] = now; else delete MARKS[m.take][m.path];
+    return fetch("/lab/derived/mark", { method: "POST", headers: { "Content-Type": "application/json" },
+                                         body: JSON.stringify(Object.assign({ name: m.take, path: m.path }, change)) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j; }); })
+      .then(function (j) { MARKS[m.take] = j.marks || {}; }, function (e) {
+        MARKS[m.take] = Object.assign({}, MARKS[m.take] || {});
+        if (was.rating || was.fav) MARKS[m.take][m.path] = was; else delete MARKS[m.take][m.path];
+        (state.hooks.toast || say)("The mark was not kept: " + (e && e.message || e), true);   // said, never kept only on the page
+      });
+  }
+
+  function tt(x) { return window.RuachI18n && window.RuachI18n.t ? window.RuachI18n.t(x) : x; }   // HERESY 1527
   function refresh() {
     if (!state.take) { paint(); return Promise.resolve(); }
     var token = state.token, name = state.take.name;
@@ -202,7 +384,9 @@
       .then(function (d) {
         if (token !== state.token || !d) return;
         state.list = d.derived || [];
+        MARKS[name] = d.marks || {};                    // HERESY 1504
         state.running = d.running || [];
+        state.trash = d.trash || [];                    // HERESY 1527
         paint();
         paintSources();
         paintUpSources();
@@ -381,6 +565,70 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-dv-split]"), function (b) {
       b.addEventListener("click", function () { split(b.dataset.dvSplit); });
     });
+    // HERESY 1527 (Viktor 17.10.2026: «удаление ненужного артефакта, чтобы не плодить мусорку в пайплайне»): a branch into the take's
+    // trash, asked; one others were made from asks again, naming them, and goes with them; the trash: Bring back, Empty (asked, for good)
+    function trashCall(path, body) {
+      return fetch("/lab/derived/" + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.assign({ name: state.take.name }, body)) })
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok) { var e = new Error(j.error || r.status); e.children = j.children; throw e; } return j; }); });
+    }
+    function named(id) { var m = state.list.filter(function (x) { return x.id === id; })[0]; return m ? kindName(m) + (m.mode ? " · " + (MODE[m.mode] || m.mode) : "") + " · " + (m.created || "") : id; }
+    function delBranch(id, withKids) {
+      if (!state.take) return;
+      var ask = window.HeresyDialog;
+      (withKids ? Promise.resolve(true) : ask.confirm(tt("Delete the branch «{0}»?").replace("{0}", named(id)) + "\n\n" + tt("It goes into this take's trash, from where it comes back."),
+        { ok: tt("Delete"), cancel: tt("Cancel"), danger: true })).then(function (yes) {
+        if (yes !== true) return;
+        trashCall("delete", { id: id, with_children: !!withKids }).then(function (d) {
+          say(tt("Into the trash: {0}").replace("{0}", (d.moved || []).length));
+          return refresh();
+        }, function (e) {
+          if (!e.children) { say(e.message, true); return; }
+          ask.confirm(tt("Branches were made from «{0}»: {1}.").replace("{0}", named(id)).replace("{1}", e.children.map(named).join("; ")) + "\n\n" +
+            tt("They go into the trash with it, and come back from it each on its own."), { ok: tt("Delete them too"), cancel: tt("Cancel"), danger: true })
+            .then(function (yes) { if (yes === true) delBranch(id, true); });
+        });
+      });
+    }
+    $("derivedTree").addEventListener("click", function (event) {
+      var del = event.target.closest("[data-dv-del]"), tg = event.target.closest("[data-dv-trash]"), back = event.target.closest("[data-dv-back]"), em = event.target.closest("[data-dv-empty]");
+      if (del) { delBranch(del.dataset.dvDel, false); return; }
+      if (tg) { state.trashOpen = !state.trashOpen; paint(); return; }
+      if (back) { trashCall("restore", { id: back.dataset.dvBack }).then(function () { say(tt("Back on the tree")); return refresh(); }, function (e) { say(e.message, true); }); return; }
+      if (em) {
+        window.HeresyDialog.confirm(tt("Empty this take's trash?") + "\n\n" + tt("Branches gone for good: {0}. This cannot be undone.").replace("{0}", (state.trash || []).length),
+          { ok: tt("Empty the trash"), cancel: tt("Cancel"), danger: true }).then(function (yes) {
+          if (yes !== true) return;
+          trashCall("empty", {}).then(function (d) { state.trashOpen = false; say(tt("The take's trash emptied: {0}").replace("{0}", d.emptied || 0)); return refresh(); }, function (e) { say(e.message, true); });
+        });
+      }
+    });
+    // HERESY 1484: a report read in the studio's dialog
+    $("derivedTree").addEventListener("click", function (event) {
+      var rd = event.target.closest("[data-dv-read]");
+      if (!rd || !state.take) return;
+      var head = rd.dataset.dvReadTitle || "";
+      fetch(fileUrl(state.take.name, rd.dataset.dvRead)).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.text(); })
+        .then(function (text) { return window.HeresyDialog.alert(head + "\n\n" + text.trim(), { ok: "Close" }); })
+        .catch(function (e) { say(head + ": " + e.message, true); });
+    });
+    // HERESY 1557: Before / after on a file of the tree; 1558: a match's bands onto the DAW's master EQ
+    $("derivedTree").addEventListener("click", function (event) {
+      var rp = event.target.closest("[data-dv-report]"), eq = event.target.closest("[data-dv-eq]");
+      if (rp && state.take) {
+        rp.disabled = true;
+        fetch("/lab/plugin/run", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: state.take.name, source: rp.dataset.dvReport, plugin: "ruach", step: "report", params: {} }) })
+          .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); })
+          .then(function () { say(tt("Started: {0}").replace("{0}", tt("Before and after"))); return refresh(); }, function (e) { rp.disabled = false; say(e.message, true); });
+      }
+      if (eq && state.take) {
+        var m = state.list.filter(function (x) { return x.id === eq.dataset.dvEq; })[0], M = window.HeresyMixer, st = M && M.state ? M.state() : null;
+        if (!m || !st || st.take !== state.take.name || !st.strips.length) { say(tt("Open this take's set in the DAW first"), true); return; }
+        if (M.k.mark) M.k.mark();                      // one step of the DAW's undo: the master's own EQ comes back
+        M.k.set("*", "eq", { on: true, bands: m.measure.bands.map(function (b) { return Object.assign({}, b); }) });
+        say(tt("The match's bands are on the DAW's master EQ"));
+      }
+    });
     $("derivedTree").addEventListener("click", function (event) {
       var sp = event.target.closest("[data-dv-spectrum]"), gl = event.target.closest("[data-dv-gloss]");
       if (sp && state.hooks.compare) state.hooks.compare(sp.dataset.dvSpectrum);
@@ -423,17 +671,18 @@
     if (!take) return;
     if (state.hooks.pauseMain) state.hooks.pauseMain();
     Array.prototype.forEach.call(document.querySelectorAll("#derivedTree audio"), function (a) { a.pause(); });
-    var GROUP = { debuzz: "Debuzz", remaster: "Remaster", upscale: "Upscale", stems: "Stems" };
+    var GROUP = { debuzz: "Debuzz", remaster: "Remaster", upscale: "Upscale", stems: "Stems", daw: "DAW mix", gate: "Digital Gateway", plugin: "" };   // 1547   // 1504: the DAW's mixes
     var versions = [{ label: "The original", group: "", url: "/library/listen?name=" + encodeURIComponent(take.name), path: "", seconds: take.seconds, take: take.name }];
     // HERESY 1311: the take's family (the same music in other takes), the disliked left out, after the original
     (state.hooks.family ? state.hooks.family(take.name) : []).forEach(function (t) {
       versions.push({ label: t.label || t.name, group: t.group || "The same music", url: t.url, path: "take:" + t.name, seconds: t.seconds, take: t.name });
     });
-    ["debuzz", "remaster", "upscale", "stems"].forEach(function (kind) {
+    ["debuzz", "remaster", "upscale", "stems", "daw", "gate", "plugin"].forEach(function (kind) {   // HERESY 1460: a plugin's too; 1504: the DAW's; 1547: the gateway's
       state.list.filter(function (m) { return m.kind === kind; }).forEach(function (m) {
         (m.files || []).forEach(function (f) {
-          versions.push({ label: f.name, group: GROUP[kind] + (m.mode ? " · " + (MODE[m.mode] || m.mode) : "") + (m.created ? " · " + String(m.created).slice(11, 16) : ""),
-                          url: fileUrl(take.name, f.path), path: f.path, seconds: f.seconds });
+          if (isText(f) || isImage(f)) return;          // HERESY 1484: a report is no version (1557: nor a picture)
+          versions.push({ label: title(f), group: (kind === "plugin" ? kindName(m) : GROUP[kind]) + (m.mode ? " · " + (MODE[m.mode] || m.mode) : "") + (m.created ? " · " + String(m.created).slice(11, 16) : ""),
+                          url: fileUrl(take.name, f.path), path: f.path, seconds: f.seconds, mark: { take: take.name, path: f.path } });   // 1504
         });
       });
     });
@@ -448,6 +697,9 @@
   // gives way to the next one shown, from the same second
   var CMP_HIDE = "yue2.cmpHideDisliked";
   function cmpHide() { try { return localStorage.getItem(CMP_HIDE) !== "0"; } catch (e) { return true; } }
+  function cmpEqual(on) {                             // HERESY 1550: «Equal loudness», on unless turned off, remembered
+    try { if (on != null) localStorage.setItem("yue2.cmpEqual", on ? "1" : "0"); return localStorage.getItem("yue2.cmpEqual") !== "0"; } catch (e) { return on != null ? !!on : true; }
+  }
   function cmpPeaks(v) {
     var decode = function () {
       var Off = window.OfflineAudioContext || window.webkitOfflineAudioContext;
@@ -473,15 +725,20 @@
     var hk = state.hooks || {};
     if (hk.pauseMain) hk.pauseMain();
     active = Math.max(0, Math.min(versions.length - 1, active || 0));
-    var audios = versions.map(function (v) { var a = new Audio(); a.preload = "metadata"; a.src = v.url; return a; });
-    var rated = !!(hk.rating && hk.rate && versions.some(function (v) { return v.take; }));
+    var audios = versions.map(function (v) { var a = new Audio(); a.preload = "metadata"; a.src = v.url; a.dataset.oneSound = "compare"; return a; });   // HERESY 1476: they hand over among themselves
+    // HERESY 1504: a take rated through the Librarian's hooks, a file made from one through the lab's marks
+    var byTake = !!(hk.rating && hk.rate);
+    var rated = (byTake && versions.some(function (v) { return v.take; })) || versions.some(function (v) { return v.mark; });
+    var rateable = function (v) { return (byTake && v.take) || v.mark; };
+    var rOf = function (v) { return v.take ? (byTake ? hk.rating(v.take) || 0 : 0) : v.mark ? markOf(v.mark).rating || 0 : 0; };
+    var fOf = function (v) { return v.take ? !!(hk.favorite && hk.favorite(v.take)) : v.mark ? !!markOf(v.mark).fav : false; };
     var hideDis = rated && cmpHide();
     var ico = function (n) { return window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(n) : (n === "pause" ? "❚❚" : "▶"); };
     var rateHtml = function (v) {
-      if (!rated || !v.take) return "";
+      if (!rated || !rateable(v)) return "";
       return '<span class="cmp-rate"><button type="button" class="coll-act" data-cmp-rate="1" aria-label="Like">' + ico("like") + "</button>" +
         '<button type="button" class="coll-act" data-cmp-rate="-1" aria-label="Dislike">' + ico("dislike") + "</button>" +
-        (hk.favorite ? '<button type="button" class="coll-act fav" data-cmp-fav="1" aria-label="Favourite">' + ico("star") + "</button>" : "") + "</span>";
+        (v.mark || hk.favorite ? '<button type="button" class="coll-act fav" data-cmp-fav="1" aria-label="Favourite">' + ico("star") + "</button>" : "") + "</span>";
     };
     var back = document.createElement("div");
     back.className = "cmp-back";
@@ -493,17 +750,36 @@
       '<div class="cmp-transport"><button type="button" class="cmp-play" data-cmp="play" aria-label="Play"></button>' +
       '<span class="cmp-time mono">0:00</span><span class="cmp-fill"></span>' +
       (rated ? '<label class="cmp-hide"><input type="checkbox" data-cmp-hide="1"' + (hideDis ? " checked" : "") + "> Hide disliked</label>" : "") +
+      '<label class="cmp-hide cmp-eq" data-tip="Each version turned down to the quietest one\'s loudness (BS.1770, measured on Forge), so the ear hears the sound and not the level"><input type="checkbox" data-cmp-eq="1"' + (cmpEqual() ? " checked" : "") + "> Equal loudness</label>" +   // HERESY 1550
       '<span class="cmp-total mono">0:00</span></div>' +
       '<ol class="cmp-list">' + versions.map(function (v, i) {
         return '<li class="cmp-li" data-cmp-li="' + i + '"><button type="button" class="cmp-row" data-cmp-i="' + i + '"><span class="cmp-n mono">' + (i < 9 ? i + 1 : "") + '</span><span class="cmp-name">' + esc(v.label) + "</span>" +
-          '<span class="cmp-group">' + esc(v.group || "as YuE2 made it") + '</span><span class="cmp-dur mono">' + (v.seconds ? clock(v.seconds) : "") + "</span></button>" + rateHtml(v) + "</li>";
+          '<span class="cmp-group">' + esc(v.group || "as YuE2 made it") + '</span><span class="cmp-lufs mono" data-cmp-lufs="' + i + '">\u2026</span><span class="cmp-dur mono">' + (v.seconds ? clock(v.seconds) : "") + "</span></button>" + rateHtml(v) + "</li>";   // 1550
       }).join("") + "</ol></div>";
     document.body.appendChild(back);
     var box = back.querySelector(".cmp-box"), wave = box.querySelector(".cmp-wave"), playBtn = box.querySelector(".cmp-play"), dragging = false;
+    // HERESY 1550: each version's loudness, and the louder ones turned down to the quietest while «Equal loudness» is on
+    var lufs = versions.map(function () { return null; });
+    function levels() {
+      var on = cmpEqual(), known = lufs.filter(function (x) { return x != null; }), lo = known.length ? Math.min.apply(null, known) : null;
+      audios.forEach(function (a, i) {
+        var l = lufs[i], g = on && l != null && lo != null ? Math.pow(10, (lo - l) / 20) : 1, el = box.querySelector('[data-cmp-lufs="' + i + '"]');
+        a.volume = Math.max(0, Math.min(1, g));
+        if (el) el.textContent = l == null ? (el.textContent === "\u2014" ? "\u2014" : "\u2026") : String(l.toFixed(1)).replace("-", "\u2212") + " LUFS" + (on && g < 0.994 ? " \u00b7 " + String((20 * Math.log10(g)).toFixed(1)).replace("-", "\u2212") + " dB" : "");
+      });
+    }
+    versions.forEach(function (v, i) {
+      var nm = v.take || (state.take && state.take.name) || "", p = v.take ? "" : v.path || "";
+      if (!nm) return;
+      fetch("/lab/loudness?name=" + encodeURIComponent(nm) + (p ? "&path=" + encodeURIComponent(p) : ""), { priority: "low" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) { lufs[i] = j && j.lufs != null ? j.lufs : null; if (lufs[i] == null) { var el = box.querySelector('[data-cmp-lufs="' + i + '"]'); if (el) el.textContent = "\u2014"; } levels(); }, function () { /* no lab: as they are */ });
+    });
+    box.addEventListener("change", function (e) { if (e.target.closest && e.target.closest("[data-cmp-eq]")) { cmpEqual(e.target.checked); levels(); } });
     var peaks = [];
     function cur() { return audios[active]; }
     function dur() { var a = cur(); return isFinite(a.duration) && a.duration > 0 ? a.duration : (versions[active].seconds || 0); }
-    function shown(i) { return !(hideDis && versions[i].take && hk.rating(versions[i].take) < 0); }
+    function shown(i) { return !(hideDis && rateable(versions[i]) && rOf(versions[i]) < 0); }   // 1504: a disliked branch too
     // HERESY 1421 (Viktor 13.10.2026: «кликание обратно со второго трека на первый останавливает воспроизведение»): a version's play
     // resolves when it has loaded, and the old callback paused the one it had been switched from, which by then could be the
     // chosen one again; now whatever resolves last, every version but the chosen one is paused. And the second the switch
@@ -546,11 +822,11 @@
       Array.prototype.forEach.call(box.querySelectorAll(".cmp-li"), function (li) {
         var v = versions[+li.dataset.cmpLi];
         li.hidden = !shown(+li.dataset.cmpLi);
-        if (!v.take) return;
-        var r = hk.rating(v.take) || 0;
+        if (!rateable(v)) return;
+        var r = rOf(v);
         li.querySelectorAll("[data-cmp-rate]").forEach(function (b) { b.setAttribute("aria-pressed", String(+b.dataset.cmpRate === 1 ? r > 0 : r < 0)); });
         var f = li.querySelector("[data-cmp-fav]");
-        if (f) f.setAttribute("aria-pressed", String(!!hk.favorite(v.take)));
+        if (f) f.setAttribute("aria-pressed", String(fOf(v)));
       });
       if (!shown(active)) {                                 // the one playing disliked and hidden: the next shown one goes on from its second
         for (var k = 1; k < versions.length; k++) { var j = (active + k) % versions.length; if (shown(j)) { pick(j); break; } }
@@ -622,12 +898,13 @@
       if (rb || fb) {
         var v = versions[+(rb || fb).closest("[data-cmp-li]").dataset.cmpLi];
         if (rb) {
-          var want = +rb.dataset.cmpRate, now = hk.rating(v.take) || 0;
-          var done = hk.rate(v.take, now === want ? 0 : want);
+          var want = +rb.dataset.cmpRate, now = rOf(v);
+          var done = v.take ? hk.rate(v.take, now === want ? 0 : want) : putMark(v.mark, { rating: now === want ? 0 : want });   // 1504
           paintRates();
           if (done && done.then) done.then(paintRates, paintRates);
         } else {
-          var f = hk.toggleFavorite(v.take);
+          var f = v.take ? hk.toggleFavorite(v.take) : putMark(v.mark, { fav: !fOf(v) });
+          paintRates();
           if (f && f.then) f.then(paintRates, paintRates);
         }
         return;
@@ -669,5 +946,7 @@
 
   // HERESY 1169: the de-esser as set, for the chain when it splits stems (remasterSettings says it for this step's own source)
   function chainDeess() { return !!($("rmDeess") && $("rmDeess").checked); }
-  window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh, remasterSettings: remasterSettings, chainDeess: chainDeess, compareList: openCompare };   // 1415
+  window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh, remasterSettings: remasterSettings, chainDeess: chainDeess, compareList: openCompare,
+                           list: function () { return state.list.slice(); },   // 1506: the branches as the lab names them (kind, source), for the Refiner's canvas
+                           marks: function (name) { return Object.assign({}, MARKS[name] || {}); } };   // 1415; 1504
 })();

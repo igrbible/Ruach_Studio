@@ -1,0 +1,160 @@
+"""HERESY 1470 · the Refiner's DAW, its lab half (Viktor 15.10.2026: «нужно начать интеграцию Plenio's DAW. Даже то же самое
+сведение… в DAW можно регулировать кучу всего по стемам, резать их, понижать/повышать»; «нужна опция для двух версий стемов, и при
+сведении нужна прослушка в общей компоновке в вкл/выкл версий стемов, чтобы собрать идеал из того, что получили»).
+
+A set of stems as the DAW's strips: its parts (a set's instrumental gives way to the drums, bass… made of it; its whole voice to
+the lead and the backing), and **rest**, what the source holds beyond their sum (Plenio's residual: a neutral mix is the source
+again, so a separation's misses are heard only where the mix is changed). Each strip may play a **version** of its stem: the
+first file of a branch made from that stem, of the same length (a cleaned voice…). The mix itself is Plenio's stem mixer
+(plenio_core, Apache-2.0: gain, mute, solo, compression, muted ranges, reverb and delay sends), rendered in daw_job.py.
+"""
+import io
+import json
+from pathlib import Path
+
+import numpy as np
+import soundfile as sf
+
+PARTS = {"instrumental": ("drums", "bass", "other", "guitar", "piano", "winds"), "vocals": ("lead_vocal", "backing_vocals")}
+REST = "rest"
+MAX_CHUNK = 30.0
+
+
+def _inside(d, rel):
+    p = (Path(d) / rel).resolve()
+    if Path(d).resolve() not in p.parents:
+        raise ValueError(f"{rel} is not inside the take")
+    return p
+
+
+def set_info(d, rel, derived):
+    """The DAW's strips of the set at `rel` (derived/stems-…) of take folder `d`; `derived`: the take's branch manifests."""
+    sd = _inside(d, rel)
+    man = json.load(open(sd / "manifest.json", encoding="utf-8"))
+    if man.get("kind") != "stems":
+        raise ValueError(f"{rel} is not a set of stems")
+    files = [f for f in man.get("files", []) if (sd / f["file"]).is_file()]
+    names = [f["name"] for f in files]
+    parts = [f for f in files if not any(n in names for n in PARTS.get(f["name"], ()))]
+    src = man.get("source") or "the take"
+    if src == "the take":
+        source = next((f for f in ("audio.wav", "audio.flac") if (Path(d) / f).is_file()), None)
+        if not source:
+            raise FileNotFoundError("the take has no audio.wav to measure the rest against")
+    else:
+        source = src
+        _inside(d, source)
+    info = sf.info(str(Path(d) / source))
+    seconds = info.frames / info.samplerate
+    rel_set = sd.relative_to(Path(d).resolve()).as_posix()
+    strips = []
+    for f in parts:
+        own = f"{rel_set}/{f['file']}"
+        versions = [{"id": "", "label": "as split", "path": own}]
+        known, taken, grew = {own}, set(), True
+        while grew:                                  # HERESY 1553: a version of a version is a version of the stem
+            grew = False
+            for m in derived:
+                if not m.get("files") or m.get("id") in taken:
+                    continue
+                mine = [x for x in m["files"] if x.get("source") in known]   # a branch's file that names this stem (or a version of it)
+                if not mine and str(m.get("source", "")) not in known:
+                    continue
+                first = mine[0] if mine else m["files"][0]
+                path = first.get("path") or f"derived/{m['id']}/{first['file']}"
+                taken.add(m.get("id"))
+                try:
+                    fi = sf.info(str(_inside(d, path)))
+                except (OSError, RuntimeError, ValueError):
+                    continue
+                if abs(fi.frames / fi.samplerate - seconds) < 0.05 and fi.samplerate == info.samplerate:
+                    versions.append({"id": m["id"], "label": (first.get("name") if mine else None) or m.get("label") or m.get("kind") or m["id"], "path": path,
+                                     "created": m.get("created", "")})
+                    known.add(path)
+                    grew = True
+        versions[1:] = sorted(versions[1:], key=lambda v: v.get("created", ""))
+        strips.append({"name": f["name"], "title": f.get("title") or f["name"].replace("_", " ").capitalize(), "path": own, "versions": versions})
+    return {"set": rel_set, "mode": man.get("mode"), "source": source, "seconds": round(seconds, 3), "rate": info.samplerate,
+            "channels": info.channels, "strips": strips, "rest": REST}
+
+
+def _slice(path, a, n, channels):
+    with sf.SoundFile(str(path)) as f:
+        f.seek(min(a, f.frames))
+        x = f.read(n, dtype="float32", always_2d=True)
+    if x.shape[1] != channels:
+        x = np.repeat(x[:, :1], channels, axis=1) if x.shape[1] == 1 else x[:, :channels]
+    return np.pad(x, ((0, n - len(x)), (0, 0)))
+
+
+def chunk(d, info, strip, path, start, seconds):
+    """A strip's stretch [start, start+seconds) as 16-bit FLAC bytes; `strip` rest: the source less the set's own parts."""
+    rate, ch = info["rate"], info["channels"]
+    seconds = max(0.05, min(MAX_CHUNK, float(seconds)))
+    a, n = max(0, int(round(float(start) * rate))), int(round(seconds * rate))
+    if strip == REST:
+        x = _slice(_inside(d, info["source"]), a, n, ch).astype(np.float64)
+        for s in info["strips"]:
+            x -= _slice(_inside(d, s["path"]), a, n, ch)
+    else:
+        s = next((s for s in info["strips"] if s["name"] == strip), None)
+        if not s or path not in [v["path"] for v in s["versions"]]:
+            raise ValueError(f"{path} is not a version of {strip}")
+        x = _slice(_inside(d, path), a, n, ch)
+    buf = io.BytesIO()
+    sf.write(buf, np.clip(x, -1.0, 1.0), rate, format="FLAC", subtype="PCM_16")
+    return buf.getvalue()
+
+
+def file_peaks(d, rel, n=400):
+    """HERESY 1487: any sound of the take's tree (rel inside the take's folder) as the loudest sample of each of n stretches, 0…1,
+    three decimals, and its length in seconds."""
+    n = max(50, min(4000, int(n)))
+    with sf.SoundFile(str(_inside(d, rel))) as f:
+        frames, rate = f.frames, f.samplerate
+        step = max(1, frames // n)
+        out = []
+        block = step * 64
+        for a in range(0, step * n, block):
+            y = f.read(min(block, step * n - a), dtype="float32", always_2d=True)
+            if not len(y):
+                break
+            m = np.abs(y).max(axis=1)
+            k = len(m) // step
+            out.extend(round(float(v), 3) for v in m[: k * step].reshape(k, step).max(axis=1))
+    return out[:n] + [0.0] * (n - len(out[:n])), frames / rate
+
+
+def peaks(d, info, strip, path, n=1200):
+    """A strip's wave for the page: the loudest sample of each of n stretches (both channels), 0…1, three decimals; rest likewise."""
+    n = max(100, min(4000, int(n)))
+    rate, ch = info["rate"], info["channels"]
+    frames = int(round(info["seconds"] * rate))
+    step = max(1, frames // n)
+    if strip != REST:
+        s = next((s for s in info["strips"] if s["name"] == strip), None)
+        if not s or path not in [v["path"] for v in s["versions"]]:
+            raise ValueError(f"{path} is not a version of {strip}")
+        files = [(_inside(d, path), 1.0)]
+    else:
+        files = [(_inside(d, info["source"]), 1.0)] + [(_inside(d, s["path"]), -1.0) for s in info["strips"]]
+    out = np.zeros(n)
+    block = step * 64
+    handles = [(sf.SoundFile(str(p)), k) for p, k in files]
+    try:
+        for a in range(0, step * n, block):
+            m = min(block, step * n - a)
+            x = np.zeros((m, ch))
+            for f, k in handles:
+                f.seek(min(a, f.frames))
+                y = f.read(m, dtype="float32", always_2d=True)
+                if y.shape[1] != ch:
+                    y = np.repeat(y[:, :1], ch, axis=1) if y.shape[1] == 1 else y[:, :ch]
+                x[: len(y)] += k * y
+            v = np.abs(x).max(axis=1)
+            i0 = a // step
+            out[i0: i0 + m // step] = v[: (m // step) * step].reshape(-1, step).max(axis=1)
+    finally:
+        for f, _k in handles:
+            f.close()
+    return [round(float(v), 3) for v in np.clip(out, 0, 1)]

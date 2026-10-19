@@ -125,11 +125,18 @@ def locked(d, ws, what):
     return bool((d.get("locks") or {}).get(ws, {}).get(what))
 
 
+def ws_locked(d, ws):
+    """HERESY 1473: a workspace under a lock of either kind, its own or that of the workspace it is a section of."""
+    parts = ws.split(SEP)
+    return any(locked(d, SEP.join(parts[:i]), what) for i in range(1, len(parts) + 1) for what in ("workspace", "tracks"))
+
+
 def locked_takes(d):
-    """The takes no deletion may reach: those in a workspace whose tracks are locked."""
+    """The takes no deletion may reach: those in a workspace under a lock (HERESY 1473: of either kind, a parent's too; until
+    15.10.2026 only a lock on the tracks, and the 💎 sets, locked as workspaces, lost 600 takes to one trash from All Workspaces)."""
     out = set()
     for ws, names in d["workspaces"].items():
-        if locked(d, ws, "tracks"):
+        if ws_locked(d, ws):
             out |= set(names)
     return out
 
@@ -331,7 +338,7 @@ def collection_post(config_dir, outputs, data):
                 raise ValueError("which workspace?")
             src = ws_name(data.get("from")) if data.get("from") else ""
             for w in ([src] if src else list(d["workspaces"])):   # from nowhere named: out of every other
-                if w != ws and w in d["workspaces"] and not frozen_ws(d, w):     # a frozen one keeps its takes (1166)
+                if w != ws and w in d["workspaces"] and not frozen_ws(d, w) and (src or not ws_locked(d, w)):   # a frozen one keeps its takes (1166); a locked one too, unless named (1473)
                     d["workspaces"][w] = sorted(set(d["workspaces"][w]) - set(names))
             d["workspaces"][ws] = sorted(set(d["workspaces"].get(ws, [])) | set(names))
         elif op == "ws-merge":                     # HERESY 1050: a workspace's takes into another, then it goes
@@ -340,6 +347,8 @@ def collection_post(config_dir, outputs, data):
                 raise ValueError("merge an existing workspace into another")
             d["workspaces"][to] = sorted(set(d["workspaces"].get(to, [])) | set(d["workspaces"].pop(ws)))
         elif op == "ws-remove":
+            if ws in d["workspaces"] and ws_locked(d, ws):          # HERESY 1473
+                raise ValueError(f"\u201c{ws}\u201d is locked: unlock it first to take takes out of it (right-click on its name)")
             if ws in d["workspaces"]:
                 d["workspaces"][ws] = sorted(set(d["workspaces"][ws]) - set(names))
         elif op == "rate":                         # HERESY 1042: like (1), dislike (-1), none (0), as SUNO has
@@ -484,7 +493,9 @@ def _fname(title, used, ext):
     return name
 
 
-def export_start(kit, outputs, names, fmt, derived):
+def export_start(kit, outputs, names, fmt, derived, sign=None):
+    """HERESY 1489: sign(take_dir, bytes, fmt, rel) -> (bytes, said), the lab's Content Credentials; each audio file goes into the
+    ZIP as it says, and the job counts the signed ones."""
     if fmt not in ("flac", "wav"):
         raise ValueError("flac or wav")
     xid = uuid.uuid4().hex[:12]
@@ -501,17 +512,24 @@ def export_start(kit, outputs, names, fmt, derived):
                 for n in names:
                     d = outputs / n
                     if "/" in n or not (d / "meta.json").is_file():
+                        job["missing"] = job.get("missing", 0) + 1     # HERESY 1473: said, never a short ZIP called whole
                         continue
                     meta = json.load(open(d / "meta.json", encoding="utf-8"))
                     title = meta.get("title") or n
+                    def put(path, arc, kind, rel=""):          # HERESY 1489: signed on the way when the lab says so
+                        if sign is None or kind not in ("wav", "flac", "mp3"):
+                            return z.write(path, arc)
+                        data, said = sign(d, path.read_bytes(), kind, rel)
+                        job["signed" if said == "signed" else "unsigned"] = job.get("signed" if said == "signed" else "unsigned", 0) + 1
+                        z.writestr(arc, data)
                     src = d / "audio.wav"
                     if src.is_file():
                         if fmt == "wav":
-                            z.write(src, _fname(title, used, ".wav"))
+                            put(src, _fname(title, used, ".wav"), "wav")
                         else:
                             tmp = out_dir / f"{xid}.flac"
                             subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-c:a", "flac", "-metadata", f"title={title}", str(tmp)], check=True, timeout=1800)
-                            z.write(tmp, _fname(title, used, ".flac"))
+                            put(tmp, _fname(title, used, ".flac"), "flac")
                             tmp.unlink()
                     if derived and (d / "derived").is_dir():
                         for m in sorted((d / "derived").glob("*/manifest.json")):
@@ -519,7 +537,7 @@ def export_start(kit, outputs, names, fmt, derived):
                             for f in man.get("files", []):
                                 fp = d / f.get("path", "")
                                 if fp.is_file():
-                                    z.write(fp, _fname(f"{title} - {f.get('name') or fp.stem}", used, fp.suffix))
+                                    put(fp, _fname(f"{title} - {f.get('name') or fp.stem}", used, fp.suffix), fp.suffix.lower().lstrip("."), f.get("path", ""))
                     job["done"] += 1
             job.update(status="done", file=path.name, bytes=path.stat().st_size)
         except Exception as e:

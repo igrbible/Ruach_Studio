@@ -1,0 +1,559 @@
+From a6d6d9fd531e8b7e1cb3b9bef03a79fef81d7947 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 16 Oct 2026 22:05:44 -0600
+Subject: [PATCH 1438/1463] HERESY 1508-1509: a node's right-click and window
+ run the chain up to it or bypass it, the old tab's frame off; no dropdowns in
+ a node's window (a select's choices in sight, a long list over the page with
+ a filter)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  40 +++++++++++
+ tools/console/heresy-i18n-be.js |   8 ++-
+ tools/console/heresy-i18n-de.js |   8 ++-
+ tools/console/heresy-i18n-el.js |   8 ++-
+ tools/console/heresy-i18n-es.js |   8 ++-
+ tools/console/heresy-i18n-fr.js |   8 ++-
+ tools/console/heresy-i18n-it.js |   8 ++-
+ tools/console/heresy-i18n-ja.js |   8 ++-
+ tools/console/heresy-i18n-pt.js |   8 ++-
+ tools/console/heresy-i18n-ru.js |   8 ++-
+ tools/console/heresy-i18n-uk.js |   8 ++-
+ tools/console/heresy-i18n-zh.js |   8 ++-
+ tools/console/heresy-menu.js    | 119 ++++++++++++++++++++++++++++++++
+ tools/console/heresy-post.js    |  73 +++++++++++++++++---
+ 14 files changed, 299 insertions(+), 21 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index add8825..36e5102 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -6102,3 +6102,43 @@ body.daw-full #dawPanel .mx-wave.mx-ruler { height: 22px; }
+ .nd-body { flex: 1; min-height: 0; overflow: auto; padding: 14px 18px 18px; }
+ .nd-body > .drawer, .nd-body > .dv-tree-box { margin: 0; display: block; }
+ 
++/* HERESY 1508 (Viktor 16.10.2026: «В модальных окнах нод не забудь снять ту старую рамку, что была на странице вкладки»): the step's panel in its
++   node's window without the tab's frame (its name is the window's title); a node bypassed in the chain dimmed, with its wires */
++.nd-body > .drawer { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
++.nd-body > .drawer > summary { background: none; padding-left: 0; padding-right: 0; border-radius: 0; }
++.nd-body > .drawer > summary .sum-name { display: none; }
++.nd-body > .drawer > .drawer-body { padding-left: 0; padding-right: 0; }
++.pcv-node.is-bypassed { opacity: .58; --pcv-edge: #8a63d2; border-style: dashed; }
++.pcv-by { color: #8a63d2; font-weight: 600; }
++.pcv-wire.is-bypass { opacity: .35; }
++
++/* HERESY 1509 (Viktor 16.10.2026: «…избавляемся от этих голимых html'евских дропдаунов»): a select's choices in sight in the Refiner's node
++   windows: a column of radio rows in a quiet frame (short ones in a row), a long list behind a button that opens it over the page; the select
++   itself, still read and written by everything, hidden there and shown as it was elsewhere */
++.hc-box { display: none; }
++.nd-body .hc-box { display: block; min-width: 0; }
++.nd-body select.hc-src { display: none; }
++.hc-list { display: flex; flex-direction: column; gap: 2px; padding: 4px; border: 1px solid var(--line-soft); border-radius: var(--r-sm); }
++.hc-list.is-row { flex-direction: row; flex-wrap: wrap; }
++.hc-opt { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 5px 10px 5px 8px; border: 1px solid transparent; border-radius: var(--r-sm);
++  background: transparent; color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
++.hc-opt > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.hc-opt:hover { background: color-mix(in srgb, var(--amber) 7%, transparent); }
++.hc-opt[aria-checked="true"] { border-color: color-mix(in srgb, var(--amber) 55%, transparent); background: color-mix(in srgb, var(--amber) 11%, transparent); }
++.hc-opt:disabled { opacity: .5; cursor: default; }
++.hc-dot { flex: none; width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--dim); }
++.hc-opt[aria-checked="true"] .hc-dot { border-color: var(--amber); background: radial-gradient(var(--amber) 0 3px, transparent 3.5px); }
++.hc-pick { display: inline-flex; align-items: center; gap: 10px; max-width: 100%; min-width: 220px; padding: 6px 10px; border: 1px solid var(--line-a);
++  border-radius: var(--r-sm); background: var(--panel); color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
++.hc-pick:hover { border-color: var(--amber); }
++.hc-pick-now { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.hc-pick-n { flex: none; font-size: 11px; color: var(--dim); padding: 1px 6px; border: 1px solid var(--line-soft); border-radius: var(--r-pill); }
++.hc-pop { position: fixed; z-index: 40; display: flex; flex-direction: column; min-height: 0; background: var(--ground); border: 1px solid var(--line-strong-a, var(--line-a));
++  border-radius: var(--r-md); box-shadow: 0 18px 50px var(--shadow-lg, rgba(0, 0, 0, .3)); }
++.hc-find { margin: 8px 8px 4px; }
++.hc-rows { overflow: auto; padding: 4px; min-height: 0; }
++.hc-row { display: block; width: 100%; padding: 6px 10px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--ink); font: inherit; text-align: left;
++  cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.hc-row:hover, .hc-row.is-cur { background: color-mix(in srgb, var(--amber) 11%, transparent); }
++.hc-row[aria-selected="true"] { color: var(--amber); font-weight: 600; }
++
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index f80e3ab..a8a75d5 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5470,5 +5470,11 @@ RuachI18n.add("be", {
+ "The take": "Сэмпл",
+ "a track from elsewhere": "трэк звонку",
+ "{0} made": "створана: {0}",
+-"Alt+← → the step before and after · Esc back": "Alt+← → крок да і пасля · Esc назад"
++"Alt+← → the step before and after · Esc back": "Alt+← → крок да і пасля · Esc назад",
++"Run up to here": "Прагнаць да гэтай ноды",
++"Bypass in the chain": "Абысці ў ланцужку",
++"Back into the chain": "Вярнуць у ланцужок",
++"bypassed": "абыдзена",
++"The chain up to this node and no further, with the chain's own settings: a node bypassed on the way is skipped, this one runs": "Ланцужок да гэтай ноды і не далей, з ягонымі ж наладамі: абыдзеная па дарозе нода прапускаецца, гэтая праганяецца",
++"The chain runs past this node: its own check in the chain's row, turned off or on": "Ланцужок ідзе міма гэтай ноды: яе ўласная птушка ў радку ланцужка, знятая ці пастаўленая"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index ab38527..6e84001 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5353,5 +5353,11 @@ RuachI18n.add("de", {
+ "The take": "Der Take",
+ "a track from elsewhere": "ein Track von anderswo",
+ "{0} made": "{0} gemacht",
+-"Alt+← → the step before and after · Esc back": "Alt+← → der Schritt davor und danach · Esc zurück"
++"Alt+← → the step before and after · Esc back": "Alt+← → der Schritt davor und danach · Esc zurück",
++"Run up to here": "Bis hierher ausführen",
++"Bypass in the chain": "In der Kette umgehen",
++"Back into the chain": "Zurück in die Kette",
++"bypassed": "umgangen",
++"The chain up to this node and no further, with the chain's own settings: a node bypassed on the way is skipped, this one runs": "Die Kette bis zu diesem Knoten und nicht weiter, mit ihren eigenen Einstellungen: ein umgangener Knoten auf dem Weg wird übersprungen, dieser läuft",
++"The chain runs past this node: its own check in the chain's row, turned off or on": "Die Kette läuft an diesem Knoten vorbei: sein eigenes Häkchen in der Zeile der Kette, aus oder an"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index ffd6983..998454c 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5469,5 +5469,11 @@ RuachI18n.add("el", {
+ "The take": "Η λήψη",
+ "a track from elsewhere": "ένα κομμάτι από αλλού",
+ "{0} made": "φτιάχτηκαν: {0}",
+-"Alt+← → the step before and after · Esc back": "Alt+← → το βήμα πριν και μετά · Esc πίσω"
++"Alt+← → the step before and after · Esc back": "Alt+← → το βήμα πριν και μετά · Esc πίσω",
++"Run up to here": "Εκτέλεση ως εδώ",
++"Bypass in the chain": "Παράκαμψη στην αλυσίδα",
++"Back into the chain": "Πίσω στην αλυσίδα",
++"bypassed": "παρακάμπτεται",
++"The chain up to this node and no further, with the chain's own settings: a node bypassed on the way is skipped, this one runs": "Η αλυσίδα ως αυτόν τον κόμβο και όχι πιο πέρα, με τις δικές της ρυθμίσεις: ένας κόμβος που παρακάμπτεται στη διαδρομή παραλείπεται, αυτός εκτελείται",
++"The chain runs past this node: its own check in the chain's row, turned off or on": "Η αλυσίδα περνά δίπλα από αυτόν τον κόμβο: το δικό του τικ στη γραμμή της αλυσίδας, σβηστό ή αναμμένο"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 2b05c5b..403a0fb 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5469,5 +5469,11 @@ RuachI18n.add("es", {
+ "The take": "La toma",
+ "a track from elsewhere": "una pista de otra parte",
+ "{0} made": "{0} hechos",
+-"Alt+← → the step before and after · Esc back": "Alt+← → el paso anterior y el siguiente · Esc vuelve"
++"Alt+← → the step before and after · Esc back": "Alt+← → el paso anterior y el siguiente · Esc vuelve",
++"Run up to here": "Ejecutar hasta aquí",
++"Bypass in the chain": "Omitir en la cadena",
++"Back into the chain": "Volver a la cadena",
++"bypassed": "omitido",
++"The chain up to this node and no further, with the chain's own settings: a node bypassed on the way is skipped, this one runs": "La cadena hasta este nodo y no más allá, con sus propios ajustes: un nodo omitido por el camino se salta, este se ejecuta",
++"The chain runs past this node: its own check in the chain's row, turned off or on": "La cadena pasa de largo este nodo: su propia casilla en la fila de la cadena, marcada o no"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index ccfedb6..4603c05 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5353,5 +5353,11 @@ RuachI18n.add("fr", {
+ "The take": "La prise",
+ "a track from elsewhere": "une piste d'ailleurs",
+ "{0} made": "{0} faits",
+-"Alt+← → the step before and after · Esc back": "Alt+← → l'étape d'avant et d'après · Échap retour"
++"Alt+← → the step before and after · Esc back": "Alt+← → l'étape d'avant et d'après · Échap retour",
++"Run up to here": "Exécuter jusqu'ici",
++"Bypass in the chain": "Contourner dans la chaîne",
++"Back into the chain": "Remettre dans la chaîne",
++"bypassed": "contourné",
++"The chain up to this node and no further, with the chain's own settings: a node bypassed on the way is skipped, this one runs": "La chaîne jusqu'à ce nœud et pas plus loin, avec ses propres réglages : un nœud contourné en route est sauté, celui-ci est exécuté",
++"The chain runs past this node: its own check in the chain's row, turned off or on": "La chaîne passe à côté de ce nœud : sa propre case dans la ligne de la chaîne, décochée ou cochée"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 7c8bf28..2afbbf2 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5469,5 +5469,11 @@ RuachI18n.add("it", {
+ "The take": "Il take",
+ "a track from elsewhere": "una traccia da altrove",
+ "{0} made": "{0} fatti",
+-"Alt+← → the step before and after · Esc back": "Alt+← → il passo prima e dopo · Esc indietro"
++"Alt+← → the step before and after · Esc back": "Alt+← → il passo prima e dopo · Esc indietro",
++"Run up to here": "Esegui fin qui",
++"Bypass in the chain": "Salta nella catena",
++"Back into the chain": "Di nuovo nella catena",
++"bypassed": "saltato",
++"The chain up to this node and no further, with the chain's own settings: a node bypassed on the way is skipped, this one runs": "La catena fino a questo nodo e non oltre, con le sue impostazioni: un nodo saltato lungo la via è omesso, questo viene eseguito",
++"The chain runs past this node: its own check in the chain's row, turned off or on": "La catena passa oltre questo nodo: la sua casella nella riga della catena, tolta o messa"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index fce16db..c3207e8 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5353,5 +5353,11 @@ RuachI18n.add("ja", {
+ "The take": "テイク",
+ "a track from elsewhere": "よそから来たトラック",
+ "{0} made": "{0} 件作成",
+-"Alt+← → the step before and after · Esc back": "Alt+← → 前後のステップ · Esc で戻る"
++"Alt+← → the step before and after · Esc back": "Alt+← → 前後のステップ · Esc で戻る",
++"Run up to here": "ここまで実行",
++"Bypass in the chain": "チェーンでバイパス",
++"Back into the chain": "チェーンに戻す",
++"bypassed": "バイパス中",
++"The chain up to this node and no further, with the chain's own settings: a node bypassed on the way is skipped, this one runs": "このノードまでのチェーンをそれ以上進めずに、チェーン自身の設定で実行。途中のバイパス中のノードは飛ばし、このノードは実行します",
++"The chain runs past this node: its own check in the chain's row, turned off or on": "チェーンがこのノードを通り過ぎます：チェーンの行にある自身のチェックのオン・オフ"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index b792eec..8c382c0 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5353,5 +5353,11 @@ RuachI18n.add("pt", {
+ "The take": "O take",
+ "a track from elsewhere": "uma faixa de outro lugar",
+ "{0} made": "{0} feitos",
+-"Alt+← → the step before and after · Esc back": "Alt+← → o passo antes e depois · Esc volta"
++"Alt+← → the step before and after · Esc back": "Alt+← → o passo antes e depois · Esc volta",
++"Run up to here": "Executar até aqui",
++"Bypass in the chain": "Contornar na cadeia",
++"Back into the chain": "Voltar à cadeia",
++"bypassed": "contornado",
++"The chain up to this node and no further, with the chain's own settings: a node bypassed on the way is skipped, this one runs": "A cadeia até este nó e não além, com as próprias configurações: um nó contornado no caminho é pulado, este é executado",
++"The chain runs past this node: its own check in the chain's row, turned off or on": "A cadeia passa ao lado deste nó: a própria caixa dele na linha da cadeia, marcada ou não"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 1536cd2..95c7f81 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5475,5 +5475,11 @@ RuachI18n.add("ru", {
+ "The take": "Семпл",
+ "a track from elsewhere": "трек со стороны",
+ "{0} made": "сделано: {0}",
+-"Alt+← → the step before and after · Esc back": "Alt+← → шаг до и после · Esc назад"
++"Alt+← → the step before and after · Esc back": "Alt+← → шаг до и после · Esc назад",
++"Run up to here": "Прогнать до этой ноды",
++"Bypass in the chain": "Обойти в цепочке",
++"Back into the chain": "Вернуть в цепочку",
++"bypassed": "обойдена",
++"The chain up to this node and no further, with the chain's own settings: a node bypassed on the way is skipped, this one runs": "Цепочка до этой ноды и не дальше, с её же настройками: обойдённая по пути нода пропускается, эта прогоняется",
++"The chain runs past this node: its own check in the chain's row, turned off or on": "Цепочка идёт мимо этой ноды: её собственная галочка в строке цепочки, снятая или поставленная"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index cff7751..2e6ba9f 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5470,5 +5470,11 @@ RuachI18n.add("uk", {
+ "The take": "Семпл",
+ "a track from elsewhere": "трек ззовні",
+ "{0} made": "створено: {0}",
+-"Alt+← → the step before and after · Esc back": "Alt+← → крок до і після · Esc назад"
++"Alt+← → the step before and after · Esc back": "Alt+← → крок до і після · Esc назад",
++"Run up to here": "Прогнати до цієї ноди",
++"Bypass in the chain": "Обійти в ланцюжку",
++"Back into the chain": "Повернути в ланцюжок",
++"bypassed": "обійдена",
++"The chain up to this node and no further, with the chain's own settings: a node bypassed on the way is skipped, this one runs": "Ланцюжок до цієї ноди й не далі, з його ж налаштуваннями: обійдена дорогою нода пропускається, ця проганяється",
++"The chain runs past this node: its own check in the chain's row, turned off or on": "Ланцюжок іде повз цю ноду: її власна позначка в рядку ланцюжка, знята чи поставлена"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index 026370f..eeac6d8 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5353,5 +5353,11 @@ RuachI18n.add("zh", {
+ "The take": "录音",
+ "a track from elsewhere": "来自别处的音轨",
+ "{0} made": "已生成 {0} 个",
+-"Alt+← → the step before and after · Esc back": "Alt+← → 前一步和后一步 · Esc 返回"
++"Alt+← → the step before and after · Esc back": "Alt+← → 前一步和后一步 · Esc 返回",
++"Run up to here": "运行到此处",
++"Bypass in the chain": "在链中绕过",
++"Back into the chain": "放回链中",
++"bypassed": "已绕过",
++"The chain up to this node and no further, with the chain's own settings: a node bypassed on the way is skipped, this one runs": "按链自身的设置运行到这个节点为止：途中被绕过的节点跳过，这个节点会运行",
++"The chain runs past this node: its own check in the chain's row, turned off or on": "链从这个节点旁边经过：即链那一行里它自己的勾选，勾上或取消"
+ });
+diff --git a/tools/console/heresy-menu.js b/tools/console/heresy-menu.js
+index abc8d1f..716801d 100644
+--- a/tools/console/heresy-menu.js
++++ b/tools/console/heresy-menu.js
+@@ -155,3 +155,122 @@
+ 
+   window.HeresyMenu = { open: open, close: close };
+ })();
++
++// HERESY 1509 (Viktor 16.10.2026: «…напрочь избавиться от дропдаун селекторов, а выстраивать… все позиции в колонку, с чекбоксами и/или
++// селекторами, и такие блоки в весьма неприметную рамку… А если списки реально большие… дополнительное модальное окно поверх как в фильтре
++// библиотеки или в селекторе воркспейса… избавляемся от этих голимых html'евских дропдаунов»): a <select> given its choices in sight.
++// Up to eight: a column of radio rows in a quiet frame (short ones in a row); more: a button that opens the list over the page, a filter
++// above it when long (arrows, Enter, Esc). The <select> stays what everything reads and writes: a choice sets its value and says input and
++// change; a value set by code shows at once (its own value and selectedIndex watched), options filled anew are drawn anew. Where the
++// choices show is the stylesheet's (first the Refiner's node windows); the select itself stays where it was for everything else.
++(function () {
++  "use strict";
++  var MAX = 8, SKIP = ".mx-ver, .mx-bus select, [data-hc='off']", pop = null;
++  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
++  function text(o) { return (o.textContent || "").trim(); }
++  function own(o) { return o.getAttribute("translate") === "no" || (o.parentNode && o.parentNode.getAttribute && o.parentNode.getAttribute("translate") === "no"); }
++  function fire(sel) { sel.dispatchEvent(new Event("input", { bubbles: true })); sel.dispatchEvent(new Event("change", { bubbles: true })); }
++  function choose(sel, i) { if (sel.selectedIndex !== i) { sel.selectedIndex = i; fire(sel); } }
++  function watch(sel, paint) {
++    var proto = HTMLSelectElement.prototype;
++    ["value", "selectedIndex"].forEach(function (k) {
++      var d = Object.getOwnPropertyDescriptor(proto, k);
++      Object.defineProperty(sel, k, { configurable: true, enumerable: true, get: function () { return d.get.call(this); }, set: function (v) { d.set.call(this, v); paint(); } });
++    });
++    if (window.MutationObserver) new MutationObserver(paint).observe(sel, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["disabled", "selected"] });
++    sel.addEventListener("change", paint);
++  }
++  function enhance(sel) {
++    if (sel.dataset.hc || sel.multiple || sel.matches(SKIP)) return;
++    sel.dataset.hc = "1";
++    var box = document.createElement("div");
++    box.className = "hc-box";
++    sel.parentNode.insertBefore(box, sel.nextSibling);
++    sel.classList.add("hc-src");
++    function paint() {
++      var opts = Array.prototype.slice.call(sel.options), cur = sel.selectedIndex, html;
++      if (opts.length > MAX) {
++        var now = cur >= 0 ? opts[cur] : null;
++        html = '<button type="button" class="hc-pick"' + (sel.disabled ? " disabled" : "") + ' aria-haspopup="listbox"><span class="hc-pick-now"' + (now && own(now) ? ' translate="no"' : "") + ">" +
++          esc(now ? text(now) : "—") + '</span><span class="hc-pick-n mono">' + opts.length + "</span></button>";
++      } else {
++        var row = opts.every(function (o) { return text(o).length <= 16; });
++        html = '<div class="hc-list' + (row ? " is-row" : "") + '" role="radiogroup">' + opts.map(function (o, i) {
++          return '<button type="button" role="radio" class="hc-opt" data-i="' + i + '" aria-checked="' + (i === cur) + '"' + (sel.disabled || o.disabled ? " disabled" : "") +
++            (own(o) ? ' translate="no"' : "") + '><i class="hc-dot" aria-hidden="true"></i><span>' + esc(text(o)) + "</span></button>";
++        }).join("") + "</div>";
++      }
++      if (box.dataset.html !== html) { box.innerHTML = html; box.dataset.html = html; }
++    }
++    box.addEventListener("click", function (e) {
++      var b = e.target.closest(".hc-opt"), p = e.target.closest(".hc-pick");
++      if (b && !b.disabled) { e.preventDefault(); choose(sel, +b.dataset.i); return; }
++      if (p && !p.disabled) { e.preventDefault(); open(sel, p); }
++    });
++    watch(sel, paint);
++    paint();
++  }
++  function close() {
++    if (!pop) return;
++    document.removeEventListener("mousedown", outside, true);
++    document.removeEventListener("keydown", key, true);
++    pop.el.remove();
++    var back = pop.anchor;
++    pop = null;
++    if (back && back.isConnected) back.focus();
++  }
++  function outside(e) { if (pop && !pop.el.contains(e.target) && !pop.anchor.contains(e.target)) close(); }
++  function rows() { return pop ? Array.prototype.filter.call(pop.el.querySelectorAll(".hc-row"), function (r) { return !r.hidden; }) : []; }
++  function mark(r) {
++    Array.prototype.forEach.call(pop.el.querySelectorAll(".hc-row.is-cur"), function (x) { x.classList.remove("is-cur"); });
++    if (r) { r.classList.add("is-cur"); r.scrollIntoView({ block: "nearest" }); }
++  }
++  function key(e) {
++    if (!pop) return;
++    var list = rows(), at = list.indexOf(pop.el.querySelector(".hc-row.is-cur"));
++    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); return; }
++    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); e.stopPropagation(); mark(list[Math.max(0, Math.min(list.length - 1, at + (e.key === "ArrowDown" ? 1 : -1)))]); return; }
++    if (e.key === "Enter" && at >= 0) { e.preventDefault(); e.stopPropagation(); var sel = pop.sel; var i = +list[at].dataset.i; close(); choose(sel, i); }
++  }
++  function open(sel, anchor) {
++    close();
++    var opts = Array.prototype.slice.call(sel.options), r = anchor.getBoundingClientRect(), el = document.createElement("div");
++    el.className = "hc-pop";
++    el.setAttribute("role", "listbox");
++    el.innerHTML = (opts.length > 10 ? '<input type="search" class="hc-find" placeholder="Find" autocomplete="off" spellcheck="false">' : "") +
++      '<div class="hc-rows">' + opts.map(function (o, i) {
++        return '<button type="button" class="hc-row' + (i === sel.selectedIndex ? " is-cur" : "") + '" role="option" data-i="' + i + '" aria-selected="' + (i === sel.selectedIndex) + '"' +
++          (o.disabled ? " disabled" : "") + (own(o) ? ' translate="no"' : "") + ">" + esc(text(o)) + "</button>";
++      }).join("") + "</div>";
++    document.body.appendChild(el);
++    pop = { el: el, sel: sel, anchor: anchor };
++    var w = Math.max(r.width, 380), h = el.offsetHeight, room = window.innerHeight - r.bottom - 12;
++    el.style.width = Math.min(w, window.innerWidth - 24) + "px";
++    el.style.left = Math.max(12, Math.min(r.left, window.innerWidth - el.offsetWidth - 12)) + "px";
++    if (h > room && r.top > room) { el.style.maxHeight = Math.min(h, r.top - 12) + "px"; el.style.top = Math.max(12, r.top - 4 - Math.min(h, r.top - 12)) + "px"; }
++    else { el.style.maxHeight = Math.max(160, room) + "px"; el.style.top = (r.bottom + 4) + "px"; }
++    el.addEventListener("click", function (e) {
++      var b = e.target.closest(".hc-row");
++      if (!b || b.disabled) return;
++      var i = +b.dataset.i;
++      close();
++      choose(sel, i);
++    });
++    var find = el.querySelector(".hc-find");
++    if (find) {
++      find.addEventListener("input", function () {
++        var q = find.value.trim().toLowerCase();
++        Array.prototype.forEach.call(el.querySelectorAll(".hc-row"), function (b) { b.hidden = !!q && b.textContent.toLowerCase().indexOf(q) < 0; });
++        var cur = el.querySelector(".hc-row.is-cur");
++        if (!cur || cur.hidden) mark(rows()[0]);
++      });
++      find.focus();
++    }
++    mark(el.querySelector(".hc-row.is-cur"));
++    document.addEventListener("mousedown", outside, true);
++    document.addEventListener("keydown", key, true);
++  }
++  function within(root) { if (root) Array.prototype.forEach.call(root.querySelectorAll("select"), enhance); }
++  window.HeresyChoices = { within: within, enhance: enhance, close: close, open: function () { return !!pop; } };
++})();
++
+diff --git a/tools/console/heresy-post.js b/tools/console/heresy-post.js
+index cc8f6c1..2f61f67 100644
+--- a/tools/console/heresy-post.js
++++ b/tools/console/heresy-post.js
+@@ -147,9 +147,7 @@
+       }
+     }).catch(function () { /* the lab will answer on the next take */ });
+   }
+-  function runChain() {
+-    if (!state.take) return;
+-    saveChainPrefs();
++  function chainBody() {                             // HERESY 1508: the chain's request, for the whole chain and «up to here»
+     var D = window.HeresyDerived, body = {
+       name: state.take.name, debuzz: $("pcDebuzz").checked, strength: parseFloat($("pcStrength").value),
+       upscale: $("pcUpscale").checked, upscale_mode: $("pcUpMode").value, stems: $("pcStems").checked, stems_mode: $("pcStemsMode").value,
+@@ -160,6 +158,14 @@
+       inspect: $("pcInspect").checked, spectrum: $("pcSpectrum").checked, gloss: $("pcGloss").checked };
+     var fr = chain.hooks.frame ? chain.hooks.frame() : null;   // HERESY 1055
+     if (fr) { body.period = fr.period; body.rate = fr.rate; }
++    return body;
++  }
++  function runChain() {
++    if (!state.take) return;
++    saveChainPrefs();
++    startChain(chainBody());
++  }
++  function startChain(body) {
+     $("pcRun").disabled = true;
+     fetch("/lab/chain", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+       .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); })
+@@ -173,7 +179,7 @@
+     if (!bar) return;
+     bar.parentNode.insertBefore(chainMarkup(), bar);
+     $("pcRun").addEventListener("click", runChain);
+-    $("postChain").addEventListener("change", function (e) { if (e.target.id !== "pcDebuzz") saveChainPrefs(); if (e.target.id === "pcStems") paintRemasterSay(); });
++    $("postChain").addEventListener("change", function (e) { if (e.target.id !== "pcDebuzz") saveChainPrefs(); if (e.target.id === "pcStems") paintRemasterSay(); cvPaint(); });
+     $("postChain").addEventListener("mouseenter", paintRemasterSay);
+     if ($("remasterPanel")) { $("remasterPanel").addEventListener("change", paintRemasterSay); $("remasterPanel").addEventListener("input", paintRemasterSay); }
+     paintRemasterSay();
+@@ -230,6 +236,29 @@
+   var KIND_NODE = { debuzz: "debuzzPanel", upscale: "upscalePanel", stems: "derivedPanel", remaster: "remasterPanel", daw: "dawPanel" };
+   var LANE = { debuzzPanel: [1, 0], upscalePanel: [2, 0], derivedPanel: [3, 0], dawPanel: [4, 0], remasterPanel: [4, 1],
+                spectrumPanel: [1, 2], inspectPanel: [2, 2], glossPanel: [3, 2] };
++  // HERESY 1508: the chain's nodes: what «up to here» names, and the chain's own check a node is bypassed by (the Remaster always runs)
++  var CHAIN_NODE = { debuzzPanel: { until: "debuzz", box: "pcDebuzz", key: "debuzz" }, upscalePanel: { until: "upscale", box: "pcUpscale", key: "upscale" },
++                     derivedPanel: { until: "stems", box: "pcStems", key: "stems" }, remasterPanel: { until: "remaster" } };
++  function bypassed(id) { var c = CHAIN_NODE[id], b = c && c.box && $(c.box); return !!b && !b.checked; }
++  function chainBusy() { return !!($("pcRun") && $("pcRun").disabled); }
++  function toggleBypass(id) {
++    var c = CHAIN_NODE[id], b = c && c.box && $(c.box);
++    if (!b) return;
++    b.checked = !b.checked;
++    b.dispatchEvent(new Event("change", { bubbles: true }));   // kept as a click on the chain's own check is: its prefs, the remaster's line
++    cvPaint();
++  }
++  function runUntil(id) {
++    var c = CHAIN_NODE[id];
++    if (!c || !state.take || chainBusy()) return false;
++    saveChainPrefs();
++    var body = chainBody();
++    body.until = c.until;
++    if (c.key) body[c.key] = true;                   // the node run up to runs, bypassed or not
++    body.inspect = body.spectrum = body.gloss = false;   // up to here and no further
++    startChain(body);
++    return true;
++  }
+   function cvRecall() {
+     try { CV.on = localStorage.getItem(CV_KEY) === "canvas"; CV.pos = JSON.parse(localStorage.getItem(CV_POS) || "{}") || {}; } catch (e) { CV.pos = {}; }
+   }
+@@ -301,7 +330,9 @@
+       var made = nd.id === "take" ? f.total : f.count[nd.id] || 0, own = nd.own ? ' translate="no"' : "";
+       var meta = (done ? '<span class="pcv-done">\u2713</span>' : "") + (made ? '<span class="pcv-made">' + esc(tr("{0} made").replace("{0}", made)) + "</span>" : "") +
+         (nd.id === "take" && secs ? '<span class="pcv-made mono">' + Math.floor(secs / 60) + ":" + ("0" + Math.floor(secs % 60)).slice(-2) + "</span>" : "");
+-      var cls = "pcv-node pcv-" + (st ? st.group || "finish" : nd.id === "take" ? "take" : "import") + (st && st.plugin ? " is-plugin" : "") + (done ? " is-done" : "") +
++      var by = bypassed(nd.id);                         // HERESY 1508
++      if (by) meta = '<span class="pcv-by">bypassed</span>' + meta;
++      var cls = "pcv-node pcv-" + (st ? st.group || "finish" : nd.id === "take" ? "take" : "import") + (st && st.plugin ? " is-plugin" : "") + (done ? " is-done" : "") + (by ? " is-bypassed" : "") +
+         (tab && tab.classList.contains("is-running") ? " is-running" : "") + (st && st.id === state.current ? " is-active" : "") + (nd.id === CV.open ? " is-open" : "");
+       return '<button type="button" class="' + cls + '" data-node="' + esc(nd.id) + '" style="left:' + Math.round(x) + "px;top:" + Math.round(y) + 'px">' +
+         '<span class="pcv-top">' + (nd.n ? '<span class="pcv-n">' + nd.n + "</span>" : "") + '<span class="pcv-name"' + (st && st.plugin ? ' translate="no"' : "") + ">" + esc(nd.name) + "</span>" +
+@@ -327,7 +358,7 @@
+     }
+     svg.innerHTML = (CV.wires || []).map(function (w) {
+       var a = at[w[0]], b = at[w[1]];
+-      return a && b ? '<path class="pcv-wire' + (w[2] ? " is-any" : "") + (w[3] ? " is-lit" : "") + '" data-wire="' + esc(w[0] + ">" + w[1]) + '" d="' + path(a, b) + '"/>' : "";
++      return a && b ? '<path class="pcv-wire' + (w[2] ? " is-any" : "") + (w[3] ? " is-lit" : "") + (bypassed(w[0]) || bypassed(w[1]) ? " is-bypass" : "") + '" data-wire="' + esc(w[0] + ">" + w[1]) + '" d="' + path(a, b) + '"/>' : "";
+     }).join("");
+   }
+   function cvSet(on) {
+@@ -360,7 +391,9 @@
+     box = document.createElement("div"); box.className = "nd-box"; box.id = "ndBox"; box.hidden = true;
+     box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true");
+     box.innerHTML = '<div class="nd-head"><button type="button" class="btn ghost small nd-prev" data-nd="prev"></button><strong class="nd-title"></strong>' +
+-      '<button type="button" class="btn ghost small nd-next" data-nd="next"></button><span class="spacer"></span>' +
++      '<button type="button" class="btn ghost small nd-next" data-nd="next"></button>' +
++      '<button type="button" class="btn primary small nd-until" data-nd="until" hidden data-tip="The chain up to this node and no further, with the chain\'s own settings: a node bypassed on the way is skipped, this one runs">Run up to here</button>' +
++      '<span class="spacer"></span>' +
+       '<span class="row-hint nd-keys">Alt+\u2190 \u2192 the step before and after \u00b7 Esc back</span>' +
+       '<button type="button" class="btn ghost small" data-nd="close">Close</button></div><div class="nd-body"></div>';
+     document.body.appendChild(back); document.body.appendChild(box);
+@@ -368,6 +401,7 @@
+     box.addEventListener("click", function (e) {
+       var b = e.target.closest("[data-nd]");
+       if (!b) return;
++      if (b.dataset.nd === "until") { if (runUntil(CV.open)) b.disabled = true; return; }   // HERESY 1508
+       if (b.dataset.nd === "close") cvClose(); else cvStep(b.dataset.nd === "next" ? 1 : -1);
+     });
+     return { back: back, box: box, body: box.querySelector(".nd-body") };
+@@ -388,6 +422,10 @@
+     m.box.querySelector(".nd-title").textContent = cvTitle(id);
+     m.box.querySelector(".nd-prev").textContent = "\u2039 " + cvTitle(prev).replace(/^\d+ \u00b7 /, "");
+     m.box.querySelector(".nd-next").textContent = cvTitle(next).replace(/^\d+ \u00b7 /, "") + " \u203a";
++    if (window.HeresyChoices) window.HeresyChoices.within(el);   // HERESY 1509: its choices in sight, no dropdowns in a node's window
++    var until = m.box.querySelector(".nd-until");    // HERESY 1508: the chain's nodes run up to themselves from here too
++    until.hidden = !CHAIN_NODE[id];
++    until.disabled = !state.take || chainBusy();
+     m.back.hidden = false; m.box.hidden = false;
+     document.body.dataset.node = id;
+     cvPaint();
+@@ -396,6 +434,7 @@
+   }
+   function cvClose(quiet) {
+     if (!CV.open) return;
++    if (window.HeresyChoices) window.HeresyChoices.close();   // HERESY 1509: a list opened from it goes with it
+     if (CV.hold && CV.hold.parentNode) { CV.hold.parentNode.insertBefore(CV.el, CV.hold); CV.hold.remove(); }
+     CV.open = ""; CV.el = null; CV.hold = null;
+     if (!quiet) {
+@@ -451,8 +490,22 @@
+     }
+     box.addEventListener("pointerup", drop);
+     box.addEventListener("pointercancel", drop);
++    function arrange() { CV.pos = {}; cvStore(); box.querySelector(".pcv-nodes").dataset.html = ""; cvPaint(); }
++    // HERESY 1508: a node's right-click, as ComfyUI's: open it, run the chain up to it, bypass it in the chain, lay the canvas out anew
++    box.addEventListener("contextmenu", function (e) {
++      var nd = e.target.closest(".pcv-node");
++      if (!nd || !window.HeresyMenu) return;
++      e.preventDefault();
++      var id = nd.dataset.node, c = CHAIN_NODE[id], items = [{ label: "Open", icon: "\u2197", action: function () { cvOpen(id); } }];
++      if (c) items.push({ label: "Run up to here", icon: "\u25b6", disabled: !state.take || chainBusy(), action: function () { runUntil(id); },
++                          hint: "The chain up to this node and no further, with the chain's own settings: a node bypassed on the way is skipped, this one runs" });
++      if (c && c.box) items.push({ label: bypassed(id) ? "Back into the chain" : "Bypass in the chain", icon: "\u2933", action: function () { toggleBypass(id); },
++                                   hint: "The chain runs past this node: its own check in the chain's row, turned off or on" });
++      items.push({ sep: true }, { label: "Arrange", icon: "\u2316", action: arrange });
++      window.HeresyMenu.open(e.clientX, e.clientY, items);
++    });
+     box.addEventListener("click", function (e) {
+-      if (e.target.closest("#pcvArrange")) { CV.pos = {}; cvStore(); box.querySelector(".pcv-nodes").dataset.html = ""; cvPaint(); return; }
++      if (e.target.closest("#pcvArrange")) { arrange(); return; }
+       var nd = e.target.closest(".pcv-node");
+       if (!nd) return;
+       if (Date.now() < CV.quietUntil) return;
+@@ -460,7 +513,7 @@
+     });
+     document.addEventListener("keydown", function (e) {
+       if (!CV.open) return;
+-      if (document.querySelector(".hd-back, .cmp-back, .ds-back") || document.fullscreenElement || document.body.classList.contains("daw-full")) return;   // theirs first
++      if (document.querySelector(".hd-back, .cmp-back, .ds-back, .hc-pop, .hm-menu") || document.fullscreenElement || document.body.classList.contains("daw-full")) return;   // theirs first (1509: a list, a menu)
+       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); cvClose(); return; }
+       if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) { e.preventDefault(); e.stopPropagation(); cvStep(e.key === "ArrowRight" ? 1 : -1); }
+     }, true);
+@@ -625,5 +678,5 @@
+   window.HeresyPost = { init: init, setTake: setTake, select: select, has: function (id) { return STEPS.some(function (s) { return s.id === id; }); },
+     plugins: loadPlugins, unplug: unplug,   // HERESY 1460
+     canvas: { set: function (on) { cvSet(on); }, on: function () { return CV.on; }, open: cvOpen, close: function () { cvClose(); }, opened: function () { return CV.open; },
+-              step: cvStep, paint: cvPaint } };   // HERESY 1506
++              step: cvStep, paint: cvPaint, until: runUntil, bypass: toggleBypass, bypassed: bypassed } };   // HERESY 1506, 1508
+ })();
+-- 
+2.43.0
+

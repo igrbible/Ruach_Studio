@@ -118,8 +118,9 @@ def post(kit, data, scope=""):
             _write(wd, doc)
             return doc
         if op == "export":                                # HERESY 1168: the whole notebook in one file, for a backup
-            return {"kind": BACKUP_KIND, "version": 1, "made": time.time(),
-                    "docs": _all(wd), "trash": _all(wd / ".trash")}
+            return {"kind": BACKUP_KIND, "version": 2, "made": time.time(),
+                    "docs": _all(wd), "trash": _all(wd / ".trash"),
+                    "creator_versions": _versions().export_all(kit, scope)}   # HERESY 1522: the Creator's versions with the notebook
         if op == "import":                                # a backup back: what is missing comes in, nothing is written over
             return _import(kit, wd, data.get("backup"), scope)
         if op == "delete":                                # into writer/.trash, never deleted here
@@ -137,6 +138,19 @@ def post(kit, data, scope=""):
 # missing here comes in as it was (a trashed one into the trash), the same one is left alone, and one that differs from
 # the document of its id here comes in beside it as a copy with a new id: nothing here is ever written over
 BACKUP_KIND = "ruach-writer-backup"
+
+
+def _versions():
+    """HERESY 1522: creator_versions.py beside this file (the lab has it imported already; the stand-in server loads this file by its path)"""
+    try:
+        import creator_versions
+        return creator_versions
+    except ImportError:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("creator_versions", Path(__file__).with_name("creator_versions.py"))
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        return m
 
 
 def _all(d):
@@ -189,4 +203,6 @@ def _import(kit, wd, backup, scope=""):
         tmp = into / f"{doc['id']}.json.part"
         json.dump(doc, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         os.replace(tmp, into / f"{doc['id']}.json")
+    if isinstance(backup.get("creator_versions"), list):   # HERESY 1522: a backup from before carries none
+        told["creator_versions"] = _versions().import_all(kit, backup["creator_versions"], scope)
     return dict(listing(kit, scope), imported=told)

@@ -232,7 +232,8 @@ def prepare_status(name):
 # ---- the run
 DEFAULTS = {"steps": 1500, "rank": 32, "lr": 1e-4, "save_epochs": 1, "cot": "off", "ar_loss_weight": 0.5,
             "ar_kl_weight": 0.2, "ar_lr_multiplier": 0.5, "train_window_frames": 1500, "do_separation": False,
-            "quant": "bf16", "engine": "ruach"}
+            "quant": "bf16", "engine": "ruach",
+            "val_fraction": 0.0, "patience": 0}             # HERESY 1497: held-out tracks and the early stop (train.py)
 # HERESY 1085: engine "ruach" is the studio's own trainer (lab/trainer, ported from Ostris' MIT code, exact on
 # parity: lab/trainer/PARITY.md), bf16 weights (Viktor: "не квантуй ничего"), Direct, score mode (1420), separated (1422).
 # HERESY 1422: the only one: AI-Toolkit, kept as the reference till then, left the studio.
@@ -242,14 +243,36 @@ OWN_CKPT = {"bf16": "yue2_3b_bf16.safetensors", "int8": "yue2_3b_int8_convrot.sa
 CKPT_RE = re.compile(r"_(\d{6,})\.safetensors$")
 
 
+SERIES = {}                                           # HERESY 1507: (path) -> ((size, mtime_ns), curves)
+
+
 def _series(d, keep=400):
     """HERESY 1067: a run's step log (AI-Toolkit's loss_log.db) as curves for its card: flow loss, ar_ce,
     ar_kl, each averaged into at most `keep` points; with the wall time, the seconds a step."""
     dbs = sorted((d / "output").rglob("loss_log.db")) if (d / "output").is_dir() else []
     if not dbs:
         return {}
+    # HERESY 1507: a run died of this read (16.10, his voice at step 35189: the trainer's commit waited 5 s on a lock the whole
+    # log's query held). The log is copied into memory in short steps (the lock held milliseconds between them) and read
+    # there; a log not changed since is not read again
     try:
-        con = sqlite3.connect(f"file:{dbs[0]}?mode=ro", uri=True, timeout=5)
+        st = dbs[0].stat()
+        stamp = (st.st_size, st.st_mtime_ns)
+        for side in ("-wal", "-journal"):
+            w = Path(str(dbs[0]) + side)
+            if w.exists():
+                ws = w.stat()
+                stamp += (ws.st_size, ws.st_mtime_ns)
+    except OSError as e:
+        return {"error": f"the step log could not be read: {e}"}
+    hit = SERIES.get(str(dbs[0]))
+    if hit and hit[0] == stamp:
+        return hit[1]
+    try:
+        src = sqlite3.connect(f"file:{dbs[0]}?mode=ro", uri=True, timeout=5)
+        con = sqlite3.connect(":memory:")
+        src.backup(con, pages=256, sleep=0.002)
+        src.close()
         rows = con.execute("SELECT step, key, value_real FROM metrics WHERE value_real IS NOT NULL AND key IN "
                            "('loss/loss', 'loss/ar_ce', 'loss/ar_kl', 'loss/flow') ORDER BY step").fetchall()
         wall = con.execute("SELECT MIN(step), MAX(step), MIN(wall_time), MAX(wall_time) FROM steps").fetchone()
@@ -281,6 +304,9 @@ def _series(d, keep=400):
                                   "min": round(min(v for _, v in pts), 4), "first": round(pts[0][1], 4)}
     if wall and wall[1] and wall[1] > wall[0]:
         out["sec_per_step"] = round((wall[3] - wall[2]) / (wall[1] - wall[0]), 2)
+    SERIES[str(dbs[0])] = (stamp, out)
+    if len(SERIES) > 64:
+        SERIES.pop(next(iter(SERIES)))
     return out
 
 
@@ -326,6 +352,21 @@ def publish(kit, run, file):
                     shutil.copy2(d / file, target)
             return {"name": run, "lora": f"{run}/{target.name}"}
     raise FileNotFoundError(f"no checkpoint {file} in {run}")
+
+
+def publish_best(kit, run, d=None):
+    """HERESY 1521: the held-out's best checkpoint (output/…/val.json, 1497) into loras/ beside the last: the early stop runs patience
+    saves past the best, so the last is not it. None when the run measured nothing held out or the best's file is not there."""
+    d = d or _safe_dir(paths(kit)["runs"], run)
+    for v in sorted((d / "output").rglob("val.json")) if (d / "output").is_dir() else []:
+        try:
+            step = int((json.load(open(v, encoding="utf-8")).get("best") or {}).get("step") or 0)
+        except (OSError, ValueError, TypeError, AttributeError):
+            continue
+        hit = [c for c in checkpoints(kit, run, d) if c.get("epoch") and c["step"] == step]
+        if hit:
+            return publish(kit, run, hit[0]["file"])["lora"]
+    return None
 
 
 # ---- HERESY 1090 (Viktor, 02.10.2026): a run kept, archived, or put in the trash; an epoch taken back out of loras/
@@ -431,6 +472,37 @@ def unpublish(kit, run, lora):
     return {"name": run, "removed": f.name}
 
 
+def delete_loras(kit, ids, dry=True):
+    """HERESY 1496 (Viktor 16.10.2026: «те адаптеры, которые сторонние… в попапе согласие на безвозвратное удаление из loras/»): adapter
+    files out of loras/ for good, on the page's second word: a dry run first says what goes (the files, a folder left with no adapter in
+    it, the bytes). Not into a trash. A file of one's own run is a hard link of its checkpoint: the checkpoint stays in the run."""
+    root = paths(kit)["loras"].resolve()
+    files = []
+    for i in ids:
+        f = (root / str(i)).resolve()
+        if root not in f.parents or f.suffix != ".safetensors" or not f.is_file():
+            raise ValueError(f"{i}: not an adapter file in loras/")
+        if f not in files:
+            files.append(f)
+    gone, folders = set(files), []
+    for f in files:                                   # a folder goes when no other adapter is left in it, up to loras/ itself
+        d = f.parent
+        while d != root and not any(x not in gone for x in d.rglob("*.safetensors")):
+            folders.append(d)
+            d = d.parent
+    tops = [d for d in sorted(set(folders), key=lambda x: len(x.parts)) if not any(q in folders for q in d.parents)]
+    loose = [f for f in files if not any(t in f.parents for t in tops)]
+    size = sum(f.stat().st_size for f in loose) + sum(_bytes(t) for t in tops)
+    plan = {"files": [str(f.relative_to(root)) for f in files], "folders": [str(t.relative_to(root)) for t in tops], "bytes": size, "deleted": False}
+    if dry:
+        return plan
+    for f in loose:
+        f.unlink()
+    for t in tops:
+        shutil.rmtree(t)
+    return dict(plan, deleted=True)
+
+
 def checkpoint_file(kit, run, file):
     """A checkpoint of the run as a file to download, named as it is called in loras/ (RUN-eNNN.safetensors)."""
     P = paths(kit)
@@ -454,6 +526,12 @@ def runs(kit):
             if live:
                 r.update({k: live.get(k) for k in ("status", "step", "steps", "loss", "ar_ce", "error", "lora", "vram_peak_mb")})
             r["series"] = _series(d)
+            vj = d / "output" / d.name / "val.json"               # HERESY 1497: the held-out measures and the best of them
+            if vj.is_file():
+                try:
+                    r["val"] = json.load(open(vj, encoding="utf-8"))
+                except (OSError, ValueError):
+                    r["val"] = {"error": "val.json unreadable"}
             r["checkpoints"] = checkpoints(kit, d.name, d)
             if live and live.get("tail"):                 # HERESY 1090: the time it has run and has left, from tqdm's line
                 m = ETA_RE.search(live["tail"][-1])
@@ -569,12 +647,15 @@ def _watch(kit, run):
     numbered = [c for c in checkpoints(kit, run, d) if c.get("epoch")]
     if numbered:
         job["lora"] = publish(kit, run, max(numbered, key=lambda c: c["step"])["file"])["lora"]
+        best = publish_best(kit, run, d)                  # HERESY 1521: the held-out's best is the run's LoRA, the last beside it
+        if best and best != job["lora"]:
+            job["lora_last"], job["lora"] = job["lora"], best
     elif saved:                                           # the last one written: the run's LoRA, where the engine looks
         dest = P["loras"] / run
         dest.mkdir(parents=True, exist_ok=True)
         shutil.copy2(saved[-1], dest / (run + ".safetensors"))
         job["lora"] = f"{run}/{run}.safetensors"
-    meta.update({k: job.get(k) for k in ("status", "step", "loss", "error", "lora", "vram_peak_mb")}, ended=time.time())
+    meta.update({k: job.get(k) for k in ("status", "step", "loss", "error", "lora", "lora_last", "vram_peak_mb")}, ended=time.time())
     _save_meta(d, meta)
 
 
@@ -645,7 +726,8 @@ def train(kit, spec, gpu_picker):
         o["quant"] = quant if quant in OWN_CKPT else "bf16"
         # the set's latent cache: train.py makes what is missing (lab/trainer/cache.py) before it loads the model
         cfg = {"name": run, "out": str(d), "dataset": str(P["prepared"] / dataset), "checkpoint": str(ckpt),
-               **{k: o[k] for k in ("steps", "save_every", "rank", "lr", "ar_loss_weight", "ar_kl_weight", "ar_lr_multiplier", "train_window_frames", "cot")}}
+               **{k: o[k] for k in ("steps", "save_every", "rank", "lr", "ar_loss_weight", "ar_kl_weight", "ar_lr_multiplier", "train_window_frames", "cot",
+                                    "val_fraction", "patience")}}   # HERESY 1497
         if o["cot"] != "off":                         # HERESY 1420: score mode, AI-Toolkit's abc_dropout
             cfg["abc_dropout"] = 0.5
         if o["do_separation"]:                        # HERESY 1422: the separation, AI-Toolkit's weights

@@ -48,26 +48,54 @@ DEFAULTS = {"steps": 1500, "rank": 32, "lr": 1e-4, "save_every": 250, "ar_loss_w
             "ar_lr_multiplier": 0.5, "train_window_frames": 1500, "seed": 42, "max_grad_norm": 1.0, "chunk": 512,
             "ar_max_tokens": 0,          # 0: the AR's loss over the whole song (AI-Toolkit's default); N: its first N tokens
             "cot": "off", "abc_dropout": 0.5,   # HERESY 1420: score mode, "full" or "melody"; a sheet dropped half the steps
-            "do_separation": False, "separation_vocals_weight": 0.5, "separation_music_weight": 1.0}   # HERESY 1422
+            "do_separation": False, "separation_vocals_weight": 0.5, "separation_music_weight": 1.0,   # HERESY 1422
+            # HERESY 1497 (Viktor 16.10.2026: «у Тренера… есть ранняя остановка обучения при стабильном оверфите в NAR половинке по последним
+            # 2-3 эпохам? И если такой сторож у нас будет идеальным, то можно и 100 эпох выставлять»): a share of the tracks held out of the
+            # training (val_fraction, val_min…val_max of them) and measured at every save; patience saves in a row with no held-out flow
+            # lower by min_delta (relative) than the best stop the run, the best named (val.json)
+            "val_fraction": 0.0, "val_min": 4, "val_max": 16, "patience": 0, "min_delta": 0.003}
 
 
 class StepLog:
-    """Every step into loss_log.db, the schema AI-Toolkit's UI logger writes (the run cards read it)."""
+    """Every step into loss_log.db, the schema AI-Toolkit's UI logger writes (the run cards read it).
+    HERESY 1507: 16.10.2026 a run of 4 h died here at step 35189, a commit refused («database is locked») after sqlite's 5 s while
+    the lab read the whole log: WAL now (readers and this writer never wait on each other), 60 s for a lock, and a commit or an
+    insert refused never ends the run: said in the run's log, the steps kept for the next commit."""
     def __init__(self, path):
-        self.con = sqlite3.connect(path)
+        self.con = sqlite3.connect(path, timeout=60)
+        self.refused = 0
+        try:
+            self.con.execute("PRAGMA journal_mode=WAL")
+        except sqlite3.Error as e:
+            print(f"[step log] WAL refused ({e}): the rollback journal stays", flush=True)
         self.con.execute("CREATE TABLE IF NOT EXISTS steps (step INTEGER PRIMARY KEY, wall_time REAL)")
         self.con.execute("CREATE TABLE IF NOT EXISTS metric_keys (key TEXT PRIMARY KEY, first_seen_step INTEGER, last_seen_step INTEGER)")
         self.con.execute("CREATE TABLE IF NOT EXISTS metrics (step INTEGER, key TEXT, value_real REAL, value_text TEXT, PRIMARY KEY (step, key))")
         self.con.commit()
 
-    def log(self, step, values):
-        self.con.execute("INSERT OR REPLACE INTO steps(step, wall_time) VALUES(?, ?)", (step, time.time()))
-        for k, v in values.items():
-            self.con.execute("INSERT OR REPLACE INTO metrics(step, key, value_real, value_text) VALUES(?, ?, ?, NULL)", (step, k, float(v)))
-            self.con.execute("INSERT INTO metric_keys(key, first_seen_step, last_seen_step) VALUES(?, ?, ?) "
-                             "ON CONFLICT(key) DO UPDATE SET last_seen_step = excluded.last_seen_step", (k, step, step))
-        if step % 10 == 0:
+    def commit(self):
+        try:
             self.con.commit()
+        except sqlite3.OperationalError as e:
+            self.refused += 1
+            print(f"[step log] a commit refused ({e}): the steps kept for the next one, the run goes on ({self.refused} so far)", flush=True)
+            return
+        if self.refused:
+            print(f"[step log] written again after {self.refused} refused commit(s)", flush=True)
+            self.refused = 0
+
+    def log(self, step, values):
+        try:
+            self.con.execute("INSERT OR REPLACE INTO steps(step, wall_time) VALUES(?, ?)", (step, time.time()))
+            for k, v in values.items():
+                self.con.execute("INSERT OR REPLACE INTO metrics(step, key, value_real, value_text) VALUES(?, ?, ?, NULL)", (step, k, float(v)))
+                self.con.execute("INSERT INTO metric_keys(key, first_seen_step, last_seen_step) VALUES(?, ?, ?) "
+                                 "ON CONFLICT(key) DO UPDATE SET last_seen_step = excluded.last_seen_step", (k, step, step))
+        except sqlite3.OperationalError as e:
+            print(f"[step log] step {step} not logged ({e}): the run goes on", flush=True)   # a gap in the curve, said; never the run's end
+            return
+        if step % 10 == 0:
+            self.commit()
 
 
 def load_set(folder):
@@ -143,6 +171,12 @@ def main():
     if sep and latent_cache.missing_stems(cfg["dataset"], cot):     # HERESY 1422: the stems after the mix's cache (cut to its length)
         latent_cache.stems(cfg["dataset"], KIT, cot, dev)
     items = load_set(cfg["dataset"])
+    # HERESY 1497: the held-out tracks, the same on every start of the run (by the seed, over the set's sorted names)
+    val_idx = []
+    if cfg["val_fraction"] > 0 and len(items) > cfg["val_min"] + 1:
+        k = max(cfg["val_min"], min(cfg["val_max"], round(len(items) * cfg["val_fraction"])))
+        val_idx = sorted(random.Random(cfg["seed"] + 1497).sample(range(len(items)), min(k, len(items) - 1)))
+    train_idx = [i for i in range(len(items)) if i not in set(val_idx)]
     tok = tokenizer_from_checkpoint(cfg["checkpoint"])
     heads = {it[0]: torch.tensor(tok.prefix_head_ids(**parse_caption(it[1]), cot="off"), dtype=torch.long) for it in items}
     heads_cot, abcs = {}, {}                              # HERESY 1420: score mode's prompt and sheet per track
@@ -196,6 +230,9 @@ def main():
             opt.load_state_dict(torch.load(os.path.join(out, "optimizer.pt"), map_location=dev))
         print(f"going on from {os.path.basename(last)} (step {step})", flush=True)
     log = StepLog(os.path.join(out, "loss_log.db"))
+    if val_idx:
+        print(f"held out: {len(val_idx)} of {len(items)} tracks, measured at every save" +
+              (f"; the run stops after {cfg['patience']} saves with no held-out flow {cfg['min_delta'] * 100:g} % lower than the best" if cfg["patience"] > 0 else ""), flush=True)
     print(f"{len(items)} tracks · rank {cfg['rank']} · {cfg['steps']} steps · ready in {time.time() - t0:.0f} s · " +
           (f"VRAM {torch.cuda.memory_allocated() / 2**30:.1f} GB" if dev == "cuda" else "on " + dev), flush=True)
     order, epoch_seed = [], cfg["seed"]
@@ -206,13 +243,68 @@ def main():
         save_file(state_dict(loras), path, metadata={"name": run, "studio": "Ruach Studio", "trainer": "ruach", "step": str(at),
                                                      "rank": str(cfg["rank"]), "format": "pt"})
         torch.save(opt.state_dict(), os.path.join(out, "optimizer.pt"))
-        log.con.commit()
+        log.commit()
+
+    # HERESY 1497: the held-out measure: each held-out track's middle window, the NAR's flow at five fixed t's with fixed noise (and the
+    # AR's CE from the song's start, when the AR trains), so two measures differ by the adapter alone; Direct's prompt
+    T_GRID = (0.1, 0.3, 0.5, 0.7, 0.9)
+    vpath = os.path.join(out, "val.json")
+    val = json.load(open(vpath, encoding="utf-8")) if os.path.isfile(vpath) else {"held_out": [items[i][0] for i in val_idx], "history": []}
+
+    def evaluate():
+        g = torch.Generator().manual_seed(cfg["seed"] + 7)
+        flows, ces = [], []
+        with torch.no_grad():
+            for i in val_idx:
+                name, _cap, latent, tokens = items[i]
+                total, w = tokens.shape[0], cfg["train_window_frames"]
+                start = 0 if w <= 0 or total <= w else (total - w) // 2
+                end = total if w <= 0 or total <= w else start + w
+                x = latent[start:end][None].to(dev, torch.bfloat16)
+                head = model.ar.embed(heads[name].to(dev))
+                song = tokens.to(dev).long()
+                ids = torch.cat([torch.tensor([ABC_END, MUSIC_START], device=dev), song[start:end] + CODEC_OFFSET, torch.tensor([MUSIC_END], device=dev)])
+                embeds = torch.cat([head, model.ar.embed(ids)], 0)[None]
+                kv, _ = model.ar.prefill(embeds)
+                for tv in T_GRID:
+                    noise = torch.randn(tuple(x.shape), generator=g).to(dev, torch.bfloat16)
+                    t = torch.full((1,), tv, device=dev)
+                    pred = model.nar((1 - t) * x + t * noise, t.to(torch.bfloat16), kv, embeds.shape[1])
+                    flows.append(F.mse_loss(pred.float(), (noise - x).float()).item())
+                del kv
+                if train_ar:
+                    limit = total if cfg["ar_max_tokens"] <= 0 else min(total, cfg["ar_max_tokens"])
+                    a_ids = torch.cat([torch.tensor([ABC_END, MUSIC_START], device=dev), song[:limit] + CODEC_OFFSET] +
+                                      ([torch.tensor([MUSIC_END], device=dev)] if limit == total else []))
+                    ce, _ = ar_losses(model, torch.cat([head, model.ar.embed(a_ids)], 0)[None], a_ids, cfg["chunk"], False, loras)
+                    ces.append(ce.item())
+        return sum(flows) / len(flows), (sum(ces) / len(ces) if ces else None)
+
+    def held_out(at):
+        # the measure at a save, kept (val.json, loss_log.db's val/…) and said; True when the run should stop
+        f, c = evaluate()
+        log.log(at, dict({"val/flow": f}, **({"val/ar_ce": c} if c is not None else {})))
+        log.commit()
+        val["history"].append({"step": at, "flow": round(f, 6), "ar_ce": None if c is None else round(c, 5)})
+        best = val.get("best")
+        if best is None or f < best["flow"] * (1 - cfg["min_delta"]):
+            val["best"], val["since_best"] = {"step": at, "flow": round(f, 6)}, 0
+        else:
+            val["since_best"] = val.get("since_best", 0) + 1
+        stop = cfg["patience"] > 0 and val["since_best"] >= cfg["patience"]
+        if stop:
+            val["stopped"] = {"step": at, "why": f"no held-out flow under {val['best']['flow'] * (1 - cfg['min_delta']):.6f} (the best {val['best']['flow']} "   # HERESY 1521: what was measured
+                                                f"less {cfg['min_delta'] * 100:g} %) for {val['since_best']} saves"}
+        json.dump(val, open(vpath, "w", encoding="utf-8"), indent=1)
+        print(f"held-out at step {at}: flow {f:.5f}" + (f" · ar_ce {c:.4f}" if c is not None else "") +
+              f" · best {val['best']['flow']:.5f} at step {val['best']['step']}" + (f" · {val['since_best']} saves without one {cfg['min_delta'] * 100:g} % lower" if val["since_best"] else ""), flush=True)
+        return stop
 
     saved_at = step
     try:
         while step < cfg["steps"]:
             if not order:
-                order = list(range(len(items)))
+                order = list(train_idx)
                 random.Random(epoch_seed + step).shuffle(order)
             name, _cap, latent, tokens = items[order.pop()]
             total = tokens.shape[0]
@@ -299,12 +391,15 @@ def main():
             if step % cfg["save_every"] == 0 or step == cfg["steps"]:
                 save(step)
                 saved_at = step
+                if val_idx and held_out(step):                # HERESY 1497: the early stop
+                    print(f"early stop at step {step}: {val['stopped']['why']}; the best held-out is step {val['best']['step']}", flush=True)
+                    break
     except KeyboardInterrupt:                         # Stop (SIGINT from the lab): keep what was learned, as AI-Toolkit does
         if step > saved_at:
             save(step)
         print(f"stopped at step {step}; saved", flush=True)
     save_file(state_dict(loras), os.path.join(out, f"{run}.safetensors"), metadata={"name": run, "studio": "Ruach Studio", "trainer": "ruach"})
-    log.con.commit()
+    log.commit()
     peak = f" · VRAM peak {torch.cuda.max_memory_allocated() / 2**30:.1f} GB" if dev == "cuda" else ""
     print(f"done: {step} steps in {(time.time() - t_start) / 60:.0f} min{peak}", flush=True)
 

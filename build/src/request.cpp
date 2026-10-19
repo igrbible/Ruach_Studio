@@ -52,6 +52,7 @@ void request_init(Yue2Request * r) {
     r->vae       = "";
     r->sliders   = {};
     r->loras     = {};
+    r->lora_groups = {};
     r->plan_only = false;
     r->parent    = "";
     r->score_guard = true;
@@ -130,6 +131,51 @@ static void add_sampling(yyjson_mut_doc *     doc,
     if (any) {
         yyjson_mut_obj_add_val(doc, root, key, node);
     }
+}
+
+// HERESY 1166: a wave through the song, points [t, k] (t 0..1, k 0..2, 64 at most) or a name: flat, arch, rise, fall
+// (1447: the sliders' and the LoRAs' alike)
+static void request_curve(yyjson_val * curve, std::vector<std::pair<float, float>> * out) {
+    out->clear();
+    if (curve && yyjson_is_str(curve)) {
+        std::string name = yy_str(curve);
+        if (name == "arch") {
+            *out = { { 0.0f, 0.15f }, { 0.5f, 1.0f }, { 1.0f, 0.15f } };
+        } else if (name == "rise") {
+            *out = { { 0.0f, 0.1f }, { 1.0f, 1.0f } };
+        } else if (name == "fall") {
+            *out = { { 0.0f, 1.0f }, { 1.0f, 0.1f } };
+        }
+    } else if (curve && yyjson_is_arr(curve)) {
+        size_t       ci, cmax;
+        yyjson_val * pt;
+        yyjson_arr_foreach(curve, ci, cmax, pt) {
+            yyjson_val * a = yyjson_is_arr(pt) ? yyjson_arr_get(pt, 0) : nullptr;
+            yyjson_val * b = yyjson_is_arr(pt) ? yyjson_arr_get(pt, 1) : nullptr;
+            if (a && b && yyjson_is_num(a) && yyjson_is_num(b) && out->size() < 64) {
+                float t = std::min(1.0f, std::max(0.0f, (float) yyjson_get_num(a)));
+                float k = std::min(2.0f, std::max(0.0f, (float) yyjson_get_num(b)));
+                out->push_back({ t, k });
+            }
+        }
+        std::stable_sort(out->begin(), out->end(),
+                         [](const std::pair<float, float> & x, const std::pair<float, float> & y) { return x.first < y.first; });
+    }
+}
+
+// HERESY 1166, 1447: a wave written back, so a take made again runs the same
+static void request_curve_out(yyjson_mut_doc * doc, yyjson_mut_val * item, const std::vector<std::pair<float, float>> & curve) {
+    if (curve.empty()) {
+        return;
+    }
+    yyjson_mut_val * pts = yyjson_mut_arr(doc);
+    for (const auto & p : curve) {
+        yyjson_mut_val * pt = yyjson_mut_arr(doc);
+        yyjson_mut_arr_add_real(doc, pt, std::round(p.first * 1000.0) / 1000.0);
+        yyjson_mut_arr_add_real(doc, pt, std::round(p.second * 1000.0) / 1000.0);
+        yyjson_mut_arr_append(pts, pt);
+    }
+    yyjson_mut_obj_add_val(doc, item, "curve", pts);
 }
 
 static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
@@ -233,31 +279,7 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
                 c.id       = yy_str(id);
                 c.strength = strength && yyjson_is_num(strength) ? (float) yyjson_get_num(strength) : 1.0f;
                 // HERESY 1166: its curve, points [t, k] (t 0..1, k 0..2, 64 at most) or a name: flat, arch, rise, fall
-                yyjson_val * curve = yyjson_obj_get(item, "curve");
-                if (curve && yyjson_is_str(curve)) {
-                    std::string name = yy_str(curve);
-                    if (name == "arch") {
-                        c.curve = { { 0.0f, 0.15f }, { 0.5f, 1.0f }, { 1.0f, 0.15f } };
-                    } else if (name == "rise") {
-                        c.curve = { { 0.0f, 0.1f }, { 1.0f, 1.0f } };
-                    } else if (name == "fall") {
-                        c.curve = { { 0.0f, 1.0f }, { 1.0f, 0.1f } };
-                    }
-                } else if (curve && yyjson_is_arr(curve)) {
-                    size_t       ci, cmax;
-                    yyjson_val * pt;
-                    yyjson_arr_foreach(curve, ci, cmax, pt) {
-                        yyjson_val * a = yyjson_is_arr(pt) ? yyjson_arr_get(pt, 0) : nullptr;
-                        yyjson_val * b = yyjson_is_arr(pt) ? yyjson_arr_get(pt, 1) : nullptr;
-                        if (a && b && yyjson_is_num(a) && yyjson_is_num(b) && c.curve.size() < 64) {
-                            float t = std::min(1.0f, std::max(0.0f, (float) yyjson_get_num(a)));
-                            float k = std::min(2.0f, std::max(0.0f, (float) yyjson_get_num(b)));
-                            c.curve.push_back({ t, k });
-                        }
-                    }
-                    std::stable_sort(c.curve.begin(), c.curve.end(),
-                                     [](const std::pair<float, float> & x, const std::pair<float, float> & y) { return x.first < y.first; });
-                }
+                request_curve(yyjson_obj_get(item, "curve"), &c.curve);
                 r->sliders.push_back(c);
             }
         }
@@ -270,9 +292,29 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
             yyjson_val * ar  = yyjson_obj_get(item, "ar");
             yyjson_val * nar = yyjson_obj_get(item, "nar");
             if (id && yyjson_is_str(id)) {
-                r->loras.push_back({ yy_str(id), ar && yyjson_is_num(ar) ? (float) yyjson_get_num(ar) : 1.0f,
-                                     nar && yyjson_is_num(nar) ? (float) yyjson_get_num(nar) : 1.0f });
+                Yue2LoraChoice c = { yy_str(id), ar && yyjson_is_num(ar) ? (float) yyjson_get_num(ar) : 1.0f,
+                                     nar && yyjson_is_num(nar) ? (float) yyjson_get_num(nar) : 1.0f };
+                request_curve(yyjson_obj_get(item, "curve"), &c.curve);  // HERESY 1447: its wave
+                yyjson_val * g = yyjson_obj_get(item, "group");          // and its budget
+                c.group        = g && yyjson_is_int(g) ? (int) yyjson_get_int(g) : -1;
+                r->loras.push_back(c);
             }
+        }
+    }
+    if ((v = yyjson_obj_get(obj, "lora_groups")) && yyjson_is_arr(v)) {  // HERESY 1447: the budgets
+        size_t       idx, max;
+        yyjson_val * item;
+        yyjson_arr_foreach(v, idx, max, item) {
+            Yue2LoraGroup g;
+            yyjson_val *  cap  = yyjson_obj_get(item, "cap");
+            yyjson_val *  mode = yyjson_obj_get(item, "mode");
+            if (cap && yyjson_is_num(cap)) {
+                g.cap = std::min(4.0f, std::max(0.0f, (float) yyjson_get_num(cap)));
+            }
+            yyjson_val * cap_nar = yyjson_obj_get(item, "cap_nar");   // the sound half's; none: the music's
+            g.cap_nar            = cap_nar && yyjson_is_num(cap_nar) ? std::min(4.0f, std::max(0.0f, (float) yyjson_get_num(cap_nar))) : g.cap;
+            g.mode = mode && yyjson_is_str(mode) && std::string(yy_str(mode)) == "order" ? 1 : 0;
+            r->lora_groups.push_back(g);
         }
     }
 }
@@ -403,16 +445,7 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
             yyjson_mut_val * item = yyjson_mut_obj(doc);
             yyjson_mut_obj_add_strncpy(doc, item, "id", c.id.c_str(), c.id.size());
             yyjson_mut_obj_add_real(doc, item, "strength", c.strength);
-            if (!c.curve.empty()) {          // HERESY 1166: its curve, so a take made again runs the same
-                yyjson_mut_val * pts = yyjson_mut_arr(doc);
-                for (const auto & p : c.curve) {
-                    yyjson_mut_val * pt = yyjson_mut_arr(doc);
-                    yyjson_mut_arr_add_real(doc, pt, std::round(p.first * 1000.0) / 1000.0);
-                    yyjson_mut_arr_add_real(doc, pt, std::round(p.second * 1000.0) / 1000.0);
-                    yyjson_mut_arr_append(pts, pt);
-                }
-                yyjson_mut_obj_add_val(doc, item, "curve", pts);
-            }
+            request_curve_out(doc, item, c.curve);  // HERESY 1166: its curve, so a take made again runs the same
             yyjson_mut_arr_append(list, item);
         }
         yyjson_mut_obj_add_val(doc, root, "sliders", list);
@@ -424,9 +457,24 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
             yyjson_mut_obj_add_strncpy(doc, item, "id", c.id.c_str(), c.id.size());
             yyjson_mut_obj_add_real(doc, item, "ar", std::round((double) c.ar * 1000.0) / 1000.0);
             yyjson_mut_obj_add_real(doc, item, "nar", std::round((double) c.nar * 1000.0) / 1000.0);
+            request_curve_out(doc, item, c.curve);  // HERESY 1447: its wave and its budget, so a take made again runs the same
+            if (c.group >= 0) {
+                yyjson_mut_obj_add_int(doc, item, "group", c.group);
+            }
             yyjson_mut_arr_append(list, item);
         }
         yyjson_mut_obj_add_val(doc, root, "loras", list);
+    }
+    if (!r->lora_groups.empty()) {
+        yyjson_mut_val * list = yyjson_mut_arr(doc);
+        for (const Yue2LoraGroup & g : r->lora_groups) {
+            yyjson_mut_val * item = yyjson_mut_obj(doc);
+            yyjson_mut_obj_add_real(doc, item, "cap", std::round((double) g.cap * 1000.0) / 1000.0);
+            yyjson_mut_obj_add_real(doc, item, "cap_nar", std::round((double) g.cap_nar * 1000.0) / 1000.0);
+            yyjson_mut_obj_add_str(doc, item, "mode", g.mode == 1 ? "order" : "share");
+            yyjson_mut_arr_append(list, item);
+        }
+        yyjson_mut_obj_add_val(doc, root, "lora_groups", list);
     }
     if (!sparse || r->plan_only != d.plan_only) {
         yyjson_mut_obj_add_bool(doc, root, "plan_only", r->plan_only);

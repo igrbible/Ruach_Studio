@@ -861,6 +861,26 @@ def make_handler(mock):
             except ValueError as e:
                 return self.error(400, str(e))
 
+        def versions(self, fn):
+            """HERESY 1519: the lab's own lab/creator_versions.py answers, on the mock's folder, as writer() does"""
+            try:
+                import importlib.util
+                here = Path(__file__).resolve()
+                found = next((d / "lab" / "creator_versions.py" for d in here.parents if (d / "lab" / "creator_versions.py").is_file()), None)
+                if found is None:
+                    raise ImportError("no lab/creator_versions.py above " + str(here.parent))
+                spec = importlib.util.spec_from_file_location("lab_creator_versions", found)
+                m = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(m)
+            except (OSError, ImportError) as e:
+                return self.error(404, "no lab/creator_versions.py beside the mock: %s" % e)
+            try:
+                return self.send(200, fn(m))
+            except FileNotFoundError as e:
+                return self.error(404, str(e))
+            except ValueError as e:
+                return self.error(400, str(e))
+
         # ----------------------------------------------------------- GET
         def route_get(self):
             path, q = urlparse(self.path).path, self.query()
@@ -870,6 +890,9 @@ def make_handler(mock):
                 return self.send(200, PAGE.read_bytes(), "text/html; charset=utf-8", {"Cache-Control": "no-store"})
             if path == "/lab/trash":   # HERESY 1168
                 return self.send(200, {"items": []})
+            if path == "/lab/writer/versions":   # HERESY 1519: the Creator's versions, the lab's own code on a folder of the mock's
+                return self.versions(lambda m: m.get(mock.writer_kit, q.get("id", ""), q.get("title", ""), q.get("scope", "")) if (q.get("id") or q.get("title"))
+                                     else m.listing(mock.writer_kit, q.get("scope", "")))
             if path == "/lab/writer":   # HERESY 1168: the Writer's notebook, the lab's own code on a folder of the mock's
                 return self.writer(lambda w: w.get(mock.writer_kit, q["id"], q.get("scope", "")) if q.get("id")
                                    else w.listing(mock.writer_kit, q.get("scope", "")))
@@ -1017,6 +1040,14 @@ def make_handler(mock):
                 job = mock.new_job("synth", req)
                 mock.work.put(job)
                 return self.send(200, {"id": job["id"]})
+            if path == "/lab/writer/versions":   # HERESY 1519: keep, mark, delete, undelete, as the lab answers them
+                raw = self.body()
+                mock.requests.append({"path": "/lab/writer/versions", "body": raw.decode("utf-8", "replace")[:2000]})
+                try:
+                    data = json.loads(raw or b"{}")
+                except ValueError:
+                    return self.error(400, "bad JSON")
+                return self.versions(lambda m: m.post(mock.writer_kit, data, q.get("scope", "")))
             if path == "/lab/writer":   # HERESY 1168: the notebook's ops (put, export, import…) as the lab answers them
                 raw = self.body()
                 mock.requests.append({"path": "/lab/writer", "body": raw.decode("utf-8", "replace")[:2000]})

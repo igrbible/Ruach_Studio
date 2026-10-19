@@ -33,7 +33,7 @@
 
   function close() {
     hintHide();
-    stack.forEach(function (m) { m.el.remove(); });
+    stack.forEach(function (m) { if (m.ro) m.ro.disconnect(); m.el.remove(); });
     stack = [];
     if (root) { document.removeEventListener("keydown", onKey, true); root = null; }
   }
@@ -47,11 +47,16 @@
       if (it.head) return '<div class="hm-head">' + esc(it.head) + "</div>";
       return '<button type="button" class="hm-item' + (it.danger ? " is-danger" : "") + '" role="menuitem" data-i="' + i + '"' +
         (it.disabled ? " disabled" : "") + (it.checked !== undefined ? ' aria-checked="' + !!it.checked + '"' : "") + ">" +
-        '<span class="hm-icon">' + (it.checked ? "✓" : esc(it.icon || "")) + '</span><span class="hm-label"' + (it.raw ? ' translate="no"' : "") + ">" + esc(it.label) + "</span>" +
+        // HERESY 1474: in the page's language before it is measured (a menu laid out in English grew past the window in Russian)
+        '<span class="hm-icon">' + (it.checked ? "✓" : esc(it.icon || "")) + '</span><span class="hm-label" translate="no">' + esc(it.raw || !window.RuachI18n ? it.label : window.RuachI18n.t(it.label)) + "</span>" +
         (it.items ? '<span class="hm-more">›</span>' : "") + "</button>";   // HERESY 1169 · 1248: the hint beside the menu (hintShow), not in the row
     }).join("");
     document.body.appendChild(el);
     var entry = { el: el, items: items, level: level };
+    if (window.ResizeObserver) {                     // HERESY 1474: a menu that changes its size is placed again, the edge kept
+      entry.ro = new ResizeObserver(function () { if (el._at) place(el, el._at[0], el._at[1], el._at[2]); });
+      entry.ro.observe(el);
+    }
     el.addEventListener("click", function (e) {
       var b = e.target.closest(".hm-item");
       if (!b || b.disabled) return;
@@ -77,13 +82,14 @@
   }
 
   function place(el, x, y, alt) {
+    el._at = [x, y, alt];
     var w = el.offsetWidth, h = el.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
     var left = x + w > vw - 6 ? (alt !== undefined ? alt - w : vw - w - 6) : x;
     el.style.left = Math.max(6, left) + "px";
     el.style.top = Math.max(6, Math.min(y, vh - h - 6)) + "px";
   }
 
-  function trim(level) { while (stack.length > level + 1) stack.pop().el.remove(); }
+  function trim(level) { while (stack.length > level + 1) { var m = stack.pop(); if (m.ro) m.ro.disconnect(); m.el.remove(); } }
 
   function openSub(parent, button, it) {
     trim(parent.level);
@@ -149,3 +155,143 @@
 
   window.HeresyMenu = { open: open, close: close };
 })();
+
+// HERESY 1509 (Viktor 16.10.2026: «…напрочь избавиться от дропдаун селекторов, а выстраивать… все позиции в колонку, с чекбоксами и/или
+// селекторами, и такие блоки в весьма неприметную рамку… А если списки реально большие… дополнительное модальное окно поверх как в фильтре
+// библиотеки или в селекторе воркспейса… избавляемся от этих голимых html'евских дропдаунов»): a <select> given its choices in sight.
+// Up to eight: a column of radio rows in a quiet frame (short ones in a row); more: a button that opens the list over the page, a filter
+// above it when long (arrows, Enter, Esc). The <select> stays what everything reads and writes: a choice sets its value and says input and
+// change; a value set by code shows at once (its own value and selectedIndex watched), options filled anew are drawn anew. Where the
+// choices show is the stylesheet's (first the Refiner's node windows); the select itself stays where it was for everything else.
+(function () {
+  "use strict";
+  var MAX = 8, SKIP = ".mx-ver, .mx-bus select, [data-hc='off']", pop = null;
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function text(o) { return (o.textContent || "").trim(); }
+  function own(o) { return o.getAttribute("translate") === "no" || (o.parentNode && o.parentNode.getAttribute && o.parentNode.getAttribute("translate") === "no"); }
+  function fire(sel) { sel.dispatchEvent(new Event("input", { bubbles: true })); sel.dispatchEvent(new Event("change", { bubbles: true })); }
+  function choose(sel, i) { if (sel.selectedIndex !== i) { sel.selectedIndex = i; fire(sel); } }
+  function watch(sel, paint) {
+    var proto = HTMLSelectElement.prototype;
+    ["value", "selectedIndex"].forEach(function (k) {
+      var d = Object.getOwnPropertyDescriptor(proto, k);
+      Object.defineProperty(sel, k, { configurable: true, enumerable: true, get: function () { return d.get.call(this); }, set: function (v) { d.set.call(this, v); paint(); } });
+    });
+    if (window.MutationObserver) new MutationObserver(paint).observe(sel, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["disabled", "selected"] });
+    sel.addEventListener("change", paint);
+  }
+  function enhance(sel) {
+    if (sel.dataset.hc || sel.multiple || sel.matches(SKIP)) return;
+    sel.dataset.hc = "1";
+    var box = document.createElement("div");
+    box.className = "hc-box";
+    sel.parentNode.insertBefore(box, sel.nextSibling);
+    sel.classList.add("hc-src");
+    function paint() {
+      var opts = Array.prototype.slice.call(sel.options), cur = sel.selectedIndex, html;
+      if (opts.length > MAX) {
+        var now = cur >= 0 ? opts[cur] : null;
+        html = '<button type="button" class="hc-pick"' + (sel.disabled ? " disabled" : "") + ' aria-haspopup="listbox"><span class="hc-pick-now"' + (now && own(now) ? ' translate="no"' : "") + ">" +
+          esc(now ? text(now) : "—") + '</span><span class="hc-pick-n mono">' + opts.length + "</span></button>";
+      } else {
+        var row = sel.dataset.hcRow === "1" || opts.every(function (o) { return text(o).length <= 16; });   // HERESY 1553: or as its own asks
+        html = '<div class="hc-list' + (row ? " is-row" : "") + '" role="radiogroup">' + opts.map(function (o, i) {
+          return '<button type="button" role="radio" class="hc-opt" data-i="' + i + '" aria-checked="' + (i === cur) + '"' + (sel.disabled || o.disabled ? " disabled" : "") +
+            (own(o) ? ' translate="no"' : "") + '><i class="hc-dot" aria-hidden="true"></i><span>' + esc(text(o)) + "</span></button>";
+        }).join("") + "</div>";
+      }
+      if (box.dataset.html !== html) { box.innerHTML = html; box.dataset.html = html; }
+    }
+    box.addEventListener("click", function (e) {
+      var b = e.target.closest(".hc-opt"), p = e.target.closest(".hc-pick");
+      if (b && !b.disabled) { e.preventDefault(); choose(sel, +b.dataset.i); return; }
+      if (p && !p.disabled) { e.preventDefault(); open(sel, p); }
+    });
+    watch(sel, paint);
+    paint();
+  }
+  function close() {
+    if (!pop) return;
+    document.removeEventListener("mousedown", outside, true);
+    document.removeEventListener("keydown", key, true);
+    pop.el.remove();
+    var back = pop.anchor;
+    pop = null;
+    if (back && back.isConnected) back.focus();
+  }
+  function outside(e) { if (pop && !pop.el.contains(e.target) && !pop.anchor.contains(e.target)) close(); }
+  function rows() { return pop ? Array.prototype.filter.call(pop.el.querySelectorAll(".hc-row"), function (r) { return !r.hidden; }) : []; }
+  function mark(r) {
+    Array.prototype.forEach.call(pop.el.querySelectorAll(".hc-row.is-cur"), function (x) { x.classList.remove("is-cur"); });
+    if (r) { r.classList.add("is-cur"); r.scrollIntoView({ block: "nearest" }); }
+  }
+  function key(e) {
+    if (!pop) return;
+    var list = rows(), at = list.indexOf(pop.el.querySelector(".hc-row.is-cur"));
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); return; }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); e.stopPropagation(); mark(list[Math.max(0, Math.min(list.length - 1, at + (e.key === "ArrowDown" ? 1 : -1)))]); return; }
+    if (e.key === "Enter" && at >= 0) { e.preventDefault(); e.stopPropagation(); var sel = pop.sel; var i = +list[at].dataset.i; close(); choose(sel, i); }
+  }
+  function open(sel, anchor) {
+    close();
+    var opts = Array.prototype.slice.call(sel.options), r = anchor.getBoundingClientRect(), el = document.createElement("div");
+    el.className = "hc-pop";
+    el.setAttribute("role", "listbox");
+    el.innerHTML = (opts.length > 10 ? '<input type="search" class="hc-find" placeholder="Find" autocomplete="off" spellcheck="false">' : "") +
+      '<div class="hc-rows">' + opts.map(function (o, i) {
+        return '<button type="button" class="hc-row' + (i === sel.selectedIndex ? " is-cur" : "") + '" role="option" data-i="' + i + '" aria-selected="' + (i === sel.selectedIndex) + '"' +
+          (o.disabled ? " disabled" : "") + (own(o) ? ' translate="no"' : "") + ">" + esc(text(o)) + "</button>";
+      }).join("") + "</div>";
+    document.body.appendChild(el);
+    pop = { el: el, sel: sel, anchor: anchor };
+    var w = Math.max(r.width, 380), h = el.offsetHeight, room = window.innerHeight - r.bottom - 12;
+    el.style.width = Math.min(w, window.innerWidth - 24) + "px";
+    el.style.left = Math.max(12, Math.min(r.left, window.innerWidth - el.offsetWidth - 12)) + "px";
+    if (h > room && r.top > room) { el.style.maxHeight = Math.min(h, r.top - 12) + "px"; el.style.top = Math.max(12, r.top - 4 - Math.min(h, r.top - 12)) + "px"; }
+    else { el.style.maxHeight = Math.max(160, room) + "px"; el.style.top = (r.bottom + 4) + "px"; }
+    el.addEventListener("click", function (e) {
+      var b = e.target.closest(".hc-row");
+      if (!b || b.disabled) return;
+      var i = +b.dataset.i;
+      close();
+      choose(sel, i);
+    });
+    var find = el.querySelector(".hc-find");
+    if (find) {
+      find.addEventListener("input", function () {
+        var q = find.value.trim().toLowerCase();
+        Array.prototype.forEach.call(el.querySelectorAll(".hc-row"), function (b) { b.hidden = !!q && b.textContent.toLowerCase().indexOf(q) < 0; });
+        var cur = el.querySelector(".hc-row.is-cur");
+        if (!cur || cur.hidden) mark(rows()[0]);
+      });
+      find.focus();
+    }
+    mark(el.querySelector(".hc-row.is-cur"));
+    document.addEventListener("mousedown", outside, true);
+    document.addEventListener("keydown", key, true);
+  }
+  function within(root) { if (root) Array.prototype.forEach.call(root.querySelectorAll("select"), enhance); }
+  // HERESY 1526 (Viktor 17.10.2026: «увидел в окнах нод. Супер, так отлично»): a room in this style as a whole: the class hc-on on it shows
+  // every choice box in it (the stylesheet hides the select), and a select added to it later (a plugin's panel, a list drawn anew) is
+  // enhanced as it comes. ROOMS: the rooms in this style so far, one by one as each is looked at
+  var ROOMS = ["view-post"];
+  function scope(root) {
+    if (!root || root.dataset.hcScope) return;
+    root.dataset.hcScope = "1";
+    root.classList.add("hc-on");
+    within(root);
+    if (!window.MutationObserver) return;
+    new MutationObserver(function (ms) {
+      ms.forEach(function (m) {
+        Array.prototype.forEach.call(m.addedNodes, function (n) {
+          if (n.nodeType !== 1) return;
+          if (n.tagName === "SELECT") enhance(n); else if (n.querySelector && n.querySelector("select")) within(n);
+        });
+      });
+    }).observe(root, { childList: true, subtree: true });
+  }
+  function rooms() { ROOMS.forEach(function (id) { scope(document.getElementById(id)); }); }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", rooms); else rooms();
+  window.HeresyChoices = { within: within, enhance: enhance, close: close, open: function () { return !!pop; }, scope: scope, rooms: function () { return ROOMS.slice(); } };
+})();
+

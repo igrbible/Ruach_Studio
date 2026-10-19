@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ruach Studio · 用文字写歌，在你自己的机器上</title>
-<meta name="description" content="围绕开放歌曲模型 YuE2 的完整歌曲工作室：写下风格和歌词，Ruach Studio 就在你自己的 GPU 上作曲、演唱并渲染歌曲。开源，AGPL。">
+<title>鲁阿赫工作室 · 用文字写歌，在你自己的机器上</title>
+<meta name="description" content="围绕开放歌曲模型 YuE2 的完整歌曲工作室：写下风格和歌词，鲁阿赫工作室 就在你自己的 GPU 上作曲、演唱并渲染歌曲。开源，AGPL。">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Ruach Studio · 用文字写歌，在你自己的机器上">
+<meta property="og:title" content="鲁阿赫工作室 · 用文字写歌，在你自己的机器上">
 <meta property="og:description" content="在你自己的 GPU 上围绕 YuE2 的完整歌曲工作室：先有乐谱，LoRA 训练，分轨，母带处理，你的 DAW。开源。">
 <meta property="og:image" content="https://ruachstudio.igr.bible/assets/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
@@ -31,9 +31,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
-<!-- umami, once its container is up on Orpheus behind nginx (the host and the id from umami's own page):
-<script defer src="https://STATS_HOST/script.js" data-website-id="WEBSITE_ID"></script>
--->
+<!-- HERESY 1446 (Viktor 15.10.2026: «Пропишь для визитки код трекинга»): Umami on Orpheus, no cookies -->
+<script defer src="https://lwa.igr.bible/bread-and-wine.js" data-website-id="b9ce0336-948e-43ed-89d6-ade9b66dbb4a"></script>
 <style>
   /* the studio's two classic themes: Scroll & Brick by day (on Viktor's #f8f9fa), Scroll by Lamplight by night */
   :root {
@@ -120,6 +119,11 @@
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .shot .day { display: none; } :root:not([data-theme="light"]) .shot .night { display: block; } }
   :root[data-theme="dark"] .shot .day { display: none; }
   :root[data-theme="dark"] .shot .night { display: block; }
+  /* a room's picture by day and by night too (HERESY 1505: the Trainer's, from Viktor's own shots) */
+  .room a.pic .night { display: none; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .room a.pic .day { display: none; } :root:not([data-theme="light"]) .room a.pic .night { display: block; } }
+  :root[data-theme="dark"] .room a.pic .day { display: none; }
+  :root[data-theme="dark"] .room a.pic .night { display: block; }
 
   /* numbers */
   .nums { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--rule); border: 1px solid var(--rule);
@@ -234,7 +238,7 @@
 
 <header class="bar">
   <div class="wrap">
-    <a class="mark" href="#top"><img src="../assets/ruach-icon-zh-32.png?v=1272" alt="" width="28" height="28">Ruach Studio</a>
+    <a class="mark" href="#top"><img src="../assets/ruach-icon-zh-32.png?v=1272" alt="" width="28" height="28">鲁阿赫工作室</a>
     <nav aria-label="章节"><a href="#rooms">房间</a><a href="#studio">它能做什么</a><a href="#honestly">坦白说</a><a href="#need">你需要</a><a href="#next">接下来</a> <a href="#licences">许可</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub ↗</a></nav>
     <details class="langs" translate="no"><summary aria-label="Language">ZH</summary><div class="langs-pop"><a href="/" lang="en" hreflang="en">English</a><a href="/ru/" lang="ru" hreflang="ru">Русский</a><a href="/uk/" lang="uk" hreflang="uk">Українська</a><a href="/be/" lang="be" hreflang="be">Беларуская</a><a href="/el/" lang="el" hreflang="el">Ελληνικά</a><a href="/es/" lang="es" hreflang="es">Español</a><a href="/it/" lang="it" hreflang="it">Italiano</a><a href="/fr/" lang="fr" hreflang="fr">Français</a><a href="/pt/" lang="pt" hreflang="pt">Português</a><a href="/de/" lang="de" hreflang="de">Deutsch</a><a href="/ja/" lang="ja" hreflang="ja">日本語</a><a href="/zh/" lang="zh" hreflang="zh" aria-current="page">中文</a></div></details>
     <button class="theme" id="theme" type="button" aria-label="白天或夜晚" title="白天或夜晚"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5a9.5 9.5 0 0 1 0 19z" fill="currentColor"/></svg></button>
@@ -257,7 +261,7 @@
     <h1>用文字与和弦写歌<br>在你自己的机器上</h1>
     <p class="lead">围绕开放歌曲模型 <b>YuE2</b> 的完整工作室。写下风格和歌词，工作室就在<b>你自己的 GPU</b> 上作曲、演唱并渲染歌曲。你的歌曲、文字和设置永远不会离开它。</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">在 GitHub 获取</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.zh.md">阅读指南</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face 上的模型</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 请我一台咖啡机</a></div>
-    <span class="rc"><b>2.0.0-rc8</b> · 第八个候选版本 · 2026 年 10 月</span>
+    <span class="rc"><b>2.0.0-pre</b> · 2.0.0 之前的最后一步 · 2026 年 10 月</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -290,7 +294,7 @@
           <div><h3>画室</h3><p>用你自己的提示词为歌曲作画：正方、横幅和竖幅出自同一个种子，由 Qwen-Image 2512 绘制；画面在你眼前显现，正方的那张成为录音的封面。早期预览。</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/studio-collection.webp"><img src="../assets/shots/studio-collection.webp" alt="资料馆" loading="lazy"></a>
           <div><h3>资料馆</h3><p>每段录音都在工作区里：可搜索、点赞、备注、锁定、配图、发送到你的 DAW；回收站可以还原。</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/studio-train.webp"><img src="../assets/shots/studio-train.webp" alt="LoRA 训练室" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/studio-train.webp" data-night="assets/shots/studio-train-night.webp"><img class="day" src="../assets/shots/studio-train.webp" alt="LoRA 训练室" loading="lazy"><img class="night" src="../assets/shots/studio-train-night.webp" alt="LoRA 训练室" loading="lazy"></a>
           <div><h3>LoRA 训练室</h3><p>从你自己的歌曲训练适配器：素材集、训练、两部分的曲线讲解、最值得先听的轮次。</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/instruments.webp"><img src="../assets/shots/instruments.webp" alt="乐器速查表" loading="lazy"></a>
           <div><h3>速查表 ♪</h3><p>200 件乐器，逐一用耳朵试听并评判：YuE2 真正会弹什么，弹得单薄的是什么，不认识的是什么。</p></div></article>
@@ -345,11 +349,11 @@
 
   <section id="honestly">
     <div class="wrap">
-      <h2>Ruach Studio 与 SUNO，坦白说</h2>
+      <h2>鲁阿赫工作室 与 SUNO，坦白说</h2>
       <p class="sub">每周都有视频说某个模型干掉了 SUNO。这不是一个模型：而是围绕一个模型的工作站。这里是它赢的地方，以及（暂时）没赢的地方。</p>
       <div class="table">
         <table>
-          <thead><tr><th></th><th>Ruach Studio (YuE2)</th><th>SUNO</th></tr></thead>
+          <thead><tr><th></th><th>鲁阿赫工作室 (YuE2)</th><th>SUNO</th></tr></thead>
           <tbody>
             <tr><td>在哪里运行</td><td>你的 GPU；你的歌永远不会离开它</td><td>他们的云</td></tr>
             <tr><td>花费</td><td>电费</td><td>订阅和积分</td></tr>
@@ -394,7 +398,7 @@
   <section id="next">
     <div class="wrap">
       <h2>接下来</h2>
-      <p class="sub">2.0.0-rc8 是我们每天做自己歌曲的工作室。以下是正在路上的较大部分，面向 2.0.0 及以后。</p>
+      <p class="sub">2.0.0-pre 是我们每天做自己歌曲的工作室。以下是正在路上的较大部分，面向 2.0.0 及以后。</p>
       <ul class="feats">
         <li><b>像模型写歌那样编辑歌曲。</b>从任意位置延长一段录音；重写一个段落，保留相邻段落的嗓音、调性和小节，并在模型自己的 token 中缝合；在录音自己的乐谱上叠加一层器乐。</li>
         <li><b>精修室里的 DAW。</b>Plenio 的乐谱编辑器抢先预览：钢琴卷帘、和弦轨、音符上方的歌词、用来弹入想法的 MIDI 键盘。</li>
@@ -511,7 +515,7 @@
 </main>
 
 <footer>
-  <div class="wrap"><span>Ruach Studio · 2.0.0-rc8 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> 的作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">更新记录</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 咖啡机</a></span></div>
+  <div class="wrap"><span>鲁阿赫工作室 · 2.0.0-pre · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> 的作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">更新记录</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 咖啡机</a></span></div>
 </footer>
 
 <script>
@@ -528,9 +532,10 @@
     function show(i) { at = (i + items.length) % items.length; img.src = items[at].src; img.alt = items[at].alt; cap.textContent = items[at].alt; }
     function open(i) { show(i); lb.hidden = false; document.documentElement.classList.add("lb-on"); lb.querySelector(".lb-x").focus(); }
     function close() { lb.hidden = true; document.documentElement.classList.remove("lb-on"); }
+    function nightNow() { var t = document.documentElement.getAttribute("data-theme"); return t === "dark" || (t !== "light" && !!window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches); }
     Array.prototype.forEach.call(document.querySelectorAll("a.pic"), function (a) {
       var i = add(a.getAttribute("href"), (a.querySelector("img") || {}).alt);
-      a.addEventListener("click", function (e) { e.preventDefault(); open(i); });
+      a.addEventListener("click", function (e) { e.preventDefault(); open(i); if (a.dataset.night && nightNow()) img.src = a.dataset.night; });   // 1505: the night's shot by night
     });
     Array.prototype.forEach.call(document.querySelectorAll(".shot img, .pair figure img"), function (im) {
       var i = add(im.getAttribute("src"), im.alt);

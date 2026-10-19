@@ -70,4 +70,23 @@ const items = await ev(`[...document.querySelectorAll(".hm-menu .hm-label")].map
 const names = (await ev(`RuachI18n.langs.map(l => l.name).join("|")`)).split("|"), shown = items.split("|");
 check("the button's menu names each language in its own words", shown[0] === "English" && shown.includes("Русский") &&
       shown.every(n => names.includes(n)) && shown.join("|") === names.filter(n => shown.includes(n)).join("|"), items);
+// HERESY 1518 (Viktor's rule: the root «раб/роб» stays out of the studio's words): every catalog the page is served with, read as the page
+// reads it; no word of the root in the Ukrainian and Belarusian translations, nor «δουλ» in the Greek, by the guide checker's own rule
+// (heresy/MISC/claude-i18n/guide/check_guide.py): the letters of проба, дроб, хвороба, Афробіт, перабор… are not the root
+{
+  const vm = await import("node:vm"), page = await (await fetch(BASE)).text(), cats = {};
+  for (const m of page.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)) {
+    if (!/RuachI18n\.add\(/.test(m[1]) || /window\.RuachI18n\s*=/.test(m[1])) continue;
+    vm.runInNewContext(m[1], { RuachI18n: { add: (l, o) => { cats[l] = Object.assign(cats[l] || {}, o); } }, window: {} });
+  }
+  const ROOTS = { uk: /(роб|раб)/i, be: /(роб|раб)/i, el: /(δουλ|δούλ)/i }, OUT = /проб|праб|дроб|драб|траб|ерабуд|ерабор|ерабір|ерабра|бараб|^араб|храб|граб|фроб|фраб|ктроб|вороб|вароб/g;
+  const kept = [];
+  for (const [lang, root] of Object.entries(ROOTS)) {
+    const words = new Set();
+    for (const v of Object.values(cats[lang] || {})) for (const w of JSON.stringify(v).match(/[\p{L}\p{M}]+/gu) || []) if (root.test(w.toLowerCase().replace(OUT, ""))) words.add(w);
+    if (words.size) kept.push(lang + ": " + [...words].slice(0, 12).join(", "));
+  }
+  check("no word of the root «раб/роб» in the uk and be catalogs, nor «δουλ» in the el one (" + ["uk", "be", "el"].map(l => l + " " + Object.keys(cats[l] || {}).length).join(", ") + " entries)",
+    !kept.length && ["uk", "be", "el"].every(l => Object.keys(cats[l] || {}).length > 1000), kept.join(" · "));
+}
 await finish(failed ? 1 : 0);

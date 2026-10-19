@@ -1,6 +1,6 @@
 // HERESY 1102 (Viktor, 02.10.2026): the DAW button's landing. Two ways out of the studio, and only two: the mixed
 // track as it is, with no DAW's magic, or the whole take handed to the user's own DAW, where whatever happens next
-// happens outside the studio. REAPER first, Waveform second; others by pull request. The lab says which DAWs the
+// happens outside the studio. Bitwig first (DAWproject), REAPER second (HERESY 1478: Waveform out); others by pull request. The lab says which DAWs the
 // studio's own machine has (GET /lab/daw); a DAW on another computer cannot be seen from there, so the user names
 // theirs, and the choice is kept with the page.
 (function () {
@@ -9,6 +9,7 @@
   var KEY = "yue2.daw";
   var state = { el: null, data: null, hooks: {} };
   function $(id) { return document.getElementById(id); }
+  function tr(t) { return window.RuachI18n ? window.RuachI18n.t(t) : t; }   // HERESY 1469
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function recall(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function keep(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) { /* a private window */ } }
@@ -49,10 +50,11 @@
         '<div class="dw-acts"><button type="button" class="btn small' + (on ? " primary" : " ghost") + '" data-dw-pick="' + esc(x.id) + '">' + (on ? "Your DAW ✓" : "I use this one") + "</button>" +
         (x.id === "reaper" ? '<button type="button" class="btn small ghost" data-dw-reaper="1"' + (title ? "" : " disabled") + '>Export the take</button>' : "") +
         // HERESY 1134: the DAWs that open DAWproject get it from here too
-        (x.id === "waveform" || x.id === "bitwig" ? '<button type="button" class="btn small ghost" data-dw-dawproject="1"' + (title ? "" : " disabled") + ' title="A DAWproject: the mix, the stems, the score as notes, the sections as markers">Export the take</button>' : "") + "</div></div>";
+        (x.id === "bitwig" ? '<button type="button" class="btn small ghost" data-dw-dawproject="1"' + (title ? "" : " disabled") + ' title="A DAWproject: the mix, the stems, the score as notes, the sections as markers">Export the take</button>' : "") + "</div></div>";
     }).join("") + "</div>";
-    html += '<p class="row-hint dw-now">Now: the <b>REAPER</b> project (the mix, every stem, the score as MIDI; the lyrics and sections once the take is timed in the Refiner’s lyrics check), and <b>DAWproject</b> (the mix, every stem, the score as notes, the sections as markers: Waveform 14, Bitwig, Studio One, Cubase); both also in a take’s menu → Download. ' +
-      "Waveform: 14 or newer.</p></section>";
+    html += '<p class="row-hint dw-now">Now: the <b>REAPER</b> project (the mix, every stem, the score as MIDI; the lyrics and sections once the take is timed in the Refiner’s lyrics check), and <b>DAWproject</b> (the mix, every stem, the score as notes, the sections as markers: Bitwig, Studio One, Cubase); both also in a take’s menu → Download.</p>' +
+      // HERESY 1469: Chrome holds back a file type it does not know until it is allowed
+      '<p class="row-hint dw-chrome">' + esc(tr("Chrome may hold back a .dawproject or .rpp download as an unusual file: open Downloads (Ctrl+J) and choose Keep.")) + "</p></section>";
     state.el.querySelector(".dw-box").innerHTML = html;
   }
   function load() {

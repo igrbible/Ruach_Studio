@@ -1,0 +1,517 @@
+From 0b8fbbe35116ebcb9ff3520188be4ff8acbc5816 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 17 Oct 2026 01:52:29 -0600
+Subject: [PATCH 1444/1463] =?UTF-8?q?HERESY=201516:=20a=20step's=20node=20?=
+ =?UTF-8?q?cloned=20on=20the=20Refiner's=20canvas:=20=C2=ABRemaster=20?=
+ =?UTF-8?q?=E2=91=A1=C2=BB=20beside=20its=20own=20with=20its=20own=20setti?=
+ =?UTF-8?q?ngs;=20its=20window=20is=20the=20step's=20panel=20with=20the=20?=
+ =?UTF-8?q?clone's=20settings=20in=20while=20open,=20the=20step's=20own=20?=
+ =?UTF-8?q?back=20on=20closing;=20it=20follows=20its=20own=20in=20the=20wi?=
+ =?UTF-8?q?ndow's=20order;=20a=20profile=20carries=20the=20clones;=20delet?=
+ =?UTF-8?q?ing=20asks.=20Run=20up=20to=20here=20hidden=20where=20the=20cha?=
+ =?UTF-8?q?in=20does=20not=20run=20(1508's=20button=20had=20stayed=20on=20?=
+ =?UTF-8?q?every=20window:=20a=20.btn's=20display=20beat=20[hidden]);=20th?=
+ =?UTF-8?q?e=20profiles'=20row=20painted=20before=20the=20lab=20answers?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |   4 +
+ tools/console/heresy-i18n-be.js |   9 +-
+ tools/console/heresy-i18n-de.js |   9 +-
+ tools/console/heresy-i18n-el.js |   9 +-
+ tools/console/heresy-i18n-es.js |   9 +-
+ tools/console/heresy-i18n-fr.js |   9 +-
+ tools/console/heresy-i18n-it.js |   9 +-
+ tools/console/heresy-i18n-ja.js |   9 +-
+ tools/console/heresy-i18n-pt.js |   9 +-
+ tools/console/heresy-i18n-ru.js |   9 +-
+ tools/console/heresy-i18n-uk.js |   9 +-
+ tools/console/heresy-i18n-zh.js |   9 +-
+ tools/console/heresy-post.js    | 150 +++++++++++++++++++++++++++-----
+ 13 files changed, 219 insertions(+), 34 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 5aacc6d..af36197 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -6188,3 +6188,7 @@ body.daw-full #dawPanel .mx-wave.mx-ruler { height: 22px; }
+ .pcv-profiles { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+ .pcv-prof-cap { font: 600 10.5px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin-right: 2px; }
+ 
++/* HERESY 1516: a clone of a step's node, its own settings: its top edge doubled */
++.pcv-node.is-clone { border-top-style: double; border-top-width: 4px; }
++.nd-until[hidden] { display: none; }   /* 1508's «Run up to here» only on the chain's nodes: a .btn's display had kept it on every window */
++
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 3e3b924..1bb4701 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5528,5 +5528,12 @@ RuachI18n.add("be", {
+ "Profile «{0}» kept": "Профіль «{0}» захаваны",
+ "Profile «{0}» set: {1} settings changed": "Профіль «{0}» пастаўлены: зменена налад — {1}",
+ "Profile «{0}» deleted": "Профіль «{0}» выдалены",
+-"The profiles could not be kept: {0}": "Профілі не захаваліся: {0}"
++"The profiles could not be kept: {0}": "Профілі не захаваліся: {0}",
++"Clone": "Кланаваць",
++"Delete the clone": "Выдаліць клон",
++"A second node of this step with its own settings, beside it: its window holds them, and a run from there runs with them": "Другая нода гэтага кроку са сваімі наладамі побач: яе акно трымае іх, і прагон адтуль ідзе з імі",
++"its own settings": "свае налады",
++"{0} cloned: its window holds its own settings": "{0}: клон гатовы, яго акно трымае свае налады",
++"Delete the clone «{0}»? Its settings go with it.": "Выдаліць клон «{0}»? Яго налады сыдуць з ім.",
++"Eight clones of one step are enough": "Васьмі клонаў аднаго кроку хопіць"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 7beca90..e431606 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5411,5 +5411,12 @@ RuachI18n.add("de", {
+ "Profile «{0}» kept": "Profil „{0}“ behalten",
+ "Profile «{0}» set: {1} settings changed": "Profil „{0}“ gesetzt: {1} Einstellungen geändert",
+ "Profile «{0}» deleted": "Profil „{0}“ gelöscht",
+-"The profiles could not be kept: {0}": "Die Profile konnten nicht behalten werden: {0}"
++"The profiles could not be kept: {0}": "Die Profile konnten nicht behalten werden: {0}",
++"Clone": "Klonen",
++"Delete the clone": "Den Klon löschen",
++"A second node of this step with its own settings, beside it: its window holds them, and a run from there runs with them": "Ein zweiter Knoten dieses Schritts mit eigenen Einstellungen daneben: sein Fenster hält sie, und ein Lauf von dort läuft mit ihnen",
++"its own settings": "eigene Einstellungen",
++"{0} cloned: its window holds its own settings": "{0} geklont: sein Fenster hält eigene Einstellungen",
++"Delete the clone «{0}»? Its settings go with it.": "Den Klon „{0}“ löschen? Seine Einstellungen gehen mit ihm.",
++"Eight clones of one step are enough": "Acht Klone eines Schritts sind genug"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index c173698..a3a5e08 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5527,5 +5527,12 @@ RuachI18n.add("el", {
+ "Profile «{0}» kept": "Το προφίλ «{0}» κρατήθηκε",
+ "Profile «{0}» set: {1} settings changed": "Το προφίλ «{0}» μπήκε: άλλαξαν {1} ρυθμίσεις",
+ "Profile «{0}» deleted": "Το προφίλ «{0}» διαγράφηκε",
+-"The profiles could not be kept: {0}": "Τα προφίλ δεν κρατήθηκαν: {0}"
++"The profiles could not be kept: {0}": "Τα προφίλ δεν κρατήθηκαν: {0}",
++"Clone": "Κλώνος",
++"Delete the clone": "Διαγραφή του κλώνου",
++"A second node of this step with its own settings, beside it: its window holds them, and a run from there runs with them": "Ένας δεύτερος κόμβος αυτού του βήματος με δικές του ρυθμίσεις, δίπλα του: το παράθυρό του τις κρατά, και μια εκτέλεση από εκεί τρέχει μ' αυτές",
++"its own settings": "δικές του ρυθμίσεις",
++"{0} cloned: its window holds its own settings": "{0}: ο κλώνος έγινε, το παράθυρό του κρατά δικές του ρυθμίσεις",
++"Delete the clone «{0}»? Its settings go with it.": "Διαγραφή του κλώνου «{0}»; Οι ρυθμίσεις του φεύγουν μαζί του.",
++"Eight clones of one step are enough": "Οκτώ κλώνοι ενός βήματος φτάνουν"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index a67441a..8ac22ee 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5527,5 +5527,12 @@ RuachI18n.add("es", {
+ "Profile «{0}» kept": "Perfil «{0}» guardado",
+ "Profile «{0}» set: {1} settings changed": "Perfil «{0}» puesto: {1} ajustes cambiados",
+ "Profile «{0}» deleted": "Perfil «{0}» borrado",
+-"The profiles could not be kept: {0}": "No se pudieron guardar los perfiles: {0}"
++"The profiles could not be kept: {0}": "No se pudieron guardar los perfiles: {0}",
++"Clone": "Clonar",
++"Delete the clone": "Borrar el clon",
++"A second node of this step with its own settings, beside it: its window holds them, and a run from there runs with them": "Un segundo nodo de este paso con sus propios ajustes, a su lado: su ventana los guarda, y una ejecución desde ahí corre con ellos",
++"its own settings": "sus propios ajustes",
++"{0} cloned: its window holds its own settings": "{0} clonado: su ventana guarda sus propios ajustes",
++"Delete the clone «{0}»? Its settings go with it.": "¿Borrar el clon «{0}»? Sus ajustes se van con él.",
++"Eight clones of one step are enough": "Ocho clones de un paso bastan"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index 7373b71..7a91543 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5411,5 +5411,12 @@ RuachI18n.add("fr", {
+ "Profile «{0}» kept": "Profil « {0} » gardé",
+ "Profile «{0}» set: {1} settings changed": "Profil « {0} » remis : {1} réglages changés",
+ "Profile «{0}» deleted": "Profil « {0} » supprimé",
+-"The profiles could not be kept: {0}": "Les profils n'ont pas pu être gardés : {0}"
++"The profiles could not be kept: {0}": "Les profils n'ont pas pu être gardés : {0}",
++"Clone": "Cloner",
++"Delete the clone": "Supprimer le clone",
++"A second node of this step with its own settings, beside it: its window holds them, and a run from there runs with them": "Un second nœud de cette étape avec ses propres réglages, à côté : sa fenêtre les garde, et un lancement depuis là tourne avec eux",
++"its own settings": "ses propres réglages",
++"{0} cloned: its window holds its own settings": "{0} cloné : sa fenêtre garde ses propres réglages",
++"Delete the clone «{0}»? Its settings go with it.": "Supprimer le clone « {0} » ? Ses réglages partent avec lui.",
++"Eight clones of one step are enough": "Huit clones d'une étape suffisent"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 3bf93c4..abbd67e 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5527,5 +5527,12 @@ RuachI18n.add("it", {
+ "Profile «{0}» kept": "Profilo «{0}» tenuto",
+ "Profile «{0}» set: {1} settings changed": "Profilo «{0}» rimesso: {1} regolazioni cambiate",
+ "Profile «{0}» deleted": "Profilo «{0}» eliminato",
+-"The profiles could not be kept: {0}": "I profili non sono stati tenuti: {0}"
++"The profiles could not be kept: {0}": "I profili non sono stati tenuti: {0}",
++"Clone": "Clona",
++"Delete the clone": "Elimina il clone",
++"A second node of this step with its own settings, beside it: its window holds them, and a run from there runs with them": "Un secondo nodo di questo passo con le sue regolazioni, accanto: la sua finestra le tiene, e un'esecuzione da lì gira con quelle",
++"its own settings": "le sue regolazioni",
++"{0} cloned: its window holds its own settings": "{0} clonato: la sua finestra tiene le sue regolazioni",
++"Delete the clone «{0}»? Its settings go with it.": "Eliminare il clone «{0}»? Le sue regolazioni se ne vanno con lui.",
++"Eight clones of one step are enough": "Otto cloni di un passo bastano"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index 0cdd280..bc79c29 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5411,5 +5411,12 @@ RuachI18n.add("ja", {
+ "Profile «{0}» kept": "プロファイル「{0}」を保存しました",
+ "Profile «{0}» set: {1} settings changed": "プロファイル「{0}」を適用：{1} 件の設定を変更",
+ "Profile «{0}» deleted": "プロファイル「{0}」を削除しました",
+-"The profiles could not be kept: {0}": "プロファイルを保存できませんでした：{0}"
++"The profiles could not be kept: {0}": "プロファイルを保存できませんでした：{0}",
++"Clone": "複製",
++"Delete the clone": "複製を削除",
++"A second node of this step with its own settings, beside it: its window holds them, and a run from there runs with them": "このステップの2つ目のノード（独自の設定付き）を隣に：そのウィンドウが設定を保持し、そこからの実行はその設定で動きます",
++"its own settings": "独自の設定",
++"{0} cloned: its window holds its own settings": "{0} を複製しました：そのウィンドウが独自の設定を保持します",
++"Delete the clone «{0}»? Its settings go with it.": "複製「{0}」を削除しますか？その設定も一緒に消えます。",
++"Eight clones of one step are enough": "1つのステップの複製は8つまでです"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index 127c3d1..eed1ddb 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5411,5 +5411,12 @@ RuachI18n.add("pt", {
+ "Profile «{0}» kept": "Perfil «{0}» guardado",
+ "Profile «{0}» set: {1} settings changed": "Perfil «{0}» posto: {1} ajustes mudados",
+ "Profile «{0}» deleted": "Perfil «{0}» apagado",
+-"The profiles could not be kept: {0}": "Os perfis não puderam ser guardados: {0}"
++"The profiles could not be kept: {0}": "Os perfis não puderam ser guardados: {0}",
++"Clone": "Clonar",
++"Delete the clone": "Apagar o clone",
++"A second node of this step with its own settings, beside it: its window holds them, and a run from there runs with them": "Um segundo nó deste passo com os seus próprios ajustes, ao lado: a janela dele os guarda, e uma execução dali roda com eles",
++"its own settings": "os seus próprios ajustes",
++"{0} cloned: its window holds its own settings": "{0} clonado: a janela dele guarda os seus próprios ajustes",
++"Delete the clone «{0}»? Its settings go with it.": "Apagar o clone «{0}»? Os ajustes dele vão junto.",
++"Eight clones of one step are enough": "Oito clones de um passo bastam"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 0a3f6e8..41a3628 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5533,5 +5533,12 @@ RuachI18n.add("ru", {
+ "Profile «{0}» kept": "Профиль «{0}» сохранён",
+ "Profile «{0}» set: {1} settings changed": "Профиль «{0}» поставлен: изменено настроек — {1}",
+ "Profile «{0}» deleted": "Профиль «{0}» удалён",
+-"The profiles could not be kept: {0}": "Профили не сохранились: {0}"
++"The profiles could not be kept: {0}": "Профили не сохранились: {0}",
++"Clone": "Клонировать",
++"Delete the clone": "Удалить клон",
++"A second node of this step with its own settings, beside it: its window holds them, and a run from there runs with them": "Вторая нода этого шага со своими настройками рядом: её окно держит их, и прогон оттуда идёт с ними",
++"its own settings": "свои настройки",
++"{0} cloned: its window holds its own settings": "{0}: клон готов, его окно держит свои настройки",
++"Delete the clone «{0}»? Its settings go with it.": "Удалить клон «{0}»? Его настройки уйдут с ним.",
++"Eight clones of one step are enough": "Восьми клонов одного шага хватит"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 74b48e5..50e392c 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5528,5 +5528,12 @@ RuachI18n.add("uk", {
+ "Profile «{0}» kept": "Профіль «{0}» збережено",
+ "Profile «{0}» set: {1} settings changed": "Профіль «{0}» поставлено: змінено налаштувань — {1}",
+ "Profile «{0}» deleted": "Профіль «{0}» видалено",
+-"The profiles could not be kept: {0}": "Профілі не збереглися: {0}"
++"The profiles could not be kept: {0}": "Профілі не збереглися: {0}",
++"Clone": "Клонувати",
++"Delete the clone": "Видалити клон",
++"A second node of this step with its own settings, beside it: its window holds them, and a run from there runs with them": "Друга нода цього кроку зі своїми налаштуваннями поруч: її вікно тримає їх, і прогін звідти йде з ними",
++"its own settings": "свої налаштування",
++"{0} cloned: its window holds its own settings": "{0}: клон готовий, його вікно тримає свої налаштування",
++"Delete the clone «{0}»? Its settings go with it.": "Видалити клон «{0}»? Його налаштування підуть з ним.",
++"Eight clones of one step are enough": "Восьми клонів одного кроку досить"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index 888000a..45605c3 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5411,5 +5411,12 @@ RuachI18n.add("zh", {
+ "Profile «{0}» kept": "已保存配置档「{0}」",
+ "Profile «{0}» set: {1} settings changed": "已套用配置档「{0}」：改动了 {1} 项设置",
+ "Profile «{0}» deleted": "已删除配置档「{0}」",
+-"The profiles could not be kept: {0}": "配置档未能保存：{0}"
++"The profiles could not be kept: {0}": "配置档未能保存：{0}",
++"Clone": "克隆",
++"Delete the clone": "删除克隆",
++"A second node of this step with its own settings, beside it: its window holds them, and a run from there runs with them": "这个步骤的第二个节点，带着自己的设置放在旁边：它的窗口保存这些设置，从那里运行就用这些设置",
++"its own settings": "自己的设置",
++"{0} cloned: its window holds its own settings": "已克隆{0}：它的窗口保存自己的设置",
++"Delete the clone «{0}»? Its settings go with it.": "删除克隆「{0}」？它的设置会一起删除。",
++"Eight clones of one step are enough": "一个步骤最多八个克隆"
+ });
+diff --git a/tools/console/heresy-post.js b/tools/console/heresy-post.js
+index 014013d..10abf71 100644
+--- a/tools/console/heresy-post.js
++++ b/tools/console/heresy-post.js
+@@ -265,6 +265,7 @@
+   }
+   function cvRecall() {
+     try { CV.on = localStorage.getItem(CV_KEY) === "canvas"; CV.pos = JSON.parse(localStorage.getItem(CV_POS) || "{}") || {}; } catch (e) { CV.pos = {}; }
++    clRecall();                                       // HERESY 1516
+   }
+   function cvStore() {
+     try { localStorage.setItem(CV_KEY, CV.on ? "canvas" : "list"); localStorage.setItem(CV_POS, JSON.stringify(CV.pos)); } catch (e) { /* private mode */ }
+@@ -279,6 +280,12 @@
+       var at = LANE[st.id] || [5, pl++];
+       out.push({ id: st.id, name: st.label, say: st.say, n: String(i + 1), col: at[0], row: at[1], step: st, own: !!st.plugin });
+     });
++    CV.clones.forEach(function (c) {                  // HERESY 1516: a clone beside its own, its own choice said
++      var o = out.filter(function (x) { return x.id === c.of; })[0];
++      if (!o) return;
++      var at = clPlace(o, out);
++      out.push({ id: c.id, name: (o.step.plugin ? o.step.label : tr(o.step.label)) + " " + clMark(c.n), say: clSay(c), n: o.n, col: at[0], row: at[1], step: o.step, clone: c.of, own: true });
++    });
+     return out;
+   }
+   // HERESY 1510: the chain's node: its steps as they are set (bypassed ones out), its run on it
+@@ -336,6 +343,7 @@
+     var w = [["take", "debuzzPanel"], ["debuzzPanel", "upscalePanel"], ["upscalePanel", "derivedPanel"], ["derivedPanel", "dawPanel"], ["derivedPanel", "remasterPanel"],
+              ["take", "spectrumPanel", 1], ["take", "inspectPanel", 1], ["take", "glossPanel", 1], ["importPanel", "take", 1]];
+     STEPS.forEach(function (st) { if (st.plugin) w.push(st.spec && st.spec.input === "stems" ? ["derivedPanel", st.id] : ["take", st.id, 1]); });
++    CV.clones.forEach(function (c) { w.filter(function (x) { return x[1] === c.of; }).forEach(function (x) { w.push([x[0], c.id, 1]); }); });   // HERESY 1516: a clone's way is its own's
+     var have = {};
+     w.forEach(function (x) { have[x[0] + ">" + x[1]] = x; x[3] = !!f.flows[x[0] + ">" + x[1]]; });
+     Object.keys(f.flows).forEach(function (k) { if (!have[k]) { var a = k.split(">"); have[k] = [a[0], a[1], 0, true]; w.push(have[k]); } });   // the way it went, where the chain's way does not run
+@@ -362,6 +370,7 @@
+     bar.className = "pcv-bar"; bar.id = "pcvBar"; bar.hidden = true;
+     bar.innerHTML = '<span class="pcv-profiles" id="pcvProfiles"></span>';
+     box.parentNode.insertBefore(bar, box);
++    pfPaint();                                        // 1516: Save as… at once, the chips when the lab answers
+     bar.addEventListener("click", function (e) {
+       if (e.target.closest("#pcvSaveAs")) { pfSaveAs(); return; }
+       var b = e.target.closest(".pcv-prof"); if (b) pfSet(b.dataset.prof);
+@@ -395,7 +404,7 @@
+     var row = state.take && window.HeresyCollection && window.HeresyCollection.row ? window.HeresyCollection.row(state.take.name) : null, secs = row && row.seconds;
+     var html = nodes.map(function (nd) {
+       var p = CV.pos[nd.id], x = p ? p[0] * (W - NODE_W) : PAD + nd.col * (W - 2 * PAD - NODE_W) / (cols - 1), y = p ? p[1] * (H - NODE_H) : PAD + nd.row * (H - 2 * PAD - NODE_H) / (rows - 1);
+-      var st = nd.step, done = st && state.done[st.step], tab = st && document.querySelector('#postSteps [data-step-panel="' + st.id + '"]');
++      var st = nd.step, done = st && !nd.clone && state.done[st.step], tab = st && !nd.clone && document.querySelector('#postSteps [data-step-panel="' + st.id + '"]');   // 1516: the step's marks on its own
+       var made = nd.id === "take" ? f.total : nd.id === "chain" ? 0 : f.count[nd.id] || 0, own = nd.own ? ' translate="no"' : "";
+       var meta = (done ? '<span class="pcv-done">\u2713</span>' : "") + (made ? '<span class="pcv-made">' + esc(tr("{0} made").replace("{0}", made)) + "</span>" : "") +
+         (nd.id === "take" && secs ? '<span class="pcv-made mono">' + Math.floor(secs / 60) + ":" + ("0" + Math.floor(secs % 60)).slice(-2) + "</span>" : "");
+@@ -403,9 +412,9 @@
+       var by = bypassed(nd.id);                         // HERESY 1508
+       if (by) meta = '<span class="pcv-by">bypassed</span>' + meta;
+       var cls = "pcv-node pcv-" + (st ? st.group || "finish" : nd.id === "take" ? "take" : "import") + (st && st.plugin ? " is-plugin" : "") + (done ? " is-done" : "") + (by ? " is-bypassed" : "") +
+-        ((tab && tab.classList.contains("is-running")) || (nd.id === "chain" && chain.job && chain.job.status === "running") ? " is-running" : "") + (st && st.id === state.current ? " is-active" : "") + (nd.id === CV.open ? " is-open" : "");
++        ((tab && tab.classList.contains("is-running")) || (nd.id === "chain" && chain.job && chain.job.status === "running") ? " is-running" : "") + (st && !nd.clone && st.id === state.current ? " is-active" : "") + (nd.id === CV.open ? " is-open" : "") + (nd.clone ? " is-clone" : "");
+       return '<button type="button" class="' + cls + '" data-node="' + esc(nd.id) + '" style="left:' + Math.round(x) + "px;top:" + Math.round(y) + 'px">' +
+-        '<span class="pcv-top">' + (nd.n ? '<span class="pcv-n">' + nd.n + "</span>" : "") + '<span class="pcv-name"' + (st && st.plugin ? ' translate="no"' : "") + ">" + esc(nd.name) + "</span>" +
++        '<span class="pcv-top">' + (nd.n ? '<span class="pcv-n">' + nd.n + "</span>" : "") + '<span class="pcv-name"' + (st && st.plugin || nd.clone ? ' translate="no"' : "") + ">" + esc(nd.name) + "</span>" +
+         '<i class="pcv-live" aria-hidden="true"></i></span><span class="pcv-say"' + own + ">" + esc(nd.say) + '</span><span class="pcv-meta">' + meta + "</span>" +
+         (srcSelect(nd.id) ? '<i class="pcv-port is-in" aria-hidden="true"></i>' : "") +   // HERESY 1510: where a wire is drawn to, and from
+         (OUT_NODES[nd.id] || (st && st.plugin) ? '<i class="pcv-port is-out" data-port="' + esc(nd.id) + '" data-tip="Drag to another node: its source becomes this one\'s newest"></i>' : "") + "</button>";
+@@ -439,23 +448,21 @@
+   // or deletes it (asked first)
+   var PF = { list: [], loaded: false };
+   var PF_SKIP = /Source$|^specCompare$|^rmTrim|^mx|^au|^imp|^pcv|^hc/;   // a take's own: its sources and its cut points
+-  function setupNow() {
+-    var fields = {};
+-    [$("view-post"), $("ndBox")].filter(Boolean).forEach(function (root) {
+-      Array.prototype.forEach.call(root.querySelectorAll("input[id], select[id], textarea[id]"), function (el) {
+-        if (PF_SKIP.test(el.id) || /^(file|button|search|submit)$/.test(el.type)) return;
+-        fields[el.id] = el.type === "checkbox" || el.type === "radio" ? el.checked : el.value;
+-      });
+-      Array.prototype.forEach.call(root.querySelectorAll(".pl-panel [data-pl-key]"), function (el) {
+-        var panel = el.closest(".pl-panel");
+-        fields["pl:" + panel.id + ":" + el.dataset.plKey] = el.type === "checkbox" ? el.checked : el.value;
+-      });
++  function fieldsOf(root, into) {                   // 1516: a root's settings (the page's, a panel's), by id, a plugin's by its key
++    var fields = into || {};
++    Array.prototype.forEach.call(root.querySelectorAll("input[id], select[id], textarea[id]"), function (el) {
++      if (PF_SKIP.test(el.id) || /^(file|button|search|submit)$/.test(el.type)) return;
++      fields[el.id] = el.type === "checkbox" || el.type === "radio" ? el.checked : el.value;
++    });
++    Array.prototype.forEach.call(root.querySelectorAll("[data-pl-key]"), function (el) {
++      var panel = el.closest(".pl-panel");
++      if (panel) fields["pl:" + panel.id + ":" + el.dataset.plKey] = el.type === "checkbox" ? el.checked : el.value;
+     });
+-    return { fields: fields, canvas: JSON.parse(JSON.stringify(CV.pos || {})) };
++    return fields;
+   }
+-  function setupApply(setup) {
+-    var n = 0, f = (setup && setup.fields) || {};
+-    Object.keys(f).forEach(function (k) {
++  function fieldsSet(f) {                            // as a hand would: each control says change; a choice this studio has not is skipped
++    var n = 0;
++    Object.keys(f || {}).forEach(function (k) {
+       var el;
+       if (k.indexOf("pl:") === 0) {
+         var a = k.split(":"), panel = $(a[1]);
+@@ -466,16 +473,94 @@
+       else {
+         var v = String(f[k]);
+         if (el.value === v) return;
+-        if (el.tagName === "SELECT" && !Array.prototype.some.call(el.options, function (o) { return o.value === v; })) return;   // a choice this studio has not
++        if (el.tagName === "SELECT" && !Array.prototype.some.call(el.options, function (o) { return o.value === v; })) return;
+         el.value = v;
+       }
+       el.dispatchEvent(new Event("input", { bubbles: true })); el.dispatchEvent(new Event("change", { bubbles: true }));
+       n++;
+     });
++    return n;
++  }
++  function setupNow() {
++    var fields = {};
++    [$("view-post"), $("ndBox")].filter(Boolean).forEach(function (root) { fieldsOf(root, fields); });
++    if (CV.swap) {                                    // 1516: a clone open: its settings are the clone's, the step's own are those kept aside
++      var cl = cloneOf(CV.swap.id);
++      if (cl && CV.el) cl.fields = fieldsOf(CV.el);
++      Object.keys(CV.swap.keep).forEach(function (k) { fields[k] = CV.swap.keep[k]; });
++    }
++    return { fields: fields, canvas: JSON.parse(JSON.stringify(CV.pos || {})), clones: JSON.parse(JSON.stringify(CV.clones)) };
++  }
++  function setupApply(setup) {
++    if (CV.swap) cvClose();                           // 1516: the step's own settings back in their panel first
++    var n = fieldsSet(setup && setup.fields);
++    if (setup && Array.isArray(setup.clones)) { CV.clones = JSON.parse(JSON.stringify(setup.clones)); clStore(); }   // 1516; a profile from before the clones leaves them
+     if (setup && setup.canvas) { CV.pos = JSON.parse(JSON.stringify(setup.canvas)); cvStore(); var h = $("postCanvas") && $("postCanvas").querySelector(".pcv-nodes"); if (h) h.dataset.html = ""; }
+     cvPaint();
+     return n;
+   }
++  // ---- HERESY 1516 (Viktor 16.10.2026: «Клонирование некоторых нод»): a step's node cloned: a second Remaster (an Upscale, a Debuzz, a plugin's
++  // step) with its own settings, beside its own. Its window is the step's own panel with the clone's settings in it while it is open (the
++  // step's own are put back on closing), so a run from there runs with them and its file lands in the tree as the step's always does
++  var CLONES_KEY = "yue2.refinerClones", CLONABLE = { debuzzPanel: 1, upscalePanel: 1, remasterPanel: 1 }, CLONE_MAX = 8;
++  CV.clones = []; CV.swap = null;
++  function clRecall() {
++    try { CV.clones = (JSON.parse(localStorage.getItem(CLONES_KEY) || "[]") || []).filter(function (c) { return c && c.id && c.of && c.n; }); } catch (e) { CV.clones = []; }
++  }
++  function clStore() { try { localStorage.setItem(CLONES_KEY, JSON.stringify(CV.clones)); } catch (e) { /* private mode */ } }
++  function clonable(id) { return !!CLONABLE[id] || /^pl-/.test(id); }
++  function cloneOf(id) { return CV.clones.filter(function (c) { return c.id === id; })[0] || null; }
++  function clMark(n) { return n >= 2 && n <= 20 ? String.fromCharCode(0x2460 + n - 1) : "#" + n; }   // the step's own is \u2460, its clones \u2461…
++  function clSay(c) {                                // the clone's own choice, as its panel names it: the remaster's preset, the upscale's mode…
++    var f = c.fields || {}, keys = Object.keys(f), num = "";
++    for (var i = 0; i < keys.length; i++) {
++      var el = $(keys[i]);
++      if (!el) continue;
++      if (el.tagName === "SELECT") {
++        var o = Array.prototype.filter.call(el.options, function (x) { return x.value === String(f[keys[i]]); })[0];
++        if (o) return o.textContent.trim();
++      } else if (!num && el.type === "number") {
++        var lab = el.closest("label"), cap = lab && lab.querySelector(".label");
++        num = (cap ? cap.textContent.trim() + " " : "") + f[keys[i]];
++      }
++    }
++    return num || tr("its own settings");
++  }
++  function clPlace(o, out) {                         // beside its own in its column: half a row down, then further, then up
++    var maxRow = Math.max(2, out.reduce(function (m, x) { return Math.max(m, Math.ceil(x.row)); }, 0));
++    var taken = out.filter(function (x) { return x.col === o.col; }).map(function (x) { return x.row; });
++    var tries = [0.5, 1, 1.5, 2, -0.5, -1, -1.5, -2];
++    for (var i = 0; i < tries.length; i++) {
++      var r = o.row + tries[i];
++      if (r < 0 || r > maxRow) continue;
++      if (taken.every(function (t) { return Math.abs(t - r) >= 0.5; })) return [o.col, r];
++    }
++    return [o.col, Math.min(maxRow, o.row + 0.25)];
++  }
++  function cvClone(id) {
++    var src = cloneOf(id), of = src ? src.of : id, el = $(of);
++    if (!el || !clonable(of)) return "";
++    if (CV.clones.filter(function (c) { return c.of === of; }).length >= CLONE_MAX) { pfSay(tr("Eight clones of one step are enough"), true); return ""; }
++    var used = CV.clones.filter(function (c) { return c.of === of; }).map(function (c) { return c.n; }), n = 2;
++    while (used.indexOf(n) >= 0) n++;
++    var cl = { id: "clone-" + of + "-" + n, of: of, n: n, fields: src ? JSON.parse(JSON.stringify(src.fields || {})) : fieldsOf(el) };
++    CV.clones.push(cl); clStore(); cvPaint();
++    pfSay(tr("{0} cloned: its window holds its own settings").replace("{0}", cvTitle(cl.id).replace(/^\d+ \u00b7 /, "")));
++    return cl.id;
++  }
++  function cvUnclone(id, asked) {
++    var cl = cloneOf(id);
++    if (!cl) return;
++    var go = asked || !window.HeresyDialog ? Promise.resolve(true)
++      : window.HeresyDialog.confirm(tr("Delete the clone «{0}»? Its settings go with it.").replace("{0}", cvTitle(id).replace(/^\d+ \u00b7 /, "")), { ok: tr("Delete"), cancel: tr("Cancel"), danger: true });
++    go.then(function (yes) {
++      if (yes !== true) return;
++      if (CV.open === id) cvClose();
++      CV.clones = CV.clones.filter(function (c) { return c.id !== id; });
++      delete CV.pos[id];
++      clStore(); cvStore(); cvPaint();
++    });
++  }
+   function pfSay(text, bad) { if (chain.hooks && chain.hooks.toast) chain.hooks.toast(text, bad ? "bad" : undefined); }
+   function pfPaint() {
+     var box = $("pcvProfiles");
+@@ -538,10 +623,16 @@
+     if (CV.on) CV.timer = setInterval(function () { if (!document.hidden && $("view-post") && !$("view-post").classList.contains("is-hidden")) cvPaint(); }, 1000);   // the pulses
+     window.dispatchEvent(new Event("resize"));
+   }
+-  function cvOrder() { return ["take", "chain"].concat(STEPS.map(function (st) { return st.id; })); }   // 1510: the chain second
++  function cvOrder() {                               // 1510: the chain second; 1516: a clone after its own
++    var out = ["take", "chain"];
++    STEPS.forEach(function (st) { out.push(st.id); CV.clones.forEach(function (c) { if (c.of === st.id) out.push(c.id); }); });
++    return out;
++  }
+   function cvTitle(id) {
+     if (id === "take") return tr("Made from This Take");
+     if (id === "chain") return tr("Chain");
++    var cl = cloneOf(id);                             // HERESY 1516
++    if (cl) return cvTitle(cl.of) + " " + clMark(cl.n);
+     var st = STEPS.filter(function (x) { return x.id === id; })[0];
+     return st ? (STEPS.indexOf(st) + 1) + " \u00b7 " + tr(st.label) : id === "importPanel" ? tr("Import a Track") : id;
+   }
+@@ -568,11 +659,13 @@
+     return { back: back, box: box, body: box.querySelector(".nd-body") };
+   }
+   function cvOpen(id) {
+-    var el = id === "take" ? document.querySelector("#view-post > .dv-tree-box") : id === "chain" ? $("postChain") : $(id);   // 1510: the chain's strip
++    var cl = cloneOf(id), pid = cl ? cl.of : id;      // HERESY 1516: a clone's window is its own's panel
++    var el = id === "take" ? document.querySelector("#view-post > .dv-tree-box") : id === "chain" ? $("postChain") : $(pid);   // 1510: the chain's strip
+     if (!el && CV.open === id) el = CV.el;
+     if (!el) return false;
+     cvClose(true);
+-    if (STEPS.some(function (st) { return st.id === id; })) select(id);   // the step's own: its events, its place in the list
++    if (STEPS.some(function (st) { return st.id === pid; })) select(pid);   // the step's own: its events, its place in the list
++    if (cl) { CV.swap = { id: id, keep: fieldsOf(el) }; fieldsSet(cl.fields); }   // 1516: the clone's settings in, the step's own kept aside
+     var m = cvModal();
+     CV.hold = document.createComment("node " + id);
+     el.parentNode.insertBefore(CV.hold, el);
+@@ -581,6 +674,7 @@
+     CV.open = id; CV.el = el;
+     var order = cvOrder(), i = order.indexOf(id), prev = order[(i - 1 + order.length) % order.length], next = order[(i + 1) % order.length];
+     m.box.querySelector(".nd-title").textContent = cvTitle(id);
++    m.box.classList.toggle("is-clone", !!cl);          // HERESY 1516
+     m.box.querySelector(".nd-prev").textContent = "\u2039 " + cvTitle(prev).replace(/^\d+ \u00b7 /, "");
+     m.box.querySelector(".nd-next").textContent = cvTitle(next).replace(/^\d+ \u00b7 /, "") + " \u203a";
+     if (window.HeresyChoices) window.HeresyChoices.within(el);   // HERESY 1509: its choices in sight, no dropdowns in a node's window
+@@ -595,6 +689,12 @@
+   }
+   function cvClose(quiet) {
+     if (!CV.open) return;
++    if (CV.swap) {                                    // HERESY 1516: the clone's settings kept, the step's own back in its panel
++      var cl = cloneOf(CV.swap.id), keep = CV.swap.keep;
++      if (cl && CV.el) { cl.fields = fieldsOf(CV.el); clStore(); }
++      CV.swap = null;
++      fieldsSet(keep);
++    }
+     if (window.HeresyChoices) window.HeresyChoices.close();   // HERESY 1509: a list opened from it goes with it
+     if (CV.hold && CV.hold.parentNode) { CV.hold.parentNode.insertBefore(CV.el, CV.hold); CV.hold.remove(); }
+     CV.open = ""; CV.el = null; CV.hold = null;
+@@ -688,6 +788,9 @@
+                           hint: "The chain up to this node and no further, with the chain's own settings: a node bypassed on the way is skipped, this one runs" });
+       if (c && c.box) items.push({ label: bypassed(id) ? "Back into the chain" : "Bypass in the chain", icon: "\u2933", action: function () { toggleBypass(id); },
+                                    hint: "The chain runs past this node: its own check in the chain's row, turned off or on" });
++      if (clonable(id) || cloneOf(id)) items.push({ label: "Clone", icon: "\u2750", action: function () { cvClone(id); },   // HERESY 1516
++                                                    hint: "A second node of this step with its own settings, beside it: its window holds them, and a run from there runs with them" });
++      if (cloneOf(id)) items.push({ label: "Delete the clone", icon: "\u2715", danger: true, action: function () { cvUnclone(id); } });
+       items.push({ sep: true }, { label: "Arrange", icon: "\u2316", action: arrange });
+       window.HeresyMenu.open(e.clientX, e.clientY, items);
+     });
+@@ -998,5 +1101,6 @@
+     audio: { load: function () { au.data = null; auLoad(true); }, data: function () { return au.data; } },   // HERESY 1512
+     canvas: { set: function (on) { cvSet(on); }, on: function () { return CV.on; }, open: cvOpen, close: function () { cvClose(); }, opened: function () { return CV.open; },
+               step: cvStep, paint: cvPaint, until: runUntil, bypass: toggleBypass, bypassed: bypassed, link: cvLink,
+-              setup: setupNow, apply: setupApply, profiles: function () { return PF.list.slice(); }, loadProfiles: pfLoad } };   // HERESY 1506, 1508, 1510, 1515
++              setup: setupNow, apply: setupApply, profiles: function () { return PF.list.slice(); }, loadProfiles: pfLoad,
++              clone: cvClone, unclone: cvUnclone, clones: function () { return JSON.parse(JSON.stringify(CV.clones)); } } };   // HERESY 1506, 1508, 1510, 1515, 1516
+ })();
+-- 
+2.43.0
+

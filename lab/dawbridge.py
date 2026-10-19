@@ -2,7 +2,7 @@
 track as it is, or the whole take handed to the user's own DAW, where whatever happens next happens outside
 the studio. Nothing comes back in: the studio does not import a DAW's project.
 
-REAPER first, Waveform second; others by pull request. This part finds which of them the studio's own machine
+Bitwig first (DAWproject), REAPER second (HERESY 1478: Waveform out, it opened our DAWproject empty); others by pull request. This part finds which of them the studio's own machine
 has. A DAW on another computer (the browser on a laptop, the studio on a server) cannot be seen from here: the
 page lets the user name it.
 
@@ -11,20 +11,15 @@ import os, re, shutil
 from pathlib import Path
 
 KNOWN = [
-    {"id": "reaper", "name": "REAPER", "by": "Cockos", "state": "first",
-     "paths": ["/opt/REAPER/reaper", "~/opt/REAPER/reaper", "/usr/local/bin/reaper"], "which": ["reaper"],
-     "licence": "60 days of evaluation with every function, then a licence: $60 for personal use or a small business",
-     "install": "reaper.fm/download.php → the Linux x86_64 tarball → unpack it and run ./install-reaper.sh (it goes to /opt/REAPER)"},
-    {"id": "waveform", "name": "Waveform", "by": "Tracktion", "state": "second",
-     "paths": ["/usr/bin/Waveform15", "/usr/bin/Waveform14", "/opt/Waveform15/Waveform15", "/opt/Waveform14/Waveform14"],
-     "which": ["Waveform15", "Waveform14"],                 # HERESY 1139: 14 at least (it opens DAWproject); 13 is not supported
-     "licence": "Waveform Free 14 or newer: free, no track or export limits; it opens the studio's DAWproject (File > Import Other > Import a DAWproject file). Waveform 13 is not supported",
-     "install": "tracktion.com/products/waveform-free → the .deb of Waveform 14 for Linux → sudo apt install ./waveform14_*.deb"},
-    {"id": "bitwig", "name": "Bitwig Studio", "by": "Bitwig", "state": "DAWproject",
+    {"id": "bitwig", "name": "Bitwig Studio", "by": "Bitwig", "state": "first",   # HERESY 1478: first; Waveform out (an empty project)
      "paths": ["/opt/bitwig-studio/bitwig-studio", "/var/lib/flatpak/exports/bin/com.bitwig.BitwigStudio",
                "~/.local/share/flatpak/exports/bin/com.bitwig.BitwigStudio"], "which": ["bitwig-studio"],   # HERESY 1148: the Flatpak too
      "licence": "30 days without limits after signing up, then Essentials $99, Producer $199 or Studio $399 (bitwig.com, 03.10.2026); opens the studio's DAWproject: the mix, the stems, the score as notes, the sections as markers",
      "install": "bitwig.com/download: the Ubuntu .deb (sudo apt install ./bitwig-studio-*.deb) or the Flatpak"},
+    {"id": "reaper", "name": "REAPER", "by": "Cockos", "state": "second",
+     "paths": ["/opt/REAPER/reaper", "~/opt/REAPER/reaper", "/usr/local/bin/reaper"], "which": ["reaper"],
+     "licence": "60 days of evaluation with every function, then a licence: $60 for personal use or a small business",
+     "install": "reaper.fm/download.php → the Linux x86_64 tarball → unpack it and run ./install-reaper.sh (it goes to /opt/REAPER)"},
 ]
 
 

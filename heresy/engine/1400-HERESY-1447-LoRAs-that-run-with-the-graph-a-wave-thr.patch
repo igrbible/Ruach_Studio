@@ -1,0 +1,1243 @@
+From 6d3966cd7bf1c959c4167df6cdaf05c2062ce9d5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 15 Oct 2026 01:59:59 -0600
+Subject: [PATCH 1400/1463] HERESY 1447: LoRAs that run with the graph: a wave
+ through the song, a budget shared
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 14.10.2026: «LoRA ересь и алхимия»; 15.10.2026: «И не забудь за динамичную волну, именно ту, что ты воплотил в слайдерах стилей».
+
+An adapter with a wave (the sliders' own, HERESY 1166) or in a budget is no longer merged at load: y = W x + g B (A x), A and B in F32 on the model's backend, g set before each step from its strength x its wave x its budget's share. The music half moves g at every frame it writes; the sound half takes a row of gains, one a frame of the chunk. A budget: the strengths of a group add up to its cap at most, shared in proportion or served in the request's order (what one adapter's wave lets go, the next one takes). An adapter's full deltas (realaudio's llm2vae and the like) stay merged at their flat strength while its A and B ride the wave. Flat adapters outside any budget are merged as before.
+
+The request: a lora's "curve" (points or flat, arch, rise, fall) and "group"; "lora_groups": [{cap, mode: share|order}]; both written back with the take. The decode graph is keyed by the set's build, a model never keeps a set of a run before past its next require.
+
+Measured on GPU2 (BF16): merged and on the graph agree token for token over all 600 frames at 0.75 (greedy), over 89 at 0.8 (a near tie; 0.75 against 0.8 merged part at 18); the sound half's latents 0.54 % apart (41 % from none). The set loads in under a second where a merge takes 9.6 s.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/generate.h  |   2 +
+ src/lora-rt.h   | 453 ++++++++++++++++++++++++++++++++++++++++++++++++
+ src/lora.h      |   7 +
+ src/nar.h       |  23 ++-
+ src/pipeline.h  | 153 +++++++++++++++-
+ src/qwen3-lm.h  |  53 +++++-
+ src/request.cpp | 119 +++++++++----
+ src/request.h   |  15 +-
+ 8 files changed, 768 insertions(+), 57 deletions(-)
+ create mode 100644 src/lora-rt.h
+
+diff --git a/src/generate.h b/src/generate.h
+index c070529..312c4ab 100644
+--- a/src/generate.h
++++ b/src/generate.h
+@@ -125,6 +125,7 @@ static bool yue2_generate(Qwen3LM *                             lm,
+ 
+     if (phase == YUE2_PHASE_SEMANTIC) {
+         sliders_progress(lm->sliders, 0, s.max_tokens);   // HERESY 1166: the curves at the start of the music
++        lora_rt_progress(lm->lora_rt, 0, s.max_tokens);   // HERESY 1447: and the LoRAs' waves
+     }
+     Timer prefill_timer;
+     for (int i = 0; i < B; i++) {
+@@ -211,6 +212,7 @@ static bool yue2_generate(Qwen3LM *                             lm,
+         }
+         if (phase == YUE2_PHASE_SEMANTIC) {
+             sliders_progress(lm->sliders, step + 1, s.max_tokens);   // HERESY 1166: each slider where its curve is now
++            lora_rt_progress(lm->lora_rt, step + 1, s.max_tokens);   // HERESY 1447: each LoRA where its wave is now
+         }
+         qw3lm_forward_batch(lm, kv, tokens.data(), kv_sets.data(), N, batched.data(), row0, rows);
+         for (int i = 0; i < B; i++) {
+diff --git a/src/lora-rt.h b/src/lora-rt.h
+new file mode 100644
+index 0000000..e1bb3b1
+--- /dev/null
++++ b/src/lora-rt.h
+@@ -0,0 +1,453 @@
++#pragma once
++// lora-rt.h: LoRA adapters applied while the graph runs, not merged into the weights (local addition, HERESY 1447)
++//
++// Viktor 14.10.2026: «LoRA ересь и алхимия»; 15.10.2026: «И не забудь за динамичную волну, именно ту, что ты воплотил в
++// слайдерах стилей». An adapter's strength runs through the song on the sliders' own wave (HERESY 1166: points, an eased
++// half cosine between them), and adapters that touch the same layers share one budget. For a projection input x:
++//
++//   y = W x + sum_i g_i * B_i (A_i x)
++//
++// A_i [rank, in] and B_i [out, rank] (scaled by alpha / rank) in F32 on the model's own backend; g_i a one-float tensor
++// set before each step: the adapter's strength x its wave at that point of the song x its group's share of the budget.
++// The music half (AR) moves g at every token it writes, as the sliders do (a prefill reads one value: the prompt the
++// adapter's own strength, the plan of the whole song being written there; a chunk read again the wave at its middle).
++// The sound half (NAR) solves a chunk of the song at once, most often the whole song, so its g is a row of gains, one a
++// frame ([1, N], broadcast over the outputs and the variations), set before each chunk.
++//
++// Only an adapter with a wave or in a budget takes this path; any other is merged at load as before (lora.h), so what
++// worked stays as it was. Full deltas cannot run as A and B (.diff, the replaced llm2vae / vae2llm / time embedder of
++// the realaudio adapters): an adapter's full deltas are merged at its flat strength while its A and B ride the wave (lora.h
++// LoraSet::lora_skip), and the log says so. The base weights stay as they are on this path, quantized ones included (no
++// re-quantizing to Q8_0, as a merge into Q6_K or Q5_K must).
++//
++// Measured 15.10.2026 on GPU2 (BF16, steps-from-hell's AR adapter, greedy sampling): merged and on the graph agree token
++// for token over all 600 frames at 0.75 and over 89 at 0.8, where a near tie turns (0.75 against 0.8 merged part at 18);
++// the sound half (realaudio v9's A and B at 0.6, one take's tokens replayed): latents 0.54 % apart, 41 % from none.
++
++#include "ggml-backend.h"
++#include "ggml.h"
++#include "lora.h"
++#include "qwen3-enc.h"  // Qwen3Layer, qwen3_linear
++#include "sliders.h"    // slider_curve_at: the same wave
++#include "weight-ctx.h"
++
++#include <cmath>
++#include <memory>
++#include <string>
++#include <utility>
++#include <vector>
++
++#define LORA_RT_MAX_LAYERS 64
++
++enum LoraRtProj { LRT_Q = 0, LRT_K, LRT_V, LRT_O, LRT_GATE, LRT_UP, LRT_DOWN, LRT_N };
++
++static const char * const LORA_RT_PROJ[2][LRT_N] = {
++    { "self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj", "self_attn.o_proj", "mlp.gate_proj", "mlp.up_proj",
++      "mlp.down_proj" },
++    { "nar_self_attn.q_proj", "nar_self_attn.k_proj", "nar_self_attn.v_proj", "nar_self_attn.o_proj", "nar_mlp.gate_proj",
++      "nar_mlp.up_proj", "nar_mlp.down_proj" },
++};
++
++struct LoraRtPair {
++    int                  adapter = 0;
++    struct ggml_tensor * a       = nullptr;  // ggml [in, rank]: A's rows
++    struct ggml_tensor * b       = nullptr;  // ggml [rank, out]: B, scaled by alpha / rank
++};
++
++struct LoraRtAdapter {
++    std::string                          id;
++    float                                strength = 0.0f;  // this half's, 0..2
++    std::vector<std::pair<float, float>> curve;            // its wave; empty: flat
++    int                                  group    = -1;    // its budget group, -1: none
++    struct ggml_tensor *                 gain_t   = nullptr;
++    struct ggml_tensor *                 frame_t  = nullptr;  // the sound half's gains frame by frame, [1, max_frames]
++    mutable float                        gain_now = 0.0f;
++};
++
++// A budget: the strengths of its members at a point of the song add up to `cap` at most. share (A): over the cap, each
++// gives way in proportion; order (B): the first member in the request's order takes what it asks, the next what is left
++struct LoraRtGroup {
++    float cap  = 2.0f;
++    int   mode = 0;  // 0 share, 1 order
++};
++
++// One adapter of the run on this path, as the pipeline hands it over
++struct LoraRtChoice {
++    std::string                          path, id;
++    float                                strength = 0.0f;  // this half's
++    std::vector<std::pair<float, float>> curve;
++    int                                  group = -1;
++};
++
++struct LoraRtSet {
++    int                        half = 0;
++    std::vector<LoraRtAdapter> adapters;
++    std::vector<LoraRtGroup>   groups;
++    std::vector<LoraRtPair>    pairs[LORA_RT_MAX_LAYERS][LRT_N];
++    WeightCtx                  wctx      = {};
++    bool                       allocated = false;
++    const void *               owner     = nullptr;  // the model it was built for: another one (reloaded) builds it anew
++    const void *               owner_buf = nullptr;  // and its weights' buffer at that time
++    unsigned                   gen       = 0;        // which build: the decode graph is keyed by it, the set's address being one
++    int                        kept      = 0;        // frames kept before the stage (regenerate from here): the wave counts them
++    int                        max_frames = 0;       // the sound half's row of gains
++    mutable float              t_now     = -1.0f;
++};
++
++inline unsigned g_lora_rt_gen = 0;
++
++static bool lora_rt_active(const LoraRtSet * s) {
++    return s && s->allocated && !s->adapters.empty();
++}
++
++static void lora_rt_free(LoraRtSet * set) {
++    if (set->allocated) {
++        wctx_free(&set->wctx);
++    }
++    set->wctx = {};
++    set->adapters.clear();
++    set->groups.clear();
++    for (auto & layer : set->pairs) {
++        for (auto & v : layer) {
++            v.clear();
++        }
++    }
++    set->allocated  = false;
++    set->owner      = nullptr;
++    set->owner_buf  = nullptr;
++    set->kept       = 0;
++    set->max_frames = 0;
++    set->t_now      = -1.0f;
++}
++
++// The effective strength of every adapter at t (0..1 of the song): its strength x its wave, then each budget; t < 0:
++// the wave left flat (the adapter's own strength), the budgets still kept
++static void lora_rt_strengths(const LoraRtSet * set, float t, std::vector<float> * out) {
++    const size_t n = set->adapters.size();
++    out->assign(n, 0.0f);
++    for (size_t i = 0; i < n; i++) {
++        const LoraRtAdapter & a = set->adapters[i];
++        (*out)[i]               = a.strength * (t < 0.0f ? 1.0f : slider_curve_at(a.curve, t));
++    }
++    for (size_t g = 0; g < set->groups.size(); g++) {
++        const LoraRtGroup & G = set->groups[g];
++        if (G.mode == 1) {  // order: served in the request's order
++            float left = G.cap;
++            for (size_t i = 0; i < n; i++) {
++                if (set->adapters[i].group != (int) g) {
++                    continue;
++                }
++                float take = (*out)[i] < left ? (*out)[i] : (left > 0.0f ? left : 0.0f);
++                (*out)[i]  = take;
++                left -= take;
++            }
++        } else {  // share: over the cap, each in proportion
++            float sum = 0.0f;
++            for (size_t i = 0; i < n; i++) {
++                if (set->adapters[i].group == (int) g) {
++                    sum += (*out)[i];
++                }
++            }
++            if (sum > G.cap && sum > 0.0f) {
++                const float k = G.cap / sum;
++                for (size_t i = 0; i < n; i++) {
++                    if (set->adapters[i].group == (int) g) {
++                        (*out)[i] *= k;
++                    }
++                }
++            }
++        }
++    }
++}
++
++// Upload the gains at t when they moved (force: all of them); the log says where each stands when asked
++static void lora_rt_at(const LoraRtSet * set, float t, bool force = false, const char * say = nullptr) {
++    if (!lora_rt_active(set)) {
++        return;
++    }
++    t = t < 0.0f ? -1.0f : (t > 1.0f ? 1.0f : t);
++    std::vector<float> g;
++    lora_rt_strengths(set, t, &g);
++    for (size_t i = 0; i < set->adapters.size(); i++) {
++        const LoraRtAdapter & a = set->adapters[i];
++        if (force || fabsf(g[i] - a.gain_now) > 1e-4f * (fabsf(a.strength) + 1e-3f)) {
++            ggml_backend_tensor_set(a.gain_t, &g[i], 0, sizeof(float));
++            a.gain_now = g[i];
++        }
++    }
++    set->t_now = t;
++    if (say) {
++        std::string line;
++        for (const LoraRtAdapter & a : set->adapters) {
++            char part[200];
++            snprintf(part, sizeof(part), "%s%s %.2f", line.empty() ? "" : ", ", a.id.c_str(), (double) a.gain_now);
++            line += part;
++        }
++        if (t < 0.0f) {
++            fprintf(stderr, "[LoRA] %s: %s\n", say, line.c_str());
++        } else {
++            fprintf(stderr, "[LoRA] %s %.0f%%: %s\n", say, (double) (t * 100.0f), line.c_str());
++        }
++    }
++}
++
++// The sound half's gains for a chunk: frames [start, start + frames) of a song whose wave spans `span` frames, one gain a
++// frame (the block's start and end rows take their neighbours'); the log says the chunk's middle
++static void lora_rt_frames(const LoraRtSet * set, int start, int frames, int span, bool say = true) {
++    if (!lora_rt_active(set) || set->max_frames <= 0) {
++        return;
++    }
++    const int N = frames + 2;
++    if (N > set->max_frames) {
++        fprintf(stderr, "[LoRA] FATAL: a chunk of %d frames past the %d the sound half's gains hold\n", frames, set->max_frames);
++        return;
++    }
++    const float                     sp = span > 0 ? (float) span : (float) (start + frames);
++    const size_t                    n  = set->adapters.size();
++    std::vector<std::vector<float>> rows(n, std::vector<float>((size_t) N));
++    std::vector<float>              g;
++    for (int k = 0; k < N; k++) {  // one budget a frame, for every adapter at once
++        int   f = k == 0 ? 0 : (k == N - 1 ? frames - 1 : k - 1);
++        float t = ((float) (start + f) + 0.5f) / sp;
++        lora_rt_strengths(set, t > 1.0f ? 1.0f : t, &g);
++        for (size_t i = 0; i < n; i++) {
++            rows[i][(size_t) k] = g[i];
++        }
++    }
++    for (size_t i = 0; i < n; i++) {
++        ggml_backend_tensor_set(set->adapters[i].frame_t, rows[i].data(), 0, (size_t) N * sizeof(float));
++    }
++    float mid = ((float) start + 0.5f * (float) frames) / sp;
++    lora_rt_at(set, mid > 1.0f ? 1.0f : mid, true, say ? "the sound half's chunk, at its middle" : nullptr);
++}
++
++// The music half's gains at a step of the music, t = (kept + step) / (kept + budget), as the sliders count it; every 250
++// steps the log says where each adapter stands
++static void lora_rt_progress(const LoraRtSet * set, int step, int budget) {
++    if (!lora_rt_active(set)) {
++        return;
++    }
++    const float span = (float) (set->kept + budget);
++    float       t    = span > 0.0f ? (float) (set->kept + step) / span : 0.0f;
++    lora_rt_at(set, t, false, step > 0 && (step % 250) == 0 ? "into the music" : nullptr);
++}
++
++// Build the set for one half on the model's backend. `src` holds the run's adapters on this path, opened at strength 1
++// and bound to the model's shapes (lora_bind); `choices` names them in the same order with this half's strength, wave
++// and group. False with the reason.
++static bool lora_rt_load(LoraRtSet *                       set,
++                         ggml_backend_t                    backend,
++                         LoraSet *                         src,
++                         const std::vector<LoraRtChoice> & choices,
++                         const std::vector<LoraRtGroup> &  groups,
++                         int                               half,
++                         int                               n_layers,
++                         const void *                      owner,
++                         int                               max_frames,
++                         std::string *                     error) {
++    lora_rt_free(set);
++    set->half   = half;
++    set->groups = groups;
++    if (n_layers > LORA_RT_MAX_LAYERS) {
++        *error = "the model has more layers than the LoRA path holds";
++        return false;
++    }
++    // which file is which adapter (src->files in the order of `choices`)
++    std::vector<int> file_adapter(src->files.size(), -1);
++    for (size_t f = 0; f < src->files.size() && f < choices.size(); f++) {
++        if (choices[f].strength == 0.0f) {
++            continue;
++        }
++        LoraRtAdapter a;
++        a.id       = choices[f].id;
++        a.strength = choices[f].strength;
++        a.curve    = choices[f].curve;
++        a.group    = choices[f].group >= 0 && choices[f].group < (int) groups.size() ? choices[f].group : -1;
++        file_adapter[f] = (int) set->adapters.size();
++        set->adapters.push_back(a);
++    }
++    if (set->adapters.empty()) {
++        return true;
++    }
++    auto adapter_of = [&](const LoraFile * lf) -> int {
++        for (size_t f = 0; f < src->files.size(); f++) {
++            if (src->files[f].get() == lf) {
++                return file_adapter[f];
++            }
++        }
++        return -1;
++    };
++    // count first: the context holds every tensor's header
++    set->max_frames = half == 1 ? max_frames : 0;
++    int n_tensors   = (int) set->adapters.size() * (half == 1 ? 2 : 1);
++    for (int l = 0; l < n_layers; l++) {
++        for (int p = 0; p < LRT_N; p++) {
++            auto it = src->index.find("model.layers." + std::to_string(l) + "." + LORA_RT_PROJ[half][p] + ".weight");
++            if (it != src->index.end()) {
++                n_tensors += 2 * (int) it->second.size();
++            }
++        }
++    }
++    wctx_init(&set->wctx, n_tensors);
++    for (size_t i = 0; i < set->adapters.size(); i++) {
++        LoraRtAdapter & a = set->adapters[i];
++        a.gain_t          = ggml_new_tensor_1d(set->wctx.ctx, GGML_TYPE_F32, 1);
++        ggml_set_name(a.gain_t, ("lrt.gain." + std::to_string(half) + "." + std::to_string(i)).c_str());
++        auto g0    = std::make_unique<float[]>(1);
++        g0[0]      = 0.0f;
++        a.gain_now = 0.0f;
++        set->wctx.pending.push_back({ a.gain_t, g0.get(), sizeof(float), 0 });
++        set->wctx.staging.push_back(std::move(g0));
++        if (half == 1 && max_frames > 0) {  // the sound half's row of gains, filled for each chunk
++            a.frame_t = ggml_new_tensor_2d(set->wctx.ctx, GGML_TYPE_F32, 1, max_frames);
++            ggml_set_name(a.frame_t, ("lrt.frames." + std::to_string(i)).c_str());
++        }
++    }
++    size_t bytes = 0, pairs = 0;
++    for (int l = 0; l < n_layers; l++) {
++        for (int p = 0; p < LRT_N; p++) {
++            const std::string name = "model.layers." + std::to_string(l) + "." + LORA_RT_PROJ[half][p] + ".weight";
++            auto              it   = src->index.find(name);
++            if (it == src->index.end()) {
++                continue;
++            }
++            int64_t rows = it->second.front().rows, cols = it->second.front().group->in;
++            std::vector<LoraPrepared> ps;
++            if (!lora_prepare(src, name, rows, cols, &ps, error)) {
++                wctx_free(&set->wctx);
++                set->wctx = {};
++                set->adapters.clear();
++                return false;
++            }
++            for (size_t i = 0; i < ps.size() && i < it->second.size(); i++) {
++                const LoraContribution & c = it->second[i];
++                const int                k = adapter_of(c.file);
++                if (k < 0 || ps[i].kind != LoraGroup::LORA || ps[i].rank <= 0) {
++                    continue;
++                }
++                const int64_t rank = ps[i].rank, in = c.group->in;
++                LoraRtPair    pr;
++                pr.adapter = k;
++                pr.a       = ggml_new_tensor_2d(set->wctx.ctx, GGML_TYPE_F32, in, rank);
++                pr.b       = ggml_new_tensor_2d(set->wctx.ctx, GGML_TYPE_F32, rank, c.rows);
++                auto abuf  = std::make_unique<float[]>((size_t) (in * rank));
++                auto bbuf  = std::make_unique<float[]>((size_t) (rank * c.rows));
++                memcpy(abuf.get(), ps[i].a.data(), (size_t) (in * rank) * sizeof(float));
++                memcpy(bbuf.get(), ps[i].b.data(), (size_t) (rank * c.rows) * sizeof(float));
++                set->wctx.pending.push_back({ pr.a, abuf.get(), (size_t) (in * rank) * sizeof(float), 0 });
++                set->wctx.pending.push_back({ pr.b, bbuf.get(), (size_t) (rank * c.rows) * sizeof(float), 0 });
++                set->wctx.staging.push_back(std::move(abuf));
++                set->wctx.staging.push_back(std::move(bbuf));
++                bytes += (size_t) (in * rank + rank * c.rows) * sizeof(float);
++                set->pairs[l][p].push_back(pr);
++                pairs++;
++            }
++        }
++    }
++    if (!wctx_alloc(&set->wctx, backend)) {
++        *error = "no GPU memory for the LoRAs on the run's path";
++        set->wctx = {};
++        set->adapters.clear();
++        return false;
++    }
++    set->allocated = true;
++    set->owner     = owner;
++    set->gen       = ++g_lora_rt_gen;
++    lora_rt_at(set, -1.0f, true);
++    if (half == 1) {
++        lora_rt_frames(set, 0, max_frames - 2, max_frames - 2, false);
++    }
++    for (const LoraRtAdapter & a : set->adapters) {
++        if (a.curve.empty()) {
++            fprintf(stderr, "[LoRA] %s on the %s half while it runs at %.2f%s\n", a.id.c_str(), half ? "sound" : "music",
++                    (double) a.strength, a.group >= 0 ? ", in a budget" : "");
++        } else {
++            fprintf(stderr, "[LoRA] %s on the %s half while it runs at %.2f, its wave %.2f %.2f %.2f %.2f %.2f%s\n",
++                    a.id.c_str(), half ? "sound" : "music", (double) a.strength, (double) slider_curve_at(a.curve, 0.0f),
++                    (double) slider_curve_at(a.curve, 0.25f), (double) slider_curve_at(a.curve, 0.5f),
++                    (double) slider_curve_at(a.curve, 0.75f), (double) slider_curve_at(a.curve, 1.0f),
++                    a.group >= 0 ? ", in a budget" : "");
++        }
++    }
++    for (size_t g = 0; g < set->groups.size(); g++) {
++        fprintf(stderr, "[LoRA] budget %zu on the %s half: %.2f at most, %s\n", g, half ? "sound" : "music",
++                (double) set->groups[g].cap, set->groups[g].mode == 1 ? "in order" : "shared in proportion");
++    }
++    fprintf(stderr, "[LoRA] %zu projections, %.1f MB on the run's path\n", pairs, (double) bytes / (1024.0 * 1024.0));
++    return true;
++}
++
++// The summed correction of every adapter for one projection, or NULL; x: the projection input, [in, ...]
++static struct ggml_tensor * lora_rt_delta(struct ggml_context * ctx,
++                                          const LoraRtSet *     set,
++                                          int                   layer,
++                                          int                   proj,
++                                          struct ggml_tensor *  x) {
++    if (!lora_rt_active(set) || layer < 0 || layer >= LORA_RT_MAX_LAYERS) {
++        return nullptr;
++    }
++    const std::vector<LoraRtPair> & ps = set->pairs[layer][proj];
++    if (ps.empty()) {
++        return nullptr;
++    }
++    struct ggml_tensor * xf    = x->type == GGML_TYPE_F32 ? x : ggml_cast(ctx, x, GGML_TYPE_F32);
++    struct ggml_tensor * total = nullptr;
++    for (const LoraRtPair & p : ps) {
++        const LoraRtAdapter & a = set->adapters[(size_t) p.adapter];
++        struct ggml_tensor *  d = ggml_mul_mat(ctx, p.b, ggml_mul_mat(ctx, p.a, xf));  // [out, ...]
++        if (a.frame_t && x->ne[1] <= a.frame_t->ne[1]) {  // the sound half: [out, N, M] x the chunk's gains [1, N]
++            d = ggml_mul(ctx, d, ggml_view_2d(ctx, a.frame_t, 1, x->ne[1], a.frame_t->nb[1], 0));
++        } else {
++            d = ggml_mul(ctx, d, a.gain_t);
++        }
++        total = total ? ggml_add(ctx, total, d) : d;
++    }
++    return total;
++}
++
++// y + the correction, or y unchanged
++static struct ggml_tensor * lora_rt_apply(struct ggml_context * ctx,
++                                          const LoraRtSet *     set,
++                                          int                   layer,
++                                          int                   proj,
++                                          struct ggml_tensor *  x,
++                                          struct ggml_tensor *  y) {
++    struct ggml_tensor * d = lora_rt_delta(ctx, set, layer, proj, x);
++    return d ? ggml_add(ctx, y, d) : y;
++}
++
++// Does the set touch the MLP of this layer (the split swiglu is taken only then)?
++static bool lora_rt_touches_mlp(const LoraRtSet * set, int layer) {
++    return lora_rt_active(set) && layer >= 0 && layer < LORA_RT_MAX_LAYERS &&
++           (!set->pairs[layer][LRT_GATE].empty() || !set->pairs[layer][LRT_UP].empty() ||
++            !set->pairs[layer][LRT_DOWN].empty());
++}
++
++// The rows [r0, r0 + n) of y along its first dimension, contiguous, whatever its other dimensions
++static struct ggml_tensor * lora_rt_rows(struct ggml_context * ctx, struct ggml_tensor * y, int64_t r0, int64_t n) {
++    return ggml_cont(ctx, ggml_view_4d(ctx, y, n, y->ne[1], y->ne[2], y->ne[3], y->nb[1], y->nb[2], y->nb[3],
++                                       (size_t) r0 * y->nb[0]));
++}
++
++// qwen3_build_mlp with the set's corrections on gate, up and down: a fused gate_up is split after its matmul, so each
++// half takes its own correction before the swiglu (only for a layer the set touches; the others keep qwen3_build_mlp)
++static struct ggml_tensor * lora_rt_build_mlp(struct ggml_context * ctx,
++                                              Qwen3Layer *          ly,
++                                              struct ggml_tensor *  x,
++                                              const LoraRtSet *     set,
++                                              int                   layer) {
++    struct ggml_tensor *gate, *up;
++    if (ly->gate_up) {
++        struct ggml_tensor * gu  = qwen3_linear(ctx, ly->gate_up, x);
++        const int64_t        ffn = gu->ne[0] / 2;
++        gate                     = lora_rt_rows(ctx, gu, 0, ffn);
++        up                       = lora_rt_rows(ctx, gu, ffn, ffn);
++    } else {
++        gate = qwen3_linear(ctx, ly->gate_proj, x);
++        up   = qwen3_linear(ctx, ly->up_proj, x);
++    }
++    gate                    = lora_rt_apply(ctx, set, layer, LRT_GATE, x, gate);
++    up                      = lora_rt_apply(ctx, set, layer, LRT_UP, x, up);
++    struct ggml_tensor * ff = ggml_swiglu_split(ctx, gate, up);
++    return lora_rt_apply(ctx, set, layer, LRT_DOWN, ff, qwen3_linear(ctx, ly->down_proj, ff));
++}
+diff --git a/src/lora.h b/src/lora.h
+index c285d6f..34e4c96 100644
+--- a/src/lora.h
++++ b/src/lora.h
+@@ -586,6 +586,9 @@ struct LoraContribution {
+ struct LoraSet {
+     std::vector<std::shared_ptr<LoraFile>> files;
+     std::vector<std::pair<double, double>> strengths;  // (music, sound) per file
++    // HERESY 1447: per file and half, its A and B left out of the merge (they run with the graph, lora-rt.h), its full
++    // deltas merged all the same; empty: none left out
++    std::vector<std::pair<bool, bool>>     lora_skip;
+     std::string                            sig[2];     // store-key signature per half
+     // GGUF tensor name (".weight"/".bias") -> what to add, built by lora_bind
+     std::unordered_map<std::string, std::vector<LoraContribution>> index;
+@@ -638,6 +641,10 @@ static bool lora_bind(LoraSet * set, LoraRowsFn rows_of, void * ctx, std::string
+             if (s == 0.0) {
+                 continue;
+             }
++            if (g.kind == LoraGroup::LORA && f < set->lora_skip.size() &&
++                (g.half ? set->lora_skip[f].second : set->lora_skip[f].first)) {
++                continue;  // HERESY 1447: its A and B run with the graph
++            }
+             bool    bias = g.kind == LoraGroup::DIFF_B || (g.kind == LoraGroup::REPLACE && g.leaf == "bias");
+             int64_t off  = 0;
+             for (const std::string & t : g.targets) {
+diff --git a/src/nar.h b/src/nar.h
+index 828c6f7..8bbbee6 100644
+--- a/src/nar.h
++++ b/src/nar.h
+@@ -32,7 +32,7 @@
+ #include <string>
+ #include <vector>
+ 
+-#define YUE2_NAR_GRAPH_NODES 8192
++#define YUE2_NAR_GRAPH_NODES (8192 + 16 * 2048)  // HERESY 1447: and room for the LoRAs that run with the graph
+ #define YUE2_TIME_EMBED_DIM  256
+ #define YUE2_NAR_MASK_PAD    64
+ #define YUE2_NAR_KV_PAD      256  // Local addition: see nar_kv_pad()
+@@ -78,6 +78,10 @@ struct Yue2NAR {
+     int                  graph_ar;    // cached ar_len
+     int                  graph_set;   // cached KV set
+ 
++    // HERESY 1447: the LoRAs that run with the graph (lora-rt.h), NULL otherwise; the graph is built anew at every
++    // evaluation, so a set attached or changed between chunks is read at the next one
++    const LoraRtSet * lora_rt = nullptr;
++
+     std::vector<float>   scratch_x;
+     std::vector<float>   scratch_pos_emb;
+     std::vector<int32_t> scratch_pos;
+@@ -252,7 +256,9 @@ static struct ggml_tensor * nar_build_attn(struct ggml_context * ctx,
+                                            int                   M,
+                                            int                   kv_pad,  // Local addition: nar_kv_pad() or 0
+                                            bool                  use_flash_attn,
+-                                           bool                  clamp_fp16) {
++                                           bool                  clamp_fp16,
++                                           const LoraRtSet *     lora_rt = nullptr,  // HERESY 1447
++                                           int                   layer   = -1) {
+     int D   = c.head_dim;
+     int Nh  = c.n_heads;
+     int Nkv = c.n_kv_heads;
+@@ -271,6 +277,11 @@ static struct ggml_tensor * nar_build_attn(struct ggml_context * ctx,
+         k = qwen3_linear(ctx, ly->k_proj, x);
+         v = qwen3_linear(ctx, ly->v_proj, x);
+     }
++    if (lora_rt_active(lora_rt)) {  // HERESY 1447
++        q = lora_rt_apply(ctx, lora_rt, layer, LRT_Q, x, q);
++        k = lora_rt_apply(ctx, lora_rt, layer, LRT_K, x, k);
++        v = lora_rt_apply(ctx, lora_rt, layer, LRT_V, x, v);
++    }
+ 
+     q = ggml_reshape_4d(ctx, q, D, Nh, N, M);
+     k = ggml_reshape_4d(ctx, k, D, Nkv, N, M);
+@@ -323,7 +334,7 @@ static struct ggml_tensor * nar_build_attn(struct ggml_context * ctx,
+     }
+ 
+     attn = ggml_reshape_3d(ctx, attn, Nh * D, N, M);
+-    return qwen3_linear(ctx, ly->o_proj, attn);
++    return lora_rt_apply(ctx, lora_rt, layer, LRT_O, attn, qwen3_linear(ctx, ly->o_proj, attn));
+ }
+ 
+ // Build the velocity graph of M variations of a T_lat frame block over the
+@@ -425,7 +436,8 @@ static bool nar_build_graph(Yue2NAR * n, const Qw3lmKvCache * kv, int T_lat, int
+         Qwen3Layer *         ly   = &n->layers[l];
+         struct ggml_tensor * norm = qwen3_rms_norm(ctx, hidden, ly->input_layernorm, c.rms_norm_eps);
+         struct ggml_tensor * attn = nar_build_attn(ctx, c, ly, norm, n->in_pos, n->in_mask, kv->k[kv_set][l],
+-                                                   kv->v[kv_set][l], ar_len, N, M, kv_pad, n->use_flash_attn, n->clamp_fp16);
++                                                   kv->v[kv_set][l], ar_len, N, M, kv_pad, n->use_flash_attn, n->clamp_fp16,
++                                                   n->lora_rt, l);
+         if (l == 0) {
+             ggml_set_name(attn, "layer0_sa_output");
+             ggml_set_output(attn);
+@@ -435,7 +447,8 @@ static bool nar_build_graph(Yue2NAR * n, const Qw3lmKvCache * kv, int T_lat, int
+             hidden = ggml_clamp(ctx, hidden, -65504.0f, 65504.0f);
+         }
+         norm   = qwen3_rms_norm(ctx, hidden, ly->post_attn_layernorm, c.rms_norm_eps);
+-        hidden = ggml_add(ctx, hidden, qwen3_build_mlp(ctx, ly, norm, N * M));
++        hidden = ggml_add(ctx, hidden, lora_rt_touches_mlp(n->lora_rt, l) ? lora_rt_build_mlp(ctx, ly, norm, n->lora_rt, l) :
++                                                                              qwen3_build_mlp(ctx, ly, norm, N * M));
+         if (n->clamp_fp16) {
+             hidden = ggml_clamp(ctx, hidden, -65504.0f, 65504.0f);
+         }
+diff --git a/src/pipeline.h b/src/pipeline.h
+index 168bad5..66da7f9 100644
+--- a/src/pipeline.h
++++ b/src/pipeline.h
+@@ -68,6 +68,12 @@ struct Yue2Pipeline {
+     // it), the set merged for the run in progress, and why the last run failed
+     std::string              lora_dir;
+     std::shared_ptr<LoraSet> loras;
++    // HERESY 1447: the run's LoRAs that run with the graph (a wave or a budget): their source, opened at strength 1 and
++    // bound to the model; each half's choices; the budgets; each half's set as built on the model it was built for
++    std::shared_ptr<LoraSet>  lora_rt_src;
++    std::vector<LoraRtChoice> lora_rt_choices[2];
++    std::vector<LoraRtGroup>  lora_rt_groups;
++    LoraRtSet                 lora_rt[2];
+     std::string              last_error;
+     std::string              broken_score;  // HERESY 1087: the score a run was stopped for, shown to the user
+     DebugDumper        dumper;
+@@ -186,6 +192,28 @@ static void pipeline_free(Yue2Pipeline * p) {
+ // configured paths, and applies the runtime knobs after every require
+ // (idempotent on cache hits). The NAR bakes them into its graph at build
+ // time, the LM reads them at every forward.
++// HERESY 1447: the run's set of a half on the model just required: kept when built for this very model (its weights the
++// same), built anew otherwise; false with the reason in last_error
++static bool pipeline_lora_rt(Yue2Pipeline * p, int half, const void * model, ggml_backend_t backend, int n_layers,
++                             const void * weights) {
++    LoraRtSet & set = p->lora_rt[half];
++    if (p->lora_rt_choices[half].empty() || !p->lora_rt_src) {
++        return true;
++    }
++    if (set.allocated && set.owner == model && set.owner_buf == weights) {
++        return true;
++    }
++    std::string error;
++    if (!lora_rt_load(&set, backend, p->lora_rt_src.get(), p->lora_rt_choices[half], p->lora_rt_groups, half, n_layers, model,
++                      half == 1 ? p->kv.cfg.max_seq_len : 0, &error)) {
++        fprintf(stderr, "[LoRA] FATAL: %s\n", error.c_str());
++        p->last_error = "LoRA: " + error;
++        return false;
++    }
++    set.owner_buf = weights;
++    return true;
++}
++
+ static Qwen3LM * require_lm(Yue2Pipeline * p) {
+     ModelKey k = { MODEL_LM, p->model_path };
+     if (p->loras && !p->loras->sig[0].empty()) {   // Local addition: the music half's LoRAs
+@@ -199,6 +227,12 @@ static Qwen3LM * require_lm(Yue2Pipeline * p) {
+     if (m) {
+         m->use_flash_attn = m->use_flash_attn && !p->params.no_fa && !p->params.no_fa_lm;
+         m->clamp_fp16     = p->params.clamp_fp16;
++        // HERESY 1447: the run's LoRAs that run with the graph, or none (a set of a run before is never left on it)
++        if (!pipeline_lora_rt(p, 0, m, m->backend, m->cfg.n_layers, m->wctx.buffer)) {
++            qw3lm_set_lora_rt(m, nullptr);
++            return nullptr;
++        }
++        qw3lm_set_lora_rt(m, p->lora_rt_choices[0].empty() ? nullptr : &p->lora_rt[0]);
+     }
+     return m;
+ }
+@@ -216,6 +250,12 @@ static Yue2NAR * require_nar(Yue2Pipeline * p) {
+     if (m) {
+         m->use_flash_attn = m->use_flash_attn && !p->params.no_fa;
+         m->clamp_fp16     = p->params.clamp_fp16;
++        // HERESY 1447: as the music half's (the graph is built at every evaluation and reads it then)
++        if (!pipeline_lora_rt(p, 1, m, m->backend, m->cfg.n_layers, m->wctx.buffer)) {
++            m->lora_rt = nullptr;
++            return nullptr;
++        }
++        m->lora_rt = p->lora_rt_choices[1].empty() ? nullptr : &p->lora_rt[1];
+     }
+     return m;
+ }
+@@ -242,12 +282,15 @@ static bool pipeline_vae_path(const Yue2Pipeline * p, const std::string & name,
+ 
+ // Local addition: open the run's LoRAs and check every target against the model's
+ // shapes before anything loads; false with the reason
+-static bool pipeline_open_loras(Yue2Pipeline * p, const std::vector<Yue2LoraChoice> & choices, std::string * error) {
++static bool pipeline_open_loras(Yue2Pipeline * p, const std::vector<Yue2LoraChoice> & choices,
++                                const std::vector<Yue2LoraGroup> & groups, std::string * error) {
+     if (p->lora_dir.empty()) {
+         *error = "this server was started without a LoRA folder (--loras)";
+         return false;
+     }
+-    std::vector<std::tuple<std::string, double, double>> list;
++    std::vector<std::tuple<std::string, double, double>> list, rt;   // 1447: rt, the graph's, at strength 1
++    std::vector<LoraRtChoice>                            rt_choices[2];
++    std::vector<std::pair<size_t, std::pair<bool, bool>>> skips;   // 1447: a merged file's A and B left to the graph
+     for (const Yue2LoraChoice & c : choices) {
+         if (c.id.empty() || c.id[0] == '/' || c.id.find("..") != std::string::npos) {
+             *error = "bad LoRA id '" + c.id + "'";
+@@ -262,21 +305,100 @@ static bool pipeline_open_loras(Yue2Pipeline * p, const std::vector<Yue2LoraChoi
+             *error = "LoRA strengths go from 0 to 2";
+             return false;
+         }
+-        list.emplace_back(path, c.ar, c.nar);
++        // HERESY 1447: a wave or a budget takes the adapter off the merge, in each half it reaches with A and B only
++        const bool graph = !c.curve.empty() || (c.group >= 0 && c.group < (int) groups.size());
++        float      merge[2] = { c.ar, c.nar };
++        if (graph) {
++            LoraFile lf;
++            if (!lora_plan(path, &lf)) {
++                *error = c.id + ": " + lf.error;
++                return false;
++            }
++            bool full[2] = { false, false }, low[2] = { false, false };
++            for (const LoraGroup & g : lf.groups) {
++                full[g.half] |= g.kind != LoraGroup::LORA;
++                low[g.half] |= g.kind == LoraGroup::LORA;
++            }
++            float on_graph[2] = { 0.0f, 0.0f };
++            bool  skip[2]     = { false, false };
++            for (int h = 0; h < 2; h++) {
++                const float s = h ? c.nar : c.ar;
++                if (s == 0.0f || !low[h]) {
++                    if (s != 0.0f) {
++                        fprintf(stderr, "[LoRA] %s has no A and B in the %s half: merged there at %.2f, its wave and budget not applied\n",
++                                c.id.c_str(), h ? "sound" : "music", (double) s);
++                    }
++                    continue;
++                }
++                on_graph[h] = s;
++                if (full[h]) {  // its full deltas merged at their flat strength, its A and B on the wave
++                    skip[h] = true;
++                    fprintf(stderr, "[LoRA] %s: its full deltas in the %s half merged at %.2f, its A and B on the wave\n",
++                            c.id.c_str(), h ? "sound" : "music", (double) s);
++                } else {
++                    merge[h] = 0.0f;
++                }
++            }
++            rt.emplace_back(path, 1.0, 1.0);
++            for (int h = 0; h < 2; h++) {
++                LoraRtChoice rc;
++                rc.path     = path;
++                rc.id       = c.id;
++                rc.strength = on_graph[h];
++                rc.curve    = c.curve;
++                rc.group    = c.group;
++                rt_choices[h].push_back(rc);
++            }
++            skips.push_back({ list.size(), { skip[0], skip[1] } });
++        }
++        list.emplace_back(path, merge[0], merge[1]);
+     }
+     auto set = std::make_shared<LoraSet>();
+     if (!lora_set_open(list, set.get(), error)) {
+         return false;
+     }
++    if (!skips.empty()) {  // HERESY 1447: those files' A and B out of the merge, and their store keys say so
++        set->lora_skip.assign(set->files.size(), { false, false });
++        for (const auto & sk : skips) {
++            set->lora_skip[sk.first] = sk.second;
++            for (int h = 0; h < 2; h++) {
++                if (h ? sk.second.second : sk.second.first) {
++                    set->sig[h] += "~full-deltas-only:" + std::get<0>(list[sk.first]) + ";";
++                }
++            }
++        }
++    }
+     GGUFModel gf;
+     if (!gf_load(&gf, p->model_path.c_str())) {
+         *error = "cannot read the model to check the LoRAs";
+         return false;
+     }
+     bool ok = lora_bind(set.get(), gf_lora_rows, (void *) &gf, error);
++    std::shared_ptr<LoraSet> rt_set;
++    if (ok && !rt.empty()) {  // HERESY 1447: the graph's, at strength 1, checked against the model as the merge's are
++        rt_set = std::make_shared<LoraSet>();
++        ok     = lora_set_open(rt, rt_set.get(), error) && lora_bind(rt_set.get(), gf_lora_rows, (void *) &gf, error);
++    }
+     gf_close(&gf);
+     if (ok) {
+         p->loras = set;
++        if (rt_set) {
++            p->lora_rt_src = rt_set;
++            for (int h = 0; h < 2; h++) {
++                bool any = false;
++                for (const LoraRtChoice & rc : rt_choices[h]) {
++                    any |= rc.strength != 0.0f;
++                }
++                p->lora_rt_choices[h] = any ? rt_choices[h] : std::vector<LoraRtChoice>{};
++            }
++            p->lora_rt_groups.clear();
++            for (const Yue2LoraGroup & g : groups) {
++                LoraRtGroup G;
++                G.cap  = g.cap;
++                G.mode = g.mode;
++                p->lora_rt_groups.push_back(G);
++            }
++        }
+     }
+     return ok;
+ }
+@@ -476,7 +598,15 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+     struct LoraScope {
+         Yue2Pipeline * p;
+ 
+-        ~LoraScope() { p->loras.reset(); }
++        ~LoraScope() {
++            p->loras.reset();
++            p->lora_rt_src.reset();  // HERESY 1447: and the graph's (a model keeps no pointer past its next require)
++            for (int h = 0; h < 2; h++) {
++                p->lora_rt_choices[h].clear();
++                lora_rt_free(&p->lora_rt[h]);
++            }
++            p->lora_rt_groups.clear();
++        }
+     } lora_scope = { p };
+     p->last_error.clear();
+     g_nar_error.clear();   // HERESY 1169
+@@ -496,13 +626,14 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+     p->broken_score.clear();
+     if (!r.loras.empty()) {
+         std::string error;
+-        if (!pipeline_open_loras(p, r.loras, &error)) {
++        if (!pipeline_open_loras(p, r.loras, r.lora_groups, &error)) {
+             fprintf(stderr, "[LoRA] FATAL: %s\n", error.c_str());
+             p->last_error = "LoRA: " + error;
+             return false;
+         }
+         for (const Yue2LoraChoice & c : r.loras) {
+-            fprintf(stderr, "[LoRA] %s: music %.2f, sound %.2f\n", c.id.c_str(), c.ar, c.nar);
++            fprintf(stderr, "[LoRA] %s: music %.2f, sound %.2f%s%s\n", c.id.c_str(), c.ar, c.nar,
++                    c.curve.empty() ? "" : ", a wave", c.group >= 0 ? ", in a budget" : "");   // HERESY 1447
+         }
+     }
+ 
+@@ -536,6 +667,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+             return false;
+         }
+         lm_hold.emplace(p->store, lm);
++        lora_rt_at(&p->lora_rt[0], -1.0f, true, "the plan and the prompt at their own strengths");   // HERESY 1447
+     }
+     Timer            score_timer;                    // HERESY 1399
+     std::vector<int> score_tokens(B, 0);
+@@ -624,6 +756,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+     std::vector<Yue2Generation> codes(B);
+     SliderSet                   sliders;
+     bool                        sliders_used = false;
++    int                         lora_span    = 0;   // HERESY 1447: the frames the LoRAs' waves run over, as the music counted them
+     if (replay) {
+         std::vector<int> values;
+         if (!pipeline_parse_tokens(r.semantic_tokens, &values)) {
+@@ -699,6 +832,8 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+                     keep.size() / (double) YUE2_FRAME_RATE, semantic.max_tokens);
+         }
+         sliders.kept     = (int) keep.size();     // HERESY 1166: a curve runs over the whole song, the kept part too
++        p->lora_rt[0].kept = (int) keep.size();   // HERESY 1447: and a LoRA's wave
++        lora_span          = (int) keep.size() + semantic.max_tokens;
+         Timer music_timer;                           // HERESY 1399
+         music_kept       = (int) keep.size();
+         bool semantic_ok = yue2_generate(lm, &p->kv, gen_prefixes, gen_negatives, guidance, semantic, r.lm_seed,
+@@ -815,6 +950,11 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+                     return false;
+                 }
+                 ModelHandle lm_chunk_hold(p->store, lm_chunk);
++                {   // HERESY 1447: the music half reads the chunk again with its LoRAs' waves at the chunk's middle
++                    const int   sp  = lora_span > 0 ? lora_span : T_lat;
++                    const float mid = ((float) start + 0.5f * (float) frames) / (float) sp;
++                    lora_rt_at(&p->lora_rt[0], mid > 1.0f ? 1.0f : mid, false, "the music half reads a chunk again at");
++                }
+                 qw3lm_kv_trim(&p->kv, i, kept);
+                 qw3lm_forward(lm_chunk, &p->kv, sequence.data() + kept, ar_len - kept, i, probe.data(), row0, rows);
+             }
+@@ -825,6 +965,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
+                 }
+                 nar_hold.emplace(p->store, nar);
+             }
++            lora_rt_frames(&p->lora_rt[1], start, frames, lora_span > 0 ? lora_span : T_lat);   // HERESY 1447: frame by frame
+ 
+             // The first chunk of the first song feeds the cossim harness: the
+             // sequence the latent block attends to, then the solver probes
+diff --git a/src/qwen3-lm.h b/src/qwen3-lm.h
+index 79c98a6..5392302 100644
+--- a/src/qwen3-lm.h
++++ b/src/qwen3-lm.h
+@@ -6,6 +6,7 @@
+ #pragma once
+ 
+ #include "sliders.h"
++#include "lora-rt.h"  // HERESY 1447
+ #include "graph-arena.h"
+ #include "qwen3-enc.h"  // Qwen3Layer, Qwen3Config, layer build helpers
+ #include "static-graph.h"
+@@ -51,6 +52,7 @@ struct Qw3lmGraphCache {
+     struct ggml_tensor *  key_kv       = nullptr;  // the cache the graph reads, reallocated on growth
+     int                   key_s0       = 0;
+     const SliderSet *     key_sliders  = nullptr;  // local addition: the sliders baked into the graph
++    const LoraRtSet *     key_lora_rt  = nullptr;  // HERESY 1447: the LoRAs that run with the graph, baked into it
+     struct ggml_cgraph *  gf           = nullptr;
+     struct ggml_tensor *  token_ids_t  = nullptr;
+     struct ggml_tensor *  positions    = nullptr;
+@@ -108,6 +110,9 @@ struct Qwen3LM {
+     // Local addition: voice/genre sliders on the attention projections while
+     // the music tokens are written (qw3lm_set_sliders), NULL otherwise
+     const SliderSet * sliders = nullptr;
++    // HERESY 1447: the LoRAs that run with the graph (lora-rt.h: a wave or a budget), NULL otherwise
++    const LoraRtSet * lora_rt     = nullptr;
++    unsigned          lora_rt_gen = 0;  // the build of it the decode graph baked
+ };
+ 
+ // Parse config.json integers, floats, bools
+@@ -398,7 +403,8 @@ static struct ggml_tensor * qw3lm_build_attn(struct ggml_context * ctx,
+                                              bool                  use_flash_attn = true,
+                                              bool                  clamp_fp16     = false,
+                                              const SliderSet *     sliders        = nullptr,
+-                                             int                   layer          = -1) {
++                                             int                   layer          = -1,
++                                             const LoraRtSet *     lora_rt        = nullptr) {
+     int D   = c.head_dim;
+     int Nh  = c.n_heads;
+     int Nkv = c.n_kv_heads;
+@@ -428,6 +434,11 @@ static struct ggml_tensor * qw3lm_build_attn(struct ggml_context * ctx,
+         k = slider_apply(ctx, sliders, layer, SLIDER_K, x, k);
+         v = slider_apply(ctx, sliders, layer, SLIDER_V, x, v);
+     }
++    if (lora_rt_active(lora_rt)) {  // HERESY 1447
++        q = lora_rt_apply(ctx, lora_rt, layer, LRT_Q, x, q);
++        k = lora_rt_apply(ctx, lora_rt, layer, LRT_K, x, k);
++        v = lora_rt_apply(ctx, lora_rt, layer, LRT_V, x, v);
++    }
+ 
+     // Reshape to heads: [X*D, S] -> [D, X, S]
+     q = ggml_reshape_3d(ctx, q, D, Nh, S);
+@@ -486,7 +497,8 @@ static struct ggml_tensor * qw3lm_build_attn(struct ggml_context * ctx,
+     attn = ggml_reshape_2d(ctx, attn, Nh * D, S);
+ 
+     // O projection
+-    return slider_apply(ctx, sliders, layer, SLIDER_O, attn, qwen3_linear(ctx, ly->o_proj, attn));
++    return lora_rt_apply(ctx, lora_rt, layer, LRT_O, attn,
++                         slider_apply(ctx, sliders, layer, SLIDER_O, attn, qwen3_linear(ctx, ly->o_proj, attn)));
+ }
+ 
+ // Rows [row0, row0 + rows) of the LM head, the vocabulary window a stage
+@@ -566,7 +578,7 @@ static void qw3lm_forward(Qwen3LM *      m,
+         // Self-attention with KV cache
+         struct ggml_tensor * attn =
+             qw3lm_build_attn(ctx, gf, c, ly, norm, positions, mask, kv_rows, kv->k[kv_set][l], kv->v[kv_set][l],
+-                             n_kv_pad, n_tokens, m->use_flash_attn, m->clamp_fp16, m->sliders, l);
++                             n_kv_pad, n_tokens, m->use_flash_attn, m->clamp_fp16, m->sliders, l, m->lora_rt);
+ 
+         // Residual
+         hidden = ggml_add(ctx, hidden, attn);
+@@ -576,7 +588,8 @@ static void qw3lm_forward(Qwen3LM *      m,
+ 
+         // Post-attention norm + MLP
+         norm                     = qwen3_rms_norm(ctx, hidden, ly->post_attn_layernorm, c.rms_norm_eps);
+-        struct ggml_tensor * mlp = qwen3_build_mlp(ctx, ly, norm, n_tokens);
++        struct ggml_tensor * mlp = lora_rt_touches_mlp(m->lora_rt, l) ? lora_rt_build_mlp(ctx, ly, norm, m->lora_rt, l) :
++                                                                         qwen3_build_mlp(ctx, ly, norm, n_tokens);
+         hidden                   = ggml_add(ctx, hidden, mlp);
+         if (m->clamp_fp16) {
+             hidden = ggml_clamp(ctx, hidden, -65504.0f, 65504.0f);
+@@ -698,7 +711,8 @@ static void qw3lm_forward_batch(Qwen3LM *      m,
+     const bool need_build = !m->batch_graph.built || m->batch_graph.key_n_kv_pad != n_kv_pad ||
+                             m->batch_graph.key_N != N || m->batch_graph.key_s0 != s0 ||
+                             m->batch_graph.key_row0 != row0 || m->batch_graph.key_rows != rows ||
+-                            m->batch_graph.key_kv != kv->k4[0] || m->batch_graph.key_sliders != m->sliders;
++                            m->batch_graph.key_kv != kv->k4[0] || m->batch_graph.key_sliders != m->sliders ||
++                            m->batch_graph.key_lora_rt != m->lora_rt;
+     if (need_build) {
+         static_graph_release(&m->batch_graph.graph, m->sched);
+         m->batch_graph.built      = false;
+@@ -762,6 +776,11 @@ static void qw3lm_forward_batch(Qwen3LM *      m,
+                 k = slider_apply(ctx, m->sliders, l, SLIDER_K, norm, k);
+                 v = slider_apply(ctx, m->sliders, l, SLIDER_V, norm, v);
+             }
++            if (lora_rt_active(m->lora_rt)) {  // HERESY 1447
++                q = lora_rt_apply(ctx, m->lora_rt, l, LRT_Q, norm, q);
++                k = lora_rt_apply(ctx, m->lora_rt, l, LRT_K, norm, k);
++                v = lora_rt_apply(ctx, m->lora_rt, l, LRT_V, norm, v);
++            }
+ 
+             // Reshape to heads: [D, Heads, N]
+             q = ggml_reshape_3d(ctx, q, D, Nh, N);
+@@ -831,8 +850,9 @@ static void qw3lm_forward_batch(Qwen3LM *      m,
+             struct ggml_tensor * attn_cat = ggml_reshape_2d(ctx, attn_result, Nh * D, N);
+ 
+             // Batched O proj
+-            struct ggml_tensor * attn_out =
+-                slider_apply(ctx, m->sliders, l, SLIDER_O, attn_cat, qwen3_linear(ctx, ly->o_proj, attn_cat));
++            struct ggml_tensor * attn_out = lora_rt_apply(
++                ctx, m->lora_rt, l, LRT_O, attn_cat,
++                slider_apply(ctx, m->sliders, l, SLIDER_O, attn_cat, qwen3_linear(ctx, ly->o_proj, attn_cat)));
+             hidden                        = ggml_add(ctx, hidden, attn_out);
+             if (m->clamp_fp16) {
+                 hidden = ggml_clamp(ctx, hidden, -65504.0f, 65504.0f);
+@@ -840,7 +860,8 @@ static void qw3lm_forward_batch(Qwen3LM *      m,
+ 
+             // Batched FFN
+             norm                     = qwen3_rms_norm(ctx, hidden, ly->post_attn_layernorm, c.rms_norm_eps);
+-            struct ggml_tensor * mlp = qwen3_build_mlp(ctx, ly, norm, N);
++            struct ggml_tensor * mlp = lora_rt_touches_mlp(m->lora_rt, l) ? lora_rt_build_mlp(ctx, ly, norm, m->lora_rt, l) :
++                                                                             qwen3_build_mlp(ctx, ly, norm, N);
+             hidden                   = ggml_add(ctx, hidden, mlp);
+             if (m->clamp_fp16) {
+                 hidden = ggml_clamp(ctx, hidden, -65504.0f, 65504.0f);
+@@ -872,6 +893,7 @@ static void qw3lm_forward_batch(Qwen3LM *      m,
+         m->batch_graph.key_rows     = rows;
+         m->batch_graph.key_kv       = kv->k4[0];
+         m->batch_graph.key_sliders  = m->sliders;
++        m->batch_graph.key_lora_rt  = m->lora_rt;
+         m->batch_graph.pos_data.resize((size_t) N);
+         m->batch_graph.rows_data.resize((size_t) N);
+         m->batch_graph.mask_data.resize((size_t) n_kv_pad * (size_t) N);
+@@ -934,6 +956,21 @@ static void qw3lm_set_sliders(Qwen3LM * m, const SliderSet * sliders) {
+     m->sliders           = next;
+ }
+ 
++// HERESY 1447: attach (or with NULL, detach) the LoRAs that run with the graph; the static decode graph bakes them in,
++// as it does the sliders, so a change drops it
++static void qw3lm_set_lora_rt(Qwen3LM * m, const LoraRtSet * set) {
++    const LoraRtSet * next = lora_rt_active(set) ? set : nullptr;
++    if (m->lora_rt == next && (!next || m->lora_rt_gen == next->gen)) {  // the same build: the graph holds
++        return;
++    }
++    if (m->batch_graph.graph.sched_allocated) {
++        static_graph_release(&m->batch_graph.graph, m->sched);
++    }
++    m->batch_graph.built = false;
++    m->lora_rt           = next;
++    m->lora_rt_gen       = next ? next->gen : 0;
++}
++
+ static void qw3lm_free(Qwen3LM * m) {
+     static_graph_release(&m->batch_graph.graph, m->sched);
+     graph_arena_free(&m->arena_batch);
+diff --git a/src/request.cpp b/src/request.cpp
+index 21a2e91..a2320f9 100644
+--- a/src/request.cpp
++++ b/src/request.cpp
+@@ -52,6 +52,7 @@ void request_init(Yue2Request * r) {
+     r->vae       = "";
+     r->sliders   = {};
+     r->loras     = {};
++    r->lora_groups = {};
+     r->plan_only = false;
+     r->parent    = "";
+     r->score_guard = true;
+@@ -132,6 +133,51 @@ static void add_sampling(yyjson_mut_doc *     doc,
+     }
+ }
+ 
++// HERESY 1166: a wave through the song, points [t, k] (t 0..1, k 0..2, 64 at most) or a name: flat, arch, rise, fall
++// (1447: the sliders' and the LoRAs' alike)
++static void request_curve(yyjson_val * curve, std::vector<std::pair<float, float>> * out) {
++    out->clear();
++    if (curve && yyjson_is_str(curve)) {
++        std::string name = yy_str(curve);
++        if (name == "arch") {
++            *out = { { 0.0f, 0.15f }, { 0.5f, 1.0f }, { 1.0f, 0.15f } };
++        } else if (name == "rise") {
++            *out = { { 0.0f, 0.1f }, { 1.0f, 1.0f } };
++        } else if (name == "fall") {
++            *out = { { 0.0f, 1.0f }, { 1.0f, 0.1f } };
++        }
++    } else if (curve && yyjson_is_arr(curve)) {
++        size_t       ci, cmax;
++        yyjson_val * pt;
++        yyjson_arr_foreach(curve, ci, cmax, pt) {
++            yyjson_val * a = yyjson_is_arr(pt) ? yyjson_arr_get(pt, 0) : nullptr;
++            yyjson_val * b = yyjson_is_arr(pt) ? yyjson_arr_get(pt, 1) : nullptr;
++            if (a && b && yyjson_is_num(a) && yyjson_is_num(b) && out->size() < 64) {
++                float t = std::min(1.0f, std::max(0.0f, (float) yyjson_get_num(a)));
++                float k = std::min(2.0f, std::max(0.0f, (float) yyjson_get_num(b)));
++                out->push_back({ t, k });
++            }
++        }
++        std::stable_sort(out->begin(), out->end(),
++                         [](const std::pair<float, float> & x, const std::pair<float, float> & y) { return x.first < y.first; });
++    }
++}
++
++// HERESY 1166, 1447: a wave written back, so a take made again runs the same
++static void request_curve_out(yyjson_mut_doc * doc, yyjson_mut_val * item, const std::vector<std::pair<float, float>> & curve) {
++    if (curve.empty()) {
++        return;
++    }
++    yyjson_mut_val * pts = yyjson_mut_arr(doc);
++    for (const auto & p : curve) {
++        yyjson_mut_val * pt = yyjson_mut_arr(doc);
++        yyjson_mut_arr_add_real(doc, pt, std::round(p.first * 1000.0) / 1000.0);
++        yyjson_mut_arr_add_real(doc, pt, std::round(p.second * 1000.0) / 1000.0);
++        yyjson_mut_arr_append(pts, pt);
++    }
++    yyjson_mut_obj_add_val(doc, item, "curve", pts);
++}
++
+ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
+     yyjson_val * v;
+ 
+@@ -233,31 +279,7 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
+                 c.id       = yy_str(id);
+                 c.strength = strength && yyjson_is_num(strength) ? (float) yyjson_get_num(strength) : 1.0f;
+                 // HERESY 1166: its curve, points [t, k] (t 0..1, k 0..2, 64 at most) or a name: flat, arch, rise, fall
+-                yyjson_val * curve = yyjson_obj_get(item, "curve");
+-                if (curve && yyjson_is_str(curve)) {
+-                    std::string name = yy_str(curve);
+-                    if (name == "arch") {
+-                        c.curve = { { 0.0f, 0.15f }, { 0.5f, 1.0f }, { 1.0f, 0.15f } };
+-                    } else if (name == "rise") {
+-                        c.curve = { { 0.0f, 0.1f }, { 1.0f, 1.0f } };
+-                    } else if (name == "fall") {
+-                        c.curve = { { 0.0f, 1.0f }, { 1.0f, 0.1f } };
+-                    }
+-                } else if (curve && yyjson_is_arr(curve)) {
+-                    size_t       ci, cmax;
+-                    yyjson_val * pt;
+-                    yyjson_arr_foreach(curve, ci, cmax, pt) {
+-                        yyjson_val * a = yyjson_is_arr(pt) ? yyjson_arr_get(pt, 0) : nullptr;
+-                        yyjson_val * b = yyjson_is_arr(pt) ? yyjson_arr_get(pt, 1) : nullptr;
+-                        if (a && b && yyjson_is_num(a) && yyjson_is_num(b) && c.curve.size() < 64) {
+-                            float t = std::min(1.0f, std::max(0.0f, (float) yyjson_get_num(a)));
+-                            float k = std::min(2.0f, std::max(0.0f, (float) yyjson_get_num(b)));
+-                            c.curve.push_back({ t, k });
+-                        }
+-                    }
+-                    std::stable_sort(c.curve.begin(), c.curve.end(),
+-                                     [](const std::pair<float, float> & x, const std::pair<float, float> & y) { return x.first < y.first; });
+-                }
++                request_curve(yyjson_obj_get(item, "curve"), &c.curve);
+                 r->sliders.push_back(c);
+             }
+         }
+@@ -270,9 +292,27 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
+             yyjson_val * ar  = yyjson_obj_get(item, "ar");
+             yyjson_val * nar = yyjson_obj_get(item, "nar");
+             if (id && yyjson_is_str(id)) {
+-                r->loras.push_back({ yy_str(id), ar && yyjson_is_num(ar) ? (float) yyjson_get_num(ar) : 1.0f,
+-                                     nar && yyjson_is_num(nar) ? (float) yyjson_get_num(nar) : 1.0f });
++                Yue2LoraChoice c = { yy_str(id), ar && yyjson_is_num(ar) ? (float) yyjson_get_num(ar) : 1.0f,
++                                     nar && yyjson_is_num(nar) ? (float) yyjson_get_num(nar) : 1.0f };
++                request_curve(yyjson_obj_get(item, "curve"), &c.curve);  // HERESY 1447: its wave
++                yyjson_val * g = yyjson_obj_get(item, "group");          // and its budget
++                c.group        = g && yyjson_is_int(g) ? (int) yyjson_get_int(g) : -1;
++                r->loras.push_back(c);
++            }
++        }
++    }
++    if ((v = yyjson_obj_get(obj, "lora_groups")) && yyjson_is_arr(v)) {  // HERESY 1447: the budgets
++        size_t       idx, max;
++        yyjson_val * item;
++        yyjson_arr_foreach(v, idx, max, item) {
++            Yue2LoraGroup g;
++            yyjson_val *  cap  = yyjson_obj_get(item, "cap");
++            yyjson_val *  mode = yyjson_obj_get(item, "mode");
++            if (cap && yyjson_is_num(cap)) {
++                g.cap = std::min(4.0f, std::max(0.0f, (float) yyjson_get_num(cap)));
+             }
++            g.mode = mode && yyjson_is_str(mode) && std::string(yy_str(mode)) == "order" ? 1 : 0;
++            r->lora_groups.push_back(g);
+         }
+     }
+ }
+@@ -403,16 +443,7 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
+             yyjson_mut_val * item = yyjson_mut_obj(doc);
+             yyjson_mut_obj_add_strncpy(doc, item, "id", c.id.c_str(), c.id.size());
+             yyjson_mut_obj_add_real(doc, item, "strength", c.strength);
+-            if (!c.curve.empty()) {          // HERESY 1166: its curve, so a take made again runs the same
+-                yyjson_mut_val * pts = yyjson_mut_arr(doc);
+-                for (const auto & p : c.curve) {
+-                    yyjson_mut_val * pt = yyjson_mut_arr(doc);
+-                    yyjson_mut_arr_add_real(doc, pt, std::round(p.first * 1000.0) / 1000.0);
+-                    yyjson_mut_arr_add_real(doc, pt, std::round(p.second * 1000.0) / 1000.0);
+-                    yyjson_mut_arr_append(pts, pt);
+-                }
+-                yyjson_mut_obj_add_val(doc, item, "curve", pts);
+-            }
++            request_curve_out(doc, item, c.curve);  // HERESY 1166: its curve, so a take made again runs the same
+             yyjson_mut_arr_append(list, item);
+         }
+         yyjson_mut_obj_add_val(doc, root, "sliders", list);
+@@ -424,10 +455,24 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
+             yyjson_mut_obj_add_strncpy(doc, item, "id", c.id.c_str(), c.id.size());
+             yyjson_mut_obj_add_real(doc, item, "ar", std::round((double) c.ar * 1000.0) / 1000.0);
+             yyjson_mut_obj_add_real(doc, item, "nar", std::round((double) c.nar * 1000.0) / 1000.0);
++            request_curve_out(doc, item, c.curve);  // HERESY 1447: its wave and its budget, so a take made again runs the same
++            if (c.group >= 0) {
++                yyjson_mut_obj_add_int(doc, item, "group", c.group);
++            }
+             yyjson_mut_arr_append(list, item);
+         }
+         yyjson_mut_obj_add_val(doc, root, "loras", list);
+     }
++    if (!r->lora_groups.empty()) {
++        yyjson_mut_val * list = yyjson_mut_arr(doc);
++        for (const Yue2LoraGroup & g : r->lora_groups) {
++            yyjson_mut_val * item = yyjson_mut_obj(doc);
++            yyjson_mut_obj_add_real(doc, item, "cap", std::round((double) g.cap * 1000.0) / 1000.0);
++            yyjson_mut_obj_add_str(doc, item, "mode", g.mode == 1 ? "order" : "share");
++            yyjson_mut_arr_append(list, item);
++        }
++        yyjson_mut_obj_add_val(doc, root, "lora_groups", list);
++    }
+     if (!sparse || r->plan_only != d.plan_only) {
+         yyjson_mut_obj_add_bool(doc, root, "plan_only", r->plan_only);
+     }
+diff --git a/src/request.h b/src/request.h
+index 48da0b2..03bd0d7 100644
+--- a/src/request.h
++++ b/src/request.h
+@@ -27,6 +27,18 @@ struct Yue2LoraChoice {
+     std::string id;
+     float       ar;
+     float       nar;
++    // HERESY 1447: its wave through the song, as a slider's (points (t, k) or flat), on both halves; and the budget it
++    // shares with the adapters that touch its layers (an index into lora_groups, -1: none). Either one takes the adapter
++    // off the merge: it runs with the graph (lora-rt.h)
++    std::vector<std::pair<float, float>> curve = {};
++    int                                  group = -1;
++};
++
++// HERESY 1447: a budget the adapters of a group share at every point of the song: their strengths add up to `cap` at
++// most, each giving way in proportion (mode 0, share) or served in the order of the request's list (mode 1, order)
++struct Yue2LoraGroup {
++    float cap  = 2.0f;
++    int   mode = 0;
+ };
+ 
+ struct Yue2Request {
+@@ -114,7 +126,8 @@ struct Yue2Request {
+     std::string                   title;      // ""
+     std::string                   vae;        // "" = the server's default decoder
+     std::vector<Yue2SliderChoice> sliders;    // applied while the music tokens are written
+-    std::vector<Yue2LoraChoice>   loras;      // merged into the weights for the whole run
++    std::vector<Yue2LoraChoice>   loras;      // merged into the weights for the whole run (1447: or run with the graph)
++    std::vector<Yue2LoraGroup>    lora_groups;  // HERESY 1447: the budgets the loras' groups name
+     bool                          plan_only;  // false; stop after the score
+     bool                          score_guard;  // true; a broken score stops the run before the music (HERESY 1087)
+     std::string                   parent;     // "" or the library take this re-renders
+-- 
+2.43.0
+

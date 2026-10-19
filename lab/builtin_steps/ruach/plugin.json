@@ -1,0 +1,188 @@
+{
+ "id": "ruach",
+ "name": "Ruach Studio",
+ "steps": [
+  {
+   "id": "lead",
+   "label": "Whole lead",
+   "say": "the voice back from the backing",
+   "tip": "Where the split put the lead voice into Backing Vocals (louder there than in the lead, loud enough and centred, as a lead voice is), it is moved back into Lead Vocal with short ramps at the edges. Lead and backing together stay what they were, sample for sample: the mix does not change, only which stem holds the voice. Both come back as versions of their stems for the DAW. Needs a set of eight stems.",
+   "script": "lead_join.py",
+   "input": "stems",
+   "rate": 0.02,
+   "group": "mend",
+   "after": "derivedPanel",
+   "params": [
+    {
+     "key": "margin",
+     "label": "Louder by, dB",
+     "type": "number",
+     "min": 3,
+     "max": 15,
+     "step": 1,
+     "default": 6,
+     "tip": "How much louder the backing must be than the lead for a stretch to count as the lead's"
+    },
+    {
+     "key": "floor",
+     "label": "Loud enough, dBFS",
+     "type": "number",
+     "min": -60,
+     "max": -20,
+     "step": 1,
+     "default": -40,
+     "tip": "Quieter than this, the backing is left as it is"
+    },
+    {
+     "key": "centre",
+     "label": "Centred by, dB",
+     "type": "number",
+     "min": 0,
+     "max": 20,
+     "step": 1,
+     "default": 9,
+     "tip": "How much the middle must outweigh the sides: a lead voice stands in the centre, a choir spreads"
+    },
+    {
+     "key": "min_s",
+     "label": "Shortest, s",
+     "type": "number",
+     "min": 0.5,
+     "max": 5,
+     "step": 0.5,
+     "default": 1,
+     "tip": "Shorter stretches are left in the backing"
+    }
+   ]
+  },
+  {
+   "id": "vupscale",
+   "label": "Voice upscale",
+   "say": "the voices' top redrawn",
+   "tip": "The separators work at 44.1 kHz and dull a voice's top: its air, its breath, the edge of its consonants. UniverSR draws that top anew on the voice stems only, keeping each below its cutoff sample for sample, and gives them back at the set's own rate as versions of their stems for the DAW. The rest of the set is left as it is.",
+   "script": "vupscale.py",
+   "input": "stems",
+   "gpu": true,
+   "need_mb": 11000,
+   "rate": 3.6,
+   "group": "mend",
+   "after": "pl-ruach-leadPanel",
+   "params": [
+    {
+     "key": "which",
+     "label": "Voices",
+     "type": "select",
+     "default": "voices",
+     "options": [
+      [
+       "voices",
+       "lead and backing"
+      ],
+      [
+       "lead",
+       "the lead only"
+      ]
+     ]
+    },
+    {
+     "key": "mode",
+     "label": "Depth",
+     "type": "select",
+     "default": "subtle",
+     "options": [
+      [
+       "subtle",
+       "subtle: above 12 kHz"
+      ],
+      [
+       "normal",
+       "normal: above 8 kHz"
+      ],
+      [
+       "high",
+       "high: above 6 kHz"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "report",
+   "label": "Before and after",
+   "say": "what a step changed, measured",
+   "tip": "A file of the tree against what it was made from (a mix or a remaster of stems against the file the stems were split from; the take when nothing else): loudness, true peak, loudness range, crest, width, correlation and the share of four bands, side by side; the average spectra at equal loudness and their difference; the short-term loudness through the song. A picture and a page of numbers, in the tree. The take itself is measured alone.",
+   "script": "report.py",
+   "input": "file",
+   "rate": 0.04,
+   "group": "look",
+   "after": "inspectPanel",
+   "params": []
+  },
+  {
+   "id": "match",
+   "label": "Match to a reference",
+   "say": "its tone toward another's",
+   "tip": "A file's tone moved toward a reference's, loudness left out: both spectra smoothed, the difference weighted by how sure each band is, peak bands added one at a time where the most is left and refined together, each kept only if it helps and stays within the bound. The bands are the DAW's own (frequency, gain, Q), listed for its master EQ; the file is the same EQ rendered, as loud as it came or as the reference, never over −1 dBTP. The reference: a file of this take's tree or another take.",
+   "script": "match.py",
+   "input": "file",
+   "rate": 0.06,
+   "group": "finish",
+   "after": "remasterPanel",
+   "params": [
+    {
+     "key": "reference",
+     "label": "Reference",
+     "type": "file",
+     "tip": "The sound to move toward: a file of this take's tree or another take"
+    },
+    {
+     "key": "amount",
+     "label": "Amount, %",
+     "type": "number",
+     "min": 0,
+     "max": 100,
+     "step": 5,
+     "default": 50,
+     "tip": "How much of the difference to take: half is a nudge, all of it a copy of the reference's tone"
+    },
+    {
+     "key": "limit",
+     "label": "At most, dB",
+     "type": "number",
+     "min": 0.5,
+     "max": 6,
+     "step": 0.5,
+     "default": 3,
+     "tip": "No band moves more than this"
+    },
+    {
+     "key": "bands",
+     "label": "Bands",
+     "type": "number",
+     "min": 1,
+     "max": 8,
+     "step": 1,
+     "default": 6,
+     "tip": "The DAW's master EQ holds eight"
+    },
+    {
+     "key": "loudness",
+     "label": "Loudness",
+     "type": "select",
+     "default": "came",
+     "options": [
+      [
+       "came",
+       "as it came"
+      ],
+      [
+       "reference",
+       "as the reference"
+      ]
+     ],
+     "tip": "The result as loud as this file was, or as the reference"
+    }
+   ]
+  }
+ ]
+}

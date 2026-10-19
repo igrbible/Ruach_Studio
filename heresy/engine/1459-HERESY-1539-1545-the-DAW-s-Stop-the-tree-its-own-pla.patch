@@ -1,0 +1,1533 @@
+From eb3569a050b59a019389d773b4c6d1be373358d8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sun, 18 Oct 2026 11:31:16 -0600
+Subject: [PATCH 1459/1463] =?UTF-8?q?HERESY=201539=E2=80=931545:=20the=20D?=
+ =?UTF-8?q?AW's=20Stop;=20the=20tree=20its=20own=20place=20in=20the=20Refi?=
+ =?UTF-8?q?ner's=20column;=20buttons=20on=20one=20line;=20a=20cut's=20fade?=
+ =?UTF-8?q?s;=20VCA=20groups;=20the=20master's=20chain=20live=20as=20the?=
+ =?UTF-8?q?=20render;=20a=20take's=20mix=20stays=20its=20own?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+1539 (Viktor 18.10.2026: «Кнопка MIX запускает сведение, но нужна и кнопка STOP»): Stop beside Mix while a mix runs on Forge (POST /lab/daw/mix/stop), nothing made, said; the watch ends when the mix is gone from Forge.
+1540 («Made from This Take висит в хвосте каждой вкладки и докучает»): the tree an entry of its own at the end of the sticky column of steps, its mark the count of branches and a light while something is made; opened where a step stands, lighting the branches of the step one came from.
+1541 («кнопки с двумя словами переносятся»): .btn white-space nowrap.
+1542: a silenced stretch's fall and rise its own: top-corner handles (a double-click gives back 10 ms), sides move it; scheduled as the render's raised cosines, picked up mid-fade; drawn as it sounds.
+1543: groups as VCAs: «+ VCA», a VCA strip, its devices (name, members, Delete); its fader adds to its members', M mutes, S solos.
+1544: the master's EQ, compressor and limiter before its fader; the kernel's Limiter is Plenio's limit streamed (5e-13), the master node within a float32 step of the render; in the path only while its compressor or limiter is on.
+1545 (found by the checks): on a change of take or set the DAW kept the mix in hand under the new take's key before reading its own, so the last take's mix became the next one's, here and on Forge; the mix in hand now knows whose it is (S.owner) and is kept only under that key.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  29 ++++
+ tools/console/heresy-console.js |  95 +++++++++--
+ tools/console/heresy-i18n-be.js |  28 +++-
+ tools/console/heresy-i18n-de.js |  28 +++-
+ tools/console/heresy-i18n-el.js |  28 +++-
+ tools/console/heresy-i18n-es.js |  28 +++-
+ tools/console/heresy-i18n-fr.js |  28 +++-
+ tools/console/heresy-i18n-it.js |  28 +++-
+ tools/console/heresy-i18n-ja.js |  28 +++-
+ tools/console/heresy-i18n-pt.js |  28 +++-
+ tools/console/heresy-i18n-ru.js |  28 +++-
+ tools/console/heresy-i18n-uk.js |  28 +++-
+ tools/console/heresy-i18n-zh.js |  28 +++-
+ tools/console/heresy-mixdsp.js  | 138 +++++++++++++++-
+ tools/console/heresy-mixer.js   | 269 ++++++++++++++++++++++++++++----
+ tools/console/heresy-post.js    |  29 +++-
+ 16 files changed, 801 insertions(+), 67 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 915fdec..7a24d14 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -6411,3 +6411,32 @@ html[data-glow] body.daw-full #dawPanel { box-shadow: none; }
+ .dv-mrow .dv-loud { flex: 0 0 auto; }
+ .dv-mrow .dv-loud .mc-name { display: none; }
+ .dv-mrow .dv-spec { flex: 1 1 420px; width: 0; min-width: 320px; max-width: none; }
++/* HERESY 1541 (Viktor 18.10.2026: «Некоторые кнопки с двумя словами переносятся на две строки»): a button's words on one line */
++.btn { white-space: nowrap; }
++/* HERESY 1540 (Viktor 18.10.2026: «…Made from This Take висит в хвосте каждой вкладки и докучает»): the tree its own place in the column;
++   opened, it stands where a step does; otherwise it is out of sight */
++#view-post > .dv-tree-box.is-step-off { display: none; }
++@media (min-width: 1100px) {
++  #view-post > .dv-tree-box { grid-row: 4; margin-top: 4px; }
++}
++#postSteps .ps-step.ps-tree .ps-mark { min-width: 22px; width: auto; padding: 0 4px; font-variant-numeric: tabular-nums; }
++#postSteps .ps-step.ps-tree.is-running .ps-mark { border-color: var(--amber); color: var(--amber); animation: pc-blink 1.2s ease-in-out infinite; }   /* 1540: something is being made */
++/* HERESY 1544: the master's chain: its slots in the console, the limiter's reduction in its device */
++.mc-master .mc-mins { grid-template-columns: 1fr; }
++.dv-lgrm i { background: #c8573d; }
++/* HERESY 1544e: the limiter's card compact; the master's slots only on the console's strip */
++.dv-limc { flex: 0 1 300px; }
++.dv-lim { align-items: flex-start; padding-bottom: 14px; }
++.dv-lim .dv-grm { height: 90px; }
++.dv-master .mc-mins { display: none; }
++/* HERESY 1543: the VCAs: a strip of their own, after the strips */
++.mc-vca { border-top-color: var(--ink); background: color-mix(in srgb, var(--ink) 6%, var(--sunk)); }
++.mc-vca-mid { align-items: center; justify-content: center; gap: 2px; }
++.mc-vca-n { font-size: 18px; line-height: 1; }
++.mc-vca-who { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; max-width: 64px; }
++.mc-vca-who i { width: 8px; height: 8px; border-radius: 2px; background: var(--mc-hue, var(--dim)); }
++.mc-addvca { flex: 0 0 auto; align-self: flex-start; padding: 6px 8px; border: 1px dashed var(--line); border-radius: 6px; background: transparent; color: var(--dim); font: 600 11px/1 inherit; cursor: pointer; white-space: nowrap; }
++.mc-addvca:hover:not(:disabled) { color: var(--ink); border-color: var(--amber); }
++.dv-vcac { flex: 1 1 480px; }
++.dv-vname { display: flex; align-items: center; gap: 8px; }
++.dv-vname input { flex: 0 1 260px; }
+diff --git a/tools/console/heresy-console.js b/tools/console/heresy-console.js
+index b4de5b9..4495ed9 100644
+--- a/tools/console/heresy-console.js
++++ b/tools/console/heresy-console.js
+@@ -23,6 +23,7 @@
+   function fms(v) { return v >= 1000 ? (v / 1000).toFixed(2) + " s" : (v < 10 ? (+v).toFixed(1) : Math.round(v)) + " ms"; }
+   function fhz(v) { return v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 1 : 2) + " kHz" : Math.round(v) + " Hz"; }
+   function fq(v) { return (+v).toFixed(2); }
++  function fdbtp(v) { return minus((+v).toFixed(1)) + " dBTP"; }   // HERESY 1544
+ 
+   // ---- what each knob turns: its range, how it moves (lin, log, send: the amount squared, so the middle is −12 dB) and how it reads
+   var P = {
+@@ -43,6 +44,9 @@
+     "delay.lowpass_hz": { min: 200, max: 20000, def: 4000, step: 10, fmt: fhz, lab: "Low-pass", taper: "log", tip: "Each echo darker than the one before, above this" },
+     "delay.time_ms": { min: 5, max: 2000, def: 375, step: 1, fmt: fms, lab: "Time", taper: "log", tip: "The time between the echoes" },
+     "master.gain_db": { min: -24, max: 12, def: 0, step: 0.1, fmt: fdb, lab: "Master", tip: "The master's level" },
++    "limit.ceiling_db": { min: -12, max: -0.3, def: -1, step: 0.1, fmt: fdbtp, lab: "Ceiling", tip: "The highest true peak let through, 4× interpolated" },   // HERESY 1544
++    "limit.drive_db": { min: -12, max: 24, def: 0, step: 0.1, fmt: fdb, lab: "Drive", tip: "How hard the mix is driven into the limiter: louder, and held under the ceiling" },
++    "limit.release_ms": { min: 10, max: 1000, def: 100, step: 5, fmt: fms, lab: "Release", taper: "log", tip: "How fast it lets go: the time to give back 12 dB" },
+     "band.frequency_hz": { min: 20, max: 20000, def: 1000, step: 1, fmt: fhz, lab: "Freq", taper: "log", tip: "The band's frequency" },
+     "band.gain_db": { min: -12, max: 12, def: 0, step: 0.1, fmt: fdb, lab: "Gain", bi: true, mid: 0, tip: "The band's gain" },
+     "band.q": { min: 0.2, max: 10, def: 0.707, step: 0.01, fmt: fq, lab: "Q", taper: "log", tip: "The band's width: a low Q wide, a high Q narrow" }
+@@ -61,23 +65,28 @@
+ 
+   // ---- the value a control stands for, and setting it: "s" a strip's, "b" a bus's, "e" the selected EQ band's
+   function band(n, id) { var s = K().strip(n); return s.eq ? s.eq.bands.filter(function (b) { return String(b.id) === String(id); })[0] : null; }
++  function grp(n) { return K().groups().filter(function (x) { return "@" + x.id === n; })[0] || null; }   // HERESY 1543: a VCA by its strip's key
+   function get(kt, n, k) {
+     var M = K();
+     if (kt === "b") { var bk = k.split("."); return M.S.buses[bk[0]][bk[1]]; }
++    if (kt === "g") { var gx = grp(n); return gx ? gx[k] : 0; }   // HERESY 1543
+     if (kt === "e") { var b = band(n, C.band); return b ? +b[k.slice(5)] : P[k].def; }
+     var s = M.strip(n);
+     if (k.indexOf("comp.") === 0) return (s.comp || {})[k.slice(5)] != null ? s.comp[k.slice(5)] : P[k].def;
++    if (k.indexOf("limit.") === 0) return (s.limit || {})[k.slice(6)] != null ? s.limit[k.slice(6)] : P[k].def;   // HERESY 1544
+     return s[k];
+   }
+   function put(kt, n, k, v) {
+     var M = K();
+     if (kt === "b") { var bk = k.split("."); M.setBus(bk[0], bk[1], v); return; }
++    if (kt === "g") { M.groupSet(n.slice(1), k, v); return; }   // HERESY 1543
+     if (kt === "e") { editBand(n, C.band, function (b) { b[k.slice(5)] = v; }); return; }
+     if (k.indexOf("comp.") === 0 && !(M.strip(n).comp)) M.set(n, "comp", { on: true });
++    if (k.indexOf("limit.") === 0 && !(M.strip(n).limit)) M.set(n, "limit", { on: true });   // HERESY 1544
+     M.set(n, k, v);
+   }
+   function editBand(n, id, fn) {
+-    var M = K(), raw = M.S.strips[n] || (M.S.strips[n] = {}), eq = raw.eq || { on: true, bands: [] };
++    var M = K(), eq = M.strip(n).eq || { on: true, bands: [] };   // HERESY 1544: the master's too
+     eq = { on: eq.on !== false, bands: eq.bands.map(function (b) { return Object.assign({}, b); }) };
+     var b = eq.bands.filter(function (x) { return String(x.id) === String(id); })[0];
+     if (b) fn(b, eq); else fn(null, eq);
+@@ -150,6 +159,17 @@
+       '<div class="mc-read"><output class="mc-db mono">' + esc(fdb(s.gain_db)) + '</output><button type="button" class="mc-pk mono" data-act="peaks" data-meter-max="' + esc(n) + '" data-tip="' +
+         esc(tr("The loudest peak since it was last cleared; a click clears every strip's")) + '">−∞</button></div></div>';
+   }
++  function vcaHtml(x) {                              // HERESY 1543: a VCA: no sound of its own, its fader adds to its members'
++    var M = K(), n = "@" + x.id;
++    return '<div class="mc-strip mc-vca' + (C.sel === n ? " is-sel" : "") + '" data-n="' + esc(n) + '">' +
++      '<button type="button" class="mc-name" data-act="select" translate="no" data-tip="' + esc(x.name + " \u00b7 " + tr("A VCA: its fader adds its dB to each member's, M mutes them, S solos them; its devices name it and choose its members")) + '">' + esc(x.name) + "</button>" +
++      '<div class="mc-ins mc-vca-mid"><span class="mc-vca-n mono" translate="no">' + esc(String(x.members.length)) + '</span><span class="row-hint">' + esc(tr("members")) + "</span>" +
++        '<span class="mc-vca-who" translate="no">' + x.members.map(function (y) { return '<i style="--mc-hue:' + M.hue(y) + '"></i>'; }).join("") + "</span></div>" +
++      '<div class="mc-btns"><button type="button" class="mx-ms' + (x.mute ? " is-on" : "") + '" data-act="gmute" aria-pressed="' + x.mute + '" data-tip="' + esc(tr("Mute its members")) + '">M</button>' +
++        '<button type="button" class="mx-ms mx-solo' + (x.solo ? " is-on" : "") + '" data-act="gsolo" aria-pressed="' + x.solo + '" data-tip="' + esc(tr("Solo its members")) + '">S</button></div>' +
++      fader("g", n, "gain_db", -60, 12, "") +
++      '<div class="mc-read"><output class="mc-db mono">' + esc(fdb(x.gain_db)) + "</output></div></div>";
++  }
+   var PRESETS = [["room", "1.2 s"], ["plate", "1.6 s"], ["hall", "2.4 s"]];
+   function returnHtml(bus) {
+     var M = K(), b = M.S.buses[bus], key = bus === "reverb" ? "~room" : "~delay";
+@@ -167,8 +187,14 @@
+   }
+   function masterHtml() {
+     var M = K();
++    var ms = M.strip("*"), eqOn = ms.eq && ms.eq.on && ms.eq.bands.some(function (b) { return b.enabled !== false; });
+     return '<div class="mc-strip mc-master" data-n="*">' +
+       '<button type="button" class="mc-name" data-act="select" data-tip="' + esc(tr("The master: everything heard, as the mix on Forge will be before its peak is kept under −0.3 dBFS")) + '">' + esc(tr("Master")) + "</button>" +
++      '<div class="mc-ins mc-mins">' +                 // HERESY 1544: its chain
++        '<button type="button" class="mc-slot' + (eqOn ? " is-on" : "") + '" data-act="eq" data-tip="' + esc(tr("The master's EQ: up to eight bands, before its compressor")) + '"><span>EQ</span><canvas class="mc-eqmini" width="60" height="18"></canvas></button>' +
++        '<button type="button" class="mc-slot' + (ms.comp && ms.comp.on ? " is-on" : "") + '" data-act="comp" data-tip="' + esc(tr("The master's compressor: its reduction as it plays")) + '"><span>' + esc(tr("Comp")) + '</span><span class="mc-gr"><i></i></span></button>' +
++        '<button type="button" class="mc-slot' + (ms.limit && ms.limit.on ? " is-on" : "") + '" data-act="lim" data-tip="' + esc(tr("The master's limiter, last before the fader: its reduction as it plays")) + '"><span>' + esc(tr("Lim")) + '</span><span class="mc-gr mc-lgr"><i></i></span></button>' +
++      "</div>" +
+       '<div class="mc-loud" data-tip="' + esc(tr("Loudness by BS.1770 as it plays: momentary (0.4 s), short-term (3 s), integrated since play was pressed; the true peak 4× interpolated; the sides' correlation (+1 mono, 0 wide, −1 out of phase)")) + '">' +
+         '<div><span>M</span><output class="mono" data-loud="m">—</output></div><div><span>S</span><output class="mono" data-loud="s">—</output></div>' +
+         '<div><span>I</span><output class="mono" data-loud="i">—</output></div><div><span>TP</span><output class="mono" data-loud="tp">—</output></div>' +
+@@ -186,7 +212,7 @@
+     if (panel) panel.classList.toggle("has-dock", !dock.hidden);
+     if (dock.hidden) return;
+     var ns = M.names();
+-    if (C.sel && C.sel !== "*" && C.sel !== "~room" && C.sel !== "~delay" && ns.indexOf(C.sel) < 0) C.sel = "";
++    if (C.sel && C.sel !== "*" && C.sel !== "~room" && C.sel !== "~delay" && ns.indexOf(C.sel) < 0 && !grp(C.sel)) C.sel = "";   // 1543: a VCA
+     var tabs = '<div class="mc-tabs" role="tablist">' +
+       '<button type="button" role="tab" class="mc-tab' + (C.tab === "mixer" ? " is-on" : "") + '" aria-selected="' + (C.tab === "mixer") + '" data-act="tab" data-v="mixer">' + esc(tr("Console")) + "</button>" +
+       '<button type="button" role="tab" class="mc-tab' + (C.tab === "devices" ? " is-on" : "") + '" aria-selected="' + (C.tab === "devices") + '" data-act="tab" data-v="devices"' + (C.sel ? "" : " disabled") + ">" +
+@@ -195,10 +221,13 @@
+         esc(tr("Mixes")) + (M.mixes.list().length ? " \u00b7 " + M.mixes.list().length : "") + "</button>" +
+       '<span class="row-hint mc-how">' + esc(tr("Knobs: drag up and down, Shift finer, a double-click back to where it was")) + "</span></div>";
+     var body = C.tab === "mixes" ? mixesHtml() : C.tab === "devices" && C.sel ? devicesHtml(C.sel)
+-      : '<div class="mc" role="group" aria-label="' + esc(tr("Console")) + '">' + ns.map(stripHtml).join("") + '<span class="mc-gap"></span>' + returnHtml("reverb") + returnHtml("delay") + masterHtml() + "</div>";
++      : '<div class="mc" role="group" aria-label="' + esc(tr("Console")) + '">' + ns.map(stripHtml).join("") + '<span class="mc-gap"></span>' +
++        M.groups().map(vcaHtml).join("") +             // HERESY 1543: the VCAs, then the way to add one
++        '<button type="button" class="mc-addvca" data-act="addvca"' + (M.groups().length >= 16 ? " disabled" : "") + ' data-tip="' + esc(tr("A VCA: one fader over a group of strips (the strip picked its first member)")) + '">+ VCA</button>' +
++        '<span class="mc-gap"></span>' + returnHtml("reverb") + returnHtml("delay") + masterHtml() + "</div>";
+     dock.innerHTML = tabs + body;
+     if (panel) panel.style.setProperty("--mx-dock-h", dock.offsetHeight + "px");   // full screen: the lanes share what is left above it
+-    ns.forEach(eqMini);
++    ns.forEach(eqMini); eqMini("*");                   // HERESY 1544
+     if (C.tab === "devices" && C.sel) { drawEq(); drawComp(); }
+     frame(true);
+   }
+@@ -217,7 +246,7 @@
+           '<button type="button" class="mx-ms" data-act="mdel" data-v="' + esc(x.name) + '" aria-label="' + esc(tr("Delete")) + '" data-tip="' + esc(tr("Delete")) + '">\u2715</button></div>'; }).join("") + "</div>"
+         : '<p class="row-hint">' + esc(tr("No mixes kept by name yet: name the one you hear and save it")) + "</p>") + "</div>";
+   }
+-  function selTitle() { var M = K(); return C.sel === "*" ? tr("Master") : C.sel === "~room" ? tr("Room") : C.sel === "~delay" ? tr("Delay") : M.title(C.sel); }
++  function selTitle() { var M = K(), gx = grp(C.sel); return gx ? gx.name : C.sel === "*" ? tr("Master") : C.sel === "~room" ? tr("Room") : C.sel === "~delay" ? tr("Delay") : M.title(C.sel); }
+ 
+   // ---- the devices of the strip picked
+   var TYPES = [["peak", "Bell"], ["low_shelf", "Low shelf"], ["high_shelf", "High shelf"], ["highpass", "Low cut"], ["lowpass", "High cut"], ["notch", "Notch"]];
+@@ -233,12 +262,22 @@
+   var POWER = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 2v6M4.6 4.2a5 5 0 1 0 6.8 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+   function devicesHtml(n) {
+     var M = K();
+-    var chooser = '<div class="dv-strips mc-chips" role="group" aria-label="' + esc(tr("Strip")) + '">' + M.names().concat(["~room", "~delay", "*"]).map(function (x) {
+-      var t = x === "*" ? tr("Master") : x === "~room" ? tr("Room") : x === "~delay" ? tr("Delay") : M.title(x);
++    var chooser = '<div class="dv-strips mc-chips" role="group" aria-label="' + esc(tr("Strip")) + '">' + M.names().concat(M.groups().map(function (x) { return "@" + x.id; }), ["~room", "~delay", "*"]).map(function (x) {
++      var gx = grp(x), t = gx ? gx.name : x === "*" ? tr("Master") : x === "~room" ? tr("Room") : x === "~delay" ? tr("Delay") : M.title(x);   // 1543: the VCAs
+       return '<button type="button" class="mc-chip' + (x === n ? " is-on" : "") + '" data-act="pick" data-v="' + esc(x) + '" aria-pressed="' + (x === n) + '" translate="no" style="--mc-hue:' + (x.charAt(0) === "~" || x === "*" ? "var(--dim)" : M.hue(x)) + '">' + esc(t) + "</button>"; }).join("") + "</div>";
+-    if (n === "*") return chooser + '<div class="dv-row">' + card("dv-master", tr("Master"), true, '<div class="dv-mrow"><div class="dv-loud">' + masterHtml().replace(/^<div class="mc-strip mc-master" data-n="\*">/, "").replace(/<\/div>$/, "") + "</div>" +
++    var mcard = n !== "*" ? "" : '<div class="dv-row">' + card("dv-master", tr("Master"), true, '<div class="dv-mrow"><div class="dv-loud">' + masterHtml().replace(/^<div class="mc-strip mc-master" data-n="\*">/, "").replace(/<\/div>$/, "") + "</div>" +
+       '<canvas class="dv-spec" data-spec="*" width="640" height="220"></canvas>' +
+-      '<canvas class="dv-gonio" width="220" height="220" data-tip="' + esc(tr("The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase")) + '"></canvas></div>') + "</div>";   // HERESY 1538
++      '<canvas class="dv-gonio" width="220" height="220" data-tip="' + esc(tr("The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase")) + '"></canvas></div>') + "</div>";   // HERESY 1538; 1544: under its chain
++    var gv = grp(n);
++    if (gv) {                                          // HERESY 1543: a VCA's devices: its name, its members, away
++      return chooser + '<div class="dv-row" data-n="' + esc(n) + '">' + card("dv-vcac", "VCA", true,
++        '<label class="dv-vname"><span class="dv-sub">' + esc(tr("Name")) + '</span><input type="text" class="dv-vcaname" maxlength="40" value="' + esc(gv.name) + '" aria-label="' + esc(tr("Name")) + '" /></label>' +
++        '<div class="dv-sub">' + esc(tr("Members")) + '</div><div class="mc-chips" role="group" aria-label="' + esc(tr("Members")) + '">' + M.names().map(function (y) {
++          var on = gv.members.indexOf(y) >= 0;
++          return '<button type="button" class="mc-chip' + (on ? " is-on" : "") + '" data-act="gmember" data-v="' + esc(y) + '" aria-pressed="' + on + '" translate="no" style="--mc-hue:' + M.hue(y) + '">' + esc(M.title(y)) + "</button>"; }).join("") + "</div>" +
++        '<p class="row-hint">' + esc(tr("Its fader adds its dB to each member's own (theirs stay where they are); M mutes them, S solos them; a strip may be in more than one, their dB add")) + "</p>" +
++        '<div class="dv-actions"><button type="button" class="btn ghost small" data-act="gdel">' + esc(tr("Delete")) + "</button></div>") + "</div>";
++    }
+     if (n === "~room" || n === "~delay") {
+       var bus = n === "~room" ? "reverb" : "delay", b = M.S.buses[bus];
+       var body = bus === "reverb"
+@@ -252,7 +291,7 @@
+           '<div class="dv-knobs">' + knob("b", "", "delay.time_ms") + knob("b", "", "delay.feedback") + knob("b", "", "delay.lowpass_hz") + knob("b", "", "delay.return_db") + "</div>";
+       return chooser + '<div class="dv-row">' + card("dv-bus", tr(bus === "reverb" ? "Room" : "Delay"), !b.mute, body, "bmute-dev") + "</div>";
+     }
+-    var s = M.strip(n), st = (M.info().strips || []).filter(function (x) { return x.name === n; })[0], cur = M.versionOf(n);
++    var s = M.strip(n), st = (M.info().strips || []).filter(function (x) { return x.name === n; })[0], cur = n === "*" ? "" : M.versionOf(n);   // 1544: the master has no versions
+     var input = '<div class="dv-knobs">' + knob("s", n, "trim_db") + '<button type="button" class="mx-ms dv-inv' + (s.invert ? " is-on" : "") + '" data-act="invert" aria-pressed="' + s.invert + '" data-tip="' + esc(tr("Polarity: the strip upside down")) + '">Ø</button></div>' +
+       (st ? '<div class="dv-sub">' + esc(tr("Version")) + '</div><div class="mc-chips dv-vers" role="group">' + st.versions.map(function (v) {
+         return '<button type="button" class="mc-chip' + (v.path === cur ? " is-on" : "") + '" data-act="version" data-v="' + esc(v.path) + '" aria-pressed="' + (v.path === cur) + '" translate="no">' + esc(v.id ? v.label + (v.created ? " · " + v.created.slice(11) : "") : tr("as split")) + "</button>"; }).join("") + "</div>"
+@@ -275,15 +314,23 @@
+     var others = M.names().filter(function (x) { return x !== n; }), key = (s.comp && s.comp.key) || "";   // HERESY 1537: the key
+     var comp = '<div class="mc-chips dv-presets" role="group" aria-label="' + esc(tr("Starting points")) + '">' + COMP_PRESETS.map(function (pr) {
+         return '<button type="button" class="mc-chip" data-act="cpreset" data-v="' + pr[0] + '">' + esc(tr(pr[0])) + "</button>"; }).join("") +
+-        (n !== "lead_vocal" && M.names().indexOf("lead_vocal") >= 0 ? '<button type="button" class="mc-chip" data-act="cpreset" data-v="Duck" data-tip="' + esc(tr("Duck: this strip under the voice, its compressor listening to the lead vocal")) + '">' + esc(tr("Duck")) + "</button>" : "") + "</div>" +
+-      '<div class="dv-key"><span class="dv-sub" data-tip="' + esc(tr("Key: what the compressor listens to: its own strip, or another as it enters its own compressor (the band ducked under the voice)")) + '">' + esc(tr("Listens to")) + "</span>" +
++        (n !== "lead_vocal" && n !== "*" && M.names().indexOf("lead_vocal") >= 0 ? '<button type="button" class="mc-chip" data-act="cpreset" data-v="Duck" data-tip="' + esc(tr("Duck: this strip under the voice, its compressor listening to the lead vocal")) + '">' + esc(tr("Duck")) + "</button>" : "") + "</div>" +
++      (n === "*" ? "" : '<div class="dv-key"><span class="dv-sub" data-tip="' + esc(tr("Key: what the compressor listens to: its own strip, or another as it enters its own compressor (the band ducked under the voice)")) + '">' + esc(tr("Listens to")) + "</span>" +   // 1544: the master listens to itself
+         '<span class="mc-chips" role="group" aria-label="' + esc(tr("Listens to")) + '">' + [""].concat(others).map(function (x) {
+-          return '<button type="button" class="mc-chip' + (x === key ? " is-on" : "") + '" data-act="ckey" data-v="' + esc(x) + '" aria-pressed="' + (x === key) + '" translate="no">' + esc(x ? M.title(x) : tr("own")) + "</button>"; }).join("") + "</span></div>" +
++          return '<button type="button" class="mc-chip' + (x === key ? " is-on" : "") + '" data-act="ckey" data-v="' + esc(x) + '" aria-pressed="' + (x === key) + '" translate="no">' + esc(x ? M.title(x) : tr("own")) + "</button>"; }).join("") + "</span></div>") +
+       '<div class="dv-comp"><canvas class="dv-curve" width="170" height="170" data-tip="' + esc(tr("In and out: the line bends at the threshold by the ratio, softly over the knee")) + '"></canvas>' +
+         '<div class="dv-grm" data-tip="' + esc(tr("The reduction as it plays")) + '"><i></i><span class="mono">0.0</span></div>' +
+         '<div class="dv-knobs dv-knobs-2">' + ["comp.threshold_db", "comp.ratio", "comp.attack_ms", "comp.release_ms", "comp.knee_db", "comp.makeup_db"].map(function (k) { return knob("s", n, k); }).join("") + "</div></div>";
+     var out = '<div class="dv-knobs">' + knob("s", n, "width") + knob("s", n, "pan") + knob("s", n, "reverb") + knob("s", n, "delay") + "</div>" +
+       '<p class="row-hint dv-out-say">' + esc(tr("Then the fader, mute and solo; the sends leave after the pan")) + "</p>";
++    if (n === "*") {                                   // HERESY 1544: the master's chain, then its meters
++      var lm = s.limit || {};
++      var lim = '<div class="dv-comp dv-lim"><div class="dv-grm dv-lgrm" data-tip="' + esc(tr("The limiter's reduction as it plays")) + '"><i></i><span class="mono">0.0</span></div>' +
++        '<div class="dv-knobs">' + ["limit.ceiling_db", "limit.drive_db", "limit.release_ms"].map(function (k) { return knob("s", n, k); }).join("") + "</div></div>" +
++        '<p class="row-hint">' + esc(tr("Plenio's limiter, as on Forge: 4× oversampled, 3 ms ahead, both sides together; the true peak held at the ceiling")) + "</p>";
++      return chooser + '<div class="dv-row" data-n="*">' + card("dv-eqc", "EQ", s.eq ? s.eq.on : false, eq, "eqon") + card("dv-compc", tr("Compressor"), !!(s.comp && s.comp.on), comp, "compon") +
++        card("dv-limc", tr("Limiter"), !!lm.on, lim, "limon") + "</div>" + mcard;
++    }
+     return chooser + '<div class="dv-row" data-n="' + esc(n) + '">' + card("dv-input", tr("Input"), true, input) + card("dv-eqc", "EQ", s.eq ? s.eq.on : false, eq, "eqon") +
+       card("dv-compc", tr("Compressor"), !!(s.comp && s.comp.on), comp, "compon") + card("dv-outc", tr("Output"), true, out) + "</div>";
+   }
+@@ -439,8 +486,13 @@
+       var v = lv[n], el = dock.querySelector('.mc-strip[data-n="' + CSS.escape(n) + '"] .mc-gr i');
+       if (el && v) el.style.transform = "scaleX(" + clamp(v.gr / 20, 0, 1).toFixed(3) + ")";
+     });
+-    var grm = dock.querySelector(".dv-grm");
++    var grm = dock.querySelector(".dv-grm:not(.dv-lgrm)");
+     if (grm && lv[C.sel]) { grm.firstChild.style.transform = "scaleY(" + clamp(lv[C.sel].gr / 24, 0, 1).toFixed(3) + ")"; grm.lastChild.textContent = minus((-lv[C.sel].gr).toFixed(1)); }
++    var lgm = dock.querySelector(".dv-lgrm"), mv = lv["*"];   // HERESY 1544: the master's compressor and limiter
++    if (lgm && mv) { lgm.firstChild.style.transform = "scaleY(" + clamp((mv.lim || 0) / 24, 0, 1).toFixed(3) + ")"; lgm.lastChild.textContent = minus((-(mv.lim || 0)).toFixed(1)); }
++    var mgr = dock.querySelector('.mc-master .mc-gr:not(.mc-lgr) i'), mlr = dock.querySelector(".mc-master .mc-lgr i");
++    if (mgr && mv) mgr.style.transform = "scaleX(" + clamp(mv.gr / 20, 0, 1).toFixed(3) + ")";
++    if (mlr && mv) mlr.style.transform = "scaleX(" + clamp((mv.lim || 0) / 20, 0, 1).toFixed(3) + ")";
+     var L = M.S.loud;
+     Array.prototype.forEach.call(dock.querySelectorAll("[data-loud]"), function (el) {
+       var k = el.dataset.loud, v = !L ? null : k === "tp" ? (L.tp > 0 ? 20 * Math.log10(L.tp) : null) : L[k];
+@@ -493,7 +545,7 @@
+   function select(n, tab) {
+     C.sel = n;
+     if (tab) C.tab = tab;
+-    if (n && n.charAt(0) !== "~" && n !== "*" && K().S.focus !== n) K().select(n);
++    if (n && n.charAt(0) !== "~" && n.charAt(0) !== "@" && n !== "*" && K().S.focus !== n) K().select(n);   // 1543: a VCA is no lane
+     paint();
+   }
+   function onClick(e) {
+@@ -503,7 +555,7 @@
+     if (act === "tab") { C.tab = v; paint(); return; }
+     if (act === "select") { select(n, "devices"); return; }
+     if (act === "pick") { select(v, "devices"); return; }
+-    if (act === "eq" || act === "comp") { C.focusCard = act; select(n, "devices"); var cd = document.querySelector("#mxDock .dv-" + (act === "eq" ? "eqc" : "compc")); if (cd) cd.scrollIntoView({ block: "nearest", inline: "nearest" }); return; }
++    if (act === "eq" || act === "comp" || act === "lim") { C.focusCard = act; select(n, "devices"); var cd = document.querySelector("#mxDock .dv-" + (act === "eq" ? "eqc" : act === "lim" ? "limc" : "compc")); if (cd) cd.scrollIntoView({ block: "nearest", inline: "nearest" }); return; }   // 1544: lim
+     if (act === "msave") {                            // HERESY 1533
+       var inp = document.querySelector("#mxDock .mm-name"), nm = inp ? inp.value.trim() : "";
+       if (!nm) { if (inp) inp.focus(); return; }
+@@ -520,6 +572,10 @@
+     if (act === "peaks") { M.resetLoud(); return; }
+     if (act === "loudreset") { M.resetLoud(); return; }
+     M.mark();
++    if (act === "addvca") { var gid = M.groupAdd(C.sel && M.names().indexOf(C.sel) >= 0 ? [C.sel] : []); if (gid) select("@" + gid, "devices"); return; }   // HERESY 1543
++    if (act === "gmute" || act === "gsolo") { var gm = grp(n); if (gm) M.groupSet(gm.id, act.slice(1), !gm[act.slice(1)]); paint(); return; }
++    if (act === "gmember") { var gg = grp(C.sel); if (gg) M.groupSet(gg.id, "members", gg.members.indexOf(v) >= 0 ? gg.members.filter(function (y) { return y !== v; }) : gg.members.concat([v])); paint(); return; }
++    if (act === "gdel") { var gd = grp(C.sel); if (gd) { M.groupDel(gd.id); C.sel = ""; C.tab = "mixer"; } paint(); return; }
+     if (act === "mute" || act === "solo" || act === "invert") { s = M.strip(n); M.set(n, act, !s[act]); return; }
+     if (act === "bmute" || act === "bmute-dev") { var bus = b.closest("[data-bus]") ? b.closest("[data-bus]").dataset.bus : (C.sel === "~room" ? "reverb" : "delay"); M.setBus(bus, "mute", !M.S.buses[bus].mute); paint(); return; }
+     if (act === "preset") { M.setBus("reverb", "preset", v); paint(); return; }
+@@ -527,6 +583,7 @@
+     if (act === "dnote") { var bpm = clamp(+((document.querySelector("#mxDock .dv-bpm") || {}).value) || 120, 20, 400); C.bpm = bpm; M.setBus("delay", "time_ms", clamp(Math.round(+v * 60000 / bpm * 100) / 100, 5, 2000)); paint(); return; }
+     if (act === "version") { M.setVersion(C.sel, v); paint(); return; }
+     if (act === "eqon") { editBand(C.sel, "", function (x, eq) { eq.on = !eq.on; }); paint(); return; }
++    if (act === "limon") { s = M.strip(C.sel); M.set(C.sel, "limit", Object.assign({}, s.limit || { on: false }, { on: !(s.limit && s.limit.on) })); paint(); return; }   // HERESY 1544
+     if (act === "compon") { s = M.strip(C.sel); M.set(C.sel, "comp", Object.assign({}, s.comp || { on: false }, { on: !(s.comp && s.comp.on) })); paint(); return; }
+     if (act === "cpreset") {
+       if (v === "Duck") { M.set(C.sel, "comp", { on: true, threshold_db: -28, ratio: 2.5, attack_ms: 15, release_ms: 250, knee_db: 6, makeup_db: 0, key: "lead_vocal" }); paint(); return; }   // HERESY 1537
+@@ -739,6 +796,12 @@
+     body.addEventListener("keydown", function (e) { if (e.target.closest && e.target.closest("#mxDock")) onKey(e); });
+     body.addEventListener("contextmenu", function (e) { if (e.target.closest && e.target.closest("#mxDock")) onMenu(e); });
+     body.addEventListener("change", function (e) { if (e.target.classList && e.target.classList.contains("dv-bpm")) C.bpm = clamp(+e.target.value || 120, 20, 400); });
++    body.addEventListener("change", function (e) {   // HERESY 1543: a VCA's name, kept as it is left
++      var inp = e.target.closest && e.target.closest("#mxDock .dv-vcaname"), gx = inp && grp(C.sel);
++      if (!gx) return;
++      var nm = inp.value.trim().slice(0, 40);
++      if (nm && nm !== gx.name) { K().mark(); K().groupSet(gx.id, "name", nm); paint(); }
++    });
+     body.addEventListener("keydown", function (e) {   // HERESY 1533: Enter in the name saves
+       if (e.key === "Enter" && e.target.classList && e.target.classList.contains("mm-name")) { e.preventDefault(); var b = document.querySelector('#mxDock [data-act="msave"]'); if (b) b.click(); }
+     });
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index f4a84ad..749d38a 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5723,5 +5723,31 @@ RuachI18n.add("be", {
+ "Key: what the compressor listens to: its own strip, or another as it enters its own compressor (the band ducked under the voice)": "Ключ: што слухае кампрэсар: свой канал або іншы, якім той уваходзіць у свой кампрэсар (група прысядае пад голасам)",
+ "Listens to": "Слухае",
+ "This stem's version: a click steps to the next, so two are compared as it plays; a right-click shows them all in its devices": "Версія гэтага стэма: пстрычка пераключае на наступную, так дзве параўноўваюцца на хаду; правая пстрычка паказвае ўсе ў яго прыладах",
+-"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "Два бакі малюнкам: сярэдзіна ўверх, бакі ўпоперак; лінія ўверх — мона, шырокае воблака — шырока, лінія ўпоперак — процілеглая фаза"
++"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "Два бакі малюнкам: сярэдзіна ўверх, бакі ўпоперак; лінія ўверх — мона, шырокае воблака — шырока, лінія ўпоперак — процілеглая фаза",
++"Stop the mix on Forge: nothing is made": "Спыніць зводжанне на Кузні: нічога не будзе створана",
++"Stopped: no mix was made": "Спынена: мікс не створаны",
++"The mix is no longer running on Forge": "Зводжанне больш не ідзе на Кузні",
++"This Take": "Гэты сэмпл",
++"the branches of every step": "галіны ўсіх крокаў",
++"A silenced stretch: its top corners fade into it and out of it (a double-click gives back 10 ms), its sides move it.": "Заглушаны адрэзак: яго верхнія куты задаюць згасанне ў цішыню і выхад з яе (падвойны пстрык вяртае 10 мс), яго краі перасоўваюць яго.",
++"A VCA: its fader adds its dB to each member's, M mutes them, S solos them; its devices name it and choose its members": "VCA: яго фейдар дадае свае дБ да фейдара кожнага ўдзельніка, M глушыць іх, S пакідае толькі іх; у яго прыладах — імя і ўдзельнікі",
++"A VCA: one fader over a group of strips (the strip picked its first member)": "VCA: адзін фейдар над групай каналаў (выбраны канал — першы ўдзельнік)",
++"Its fader adds its dB to each member's own (theirs stay where they are); M mutes them, S solos them; a strip may be in more than one, their dB add": "Яго фейдар дадае свае дБ да ўласнага фейдара кожнага ўдзельніка (іх фейдары застаюцца на месцы); M глушыць іх, S пакідае толькі іх; канал можа быць у некалькіх групах, іх дБ складаюцца",
++"Limiter": "Ліміцер",
++"Lim": "Лім",
++"Members": "Удзельнікі",
++"members": "удзельн.",
++"Mute its members": "Заглушыць яго ўдзельнікаў",
++"Solo its members": "Сола яго ўдзельнікам",
++"Name": "Імя",
++"Plenio's limiter, as on Forge: 4× oversampled, 3 ms ahead, both sides together; the true peak held at the ceiling": "Ліміцер Plenio, як на Кузні: 4× перадыскрэтызацыя, 3 мс наперад, абодва бакі разам; сапраўдны пік трымаецца каля столі",
++"The limiter's reduction as it plays": "Прыдушэнне ліміцера, пакуль грае",
++"The master's EQ: up to eight bands, before its compressor": "Эквалайзер мастара: да васьмі палос, перад яго кампрэсарам",
++"The master's compressor: its reduction as it plays": "Кампрэсар мастара: яго прыдушэнне, пакуль грае",
++"The master's limiter, last before the fader: its reduction as it plays": "Ліміцер мастара, апошні перад фейдарам: яго прыдушэнне, пакуль грае",
++"Ceiling": "Столь",
++"Drive": "Націск",
++"The highest true peak let through, 4× interpolated": "Найвышэйшы сапраўдны пік, што праходзіць, па 4× інтэрпаляцыі",
++"How hard the mix is driven into the limiter: louder, and held under the ceiling": "Як моцна зводжанне заганяецца ў ліміцер: гучней, і ўтрымліваецца пад столлю",
++"How fast it lets go: the time to give back 12 dB": "Як хутка ён адпускае: час, каб вярнуць 12 дБ"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 57d44d7..11cbb62 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5606,5 +5606,31 @@ RuachI18n.add("de", {
+ "Key: what the compressor listens to: its own strip, or another as it enters its own compressor (the band ducked under the voice)": "Key: worauf der Kompressor hört: auf den eigenen Kanalzug, oder auf einen anderen, wie er in dessen eigenen Kompressor geht (die Band unter die Stimme geduckt)",
+ "Listens to": "Hört auf",
+ "This stem's version: a click steps to the next, so two are compared as it plays; a right-click shows them all in its devices": "Die Version dieses Stems: ein Klick schaltet zur nächsten, so werden zwei beim Spielen verglichen; ein Rechtsklick zeigt alle in seinen Geräten",
+-"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "Die zwei Seiten als Bild: die Mitte nach oben, die Seiten quer; eine Linie nach oben ist mono, eine breite Wolke breit, eine Linie quer gegenphasig"
++"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "Die zwei Seiten als Bild: die Mitte nach oben, die Seiten quer; eine Linie nach oben ist mono, eine breite Wolke breit, eine Linie quer gegenphasig",
++"Stop the mix on Forge: nothing is made": "Den Mix auf Forge stoppen: nichts wird gemacht",
++"Stopped: no mix was made": "Gestoppt: kein Mix gemacht",
++"The mix is no longer running on Forge": "Der Mix läuft auf Forge nicht mehr",
++"This Take": "Dieser Take",
++"the branches of every step": "die Zweige aller Schritte",
++"A silenced stretch: its top corners fade into it and out of it (a double-click gives back 10 ms), its sides move it.": "Eine stummgeschaltete Strecke: ihre oberen Ecken blenden in die Stille und aus ihr heraus (ein Doppelklick gibt 10 ms zurück), ihre Seiten verschieben sie.",
++"A VCA: its fader adds its dB to each member's, M mutes them, S solos them; its devices name it and choose its members": "Ein VCA: sein Fader addiert seine dB zu dem jedes Mitglieds, M schaltet sie stumm, S auf Solo; in seinen Geräten sein Name und seine Mitglieder",
++"A VCA: one fader over a group of strips (the strip picked its first member)": "Ein VCA: ein Fader über einer Gruppe von Spuren (die gewählte Spur ist das erste Mitglied)",
++"Its fader adds its dB to each member's own (theirs stay where they are); M mutes them, S solos them; a strip may be in more than one, their dB add": "Sein Fader addiert seine dB zum eigenen Fader jedes Mitglieds (deren Fader bleiben, wo sie sind); M schaltet sie stumm, S auf Solo; eine Spur kann in mehreren sein, ihre dB addieren sich",
++"Limiter": "Limiter",
++"Lim": "Lim",
++"Members": "Mitglieder",
++"members": "Mitgl.",
++"Mute its members": "Seine Mitglieder stummschalten",
++"Solo its members": "Seine Mitglieder auf Solo",
++"Name": "Name",
++"Plenio's limiter, as on Forge: 4× oversampled, 3 ms ahead, both sides together; the true peak held at the ceiling": "Plenios Limiter, wie auf Forge: 4× überabgetastet, 3 ms voraus, beide Seiten zusammen; der True Peak an der Decke gehalten",
++"The limiter's reduction as it plays": "Die Absenkung des Limiters, während es spielt",
++"The master's EQ: up to eight bands, before its compressor": "Der EQ des Masters: bis zu acht Bänder, vor seinem Kompressor",
++"The master's compressor: its reduction as it plays": "Der Kompressor des Masters: seine Absenkung, während es spielt",
++"The master's limiter, last before the fader: its reduction as it plays": "Der Limiter des Masters, als Letztes vor dem Fader: seine Absenkung, während es spielt",
++"Ceiling": "Decke",
++"Drive": "Drive",
++"The highest true peak let through, 4× interpolated": "Der höchste True Peak, der durchgeht, 4× interpoliert",
++"How hard the mix is driven into the limiter: louder, and held under the ceiling": "Wie stark der Mix in den Limiter gefahren wird: lauter, und unter der Decke gehalten",
++"How fast it lets go: the time to give back 12 dB": "Wie schnell er loslässt: die Zeit, um 12 dB zurückzugeben"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 3a70492..82b36c7 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5722,5 +5722,31 @@ RuachI18n.add("el", {
+ "Key: what the compressor listens to: its own strip, or another as it enters its own compressor (the band ducked under the voice)": "Κλειδί: τι ακούει ο συμπιεστής: το δικό του κανάλι, ή άλλο όπως μπαίνει στον δικό του συμπιεστή (η μπάντα χαμηλώνει κάτω από τη φωνή)",
+ "Listens to": "Ακούει",
+ "This stem's version: a click steps to the next, so two are compared as it plays; a right-click shows them all in its devices": "Η έκδοση αυτού του stem: ένα κλικ πάει στην επόμενη, ώστε δύο να συγκρίνονται όσο παίζει· δεξί κλικ τις δείχνει όλες στις συσκευές του",
+-"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "Οι δύο πλευρές σε εικόνα: το κέντρο πάνω, οι πλευρές οριζόντια· γραμμή πάνω είναι μονοφωνικό, πλατύ σύννεφο ευρύ, γραμμή οριζόντια σε αντιφασισμό"
++"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "Οι δύο πλευρές σε εικόνα: το κέντρο πάνω, οι πλευρές οριζόντια· γραμμή πάνω είναι μονοφωνικό, πλατύ σύννεφο ευρύ, γραμμή οριζόντια σε αντιφασισμό",
++"Stop the mix on Forge: nothing is made": "Διακοπή της μίξης στο Forge: δεν φτιάχνεται τίποτα",
++"Stopped: no mix was made": "Διακόπηκε: δεν φτιάχτηκε μίξη",
++"The mix is no longer running on Forge": "Η μίξη δεν τρέχει πια στο Forge",
++"This Take": "Αυτή η λήψη",
++"the branches of every step": "οι κλάδοι όλων των βημάτων",
++"A silenced stretch: its top corners fade into it and out of it (a double-click gives back 10 ms), its sides move it.": "Ένα κομμάτι σε σίγαση: οι πάνω γωνίες του ορίζουν το σβήσιμο προς τη σιγή και την επιστροφή από αυτήν (διπλό κλικ επαναφέρει τα 10 ms), οι πλευρές του το μετακινούν.",
++"A VCA: its fader adds its dB to each member's, M mutes them, S solos them; its devices name it and choose its members": "VCA: ο φέιντερ του προσθέτει τα dB του σε κάθε μέλος, το M τα σιγεί, το S τα βάζει σε solo· στις συσκευές του, το όνομα και τα μέλη του",
++"A VCA: one fader over a group of strips (the strip picked its first member)": "VCA: ένας φέιντερ πάνω από μια ομάδα καναλιών (το επιλεγμένο κανάλι, πρώτο μέλος)",
++"Its fader adds its dB to each member's own (theirs stay where they are); M mutes them, S solos them; a strip may be in more than one, their dB add": "Ο φέιντερ του προσθέτει τα dB του στον δικό φέιντερ κάθε μέλους (οι δικοί τους μένουν όπου είναι)· το M τα σιγεί, το S τα βάζει σε solo· ένα κανάλι μπορεί να ανήκει σε περισσότερες ομάδες, τα dB τους αθροίζονται",
++"Limiter": "Περιοριστής",
++"Lim": "Lim",
++"Members": "Μέλη",
++"members": "μέλη",
++"Mute its members": "Σίγαση των μελών του",
++"Solo its members": "Solo στα μέλη του",
++"Name": "Όνομα",
++"Plenio's limiter, as on Forge: 4× oversampled, 3 ms ahead, both sides together; the true peak held at the ceiling": "Ο περιοριστής του Plenio, όπως στο Forge: 4× υπερδειγματοληψία, 3 ms μπροστά, και οι δύο πλευρές μαζί· η πραγματική κορυφή κρατιέται στο ταβάνι",
++"The limiter's reduction as it plays": "Η μείωση του περιοριστή όσο παίζει",
++"The master's EQ: up to eight bands, before its compressor": "Ο ισοσταθμιστής του master: έως οκτώ ζώνες, πριν από τον συμπιεστή του",
++"The master's compressor: its reduction as it plays": "Ο συμπιεστής του master: η μείωσή του όσο παίζει",
++"The master's limiter, last before the fader: its reduction as it plays": "Ο περιοριστής του master, τελευταίος πριν από τον φέιντερ: η μείωσή του όσο παίζει",
++"Ceiling": "Ταβάνι",
++"Drive": "Ώθηση",
++"The highest true peak let through, 4× interpolated": "Η υψηλότερη πραγματική κορυφή που περνά, με 4× παρεμβολή",
++"How hard the mix is driven into the limiter: louder, and held under the ceiling": "Πόσο δυνατά οδηγείται η μίξη στον περιοριστή: πιο δυνατά, και κρατιέται κάτω από το ταβάνι",
++"How fast it lets go: the time to give back 12 dB": "Πόσο γρήγορα αφήνει: ο χρόνος για να επιστρέψει 12 dB"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index fbb5923..58ee659 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5722,5 +5722,31 @@ RuachI18n.add("es", {
+ "Key: what the compressor listens to: its own strip, or another as it enters its own compressor (the band ducked under the voice)": "Clave: lo que escucha el compresor: su propia pista, u otra tal como entra en su propio compresor (la banda agachada bajo la voz)",
+ "Listens to": "Escucha",
+ "This stem's version: a click steps to the next, so two are compared as it plays; a right-click shows them all in its devices": "La versión de este stem: un clic pasa a la siguiente, así se comparan dos mientras suena; un clic derecho las muestra todas en sus dispositivos",
+-"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "Los dos lados como imagen: el centro arriba, los lados de través; una línea hacia arriba es mono, una nube ancha es ancho, una línea de través está en contrafase"
++"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "Los dos lados como imagen: el centro arriba, los lados de través; una línea hacia arriba es mono, una nube ancha es ancho, una línea de través está en contrafase",
++"Stop the mix on Forge: nothing is made": "Detener la mezcla en Forge: no se hace nada",
++"Stopped: no mix was made": "Detenida: no se hizo ninguna mezcla",
++"The mix is no longer running on Forge": "La mezcla ya no corre en Forge",
++"This Take": "Esta toma",
++"the branches of every step": "las ramas de todos los pasos",
++"A silenced stretch: its top corners fade into it and out of it (a double-click gives back 10 ms), its sides move it.": "Un tramo silenciado: sus esquinas superiores lo funden hacia el silencio y de vuelta (un doble clic devuelve 10 ms), sus lados lo mueven.",
++"A VCA: its fader adds its dB to each member's, M mutes them, S solos them; its devices name it and choose its members": "Un VCA: su fader suma sus dB al de cada miembro, M los silencia, S los deja en solo; en sus dispositivos, su nombre y sus miembros",
++"A VCA: one fader over a group of strips (the strip picked its first member)": "Un VCA: un fader sobre un grupo de pistas (la pista elegida, su primer miembro)",
++"Its fader adds its dB to each member's own (theirs stay where they are); M mutes them, S solos them; a strip may be in more than one, their dB add": "Su fader suma sus dB al fader propio de cada miembro (los suyos se quedan donde están); M los silencia, S los deja en solo; una pista puede estar en más de uno, sus dB se suman",
++"Limiter": "Limitador",
++"Lim": "Lim",
++"Members": "Miembros",
++"members": "miembros",
++"Mute its members": "Silenciar sus miembros",
++"Solo its members": "Solo a sus miembros",
++"Name": "Nombre",
++"Plenio's limiter, as on Forge: 4× oversampled, 3 ms ahead, both sides together; the true peak held at the ceiling": "El limitador de Plenio, como en Forge: sobremuestreo 4×, 3 ms por delante, los dos lados juntos; el pico real se mantiene en el techo",
++"The limiter's reduction as it plays": "La reducción del limitador mientras suena",
++"The master's EQ: up to eight bands, before its compressor": "El EQ del máster: hasta ocho bandas, antes de su compresor",
++"The master's compressor: its reduction as it plays": "El compresor del máster: su reducción mientras suena",
++"The master's limiter, last before the fader: its reduction as it plays": "El limitador del máster, el último antes del fader: su reducción mientras suena",
++"Ceiling": "Techo",
++"Drive": "Empuje",
++"The highest true peak let through, 4× interpolated": "El pico real más alto que deja pasar, interpolado 4×",
++"How hard the mix is driven into the limiter: louder, and held under the ceiling": "Cuánto se empuja la mezcla al limitador: más fuerte, y sujeta bajo el techo",
++"How fast it lets go: the time to give back 12 dB": "Qué tan rápido suelta: el tiempo para devolver 12 dB"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index d4677c4..a1b1ba0 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5606,5 +5606,31 @@ RuachI18n.add("fr", {
+ "Key: what the compressor listens to: its own strip, or another as it enters its own compressor (the band ducked under the voice)": "Clé : ce qu'écoute le compresseur : sa propre tranche, ou une autre telle qu'elle entre dans son propre compresseur (le groupe effacé sous la voix)",
+ "Listens to": "Écoute",
+ "This stem's version: a click steps to the next, so two are compared as it plays; a right-click shows them all in its devices": "La version de ce stem : un clic passe à la suivante, ainsi deux se comparent en jouant ; un clic droit les montre toutes dans ses appareils",
+-"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "Les deux côtés en image : le centre en haut, les côtés en travers ; une ligne vers le haut est mono, un nuage large est large, une ligne en travers est en opposition de phase"
++"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "Les deux côtés en image : le centre en haut, les côtés en travers ; une ligne vers le haut est mono, un nuage large est large, une ligne en travers est en opposition de phase",
++"Stop the mix on Forge: nothing is made": "Arrêter le mix sur Forge : rien n'est fait",
++"Stopped: no mix was made": "Arrêté : aucun mix n'a été fait",
++"The mix is no longer running on Forge": "Le mix ne tourne plus sur Forge",
++"This Take": "Cette prise",
++"the branches of every step": "les branches de toutes les étapes",
++"A silenced stretch: its top corners fade into it and out of it (a double-click gives back 10 ms), its sides move it.": "Un passage rendu muet : ses coins du haut règlent le fondu vers le silence et hors de lui (un double-clic rend 10 ms), ses bords le déplacent.",
++"A VCA: its fader adds its dB to each member's, M mutes them, S solos them; its devices name it and choose its members": "Un VCA : son fader ajoute ses dB à celui de chaque membre, M les coupe, S les met en solo ; dans ses appareils, son nom et ses membres",
++"A VCA: one fader over a group of strips (the strip picked its first member)": "Un VCA : un fader sur un groupe de pistes (la piste choisie en premier membre)",
++"Its fader adds its dB to each member's own (theirs stay where they are); M mutes them, S solos them; a strip may be in more than one, their dB add": "Son fader ajoute ses dB au fader propre de chaque membre (les leurs restent où ils sont) ; M les coupe, S les met en solo ; une piste peut être dans plusieurs, leurs dB s'additionnent",
++"Limiter": "Limiteur",
++"Lim": "Lim",
++"Members": "Membres",
++"members": "membres",
++"Mute its members": "Couper ses membres",
++"Solo its members": "Solo à ses membres",
++"Name": "Nom",
++"Plenio's limiter, as on Forge: 4× oversampled, 3 ms ahead, both sides together; the true peak held at the ceiling": "Le limiteur de Plenio, comme sur Forge : suréchantillonnage 4×, 3 ms d'avance, les deux côtés ensemble ; la crête vraie tenue au plafond",
++"The limiter's reduction as it plays": "La réduction du limiteur pendant la lecture",
++"The master's EQ: up to eight bands, before its compressor": "L'EQ du master : jusqu'à huit bandes, avant son compresseur",
++"The master's compressor: its reduction as it plays": "Le compresseur du master : sa réduction pendant la lecture",
++"The master's limiter, last before the fader: its reduction as it plays": "Le limiteur du master, dernier avant le fader : sa réduction pendant la lecture",
++"Ceiling": "Plafond",
++"Drive": "Poussée",
++"The highest true peak let through, 4× interpolated": "La crête vraie la plus haute qu'il laisse passer, interpolée 4×",
++"How hard the mix is driven into the limiter: louder, and held under the ceiling": "À quel point le mix est poussé dans le limiteur : plus fort, et tenu sous le plafond",
++"How fast it lets go: the time to give back 12 dB": "À quelle vitesse il relâche : le temps de rendre 12 dB"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 11730c5..afbb522 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5722,5 +5722,31 @@ RuachI18n.add("it", {
+ "Key: what the compressor listens to: its own strip, or another as it enters its own compressor (the band ducked under the voice)": "Chiave: ciò che ascolta il compressore: la propria traccia, o un'altra come entra nel proprio compressore (la band abbassata sotto la voce)",
+ "Listens to": "Ascolta",
+ "This stem's version: a click steps to the next, so two are compared as it plays; a right-click shows them all in its devices": "La versione di questo stem: un clic passa alla successiva, così se ne confrontano due mentre suona; un clic destro le mostra tutte nei suoi dispositivi",
+-"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "I due lati come immagine: il centro in su, i lati di traverso; una linea in su è mono, una nuvola larga è largo, una linea di traverso è in controfase"
++"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "I due lati come immagine: il centro in su, i lati di traverso; una linea in su è mono, una nuvola larga è largo, una linea di traverso è in controfase",
++"Stop the mix on Forge: nothing is made": "Ferma il mix su Forge: non si fa nulla",
++"Stopped: no mix was made": "Fermato: nessun mix fatto",
++"The mix is no longer running on Forge": "Il mix non gira più su Forge",
++"This Take": "Questo take",
++"the branches of every step": "i rami di tutti i passi",
++"A silenced stretch: its top corners fade into it and out of it (a double-click gives back 10 ms), its sides move it.": "Un tratto silenziato: i suoi angoli in alto lo sfumano verso il silenzio e fuori da esso (un doppio clic riporta 10 ms), i suoi lati lo spostano.",
++"A VCA: its fader adds its dB to each member's, M mutes them, S solos them; its devices name it and choose its members": "Un VCA: il suo fader aggiunge i suoi dB a quello di ogni membro, M li silenzia, S li mette in solo; nei suoi dispositivi, il nome e i membri",
++"A VCA: one fader over a group of strips (the strip picked its first member)": "Un VCA: un fader su un gruppo di tracce (la traccia scelta è il primo membro)",
++"Its fader adds its dB to each member's own (theirs stay where they are); M mutes them, S solos them; a strip may be in more than one, their dB add": "Il suo fader aggiunge i suoi dB al fader di ogni membro (i loro restano dove sono); M li silenzia, S li mette in solo; una traccia può stare in più gruppi, i loro dB si sommano",
++"Limiter": "Limitatore",
++"Lim": "Lim",
++"Members": "Membri",
++"members": "membri",
++"Mute its members": "Silenzia i suoi membri",
++"Solo its members": "Solo ai suoi membri",
++"Name": "Nome",
++"Plenio's limiter, as on Forge: 4× oversampled, 3 ms ahead, both sides together; the true peak held at the ceiling": "Il limitatore di Plenio, come su Forge: sovracampionamento 4×, 3 ms in anticipo, i due lati insieme; il picco reale tenuto al tetto",
++"The limiter's reduction as it plays": "La riduzione del limitatore mentre suona",
++"The master's EQ: up to eight bands, before its compressor": "L'EQ del master: fino a otto bande, prima del suo compressore",
++"The master's compressor: its reduction as it plays": "Il compressore del master: la sua riduzione mentre suona",
++"The master's limiter, last before the fader: its reduction as it plays": "Il limitatore del master, l'ultimo prima del fader: la sua riduzione mentre suona",
++"Ceiling": "Tetto",
++"Drive": "Spinta",
++"The highest true peak let through, 4× interpolated": "Il picco reale più alto che lascia passare, interpolato 4×",
++"How hard the mix is driven into the limiter: louder, and held under the ceiling": "Quanto il mix è spinto nel limitatore: più forte, e tenuto sotto il tetto",
++"How fast it lets go: the time to give back 12 dB": "Quanto in fretta rilascia: il tempo per restituire 12 dB"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index 4647a59..3887bde 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5606,5 +5606,31 @@ RuachI18n.add("ja", {
+ "Key: what the compressor listens to: its own strip, or another as it enters its own compressor (the band ducked under the voice)": "キー：コンプレッサーが聴くもの。自分のトラック、または別のトラック（そのコンプレッサーに入るときの音）。バンドを声の下に沈めるときに",
+ "Listens to": "聴く先",
+ "This stem's version: a click steps to the next, so two are compared as it plays; a right-click shows them all in its devices": "このステムのバージョン：クリックで次へ。再生しながら二つを比べられます。右クリックでデバイスに全部を表示",
+-"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "左右を絵で：中央は上、左右差は横。縦の線はモノ、広い雲はワイド、横の線は逆相"
++"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "左右を絵で：中央は上、左右差は横。縦の線はモノ、広い雲はワイド、横の線は逆相",
++"Stop the mix on Forge: nothing is made": "Forge でのミックスを止めます：何も作られません",
++"Stopped: no mix was made": "止めました：ミックスは作られていません",
++"The mix is no longer running on Forge": "ミックスはもう Forge で動いていません",
++"This Take": "このテイク",
++"the branches of every step": "すべてのステップの枝",
++"A silenced stretch: its top corners fade into it and out of it (a double-click gives back 10 ms), its sides move it.": "無音にした区間：上の両角でフェードの長さを決め（ダブルクリックで 10 ms に戻る）、両端で位置を動かします。",
++"A VCA: its fader adds its dB to each member's, M mutes them, S solos them; its devices name it and choose its members": "VCA：そのフェーダーが各メンバーのフェーダーに dB を足します。M でミュート、S でソロ。デバイスで名前とメンバーを決めます",
++"A VCA: one fader over a group of strips (the strip picked its first member)": "VCA：トラックのグループをひとつのフェーダーで（選んだトラックが最初のメンバー）",
++"Its fader adds its dB to each member's own (theirs stay where they are); M mutes them, S solos them; a strip may be in more than one, their dB add": "フェーダーは各メンバー自身のフェーダーに dB を足します（メンバーのフェーダーは動きません）。M でミュート、S でソロ。トラックは複数のグループに入れられ、その dB は足し合わされます",
++"Limiter": "リミッター",
++"Lim": "リミ",
++"Members": "メンバー",
++"members": "メンバー",
++"Mute its members": "メンバーをミュート",
++"Solo its members": "メンバーをソロ",
++"Name": "名前",
++"Plenio's limiter, as on Forge: 4× oversampled, 3 ms ahead, both sides together; the true peak held at the ceiling": "Plenio のリミッター（Forge と同じ）：4× オーバーサンプリング、3 ms 先読み、左右連動。トゥルーピークは上限に保たれます",
++"The limiter's reduction as it plays": "再生中のリミッターのリダクション",
++"The master's EQ: up to eight bands, before its compressor": "マスターの EQ：最大 8 バンド、コンプレッサーの前",
++"The master's compressor: its reduction as it plays": "マスターのコンプレッサー：再生中のリダクション",
++"The master's limiter, last before the fader: its reduction as it plays": "マスターのリミッター、フェーダー直前：再生中のリダクション",
++"Ceiling": "上限",
++"Drive": "ドライブ",
++"The highest true peak let through, 4× interpolated": "通過させる最大のトゥルーピーク（4× 補間）",
++"How hard the mix is driven into the limiter: louder, and held under the ceiling": "リミッターへどれだけ強く押し込むか：大きくなり、上限の下に保たれます",
++"How fast it lets go: the time to give back 12 dB": "どれだけ速く離すか：12 dB を戻すまでの時間"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index d4ebe3a..6610327 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5606,5 +5606,31 @@ RuachI18n.add("pt", {
+ "Key: what the compressor listens to: its own strip, or another as it enters its own compressor (the band ducked under the voice)": "Chave: o que o compressor escuta: o próprio canal, ou outro tal como entra no próprio compressor (a banda abaixada sob a voz)",
+ "Listens to": "Escuta",
+ "This stem's version: a click steps to the next, so two are compared as it plays; a right-click shows them all in its devices": "A versão deste stem: um clique passa à seguinte, assim duas se comparam enquanto toca; um clique direito mostra todas em seus dispositivos",
+-"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "Os dois lados como imagem: o centro para cima, os lados de través; uma linha para cima é mono, uma nuvem larga é largo, uma linha de través está fora de fase"
++"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "Os dois lados como imagem: o centro para cima, os lados de través; uma linha para cima é mono, uma nuvem larga é largo, uma linha de través está fora de fase",
++"Stop the mix on Forge: nothing is made": "Parar a mix no Forge: nada é feito",
++"Stopped: no mix was made": "Parada: nenhuma mix foi feita",
++"The mix is no longer running on Forge": "A mix não está mais rodando no Forge",
++"This Take": "Este take",
++"the branches of every step": "os ramos de todos os passos",
++"A silenced stretch: its top corners fade into it and out of it (a double-click gives back 10 ms), its sides move it.": "Um trecho silenciado: os cantos de cima fazem o fade para o silêncio e de volta (um duplo clique devolve 10 ms), os lados movem-no.",
++"A VCA: its fader adds its dB to each member's, M mutes them, S solos them; its devices name it and choose its members": "Um VCA: o seu fader soma os seus dB ao de cada membro, M silencia-os, S põe-nos em solo; nos seus dispositivos, o nome e os membros",
++"A VCA: one fader over a group of strips (the strip picked its first member)": "Um VCA: um fader sobre um grupo de faixas (a faixa escolhida é o primeiro membro)",
++"Its fader adds its dB to each member's own (theirs stay where they are); M mutes them, S solos them; a strip may be in more than one, their dB add": "O seu fader soma os seus dB ao fader próprio de cada membro (os deles ficam onde estão); M silencia-os, S põe-nos em solo; uma faixa pode estar em mais de um, os dB somam-se",
++"Limiter": "Limitador",
++"Lim": "Lim",
++"Members": "Membros",
++"members": "membros",
++"Mute its members": "Silenciar os seus membros",
++"Solo its members": "Solo aos seus membros",
++"Name": "Nome",
++"Plenio's limiter, as on Forge: 4× oversampled, 3 ms ahead, both sides together; the true peak held at the ceiling": "O limitador do Plenio, como no Forge: sobreamostragem 4×, 3 ms à frente, os dois lados juntos; o pico real mantido no teto",
++"The limiter's reduction as it plays": "A redução do limitador enquanto toca",
++"The master's EQ: up to eight bands, before its compressor": "O EQ do master: até oito bandas, antes do seu compressor",
++"The master's compressor: its reduction as it plays": "O compressor do master: sua redução enquanto toca",
++"The master's limiter, last before the fader: its reduction as it plays": "O limitador do master, o último antes do fader: sua redução enquanto toca",
++"Ceiling": "Teto",
++"Drive": "Empurrão",
++"The highest true peak let through, 4× interpolated": "O pico real mais alto que deixa passar, interpolado 4×",
++"How hard the mix is driven into the limiter: louder, and held under the ceiling": "Quanto a mix é empurrada para o limitador: mais alta, e mantida abaixo do teto",
++"How fast it lets go: the time to give back 12 dB": "Quão rápido ele solta: o tempo para devolver 12 dB"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 1402171..a146792 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5728,5 +5728,31 @@ RuachI18n.add("ru", {
+ "Key: what the compressor listens to: its own strip, or another as it enters its own compressor (the band ducked under the voice)": "Ключ: что слушает компрессор: свой канал или другой, каким тот входит в свой компрессор (группа приседает под голосом)",
+ "Listens to": "Слушает",
+ "This stem's version: a click steps to the next, so two are compared as it plays; a right-click shows them all in its devices": "Версия этого стема: щелчок переключает на следующую, так две сравниваются на ходу; правый щелчок показывает все в его устройствах",
+-"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "Две стороны картинкой: середина вверх, бока поперёк; линия вверх — моно, широкое облако — широко, линия поперёк — противофаза"
++"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "Две стороны картинкой: середина вверх, бока поперёк; линия вверх — моно, широкое облако — широко, линия поперёк — противофаза",
++"Stop the mix on Forge: nothing is made": "Остановить сведение на Кузне: ничего не будет сделано",
++"Stopped: no mix was made": "Остановлено: микс не сделан",
++"The mix is no longer running on Forge": "Сведение больше не идёт на Кузне",
++"This Take": "Этот семпл",
++"the branches of every step": "ветви всех шагов",
++"A silenced stretch: its top corners fade into it and out of it (a double-click gives back 10 ms), its sides move it.": "Заглушённый отрезок: его верхние углы задают затухание в тишину и выход из неё (двойной щелчок возвращает 10 мс), его края двигают его.",
++"A VCA: its fader adds its dB to each member's, M mutes them, S solos them; its devices name it and choose its members": "VCA: его фейдер прибавляет свои дБ к фейдеру каждого участника, M глушит их, S оставляет только их; в его устройствах — имя и участники",
++"A VCA: one fader over a group of strips (the strip picked its first member)": "VCA: один фейдер над группой каналов (выбранный канал — первый участник)",
++"Its fader adds its dB to each member's own (theirs stay where they are); M mutes them, S solos them; a strip may be in more than one, their dB add": "Его фейдер прибавляет свои дБ к собственному фейдеру каждого участника (их фейдеры остаются на месте); M глушит их, S оставляет только их; канал может быть в нескольких группах, их дБ складываются",
++"Limiter": "Лимитер",
++"Lim": "Лим",
++"Members": "Участники",
++"members": "участн.",
++"Mute its members": "Заглушить его участников",
++"Solo its members": "Соло его участникам",
++"Name": "Имя",
++"Plenio's limiter, as on Forge: 4× oversampled, 3 ms ahead, both sides together; the true peak held at the ceiling": "Лимитер Plenio, как на Кузне: 4× передискретизация, 3 мс вперёд, обе стороны вместе; истинный пик держится у потолка",
++"The limiter's reduction as it plays": "Подавление лимитера, пока играет",
++"The master's EQ: up to eight bands, before its compressor": "Эквалайзер мастера: до восьми полос, перед его компрессором",
++"The master's compressor: its reduction as it plays": "Компрессор мастера: его подавление, пока играет",
++"The master's limiter, last before the fader: its reduction as it plays": "Лимитер мастера, последний перед фейдером: его подавление, пока играет",
++"Ceiling": "Потолок",
++"Drive": "Нажим",
++"The highest true peak let through, 4× interpolated": "Наивысший истинный пик, что проходит, по 4× интерполяции",
++"How hard the mix is driven into the limiter: louder, and held under the ceiling": "Как сильно сведение вгоняется в лимитер: громче, и удерживается под потолком",
++"How fast it lets go: the time to give back 12 dB": "Как быстро он отпускает: время, чтобы вернуть 12 дБ"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 5dc61ea..a0c814b 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5723,5 +5723,31 @@ RuachI18n.add("uk", {
+ "Key: what the compressor listens to: its own strip, or another as it enters its own compressor (the band ducked under the voice)": "Ключ: що слухає компресор: свій канал або інший, яким той входить у свій компресор (група присідає під голосом)",
+ "Listens to": "Слухає",
+ "This stem's version: a click steps to the next, so two are compared as it plays; a right-click shows them all in its devices": "Версія цього стема: клац перемикає на наступну, так дві порівнюються на ходу; правий клац показує всі в його пристроях",
+-"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "Дві сторони картинкою: середина вгору, боки впоперек; лінія вгору — моно, широка хмара — широко, лінія впоперек — протифаза"
++"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "Дві сторони картинкою: середина вгору, боки впоперек; лінія вгору — моно, широка хмара — широко, лінія впоперек — протифаза",
++"Stop the mix on Forge: nothing is made": "Зупинити зведення на Кузні: нічого не буде створено",
++"Stopped: no mix was made": "Зупинено: мікс не створено",
++"The mix is no longer running on Forge": "Зведення більше не йде на Кузні",
++"This Take": "Цей семпл",
++"the branches of every step": "гілки всіх кроків",
++"A silenced stretch: its top corners fade into it and out of it (a double-click gives back 10 ms), its sides move it.": "Заглушений відрізок: його верхні кути задають згасання в тишу й вихід із неї (подвійне клацання повертає 10 мс), його краї пересувають його.",
++"A VCA: its fader adds its dB to each member's, M mutes them, S solos them; its devices name it and choose its members": "VCA: його фейдер додає свої дБ до фейдера кожного учасника, M глушить їх, S лишає тільки їх; у його пристроях — ім’я та учасники",
++"A VCA: one fader over a group of strips (the strip picked its first member)": "VCA: один фейдер над групою каналів (вибраний канал — перший учасник)",
++"Its fader adds its dB to each member's own (theirs stay where they are); M mutes them, S solos them; a strip may be in more than one, their dB add": "Його фейдер додає свої дБ до власного фейдера кожного учасника (їхні фейдери лишаються на місці); M глушить їх, S лишає тільки їх; канал може бути в кількох групах, їхні дБ додаються",
++"Limiter": "Лімітер",
++"Lim": "Лім",
++"Members": "Учасники",
++"members": "учасн.",
++"Mute its members": "Заглушити його учасників",
++"Solo its members": "Соло його учасникам",
++"Name": "Ім’я",
++"Plenio's limiter, as on Forge: 4× oversampled, 3 ms ahead, both sides together; the true peak held at the ceiling": "Лімітер Plenio, як на Кузні: 4× передискретизація, 3 мс уперед, обидві сторони разом; справжній пік тримається біля стелі",
++"The limiter's reduction as it plays": "Придушення лімітера, поки грає",
++"The master's EQ: up to eight bands, before its compressor": "Еквалайзер мастера: до восьми смуг, перед його компресором",
++"The master's compressor: its reduction as it plays": "Компресор мастера: його придушення, поки грає",
++"The master's limiter, last before the fader: its reduction as it plays": "Лімітер мастера, останній перед фейдером: його придушення, поки грає",
++"Ceiling": "Стеля",
++"Drive": "Натиск",
++"The highest true peak let through, 4× interpolated": "Найвищий справжній пік, що проходить, за 4× інтерполяцією",
++"How hard the mix is driven into the limiter: louder, and held under the ceiling": "Як сильно зведення заганяється в лімітер: гучніше, і втримується під стелею",
++"How fast it lets go: the time to give back 12 dB": "Як швидко він відпускає: час, щоб повернути 12 дБ"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index c3e11e7..664b90a 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5606,5 +5606,31 @@ RuachI18n.add("zh", {
+ "Key: what the compressor listens to: its own strip, or another as it enters its own compressor (the band ducked under the voice)": "键控：压缩器所听的：自身轨道，或另一条轨道进入其自身压缩器时的声音（让乐队在人声下方压低）",
+ "Listens to": "监听源",
+ "This stem's version: a click steps to the next, so two are compared as it plays; a right-click shows them all in its devices": "此分轨的版本：单击切换到下一个，播放时即可比较两个；右键在它的设备中显示全部",
+-"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "左右两侧的图像：中间向上，两侧横向；竖线为单声道，宽阔的云为宽，横线为反相"
++"The two sides as a picture: mid up, side across; a line up is mono, a wide cloud wide, a line across out of phase": "左右两侧的图像：中间向上，两侧横向；竖线为单声道，宽阔的云为宽，横线为反相",
++"Stop the mix on Forge: nothing is made": "停止 Forge 上的混音：不会生成任何内容",
++"Stopped: no mix was made": "已停止：没有生成混音",
++"The mix is no longer running on Forge": "混音已不在 Forge 上运行",
++"This Take": "这个录音",
++"the branches of every step": "所有步骤的分支",
++"A silenced stretch: its top corners fade into it and out of it (a double-click gives back 10 ms), its sides move it.": "静音的一段：拖动顶部两角设定淡出与淡入的长度（双击恢复为 10 毫秒），拖动两边移动它。",
++"A VCA: its fader adds its dB to each member's, M mutes them, S solos them; its devices name it and choose its members": "VCA：它的推子把自己的 dB 加到每个成员的推子上，M 静音它们，S 独奏它们；在它的设备里命名并选择成员",
++"A VCA: one fader over a group of strips (the strip picked its first member)": "VCA：一个推子控制一组轨道（所选轨道为第一个成员）",
++"Its fader adds its dB to each member's own (theirs stay where they are); M mutes them, S solos them; a strip may be in more than one, their dB add": "它的推子把自己的 dB 加到每个成员自己的推子上（成员的推子不动）；M 静音它们，S 独奏它们；一个轨道可以属于多个组，它们的 dB 相加",
++"Limiter": "限幅器",
++"Lim": "限幅",
++"Members": "成员",
++"members": "成员",
++"Mute its members": "静音其成员",
++"Solo its members": "独奏其成员",
++"Name": "名称",
++"Plenio's limiter, as on Forge: 4× oversampled, 3 ms ahead, both sides together; the true peak held at the ceiling": "Plenio 的限幅器，与 Forge 上相同：4× 过采样，提前 3 毫秒，左右联动；真峰值保持在上限",
++"The limiter's reduction as it plays": "播放时的限幅量",
++"The master's EQ: up to eight bands, before its compressor": "主输出的均衡：最多八个频段，在其压缩器之前",
++"The master's compressor: its reduction as it plays": "主输出的压缩器：播放时的压缩量",
++"The master's limiter, last before the fader: its reduction as it plays": "主输出的限幅器，推子前的最后一级：播放时的限幅量",
++"Ceiling": "上限",
++"Drive": "推动",
++"The highest true peak let through, 4× interpolated": "允许通过的最高真峰值（4× 插值）",
++"How hard the mix is driven into the limiter: louder, and held under the ceiling": "把混音推进限幅器的力度：更响，并保持在上限之下",
++"How fast it lets go: the time to give back 12 dB": "多快放开：恢复 12 dB 所需的时间"
+ });
+diff --git a/tools/console/heresy-mixdsp.js b/tools/console/heresy-mixdsp.js
+index d6304a9..8776c7a 100644
+--- a/tools/console/heresy-mixdsp.js
++++ b/tools/console/heresy-mixdsp.js
+@@ -170,7 +170,100 @@
+     function MeterBank(rate, n, master) { this.m = []; for (var i = 0; i < n; i++) this.m.push(new Meter(rate, i === master)); }
+     MeterBank.prototype.run = function (ins, n) { for (var i = 0; i < this.m.length; i++) this.m[i].feed(ins[2 * i], ins[2 * i + 1], n); };
+     MeterBank.prototype.take = function () { return this.m.map(function (m) { return m.take(); }); };
+-    G.Comp = Comp; G.Meter = Meter; G.CompBank = CompBank; G.MeterBank = MeterBank; G.merge = merge; G.softKnee = softKnee;
++    // ---- HERESY 1544: Plenio's limiter, streamed. Its FIR is scipy's resample_poly design for 4×: firwin(81, 1/4, Kaiser β 10)
++    function firwin81() {
++      var N = 81, h = new Float64Array(N), s = 0, i0 = function (x) { var sum = 1, t = 1; for (var k = 1; k < 60; k++) { t *= (x / 2) / k; sum += t * t; } return sum; };
++      for (var i = 0; i < N; i++) {
++        var m = i - 40, x = 0.25 * m, r = (i - 40) / 40;
++        h[i] = 0.25 * (m === 0 ? 1 : Math.sin(Math.PI * x) / (Math.PI * x)) * i0(10 * Math.sqrt(Math.max(0, 1 - r * r))) / i0(10);
++        s += h[i];
++      }
++      for (i = 0; i < N; i++) h[i] /= s;
++      return h;
++    }
++    function Limiter(rate) {
++      this.rate = rate; this.h = firwin81();
++      this.look = Math.max(1, Math.round(rate * 4 * 3 / 1000));   // Plenio's 3 ms, in oversampled samples
++      this.delay = 20 + Math.floor(this.look / 4);
++      var S2 = this.look + 8;
++      this.S = S2; this.uL = new Float64Array(S2); this.uR = new Float64Array(S2); this.d = new Float64Array(S2);
++      this.f = new Float64Array(this.look + 2); this.fsum = 0;
++      this.dq = new Int32Array(S2); this.dh = 0; this.dt = 0;  // the demand's maximum over the lookahead: a deque of indices
++      this.xL = new Float64Array(32); this.xR = new Float64Array(32);   // the input, 21 samples of it at a time
++      this.oL = new Float64Array(128); this.oR = new Float64Array(128); // the gained oversampled sound, for the way down
++      this.pL = new Float64Array(this.delay); this.pR = new Float64Array(this.delay);   // the plain delay, when it is off
++      this.n = 0; this.k = -40; this.R = 0; this.gr = 0; this.grNow = 0;
++      this.set({});
++    }
++    Limiter.prototype.set = function (p) {
++      p = p || {};
++      this.on = !!p.on;
++      var ceil = p.ceiling_db != null ? +p.ceiling_db : -1, rel = p.release_ms != null ? +p.release_ms : 100;
++      this.thr = Math.pow(10, (ceil - 0.2) / 20);
++      this.step = 12 / (this.rate * 4 * rel / 1000);
++      this.drive = Math.pow(10, (p.drive_db || 0) / 20);
++    };
++    Limiter.prototype.one = function (inL, inR) {          // one sample in, one out (delay samples late)
++      var h = this.h, xi = this.n & 31, look = this.look, S2 = this.S, i, p, t, m;
++      this.xL[xi] = inL * this.drive; this.xR[xi] = inR * this.drive;
++      // up: the four oversampled points of input sample n − 10
++      for (p = 0; p < 4; p++) {
++        var aL = 0, aR = 0;
++        for (m = -10; m <= 10; m++) {                     // x[q + m], q = n − 10; tap 40 + p − 4m
++          t = 40 + p - 4 * m;
++          if (t < 0 || t > 80) continue;
++          var j = (this.n - 10 + m) & 31;
++          aL += h[t] * this.xL[j]; aR += h[t] * this.xR[j];
++        }
++        aL *= 4; aR *= 4;
++        var k = this.k++, ks = ((k % S2) + S2) % S2;
++        this.uL[ks] = aL; this.uR[ks] = aR;
++        var a = Math.max(aL < 0 ? -aL : aL, aR < 0 ? -aR : aR), dd = a > this.thr ? 20 * Math.log10(a / this.thr) : 0;
++        this.d[ks] = dd;
++        // the maximum of the demand over [k − look, k] is f[k − look]
++        while (this.dt > this.dh && this.d[((this.dq[(this.dt - 1) % S2] % S2) + S2) % S2] <= dd) this.dt--;
++        this.dq[this.dt % S2] = k; this.dt++;
++        var j0 = k - look;
++        while (this.dq[this.dh % S2] < j0) this.dh++;
++        var fj = this.d[((this.dq[this.dh % S2] % S2) + S2) % S2];
++        // its mean over the last look + 1: the smoothed demand at j0
++        var fi = ((j0 % (look + 2)) + look + 2) % (look + 2), old = this.f[((j0 - look - 1) % (look + 2) + look + 2) % (look + 2)];
++        this.f[fi] = fj; this.fsum += fj - old;
++        if (this.fsum < 1e-12) this.fsum = 0;
++        var js = ((j0 % S2) + S2) % S2, r = Math.max(this.d[js], this.fsum / (look + 1));
++        this.R = Math.max(this.R - this.step, r);
++        var g = Math.exp(-this.R * LN), oi = j0 & 127;
++        this.oL[oi] = this.uL[js] * g; this.oR[oi] = this.uR[js] * g;
++        if (this.R > this.grNow) this.grNow = this.R;
++        if ((j0 & 3) === 0) {                               // down: output sample (j0 − 40) / 4
++          var bL = 0, bR = 0;
++          for (t = 0; t <= 80; t++) { var oj = (j0 - t) & 127; bL += h[t] * this.oL[oj]; bR += h[t] * this.oR[oj]; }
++          this.yL = bL; this.yR = bR;
++        }
++      }
++      var pi = this.n % this.delay, qL = this.pL[pi], qR = this.pR[pi];   // the plain delay: what came delay samples ago
++      this.pL[pi] = inL; this.pR[pi] = inR;
++      this.n++;
++      if (!this.on) return [qL, qR];
++      return [this.yL, this.yR];
++    };
++    Limiter.prototype.run = function (inL, inR, outL, outR, n) {
++      for (var i = 0; i < n; i++) {
++        var a = inL ? inL[i] : 0, o = this.one(a, inR ? inR[i] : a);
++        outL[i] = o[0]; if (outR) outR[i] = o[1];
++      }
++      if (this.on && this.grNow > this.gr) this.gr = this.grNow;
++      this.grNow = 0;
++    };
++    // the master's chain: its compressor, then its limiter; a fixed delay, a cell and the limiter's
++    function Master(rate) { this.comp = new Comp(rate, 2); this.lim = new Limiter(rate); this.tL = new Float32Array(16384); this.tR = new Float32Array(16384); this.delay = this.comp.cell + this.lim.delay; }
++    Master.prototype.run = function (inL, inR, outL, outR, n) {
++      var tL = this.tL.subarray(0, n), tR = this.tR.subarray(0, n);
++      this.comp.run(inL, inR, tL, tR, n);
++      this.lim.run(tL, tR, outL, outR, n);
++    };
++    Master.prototype.gr = function () { var o = [this.comp.gr, this.lim.gr]; this.comp.gr = 0; this.lim.gr = 0; return o; };
++    G.Comp = Comp; G.Meter = Meter; G.CompBank = CompBank; G.MeterBank = MeterBank; G.merge = merge; G.softKnee = softKnee; G.Limiter = Limiter; G.Master = Master;
+ 
+     if (typeof registerProcessor === "function" && typeof AudioWorkletProcessor === "function") {
+       var EVERY = 1600;
+@@ -203,6 +296,21 @@
+         }
+       };
+       registerProcessor("ruach-meter-bank", MeterProc);
++      var MasterProc = class extends AudioWorkletProcessor {   // HERESY 1544
++        constructor() {
++          super();
++          var me = this;
++          me.m = new Master(sampleRate); me.since = 0;
++          me.port.onmessage = function (e) { var d = e.data || {}; if (d.comp) me.m.comp.set(d.comp); if (d.limit) me.m.lim.set(d.limit); };
++        }
++        process(inputs, outputs) {
++          var inp = inputs[0] || [], out = outputs[0], n = out[0] ? out[0].length : 128;
++          this.m.run(inp[0], inp[1] || inp[0], out[0], out[1], n);
++          if ((this.since += n) >= EVERY) { this.since = 0; this.port.postMessage({ mg: this.m.gr() }); }
++          return true;
++        }
++      };
++      registerProcessor("ruach-master", MasterProc);
+     }
+     return G;
+   }
+@@ -222,6 +330,9 @@
+               grAcc: [], mAcc: [], params: [] };
+     var SP = 4096;                                    // HERESY 1536: the page's thread may stall a few tens of ms; 85 ms of room
+     e.latency = (e.cell + (useWorklet ? 0 : SP)) / rate;
++    e.masterDelay = e.cell + 20 + Math.floor(Math.max(1, Math.round(rate * 4 * 3 / 1000)) / 4);   // HERESY 1544: the master's compressor and limiter
++    e.masterLatency = (e.masterDelay + (useWorklet ? 0 : SP)) / rate;   // while the master's node is in the path
++    e.mgAcc = [0, 0]; e.mparams = null;
+     function split(target, chans, at) {               // a strip's stereo into two channels of a bank's input
+       var s = ctx.createChannelSplitter(2);
+       s.connect(target, 0, at); s.connect(target, ch > 1 ? 1 : 0, at + 1);
+@@ -282,7 +393,23 @@
+         for (var j = 0; j < k; j++) e.meterIns[r[0] + j] = split(merger, 2, 2 * j);
+         e.nodes.push(merger, node);
+       });
++      var mnode;                                      // HERESY 1544: the master's chain, one node
++      if (useWorklet) {
++        mnode = new AudioWorkletNode(ctx, "ruach-master", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: "explicit", channelInterpretation: "speakers" });
++        mnode.port.onmessage = function (ev) { var g2 = ev.data.mg; if (g2) { e.mgAcc[0] = Math.max(e.mgAcc[0], g2[0]); e.mgAcc[1] = Math.max(e.mgAcc[1], g2[1]); e.mgNew = true; } };
++      } else {
++        var mc = new DSP.Master(rate);
++        mnode = ctx.createScriptProcessor(SP, 2, 2);
++        mnode.onaudioprocess = function (ev) {
++          mc.run(ev.inputBuffer.getChannelData(0), ev.inputBuffer.getChannelData(1), ev.outputBuffer.getChannelData(0), ev.outputBuffer.getChannelData(1), SP);
++          var g2 = mc.gr(); e.mgAcc[0] = Math.max(e.mgAcc[0], g2[0]); e.mgAcc[1] = Math.max(e.mgAcc[1], g2[1]); e.mgNew = true;
++        };
++        mnode.master = mc;
++      }
++      e.masterIn = e.masterOut = mnode;
++      e.nodes.push(mnode);
+       e.params.forEach(function (p, i) { if (p) e.setComp(i, p); });
++      if (e.mparams) e.setMaster(e.mparams);
+       return e;
+     });
+     e.setComp = function (i, p) {
+@@ -294,7 +421,14 @@
+         else if (b.node.bank && b.node.bank.c[i - b.from]) b.node.bank.c[i - b.from].set(q);
+       });
+     };
+-    e.read = function () { var o2 = { gr: e.grAcc, m: e.mAcc }; e.grAcc = []; e.mAcc = []; return o2; };
++    e.setMaster = function (p) {                      // HERESY 1544: {comp, limit}, each {on: false} when it is off
++      e.mparams = p;
++      var mn = e.masterIn;
++      if (!mn) return;
++      if (mn.port) mn.port.postMessage({ comp: p.comp, limit: p.limit });
++      else if (mn.master) { mn.master.comp.set(p.comp); mn.master.lim.set(p.limit); }
++    };
++    e.read = function () { var o2 = { gr: e.grAcc, m: e.mAcc, mg: e.mgNew ? e.mgAcc : null }; e.grAcc = []; e.mAcc = []; e.mgAcc = [0, 0]; e.mgNew = false; return o2; };   // 1544: mg null, no news
+     e.close = function () { e.nodes.forEach(function (x) { try { x.disconnect(); } catch (err) { /* gone */ } if (x.port) x.port.onmessage = null; if (x.onaudioprocess) x.onaudioprocess = null; }); e.nodes = []; };
+     return e;
+   }
+diff --git a/tools/console/heresy-mixer.js b/tools/console/heresy-mixer.js
+index 57bafa6..ac9439f 100644
+--- a/tools/console/heresy-mixer.js
++++ b/tools/console/heresy-mixer.js
+@@ -44,7 +44,7 @@
+   var keepTimer = 0;
+   function keepNow() {
+     clearTimeout(keepTimer); keepTimer = 0;
+-    if (!S.take || !S.set) return;
++    if (!S.take || !S.set || S.owner !== keyOf()) return;   // HERESY 1545: kept only as whose it is
+     S.t = Date.now();
+     try { localStorage.setItem(keyOf(), JSON.stringify({ strips: S.strips, versions: S.versions, buses: S.buses, ab: S.ab, t: S.t })); } catch (e) { /* private mode */ }
+     labKeep();
+@@ -60,7 +60,7 @@
+   }
+   function labKeep() {
+     clearTimeout(S.labTimer);
+-    if (!S.take || !S.set || !S.info) return;
++    if (!S.take || !S.set || !S.info || S.owner !== keyOf()) return;   // HERESY 1545
+     var take = S.take.name, set = S.set;
+     S.labTimer = setTimeout(function () {
+       if (!S.take || S.take.name !== take || S.set !== set) return;
+@@ -107,15 +107,18 @@
+   }
+   // HERESY 1531: a strip as the console has it; what is not set is the strip as it came
+   var COMP_DEF = { on: true, threshold_db: -18, ratio: 2, knee_db: 6, attack_ms: 10, release_ms: 120, makeup_db: 0, key: "" };   // 1537: key
++  var LIMIT_DEF = { on: true, ceiling_db: -1, drive_db: 0, release_ms: 100 };   // HERESY 1544: Plenio's limiter, its own defaults
+   function busesDefault() {
+     return { reverb: { preset: "room", return_db: 0, mute: false }, delay: { time_ms: 375, feedback: 0.35, lowpass_hz: 4000, return_db: 0, mute: false },
+-             master: { gain_db: 0 } };
++             master: { gain_db: 0, eq: null, comp: null, limit: null }, groups: [] };   // HERESY 1544: the master's chain; 1543: the VCAs
+   }
+   function busesOf(b) {
+     var d = busesDefault();
+     b = b || {};
+     ["reverb", "delay", "master"].forEach(function (k) { if (b[k] && typeof b[k] === "object") Object.keys(d[k]).forEach(function (f) { if (b[k][f] != null) d[k][f] = b[k][f]; }); });
+     if (["room", "plate", "hall"].indexOf(d.reverb.preset) < 0) d.reverb.preset = "room";
++    d.groups = (Array.isArray(b.groups) ? b.groups : []).filter(function (x) { return x && x.id; }).slice(0, 16).map(function (x) {   // HERESY 1543
++      return { id: String(x.id), name: String(x.name || x.id).slice(0, 40), members: Array.isArray(x.members) ? x.members.map(String) : [], gain_db: +x.gain_db || 0, mute: !!x.mute, solo: !!x.solo }; });
+     return d;
+   }
+   function migrate(strips) {                         // a mix kept before 1531: Plenio's one compression knob as its compressor
+@@ -126,7 +129,14 @@
+     });
+     return strips;
+   }
++  function masterStrip() {                           // HERESY 1544: the master as a strip, for the console's devices
++    var b = S.buses.master;
++    return { gain_db: +b.gain_db || 0, mute: false, solo: false, muted: [], reverb: 0, delay: 0, trim_db: 0, invert: false, width: 1, pan: 0, auto: [],
++             eq: b.eq && Array.isArray(b.eq.bands) ? { on: b.eq.on !== false, bands: b.eq.bands } : null,
++             comp: b.comp ? Object.assign({}, COMP_DEF, b.comp, { key: "" }) : null, limit: b.limit ? Object.assign({}, LIMIT_DEF, b.limit) : null };
++  }
+   function strip(name) {
++    if (name === "*") return masterStrip();
+     var s = S.strips[name] || (S.strips[name] = {});
+     return { gain_db: +s.gain_db || 0, mute: !!s.mute, solo: !!s.solo, muted: Array.isArray(s.muted) ? s.muted : [],
+              reverb: +s.reverb || 0, delay: +s.delay || 0,
+@@ -136,6 +146,24 @@
+              auto: Array.isArray(s.auto) ? s.auto : [] };   // HERESY 1535: [[t, dB], …]
+   }
+   function names() { return S.info ? S.info.strips.map(function (s) { return s.name; }).concat([REST]) : []; }
++  // HERESY 1542: a silenced stretch [start, end, fall, rise]; 10 ms edges when it says none; edges longer than it shared by their lengths
++  var EDGE = 0.01;
++  function fadesOf(r) { return [r[2] != null ? +r[2] : EDGE, r[3] != null ? +r[3] : EDGE]; }
++  function fitFades(r) {
++    var f = fadesOf(r), len = r[1] - r[0], sum = f[0] + f[1];
++    return sum > len && sum > 0 ? [len * f[0] / sum, len * f[1] / sum] : f;
++  }
++  function cutEnv(cuts, t) {                         // the gain the stretches leave at t, as the render's envelope
++    var v = 1;
++    cuts.forEach(function (r) {
++      if (t < r[0] || t >= r[1]) return;
++      var f = fitFades(r), e = 0;
++      if (f[0] > 0 && t < r[0] + f[0]) e = 0.5 + 0.5 * Math.cos(Math.PI * (t - r[0]) / f[0]);
++      else if (f[1] > 0 && t >= r[1] - f[1]) e = 0.5 - 0.5 * Math.cos(Math.PI * (t - (r[1] - f[1])) / f[1]);
++      v = Math.min(v, e);
++    });
++    return v;
++  }
+   // HERESY 1501 (Viktor 15–16.10.2026: «DAW UX должен быть как в Bitwig»; «DAW будет самым интересным»): the lanes seen through a view, its
+   // zoom (1: the whole song) and its start; a lane's colour by what it holds
+   function span() { return (S.info ? S.info.seconds || 1 : 1) / S.view.zoom; }
+@@ -159,7 +187,9 @@
+       if (s.gain_db) o.gain_db = rnd(s.gain_db, 2);
+       if (s.mute) o.mute = true;
+       if (s.solo) o.solo = true;
+-      if (s.muted.length) o.muted = s.muted.map(function (r) { return [Math.round(r[0] * 1000) / 1000, Math.round(r[1] * 1000) / 1000]; });
++      if (s.muted.length) o.muted = s.muted.map(function (r) {   // HERESY 1542: its fall and rise when they are not 10 ms
++        var f = fadesOf(r), o2 = [Math.round(r[0] * 1000) / 1000, Math.round(r[1] * 1000) / 1000];
++        return f[0] === EDGE && f[1] === EDGE ? o2 : o2.concat([Math.round(f[0] * 1000) / 1000, Math.round(f[1] * 1000) / 1000]); });
+       if (s.trim_db) o.trim_db = rnd(s.trim_db, 2);
+       if (s.invert) o.invert = true;
+       if (s.eq && s.eq.bands.length) o.eq = { on: s.eq.on, bands: s.eq.bands.map(function (x) {
+@@ -180,12 +210,30 @@
+     out.delay = { time_ms: rnd(b.delay.time_ms, 2), feedback: rnd(b.delay.feedback, 3), lowpass_hz: rnd(b.delay.lowpass_hz, 1) };
+     if (b.delay.return_db) out.delay.return_db = rnd(b.delay.return_db, 2);
+     if (b.delay.mute) out.delay.mute = true;
+-    if (b.master.gain_db) out.master = { gain_db: rnd(b.master.gain_db, 2) };
++    var ms = masterStrip(), mo = {};                   // HERESY 1544: the master's fader and chain
++    if (ms.gain_db) mo.gain_db = rnd(ms.gain_db, 2);
++    if (ms.eq && ms.eq.bands.length) mo.eq = { on: ms.eq.on, bands: ms.eq.bands.map(function (x) {
++      return { id: String(x.id), type: x.type, enabled: x.enabled !== false, frequency_hz: rnd(+x.frequency_hz, 1), gain_db: rnd(+x.gain_db || 0, 2), q: rnd(+x.q, 3) }; }) };
++    if (ms.comp) mo.comp = { on: !!ms.comp.on, threshold_db: rnd(ms.comp.threshold_db, 2), ratio: rnd(ms.comp.ratio, 2), knee_db: rnd(ms.comp.knee_db, 2),
++                             attack_ms: rnd(ms.comp.attack_ms, 2), release_ms: rnd(ms.comp.release_ms, 1), makeup_db: rnd(ms.comp.makeup_db, 2) };
++    if (ms.limit) mo.limit = { on: !!ms.limit.on, ceiling_db: rnd(ms.limit.ceiling_db, 2), drive_db: rnd(ms.limit.drive_db, 2), release_ms: rnd(ms.limit.release_ms, 1) };
++    if (Object.keys(mo).length) out.master = mo;
++    var ns0 = names();                                 // HERESY 1543: the VCAs, their members of this set
++    if (b.groups && b.groups.length) out.groups = b.groups.map(function (x) {
++      var o3 = { id: x.id, name: x.name, members: x.members.filter(function (y) { return ns0.indexOf(y) >= 0; }) };
++      if (x.gain_db) o3.gain_db = rnd(x.gain_db, 2);
++      if (x.mute) o3.mute = true;
++      if (x.solo) o3.solo = true;
++      return o3; });
+     return out;
+   }
++  // HERESY 1543: the VCAs over their members, as the render reads them
++  function groupsOf(n) { return (S.buses.groups || []).filter(function (x) { return x.members.indexOf(n) >= 0; }); }
++  function vcaDb(n) { return groupsOf(n).reduce(function (a, x) { return a + (+x.gain_db || 0); }, 0); }
+   function audible(name) {
+-    var soloing = names().some(function (n) { return strip(n).solo; });
+-    return soloing ? strip(name).solo : !strip(name).mute;
++    var soloing = names().some(function (n) { return strip(n).solo; }) || (S.buses.groups || []).some(function (x) { return x.solo && x.members.length; });
++    var gs = groupsOf(name);
++    return soloing ? strip(name).solo || gs.some(function (x) { return x.solo; }) : !(strip(name).mute || gs.some(function (x) { return x.mute; }));
+   }
+   function versionOf(name) {
+     if (name === REST) return "";
+@@ -198,7 +246,8 @@
+     if (S.take && take && S.take.name === take.name) return;
+     stop();
+     keepNow(); closeGraph();   // HERESY 1531
+-    clearTimeout(S.watch); S.busy = "";               // HERESY 1536: a mix watched for another take is no longer this one's
++    clearTimeout(S.watch); S.busy = ""; S.mixId = "";   // HERESY 1536: a mix watched for another take is no longer this one's
++    S.owner = "";                                     // HERESY 1545: the mix in hand was the last take's
+     S.take = take ? { name: take.name, label: take.label || take.name, seconds: take.seconds || 0 } : null;
+     S.sets = []; S.set = ""; S.info = null; S.peaks = {};
+     paint();
+@@ -217,7 +266,7 @@
+   function onTree(files) {
+     var sets = setsFrom(files), was = S.set;
+     S.sets = sets;
+-    if (!sets.some(function (x) { return x.dir === was; })) S.set = sets.length ? sets[sets.length - 1].dir : "";
++    if (!sets.some(function (x) { return x.dir === was; })) { keepNow(); S.owner = ""; S.set = sets.length ? sets[sets.length - 1].dir : ""; }   // HERESY 1545: kept as the last set's
+     if (S.set !== was || !S.info) open(); else paintHead();
+   }
+   function open() {
+@@ -233,6 +282,7 @@
+       S.info = info;
+       var kept = recall() || {};
+       S.strips = migrate(kept.strips || {}); S.versions = kept.versions || {}; S.buses = busesOf(kept.buses);   // HERESY 1531
++      S.owner = keyOf();                              // HERESY 1545: this mix is this take's and set's
+       S.t = +kept.t || 0; S.named = []; S.lab = { saved: 0, err: "", broken: "" };
+       labLoad(token, kept.t);                          // HERESY 1533: Forge's copy, when newer, replaces this browser's
+       S.ab = kept.ab && kept.ab.cur ? kept.ab : { cur: "A", A: null, B: null };
+@@ -268,7 +318,8 @@
+     }
+     html += "</div>";
+     if (S.info) html += '<div class="mx-dock" id="mxDock"' + (S.dock ? "" : " hidden") + "></div>";   // HERESY 1531: the console (heresy-console.js)
+-    html += '<p class="row-hint mx-note">' + esc(tr("Everything set here is heard as it is set and mixed on Forge as it is heard: the same EQ, compressor, pan, room and delay. Drag along a wave to silence a stretch, right-click it to give it back, click to play from there.")) + "</p>";
++    html += '<p class="row-hint mx-note">' + esc(tr("Everything set here is heard as it is set and mixed on Forge as it is heard: the same EQ, compressor, pan, room and delay. Drag along a wave to silence a stretch, right-click it to give it back, click to play from there.")) + " " +
++      esc(tr("A silenced stretch: its top corners fade into it and out of it (a double-click gives back 10 ms), its sides move it.")) + "</p>";   // HERESY 1542
+     body.innerHTML = html;
+     if ($("dawPanel")) $("dawPanel").style.setProperty("--mx-lanes", String(Math.max(1, names().length)));   // HERESY 1499: the lanes share the screen
+     paintHead();
+@@ -292,6 +343,7 @@
+       '<button type="button" class="btn ghost small icon-act" id="mxDockBtn" aria-pressed="' + S.dock + '" data-tip="' + esc(tr("The console under the lanes: every strip's inserts, sends, pan and fader, the returns and the master")) + '">' +
+         icon("sliders", "\u2261") + "<span>" + esc(tr("Console")) + "</span></button>" +
+       '<button type="button" class="mx-ms mx-print' + (S.print ? " is-on" : "") + '" id="mxPrint" aria-pressed="' + S.print + '" data-tip="' + esc(tr("Mix with its stems: every strip as it sounds in the mix, and each return, its own file beside the mix")) + '">+' + esc(tr("stems")) + "</button>" +
++      (S.busy && S.mixId ? '<button type="button" class="btn ghost small mx-stop" id="mxStop" data-tip="' + esc(tr("Stop the mix on Forge: nothing is made")) + '">' + esc(tr("Stop")) + "</button>" : "") +   // HERESY 1539
+       '<button type="button" class="btn primary small" id="mxMix"' + (S.info && !S.busy ? "" : " disabled") + ' data-tip="' + esc(tr("Mix it on Forge as it is heard here: a branch of the tree, its loudness measured")) + '">' + esc(tr("Mix")) + "</button>" +
+       '<button type="button" class="btn ghost small icon-act mx-full" id="mxFull" aria-pressed="' + (isFull() ? "true" : "false") + '" aria-label="' + esc(tr(isFull() ? "Back from full screen" : "Full screen")) +
+         '" data-tip="' + esc(tr("The DAW over the whole screen, its lanes as tall as the screen gives them; F11 here does the same. Esc, F11 or this button back")) + '">' +
+@@ -446,7 +498,22 @@
+       }
+     }
+     g.fillStyle = off;
+-    strip(n).muted.forEach(function (r) { g.fillRect(tx(r[0], w), 0, Math.max(1, (r[1] - r[0]) / span() * w), h); });
++    strip(n).muted.forEach(function (r) {             // HERESY 1542: dark as the gain is low, the gain's line, a handle at each top corner
++      var xa = tx(r[0], w), xb = tx(r[1], w), f = fitFades(r), xf = tx(r[0] + f[0], w), xr = tx(r[1] - f[1], w);
++      if (xb < 0 || xa > w) return;
++      g.fillRect(xf, 0, Math.max(1, xr - xf), h);
++      for (var px = Math.floor(xa); px < Math.ceil(xb); px++) {
++        if (px >= xf && px < xr) continue;
++        g.globalAlpha = 1 - cutEnv([r], xt(px + 0.5, w)); g.fillRect(px, 0, 1, h);
++      }
++      g.globalAlpha = 1;
++      if (xb - xa < 10) return;
++      g.strokeStyle = on; g.globalAlpha = 0.85; g.lineWidth = 1.25; g.beginPath();
++      for (var lx = Math.floor(xa) - 1; lx <= Math.ceil(xb) + 1; lx++) { var ly = 1.5 + (1 - cutEnv([r], xt(lx, w))) * (h - 3); if (lx === Math.floor(xa) - 1) g.moveTo(lx, ly); else g.lineTo(lx, ly); }
++      g.stroke(); g.globalAlpha = 1;
++      [xf, xr].forEach(function (hx) { g.fillStyle = on; g.fillRect(Math.round(hx) - 3, 0, 7, 7); g.strokeStyle = "rgba(0,0,0,.6)"; g.lineWidth = 1; g.strokeRect(Math.round(hx) - 2.5, 0.5, 6, 6); });
++      g.fillStyle = off;
++    });
+     if (S.drag && S.drag.name === n && S.drag.moved) {
+       var a = Math.min(S.drag.a, S.drag.b), b = Math.max(S.drag.a, S.drag.b);
+       g.fillStyle = off; g.fillRect(tx(a, w), 0, (b - a) / span() * w, h);
+@@ -510,8 +577,7 @@
+     var node = function (x) { all.push(x); return x; }, gain = function (v) { var x = node(ctx.createGain()); x.gain.value = v == null ? 1 : v; return x; };
+     var g = { key: graphKey(), all: all, lanes: {}, ch: ch };
+     g.eng = window.RuachMixDsp.make(ctx, { strips: ns.length, meters: ns.length + 3, master: ns.length + 2, ch: ch });
+-    g.master = { input: gain(), fader: gain() };
+-    g.master.input.connect(g.master.fader);
++    g.master = { input: gain(), fader: gain(), eq: [], eqKey: null };   // HERESY 1544: input · EQ · the chain's node · fader, wired when the kernel is up
+     // HERESY 1536: the monitor after the meters: Mono (the sides summed, mid and side by four gains as a lane's width) and Dim
+     var mon = g.mon = { sp: node(ctx.createChannelSplitter(2)), mg: node(ctx.createChannelMerger(2)), w: [gain(), gain(0), gain(0), gain()], dim: gain() };
+     g.master.fader.connect(mon.sp);
+@@ -550,7 +616,9 @@
+         l.gate.connect(g.eng.meterIns[i]);
+       });
+       rv.mute.connect(g.eng.meterIns[ns.length]); dl.mute.connect(g.eng.meterIns[ns.length + 1]); g.master.fader.connect(g.eng.meterIns[ns.length + 2]);
++      g.eng.masterOut.connect(g.master.fader);       // HERESY 1544
+       g.on = true;
++      applyBuses(g);
+       ns.forEach(function (n) { applyStrip(g, n); });
+       return g;
+     });
+@@ -580,6 +648,19 @@
+     if (l.an) at.connect(l.an);
+     l.tap = at; l.eqKey = key;
+   }
++  function wireMasterEq(g) {                         // HERESY 1544: the master's bands before its chain, as a lane's before its compressor
++    var mm = g.master, ms = masterStrip(), bands = liveBands(ms), mOn = !!((ms.comp && ms.comp.on) || (ms.limit && ms.limit.on)), key = bands.map(function (b) { return b.type; }).join(",") + "|" + mOn;
++    g.mOn = mOn;
++    if (!g.on || !g.eng.masterIn) return;
++    if (mm.eqKey === key) { bands.forEach(function (b, k) { setBand(mm.eq[k], b); }); return; }
++    try { mm.input.disconnect(); } catch (e) { /* not yet */ }
++    mm.eq.forEach(function (x) { try { x.disconnect(); } catch (e) { /* gone */ } });
++    mm.eq = bands.map(function (b) { var q = S.ctx.createBiquadFilter(); q.type = BQ[b.type]; g.all.push(q); setBand(q, b, true); return q; });
++    var at = mm.input;
++    mm.eq.forEach(function (q) { at.connect(q); at = q; });
++    at.connect(g.mOn ? g.eng.masterIn : mm.fader);   // the chain's node only while it has work
++    mm.tail = at; mm.eqKey = key;
++  }
+   // HERESY 1535: a lane's volume over time: linear in dB between its points, the first's level before them, the last's after
+   function autoPts(n) { return strip(n).auto.slice().sort(function (a, b) { return a[0] - b[0]; }); }
+   function autoDb(pts, t) {
+@@ -606,7 +687,7 @@
+     if (!l || !S.ctx) return;
+     var s = strip(n), t = S.ctx.currentTime, k = 0.01;
+     l.trim.gain.setTargetAtTime(db(s.trim_db) * (s.invert ? -1 : 1), t, k);
+-    l.fader.gain.setTargetAtTime(db(s.gain_db), t, k);
++    l.fader.gain.setTargetAtTime(db(s.gain_db + vcaDb(n)), t, k);   // HERESY 1543: as its VCAs move it
+     if (l.w) {
+       var a = (1 + s.width) / 2, b = (1 - s.width) / 2;
+       l.w[0].gain.setTargetAtTime(a, t, k); l.w[3].gain.setTargetAtTime(a, t, k); l.w[1].gain.setTargetAtTime(b, t, k); l.w[2].gain.setTargetAtTime(b, t, k);
+@@ -654,6 +735,9 @@
+       d.y.connect(lp); lp.connect(d.fb); d.lp = lp;
+     }
+     g.master.fader.gain.setTargetAtTime(db(b.master.gain_db), t, k);
++    var ms = masterStrip();                            // HERESY 1544: the chain as it is set
++    if (g.eng && g.eng.setMaster) g.eng.setMaster({ comp: ms.comp && ms.comp.on ? ms.comp : { on: false }, limit: ms.limit && ms.limit.on ? ms.limit : { on: false } });
++    wireMasterEq(g);
+   }
+   function liveGains() {
+     var g = S.graph;
+@@ -671,7 +755,8 @@
+     return l.an;
+   }
+   function pos() { return S.playing && S.ctx ? Math.min(S.info.seconds, Math.max(S.startAt, S.startAt + (S.ctx.currentTime - S.startCtx))) : S.at; }
+-  function heard() { var g = S.graph; return S.playing && g && g.eng ? Math.max(S.startAt, pos() - g.eng.latency) : pos(); }   // HERESY 1531: as it reaches the ears
++  function latency(g) { return g && g.eng ? g.eng.latency + (g.mOn ? g.eng.masterLatency || 0 : 0) : 0; }   // HERESY 1544: with the master's node when it is in
++  function heard() { var g = S.graph; return S.playing && g && g.eng ? Math.max(S.startAt, pos() - latency(g)) : pos(); }   // HERESY 1531: as it reaches the ears
+   function stop(keepAt) {
+     if (S.playing && keepAt !== false) S.at = pos();
+     S.playing = false;
+@@ -738,22 +823,30 @@
+       S.timer = setTimeout(function () { schedule(k + 1, token); }, Math.max(0, next * 1000));
+     });
+   }
+-  // the silence drawn on a lane, on the clock; HERESY 1531: its edges as the render's, raised cosines of 10 ms inside the stretch
+-  var FALL = new Float32Array(33), RISE = new Float32Array(33);
+-  for (var fk = 0; fk < 33; fk++) { FALL[fk] = 0.5 + 0.5 * Math.cos(Math.PI * fk / 32); RISE[32 - fk] = FALL[fk]; }
++  // the silence drawn on a lane, on the clock; HERESY 1531: its edges as the render's, raised cosines inside the stretch; 1542: of
++  // each stretch's own lengths, a stretch begun mid-edge picked up where it is
++  function curveOf(falling, u0, secs) {              // the raised cosine from its phase u0 to its end, a point every 5 ms (at least 33)
++    var k = Math.max(33, Math.min(2049, Math.ceil(secs / 0.005) + 1)), out = new Float32Array(k);
++    for (var i = 0; i < k; i++) { var u = u0 + (1 - u0) * i / (k - 1), c = 0.5 * Math.cos(Math.PI * u); out[i] = falling ? 0.5 + c : 0.5 - c; }
++    return out;
++  }
+   function ranges(n, l, a, b) {
+     var ctx = S.ctx, toCtx = function (t) { return S.startCtx + (t - S.startAt); }, g = l.range.gain, from = Math.max(ctx.currentTime + 0.005, toCtx(a));
+     g.cancelScheduledValues(from);
+-    var at = from - S.startCtx + S.startAt, inside = null;
+-    strip(n).muted.forEach(function (r) { if (r[0] <= at && r[1] > at) inside = r; });
+-    g.setValueAtTime(inside ? 0 : 1, from);
+-    strip(n).muted.forEach(function (r) {
++    var at = from - S.startCtx + S.startAt, cuts = strip(n).muted;
++    g.setValueAtTime(cutEnv(cuts, at), from);
++    cuts.forEach(function (r) {
+       if (r[1] <= a || r[0] >= b + CHUNK) return;
+-      var s = toCtx(r[0]), e = toCtx(r[1]), edge = Math.min(0.01, (r[1] - r[0]) / 2);
++      var f = fitFades(r), s = toCtx(r[0]), e = toCtx(r[1]), fe = s + f[0], rs = Math.max(fe, e - f[1]);
+       if (e <= from) return;
+-      if (s >= from) g.setValueCurveAtTime(FALL, s, edge);
+-      if (e - edge >= from + 0.001 && (s >= from || r === inside)) g.setValueCurveAtTime(RISE, e - edge, edge);
+-      else g.setValueAtTime(1, e);
++      if (f[0] > 0 && fe > from + 0.001) {            // the fall
++        if (s >= from) g.setValueCurveAtTime(curveOf(true, 0, f[0]), s, f[0]);
++        else g.setValueCurveAtTime(curveOf(true, (from - s) / f[0], fe - from), from, fe - from);
++      } else if (s >= from) g.setValueAtTime(0, s);
++      if (f[1] > 0 && e > from + 0.001) {             // the rise
++        if (rs >= from) g.setValueCurveAtTime(curveOf(false, 0, e - rs), rs, e - rs);
++        else g.setValueCurveAtTime(curveOf(false, (from - rs) / (e - rs), e - from), from, e - from);
++      } else g.setValueAtTime(1, Math.max(e, from));
+     });
+   }
+   // HERESY 1501: the meters; 1531: from the console's meter bank (heresy-mixdsp.js): every strip's peak and RMS after its pan, the
+@@ -817,7 +910,9 @@
+     if (!g || !g.eng || !g.on) return;
+     var rd = g.eng.read(), ns = names(), now = performance.now();
+     ns.forEach(function (n, i) { level(n, rd.m[i], rd.gr[i], now); });
+-    level("~room", rd.m[ns.length], 0, now); level("~delay", rd.m[ns.length + 1], 0, now); level("*", rd.m[ns.length + 2], 0, now);
++    level("~room", rd.m[ns.length], 0, now); level("~delay", rd.m[ns.length + 1], 0, now);
++    var mt = S.lv["*"] ? S.lv["*"].t : 0, mv = level("*", rd.m[ns.length + 2], rd.mg ? rd.mg[0] : (S.lv["*"] ? S.lv["*"].gr : 0), now);   // HERESY 1544: the master's compressor and limiter
++    if (rd.mg) { var lg = rd.mg[1], ldt = mt ? Math.min(0.25, (now - mt) / 1000) : 0.016; mv.lim = lg >= (mv.lim || 0) ? lg : Math.max(lg, (mv.lim || 0) - 20 * ldt); }
+     loudness(rd.m[ns.length + 2]);
+     ns.concat(["*"]).forEach(function (key) {
+       var el = document.querySelector('.mx-meter[data-meter="' + key + '"] i'), v = S.lv[key];
+@@ -865,7 +960,7 @@
+   }
+   function onChange(e) {
+     var el = e.target;
+-    if (el.id === "mxSet") { S.set = el.value; open(); return; }
++    if (el.id === "mxSet") { keepNow(); S.owner = ""; S.set = el.value; open(); return; }   // HERESY 1545
+     if (el.dataset && el.dataset.mx === "gain_db") S.gesture = false;
+     var row = el.closest && el.closest(".mx-lane");
+     if (row && el.dataset.mx === "version") setVersion(row.dataset.strip, el.value);
+@@ -894,6 +989,7 @@
+     if (el.id === "mxPlay") { if (S.playing) stop(); else play(); return; }
+     if (el.id === "mxReset") { mark(); S.strips = {}; S.versions = {}; S.buses = busesDefault(); restored(); return; }
+     if (el.id === "mxMix") { mix(); return; }
++    if (el.id === "mxStop") { stopMix(); return; }     // HERESY 1539
+     if (el.id === "mxUndo") { undo(); return; }        // HERESY 1531
+     if (el.id === "mxRedo") { redo(); return; }
+     if (el.id === "mxA" || el.id === "mxB") { abTo(el.id.slice(2)); return; }
+@@ -950,11 +1046,45 @@
+   }
+   // HERESY 1531: what the console sets, heard at once and kept (heresy-console.js); `key` "comp.ratio" reaches into the compressor
+   function setStrip(n, key, v) {
++    if (n === "*") {                                  // HERESY 1544: the master's devices
++      var b = S.buses.master;
++      if (key.indexOf("comp.") === 0) { b.comp = Object.assign({}, COMP_DEF, b.comp || {}); delete b.comp.key; b.comp[key.slice(5)] = v; }
++      else if (key.indexOf("limit.") === 0) { b.limit = Object.assign({}, LIMIT_DEF, b.limit || {}); b.limit[key.slice(6)] = v; }
++      else if (key === "comp" && v) { b.comp = Object.assign({}, v); delete b.comp.key; }
++      else b[key] = v;
++      keep(); applyBuses(S.graph); emit("change", { bus: "master", key: key });
++      return;
++    }
+     var s = S.strips[n] || (S.strips[n] = {});
+     if (key.indexOf("comp.") === 0) { s.comp = Object.assign({}, COMP_DEF, s.comp || {}); s.comp[key.slice(5)] = v; }
+     else s[key] = v;
+     changed(n);
+   }
++  // HERESY 1543: the VCAs, set from the console (its mark() before)
++  function groupSet(id, key, v) {
++    var x = (S.buses.groups || []).filter(function (y) { return y.id === id; })[0];
++    if (!x) return;
++    x[key] = v;
++    keep();
++    if (S.graph) names().forEach(function (n) { applyStrip(S.graph, n); });
++    names().forEach(function (m2) { var r = document.querySelector('.mx-lane[data-strip="' + m2 + '"]'); if (r) r.classList.toggle("is-quiet", !audible(m2)); });
++    emit("change", { group: id, key: key });
++  }
++  function groupAdd(members) {
++    var gs = S.buses.groups || (S.buses.groups = []);
++    if (gs.length >= 16) return "";
++    var k = 1; while (gs.some(function (y) { return y.name === "VCA " + k; })) k++;
++    var id = "vca-" + Date.now().toString(36);
++    gs.push({ id: id, name: "VCA " + k, members: (members || []).filter(function (n) { return names().indexOf(n) >= 0; }), gain_db: 0, mute: false, solo: false });
++    keep(); emit("change", { group: id });
++    return id;
++  }
++  function groupDel(id) {
++    S.buses.groups = (S.buses.groups || []).filter(function (y) { return y.id !== id; });
++    keep();
++    if (S.graph) names().forEach(function (n) { applyStrip(S.graph, n); });
++    emit("change", { group: id });
++  }
+   function setBus(bus, key, v) {
+     S.buses[bus][key] = v;
+     keep();
+@@ -970,6 +1100,15 @@
+       var r = rc.getBoundingClientRect(), sc = e.clientY > r.bottom - 15 ? sectionAt(timeAt(rc, e.clientX)) : null;
+       if (sc) { S.loop = [sc.t, sc.end]; S.loopOn = true; loopPaint(); if (S.playing) play(sc.t); else { S.at = sc.t; paintPlayhead(); } return; }
+     }
++    var cc = e.target.closest && e.target.closest("canvas[data-mx-wave]");   // HERESY 1542: a corner's handle back to 10 ms
++    if (cc && S.info && !S.autoShow[cc.dataset.mxWave]) {
++      var ch = cutAt(cc, e);
++      if (ch && (ch.kind === "fall" || ch.kind === "rise")) {
++        mark(); var f0 = fadesOf(ch.r); ch.r[2] = f0[0]; ch.r[3] = f0[1]; ch.r[ch.kind === "fall" ? 2 : 3] = EDGE;
++        keep(); draw(cc.dataset.mxWave); rangesNow(cc.dataset.mxWave); emit("change", { n: cc.dataset.mxWave, key: "muted" });
++        return;
++      }
++    }
+     var ac = e.target.closest && e.target.closest("canvas[data-mx-wave]");   // HERESY 1535: a point to 0 dB
+     if (ac && S.info && S.autoShow[ac.dataset.mxWave]) {
+       var a = autoAt(ac, e);
+@@ -1062,12 +1201,41 @@
+     try { if (c.setPointerCapture) c.setPointerCapture(e.pointerId); } catch (x) { /* gone */ }
+     draw(a.n);
+   }
++  // HERESY 1542: what of a stretch is under the pointer: a top corner's handle (its fall or rise) or a side (its start or end)
++  function cutAt(c, e) {
++    var n = c.dataset.mxWave, r0 = c.getBoundingClientRect(), x = e.clientX - r0.left, y = e.clientY - r0.top, w = r0.width, hit = null;
++    strip(n).muted.forEach(function (r) {
++      if (hit) return;
++      var f = fitFades(r), xa = tx(r[0], w), xb = tx(r[1], w);
++      if (xb - xa >= 10 && y <= 11) {
++        if (Math.abs(x - tx(r[0] + f[0], w)) <= 6) hit = { r: r, kind: "fall" };
++        else if (Math.abs(x - tx(r[1] - f[1], w)) <= 6) hit = { r: r, kind: "rise" };
++      }
++      if (!hit && Math.abs(x - xa) <= 4) hit = { r: r, kind: "start" };
++      if (!hit && Math.abs(x - xb) <= 4) hit = { r: r, kind: "end" };
++    });
++    return hit;
++  }
++  function cutMove(d, t) {
++    var r = d.r, f = fadesOf(r), cuts = strip(d.n).muted, i = cuts.indexOf(r), L = S.info.seconds;
++    if (r.length < 4) { r[2] = f[0]; r[3] = f[1]; }
++    if (d.kind === "fall") r[2] = Math.round(Math.max(0, Math.min(r[1] - r[0] - Math.min(r[3], r[1] - r[0]), t - r[0])) * 1000) / 1000;
++    else if (d.kind === "rise") r[3] = Math.round(Math.max(0, Math.min(r[1] - r[0] - Math.min(r[2], r[1] - r[0]), r[1] - t)) * 1000) / 1000;
++    else if (d.kind === "start") r[0] = Math.round(Math.max(i > 0 ? cuts[i - 1][1] : 0, Math.min(r[1] - 0.05, t)) * 1000) / 1000;
++    else r[1] = Math.round(Math.min(i < cuts.length - 1 ? cuts[i + 1][0] : L, Math.max(r[0] + 0.05, t)) * 1000) / 1000;
++  }
+   function onDown(e) {
+     if (rulerDown(e)) return;                         // HERESY 1501
+     var c = e.target.closest && e.target.closest("canvas[data-mx-wave]");
+     if (!c || e.button !== 0 || !S.info) return;
+     if (S.autoShow[c.dataset.mxWave]) { autoDown(e, c); return; }   // HERESY 1535
+     e.preventDefault();
++    var hit = cutAt(c, e);                            // HERESY 1542: a stretch's edge in hand
++    if (hit) {
++      S.cdrag = { n: c.dataset.mxWave, c: c, r: hit.r, kind: hit.kind, x: e.clientX, moved: false };
++      try { if (c.setPointerCapture) c.setPointerCapture(e.pointerId); } catch (x) { /* gone */ }
++      return;
++    }
+     var t = timeAt(c, e.clientX);
+     S.drag = { name: c.dataset.mxWave, canvas: c, x: e.clientX, a: t, b: t, moved: false };
+     try { if (c.setPointerCapture) c.setPointerCapture(e.pointerId); } catch (x) { /* a pointer the browser no longer holds */ }
+@@ -1088,8 +1256,20 @@
+       draw(ad.n);
+       return;
+     }
++    var cd = S.cdrag;                                 // HERESY 1542
++    if (cd) {
++      if (!cd.moved && Math.abs(e.clientX - cd.x) < 2) return;
++      if (!cd.moved) { mark(); cd.moved = true; }
++      cutMove(cd, timeAt(cd.c, e.clientX));
++      draw(cd.n);
++      return;
++    }
+     var d = S.drag;
+-    if (!d) return;
++    if (!d) {                                         // HERESY 1542: the pointer says what a press would take
++      var hc = e.target.closest && e.target.closest("canvas[data-mx-wave]");
++      if (hc && S.info && !S.autoShow[hc.dataset.mxWave]) { var hh = cutAt(hc, e); hc.style.cursor = hh ? "ew-resize" : ""; }
++      return;
++    }
+     d.b = timeAt(d.canvas, e.clientX);
+     if (Math.abs(e.clientX - d.x) > 4) d.moved = true;
+     if (d.moved) draw(d.name);
+@@ -1109,6 +1289,11 @@
+       emit("change", { n: ad.n, key: "auto" });
+       return;
+     }
++    if (S.cdrag) {                                    // HERESY 1542: the stretch's edge let go: kept, heard
++      var cd = S.cdrag; S.cdrag = null;
++      if (cd.moved) { keep(); draw(cd.n); rangesNow(cd.n); emit("change", { n: cd.n, key: "muted" }); }
++      return;
++    }
+     var d = S.drag;
+     if (!d) return;
+     S.drag = null;
+@@ -1116,7 +1301,11 @@
+     var a = Math.min(d.a, d.b), b = Math.max(d.a, d.b);
+     if (b - a < 0.05) return draw(d.name);
+     var s = S.strips[d.name] || (S.strips[d.name] = {}), list = (s.muted || []).concat([[a, b]]).sort(function (x, y) { return x[0] - y[0]; }), merged = [];
+-    list.forEach(function (r) { var last = merged[merged.length - 1]; if (last && r[0] <= last[1]) last[1] = Math.max(last[1], r[1]); else merged.push([r[0], r[1]]); });
++    list.forEach(function (r) {                       // HERESY 1542: one that touches another is one: the first's fall, the last's rise
++      var last = merged[merged.length - 1], f = fadesOf(r);
++      if (last && r[0] <= last[1]) { if (r[1] > last[1]) { last[1] = r[1]; last[3] = f[1]; } }
++      else merged.push([r[0], r[1], f[0], f[1]]);
++    });
+     mark();
+     s.muted = merged;
+     keep(); draw(d.name); rangesNow(d.name);
+@@ -1168,9 +1357,18 @@
+     say(tr("Mixing on Forge…"));
+     fetch("/lab/daw/mix", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: S.take.name, set: S.set, mix: value(), versions: versions, print: S.print }) })
+       .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); })
+-      .then(function (job) { watch(job.id); })
++      .then(function (job) { S.mixId = job.id; S.mixGone = 0; paintHead(); watch(job.id); })
+       .catch(function (e) { S.busy = ""; paintHead(); say(e.message, true); });
+   }
++  function stopMix() {                                // HERESY 1539
++    var id = S.mixId, name = S.take && S.take.name;
++    if (!id || !name) return;
++    var b = $("mxStop"); if (b) b.disabled = true;
++    fetch("/lab/daw/mix/stop", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, id: id }) })
++      .then(function (r) { return r.json().then(function (x) { if (!r.ok) throw new Error(x.error || r.status); return x; }); })
++      .then(function () { clearTimeout(S.watch); S.busy = ""; S.mixId = ""; paintHead(); say(tr("Stopped: no mix was made")); if (window.HeresyDerived) window.HeresyDerived.refresh(); },
++            function (e) { var b2 = $("mxStop"); if (b2) b2.disabled = false; say(e.message, true); });
++  }
+   function watch(id, name) {
+     clearTimeout(S.watch);
+     name = name || (S.take && S.take.name);
+@@ -1178,14 +1376,16 @@
+     getJson("/derived?" + q({ name: name })).then(function (d) {
+       var run = (d.running || []).filter(function (j) { return j.id === id; })[0], made = (d.derived || []).filter(function (m) { return m.id === id; })[0];
+       if (made) {
+-        S.busy = ""; paintHead();
++        S.busy = ""; S.mixId = ""; paintHead();
+         var l = made.loudness || {};
+         say(tr("Mixed") + ": " + (l.integrated_lufs != null ? l.integrated_lufs + " LUFS, " : "") + (l.true_peak_dbtp != null ? l.true_peak_dbtp + " dBTP" : "") + (made.lowered_db ? " · " + tr("lowered") + " " + made.lowered_db + " dB" : "") +
+             ((made.files || []).length > 1 ? " · " + tr("its stems beside it") + ": " + ((made.files || []).length - 1) : ""));
+         if (window.HeresyDerived) window.HeresyDerived.refresh();
+         return;
+       }
+-      if (run && run.status === "failed") { S.busy = ""; paintHead(); say(run.error || tr("failed"), true); return; }
++      if (run && run.status === "failed") { S.busy = ""; S.mixId = ""; paintHead(); say(run.error || tr("failed"), true); return; }
++      if (!run && ++S.mixGone >= 2) { S.busy = ""; S.mixId = ""; paintHead(); say(tr("The mix is no longer running on Forge"), true); return; }   // HERESY 1539
++      if (run) S.mixGone = 0;
+       S.watch = setTimeout(function () { watch(id, name); }, 2000);
+     }).catch(function () { S.watch = setTimeout(function () { watch(id, name); }, 4000); });
+   }
+@@ -1222,13 +1422,14 @@
+     state: function () { var g = S.graph; return { take: S.take && S.take.name, set: S.set, sets: S.sets.length, strips: names(), playing: S.playing, at: pos(), srcs: S.srcs.length, versions: S.versions, busy: S.busy,
+       zoom: S.view.zoom, t0: S.view.t0, loop: S.loop, loopOn: S.loopOn, focus: S.focus, meters: Object.assign({}, S.meters),   // HERESY 1501
+       peaks: Object.keys(S.peaks).length, ctx: S.ctx ? S.ctx.state : "",
+-      graph: g ? { kind: g.eng.kind, on: !!g.on, lanes: Object.keys(g.lanes).length, room: !!g.rv.conv, latency: g.eng.latency } : null,   // HERESY 1531
++      graph: g ? { kind: g.eng.kind, on: !!g.on, lanes: Object.keys(g.lanes).length, room: !!g.rv.conv, latency: latency(g), master: !!g.mOn } : null,   // HERESY 1531; 1544: master
+       levels: Object.keys(S.lv).length, loud: S.loud ? { m: S.loud.m, s: S.loud.s, i: S.loud.i, tp: S.loud.tp } : null, undo: S.undo.length, redo: S.redo.length, ab: S.ab.cur,
+       dock: S.dock, print: S.print, auto: Object.keys(S.autoShow).filter(function (k2) { return S.autoShow[k2]; }), mon: Object.assign({}, S.mon) }; },
+     // HERESY 1531: the console's way in (heresy-console.js)
+     k: { S: S, names: names, strip: strip, set: setStrip, setBus: setBus, mark: mark, on: on, select: select, setVersion: setVersion, versionOf: versionOf,
+          mixes: { list: function () { return S.named; }, lab: function () { return S.lab; }, saveAs: saveAs, load: loadNamed, del: delNamed },   // HERESY 1533
+          monitor: function (k2, on) { if (k2) { S.mon[k2] = on == null ? !S.mon[k2] : !!on; applyMon(S.graph); emit("change", { bus: "monitor" }); } return S.mon; },   // HERESY 1536
++         groups: function () { return S.buses.groups || []; }, groupSet: groupSet, groupAdd: groupAdd, groupDel: groupDel, vcaDb: vcaDb,   // HERESY 1543
+          audible: audible, hue: hueOf, fmtDb: fmtDb, taper: taper, untaper: untaper, analyser: analyser, play: play, stop: stop, pos: pos,
+          lufs: lufs, resetLoud: function () { S.loud = loudReset(); Object.keys(S.lv).forEach(function (k2) { S.lv[k2].max = -150; S.lv[k2].clip = false; }); emit("frame"); },
+          info: function () { return S.info; }, title: function (n) { var st = S.info && S.info.strips.filter(function (x) { return x.name === n; })[0]; return st ? st.title : tr("Rest"); } } };
+diff --git a/tools/console/heresy-post.js b/tools/console/heresy-post.js
+index e7fcb80..37a509b 100644
+--- a/tools/console/heresy-post.js
++++ b/tools/console/heresy-post.js
+@@ -20,6 +20,7 @@
+   ];
+   var GROUPS = { look: "Hear and look", mend: "Mend", finish: "Finish", setup: "Setup" };   // 1512: the machine's own
+   var KEY = "yue2.postStep";
++  var TREE = "treePanel", treeFrom = "";            // HERESY 1540: the tree as a place of the column, not a step of the chain
+   var state = { take: null, done: {}, current: "" };
+   function $(id) { return document.getElementById(id); }
+   function recall() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
+@@ -36,20 +37,35 @@
+       b.setAttribute("aria-selected", s.id === state.current ? "true" : "false");
+       b.querySelector(".ps-mark").textContent = done ? "✓" : String(STEPS.indexOf(s) + 1);
+     });
++    paintTree();
++  }
++  function treeBox() { return document.querySelector("#view-post > .dv-tree-box"); }
++  function paintTree() {                             // HERESY 1540: its count, its light
++    var b = document.querySelector('#postSteps [data-tree-step]');
++    if (!b) return;
++    var D = window.HeresyDerived, n = D && D.list ? D.list().length : 0, live = !!document.querySelector("#derivedTree .dv-group.is-running:not(.is-failed)");
++    b.classList.toggle("is-active", state.current === TREE);
++    b.setAttribute("aria-selected", state.current === TREE ? "true" : "false");
++    b.classList.toggle("is-running", live);
++    b.querySelector(".ps-mark").textContent = String(n);
+   }
+ 
+   function select(id) {
+-    if (!STEPS.some(function (s) { return s.id === id; })) id = STEPS[0].id;
++    var tree = id === TREE;                           // HERESY 1540
++    if (!tree && !STEPS.some(function (s) { return s.id === id; })) id = STEPS[0].id;
++    if (tree && state.current && state.current !== TREE) treeFrom = state.current;
+     state.current = id;
+     store(id);
+     STEPS.forEach(function (s) {
+       var p = $(s.id);
+       if (!p) return;
+-      p.classList.toggle("is-step-off", s.id !== id);
++      p.classList.toggle("is-step-off", tree || s.id !== id);
+       if (s.id === id && !p.open) p.open = true;           // its own toggle draws it
+     });
++    var box = treeBox();
++    if (box) box.classList.toggle("is-step-off", !tree);
+     paint();
+-    window.dispatchEvent(new CustomEvent("heresy-post-step", { detail: { panel: id } }));   // HERESY 1129: the tree lights its branches
++    window.dispatchEvent(new CustomEvent("heresy-post-step", { detail: { panel: tree ? (treeFrom || id) : id } }));   // HERESY 1129: the tree lights its branches (1540: the step one came from)
+     window.dispatchEvent(new Event("resize"));             // a picture shown measures its new width
+   }
+ 
+@@ -190,6 +206,7 @@
+     bar.addEventListener("click", function (e) {
+       var b = e.target.closest("[data-step-panel]");
+       if (b) select(b.dataset.stepPanel);
++      else if (e.target.closest("[data-tree-step]")) select(TREE);   // HERESY 1540
+     });
+     auPanel();                                       // HERESY 1512: the Audio I/O's panel, made here (the lab answers it)
+     STEPS.forEach(function (s) { var p = $(s.id); if (p) p.classList.add("is-step"); });
+@@ -211,6 +228,7 @@
+       paint();
+     });
+     select(recall() || STEPS[0].id);
++    window.addEventListener("heresy-derived", paintTree);   // HERESY 1540: its count as the branches come
+     loadPlugins();                                   // HERESY 1460
+     cvInit();                                        // HERESY 1506
+   }
+@@ -223,7 +241,10 @@
+       return head + (i ? '<span class="ps-arrow" aria-hidden="true">›</span>' : "") +
+         '<button type="button" role="tab" class="ps-step' + (s.plugin ? " is-plugin" : "") + '" data-step-panel="' + s.id + '"><span class="ps-mark">' + (i + 1) +
+         '</span><span class="ps-text"' + own + '><span class="ps-name">' + esc(s.label) + '</span><span class="ps-say">' + esc(s.say) + "</span></span></button>";
+-    }).join("");
++    }).join("") +
++      // HERESY 1540: what is made from the take, its own place at the column's end
++      '<span class="ps-group">This Take</span><button type="button" role="tab" class="ps-step ps-tree" data-tree-step="1"><span class="ps-mark">0</span>' +
++      '<span class="ps-text"><span class="ps-name">Made from This Take</span><span class="ps-say">the branches of every step</span></span></button>';
+     cvPaint();                                       // HERESY 1506: a plugin's steps are nodes too
+   }
+ 
+-- 
+2.43.0
+

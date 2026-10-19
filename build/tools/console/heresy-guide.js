@@ -124,7 +124,10 @@
       '<button type="button" class="btn ghost small icon-btn" data-hg-z="0" aria-label="The text as it starts" data-tip="The text as it starts">' + ico("text-reset") + "</button></span>" +
       '<button type="button" class="btn ghost small icon-btn hg-full"></button>' +
       '<button type="button" class="btn ghost small icon-btn hg-close" aria-label="Close the guide" data-tip="Close the guide (Esc, F1)">' + ico("x") + "</button></span></header>" +
-      '<nav class="hg-tabs" role="tablist"></nav><div class="hg-main"><nav class="hg-stops" aria-label="In this part"></nav><article class="hg-body" translate="no"></article></div></div>' +
+      // HERESY 1455 (Viktor 15.10.2026: «То же самое можно сделать и с F1 гайдом»): the parts in a column at the left, as the Engine's tabs,
+      // the open part's stops under its own tab; the text beside them
+      '<div class="hg-main"><nav class="hg-side" aria-label="The Guide"><div class="hg-tabs" role="tablist" aria-orientation="vertical"></div></nav>' +
+      '<article class="hg-body" translate="no"></article></div></div>' +
       '<div class="hg-zoom" hidden><img alt="" /></div>';
     document.body.appendChild(el);
     el.addEventListener("click", function (e) {
@@ -156,9 +159,12 @@
     el.querySelector(".hg-title").textContent = state.title;
     el.querySelector(".hg-lead").textContent = state.lead.replace(/[*_`]/g, "").split("\n")[0];
     el.querySelector(".hg-tabs").innerHTML = state.tabs.map(function (t) {
-      return '<button type="button" role="tab" translate="no" data-hg-tab="' + esc(t.id) + '" class="' + (t === tab ? "is-on" : "") + '" aria-selected="' + (t === tab) + '">' + inline(t.name) + "</button>";
+      return '<button type="button" role="tab" translate="no" data-hg-tab="' + esc(t.id) + '" class="' + (t === tab ? "is-on" : "") + '" aria-selected="' + (t === tab) + '">' + inline(t.name) + "</button>" +
+        (t === tab && t.stops.length ? '<div class="hg-stops" role="group" aria-label="In this part">' +   // HERESY 1455: under its own tab
+          t.stops.map(function (s) { return '<button type="button" translate="no" data-hg-stop="' + esc(s.id) + '">' + inline(s.text) + "</button>"; }).join("") + "</div>" : "");
     }).join("");
-    el.querySelector(".hg-stops").innerHTML = tab.stops.map(function (s) { return '<button type="button" translate="no" data-hg-stop="' + esc(s.id) + '">' + inline(s.text) + "</button>"; }).join("");
+    var onTab = el.querySelector(".hg-tabs .is-on");
+    if (onTab && onTab.scrollIntoView) onTab.scrollIntoView({ block: "nearest" });
     var body = el.querySelector(".hg-body");
     body.innerHTML = '<div class="hg-doc">' + tab.html + "</div>";   // HERESY 1169 · 1250: the text's own zoom, the scroll box stays
     body.scrollTop = 0;

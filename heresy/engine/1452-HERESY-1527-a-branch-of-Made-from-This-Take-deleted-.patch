@@ -1,0 +1,408 @@
+From d36f9f8a7a9bee1b325439f76df7d59d8b0973df Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 17 Oct 2026 14:30:35 -0600
+Subject: [PATCH 1452/1463] =?UTF-8?q?HERESY=201527:=20a=20branch=20of=20?=
+ =?UTF-8?q?=C2=ABMade=20from=20This=20Take=C2=BB=20deleted=20from=20its=20?=
+ =?UTF-8?q?head=20into=20the=20take's=20trash,=20asked;=20one=20others=20w?=
+ =?UTF-8?q?ere=20made=20from=20asks=20again,=20naming=20them,=20and=20goes?=
+ =?UTF-8?q?=20with=20them;=20the=20trash=20under=20the=20tree=20with=20Bri?=
+ =?UTF-8?q?ng=20back=20and=20Empty=20the=20trash=20(asked=20as=20for=20goo?=
+ =?UTF-8?q?d);=20the=20head=20holds=20its=20button=20(flow-root),=20so=20t?=
+ =?UTF-8?q?he=20waves=20keep=20one=20x?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  9 ++++++
+ tools/console/heresy-derived.js | 52 ++++++++++++++++++++++++++++++++-
+ tools/console/heresy-i18n-be.js | 15 +++++++++-
+ tools/console/heresy-i18n-de.js | 15 +++++++++-
+ tools/console/heresy-i18n-el.js | 15 +++++++++-
+ tools/console/heresy-i18n-es.js | 15 +++++++++-
+ tools/console/heresy-i18n-fr.js | 15 +++++++++-
+ tools/console/heresy-i18n-it.js | 15 +++++++++-
+ tools/console/heresy-i18n-ja.js | 15 +++++++++-
+ tools/console/heresy-i18n-pt.js | 15 +++++++++-
+ tools/console/heresy-i18n-ru.js | 15 +++++++++-
+ tools/console/heresy-i18n-uk.js | 15 +++++++++-
+ tools/console/heresy-i18n-zh.js | 15 +++++++++-
+ 13 files changed, 214 insertions(+), 12 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 1ff9172..4e43438 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -6243,3 +6243,12 @@ body.daw-full #dawPanel .mx-wave.mx-ruler { height: 22px; }
+ .hc-on .field:has(> .hc-box), .nd-body .field:has(> .hc-box) { align-self: start; }
+ .hc-list:empty::after { content: "\2014"; color: var(--dim); padding: 2px 6px; }
+ 
++/* HERESY 1527: a branch's Delete at the end of its head; the take's trash under its tree */
++.dv-group-head { display: flow-root; }   /* the float held in its head: a row under it keeps its whole width (1513's waves from one x to one x) */
++.dv-group-head .dv-del { float: right; margin: -3px 0 0 8px; opacity: .7; }
++.dv-group-head .dv-del:hover { opacity: 1; color: var(--bad); }
++.dv-trash { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line-a); }
++.dv-trash-row { display: flex; align-items: baseline; gap: 10px; width: 100%; padding: 3px 0; }
++.dv-trash-row .dv-name { flex: 1; min-width: 0; }
++.dv-trash .dv-empty { margin-top: 4px; }
++
+diff --git a/tools/console/heresy-derived.js b/tools/console/heresy-derived.js
+index d1339e5..30c5e4c 100644
+--- a/tools/console/heresy-derived.js
++++ b/tools/console/heresy-derived.js
+@@ -204,7 +204,8 @@
+         (m.kind === "debuzz" ? " · " + esc(debuzzSummary(m)) : "") +
+         (m.kind === "daw" ? " · " + esc(dawSummary(m)) : "") +   // HERESY 1471
+         (m.kind === "upscale" ? " · from " + esc(String(m.source || "the take").replace("derived/", "")) + ", above " + Math.round((m.cutoff_hz || 0) / 1000) + " kHz" + (m.keep_low ? ", original kept below" : "") : "") +
+-        '<span class="dv-meta">' + esc((m.models || []).join(" + ")) + " · " + esc(m.created || "") + (m.took ? " · " + Math.round(m.took) + " s" : "") + "</span></div>";
++        '<span class="dv-meta">' + esc((m.models || []).join(" + ")) + " · " + esc(m.created || "") + (m.took ? " · " + Math.round(m.took) + " s" : "") + "</span>" +
++        '<button type="button" class="btn ghost small dv-del" data-dv-del="' + esc(m.id || "") + '" data-tip="Into this take\'s trash, from where it comes back">Delete</button></div>';   // HERESY 1527
+       (m.files || []).forEach(function (f) {
+         var url = fileUrl(take.name, f.path);
+         if (isText(f)) {                                // HERESY 1484: a report: read here, or its file
+@@ -223,6 +224,16 @@
+       });
+       html += "</div>";
+     });
++    var bin = state.trash || [];                        // HERESY 1527: the take's trash, under its tree
++    if (bin.length) {
++      html += '<div class="dv-trash"><button type="button" class="btn ghost small" data-dv-trash="1" aria-expanded="' + !!state.trashOpen + '">' + esc(tt("Trash ({0})").replace("{0}", bin.length)) + "</button>" +
++        (state.trashOpen ? bin.map(function (x) {
++          var m = x.manifest || {};
++          return '<div class="dv-trash-row"><span class="dv-name"><strong' + (m.kind === "plugin" ? ' translate="no"' : "") + ">" + esc(kindName(m)) + "</strong>" + (m.mode ? " · " + esc(MODE[m.mode] || m.mode) : "") +
++            '</span><span class="dv-meta">' + esc(m.created || "") + (x.with ? " · " + esc(tt("deleted with {0}").replace("{0}", x.with)) : "") + "</span>" +
++            '<button type="button" class="btn ghost small" data-dv-back="' + esc(x.trash_id) + '">Bring back</button></div>';
++        }).join("") + '<button type="button" class="btn ghost small danger dv-empty" data-dv-empty="1">Empty the trash</button>' : "") + "</div>";
++    }
+     host.innerHTML = html;
+     alignTree(host);                                    // HERESY 1513: every wave from one x to one x
+     initPlayers(host);                                  // HERESY 1487
+@@ -341,6 +352,7 @@
+       });
+   }
+ 
++  function tt(x) { return window.RuachI18n && window.RuachI18n.t ? window.RuachI18n.t(x) : x; }   // HERESY 1527
+   function refresh() {
+     if (!state.take) { paint(); return Promise.resolve(); }
+     var token = state.token, name = state.take.name;
+@@ -350,6 +362,7 @@
+         state.list = d.derived || [];
+         MARKS[name] = d.marks || {};                    // HERESY 1504
+         state.running = d.running || [];
++        state.trash = d.trash || [];                    // HERESY 1527
+         paint();
+         paintSources();
+         paintUpSources();
+@@ -528,6 +541,43 @@
+     Array.prototype.forEach.call(document.querySelectorAll("[data-dv-split]"), function (b) {
+       b.addEventListener("click", function () { split(b.dataset.dvSplit); });
+     });
++    // HERESY 1527 (Viktor 17.10.2026: «удаление ненужного артефакта, чтобы не плодить мусорку в пайплайне»): a branch into the take's
++    // trash, asked; one others were made from asks again, naming them, and goes with them; the trash: Bring back, Empty (asked, for good)
++    function trashCall(path, body) {
++      return fetch("/lab/derived/" + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.assign({ name: state.take.name }, body)) })
++        .then(function (r) { return r.json().then(function (j) { if (!r.ok) { var e = new Error(j.error || r.status); e.children = j.children; throw e; } return j; }); });
++    }
++    function named(id) { var m = state.list.filter(function (x) { return x.id === id; })[0]; return m ? kindName(m) + (m.mode ? " · " + (MODE[m.mode] || m.mode) : "") + " · " + (m.created || "") : id; }
++    function delBranch(id, withKids) {
++      if (!state.take) return;
++      var ask = window.HeresyDialog;
++      (withKids ? Promise.resolve(true) : ask.confirm(tt("Delete the branch «{0}»?").replace("{0}", named(id)) + "\n\n" + tt("It goes into this take's trash, from where it comes back."),
++        { ok: tt("Delete"), cancel: tt("Cancel"), danger: true })).then(function (yes) {
++        if (yes !== true) return;
++        trashCall("delete", { id: id, with_children: !!withKids }).then(function (d) {
++          say(tt("Into the trash: {0}").replace("{0}", (d.moved || []).length));
++          return refresh();
++        }, function (e) {
++          if (!e.children) { say(e.message, true); return; }
++          ask.confirm(tt("Branches were made from «{0}»: {1}.").replace("{0}", named(id)).replace("{1}", e.children.map(named).join("; ")) + "\n\n" +
++            tt("They go into the trash with it, and come back from it each on its own."), { ok: tt("Delete them too"), cancel: tt("Cancel"), danger: true })
++            .then(function (yes) { if (yes === true) delBranch(id, true); });
++        });
++      });
++    }
++    $("derivedTree").addEventListener("click", function (event) {
++      var del = event.target.closest("[data-dv-del]"), tg = event.target.closest("[data-dv-trash]"), back = event.target.closest("[data-dv-back]"), em = event.target.closest("[data-dv-empty]");
++      if (del) { delBranch(del.dataset.dvDel, false); return; }
++      if (tg) { state.trashOpen = !state.trashOpen; paint(); return; }
++      if (back) { trashCall("restore", { id: back.dataset.dvBack }).then(function () { say(tt("Back on the tree")); return refresh(); }, function (e) { say(e.message, true); }); return; }
++      if (em) {
++        window.HeresyDialog.confirm(tt("Empty this take's trash?") + "\n\n" + tt("Branches gone for good: {0}. This cannot be undone.").replace("{0}", (state.trash || []).length),
++          { ok: tt("Empty the trash"), cancel: tt("Cancel"), danger: true }).then(function (yes) {
++          if (yes !== true) return;
++          trashCall("empty", {}).then(function (d) { state.trashOpen = false; say(tt("The take's trash emptied: {0}").replace("{0}", d.emptied || 0)); return refresh(); }, function (e) { say(e.message, true); });
++        });
++      }
++    });
+     // HERESY 1484: a report read in the studio's dialog
+     $("derivedTree").addEventListener("click", function (event) {
+       var rd = event.target.closest("[data-dv-read]");
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 2bfa8d6..6c39a59 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5603,5 +5603,18 @@ RuachI18n.add("be", {
+ "Always the canvas": "Заўсёды палатном",
+ "The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "Ноды і правады паміж імі; пстрычка адкрывае ноду; на 1080p нічога не пракручваецца.",
+ "About models and LoRAs": "Пра мадэлі і LoRA",
+-"About folders": "Пра папкі"
++"About folders": "Пра папкі",
++"Into this take's trash, from where it comes back": "У кошык гэтага сэмпла, адкуль вяртаецца",
++"deleted with {0}": "выдалена разам з {0}",
++"Empty the trash": "Ачысціць кошык",
++"Delete the branch «{0}»?": "Выдаліць галіну «{0}»?",
++"It goes into this take's trash, from where it comes back.": "Яна пойдзе ў кошык гэтага сэмпла, адкуль вяртаецца.",
++"Into the trash: {0}": "У кошык: {0}",
++"Branches were made from «{0}»: {1}.": "З «{0}» створаныя галіны: {1}.",
++"They go into the trash with it, and come back from it each on its own.": "Яны пойдуць у кошык разам з ёй і вернуцца з яго кожная паасобку.",
++"Delete them too": "Выдаліць і іх",
++"Back on the tree": "Зноў на дрэве",
++"Empty this take's trash?": "Ачысціць кошык гэтага сэмпла?",
++"Branches gone for good: {0}. This cannot be undone.": "Галін сыдзе назаўсёды: {0}. Гэтага не адмяніць.",
++"The take's trash emptied: {0}": "Кошык сэмпла ачышчаны: {0}"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index c3fb3b5..6736a43 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5486,5 +5486,18 @@ RuachI18n.add("de", {
+ "Always the canvas": "Immer als Leinwand",
+ "The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "Die Knoten und ihre Kabel; ein Klick öffnet einen; bei 1080p nichts zu scrollen.",
+ "About models and LoRAs": "Über Modelle und LoRAs",
+-"About folders": "Über die Ordner"
++"About folders": "Über die Ordner",
++"Into this take's trash, from where it comes back": "In den Papierkorb dieses Takes, aus dem er zurückkommt",
++"deleted with {0}": "gelöscht mit {0}",
++"Empty the trash": "Papierkorb leeren",
++"Delete the branch «{0}»?": "Den Zweig „{0}“ löschen?",
++"It goes into this take's trash, from where it comes back.": "Er geht in den Papierkorb dieses Takes, aus dem er zurückkommt.",
++"Into the trash: {0}": "In den Papierkorb: {0}",
++"Branches were made from «{0}»: {1}.": "Aus „{0}“ wurden Zweige gemacht: {1}.",
++"They go into the trash with it, and come back from it each on its own.": "Sie gehen mit ihm in den Papierkorb und kommen jeder für sich zurück.",
++"Delete them too": "Auch sie löschen",
++"Back on the tree": "Wieder im Baum",
++"Empty this take's trash?": "Den Papierkorb dieses Takes leeren?",
++"Branches gone for good: {0}. This cannot be undone.": "Endgültig gelöschte Zweige: {0}. Das lässt sich nicht rückgängig machen.",
++"The take's trash emptied: {0}": "Papierkorb des Takes geleert: {0}"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index ce9090b..49b820b 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5602,5 +5602,18 @@ RuachI18n.add("el", {
+ "Always the canvas": "Πάντα ως καμβάς",
+ "The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "Οι κόμβοι και τα καλώδιά τους· ένα κλικ ανοίγει έναν· τίποτα δεν κυλά στα 1080p.",
+ "About models and LoRAs": "Σχετικά με τα μοντέλα και τις LoRA",
+-"About folders": "Σχετικά με τους φακέλους"
++"About folders": "Σχετικά με τους φακέλους",
++"Into this take's trash, from where it comes back": "Στον κάδο αυτής της λήψης, από όπου επιστρέφει",
++"deleted with {0}": "σβήστηκε μαζί με το {0}",
++"Empty the trash": "Άδειασμα του κάδου",
++"Delete the branch «{0}»?": "Διαγραφή του κλάδου «{0}»;",
++"It goes into this take's trash, from where it comes back.": "Πηγαίνει στον κάδο αυτής της λήψης, από όπου επιστρέφει.",
++"Into the trash: {0}": "Στον κάδο: {0}",
++"Branches were made from «{0}»: {1}.": "Από το «{0}» έγιναν κλάδοι: {1}.",
++"They go into the trash with it, and come back from it each on its own.": "Πηγαίνουν στον κάδο μαζί του και επιστρέφουν από εκεί ο καθένας χωριστά.",
++"Delete them too": "Διαγραφή και αυτών",
++"Back on the tree": "Ξανά στο δέντρο",
++"Empty this take's trash?": "Άδειασμα του κάδου αυτής της λήψης;",
++"Branches gone for good: {0}. This cannot be undone.": "Κλάδοι που φεύγουν για πάντα: {0}. Αυτό δεν αναιρείται.",
++"The take's trash emptied: {0}": "Ο κάδος της λήψης άδειασε: {0}"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index ff491a6..ac3cfce 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5602,5 +5602,18 @@ RuachI18n.add("es", {
+ "Always the canvas": "Siempre en lienzo",
+ "The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "Los nodos y sus cables; un clic abre uno; nada que desplazar a 1080p.",
+ "About models and LoRAs": "Sobre los modelos y las LoRA",
+-"About folders": "Sobre las carpetas"
++"About folders": "Sobre las carpetas",
++"Into this take's trash, from where it comes back": "A la papelera de esta toma, de donde vuelve",
++"deleted with {0}": "borrada con {0}",
++"Empty the trash": "Vaciar la papelera",
++"Delete the branch «{0}»?": "¿Borrar la rama «{0}»?",
++"It goes into this take's trash, from where it comes back.": "Va a la papelera de esta toma, de donde vuelve.",
++"Into the trash: {0}": "A la papelera: {0}",
++"Branches were made from «{0}»: {1}.": "De «{0}» se hicieron ramas: {1}.",
++"They go into the trash with it, and come back from it each on its own.": "Van a la papelera con ella y vuelven de allí cada una por su cuenta.",
++"Delete them too": "Borrarlas también",
++"Back on the tree": "De vuelta en el árbol",
++"Empty this take's trash?": "¿Vaciar la papelera de esta toma?",
++"Branches gone for good: {0}. This cannot be undone.": "Ramas que se van para siempre: {0}. No se puede deshacer.",
++"The take's trash emptied: {0}": "Papelera de la toma vaciada: {0}"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index 700722d..18066f4 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5486,5 +5486,18 @@ RuachI18n.add("fr", {
+ "Always the canvas": "Toujours en toile",
+ "The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "Les nœuds et leurs fils ; un clic en ouvre un ; rien à faire défiler en 1080p.",
+ "About models and LoRAs": "À propos des modèles et des LoRA",
+-"About folders": "À propos des dossiers"
++"About folders": "À propos des dossiers",
++"Into this take's trash, from where it comes back": "Dans la corbeille de cette prise, d'où elle revient",
++"deleted with {0}": "supprimée avec {0}",
++"Empty the trash": "Vider la corbeille",
++"Delete the branch «{0}»?": "Supprimer la branche « {0} » ?",
++"It goes into this take's trash, from where it comes back.": "Elle va dans la corbeille de cette prise, d'où elle revient.",
++"Into the trash: {0}": "Dans la corbeille : {0}",
++"Branches were made from «{0}»: {1}.": "Des branches ont été faites à partir de « {0} » : {1}.",
++"They go into the trash with it, and come back from it each on its own.": "Elles vont dans la corbeille avec elle et en reviennent chacune pour soi.",
++"Delete them too": "Les supprimer aussi",
++"Back on the tree": "De retour sur l'arbre",
++"Empty this take's trash?": "Vider la corbeille de cette prise ?",
++"Branches gone for good: {0}. This cannot be undone.": "Branches supprimées pour de bon : {0}. Impossible d'annuler.",
++"The take's trash emptied: {0}": "Corbeille de la prise vidée : {0}"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 36b7dcf..c0c418f 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5602,5 +5602,18 @@ RuachI18n.add("it", {
+ "Always the canvas": "Sempre su tela",
+ "The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "I nodi e i loro cavi; un clic ne apre uno; niente da scorrere a 1080p.",
+ "About models and LoRAs": "Sui modelli e le LoRA",
+-"About folders": "Sulle cartelle"
++"About folders": "Sulle cartelle",
++"Into this take's trash, from where it comes back": "Nel cestino di questo take, da dove torna",
++"deleted with {0}": "eliminato con {0}",
++"Empty the trash": "Svuota il cestino",
++"Delete the branch «{0}»?": "Eliminare il ramo «{0}»?",
++"It goes into this take's trash, from where it comes back.": "Va nel cestino di questo take, da dove torna.",
++"Into the trash: {0}": "Nel cestino: {0}",
++"Branches were made from «{0}»: {1}.": "Da «{0}» sono stati fatti dei rami: {1}.",
++"They go into the trash with it, and come back from it each on its own.": "Vanno nel cestino con esso e tornano da lì ciascuno per conto suo.",
++"Delete them too": "Elimina anche quelli",
++"Back on the tree": "Di nuovo sull'albero",
++"Empty this take's trash?": "Svuotare il cestino di questo take?",
++"Branches gone for good: {0}. This cannot be undone.": "Rami eliminati per sempre: {0}. Non si può annullare.",
++"The take's trash emptied: {0}": "Cestino del take svuotato: {0}"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index c53c59a..c4a4af5 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5486,5 +5486,18 @@ RuachI18n.add("ja", {
+ "Always the canvas": "常にキャンバス",
+ "The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "ノードとそのワイヤー。クリックで開きます。1080p でもスクロール不要。",
+ "About models and LoRAs": "モデルと LoRA について",
+-"About folders": "フォルダについて"
++"About folders": "フォルダについて",
++"Into this take's trash, from where it comes back": "このテイクのゴミ箱へ（そこから戻せます）",
++"deleted with {0}": "{0} と一緒に削除",
++"Empty the trash": "ゴミ箱を空にする",
++"Delete the branch «{0}»?": "ブランチ「{0}」を削除しますか？",
++"It goes into this take's trash, from where it comes back.": "このテイクのゴミ箱に入り、そこから戻せます。",
++"Into the trash: {0}": "ゴミ箱へ：{0}",
++"Branches were made from «{0}»: {1}.": "「{0}」から作られたブランチ：{1}。",
++"They go into the trash with it, and come back from it each on its own.": "一緒にゴミ箱に入り、それぞれ個別に戻せます。",
++"Delete them too": "それらも削除",
++"Back on the tree": "ツリーに戻しました",
++"Empty this take's trash?": "このテイクのゴミ箱を空にしますか？",
++"Branches gone for good: {0}. This cannot be undone.": "完全に削除されるブランチ：{0}。元に戻せません。",
++"The take's trash emptied: {0}": "テイクのゴミ箱を空にしました：{0}"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index 56f4f84..73ff337 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5486,5 +5486,18 @@ RuachI18n.add("pt", {
+ "Always the canvas": "Sempre em tela",
+ "The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "Os nós e seus fios; um clique abre um; nada a rolar em 1080p.",
+ "About models and LoRAs": "Sobre os modelos e as LoRAs",
+-"About folders": "Sobre as pastas"
++"About folders": "Sobre as pastas",
++"Into this take's trash, from where it comes back": "Para a lixeira deste take, de onde volta",
++"deleted with {0}": "apagada com {0}",
++"Empty the trash": "Esvaziar a lixeira",
++"Delete the branch «{0}»?": "Apagar o ramo «{0}»?",
++"It goes into this take's trash, from where it comes back.": "Ele vai para a lixeira deste take, de onde volta.",
++"Into the trash: {0}": "Para a lixeira: {0}",
++"Branches were made from «{0}»: {1}.": "De «{0}» foram feitos ramos: {1}.",
++"They go into the trash with it, and come back from it each on its own.": "Vão para a lixeira com ele e voltam de lá cada um por si.",
++"Delete them too": "Apagar esses também",
++"Back on the tree": "De volta à árvore",
++"Empty this take's trash?": "Esvaziar a lixeira deste take?",
++"Branches gone for good: {0}. This cannot be undone.": "Ramos apagados para sempre: {0}. Não dá para desfazer.",
++"The take's trash emptied: {0}": "Lixeira do take esvaziada: {0}"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index f390be2..00c10be 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5608,5 +5608,18 @@ RuachI18n.add("ru", {
+ "Always the canvas": "Всегда холстом",
+ "The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "Ноды и провода между ними; щелчок открывает ноду; на 1080p ничего не прокручивается.",
+ "About models and LoRAs": "О моделях и LoRA",
+-"About folders": "О папках"
++"About folders": "О папках",
++"Into this take's trash, from where it comes back": "В корзину этого семпла, откуда возвращается",
++"deleted with {0}": "удалена вместе с {0}",
++"Empty the trash": "Очистить корзину",
++"Delete the branch «{0}»?": "Удалить ветку «{0}»?",
++"It goes into this take's trash, from where it comes back.": "Она уйдёт в корзину этого семпла, откуда возвращается.",
++"Into the trash: {0}": "В корзину: {0}",
++"Branches were made from «{0}»: {1}.": "Из «{0}» сделаны ветки: {1}.",
++"They go into the trash with it, and come back from it each on its own.": "Они уйдут в корзину вместе с ней и вернутся из неё каждая по отдельности.",
++"Delete them too": "Удалить и их",
++"Back on the tree": "Снова на дереве",
++"Empty this take's trash?": "Очистить корзину этого семпла?",
++"Branches gone for good: {0}. This cannot be undone.": "Веток уйдёт навсегда: {0}. Это не отменить.",
++"The take's trash emptied: {0}": "Корзина семпла очищена: {0}"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 4df1b69..24c6c46 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5603,5 +5603,18 @@ RuachI18n.add("uk", {
+ "Always the canvas": "Завжди полотном",
+ "The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "Ноди й дроти між ними; клацання відкриває ноду; на 1080p нічого не прокручується.",
+ "About models and LoRAs": "Про моделі й LoRA",
+-"About folders": "Про теки"
++"About folders": "Про теки",
++"Into this take's trash, from where it comes back": "До кошика цього семплу, звідки повертається",
++"deleted with {0}": "видалена разом із {0}",
++"Empty the trash": "Очистити кошик",
++"Delete the branch «{0}»?": "Видалити гілку «{0}»?",
++"It goes into this take's trash, from where it comes back.": "Вона піде до кошика цього семплу, звідки повертається.",
++"Into the trash: {0}": "До кошика: {0}",
++"Branches were made from «{0}»: {1}.": "З «{0}» створено гілки: {1}.",
++"They go into the trash with it, and come back from it each on its own.": "Вони підуть до кошика разом із нею й повернуться з нього кожна окремо.",
++"Delete them too": "Видалити і їх",
++"Back on the tree": "Знову на дереві",
++"Empty this take's trash?": "Очистити кошик цього семплу?",
++"Branches gone for good: {0}. This cannot be undone.": "Гілок піде назавжди: {0}. Цього не скасувати.",
++"The take's trash emptied: {0}": "Кошик семплу очищено: {0}"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index 92a8982..fbe1a9c 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5486,5 +5486,18 @@ RuachI18n.add("zh", {
+ "Always the canvas": "总是画布",
+ "The nodes and their wires; a click opens one; nothing to scroll at 1080p.": "节点和连线；单击打开节点；1080p 下无需滚动。",
+ "About models and LoRAs": "关于模型和 LoRA",
+-"About folders": "关于文件夹"
++"About folders": "关于文件夹",
++"Into this take's trash, from where it comes back": "放入这个录音的回收站，可从那里恢复",
++"deleted with {0}": "随 {0} 一起删除",
++"Empty the trash": "清空回收站",
++"Delete the branch «{0}»?": "删除分支「{0}」？",
++"It goes into this take's trash, from where it comes back.": "它会进入这个录音的回收站，可以从那里恢复。",
++"Into the trash: {0}": "放入回收站：{0}",
++"Branches were made from «{0}»: {1}.": "由「{0}」生成的分支：{1}。",
++"They go into the trash with it, and come back from it each on its own.": "它们会一起进入回收站，之后可以各自恢复。",
++"Delete them too": "一并删除",
++"Back on the tree": "已回到树上",
++"Empty this take's trash?": "清空这个录音的回收站？",
++"Branches gone for good: {0}. This cannot be undone.": "将被永久删除的分支：{0}。此操作无法撤销。",
++"The take's trash emptied: {0}": "录音回收站已清空：{0}"
+ });
+-- 
+2.43.0
+

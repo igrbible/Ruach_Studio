@@ -282,7 +282,8 @@
   function labelName(el) {
     var field = el.closest(".field, label");
     var label = field && field.querySelector(".label, span, .shape-name");
-    return ((label && label.firstChild && label.firstChild.textContent) || el.id).trim() || el.id;
+    // HERESY 1524: a control with no label text by its own name for the ear (aria-label), then its placeholder, its id only last
+    return ((label && label.firstChild && label.firstChild.textContent) || "").trim() || el.getAttribute("aria-label") || el.getAttribute("placeholder") || el.id;
   }
 
   function decorate() {

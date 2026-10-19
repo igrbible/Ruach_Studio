@@ -10,7 +10,8 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
   GET /gloss?name=TAKE&cached=1    only an earlier measurement, 404 if there is none
   GET /spectrum?name=TAKE          the take's spectrum (spectrum_job.py), its binary block when
                                    ready, {"status": …} with 202 while it is computed
-  GET /stems?name=TAKE&mode=vocals|four   split into stems (stems_job.py, BS-Roformer + htdemucs_ft)
+  GET /stems?name=TAKE&mode=vocals|four|six|eight   split into stems (stems_job.py, BS-Roformer + htdemucs_ft; six: + BS-Roformer-SW;
+                                   eight: + the karaoke Mel-Roformer and UVR's winds; each stem with a proper title)
   GET /arts                        HERESY 1120: every take that has artwork (name -> time), the ones being drawn;
                                    HERESY 1156: the unseen (its subject not found by the critic: a guess)
   GET /art?name=TAKE               its artwork (JPEG, 768 px)
@@ -42,9 +43,27 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
                                    frame buzz, clicks, clipping, dropouts, DC, stereo, loudness
   GET /debuzz?name=TAKE[&source=derived/…][&strength=0.8]   the VAE's 25-frame ripple out of the highs
                                    (debuzz.py), a new branch of the tree with its measure in and out
+  POST /audio/monitor {out, rate} · /audio/monitor/tone · /audio/monitor/play {name, source, at} · /audio/monitor/stop
+                                   HERESY 1548: the monitor, a second output on this machine: kept, a tone, a file of a take played
+                                   through it from any second, stopped; GET /audio/devices says it and what plays
+  GET /loudness?name=TAKE[&path=derived/…]  HERESY 1550: a file's integrated loudness and sample peak, kept per file (an honest A/B)
+  POST /gate {name, source, params}  HERESY 1547: the Digital Gateway (digital_gate.py): tape, console, tube, transformer or
+                                   vinyl in numbers, a branch of the tree of kind "gate" with what it set and measured
   GET /textend?name=TAKE[&force=1|&cached=1]   where the text of a reading ends (Whisper), for
                                    "Trim to the text": the frames to keep of the take's own tokens
-  GET /derived?name=TAKE           everything made from a take: outputs/TAKE/derived/*/manifest.json
+  GET /derived?name=TAKE           everything made from a take: outputs/TAKE/derived/*/manifest.json (and its marks, 1504)
+  POST /derived/mark               {name, path, rating, fav}: a like, a dislike or a star on a file made from a take (1504)
+  POST /derived/delete             {name, id, with_children}: a branch into its take's derived/.trash/ (409: the children it has) (1527)
+  POST /derived/restore · /empty   {name, id} back to the tree · {name} the take's trash gone for good (1527)
+  GET /audio/devices               the audio interfaces, physical and virtual, and the gateway's choice (1512)
+  POST /audio/gateway              {out, in, rate}: the analog gateway's devices (user/audio.json) (1512)
+  POST /audio/probe                {device, rate, seconds}: an input's floor, dBFS per channel (1512)
+  POST /audio/loop                 {out, in, rate, level}: a 1 kHz tone out and back: answered, gain, noise, THD (1514)
+  GET /refiner/profiles            the Refiner's setups by name (1515); its «pipelines»: the studio's and the plugins' (1553)
+  GET /chain/batch · POST /chain/batch {names, …a chain}   one chain on many takes, one after another (1562); POST /chain/batch/stop
+  GET /writer/versions[?id=|?title=] · POST /writer/versions {op: keep|mark|delete|undelete}   the Creator's words on each
+                                   Generate, one file per base title in KIT/writer-versions/ (1519)
+  POST /refiner/profiles           {op: save|delete, name, setup} (1515)
   GET /file?name=TAKE&path=derived/…     a derived file, with Range (the page's players seek)
   GET /settings · POST /settings   the page's own settings (its yue2.* keys) kept on disk in the
                                    studio's user/ folder (user/settings.json), so a cleared
@@ -80,6 +99,20 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
   GET /presets · POST /presets     saved styles and profiles (presets.json in the same folder):
                                    {op: put|delete, kind: style|setup, name, data}
   /gloss and /spectrum take &source=derived/… to work on a derived file instead of the take
+  GET /plugins · POST /plugin/run {name, source, plugin, step, params}   HERESY 1460: the Refiner's steps of one's own from
+                                   user/plugins/*/plugin.json (plugins.py), each a branch of kind "plugin" in derived/
+  GET /daw/set?name=&set=derived/stems-…   HERESY 1470: the Refiner's DAW: a set's strips, their versions, the rest (daw.py)
+  GET /daw/chunk?name=&set=&strip=&path=&start=&seconds=   a strip's stretch as FLAC (rest: the source less the set's parts)
+  GET /daw/peaks?name=&set=&strip=&path=[&n=1200]   a strip's wave, the loudest of each stretch, 0…1
+  GET /peaks?name=&path=[&n=400]   any sound of the take's tree as its wave (HERESY 1487: the tree's players)
+  GET /c2pa · POST /c2pa {on, author, contact, cert, key}   Content Credentials (HERESY 1489, c2pa_sign.py): its state and settings
+  GET /c2pa/file?name=&format=wav|flac|mp3&from=/library/…[&path=derived/…]   the engine's download, signed on the way
+  POST /daw/mix {name, set, mix, versions}   the mixdown by Plenio's stem mixer (daw_job.py), a branch of kind "daw"
+  POST /daw/mix {…, mix: ruach.mix/1, print}  HERESY 1531: the Refiner's mixer (daw_mix.py); print: each strip and return its own file
+  POST /daw/mix/stop {name, id}    HERESY 1539: a mix off the queue, or its process ended; no branch, its folder gone
+  GET /daw/ir?preset=room|plate|hall&rate=48000   HERESY 1531: the room's impulse (WAV, float), the one the render convolves with
+  GET /daw/mixes?name=&set=        HERESY 1533: the set's working mix and its named mixes (derived/<set>/mixes.json)
+  POST /daw/mixes {name, set, working} | {…, save_as, state} | {…, delete}   the working mix kept, a mix kept by name, one deleted
 
 Asynchronous (Viktor 30.09.2026): a request never waits for the job. Jobs run in a
 background thread, one heavy job at a time, in their own process on the GPU with the most
@@ -119,11 +152,24 @@ import diamond  # noqa: E402   HERESY 1166
 import updates  # noqa: E402   HERESY 1169
 import artist  # noqa: E402   HERESY 1255
 import places  # noqa: E402   HERESY 1261: where the user's work lives (outputs, trash, artist, writer)
+import plugins as plugin_kit  # noqa: E402   HERESY 1460: the Refiner's steps of one's own (user/plugins/)
+import daw as daw_kit  # noqa: E402   HERESY 1470: the Refiner's DAW (Plenio's stem mixer, plenio_core/)
+import daw_mix  # noqa: E402   HERESY 1531: the Refiner's mixer, its render (ruach.mix/1)
+import daw_mixes  # noqa: E402   HERESY 1533: the DAW's mixes kept beside their set
+import merges  # noqa: E402   HERESY 1494: what a merged backbone carries, read from its file
+import derived_marks  # noqa: E402   HERESY 1504: likes, dislikes and stars on the files made from a take
+import chain_plan  # noqa: E402   HERESY 1508: the chain's steps, and «up to this node»
+import audio_io  # noqa: E402   HERESY 1512: the audio interfaces, physical and virtual, and the analog gateway's choice
+import refiner_profiles  # noqa: E402   HERESY 1515: the Refiner's setups by name
+import creator_versions  # noqa: E402   HERESY 1519: the Creator's words on each Generate, apart from the takes
+import derived_trash  # noqa: E402   HERESY 1527: a branch into its take's trash and back
+import c2pa_sign  # noqa: E402   HERESY 1489: Content Credentials on the downloads
 import gpu_live  # noqa: E402   HERESY 1264: the cards second by second, for the page's live graphs
 import section  # noqa: E402   HERESY 1414: Replace a section
 import machine  # noqa: E402   HERESY 1304: the machine as a new studio's first start reads it
 import artist_loras  # noqa: E402   HERESY 1316: the Artist's adapters
 import weights  # noqa: E402   HERESY 1289: the Engine's Models card over heresy/fetch-heresy.sh
+import lora_alchemy  # HERESY 1447: what each LoRA touches, which share layers
 import takeloop  # noqa: E402   HERESY 1325: a loop from a take
 import takeedit  # noqa: E402   HERESY 1356: a take cropped, a section taken out, its speed changed: a new take
 import takechanges  # noqa: E402   HERESY 1358: where a take's music changes; a slice of its spectrogram
@@ -746,13 +792,178 @@ def derived_list(name):
             pass
     with jobs_lock:
         running = [dict(v, key=k) for k, v in jobs.items()
-                   if any(k.startswith(kind + ":" + name) for kind in ("stems", "remaster", "upscale", "debuzz"))]
-    return {"name": name, "derived": out, "running": running}
+                   if any(k.startswith(kind + ":" + name) for kind in ("stems", "remaster", "upscale", "debuzz", "plugin", "daw", "gate"))]   # 1460, 1470, 1547
+    return {"name": name, "derived": out, "running": running, "marks": derived_marks.read(take_dir(name)),   # HERESY 1504
+            "trash": derived_trash.listing(take_dir(name))}   # HERESY 1527
+
+
+def derived_busy(name):
+    """HERESY 1527: a job of this take running: its branches are not moved under it"""
+    with jobs_lock:
+        return any(k.split(":")[1:2] == [name] for k, v in jobs.items() if v.get("status") in ("queued", "running"))
+
+
+DAW_SEEN, DAW_PEAKS = {}, {}
+DAW_IR = {}   # HERESY 1531: the room's impulses, by preset and rate
+DAW_PROCS = {}   # HERESY 1539: a running mix's process, by its job's key, so Stop can end it
+FILE_PEAKS = collections.OrderedDict()               # HERESY 1487: (name, path, n) -> (stamp, peaks, seconds)
+
+
+def studio_version():
+    try:
+        return (KIT / "VERSION").read_text(encoding="utf-8").strip() or "2"
+    except OSError:
+        return "2"
+
+
+def c2pa_for(d, data, fmt, rel=""):
+    """HERESY 1489: a file of take folder d signed, or why not: (bytes, said). Off or imported: as it came, said so; on and signable:
+    signed, or ValueError with the reason (a download asked to be signed is never handed over unsigned in silence)."""
+    s = c2pa_sign.load(config_dir())
+    if not s["on"]:
+        return data, "unsigned: off"
+    try:
+        req = json.load(open(d / "request.json", encoding="utf-8"))
+    except (OSError, ValueError):
+        req = {}
+    if req.get("imported"):
+        return data, "unsigned: imported (not made here)"
+    ok, why = c2pa_sign.available()
+    if not ok:
+        raise ValueError("Content Credentials are on but cannot sign: " + why)
+    try:
+        title = json.load(open(d / "meta.json", encoding="utf-8")).get("title") or d.name
+    except (OSError, ValueError):
+        title = d.name
+    return c2pa_sign.sign(config_dir(), data, fmt, title, studio_version(), c2pa_sign.edits_of(d, rel)), "signed"
+
+
+def c2pa_file(q):
+    name, fmt, src, rel = q.get("name", ""), q.get("format", ""), q.get("from", ""), q.get("path", "")
+    d = take_dir(name)
+    if not src.startswith("/library/") or "://" in src or ".." in src:
+        raise ValueError("from is one of the engine's own /library/ downloads")
+    if fmt not in c2pa_sign.MIME:
+        raise ValueError("format: wav, flac or mp3")
+    with urllib.request.urlopen(ENGINE_URL + src, timeout=900) as r:
+        data, head = r.read(), {k: r.headers.get(k) for k in ("Content-Type", "Content-Disposition") if r.headers.get(k)}
+    data, said = c2pa_for(d, data, fmt, rel)
+    return data, head, said
+
+
+def file_peaks(name, rel, n):
+    d = take_dir(name)
+    p = daw_kit._inside(d, rel)
+    st = p.stat()
+    k, stamp = (name, rel, int(n)), (st.st_mtime_ns, st.st_size)
+    hit = FILE_PEAKS.get(k)
+    if not hit or hit[0] != stamp:
+        pk, secs = daw_kit.file_peaks(d, rel, n)
+        FILE_PEAKS[k] = hit = (stamp, pk, round(secs, 3))
+        while len(FILE_PEAKS) > 400:
+            FILE_PEAKS.popitem(last=False)
+    return {"peaks": hit[1], "seconds": hit[2]}
+
+
+def daw_info(name, rel):
+    """HERESY 1470: the DAW's strips of a set, read again when the take's branches change (a chunk asks it every few seconds)."""
+    d = take_dir(name)
+    dd = d / "derived"
+    stamp = (dd.stat().st_mtime_ns if dd.is_dir() else 0, rel)
+    hit = DAW_SEEN.get((name, rel))
+    if hit and hit[0] == stamp:
+        return d, hit[1]
+    info = daw_kit.set_info(d, rel, derived_list(name)["derived"])
+    DAW_SEEN[(name, rel)] = (stamp, info)
+    return d, info
+
+
+def daw_async(name, rel, mix, versions, printed=False):
+    """HERESY 1470: the set mixed as the DAW says, a branch of kind "daw" beside the take's others; 1531: the mixer's ruach.mix/1 too,
+    checked before the job is queued, and `printed`: each strip and return as its own file beside the mix."""
+    d, info = daw_info(name, rel)
+    if not isinstance(mix, dict) or mix.get("schema") not in ("plenio.stem_mix/1", daw_mix.SCHEMA):
+        raise ValueError('the mix is a ruach.mix/1 or a plenio.stem_mix/1 value: {"schema": "ruach.mix/1", "strips": {…}}')
+    if mix.get("schema") == daw_mix.SCHEMA:
+        try:
+            daw_mix.parse(mix, [s["name"] for s in info["strips"]] + [daw_kit.REST], int(info["rate"]))
+        except Exception as e:                       # a typo or a value out of range: said now, not in a failed job
+            raise ValueError(str(e))
+    versions = {k: str(v) for k, v in (versions or {}).items() if isinstance(k, str)}
+    for s in info["strips"]:
+        if s["name"] in versions and versions[s["name"]] not in [v["path"] for v in s["versions"]]:
+            raise ValueError(f"{versions[s['name']]} is not a version of {s['name']}")
+    did = "daw-" + time.strftime("%Y%m%d-%H%M%S")
+    key = f"daw:{name}:{did}"
+    job = {"status": "queued", "started": time.time(), "kind": "daw", "id": did, "label": "DAW mix"}
+    with jobs_lock:
+        jobs[key] = job
+
+    tmp = d / "derived" / (did + ".part")
+
+    def work():
+        try:
+            with cpu:
+                if job.get("stop"):                   # HERESY 1539: stopped while it waited for the machine
+                    raise RuntimeError("stopped")
+                job["status"] = "running"
+                tmp.mkdir(parents=True, exist_ok=True)
+                spec = tmp / ".spec.json"
+                json.dump({"set": info["set"], "mix": mix, "versions": versions, "print": bool(printed)}, open(spec, "w", encoding="utf-8"), ensure_ascii=False)
+                p = subprocess.Popen([str(LAB_PY), str(HERE / "daw_job.py"), str(d), str(spec), str(tmp)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                DAW_PROCS[key] = p
+                if job.get("stop"):
+                    p.terminate()
+                try:
+                    out, err = p.communicate(timeout=3600)
+                finally:
+                    DAW_PROCS.pop(key, None)
+                if job.get("stop"):
+                    raise RuntimeError("stopped")
+                if p.returncode != 0:
+                    raise RuntimeError("the DAW mix failed: " + (err.strip().splitlines() or ["no output"])[-1][-300:])
+                r = json.loads(out.strip().splitlines()[-1])
+                spec.unlink()
+            manifest = {"id": did, "kind": "daw", "label": "DAW mix", "parent": name, "source": info["set"], "mix": mix, "versions": r["versions"], "printed": bool(printed),
+                        "report": r["report"], "loudness": r["loudness"], "lowered_db": r["lowered_db"],
+                        "files": [dict(f, path=f"derived/{did}/{f['file']}") for f in r["files"]], "took": r["took"],
+                        "created": time.strftime("%Y-%m-%d %H:%M")}
+            json.dump(manifest, open(tmp / "manifest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+            tmp.rename(d / "derived" / did)
+            with jobs_lock:
+                jobs.pop(key, None)
+        except Exception as e:
+            if job.get("stop"):                       # HERESY 1539: no branch, no half-written folder, off the list
+                shutil.rmtree(tmp, ignore_errors=True)
+                with jobs_lock:
+                    jobs.pop(key, None)
+                act_say(f"DAW mix · {name} · stopped")
+                return
+            job.update(status="failed", error=str(e))
+    threading.Thread(target=work, daemon=True).start()
+    return dict(job, name=name)
+
+
+def daw_stop(name, did):
+    """HERESY 1539: a DAW mix stopped by the hand: off the queue if it waits, its process ended if it runs."""
+    key = f"daw:{name}:{did}"
+    with jobs_lock:
+        job = jobs.get(key)
+        if not job or job.get("status") not in ("queued", "running"):
+            raise FileNotFoundError("no such mix waiting or running")
+        job["stop"] = True
+        was = job.get("status")
+        if was == "queued":                           # off the list at once; it leaves quietly when its turn comes
+            jobs.pop(key, None)
+        proc = DAW_PROCS.get(key)
+    if proc and proc.poll() is None:
+        proc.terminate()
+    return {"stopping": did, "was": was}
 
 
 def stems_async(name, mode, source=""):
-    if mode not in ("vocals", "four"):
-        raise ValueError("mode is vocals or four")
+    if mode not in ("vocals", "four", "six", "eight"):        # HERESY 1462: six, with BS-Roformer-SW; 1463: eight
+        raise ValueError("mode is vocals, four, six or eight")
     d = take_dir(name)
     audio, did, key = d / "audio.wav", f"stems-{mode}", f"stems:{name}:{mode}"
     # HERESY 1169 (Viktor 08.10.2026: «Апскейлер нужен в двух местах - перед разделением на стемы…»): stems from a file of
@@ -877,6 +1088,9 @@ def slug(text):
     return re.sub(r"[^a-z0-9]+", "-", t).strip("-")[:40] or "track"
 
 
+IMPORTED = "\U0001f6a8 IMPORTED"                     # HERESY 1481: where every import lands
+
+
 def import_track(filename, title, body):
     ext = Path(filename).suffix.lower()
     if ext not in (".wav", ".flac", ".mp3", ".m4a", ".ogg", ".aiff", ".aif"):
@@ -901,7 +1115,13 @@ def import_track(filename, title, body):
     json.dump({"title": title, "style": "imported: " + filename, "lyrics": "", "cot": "off",
                "imported": {"file": filename, "bytes": len(body), "at": time.strftime("%Y-%m-%d %H:%M")}},
               open(d / "request.json", "w", encoding="utf-8"), ensure_ascii=False)
-    return {"name": name, "title": title, "seconds": round(secs, 2)}
+    out = {"name": name, "title": title, "seconds": round(secs, 2)}
+    try:                                                 # HERESY 1481: every import lands in 🚨 IMPORTED; said only when it did
+        collection.collection_post(config_dir(), OUTPUTS, {"op": "ws-add", "workspace": IMPORTED, "names": [name]})
+        out["workspace"] = IMPORTED
+    except (OSError, ValueError) as e:
+        print(f"[lab] {name} imported, not put in {IMPORTED}: {e}", file=sys.stderr, flush=True)
+    return out
 
 
 # HERESY 1027: the page's settings on disk, per platform, as other desktop programs keep theirs.
@@ -1078,6 +1298,106 @@ def upscale_async(name, mode, source="", variants=2, keep=True, ceiling=None):
 
 
 # HERESY 1030: the VAE's frame ripple out of the highs (debuzz.py), a branch of the tree. CPU.
+# HERESY 1460: a plugin's step on the take or a file of its tree, a branch of its own (plugins.py says what a plugin is). On the
+# CPU, one at a time as the other CPU jobs; its files are checked to be where it said before the branch appears
+PLUGINS = Path(os.environ.get("LAB_PLUGINS", KIT / "user" / "plugins"))
+BUILTIN_STEPS = HERE / "builtin_steps"              # HERESY 1553: the studio's own steps, shipped (plugins.load_all)
+
+
+def file_param(name, value, label):
+    """HERESY 1557: a step's file field: a file of this take's tree («derived/…» or the take's own audio) or another take («take:NAME»,
+    its audio); (its path, a name to say it by). Said when missing or outside."""
+    v = str(value or "").strip()
+    if not v:
+        raise ValueError(f"{label}: choose a file")
+    if v.startswith("take:"):
+        other = v[5:]
+        a = next((take_dir(other) / f for f in ("audio.wav", "audio.flac") if (take_dir(other) / f).is_file()), None)
+        if not a:
+            raise ValueError(f"{label}: {other} has no audio")
+        return a, other
+    d = take_dir(name)
+    p = (d / v).resolve()
+    if d.resolve() not in p.parents or not p.is_file():
+        raise ValueError(f"{label}: {v} is not a file of this take")
+    return p, v
+
+
+def plugin_async(name, pid, sid, source="", given=None, versions=None, history=None):
+    plugin, step = plugin_kit.find(plugin_kit.load_all(PLUGINS, BUILTIN_STEPS)[0], pid, sid)
+    params = plugin_kit.clean(step, given)
+    d = take_dir(name)
+    files_in = {}
+    for fp in step["params"]:                          # HERESY 1557: a file field made a path now: a wrong one said before the queue
+        if fp["type"] == "file":
+            files_in[fp["key"]] = file_param(name, params.get(fp["key"]), fp["label"])
+    if step["input"] == "stems":                     # HERESY 1464: a set of stems, its folder with its manifest
+        sd = (d / source).resolve() if source else None
+        man = sd / "manifest.json" if sd else None
+        if not man or d.resolve() not in sd.parents or not man.is_file() or json.load(open(man, encoding="utf-8")).get("kind") != "stems":
+            raise ValueError(f"{step['label']} works on a set of stems: split the take into stems, then pick the set")
+        audio = sd
+    else:
+        audio, _tag = source_of(name, source)
+    if not audio:
+        raise FileNotFoundError(f"{name} has no audio")
+    did = f"plugin-{pid}-{sid}-" + time.strftime("%Y%m%d-%H%M%S")
+    key = f"plugin:{name}:{did}"
+    job = {"status": "queued", "started": time.time(), "kind": "plugin", "id": did, "plugin": pid, "step": sid, "label": step["label"],
+           "rate": step.get("rate"), "builtin": plugin.get("builtin", False)}   # HERESY 1549: a step's own pace (seconds of work a second of audio), for its progress
+    with jobs_lock:
+        jobs[key] = job
+
+    def run(env=None):
+        job["status"] = "running"
+        tmp = d / "derived" / (did + ".part")
+        tmp.mkdir(parents=True, exist_ok=True)
+        pfile = tmp / ".params.json"
+        told = dict(params)
+        for k, (fpath, fname) in files_in.items():     # HERESY 1557
+            told[k], told[k + "_name"] = str(fpath), fname
+        if step["input"] == "stems" and versions:      # HERESY 1553: the set's stems as the chain left them, stem → file
+            told["_versions"] = {k: str((d / v).resolve()) for k, v in versions.items() if (d / v).resolve().is_file() and d.resolve() in (d / v).resolve().parents}
+            told["_history"] = {k: [str((d / v).resolve()) for v in vs if d.resolve() in (d / v).resolve().parents] for k, vs in (history or {}).items()}
+        json.dump(told, open(pfile, "w", encoding="utf-8"))
+        p = subprocess.run(plugin_kit.command(plugin, step, audio, tmp, pfile, LAB_PY), cwd=plugin["folder"], env=env,
+                           capture_output=True, text=True, timeout=4 * 3600)
+        if p.returncode != 0:
+            raise RuntimeError(step["label"] + " failed: " + (p.stderr.strip().splitlines() or ["no output"])[-1][-300:])
+        r = plugin_kit.result(p.stdout)
+        pfile.unlink()
+        return tmp, r
+
+    def work():
+        try:
+            if step["gpu"]:                              # HERESY 1465: as the lab's own GPU jobs, never on the studio's card
+                with turn(job):
+                    job["status"] = "running"
+                    gpu, _free = free_gpu(step["need_mb"], why=step["label"])
+                    job["gpu"] = gpu
+                    tmp, r = run(dict(os.environ, CUDA_VISIBLE_DEVICES=str(gpu), CUDA_DEVICE_ORDER="PCI_BUS_ID"))
+            else:
+                with cpu:
+                    tmp, r = run()
+            for f in r["files"]:
+                if not (tmp / f["file"]).is_file():
+                    raise RuntimeError(f"{f['file']} is not where {step['label']} said")
+            manifest = {"id": did, "kind": "plugin", "plugin": pid, "plugin_name": plugin["name"], "step": sid, "label": step["label"],
+                        "builtin": plugin.get("builtin", False),   # HERESY 1553: the studio's own step, its name translated
+                        "parent": name, "source": source or "the take", "params": params, "measure": r["measure"],
+                        "summary": r.get("summary", ""),   # HERESY 1484: the step's own line
+                        "files": [dict(f, path=f"derived/{did}/{f['file']}") for f in r["files"]],
+                        "took": r["took"], "created": time.strftime("%Y-%m-%d %H:%M")}
+            json.dump(manifest, open(tmp / "manifest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+            tmp.rename(d / "derived" / did)
+            with jobs_lock:
+                jobs.pop(key, None)
+        except Exception as e:
+            job.update(status="failed", error=str(e))
+    threading.Thread(target=work, daemon=True).start()
+    return dict(job, name=name)
+
+
 def debuzz_async(name, source="", strength=0.8, period=1920, rate=48000):
     strength = min(1.0, max(0.1, float(strength)))
     period, rate = int(period or 1920), int(rate or 48000)    # HERESY 1055: the model's, from the page's /props
@@ -1110,6 +1430,58 @@ def debuzz_async(name, source="", strength=0.8, period=1920, rate=48000):
                         "files": [{"name": f"debuzz {round(strength * 100)} %", "file": "debuzz.flac",
                                    "path": f"derived/{did}/debuzz.flac", "seconds": r["seconds"]}],
                         "took": r["took"], "created": time.strftime("%Y-%m-%d %H:%M")}
+            json.dump(manifest, open(tmp / "manifest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+            tmp.rename(d / "derived" / did)
+            with jobs_lock:
+                jobs.pop(key, None)
+        except Exception as e:
+            job.update(status="failed", error=str(e))
+    threading.Thread(target=work, daemon=True).start()
+    return dict(job, name=name)
+
+
+# HERESY 1547 (Viktor 17.10.2026: «Вот цифровой шлюз в паблик, и обогати его по максимуму»): the Digital Gateway, a branch
+# of the tree like Debuzz's; its settings checked before it is queued (a typo said at once, not after the wait)
+def gate_async(name, source="", params=None):
+    import digital_gate
+    p = digital_gate.settings(params or {})
+    d = take_dir(name)
+    audio, _tag = source_of(name, source)
+    if not audio:
+        raise FileNotFoundError(f"{name} has no audio")
+    try:
+        import soundfile as _sf
+        secs = float(_sf.info(str(audio)).duration)
+    except Exception:
+        secs = 0.0
+    did = f"gate-{p['character']}-" + time.strftime("%Y%m%d-%H%M%S")
+    key = f"gate:{name}:{did}"
+    job = {"status": "queued", "started": time.time(), "kind": "gate", "id": did, "seconds": round(secs, 2),
+           "expect": round(10 + 0.13 * secs * p["oversample"] / 4, 1)}   # what a 3090's host took: 45 s for 6:37 at 4×
+    with jobs_lock:
+        jobs[key] = job
+
+    def work():
+        try:
+            with cpu:
+                job["status"] = "running"
+                job["since"] = time.time()
+                tmp = d / "derived" / (did + ".part")
+                tmp.mkdir(parents=True, exist_ok=True)
+                pf = tmp / "params.json"
+                json.dump(dict(params or {}), open(pf, "w", encoding="utf-8"))
+                r = subprocess.run([str(LAB_PY), str(HERE / "digital_gate.py"), str(audio), str(tmp / "gate.flac"), str(pf)],
+                                   capture_output=True, text=True, timeout=7200)
+                if r.returncode != 0:
+                    raise RuntimeError("the gateway failed: " + (r.stderr.strip().splitlines() or ["no output"])[-1][-300:])
+                rep = json.loads(r.stdout.strip().splitlines()[-1])
+                pf.unlink()
+            s = rep["settings"]
+            manifest = {"id": did, "kind": "gate", "parent": name, "source": source or "the take", "character": rep["character"],
+                        "settings": s, "measure": rep,
+                        "files": [{"name": f"{rep['character']} {s['drive_db']:g} dB", "file": "gate.flac", "path": f"derived/{did}/gate.flac",
+                                   "seconds": rep["seconds"]}],
+                        "took": rep.get("took"), "created": time.strftime("%Y-%m-%d %H:%M")}
             json.dump(manifest, open(tmp / "manifest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
             tmp.rename(d / "derived" / did)
             with jobs_lock:
@@ -1254,31 +1626,71 @@ def chain_async(name, spec):
         # split from the debuzzed (and upscaled) take instead of the raw one after it all, and the remaster mixes them: the
         # preset balances them and the de-esser has a voice of its own. The separators work at 44.1 kHz and the mix dulls
         # the top, so it may be drawn anew at the end, under the remaster's true-peak ceiling
-        steps = []
-        if spec.get("debuzz", True):
-            steps.append({"step": "debuzz", "strength": min(1.0, max(0.1, float(spec.get("strength", 0.8))))})
-        if spec.get("upscale"):
-            steps.append({"step": "upscale", "mode": spec.get("upscale_mode") or "subtle"})
-        if spec.get("stems"):
-            steps.append({"step": "stems", "mode": spec.get("stems_mode") or "four"})
-        steps.append({"step": "remaster", "settings": dict(spec.get("remaster") or {})})
-        if spec.get("upscale_end"):
-            steps.append({"step": "upscale", "mode": spec.get("upscale_end_mode") or "subtle", "end": True})
-        for k in ("inspect", "spectrum", "gloss"):
-            if spec.get(k):
-                steps.append({"step": k})
+        steps = chain_plan.pipeline(spec, plugin_kit.load_all(PLUGINS, BUILTIN_STEPS)[0]) if spec.get("pipeline") else chain_plan.steps(spec)   # HERESY 1508; 1553: a pipeline
         for st in steps:
             st["status"] = "waiting"
-        job = {"status": "running", "started": time.time(), "kind": "chain", "steps": steps, "final": ""}
+        job = {"status": "running", "started": time.time(), "kind": "chain", "steps": steps, "final": "", "until": spec.get("until") or ""}
         CHAINS[name] = job
 
     def work():
         src, stems, st = "", "", None
+        versions, flow, history = {}, "file", {}         # HERESY 1553: a set's versions made on the way (and each stem's way); what the last step made
         try:
             for st in steps:
                 st["status"] = "running"
                 job["current"] = st["step"]
                 k = st["step"]
+                if k == "gate":                         # HERESY 1553: the Digital Gateway on the file before
+                    r = gate_async(name, src, st.get("params") or {})
+                    _follow(r, f"gate:{name}:{r['id']}")
+                    src, flow = _first_file(d, r["id"]), "file"
+                    job["final"] = src
+                    st["file"] = src
+                    st["status"] = "done"
+                    continue
+                if k == "daw":                          # HERESY 1553: the set mixed as the DAW's value says, its versions as made
+                    if not stems:
+                        raise RuntimeError("the DAW mixes a set of stems: put Stems before it")
+                    r = daw_async(name, stems, st.get("mix") or {"schema": daw_mix.SCHEMA, "strips": {}}, dict(st.get("versions") or {}, **versions), False)   # 1561: the DAW's own, then the chain's
+                    _follow(r, f"daw:{name}:{r['id']}")
+                    src, flow = _first_file(d, r["id"]), "file"
+                    job["final"] = src
+                    st["file"] = src
+                    st["status"] = "done"
+                    continue
+                if k == "plugin":                       # HERESY 1553: a built-in step or the user's, on a file or on the set
+                    _p, sp = plugin_kit.find(plugin_kit.load_all(PLUGINS, BUILTIN_STEPS)[0], st["plugin"], st["sid"])
+                    on = stems if sp["input"] == "stems" else src
+                    if sp["input"] == "stems" and not stems:
+                        raise RuntimeError(sp["label"] + " works on a set of stems: put Stems before it")
+                    stem = st.get("stem") or ""
+                    if stem:                            # one stem of the set: its last version in, the stem's new version out
+                        smf = [x for x in json.load(open(d / stems / "manifest.json", encoding="utf-8")).get("files", []) if x["name"] == stem]
+                        if not smf:
+                            raise RuntimeError(f"the set has no stem {stem}: split it as a profile of this step asks")
+                        on = versions.get(stem) or f"{stems}/{smf[0]['file']}"
+                    r = plugin_async(name, st["plugin"], st["sid"], on, st.get("params") or {}, dict(versions), history)
+                    _follow(r, f"plugin:{name}:{r['id']}")
+                    man = json.load(open(d / "derived" / r["id"] / "manifest.json", encoding="utf-8"))
+                    made = [f for f in man.get("files", []) if f.get("kind") not in ("text", "image")]
+                    if made and stem:
+                        versions[stem] = made[0]["path"]
+                        history.setdefault(stem, []).append(made[0]["path"])
+                        st["file"] = made[0]["path"]
+                    elif made and all(f.get("source") for f in made):   # versions of the set's stems
+                        for f in made:
+                            stem = next((x["name"] for x in json.load(open(d / stems / "manifest.json", encoding="utf-8")).get("files", [])
+                                         if f"{stems}/{x['file']}" == f["source"]), None)
+                            if stem:
+                                versions[stem] = f["path"]
+                                history.setdefault(stem, []).append(f["path"])
+                        st["file"] = "derived/" + r["id"]
+                    elif made:
+                        src, flow = made[0]["path"], "file"
+                        job["final"] = src
+                        st["file"] = src
+                    st["status"] = "done"
+                    continue
                 if k == "debuzz":
                     r = debuzz_async(name, src, st["strength"], spec.get("period") or 1920, spec.get("rate") or 48000)
                     _follow(r, f"debuzz:{name}:{r['id']}")
@@ -1293,19 +1705,31 @@ def chain_async(name, spec):
                     src = _first_file(d, r["id"])
                     if st.get("end"):
                         job["final"] = src
+                elif k == "stems" and st.get("set"):     # HERESY 1553: a set the take has, as it is
+                    sm = d / st["set"] / "manifest.json"
+                    if not sm.is_file() or json.load(open(sm, encoding="utf-8")).get("kind") != "stems":
+                        raise RuntimeError(f"{st['set']} is not a set of stems of this take")
+                    stems = st["set"]
+                    st["file"] = stems
+                    versions, flow, history = {}, "stems", {}
                 elif k == "stems":                      # from the file before, the take when nothing came before
                     r = stems_async(name, st["mode"], src)
                     _follow(r, f"stems:{name}:{st['mode']}" + (f":{src}" if src else ""))
                     stems = "derived/" + r["id"]
                     st["file"] = stems
+                    versions, flow, history = {}, "stems", {}
                 elif k == "remaster":
-                    cfg = dict(st["settings"], source=stems or src)
-                    if not stems:                       # a single file has no voice of its own to de-ess
+                    on_stems = bool(stems) and (flow == "stems" or not spec.get("pipeline"))   # HERESY 1553: after a mix, the mix
+                    cfg = dict(st["settings"], source=stems if on_stems else src)
+                    if on_stems and versions:
+                        cfg["versions"] = dict(versions)
+                    if not on_stems:                    # a single file has no voice of its own to de-ess
                         cfg["deess"] = False
                     r = remaster_async(name, json.dumps(cfg))
                     _follow(r, f"remaster:{name}:{r['id']}")
                     src = _first_file(d, r["id"])
                     job["final"] = src
+                    flow = "file"
                 elif k == "inspect":
                     _follow(inspect_async(name, src), "inspect:" + name + source_of(name, src)[1])
                 elif k == "spectrum":
@@ -1315,6 +1739,7 @@ def chain_async(name, spec):
                 st["status"] = "done"
                 if k in ("debuzz", "upscale", "remaster"):
                     st["file"] = src
+                    flow = "file"
             job.update(status="done", ended=time.time(), current="")
         except Exception as e:                          # said on the step that failed; what was made stays
             if st is not None:
@@ -1322,6 +1747,53 @@ def chain_async(name, spec):
             job.update(status="failed", error=f"{st['step'] if st else 'chain'}: {e}", ended=time.time())
     threading.Thread(target=work, daemon=True).start()
     return dict(job, name=name)
+
+
+# HERESY 1562: one chain on many takes, one after another; the take in hand finishes when stopped, the rest are skipped
+BATCH = {"status": "none"}
+BATCH_LOCK = threading.Lock()
+MAX_BATCH = 500
+
+
+def batch_async(spec):
+    names = list(dict.fromkeys(str(n) for n in (spec.get("names") or []) if isinstance(n, str) and n))[:MAX_BATCH]
+    if not names:
+        raise ValueError("no takes to refine")
+    for n in names:
+        if not take_dir(n).is_dir():
+            raise ValueError(f"{n} is not a take here")
+    one = {k: v for k, v in spec.items() if k not in ("names", "name")}
+    if one.get("pipeline"):                             # the chain checked once, before the first take
+        chain_plan.pipeline(one, plugin_kit.load_all(PLUGINS, BUILTIN_STEPS)[0])
+    else:
+        chain_plan.steps(one)
+    with BATCH_LOCK:
+        if BATCH.get("status") == "running":
+            return dict(BATCH)
+        BATCH.clear()
+        BATCH.update(kind="batch", id="batch-" + time.strftime("%Y%m%d-%H%M%S"), status="running", started=time.time(), stop=False,
+                     profile=str(spec.get("profile") or ""), items=[{"name": n, "status": "waiting"} for n in names])
+
+    def work():
+        for it in BATCH["items"]:
+            if BATCH.get("stop"):
+                it["status"] = "skipped"
+                continue
+            it.update(status="running", started=time.time())
+            try:
+                chain_async(it["name"], dict(one, name=it["name"]))
+                while True:
+                    j = CHAINS.get(it["name"]) or {}
+                    if j.get("status") in ("done", "failed"):
+                        break
+                    time.sleep(2)
+                it.update(status=j["status"], final=j.get("final", ""), error=j.get("error", ""))
+            except Exception as e:                      # said on its take; the rest go on
+                it.update(status="failed", error=str(e))
+            it["ended"] = time.time()
+        BATCH.update(status="stopped" if BATCH.get("stop") else "done", ended=time.time())
+    threading.Thread(target=work, daemon=True).start()
+    return dict(BATCH)
 
 
 # HERESY 1120: artwork for a take (art_job.py, Viktor 02.10.2026: «просто иконка в плеере, в карточке и в mp3»): a
@@ -1418,7 +1890,7 @@ def refined():
     with jobs_lock:
         for k, v in jobs.items():
             kind, _, rest = k.partition(":")
-            if kind in ("stems", "remaster", "upscale", "debuzz") and v.get("status") in ("queued", "running"):
+            if kind in ("stems", "remaster", "upscale", "debuzz", "gate") and v.get("status") in ("queued", "running"):   # 1547
                 out[rest.split(":")[0]] = int(time.time())
     return {"refined": out}
 
@@ -1677,7 +2149,7 @@ def api_ctx():
 ACT = {"seq": 0, "lines": collections.deque(maxlen=400), "seen": {}}
 ACT_LOCK = threading.Lock()
 ACT_SAY = {"art": "artwork", "stems": "stems (BS-Roformer, htdemucs)", "remaster": "remaster", "upscale": "upscale (UniverSR)",
-           "debuzz": "debuzz", "timing": "lyrics timing (Whisper)", "textend": "lyrics check (Whisper)", "spectrum": "spectrum",
+           "debuzz": "debuzz", "gate": "digital gateway", "timing": "lyrics timing (Whisper)", "textend": "lyrics check (Whisper)", "spectrum": "spectrum",
            "inspect": "inspection", "train": "LoRA training", "listen": "listener (Omni)", "artist": "the Artist"}
 
 
@@ -1688,15 +2160,87 @@ def act_say(text):
     print("[lab] " + text, file=sys.stderr, flush=True)
 
 
+# HERESY 1550: a file's loudness for an honest comparison, kept per file and its time
+LOUD = {}
+LOUD_LOCK = threading.Lock()
+
+
+def loudness_of(name, path=""):
+    a, _tag = source_of(name, path)
+    if not a:
+        raise FileNotFoundError(f"{name} has no audio")
+    key = (str(a), a.stat().st_mtime_ns)
+    with LOUD_LOCK:
+        if key in LOUD:
+            return LOUD[key]
+    import soundfile as _sf
+    from plenio_core.audio.loudness import measure as _measure
+    x, sr = _sf.read(str(a), dtype="float64", always_2d=True)
+    m = _measure(x.T, sr, with_true_peak=False)       # the loudness is what an A/B needs; the true peak is the slow part
+    r = {"name": name, "path": path, "lufs": None if m.integrated_lufs is None else round(m.integrated_lufs, 2),
+         "sample_peak_dbfs": None if m.sample_peak_dbfs is None else round(m.sample_peak_dbfs, 2), "seconds": round(len(x) / sr, 2)}
+    with LOUD_LOCK:
+        LOUD[key] = r
+    return r
+
+
+# HERESY 1549: how long a job of the Refiner takes, seconds of work a second of the take, measured on Forge (the page's RATE too)
+PACE = {"debuzz": 0.18, "remaster": 0.12, "upscale": 1.8, "stems": 0.9, "daw": 0.05, "gate": 0.12, "textend": 0.15, "timing": 0.15,
+        "inspect": 0.05, "spectrum": 0.02}
+TAKE_SECS = {}
+
+
+def take_secs(name):
+    """The take's length, read once (soundfile's header), 0 when it cannot be read."""
+    if name not in TAKE_SECS:
+        try:
+            import soundfile as _sf
+            a, _t = source_of(name, "")
+            TAKE_SECS[name] = float(_sf.info(str(a)).duration) if a else 0.0
+        except Exception:
+            TAKE_SECS[name] = 0.0
+    return TAKE_SECS[name]
+
+
+def act_expect(kind, name, v):
+    """What a job expects to take, seconds; None when nothing says."""
+    if v.get("expect"):
+        return float(v["expect"])
+    secs = float(v.get("seconds") or 0) or take_secs(name)
+    if not secs:
+        return None
+    if kind == "plugin" and v.get("rate"):
+        return 5 + float(v["rate"]) * secs
+    pace = PACE.get(kind)
+    if not pace:
+        return None
+    if kind == "stems":
+        pace *= {"four": 1.8, "six": 1.1, "eight": 2.1}.get(v.get("mode"), 1)
+    if kind == "upscale":
+        pace *= int(v.get("variants") or 1)
+    return 5 + pace * secs
+
+
 def act_now():
-    """What runs now: the lab's jobs, the training runs (with their step), the listener."""
+    """What runs now: the lab's jobs, the training runs (with their step), the listener; HERESY 1549: each with how far it is."""
     out = []
+    now = time.time()
     with jobs_lock:
         for k, v in jobs.items():
             kind, _, name = k.partition(":")
             if v.get("status") in ("queued", "running"):
-                out.append({"key": k, "what": ACT_SAY.get(kind, kind), "name": name.split(":")[0], "status": v.get("status"),
-                            "gpu": v.get("gpu"), "since": v.get("started")})
+                take = name.split(":")[0]
+                if v.get("status") == "running" and not v.get("since"):
+                    v["since"] = now                          # the watch looks every second: when it was first seen running
+                since = v.get("since") or v.get("started")
+                r = {"key": k, "what": ACT_SAY.get(kind, kind), "name": take, "status": v.get("status"), "gpu": v.get("gpu"),
+                     "since": v.get("started"), "kind": kind, "label": v.get("label")}
+                if v.get("status") == "running" and since:
+                    r["elapsed"] = round(now - since, 1)
+                    ex = act_expect(kind, take, v)
+                    if ex:
+                        r["expect"] = round(ex, 1)
+                out.append(r)
     for name, run in list(training.RUNS.items()):
         if run.get("status") in ("running", "stopping"):
             gpu = training._meta(training.paths(KIT)["runs"] / name).get("gpu")
@@ -1739,7 +2283,7 @@ def act_watch():
                         act_say(f"{seen[k]['what']} · {name} · {run.get('status', 'ended')} at step {run.get('step')}/{run.get('steps')}")
                     elif kind != "art":                        # the artwork says its own end, with what the critic saw
                         act_say(f"{seen[k]['what']} · {seen[k]['name']} · done")
-                        if kind in ("stems", "remaster", "upscale", "debuzz"):
+                        if kind in ("stems", "remaster", "upscale", "debuzz", "gate"):   # 1547
                             refined_section(seen[k]["name"])
                     del seen[k]
         except Exception as e:                                 # the watch must not die of one odd record
@@ -2044,6 +2588,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, places.plan(q.get("name", ""), q.get("to", "")))
             if url.path == "/weights":                      # HERESY 1289: what the install brings, and a run under way
                 return self.send(200, weights.listing(KIT))
+            if url.path == "/lora/profile":                 # HERESY 1447: LoRA alchemy: each adapter by layer, the pairs, the budgets
+                return self.send(200, lora_alchemy.report((q.get("ids") or "").split(",")))
             if url.path == "/health":
                 with jobs_lock:
                     active = {k: v["status"] for k, v in jobs.items()}
@@ -2134,6 +2680,11 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/stems":
                 r = stems_async(q.get("name", ""), q.get("mode", "four"), q.get("source", ""))
                 return self.send(500 if r.get("status") == "failed" else 202 if r.get("status") else 200, r)
+            if url.path == "/loudness":                      # HERESY 1550
+                try:
+                    return self.send(200, loudness_of(q.get("name", ""), q.get("path", "")))
+                except (ValueError, FileNotFoundError) as e:
+                    return self.send(404, {"error": str(e)})
             if url.path == "/debuzz":
                 return self.send(202, debuzz_async(q.get("name", ""), q.get("source", ""), q.get("strength", "0.8"),
                                                    q.get("period", "1920"), q.get("rate", "48000")))
@@ -2211,11 +2762,75 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_file(path, "application/octet-stream", name)
             if url.path == "/train/log":
                 return self.send_file(training.paths(KIT)["runs"] / Path(q.get("name", "")).name / "train.log", "text/plain; charset=utf-8")
+            if url.path == "/chain/batch":                  # HERESY 1562
+                return self.send(200, dict(BATCH))
             if url.path == "/chain":                        # HERESY 1054: the chain's state for a take
                 job = CHAINS.get(q.get("name", ""))
                 return self.send(200, dict(job, name=q.get("name", "")) if job else {"status": "none", "name": q.get("name", "")})
             if url.path == "/derived":
                 return self.send(200, derived_list(q.get("name", "")))
+            if url.path == "/daw/set":                      # HERESY 1470: the Refiner's DAW
+                return self.send(200, daw_info(q.get("name", ""), q.get("set", ""))[1])
+            if url.path == "/refiner/profiles":         # HERESY 1515: the Refiner's setups by name
+                plugs = plugin_kit.load_all(PLUGINS, BUILTIN_STEPS)[0]
+                return self.send(200, dict(refiner_profiles.load(config_dir()), pipelines=refiner_profiles.pipelines(HERE, plugs)))   # HERESY 1553
+            if url.path == "/audio/devices":            # HERESY 1512: the machine's audio interfaces and the gateway's choice
+                return self.send(200, audio_io.devices(user_dir=config_dir()))
+            if url.path == "/models/merges":           # HERESY 1494: what each merged backbone carries, from its file
+                return self.send(200, merges.merges(KIT))
+            if url.path == "/peaks":                    # HERESY 1487
+                return self.send(200, file_peaks(q.get("name", ""), q.get("path", ""), int(q.get("n", "400"))))
+            if url.path == "/daw/peaks":
+                d, info = daw_info(q.get("name", ""), q.get("set", ""))
+                k = (q.get("name", ""), info["set"], q.get("strip", ""), q.get("path", ""), int(q.get("n", "1200")))
+                if k not in DAW_PEAKS:
+                    DAW_PEAKS[k] = daw_kit.peaks(d, info, q.get("strip", ""), q.get("path", ""), int(q.get("n", "1200")))
+                    while len(DAW_PEAKS) > 400:
+                        DAW_PEAKS.pop(next(iter(DAW_PEAKS)))
+                return self.send(200, {"peaks": DAW_PEAKS[k], "seconds": info["seconds"]})
+            if url.path == "/c2pa":                     # HERESY 1489
+                return self.send(200, c2pa_sign.status(config_dir()))
+            if url.path == "/c2pa/file":
+                data, head, said = c2pa_file(q)
+                self.send_response(200)
+                for k, v in head.items():
+                    self.send_header(k, v)
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("X-C2PA", said)
+                self.end_headers()
+                self.wfile.write(data)
+                return
+            if url.path == "/daw/mixes":                    # HERESY 1533: the working mix and the named ones of a set
+                d, info = daw_info(q.get("name", ""), q.get("set", ""))
+                return self.send(200, daw_mixes.load(daw_kit._inside(d, info["set"])))
+            if url.path == "/daw/ir":                       # HERESY 1531: the room's impulse, as the render convolves with it
+                key = (q.get("preset", "room"), int(q.get("rate", "48000")))
+                if key[1] not in (32000, 44100, 48000, 88200, 96000):
+                    raise ValueError("rate is 32000, 44100, 48000, 88200 or 96000")
+                if key not in DAW_IR:
+                    DAW_IR[key] = daw_mix.ir_wav(key[1], key[0])
+                data = DAW_IR[key]
+                self.send_response(200)
+                self.send_header("Content-Type", "audio/wav")
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "max-age=86400")
+                self.end_headers()
+                self.wfile.write(data)
+                return
+            if url.path == "/daw/chunk":
+                d, info = daw_info(q.get("name", ""), q.get("set", ""))
+                data = daw_kit.chunk(d, info, q.get("strip", ""), q.get("path", ""), float(q.get("start", "0")), float(q.get("seconds", "10")))
+                self.send_response(200)
+                self.send_header("Content-Type", "audio/flac")
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(data)
+                return
+            if url.path == "/plugins":                      # HERESY 1460: the Refiner's steps of one's own
+                plugs, broken = plugin_kit.load_all(PLUGINS, BUILTIN_STEPS)
+                return self.send(200, {"plugins": plugin_kit.public(plugs), "errors": broken})
             if url.path == "/settings":
                 return self.send(200, settings_get(q.get("scope", "")))
             if url.path == "/presets":
@@ -2237,6 +2852,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, updates.status(KIT, config_dir()))
             if url.path == "/update/log":
                 return self.send(200, updates.log_tail(KIT))
+            if url.path == "/writer/versions":              # HERESY 1519: the titles, or one title's versions (?id= or ?title=)
+                if q.get("id") or q.get("title"):
+                    return self.send(200, creator_versions.get(KIT, q.get("id", ""), q.get("title", ""), q.get("scope", "")))
+                return self.send(200, creator_versions.listing(KIT, q.get("scope", "")))
             if url.path == "/writer":                       # HERESY 1047
                 if q.get("id"):
                     return self.send(200, writer.get(KIT, q["id"], q.get("scope", "")))
@@ -2366,13 +2985,15 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/collection/diamonds":       # HERESY 1166: one 💎 workspace, on the user's word (409: it is here)
                 data = json.loads(body.decode("utf-8"))
                 return self.send(*diamond.fetch(KIT, OUTPUTS, config_dir(), str(data.get("name", "")), bool(data.get("restore"))))
+            if url.path == "/c2pa":                          # HERESY 1489: the switch, the author, one's own certificate
+                return self.send(200, dict(c2pa_sign.save(config_dir(), json.loads(body.decode("utf-8"))), **c2pa_sign.status(config_dir())))
             if url.path in ("/collection", "/trash", "/export"):     # HERESY 1041
                 data = json.loads(body.decode("utf-8"))
                 if url.path == "/collection":
                     return self.send(200, collection.collection_post(config_dir(), OUTPUTS, data))
                 if url.path == "/export":
                     return self.send(202, collection.export_start(KIT, OUTPUTS, [str(n) for n in data.get("names") or []],
-                                                                  data.get("format", "flac"), bool(data.get("derived"))))
+                                                                  data.get("format", "flac"), bool(data.get("derived")), sign=c2pa_for))   # 1489
                 op = data.get("op")
                 if op == "move":
                     return self.send(200, collection.trash_move(KIT, OUTPUTS, [str(n) for n in data.get("names") or []], config_dir()))
@@ -2410,6 +3031,9 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/train/starter":             # HERESY 1100: one starter set, on the user's word
                 data = json.loads(body.decode("utf-8"))
                 return self.send(202, starter.fetch(KIT, str(data.get("name", ""))))
+            if url.path == "/lora/delete":                  # HERESY 1496: adapter files out of loras/ for good, a dry run first
+                data = json.loads(body.decode("utf-8"))
+                return self.send(200, training.delete_loras(KIT, [str(x) for x in (data.get("ids") or [])], data.get("dry", True) is not False))
             if url.path in ("/train/archive", "/train/delete", "/train/restore", "/train/purge", "/train/unpublish"):   # HERESY 1090
                 data = json.loads(body.decode("utf-8"))
                 if url.path == "/train/archive":
@@ -2436,11 +3060,92 @@ class Handler(BaseHTTPRequestHandler):
                 if url.path == "/train/run":
                     return self.send(202, training.train(KIT, data, free_gpu))
                 return self.send(200, training.stop(KIT, str(data.get("name", ""))))
+            if url.path == "/chain/batch":                  # HERESY 1562: one chain on many takes
+                return self.send(202, batch_async(json.loads(body.decode("utf-8"))))
+            if url.path == "/chain/batch/stop":
+                BATCH["stop"] = True
+                return self.send(200, dict(BATCH))
             if url.path == "/chain":
                 data = json.loads(body.decode("utf-8"))
                 return self.send(202, chain_async(str(data.get("name", "")), data))
+            if url.path == "/audio/gateway":                 # HERESY 1512: {out, in, rate}: the analog gateway's devices, kept in user/audio.json
+                data = json.loads(body.decode("utf-8"))
+                return self.send(200, {"gateway": audio_io.set_gateway(config_dir(), str(data.get("out") or ""), str(data.get("in") or ""), data.get("rate") or 0)})
+            if url.path == "/refiner/profiles":              # HERESY 1515: {op: save|delete, name, setup}: the profiles back
+                data = json.loads(body.decode("utf-8"))
+                if data.get("op") == "delete":
+                    return self.send(200, refiner_profiles.delete(config_dir(), data.get("name")))
+                return self.send(200, refiner_profiles.save(config_dir(), data.get("name"), data.get("setup")))
+            if url.path == "/audio/loop":                    # HERESY 1514: {out, in, rate, level}: a tone out and back, measured
+                data = json.loads(body.decode("utf-8"))
+                return self.send(200, audio_io.loop(str(data.get("out") or ""), str(data.get("in") or ""), int(data.get("rate") or 48000), float(data.get("level") or -20)))
+            if url.path == "/audio/monitor":                 # HERESY 1548: {out, rate}: the monitor kept in user/audio.json
+                data = json.loads(body.decode("utf-8"))
+                return self.send(200, {"monitor": audio_io.set_monitor(config_dir(), str(data.get("out") or ""), data.get("rate") or 0)})
+            if url.path == "/audio/monitor/tone":
+                return self.send(200, audio_io.monitor_tone(config_dir()))
+            if url.path == "/audio/monitor/stop":
+                return self.send(200, audio_io.monitor_stop())
+            if url.path == "/audio/monitor/play":            # {name, source, at}: the take, or a file of its tree
+                data = json.loads(body.decode("utf-8"))
+                path, _tag = source_of(str(data.get("name", "")), str(data.get("source", "") or ""))
+                if not path:
+                    return self.send(404, {"error": "no audio"})
+                return self.send(200, audio_io.monitor_play(config_dir(), path, float(data.get("at") or 0), str(data.get("label") or "") or None))
+            if url.path == "/audio/probe":                   # HERESY 1512: {device, rate, seconds}: an input's floor in dBFS per channel
+                data = json.loads(body.decode("utf-8"))
+                return self.send(200, audio_io.probe(str(data.get("device") or ""), int(data.get("rate") or 48000), int(data.get("seconds") or 2)))
+            if url.path in ("/derived/delete", "/derived/restore", "/derived/empty"):   # HERESY 1527: {name, id, with_children} · {name, id} · {name}
+                data = json.loads(body.decode("utf-8"))
+                name = str(data.get("name", ""))
+                if derived_busy(name):
+                    return self.send(409, {"error": "a job runs on this take: its branches stay until it is done"})
+                d = take_dir(name)
+                if url.path == "/derived/delete":
+                    try:
+                        moved = derived_trash.delete(d, str(data.get("id", "")), bool(data.get("with_children")))
+                    except derived_trash.HasChildren as e:
+                        return self.send(409, {"error": str(e), "children": e.kids})
+                    return self.send(200, dict(derived_list(name), moved=moved))
+                if url.path == "/derived/restore":
+                    return self.send(200, dict(derived_list(name), restored=derived_trash.restore(d, str(data.get("id", "")))))
+                return self.send(200, dict(derived_list(name), emptied=derived_trash.empty(d)))
+            if url.path == "/derived/mark":                  # HERESY 1504: {name, path, rating (1, -1, 0), fav}: the take's marks back
+                data = json.loads(body.decode("utf-8"))
+                name = str(data.get("name", ""))
+                return self.send(200, {"name": name, "marks": derived_marks.mark(take_dir(name), str(data.get("path", "")), data.get("rating"), data.get("fav"))})
+            if url.path == "/daw/mixes":                    # HERESY 1533: {name, set, working} · {…, save_as, state} · {…, delete}
+                data = json.loads(body.decode("utf-8"))
+                d, info = daw_info(str(data.get("name", "")), str(data.get("set", "")))
+                sd = daw_kit._inside(d, info["set"])
+                if "working" in data:
+                    return self.send(200, daw_mixes.keep_working(sd, data["working"]))
+                if "save_as" in data:
+                    return self.send(200, daw_mixes.save_as(sd, data["save_as"], data.get("state")))
+                if "delete" in data:
+                    return self.send(200, daw_mixes.delete(sd, data["delete"]))
+                return self.send(400, {"error": "working, save_as or delete"})
+            if url.path == "/daw/mix/stop":                  # HERESY 1539: {name, id}
+                data = json.loads(body.decode("utf-8"))
+                return self.send(200, daw_stop(str(data.get("name", "")), str(data.get("id", ""))))
+            if url.path == "/daw/mix":                       # HERESY 1470: {name, set, mix, versions}
+                data = json.loads(body.decode("utf-8"))
+                return self.send(202, daw_async(str(data.get("name", "")), str(data.get("set", "")), data.get("mix"), data.get("versions"),
+                                                bool(data.get("print"))))   # HERESY 1531
+            if url.path == "/gate":                          # HERESY 1547: {name, source, params}
+                data = json.loads(body.decode("utf-8"))
+                try:
+                    return self.send(202, gate_async(str(data.get("name", "")), str(data.get("source", "") or ""), data.get("params")))
+                except ValueError as e:
+                    return self.send(400, {"error": str(e)})
+            if url.path == "/plugin/run":                    # HERESY 1460: {name, source, plugin, step, params}
+                data = json.loads(body.decode("utf-8"))
+                return self.send(202, plugin_async(str(data.get("name", "")), str(data.get("plugin", "")), str(data.get("step", "")),
+                                                   str(data.get("source", "") or ""), data.get("params")))
             if url.path == "/writer":
                 return self.send(200, writer.post(KIT, json.loads(body.decode("utf-8")), q.get("scope", "")))
+            if url.path == "/writer/versions":               # HERESY 1519: {op: keep|mark|delete|undelete, …}
+                return self.send(200, creator_versions.post(KIT, json.loads(body.decode("utf-8")), q.get("scope", "")))
             if url.path == "/import":
                 return self.send(200, import_track(q.get("file", "track.wav"), q.get("title", ""), body))
             if url.path == "/settings":

@@ -51,7 +51,7 @@ PAGE="$ROOT/build/tools/public/index.html"
 MODEL=""; for q in Q5_K_M Q8_0 Q6_K BF16; do [ -f "$ROOT/models/YuE2-3B-$q.gguf" ] && { MODEL="$q"; break; }; done
 [ -n "$MODEL" ] || stop "no models/YuE2-3B-*.gguf: convert the models first"
 for f in YuE2-Vae-F32.gguf YuE2-Vae-legacy-F32.gguf YuE2-Vae-blend-F32.gguf; do [ -f "$ROOT/models/$f" ] || stop "models/$f is missing"; done
-[ -f "$ROOT/sliders/catalog.json" ] || stop "sliders/ is not converted"
+# HERESY 1566: no sliders since 1449 (start.sh passes none): the test neither asks for them nor gives them to its server
 
 # fingerprints of the user's own library and settings, to prove the test left them alone (portable: Python)
 fp() { python3 - "$ROOT" <<'PY'
@@ -123,7 +123,7 @@ export RUACH_PAGE="$PAGE"
 export LAB_PORT=$(python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
 ${HIDE[@]+"${HIDE[@]}"} nice -n 15 ${PIN[@]+"${PIN[@]}"} "$BIN" --host 127.0.0.1 --port "$PORT" \
   --model "$MODEL=models/YuE2-3B-$MODEL.gguf" --vae "standard=models/YuE2-Vae-F32.gguf" --vae "legacy=models/YuE2-Vae-legacy-F32.gguf" --vae "blend=models/YuE2-Vae-blend-F32.gguf" \
-  --loras loras --sliders sliders --outputs "$T/library" --settings "$T/settings.json" > "$T/server.log" 2>&1 &
+  --loras loras --outputs "$T/library" --settings "$T/settings.json" > "$T/server.log" 2>&1 &
 SPID=$!
 # up to 3 minutes: on a Mac the Metal shaders are compiled at start, even for a CPU run
 up=""; for _ in $(seq 1 360); do curl -sf "http://127.0.0.1:$PORT/props" >/dev/null && { up=1; break; }; kill -0 "$SPID" 2>/dev/null || break; sleep 0.5; done

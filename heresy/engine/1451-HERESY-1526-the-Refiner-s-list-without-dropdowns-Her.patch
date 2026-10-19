@@ -1,0 +1,68 @@
+From f012435490120b518dd0f4719fe279e98731b7d1 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Sat, 17 Oct 2026 14:00:40 -0600
+Subject: [PATCH 1451/1463] HERESY 1526: the Refiner's list without dropdowns:
+ HeresyChoices.scope(room) shows a room's choices in sight as the node windows
+ do (the class hc-on; a select added later enhanced as it comes); the rooms in
+ this style named in one list (ROOMS), the Refiner's list view first; a field
+ with its choices in sight stands at the top of its row; an empty list shows a
+ dash
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css        |  7 +++++++
+ tools/console/heresy-menu.js | 23 ++++++++++++++++++++++-
+ 2 files changed, 29 insertions(+), 1 deletion(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 5b3fb44..1ff9172 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -6236,3 +6236,10 @@ body.daw-full #dawPanel .mx-wave.mx-ruler { height: 22px; }
+ .vr-words .is-del { background: color-mix(in srgb, var(--bad) 18%, transparent); text-decoration: line-through; margin-right: 2px; }
+ .vr-words .is-add { background: color-mix(in srgb, var(--good) 20%, transparent); }
+ 
++/* HERESY 1526: a room in the node windows' style as a whole (HeresyChoices.scope): its choices in sight, its selects hidden */
++.hc-on .hc-box { display: block; min-width: 0; }
++.hc-on select.hc-src { display: none; }
++/* a field with its choices in sight stands at the top of its row: a tall column beside it no longer pushes a short one down */
++.hc-on .field:has(> .hc-box), .nd-body .field:has(> .hc-box) { align-self: start; }
++.hc-list:empty::after { content: "\2014"; color: var(--dim); padding: 2px 6px; }
++
+diff --git a/tools/console/heresy-menu.js b/tools/console/heresy-menu.js
+index 716801d..edb92cb 100644
+--- a/tools/console/heresy-menu.js
++++ b/tools/console/heresy-menu.js
+@@ -271,6 +271,27 @@
+     document.addEventListener("keydown", key, true);
+   }
+   function within(root) { if (root) Array.prototype.forEach.call(root.querySelectorAll("select"), enhance); }
+-  window.HeresyChoices = { within: within, enhance: enhance, close: close, open: function () { return !!pop; } };
++  // HERESY 1526 (Viktor 17.10.2026: «увидел в окнах нод. Супер, так отлично»): a room in this style as a whole: the class hc-on on it shows
++  // every choice box in it (the stylesheet hides the select), and a select added to it later (a plugin's panel, a list drawn anew) is
++  // enhanced as it comes. ROOMS: the rooms in this style so far, one by one as each is looked at
++  var ROOMS = ["view-post"];
++  function scope(root) {
++    if (!root || root.dataset.hcScope) return;
++    root.dataset.hcScope = "1";
++    root.classList.add("hc-on");
++    within(root);
++    if (!window.MutationObserver) return;
++    new MutationObserver(function (ms) {
++      ms.forEach(function (m) {
++        Array.prototype.forEach.call(m.addedNodes, function (n) {
++          if (n.nodeType !== 1) return;
++          if (n.tagName === "SELECT") enhance(n); else if (n.querySelector && n.querySelector("select")) within(n);
++        });
++      });
++    }).observe(root, { childList: true, subtree: true });
++  }
++  function rooms() { ROOMS.forEach(function (id) { scope(document.getElementById(id)); }); }
++  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", rooms); else rooms();
++  window.HeresyChoices = { within: within, enhance: enhance, close: close, open: function () { return !!pop; }, scope: scope, rooms: function () { return ROOMS.slice(); } };
+ })();
+ 
+-- 
+2.43.0
+

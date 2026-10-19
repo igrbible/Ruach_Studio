@@ -4,7 +4,112 @@ Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): 
 
 ## 2.0.0 · In the Making
 
-The closing pass goes on: the LoRAs mixed by the layers they touch, the Engine as an overlay, the strings in every language, the 💎 probes at full length (HERESY 1169, patches 1446 and up).
+After the pre: what its testers find, the strings in every language, the 💎 probes at full length (HERESY 1169, patches 1567 and up).
+
+## 2.0.0-pre · 2026-10-18
+
+The last step before 2.0.0, tagged v2.0.0-rc9 so a studio already installed offers it: the Refiner as a canvas with pipelines, the DAW as a preview (stems on lanes over a console, automation, buses and VCAs, the master's chain), steps of your own, eight stems, each LoRA's wave and a budget for the adapters that share their layers, Content Credentials on every download (HERESY 1169, patches 1446–1566).
+
+- **The Engine over the room, in tabs** (HERESY 1450): it opens over the room you are in, as wide and tall as the window between the bar and the player, the room dimmed around it; its cards by theme behind seven tabs at the left, in the order one goes through them (Server and log, Hardware, Models and LoRAs, Writer and Artwork, Folders and Security, Appearance, Updates and About), one tab's cards centred; ↑ and ↓ move between the tabs, it opens again on the tab it was left on, and Esc, Close or a click on the dimmed room closes it.
+- **A LoRA's wave through the song** (HERESY 1447): each adapter's row has a wave beside its strengths, Flat, Arch or drawn by hand, the one the voice and genre sliders had; the engine runs such an adapter with the graph instead of merging it at load, the music half token by token, the sound half frame by frame, and a take made again runs the same wave. Measured: merged and on the graph the same token for token over 600 frames; the set loads in under a second where a merge takes 9.6 s.
+- **A budget for the adapters that share their layers** (HERESY 1447): the studio measures where each adapter pushes (its layers on each half, attention against MLP, how far it moves a layer) and says it in the row's tip; adapters on the same layers share one budget a half, the measured red line its cap (music 2.25, sound 1.5): **Share** gives way in proportion past it, **In order** serves them from the top row (the rows dragged), and what a wave lets go, the next one takes. The notes say when two share their layers and how they pull.
+- **The voice and genre sliders out of the studio** (HERESY 1449): measured before they went, a short pop ballad on three seeds with the Acoustic folk slider at full strength: held flat it made another song from the fourth or fifth music token on, and moved the sound a different way on each seed (its brightness −822 to +1203 Hz) rather than toward folk. Their wave lives on in the LoRAs'; the start, the install and Models v2 carry none, and a prompt or a take that had some opens without them.
+- **The studio's name in each language** (HERESY 1448, 1454, 1456): «Ruach Studio» as its logo says it, in the page, the guide and the visiting card; in Greek Ροῦαχ Στούντιο, the name carried over as in the other languages (ΡΟΥΑΧ in the logo's capitals); a name quoted as a name stays.
+- **The IRA merge** (HERESY 1490): YuE2-3B with Instrumental (0.75) and Real Audio v9 (0.85) folded in, fetched in Engine › Models and LoRAs and chosen beside m-a-p's weights; backbones named by their files («YuE2 BF16», «YuE2 IRA Q8_0»).
+- **A merge's adapters in the model selectors** (HERESY 1494): Compute's list and the selectors' tips say which adapters a merged backbone carries and how strong, read from its file.
+- **His fonts and sizes by default** (HERESY 1493): Tektur headings at −1 pt, Noto Sans rooms, Raleway section marks at +1 pt, Jura buttons at +2 pt; sizes chosen in the Fonts card now survive a reload.
+- **Section names over the wave's top** (HERESY 1492, 1494): every section named, whole, in a staircase going down where names would meet.
+- **Denoising steps on a slider** (HERESY 1498): nine stops from 8 to 160, 32 by default, the road coloured by what the ear found; the solvers' calls a step in their tip.
+- **Also render with** (HERESY 1498): each take of a run rendered again by other solvers from its own codes and sound seed, to compare them on one music.
+- **The bare wave** (HERESY 1498): the wave's ear in the player turns Whisper's sections and lines off for a run of tests.
+- **The probes' guard** (HERESY 1498): counts the engine's KV sets (three with the lyrics' own guidance), so two probes no longer run out of memory on 24 GB.
+- **The DAW over the whole window** (HERESY 1499): its button or F11; Esc back.
+- **The DAW, Bitwig's way** (HERESY 1501): a ruler with a loop, zoom and scroll, the keys, a meter on every lane, lanes coloured by what they hold.
+- **Seeds that keep their words** (HERESY 1500).
+- **The model in a take's passport** (HERESY 1502): its name, quant and bits, right above the VAE.
+- **The DAW in the guide** (HERESY 1503): its own stop in the Refiner's tab and its keys in the Shortcuts, in all twelve languages.
+- **Marks on branches and stems** (HERESY 1504): 👍 👎 ★ on every file made from a take in the compare window, kept by the lab; the DAW's mixes compared too.
+- **The Trainer's pictures** (HERESY 1505): new shots of a run at work in the guide, the README and the visiting card (by day and by night); no private names in any picture.
+- **The Refiner as a canvas of nodes** (HERESY 1506): every step a node where the work flows, wires the chain's way and the way the take went; a click lifts its panel, ‹ › along; beside the list.
+- **A run never dies of its own step log** (HERESY 1507): the lab reads it without holding it, the trainer logs in WAL and says a refused write.
+- **Run up to here and bypass** (HERESY 1508): a node's right-click and its window run the chain up to it, or take it out of the chain.
+- **No dropdowns in a node's window** (HERESY 1509): a select's choices in sight, a long list over the page with a filter.
+- **The chain as a node, wires drawn by hand** (HERESY 1510): a node's newest branch made another's source by a wire.
+- **The DAW's waves whole** (HERESY 1511): both halves at one height; nothing moves under the mouse.
+- **Audio I/O** (HERESY 1512): the machine's interfaces, physical and virtual, the analog gateway's choice and an input's floor, in the Refiner.
+- **The tree's waves aligned** (HERESY 1513): every wave of «Made from This Take» from one x to one x.
+- **Loop test** (HERESY 1514): a tone out through the gateway's output and back from its input, measured: answered, gain, noise, THD.
+- **Profiles in the Refiner** (HERESY 1515): the Refiner's setups by name above the canvas: the steps' settings and the nodes' places, never a take's sources or cut points.
+- **Clones on the Refiner's canvas** (HERESY 1516): a second Remaster, Upscale, Debuzz or plugin step beside its own, with its own settings, run from its window.
+- **The Creator's versions** (HERESY 1519): every Generate's title, style, lyrics and score kept under its title apart from the takes; a diff of two, stars, labels, locks, a trash, one back into the form; the Writer lists every title.
+- **The Creator's versions in Export all** (HERESY 1522): the Writer's backup carries them, Import brings back what is missing.
+- **Refiner Room in the Engine** (HERESY 1523): the Refiner opens as it was left, always as the list or always as the canvas.
+- **The Refiner's list without dropdowns** (HERESY 1526): the node windows' choices in sight, for the whole room.
+- **A branch into its take's trash** (HERESY 1527): Delete on a branch of «Made from This Take», asked; Bring back; Empty the trash, asked.
+- **The DAW's console** (HERESY 1531): under the lanes a mixing desk, every lane a strip: EQ, compressor, sends, width, pan, polarity, fader and meter on one scale; the room and the delay as returns; the master with its loudness, true peak and correlation; a strip's devices (an EQ of eight bands drawn over its own sound, a compressor with its curve); undo and redo, A and B, the stems printed with the mix. What you hear while you set it is what is mixed.
+- **The song's sections on the DAW's ruler** (HERESY 1532): as the player timed them; a click goes to one, a double-click loops it, [ and ] step between them.
+- **The DAW's mixes on Forge** (HERESY 1533): the mix you are setting follows you to any browser; mixes kept by name, called back with Undo behind them.
+- **No ring inside a node's window** (HERESY 1534): the glow's frame off where the window is the frame.
+- **Automation** (HERESY 1535): a lane's volume drawn over time on its wave, heard and mixed after the fader.
+- **The master's monitor** (HERESY 1536): Mono and Dim, for the ear only; the DAW steadier when the studio is opened by its network address.
+- **Sidechain** (HERESY 1537): a compressor listens to another strip; Duck puts the band under the voice.
+- **A stem's version by a click** (HERESY 1538): no dropdown on a lane; two versions compared as it plays; the master's goniometer.
+- **Stop beside Mix** (HERESY 1539): a mix running or waiting on Forge stopped, nothing made.
+- **The tree in the Refiner's column** (HERESY 1540): «Made from This Take» its own entry, not under every step.
+- **Buttons on one line** (HERESY 1541): two-word buttons no longer wrap.
+- **Fades on a cut** (HERESY 1542): a silenced stretch's fall and rise dragged by its corners; heard and rendered alike.
+- **VCA groups** (HERESY 1543): one fader over a group of strips, with its mute and solo.
+- **The master's chain** (HERESY 1544): EQ, compressor and Plenio's lookahead limiter on the master, live as rendered.
+- **Fix: a take's mix stays its own** (HERESY 1545): opening another take no longer carries the last take's mix into it.
+- **Fix: an input's floor after it settles** (HERESY 1546): an interface's thump at the stream's opening no longer read as its noise.
+- **Digital Gateway** (HERESY 1547): tape, console, tube, transformer or vinyl in numbers, a step of the Refiner; starting points, harmonics said.
+- **The monitor** (HERESY 1548): a second output on Forge in Audio I/O; any file of the tree plays there with «On Forge».
+- **Progress above the player** (HERESY 1549): every job of the lab, a bar each, in every room, with the time it has left.
+- **Equal loudness in Compare** (HERESY 1550): each version's loudness said, the louder turned down to the quietest.
+- **The chain's pipelines** (HERESY 1553): the chain as steps in their own order, seven shipped (Quick polish, Song: stems and remaster, Song: my DAW mix, Song: full air, Warm tape, Spoken word, Look only) and a plugin's own; a chip unchecked bypasses its step, the canvas draws the way.
+- **The studio's own steps** (HERESY 1553): built-in steps beside the plugins', in the page's language, where they belong in the column and on the canvas.
+- **Whole lead** (HERESY 1554): the lead voice moved back from Backing Vocals where the split lost it, the mix unchanged.
+- **Voice upscale** (HERESY 1555): UniverSR on the voice stems only, each a version of its stem.
+- **Before and after** (HERESY 1557): on every file of the tree, measured against what it was made from: loudness, peak, range, width, bands, the spectra at equal loudness, a picture in the tree.
+- **Match to a reference** (HERESY 1558): a file's tone toward another file's or another take's, in the DAW's own bands; onto the DAW's master in one click.
+- **The DAW's other lines** (HERESY 1559): pan, width and the two sends drawn over time beside the volume, heard and mixed.
+- **Inserts and Print** (HERESY 1561): a strip through the Digital Gateway or a plugin's step on Forge, its result the strip's new version; the master printed through the gateway.
+- **The chain on many takes** (HERESY 1562): the chain as set on the workspace's takes or the Librarian's checked ones, one after another.
+- **Audio buses** (HERESY 1563): strips summed into a bus with its own EQ, compressor, fader, width and pan, live and in the mix.
+- **Moving and copying** (HERESY 1564): Shift-drag picks a stretch of a lane; Ctrl+C, Ctrl+X, Ctrl+V lay it at the playhead with crossfades, live and in the mix.
+- **Fix: the install's checks without the sliders** (HERESY 1566): verify-install and convert-models no longer ask for the sliders gone in 1449; the real-server test is out of date until 2.0.0.
+- **The 2.0.0 shots** (HERESY 1565): every room by day and by night, the Refiner's canvas and the DAW among them, in the guide and the README; a release now stops on any picture not read for private names first.
+- **A LoRA hidden or deleted for good** (HERESY 1496): a right-click hides it (Show hidden in the LoRAs head brings it back) or deletes its files from loras/ after saying what goes.
+- **An adapter gone from loras/** (HERESY 1496): asked about with those of a name like its own, or taken out of the song; Generate never sends it.
+- **The Trainer's epochs** (HERESY 1496): a click asks IN / OUT / Cancel; voice runs at rank 32.
+- **The trainer's early stop** (HERESY 1497): a few tracks held out and measured each epoch; the run stops when the held-out flow no longer falls, the best epoch named.
+- **The log's window keeps its GPU column** (HERESY 1495): it opens at its full size each time; a narrow one keeps the cards in a row under the log.
+- **A skipped LoRA out of reach** (HERESY 1494): its strengths and wave disabled, its name and ✕ as in any row; the rows part under a dragged one.
+- **Content Credentials (C2PA)** (HERESY 1489): every download (WAV, FLAC, MP3, the Library's ZIP) carries a signed record of its origin: made by AI (YuE2) in Ruach Studio, refined by a person when the Refiner made it, your name if you give it; the sound untouched. Switch and fields in Engine › Folders and Security.
+- **The lean card** (HERESY 1488): the take's card without its rows of buttons; «⋯» beside the title opens the take's menu, which holds them all and can bring them back; Regenerate leads Make again.
+- **The take's tree in the chain's order, with its own players** (HERESY 1486, 1487): each branch under the one it was made from; a play button beside each sound's wave, the whole wave drawn (1491).
+- **A plugin step's report** (HERESY 1484): read in the studio's dialog, its summary beside its branch; no player for it.
+- **The take card's buttons in the take's menu** (HERESY 1483): Make again, Edit, Refiner and the card's files under Download, from any take's menu; the run's cancel says «Cancel it» (1482).
+- **Full with a key in one press** (HERESY 1480): a chosen key with no score plans, moves the score to the key and sings it; keys spelled as the engine sings them, F♯ and D♯m rather than G♭ and E♭m (1479).
+- **Imports in 🚨 IMPORTED** (HERESY 1481): every imported take lands in one workspace.
+- **One sound at a time** (HERESY 1476); the eight stems keep the whole voice (1477); Export to DAW: Bitwig first, Waveform gone (1478); DAW projects open with the parts sounding (1475).
+- **Menus inside the window, the take's menu in groups** (HERESY 1474): Open, Marks, Artwork, Library.
+- **The Librarian's guards** (HERESY 1473): a mass trash, move, take-out or hiding says where you stand and which workspaces it reaches, and asks twice when it reaches past one; a locked workspace keeps its takes.
+- **The Refiner's DAW** (HERESY 1470, 1471): a set of stems on lanes with a version each, level, mute, solo, silence drawn on the wave, compression and sends; heard as set, mixed on Forge by Plenio's stem mixer (Apache-2.0).
+- **The song's length by its mode** (HERESY 1468): music up to 10:00 (8:00 by default), Direct's speech up to 15:00; Output's length beside «Song ≈» in the LoRAs.
+- **Plugin steps on the GPU** (HERESY 1465): a step of your own may run on a card of the lab's jobs, in their turn, and name the files it is made for, which its panel then picks as the source (docs/PLUGINS.md).
+- **Plugin steps on a set of stems** (HERESY 1464): a step of your own may take the take's stems as its source (docs/PLUGINS.md).
+- **Eight stems and proper stem names** (HERESY 1463): the voice in two (Lead Vocal, Backing Vocals) and the winds apart; every stem shows, downloads and goes to the DAW by its proper name.
+- **Six stems** (HERESY 1462): ep317 for the voice, then BS-Roformer-SW on the instrumental: drums, bass, guitar, piano and the rest; in the Stems step and in the chain.
+- **The Refiner in a column of steps** (HERESY 1461): the steps as tabs at the left in three groups in the chain's order (Hear and look, Mend, Finish), the open step beside them and what is made from the take under it.
+- **Steps of your own in the Refiner** (HERESY 1460): a plugin in `user/plugins/` adds steps after the studio's own, each with a panel drawn from its fields; its files land in the take's tree like any other version (docs/PLUGINS.md).
+- **A take's tools as lists with drawings** (HERESY 1459): Download, Refiner, Files and Edit each a column of rows, a drawing beside every name; a right-click takes a wave's point out.
+- **The LoRA waves on a grid** (HERESY 1458): the wave's graph counts minutes and seconds along the length set in Output (the engine runs the wave over it) and the strength in quarters; «Song ≈» marks where the song should end; Shift keeps a point on the grid; the LoRAs open over the page up to 1800 px wide; under a budget each strength and each together show what runs of what is asked.
+- **The LoRA row** (HERESY 1457): the budget as two modes, Share and In order (none lit is no budget, the lit one pressed again lets it go); a chord and a wave open the music and sound halves' strengths instead of words, so every slider starts and ends alike; the name's column half as wide, a long name cut and whole under the pointer.
+- **The guide as the Engine** (HERESY 1455): up to 1800 px wide and the window's height, its parts as tabs in a column at the left, the open part's stops under its own tab, the text beside them.
+- **The morning's three** (HERESY 1453): the lyrics' counts right after a reload with the editor folded (they showed zeros until it unfolded); a LoRA row holds its name, strengths, wave and ✕ in its frame again; in order, a row is dragged by its name and tag, so its strengths move.
+- **The Kit's library from Models v2** (HERESY 1446): Instrumental, sv-billie, DreamPop v2, J-pop and Real audio v4 and v9 at the Kit's pins, each checked against its author's SHA-256; the three without a licence (Death metal, Industrial rock, Epic trailer) still from their authors, asked on Hugging Face.
+- **The visiting card counts its visitors** (HERESY 1446): Umami on our own server, no cookies.
 
 ## 2.0.0-rc8 · 2026-10-14
 

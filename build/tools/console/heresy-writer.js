@@ -322,7 +322,10 @@
         a.click();
         a.remove();
         setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
-        toast(tr("Writer backup: {0} documents and {1} in the trash, into {2}").replace("{0}", (b.docs || []).length)
+        var cv = b.creator_versions || [];                  // HERESY 1522: the Creator's versions in the same file
+        toast(cv.length ? tr("Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}").replace("{0}", (b.docs || []).length)
+          .replace("{1}", (b.trash || []).length).replace("{2}", cv.length).replace("{3}", name)
+          : tr("Writer backup: {0} documents and {1} in the trash, into {2}").replace("{0}", (b.docs || []).length)
           .replace("{1}", (b.trash || []).length).replace("{2}", name));
       }).catch(function (e) { toast(e.message, true); });
     });
@@ -339,8 +342,10 @@
         state.docs = d.docs || state.docs;
         paintList();
         paintHand();
+        var cv = n.creator_versions;                         // HERESY 1522: and the Creator's versions it brought
         toast(tr("Writer backup {0}: {1} new, {2} already here, {3} beside their namesakes as copies, {4} into the trash")
-          .replace("{0}", f.name).replace("{1}", n.added || 0).replace("{2}", n.same || 0).replace("{3}", n.copies || 0).replace("{4}", n.trashed || 0));
+          .replace("{0}", f.name).replace("{1}", n.added || 0).replace("{2}", n.same || 0).replace("{3}", n.copies || 0).replace("{4}", n.trashed || 0) +
+          (cv ? " \u00b7 " + tr("the Creator's versions: {0} new, {1} titles new").replace("{0}", cv.versions || 0).replace("{1}", cv.titles || 0) : ""));
       }).catch(function (e) { toast(tr("Not imported: {0}").replace("{0}", e.message), true); });
     });
     ["wrTitle", "wrStyle", "wrLyrics", "wrNotes"].forEach(function (id) { $(id).addEventListener("input", changed); });

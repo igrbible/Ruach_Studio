@@ -2,6 +2,9 @@
 # The LoRA library: 11 LoRA files from 8 Hugging Face repos (about 1.3 GB) into ./loras, one folder
 # each, with the small side files the app reads (trigger words, alpha, training mode), at the revisions
 # in tools/hf-revisions.txt. The folder names matter: loras/sources.json is keyed by them.
+# HERESY 1446 (Viktor 14.10.2026: «Лучше всё тянуть Студии из одного репо»): the five whose authors license them (CC BY-NC 4.0)
+# come from goldhub/Ruach_Studio_Models_v2 at its pin (heresy/hf-revisions.txt), the same files byte for byte, laid out there as here;
+# the three that carry no licence come from their authors as before (their authors asked).
 #
 #   tools/download-loras.sh           download what is missing or incomplete (safe to run again)
 #   tools/download-loras.sh --check   only ask Hugging Face that every file is still there (no download)
@@ -18,13 +21,13 @@ source "$ROOT/tools/hf-env.sh"
 
 # folder | repo | folder inside the repo ("" = its top) | files
 LORAS=(
-  "YuE2-instrumental-cot-full-loras|Mothersuperior/YuE2-instrumental-cot-full-loras||README.md ar_lora_inst_v3abc.bf16.safetensors"
+  "YuE2-instrumental-cot-full-loras|goldhub/Ruach_Studio_Models_v2|loras/YuE2-instrumental-cot-full-loras|README.md ar_lora_inst_v3abc.bf16.safetensors"
   "YuE2_Deathmetalv1_lora|pduncan/YuE2_Deathmetalv1_lora||README.md deathmetalv1_step-000600.safetensors"
-  "sv-billie-yue2-lora|HaileyStorm/sv-billie-yue2-lora||README.md lora.json sv_billie.safetensors"
-  "sv-dreampop|atomtanstudio/lora-library|yue2/dreampop|lora.json dreampop_sv_dreampop.safetensors"
+  "sv-billie-yue2-lora|goldhub/Ruach_Studio_Models_v2|loras/sv-billie-yue2-lora|README.md lora.json sv_billie.safetensors"
+  "sv-dreampop|goldhub/Ruach_Studio_Models_v2|loras/sv-dreampop|lora.json dreampop_sv_dreampop.safetensors"
   "yue2-industrial-rock-lora|monsterovich/yue2-industrial-rock-lora||README.md adapter-ar-179/adapter_config.json adapter-ar-179/lora.safetensors adapter-nar-179-v2/adapter_config.json adapter-nar-179-v2/lora.safetensors"
-  "yue2-jpop-t4-lora|storagejuju/yue2-jpop-t4-lora||README.md training_config.json yue2_jpop_t4.safetensors"
-  "yue2-mothersuperior-realaudio-tokenizer-v4|Mothersuperior/yue2-mothersuperior-realaudio-tokenizer-v4||README.md nar_lora_joint_v4.bf16.safetensors nar_lora_joint_v9.bf16.safetensors"
+  "yue2-jpop-t4-lora|goldhub/Ruach_Studio_Models_v2|loras/yue2-jpop-t4-lora|README.md training_config.json yue2_jpop_t4.safetensors"
+  "yue2-mothersuperior-realaudio-tokenizer-v4|goldhub/Ruach_Studio_Models_v2|loras/yue2-mothersuperior-realaudio-tokenizer-v4|README.md nar_lora_joint_v4.bf16.safetensors nar_lora_joint_v9.bf16.safetensors"
   "yue2-steps-from-hell|monsterovich/yue2-steps-from-hell||README.md adapter-ar-195/adapter_config.json adapter-ar-195/lora.safetensors adapter-nar-194/adapter_config.json adapter-nar-194/lora.safetensors"
 )
 

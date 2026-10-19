@@ -1,0 +1,735 @@
+From 66f2bd024f766061b58312f5ef4f9f824b732266 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 16 Oct 2026 15:48:39 -0600
+Subject: [PATCH 1432/1463] HERESY 1496: a LoRA hidden or deleted for good; an
+ adapter gone from loras/ asked about, never sent; the Trainer's epoch asks IN
+ / OUT / Cancel; voice runs at rank 32
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Right-click on an adapter: Hide from the list (Show hidden in the LoRAs head, kept in yue2.lorasHidden), Delete from loras/ for good (the lab says what goes first). An adapter of the song gone from loras/: asked once the list comes, with those of a name like its own (the same run first, then the same voice at another rank or suffix), or out of the song; Later leaves it marked and Generate sends nothing until it is answered. The Trainer: no block under the epochs; a click asks IN / OUT / Cancel, a right-click gives the file. The Voice kind at rank 32 (Viktor: «нужно r32»). Kitchen suite 869/869.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |   7 +++
+ tools/console/app.js            |  24 +++++++
+ tools/console/heresy-i18n-be.js |  25 +++++++-
+ tools/console/heresy-i18n-de.js |  25 +++++++-
+ tools/console/heresy-i18n-el.js |  25 +++++++-
+ tools/console/heresy-i18n-es.js |  25 +++++++-
+ tools/console/heresy-i18n-fr.js |  25 +++++++-
+ tools/console/heresy-i18n-it.js |  25 +++++++-
+ tools/console/heresy-i18n-ja.js |  25 +++++++-
+ tools/console/heresy-i18n-pt.js |  25 +++++++-
+ tools/console/heresy-i18n-ru.js |  25 +++++++-
+ tools/console/heresy-i18n-uk.js |  25 +++++++-
+ tools/console/heresy-i18n-zh.js |  25 +++++++-
+ tools/console/heresy-train.js   |  54 +++++++++++-----
+ tools/console/loras.js          | 108 +++++++++++++++++++++++++++++---
+ 15 files changed, 436 insertions(+), 32 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index aba6919..087f47c 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -6008,3 +6008,10 @@ body:has(#view-engine:not(.is-hidden)) :is(.topbar, #playbar) { z-index: 37; }
+ .find-bar .find-btn { height: 28px; padding-top: 0; padding-bottom: 0; }   /* the find bar's buttons the field's height */
+ .lyr-tog.free-tempo { --fs: calc(var(--fs-g) + var(--fs-frame)); }   /* Free tempo the lyrics' toggles' size (1419): they take their row's size, not the buttons' step */
+ .submit-note { line-height: 1.25; }   /* the note beside Generate in two lines when the buttons are wider stays within their 32 px: no line of its own */
++/* HERESY 1496: Show hidden in the LoRAs head, at its right; a hidden adapter in sight marked */
++.lora-show-hidden { float: right; display: inline-flex; align-items: center; gap: 5px; text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--dim); cursor: pointer; }
++.lora-show-hidden[hidden] { display: none; }
++.lora-show-hidden input { margin: 0; }
++.lora-pick.is-hidden-lora { opacity: .5; border-style: dashed; }
++.lora-pick.is-hidden-lora:hover { opacity: .8; }
++.lora-row.is-missing > .lora-who { cursor: pointer; }   /* its question again */
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 2b5f038..30684e0 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -1384,6 +1384,25 @@
+     lyricsText: function () { return $("lyrics").value; }, // HERESY 1095: an instrumental score adapter with words to sing
+     // HERESY 1167 (Viktor: «адаптер из локального тренинга… Убрать из списка (адаптер в своей сессии Тренера)»): out of loras/,
+     // its checkpoint still in its run; the Trainer puts it back
++    // HERESY 1496: an adapter's files out of loras/ for good: the lab says first what goes (a folder left with no adapter goes with them)
++    deleteFiles: function (ids, name) {
++      var mb = function (n) { return n >= 1073741824 ? (n / 1073741824).toFixed(1) + " GB" : (n / 1048576).toFixed(n >= 10485760 ? 0 : 1) + " MB"; };
++      var ask = function (dry) { return api("/lab/lora/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: ids, dry: dry }) }); };
++      ask(true).then(function (plan) {
++        return window.HeresyDialog.confirm(tr("Delete " + name + " from loras/ for good?") + "\n\n" +
++          tr("Gone from the disk, not into a trash: " + mb(plan.bytes) + ".") + "\n" + plan.files.join("\n") +
++          (plan.folders.length ? "\n\n" + tr("Its folder goes with them (no other adapter is left in it): " + plan.folders.join(", ")) : "") + "\n\n" +
++          tr("An adapter of your own run stays in the Trainer while its checkpoint is there; a downloaded one comes back only by downloading it again."),
++          { ok: tr("Delete for good"), danger: true }).then(function (ok) {
++          if (!ok) return;
++          return ask(false).then(function (done) {
++            YueLoras.set(YueLoras.kept().filter(function (c) { return ids.indexOf(c.id) < 0; }), YueLoras.groups ? YueLoras.groups() : []);
++            toast(tr(name + " is deleted from loras/ (" + mb(done.bytes) + " freed)"));
++            pollProps();
++          });
++        });
++      }).catch(function (error) { toast(error.message, "bad"); pollProps(); });
++    },
+     unpublish: function (ids) {
+       Promise.all(ids.map(function (id) {
+         var parts = id.split("/");
+@@ -1878,6 +1897,11 @@
+   var lintAnswered = false;
+   $("composeForm").addEventListener("submit", function (event) {
+     event.preventDefault();
++    // HERESY 1496: an adapter of the song gone from loras/ is never sent: another in its place, out of the song, or the song waits
++    if (window.YueLoras && YueLoras.missing && YueLoras.missing().length) {
++      if (!YueLoras.askMissing(true)) toast(tr("An adapter of the song is not in loras/ any more: answer its question first"), "bad");
++      return;
++    }
+     if (!lintAnswered && window.HeresyLyrics && window.HeresyDialog) {
+       var broken = window.HeresyLyrics.lint($("lyrics").value).filter(function (f) { return f.bad; });
+       if (broken.length) {
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 42117e4..374029f 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5415,5 +5415,28 @@ RuachI18n.add("be", {
+ "{0}: what it carries could not be read ({1})": "{0}: не ўдалося прачытаць, што ў ім ({1})",
+ "IBM Plex Mono, as they were": "IBM Plex Mono, як было",
+ "The font of the sections' names drawn on the wave and on its scope; Raleway by default": "Шрыфт назваў секцый на хвалі і на яе выглядзе зверху; па змаўчанні Raleway",
+-"The font of every button with words, the toggles and the menus' items; Jura by default": "Шрыфт усіх кнопак са словамі, пераключальнікаў і пунктаў меню; па змаўчанні Jura"
++"The font of every button with words, the toggles and the menus' items; Jura by default": "Шрыфт усіх кнопак са словамі, пераключальнікаў і пунктаў меню; па змаўчанні Jura",
++"{0} is not in loras/ any more": "{0} больш няма ў loras/",
++"It is still among the song's adapters. Take one of these in its place (a name like its own: the same run, another epoch or suffix; its strengths kept), or take it out of the song.": "Ён дагэтуль сярод адаптараў песні. Пастаў на яго месца адзін з гэтых (імя падобнае: той жа ран, іншая эпоха ці суфікс; сілы захаваюцца) або прыбяры яго з песні.",
++"It is still among the song's adapters, and nothing in loras/ goes by a name like it. Take it out of the song, or leave it for now: the song is not made while it is there.": "Ён дагэтуль сярод адаптараў песні, а ў loras/ няма нічога з падобным імем. Прыбяры яго з песні або пакінь пакуль: пакуль ён там, песня не ствараецца.",
++"Show it in the list again": "Зноў паказаць у спісе",
++"Hide from the list (Show hidden brings it back)": "Схаваць са спісу (верне «Паказаць схаваныя»)",
++"Delete from loras/ for good…": "Выдаліць з loras/ назаўсёды…",
++"Show hidden": "Паказаць схаваныя",
++"The adapters hidden from the list (a right-click on one hides it), back in sight, marked": "Схаваныя са спісу адаптары (хавае правы клік па адаптары) зноў на віду, з пазнакай",
++"An adapter of the song is not in loras/ any more: answer its question first": "Адаптара песні больш няма ў loras/: спачатку адкажы на яго пытанне",
++"Delete {0} from loras/ for good?": "Выдаліць {0} з loras/ назаўсёды?",
++"Gone from the disk, not into a trash: {0}.": "Знікае з дыска, не ў сметніцу: {0}.",
++"Its folder goes with them (no other adapter is left in it): {0}": "Яго тэчка сыходзіць разам з імі (іншых адаптараў у ёй не застаецца): {0}",
++"An adapter of your own run stays in the Trainer while its checkpoint is there; a downloaded one comes back only by downloading it again.": "Адаптар твайго рану застаецца ў Трэнеры, пакуль там яго чэкпойнт; спампаваны вернецца толькі новым спампоўваннем.",
++"{0} is deleted from loras/ ({1} freed)": "{0} выдалены з loras/ (вызвалена {1})",
++"a click: into the Creator’s LoRAs or out of them; a right-click: its file ·": "клік: у LoRA Творцы або з іх; правы клік: яго файл ·",
++"In loras/ now, in the Creator as {0}.": "Цяпер у loras/, у Творцы як {0}.",
++"Not in loras/ now.": "Цяпер не ў loras/.",
++"IN: into loras/": "IN: у loras/",
++"OUT: out of loras/": "OUT: з loras/",
++"Already in loras/ as {0}": "Ужо ў loras/ як {0}",
++"The final file goes into loras/ by its epoch: pick the last one": "Фінальны файл ідзе ў loras/ сваёй эпохай: выберы апошнюю",
++"Not in loras/: nothing to take out": "Не ў loras/: прыбіраць няма чаго",
++"IN or OUT…": "IN ці OUT…"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 6535c4f..9b3833c 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5298,5 +5298,28 @@ RuachI18n.add("de", {
+ "{0}: what it carries could not be read ({1})": "{0}: nicht lesbar, was er enthält ({1})",
+ "IBM Plex Mono, as they were": "IBM Plex Mono, wie bisher",
+ "The font of the sections' names drawn on the wave and on its scope; Raleway by default": "Die Schrift der Abschnittsnamen auf der Welle und ihrer Ansicht; standardmäßig Raleway",
+-"The font of every button with words, the toggles and the menus' items; Jura by default": "Die Schrift aller Schaltflächen mit Worten, der Schalter und der Menüeinträge; standardmäßig Jura"
++"The font of every button with words, the toggles and the menus' items; Jura by default": "Die Schrift aller Schaltflächen mit Worten, der Schalter und der Menüeinträge; standardmäßig Jura",
++"{0} is not in loras/ any more": "{0} ist nicht mehr in loras/",
++"It is still among the song's adapters. Take one of these in its place (a name like its own: the same run, another epoch or suffix; its strengths kept), or take it out of the song.": "Er ist noch unter den Adaptern des Songs. Einen von diesen an seine Stelle setzen (ein Name wie seiner: derselbe Lauf, eine andere Epoche oder Endung; seine Stärken bleiben) oder ihn aus dem Song nehmen.",
++"It is still among the song's adapters, and nothing in loras/ goes by a name like it. Take it out of the song, or leave it for now: the song is not made while it is there.": "Er ist noch unter den Adaptern des Songs, und nichts in loras/ trägt einen ähnlichen Namen. Ihn aus dem Song nehmen oder vorerst lassen: solange er da ist, entsteht der Song nicht.",
++"Show it in the list again": "Wieder in der Liste zeigen",
++"Hide from the list (Show hidden brings it back)": "Aus der Liste ausblenden (Ausgeblendete zeigen holt ihn zurück)",
++"Delete from loras/ for good…": "Endgültig aus loras/ löschen…",
++"Show hidden": "Ausgeblendete zeigen",
++"The adapters hidden from the list (a right-click on one hides it), back in sight, marked": "Die aus der Liste ausgeblendeten Adapter (ein Rechtsklick auf einen blendet ihn aus), wieder sichtbar, markiert",
++"An adapter of the song is not in loras/ any more: answer its question first": "Ein Adapter des Songs ist nicht mehr in loras/: zuerst seine Frage beantworten",
++"Delete {0} from loras/ for good?": "{0} endgültig aus loras/ löschen?",
++"Gone from the disk, not into a trash: {0}.": "Weg von der Platte, nicht in einen Papierkorb: {0}.",
++"Its folder goes with them (no other adapter is left in it): {0}": "Sein Ordner geht mit (kein anderer Adapter bleibt darin): {0}",
++"An adapter of your own run stays in the Trainer while its checkpoint is there; a downloaded one comes back only by downloading it again.": "Ein hier trainierter Adapter bleibt im Trainer, solange sein Checkpoint dort ist; ein heruntergeladener kommt nur durch erneutes Herunterladen zurück.",
++"{0} is deleted from loras/ ({1} freed)": "{0} aus loras/ gelöscht ({1} frei)",
++"a click: into the Creator’s LoRAs or out of them; a right-click: its file ·": "ein Klick: in die LoRAs des Schöpfers oder aus ihnen heraus; Rechtsklick: seine Datei ·",
++"In loras/ now, in the Creator as {0}.": "Jetzt in loras/, im Schöpfer als {0}.",
++"Not in loras/ now.": "Jetzt nicht in loras/.",
++"IN: into loras/": "IN: nach loras/",
++"OUT: out of loras/": "OUT: aus loras/",
++"Already in loras/ as {0}": "Schon in loras/ als {0}",
++"The final file goes into loras/ by its epoch: pick the last one": "Die letzte Datei kommt über ihre Epoche nach loras/: die letzte Epoche wählen",
++"Not in loras/: nothing to take out": "Nicht in loras/: nichts herauszunehmen",
++"IN or OUT…": "IN oder OUT…"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index fc07bc2..c3531fe 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5414,5 +5414,28 @@ RuachI18n.add("el", {
+ "{0}: what it carries could not be read ({1})": "{0}: δεν διαβάστηκε τι περιέχει ({1})",
+ "IBM Plex Mono, as they were": "IBM Plex Mono, όπως ήταν",
+ "The font of the sections' names drawn on the wave and on its scope; Raleway by default": "Η γραμματοσειρά των ονομάτων των ενοτήτων στο κύμα και στην προβολή του· προεπιλογή Raleway",
+-"The font of every button with words, the toggles and the menus' items; Jura by default": "Η γραμματοσειρά κάθε κουμπιού με λέξεις, των διακοπτών και των στοιχείων των μενού· προεπιλογή Jura"
++"The font of every button with words, the toggles and the menus' items; Jura by default": "Η γραμματοσειρά κάθε κουμπιού με λέξεις, των διακοπτών και των στοιχείων των μενού· προεπιλογή Jura",
++"{0} is not in loras/ any more": "Το {0} δεν είναι πια στο loras/",
++"It is still among the song's adapters. Take one of these in its place (a name like its own: the same run, another epoch or suffix; its strengths kept), or take it out of the song.": "Είναι ακόμη στους προσαρμογείς του τραγουδιού. Βάλε στη θέση του έναν από αυτούς (όνομα σαν το δικό του: η ίδια εκτέλεση, άλλη εποχή ή κατάληξη· οι ισχύεις του μένουν) ή βγάλ' τον από το τραγούδι.",
++"It is still among the song's adapters, and nothing in loras/ goes by a name like it. Take it out of the song, or leave it for now: the song is not made while it is there.": "Είναι ακόμη στους προσαρμογείς του τραγουδιού, και τίποτα στο loras/ δεν έχει παρόμοιο όνομα. Βγάλ' τον από το τραγούδι ή άφησέ τον προς το παρόν: όσο είναι εκεί, το τραγούδι δεν φτιάχνεται.",
++"Show it in the list again": "Εμφάνιση ξανά στη λίστα",
++"Hide from the list (Show hidden brings it back)": "Απόκρυψη από τη λίστα (το «Εμφάνιση κρυφών» τον φέρνει πίσω)",
++"Delete from loras/ for good…": "Οριστική διαγραφή από το loras/…",
++"Show hidden": "Εμφάνιση κρυφών",
++"The adapters hidden from the list (a right-click on one hides it), back in sight, marked": "Οι προσαρμογείς που κρύφτηκαν από τη λίστα (τους κρύβει ένα δεξί κλικ) ξανά σε θέα, σημαδεμένοι",
++"An adapter of the song is not in loras/ any more: answer its question first": "Ένας προσαρμογέας του τραγουδιού δεν είναι πια στο loras/: απάντησε πρώτα στην ερώτησή του",
++"Delete {0} from loras/ for good?": "Οριστική διαγραφή του {0} από το loras/;",
++"Gone from the disk, not into a trash: {0}.": "Φεύγει από τον δίσκο, όχι σε κάδο: {0}.",
++"Its folder goes with them (no other adapter is left in it): {0}": "Ο φάκελός του φεύγει μαζί τους (δεν μένει άλλος προσαρμογέας μέσα): {0}",
++"An adapter of your own run stays in the Trainer while its checkpoint is there; a downloaded one comes back only by downloading it again.": "Ένας προσαρμογέας εκπαιδευμένος εδώ μένει στον Εκπαιδευτή όσο υπάρχει το checkpoint του· ένας κατεβασμένος γυρίζει μόνο αν κατέβει ξανά.",
++"{0} is deleted from loras/ ({1} freed)": "Το {0} διαγράφηκε από το loras/ (ελευθερώθηκαν {1})",
++"a click: into the Creator’s LoRAs or out of them; a right-click: its file ·": "κλικ: στις LoRA του Δημιουργού ή έξω από αυτές· δεξί κλικ: το αρχείο της ·",
++"In loras/ now, in the Creator as {0}.": "Τώρα στο loras/, στον Δημιουργό ως {0}.",
++"Not in loras/ now.": "Τώρα δεν είναι στο loras/.",
++"IN: into loras/": "IN: στο loras/",
++"OUT: out of loras/": "OUT: έξω από το loras/",
++"Already in loras/ as {0}": "Ήδη στο loras/ ως {0}",
++"The final file goes into loras/ by its epoch: pick the last one": "Το τελικό αρχείο μπαίνει στο loras/ με την εποχή του: διάλεξε την τελευταία",
++"Not in loras/: nothing to take out": "Δεν είναι στο loras/: τίποτα για αφαίρεση",
++"IN or OUT…": "IN ή OUT…"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 999b1ba..213e5c5 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5414,5 +5414,28 @@ RuachI18n.add("es", {
+ "{0}: what it carries could not be read ({1})": "{0}: no se pudo leer lo que lleva ({1})",
+ "IBM Plex Mono, as they were": "IBM Plex Mono, como estaban",
+ "The font of the sections' names drawn on the wave and on its scope; Raleway by default": "La fuente de los nombres de las secciones en la onda y en su vista; por defecto Raleway",
+-"The font of every button with words, the toggles and the menus' items; Jura by default": "La fuente de todos los botones con palabras, los interruptores y los elementos de los menús; por defecto Jura"
++"The font of every button with words, the toggles and the menus' items; Jura by default": "La fuente de todos los botones con palabras, los interruptores y los elementos de los menús; por defecto Jura",
++"{0} is not in loras/ any more": "{0} ya no está en loras/",
++"It is still among the song's adapters. Take one of these in its place (a name like its own: the same run, another epoch or suffix; its strengths kept), or take it out of the song.": "Sigue entre los adaptadores de la canción. Poner uno de estos en su lugar (un nombre como el suyo: la misma ejecución, otra época o sufijo; sus fuerzas se guardan) o quitarlo de la canción.",
++"It is still among the song's adapters, and nothing in loras/ goes by a name like it. Take it out of the song, or leave it for now: the song is not made while it is there.": "Sigue entre los adaptadores de la canción, y nada en loras/ tiene un nombre parecido. Quitarlo de la canción o dejarlo por ahora: mientras esté ahí, la canción no se hace.",
++"Show it in the list again": "Mostrarlo de nuevo en la lista",
++"Hide from the list (Show hidden brings it back)": "Ocultar de la lista (Mostrar ocultos lo devuelve)",
++"Delete from loras/ for good…": "Borrar de loras/ para siempre…",
++"Show hidden": "Mostrar ocultos",
++"The adapters hidden from the list (a right-click on one hides it), back in sight, marked": "Los adaptadores ocultos de la lista (un clic derecho en uno lo oculta), de nuevo a la vista, marcados",
++"An adapter of the song is not in loras/ any more: answer its question first": "Un adaptador de la canción ya no está en loras/: responder antes a su pregunta",
++"Delete {0} from loras/ for good?": "¿Borrar {0} de loras/ para siempre?",
++"Gone from the disk, not into a trash: {0}.": "Se va del disco, no a una papelera: {0}.",
++"Its folder goes with them (no other adapter is left in it): {0}": "Su carpeta se va con ellos (no queda otro adaptador en ella): {0}",
++"An adapter of your own run stays in the Trainer while its checkpoint is there; a downloaded one comes back only by downloading it again.": "Un adaptador entrenado aquí queda en el Entrenador mientras esté su checkpoint; uno descargado solo vuelve descargándolo otra vez.",
++"{0} is deleted from loras/ ({1} freed)": "{0} borrado de loras/ ({1} liberados)",
++"a click: into the Creator’s LoRAs or out of them; a right-click: its file ·": "un clic: a las LoRA del Creador o fuera de ellas; clic derecho: su archivo ·",
++"In loras/ now, in the Creator as {0}.": "Ahora en loras/, en el Creador como {0}.",
++"Not in loras/ now.": "Ahora no está en loras/.",
++"IN: into loras/": "IN: a loras/",
++"OUT: out of loras/": "OUT: fuera de loras/",
++"Already in loras/ as {0}": "Ya está en loras/ como {0}",
++"The final file goes into loras/ by its epoch: pick the last one": "El archivo final entra en loras/ por su época: elegir la última",
++"Not in loras/: nothing to take out": "No está en loras/: nada que quitar",
++"IN or OUT…": "IN u OUT…"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index 87da450..e99feda 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5298,5 +5298,28 @@ RuachI18n.add("fr", {
+ "{0}: what it carries could not be read ({1})": "{0} : impossible de lire ce qu'il contient ({1})",
+ "IBM Plex Mono, as they were": "IBM Plex Mono, comme avant",
+ "The font of the sections' names drawn on the wave and on its scope; Raleway by default": "La police des noms des sections sur l'onde et sur sa vue ; par défaut Raleway",
+-"The font of every button with words, the toggles and the menus' items; Jura by default": "La police de chaque bouton avec des mots, des bascules et des éléments des menus ; par défaut Jura"
++"The font of every button with words, the toggles and the menus' items; Jura by default": "La police de chaque bouton avec des mots, des bascules et des éléments des menus ; par défaut Jura",
++"{0} is not in loras/ any more": "{0} n'est plus dans loras/",
++"It is still among the song's adapters. Take one of these in its place (a name like its own: the same run, another epoch or suffix; its strengths kept), or take it out of the song.": "Il est encore parmi les adaptateurs de la chanson. Mettre l'un de ceux-ci à sa place (un nom comme le sien : la même session, une autre époque ou un autre suffixe ; ses forces gardées) ou le retirer de la chanson.",
++"It is still among the song's adapters, and nothing in loras/ goes by a name like it. Take it out of the song, or leave it for now: the song is not made while it is there.": "Il est encore parmi les adaptateurs de la chanson, et rien dans loras/ ne porte un nom semblable. Le retirer de la chanson, ou le laisser pour l'instant : tant qu'il est là, la chanson ne se fait pas.",
++"Show it in the list again": "Le montrer de nouveau dans la liste",
++"Hide from the list (Show hidden brings it back)": "Masquer de la liste (Afficher les masqués le ramène)",
++"Delete from loras/ for good…": "Supprimer de loras/ pour de bon…",
++"Show hidden": "Afficher les masqués",
++"The adapters hidden from the list (a right-click on one hides it), back in sight, marked": "Les adaptateurs masqués de la liste (un clic droit sur l'un le masque), de nouveau en vue, marqués",
++"An adapter of the song is not in loras/ any more: answer its question first": "Un adaptateur de la chanson n'est plus dans loras/ : répondre d'abord à sa question",
++"Delete {0} from loras/ for good?": "Supprimer {0} de loras/ pour de bon ?",
++"Gone from the disk, not into a trash: {0}.": "Disparaît du disque, pas dans une corbeille : {0}.",
++"Its folder goes with them (no other adapter is left in it): {0}": "Son dossier part avec eux (aucun autre adaptateur n'y reste) : {0}",
++"An adapter of your own run stays in the Trainer while its checkpoint is there; a downloaded one comes back only by downloading it again.": "Un adaptateur entraîné ici reste dans l'Entraîneur tant que son point de contrôle y est ; un adaptateur téléchargé ne revient qu'en le téléchargeant de nouveau.",
++"{0} is deleted from loras/ ({1} freed)": "{0} supprimé de loras/ ({1} libérés)",
++"a click: into the Creator’s LoRAs or out of them; a right-click: its file ·": "un clic : dans les LoRA du Créateur ou hors d'eux ; clic droit : son fichier ·",
++"In loras/ now, in the Creator as {0}.": "Dans loras/ maintenant, dans le Créateur comme {0}.",
++"Not in loras/ now.": "Pas dans loras/ maintenant.",
++"IN: into loras/": "IN : dans loras/",
++"OUT: out of loras/": "OUT : hors de loras/",
++"Already in loras/ as {0}": "Déjà dans loras/ comme {0}",
++"The final file goes into loras/ by its epoch: pick the last one": "Le fichier final entre dans loras/ par son époque : choisir la dernière",
++"Not in loras/: nothing to take out": "Pas dans loras/ : rien à retirer",
++"IN or OUT…": "IN ou OUT…"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 73ad3e5..02add36 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5414,5 +5414,28 @@ RuachI18n.add("it", {
+ "{0}: what it carries could not be read ({1})": "{0}: non si è potuto leggere cosa contiene ({1})",
+ "IBM Plex Mono, as they were": "IBM Plex Mono, come prima",
+ "The font of the sections' names drawn on the wave and on its scope; Raleway by default": "Il carattere dei nomi delle sezioni sull'onda e sulla sua vista; predefinito Raleway",
+-"The font of every button with words, the toggles and the menus' items; Jura by default": "Il carattere di ogni pulsante con parole, degli interruttori e delle voci dei menu; predefinito Jura"
++"The font of every button with words, the toggles and the menus' items; Jura by default": "Il carattere di ogni pulsante con parole, degli interruttori e delle voci dei menu; predefinito Jura",
++"{0} is not in loras/ any more": "{0} non è più in loras/",
++"It is still among the song's adapters. Take one of these in its place (a name like its own: the same run, another epoch or suffix; its strengths kept), or take it out of the song.": "È ancora tra gli adattatori della canzone. Mettere uno di questi al suo posto (un nome come il suo: la stessa esecuzione, un'altra epoca o suffisso; le sue forze restano) o toglierlo dalla canzone.",
++"It is still among the song's adapters, and nothing in loras/ goes by a name like it. Take it out of the song, or leave it for now: the song is not made while it is there.": "È ancora tra gli adattatori della canzone, e niente in loras/ ha un nome simile. Toglierlo dalla canzone o lasciarlo per ora: finché è lì, la canzone non si fa.",
++"Show it in the list again": "Mostrarlo di nuovo nell'elenco",
++"Hide from the list (Show hidden brings it back)": "Nascondi dall'elenco (Mostra nascosti lo riporta)",
++"Delete from loras/ for good…": "Elimina da loras/ per sempre…",
++"Show hidden": "Mostra nascosti",
++"The adapters hidden from the list (a right-click on one hides it), back in sight, marked": "Gli adattatori nascosti dall'elenco (un clic destro su uno lo nasconde), di nuovo in vista, segnati",
++"An adapter of the song is not in loras/ any more: answer its question first": "Un adattatore della canzone non è più in loras/: rispondere prima alla sua domanda",
++"Delete {0} from loras/ for good?": "Eliminare {0} da loras/ per sempre?",
++"Gone from the disk, not into a trash: {0}.": "Sparisce dal disco, non in un cestino: {0}.",
++"Its folder goes with them (no other adapter is left in it): {0}": "La sua cartella se ne va con loro (non resta altro adattatore dentro): {0}",
++"An adapter of your own run stays in the Trainer while its checkpoint is there; a downloaded one comes back only by downloading it again.": "Un adattatore addestrato qui resta nell'Allenatore finché c'è il suo checkpoint; uno scaricato torna solo scaricandolo di nuovo.",
++"{0} is deleted from loras/ ({1} freed)": "{0} eliminato da loras/ ({1} liberati)",
++"a click: into the Creator’s LoRAs or out of them; a right-click: its file ·": "un clic: nelle LoRA del Creatore o fuori da esse; clic destro: il suo file ·",
++"In loras/ now, in the Creator as {0}.": "Ora in loras/, nel Creatore come {0}.",
++"Not in loras/ now.": "Ora non è in loras/.",
++"IN: into loras/": "IN: in loras/",
++"OUT: out of loras/": "OUT: fuori da loras/",
++"Already in loras/ as {0}": "Già in loras/ come {0}",
++"The final file goes into loras/ by its epoch: pick the last one": "Il file finale entra in loras/ con la sua epoca: scegliere l'ultima",
++"Not in loras/: nothing to take out": "Non è in loras/: niente da togliere",
++"IN or OUT…": "IN o OUT…"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index b42f225..0462ad5 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5298,5 +5298,28 @@ RuachI18n.add("ja", {
+ "{0}: what it carries could not be read ({1})": "{0}：中身を読めませんでした（{1}）",
+ "IBM Plex Mono, as they were": "IBM Plex Mono（従来どおり）",
+ "The font of the sections' names drawn on the wave and on its scope; Raleway by default": "波形とそのスコープに描くセクション名のフォント。既定は Raleway",
+-"The font of every button with words, the toggles and the menus' items; Jura by default": "文字のあるボタン、切り替え、メニュー項目のフォント。既定は Jura"
++"The font of every button with words, the toggles and the menus' items; Jura by default": "文字のあるボタン、切り替え、メニュー項目のフォント。既定は Jura",
++"{0} is not in loras/ any more": "{0} は loras/ にもうありません",
++"It is still among the song's adapters. Take one of these in its place (a name like its own: the same run, another epoch or suffix; its strengths kept), or take it out of the song.": "まだ曲のアダプターに入っています。代わりにこれらのどれかを入れる（似た名前：同じラン、別のエポックや接尾辞。強さはそのまま）か、曲から外してください。",
++"It is still among the song's adapters, and nothing in loras/ goes by a name like it. Take it out of the song, or leave it for now: the song is not made while it is there.": "まだ曲のアダプターに入っていますが、loras/ に似た名前のものはありません。曲から外すか、今は残してください。残っている間は曲は作られません。",
++"Show it in the list again": "一覧に再表示",
++"Hide from the list (Show hidden brings it back)": "一覧から隠す（「隠したものを表示」で戻る）",
++"Delete from loras/ for good…": "loras/ から完全に削除…",
++"Show hidden": "隠したものを表示",
++"The adapters hidden from the list (a right-click on one hides it), back in sight, marked": "一覧から隠したアダプター（右クリックで隠せます）を印付きで再表示",
++"An adapter of the song is not in loras/ any more: answer its question first": "曲のアダプターが loras/ にありません。先にその質問に答えてください",
++"Delete {0} from loras/ for good?": "{0} を loras/ から完全に削除しますか？",
++"Gone from the disk, not into a trash: {0}.": "ゴミ箱ではなくディスクから消えます：{0}。",
++"Its folder goes with them (no other adapter is left in it): {0}": "フォルダーも一緒に消えます（他のアダプターは残りません）：{0}",
++"An adapter of your own run stays in the Trainer while its checkpoint is there; a downloaded one comes back only by downloading it again.": "ここで学習したアダプターはチェックポイントがある限りトレーナーに残ります。ダウンロードしたものは再ダウンロードでしか戻りません。",
++"{0} is deleted from loras/ ({1} freed)": "{0} を loras/ から削除しました（{1} 解放）",
++"a click: into the Creator’s LoRAs or out of them; a right-click: its file ·": "クリック：クリエイターの LoRA へ入れる・外す、右クリック：ファイル ·",
++"In loras/ now, in the Creator as {0}.": "現在 loras/ にあり、クリエイターでは {0}。",
++"Not in loras/ now.": "現在 loras/ にはありません。",
++"IN: into loras/": "IN：loras/ へ",
++"OUT: out of loras/": "OUT：loras/ から出す",
++"Already in loras/ as {0}": "すでに loras/ に {0} としてあります",
++"The final file goes into loras/ by its epoch: pick the last one": "最終ファイルはそのエポックで loras/ に入ります。最後のエポックを選んでください",
++"Not in loras/: nothing to take out": "loras/ にありません。外すものはありません",
++"IN or OUT…": "IN か OUT…"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index ab863e4..d2f371e 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5298,5 +5298,28 @@ RuachI18n.add("pt", {
+ "{0}: what it carries could not be read ({1})": "{0}: não deu para ler o que ele traz ({1})",
+ "IBM Plex Mono, as they were": "IBM Plex Mono, como estavam",
+ "The font of the sections' names drawn on the wave and on its scope; Raleway by default": "A fonte dos nomes das secções na onda e na sua vista; por padrão Raleway",
+-"The font of every button with words, the toggles and the menus' items; Jura by default": "A fonte de todos os botões com palavras, dos interruptores e dos itens dos menus; por padrão Jura"
++"The font of every button with words, the toggles and the menus' items; Jura by default": "A fonte de todos os botões com palavras, dos interruptores e dos itens dos menus; por padrão Jura",
++"{0} is not in loras/ any more": "{0} já não está em loras/",
++"It is still among the song's adapters. Take one of these in its place (a name like its own: the same run, another epoch or suffix; its strengths kept), or take it out of the song.": "Ainda está entre os adaptadores da canção. Pôr um destes no lugar dele (um nome como o seu: a mesma execução, outra época ou sufixo; as forças ficam) ou tirá-lo da canção.",
++"It is still among the song's adapters, and nothing in loras/ goes by a name like it. Take it out of the song, or leave it for now: the song is not made while it is there.": "Ainda está entre os adaptadores da canção, e nada em loras/ tem um nome parecido. Tirá-lo da canção ou deixá-lo por agora: enquanto estiver lá, a canção não é feita.",
++"Show it in the list again": "Mostrar de novo na lista",
++"Hide from the list (Show hidden brings it back)": "Ocultar da lista (Mostrar ocultos o traz de volta)",
++"Delete from loras/ for good…": "Apagar de loras/ de vez…",
++"Show hidden": "Mostrar ocultos",
++"The adapters hidden from the list (a right-click on one hides it), back in sight, marked": "Os adaptadores ocultos da lista (um clique direito num deles oculta-o), de novo à vista, marcados",
++"An adapter of the song is not in loras/ any more: answer its question first": "Um adaptador da canção já não está em loras/: responder primeiro à pergunta dele",
++"Delete {0} from loras/ for good?": "Apagar {0} de loras/ de vez?",
++"Gone from the disk, not into a trash: {0}.": "Sai do disco, não vai para um lixo: {0}.",
++"Its folder goes with them (no other adapter is left in it): {0}": "A pasta dele vai junto (não resta outro adaptador nela): {0}",
++"An adapter of your own run stays in the Trainer while its checkpoint is there; a downloaded one comes back only by downloading it again.": "Um adaptador treinado aqui fica no Treinador enquanto o checkpoint dele lá estiver; um baixado só volta baixando-o de novo.",
++"{0} is deleted from loras/ ({1} freed)": "{0} apagado de loras/ ({1} libertados)",
++"a click: into the Creator’s LoRAs or out of them; a right-click: its file ·": "um clique: para os LoRAs do Criador ou para fora deles; clique direito: o seu arquivo ·",
++"In loras/ now, in the Creator as {0}.": "Agora em loras/, no Criador como {0}.",
++"Not in loras/ now.": "Agora não está em loras/.",
++"IN: into loras/": "IN: para loras/",
++"OUT: out of loras/": "OUT: fora de loras/",
++"Already in loras/ as {0}": "Já está em loras/ como {0}",
++"The final file goes into loras/ by its epoch: pick the last one": "O arquivo final entra em loras/ pela sua época: escolher a última",
++"Not in loras/: nothing to take out": "Não está em loras/: nada a tirar",
++"IN or OUT…": "IN ou OUT…"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index ecef1bf..804dc7c 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5420,5 +5420,28 @@ RuachI18n.add("ru", {
+ "{0}: what it carries could not be read ({1})": "{0}: не удалось прочесть, что в нём ({1})",
+ "IBM Plex Mono, as they were": "IBM Plex Mono, как было",
+ "The font of the sections' names drawn on the wave and on its scope; Raleway by default": "Шрифт названий секций на волне и на её виде сверху; по умолчанию Raleway",
+-"The font of every button with words, the toggles and the menus' items; Jura by default": "Шрифт всех кнопок со словами, переключателей и пунктов меню; по умолчанию Jura"
++"The font of every button with words, the toggles and the menus' items; Jura by default": "Шрифт всех кнопок со словами, переключателей и пунктов меню; по умолчанию Jura",
++"{0} is not in loras/ any more": "{0} больше нет в loras/",
++"It is still among the song's adapters. Take one of these in its place (a name like its own: the same run, another epoch or suffix; its strengths kept), or take it out of the song.": "Он всё ещё среди адаптеров песни. Поставь на его место один из этих (имя похоже на его: тот же ран, другая эпоха или суффикс; силы сохранятся) или убери его из песни.",
++"It is still among the song's adapters, and nothing in loras/ goes by a name like it. Take it out of the song, or leave it for now: the song is not made while it is there.": "Он всё ещё среди адаптеров песни, а в loras/ нет ничего с похожим именем. Убери его из песни или оставь пока: пока он там, песня не создаётся.",
++"Show it in the list again": "Снова показать в списке",
++"Hide from the list (Show hidden brings it back)": "Спрятать из списка (вернёт «Показать скрытые»)",
++"Delete from loras/ for good…": "Удалить из loras/ насовсем…",
++"Show hidden": "Показать скрытые",
++"The adapters hidden from the list (a right-click on one hides it), back in sight, marked": "Спрятанные из списка адаптеры (прячет правый клик по адаптеру) снова на виду, с пометкой",
++"An adapter of the song is not in loras/ any more: answer its question first": "Адаптера песни больше нет в loras/: сначала ответь на его вопрос",
++"Delete {0} from loras/ for good?": "Удалить {0} из loras/ насовсем?",
++"Gone from the disk, not into a trash: {0}.": "Уходит с диска, не в корзину: {0}.",
++"Its folder goes with them (no other adapter is left in it): {0}": "Его папка уходит вместе с ними (других адаптеров в ней не остаётся): {0}",
++"An adapter of your own run stays in the Trainer while its checkpoint is there; a downloaded one comes back only by downloading it again.": "Адаптер твоего рана остаётся в Тренере, пока там его чекпойнт; скачанный вернётся только новым скачиванием.",
++"{0} is deleted from loras/ ({1} freed)": "{0} удалён из loras/ (освобождено {1})",
++"a click: into the Creator’s LoRAs or out of them; a right-click: its file ·": "клик: в LoRA Творца или из них; правый клик: его файл ·",
++"In loras/ now, in the Creator as {0}.": "Сейчас в loras/, в Творце как {0}.",
++"Not in loras/ now.": "Сейчас не в loras/.",
++"IN: into loras/": "IN: в loras/",
++"OUT: out of loras/": "OUT: из loras/",
++"Already in loras/ as {0}": "Уже в loras/ как {0}",
++"The final file goes into loras/ by its epoch: pick the last one": "Финальный файл идёт в loras/ своей эпохой: выбери последнюю",
++"Not in loras/: nothing to take out": "Не в loras/: убирать нечего",
++"IN or OUT…": "IN или OUT…"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 5681a8e..296f4cf 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5415,5 +5415,28 @@ RuachI18n.add("uk", {
+ "{0}: what it carries could not be read ({1})": "{0}: не вдалося прочитати, що в ньому ({1})",
+ "IBM Plex Mono, as they were": "IBM Plex Mono, як було",
+ "The font of the sections' names drawn on the wave and on its scope; Raleway by default": "Шрифт назв секцій на хвилі та на її вигляді згори; типово Raleway",
+-"The font of every button with words, the toggles and the menus' items; Jura by default": "Шрифт усіх кнопок зі словами, перемикачів і пунктів меню; типово Jura"
++"The font of every button with words, the toggles and the menus' items; Jura by default": "Шрифт усіх кнопок зі словами, перемикачів і пунктів меню; типово Jura",
++"{0} is not in loras/ any more": "{0} більше немає в loras/",
++"It is still among the song's adapters. Take one of these in its place (a name like its own: the same run, another epoch or suffix; its strengths kept), or take it out of the song.": "Він досі серед адаптерів пісні. Постав на його місце один із цих (ім'я схоже: той самий ран, інша епоха чи суфікс; сили збережуться) або прибери його з пісні.",
++"It is still among the song's adapters, and nothing in loras/ goes by a name like it. Take it out of the song, or leave it for now: the song is not made while it is there.": "Він досі серед адаптерів пісні, а в loras/ немає нічого зі схожим ім'ям. Прибери його з пісні або залиш поки: доки він там, пісня не створюється.",
++"Show it in the list again": "Знову показати в списку",
++"Hide from the list (Show hidden brings it back)": "Сховати зі списку (поверне «Показати сховані»)",
++"Delete from loras/ for good…": "Видалити з loras/ назавжди…",
++"Show hidden": "Показати сховані",
++"The adapters hidden from the list (a right-click on one hides it), back in sight, marked": "Сховані зі списку адаптери (ховає правий клік по адаптеру) знову на виду, з позначкою",
++"An adapter of the song is not in loras/ any more: answer its question first": "Адаптера пісні більше немає в loras/: спершу дай відповідь на його питання",
++"Delete {0} from loras/ for good?": "Видалити {0} з loras/ назавжди?",
++"Gone from the disk, not into a trash: {0}.": "Зникає з диска, не в кошик: {0}.",
++"Its folder goes with them (no other adapter is left in it): {0}": "Його тека йде разом із ними (інших адаптерів у ній не лишається): {0}",
++"An adapter of your own run stays in the Trainer while its checkpoint is there; a downloaded one comes back only by downloading it again.": "Адаптер твого рану лишається в Тренері, доки там його чекпойнт; завантажений повернеться лише новим завантаженням.",
++"{0} is deleted from loras/ ({1} freed)": "{0} видалено з loras/ (звільнено {1})",
++"a click: into the Creator’s LoRAs or out of them; a right-click: its file ·": "клік: у LoRA Творця або з них; правий клік: його файл ·",
++"In loras/ now, in the Creator as {0}.": "Зараз у loras/, у Творці як {0}.",
++"Not in loras/ now.": "Зараз не в loras/.",
++"IN: into loras/": "IN: у loras/",
++"OUT: out of loras/": "OUT: з loras/",
++"Already in loras/ as {0}": "Уже в loras/ як {0}",
++"The final file goes into loras/ by its epoch: pick the last one": "Фінальний файл іде в loras/ своєю епохою: вибери останню",
++"Not in loras/: nothing to take out": "Не в loras/: прибирати нічого",
++"IN or OUT…": "IN чи OUT…"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index 6c8feed..7e4d8d3 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5298,5 +5298,28 @@ RuachI18n.add("zh", {
+ "{0}: what it carries could not be read ({1})": "{0}：无法读取其内容（{1}）",
+ "IBM Plex Mono, as they were": "IBM Plex Mono，保持原样",
+ "The font of the sections' names drawn on the wave and on its scope; Raleway by default": "波形及其视图上段落名称的字体；默认为 Raleway",
+-"The font of every button with words, the toggles and the menus' items; Jura by default": "所有带文字按钮、开关和菜单项的字体；默认为 Jura"
++"The font of every button with words, the toggles and the menus' items; Jura by default": "所有带文字按钮、开关和菜单项的字体；默认为 Jura",
++"{0} is not in loras/ any more": "{0} 已不在 loras/ 中",
++"It is still among the song's adapters. Take one of these in its place (a name like its own: the same run, another epoch or suffix; its strengths kept), or take it out of the song.": "它仍在歌曲的适配器中。用其中一个替代它（名字相近：同一次训练、另一轮次或后缀；强度保留），或将它移出歌曲。",
++"It is still among the song's adapters, and nothing in loras/ goes by a name like it. Take it out of the song, or leave it for now: the song is not made while it is there.": "它仍在歌曲的适配器中，而 loras/ 中没有名字相近的。将它移出歌曲，或暂时保留：它在那里时，歌曲不会生成。",
++"Show it in the list again": "重新在列表中显示",
++"Hide from the list (Show hidden brings it back)": "从列表中隐藏（“显示隐藏项”可找回）",
++"Delete from loras/ for good…": "从 loras/ 永久删除…",
++"Show hidden": "显示隐藏项",
++"The adapters hidden from the list (a right-click on one hides it), back in sight, marked": "从列表中隐藏的适配器（右键可隐藏）重新显示并带标记",
++"An adapter of the song is not in loras/ any more: answer its question first": "歌曲的一个适配器已不在 loras/ 中：请先回答它的问题",
++"Delete {0} from loras/ for good?": "从 loras/ 永久删除 {0}？",
++"Gone from the disk, not into a trash: {0}.": "从磁盘删除，不进回收站：{0}。",
++"Its folder goes with them (no other adapter is left in it): {0}": "其文件夹一并删除（里面不再有其他适配器）：{0}",
++"An adapter of your own run stays in the Trainer while its checkpoint is there; a downloaded one comes back only by downloading it again.": "在这里训练的适配器只要检查点还在，就留在训练器中；下载的只能重新下载才能找回。",
++"{0} is deleted from loras/ ({1} freed)": "已从 loras/ 删除 {0}（释放 {1}）",
++"a click: into the Creator’s LoRAs or out of them; a right-click: its file ·": "单击：放进创作室的 LoRA 或移出；右键：其文件 ·",
++"In loras/ now, in the Creator as {0}.": "现在在 loras/ 中，在创作室里名为 {0}。",
++"Not in loras/ now.": "现在不在 loras/ 中。",
++"IN: into loras/": "IN：放入 loras/",
++"OUT: out of loras/": "OUT：移出 loras/",
++"Already in loras/ as {0}": "已在 loras/ 中，名为 {0}",
++"The final file goes into loras/ by its epoch: pick the last one": "最终文件按其轮次放入 loras/：请选择最后一轮",
++"Not in loras/: nothing to take out": "不在 loras/ 中：无需移出",
++"IN or OUT…": "IN 或 OUT…"
+ });
+diff --git a/tools/console/heresy-train.js b/tools/console/heresy-train.js
+index 3decf4c..fac7e55 100644
+--- a/tools/console/heresy-train.js
++++ b/tools/console/heresy-train.js
+@@ -14,7 +14,7 @@
+ 
+   var KINDS = {
+     style:    { label: "Style", say: "genre, production, a band's sound", o: { rank: 32, epochs: 40, ar_loss_weight: 0.5, ar_kl_weight: 0.2, ar_lr_multiplier: 0.5 } },
+-    voice:    { label: "Voice", say: "one singer's timbre", o: { rank: 16, epochs: 30, ar_loss_weight: 0.3, ar_kl_weight: 0.3, ar_lr_multiplier: 0.5 } },
++    voice:    { label: "Voice", say: "one singer's timbre", o: { rank: 32 /* HERESY 1496 (Viktor: «нужно r32»): r16 did not carry a voice's texture */, epochs: 30, ar_loss_weight: 0.3, ar_kl_weight: 0.3, ar_lr_multiplier: 0.5 } },
+     language: { label: "Language", say: "diction of a language; exact lyrics, many voices", o: { rank: 32, epochs: 20, ar_loss_weight: 1.0, ar_kl_weight: 0.1, ar_lr_multiplier: 1.0 } },
+     artist:   { label: "Artist", say: "all of it; a large, varied catalogue", o: { rank: 32, epochs: 20, ar_loss_weight: 0.7, ar_kl_weight: 0.2, ar_lr_multiplier: 0.7 } }
+   };
+@@ -488,18 +488,11 @@
+           "How well the music half predicts the song’s own tokens. Lower is better; close to 0 it knows the songs by heart, and an earlier epoch is then the better adapter.") +
+       "</div>" +
+       (cks.length ? '<div class="tr-epochs"><div class="tr-ehead"><span class="label">Epochs · ' + cks.length + " saved · " + gb(bytes) + "</span>" +
+-          '<span class="row-hint">pick one: into the Creator’s LoRAs, out of them, or as a file \u00b7 <span class="tr-key-cand"></span> worth hearing first, read off the curves (a guess: the ear decides) \u00b7 \u2713 in loras/</span></div>' +
++          '<span class="row-hint">a click: into the Creator’s LoRAs or out of them; a right-click: its file \u00b7 <span class="tr-key-cand"></span> worth hearing first, read off the curves (a guess: the ear decides) \u00b7 \u2713 in loras/</span></div>' +
+         '<div class="tr-echips">' + cks.map(function (c) {
+           var why = cand[c.file];
+           return '<button type="button" class="coll-chip' + (c.lora ? " is-in" : "") + (why ? " is-cand" : "") + (c.file === state.epoch ? " is-on" : "") + '" data-epoch="' + esc(c.file) + '" data-tip="' + esc([tr("step " + c.step), when(c.saved), c.lora ? tr("in loras/") : "", why ? tr("worth hearing first: " + why) : ""].filter(Boolean).join(" · ")) + '">' + (c.epoch != null ? "e" + Math.round(c.epoch) : "final") + (c.lora ? " ✓" : "") + "</button>";
+         }).join("") + "</div>" +
+-        (pick ? '<div class="tr-eact"><span><b>' + (pick.epoch != null ? "Epoch " + Math.round(pick.epoch) : "The final file") + "</b> · <span>step " + pick.step + "</span> · <span>" + esc(when(pick.saved)) + "</span> · <span>" + gb(pick.bytes) + "</span>" +   // HERESY 1166
+-            (pick.lora ? ' · <span>in the Creator as</span> <code>' + esc(pick.lora.split("/").pop().replace(/\.safetensors$/, "")) + "</code>" : "") +
+-            (cand[pick.file] ? ' · <span class="tr-candsay">worth hearing first: ' + esc(cand[pick.file]) + "</span>" : "") + "</span>" +
+-            '<span class="spacer"></span>' +
+-            (pick.lora ? '<button type="button" class="btn ghost small" data-unpub="' + esc(pick.lora.split("/").pop()) + '">Out of loras/</button>'
+-                       : (pick.epoch != null ? '<button type="button" class="btn small primary" data-pub="' + esc(pick.file) + '">Into loras/ → the Creator</button>' : "")) +
+-            '<a class="btn ghost small" download href="/lab/train/file?name=' + encodeURIComponent(r.name) + "&file=" + encodeURIComponent(pick.file) + '">Download</a></div>' : "") +
+         "</div>" : "") +
+       '<details class="tr-facts"><summary>What it was given</summary><div class="tr-fgrid">' +
+         "<span><em>set</em> <span translate=\"no\">" + esc(r.dataset) + "</span>" + (r.tracks ? " · <span>" + r.tracks + " tracks</span>" : "") + "</span>" +   // HERESY 1166
+@@ -535,11 +528,30 @@
+     var r = runOf(state.sel);
+     api("/train/publish", { name: r.name, file: file }).then(function (d) { toast("In loras/: " + d.lora + " — ready in the Creator"); load(); }).catch(function (e) { toast(e.message, true); });
+   }
+-  function unpublish(lora) {
++  function unpublish(lora) {                        // HERESY 1496: OUT in the epoch's question is the word; no second one
+     var r = runOf(state.sel);
+-    confirmBox("Take " + lora + " out of loras/?\n\nIt leaves Create’s LoRAs; the checkpoint stays in the run, and a click puts it back.", { ok: "Take it out" })
+-      .then(function (ok) { if (ok) return api("/train/unpublish", { name: r.name, lora: lora }).then(function () { toast(lora + " is out of loras/"); load(); }); })
+-      .catch(function (e) { toast(e.message, true); });
++    api("/train/unpublish", { name: r.name, lora: lora }).then(function () { toast(lora + " is out of loras/"); load(); }).catch(function (e) { toast(e.message, true); });
++  }
++  // HERESY 1496 (Viktor 16.10.2026: «Предлагаю вообще убрать тот блок, и по клику на эпоху выводить модальное диалоговое окно с опциями действий -
++  // IN/OUT/Cancel»): an epoch's click asks what to do with it; its file to download by a right-click
++  function epochOf(file) { var r = runOf(state.sel); return r ? (r.checkpoints || []).filter(function (k) { return k.file === file; })[0] : null; }
++  function epochAsk(file) {
++    var r = runOf(state.sel), c = epochOf(file);
++    if (!r || !c) return;
++    var why = candidates(r)[file], as = c.lora ? c.lora.split("/").pop().replace(/\.safetensors$/, "") : "";
++    window.HeresyDialog.confirm((c.epoch != null ? tr("Epoch " + Math.round(c.epoch)) : tr("The final file")) + " \u00b7 " + r.name + "\n\n" +
++      [tr("step " + c.step), when(c.saved), gb(c.bytes)].filter(Boolean).join(" \u00b7 ") + "\n" +
++      (c.lora ? tr("In loras/ now, in the Creator as " + as + ".") : tr("Not in loras/ now.")) + (why ? "\n" + tr("worth hearing first: " + why) : ""),
++      { ok: tr("IN: into loras/"), alt: tr("OUT: out of loras/"), cancel: tr("Cancel") }).then(function (a) {
++      if (a === true) {
++        if (c.lora) return toast(tr("Already in loras/ as " + as));
++        if (c.epoch == null) return toast(tr("The final file goes into loras/ by its epoch: pick the last one"), true);
++        publish(file);
++      } else if (a === "alt") {
++        if (!c.lora) return toast(tr("Not in loras/: nothing to take out"));
++        unpublish(c.lora.split("/").pop());
++      }
++    });
+   }
+ 
+   // ------------------------------------------------------------------ 1 Material
+@@ -832,13 +844,27 @@
+       if ((b = t.closest("[data-act][data-run]"))) return act(b.dataset.run, b.dataset.act);
+       if ((b = t.closest("[data-restore]"))) return restore(b.dataset.restore);
+       if ((b = t.closest("[data-purge]"))) return purge(b.dataset.purge, b.dataset.name, b.dataset.size);
+-      if ((b = t.closest("[data-epoch]"))) { state.epoch = state.epoch === b.dataset.epoch ? "" : b.dataset.epoch; return paintRun(); }
++      if ((b = t.closest("[data-epoch]"))) { state.epoch = b.dataset.epoch; paintRun(); return epochAsk(b.dataset.epoch); }   // HERESY 1496
+       if ((b = t.closest("[data-pub]"))) return publish(b.dataset.pub);
+       if ((b = t.closest("[data-unpub]"))) return unpublish(b.dataset.unpub);
+       if ((b = t.closest("[data-open]"))) return openRun(b.dataset.open);
+     });
+     $("trRunList").addEventListener("keydown", function (e) { var c = e.target.closest(".tr-rcard[data-open]"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openRun(c.dataset.open); } });
+     $("trRunPane").addEventListener("mousemove", function (e) { if (e.target.closest(".tr-plot")) readout(e); });
++    // HERESY 1496: an epoch's file by a right-click (what to do with it, by a click)
++    $("trRunPane").addEventListener("contextmenu", function (e) {
++      var b = e.target.closest("[data-epoch]"), r = runOf(state.sel), c = b && epochOf(b.dataset.epoch);
++      if (!c || !r || !window.HeresyMenu) return;
++      e.preventDefault();
++      window.HeresyMenu.open(e.clientX, e.clientY, [
++        { label: tr("Download"), icon: "\u2193", action: function () {
++          var a = document.createElement("a");
++          a.href = "/lab/train/file?name=" + encodeURIComponent(r.name) + "&file=" + encodeURIComponent(c.file); a.download = "";
++          document.body.appendChild(a); a.click(); a.remove();
++        } },
++        { label: tr("IN or OUT\u2026"), action: function () { epochAsk(c.file); } }
++      ]);
++    });
+     $("trRunPane").addEventListener("change", function (e) { if (e.target.id === "trCmp") { state.cmp = e.target.value; paintRun(); } });
+     $("trFilters").addEventListener("click", function (e) { var b = e.target.closest("[data-filter]"); if (b) { state.filter = b.dataset.filter; keep("yue2.trFilter", state.filter); paintList(); } });
+     $("trSearch").addEventListener("input", function () { state.search = this.value; paintList(); });
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index 4b7c9a2..945ebe4 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -724,12 +724,15 @@
+         (e && waveOpen[key] && !muted ? waveEditor(key, c, name) : "");   // HERESY 1494: a skipped one's wave stays shut
+     }).join("") + totalBar() + budgetBar();
+     // one even grid of buttons: the name, which half it steers, and a few words on what it does
++    var nHidden = 0;                                 // HERESY 1496
+     chips.innerHTML = S.catalog.map(function (e) {
+       var p = pairOf(e);
+       if (p && has(e, "nar")) return "";                // HERESY 1167: a pair drawn once, from its music file
+-      var isOn = on[e.id] || (p && on[p.id]);
++      var isOn = on[e.id] || (p && on[p.id]), hid = isHidden(e.id);
++      if (hid) nHidden++;
++      if (hid && !S.showHidden) return "";            // HERESY 1496
+       var tag = e.error ? "cannot load" : p ? (tagOf(e) || "music + sound halves") : tagOf(e) || halvesText(e) + (has(e, "ar") && has(e, "nar") ? " halves" : " half");
+-      return '<button type="button" class="lora-pick' + (isOn ? " is-on" : "") + '" data-lora-chip="' + escape(e.id) + '"' +
++      return '<button type="button" class="lora-pick' + (isOn ? " is-on" : "") + (hid ? " is-hidden-lora" : "") + '" data-lora-chip="' + escape(e.id) + '"' +
+         (e.error ? " disabled" : "") + ' aria-pressed="' + (isOn ? "true" : "false") + '" data-tip="' + escape(aboutTip(e) + (p ? "\n\n" + aboutTip(p) : "")) + '">' +
+         '<span class="lora-pick-name" translate="no">' + escape(nameOf(e.id)) + "</span>" +
+         (e.error ? "" : '<span class="lora-pick-half">' + (p ? "both" : halfShort(e)) + "</span>") +
+@@ -737,6 +740,11 @@
+     }).join("");
+     paintNotes();
+     S.host.querySelector(".lora-lib-count").textContent = S.catalog.length ? String(S.catalog.length) : "";   // HERESY 1167
++    if (S.showBox) {                                 // HERESY 1496: Show hidden, while some are
++      S.showBox.hidden = !nHidden;
++      S.showBox.querySelector(".lora-hidden-n").textContent = String(nHidden);
++      S.showBox.querySelector("input").checked = !!S.showHidden;
++    }
+     wantProfile();                                   // HERESY 1447
+     paintBudgetTips();
+     layoutWaves();                                   // HERESY 1458: the graphs at their size, and what the budget lets run
+@@ -775,6 +783,72 @@
+     if (S.opts.onChange) S.opts.onChange();
+   }
+ 
++  // HERESY 1496 (Viktor 16.10.2026: «те адаптеры, которые сторонние, либо в попапе согласие на безвозвратное удаление из loras/, либо просто
++  // прятать из вида, а в хедере LORAS справа галочку добавить Show hidden»): adapters hidden from the list, kept with the page's settings
++  // (yue2.lorasHidden); Show hidden in the LoRAs head brings them into sight again, marked
++  function loadHidden() {
++    try { var v = JSON.parse(root.localStorage.getItem("yue2.lorasHidden") || "[]"); S.hidden = Array.isArray(v) ? v.map(String) : []; } catch (e) { S.hidden = S.hidden || []; }
++  }
++  function isHidden(id) { return (S.hidden || []).indexOf(id) >= 0; }
++  function setHidden(ids, on) {
++    S.hidden = (S.hidden || []).filter(function (x) { return ids.indexOf(x) < 0; }).concat(on ? ids : []);
++    try { if (S.hidden.length) root.localStorage.setItem("yue2.lorasHidden", JSON.stringify(S.hidden)); else root.localStorage.removeItem("yue2.lorasHidden"); } catch (e) { /* kept in this view only */ }
++    paint();
++  }
++
++  // HERESY 1496 (Viktor 16.10.2026: «В активных остаётся удалённый адаптер. Нужно допилить сторожа, чтобы поднимал диалоговое окно, извещал об
++  // отсутствии ранее выбранного адаптера, делал поиск по соответствию имён и предлагал заменить зомби на другой, с другой эпохой, суффиксом, либо
++  // удаление из списка активных»): an adapter of the song gone from loras/ is asked about once the list has come: one by a name like its own
++  // in its place (the same run, another epoch or suffix; its strengths, wave and mute kept), or out of the song; «Later» leaves it, marked,
++  // and Generate asks again rather than send it
++  function missingIds() { return S.catalog.length ? S.choice.filter(function (c) { return !entry(c.id); }).map(function (c) { return c.id; }) : []; }
++  function nameTokens(id) {
++    var parts = String(id).replace(/\.safetensors$/i, "").toLowerCase().split("/"), stem = parts[parts.length - 1];
++    if (/^(lora|adapter_model|pytorch_lora_weights|model|adapter)$/.test(stem) && parts.length > 1) stem = parts[parts.length - 2];
++    return stem.split(/[-_.\s]+/).filter(function (t) {
++      return t && !/^(e|ep|epoch|step)\d+$/.test(t) && !/^[rv]\d+$/.test(t) && !/^(final|full)$/.test(t) && !/^\d{3,}$/.test(t);
++    });
++  }
++  function lookalikes(id, c) {
++    var mine = nameTokens(id), folder = String(id).split("/")[0].toLowerCase(), taken = {};
++    S.choice.forEach(function (x) { taken[x.id] = true; });
++    return S.catalog.filter(function (e) {
++      return !e.error && !taken[e.id] && (!(c.ar > 0) || has(e, "ar")) && (!(c.nar > 0) || has(e, "nar"));
++    }).map(function (e) {
++      var t = nameTokens(e.id), score = 0, n = 0;
++      if (e.id.split("/")[0].toLowerCase() === folder) score = 3;
++      else if (mine.length && t.join("-") === mine.join("-")) score = 2;
++      else { while (n < t.length && n < mine.length && t[n] === mine[n]) n++; if (n >= 2) score = 1; }
++      return { e: e, score: score };
++    }).filter(function (x) { return x.score > 0; })
++      .sort(function (a, b) { return b.score - a.score || (a.e.id < b.e.id ? 1 : a.e.id > b.e.id ? -1 : 0); })
++      .map(function (x) { return x.e; });
++  }
++  var asking = false, askedZ = {};
++  function askMissing(which) {                     // which: nothing (the ones not asked yet), true (all of them), or a list of ids
++    if (asking || !root.HeresyDialog || !root.HeresyDialog.choose) return false;
++    var ids = missingIds().filter(function (id) { return which === true || (Array.isArray(which) ? which.indexOf(id) >= 0 : !askedZ[id]); });
++    if (!ids.length) return false;
++    asking = true;
++    (function next() {
++      var id = ids.shift(), c = id && S.choice.filter(function (x) { return x.id === id; })[0];
++      if (!id) { asking = false; return; }
++      askedZ[id] = true;
++      if (!c) return next();
++      var cands = lookalikes(id, c);
++      root.HeresyDialog.choose(tr(fallbackName(id) + " is not in loras/ any more") + "\n\n" +
++        tr(cands.length ? "It is still among the song's adapters. Take one of these in its place (a name like its own: the same run, another epoch or suffix; its strengths kept), or take it out of the song."
++                        : "It is still among the song's adapters, and nothing in loras/ goes by a name like it. Take it out of the song, or leave it for now: the song is not made while it is there."),
++        cands.map(function (e) { return { value: e.id, label: nameOf(e.id), note: e.id }; }),
++        { cancel: tr("Later"), more: [{ label: tr("Take it out of the song"), value: "__out__" }] }).then(function (v) {
++        if (v === "__out__") { S.choice = S.choice.filter(function (x) { return x.id !== id; }); changed(); }
++        else if (v) { S.choice.forEach(function (x) { if (x.id === id) x.id = String(v); }); changed(); }
++        next();
++      }, function () { asking = false; });
++    })();
++    return true;
++  }
++
+   // HERESY 1169 (Viktor 08.10.2026: «после свёрнутого блока LoRA выскочил обрезанный параграф объяснений. Он нахер там не нужен»):
+   // the picker's notes in a tip beside the LoRAs' name, ⚠ when one warns; the paragraph under the list keeps them, hidden
+   function paintNotes() {
+@@ -819,6 +893,19 @@
+       '<span class="lora-lib-name">Add a LoRA</span><span class="lora-lib-count mono"></span></summary>' +
+       '<div class="lora-chips"></div></details><p class="row-hint lora-hint"></p>';
+     S.set = host.closest("fieldset");                 // HERESY 1458: its form's place, while it stands over the page
++    loadHidden();                                    // HERESY 1496
++    var head = host.closest("fieldset") && host.closest("fieldset").querySelector(".label");
++    if (head && !head.querySelector(".lora-show-hidden")) {
++      var sh = root.document.createElement("label");
++      sh.className = "lora-show-hidden";
++      sh.hidden = true;
++      sh.setAttribute("data-tip", "The adapters hidden from the list (a right-click on one hides it), back in sight, marked");
++      sh.innerHTML = '<input type="checkbox" /> <span>Show hidden</span> <span class="lora-hidden-n mono"></span>';
++      sh.addEventListener("click", function (e) { e.stopPropagation(); });   // not the LoRAs' fold
++      sh.querySelector("input").addEventListener("change", function () { S.showHidden = this.checked; paint(); });
++      head.appendChild(sh);
++      S.showBox = sh;
++    }
+     var lab = host.closest("fieldset") && host.closest("fieldset").querySelector(".label");   // HERESY 1169: the notes' place
+     if (lab && !lab.querySelector(".lora-notes")) {
+       var nb = root.document.createElement("span");
+@@ -1034,8 +1121,10 @@
+     });
+     host.addEventListener("click", function (event) {
+       var chip = event.target.closest("[data-lora-chip]"), remove = event.target.closest("[data-remove-lora]");
+-      var trigger = event.target.closest("[data-trigger]");
+-      if (chip && !chip.disabled) {
++      var trigger = event.target.closest("[data-trigger]"), zombie = event.target.closest(".lora-row.is-missing > .lora-who");
++      if (zombie && !remove) {                        // HERESY 1496: the question again for the row gone from loras/
++        askMissing(zombie.parentNode.dataset.ids.split("|"));
++      } else if (chip && !chip.disabled) {
+         toggle(chip.dataset.loraChip);
+       } else if (remove) {
+         var gone = remove.dataset.removeLora.split("|");   // HERESY 1167: a pair's ✕ takes both
+@@ -1065,9 +1154,13 @@
+       var e = entry(chip.dataset.loraChip);
+       if (!e) return;
+       var inSong = S.choice.some(function (c) { return idsOf(e.id).indexOf(c.id) >= 0; });
+-      var items = [{ label: inSong ? "Take it out of the song" : "Add it to the song", action: function () { toggle(e.id); } }];
+-      if (ownAdapter(e) && S.opts.unpublish) items.push({ sep: true }, { label: "Remove from the list (the adapter stays in its Trainer session)", icon: "\u21a9",
++      var items = [{ label: inSong ? "Take it out of the song" : "Add it to the song", action: function () { toggle(e.id); } }], hid = isHidden(e.id);
++      items.push({ sep: true }, { label: hid ? "Show it in the list again" : "Hide from the list (Show hidden brings it back)", icon: hid ? "\u25c9" : "\u25cc",   // HERESY 1496
++        action: function () { setHidden(idsOf(e.id), !hid); } });
++      if (ownAdapter(e) && S.opts.unpublish) items.push({ label: "Remove from the list (the adapter stays in its Trainer session)", icon: "\u21a9",
+         action: function () { S.opts.unpublish(idsOf(e.id)); } });
++      if (S.opts.deleteFiles) items.push({ label: "Delete from loras/ for good\u2026", icon: "\u2715", danger: true,   // HERESY 1496: asked, with what goes
++        action: function () { S.opts.deleteFiles(idsOf(e.id), nameOf(e.id)); } });
+       root.HeresyMenu.open(event.clientX, event.clientY, items);
+     });
+     // HERESY 1081: a double-click on a strength opens a field for it; Enter or leaving it sets, Esc leaves it be
+@@ -1136,7 +1229,7 @@
+   function setCatalog(list) {
+     var before = JSON.stringify(S.catalog);
+     S.catalog = (list || []).slice();
+-    if (JSON.stringify(S.catalog) !== before) paint();
++    if (JSON.stringify(S.catalog) !== before) { paint(); askMissing(); }   // HERESY 1496
+   }
+ 
+   function setSources(map) {
+@@ -1232,5 +1325,6 @@
+     budget: function () { return S.budget; }, profile: function () { return S.profile; }, triggersFor: triggersFor, describe: describe, has: inCatalog, lines: lines, repaint: paint,
+     relayout: layoutWaves, over: function (on) { if (on !== undefined) loraOver(!!on); return !!S.over; },   // HERESY 1458
+     listInto: listInto, setSources: setSources, zone: function (id, half) { return zones(entry(id), half); }, name: nameOf, toGreen: toGreen,
++    missing: missingIds, askMissing: askMissing, hidden: function () { return (S.hidden || []).slice(); },   // HERESY 1496
+     total: function () { return { value: arTotal(), stacked: arStacked(), safe: AR_TOTAL.safe, limit: AR_TOTAL.limit }; } };
+ })(window);
+-- 
+2.43.0
+

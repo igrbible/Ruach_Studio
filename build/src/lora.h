@@ -586,6 +586,9 @@ struct LoraContribution {
 struct LoraSet {
     std::vector<std::shared_ptr<LoraFile>> files;
     std::vector<std::pair<double, double>> strengths;  // (music, sound) per file
+    // HERESY 1447: per file and half, its A and B left out of the merge (they run with the graph, lora-rt.h), its full
+    // deltas merged all the same; empty: none left out
+    std::vector<std::pair<bool, bool>>     lora_skip;
     std::string                            sig[2];     // store-key signature per half
     // GGUF tensor name (".weight"/".bias") -> what to add, built by lora_bind
     std::unordered_map<std::string, std::vector<LoraContribution>> index;
@@ -637,6 +640,10 @@ static bool lora_bind(LoraSet * set, LoraRowsFn rows_of, void * ctx, std::string
             double s = g.half ? set->strengths[f].second : set->strengths[f].first;
             if (s == 0.0) {
                 continue;
+            }
+            if (g.kind == LoraGroup::LORA && f < set->lora_skip.size() &&
+                (g.half ? set->lora_skip[f].second : set->lora_skip[f].first)) {
+                continue;  // HERESY 1447: its A and B run with the graph
             }
             bool    bias = g.kind == LoraGroup::DIFF_B || (g.kind == LoraGroup::REPLACE && g.leaf == "bias");
             int64_t off  = 0;

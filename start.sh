@@ -68,7 +68,6 @@ fi
 BIN="$ROOT/build/build/yue-server"
 MODEL="$ROOT/models/YuE2-3B-$QUANT.gguf"
 VAE="$ROOT/models/YuE2-Vae-F32.gguf"
-SLIDERS="$ROOT/sliders"
 OUTPUTS="$ROOT/outputs"
 TRANSCRIBER="$ROOT/models/SheetSage2-Q8_0.gguf"     # downloaded; convert-models.sh makes F32
 [ -f "$TRANSCRIBER" ] || TRANSCRIBER="$ROOT/models/SheetSage2-F32.gguf"
@@ -91,9 +90,12 @@ plural() { if [ "$1" = 1 ]; then printf '%s %s' "$1" "$2"; else printf '%s %ss' 
 row() { printf '  %s%-12s%s %s\n' "$C" "$1" "$X" "$2"; }
 args=(--host 0.0.0.0 --port "$PORT" --model "$QUANT=$MODEL" --vae "standard=$VAE" --outputs "$OUTPUTS"
       --max-batch "$BATCH" --settings "$ROOT/settings.json")
-# every other backbone that is present can be picked in the page (Engine -> Model)
+# every other backbone that is present can be picked in the page (Engine -> Model); HERESY 1490: a merge's too, each by its file's
+# name (models/YuE2-3B-IRA-Q8_0.gguf is «IRA-Q8_0»), m-a-p's own first, so a choice kept in settings.json starts again as itself
 models="${B}$QUANT${X} $(size "$MODEL") ${G}starts${X}"
-for q in BF16 Q8_0 Q6_K Q5_K_M; do
+others=(BF16 Q8_0 Q6_K Q5_K_M)
+for f in "$ROOT"/models/YuE2-3B-*-*.gguf; do [ -f "$f" ] && { f=${f##*/YuE2-3B-}; others+=("${f%.gguf}"); }; done
+for q in "${others[@]}"; do
     if [ "$q" != "$QUANT" ] && [ -f "$ROOT/models/YuE2-3B-$q.gguf" ]; then
         args+=(--model "$q=$ROOT/models/YuE2-3B-$q.gguf")
         models="$models, ${B}$q${X} $(size "$ROOT/models/YuE2-3B-$q.gguf")"
@@ -164,13 +166,8 @@ if [ -d "$LORAS" ]; then
     args+=(--loras "$LORAS")
     row loras "${B}$(find -L "$LORAS" -name '*.safetensors' -not -path '*/.*' 2>/dev/null | count)${X} files in ${B}$(find -L "$LORAS" -mindepth 1 -maxdepth 1 -type d -not -name '.*' 2>/dev/null | count)${X} folders ${D}· $(du -shL "$LORAS" 2>/dev/null | cut -f1 | tr -d ' ') · loras/: files, folders or links${X}"
 fi
-if [ -f "$SLIDERS/catalog.json" ] && ls "$SLIDERS"/*.gguf >/dev/null 2>&1; then
-    args+=(--sliders "$SLIDERS")
-    row sliders "${B}$(ls "$SLIDERS"/*.gguf 2>/dev/null | count)${X} voice/genre sliders"
-else
-    # HERESY 1290: they come converted, from goldhub/Ruach_Studio_Models_v2 (the catalog alone, as the repository keeps it, is not them)
-    row sliders "${Y}not here${X} ${D}(heresy/fetch-heresy.sh --only extras, or Engine → Models and LoRAs)${X}"
-fi
+# HERESY 1449 (Viktor 15.10.2026: «Нахер убирай это слайдерное говно из нашей Студии»): no voice and genre sliders any more;
+# their wave lives on in the LoRAs'
 nsongs=$(find "$OUTPUTS" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | count)
 row library "${B}$nsongs${X} $([ "$nsongs" = 1 ] && echo song || echo songs) ${D}· $(du -sh "$OUTPUTS" 2>/dev/null | cut -f1 | tr -d ' ') in ${OUTPUTS#"$ROOT"/}/${X}"
 if [ -f "$TRANSCRIBER" ]; then

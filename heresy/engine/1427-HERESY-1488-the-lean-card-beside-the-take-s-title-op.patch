@@ -1,0 +1,315 @@
+From 9fca4d4a8ba09492a35977e0d9ed4dfcba986a61 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 16 Oct 2026 09:23:41 -0600
+Subject: [PATCH 1427/1463] =?UTF-8?q?HERESY=201488:=20the=20lean=20card;?=
+ =?UTF-8?q?=20=C2=AB=E2=8B=AF=C2=BB=20beside=20the=20take's=20title=20open?=
+ =?UTF-8?q?s=20its=20menu;=20Regenerate=20leads=20Make=20again?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The take's card no longer shows its rows of buttons by default (the take's menu holds them since 1483); «⋯» beside the title opens that menu, whose last row, «The card's buttons», brings them back (kept in this browser) and takes them off again. «⋯» ends the head's row, ▶ stays first. Regenerate with a new seed leads Make again ›; on several checked takes it is that group's one row.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |  3 +++
+ tools/console/app.js            | 32 ++++++++++++++++++++++++++++++++
+ tools/console/heresy-i18n-be.js |  7 ++++++-
+ tools/console/heresy-i18n-de.js |  7 ++++++-
+ tools/console/heresy-i18n-el.js |  7 ++++++-
+ tools/console/heresy-i18n-es.js |  7 ++++++-
+ tools/console/heresy-i18n-fr.js |  7 ++++++-
+ tools/console/heresy-i18n-it.js |  7 ++++++-
+ tools/console/heresy-i18n-ja.js |  7 ++++++-
+ tools/console/heresy-i18n-pt.js |  7 ++++++-
+ tools/console/heresy-i18n-ru.js |  7 ++++++-
+ tools/console/heresy-i18n-uk.js |  7 ++++++-
+ tools/console/heresy-i18n-zh.js |  7 ++++++-
+ tools/console/index.html        |  2 ++
+ 14 files changed, 103 insertions(+), 11 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 257917d..fa97861 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -2175,6 +2175,8 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left, bod
+ .dv-node.is-text { grid-template-columns: minmax(120px, 1fr) auto auto; }   /* HERESY 1484: a step's report */
+ .dv-group { margin-left: 14px; padding: 6px 0 6px 12px; border-left: 2px solid var(--amber-dim); }
+ .dv-group-head { font-size: 12.5px; margin-bottom: 4px; }
++body.card-lean #takeTools { display: none; }   /* HERESY 1488: the card's buttons live in the take's menu («⋯») */
++.take-more { font-size: 18px; line-height: 1; padding: 2px 9px; }
+ #derivedTree .dv-group[data-depth] { margin-left: calc(14px + var(--dv-depth) * 22px); }   /* HERESY 1486: under its source */
+ .dv-player { display: flex; align-items: center; gap: 6px; min-width: 0; }   /* HERESY 1487: the tree's own players */
+ .dv-player audio { display: none; }
+@@ -4535,6 +4537,7 @@ body:not([data-frame="take"]) #view-take > .col-head { padding-right: 22px; alig
+ @media (max-width: 1500px) { body:not([data-frame="take"]) #view-take > .col-head { padding-right: 16px; } }
+ body:not([data-frame="take"]) #view-take > .col-head > #playHere { order: 1; }
+ body:not([data-frame="take"]) #view-take > .col-head > #takeActions { order: 2; }
++body:not([data-frame="take"]) #view-take > .col-head > #takeMore { order: 3; }   /* HERESY 1488: «⋯» ends the row, ▶ stays first (1432) */
+ body:not([data-frame="take"]) #view-take > .col-head > :is(#backToRun, #cancelAway) { order: 3; }
+ body:not([data-frame="take"]) #view-take > .col-head > .frame-tools { position: static; order: 4; margin-left: auto; }
+ body:not([data-frame="take"]) #view-take > .col-head > .spacer { display: none; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 48ce8ff..f00bb9f 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3612,6 +3612,19 @@
+   // the ✕ beside «Back to …»
+   $("cancelRun").addEventListener("click", function () { cancelJob(STATE.job); });
+   $("cancelAway").addEventListener("click", function () { cancelJob(STATE.running); });
++  // HERESY 1488 (Viktor 16.10.2026: «нужно упростить карту, а весь "гламур"… перенести в контекстуху»; «Да, внедряй твою версию карты»):
++  // the card without its rows of buttons by default (the take's menu holds them since 1483); «⋯» beside the title opens that menu,
++  // and from it the card's buttons come back (kept in this browser)
++  var CARD_TOOLS = "yue2.cardTools";
++  function cardTools() { return recall(CARD_TOOLS) === "on"; }
++  function paintCardTools() { document.body.classList.toggle("card-lean", !cardTools()); }
++  paintCardTools();
++  $("takeMore").addEventListener("click", function (e) {
++    if (!STATE.take) return;
++    var r = e.currentTarget.getBoundingClientRect();
++    STATE.menuFromCard = true;
++    takeMenu(STATE.take.name, r.left, r.bottom + 4);
++  });
+   function cancelJob(job) {
+     if (!job || !isLive(job)) return;
+     // Queued versions of the same song go with it.
+@@ -4631,6 +4644,8 @@
+ 
+   function paintTakeHead() {
+     var take = STATE.take;
++    $("takeMore").classList.toggle("is-hidden", !take);   // HERESY 1488
++    paintCardTools();
+     if (!take) return;
+     // how old, how long, how long it took (the seeds are in the details below)
+     var eyebrow = [ago(take.created)];
+@@ -5739,6 +5754,7 @@
+     // закончился, она наоборот - исчезла, а не появилась. Автоматический плей был выключен»): it offers the take shown
+     // when that take is not playing; a run being watched has no take yet; a take the idle player only holds is offered
+     if (button) button.classList.toggle("is-hidden", !STATE.take || !!(STATE.playerTake && STATE.playerTake.name === STATE.take.name && isPlaying()));
++    if ($("takeMore")) $("takeMore").classList.toggle("is-hidden", !STATE.take);   // HERESY 1488: a run being watched has no take's menu
+   }
+ 
+   // Put a song in the player and start it: "Play this song" (right after the title, on the left)
+@@ -8920,6 +8936,8 @@
+     var take = findTake(name), HC = window.HeresyCollection, HW = window.HeresyWriter;
+     var menuAt = STATE.menuSection && STATE.menuSection.name === name ? STATE.menuSection : null;   // HERESY 1414
+     STATE.menuSection = null;
++    var fromCard = !!STATE.menuFromCard;                   // HERESY 1488: opened by the card's «⋯»
++    STATE.menuFromCard = false;
+     if (!take || !window.HeresyMenu) return;
+     var row = HC && HC.row ? HC.row(name) : null, r = HC ? HC.rating(name) : 0;
+     var now = STATE.playerTake && STATE.playerTake.name === name && isPlaying();
+@@ -9161,6 +9179,20 @@
+       } };
+       })() : null
+     ].filter(Boolean);
++    // HERESY 1488 (Viktor 16.10.2026: «"Перегенерировать с новым зерном" в "Сделать ещё раз ›"»): the regeneration leads Make again;
++    // on several checked takes it is that group's one row
++    var regen = items.filter(function (it) { return it && it.icon === "\u27f3" && /^Regenerate /.test(it.label || ""); })[0];
++    if (regen) {
++      var again = items.filter(function (it) { return it && it.label === "Make again" && it.items; })[0], at = items.indexOf(regen);
++      items.splice(at, 1);
++      if (again) again.items.unshift(regen, { sep: true });
++      else items.splice(at, 0, { icon: "\u21ba", label: "Make again", items: [regen] });
++    }
++    if (fromCard) {                                        // HERESY 1488: the card's own buttons, on the card or in this menu only
++      var on = cardTools();
++      items.push({ sep: true }, { icon: "\u25a4", label: "The card's buttons", checked: on, hint: on ? "shown on the card" : "in this menu only",
++                                  action: function () { store(CARD_TOOLS, on ? null : "on"); paintCardTools(); } });
++    }
+     window.HeresyMenu.open(x, y, groupMenu(items));
+   }
+   // HERESY 1483: one of the take card's buttons as a menu item: the take into the card (and the Creator, for what works on the card),
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index ceb5aa6..d0a6c3d 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5371,5 +5371,10 @@ RuachI18n.add("be", {
+ "mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "мікс і партытура (стэмы: раздзялі іх у Гранільшчыку) · Bitwig, Studio One, Cubase",
+ "Cancel it": "Адмяніць",
+ "Not for this take": "Не для гэтага сэмпла",
+-"Read": "Прачытаць"
++"Read": "Прачытаць",
++"Everything for this take": "Усё для гэтага сэмпла",
++"Everything for this take: its menu, as a right-click on it opens": "Усё для гэтага сэмпла: яго меню, як па правым пстрычку",
++"The card's buttons": "Кнопкі на картцы",
++"shown on the card": "відаць на картцы",
++"in this menu only": "толькі ў гэтым меню"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index d8bca60..70a5f7e 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5254,5 +5254,10 @@ RuachI18n.add("de", {
+ "mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "Mix und Partitur (Stems: trenne sie im Veredler) · Bitwig, Studio One, Cubase",
+ "Cancel it": "Abbrechen",
+ "Not for this take": "Nicht für diesen Take",
+-"Read": "Lesen"
++"Read": "Lesen",
++"Everything for this take": "Alles für diesen Take",
++"Everything for this take: its menu, as a right-click on it opens": "Alles für diesen Take: sein Menü, wie per Rechtsklick",
++"The card's buttons": "Die Knöpfe der Karte",
++"shown on the card": "auf der Karte zu sehen",
++"in this menu only": "nur in diesem Menü"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 797f943..d6d58be 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5370,5 +5370,10 @@ RuachI18n.add("el", {
+ "mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "μίξη και παρτιτούρα (stems: διαχώρισέ τα στον Γυαλιστή) · Bitwig, Studio One, Cubase",
+ "Cancel it": "Ακύρωση",
+ "Not for this take": "Όχι για αυτή τη λήψη",
+-"Read": "Ανάγνωση"
++"Read": "Ανάγνωση",
++"Everything for this take": "Όλα για αυτή τη λήψη",
++"Everything for this take: its menu, as a right-click on it opens": "Όλα για αυτή τη λήψη: το μενού της, όπως με δεξί κλικ",
++"The card's buttons": "Τα κουμπιά της κάρτας",
++"shown on the card": "φαίνονται στην κάρτα",
++"in this menu only": "μόνο σε αυτό το μενού"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 3cef610..7538bbf 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5370,5 +5370,10 @@ RuachI18n.add("es", {
+ "mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "mezcla y partitura (stems: sepáralos en el Pulidor) · Bitwig, Studio One, Cubase",
+ "Cancel it": "Cancelar",
+ "Not for this take": "No para esta toma",
+-"Read": "Leer"
++"Read": "Leer",
++"Everything for this take": "Todo para esta toma",
++"Everything for this take: its menu, as a right-click on it opens": "Todo para esta toma: su menú, como con el clic derecho",
++"The card's buttons": "Los botones de la tarjeta",
++"shown on the card": "visibles en la tarjeta",
++"in this menu only": "solo en este menú"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index 7cdaafa..b138bd8 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5254,5 +5254,10 @@ RuachI18n.add("fr", {
+ "mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "mix et partition (stems : sépare-les dans l'Affineur) · Bitwig, Studio One, Cubase",
+ "Cancel it": "Annuler",
+ "Not for this take": "Pas pour cette prise",
+-"Read": "Lire"
++"Read": "Lire",
++"Everything for this take": "Tout pour cette prise",
++"Everything for this take: its menu, as a right-click on it opens": "Tout pour cette prise : son menu, comme au clic droit",
++"The card's buttons": "Les boutons de la carte",
++"shown on the card": "visibles sur la carte",
++"in this menu only": "dans ce menu seulement"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 3927856..073f3e7 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5370,5 +5370,10 @@ RuachI18n.add("it", {
+ "mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "mix e partitura (stem: separali nel Rifinitore) · Bitwig, Studio One, Cubase",
+ "Cancel it": "Annulla",
+ "Not for this take": "Non per questo take",
+-"Read": "Leggi"
++"Read": "Leggi",
++"Everything for this take": "Tutto per questo take",
++"Everything for this take: its menu, as a right-click on it opens": "Tutto per questo take: il suo menu, come col clic destro",
++"The card's buttons": "I pulsanti della scheda",
++"shown on the card": "visibili sulla scheda",
++"in this menu only": "solo in questo menu"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index 8be120f..6a29eda 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5254,5 +5254,10 @@ RuachI18n.add("ja", {
+ "mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "ミックスと楽譜（ステム：仕上げ師で分離してください） · Waveform 14、Bitwig、Studio One、Cubase",
+ "Cancel it": "取り消す",
+ "Not for this take": "このテイクには使えません",
+-"Read": "読む"
++"Read": "読む",
++"Everything for this take": "このテイクのすべて",
++"Everything for this take: its menu, as a right-click on it opens": "このテイクのすべて：右クリックと同じメニュー",
++"The card's buttons": "カードのボタン",
++"shown on the card": "カードに表示",
++"in this menu only": "このメニューだけ"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index 820b5db..ac1792d 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5254,5 +5254,10 @@ RuachI18n.add("pt", {
+ "mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "mix e partitura (stems: separe-os no Lapidador) · Bitwig, Studio One, Cubase",
+ "Cancel it": "Cancelar",
+ "Not for this take": "Não para este take",
+-"Read": "Ler"
++"Read": "Ler",
++"Everything for this take": "Tudo para este take",
++"Everything for this take: its menu, as a right-click on it opens": "Tudo para este take: o seu menu, como com o clique direito",
++"The card's buttons": "Os botões do cartão",
++"shown on the card": "visíveis no cartão",
++"in this menu only": "só neste menu"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index bab38ae..d62affe 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5376,5 +5376,10 @@ RuachI18n.add("ru", {
+ "mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "микс и партитура (стемы: раздели их в Огранщике) · Bitwig, Studio One, Cubase",
+ "Cancel it": "Отменить",
+ "Not for this take": "Не для этого семпла",
+-"Read": "Прочесть"
++"Read": "Прочесть",
++"Everything for this take": "Всё для этого семпла",
++"Everything for this take: its menu, as a right-click on it opens": "Всё для этого семпла: его меню, как по правому клику",
++"The card's buttons": "Кнопки на карте",
++"shown on the card": "видны на карте",
++"in this menu only": "только в этом меню"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index c2fee0c..4461a26 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5371,5 +5371,10 @@ RuachI18n.add("uk", {
+ "mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "мікс і партитура (стеми: розділи їх в Огранювачі) · Bitwig, Studio One, Cubase",
+ "Cancel it": "Скасувати",
+ "Not for this take": "Не для цього семпла",
+-"Read": "Прочитати"
++"Read": "Прочитати",
++"Everything for this take": "Усе для цього семпла",
++"Everything for this take: its menu, as a right-click on it opens": "Усе для цього семпла: його меню, як за правим кліком",
++"The card's buttons": "Кнопки на картці",
++"shown on the card": "видно на картці",
++"in this menu only": "лише в цьому меню"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index ccbb941..515d7fb 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5254,5 +5254,10 @@ RuachI18n.add("zh", {
+ "mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "混音和乐谱（分轨：在精修室中分离） · Waveform 14、Bitwig、Studio One、Cubase",
+ "Cancel it": "取消",
+ "Not for this take": "不适用于这首歌曲",
+-"Read": "阅读"
++"Read": "阅读",
++"Everything for this take": "这首歌曲的全部操作",
++"Everything for this take: its menu, as a right-click on it opens": "这首歌曲的全部操作：与右键菜单相同",
++"The card's buttons": "卡片上的按钮",
++"shown on the card": "显示在卡片上",
++"in this menu only": "仅在此菜单中"
+ });
+diff --git a/tools/console/index.html b/tools/console/index.html
+index f88ae86..a689463 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -982,6 +982,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+   <section class="col take-col" id="view-take">
+     <div class="col-head">
+       <h2 id="takeTitle">Smithery Is Idle</h2>
++      <!-- HERESY 1488: the take's menu from the card (its rows of buttons live there) -->
++      <button type="button" class="btn ghost small take-more is-hidden" id="takeMore" aria-label="Everything for this take" data-tip="Everything for this take: its menu, as a right-click on it opens">⋯</button>
+       <!-- HERESY 1432 (Viktor 14.10.2026: «Кнопку "Play this song"… в строку с svg кнопками, оставить её крашеной, шириной в две
+            иконки, заменить текст на плеерную svg иконку PLAY») -->
+       <button type="button" class="btn primary small is-hidden" id="playHere" data-ui="play" aria-label="Play this song" data-tip="Play this song now (the player keeps what it was playing until you do). Double-clicking a song in the list plays it too."></button>
+-- 
+2.43.0
+

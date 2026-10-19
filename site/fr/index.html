@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ruach Studio · des chansons à partir de mots, sur ta propre machine</title>
-<meta name="description" content="Un studio de chansons complet autour de YuE2, le modèle de chanson ouvert : écris le style et les paroles, et Ruach Studio compose, chante et rend la chanson sur ton propre GPU. Open source, AGPL.">
+<title>Rouah Studio · des chansons à partir de mots, sur ta propre machine</title>
+<meta name="description" content="Un studio de chansons complet autour de YuE2, le modèle de chanson ouvert : écris le style et les paroles, et Rouah Studio compose, chante et rend la chanson sur ton propre GPU. Open source, AGPL.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Ruach Studio · des chansons à partir de mots, sur ta propre machine">
+<meta property="og:title" content="Rouah Studio · des chansons à partir de mots, sur ta propre machine">
 <meta property="og:description" content="Un studio de chansons complet autour de YuE2 sur ton propre GPU : la partition d'abord, l'entraînement de LoRA, les pistes séparées, le remastering, ta DAW. Open source.">
 <meta property="og:image" content="https://ruachstudio.igr.bible/assets/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
@@ -31,9 +31,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
-<!-- umami, once its container is up on Orpheus behind nginx (the host and the id from umami's own page):
-<script defer src="https://STATS_HOST/script.js" data-website-id="WEBSITE_ID"></script>
--->
+<!-- HERESY 1446 (Viktor 15.10.2026: «Пропишь для визитки код трекинга»): Umami on Orpheus, no cookies -->
+<script defer src="https://lwa.igr.bible/bread-and-wine.js" data-website-id="b9ce0336-948e-43ed-89d6-ade9b66dbb4a"></script>
 <style>
   /* the studio's two classic themes: Scroll & Brick by day (on Viktor's #f8f9fa), Scroll by Lamplight by night */
   :root {
@@ -120,6 +119,11 @@
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .shot .day { display: none; } :root:not([data-theme="light"]) .shot .night { display: block; } }
   :root[data-theme="dark"] .shot .day { display: none; }
   :root[data-theme="dark"] .shot .night { display: block; }
+  /* a room's picture by day and by night too (HERESY 1505: the Trainer's, from Viktor's own shots) */
+  .room a.pic .night { display: none; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .room a.pic .day { display: none; } :root:not([data-theme="light"]) .room a.pic .night { display: block; } }
+  :root[data-theme="dark"] .room a.pic .day { display: none; }
+  :root[data-theme="dark"] .room a.pic .night { display: block; }
 
   /* numbers */
   .nums { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--rule); border: 1px solid var(--rule);
@@ -233,7 +237,7 @@
 
 <header class="bar">
   <div class="wrap">
-    <a class="mark" href="#top"><img src="../assets/ruach-icon-32.png?v=1272" alt="" width="28" height="28">Ruach Studio</a>
+    <a class="mark" href="#top"><img src="../assets/ruach-icon-32.png?v=1272" alt="" width="28" height="28">Rouah Studio</a>
     <nav aria-label="Sections"><a href="#rooms">Salles</a><a href="#studio">Ce qu'il fait</a><a href="#honestly">Honnêtement</a><a href="#need">Ce qu'il faut</a><a href="#next">La suite</a> <a href="#licences">Licences</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub ↗</a></nav>
     <details class="langs" translate="no"><summary aria-label="Language">FR</summary><div class="langs-pop"><a href="/" lang="en" hreflang="en">English</a><a href="/ru/" lang="ru" hreflang="ru">Русский</a><a href="/uk/" lang="uk" hreflang="uk">Українська</a><a href="/be/" lang="be" hreflang="be">Беларуская</a><a href="/el/" lang="el" hreflang="el">Ελληνικά</a><a href="/es/" lang="es" hreflang="es">Español</a><a href="/it/" lang="it" hreflang="it">Italiano</a><a href="/fr/" lang="fr" hreflang="fr" aria-current="page">Français</a><a href="/pt/" lang="pt" hreflang="pt">Português</a><a href="/de/" lang="de" hreflang="de">Deutsch</a><a href="/ja/" lang="ja" hreflang="ja">日本語</a><a href="/zh/" lang="zh" hreflang="zh">中文</a></div></details>
     <button class="theme" id="theme" type="button" aria-label="Jour ou nuit" title="Jour ou nuit"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5a9.5 9.5 0 0 1 0 19z" fill="currentColor"/></svg></button>
@@ -256,7 +260,7 @@
     <h1>Des chansons à partir de mots et d'accords<br>sur ta propre machine</h1>
     <p class="lead">Un studio complet autour de <b>YuE2</b>, le modèle de chanson ouvert. Écris le style et les paroles, et le studio compose, chante et rend la chanson sur <b>ton propre GPU</b>. Tes chansons, tes mots et tes réglages n'en sortent jamais.</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Le prendre sur GitHub</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.fr.md">Lire le guide</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Modèles sur Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Offre-moi une machine à café</a></div>
-    <span class="rc"><b>2.0.0-rc8</b> · la huitième version candidate · octobre 2026</span>
+    <span class="rc"><b>2.0.0-pre</b> · la dernière étape avant la 2.0.0 · octobre 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -289,7 +293,7 @@
           <div><h3>Peintre</h3><p>Des images pour tes chansons à partir d'un prompt à toi : carrée, large et haute d'une seule graine, peintes par Qwen-Image 2512 ; l'image se révèle sous tes yeux, et une carrée devient la pochette de la prise. Un premier aperçu.</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/studio-collection.webp"><img src="../assets/shots/studio-collection.webp" alt="Bibliothécaire" loading="lazy"></a>
           <div><h3>Bibliothécaire</h3><p>Chaque prise dans des espaces : cherchée, aimée, annotée, verrouillée, illustrée, envoyée vers ta DAW ; une corbeille qui rend.</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/studio-train.webp"><img src="../assets/shots/studio-train.webp" alt="Entraîneur LoRA" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/studio-train.webp" data-night="assets/shots/studio-train-night.webp"><img class="day" src="../assets/shots/studio-train.webp" alt="Entraîneur LoRA" loading="lazy"><img class="night" src="../assets/shots/studio-train-night.webp" alt="Entraîneur LoRA" loading="lazy"></a>
           <div><h3>Entraîneur LoRA</h3><p>Des adaptateurs tirés de tes propres chansons : l'ensemble, l'entraînement, les courbes des deux moitiés expliquées, les époques à écouter en premier.</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/instruments.webp"><img src="../assets/shots/instruments.webp" alt="La fiche des instruments" loading="lazy"></a>
           <div><h3>La fiche ♪</h3><p>200 instruments sondés et jugés à l'oreille : ce que YuE2 joue vraiment, ce qu'il joue maigrement, ce qu'il ne connaît pas.</p></div></article>
@@ -344,11 +348,11 @@
 
   <section id="honestly">
     <div class="wrap">
-      <h2>Ruach Studio et SUNO, honnêtement</h2>
+      <h2>Rouah Studio et SUNO, honnêtement</h2>
       <p class="sub">Chaque semaine, une vidéo affirme qu'un modèle tue SUNO. Ceci n'est pas un modèle : c'est un poste de travail autour d'un modèle. Voici où il gagne, et où il ne gagne pas (encore).</p>
       <div class="table">
         <table>
-          <thead><tr><th></th><th>Ruach Studio (YuE2)</th><th>SUNO</th></tr></thead>
+          <thead><tr><th></th><th>Rouah Studio (YuE2)</th><th>SUNO</th></tr></thead>
           <tbody>
             <tr><td>où il tourne</td><td>ton GPU ; tes chansons n'en sortent jamais</td><td>leur cloud</td></tr>
             <tr><td>ce qu'il coûte</td><td>l'électricité</td><td>un abonnement et des crédits</td></tr>
@@ -393,7 +397,7 @@
   <section id="next">
     <div class="wrap">
       <h2>La suite</h2>
-      <p class="sub">2.0.0-rc8 est le studio où nous faisons nos propres chansons chaque jour. Voici les grandes pièces en route, pour 2.0.0 et après.</p>
+      <p class="sub">2.0.0-pre est le studio où nous faisons nos propres chansons chaque jour. Voici les grandes pièces en route, pour 2.0.0 et après.</p>
       <ul class="feats">
         <li><b>Des chansons modifiées comme le modèle les écrit.</b> Une prise prolongée à partir de n'importe quel moment ; une section réécrite en gardant la voix, la tonalité et les mesures de ses voisines, cousue dans les propres tokens du modèle ; une couche instrumentale sur la partition de la prise elle-même.</li>
         <li><b>Une DAW dans l'Affineur.</b> L'éditeur de partition de Plenio en avant-première : un piano roll, une piste d'accords, les paroles au-dessus des notes, un clavier MIDI pour y jouer des idées.</li>
@@ -510,7 +514,7 @@
 </main>
 
 <footer>
-  <div class="wrap"><span>Ruach Studio · 2.0.0-rc8 · une œuvre d'<a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changements</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Machine à café</a></span></div>
+  <div class="wrap"><span>Rouah Studio · 2.0.0-pre · une œuvre d'<a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changements</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Machine à café</a></span></div>
 </footer>
 
 <script>
@@ -527,9 +531,10 @@
     function show(i) { at = (i + items.length) % items.length; img.src = items[at].src; img.alt = items[at].alt; cap.textContent = items[at].alt; }
     function open(i) { show(i); lb.hidden = false; document.documentElement.classList.add("lb-on"); lb.querySelector(".lb-x").focus(); }
     function close() { lb.hidden = true; document.documentElement.classList.remove("lb-on"); }
+    function nightNow() { var t = document.documentElement.getAttribute("data-theme"); return t === "dark" || (t !== "light" && !!window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches); }
     Array.prototype.forEach.call(document.querySelectorAll("a.pic"), function (a) {
       var i = add(a.getAttribute("href"), (a.querySelector("img") || {}).alt);
-      a.addEventListener("click", function (e) { e.preventDefault(); open(i); });
+      a.addEventListener("click", function (e) { e.preventDefault(); open(i); if (a.dataset.night && nightNow()) img.src = a.dataset.night; });   // 1505: the night's shot by night
     });
     Array.prototype.forEach.call(document.querySelectorAll(".shot img, .pair figure img"), function (im) {
       var i = add(im.getAttribute("src"), im.alt);

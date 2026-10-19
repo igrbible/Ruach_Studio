@@ -1,0 +1,213 @@
+From ea2c4072750480b8ce686d27a732c2d01256cad3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 15 Oct 2026 19:34:29 -0600
+Subject: [PATCH 1417/1463] HERESY 1464: a plugin step on a set of stems picks
+ a set, not a file; Run shut until there is one
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+A step that says input: stems gets «A set of stems» for its source: the take's sets, each once (eight stems, six stems, from the debuzzed…), the newest first chosen; with none it says to split the take first and Run stays shut; the run sends the set's folder. Two new strings in all eleven catalogs. Kitchen suite 824/0 (one new check).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-i18n-be.js |  4 +++-
+ tools/console/heresy-i18n-de.js |  4 +++-
+ tools/console/heresy-i18n-el.js |  4 +++-
+ tools/console/heresy-i18n-es.js |  4 +++-
+ tools/console/heresy-i18n-fr.js |  4 +++-
+ tools/console/heresy-i18n-it.js |  4 +++-
+ tools/console/heresy-i18n-ja.js |  4 +++-
+ tools/console/heresy-i18n-pt.js |  4 +++-
+ tools/console/heresy-i18n-ru.js |  4 +++-
+ tools/console/heresy-i18n-uk.js |  4 +++-
+ tools/console/heresy-i18n-zh.js |  4 +++-
+ tools/console/heresy-post.js    | 21 +++++++++++++++++++--
+ 12 files changed, 52 insertions(+), 13 deletions(-)
+
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index f7f27b8..2a20488 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5300,5 +5300,7 @@ RuachI18n.add("be", {
+ "Split: eight stems": "Раздзяліць: восем стэмаў",
+ "eight": "восем",
+ "eight stems": "восем стэмаў",
+-"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "Шэсць, з голасам надвое па караоке-мадэлі becruily (Mel-Roformer) і духавымі з астатняга па Wind_Inst ад UVR: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other і інструментал, каля 10 хвілін на 7 хвілін песні на 3090"
++"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "Шэсць, з голасам надвое па караоке-мадэлі becruily (Mel-Roformer) і духавымі з астатняга па Wind_Inst ад UVR: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other і інструментал, каля 10 хвілін на 7 хвілін песні на 3090",
++"A set of stems": "Набор стэмаў",
++"Split the take into stems first": "Спачатку раздзялі сэмпл на стэмы"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 5806002..7c1941d 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5183,5 +5183,7 @@ RuachI18n.add("de", {
+ "Split: eight stems": "Trennen: acht Stems",
+ "eight": "acht",
+ "eight stems": "acht Stems",
+-"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "Sechs, mit der Stimme in zwei durch becruilys Karaoke-Mel-Roformer und den Bläsern aus dem Rest durch UVRs Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other und das Instrumental, etwa 10 Minuten für 7 Minuten Song auf einer 3090"
++"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "Sechs, mit der Stimme in zwei durch becruilys Karaoke-Mel-Roformer und den Bläsern aus dem Rest durch UVRs Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other und das Instrumental, etwa 10 Minuten für 7 Minuten Song auf einer 3090",
++"A set of stems": "Stem-Satz",
++"Split the take into stems first": "Trenne den Take zuerst in Stems"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index bf29b08..4e25ddb 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5299,5 +5299,7 @@ RuachI18n.add("el", {
+ "Split: eight stems": "Διαχωρισμός: οκτώ stems",
+ "eight": "οκτώ",
+ "eight stems": "οκτώ stems",
+-"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "Έξι, με τη φωνή στα δύο από το karaoke Mel-Roformer του becruily και τα πνευστά από τα υπόλοιπα με το Wind_Inst του UVR: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other και το ορχηστρικό, περίπου 10 λεπτά για 7 λεπτά τραγουδιού σε μια 3090"
++"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "Έξι, με τη φωνή στα δύο από το karaoke Mel-Roformer του becruily και τα πνευστά από τα υπόλοιπα με το Wind_Inst του UVR: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other και το ορχηστρικό, περίπου 10 λεπτά για 7 λεπτά τραγουδιού σε μια 3090",
++"A set of stems": "Σύνολο stems",
++"Split the take into stems first": "Χώρισε πρώτα τη λήψη σε stems"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 55b1e3d..1081091 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5299,5 +5299,7 @@ RuachI18n.add("es", {
+ "Split: eight stems": "Separar: ocho stems",
+ "eight": "ocho",
+ "eight stems": "ocho stems",
+-"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "Seis, con la voz en dos por el karaoke Mel-Roformer de becruily y los vientos sacados del resto por el Wind_Inst de UVR: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other y el instrumental, unos 10 minutos por 7 minutos de canción en una 3090"
++"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "Seis, con la voz en dos por el karaoke Mel-Roformer de becruily y los vientos sacados del resto por el Wind_Inst de UVR: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other y el instrumental, unos 10 minutos por 7 minutos de canción en una 3090",
++"A set of stems": "Juego de stems",
++"Split the take into stems first": "Primero separa la toma en stems"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index 04a8438..d14eea8 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5183,5 +5183,7 @@ RuachI18n.add("fr", {
+ "Split: eight stems": "Séparer : huit stems",
+ "eight": "huit",
+ "eight stems": "huit stems",
+-"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "Six, avec la voix en deux par le karaoké Mel-Roformer de becruily et les vents tirés du reste par le Wind_Inst d'UVR : Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other et l'instrumental, environ 10 minutes pour 7 minutes de chanson sur une 3090"
++"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "Six, avec la voix en deux par le karaoké Mel-Roformer de becruily et les vents tirés du reste par le Wind_Inst d'UVR : Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other et l'instrumental, environ 10 minutes pour 7 minutes de chanson sur une 3090",
++"A set of stems": "Jeu de stems",
++"Split the take into stems first": "Sépare d'abord la prise en stems"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 9cfaadb..fd45a4e 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5299,5 +5299,7 @@ RuachI18n.add("it", {
+ "Split: eight stems": "Separa: otto stem",
+ "eight": "otto",
+ "eight stems": "otto stem",
+-"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "Sei, con la voce in due dal karaoke Mel-Roformer di becruily e i fiati tolti dal resto dal Wind_Inst di UVR: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other e lo strumentale, circa 10 minuti per 7 minuti di canzone su una 3090"
++"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "Sei, con la voce in due dal karaoke Mel-Roformer di becruily e i fiati tolti dal resto dal Wind_Inst di UVR: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other e lo strumentale, circa 10 minuti per 7 minuti di canzone su una 3090",
++"A set of stems": "Set di stem",
++"Split the take into stems first": "Prima separa il take in stem"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index 9ad2459..3506371 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5183,5 +5183,7 @@ RuachI18n.add("ja", {
+ "Split: eight stems": "分離：8 つのステム",
+ "eight": "8 つ",
+ "eight stems": "8 つのステム",
+-"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "6 つに加え、becruily のカラオケ Mel-Roformer で声を 2 つに、UVR の Wind_Inst で残りから管楽器を分けます：Lead Vocal、Backing Vocals、Drums、Bass、Guitar、Piano、Winds、Other、インスト。3090 で 7 分の曲に約 10 分"
++"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "6 つに加え、becruily のカラオケ Mel-Roformer で声を 2 つに、UVR の Wind_Inst で残りから管楽器を分けます：Lead Vocal、Backing Vocals、Drums、Bass、Guitar、Piano、Winds、Other、インスト。3090 で 7 分の曲に約 10 分",
++"A set of stems": "ステムのセット",
++"Split the take into stems first": "まずテイクをステムに分離してください"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index 8e54b43..681cb20 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5183,5 +5183,7 @@ RuachI18n.add("pt", {
+ "Split: eight stems": "Separar: oito stems",
+ "eight": "oito",
+ "eight stems": "oito stems",
+-"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "Seis, com a voz em duas pelo karaokê Mel-Roformer de becruily e os sopros tirados do resto pelo Wind_Inst da UVR: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other e o instrumental, cerca de 10 minutos para 7 minutos de canção numa 3090"
++"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "Seis, com a voz em duas pelo karaokê Mel-Roformer de becruily e os sopros tirados do resto pelo Wind_Inst da UVR: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other e o instrumental, cerca de 10 minutos para 7 minutos de canção numa 3090",
++"A set of stems": "Conjunto de stems",
++"Split the take into stems first": "Primeiro separe o take em stems"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 5f2d588..692140d 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5305,5 +5305,7 @@ RuachI18n.add("ru", {
+ "Split: eight stems": "Разделить: восемь стемов",
+ "eight": "восемь",
+ "eight stems": "восемь стемов",
+-"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "Шесть, с голосом надвое по караоке-модели becruily (Mel-Roformer) и духовыми из остального по Wind_Inst от UVR: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other и инструментал, около 10 минут на 7 минут песни на 3090"
++"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "Шесть, с голосом надвое по караоке-модели becruily (Mel-Roformer) и духовыми из остального по Wind_Inst от UVR: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other и инструментал, около 10 минут на 7 минут песни на 3090",
++"A set of stems": "Набор стемов",
++"Split the take into stems first": "Сперва раздели семпл на стемы"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 613123b..c26328d 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5300,5 +5300,7 @@ RuachI18n.add("uk", {
+ "Split: eight stems": "Розділити: вісім стемів",
+ "eight": "вісім",
+ "eight stems": "вісім стемів",
+-"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "Шість, з голосом надвоє за караоке-моделлю becruily (Mel-Roformer) і духовими з решти за Wind_Inst від UVR: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other та інструментал, близько 10 хвилин на 7 хвилин пісні на 3090"
++"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "Шість, з голосом надвоє за караоке-моделлю becruily (Mel-Roformer) і духовими з решти за Wind_Inst від UVR: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other та інструментал, близько 10 хвилин на 7 хвилин пісні на 3090",
++"A set of stems": "Набір стемів",
++"Split the take into stems first": "Спершу розділи семпл на стеми"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index 4b5adb7..e2d21f6 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5183,5 +5183,7 @@ RuachI18n.add("zh", {
+ "Split: eight stems": "分离：八条分轨",
+ "eight": "八轨",
+ "eight stems": "八条分轨",
+-"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "在六轨基础上，用 becruily 的卡拉 OK Mel-Roformer 把人声分成两条，用 UVR 的 Wind_Inst 从其余部分分出管乐：Lead Vocal、Backing Vocals、Drums、Bass、Guitar、Piano、Winds、Other 和伴奏，在 3090 上 7 分钟的歌约需 10 分钟"
++"Six, with the voice in two by becruily's karaoke Mel-Roformer and the winds out of the rest by UVR's Wind_Inst: Lead Vocal, Backing Vocals, Drums, Bass, Guitar, Piano, Winds, Other and the Instrumental, about 10 minutes for 7 minutes of song on a 3090": "在六轨基础上，用 becruily 的卡拉 OK Mel-Roformer 把人声分成两条，用 UVR 的 Wind_Inst 从其余部分分出管乐：Lead Vocal、Backing Vocals、Drums、Bass、Guitar、Piano、Winds、Other 和伴奏，在 3090 上 7 分钟的歌约需 10 分钟",
++"A set of stems": "一组分轨",
++"Split the take into stems first": "请先把这段录音分离成分轨"
+ });
+diff --git a/tools/console/heresy-post.js b/tools/console/heresy-post.js
+index d4ea22b..1fcb4e9 100644
+--- a/tools/console/heresy-post.js
++++ b/tools/console/heresy-post.js
+@@ -261,7 +261,9 @@
+     d.innerHTML = '<summary><span class="chev" aria-hidden="true"></span><span class="sum-head" translate="no"><span class="sum-name">' + esc(s.label) +
+       '</span><span class="sum-say">' + esc(s.say) + "</span></span></summary>" +
+       '<div class="drawer-body rm-body"><div class="rm-grid">' +
+-      '<label class="field"><span class="label">Source</span><select class="pl-source"><option value="">the take</option></select></label>' +
++      (s.spec.input === "stems"                       // HERESY 1464: a step on a set of stems picks a set, not a file
++        ? '<label class="field"><span class="label">A set of stems</span><select class="pl-source pl-stems"></select></label>'
++        : '<label class="field"><span class="label">Source</span><select class="pl-source"><option value="">the take</option></select></label>') +
+       s.spec.params.map(function (p) { return field(s, p); }).join("") + "</div>" +
+       '<div class="dv-actions"><button type="button" class="btn primary small pl-run" translate="no">' + esc(s.label) + '</button><span class="row-hint mono pl-state"></span></div>' +
+       (s.spec.tip ? '<p class="row-hint" translate="no">' + esc(s.spec.tip) + "</p>" : "") + "</div>";
+@@ -270,7 +272,22 @@
+   }
+   function paintPluginSources() {
+     var D = window.HeresyDerived, files = D && D.files ? D.files() : [];
+-    Array.prototype.forEach.call(document.querySelectorAll(".pl-panel .pl-source"), function (sel) {
++    var sets = [], seen = {};                        // HERESY 1464: the take's sets of stems, each once, by its folder
++    files.forEach(function (f) {
++      if (f.kind !== "stems") return;
++      var dir = String(f.source).split("/").slice(0, 2).join("/"), m = /\(([^)]*)\)\s*$/.exec(f.label || "");
++      if (seen[dir]) return;
++      seen[dir] = true;
++      sets.push({ dir: dir, label: (m ? m[1] : dir).replace(/^Stems, /, "") });
++    });
++    Array.prototype.forEach.call(document.querySelectorAll(".pl-panel .pl-stems"), function (sel) {
++      var keep = sel.value, run = sel.closest(".pl-panel").querySelector(".pl-run");
++      sel.innerHTML = sets.length ? sets.map(function (x) { return '<option value="' + esc(x.dir) + '" translate="no">' + esc(x.label) + "</option>"; }).join("")
++        : '<option value="">' + esc(tr("Split the take into stems first")) + "</option>";
++      sel.value = sets.some(function (x) { return x.dir === keep; }) ? keep : sets.length ? sets[sets.length - 1].dir : "";
++      run.disabled = !sets.length;
++    });
++    Array.prototype.forEach.call(document.querySelectorAll(".pl-panel .pl-source:not(.pl-stems)"), function (sel) {
+       var keep = sel.value;
+       sel.innerHTML = '<option value="">the take</option>' + files.filter(function (f) { return f.kind !== "stems" || !/instrumental/i.test(f.label); }).map(function (f) {
+         return '<option value="' + esc(f.source) + '" translate="no">' + esc(f.label.replace(/^↳ /, "")) + "</option>";
+-- 
+2.43.0
+

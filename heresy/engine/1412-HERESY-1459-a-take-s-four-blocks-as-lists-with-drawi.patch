@@ -1,0 +1,321 @@
+From 4f3eb06e4341d92ca9690a134143a53f42074994 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 15 Oct 2026 16:50:18 -0600
+Subject: [PATCH 1412/1463] HERESY 1459: a take's four blocks as lists with
+ drawings; a right-click takes a wave's point out
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 15.10.2026, his picture of a take's Download / Refiner / Files / Edit: «реструктурировать эти четыре блока и сделать более восприимчивым для глаза? Где возможно, SVG иконки»; «правой кнопкой мыши снятие точки с кривой». Each of the four blocks is a column of whole-width rows, every row a drawing then its name (file-down for WAV, FLAC and MP3; a spectrum's bars and spell-check in the Refiner; braces, music and repeat in Files; crop, scissors and gauge in Edit), every block's name with its own drawing in the accent (Make again too); seven Lucide shapes added to the page's set. The WAV and MP3 labels written by the page keep their drawings. A right-click on a wave's point takes it out as a double-click does (the first and the last stay); the hint says so in all eleven catalogs. Kitchen suite 819/0 (two new checks).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           | 15 +++++++++++++++
+ tools/console/app.js            |  4 ++--
+ tools/console/heresy-i18n-be.js |  3 ++-
+ tools/console/heresy-i18n-de.js |  3 ++-
+ tools/console/heresy-i18n-el.js |  3 ++-
+ tools/console/heresy-i18n-es.js |  3 ++-
+ tools/console/heresy-i18n-fr.js |  3 ++-
+ tools/console/heresy-i18n-it.js |  3 ++-
+ tools/console/heresy-i18n-ja.js |  3 ++-
+ tools/console/heresy-i18n-pt.js |  3 ++-
+ tools/console/heresy-i18n-ru.js |  3 ++-
+ tools/console/heresy-i18n-uk.js |  3 ++-
+ tools/console/heresy-i18n-zh.js |  3 ++-
+ tools/console/heresy-icons.js   |  8 ++++++++
+ tools/console/index.html        | 32 ++++++++++++++++----------------
+ tools/console/loras.js          | 15 ++++++++++++++-
+ 16 files changed, 77 insertions(+), 30 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 02a59fd..fbc5629 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -5858,3 +5858,18 @@ body:has(#view-engine:not(.is-hidden)) :is(.topbar, #playbar) { z-index: 37; }
+     linear-gradient(to right, #3f9a4a 0, #3f9a4a var(--z1), #e0b030 var(--z2), #c8372d var(--z2), #c8372d 100%);
+ }
+ 
++/* HERESY 1459 (Viktor 15.10.2026: «реструктурировать эти четыре блока и сделать более восприимчивым для глаза? Где возможно, SVG
++   иконки»): Download, Refiner, Files and Edit each a column of whole-width rows, every row its drawing then its name, so the four
++   read as four short lists of the same rhythm; every block's name has its own drawing in the accent */
++.take-tools .tool-cap { display: flex; align-items: center; gap: 7px; }
++.take-tools .tl-cap-ico { display: inline-flex; color: var(--amber); }
++.take-tools .tl-cap-ico .ui-ico { width: 14px; height: 14px; }
++.take-tools .tool-group:not(.tg-again) > .tool-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; }
++.take-tools .tool-group:not(.tg-again) > .tool-row > .btn { width: 100%; justify-content: flex-start; }
++.take-tools .tg-dl .split-btn { display: flex; width: 100%; min-width: 0; }
++.take-tools .tg-dl .split-btn > .btn { flex: 1; min-width: 0; justify-content: flex-start; }
++.take-tools .tl-ico { display: inline-flex; flex: none; color: var(--muted); }
++.take-tools .tl-ico .ui-ico { width: 15px; height: 15px; }
++.take-tools .btn:hover .tl-ico, .take-tools .btn:focus-visible .tl-ico { color: var(--amber); }
++.take-tools .tl-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++
+diff --git a/tools/console/app.js b/tools/console/app.js
+index c448fef..519d43c 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -4436,7 +4436,7 @@
+     if (!convertible(take)) return;
+     link.href = mp3Url(take);
+     link.setAttribute("download", fileTitle(take) + ".mp3");
+-    link.textContent = label;
++    (link.querySelector(".tl-name") || link).textContent = label;   // HERESY 1459: its drawing stays
+   }
+ 
+   // the song page's download buttons: named after the song (or with the date), the server told the same
+@@ -4444,7 +4444,7 @@
+     var take = STATE.take;
+     if (!take) return;
+     $("dlTakeAudio").href = downloadUrl(take);
+-    $("dlTakeAudio").textContent = formatExt(take.format).toUpperCase();
++    ($("dlTakeAudio").querySelector(".tl-name") || $("dlTakeAudio")).textContent = formatExt(take.format).toUpperCase();   // HERESY 1459
+     $("dlTakeAudio").setAttribute("download", audioFileName(take));
+     paintMp3();
+   }
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 2c63ab8..bfb5222 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5285,5 +5285,6 @@ RuachI18n.add("be", {
+ "Runs {#0} of {#1}: in order, the rows above take theirs first and this one gets what the red line leaves.": "Ідзе {#0} з {#1}: па чарзе радкі вышэй бяруць сваё першымі, гэтаму дастаецца тое, што пакінула чырвоная лінія.",
+ "Runs {#0} of {#1}: shared, the adapters on the same layers give way in proportion past the red line.": "Ідзе {#0} з {#1}: па долях — адаптары на тых самых слаях за чырвонай лініяй саступаюць прапарцыйна.",
+ "Runs {#0} of the {#1} asked: the budget holds the adapters on shared layers at the red line.": "Ідзе {#0} з запытаных {#1}: бюджэт трымае адаптары на агульных слаях ля чырвонай лініі.",
+-"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "LoRA па-над старонкай, да 1800 px у шырыню, для кропак хваль: Esc або пстрычка побач вяртаюць іх на месца"
++"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "LoRA па-над старонкай, да 1800 px у шырыню, для кропак хваль: Esc або пстрычка побач вяртаюць іх на месца",
++"Shift keeps a point on the grid; a right-click takes a point out.": "Shift трымае кропку на сетцы; правая пстрычка па кропцы прыбірае яе."
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 2a5b3c2..e4221aa 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5168,5 +5168,6 @@ RuachI18n.add("de", {
+ "Runs {#0} of {#1}: in order, the rows above take theirs first and this one gets what the red line leaves.": "Läuft mit {#0} von {#1}: der Reihe nach nehmen die Zeilen darüber zuerst ihren Teil, diese bekommt, was die rote Linie übrig lässt.",
+ "Runs {#0} of {#1}: shared, the adapters on the same layers give way in proportion past the red line.": "Läuft mit {#0} von {#1}: beim Teilen geben die Adapter auf denselben Schichten jenseits der roten Linie anteilig nach.",
+ "Runs {#0} of the {#1} asked: the budget holds the adapters on shared layers at the red line.": "Läuft mit {#0} von {#1} verlangten: Das Budget hält die Adapter auf gemeinsamen Schichten an der roten Linie.",
+-"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "Die LoRAs über der Seite, bis 1800 px breit, für die Punkte der Wellen: Esc oder ein Klick daneben legt sie zurück"
++"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "Die LoRAs über der Seite, bis 1800 px breit, für die Punkte der Wellen: Esc oder ein Klick daneben legt sie zurück",
++"Shift keeps a point on the grid; a right-click takes a point out.": "Shift hält den Punkt auf dem Raster; ein Rechtsklick auf einen Punkt nimmt ihn heraus."
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index b7992cc..be6b6d2 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5284,5 +5284,6 @@ RuachI18n.add("el", {
+ "Runs {#0} of {#1}: in order, the rows above take theirs first and this one gets what the red line leaves.": "Τρέχει {#0} από {#1}: με τη σειρά, οι γραμμές από πάνω παίρνουν πρώτες το δικό τους και αυτή παίρνει ό,τι αφήνει η κόκκινη γραμμή.",
+ "Runs {#0} of {#1}: shared, the adapters on the same layers give way in proportion past the red line.": "Τρέχει {#0} από {#1}: αναλογικά, οι adapters στα ίδια στρώματα υποχωρούν κατ' αναλογία πέρα από την κόκκινη γραμμή.",
+ "Runs {#0} of the {#1} asked: the budget holds the adapters on shared layers at the red line.": "Τρέχει {#0} από τα {#1} που ζητήθηκαν: ο προϋπολογισμός κρατά τους adapters στα κοινά στρώματα στην κόκκινη γραμμή.",
+-"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "Τα LoRA πάνω από τη σελίδα, έως 1800 px πλάτος, για τα σημεία των κυμάτων: Esc ή ένα κλικ δίπλα τα επαναφέρει"
++"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "Τα LoRA πάνω από τη σελίδα, έως 1800 px πλάτος, για τα σημεία των κυμάτων: Esc ή ένα κλικ δίπλα τα επαναφέρει",
++"Shift keeps a point on the grid; a right-click takes a point out.": "Το Shift κρατά το σημείο πάνω στο πλέγμα· δεξί κλικ σε σημείο το αφαιρεί."
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 3e8ab42..76b349b 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5284,5 +5284,6 @@ RuachI18n.add("es", {
+ "Runs {#0} of {#1}: in order, the rows above take theirs first and this one gets what the red line leaves.": "Corre {#0} de {#1}: en orden, las filas de arriba toman lo suyo primero y esta recibe lo que deja la línea roja.",
+ "Runs {#0} of {#1}: shared, the adapters on the same layers give way in proportion past the red line.": "Corre {#0} de {#1}: al repartir, los adaptadores sobre las mismas capas ceden en proporción pasada la línea roja.",
+ "Runs {#0} of the {#1} asked: the budget holds the adapters on shared layers at the red line.": "Corre {#0} de los {#1} pedidos: el presupuesto mantiene a los adaptadores de capas compartidas en la línea roja.",
+-"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "Las LoRA sobre la página, hasta 1800 px de ancho, para los puntos de las ondas: Esc o un clic al lado las devuelve a su sitio"
++"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "Las LoRA sobre la página, hasta 1800 px de ancho, para los puntos de las ondas: Esc o un clic al lado las devuelve a su sitio",
++"Shift keeps a point on the grid; a right-click takes a point out.": "Shift mantiene el punto en la cuadrícula; un clic derecho en un punto lo quita."
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index 9c23de2..08dad0e 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5168,5 +5168,6 @@ RuachI18n.add("fr", {
+ "Runs {#0} of {#1}: in order, the rows above take theirs first and this one gets what the red line leaves.": "Tourne à {#0} sur {#1} : dans l'ordre, les lignes du dessus prennent leur part d'abord et celle-ci reçoit ce que laisse la ligne rouge.",
+ "Runs {#0} of {#1}: shared, the adapters on the same layers give way in proportion past the red line.": "Tourne à {#0} sur {#1} : en partage, les adaptateurs sur les mêmes couches cèdent en proportion au-delà de la ligne rouge.",
+ "Runs {#0} of the {#1} asked: the budget holds the adapters on shared layers at the red line.": "Tourne à {#0} sur les {#1} demandés : le budget tient les adaptateurs des couches partagées à la ligne rouge.",
+-"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "Les LoRA par-dessus la page, jusqu'à 1800 px de large, pour les points des vagues : Échap ou un clic à côté les remet en place"
++"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "Les LoRA par-dessus la page, jusqu'à 1800 px de large, pour les points des vagues : Échap ou un clic à côté les remet en place",
++"Shift keeps a point on the grid; a right-click takes a point out.": "Shift garde le point sur la grille ; un clic droit sur un point le retire."
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 1d77072..0c4d296 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5284,5 +5284,6 @@ RuachI18n.add("it", {
+ "Runs {#0} of {#1}: in order, the rows above take theirs first and this one gets what the red line leaves.": "Va a {#0} di {#1}: in ordine, le righe sopra prendono per prime il loro e questa riceve ciò che lascia la linea rossa.",
+ "Runs {#0} of {#1}: shared, the adapters on the same layers give way in proportion past the red line.": "Va a {#0} di {#1}: ripartendo, gli adattatori sugli stessi strati cedono in proporzione oltre la linea rossa.",
+ "Runs {#0} of the {#1} asked: the budget holds the adapters on shared layers at the red line.": "Va a {#0} dei {#1} richiesti: il budget tiene gli adattatori sugli strati condivisi alla linea rossa.",
+-"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "Le LoRA sopra la pagina, fino a 1800 px di larghezza, per i punti delle onde: Esc o un clic accanto le rimette al loro posto"
++"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "Le LoRA sopra la pagina, fino a 1800 px di larghezza, per i punti delle onde: Esc o un clic accanto le rimette al loro posto",
++"Shift keeps a point on the grid; a right-click takes a point out.": "Shift tiene il punto sulla griglia; un clic destro su un punto lo toglie."
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index 0098094..c44834e 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5168,5 +5168,6 @@ RuachI18n.add("ja", {
+ "Runs {#0} of {#1}: in order, the rows above take theirs first and this one gets what the red line leaves.": "{#1} のうち {#0} で効きます：順番に、上の行が先に取り、この行には赤い線が残した分が回ります。",
+ "Runs {#0} of {#1}: shared, the adapters on the same layers give way in proportion past the red line.": "{#1} のうち {#0} で効きます：按分では、同じ層のアダプターが赤い線を超えた分を比例して譲ります。",
+ "Runs {#0} of the {#1} asked: the budget holds the adapters on shared layers at the red line.": "求めた {#1} のうち {#0} で効きます：予算が共有層のアダプターを赤い線で抑えます。",
+-"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "LoRA をページの上に最大 1800 px 幅で表示し、波の点を細かく動かせます：Esc か外側のクリックで元に戻ります"
++"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "LoRA をページの上に最大 1800 px 幅で表示し、波の点を細かく動かせます：Esc か外側のクリックで元に戻ります",
++"Shift keeps a point on the grid; a right-click takes a point out.": "Shift を押すと点がグリッドに沿います。点を右クリックすると消えます。"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index b909be7..df1405a 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5168,5 +5168,6 @@ RuachI18n.add("pt", {
+ "Runs {#0} of {#1}: in order, the rows above take theirs first and this one gets what the red line leaves.": "Corre {#0} de {#1}: por ordem, as linhas de cima tomam a sua parte primeiro e esta recebe o que a linha vermelha deixa.",
+ "Runs {#0} of {#1}: shared, the adapters on the same layers give way in proportion past the red line.": "Corre {#0} de {#1}: ao repartir, os adaptadores nas mesmas camadas cedem em proporção além da linha vermelha.",
+ "Runs {#0} of the {#1} asked: the budget holds the adapters on shared layers at the red line.": "Corre {#0} dos {#1} pedidos: o orçamento segura os adaptadores das camadas compartilhadas na linha vermelha.",
+-"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "As LoRAs sobre a página, até 1800 px de largura, para os pontos das ondas: Esc ou um clique ao lado as devolve ao lugar"
++"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "As LoRAs sobre a página, até 1800 px de largura, para os pontos das ondas: Esc ou um clique ao lado as devolve ao lugar",
++"Shift keeps a point on the grid; a right-click takes a point out.": "Shift mantém o ponto na grade; um clique direito num ponto o remove."
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index f466a98..aff5626 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5290,5 +5290,6 @@ RuachI18n.add("ru", {
+ "Runs {#0} of {#1}: in order, the rows above take theirs first and this one gets what the red line leaves.": "Идёт {#0} из {#1}: по порядку строки выше берут своё первыми, этой достаётся то, что оставила красная линия.",
+ "Runs {#0} of {#1}: shared, the adapters on the same layers give way in proportion past the red line.": "Идёт {#0} из {#1}: в долю — адаптеры на одних и тех же слоях за красной линией уступают пропорционально.",
+ "Runs {#0} of the {#1} asked: the budget holds the adapters on shared layers at the red line.": "Идёт {#0} из запрошенных {#1}: бюджет держит адаптеры на общих слоях у красной линии.",
+-"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "LoRA поверх страницы, до 1800 px в ширину, для точек волн: Esc или щелчок рядом возвращают их на место"
++"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "LoRA поверх страницы, до 1800 px в ширину, для точек волн: Esc или щелчок рядом возвращают их на место",
++"Shift keeps a point on the grid; a right-click takes a point out.": "Shift держит точку на сетке; правый щелчок по точке убирает её."
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index b6fee29..7fe64db 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5285,5 +5285,6 @@ RuachI18n.add("uk", {
+ "Runs {#0} of {#1}: in order, the rows above take theirs first and this one gets what the red line leaves.": "Іде {#0} з {#1}: за порядком рядки вище беруть своє першими, цьому дістається те, що лишила червона лінія.",
+ "Runs {#0} of {#1}: shared, the adapters on the same layers give way in proportion past the red line.": "Іде {#0} з {#1}: частками — адаптери на тих самих шарах за червоною лінією поступаються пропорційно.",
+ "Runs {#0} of the {#1} asked: the budget holds the adapters on shared layers at the red line.": "Іде {#0} із запитаних {#1}: бюджет тримає адаптери на спільних шарах біля червоної лінії.",
+-"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "LoRA поверх сторінки, до 1800 px завширшки, для точок хвиль: Esc або клацання поруч повертають їх на місце"
++"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "LoRA поверх сторінки, до 1800 px завширшки, для точок хвиль: Esc або клацання поруч повертають їх на місце",
++"Shift keeps a point on the grid; a right-click takes a point out.": "Shift тримає точку на сітці; правий клац по точці прибирає її."
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index b7f4a55..1e71f0e 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5168,5 +5168,6 @@ RuachI18n.add("zh", {
+ "Runs {#0} of {#1}: in order, the rows above take theirs first and this one gets what the red line leaves.": "实际生效 {#0}（设定 {#1}）：按顺序，上面的行先取，这一行得到红线剩下的部分。",
+ "Runs {#0} of {#1}: shared, the adapters on the same layers give way in proportion past the red line.": "实际生效 {#0}（设定 {#1}）：按比例时，同一层上的适配器在红线以上按比例让出。",
+ "Runs {#0} of the {#1} asked: the budget holds the adapters on shared layers at the red line.": "实际生效 {#0}（请求 {#1}）：预算把共享层上的适配器限制在红线。",
+-"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "LoRA 浮在页面之上，最宽 1800 px，便于调整波形的点：按 Esc 或点击旁边即可放回"
++"The LoRAs over the page, up to 1800 px wide, for the waves' points: Esc or a click beside them puts them back": "LoRA 浮在页面之上，最宽 1800 px，便于调整波形的点：按 Esc 或点击旁边即可放回",
++"Shift keeps a point on the grid; a right-click takes a point out.": "按住 Shift，点会贴合网格；右键点击一个点即可删除它。"
+ });
+diff --git a/tools/console/heresy-icons.js b/tools/console/heresy-icons.js
+index f42bd49..a4d27e8 100644
+--- a/tools/console/heresy-icons.js
++++ b/tools/console/heresy-icons.js
+@@ -142,6 +142,14 @@
+     "expand-out": '<path d="m15 15 6 6"/><path d="m15 9 6-6"/><path d="M21 16v5h-5"/><path d="M21 8V3h-5"/><path d="M3 16v5h5"/><path d="m3 21 6-6"/><path d="M3 8V3h5"/><path d="M9 9 3 3"/>',
+     // HERESY 1432: Save style as an icon (Lucide's save, ISC)
+     floppy: '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/>',
++    // HERESY 1459: a take's tools (Lucide's, ISC): crop, scissors, gauge, braces, music, a spectrum's bars, a folder
++    crop: '<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/>',
++    scissors: '<circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/>',
++    gauge: '<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
++    braces: '<path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/>',
++    music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
++    spectrum: '<path d="M3 21h18"/><path d="M5 17v-3"/><path d="M9 17V7"/><path d="M13 17V4"/><path d="M17 17v-6"/><path d="M21 17v-2"/>',
++    folder: '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+     star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>'
+   };
+   function ui(name, cls) {
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 3447eea..29ba9ab 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -1022,16 +1022,16 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+ 
+     <div class="take-body is-hidden" id="takeBody">
+       <div class="take-tools" id="takeTools">
+-        <div class="tool-group tg-dl"><span class="tool-cap">Download</span><div class="tool-row">
+-          <a class="btn ghost small" id="dlTakeAudio" download title="Download this song">WAV</a>
+-          <a class="btn ghost small" id="dlTakeFlac" download data-tip="FLAC: the same song, lossless (every sample identical to the WAV) at about three quarters of the size. Made on the spot in about a second; the title and lyrics are written into the file.">FLAC</a>
+-          <span class="split-btn"><a class="btn ghost small" id="dlTakeMp3" download data-tip="MP3 converter: makes a shareable MP3 from the lossless song on the server (a few seconds the first time, then kept). 320 kbps is near transparent (about 7 MB for 3 minutes); 256 is very good; 192 is good and smaller (about 4 MB); 128 is small, with audible loss on cymbals and reverb. The song title and lyrics are written into the file.">MP3</a>
++        <div class="tool-group tg-dl"><span class="tool-cap"><span class="tl-cap-ico" data-ui="download" aria-hidden="true"></span>Download</span><div class="tool-row">
++          <a class="btn ghost small" id="dlTakeAudio" download title="Download this song"><span class="tl-ico" data-ui="file-down" aria-hidden="true"></span><span class="tl-name">WAV</span></a>
++          <a class="btn ghost small" id="dlTakeFlac" download data-tip="FLAC: the same song, lossless (every sample identical to the WAV) at about three quarters of the size. Made on the spot in about a second; the title and lyrics are written into the file."><span class="tl-ico" data-ui="file-down" aria-hidden="true"></span><span class="tl-name">FLAC</span></a>
++          <span class="split-btn"><a class="btn ghost small" id="dlTakeMp3" download data-tip="MP3 converter: makes a shareable MP3 from the lossless song on the server (a few seconds the first time, then kept). 320 kbps is near transparent (about 7 MB for 3 minutes); 256 is very good; 192 is good and smaller (about 4 MB); 128 is small, with audible loss on cymbals and reverb. The song title and lyrics are written into the file."><span class="tl-ico" data-ui="file-down" aria-hidden="true"></span><span class="tl-name">MP3</span></a>
+             <select class="mp3-rate" id="mp3Rate" aria-label="MP3 bitrate" data-tip="MP3 converter: makes a shareable MP3 from the lossless song on the server (a few seconds the first time, then kept). 320 kbps is near transparent (about 7 MB for 3 minutes); 256 is very good; 192 is good and smaller (about 4 MB); 128 is small, with audible loss on cymbals and reverb. The song title and lyrics are written into the file.">
+           <option value="320">320k</option><option value="256">256k</option>
+           <option value="192">192k</option><option value="128">128k</option>
+         </select></span>
+         </div></div>
+-        <div class="tool-group tg-again"><span class="tool-cap">Make again</span><div class="tool-row">
++        <div class="tool-group tg-again"><span class="tool-cap"><span class="tl-cap-ico" data-ui="refresh" aria-hidden="true"></span>Make again</span><div class="tool-row">
+           <button type="button" class="btn ghost small" id="retakeTake" data-tip="Retake: this exact take into the form, with its score, both seeds and its music codes. Generate renders the same music again: try another VAE, sound seed or sound variations">Retake</button>
+           <button type="button" class="btn ghost small" id="reuseTake" data-tip="Reuse: the prompt, lyrics and every setting (mode, sampling, guidance, VAE, LoRAs, output) for a new song: no score, no seeds, no music codes, so Generate writes new music">Reuse</button>
+           <button type="button" class="btn ghost small" id="rerenderSound" title="Same music, a new sound seed (seconds)">Re-render sound</button>
+@@ -1042,19 +1042,19 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+           <button type="button" class="btn ghost small" id="fadeIn" data-tip="Fade the take in: its first seconds rise from silence (2 s unless you say otherwise), for a song that starts too abruptly. From the take's kept latents in seconds (the very sound), else its music codes rendered again. A new take; this one stays.">Fade in…</button>
+         </div></div>
+         <!-- HERESY 1356 (from SUNO v6): the take's own sound cut on its score's sections or stretched; a new take each time -->
+-        <div class="tool-group tg-edit"><span class="tool-cap">Edit</span><div class="tool-row">
+-          <button type="button" class="btn ghost small" id="cropTake" data-tip="Crop: keep the stretch from one section to another of this take's own sound, cut on its score's bar lines, the score cut along. A new take; this one stays.">Crop…</button>
+-          <button type="button" class="btn ghost small" id="cutSection" data-tip="Remove a section: take one or more sections out of this take's own sound, each cut on its score's bar lines and healed by a short crossfade, the score cut along. A new take; this one stays.">Remove a section…</button>
+-          <button type="button" class="btn ghost small" id="speedTake" data-tip="Speed: this take faster or slower, its pitch kept (Rubber Band), its score's tempo written anew. A new take; this one stays.">Speed…</button>
++        <div class="tool-group tg-edit"><span class="tool-cap"><span class="tl-cap-ico" data-ui="pencil" aria-hidden="true"></span>Edit</span><div class="tool-row">
++          <button type="button" class="btn ghost small" id="cropTake" data-tip="Crop: keep the stretch from one section to another of this take's own sound, cut on its score's bar lines, the score cut along. A new take; this one stays."><span class="tl-ico" data-ui="crop" aria-hidden="true"></span><span class="tl-name">Crop…</span></button>
++          <button type="button" class="btn ghost small" id="cutSection" data-tip="Remove a section: take one or more sections out of this take's own sound, each cut on its score's bar lines and healed by a short crossfade, the score cut along. A new take; this one stays."><span class="tl-ico" data-ui="scissors" aria-hidden="true"></span><span class="tl-name">Remove a section…</span></button>
++          <button type="button" class="btn ghost small" id="speedTake" data-tip="Speed: this take faster or slower, its pitch kept (Rubber Band), its score's tempo written anew. A new take; this one stays."><span class="tl-ico" data-ui="gauge" aria-hidden="true"></span><span class="tl-name">Speed…</span></button>
+         </div></div>
+-        <div class="tool-group tg-refine"><span class="tool-cap">Refiner</span><div class="tool-row">
+-          <button type="button" class="btn ghost small" data-post-open="spectrumPanel" data-tip="This take in the Refiner: its spectrum">Spectrum</button>
+-          <button type="button" class="btn ghost small" data-post-open="glossPanel" data-tip="This take in the Refiner: Whisper against the lyrics">Lyrics check</button>
++        <div class="tool-group tg-refine"><span class="tool-cap"><span class="tl-cap-ico" data-ui="sparkles" aria-hidden="true"></span>Refiner</span><div class="tool-row">
++          <button type="button" class="btn ghost small" data-post-open="spectrumPanel" data-tip="This take in the Refiner: its spectrum"><span class="tl-ico" data-ui="spectrum" aria-hidden="true"></span><span class="tl-name">Spectrum</span></button>
++          <button type="button" class="btn ghost small" data-post-open="glossPanel" data-tip="This take in the Refiner: Whisper against the lyrics"><span class="tl-ico" data-ui="spell-check" aria-hidden="true"></span><span class="tl-name">Lyrics check</span></button>
+         </div></div>
+-        <div class="tool-group tg-files"><span class="tool-cap">Files</span><div class="tool-row">
+-          <button type="button" class="btn ghost small" id="dlRequest" title="The replay request (.json): prompt, score, codes and both seeds">Request</button>
+-          <button type="button" class="btn ghost small" id="dlScore" title="The score as ABC notation (.abc)">Score</button>
+-          <button type="button" class="btn ghost small" id="loopTake" data-tip="A loop from this take: 1, 2, 4 or 8 bars on its score's bar lines, from the bar where the player stands (else the first), seamless (its end runs into its start), saved as a WAV named with its tempo and key">Loop…</button>
++        <div class="tool-group tg-files"><span class="tool-cap"><span class="tl-cap-ico" data-ui="folder" aria-hidden="true"></span>Files</span><div class="tool-row">
++          <button type="button" class="btn ghost small" id="dlRequest" title="The replay request (.json): prompt, score, codes and both seeds"><span class="tl-ico" data-ui="braces" aria-hidden="true"></span><span class="tl-name">Request</span></button>
++          <button type="button" class="btn ghost small" id="dlScore" title="The score as ABC notation (.abc)"><span class="tl-ico" data-ui="music" aria-hidden="true"></span><span class="tl-name">Score</span></button>
++          <button type="button" class="btn ghost small" id="loopTake" data-tip="A loop from this take: 1, 2, 4 or 8 bars on its score's bar lines, from the bar where the player stands (else the first), seamless (its end runs into its start), saved as a WAV named with its tempo and key"><span class="tl-ico" data-ui="repeat" aria-hidden="true"></span><span class="tl-name">Loop…</span></button>
+         </div></div>
+       </div>
+ 
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index 0dda57b..9fce782 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -378,7 +378,7 @@
+       '<svg class="curve-graph lora-wave-graph" data-wave-graph="' + escape(key) + '"></svg>' +
+       '<p class="row-hint">Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, ' +
+       "double-click a point to take it out. The strength above is the top of the curve.</p>" +
+-      '<p class="row-hint lora-wave-snap">Shift keeps a point on the grid.</p><p class="row-hint lora-wave-past" hidden></p></div>';
++      '<p class="row-hint lora-wave-snap">Shift keeps a point on the grid; a right-click takes a point out.</p><p class="row-hint lora-wave-past" hidden></p></div>';
+   }
+   function waveRedraw(svg, c) {   // while a point is dragged: the same elements moved, so the pointer keeps its point
+     var g = svg._geo;
+@@ -861,6 +861,19 @@
+     host.addEventListener("keydown", function (event) {
+       if (event.key === "Enter" && event.target.closest && event.target.closest(".lora-wave-len-in")) { event.preventDefault(); event.target.blur(); }
+     });
++    // HERESY 1459 (Viktor 15.10.2026: «правой кнопкой мыши снятие точки с кривой»): a right-click on a point takes it out, as a
++    // double-click does; the first and the last stay
++    host.addEventListener("contextmenu", function (event) {
++      var pt = event.target.closest && event.target.closest(".curve-pt"), svg = pt && pt.ownerSVGElement, key = svg && svg.dataset.waveGraph, c = key && rowChoices(key)[0];
++      if (!c || !c.curve) return;
++      event.preventDefault();
++      event.stopPropagation();
++      var i = +pt.dataset.pt, pts = c.curve.map(function (q) { return q.slice(); });
++      if (i <= 0 || i >= pts.length - 1) return;
++      pts.splice(i, 1);
++      setWave(key, pts, "draw");
++      changed();
++    });
+     host.addEventListener("pointerout", function (event) {
+       var g = event.target.closest && event.target.closest("svg[data-wave-graph]"), ed = g && g.closest("[data-wave-edit]");
+       if (ed && !waveDrag && !(event.relatedTarget && g.contains(event.relatedTarget))) ed.querySelector(".lora-wave-at").textContent = "";
+-- 
+2.43.0
+

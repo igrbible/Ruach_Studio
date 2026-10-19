@@ -23,6 +23,8 @@ faster-whisper==1.2.1
 # and hands Whisper a 16 kHz array, so any PyAV version does.
 soundfile
 numpy
+scipy                        # the Digital Gateway (HERESY 1547: digital_gate.py), the DAW render, the measures
+matplotlib                   # before and after drawn: spectrograms, bands, loudness (HERESY 1549: before_after.py)
 
 # Weights (not pip), all inside the Kit:
 #   ../whisper/whisper-large-v3-ct2-float16      Whisper large-v3, CTranslate2 float16, 2.9 GB
@@ -33,3 +35,5 @@ torchvision==0.26.0+cu128     # timm wants it; the PyPI build is CUDA 13 and bre
 transformers>=4.45,<5        # CLAP for the instrument probe (HERESY night 01.10)
 yt-dlp[default]              # audio of long recordings for instrument sets (HERESY 1100)
 mutagen                      # the artwork's tests read the MP3's tags; audio-separator brings it too
+c2pa-python==0.38.0          # Content Credentials on the downloads (HERESY 1489, c2pa_sign.py; MIT/Apache-2.0)
+cryptography                 # the install's own signing certificate, made at first use (HERESY 1489)

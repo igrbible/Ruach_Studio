@@ -1,0 +1,274 @@
+From f25cc53c8bcc66ca4fa0733b83902bad060b97ed Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 15 Oct 2026 13:30:42 -0600
+Subject: [PATCH 1409/1463] HERESY 1457: the LoRA row: a chord and a wave
+ instead of the words, the sliders starting alike; the name's column half as
+ wide, whole on hover; the budget as two modes
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Viktor 15.10.2026, his screenshot of two LoRAs in order: «Три кнопки ВЫКЛ / В ДОЛЮ / ПО ПОРЯДКУ… А ВЫКЛ что делает? Режимов у нас же два? Тогда ВЫКЛ и не нужен»; «Выровняй начальную точку ползунков»; «svg иконки с подсказкой по наведению. Для музыки аккордная svg, для звука — звуковая волна»; «колонку с названием адаптера можно ужать вдвое, обрезать троеточием… при наведении мышью распахивать в полную длину, не смещая дизайн». The budget is Share and In order; none lit is no budget (each adapter at its own strength), the lit one pressed again lets it go. Each half's strength opens with an icon of one width (a chord of three heads on a stem for the music half, Lucide's audio-waveform for the sound half; their tips and the strength's own tip name the half), so both sliders of a row and all rows start and end alike in every language. The name's column 0.42fr (was 0.85fr), cut with an ellipsis, its trigger word too; the whole name over the row on hover (.coll-fullname, as the Librarian's workspaces of 1105), gone on leaving or scrolling. The new tip in all eleven catalogs. Kitchen suite 814/0 (lr57 new; lw47 and lr53 now turn the budget off by pressing the lit mode).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           | 14 +++++++++++
+ tools/console/heresy-i18n-be.js |  3 ++-
+ tools/console/heresy-i18n-de.js |  3 ++-
+ tools/console/heresy-i18n-el.js |  3 ++-
+ tools/console/heresy-i18n-es.js |  3 ++-
+ tools/console/heresy-i18n-fr.js |  3 ++-
+ tools/console/heresy-i18n-it.js |  3 ++-
+ tools/console/heresy-i18n-ja.js |  3 ++-
+ tools/console/heresy-i18n-pt.js |  3 ++-
+ tools/console/heresy-i18n-ru.js |  3 ++-
+ tools/console/heresy-i18n-uk.js |  3 ++-
+ tools/console/heresy-i18n-zh.js |  3 ++-
+ tools/console/loras.js          | 41 +++++++++++++++++++++++++++++----
+ 13 files changed, 72 insertions(+), 16 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index afe3544..25c333d 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -5794,3 +5794,17 @@ body:has(#view-engine:not(.is-hidden)) :is(.topbar, #playbar) { z-index: 37; }
+   .hg-tabs button { width: auto; white-space: nowrap; }
+   .hg-tabs .hg-stops { display: none; }
+ }
++
++/* HERESY 1457 (Viktor 15.10.2026: «Выровняй начальную точку ползунков, чтобы они были симметричны по длине… svg иконки… колонку с
++   названием адаптера можно ужать вдвое, обрезать троеточием»): an icon of one width before every strength (a chord for the music
++   half, a wave for the sound half), so the sliders start and end alike in every language; the name's column half as wide as it
++   was, cut with an ellipsis, its trigger word too, the whole name over the row on hover (.coll-fullname, 1105) */
++.lora-half { grid-template-columns: 18px minmax(0, 1fr) 34px; }
++.lora-half:has(input.lora-exact) { grid-template-columns: 18px minmax(0, 1fr) 58px; }
++.lora-half-ico { display: flex; align-items: center; justify-content: center; color: var(--dim); cursor: help; }
++.lora-half-ico .ui-ico { width: 16px; height: 16px; }
++.lora-half:hover .lora-half-ico { color: var(--amber); }
++@media (min-width: 721px) {
++  .lora-row { grid-template-columns: minmax(64px, 0.42fr) minmax(150px, 1.6fr) auto 30px; }
++}
++.lora-who .lora-trigger { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 9c9362d..a554066 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5274,5 +5274,6 @@ RuachI18n.add("be", {
+ "Folders and Security": "Папкі і бяспека",
+ "Updates and About": "Абнаўленні і пра праграму",
+ "Clear the words: title, style, lyrics, score, seeds and loaded codes. The mode, knobs and LoRAs stay (New song resets them too, all but Sound and output)": "Ачысціць словы: назву, стыль, тэкст, партытуру, сіды і загружаныя коды. Рэжым, ручкі і LoRA застаюцца («Новая песня» скідае і іх, акрамя «Гуку і вываду»)",
+-"Drag the rows by their names to set their order": "Перацягні радкі за назву, каб задаць іх парадак"
++"Drag the rows by their names to set their order": "Перацягні радкі за назву, каб задаць іх парадак",
++"Press it again: no budget, each adapter at its own strength": "Націсні яшчэ раз — без бюджэту: кожны адаптар сваёй сілай"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index a5965ef..bfe2079 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5157,5 +5157,6 @@ RuachI18n.add("de", {
+ "Folders and Security": "Ordner und Sicherheit",
+ "Updates and About": "Updates und Über",
+ "Clear the words: title, style, lyrics, score, seeds and loaded codes. The mode, knobs and LoRAs stay (New song resets them too, all but Sound and output)": "Die Wörter leeren: Titel, Stil, Liedtext, Partitur, Seeds und geladene Codes. Modus, Einstellungen und LoRAs bleiben (Neuer Song setzt auch sie zurück, außer Klang und Ausgabe)",
+-"Drag the rows by their names to set their order": "Zieh die Zeilen an ihrem Namen, um ihre Reihenfolge festzulegen"
++"Drag the rows by their names to set their order": "Zieh die Zeilen an ihrem Namen, um ihre Reihenfolge festzulegen",
++"Press it again: no budget, each adapter at its own strength": "Noch einmal drücken: kein Budget, jeder Adapter mit seiner eigenen Stärke"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index 6ddc73b..ae15577 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5273,5 +5273,6 @@ RuachI18n.add("el", {
+ "Folders and Security": "Φάκελοι και ασφάλεια",
+ "Updates and About": "Ενημερώσεις και σχετικά",
+ "Clear the words: title, style, lyrics, score, seeds and loaded codes. The mode, knobs and LoRAs stay (New song resets them too, all but Sound and output)": "Καθαρισμός των λέξεων: τίτλος, ύφος, στίχοι, παρτιτούρα, σπόροι και φορτωμένοι κώδικες. Η λειτουργία, τα κουμπιά και τα LoRA μένουν (το «Νέο τραγούδι» τα επαναφέρει κι αυτά, εκτός από το «Ήχος και έξοδος»)",
+-"Drag the rows by their names to set their order": "Σύρε τις γραμμές από το όνομά τους για να ορίσεις τη σειρά τους"
++"Drag the rows by their names to set their order": "Σύρε τις γραμμές από το όνομά τους για να ορίσεις τη σειρά τους",
++"Press it again: no budget, each adapter at its own strength": "Πάτησέ το ξανά: χωρίς προϋπολογισμό, κάθε adapter με τη δική του ένταση"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 77537c3..20720e8 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5273,5 +5273,6 @@ RuachI18n.add("es", {
+ "Folders and Security": "Carpetas y seguridad",
+ "Updates and About": "Actualizaciones y acerca de",
+ "Clear the words: title, style, lyrics, score, seeds and loaded codes. The mode, knobs and LoRAs stay (New song resets them too, all but Sound and output)": "Vaciar las palabras: título, estilo, letra, partitura, semillas y códigos cargados. El modo, los mandos y las LoRA se quedan («Canción nueva» también los restablece, salvo «Sonido y salida»)",
+-"Drag the rows by their names to set their order": "Arrastra las filas por su nombre para fijar su orden"
++"Drag the rows by their names to set their order": "Arrastra las filas por su nombre para fijar su orden",
++"Press it again: no budget, each adapter at its own strength": "Púlsalo otra vez: sin presupuesto, cada adaptador con su propia fuerza"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index 201f602..de43a29 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5157,5 +5157,6 @@ RuachI18n.add("fr", {
+ "Folders and Security": "Dossiers et sécurité",
+ "Updates and About": "Mises à jour et à propos",
+ "Clear the words: title, style, lyrics, score, seeds and loaded codes. The mode, knobs and LoRAs stay (New song resets them too, all but Sound and output)": "Vider les mots : titre, style, paroles, partition, graines et codes chargés. Le mode, les réglages et les LoRA restent (Nouvelle chanson les remet aussi, sauf Son et sortie)",
+-"Drag the rows by their names to set their order": "Fais glisser les lignes par leur nom pour fixer leur ordre"
++"Drag the rows by their names to set their order": "Fais glisser les lignes par leur nom pour fixer leur ordre",
++"Press it again: no budget, each adapter at its own strength": "Appuie à nouveau : pas de budget, chaque adaptateur à sa propre force"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index cfd4ee3..518394c 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5273,5 +5273,6 @@ RuachI18n.add("it", {
+ "Folders and Security": "Cartelle e sicurezza",
+ "Updates and About": "Aggiornamenti e informazioni",
+ "Clear the words: title, style, lyrics, score, seeds and loaded codes. The mode, knobs and LoRAs stay (New song resets them too, all but Sound and output)": "Svuota le parole: titolo, stile, testo, partitura, semi e codici caricati. La modalità, le manopole e le LoRA restano («Nuova canzone» azzera anche loro, tranne «Suono e uscita»)",
+-"Drag the rows by their names to set their order": "Trascina le righe per il nome per stabilirne l'ordine"
++"Drag the rows by their names to set their order": "Trascina le righe per il nome per stabilirne l'ordine",
++"Press it again: no budget, each adapter at its own strength": "Premilo di nuovo: nessun budget, ogni adattatore con la sua forza"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index e697c66..d1c9ff3 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5157,5 +5157,6 @@ RuachI18n.add("ja", {
+ "Folders and Security": "フォルダーとセキュリティ",
+ "Updates and About": "アップデートとこのアプリについて",
+ "Clear the words: title, style, lyrics, score, seeds and loaded codes. The mode, knobs and LoRAs stay (New song resets them too, all but Sound and output)": "言葉をクリア：タイトル、スタイル、歌詞、楽譜、シード、読み込んだコード。モード、設定、LoRA は残ります（「新しい曲」はそれらも戻します。「サウンドと出力」は除く）",
+-"Drag the rows by their names to set their order": "名前の部分で行をドラッグして順番を決める"
++"Drag the rows by their names to set their order": "名前の部分で行をドラッグして順番を決める",
++"Press it again: no budget, each adapter at its own strength": "もう一度押すと予算なし：各アダプターが自分の強さで"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index 62dc7a0..95c2b62 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5157,5 +5157,6 @@ RuachI18n.add("pt", {
+ "Folders and Security": "Pastas e segurança",
+ "Updates and About": "Atualizações e sobre",
+ "Clear the words: title, style, lyrics, score, seeds and loaded codes. The mode, knobs and LoRAs stay (New song resets them too, all but Sound and output)": "Limpar as palavras: título, estilo, letra, partitura, sementes e códigos carregados. O modo, os ajustes e os LoRAs ficam (Canção nova também os redefine, menos Som e saída)",
+-"Drag the rows by their names to set their order": "Arrasta as linhas pelo nome para definir a sua ordem"
++"Drag the rows by their names to set their order": "Arrasta as linhas pelo nome para definir a sua ordem",
++"Press it again: no budget, each adapter at its own strength": "Carrega outra vez: sem orçamento, cada adaptador com a sua própria força"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 12a94e5..cc84353 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5279,5 +5279,6 @@ RuachI18n.add("ru", {
+ "Folders and Security": "Папки и безопасность",
+ "Updates and About": "Обновления и о программе",
+ "Clear the words: title, style, lyrics, score, seeds and loaded codes. The mode, knobs and LoRAs stay (New song resets them too, all but Sound and output)": "Очистить слова: название, стиль, текст, партитуру, сиды и загруженные коды. Режим, ручки и LoRA остаются («Новая песня» сбрасывает и их, кроме «Звука и вывода»)",
+-"Drag the rows by their names to set their order": "Перетащи строки за имя, чтобы задать их порядок"
++"Drag the rows by their names to set their order": "Перетащи строки за имя, чтобы задать их порядок",
++"Press it again: no budget, each adapter at its own strength": "Нажми ещё раз — без бюджета: каждый адаптер своей силой"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 151c163..429b431 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5274,5 +5274,6 @@ RuachI18n.add("uk", {
+ "Folders and Security": "Теки й безпека",
+ "Updates and About": "Оновлення й про програму",
+ "Clear the words: title, style, lyrics, score, seeds and loaded codes. The mode, knobs and LoRAs stay (New song resets them too, all but Sound and output)": "Очистити слова: назву, стиль, текст, партитуру, сіди й завантажені коди. Режим, ручки й LoRA лишаються («Нова пісня» скидає і їх, крім «Звуку і виводу»)",
+-"Drag the rows by their names to set their order": "Перетягни рядки за назву, щоб задати їхній порядок"
++"Drag the rows by their names to set their order": "Перетягни рядки за назву, щоб задати їхній порядок",
++"Press it again: no budget, each adapter at its own strength": "Натисни ще раз — без бюджету: кожен адаптер своєю силою"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index e449c95..afb8219 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5157,5 +5157,6 @@ RuachI18n.add("zh", {
+ "Folders and Security": "文件夹与安全",
+ "Updates and About": "更新与关于",
+ "Clear the words: title, style, lyrics, score, seeds and loaded codes. The mode, knobs and LoRAs stay (New song resets them too, all but Sound and output)": "清空文字：标题、风格、歌词、乐谱、种子和已加载的编码。模式、设置和 LoRA 保留（“新歌”也会重置它们，“声音与输出”除外）",
+-"Drag the rows by their names to set their order": "按住名称拖动行来设定它们的顺序"
++"Drag the rows by their names to set their order": "按住名称拖动行来设定它们的顺序",
++"Press it again: no budget, each adapter at its own strength": "再按一次：不设预算，每个适配器按自己的强度"
+ });
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index ab41c82..8038381 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -351,8 +351,10 @@
+     if (liveChoices().length < 2) return "";
+     var tip = tr("Adapters that push on the same layers share one budget a half, its red line the cap: Share gives way in proportion past it, In order serves them from the top row, and what one lets go, the next one takes. The engine keeps it at every moment of the song.");
+     return '<div class="lora-budget" role="group" aria-label="' + escape(tr("Budget")) + '"><span class="lora-budget-name" data-tip="' + escape(tip) + '">Budget</span>' +
+-      [["off", "Off"], ["share", "Share"], ["order", "In order"]].map(function (m) {
+-        return '<button type="button" class="curve-mode' + (S.budget === m[0] ? " is-on" : "") + '" data-budget="' + m[0] + '" aria-pressed="' + (S.budget === m[0]) + '">' + m[1] + "</button>";
++      // HERESY 1457 (Viktor: «Режимов у нас же два? Тогда ВЫКЛ и не нужен»): two modes; none lit is no budget, the lit one pressed again
++      [["share", "Share"], ["order", "In order"]].map(function (m) {
++        return '<button type="button" class="curve-mode' + (S.budget === m[0] ? " is-on" : "") + '" data-budget="' + m[0] + '" aria-pressed="' + (S.budget === m[0]) +
++          '" data-tip="' + escape(tr("Press it again: no budget, each adapter at its own strength")) + '">' + m[1] + "</button>";
+       }).join("") + (S.budget === "order" ? '<span class="row-hint lora-budget-hint">Drag the rows by their names to set their order</span>' : "") + "</div>";
+   }
+   // the lab's word for the adapters of the form, asked when they change (none: the budget groups them all, the tips say nothing)
+@@ -407,6 +409,12 @@
+     return out;
+   }
+ 
++  // HERESY 1457 (Viktor 15.10.2026: «Для музыки аккордная svg, для звука — звуковая волна»): a chord (three heads on one stem, drawn
++  // in the line of Lucide's icons) and Lucide's audio-waveform; the label's own tip says which half and what it does
++  var CHORD = '<svg class="ui-ico ui-chord" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15.6 2.5v16"/>' +
++    '<ellipse class="f" cx="12.7" cy="19" rx="3" ry="2" transform="rotate(-20 12.7 19)"/><ellipse class="f" cx="12.7" cy="12.6" rx="3" ry="2" transform="rotate(-20 12.7 12.6)"/>' +
++    '<ellipse class="f" cx="12.7" cy="6.2" rx="3" ry="2" transform="rotate(-20 12.7 6.2)"/></svg>';
++  function halfIcon(half) { return half === "ar" ? CHORD : (root.HeresyIcons ? root.HeresyIcons.ui("waveform") : "~"); }
+   function halfControl(choice, e, half) {
+     var label = half === "ar" ? "Music" : "Sound", on = has(e, half) || !e;
+     if (!on) return "";   // HERESY 1016: a file without this half shows no slider for it
+@@ -416,7 +424,7 @@
+       ? tr(half === "ar" ? "Strength on the music half: the score and the music tokens (0 off, 1 as trained)"
+                          : "Strength on the sound half: the acoustic stage that turns music tokens into sound (0 off, 1 as trained)") +
+         " · " + tr("green to " + z.safe + ", amber to " + z.limit + ", red beyond")
+-      : tr("This file has no " + label.toLowerCase() + " half")) + '"><span>' + label + "</span>" +
++      : tr("This file has no " + label.toLowerCase() + " half")) + '"><span class="lora-half-ico" role="img" aria-label="' + escape(tr(label)) + '" data-name="' + label + '">' + halfIcon(half) + "</span>" +
+       '<input type="range" class="zoned" style="' + road + '" min="0" max="' + z.max + '" step="0.025" value="' + value + '"' + (on ? "" : " disabled") +
+       ' data-lora="' + escape(choice.id) + '" data-half="' + half + '" aria-label="' + escape(tr(nameOf(choice.id) + " " + label + " strength")) + '" />' +
+       '<output data-tip="Double-click to type it">' + (on ? fmt(value, 2) : "—") + "</output></label>";
+@@ -599,6 +607,29 @@
+   }
+   function mount(host, opts) {
+     S.host = host;
++    // HERESY 1457 (Viktor: «колонку с названием адаптера можно ужать вдвое, обрезать троеточием… при наведении мышью распахивать в
++    // полную длину, не смещая дизайн, — как ты сделал с обрезкой имён в волкспейсах»): as the Librarian's workspaces (1105)
++    var fullName = null;
++    function dropFull() { if (fullName) { fullName.remove(); fullName = null; } }
++    host.addEventListener("mouseover", function (e) {
++      var n = e.target.closest && e.target.closest(".lora-row .lora-name");
++      if (fullName && fullName.owner === n && root.document.body.contains(n)) return;
++      dropFull();
++      if (!n || n.scrollWidth <= n.clientWidth + 1) return;
++      var r = n.getBoundingClientRect(), cs = root.getComputedStyle(n);
++      fullName = root.document.createElement("div");
++      fullName.className = "coll-fullname lora-fullname";
++      fullName.owner = n;
++      fullName.textContent = n.textContent;
++      fullName.style.cssText = "left:" + (r.left - 6) + "px;top:" + (r.top - 3) + "px;font-size:" + cs.fontSize;
++      root.document.body.appendChild(fullName);
++    });
++    host.addEventListener("mouseout", function (e) {
++      var n = e.target.closest && e.target.closest(".lora-name");
++      if (n && !(e.relatedTarget && n.contains(e.relatedTarget))) dropFull();
++    });
++    host.addEventListener("mouseleave", dropFull);
++    root.addEventListener("scroll", dropFull, true);
+     S.opts = opts || {};
+     // HERESY 1167: the adapters not in use behind one line, open or closed as it was left; the ones in use stay above it
+     host.innerHTML = '<div class="lora-active"></div><details class="lora-lib"><summary><span class="chev" aria-hidden="true"></span>' +
+@@ -626,7 +657,7 @@
+       var wt = event.target.closest("[data-wave-toggle]"), wm = event.target.closest("[data-wave-mode]"), bm = event.target.closest("[data-budget]");
+       if (wt) { waveOpen[wt.dataset.waveToggle] = !waveOpen[wt.dataset.waveToggle]; paint(); return; }
+       if (bm) {
+-        S.budget = bm.dataset.budget;
++        S.budget = bm.dataset.budget === S.budget ? "off" : bm.dataset.budget;   // HERESY 1457: the lit one again: no budget
+         try { root.localStorage.setItem("yue2.loraBudget", S.budget); } catch (e) { /* no storage */ }
+         return changed();
+       }
+@@ -764,7 +795,7 @@
+     function vtip(range) {
+       if (!vt) { vt = document.createElement("div"); vt.className = "lora-vtip"; vt.setAttribute("aria-hidden", "true"); document.body.appendChild(vt); }
+       var v = +range.value, max = +range.max || 1, z1 = parseFloat(range.style.getPropertyValue("--z1")) / 100 * max, z2 = parseFloat(range.style.getPropertyValue("--z2")) / 100 * max;
+-      var label = range.closest(".lora-half, .lora-total"), name = label && label.querySelector("span") ? label.querySelector("span").textContent : "";
++      var label = range.closest(".lora-half, .lora-total"), sp = label && label.querySelector("span"), name = sp ? (sp.dataset.name ? tr(sp.dataset.name) : sp.textContent) : "";   // 1457: an icon's name
+       vt.textContent = (name ? name + " " : "") + v.toFixed(3).replace(/0+$/, "").replace(/\.$/, ".0");
+       vt.className = "lora-vtip " + (v > z2 + 1e-9 ? "is-red" : v > z1 + 1e-9 ? "is-amber" : "is-green");
+       vt.style.left = vtXY[0] + "px";
+-- 
+2.43.0
+

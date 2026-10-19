@@ -31,8 +31,16 @@ for u in ("", "K", "M", "G", "T"):
         print(f"{n:.0f}{u}" if u == "" else f"{n:.1f}{u}"); break
     n /= 1024' "${1:-0}"; }
 
-# The revision a repo is pinned to ("main" when tools/hf-revisions.txt does not list it)
-hf_rev() { local r=""; [ -f "$HF_REVS" ] && r=$(awk -v k="$1" '$1 == k {print $2; exit}' "$HF_REVS"); echo "${r:-main}"; }
+# The revision a repo is pinned to: tools/hf-revisions.txt, then (HERESY 1446) the studio's own heresy/hf-revisions.txt, where
+# goldhub/Ruach_Studio_Models_v2 is pinned; "main" when neither lists it
+hf_rev() {
+  local r="" f
+  for f in "$HF_REVS" "$ROOT/heresy/hf-revisions.txt"; do
+    [ -f "$f" ] && r=$(awk -v k="$1" '$1 == k {print $2; exit}' "$f")
+    [ -n "$r" ] && break
+  done
+  echo "${r:-main}"
+}
 
 # Make sure the pinned downloader is installed (and is the pinned version, not whatever was there)
 hf_ready() {

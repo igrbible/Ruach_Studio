@@ -1,0 +1,455 @@
+From c5deee5e38f7ec22138549ce54ea6080d854febe Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 16 Oct 2026 00:48:05 -0600
+Subject: [PATCH 1421/1463] HERESY 1474, 1476, 1478: menus placed again when
+ they grow and the take's menu in groups (guards on its trash, move, hiding);
+ one sound at a time; Export to DAW without Waveform, Bitwig first
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.js               | 65 ++++++++++++++++++++++++++----
+ tools/console/heresy-collection.js | 13 ++++--
+ tools/console/heresy-daw.js        |  7 ++--
+ tools/console/heresy-derived.js    |  2 +-
+ tools/console/heresy-i18n-be.js    |  7 +++-
+ tools/console/heresy-i18n-de.js    |  7 +++-
+ tools/console/heresy-i18n-el.js    |  7 +++-
+ tools/console/heresy-i18n-es.js    |  7 +++-
+ tools/console/heresy-i18n-fr.js    |  7 +++-
+ tools/console/heresy-i18n-it.js    |  7 +++-
+ tools/console/heresy-i18n-ja.js    |  7 +++-
+ tools/console/heresy-i18n-pt.js    |  7 +++-
+ tools/console/heresy-i18n-ru.js    |  7 +++-
+ tools/console/heresy-i18n-uk.js    |  7 +++-
+ tools/console/heresy-i18n-zh.js    |  7 +++-
+ tools/console/heresy-menu.js       | 12 ++++--
+ tools/console/heresy-mixer.js      |  1 +
+ tools/console/index.html           |  2 +-
+ 18 files changed, 149 insertions(+), 30 deletions(-)
+
+diff --git a/tools/console/app.js b/tools/console/app.js
+index 3a93b45..d24c6f6 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -7397,6 +7397,23 @@
+ 
+   // Listen to the chosen recording before transcribing it. It has its own player, so the one at the bottom
+   // keeps its song; starting either one pauses the other.
++  // HERESY 1476 (Viktor 15.10.2026: «Воспроизведение из Огранщика не останавливается при включении плей в другой комнате»): one sound
++  // at a time: a player that starts (in the page or not, by a click on its controls or by the page) stops every other one that plays,
++  // and the DAW; players of one group (the compare's versions) hand over among themselves. The DAW, when it starts, stops them all
++  (function () {
++    var live = [];
++    function oneSound(el) {
++      var g = el.dataset ? el.dataset.oneSound || "" : "";
++      live = live.filter(function (b) { return b.isConnected || !b.paused; });
++      live.forEach(function (b) { if (b !== el && !b.paused && !(g && b.dataset && b.dataset.oneSound === g)) b.pause(); });
++      if (live.indexOf(el) < 0) live.push(el);
++      if (window.HeresyMixer && window.HeresyMixer.state && window.HeresyMixer.state().playing) window.HeresyMixer.stop();
++    }
++    var play = HTMLMediaElement.prototype.play;
++    HTMLMediaElement.prototype.play = function () { try { oneSound(this); } catch (e) { /* the sound still plays */ } return play.apply(this, arguments); };
++    document.addEventListener("play", function (e) { if (e.target instanceof HTMLMediaElement) oneSound(e.target); }, true);
++    window.ruachOneSound = function () { live.forEach(function (b) { if (!b.paused) b.pause(); }); };
++  })();
+   var preview = new Audio(), previewUrl = "";
+   preview.preload = "metadata";
+   function paintListen() {
+@@ -8994,8 +9011,13 @@
+       HC && bulk ? (function () {
+         var all = bulkRows.length > 0 && bulkRows.every(function (x) { return x.hidden; });
+         return { icon: "◌", label: all ? "Show " + bulk.length + " again" : "Hide " + bulk.length + " from the lists", action: function () {
+-          HC.act({ op: all ? "show" : "hide", names: bulk }, all ? "Shown again: " + bulk.length : "Hidden from the lists (not deleted): " + bulk.length);
+-          if (HC.unselect) HC.unselect(bulk);   // HERESY 1169 · 1239: they leave this view, as the bar's own button lets them go
++          var go = function () {
++            HC.act({ op: all ? "show" : "hide", names: bulk }, all ? "Shown again: " + bulk.length : "Hidden from the lists (not deleted): " + bulk.length);
++            if (HC.unselect) HC.unselect(bulk);   // HERESY 1169 · 1239: they leave this view, as the bar's own button lets them go
++          };
++          if (all || !HC.guard) return go();     // HERESY 1474: hiding several asked as the bar's own button asks (1473)
++          HC.guard(tr("Hide " + bulk.length + " takes from the lists?") + "\n\n" + tr("Nothing is deleted: Hidden on the left shows them again."), tr("Hide them"), bulk)
++            .then(function (ok) { if (ok) go(); });
+         } };
+       })() : HC ? { icon: "◌", label: row && row.hidden ? "Show again" : "Hide from the lists", action: function () {
+         HC.act({ op: row && row.hidden ? "show" : "hide", names: [name] }, row && row.hidden ? "Shown again" : "Hidden from the lists (not deleted)");
+@@ -9043,18 +9065,21 @@
+         var reaper = { label: "REAPER project", hint: (mine === "reaper" ? "your DAW · " : "") + what, action: function () {   // HERESY 1104
+           reaperProject(take).catch(function (e) { toast("No REAPER project: " + e.message, "bad"); });
+         } };
+-        var dawp = { label: "DAWproject", hint: (mine === "waveform" || mine === "bitwig" ? "your DAW · " : "") + what + " · Waveform 14, Bitwig, Studio One, Cubase", action: function () {
++        var dawp = { label: "DAWproject", hint: (mine === "bitwig" ? "your DAW · " : "") + what + " · Bitwig, Studio One, Cubase", action: function () {   // HERESY 1478
+           dawProject(take).catch(function (e) { toast("No DAWproject: " + e.message, "bad"); });   // HERESY 1134
+         } };
+-        return { icon: "🎚", label: "Export to DAW", items: mine === "waveform" || mine === "bitwig" ? [dawp, reaper] : [reaper, dawp] };
++        return { icon: "🎚", label: "Export to DAW", items: mine === "reaper" ? [reaper, dawp] : [dawp, reaper] };   // HERESY 1478: Bitwig's first
+       })(),
+       HC && HC.trash ? { sep: true } : null,
+       // HERESY 1151 (Viktor): on a checked card in the Librarian, every checked take goes, as with Move
+       HC && HC.trash ? (function () {
+         var sel = here === "collection" && HC.selected ? HC.selected() : [], list = sel.length > 1 && sel.indexOf(name) >= 0 ? sel : [name];
+         return { icon: "🗑", label: list.length > 1 ? "Move " + list.length + " to the trash…" : "Move to the trash…", danger: true, action: function () {
+-        window.HeresyDialog.confirm((list.length > 1 ? "Move the " + list.length + " checked takes to the trash?" : "Move “" + displayTitle(take) + "” to the trash?") +
+-          "\n\nNothing is deleted: the trash in the Librarian gives it back until it is emptied.", { ok: "To the trash", danger: true })
++        // HERESY 1474: through the Librarian's guards (1473): where you stand, which workspaces it reaches, twice when it reaches past one
++        (HC.guard ? HC.guard((list.length > 1 ? tr("Move " + list.length + " takes to the trash?") : tr("Move “" + displayTitle(take) + "” to the trash?")) + "\n\n" +
++                             tr("Nothing is deleted: the trash in the Librarian gives it back until it is emptied."), tr("To the trash"), list)
++          : window.HeresyDialog.confirm((list.length > 1 ? "Move the " + list.length + " checked takes to the trash?" : "Move “" + displayTitle(take) + "” to the trash?") +
++          "\n\nNothing is deleted: the trash in the Librarian gives it back until it is emptied.", { ok: "To the trash", danger: true }))
+           .then(function (ok) { if (ok) return HC.trash(list).then(function (d) {     // HERESY 1135: with its undo
+             if (HC.undoable && d && d.moved && d.moved.length) HC.undoable("Moved to the trash", HC.untrash(d.moved));
+             else if (!d || !d.protected || !d.protected.length) toast("Moved to the trash");   // HERESY 1368: none went: HC.trash said why
+@@ -9064,7 +9089,33 @@
+       } };
+       })() : null
+     ].filter(Boolean);
+-    window.HeresyMenu.open(x, y, items);
++    window.HeresyMenu.open(x, y, groupMenu(items));
++  }
++  // HERESY 1474 (Viktor 16.10.2026: «пересмотри все пункты в контекстнике. Если логично, сделай подпункты, потому что оно у нас скоро
++  // разбухнет до потолка»): the take's menu in groups: Open › (the rooms, the sheet, the datasheet, the artwork), Marks › (like,
++  // dislike, favourite, protect), Artwork › (draw, redraw, take off, to its namesakes), Library › (its workspaces, a move, a pin,
++  // hiding); a group of one stays a row of its own; Play, the section's own actions, the note, the name, a regeneration, the Writer,
++  // Copy, Download, Export to DAW and the trash stay where the hand finds them
++  function groupMenu(items) {
++    var G = { open: { icon: "\u2197", label: "Open", items: [] }, mark: { icon: "\ud83d\udc4d", label: "Marks", items: [] },
++              art: { icon: "\u25a3", label: "Artwork", items: [] }, lib: { icon: "\u25a6", label: "Library", items: [] } };
++    var kindOf = function (it) {
++      if (!it || it.sep || it.head || !it.label || it.disabled && !it.action) return "";
++      if (/^Open (in|the) /.test(it.label)) return "open";
++      if (["\ud83d\udc4d", "\ud83d\udc4e", "\u2606", "\ud83d\udee1"].indexOf(it.icon) >= 0) return "mark";
++      if (/artwork|cover/i.test(it.label)) return "art";
++      if (["\u25a6", "\u21e5", "\ud83d\udccc", "\u25cc"].indexOf(it.icon) >= 0) return "lib";
++      return "";
++    };
++    var out = [], seen = {};
++    items.forEach(function (it) {
++      var k = kindOf(it);
++      if (!k) return out.push(it);
++      G[k].items.push(it);
++      if (!seen[k]) { seen[k] = true; out.push(G[k]); }
++    });
++    out = out.map(function (it) { for (var k in G) if (G[k] === it && it.items.length === 1) return it.items[0]; return it; });
++    return out.filter(function (it, i, a) { return !(it.sep && (i === 0 || i === a.length - 1 || a[i - 1].sep)); });
+   }
+ 
+   /* ---------------------------------------------- HERESY 1044: a note on the take */
+diff --git a/tools/console/heresy-collection.js b/tools/console/heresy-collection.js
+index dd43799..ff5cc20 100644
+--- a/tools/console/heresy-collection.js
++++ b/tools/console/heresy-collection.js
+@@ -735,8 +735,15 @@
+   // HERESY 1101: a move into one workspace, for the menu on a card (the selection when the card is in it)
+   function moveTo(w, list, fromHere) {
+     var from = fromHere && state.place && state.place.charAt(0) !== "_" ? state.place : "", n = list.length;
+-    return act({ op: "ws-move", workspace: w, from: from, names: list }, n + " moved to “" + w + "”" + (from ? " (out of “" + from + "”)" : " (out of every other workspace)"))
+-      .then(function (ok) { if (ok) { list.forEach(function (k) { delete state.sel[k]; }); paint(); } return ok; });
++    var go = function () {
++      return act({ op: "ws-move", workspace: w, from: from, names: list }, n + " moved to “" + w + "”" + (from ? " (out of “" + from + "”)" : " (out of every other workspace)"))
++        .then(function (ok) { if (ok) { list.forEach(function (k) { delete state.sel[k]; }); paint(); } return ok; });
++    };
++    // HERESY 1474: from the take's menu as from the bar (1473): several takes, or one that lives in more than one workspace, asked first
++    if (n < 2 && (from || reach(list, false).wss.length < 2)) return go();
++    return guarded(tl(n > 1 ? "Move " + n + " takes to \u201c" + w + "\u201d?" : "Move 1 take to \u201c" + w + "\u201d?") + "\n\n" +
++                   (from ? tl("They leave \u201c" + from + "\u201d.") : tl("They leave every other workspace they are in (a locked one keeps its own).")),
++                   tl("Move them"), list, !!from).then(function (yes) { return yes ? go() : false; });
+   }
+ 
+   // the workspace in hand (the header): the list shows it, new takes land in it
+@@ -1914,7 +1921,7 @@
+                               pinPlaces: pinPlaces, unpinAll: unpinAll, pinTarget: pinTarget, pinIn: pinIn,   // HERESY 1167
+                               isFrozen: function (name) { var r = rowOf(name); return !!(r && r.frozen); },   // HERESY 1166
+                               isProtected: isProtected, protect: protect, protectMany: protectMany, protTip: function (on) { return on ? PROT_ON : PROT_OFF; },   // HERESY 1368
+-                              undoable: undoable, untrash: untrash,
++                              undoable: undoable, untrash: untrash, guard: guarded,   // HERESY 1474: the take's menu asks as the bar does
+                               trash: function (names) { return api("/trash", { op: "move", names: names }).then(function (d) { saidProtected(d); ((d && d.moved) || names).forEach(function (n) { delete state.sel[n]; }); return load().then(function () { return d; }); }); },
+                               // HERESY 1169 · 1239 (Viktor 08.10.2026: «Я переместил в корзину три трека, а блок так и остался раскрытым, и не исчез обратно в "тень"»): what the menu sends away leaves the choice, as with the bar's own buttons
+                               unselect: function (names) { (names || []).forEach(function (n) { delete state.sel[n]; }); paint(); } };
+diff --git a/tools/console/heresy-daw.js b/tools/console/heresy-daw.js
+index f72c1da..1d0c561 100644
+--- a/tools/console/heresy-daw.js
++++ b/tools/console/heresy-daw.js
+@@ -1,6 +1,6 @@
+ // HERESY 1102 (Viktor, 02.10.2026): the DAW button's landing. Two ways out of the studio, and only two: the mixed
+ // track as it is, with no DAW's magic, or the whole take handed to the user's own DAW, where whatever happens next
+-// happens outside the studio. REAPER first, Waveform second; others by pull request. The lab says which DAWs the
++// happens outside the studio. Bitwig first (DAWproject), REAPER second (HERESY 1478: Waveform out); others by pull request. The lab says which DAWs the
+ // studio's own machine has (GET /lab/daw); a DAW on another computer cannot be seen from there, so the user names
+ // theirs, and the choice is kept with the page.
+ (function () {
+@@ -50,10 +50,9 @@
+         '<div class="dw-acts"><button type="button" class="btn small' + (on ? " primary" : " ghost") + '" data-dw-pick="' + esc(x.id) + '">' + (on ? "Your DAW ✓" : "I use this one") + "</button>" +
+         (x.id === "reaper" ? '<button type="button" class="btn small ghost" data-dw-reaper="1"' + (title ? "" : " disabled") + '>Export the take</button>' : "") +
+         // HERESY 1134: the DAWs that open DAWproject get it from here too
+-        (x.id === "waveform" || x.id === "bitwig" ? '<button type="button" class="btn small ghost" data-dw-dawproject="1"' + (title ? "" : " disabled") + ' title="A DAWproject: the mix, the stems, the score as notes, the sections as markers">Export the take</button>' : "") + "</div></div>";
++        (x.id === "bitwig" ? '<button type="button" class="btn small ghost" data-dw-dawproject="1"' + (title ? "" : " disabled") + ' title="A DAWproject: the mix, the stems, the score as notes, the sections as markers">Export the take</button>' : "") + "</div></div>";
+     }).join("") + "</div>";
+-    html += '<p class="row-hint dw-now">Now: the <b>REAPER</b> project (the mix, every stem, the score as MIDI; the lyrics and sections once the take is timed in the Refiner’s lyrics check), and <b>DAWproject</b> (the mix, every stem, the score as notes, the sections as markers: Waveform 14, Bitwig, Studio One, Cubase); both also in a take’s menu → Download. ' +
+-      "Waveform: 14 or newer.</p>" +
++    html += '<p class="row-hint dw-now">Now: the <b>REAPER</b> project (the mix, every stem, the score as MIDI; the lyrics and sections once the take is timed in the Refiner’s lyrics check), and <b>DAWproject</b> (the mix, every stem, the score as notes, the sections as markers: Bitwig, Studio One, Cubase); both also in a take’s menu → Download.</p>' +
+       // HERESY 1469: Chrome holds back a file type it does not know until it is allowed
+       '<p class="row-hint dw-chrome">' + esc(tr("Chrome may hold back a .dawproject or .rpp download as an unusual file: open Downloads (Ctrl+J) and choose Keep.")) + "</p></section>";
+     state.el.querySelector(".dw-box").innerHTML = html;
+diff --git a/tools/console/heresy-derived.js b/tools/console/heresy-derived.js
+index 80718f1..5d27322 100644
+--- a/tools/console/heresy-derived.js
++++ b/tools/console/heresy-derived.js
+@@ -488,7 +488,7 @@
+     var hk = state.hooks || {};
+     if (hk.pauseMain) hk.pauseMain();
+     active = Math.max(0, Math.min(versions.length - 1, active || 0));
+-    var audios = versions.map(function (v) { var a = new Audio(); a.preload = "metadata"; a.src = v.url; return a; });
++    var audios = versions.map(function (v) { var a = new Audio(); a.preload = "metadata"; a.src = v.url; a.dataset.oneSound = "compare"; return a; });   // HERESY 1476: they hand over among themselves
+     var rated = !!(hk.rating && hk.rate && versions.some(function (v) { return v.take; }));
+     var hideDis = rated && cmpHide();
+     var ico = function (n) { return window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(n) : (n === "pause" ? "❚❚" : "▶"); };
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 408d47e..649e61a 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5363,5 +5363,10 @@ RuachI18n.add("be", {
+ "Nothing is deleted: Hidden on the left shows them again.": "Нічога не выдаляецца: «Схаваныя» злева пакажуць іх зноў.",
+ "Hide them": "Схаваць",
+ "{#0} selected · across ALL workspaces": "Выбрана: {0} · па ЎСІХ прасторах",
+-"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "У ім {0} з {1} сэмплаў: {2} зніклі з бібліятэкі, пакуль ішла ўпакоўка (у кошыку або выдаленыя)."
++"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "У ім {0} з {1} сэмплаў: {2} зніклі з бібліятэкі, пакуль ішла ўпакоўка (у кошыку або выдаленыя).",
++"Move 1 take to “{0}”?": "Перамясціць сэмпл у «{0}»?",
++"Move “{0}” to the trash?": "«{0}» — у кошык?",
++"Out of the studio: the mixed track as it is, or the whole take into your DAW (Bitwig, REAPER)": "Вонкі са студыі: зведзены трэк як ёсць або ўвесь сэмпл у тваю DAW Bitwig, REAPER",
++"(the mix, every stem, the score as notes, the sections as markers: Bitwig, Studio One, Cubase); both also in a take’s menu → Download.": "(мікс, кожны стэм, партытура нотамі, раздзелы маркерамі: Bitwig, Studio One, Cubase); абодва ёсць і ў меню сэмпла → «Спампаваць».",
++"mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "мікс і партытура (стэмы: раздзялі іх у Гранільшчыку) · Bitwig, Studio One, Cubase"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 5c5b3d7..d6154f8 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5246,5 +5246,10 @@ RuachI18n.add("de", {
+ "Nothing is deleted: Hidden on the left shows them again.": "Nichts wird gelöscht: «Ausgeblendet» links zeigt sie wieder.",
+ "Hide them": "Ausblenden",
+ "{#0} selected · across ALL workspaces": "{0} gewählt · über ALLE Bereiche",
+-"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "Darin sind {0} von {1} Takes: {2} waren beim Packen nicht mehr in der Bibliothek (im Papierkorb oder weg)."
++"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "Darin sind {0} von {1} Takes: {2} waren beim Packen nicht mehr in der Bibliothek (im Papierkorb oder weg).",
++"Move 1 take to “{0}”?": "Den Take nach «{0}» verschieben?",
++"Move “{0}” to the trash?": "«{0}» in den Papierkorb?",
++"Out of the studio: the mixed track as it is, or the whole take into your DAW (Bitwig, REAPER)": "Raus aus dem Studio: der gemischte Track, wie er ist, oder der ganze Take in deine DAW Bitwig, REAPER",
++"(the mix, every stem, the score as notes, the sections as markers: Bitwig, Studio One, Cubase); both also in a take’s menu → Download.": "(der Mix, jeder Stem, die Partitur als Noten, die Abschnitte als Marker: Bitwig, Studio One, Cubase); beides auch im Menü eines Takes → Herunterladen.",
++"mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "Mix und Partitur (Stems: trenne sie im Veredler) · Bitwig, Studio One, Cubase"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index b9b1711..27445ad 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5362,5 +5362,10 @@ RuachI18n.add("el", {
+ "Nothing is deleted: Hidden on the left shows them again.": "Τίποτα δεν διαγράφεται: τα «Κρυμμένα» αριστερά τα δείχνουν ξανά.",
+ "Hide them": "Απόκρυψη",
+ "{#0} selected · across ALL workspaces": "Επιλεγμένα: {0} · σε ΟΛΟΥΣ τους χώρους",
+-"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "Περιέχει {0} από {1} λήψεις: {2} δεν ήταν πια στη βιβλιοθήκη όσο πακεταριζόταν (στον κάδο ή χαμένες)."
++"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "Περιέχει {0} από {1} λήψεις: {2} δεν ήταν πια στη βιβλιοθήκη όσο πακεταριζόταν (στον κάδο ή χαμένες).",
++"Move 1 take to “{0}”?": "Μετακίνηση της λήψης στο «{0}»;",
++"Move “{0}” to the trash?": "Το «{0}» στον κάδο;",
++"Out of the studio: the mixed track as it is, or the whole take into your DAW (Bitwig, REAPER)": "Έξω από το στούντιο: το μιξαρισμένο κομμάτι όπως είναι, ή ολόκληρη η λήψη στο DAW σου Bitwig, REAPER",
++"(the mix, every stem, the score as notes, the sections as markers: Bitwig, Studio One, Cubase); both also in a take’s menu → Download.": "(η μίξη, κάθε stem, η παρτιτούρα ως νότες, οι ενότητες ως δείκτες: Bitwig, Studio One, Cubase)· και τα δύο και στο μενού μιας λήψης → «Κατέβασμα».",
++"mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "μίξη και παρτιτούρα (stems: διαχώρισέ τα στον Γυαλιστή) · Bitwig, Studio One, Cubase"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 8286b6c..cd30cc3 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5362,5 +5362,10 @@ RuachI18n.add("es", {
+ "Nothing is deleted: Hidden on the left shows them again.": "Nada se borra: «Ocultas» a la izquierda las muestra de nuevo.",
+ "Hide them": "Ocultarlas",
+ "{#0} selected · across ALL workspaces": "{0} elegidas · en TODOS los espacios",
+-"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "Contiene {0} de {1} tomas: {2} ya no estaban en la biblioteca mientras se empaquetaba (en la papelera o borradas)."
++"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "Contiene {0} de {1} tomas: {2} ya no estaban en la biblioteca mientras se empaquetaba (en la papelera o borradas).",
++"Move 1 take to “{0}”?": "¿Mover la toma a «{0}»?",
++"Move “{0}” to the trash?": "¿«{0}» a la papelera?",
++"Out of the studio: the mixed track as it is, or the whole take into your DAW (Bitwig, REAPER)": "Fuera del estudio: la pista mezclada tal cual, o la toma entera a tu DAW Bitwig, REAPER",
++"(the mix, every stem, the score as notes, the sections as markers: Bitwig, Studio One, Cubase); both also in a take’s menu → Download.": "(la mezcla, cada stem, la partitura como notas, las secciones como marcadores: Bitwig, Studio One, Cubase); ambos también en el menú de una toma → «Descargar».",
++"mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "mezcla y partitura (stems: sepáralos en el Pulidor) · Bitwig, Studio One, Cubase"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index 16539dd..695ca85 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5246,5 +5246,10 @@ RuachI18n.add("fr", {
+ "Nothing is deleted: Hidden on the left shows them again.": "Rien n'est effacé : « Masqués » à gauche les montre à nouveau.",
+ "Hide them": "Les masquer",
+ "{#0} selected · across ALL workspaces": "{0} choisies · dans TOUS les espaces",
+-"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "Il contient {0} prises sur {1} : {2} n'étaient plus dans la bibliothèque pendant l'emballage (à la corbeille ou disparues)."
++"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "Il contient {0} prises sur {1} : {2} n'étaient plus dans la bibliothèque pendant l'emballage (à la corbeille ou disparues).",
++"Move 1 take to “{0}”?": "Déplacer la prise vers « {0} » ?",
++"Move “{0}” to the trash?": "« {0} » à la corbeille ?",
++"Out of the studio: the mixed track as it is, or the whole take into your DAW (Bitwig, REAPER)": "Hors du studio : la piste mixée telle quelle, ou la prise entière dans ta DAW Bitwig, REAPER",
++"(the mix, every stem, the score as notes, the sections as markers: Bitwig, Studio One, Cubase); both also in a take’s menu → Download.": "(le mix, chaque stem, la partition en notes, les sections en marqueurs : Bitwig, Studio One, Cubase) ; les deux aussi dans le menu d'une prise → Télécharger.",
++"mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "mix et partition (stems : sépare-les dans l'Affineur) · Bitwig, Studio One, Cubase"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index 8725af7..2624ce5 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5362,5 +5362,10 @@ RuachI18n.add("it", {
+ "Nothing is deleted: Hidden on the left shows them again.": "Niente si cancella: «Nascosti» a sinistra li mostra di nuovo.",
+ "Hide them": "Nascondili",
+ "{#0} selected · across ALL workspaces": "{0} scelti · in TUTTI gli spazi",
+-"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "Contiene {0} di {1} take: {2} non erano più nella libreria mentre si impacchettava (nel cestino o eliminati)."
++"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "Contiene {0} di {1} take: {2} non erano più nella libreria mentre si impacchettava (nel cestino o eliminati).",
++"Move 1 take to “{0}”?": "Spostare il take in «{0}»?",
++"Move “{0}” to the trash?": "«{0}» nel cestino?",
++"Out of the studio: the mixed track as it is, or the whole take into your DAW (Bitwig, REAPER)": "Fuori dallo studio: la traccia mixata così com'è, o l'intero take nella tua DAW Bitwig, REAPER",
++"(the mix, every stem, the score as notes, the sections as markers: Bitwig, Studio One, Cubase); both also in a take’s menu → Download.": "(il mix, ogni stem, la partitura come note, le sezioni come marcatori: Bitwig, Studio One, Cubase); entrambi anche nel menu di un take → «Scarica».",
++"mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "mix e partitura (stem: separali nel Rifinitore) · Bitwig, Studio One, Cubase"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index 1914063..1fabdd7 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5246,5 +5246,10 @@ RuachI18n.add("ja", {
+ "Nothing is deleted: Hidden on the left shows them again.": "何も削除されません：左の「非表示」でまた表示できます。",
+ "Hide them": "隠す",
+ "{#0} selected · across ALL workspaces": "{0} 個選択 · すべてのワークスペースにまたがる",
+-"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "{1} 個中 {0} 個が入っています：{2} 個は梱包中にライブラリから消えていました（ゴミ箱か削除済み）。"
++"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "{1} 個中 {0} 個が入っています：{2} 個は梱包中にライブラリから消えていました（ゴミ箱か削除済み）。",
++"Move 1 take to “{0}”?": "テイクを「{0}」へ移動しますか？",
++"Move “{0}” to the trash?": "「{0}」をゴミ箱へ？",
++"Out of the studio: the mixed track as it is, or the whole take into your DAW (Bitwig, REAPER)": "スタジオの外へ：ミックスしたトラックをそのまま、またはテイク全体をあなたの DAW へ（REAPER、Waveform、Bitwig）",
++"(the mix, every stem, the score as notes, the sections as markers: Bitwig, Studio One, Cubase); both also in a take’s menu → Download.": "（ミックス、各ステム、音符としての楽譜、マーカーとしてのセクション：Waveform 14、Bitwig、Studio One、Cubase）。どちらもテイクのメニュー → ダウンロード にもあります。",
++"mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "ミックスと楽譜（ステム：仕上げ師で分離してください） · Waveform 14、Bitwig、Studio One、Cubase"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index 903bdd3..222175b 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5246,5 +5246,10 @@ RuachI18n.add("pt", {
+ "Nothing is deleted: Hidden on the left shows them again.": "Nada é apagado: «Ocultos» à esquerda os mostra de novo.",
+ "Hide them": "Ocultar",
+ "{#0} selected · across ALL workspaces": "{0} escolhidos · em TODOS os espaços",
+-"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "Contém {0} de {1} takes: {2} já não estavam na biblioteca durante o empacotamento (na lixeira ou apagados)."
++"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "Contém {0} de {1} takes: {2} já não estavam na biblioteca durante o empacotamento (na lixeira ou apagados).",
++"Move 1 take to “{0}”?": "Mover o take para «{0}»?",
++"Move “{0}” to the trash?": "«{0}» para a lixeira?",
++"Out of the studio: the mixed track as it is, or the whole take into your DAW (Bitwig, REAPER)": "Fora do estúdio: a faixa mixada como está, ou o take inteiro na sua DAW Bitwig, REAPER",
++"(the mix, every stem, the score as notes, the sections as markers: Bitwig, Studio One, Cubase); both also in a take’s menu → Download.": "(o mix, cada stem, a partitura como notas, as seções como marcadores: Bitwig, Studio One, Cubase); os dois também no menu de um take → Baixar.",
++"mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "mix e partitura (stems: separe-os no Lapidador) · Bitwig, Studio One, Cubase"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 6de8adc..4d59104 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5368,5 +5368,10 @@ RuachI18n.add("ru", {
+ "Nothing is deleted: Hidden on the left shows them again.": "Ничего не удаляется: «Скрытые» слева покажут их снова.",
+ "Hide them": "Скрыть",
+ "{#0} selected · across ALL workspaces": "Выбрано: {0} · по ВСЕМ пространствам",
+-"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "В нём {0} из {1} семплов: {2} пропали из библиотеки, пока шла упаковка (в корзине или удалены)."
++"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "В нём {0} из {1} семплов: {2} пропали из библиотеки, пока шла упаковка (в корзине или удалены).",
++"Move 1 take to “{0}”?": "Переместить семпл в «{0}»?",
++"Move “{0}” to the trash?": "«{0}» — в корзину?",
++"Out of the studio: the mixed track as it is, or the whole take into your DAW (Bitwig, REAPER)": "Наружу из студии: сведённый трек как есть или весь семпл в твою DAW Bitwig, REAPER",
++"(the mix, every stem, the score as notes, the sections as markers: Bitwig, Studio One, Cubase); both also in a take’s menu → Download.": "(микс, каждый стем, партитура нотами, разделы маркерами: Bitwig, Studio One, Cubase); оба есть и в меню семпла → «Скачать».",
++"mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "микс и партитура (стемы: раздели их в Огранщике) · Bitwig, Studio One, Cubase"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 7f801e0..56eacaa 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5363,5 +5363,10 @@ RuachI18n.add("uk", {
+ "Nothing is deleted: Hidden on the left shows them again.": "Нічого не видаляється: «Приховані» ліворуч покажуть їх знову.",
+ "Hide them": "Сховати",
+ "{#0} selected · across ALL workspaces": "Вибрано: {0} · по ВСІХ просторах",
+-"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "У ньому {0} з {1} семплів: {2} зникли з бібліотеки, поки йшло пакування (у кошику або видалені)."
++"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "У ньому {0} з {1} семплів: {2} зникли з бібліотеки, поки йшло пакування (у кошику або видалені).",
++"Move 1 take to “{0}”?": "Перемістити семпл до «{0}»?",
++"Move “{0}” to the trash?": "«{0}» — до кошика?",
++"Out of the studio: the mixed track as it is, or the whole take into your DAW (Bitwig, REAPER)": "Назовні зі студії: зведений трек як є або весь семпл у твою DAW Bitwig, REAPER",
++"(the mix, every stem, the score as notes, the sections as markers: Bitwig, Studio One, Cubase); both also in a take’s menu → Download.": "(мікс, кожен стем, партитура нотами, розділи маркерами: Bitwig, Studio One, Cubase); обидва є й у меню семплу → «Завантажити».",
++"mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "мікс і партитура (стеми: розділи їх в Огранювачі) · Bitwig, Studio One, Cubase"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index 325a022..ac17def 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5246,5 +5246,10 @@ RuachI18n.add("zh", {
+ "Nothing is deleted: Hidden on the left shows them again.": "不会删除任何东西：左侧的“已隐藏”能再显示它们。",
+ "Hide them": "隐藏",
+ "{#0} selected · across ALL workspaces": "已选 {0} 个 · 跨所有工作区",
+-"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "里面有 {1} 首中的 {0} 首：打包时有 {2} 首已不在资料库里（在回收站或已删除）。"
++"{#0} of {#1} takes are in it: {#2} were no longer in the library while it packed (in the trash, or gone).": "里面有 {1} 首中的 {0} 首：打包时有 {2} 首已不在资料库里（在回收站或已删除）。",
++"Move 1 take to “{0}”?": "把这首歌曲移到“{0}”？",
++"Move “{0}” to the trash?": "把“{0}”移到回收站？",
++"Out of the studio: the mixed track as it is, or the whole take into your DAW (Bitwig, REAPER)": "离开工作室：按原样导出混音音轨，或把整个录音送进你的 DAW（REAPER、Waveform、Bitwig）",
++"(the mix, every stem, the score as notes, the sections as markers: Bitwig, Studio One, Cubase); both also in a take’s menu → Download.": "（混音、每个分轨、作为音符的乐谱、作为标记的段落：Waveform 14、Bitwig、Studio One、Cubase）；两者也都在录音菜单 → 下载 中。",
++"mix and score (stems: split them in the Refiner) · Bitwig, Studio One, Cubase": "混音和乐谱（分轨：在精修室中分离） · Waveform 14、Bitwig、Studio One、Cubase"
+ });
+diff --git a/tools/console/heresy-menu.js b/tools/console/heresy-menu.js
+index a17f4d2..abc8d1f 100644
+--- a/tools/console/heresy-menu.js
++++ b/tools/console/heresy-menu.js
+@@ -33,7 +33,7 @@
+ 
+   function close() {
+     hintHide();
+-    stack.forEach(function (m) { m.el.remove(); });
++    stack.forEach(function (m) { if (m.ro) m.ro.disconnect(); m.el.remove(); });
+     stack = [];
+     if (root) { document.removeEventListener("keydown", onKey, true); root = null; }
+   }
+@@ -47,11 +47,16 @@
+       if (it.head) return '<div class="hm-head">' + esc(it.head) + "</div>";
+       return '<button type="button" class="hm-item' + (it.danger ? " is-danger" : "") + '" role="menuitem" data-i="' + i + '"' +
+         (it.disabled ? " disabled" : "") + (it.checked !== undefined ? ' aria-checked="' + !!it.checked + '"' : "") + ">" +
+-        '<span class="hm-icon">' + (it.checked ? "✓" : esc(it.icon || "")) + '</span><span class="hm-label"' + (it.raw ? ' translate="no"' : "") + ">" + esc(it.label) + "</span>" +
++        // HERESY 1474: in the page's language before it is measured (a menu laid out in English grew past the window in Russian)
++        '<span class="hm-icon">' + (it.checked ? "✓" : esc(it.icon || "")) + '</span><span class="hm-label" translate="no">' + esc(it.raw || !window.RuachI18n ? it.label : window.RuachI18n.t(it.label)) + "</span>" +
+         (it.items ? '<span class="hm-more">›</span>' : "") + "</button>";   // HERESY 1169 · 1248: the hint beside the menu (hintShow), not in the row
+     }).join("");
+     document.body.appendChild(el);
+     var entry = { el: el, items: items, level: level };
++    if (window.ResizeObserver) {                     // HERESY 1474: a menu that changes its size is placed again, the edge kept
++      entry.ro = new ResizeObserver(function () { if (el._at) place(el, el._at[0], el._at[1], el._at[2]); });
++      entry.ro.observe(el);
++    }
+     el.addEventListener("click", function (e) {
+       var b = e.target.closest(".hm-item");
+       if (!b || b.disabled) return;
+@@ -77,13 +82,14 @@
+   }
+ 
+   function place(el, x, y, alt) {
++    el._at = [x, y, alt];
+     var w = el.offsetWidth, h = el.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
+     var left = x + w > vw - 6 ? (alt !== undefined ? alt - w : vw - w - 6) : x;
+     el.style.left = Math.max(6, left) + "px";
+     el.style.top = Math.max(6, Math.min(y, vh - h - 6)) + "px";
+   }
+ 
+-  function trim(level) { while (stack.length > level + 1) stack.pop().el.remove(); }
++  function trim(level) { while (stack.length > level + 1) { var m = stack.pop(); if (m.ro) m.ro.disconnect(); m.el.remove(); } }
+ 
+   function openSub(parent, button, it) {
+     trim(parent.level);
+diff --git a/tools/console/heresy-mixer.js b/tools/console/heresy-mixer.js
+index 179c616..1c039f2 100644
+--- a/tools/console/heresy-mixer.js
++++ b/tools/console/heresy-mixer.js
+@@ -249,6 +249,7 @@
+     stop(false);
+     var ctx = ensureCtx();
+     if (ctx.state === "suspended") ctx.resume();
++    if (window.ruachOneSound) window.ruachOneSound();   // HERESY 1476: one sound at a time
+     S.at = Math.max(0, Math.min(S.info.seconds - 0.05, from == null ? S.at : from));
+     S.playing = true;
+     S.startAt = S.at;
+diff --git a/tools/console/index.html b/tools/console/index.html
+index 69224df..e0e3802 100644
+--- a/tools/console/index.html
++++ b/tools/console/index.html
+@@ -131,7 +131,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+         <div class="head-more-items">
+           <!-- HERESY 1169 (Viktor 07.10.2026: «кнопку экспорта в DAW перенести в спадающее меню… И наверное продублировать в
+                правильных местах в самом Огранщике»): out of the bar into ☰; the Refiner has it beside the take in hand -->
+-          <button type="button" class="btn ghost small" id="dawOpen" data-icon="daw" data-tip="Out of the studio: the mixed track as it is, or the whole take into your DAW (REAPER, Waveform, Bitwig)">Export to DAW</button>
++          <button type="button" class="btn ghost small" id="dawOpen" data-icon="daw" data-tip="Out of the studio: the mixed track as it is, or the whole take into your DAW (Bitwig, REAPER)">Export to DAW</button>
+           <!-- HERESY 1169 (Viktor 07.10.2026: «глобальный скейл шрифтов с минус 2 и плюс до 4… Три кнопочки глобального -=R в спадающее
+                меню в баре»): the page's text, smaller or larger, the layout as it is -->
+           <div class="hm-fs" data-tip="The whole page's text smaller or larger (−2 to +4 pt): the layout stays; a lifted frame has its own on top">
+-- 
+2.43.0
+

@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ruach Studio · τραγούδια από λέξεις, στο δικό σου μηχάνημα</title>
-<meta name="description" content="Ένα ολόκληρο στούντιο τραγουδιών γύρω από το YuE2, το ανοιχτό μοντέλο τραγουδιών: γράφεις το ύφος και τους στίχους, και το Ruach Studio συνθέτει, τραγουδά και αποδίδει το τραγούδι στη δική σου GPU. Ανοιχτός κώδικας, AGPL.">
+<title>Ροῦαχ Στούντιο · τραγούδια από λέξεις, στο δικό σου μηχάνημα</title>
+<meta name="description" content="Ένα ολόκληρο στούντιο τραγουδιών γύρω από το YuE2, το ανοιχτό μοντέλο τραγουδιών: γράφεις το ύφος και τους στίχους, και το Ροῦαχ Στούντιο συνθέτει, τραγουδά και αποδίδει το τραγούδι στη δική σου GPU. Ανοιχτός κώδικας, AGPL.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Ruach Studio · τραγούδια από λέξεις, στο δικό σου μηχάνημα">
+<meta property="og:title" content="Ροῦαχ Στούντιο · τραγούδια από λέξεις, στο δικό σου μηχάνημα">
 <meta property="og:description" content="Ένα ολόκληρο στούντιο τραγουδιών γύρω από το YuE2 στη δική σου GPU: πρώτα η παρτιτούρα, εκπαίδευση LoRA, stems, remaster, το DAW σου. Ανοιχτός κώδικας.">
 <meta property="og:image" content="https://ruachstudio.igr.bible/assets/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
@@ -25,15 +25,14 @@
 <link rel="alternate" hreflang="x-default" href="https://ruachstudio.igr.bible/">
 <link rel="canonical" href="https://ruachstudio.igr.bible/el/">
 
-<link rel="icon" type="image/png" sizes="32x32" href="../assets/ruach-icon-pi-32.png?v=1272">
-<link rel="icon" type="image/png" sizes="192x192" href="../assets/ruach-icon-pi-192.png?v=1272">
-<link rel="apple-touch-icon" href="../assets/ruach-icon-pi-180.png?v=1272">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/ruach-icon-er-32.png?v=1272">
+<link rel="icon" type="image/png" sizes="192x192" href="../assets/ruach-icon-er-192.png?v=1272">
+<link rel="apple-touch-icon" href="../assets/ruach-icon-er-180.png?v=1272">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
-<!-- umami, once its container is up on Orpheus behind nginx (the host and the id from umami's own page):
-<script defer src="https://STATS_HOST/script.js" data-website-id="WEBSITE_ID"></script>
--->
+<!-- HERESY 1446 (Viktor 15.10.2026: «Пропишь для визитки код трекинга»): Umami on Orpheus, no cookies -->
+<script defer src="https://lwa.igr.bible/bread-and-wine.js" data-website-id="b9ce0336-948e-43ed-89d6-ade9b66dbb4a"></script>
 <style>
   /* the studio's two classic themes: Scroll & Brick by day (on Viktor's #f8f9fa), Scroll by Lamplight by night */
   :root {
@@ -120,6 +119,11 @@
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .shot .day { display: none; } :root:not([data-theme="light"]) .shot .night { display: block; } }
   :root[data-theme="dark"] .shot .day { display: none; }
   :root[data-theme="dark"] .shot .night { display: block; }
+  /* a room's picture by day and by night too (HERESY 1505: the Trainer's, from Viktor's own shots) */
+  .room a.pic .night { display: none; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .room a.pic .day { display: none; } :root:not([data-theme="light"]) .room a.pic .night { display: block; } }
+  :root[data-theme="dark"] .room a.pic .day { display: none; }
+  :root[data-theme="dark"] .room a.pic .night { display: block; }
 
   /* numbers */
   .nums { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--rule); border: 1px solid var(--rule);
@@ -233,7 +237,7 @@
 
 <header class="bar">
   <div class="wrap">
-    <a class="mark" href="#top"><img src="../assets/ruach-icon-pi-32.png?v=1272" alt="" width="28" height="28">Ruach Studio</a>
+    <a class="mark" href="#top"><img src="../assets/ruach-icon-er-32.png?v=1272" alt="" width="28" height="28">Ροῦαχ Στούντιο</a>
     <nav aria-label="Ενότητες"><a href="#rooms">Δωμάτια</a><a href="#studio">Τι κάνει</a><a href="#honestly">Ειλικρινά</a><a href="#need">Τι χρειάζεσαι</a><a href="#next">Τι ακολουθεί</a> <a href="#licences">Άδειες</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub ↗</a></nav>
     <details class="langs" translate="no"><summary aria-label="Language">EL</summary><div class="langs-pop"><a href="/" lang="en" hreflang="en">English</a><a href="/ru/" lang="ru" hreflang="ru">Русский</a><a href="/uk/" lang="uk" hreflang="uk">Українська</a><a href="/be/" lang="be" hreflang="be">Беларуская</a><a href="/el/" lang="el" hreflang="el" aria-current="page">Ελληνικά</a><a href="/es/" lang="es" hreflang="es">Español</a><a href="/it/" lang="it" hreflang="it">Italiano</a><a href="/fr/" lang="fr" hreflang="fr">Français</a><a href="/pt/" lang="pt" hreflang="pt">Português</a><a href="/de/" lang="de" hreflang="de">Deutsch</a><a href="/ja/" lang="ja" hreflang="ja">日本語</a><a href="/zh/" lang="zh" hreflang="zh">中文</a></div></details>
     <button class="theme" id="theme" type="button" aria-label="Μέρα ή νύχτα" title="Μέρα ή νύχτα"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5a9.5 9.5 0 0 1 0 19z" fill="currentColor"/></svg></button>
@@ -243,20 +247,20 @@
 <main id="top">
   <section class="hero-night">
   <div class="wrap hero">
-    <div class="logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-2.0 -108.0 1127.7 116.0" class="ruach-logo" role="img" aria-label="Πνεύμα Στούντιο">
+    <div class="logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="57.8 -108.0 1008.1 116.0" class="ruach-logo" role="img" aria-label="Ροῦαχ Στούντιο">
   <g class="rl-word" fill="var(--logo-word, var(--amber, #8e1a2e))">
-    <path transform="translate(-9.34 -6.68)" d="M9.34 0V-86.65H80.34V0H56.79V-67.47H32.89V0ZM183.28 0H152.57L120.9 -61.04H120.42Q120.66 -58.25 120.9 -54.31Q121.14 -50.36 121.33 -46.36Q121.51 -42.35 121.51 -39.08V0H100.76V-86.65H131.34L162.89 -26.45H163.25Q163.13 -29.25 162.89 -33.01Q162.65 -36.77 162.53 -40.65Q162.4 -44.54 162.4 -47.45V-86.65H183.28ZM255.15 0H203.7V-86.65H255.15V-67.84H227.12V-54.24H253.09V-35.44H227.12V-19.05H255.15ZM303 -54.49 317.93 -86.65H343.29L314.77 -33.86V0H291.23V-33.13L262.71 -86.65H288.19ZM392.11 0 374.39 -62.38H373.9Q374.15 -59.95 374.39 -55.82Q374.63 -51.7 374.87 -46.9Q375.12 -42.11 375.12 -37.62V0H354.36V-86.65H385.55L403.63 -25.12H404.12L421.84 -86.65H453.02V0H431.55V-37.98Q431.55 -42.11 431.67 -46.78Q431.79 -51.45 432.03 -55.64Q432.27 -59.83 432.39 -62.25H431.91L414.43 0ZM526.6 0 522.35 -16.26H494.2L489.83 0H464.1L492.38 -87.01H523.56L552.2 0ZM513.74 -49.63Q513.13 -51.94 512.04 -56.25Q510.94 -60.56 509.85 -65.17Q508.76 -69.78 508.15 -72.69Q507.67 -69.78 506.64 -65.41Q505.6 -61.04 504.57 -56.79Q503.54 -52.55 502.81 -49.63L499.05 -35.44H517.5Z"/>
+    <path transform="translate(49.01 0.00)" d="M45.38 -100Q64.43 -100 73.88 -91.74Q83.33 -83.47 83.33 -68.21Q83.33 -61.34 81.37 -55.11Q79.41 -48.88 75 -43.91Q70.59 -38.94 63.31 -36.06Q56.02 -33.19 45.38 -33.19H37.82V0H10.78V-100ZM44.82 -78.15H37.82V-55.18H43.14Q48.46 -55.18 52.38 -57.91Q56.3 -60.64 56.3 -67.51Q56.3 -72.27 53.5 -75.21Q50.7 -78.15 44.82 -78.15ZM194.86 -50.14Q194.86 -34.59 189.89 -23.04Q184.91 -11.48 174.2 -5.04Q163.48 1.4 146.26 1.4Q129.45 1.4 118.67 -5.04Q107.88 -11.48 102.77 -23.11Q97.66 -34.73 97.66 -50.28Q97.66 -65.83 102.84 -77.38Q108.02 -88.94 118.81 -95.24Q129.59 -101.54 146.4 -101.54Q163.48 -101.54 174.2 -95.17Q184.91 -88.8 189.89 -77.24Q194.86 -65.69 194.86 -50.14ZM126.09 -50.14Q126.09 -36.55 130.78 -28.85Q135.47 -21.15 146.26 -21.15Q157.46 -21.15 161.94 -28.85Q166.43 -36.55 166.43 -50.14Q166.43 -63.73 161.94 -71.57Q157.46 -79.41 146.4 -79.41Q135.33 -79.41 130.71 -71.57Q126.09 -63.73 126.09 -50.14ZM249.24 -62.89 266.46 -100H295.74L262.82 -39.08V0H235.65V-38.24L202.74 -100H232.15ZM361.46 0 356.56 -18.77H324.07L319.03 0H289.33L321.97 -100.42H357.96L391.01 0ZM346.62 -57.28Q345.92 -59.94 344.66 -64.92Q343.39 -69.89 342.13 -75.21Q340.87 -80.53 340.17 -83.89Q339.61 -80.53 338.42 -75.49Q337.23 -70.45 336.04 -65.55Q334.85 -60.64 334.01 -57.28L329.67 -40.9H350.96ZM493.85 0H462.62L443.15 -31.23L423.83 0H393.29L426.49 -51.12L395.25 -100H425.23L443.29 -69.05L460.66 -100H491.47L459.82 -49.02Z"/>
   </g>
-  <rect class="rl-box" x="580.86" y="-106.00" width="542.86" height="112.00" rx="13.44" fill="var(--logo-word, var(--amber, #8e1a2e))"/>
+  <rect class="rl-box" x="580.86" y="-106.00" width="483.07" height="112.00" rx="13.44" fill="var(--logo-word, var(--amber, #8e1a2e))"/>
   <g class="rl-studio" fill="var(--logo-on, var(--on-amber, #ffffff))">
-    <path transform="translate(625.08 -22.00)" d="M2.82 0V-5.8L21.18 -29.25L3.29 -50.12V-56H40.55V-49.73H20.55Q19.45 -49.73 17.57 -49.73Q15.69 -49.73 13.96 -49.76Q12.24 -49.8 11.37 -49.8L29.02 -29.33L10.59 -6.12Q13.57 -6.12 16.51 -6.16Q19.45 -6.2 22.59 -6.2H42.82V0ZM80.68 0H73.62V-49.8H56.13V-56H98.09V-49.8H80.68ZM163.72 -28.08Q163.72 -19.37 160.78 -12.9Q157.84 -6.43 152.11 -2.82Q146.39 0.78 137.91 0.78Q129.21 0.78 123.44 -2.82Q117.68 -6.43 114.86 -12.94Q112.03 -19.45 112.03 -28.16Q112.03 -36.78 114.86 -43.22Q117.68 -49.65 123.44 -53.25Q129.21 -56.86 137.99 -56.86Q146.39 -56.86 152.11 -53.29Q157.84 -49.73 160.78 -43.25Q163.72 -36.78 163.72 -28.08ZM119.48 -28.08Q119.48 -17.49 123.95 -11.41Q128.42 -5.33 137.91 -5.33Q147.48 -5.33 151.88 -11.41Q156.27 -17.49 156.27 -28.08Q156.27 -38.67 151.88 -44.67Q147.48 -50.67 137.99 -50.67Q128.5 -50.67 123.99 -44.67Q119.48 -38.67 119.48 -28.08ZM200.56 -28.47 215.15 -56H222.75L204.09 -21.73V0H197.03V-21.41L178.36 -56H186.05ZM285.4 0H277.16L247.2 -46.51H246.89Q247.05 -43.76 247.28 -39.69Q247.52 -35.61 247.52 -31.29V0H241.01V-56H249.16L279.05 -9.65H279.36Q279.28 -10.9 279.16 -13.41Q279.05 -15.92 278.93 -18.9Q278.81 -21.88 278.81 -24.39V-56H285.4ZM328.98 0H321.92V-49.8H304.43V-56H346.39V-49.8H328.98ZM381.27 0H361.04V-4.08L367.63 -5.57V-50.35L361.04 -51.92V-56H381.27V-51.92L374.69 -50.35V-5.57L381.27 -4.08ZM451.6 -28.08Q451.6 -19.37 448.66 -12.9Q445.72 -6.43 440 -2.82Q434.27 0.78 425.8 0.78Q417.09 0.78 411.33 -2.82Q405.56 -6.43 402.74 -12.94Q399.92 -19.45 399.92 -28.16Q399.92 -36.78 402.74 -43.22Q405.56 -49.65 411.33 -53.25Q417.09 -56.86 425.88 -56.86Q434.27 -56.86 440 -53.29Q445.72 -49.73 448.66 -43.25Q451.6 -36.78 451.6 -28.08ZM407.37 -28.08Q407.37 -17.49 411.84 -11.41Q416.31 -5.33 425.8 -5.33Q435.37 -5.33 439.76 -11.41Q444.15 -17.49 444.15 -28.08Q444.15 -38.67 439.76 -44.67Q435.37 -50.67 425.88 -50.67Q416.39 -50.67 411.88 -44.67Q407.37 -38.67 407.37 -28.08Z"/>
+    <path transform="translate(625.14 -22.65)" d="M2.76 0V-5.67L20.69 -28.58L3.22 -48.96V-54.71H39.61V-48.58H20.08Q19 -48.58 17.16 -48.58Q15.32 -48.58 13.64 -48.62Q11.95 -48.66 11.11 -48.66L28.35 -28.66L10.34 -5.98Q13.26 -5.98 16.13 -6.01Q19 -6.05 22.07 -6.05H41.84V0ZM71.76 0H64.86V-48.66H47.78V-54.71H88.77V-48.66H71.76ZM145.82 -27.43Q145.82 -18.93 142.94 -12.6Q140.07 -6.28 134.48 -2.76Q128.88 0.77 120.61 0.77Q112.1 0.77 106.47 -2.76Q100.84 -6.28 98.08 -12.64Q95.32 -19 95.32 -27.51Q95.32 -35.94 98.08 -42.22Q100.84 -48.5 106.47 -52.03Q112.1 -55.55 120.69 -55.55Q128.88 -55.55 134.48 -52.07Q140.07 -48.58 142.94 -42.26Q145.82 -35.94 145.82 -27.43ZM102.6 -27.43Q102.6 -17.09 106.97 -11.15Q111.34 -5.21 120.61 -5.21Q129.96 -5.21 134.25 -11.15Q138.54 -17.09 138.54 -27.43Q138.54 -37.78 134.25 -43.64Q129.96 -49.5 120.69 -49.5Q111.41 -49.5 107.01 -43.64Q102.6 -37.78 102.6 -27.43ZM174.74 -27.81 189 -54.71H196.43L178.19 -21.22V0H171.3V-20.92L153.06 -54.71H160.57ZM250.57 0H242.52L213.25 -45.44H212.94Q213.1 -42.76 213.33 -38.77Q213.56 -34.79 213.56 -30.57V0H207.2V-54.71H215.16L244.36 -9.42H244.67Q244.59 -10.65 244.47 -13.1Q244.36 -15.55 244.24 -18.47Q244.13 -21.38 244.13 -23.83V-54.71H250.57ZM286.08 0H279.19V-48.66H262.1V-54.71H303.09V-48.66H286.08ZM330.1 0H310.33V-3.98L316.77 -5.44V-49.19L310.33 -50.73V-54.71H330.1V-50.73L323.67 -49.19V-5.44L330.1 -3.98ZM391.75 -27.43Q391.75 -18.93 388.88 -12.6Q386 -6.28 380.41 -2.76Q374.81 0.77 366.54 0.77Q358.03 0.77 352.4 -2.76Q346.77 -6.28 344.01 -12.64Q341.25 -19 341.25 -27.51Q341.25 -35.94 344.01 -42.22Q346.77 -48.5 352.4 -52.03Q358.03 -55.55 366.62 -55.55Q374.81 -55.55 380.41 -52.07Q386 -48.58 388.88 -42.26Q391.75 -35.94 391.75 -27.43ZM348.53 -27.43Q348.53 -17.09 352.9 -11.15Q357.27 -5.21 366.54 -5.21Q375.89 -5.21 380.18 -11.15Q384.47 -17.09 384.47 -27.43Q384.47 -37.78 380.18 -43.64Q375.89 -49.5 366.62 -49.5Q357.34 -49.5 352.94 -43.64Q348.53 -37.78 348.53 -27.43Z"/>
   </g>
 </svg></div>
     <div class="osem" translate="no"><b>OSEM</b><span class="say">Απλά AWESOME</span><span>Open Source, Engaged &amp; Musical</span></div>
     <h1>Τραγούδια από λέξεις και συγχορδίες<br>στο δικό σου μηχάνημα</h1>
     <p class="lead">Ένα ολόκληρο στούντιο γύρω από το <b>YuE2</b>, το ανοιχτό μοντέλο τραγουδιών. Γράφεις το ύφος και τους στίχους, και το στούντιο συνθέτει, τραγουδά και αποδίδει το τραγούδι στη <b>δική σου GPU</b>. Τα τραγούδια, οι λέξεις και οι ρυθμίσεις σου δεν φεύγουν ποτέ από εκεί.</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Πάρ' το από το GitHub</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.el.md">Διάβασε τον οδηγό</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Μοντέλα στο Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Κέρασέ με μια μηχανή καφέ</a></div>
-    <span class="rc"><b>2.0.0-rc8</b> · η όγδοη υποψήφια έκδοση · Οκτώβριος 2026</span>
+    <span class="rc"><b>2.0.0-pre</b> · το τελευταίο βήμα πριν από το 2.0.0 · Οκτώβριος 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -289,7 +293,7 @@
           <div><h3>Καλλιτέχνης</h3><p>Εικόνες για τα τραγούδια σου από ένα δικό σου prompt: τετράγωνη, φαρδιά και ψηλή από έναν σπόρο, τις ζωγραφίζει το Qwen-Image 2512· η εικόνα εμφανίζεται μπροστά στα μάτια σου, και μια τετράγωνη γίνεται το εξώφυλλο της λήψης. Πρώιμη προβολή.</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/studio-collection.webp"><img src="../assets/shots/studio-collection.webp" alt="Βιβλιοθηκάριος" loading="lazy"></a>
           <div><h3>Βιβλιοθηκάριος</h3><p>Κάθε λήψη σε χώρους: αναζητήσιμη, με «μου αρέσει», με σημειώσεις, κλειδωμένη, με εξώφυλλο, σταλμένη στο DAW σου· ένας κάδος που επιστρέφει.</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/studio-train.webp"><img src="../assets/shots/studio-train.webp" alt="Εκπαιδευτής LoRA" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/studio-train.webp" data-night="assets/shots/studio-train-night.webp"><img class="day" src="../assets/shots/studio-train.webp" alt="Εκπαιδευτής LoRA" loading="lazy"><img class="night" src="../assets/shots/studio-train-night.webp" alt="Εκπαιδευτής LoRA" loading="lazy"></a>
           <div><h3>Εκπαιδευτής LoRA</h3><p>Προσαρμογείς από τα δικά σου τραγούδια: το σύνολο, η εκπαίδευση, οι καμπύλες και των δύο μισών εξηγημένες, οι εποχές που αξίζει να ακούσεις πρώτες.</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/instruments.webp"><img src="../assets/shots/instruments.webp" alt="Το σκονάκι οργάνων" loading="lazy"></a>
           <div><h3>Το σκονάκι ♪</h3><p>200 όργανα δοκιμασμένα και κριμένα με το αυτί: τι παίζει πραγματικά το YuE2, τι παίζει αδύναμα και τι δεν ξέρει.</p></div></article>
@@ -344,11 +348,11 @@
 
   <section id="honestly">
     <div class="wrap">
-      <h2>Το Ruach Studio και το SUNO, ειλικρινά</h2>
+      <h2>Το Ροῦαχ Στούντιο και το SUNO, ειλικρινά</h2>
       <p class="sub">Κάθε εβδομάδα ένα βίντεο λέει ότι κάποιο μοντέλο σκοτώνει το SUNO. Αυτό δεν είναι μοντέλο: είναι ένας σταθμός εργασίας γύρω από ένα μοντέλο. Ορίστε πού κερδίζει και πού όχι (ακόμα).</p>
       <div class="table">
         <table>
-          <thead><tr><th></th><th>Ruach Studio (YuE2)</th><th>SUNO</th></tr></thead>
+          <thead><tr><th></th><th>Ροῦαχ Στούντιο (YuE2)</th><th>SUNO</th></tr></thead>
           <tbody>
             <tr><td>πού τρέχει</td><td>στη δική σου GPU· τα τραγούδια σου δεν φεύγουν ποτέ από εκεί</td><td>στο δικό τους νέφος</td></tr>
             <tr><td>πόσο κοστίζει</td><td>το ρεύμα</td><td>συνδρομή και μονάδες</td></tr>
@@ -393,7 +397,7 @@
   <section id="next">
     <div class="wrap">
       <h2>Τι ακολουθεί</h2>
-      <p class="sub">Το 2.0.0-rc8 είναι το στούντιο όπου φτιάχνουμε τα δικά μας τραγούδια κάθε μέρα. Αυτά είναι τα μεγαλύτερα κομμάτια που έρχονται, για το 2.0.0 και μετά.</p>
+      <p class="sub">Το 2.0.0-pre είναι το στούντιο όπου φτιάχνουμε τα δικά μας τραγούδια κάθε μέρα. Αυτά είναι τα μεγαλύτερα κομμάτια που έρχονται, για το 2.0.0 και μετά.</p>
       <ul class="feats">
         <li><b>Τραγούδια που διορθώνονται όπως τα γράφει το μοντέλο.</b> Μια λήψη συνεχίζεται από οποιαδήποτε στιγμή· ένα μέρος γράφεται ξανά κρατώντας τη φωνή, την τονικότητα και τα μέτρα των γειτόνων του, και ράβεται στα ίδια τα tokens του μοντέλου· ένα οργανικό στρώμα πάνω στην παρτιτούρα της ίδιας της λήψης.</li>
         <li><b>Ένα DAW στον Γυαλιστή.</b> Ο επεξεργαστής παρτιτούρας του Plenio σε πρώιμη προεπισκόπηση: piano roll, γραμμή συγχορδιών, οι στίχοι πάνω από τις νότες, ένα πληκτρολόγιο MIDI για να παίξεις ιδέες.</li>
@@ -510,7 +514,7 @@
 </main>
 
 <footer>
-  <div class="wrap"><span>Ruach Studio · 2.0.0-rc8 · ένα έργο του <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Αλλαγές</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Μηχανή καφέ</a></span></div>
+  <div class="wrap"><span>Ροῦαχ Στούντιο · 2.0.0-pre · ένα έργο του <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Αλλαγές</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Μηχανή καφέ</a></span></div>
 </footer>
 
 <script>
@@ -527,9 +531,10 @@
     function show(i) { at = (i + items.length) % items.length; img.src = items[at].src; img.alt = items[at].alt; cap.textContent = items[at].alt; }
     function open(i) { show(i); lb.hidden = false; document.documentElement.classList.add("lb-on"); lb.querySelector(".lb-x").focus(); }
     function close() { lb.hidden = true; document.documentElement.classList.remove("lb-on"); }
+    function nightNow() { var t = document.documentElement.getAttribute("data-theme"); return t === "dark" || (t !== "light" && !!window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches); }
     Array.prototype.forEach.call(document.querySelectorAll("a.pic"), function (a) {
       var i = add(a.getAttribute("href"), (a.querySelector("img") || {}).alt);
-      a.addEventListener("click", function (e) { e.preventDefault(); open(i); });
+      a.addEventListener("click", function (e) { e.preventDefault(); open(i); if (a.dataset.night && nightNow()) img.src = a.dataset.night; });   // 1505: the night's shot by night
     });
     Array.prototype.forEach.call(document.querySelectorAll(".shot img, .pair figure img"), function (im) {
       var i = add(im.getAttribute("src"), im.alt);

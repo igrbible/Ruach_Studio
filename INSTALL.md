@@ -72,7 +72,7 @@ The page is read from disk at every load: `./build.sh` and a reload of the brows
 ## Tests, if you want to see it work on your machine
 
 ```bash
-tools/test-real.sh                         # the engine on the CPU, its page and a 1-second song, in a library of its own (1–4 minutes)
+tools/test-real.sh                         # the engine on the CPU, its page and a 1-second song (out of date in 2.0.0-pre: it predates the workspaces; renewed for 2.0.0)
 node tools/cdp-console.mjs                 # the page against a stand-in server (about 2 minutes)
 node heresy/tools/check-player.mjs         # the player: a click plays, play-on goes to the next take
 node heresy/tools/check-pinokio.mjs        # the Pinokio launcher without Pinokio: its menu, its scripts, the lines it waits for

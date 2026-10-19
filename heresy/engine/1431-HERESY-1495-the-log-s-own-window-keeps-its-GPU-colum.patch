@@ -1,0 +1,55 @@
+From 70321e664a2772427f3b22e6a9b893998c356274 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 16 Oct 2026 13:59:24 -0600
+Subject: [PATCH 1431/1463] HERESY 1495: the log's own window keeps its GPU
+ column
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Picture-in-Picture asked at 1240 x 560 each time (preferInitialWindowPlacement), not the size Chrome kept from an earlier window; a log window under 700 px keeps the cards in a row under the log instead of hiding them. Viktor 16.10.2026: «В детаче фрейма серверного лога нет колонки с GPU графами». Kitchen suite 863/863.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css | 8 +++++++-
+ tools/console/app.js  | 4 +++-
+ 2 files changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index bb101c5..aba6919 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -5347,7 +5347,13 @@ body.log-pop .log-dock-body { flex: 1 1 auto; height: auto; overflow: auto; padd
+ .log-pop-logs { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+ .log-pop-gpus { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow: auto; padding: 8px 10px; border-left: 1px solid var(--line-soft, var(--line)); }
+ .log-pop-gpus:empty { display: none; }
+-@media (max-width: 700px) { .log-pop-main { grid-template-columns: minmax(0, 1fr); } .log-pop-gpus { display: none; } }
++/* HERESY 1495 (Viktor 16.10.2026: «В детаче фрейма серверного лога нет колонки с GPU графами»): a narrow log window keeps the cards, in a row
++   under the log, rather than hiding them */
++@media (max-width: 700px) {
++  .log-pop-main { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
++  .log-pop-gpus { flex-direction: row; overflow-x: auto; overflow-y: hidden; border-left: 0; border-top: 1px solid var(--line-soft, var(--line)); }
++  .log-pop-gpus > .gl-card { flex: 0 0 260px; }
++}
+ /* HERESY 1335: the Artist's adapters together, as the Creator's bar */
+ .ar-lora-total { margin-top: 6px; }
+ /* HERESY 1336: «Its run» from a picture's menu: the card it came from, flashed */
+diff --git a/tools/console/app.js b/tools/console/app.js
+index edb1ef3..2b5f038 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -3331,7 +3331,9 @@
+   if ($("logDockPop")) $("logDockPop").addEventListener("click", function () {
+     if (POP && !POP.win.closed) { try { POP.win.focus(); } catch (e) { /* over the others already */ } return; }
+     if (window.documentPictureInPicture && documentPictureInPicture.requestWindow) {
+-      documentPictureInPicture.requestWindow({ width: 1240, height: 560 }).then(popOpened).catch(function (e) { toast(e.message, "bad"); });   // HERESY 1343: room for the cards
++      // HERESY 1495 (Viktor 16.10.2026: «В детаче фрейма серверного лога нет колонки с GPU графами»): the size asked for each time, not the one
++      // Chrome kept from an earlier window (a narrow one hid the cards)
++      documentPictureInPicture.requestWindow({ width: 1240, height: 560, preferInitialWindowPlacement: true }).then(popOpened).catch(function (e) { toast(e.message, "bad"); });   // HERESY 1343: room for the cards
+       return;
+     }
+     var w = window.open("", "ruach-log", "popup,width=1280,height=600");   // HERESY 1343: room for the cards
+-- 
+2.43.0
+

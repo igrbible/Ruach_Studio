@@ -139,7 +139,7 @@
     } else if (j && j.kind === "fetch") {
       var c = j.counts || {};
       txt = tr("{0}: {1} fetched, {2} failed, in {3}.").replace("{0}", cap(tr(j.what))).replace("{1}", c.fetched || 0).replace("{2}", c.failed || 0).replace("{3}", dur(j.ended - j.started)) +
-        (j.restart ? " " + tr("The engine lists a new backbone, decoder or slider at its next start.") : "");
+        (j.restart ? " " + tr("The engine lists a new backbone or decoder at its next start.") : "");
       cls = c.failed || j.status === "failed" ? "is-bad" : "is-good";
     } else if (d.last && d.last.counts) {
       var n = d.last.counts;

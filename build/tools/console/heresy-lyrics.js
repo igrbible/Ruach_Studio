@@ -609,6 +609,16 @@
     wrap.appendChild(mirror);
     var last = null, queued = false;
     var ax = aids(area, function () { if (meter) paintMeter(last || measure(area.value, latinOf(area.value, styleBox ? styleBox.value : ""))); });   // HERESY 1169
+    // HERESY 1453 (Viktor 15.10.2026: «По F5… Нули, пока не развернул свёрнутый блок»): the text the page itself puts into the
+    // box (the form back after a reload, a take, a document) sends no input event, and a folded box sends no resize either, so the
+    // counts kept the empty box's zeros until it unfolded: the value setter (1269's, which brings the marks back) counts again too
+    (function () {
+      var d = Object.getOwnPropertyDescriptor(area, "value") || Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
+      if (!d || !d.set) return;
+      Object.defineProperty(area, "value", { configurable: true, enumerable: true,
+        get: function () { return d.get.call(this); },
+        set: function (v) { d.set.call(this, v); last = null; later(); } });
+    })();
 
     // HERESY 1427 (Viktor 14.10.2026: «в подвале редактора отображение статистики разведи на читаемые блоки»): the counts in blocks, their
     // numbers bold (the words read as before); the line numbers and the spelling by the Lyrics' title (opts.head) as icons

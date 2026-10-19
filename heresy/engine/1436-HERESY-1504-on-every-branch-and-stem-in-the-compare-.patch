@@ -1,0 +1,153 @@
+From 1af659ebd56bbcd716c1698d0f120fe1e3447637 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Fri, 16 Oct 2026 20:35:02 -0600
+Subject: [PATCH 1436/1463] =?UTF-8?q?HERESY=201504:=20=F0=9F=91=8D=20?=
+ =?UTF-8?q?=F0=9F=91=8E=20=E2=98=85=20on=20every=20branch=20and=20stem=20i?=
+ =?UTF-8?q?n=20the=20compare=20window,=20kept=20by=20the=20lab;=20Hide=20d?=
+ =?UTF-8?q?isliked=20hides=20a=20disliked=20branch;=20the=20DAW's=20mixes?=
+ =?UTF-8?q?=20in=20the=20comparison?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/heresy-derived.js | 55 ++++++++++++++++++++++++---------
+ 1 file changed, 41 insertions(+), 14 deletions(-)
+
+diff --git a/tools/console/heresy-derived.js b/tools/console/heresy-derived.js
+index 38db13d..deae659 100644
+--- a/tools/console/heresy-derived.js
++++ b/tools/console/heresy-derived.js
+@@ -308,6 +308,25 @@
+     if (state.running.length) paintLive();
+   }, 1000);
+ 
++  // HERESY 1504: the marks on the files made from each take, as the lab keeps them ({take: {path: {rating, fav}}})
++  var MARKS = {};
++  function markOf(m) { return (MARKS[m.take] || {})[m.path] || {}; }
++  function putMark(m, change) {
++    var was = markOf(m), now = Object.assign({}, was, change);
++    if (!now.rating) delete now.rating;
++    if (!now.fav) delete now.fav;
++    MARKS[m.take] = Object.assign({}, MARKS[m.take] || {});
++    if (now.rating || now.fav) MARKS[m.take][m.path] = now; else delete MARKS[m.take][m.path];
++    return fetch("/lab/derived/mark", { method: "POST", headers: { "Content-Type": "application/json" },
++                                         body: JSON.stringify(Object.assign({ name: m.take, path: m.path }, change)) })
++      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j; }); })
++      .then(function (j) { MARKS[m.take] = j.marks || {}; }, function (e) {
++        MARKS[m.take] = Object.assign({}, MARKS[m.take] || {});
++        if (was.rating || was.fav) MARKS[m.take][m.path] = was; else delete MARKS[m.take][m.path];
++        (state.hooks.toast || say)("The mark was not kept: " + (e && e.message || e), true);   // said, never kept only on the page
++      });
++  }
++
+   function refresh() {
+     if (!state.take) { paint(); return Promise.resolve(); }
+     var token = state.token, name = state.take.name;
+@@ -315,6 +334,7 @@
+       .then(function (d) {
+         if (token !== state.token || !d) return;
+         state.list = d.derived || [];
++        MARKS[name] = d.marks || {};                    // HERESY 1504
+         state.running = d.running || [];
+         paint();
+         paintSources();
+@@ -545,18 +565,18 @@
+     if (!take) return;
+     if (state.hooks.pauseMain) state.hooks.pauseMain();
+     Array.prototype.forEach.call(document.querySelectorAll("#derivedTree audio"), function (a) { a.pause(); });
+-    var GROUP = { debuzz: "Debuzz", remaster: "Remaster", upscale: "Upscale", stems: "Stems", plugin: "" };
++    var GROUP = { debuzz: "Debuzz", remaster: "Remaster", upscale: "Upscale", stems: "Stems", daw: "DAW mix", plugin: "" };   // 1504: the DAW's mixes
+     var versions = [{ label: "The original", group: "", url: "/library/listen?name=" + encodeURIComponent(take.name), path: "", seconds: take.seconds, take: take.name }];
+     // HERESY 1311: the take's family (the same music in other takes), the disliked left out, after the original
+     (state.hooks.family ? state.hooks.family(take.name) : []).forEach(function (t) {
+       versions.push({ label: t.label || t.name, group: t.group || "The same music", url: t.url, path: "take:" + t.name, seconds: t.seconds, take: t.name });
+     });
+-    ["debuzz", "remaster", "upscale", "stems", "plugin"].forEach(function (kind) {   // HERESY 1460: a plugin's too
++    ["debuzz", "remaster", "upscale", "stems", "daw", "plugin"].forEach(function (kind) {   // HERESY 1460: a plugin's too; 1504: the DAW's
+       state.list.filter(function (m) { return m.kind === kind; }).forEach(function (m) {
+         (m.files || []).forEach(function (f) {
+           if (isText(f)) return;                        // HERESY 1484: a report is no version
+           versions.push({ label: title(f), group: (kind === "plugin" ? kindName(m) : GROUP[kind]) + (m.mode ? " · " + (MODE[m.mode] || m.mode) : "") + (m.created ? " · " + String(m.created).slice(11, 16) : ""),
+-                          url: fileUrl(take.name, f.path), path: f.path, seconds: f.seconds });
++                          url: fileUrl(take.name, f.path), path: f.path, seconds: f.seconds, mark: { take: take.name, path: f.path } });   // 1504
+         });
+       });
+     });
+@@ -597,14 +617,19 @@
+     if (hk.pauseMain) hk.pauseMain();
+     active = Math.max(0, Math.min(versions.length - 1, active || 0));
+     var audios = versions.map(function (v) { var a = new Audio(); a.preload = "metadata"; a.src = v.url; a.dataset.oneSound = "compare"; return a; });   // HERESY 1476: they hand over among themselves
+-    var rated = !!(hk.rating && hk.rate && versions.some(function (v) { return v.take; }));
++    // HERESY 1504: a take rated through the Librarian's hooks, a file made from one through the lab's marks
++    var byTake = !!(hk.rating && hk.rate);
++    var rated = (byTake && versions.some(function (v) { return v.take; })) || versions.some(function (v) { return v.mark; });
++    var rateable = function (v) { return (byTake && v.take) || v.mark; };
++    var rOf = function (v) { return v.take ? (byTake ? hk.rating(v.take) || 0 : 0) : v.mark ? markOf(v.mark).rating || 0 : 0; };
++    var fOf = function (v) { return v.take ? !!(hk.favorite && hk.favorite(v.take)) : v.mark ? !!markOf(v.mark).fav : false; };
+     var hideDis = rated && cmpHide();
+     var ico = function (n) { return window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(n) : (n === "pause" ? "❚❚" : "▶"); };
+     var rateHtml = function (v) {
+-      if (!rated || !v.take) return "";
++      if (!rated || !rateable(v)) return "";
+       return '<span class="cmp-rate"><button type="button" class="coll-act" data-cmp-rate="1" aria-label="Like">' + ico("like") + "</button>" +
+         '<button type="button" class="coll-act" data-cmp-rate="-1" aria-label="Dislike">' + ico("dislike") + "</button>" +
+-        (hk.favorite ? '<button type="button" class="coll-act fav" data-cmp-fav="1" aria-label="Favourite">' + ico("star") + "</button>" : "") + "</span>";
++        (v.mark || hk.favorite ? '<button type="button" class="coll-act fav" data-cmp-fav="1" aria-label="Favourite">' + ico("star") + "</button>" : "") + "</span>";
+     };
+     var back = document.createElement("div");
+     back.className = "cmp-back";
+@@ -626,7 +651,7 @@
+     var peaks = [];
+     function cur() { return audios[active]; }
+     function dur() { var a = cur(); return isFinite(a.duration) && a.duration > 0 ? a.duration : (versions[active].seconds || 0); }
+-    function shown(i) { return !(hideDis && versions[i].take && hk.rating(versions[i].take) < 0); }
++    function shown(i) { return !(hideDis && rateable(versions[i]) && rOf(versions[i]) < 0); }   // 1504: a disliked branch too
+     // HERESY 1421 (Viktor 13.10.2026: «кликание обратно со второго трека на первый останавливает воспроизведение»): a version's play
+     // resolves when it has loaded, and the old callback paused the one it had been switched from, which by then could be the
+     // chosen one again; now whatever resolves last, every version but the chosen one is paused. And the second the switch
+@@ -669,11 +694,11 @@
+       Array.prototype.forEach.call(box.querySelectorAll(".cmp-li"), function (li) {
+         var v = versions[+li.dataset.cmpLi];
+         li.hidden = !shown(+li.dataset.cmpLi);
+-        if (!v.take) return;
+-        var r = hk.rating(v.take) || 0;
++        if (!rateable(v)) return;
++        var r = rOf(v);
+         li.querySelectorAll("[data-cmp-rate]").forEach(function (b) { b.setAttribute("aria-pressed", String(+b.dataset.cmpRate === 1 ? r > 0 : r < 0)); });
+         var f = li.querySelector("[data-cmp-fav]");
+-        if (f) f.setAttribute("aria-pressed", String(!!hk.favorite(v.take)));
++        if (f) f.setAttribute("aria-pressed", String(fOf(v)));
+       });
+       if (!shown(active)) {                                 // the one playing disliked and hidden: the next shown one goes on from its second
+         for (var k = 1; k < versions.length; k++) { var j = (active + k) % versions.length; if (shown(j)) { pick(j); break; } }
+@@ -745,12 +770,13 @@
+       if (rb || fb) {
+         var v = versions[+(rb || fb).closest("[data-cmp-li]").dataset.cmpLi];
+         if (rb) {
+-          var want = +rb.dataset.cmpRate, now = hk.rating(v.take) || 0;
+-          var done = hk.rate(v.take, now === want ? 0 : want);
++          var want = +rb.dataset.cmpRate, now = rOf(v);
++          var done = v.take ? hk.rate(v.take, now === want ? 0 : want) : putMark(v.mark, { rating: now === want ? 0 : want });   // 1504
+           paintRates();
+           if (done && done.then) done.then(paintRates, paintRates);
+         } else {
+-          var f = hk.toggleFavorite(v.take);
++          var f = v.take ? hk.toggleFavorite(v.take) : putMark(v.mark, { fav: !fOf(v) });
++          paintRates();
+           if (f && f.then) f.then(paintRates, paintRates);
+         }
+         return;
+@@ -792,5 +818,6 @@
+ 
+   // HERESY 1169: the de-esser as set, for the chain when it splits stems (remasterSettings says it for this step's own source)
+   function chainDeess() { return !!($("rmDeess") && $("rmDeess").checked); }
+-  window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh, remasterSettings: remasterSettings, chainDeess: chainDeess, compareList: openCompare };   // 1415
++  window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh, remasterSettings: remasterSettings, chainDeess: chainDeess, compareList: openCompare,
++                           marks: function (name) { return Object.assign({}, MARKS[name] || {}); } };   // 1415; 1504
+ })();
+-- 
+2.43.0
+

@@ -14,7 +14,7 @@
 
   var KINDS = {
     style:    { label: "Style", say: "genre, production, a band's sound", o: { rank: 32, epochs: 40, ar_loss_weight: 0.5, ar_kl_weight: 0.2, ar_lr_multiplier: 0.5 } },
-    voice:    { label: "Voice", say: "one singer's timbre", o: { rank: 16, epochs: 30, ar_loss_weight: 0.3, ar_kl_weight: 0.3, ar_lr_multiplier: 0.5 } },
+    voice:    { label: "Voice", say: "one singer's timbre", o: { rank: 32 /* HERESY 1496 (Viktor: «нужно r32»): r16 did not carry a voice's texture */, epochs: 30, ar_loss_weight: 0.3, ar_kl_weight: 0.3, ar_lr_multiplier: 0.5 } },
     language: { label: "Language", say: "diction of a language; exact lyrics, many voices", o: { rank: 32, epochs: 20, ar_loss_weight: 1.0, ar_kl_weight: 0.1, ar_lr_multiplier: 1.0 } },
     artist:   { label: "Artist", say: "all of it; a large, varied catalogue", o: { rank: 32, epochs: 20, ar_loss_weight: 0.7, ar_kl_weight: 0.2, ar_lr_multiplier: 0.7 } }
   };
@@ -488,18 +488,11 @@
           "How well the music half predicts the song’s own tokens. Lower is better; close to 0 it knows the songs by heart, and an earlier epoch is then the better adapter.") +
       "</div>" +
       (cks.length ? '<div class="tr-epochs"><div class="tr-ehead"><span class="label">Epochs · ' + cks.length + " saved · " + gb(bytes) + "</span>" +
-          '<span class="row-hint">pick one: into the Creator’s LoRAs, out of them, or as a file \u00b7 <span class="tr-key-cand"></span> worth hearing first, read off the curves (a guess: the ear decides) \u00b7 \u2713 in loras/</span></div>' +
+          '<span class="row-hint">a click: into the Creator’s LoRAs or out of them; a right-click: its file \u00b7 <span class="tr-key-cand"></span> worth hearing first, read off the curves (a guess: the ear decides) \u00b7 \u2713 in loras/</span></div>' +
         '<div class="tr-echips">' + cks.map(function (c) {
           var why = cand[c.file];
           return '<button type="button" class="coll-chip' + (c.lora ? " is-in" : "") + (why ? " is-cand" : "") + (c.file === state.epoch ? " is-on" : "") + '" data-epoch="' + esc(c.file) + '" data-tip="' + esc([tr("step " + c.step), when(c.saved), c.lora ? tr("in loras/") : "", why ? tr("worth hearing first: " + why) : ""].filter(Boolean).join(" · ")) + '">' + (c.epoch != null ? "e" + Math.round(c.epoch) : "final") + (c.lora ? " ✓" : "") + "</button>";
         }).join("") + "</div>" +
-        (pick ? '<div class="tr-eact"><span><b>' + (pick.epoch != null ? "Epoch " + Math.round(pick.epoch) : "The final file") + "</b> · <span>step " + pick.step + "</span> · <span>" + esc(when(pick.saved)) + "</span> · <span>" + gb(pick.bytes) + "</span>" +   // HERESY 1166
-            (pick.lora ? ' · <span>in the Creator as</span> <code>' + esc(pick.lora.split("/").pop().replace(/\.safetensors$/, "")) + "</code>" : "") +
-            (cand[pick.file] ? ' · <span class="tr-candsay">worth hearing first: ' + esc(cand[pick.file]) + "</span>" : "") + "</span>" +
-            '<span class="spacer"></span>' +
-            (pick.lora ? '<button type="button" class="btn ghost small" data-unpub="' + esc(pick.lora.split("/").pop()) + '">Out of loras/</button>'
-                       : (pick.epoch != null ? '<button type="button" class="btn small primary" data-pub="' + esc(pick.file) + '">Into loras/ → the Creator</button>' : "")) +
-            '<a class="btn ghost small" download href="/lab/train/file?name=' + encodeURIComponent(r.name) + "&file=" + encodeURIComponent(pick.file) + '">Download</a></div>' : "") +
         "</div>" : "") +
       '<details class="tr-facts"><summary>What it was given</summary><div class="tr-fgrid">' +
         "<span><em>set</em> <span translate=\"no\">" + esc(r.dataset) + "</span>" + (r.tracks ? " · <span>" + r.tracks + " tracks</span>" : "") + "</span>" +   // HERESY 1166
@@ -535,11 +528,30 @@
     var r = runOf(state.sel);
     api("/train/publish", { name: r.name, file: file }).then(function (d) { toast("In loras/: " + d.lora + " — ready in the Creator"); load(); }).catch(function (e) { toast(e.message, true); });
   }
-  function unpublish(lora) {
+  function unpublish(lora) {                        // HERESY 1496: OUT in the epoch's question is the word; no second one
     var r = runOf(state.sel);
-    confirmBox("Take " + lora + " out of loras/?\n\nIt leaves Create’s LoRAs; the checkpoint stays in the run, and a click puts it back.", { ok: "Take it out" })
-      .then(function (ok) { if (ok) return api("/train/unpublish", { name: r.name, lora: lora }).then(function () { toast(lora + " is out of loras/"); load(); }); })
-      .catch(function (e) { toast(e.message, true); });
+    api("/train/unpublish", { name: r.name, lora: lora }).then(function () { toast(lora + " is out of loras/"); load(); }).catch(function (e) { toast(e.message, true); });
+  }
+  // HERESY 1496 (Viktor 16.10.2026: «Предлагаю вообще убрать тот блок, и по клику на эпоху выводить модальное диалоговое окно с опциями действий -
+  // IN/OUT/Cancel»): an epoch's click asks what to do with it; its file to download by a right-click
+  function epochOf(file) { var r = runOf(state.sel); return r ? (r.checkpoints || []).filter(function (k) { return k.file === file; })[0] : null; }
+  function epochAsk(file) {
+    var r = runOf(state.sel), c = epochOf(file);
+    if (!r || !c) return;
+    var why = candidates(r)[file], as = c.lora ? c.lora.split("/").pop().replace(/\.safetensors$/, "") : "";
+    window.HeresyDialog.confirm((c.epoch != null ? tr("Epoch " + Math.round(c.epoch)) : tr("The final file")) + " \u00b7 " + r.name + "\n\n" +
+      [tr("step " + c.step), when(c.saved), gb(c.bytes)].filter(Boolean).join(" \u00b7 ") + "\n" +
+      (c.lora ? tr("In loras/ now, in the Creator as " + as + ".") : tr("Not in loras/ now.")) + (why ? "\n" + tr("worth hearing first: " + why) : ""),
+      { ok: tr("IN: into loras/"), alt: tr("OUT: out of loras/"), cancel: tr("Cancel") }).then(function (a) {
+      if (a === true) {
+        if (c.lora) return toast(tr("Already in loras/ as " + as));
+        if (c.epoch == null) return toast(tr("The final file goes into loras/ by its epoch: pick the last one"), true);
+        publish(file);
+      } else if (a === "alt") {
+        if (!c.lora) return toast(tr("Not in loras/: nothing to take out"));
+        unpublish(c.lora.split("/").pop());
+      }
+    });
   }
 
   // ------------------------------------------------------------------ 1 Material
@@ -832,13 +844,27 @@
       if ((b = t.closest("[data-act][data-run]"))) return act(b.dataset.run, b.dataset.act);
       if ((b = t.closest("[data-restore]"))) return restore(b.dataset.restore);
       if ((b = t.closest("[data-purge]"))) return purge(b.dataset.purge, b.dataset.name, b.dataset.size);
-      if ((b = t.closest("[data-epoch]"))) { state.epoch = state.epoch === b.dataset.epoch ? "" : b.dataset.epoch; return paintRun(); }
+      if ((b = t.closest("[data-epoch]"))) { state.epoch = b.dataset.epoch; paintRun(); return epochAsk(b.dataset.epoch); }   // HERESY 1496
       if ((b = t.closest("[data-pub]"))) return publish(b.dataset.pub);
       if ((b = t.closest("[data-unpub]"))) return unpublish(b.dataset.unpub);
       if ((b = t.closest("[data-open]"))) return openRun(b.dataset.open);
     });
     $("trRunList").addEventListener("keydown", function (e) { var c = e.target.closest(".tr-rcard[data-open]"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openRun(c.dataset.open); } });
     $("trRunPane").addEventListener("mousemove", function (e) { if (e.target.closest(".tr-plot")) readout(e); });
+    // HERESY 1496: an epoch's file by a right-click (what to do with it, by a click)
+    $("trRunPane").addEventListener("contextmenu", function (e) {
+      var b = e.target.closest("[data-epoch]"), r = runOf(state.sel), c = b && epochOf(b.dataset.epoch);
+      if (!c || !r || !window.HeresyMenu) return;
+      e.preventDefault();
+      window.HeresyMenu.open(e.clientX, e.clientY, [
+        { label: tr("Download"), icon: "\u2193", action: function () {
+          var a = document.createElement("a");
+          a.href = "/lab/train/file?name=" + encodeURIComponent(r.name) + "&file=" + encodeURIComponent(c.file); a.download = "";
+          document.body.appendChild(a); a.click(); a.remove();
+        } },
+        { label: tr("IN or OUT\u2026"), action: function () { epochAsk(c.file); } }
+      ]);
+    });
     $("trRunPane").addEventListener("change", function (e) { if (e.target.id === "trCmp") { state.cmp = e.target.value; paintRun(); } });
     $("trFilters").addEventListener("click", function (e) { var b = e.target.closest("[data-filter]"); if (b) { state.filter = b.dataset.filter; keep("yue2.trFilter", state.filter); paintList(); } });
     $("trSearch").addEventListener("input", function () { state.search = this.value; paintList(); });

@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ruach Studio · пісні зі слів, на твоїй власній машині</title>
-<meta name="description" content="Ціла студія пісень довкола YuE2, відкритої моделі пісень: пишеш стиль і текст, а Ruach Studio складає, співає й зводить пісню на твоїй власній відеокарті. Відкритий код, AGPL.">
+<title>Руах Студія · пісні зі слів, на твоїй власній машині</title>
+<meta name="description" content="Ціла студія пісень довкола YuE2, відкритої моделі пісень: пишеш стиль і текст, а Руах Студія складає, співає й зводить пісню на твоїй власній відеокарті. Відкритий код, AGPL.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Ruach Studio · пісні зі слів, на твоїй власній машині">
+<meta property="og:title" content="Руах Студія · пісні зі слів, на твоїй власній машині">
 <meta property="og:description" content="Ціла студія пісень довкола YuE2 на твоїй відеокарті: спершу партитура, навчання LoRA, стеми, ремастер, твоя DAW. Відкритий код.">
 <meta property="og:image" content="https://ruachstudio.igr.bible/assets/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
@@ -31,9 +31,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
-<!-- umami, once its container is up on Orpheus behind nginx (the host and the id from umami's own page):
-<script defer src="https://STATS_HOST/script.js" data-website-id="WEBSITE_ID"></script>
--->
+<!-- HERESY 1446 (Viktor 15.10.2026: «Пропишь для визитки код трекинга»): Umami on Orpheus, no cookies -->
+<script defer src="https://lwa.igr.bible/bread-and-wine.js" data-website-id="b9ce0336-948e-43ed-89d6-ade9b66dbb4a"></script>
 <style>
   /* the studio's two classic themes: Scroll & Brick by day (on Viktor's #f8f9fa), Scroll by Lamplight by night */
   :root {
@@ -120,6 +119,11 @@
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .shot .day { display: none; } :root:not([data-theme="light"]) .shot .night { display: block; } }
   :root[data-theme="dark"] .shot .day { display: none; }
   :root[data-theme="dark"] .shot .night { display: block; }
+  /* a room's picture by day and by night too (HERESY 1505: the Trainer's, from Viktor's own shots) */
+  .room a.pic .night { display: none; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .room a.pic .day { display: none; } :root:not([data-theme="light"]) .room a.pic .night { display: block; } }
+  :root[data-theme="dark"] .room a.pic .day { display: none; }
+  :root[data-theme="dark"] .room a.pic .night { display: block; }
 
   /* numbers */
   .nums { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--rule); border: 1px solid var(--rule);
@@ -233,7 +237,7 @@
 
 <header class="bar">
   <div class="wrap">
-    <a class="mark" href="#top"><img src="../assets/ruach-icon-er-32.png?v=1272" alt="" width="28" height="28">Ruach Studio</a>
+    <a class="mark" href="#top"><img src="../assets/ruach-icon-er-32.png?v=1272" alt="" width="28" height="28">Руах Студія</a>
     <nav aria-label="Розділи"><a href="#rooms">Кімнати</a><a href="#studio">Що вміє</a><a href="#honestly">Чесно</a><a href="#need">Що потрібно</a><a href="#next">Що далі</a> <a href="#licences">Ліцензії</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub ↗</a></nav>
     <details class="langs" translate="no"><summary aria-label="Language">UK</summary><div class="langs-pop"><a href="/" lang="en" hreflang="en">English</a><a href="/ru/" lang="ru" hreflang="ru">Русский</a><a href="/uk/" lang="uk" hreflang="uk" aria-current="page">Українська</a><a href="/be/" lang="be" hreflang="be">Беларуская</a><a href="/el/" lang="el" hreflang="el">Ελληνικά</a><a href="/es/" lang="es" hreflang="es">Español</a><a href="/it/" lang="it" hreflang="it">Italiano</a><a href="/fr/" lang="fr" hreflang="fr">Français</a><a href="/pt/" lang="pt" hreflang="pt">Português</a><a href="/de/" lang="de" hreflang="de">Deutsch</a><a href="/ja/" lang="ja" hreflang="ja">日本語</a><a href="/zh/" lang="zh" hreflang="zh">中文</a></div></details>
     <button class="theme" id="theme" type="button" aria-label="День чи ніч" title="День чи ніч"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5a9.5 9.5 0 0 1 0 19z" fill="currentColor"/></svg></button>
@@ -256,7 +260,7 @@
     <h1>Пісні зі слів і акордів<br>на твоїй власній машині</h1>
     <p class="lead">Ціла студія довкола <b>YuE2</b>, відкритої моделі пісень. Пишеш стиль і текст, а студія складає, співає й зводить пісню на <b>твоїй власній відеокарті</b>. Твої пісні, слова й налаштування ніколи її не покидають.</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Узяти на GitHub</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.uk.md">Читати посібник</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Моделі на Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Купи мені кавомашину</a></div>
-    <span class="rc"><b>2.0.0-rc8</b> · восьмий кандидат у релізи · жовтень 2026</span>
+    <span class="rc"><b>2.0.0-pre</b> · останній крок перед 2.0.0 · жовтень 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -289,7 +293,7 @@
           <div><h3>Художник</h3><p>Картинки для твоїх пісень за твоїм власним промптом: квадратна, широка й висока з одного сіда, малює Qwen-Image 2512; картинка проявляється на очах, а квадратна стає обкладинкою семплу. Ранній показ.</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/studio-collection.webp"><img src="../assets/shots/studio-collection.webp" alt="Бібліотекар" loading="lazy"></a>
           <div><h3>Бібліотекар</h3><p>Кожен семпл у просторах: знайдений, оцінений, із нотаткою, під замком, з обкладинкою, надісланий у твою DAW; кошик, що повертає.</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/studio-train.webp"><img src="../assets/shots/studio-train.webp" alt="Тренер LoRA" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/studio-train.webp" data-night="assets/shots/studio-train-night.webp"><img class="day" src="../assets/shots/studio-train.webp" alt="Тренер LoRA" loading="lazy"><img class="night" src="../assets/shots/studio-train-night.webp" alt="Тренер LoRA" loading="lazy"></a>
           <div><h3>Тренер LoRA</h3><p>Адаптери з твоїх власних пісень: набір, запуск, криві обох половин із поясненням, епохи, які варто послухати першими.</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/instruments.webp"><img src="../assets/shots/instruments.webp" alt="Шпаргалка інструментів" loading="lazy"></a>
           <div><h3>Шпаргалка ♪</h3><p>200 інструментів, перевірених і оцінених на слух: що YuE2 справді грає, що звучить у неї рідко і чого вона не знає.</p></div></article>
@@ -344,11 +348,11 @@
 
   <section id="honestly">
     <div class="wrap">
-      <h2>Ruach Studio і SUNO, чесно</h2>
+      <h2>Руах Студія і SUNO, чесно</h2>
       <p class="sub">Щотижня якесь відео оголошує, що чергова модель вбиває SUNO. Це не модель, а студія довкола моделі. Ось де вона виграє, а де (поки що) ні.</p>
       <div class="table">
         <table>
-          <thead><tr><th></th><th>Ruach Studio (YuE2)</th><th>SUNO</th></tr></thead>
+          <thead><tr><th></th><th>Руах Студія (YuE2)</th><th>SUNO</th></tr></thead>
           <tbody>
             <tr><td>де живе</td><td>на твоїй відеокарті; пісні ніколи її не покидають</td><td>у їхній хмарі</td></tr>
             <tr><td>скільки коштує</td><td>електрика</td><td>підписка й кредити</td></tr>
@@ -393,7 +397,7 @@
   <section id="next">
     <div class="wrap">
       <h2>Що далі</h2>
-      <p class="sub">2.0.0-rc8 — студія, у якій ми щодня створюємо власні пісні. Ось великі частини на підході, для 2.0.0 і далі.</p>
+      <p class="sub">2.0.0-pre — студія, у якій ми щодня створюємо власні пісні. Ось великі частини на підході, для 2.0.0 і далі.</p>
       <ul class="feats">
         <li><b>Пісні правляться так, як їх пише модель.</b> Семпл продовжується з будь-якої миті; відрізок пишеться наново, зберігаючи голос, тональність і такти сусідів, і зшивається у власних токенах моделі; інструментальний шар лягає на партитуру самого семпла.</li>
         <li><b>DAW в Огранювачі.</b> Редактор партитури Plenio в ранньому показі: піано-рол, доріжка акордів, текст над нотами, MIDI-клавіатура, щоб награти ідею.</li>
@@ -510,7 +514,7 @@
 </main>
 
 <footer>
-  <div class="wrap"><span>Ruach Studio · 2.0.0-rc8 · творіння <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Зміни</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Кавомашина</a></span></div>
+  <div class="wrap"><span>Руах Студія · 2.0.0-pre · творіння <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Зміни</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Кавомашина</a></span></div>
 </footer>
 
 <script>
@@ -527,9 +531,10 @@
     function show(i) { at = (i + items.length) % items.length; img.src = items[at].src; img.alt = items[at].alt; cap.textContent = items[at].alt; }
     function open(i) { show(i); lb.hidden = false; document.documentElement.classList.add("lb-on"); lb.querySelector(".lb-x").focus(); }
     function close() { lb.hidden = true; document.documentElement.classList.remove("lb-on"); }
+    function nightNow() { var t = document.documentElement.getAttribute("data-theme"); return t === "dark" || (t !== "light" && !!window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches); }
     Array.prototype.forEach.call(document.querySelectorAll("a.pic"), function (a) {
       var i = add(a.getAttribute("href"), (a.querySelector("img") || {}).alt);
-      a.addEventListener("click", function (e) { e.preventDefault(); open(i); });
+      a.addEventListener("click", function (e) { e.preventDefault(); open(i); if (a.dataset.night && nightNow()) img.src = a.dataset.night; });   // 1505: the night's shot by night
     });
     Array.prototype.forEach.call(document.querySelectorAll(".shot img, .pair figure img"), function (im) {
       var i = add(im.getAttribute("src"), im.alt);

@@ -7,7 +7,7 @@ download cut short going on from where it stopped, a second try after half a min
     POST /weights/check         fetch-heresy.sh --check: what is here and what is missing; nothing is downloaded
     POST /weights/fetch {…}     one run at a time, on the user's word (the page has said the size): {"part": "missing"}
                                 everything the install brings that is not here, {"part": "loras"} one part of it, or one
-                                extra: {"backbone": "BF16"}, {"listener": "Q8_0"}, {"artwork": "q4"}, {"trainer": "int8"}
+                                extra: {"backbone": "BF16"}, {"ira": "Q8_0"} (1490), {"listener": "Q8_0"}, {"artwork": "q4"}, {"trainer": "int8"}
 
 A test page (?scope=…) checks but fetches nothing: the lab refuses. New LoRAs reach the engine at once; new backbones,
 decoders and sliders at its next start (it reads them when it starts), which the card says."""
@@ -65,6 +65,13 @@ EXTRAS = [
          {"id": "Q8_0", "size": "3.8 GB", "files": ["models/YuE2-3B-Q8_0.gguf"]},
          {"id": "Q6_K", "size": "2.9 GB", "files": ["models/YuE2-3B-Q6_K.gguf"]},
          {"id": "Q5_K_M", "size": "2.6 GB", "files": ["models/YuE2-3B-Q5_K_M.gguf"]}]},
+    # HERESY 1490 (Viktor 16.10.2026: «прикрутить скачивание этих GGUF в студии и выбор активной модели к базовым m-a-p весам»)
+    {"name": "ira", "label": "IRA merge", "restart": True,
+     "what": "YuE2-3B with two of Mothersuperior's adapters folded in, Instrumental on the music half (0.75) and Real Audio v9 on the sound half (0.85): Ruach Studio's merge, from goldhub/YuE2-3B-Ruach_Studio-IRA-Merge (CC BY-NC 4.0). Compute chooses it beside m-a-p's backbones; do not add those two adapters on top",
+     "variants": [
+         {"id": "BF16", "size": "7.2 GB", "files": ["models/YuE2-3B-IRA-BF16.gguf"]},
+         {"id": "Q8_0", "size": "3.8 GB", "files": ["models/YuE2-3B-IRA-Q8_0.gguf"]},
+         {"id": "Q6_K", "size": "2.9 GB", "files": ["models/YuE2-3B-IRA-Q6_K.gguf"]}]},
     {"name": "listener", "label": "Style listener",
      "what": "Qwen2.5-Omni-7B: hears the songs of a training set and writes each one's style tags; the GGUF ones run through llama.cpp (vendor/llama.cpp, built by you)",
      "variants": [
@@ -250,7 +257,7 @@ def running():
         return bool(JOB) and JOB.get("status") == "running"
 
 
-NAMES = {"extras": "the extra decoders and the sliders", "whisper": "Whisper", "stems": "the stems' models", "upscale": "UniverSR",
+NAMES = {"extras": "the extra decoders", "whisper": "Whisper", "stems": "the stems' models", "upscale": "UniverSR",
          "loras": "the LoRAs"}
 
 
@@ -272,11 +279,11 @@ def _args(body):
             raise ValueError(f"{name} takes {', '.join(ids)}")
         x = (e or ARTWORK_BIG)["variants"]
         label = (e or ARTWORK_BIG)["label"]
-        what = "the " + label[0].lower() + label[1:] + " " + next((y.get("label") or y["id"] for y in x if y["id"] == v), v)
+        what = "the " + (label if label[:2].isupper() else label[0].lower() + label[1:]) + " " + next((y.get("label") or y["id"] for y in x if y["id"] == v), v)   # 1490: «the IRA merge»
         if name == "artwork":
             return ["--only", "none", "--artwork-q8" if v == "q8" else "--artwork", "--yes"], what
         return ["--only", "none", "--" + name, v, "--yes"], what
-    raise ValueError("say what to fetch: a part (missing, " + ", ".join(PARTS) + ") or an extra (backbone, listener, artwork, qwen, qwen-fine, art-loras, trainer)")
+    raise ValueError("say what to fetch: a part (missing, " + ", ".join(PARTS) + ") or an extra (backbone, ira, listener, artwork, qwen, qwen-fine, art-loras, trainer)")
 
 
 def _bytes(size):
@@ -345,7 +352,7 @@ def _say(kit, args):
             if m:
                 JOB["counts"] = dict(zip(("here", "unknown", "differs", "fetched", "missing", "failed"), map(int, m.groups())))
             # a backbone, a decoder or the sliders: the engine reads those when it starts (LoRAs it reads each time)
-            if JOB["kind"] == "fetch" and re.match(r"^fetched\s+(models/|legacy, blend and sliders)", line):
+            if JOB["kind"] == "fetch" and re.match(r"^fetched\s+(models/|legacy and blend decoders)", line):   # 1449: no sliders
                 JOB["restart"] = True
     return p.wait()
 

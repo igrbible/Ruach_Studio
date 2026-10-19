@@ -142,7 +142,7 @@ echo "${B}converted${X} in ${secs}s into $(real "$ROOT/build/models")$([ "$LOW" 
 for f in "$ROOT"/build/models/*.gguf; do
     [ -f "$f" ] && echo "  ${G}$(basename "$f")${X}  ${D}$(du -h "$f" | cut -f1)${X}"
 done
-echo "  sliders: $(ls "$ROOT"/sliders/*.gguf 2>/dev/null | wc -l | tr -d ' ') GGUF files, catalog $([ -f "$ROOT/sliders/catalog.json" ] && echo present || echo "${R}missing${X}")"
+[ -f "$ROOT/sliders/catalog.json" ] && echo "  sliders: $(ls "$ROOT"/sliders/*.gguf 2>/dev/null | wc -l | tr -d ' ') GGUF files, catalog present"   # HERESY 1566: none since 1449, nothing to say
 echo "  outputs checked: ${#OUTPUTS[@]}; from an interrupted run: $partials .partial removed, $rejected incomplete moved to tmp/rejected/$([ "$rejected" -gt 0 ] && echo " ${D}(delete them once this run is done)${X}"); incomplete or missing now: $([ $bad = 0 ] && echo "${G}0${X}" || echo "${R}$bad${X}")"
 echo "  disk free ${free_before}G -> ${free_after}G"
 [ "$bad" = 0 ]

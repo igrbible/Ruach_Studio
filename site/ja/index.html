@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ruach Studio · 言葉から歌を、自分のマシンで</title>
-<meta name="description" content="オープンな歌モデル YuE2 を中心にした本格的な歌のスタジオ：スタイルと歌詞を書けば、Ruach Studio があなた自身の GPU で作曲し、歌い、曲をレンダリングします。オープンソース、AGPL。">
+<title>ルアハ・スタジオ · 言葉から歌を、自分のマシンで</title>
+<meta name="description" content="オープンな歌モデル YuE2 を中心にした本格的な歌のスタジオ：スタイルと歌詞を書けば、ルアハ・スタジオ があなた自身の GPU で作曲し、歌い、曲をレンダリングします。オープンソース、AGPL。">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Ruach Studio · 言葉から歌を、自分のマシンで">
+<meta property="og:title" content="ルアハ・スタジオ · 言葉から歌を、自分のマシンで">
 <meta property="og:description" content="あなた自身の GPU で動く、YuE2 を中心にした本格的な歌のスタジオ：まず楽譜、LoRA のトレーニング、ステム、リマスター、あなたの DAW へ。オープンソース。">
 <meta property="og:image" content="https://ruachstudio.igr.bible/assets/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
@@ -31,9 +31,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
-<!-- umami, once its container is up on Orpheus behind nginx (the host and the id from umami's own page):
-<script defer src="https://STATS_HOST/script.js" data-website-id="WEBSITE_ID"></script>
--->
+<!-- HERESY 1446 (Viktor 15.10.2026: «Пропишь для визитки код трекинга»): Umami on Orpheus, no cookies -->
+<script defer src="https://lwa.igr.bible/bread-and-wine.js" data-website-id="b9ce0336-948e-43ed-89d6-ade9b66dbb4a"></script>
 <style>
   /* the studio's two classic themes: Scroll & Brick by day (on Viktor's #f8f9fa), Scroll by Lamplight by night */
   :root {
@@ -120,6 +119,11 @@
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .shot .day { display: none; } :root:not([data-theme="light"]) .shot .night { display: block; } }
   :root[data-theme="dark"] .shot .day { display: none; }
   :root[data-theme="dark"] .shot .night { display: block; }
+  /* a room's picture by day and by night too (HERESY 1505: the Trainer's, from Viktor's own shots) */
+  .room a.pic .night { display: none; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .room a.pic .day { display: none; } :root:not([data-theme="light"]) .room a.pic .night { display: block; } }
+  :root[data-theme="dark"] .room a.pic .day { display: none; }
+  :root[data-theme="dark"] .room a.pic .night { display: block; }
 
   /* numbers */
   .nums { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--rule); border: 1px solid var(--rule);
@@ -234,7 +238,7 @@
 
 <header class="bar">
   <div class="wrap">
-    <a class="mark" href="#top"><img src="../assets/ruach-icon-ja-32.png?v=1272" alt="" width="28" height="28">Ruach Studio</a>
+    <a class="mark" href="#top"><img src="../assets/ruach-icon-ja-32.png?v=1272" alt="" width="28" height="28">ルアハ・スタジオ</a>
     <nav aria-label="セクション"><a href="#rooms">部屋</a><a href="#studio">できること</a><a href="#honestly">正直に</a><a href="#need">必要なもの</a><a href="#next">これから</a> <a href="#licences">ライセンス</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub ↗</a></nav>
     <details class="langs" translate="no"><summary aria-label="Language">JA</summary><div class="langs-pop"><a href="/" lang="en" hreflang="en">English</a><a href="/ru/" lang="ru" hreflang="ru">Русский</a><a href="/uk/" lang="uk" hreflang="uk">Українська</a><a href="/be/" lang="be" hreflang="be">Беларуская</a><a href="/el/" lang="el" hreflang="el">Ελληνικά</a><a href="/es/" lang="es" hreflang="es">Español</a><a href="/it/" lang="it" hreflang="it">Italiano</a><a href="/fr/" lang="fr" hreflang="fr">Français</a><a href="/pt/" lang="pt" hreflang="pt">Português</a><a href="/de/" lang="de" hreflang="de">Deutsch</a><a href="/ja/" lang="ja" hreflang="ja" aria-current="page">日本語</a><a href="/zh/" lang="zh" hreflang="zh">中文</a></div></details>
     <button class="theme" id="theme" type="button" aria-label="昼か夜か" title="昼か夜か"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5a9.5 9.5 0 0 1 0 19z" fill="currentColor"/></svg></button>
@@ -257,7 +261,7 @@
     <h1>言葉とコードから歌を<br>自分のマシンで</h1>
     <p class="lead">オープンな歌モデル <b>YuE2</b> を中心にした本格的なスタジオ。スタイルと歌詞を書けば、スタジオが<b>あなた自身の GPU</b> で作曲し、歌い、曲をレンダリングします。あなたの歌、言葉、設定がそこから出ることはありません。</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">GitHub で入手</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.ja.md">ガイドを読む</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face のモデル</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ コーヒーマシンをおごってください</a></div>
-    <span class="rc"><b>2.0.0-rc8</b> · 8 番目のリリース候補 · 2026 年 10 月</span>
+    <span class="rc"><b>2.0.0-pre</b> · 2.0.0 の前の最後の一歩 · 2026 年 10 月</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -290,7 +294,7 @@
           <div><h3>絵師</h3><p>自分のプロンプトから歌のための絵を：正方形、横長、縦長を 1 つのシードから、Qwen-Image 2512 が描きます。絵は目の前で現れ、正方形のものはテイクのカバーになります。早期プレビュー。</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/studio-collection.webp"><img src="../assets/shots/studio-collection.webp" alt="司書" loading="lazy"></a>
           <div><h3>司書</h3><p>すべてのテイクをワークスペースに：検索、いいね、メモ、ロック、アートワーク付け、DAW へ送る。元に戻せるゴミ箱。</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/studio-train.webp"><img src="../assets/shots/studio-train.webp" alt="LoRA トレーナー" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/studio-train.webp" data-night="assets/shots/studio-train-night.webp"><img class="day" src="../assets/shots/studio-train.webp" alt="LoRA トレーナー" loading="lazy"><img class="night" src="../assets/shots/studio-train-night.webp" alt="LoRA トレーナー" loading="lazy"></a>
           <div><h3>LoRA トレーナー</h3><p>自分の歌からアダプターを：セット、実行、両半分の曲線の解説、まず聴くべきエポック。</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/instruments.webp"><img src="../assets/shots/instruments.webp" alt="楽器のチートシート" loading="lazy"></a>
           <div><h3>チートシート ♪</h3><p>耳で確かめ判定した 200 の楽器：YuE2 が本当に弾けるもの、薄くしか弾けないもの、知らないもの。</p></div></article>
@@ -345,11 +349,11 @@
 
   <section id="honestly">
     <div class="wrap">
-      <h2>Ruach Studio と SUNO、正直に</h2>
+      <h2>ルアハ・スタジオ と SUNO、正直に</h2>
       <p class="sub">毎週どこかの動画が、あるモデルが SUNO を倒すと言います。これはモデルではありません：モデルを囲むワークステーションです。勝っている所と、（まだ）勝っていない所をここに。</p>
       <div class="table">
         <table>
-          <thead><tr><th></th><th>Ruach Studio (YuE2)</th><th>SUNO</th></tr></thead>
+          <thead><tr><th></th><th>ルアハ・スタジオ (YuE2)</th><th>SUNO</th></tr></thead>
           <tbody>
             <tr><td>どこで動くか</td><td>あなたの GPU。歌がそこから出ることはありません</td><td>彼らのクラウド</td></tr>
             <tr><td>費用</td><td>電気代</td><td>サブスクリプションとクレジット</td></tr>
@@ -394,7 +398,7 @@
   <section id="next">
     <div class="wrap">
       <h2>これから</h2>
-      <p class="sub">2.0.0-rc8 は、私たちが毎日自分たちの歌を作っているスタジオです。2.0.0 以降に向けて進んでいる大きなものはこちら。</p>
+      <p class="sub">2.0.0-pre は、私たちが毎日自分たちの歌を作っているスタジオです。2.0.0 以降に向けて進んでいる大きなものはこちら。</p>
       <ul class="feats">
         <li><b>モデルが書くように曲を編集。</b>任意の位置からテイクを延長。隣のセクションの声・調・小節を保ったままセクションを書き直し、モデル自身のトークンで縫い合わせ。テイク自身の楽譜の上に器楽のレイヤーを。</li>
         <li><b>仕上げ師の中の DAW。</b>Plenio の楽譜エディターを早期プレビューで：ピアノロール、コードレーン、音符の上の歌詞、アイデアを弾き込む MIDI キーボード。</li>
@@ -511,7 +515,7 @@
 </main>
 
 <footer>
-  <div class="wrap"><span>Ruach Studio · 2.0.0-rc8 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> の作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">変更履歴</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ コーヒーマシン</a></span></div>
+  <div class="wrap"><span>ルアハ・スタジオ · 2.0.0-pre · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> の作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">変更履歴</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ コーヒーマシン</a></span></div>
 </footer>
 
 <script>
@@ -528,9 +532,10 @@
     function show(i) { at = (i + items.length) % items.length; img.src = items[at].src; img.alt = items[at].alt; cap.textContent = items[at].alt; }
     function open(i) { show(i); lb.hidden = false; document.documentElement.classList.add("lb-on"); lb.querySelector(".lb-x").focus(); }
     function close() { lb.hidden = true; document.documentElement.classList.remove("lb-on"); }
+    function nightNow() { var t = document.documentElement.getAttribute("data-theme"); return t === "dark" || (t !== "light" && !!window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches); }
     Array.prototype.forEach.call(document.querySelectorAll("a.pic"), function (a) {
       var i = add(a.getAttribute("href"), (a.querySelector("img") || {}).alt);
-      a.addEventListener("click", function (e) { e.preventDefault(); open(i); });
+      a.addEventListener("click", function (e) { e.preventDefault(); open(i); if (a.dataset.night && nightNow()) img.src = a.dataset.night; });   // 1505: the night's shot by night
     });
     Array.prototype.forEach.call(document.querySelectorAll(".shot img, .pair figure img"), function (im) {
       var i = add(im.getAttribute("src"), im.alt);

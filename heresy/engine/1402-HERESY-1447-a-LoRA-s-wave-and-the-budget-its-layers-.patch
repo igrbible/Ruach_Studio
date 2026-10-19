@@ -1,0 +1,793 @@
+From 1a9e40fdc3cf4d55df3e03a1b25c2e97241d99f4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=D0=92=D0=B8=D0=BA=D1=82=D0=BE=D1=80=20=D0=96=D1=83=D1=80?=
+ =?UTF-8?q?=D0=BE=D0=BC=D1=81=D0=BA=D0=B8=D0=B9?= <git@igrnt.info>
+Date: Thu, 15 Oct 2026 02:24:37 -0600
+Subject: [PATCH 1402/1463] HERESY 1447: a LoRA's wave and the budget its
+ layers share, on the page
+
+Each LoRA row a wave beside its strengths, the sliders' own picture and editor (Flat, Arch, Draw; points dragged, added, taken out), one wave for a pair's two files; Budget: Off, Share (past the red line each gives way in proportion), In order (the top row first, the rows dragged to order them); the groups the lab's (adapters that push on the same layers), the caps the measured red lines (music 2.25, sound 1.5). The request carries each lora's "curve" and "group" and the "lora_groups"; a take or a prompt brings them back; the draft keeps them. The lab's word in the row's tip (where it pushes: the layers, attention against MLP, how far it moves them) and in the notes (two that share their layers, and how they pull). A slider's note in the stage is its "at gain" line only, never its wave as it goes. Fifteen strings in the eleven languages.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/console/app.css           |   9 +
+ tools/console/app.js            |  14 +-
+ tools/console/heresy-i18n-be.js |  17 +-
+ tools/console/heresy-i18n-de.js |  17 +-
+ tools/console/heresy-i18n-el.js |  17 +-
+ tools/console/heresy-i18n-es.js |  17 +-
+ tools/console/heresy-i18n-fr.js |  17 +-
+ tools/console/heresy-i18n-it.js |  17 +-
+ tools/console/heresy-i18n-ja.js |  17 +-
+ tools/console/heresy-i18n-pt.js |  17 +-
+ tools/console/heresy-i18n-ru.js |  17 +-
+ tools/console/heresy-i18n-uk.js |  17 +-
+ tools/console/heresy-i18n-zh.js |  17 +-
+ tools/console/loras.js          | 308 ++++++++++++++++++++++++++++++--
+ 14 files changed, 491 insertions(+), 27 deletions(-)
+
+diff --git a/tools/console/app.css b/tools/console/app.css
+index 07e4fca..7e51efa 100644
+--- a/tools/console/app.css
++++ b/tools/console/app.css
+@@ -5675,3 +5675,12 @@ html.fonts-buttons :is(.btn, .lyr-tog, .menu-pop button, .chip, .head-more-row b
+ .pick-btn .pick-caret { flex: none; color: var(--muted); font-size: .85em; }
+ .pick-btn:disabled { opacity: .6; cursor: default; }
+ .lib-row .pick-btn { max-width: 340px; }
++
++/* HERESY 1447: a LoRA's wave beside its strengths (the sliders' picture and editor), the budget's three under the togethers */
++.lora-row .lora-wave { flex: none; align-self: center; }
++.lora-wave-edit { margin: 0 0 6px; }
++.lora-budget { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin: 6px 0 2px; }
++.lora-budget-name { margin-right: 6px; color: var(--muted); font-size: calc(12px + var(--fs, 0px)); cursor: help; }
++.lora-budget-hint { margin: 0 0 0 8px; }
++.lora-row.is-ordered { cursor: grab; }
++.lora-row.is-ordered:active { cursor: grabbing; }
+diff --git a/tools/console/app.js b/tools/console/app.js
+index f503c68..312e224 100644
+--- a/tools/console/app.js
++++ b/tools/console/app.js
+@@ -1844,6 +1844,8 @@
+     var loras = YueLoras.value();
+     if (loras.length) {
+       body.loras = loras;
++      var budgets = YueLoras.groups ? YueLoras.groups() : [];   // HERESY 1447: the budgets the loras' groups name
++      if (budgets.length) body.lora_groups = budgets;
+       // HERESY 1167 (Viktor: «суффиксом приклинивай все триггеры в системный промпт»): the adapters' words at the style's end,
+       // in the request only (the field stays as written; a word already in it is not doubled)
+       var trig = YueLoras.triggersFor ? YueLoras.triggersFor(body.style) : [];
+@@ -2172,7 +2174,7 @@
+       if (curve) out.curve = curve;            // HERESY 1166: its curve, as the take ran it
+       return out;
+     });
+-    YueLoras.set(Array.isArray(req.loras) ? req.loras : []);
++    YueLoras.set(Array.isArray(req.loras) ? req.loras : [], Array.isArray(req.lora_groups) ? req.lora_groups : undefined);   // HERESY 1447
+     if (typeof req.steps === "number") $("odeSteps").value = req.steps;
+     $("odeSolver").value = ["midpoint", "multistep", "heun", "euler"].indexOf(req.solver) >= 0 ? req.solver : "midpoint";
+     if (typeof req.duration === "number") $("maxLength").value = round(req.duration, 3);
+@@ -2201,7 +2203,7 @@
+   // prompt file does not come into the form as written is said when it opens. A file that loads «clean» but lost a field, a
+   // mode or an adapter on the way lies; each such place says what was there and what the form holds instead.
+   var PROMPT_KEYS = ["title", "style", "lyrics", "cot", "abc", "lm_seed", "seed", "cfg_scale", "cfg_lyrics", "free_tempo", "abc_sampling", "semantic_sampling",
+-    "vae", "solver", "sliders", "loras", "plan_only", "semantic_tokens", "semantic_keep", "parent", "duration", "steps",
++    "vae", "solver", "sliders", "loras", "lora_groups", "plan_only", "semantic_tokens", "semantic_keep", "parent", "duration", "steps",
+     "lm_batch_size", "synth_batch_size", "output_format", "mp3_bitrate", "peak_clip", "score_guard", "seconds", "instrumental"];
+   var GROUP_NAMES = { abc: "Score planner", semantic: "Music tokens" };
+   function openNotes(req) {
+@@ -3191,8 +3193,9 @@
+       s.tokens = +m[2];
+       completeStage(job, AR_KEY[m[1]], +m[5]);
+     } else if ((m = text.match(/^\[Sliders\] (.*)$/))) {
+-      // one "<id> at gain <g>" line per slider; the "Detached" line only closes them
+-      if (!/^Detached/.test(m[1])) {
++      // one "<id> at gain <g>" line per slider; the "Detached" line only closes them. HERESY 1447 (Viktor 15.10.2026: «К хуям
++      // убери этот лог арки. Он там не нужен»): only those, a wave's way through the song never in the stage's words
++      if (/ at gain /.test(m[1])) {
+         var seen = job.notes.sliders ? job.notes.sliders.split(", ") : [];
+         if (seen.indexOf(m[1]) < 0) seen.push(m[1]);
+         job.notes.sliders = seen.join(", ");
+@@ -8603,7 +8606,8 @@
+       synth_batch_size: parseInt($("variations").value, 10), lm_batch_size: parseInt($("versions").value, 10),
+       output_format: $("outFormat").value, mp3_bitrate: parseInt($("mp3Bitrate").value, 10),
+       peak_clip: parseInt($("peakClip").value, 10),
+-      vae: selectedVae(), sliders: STATE.sliderChoice || [], loras: YueLoras.kept ? YueLoras.kept() : YueLoras.value()   // HERESY 1167: the muted kept
++      vae: selectedVae(), sliders: STATE.sliderChoice || [], loras: YueLoras.kept ? YueLoras.kept() : YueLoras.value(),   // HERESY 1167: the muted kept
++      lora_groups: YueLoras.groups ? YueLoras.groups() : []   // HERESY 1447
+     };
+     ["abc", "semantic"].forEach(function (group) {
+       var preset = {};
+diff --git a/tools/console/heresy-i18n-be.js b/tools/console/heresy-i18n-be.js
+index 369bd55..cb438ff 100644
+--- a/tools/console/heresy-i18n-be.js
++++ b/tools/console/heresy-i18n-be.js
+@@ -5253,5 +5253,20 @@ RuachI18n.add("be", {
+ "No outpaint: ": "Не дамалявана: ",
+ "No outpaint:": "Не дамалявана:",
+ "Outpainting waits for a card with room, then paints the edges on": "Дамалёўка краёў чакае карту з месцам, потым дамалюе краі",
+-"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "Дамалёўка краёў — справа Qwen-Image 2.1 з адаптарам «Outpaint v2»: на гэтай машыне яго няма"
++"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "Дамалёўка краёў — справа Qwen-Image 2.1 з адаптарам «Outpaint v2»: на гэтай машыне яго няма",
++"Budget": "Бюджэт",
++"Share": "Па долях",
++"In order": "Па чарзе",
++"Adapters that push on the same layers share one budget a half, its red line the cap: Share gives way in proportion past it, In order serves them from the top row, and what one lets go, the next one takes. The engine keeps it at every moment of the song.": "Адаптары, якія ціснуць на тыя самыя слаі, дзеляць адзін бюджэт на палову, яго столь — чырвоная лінія: «Па долях» — за ёй кожны саступае прапарцыйна, «Па чарзе» — сіла раздаецца з верхняга радка, і што адзін адпусціў, бярэ наступны. Рухавік трымае гэта ў кожнае імгненне песні.",
++"Drag the rows to set their order": "Перацягні радкі, каб задаць іх парадак",
++"Music half: {0} layers, attention {1} %, MLP {2} %": "Музычная палова: слаёў {0}, увага {1} %, MLP {2} %",
++"Sound half: {0} layers, attention {1} %, MLP {2} %": "Гукавая палова: слаёў {0}, увага {1} %, MLP {2} %",
++"moves a layer by up to {0} % at 1.0": "зрушвае слой да {0} % пры 1.0",
++"Where it pushes:": "Дзе цісне:",
++"{0} and {1} share their layers ({2}) and pull the same way: together they push harder than their strengths say, keep them lower.": "{0} і {1} дзеляць слаі ({2}) і цягнуць у адзін бок: разам яны ціснуць мацней, чым кажуць іх сілы, — трымай іх ніжэй.",
++"{0} and {1} share their layers ({2}) and pull against each other: some of each cancels the other.": "{0} і {1} дзеляць слаі ({2}) і цягнуць адно супраць аднаго: частка кожнага гасіць другога.",
++"{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} і {1} дзеляць слаі ({2}) і цягнуць упоперак адно аднаго: разам яны сягаюць далей за кожнага з іх, але менш за іх суму.",
++"In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "Па чарзе: верхні радок бярэ сваю сілу першым, наступны — што пакінула чырвоная лінія; што адпусціла хваля, бярэ наступны.",
++"Share: past the red line, the adapters that share their layers give way, each in proportion.": "Па долях: за чырвонай лініяй адаптары, што дзеляць слаі, саступаюць — кожны прапарцыйна.",
++"a wave": "хваля"
+ });
+diff --git a/tools/console/heresy-i18n-de.js b/tools/console/heresy-i18n-de.js
+index 98b6ad2..f1c579d 100644
+--- a/tools/console/heresy-i18n-de.js
++++ b/tools/console/heresy-i18n-de.js
+@@ -5136,5 +5136,20 @@ RuachI18n.add("de", {
+ "No outpaint: ": "Keine Erweiterung: ",
+ "No outpaint:": "Keine Erweiterung:",
+ "Outpainting waits for a card with room, then paints the edges on": "Die Erweiterung wartet auf eine Karte mit Platz und malt dann die Ränder",
+-"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "Erweitern macht Qwen-Image 2.1 mit dem Adapter „Outpaint v2“: er ist nicht auf diesem Rechner"
++"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "Erweitern macht Qwen-Image 2.1 mit dem Adapter „Outpaint v2“: er ist nicht auf diesem Rechner",
++"Budget": "Budget",
++"Share": "Teilen",
++"In order": "Der Reihe nach",
++"Adapters that push on the same layers share one budget a half, its red line the cap: Share gives way in proportion past it, In order serves them from the top row, and what one lets go, the next one takes. The engine keeps it at every moment of the song.": "Adapter, die auf dieselben Schichten drücken, teilen sich ein Budget je Hälfte, die rote Linie als Obergrenze: Teilen gibt darüber anteilig nach, Der Reihe nach bedient sie von der obersten Zeile an, und was einer loslässt, nimmt der nächste. Die Engine hält das in jedem Moment des Songs.",
++"Drag the rows to set their order": "Zieh die Zeilen, um ihre Reihenfolge festzulegen",
++"Music half: {0} layers, attention {1} %, MLP {2} %": "Musikhälfte: {0} Schichten, Attention {1} %, MLP {2} %",
++"Sound half: {0} layers, attention {1} %, MLP {2} %": "Klanghälfte: {0} Schichten, Attention {1} %, MLP {2} %",
++"moves a layer by up to {0} % at 1.0": "verschiebt eine Schicht um bis zu {0} % bei 1.0",
++"Where it pushes:": "Wo er drückt:",
++"{0} and {1} share their layers ({2}) and pull the same way: together they push harder than their strengths say, keep them lower.": "{0} und {1} teilen ihre Schichten ({2}) und ziehen in dieselbe Richtung: zusammen drücken sie stärker, als ihre Stärken sagen; halte sie niedriger.",
++"{0} and {1} share their layers ({2}) and pull against each other: some of each cancels the other.": "{0} und {1} teilen ihre Schichten ({2}) und ziehen gegeneinander: ein Teil von jedem hebt den anderen auf.",
++"{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} und {1} teilen ihre Schichten ({2}) und ziehen quer zueinander: zusammen reichen sie weiter als jeder allein, aber weniger als ihre Summe.",
++"In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "Der Reihe nach: die oberste Zeile nimmt ihre Stärke zuerst, die nächste, was die rote Linie übrig lässt; was eine Welle loslässt, nimmt der nächste.",
++"Share: past the red line, the adapters that share their layers give way, each in proportion.": "Teilen: über der roten Linie geben die Adapter, die sich Schichten teilen, nach, jeder anteilig.",
++"a wave": "eine Welle"
+ });
+diff --git a/tools/console/heresy-i18n-el.js b/tools/console/heresy-i18n-el.js
+index e92e9dd..bd0c2e4 100644
+--- a/tools/console/heresy-i18n-el.js
++++ b/tools/console/heresy-i18n-el.js
+@@ -5252,5 +5252,20 @@ RuachI18n.add("el", {
+ "No outpaint: ": "Χωρίς επέκταση: ",
+ "No outpaint:": "Χωρίς επέκταση:",
+ "Outpainting waits for a card with room, then paints the edges on": "Η επέκταση περιμένει κάρτα με χώρο και μετά ζωγραφίζει τις άκρες",
+-"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "Η επέκταση είναι του Qwen-Image 2.1 με τον προσαρμογέα «Outpaint v2»: δεν υπάρχει σε αυτό το μηχάνημα"
++"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "Η επέκταση είναι του Qwen-Image 2.1 με τον προσαρμογέα «Outpaint v2»: δεν υπάρχει σε αυτό το μηχάνημα",
++"Budget": "Προϋπολογισμός",
++"Share": "Αναλογικά",
++"In order": "Με τη σειρά",
++"Adapters that push on the same layers share one budget a half, its red line the cap: Share gives way in proportion past it, In order serves them from the top row, and what one lets go, the next one takes. The engine keeps it at every moment of the song.": "Οι προσαρμογείς που πιέζουν τα ίδια στρώματα μοιράζονται έναν προϋπολογισμό ανά μισό, με όριο την κόκκινη γραμμή: «Αναλογικά» — πέρα από αυτήν ο καθένας υποχωρεί αναλογικά, «Με τη σειρά» — η δύναμη μοιράζεται από την πάνω γραμμή, και ό,τι αφήνει ο ένας το παίρνει ο επόμενος. Η μηχανή το τηρεί σε κάθε στιγμή του τραγουδιού.",
++"Drag the rows to set their order": "Σύρε τις γραμμές για να ορίσεις τη σειρά τους",
++"Music half: {0} layers, attention {1} %, MLP {2} %": "Μουσικό μισό: {0} στρώματα, προσοχή {1} %, MLP {2} %",
++"Sound half: {0} layers, attention {1} %, MLP {2} %": "Ηχητικό μισό: {0} στρώματα, προσοχή {1} %, MLP {2} %",
++"moves a layer by up to {0} % at 1.0": "μετακινεί ένα στρώμα έως {0} % στο 1.0",
++"Where it pushes:": "Πού πιέζει:",
++"{0} and {1} share their layers ({2}) and pull the same way: together they push harder than their strengths say, keep them lower.": "Οι {0} και {1} μοιράζονται τα στρώματά τους ({2}) και τραβούν προς την ίδια μεριά: μαζί πιέζουν πιο δυνατά απ' όσο λένε οι δυνάμεις τους, κράτησέ τους χαμηλότερα.",
++"{0} and {1} share their layers ({2}) and pull against each other: some of each cancels the other.": "Οι {0} και {1} μοιράζονται τα στρώματά τους ({2}) και τραβούν ο ένας ενάντια στον άλλον: κάτι από τον καθένα σβήνει τον άλλον.",
++"{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "Οι {0} και {1} μοιράζονται τα στρώματά τους ({2}) και τραβούν εγκάρσια ο ένας στον άλλον: μαζί φτάνουν πιο μακριά από τον καθένα, αλλά λιγότερο από το άθροισμά τους.",
++"In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "Με τη σειρά: η πάνω γραμμή παίρνει πρώτη τη δύναμή της, η επόμενη ό,τι αφήνει η κόκκινη γραμμή· ό,τι αφήνει ένα κύμα, το παίρνει ο επόμενος.",
++"Share: past the red line, the adapters that share their layers give way, each in proportion.": "Αναλογικά: πέρα από την κόκκινη γραμμή, οι προσαρμογείς που μοιράζονται στρώματα υποχωρούν, ο καθένας αναλογικά.",
++"a wave": "ένα κύμα"
+ });
+diff --git a/tools/console/heresy-i18n-es.js b/tools/console/heresy-i18n-es.js
+index 36acceb..1d74bdd 100644
+--- a/tools/console/heresy-i18n-es.js
++++ b/tools/console/heresy-i18n-es.js
+@@ -5252,5 +5252,20 @@ RuachI18n.add("es", {
+ "No outpaint: ": "Sin ampliación: ",
+ "No outpaint:": "Sin ampliación:",
+ "Outpainting waits for a card with room, then paints the edges on": "La ampliación espera una tarjeta con sitio y luego pinta los bordes",
+-"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "Ampliar es cosa de Qwen-Image 2.1 con su adaptador «Outpaint v2»: no está en esta máquina"
++"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "Ampliar es cosa de Qwen-Image 2.1 con su adaptador «Outpaint v2»: no está en esta máquina",
++"Budget": "Presupuesto",
++"Share": "Repartir",
++"In order": "En orden",
++"Adapters that push on the same layers share one budget a half, its red line the cap: Share gives way in proportion past it, In order serves them from the top row, and what one lets go, the next one takes. The engine keeps it at every moment of the song.": "Los adaptadores que empujan las mismas capas comparten un presupuesto por mitad, con la línea roja como tope: Repartir cede en proporción más allá de ella, En orden los sirve desde la fila de arriba, y lo que uno suelta lo toma el siguiente. El motor lo mantiene en cada momento de la canción.",
++"Drag the rows to set their order": "Arrastra las filas para fijar su orden",
++"Music half: {0} layers, attention {1} %, MLP {2} %": "Mitad musical: {0} capas, atención {1} %, MLP {2} %",
++"Sound half: {0} layers, attention {1} %, MLP {2} %": "Mitad sonora: {0} capas, atención {1} %, MLP {2} %",
++"moves a layer by up to {0} % at 1.0": "mueve una capa hasta un {0} % a 1.0",
++"Where it pushes:": "Dónde empuja:",
++"{0} and {1} share their layers ({2}) and pull the same way: together they push harder than their strengths say, keep them lower.": "{0} y {1} comparten sus capas ({2}) y tiran en el mismo sentido: juntos empujan más de lo que dicen sus fuerzas; mantenlos más bajos.",
++"{0} and {1} share their layers ({2}) and pull against each other: some of each cancels the other.": "{0} y {1} comparten sus capas ({2}) y tiran uno contra otro: parte de cada uno anula al otro.",
++"{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} y {1} comparten sus capas ({2}) y tiran en direcciones cruzadas: juntos llegan más lejos que cualquiera de los dos, pero menos que su suma.",
++"In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "En orden: la fila de arriba toma su fuerza primero, la siguiente lo que deja la línea roja; lo que suelta una onda lo toma el siguiente.",
++"Share: past the red line, the adapters that share their layers give way, each in proportion.": "Repartir: más allá de la línea roja, los adaptadores que comparten capas ceden, cada uno en proporción.",
++"a wave": "una onda"
+ });
+diff --git a/tools/console/heresy-i18n-fr.js b/tools/console/heresy-i18n-fr.js
+index 4f07c0d..29735fd 100644
+--- a/tools/console/heresy-i18n-fr.js
++++ b/tools/console/heresy-i18n-fr.js
+@@ -5136,5 +5136,20 @@ RuachI18n.add("fr", {
+ "No outpaint: ": "Pas de prolongement : ",
+ "No outpaint:": "Pas de prolongement :",
+ "Outpainting waits for a card with room, then paints the edges on": "Le prolongement attend une carte avec de la place, puis peint les bords",
+-"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "Prolonger revient à Qwen-Image 2.1 avec son adaptateur « Outpaint v2 » : il n'est pas sur cette machine"
++"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "Prolonger revient à Qwen-Image 2.1 avec son adaptateur « Outpaint v2 » : il n'est pas sur cette machine",
++"Budget": "Budget",
++"Share": "Partager",
++"In order": "Dans l'ordre",
++"Adapters that push on the same layers share one budget a half, its red line the cap: Share gives way in proportion past it, In order serves them from the top row, and what one lets go, the next one takes. The engine keeps it at every moment of the song.": "Les adaptateurs qui poussent sur les mêmes couches partagent un budget par moitié, la ligne rouge pour plafond : Partager cède en proportion au-delà, Dans l'ordre les sert depuis la ligne du haut, et ce que l'un lâche, le suivant le prend. Le moteur le tient à chaque instant de la chanson.",
++"Drag the rows to set their order": "Fais glisser les lignes pour fixer leur ordre",
++"Music half: {0} layers, attention {1} %, MLP {2} %": "Moitié musique : {0} couches, attention {1} %, MLP {2} %",
++"Sound half: {0} layers, attention {1} %, MLP {2} %": "Moitié son : {0} couches, attention {1} %, MLP {2} %",
++"moves a layer by up to {0} % at 1.0": "déplace une couche jusqu'à {0} % à 1.0",
++"Where it pushes:": "Où il pousse :",
++"{0} and {1} share their layers ({2}) and pull the same way: together they push harder than their strengths say, keep them lower.": "{0} et {1} partagent leurs couches ({2}) et tirent dans le même sens : ensemble ils poussent plus fort que leurs forces ne le disent ; garde-les plus bas.",
++"{0} and {1} share their layers ({2}) and pull against each other: some of each cancels the other.": "{0} et {1} partagent leurs couches ({2}) et tirent l'un contre l'autre : une part de chacun annule l'autre.",
++"{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} et {1} partagent leurs couches ({2}) et tirent en travers l'un de l'autre : ensemble ils vont plus loin que chacun, mais moins que leur somme.",
++"In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "Dans l'ordre : la ligne du haut prend sa force en premier, la suivante ce que laisse la ligne rouge ; ce qu'une vague lâche, le suivant le prend.",
++"Share: past the red line, the adapters that share their layers give way, each in proportion.": "Partager : au-delà de la ligne rouge, les adaptateurs qui partagent leurs couches cèdent, chacun en proportion.",
++"a wave": "une vague"
+ });
+diff --git a/tools/console/heresy-i18n-it.js b/tools/console/heresy-i18n-it.js
+index cff64f2..8744c02 100644
+--- a/tools/console/heresy-i18n-it.js
++++ b/tools/console/heresy-i18n-it.js
+@@ -5252,5 +5252,20 @@ RuachI18n.add("it", {
+ "No outpaint: ": "Nessuna estensione: ",
+ "No outpaint:": "Nessuna estensione:",
+ "Outpainting waits for a card with room, then paints the edges on": "L'estensione aspetta una scheda libera, poi dipinge i bordi",
+-"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "Estendere è di Qwen-Image 2.1 con l'adattatore «Outpaint v2»: non è su questa macchina"
++"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "Estendere è di Qwen-Image 2.1 con l'adattatore «Outpaint v2»: non è su questa macchina",
++"Budget": "Budget",
++"Share": "Ripartire",
++"In order": "In ordine",
++"Adapters that push on the same layers share one budget a half, its red line the cap: Share gives way in proportion past it, In order serves them from the top row, and what one lets go, the next one takes. The engine keeps it at every moment of the song.": "Gli adattatori che spingono sugli stessi strati condividono un budget per metà, con la linea rossa come tetto: Ripartire cede in proporzione oltre di essa, In ordine li serve dalla riga in alto, e ciò che uno lascia lo prende il successivo. Il motore lo mantiene in ogni momento della canzone.",
++"Drag the rows to set their order": "Trascina le righe per stabilirne l'ordine",
++"Music half: {0} layers, attention {1} %, MLP {2} %": "Metà musicale: {0} strati, attenzione {1} %, MLP {2} %",
++"Sound half: {0} layers, attention {1} %, MLP {2} %": "Metà sonora: {0} strati, attenzione {1} %, MLP {2} %",
++"moves a layer by up to {0} % at 1.0": "sposta uno strato fino al {0} % a 1.0",
++"Where it pushes:": "Dove spinge:",
++"{0} and {1} share their layers ({2}) and pull the same way: together they push harder than their strengths say, keep them lower.": "{0} e {1} condividono i loro strati ({2}) e tirano nella stessa direzione: insieme spingono più di quanto dicano le loro forze; tienili più bassi.",
++"{0} and {1} share their layers ({2}) and pull against each other: some of each cancels the other.": "{0} e {1} condividono i loro strati ({2}) e tirano l'uno contro l'altro: parte di ciascuno annulla l'altro.",
++"{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} e {1} condividono i loro strati ({2}) e tirano di traverso l'uno all'altro: insieme arrivano più lontano di ciascuno, ma meno della loro somma.",
++"In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "In ordine: la riga in alto prende per prima la sua forza, la successiva ciò che lascia la linea rossa; ciò che un'onda lascia, lo prende il successivo.",
++"Share: past the red line, the adapters that share their layers give way, each in proportion.": "Ripartire: oltre la linea rossa, gli adattatori che condividono gli strati cedono, ciascuno in proporzione.",
++"a wave": "un'onda"
+ });
+diff --git a/tools/console/heresy-i18n-ja.js b/tools/console/heresy-i18n-ja.js
+index 8659dc7..e57357f 100644
+--- a/tools/console/heresy-i18n-ja.js
++++ b/tools/console/heresy-i18n-ja.js
+@@ -5136,5 +5136,20 @@ RuachI18n.add("ja", {
+ "No outpaint: ": "描き足しなし：",
+ "No outpaint:": "描き足しなし：",
+ "Outpainting waits for a card with room, then paints the edges on": "空きのあるカードを待ってから外側を描き足します",
+-"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "描き足しは Qwen-Image 2.1 とアダプター「Outpaint v2」の仕事です。このマシンにはありません"
++"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "描き足しは Qwen-Image 2.1 とアダプター「Outpaint v2」の仕事です。このマシンにはありません",
++"Budget": "予算",
++"Share": "按分",
++"In order": "順番に",
++"Adapters that push on the same layers share one budget a half, its red line the cap: Share gives way in proportion past it, In order serves them from the top row, and what one lets go, the next one takes. The engine keeps it at every moment of the song.": "同じ層に効くアダプターは、半分ごとに一つの予算を分け合い、その上限が赤い線です。「按分」は線を超えるとそれぞれ比例して譲り、「順番に」は上の行から強さを配り、一つが手放した分は次が受け取ります。エンジンは曲のあらゆる瞬間でこれを保ちます。",
++"Drag the rows to set their order": "行をドラッグして順番を決める",
++"Music half: {0} layers, attention {1} %, MLP {2} %": "音楽の半分：{0} 層、アテンション {1} %、MLP {2} %",
++"Sound half: {0} layers, attention {1} %, MLP {2} %": "音の半分：{0} 層、アテンション {1} %、MLP {2} %",
++"moves a layer by up to {0} % at 1.0": "1.0 で層を最大 {0} % 動かす",
++"Where it pushes:": "効いている所：",
++"{0} and {1} share their layers ({2}) and pull the same way: together they push harder than their strengths say, keep them lower.": "{0} と {1} は層を共有し（{2}）、同じ向きに引きます。合わせると強さの数値以上に効くので、低めに保ってください。",
++"{0} and {1} share their layers ({2}) and pull against each other: some of each cancels the other.": "{0} と {1} は層を共有し（{2}）、互いに逆向きに引きます。それぞれの一部が相手を打ち消します。",
++"{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} と {1} は層を共有し（{2}）、互いに交差する向きに引きます。合わせるとどちらか一方より遠くまで届きますが、合計よりは小さくなります。",
++"In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "順番に：上の行が最初に強さを取り、次の行は赤い線が残した分を取ります。波が手放した分は次が受け取ります。",
++"Share: past the red line, the adapters that share their layers give way, each in proportion.": "按分：赤い線を超えると、層を共有するアダプターがそれぞれ比例して譲ります。",
++"a wave": "波"
+ });
+diff --git a/tools/console/heresy-i18n-pt.js b/tools/console/heresy-i18n-pt.js
+index bfe3753..2399dde 100644
+--- a/tools/console/heresy-i18n-pt.js
++++ b/tools/console/heresy-i18n-pt.js
+@@ -5136,5 +5136,20 @@ RuachI18n.add("pt", {
+ "No outpaint: ": "Sem expansão: ",
+ "No outpaint:": "Sem expansão:",
+ "Outpainting waits for a card with room, then paints the edges on": "A expansão espera uma placa com espaço e depois pinta as bordas",
+-"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "Expandir é do Qwen-Image 2.1 com o adaptador «Outpaint v2»: não está nesta máquina"
++"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "Expandir é do Qwen-Image 2.1 com o adaptador «Outpaint v2»: não está nesta máquina",
++"Budget": "Orçamento",
++"Share": "Repartir",
++"In order": "Por ordem",
++"Adapters that push on the same layers share one budget a half, its red line the cap: Share gives way in proportion past it, In order serves them from the top row, and what one lets go, the next one takes. The engine keeps it at every moment of the song.": "Os adaptadores que empurram as mesmas camadas partilham um orçamento por metade, com a linha vermelha como teto: Repartir cede em proporção para lá dela, Por ordem serve-os a partir da linha de cima, e o que um larga, o seguinte apanha. O motor mantém isto em cada momento da canção.",
++"Drag the rows to set their order": "Arrasta as linhas para definir a sua ordem",
++"Music half: {0} layers, attention {1} %, MLP {2} %": "Metade musical: {0} camadas, atenção {1} %, MLP {2} %",
++"Sound half: {0} layers, attention {1} %, MLP {2} %": "Metade sonora: {0} camadas, atenção {1} %, MLP {2} %",
++"moves a layer by up to {0} % at 1.0": "move uma camada até {0} % a 1.0",
++"Where it pushes:": "Onde empurra:",
++"{0} and {1} share their layers ({2}) and pull the same way: together they push harder than their strengths say, keep them lower.": "{0} e {1} partilham as suas camadas ({2}) e puxam no mesmo sentido: juntos empurram mais do que dizem as suas forças; mantém-nos mais baixos.",
++"{0} and {1} share their layers ({2}) and pull against each other: some of each cancels the other.": "{0} e {1} partilham as suas camadas ({2}) e puxam um contra o outro: parte de cada um anula o outro.",
++"{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} e {1} partilham as suas camadas ({2}) e puxam de través um ao outro: juntos chegam mais longe do que qualquer um, mas menos do que a sua soma.",
++"In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "Por ordem: a linha de cima toma primeiro a sua força, a seguinte o que a linha vermelha deixa; o que uma onda larga, o seguinte apanha.",
++"Share: past the red line, the adapters that share their layers give way, each in proportion.": "Repartir: para lá da linha vermelha, os adaptadores que partilham camadas cedem, cada um em proporção.",
++"a wave": "uma onda"
+ });
+diff --git a/tools/console/heresy-i18n-ru.js b/tools/console/heresy-i18n-ru.js
+index 823d248..2f75ecb 100644
+--- a/tools/console/heresy-i18n-ru.js
++++ b/tools/console/heresy-i18n-ru.js
+@@ -5258,5 +5258,20 @@ RuachI18n.add("ru", {
+ "No outpaint: ": "Не дорисовано: ",
+ "No outpaint:": "Не дорисовано:",
+ "Outpainting waits for a card with room, then paints the edges on": "Дорисовка краёв ждёт карту с местом, потом дорисует края",
+-"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "Дорисовка краёв — дело Qwen-Image 2.1 с адаптером «Outpaint v2»: на этой машине его нет"
++"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "Дорисовка краёв — дело Qwen-Image 2.1 с адаптером «Outpaint v2»: на этой машине его нет",
++"Budget": "Бюджет",
++"Share": "В долю",
++"In order": "По порядку",
++"Adapters that push on the same layers share one budget a half, its red line the cap: Share gives way in proportion past it, In order serves them from the top row, and what one lets go, the next one takes. The engine keeps it at every moment of the song.": "Адаптеры, которые давят на одни и те же слои, делят один бюджет на половину, его потолок — красная линия: «В долю» — за ней каждый уступает пропорционально, «По порядку» — сила раздаётся с верхней строки, и что один отпустил, берёт следующий. Движок держит это в каждый миг песни.",
++"Drag the rows to set their order": "Перетащи строки, чтобы задать их порядок",
++"Music half: {0} layers, attention {1} %, MLP {2} %": "Музыкальная половина: слоёв {0}, внимание {1} %, MLP {2} %",
++"Sound half: {0} layers, attention {1} %, MLP {2} %": "Звуковая половина: слоёв {0}, внимание {1} %, MLP {2} %",
++"moves a layer by up to {0} % at 1.0": "сдвигает слой до {0} % при 1.0",
++"Where it pushes:": "Где давит:",
++"{0} and {1} share their layers ({2}) and pull the same way: together they push harder than their strengths say, keep them lower.": "{0} и {1} делят слои ({2}) и тянут в одну сторону: вместе они давят сильнее, чем говорят их силы, — держи их ниже.",
++"{0} and {1} share their layers ({2}) and pull against each other: some of each cancels the other.": "{0} и {1} делят слои ({2}) и тянут друг против друга: часть каждого гасит другого.",
++"{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} и {1} делят слои ({2}) и тянут поперёк друг друга: вместе они дотягиваются дальше любого из них, но меньше их суммы.",
++"In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "По порядку: верхняя строка берёт свою силу первой, следующая — что оставила красная линия; что отпустила волна, берёт следующий.",
++"Share: past the red line, the adapters that share their layers give way, each in proportion.": "В долю: за красной линией адаптеры, делящие слои, уступают — каждый пропорционально.",
++"a wave": "волна"
+ });
+diff --git a/tools/console/heresy-i18n-uk.js b/tools/console/heresy-i18n-uk.js
+index 3f3d3d4..e9d7813 100644
+--- a/tools/console/heresy-i18n-uk.js
++++ b/tools/console/heresy-i18n-uk.js
+@@ -5253,5 +5253,20 @@ RuachI18n.add("uk", {
+ "No outpaint: ": "Не домальовано: ",
+ "No outpaint:": "Не домальовано:",
+ "Outpainting waits for a card with room, then paints the edges on": "Домальовування країв чекає карту з місцем, потім домалює краї",
+-"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "Домальовування країв — справа Qwen-Image 2.1 з адаптером «Outpaint v2»: на цій машині його немає"
++"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "Домальовування країв — справа Qwen-Image 2.1 з адаптером «Outpaint v2»: на цій машині його немає",
++"Budget": "Бюджет",
++"Share": "Частками",
++"In order": "За порядком",
++"Adapters that push on the same layers share one budget a half, its red line the cap: Share gives way in proportion past it, In order serves them from the top row, and what one lets go, the next one takes. The engine keeps it at every moment of the song.": "Адаптери, що тиснуть на ті самі шари, ділять один бюджет на половину, його стеля — червона лінія: «Частками» — за нею кожен поступається пропорційно, «За порядком» — сила роздається з верхнього рядка, і що один відпустив, бере наступний. Рушій тримає це в кожну мить пісні.",
++"Drag the rows to set their order": "Перетягни рядки, щоб задати їхній порядок",
++"Music half: {0} layers, attention {1} %, MLP {2} %": "Музична половина: шарів {0}, увага {1} %, MLP {2} %",
++"Sound half: {0} layers, attention {1} %, MLP {2} %": "Звукова половина: шарів {0}, увага {1} %, MLP {2} %",
++"moves a layer by up to {0} % at 1.0": "зсуває шар до {0} % при 1.0",
++"Where it pushes:": "Де тисне:",
++"{0} and {1} share their layers ({2}) and pull the same way: together they push harder than their strengths say, keep them lower.": "{0} і {1} ділять шари ({2}) і тягнуть в один бік: разом вони тиснуть сильніше, ніж кажуть їхні сили, — тримай їх нижче.",
++"{0} and {1} share their layers ({2}) and pull against each other: some of each cancels the other.": "{0} і {1} ділять шари ({2}) і тягнуть одне проти одного: частина кожного гасить іншого.",
++"{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} і {1} ділять шари ({2}) і тягнуть упоперек одне одного: разом вони сягають далі за будь-кого з них, але менше за їхню суму.",
++"In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "За порядком: верхній рядок бере свою силу першим, наступний — що лишила червона лінія; що відпустила хвиля, бере наступний.",
++"Share: past the red line, the adapters that share their layers give way, each in proportion.": "Частками: за червоною лінією адаптери, що ділять шари, поступаються — кожен пропорційно.",
++"a wave": "хвиля"
+ });
+diff --git a/tools/console/heresy-i18n-zh.js b/tools/console/heresy-i18n-zh.js
+index 0d9a029..a63d6c9 100644
+--- a/tools/console/heresy-i18n-zh.js
++++ b/tools/console/heresy-i18n-zh.js
+@@ -5136,5 +5136,20 @@ RuachI18n.add("zh", {
+ "No outpaint: ": "未扩画：",
+ "No outpaint:": "未扩画：",
+ "Outpainting waits for a card with room, then paints the edges on": "扩画等待有空闲的显卡，然后补画边缘",
+-"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "扩画需要 Qwen-Image 2.1 及其“Outpaint v2”适配器：本机没有"
++"Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine": "扩画需要 Qwen-Image 2.1 及其“Outpaint v2”适配器：本机没有",
++"Budget": "预算",
++"Share": "按比例",
++"In order": "按顺序",
++"Adapters that push on the same layers share one budget a half, its red line the cap: Share gives way in proportion past it, In order serves them from the top row, and what one lets go, the next one takes. The engine keeps it at every moment of the song.": "作用于相同层的适配器在每一半共享一个预算，上限是红线：「按比例」越过红线时各自按比例让出，「按顺序」从最上面一行开始分配强度，一个放下的部分由下一个接过。引擎在歌曲的每一刻都保持这一点。",
++"Drag the rows to set their order": "拖动行来设定它们的顺序",
++"Music half: {0} layers, attention {1} %, MLP {2} %": "音乐一半：{0} 层，注意力 {1} %，MLP {2} %",
++"Sound half: {0} layers, attention {1} %, MLP {2} %": "声音一半：{0} 层，注意力 {1} %，MLP {2} %",
++"moves a layer by up to {0} % at 1.0": "在 1.0 时最多移动某层 {0} %",
++"Where it pushes:": "作用位置：",
++"{0} and {1} share their layers ({2}) and pull the same way: together they push harder than their strengths say, keep them lower.": "{0} 和 {1} 共享它们的层（{2}），并朝同一方向拉：合在一起比各自的强度显示的更猛，请调低一些。",
++"{0} and {1} share their layers ({2}) and pull against each other: some of each cancels the other.": "{0} 和 {1} 共享它们的层（{2}），并相互反向拉：各自的一部分抵消了对方。",
++"{0} and {1} share their layers ({2}) and pull across each other: together they reach further than either, yet less than their sum.": "{0} 和 {1} 共享它们的层（{2}），并交叉地拉：合在一起比任何一个走得更远，但少于两者之和。",
++"In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes.": "按顺序：最上面一行先取其强度，下一行取红线剩下的部分；一个波形放下的部分由下一个接过。",
++"Share: past the red line, the adapters that share their layers give way, each in proportion.": "按比例：越过红线后，共享层的适配器各自按比例让出。",
++"a wave": "波形"
+ });
+diff --git a/tools/console/loras.js b/tools/console/loras.js
+index 30d1c9a..72276ba 100644
+--- a/tools/console/loras.js
++++ b/tools/console/loras.js
+@@ -15,7 +15,7 @@
+ (function (root) {
+   "use strict";
+ 
+-  var S = { catalog: [], choice: [], host: null, opts: {}, list: null, note: null, sources: {} };
++  var S = { catalog: [], choice: [], host: null, opts: {}, list: null, note: null, sources: {}, budget: "off", profile: null, profileKey: "" };
+ 
+   // HERESY 1165: a text glued from names and numbers is translated here, whole, from the English it is made as (the
+   // page's translator matches whole texts; its catalog holds the patterns); drawn again when the language changes
+@@ -219,6 +219,194 @@
+   }
+   function overLimit(e, half, v) { return v > zones(e, half).limit + 1e-9; }
+ 
++  // HERESY 1447 (Viktor 14.10.2026: «LoRA ересь и алхимия»; 15.10.2026: «И не забудь за динамичную волну, именно ту, что ты
++  // воплотил в слайдерах стилей»): an adapter's strength through the song on the sliders' own wave (HERESY 1166: points
++  // [t, k], k the share of its strength, eased by half a cosine; flat: none), one wave for a pair's two files; and the
++  // adapters that push on the same layers (the lab's word, /lab/lora/profile) under one budget a half: off, Share (each
++  // gives way in proportion past the red line) or In order (served from the top row; what one lets go, the next takes). The
++  // engine runs such an adapter with the graph (lora-rt.h) and keeps the budget at every moment of the song
++  var WAVE_ARCH = [[0, 0.15], [0.5, 1], [1, 0.15]], waveOpen = {}, waveDrag = null, WW = 300, WH = 90, WP = 8;
++  function waveAt(c, t) {
++    if (!c || !c.length) return 1;
++    if (t <= c[0][0]) return c[0][1];
++    for (var i = 1; i < c.length; i++) {
++      if (t <= c[i][0]) {
++        var t0 = c[i - 1][0], t1 = c[i][0], u = t1 > t0 ? (t - t0) / (t1 - t0) : 1, e = 0.5 - 0.5 * Math.cos(Math.PI * u);
++        return c[i - 1][1] + (c[i][1] - c[i - 1][1]) * e;
++      }
++    }
++    return c[c.length - 1][1];
++  }
++  function r3(v) { return Math.round(v * 1000) / 1000; }
++  function waveClean(c) {   // as the request carries it: points in order, t and k 0..1, 64 at most; flat is none
++    if (!Array.isArray(c)) return null;
++    var pts = c.filter(function (q) { return Array.isArray(q) && isFinite(q[0]) && isFinite(q[1]); })
++      .map(function (q) { return [r3(Math.min(1, Math.max(0, +q[0]))), r3(Math.min(1, Math.max(0, +q[1])))]; })
++      .sort(function (a, b) { return a[0] - b[0]; }).slice(0, 64);
++    if (pts.length < 2 || pts.every(function (q) { return q[1] === 1; })) return null;
++    return pts;
++  }
++  function waveMode(c) {
++    if (!c.curve) return "flat";
++    return c.curveMode || (JSON.stringify(c.curve) === JSON.stringify(WAVE_ARCH) ? "arch" : "draw");
++  }
++  function wavePath(c, w, h, pad) {
++    var d = "";
++    for (var i = 0; i <= 48; i++) {
++      var t = i / 48, k = Math.min(1, Math.max(0, waveAt(c, t)));
++      d += (i ? " L" : "M") + (pad + t * (w - 2 * pad)).toFixed(1) + "," + (pad + (1 - k) * (h - 2 * pad)).toFixed(1);
++    }
++    return d;
++  }
++  function rowChoices(key) { var ids = String(key).split("|"); return S.choice.filter(function (c) { return ids.indexOf(c.id) >= 0; }); }
++  function setWave(key, curve, mode) {           // a pair's two files ride one wave
++    rowChoices(key).forEach(function (c) {
++      if (curve) { c.curve = curve.map(function (q) { return q.slice(); }); c.curveMode = mode; }
++      else { delete c.curve; delete c.curveMode; }
++    });
++  }
++  function waveButton(key, c, name) {
++    var open = !!waveOpen[key];
++    return '<button type="button" class="slider-curve lora-wave' + (waveClean(c.curve) ? " is-curved" : "") + (open ? " is-open" : "") +
++      '" data-wave-toggle="' + escape(key) + '" aria-expanded="' + open + '" aria-label="' + escape(tr(name + ": its curve through the song")) +
++      '" data-tip="' + escape(tr("How its strength runs through the song: flat, an arch, or drawn by hand")) + '"><svg viewBox="0 0 48 18" aria-hidden="true"><path d="' +
++      wavePath(c.curve, 48, 18, 2) + '"/></svg></button>';
++  }
++  function waveEditor(key, c, name) {
++    var mode = waveMode(c), pts = c.curve || [];
++    var grid = [0.25, 0.5, 0.75].map(function (x) {
++      var X = (WP + x * (WW - 2 * WP)).toFixed(1);
++      return '<line class="curve-grid" x1="' + X + '" y1="' + WP + '" x2="' + X + '" y2="' + (WH - WP) + '"/>';
++    }).join("") + '<line class="curve-grid" x1="' + WP + '" y1="' + WH / 2 + '" x2="' + (WW - WP) + '" y2="' + WH / 2 + '"/>';
++    var line = wavePath(c.curve, WW, WH, WP);
++    return '<div class="curve-edit lora-wave-edit" data-wave-edit="' + escape(key) + '">' +
++      '<div class="curve-modes" role="group" aria-label="' + escape(tr(name + ": its curve through the song")) + '">' +
++      [["flat", "Flat"], ["arch", "Arch"], ["draw", "Draw"]].map(function (m) {
++        return '<button type="button" class="curve-mode' + (mode === m[0] ? " is-on" : "") + '" data-wave-mode="' + m[0] + '" aria-pressed="' + (mode === m[0]) + '">' + m[1] + "</button>";
++      }).join("") + "</div>" +
++      '<svg class="curve-graph" viewBox="0 0 ' + WW + " " + WH + '" data-wave-graph="' + escape(key) + '">' + grid +
++      '<path class="curve-area" d="' + line + " L" + (WW - WP) + "," + (WH - WP) + " L" + WP + "," + (WH - WP) + ' Z"/><path class="curve-line" d="' + line + '"/>' +
++      pts.map(function (q, i) {
++        return '<circle class="curve-pt" data-pt="' + i + '" r="5" cx="' + (WP + q[0] * (WW - 2 * WP)).toFixed(1) + '" cy="' + (WP + (1 - q[1]) * (WH - 2 * WP)).toFixed(1) + '"/>';
++      }).join("") + "</svg>" +
++      '<div class="curve-axis"><span>start</span><span>end</span></div>' +
++      '<p class="row-hint">Drag a point up for a flare, down for a fade, along the song to move it; double-click to add one, ' +
++      "double-click a point to take it out. The strength above is the top of the curve.</p></div>";
++  }
++  function waveRedraw(svg, c) {
++    var line = wavePath(c.curve, WW, WH, WP);
++    svg.querySelector(".curve-line").setAttribute("d", line);
++    svg.querySelector(".curve-area").setAttribute("d", line + " L" + (WW - WP) + "," + (WH - WP) + " L" + WP + "," + (WH - WP) + " Z");
++    Array.prototype.forEach.call(svg.querySelectorAll(".curve-pt"), function (el, i) {
++      var q = c.curve[i];
++      if (!q) return;
++      el.setAttribute("cx", (WP + q[0] * (WW - 2 * WP)).toFixed(1));
++      el.setAttribute("cy", (WP + (1 - q[1]) * (WH - 2 * WP)).toFixed(1));
++    });
++  }
++  function wavePointer(svg, event) {
++    var r = svg.getBoundingClientRect();
++    return { t: ((event.clientX - r.left) / r.width * WW - WP) / (WW - 2 * WP), k: 1 - ((event.clientY - r.top) / r.height * WH - WP) / (WH - 2 * WP) };
++  }
++
++  // the budget: which live adapters push on the same layers (the lab's groups, joined over both halves; one group for them
++  // all while the lab has not answered, as most adapters touch every layer), the caps the measured red lines
++  function liveChoices() { return S.choice.filter(function (c) { var e = entry(c.id); return e && !e.error && !c.muted && (c.ar > 0 || c.nar > 0); }); }
++  function budgetGroups() {
++    var live = liveChoices().map(function (c) { return c.id; });
++    if (S.budget === "off" || live.length < 2) return [];
++    var parent = {};
++    live.forEach(function (id) { parent[id] = id; });
++    function find(x) { while (parent[x] !== x) x = parent[x] = parent[parent[x]]; return x; }
++    var g = S.profile && S.profile.groups;
++    if (g && (g.ar || g.nar)) {
++      ["ar", "nar"].forEach(function (half) {
++        (g[half] || []).forEach(function (members) {
++          var m = members.filter(function (id) { return parent[id] !== undefined; });
++          for (var i = 1; i < m.length; i++) parent[find(m[i])] = find(m[0]);
++        });
++      });
++      liveChoices().forEach(function (c) {   // a pair's two files are one adapter
++        var p = pairOf(entry(c.id));
++        if (p && parent[p.id] !== undefined) parent[find(p.id)] = find(c.id);
++      });
++    } else {
++      for (var i = 1; i < live.length; i++) parent[find(live[i])] = find(live[0]);
++    }
++    var by = {}, order = [];
++    live.forEach(function (id) { var r = find(id); if (!by[r]) { by[r] = []; order.push(r); } by[r].push(id); });
++    return order.map(function (r) { return by[r]; }).filter(function (m) { return m.length > 1; });
++  }
++  function groupOf(id) {
++    var gs = budgetGroups();
++    for (var i = 0; i < gs.length; i++) if (gs[i].indexOf(id) >= 0) return i;
++    return -1;
++  }
++  function loraGroups() {
++    return budgetGroups().map(function () {
++      return { cap: TOTAL.ar.limit, cap_nar: TOTAL.nar.limit, mode: S.budget === "order" ? "order" : "share" };
++    });
++  }
++  function budgetBar() {
++    if (liveChoices().length < 2) return "";
++    var tip = tr("Adapters that push on the same layers share one budget a half, its red line the cap: Share gives way in proportion past it, In order serves them from the top row, and what one lets go, the next one takes. The engine keeps it at every moment of the song.");
++    return '<div class="lora-budget" role="group" aria-label="' + escape(tr("Budget")) + '"><span class="lora-budget-name" data-tip="' + escape(tip) + '">Budget</span>' +
++      [["off", "Off"], ["share", "Share"], ["order", "In order"]].map(function (m) {
++        return '<button type="button" class="curve-mode' + (S.budget === m[0] ? " is-on" : "") + '" data-budget="' + m[0] + '" aria-pressed="' + (S.budget === m[0]) + '">' + m[1] + "</button>";
++      }).join("") + (S.budget === "order" ? '<span class="row-hint lora-budget-hint">Drag the rows to set their order</span>' : "") + "</div>";
++  }
++  // the lab's word for the adapters of the form, asked when they change (none: the budget groups them all, the tips say nothing)
++  function wantProfile() {
++    var ids = liveChoices().map(function (c) { return c.id; }).sort(), key = ids.join(",");
++    if (key === S.profileKey) return;
++    S.profileKey = key;
++    if (ids.length < 1 || !root.fetch) { S.profile = null; return; }
++    root.fetch("/lab/lora/profile?ids=" + encodeURIComponent(key)).then(function (r) { return r.ok ? r.json() : null; })
++      .then(function (d) { if (S.profileKey === key) { S.profile = d && d.adapters ? d : null; paintNotes(); paintBudgetTips(); } })
++      .catch(function () { /* no lab: the budget groups them all */ });
++  }
++  // where an adapter pushes, from the lab: the layers it reaches on each half, attention against MLP, how far it moves them
++  function footprint(id) {
++    var a = S.profile && S.profile.adapters && S.profile.adapters[id];
++    if (!a) return "";
++    return ["ar", "nar"].map(function (half) {
++      var h = a.halves && a.halves[half];
++      if (!h || !h.bins) return "";
++      var attn = 0, mlp = 0, layers = 0, tot = 0;
++      Object.keys(h.bins).forEach(function (k) { var v = h.bins[k] * h.bins[k]; tot += v; if (/\.attn$/.test(k)) attn += v; else if (/\.mlp$/.test(k)) mlp += v; });
++      Object.keys(h.layers || {}).forEach(function (k) { if (k !== "edge" && h.layers[k] * h.layers[k] > tot * 0.002) layers++; });
++      var moves = h.moves_percent ? Object.keys(h.moves_percent).reduce(function (m, k) { return Math.max(m, h.moves_percent[k]); }, 0) : 0;
++      return tr((half === "ar" ? "Music half" : "Sound half") + ": {0} layers, attention {1} %, MLP {2} %")
++        .replace("{0}", layers).replace("{1}", Math.round(100 * attn / (tot || 1))).replace("{2}", Math.round(100 * mlp / (tot || 1))) +
++        (moves ? " · " + tr("moves a layer by up to {0} % at 1.0").replace("{0}", moves.toFixed(2)) : "");
++    }).filter(Boolean).join("\n");
++  }
++  function paintBudgetTips() {
++    if (!S.host) return;
++    Array.prototype.forEach.call(S.host.querySelectorAll(".lora-row[data-ids]"), function (row) {
++      var name = row.querySelector(".lora-name"), ids = row.dataset.ids.split("|"), fp = ids.map(footprint).filter(Boolean).join("\n");
++      if (!name) return;
++      if (!name.dataset.baseTip) name.dataset.baseTip = name.dataset.tip || "";
++      name.dataset.tip = name.dataset.baseTip + (fp ? "\n\n" + tr("Where it pushes:") + "\n" + fp : "");
++    });
++  }
++  // two adapters on the same layers: how much they share and how they pull, said once a pair
++  function pairNotes() {
++    if (!S.profile || !S.profile.pairs) return [];
++    var out = [], said = {};
++    S.profile.pairs.forEach(function (q) {
++      if (q.overlap < (S.profile.overlap_group || 0.5) || q.cosine === null || q.cosine === undefined) return;
++      var a = nameOf(q.a), b = nameOf(q.b), key = [a, b].sort().join("|");
++      if (a === b || said[key]) return;
++      said[key] = true;
++      var how = q.cosine > 0.5 ? "pull the same way: together they push harder than their strengths say, keep them lower"
++        : q.cosine < -0.3 ? "pull against each other: some of each cancels the other"
++        : "pull across each other: together they reach further than either, yet less than their sum";
++      out.push(tr("{0} and {1} share their layers ({2}) and " + how + ".").replace("{0}", a).replace("{1}", b).replace("{2}", q.overlap.toFixed(2)));
++    });
++    return out;
++  }
++
+   function halfControl(choice, e, half) {
+     var label = half === "ar" ? "Music" : "Sound", on = has(e, half) || !e;
+     if (!on) return "";   // HERESY 1016: a file without this half shows no slider for it
+@@ -272,6 +460,10 @@
+       " together: by ear, 2.0 together brought a heavy bass (05.10.2026). Lower some, or drag Sound, together.");   // HERESY 1167
+     if (arStacked() > 1 && arTotal() > AR_TOTAL.limit + 1e-9) notes.push("\u26a0 The music half carries " + fmt(arTotal(), 2) + " together, past the shared ceiling " +
+       AR_TOTAL.limit + ": runs this heavy wrote broken scores every time (measured). Lower some, or take one off the music half.");
++    if (S.budget !== "off" && budgetGroups().length) notes.push(S.budget === "order"   // HERESY 1447
++      ? "In order: the top row takes its strength first, the next what the red line leaves; what a wave lets go, the next one takes."
++      : "Share: past the red line, the adapters that share their layers give way, each in proportion.");
++    pairNotes().forEach(function (n) { notes.push(n); });
+     return notes.filter(function (n, i) { return notes.indexOf(n) === i; });   // HERESY 1167: a pair's note once
+   }
+ 
+@@ -358,15 +550,17 @@
+       // HERESY 1018: three columns the same in every row — the name (its trigger word under it,
+       // small), the sliders of the halves it has, the remove button — so the rows line up
+       var trig = triggerOf(e), inStyle = trig && S.opts.styleText && S.opts.styleText().toLowerCase().indexOf(trig.toLowerCase()) >= 0;
+-      return '<div class="lora-row' + (e ? "" : " is-missing") + (muted ? " is-muted" : "") + '" data-ids="' + escape(ids.join("|")) +
+-        '"><span class="lora-who"><span class="lora-name" translate="no" data-tip="' + escape(e ? aboutTip(e) + (p ? "\n\n" + aboutTip(p) : "") : tr("Not in loras/ any more")) + '">' +
++      var key = ids.join("|"), name = nameOf(c.id);   // HERESY 1447: its wave; dragged in order
++      return '<div class="lora-row' + (e ? "" : " is-missing") + (muted ? " is-muted" : "") + (S.budget === "order" ? " is-ordered" : "") + '" data-ids="' + escape(key) +
++        '"' + (S.budget === "order" ? ' draggable="true"' : "") + '><span class="lora-who"><span class="lora-name" translate="no" data-tip="' + escape(e ? aboutTip(e) + (p ? "\n\n" + aboutTip(p) : "") : tr("Not in loras/ any more")) + '">' +
+         escape(nameOf(c.id)) + "</span>" + (muted ? '<span class="lora-muted-tag" data-tip="Right-click: back in the run">muted</span>' : "") +
+         // HERESY 1167 (Viktor: «суффиксом приклинивай все триггеры… кнопка не нужна»): the run puts the word at the style's end
+         (trig ? (inStyle ? '<span class="lora-trigger is-in" data-tip="Its trigger word is in the style">\u2713 ' + escape(trig) + "</span>"
+                          : '<span class="lora-trigger is-auto" data-tip="Its trigger word goes at the style\u2019s end by itself when the song is made">' + escape(trig) + "</span>") : "") +
+-        '</span><span class="lora-halves">' + arPart + narPart + "</span>" +
+-        '<button type="button" class="icon-btn" data-remove-lora="' + escape(ids.join("|")) + '" aria-label="' + escape(tr("Remove " + nameOf(c.id))) + '">✕</button></div>';
+-    }).join("") + totalBar();
++        '</span><span class="lora-halves">' + arPart + narPart + "</span>" + (e ? waveButton(key, c, name) : "") +
++        '<button type="button" class="icon-btn" data-remove-lora="' + escape(ids.join("|")) + '" aria-label="' + escape(tr("Remove " + nameOf(c.id))) + '">✕</button></div>' +
++        (e && waveOpen[key] ? waveEditor(key, c, name) : "");
++    }).join("") + totalBar() + budgetBar();
+     // one even grid of buttons: the name, which half it steers, and a few words on what it does
+     chips.innerHTML = S.catalog.map(function (e) {
+       var p = pairOf(e);
+@@ -381,6 +575,8 @@
+     }).join("");
+     paintNotes();
+     S.host.querySelector(".lora-lib-count").textContent = S.catalog.length ? String(S.catalog.length) : "";   // HERESY 1167
++    wantProfile();                                   // HERESY 1447
++    paintBudgetTips();
+   }
+ 
+   function changed() {
+@@ -420,9 +616,89 @@
+     }
+     var lib = host.querySelector(".lora-lib");
+     try { lib.open = root.localStorage.getItem("yue2.loraLib") === "open"; } catch (e) { /* no storage: closed */ }
++    try { S.budget = ["share", "order"].indexOf(root.localStorage.getItem("yue2.loraBudget")) >= 0 ? root.localStorage.getItem("yue2.loraBudget") : "off"; } catch (e) { /* off */ }
+     lib.addEventListener("toggle", function () {
+       try { root.localStorage.setItem("yue2.loraLib", lib.open ? "open" : "closed"); } catch (e) { /* no storage */ }
+     });
++    // HERESY 1447: the wave's picture opens its editor; Flat, Arch and Draw; its points dragged, added and taken out (as the
++    // sliders' are); the budget's three; the rows dragged in order
++    host.addEventListener("click", function (event) {
++      var wt = event.target.closest("[data-wave-toggle]"), wm = event.target.closest("[data-wave-mode]"), bm = event.target.closest("[data-budget]");
++      if (wt) { waveOpen[wt.dataset.waveToggle] = !waveOpen[wt.dataset.waveToggle]; paint(); return; }
++      if (bm) {
++        S.budget = bm.dataset.budget;
++        try { root.localStorage.setItem("yue2.loraBudget", S.budget); } catch (e) { /* no storage */ }
++        return changed();
++      }
++      if (!wm) return;
++      var key = wm.closest("[data-wave-edit]").dataset.waveEdit, c = rowChoices(key)[0];
++      if (!c) return;
++      if (wm.dataset.waveMode === "flat") setWave(key, null);
++      else if (wm.dataset.waveMode === "arch") setWave(key, WAVE_ARCH, "arch");
++      else setWave(key, c.curve || [[0, 1], [0.5, 1], [1, 1]], "draw");
++      changed();
++    });
++    host.addEventListener("pointerdown", function (event) {
++      var pt = event.target.closest(".curve-pt"), svg = pt && pt.ownerSVGElement, key = svg && svg.dataset.waveGraph, c = key && rowChoices(key)[0];
++      if (!c || !c.curve) return;
++      waveDrag = { svg: svg, key: key, c: c, i: +pt.dataset.pt };
++      try { pt.setPointerCapture(event.pointerId); } catch (e) { /* the move still comes through the host */ }
++      event.preventDefault();
++    });
++    host.addEventListener("pointermove", function (event) {
++      if (!waveDrag) return;
++      var pts = waveDrag.c.curve, i = waveDrag.i, last = pts.length - 1, at = wavePointer(waveDrag.svg, event);
++      var t = i === 0 ? 0 : i === last ? 1 : Math.min(pts[i + 1][0] - 0.02, Math.max(pts[i - 1][0] + 0.02, at.t));
++      pts[i] = [r3(t), r3(Math.min(1, Math.max(0, at.k)))];
++      waveDrag.c.curveMode = "draw";
++      waveRedraw(waveDrag.svg, waveDrag.c);
++    });
++    ["pointerup", "pointercancel"].forEach(function (type) {
++      host.addEventListener(type, function () {
++        if (!waveDrag) return;
++        var d = waveDrag;
++        waveDrag = null;
++        setWave(d.key, d.c.curve, "draw");
++        changed();
++      });
++    });
++    host.addEventListener("dblclick", function (event) {
++      var svg = event.target.closest("[data-wave-graph]"), key = svg && svg.dataset.waveGraph, c = key && rowChoices(key)[0];
++      if (!c) return;
++      var pts = (c.curve || [[0, 1], [1, 1]]).map(function (q) { return q.slice(); }), pt = event.target.closest(".curve-pt");
++      if (pt) {
++        var i = +pt.dataset.pt;
++        if (i > 0 && i < pts.length - 1) pts.splice(i, 1);
++      } else if (pts.length < 64) {
++        var at = wavePointer(svg, event);
++        pts.push([r3(Math.min(0.99, Math.max(0.01, at.t))), r3(Math.min(1, Math.max(0, at.k)))]);
++        pts.sort(function (a, b) { return a[0] - b[0]; });
++      }
++      setWave(key, pts, "draw");
++      event.stopPropagation();
++      changed();
++    });
++    var dragRow = null;
++    host.addEventListener("dragstart", function (event) {
++      var row = event.target.closest && event.target.closest(".lora-row.is-ordered");
++      if (!row) return;
++      dragRow = row.dataset.ids;
++      try { event.dataTransfer.setData("text/plain", dragRow); event.dataTransfer.effectAllowed = "move"; } catch (e) { /* the row still moves */ }
++    });
++    host.addEventListener("dragover", function (event) { if (dragRow && event.target.closest(".lora-row")) event.preventDefault(); });
++    host.addEventListener("drop", function (event) {
++      var row = event.target.closest(".lora-row[data-ids]");
++      if (!dragRow || !row || row.dataset.ids === dragRow) { dragRow = null; return; }
++      event.preventDefault();
++      var moved = dragRow.split("|"), before = row.dataset.ids.split("|")[0];
++      var mine = S.choice.filter(function (c) { return moved.indexOf(c.id) >= 0; });
++      var rest = S.choice.filter(function (c) { return moved.indexOf(c.id) < 0; }), at = 0;
++      rest.forEach(function (c, i) { if (c.id === before) at = i; });
++      var r = row.getBoundingClientRect(), after = event.clientY > r.top + r.height / 2;
++      S.choice = rest.slice(0, at + (after ? rowChoices(row.dataset.ids).length : 0)).concat(mine, rest.slice(at + (after ? rowChoices(row.dataset.ids).length : 0)));
++      dragRow = null;
++      changed();
++    });
+     host.addEventListener("click", function (event) {
+       var chip = event.target.closest("[data-lora-chip]"), remove = event.target.closest("[data-remove-lora]");
+       var trigger = event.target.closest("[data-trigger]");
+@@ -536,12 +812,15 @@
+     if (JSON.stringify(S.sources) !== before) paint();
+   }
+ 
+-  function set(list) {
++  function set(list, groups) {
+     S.choice = (list || []).map(function (c) {
+       var o = { id: String(c.id), ar: Number(c.ar) || 0, nar: Number(c.nar) || 0 };
+       if (c.muted) o.muted = true;                    // HERESY 1167: a muted one comes back muted
++      var w = waveClean(c.curve);                     // HERESY 1447: its wave, as the take ran it
++      if (w) { o.curve = w; o.curveMode = JSON.stringify(w) === JSON.stringify(WAVE_ARCH) ? "arch" : "draw"; }
+       return o;
+     }).filter(function (c) { return c.id && (c.ar || c.nar); });
++    if (Array.isArray(groups)) S.budget = groups.length ? (groups[0].mode === "order" ? "order" : "share") : S.budget;   // HERESY 1447
+     changed();
+   }
+ 
+@@ -558,8 +837,9 @@
+   // HERESY 1167: what the form keeps, the muted too (value() is what the run gets)
+   function kept() {
+     return S.choice.filter(function (c) { return c.ar || c.nar; }).map(function (c) {
+-      var o = { id: c.id, ar: c.ar || 0, nar: c.nar || 0 };
++      var o = { id: c.id, ar: c.ar || 0, nar: c.nar || 0 }, w = waveClean(c.curve);
+       if (c.muted) o.muted = true;
++      if (w) o.curve = w;                             // HERESY 1447
+       return o;
+     });
+   }
+@@ -568,8 +848,11 @@
+       var e = entry(c.id);
+       return e && !e.error && !c.muted && ((has(e, "ar") && c.ar > 0) || (has(e, "nar") && c.nar > 0));
+     }).map(function (c) {
+-      var e = entry(c.id);
+-      return { id: c.id, ar: has(e, "ar") ? Math.round(c.ar * 1000) / 1000 : 0, nar: has(e, "nar") ? Math.round(c.nar * 1000) / 1000 : 0 };
++      var e = entry(c.id), w = waveClean(c.curve), g = groupOf(c.id);
++      var o = { id: c.id, ar: has(e, "ar") ? Math.round(c.ar * 1000) / 1000 : 0, nar: has(e, "nar") ? Math.round(c.nar * 1000) / 1000 : 0 };
++      if (w) o.curve = w;                             // HERESY 1447: its wave and its budget, both run with the graph
++      if (g >= 0) o.group = g;
++      return o;
+     });
+   }
+ 
+@@ -581,11 +864,13 @@
+       if (!byName[name]) { byName[name] = { music: 0, sound: 0 }; order.push(name); }
+       if (Number(c.ar)) byName[name].music = Number(c.ar);
+       if (Number(c.nar)) byName[name].sound = Number(c.nar);
++      if (Array.isArray(c.curve) && c.curve.length) byName[name].wave = true;   // HERESY 1447
+     });
+     return order.map(function (name) {
+       var l = byName[name], parts = [];
+       if (l.music) parts.push("music " + fmt(l.music, 2));
+       if (l.sound) parts.push("sound " + fmt(l.sound, 2));
++      if (l.wave) parts.push("a wave");               // HERESY 1447
+       return { name: name, amounts: parts.join(" · ") };
+     });
+   }
+@@ -610,7 +895,8 @@
+   // HERESY 1168: is this adapter in loras/? (null while the catalog has not come: unknown, not «no»)
+   // (its own name: has(e, half) above is the halves' question)
+   function inCatalog(id) { return S.catalog.length ? !!entry(id) : null; }
+-  root.YueLoras = { mount: mount, setCatalog: setCatalog, set: set, value: value, kept: kept, triggersFor: triggersFor, describe: describe, has: inCatalog, lines: lines, repaint: paint,
++  root.YueLoras = { mount: mount, setCatalog: setCatalog, set: set, value: value, kept: kept, groups: loraGroups,   // HERESY 1447: the budgets
++    budget: function () { return S.budget; }, profile: function () { return S.profile; }, triggersFor: triggersFor, describe: describe, has: inCatalog, lines: lines, repaint: paint,
+     listInto: listInto, setSources: setSources, zone: function (id, half) { return zones(entry(id), half); }, name: nameOf, toGreen: toGreen,
+     total: function () { return { value: arTotal(), stacked: arStacked(), safe: AR_TOTAL.safe, limit: AR_TOTAL.limit }; } };
+ })(window);
+-- 
+2.43.0
+

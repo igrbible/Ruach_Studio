@@ -125,6 +125,7 @@ static bool yue2_generate(Qwen3LM *                             lm,
 
     if (phase == YUE2_PHASE_SEMANTIC) {
         sliders_progress(lm->sliders, 0, s.max_tokens);   // HERESY 1166: the curves at the start of the music
+        lora_rt_progress(lm->lora_rt, 0, s.max_tokens);   // HERESY 1447: and the LoRAs' waves
     }
     Timer prefill_timer;
     for (int i = 0; i < B; i++) {
@@ -211,6 +212,7 @@ static bool yue2_generate(Qwen3LM *                             lm,
         }
         if (phase == YUE2_PHASE_SEMANTIC) {
             sliders_progress(lm->sliders, step + 1, s.max_tokens);   // HERESY 1166: each slider where its curve is now
+            lora_rt_progress(lm->lora_rt, step + 1, s.max_tokens);   // HERESY 1447: each LoRA where its wave is now
         }
         qw3lm_forward_batch(lm, kv, tokens.data(), kv_sets.data(), N, batched.data(), row0, rows);
         for (int i = 0; i < B; i++) {

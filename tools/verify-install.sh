@@ -105,7 +105,7 @@ if [ -f "$ROOT/sliders/catalog.json" ]; then
   want_s=$(exp sliders)
   if [ "$sliders_ok" = "${#sl[@]}" ] && { [ -z "$want_s" ] || [ "$sliders_ok" = "$want_s" ]; }; then ok "$sliders_ok sliders" "every one catalog.json lists, as GGUF"
   else bad "$sliders_ok of ${#sl[@]} sliders$([ -n "$want_s" ] && echo ", expected $want_s")"; fi
-else bad "sliders/catalog.json is missing" "run ./convert-models.sh"; sliders_ok=0; fi
+else note "no sliders" "the studio has none since HERESY 1449"; sliders_ok=0; fi   # HERESY 1566
 
 echo "${B}loras${X}"
 # (the scripts it runs print plain text into a pipe: no colour codes to strip)
