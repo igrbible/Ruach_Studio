@@ -116,6 +116,22 @@ The studio has 22 themes, kept for working in: clear, quiet, readable for hours.
 | LoRA training, bf16, rank 32, 42 full songs | 6.7 s a step, 18 GB |
 | a broken score caught | 15 s into the run |
 
+## The Ring: YuE2 against SUNO v6 and musicful
+
+Twenty cards, each a style line and lyrics, sent unchanged to every side: SUNO v6 and musicful V3 as their services deliver them, ours raw from the engine (the stock YuE2-3B and our own fine-tune, RS-FW, at its saves 0.7 and 1.5). 160 takes, one yardstick for all. **[Listen to them side by side](https://ruachstudio.igr.bible/#ring)** on the visiting card, every file at the same loudness, a name switched on the same second.
+
+| measured raw, the means | SUNO v6 | musicful V3 | YuE2-3B | RS-FW 0.7 | RS-FW 1.5 |
+|---|---|---|---|---|---|
+| Whisper's error on the lyrics, % (lower is better) | 23.0 | 17.2 | 20.6 | **18.1** | 26.2 |
+| sand in the quiet, 6–16 kHz, dB (lower is better) | -15.7 | -14.8 | -17.6 | **-18.1** | -17.4 |
+| stray standing tones (lower is better) | 2.2 | 1.9 | 4.25 | 1.95 | 2.3 |
+| the decoder's 25 Hz buzz in the highs, dB (lower is better) | 8.3 | 8.0 | 11.4 | 11.6 | 11.5 |
+| sub 20–60 Hz share, dB | -8.6 | -10.2 | -10.0 | -9.6 | -10.1 |
+| loudness as delivered, LUFS | -15.5 | -14.3 | -12.6 | -12.8 | -12.6 |
+| true peak as delivered, dBTP | -3.4 | -0.5 | +0.3 | +0.3 | +0.3 |
+
+Theirs come mastered, ours raw: the true peak above zero is ours to fix, as the Refiner does. Other seeds and other prompts sound different on every side; the ring shows the quality and the spread, not a final ranking. The whole table and how it was measured are on the [model card](https://huggingface.co/goldhub/YuE2-RS-Finetunes).
+
 ## Into Your DAW (Experimental)
 
 **Experimental: it needs crash tests and more work.** Two ways out of the studio, and only two: the mixed track as it is (WAV, FLAC, MP3), or the whole take into your own DAW, where the rest happens. No audio and no project comes back in; what REAPER can give the studio is what a song is made from: its words, and a melody from its MIDI items.

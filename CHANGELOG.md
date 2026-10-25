@@ -6,6 +6,8 @@ Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): 
 
 After 2.0.0 (patches 1798 and up).
 
+- **The ring on the visiting card** (HERESY 1798): twenty cards, YuE2 and our own fine-tune against SUNO v6 and musicful, each side at the same loudness, in a player of its own; in twelve languages.
+
 ## 2.0.0 · 2026-10-25
 
 The release: Ruach Studio's own fine-tune as the default model, the songs edited as the model writes them, the piano roll, the Refiner as its canvas and the DAW after a sound engineer's pass (both a beta), the playlist, the Trainer on several cards, the strings in every language (HERESY 1169, patches 1567–1797).

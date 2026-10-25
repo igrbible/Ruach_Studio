@@ -232,6 +232,50 @@
   footer { margin-top: 84px; border-top: 1px solid var(--rule); padding: 30px 0 44px; color: var(--faint); font-size: 14px; }
   footer .wrap { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
   footer .links { margin-left: auto; display: flex; gap: 18px; flex-wrap: wrap; }
+  /* the ring (Viktor 25.10.2026: «на сайт визитку также добавь ринг и нормальный плеер… не говно стандартное браузерное») */
+  .ring-deck { border: 1px solid var(--rule); border-radius: 14px; background: var(--paper); box-shadow: var(--shadow); overflow: hidden; margin: 0 0 26px; }
+  .ring-card { display: flex; align-items: center; gap: 14px; padding: 9px 16px; border-top: 1px solid var(--rule); }
+  .ring-card:first-child { border-top: 0; }
+  .ring-card.on { background: var(--wash); }
+  .ring-name { flex: 1 1 auto; min-width: 0; }
+  .ring-name b { color: var(--faint); font-weight: 600; font-variant-numeric: tabular-nums; margin-right: 4px; }
+  .ring-name i { color: var(--faint); font-style: normal; font-size: .82em; margin-left: 4px; }
+  .ring-sides { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+  .ring-chip { font: inherit; font-size: .84em; line-height: 1; height: 30px; padding: 0 12px; border-radius: 15px; border: 1px solid var(--rule);
+    background: transparent; color: var(--soft); cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+  .ring-chip:hover { border-color: var(--amber); color: var(--ink); }
+  .ring-chip.ours { color: var(--ink); }
+  .ring-chip.on { background: var(--amber); border-color: var(--amber); color: var(--on-amber); }
+  .ring-chip.on::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .ring-table td:first-child { color: var(--soft); }
+  .ring-table td, .ring-table th { font-variant-numeric: tabular-nums; }
+  .ring-note { color: var(--soft); font-size: .92em; margin: 14px 0 0; }
+  .ring-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: color-mix(in srgb, var(--paper) 94%, transparent);
+    backdrop-filter: blur(12px); border-top: 1px solid var(--rule); box-shadow: 0 -8px 30px rgba(0, 0, 0, .12); }
+  .ring-bar .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-top: 10px; padding-bottom: 10px; }
+  .rb-btn { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%; border: 0; background: transparent; color: var(--soft); cursor: pointer; display: grid; place-items: center; }
+  .rb-btn:hover { color: var(--ink); background: var(--wash); }
+  .rb-btn svg { width: 20px; height: 20px; fill: currentColor; }
+  .rb-play { width: 44px; height: 44px; background: var(--amber); color: var(--on-amber); }
+  .rb-play:hover { background: var(--amber); color: var(--on-amber); filter: brightness(1.08); }
+  .rb-play .i-pause { display: none; }
+  .ring-bar.playing .rb-play .i-play { display: none; }
+  .ring-bar.playing .rb-play .i-pause { display: inline; }
+  .rb-what { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+  .rb-what b, .rb-what span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rb-what span { color: var(--amber); font-size: .88em; }
+  .rb-wave { order: -1; flex: 1 1 100%; height: 48px; cursor: pointer; }
+  .rb-time { flex: 0 0 auto; color: var(--faint); font-size: .86em; font-variant-numeric: tabular-nums; min-width: 84px; text-align: right; }
+  .rb-sides { display: flex; gap: 6px; flex: 0 0 auto; }
+  .rb-sides .ring-chip { height: 28px; padding: 0 10px; }
+  body.ring-open { padding-bottom: 130px; }
+  @media (max-width: 900px) {
+    .rb-wave { height: 40px; }
+    .rb-sides { order: 11; flex: 1 1 100%; overflow-x: auto; }
+    body.ring-open { padding-bottom: 170px; }
+    .ring-card { flex-wrap: wrap; }
+    .ring-sides { justify-content: flex-start; }
+  }
 </style>
 <script>
   // the visitor's day or night, kept in this browser only; the page works without it
@@ -245,7 +289,7 @@
 <header class="bar">
   <div class="wrap">
     <a class="mark" href="#top"><img src="../assets/ruach-icon-er-32.png?v=1272" alt="" width="28" height="28">Руах Студія</a>
-    <nav aria-label="Розділи"><a href="#rooms">Кімнати</a><a href="#studio">Що вміє</a><a href="#honestly">Чесно</a><a href="#need">Що потрібно</a><a href="#next">Що далі</a> <a href="#licences">Ліцензії</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub ↗</a></nav>
+    <nav aria-label="Розділи"><a href="#rooms">Кімнати</a><a href="#studio">Що вміє</a><a href="#honestly">Чесно</a><a href="#ring">Ринг</a><a href="#need">Що потрібно</a><a href="#next">Що далі</a> <a href="#licences">Ліцензії</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub ↗</a></nav>
     <details class="langs" translate="no"><summary aria-label="Language">UK</summary><div class="langs-pop"><a href="/" lang="en" hreflang="en">English</a><a href="/ru/" lang="ru" hreflang="ru">Русский</a><a href="/uk/" lang="uk" hreflang="uk" aria-current="page">Українська</a><a href="/be/" lang="be" hreflang="be">Беларуская</a><a href="/el/" lang="el" hreflang="el">Ελληνικά</a><a href="/es/" lang="es" hreflang="es">Español</a><a href="/it/" lang="it" hreflang="it">Italiano</a><a href="/fr/" lang="fr" hreflang="fr">Français</a><a href="/pt/" lang="pt" hreflang="pt">Português</a><a href="/de/" lang="de" hreflang="de">Deutsch</a><a href="/ja/" lang="ja" hreflang="ja">日本語</a><a href="/zh/" lang="zh" hreflang="zh">中文</a></div></details>
     <button class="theme" id="theme" type="button" aria-label="День чи ніч" title="День чи ніч"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5a9.5 9.5 0 0 1 0 19z" fill="currentColor"/></svg></button>
   </div>
@@ -391,6 +435,50 @@
     </div>
   </section>
 
+  <section id="ring">
+    <div class="wrap">
+      <h2>Ринг: YuE2 проти SUNO v6 і musicful</h2>
+      <p class="sub">Двадцять карток, у кожній рядок стилю й текст, надіслані без змін кожній стороні. SUNO v6 і musicful V3 — такими, якими їх віддають їхні сервіси; наші — сирими з рушія: стокова YuE2-3B і наш власний файнтюн, RS-FW, на двох його збереженнях. Тут кожен файл звучить з однаковою гучністю, тож ніхто не виграє тим, що гучніший. Натиск на ім'я вмикає його; інше ім'я на тій самій картці продовжує з тієї ж секунди.</p>
+      <div class="ring-deck" id="ring-deck">
+        <div class="ring-card" data-n="01"><span class="ring-name"><b>01</b> <span>Рок-балада</span> <i>ru</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="02"><span class="ring-name"><b>02</b> <span>Синті-поп</span> <i>ru</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="03"><span class="ring-name"><b>03</b> <span>Фолк-поп з бандурою</span> <i>uk</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="05"><span class="ring-name"><b>05</b> <span>Госпел</span> <i>en-US</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="07"><span class="ring-name"><b>07</b> <span>Брит-поп, британський акцент</span> <i>en-UK</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="08"><span class="ring-name"><b>08</b> <span>Ліквід драм-н-бейс</span> <i>en-UK</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="09"><span class="ring-name"><b>09</b> <span>Чиказький дрил</span> <i>en</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="10"><span class="ring-name"><b>10</b> <span>Чиказький блюз</span> <i>en</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="11"><span class="ring-name"><b>11</b> <span>Шансон, вальс</span> <i>fr</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="13"><span class="ring-name"><b>13</b> <span>Поп-опера, тенор</span> <i>it</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="15"><span class="ring-name"><b>15</b> <span>Ребетика, бузукі</span> <i>el</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="17"><span class="ring-name"><b>17</b> <span>J-pop, опенінг аніме</span> <i>ja</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="18"><span class="ring-name"><b>18</b> <span>Сіті-поп</span> <i>ja</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="19"><span class="ring-name"><b>19</b> <span>Балада мандаринською</span> <i>zh</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="20"><span class="ring-name"><b>20</b> <span>Китайський фолк-ф'южн</span> <i>zh</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="21"><span class="ring-name"><b>21</b> <span>Фаду</span> <i>pt-PT</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="22"><span class="ring-name"><b>22</b> <span>Боса-нова</span> <i>pt-BR</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="23"><span class="ring-name"><b>23</b> <span>Самба</span> <i>pt-BR</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="24"><span class="ring-name"><b>24</b> <span>Дудук, наше власне поле</span> <i>ru</i></span><span class="ring-sides"></span></div>
+        <div class="ring-card" data-n="25"><span class="ring-name"><b>25</b> <span>Індастріал-метал</span> <i>ru</i></span><span class="ring-sides"></span></div>
+      </div>
+      <div class="table ring-table">
+        <table>
+          <thead><tr><th>заміряно сирим, середні</th><th>SUNO v6</th><th>musicful V3</th><th>YuE2-3B</th><th>RS-FW 0.7</th><th>RS-FW 1.5</th></tr></thead>
+          <tbody>
+            <tr><td>помилка Whisper за текстом, % (менше — краще)</td><td>23.0</td><td>17.2</td><td>20.6</td><td><b>18.1</b></td><td>26.2</td></tr>
+            <tr><td>пісок у тиші, 6–16 kHz, dB (менше — краще)</td><td>-15.7</td><td>-14.8</td><td>-17.6</td><td><b>-18.1</b></td><td>-17.4</td></tr>
+            <tr><td>випадкові стоячі тони (менше — краще)</td><td>2.2</td><td>1.9</td><td>4.25</td><td>1.95</td><td>2.3</td></tr>
+            <tr><td>дзижчання декодера 25 Hz на верхах, dB (менше — краще)</td><td>8.3</td><td>8.0</td><td>11.4</td><td>11.6</td><td>11.5</td></tr>
+            <tr><td>частка сабу 20–60 Hz, dB</td><td>-8.6</td><td>-10.2</td><td>-10.0</td><td>-9.6</td><td>-10.1</td></tr>
+            <tr><td>гучність як віддано, LUFS</td><td>-15.5</td><td>-14.3</td><td>-12.6</td><td>-12.8</td><td>-12.6</td></tr>
+            <tr><td>справжній пік як віддано, dBTP</td><td>-3.4</td><td>-0.5</td><td>+0.3</td><td>+0.3</td><td>+0.3</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="ring-note">Їхні треки приходять відмастереними, наші — сирими: справжній пік понад нуль нам належить виправити, як це робить Огранювач студії. Інші сиди та інші промпти звучать по-іншому в кожної сторони; ринг показує якість і розкид, а не остаточний рейтинг. Уся таблиця і те, як її виміряно: <a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-RS-Finetunes">картка моделі</a>.</p>
+    </div>
+  </section>
+
   <section id="need">
     <div class="wrap">
       <h2>Що потрібно</h2>
@@ -530,10 +618,24 @@
   </section>
 </main>
 
+  <div class="ring-bar" id="ring-bar" hidden>
+    <div class="wrap">
+      <button class="rb-btn rb-play" id="rb-play" type="button" aria-label="Грати або пауза"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="i-play" d="M8 5v14l11-7z"/><path class="i-pause" d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg></button>
+      <div class="rb-what"><b id="rb-card"></b><span id="rb-side"></span></div>
+      <div class="rb-wave" id="rb-wave"></div>
+      <span class="rb-time" id="rb-time">0:00</span>
+      <span class="rb-sides" id="rb-sides"></span>
+      <button class="rb-btn" id="rb-prev" type="button" aria-label="Попередня картка"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
+      <button class="rb-btn" id="rb-next" type="button" aria-label="Наступна картка"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18l8.5-6L6 6zM16 6h2v12h-2z"/></svg></button>
+      <button class="rb-btn" id="rb-close" type="button" aria-label="Закрити плеєр"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg></button>
+    </div>
+  </div>
+
 <footer>
   <div class="wrap"><span>Руах Студія · 2.0.0 · творіння <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Зміни</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Кавомашина</a></span></div>
 </footer>
 
+<script src="../assets/wavesurfer.min.js"></script>
 <script>
   // the pictures open over the page: ‹ › and the arrow keys through them, Esc or a click beside to close
   (function () {
@@ -590,6 +692,86 @@
       root.dataset.theme = next;
       try { localStorage.setItem("ruach.theme", next); } catch (e) {}
     });
+  })();
+  // the ring's player (Viktor 25.10.2026): a card's five sides, each at −14 LUFS; another side of the same card goes on from the same second;
+  // the wave drawn from its peaks (wavesurfer.js, BSD-3, in assets/), the colours the page's own in day and night; keys while it is open:
+  // Space play or pause, 1–5 the sides, ← → five seconds, ↑ ↓ the card before or after
+  (function () {
+    var deck = document.getElementById("ring-deck"), bar = document.getElementById("ring-bar");
+    if (!deck || !bar || !window.WaveSurfer) return;
+    var SIDES = [["suno", "SUNO v6"], ["musicful", "musicful V3"], ["bare", "YuE2-3B"], ["fw", "RS-FW 0.7"], ["fw15", "RS-FW 1.5"]];
+    var OURS = { bare: 1, fw: 1, fw15: 1 }, BASE = "/ring/";
+    var cards = Array.prototype.slice.call(deck.querySelectorAll(".ring-card")), info = {}, cur = { n: null, side: null };
+    var root = document.documentElement, audio = new Audio(), ws = null;
+    audio.preload = "metadata";
+    var css = function (v) { return getComputedStyle(root).getPropertyValue(v).trim(); };
+    var colours = function () { return { waveColor: css("--rule") || "#ccc", progressColor: css("--amber"), cursorColor: css("--amber") }; };
+    var fmt = function (t) { t = Math.max(0, Math.floor(t || 0)); return Math.floor(t / 60) + ":" + ("0" + t % 60).slice(-2); };
+    var chip = function (n, s, go) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "ring-chip" + (OURS[s[0]] ? " ours" : ""); b.textContent = s[1];
+      b.dataset.n = n; b.dataset.side = s[0];
+      b.addEventListener("click", go);
+      return b;
+    };
+    cards.forEach(function (c) { var box = c.querySelector(".ring-sides"); SIDES.forEach(function (s) { box.appendChild(chip(c.dataset.n, s, function () { play(c.dataset.n, s[0]); })); }); });
+    var rbSides = document.getElementById("rb-sides");
+    SIDES.forEach(function (s) { rbSides.appendChild(chip("", s, function () { if (cur.n) play(cur.n, s[0]); })); });
+    fetch(BASE + "ring.json").then(function (r) { return r.json(); }).then(function (rows) {
+      rows.forEach(function (row) { row.sides.forEach(function (s) { info[row.n + "-" + s.side] = s; }); });
+      cards.forEach(function (c) { Array.prototype.forEach.call(c.querySelectorAll(".ring-chip"), function (b) { if (!info[c.dataset.n + "-" + b.dataset.side]) b.disabled = true; }); });
+    }).catch(function () {});
+    function mark() {
+      Array.prototype.forEach.call(document.querySelectorAll(".ring-chip"), function (b) {
+        b.classList.toggle("on", b.dataset.side === cur.side && (b.dataset.n === cur.n || b.dataset.n === ""));
+      });
+      cards.forEach(function (c) { c.classList.toggle("on", c.dataset.n === cur.n); });
+    }
+    function play(n, side) {
+      var key = n + "-" + side, s = info[key];
+      if (cur.n === n && cur.side === side) { audio.paused ? audio.play() : audio.pause(); return; }
+      var at = cur.n === n ? audio.currentTime : 0, card = deck.querySelector('.ring-card[data-n="' + n + '"]');
+      cur = { n: n, side: side };
+      bar.hidden = false; document.body.classList.add("ring-open");
+      document.getElementById("rb-card").textContent = card ? card.querySelector(".ring-name").textContent.replace(/\s+/g, " ").trim() : n;
+      document.getElementById("rb-side").textContent = (SIDES.filter(function (x) { return x[0] === side; })[0] || ["", side])[1];
+      mark();
+      if (!ws) {
+        ws = WaveSurfer.create(Object.assign({ container: "#rb-wave", height: "auto", barWidth: 2, barGap: 1, barRadius: 2, cursorWidth: 1,
+          normalize: true, media: audio, interact: true, hideScrollbar: true }, colours()));
+        ws.on("timeupdate", function (t) { document.getElementById("rb-time").textContent = fmt(t) + " / " + fmt(ws.getDuration()); });
+        audio.addEventListener("play", function () { bar.classList.add("playing"); });
+        audio.addEventListener("pause", function () { bar.classList.remove("playing"); });
+        audio.addEventListener("ended", function () { step(1); });
+      }
+      var go = function (peaks) {
+        ws.load(BASE + key + ".mp3", peaks ? [peaks] : undefined, s ? s.seconds : undefined).then(function () {
+          if (at > 0) ws.setTime(Math.min(at, Math.max(0, ws.getDuration() - 1)));
+          audio.play().catch(function () {});
+        }).catch(function () {});
+      };
+      fetch(BASE + key + ".json").then(function (r) { return r.json(); }).then(go, function () { go(null); });
+    }
+    function step(d) {
+      var i = cards.map(function (c) { return c.dataset.n; }).indexOf(cur.n), next = cards[(i + d + cards.length) % cards.length];
+      if (next) { var keep = cur.side; cur = { n: null, side: null }; play(next.dataset.n, keep); }
+    }
+    document.getElementById("rb-play").addEventListener("click", function () { if (cur.n) { audio.paused ? audio.play() : audio.pause(); } });
+    document.getElementById("rb-prev").addEventListener("click", function () { step(-1); });
+    document.getElementById("rb-next").addEventListener("click", function () { step(1); });
+    document.getElementById("rb-close").addEventListener("click", function () {
+      audio.pause(); bar.hidden = true; document.body.classList.remove("ring-open"); cur = { n: null, side: null }; mark();
+    });
+    document.addEventListener("keydown", function (e) {
+      if (bar.hidden || e.ctrlKey || e.metaKey || e.altKey || /input|textarea|select/i.test((e.target || {}).tagName || "")) return;
+      var lb = document.querySelector(".lb"); if (lb && !lb.hidden) return;
+      if (e.key === " ") { e.preventDefault(); audio.paused ? audio.play() : audio.pause(); }
+      else if (/^[1-5]$/.test(e.key)) play(cur.n, SIDES[+e.key - 1][0]);
+      else if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); ws.setTime(Math.max(0, audio.currentTime + (e.key === "ArrowLeft" ? -5 : 5))); }
+      else if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); step(e.key === "ArrowUp" ? -1 : 1); }
+    });
+    new MutationObserver(function () { if (ws) ws.setOptions(colours()); }).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { if (ws) ws.setOptions(colours()); });
   })();
 </script>
 </body>
