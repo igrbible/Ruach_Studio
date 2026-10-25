@@ -56,10 +56,231 @@
    ]
   },
   {
+   "id": "tamer",
+   "label": "Voice tamer",
+   "say": "the voice's harsh bulges lowered",
+   "tip": "Where the voice's spectrum bulges over its own course at that moment (a resonance, a harsh overtone ringing over its neighbours: the wolf in the voice), the bulge is lowered by part of how far it stands out, a few dB at most, eased in and out; by default only what rises over the voice's own usual colour, and nothing under 2.5 kHz, where the vowels live. What does not stand out is not touched: the overtones keep their order, the colour and the breath stay, and a ringing «s» is softened where it rings, never cut short. One gain for both channels, so the voice stands where it stood. Only the voice stems; the rest of the mix is not touched. Each comes back as a version of its stem for the DAW. Shaumarov's soothe2 and SpecCraft, taken as a hint.",
+   "script": "tamer.py",
+   "input": "stems",
+   "rate": 0.16,
+   "group": "mend",
+   "after": "derivedPanel",
+   "params": [
+    {
+     "key": "depth",
+     "label": "Most, dB",
+     "type": "number",
+     "min": 1,
+     "max": 9,
+     "step": 1,
+     "default": 4,
+     "tip": "The deepest it lowers a bulge"
+    },
+    {
+     "key": "threshold",
+     "label": "Stands out by, dB",
+     "type": "number",
+     "min": 1,
+     "max": 6,
+     "step": 0.5,
+     "default": 2,
+     "tip": "How far a bulge must stand over the voice's own course before it is touched: lower takes more, higher only the sharpest"
+    },
+    {
+     "key": "colour",
+     "label": "Colour",
+     "type": "select",
+     "default": "keep",
+     "options": [
+      [
+       "keep",
+       "Keep the voice's own"
+      ],
+      [
+       "all",
+       "Every bulge"
+      ]
+     ],
+     "tip": "Keep the voice's own: only what rises over its usual bulges at that moment (a singer's formant is its presence and stays). Every bulge: its colour lowered too"
+    },
+    {
+     "key": "low",
+     "label": "From, Hz",
+     "type": "select",
+     "default": "2500",
+     "options": [
+      [
+       "1200",
+       "1.2 kHz"
+      ],
+      [
+       "2500",
+       "2.5 kHz"
+      ],
+      [
+       "4000",
+       "4 kHz"
+      ]
+     ],
+     "tip": "Below this the voice is never touched: its vowels live there, and flattened they blur the words"
+    },
+    {
+     "key": "high",
+     "label": "Up to, Hz",
+     "type": "select",
+     "default": "12000",
+     "options": [
+      [
+       "8000",
+       "8 kHz"
+      ],
+      [
+       "12000",
+       "12 kHz"
+      ],
+      [
+       "16000",
+       "16 kHz"
+      ]
+     ],
+     "tip": "Above this the air is never touched"
+    },
+    {
+     "key": "voices",
+     "label": "Voices",
+     "type": "select",
+     "default": "all",
+     "options": [
+      [
+       "all",
+       "Lead and backing"
+      ],
+      [
+       "lead",
+       "The lead only"
+      ]
+     ],
+     "tip": "Which voice stems it works on: in a set of eight, the lead and the backing apart; in four or six, the one Vocals stem either way"
+    }
+   ]
+  },
+  {
+   "id": "shape",
+   "label": "Voice attack and body",
+   "say": "the words' beginnings and their dying away, a little",
+   "tip": "Two envelopes of the voice, a quick one and a slow one: where the quick one rises over the slow one a word begins, and that moment is raised by up to the attack's dB; where it falls under it a sound is dying away, and that is raised by up to the body's dB. A held, steady vowel is left as it is, and the silence between phrases too. A little of each brings the voice forward without a compressor's squeeze. Only the voice stems, each back as a version for the DAW. Shaumarov's two transient compressors on the voice, taken as a hint.",
+   "script": "shape.py",
+   "input": "stems",
+   "rate": 0.05,
+   "group": "mend",
+   "after": "derivedPanel",
+   "params": [
+    {
+     "key": "attack",
+     "label": "Attack, dB",
+     "type": "number",
+     "min": 0,
+     "max": 6,
+     "step": 0.5,
+     "default": 2,
+     "tip": "How much the beginnings of words are raised at most"
+    },
+    {
+     "key": "body",
+     "label": "Body, dB",
+     "type": "number",
+     "min": 0,
+     "max": 6,
+     "step": 0.5,
+     "default": 1.5,
+     "tip": "How much the dying away of a sound is raised at most"
+    },
+    {
+     "key": "voices",
+     "label": "Voices",
+     "type": "select",
+     "default": "all",
+     "options": [
+      [
+       "all",
+       "Lead and backing"
+      ],
+      [
+       "lead",
+       "The lead only"
+      ]
+     ],
+     "tip": "Which voice stems it works on: in a set of eight, the lead and the backing apart; in four or six, the one Vocals stem either way"
+    }
+   ]
+  },
+  {
+   "id": "duck",
+   "label": "Bass under the kick",
+   "say": "the bass makes room for each kick",
+   "tip": "The kick and the bass share the same low octave. The kick is found on the drum stem; the bass stem is split there, zero-phase, and only its low part goes down while a kick sounds, by up to the dB asked and as far as the kick is loud. Between the kicks, and above the split always, the bass is what it was. Needs a set with the drums and the bass apart; the bass comes back as a version of its stem. Shaumarov's soothe2 keyed from the kick, taken as a hint.",
+   "script": "duck.py",
+   "input": "stems",
+   "rate": 0.09,
+   "group": "mend",
+   "after": "derivedPanel",
+   "params": [
+    {
+     "key": "depth",
+     "label": "Room, dB",
+     "type": "number",
+     "min": 0.5,
+     "max": 9,
+     "step": 0.5,
+     "default": 3,
+     "tip": "How far the bass's low goes down under a full kick"
+    },
+    {
+     "key": "freq",
+     "label": "Below, Hz",
+     "type": "select",
+     "default": "120",
+     "options": [
+      [
+       "80",
+       "80 Hz"
+      ],
+      [
+       "100",
+       "100 Hz"
+      ],
+      [
+       "120",
+       "120 Hz"
+      ],
+      [
+       "150",
+       "150 Hz"
+      ],
+      [
+       "200",
+       "200 Hz"
+      ]
+     ],
+     "tip": "The split: under it the bass makes room, over it nothing changes"
+    },
+    {
+     "key": "release",
+     "label": "Back in, ms",
+     "type": "number",
+     "min": 30,
+     "max": 300,
+     "step": 10,
+     "default": 80,
+     "tip": "How fast the bass comes back after a kick"
+    }
+   ]
+  },
+  {
    "id": "vupscale",
    "label": "Voice upscale",
    "say": "the voices' top redrawn",
-   "tip": "The separators work at 44.1 kHz and dull a voice's top: its air, its breath, the edge of its consonants. UniverSR draws that top anew on the voice stems only, keeping each below its cutoff sample for sample, and gives them back at the set's own rate as versions of their stems for the DAW. The rest of the set is left as it is.",
+   "tip": "The separators work at 44.1 kHz and dull a voice's top: its air, its breath, the edge of its consonants. UniverSR draws that top anew on the voice stems only, keeping each below its cutoff sample for sample, and gives them back at the set's own rate as versions of their stems for the DAW. The rest of the set is left as it is. The bundle (HERESY 1583) draws it three times, with UniverSR, Apollo-vocal and FlashSR, and blends them above the cut as the separators' ensembles do: averaged, the loudest, or air (averaged up to 16 kHz, the loudest above). Apollo-vocal (baicai1145, CC BY-NC-SA 4.0: not for commercial use) and FlashSR (Jaekwon Im, no licence stated yet) come from their authors on first use, never with the studio.",
    "script": "vupscale.py",
    "input": "stems",
    "gpu": true,
@@ -103,6 +324,56 @@
        "high: above 6 kHz"
       ]
      ]
+    },
+    {
+     "key": "blend",
+     "label": "Upscaler",
+     "type": "select",
+     "default": "universr",
+     "options": [
+      [
+       "universr",
+       "UniverSR alone"
+      ],
+      [
+       "avg",
+       "bundle: averaged"
+      ],
+      [
+       "max",
+       "bundle: the loudest"
+      ],
+      [
+       "air",
+       "bundle: air"
+      ]
+     ],
+     "tip": "UniverSR alone, as before; or the bundle of three: averaged (closest to a voice's own top), the loudest in each cell (brightest), or air (averaged to 16 kHz, the loudest above)"
+    },
+    {
+     "key": "top",
+     "label": "Drawn top",
+     "type": "select",
+     "default": "0",
+     "options": [
+      [
+       "+2",
+       "+2 dB"
+      ],
+      [
+       "0",
+       "as drawn"
+      ],
+      [
+       "-2",
+       "−2 dB"
+      ],
+      [
+       "-4",
+       "−4 dB"
+      ]
+     ],
+     "tip": "The bundle's drawn band lifted or lowered against the original below it"
     }
    ]
   },
@@ -181,6 +452,204 @@
       ]
      ],
      "tip": "The result as loud as this file was, or as the reference"
+    }
+   ]
+  },
+  {
+   "id": "lift",
+   "label": "Details up",
+   "say": "the quiet details lifted, the loudness kept",
+   "tip": "Three bands, split zero-phase so they sum back exactly. In each, the quiet moments are raised toward the band's own loud level, the quieter the more, up to the most asked; the loud moments are not pushed down at all, and the floor and the hiss (40 dB under) are left. Mixed in at the share asked, ten per cent as Shaumarov uses OTT, then the file is brought back to the loudness it came at: what changes is the detail under the loud parts, not the level.",
+   "script": "lift.py",
+   "input": "file",
+   "rate": 0.05,
+   "group": "finish",
+   "after": "remasterPanel",
+   "params": [
+    {
+     "key": "amount",
+     "label": "Amount, %",
+     "type": "number",
+     "min": 0,
+     "max": 30,
+     "step": 1,
+     "default": 10,
+     "tip": "How much of the lifted sound goes into the file"
+    },
+    {
+     "key": "most",
+     "label": "Most, dB",
+     "type": "number",
+     "min": 2,
+     "max": 18,
+     "step": 1,
+     "default": 12,
+     "tip": "The most a band's quiet moment is raised before mixing in"
+    }
+   ]
+  },
+  {
+   "id": "mono",
+   "label": "Mono Maker",
+   "say": "the lows in the middle",
+   "tip": "Below the frequency the side (L − R) is taken out, as much as asked; above it nothing changes. The side is high-passed with a zero-phase filter and the mid left as it is, so the bass and the kick sit in the centre and the stereo stays where it lives. Shaumarov's first tool on the instrument bus and the master.",
+   "script": "mono.py",
+   "input": "file",
+   "rate": 0.015,
+   "group": "finish",
+   "after": "remasterPanel",
+   "params": [
+    {
+     "key": "freq",
+     "label": "Below, Hz",
+     "type": "select",
+     "default": "120",
+     "options": [
+      [
+       "80",
+       "80 Hz"
+      ],
+      [
+       "100",
+       "100 Hz"
+      ],
+      [
+       "120",
+       "120 Hz"
+      ],
+      [
+       "150",
+       "150 Hz"
+      ],
+      [
+       "200",
+       "200 Hz"
+      ]
+     ],
+     "tip": "The frequency under which the stereo goes to the middle"
+    },
+    {
+     "key": "amount",
+     "label": "Amount, %",
+     "type": "number",
+     "min": 0,
+     "max": 100,
+     "step": 10,
+     "default": 100,
+     "tip": "How much of the side under it goes: all of it, or a part"
+    }
+   ]
+  },
+  {
+   "id": "glue",
+   "label": "Peak glue",
+   "say": "the loud moments shaved, the loudness kept",
+   "tip": "A gentle compressor before anything else, as Shaumarov prepares a voice or a mix: only the loud moments lose the dB asked (its threshold found for that), the sharpest transients pass, and the file comes back as loud as it came. No ceiling here: put the True-peak ceiling at the end of the way.",
+   "script": "glue.py",
+   "input": "file",
+   "rate": 0.08,
+   "group": "finish",
+   "after": "remasterPanel",
+   "params": [
+    {
+     "key": "reduction",
+     "label": "Shave, dB",
+     "type": "select",
+     "default": "3",
+     "options": [
+      [
+       "2",
+       "2 dB"
+      ],
+      [
+       "3",
+       "3 dB"
+      ],
+      [
+       "4",
+       "4 dB"
+      ]
+     ],
+     "tip": "How much the loud moments lose"
+    },
+    {
+     "key": "attack",
+     "label": "Attack, ms",
+     "type": "number",
+     "min": 1,
+     "max": 50,
+     "step": 1,
+     "default": 10,
+     "tip": "How fast it takes hold: slower lets more of the transients through"
+    },
+    {
+     "key": "release",
+     "label": "Release, ms",
+     "type": "number",
+     "min": 30,
+     "max": 500,
+     "step": 10,
+     "default": 120,
+     "tip": "How fast it lets go"
+    }
+   ]
+  },
+  {
+   "id": "ceiling",
+   "label": "True-peak ceiling",
+   "say": "the last step: no peak over the ceiling",
+   "tip": "An oversampled lookahead limiter, its ceiling checked by a true-peak meter. «as it came» only catches the overs at the file's own loudness; a loudness target drives into it (at most 6 dB of limiting). Shaumarov ends the master at about −0.5 dBTP.",
+   "script": "ceiling.py",
+   "input": "file",
+   "rate": 0.17,
+   "group": "finish",
+   "after": "remasterPanel",
+   "params": [
+    {
+     "key": "ceiling",
+     "label": "Ceiling, dBTP",
+     "type": "select",
+     "default": "-0.5",
+     "options": [
+      [
+       "-0.3",
+       "−0.3 dBTP"
+      ],
+      [
+       "-0.5",
+       "−0.5 dBTP"
+      ],
+      [
+       "-1",
+       "−1 dBTP"
+      ]
+     ],
+     "tip": "No peak over it, between the samples too"
+    },
+    {
+     "key": "loudness",
+     "label": "Loudness",
+     "type": "select",
+     "default": "as",
+     "options": [
+      [
+       "as",
+       "as it came"
+      ],
+      [
+       "-14",
+       "−14 LUFS"
+      ],
+      [
+       "-11",
+       "−11 LUFS"
+      ],
+      [
+       "-9",
+       "−9 LUFS"
+      ]
+     ],
+     "tip": "The file's own loudness, or a target to drive to"
     }
    ]
   }

@@ -40,6 +40,49 @@ export async function jobResultTranscribe(id: string): Promise<{ abc: string }> 
 	return res.json();
 }
 
+// POST /tokenize (multipart): submit a recording, returns job ID.
+export function tokenizeSubmit(audio: Blob): Promise<string> {
+	const form = new FormData();
+	form.append('audio', audio, 'input.audio');
+	return submitJob('tokenize', { method: 'POST', body: form });
+}
+
+// GET /job?id=X&result=1: fetch a tokenize result, the semantic codes it heard.
+export async function jobResultTokenize(id: string): Promise<{ codes: string }> {
+	const res = await fetch(`job?id=${encodeURIComponent(id)}&result=1`);
+	if (!res.ok) throw new Error(`${res.status} Result not ready`);
+	return res.json();
+}
+
+// POST /vae (multipart): the VAE alone, its direction set by the part sent:
+// 'audio' encodes (latents out), 'src_latents' decodes (audio out). The
+// request drives the output format, the peak clip and the bitrate of a
+// decode. The result carries the other side alone.
+export function vaeEncode(audio: Blob): Promise<string> {
+	const form = new FormData();
+	form.append('audio', audio, 'src.audio');
+	return submitJob('vae', { method: 'POST', body: form });
+}
+
+export function vaeDecode(latents: Blob, request: Yue2Request, format: string): Promise<string> {
+	const form = new FormData();
+	form.append('src_latents', latents, 'src.vae');
+	form.append(
+		'request',
+		new Blob([JSON.stringify({ ...request, output_format: format })], { type: 'application/json' }),
+		'request.json'
+	);
+	return submitJob('vae', { method: 'POST', body: form });
+}
+
+// GET /job?id=X&result=1 of a /vae job: the raw latents of an encode or the
+// audio of a decode, a single body either way
+export async function jobResultBlob(id: string): Promise<Blob> {
+	const res = await fetch(`job?id=${encodeURIComponent(id)}&result=1`);
+	if (!res.ok) throw new Error(`${res.status} Result not ready`);
+	return res.blob();
+}
+
 // GET /job?id=X: poll job status
 export async function jobStatus(id: string): Promise<string> {
 	const res = await fetch(`job?id=${encodeURIComponent(id)}`, {
@@ -77,16 +120,18 @@ export async function pollJob(id: string): Promise<void> {
 // GET /job?id=X&result=1: fetch job result. Batch jobs reply
 // multipart/mixed with one audio part per track in song-major order;
 // single-track jobs reply with the raw audio body.
-// One rendered track: its audio and the replay request the server pairs
-// with it (semantic_tokens + exact seed, replays the track deterministically)
+// One rendered track: its audio, its latents and the replay request the
+// server pairs with it (semantic_tokens + exact seed, replays the track
+// deterministically)
 export interface JobTrack {
 	request: Yue2Request;
 	audio: Blob;
+	latents: Blob;
 }
 
 // GET /job?id=X&result=1: the finished tracks of a job. The response is
-// multipart/mixed, one JSON replay request part then one audio part per
-// track, in song-major order.
+// multipart/mixed, per track one JSON replay request part, one audio part
+// and one application/octet-stream latent part, in song-major order.
 export async function jobResultTracks(id: string): Promise<JobTrack[]> {
 	const res = await fetch(`job?id=${encodeURIComponent(id)}&result=1`);
 	if (!res.ok) throw new Error(`${res.status} Result not ready`);
@@ -96,13 +141,17 @@ export async function jobResultTracks(id: string): Promise<JobTrack[]> {
 	const parts = parseMultipartParts(new Uint8Array(await res.arrayBuffer()), match[1]);
 
 	const tracks: JobTrack[] = [];
-	let pending: Yue2Request | null = null;
+	let request: Yue2Request | null = null;
+	let audio: Blob | null = null;
 	for (const part of parts) {
 		if (part.type === 'application/json') {
-			pending = JSON.parse(await part.text()) as Yue2Request;
-		} else if (pending) {
-			tracks.push({ request: pending, audio: part });
-			pending = null;
+			request = JSON.parse(await part.text()) as Yue2Request;
+		} else if (part.type === 'application/octet-stream') {
+			if (request && audio) tracks.push({ request, audio, latents: part });
+			request = null;
+			audio = null;
+		} else {
+			audio = part;
 		}
 	}
 	return tracks;

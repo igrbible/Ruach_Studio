@@ -2,13 +2,14 @@
 # yue2.cpp: the C++ YuE2 server and its own browser page.
 # Everything it needs lives in this folder: build/ (the engine: upstream plus the patches, compiled in build/build), models/, tmp/.
 #
-#   ./start.sh                      the backbone settings.json picks (else the first one present)
+#   ./start.sh                      the backbone settings.json picks (else Ruach Studio's default, RS-FW 2.4x0.75; else the first one present)
 #   YUE2CPP_QUANT=Q8_0 ./start.sh   a given backbone copy, if present
 #   YUE2CPP_PORT=7778 ./start.sh   another port
 #   YUE2CPP_GPU=1 ./start.sh        another card than user/gpus.json gives the studio
 #   YUE2CPP_BATCH=1 ./start.sh      one song per pass instead of 2 (a GPU with 12 GB or less)
 #   YUE2CPP_DRY_RUN=1 ./start.sh    only print the server command it would run
 #   YUE2CPP_FP16_MATMUL=0 ./start.sh   keep BF16 maths on an RTX 20 / Volta card (the matmul block below)
+#   YUE2_ENGINE=sycl ./start.sh     the engine for Intel Arc (beta; ./build.sh --sycl builds it)
 #
 # Extra arguments go to yue-server (for example --keep-loaded).
 set -euo pipefail
@@ -23,6 +24,17 @@ export PYTHONUNBUFFERED=1
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HPY="$ROOT/.venv/bin/python"; [ -x "$HPY" ] || HPY=python3   # HERESY 1080: the studio's one environment
+# HERESY 1656 (Viktor 21.10.2026: «выпускай бета поддержку для интеловских карт»): Intel Arc (beta). YUE2_ENGINE=sycl, or a SYCL engine with no
+# CUDA one beside it (./build.sh --sycl), runs build/build-sycl/yue-server under oneAPI's runtime, NVIDIA's guard and card left out.
+# SYCL_CACHE_PERSISTENT stays 0: with the kernels' disk cache, libsycl (oneAPI 2026.1) dies at the first kernel it runs, a fresh cache
+# too (found 21.10.2026 on an Arc Pro B50); the kernels are compiled at each start instead, a few seconds on the first song
+SYCL=0
+if [ "${YUE2_ENGINE:-}" = sycl ] || { [ ! -f "$ROOT/build/build/yue-server" ] && [ -f "$ROOT/build/build-sycl/yue-server" ]; }; then
+    SYCL=1
+    if [ -f /opt/intel/oneapi/setvars.sh ]; then set +u; source /opt/intel/oneapi/setvars.sh >/dev/null 2>&1 || true; set -u; fi
+    export ONEAPI_DEVICE_SELECTOR="${ONEAPI_DEVICE_SELECTOR:-level_zero:*}" SYCL_CACHE_PERSISTENT=0
+    case "${GGML_BACKEND:-}" in SYCL*|CPU*|"") ;; *) unset GGML_BACKEND ;; esac
+fi
 # HERESY 1091: the studio's card (Engine -> GPUs in the page writes user/gpus.json); YUE2CPP_GPU overrides; 0 by default
 STUDIO_GPU="${YUE2CPP_GPU:-}"
 if [ -z "$STUDIO_GPU" ] && [ -f "$ROOT/user/gpus.json" ]; then
@@ -36,14 +48,14 @@ fi
 # kind; the desktop's small ones are fine) and 8 GB free for the weights and their cache; else the freest card that
 # passes; none passes: the saved card, said loudly (the engine may run out of memory)
 GUARD_SAY=""
-if [ -z "${YUE2CPP_GPU:-}" ] && command -v nvidia-smi >/dev/null 2>&1; then
+if [ -z "${YUE2CPP_GPU:-}" ] && [ $SYCL = 0 ] && command -v nvidia-smi >/dev/null 2>&1; then
     PICK=$("$HPY" "$ROOT/lab/gpu_guard.py" --pick "${STUDIO_GPU:-0}" 8000 2>"$ROOT/tmp/.gpu_guard.say" || true)
     GUARD_SAY=$(cat "$ROOT/tmp/.gpu_guard.say" 2>/dev/null || true)
     if [ -n "$PICK" ] && [ "$PICK" != "${STUDIO_GPU:-0}" ]; then GUARD_SAY="GPU${STUDIO_GPU:-0} did not pass the guard; GPU$PICK instead · $GUARD_SAY"; STUDIO_GPU="$PICK"
     elif [ -z "$PICK" ]; then GUARD_SAY="no card passes the guard; GPU${STUDIO_GPU:-0} all the same, it may run out of memory · $GUARD_SAY"
     else GUARD_SAY=""; fi
 fi
-if [ -n "$STUDIO_GPU" ] && [ "$STUDIO_GPU" != 0 ] && [ -z "${GGML_BACKEND:-}" ]; then export GGML_BACKEND="CUDA$STUDIO_GPU"; fi
+if [ $SYCL = 0 ] && [ -n "$STUDIO_GPU" ] && [ "$STUDIO_GPU" != 0 ] && [ -z "${GGML_BACKEND:-}" ]; then export GGML_BACKEND="CUDA$STUDIO_GPU"; fi
 export TMPDIR="$ROOT/tmp"
 
 G=$'\e[32m' Y=$'\e[33m' R=$'\e[31m' D=$'\e[2m' B=$'\e[1m' X=$'\e[0m' C=$'\e[36m'
@@ -53,11 +65,18 @@ if [ -n "${NO_COLOR:-}" ] || [ ! -t 1 ]; then G="" Y="" R="" D="" B="" X="" C=""
 PORT="${YUE2CPP_PORT:-7777}"
 # songs the server renders together in one pass (YUE2CPP_BATCH): 1 on a small GPU
 BATCH="${YUE2CPP_BATCH:-2}"
+# HERESY 1656: one song a pass on Arc: a 16 GB Arc holds BF16 and the whole context for one; two would want 5.4 GB more of cache
+[ $SYCL = 1 ] && [ -z "${YUE2CPP_BATCH:-}" ] && BATCH=1
 # The backbone: YUE2CPP_QUANT, else the one settings.json picks (the page saves it there), else the
 # first copy present. Resolved before any file is required, so a Q5_K_M-only install starts.
 QUANT="${YUE2CPP_QUANT:-}"
 if [ -z "$QUANT" ] && [ -f "$ROOT/settings.json" ]; then
     QUANT=$("$HPY" -c 'import json, sys; print(json.load(open(sys.argv[1])).get("model") or "")' "$ROOT/settings.json" 2>/dev/null || true)
+fi
+# HERESY 1794 (Viktor 25.10.2026: «2.4 ep - самый безопасный, и пусть он будет базовой моделью»): no model named, Ruach Studio's own fine-tune
+# starts, its default merge at the fullest quant here (the install brings it at the backbone's); m-a-p's own when it is not here
+if [ -z "$QUANT" ]; then
+    for q in BF16 Q8_0 Q6_K; do [ -f "$ROOT/models/YuE2-3B-RS-FW-2.4x0.75-$q.gguf" ] && { QUANT="RS-FW-2.4x0.75-$q"; break; }; done
 fi
 if [ -z "$QUANT" ] || [ ! -f "$ROOT/models/YuE2-3B-$QUANT.gguf" ]; then
     wanted="$QUANT"; QUANT=""
@@ -66,6 +85,7 @@ if [ -z "$QUANT" ] || [ ! -f "$ROOT/models/YuE2-3B-$QUANT.gguf" ]; then
     [ -n "$QUANT" ] || QUANT="${wanted:-BF16}"      # nothing present: the check below names what is missing
 fi
 BIN="$ROOT/build/build/yue-server"
+[ $SYCL = 1 ] && BIN="$ROOT/build/build-sycl/yue-server"
 MODEL="$ROOT/models/YuE2-3B-$QUANT.gguf"
 VAE="$ROOT/models/YuE2-Vae-F32.gguf"
 OUTPUTS="$ROOT/outputs"
@@ -132,7 +152,7 @@ why="forced by YUE2CPP_FP16_MATMUL=1"
 if [ "$FP16_MATMUL" = auto ]; then
     FP16_MATMUL=0
     why="compute $CC has no BF16 tensor cores; YUE2CPP_FP16_MATMUL=0 turns it off"
-    case "$ON_GPU/$CC" in 1/7.*) FP16_MATMUL=1 ;; esac
+    case "$SYCL/$ON_GPU/$CC" in 0/1/7.*) FP16_MATMUL=1 ;; esac
 fi
 [ "$FP16_MATMUL" = 1 ] && args+=(--fp16-matmul)
 
@@ -147,7 +167,10 @@ echo "${B}Ruach Studio $(cat "$ROOT/VERSION" 2>/dev/null || echo "?")${X} · $(b
 # HERESY 1433 (Viktor: «пропиши жирно, чтобы юзеры знали, на какой порт коннектиться»): the port said on its own, bold
 echo "${B}The studio's port: $PORT${X}  ${D}·${X} this machine: ${G}$(link "http://127.0.0.1:$PORT")${X}  ${D}·${X} your network: ${G}$(link "$URL")${X}"
 [ -n "$GUARD_SAY" ] && echo "${Y}guard${X} $GUARD_SAY"
-if [ -n "$GPU_NAME" ] && [ "$ON_GPU" = 1 ]; then
+if [ $SYCL = 1 ]; then
+    ARC=$(sycl-ls 2>/dev/null | grep -m1 '^\[level_zero:gpu\]' | sed -E 's/.*Level-Zero[^,]*, //; s/ [0-9]+\.[0-9.]+ \[.*//' || true)
+    row gpu "${B}${ARC:-an Intel GPU}${X} ${D}· SYCL, Intel Arc (beta, no guarantees)${X}"
+elif [ -n "$GPU_NAME" ] && [ "$ON_GPU" = 1 ]; then
     row gpu "${B}$(printf '%s' "$GPU_NAME" | sed 's/^ *//')${X} ${D}·${X} $(awk -v u="$GPU_USED" -v t="$GPU_TOTAL" 'BEGIN { printf "%.1f of %.1f GiB in use", u / 1024, t / 1024 }') ${D}· compute $CC${X}"
 elif [ -n "$GPU_NAME" ]; then
     row gpu "${Y}hidden${X}: this run uses the CPU ${D}(GGML_BACKEND=CPU or an empty CUDA_VISIBLE_DEVICES)${X}"
@@ -170,9 +193,14 @@ fi
 # their wave lives on in the LoRAs'
 nsongs=$(find "$OUTPUTS" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | count)
 row library "${B}$nsongs${X} $([ "$nsongs" = 1 ] && echo song || echo songs) ${D}· $(du -sh "$OUTPUTS" 2>/dev/null | cut -f1 | tr -d ' ') in ${OUTPUTS#"$ROOT"/}/${X}"
-if [ -f "$TRANSCRIBER" ]; then
+# HERESY 1610: the engine reads SheetSage2's head with MERT-v2-FullSong of the same kind beside it (1604); an older install's SheetSage2
+# file held both in one (957 MB as Q8_0, 2.7 GB as F32, against the head's 106 and 229 MB): passed on, it would fail on the first cover
+MERT="$ROOT/models/MERT-v2-FullSong-${TRANSCRIBER##*-}"
+if [ -f "$TRANSCRIBER" ] && [ -f "$MERT" ] && [ "$(wc -c < "$TRANSCRIBER" | tr -d ' ')" -lt 500000000 ]; then
     args+=(--transcriber "$TRANSCRIBER")
-    row transcriber "$(basename "$TRANSCRIBER") ${D}· $(size "$TRANSCRIBER") · covers from a recording${X}"
+    row transcriber "$(basename "$TRANSCRIBER") ${D}· $(size "$TRANSCRIBER"), MERT beside it $(size "$MERT") · covers from a recording${X}"
+elif [ -f "$TRANSCRIBER" ]; then
+    row transcriber "${Y}an older one${X} ${D}(this engine reads SheetSage2's head with MERT-v2-FullSong beside it; covers from a recording are off):${X} ./download-models.sh --transcriber"
 else
     row transcriber "${Y}not downloaded${X} ${D}(covers from a recording are off)${X}"
 fi

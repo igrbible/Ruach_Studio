@@ -9,7 +9,7 @@ Run from the tests/ directory.
 
 Usage:
     ./test-vae.py
-    GGML_BACKEND=CPU ./test-vae.py
+    ./test-vae.py --device CPU
 """
 import os
 import subprocess
@@ -22,6 +22,8 @@ import numpy as np
 import torch
 
 BIN = "../build/test-vae"
+# A leading "--device <name>" is forwarded to the harness
+DEVICE = ["--device", sys.argv[2]] if sys.argv[1:2] == ["--device"] else []
 CKPT = "../checkpoints/YuE2-Vae"
 GGUF = "../models/YuE2-Vae-F32.gguf"
 TMP = "tmp"
@@ -63,7 +65,7 @@ def main():
         latent.squeeze(0).T.contiguous().numpy().astype("float32").tofile(TMP + "/latent.bin")
         ref = audio.squeeze(0).contiguous().numpy().astype("float32").ravel()
 
-        args = [BIN, GGUF, TMP + "/latent.bin", str(t_latent), TMP + "/audio.bin"]
+        args = [BIN] + DEVICE + [GGUF, TMP + "/latent.bin", str(t_latent), TMP + "/audio.bin"]
         if core is not None:
             args.append(str(core))
         subprocess.run(args, check=True)

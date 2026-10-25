@@ -16,8 +16,9 @@ Usage:
     cd tests/
     ./debug-nar-cossim.py                   # backbone BF16
     ./debug-nar-cossim.py --quant Q6_K      # backbone Q6_K
+    ./debug-nar-cossim.py --device CPU      # pick the GGML device
 
-Backend follows GGML_BACKEND; the archive loop lives in debug-nar-cossim.sh.
+The archive loop lives in debug-nar-cossim.sh.
 """
 import argparse
 import json
@@ -97,7 +98,7 @@ def stft_cos(a, b, win=2048, hop=512):
 
 # GGML runner
 
-def run_ggml(dump_dir, req, quant):
+def run_ggml(dump_dir, req, quant, device=None):
     ggml_bin = "../build/yue-synth"
     if not os.path.isfile(ggml_bin):
         print(f"[GGML] binary not found: {ggml_bin}")
@@ -117,6 +118,8 @@ def run_ggml(dump_dir, req, quant):
     cmd = [ggml_bin, "--model", model, "--vae", "../models/YuE2-Vae-F32.gguf", "--request", request_json,
            "--dump", dump_dir, "--out", os.path.join(dump_dir, "output.wav")]
     print(f"[GGML] Running YuE2-3B-{quant}.gguf...")
+    if device:
+        cmd += ["--device", device]
     r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=None, text=True)
     n = len([f for f in os.listdir(dump_dir) if f.endswith(".bin")])
     if r.returncode != 0:
@@ -305,6 +308,7 @@ def compare(dirs, stages, tag):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--quant", default="BF16", help="backbone GGUF quant suffix (BF16, Q8_0, Q6_K, Q5_K_M)")
+    ap.add_argument("--device", default=None, help="GGML device passed to the binary (default: best available)")
     args = ap.parse_args()
 
     if not os.path.isfile("request0.json"):
@@ -322,7 +326,7 @@ def main():
 
     if os.path.isdir(dump_ggml):
         shutil.rmtree(dump_ggml)
-    if not run_ggml(dump_ggml, req, args.quant):
+    if not run_ggml(dump_ggml, req, args.quant, args.device):
         print("[NAR] GGML failed")
         sys.exit(1)
 

@@ -4,6 +4,7 @@
 // it hears, the abc a cover of YuE2 takes. The full score carries the chord
 // symbols, melody-only keeps the vocal and instrumental voices alone.
 #include "audio-io.h"
+#include "backend.h"
 #include "sheetsage.h"
 #include "version.h"
 
@@ -19,10 +20,12 @@ static void print_usage(const char * prog) {
             "Usage: %s --model <gguf> --audio <file> [options]\n"
             "\n"
             "Required:\n"
-            "  --model <gguf>         Transcriber GGUF\n"
+            "  --model <gguf>         Transcriber GGUF, MERT beside it\n"
             "  --audio <file>         Recording to transcribe (WAV or MP3)\n"
             "\n"
             "Optional:\n"
+            "  --device <name>        Compute device: CUDA0, Vulkan0, MTL0, CPU...\n"
+            "                         (default: best available)\n"
             "  --out <path>           Output score (default: score.abc)\n"
             "  --melody-only          Omit the chord symbols from the score\n"
             "\n"
@@ -38,6 +41,7 @@ int main(int argc, char ** argv) {
         return 1;
     }
     const char * model_path  = nullptr;
+    const char * device      = nullptr;
     const char * audio_path  = nullptr;
     const char * out_path    = "score.abc";
     const char * dump_dir    = nullptr;
@@ -49,6 +53,8 @@ int main(int argc, char ** argv) {
             model_path = argv[++i];
         } else if (!strcmp(argv[i], "--audio") && !last) {
             audio_path = argv[++i];
+        } else if (!strcmp(argv[i], "--device") && !last) {
+            device = argv[++i];
         } else if (!strcmp(argv[i], "--out") && !last) {
             out_path = argv[++i];
         } else if (!strcmp(argv[i], "--melody-only")) {
@@ -66,11 +72,15 @@ int main(int argc, char ** argv) {
         print_usage(argv[0]);
         return 1;
     }
+    if (device && !backend_set_device(device)) {
+        print_usage(argv[0]);
+        return 1;
+    }
 
     int                T = 0, sr = 0;
     float *            planar = audio_read(audio_path, &T, &sr);
     std::vector<float> audio;
-    if (!planar || !ss2_mono_24k(planar, T, sr, &audio)) {
+    if (!planar || !mert_mono_24k(planar, T, sr, &audio)) {
         fprintf(stderr, "[Transcribe] FATAL: cannot read %s\n", audio_path);
         return 1;
     }

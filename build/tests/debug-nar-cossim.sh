@@ -10,8 +10,8 @@ for backend in "${!DISABLE_VAR[@]}"; do
     var=${DISABLE_VAR[$backend]}
     for fusion in "" NOFUSION; do
         for quant in BF16 Q8_0 Q6_K Q5_K_M; do
-            env ${fusion:+$var=1} GGML_BACKEND=$backend ./debug-nar-cossim.py \
-                --quant $quant 2>&1 \
+            env ${fusion:+$var=1} ./debug-nar-cossim.py \
+                --device $backend --quant $quant 2>&1 \
                 | tee ${backend}-${fusion:+$fusion-}${quant}.log
         done
     done

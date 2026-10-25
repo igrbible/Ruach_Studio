@@ -23,7 +23,7 @@
     // Нет ускорений, умеренная речь в рЕпе, просто чудеса»): Composition low, Performance low, Style influence high; 32 Midpoint
     // HERESY 1401: renamed and his to set: «Я подберу для него идеальные параметры» (was «Russian · conservative (Viktor's)», CFG 1.8)
     // (Viktor: «выставь в нём макс музыку с 8 до 10 минут. Мне уже и 8 минут иногда в Крике не хватает»): 600 s, 15000 music tokens
-    { name: EAR, builtin: true, editable: true, request: { cot: "full", duration: 600, cfg_scale: 1.6, cfg_lyrics: 2.2, steps: 32, solver: "midpoint",
+    { name: EAR, builtin: true, editable: true, request: { cot: "full", duration: 600, cfg_scale: 1.6, cfg_lyrics: 2.2, steps: 48, solver: "multistep",   // HERESY 1710: AB2 48 (Midpoint 32 before)
       abc_sampling: Object.assign({}, ABC, { temperature: 0.85, top_p: 0.92, top_k: 40 }),
       semantic_sampling: Object.assign({ max_tokens: 15000 }, SEM, { temperature: 0.85, top_p: 0.93, top_k: 80 }) } }
   ];

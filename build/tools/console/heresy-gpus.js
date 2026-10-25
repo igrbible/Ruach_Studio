@@ -57,6 +57,12 @@
             '<td class="gpu-limit">' + limitCell(c, r) + "</td>" +
             '<td class="mono">' + gb(c.total_mb - c.free_mb) + " used" + (now.length ? " · " + esc(now.join(", ")) : "") + "</td>" + guardCell(d.guard, i) + "</tr>" +
             '<tr class="gpu-live-row"><td colspan="7"><div class="gpu-live" data-gpu="' + i + '"></div></td></tr>';   // HERESY 1264: the card live
+        }).join("") + (d.arc || []).map(function (c) {   // HERESY 1680: each Intel card, the studio's when it runs there; no roles of the CUDA kind
+          var i = c.index, on = studioNow === i, lab = (window.HeresyGpuLabel ? window.HeresyGpuLabel(i, c.name) : "Arc" + (i - 100) + " · " + c.name).split(" · ");
+          return '<tr class="gpu-arc' + (on ? " is-studio" : "") + '"><td><b>' + esc(lab[0]) + '</b> <span class="row-hint">' + esc(lab.slice(1).join(" · ")) +
+            (c.total_mb ? " · " + gb(c.total_mb) : "") + "</span></td>" +
+            '<td>' + (on ? "●" : "") + '</td><td class="row-hint">—</td><td class="row-hint">—</td><td></td><td class="mono">' + (on ? esc(tr("the studio, on SYCL")) : "") + "</td><td></td></tr>" +
+            '<tr class="gpu-live-row"><td colspan="7"><div class="gpu-live" data-gpu="' + i + '"></div></td></tr>';
         }).join("") + "</table>";
       hint();
       migrate(d);
@@ -100,6 +106,11 @@
   function hint() {
     var d = state.data, c = chosen(), say = [];
     if (!d) return;
+    if (d.studio_now != null && d.studio_now >= 100) {   // HERESY 1680: the studio on the Intel Arc: the CUDA cards are all for training and the lab
+      $("gpuHint").textContent = tr("The studio runs on the Intel Arc (SYCL, beta): these cards are free for training and the lab's jobs.");
+      $("gpuRestart").hidden = true;
+      return;
+    }
     if (c.train.indexOf(c.studio) >= 0) say.push("Training may take GPU" + c.studio + ", the studio’s card: while it does, synthesis waits.");
     else say.push("Training never takes GPU" + c.studio + ": synthesis and training go on side by side.");
     if (d.studio_now != null && d.studio_now !== d.roles.studio) say.push("Saved: the studio on GPU" + d.roles.studio + "; it still runs on GPU" + d.studio_now + " until it restarts.");

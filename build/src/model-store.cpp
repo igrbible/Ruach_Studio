@@ -23,8 +23,8 @@
 namespace {
 
 // Coexistence groups: modules the pipeline interleaves too finely to
-// evict between. AR is the LM alone, SYNTH pairs the NAR and the VAE per
-// song.
+// evict between. AR is the LM alone, SYNTH holds the NAR with the VAE
+// decoder and encoder, TRANSCRIBE the heads that listen to a recording.
 enum ModelGroup {
     GROUP_AR,
     GROUP_SYNTH,
@@ -32,7 +32,7 @@ enum ModelGroup {
 };
 
 static ModelGroup group_of(ModelKind kind) {
-    return kind == MODEL_LM ? GROUP_AR : (kind == MODEL_SS2 ? GROUP_TRANSCRIBE : GROUP_SYNTH);
+    return kind == MODEL_LM ? GROUP_AR : (kind == MODEL_SS2 || kind == MODEL_ATOK ? GROUP_TRANSCRIBE : GROUP_SYNTH);
 }
 
 struct ModelKeyHash {
@@ -40,13 +40,17 @@ struct ModelKeyHash {
         size_t h = std::hash<int>{}(static_cast<int>(k.kind));
         h ^= std::hash<std::string>{}(k.path) + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
         h ^= std::hash<std::string>{}(k.lora_sig) + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
+        for (const AdapterUse & a : k.adapters) {
+            h ^= std::hash<std::string>{}(a.path) + std::hash<float>{}(a.scale) + 0x9e3779b97f4a7c15ULL + (h << 6) +
+                 (h >> 2);
+        }
         return h;
     }
 };
 
 struct ModelKeyEq {
     bool operator()(const ModelKey & a, const ModelKey & b) const noexcept {
-        return a.kind == b.kind && a.path == b.path && a.lora_sig == b.lora_sig;
+        return a.kind == b.kind && a.path == b.path && a.lora_sig == b.lora_sig && a.adapters == b.adapters;
     }
 };
 
@@ -190,9 +194,19 @@ static void del_vae(void * p) {
     delete static_cast<VAEGGML *>(p);
 }
 
+static void del_vae_enc(void * p) {
+    vae_enc_free(static_cast<VAEEncoder *>(p));
+    delete static_cast<VAEEncoder *>(p);
+}
+
 static void del_ss2(void * p) {
     ss2_free(static_cast<SheetSage2 *>(p));
     delete static_cast<SheetSage2 *>(p);
+}
+
+static void del_atok(void * p) {
+    atok_free(static_cast<AudioTokenizer *>(p));
+    delete static_cast<AudioTokenizer *>(p);
 }
 
 // Weight buffer size helpers: the two halves expose a WeightCtx at
@@ -206,6 +220,10 @@ static size_t bytes_of_nar(const Yue2NAR * m) {
 }
 
 static size_t bytes_of_vae(const VAEGGML * m) {
+    return m && m->buf ? ggml_backend_buffer_get_size(m->buf) : 0;
+}
+
+static size_t bytes_of_vae_enc(const VAEEncoder * m) {
     return m && m->buf ? ggml_backend_buffer_get_size(m->buf) : 0;
 }
 
@@ -230,12 +248,12 @@ static void evict_same_kind_idle(ModelStore * s, const ModelKey & keep) {
 }
 
 // Local addition: load with the key's LoRAs merged; a failed merge discards the load
-template <typename T> static bool load_with_loras(const ModelKey & k, T * m, bool (*load)(T *, const char *),
+template <typename T> static bool load_with_loras(const ModelKey & k, T * m, bool (*load)(T *, const char *, const std::vector<AdapterUse> &),
                                                    void (*unload)(T *)) {
     g_gf_lora = k.lora.get();
     g_gf_lora_error.clear();
     Timer t;
-    bool  ok = load(m, k.path.c_str());
+    bool  ok = load(m, k.path.c_str(), k.adapters);   // upstream's adapters merge in the same load (1603)
     g_gf_lora = nullptr;
     if (ok && !g_gf_lora_error.empty()) {
         fprintf(stderr, "[LoRA] FATAL: %s\n", g_gf_lora_error.c_str());
@@ -246,6 +264,10 @@ template <typename T> static bool load_with_loras(const ModelKey & k, T * m, boo
         fprintf(stderr, "[LoRA] Merged while loading (%.0f ms in all)\n", t.ms());
     }
     return ok;
+}
+
+static size_t bytes_of_atok(const AudioTokenizer * m) {
+    return m && m->wctx.buffer ? ggml_backend_buffer_get_size(m->wctx.buffer) : 0;
 }
 
 Qwen3LM * store_require_lm(ModelStore * s, const ModelKey & k) {
@@ -307,6 +329,21 @@ VAEGGML * store_require_vae(ModelStore * s, const ModelKey & k) {
     return m;
 }
 
+VAEEncoder * store_require_vae_enc(ModelStore * s, const ModelKey & k) {
+    if (auto * hit = cache_hit<VAEEncoder>(s, k)) {
+        return hit;
+    }
+    if (s->policy == EVICT_STRICT) {
+        evict_conflicts(s, k);
+    }
+    Timer        t;
+    VAEEncoder * m = new VAEEncoder();
+    vae_enc_load(m, k.path.c_str());
+    install_entry(s, k, m, bytes_of_vae_enc(m), "VAE-ENC", del_vae_enc);
+    fprintf(stderr, "[Store] Load VAE-ENC: %.0f ms\n", t.ms());
+    return m;
+}
+
 SheetSage2 * store_require_ss2(ModelStore * s, const ModelKey & k) {
     if (auto * hit = cache_hit<SheetSage2>(s, k)) {
         return hit;
@@ -322,6 +359,24 @@ SheetSage2 * store_require_ss2(ModelStore * s, const ModelKey & k) {
     }
     install_entry(s, k, m, bytes_of_ss2(m), "SS2", del_ss2);
     fprintf(stderr, "[Store] Load SS2: %.0f ms\n", t.ms());
+    return m;
+}
+
+AudioTokenizer * store_require_atok(ModelStore * s, const ModelKey & k) {
+    if (auto * hit = cache_hit<AudioTokenizer>(s, k)) {
+        return hit;
+    }
+    if (s->policy == EVICT_STRICT) {
+        evict_conflicts(s, k);
+    }
+    Timer            t;
+    AudioTokenizer * m = new AudioTokenizer();
+    if (!atok_load(m, k.path.c_str())) {
+        delete m;
+        return nullptr;
+    }
+    install_entry(s, k, m, bytes_of_atok(m), "ATOK", del_atok);
+    fprintf(stderr, "[Store] Load ATOK: %.0f ms\n", t.ms());
     return m;
 }
 

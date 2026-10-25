@@ -1,10 +1,13 @@
 build/
+build-sycl/
 *.wav
 
 tests/*/
 
 checkpoints/
 models/*.gguf
+adapters/*/
+adapters/*.safetensors
 __pycache__/
 node_modules/
 tools/webui/dist/

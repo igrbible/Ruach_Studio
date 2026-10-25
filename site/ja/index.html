@@ -133,6 +133,13 @@
   .nums span { color: var(--soft); font-size: 14px; line-height: 1.4; display: block; margin-top: 6px; }
   @media (max-width: 860px) { .nums { grid-template-columns: repeat(2, 1fr); } .nums div:last-child { grid-column: 1 / -1; } }
 
+  /* HERESY 1711 (Viktor 22.10.2026: «Декларацию на сайте-визитке врежь красиво между первым скриншотом и "Шесть комнат, одна студия"»): the declaration
+     under the first screenshot and its numbers, the accent's rule on its left, its last sentence the louder; as wide as the column */
+  section.declare { padding: 64px 0 0; }
+  .declare blockquote { margin: 0; padding: 4px 0 4px 28px; border-left: 3px solid var(--amber); }
+  .declare p { margin: 0 0 14px; font-size: 19px; line-height: 1.65; color: var(--soft); }
+  .declare p.loud { margin: 0; font-size: 22px; line-height: 1.5; color: var(--ink); font-weight: 500; }
+  @media (max-width: 600px) { section.declare { padding-top: 48px; } .declare blockquote { padding-left: 18px; } .declare p { font-size: 17px; } .declare p.loud { font-size: 19px; } }
   /* sections */
   section { padding: 72px 0 0; }
   h2 { font-size: clamp(25px, 3vw, 34px); line-height: 1.2; margin: 0 0 10px; font-weight: 700; }
@@ -261,7 +268,7 @@
     <h1>言葉とコードから歌を<br>自分のマシンで</h1>
     <p class="lead">オープンな歌モデル <b>YuE2</b> を中心にした本格的なスタジオ。スタイルと歌詞を書けば、スタジオが<b>あなた自身の GPU</b> で作曲し、歌い、曲をレンダリングします。あなたの歌、言葉、設定がそこから出ることはありません。</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">GitHub で入手</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.ja.md">ガイドを読む</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face のモデル</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ コーヒーマシンをおごってください</a></div>
-    <span class="rc"><b>2.0.0-pre</b> · 2.0.0 の前の最後の一歩 · 2026 年 10 月</span>
+    <span class="rc"><b>2.0.0</b> · 最初の安定版 · 2026 年 10 月</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -272,27 +279,37 @@
 
     <div class="nums">
       <div><b>8 min</b><span>最長 8 分の曲をまるごと</span></div>
-      <div><b>126 s</b><span>6:12 の曲を RTX 3090 1 枚で</span></div>
+      <div><b>135 s</b><span>6:12 の曲を RTX 3090 1 枚で</span></div>
       <div><b>6 部屋</b><span>作る、書く、仕上げる、描く、保管する、教える</span></div>
       <div><b>200</b><span>耳で確かめた楽器</span></div>
       <div><b>12</b><span>ページの言語</span></div>
     </div>
   </div>
 
+  <!-- HERESY 1711: the declaration (approved 21.10.2026), as in the README and the Hub's cards -->
+  <section class="declare" aria-label="私たちが大切にすること">
+    <div class="wrap">
+      <blockquote>
+        <p>Ruach Studio は、あなた自身のハードウェアで動くオープンな音楽生成です。モデルも、スコアも、アダプターも、すべてのテイクもあなたのもので、トークン単位で借りるものは何もありません。オープンなモデルはもう自分の足で立てるほど良くなり、欠けていたのはその周りのスタジオでした。私たちはそれを、オープンに作っています。</p>
+        <p class="loud">音楽は、自由に作り、自由に分かち合えるものであるべきです。声も、楽器も、スタジオも持たない人にも、自分の思いと気持ちを音に託す権利があります。</p>
+      </blockquote>
+    </div>
+  </section>
+
   <section id="rooms">
     <div class="wrap">
       <h2>6 つの部屋、1 つのスタジオ</h2>
       <p class="sub"><b>クリエイター</b>が曲を作り、<b>ライター</b>がチャットモデルと書き、<b>仕上げ師</b>が仕上げ、<b>絵師</b>が絵を描き、<b>司書</b>がすべてのテイクを保管し、<b>LoRA トレーナー</b>があなた自身の歌を YuE2 に教えます。各部屋のガイドはスタジオの中にあります。</p>
       <div class="rooms">
-        <article class="room"><a class="pic" href="../assets/shots/studio-create.webp"><img src="../assets/shots/studio-create.webp" alt="クリエイター" loading="lazy"></a>
-          <div><h3>クリエイター</h3><p>スタイル、歌詞、計画モード、デコーダー、スライダー、緑から赤への道の上の LoRA。テイクには楽譜、シード、作り直すためのすべてが付きます。</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/studio-writer.webp"><img src="../assets/shots/studio-writer.webp" alt="ライター" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/studio-create.webp" data-night="assets/shots/studio-create-night.webp"><img class="day" src="../assets/shots/studio-create.webp" alt="クリエイター" loading="lazy"><img class="night" src="../assets/shots/studio-create-night.webp" alt="クリエイター" loading="lazy"></a>
+          <div><h3>クリエイター</h3><p>スタイル、歌詞、計画モード、デコーダー、緑から赤への道の上の LoRA。テイクには楽譜、シード、作り直すためのすべてが付きます。</p></div></article>
+        <article class="room"><a class="pic" href="../assets/shots/studio-writer.webp" data-night="assets/shots/studio-writer-night.webp"><img class="day" src="../assets/shots/studio-writer.webp" alt="ライター" loading="lazy"><img class="night" src="../assets/shots/studio-writer-night.webp" alt="ライター" loading="lazy"></a>
           <div><h3>ライター</h3><p>バージョン付きの文書としての歌、テキストプロファイル、そしてあなた専用のチャットモデル（または OpenRouter）が一緒に下書きし、推敲します。</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/studio-post.webp"><img src="../assets/shots/studio-post.webp" alt="仕上げ師" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/studio-post.webp" data-night="assets/shots/studio-post-night.webp"><img class="day" src="../assets/shots/studio-post.webp" alt="仕上げ師" loading="lazy"><img class="night" src="../assets/shots/studio-post-night.webp" alt="仕上げ師" loading="lazy"></a>
           <div><h3>仕上げ師</h3><p>スペクトル、アーティファクト、バズ除去、Whisper による歌詞チェック、ステム、リマスター、アップスケール。1 本のチェーンですべてを実行します。</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/artist.webp"><img src="../assets/shots/artist.webp" alt="絵師" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/artist.webp" data-night="assets/shots/artist-night.webp"><img class="day" src="../assets/shots/artist.webp" alt="絵師" loading="lazy"><img class="night" src="../assets/shots/artist-night.webp" alt="絵師" loading="lazy"></a>
           <div><h3>絵師</h3><p>自分のプロンプトから歌のための絵を：正方形、横長、縦長を 1 つのシードから、Qwen-Image 2512 が描きます。絵は目の前で現れ、正方形のものはテイクのカバーになります。早期プレビュー。</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/studio-collection.webp"><img src="../assets/shots/studio-collection.webp" alt="司書" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/studio-collection.webp" data-night="assets/shots/studio-collection-night.webp"><img class="day" src="../assets/shots/studio-collection.webp" alt="司書" loading="lazy"><img class="night" src="../assets/shots/studio-collection-night.webp" alt="司書" loading="lazy"></a>
           <div><h3>司書</h3><p>すべてのテイクをワークスペースに：検索、いいね、メモ、ロック、アートワーク付け、DAW へ送る。元に戻せるゴミ箱。</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/studio-train.webp" data-night="assets/shots/studio-train-night.webp"><img class="day" src="../assets/shots/studio-train.webp" alt="LoRA トレーナー" loading="lazy"><img class="night" src="../assets/shots/studio-train-night.webp" alt="LoRA トレーナー" loading="lazy"></a>
           <div><h3>LoRA トレーナー</h3><p>自分の歌からアダプターを：セット、実行、両半分の曲線の解説、まず聴くべきエポック。</p></div></article>
@@ -307,7 +324,7 @@
       <h2>スタジオである理由</h2>
       <p class="sub">モデルのラッパーがまた 1 つ、ではありません：モデルを囲むワークステーションで、骨の髄までオープン、すべての変更に番号と記録があります。</p>
       <ul class="feats">
-        <li><b>最長 8 分の曲をまるごと。</b>6:12 の曲を 126 秒で、楽譜を先に書く 7:25 の曲を 198 秒で、RTX 3090 1 枚で。</li>
+        <li><b>最長 8 分の曲をまるごと。</b>6:12 の曲を 135 秒で、楽譜を先に書く 7:25 の曲を 212 秒で、RTX 3090 1 枚で。</li>
         <li><b>まず楽譜、そして編集できる。</b>YuE2 は音が鳴る前にメロディーとコードを ABC で書きます：変える、移調する、自分の楽譜や MIDI を持ち込む。歌はそれに従います。</li>
         <li><b>シードは 1 つではなく 2 つ。</b>曲を保ち（音楽シード）、新しくレンダリングして聴く（サウンドシード）。</li>
         <li><b>あなた自身の音。</b>自分の歌で LoRA をトレーニング、スタジオの中で、量子化なし（bf16）、どのエポックを先に聴くべきか教えてくれるテレメトリー付き。</li>
@@ -368,7 +385,7 @@
             <tr><td>DAW へ</td><td>楽譜、セクション、歌詞を含む REAPER プロジェクト（実験的）</td><td>オーディオステム</td></tr>
             <tr><td>コード</td><td>オープン、すべての変更を記録</td><td>クローズド</td></tr>
             <tr class="honest"><td>箱から出してすぐの仕上がり</td><td><b>劣る</b>：ミックスがバズることがある（バズ除去が助けます）、歌詞がずれることがある（歌詞チェックが場所を見つけます）、YuE2 が薄くしか、または全く弾けない楽器がある（LoRA が教えます）</td><td><b>勝る</b></td></tr>
-            <tr class="honest"><td>必要なもの</td><td>NVIDIA の GPU（フル精度ですべてに 24 GB）、Linux、ディスク約 30 GB（絵師のモデル込みで約 56 GB）</td><td>ブラウザー</td></tr>
+            <tr class="honest"><td>必要なもの</td><td>NVIDIA の GPU（フル精度ですべてに 24 GB）、Linux、ディスク約 33 GB（絵師のモデル込みで約 60 GB）</td><td>ブラウザー</td></tr>
           </tbody>
         </table>
       </div>
@@ -382,7 +399,7 @@
         <div class="card"><h3>マシン</h3><ul>
           <li><b>NVIDIA の GPU</b>：フル精度ですべてに 24 GB</li>
           <li><b>Linux</b>（Ubuntu 24.04、CUDA 12.8 で作成）</li>
-          <li>ディスク<b>約 30 GB</b>、新規インストールで計測：プログラムとその Python（16 GB）、モデル（カードにより 13〜17 GB、<code>fetch-models.sh</code> が取得し、固定し、検証）。絵師のモデルはさらに 26 GB、💎 セットは 5 GB、どちらも求めたときだけ</li></ul></div>
+          <li>ディスク<b>約 33 GB</b>、新規インストールで計測：プログラムとその Python（16 GB）、モデル（カードにより 17〜24 GB、<code>fetch-models.sh</code> が取得し、固定し、検証）。絵師のモデルはさらに 26 GB、💎 セットは 5 GB、どちらも求めたときだけ</li></ul></div>
         <div class="card"><h3>画面</h3><ul>
           <li><b>1920×1080、100 %</b> のブラウザーウィンドウ向けに作られています</li>
           <li>理想：<b>2K</b>（2560×1440）、22″ 以上、16:9 またはそれより横長</li>
@@ -398,7 +415,7 @@
   <section id="next">
     <div class="wrap">
       <h2>これから</h2>
-      <p class="sub">2.0.0-pre は、私たちが毎日自分たちの歌を作っているスタジオです。2.0.0 以降に向けて進んでいる大きなものはこちら。</p>
+      <p class="sub">2.0.0 は、私たちが毎日自分たちの歌を作っているスタジオです。2.1.0 以降に向けて進んでいる大きなものはこちら。</p>
       <ul class="feats">
         <li><b>モデルが書くように曲を編集。</b>任意の位置からテイクを延長。隣のセクションの声・調・小節を保ったままセクションを書き直し、モデル自身のトークンで縫い合わせ。テイク自身の楽譜の上に器楽のレイヤーを。</li>
         <li><b>仕上げ師の中の DAW。</b>Plenio の楽譜エディターを早期プレビューで：ピアノロール、コードレーン、音符の上の歌詞、アイデアを弾き込む MIDI キーボード。</li>
@@ -515,7 +532,7 @@
 </main>
 
 <footer>
-  <div class="wrap"><span>ルアハ・スタジオ · 2.0.0-pre · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> の作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">変更履歴</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ コーヒーマシン</a></span></div>
+  <div class="wrap"><span>ルアハ・スタジオ · 2.0.0 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> の作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">変更履歴</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ コーヒーマシン</a></span></div>
 </footer>
 
 <script>

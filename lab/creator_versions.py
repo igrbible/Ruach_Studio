@@ -1,9 +1,15 @@
 """HERESY 1519 (Viktor's TODO 14.10.2026: «Version control of the Creator (style, lyrics, score kept under the base title on each Generate,
-a diff of two, restore into the form, labels and stars)»; 13.10.2026: «В Писателя нужно автоматом отправлять все версии как в отдельный
+a diff of two, restore into the form, labels and stars)»; HERESY 1596, 19.10.2026: «Испортил, применил, F5, и ... проебал основу… Каждый
+Ctrl+S или запуск генерации на изменённых текстах, параметрах, данных ABC сохраняет свою diff»; 13.10.2026: «В Писателя нужно автоматом отправлять все версии как в отдельный
 бакет, чтобы потом, даже после удаления треков, можно было восстановить "потерянное"»): the Creator's words kept apart from the takes, one
 file per base title in KIT/writer-versions/ (writer-versions-SCOPE for a test page, as the Writer's notebook): every Generate keeps the
 title, style, lyrics and score it was sent with, its mode and the takes it made; the same words again only add their takes. Nothing is
-deleted here: a version deleted goes into its title's trash and comes back from it; a locked one is not deleted at all."""
+deleted here: a version deleted goes into its title's trash and comes back from it; a locked one is not deleted at all.
+
+HERESY 1614 (Viktor 19.10.2026: «привязывая древо изменений к имени трека как к базе, и ветвя по суффиксным номерам версий… vN.N»): a title
+«Name vN.N» is the root «Name» and the branch «N.N»; one book per root, every version with its branch («» for none). The books kept under a
+«Name vN.N» title before come into their root's book once, numbered after it in their time order, the old files moved to .adopted/. A whole
+tree deleted («как это сделано с драфтами в Писателе») goes into .trash/ and comes back from it; a tree with a locked version stays."""
 import hashlib
 import json
 import os
@@ -25,6 +31,64 @@ def _dir(kit, scope=""):
 
 def clean_title(title):
     return re.sub(r"\s+", " ", str(title or "")).strip()[:120] or "Untitled"
+
+
+VERSION_TAIL = re.compile(r"^(.*\S)\s+v(\d+(?:\.\d+)*)$", re.I)   # HERESY 1614: «Name v4.2.3»
+
+
+def split_title(title):
+    """(root, branch): «01. Крик. v4.2.3» -> («01. Крик.», «4.2.3»); a title with no version tail is its own root"""
+    t = clean_title(title)
+    m = VERSION_TAIL.match(t)
+    return (m.group(1), m.group(2)) if m else (t, "")
+
+
+def clean_version(v):
+    """digits and dots only, no dot at either end, none doubled (the page's guard, again here)"""
+    v = re.sub(r"\.{2,}", ".", re.sub(r"[^0-9.]", "", str(v or ""))).strip(".")
+    return v[:24]
+
+
+def _adopt(d):
+    """HERESY 1614: every book whose title carries a version, or that shares its root with another, comes into its root's book once"""
+    books = []
+    for p in sorted(d.glob("*.json")):
+        try:
+            books.append((p, json.load(open(p, encoding="utf-8"))))
+        except ValueError:
+            continue
+    roots = {}
+    for p, b in books:
+        root, branch = split_title(b.get("title"))
+        roots.setdefault(root.lower(), []).append((p, b, root, branch))
+    for key, group in roots.items():
+        root = group[0][2]
+        rid = base_id(root)
+        if all(p.stem == rid and not br for p, b, r, br in group):
+            continue
+        target = next((b for p, b, r, br in group if p.stem == rid), None) or {"id": rid, "title": root, "created": time.time(), "versions": [], "trash": []}
+        n = max([v.get("n", 0) for v in target.get("versions", []) + target.get("trash", [])] + [0])
+        moved = []
+        for p, b, r, branch in sorted(group, key=lambda g: g[1].get("created") or 0):
+            if p.stem == rid:
+                for v in b.get("versions", []) + b.get("trash", []):     # the root's own: a version tail in a version's title is its branch
+                    vr, vb = split_title(v.get("title"))
+                    if not v.get("version") and vb:
+                        v["version"], v["title"] = vb, vr
+                continue
+            for into in ("versions", "trash"):
+                for v in sorted(b.get(into) or [], key=lambda x: x.get("at") or 0):
+                    n += 1
+                    vr, vb = split_title(v.get("title"))
+                    target.setdefault(into, []).append({**v, "n": n, "title": vr, "version": v.get("version") or vb or branch})
+            moved.append(p)
+        target["versions"] = sorted(target.get("versions", []), key=lambda x: x.get("n", 0))
+        target["title"], target["updated"] = root, max([target.get("updated") or 0] + [g[1].get("updated") or 0 for g in group])
+        _write(d, target)
+        if moved:
+            (d / ".adopted").mkdir(exist_ok=True)
+            for p in moved:
+                os.replace(p, d / ".adopted" / p.name)
 
 
 def base_id(title):
@@ -64,8 +128,10 @@ def _find(book, n):
 
 
 def listing(kit, scope=""):
-    out = []
-    for p in _dir(kit, scope).glob("*.json"):
+    out, d = [], _dir(kit, scope)
+    with LOCK:
+        _adopt(d)                                         # HERESY 1614
+    for p in d.glob("*.json"):
         try:
             b = json.load(open(p, encoding="utf-8"))
         except ValueError:
@@ -73,26 +139,44 @@ def listing(kit, scope=""):
         vs = b.get("versions") or []
         out.append({"id": b["id"], "title": b.get("title") or "Untitled", "versions": len(vs), "updated": b.get("updated"),
                     "stars": sum(1 for v in vs if v.get("star")), "takes": sum(len(v.get("takes") or []) for v in vs),
-                    "trash": len(b.get("trash") or [])})
+                    "trash": len(b.get("trash") or []), "branches": len({v.get("version") or "" for v in vs})})
     out.sort(key=lambda x: -(x["updated"] or 0))
-    return {"titles": out}
+    dropped = []                                          # HERESY 1614: the trees deleted whole, to bring back
+    for p in sorted((d / ".trash").glob("*.json")) if (d / ".trash").is_dir() else []:
+        try:
+            b = json.load(open(p, encoding="utf-8"))
+        except ValueError:
+            continue
+        dropped.append({"file": p.name, "title": b.get("title") or "Untitled", "versions": len(b.get("versions") or []), "dropped": b.get("dropped")})
+    dropped.sort(key=lambda x: -(x["dropped"] or 0))
+    return {"titles": out, "dropped": dropped}
 
 
 def get(kit, vid="", title="", scope=""):
     d = _dir(kit, scope)
-    vid = vid or base_id(title)
+    with LOCK:
+        _adopt(d)                                         # HERESY 1614
+    root = split_title(title)[0]                          # a title with its version opens its root's tree
+    vid = vid or base_id(root)
     try:
         return _read(d, vid)
     except FileNotFoundError:
-        return {"id": vid, "title": clean_title(title), "versions": [], "trash": []}
+        return {"id": vid, "title": root, "versions": [], "trash": []}
 
 
 def post(kit, data, scope=""):
     op, d = data.get("op"), _dir(kit, scope)
     with LOCK:
         if op == "keep":                                  # a Generate's words and the takes they made
-            title = clean_title(data.get("title"))
+            _adopt(d)                                     # HERESY 1614: the root's tree, its branch from the title or the version given
+            title, branch = split_title(data.get("title"))
+            branch = clean_version(data.get("version")) or branch
             words = {f: str(data.get(f) or "") for f in WORDS}
+            params = data.get("params") if isinstance(data.get("params"), dict) else {}          # HERESY 1596: the form's knobs
+            knobs = json.dumps(params, sort_keys=True, ensure_ascii=False)
+            if len(knobs) > 16000:
+                params, knobs = {}, "{}"
+            why = re.sub(r"[^a-z-]", "", str(data.get("why") or "generate").lower())[:16] or "generate"
             words["title"] = title
             takes = [n for n in data.get("takes") or [] if isinstance(n, str) and n and "/" not in n]
             vid = base_id(title)
@@ -101,12 +185,13 @@ def post(kit, data, scope=""):
             except FileNotFoundError:
                 book = {"id": vid, "title": title, "created": time.time(), "versions": [], "trash": []}
             vs, now = book["versions"], time.time()
-            last = vs[-1] if vs else None
-            if last and all(last.get(f, "") == words[f] for f in WORDS):
+            last = next((v for v in reversed(vs) if (v.get("version") or "") == branch), None)   # HERESY 1614: the branch's last
+            if last and all(last.get(f, "") == words[f] for f in WORDS) and json.dumps(last.get("params") or {}, sort_keys=True, ensure_ascii=False) == knobs:
                 last["takes"] = sorted(set(last.get("takes") or []) | set(takes))   # the same words again: their takes only
             else:
                 n = max([v.get("n", 0) for v in vs + (book.get("trash") or [])] + [0]) + 1
-                vs.append({"n": n, "at": now, **words, "mode": str(data.get("mode") or "")[:12], "takes": takes, "label": "", "star": False, "lock": False})
+                vs.append({"n": n, "at": now, **words, "version": branch, "mode": str(data.get("mode") or "")[:12], "takes": takes, "label": "", "star": False,
+                           "lock": False, "why": why, "params": params})
             book["title"], book["updated"] = title, now
             _write(d, book)
             return book
@@ -141,7 +226,38 @@ def post(kit, data, scope=""):
             book["versions"].sort(key=lambda x: x.get("n", 0))
             _write(d, book)
             return book
-    raise ValueError("keep, mark, delete or undelete")
+        if op == "drop":                                  # HERESY 1614: the whole tree into .trash/; a locked version keeps it here
+            book = _read(d, data.get("id"))
+            locked = [v.get("n") for v in book.get("versions") or [] if v.get("lock")]
+            if locked:
+                raise ValueError("version " + ", ".join(f"#{n}" for n in locked) + " is locked: unlock it to delete the whole tree")
+            (d / ".trash").mkdir(exist_ok=True)
+            book["dropped"] = time.time()
+            name = f"{book['id']}-{int(book['dropped'])}.json"
+            json.dump(book, open(d / ".trash" / name, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+            _path(d, book["id"]).unlink()
+            return {"dropped": name, "title": book.get("title"), "versions": len(book.get("versions") or [])}
+        if op == "undrop":                                # back whole; a tree grown again under its root meanwhile takes it in
+            name = str(data.get("file") or "")
+            if not re.fullmatch(r"[0-9a-f]{12}-\d+\.json", name) or not (d / ".trash" / name).is_file():
+                raise ValueError("no such deleted tree")
+            book = json.load(open(d / ".trash" / name, encoding="utf-8"))
+            book.pop("dropped", None)
+            try:
+                here = _read(d, book["id"])
+            except FileNotFoundError:
+                here = None
+            if here:
+                n = max([v.get("n", 0) for v in here.get("versions", []) + here.get("trash", [])] + [0])
+                for into in ("versions", "trash"):
+                    for v in book.get(into) or []:
+                        n += 1
+                        here.setdefault(into, []).append({**v, "n": n})
+                book = here
+            _write(d, book)
+            (d / ".trash" / name).unlink()
+            return book
+    raise ValueError("keep, mark, delete, undelete, drop or undrop")
 
 
 # ---- HERESY 1522 (Viktor 17.10.2026: «бакет версий Творца включай в Export All как глобальный бекап/экспорт»): every title's book in the

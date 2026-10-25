@@ -26,7 +26,8 @@
             named: [], lab: { saved: 0, err: "", broken: "" }, labTimer: 0,   // HERESY 1533: the mixes kept on Forge
             autoShow: {}, adrag: null,                   // HERESY 1535: the lanes whose volume line is in hand
             autoParam: {},                               // HERESY 1559: which line a lane has in hand (volume when not said)
-            mon: { mono: false, dim: false } };          // HERESY 1536: the master's monitor, for the ear only
+            mon: { mono: false, dim: false },            // HERESY 1536: the master's monitor, for the ear only
+            ref: refReset() };                           // HERESY 1755: the reference, the sound as it came
   function $(id) { return document.getElementById(id); }
   var UNDO_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 3 2 6l3 3M2.5 6H10a4 4 0 0 1 0 8H7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var REDO_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M11 3l3 3-3 3M13.5 6H6a4 4 0 0 0 0 8h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -107,11 +108,13 @@
     try { var v = JSON.parse(localStorage.getItem(keyOf()) || "null"); return v && typeof v === "object" ? v : null; } catch (e) { return null; }
   }
   // HERESY 1531: a strip as the console has it; what is not set is the strip as it came
-  var COMP_DEF = { on: true, threshold_db: -18, ratio: 2, knee_db: 6, attack_ms: 10, release_ms: 120, makeup_db: 0, key: "" };   // 1537: key
+  var COMP_DEF = { on: true, threshold_db: -18, ratio: 2, knee_db: 6, attack_ms: 10, release_ms: 120, makeup_db: 0, key: "", mix: 1 };   // 1537: key; 1759: mix
+  var GATE_DEF = { on: true, threshold_db: -50, ratio: 4, range_db: 40, attack_ms: 2, release_ms: 150 };   // HERESY 1760: a strip's gate
   var LIMIT_DEF = { on: true, ceiling_db: -1, drive_db: 0, release_ms: 100 };   // HERESY 1544: Plenio's limiter, its own defaults
   function busesDefault() {
-    return { reverb: { preset: "room", return_db: 0, mute: false }, delay: { time_ms: 375, feedback: 0.35, lowpass_hz: 4000, return_db: 0, mute: false },
-             master: { gain_db: 0, eq: null, comp: null, limit: null }, groups: [], subs: [] };   // HERESY 1544: the master's chain; 1543: the VCAs; 1563: the audio buses
+    return { reverb: { preset: "room", return_db: 0, mute: false, predelay_ms: 0, lowcut_hz: 20, highcut_hz: 20000 },   // HERESY 1762: its pre-delay, the returns' cuts (20 Hz, 20 kHz: Off)
+             delay: { time_ms: 375, feedback: 0.35, lowpass_hz: 4000, return_db: 0, mute: false, lowcut_hz: 20, highcut_hz: 20000 },
+             master: { gain_db: 0, eq: null, comp: null, limit: null, fade_in_s: 0, fade_out_s: 0, end_s: null }, groups: [], subs: [] };   // HERESY 1544: the master's chain; 1543: the VCAs; 1563: the audio buses; 1756: the song's fade
   }
   function busesOf(b) {
     var d = busesDefault();
@@ -186,6 +189,7 @@
              trim_db: +s.trim_db || 0, invert: !!s.invert, width: s.width == null ? 1 : +s.width, pan: +s.pan || 0,
              eq: s.eq && Array.isArray(s.eq.bands) ? { on: s.eq.on !== false, bands: s.eq.bands } : null,
              comp: s.comp ? Object.assign({}, COMP_DEF, s.comp) : null,
+             gate: s.gate && typeof s.gate === "object" ? Object.assign({}, GATE_DEF, s.gate) : null,   // HERESY 1760
              auto: Array.isArray(s.auto) ? s.auto : [],   // HERESY 1535: [[t, dB], …]
              autos: s.autos && typeof s.autos === "object" && !Array.isArray(s.autos) ? s.autos : {},   // HERESY 1559: pan, width, sends
              edits: Array.isArray(s.edits) ? s.edits : [] };   // HERESY 1564: stretches copied or moved along the lane
@@ -249,6 +253,9 @@
         return { id: String(x.id), type: x.type, enabled: x.enabled !== false, frequency_hz: rnd(+x.frequency_hz, 1), gain_db: rnd(+x.gain_db || 0, 2), q: rnd(+x.q, 3) }; }) };
       if (s.comp) o.comp = { on: !!s.comp.on, threshold_db: rnd(s.comp.threshold_db, 2), ratio: rnd(s.comp.ratio, 2), knee_db: rnd(s.comp.knee_db, 2),
                              attack_ms: rnd(s.comp.attack_ms, 2), release_ms: rnd(s.comp.release_ms, 1), makeup_db: rnd(s.comp.makeup_db, 2) };
+      if (s.comp && +s.comp.mix < 1) o.comp.mix = rnd(Math.max(0, +s.comp.mix), 3);   // HERESY 1759: parallel compression
+      if (s.gate) o.gate = { on: !!s.gate.on, threshold_db: rnd(+s.gate.threshold_db, 2), ratio: rnd(+s.gate.ratio, 2), range_db: rnd(+s.gate.range_db, 2),
+                             attack_ms: rnd(+s.gate.attack_ms, 2), release_ms: rnd(+s.gate.release_ms, 1) };   // HERESY 1760
       if (s.comp && s.comp.key && s.comp.key !== n && names().indexOf(s.comp.key) >= 0) o.comp.key = s.comp.key;   // HERESY 1537
       if (s.width !== 1) o.width = rnd(s.width, 3);
       if (s.pan) o.pan = rnd(s.pan, 3);
@@ -267,13 +274,23 @@
     out.delay = { time_ms: rnd(b.delay.time_ms, 2), feedback: rnd(b.delay.feedback, 3), lowpass_hz: rnd(b.delay.lowpass_hz, 1) };
     if (b.delay.return_db) out.delay.return_db = rnd(b.delay.return_db, 2);
     if (b.delay.mute) out.delay.mute = true;
+    if (b.reverb.predelay_ms > 0) out.reverb.predelay_ms = rnd(b.reverb.predelay_ms, 1);   // HERESY 1762: said only when on
+    ["reverb", "delay"].forEach(function (k) {
+      if (b[k].lowcut_hz > 20) out[k].lowcut_hz = rnd(b[k].lowcut_hz, 1);
+      if (b[k].highcut_hz < 20000) out[k].highcut_hz = rnd(b[k].highcut_hz, 1);
+    });
     var ms = masterStrip(), mo = {};                   // HERESY 1544: the master's fader and chain
     if (ms.gain_db) mo.gain_db = rnd(ms.gain_db, 2);
     if (ms.eq && ms.eq.bands.length) mo.eq = { on: ms.eq.on, bands: ms.eq.bands.map(function (x) {
       return { id: String(x.id), type: x.type, enabled: x.enabled !== false, frequency_hz: rnd(+x.frequency_hz, 1), gain_db: rnd(+x.gain_db || 0, 2), q: rnd(+x.q, 3) }; }) };
     if (ms.comp) mo.comp = { on: !!ms.comp.on, threshold_db: rnd(ms.comp.threshold_db, 2), ratio: rnd(ms.comp.ratio, 2), knee_db: rnd(ms.comp.knee_db, 2),
                              attack_ms: rnd(ms.comp.attack_ms, 2), release_ms: rnd(ms.comp.release_ms, 1), makeup_db: rnd(ms.comp.makeup_db, 2) };
+    if (ms.comp && +ms.comp.mix < 1) mo.comp.mix = rnd(Math.max(0, +ms.comp.mix), 3);   // HERESY 1759
     if (ms.limit) mo.limit = { on: !!ms.limit.on, ceiling_db: rnd(ms.limit.ceiling_db, 2), drive_db: rnd(ms.limit.drive_db, 2), release_ms: rnd(ms.limit.release_ms, 1) };
+    var fd = fadeOf();                                 // HERESY 1756: the song's fade in and out, its end
+    if (fd.fin) mo.fade_in_s = rnd(fd.fin, 2);
+    if (fd.fout) mo.fade_out_s = rnd(fd.fout, 2);
+    if (fd.endSet) mo.end_s = rnd(fd.end, 3);
     if (Object.keys(mo).length) out.master = mo;
     var ns0 = names();                                 // HERESY 1543: the VCAs, their members of this set
     if (b.groups && b.groups.length) out.groups = b.groups.map(function (x) {
@@ -292,6 +309,7 @@
         return { id: String(q2.id), type: q2.type, enabled: q2.enabled !== false, frequency_hz: rnd(+q2.frequency_hz, 1), gain_db: rnd(+q2.gain_db || 0, 2), q: rnd(+q2.q, 3) }; }) };
       if (sx.comp) o4.comp = { on: !!sx.comp.on, threshold_db: rnd(sx.comp.threshold_db, 2), ratio: rnd(sx.comp.ratio, 2), knee_db: rnd(sx.comp.knee_db, 2),
                                attack_ms: rnd(sx.comp.attack_ms, 2), release_ms: rnd(sx.comp.release_ms, 1), makeup_db: rnd(sx.comp.makeup_db, 2) };
+      if (sx.comp && +sx.comp.mix < 1) o4.comp.mix = rnd(Math.max(0, +sx.comp.mix), 3);   // HERESY 1759
       return o4; });
     return out;
   }
@@ -307,6 +325,112 @@
     if (name === REST) return "";
     var s = S.info.strips.filter(function (x) { return x.name === name; })[0], want = S.versions[name];
     return s.versions.some(function (v) { return v.path === want; }) ? want : s.path;
+  }
+
+  // HERESY 1754: a solo forgotten makes the Mix of one lane: the head says it while one is on; a click there (or Alt+click on any S) lets
+  // every lane be heard again, the lanes' solos and the VCAs', one undo
+  function soloing() { return names().some(function (n) { return strip(n).solo; }) || (S.buses.groups || []).some(function (x) { return x.solo && x.members.length; }); }
+  function soloPaint() {
+    var b = $("mxUnsolo");
+    if (!b) return;
+    var k = S.info && soloing() ? names().filter(audible).length : 0;
+    b.hidden = !k;
+    b.textContent = "S \u00b7 " + k;
+    b.setAttribute("data-tip", tr("Solo is on: {0} of {1} lanes heard, and Mix makes only them. A click (or Alt+click on any S) lets every lane be heard again").replace("{0}", k).replace("{1}", names().length));
+  }
+  function clearSolo() {
+    var lanes = names().filter(function (n) { return S.strips[n] && S.strips[n].solo; }), gs = (S.buses.groups || []).filter(function (x) { return x.solo; });
+    if (!lanes.length && !gs.length) return;
+    mark();
+    lanes.forEach(function (n) { S.strips[n].solo = false; });
+    gs.forEach(function (x) { x.solo = false; });
+    restored(false);
+  }
+  // HERESY 1755: the reference: the sound the set was split from (what a neutral mix gives back), streamed beside the lanes into the monitor in
+  // the mix's place, as loud as the mix over what has played (the lab's blocks of it, /lab/daw/loudness, gated as the mix's are): louder
+  // sounds better, so a compare not matched in level is no compare
+  var SOURCE = "source";
+  function refReset() { return { on: false, armed: false, asked: false, z: null, block: 0.1, match: null, t: 0 }; }
+  function refLabel() { return tr("Ref") + (S.ref.match != null ? " " + fmtDb(S.ref.match) : ""); }
+  function refButton() {
+    return '<button type="button" class="mx-ms mx-ref' + (S.ref.on ? " is-on" : "") + '" id="mxRef" aria-pressed="' + S.ref.on + '"' + (S.info ? "" : " disabled") +
+      ' data-tip="' + esc(tr("The sound as it came, the one the stems were split from (a neutral mix gives it back), heard in place of the mix and as loud as it over what has played: so the compare is of the sound, not of the level. The button says by how much it is raised or lowered; R does the same; Mono and Dim hear it too")) + '">' + esc(refLabel()) + "</button>";
+  }
+  function refPaint() { var b = $("mxRef"); if (b) { b.classList.toggle("is-on", S.ref.on); b.setAttribute("aria-pressed", S.ref.on); b.textContent = refLabel(); } }
+  function refLoad() {
+    if (!S.take || !S.set || S.ref.asked) return;
+    var R = S.ref, set = S.set;
+    R.asked = true;
+    getJson("/daw/loudness?" + q({ name: S.take.name, set: set })).then(function (d) {
+      if (S.ref !== R || S.set !== set) return;
+      R.z = d.z || null; R.block = d.block || 0.1;
+    }, function (e) { if (S.ref === R) { R.asked = false; say(tr("The source's loudness did not come from the lab: the reference plays as it is, not matched") + " (" + (e.message || e) + ")", true); } });
+  }
+  function refToggle() {
+    if (!S.info) return;
+    var first = !S.ref.armed;
+    S.ref.armed = true; S.ref.on = !S.ref.on;
+    refLoad();
+    applyRef(S.graph); refPaint();
+    if (first && S.playing) play(pos());               // the source streamed from here on, beside the lanes
+  }
+  function applyRef(g) {
+    if (!g || !g.ref || !S.ctx) return;
+    var t = S.ctx.currentTime, on = S.ref.on && S.ref.armed;
+    g.ref.delay.delayTime.setValueAtTime(Math.min(1, latency(g)), t);   // as late as the console makes the mix
+    g.mixMon.gain.setTargetAtTime(on ? 0 : 1, t, 0.006);
+    g.ref.out.gain.setTargetAtTime(on ? db(S.ref.match || 0) : 0, t, on && g.refWas ? 0.3 : 0.006);   // a switch quick, a new match gliding
+    g.refWas = on;
+  }
+  function refGated(z) {                             // as loudness() gates the mix's blocks: 400 ms windows a block apart, −70 LUFS, then 10 LU under
+    var win = [];
+    for (var k = 3; k < z.length; k++) win.push((z[k] + z[k - 1] + z[k - 2] + z[k - 3]) / 4);
+    var abs = win.filter(function (w) { var l = lufs(w); return l != null && l > -70; });
+    if (!abs.length) return null;
+    var rel = lufs(abs.reduce(function (x, y) { return x + y; }, 0) / abs.length) - 10, gated = abs.filter(function (w) { return lufs(w) > rel; });
+    return gated.length ? lufs(gated.reduce(function (x, y) { return x + y; }, 0) / gated.length) : null;
+  }
+  function refMatch() {
+    var R = S.ref, L = S.loud, now = performance.now();
+    if (!R.armed || !R.z || !S.playing || !L || L.i == null || now - R.t < 500) return;
+    R.t = now;
+    var a = Math.max(0, Math.floor(S.startAt / R.block)), b = Math.min(R.z.length, Math.floor(heard() / R.block));
+    var ri = b - a >= 4 ? refGated(R.z.slice(a, b)) : null;
+    if (ri == null) return;
+    var m = Math.round(Math.max(-30, Math.min(30, L.i - ri)) * 10) / 10;
+    if (m === R.match) return;
+    R.match = m;
+    applyRef(S.graph); refPaint();
+  }
+  // HERESY 1756: the song's fade on the master, after its fader: from −60 dB up over the fade-in, down to −60 dB over the fade-out before the
+  // end, linear in dB (the gain's exponential ramps, as the render draws it), the lower where the two meet; nothing after the end
+  var FADE_FLOOR = -60;
+  function fadeOf() {
+    var m = S.buses.master, L = S.info ? S.info.seconds : 0, e = +m.end_s > 0 && +m.end_s < L ? +m.end_s : L;
+    return { fin: Math.max(0, +m.fade_in_s || 0), fout: Math.max(0, +m.fade_out_s || 0), end: e, endSet: e < L };
+  }
+  function fadeDb(t) {                               // the fade's level at t in dB; null from the end on (silent)
+    var f = fadeOf(), d = 0;
+    if (t >= f.end) return null;
+    if (f.fin > 0 && t < f.fin) d = FADE_FLOOR * (1 - t / f.fin);
+    if (f.fout > 0 && t > f.end - f.fout) d = Math.min(d, FADE_FLOOR * (t - (f.end - f.fout)) / f.fout);
+    return d;
+  }
+  function fadeGain(t) { var d = fadeDb(t); return d == null ? 0 : db(d); }
+  function fadeSchedule(g) {
+    if (!g || !g.master || !g.master.fade || !S.ctx || !S.info) return;
+    var p = g.master.fade.gain, now = S.ctx.currentTime, f = fadeOf(), from = S.playing ? Math.max(S.startAt, pos()) : S.at;
+    p.cancelScheduledValues(0);
+    p.setValueAtTime(fadeGain(from), now);
+    if (!S.playing || !(f.fin > 0 || f.fout > 0 || f.endSet)) return;
+    var lat = latency(g), toCtx = function (t) { return S.startCtx + (t - S.startAt) + lat; }, at = Math.max(now, toCtx(from));
+    p.setValueAtTime(fadeGain(from), at);
+    var marks = [];                                   // where the line bends, and every quarter second inside a fade (the two may meet)
+    for (var t = Math.ceil(from * 4) / 4; t < f.end; t += 0.25) if ((f.fin > 0 && t <= f.fin + 0.25) || (f.fout > 0 && t >= f.end - f.fout - 0.25)) marks.push(t);
+    [f.fin, f.end - f.fout].forEach(function (b) { if (b > from && b < f.end) marks.push(b); });
+    marks.sort(function (a, b) { return a - b; });
+    marks.forEach(function (t2) { if (t2 > from) p.exponentialRampToValueAtTime(Math.max(1e-6, fadeGain(t2)), toCtx(t2)); });
+    if (f.end > from) { var ec = toCtx(f.end); if (f.fout > 0) p.exponentialRampToValueAtTime(db(FADE_FLOOR), ec); p.setValueAtTime(0, ec); }
   }
 
   // ---- the take, its sets of stems
@@ -342,6 +466,7 @@
     keepNow(); closeGraph();   // HERESY 1531: another set, another console
     S.info = null; S.peaks = {}; S.lv = {}; S.undo = []; S.redo = [];
     S.pick = null; S.clip = null;                     // HERESY 1564: a stretch in hand is this set's
+    S.ref = refReset();                               // HERESY 1755: the reference is this set's source
     paint();
     if (!S.take || !S.set) return;
     var token = ++S.token;
@@ -399,13 +524,17 @@
     var h = $("mxHead");
     if (!h) return;
     var sets = S.sets.map(function (x) { return '<option value="' + esc(x.dir) + '"' + (x.dir === S.set ? " selected" : "") + ' translate="no">' + esc(x.label) + "</option>"; }).join("");
+    // HERESY 1797: the DAW's «beta» (1795) in its head, seen while it is over the whole window (its drawer's summary hidden then)
     h.innerHTML = '<label class="field mx-set"><span class="label">' + esc(tr("A set of stems")) + '</span><select id="mxSet">' + sets + "</select></label>" +
+      '<span class="beta-badge mx-beta" data-tip="' + esc(tr("Beta: we make our songs here every day, and it is all still growing; what it keeps and how it looks may change in a later release.")) + '">' + esc(tr("beta")) + "</span>" +
       '<button type="button" class="btn ghost small icon-act mx-play" id="mxPlay" aria-label="' + esc(tr(S.playing ? "Pause" : "Play")) + '"' + (S.info ? "" : " disabled") + ">" + icon(S.playing ? "pause" : "play", S.playing ? "❚❚" : "▶") + "</button>" +
       '<span class="mono mx-time" id="mxTime">' + clock(pos()) + " / " + clock(S.info ? S.info.seconds : 0) + "</span>" +
+      '<button type="button" class="mx-ms mx-unsolo" id="mxUnsolo" hidden></button>' +   // HERESY 1754: the solo light
       // HERESY 1531: A and B, undo and redo, the console shown or not, the stems printed with the mix
       '<span class="mx-ab" role="group" aria-label="' + esc(tr("Two mixes to compare")) + '">' + ["A", "B"].map(function (k) {
         return '<button type="button" class="mx-ms' + (S.ab.cur === k ? " is-on" : "") + '" id="mx' + k + '" aria-pressed="' + (S.ab.cur === k) + '" data-tip="' +
           esc(tr("Two mixes of this set to compare: switch between them as it plays; what is set goes into the one lit")) + '">' + k + "</button>"; }).join("") + "</span>" +
+      refButton() +                                    // HERESY 1755: the sound as it came, as loud as the mix
       '<button type="button" class="mx-ms mx-undo" id="mxUndo"' + (S.undo.length ? "" : " disabled") + ' aria-label="' + esc(tr("Undo")) + '" data-tip="' + esc(tr("Undo (Ctrl+Z)")) + '">' + UNDO_SVG + "</button>" +
       '<button type="button" class="mx-ms mx-undo" id="mxRedo"' + (S.redo.length ? "" : " disabled") + ' aria-label="' + esc(tr("Redo")) + '" data-tip="' + esc(tr("Redo (Ctrl+Shift+Z)")) + '">' + REDO_SVG + "</button>" +
       '<button type="button" class="btn ghost small" id="mxReset"' + (S.info ? "" : " disabled") + ' data-tip="' + esc(tr("Every lane back to as split: level 0 dB, nothing muted, no silence, no sends")) + '">' + esc(tr("Reset")) + "</button>" +
@@ -418,6 +547,7 @@
         '" data-tip="' + esc(tr("The DAW over the whole screen, its lanes as tall as the screen gives them; F11 here does the same. Esc, F11 or this button back")) + '">' +
         icon(isFull() ? "minimize" : "maximize", isFull() ? "\u2921" : "\u26f6") + "</button>" +   // HERESY 1499
       '<span class="row-hint mono mx-state" id="mxState"></span>';
+    soloPaint();                                      // HERESY 1754
   }
   // HERESY 1499 (Viktor 16.10.2026: «DAW будет самым интересным. И сразу внедряй переключение в максимальный full screen режим, и перехватывай
   // в нём браузерный F11 на вкладке Студии»): the DAW over the whole window (the page's dialogs, menus and tips still over it), the window full
@@ -487,7 +617,7 @@
       '<button type="button" class="mx-ms" id="mxZoomIn" data-tip="' + esc(tr("Zoom in (+); Ctrl+wheel zooms about the pointer, Shift+wheel goes along")) + '">+</button>' +
       '<button type="button" class="btn ghost small" id="mxFit" data-tip="' + esc(tr("The whole song in view (0)")) + '">' + esc(tr("Fit")) + "</button>" +
       '<span class="mx-meter mx-master" data-meter="*" data-tip="' + esc(tr("The whole mix's level as it plays")) + '"><i></i></span>' +
-      '<span class="row-hint mono mx-keys" data-tip="' + esc(tr("Space plays and stops; Home to the start (the loop's, when it is on); L the loop; M and S the lane picked by a click on its name; ↑ ↓ another lane; + − 0 the zoom; [ ] the section before and after; Ctrl+Z, Ctrl+Shift+Z undo and redo")) + '">' + esc(tr("keys")) + "</span></div>" +
+      '<span class="row-hint mono mx-keys" data-tip="' + esc(tr("Space plays and stops; Home to the start (the loop's, when it is on); L the loop; M and S the lane picked by a click on its name; ↑ ↓ another lane; + − 0 the zoom; [ ] the section before and after; Ctrl+Z, Ctrl+Shift+Z undo and redo; R the sound as it came, as loud as the mix; Alt+click on an S: every solo off")) + '">' + esc(tr("keys")) + "</span></div>" +
       '<div class="mx-wave mx-ruler" data-tip="' + esc(tr("The time: a click goes there, a drag draws the loop. Under it the song's sections, as the player has timed them: a click goes to one, a double-click loops it")) + '"><canvas data-mx-ruler="1"></canvas></div></div>';
   }
   // HERESY 1532: the song's sections, as the player's wave has them (the take in the player): [{t, name, end}], each to the next
@@ -605,6 +735,15 @@
       g.strokeStyle = acc; g.lineWidth = 1; g.strokeRect(Math.round(xa) + 0.5, 0.5, Math.max(1, Math.round(xb - xa) - 1), h - 1);
       if (xb - xa > 40) { g.fillStyle = acc; g.font = "10px sans-serif"; g.fillText((e2.op === "move" ? "\u21e2 " : "\u29c9 ") + clock(e2.a), xa + 4, 11); }
     });
+    var fz = fadeOf();                                // HERESY 1756: the song's fade over the lane, dark as it is low; after the end, dark
+    if (fz.fin > 0 || fz.fout > 0 || fz.endSet) {
+      g.fillStyle = off;
+      for (var fx2 = 0; fx2 < w; fx2 += 2) {
+        var fdv = fadeDb(xt(fx2 + 1, w)), fal = fdv == null ? 1 : -fdv / 60;
+        if (fal > 0.02) { g.globalAlpha = fdv == null ? 1 : Math.min(1, fal) * 0.85; g.fillRect(fx2, 0, 2, h); }   // after the end as a cut is drawn
+      }
+      g.globalAlpha = 1;
+    }
     if (S.pick && S.pick.n === n) {                   // HERESY 1564: the stretch in hand
       g.fillStyle = acc; g.globalAlpha = 0.22; g.fillRect(tx(S.pick.a, w), 0, (S.pick.b - S.pick.a) / span() * w, h); g.globalAlpha = 1;
     }
@@ -676,22 +815,27 @@
     var g = { key: graphKey(), all: all, lanes: {}, ch: ch };
     var subs = (S.buses.subs || []).slice();          // HERESY 1563: each bus a lane of the kernel after the strips, its meter after the master's
     g.eng = window.RuachMixDsp.make(ctx, { strips: ns.length + subs.length, meters: ns.length + 3 + subs.length, master: ns.length + 2, ch: ch });
-    g.master = { input: gain(), fader: gain(), eq: [], eqKey: null };   // HERESY 1544: input · EQ · the chain's node · fader, wired when the kernel is up
+    g.master = { input: gain(), fader: gain(), fade: gain(), eq: [], eqKey: null };   // HERESY 1544: input · EQ · the chain's node · fader, wired when the kernel is up; 1756: the fade
     // HERESY 1536: the monitor after the meters: Mono (the sides summed, mid and side by four gains as a lane's width) and Dim
     var mon = g.mon = { sp: node(ctx.createChannelSplitter(2)), mg: node(ctx.createChannelMerger(2)), w: [gain(), gain(0), gain(0), gain()], dim: gain() };
-    g.master.fader.connect(mon.sp);
+    g.master.fader.connect(g.master.fade);            // HERESY 1756: the song's fade after the fader, heard and measured as rendered
+    g.mixMon = gain(); g.master.fade.connect(g.mixMon); g.mixMon.connect(mon.sp);   // HERESY 1755: the mix, or the reference in its place
+    g.ref = { input: gain(), delay: node(ctx.createDelay(1)), out: gain(0) };
+    g.ref.input.connect(g.ref.delay); g.ref.delay.connect(g.ref.out); g.ref.out.connect(mon.sp);
     mon.sp.connect(mon.w[0], 0); mon.sp.connect(mon.w[1], 0); mon.sp.connect(mon.w[2], 1); mon.sp.connect(mon.w[3], 1);
     mon.w[0].connect(mon.mg, 0, 0); mon.w[1].connect(mon.mg, 0, 1); mon.w[2].connect(mon.mg, 0, 0); mon.w[3].connect(mon.mg, 0, 1);
     mon.mg.connect(mon.dim); mon.dim.connect(ctx.destination);
     g.master.an = node(ctx.createAnalyser()); g.master.an.fftSize = 8192; g.master.an.smoothingTimeConstant = 0.75;
-    g.master.fader.connect(g.master.an);
+    g.master.fade.connect(g.master.an);
     g.master.sp = node(ctx.createChannelSplitter(2)); g.master.anL = node(ctx.createAnalyser()); g.master.anR = node(ctx.createAnalyser());   // HERESY 1538: the goniometer's two sides
     g.master.anL.fftSize = g.master.anR.fftSize = 2048;
-    g.master.fader.connect(g.master.sp); g.master.sp.connect(g.master.anL, 0); g.master.sp.connect(g.master.anR, 1);
-    var rv = g.rv = { input: gain(), conv: null, ret: gain(), mute: gain() };
+    g.master.fade.connect(g.master.sp); g.master.sp.connect(g.master.anL, 0); g.master.sp.connect(g.master.anR, 1);
+    var cut = function () { var x = node(ctx.createBiquadFilter()); x.type = "peaking"; x.gain.value = 0; return x; };   // HERESY 1762: a return's cut, Off a 0 dB bell
+    var rv = g.rv = { input: gain(), pre: node(ctx.createDelay(0.5)), conv: null, lc: cut(), hc: cut(), ret: gain(), mute: gain() };   // 1762: input · pre-delay · convolver · cuts · return
+    rv.input.connect(rv.pre); rv.lc.connect(rv.hc); rv.hc.connect(rv.ret);
     rv.ret.connect(rv.mute); rv.mute.connect(g.master.input);
-    var dl = g.dl = { input: gain(), del: node(ctx.createDelay(2.0)), y: gain(), fb: gain(0), ret: gain(), mute: gain(), lp: null };
-    dl.input.connect(dl.del); dl.del.connect(dl.y); dl.y.connect(dl.ret); dl.ret.connect(dl.mute); dl.mute.connect(g.master.input); dl.fb.connect(dl.del);
+    var dl = g.dl = { input: gain(), del: node(ctx.createDelay(2.0)), y: gain(), fb: gain(0), lc: cut(), hc: cut(), ret: gain(), mute: gain(), lp: null };
+    dl.input.connect(dl.del); dl.del.connect(dl.y); dl.y.connect(dl.lc); dl.lc.connect(dl.hc); dl.hc.connect(dl.ret); dl.ret.connect(dl.mute); dl.mute.connect(g.master.input); dl.fb.connect(dl.del);   // 1762: the cuts after the loop
     g.subs = {};                                      // HERESY 1563: the buses: input · EQ · the kernel's compressor · fader · width · pan · mute
     subs.forEach(function (b, j) {
       var u = g.subs[b.id] = { i: ns.length + j, mi: ns.length + 3 + j, input: gain(), eq: [], eqKey: null, fader: gain(), gate: gain(), an: null, tap: null };
@@ -724,7 +868,7 @@
         l.gate.connect(g.eng.meterIns[i]);
       });
       subs.forEach(function (b) { var u = g.subs[b.id]; g.eng.compOuts[u.i].connect(u.fader); u.gate.connect(g.eng.meterIns[u.mi]); });   // HERESY 1563
-      rv.mute.connect(g.eng.meterIns[ns.length]); dl.mute.connect(g.eng.meterIns[ns.length + 1]); g.master.fader.connect(g.eng.meterIns[ns.length + 2]);
+      rv.mute.connect(g.eng.meterIns[ns.length]); dl.mute.connect(g.eng.meterIns[ns.length + 1]); g.master.fade.connect(g.eng.meterIns[ns.length + 2]);
       g.eng.masterOut.connect(g.master.fader);       // HERESY 1544
       g.on = true;
       applyBuses(g);
@@ -735,6 +879,7 @@
     S.graph = g;
     applyBuses(g);
     applyMon(g);                                      // HERESY 1536
+    applyRef(g);                                      // HERESY 1755
     return g;
   }
   var BQ = { peak: "peaking", low_shelf: "lowshelf", high_shelf: "highshelf", highpass: "highpass", lowpass: "lowpass", notch: "notch" };
@@ -872,7 +1017,8 @@
     l.gate.gain.setTargetAtTime(audible(n) ? 1 : 0, t, k);
     if (!drawn(n, "reverb")) l.rv.gain.setTargetAtTime(s.reverb, t, k);
     if (!drawn(n, "delay")) l.dl.gain.setTargetAtTime(s.delay, t, k);
-    g.eng.setComp(l.i, s.comp && s.comp.on ? Object.assign({}, s.comp, { keyIndex: s.comp.key && s.comp.key !== n ? names().indexOf(s.comp.key) : -1 }) : { on: false });   // 1537
+    g.eng.setComp(l.i, Object.assign(s.comp && s.comp.on ? Object.assign({}, s.comp, { keyIndex: s.comp.key && s.comp.key !== n ? names().indexOf(s.comp.key) : -1 }) : { on: false },
+      { gate: s.gate && s.gate.on ? s.gate : null }));   // 1537; HERESY 1760: and its gate
     wireEq(g, n);
     if (g === S.graph) knobsSchedule(n);              // HERESY 1559: the drawn knobs' lines again (an undo, a set, a version)
   }
@@ -883,10 +1029,18 @@
     g.mon.dim.gain.setTargetAtTime(S.mon.dim ? 0.1 : 1, t, 0.01);
   }
   var IRS = {};
+  function setCut(q, type, hz, rate) {               // HERESY 1762: the render's RBJ band at Q 1/√2 (in dB, as the EQ's cuts); Off, a 0 dB bell
+    var on = type === "highpass" ? +hz > 20 : +hz < 20000, t = S.ctx.currentTime;
+    q.type = on ? type : "peaking";
+    q.frequency.setValueAtTime(on ? Math.min(+hz, 0.45 * rate) : 1000, t); q.gain.setValueAtTime(0, t); q.Q.setValueAtTime(on ? 20 * Math.log10(Math.SQRT1_2) : 1, t);
+  }
   function applyBuses(g) {
     if (!g || !S.ctx) return;
     var b = S.buses, ctx = S.ctx, t = ctx.currentTime, k = 0.01, rate = ctx.sampleRate, rv = g.rv, d = g.dl;
     rv.ret.gain.setTargetAtTime(db(b.reverb.return_db), t, k); rv.mute.gain.setTargetAtTime(b.reverb.mute ? 0 : 1, t, k);
+    rv.pre.delayTime.setValueAtTime(Math.round((+b.reverb.predelay_ms || 0) * rate / 1000) / rate, t);   // HERESY 1762: whole samples, as the render shifts the send
+    setCut(rv.lc, "highpass", b.reverb.lowcut_hz, rate); setCut(rv.hc, "lowpass", b.reverb.highcut_hz, rate);
+    setCut(d.lc, "highpass", b.delay.lowcut_hz, rate); setCut(d.hc, "lowpass", b.delay.highcut_hz, rate);
     if (g.rvPreset !== b.reverb.preset) {
       var preset = g.rvPreset = b.reverb.preset, key = preset + "|" + rate;
       var got = IRS[key] || (IRS[key] = fetch("/lab/daw/ir?" + q({ preset: preset, rate: rate }))
@@ -896,8 +1050,8 @@
         if (g.dead || g.rvPreset !== preset) return;
         var conv = ctx.createConvolver();              // a new convolver for a new room: the render's impulse, not normalised
         conv.normalize = false; conv.buffer = ir; g.all.push(conv);
-        rv.input.connect(conv); conv.connect(rv.ret);
-        if (rv.conv) { try { rv.input.disconnect(rv.conv); rv.conv.disconnect(); } catch (e) { /* gone */ } }
+        rv.pre.connect(conv); conv.connect(rv.lc);      // HERESY 1762: after its pre-delay, into its cuts
+        if (rv.conv) { try { rv.pre.disconnect(rv.conv); rv.conv.disconnect(); } catch (e) { /* gone */ } }
         rv.conv = conv;
         emit("change", { bus: "reverb" });
       }).catch(function () { delete IRS[key]; say(tr("The room's impulse did not come from the lab: the room is silent here, the mix on Forge has it"), true); });
@@ -917,6 +1071,7 @@
     if (g.eng && g.eng.setMaster) g.eng.setMaster({ comp: ms.comp && ms.comp.on ? ms.comp : { on: false }, limit: ms.limit && ms.limit.on ? ms.limit : { on: false } });
     wireMasterEq(g);
     (S.buses.subs || []).forEach(function (sb) { applySub(g, sb.id); });   // HERESY 1563
+    fadeSchedule(g);                                  // HERESY 1756
   }
   function liveGains() {
     var g = S.graph;
@@ -969,6 +1124,7 @@
       S.startCtx = ctx.currentTime + LEAD + 0.25;    // the first stretches arrive and decode
       schedule(Math.floor(S.startAt / CHUNK), token);
       names().forEach(autoSchedule);                 // HERESY 1535
+      fadeSchedule(g); applyRef(g);                   // HERESY 1756; 1755
     });
     var tick = function () {
       if (token !== S.token) return;
@@ -1008,14 +1164,16 @@
     });
   }
   function fetchChunk(n, k) {
-    return fetch("/lab/daw/chunk?" + q({ name: S.take.name, set: S.set, strip: n, path: versionOf(n), start: k * CHUNK, seconds: CHUNK }))
+    return fetch("/lab/daw/chunk?" + q({ name: S.take.name, set: S.set, strip: n, path: n === SOURCE ? "" : versionOf(n), start: k * CHUNK, seconds: CHUNK }))   // 1755
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
       .then(function (buf) { return S.ctx.decodeAudioData(buf); });
   }
   function schedule(k, token) {
     if (token !== S.token || k * CHUNK >= S.info.seconds) return;
     var at = k * CHUNK, ns = names();
-    Promise.all(ns.map(function (n) { return fetchChunk(n, k).catch(function () { return null; }); })).then(function (bufs) {
+    var asks = ns.map(function (n) { return fetchChunk(n, k).catch(function () { return null; }); });
+    if (S.ref.armed) asks.push(fetchChunk(SOURCE, k).catch(function () { return null; }));   // HERESY 1755: the reference beside the lanes
+    Promise.all(asks).then(function (bufs) {
       if (token !== S.token) return;
       var ctx = S.ctx, when = S.startCtx + (at - S.startAt), now = ctx.currentTime + 0.02;
       bufs.forEach(function (b, i) {
@@ -1029,6 +1187,12 @@
         ranges(n, l, at, at + CHUNK);
         laid(n, l, at, token);                        // HERESY 1564
       });
+      var rb = S.ref.armed ? bufs[ns.length] : null, rl = S.graph && S.graph.ref;   // HERESY 1755: the reference, on the lanes' clock
+      if (rb && rl) {
+        var rs = ctx.createBufferSource(), rskip = Math.max(0, S.startAt - at), rst = when + rskip, rlate = Math.max(0, now - rst);
+        rs.buffer = rb; rs.connect(rl.input);
+        if (rskip + rlate < rb.duration) { rs.start(rst + rlate, rskip + rlate); S.srcs.push(rs); }
+      }
       if (S.srcs.length > 64) S.srcs = S.srcs.slice(-32);
       var next = S.startCtx + (at + CHUNK - S.startAt) - ctx.currentTime - 3;   // the next stretch three seconds before it is due
       S.timer = setTimeout(function () { schedule(k + 1, token); }, Math.max(0, next * 1000));
@@ -1073,8 +1237,17 @@
     for (var i = 1; i < TAPER.length; i++) if (p <= TAPER[i][1]) { var a = TAPER[i - 1], b = TAPER[i]; return a[0] + (p - a[1]) / (b[1] - a[1]) * (b[0] - a[0]); }
     return 12;
   }
-  function loudReset() { return { z: [], win: [], tp: 0, max: -150, corr: 1, m: null, s: null, i: null, n: 0 }; }
+  function loudReset() { return { z: [], win: [], tp: 0, max: -150, corr: 1, m: null, s: null, i: null, n: 0, st: [], lra: null }; }   // HERESY 1763: st, lra
   function lufs(p) { return p > 0 ? -0.691 + 10 * Math.log10(p) : null; }
+  function lra(st) {                                 // HERESY 1763: EBU Tech 3342 as Plenio has it: −70 LUFS, then 20 LU under the mean of what passed; the 95th less the 10th percentile
+    var abs = st.filter(function (p) { var l = lufs(p); return l != null && l > -70; });
+    if (!abs.length) return null;
+    var rel = lufs(abs.reduce(function (x, y) { return x + y; }, 0) / abs.length) - 20;
+    var g = abs.map(lufs).filter(function (l) { return l > rel; }).sort(function (a, b) { return a - b; });
+    if (g.length < 2) return 0;
+    var pc = function (q) { var x = q / 100 * (g.length - 1), i = Math.floor(x); return i + 1 < g.length ? g[i] + (x - i) * (g[i + 1] - g[i]) : g[i]; };   // numpy's linear
+    return pc(95) - pc(10);
+  }
   function loudness(t) {
     var L = S.loud || (S.loud = loudReset());
     if (!t || !t.n) return;
@@ -1082,6 +1255,7 @@
       L.z.push(z);
       var k = L.z.length;
       if (k >= 4) L.win.push((L.z[k - 1] + L.z[k - 2] + L.z[k - 3] + L.z[k - 4]) / 4);   // 400 ms, a new one every 100 ms
+      if (k >= 30) { var s3 = 0; for (var j = k - 30; j < k; j++) s3 += L.z[j]; L.st.push(s3 / 30); }   // HERESY 1763: 3 s, a new one every 100 ms, for the LRA
     });
     if (L.z.length > 400) L.z.splice(0, L.z.length - 400);
     L.tp = Math.max(L.tp, t.tp || 0);
@@ -1089,12 +1263,13 @@
     L.m = k2 >= 4 ? lufs(L.win[L.win.length - 1]) : null;
     if (k2 >= 30) { var sum = 0; for (var i = k2 - 30; i < k2; i++) sum += L.z[i]; L.s = lufs(sum / 30); } else L.s = null;
     if (++L.n % 10 === 0 || L.i == null) {          // integrated: gated at −70 LUFS, then 10 LU under the mean of what passed
-      var abs = L.win.filter(function (w) { return lufs(w) > -70; });
+      var abs = L.win.filter(function (w) { var l = lufs(w); return l != null && l > -70; });   // HERESY 1755: null (digital silence) is not above the gate
       if (abs.length) {
         var mean = abs.reduce(function (x, y) { return x + y; }, 0) / abs.length, rel = lufs(mean) - 10;
         var gated = abs.filter(function (w) { return lufs(w) > rel; });
         L.i = gated.length ? lufs(gated.reduce(function (x, y) { return x + y; }, 0) / gated.length) : null;
       }
+      L.lra = lra(L.st);                              // HERESY 1763
     }
     var c = t.ss[0] > 1e-12 && t.ss[1] > 1e-12 ? t.xy / Math.sqrt(t.ss[0] * t.ss[1]) : 1;
     L.corr += (c - L.corr) * 0.2;
@@ -1121,6 +1296,7 @@
     if (!g || !g.eng || !g.on) return;
     var rd = g.eng.read(), ns = names(), now = performance.now();
     ns.forEach(function (n, i) { level(n, rd.m[i], rd.gr[i], now); });
+    ns.forEach(function (n, i) { var v = S.lv[n], gg = (rd.gg && rd.gg[i]) || 0; if (v) v.gg = gg >= (v.gg || 0) ? gg : Math.max(gg, (v.gg || 0) - 0.4); });   // HERESY 1760: the gates' reduction, falling back
     level("~room", rd.m[ns.length], 0, now); level("~delay", rd.m[ns.length + 1], 0, now);
     (S.buses.subs || []).forEach(function (b, j) { if (g.subs && g.subs[b.id]) level("%" + b.id, rd.m[ns.length + 3 + j], rd.gr[ns.length + j], now); });   // HERESY 1563
     var mt = S.lv["*"] ? S.lv["*"].t : 0, mv = level("*", rd.m[ns.length + 2], rd.mg ? rd.mg[0] : (S.lv["*"] ? S.lv["*"].gr : 0), now);   // HERESY 1544: the master's compressor and limiter
@@ -1134,6 +1310,7 @@
       el.parentNode.classList.toggle("is-hot", top > -1);
       S.meters[key] = taper(top);                    // HERESY 1501's reading, kept
     });
+    refMatch();                                       // HERESY 1755
     emit("frame");
   }
   function fallMeters() {
@@ -1160,6 +1337,7 @@
       if (f && +f.value !== s.gain_db && document.activeElement !== f) f.value = s.gain_db;
     }
     liveGains();
+    soloPaint();                                      // HERESY 1754
     emit("change", { n: n });
   }
   function onInput(e) {
@@ -1212,6 +1390,8 @@
     if (el.id === "mxReset") { mark(); S.strips = {}; S.versions = {}; S.buses = busesDefault(); restored(); return; }
     if (el.id === "mxMix") { mix(); return; }
     if (el.id === "mxStop") { stopMix(); return; }     // HERESY 1539
+    if (el.id === "mxRef") { refToggle(); return; }    // HERESY 1755
+    if (el.id === "mxUnsolo") { clearSolo(); return; }   // HERESY 1754
     if (el.id === "mxUndo") { undo(); return; }        // HERESY 1531
     if (el.id === "mxRedo") { redo(); return; }
     if (el.id === "mxA" || el.id === "mxB") { abTo(el.id.slice(2)); return; }
@@ -1230,6 +1410,7 @@
       lanePaintAuto(apn); draw(apn);
       return;
     }
+    if (row && k === "solo" && e.altKey) { clearSolo(); return; }   // HERESY 1754: Alt+click on an S, every solo off
     if (row && (k === "mute" || k === "solo")) {
       var n = row.dataset.strip, s = S.strips[n] || (S.strips[n] = {});
       mark();
@@ -1295,6 +1476,7 @@
     }
     var s = S.strips[n] || (S.strips[n] = {});
     if (key.indexOf("comp.") === 0) { s.comp = Object.assign({}, COMP_DEF, s.comp || {}); s.comp[key.slice(5)] = v; }
+    else if (key.indexOf("gate.") === 0) { s.gate = Object.assign({}, GATE_DEF, s.gate || {}); s.gate[key.slice(5)] = v; }   // HERESY 1760
     else s[key] = v;
     changed(n);
   }
@@ -1306,6 +1488,7 @@
     keep();
     if (S.graph) names().forEach(function (n) { applyStrip(S.graph, n); });
     names().forEach(function (m2) { var r = document.querySelector('.mx-lane[data-strip="' + m2 + '"]'); if (r) r.classList.toggle("is-quiet", !audible(m2)); });
+    soloPaint();                                      // HERESY 1754: a VCA's solo too
     emit("change", { group: id, key: key });
   }
   function groupAdd(members) {
@@ -1327,6 +1510,7 @@
     S.buses[bus][key] = v;
     keep();
     applyBuses(S.graph);
+    if (bus === "master" && /^(fade_|end_s)/.test(key)) redrawAll();   // HERESY 1756: the fade drawn over the lanes
     emit("change", { bus: bus, key: key });
   }
   var EV = {};
@@ -1423,6 +1607,7 @@
     if (k === " ") { e.preventDefault(); if (S.playing) stop(); else play(); return; }
     if (k === "Home") { e.preventDefault(); var to = S.loopOn && S.loop ? S.loop[0] : 0; if (S.playing) play(to); else { S.at = to; paintPlayhead(); } return; }
     if (k === "l" || k === "L") { e.preventDefault(); S.loopOn = !S.loopOn; loopPaint(); return; }
+    if (k === "r" || k === "R") { e.preventDefault(); refToggle(); return; }   // HERESY 1755
     if ((k === "Delete" || k === "Backspace") && S.pick) {   // HERESY 1564: the stretch in hand silenced, as a drag would
       e.preventDefault();
       var pn = S.pick.n, ps = S.strips[pn] || (S.strips[pn] = {});
@@ -1676,7 +1861,7 @@
       if (made) {
         S.busy = ""; S.mixId = ""; paintHead();
         var l = made.loudness || {};
-        say(tr("Mixed") + ": " + (l.integrated_lufs != null ? l.integrated_lufs + " LUFS, " : "") + (l.true_peak_dbtp != null ? l.true_peak_dbtp + " dBTP" : "") + (made.lowered_db ? " · " + tr("lowered") + " " + made.lowered_db + " dB" : "") +
+        say(tr("Mixed") + ": " + (l.integrated_lufs != null ? l.integrated_lufs + " LUFS, " : "") + (l.true_peak_dbtp != null ? l.true_peak_dbtp + " dBTP" : "") + (l.loudness_range_lu != null ? ", LRA " + l.loudness_range_lu + " LU" : "") + (made.lowered_db ? " · " + tr("lowered") + " " + made.lowered_db + " dB" : "") +
             ((made.files || []).length > 1 ? " · " + tr("its stems beside it") + ": " + ((made.files || []).length - 1) : ""));
         if (window.HeresyDerived) window.HeresyDerived.refresh();
         return;
@@ -1721,15 +1906,17 @@
       zoom: S.view.zoom, t0: S.view.t0, loop: S.loop, loopOn: S.loopOn, focus: S.focus, meters: Object.assign({}, S.meters),   // HERESY 1501
       peaks: Object.keys(S.peaks).length, ctx: S.ctx ? S.ctx.state : "",
       graph: g ? { kind: g.eng.kind, on: !!g.on, lanes: Object.keys(g.lanes).length, room: !!g.rv.conv, latency: latency(g), master: !!g.mOn } : null,   // HERESY 1531; 1544: master
-      levels: Object.keys(S.lv).length, loud: S.loud ? { m: S.loud.m, s: S.loud.s, i: S.loud.i, tp: S.loud.tp } : null, undo: S.undo.length, redo: S.redo.length, ab: S.ab.cur,
-      dock: S.dock, print: S.print, auto: Object.keys(S.autoShow).filter(function (k2) { return S.autoShow[k2]; }), mon: Object.assign({}, S.mon) }; },
+      levels: Object.keys(S.lv).length, loud: S.loud ? { m: S.loud.m, s: S.loud.s, i: S.loud.i, tp: S.loud.tp, lra: S.loud.lra } : null, undo: S.undo.length, redo: S.redo.length, ab: S.ab.cur,
+      dock: S.dock, print: S.print, auto: Object.keys(S.autoShow).filter(function (k2) { return S.autoShow[k2]; }), mon: Object.assign({}, S.mon),
+      ref: { armed: S.ref.armed, on: S.ref.on, match: S.ref.match, blocks: S.ref.z ? S.ref.z.length : 0 }, fade: S.info ? fadeOf() : null }; },   // HERESY 1755, 1756
     // HERESY 1531: the console's way in (heresy-console.js)
     k: { S: S, names: names, strip: strip, set: setStrip, setBus: setBus, mark: mark, on: on, select: select, setVersion: setVersion, versionOf: versionOf, refresh: refreshVersions,   // 1561
          mixes: { list: function () { return S.named; }, lab: function () { return S.lab; }, saveAs: saveAs, load: loadNamed, del: delNamed },   // HERESY 1533
          monitor: function (k2, on) { if (k2) { S.mon[k2] = on == null ? !S.mon[k2] : !!on; applyMon(S.graph); emit("change", { bus: "monitor" }); } return S.mon; },   // HERESY 1536
          groups: function () { return S.buses.groups || []; }, groupSet: groupSet, groupAdd: groupAdd, groupDel: groupDel, vcaDb: vcaDb,   // HERESY 1543
          subs: function () { return S.buses.subs || []; }, subAdd: subAdd, subSet: subSet, subDel: subDel, subOfStrip: subOfStrip,   // HERESY 1563
+         clearSolo: clearSolo, refToggle: refToggle, fadeDb: fadeDb, clock: clock,   // HERESY 1754–1756
          audible: audible, hue: hueOf, fmtDb: fmtDb, taper: taper, untaper: untaper, analyser: analyser, play: play, stop: stop, pos: pos,
-         lufs: lufs, resetLoud: function () { S.loud = loudReset(); Object.keys(S.lv).forEach(function (k2) { S.lv[k2].max = -150; S.lv[k2].clip = false; }); emit("frame"); },
+         lufs: lufs, lra: lra, loudFeed: loudness, resetLoud: function () { S.loud = loudReset(); Object.keys(S.lv).forEach(function (k2) { S.lv[k2].max = -150; S.lv[k2].clip = false; }); emit("frame"); },
          info: function () { return S.info; }, title: function (n) { var st = S.info && S.info.strips.filter(function (x) { return x.name === n; })[0]; return st ? st.title : tr("Rest"); } } };
 })();

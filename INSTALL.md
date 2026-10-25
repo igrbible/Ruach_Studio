@@ -10,7 +10,7 @@ One Linux machine with an NVIDIA card. The studio runs there; you use it from a 
 | GPU | NVIDIA, **24 GB** runs everything at full precision; **8 to 16 GB** run songs with the Q8_0 model (measured: 5.1 GB with a context of 12 288 rows, 7.7 GB with the whole); **6 GB** Q8_0 with shorter songs, less Q6_K; int8 training under 24 GB. |
 | CUDA | the **CUDA toolkit 12.8** (`nvcc`), in `/usr/local/cuda-12.8` or on the `PATH`; a driver that supports it |
 | tools | `git`, `cmake` 3.24 or newer, `ninja` (optional, faster), `gcc`/`g++` 13, `python3.12` with `python3.12-venv`, `ffmpeg`, `curl` |
-| disk | **about 30 GB**, measured on fresh installs: the program and its two Pythons 16 GB, the models 13 GB for a 16 GB card (16.5 GB with BF16 for 24 GB); the Artist's helpers 8.4 GB and its Qwen-Image 2512 at Q4 31 GB more when you take them (a card under 16 GB streams its blocks from RAM), the 💎 sets 5 GB; and room for your songs |
+| disk | **about 33 GB**, measured on fresh installs: the program and its two Pythons 16 GB, the models 17 GB for a 16 GB card (24 GB with BF16 for 24 GB), Ruach Studio's own fine-tune among them; the Artist's helpers 8.4 GB and its Qwen-Image 2512 at Q4 31 GB more when you take them (a card under 16 GB streams its blocks from RAM), the 💎 sets 5 GB; and room for your songs |
 | tests only | `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test; Node.js 22+ and Chrome or Chromium for the page tests. The studio itself needs none of them: FLAC is made by the engine and by ffmpeg |
 
 On Ubuntu 24.04, everything but CUDA in one line:
@@ -47,6 +47,7 @@ heresy/fetch-heresy.sh --artwork         # the covers' helpers: the prompt write
 heresy/fetch-heresy.sh --qwen 2512-q4    # the Artist's Qwen-Image 2512 at Q4 with Lightning (Apache-2.0), 31 GB, a 16 GB card (2512-q6: 34.5 GB, 24 GB; 2.1: 33 GB, research licence)
 heresy/fetch-heresy.sh --trainer bf16    # the base the LoRA trainer trains on, 7.8 GB (int8: 4.0 GB)
 heresy/fetch-heresy.sh --backbone BF16   # the full backbone beside a Q8_0 one, 7.2 GB
+heresy/fetch-heresy.sh --fw 3.4x0.75-Q8_0   # another merge of Ruach Studio's own fine-tune (seven, each at BF16, Q8_0 and Q6_K); the default, 2.4x0.75, comes with the install
 ./fetch-models.sh --check                # what is here, what is missing; downloads nothing
 ```
 
@@ -60,6 +61,19 @@ The work is done by the bash scripts in `launcher/`, which run the same from a t
 
 Until 2.0.0-rc5 these scripts lived in `pinokio/`, a folder where Pinokio then kept its own environment out of its environment page's reach. The first **Update** of such an install stops halfway, its old script finding its folder gone; the menu then moves what Pinokio wrote there out of its way (its `ENVIRONMENT` beside `pinokio.js`, the rest under `tmp/`) and offers **Finish the update**, which sets the new version up.
 
+## Intel Arc (beta)
+
+An Intel Arc card runs the engine too, as a beta with no guarantees: songs in every mode, adapters, Extend and going on from kept music. Measured on an Arc Pro B50 (16 GB): a song of 30 s in 43 s (BF16) to 60 s (Q8_0, Full with an adapter), where an RTX 3090 takes about 12 s. On Arc, BF16 is the fastest copy; Q8_0 and Q5_K_M save memory, not time. Training, the Artist and the Refiner's GPU steps still want an NVIDIA card, and Pinokio installs the NVIDIA way only.
+
+It needs Intel's GPU driver with Level Zero (the compute runtime) and Intel's **oneAPI Base Toolkit** in `/opt/intel/oneapi` (icpx and the SYCL runtime). Then, in the steps above, instead of `./build.sh --server`:
+
+```bash
+./build.sh --sycl             # the engine for Intel Arc, in build/build-sycl (a CUDA engine beside it stays as it is)
+YUE2_ENGINE=sycl ./start.sh   # or plain ./start.sh, where there is no CUDA engine
+```
+
+With systemd and both kinds of engine on one machine: `systemctl --user edit ruach-studio`, and under `[Service]` the line `Environment=YUE2_ENGINE=sycl`. Several Intel GPUs: `ONEAPI_DEVICE_SELECTOR=level_zero:0` picks one. The kernels are compiled at each start (a few seconds before the first song): oneAPI's kernel cache stays off, because with it libsycl 2026.1 fails at the first kernel.
+
 ## After an update
 
 ```bash
@@ -72,7 +86,7 @@ The page is read from disk at every load: `./build.sh` and a reload of the brows
 ## Tests, if you want to see it work on your machine
 
 ```bash
-tools/test-real.sh                         # the engine on the CPU, its page and a 1-second song (out of date in 2.0.0-pre: it predates the workspaces; renewed for 2.0.0)
+tools/test-real.sh                         # the engine on the CPU, its page and a 1-second song, in a library of its own (1–4 minutes)
 node tools/cdp-console.mjs                 # the page against a stand-in server (about 2 minutes)
 node heresy/tools/check-player.mjs         # the player: a click plays, play-on goes to the next take
 node heresy/tools/check-pinokio.mjs        # the Pinokio launcher without Pinokio: its menu, its scripts, the lines it waits for

@@ -10,7 +10,7 @@ export_*()           a ZIP of chosen takes (FLAC or WAV, with or without what is
                      built as a job into tmp/exports and fetched as a file
 The marks live in the studio's user/ folder (user/collection.json), as the settings do.
 """
-import json, os, re, shutil, subprocess, threading, time, uuid, zipfile
+import json, os, random, re, shutil, subprocess, threading, time, uuid, zipfile
 from pathlib import Path
 
 LOCK = threading.Lock()
@@ -39,6 +39,9 @@ def load(config_dir):
     # HERESY 1368 (Viktor 11.10.2026: «И на аудио треки в студии тоже защиту добавь в опцию и в фильтр в Библиотеке не забудь эту
     # опцию»): the takes protected: never to the trash, never deleted for good (the page's direct deletion asks the same of it)
     d.setdefault("protected", [])
+    # HERESY 1730: the playlist, one ordered list of takes apart from the workspaces (never renamed, deleted or frozen), and its crossfade (0–4 s)
+    d.setdefault("playlist", [])
+    d.setdefault("playlist_xfade", 0)
     if "fresh_since" not in d:                   # from the day this came: the takes before it are not all fresh at once
         d["fresh_since"] = int(time.time())
         save(config_dir, d)
@@ -251,7 +254,9 @@ def catalog(outputs, config_dir):
                      "fresh": (meta.get("created") or 0) >= since and d.name not in played,     # HERESY 1162
                      "regen_of": marks["regen_of"].get(d.name, ""), "frozen": d.name in ice, "protected": d.name in shield})
     return {"takes": rows, "workspaces": sorted(marks["workspaces"]), "trash_days": marks["trash_days"], "locks": marks["locks"],
-            "pins": marks["pins"], "frozen": marks["frozen"]}
+            "pins": marks["pins"], "frozen": marks["frozen"],
+            "playlist": (lambda here: [n for n in marks["playlist"] if n in here])({r["name"] for r in rows}),   # HERESY 1730: only the takes still here
+            "playlist_xfade": marks["playlist_xfade"]}
 
 
 def collection_post(config_dir, outputs, data):
@@ -381,6 +386,38 @@ def collection_post(config_dir, outputs, data):
             src = str(data.get("from") or "")
             for n in names:
                 d["regen_of"][n] = src
+        elif op == "playlist-add":                 # HERESY 1730: where = first | last | random; a take already in it moves there
+            where = str(data.get("where") or "last")
+            if where not in ("first", "last", "random"):
+                raise ValueError("where: first, last or random")
+            pl = [n for n in d["playlist"] if n not in names]
+            add = [n for n in names if (outputs / n).is_dir()]
+            if not add:
+                raise ValueError("no such take")
+            if where == "first":
+                pl = add + pl
+            elif where == "last":
+                pl = pl + add
+            else:
+                for n in add:
+                    pl.insert(random.randint(0, len(pl)), n)
+            d["playlist"] = pl
+        elif op == "playlist-remove":              # HERESY 1730: out of the playlist; the take itself untouched
+            d["playlist"] = [n for n in d["playlist"] if n not in names]
+        elif op == "playlist-order":               # HERESY 1730: the whole list again, as the page dragged it (the same takes)
+            here = [n for n in d["playlist"] if (outputs / n).is_dir()]   # HERESY 1730b: a take gone from the library no longer counts
+            if sorted(set(names)) != sorted(set(here)) or len(names) != len(set(names)):
+                raise ValueError("the order must hold the playlist's own takes, each once")
+            d["playlist"] = names
+        elif op == "playlist-shuffle":             # HERESY 1730: a deck's shuffle
+            pl = list(d["playlist"])
+            random.shuffle(pl)
+            d["playlist"] = pl
+        elif op == "playlist-xfade":               # HERESY 1730: the crossfade between its takes, 0 to 4 s
+            sec = int(data.get("seconds") or 0)
+            if not 0 <= sec <= 4:
+                raise ValueError("a crossfade of 0 to 4 seconds")
+            d["playlist_xfade"] = sec
         elif op == "trash-days":
             days = int(data.get("days") or 0)
             if days not in (0, 7, 14, 28):

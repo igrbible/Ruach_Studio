@@ -155,7 +155,13 @@
       '<span class="ws-key ws-key-rms" data-tip="' + esc(TIP_RMS) + '">RMS</span></span>' +
       '<span class="ws-scale" role="group" aria-label="Frequency scale">' +
       '<button type="button" data-scale="log" data-tip="' + esc(TIP_LOG) + '">Log</button>' +
-      '<button type="button" data-scale="lin" data-tip="' + esc(TIP_LIN) + '">Linear</button></span></div>' +
+      '<button type="button" data-scale="lin" data-tip="' + esc(TIP_LIN) + '">Linear</button></span>' +
+      // HERESY 1740: the view, one setting with the Refiner's card
+      '<span class="ws-scale ws-mode" role="group" aria-label="The spectrum\'s view">' +
+      '<button type="button" data-mode="mono" data-tip="Mono: the two sides averaged, one picture">Mono</button>' +
+      '<button type="button" data-mode="lr" data-tip="Left and right: each side its own picture, one under the other">L / R</button>' +
+      '<button type="button" data-mode="ms" data-tip="Mid and side: what the sides share, and what differs between them, one under the other">M / S</button>' +
+      '<button type="button" data-mode="pan" data-tip="Pan: one picture, each point coloured by where it stands between the sides (blue left, orange right, pale in the middle)">Pan</button></span></div>' +
       '<div class="ws-read" hidden></div><div class="ws-say"></div>';
     document.body.appendChild(el);
     cvBase = el.querySelector(".ws-base");
@@ -172,6 +178,10 @@
     Array.prototype.forEach.call(el.querySelectorAll("[data-scale]"), function (b) {
       b.addEventListener("click", function () { store("yue2.waveScopeScale", b.dataset.scale === "lin" ? "lin" : null); paintScale(); paint(); });
     });
+    Array.prototype.forEach.call(el.querySelectorAll("[data-mode]"), function (b) {   // HERESY 1740
+      b.addEventListener("click", function () { if (window.HeresySpectrum && window.HeresySpectrum.setMode) window.HeresySpectrum.setMode(b.dataset.mode); });
+    });
+    window.addEventListener("heresy-specmode", function () { paintScale(); S.view = null; S.viewKey = ""; S.bitmapKey = ""; S.cut = null; if (S.on) paint(); });
     paintScale();
   }
   function paintScale() {
@@ -181,7 +191,30 @@
       b.classList.toggle("is-on", on);
       b.setAttribute("aria-pressed", on ? "true" : "false");
     });
+    Array.prototype.forEach.call(el.querySelectorAll("[data-mode]"), function (b) {   // HERESY 1740
+      var on = b.dataset.mode === viewMode();
+      b.classList.toggle("is-on", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
   }
+  // HERESY 1740: the view in hand, and the picture's rows: the mono data's one, or the view's two planes
+  function viewMode() { return window.HeresySpectrum && window.HeresySpectrum.mode ? window.HeresySpectrum.mode() : "mono"; }
+  function viewData() { return viewMode() !== "mono" && S.view ? S.view : S.data; }
+  function planes() { var v = viewData(); return v.spec2 ? [v.spec, v.spec2] : [v.spec]; }
+  function rowAt(y) { var n = planes().length, hh = S.L.spec / n, r = Math.max(0, Math.min(n - 1, Math.floor(y / hh))); return { r: r, top: r * hh, h: hh }; }
+  function loadView() {                                 // the view's planes beside the mono data (its RMS, centroid, peak and bands stay the mix's)
+    var take = H.take(), m = viewMode();
+    if (!take || m === "mono" || !S.data) return;
+    var key = take.url + "|" + m;
+    if (S.viewKey === key) return;
+    S.viewKey = key; S.view = null;
+    var token = S.token;
+    window.HeresySpectrum.data(take, function (text) { if (token === S.token) say(text); }, m).then(function (v) {
+      if (token !== S.token || S.viewKey !== key) return;
+      S.view = v; S.bitmapKey = ""; S.cut = null; say(""); paint();
+    }, function (error) { if (token === S.token) say("Could not measure: " + (error && error.message || error), true); });
+  }
+  window.ruachScope = function () { return S.L ? { spec: S.L.spec, dpr: S.L.dpr, rows: S.data ? planes().length : 0, mode: viewMode() } : null; };   // for the checks
   // over the player, on its top edge, as wide as the wave's own drawing (its border left out), a third of the window high
   function place() {
     var w = H.wave, r = w.getBoundingClientRect(), bar = document.getElementById("playbar").getBoundingClientRect();
@@ -211,7 +244,7 @@
     if (!take) return;
     if (S.key === take.url && (S.data || S.loading)) { if (S.data) paint(); return; }
     var token = ++S.token;
-    S.key = take.url; S.data = null; S.d = null; S.loading = true; S.bitmapKey = ""; S.baseKey = ""; S.cut = null; S.read = "";
+    S.key = take.url; S.data = null; S.d = null; S.loading = true; S.bitmapKey = ""; S.baseKey = ""; S.cut = null; S.read = ""; S.view = null; S.viewKey = "";   // HERESY 1740
     [cvBase, cvOver].forEach(function (c) { c.getContext("2d").clearRect(0, 0, c.width, c.height); });
     headEl.querySelector(".ws-title").textContent = take.label || "";
     headEl.querySelector(".ws-stats").innerHTML = "";
@@ -277,7 +310,8 @@
     if (take.url !== S.key) { load(); return; }
     place();
     if (!S.data) return;
-    var L = S.L, D = H.audio.duration, bk = S.key + "|" + L.w + "x" + L.spec + "@" + L.dpr + "|" + scale() + "|" + D.toFixed(2);
+    if (viewMode() !== "mono" && !S.view) { loadView(); if (!S.view) return; }   // HERESY 1740: the view's planes first
+    var L = S.L, D = H.audio.duration, bk = S.key + "|" + viewMode() + "|" + L.w + "x" + L.spec + "@" + L.dpr + "|" + scale() + "|" + D.toFixed(2);
     if (S.bitmapKey !== bk) { S.bitmap = render(); S.bitmapKey = bk; S.baseKey = ""; S.cut = null; }
     var sig = sectionsSig();
     if (S.baseKey !== bk || S.sig !== sig) {
@@ -294,27 +328,32 @@
   // the spectrogram in the window's own pixels: each column the loudest of its frames (a short hit stays seen), each row its frequency
   // between two bins; the columns on the player's own time, so the take's end falls where the wave's does
   function render() {
-    var L = S.L, s = S.data.spec, d = S.d, W = Math.max(1, Math.round(L.w * L.dpr)), Hs = Math.max(1, Math.round(L.spec * L.dpr));
+    // HERESY 1740: one row as before; two planes one under the other, each with its own frequencies; a pan plane colours one picture
+    var L = S.L, d = S.d, v = viewData(), pl = planes(), rows = pl.length, pan = v.pan || null, W = Math.max(1, Math.round(L.w * L.dpr)), Hs = Math.max(1, Math.round(L.spec * L.dpr));
     var c = document.createElement("canvas");
     c.width = W; c.height = Hs;
-    var g = c.getContext("2d"), img = g.createImageData(W, Hs), px = img.data, lut = window.HeresySpectrum.lut;
-    var sc = scale(), D = H.audio.duration, F = s.frames, B = s.bins, span = Math.max(1e-6, d.top - LO), x, y;
-    var rowBin = new Float64Array(Hs);
-    for (y = 0; y < Hs; y++) rowBin[y] = Math.max(0, Math.min(B - 1, freqAt(1 - (y + 0.5) / Hs, sc, d.nyq) / d.nyq * (B - 1)));
-    for (x = 0; x < W; x++) {
-      var f0 = Math.floor(x / W * D * d.fps), f1 = Math.min(F, Math.max(f0 + 1, Math.floor((x + 1) / W * D * d.fps)));
-      for (y = 0; y < Hs; y++) {
-        var v = LO;
-        if (f0 < F) {
-          var b = rowBin[y], k = Math.floor(b), t = b - k;
-          v = -1e9;
-          for (var f = f0; f < f1; f++) {
-            var o = f * B, a = s.db[o + k], z = k + 1 < B ? s.db[o + k + 1] : a, here = a + (z - a) * t;
-            if (here > v) v = here;
+    var g = c.getContext("2d"), img = g.createImageData(W, Hs), px = img.data, lut = window.HeresySpectrum.lut, panPixel = window.HeresySpectrum.panPixel;
+    var sc = scale(), D = H.audio.duration, span = Math.max(1e-6, d.top - LO), x, y;
+    for (var r = 0; r < rows; r++) {
+      var s = pl[r], F = s.frames, B = s.bins, y0 = Math.round(r * Hs / rows), hh = Math.round((r + 1) * Hs / rows) - y0;
+      var rowBin = new Float64Array(hh);
+      for (y = 0; y < hh; y++) rowBin[y] = Math.max(0, Math.min(B - 1, freqAt(1 - (y + 0.5) / hh, sc, d.nyq) / d.nyq * (B - 1)));
+      for (x = 0; x < W; x++) {
+        var f0 = Math.floor(x / W * D * d.fps), f1 = Math.min(F, Math.max(f0 + 1, Math.floor((x + 1) / W * D * d.fps)));
+        for (y = 0; y < hh; y++) {
+          var val = LO, vf = -1;
+          if (f0 < F) {
+            var b = rowBin[y], k = Math.floor(b), t = b - k;
+            val = -1e9;
+            for (var f = f0; f < f1; f++) {
+              var o = f * B, a = s.db[o + k], z = k + 1 < B ? s.db[o + k + 1] : a, here = a + (z - a) * t;
+              if (here > val) { val = here; vf = f; }
+            }
           }
+          var i = Math.max(0, Math.min(255, Math.round((val - LO) / span * 255))), q = ((y0 + y) * W + x) * 4;
+          if (pan && vf >= 0) panPixel(px, q, i / 255, (pan[vf * B + Math.min(B - 1, Math.round(rowBin[y]))] - 127.5) / 127.5);
+          else { px[q] = lut[i * 3]; px[q + 1] = lut[i * 3 + 1]; px[q + 2] = lut[i * 3 + 2]; px[q + 3] = 255; }
         }
-        var i = Math.max(0, Math.min(255, Math.round((v - LO) / span * 255))), q = (y * W + x) * 4;
-        px[q] = lut[i * 3]; px[q + 1] = lut[i * 3 + 1]; px[q + 2] = lut[i * 3 + 2]; px[q + 3] = 255;
       }
     }
     g.putImageData(img, 0, 0);
@@ -343,14 +382,19 @@
     g.textAlign = "left";
     g.textBaseline = "middle";
     var ticks = sc === "log" ? [50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000] : [2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000, 22000];
-    ticks.forEach(function (fq) {
+    var rows = planes().length, rh = L.spec / rows;     // HERESY 1740: each row its own frequencies, its name at its top
+    for (var rr = 0; rr < rows; rr++) ticks.forEach(function (fq) {
       if (fq >= nyq) return;
-      var y = Math.round(L.spec * (1 - yOf(fq, sc, nyq))) + 0.5;
-      if (y < HEAD_H + 22 || y > L.spec - 18) return;   // clear of the sections' names and the times
+      var y = Math.round(rr * rh + rh * (1 - yOf(fq, sc, nyq))) + 0.5;
+      if (y < Math.max(HEAD_H + 22, rr * rh + 14) || y > (rr + 1) * rh - 18) return;   // clear of the sections' names, the times and the rows' edges
       g.fillStyle = "rgba(255,255,255,.09)";
       g.fillRect(0, y - 0.5, L.w, 1);
       label(g, tickName(fq), 6, y, TEXT);
     });
+    if (rows > 1) {
+      g.fillStyle = "rgba(0,0,0,.6)"; g.fillRect(0, Math.round(rh) - 1, L.w, 2);
+      (viewData().planes || []).forEach(function (n, j) { label(g, n, L.w - 22, Math.max(HEAD_H + 30, j * rh + 14), "#f3e7c9"); });
+    }
     // the times' grid, the times at the picture's foot
     var every = [5, 10, 15, 30, 60, 120, 300].filter(function (e) { return e / D * L.w >= 70; })[0] || 600;
     g.textBaseline = "alphabetic";
@@ -360,8 +404,9 @@
       g.fillRect(tx - 0.5, HEAD_H, 1, L.spec - HEAD_H);
       label(g, clock(t), tx + 3, L.spec - 5, "rgba(232,213,160,.72)");
     }
-    // the spectral centroid: a line through the picture, broken where the take is near silent
+    // the spectral centroid: a line through the picture, broken where the take is near silent (HERESY 1740: over one row only, it is the mix's)
     var path = new Path2D(), pen = false;
+    if (rows === 1) {
     for (cx = 0; cx < L.w; cx++) {
       fr = frames(cx, L.w, D, d.fps, F);
       var acc = 0, m = 0;
@@ -373,6 +418,7 @@
     g.lineJoin = "round";
     g.strokeStyle = "rgba(0,0,0,.6)"; g.lineWidth = 3.5; g.stroke(path);
     g.globalAlpha = 0.95; g.strokeStyle = MAGENTA; g.lineWidth = 1.5; g.stroke(path); g.globalAlpha = 1;
+    }
     // the lane at the foot: the RMS of each moment, 0 to -60 dBFS, the take's own average dashed
     var top = L.spec, lh = L.lane;
     function ry(v) { return top + 3 + (1 - Math.max(0, Math.min(60, v + 60)) / 60) * (lh - 6); }
@@ -429,19 +475,25 @@
   // the spectrum of the moment under the line: its column's frames and one each side, their power averaged; a row every 2 px; its
   // loudest bin from 30 Hz up, a parabola through it and its neighbours for the frequency between two bins
   function cut(x) {
-    var L = S.L, s = S.data.spec, d = S.d, D = H.audio.duration, F = s.frames, B = s.bins, nyq = d.nyq, sc = scale(), k, f;
-    var fr = frames(x, L.w, D, d.fps, F);
-    if (fr[0] >= F) return null;
-    var f0 = Math.max(0, fr[0] - 1), f1 = Math.min(F - 1, fr[1]), n = f1 - f0 + 1, mean = new Float64Array(B);
-    for (f = f0; f <= f1; f++) for (k = 0; k < B; k++) mean[k] += Math.pow(10, s.db[f * B + k] / 10);
-    for (k = 0; k < B; k++) mean[k] = 10 * Math.log10(mean[k] / n + 1e-14);
-    var ys = [], vs = [];
-    for (var y = HEAD_H + 2; y < L.spec; y += 2) { ys.push(y); vs.push(levelAt(mean, freqAt(1 - y / L.spec, sc, nyq), nyq)); }
-    var lo = Math.max(1, Math.ceil(30 / nyq * (B - 1))), best = lo;
-    for (k = lo; k < B - 1; k++) if (mean[k] > mean[best]) best = k;
-    var l = mean[best - 1], m = mean[best], r = mean[best + 1], den = l - 2 * m + r, off = den < 0 ? 0.5 * (l - r) / den : 0;
-    var lf = (best + off) * nyq / (B - 1);
-    return { x: x, key: S.bitmapKey, ys: ys, vs: vs, mean: mean, loud: { f: lf, v: m, y: L.spec * (1 - yOf(Math.max(20, lf), sc, nyq)) } };
+    // HERESY 1740: a slice for each row (its own plane and frequencies); the loudest point of the loudest row
+    var L = S.L, pl = planes(), rows = pl.length, d = S.d, D = H.audio.duration, nyq = d.nyq, sc = scale(), k, f;
+    var ys = [], vs = [], rs = [], means = [], loud = null;
+    for (var r = 0; r < rows; r++) {
+      var s = pl[r], F = s.frames, B = s.bins, fr = frames(x, L.w, D, d.fps, F);
+      if (fr[0] >= F) return null;
+      var f0 = Math.max(0, fr[0] - 1), f1 = Math.min(F - 1, fr[1]), n = f1 - f0 + 1, mean = new Float64Array(B);
+      for (f = f0; f <= f1; f++) for (k = 0; k < B; k++) mean[k] += Math.pow(10, s.db[f * B + k] / 10);
+      for (k = 0; k < B; k++) mean[k] = 10 * Math.log10(mean[k] / n + 1e-14);
+      means.push(mean);
+      var top = r * L.spec / rows, hh = L.spec / rows;
+      for (var y = Math.max(HEAD_H + 2, Math.ceil(top) + 2); y < top + hh; y += 2) { ys.push(y); vs.push(levelAt(mean, freqAt(1 - (y - top) / hh, sc, nyq), nyq)); rs.push(r); }
+      var lo = Math.max(1, Math.ceil(30 / nyq * (B - 1))), best = lo;
+      for (k = lo; k < B - 1; k++) if (mean[k] > mean[best]) best = k;
+      var l = mean[best - 1], m = mean[best], rt = mean[best + 1], den = l - 2 * m + rt, off = den < 0 ? 0.5 * (l - rt) / den : 0;
+      var lf = (best + off) * nyq / (B - 1);
+      if (!loud || m > loud.v) loud = { f: lf, v: m, y: top + hh * (1 - yOf(Math.max(20, lf), sc, nyq)) };
+    }
+    return { x: x, key: S.bitmapKey, ys: ys, vs: vs, rs: rs, mean: means[0], means: means, loud: loud };
   }
   function levelAt(mean, fq, nyq) {
     var B = mean.length, b = Math.max(0, Math.min(B - 1, fq / nyq * (B - 1))), k = Math.floor(b), t = b - k, a = mean[k], z = k + 1 < B ? mean[k + 1] : a;
@@ -469,7 +521,7 @@
       g.fillRect(dir > 0 ? x0 : x0 - PROFILE_W - 8, HEAD_H, PROFILE_W + 8, L.spec - HEAD_H);
       for (var i = 0; i < c.ys.length; i++) {
         var X = x0 + dir * (4 + Math.max(0, Math.min(1, (c.vs[i] - LO) / span)) * PROFILE_W);
-        if (i) path.lineTo(X, c.ys[i]); else path.moveTo(X, c.ys[i]);
+        if (i && c.rs[i] === c.rs[i - 1]) path.lineTo(X, c.ys[i]); else path.moveTo(X, c.ys[i]);   // HERESY 1740: a line a row
       }
       g.strokeStyle = "rgba(255,255,255,.92)"; g.lineWidth = 1.2; g.stroke(path);
       if (c.loud.v > LO && c.loud.y > HEAD_H && c.loud.y < L.spec) {
@@ -500,9 +552,9 @@
     if (d.cen[fi] > 0) rows.push("<div>" + esc("centroid " + hz(d.cen[fi])) + "</div>");
     if (c && c.loud.v > LO) rows.push('<div><span>' + esc("loudest " + hz(c.loud.f)) + '</span> <span class="ws-note" translate="no">' + esc(note(c.loud.f)) + "</span></div>");
     if (p.pic && c) {
-      var fq = freqAt(1 - p.y / L.spec, scale(), d.nyq);
+      var rw = rowAt(p.y), fq = freqAt(1 - (p.y - rw.top) / rw.h, scale(), d.nyq), pn = (viewData().planes || [])[rw.r];   // HERESY 1740: the row under the pointer
       rows.push('<div class="ws-r-here"><span>' + esc("here " + hz(fq)) + '</span> <span class="ws-note" translate="no">' + esc(note(fq)) + "</span> <span>" +
-        esc(dB(levelAt(c.mean, fq, d.nyq)) + " dB") + "</span></div>");
+        esc(dB(levelAt(c.means ? c.means[rw.r] : c.mean, fq, d.nyq)) + " dB") + "</span>" + (planes().length > 1 && pn ? ' <span class="ws-note" translate="no">' + esc(pn) + "</span>" : "") + "</div>");
     }
     var html = rows.join("");
     if (html !== S.read) { readEl.innerHTML = html; S.read = html; }

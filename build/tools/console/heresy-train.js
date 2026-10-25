@@ -23,6 +23,7 @@
     hooks: null, data: null, trash: [], raw: null, rows: [], kind: "style",
     set: recall("yue2.trSet") || "", pane: recall("yue2.trPane") || "", sel: recall("yue2.trRun") || "", epoch: "", cmp: "",
     filter: recall("yue2.trFilter") || "all", search: "", folded: recall("yue2.trFolded") === "1", timer: 0, first: true,
+    st: recall("yue2.trState") || "",              // HERESY 1659: a state the runs are seen by
     stacked: recall("yue2.trStacked") === "1"      // HERESY 1299: the Telemetry's curves one under the other
   };
   function $(id) { return document.getElementById(id); }
@@ -49,7 +50,8 @@
   function when(t) { var d = new Date((t || 0) * 1000); return t ? d.toLocaleDateString(window.RuachI18n ? window.RuachI18n.locales() : undefined) + " " + d.toTimeString().slice(0, 5) : ""; }   // 1165, 1166
   function runs() { return (state.data && state.data.runs) || []; }
   function runOf(name) { return runs().filter(function (r) { return r.name === name; })[0] || null; }
-  function isLive(r) { return r && (r.status === "running" || r.status === "stopping"); }
+  function isLive(r) { return r && (r.status === "running" || r.status === "stopping" || r.status === "pausing"); }   // HERESY 1659: pausing too
+  function stateOf(r) { return isLive(r) ? "running" : r.status; }
   function engineOf(r) { return ((r && r.options) || {}).engine === "ruach" ? "ruach" : "ai-toolkit"; }
   function epochs(r) { return r.tracks ? (r.steps || 0) / r.tracks : 0; }
 
@@ -128,7 +130,7 @@
     // HERESY 1166: the names as typed, the words translated piece by piece
     $("trSayRaw").textContent = state.raw ? state.raw + (state.rows.length ? " · " + tr(included + " of " + state.rows.length) : "") : tr("a folder of datasets/raw/");
     $("trSaySet").textContent = set ? set.name + " · " + tr(set.tracks + " tracks") : tr("a caption for every track");
-    $("trSayTrain").textContent = tr(KINDS[state.kind].label.toLowerCase()) + " · " + tr("rank " + ($("tr_rank").value || "?")) + " · " + $("tr_quant").value +
+    $("trSayTrain").textContent = tr(KINDS[state.kind].label.toLowerCase()) + " · " + tr("rank " + (parseInt($("tr_rank").value, 10) ? Math.max(4, Math.floor(parseInt($("tr_rank").value, 10) / 2)) + " · " + $("tr_rank").value : "?"))   /* HERESY 1668: music · sound, 1:2 */ + " · " + $("tr_quant").value +
       ($("tr_engine").value === "ruach" ? "" : " · AI-Toolkit");
     $("trSayRun").textContent = r ? r.name + (isLive(r) && r.steps ? " · " + Math.floor(100 * (r.step || 0) / r.steps) + " %" : " · " + tr(r.status)) : tr("a run: its curves and epochs");
     var done = { raw: !!state.raw, set: !!set, train: runs().some(function (x) { return x.dataset === state.set; }), run: !!(r && r.status === "done") };
@@ -146,7 +148,8 @@
     if (!own[q]) lack.push("Comfy-Org's YuE2 " + q + " weights");
     if (!own.mert) lack.push("MERT-v2-FullSong");
     if (!own.head) lack.push("the realaudio tokenizer head");
-    if (lack.length) html += '<p class="tr-warn">The studio’s trainer is missing ' + esc(lack.join(", ")) + ": <code>heresy/fetch-heresy.sh --trainer " + esc(q) + "</code>" +
+    // HERESY 1672: each name in the page's language before the join (the pattern's «{0}» is the whole list, which no key knows)
+    if (lack.length) html += '<p class="tr-warn">The studio’s trainer is missing ' + esc(lack.map(tr).join(", ")) + ": <code>heresy/fetch-heresy.sh --trainer " + esc(q) + "</code>" +
       (own.mert ? "" : " and <code>tools/download-checkpoints.sh</code>") + ".</p>";
     $("trWarn").innerHTML = html;
   }
@@ -159,7 +162,7 @@
       var pct = r.steps ? 100 * (r.step || 0) / r.steps : 0, ser = r.series || {};
       var loss = ser.flow ? ser.flow.last : r.loss, ar = ser.ar_ce ? ser.ar_ce.last : r.ar_ce;
       return '<button type="button" class="tr-liverow' + (r.name === state.sel && state.pane === "run" ? " is-on" : "") + '" data-open="' + esc(r.name) + '" data-tip="Its telemetry">' +
-        '<span class="tr-lname"><i class="tr-pulse"></i><b translate="no">' + esc(r.name) + "</b><em>" + esc(r.kind || "") + " · " + (engineOf(r) === "ruach" ? "Ruach" : "AI-Toolkit") + " · GPU" + esc(r.gpu) + "</em></span>" +
+        '<span class="tr-lname"><i class="tr-pulse"></i><b translate="no">' + esc(r.name) + "</b><em>" + esc(r.kind || "") + " · " + (engineOf(r) === "ruach" ? "Ruach" : "AI-Toolkit") + " · GPU" + esc(r.gpus && r.gpus.length > 1 ? r.gpus.join("+") : r.gpu) + "</em></span>" +
         '<span class="tr-lbar"><i style="width:' + pct.toFixed(1) + '%"></i></span>' +
         '<span class="tr-lnums mono">' + pct.toFixed(0) + " % · " + (r.step || 0) + "/" + (r.steps || "?") +
           (r.tracks ? " · e" + ((r.step || 0) / r.tracks).toFixed(1) + "/" + Math.round(epochs(r)) : "") +
@@ -170,6 +173,7 @@
 
   // ------------------------------------------------------------------ the column of runs
   function inFilter(r) {
+    if (state.st && stateOf(r) !== state.st) return false;   // HERESY 1659
     if (state.filter === "active") return isLive(r);
     if (state.filter === "archived") return !!r.archived;
     return !r.archived;                                     // All: everything not archived
@@ -188,6 +192,11 @@
   function paintList() {
     var q = state.search.trim().toLowerCase(), html;
     Array.prototype.forEach.call(document.querySelectorAll("#trFilters [data-filter]"), function (b) { b.setAttribute("aria-pressed", b.dataset.filter === state.filter ? "true" : "false"); });
+    Array.prototype.forEach.call(document.querySelectorAll("#trStates [data-state]"), function (b) {   // HERESY 1659: each state with its count
+      var n = runs().filter(function (r) { return stateOf(r) === b.dataset.state; }).length;
+      b.setAttribute("aria-pressed", b.dataset.state === state.st ? "true" : "false");
+      b.dataset.n = n; b.classList.toggle("is-none", !n);
+    });
     if (state.filter === "trash") {
       var t = state.trash.filter(function (x) { return !q || (x.name + " " + (x.dataset || "") + " " + (x.kind || "")).toLowerCase().indexOf(q) >= 0; });
       html = t.length ? t.map(function (x) {
@@ -212,7 +221,7 @@
   }
   function card(r) {
     var pct = r.steps ? 100 * (r.step || 0) / r.steps : 0, live = isLive(r);
-    var ep = r.tracks ? "e" + Math.floor((r.step || 0) / r.tracks) + "/" + Math.round(epochs(r)) : (r.step || 0) + "/" + (r.steps || "?");
+    var ep = r.tracks ? "e" + epochSaid(Math.floor(10 * (r.step || 0) / r.tracks) / 10) + "/" + Math.round(epochs(r)) : (r.step || 0) + "/" + (r.steps || "?");   // HERESY 1736: its tenths
     return '<article class="tr-rcard' + (live ? " is-running" : "") + (r.name === state.sel ? " is-selected" : "") + (r.archived ? " is-archived" : "") + '" data-open="' + esc(r.name) + '" tabindex="0">' +
       '<div class="tr-rtitle" translate="no">' + esc(r.name) + "</div>" +
       '<div class="tr-rsub">' + rsub([r.kind, r.dataset, r.tracks ? r.tracks + " tracks" : ""]) + "</div>" +
@@ -238,6 +247,8 @@
       '<button type="button" role="menuitem" data-act="log">The log</button>' +   // HERESY 1167: at the page's foot
       (canGoOn(r) ? '<button type="button" role="menuitem" data-act="goon">Go on to more epochs…</button>' : "") +   // HERESY 1300
       '<button type="button" role="menuitem" data-act="' + (r.archived ? "unarchive" : "archive") + '">' + (r.archived ? "Out of the archive" : "Archive") + "</button>" +
+      (r.status === "running" ? '<button type="button" role="menuitem" data-act="pause">' + esc(tr("Pause")) + "</button>" : "") +   // HERESY 1659
+      (r.status === "paused" ? '<button type="button" role="menuitem" data-act="resume">' + esc(tr("Resume")) + "</button>" : "") +
       (isLive(r) ? '<button type="button" role="menuitem" class="danger" data-act="stop">Stop…</button>'
                  : '<button type="button" role="menuitem" class="danger" data-act="delete">Delete…</button>');
     document.body.appendChild(pop);
@@ -322,9 +333,10 @@
       if (v === null) return;
       var n = parseInt(v, 10);
       if (!(n > at && n <= 1000)) return toast(tr("More epochs than " + now + ", please"), true);
-      var spec = { dataset: r.dataset, name: r.name, kind: r.kind || "", engine: "ruach", steps: n * tracks, save_epochs: o.save_epochs || 1, rank: o.rank, lr: o.lr,
-        ar_loss_weight: o.ar_loss_weight, ar_kl_weight: o.ar_kl_weight, ar_lr_multiplier: o.ar_lr_multiplier, cot: o.cot || "off", quant: o.quant || "bf16",
-        do_separation: !!o.do_separation, note: r.note || "" };   // HERESY 1422: the run's own separation kept
+      // HERESY 1752: every knob the run was given (its held-out tracks, its average's span, its AR tokens, its cards, its fade…), the steps more:
+      // the lab takes a knob not sent from its defaults, so naming eight of them let a run gone on lose the rest
+      var spec = Object.assign({}, o, { dataset: r.dataset, name: r.name, kind: r.kind || "", engine: "ruach", steps: n * tracks, save_epochs: o.save_epochs || 1,
+        cot: o.cot || "off", quant: o.quant || "bf16", do_separation: !!o.do_separation, note: r.note || "" });   // HERESY 1422: the run's own separation kept
       return api("/train/run", spec).then(function () {
         toast(tr(name + " goes on to " + n + " epochs"));
         state.sel = name; keep("yue2.trRun", name);
@@ -339,6 +351,8 @@
     if (what === "archive" || what === "unarchive")
       return api("/train/archive", { name: name, archived: what === "archive" }).then(function () { toast(what === "archive" ? name + " is archived" : name + " is back from the archive"); load(); }).catch(function (e) { toast(e.message, true); });
     if (what === "stop") return stopRun(name);
+    if (what === "pause") return api("/train/pause", { name: name }).then(function () { toast(tr("Pausing {0}: it saves what it has learned and waits for Resume").replace("{0}", name)); load(); }).catch(function (e) { toast(e.message, true); });   // HERESY 1659
+    if (what === "resume") return api("/train/resume", { name: name }).then(function () { toast(tr("Resuming {0} from its last save").replace("{0}", name)); load(); }).catch(function (e) { toast(e.message, true); });
     if (what === "delete") return deleteRun(name);
   }
   function stopRun(name) {
@@ -386,6 +400,24 @@
     curve.forEach(function (p) { v = v == null ? p[1] : v + a * (p[1] - v); out.push([p[0], v]); });
     return out;
   }
+  // HERESY 1736: an epoch as it is said: its tenths (0.7, 1.3), a whole one without a point (1, 2)
+  function epochSaid(e) { var x = Math.round(e * 10) / 10; return Math.abs(x - Math.round(x)) < 1e-9 ? String(Math.round(x)) : x.toFixed(1); }
+  // HERESY 1736: the held-out measure (1497) when the run has one: the saves it rates best, each with why (else null)
+  function heldOutBest(r) {
+    var hist = ((r.val || {}).history || []).filter(function (h) { return h && h.step && h.flow != null; });
+    if (!hist.length) return null;
+    var byStep = {}, out = {};
+    (r.checkpoints || []).forEach(function (k) { if (k.step) byStep[k.step] = k; });
+    var mark = function (h, why) {
+      var k = byStep[h.step]; if (!k) return;
+      out[k.file] = (out[k.file] ? out[k.file] + "; " : "") + tr(why + " (flow " + Number(h.flow).toFixed(4) + (h.ar_ce != null ? ", ar_ce " + Number(h.ar_ce).toFixed(3) : "") + ")");
+    };
+    var f = hist.reduce(function (b, h) { return h.flow < b.flow ? h : b; }, hist[0]), ce = hist.filter(function (h) { return h.ar_ce != null; });
+    var m = ce.length ? ce.reduce(function (b, h) { return h.ar_ce < b.ar_ce ? h : b; }, ce[0]) : null;
+    if (m && m.step === f.step) mark(f, "the lowest sound and music loss on the held-out tracks");
+    else { mark(f, "the lowest sound loss on the held-out tracks"); if (m) mark(m, "the lowest music loss on the held-out tracks"); }
+    return Object.keys(out).length ? out : null;
+  }
   // a curve over the steps: the raw points faint, their running average bold, the epochs as ticks (a filled one
   // is in loras/), the chosen epoch as a line; y labelled at its top, middle and bottom
   // HERESY 1093 (Viktor, 02.10.2026): the epochs worth hearing first, read off the curves (a guess; the ear
@@ -394,6 +426,8 @@
   // out) and the music half not yet knowing the songs by heart (ar_ce 0.3 or more). Lit: the first such epoch,
   // the one with the lowest sound loss, and the last before the music half learns the songs by heart.
   function candidates(r) {
+    var held = heldOutBest(r);                            // HERESY 1736: measured on the held-out tracks, not guessed off the curves
+    if (held) return held;
     var ser = r.series || {}, f = (ser.flow || ser.loss || {}).curve, c = (ser.ar_ce || {}).curve;
     if (!f || f.length < 8) return {};
     var fa = ema(f, 0.08), ca = c && c.length > 1 ? ema(c, 0.08) : null;
@@ -458,6 +492,8 @@
           '<option value="">Compare with\u2026</option>' + runs().filter(function (x) { return x.name !== r.name && x.series && x.series.flow; })
             .sort(function (x, y) { return (y.dataset === r.dataset) - (x.dataset === r.dataset); })
             .map(function (x) { return '<option value="' + esc(x.name) + '"' + (x.name === state.cmp ? " selected" : "") + ">" + esc(x.name) + (x.dataset === r.dataset ? " \u00b7 same set" : "") + "</option>"; }).join("") + "</select>" +
+          (r.status === "running" ? '<button type="button" class="btn ghost small" data-act="pause" data-run="' + esc(r.name) + '" data-tip="' + esc(tr("Pause: the run saves what it has learned and waits; Resume goes on from that save, with the same set, knobs and cards.")) + '">' + esc(tr("Pause")) + "</button>" : "") +   // HERESY 1659
+          (r.status === "paused" ? '<button type="button" class="btn ghost small" data-act="resume" data-run="' + esc(r.name) + '" data-tip="' + esc(tr("Resume: the run goes on from its last save, with the same set, knobs and cards.")) + '">' + esc(tr("Resume")) + "</button>" : "") +
           (live ? '<button type="button" class="btn ghost small danger" data-act="stop" data-run="' + esc(r.name) + '">Stop</button>' : "") +
           '<button type="button" class="btn ghost small" data-act="log" data-run="' + esc(r.name) + '">The log</button>' +   // HERESY 1167
           // HERESY 1299 (Viktor: «выстраивать в одну колонку оба блока живого графа»): the face shows what a click makes
@@ -477,7 +513,10 @@
         tile("ar_ce now", ar != null ? Number(ar).toFixed(3) : "—", "the music half's loss, averaged over the last 25 steps") +
         tile("ar_kl now", ser.ar_kl ? ser.ar_kl.last.toFixed(4) : "—", "how far the music half has moved from the base model") +
         tile("VRAM peak", r.vram_peak_mb ? (r.vram_peak_mb / 1024).toFixed(1) + " GB" : "—", "the card's peak while it ran") +
-        tile("GPU", r.gpu != null ? "GPU" + esc(r.gpu) : "—") +
+        tile("GPU", r.gpus && r.gpus.length > 1 ? "GPU" + esc(r.gpus.join("+")) : r.gpu != null ? "GPU" + esc(r.gpu) : "—") +   // HERESY 1631
+        // HERESY 1736: the held-out best (1497), its epoch
+        (r.val && r.val.best && r.val.best.flow != null ? tile("held-out best", Number(r.val.best.flow).toFixed(4) + (r.tracks && r.val.best.step ? " · e" + epochSaid(r.val.best.step / r.tracks) : ""),
+          "The sound half's loss on " + ((r.val.held_out || []).length || 16) + " tracks it never trains on, measured at each save: the lowest so far, and the epoch it came at") : "") +
       "</div>" +
       (memo ? '<p class="tr-err">ar_ce ' + Number(ar).toFixed(3) + ": the music half is learning the songs by heart; an earlier epoch may be the better adapter.</p>" : "") +
       (ser.error ? '<p class="tr-err">' + esc(ser.error) + "</p>" : "") + (r.error ? '<p class="tr-err">' + esc(r.error) + "</p>" : "") +
@@ -488,15 +527,16 @@
           "How well the music half predicts the song’s own tokens. Lower is better; close to 0 it knows the songs by heart, and an earlier epoch is then the better adapter.") +
       "</div>" +
       (cks.length ? '<div class="tr-epochs"><div class="tr-ehead"><span class="label">Epochs · ' + cks.length + " saved · " + gb(bytes) + "</span>" +
-          '<span class="row-hint">a click: into the Creator’s LoRAs or out of them; a right-click: its file \u00b7 <span class="tr-key-cand"></span> worth hearing first, read off the curves (a guess: the ear decides) \u00b7 \u2713 in loras/</span></div>' +
+          '<span class="row-hint">a click: into the Creator’s LoRAs or out of them; a right-click: its file \u00b7 <span class="tr-key-cand"></span>' + (heldOutBest(r) ? " worth hearing first, by the held-out tracks (the ear decides) \u00b7 \u2713 in loras/" : " worth hearing first, read off the curves (a guess: the ear decides) \u00b7 \u2713 in loras/") + "</span></div>" +   // HERESY 1736
         '<div class="tr-echips">' + cks.map(function (c) {
           var why = cand[c.file];
-          return '<button type="button" class="coll-chip' + (c.lora ? " is-in" : "") + (why ? " is-cand" : "") + (c.file === state.epoch ? " is-on" : "") + '" data-epoch="' + esc(c.file) + '" data-tip="' + esc([tr("step " + c.step), when(c.saved), c.lora ? tr("in loras/") : "", why ? tr("worth hearing first: " + why) : ""].filter(Boolean).join(" · ")) + '">' + (c.epoch != null ? "e" + Math.round(c.epoch) : "final") + (c.lora ? " ✓" : "") + "</button>";
+          return '<button type="button" class="coll-chip' + (c.lora ? " is-in" : "") + (why ? " is-cand" : "") + (c.file === state.epoch ? " is-on" : "") + '" data-epoch="' + esc(c.file) + '" data-tip="' + esc([tr("step " + c.step), when(c.saved), c.lora ? tr("in loras/") : "", why ? tr("worth hearing first: " + why) : ""].filter(Boolean).join(" · ")) + '">' + (c.epoch != null ? "e" + epochSaid(c.epoch) : "final") + (c.lora ? " ✓" : "") + "</button>";
         }).join("") + "</div>" +
         "</div>" : "") +
       '<details class="tr-facts"><summary>What it was given</summary><div class="tr-fgrid">' +
         "<span><em>set</em> <span translate=\"no\">" + esc(r.dataset) + "</span>" + (r.tracks ? " · <span>" + r.tracks + " tracks</span>" : "") + "</span>" +   // HERESY 1166
         "<span><em>rank</em> " + esc(o.rank) + " · lr " + esc(o.lr) + "</span>" +
+        (+o.lr_tail_epochs > 0 ? "<span><em>fade</em> " + esc(tr("the last {0} epochs to {1} %").replace("{0}", o.lr_tail_epochs).replace("{1}", Math.round((+o.lr_tail_floor || 0) * 100))) + "</span>" : "") +   // HERESY 1752
         "<span><em>music half</em> AR " + esc(o.ar_loss_weight) + " · KL " + esc(o.ar_kl_weight) + " · <span>speed ×" + esc(o.ar_lr_multiplier) + "</span></span>" +
         "<span><em>mode</em> <span>" + esc(o.cot) + "</span> · " + esc(o.quant) + (o.do_separation ? " · <span>separated</span>" : "") + "</span>" +
         "<span><em>window</em> " + Math.round((o.train_window_frames || 0) / 25) + " s</span>" +
@@ -539,7 +579,7 @@
     var r = runOf(state.sel), c = epochOf(file);
     if (!r || !c) return;
     var why = candidates(r)[file], as = c.lora ? c.lora.split("/").pop().replace(/\.safetensors$/, "") : "";
-    window.HeresyDialog.confirm((c.epoch != null ? tr("Epoch " + Math.round(c.epoch)) : tr("The final file")) + " \u00b7 " + r.name + "\n\n" +
+    window.HeresyDialog.confirm((c.epoch != null ? tr("Epoch " + epochSaid(c.epoch)) : tr("The final file")) + " \u00b7 " + r.name + "\n\n" +
       [tr("step " + c.step), when(c.saved), gb(c.bytes)].filter(Boolean).join(" \u00b7 ") + "\n" +
       (c.lora ? tr("In loras/ now, in the Creator as " + as + ".") : tr("Not in loras/ now.")) + (why ? "\n" + tr("worth hearing first: " + why) : ""),
       { ok: tr("IN: into loras/"), alt: tr("OUT: out of loras/"), cancel: tr("Cancel") }).then(function (a) {
@@ -766,12 +806,20 @@
     // too (Direct, Full, Melody); HERESY 1422: and Separate (AI-Toolkit left the studio: the studio's own is the only trainer)
     $("tr_cot").disabled = false; $("tr_sep").disabled = false;
   }
+  // HERESY 1631: the cards asked last time, kept in this browser
+  (function () { var c = $("tr_cards"), v = recall("yue2.trCards"); if (c && v && c.querySelector('option[value="' + v + '"]')) c.value = v; })();
   function startRun() {
     var set = state.set;
     if (!set) return toast("Pick a set (made in step 2)", true);
     var spec = { dataset: set, name: slug($("trRunName").value || set + "-" + state.kind), kind: state.kind, engine: $("tr_engine").value };
     ["save_epochs", "rank", "lr", "ar_loss_weight", "ar_kl_weight", "ar_lr_multiplier"].forEach(function (k) { spec[k] = parseFloat($("tr_" + k).value); });
+    // HERESY 1752: the rate's fade over the run's last epochs, down to a per cent of itself (the lab and the trainer take it as a share)
+    spec.lr_tail_epochs = Math.max(0, parseFloat($("tr_lr_tail_epochs") && $("tr_lr_tail_epochs").value) || 0);
+    spec.lr_tail_floor = Math.max(0, Math.min(100, parseFloat($("tr_lr_tail_floor") && $("tr_lr_tail_floor").value) || 0)) / 100;
     spec.cot = $("tr_cot").value; spec.quant = $("tr_quant").value; spec.do_separation = $("tr_sep").checked;
+    spec.cards = Math.max(1, parseInt($("tr_cards") && $("tr_cards").value, 10) || 1);   // HERESY 1631
+    keep("yue2.trCards", String(spec.cards));
+    if ($("tr_plateau") && $("tr_plateau").checked) { spec.val_fraction = 0.02; spec.patience = 3; }   // HERESY 1622: the plateau, then the sound half alone
     if (runOf(spec.name)) return toast("A run named " + spec.name + " is there already: give this one its own name", true);
     var tracks = ((state.data.prepared || []).filter(function (p) { return p.name === set; })[0] || {}).tracks || 1;
     var ep = Math.max(1, parseInt($("tr_epochs").value, 10) || 1);   // HERESY 1410: epochs asked, the steps the set's tracks times them
@@ -783,7 +831,9 @@
       return confirmBox(tr("Train " + spec.name + "?") + "\n\n" + tr(ep * tracks + " steps (" + ep + " epochs of " + tracks + " tracks) on " + set + ", rank " + spec.rank + ", AR weight " + spec.ar_loss_weight + ", " + spec.quant + " weights, " +
         (spec.engine === "ruach" ? "the studio’s trainer" : "AI-Toolkit") + "; a checkpoint every " + (spec.save_epochs > 1 ? spec.save_epochs + " epochs" : "epoch") + ", all kept.") + " " +
         tr("It takes a GPU of its own for hours" + (spec.engine === "ruach" ? "; a set without its latent cache gets one first (a second or two a track)." : "; the first run also fetches Comfy-Org’s YuE2 weights.")) +
-        (shared ? "\n\n" + tr("Training may take GPU" + g.roles.studio + ", the studio’s own card: if it does, synthesis waits until the run ends (Engine → GPUs gives training another card).") : ""), { ok: "Start training" });   // 1166: "Train" is the step's name
+        (shared ? "\n\n" + tr("Training may take GPU" + g.roles.studio + ", the studio’s own card: if it does, synthesis waits until the run ends (Engine → GPUs gives training another card).") : "") +
+        (spec.cards > 1 ? "\n\n" + tr("On {0} cards at once: each learns its own songs, their lessons averaged every step.").replace("{0}", spec.cards) : "") +
+        (spec.lr_tail_epochs > 0 ? "\n\n" + tr("The learning rate fades over the last {0} epochs to {1} % of itself.").replace("{0}", spec.lr_tail_epochs).replace("{1}", Math.round(spec.lr_tail_floor * 100)) : ""), { ok: "Start training" });   // HERESY 1752   // HERESY 1631   // 1166: "Train" is the step's name
     }).then(function (ok) {
       if (!ok) return;
       return api("/train/run", spec).then(function () { toast("Training " + spec.name); state.sel = spec.name; keep("yue2.trRun", spec.name); return load().then(function () { showPane("run"); }); });
@@ -867,6 +917,10 @@
     });
     $("trRunPane").addEventListener("change", function (e) { if (e.target.id === "trCmp") { state.cmp = e.target.value; paintRun(); } });
     $("trFilters").addEventListener("click", function (e) { var b = e.target.closest("[data-filter]"); if (b) { state.filter = b.dataset.filter; keep("yue2.trFilter", state.filter); paintList(); } });
+    $("trStates").addEventListener("click", function (e) {   // HERESY 1659: one state at a time; the lit one again: all
+      var b = e.target.closest("[data-state]");
+      if (b) { state.st = state.st === b.dataset.state ? "" : b.dataset.state; keep("yue2.trState", state.st); paintList(); }
+    });
     $("trSearch").addEventListener("input", function () { state.search = this.value; paintList(); });
     $("trFold").addEventListener("click", function () { state.folded = true; keep("yue2.trFolded", "1"); paintList(); });
     $("trUnfold").addEventListener("click", function () { state.folded = false; keep("yue2.trFolded", null); paintList(); });

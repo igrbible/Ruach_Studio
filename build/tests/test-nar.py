@@ -11,7 +11,7 @@ Run from the tests/ directory.
 
 Usage:
     ./test-nar.py
-    GGML_BACKEND=CPU ./test-nar.py
+    ./test-nar.py --device CPU
 """
 import os
 import subprocess
@@ -21,6 +21,8 @@ import numpy as np
 import torch
 
 BIN = "../build/test-nar"
+# A leading "--device <name>" is forwarded to the harness
+DEVICE = ["--device", sys.argv[2]] if sys.argv[1:2] == ["--device"] else []
 CKPT = "../checkpoints/YuE2-3B"
 GGUF = "../models/YuE2-3B-BF16.gguf"
 YUE = "../../YuE/src"
@@ -75,7 +77,7 @@ def main():
         ref = np.concatenate(refs)
 
         for suffix, flags in (("", []), ("-clamp", ["--clamp-fp16"])):
-            subprocess.run([BIN, GGUF, TMP + "/nar_ids.bin", TMP + "/nar_xt.bin", str(t_lat), str(m), mode, str(arg),
+            subprocess.run([BIN] + DEVICE + [GGUF, TMP + "/nar_ids.bin", TMP + "/nar_xt.bin", str(t_lat), str(m), mode, str(arg),
                             TMP + "/nar.bin"] + flags, check=True)
             got = np.fromfile(TMP + "/nar.bin", dtype="float32")
             ok = report(label + suffix, ref, got, MAX_REL) and ok

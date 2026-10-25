@@ -5,6 +5,7 @@
 // Only fields the pipeline consumes: the protocol constants (vocabulary
 // slices, sampling presets, frame rate) live in the pipeline, not here.
 
+#include "harmony.h"   // HERESY 1606
 #include "sampling.h"
 
 #include <cstdint>
@@ -42,6 +43,12 @@ struct Yue2LoraGroup {
     int   mode    = 0;
 };
 
+// One adapter of a request (upstream 1603 merge): an entry of the --adapters directory and its strength
+struct Yue2Adapter {
+    std::string name;
+    float       scale;  // 1.0
+};
+
 struct Yue2Request {
     // text content
     std::string style;   // ""
@@ -51,6 +58,10 @@ struct Yue2Request {
     // and the score it produces comes back in the reply so it can be edited
     // and submitted again.
     std::string abc;  // ""
+
+    // HERESY 1608 (timoncool/yue2.cpp 7810749): with abc, the score is the opening of a plan, not the whole of it: it goes in
+    // without its end token and the model writes the rest of the song on from it, in its key and meter (a hummed or played seed)
+    bool abc_continue;  // false
 
     // chain of thought mode: "full", "melody" or "off"
     std::string cot;  // "full"
@@ -98,6 +109,9 @@ struct Yue2Request {
     // here"). It counts in the duration; the song is the kept codes followed by the new ones.
     std::string semantic_keep;  // ""
 
+    // HERESY 1661: the backbone this job is sung on, one of the server's --model names ("" = the Engine's)
+    std::string backbone;  // ""
+
     // HERESY 1169 (Viktor 08.10.2026: a Full song runs on 10-15 s after its proper fade): the take ends at this second (with decode_from its kept latents are decoded only so far; 0: to the end) and fades out over its last fade_out seconds (0: no fade)
     float end_at;    // 0
     float fade_out;  // 0
@@ -109,7 +123,10 @@ struct Yue2Request {
     // and 1.0 otherwise), and a scale of exactly 1.0 keeps a single branch.
     float cfg_scale;  // -1
     float cfg_lyrics;  // HERESY 1397: the lyrics' own guidance in the music stage; -1: as cfg_scale
+    bool  score_planned;  // HERESY 1618: the page planned this score itself first (a key, an instrumental): sung as given, called planned
     bool  free_tempo;  // HERESY 1416: the music stage reads the score without its tempo (Q: lines and [Q:…] fields)
+    bool  nar_ladder;  // HERESY 1768: the sound half in even pieces of about 20 s, each hearing 2 s past its edges (experimental)
+    int   vocal_octave;  // HERESY 1743: a score the model plans whole has its Vocal line moved by this many octaves before it is sung (−3…3; 0: as planned)
 
     // output normalization percentile control, the peak being the
     // 1 - peak_clip / 1e6 percentile of the absolute signal
@@ -133,6 +150,23 @@ struct Yue2Request {
     bool                          score_guard;  // true; a broken score stops the run before the music (HERESY 1087)
     std::string                   parent;     // "" or the library take this re-renders
     std::string                   decode_from;  // "" or a take whose kept latents another decoder makes again (HERESY 1168)
+
+    // adapters stacked on the backbone, each merged into the halves it
+    // changes at its own strength
+    std::vector<Yue2Adapter> adapters;  // empty
+
+    // continuation: the semantic stream of a source song, its section
+    // [source_start, source_end) in seconds opening the song the model then
+    // writes on from. source_end -1 is the end of the source.
+    std::string source_tokens;  // "" (no continuation)
+    float       source_start;   // 0
+    float       source_end;     // -1
+
+    // HERESY 1606 (timoncool/yue2.cpp 1e21e63): chord variety and section order of a planned score, see harmony.h;
+    // "harmony": {"identity": "root"|"spelling", "strength", "window", "hold_limit", "outside_bonus", "outside_limit",
+    // "section_strength", "section_open", "follow": ["intro", "verse", ...]}
+    Yue2Harmony harmony;  // off
+    std::string harmony_error;  // HERESY 1606: why the harmony object was refused, the server's 400
 };
 
 // fills every field with its default
@@ -151,7 +185,8 @@ std::string request_to_json(const Yue2Request * r, bool sparse = true);
 void request_resolve_seed(Yue2Request * r);
 
 // the request that renders one track of a batch again without the
-// autoregression: its score, its semantic stream and the two seeds it consumed
+// autoregression: its score, its semantic stream and the two seeds it
+// consumed, the stream of a continued track whole and its source dropped
 Yue2Request request_replay(const Yue2Request & base,
                            const std::string & abc,
                            const std::string & tokens,

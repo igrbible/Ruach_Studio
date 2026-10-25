@@ -16,13 +16,16 @@ https://huggingface.co/Serveurperso/YuE2-GGUF/tree/main
 |------|----------|------|
 | Backbone | YuE2-3B-Q8_0.gguf | 3.81 GB |
 | VAE | YuE2-Vae-F32.gguf | 530 MB |
-| Transcriber (optional) | SheetSage2-Q8_0.gguf | 958 MB |
+| Audio encoder (optional) | MERT-v2-FullSong-Q8_0.gguf | 902 MB |
+| Transcriber (optional) | SheetSage2-Q8_0.gguf | 106 MB |
+| Audio tokenizer (optional) | yue2-mothersuperior-realaudio-tokenizer-v4-Q8_0.gguf | 47 MB |
 
 Q8_0 is near lossless. The backbone also ships in BF16 / Q6_K / Q5_K_M, the
 VAE in F32 only since its weights are the audio. The Q8_0 pair runs in about
 4.4 GB plus the KV cache, the native pair in about 7.7 GB. The transcriber
-turns a recording into its score for covers; it ships in F32 / Q8_0 / Q6_K /
-Q5_K_M and loads only for a transcription.
+turns a recording into its score for covers and the audio tokenizer into its
+semantic codes, two heads on the MERT audio encoder each finds beside it in
+the same quant; all three ship in F32 / Q8_0 and load only when used.
 
 Alternative: `./models.sh` downloads the default set automatically
 (needs `pip install hf`), `./models.sh --all` everything.
@@ -67,8 +70,10 @@ To build the GGUFs locally from the official checkpoints instead, download
 [m-a-p/YuE2-3B](https://huggingface.co/m-a-p/YuE2-3B),
 [m-a-p/YuE2-Vae](https://huggingface.co/m-a-p/YuE2-Vae), and for the
 transcriber [m-a-p/SheetSage2](https://huggingface.co/m-a-p/SheetSage2) with
-its parent [m-a-p/MERT-v2-FullSong](https://huggingface.co/m-a-p/MERT-v2-FullSong)
-(both gated, accept their terms and `hf auth login` first) into `checkpoints/`.
+its base model [m-a-p/MERT-v2-FullSong](https://huggingface.co/m-a-p/MERT-v2-FullSong)
+(both gated, accept their terms and `hf auth login` first), and the v9 head
+of [Mothersuperior/yue2-mothersuperior-realaudio-tokenizer-v4](https://huggingface.co/Mothersuperior/yue2-mothersuperior-realaudio-tokenizer-v4)
+for the audio tokenizer, into `checkpoints/`.
 
 ```bash
 pip install hf gguf numpy
@@ -81,7 +86,9 @@ pip install hf gguf numpy
 |------|-----------|------|
 | YuE2-3B-BF16.gguf | 3.6B Mixture-of-Transformers backbone | 7.17 GB |
 | YuE2-Vae-F32.gguf | Oobleck VAE encoder + decoder | 530 MB |
-| SheetSage2-F32.gguf | SheetSage2 transcriber on MERT-v2-FullSong, LoRA merged | 2.71 GB |
+| MERT-v2-FullSong-F32.gguf | MERT-v2 audio encoder | 2.53 GB |
+| SheetSage2-F32.gguf | SheetSage2 transcriber head and its MERT LoRA | 229 MB |
+| yue2-mothersuperior-realaudio-tokenizer-v4-F32.gguf | Mothersuperior audio tokenizer head, v9 | 171 MB |
 
 ## Run
 
@@ -95,7 +102,24 @@ write style tags and lyrics, generate, read the score the model composed,
 play and download tracks. Open an MP3 or WAV to get it on a card, then
 Transcribe score or Transcribe melody from the card menu: the score lands
 in the score field, pick the matching mode, add your lyrics and a style,
-and the model covers the song.
+and the model covers the song. Tokenize audio puts the semantic codes of
+the recording on its card and in the form instead: Generate renders the
+song again through YuE2, best with the realaudio NAR adapter selected. Every track
+keeps the VAE latents it was decoded from in the browser, the VAE badge
+of its card: download them as a .vae file, open one to get its card back,
+or compute them for a recording you opened. To start a song from another
+one, Tokenize audio on its card (a generated card already has its codes),
+tick Src audio and select a section on its waveform: the new song starts
+with that section as the model hears it, and the rest grows from it.
+
+## Adapters
+
+Drop LoRA adapters in the `adapters/` folder and restart the server. Every
+format the community publishes is read: AI Toolkit and ComfyUI single files,
+native YuE2 trainer files and folders with an `adapter_config.json`. Pick
+them in the Models menu of the WebUI, as many as you like, each with its
+own strength; each one merges into the half of the backbone it was trained
+on, at load time.
 
 ## Pipeline
 
@@ -144,7 +168,11 @@ Required:
   --vae <gguf>           VAE GGUF
 
 Optional:
-  --transcriber <gguf>   SheetSage2 GGUF, enables /transcribe
+  --device <name>        Compute device: CUDA0, Vulkan0, MTL0, CPU...
+                         (default: best available)
+  --transcriber <gguf>   SheetSage2 GGUF, MERT beside it, enables /transcribe
+  --tokenizer <gguf>     Audio tokenizer GGUF, MERT beside it, enables /tokenize
+  --adapters <dir>       Directory of LoRA adapters a request can stack
   --host <addr>          Listen address (default: 0.0.0.0)
   --port <N>             Listen port (default: 8087)
   --max-batch <N>        Song batch limit, one KV set each (default: 1)
@@ -222,6 +250,15 @@ instrumental voices alone, which is what `cot` `melody` expects.
 
 ```bash
 ./build/yue-transcribe --model models/SheetSage2-Q8_0.gguf --audio song.mp3 --out score.abc
+```
+
+The `yue-tokenize` tool runs the audio tokenizer on a recording and writes
+its semantic codes, 25 per second, ready for the `semantic_tokens` field of
+a request: the song renders again through the NAR half and the VAE, best
+with the realaudio NAR adapter the tokenizer was trained with.
+
+```bash
+./build/yue-tokenize --model models/yue2-mothersuperior-realaudio-tokenizer-v4-Q8_0.gguf --audio song.mp3 --out codes.csv
 ```
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full JSON

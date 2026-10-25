@@ -172,7 +172,7 @@
     var play = bare ? "" : playsHtml(p);
     return '<tr class="' + (bare ? "is-no" : st.cls) + '">' + picHtml(p) + '<td class="hi-name">' +
       (bare ? '<span class="hi-bare" translate="no">' + esc(i.tag || i.slug) + "</span>" : '<button type="button" class="hi-tag" data-hi-tag="' + esc(i.tag) + '" data-tip="into the Style prompt">' + esc(i.tag || i.slug) + "</button>") +
-      '<div class="hi-home">' + esc(i.home) + '</div><div class="hi-st">' + esc(st.text) + "</div></td>" +
+      '<div class="hi-home">' + esc(i.home) + '</div><div class="hi-st" translate="no">' + esc(st.text) + "</div></td>" +
       '<td class="hi-say"><div translate="no">' + esc(i.en) + '</div><div class="hi-ru" translate="no">' + esc(second(i.en, i.ru)) + "</div>" +
       (his ? '<div class="hi-his">\u201c' + esc(his) + "\u201d</div>" : "") +
       // HERESY 1148 (Viktor): the shofar's probes are kept and listed with the prompt they were made with
@@ -195,7 +195,7 @@
   function styleRow(s) {
     var p = probes(s.slug), his = hisNote(p), c = styleState(s), st = c.text;
     return '<tr class="' + (c.cls === "is-wait" ? "is-wait" : "is-heard") + '">' + picHtml(p) + '<td class="hi-name">' + (fold(s.name) === fold(s.tag) ? "" : '<div class="hi-sname">' + esc(s.name) + "</div>") +
-      '<button type="button" class="hi-tag" data-hi-tag="' + esc(s.tag) + '" data-tip="into the Style prompt">' + esc(s.tag) + '</button><div class="hi-st ' + c.cls + '">' + esc(st) + "</div></td>" +
+      '<button type="button" class="hi-tag" data-hi-tag="' + esc(s.tag) + '" data-tip="into the Style prompt">' + esc(s.tag) + '</button><div class="hi-st ' + c.cls + '" translate="no">' + esc(st) + "</div></td>" +
       '<td class="hi-say"><div translate="no">' + esc(s.en) + '</div><div class="hi-ru" translate="no">' + esc(second(s.en, s.ru)) + "</div>" + (his ? '<div class="hi-his">\u201c' + esc(his) + "\u201d</div>" : "") + "</td>" +
       '<td class="hi-plays">' + playsHtml(p) + "</td></tr>";
   }
@@ -681,6 +681,7 @@
   // HERESY 1156: pictures drawn meanwhile reach the open sheet; 1158: and the chips under the style
   function paintArts() { if ($("hiBack") && !$("hiBack").hidden) paint(); paintChips(); }
   window.addEventListener("ruach-lang", function () { if (DATA && DATA.instruments) paintArts(); });   // HERESY 1339: the second line follows the language
+  // HERESY 1672: the sheet's notes (.hi-st) are the probes' own words, kept as written (translate="no")
   window.HeresyInstruments = { init: init, open: open, heardTags: heardTags, notHeardTags: notHeardTags, paintArts: paintArts, data: function () { return DATA; },
     styleLines: styleLines, styleProbed: styleProbed, voices: voices, adapters: adapters,   // HERESY 1166: the Writer's charter
     lyricTags: function () { return LYRIC_TAGS; } };   // HERESY 1168: the tags offered under a «[» in the lyrics (heresy-complete.js)

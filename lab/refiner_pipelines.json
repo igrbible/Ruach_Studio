@@ -242,6 +242,236 @@
      "step": "gloss"
     }
    ]
+  },
+  {
+   "id": "voice-subtle",
+   "name": "Voices: subtle",
+   "say": "the bundle averaged above 12 kHz, a little under",
+   "tip": "The voices' top drawn by the three upscalers and averaged above 12 kHz, 2 dB under as drawn: the gentlest, as SUNO's subtle remaster. Then the DAW's mix and the Remaster.",
+   "pipeline": [
+    {
+     "step": "debuzz",
+     "strength": 0.8
+    },
+    {
+     "step": "stems",
+     "mode": "eight"
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "lead"
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "vupscale",
+     "params": {
+      "which": "voices",
+      "mode": "subtle",
+      "blend": "avg",
+      "top": "-2"
+     }
+    },
+    {
+     "step": "daw",
+     "mix": "current"
+    },
+    {
+     "step": "remaster",
+     "settings": {
+      "preset": "balanced",
+      "deess": true
+     }
+    },
+    {
+     "step": "spectrum"
+    }
+   ]
+  },
+  {
+   "id": "voice-normal",
+   "name": "Voices: normal",
+   "say": "the bundle averaged above 12 kHz",
+   "tip": "The voices' top drawn by the three upscalers and averaged above 12 kHz, as drawn: the balance measured closest to a voice's own top. Then the DAW's mix and the Remaster.",
+   "pipeline": [
+    {
+     "step": "debuzz",
+     "strength": 0.8
+    },
+    {
+     "step": "stems",
+     "mode": "eight"
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "lead"
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "vupscale",
+     "params": {
+      "which": "voices",
+      "mode": "subtle",
+      "blend": "avg",
+      "top": "0"
+     }
+    },
+    {
+     "step": "daw",
+     "mix": "current"
+    },
+    {
+     "step": "remaster",
+     "settings": {
+      "preset": "balanced",
+      "deess": true
+     }
+    },
+    {
+     "step": "spectrum"
+    }
+   ]
+  },
+  {
+   "id": "voice-high",
+   "name": "Voices: high",
+   "say": "the bundle averaged above 8 kHz",
+   "tip": "The voices redrawn from 8 kHz, averaged: for a voice the split left dull. Then the DAW's mix and the Remaster.",
+   "pipeline": [
+    {
+     "step": "debuzz",
+     "strength": 0.8
+    },
+    {
+     "step": "stems",
+     "mode": "eight"
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "lead"
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "vupscale",
+     "params": {
+      "which": "voices",
+      "mode": "normal",
+      "blend": "avg",
+      "top": "0"
+     }
+    },
+    {
+     "step": "daw",
+     "mix": "current"
+    },
+    {
+     "step": "remaster",
+     "settings": {
+      "preset": "balanced",
+      "deess": true
+     }
+    },
+    {
+     "step": "spectrum"
+    }
+   ]
+  },
+  {
+   "id": "voice-air",
+   "name": "Voices: air",
+   "say": "averaged to 16 kHz, the loudest above",
+   "tip": "The bundle averaged up to 16 kHz and the loudest of the three above it: breath and air over a calm presence. Then the DAW's mix and the Remaster.",
+   "pipeline": [
+    {
+     "step": "debuzz",
+     "strength": 0.8
+    },
+    {
+     "step": "stems",
+     "mode": "eight"
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "lead"
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "vupscale",
+     "params": {
+      "which": "voices",
+      "mode": "subtle",
+      "blend": "air",
+      "top": "0"
+     }
+    },
+    {
+     "step": "daw",
+     "mix": "current"
+    },
+    {
+     "step": "remaster",
+     "settings": {
+      "preset": "balanced",
+      "deess": true
+     }
+    },
+    {
+     "step": "spectrum"
+    }
+   ]
+  },
+  {
+   "id": "voice-bright",
+   "name": "Voices: bright",
+   "say": "the loudest of the three in each cell",
+   "tip": "The loudest of the three upscalers in each cell above 12 kHz, 2 dB under: the brightest; for a voice buried in the band. Then the DAW's mix and the Remaster.",
+   "pipeline": [
+    {
+     "step": "debuzz",
+     "strength": 0.8
+    },
+    {
+     "step": "stems",
+     "mode": "eight"
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "lead"
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "vupscale",
+     "params": {
+      "which": "voices",
+      "mode": "subtle",
+      "blend": "max",
+      "top": "-2"
+     }
+    },
+    {
+     "step": "daw",
+     "mix": "current"
+    },
+    {
+     "step": "remaster",
+     "settings": {
+      "preset": "balanced",
+      "deess": true
+     }
+    },
+    {
+     "step": "spectrum"
+    }
+   ]
   }
  ]
 }

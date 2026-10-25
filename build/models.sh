@@ -2,9 +2,10 @@
 # Download the pre-quantized YuE2 GGUF release from HuggingFace
 #
 # Usage: ./models.sh [options]
-#   default:    Q8_0 backbone + F32 VAE + Q8_0 transcriber
+#   default:    Q8_0 backbone + F32 VAE + Q8_0 audio encoder, transcriber and audio tokenizer
 #   --all:      every published quant
-#   --quant X:  backbone and transcriber quant (BF16, Q8_0, Q6_K, Q5_K_M)
+#   --quant X:  backbone quant (BF16, Q8_0, Q6_K, Q5_K_M), the audio encoder
+#               and its heads in F32 for BF16 and Q8_0 otherwise
 
 set -eu
 
@@ -40,10 +41,11 @@ if [ "$ALL" = 1 ]; then
     dl "YuE2-3B-Q5_K_M.gguf"
     dl "YuE2-3B-Q6_K.gguf"
     dl "YuE2-3B-Q8_0.gguf"
-    dl "SheetSage2-F32.gguf"
-    dl "SheetSage2-Q5_K_M.gguf"
-    dl "SheetSage2-Q6_K.gguf"
-    dl "SheetSage2-Q8_0.gguf"
+    for q in F32 Q8_0; do
+        dl "MERT-v2-FullSong-$q.gguf"
+        dl "SheetSage2-$q.gguf"
+        dl "yue2-mothersuperior-realaudio-tokenizer-v4-$q.gguf"
+    done
     exit 0
 fi
 
@@ -60,7 +62,10 @@ resolve_quant() {
 
 dl "YuE2-Vae-F32.gguf"
 dl "YuE2-3B-$(resolve_quant "$QUANT").gguf"
-# The transcriber has no BF16, its native is F32
-transcriber_quant="$(resolve_quant "$QUANT")"
-[ "$transcriber_quant" = "BF16" ] && transcriber_quant="F32"
+# The audio encoder and its heads ship in F32 and Q8_0, a head loading the
+# audio encoder of the same quant beside it
+transcriber_quant="Q8_0"
+[ "$(resolve_quant "$QUANT")" = "BF16" ] && transcriber_quant="F32"
+dl "MERT-v2-FullSong-$transcriber_quant.gguf"
 dl "SheetSage2-$transcriber_quant.gguf"
+dl "yue2-mothersuperior-realaudio-tokenizer-v4-$transcriber_quant.gguf"

@@ -1,0 +1,20 @@
+Ruach Studio
+Copyright 2026 Viktor Zhuromskyy
+
+Ruach Studio grew over yue2-kit. Its own code is under the GNU Affero General Public License, version 3 or any later version (LICENSE); its logo, its name and the audio and pictures published with it are under LICENSE-ASSETS.md. The models, the datasets and the other projects inside keep their own licences and notices (README.md, Licence).
+
+The notice of yue2-kit, kept as its Apache License 2.0 asks (section 4(d)); its licence text is in LICENSES/yue2-kit-Apache-2.0.txt:
+
+----------------------------------------------------------------------
+yue2-kit
+Copyright 2026 SeattleSysop (IronWolve)
+
+This product includes work from yue2-kit by SeattleSysop (IronWolve).
+https://github.com/IronWolve/yue2-kit
+
+The original yue2-kit contributions by SeattleSysop (IronWolve) are
+licensed under the Apache License, Version 2.0. See LICENSE.
+
+Third-party code, assets, model weights and adapters retain their own
+copyrights, licenses and notices. The kit's license does not replace them.
+----------------------------------------------------------------------

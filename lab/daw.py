@@ -17,6 +17,7 @@ import soundfile as sf
 
 PARTS = {"instrumental": ("drums", "bass", "other", "guitar", "piano", "winds"), "vocals": ("lead_vocal", "backing_vocals")}
 REST = "rest"
+SOURCE = "source"                                    # HERESY 1755: what the set was split from, the DAW's reference
 MAX_CHUNK = 30.0
 
 
@@ -88,11 +89,14 @@ def _slice(path, a, n, channels):
 
 
 def chunk(d, info, strip, path, start, seconds):
-    """A strip's stretch [start, start+seconds) as 16-bit FLAC bytes; `strip` rest: the source less the set's own parts."""
+    """A strip's stretch [start, start+seconds) as 16-bit FLAC bytes; `strip` rest: the source less the set's own parts; source
+    (HERESY 1755): the source as it came, the reference."""
     rate, ch = info["rate"], info["channels"]
     seconds = max(0.05, min(MAX_CHUNK, float(seconds)))
     a, n = max(0, int(round(float(start) * rate))), int(round(seconds * rate))
-    if strip == REST:
+    if strip == SOURCE:
+        x = _slice(_inside(d, info["source"]), a, n, ch)
+    elif strip == REST:
         x = _slice(_inside(d, info["source"]), a, n, ch).astype(np.float64)
         for s in info["strips"]:
             x -= _slice(_inside(d, s["path"]), a, n, ch)
@@ -104,6 +108,20 @@ def chunk(d, info, strip, path, start, seconds):
     buf = io.BytesIO()
     sf.write(buf, np.clip(x, -1.0, 1.0), rate, format="FLAC", subtype="PCM_16")
     return buf.getvalue()
+
+
+def source_loudness(d, info):
+    """HERESY 1755: the set's source as the page's loudness meter reads it (heresy-mixdsp.js): the K-weighted power of each 100 ms
+    block, BS.1770 with Plenio's filters, the two sides summed (a mono source as the page plays it, on both); and its integrated
+    loudness. The page gates the blocks of the stretch that has played as it gates the mix's, and plays the reference as loud."""
+    from plenio_core.audio import loudness as pl
+    x, rate = sf.read(str(_inside(d, info["source"])), dtype="float64", always_2d=True)
+    x = x.T if x.shape[1] > 1 else np.repeat(x.T, 2, axis=0)
+    p = pl._weighted_power(x[:2], rate, pl.no_cancel)
+    k = round(0.1 * rate)
+    z = p[: len(p) // k * k].reshape(-1, k).mean(axis=1)
+    whole = pl.integrated_from_blocks(pl._block_powers(p, rate, pl.BLOCK_S, pl.STEP_S))
+    return {"block": 0.1, "rate": rate, "z": [float(f"{v:.5g}") for v in z], "integrated": round(whole, 2) if whole is not None else None}
 
 
 def file_peaks(d, rel, n=400):

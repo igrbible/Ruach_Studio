@@ -72,7 +72,8 @@ def align(whisper, lyrics):
         if share < (0.5 if len(r["toks"]) <= 3 else 0.3):   # a word or two of a long line: chance, not an anchor
             ts = []
         out.append({"text": r["text"], "start": ts[0][0] if ts else None, "end": ts[-1][1] if ts else None,
-                    "heard": round(share, 2), "guessed": not ts, "n": len(r["toks"])})
+                    "heard": round(share, 2), "guessed": not ts, "n": len(r["toks"]),
+                    "tt": [[round(w[0], 2), round(w[1], 2)] if w else None for w in when[at:at + len(r["toks"])]]})   # HERESY 1646: each word's time
         at += len(r["toks"])
     last = -1.0                                          # a line earlier than the one before is a false match
     for r in out:
@@ -136,6 +137,47 @@ def clock_srt(t):
 def lrc(rows, title=""):
     head = [f"[ti:{title}]"] if title else []
     return "\n".join(head + [f"[{clock_lrc(r['start'])}]{r['text']}" for r in rows]) + "\n"
+
+
+def _word_times(r):
+    """HERESY 1646: [(word, time)] of a line as written: a word at the time Whisper heard its first token; a word unheard, and a choir's (words), in
+    between its heard neighbours by its place; a guessed line (or a timing made before 1646) shares its span evenly. Never earlier than the word before."""
+    words, depth = [], 0
+    for m in re.finditer(r"\S+", r["text"]):
+        w = m.group(0)
+        inside = depth > 0 or w.startswith("(")
+        depth = max(0, depth + w.count("(") - w.count(")"))
+        words.append((w, 0 if inside else len(norm(re.sub(r"\([^)]*\)", "", w)).split())))
+    tt = r.get("tt") if not r.get("guessed") else None
+    if tt is not None and sum(n for _, n in words) != len(tt):
+        tt = None                                        # the words and the tokens do not line up: no word's own time
+    known, k = {}, 0
+    for i, (w, n) in enumerate(words):
+        if n and tt and tt[k]:
+            known[i] = tt[k][0]
+        k += n
+    start = r["start"] if r.get("start") is not None else 0.0
+    end = r["end"] if r.get("end") is not None and r["end"] > start else start + 2.0
+    known.setdefault(0, start)
+    out, last = [], start
+    for i, (w, _) in enumerate(words):
+        if i in known:
+            t = known[i]
+        else:
+            pl = max(j for j in known if j < i)
+            nr = [j for j in known if j > i]
+            pr, tr = (min(nr), known[min(nr)]) if nr else (len(words), end)
+            t = known[pl] + (tr - known[pl]) * (i - pl) / (pr - pl)
+        t = max(t, last)
+        out.append((w, round(t, 2)))
+        last = t
+    return out
+
+
+def lrc_words(rows, title=""):
+    """HERESY 1646: the enhanced LRC, a time on every word (players that sing along light each word as it is sung)"""
+    head = [f"[ti:{title}]"] if title else []
+    return "\n".join(head + [f"[{clock_lrc(r['start'])}]" + " ".join(f"<{clock_lrc(t)}>{w}" for w, t in _word_times(r)) for r in rows]) + "\n"
 
 
 def srt(rows):

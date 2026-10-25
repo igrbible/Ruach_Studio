@@ -120,5 +120,16 @@ with _tf.TemporaryDirectory() as _d:
     _all, _set = aio.levels(_p), aio.levels(_p, skip=aio.SETTLE)
     check("the floor read after the input settles: a thump at the start left out (−95 dBFS, not what the thump makes it)",
           abs(_set["rms_db"][0] + 95) < 0.5 and _all["rms_db"][0] > -30, (_all, _set))
+# HERESY 1568: no monitor on the gateway's own card
+import tempfile as _tf
+with _tf.TemporaryDirectory() as _u:
+    aio.set_gateway(_u, "hw:CARD=S24,DEV=0", "hw:CARD=S24,DEV=0", 48000)
+    try:
+        aio.set_monitor(_u, "hw:CARD=S24,DEV=0", 48000); _said = ""
+    except ValueError as e:
+        _said = str(e)
+    _kept = aio.set_monitor(_u, "hw:CARD=Plus,DEV=0", 48000)
+    check("no monitor on the gateway's own card (refused, said); another card kept", "gateway's own card" in _said and _kept["out"] == "hw:CARD=Plus,DEV=0", (_said, _kept))
+    check("cards read from both ways of naming them", aio.card_of("hw:CARD=S24,DEV=0") == "S24" and aio.card_of("plughw:4,0") == "4" and aio.card_of("pulse") == "", "")
 print("test_audio_io:", "FAILED " + ", ".join(bad) if bad else "all passed")
 sys.exit(1 if bad else 0)

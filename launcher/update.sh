@@ -43,5 +43,16 @@ step "④ the models this release pins"
 Q=$(ruach_quant)
 bash fetch-models.sh ${Q:+--quant "$Q"} || stop "a download did not complete (fetch-models.sh says which above): Update again goes on from there"
 rm -f tmp/update-unfinished
+# HERESY 1567: an older version's weights of models the studio no longer reads (SDXL since 1405, Krea 2 since 1428, the sliders since
+# 1449) stay where it put them: said with their size and how to free the space, never removed here
+old=()
+for d in artwork/SDXL-Artwork-Model artwork/Krea-2-Muse artwork/Krea-2-Turbo; do [ -d "$d" ] && old+=("$d"); done
+ls sliders/*.gguf >/dev/null 2>&1 && old+=("sliders/*.gguf")
+if [ ${#old[@]} -gt 0 ]; then
+  echo
+  echo "weights of models the studio no longer uses, kept as an older version left them:"
+  for d in "${old[@]}"; do echo "  $(du -shc $d 2>/dev/null | tail -1 | cut -f1)  $d"; done
+  echo "  nothing reads them now; to free the space: rm -rf ${old[*]}"
+fi
 echo
 echo "${G}Updated to $(cat VERSION 2>/dev/null).${X} Start it from Pinokio's menu."

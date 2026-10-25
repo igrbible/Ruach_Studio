@@ -12,6 +12,7 @@ import torch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from semantic import SemanticTokenizer  # noqa: E402
+import tracks  # noqa: E402   (HERESY 1626: a set's tracks as WAV files or packed into parquet)
 from vae import SAMPLE_RATE, YuE2VAE  # noqa: E402
 
 HEAD = "tokenizer_head_joint_v4.pt"
@@ -40,6 +41,20 @@ def stereo48(path):
     return w
 
 
+def stereo48_track(set_folder, stem):
+    """HERESY 1626: one track of a set, from its WAV or its packed row, as stereo48 makes a file."""
+    import torchaudio
+    data, sr = tracks.audio(set_folder, stem)
+    w = torch.from_numpy(data.T.copy())
+    if w.shape[0] == 1:
+        w = w.repeat(2, 1)
+    elif w.shape[0] > 2:
+        w = w[:2]
+    if sr != SAMPLE_RATE:
+        w = torchaudio.functional.resample(w, sr, SAMPLE_RATE)
+    return w
+
+
 # HERESY 1420: score mode's sheets, by the engine's own transcriber (SheetSage2 GGUF, yue-transcribe): "full" melody and chords,
 # "melody" the melody alone (--melody-only), as AI-Toolkit's SheetSage2Transcriber makes them per cot
 SHEET_FLAGS = {"full": [], "melody": ["--melody-only"]}
@@ -52,10 +67,10 @@ def sheet_path(set_folder, stem, cot):
 def missing_sheets(set_folder, cot):
     """The tracks without a sheet of this cot, neither made nor refused before (a refusal is kept beside it as .fail, said once)."""
     out = []
-    for w in sorted(glob.glob(os.path.join(set_folder, "[0-9]*.wav"))):
-        p = sheet_path(set_folder, os.path.basename(w)[:-4], cot)
+    for stem in tracks.stems(set_folder):               # HERESY 1626
+        p = sheet_path(set_folder, stem, cot)
         if not os.path.isfile(p) and not os.path.isfile(p + ".fail"):
-            out.append(os.path.basename(w)[:-4])
+            out.append(stem)
     return out
 
 
@@ -101,8 +116,7 @@ def stem_sheet_path(set_folder, stem, variant, cot):
 def missing_stems(set_folder, cot="off"):
     """The tracks without their stems' tokens, or (with a cot) without a stem's sheet neither made nor refused."""
     out = []
-    for w in sorted(glob.glob(os.path.join(set_folder, "[0-9]*.wav"))):
-        stem = os.path.basename(w)[:-4]
+    for stem in tracks.stems(set_folder):               # HERESY 1626
         lack = not os.path.isfile(stems_path(set_folder, stem))
         if not lack and cot != "off":
             lack = any(not os.path.isfile(p) and not os.path.isfile(p + ".fail") for p in (stem_sheet_path(set_folder, stem, v, cot) for v in STEMS))
@@ -133,7 +147,8 @@ def stems(set_folder, kit, cot="off", device="cuda", only=None):
     for i, stem in enumerate(todo):
         with safe_open(os.path.join(cache_dir, f"{stem}_ruach.safetensors"), "pt") as f:
             n = f.get_tensor("dto.tokens").shape[0]               # the mix's length: the stems are cut to it
-        files = [p if os.path.isabs(p) else os.path.join(work, os.path.basename(p)) for p in sep.separate(os.path.join(set_folder, stem + ".wav"))]
+        with tracks.as_file(set_folder, stem) as wav:    # HERESY 1626: a packed track unpacked for the while
+            files = [p if os.path.isabs(p) else os.path.join(work, os.path.basename(p)) for p in sep.separate(wav)]
         found = {}
         for name, word in (("vocals", "(vocals)"), ("music", "(instrumental)")):
             hit = [p for p in files if word in os.path.basename(p).lower()]
@@ -185,7 +200,8 @@ def sheets(set_folder, cot, kit, only=None):
     todo = only or missing_sheets(set_folder, cot)
     t0, made = time.time(), 0
     for i, stem in enumerate(todo):
-        ok, what = _transcribe(exe, gguf, os.path.join(set_folder, stem + ".wav"), sheet_path(set_folder, stem, cot), cot)
+        with tracks.as_file(set_folder, stem) as wav:    # HERESY 1626
+            ok, what = _transcribe(exe, gguf, wav, sheet_path(set_folder, stem, cot), cot)
         if not ok:
             print(f"sheet: {i + 1}/{len(todo)} {stem}: no score ({what}); it trains as Direct", flush=True)
             continue
@@ -204,29 +220,28 @@ def read_sheet(set_folder, stem, cot):
 def missing(set_folder):
     """The tracks of a set without a cache of ours (AI-Toolkit's _latent_cache does not count: the trainer
     reads nothing another program made)."""
-    return [os.path.basename(w)[:-4] for w in sorted(glob.glob(os.path.join(set_folder, "[0-9]*.wav")))
-            if not os.path.isfile(os.path.join(set_folder, "_ruach_cache", os.path.basename(w)[:-4] + "_ruach.safetensors"))]
+    return [s for s in tracks.stems(set_folder)          # HERESY 1626: WAV or packed
+            if not os.path.isfile(os.path.join(set_folder, "_ruach_cache", s + "_ruach.safetensors"))]
 
 
 def build(set_folder, checkpoint, kit, device="cuda", only=None, out_dir=None):
     """Write the cache of every track (or of `only`) that has no file of ours yet; models freed after."""
     out_dir = out_dir or os.path.join(set_folder, "_ruach_cache")
     os.makedirs(out_dir, exist_ok=True)
-    wavs = sorted(glob.glob(os.path.join(set_folder, "[0-9]*.wav")))
+    todo = tracks.stems(set_folder)                      # HERESY 1626: WAV or packed
     if only:
-        wavs = [w for w in wavs if os.path.basename(w)[:-4] in only]
-    wavs = [w for w in wavs if not os.path.isfile(os.path.join(out_dir, os.path.basename(w)[:-4] + "_ruach.safetensors"))]
-    if not wavs:
+        todo = [s for s in todo if s in only]
+    todo = [s for s in todo if not os.path.isfile(os.path.join(out_dir, s + "_ruach.safetensors"))]
+    if not todo:
         return 0
     t0 = time.time()
     vae = load_vae(checkpoint, device)
     tok = SemanticTokenizer(os.path.join(kit, "checkpoints/yue2-mothersuperior-realaudio-tokenizer-v4", HEAD),
                             os.path.join(kit, "checkpoints/MERT-v2-FullSong")).to(device)
-    print(f"cache: VAE and MERT head ready in {time.time() - t0:.0f} s; {len(wavs)} tracks", flush=True)
+    print(f"cache: VAE and MERT head ready in {time.time() - t0:.0f} s; {len(todo)} tracks", flush=True)
     from safetensors.torch import save_file
-    for i, wav in enumerate(wavs):
-        stem = os.path.basename(wav)[:-4]
-        w = stereo48(wav)
+    for i, stem in enumerate(todo):
+        w = stereo48_track(set_folder, stem)
         with torch.no_grad():
             lat = vae.encode(w[None].to(device, torch.float32))[0].T.contiguous()       # [T, 64]
             tokens = tok.tokenize(w, SAMPLE_RATE)
@@ -236,12 +251,12 @@ def build(set_folder, checkpoint, kit, device="cuda", only=None, out_dir=None):
                   metadata={"filename": stem + ".wav", "is_audio_model": "true", "latent_space_version": VERSION,
                             "sample_rate": str(SAMPLE_RATE), "software": "ruach-studio lab/trainer/cache.py"})
         os.replace(target + ".part", target)
-        print(f"cache: {i + 1}/{len(wavs)} {stem}: {n} frames", flush=True)
+        print(f"cache: {i + 1}/{len(todo)} {stem}: {n} frames", flush=True)
     del vae, tok
     if device == "cuda":
         torch.cuda.empty_cache()
     print(f"cache: done in {time.time() - t0:.0f} s", flush=True)
-    return len(wavs)
+    return len(todo)
 
 
 def main():

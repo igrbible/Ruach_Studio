@@ -173,12 +173,27 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     }
   } catch (e) { /* the veil without its logo */ }
   try { window.RuachVeilVersions(); } catch (e) { /* the veil without its versions */ }
-  // ready: the page parsed and its scripts run (not the load event: the web fonts may come late on a slow road), its room
+  // HERESY 1745 (Viktor 23.10.2026: «Открываем страницу Студии только после того как всё загрузилось»): ready waits for the load event and the web
+  // fonts too (on his road they came late, and the page showed half drawn); twenty seconds turn the line into a running stripe, two minutes lift it
+  // ready (1167, 1435): the page parsed and its scripts run, its room
   // set, the translation in
-  var MIN = 10000, MAX = 20000, LOGO_AT = 2200, LANG_LATEST = 6000, gone = false;   // HERESY 1435
+  var MIN = 10000, WAIT = 20000, MAX = 120000, LOGO_AT = 2200, LANG_LATEST = 6000, gone = false, fontsIn = false;   // HERESY 1435; 1745: WAIT, MAX
+  // HERESY 1745: the fonts in, after every request of the page has come (a face the page has not used yet counts once it is asked)
+  // HERESY 1745c: and the faces of the six font roles asked first, for the letters of the page's language (a role's face no text under the veil
+  // uses was asked only once the page showed: the wave's marks, drawn on its canvas once a take is in)
+  window.addEventListener("load", function () {
+    try {
+      var l = html.lang || "", text = "Aa0" + (/^(ru|uk|be)/.test(l) ? "Жжї" : "") + (/^el/.test(l) ? "λΛ" : "");
+      if (window.ruachCanvasFont) ["sans", "heading", "mono", "rooms", "marks", "buttons"].forEach(function (r) {
+        ["400", "700"].forEach(function (w) { document.fonts.load(window.ruachCanvasFont(r, 16, w), text).catch(function () {}); });
+      });
+      document.fonts.ready.then(function () { fontsIn = true; }, function () { fontsIn = true; });
+    } catch (e) { fontsIn = true; }
+  });
   // the page's language in (heresy-i18n.js says it, the logo's words painted already): «Loading…» and the versions show
   window.addEventListener("ruach-lang", function () { html.classList.add("veil-lang"); });
-  function ready() { return document.readyState !== "loading" && !!document.body.dataset.tab && !html.classList.contains("i18n-wait"); }
+  // HERESY 1745b: and no face loading now (a face asked after the first round)
+  function ready() { return document.readyState === "complete" && fontsIn && (!document.fonts || document.fonts.status === "loaded") && !!document.body.dataset.tab && !html.classList.contains("i18n-wait"); }   // 1745: complete, fonts in
   function lift() {
     if (gone) return;
     gone = true;
@@ -191,6 +206,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     var age = performance.now();
     if (age >= LANG_LATEST) html.classList.add("veil-lang");   // a translation that never came: the words as they are
     if (age >= LOGO_AT && html.classList.contains("veil-lang")) html.classList.add("veil-logo");
+    if (age >= WAIT) html.classList.add("veil-wait");     // HERESY 1745: still coming, said by the line
     if (age >= MAX || (age >= MIN && ready())) lift(); else setTimeout(tick, 100);
   })();
   function sooner(event) {
@@ -218,6 +234,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     <button type="button" role="tab" class="engine-tab" data-etab="server" aria-selected="true">Server and log</button>
     <button type="button" role="tab" class="engine-tab" data-etab="machine" aria-selected="false" tabindex="-1">Hardware</button>
     <button type="button" role="tab" class="engine-tab" data-etab="models" aria-selected="false" tabindex="-1">Models and LoRAs</button>
+    <button type="button" role="tab" class="engine-tab" data-etab="creator" aria-selected="false" tabindex="-1">Creator Heresy</button>   <!-- HERESY 1743 -->
     <button type="button" role="tab" class="engine-tab" data-etab="rooms" aria-selected="false" tabindex="-1">Writer and Artwork</button>
     <button type="button" role="tab" class="engine-tab" data-etab="refiner" aria-selected="false" tabindex="-1">Refiner Room</button>
     <button type="button" role="tab" class="engine-tab" data-etab="places" aria-selected="false" tabindex="-1">Folders and Security</button>
@@ -319,6 +336,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <select id="lookTheme"></select></label>
         <label class="field"><span class="label">Corners</span>
           <select id="lookCorners"><option value="">Rounded</option><option value="soft">Softer</option><option value="square">Square</option></select></label>
+        <!-- HERESY 1720 (Viktor 22.10.2026: «опцию для дефолта… Дефолт пусть будет как есть сейчас - как давно») -->
+        <label class="field"><span class="label">Take time</span>
+          <select id="lookWhen" data-tip="A take's time on its card and wherever it is shown: how long ago, or its exact date and time. A click on a card's time flips it to the other for that take; its tip always says the other"><option value="">How long ago</option><option value="exact">The exact time</option></select></label>
         <div class="look-checks">
           <label class="check"><input type="checkbox" id="lookHover" /> <span>Hover highlights in the theme's colour</span></label>
           <label class="check"><input type="checkbox" id="lookGlow" /> <span>A soft accent glow around cards</span></label>
@@ -387,12 +407,31 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       <p class="row-hint">Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here, and every picture passes a content filter; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.</p>
     </div>
 
+    <!-- HERESY 1589 (Viktor 19.10.2026: «официально с 2.0.0 релизом выкатим early-release поддержку M-Audio миди контроллеров… Откроем
+         "MIDI API", люди начнут писать свои плагины»): the studio's MIDI (heresy-midi.js): listening on or off, its ports and what each is for -->
+    <div class="card wide eg-midi" id="midiCard">
+      <h3>MIDI</h3>
+      <p class="hint">A MIDI keyboard plays the piano roll; a controller's control port (an M-Audio Oxygen's DAW port in its Mackie preset, or any Mackie Control) runs the transport: the roll's, the DAW's in sight, else the player's. Early support: made to the Mackie Control protocol and tried through the browser's MIDI, not yet on every device.</p>
+      <div class="midi-row"><button type="button" class="btn ghost small" id="midiOnBtn" aria-pressed="false">Listen to MIDI</button><span class="row-hint midi-say" id="midiSay"></span></div>
+      <div class="midi-ports" id="midiPorts"></div>
+      <p class="hint">A plugin may bring a script for its own controller: plugin.json, "midi" (PLUGINS.md, «MIDI scripts»).</p>
+    </div>
+
+    <!-- HERESY 1743 (Viktor 22.10.2026: «автоматом в FULL режиме херачить октавой ниже? И в `Engine > Creator Heresy` дадим настройку по октавам?»):
+         how the Creator sings what the model plans itself; the engine moves the planned Vocal line (request vocal_octave) -->
+    <div class="card eg-creator" id="creatorCard">
+      <h3>Creator Heresy</h3>
+      <p class="hint">How the Creator sings what the model writes itself. A score supplied, edited or kept in the form is sung as written.</p>
+      <label class="field"><span class="label">Full: the Vocal line of a score the model plans</span>
+        <select id="setFullOctave" data-tip="In Full with no score in the form, the model plans the score, then sings it. Here its Vocal line moves by whole octaves before it is sung; each version moves its own. The model sings where the line goes: measured 21.10.2026, an octave down sang 9–10 semitones lower. The ▼ ▲ by a voice adapter move a score that is already in the form."><option value="-2">Two octaves down</option><option value="-1">An octave down</option><option value="0">As the model wrote it</option><option value="1">An octave up</option><option value="2">Two octaves up</option></select></label>
+    </div>
+
     <!-- HERESY 1523 (Viktor 17.10.2026: «Холст не делай дефолтным пока что, но в настройках Engine предусмотри эту опцию… отдельной вкладкой
          Refiner Room»): how the Refiner opens; the List / Canvas button in the room's head still switches at any time -->
-    <div class="card wide eg-refiner" id="refinerCard">
+    <div class="card wide eg-refiner" id="refinerCard">   <!-- HERESY 1581: one room, the canvas: nothing to choose, said -->
       <h3>Refiner</h3>
-      <p class="hint">How the Refiner room opens: its steps as a list, or its nodes on a canvas. The List and Canvas button in the room's head switches at any time.</p>
-      <div class="modes rf-opens" id="refinerOpens" role="radiogroup" aria-label="The Refiner opens">
+      <p class="hint">The Refiner is a canvas of nodes: every step a node, wired the way the work flows and numbered by it; a click or its number's key (1…9, 0) opens one.</p>
+      <div class="modes rf-opens" id="refinerOpens" role="radiogroup" aria-label="The Refiner opens" hidden>
         <label class="mode"><input type="radio" name="refinerOpens" value="last" /><span class="mode-body"><strong>As it was left</strong>
           <small>The view the room had when you last left it.</small></span></label>
         <label class="mode"><input type="radio" name="refinerOpens" value="list" /><span class="mode-body"><strong>Always the list</strong>
@@ -498,7 +537,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <h3>About</h3>
         <p class="about-credit"><a class="about-kit" href="https://github.com/IronWolve/yue2-kit" target="_blank" rel="noopener noreferrer"
           data-tip="This collection's own repository: the install kit, its patches and its releases">Customized Collection</a> by <strong>SeattleSysop</strong>
-          <a class="about-gh" href="https://github.com/IronWolve" target="_blank" rel="noopener noreferrer">github.com/IronWolve</a></p>
+          <a class="about-gh" href="https://github.com/IronWolve" target="_blank" rel="noopener noreferrer">github.com/IronWolve</a>
+          <span class="about-lic"> · <a href="https://github.com/IronWolve/yue2-kit/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a>, with thanks</span></p>
       </div>
       <!-- HERESY 1166 (Viktor 04.10.2026: «не две горизонтальные секции там, а одна с тремя колонками RUACH STUDIO | YuE2 +
            ggml + yue2.cpp | Sound decoders, Sliders, Loras. В колонке YuE2 — логотип так же, как в первой наш»): one band of
@@ -667,6 +707,11 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
               <span class="label">Title</span>
               <input type="text" id="title" placeholder="Song title" autocomplete="off" maxlength="80" />
             </label>
+            <!-- HERESY 1614: the version beside the title -->
+            <label class="field versionfield" data-tip="The song's version beside its name, digits and dots only (4.2.3). A take is called «Title v4.2.3», as your tracks are, and the Creator's versions keep one tree per title, a branch per version. A title typed with its version («Song v1.2») splits into the two">
+              <span class="label">Version</span>
+              <input type="text" id="titleVersion" placeholder="1.0" autocomplete="off" maxlength="24" inputmode="decimal" spellcheck="false" translate="no" />
+            </label>
             <label class="field keyfield">
               <span class="label">Key</span>
               <select id="songKey" data-tip="The key the song is in: the score's K:. With a score in the form, a choice moves it there; without one, the choice waits and moves the score that comes (a plan, a Retake, a transcription)."></select>
@@ -753,6 +798,14 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
                 </span>
               </label>
             </div>
+            <!-- HERESY 1607 (Viktor 20.10.2026 on timoncool's fork: «Всё забирай»): the engine's harmony (1606) for the score the model plans -->
+            <div class="harmony-row" id="harmonyRow" role="group" aria-label="Chords" data-tip="How far the planned chords may wander. The planner tends to loop one progression through the whole song: Gentle, Varied and Bold make a chord heard among the recent changes come back later, and keep a section's opening chords apart from the one before; Bold also lets a chord step outside the key now and then. Only when the model writes the score (Full or Melody, no score of yours). After Yeufonic, through timoncool's yue2.cpp">
+              <span class="label">Chords</span>
+              <button type="button" class="chip" data-harmony="0" aria-pressed="false">Off</button>
+              <button type="button" class="chip" data-harmony="1" aria-pressed="true">Gentle</button>
+              <button type="button" class="chip" data-harmony="2" aria-pressed="false">Varied</button>
+              <button type="button" class="chip" data-harmony="3" aria-pressed="false">Bold</button>
+            </div>
           </fieldset>
 
           <div class="codes-note is-hidden" id="codesNote">
@@ -794,6 +847,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
                   <button type="button" class="btn ghost" id="coverListen" aria-pressed="false" disabled
                           data-tip="Listen to the chosen recording here; the player at the bottom pauses while it plays">▶ Listen</button>
                   <button type="button" class="btn ghost" id="coverFromAudio">Transcribe</button>
+                  <button type="button" class="btn ghost" id="coverMatch" data-tip="Match sections: Whisper hears where each block of your lyrics begins in this recording, and each block takes the tag of the score section it is sung in (the score transcribed from this recording, its sections named). Words never change; you see the proposal before it goes into the form. After timoncool's YuE2-Studio and HOT-Step's Cover Studio">Match sections</button>
                   <p class="cover-status" id="coverAudioStatus"></p>
                 </div>
               </section>
@@ -820,6 +874,17 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
                 <textarea id="abc" rows="8" spellcheck="false" class="mono" placeholder="X:1&#10;L:1/8&#10;M:4/4&#10;K:C"></textarea>
               </label>
               <p class="row-hint score-guard" id="scoreGuard" hidden></p>
+              <!-- HERESY 1609: the engine's abc_continue (1608) -->
+              <label class="check opening-check" data-tip="The score in the box is only an opening: a few bars you played on the roll or a MIDI keyboard, hummed and written from the sound, or typed. The model plans the rest of the song on from it, in its key and meter, and the whole score, your opening first, is sung. Full plan or Melody only. After Mothersuperior's hum-to-song, through timoncool's yue2.cpp"><input type="checkbox" id="abcOpening" /> <span><strong>Only the opening</strong>: the model writes the rest of the song on from it</span></label>
+              <!-- HERESY 1704: a chord bed (after timoncool's YuE2-Studio, MIT, and gary4juce's yuey scaffold) -->
+              <div class="transpose-row bed-row" id="bedRow">
+                <span class="label">Chord bed</span>
+                <select id="bedKey" aria-label="Key" data-tip="The key the bed's chords are in; taken from the style when it names one («Bb major», «F#m»)" translate="no"><option value="C">C</option><option value="Db">Db</option><option value="D">D</option><option value="Eb">Eb</option><option value="E">E</option><option value="F">F</option><option value="F#">F#</option><option value="G">G</option><option value="Ab">Ab</option><option value="A">A</option><option value="Bb">Bb</option><option value="B">B</option><option value="Cm">Cm</option><option value="C#m">C#m</option><option value="Dm">Dm</option><option value="Ebm">Ebm</option><option value="Em">Em</option><option value="Fm">Fm</option><option value="F#m">F#m</option><option value="Gm">Gm</option><option value="G#m">G#m</option><option value="Am">Am</option><option value="Bbm">Bbm</option><option value="Bm">Bm</option></select>
+                <select id="bedMeter" aria-label="Meter" data-tip="The meter of the bed's bars: 4/4, 3/4, 6/8 or 2/4" translate="no"><option value="4/4">4/4</option><option value="3/4">3/4</option><option value="6/8">6/8</option><option value="2/4">2/4</option></select>
+                <input type="number" id="bedBpm" class="mono bed-bpm" min="40" max="240" step="1" value="96" aria-label="Tempo (BPM)" data-tip="The bed's tempo, 40 to 240 BPM; taken from the style when it names one («96 BPM»)" />   <!-- HERESY 1704b: the three tips -->
+                <button type="button" class="btn ghost small" id="bedWrite" data-tip="A chord bed: a score written at once from the key, the meter and the tempo here, a few bars of chords for every section of the lyrics, the Vocal voice resting and the instruments empty. In Full the model writes the melody and the arrangement over that harmony. Each press draws other progressions (one for the verses, one for the choruses, one for a bridge). After timoncool's YuE2-Studio (MIT) and gary4juce's yuey scaffold">Write a bed</button>
+                <span class="row-hint" id="bedNote"></span>
+              </div>
               <!-- HERESY 1018: move the score to another key (heresy-transpose.js) -->
               <div class="transpose-row is-hidden" id="transposeRow">
                 <span class="label">Key</span><strong class="mono" id="scoreKeyNow"></strong><span aria-hidden="true">→</span>
@@ -868,6 +933,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
               <div class="drawer-act">
                 <button type="button" class="btn ghost" id="abcInstrumental" data-tip="Move the vocal melody of this score to the instrument (the official instrumental recipe) and tick Instrumental">Make instrumental</button>
                 <button type="button" class="btn ghost danger" id="abcRemove" data-abc="">Remove score</button>
+                <button type="button" class="btn ghost roll-btn" id="rollOpen" data-tip="The score in the box as a piano roll: both staves, Vocal and Ins, a note a click; written back into the score line by line, every untouched line as YuE2 wrote it" aria-label="Piano roll"><svg class="roll-btn-svg" viewBox="0 0 96 26" width="96" height="26" aria-hidden="true"><g stroke="currentColor" stroke-width="1" opacity=".55"><line x1="2" y1="5" x2="94" y2="5"/><line x1="2" y1="9" x2="94" y2="9"/><line x1="2" y1="13" x2="94" y2="13"/><line x1="2" y1="17" x2="94" y2="17"/><line x1="2" y1="21" x2="94" y2="21"/></g><ellipse cx="12" cy="23.0" rx="3.6" ry="2.6" transform="rotate(-20 12 23.0)" fill="currentColor"/><line x1="15.3" y1="23.0" x2="15.3" y2="11.0" stroke="currentColor" stroke-width="1.2"/><ellipse cx="22" cy="21.0" rx="3.6" ry="2.6" transform="rotate(-20 22 21.0)" fill="currentColor"/><line x1="25.3" y1="21.0" x2="25.3" y2="9.0" stroke="currentColor" stroke-width="1.2"/><ellipse cx="32" cy="19.0" rx="3.6" ry="2.6" transform="rotate(-20 32 19.0)" fill="currentColor"/><line x1="35.3" y1="19.0" x2="35.3" y2="7.0" stroke="currentColor" stroke-width="1.2"/><ellipse cx="42" cy="17.0" rx="3.6" ry="2.6" transform="rotate(-20 42 17.0)" fill="currentColor"/><line x1="45.3" y1="17.0" x2="45.3" y2="5.0" stroke="currentColor" stroke-width="1.2"/><ellipse cx="52" cy="15.0" rx="3.6" ry="2.6" transform="rotate(-20 52 15.0)" fill="currentColor"/><line x1="55.3" y1="15.0" x2="55.3" y2="3.0" stroke="currentColor" stroke-width="1.2"/><ellipse cx="62" cy="13.0" rx="3.6" ry="2.6" transform="rotate(-20 62 13.0)" fill="currentColor"/><line x1="65.3" y1="13.0" x2="65.3" y2="1.0" stroke="currentColor" stroke-width="1.2"/><ellipse cx="72" cy="11.0" rx="3.6" ry="2.6" transform="rotate(-20 72 11.0)" fill="currentColor"/><line x1="75.3" y1="11.0" x2="75.3" y2="-1.0" stroke="currentColor" stroke-width="1.2"/><ellipse cx="82" cy="9.0" rx="3.6" ry="2.6" transform="rotate(-20 82 9.0)" fill="currentColor"/><line x1="85.3" y1="9.0" x2="85.3" y2="-3.0" stroke="currentColor" stroke-width="1.2"/></svg></button>   <!-- HERESY 1578 -->
               </div>
             </div>
           </details>
@@ -951,13 +1017,13 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
                   <!-- HERESY 1498 (Viktor 16.10.2026: «Замени поле ввода шагов семплинга в Выводе на ползунок с 8-160 границами. Шаг 8. Дефолт 32»):
                        nine stops, 8 apart to 32, then 16, then 32; the number field stays as the value's holder for the rest of the page -->
                   <label class="field steps-field"><span class="label" data-head="sound solver">Denoising steps</span>
-                    <span class="steps-road"><input type="range" id="odeStepsRange" min="0" max="8" step="1" value="3" aria-label="Denoising steps"
-                      data-tip="Denoising steps of the sound half, by Viktor's ear on Heun (16.10.2026): 8 to 24 thin, sand, the voice hurries; 32 the default, where it starts to come; 64 the sweet spot; 128 likely overburn; 160 overburn and wasted GPU time. Midpoint and Heun take two network calls a step, Multistep and Euler one." /><output id="odeStepsOut" class="mono">32</output></span>
+                    <span class="steps-road"><input type="range" id="odeStepsRange" min="0" max="8" step="1" value="4" aria-label="Denoising steps"
+                      data-tip="Denoising steps of the sound half, by Viktor's ear on Heun (16.10.2026): 8 to 24 thin, sand, the voice hurries; 32 where it starts to come; 48 the default with AB2 (22.10.2026); 64 the sweet spot; 128 likely overburn; 160 overburn and wasted GPU time. Midpoint and Heun take two network calls a step, Multistep and Euler one." /><output id="odeStepsOut" class="mono">32</output></span>
                     <input type="number" id="odeSteps" step="1" min="1" max="160" hidden /></label>
                   <label class="field"><span class="label" data-head="sound ODE">Solver</span>
                     <select id="odeSolver" data-tip="The sound half's solver. Midpoint (the release) and Heun take two network calls a step, second order; Multistep one call a step, second order (it reuses the velocity of the step before); Euler one call, first order, a draft. With one take's codes and one sound seed, Midpoint, Multistep and Euler close in on the same sound as the steps grow (16.10.2026): Midpoint by 64, Multistep by 128, Euler slowly.">   <!-- HERESY 1498b: the calls a step in the tip, the names short -->
                       <option value="midpoint">Midpoint · release</option>
-                      <option value="multistep">Multistep</option>
+                      <option value="multistep" selected>Multistep · AB2</option><!-- HERESY 1710: the default -->
                       <option value="heun">Heun</option>
                       <option value="euler">Euler · draft</option>
                     </select></label>
@@ -981,6 +1047,13 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
                     </select></label>
                   <label class="field"><span class="label" data-head="per million">Peak clip</span>
                     <input type="number" id="peakClip" step="1" /></label>
+                  <!-- HERESY 1768 (Viktor 24.10.2026: «Делай это опцией Sampling блоке Творца… А этот в тултипе подсказки пометь как экспериментальный и
+                       отличающийся выхлопом»): the decode ladder, the Creator's own; after Peak clip, so the rows above stay as they were -->
+                  <label class="field"><span class="label" data-head="sound half">Sound decode</span>
+                    <select id="narDecode" data-tip="Experimental: what comes out differs from the standard decode. How the sound half turns the music codes into sound. Whole song, the standard (and the only way everywhere else in the Studio): one solve over the whole song, stable and predictable. Ladder: the song in even pieces of about 20 s, each solved hearing 2 s of the music past both its edges, the neighbours crossfaded over the 2 s round each joint (the best of the probes by Viktor's ear, 24.10.2026). On the same codes and seeds it comes out close to the whole-song decode, not the same, and further from it on a fine-tuned checkpoint; for now it takes the same time. A song under 20 s is one piece. Only the Creator's runs and their «Also render with» go this way; a section or a window sung anew, a new sound, a trim, an end or a fade-in in the player decode the standard way.">
+                      <option value="standard" selected>Whole song · standard</option>
+                      <option value="ladder">Ladder · experimental</option>
+                    </select></label>
                 </div>
                 <div class="field-row">
                   <p class="row-hint grow" id="outHint"></p>
@@ -1079,6 +1152,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <button type="button" class="btn ghost small" id="reuseTake" data-tip="Reuse: the prompt, lyrics and every setting (mode, sampling, guidance, VAE, LoRAs, output) for a new song: no score, no seeds, no music codes, so Generate writes new music">Reuse</button>
           <button type="button" class="btn ghost small" id="rerenderSound" title="Same music, a new sound seed (seconds)">Re-render sound</button>
           <button type="button" class="btn ghost small" id="regenFrom" data-tip="Regenerate from here: everything before the chosen moment stays exactly as it is (its music codes are kept), and the music is written anew from there with a new music seed. The moment is where the player stands when this take plays; otherwise you are asked. For a song or reading that breaks down after a point.">Regenerate from…</button>
+          <button type="button" class="btn ghost small" id="extendTake" data-tip="Extend: the take goes on past its end, every bit of it kept as it is (its music codes), 15 seconds to 2 minutes more, with new lines if you give them. A take planned with a score goes on without one (Direct): its score ends where the take ends.">Extend…</button>   <!-- HERESY 1651 -->
           <button type="button" class="btn ghost small" id="transcribeTake" data-tip="SheetSage2 writes this take's own sound down as a score (the server reads the take itself; nothing is uploaded), into the form for a cover: with chords, or the melody only, as chosen under Cover a recording. Good for a reading made in Direct mode, which has no score.">Transcribe this take</button>
           <button type="button" class="btn ghost small" id="trimToText" data-tip="For readings and songs that go on past their text: Whisper finds where the text ends, and the same take is rendered again from its own music codes cut there (+1.5 s). The same performance, without the returns and babble after the last line; only the sound stage runs.">Trim to the text</button>
           <button type="button" class="btn ghost small" id="endAt" data-tip="End the take at a moment: its last 2 s fade out, and nothing after it is kept. For a song that runs on past its proper end (in Full, the score's leftover bars after the last words). The moment is where the player stands when this take plays; otherwise you are asked. From the take's kept latents in seconds (the very sound), else its music codes rendered again. A new take; this one stays.">End at…</button>
@@ -1088,6 +1162,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <div class="tool-group tg-edit"><span class="tool-cap"><span class="tl-cap-ico" data-ui="pencil" aria-hidden="true"></span>Edit</span><div class="tool-row">
           <button type="button" class="btn ghost small" id="cropTake" data-tip="Crop: keep the stretch from one section to another of this take's own sound, cut on its score's bar lines, the score cut along. A new take; this one stays."><span class="tl-ico" data-ui="crop" aria-hidden="true"></span><span class="tl-name">Crop…</span></button>
           <button type="button" class="btn ghost small" id="cutSection" data-tip="Remove a section: take one or more sections out of this take's own sound, each cut on its score's bar lines and healed by a short crossfade, the score cut along. A new take; this one stays."><span class="tl-ico" data-ui="scissors" aria-hidden="true"></span><span class="tl-name">Remove a section…</span></button>
+          <!-- HERESY 1714 (RIVALS 13): a take arranged anew from its own sections -->
+          <button type="button" class="btn ghost small" id="repeatSection" data-tip="Repeat a section: the sections ticked play twice, the copy right after them (the last chorus once more), each join cut on its score's bar lines and healed by a short crossfade, the score joined along. A new take; this one stays."><span class="tl-ico" data-ui="repeat" aria-hidden="true"></span><span class="tl-name">Repeat a section…</span></button>
+          <button type="button" class="btn ghost small" id="insertPart" data-tip="Insert a part: a copy of one section after another (an intro or a break as an interlude), each join cut on its score's bar lines and healed by a short crossfade, the score joined along. A new take; this one stays."><span class="tl-ico" data-ui="layers" aria-hidden="true"></span><span class="tl-name">Insert a part…</span></button>
           <button type="button" class="btn ghost small" id="speedTake" data-tip="Speed: this take faster or slower, its pitch kept (Rubber Band), its score's tempo written anew. A new take; this one stays."><span class="tl-ico" data-ui="gauge" aria-hidden="true"></span><span class="tl-name">Speed…</span></button>
         </div></div>
         <div class="tool-group tg-refine"><span class="tool-cap"><span class="tl-cap-ico" data-ui="sparkles" aria-hidden="true"></span>Refiner</span><div class="tool-row">
@@ -1390,7 +1467,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 
       <!-- HERESY 1471: the DAW: a set of stems on lanes, Plenio's stem mixer on Forge (lab/daw.py), heard here as it is set -->
       <details class="drawer" id="dawPanel">
-        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">DAW</span><span class="sum-say">A set of stems on its lanes: level, mute and solo, a version for each stem, silence drawn on a wave, compression, the room and the delay; heard here as you set it, then mixed on Forge into a branch of the tree.</span></span></summary>
+        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">DAW<span class="beta-badge" data-tip="Beta: we make our songs here every day, and it is all still growing; what it keeps and how it looks may change in a later release.">beta</span></span><span class="sum-say">A set of stems on its lanes: level, mute and solo, a version for each stem, silence drawn on a wave, compression, the room and the delay; heard here as you set it, then mixed on Forge into a branch of the tree.</span></span></summary>
         <div class="drawer-body mx-body" id="mxBody"></div>
       </details>
 
@@ -1540,6 +1617,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
             <div class="score-tabs">
               <button type="button" class="spec-scale is-active" data-spec-scale="log">Log</button>
               <button type="button" class="spec-scale" data-spec-scale="linear">Linear</button>
+              <!-- HERESY 1740: the view, one setting with the player's scope -->
+              <span class="spec-modes" role="group" aria-label="The spectrum's view"><button type="button" class="spec-scale" data-spec-mode="mono" data-tip="Mono: the two sides averaged, one picture">Mono</button><button type="button" class="spec-scale" data-spec-mode="lr" data-tip="Left and right: each side its own picture, one under the other">L / R</button><button type="button" class="spec-scale" data-spec-mode="ms" data-tip="Mid and side: what the sides share, and what differs between them, one under the other">M / S</button><button type="button" class="spec-scale" data-spec-mode="pan" data-tip="Pan: one picture, each point coloured by where it stands between the sides (blue left, orange right, pale in the middle)">Pan</button></span>
             </div>
             <label class="spec-compare" data-tip="Lays a second spectrum under this one, on the same scale: a file made from this take, or another take."><span>Compare with</span><select id="specCompare"></select></label>
             <span class="spec-state mono" id="specState"></span>
@@ -1583,6 +1662,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
               <span class="row-hint mono" id="ktState"></span>
               <span class="spacer"></span>
               <a class="btn ghost small" id="ktLrc" hidden>⤓ .lrc</a>
+              <a class="btn ghost small" id="ktLrcW" hidden data-tip="Every word timed (enhanced LRC): a player that sings along lights each word as it is sung. The lines are yours; only the times come from Whisper.">⤓ .lrc (words)</a>
               <a class="btn ghost small" id="ktSrt" hidden>⤓ .srt</a>
             </div>
             <ol class="kt-rows" id="ktRows" hidden></ol>
@@ -1771,14 +1851,21 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
             <label class="field" data-tip="The base model's weights while training: bf16, the full ones (a 24 GB card), or int8 for smaller cards, a little less exact."><span class="label">Base weights</span><select id="tr_quant"><option value="bf16">bf16</option><option value="int8">int8</option></select></label>
             <label class="field" data-tip="Direct: no score, for songs made in Direct mode. Full (score) and Melody: the music half also learns to write a score first, transcribed from every song by the engine before the run, for songs made in those modes; half the steps go without it, so Direct is not forgotten."><span class="label">Mode</span><select id="tr_cot"><option value="off">Direct</option><option value="full">Full (score)</option><option value="melody">Melody</option></select></label>
             <label class="field" data-tip="How many epochs: every track of the set once an epoch, one track a step; the run's steps are the set's tracks times this. A small set is learnt by heart fast: the green epochs in the Telemetry are the ones to hear first, often before the last."><span class="label">Epochs</span><span class="tr-unit-in"><input type="number" id="tr_epochs" min="1" max="1000" step="1" value="30" /><span class="tr-unit" id="trStepsSay"></span></span></label>
-            <label class="field" data-tip="An adapter is saved every this many epochs (an epoch: every song once), each to be heard and compared."><span class="label">Save every</span><span class="tr-unit-in"><input type="number" id="tr_save_epochs" min="1" max="100" step="1" value="1" /><span class="tr-unit">epochs</span></span></label>
-            <label class="field"><span class="label">Rank <button type="button" class="tr-howto tr-q" id="trRankHow" aria-label="How to choose" data-tip="Which rank, how many steps, the other knobs: the guide">?</button></span><input type="number" id="tr_rank" min="4" max="128" step="4" data-tip="How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, 128 at most." /></label>
+            <label class="field" data-tip="An adapter is saved every this many epochs, down to a tenth of one (0.1: ten saves an epoch), each to be heard and compared."><span class="label">Save every</span><span class="tr-unit-in"><input type="number" id="tr_save_epochs" min="0.1" max="100" step="0.1" value="1" /><span class="tr-unit">epochs</span></span></label>
+            <label class="field"><span class="label">Rank <button type="button" class="tr-howto tr-q" id="trRankHow" aria-label="How to choose" data-tip="Which rank, how many steps, the other knobs: the guide">?</button></span><input type="number" id="tr_rank" min="4" max="512" step="4" data-tip="The sound half's rank; the music half takes half of it (1:2). How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, more for a large set." /></label>
             <label class="field" data-tip="How big each step is. Keep the kind's own; higher learns faster and forgets more."><span class="label">Learning rate</span><input type="number" id="tr_lr" value="0.0001" step="0.00001" /></label>
+            <!-- HERESY 1752: the rate's fade at the run's end -->
+            <label class="field" data-tip="Over the run's last this many epochs the learning rate goes down in a straight line, to the share below at its last step: the usual way to end a run, the last saves settling instead of stepping on as hard. It follows the run's length, so a run gone on longer fades at its new end. 0: none, the rate the same to the end."><span class="label">LR fade, epochs</span><input type="number" id="tr_lr_tail_epochs" min="0" max="100" step="0.1" value="0" /></label>
+            <label class="field" data-tip="What is left of the learning rate at the run's last step, in per cent of it: 0 fades it out"><span class="label">LR at the end, %</span><input type="number" id="tr_lr_tail_floor" min="0" max="100" step="5" value="0" /></label>
             <label class="field" data-tip="Whether the music half learns (the part that writes the song's tokens), and how hard its lesson pulls against the anchor: 0 leaves it as the base, a timbre only; raise it for diction and style. What counts is the anchor's share of it, not its size."><span class="label">AR weight <button type="button" class="tr-howto tr-q" id="trArHow" aria-label="How they work" data-tip="The music half's three knobs: the guide">?</button></span><input type="number" id="tr_ar_loss_weight" min="0" max="2" step="0.1" /></label>
             <label class="field" data-tip="Pulls the music half back toward the base model, so it keeps what the set does not show. Read it as a share of the AR weight: a tenth lets it move, as much as the weight holds it near the base. Nothing at AR weight 0."><span class="label">AR anchor (KL)</span><input type="number" id="tr_ar_kl_weight" min="0" max="2" step="0.05" /></label>
             <label class="field" data-tip="The music half's learning rate as a share of the one above: the knob that makes it learn faster or slower (0.5: half as fast). It learns a small set by heart quickly."><span class="label">AR speed</span><input type="number" id="tr_ar_lr_multiplier" min="0" max="2" step="0.1" /></label>
             
             <label class="check" data-tip="Every song is first split into voice and instrumental (the studio's separator, once a set: minutes a song); the music half then also learns the voice from the lyrics alone and the music from the tags alone."><input type="checkbox" id="tr_sep" /> <span>Separate vocals and music</span></label>
+            <!-- HERESY 1622 -->
+            <label class="check" data-tip="Two in a hundred of the set's tracks (4 to 16) are held out and heard at every epoch. When the sound half stops getting better on them for 3 epochs, the music half stands still at its best epoch and the sound half goes on alone, up to 12 more (a voice came out cleaner so). Off: every track trains and the run goes all its epochs"><input type="checkbox" id="tr_plateau" checked /> <span>Stop at the plateau, then the sound half alone</span></label>
+            <!-- HERESY 1631: the run on several cards, data-parallel (lab/trainer/train.py under torchrun); last, so the knobs before it keep their places -->
+            <label class="field" data-tip="How many GPUs the run takes, among the cards given to training (Engine → GPUs), the freest first. Each holds the whole model and learns its own songs; their lessons are averaged every step, so two cards go through an epoch about twice as fast, three about three times. Nothing else to set: the learning rate follows the batch (× √cards), and every save is the moving average of the adapter."><span class="label">Cards</span><select id="tr_cards"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
           </div>
           <div class="tr-bar"><button type="button" class="btn primary small" id="trRun">Train</button><span class="row-hint" id="trRunSay"></span></div>
         </section>
@@ -1791,11 +1878,20 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <span class="lib-unfold-name">Runs</span><span class="lib-unfold-count mono" id="trUnfoldCount"></span></button>
         <header class="lib-head"><h3>Runs</h3><span class="count mono" id="trRunCount">0</span><div class="spacer"></div>
           <button type="button" class="icon-btn lib-fold" id="trFold" data-icon="collapse" data-tip="Fold the runs to the right">Fold</button></header>
-        <div class="tr-filters" id="trFilters">
-          <button type="button" class="lib-toggle" data-filter="active">Active</button>
-          <button type="button" class="lib-toggle" data-filter="all">All</button>
-          <button type="button" class="lib-toggle" data-filter="archived">Archived</button>
-          <button type="button" class="lib-toggle" data-filter="trash">Trash</button>
+        <!-- HERESY 1739 (Viktor 22.10.2026: «Если всё в SVG иконки можешь превратить - гони огонь. Высоты элементов в общий стиль»): icons of one height -->
+        <div class="tr-filters tr-ichips" id="trFilters" data-no-icon>
+          <button type="button" class="lib-toggle" data-filter="active" aria-label="Active" data-tip="Active runs: not archived, not in the trash" data-ui="activity"></button>
+          <button type="button" class="lib-toggle" data-filter="all" aria-label="All" data-tip="All runs" data-ui="list"></button>
+          <button type="button" class="lib-toggle" data-filter="archived" aria-label="Archived" data-tip="Archived runs" data-ui="archive"></button>
+          <button type="button" class="lib-toggle" data-filter="trash" aria-label="Trash" data-tip="Runs in the trash" data-ui="trash"></button>
+        </div>
+        <!-- HERESY 1659: the runs by their state, one at a time (a click again: all); 1739: an icon and the count -->
+        <div class="tr-filters tr-states tr-ichips" id="trStates" data-no-icon>
+          <button type="button" class="lib-toggle" data-state="running" aria-label="Training" data-tip="Training: a click shows these alone; again, all" data-ui="play"></button>
+          <button type="button" class="lib-toggle" data-state="paused" aria-label="Paused" data-tip="Paused: a click shows these alone; again, all" data-ui="pause"></button>
+          <button type="button" class="lib-toggle" data-state="done" aria-label="Done" data-tip="Done: a click shows these alone; again, all" data-ui="check"></button>
+          <button type="button" class="lib-toggle" data-state="stopped" aria-label="Stopped" data-tip="Stopped: a click shows these alone; again, all" data-ui="stop-circle"></button>
+          <button type="button" class="lib-toggle" data-state="failed" aria-label="Failed" data-tip="Failed: a click shows these alone; again, all" data-ui="alert"></button>
         </div>
         <div class="lib-search"><input type="search" id="trSearch" placeholder="Search runs · set · kind" autocomplete="off" /></div>
         <div class="tr-rlist" id="trRunList"></div>
@@ -1898,6 +1994,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <div class="menu-pop right is-hidden" id="libMenu" role="menu">
           <!-- HERESY 1125: the column's filters, as the Librarian has them, in every room -->
           <div class="menu-cap">Show</div>
+          <!-- HERESY 1577 (Viktor 19.10.2026: «`From all Workspaces` в спадающем меню схлопывающейся колонки Takes»): the column's own -->
+          <button type="button" role="menuitemcheckbox" aria-checked="false" data-libf="allWs" data-tip="Every workspace's takes in this column, whatever workspace is in hand (new takes still land in that one); the column's other filters still apply">From all Workspaces</button>
           <button type="button" role="menuitemcheckbox" aria-checked="false" data-libf="liked">Liked only</button>
           <!-- HERESY 1167: a dislike hides a take (as SUNO does); this shows them, the same setting as the Librarian's box -->
           <button type="button" role="menuitemcheckbox" aria-checked="false" data-libf="disliked">The disliked ones too</button>
@@ -1955,8 +2053,11 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     <button type="button" class="icon-btn skip-btn" id="pbFwd" aria-label="On 15 s" data-tip="On to the next quarter-minute mark. The → key: to the next 5 s mark" data-ui="forward">⏩</button>
     <button type="button" class="icon-btn skip-btn" id="nextTake" aria-label="Next take" data-tip="The take below in the list" data-ui="next">⏭</button>
     <button type="button" class="icon-btn pb-tog" id="pbRepeat" aria-pressed="false" data-mode="off" aria-label="Repeat" data-tip="Repeat: off · the list again from the top · this take again and again" data-ui="repeat">⟳</button>
+    <!-- HERESY 1731 (Viktor 22.10.2026: «в конец кнопок плеера прикручиваем кнопку для вызова модального окна с плейлистом») -->
+    <button type="button" class="icon-btn pb-tog" id="pbPlaylist" aria-label="Playlist" data-tip="The playlist: your takes in your order, a deck's shuffle" data-ui="playlist">☰</button>
   </div>
   <div class="pb-side">
+    <span class="pb-hold mono" id="pbHold" hidden translate="no" data-tip="Held whole in the page before it plays, so a slow line cannot break it: how much of it is in"></span>   <!-- HERESY 1746 -->
     <span class="mono time"><span id="timeNow">0:00</span> <span class="dim">/</span> <span class="dim" id="timeTotal" data-tip="Click: the time left, or the whole length">0:00</span></span>
     <!-- HERESY 1040: a click in the list plays the take at once (on by default), or only opens it -->
     <button type="button" class="icon-btn pb-tog autoplay-btn" id="clickPlay" aria-pressed="true" aria-label="Play on click"
@@ -1965,6 +2066,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
          выключатель третий добавить») -->
     <button type="button" class="icon-btn pb-tog autoplay-btn" id="playNew" aria-pressed="true" aria-label="Play new takes"
       data-tip="Play new takes: a song made here plays when it is done, unless something plays. Click to only open it." data-ui="playnew">✦</button>
+    <!-- HERESY 1713 (RIVALS 11, Viktor 20.10.2026: «ОДОБРЯЮ с созданием функционала плейлиста»): the crossfade between the takes of Play on, just
+         before it (the bell stays right after Play on) -->
     <button type="button" class="icon-btn pb-tog autoplay-btn" id="autoplay" aria-pressed="true" aria-label="Play on"
       data-tip="Play on: when a take ends, the next one down the list starts, into the history. Click to stop after each take." data-ui="playon">↓</button>
     <!-- HERESY 1275 (Viktor 28.09.2026: «звуковое оповещение при окончании генерации») -->
@@ -1981,11 +2084,13 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     </select>
     <div class="volume">
       <button class="icon-btn" id="muteBtn" aria-label="Mute"><span id="muteGlyph">🔊</span></button>
-      <input type="range" id="volume" min="0" max="1" step="0.01" value="1" aria-label="Volume" />
+      <input type="range" id="volume" min="0" max="1.5" step="0.01" value="1" aria-label="Volume" data-tip="Volume. Past 100 % a boost up to 150 % for a quiet take: the slider stops at 100 % first; let go and drag again to go past it" />   <!-- HERESY 1700: to 150 % -->
     </div>
     <button type="button" class="status-pill" id="statusPill" data-s="idle" data-tip="Nothing is being made or played"><span class="status-dot" aria-hidden="true"></span><span id="statusText" aria-live="polite">Idle</span></button>
   </div>
   </div>
+  <!-- HERESY 1731: the playlist's strip under the player, while a take of it plays: the take before, its place, the take after -->
+  <div class="pl-strip" id="plStrip" hidden><button type="button" class="pl-prev" id="plPrev" translate="no"></button><span class="pl-mid"><span id="plMid"></span><span class="pl-xfn mono" id="plXfN" hidden title="The playlist's crossfade"></span><button type="button" class="pl-leave" id="plLeave" aria-label="Leave the playlist" data-tip="Leave the playlist">✕</button></span><button type="button" class="pl-next" id="plNext" translate="no"></button></div>
   <audio id="audio" preload="auto"></audio>
 </footer>
 
@@ -2002,6 +2107,10 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     <span class="log-dock-acts">
       <span class="log-dock-views" id="logDockViews" role="tablist" aria-label="Which log">
         <button type="button" role="tab" class="log-view is-on" data-view="server" aria-selected="true" data-tip="The server's log: the engine and the lab">Server</button>
+        <!-- HERESY 1630 (Viktor 20.10.2026: «добавь ещё вкладку с фильтрацией по Creator, Trainer, Refiner»): the same lines, each room's own (app.js logSrc) -->
+        <button type="button" role="tab" class="log-view" data-view="creator" aria-selected="false" data-tip="The Creator's lines of the server's log: the engine's own, the page's and the lab's for songs">Creator</button>
+        <button type="button" role="tab" class="log-view" data-view="trainer" aria-selected="false" data-tip="The Trainer's lines of the server's log: its runs as they start and end">Trainer</button>
+        <button type="button" role="tab" class="log-view" data-view="refiner" aria-selected="false" data-tip="The Refiner's lines of the server's log: stems, remaster, upscale, the gateway, the DAW's mixes">Refiner</button>
         <button type="button" role="tab" class="log-view" data-view="artist" id="logViewArtist" translate="no" aria-selected="false" data-tip="The Artist's own log: what was asked, what the lab answered, each run's way to its end; kept in this browser">Artist</button></span>
       <label class="check small-check"><input type="checkbox" id="logDockFollow" checked data-tip="Follow: the log keeps to its newest line as the engine writes. Off: it stays where you scrolled to read." /> <span>Follow</span></label>
       <!-- HERESY 1166 (Viktor: «кнопочку полной распашки консоли на всю высоту»): the log the window's full height, or back -->
@@ -2156,6 +2265,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 <script src="loras.js"></script>
 <script src="vaes.js"></script>
 <script src="heresy-icons.js"></script>
+<script src="heresy-pro.js"></script>   <!-- HERESY 1599: own plugins off for a public view -->
 <script src="heresy-transpose.js"></script>
 <script src="heresy-abc.js"></script>
 <script src="heresy-score.js"></script>
@@ -2189,7 +2299,10 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 <script src="heresy-canvas.js"></script>   <!-- HERESY 1346: the Artist's canvas -->
 <script src="heresy-zoom.js"></script>
 <script src="heresy-spectrum.js"></script>
-<script src="heresy-wavescope.js"></script>   <!-- HERESY 1374: the wave's scope -->
+<script src="heresy-wavescope.js"></script>
+<script src="heresy-midi.js"></script>
+<script src="heresy-iconbtn.js"></script>   <!-- HERESY 1593: the common acts' buttons as icons -->   <!-- HERESY 1589: the studio's MIDI -->
+<script src="heresy-roll.js"></script>   <!-- HERESY 1578: the Creator's piano roll -->   <!-- HERESY 1374: the wave's scope -->
 <script src="themes.js"></script>
 <script src="app.js"></script>
 </body>

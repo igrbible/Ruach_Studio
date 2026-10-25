@@ -27,9 +27,11 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
        HERESY 1337: GET /artist/bin (the art's trash: runs, pictures put aside, covers taken off) · GET /artist/bin-file?take=&stamp= ·
        POST /artist/bin {op: restore | delete | empty, items}
   GET  /fonts/NAME.woff2|.ttf      HERESY 1274: the page's fonts (lab/fonts/, OFL), cached a year (1426: Liberation Mono as TTF)
+  GET  /sounds/NAME.mp3            HERESY 1586: the piano roll's instruments (lab/sounds/, CC BY 3.0), cached a year
   POST /jobs/cancel {key}          HERESY 1165: a job waiting for a card off the queue (a running one is refused)
   POST /regen {names, same_seeds}  HERESY 1160: made again, new seeds; same_seeds (1165): its own, at a probe's full length
   POST /section {name, a, b, lyrics, versions, section, parts}  HERESY 1414: a section sung anew (GET /section/live, /section/job?id=, /section/mark?name=)
+  POST /section/window {name, a, b, lyrics, versions, pre, post, loras}  HERESY 1757: a window sung anew with adapters of its own, ramps round it
   GET /activity?since=SEQ          HERESY 1157: the lab's GPU work as it starts and ends, and what runs now
   POST /regen {names}              HERESY 1160: made again with new seeds; the new take takes the old one's places
   GET /remaster?name=TAKE&s=JSON   the Debunker v6 pipeline (remaster_job.py) on the take or its stems
@@ -76,7 +78,7 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
   GET /timing?name=&fmt=json|lrc|srt[&force=1]   karaoke timing: lyric lines on Whisper's word times
   GET /loop?name=&start=&seconds=                 HERESY 1325: a loop cut from the take's WAV, seamless (audio/wav)
   GET /train/datasets · /train/scan?name= · /train/prepare?name= · /train/run?name= · /train/log?name=
-  POST /train/prepare {from, name, style, tracks} · /train/run {dataset, name, steps…} · /train/stop {name}
+  POST /train/prepare {from, name, style, tracks} · /train/run {dataset, name, steps…} · /train/stop {name} · /train/pack {name, undo} (HERESY 1626)
        /train/publish {name, file}: one epoch's checkpoint into loras/ (HERESY 1067)
        /train/archive {name, archived} · /train/delete {name, loras} (to trash/training/) · /train/restore {id}
        /train/purge {id} · /train/unpublish {name, lora} · GET /train/trash · /train/file?name=&file= (HERESY 1090)
@@ -104,6 +106,8 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
   GET /daw/set?name=&set=derived/stems-…   HERESY 1470: the Refiner's DAW: a set's strips, their versions, the rest (daw.py)
   GET /daw/chunk?name=&set=&strip=&path=&start=&seconds=   a strip's stretch as FLAC (rest: the source less the set's parts)
   GET /daw/peaks?name=&set=&strip=&path=[&n=1200]   a strip's wave, the loudest of each stretch, 0…1
+  GET /daw/loudness?name=&set=   HERESY 1755: the set's source a 100 ms block as the DAW's loudness meter reads it, and its integrated loudness
+                                 (the reference, matched to the mix; /daw/chunk with strip=source plays it)
   GET /peaks?name=&path=[&n=400]   any sound of the take's tree as its wave (HERESY 1487: the tree's players)
   GET /c2pa · POST /c2pa {on, author, contact, cert, key}   Content Credentials (HERESY 1489, c2pa_sign.py): its state and settings
   GET /c2pa/file?name=&format=wav|flac|mp3&from=/library/…[&path=derived/…]   the engine's download, signed on the way
@@ -164,6 +168,7 @@ import refiner_profiles  # noqa: E402   HERESY 1515: the Refiner's setups by nam
 import creator_versions  # noqa: E402   HERESY 1519: the Creator's words on each Generate, apart from the takes
 import derived_trash  # noqa: E402   HERESY 1527: a branch into its take's trash and back
 import c2pa_sign  # noqa: E402   HERESY 1489: Content Credentials on the downloads
+import file_tags  # noqa: E402   HERESY 1635: the song's tags on the downloads, before the signature
 import gpu_live  # noqa: E402   HERESY 1264: the cards second by second, for the page's live graphs
 import section  # noqa: E402   HERESY 1414: Replace a section
 import machine  # noqa: E402   HERESY 1304: the machine as a new studio's first start reads it
@@ -491,9 +496,8 @@ def gpus_state():
     live = {}                                           # the live runs only (the full history is heavy to read)
     for name, job in list(training.RUNS.items()):
         if job.get("status") in ("running", "stopping"):
-            g = training._meta(training.paths(KIT)["runs"] / name).get("gpu")
-            if g is not None:
-                live[int(g)] = name
+            for g in training.run_cards(training._meta(training.paths(KIT)["runs"] / name)):   # HERESY 1631: every card a run holds
+                live[g] = name
     now = gpu_roles.studio_now()
     studio = now if now is not None else roles["studio"]
     try:                                                # HERESY 1140: the guard's verdict, card by card, as the jobs get it
@@ -503,7 +507,8 @@ def gpus_state():
         guard = {"error": str(e)}
     return {"cards": cards, "roles": roles, "saved": gpu_roles.path(KIT).is_file(), "studio_now": now, "guard": guard,
             "training": {str(g): n for g, n in live.items()},
-            "studio_training": live.get(studio)}
+            "studio_training": live.get(studio),
+            "arc": [{"index": i, "bdf": b, "name": n, "total_mb": t} for i, b, h, n, t in gpu_live._xe_cards()]}   # HERESY 1680: the Intel cards
 
 
 def machine_state():
@@ -669,7 +674,20 @@ def timing_async(name, force=False, cached_only=False):
             jobs.pop(key)
             return dict(job, name=name)
         if out.is_file() and not force and out.stat().st_mtime >= newest:
-            return json.load(open(out, encoding="utf-8"))
+            res = json.load(open(out, encoding="utf-8"))
+            # HERESY 1646: a timing made before each word kept its time is aligned again from Whisper's words already heard (no new pass)
+            if res.get("rows") and "tt" not in res["rows"][0] and words.is_file():
+                try:
+                    rows = timing.align(json.load(open(words, encoding="utf-8")), lyrics)
+                    hint = CACHE / f"{name}.words-hint.json"
+                    if hint.is_file():
+                        rows = timing.merge(rows, timing.align(json.load(open(hint, encoding="utf-8")), lyrics))
+                    if len(rows) == len(res["rows"]):
+                        res["rows"] = rows
+                        json.dump(res, open(out, "w", encoding="utf-8"), ensure_ascii=False)
+                except (OSError, ValueError, KeyError):
+                    pass                                 # the timing as it was: its words share their lines evenly
+            return res
         if cached_only:
             raise FileNotFoundError("not timed yet")
         job = {"status": "queued", "started": time.time(), "kind": "timing"}
@@ -727,23 +745,98 @@ def timing_async(name, force=False, cached_only=False):
     return dict(job, name=name)
 
 
+# HERESY 1719 (RIVALS 9, Match sections): the lyrics timed on a recording that is not a take (a cover's source). The recording is kept in the
+# cache by its hash, so Whisper hears it once however often its lyrics change; the lines are aligned as a take's are (timing.align).
+REC_JOBS = {}
+
+
+def timing_recording(data):
+    import base64, hashlib
+    lyrics = str(data.get("lyrics") or "")
+    if not timing.rows_of(lyrics):
+        raise ValueError("no lyrics to time")
+    try:
+        raw = base64.b64decode(str(data.get("audio") or ""), validate=True)
+    except ValueError:
+        raise ValueError("the recording: base64, please")
+    if len(raw) < 4096:
+        raise ValueError("no recording")
+    ext = Path(str(data.get("file") or "x.wav")).suffix.lower()
+    ext = ext if ext in (".wav", ".mp3", ".flac", ".m4a", ".ogg", ".opus", ".aac") else ".wav"
+    rid = hashlib.sha256(raw).hexdigest()[:16]         # the recording: its words, heard once
+    sid = rid + "-" + hashlib.sha256(lyrics.encode("utf-8")).hexdigest()[:8]   # HERESY 1719b: the job, the recording with these lyrics
+    CACHE.mkdir(exist_ok=True)
+    src, words = CACHE / f"rec-{rid}{ext}", CACHE / f"rec-{rid}.words.json"
+    with jobs_lock:
+        job = REC_JOBS.get(sid)
+        if job and job["status"] in ("queued", "running"):
+            return dict({k: v for k, v in job.items() if k != "lyrics"}, id=sid)
+        job = {"status": "queued", "started": time.time(), "kind": "timing", "lyrics": lyrics}
+        REC_JOBS[sid] = job
+    if not src.is_file():
+        src.write_bytes(raw)
+
+    def work():
+        try:
+            lang = timing.language(lyrics)
+            if not words.is_file():
+                with whisper_turn(job) as wt:
+                    job["status"] = "running"
+                    if not words.is_file():              # HERESY 1719b: another job may have heard it while this one waited its turn
+                        env, gpu, why = whisper_env(wt.gpu)
+                        job["gpu"] = gpu
+                        part = Path(str(words) + ".part")
+                        r = subprocess.run([str(WHISPER_PY), str(HERE / "whisper_job.py"), str(src), str(part), lang or "", str(WHISPER_DIR), "words"],
+                                           env=env, capture_output=True, text=True, timeout=1800)
+                        if r.returncode != 0:
+                            raise RuntimeError("Whisper failed: " + (r.stderr.strip().splitlines() or ["no output"])[-1][-300:])
+                        os.replace(part, words)
+            rows = timing.align(json.load(open(words, encoding="utf-8")), lyrics)
+            job.update(status="done", rows=rows, language=lang or "auto", heard=round(sum(not x["guessed"] for x in rows) / len(rows), 3))
+        except Exception as e:
+            job.update(status="failed", error=str(e))
+        finally:
+            job.pop("lyrics", None)
+            threading.Timer(600, lambda: REC_JOBS.pop(sid, None) if REC_JOBS.get(sid) is job else None).start()
+    threading.Thread(target=work, daemon=True).start()
+    return {"status": job["status"], "id": sid}
+
+
+def timing_recording_job(sid):
+    job = REC_JOBS.get(str(sid or ""))
+    if not job:
+        raise FileNotFoundError("no such timing: it ended over ten minutes ago, or was never asked")
+    return dict({k: v for k, v in job.items() if k != "lyrics"}, id=sid)
+
+
 # HERESY 1020: the spectrum, computed here instead of in the browser. CPU only, so it does not
 # wait for the GPU lock; one at a time of its own. Needs numpy: the Whisper venv's python.
 NUMPY_PY = Path(os.environ.get("LAB_NUMPY_PY", LAB_PY))
 cpu = threading.Lock()
 
 
-def spectrum_file(name, source=""):
+SPEC_MODES = ("mono", "lr", "ms", "pan")         # HERESY 1740: mono as before; left/right, mid/side, the pan map
+
+
+def spec_mode(mode):
+    mode = str(mode or "mono")
+    if mode not in SPEC_MODES:
+        raise ValueError(f"a spectrum is one of {list(SPEC_MODES)}")
+    return mode
+
+
+def spectrum_file(name, source="", mode="mono"):
     audio, tag = source_of(name, source)
     if not audio or not audio.is_file():
         raise FileNotFoundError(f"{name} has no audio")
     CACHE.mkdir(exist_ok=True)
-    out = CACHE / f"{name}{tag}.spec"
+    mode = spec_mode(mode)
+    out = CACHE / f"{name}{tag}{'' if mode == 'mono' else '.' + mode}.spec"   # HERESY 1740: each mode its own file
     if out.is_file() and out.stat().st_mtime >= audio.stat().st_mtime:
         return out
     with cpu:
-        tmp = CACHE / f"{name}{tag}.spec.part"
-        p = subprocess.run([str(NUMPY_PY), str(HERE / "spectrum_job.py"), str(audio), str(tmp)],
+        tmp = out.with_name(out.name + ".part")
+        p = subprocess.run([str(NUMPY_PY), str(HERE / "spectrum_job.py"), str(audio), str(tmp), mode],
                            capture_output=True, text=True, timeout=600)
         if p.returncode != 0:
             raise RuntimeError("spectrum failed: " + (p.stderr.strip().splitlines() or ["no output"])[-1])
@@ -751,11 +844,12 @@ def spectrum_file(name, source=""):
     return out
 
 
-def spectrum_async(name, source=""):
+def spectrum_async(name, source="", mode="mono"):
     """The file when it is ready; otherwise the job's state, starting the job if needed."""
     audio, tag = source_of(name, source)
-    out = CACHE / f"{name}{tag}.spec"
-    key = "spectrum:" + name + tag
+    mode = spec_mode(mode)
+    out = CACHE / f"{name}{tag}{'' if mode == 'mono' else '.' + mode}.spec"   # HERESY 1740
+    key = "spectrum:" + name + tag + ("" if mode == "mono" else ":" + mode)
     with jobs_lock:
         job = jobs.get(key)
         if job and job["status"] in ("queued", "running"):
@@ -770,7 +864,7 @@ def spectrum_async(name, source=""):
 
     def work():
         try:
-            spectrum_file(name, source)
+            spectrum_file(name, source, mode)
             with jobs_lock:
                 jobs.pop(key, None)
         except Exception as e:
@@ -787,7 +881,7 @@ def derived_list(name):
     out = []
     for m in sorted(d.glob("*/manifest.json")) if d.is_dir() else []:
         try:
-            out.append(json.load(open(m, encoding="utf-8")))
+            out.append(json.load(open(m, encoding="utf-8"), parse_constant=lambda c: None))   # HERESY 1576: NaN/Infinity as null, the reply stays JSON
         except ValueError:
             pass
     with jobs_lock:
@@ -805,6 +899,7 @@ def derived_busy(name):
 
 DAW_SEEN, DAW_PEAKS = {}, {}
 DAW_IR = {}   # HERESY 1531: the room's impulses, by preset and rate
+DAW_LOUD = {}   # HERESY 1755: the sources' loudness blocks, by file and its time
 DAW_PROCS = {}   # HERESY 1539: a running mix's process, by its job's key, so Stop can end it
 FILE_PEAKS = collections.OrderedDict()               # HERESY 1487: (name, path, n) -> (stamp, peaks, seconds)
 
@@ -847,6 +942,12 @@ def c2pa_file(q):
         raise ValueError("format: wav, flac or mp3")
     with urllib.request.urlopen(ENGINE_URL + src, timeout=900) as r:
         data, head = r.read(), {k: r.headers.get(k) for k in ("Content-Type", "Content-Disposition") if r.headers.get(k)}
+    # HERESY 1635 (RIVALS 8): the title, the lyrics, the style, the cover and the studio in the file, so a player shows the song whole; signed after
+    data, tagged = file_tags.tag(data, fmt, file_tags.song_of(d), author=str(c2pa_sign.load(config_dir()).get("author") or ""),
+                                 software="Ruach Studio " + studio_version())
+    head["X-Tags"] = tagged.encode("ascii", "replace").decode("ascii")[:200]   # a header is latin-1
+    if q.get("sign") == "0":                         # HERESY 1635: the page asks for the tags alone (signing off or not available there)
+        return data, head, "unsigned: not asked"
     data, said = c2pa_for(d, data, fmt, rel)
     return data, head, said
 
@@ -1376,6 +1477,8 @@ def plugin_async(name, pid, sid, source="", given=None, versions=None, history=N
                     gpu, _free = free_gpu(step["need_mb"], why=step["label"])
                     job["gpu"] = gpu
                     tmp, r = run(dict(os.environ, CUDA_VISIBLE_DEVICES=str(gpu), CUDA_DEVICE_ORDER="PCI_BUS_ID"))
+            elif step.get("hardware"):                # HERESY 1572: gear outside the machine, in real time: not the CPU's turn (its own lock queues the passes)
+                tmp, r = run()
             else:
                 with cpu:
                     tmp, r = run()
@@ -2243,9 +2346,14 @@ def act_now():
                 out.append(r)
     for name, run in list(training.RUNS.items()):
         if run.get("status") in ("running", "stopping"):
-            gpu = training._meta(training.paths(KIT)["runs"] / name).get("gpu")
-            out.append({"key": "train:" + name, "what": ACT_SAY["train"], "name": name, "status": "running", "gpu": gpu,
-                        "step": run.get("step"), "steps": run.get("steps")})
+            held = training.run_cards(training._meta(training.paths(KIT)["runs"] / name))   # HERESY 1631: "1+2" for a run on two
+            gpu = "+".join(str(c) for c in held) if len(held) > 1 else (held[0] if held else None)
+            r = {"key": "train:" + name, "what": ACT_SAY["train"], "name": name, "status": "running", "gpu": gpu,
+                 "step": run.get("step"), "steps": run.get("steps")}
+            m = training.ETA_RE.search((run.get("tail") or [""])[-1])   # HERESY 1617: the time it has run and has left, off the trainer's line
+            if m:
+                r["elapsed"], r["eta"] = training._hms(m.group(1)), training._hms(m.group(2))
+            out.append(r)
     for name, job in list(training.LISTEN.items()):
         if job.get("status") == "running":
             out.append({"key": "listen:" + name, "what": ACT_SAY["listen"], "name": name, "status": "running", "gpu": job.get("gpu"),
@@ -2467,8 +2575,10 @@ def regen(names, same_seeds=False):
             req.pop(k, None)
         if not meta.get("provided_score"):
             req.pop("abc", None)                             # the score the plan wrote: a new seed plans a new one
+        if not req.get("backbone") and meta.get("model"):   # HERESY 1767: the backbone it was sung on, not today's default
+            req["backbone"] = meta["model"]
         # 1165: an A/B sample is a probe too; 1166: and a voice («💎 Voice Types», voice-sung|spoken-…), at 120 s with the rest
-        if re.match(r"^(probe|style|ab|voice)\d*-", str(req.get("title") or "")):
+        if re.match(r"^(probe|style|ab|voice|keys)\d*-", str(req.get("title") or "")):   # 1767: keys, the Keys Probe
             req["duration"] = 120.0
             ss = dict(req.get("semantic_sampling") or {})
             ss["min_tokens"] = max(int(ss.get("min_tokens") or 0), 90 * 25)
@@ -2495,7 +2605,7 @@ artist.setup(kit=KIT, jobs=jobs, lock=jobs_lock, wait_card=wait_card, turn=turn,
              art_remove=art_remove)                       # HERESY 1372: a cover taken off with its picture
 
 # HERESY 1414: Replace a section reaches the engine through api, the takes' trash for its drafts, the collection for its places
-section.setup(kit=KIT, outputs=OUTPUTS, engine=api._engine, say=act_say, config_dir=config_dir, collection=collection,
+section.setup(kit=KIT, outputs=OUTPUTS, engine=api._engine, say=act_say, config_dir=config_dir, collection=collection, py=LAB_PY,   # 1717: vocal_rest.py's
               frozen=lambda: collection.frozen_takes(collection.load(config_dir())),
               trash=lambda names: collection.trash_move(KIT, OUTPUTS, names, config_dir()))
 
@@ -2595,6 +2705,12 @@ class Handler(BaseHTTPRequestHandler):
                     active = {k: v["status"] for k, v in jobs.items()}
                 if weights.running():                       # HERESY 1289: a download under way is a job too (a restart cuts it)
                     active["weights"] = "running"
+                for x in section.live():                    # HERESY 1790: a section, a line or a window sung anew (its own thread) too
+                    active["section " + x["id"]] = x["status"]
+                for mod, what in ((diamond, "diamond"), (starter, "starter")):   # HERESY 1790: and a 💎 fetch or a starter set's download
+                    for k, v in list(mod.JOBS.items()):
+                        if isinstance(v, dict) and v.get("status") in ("queued", "running"):
+                            active[what + " " + k] = v["status"]
                 return self.send(200, {"ok": True, "busy": heavy.locked(), "jobs": active, "whisper": WHISPER_DIR.is_dir()})
             if url.path == "/gloss":
                 if q.get("cached") == "1":
@@ -2640,6 +2756,14 @@ class Handler(BaseHTTPRequestHandler):
                 if not re.fullmatch(r"[A-Za-z0-9_-]+\.(woff2|ttf)", name) or not font.is_file():   # HERESY 1426: Liberation Mono as TTF
                     return self.send(404, {"error": "no such font"})
                 return self.send_file(font, "font/ttf" if name.endswith(".ttf") else "font/woff2", cache="public, max-age=31536000, immutable")
+            if url.path.startswith("/sounds/"):              # HERESY 1586: the piano roll's instruments, in the studio itself
+                name = url.path[len("/sounds/"):]
+                snd = HERE / "sounds" / name
+                if name == "vowels.json" and snd.is_file():   # HERESY 1624: the sung vowels' loops, read fresh
+                    return self.send_file(snd, "application/json", cache="no-cache")
+                if not re.fullmatch(r"[a-z]+-\d{2,3}\.mp3", name) or not snd.is_file():
+                    return self.send(404, {"error": "no such sound"})
+                return self.send_file(snd, "audio/mpeg", cache="public, max-age=31536000, immutable")
             if url.path == "/artist/runs":                   # HERESY 1255: the Artist room
                 return self.send(200, artist.runs())
             if url.path == "/artist/file":
@@ -2714,12 +2838,15 @@ class Handler(BaseHTTPRequestHandler):
                     for old in sorted(box.glob("*.wav"), key=lambda f: f.stat().st_mtime)[:-40]:
                         old.unlink(missing_ok=True)      # what the cache made, never a take's own
                 return self.send_file(out, "audio/wav")
+            if url.path == "/timing/recording":             # HERESY 1719: a recording's lyrics timing, as its job stands
+                r = timing_recording_job(q.get("id", ""))
+                return self.send(500 if r.get("status") == "failed" else 200 if r.get("status") == "done" else 202, r)
             if url.path == "/timing":                       # HERESY 1056: karaoke timing, as JSON, LRC or SRT
                 r = timing_async(q.get("name", ""), q.get("force") == "1", q.get("cached") == "1")
                 fmt = q.get("fmt", "json")
-                if fmt in ("lrc", "srt") and "rows" in r:
+                if fmt in ("lrc", "lrcw", "srt") and "rows" in r:   # HERESY 1646: lrcw, every word timed
                     title = json.load(open(take_dir(q["name"]) / "meta.json", encoding="utf-8")).get("title", "")
-                    text = timing.lrc(r["rows"], title) if fmt == "lrc" else timing.srt(r["rows"])
+                    text = timing.lrc(r["rows"], title) if fmt == "lrc" else timing.lrc_words(r["rows"], title) if fmt == "lrcw" else timing.srt(r["rows"])
                     data = text.encode("utf-8")
                     self.send_response(200)
                     self.send_header("Content-Type", "text/plain; charset=utf-8")
@@ -2818,6 +2945,15 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
                 return
+            if url.path == "/daw/loudness":                 # HERESY 1755: the reference's loudness, block by block
+                d, info = daw_info(q.get("name", ""), q.get("set", ""))
+                src = daw_kit._inside(d, info["source"])
+                key = (str(src), src.stat().st_mtime_ns)
+                if key not in DAW_LOUD:
+                    DAW_LOUD[key] = daw_kit.source_loudness(d, info)
+                    while len(DAW_LOUD) > 16:
+                        DAW_LOUD.pop(next(iter(DAW_LOUD)))
+                return self.send(200, DAW_LOUD[key])
             if url.path == "/daw/chunk":
                 d, info = daw_info(q.get("name", ""), q.get("set", ""))
                 data = daw_kit.chunk(d, info, q.get("strip", ""), q.get("path", ""), float(q.get("start", "0")), float(q.get("seconds", "10")))
@@ -2825,6 +2961,19 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "audio/flac")
                 self.send_header("Content-Length", str(len(data)))
                 self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(data)
+                return
+            if url.path == "/plugins/midi":                 # HERESY 1589: a plugin's MIDI script, its text (the page runs it in a worker)
+                plugs, _ = plugin_kit.load_all(PLUGINS, BUILTIN_STEPS)
+                hit = [m for p in plugs if p["id"] == q.get("plugin", "") for m in p.get("midi") or [] if m["id"] == q.get("id", "")]
+                if not hit:
+                    return self.send(404, {"error": "no such MIDI script"})
+                data = Path(hit[0]["script"]).read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/javascript; charset=utf-8")
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)
                 return
@@ -2871,7 +3020,7 @@ class Handler(BaseHTTPRequestHandler):
                 p, _ = source_of(q.get("name", ""), q.get("path", ""))
                 return self.send_file(p, AUDIO_TYPES.get(p.suffix.lower(), "application/octet-stream"))
             if url.path == "/spectrum":
-                r = spectrum_async(q.get("name", ""), q.get("source", ""))
+                r = spectrum_async(q.get("name", ""), q.get("source", ""), q.get("mode", "mono"))   # HERESY 1740: &mode=
                 if isinstance(r, Path):
                     return self.send_file(r)
                 return self.send(500 if r.get("status") == "failed" else 202, r)
@@ -2968,6 +3117,17 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/art/namesakes":                 # HERESY 1425: {name, to, replace}: a take's cover to its namesakes
                 data = json.loads(body.decode("utf-8"))
                 return self.send(200, art_to_namesakes(str(data.get("name") or ""), data.get("to") or [], bool(data.get("replace"))))
+            if url.path == "/section/repeat":                # HERESY 1715: {name, a, b, lyrics, versions, section, abc}: a section sung once more
+                data = json.loads(body.decode("utf-8"))
+                return self.send(202, section.repeat(data.get("name"), data.get("a"), data.get("b"), data.get("lyrics"),
+                                                     data.get("versions") or 2, data.get("section") or "", data.get("abc"),
+                                                     data.get("gap") or 0, data.get("kind") or "repeat", data.get("bar")))   # HERESY 1717
+            if url.path == "/timing/recording":             # HERESY 1719: {file, lyrics, audio}: the lyrics timed on a cover's source
+                return self.send(202, timing_recording(json.loads(body.decode("utf-8"))))
+            if url.path == "/section/window":                # HERESY 1757: {name, a, b, lyrics, versions, pre, post, loras}: a window anew, its own adapters
+                data = json.loads(body.decode("utf-8"))
+                return self.send(202, section.window(data.get("name"), data.get("a"), data.get("b"), data.get("lyrics"), data.get("versions") or 2,
+                                                     data.get("pre", 2.0), data.get("post", 2.0), data.get("loras") or []))
             if url.path == "/section":                       # HERESY 1414: {name, a, b, lyrics, versions, section}: a section sung anew
                 data = json.loads(body.decode("utf-8"))
                 return self.send(202, section.start(data.get("name"), data.get("a"), data.get("b"), data.get("lyrics"),
@@ -3047,8 +3207,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, training.unpublish(KIT, str(data.get("name", "")), str(data.get("lora", ""))))
             if url.path == "/train/voice":                  # HERESY 1169: measure a raw folder's voice
                 return self.send(202, training.measure_voice(KIT, json.loads(body.decode("utf-8"))))
-            if url.path in ("/train/prepare", "/train/run", "/train/stop", "/train/publish", "/train/listen", "/train/styles"):     # HERESY 1063, 1067, 1078
+            if url.path in ("/train/prepare", "/train/run", "/train/stop", "/train/pause", "/train/resume", "/train/publish", "/train/listen", "/train/styles", "/train/pack"):     # HERESY 1063, 1067, 1078, 1626, 1659
                 data = json.loads(body.decode("utf-8"))
+                if url.path == "/train/pack":                # HERESY 1626: a prepared set packed into parquet (FLAC) or back; its state at GET /train/prepare
+                    return self.send(202, training.pack(KIT, data))
                 if url.path == "/train/listen":
                     return self.send(202, training.listen(KIT, data, free_gpu))
                 if url.path == "/train/styles":
@@ -3058,7 +3220,11 @@ class Handler(BaseHTTPRequestHandler):
                 if url.path == "/train/prepare":
                     return self.send(202, training.prepare(KIT, data))
                 if url.path == "/train/run":
-                    return self.send(202, training.train(KIT, data, free_gpu))
+                    return self.send(202, training.train(KIT, data, free_gpu, more_gpus))   # HERESY 1631: and more cards
+                if url.path == "/train/pause":               # HERESY 1659: a stop the run is called paused by
+                    return self.send(200, training.stop(KIT, str(data.get("name", "")), pause=True))
+                if url.path == "/train/resume":              # HERESY 1659: the paused run again, from its last save
+                    return self.send(202, training.resume_run(KIT, str(data.get("name", "")), free_gpu, more_gpus))
                 return self.send(200, training.stop(KIT, str(data.get("name", ""))))
             if url.path == "/chain/batch":                  # HERESY 1562: one chain on many takes
                 return self.send(202, batch_async(json.loads(body.decode("utf-8"))))

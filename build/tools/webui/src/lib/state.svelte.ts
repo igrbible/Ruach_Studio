@@ -11,6 +11,7 @@ interface Saved {
 	dark: boolean;
 	logsOpen: boolean;
 	request: Yue2Request;
+	srcSongId: number | null;
 }
 
 function load(): Saved {
@@ -24,7 +25,8 @@ function load(): Saved {
 				format: OUTPUT_FORMATS.includes(parsed.format) ? parsed.format : 'mp3',
 				dark: parsed.dark ?? true,
 				logsOpen: parsed.logsOpen ?? true,
-				request: parsed.request || emptyRequest()
+				request: parsed.request || emptyRequest(),
+				srcSongId: parsed.srcSongId ?? null
 			};
 		}
 	} catch {
@@ -36,7 +38,8 @@ function load(): Saved {
 		format: 'mp3',
 		dark: false,
 		logsOpen: true,
-		request: emptyRequest()
+		request: emptyRequest(),
+		srcSongId: null
 	};
 }
 
@@ -52,7 +55,8 @@ export const app = $state({
 	songs: [] as Song[],
 	props: null as Yue2Props | null,
 	toast: '' as string,
-	toastOk: false
+	toastOk: false,
+	srcSongId: saved.srcSongId
 });
 
 let toastTimer = 0;
@@ -90,7 +94,8 @@ $effect.root(() => {
 			format: app.format,
 			dark: app.dark,
 			logsOpen: app.logsOpen,
-			request: app.request
+			request: app.request,
+			srcSongId: app.srcSongId
 		};
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 	});

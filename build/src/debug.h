@@ -68,3 +68,12 @@ static void debug_dump_2d(const DebugDumper * d, const char * name, const float 
 static void debug_dump_1d(const DebugDumper * d, const char * name, const float * data, int n) {
     debug_dump(d, name, data, &n, 1);
 }
+
+// Token ids as f32 for the dump format
+static std::vector<float> debug_ids(const std::vector<int> & ids) {
+    std::vector<float> out(ids.size());
+    for (size_t i = 0; i < ids.size(); i++) {
+        out[i] = (float) ids[i];
+    }
+    return out;
+}

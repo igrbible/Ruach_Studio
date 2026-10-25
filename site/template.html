@@ -120,6 +120,13 @@
   .nums span { color: var(--soft); font-size: 14px; line-height: 1.4; display: block; margin-top: 6px; }
   @media (max-width: 860px) { .nums { grid-template-columns: repeat(2, 1fr); } .nums div:last-child { grid-column: 1 / -1; } }
 
+  /* HERESY 1711 (Viktor 22.10.2026: «Декларацию на сайте-визитке врежь красиво между первым скриншотом и "Шесть комнат, одна студия"»): the declaration
+     under the first screenshot and its numbers, the accent's rule on its left, its last sentence the louder; as wide as the column */
+  section.declare { padding: 64px 0 0; }
+  .declare blockquote { margin: 0; padding: 4px 0 4px 28px; border-left: 3px solid var(--amber); }
+  .declare p { margin: 0 0 14px; font-size: 19px; line-height: 1.65; color: var(--soft); }
+  .declare p.loud { margin: 0; font-size: 22px; line-height: 1.5; color: var(--ink); font-weight: 500; }
+  @media (max-width: 600px) { section.declare { padding-top: 48px; } .declare blockquote { padding-left: 18px; } .declare p { font-size: 17px; } .declare p.loud { font-size: 19px; } }
   /* sections */
   section { padding: 72px 0 0; }
   h2 { font-size: clamp(25px, 3vw, 34px); line-height: 1.2; margin: 0 0 10px; font-weight: 700; }
@@ -248,7 +255,7 @@
       <a class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Models on Hugging Face</a>
       <a class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Buy me a Coffee Machine</a>
     </div>
-    <span class="rc"><b>2.0.0-pre</b> · the last step before 2.0.0 · October 2026</span>
+    <span class="rc"><b>2.0.0</b> · the first stable release · October 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -259,12 +266,22 @@
 
     <div class="nums">
       <div><b>8 min</b><span>whole songs, up to eight minutes</span></div>
-      <div><b>126 s</b><span>a 6:12 song on one RTX 3090</span></div>
+      <div><b>135 s</b><span>a 6:12 song on one RTX 3090</span></div>
       <div><b>6 rooms</b><span>to make, write, refine, paint, keep and teach</span></div>
       <div><b>200</b><span>instruments probed by ear</span></div>
       <div><b>12</b><span>languages of the page</span></div>
     </div>
   </div>
+
+  <!-- HERESY 1711: the declaration (approved 21.10.2026), as in the README and the Hub's cards -->
+  <section class="declare" aria-label="What we stand for">
+    <div class="wrap">
+      <blockquote>
+        <p>Ruach Studio is open music generation that runs on your own hardware: the model, the score, the adapters and every take stay yours, and nothing is rented by the token. Open models are now good enough to stand on their own, and what was missing is the studio around them: that is what we build, in the open.</p>
+        <p class="loud">Music should be free to make and to share: whoever has no voice, no instrument and no studio still has the right to lay their thoughts and feelings onto sound.</p>
+      </blockquote>
+    </div>
+  </section>
 
   <section id="rooms">
     <div class="wrap">
@@ -273,15 +290,15 @@
         finishes it, the <b>Artist</b> paints its pictures, the <b>Librarian</b> keeps every take, and the <b>LoRA Trainer</b> teaches YuE2 your own songs.
         A guide for every room is inside the studio.</p>
       <div class="rooms">
-        <article class="room"><a class="pic" href="assets/shots/studio-create.webp"><img src="assets/shots/studio-create.webp" alt="Creator" loading="lazy"></a>
-          <div><h3>Creator</h3><p>Style, lyrics, planning mode, decoder, sliders, LoRAs on a road from green to red; the take with its score, seeds and everything to make it again.</p></div></article>
-        <article class="room"><a class="pic" href="assets/shots/studio-writer.webp"><img src="assets/shots/studio-writer.webp" alt="Writer" loading="lazy"></a>
+        <article class="room"><a class="pic" href="assets/shots/studio-create.webp" data-night="assets/shots/studio-create-night.webp"><img class="day" src="assets/shots/studio-create.webp" alt="Creator" loading="lazy"><img class="night" src="assets/shots/studio-create-night.webp" alt="Creator" loading="lazy"></a>
+          <div><h3>Creator</h3><p>Style, lyrics, planning mode, decoder, LoRAs on a road from green to red; the take with its score, seeds and everything to make it again.</p></div></article>
+        <article class="room"><a class="pic" href="assets/shots/studio-writer.webp" data-night="assets/shots/studio-writer-night.webp"><img class="day" src="assets/shots/studio-writer.webp" alt="Writer" loading="lazy"><img class="night" src="assets/shots/studio-writer-night.webp" alt="Writer" loading="lazy"></a>
           <div><h3>Writer</h3><p>Songs as documents with versions, text profiles, and a chat model of your own (or OpenRouter) that drafts and revises with you.</p></div></article>
-        <article class="room"><a class="pic" href="assets/shots/studio-post.webp"><img src="assets/shots/studio-post.webp" alt="Refiner" loading="lazy"></a>
+        <article class="room"><a class="pic" href="assets/shots/studio-post.webp" data-night="assets/shots/studio-post-night.webp"><img class="day" src="assets/shots/studio-post.webp" alt="Refiner" loading="lazy"><img class="night" src="assets/shots/studio-post-night.webp" alt="Refiner" loading="lazy"></a>
           <div><h3>Refiner</h3><p>Spectrum, artifacts, debuzz, a lyrics check by Whisper, stems, remaster, upscale; one chain runs them all.</p></div></article>
-        <article class="room"><a class="pic" href="assets/shots/artist.webp"><img src="assets/shots/artist.webp" alt="Artist" loading="lazy"></a>
+        <article class="room"><a class="pic" href="assets/shots/artist.webp" data-night="assets/shots/artist-night.webp"><img class="day" src="assets/shots/artist.webp" alt="Artist" loading="lazy"><img class="night" src="assets/shots/artist-night.webp" alt="Artist" loading="lazy"></a>
           <div><h3>Artist</h3><p>Pictures for your songs from a prompt of your own: square, wide and tall from one seed, painted by Qwen-Image 2512; the picture develops before your eyes, and a square one becomes the take's cover. An early preview.</p></div></article>
-        <article class="room"><a class="pic" href="assets/shots/studio-collection.webp"><img src="assets/shots/studio-collection.webp" alt="Librarian" loading="lazy"></a>
+        <article class="room"><a class="pic" href="assets/shots/studio-collection.webp" data-night="assets/shots/studio-collection-night.webp"><img class="day" src="assets/shots/studio-collection.webp" alt="Librarian" loading="lazy"><img class="night" src="assets/shots/studio-collection-night.webp" alt="Librarian" loading="lazy"></a>
           <div><h3>Librarian</h3><p>Every take in workspaces: searched, liked, noted, locked, given artwork, sent to your DAW; a trash that gives back.</p></div></article>
         <article class="room"><a class="pic" href="assets/shots/studio-train.webp" data-night="assets/shots/studio-train-night.webp"><img class="day" src="assets/shots/studio-train.webp" alt="LoRA Trainer" loading="lazy"><img class="night" src="assets/shots/studio-train-night.webp" alt="LoRA Trainer" loading="lazy"></a>
           <div><h3>LoRA Trainer</h3><p>Adapters from your own songs: the set, the run, both halves' curves explained, the epochs worth hearing first.</p></div></article>
@@ -296,7 +313,7 @@
       <h2>What makes it a studio</h2>
       <p class="sub">Not one more model wrapper: a workstation around the model, open to the bone, every change numbered and documented.</p>
       <ul class="feats">
-        <li><b>Whole songs, up to eight minutes.</b> A 6:12 song in 126 s; a 7:25 song with its score first in 198 s, on one RTX 3090.</li>
+        <li><b>Whole songs, up to eight minutes.</b> A 6:12 song in 135 s; a 7:25 song with its score first in 212 s, on one RTX 3090.</li>
         <li><b>The score first, and yours to edit.</b> YuE2 writes the melody and chords as ABC before a note sounds: change them, transpose them, bring your own score or MIDI, and the song follows it.</li>
         <li><b>Two seeds, not one.</b> Keep the song (the music seed), hear it rendered anew (the sound seed).</li>
         <li><b>Your own sound.</b> LoRA training on your own songs, in the studio, unquantized (bf16), with telemetry that tells you which epochs to hear first.</li>
@@ -357,7 +374,7 @@
             <tr><td>into a DAW</td><td>a REAPER project with the score, sections and lyrics (experimental)</td><td>audio stems</td></tr>
             <tr><td>the code</td><td>open, every change documented</td><td>closed</td></tr>
             <tr class="honest"><td>polish out of the box</td><td><b>less</b>: a mix can buzz (Debuzz helps), lyrics can drift (the lyrics check finds where), some instruments YuE2 plays thinly or not at all (a LoRA teaches them)</td><td><b>more</b></td></tr>
-            <tr class="honest"><td>what you need</td><td>an NVIDIA GPU (24 GB for everything at full precision), Linux, about 30 GB of disk (about 56 GB with the Artist's models)</td><td>a browser</td></tr>
+            <tr class="honest"><td>what you need</td><td>an NVIDIA GPU (24 GB for everything at full precision), Linux, about 33 GB of disk (about 60 GB with the Artist's models)</td><td>a browser</td></tr>
           </tbody>
         </table>
       </div>
@@ -371,7 +388,7 @@
         <div class="card"><h3>The machine</h3><ul>
           <li><b>An NVIDIA GPU</b>: 24 GB for everything at full precision</li>
           <li><b>Linux</b> (made on Ubuntu 24.04, CUDA 12.8)</li>
-          <li><b>About 30 GB</b> of disk, measured on fresh installs: the program and its Python (16 GB), the models (13 to 17 GB by the card, fetched, pinned and checked by <code>fetch-models.sh</code>); the Artist's models 26 GB more, the 💎 sets 5 GB, each only when you ask</li></ul></div>
+          <li><b>About 33 GB</b> of disk, measured on fresh installs: the program and its Python (16 GB), the models (17 to 24 GB by the card, fetched, pinned and checked by <code>fetch-models.sh</code>); the Artist's models 26 GB more, the 💎 sets 5 GB, each only when you ask</li></ul></div>
         <div class="card"><h3>The screen</h3><ul>
           <li>Made for a browser window of <b>1920×1080 at 100 %</b></li>
           <li>The ideal: <b>2K</b> (2560×1440), 22″ or larger, 16:9 or wider</li>
@@ -387,7 +404,7 @@
   <section id="next">
     <div class="wrap">
       <h2>What comes next</h2>
-      <p class="sub">2.0.0-pre is the studio we make our own songs in every day. These are the larger pieces on their way, for 2.0.0 and after.</p>
+      <p class="sub">2.0.0 is the studio we make our own songs in every day. These are the larger pieces on their way, for 2.1.0 and after.</p>
       <ul class="feats">
         <li><b>Songs edited as the model writes them.</b> A take extended from any moment; a section written anew with its neighbours' voice, key and bars kept, joined in the model's own tokens; an instrumental layer on the take's own score.</li>
         <li><b>A DAW in the Refiner.</b> Plenio's score editor in an early preview: a piano roll, a chord lane, the lyrics over the notes, a MIDI keyboard to play ideas in.</li>
@@ -505,7 +522,7 @@
 
 <footer>
   <div class="wrap">
-    <span>Ruach Studio · 2.0.0-pre · a work of <a href="https://igr.bible">igr.bible</a></span> <span class="links"><a href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changelog</a><a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Coffee Machine</a></span>
+    <span>Ruach Studio · 2.0.0 · a work of <a href="https://igr.bible">igr.bible</a></span> <span class="links"><a href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changelog</a><a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Coffee Machine</a></span>
   </div>
 </footer>
 

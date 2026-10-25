@@ -12,6 +12,7 @@
 // holds for the whole loop.
 #pragma once
 
+#include "harmony.h"   // HERESY 1606
 #include "qwen3-lm.h"
 #include "sampling.h"
 #include "timer.h"
@@ -68,7 +69,8 @@ static bool yue2_generate(Qwen3LM *                             lm,
                           bool (*cancelled)(void *) = nullptr,
                           void * cancel_data        = nullptr,
                           const std::vector<std::vector<int>> * lyricless = nullptr,
-                          float                                 lyrics_scale = -1.0f) {
+                          float                                 lyrics_scale = -1.0f,
+                          const Yue2HarmonyPlan *               harmony      = nullptr) {   // HERESY 1606
     const int B       = (int) prefixes.size();
     const int context = kv->cfg.max_seq_len;
     // HERESY 1397: the lyrics' own scale: a third branch, the prompt without its lyrics, in KV sets 2B..3B-1
@@ -154,6 +156,10 @@ static bool yue2_generate(Qwen3LM *                             lm,
     std::vector<int>           tokens(N);
     std::vector<float>         mixed(guided ? (size_t) rows : 0);
     std::vector<Yue2Candidate> candidates;
+    // HERESY 1606: chord variety and section order of the plan, off unless asked for (timoncool/yue2.cpp 1e21e63)
+    const bool                    steered = harmony && phase == YUE2_PHASE_ABC && harmony->cfg.active();
+    std::vector<Yue2HarmonyState> chords(steered ? (size_t) B : 0);
+    std::vector<float>            steered_logits;
     int                        step = 0;
     for (;; step++) {
         if (cancelled && cancelled(cancel_data)) {
@@ -179,6 +185,12 @@ static bool yue2_generate(Qwen3LM *                             lm,
                         mixed[k] = uncond[k] + cfg_scale * (cond[k] - uncond[k]);
                     }
                     logits = mixed.data();
+                }
+                if (steered) {   // HERESY 1606: the ABC rows start at id 0, so the content ids index the logits as they are
+                    yue2_harmony_feed(*harmony, &chords[(size_t) i], g.tokens);
+                    if (yue2_harmony_apply(*harmony, &chords[(size_t) i], logits, rows, std::max(64, s.top_k), &steered_logits)) {
+                        logits = steered_logits.data();
+                    }
                 }
                 yue2_distribution(logits, s, g.tokens, step, phase, candidates);
                 int token = yue2_draw(candidates, seed + i, step);

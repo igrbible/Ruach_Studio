@@ -77,7 +77,7 @@ curl -s -X POST -H "Content-Type: application/json" \
 They need `flac` and `metaflac` (the FLAC test), Node.js 22+ and Chrome or Chromium (the page tests): ask before installing any. None touches the person's songs, settings or services.
 
 ```bash
-tools/test-real.sh                   # out of date in 2.0.0-pre (it predates the workspaces): skip it; renewed for 2.0.0
+tools/test-real.sh                   # expect: 6 passed, 0 failed
 node tools/cdp-console.mjs           # expect: 987 passed, 0 failed, 7 skipped (the skips say why)
 node heresy/tools/check-player.mjs   # expect: 3 passed
 tools/test_downloaders.sh            # expect: 14 passed (offline)

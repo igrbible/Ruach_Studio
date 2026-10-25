@@ -45,8 +45,8 @@
     el.innerHTML = items.map(function (it, i) {
       if (it.sep) return '<div class="hm-sep" role="separator"></div>';
       if (it.head) return '<div class="hm-head">' + esc(it.head) + "</div>";
-      return '<button type="button" class="hm-item' + (it.danger ? " is-danger" : "") + '" role="menuitem" data-i="' + i + '"' +
-        (it.disabled ? " disabled" : "") + (it.checked !== undefined ? ' aria-checked="' + !!it.checked + '"' : "") + ">" +
+      return '<button type="button" class="hm-item' + (it.danger ? " is-danger" : "") + (it.muted ? " is-muted" : "") + '" role="menuitem" data-i="' + i + '"' +
+        (it.disabled ? " disabled" : "") + (it.muted ? ' aria-disabled="true"' : "") +   /* HERESY 1734: muted, greyed and saying why (a disabled one cannot) */ (it.checked !== undefined ? ' aria-checked="' + !!it.checked + '"' : "") + ">" +
         // HERESY 1474: in the page's language before it is measured (a menu laid out in English grew past the window in Russian)
         '<span class="hm-icon">' + (it.checked ? "✓" : esc(it.icon || "")) + '</span><span class="hm-label" translate="no">' + esc(it.raw || !window.RuachI18n ? it.label : window.RuachI18n.t(it.label)) + "</span>" +
         (it.items ? '<span class="hm-more">›</span>' : "") + "</button>";   // HERESY 1169 · 1248: the hint beside the menu (hintShow), not in the row
@@ -61,6 +61,7 @@
       var b = e.target.closest(".hm-item");
       if (!b || b.disabled) return;
       var it = items[+b.dataset.i];
+      if (it.muted) { hintShow(entry, b); return; }   // HERESY 1734: a muted item says why again, and the menu stays
       if (it.items) return openSub(entry, b, it);
       close();
       if (it.action) it.action();
@@ -189,7 +190,7 @@
     sel.classList.add("hc-src");
     function paint() {
       var opts = Array.prototype.slice.call(sel.options), cur = sel.selectedIndex, html;
-      if (opts.length > MAX) {
+      if (opts.length > MAX || sel.dataset.hcPick === "1") {   // HERESY 1598: or a button as its own asks (a head has no room for rows)
         var now = cur >= 0 ? opts[cur] : null;
         html = '<button type="button" class="hc-pick"' + (sel.disabled ? " disabled" : "") + ' aria-haspopup="listbox"><span class="hc-pick-now"' + (now && own(now) ? ' translate="no"' : "") + ">" +
           esc(now ? text(now) : "—") + '</span><span class="hc-pick-n mono">' + opts.length + "</span></button>";

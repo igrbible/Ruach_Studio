@@ -133,6 +133,13 @@
   .nums span { color: var(--soft); font-size: 14px; line-height: 1.4; display: block; margin-top: 6px; }
   @media (max-width: 860px) { .nums { grid-template-columns: repeat(2, 1fr); } .nums div:last-child { grid-column: 1 / -1; } }
 
+  /* HERESY 1711 (Viktor 22.10.2026: «Декларацию на сайте-визитке врежь красиво между первым скриншотом и "Шесть комнат, одна студия"»): the declaration
+     under the first screenshot and its numbers, the accent's rule on its left, its last sentence the louder; as wide as the column */
+  section.declare { padding: 64px 0 0; }
+  .declare blockquote { margin: 0; padding: 4px 0 4px 28px; border-left: 3px solid var(--amber); }
+  .declare p { margin: 0 0 14px; font-size: 19px; line-height: 1.65; color: var(--soft); }
+  .declare p.loud { margin: 0; font-size: 22px; line-height: 1.5; color: var(--ink); font-weight: 500; }
+  @media (max-width: 600px) { section.declare { padding-top: 48px; } .declare blockquote { padding-left: 18px; } .declare p { font-size: 17px; } .declare p.loud { font-size: 19px; } }
   /* sections */
   section { padding: 72px 0 0; }
   h2 { font-size: clamp(25px, 3vw, 34px); line-height: 1.2; margin: 0 0 10px; font-weight: 700; }
@@ -260,7 +267,7 @@
     <h1>Песни из слов и аккордов<br>на твоей собственной машине</h1>
     <p class="lead">Целая студия вокруг <b>YuE2</b>, открытой модели песен. Пишешь стиль и текст, а студия сочиняет, поёт и сводит песню на <b>твоей собственной видеокарте</b>. Твои песни, слова и настройки никогда её не покидают.</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Взять на GitHub</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.ru.md">Читать руководство</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Модели на Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Купи мне кофемашину</a></div>
-    <span class="rc"><b>2.0.0-pre</b> · последний шаг перед 2.0.0 · октябрь 2026</span>
+    <span class="rc"><b>2.0.0</b> · первый стабильный выпуск · октябрь 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -271,27 +278,37 @@
 
     <div class="nums">
       <div><b>8 мин</b><span>целые песни, до восьми минут</span></div>
-      <div><b>126 с</b><span>песня в 6:12 на одной RTX 3090</span></div>
+      <div><b>135 с</b><span>песня в 6:12 на одной RTX 3090</span></div>
       <div><b>6 комнат</b><span>сочинять, писать, гранить, рисовать, хранить и учить</span></div>
       <div><b>200</b><span>инструментов, проверенных на слух</span></div>
       <div><b>12</b><span>языков страницы</span></div>
     </div>
   </div>
 
+  <!-- HERESY 1711: the declaration (approved 21.10.2026), as in the README and the Hub's cards -->
+  <section class="declare" aria-label="За что мы стоим">
+    <div class="wrap">
+      <blockquote>
+        <p>Руах Студия — открытая генерация музыки на твоём собственном железе: модель, партитура, адаптеры и каждый семпл остаются твоими, и ничего не сдаётся в аренду по токенам. Открытые модели уже достаточно хороши, чтобы стоять на своих ногах, а не хватало студии вокруг них: её мы и строим, открыто.</p>
+        <p class="loud">Музыку должно быть свободно создавать и делиться ею: у того, у кого нет голоса, инструмента и студии, всё равно есть право положить свои мысли и чувства на звук.</p>
+      </blockquote>
+    </div>
+  </section>
+
   <section id="rooms">
     <div class="wrap">
       <h2>Шесть комнат, одна студия</h2>
       <p class="sub"><b>Творец</b> делает песню, <b>Писатель</b> пишет её вместе с чат-моделью, <b>Огранщик</b> доводит её, <b>Художник</b> рисует её картинки, <b>Библиотекарь</b> хранит каждый семпл, а <b>Тренер LoRA</b> учит YuE2 твоим собственным песням. Руководство по каждой комнате — внутри студии.</p>
       <div class="rooms">
-        <article class="room"><a class="pic" href="../assets/shots/studio-create.webp"><img src="../assets/shots/studio-create.webp" alt="Творец" loading="lazy"></a>
-          <div><h3>Творец</h3><p>Стиль, текст, режим планирования, декодер, слайдеры, LoRA на дороге от зелёного к красному; семпл с его партитурой, сидами и всем, чтобы сделать его снова.</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/studio-writer.webp"><img src="../assets/shots/studio-writer.webp" alt="Писатель" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/studio-create.webp" data-night="assets/shots/studio-create-night.webp"><img class="day" src="../assets/shots/studio-create.webp" alt="Творец" loading="lazy"><img class="night" src="../assets/shots/studio-create-night.webp" alt="Творец" loading="lazy"></a>
+          <div><h3>Творец</h3><p>Стиль, текст, режим планирования, декодер, LoRA на дороге от зелёного к красному; семпл с его партитурой, сидами и всем, чтобы сделать его снова.</p></div></article>
+        <article class="room"><a class="pic" href="../assets/shots/studio-writer.webp" data-night="assets/shots/studio-writer-night.webp"><img class="day" src="../assets/shots/studio-writer.webp" alt="Писатель" loading="lazy"><img class="night" src="../assets/shots/studio-writer-night.webp" alt="Писатель" loading="lazy"></a>
           <div><h3>Писатель</h3><p>Песни как документы с версиями, текстовые профили и твоя собственная чат-модель (или OpenRouter), которая набрасывает и правит вместе с тобой.</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/studio-post.webp"><img src="../assets/shots/studio-post.webp" alt="Огранщик" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/studio-post.webp" data-night="assets/shots/studio-post-night.webp"><img class="day" src="../assets/shots/studio-post.webp" alt="Огранщик" loading="lazy"><img class="night" src="../assets/shots/studio-post-night.webp" alt="Огранщик" loading="lazy"></a>
           <div><h3>Огранщик</h3><p>Спектр, артефакты, антигул, проверка текста через Whisper, стемы, ремастер, апскейл; одна цепочка запускает их все.</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/artist.webp"><img src="../assets/shots/artist.webp" alt="Художник" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/artist.webp" data-night="assets/shots/artist-night.webp"><img class="day" src="../assets/shots/artist.webp" alt="Художник" loading="lazy"><img class="night" src="../assets/shots/artist-night.webp" alt="Художник" loading="lazy"></a>
           <div><h3>Художник</h3><p>Картинки для твоих песен по твоему собственному промпту: квадратная, широкая и высокая из одного сида, рисует Qwen-Image 2512; картинка проявляется на глазах, а квадратная становится обложкой семпла. Ранний показ.</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/studio-collection.webp"><img src="../assets/shots/studio-collection.webp" alt="Библиотекарь" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/studio-collection.webp" data-night="assets/shots/studio-collection-night.webp"><img class="day" src="../assets/shots/studio-collection.webp" alt="Библиотекарь" loading="lazy"><img class="night" src="../assets/shots/studio-collection-night.webp" alt="Библиотекарь" loading="lazy"></a>
           <div><h3>Библиотекарь</h3><p>Каждый семпл в пространствах: найден, оценён, с заметкой, под замком, с обложкой, отправлен в твою DAW; корзина, которая возвращает.</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/studio-train.webp" data-night="assets/shots/studio-train-night.webp"><img class="day" src="../assets/shots/studio-train.webp" alt="Тренер LoRA" loading="lazy"><img class="night" src="../assets/shots/studio-train-night.webp" alt="Тренер LoRA" loading="lazy"></a>
           <div><h3>Тренер LoRA</h3><p>Адаптеры из твоих собственных песен: набор, запуск, кривые обеих половин с объяснением, эпохи, которые стоит послушать первыми.</p></div></article>
@@ -306,7 +323,7 @@
       <h2>Почему это студия</h2>
       <p class="sub">Не очередная обёртка над моделью, а мастерская вокруг неё: открытая до костей, каждое изменение пронумеровано и описано.</p>
       <ul class="feats">
-        <li><b>Целые песни, до восьми минут.</b> Песня в 6:12 за 126 с; песня в 7:25 с партитурой сначала за 198 с, на одной RTX 3090.</li>
+        <li><b>Целые песни, до восьми минут.</b> Песня в 6:12 за 135 с; песня в 7:25 с партитурой сначала за 212 с, на одной RTX 3090.</li>
         <li><b>Сначала партитура, и править её тебе.</b> YuE2 пишет мелодию и аккорды в ABC прежде, чем прозвучит хоть одна нота: меняй их, транспонируй, приноси свою партитуру или MIDI, и песня пойдёт за ней.</li>
         <li><b>Два сида, а не один.</b> Оставь песню (музыкальный сид) и услышь её отрисованной заново (звуковой сид).</li>
         <li><b>Твой собственный звук.</b> Обучение LoRA на твоих собственных песнях, прямо в студии, без квантизации (bf16), с телеметрией, которая подскажет, какие эпохи слушать первыми.</li>
@@ -367,7 +384,7 @@
             <tr><td>в DAW</td><td>проект REAPER с партитурой, секциями и текстом (экспериментально)</td><td>аудиостемы</td></tr>
             <tr><td>код</td><td>открыт, каждое изменение описано</td><td>закрыт</td></tr>
             <tr class="honest"><td>лоск из коробки</td><td><b>меньше</b>: микс может гудеть (помогает антигул), текст может уплывать (проверка текста найдёт где), некоторые инструменты YuE2 играет жидко или не играет вовсе (их научит LoRA)</td><td><b>больше</b></td></tr>
-            <tr class="honest"><td>что нужно</td><td>видеокарта NVIDIA (24 ГБ, чтобы всё шло в полной точности), Linux, около 30 ГБ диска (около 56 ГБ с моделями Художника)</td><td>браузер</td></tr>
+            <tr class="honest"><td>что нужно</td><td>видеокарта NVIDIA (24 ГБ, чтобы всё шло в полной точности), Linux, около 33 ГБ диска (около 60 ГБ с моделями Художника)</td><td>браузер</td></tr>
           </tbody>
         </table>
       </div>
@@ -381,7 +398,7 @@
         <div class="card"><h3>Машина</h3><ul>
           <li><b>Видеокарта NVIDIA</b>: 24 ГБ, чтобы всё шло в полной точности</li>
           <li><b>Linux</b> (сделано на Ubuntu 24.04, CUDA 12.8)</li>
-          <li><b>Около 30 ГБ</b> диска, по замерам свежих установок: программа и её Python (16 ГБ), модели (от 13 до 17 ГБ по карте, их скачивает, закрепляет и проверяет <code>fetch-models.sh</code>); модели Художника ещё 26 ГБ, наборы 💎 5 ГБ, каждое только когда попросите</li></ul></div>
+          <li><b>Около 33 ГБ</b> диска, по замерам свежих установок: программа и её Python (16 ГБ), модели (от 17 до 24 ГБ по карте, их скачивает, закрепляет и проверяет <code>fetch-models.sh</code>); модели Художника ещё 26 ГБ, наборы 💎 5 ГБ, каждое только когда попросите</li></ul></div>
         <div class="card"><h3>Экран</h3><ul>
           <li>Сделано для окна браузера <b>1920×1080 при 100 %</b></li>
           <li>Идеал: <b>2K</b> (2560×1440), от 22″, 16:9 или шире</li>
@@ -397,7 +414,7 @@
   <section id="next">
     <div class="wrap">
       <h2>Что дальше</h2>
-      <p class="sub">2.0.0-pre — студия, в которой мы каждый день делаем собственные песни. Вот крупные части на подходе, для 2.0.0 и дальше.</p>
+      <p class="sub">2.0.0 — студия, в которой мы каждый день делаем собственные песни. Вот крупные части на подходе, для 2.1.0 и дальше.</p>
       <ul class="feats">
         <li><b>Песни правятся так, как их пишет модель.</b> Семпл продлевается с любого момента; отрезок пишется заново, сохраняя голос, тональность и такты соседей, и сшивается в собственных токенах модели; инструментальный слой ложится на партитуру самого семпла.</li>
         <li><b>DAW в Огранщике.</b> Редактор партитуры Plenio в раннем показе: пиано-ролл, дорожка аккордов, текст над нотами, MIDI-клавиатура, чтобы наиграть идею.</li>
@@ -514,7 +531,7 @@
 </main>
 
 <footer>
-  <div class="wrap"><span>Руах Студия · 2.0.0-pre · творение <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Изменения</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Кофемашина</a></span></div>
+  <div class="wrap"><span>Руах Студия · 2.0.0 · творение <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Изменения</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Кофемашина</a></span></div>
 </footer>
 
 <script>

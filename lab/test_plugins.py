@@ -80,4 +80,35 @@ with tempfile.TemporaryDirectory() as t:
     v = [p for p in plugs if p["id"] == "pref"][0]["steps"][0]
     assert v["prefer"] == ["lead_vocal", "vocals"], v
     assert k.public(plugs)[[p["id"] for p in plugs].index("pref")]["steps"][0]["prefer"] == ["lead_vocal", "vocals"]
-print("plugins: 22 checks passed")
+    # HERESY 1572: a step through gear outside the machine, and the one stem a step mends, kept and said to the page
+    json.dump({"id": "hw", "steps": [{"id": "a", "script": "g.py", "hardware": True, "stem": "lead_vocal"}, {"id": "b", "script": "g.py", "stem": "../x"}]},
+              open(gpu / "plugin.json", "w"))
+    plugs, _ = k.load(root)
+    h = [p for p in plugs if p["id"] == "hw"][0]["steps"]
+    assert (h[0]["hardware"], h[0]["stem"], h[1]["hardware"], h[1]["stem"]) == (True, "lead_vocal", False, ""), h
+    pub = k.public(plugs)[[p["id"] for p in plugs].index("hw")]["steps"]
+    assert (pub[0]["hardware"], pub[0]["stem"]) == (True, "lead_vocal"), pub
+print("plugins: 24 checks passed")
+
+
+# HERESY 1589: MIDI scripts: a plugin of them alone is listed; a script outside its folder, not .js, or with a broken pattern is left out;
+# what the page sees has no path
+with tempfile.TemporaryDirectory() as t:
+    root = Path(t)
+    m = root / "midi-only"; (m / "midi").mkdir(parents=True)
+    (m / "midi" / "ox.js").write_text("onMidi(function (b) { if (b[0] === 0x90 && b[1] === 0x5e && b[2]) studio.act('play'); });\n")
+    (m / "midi" / "notjs.txt").write_text("x")
+    json.dump({"id": "midi-only", "name": "Oxygen", "midi": [
+        {"id": "ox", "name": "Oxygen DAW", "script": "midi/ox.js", "ports": "Oxygen.*(MIDIIN2|MIDI 2)"},
+        {"id": "far", "script": "../far.js", "ports": "x"}, {"id": "txt", "script": "midi/notjs.txt", "ports": "x"},
+        {"id": "badre", "script": "midi/ox.js", "ports": "(("}, {"id": "noports", "script": "midi/ox.js"}]}, open(m / "plugin.json", "w"))
+    plugs, errors = k.load(root)
+    assert [p["id"] for p in plugs] == ["midi-only"] and not errors, (plugs, errors)
+    assert [x["id"] for x in plugs[0]["midi"]] == ["ox"], plugs[0]["midi"]
+    pub = k.public(plugs)[0]
+    assert pub["midi"] == [{"id": "ox", "name": "Oxygen DAW", "ports": "Oxygen.*(MIDIIN2|MIDI 2)", "tip": ""}] and pub["steps"] == [], pub
+    empty = root / "empty"; empty.mkdir()
+    json.dump({"id": "empty", "midi": [{"id": "far", "script": "../far.js", "ports": "x"}]}, open(empty / "plugin.json", "w"))
+    plugs, errors = k.load(root)
+    assert [e["plugin"] for e in errors] == ["empty"], errors
+print("plugins: MIDI scripts ok")

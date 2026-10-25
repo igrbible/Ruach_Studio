@@ -127,7 +127,9 @@ static void nar_load_layer(WeightCtx *         wctx,
     ly->down_proj = gf_load_tensor(wctx, gf, prefix + ".nar_mlp.down_proj.weight");
 }
 
-static bool nar_load(Yue2NAR * n, const char * gguf_path) {
+// Load the NAR half, the adapters merged into its projections and the latent
+// projections
+static bool nar_load(Yue2NAR * n, const char * gguf_path, const std::vector<AdapterUse> & adapters) {
     *n = {};
 
     GGUFModel gf = {};
@@ -168,6 +170,10 @@ static bool nar_load(Yue2NAR * n, const char * gguf_path) {
     n->time_w1    = gf_load_tensor(&n->wctx, gf, "time_embedder.mlp.2.weight");
     n->time_b1    = gf_load_tensor_f32(&n->wctx, gf, "time_embedder.mlp.2.bias");
 
+    if (!adapter_merge(&n->wctx, gf, n->backend, ADAPTER_NAR, adapters)) {
+        gf_close(&gf);
+        return false;
+    }
     if (!wctx_alloc(&n->wctx, n->backend)) {
         fprintf(stderr, "[NAR] FATAL: failed to allocate weights\n");
         gf_close(&gf);

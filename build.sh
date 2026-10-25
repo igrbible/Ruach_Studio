@@ -36,15 +36,16 @@ if [ -n "${NO_COLOR:-}" ] || [ ! -t 1 ]; then G=""; R=""; Y=""; D=""; X=""; fi
 cd "$ROOT"
 step() { echo -e "${G}── $1${X}"; }
 
-PATCHES=0; SERVER=0; RESTART=1
+PATCHES=0; SERVER=0; SYCL=0; RESTART=1
 for a in "$@"; do
     case "$a" in
         --status)     heresy/apply.sh --status; exit 0 ;;
         --patches)    PATCHES=1 ;;
         --server)     SERVER=1 ;;
+        --sycl)       SYCL=1 ;;                         # HERESY 1656: the engine for Intel Arc (beta)
         --no-restart) RESTART=0 ;;
         --page)       ;;                                # the old key: the page is always built
-        *) echo -e "${R}keys: --server · --patches · --no-restart · --status · none: the page (and the server when needed)${X}"; exit 1 ;;
+        *) echo -e "${R}keys: --server · --sycl · --patches · --no-restart · --status · none: the page (and the server when needed)${X}"; exit 1 ;;
     esac
 done
 
@@ -186,6 +187,21 @@ mv "$PAGE.part" "$PAGE"
 IFS=$'\t' read -r s_html s_css s_js s_ex s_page l_html l_css l_js n_ex n_css n_js <<<"$stats"
 echo -e "  ${PAGE#"$ROOT"/} · $(( s_page / 1024 )) KB · $((1 + n_css + n_js)) files and $n_ex examples inside · $(( ($(date +%s%N) - T0) / 1000000 )) ms"
 
+# ── HERESY 1613 (Viktor 20.10.2026: «Докачиваем новый транскрайбер (1 ГБ) прямо в апдейте»): since 1604 the engine reads SheetSage2's
+#    head with MERT-v2-FullSong beside it; an install whose transcriber is the older one-file kind, or a head with no MERT beside it, fetches
+#    the pair once, here, as the updater runs this script after its checkout. Only an install that had a transcriber; a failed fetch is
+#    said, and the build goes on (start.sh then leaves covers off and says what to run)
+SS2="$ROOT/models/SheetSage2-Q8_0.gguf"; [ -f "$SS2" ] || SS2="$ROOT/models/SheetSage2-F32.gguf"
+if [ -f "$SS2" ] && { [ ! -f "$ROOT/models/MERT-v2-FullSong-${SS2##*-}" ] || [ "$(wc -c < "$SS2" | tr -d ' ')" -ge 500000000 ]; }; then
+    step "the transcriber"
+    echo -e "  ${SS2#"$ROOT"/} is the older kind: fetching SheetSage2's head with MERT-v2-FullSong beside it (Q8_0, 1.0 GB)"
+    if [ -x "$ROOT/download-models.sh" ] && NO_COLOR=1 "$ROOT/download-models.sh" --transcriber-only 2>&1 | sed 's/^/  /'; then
+        echo -e "${G}  the transcriber as this engine reads it${X}"
+    else
+        echo -e "${Y}  not fetched: covers from a recording stay off until ./download-models.sh --transcriber${X}"
+    fi
+fi
+
 # ── HERESY 1169: our fixes to ggml (a submodule, someone else's fork) are patch files of our own, build/ggml-patches/:
 #    put on before the server is built, each once (one already on is passed over; one that no longer fits is said)
 GGML_PUT=0
@@ -199,25 +215,64 @@ for p in "$ROOT"/build/ggml-patches/*.patch; do
 done
 [ "$GGML_PUT" = 1 ] && SERVER=1
 
+# ── HERESY 1656 (Viktor 21.10.2026: «Конечно, выпускай бета поддержку для интеловских карт»): Intel Arc (beta). --sycl builds the engine
+#    with oneAPI's icpx into build/build-sycl, the CUDA one in build/build left as it is; start.sh runs it with YUE2_ENGINE=sycl, or by itself
+#    where there is no CUDA engine. Measured 21.10.2026 on an Arc Pro B50 (16 GB): a song of 30 s in 43-60 s, adapters at run time, Full,
+#    going on from kept music. icpx takes the newest GCC; when that one has no libstdc++ headers (GCC 14 on Ubuntu 24.04), the newest that has.
+#    HERESY 1661: an install with a SYCL engine and no CUDA one goes this way by itself (the updater runs ./build.sh after its checkout); one
+#    with both rebuilds the SYCL engine beside the CUDA one, so a studio on the Arc restarts on fresh code too
+sycl_build() {
+    step "${1:-③} the engine for Intel Arc (beta, SYCL)"
+    [ -f /opt/intel/oneapi/setvars.sh ] || { echo -e "${R}⛔ Intel's oneAPI Base Toolkit is not at /opt/intel/oneapi: install it first (icpx and the SYCL runtime)${X}"; exit 1; }
+    set +u; source /opt/intel/oneapi/setvars.sh >/dev/null 2>&1 || true; set -u
+    local GF="" g T1
+    for g in $(ls -d /usr/lib/gcc/x86_64-linux-gnu/* 2>/dev/null | sort -V -r); do [ -d "/usr/include/c++/${g##*/}" ] && { GF="--gcc-install-dir=$g"; break; }; done
+    if [ ! -f "$ROOT/build/build-sycl/CMakeCache.txt" ]; then
+        echo -e "  configuring cmake (the first time): SYCL (icpx${GF:+, $GF}), Release"
+        cmake -S "$ROOT/build" -B "$ROOT/build/build-sycl" -DCMAKE_BUILD_TYPE=Release -DGGML_SYCL=ON -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icpx \
+              ${GF:+"-DCMAKE_C_FLAGS=$GF" "-DCMAKE_CXX_FLAGS=$GF" "-DCMAKE_EXE_LINKER_FLAGS=$GF" "-DCMAKE_SHARED_LINKER_FLAGS=$GF"} >/dev/null \
+            || { echo -e "${R}⛔ cmake did not configure for SYCL: build/build-sycl/CMakeFiles/CMakeError.log says why${X}"; exit 1; }
+    fi
+    T1=$(date +%s)
+    nice -n 10 cmake --build build/build-sycl -j "$(nproc)" --target yue-server 2>&1 | grep -E "error|Linking CXX executable yue-server|no work" || true
+    [ "${PIPESTATUS[0]}" = 0 ] || { echo -e "${R}⛔ the SYCL build failed: cmake --build build/build-sycl says why${X}"; exit 1; }
+    echo -e "  built in $(( $(date +%s) - T1 )) s: build/build-sycl/yue-server"
+}
+# the studio runs the SYCL engine: start.sh would take it (YUE2_ENGINE=sycl in its unit, or no CUDA engine)
+studio_on_sycl() {
+    [ ! -f "$ROOT/build/build/yue-server" ] || systemctl --user show -p Environment --value ruach-studio 2>/dev/null | grep -q "YUE2_ENGINE=sycl"
+}
+[ $SYCL = 0 ] && [ ! -f "$ROOT/build/build/CMakeCache.txt" ] && [ -f "$ROOT/build/build-sycl/CMakeCache.txt" ] && SYCL=1
+if [ $SYCL = 1 ]; then
+    sycl_build
+    echo -e "${Y}  Intel Arc (beta, no guarantees): YUE2_ENGINE=sycl ./start.sh; with no CUDA engine beside it, start.sh takes this one by itself${X}"
+    if [ $RESTART = 0 ] || ! studio_on_sycl; then exit 0; fi
+fi
+
 # ── ③ сервер: только если его C++ новее бинаря (или --server)
 BIN="$ROOT/build/build/yue-server"
-if [ $SERVER = 0 ] && [ -x "$BIN" ] && [ -z "$(find "$ROOT/build/tools" "$ROOT/build/src" "$ROOT/build/CMakeLists.txt" \
+if [ $SYCL = 1 ]; then :          # HERESY 1661: the SYCL way ran; on to the restart
+elif [ $SERVER = 0 ] && [ -x "$BIN" ] && [ -z "$(find "$ROOT/build/tools" "$ROOT/build/src" "$ROOT/build/CMakeLists.txt" \
         \( -name "*.cpp" -o -name "*.h" -o -name "*.hpp" -o -name "*.c" -o -name "*.cu" -o -name CMakeLists.txt \) -newer "$BIN" 2>/dev/null | head -1)" ]; then
     echo -e "${G}  done: reload the browser tab (the server reads the page from disk)${X}"
     exit 0
 fi
-step "③ the server"
-if [ ! -f "$ROOT/build/build/CMakeCache.txt" ]; then                 # a fresh clone: configure once, as Forge's was
-    GEN=(); ninja --version >/dev/null 2>&1 && GEN=(-G Ninja)   # HERESY 1259: a ninja that answers (a pip wrapper without its module is on a PATH too)
-    NVCC="$(command -v nvcc || echo "$CUDA_HOME/bin/nvcc")"
-    echo -e "  configuring cmake (the first time): CUDA ($NVCC), flash attention, Release"
-    cmake -S "$ROOT/build" -B "$ROOT/build/build" "${GEN[@]}" -DCMAKE_BUILD_TYPE=Release -DGGML_CUDA=ON -DGGML_CUDA_FA=ON \
-          -DCMAKE_CUDA_COMPILER="$NVCC" -DCMAKE_CUDA_ARCHITECTURES=native >/dev/null || { echo -e "${R}⛔ cmake did not configure: it needs the CUDA toolkit 12.8 (nvcc)${X}"; exit 1; }
+if [ $SYCL = 0 ]; then
+    step "③ the server"
+    if [ ! -f "$ROOT/build/build/CMakeCache.txt" ]; then                 # a fresh clone: configure once, as Forge's was
+        GEN=(); ninja --version >/dev/null 2>&1 && GEN=(-G Ninja)   # HERESY 1259: a ninja that answers (a pip wrapper without its module is on a PATH too)
+        NVCC="$(command -v nvcc || echo "$CUDA_HOME/bin/nvcc")"
+        echo -e "  configuring cmake (the first time): CUDA ($NVCC), flash attention, Release"
+        cmake -S "$ROOT/build" -B "$ROOT/build/build" "${GEN[@]}" -DCMAKE_BUILD_TYPE=Release -DGGML_CUDA=ON -DGGML_CUDA_FA=ON \
+              -DCMAKE_CUDA_COMPILER="$NVCC" -DCMAKE_CUDA_ARCHITECTURES=native >/dev/null || { echo -e "${R}⛔ cmake did not configure: it needs the CUDA toolkit 12.8 (nvcc); an Intel Arc card: ./build.sh --sycl${X}"; exit 1; }
+    fi
+    T1=$(date +%s)
+    nice -n 10 cmake --build build/build -j "$(nproc)" 2>&1 | grep -E "error|Linking CXX executable yue-server|no work" || true
+    [ "${PIPESTATUS[0]}" = 0 ] || { echo -e "${R}⛔ the build failed: cmake --build build/build says why${X}"; exit 1; }
+    echo -e "  built in $(( $(date +%s) - T1 )) s"
+    # HERESY 1661: the Intel Arc engine beside it, on the same code
+    if [ -f "$ROOT/build/build-sycl/CMakeCache.txt" ]; then sycl_build "③b"; fi
 fi
-T1=$(date +%s)
-nice -n 10 cmake --build build/build -j "$(nproc)" 2>&1 | grep -E "error|Linking CXX executable yue-server|no work" || true
-[ "${PIPESTATUS[0]}" = 0 ] || { echo -e "${R}⛔ the build failed: cmake --build build/build says why${X}"; exit 1; }
-echo -e "  built in $(( $(date +%s) - T1 )) s"
 
 [ $RESTART = 1 ] || { echo -e "${Y}  not restarted: systemctl --user restart ruach-studio${X}"; exit 0; }
 

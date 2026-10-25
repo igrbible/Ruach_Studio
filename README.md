@@ -8,6 +8,8 @@
 <a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Models on Hugging Face</a> · <a href="docs/GUIDE.md">The guide</a> ·
 <a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02"><b>☕ Buy me a Coffee Machine</b></a></p>
 
+> Ruach Studio is open music generation that runs on your own hardware: the model, the score, the adapters and every take stay yours, and nothing is rented by the token. Open models are now good enough to stand on their own, and what was missing is the studio around them: that is what we build, in the open. Music should be free to make and to share: whoever has no voice, no instrument and no studio still has the right to lay their thoughts and feelings onto sound.
+
 > **⚠ The screen.** The studio's design adapts to the window, but everything has its limit. It is made for a browser window of **1920×1080 at 100 % zoom**; the ideal monitor is **2K (2560×1440), 22″ or larger, 16:9 or wider**.
 
 **Songs from words, on your own machine.** A full studio around **YuE2**, the open song model: write the style and the lyrics, and the studio composes, sings and renders the song on your own GPU. Your songs, words and settings never leave it: the Writer goes to a cloud chat model only if you point it there, and the page itself fetches only its fonts and its score renderer from the internet (see [Dependencies](#dependencies)).
@@ -15,7 +17,7 @@
 If you came looking for a **YuE2 WebUI** or a **YuE studio**: this is one, grown into a whole music workstation. It runs YuE2, the successor of YuE (m-a-p's open song models), through yue2.cpp on your own NVIDIA GPU.
 
 > ### **FEATURESET**
-> - **Whole songs**, up to eight minutes: a 6:12 song in 126 s, a 7:25 song with its score first in 198 s, on one RTX 3090.
+> - **Whole songs**, up to eight minutes: a 6:12 song in 135 s, a 7:25 song with its score first in 212 s, on one RTX 3090.
 > - **The score first, and yours to edit**: YuE2 writes the melody and chords as ABC before a note sounds; change them, transpose them, bring your own score or MIDI, and the song follows it.
 > - **Two seeds, not one**: keep the song (music seed), hear it rendered anew (sound seed).
 > - **LoRA training on your own songs**, in the studio, unquantized (bf16), with telemetry that tells you which epochs to hear first; starter sets to try it at once. Adapters stack on measured roads, under a measured ceiling, each with its own wave through the song.
@@ -41,8 +43,8 @@ If you came looking for a **YuE2 WebUI** or a **YuE studio**: this is one, grown
 > | into a DAW | a REAPER project with the score, sections and lyrics (experimental) | audio stems |
 > | the code | open, every change documented | closed |
 > | **polish out of the box** | **less**: a mix can buzz (Debuzz helps), lyrics can drift (the lyrics check finds where), some instruments YuE2 plays thinly or not at all (a LoRA teaches them) | **more** |
-> | **what you need** | **an NVIDIA GPU (24 GB for everything at full precision), Linux, about 30 GB of disk (56 GB with the Artist's models)** | a browser |
-> | **the licence of the songs** | the YuE2 weights are CC BY-NC 4.0, and their licence speaks of the weights, not of the songs made with them: read it before you sell | SUNO's terms per plan |
+> | **what you need** | **an NVIDIA GPU (24 GB for everything at full precision), Linux, about 33 GB of disk (60 GB with the Artist's models)** | a browser |
+> | **the licence of the songs** | the YuE2 weights are CC BY-NC 4.0 with an individual creator permission (M-A-P, 16.09.2026): a musician, a creator or a personal user acting on their own may publish, sell and license the songs, free of charge; a company needs the authors' licence ([MODEL_LICENSE](https://github.com/multimodal-art-projection/YuE/blob/main/MODEL_LICENSE)) | SUNO's terms per plan |
 >
 > Every week a video says some model *KILLS* SUNO. This is not a model: it is a workstation around one, open to the bone.
 
@@ -108,8 +110,8 @@ The studio has 22 themes, kept for working in: clear, quiet, readable for hours.
 
 | | |
 |---|---|
-| a 6:12 song, Direct mode, RTX 3090 | 126 s |
-| a 7:25 song, Full plan (score first), RTX 3090 | 198 s |
+| a 6:12 song, Direct mode, RTX 3090 | 135 s |
+| a 7:25 song, Full plan (score first), RTX 3090 | 212 s |
 | LoRA training, bf16, rank 16, 148 songs | 2.1 s a step, 12 GB |
 | LoRA training, bf16, rank 32, 42 full songs | 6.7 s a step, 18 GB |
 | a broken score caught | 15 s into the run |
@@ -136,7 +138,8 @@ Made and tested on Viktor's setup:
 What it needs:
 
 - Linux, an NVIDIA GPU with CUDA. 24 GB runs everything (synthesis in BF16, training in bf16); smaller cards use smaller model copies (Q8_0 3.8 GB, Q6_K, Q5_K_M) and int8 training.
-- About 30 GB of disk, measured on fresh installs (10.10.2026): the program and its two Pythons 16 GB, the models 13.2 GB for a 16 GB card (Q8_0) or 16.5 GB for 24 GB (BF16), the LoRAs among them; the Artist's helpers (the prompt writer and the content filter) 8.4 GB more, its Qwen painters 31 GB more for Qwen-Image 2512 at Q4 (34.5 GB at Q6; on a smaller card it streams its blocks from RAM; Qwen-Image 2.1 33.1 GB), the 💎 sets 5.3 GB, each only when you take it; more for your takes.
+- An Intel Arc card runs the engine as a beta (oneAPI, `./build.sh --sycl`): songs, adapters, Extend; training and the Artist stay on NVIDIA. INSTALL.md, «Intel Arc (beta)».
+- About 33 GB of disk, measured on fresh installs (10.10.2026; since 2.0.0 the default fine-tune's 3.8 or 7.2 GB beside them): the program and its two Pythons 16 GB, the models 17 GB for a 16 GB card (Q8_0) or 23.7 GB for 24 GB (BF16), the LoRAs and Ruach Studio's own fine-tune among them; the Artist's helpers (the prompt writer and the content filter) 8.4 GB more, its Qwen painters 31 GB more for Qwen-Image 2512 at Q4 (34.5 GB at Q6; on a smaller card it streams its blocks from RAM; Qwen-Image 2.1 33.1 GB), the 💎 sets 5.3 GB, each only when you take it; more for your takes.
 - The CUDA toolkit 12.8, `git`, `cmake`, `gcc`/`g++`, `python3.12`, `ffmpeg`, `curl`. FLAC needs nothing more: the engine encodes it itself, the Refiner and the exports through ffmpeg.
 - Only for the tests: `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test, which checks the engine's encoder against the reference; Node.js 22+ and Chrome or Chromium for the page tests.
 
@@ -182,6 +185,8 @@ Everything the studio uses, and what for. The engine comes with the repository; 
 | Whisper large-v3 (CTranslate2) | the lyrics check, timing | MIT |
 | BS-Roformer ep317 · htdemucs_ft | stems | not stated by its author · MIT |
 | UniverSR | upscale | CC BY 4.0 |
+| Apollo-vocal (baicai1145, on Apollo by JusperLee) | the Voice upscale's bundle | CC BY-NC-SA 4.0 (the model's code CC BY-SA 4.0) |
+| FlashSR (Jaekwon Im) · on first use: its weights from our models' repository, its code from him | the Voice upscale's bundle | the weights Apache 2.0, his code MIT (as he stated on 20.10.2026) |
 | Qwen2.5-Omni-7B (GGUF, through [llama.cpp](https://github.com/ggml-org/llama.cpp), built by you) · extra | the style listener for training sets | Apache-2.0 |
 | Qwen3-4B-Instruct-2507 · extra | the artwork's prompt writer | Apache-2.0 |
 | the content filter (Falconsai's nsfw_image_detection) · extra | every picture the Artist and a take's artwork paint passes it | Apache-2.0 |
@@ -190,7 +195,7 @@ Everything the studio uses, and what for. The engine comes with the repository; 
 | the upscalers you put into `artwork/upscalers/` (ESRGAN, DAT, HAT, SPAN…) | the Artist's upscale | each its own |
 | YuE2-3B for training (bf16 or int8) · extra | the LoRA trainer | CC BY-NC 4.0 |
 
-**In the page** (one file, made by `build.sh`): the icons (Font Awesome Free, CC BY 4.0; Lucide, ISC), the logo's words (Montserrat, SIL OFL, as paths) and [abcjs](https://www.abcjs.net/) 6.7 (MIT), which draws the staff, are inside it; YuE2 Studio's score checker (Apache-2.0) is ported into it, and the lab carries the original (`lab/abc_tools.py`). **The fonts** (Raleway, Michroma and Liberation Mono by default; Noto Sans and Noto Sans Mono, IBM Plex Sans and Mono, Bodoni Moda, Space Grotesk, Roboto, Lato, Unbounded, Tektur and Jura to choose from; SIL OFL) are served by the lab from `lab/fonts/`. The page loads no script, stylesheet or font from the internet.
+**In the page** (one file, made by `build.sh`): the icons (Font Awesome Free, CC BY 4.0; Lucide, ISC), the logo's words (Montserrat, SIL OFL, as paths) and [abcjs](https://www.abcjs.net/) 6.7 (MIT), which draws the staff, are inside it; YuE2 Studio's score checker (Apache-2.0) is ported into it, and the lab carries the original (`lab/abc_tools.py`). **The fonts** (Raleway, Michroma and Liberation Mono by default; Noto Sans and Noto Sans Mono, IBM Plex Sans and Mono, Bodoni Moda, Space Grotesk, Roboto, Lato, Unbounded, Tektur and Jura to choose from; SIL OFL) are served by the lab from `lab/fonts/`. **The piano roll's instruments** (the Salamander Grand Piano by Alexander Holm; the choir «aah» and the voice «ooh» of FluidR3 GM by Frank Wen; CC BY 3.0, shortened and made mono) are served by the lab from `lab/sounds/`. The page loads no script, stylesheet or font from the internet.
 
 **Optional:** a chat server for the Writer (vLLM, LM Studio or Ollama on your machine) or OpenRouter (the cloud, your key); a DAW (above); `node` 22+ (YouTube in yt-dlp, the page tests) and Chrome or Chromium (the page tests); `flac` and `metaflac` (the FLAC test); `pip install mcp` on an agent's machine (`extras/ruach-mcp.py`).
 
@@ -294,13 +299,23 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
-### To Do › 2.0.0 and After
+### Done › 2.0.0 (October 2026)
 
-2.0.0-pre is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
+- **Ruach Studio's own fine-tune**: YuE2-RS-FW folded into the base at seven points of its training, each named by its epoch and strength ([goldhub/YuE2-RS-Finetunes](https://huggingface.co/goldhub/YuE2-RS-Finetunes), CC BY-NC-SA 4.0); RS-FW 2.4x0.75, the safest, is the studio's default and comes with the install; the adapters themselves are not published.
+- **Songs edited as the model writes them**: Extend from any moment; a section sung once more, a line re-sung, a window sung anew with its neighbours kept and the sound decoded whole; a take arranged anew from its sections and matched section by section; music before a repeat and an interlude written by the model; the opening alone.
+- **The piano roll** (beta): the scores YuE2 writes opened and played on real instruments, its Vocal singing the vowels in phrases; Chords, and a chord bed the model sings over; a segment transposed; MIDI for the whole studio and a MIDI API; a planned score read before it is sung.
+- **The Refiner is its canvas, and the DAW (beta) had a sound engineer's pass**: the nodes wired as the work flows; Voice tamer, Voice attack and body, Bass under the kick, Details up, Mono Maker, Peak glue, a true-peak ceiling and the voice transposer; the console's solo, reference, fades, typed values, parallel compression, a gate on every strip, returns with pre-delay, LRA and PLR.
+- **Listening and choosing**: the playlist and its crossfade; Compare from memory, up to twelve takes, with a star, a dislike and a note; the Library's cards anew; the lyrics timed word by word; the tags in every download.
+- **The Trainer**: on several cards; a rank for each half, and tracks without the music lesson; saves in tenths of an epoch, Pause and Resume, the held-out best; the learning rate honest, with a fade; datasets as parquet.
+- **Lettering on a cover**: the title and a second line painted into the picture by Qwen-Image, each picture read back and painted again when misspelled.
+- **The engine**: at upstream's level; AB2 at 48 steps by default; Full an octave lower by default; a job names its backbone and Regenerate keeps a take's own; the IRAE merges in the lineage; the sound decode's ladder, an experiment in the Creator's Sampling; Intel Arc as a beta.
 
-- **Songs edited as the model writes them** (2.0.0): a take extended from any moment; a section written anew with its neighbours' voice, key and bars kept, joined in the model's own tokens and decoded whole, the best joins heard first; an instrumental layer on the take's own score, locked to its bars.
-- **A DAW in the Refiner, an early preview** (2.0.0): [Plenio Music Production System](https://github.com/jplenio/Plenio-Music-Production-System)'s score editor (Apache-2.0): a piano roll, a chord lane, the lyrics over the notes, a MIDI keyboard to play ideas in, the score going both ways.
-- **Lettering on a cover** (2.0.0, in the studio now): the title and a second line painted into the picture by Qwen-Image, each picture read back and painted again when misspelled.
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
+### To Do › After 2.0.0
+
+2.0.0 is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
+
 - **Right-to-left languages** (Arabic, Hebrew, Urdu), once the page itself runs right to left.
 - **The Videographer** (2.1.0): a music video for the song, its scenes prompted by a helper and its key frames painted by the Artist.
 - **SeedVR** as an upscaler (2.1.0).
@@ -314,10 +329,11 @@ Issues and pull requests are welcome: they are read and answered.
 
 - **[YuE2](https://huggingface.co/m-a-p/YuE2-3B)** by m-a-p, the model; **MERT-v2-FullSong** by m-a-p.
 - **[yue2.cpp](https://github.com/ServeurpersoCom)** by ServeurpersoCom, the C++ engine on ggml; this studio carries it with its own patches (upstream alone will not run the studio).
-- **[YuE2 Kit](https://github.com/IronWolve/yue2-kit)** by IronWolve, the base of the page and the scripts.
+- **[timoncool's yue2.cpp](https://github.com/timoncool/yue2.cpp)** (MIT): the planned score's chords (after Yeufonic) and the opening a plan goes on from (after Mothersuperior's hum-to-song), ported into our engine.
+- **[YuE2 Kit](https://github.com/IronWolve/yue2-kit)** by SeattleSysop (IronWolve), the base of the page and the scripts (Apache License 2.0).
 - **[AI-Toolkit](https://github.com/ostris/ai-toolkit)** by Ostris (MIT): the trainer's YuE2 code was ported from it.
 - **Mothersuperior**: the realaudio tokenizer head (CC BY-NC 4.0) and the VAE merge.
-- **Qwen2.5-Omni** (the listener), **Whisper** (the lyrics check), **BS-Roformer** and **htdemucs_ft** (stems), **UniverSR** (upscale), **GTSinger** (CC BY-NC-SA 4.0, training data for voices).
+- **Qwen2.5-Omni** (the listener), **Whisper** (the lyrics check), **BS-Roformer** and **htdemucs_ft** (stems), **UniverSR**, **Apollo-vocal** and **FlashSR** (upscale), the **Salamander Grand Piano** and **FluidR3 GM** (the piano roll's instruments), **GTSinger** (CC BY-NC-SA 4.0, training data for voices).
 - **Qwen-Image 2512** by Qwen and its **Lightning** by lightx2v (the artwork's painter) and **Qwen3-4B** (its prompts); **[YuE2 Studio](https://github.com/vrgamegirl19/Yue2_Studio)** (Apache-2.0): the score checker the page and the lab use.
 
 Every project is linked from the studio's own Engine → About.
@@ -327,7 +343,7 @@ Every project is linked from the studio's own Engine → About.
 - **What we wrote** (the patches over the engine and the page, the lab, the trainer, the extras, the tools, the guides): the **GNU Affero General Public License, version 3 or any later version** (AGPL-3.0-or-later), in `LICENSE`. Free to use, study, change and pass on, and every copy passed on, changed or not, and every service run on a changed copy, goes with its source under the same licence: nobody can close it and sell it as their own.
 - **The logo and the name «Ruach Studio», and the audio and pictures we publish with it** (the probe workspaces, the LoRA samples, their artworks): CC BY-NC-ND 4.0, in `LICENSE-ASSETS.md`.
 - **yue2.cpp, ggml and the other MIT projects** inside keep their MIT notices; MIT code may stand inside an AGPL work.
-- **YuE2 Kit** by IronWolve, the base of the page and the scripts, is on GitHub without a licence of its own: it names the licences of the projects it builds on (MIT, Apache 2.0), not its own, and we have no way to reach its author. Ruach Studio is a fork of it in the open, as GitHub lets anyone fork a public repository, with every change published. The Kit's own lines remain IronWolve's; if he wants it otherwise, we will settle it with him.
+- **YuE2 Kit** by SeattleSysop (IronWolve), the base of the page and the scripts: its original contributions (the scripts, the documentation, the studio page's customisations, the engine's modifications) are under the **Apache License 2.0** since 22.10.2026 (its commit 5df6eaa). Its licence text is in `LICENSES/yue2-kit-Apache-2.0.txt` and its notice is kept word for word in `NOTICE`, as its section 4 asks; Apache 2.0 code may stand inside an AGPL-3.0 work.
 - **The models and the datasets** keep their own licences, and several are non-commercial: the realaudio head (CC BY-NC 4.0), GTSinger (CC BY-NC-SA 4.0), and YuE2, whose licence file reads: *"The YuE2-3B, YuE2-Vae and YuE2-Vae-legacy checkpoint weights are licensed under Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)"*, and *"This weight license does not replace separately applicable licenses for code, text tokenization files, evaluation assets or other bundled material."* It speaks of the weights; it says nothing of the songs you make with them. What you may do with your songs is a question for your own judgement and, if it matters to you, a lawyer: this README gives no legal advice.
 
 ## A Little Story

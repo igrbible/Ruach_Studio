@@ -8,19 +8,22 @@
 #
 #   ./download-models.sh                  BF16 backbone + F32 VAE (7.7 GB)
 #   ./download-models.sh --quant Q8_0     Q8_0 backbone instead (3.8 GB)
-#   ./download-models.sh --transcriber    also SheetSage2 Q8_0 for covers (1.0 GB)
+#   ./download-models.sh --transcriber    also the transcriber for covers: SheetSage2's head and MERT-v2-FullSong beside it, Q8_0 (1.0 GB)
+#   ./download-models.sh --transcriber-only   the transcriber alone (build.sh fetches it so in an update; HERESY 1613)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="goldhub/Ruach_Studio_Models_v2"
 QUANT="BF16"
 TRANSCRIBER=0
+ONLY=0
 usage() { awk 'NR == 1 {next} /^#/ {sub(/^# ?/, ""); print; next} {exit}' "${BASH_SOURCE[0]}"; exit 2; }   # the comment block above
 while [ $# -gt 0 ]; do
     case "$1" in
         --quant) [ -n "${2:-}" ] && [ "${2#-}" = "$2" ] || { echo "--quant needs a value (BF16, Q8_0, ...)"; usage; }
                  QUANT="$2"; shift ;;
         --transcriber) TRANSCRIBER=1 ;;
+        --transcriber-only) TRANSCRIBER=1; ONLY=1 ;;
         -h|--help) usage ;;
         *) echo "unknown option: $1"; usage ;;
     esac
@@ -39,7 +42,8 @@ REV=$(awk -v k="$REPO" '$1 == k {print $2; exit}' "$ROOT/heresy/hf-revisions.txt
 [ -n "$REV" ] || REV=$(hf_rev "$REPO")
 
 files=("models/YuE2-3B-$QUANT.gguf" "models/YuE2-Vae-F32.gguf")
-[ "$TRANSCRIBER" = 1 ] && files+=("models/SheetSage2-Q8_0.gguf")
+[ "$ONLY" = 1 ] && files=()
+[ "$TRANSCRIBER" = 1 ] && files+=("models/SheetSage2-Q8_0.gguf" "models/MERT-v2-FullSong-Q8_0.gguf")   # HERESY 1610: the engine reads the head with MERT beside it
 
 mkdir -p "$ROOT/models"
 start=$(date +%s); got=0; skipped=0; failed=0

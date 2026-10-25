@@ -89,7 +89,8 @@
     if (state.lang !== lang) { state.tabs = null; state.loading = null; state.lang = lang; }
     var get = function (file) { return fetch("/lab/guide/" + file).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); }); };
     if (!state.loading) state.loading = (lang === "en" ? get("GUIDE.md") : get("GUIDE." + lang + ".md").catch(function () { return get("GUIDE.md"); }))
-      .then(function (md) { if (state.lang === lang) parse(md); });
+      .then(function (md) { if (state.lang === lang) parse(md); })
+      .catch(function (e) { state.loading = null; throw e; });   // HERESY 1670: a failed read is not kept: the next open reads again
     return state.loading;
   }
 

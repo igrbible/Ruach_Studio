@@ -34,7 +34,7 @@
         esc(x.low) + "–" + esc(x.high) + '</td><td class="mono">' + pct(x.sounding) + "</td>" + (name === "Vocal" ? '<td class="mono">' + x.chords + "</td>" : "<td></td>") + "</tr>";
     };
     host.innerHTML = '<p class="sc-ok">✓ Native YuE2 score · ' + esc(r.key) + " · " + (r.free ? "free tempo" : r.bpm + " BPM") + " · " + r.meter + " · " + r.bars +   // HERESY 1416
-      " bars · " + clock(r.seconds) + " · " + r.sections + " sections</p>" +
+      " bars · \u2248 " + clock(r.seconds) + " long · " + r.sections + " sections</p>" +   // HERESY 1716: the length said as one
       '<table class="sc-table"><tr><th></th><th>notes</th><th>a minute</th><th>range</th><th>sounding</th><th>chords</th></tr>' +
       row("Vocal", v) + row("Ins", i) + "</table>" +
       '<p class="sc-ratio">Ins : Vocal = <strong class="mono">' + esc(r.ratioText) + "</strong>" +
@@ -96,6 +96,35 @@
     })();
     $("formMidi").addEventListener("click", function () { midiOut($("abc").value, hooks.title()); });
     $("formMarkers").addEventListener("click", function () { markersOut($("abc").value, hooks.title()); });
+    // HERESY 1704: the chord bed's row: the key and the tempo from the style when it names them, a new draw at each press
+    if ($("bedWrite")) {
+      var styleKey = function () {
+        var m = /(^|[^A-Za-z])([A-G])(#|b|♯|♭)?\s*(major|minor|Major|Minor|maj|min|m)(?![a-z])/.exec(($("style") || {}).value || ""), s = /(\d{2,3})\s*bpm/i.exec(($("style") || {}).value || "");
+        return { key: m ? m[2] + (m[3] ? m[3].replace("♯", "#").replace("♭", "b") : "") + (/^(minor|min|m)$/i.test(m[4]) ? "m" : "") : "", bpm: s ? +s[1] : 0 };
+      };
+      var fillBed = function () {
+        var sk = styleKey();
+        if (sk.key && $("bedKey").querySelector('option[value="' + sk.key + '"]')) $("bedKey").value = sk.key;
+        if (sk.bpm >= 40 && sk.bpm <= 240) $("bedBpm").value = sk.bpm;
+      };
+      $("scoreDrawer") && $("scoreDrawer").addEventListener("toggle", function () { if (this.open) fillBed(); });
+      fillBed();
+      $("bedWrite").addEventListener("click", function () {
+        var r;
+        try {
+          r = A.chordBed({ key: $("bedKey").value, meter: $("bedMeter").value, bpm: $("bedBpm").value, lyrics: ($("lyrics") || {}).value || "",
+                           seed: Math.floor(Math.random() * 4294967296) });
+        } catch (error) { toast(error.message, true); return; }
+        (($("abc").value || "").trim() ? window.HeresyDialog.confirm("Replace the score in the form with a chord bed?", { ok: "Replace" }) : Promise.resolve(true)).then(function (ok) {
+          if (!ok) return;
+          set(r.abc);
+          var off = document.querySelector('input[name="cot"]:checked'), full = document.querySelector('input[name="cot"][value="full"]');
+          if (full && (!off || off.value !== "full")) full.click();   // a score is sung in Full
+          $("bedNote").textContent = "A bed of " + r.bars + " bars in " + r.key + ": verse " + r.progressions[0].join(" ") + " · chorus " + r.progressions[1].join(" ") + " · bridge " + r.progressions[2].join(" ");
+          toast("Chord bed written: " + r.bars + " bars; the planning mode is Full");
+        });
+      });
+    }
     $("voiceShiftBtn").addEventListener("click", function () {
       var steps = parseInt($("voiceShift").value, 10), voice = $("voiceShiftWho").value;
       try {

@@ -7,6 +7,7 @@
 
 #include "sliders.h"
 #include "lora-rt.h"  // HERESY 1447
+#include "adapter.h"
 #include "graph-arena.h"
 #include "qwen3-enc.h"  // Qwen3Layer, Qwen3Config, layer build helpers
 #include "static-graph.h"
@@ -333,8 +334,8 @@ static bool qw3lm_read_config(const char * gguf_path, Qwen3LMConfig * cfg) {
     return true;
 }
 
-// Load model weights from GGUF
-static bool qw3lm_load(Qwen3LM * m, const char * gguf_path) {
+// Load model weights from GGUF, the adapters merged into the AR projections
+static bool qw3lm_load(Qwen3LM * m, const char * gguf_path, const std::vector<AdapterUse> & adapters) {
     *m = {};
 
     qw3lm_init_backend(m);
@@ -370,6 +371,10 @@ static bool qw3lm_load(Qwen3LM * m, const char * gguf_path) {
         qwen3_load_layer(&m->wctx, gf, &m->layers[i], prefix, i);
     }
 
+    if (!adapter_merge(&m->wctx, gf, m->backend, ADAPTER_AR, adapters)) {
+        gf_close(&gf);
+        return false;
+    }
     wctx_alloc(&m->wctx, m->backend);
     gf_close(&gf);
 

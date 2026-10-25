@@ -7,7 +7,7 @@ download cut short going on from where it stopped, a second try after half a min
     POST /weights/check         fetch-heresy.sh --check: what is here and what is missing; nothing is downloaded
     POST /weights/fetch {…}     one run at a time, on the user's word (the page has said the size): {"part": "missing"}
                                 everything the install brings that is not here, {"part": "loras"} one part of it, or one
-                                extra: {"backbone": "BF16"}, {"ira": "Q8_0"} (1490), {"listener": "Q8_0"}, {"artwork": "q4"}, {"trainer": "int8"}
+                                extra: {"backbone": "BF16"}, {"ira": "Q8_0"} (1490), {"irae": "IRAEv2-Q8_0"} (1689), {"fw": "2.4x0.75-Q8_0"} (1794), {"listener": "Q8_0"}, {"artwork": "q4"}, {"trainer": "int8"}
 
 A test page (?scope=…) checks but fetches nothing: the lab refuses. New LoRAs reach the engine at once; new backbones,
 decoders and sliders at its next start (it reads them when it starts), which the card says."""
@@ -22,6 +22,23 @@ from pathlib import Path
 # what the install brings, part by part (fetch-heresy.sh --only NAME): what a fetch of the whole part takes, measured on the
 # Forge 10.10.2026 (HERESY 1290: the extras come converted, from goldhub/Ruach_Studio_Models_v2: nothing is made here any more)
 PARTS = {"extras": "1.3 GB", "whisper": "3.1 GB", "stems": "1.0 GB", "upscale": "0.2 GB", "loras": "2.3 GB"}   # HERESY 1292: du -sb, decimal
+# HERESY 1794 (Viktor 25.10.2026: «2.4 ep - самый безопасный, и пусть он будет базовой моделью»): Ruach Studio's own fine-tune, YuE2-RS-FW, its
+# saves folded into m-a-p's base at seven points (epoch x strength), from goldhub/YuE2-RS-Finetunes; the default one comes with the install as a
+# part, at the quant of m-a-p's backbone here (BF16, Q8_0 or Q6_K: there is no Q5_K_M of it, so a Q5_K_M install keeps m-a-p's alone)
+FW_MERGES = ["0.7x0.75", "1.5x0.75", "2.4x0.75", "3.4x0.7", "3.4x0.75", "4.0x0.65", "4.0x0.7"]
+FW_DEFAULT = "2.4x0.75"
+FW_SIZES = {"BF16": "7.2 GB", "Q8_0": "3.8 GB", "Q6_K": "2.9 GB"}
+
+
+def fw_quant(kit):
+    """the quant the install's fine-tune comes at: m-a-p's backbone here, the fullest first; "" where none of the three is"""
+    return next((q for q in FW_SIZES if (Path(kit) / "models" / f"YuE2-3B-{q}.gguf").is_file()), "")
+
+
+def parts_of(kit):   # (not «parts»: _last_run keeps a list of that name)
+    """the parts the install brings and their sizes, the fine-tune's at its quant (none on a Q5_K_M install)"""
+    q = fw_quant(kit)
+    return dict(PARTS, fw=FW_SIZES[q]) if q else dict(PARTS)
 
 OMNI = "checkpoints/Qwen2.5-Omni-7B-GGUF/"
 PROJ = OMNI + "mradermacher/Qwen2.5-Omni-7B.mmproj-Q8_0.gguf"
@@ -72,6 +89,30 @@ EXTRAS = [
          {"id": "BF16", "size": "7.2 GB", "files": ["models/YuE2-3B-IRA-BF16.gguf"]},
          {"id": "Q8_0", "size": "3.8 GB", "files": ["models/YuE2-3B-IRA-Q8_0.gguf"]},
          {"id": "Q6_K", "size": "2.9 GB", "files": ["models/YuE2-3B-IRA-Q6_K.gguf"]}]},
+    # HERESY 1689 (Viktor 21.10.2026: «Собирай IRAE* мёрджи, пушай их в IRA репо и прикручивай к загрузчику»): IRA with monsterovich's Epic Trailer on top
+    {"name": "irae", "label": "IRAE merge", "restart": True,
+     "what": "IRA with monsterovich's Epic Trailer adapter folded in on top, at three strengths (music / sound): IRAE 0.32 / 0.32, the fullest by ear; IRAEv2 0.28 / 0.24, cleaner; IRAEv3 0.5 / 0.375, its author's own, at its best on instrumentals. Ruach Studio's merges, from goldhub/YuE2-3B-Ruach_Studio-IRA-Merge (CC BY-NC 4.0). Compute chooses them beside m-a-p's backbones; do not add Instrumental, Real Audio or Epic Trailer on top. IRAE-IR (0.4 / 0.6) and IRAE-IRv2 (0.32 / 0.6) carry monsterovich's Industrial Rock as well: experimental, highly unstable on lyrics, mostly for rock instrumentals; nor Industrial Rock on them",   # HERESY 1708: and IRAE-IR, IRAE-IRv2
+     "variants": [
+         {"id": "IRAE-BF16", "size": "7.2 GB", "files": ["models/YuE2-3B-IRAE-BF16.gguf"]},
+         {"id": "IRAE-Q8_0", "size": "3.8 GB", "files": ["models/YuE2-3B-IRAE-Q8_0.gguf"]},
+         {"id": "IRAE-Q6_K", "size": "2.9 GB", "files": ["models/YuE2-3B-IRAE-Q6_K.gguf"]},
+         {"id": "IRAEv2-BF16", "size": "7.2 GB", "files": ["models/YuE2-3B-IRAEv2-BF16.gguf"]},
+         {"id": "IRAEv2-Q8_0", "size": "3.8 GB", "files": ["models/YuE2-3B-IRAEv2-Q8_0.gguf"]},
+         {"id": "IRAEv2-Q6_K", "size": "2.9 GB", "files": ["models/YuE2-3B-IRAEv2-Q6_K.gguf"]},
+         {"id": "IRAEv3-BF16", "size": "7.2 GB", "files": ["models/YuE2-3B-IRAEv3-BF16.gguf"]},
+         {"id": "IRAEv3-Q8_0", "size": "3.8 GB", "files": ["models/YuE2-3B-IRAEv3-Q8_0.gguf"]},
+         {"id": "IRAEv3-Q6_K", "size": "2.9 GB", "files": ["models/YuE2-3B-IRAEv3-Q6_K.gguf"]},
+         {"id": "IRAE-IR-BF16", "size": "7.2 GB", "files": ["models/YuE2-3B-IRAE-IR-BF16.gguf"]},
+         {"id": "IRAE-IR-Q8_0", "size": "3.8 GB", "files": ["models/YuE2-3B-IRAE-IR-Q8_0.gguf"]},
+         {"id": "IRAE-IR-Q6_K", "size": "2.9 GB", "files": ["models/YuE2-3B-IRAE-IR-Q6_K.gguf"]},
+         {"id": "IRAE-IRv2-BF16", "size": "7.2 GB", "files": ["models/YuE2-3B-IRAE-IRv2-BF16.gguf"]},
+         {"id": "IRAE-IRv2-Q8_0", "size": "3.8 GB", "files": ["models/YuE2-3B-IRAE-IRv2-Q8_0.gguf"]},
+         {"id": "IRAE-IRv2-Q6_K", "size": "2.9 GB", "files": ["models/YuE2-3B-IRAE-IRv2-Q6_K.gguf"]}]},
+    # HERESY 1794: Ruach Studio's own fine-tune, the seven merges at three quants each (models/YuE2-3B-RS-FW-<merge>-<quant>.gguf)
+    {"name": "fw", "label": "RS-FW merge", "restart": True,
+     "what": "YuE2-3B with Ruach Studio's own fine-tune folded in (YuE2-RS-FW, at seven points of its training: epoch x strength): 2.4x0.75 is the studio's default, the safest; from goldhub/YuE2-RS-Finetunes (CC BY-NC-SA 4.0). Compute chooses it beside m-a-p's backbones; the adapters themselves are not published",
+     "variants": [dict({"id": f"{v}-{q}", "size": size, "files": [f"models/YuE2-3B-RS-FW-{v}-{q}.gguf"]}, **({"note": "the studio's default"} if v == FW_DEFAULT else {}))
+                  for v in FW_MERGES for q, size in FW_SIZES.items()]},
     {"name": "listener", "label": "Style listener",
      "what": "Qwen2.5-Omni-7B: hears the songs of a training set and writes each one's style tags; the GGUF ones run through llama.cpp (vendor/llama.cpp, built by you)",
      "variants": [
@@ -213,7 +254,7 @@ def _last_run(kit):
             continue
         st, what, words = cols[0], _strip(kit, cols[1]), _strip(kit, cols[2])
         if st == "##":
-            cur = {"part": what, "label": words, "size": PARTS.get(what, ""), "rows": []}
+            cur = {"part": what, "label": words, "size": parts_of(kit).get(what, ""), "rows": []}   # HERESY 1794: the fine-tune's at its quant
             parts.append(cur)
         elif st == "#sum":
             n = what.split()
@@ -248,7 +289,7 @@ def _job_view(kit):
 
 def listing(kit):
     script = kit / "heresy" / "fetch-heresy.sh"
-    return {"script": script.is_file(), "last": _last_run(kit), "extras": _extras(kit), "parts": PARTS,
+    return {"script": script.is_file(), "last": _last_run(kit), "extras": _extras(kit), "parts": parts_of(kit),   # HERESY 1794
             "job": _job_view(kit), "now": int(time.time())}
 
 
@@ -258,7 +299,7 @@ def running():
 
 
 NAMES = {"extras": "the extra decoders", "whisper": "Whisper", "stems": "the stems' models", "upscale": "UniverSR",
-         "loras": "the LoRAs"}
+         "loras": "the LoRAs", "fw": "Ruach Studio's own fine-tune"}   # HERESY 1794
 
 
 def _args(body):
@@ -266,7 +307,7 @@ def _args(body):
     part = str(body.get("part", "") or "")
     if part == "missing":
         return [], "what is missing"
-    if part in PARTS:
+    if part in PARTS or part == "fw":                # HERESY 1794: the fine-tune's part, at the backbone's quant
         return ["--only", part], NAMES[part]
     for e in EXTRAS:
         name = e["name"] if e else "artwork"
@@ -283,7 +324,7 @@ def _args(body):
         if name == "artwork":
             return ["--only", "none", "--artwork-q8" if v == "q8" else "--artwork", "--yes"], what
         return ["--only", "none", "--" + name, v, "--yes"], what
-    raise ValueError("say what to fetch: a part (missing, " + ", ".join(PARTS) + ") or an extra (backbone, ira, listener, artwork, qwen, qwen-fine, art-loras, trainer)")
+    raise ValueError("say what to fetch: a part (missing, " + ", ".join(list(PARTS) + ["fw"]) + ") or an extra (backbone, ira, irae, fw, listener, artwork, qwen, qwen-fine, art-loras, trainer)")
 
 
 def _bytes(size):
@@ -292,12 +333,12 @@ def _bytes(size):
     return int(float(m.group(1)) * (1e9 if m.group(2) == "GB" else 1e6)) if m else None
 
 
-def _which(body):
+def _which(body, kit=None):
     """HERESY 1302: what a fetch was asked for, for the page to draw its progress at that row ({"part": …} or {"extra": …,
     "variant": …}), and the bytes the card says it brings (None for «what is missing»: its size is not one number)."""
     part = str(body.get("part", "") or "")
     if part:
-        return {"part": part}, _bytes(PARTS.get(part))
+        return {"part": part}, _bytes((parts_of(kit) if kit else PARTS).get(part))   # HERESY 1794: the fine-tune's at its quant
     for e in EXTRAS:
         name = e["name"] if e else "artwork"
         if body.get(name) is None:
@@ -333,7 +374,7 @@ def fetch(kit, body, scope=""):
         raise FileNotFoundError("no heresy/fetch-heresy.sh in this tree")
     body = body if isinstance(body, dict) else {}
     args, what = _args(body)
-    which, expect = _which(body)                    # HERESY 1302: the page's progress at the row pressed
+    which, expect = _which(body, kit)               # HERESY 1302: the page's progress at the row pressed (1794: the kit, for the fine-tune's size)
     # a part fetched alone leaves the whole list as it was: a check after it says where everything stands
     return _start(kit, args, what, "fetch", bool(args and args[0] == "--only" and args[1] != "none"), which, expect)
 

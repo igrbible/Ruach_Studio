@@ -6,7 +6,7 @@
 #
 #   YuE2-3B-BF16.gguf     7.2 GB  main model, byte-exact BF16
 #   YuE2-Vae-F32.gguf     0.5 GB  Standard VAE (+ Legacy, Blend and the 16 sliders via convert-extras.py)
-#   SheetSage2-F32.gguf   2.6 GB  transcriber (SheetSage2 + MERT), for covers
+#   SheetSage2-F32.gguf   0.2 GB  transcriber's head, for covers, with MERT-v2-FullSong-F32.gguf (2.5 GB) beside it
 #
 # Interruptions: every output is written as <name>.partial and renamed when complete
 # (tools/gguf_atomic.py); an output an earlier run left incomplete is found (tools/gguf_check.py),
@@ -97,7 +97,7 @@ need_gb=$([ "$LOW" = 1 ] && echo 22 || echo 15)    # 13.1 GB of outputs (+ a 7.5
 list_outputs() {
     local extras f
     extras=$("$PY" "$ROOT/convert-extras.py" --list-outputs) || { echo "${R}convert-extras.py cannot list its outputs${X}"; exit 1; }
-    OUTPUTS=("build/models/YuE2-3B-BF16.gguf" "build/models/YuE2-Vae-F32.gguf" "build/models/SheetSage2-F32.gguf")
+    OUTPUTS=("build/models/YuE2-3B-BF16.gguf" "build/models/YuE2-Vae-F32.gguf" "build/models/SheetSage2-F32.gguf" "build/models/MERT-v2-FullSong-F32.gguf")   # HERESY 1610
     while IFS= read -r f; do [ -n "$f" ] && OUTPUTS+=("$f"); done <<EOF
 $extras
 EOF
@@ -112,6 +112,14 @@ for rel in "${OUTPUTS[@]}"; do
     f="$ROOT/$rel"
     [ -e "$f.partial" ] && { rm -f "$f.partial"; partials=$((partials + 1)); }
     [ -e "$f" ] || continue
+    # HERESY 1610: an older install's SheetSage2-F32 held MERT too (2.7 GB); the engine now reads the head with MERT beside it
+    if [ "${rel##*/}" = SheetSage2-F32.gguf ] && [ "$(wc -c < "$f" | tr -d ' ')" -gt 1000000000 ]; then
+        mkdir -p "$REJ"
+        mv -f "$f" "$REJ/$(basename "$f")"
+        echo "${Y}older${X} SheetSage2-F32.gguf ${D}(SheetSage2 and MERT in one file): moved to tmp/rejected/, made again as the head with MERT beside it${X}"
+        rejected=$((rejected + 1))
+        continue
+    fi
     if ! "$HPY" "$ROOT/tools/gguf_check.py" complete "$f" >/dev/null 2>&1; then
         mkdir -p "$REJ"
         mv -f "$f" "$REJ/$(basename "$f")"

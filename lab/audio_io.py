@@ -214,12 +214,21 @@ def monitor(user_dir):
     return {"out": m.get("out", ""), "rate": int(m.get("rate") or 0)}
 
 
+def card_of(dev):
+    """HERESY 1568: the card an ALSA name points at (hw:CARD=S24,DEV=0 → S24, plughw:4,0 → 4), or empty."""
+    m = re.search(r"CARD=([^,]+)", dev or "") or re.match(r"(?:plug)?hw:(\d+)", dev or "")
+    return m.group(1) if m else ""
+
+
 def set_monitor(user_dir, out, rate):
     rate = int(rate or 0)
     if rate and rate not in (44100, 48000, 88200, 96000, 176400, 192000):
         raise ValueError(f"{rate} Hz is no rate a converter runs at")
     if out and not re.fullmatch(r"[\w.:=,@-]+", out):
         raise ValueError(f"{out} is no device name")
+    g = gateway(user_dir)                     # HERESY 1568: the gateway's card opens once; a monitor there would fight it
+    if out and card_of(out) and card_of(out) in {card_of(g["out"]), card_of(g["in"])}:
+        raise ValueError(f"{out} is the gateway's own card, which opens once: choose another output for the monitor")
     p = Path(user_dir, "audio.json")
     try:
         cfg = json.loads(p.read_text())

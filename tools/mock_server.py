@@ -680,6 +680,8 @@ def parse_request(body, mock):
             req[key].update(value)
         elif key in req:
             req[key] = value
+    if raw.get("nar_ladder") is True:                  # HERESY 1768: the decode ladder, kept as yue-server keeps it (only when on)
+        req["nar_ladder"] = True
     if req["cot"] not in ("full", "melody", "off"):
         return None, "cot must be full, melody or off"
     if req["output_format"] not in ("mp3", "wav16", "wav24", "wav32"):
@@ -888,6 +890,12 @@ def make_handler(mock):
                 if not PAGE.is_file():
                     return self.send(404, "build/tools/public/index.html is missing: run ./build.sh first\n", "text/plain")
                 return self.send(200, PAGE.read_bytes(), "text/html; charset=utf-8", {"Cache-Control": "no-store"})
+            if path == "/lab/sounds/vowels.json" or re.match(r"^/lab/sounds/v[aeiou]-\d+\.mp3$", path):   # HERESY 1624: the roll's vowels from the studio's lab/sounds; the piano and the choir stay unserved, as ever
+                found = next((d / "lab" / "sounds" for d in Path(__file__).resolve().parents if (d / "lab" / "sounds").is_dir()), None)
+                f = found / path.rsplit("/", 1)[1] if found else None
+                if not f or not f.is_file():
+                    return self.error(404, "no " + path)
+                return self.send(200, f.read_bytes(), "application/json" if f.suffix == ".json" else "audio/mpeg")
             if path == "/lab/trash":   # HERESY 1168
                 return self.send(200, {"items": []})
             if path == "/lab/writer/versions":   # HERESY 1519: the Creator's versions, the lab's own code on a folder of the mock's

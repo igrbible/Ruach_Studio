@@ -5,6 +5,7 @@
 // every forward for comparison against the torch reference. The FP16 clamp
 // flag runs the same path clamped.
 
+#include "backend.h"
 #include "qwen3-lm.h"
 
 #include <cstdio>
@@ -24,10 +25,22 @@ static bool dump(const std::string & path, const std::vector<float> & data) {
 }
 
 int main(int argc, char ** argv) {
+    // A leading --device <name> picks the device, the positional arguments follow
+    if (argc > 2 && !strcmp(argv[1], "--device")) {
+        if (!backend_set_device(argv[2])) {
+            return 1;
+        }
+        for (int i = 3; i <= argc; i++) {
+            argv[i - 2] = argv[i];
+        }
+        argc -= 2;
+    }
     bool clamp = argc > 3 && strcmp(argv[3], "--clamp-fp16") == 0;
     int  first = clamp ? 4 : 3;
     if (argc <= first) {
-        fprintf(stderr, "usage: %s lm.gguf out_prefix [--clamp-fp16] id0 [id1 ...] [/ id0 [id1 ...]]\n", argv[0]);
+        fprintf(stderr,
+                "usage: %s [--device <name>] lm.gguf out_prefix [--clamp-fp16] id0 [id1 ...] [/ id0 [id1 ...]]\n",
+                argv[0]);
         return 1;
     }
 
@@ -43,7 +56,7 @@ int main(int argc, char ** argv) {
     int N = (int) seqs.size();
 
     Qwen3LM lm;
-    if (!qw3lm_load(&lm, argv[1])) {
+    if (!qw3lm_load(&lm, argv[1], {})) {
         return 1;
     }
     lm.clamp_fp16 = clamp;

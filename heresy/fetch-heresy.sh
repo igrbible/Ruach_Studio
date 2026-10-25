@@ -31,6 +31,11 @@
 #   heresy/fetch-heresy.sh --ira BF16|Q8_0|Q6_K [--yes]
 #                                      HERESY 1490: also the IRA merge (YuE2-3B with Mothersuperior's Instrumental and Real Audio
 #                                      folded in, goldhub/YuE2-3B-Ruach_Studio-IRA-Merge) beside m-a-p's backbones, asked first
+#   heresy/fetch-heresy.sh --irae IRAE|IRAEv2|IRAEv3|IRAE-IR|IRAE-IRv2-BF16|Q8_0|Q6_K [--yes]   (HERESY 1708: IRAE-IR, IRAE-IRv2)
+#                                      HERESY 1689: also an IRAE merge (IRA with monsterovich's Epic Trailer on top), from the same repo
+#   heresy/fetch-heresy.sh --fw 2.4x0.75-BF16|Q8_0|Q6_K [--yes]   (and 0.7x0.75, 1.5x0.75, 3.4x0.7, 3.4x0.75, 4.0x0.65, 4.0x0.7)
+#                                      HERESY 1794: also a merge of Ruach Studio's own fine-tune, from goldhub/YuE2-RS-Finetunes; the
+#                                      default one (2.4x0.75) comes with the install as the part «fw», at the backbone's quant
 #   heresy/fetch-heresy.sh --only extras,whisper,stems,upscale,loras
 #                                      HERESY 1289: those parts of what the install brings, the others left alone; with
 #                                      none, only what the options above ask for (the Engine's Models card fetches so)
@@ -51,7 +56,7 @@
 # Needs: python3, git, the lab venv for audio-separator (lab/install-venv.sh), ~8 GB of disk.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""; QFINE=""; ARTLORAS=""; IRA=""
+MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""; QFINE=""; ARTLORAS=""; IRA=""; IRAE=""; FW=""   # HERESY 1794: FW
 while [ $# -gt 0 ]; do
   case "$1" in
     --check) MODE=check ;; --replace) MODE=replace ;; --yes) YES=1 ;;
@@ -59,13 +64,15 @@ while [ $# -gt 0 ]; do
     --trainer) TRAINER="${2:-}"; shift ;;
     --backbone) BACKBONE="${2:-}"; shift ;;
     --ira) IRA="${2:-}"; shift ;;                   # HERESY 1490
+    --irae) IRAE="${2:-}"; shift ;;                 # HERESY 1689
+    --fw) FW="${2:-}"; shift ;;                     # HERESY 1794
     --only) ONLY=",${2:-},"; shift ;;
     --artwork) ARTWORK=1 ;;
     --artwork-q8) ARTWORK=1; ARTQ8=1 ;;
     --qwen) QWEN="${2:-}"; shift ;;
     --qwen-fine) QFINE="${2:-}"; shift ;;           # HERESY 1347
     --art-loras) ARTLORAS="${2:-all}"; shift ;;
-    *) echo "--check, --replace, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --ira BF16|Q8_0|Q6_K, --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --qwen-fine jibmix-v6|intorealism-v1|real-v2|base-fp8, --art-loras all, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
+    *) echo "--check, --replace, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --ira BF16|Q8_0|Q6_K, --irae IRAE|IRAEv2|IRAEv3-BF16|Q8_0|Q6_K, --fw 2.4x0.75-BF16|Q8_0|Q6_K (and 0.7x0.75, 1.5x0.75, 3.4x0.7, 3.4x0.75, 4.0x0.65, 4.0x0.7), --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --qwen-fine jibmix-v6|intorealism-v1|real-v2|base-fp8, --art-loras all, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
   esac
   shift
 done
@@ -284,6 +291,9 @@ if want upscale; then
     hf_into "universr (woongzip1/universr-audio)" goldhub/Ruach_Studio_Models_v2 "universr/*"
   fi
   clone https://github.com/woongzip1/UniverSR.git "$ROOT/vendor/UniverSR"
+  # HERESY 1583: the Voice upscale's bundle: Apollo-vocal (baicai1145, CC BY-NC-SA 4.0) and its model code, from v2 into models/upbundle/apollo/
+  # where lab/upbundle_job.py reads them; FlashSR comes on first use (1611: its weights from our copy in v2, Apache-2.0 as its author stated on 20.10.2026; its code from him)
+  hf_into "Apollo-vocal (baicai1145/Apollo-vocal-msst)" goldhub/Ruach_Studio_Models_v2 "models/upbundle/apollo/*"
 fi
 
 # HERESY 1079: the style listener, only when asked for, and asked again with its size: a download of 7 to 22 GB
@@ -488,6 +498,46 @@ if [ -n "$IRA" ]; then
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
   [ $go = 1 ] && hf_into_at "models/YuE2-3B-IRA-$IRA.gguf (Ruach Studio's IRA merge)" goldhub/YuE2-3B-Ruach_Studio-IRA-Merge "$ROOT/models" "YuE2-3B-IRA-$IRA.gguf"
+fi
+
+# HERESY 1689 (Viktor 21.10.2026: «Собирай IRAE* мёрджи, пушай их в IRA репо и прикручивай к загрузчику»): an IRAE merge, IRA with monsterovich's
+# Epic Trailer adapter folded in on top (IRAE 0.32 / 0.32, IRAEv2 0.28 / 0.24, IRAEv3 0.5 / 0.375), from the IRA repo at its pin, asked with its size
+if [ -n "$IRAE" ]; then
+  # HERESY 1708: and IRAE-IR, IRAE-IRv2 (Industrial Rock on top: experimental, highly unstable on lyrics, mostly for rock instrumentals)
+  case "$IRAE" in IRAE-BF16|IRAEv2-BF16|IRAEv3-BF16|IRAE-IR-BF16|IRAE-IRv2-BF16) E_SIZE="7.2 GB" ;; IRAE-Q8_0|IRAEv2-Q8_0|IRAEv3-Q8_0|IRAE-IR-Q8_0|IRAE-IRv2-Q8_0) E_SIZE="3.8 GB" ;;
+    IRAE-Q6_K|IRAEv2-Q6_K|IRAEv3-Q6_K|IRAE-IR-Q6_K|IRAE-IRv2-Q6_K) E_SIZE="2.9 GB" ;;
+    *) echo "${R}--irae takes IRAE, IRAEv2, IRAEv3, IRAE-IR or IRAE-IRv2 with -BF16, -Q8_0 or -Q6_K (IRAEv2-Q8_0)${X}"; exit 2 ;; esac
+  asked irae "The $IRAE merge (IRA with monsterovich's Epic Trailer adapter folded in on top: goldhub/YuE2-3B-Ruach_Studio-IRA-Merge)"
+  go=1
+  if [ $MODE = fetch ] && [ $YES = 0 ] && [ ! -s "$ROOT/models/YuE2-3B-$IRAE.gguf" ]; then
+    printf "%s" "Download $E_SIZE? The studio's Engine (Compute) chooses it beside m-a-p's backbones after its next start. [y/N] "
+    read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
+  fi
+  [ $go = 1 ] && hf_into_at "models/YuE2-3B-$IRAE.gguf (Ruach Studio's $IRAE merge)" goldhub/YuE2-3B-Ruach_Studio-IRA-Merge "$ROOT/models" "YuE2-3B-$IRAE.gguf"
+fi
+
+# HERESY 1794 (Viktor 25.10.2026: «2.4 ep - самый безопасный, и пусть он будет базовой моделью»; «Привязывай все эти варианты в Студию и в
+# downloader»): Ruach Studio's own fine-tune, YuE2-RS-FW, folded into m-a-p's base at seven points of its training (epoch x strength), from
+# goldhub/YuE2-RS-Finetunes. The install brings the default one, RS-FW 2.4x0.75, at the quant of m-a-p's backbone here (start.sh starts it
+# when settings.json names no model); there is no Q5_K_M of it, so a Q5_K_M install keeps m-a-p's alone. --fw fetches any of the seven, asked.
+FW_REPO=goldhub/YuE2-RS-Finetunes
+if want fw; then
+  FWQ=""; for q in BF16 Q8_0 Q6_K; do [ -s "$ROOT/models/YuE2-3B-$q.gguf" ] && { FWQ=$q; break; }; done
+  part fw "Ruach Studio's own fine-tune: RS-FW 2.4x0.75, the studio's default"
+  if [ -z "$FWQ" ]; then echo "${D}          no BF16, Q8_0 or Q6_K backbone here: m-a-p's alone (there is no Q5_K_M of the fine-tune)${X}"
+  else hf_into_at "models/YuE2-3B-RS-FW-2.4x0.75-$FWQ.gguf (Ruach Studio's own fine-tune, the default)" $FW_REPO "$ROOT/models" "YuE2-3B-RS-FW-2.4x0.75-$FWQ.gguf"; fi
+fi
+if [ -n "$FW" ]; then
+  case "$FW" in 0.7x0.75-*|1.5x0.75-*|2.4x0.75-*|3.4x0.7-*|3.4x0.75-*|4.0x0.65-*|4.0x0.7-*) ;; *) FW=none ;; esac
+  case "$FW" in *-BF16) F_SIZE="7.2 GB" ;; *-Q8_0) F_SIZE="3.8 GB" ;; *-Q6_K) F_SIZE="2.9 GB" ;;
+    *) echo "${R}--fw takes 0.7x0.75, 1.5x0.75, 2.4x0.75, 3.4x0.7, 3.4x0.75, 4.0x0.65 or 4.0x0.7 with -BF16, -Q8_0 or -Q6_K (2.4x0.75-Q8_0)${X}"; exit 2 ;; esac
+  asked fw "The RS-FW merge $FW (Ruach Studio's own fine-tune folded into YuE2-3B: $FW_REPO)"
+  go=1
+  if [ $MODE = fetch ] && [ $YES = 0 ] && [ ! -s "$ROOT/models/YuE2-3B-RS-FW-$FW.gguf" ]; then
+    printf "%s" "Download $F_SIZE? The studio's Engine (Compute) chooses it beside m-a-p's backbones after its next start. [y/N] "
+    read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
+  fi
+  [ $go = 1 ] && hf_into_at "models/YuE2-3B-RS-FW-$FW.gguf (Ruach Studio's RS-FW $FW merge)" $FW_REPO "$ROOT/models" "YuE2-3B-RS-FW-$FW.gguf"
 fi
 
 # HERESY 1285 (Viktor 09.10.2026: «LoRA пока что не скачались. Только Standard VAE»): the LoRAs the 💎 sets were made with come

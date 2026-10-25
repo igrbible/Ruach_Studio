@@ -121,6 +121,11 @@ add_executable(yue-transcribe tools/yue-transcribe.cpp)
 target_link_libraries(yue-transcribe PRIVATE yyjson)
 link_ggml_backends(yue-transcribe)
 
+# yue-tokenize: audio to semantic codes (audio tokenizer)
+add_executable(yue-tokenize tools/yue-tokenize.cpp)
+target_link_libraries(yue-tokenize PRIVATE yyjson)
+link_ggml_backends(yue-tokenize)
+
 # yue-synth: full pipeline (score -> semantic -> flow matching -> VAE -> audio)
 add_executable(yue-synth tools/yue-synth.cpp src/request.cpp src/model-store.cpp)
 target_link_libraries(yue-synth PRIVATE yyjson)

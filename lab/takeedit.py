@@ -73,6 +73,30 @@ def cut(src, spans, out, keep=True):
     return {"seconds": len(y) / sr, "joins": max(0, len(sp) - 1), "kept": sp}
 
 
+def arrange(src, spans, out):
+    """HERESY 1714: src's stretches in the order given, the same one more than once if asked (a section repeated, a part inserted after
+    another), each join healed by _join, into out at src's own rate and depth: {seconds, joins, kept}. spans: [[a, b]] in seconds, within the
+    take, half a second each at least; their order is the new take's."""
+    info = sf.info(str(src))
+    sr, n = info.samplerate, info.frames
+    sp = [[max(0.0, float(a)), min(n / sr, float(b))] for a, b in spans]
+    if not sp or any(b - a < 0.5 for a, b in sp):
+        raise ValueError("each stretch half a second at least, within the take")
+    if sum(b - a for a, b in sp) < 1.0:
+        raise ValueError("nothing would be left of the take")
+    x, _ = sf.read(str(src), dtype="float64", always_2d=True)
+    parts = [(x, int(round(a * sr)), int(round(b * sr))) for a, b in sp]
+    y = _join(parts, sr)
+    e = int(round(EDGE * sr))
+    if parts[0][1] > 0 and len(y) > 2 * e:              # a start cut into the song: faded in, not clicked
+        y[:e] *= np.linspace(0, 1, e)[:, None]
+    if parts[-1][2] < n and len(y) > 2 * e:             # an end cut out of it: faded out
+        y[-e:] *= np.linspace(1, 0, e)[:, None]
+    sub = info.subtype if info.subtype in ("PCM_16", "PCM_24", "PCM_32", "FLOAT") else "PCM_24"
+    sf.write(str(out), np.clip(y, -1.0, 1.0), sr, subtype=sub)
+    return {"seconds": len(y) / sr, "joins": max(0, len(sp) - 1), "kept": sp}
+
+
 def rubberband_here():
     try:
         p = subprocess.run(["ffmpeg", "-hide_banner", "-filters"], capture_output=True, text=True, timeout=20)
@@ -99,14 +123,14 @@ def stretch(src, factor, out):
 
 
 def make(outputs, name, body, take_dir):
-    """A new take beside name, its sound edited (body: {op: crop | remove | speed, spans, factor, abc, title}): its folder's name."""
+    """A new take beside name, its sound edited (body: {op: crop | remove | arrange | speed, spans, factor, abc, title}): its folder's name."""
     src = take_dir(name)
     wav = src / "audio.wav"
     if not wav.is_file():
         raise FileNotFoundError("this take has no audio.wav to edit")
     op = str(body.get("op") or "")
-    if op not in ("crop", "remove", "speed"):
-        raise ValueError("op: crop, remove or speed")
+    if op not in ("crop", "remove", "arrange", "speed"):          # HERESY 1714: arrange
+        raise ValueError("op: crop, remove, arrange or speed")
     title = str(body.get("title") or "").strip()[:200]
     abc = body.get("abc")
     if abc is not None and (not isinstance(abc, str) or len(abc) > 2 ** 20):
@@ -126,9 +150,13 @@ def make(outputs, name, body, take_dir):
             spans = body.get("spans")
             if not isinstance(spans, list) or not spans or len(spans) > 64:
                 raise ValueError("the stretches: one to sixty-four [start, end] in seconds")
-            said = cut(wav, spans, tmp / "audio.wav", keep=(op == "crop"))
-            how = {"op": op, "spans": [[round(a, 3), round(b, 3)] for a, b in sp(spans)], "kept": [[round(a, 3), round(b, 3)] for a, b in said["kept"]],
-                   "xfade": XFADE}
+            if op == "arrange":                            # HERESY 1714: the stretches in the page's order, repeats allowed
+                said = arrange(wav, spans, tmp / "audio.wav")
+                how = {"op": op, "spans": [[round(float(a), 3), round(float(b), 3)] for a, b in spans], "xfade": XFADE}
+            else:
+                said = cut(wav, spans, tmp / "audio.wav", keep=(op == "crop"))
+                how = {"op": op, "spans": [[round(a, 3), round(b, 3)] for a, b in sp(spans)], "kept": [[round(a, 3), round(b, 3)] for a, b in said["kept"]],
+                       "xfade": XFADE}
         meta = json.loads((src / "meta.json").read_text(encoding="utf-8")) if (src / "meta.json").is_file() else {}
         req = json.loads((src / "request.json").read_text(encoding="utf-8")) if (src / "request.json").is_file() else {}
         how.update({"from": name, "at": time.strftime("%Y-%m-%d %H:%M")})

@@ -24,6 +24,70 @@
   function fhz(v) { return v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 1 : 2) + " kHz" : Math.round(v) + " Hz"; }
   function fq(v) { return (+v).toFixed(2); }
   function fdbtp(v) { return minus((+v).toFixed(1)) + " dBTP"; }   // HERESY 1544
+  function fsec(v) { return (+v).toFixed(v < 10 ? 1 : 0) + " s"; }   // HERESY 1756
+  function frange(v) { return minus((-v).toFixed(1)) + " dB"; }   // HERESY 1760: a gate's range, the floor it leaves
+  function flowcut(v) { return v <= 20 ? tr("Off") : fhz(v); }   // HERESY 1762: a return's cuts, Off at their ends
+  function fhighcut(v) { return v >= 20000 ? tr("Off") : fhz(v); }
+  // HERESY 1758: a value typed in the knob's own words, read back to the value it keeps (a share for %, an amplitude for a send's dB)
+  function typed(p, text) {
+    var t = String(text == null ? "" : text).trim().toLowerCase().replace(/\u2212/g, "-").replace(/,/g, ".").replace(/\s+/g, "");
+    if (!t) return NaN;
+    if (p.fmt === fsend && /^-?(\u221e|inf)$/.test(t)) return 0;
+    if (p.fmt === fpan) {
+      if (t === "c") return 0;
+      var m = /^([lr])(\d+(?:\.\d+)?)$/.exec(t);
+      return m ? (m[1] === "l" ? -1 : 1) * parseFloat(m[2]) / 100 : parseFloat(t) / 100;   // −30 is L30
+    }
+    var mult = 1;
+    if ((p.fmt === flowcut || p.fmt === fhighcut) && (t === "off" || t.replace(/\./g, "") === tr("Off").toLowerCase().replace(/[\s.]+/g, ""))) return p.fmt === flowcut ? 20 : 20000;   // HERESY 1762
+    if ((p.fmt === fhz || p.fmt === flowcut || p.fmt === fhighcut) && /k(hz)?$/.test(t)) { mult = 1000; t = t.replace(/k(hz)?$/, ""); }
+    else if (p.fmt === fms && /[0-9.]s$/.test(t)) { mult = 1000; t = t.replace(/s$/, ""); }
+    t = t.replace(/(hz|dbtp|db|ms|s|%|:1)$/, "");
+    var v = parseFloat(t) * mult;
+    if (!isFinite(v)) return NaN;
+    if (p.fmt === fpct) return v / 100;
+    if (p.fmt === fsend) return Math.pow(10, v / 20);
+    if (p.fmt === frange) return Math.abs(v);       // HERESY 1760: a range typed with or without its minus
+    return v;
+  }
+  var EDIT = null;
+  function editOpen(host, kind, first) {             // host: a knob (.kn), or a fader (.fd) whose number is the .mc-db under it
+    editClose(false);
+    var kt = host.dataset.kt, n = host.dataset.n, k = host.dataset.k;
+    var p = kind === "fader" ? { min: +host.dataset.lo, max: +host.dataset.hi, step: 0.1, fmt: fdb } : P[k];
+    var out = kind === "fader" ? host.parentNode.querySelector(".mc-db") : host.querySelector(".kn-out");
+    if (!out || !p) return;
+    var r = out.getBoundingClientRect(), w = Math.max(58, Math.round(r.width) + 12), inp = document.createElement("input");
+    inp.type = "text"; inp.className = "kn-edit mono"; inp.spellcheck = false; inp.setAttribute("aria-label", tr("Type a value"));
+    inp.value = first != null ? first : p.fmt(get(kt, n, k));
+    inp.style.left = Math.round(r.left + r.width / 2 - w / 2) + "px"; inp.style.top = Math.round(r.top + r.height / 2 - 11) + "px"; inp.style.width = w + "px";
+    document.body.appendChild(inp);
+    EDIT = { inp: inp, host: host, kind: kind, kt: kt, n: n, k: k, p: p };
+    inp.focus({ preventScroll: true });
+    if (first == null) inp.select(); else inp.setSelectionRange(inp.value.length, inp.value.length);
+    inp.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); editClose(true); }
+      else if (e.key === "Escape") { e.preventDefault(); editClose(false); }
+      e.stopPropagation();                            // the DAW's keys (Space, M, S, 0…) not while typing
+    });
+    inp.addEventListener("blur", function () { setTimeout(function () { if (EDIT && EDIT.inp === inp) editClose(true); }, 0); });
+  }
+  function editClose(commit) {
+    var E = EDIT;
+    if (!E) return;
+    EDIT = null;
+    var v = commit ? typed(E.p, E.inp.value) : NaN;
+    E.inp.remove();
+    var back = E.kind === "fader" ? E.host.querySelector(".fd-track") : E.host;
+    if (isFinite(v) && document.body.contains(E.host)) {
+      K().mark();
+      v = clamp(+(Math.round(v / E.p.step) * E.p.step).toFixed(4), E.p.min, E.p.max);
+      put(E.kt, E.n, E.k, v);
+      if (E.kind === "fader") { faderValue(E.host, v); var o = E.host.parentNode.querySelector(".mc-db"); if (o) o.textContent = fdb(v); }
+      else { paintKnob(E.host); after(E.host); }
+    }
+    try { if (back && document.body.contains(back)) back.focus({ preventScroll: true }); } catch (x) { /* gone */ }
+  }
 
   // ---- what each knob turns: its range, how it moves (lin, log, send: the amount squared, so the middle is −12 dB) and how it reads
   var P = {
@@ -38,12 +102,25 @@
     "comp.release_ms": { min: 10, max: 2000, def: 120, step: 5, fmt: fms, lab: "Release", taper: "log", tip: "How fast it lets go" },
     "comp.knee_db": { min: 0, max: 24, def: 6, step: 0.5, fmt: fdb, lab: "Knee", tip: "How softly it bends into the ratio" },
     "comp.makeup_db": { min: 0, max: 24, def: 0, step: 0.1, fmt: fdb, lab: "Make-up", tip: "The level given back after it" },
+    "gate.threshold_db": { min: -90, max: 0, def: -50, step: 0.5, fmt: fdb, lab: "Threshold", tip: "Below it the gate closes, by its ratio" },   // HERESY 1760
+    "gate.ratio": { min: 1, max: 20, def: 4, step: 0.1, fmt: fratio, lab: "Ratio", taper: "log", tip: "How much it lowers what is under the threshold: 4:1 takes 10 dB under it down 40" },
+    "gate.range_db": { min: 0, max: 80, def: 40, step: 0.5, fmt: frange, lab: "Range", tip: "The most it lowers anything: the floor the bleed is left at" },
+    "gate.attack_ms": { min: 0.1, max: 50, def: 2, step: 0.1, fmt: fms, lab: "Attack", taper: "log", tip: "How fast it opens when the sound comes back" },
+    "gate.release_ms": { min: 5, max: 2000, def: 150, step: 5, fmt: fms, lab: "Release", taper: "log", tip: "How fast it closes after the sound: longer, the tails kept" },
+    "comp.mix": { min: 0, max: 1, def: 1, step: 0.01, fmt: fpct, lab: "Blend", tip: "Parallel compression: the compressed sound blended with the dry one; 100 % the compressor alone" },   // HERESY 1759
     "reverb.return_db": { min: -60, max: 6, def: 0, step: 0.1, fmt: fdb, lab: "Return", tip: "The room's level into the master" },
     "delay.return_db": { min: -60, max: 6, def: 0, step: 0.1, fmt: fdb, lab: "Return", tip: "The delay's level into the master" },
     "delay.feedback": { min: 0, max: 0.8, def: 0.35, step: 0.01, fmt: fpct, lab: "Feedback", tip: "How much of each echo comes back as the next" },
     "delay.lowpass_hz": { min: 200, max: 20000, def: 4000, step: 10, fmt: fhz, lab: "Low-pass", taper: "log", tip: "Each echo darker than the one before, above this" },
     "delay.time_ms": { min: 5, max: 2000, def: 375, step: 1, fmt: fms, lab: "Time", taper: "log", tip: "The time between the echoes" },
+    "reverb.predelay_ms": { min: 0, max: 250, def: 0, step: 1, fmt: fms, lab: "Pre-delay", tip: "The room comes in this much after the sound, on top of its own: the word clear before its room" },   // HERESY 1762
+    "reverb.lowcut_hz": { min: 20, max: 2000, def: 20, step: 1, fmt: flowcut, lab: "Low cut", taper: "log", tip: "Below this the room is cut: no mud under the voice; Off at 20 Hz" },
+    "reverb.highcut_hz": { min: 1000, max: 20000, def: 20000, step: 10, fmt: fhighcut, lab: "High cut", taper: "log", tip: "Above this the room is cut: a darker room, the sibilants out of it; Off at 20 kHz" },
+    "delay.lowcut_hz": { min: 20, max: 2000, def: 20, step: 1, fmt: flowcut, lab: "Low cut", taper: "log", tip: "Below this the echoes are cut, all of them alike: no bass in them; Off at 20 Hz" },
+    "delay.highcut_hz": { min: 1000, max: 20000, def: 20000, step: 10, fmt: fhighcut, lab: "High cut", taper: "log", tip: "Above this the echoes are cut, all of them alike (the low-pass darkens each one more than the last); Off at 20 kHz" },
     "master.gain_db": { min: -24, max: 12, def: 0, step: 0.1, fmt: fdb, lab: "Master", tip: "The master's level" },
+    "master.fade_in_s": { min: 0, max: 60, def: 0, step: 0.1, fmt: fsec, lab: "Fade in", tip: "The song comes up from −60 dB over this many seconds; 0: no fade-in" },   // HERESY 1756
+    "master.fade_out_s": { min: 0, max: 120, def: 0, step: 0.1, fmt: fsec, lab: "Fade out", tip: "The song goes down to −60 dB over this many seconds before its end; 0: no fade-out" },
     "limit.ceiling_db": { min: -12, max: -0.3, def: -1, step: 0.1, fmt: fdbtp, lab: "Ceiling", tip: "The highest true peak let through, 4× interpolated" },   // HERESY 1544
     "limit.drive_db": { min: -12, max: 24, def: 0, step: 0.1, fmt: fdb, lab: "Drive", tip: "How hard the mix is driven into the limiter: louder, and held under the ceiling" },
     "limit.release_ms": { min: 10, max: 1000, def: 100, step: 5, fmt: fms, lab: "Release", taper: "log", tip: "How fast it lets go: the time to give back 12 dB" },
@@ -73,6 +150,7 @@
     if (kt === "e") { var b = band(n, C.band); return b ? +b[k.slice(5)] : P[k].def; }
     var s = M.strip(n);
     if (k.indexOf("comp.") === 0) return (s.comp || {})[k.slice(5)] != null ? s.comp[k.slice(5)] : P[k].def;
+    if (k.indexOf("gate.") === 0) return (s.gate || {})[k.slice(5)] != null ? s.gate[k.slice(5)] : P[k].def;   // HERESY 1760
     if (k.indexOf("limit.") === 0) return (s.limit || {})[k.slice(6)] != null ? s.limit[k.slice(6)] : P[k].def;   // HERESY 1544
     return s[k];
   }
@@ -82,6 +160,7 @@
     if (kt === "g") { M.groupSet(n.slice(1), k, v); return; }   // HERESY 1543
     if (kt === "e") { editBand(n, C.band, function (b) { b[k.slice(5)] = v; }); return; }
     if (k.indexOf("comp.") === 0 && !(M.strip(n).comp)) M.set(n, "comp", { on: true });
+    if (k.indexOf("gate.") === 0 && !(M.strip(n).gate)) M.set(n, "gate", { on: true });   // HERESY 1760
     if (k.indexOf("limit.") === 0 && !(M.strip(n).limit)) M.set(n, "limit", { on: true });   // HERESY 1544
     M.set(n, k, v);
   }
@@ -142,11 +221,12 @@
   // ---- the console: the strips, the returns, the master
   function icon(n, alt) { return window.HeresyIcons ? window.HeresyIcons.ui(n) : alt; }
   function stripHtml(n) {
-    var M = K(), s = M.strip(n), eqOn = s.eq && s.eq.on && s.eq.bands.some(function (b) { return b.enabled !== false; }), compOn = s.comp && s.comp.on;
+    var M = K(), s = M.strip(n), eqOn = s.eq && s.eq.on && s.eq.bands.some(function (b) { return b.enabled !== false; }), compOn = s.comp && s.comp.on, gateOn = s.gate && s.gate.on;   // 1760
     return '<div class="mc-strip' + (C.sel === n ? " is-sel" : "") + (M.audible(n) ? "" : " is-quiet") + '" data-n="' + esc(n) + '" style="--mc-hue:' + M.hue(n) + '">' +
       '<button type="button" class="mc-name" data-act="select" translate="no" data-tip="' + esc(M.title(n) + " \u00b7 " + tr("Its devices: input, EQ, compressor, output")) + '">' + esc(M.title(n)) + "</button>" +
       '<div class="mc-ins">' +
         '<button type="button" class="mc-slot' + (eqOn ? " is-on" : "") + '" data-act="eq" data-tip="' + esc(tr("The EQ: up to eight bands, drawn over the strip's own sound")) + '"><span>EQ</span><canvas class="mc-eqmini" width="60" height="18"></canvas></button>' +
+        '<button type="button" class="mc-slot' + (gateOn ? " is-on" : "") + '" data-act="gate" data-tip="' + esc(tr("The gate: what it takes away between the phrases as it plays")) + '"><span>' + esc(tr("Gate")) + '</span><span class="mc-gr mc-ggr"><i></i></span></button>' +   // HERESY 1760
         '<button type="button" class="mc-slot' + (compOn ? " is-on" : "") + '" data-act="comp" data-tip="' + esc(tr("The compressor: its reduction as it plays")) + '"><span>' + esc(tr("Comp")) + '</span><span class="mc-gr"><i></i></span></button>' +
       "</div>" +
       '<div class="mc-row">' + knob("s", n, "reverb", { small: true }) + knob("s", n, "delay", { small: true }) + "</div>" +
@@ -214,12 +294,22 @@
       '<div class="mc-loud" data-tip="' + esc(tr("Loudness by BS.1770 as it plays: momentary (0.4 s), short-term (3 s), integrated since play was pressed; the true peak 4× interpolated; the sides' correlation (+1 mono, 0 wide, −1 out of phase)")) + '">' +
         '<div><span>M</span><output class="mono" data-loud="m">—</output></div><div><span>S</span><output class="mono" data-loud="s">—</output></div>' +
         '<div><span>I</span><output class="mono" data-loud="i">—</output></div><div><span>TP</span><output class="mono" data-loud="tp">—</output></div>' +
+        '<div class="mc-lra" data-tip="' + esc(tr("The loudness range since play, by EBU Tech 3342: how far the song's short-term loudness moves, its quietest 10 % and its loudest 5 % left out; the mix on Forge says its own")) + '"><span>LRA</span><output class="mono" data-loud="lra">—</output></div>' +   // HERESY 1763: in the devices
+        '<div class="mc-lra" data-tip="' + esc(tr("Peak to loudness: the true peak over the integrated loudness since play; the smaller, the more squashed the song")) + '"><span>PLR</span><output class="mono" data-loud="plr">—</output></div>' +
         '<div class="mc-corr" aria-hidden="true"><i></i></div><span class="mc-corr-lab"><span>−1</span><span>0</span><span>+1</span></span>' +
         '<button type="button" class="btn ghost small" data-act="loudreset" data-tip="' + esc(tr("Clear the loudness, the true peak and every peak held")) + '">' + icon("refresh", "↺") + "</button></div>" +
       '<div class="mc-btns mc-mon" role="group" aria-label="' + esc(tr("Monitor")) + '">' + [["mono", "Mono", "Listen in mono, never in the mix: the two sides summed, as one speaker hears it"], ["dim", "Dim", "Listen 20 dB lower, never in the mix"]].map(function (x) {   // HERESY 1536
         var on = !!M.monitor()[x[0]]; return '<button type="button" class="mx-ms mc-monb' + (on ? " is-on" : "") + '" data-act="mon" data-v="' + x[0] + '" aria-pressed="' + on + '" data-tip="' + esc(tr(x[2])) + '">' + esc(tr(x[1])) + "</button>"; }).join("") + "</div>" +
       fader("b", "", "master.gain_db", -24, 12, "*") +
       '<div class="mc-read"><output class="mc-db mono">' + esc(fdb(M.S.buses.master.gain_db)) + '</output><button type="button" class="mc-pk mono" data-act="peaks" data-meter-max="*">−∞</button></div></div>';
+  }
+  function fitNames(dock) {                          // HERESY 1764: a strip's name whole: 12 px if it fits, else 11 and 10, else two lines at 10 in the same height
+    Array.prototype.forEach.call(dock.querySelectorAll(".mc .mc-name"), function (b) {
+      if (b.scrollWidth <= b.clientWidth) return;
+      b.style.lineHeight = "15px";                    // the one line's height kept as it shrinks
+      for (var px = 11; px >= 10; px--) { b.style.fontSize = px + "px"; if (b.scrollWidth <= b.clientWidth) return; }
+      b.style.fontSize = ""; b.style.lineHeight = ""; b.classList.add("is-two");
+    });
   }
   function paint() {
     var dock = $("mxDock"), M = K();
@@ -235,7 +325,7 @@
         esc(tr("Devices")) + (C.sel ? ' · <b translate="no">' + esc(selTitle()) + "</b>" : "") + "</button>" +
       '<button type="button" role="tab" class="mc-tab' + (C.tab === "mixes" ? " is-on" : "") + '" aria-selected="' + (C.tab === "mixes") + '" data-act="tab" data-v="mixes">' +   // HERESY 1533
         esc(tr("Mixes")) + (M.mixes.list().length ? " \u00b7 " + M.mixes.list().length : "") + "</button>" +
-      '<span class="row-hint mc-how">' + esc(tr("Knobs: drag up and down, Shift finer, a double-click back to where it was")) + "</span></div>";
+      '<span class="row-hint mc-how">' + esc(tr("Knobs: drag up and down, Shift finer, a double-click back to where it was; a click on a number, or a digit, to type one")) + "</span></div>";   // HERESY 1758
     var body = C.tab === "mixes" ? mixesHtml() : C.tab === "devices" && C.sel ? devicesHtml(C.sel)
       : '<div class="mc" role="group" aria-label="' + esc(tr("Console")) + '">' + ns.map(stripHtml).join("") + '<span class="mc-gap"></span>' +
         M.groups().map(vcaHtml).join("") +             // HERESY 1543: the VCAs, then the way to add one
@@ -244,6 +334,7 @@
         '<button type="button" class="mc-addvca mc-addbus" data-act="addbus"' + (M.subs().length >= 8 ? " disabled" : "") + ' data-tip="' + esc(tr("An audio bus: the strips you choose summed and run through one chain of their own (the strip picked its first member)")) + '">+ ' + esc(tr("Bus")) + "</button>" +
         '<span class="mc-gap"></span>' + returnHtml("reverb") + returnHtml("delay") + masterHtml() + "</div>";
     dock.innerHTML = tabs + body;
+    fitNames(dock);                                   // HERESY 1764
     if (panel) panel.style.setProperty("--mx-dock-h", dock.offsetHeight + "px");   // full screen: the lanes share what is left above it
     ns.forEach(eqMini); eqMini("*");                   // HERESY 1544
     M.subs().forEach(function (x) { eqMini("%" + x.id); });   // HERESY 1563
@@ -273,7 +364,8 @@
                       ["Voice", { threshold_db: -24, ratio: 3, attack_ms: 8, release_ms: 120, knee_db: 6, makeup_db: 3 }],
                       ["Punch", { threshold_db: -20, ratio: 4, attack_ms: 30, release_ms: 100, knee_db: 3, makeup_db: 2 }],
                       ["Glue", { threshold_db: -14, ratio: 1.5, attack_ms: 30, release_ms: 300, knee_db: 10, makeup_db: 0.5 }],
-                      ["Squash", { threshold_db: -32, ratio: 8, attack_ms: 2, release_ms: 80, knee_db: 0, makeup_db: 8 }]];
+                      ["Squash", { threshold_db: -32, ratio: 8, attack_ms: 2, release_ms: 80, knee_db: 0, makeup_db: 8 }],
+                      ["Parallel", { threshold_db: -30, ratio: 6, attack_ms: 5, release_ms: 120, knee_db: 0, makeup_db: 8, mix: 0.4 }]];   // HERESY 1759
   function card(cls, title, on, body, act) {
     return '<section class="dv-card ' + cls + '"><header>' + (act ? '<button type="button" class="mc-power' + (on ? " is-on" : "") + '" data-act="' + act + '" aria-pressed="' + !!on + '" data-tip="' + esc(tr("On and off: heard at once")) + '">' + POWER + "</button>" : "") +
       "<b>" + esc(title) + "</b></header>" + body + "</section>";
@@ -287,7 +379,7 @@
     INS.plugins = [];
     fetch("/lab/plugins", { priority: "low" }).then(function (r) { return r.ok ? r.json() : { plugins: [] }; }).then(function (d) {
       var out = [];
-      (d.plugins || []).forEach(function (pl) { (pl.steps || []).forEach(function (st) {
+      (d.plugins || []).filter(function (pl) { return !window.HeresyPro || window.HeresyPro.keep(pl); }).forEach(function (pl) { (pl.steps || []).forEach(function (st) {   // HERESY 1599
         if (st.input === "file" && !(pl.builtin && (st.id === "report" || st.id === "match"))) out.push({ pid: pl.id, sid: st.id, label: st.label, builtin: !!pl.builtin });
       }); });
       INS.plugins = out;
@@ -372,6 +464,21 @@
       .then(function () { if (say) say.textContent = tr("Started: the mix through the Digital Gateway; it lands in the tree"); },
             function (e) { if (say) say.textContent = "\u2715 " + (e.message || e); });
   }
+  // HERESY 1756: the song's fade on the master, after its fader: in, out, and where it ends
+  function fclock(t) { var m = Math.floor(t / 60), s = t - m * 60; return m + ":" + (s < 10 ? "0" : "") + s.toFixed(1); }
+  function fadeHtml() {
+    var M = K(), m = M.S.buses.master, L = (M.info() || {}).seconds || 0, end = +m.end_s > 0 && +m.end_s < L ? +m.end_s : null;
+    return '<div class="dv-knobs">' + knob("b", "", "master.fade_in_s") + knob("b", "", "master.fade_out_s") + "</div>" +
+      '<div class="dv-sub">' + esc(tr("Ends at")) + '</div><div class="dv-fend"><output class="mono">' + esc(end == null ? tr("the song's end") : fclock(end)) + "</output>" +
+      '<button type="button" class="btn ghost small" data-act="fend" data-tip="' + esc(tr("The song ends at the playhead: silent from there, the fade-out before it")) + '">' + esc(tr("At the playhead")) + "</button>" +
+      '<button type="button" class="btn ghost small" data-act="fendclear"' + (end == null ? " disabled" : "") + ">" + esc(tr("At the song's end")) + "</button></div>" +
+      '<p class="row-hint">' + esc(tr("Linear in dB from −60 dB and down to it, after the master's fader, as the mix on Forge has it; drawn dark over the lanes")) + "</p>";
+  }
+  function gateHtml(n) {                              // HERESY 1760: a strip's gate: its reduction as it plays, its five knobs
+    return '<div class="dv-comp dv-gate"><div class="dv-grm dv-ggrm" data-tip="' + esc(tr("The gate's reduction as it plays")) + '"><i></i><span class="mono">0.0</span></div>' +
+      '<div class="dv-knobs-gate">' + ["gate.threshold_db", "gate.ratio", "gate.range_db", "gate.attack_ms", "gate.release_ms"].map(function (k) { return knob("s", n, k); }).join("") + "</div></div>" +
+      '<p class="row-hint">' + esc(tr("It listens to the strip itself, after its EQ: below the threshold the strip goes down by the ratio, never more than the range, so the bleed between the phrases falls away")) + "</p>";
+  }
   function devicesHtml(n) {
     var M = K();
     var chooser = '<div class="dv-strips mc-chips" role="group" aria-label="' + esc(tr("Strip")) + '">' + M.names().concat(M.groups().map(function (x) { return "@" + x.id; }), M.subs().map(function (x) { return "%" + x.id; }), ["~room", "~delay", "*"]).map(function (x) {
@@ -394,13 +501,14 @@
       var bus = n === "~room" ? "reverb" : "delay", b = M.S.buses[bus];
       var body = bus === "reverb"
         ? '<div class="mc-chips" role="group">' + PRESETS.map(function (p) { return '<button type="button" class="mc-chip' + (b.preset === p[0] ? " is-on" : "") + '" data-act="preset" data-v="' + p[0] + '" aria-pressed="' + (b.preset === p[0]) + '">' + esc(tr(p[0])) + " · " + p[1] + "</button>"; }).join("") + "</div>" +
-          '<div class="dv-knobs">' + knob("b", "", "reverb.return_db") + "</div>"
+          '<div class="dv-knobs dv-knobs-2">' + knob("b", "", "reverb.predelay_ms") + knob("b", "", "reverb.return_db") + knob("b", "", "reverb.lowcut_hz") + knob("b", "", "reverb.highcut_hz") + "</div>"   // HERESY 1762
         : '<div class="mc-chips" role="group" aria-label="' + esc(tr("Time")) + '">' + [125, 250, 375, 500, 750, 1000].map(function (t) {
             return '<button type="button" class="mc-chip' + (Math.abs(b.time_ms - t) < 0.5 ? " is-on" : "") + '" data-act="dtime" data-v="' + t + '">' + t + " ms</button>"; }).join("") + "</div>" +
           '<div class="dv-tempo"><label>' + esc(tr("At a tempo")) + ' <input type="number" class="dv-bpm" min="20" max="400" step="1" value="' + (C.bpm || 120) + '" aria-label="BPM" /> BPM</label>' +
           '<span class="mc-chips">' + [["1/4", 1], ["1/8", 0.5], ["1/8.", 0.75], ["1/8t", 1 / 3], ["1/16", 0.25]].map(function (nv) {
             return '<button type="button" class="mc-chip" data-act="dnote" data-v="' + nv[1] + '">' + nv[0] + "</button>"; }).join("") + "</span></div>" +
-          '<div class="dv-knobs">' + knob("b", "", "delay.time_ms") + knob("b", "", "delay.feedback") + knob("b", "", "delay.lowpass_hz") + knob("b", "", "delay.return_db") + "</div>";
+          '<div class="dv-knobs dv-knobs-2">' + knob("b", "", "delay.time_ms") + knob("b", "", "delay.feedback") + knob("b", "", "delay.lowpass_hz") + knob("b", "", "delay.return_db") +
+            knob("b", "", "delay.lowcut_hz") + knob("b", "", "delay.highcut_hz") + "</div>";   // HERESY 1762: its cuts under its own four
       return chooser + '<div class="dv-row">' + card("dv-bus", tr(bus === "reverb" ? "Room" : "Delay"), !b.mute, body, "bmute-dev") + "</div>";
     }
     var s = M.strip(n), st = (M.info().strips || []).filter(function (x) { return x.name === n; })[0], cur = n === "*" || n.charAt(0) === "%" ? "" : M.versionOf(n);   // 1544: the master has no versions (1563: nor a bus)
@@ -433,7 +541,7 @@
           return '<button type="button" class="mc-chip' + (x === key ? " is-on" : "") + '" data-act="ckey" data-v="' + esc(x) + '" aria-pressed="' + (x === key) + '" translate="no">' + esc(x ? M.title(x) : tr("own")) + "</button>"; }).join("") + "</span></div>") +
       '<div class="dv-comp"><canvas class="dv-curve" width="170" height="170" data-tip="' + esc(tr("In and out: the line bends at the threshold by the ratio, softly over the knee")) + '"></canvas>' +
         '<div class="dv-grm" data-tip="' + esc(tr("The reduction as it plays")) + '"><i></i><span class="mono">0.0</span></div>' +
-        '<div class="dv-knobs dv-knobs-2">' + ["comp.threshold_db", "comp.ratio", "comp.attack_ms", "comp.release_ms", "comp.knee_db", "comp.makeup_db"].map(function (k) { return knob("s", n, k); }).join("") + "</div></div>";
+        '<div class="dv-knobs dv-knobs-2">' + ["comp.threshold_db", "comp.ratio", "comp.attack_ms", "comp.release_ms", "comp.knee_db", "comp.makeup_db", "comp.mix"].map(function (k) { return knob("s", n, k); }).join("") + "</div></div>";
     var out = '<div class="dv-knobs">' + knob("s", n, "width") + knob("s", n, "pan") + knob("s", n, "reverb") + knob("s", n, "delay") + "</div>" +
       '<p class="row-hint dv-out-say">' + esc(tr("Then the fader, mute and solo; the sends leave after the pan")) + "</p>";
     var bx = subOf2(n);                               // HERESY 1563: a bus: its members, EQ, compressor, output
@@ -455,9 +563,10 @@
         '<div class="dv-knobs">' + ["limit.ceiling_db", "limit.drive_db", "limit.release_ms"].map(function (k) { return knob("s", n, k); }).join("") + "</div></div>" +
         '<p class="row-hint">' + esc(tr("Plenio's limiter, as on Forge: 4× oversampled, 3 ms ahead, both sides together; the true peak held at the ceiling")) + "</p>";
       return chooser + '<div class="dv-row" data-n="*">' + card("dv-eqc", "EQ", s.eq ? s.eq.on : false, eq, "eqon") + card("dv-compc", tr("Compressor"), !!(s.comp && s.comp.on), comp, "compon") +
-        card("dv-limc", tr("Limiter"), !!lm.on, lim, "limon") + card("dv-printc", tr("Print"), true, printHtml()) + "</div>" + mcard;   // 1561: Print
+        card("dv-limc", tr("Limiter"), !!lm.on, lim, "limon") + card("dv-fadec", tr("Fade"), true, fadeHtml()) + card("dv-printc", tr("Print"), true, printHtml()) + "</div>" + mcard;   // 1561: Print; 1756: Fade
     }
     return chooser + '<div class="dv-row" data-n="' + esc(n) + '">' + card("dv-input", tr("Input"), true, input) + card("dv-eqc", "EQ", s.eq ? s.eq.on : false, eq, "eqon") +
+      card("dv-gatec", tr("Gate"), !!(s.gate && s.gate.on), gateHtml(n), "gateon") +   // HERESY 1760
       card("dv-compc", tr("Compressor"), !!(s.comp && s.comp.on), comp, "compon") + card("dv-outc", tr("Output"), true, out) + "</div>";
   }
   var GAIN_TYPES = { peak: 1, low_shelf: 1, high_shelf: 1 };
@@ -579,7 +688,8 @@
     g.beginPath(); g.moveTo(X(-60), Y(-60)); g.lineTo(X(0), Y(0)); g.stroke(); g.globalAlpha = 0.6;
     g.setLineDash([3, 3]); g.beginPath(); g.moveTo(X(p.threshold_db), 0); g.lineTo(X(p.threshold_db), h); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
     g.beginPath();
-    for (var d = -60; d <= 0; d += 0.5) { var o = d + soft(d, p.threshold_db, p.ratio, p.knee_db) + p.makeup_db; if (d === -60) g.moveTo(X(d), Y(o)); else g.lineTo(X(d), Y(clamp(o, -60, 6))); }
+    var mx = p.mix != null ? clamp(+p.mix, 0, 1) : 1;   // HERESY 1759: the blend's curve, the dry beside the wet
+    for (var d = -60; d <= 0; d += 0.5) { var gw = soft(d, p.threshold_db, p.ratio, p.knee_db) + p.makeup_db, o = d + (mx >= 1 ? gw : 20 * Math.log10(Math.max(1e-6, (1 - mx) + mx * Math.pow(10, gw / 20)))); if (d === -60) g.moveTo(X(d), Y(o)); else g.lineTo(X(d), Y(clamp(o, -60, 6))); }
     g.strokeStyle = s.comp && s.comp.on ? amber : dim; g.lineWidth = 2; g.stroke();
   }
 
@@ -609,10 +719,12 @@
       el.classList.toggle("is-hot", !!v.clip);
     });
     M.names().concat(M.subs().map(function (x) { return "%" + x.id; })).forEach(function (n) {   // 1563: the buses' too
-      var v = lv[n], el = dock.querySelector('.mc-strip[data-n="' + CSS.escape(n) + '"] .mc-gr i');
+      var v = lv[n], el = dock.querySelector('.mc-strip[data-n="' + CSS.escape(n) + '"] .mc-gr:not(.mc-ggr) i'), eg = dock.querySelector('.mc-strip[data-n="' + CSS.escape(n) + '"] .mc-ggr i');   // 1760: the gate's beside
       if (el && v) el.style.transform = "scaleX(" + clamp(v.gr / 20, 0, 1).toFixed(3) + ")";
+      if (eg && v) eg.style.transform = "scaleX(" + clamp((v.gg || 0) / 40, 0, 1).toFixed(3) + ")";
     });
-    var grm = dock.querySelector(".dv-grm:not(.dv-lgrm)");
+    var grm = dock.querySelector(".dv-grm:not(.dv-lgrm):not(.dv-ggrm)"), ggm = dock.querySelector(".dv-ggrm");   // HERESY 1760: the gate's its own
+    if (ggm && lv[C.sel]) { ggm.firstChild.style.transform = "scaleY(" + clamp((lv[C.sel].gg || 0) / 40, 0, 1).toFixed(3) + ")"; ggm.lastChild.textContent = minus((-(lv[C.sel].gg || 0)).toFixed(1)); }
     if (grm && lv[C.sel]) { grm.firstChild.style.transform = "scaleY(" + clamp(lv[C.sel].gr / 24, 0, 1).toFixed(3) + ")"; grm.lastChild.textContent = minus((-lv[C.sel].gr).toFixed(1)); }
     var lgm = dock.querySelector(".dv-lgrm"), mv = lv["*"];   // HERESY 1544: the master's compressor and limiter
     if (lgm && mv) { lgm.firstChild.style.transform = "scaleY(" + clamp((mv.lim || 0) / 24, 0, 1).toFixed(3) + ")"; lgm.lastChild.textContent = minus((-(mv.lim || 0)).toFixed(1)); }
@@ -621,7 +733,7 @@
     if (mlr && mv) mlr.style.transform = "scaleX(" + clamp((mv.lim || 0) / 20, 0, 1).toFixed(3) + ")";
     var L = M.S.loud;
     Array.prototype.forEach.call(dock.querySelectorAll("[data-loud]"), function (el) {
-      var k = el.dataset.loud, v = !L ? null : k === "tp" ? (L.tp > 0 ? 20 * Math.log10(L.tp) : null) : L[k];
+      var k = el.dataset.loud, v = !L ? null : k === "tp" ? (L.tp > 0 ? 20 * Math.log10(L.tp) : null) : k === "plr" ? (L.tp > 0 && L.i != null ? 20 * Math.log10(L.tp) - L.i : null) : L[k];   // HERESY 1763: plr
       el.textContent = v == null ? "—" : minus(v.toFixed(1));
       el.classList.toggle("is-hot", k === "tp" && v != null && v > -1);
     });
@@ -675,13 +787,19 @@
     paint();
   }
   function onClick(e) {
+    var num = e.target.closest && e.target.closest(".kn-out, .mc-db");   // HERESY 1758: a number clicked, a value typed
+    if (num && K()) {
+      var hk = num.closest(".kn"), rd = num.closest(".mc-read"), fd0 = rd && rd.previousElementSibling;
+      if (hk) { editOpen(hk, "knob"); return; }
+      if (fd0 && fd0.classList.contains("fd")) { editOpen(fd0, "fader"); return; }
+    }
     var b = e.target.closest && e.target.closest("[data-act]"), M = K();
     if (!b || !M || b.disabled) return;
     var act = b.dataset.act, n = stripOf(b), v = b.dataset.v, s;
     if (act === "tab") { C.tab = v; paint(); return; }
     if (act === "select") { select(n, "devices"); return; }
     if (act === "pick") { select(v, "devices"); return; }
-    if (act === "eq" || act === "comp" || act === "lim") { C.focusCard = act; select(n, "devices"); var cd = document.querySelector("#mxDock .dv-" + (act === "eq" ? "eqc" : act === "lim" ? "limc" : "compc")); if (cd) cd.scrollIntoView({ block: "nearest", inline: "nearest" }); return; }   // 1544: lim
+    if (act === "eq" || act === "comp" || act === "lim" || act === "gate") { C.focusCard = act; select(n, "devices"); var cd = document.querySelector("#mxDock .dv-" + (act === "eq" ? "eqc" : act === "lim" ? "limc" : act === "gate" ? "gatec" : "compc")); if (cd) cd.scrollIntoView({ block: "nearest", inline: "nearest" }); return; }   // 1544: lim; 1760: gate
     if (act === "msave") {                            // HERESY 1533
       var inp = document.querySelector("#mxDock .mm-name"), nm = inp ? inp.value.trim() : "";
       if (!nm) { if (inp) inp.focus(); return; }
@@ -699,7 +817,10 @@
     if (act === "loudreset") { M.resetLoud(); return; }
     if (act === "insgate" || act === "insplug") { runInsert(C.sel, act, v); return; }   // HERESY 1561: a job on Forge, its undo the versions
     if (act === "mprint") { runPrint(v); return; }
+    if (act === "solo" && e.altKey && M.clearSolo) { M.clearSolo(); return; }   // HERESY 1754: Alt+click on an S, every solo off
     M.mark();
+    if (act === "fend") { M.setBus("master", "end_s", Math.max(0.05, Math.round(M.pos() * 1000) / 1000)); paint(); return; }   // HERESY 1756
+    if (act === "fendclear") { M.setBus("master", "end_s", null); paint(); return; }
     if (act === "addvca") { var gid = M.groupAdd(C.sel && M.names().indexOf(C.sel) >= 0 ? [C.sel] : []); if (gid) select("@" + gid, "devices"); return; }   // HERESY 1543
     if (act === "addbus") { var sid = M.subAdd(C.sel && M.names().indexOf(C.sel) >= 0 ? [C.sel] : []); if (sid) select("%" + sid, "devices"); return; }   // HERESY 1563
     if (act === "smember") { var sb2 = subOf2(C.sel); if (sb2) M.subSet(sb2.id, "members", sb2.members.indexOf(v) >= 0 ? sb2.members.filter(function (y) { return y !== v; }) : sb2.members.concat([v])); paint(); return; }
@@ -716,6 +837,7 @@
     if (act === "eqon") { editBand(C.sel, "", function (x, eq) { eq.on = !eq.on; }); paint(); return; }
     if (act === "limon") { s = M.strip(C.sel); M.set(C.sel, "limit", Object.assign({}, s.limit || { on: false }, { on: !(s.limit && s.limit.on) })); paint(); return; }   // HERESY 1544
     if (act === "compon") { s = M.strip(C.sel); M.set(C.sel, "comp", Object.assign({}, s.comp || { on: false }, { on: !(s.comp && s.comp.on) })); paint(); return; }
+    if (act === "gateon") { s = M.strip(C.sel); M.set(C.sel, "gate", Object.assign({}, s.gate || { on: false }, { on: !(s.gate && s.gate.on) })); paint(); return; }   // HERESY 1760
     if (act === "cpreset") {
       if (v === "Duck") { M.set(C.sel, "comp", { on: true, threshold_db: -28, ratio: 2.5, attack_ms: 15, release_ms: 250, knee_db: 6, makeup_db: 0, key: "lead_vocal" }); paint(); return; }   // HERESY 1537
       var pr = COMP_PRESETS.filter(function (x) { return x[0] === v; })[0]; if (pr) M.set(C.sel, "comp", Object.assign({ on: true }, pr[1])); paint(); return;
@@ -823,6 +945,11 @@
   function onKey(e) {
     var kn = e.target.closest && e.target.closest(".kn"), fd = e.target.closest && e.target.closest(".fd-track"), M = K();
     if (!M || !(kn || fd) || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (/^[0-9.\-\u2212]$/.test(e.key) || e.key === "Enter") {   // HERESY 1758: a digit typed opens the field with it; Enter with the value
+      e.preventDefault(); e.stopPropagation();
+      if (kn) editOpen(kn, "knob", e.key === "Enter" ? null : e.key); else editOpen(fd.closest(".fd"), "fader", e.key === "Enter" ? null : e.key);
+      return;
+    }
     var dir = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: 5, PageDown: -5 }[e.key];
     if (e.key === "Home" || e.key === "End" || dir) { e.preventDefault(); e.stopPropagation(); } else return;
     M.mark();
@@ -900,6 +1027,7 @@
       var eqs = st.querySelector('[data-act="eq"]'), cps = st.querySelector('[data-act="comp"]');
       if (eqs) eqs.classList.toggle("is-on", !!(s.eq && s.eq.on && s.eq.bands.some(function (b) { return b.enabled !== false; })));
       if (cps) cps.classList.toggle("is-on", !!(s.comp && s.comp.on));
+      var gts = st.querySelector('[data-act="gate"]'); if (gts) gts.classList.toggle("is-on", !!(s.gate && s.gate.on));   // HERESY 1760
       eqMini(n);
     }
     if (C.tab === "devices" && C.sel === n) {
@@ -946,6 +1074,6 @@
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 
-  window.HeresyConsole = { paint: paint, state: function () { return { sel: C.sel, tab: C.tab, band: C.band }; }, select: select,
+  window.HeresyConsole = { paint: paint, state: function () { return { sel: C.sel, tab: C.tab, band: C.band }; }, select: select, typed: function (k, t) { return typed(P[k], t); },   // HERESY 1758
     response: response };
 })();

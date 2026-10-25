@@ -9,10 +9,20 @@
 		Heart,
 		Type,
 		TriangleAlert,
-		Music
+		Music,
+		AudioWaveform,
+		Cpu
 	} from '@lucide/svelte';
 	import { app, setRequest, toast } from '../lib/state.svelte.js';
-	import { transcribeSubmit, pollJob, jobResultTranscribe } from '../lib/api.js';
+	import {
+		transcribeSubmit,
+		tokenizeSubmit,
+		pollJob,
+		jobResultTranscribe,
+		jobResultTokenize,
+		vaeEncode,
+		jobResultBlob
+	} from '../lib/api.js';
 	import { deleteSong, putSong } from '../lib/db.js';
 	import type { Song } from '../lib/types.js';
 	import Waveform from './Waveform.svelte';
@@ -24,6 +34,39 @@
 	let playing = $state(false);
 	let time = $state(0);
 	let dur = $state(0);
+	let rangeStart = $state(0);
+	let rangeEnd = $state(0);
+
+	let isSrc = $derived(app.srcSongId === song.id);
+
+	// the source of a continuation: one card at a time, its section staying
+	// in the request
+	function toggleSrc() {
+		app.srcSongId = isSrc ? null : (song.id ?? null);
+	}
+
+	// waveform drag to the request
+	$effect(() => {
+		if (isSrc && rangeEnd > rangeStart) {
+			app.request.source_start = Math.round(rangeStart * 100) / 100;
+			app.request.source_end = Math.round(rangeEnd * 100) / 100;
+		}
+	});
+
+	// request to waveform visual (field input, a loaded request)
+	$effect(() => {
+		if (isSrc) {
+			const rs = Number(app.request.source_start ?? 0);
+			const re = Number(app.request.source_end ?? -1);
+			if (re > rs) {
+				rangeStart = rs;
+				rangeEnd = re;
+			} else {
+				rangeStart = 0;
+				rangeEnd = 0;
+			}
+		}
+	});
 
 	function toggle() {
 		playing = !playing;
@@ -43,6 +86,33 @@
 		a.download = `${safe}.${ext}`;
 		a.click();
 		URL.revokeObjectURL(url);
+	}
+
+	// Download the latents as a .vae file, which Open decodes back into a
+	// card holding both
+	function downloadLatents() {
+		if (!song.latents) return;
+		const url = URL.createObjectURL(song.latents);
+		const a = document.createElement('a');
+		a.href = url;
+		const safe = song.name.replace(/[\\/:*?"<>|\x00-\x1f]/g, '') || 'song';
+		a.download = `${safe}.vae`;
+		a.click();
+		URL.revokeObjectURL(url);
+	}
+
+	// VAE encode alone: POST /vae with the audio of the card and keep the
+	// latents on it, for an imported recording a retouch will start from
+	async function encodeOnly() {
+		if (song.latents || song.id == null) return;
+		try {
+			const jobId = await vaeEncode(song.audio);
+			await pollJob(jobId);
+			song.latents = await jobResultBlob(jobId);
+			await putSong($state.snapshot(song));
+		} catch (e: unknown) {
+			toast(e instanceof Error ? e.message : String(e));
+		}
 	}
 
 	let confirmDeleteOpen = $state(false);
@@ -71,6 +141,7 @@
 
 	async function doRemove() {
 		if (song.id == null) return;
+		if (app.srcSongId === song.id) app.srcSongId = null;
 		await deleteSong(song.id);
 		const idx = app.songs.findIndex((s) => s.id === song.id);
 		if (idx >= 0) app.songs.splice(idx, 1);
@@ -127,14 +198,40 @@
 		}
 	}
 
+	// tokenize audio: the semantic codes of the recording kept on the card,
+	// the card then ready to open a continuation, and put in the form, so
+	// Generate renders the song again through the NAR half. The style, the
+	// lyrics and the mode stay yours.
+	async function tokenize() {
+		try {
+			const jobId = await tokenizeSubmit(song.audio);
+			await pollJob(jobId);
+			const result = await jobResultTokenize(jobId);
+			song.request = { ...song.request, semantic_tokens: result.codes };
+			if (song.id != null) await putSong($state.snapshot(song));
+			app.request.semantic_tokens = result.codes;
+			toast('Tokenized: ' + song.name, 4000, true);
+		} catch (e) {
+			toast('Tokenization failed: ' + (e instanceof Error ? e.message : String(e)));
+		}
+	}
+
 	// Single action menu: one entry per user intent.
 	// Destructive entries open a confirm dialog.
 	const actionItems: MenuItem[] = $derived([
 		{ icon: Pencil, label: 'Edit prompt', onSelect: load },
 		{ icon: Type, label: 'Rename song', onSelect: openRename },
 		{ icon: Download, label: 'Download audio', onSelect: downloadAudio },
+		{ icon: Cpu, label: 'Compute VAE latents', onSelect: encodeOnly, disabled: !!song.latents },
+		{
+			icon: Download,
+			label: 'Download VAE latents',
+			onSelect: downloadLatents,
+			disabled: !song.latents
+		},
 		{ icon: Music, label: 'Transcribe score', onSelect: () => transcribe(false) },
 		{ icon: Music, label: 'Transcribe melody', onSelect: () => transcribe(true) },
+		{ icon: AudioWaveform, label: 'Tokenize audio', onSelect: tokenize },
 		{ icon: Trash2, label: 'Delete this track', onSelect: () => (confirmDeleteOpen = true) },
 		{
 			icon: TriangleAlert,
@@ -165,10 +262,32 @@
 			<Heart size={14} fill={song.favorite ? 'currentColor' : 'none'} />
 		</button>
 	</div>
-	<Waveform {song} bind:playing bind:time bind:dur />
+	<Waveform
+		{song}
+		bind:playing
+		bind:time
+		bind:dur
+		selectable={isSrc}
+		bind:rangeStart
+		bind:rangeEnd
+	/>
 	<div class="card-footer">
 		<span class="format-badge">{song.format.toUpperCase()}</span>
+		{#if song.latents}
+			<span class="format-badge">VAE</span>
+		{/if}
 		<span class="timecode">{fmtPos(time)} / {fmtDur(dur)}</span>
+		<div class="card-actions">
+			<label class="icon-btn"
+				><input
+					type="checkbox"
+					class="ref-check"
+					checked={isSrc}
+					onchange={toggleSrc}
+					title="Source of a continuation"
+				/> Src audio</label
+			>
+		</div>
 	</div>
 </div>
 
@@ -228,6 +347,17 @@
 		color: var(--fg);
 		white-space: nowrap;
 		flex: 1;
+	}
+	.card-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.2rem;
+		flex-shrink: 0;
+		font-size: 0.8rem;
+	}
+	.ref-check {
+		cursor: pointer;
+		accent-color: var(--focus);
 	}
 	.icon-btn {
 		background: none;

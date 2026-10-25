@@ -1,7 +1,7 @@
 #!/bin/bash
 # Ruach Studio · fetch-models.sh — every weight in one go: YuE2 (m-a-p's models as GGUF), then the studio's own.
 #
-#   ./fetch-models.sh                     BF16 backbone + F32 VAE + SheetSage2, then heresy/fetch-heresy.sh
+#   ./fetch-models.sh                     BF16 backbone + F32 VAE + the transcriber, then heresy/fetch-heresy.sh
 #   ./fetch-models.sh --quant Q8_0        a Q8_0 backbone instead (3.8 GB; for 12-16 GB cards)
 #   ./fetch-models.sh --check             say what is here and what is missing, download nothing
 #
@@ -26,7 +26,7 @@ rc=0
 
 echo "${B}1 · YuE2: m-a-p's models as GGUF (Serveurperso/YuE2-GGUF)${X}"
 if [ $CHECK = 1 ]; then
-  for f in "$ROOT"/models/YuE2-3B-*.gguf "$ROOT"/models/YuE2-Vae-F32.gguf "$ROOT"/models/SheetSage2-*.gguf; do
+  for f in "$ROOT"/models/YuE2-3B-*.gguf "$ROOT"/models/YuE2-Vae-F32.gguf "$ROOT"/models/SheetSage2-*.gguf "$ROOT"/models/MERT-v2-FullSong-*.gguf; do
     [ -s "$f" ] && echo "here      ${f#"$ROOT"/}" || { echo "missing   ${f#"$ROOT"/}"; rc=1; }
   done
   echo "(a full check against the pinned files: tools/verify-install.sh --quick)"

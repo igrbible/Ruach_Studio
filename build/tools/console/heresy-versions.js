@@ -22,12 +22,23 @@
   function answer(r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j; }); }
   function api(body) { return fetch(url(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(answer); }
   function when(t) { return t ? new Date(t * 1000).toLocaleString(document.documentElement.lang || undefined, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""; }
+  var WHY = { generate: "Generate", save: "Ctrl+S", roll: "the piano roll", before: "before a change" };   // HERESY 1596
   function lines(s) { return String(s || "").split(/\r?\n/).filter(function (l) { return l.trim(); }).length; }
+  // HERESY 1614: a version's branch, as its title carries it («v4.2.3»), «no version» for none
+  function branchName(v) { return v && v.version ? "v" + v.version : tr("no version"); }
 
   // ---- kept on landing: a refusal said aloud, never silent (the words are what a version is for)
-  function keep(words, takes, mode) {
+  // HERESY 1596: why it was kept (generate, save, roll, before) and the form's knobs with it
+  // HERESY 1629: one keep at a time, in the order asked: a burst of them (examples loaded one after another, each keeping the form first) held all
+  // six connections the browser gives the studio while the lab answered them one by one, and the song's own request waited behind them
+  var keeping = Promise.resolve();
+  function keep(words, takes, mode, why, params) {
     if (!words || !(String(words.style || "").trim() || String(words.lyrics || "").trim() || String(words.abc || "").trim())) return Promise.resolve(null);
-    return api({ op: "keep", title: words.title, style: words.style || "", lyrics: words.lyrics || "", abc: words.abc || "", mode: mode || "", takes: takes || [] })
+    var body = { op: "keep", title: words.title, version: words.version || "", style: words.style || "", lyrics: words.lyrics || "", abc: words.abc || "", mode: mode || "", takes: takes || [],
+                 why: why || "generate", params: params || {} };
+    var sent = keeping.then(function () { return api(body); });
+    keeping = sent.catch(function () { return null; });
+    return sent
       .then(function (b) { if (st.book && st.book.id === b.id) { st.book = b; paint(); } return b; },
         function (e) { say(tr("The Creator's version was not kept: {0}").replace("{0}", e.message), true); return null; });
   }
@@ -76,6 +87,7 @@
     back.className = "vr-back"; back.id = "vrBack"; back.hidden = true;
     back.innerHTML = '<div class="vr-box" role="dialog" aria-modal="true"><div class="vr-head"><strong class="vr-title" translate="no"></strong>' +
       '<span class="row-hint vr-count"></span><span class="spacer"></span><span class="row-hint vr-keys">a click picks a version; Ctrl or Shift and a click, a second: their difference</span>' +
+      '<button type="button" class="btn ghost small danger" data-vr="drop" data-tip="Every version of this title, every branch, into the versions\' trash; the Writer brings the tree back">Delete the tree…</button>' +
       '<button type="button" class="btn ghost small" data-vr="close">Close</button></div><div class="vr-body"><div class="vr-list" id="vrList"></div><div class="vr-view" id="vrView"></div></div></div>';
     document.body.appendChild(back);
     back.addEventListener("click", function (e) {
@@ -83,7 +95,8 @@
       var row = e.target.closest(".vr-row[data-n]");
       if (row) {
         var n = +row.dataset.n;
-        if ((e.ctrlKey || e.metaKey || e.shiftKey) && st.a != null && n !== st.a) st.b = n; else { st.a = n; st.b = null; }
+        var armed = st.arm; st.arm = false;                // HERESY 1707: after «Compare with…», a plain click picks the second
+        if ((e.ctrlKey || e.metaKey || e.shiftKey || armed) && st.a != null && n !== st.a) st.b = n; else { st.a = n; st.b = null; }
         return paint();
       }
       var b = e.target.closest("[data-vr]");
@@ -91,6 +104,8 @@
       var act = b.dataset.vr, v = version(st.a);
       if (act === "close") return close();
       if (act === "trash") { st.trash = !st.trash; return paint(); }
+      if (act === "drop") return dropTree();
+      if (act === "cmpwith") { st.arm = !st.arm; return paint(); }   // HERESY 1707
       if (act === "back") return mark("undelete", +b.dataset.n);
       if (act === "take") { var name = b.dataset.take; close(); if (st.hooks && st.hooks.openTake) st.hooks.openTake(name); return; }
       if (!v) return;
@@ -114,7 +129,7 @@
   }
   function formWords() {
     var f = st.hooks && st.hooks.form ? st.hooks.form() : {};
-    return { n: "form", title: f.title || "", style: f.style || "", lyrics: f.lyrics || "", abc: f.abc || "", takes: [] };
+    return { n: "form", title: f.title || "", version: f.version || "", style: f.style || "", lyrics: f.lyrics || "", abc: f.abc || "", takes: [] };
   }
   function open(where) {
     where = where || {};
@@ -134,6 +149,7 @@
     var back = $("vrBack");
     if (!back || back.hidden) return;
     back.hidden = true;
+    st.arm = false;                                              // HERESY 1707
     document.body.classList.remove("vr-open");
   }
   function paint() {
@@ -141,14 +157,24 @@
     if (!back || !st.book) return;
     var b = st.book, vs = (b.versions || []).slice().reverse(), trash = (b.trash || []).slice().reverse();
     back.querySelector(".vr-title").textContent = b.title;
-    back.querySelector(".vr-count").textContent = tr("versions: {0}").replace("{0}", (b.versions || []).length);
+    var branches = [];                                             // HERESY 1614: the newest branch first, each its versions newest first
+    vs.forEach(function (v) { var k = v.version || ""; if (branches.indexOf(k) < 0) branches.push(k); });
+    back.querySelector(".vr-count").textContent = tr("versions: {0}").replace("{0}", (b.versions || []).length) + " · " + tr("branches: {0}").replace("{0}", branches.length);
+    back.classList.toggle("is-arming", !!st.arm && st.a != null);   // HERESY 1707: «Compare with…» waits for a click on the list
+    back.querySelector(".vr-keys").textContent = st.arm && st.a != null ? tr("a click on a version compares it with #{0}").replace("{0}", st.a)
+      : tr("a click picks a version; Ctrl or Shift and a click, a second: their difference");
+    vs = [].concat.apply([], branches.map(function (k) { return vs.filter(function (v) { return (v.version || "") === k; }); }));
+    var shown = null;
     $("vrList").innerHTML = (vs.length ? vs.map(function (v) {
       var on = v.n === st.a ? " is-a" : v.n === st.b ? " is-b" : "";
-      return '<button type="button" class="vr-row' + on + '" data-n="' + v.n + '"><span class="vr-n mono">#' + v.n + "</span>" +
+      var head = shown === (v.version || "") ? "" : '<div class="vr-branch" translate="no"><span class="vr-branch-name">' + esc(branchName(v)) + '</span><span class="row-hint">' +
+        esc(tr("versions: {0}").replace("{0}", vs.filter(function (x) { return (x.version || "") === (v.version || ""); }).length)) + "</span></div>";
+      shown = v.version || "";
+      return head + '<button type="button" class="vr-row' + on + '" data-n="' + v.n + '"><span class="vr-n mono">#' + v.n + "</span>" +
         '<span class="vr-when mono">' + esc(when(v.at)) + "</span>" + (v.star ? '<span class="vr-star" aria-label="starred">★</span>' : "") +
         (v.lock ? '<span class="vr-lock" aria-label="locked">🔒</span>' : "") +
         (v.label ? '<span class="vr-label" translate="no">' + esc(v.label) + "</span>" : "") +
-        '<span class="vr-meta">' + esc(tr("lines: {0}").replace("{0}", lines(v.lyrics))) + (v.abc ? " · " + esc(tr("score")) : "") +
+        '<span class="vr-meta">' + (v.why && WHY[v.why] ? esc(tr(WHY[v.why])) + " · " : "") + esc(tr("lines: {0}").replace("{0}", lines(v.lyrics))) + (v.abc ? " · " + esc(tr("score")) : "") +
         " · " + esc(tr("takes: {0}").replace("{0}", (v.takes || []).length)) + "</span></button>";
     }).join("") : '<p class="row-hint">Nothing kept under this title yet: every Generate keeps its words here.</p>') +
       (trash.length ? '<button type="button" class="btn ghost small vr-trash-btn" data-vr="trash">' + esc(tr("Trash ({0})").replace("{0}", trash.length)) + "</button>" +
@@ -167,12 +193,13 @@
         : '<span class="vr-take is-gone" translate="no" data-tip="deleted from the library; its words are kept here">' + esc(n) + "</span>";
     }).join("");
     var i = st.book.versions.indexOf(v);
-    return '<div class="vr-acts"><strong class="mono">#' + v.n + "</strong>" + '<span class="row-hint mono">' + esc(when(v.at)) + (v.mode ? " · " + esc(v.mode) : "") + "</span>" +
+    return '<div class="vr-acts"><strong class="mono" translate="no">' + esc(branchName(v)) + " · #" + v.n + "</strong>" + '<span class="row-hint mono">' + esc(when(v.at)) + (v.mode ? " · " + esc(v.mode) : "") + "</span>" +
       '<button type="button" class="btn primary small" data-vr="form" data-tip="Its title, style, lyrics and score into the Creator\'s form">Into the form</button>' +
       '<button type="button" class="btn ghost small" data-vr="star" aria-pressed="' + !!v.star + '">' + (v.star ? "★ Starred" : "☆ Star") + "</button>" +
       '<button type="button" class="btn ghost small" data-vr="label">Label…</button>' +
       '<button type="button" class="btn ghost small" data-vr="lock" aria-pressed="' + !!v.lock + '" data-tip="A locked version cannot be deleted">' + (v.lock ? "Unlock" : "Lock") + "</button>" +
       '<button type="button" class="btn ghost small" data-vr="before"' + (i > 0 ? "" : " disabled") + '>Compare with the one before</button>' +
+      '<button type="button" class="btn ghost small" data-vr="cmpwith" aria-pressed="' + !!st.arm + '" data-tip="Then a click on a version in the list: the two compared, as Ctrl or Shift and a click do">Compare with…</button>' +   // HERESY 1707
       '<button type="button" class="btn ghost small" data-vr="withform">Compare with the form</button>' +
       '<span class="spacer"></span><button type="button" class="btn ghost small danger" data-vr="delete"' + (v.lock ? " disabled" : "") + ">Delete</button></div>" +
       (v.label ? '<p class="vr-label-big" translate="no">' + esc(v.label) + "</p>" : "") +
@@ -186,8 +213,10 @@
     var older = a, newer = c;
     if (a.n !== "form" && c.n !== "form" && a.n > c.n) { older = c; newer = a; }
     if (a.n === "form") { older = c; newer = a; }
-    var name = function (v) { return v.n === "form" ? tr("the form") : "#" + v.n; };
-    return '<div class="vr-acts"><strong class="mono">' + esc(name(older)) + " → " + esc(name(newer)) + "</strong>" +
+    // HERESY 1614: the branch named once when both are on it («v4.2.3 · #1 → #2»), with each where they differ
+    var same = older.n !== "form" && newer.n !== "form" && (older.version || "") === (newer.version || "");
+    var name = function (v) { return v.n === "form" ? tr("the form") : (same || !v.version ? "" : branchName(v) + " ") + "#" + v.n; };
+    return '<div class="vr-acts"><strong class="mono" translate="no">' + (same && older.version ? esc(branchName(older)) + " · " : "") + esc(name(older)) + " → " + esc(name(newer)) + "</strong>" +
       '<span class="row-hint">− ' + esc(tr("only in {0}").replace("{0}", name(older))) + " · + " + esc(tr("only in {0}").replace("{0}", name(newer))) + "</span></div>" +
       (older.title !== newer.title ? section("Title", diffWords(older.title, newer.title)) : "") +
       section("Style", diffWords(older.style, newer.style)) +
@@ -221,7 +250,7 @@
     go.then(function (yes) { if (yes === true) mark("delete", v.n); });
   }
   function intoForm(v) {
-    var f = formWords(), same = f.title === (v.title === "Untitled" ? "" : v.title) && f.style === v.style && f.lyrics === v.lyrics && f.abc === (v.abc || "");
+    var f = formWords(), same = f.title === (v.title === "Untitled" ? "" : v.title) && (f.version || "") === (v.version || "") && f.style === v.style && f.lyrics === v.lyrics && f.abc === (v.abc || "");
     var empty = !f.style.trim() && !f.lyrics.trim() && !f.abc.trim();
     var go = same || empty || !window.HeresyDialog ? Promise.resolve(true)
       : window.HeresyDialog.confirm(tr("Put version #{0} into the Creator's form?").replace("{0}", v.n) + "\n\n" + tr("The title, style, lyrics and score there now are replaced. What was generated from them is kept here already."),
@@ -234,14 +263,46 @@
     });
   }
 
+  // ---- HERESY 1614 (Viktor 19.10.2026: «нужна возможность полного удаления всего древа того или иного Root Title, как это сделано с
+  // драфтами в Писателе»): the whole tree into the versions' trash, asked; a locked version keeps it (the lab says which)
+  function dropTree() {
+    var b = st.book;
+    if (!b || !(b.versions || []).length) return;
+    var branches = {};
+    (b.versions || []).forEach(function (v) { branches[v.version || ""] = 1; });
+    var go = window.HeresyDialog ? window.HeresyDialog.confirm(tr("Delete the whole tree of “{0}”?").replace("{0}", b.title) + "\n\n" +
+      tr("{0} versions in {1} branches go into the versions' trash; the Writer's «The Creator's versions» brings the tree back.").replace("{0}", (b.versions || []).length).replace("{1}", Object.keys(branches).length),
+      { ok: tr("Delete the tree"), cancel: tr("Cancel"), danger: true }) : Promise.resolve(true);
+    go.then(function (yes) {
+      if (yes !== true) return;
+      api({ op: "drop", id: b.id }).then(function () {
+        close(); st.book = null;
+        say(tr("The tree of “{0}” is in the versions' trash").replace("{0}", b.title));
+      }, function (e) { say(e.message, true); });
+    });
+  }
+  function pickDropped(list) {
+    return window.HeresyDialog.choose(tr("Deleted trees") + "\n\n" + tr("A tree picked comes back whole, every branch and version."),
+      list.map(function (x) { return { value: x.file, label: x.title, note: tr("versions: {0}").replace("{0}", x.versions) + " · " + when(x.dropped) }; }),
+      { filter: list.length > 8, ok: tr("Bring back") }).then(function (file) {
+      if (!file) return null;
+      return api({ op: "undrop", file: file }).then(function (b) {
+        say(tr("The tree of “{0}” is back").replace("{0}", b.title));
+        return open({ id: b.id });
+      }, function (e) { say(e.message, true); return null; });
+    });
+  }
+
   // ---- the Writer's bucket: every title kept, one picked opens its versions
   function pickTitle() {
     return fetch(url()).then(answer).then(function (d) {
-      var t = d.titles || [];
+      var t = d.titles || [], gone = d.dropped || [];
+      if (!t.length && gone.length) return pickDropped(gone);       // HERESY 1614
       if (!t.length) { say(tr("No version is kept yet: every Generate keeps its words here")); return null; }
       return window.HeresyDialog.choose(tr("The Creator's versions") + "\n\n" + tr("Every Generate keeps its title's words here, apart from the takes: a take deleted never takes them along."),
-        t.map(function (x) { return { value: x.id, label: x.title, note: tr("versions: {0}").replace("{0}", x.versions) + (x.stars ? " · ★ " + x.stars : "") + " · " + when(x.updated) }; }),
-        { filter: t.length > 8 }).then(function (id) { return id ? open({ id: id }) : null; });
+        t.map(function (x) { return { value: x.id, label: x.title, note: tr("versions: {0}").replace("{0}", x.versions) + (x.branches > 1 ? " · " + tr("branches: {0}").replace("{0}", x.branches) : "") +
+          (x.stars ? " · ★ " + x.stars : "") + " · " + when(x.updated) }; }).concat(gone.length ? [{ value: "__dropped", label: tr("Deleted trees ({0})…").replace("{0}", gone.length) }] : []),
+        { filter: t.length > 8 }).then(function (id) { return id === "__dropped" ? pickDropped(gone) : id ? open({ id: id }) : null; });
     }, function (e) { say(tr("The Creator's versions did not come: {0}").replace("{0}", e.message), true); return null; });
   }
 

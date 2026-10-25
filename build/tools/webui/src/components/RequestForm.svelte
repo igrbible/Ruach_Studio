@@ -4,7 +4,14 @@
 	import { RotateCcw, Download, FolderOpen, X } from '@lucide/svelte';
 	import { app, toast, setRequest } from '../lib/state.svelte.js';
 	import { example } from '../lib/example.js';
-	import { synthSubmit, pollJob, jobResultTracks, cancelJob } from '../lib/api.js';
+	import {
+		synthSubmit,
+		pollJob,
+		jobResultTracks,
+		cancelJob,
+		vaeDecode,
+		jobResultBlob
+	} from '../lib/api.js';
 	import { putSong, getAllSongs, saveJob, loadJob, clearJob } from '../lib/db.js';
 	import { num, buildSparse, clearSection, emptyRequest } from '../lib/fields.js';
 	import { COT_FULL, COT_MELODY, COT_OFF } from '../lib/config.js';
@@ -19,6 +26,24 @@
 	let takeOpen = $state(false);
 
 	let d = $derived(app.props?.defaults);
+
+	// The adapter directory of the server. The stacked list grows one menu at
+	// a time: an adapter picked in the trailing menu opens another, Disabled
+	// takes its row out.
+	let adapterList = $derived(app.props?.adapters ?? []);
+	let adapterRows = $derived([...(app.request.adapters ?? []), { name: '' }]);
+
+	function pickAdapter(i: number, name: string) {
+		const list = app.request.adapters ?? [];
+		if (!name) list.splice(i, 1);
+		else if (i < list.length) list[i].name = name;
+		else list.push({ name });
+		app.request.adapters = list;
+	}
+
+	function halves(e: { ar: boolean; nar: boolean }): string {
+		return e.ar && e.nar ? 'AR + NAR' : e.ar ? 'AR' : 'NAR';
+	}
 
 	// The mode menu shows the published default until a mode is picked, so
 	// the request carries a cot only when it is yours.
@@ -44,7 +69,8 @@
 				duration: 0,
 				score: r.abc || '',
 				request: r,
-				audio: tracks[i].audio
+				audio: tracks[i].audio,
+				latents: tracks[i].latents
 			};
 			song.id = await putSong(song);
 		}
@@ -111,6 +137,13 @@
 			return;
 		}
 
+		// VAE latents: decoded through /vae into the audio, a card holding
+		// both from the start
+		if (ext === 'vae') {
+			openLatents(file);
+			return;
+		}
+
 		// JSON and YAML share the same load path: parse, push the request into
 		// the form, and use the file basename as app.name.
 		const parsers: Record<string, (s: string) => Yue2Request> = {
@@ -165,6 +198,46 @@
 		toast('Opened: ' + name, 4000, true);
 	}
 
+	// open VAE latents file: check the framing, decode it through /vae, then
+	// create a card with the audio and the latents, the latents a retouch
+	// starts from
+	async function openLatents(file: File) {
+		const buf = await file.arrayBuffer();
+		const T = buf.byteLength / 256;
+		if (buf.byteLength === 0 || buf.byteLength % 256 !== 0) {
+			toast('Invalid .vae file: size must be a multiple of 256 bytes (64 channels x f32)');
+			return;
+		}
+		if (app.props && T > app.props.context) {
+			toast(`Invalid .vae file: longer than the context (${app.props.context} frames)`);
+			return;
+		}
+		const latents = new Blob([buf], { type: 'application/octet-stream' });
+		const name = file.name.replace(/\.vae$/i, '') || 'Imported';
+		try {
+			const jobId = await vaeDecode(latents, buildRequest(), app.format);
+			await pollJob(jobId);
+			const song: Song = {
+				name,
+				format: app.format,
+				created: Date.now(),
+				style: '',
+				seed: 0,
+				duration: 0,
+				score: '',
+				request: emptyRequest(),
+				audio: await jobResultBlob(jobId),
+				latents
+			};
+			song.id = await putSong(song);
+			app.songs.unshift(song);
+			app.name = name;
+			toast('Opened: ' + name, 4000, true);
+		} catch (e: unknown) {
+			toast(e instanceof Error ? e.message : String(e));
+		}
+	}
+
 	// snapshot app.request into a clean Yue2Request with proper types.
 	// bind:value guarantees app.request always matches the DOM.
 	function buildRequest(): Yue2Request {
@@ -185,6 +258,9 @@
 		busy = true;
 		try {
 			const req = buildRequest();
+			// An adapter the server no longer lists stays visible in its menu
+			// and out of the run
+			req.adapters = req.adapters?.filter((a) => adapterList.some((e) => e.name === a.name));
 			// Both seeds are resolved here so the stored request replays the
 			// exact track, the token draw and the acoustic noise alike
 			const userLmSeed = num(req.lm_seed);
@@ -196,6 +272,18 @@
 			req.seed =
 				userSeed != null && userSeed >= 0 ? userSeed : Math.floor(Math.random() * 0x100000000);
 
+			// A source card opens the song with its section: its codes ride in
+			// source_tokens, kept on the card by its generation or by
+			// Tokenize audio
+			const src = app.srcSongId != null ? app.songs.find((s) => s.id === app.srcSongId) : null;
+			if (src && !src.request.semantic_tokens) {
+				toast('Tokenize audio on the source card first');
+				return;
+			}
+			if (src) {
+				req.source_tokens = src.request.semantic_tokens;
+				req.semantic_tokens = undefined;
+			}
 			const jobId = await synthSubmit(req, app.format);
 			const job: PendingJob = { id: jobId, name: app.name || 'Untitled', request: req };
 			saveJob(job);
@@ -211,7 +299,7 @@
 	// asks which take is wanted before it starts. An empty box goes straight
 	// to the pipeline.
 	function askTake() {
-		if (app.request.semantic_tokens?.trim()) {
+		if (app.request.semantic_tokens?.trim() && app.srcSongId == null) {
 			takeOpen = true;
 			return;
 		}
@@ -265,7 +353,7 @@
 <form class="request-form" onsubmit={(e) => e.preventDefault()}>
 	<input
 		type="file"
-		accept=".json,.yml,.yaml,.mp3,.wav"
+		accept=".json,.yml,.yaml,.mp3,.wav,.vae"
 		bind:this={fileInput}
 		onchange={onFileSelected}
 		hidden
@@ -282,6 +370,42 @@
 		<button type="button" onclick={reset} title="Reset prompt"><RotateCcw size={14} /> Reset</button
 		>
 	</div>
+
+	{#if adapterList.length}
+		<details>
+			<summary>Models</summary>
+			<div class="details-body">
+				{#each adapterRows as a, i}
+					<div class="field-row">
+						<span class="field-label">LoRA</span>
+						<select
+							class="field-select"
+							value={a.name}
+							onchange={(e) => pickAdapter(i, e.currentTarget.value)}
+							title="Adapter merged into the halves it changes at load time. Scanned from the --adapters directory: a .safetensors file, or a folder holding one next to its adapter_config.json."
+						>
+							<option value="">Disabled</option>
+							{#if a.name && !adapterList.some((e) => e.name === a.name)}
+								<option value={a.name} disabled>{a.name}</option>
+							{/if}
+							{#each adapterList as e}
+								<option value={e.name}>{e.name} ({halves(e)})</option>
+							{/each}
+						</select>
+						{#if a.name && app.request.adapters}
+							<input
+								type="text"
+								class="scale-input"
+								placeholder="1.0"
+								bind:value={app.request.adapters[i].scale}
+								title="Adapter strength. Lower it if you hear artifacts, raise it for a stronger effect."
+							/>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		</details>
+	{/if}
 
 	<div class="section-title">Name</div>
 	<input type="text" bind:value={app.name} placeholder="Untitled" />
@@ -556,6 +680,22 @@
 					/></label
 				>
 				<label
+					>Source start <input
+						type="text"
+						placeholder={ph(d?.source_start)}
+						bind:value={app.request.source_start}
+						title="Seconds into the Src audio card where the section opening the song starts. Drag on its waveform to set the section."
+					/></label
+				>
+				<label
+					>Source end <input
+						type="text"
+						placeholder={ph(d?.source_end)}
+						bind:value={app.request.source_end}
+						title="Seconds into the Src audio card where the section ends and the model writes on, -1 its end."
+					/></label
+				>
+				<label
 					>Peak clip <input
 						type="text"
 						placeholder={ph(d?.peak_clip)}
@@ -730,6 +870,10 @@
 	.field-select {
 		flex: 1;
 		min-width: 0;
+	}
+	.scale-input {
+		width: 4rem;
+		flex-shrink: 0;
 	}
 
 	.meta-grid {

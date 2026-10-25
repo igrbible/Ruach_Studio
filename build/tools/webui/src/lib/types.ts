@@ -12,6 +12,13 @@ export interface Yue2Sampling {
 	max_tokens?: number;
 }
 
+// one adapter of a request: an entry of the server adapter directory and its
+// strength, 1 when unset
+export interface Yue2Adapter {
+	name: string;
+	scale?: number | string;
+}
+
 export interface Yue2Request {
 	style: string;
 	lyrics?: string;
@@ -30,6 +37,10 @@ export interface Yue2Request {
 	output_format?: string;
 	peak_clip?: number;
 	mp3_bitrate?: number;
+	adapters?: Yue2Adapter[];
+	source_tokens?: string;
+	source_start?: number;
+	source_end?: number;
 }
 
 // GET /props response
@@ -40,6 +51,8 @@ export interface Yue2Props {
 	sample_rate: number;
 	frame_rate: number;
 	context: number;
+	// the adapter directory, each entry with the halves it changes
+	adapters: { name: string; ar: boolean; nar: boolean }[];
 	defaults: Yue2Request;
 }
 
@@ -57,6 +70,11 @@ export interface Song {
 	score: string;
 	request: Yue2Request;
 	audio: Blob;
+	// raw f32 [T * 64] latents the VAE decoder produced this audio from.
+	// Present for songs from /synth and for .vae files opened, computed on
+	// demand for an imported recording. A retouch starts from them instead
+	// of encoding the audio again.
+	latents?: Blob;
 	// user-marked favorite, persisted across reloads. Acts as a sticky
 	// flag for the bulk "Delete non-favorites" action.
 	favorite?: boolean;

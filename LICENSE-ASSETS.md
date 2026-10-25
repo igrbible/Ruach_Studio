@@ -6,6 +6,7 @@ These are under a licence of their own:
 
 - **The logo and the name «Ruach Studio»** (`src/brand/`, the logo's words in every language): © 2026 Viktor Zhuromskyy, [Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International](https://creativecommons.org/licenses/by-nc-nd/4.0/) (CC BY-NC-ND 4.0). You may show them and pass them on as they are, naming their author, not for money; you may not change them, nor make them the mark of another program. A fork of the code names itself and draws its own logo.
 - **The audio and the pictures published with the studio** (the approved probe workspaces, the style probes and the LoRA samples on Hugging Face, and their artworks): © 2026 Viktor Zhuromskyy, CC BY-NC-ND 4.0 as well. They were made with YuE2 and an SDXL model, whose own licences stand beside this one (the YuE2 weights: CC BY-NC 4.0).
+- **The piano roll's instruments** (`lab/sounds/`): the Salamander Grand Piano by Alexander Holm, and the choir «aah» and the voice «ooh» of the FluidR3 GM sound font by Frank Wen, both under [Creative Commons Attribution 3.0](https://creativecommons.org/licenses/by/3.0/) (CC BY 3.0), shortened to a few seconds and made mono (`lab/sounds/README.md`).
 - **The models, the datasets and the projects the studio stands on** keep their own licences: README → Licence.
 
 This file gives no legal advice.

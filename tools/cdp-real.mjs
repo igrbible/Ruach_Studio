@@ -38,10 +38,10 @@ await send("Page.enable"); await send("Runtime.enable"); await send("Network.ena
 await send("Emulation.setDeviceMetricsOverride", { width: 1536, height: 730, deviceScaleFactor: 1, mobile: false });
 await send("Page.navigate", { url: BASE });
 console.log(`${B}the page served by the real server${X}`);
-const loaded = await waitFor(`document.querySelectorAll("#decoders input").length >= 3 && document.querySelectorAll("#sliderChips [data-slider]").length`, 20000);
+const loaded = await waitFor(`document.querySelectorAll("#decoders input").length >= 3`, 20000);
 check("page loads from the server (from disk)", !!loaded, (await ev("document.title")));
 check("three VAEs from /props", (await ev(`document.querySelectorAll("#decoders input").length`)) === 3);
-check("16 sliders from /props", (await ev(`document.querySelectorAll("#sliderChips [data-slider]").length`)) === 16);
+check("no slider chips (gone in HERESY 1449)", (await ev(`document.querySelectorAll("#sliderChips [data-slider]").length`)) === 0);
 const takes = await waitFor(`document.querySelectorAll("#libList .take-title").length`, 10000);
 check("library lists the takes on disk (on a fresh install: test-real.sh's synthetic fixture)", takes >= 1, `${takes} takes`);
 await click("#engineToggle");
@@ -60,7 +60,6 @@ await click("#advDrawer summary");
 await waitFor(`document.getElementById("advDrawer").open`, 3000, 50);
 await setValue("#maxLength", "1"); await setValue("#odeSteps", "2");
 await click('#decoders input[value="legacy"]');
-await click('#sliderChips [data-slider="metal"]');
 const before = requests.length;
 await click("#generateBtn");
 const posted = await until(() => requests.slice(before).some((r) => r.startsWith("POST /synth")), 10000);
@@ -91,7 +90,6 @@ const opened = await waitFor(`document.getElementById("takeTitle")?.textContent 
   (() => { const m = document.querySelector('#metaGrid [data-field="Composition"]'); return !m || m.dataset.value !== "…"; })()`, 20000, 200);
 const cells = await ev(`[...document.querySelectorAll("#metaGrid > *")].map(e => e.innerText.replace(/\\s+/g, " ").trim()).join(" | ")`);
 check("song page: VAE Legacy", !!opened && /VAE Legacy/i.test(cells || ""), cells);
-check("song page: slider Metal", /Metal/i.test(cells || ""));
 check("song page: no precision row on a new song", !!opened && !/Precision/i.test(cells || ""), cells);
 check("waveform came from /library/peaks", !!(await until(() => requests.some((r) => r.startsWith("GET /library/peaks")), 10000)));
 await shot("3-take");

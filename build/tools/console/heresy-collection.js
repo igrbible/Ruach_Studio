@@ -8,9 +8,19 @@
 (function () {
   "use strict";
 
-  var KINDS = { generated: "generated", imported: "imported", regenerated: "regenerated", rerendered: "re-rendered" };
+  // HERESY 1706 (Viktor 22.10.2026: «метку `created` замени на `raw / сырец`»): a take straight from the model is «raw»; its key stays «generated»
+  var KINDS = { generated: "raw", imported: "imported", regenerated: "regenerated", rerendered: "re-rendered" };
   var DERIVED = { stems: "stems", debuzz: "debuzz", remaster: "remaster", upscale: "upscale" };
   var VIEW_KEY = "yue2.collView", SORT_KEY = "yue2.collSort", WS_KEY = "yue2.workspace";
+  // HERESY 1685 (Viktor 21.10.2026: «прикрути ручку для сворачивания подкатегорий»): the workspaces whose sections are folded out of the column
+  var SECFOLD_KEY = "yue2.collSecFold";
+  function secFolded() { try { var v = JSON.parse(recall(SECFOLD_KEY) || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
+  function secFold(w) {
+    var shut = secFolded(), i = shut.indexOf(w);
+    if (i < 0) shut.push(w); else shut.splice(i, 1);
+    store(SECFOLD_KEY, JSON.stringify(shut));
+    paintSide();
+  }
   // HERESY 1167 (Viktor: «`Sourced for Regeneration` исключай из выбора как рабочий воркспейс. Даже если в Библиотеке
   // выбрал, генерация у Творца идёт в родительский»): such a section is never the workspace in hand; its parent is
   function workable(w) { var p = String(w || "").split(" / "); return p.length > 1 && p[p.length - 1] === "Sourced for Regeneration" ? p.slice(0, -1).join(" / ") : String(w || ""); }
@@ -68,6 +78,7 @@
       state.rows = fresh(d.takes || [], asked); state.ws = d.workspaces || []; state.trashDays = d.trash_days || 0; state.loaded = true; state.locks = d.locks || {}; state.pins = d.pins || {};
       state.loadStatus = 200;                      // HERESY 1434
       state.frozen = d.frozen || [];               // HERESY 1166
+      state.playlist = d.playlist || []; state.plXfade = d.playlist_xfade || 0;   // HERESY 1731
       firstWs();                                   // HERESY 1434
       var names = {};
       state.rows.forEach(function (r) { names[r.name] = 1; });
@@ -148,7 +159,7 @@
   function iceHere(r) { return !r.frozen || (!!state.place && state.place.charAt(0) !== "_" && frozenWs(state.place)); }
   // HERESY 1169 · 1241 (Viktor 08.10.2026: «трансформируй полосу фильтров показа карточек… Идея фильтра SUNO, с чекбоксами, логикой AND, OR, NOR»): what can be ticked, and how a take answers each
   var FILTERS = [
-    { label: "Made", items: [["generated", "generated", "sparkles"], ["imported", "imported", "import"], ["regenerated", "regenerated", "refresh"], ["rerendered", "re-rendered", "waveform"]] },
+    { label: "Made", items: [["generated", "raw", "sparkles"], ["imported", "imported", "import"], ["regenerated", "regenerated", "refresh"], ["rerendered", "re-rendered", "waveform"]] },
     { label: "Marked", items: [["__liked", "liked", "like"], ["__disliked", "disliked", "dislike"], ["__starred", "favourites", "star"], ["__note", "with a note", "note"], ["__art", "with artwork", "image"], ["__protected", "protected", "shield"]] },
     { label: "Has", items: [["stems", "stems", "layers"], ["debuzz", "debuzz", "eraser"], ["remaster", "remaster", "sliders"], ["upscale", "upscale", "chevrons-up"]] }
   ];
@@ -211,8 +222,19 @@
       return '<button type="button" class="coll-place' + (state.place === key ? " is-on" : "") + '" data-place="' + esc(key) + '"><span' + (own ? ' translate="no"' : "") + ">" + esc(label) +
         '</span><span class="coll-n">' + (n === undefined ? "" : n) + "</span></button>";
     };
+    // HERESY 1685: which workspaces have sections (a handle on their row), which are folded, and the rows a folded parent keeps out of sight
+    var secShut = secFolded(), secHas = {};
+    state.ws.forEach(function (w) { var p = wsParts(w); for (var i = 1; i < p.length; i++) secHas[p.slice(0, i).join(SEP)] = 1; });
+    var secAway = function (w) { var p = wsParts(w); for (var i = 1; i < p.length; i++) if (secShut.indexOf(p.slice(0, i).join(SEP)) >= 0) return true; return false; };
+    var secHandle = function (w) {
+      if (!secHas[w]) return "";
+      var open = secShut.indexOf(w) < 0;
+      return '<span class="coll-sec-fold" data-sec-fold="' + esc(w) + '" role="button" aria-expanded="' + open + '" title="' + (open ? "Fold its sections" : "Unfold its sections") + '"></span>';
+    };
     var pinAll = pinnedAll(), pinN = state.rows.filter(function (r) { return pinAll[r.name] && !r.hidden && !r.frozen; }).length;
-    $("collSide").innerHTML = item("", "All Workspaces", counts[""]) + item("__fav", "★ Favourites", counts.__fav) +
+    // HERESY 1731: the playlist at the very top, never renamed or deleted (a place of the studio's own, as Favourites)
+    $("collSide").innerHTML = item("__playlist", "\u25b6 Playlist", plRows().length) +
+      item("", "All Workspaces", counts[""]) + item("__fav", "★ Favourites", counts.__fav) +
       item("__pinned", "\ud83d\udccc Pinned", pinN) +
       item("__none", "Not in a workspace", counts.__none) +
       '<div class="coll-cap">Workspaces</div>' + treeOrder(state.ws).map(function (w) {
@@ -220,8 +242,9 @@
         var lk = (state.locks || {})[w] || {}, lock = ice + (lk.workspace || lk.tracks ?   // HERESY 1070
           '<span class="coll-lock" title="' + (lk.workspace ? "the workspace is locked against deletion" : "") + (lk.workspace && lk.tracks ? "; " : "") + (lk.tracks ? "its takes are locked against deletion" : "") + '">\ud83d\udd12</span>' : "");
         var depth = wsParts(w).length;               // a section: its own name, indented under its parent (1161)
-        return item(w, depth > 1 ? wsLeaf(w) : w, perWs[w] || 0, depth < 2 || !STUDIO_SECTIONS[wsLeaf(w)]).replace('class="coll-place', 'class="coll-place' + (depth > 1 ? " is-sub d" + depth : "") + (frozenWs(w) ? " is-frozen" : ""))
-          .replace('<span class="coll-n">', lock + '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Rename, delete, lock, a section…" role="button">\u22ef</span><span class="coll-n">');
+        return item(w, depth > 1 ? wsLeaf(w) : w, perWs[w] || 0, depth < 2 || !STUDIO_SECTIONS[wsLeaf(w)]).replace('class="coll-place', 'class="coll-place' + (depth > 1 ? " is-sub d" + depth : "") + (frozenWs(w) ? " is-frozen" : "") +
+            (secAway(w) ? " is-sec-away" : "") + (secShut.indexOf(w) >= 0 && String(state.place || "").indexOf(w + SEP) === 0 ? " has-on-inside" : ""))
+          .replace('<span class="coll-n">', lock + secHandle(w) + '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Rename, delete, lock, a section…" role="button">\u22ef</span><span class="coll-n">');
       }).join("") +
       '<button type="button" class="coll-place coll-new" data-ws-new="1">+ New workspace</button>' +
       '<button type="button" class="coll-place coll-new coll-hub" data-ws-hub="1">\ud83d\udc8e From Hugging Face\u2026</button>' +   // HERESY 1166
@@ -238,11 +261,20 @@
     var side = $("collSide");
     if (!side) return;
     if (!side.offsetParent || getComputedStyle(side).position !== "sticky") { side.style.maxHeight = ""; return; }
+    // HERESY 1688: the room's head sticks over the column; the column sticks under it, as high as the head stands now
+    var head = document.querySelector("#view-collection .coll-head"), lay = side.closest(".coll-layout"), hs = head && getComputedStyle(head);
+    if (lay) lay.style.setProperty("--coll-side-top", (hs && hs.position === "sticky" ? Math.max(8, Math.round(head.offsetHeight + (parseFloat(hs.top) || 0) + 8)) : 8) + "px");
     var bottom = window.innerHeight, pb = document.getElementById("playbar"), dock = document.querySelector(".log-dock");
     if (pb && getComputedStyle(pb).display !== "none") bottom = Math.min(bottom, pb.getBoundingClientRect().top);
     var sr = side.getBoundingClientRect(), dr = dock && getComputedStyle(dock).display !== "none" ? dock.getBoundingClientRect() : null;
     if (dr && dr.left < sr.right && dr.right > sr.left) bottom = Math.min(bottom, dr.top);   // the log box only where it is above the column
-    side.style.maxHeight = Math.max(160, Math.floor(bottom - side.getBoundingClientRect().top - 10)) + "px";
+    // HERESY 1733: measured where it sticks, not where the room's end pushed it up for a moment (that made it taller each time, its foot under the player)
+    var room = side.closest("[id^='view-']"), rr = room && room.getBoundingClientRect(), top = side.getBoundingClientRect().top;
+    if (rr) {
+      top = Math.max(top, rr.top + (parseFloat(getComputedStyle(room).paddingTop) || 0) + (parseFloat(getComputedStyle(side).top) || 0));   // it sticks below the room's padding
+      bottom = Math.min(bottom, rr.bottom);
+    }
+    side.style.maxHeight = Math.max(160, Math.floor(bottom - top - 10)) + "px";
   }
   function fitSideSoon() { if (!sideFrame) sideFrame = requestAnimationFrame(function () { sideFrame = 0; fitSide(); }); }
   function watchSide() {
@@ -251,6 +283,8 @@
     if (room) {
       room.addEventListener("scroll", fitSideSoon, { passive: true });
       if (window.ResizeObserver) new ResizeObserver(fitSideSoon).observe(room);   // shown, hidden, the window resized
+      var head = room.querySelector(".coll-head");                                   // HERESY 1688: the head's counts wrapping or not
+      if (head && window.ResizeObserver) new ResizeObserver(fitSideSoon).observe(head);
     }
   }
 
@@ -296,6 +330,10 @@
     $("collTrashDays").closest("label").style.display = state.place === "__trash_art" ? "none" : "";   // the takes' trash's own
     if (state.place === "__trash_art") return paintArtBin();
     if (trash) return paintTrash();
+    // HERESY 1731: the playlist's own view, no tiles, no filter, no bar, no pins
+    var plOn = state.place === "__playlist";
+    $("collBar").hidden = plOn; $("collSlot").hidden = plOn; $("collHeadTools").hidden = plOn;
+    if (plOn) return plPaint();
     var rows = shown(), view = recall(VIEW_KEY) || "tiles";
     $("collGrid").className = "coll-grid " + view;
     Array.prototype.forEach.call(document.querySelectorAll("[data-coll-view]"), function (b) { b.classList.toggle("is-on", b.dataset.collView === view); });
@@ -359,13 +397,13 @@
       var sel = !!state.sel[r.name], now = state.hooks.playing ? state.hooks.playing() : {};
       var mine = now.name === r.name;
       var art = window.HeresyArt ? window.HeresyArt.url(r.name) : "";   // HERESY 1154: beside the title, not in the play button
-      return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden-take" : "") + (r.frozen ? " is-frozen" : "") + (r.fresh ? " is-fresh" : "") + (window.HeresyRegen && window.HeresyRegen.has(r.name) ? " is-regenerating" : "") + (mine ? " is-current" : "") + (mine && now.playing ? " is-sounding" : "") + (art ? " has-art" : "") + '" data-name="' + esc(r.name) + '" draggable="true">' +
+      return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden-take" : "") + (r.frozen ? " is-frozen" : "") + (r.fresh ? " is-fresh" : "") + (window.HeresyRegen && window.HeresyRegen.has(r.name) ? " is-regenerating" : "") + (mine ? " is-current" : "") + (mine && now.playing ? " is-sounding" : "") + (art ? " has-art" : "") + '" data-name="' + esc(r.name) + '"' + sandAt(r.name) + ' draggable="true">' +
         '<label class="coll-check"><input type="checkbox" data-sel="' + esc(r.name) + '"' + (sel ? " checked" : "") + ' aria-label="Select" /></label>' +
         '<button type="button" class="coll-play' + (mine && now.playing ? " is-playing" : "") + '" data-play="' + esc(r.name) + '" aria-label="' + (mine && now.playing ? "Pause" : "Play") + '">' + ico(mine && now.playing ? "pause" : "play") + "</button>" +
         '<div class="coll-body"><div class="coll-title"><span class="coll-title-text" data-open="' + esc(r.name) + '">' + esc(r.title) + "</span>" +
         '<button type="button" class="coll-ren" data-ren="' + esc(r.name) + '" title="Rename" aria-label="Rename">✎</button></div>' +
         // HERESY 1165: each piece its own text, so the words among the numbers translate (heresy-i18n.js matches whole texts)
-        '<div class="coll-meta"><span>' + esc(r.created ? ago(r.created) : "") + "</span>" + (r.seconds ? " · <span>" + clock(r.seconds) + "</span>" : "") + (r.cot ? " · <span>" + esc(cotWord(r.cot)) + "</span>" : "") + "</div>" +
+        '<div class="coll-meta">' + (state.hooks.when ? state.hooks.when(r.created, r.name) : "<span>" + esc(r.created ? ago(r.created) : "") + "</span>") + (r.seconds ? " · <span>" + clock(r.seconds) + "</span>" : "") /* HERESY 1720 */ + (r.cot ? " · <span>" + esc(cotWord(r.cot)) + "</span>" : "") + "</div>" +
         '<div class="coll-badges">' + badge(KINDS[r.kind] || r.kind, "k-" + r.kind) + r.derived.map(function (k) { return badge(DERIVED[k] || k, "d"); }).join("") +
         r.workspaces.map(function (w) { return badge(w, "w"); }).join("") +
         // HERESY 1162: what it was made again from, on its card
@@ -540,7 +578,7 @@
     hb.setAttribute("aria-label", hid ? "Show again" : "Hide");
     hb.dataset.tip = hid ? "Show again: back in the lists" : "Out of the lists, not deleted: Hidden on the left shows them again";
     $("collWsOut").hidden = !state.place || state.place.charAt(0) === "_";
-    $("collCompare").disabled = n < 2 || n > 4;                // HERESY 1415: two to four
+    $("collCompare").disabled = n < 2 || n > 6;                // HERESY 1415: two to four; 1621: to six
   }
 
   function paintTrash() {
@@ -680,7 +718,7 @@
     return document.scrollingElement || document.documentElement;
   }
   function bandStart(e) {
-    if (e.button !== 0 || inTrash()) return;
+    if (e.button !== 0 || inTrash() || state.place === "__playlist") return;   // HERESY 1731: its cards drag themselves
     var onCard = e.target.closest(".coll-card[data-name]");
     if (onCard && !e.ctrlKey) return;
     if (e.target.closest("button, input, a, select, textarea, .coll-title-edit") && !e.ctrlKey) return;
@@ -877,6 +915,7 @@
       state.rows = d.takes ? fresh(d.takes, asked) : state.rows; state.ws = d.workspaces || state.ws; state.trashDays = d.trash_days || 0; state.locks = d.locks || state.locks || {};
       state.pins = d.pins || state.pins || {};
       state.frozen = d.frozen || state.frozen || [];   // HERESY 1166
+      if (d.playlist) state.playlist = d.playlist;     // HERESY 1731: a take gone from the library is gone from the playlist
       if (done) { if (undo) undoable(done, undo); else toast(done); }
       paint();
       paintCurrent();
@@ -1017,6 +1056,8 @@
       b.addEventListener("click", function () { store(VIEW_KEY, b.dataset.collView); paint(); });
     });
     $("collSide").addEventListener("click", function (e) {
+      var sf = e.target.closest("[data-sec-fold]");           // HERESY 1685: its sections folded or back, the place in hand as it was
+      if (sf) { e.stopPropagation(); secFold(sf.dataset.secFold); return; }
       var more = e.target.closest("[data-ws-menu]");          // HERESY 1050
       if (more) { e.stopPropagation(); var rc = more.getBoundingClientRect(); wsMenu(more.dataset.wsMenu, rc.left, rc.bottom + 2); return; }
       if (e.target.closest("[data-ws-hub]")) return void hubOpen();   // HERESY 1166: the published 💎 sets
@@ -1033,6 +1074,7 @@
       if (state.place === "__trash") loadTrash(); else if (state.place === "__trash_art") loadArtBin(); else paint();   // HERESY 1337
     });
     $("collSide").addEventListener("dblclick", function (e) {
+      if (e.target.closest("[data-sec-fold]")) return;       // HERESY 1685: two quick clicks on the handle fold and unfold, they do not rename
       var p = e.target.closest("[data-place]");
       if (p && p.dataset.place && p.dataset.place.charAt(0) !== "_") renameWs(p.dataset.place);
     });
@@ -1055,6 +1097,7 @@
     }
     function clearDrop() { Array.prototype.forEach.call(document.querySelectorAll(".coll-place.is-drop"), function (b) { b.classList.remove("is-drop"); }); }
     $("collGrid").addEventListener("dragstart", function (e) {
+      if (e.target.closest && e.target.closest(".pl-card")) return;   // HERESY 1731: the playlist's cards drag themselves
       var card = e.target.closest && e.target.closest(".coll-card[data-name]");
       if (!card || inTrash() || card.classList.contains("is-frozen") || (e.target.closest && e.target.closest("input, textarea"))) { e.preventDefault(); return; }
       var n = card.dataset.name, list = state.sel[n] ? names() : [n], r = rowOf(n);
@@ -1590,6 +1633,7 @@
   function paintPlaying() {
     var now = state.hooks && state.hooks.playing ? state.hooks.playing() : {};
     if ($("collPins") && !$("collPins").hidden && state.loaded) paintPins();   // HERESY 1103
+    plPlaying(now);                                   // HERESY 1731
     var sp = document.querySelector("[data-sheet-play]");
     if (sp && sheetName) { var on0 = now.name === sheetName && now.playing; sp.innerHTML = ico(on0 ? "pause" : "play"); sp.classList.toggle("is-playing", on0); }
     Array.prototype.forEach.call(document.querySelectorAll("#collGrid .coll-card[data-name]"), function (card) {
@@ -1803,8 +1847,9 @@
           return;
         }
         try {
-          window.ABCJS.renderAbc(staffBox, abc, { responsive: "resize", staffwidth: 900, paddingtop: 4, paddingbottom: 8,
+          window.ABCJS.renderAbc(staffBox, abc, { responsive: "resize", staffwidth: 900, paddingtop: 4, paddingbottom: 8, add_classes: true,
             foregroundColor: getComputedStyle(staffBox).getPropertyValue("--paper-ink").trim() || "#111111" });   // HERESY 1167: the Creator's ink
+          if (window.HeresyAbc && window.HeresyAbc.dress) window.HeresyAbc.dress(staffBox);   // HERESY 1601
         } catch (err) { staffBox.textContent = "This score could not be engraved; read it as ABC below."; }
       }
       function showScore(abc, note) {
@@ -1904,6 +1949,141 @@
     input.addEventListener("blur", function () { finish(true); });
   }
 
+  // HERESY 1726 (Viktor 22.10.2026: «Песок на карточке имеет предсказуемый паттерн»): where a card's gold grain starts, from its name, so neighbours differ
+  function sandAt(name) {
+    var h = 2166136261;
+    for (var k = 0; k < String(name).length; k++) { h ^= String(name).charCodeAt(k); h = Math.imul(h, 16777619); }
+    return ' style="--sand-x:' + ((h >>> 0) % 320) + "px;--sand-y:" + ((h >>> 9) % 320) + 'px"';
+  }
+  // HERESY 1731 (Viktor 22.10.2026, the playlist): its takes in his order, apart from the workspaces; its view in the Librarian and in a window
+  var plWin = null;
+  function plRows() { var by = {}; state.rows.forEach(function (r) { by[r.name] = r; }); return (state.playlist || []).map(function (n) { return by[n]; }).filter(Boolean); }
+  function plCard(r) {
+    var now = state.hooks.playing ? state.hooks.playing() : {}, mine = now.name === r.name, on = mine && now.playing, art = window.HeresyArt ? window.HeresyArt.url(r.name) : "";
+    var mk = function (lit, icon, tip) { return '<span class="pl-mark' + (lit ? " is-on" : "") + '" title="' + esc(tip) + '">' + ico(icon) + "</span>"; };
+    var when = state.hooks.when ? state.hooks.when(r.created, r.name) : "<span>" + esc(r.created ? state.hooks.ago(r.created) : "") + "</span>";
+    return '<article class="pl-card' + (mine ? " is-current" : "") + '" draggable="true" data-pl="' + esc(r.name) + '">' +
+      '<button type="button" class="pl-play' + (on ? " is-playing" : "") + '" data-pl-play="' + esc(r.name) + '" aria-label="' + (on ? "Pause" : "Play") + '">' + ico(on ? "pause" : "play") + "</button>" +
+      '<div class="pl-main"><div class="pl-title" translate="no">' + esc(r.title) + "</div>" +
+      '<div class="pl-meta">' + when + (r.seconds ? " · <span>" + state.hooks.clock(r.seconds) + "</span>" : "") + (r.cot ? " · <span>" + esc(cotWord(r.cot)) + "</span>" : "") + "</div>" +
+      '<div class="pl-marks">' + mk(r.rating > 0, "like", "Liked") + mk(r.rating < 0, "dislike", "Disliked") + mk(favOf(r.name, r), "star", "Favourite") +
+      mk(!!r.note, "note", r.note ? String(r.note).slice(0, 160) : "Without a note") +
+      '<button type="button" class="pl-out" data-pl-out="' + esc(r.name) + '" title="Out of the playlist (the take stays)" aria-label="Out of the playlist (the take stays)">✕</button></div></div>' +
+      '<div class="pl-cover">' + (art ? '<img alt="" loading="lazy" src="' + esc(art) + '" />' : '<span class="pl-nocover">' + ico("music") + "</span>") + "</div></article>";
+  }
+  function plHtml() {
+    var rows = plRows();
+    return '<div class="pl-head"><button type="button" class="btn small primary" data-pl-go="1"' + (rows.length ? "" : " disabled") + ">Play from the top</button>" +
+      '<button type="button" class="btn ghost small" data-pl-shuffle="1"' + (rows.length > 1 ? "" : " disabled") + ' title="A deck\'s shuffle: every take to a new place">Shuffle the deck</button>' +
+      '<label class="pl-xf" title="The crossfade between the playlist\'s takes, 0 to 4 s; Previous and Next change at once"><span>Crossfade</span>' +   // HERESY 1737
+      '<input type="range" min="0" max="4" step="1" value="' + (+state.plXfade || 0) + '" data-pl-xf="1" /><span class="mono pl-xf-n">' + (+state.plXfade || 0) + " s</span></label>" +
+      '<span class="pl-hint">Drag a take to its place; × takes it out of the playlist, never out of the library</span></div>' +
+      (rows.length ? '<div class="pl-list">' + rows.map(plCard).join("") + "</div>"
+        : '<p class="row-hint coll-empty">The playlist is empty: «Add to playlist» in a take\'s menu puts takes here</p>');
+  }
+  function plHead() {                                    // the Librarian's heading, as for its other places
+    var rows = plRows(), secs = rows.reduce(function (a, r) { return a + (+r.seconds || 0); }, 0);
+    $("collWhere").innerHTML = " › <span>Playlist</span>";
+    $("collNote").innerHTML = "<span>" + rows.length + " takes</span> · <span>" + state.hooks.clock(secs) + "</span>";
+  }
+  function plPaint() {                                   // paint() hands the place over here
+    $("collGrid").className = "coll-grid pl-view";
+    $("collGrid").innerHTML = plHtml();
+    if ($("collMore")) $("collMore").hidden = true;      // the lazy rows of the place before stay out
+    plBind($("collGrid"));
+    plHead();
+  }
+  function plChanged(d, asked) {
+    if (d) { state.playlist = d.playlist || []; state.plXfade = d.playlist_xfade || 0; if (d.takes) state.rows = fresh(d.takes, asked); }
+    if (state.place === "__playlist") paint(); else paintSide();
+    if (plWin) plWin.querySelector(".pl-body").innerHTML = plHtml();
+    if (state.hooks.playlistChanged) state.hooks.playlistChanged();
+  }
+  function plOp(body, said) {
+    var asked = rateSeq;
+    return api("/collection", body).then(function (d) { plChanged(d, asked); if (said) toast(said); return true; },
+      function (e) { toast(e.message, true); plChanged(); return false; });
+  }
+  function plAdd(names, where) {
+    return plOp({ op: "playlist-add", names: names, where: where }, names.length > 1 ? "Into the playlist: " + names.length : "Into the playlist");
+  }
+  function plPlaying(now) {                              // the play buttons follow the player, as the cards' do
+    Array.prototype.forEach.call(document.querySelectorAll(".pl-card[data-pl]"), function (card) {
+      var mine = card.dataset.pl === now.name, on = mine && !!now.playing, b = card.querySelector(".pl-play");
+      card.classList.toggle("is-current", mine);
+      if (!b) return;
+      b.classList.toggle("is-playing", on);
+      b.innerHTML = ico(on ? "pause" : "play");
+      b.setAttribute("aria-label", on ? "Pause" : "Play");
+    });
+  }
+  function plBind(root) {                                // the playlist's own clicks and drags, wherever its view stands
+    if (root.dataset.plBound) return;
+    root.dataset.plBound = "1";
+    root.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-pl-play]"), out = e.target.closest("[data-pl-out]");
+      if (b) { if (state.hooks.playPlaylist) state.hooks.playPlaylist(b.dataset.plPlay); return; }
+      if (out) { plOp({ op: "playlist-remove", names: [out.dataset.plOut] }); return; }
+      if (e.target.closest("[data-pl-go]")) { var first = (state.playlist || [])[0]; if (first && state.hooks.playPlaylist) state.hooks.playPlaylist(first, true); return; }
+      if (e.target.closest("[data-pl-shuffle]")) plOp({ op: "playlist-shuffle" }, "Shuffled");
+    });
+    // HERESY 1737: the crossfade, 0 to 4 s, kept by the lab
+    root.addEventListener("input", function (e) { var x = e.target.closest && e.target.closest("[data-pl-xf]"), n = x && root.querySelector(".pl-xf-n"); if (n) n.textContent = x.value + " s"; });
+    root.addEventListener("change", function (e) { var x = e.target.closest && e.target.closest("[data-pl-xf]"); if (x) plOp({ op: "playlist-xfade", seconds: +x.value }); });
+    root.addEventListener("contextmenu", function (e) {   // the take's own menu, as on its card
+      var card = e.target.closest(".pl-card[data-pl]");
+      if (!card || !state.hooks.menu) return;
+      e.preventDefault();
+      state.hooks.menu(card.dataset.pl, e.clientX, e.clientY);
+    });
+    var drag = null, dropped = false;
+    root.addEventListener("dragstart", function (e) {
+      var card = e.target.closest && e.target.closest(".pl-card[data-pl]");
+      if (!card) return;
+      drag = card.dataset.pl; dropped = false;
+      card.classList.add("is-dragging");
+      e.dataTransfer.effectAllowed = "move";
+      try { e.dataTransfer.setData("text/plain", drag); } catch (x) { /* some browsers */ }
+    });
+    root.addEventListener("dragover", function (e) {
+      if (!drag || !(e.target.closest && e.target.closest(".pl-list"))) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      var card = e.target.closest(".pl-card[data-pl]");
+      if (!card || card.dataset.pl === drag) return;
+      var box = card.getBoundingClientRect(), list = card.parentNode, moving = list.querySelector('.pl-card[data-pl="' + CSS.escape(drag) + '"]');
+      if (moving) list.insertBefore(moving, e.clientY > box.top + box.height / 2 ? card.nextSibling : card);
+    });
+    root.addEventListener("drop", function (e) { if (drag) { e.preventDefault(); dropped = true; } });
+    root.addEventListener("dragend", function (e) {
+      if (!drag) return;
+      drag = null;
+      var list = root.querySelector(".pl-list"), pl = state.playlist || [];
+      if (!list || !dropped) { plChanged(); return; }   // let go outside the list (or Esc): back where it was
+      var order = Array.prototype.map.call(list.querySelectorAll(".pl-card[data-pl]"), function (x) { return x.dataset.pl; });
+      Array.prototype.forEach.call(list.querySelectorAll(".is-dragging"), function (x) { x.classList.remove("is-dragging"); });
+      var drawn = pl.filter(function (n) { return order.indexOf(n) >= 0; });
+      if (order.join("\n") === drawn.join("\n")) return;
+      plOp({ op: "playlist-order", names: order.concat(pl.filter(function (n) { return order.indexOf(n) < 0; })) });
+    });
+  }
+  function plOpen() {                                    // the playlist in a window of its own (the player's last button)
+    if (plWin) return;
+    var back = document.createElement("div");
+    back.className = "cmp-back pl-back";
+    back.innerHTML = '<div class="cmp-box pl-box" role="dialog" aria-modal="true" aria-label="Playlist"><div class="cmp-head"><div class="cmp-title">Playlist</div>' +
+      '<button type="button" class="btn ghost small" data-pl-close="1">Close</button></div><div class="pl-body"></div></div>';
+    document.body.appendChild(back);
+    plWin = back;
+    var body = back.querySelector(".pl-body");
+    body.innerHTML = plHtml();
+    plBind(body);
+    var key = function (e) { if (e.key === "Escape" && !document.querySelector(".hd-back:not(.is-leaving)")) { e.preventDefault(); e.stopPropagation(); shut(); } };
+    var shut = function () { document.removeEventListener("keydown", key, true); back.remove(); plWin = null; };
+    document.addEventListener("keydown", key, true);
+    back.addEventListener("mousedown", function (e) { if (e.target === back) shut(); });
+    back.querySelector("[data-pl-close]").addEventListener("click", shut);
+  }
   // HERESY 1044: a note on a take (the take card edits it)
   function note(name) { var r = state.rows.filter(function (x) { return x.name === name; })[0]; return r ? r.note || "" : ""; }
   function setNote(name, text) {
@@ -1924,8 +2104,8 @@
   }
 
   window.HeresyCollection = { init: init, reload: load, hubOpen: hubOpen, repaint: paint, paintArts: paintArts, isHidden: isHidden, isFresh: isFresh, markPlayed: markPlayed, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
-                              current: current, landable: landable, closedWs: closedWs, firstWs: firstWs, absent: function () { return state.loadStatus === 404; }, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, rateMany: rateMany, favMany: favMany, exportChecked: exportZip, note: note, setNote: setNote, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
-                              order: function () { return state.place === "__trash" ? [] : shown().map(function (r) { return r.name; }); },
+                              current: current, landable: landable, closedWs: closedWs, firstWs: firstWs, absent: function () { return state.loadStatus === 404; }, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, rateMany: rateMany, favMany: favMany, exportChecked: exportZip, note: note, setNote: setNote, playlist: function () { return (state.playlist || []).slice(); }, playlistAdd: plAdd, openPlaylist: plOpen, playlistXfade: function () { return +state.plXfade || 0; }, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
+                              order: function () { return state.place === "__trash" ? [] : state.place === "__playlist" ? (state.playlist || []).slice() : shown().map(function (r) { return r.name; }); },
                               datasheet: openDatasheet, modelLine: modelLine, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
                               row: rowOf, workspaces: function () { return state.ws.slice(); }, act: act, openSheet: openSheet, requestOf: requestOf,
                               selected: names, place: function () { return state.place; }, moveTo: moveTo,

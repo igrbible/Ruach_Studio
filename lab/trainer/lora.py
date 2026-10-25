@@ -34,18 +34,20 @@ class LoRALinear(nn.Module):
         return out + (x @ self.lora_A.to(x.dtype).t() @ self.lora_B.to(x.dtype).t()) * self.scale
 
 
-def inject(model, rank: int, alpha: float = None) -> Dict[str, List[LoRALinear]]:
-    """Wrap the target linears of both experts; the base stays frozen. Returns {"ar": [...], "nar": [...]}."""
-    alpha = float(alpha or rank)
+def inject(model, rank: int, alpha: float = None, ranks: Dict[str, int] = None) -> Dict[str, List[LoRALinear]]:
+    """Wrap the target linears of both experts; the base stays frozen. Returns {"ar": [...], "nar": [...]}.
+    HERESY 1642: ranks {"ar": r, "nar": r} gives each half its own rank (missing or 0: rank); alpha, unless given, the half's own rank."""
     for p in model.parameters():
         p.requires_grad_(False)
     out = {"ar": [], "nar": []}
     for half, expert in (("ar", model.ar), ("nar", model.nar)):
+        r = int((ranks or {}).get(half) or rank)
+        a = float(alpha or r)
         for i, layer in enumerate(expert.model.layers):
             for target in TARGETS:
                 parent_name, attr = target.split(".")
                 parent = getattr(layer, parent_name)
-                lora = LoRALinear(getattr(parent, attr), rank, alpha)
+                lora = LoRALinear(getattr(parent, attr), r, a)
                 lora.ruach_key = f"{PREFIX[half]}.model.layers.{i}.{target}"
                 setattr(parent, attr, lora)
                 out[half].append(lora)

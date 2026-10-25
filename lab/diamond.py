@@ -36,6 +36,7 @@ SOURCES = [
     {"name": "💎 Voice Types", "folder": "voice-types"},
     {"name": "💎 Voice Types LoRA", "folder": "voice-types-lora"},   # HERESY 1167: the six voice adapters sung (Viktor 06.10)
     {"name": "💎 Dual CFG", "folder": "dual-cfg"},   # HERESY 1403 (Viktor 12.10.2026: «воркспейс… переименовать в `💎 Dual CFG`, залочить и оформить его в HF бакет»): the two guidances' grid
+    {"name": "💎 Keys Probe", "folder": "keys-probe"},   # HERESY 1723 (Viktor 22.10.2026: «Да, выкладывай `💎 Keys Probe`»): one ballad in every key (1475)
 ]
 MANIFEST = "workspace.json"
 FORMAT = "ruach-workspace 1"

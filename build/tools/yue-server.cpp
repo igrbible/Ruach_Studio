@@ -11,6 +11,7 @@
 
 #include "audio-io.h"
 #include "flac-enc.h"
+#include "backend.h"
 #include "httplib.h"
 #include "pipeline.h"
 #include "version.h"
@@ -115,30 +116,35 @@ static int fd_isatty(int fd) {  // Local addition
 
 static httplib::Server * g_svr = nullptr;
 
-// Build a multipart/mixed body with one JSON replay request part followed by
-// its audio part, per rendered track. The boundary is fixed; the client splits
-// on it and types parts by their header.
+// Build a multipart/mixed body with, per rendered track, its JSON replay
+// request part, its audio part and its latent part (raw f32 [T, 64] time
+// major, the .vae layout). The boundary is fixed; the client splits on it
+// and types parts by their header.
 static const char * MULTIPART_BOUNDARY = "yue2-batch-boundary";
 
-static std::string multipart_build_tracks(const std::vector<std::string> & request_parts,
-                                          const std::vector<std::string> & audio_parts,
-                                          const char *                     audio_mime) {
+static std::string multipart_build_tracks(const std::vector<std::string> &        request_parts,
+                                          const std::vector<std::string> &        audio_parts,
+                                          const char *                            audio_mime,
+                                          const std::vector<std::vector<float>> & latents) {
     // One set of literal fragments sizes the body exactly and builds it:
     // audio parts weigh tens of MB, growing the string through repeated
     // appends would reallocate and copy them
     const char * dash       = "--";
     const char * json_head  = "\r\nContent-Type: application/json\r\n\r\n";
     const char * audio_head = "\r\nContent-Type: ";
-    const char * head_end   = "\r\n\r\n";
-    const char * crlf       = "\r\n";
-    const char * close_end  = "--\r\n";
+    const char * latent_head =
+        "\r\nContent-Type: application/octet-stream\r\n"
+        "Content-Disposition: form-data; name=\"latent\"\r\n\r\n";
+    const char * head_end  = "\r\n\r\n";
+    const char * crlf      = "\r\n";
+    const char * close_end = "--\r\n";
 
     const size_t boundary_len = strlen(MULTIPART_BOUNDARY);
-    const size_t per_track    = 2 * strlen(dash) + 2 * boundary_len + strlen(json_head) + 2 * strlen(crlf) +
-                             strlen(audio_head) + strlen(audio_mime) + strlen(head_end);
+    const size_t per_track    = 3 * strlen(dash) + 3 * boundary_len + strlen(json_head) + 3 * strlen(crlf) +
+                             strlen(audio_head) + strlen(audio_mime) + strlen(head_end) + strlen(latent_head);
     size_t total = strlen(dash) + boundary_len + strlen(close_end);
     for (size_t i = 0; i < audio_parts.size(); i++) {
-        total += per_track + request_parts[i].size() + audio_parts[i].size();
+        total += per_track + request_parts[i].size() + audio_parts[i].size() + latents[i].size() * sizeof(float);
     }
 
     std::string body;
@@ -155,6 +161,11 @@ static std::string multipart_build_tracks(const std::vector<std::string> & reque
         body += audio_mime;
         body += head_end;
         body += audio_parts[i];
+        body += crlf;
+        body += dash;
+        body += MULTIPART_BOUNDARY;
+        body += latent_head;
+        body.append(reinterpret_cast<const char *>(latents[i].data()), latents[i].size() * sizeof(float));
         body += crlf;
     }
     body += dash;
@@ -567,6 +578,7 @@ static bool         g_keep_loaded = false;
 static std::string  g_model_path;
 static std::string  g_vae_path;
 static std::string  g_transcriber_path;
+static std::string  g_tokenizer_path;
 
 // Local additions: named decoders, the slider catalog and the song library
 struct SliderInfo {
@@ -998,8 +1010,8 @@ static std::string library_save(const Yue2Request & replay,
         yyjson_mut_obj_add_val(doc, root, "stages", st);
     }
     {
-        std::lock_guard<std::mutex> settings_lock(mtx_settings);
-        yyjson_mut_obj_add_strcpy(doc, root, "model", g_settings.model.c_str());
+        std::lock_guard<std::mutex> settings_lock(mtx_settings);   // HERESY 1661: the backbone the job named, else the Engine's
+        yyjson_mut_obj_add_strcpy(doc, root, "model", replay.backbone.empty() ? g_settings.model.c_str() : replay.backbone.c_str());
     }
     char * json = yyjson_mut_write(doc, YYJSON_WRITE_PRETTY, NULL);
     ok          = ok && json && write_file(dir + "/meta.json", json);
@@ -1667,6 +1679,15 @@ static void handle_props(const httplib::Request &, httplib::Response & res) {
     yyjson_mut_obj_add_int(doc, root, "max_batch", g_pipeline.params.max_batch);
     yyjson_mut_obj_add_bool(doc, root, "transcriber", !g_transcriber_path.empty());
     yyjson_mut_obj_add_bool(doc, root, "outputs", !g_outputs_dir.empty());
+    // The adapter directory, each entry with the halves it changes
+    yyjson_mut_val * adapters = yyjson_mut_arr(doc);
+    for (const AdapterEntry & e : g_pipeline.adapters) {
+        yyjson_mut_val * item = yyjson_mut_arr_add_obj(doc, adapters);
+        yyjson_mut_obj_add_strncpy(doc, item, "name", e.name.c_str(), e.name.size());
+        yyjson_mut_obj_add_bool(doc, item, "ar", e.halves & ADAPTER_AR);
+        yyjson_mut_obj_add_bool(doc, item, "nar", e.halves & ADAPTER_NAR);
+    }
+    yyjson_mut_obj_add_val(doc, root, "adapters", adapters);
 
     // The defaults are the request schema itself, serialized by the request
     // writer and grafted here: one source of truth, one float formatting
@@ -1687,8 +1708,8 @@ static void handle_props(const httplib::Request &, httplib::Response & res) {
 
 // Validates what the pipeline would refuse anyway, so a bad request fails
 // fast with a 400 instead of occupying the worker
-static bool validate(const httplib::Request & req, httplib::Response & res, Yue2Request * r) {
-    if (!request_parse_json(r, req.body.c_str())) {
+static bool validate(const std::string & json, httplib::Response & res, Yue2Request * r) {
+    if (!request_parse_json(r, json.c_str())) {
         res.status = 400;
         res.set_content(json_string("error", "invalid JSON"), "application/json");
         return false;
@@ -1748,6 +1769,9 @@ static bool validate(const httplib::Request & req, httplib::Response & res, Yue2
         if (!known) {
             return fail("unknown decoder (see /props vaes)");
         }
+    }
+    if (!r->harmony_error.empty()) {   // HERESY 1606
+        return fail(r->harmony_error.c_str());
     }
     if (!(r->end_at >= 0.0f && r->end_at < 36000.0f) || !(r->fade_out >= 0.0f && r->fade_out <= 30.0f) ||
         !(r->fade_in >= 0.0f && r->fade_in <= 30.0f)) {   // HERESY 1169, 1324
@@ -1810,8 +1834,23 @@ static bool validate(const httplib::Request & req, httplib::Response & res, Yue2
         }
         r->loras = kept;
     }
-    if (r->plan_only && (cot == YUE2_COT_OFF || !r->abc.empty() || !r->semantic_tokens.empty())) {
+    if (r->abc_continue && (r->abc.empty() || cot == YUE2_COT_OFF || !r->semantic_tokens.empty())) {   // HERESY 1608
+        return fail("abc_continue takes the opening of a score in melody or full mode, and no semantic stream");
+    }
+    if (r->plan_only && (cot == YUE2_COT_OFF || (!r->abc.empty() && !r->abc_continue) || !r->semantic_tokens.empty())) {
         return fail("plan_only needs full or melody mode, no supplied score and no semantic stream");
+    }
+    for (const Yue2Adapter & a : r->adapters) {
+        if (!adapter_find(g_pipeline.adapters, a.name)) {
+            res.status = 400;
+            res.set_content(json_string("error", "adapter not found: " + a.name), "application/json");
+            return false;
+        }
+    }
+    if (!r->semantic_tokens.empty() && !r->source_tokens.empty()) {
+        res.status = 400;
+        res.set_content(json_string("error", "semantic_tokens and source_tokens are exclusive"), "application/json");
+        return false;
     }
     request_resolve_seed(r);
     return true;
@@ -1823,7 +1862,7 @@ static void run_transcribe(std::shared_ptr<Job> job, std::vector<float> audio, b
     job->started.store(true);
     active_job_set(job);
     fprintf(stderr, "[Server] Transcribe job %s: %.1f s of audio, %s\n", job->id.c_str(),
-            (double) audio.size() / SS2_SAMPLE_RATE, melody_only ? "melody only" : "full score");
+            (double) audio.size() / MERT_SAMPLE_RATE, melody_only ? "melody only" : "full score");
     std::string abc, error;
     bool        ok = pipeline_transcribe(&g_pipeline, audio.data(), (int) audio.size(), melody_only, &abc, &error);
     active_job_set(nullptr);
@@ -1897,16 +1936,122 @@ static void decode_job(std::shared_ptr<Job> job, const Yue2Request & request) {
     std::vector<std::string> request_parts = { request_to_json(&replay) };
     std::vector<std::string> audio_parts   = { audio };
     if (!g_outputs_dir.empty()) {
-        std::string name = library_save(replay, audio, is_mp3, song, 0, 1, 0, 0, !request.abc.empty(), render_seconds);
+        std::string name = library_save(replay, audio, is_mp3, song, 0, 1, 0, 0, !request.abc.empty() && !request.score_planned, render_seconds);
         if (!name.empty()) {
             job->takes.push_back(name);
             latents_save(g_outputs_dir + "/" + name, song);
         }
     }
     active_job_set(nullptr);
-    job->result_body = multipart_build_tracks(request_parts, audio_parts, is_mp3 ? "audio/mpeg" : "audio/wav");
+    job->result_body = multipart_build_tracks(request_parts, audio_parts, is_mp3 ? "audio/mpeg" : "audio/wav",
+                                              std::vector<std::vector<float>>{ song.latents });   // upstream 1603: a latent part per track
     job->result_mime = MULTIPART_MIME;
     job->status.store(JobStatus::DONE);
+}
+
+// Tokenize worker: the uploaded recording becomes its semantic codes, the
+// stream a card keeps for its replay and for the continuations it opens.
+static void run_tokenize(std::shared_ptr<Job> job, std::vector<float> audio) {
+    active_job_set(job);
+    fprintf(stderr, "[Server] Tokenize job %s: %.1f s of audio\n", job->id.c_str(),
+            (double) audio.size() / MERT_SAMPLE_RATE);
+    std::vector<int> codes;
+    std::string      error;
+    bool             ok = pipeline_tokenize(&g_pipeline, audio.data(), (int) audio.size(), &codes, &error);
+    active_job_set(nullptr);
+    if (!ok) {
+        fprintf(stderr, "[Server] Tokenize job %s failed: %s\n", job->id.c_str(), error.c_str());
+        job->status.store(job->cancel.load() ? JobStatus::CANCELLED : JobStatus::FAILED);
+        return;
+    }
+    job->result_body = json_string("codes", pipeline_format_tokens(codes));
+    job->result_mime = "application/json";
+    job->status.store(JobStatus::DONE);
+}
+
+// The audio part of a track: peak normalized except WAV32, then encoded in
+// the output format of the request
+static std::string encode_audio(const Yue2Request & request, std::vector<float> & audio, int T_audio) {
+    bool      is_mp3  = false;
+    WavFormat wav_fmt = WAV_S16;
+    audio_parse_format(request.output_format.c_str(), is_mp3, wav_fmt);
+    if (is_mp3 || wav_fmt != WAV_F32) {
+        audio_normalize(audio.data(), T_audio * 2, request.peak_clip);
+    }
+    return is_mp3 ? audio_encode_mp3(audio.data(), T_audio, YUE2_SAMPLE_RATE, request.mp3_bitrate) :
+                    audio_encode_wav(audio.data(), T_audio, YUE2_SAMPLE_RATE, wav_fmt);
+}
+
+// VAE worker, encode: the uploaded recording becomes its latents, raw f32
+// [T, 64] time major, the .vae layout
+static void run_vae_encode(std::shared_ptr<Job> job, std::vector<float> planar, int T, int sr) {
+    active_job_set(job);
+    fprintf(stderr, "[Server] VAE encode job %s: %.1f s of audio\n", job->id.c_str(), (double) T / sr);
+    std::vector<float> latents;
+    int                T_lat = 0;
+    bool               ok    = pipeline_encode(&g_pipeline, planar.data(), T, sr, &latents, &T_lat);
+    active_job_set(nullptr);
+    if (!ok) {
+        job->status.store(job->cancel.load() ? JobStatus::CANCELLED : JobStatus::FAILED);
+        return;
+    }
+    job->result_body.assign(reinterpret_cast<const char *>(latents.data()), latents.size() * sizeof(float));
+    job->result_mime = "application/octet-stream";
+    job->status.store(JobStatus::DONE);
+}
+
+// VAE worker, decode: uploaded latents become audio in the output format of
+// the request
+static void run_vae_decode(std::shared_ptr<Job> job, Yue2Request request, std::vector<float> latents, int T_lat) {
+    active_job_set(job);
+    fprintf(stderr, "[Server] VAE decode job %s: %d latent frames\n", job->id.c_str(), T_lat);
+    VAEGGML *   vae = require_vae(&g_pipeline);
+    bool        ok  = vae != nullptr;
+    std::string audio_part;
+    if (ok) {
+        ModelHandle        hold(g_pipeline.store, vae);
+        std::vector<float> audio;
+        int                T_audio = 0;
+        ok = pipeline_decode(&g_pipeline, vae, latents.data(), T_lat, &audio, &T_audio, server_cancel_job,
+                             (void *) &job->cancel);
+        if (ok) {
+            audio_part = encode_audio(request, audio, T_audio);
+            ok         = !audio_part.empty();
+        }
+    }
+    active_job_set(nullptr);
+    if (!ok) {
+        job->status.store(job->cancel.load() ? JobStatus::CANCELLED : JobStatus::FAILED);
+        return;
+    }
+    bool      is_mp3  = false;
+    WavFormat wav_fmt = WAV_S16;
+    audio_parse_format(request.output_format.c_str(), is_mp3, wav_fmt);
+    job->result_body = std::move(audio_part);
+    job->result_mime = is_mp3 ? "audio/mpeg" : "audio/wav";
+    job->status.store(JobStatus::DONE);
+}
+
+// HERESY 1661: the job's backbone (its own name, else the Engine's) made the one the pipeline loads; on the worker, between jobs, as
+// settings_apply does; false for a name that is none of --model's
+static bool backbone_for(const std::string & named) {
+    std::string want = named;
+    if (want.empty()) {
+        std::lock_guard<std::mutex> lock(mtx_settings);
+        want = g_settings.model;
+    }
+    for (const auto & m : g_models) {
+        if (m.first == want) {
+            if (g_pipeline.model_path != m.second) {
+                fprintf(stderr, "[Server] Backbone for this job: %s (%s)\n", m.first.c_str(), m.second.c_str());
+                g_pipeline.model_path = m.second;
+                g_model_path          = m.second;
+                store_unload_idle(g_pipeline.store);
+            }
+            return true;
+        }
+    }
+    return named.empty();   // an Engine choice the server does not have: as before, the loaded one
 }
 
 static void run_job(std::shared_ptr<Job> job, Yue2Request request) {
@@ -1921,6 +2066,16 @@ static void run_job(std::shared_ptr<Job> job, Yue2Request request) {
         return;
     }
 
+    if (!backbone_for(request.backbone)) {   // HERESY 1661
+        std::string have;
+        for (const auto & m : g_models) {
+            have += (have.empty() ? "" : ", ") + m.first;
+        }
+        active_job_set(nullptr);
+        job->error = "no backbone \"" + request.backbone + "\" here; this engine has " + have;
+        job->status.store(JobStatus::FAILED);
+        return;
+    }
     std::vector<Yue2Song> songs;
     auto                  started = std::chrono::steady_clock::now();
     bool ok = pipeline_generate(&g_pipeline, request, &songs, server_cancel_job, (void *) &job->cancel);
@@ -1949,12 +2104,13 @@ static void run_job(std::shared_ptr<Job> job, Yue2Request request) {
     WavFormat wav_fmt = WAV_S16;
     audio_parse_format(request.output_format.c_str(), is_mp3, wav_fmt);
 
-    // One part pair per track, song-major. The replay request of a track
+    // One part triple per track, song-major. The replay request of a track
     // carries its semantic stream, its score and the seeds it consumed, so a
     // resubmit reproduces it without the autoregression.
-    const int                M = request.synth_batch_size;
-    std::vector<std::string> audio_parts;
-    std::vector<std::string> request_parts;
+    const int                       M = request.synth_batch_size;
+    std::vector<std::string>        audio_parts;
+    std::vector<std::string>        request_parts;
+    std::vector<std::vector<float>> latents;
     for (size_t t = 0; t < songs.size(); t++) {
         Yue2Song & song = songs[t];
         if (request.fade_out > 0.0f) {   // HERESY 1169
@@ -1981,16 +2137,17 @@ static void run_job(std::shared_ptr<Job> job, Yue2Request request) {
         // Local addition: every track lands in the library as it is encoded
         if (!g_outputs_dir.empty()) {
             std::string name = library_save(replay, audio_parts.back(), is_mp3, song, (int) t, (int) songs.size(),
-                                            (int) t / M, (int) t % M, !request.abc.empty(), render_seconds);
+                                            (int) t / M, (int) t % M, !request.abc.empty() && !request.score_planned, render_seconds);
             if (!name.empty()) {
                 job->takes.push_back(name);
                 latents_save(g_outputs_dir + "/" + name, song);   // HERESY 1168: for another decoder, in seconds
             }
         }
+        latents.push_back(std::move(song.latents));
     }
 
     active_job_set(nullptr);
-    job->result_body = multipart_build_tracks(request_parts, audio_parts, is_mp3 ? "audio/mpeg" : "audio/wav");
+    job->result_body = multipart_build_tracks(request_parts, audio_parts, is_mp3 ? "audio/mpeg" : "audio/wav", latents);
     job->result_mime = MULTIPART_MIME;
     job->status.store(JobStatus::DONE);
 }
@@ -2005,7 +2162,11 @@ static void print_usage(const char * prog) {
             "  --vae <gguf>           VAE GGUF\n"
             "\n"
             "Optional:\n"
-            "  --transcriber <gguf>   SheetSage2 GGUF, enables /transcribe\n"
+            "  --device <name>        Compute device: CUDA0, Vulkan0, MTL0, CPU...\n"
+            "                         (default: best available)\n"
+            "  --transcriber <gguf>   SheetSage2 GGUF, MERT beside it, enables /transcribe\n"
+            "  --tokenizer <gguf>     Audio tokenizer GGUF, MERT beside it, enables /tokenize\n"
+            "  --adapters <dir>       Directory of LoRA adapters a request can stack\n"
             "  --vae <name>=<gguf>    Another named decoder, selectable per request (repeatable)\n"
             "  --sliders <dir>        Slider GGUFs + catalog.json (voice and genre sliders)\n"
             "  --loras <dir>          LoRA .safetensors files or folders (links are followed)\n"
@@ -2032,8 +2193,9 @@ int main(int argc, char ** argv) {
         return 1;
     }
 
-    const char *       host = "0.0.0.0";
-    int                port = 8087;
+    const char *       host   = "0.0.0.0";
+    const char *       device = nullptr;
+    int                port   = 8087;
     Yue2PipelineParams params;
 
     for (int i = 1; i < argc; i++) {
@@ -2084,8 +2246,14 @@ int main(int argc, char ** argv) {
                     g_pipeline.lora_dir.c_str());
         } else if (!strcmp(argv[i], "--outputs") && !last) {
             g_outputs_dir = argv[++i];
+        } else if (!strcmp(argv[i], "--device") && !last) {   // upstream 1603
+            device = argv[++i];
         } else if (!strcmp(argv[i], "--transcriber") && !last) {
             g_transcriber_path = argv[++i];
+        } else if (!strcmp(argv[i], "--tokenizer") && !last) {
+            g_tokenizer_path = argv[++i];
+        } else if (!strcmp(argv[i], "--adapters") && !last) {
+            params.adapters_dir = argv[++i];
         } else if (!strcmp(argv[i], "--host") && !last) {
             host = argv[++i];
         } else if (!strcmp(argv[i], "--port") && !last) {
@@ -2116,6 +2284,10 @@ int main(int argc, char ** argv) {
     }
 
     if (g_model_path.empty() || g_vae_path.empty()) {
+        print_usage(argv[0]);
+        return 1;
+    }
+    if (device && !backend_set_device(device)) {
         print_usage(argv[0]);
         return 1;
     }
@@ -2170,6 +2342,7 @@ int main(int argc, char ** argv) {
         std::filesystem::create_directories(g_outputs_dir, ec);
         fprintf(stderr, "[Server] Library: %s\n", g_outputs_dir.c_str());
     }
+    g_pipeline.tokenizer_path   = g_tokenizer_path;
     if (!pipeline_configure(&g_pipeline, g_model_path.c_str(), g_vae_path.c_str(), params)) {
         store_free(g_pipeline.store);
         return 1;
@@ -2343,7 +2516,7 @@ int main(int argc, char ** argv) {
 
     svr.Post("/synth", [](const httplib::Request & req, httplib::Response & res) {
         Yue2Request request;
-        if (!validate(req, res, &request)) {
+        if (!validate(req.body, res, &request)) {
             return;
         }
         auto job     = job_create();
@@ -2385,7 +2558,7 @@ int main(int argc, char ** argv) {
             int                 T = 0, sr = 0;
             float *             planar = audio_read_buf((const uint8_t *) file.data(), file.size(), &T, &sr);
             std::vector<float>  audio;
-            if (!planar || !ss2_mono_24k(planar, T, sr, &audio)) {
+            if (!planar || !mert_mono_24k(planar, T, sr, &audio)) {
                 res.status = 400;
                 res.set_content(json_string("error", "cannot decode audio"), "application/json");
                 return;
@@ -2395,6 +2568,89 @@ int main(int argc, char ** argv) {
             res.set_content(json_string("id", job->id), "application/json");
         });
     }
+
+    // POST /tokenize, multipart/form-data: an "audio" part (WAV or MP3). The
+    // route is served when an audio tokenizer is given.
+    if (!g_tokenizer_path.empty()) {
+        svr.Post("/tokenize", [](const httplib::Request & req, httplib::Response & res) {
+            if (!req.is_multipart_form_data() || !req.form.has_file("audio")) {
+                res.status = 400;
+                res.set_content(json_string("error", "multipart audio part required"), "application/json");
+                return;
+            }
+            const std::string & file = req.form.get_file("audio").content;
+            int                 T = 0, sr = 0;
+            float *             planar = audio_read_buf((const uint8_t *) file.data(), file.size(), &T, &sr);
+            std::vector<float>  audio;
+            if (!planar || !mert_mono_24k(planar, T, sr, &audio)) {
+                res.status = 400;
+                res.set_content(json_string("error", "cannot decode audio"), "application/json");
+                return;
+            }
+            auto job = job_create();
+            work_push([job, audio] { run_tokenize(job, audio); });
+            res.set_content(json_string("id", job->id), "application/json");
+        });
+    }
+
+    // POST /vae, multipart/form-data: exactly one of an "audio" part (WAV or
+    // MP3, encode: raw latents out) or a "src_latents" part (raw f32 [T, 64]
+    // time major, decode: audio out), and an optional "request" part whose
+    // output format, peak clip and bitrate drive the decode. The result
+    // carries the other side alone, the client holds the one it sent.
+    svr.Post("/vae", [](const httplib::Request & req, httplib::Response & res) {
+        bool has_audio   = req.is_multipart_form_data() && req.form.has_file("audio");
+        bool has_latents = req.is_multipart_form_data() && req.form.has_file("src_latents");
+        if (has_audio == has_latents) {
+            res.status = 400;
+            res.set_content(json_string("error", "provide exactly one of audio (encode) or src_latents (decode)"),
+                            "application/json");
+            return;
+        }
+        Yue2Request request;
+        request_init(&request);
+        if (req.form.has_file("request") &&
+            !request_parse_json(&request, req.form.get_file("request").content.c_str())) {
+            res.status = 400;
+            res.set_content(json_string("error", "invalid JSON in the request part"), "application/json");
+            return;
+        }
+        if (has_audio) {
+            const std::string & file = req.form.get_file("audio").content;
+            int                 T = 0, sr = 0;
+            float *             planar = audio_read_buf((const uint8_t *) file.data(), file.size(), &T, &sr);
+            if (!planar) {
+                res.status = 400;
+                res.set_content(json_string("error", "cannot decode audio"), "application/json");
+                return;
+            }
+            std::vector<float> audio(planar, planar + (size_t) 2 * T);
+            free(planar);
+            auto job = job_create();
+            work_push([job, audio, T, sr] { run_vae_encode(job, audio, T, sr); });
+            res.set_content(json_string("id", job->id), "application/json");
+        } else {
+            const std::string & file    = req.form.get_file("src_latents").content;
+            const size_t        frame   = (size_t) YUE2_LATENT_DIM * sizeof(float);
+            int                 T_lat   = (int) (file.size() / frame);
+            bool                is_mp3  = false;
+            WavFormat           wav_fmt = WAV_S16;
+            if (file.empty() || file.size() % frame != 0 || T_lat > YUE2_CONTEXT ||
+                !audio_parse_format(request.output_format.c_str(), is_mp3, wav_fmt)) {
+                res.status = 400;
+                res.set_content(json_string("error",
+                                            "src_latents must be [T, 64] f32 within the context, "
+                                            "output_format known"),
+                                "application/json");
+                return;
+            }
+            std::vector<float> latents((size_t) T_lat * YUE2_LATENT_DIM);
+            memcpy(latents.data(), file.data(), file.size());
+            auto job = job_create();
+            work_push([job, request, latents, T_lat] { run_vae_decode(job, request, latents, T_lat); });
+            res.set_content(json_string("id", job->id), "application/json");
+        }
+    });
 
     svr.Get("/job", [](const httplib::Request & req, httplib::Response & res) {
         auto job = job_find(req.get_param_value("id"));

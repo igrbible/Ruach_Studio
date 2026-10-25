@@ -32,6 +32,7 @@
 //   neural-codec --vae model.gguf --decode -i song.nac4 -o song.wav
 
 #include "audio-io.h"
+#include "backend.h"
 #include "vae-enc.h"
 #include "vae.h"
 #include "version.h"
@@ -261,6 +262,8 @@ static void print_usage(const char * prog) {
             "  -i <path>               Input file\n"
             "\n"
             "Optional:\n"
+            "  --device <name>         Compute device: CUDA0, Vulkan0, MTL0, CPU...\n"
+            "                          (default: best available)\n"
             "  -o <path>               Output file (default: input with swapped extension)\n"
             "  --q8                    Quantize the latent to int8 (encode only)\n"
             "  --q4                    Quantize the latent to 4 bits (encode only)\n"
@@ -292,6 +295,7 @@ int main(int argc, char ** argv) {
     }
 
     const char * vae_path    = nullptr;
+    const char * device      = nullptr;
     const char * input_path  = nullptr;
     const char * output_path = nullptr;
     const char * format      = "wav16";
@@ -307,6 +311,8 @@ int main(int argc, char ** argv) {
             vae_path = argv[++i];
         } else if (!strcmp(argv[i], "-i") && !last) {
             input_path = argv[++i];
+        } else if (!strcmp(argv[i], "--device") && !last) {
+            device = argv[++i];
         } else if (!strcmp(argv[i], "-o") && !last) {
             output_path = argv[++i];
         } else if (!strcmp(argv[i], "--format") && !last) {
@@ -332,6 +338,10 @@ int main(int argc, char ** argv) {
     }
 
     if (!vae_path || mode < 0 || !input_path) {
+        print_usage(argv[0]);
+        return 1;
+    }
+    if (device && !backend_set_device(device)) {
         print_usage(argv[0]);
         return 1;
     }

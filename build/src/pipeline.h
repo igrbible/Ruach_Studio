@@ -14,8 +14,11 @@
 // left complete, end token included, so a generated song that fits one
 // chunk never prefills, and the cache outlives both halves. It lives for
 // one generate under the strict policy, so the GPU is empty between
-// requests, and stays under --keep-loaded.
+// requests, and stays under --keep-loaded. The adapters of a request merge
+// into the halves at load, a half under another adapter list being another
+// module of the store.
 
+#include "audio-resample.h"
 #include "generate.h"
 #include "model-store.h"
 #include "nar.h"
@@ -23,11 +26,13 @@
 #include "sliders.h"
 #include "timer.h"
 #include "torch-cpu-rng.h"
+#include "vae-enc.h"
 #include "vae.h"
 
 #include <cstdlib>
 #include <regex>
 #include <cstring>
+#include <cctype>   // HERESY 1743
 #include <optional>
 #include <string>
 #include <vector>
@@ -50,7 +55,8 @@ struct Yue2PipelineParams {
     int  vae_core   = 512;            // VAE tile core frames
     int  vae_halo   = 16;             // VAE tile halo frames
 
-    const char * dump_dir = nullptr;  // probe dumps of the first track for the cossim harness
+    const char * dump_dir     = nullptr;  // probe dumps of the first track for the cossim harness
+    const char * adapters_dir = nullptr;  // the adapters requests can stack, none without it
 };
 
 struct Yue2Pipeline {
@@ -58,7 +64,9 @@ struct Yue2Pipeline {
     std::string        model_path;        // the backbone GGUF, both halves and the tokenizer
     std::string        vae_path;
     std::string        transcriber_path;  // the SheetSage2 GGUF, empty without one
+    std::string        tokenizer_path;    // upstream: the audio tokenizer GGUF, empty without one
     Yue2PipelineParams params;
+    std::vector<AdapterEntry> adapters;   // upstream: the adapter directory, scanned at configure
 
     // Local additions: named decoders (the first is the default; vae_path is
     // its path) and the slider catalog, id -> GGUF path
@@ -165,6 +173,9 @@ static bool pipeline_configure(Yue2Pipeline *             p,
     if (!store_bpe(p->store, model_path)) {
         return false;
     }
+    if (params.adapters_dir) {
+        p->adapters = adapter_scan(params.adapters_dir);
+    }
 
     Qwen3LMConfig cfg;
     if (!qw3lm_read_config(model_path, &cfg)) {
@@ -186,6 +197,31 @@ static void pipeline_free(Yue2Pipeline * p) {
     qw3lm_kv_free(&p->kv);
     backend_release(p->kv_backend.backend, p->kv_backend.cpu_backend);
     p->configured = false;
+}
+
+// The adapters of a request resolved to their files, split by the half each
+// changes. A zero strength leaves the halves as they are.
+static bool pipeline_adapters(const Yue2Pipeline *      p,
+                              const Yue2Request &       r,
+                              std::vector<AdapterUse> * ar,
+                              std::vector<AdapterUse> * nar) {
+    for (const Yue2Adapter & a : r.adapters) {
+        const AdapterEntry * e = adapter_find(p->adapters, a.name);
+        if (!e) {
+            fprintf(stderr, "[Pipeline] FATAL: adapter %s not found\n", a.name.c_str());
+            return false;
+        }
+        if (a.scale == 0.0f) {
+            continue;
+        }
+        if (e->halves & ADAPTER_AR) {
+            ar->push_back({ e->path, a.scale });
+        }
+        if (e->halves & ADAPTER_NAR) {
+            nar->push_back({ e->path, a.scale });
+        }
+    }
+    return true;
 }
 
 // Require helpers: one place builds the store key of each module from the
@@ -214,8 +250,8 @@ static bool pipeline_lora_rt(Yue2Pipeline * p, int half, const void * model, ggm
     return true;
 }
 
-static Qwen3LM * require_lm(Yue2Pipeline * p) {
-    ModelKey k = { MODEL_LM, p->model_path };
+static Qwen3LM * require_lm(Yue2Pipeline * p, const std::vector<AdapterUse> & adapters) {
+    ModelKey k = { MODEL_LM, p->model_path, adapters };   // upstream's adapters in the key too (1603)
     if (p->loras && !p->loras->sig[0].empty()) {   // Local addition: the music half's LoRAs
         k.lora_sig = p->loras->sig[0];
         k.lora     = p->loras;
@@ -237,8 +273,8 @@ static Qwen3LM * require_lm(Yue2Pipeline * p) {
     return m;
 }
 
-static Yue2NAR * require_nar(Yue2Pipeline * p) {
-    ModelKey k = { MODEL_NAR, p->model_path };
+static Yue2NAR * require_nar(Yue2Pipeline * p, const std::vector<AdapterUse> & adapters) {
+    ModelKey k = { MODEL_NAR, p->model_path, adapters };   // upstream's adapters in the key too (1603)
     if (p->loras && !p->loras->sig[1].empty()) {   // Local addition: the sound half's LoRAs
         k.lora_sig = p->loras->sig[1];
         k.lora     = p->loras;
@@ -415,8 +451,90 @@ static std::string pipeline_slider_path(const Yue2Pipeline * p, const std::strin
     return "";
 }
 
+static VAEGGML * require_vae(Yue2Pipeline * p) {
+    ModelKey k = { MODEL_VAE, p->vae_path, {} };
+    return store_require_vae(p->store, k);
+}
+
+static VAEEncoder * require_vae_enc(Yue2Pipeline * p) {
+    ModelKey k = { MODEL_VAE_ENC, p->vae_path, {} };
+    return store_require_vae_enc(p->store, k);
+}
+
+// Latents [T_lat, 64] time major to 48 kHz planar stereo [2, T_audio]
+static bool pipeline_decode(Yue2Pipeline *       p,
+                            VAEGGML *            vae,
+                            const float *        latents,
+                            int                  T_lat,
+                            std::vector<float> * audio,
+                            int *                T_audio,
+                            bool (*cancelled)(void *),
+                            void * cancel_data) {
+    int max_T_audio = T_lat * YUE2_HOP;
+    audio->assign((size_t) 2 * max_T_audio, 0.0f);
+    *T_audio = vae_ggml_decode_tiled(vae, latents, T_lat, audio->data(), max_T_audio, p->params.vae_core,
+                                     p->params.vae_halo, cancelled, cancel_data);
+    if (*T_audio < 0) {
+        return false;
+    }
+    audio->resize((size_t) 2 * *T_audio);
+    return true;
+}
+
+// A recording to its latents: planar stereo at any rate, each channel
+// resampled to 48 kHz, through the VAE encoder; [T_lat, 64] time major
+static bool pipeline_encode(Yue2Pipeline *       p,
+                            const float *        planar,
+                            int                  T,
+                            int                  sr,
+                            std::vector<float> * latents,
+                            int *                T_lat) {
+    int                T_audio = T;
+    std::vector<float> channels[2];
+    for (int c = 0; c < 2; c++) {
+        if (sr == YUE2_SAMPLE_RATE) {
+            channels[c].assign(planar + (size_t) c * T, planar + (size_t) (c + 1) * T);
+            continue;
+        }
+        float * rs = audio_resample(planar + (size_t) c * T, T, sr, YUE2_SAMPLE_RATE, 1, &T_audio);
+        if (!rs) {
+            return false;
+        }
+        channels[c].assign(rs, rs + T_audio);
+        free(rs);
+    }
+    std::vector<float> interleaved((size_t) 2 * T_audio);
+    for (int t = 0; t < T_audio; t++) {
+        interleaved[(size_t) 2 * t]     = channels[0][(size_t) t];
+        interleaved[(size_t) 2 * t + 1] = channels[1][(size_t) t];
+    }
+    VAEEncoder * enc = require_vae_enc(p);
+    if (!enc) {
+        return false;
+    }
+    ModelHandle hold(p->store, enc);
+    int         max_T_lat = T_audio / YUE2_HOP + 1;
+    latents->assign((size_t) max_T_lat * YUE2_LATENT_DIM, 0.0f);
+    *T_lat = vae_enc_encode_tiled(enc, interleaved.data(), T_audio, latents->data(), max_T_lat, p->params.vae_core,
+                                  p->params.vae_halo);
+    if (*T_lat < 0) {
+        return false;
+    }
+    latents->resize((size_t) *T_lat * YUE2_LATENT_DIM);
+    return true;
+}
+
+static AudioTokenizer * require_atok(Yue2Pipeline * p) {
+    ModelKey         k = { MODEL_ATOK, p->tokenizer_path, {} };
+    AudioTokenizer * m = store_require_atok(p->store, k);
+    if (m) {
+        m->use_flash_attn = m->use_flash_attn && !p->params.no_fa;
+    }
+    return m;
+}
+
 static SheetSage2 * require_ss2(Yue2Pipeline * p) {
-    ModelKey     k = { MODEL_SS2, p->transcriber_path };
+    ModelKey     k = { MODEL_SS2, p->transcriber_path, {} };
     SheetSage2 * m = store_require_ss2(p->store, k);
     if (m) {
         m->use_flash_attn = m->use_flash_attn && !p->params.no_fa;
@@ -442,6 +560,26 @@ static bool pipeline_transcribe(Yue2Pipeline * p,
     return ss2_transcribe(m, audio, n_samples, melody_only, abc, error, &p->dumper);
 }
 
+// A recording to its semantic codes, the stream a replay renders. The
+// tokenizer holds the GPU for the call and steps aside after it.
+static bool pipeline_tokenize(Yue2Pipeline *     p,
+                              const float *      audio,
+                              int                n_samples,
+                              std::vector<int> * codes,
+                              std::string *      error) {
+    AudioTokenizer * m = require_atok(p);
+    if (!m) {
+        *error = "audio tokenizer unavailable";
+        return false;
+    }
+    ModelHandle hold(p->store, m);
+    if (!atok_tokenize(m, audio, n_samples, codes, &p->dumper)) {
+        *error = "tokenization failed";
+        return false;
+    }
+    return true;
+}
+
 // The cache of one generate: the stages grow it to the sets they need, a
 // replay to the one set its prefill fills. Freed on every exit under the
 // strict policy, kept under the other.
@@ -455,10 +593,73 @@ struct KvScope {
     }
 };
 
+// The codes of a continuation: the section [source_start, source_end) of
+// the source stream opens the song, the AR writes on behind the prompt and
+// it until the requested length or its end token. The whole song is then
+// rendered like a generated one, the section included.
+static bool pipeline_continue_codes(Yue2Pipeline *           p,
+                                    Qwen3LM *                lm,
+                                    const Yue2Request &      r,
+                                    const std::vector<int> & prompt,
+                                    const std::vector<int> * negative,
+                                    float                    guidance,
+                                    Yue2Generation *         codes,
+                                    bool (*cancelled)(void *),
+                                    void * cancel_data) {
+    std::vector<int> values;
+    if (!pipeline_parse_tokens(r.source_tokens, &values)) {
+        return false;
+    }
+    const int T_src = (int) values.size();
+    const int a     = std::clamp((int) lroundf(r.source_start * YUE2_FRAME_RATE), 0, T_src);
+    const int b     = r.source_end < 0.0f ? T_src : std::clamp((int) lroundf(r.source_end * YUE2_FRAME_RATE), 0, T_src);
+    if (b <= a) {
+        fprintf(stderr, "[Continue] FATAL: empty source section %.2f s .. %.2f s\n", (double) r.source_start,
+                (double) r.source_end);
+        return false;
+    }
+
+    // The requested length counts the section, the stage keeps its own cap
+    Yue2Sampling sampling = r.semantic_sampling;
+    int          budget   = sampling.max_tokens - (b - a);
+    if (r.duration > 0.0f) {
+        budget = std::min(budget, (int) (r.duration * (float) YUE2_FRAME_RATE) - (b - a));
+    }
+    if (budget < 1) {
+        fprintf(stderr, "[Continue] FATAL: nothing left to write after the %d frames of the section\n", b - a);
+        return false;
+    }
+    sampling.max_tokens = budget;
+    sampling.min_tokens = std::min(sampling.min_tokens, budget);
+    fprintf(stderr, "[Continue] Source %d frames, section [%d, %d), budget %d\n", T_src, a, b, budget);
+
+    std::vector<int> section((size_t) (b - a));
+    for (int f = a; f < b; f++) {
+        section[(size_t) (f - a)] = values[(size_t) f] + YUE2_CODEC_OFFSET;
+    }
+    std::vector<std::vector<int>> prefixes(1, prompt), negatives;
+    prefixes[0].insert(prefixes[0].end(), section.begin(), section.end());
+    if (negative) {
+        negatives.assign(1, *negative);
+        negatives[0].insert(negatives[0].end(), section.begin(), section.end());
+    }
+    std::vector<Yue2Generation> drawn;
+    if (!yue2_generate(lm, &p->kv, prefixes, negatives, guidance, sampling, r.lm_seed, YUE2_PHASE_SEMANTIC, &drawn,
+                       cancelled, cancel_data)) {
+        return false;
+    }
+    codes->tokens = section;
+    codes->tokens.insert(codes->tokens.end(), drawn[0].tokens.begin(), drawn[0].tokens.end());
+    codes->truncated = drawn[0].truncated;
+    return true;
+}
+
 // Renders lm_batch_size songs times synth_batch_size variations, song-major:
 // track song * M + variation. Song i draws its tokens with lm_seed + i in
 // KV set i, variation j draws its noise with seed + j, and the M variations
-// of a song solve in one NAR graph over the set the AR left complete.
+// of a song solve in one NAR graph over the set the AR left complete. With
+// source_tokens, the song opens on the section of the source the request
+// names and the AR writes on from it.
 // HERESY 1416: a score without its tempo: the lines that begin with Q: go, and the inline [Q:…] fields within the others
 static std::string yue2_score_without_tempo(const std::string & abc, int * dropped) {
     std::string out;
@@ -493,6 +694,102 @@ static std::string yue2_score_without_tempo(const std::string & abc, int * dropp
     }
     if (dropped) {
         *dropped = n;
+    }
+    return out;
+}
+
+// HERESY 1743: a score with its Vocal voice moved by whole octaves. Only notes move, each by its own octave marks (C, → C → c → c'), so a
+// letter keeps its name and the key and the accidentals stand. The header (to the first K:) is left as it is; in the body, field lines (K: V: w: …),
+// comments, chord symbols "…", decorations !…! and +…+ and inline fields [K:…] are copied; a V: line or an inline [V:…] says whose notes follow.
+// Chords [ceg] and grace notes {g} move with their voice.
+static bool yue2_voice_is_vocal(const std::string & spec) {
+    size_t a = spec.find_first_not_of(" \t");
+    if (a == std::string::npos) {
+        return false;
+    }
+    size_t b = spec.find_first_of(" \t]", a);
+    return spec.compare(a, b == std::string::npos ? std::string::npos : b - a, "Vocal") == 0;
+}
+
+static std::string yue2_score_vocal_octave(const std::string & abc, int octaves, int * moved) {
+    std::string out;
+    int         n     = 0;
+    bool        body  = false;
+    bool        vocal = false;
+    size_t      pos   = 0;
+    while (pos <= abc.size()) {
+        size_t e = abc.find('\n', pos);
+        if (e == std::string::npos) {
+            e = abc.size();
+        }
+        const std::string line = abc.substr(pos, e - pos);
+        pos                    = e + 1;
+        const bool note_letter = !line.empty() && std::strchr("ABCDEFGabcdefg", line[0]) != nullptr;
+        const bool field = line.size() >= 2 && std::isalpha((unsigned char) line[0]) && line[1] == ':' && !(body && note_letter);
+        if (!body || field || line.empty() || line[0] == '%') {
+            if (field && line[0] == 'K') {
+                body = true;
+            } else if (field && line[0] == 'V' && body) {
+                vocal = yue2_voice_is_vocal(line.substr(2));
+            }
+            out += line;
+        } else {
+            size_t i = 0;
+            while (i < line.size()) {
+                const char c = line[i];
+                if (c == '%') {
+                    out.append(line, i, std::string::npos);
+                    break;
+                }
+                if (c == '"' || c == '!' || c == '+') {   // a chord symbol or a decoration, to its closing mark
+                    size_t z = line.find(c, i + 1);
+                    z        = z == std::string::npos ? line.size() : z + 1;
+                    out.append(line, i, z - i);
+                    i = z;
+                    continue;
+                }
+                if (c == '[' && i + 2 < line.size() && std::isalpha((unsigned char) line[i + 1]) && line[i + 2] == ':') {   // an inline field
+                    size_t z = line.find(']', i);
+                    z        = z == std::string::npos ? line.size() : z + 1;
+                    if (line[i + 1] == 'V') {
+                        vocal = yue2_voice_is_vocal(line.substr(i + 3, z - i - 3));
+                    }
+                    out.append(line, i, z - i);
+                    i = z;
+                    continue;
+                }
+                const char * at = std::strchr("ABCDEFGabcdefg", c);
+                if (vocal && c != '\0' && at != nullptr) {   // a note: its letter and its octave marks
+                    const bool low = c >= 'a';
+                    int        o   = low ? 5 : 4;
+                    size_t     j   = i + 1;
+                    for (; j < line.size() && (line[j] == '\'' || line[j] == ','); j++) {
+                        o += line[j] == '\'' ? 1 : -1;
+                    }
+                    o += octaves;
+                    const char up = (char) std::toupper((unsigned char) c);
+                    if (o >= 5) {
+                        out += (char) std::tolower((unsigned char) up);
+                        out.append((size_t) (o - 5), '\'');
+                    } else {
+                        out += up;
+                        out.append((size_t) (4 - o), ',');
+                    }
+                    n++;
+                    i = j;
+                    continue;
+                }
+                out += c;
+                i++;
+            }
+        }
+        if (e >= abc.size()) {
+            break;
+        }
+        out += '\n';
+    }
+    if (moved) {
+        *moved = n;
     }
     return out;
 }
@@ -565,6 +862,10 @@ static std::string yue2_score_broken(const std::string & abc) {
     return out;
 }
 
+// HERESY 1768: the decode ladder: pieces of about 20 s (25 frames a second), each hearing 2 s past its edges
+static const int YUE2_LADDER_PIECE  = 500;
+static const int YUE2_LADDER_MARGIN = 50;
+
 static bool pipeline_generate(Yue2Pipeline *          p,
                               const Yue2Request &     r,
                               std::vector<Yue2Song> * songs,
@@ -588,8 +889,17 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         fprintf(stderr, "[Pipeline] FATAL: unknown decoder '%s'\n", r.vae.c_str());
         return false;
     }
-    if (r.plan_only && (cot == YUE2_COT_OFF || !r.abc.empty())) {
+    if (r.abc_continue && (r.abc.empty() || cot == YUE2_COT_OFF)) {   // HERESY 1608
+        fprintf(stderr, "[Pipeline] FATAL: abc_continue takes the opening of a score in melody or full mode\n");
+        p->last_error = "abc_continue takes the opening of a score in melody or full mode";
+        return false;
+    }
+    if (r.plan_only && (cot == YUE2_COT_OFF || (!r.abc.empty() && !r.abc_continue))) {
         fprintf(stderr, "[Pipeline] FATAL: plan_only needs full or melody mode and no supplied score\n");
+        return false;
+    }
+    std::vector<AdapterUse> ar_adapters, nar_adapters;
+    if (!pipeline_adapters(p, r, &ar_adapters, &nar_adapters)) {
         return false;
     }
 
@@ -644,27 +954,39 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         return bpe_encode(tok, text);
     };
 
-    // A supplied stream is one song, the batch counter has nothing to draw
-    bool replay = !r.semantic_tokens.empty();
-    if (replay && r.lm_batch_size > 1) {
-        fprintf(stderr, "[Pipeline] Replay: lm_batch_size ignored\n");
+    // A supplied stream is replayed, a source section is continued; either
+    // is one song, the batch counter has nothing to draw
+    bool replay    = !r.semantic_tokens.empty();
+    bool continued = !r.source_tokens.empty();
+    if (replay && continued) {
+        fprintf(stderr, "[Pipeline] FATAL: semantic_tokens and source_tokens are exclusive\n");
+        return false;
     }
-    const int B = replay ? 1 : r.lm_batch_size;
+    if ((replay || continued) && r.lm_batch_size > 1) {
+        fprintf(stderr, "[Pipeline] Supplied stream: lm_batch_size ignored\n");
+    }
+    const int B = replay || continued ? 1 : r.lm_batch_size;
     const int M = r.synth_batch_size;
+
+    // A supplied stream with no score renders without one, whatever the
+    // mode: a score planned now is not the one the codes follow
+    if ((replay || continued) && r.abc.empty()) {
+        cot = YUE2_COT_OFF;
+    }
 
     // Score per song: supplied by the caller, planned by the model, or absent
     std::vector<std::vector<int>> abc_ids(B);
     std::vector<std::string>      scores(B);
     std::vector<bool>             truncated(B, false);
     bool                          has_score = cot != YUE2_COT_OFF;
-    bool                          planned   = has_score && r.abc.empty();
+    bool                          planned   = has_score && (r.abc.empty() || r.abc_continue);   // HERESY 1608: an opening is planned on from
 
     // The AR half holds the GPU for the plan and the semantic stage, then
     // steps aside for the synthesis
     std::optional<ModelHandle> lm_hold;
     Qwen3LM *                  lm = nullptr;
     if (planned || !replay) {
-        lm = require_lm(p);
+        lm = require_lm(p, ar_adapters);
         if (!lm) {
             return false;
         }
@@ -675,17 +997,40 @@ static bool pipeline_generate(Yue2Pipeline *          p,
     std::vector<int> score_tokens(B, 0);
     double           score_seconds = 0.0, music_seconds = 0.0, sound_seconds = 0.0;
     int              music_kept    = 0;
-    if (has_score && !r.abc.empty()) {
+    if (has_score && !planned) {
         abc_ids.assign(B, encode(r.abc));
         scores.assign(B, r.abc);
     } else if (has_score) {
         std::vector<int>            open = yue2_build_prompt_ids(encode, cot, r.style, r.lyrics, nullptr);
+        std::vector<int>            opening;   // HERESY 1608: an opening to continue goes in after ABC_START, its end token left out
+        if (r.abc_continue) {
+            std::string text = r.abc;
+            if (!text.empty() && text.back() != '\n') {
+                text += '\n';
+            }
+            opening = encode(text);
+            open.insert(open.end(), opening.begin(), opening.end());
+            fprintf(stderr, "[Pipeline] Score continues from an opening of %zu tokens\n", opening.size());
+        }
         std::vector<Yue2Generation> plans;
+        std::vector<std::string>    texts;      // HERESY 1606: harmony (timoncool/yue2.cpp 1e21e63), off unless the request asks
+        Yue2HarmonyPlan             harmony;
+        if (r.harmony.active()) {
+            texts   = bpe_decode_each(tok, YUE2_EOD);
+            harmony = yue2_harmony_plan(r.harmony, &texts, YUE2_ABC_END);
+            fprintf(stderr, "[Harmony] %s strength=%.2f window=%d hold=%d outside=%.2f/%.2f section=%.2f/%d follow=%zu\n",
+                    r.harmony.by_root ? "root" : "spelling", (double) r.harmony.strength, r.harmony.window, r.harmony.hold_limit,
+                    (double) r.harmony.outside_bonus, (double) r.harmony.outside_limit, (double) r.harmony.section_strength,
+                    r.harmony.section_open, r.harmony.follow.size());
+        }
         if (!yue2_generate(lm, &p->kv, std::vector<std::vector<int>>(B, open), {}, 1.0f, r.abc_sampling, r.lm_seed,
-                           YUE2_PHASE_ABC, &plans, cancelled, cancel_data)) {
+                           YUE2_PHASE_ABC, &plans, cancelled, cancel_data, nullptr, -1.0f, r.harmony.active() ? &harmony : nullptr)) {
             return false;
         }
         for (int i = 0; i < B; i++) {
+            if (!opening.empty()) {   // HERESY 1608: the opening first, then what the model wrote on from it
+                plans[i].tokens.insert(plans[i].tokens.begin(), opening.begin(), opening.end());
+            }
             abc_ids[i]   = plans[i].tokens;
             scores[i]    = bpe_decode(tok, abc_ids[i]);
             truncated[i] = plans[i].truncated;
@@ -714,6 +1059,16 @@ static bool pipeline_generate(Yue2Pipeline *          p,
             fprintf(stderr, "[Score] Free tempo: song %d, %d tempo mark%s taken out\n", i, dropped, dropped == 1 ? "" : "s");
         }
     }
+    // HERESY 1743: a score the model planned whole, its Vocal line moved by octaves before it is sung (and before a plan asked alone goes back)
+    if (planned && r.abc.empty() && r.vocal_octave != 0) {
+        for (int i = 0; i < B; i++) {
+            int moved  = 0;
+            scores[i]  = yue2_score_vocal_octave(scores[i], r.vocal_octave, &moved);
+            abc_ids[i] = encode(scores[i]);
+            fprintf(stderr, "[Score] Vocal line %+d octave%s: song %d, %d notes moved\n", r.vocal_octave,
+                    r.vocal_octave == 1 || r.vocal_octave == -1 ? "" : "s", i, moved);
+        }
+    }
     // Local addition: the score alone, no music and no audio
     if (r.plan_only) {
         songs->assign((size_t) B, {});
@@ -732,7 +1087,8 @@ static bool pipeline_generate(Yue2Pipeline *          p,
     for (int i = 0; i < B; i++) {
         prefixes[i] = yue2_build_prompt_ids(encode, cot, r.style, r.lyrics, has_score ? &abc_ids[i] : nullptr);
     }
-    fprintf(stderr, "[Prompt] cot=%s, songs=%d, variations=%d, %zu tracks\n", r.cot.c_str(), B, M, (size_t) B * M);
+    fprintf(stderr, "[Prompt] cot=%s, songs=%d, variations=%d, %zu tracks\n", has_score ? r.cot.c_str() : "off", B, M,
+            (size_t) B * M);
 
     float                         guidance = r.cfg_scale < 0.0f ? yue2_default_guidance(cot) : r.cfg_scale;
     // HERESY 1397: the lyrics' own scale; a third stream, the prompt without its lyrics, when it differs from the guidance
@@ -770,6 +1126,11 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         }
         codes[0].truncated = false;
         fprintf(stderr, "[Pipeline] Replay: %zu frames supplied\n", codes[0].tokens.size());
+    } else if (continued) {
+        if (!pipeline_continue_codes(p, lm, r, prefixes[0], negatives.empty() ? nullptr : &negatives[0], guidance,
+                                     &codes[0], cancelled, cancel_data)) {
+            return false;
+        }
     } else {
         // The requested length caps the budget of the stage, never raises it
         Yue2Sampling semantic = r.semantic_sampling;
@@ -873,6 +1234,12 @@ static bool pipeline_generate(Yue2Pipeline *          p,
             return false;
         }
         chunk_sizes[i] = (context - (int) prefixes[i].size() - 3) / 2;
+        if (r.nar_ladder) {                           // HERESY 1768: even pieces of about 20 s, room for their windows' 2 s either side
+            const int n = (T_lat + YUE2_LADDER_PIECE - 1) / YUE2_LADDER_PIECE, even = (T_lat + n - 1) / n;
+            if (n > 1 && even + 2 * YUE2_LADDER_MARGIN <= chunk_sizes[i]) {
+                chunk_sizes[i] = even;
+            }
+        }
         if (chunk_sizes[i] < 1) {
             fprintf(stderr, "[Pipeline] FATAL: prefix %zu leaves no acoustic context in %d\n", prefixes[i].size(),
                     context);
@@ -897,7 +1264,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
     // A generated song spanning several chunks has its first one sealed while
     // the AR half still holds the GPU: the set carries the whole stream, the
     // end token takes the row that closes the chunk
-    if (!replay && !sliders_used) {
+    if (!replay && !sliders_used && !r.nar_ladder) {   // HERESY 1768: a ladder reads each window again, nothing to seal
         for (int i = 0; i < B; i++) {
             if ((int) codes[i].tokens.size() > chunk_sizes[i]) {
                 int end = YUE2_MUSIC_END;
@@ -928,10 +1295,20 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         fprintf(stderr, "[NAR] Song %d: %d frames (%.1f s), prefix %d, %d chunk%s of %d, %d variation%s\n", i, T_lat,
                 (float) T_lat / (float) YUE2_FRAME_RATE, prefix_len, chunks, chunks > 1 ? "s" : "", chunk_size, M,
                 M > 1 ? "s" : "");
+        // HERESY 1768: the ladder: a piece's window hears YUE2_LADDER_MARGIN codes past its end and before its start; neighbours meet in a
+        // crossfade of their latents half a margin either side of their common edge. The noise stays in the latents until every piece is solved.
+        const bool lad   = r.nar_ladder && chunks > 1;
+        const int  lad_m = lad ? YUE2_LADDER_MARGIN : 0, lad_x = YUE2_LADDER_MARGIN / 2;
+        std::vector<std::vector<float>> lad_acc(lad ? M : 0, std::vector<float>(lad ? (size_t) T_lat * YUE2_LATENT_DIM : 0, 0.0f));
+        if (lad) {
+            fprintf(stderr, "[NAR] ladder: %d pieces of %d frames, each hearing %d past its edges, joined over %d\n", chunks, chunk_size, lad_m, 2 * lad_x);
+        }
         for (int start = 0; start < T_lat; start += chunk_size) {
             Timer chunk_timer;
-            int   frames = T_lat - start < chunk_size ? T_lat - start : chunk_size;
-            int   ar_len = prefix_len + frames + 1;
+            const int nf     = T_lat - start < chunk_size ? T_lat - start : chunk_size;   // the piece's own frames
+            const int ws     = lad ? std::max(0, start - lad_m) : start;                  // HERESY 1768: the window it is solved over
+            int       frames = lad ? std::min(T_lat, start + nf + lad_m) - ws : nf;
+            int       ar_len = prefix_len + frames + 1;
 
             // The chunk sequence is the prefix, the codes of the chunk and the
             // end token. Its head already sits in the set, the whole prefix
@@ -939,41 +1316,41 @@ static bool pipeline_generate(Yue2Pipeline *          p,
             // song for the first one, so only the tail is forwarded and its
             // logits go nowhere.
             std::vector<int> sequence = prefixes[i];
-            sequence.insert(sequence.end(), codes[i].tokens.begin() + start, codes[i].tokens.begin() + start + frames);
+            sequence.insert(sequence.end(), codes[i].tokens.begin() + ws, codes[i].tokens.begin() + ws + frames);
             sequence.push_back(YUE2_MUSIC_END);
             // With sliders the cache the AR decode left carries their steer, so
             // the first chunk re-prefills the whole sequence without them
-            const int kept = start > 0 ? prefix_len : ((replay || sliders_used) ? 0 : ar_len);
+            const int kept = start > 0 ? prefix_len : ((replay || sliders_used || lad) ? 0 : ar_len);   // 1768: a ladder reads its first window again
             if (kept < ar_len) {
                 nar_hold.reset();
                 nar                = nullptr;
-                Qwen3LM * lm_chunk = require_lm(p);
+                Qwen3LM * lm_chunk = require_lm(p, ar_adapters);
                 if (!lm_chunk) {
                     return false;
                 }
                 ModelHandle lm_chunk_hold(p->store, lm_chunk);
                 {   // HERESY 1447: the music half reads the chunk again with its LoRAs' waves at the chunk's middle
                     const int   sp  = lora_span > 0 ? lora_span : T_lat;
-                    const float mid = ((float) start + 0.5f * (float) frames) / (float) sp;
+                    const float mid = ((float) ws + 0.5f * (float) frames) / (float) sp;
                     lora_rt_at(&p->lora_rt[0], mid > 1.0f ? 1.0f : mid, false, "the music half reads a chunk again at");
                 }
                 qw3lm_kv_trim(&p->kv, i, kept);
                 qw3lm_forward(lm_chunk, &p->kv, sequence.data() + kept, ar_len - kept, i, probe.data(), row0, rows);
             }
             if (!nar) {
-                nar = require_nar(p);
+                nar = require_nar(p, nar_adapters);
                 if (!nar) {
                     return false;
                 }
                 nar_hold.emplace(p->store, nar);
             }
-            lora_rt_frames(&p->lora_rt[1], start, frames, lora_span > 0 ? lora_span : T_lat);   // HERESY 1447: frame by frame
+            lora_rt_frames(&p->lora_rt[1], ws, frames, lora_span > 0 ? lora_span : T_lat);   // HERESY 1447: frame by frame
 
             // The first chunk of the first song feeds the cossim harness: the
             // sequence the latent block attends to, then the solver probes
             const DebugDumper * dbg = i == 0 && start == 0 ? &p->dumper : &quiet;
             if (dbg->enabled) {
-                std::vector<float> ids(sequence.begin(), sequence.end());
+                std::vector<float> ids = debug_ids(sequence);
                 debug_dump_1d(dbg, "ar_ids", ids.data(), (int) ids.size());
             }
 
@@ -982,7 +1359,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
             block.resize(span * M);
             for (int j = 0; j < M; j++) {
                 memcpy(block.data() + span * j,
-                       (*songs)[(size_t) i * M + j].latents.data() + (size_t) start * YUE2_LATENT_DIM,
+                       (*songs)[(size_t) i * M + j].latents.data() + (size_t) ws * YUE2_LATENT_DIM,
                        span * sizeof(float));
             }
             // HERESY 1039: the attention of one pass holds heads x variations x frames x keys elements;
@@ -1025,11 +1402,34 @@ static bool pipeline_generate(Yue2Pipeline *          p,
                 }
             }
             for (int j = 0; j < M; j++) {
-                memcpy((*songs)[(size_t) i * M + j].latents.data() + (size_t) start * YUE2_LATENT_DIM,
-                       block.data() + span * j, span * sizeof(float));
+                if (!lad) {
+                    memcpy((*songs)[(size_t) i * M + j].latents.data() + (size_t) start * YUE2_LATENT_DIM,
+                           block.data() + span * j, span * sizeof(float));
+                    continue;
+                }
+                // HERESY 1768: complementary half-cosines centred on the piece's own edges, inside both neighbours' windows
+                auto ramp = [](float u) { u = u < 0.0f ? 0.0f : (u > 1.0f ? 1.0f : u); return 0.5f - 0.5f * cosf(3.14159265f * u); };
+                for (int t = ws; t < ws + frames; t++) {
+                    const float up   = start == 0 ? 1.0f : ramp((float) (t - (start - lad_x)) / (float) (2 * lad_x));
+                    const float down = start + nf >= T_lat ? 1.0f : 1.0f - ramp((float) (t - (start + nf - lad_x)) / (float) (2 * lad_x));
+                    const float w    = up * down;
+                    if (w <= 0.0f) {
+                        continue;
+                    }
+                    float *       dst = lad_acc[j].data() + (size_t) t * YUE2_LATENT_DIM;
+                    const float * src = block.data() + span * j + (size_t) (t - ws) * YUE2_LATENT_DIM;
+                    for (int d = 0; d < YUE2_LATENT_DIM; d++) {
+                        dst[d] += w * src[d];
+                    }
+                }
             }
             fprintf(stderr, "[NAR] Song %d chunk %d/%d: %d frames, cache %d rows, %d forwarded, %.1f s\n", i,
                     start / chunk_size + 1, chunks, frames, ar_len, ar_len - kept, chunk_timer.ms() / 1000.0);
+        }
+        if (lad) {                                    // HERESY 1768: the blend in place of the noise, once every piece is solved
+            for (int j = 0; j < M; j++) {
+                memcpy((*songs)[(size_t) i * M + j].latents.data(), lad_acc[j].data(), lad_acc[j].size() * sizeof(float));
+            }
         }
     }
 
@@ -1041,9 +1441,9 @@ static bool pipeline_generate(Yue2Pipeline *          p,
     }
     ModelHandle vae_hold(p->store, vae);
     for (size_t t = 0; t < songs->size(); t++) {
-        Yue2Song & song        = (*songs)[t];
-        int        max_T_audio = song.T_lat * YUE2_HOP;
+        Yue2Song & song = (*songs)[t];
         fprintf(stderr, "[VAE] Track %zu/%zu: song %zu variation %zu\n", t + 1, songs->size(), t / M, t % M);
+        int        max_T_audio = song.T_lat * YUE2_HOP;   // ours (the 1603 merge took the upstream line into pipeline_decode)
         song.audio.assign((size_t) 2 * max_T_audio, 0.0f);
         Timer vae_timer;                             // HERESY 1399
         song.T_audio = vae_ggml_decode_tiled(vae, song.latents.data(), song.T_lat, song.audio.data(), max_T_audio,

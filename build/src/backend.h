@@ -63,8 +63,8 @@ static ggml_backend_t cpu_backend_new(int n_threads) {
 // count when the run ends (tames the CUDA graph capture "reused" flood).
 static void yue2_ggml_log(enum ggml_log_level level, const char * text, void * user_data) {
     (void) user_data;
-    // Debug chatter (CUDA graph reuse and friends) stays silent unless asked
-    if (level == GGML_LOG_LEVEL_DEBUG && !getenv("YUE2_LOG_DEBUG")) {
+    // Debug chatter (CUDA graph reuse and friends) stays silent
+    if (level == GGML_LOG_LEVEL_DEBUG) {
         return;
     }
     static char last[256] = { 0 };
@@ -86,16 +86,43 @@ static void yue2_ggml_log(enum ggml_log_level level, const char * text, void * u
     fflush(stderr);
 }
 
-// Initialize backends: load all available (CUDA, Metal, Vulkan...),
-// pick the best one, keep CPU as fallback.
+// Device named by --device, NULL for the best available one. Inline so
+// every translation unit of the binary sees the one main sets.
+inline const char * g_backend_device = NULL;
+
+// Install the log callback and load every backend, once per process.
+static void backend_load(void) {
+    static const bool loaded = [] {
+        ggml_log_set(yue2_ggml_log, nullptr);
+        ggml_backend_load_all();
+        return true;
+    }();
+    (void) loaded;
+}
+
+// Select the device of every later backend_init by name (CUDA0, Vulkan0,
+// MTL0, CPU...). Returns false and lists the available devices when the
+// name matches none.
+static bool backend_set_device(const char * name) {
+    backend_load();
+    if (!ggml_backend_dev_by_name(name)) {
+        fprintf(stderr, "--device %s not found. Available:", name);
+        for (size_t i = 0; i < ggml_backend_dev_count(); i++) {
+            fprintf(stderr, " %s", ggml_backend_dev_name(ggml_backend_dev_get(i)));
+        }
+        fprintf(stderr, "\n");
+        return false;
+    }
+    g_backend_device = name;
+    return true;
+}
+
+// Initialize backends: the device named by --device or the best available
+// one (CUDA, Metal, Vulkan...), keep CPU as fallback.
 // label: log prefix, e.g. "LM", "NAR", "VAE"
 // Subsequent calls reuse the same backend (single VMM pool).
 static BackendPair backend_init(const char * label) {
-    static bool log_installed = false;
-    if (!log_installed) {
-        ggml_log_set(yue2_ggml_log, nullptr);
-        log_installed = true;
-    }
+    backend_load();
 
     if (g_backend_refs > 0) {
         g_backend_refs++;
@@ -103,25 +130,24 @@ static BackendPair backend_init(const char * label) {
         return g_backend_cache;
     }
 
-    ggml_backend_load_all();
     BackendPair bp = {};
-
-    // GGML_BACKEND env var: force a specific device instead of auto-best.
-    // Device names: CUDA0, Vulkan0, CPU, BLAS (see ggml_backend_dev_name).
-    const char * force_backend = std::getenv("GGML_BACKEND");
-    if (force_backend) {
-        bp.backend = ggml_backend_init_by_name(force_backend, nullptr);
-        if (!bp.backend) {
-            fprintf(stderr, "[Load] FATAL: GGML_BACKEND=%s not found. Available:", force_backend);
+    // HERESY 1613: GGML_BACKEND (CUDAn, CPU...) names the device as it did before upstream's --device (83b65f5), when no --device was
+    // given: start.sh, the lab's extra engines and gpu_roles.py name the card by it, and without it each landed on the best device,
+    // the studio's own card. A name that matches no device stops here, as it always did
+    const char * device = g_backend_device;
+    const char * forced = std::getenv("GGML_BACKEND");
+    if (!device && forced && *forced) {
+        if (!ggml_backend_dev_by_name(forced)) {
+            fprintf(stderr, "[Load] FATAL: GGML_BACKEND=%s not found. Available:", forced);
             for (size_t i = 0; i < ggml_backend_dev_count(); i++) {
                 fprintf(stderr, " %s", ggml_backend_dev_name(ggml_backend_dev_get(i)));
             }
             fprintf(stderr, "\n");
             exit(1);
         }
-    } else {
-        bp.backend = ggml_backend_init_best();
+        device = forced;
     }
+    bp.backend = device ? ggml_backend_init_by_name(device, nullptr) : ggml_backend_init_best();
     if (!bp.backend) {
         fprintf(stderr, "[Load] FATAL: no backend available\n");
         exit(1);

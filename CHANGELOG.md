@@ -2,9 +2,178 @@
 
 Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): one machine with an NVIDIA card, your own songs, nothing in a cloud. It grew over [YuE2 Kit](https://github.com/IronWolve/yue2-kit) v12 by IronWolve, which runs [yue2.cpp](https://github.com/ServeurpersoCom/yue2.cpp) by ServeurpersoCom. Every change has a number (HERESY 1001 and up); `heresy/docs/HERESY.md` tells each one with what was measured, and `heresy/engine/` keeps each change to the engine and the page as a patch of its own.
 
-## 2.0.0 · In the Making
+## 2.0.1 · In the Making
 
-After the pre: what its testers find, the strings in every language, the 💎 probes at full length (HERESY 1169, patches 1567 and up).
+After 2.0.0 (patches 1798 and up).
+
+## 2.0.0 · 2026-10-25
+
+The release: Ruach Studio's own fine-tune as the default model, the songs edited as the model writes them, the piano roll, the Refiner as its canvas and the DAW after a sound engineer's pass (both a beta), the playlist, the Trainer on several cards, the strings in every language (HERESY 1169, patches 1567–1797).
+
+- **The real-server test alive again** (HERESY 1567): `tools/test-real.sh` without the sliders and with a studio that has no Librarian; the update names an older version's weights nothing reads now, with their size.
+- **The visiting card by night** (HERESY 1567): every room's tile in the night theme too.
+- **No monitor on the gateway's own card** (HERESY 1568): Audio I/O offers the monitor the other outputs, follows the gateway's choice and says a monitor kept there.
+- **The canvas as the work flows** (HERESY 1569): six columns of nodes, none over another, the import and Audio I/O at the left's bottom, every node on a 10 px grid; the chain's row and the jobs' strip fold.
+- **Your own way on the canvas** (HERESY 1570): a click cuts a wire, a wire puts a step after another, *Off the way*, Ctrl+Z; «My way» in the chain's Profile, from the take or from an imported track.
+- **The way tested, and a target** (HERESY 1571): the way drawn as it flows up to a node and checked step by step, nothing run; ◎ the node the chain runs up to.
+- **A plugin's step names its stem and its gear** (HERESY 1572): `stem` and `hardware` in plugin.json; a step through gear no longer holds the CPU's turn.
+- **A node's window as large as what it holds** (HERESY 1573): the profiles and Arrange as two icons in the room's head.
+- **An unread answer said** (HERESY 1576): «Made from this Take» says when the lab's answer did not read, never «nothing»; a manifest's NaN or Infinity no longer breaks it.
+- **«From all Workspaces» in the Takes column** (HERESY 1577): every workspace's takes in the column, the one in hand left as it is.
+- **The compare window on one line** (HERESY 1579).
+- **Wires that say one thing each** (HERESY 1580): the way thick, made thin, a source dotted, the roads while a wire is dragged, a legend; a wire from a step off the way puts it where its kind stands; a wire into the DAW sets its lanes.
+- **The Refiner is its canvas** (HERESY 1581): numbered as the work flows, a tip on every node, the digits open nodes, «Made from This Take» a node of its own.
+- **Slots of a class each** (HERESY 1582): a file, a set of stems, one stem, named on the nodes' edges and coloured on the wires.
+- **The Voice upscale's bundle** (HERESY 1583): UniverSR, Apollo-vocal and FlashSR averaged, the loudest or air, five «Voices: …» pipelines; Apollo-vocal in the studio's models.
+- **The piano roll** (HERESY 1578, 1584): the score on paper twice above two weighted keyboards, time flowing down, chords with Shift, the computer's keys and MIDI, Rec, a sung solfège voice.
+- **The roll by day and by night** (HERESY 1585): the paper dark by night, grey by day; Ins's keys long, Vocal's short, both with depth; the keys' guide faint over the lane, folding when MIDI listens; MIDI says what a page opened from another computer needs.
+- **Real instruments in the roll** (HERESY 1586): the Salamander Grand Piano for Ins, a choir's «aah» and «ooh» for Vocal (CC BY 3.0), in the studio itself.
+- **The papers follow the roll** (HERESY 1587): both papers with the playhead, the cursor or the lane, the bar lit; a paper scrolled by hand takes the other and the lane; Play from what is in sight.
+- **MIDI for the whole studio, and a MIDI API** (HERESY 1589): Engine → Hardware → MIDI; a keyboard plays the piano roll, an M-Audio Oxygen's DAW port (Mackie Control) runs the transport; plugins may bring MIDI scripts for their controllers (PLUGINS.md). Early support.
+- **The roll's ends, lever, tempo and wheels** (HERESY 1590): arrows at the keyboards' ends and ◎, a lever between the papers and the roll, a grand's keys on a tall screen, the line of state under the guide, Play as an icon, the tempo (a free-tempo score no longer plays at 120), ↑ to a paper's start, the MIDI pitch wheel runs the cursor, the modulation wheel the note's length.
+- **The roll's Vocal sings in phrases** (HERESY 1592): one voice gliding from note to note, a vibrato, the vowels flowing, a breath and a small hall; the lyrics' syllables or Do Re Mi.
+- **Icons for the common acts** (HERESY 1593): Cancel ✕, Apply ✓, Save, Delete, Clear, Reset as icons, their words kept for readers and tips.
+- **Transpose a segment** (HERESY 1594): a segment laid across, the shift drawn as a line of points by semitones up to two octaves, held or gliding; to minor or major with its chords; in the key.
+- **A voice adapter's road** (HERESY 1595): the music half red past 0.5, the sound half past 1.0.
+- **The Creator's form kept on every change** (HERESY 1596): before anything overwrites it, on Ctrl+S, after the roll, on Generate, with its knobs.
+- **The Refiner without a chain** (HERESY 1598): the way is yours or a pipeline's, run from the room's head (Run the way, New way, On the workspace…); no Chain node, no List; two digits open nodes past ten.
+- **Own plugins off for a public view** (HERESY 1599): a row in ☰ when there is a plugin of your own.
+- **The roll opens the scores YuE2 writes** (HERESY 1600): a bar off its meter evened for the roll and given back as written; the lyrics under the Vocal staff; Transpose on the section at the cursor; the keyboard's size and the tempo as lists.
+- **The paper's words in Noto Sans** (HERESY 1601): the voices' names at 76 %, chords and lyrics at 90 %.
+- **The song licence** (HERESY 1603): YuE2's individual creator permission (16.09.2026) in the README.
+- **The engine at upstream's level** (HERESY 1604): yue2.cpp merged to 8af0174 with ours kept whole: continuation from another song's section, upstream's adapters beside ours, the audio tokenizer, MERT-v2 and SheetSage2 as separate models, ggml 0.27; the sound bit for bit the same, at the same speed.
+- **Multistep is AB2** (HERESY 1605): the solver named for what it is, each solver's calls a step said.
+- **Chords** (HERESY 1606, 1607): Off · Gentle · Varied · Bold under the planning modes; the planned score's chords loop less (after Yeufonic, through timoncool's yue2.cpp).
+- **Only the opening** (HERESY 1608, 1609): a few bars of your own, and the model plans the song on from them (after Mothersuperior's hum-to-song, through timoncool's yue2.cpp).
+- **The transcriber in the install as the engine reads it** (HERESY 1610): SheetSage2's head with MERT-v2-FullSong beside it in the models' repository, fetched by `download-models.sh --transcriber`; an older install is told what to run; a conversion from checkpoints no longer needs the tokenizer's.
+- **The card named again** (HERESY 1613): `GGML_BACKEND` picks the engine's card again (upstream's `--device` had dropped it, and every engine named by it ran on the studio's card).
+- **Chords start at Gentle** (HERESY 1613).
+- **The engine's patch series stays home** (HERESY 1613): the release carries the code in build/, not the series written from our history.
+- **Version beside Title** (HERESY 1614): digits and dots; a take is called «Title vN.N»; the Creator's versions keep one tree per title with a branch per version, and a whole tree goes into the trash and comes back.
+- **The score drawer's buttons as wide as their words** (HERESY 1615): the roll's as its staff, all on one row.
+- **Training over the Server log** (HERESY 1617): each LoRA run a line with its step, share done and time left; a click opens the Trainer.
+- **A planned score read before it is sung** (HERESY 1618): a broken plan planned again or stopped; such a take called planned, not supplied.
+- **The plan's fuse** (HERESY 1620): adapters past 1.0 together on the music half plan the score eased to 1.0 and sing at their own strengths.
+- **Compare from memory, up to six** (HERESY 1619, 1621): every version fetched whole as the window opens; the chooser wide.
+- **Stop at the plateau, then the sound half alone** (HERESY 1622): in the Trainer, on by default.
+- **Adapters in tenths, on one road** (HERESY 1623): music green to 0.4, red from 0.5, 0.75 at most; sound green to 0.6, red from 0.75, 1.0 at most; Music, together red at 1.4 while the score is written (the old ceiling on a score in the form); the plan's fuse 0.8 on IRAEv3.
+- **The seed's guard** (HERESY 1623): a fixed music seed asks before a run when its adapters or backbone moved, or it broke a plan; a plan no longer fixes its seed in the field; A new score takes new seeds.
+- **The Babel window told true** (HERESY 1623): the adapters that weighed, the backbone, the seed and the fuse; a new seed on a word.
+- **The roll sings the vowels** (HERESY 1624): a, e, i, o, u from VocalSet's singers, no noise before them; **Sound ▾**: a pianist's legato pedal on the long notes, the acoustics (Dry, Room, Hall) and the grand's lid.
+- **The folded takes wide enough** (HERESY 1624): the peek 440 px, the votes always inside.
+- **The plan's count on the song's first step** (HERESY 1625): a song sung on its own plan keeps the plan's tokens and seconds on step 1, «planned first».
+- **The cards' graphs gathered all the while** (HERESY 1625): a bar every two seconds, four minutes, whole when the log unfolds.
+- **Datasets as parquet** (HERESY 1626): a prepared set packed into parquet with FLAC (the same samples, about a fifth of a voice's WAV), read as it is; Hugging Face parquet shards in a raw folder read as tracks; `tools/pack-set.sh`, `tools/fetch-hf-parquet.sh`.
+- **Lead and choir** (HERESY 1627, the Guide): the lyrics split into the lead's lines and the choir's answers in round brackets; plain brackets the steadiest, `(Choir: …)` not every time, `(Choir backing: …)` fails.
+- **The take's Play/Pause** (HERESY 1628): a narrow column before the title, under the take's buttons; pressed, it stays, as Pause.
+- **Past the limits** (HERESY 1629): a box at the end of the adapters' budget row lets the sliders go past their own most (music 1.5, sound 2), the budget asleep; the score is still planned within the fuse.
+- **Out of the score** (HERESY 1629): right-click an adapter's row; its music half sings the score, the plan is written without it.
+- **The roll's vowels in one low voice** (HERESY 1629): VocalSet's darkest woman, C3 to A5, instead of a different singer a note.
+- **The Creator's versions one at a time** (HERESY 1629): a burst of kept versions no longer holds every connection to the studio, so Generate is never kept waiting behind it.
+- **The log by rooms** (HERESY 1630): the server log's frame has Creator, Trainer and Refiner views beside Server and Artist, each the server's lines that are its room's own.
+- **The Trainer's bars under Engine** (HERESY 1630): while Engine is open the training bar steps aside, as the log does.
+- **The Trainer on cards** (HERESY 1631): Cards 1–3 in the Trainer; the run learns on each card at once (DDP), the rate following the batch, every save a moving average (EMA); resume from any save.
+- **A rank a half, and tracks without the music lesson** (HERESY 1642, 1643): the trainer takes rank_ar and rank_nar; a track marked no_ar teaches the sound half only.
+- **The bar** (HERESY 1632): the workspace bold in the rooms' letters on a sunk ground, centred between the Trainer and the lamp; the right buttons bare, Unload glowing.
+- **Add a LoRA, found** (HERESY 1636): a search by any word, the kinds as filters and coloured stripes, two columns at 1080p and more on wider screens, its own scroll past 800 px.
+- **The chapter look** (HERESY 1637): the adapters' Budget and the together sliders' names in the small capitals of the studio's other headings.
+- **The Creator cards' bottom** (HERESY 1645): as much room under the last row as at the sides (was 26 px against 16).
+- **The lyrics timed word by word** (HERESY 1646): Refiner › Lyrics downloads an enhanced .lrc, every word at the time Whisper heard it, beside .lrc and .srt.
+- **Add a LoRA's kinds** (HERESY 1647): a score adapter and a style whose note speaks of vocals no longer take the singing voice's stripe.
+- **Tags in every download** (HERESY 1635, 1648): a take's WAV, FLAC and MP3 carry its title, lyrics, style and cover, signed or not.
+- **Finished runs say so** (HERESY 1649): a run that stopped early on its held-out measure, or went on with the sound half alone, shows as done, not stopped.
+- **Twin tiles told apart** (HERESY 1650): two adapters of one name in Add a LoRA say what differs (bf16, or the size).
+- **Extend…** (HERESY 1651): a take goes on past its end, 0:15 to 2:00 more, with new lines if you give them; everything it has stays as it is.
+- **Room under the Trainer's bars** (HERESY 1652): the training bars no longer cover the Artist's Paint button or the last takes and runs.
+- **Every room clear of the training bars** (HERESY 1653): while they stand, each room's column scrolls clear of them.
+- **The workspace by day** (HERESY 1654): in a day theme its sunk ground is faint, no frame round it.
+- **Intel Arc, as a beta** (HERESY 1656): `./build.sh --sycl` builds the engine for Intel's cards with oneAPI, and `start.sh` runs it (`YUE2_ENGINE=sycl`, or by itself where there is no CUDA engine); songs, adapters, Full, Extend and going on from kept music, measured on an Arc Pro B50. INSTALL.md, «Intel Arc (beta)».
+- **Saves in tenths of an epoch** (HERESY 1658): Save every goes down to 0.1; a tenth's save is named e001.3.
+- **Pause and Resume** (HERESY 1659): a training run pauses and goes on from its last save with the same set, knobs and cards; the runs filter by state.
+- **The bar's logo on the song's beat** (HERESY 1660): while a song plays the logo pulses, then breathes and glows on the song's own beat, and the bar's lower line with it.
+- **A job may name its backbone** (HERESY 1661): the fine-tune's probes on the bare YuE2 beside the Studio's own, one engine.
+- **The workspace in the bar, lighter** (HERESY 1663): wider, no ground, an accent line above and below, capitals not bold.
+- **A LoRA by the song's sections** (HERESY 1665): a wave mode that lets an adapter sound only in the sections ticked (verses, a solo…), from the score or the lyrics' tags.
+- **The logo's fog, the counts whole** (HERESY 1666, 1667): the beat's glow spreads past the logo's ends; the Librarian's counts break only between their pieces.
+- **The Arc in Engine → GPUs** (HERESY 1680): an Intel card's load, memory, temperature and watts, from the kernel; a Studio on the Arc said so.
+- **A chapter looks like a chapter** (HERESY 1683): a soft accent tick before every chapter heading; a field's caption has none.
+- **Planning mode and Chords, chapters too** (HERESY 1684): the plan's two headings carry the tick as well.
+- **A workspace's sections fold** (HERESY 1685): a handle on a workspace in the Library's column folds its sections away and back.
+- **The halves 1:2** (HERESY 1668): a new training run's music half takes half the rank of its sound half (16 · 32 by default).
+- **A run without fragments** (HERESY 1669): training runs start with the allocator in expandable segments; r192/r384 fits a 24 GB card (21.1 GB).
+- **The first card no longer carries the average** (HERESY 1671): with several cards the training's moving average lives in the host's memory; the first wave fell twice on GPU0 without it.
+- **The Library's cards, look B** (HERESY 1686): a see-through ground (lighter by day), a stripe by the verdict, outlined buttons and badges.
+- **The rooms' names, a line that glides** (HERESY 1687): the room in hand semibold, a 4 px line gliding under the pointer, the lamp beside the logo.
+- **The workspace column under the Library's head** (HERESY 1688): All Workspaces and Favourites no longer slide under the head.
+- **The guide reads again after a failed read** (HERESY 1670): a moment's failure no longer leaves F1 dead until a reload.
+- **The backbones in their lineage, the IRAE merges fetched** (HERESY 1689): the model menu stock → IRA → IRAE… → the studio's fine-tunes; IRAE, IRAEv2, IRAEv3 in More models.
+- **The volume to 150 %** (HERESY 1700): a stop at 100 %, a limited boost past it.
+- **The locks lined up** (HERESY 1701): the workspace column's locks at one x.
+- **The voice transposer** (HERESY 1703): ▼ ▲ on a voice adapter's row move the score's Vocal an octave, in Full with a score.
+- **The chord bed** (HERESY 1704): a score of chords over rests from a key, a meter and a tempo, section by section, for the model to sing over in Full (after timoncool's YuE2-Studio, MIT).
+- **Gold for the star** (HERESY 1705): a favourite's star is gold everywhere; a starred and liked card has a fine gold sand.
+- **Raw** (HERESY 1706): a take straight from the model is «raw» (ru «сырец»), not «generated».
+- **Open in the Creator asks** (HERESY 1707): what to bring into the Composer, the form kept as a version first; «Compare with…» in the versions.
+- **The rooms' grey lines, a quieter theme button, the model menus** (HERESY 1709): every model one tip, 600 px to the left of the list.
+- **IRAE-IRv2** (HERESY 1708): IRAE-IR and IRAE-IRv2 in the models' line and More models (experimental, for rock instrumentals).
+- **AB2 at 48 steps, the default** (HERESY 1710): the page's solver Multistep at 48 (cheaper than Midpoint 32, better by his blind test).
+- **The chord bed paced as YuE2 paces a song** (HERESY 1712): about 2.5 s a sung line; the guide has the chord bed.
+- **Crossfade in the playlist** (HERESY 1713): ⋈ before Play on, 0–8 s; the next take comes in under the last seconds of the one before.
+- **A take arranged anew from its sections** (HERESY 1714): Repeat a section… and Insert a part… in the Edit row and the take's menu; a new take each time.
+- **A section sung once more** (HERESY 1715): «Sing it once more…» in the wave's menu; the model sings it again on the next seed, the take grows by it.
+- **Compare loads ahead; the score's length said** (HERESY 1716): versions fetched into memory with a progress bar, Compare the selected…, «≈ M:SS long» in the score's line.
+- **Music before a repeat; an interlude written by the model** (HERESY 1717): a breath or a short interlude before a sung repeat, «Insert an interlude after it…»; cuts by the draft's own voice, on bar lines.
+- **Re-sing this line** (HERESY 1718): one line sung anew from the wave's menu, the rest of the take as it was.
+- **Match sections** (HERESY 1719): a cover's lyrics blocks tagged with the score sections they are sung in, heard by Whisper (after timoncool's section_match, MIT).
+- **A take's exact time** (HERESY 1720): Engine › Appearance › Take time (how long ago or the exact time); a click on a card's time flips it.
+- **Sing it once more opens on a breath** (HERESY 1721): «After a breath» offered first.
+- **The crossfade cuts nothing** (HERESY 1722): the next take comes in whole under the quiet tail of the one before; ⋈ without its arrow.
+- **💎 Keys Probe in the bucket** (HERESY 1723): the keys probe a 💎 set of its own, pulled back like the others.
+- **The Kit's licence and notice** (HERESY 1725): yue2-kit's Apache 2.0 text in LICENSES/ and its notice in NOTICE, as its section 4 asks; the README says so.
+- **Compare: star and dislike, twelve takes, a note** (HERESY 1724): a dislike takes the star off; «Hide disliked» on at every opening; up to twelve; a note button; one time in the bar.
+- **The star's sand as grain** (HERESY 1726): random grain instead of a pattern of dots.
+- **The take's menu: Edit, then Regenerate; the crossfade gone** (HERESY 1727): Extend, End at and Fade in under Edit; «Make again» is Regenerate; ⋈ removed for the coming playlist.
+- **The star's sand as faded gold blots** (HERESY 1728): a fifth to a quarter of the card, grain gathered in blots.
+- **The take's wave over its edits** (HERESY 1729): every edit dialog shows the take's wave with the donor and the target marked.
+- **The playlist** (HERESY 1730, 1731): «▶ Playlist» first in the Librarian, Add to playlist › First / Last / Random, the player's ☰ window and its strip of the previous and next takes.
+- **Section tags stay as they are** (HERESY 1732): CHORUS is CHORUS in every language, in the edit dialogs too.
+- **The workspace column scrolls on its own** (HERESY 1733): it no longer runs under the player.
+- **The wave's section items, said where they can't act** (HERESY 1734): greyed with their reason instead of missing.
+- **No rule over Seeds** (HERESY 1735): the drawer's first block without a separator.
+- **The Trainer's epochs with their tenths; the held-out best** (HERESY 1736): e0.7 instead of e1; green by the held-out tracks.
+- **The playlist's crossfade** (HERESY 1737): 0–4 s in the playlist alone, the next take held whole ahead so its start is never cut.
+- **Mono Maker, Peak glue, True-peak ceiling** (HERESY 1738): three Refiner steps with Shaumarov's defaults.
+- **The Trainer's run filters as icons** (HERESY 1739): one height, two even rows.
+- **The spectrum's views** (HERESY 1740): Mono, L/R, Mid/Side and Pan in the player's scope and the Refiner's Spectrum.
+- **The player mirrored around its centre** (HERESY 1741): equal gaps on both sides; the style line unfolds to 800 px on hover.
+- **Blurred pastel blots for every card** (HERESY 1742): each state of a card its own blurred colour.
+- **Full sings an octave lower by default** (HERESY 1743): Engine › Creator Heresy, −1 octave for the Vocal line of a score the model plans.
+- **The page opens when everything has come** (HERESY 1745, 1745c): the veil waits for the load, every font role's faces and the words, two minutes at most.
+- **The player holds a take whole** (HERESY 1746): fetched whole before it plays, so a slow line no longer tears it.
+- **Composed texts in the page's language** (HERESY 1672): the Trainer's missing parts by name, the OpenRouter line after a language change, the instrument notes as written.
+- **Voice tamer, Voice attack and body, Bass under the kick, Details up** (HERESY 1748–1751): the rest of Shaumarov's tools as the Refiner's own steps.
+- **The learning rate honest, with a fade** (HERESY 1752): the rate set from the config every step; an LR fade over the last epochs in the Trainer; Go on keeps every option of the run.
+- **The DAW, a sound engineer's pass** (HERESY 1753–1756): one-height head, the solo shown and cleared, the reference matched in loudness, the song's fade in and out and its end.
+- **Sing a window anew** (HERESY 1757): a stretch laid on the take's wave, sung anew with adapters of its own, their strengths and waves, ramps before and after it where the take's adapters give way and come back.
+- **A value typed in the DAW's console** (HERESY 1758): a click on a knob's or a fader's number, or a digit, to type the value in its own units; Enter sets it, Esc leaves it.
+- **Parallel compression** (HERESY 1759): a compressor's Blend on a strip, a bus and the master, the page and the render alike, and a «Parallel» preset.
+- **A strip's gate** (HERESY 1760): a downward expander against the separation's bleed, the page and the render alike.
+- **A restart waits for the lab's own threads** (HERESY 1790): a section sung anew, a 💎 fetch and a starter set's download count as jobs, so a reload no longer cuts them.
+- **The returns' pre-delay and cuts** (HERESY 1762): the room's pre-delay, a low and a high cut on both returns, the page and the render alike.
+- **LRA and PLR** (HERESY 1763) on the master, as Plenio counts them.
+- **Strip names whole** (HERESY 1764): an invalid font rule mended; a long name shrinks, then wraps, and the faders stay in a row.
+- **The mp3 tip in your language at any rate** (HERESY 1791), not only at 320 kbps.
+- **The Babel window only over your own runs** (HERESY 1765): a run from elsewhere that stops on a broken score is said in a toast and leaves the form alone; the window names the run's own backbone; its rows readable on dark themes.
+- **Regenerate keeps a take's own backbone** (HERESY 1767): a take from before the backbone field is made again on the model it was sung on, not today's default.
+- **Sound decode: the ladder, experimental** (HERESY 1768): in the Creator's Sampling, the sound half in pieces of about 20 s that hear past their edges; the whole-song decode stays the default and the only one elsewhere.
+- **The score guard and the Trainer's held-out reasons in your language** (HERESY 1793).
+- **The DAW and the piano roll, a beta** (HERESY 1795): a «beta» badge on the DAW's step, its node and its window, and in the piano roll's head, with a tip saying what a beta means here.
+- **Ruach Studio's own fine-tune, the default** (HERESY 1794): seven merges of YuE2-RS-FW (goldhub/YuE2-RS-Finetunes) in Engine → Models; the install brings RS-FW 2.4x0.75 at the backbone's format, and it starts when no model is chosen.
+- **The workspace column's headings in the chapter look** (HERESY 1796): Workspaces and Out of sight with the chapter's tick.
+- **The DAW's «beta» over the whole window** (HERESY 1797): in the DAW's own head, where its drawer's summary is hidden.
+- **The older transcriber fetched in an update** (HERESY 1613): `build.sh`, which the updater runs, brings SheetSage2's head with MERT beside it once.
+- **FlashSR's weights in the models' repository** (HERESY 1611): Apache-2.0 as its author stated; the Voice upscale fetches them from there.
+- **The jobs' strip clears the controls** (HERESY 1588): it dissolves over a control under the pointer; the roll's button at its row's end.
 
 ## 2.0.0-pre · 2026-10-18
 

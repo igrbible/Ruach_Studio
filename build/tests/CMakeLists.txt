@@ -39,3 +39,8 @@ target_include_directories(test-draw PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_executable(test-sheetsage test-sheetsage.cpp)
 target_link_libraries(test-sheetsage PRIVATE yyjson)
 link_ggml_backends(test-sheetsage)
+
+# test-tokenizer: audio tokenizer parity harness against the torch reference.
+add_executable(test-tokenizer test-tokenizer.cpp)
+target_link_libraries(test-tokenizer PRIVATE yyjson)
+link_ggml_backends(test-tokenizer)

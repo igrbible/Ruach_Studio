@@ -451,6 +451,299 @@
     return { abc: out, notes: moved, low: noteName(lowest), high: noteName(highest) };
   }
 
-  window.HeresyAbc = { parse: parse, report: report, markers: markers, toMidi: toMidi, fromMidi: fromMidi,
-                       shiftVoice: shiftVoice, noteName: noteName };
+  // ---- HERESY 1578 (Viktor 19.10.2026: «визуальный редактор партитуры в творце, так называемый пиано ролл, и не забывай, что в
+  // партитуре YuE2 два стана - Vocal и Ins»): the score as the roll edits it, in grid units (L), and back. grid() reads it strictly;
+  // rewrite() keeps every group's line of a voice byte for byte while what sounds in its bars is the same (YuE2 reads the text, so an
+  // untouched line must stay as it wrote it), and writes anew only a line whose notes or ties changed: the key's own spelling, the
+  // bar's accidentals, supported lengths tied, the chord symbols where they stood. The result must read back to exactly the notes asked.
+  function groupsOf(text) {
+    var lines = String(text).replace(/\r/g, "").replace(/\n+$/, "").split("\n"), out = [], cursor = 8, bar = 0;
+    if (lines[4] && lines[4].indexOf("Q:") !== 0) cursor = 7;                // a score without Q: (parse puts it back)
+    while (cursor < lines.length) {
+      while (cursor < lines.length && lines[cursor].indexOf("% ") === 0) cursor++;
+      if (cursor >= lines.length) break;
+      var g = { bar0: bar, at: {}, n: 0 };
+      VOICES.forEach(function (name) {
+        cursor++;                                                               // V: name
+        while (cursor < lines.length && /^(M|K):/.test(lines[cursor])) cursor++;
+        var line = lines[cursor], n = 0;
+        line.slice(0, -1).split("|").forEach(function (b) { var r = /^Z([2-4])?$/.exec(b.trim()); n += r ? +(r[1] || 1) : 1; });
+        g.at[name] = cursor; g.n = n;
+        cursor++;
+      });
+      bar += g.n;
+      out.push(g);
+    }
+    return { lines: lines, groups: out };
+  }
+  function grid(text) {
+    var s = parse(text), L = s.unit[1], u = function (q) { return Math.round(num(q) * L / 4); };
+    var V = s.voices.Vocal, out = { unit: L, bpm: s.bpm, free: s.free, key: s.key, meter: s.meter, end: u(V.time),
+      sections: s.sections.map(function (x) { return [u(x[0]), x[1]]; }),
+      bars: V.bars.map(function (b) { return [u(b[0]), u(b[1]), b[2].join("/")]; }),
+      keys: V.keys.map(function (k) { return [u(k[0]), k[1]]; }),
+      chords: V.chords.map(function (c) { return [u(c[0]), c[1]]; }), voices: {} };
+    VOICES.forEach(function (name) { out.voices[name] = s.voices[name].notes.map(function (n) { return [u(n[0]), n[1], u(n[2])]; }); });
+    return out;
+  }
+  function clip(notes, a, b) {                     // the notes sounding in [a, b): [start, pitch, length, tied in, tied out]
+    return notes.filter(function (n) { return n[0] < b && n[0] + n[2] > a; }).map(function (n) {
+      var s0 = Math.max(n[0], a), e0 = Math.min(n[0] + n[2], b);
+      return [s0, n[1], e0 - s0, n[0] < a, n[0] + n[2] > b];
+    });
+  }
+  function keyAt(keys, t) { var k = keys[0][1]; keys.forEach(function (x) { if (x[0] <= t) k = x[1]; }); return k; }
+  function writeLine(g0, nbars, voice, notes, G) {
+    var bars = [], ACC = { "-2": "__", "-1": "_", 0: "=", 1: "^", 2: "^^" };
+    for (var b = g0; b < g0 + nbars; b++) {
+      var S = G.bars[b][0], len = G.bars[b][1], E = S + len, key = keyAt(G.keys, S), sig = keyAccidentals(key), local = {}, toks = [];
+      var chords = voice === "Vocal" ? G.chords.filter(function (c) { return c[0] >= S && c[0] < E; }) : [];
+      var cuts = chords.map(function (c) { return c[0]; });
+      var segs = clip(notes, S, E), events = [], at = S;
+      segs.forEach(function (n) { if (n[0] > at) events.push([at, null, n[0] - at]); events.push(n); at = n[0] + n[2]; });
+      if (at < E) events.push([at, null, E - at]);
+      var chordAt = function (t) { var c = chords.filter(function (x) { return x[0] === t; })[0]; return c ? '"' + c[1] + '"' : ""; };
+      events.forEach(function (ev) {
+        // a chord symbol inside an event splits it there (a note tied over it, a rest in two)
+        var marks = [ev[0]].concat(cuts.filter(function (t) { return t > ev[0] && t < ev[0] + ev[2]; }), [ev[0] + ev[2]]);
+        for (var i = 0; i < marks.length - 1; i++) {
+          var a = marks[i], l = marks[i + 1] - a, last = i === marks.length - 2;
+          var head = chordAt(a);
+          if (ev[1] === null) { pieces(l).forEach(function (q, k) { toks.push((k === 0 ? head : "") + "z" + (q === 1 ? "" : q)); }); continue; }
+          var sp = spell(ev[1], key), cur = sp[0] in local ? local[sp[0]] : sig[sp[0]], accs = "";
+          if (sp[1] !== cur) { accs = ACC[sp[1]]; local[sp[0]] = sp[1]; }
+          var parts = pieces(l), tieOut = !last || ev[4];
+          parts.forEach(function (q, k) {
+            toks.push((k === 0 ? head + accs : "") + written(sp[0], sp[2]) + (q === 1 ? "" : q) + (k < parts.length - 1 || tieOut ? "-" : ""));
+          });
+        }
+      });
+      bars.push(!chords.length && !segs.length ? "Z" : toks.join(""));
+    }
+    var out = [], i = 0;                                   // empty bars in a run as Z2…Z4, as YuE2 writes the instruments' rests
+    while (i < bars.length) {
+      if (bars[i] !== "Z") { out.push(bars[i]); i++; continue; }
+      var j = i; while (j < bars.length && bars[j] === "Z") j++;
+      for (var r = j - i; r > 0; r -= 4) out.push(r >= 4 ? "Z4" : r === 1 ? "Z" : "Z" + r);
+      i = j;
+    }
+    return out.join("|") + "|";
+  }
+  function rewrite(text, edits) {
+    var G = grid(text), parts = groupsOf(text), lines = parts.lines.slice(), changed = 0, kept = 0;
+    var want = {};
+    VOICES.forEach(function (name) {
+      var list = (edits && edits[name] ? edits[name] : G.voices[name]).map(function (n) { return [Math.round(n[0]), Math.round(n[1]), Math.round(n[2])]; })
+        .filter(function (n) { return n[2] > 0; }).sort(function (a, b) { return a[0] - b[0]; });
+      list.forEach(function (n, i) {
+        fail(n[0] < 0 || n[0] + n[2] > G.end, name + ": a note outside the score (" + n[0] + "…" + (n[0] + n[2]) + " of " + G.end + ")");
+        fail(n[1] < 0 || n[1] > 127, name + ": pitch " + n[1] + " is outside MIDI range");
+        fail(i && list[i - 1][0] + list[i - 1][2] > n[0], name + ": two notes at once at unit " + n[0] + " (a voice of YuE2 sings one note at a time)");
+      });
+      want[name] = list;
+    });
+    var chords = edits && edits.chords ? edits.chords.map(function (c) { return [Math.round(c[0]), String(c[1])]; }).sort(function (a, b) { return a[0] - b[0]; }) : G.chords;   // HERESY 1584
+    chords.forEach(function (c, i) {
+      fail(c[0] < 0 || c[0] >= G.end, "a chord symbol outside the score (" + c[0] + " of " + G.end + ")");
+      fail(!CHORD.test(c[1]), "unsupported chord " + JSON.stringify(c[1]));
+      fail(i && chords[i - 1][0] === c[0], "two chord symbols at unit " + c[0]);
+    });
+    var G2 = Object.assign({}, G, { chords: chords });
+    parts.groups.forEach(function (g) {
+      var a = G.bars[g.bar0][0], last = G.bars[g.bar0 + g.n - 1], b = last[0] + last[1];
+      VOICES.forEach(function (name) {
+        var inside = function (list) { return JSON.stringify(list.filter(function (c) { return c[0] >= a && c[0] < b; })); };   // HERESY 1584: its chords too
+        if (JSON.stringify(clip(want[name], a, b)) === JSON.stringify(clip(G.voices[name], a, b)) && (name !== "Vocal" || inside(chords) === inside(G.chords))) { kept++; return; }
+        fail(/\[K:/.test(lines[g.at[name]]), name + ": a line that changes key inside itself is edited as text");
+        lines[g.at[name]] = writeLine(g.bar0, g.n, name, want[name], G2);
+        changed++;
+      });
+    });
+    var abc = lines.join("\n"), back = grid(abc);
+    VOICES.forEach(function (name) {
+      fail(JSON.stringify(back.voices[name]) !== JSON.stringify(want[name]), name + ": the written score does not read back to the notes asked");
+    });
+    fail(JSON.stringify(back.chords) !== JSON.stringify(chords), "the written score does not read back to the chord symbols asked");   // HERESY 1584
+    return { abc: abc + (/\n$/.test(String(text)) ? "\n" : ""), changed: changed, kept: kept };
+  }
+
+  // HERESY 1600: a score as YuE2 wrote it may hold a bar off its meter (18/16, 14/16) or a length the grid has no name for (5, 7): read
+  // strictly it fails, and the roll could not open it. mend() writes each such bar to its meter for the roll (what runs over cut at the
+  // bar's end, a short bar filled with a rest, an odd length as tied supported ones) and says what it did; was: the lines as they were, so
+  // a line the roll does not change goes back as YuE2 wrote it
+  function mend(text) {
+    var lines = String(text).replace(/\r/g, "").split("\n"), said = [], was = {};
+    var mm = /^M:(\d+)\/(\d+)$/.exec(lines[2] || ""), um = /^L:1\/(\d+)$/.exec(lines[3] || ""), none = { abc: String(text), said: said, was: was };
+    if (!mm || !um) return none;
+    var full = (+mm[1]) * (+um[1]) / (+mm[2]), count = { Vocal: 0, Ins: 0 };
+    if (full !== Math.round(full) || full < 1) return none;
+    var ofLen = function (u, head, rest, tieEnd) {    // a note or rest of u units as supported lengths, tied between
+      return pieces(u).map(function (q, k, all) { return head + (q === 1 ? "" : q) + (rest ? "" : k < all.length - 1 ? "-" : tieEnd); }).join("");
+    };
+    for (var i = 0; i < lines.length; i++) {
+      var vm = /^V: (Vocal|Ins)$/.exec(lines[i]);
+      if (!vm) continue;
+      var j = i + 1;
+      while (j < lines.length && /^(M|K):/.test(lines[j])) j++;
+      var line = lines[j];
+      if (!line || line.charAt(line.length - 1) !== "|") continue;
+      var touched = false, bars = line.slice(0, -1).split("|").map(function (body) {
+        var z = /^\s*Z([2-4])?\s*$/.exec(body);
+        if (z) { count[vm[1]] += +(z[1] || 1); return body; }
+        count[vm[1]]++;
+        var toks = [], at = 0, total = 0, cur = 0, changed = false;
+        while (cur < body.length) {
+          if (/\s/.test(body.charAt(cur))) { cur++; continue; }
+          TOKEN.lastIndex = cur;
+          var m = TOKEN.exec(body);
+          if (!m) return body;                         // a token it does not know: the bar as it is (the strict read says why)
+          cur = TOKEN.lastIndex;
+          if (m[1] !== undefined || m[2] !== undefined) { if (at < full) toks.push(m[0]); else changed = true; continue; }
+          var u = parseInt(m[6] || "1", 10), rest = m[4] === "z", keep = Math.max(0, Math.min(u, full - at));
+          total += u;
+          if (!keep) { changed = true; continue; }
+          if (keep !== u || !DURATIONS[u]) { changed = true; toks.push(ofLen(keep, (m[3] || "") + m[4] + (m[5] || ""), rest, m[7] || "")); } else toks.push(m[0]);
+          at += keep;
+        }
+        if (at < full || total > full) {               // cut or filled: no tie leaves this bar
+          changed = true;
+          if (toks.length) toks[toks.length - 1] = toks[toks.length - 1].replace(/-$/, "");
+          if (at < full) toks.push(ofLen(full - at, "z", true, ""));
+        }
+        if (!changed) return body;
+        touched = true;
+        said.push({ voice: vm[1], bar: count[vm[1]], units: total, full: full });
+        return toks.join("");
+      });
+      if (touched) { was[j] = line; lines[j] = bars.join("|") + "|"; }
+    }
+    return { abc: lines.join("\n"), said: said, was: was };
+  }
+  // HERESY 1600: the lyrics under the Vocal staff, for the papers only (abcjs w: lines; the score keeps none): syl a syllable by a note's
+  // start, join its word going on (a hyphen); a note tied on holds the syllable (_), a note without one is skipped (*)
+  function withWords(text, syl, join) {
+    var G = grid(text), parts = groupsOf(text), lines = parts.lines.slice(), adds = [];
+    join = join || {};
+    parts.groups.forEach(function (g) {
+      var j = g.at.Vocal, bar = g.bar0, words = [], any = false, tied = false;
+      lines[j].slice(0, -1).split("|").forEach(function (body) {
+        var z = /^\s*Z([2-4])?\s*$/.exec(body);
+        if (z) { bar += +(z[1] || 1); tied = false; return; }
+        var t = G.bars[bar] ? G.bars[bar][0] : 0, cur = 0;
+        bar++;
+        while (cur < body.length) {
+          if (/\s/.test(body.charAt(cur))) { cur++; continue; }
+          TOKEN.lastIndex = cur;
+          var m = TOKEN.exec(body);
+          if (!m) return;
+          cur = TOKEN.lastIndex;
+          if (m[4] === undefined) continue;
+          if (m[4] !== "z") {
+            var s = syl[t];
+            if (tied) words.push("_");
+            else if (s) { any = true; words.push(String(s).replace(/[\s|*_~\\-]/g, "") + (join[t] ? "-" : "")); }
+            else words.push("*");
+            tied = m[7] === "-";
+          } else tied = false;
+          t += parseInt(m[6] || "1", 10);
+        }
+      });
+      if (any) adds.push([j, "w: " + words.join(" ")]);
+    });
+    adds.reverse().forEach(function (a) { lines.splice(a[0] + 1, 0, a[1]); });
+    return lines.join("\n") + (/\n$/.test(String(text)) ? "\n" : "");
+  }
+
+  // HERESY 1601: the paper's words in Noto Sans, narrowed as LaTeX's FakeStretch does (scaled across about the point each stands at, so
+  // a name keeps its left edge, a chord its middle): the voices' names 76 %, the count over an empty run of bars as it is, the chord
+  // symbols, the lyrics and every other word 90 %. As attributes, so a print window carries them too
+  var DRESS_FONT = '"Noto Sans", "Noto Sans Display", sans-serif';
+  function dress(root) {
+    if (!root || !root.querySelectorAll) return root;
+    Array.prototype.forEach.call(root.querySelectorAll("svg text"), function (t) {
+      if (t.getAttribute("data-dressed")) return;
+      var c = t.getAttribute("class") || "", w = /abcjs-voice-name/.test(c) ? 0.76 : /abcjs-rest/.test(c) ? 1 : 0.9;
+      t.setAttribute("data-dressed", "1");
+      t.setAttribute("font-family", DRESS_FONT);
+      if (/abcjs-voice-name/.test(c)) t.setAttribute("font-weight", "600");
+      if (w === 1) return;
+      var x = parseFloat(t.getAttribute("x") || "0") || 0, was = t.getAttribute("transform") || "";
+      t.setAttribute("transform", (was ? was + " " : "") + "translate(" + x + " 0) scale(" + w + " 1) translate(" + (-x) + " 0)");
+    });
+    return root;
+  }
+
+
+  // HERESY 1704: a chord bed, ported from timoncool's YuE2-Studio (score/chord_bed.rs, MIT, Ilya Timonin; after gary4juce's yuey scaffold): every
+  // lyrics section gets bars of chords over rests in Vocal and an empty Ins, the model writes the melody over that harmony. The same progressions,
+  // the same seeded draw; verses one progression, choruses a second, a bridge a third; no two neighbouring bars on one chord
+  var BED_MAJOR = [[[0, "maj"], [7, "maj"], [9, "min"], [5, "maj"]], [[0, "maj"], [9, "min"], [5, "maj"], [7, "maj"]], [[9, "min"], [5, "maj"], [0, "maj"], [7, "maj"]],
+    [[0, "maj"], [5, "maj"], [7, "maj"], [5, "maj"]], [[2, "min7"], [7, "7"], [0, "maj7"], [9, "min7"]],
+    [[0, "maj"], [7, "maj"], [9, "min"], [4, "min"], [5, "maj"], [0, "maj"], [5, "maj"], [7, "maj"]], [[0, "maj"], [5, "maj"]], [[0, "maj"], [10, "maj"]],
+    [[0, "maj7"], [5, "maj7"]], [[5, "maj"], [0, "maj"], [7, "maj"], [9, "min"]], [[0, "maj"], [4, "min"], [5, "maj"], [7, "maj"]],
+    [[0, "maj"], [7, "maj"], [5, "maj"], [7, "maj"]], [[9, "min"], [7, "maj"], [5, "maj"], [7, "maj"]], [[0, "maj"], [10, "maj"], [5, "maj"], [0, "maj"]],
+    [[5, "maj"], [7, "maj"], [4, "min"], [9, "min"]]];
+  var BED_MINOR = [[[0, "min"], [8, "maj"], [3, "maj"], [10, "maj"]], [[0, "min"], [5, "min"], [10, "maj"], [3, "maj"]], [[0, "min"], [10, "maj"], [8, "maj"], [7, "maj"]],
+    [[2, "hdim7"], [7, "7"], [0, "min7"], [8, "maj7"]], [[0, "min"], [5, "maj"]], [[0, "min7"], [5, "min7"]], [[0, "min"], [8, "maj"], [10, "maj"], [8, "maj"]],
+    [[0, "min"], [5, "min"], [7, "min"], [5, "min"]], [[0, "min"], [10, "maj"], [8, "maj"], [10, "maj"]], [[8, "maj"], [10, "maj"], [0, "min"], [10, "maj"]],
+    [[0, "min"], [5, "min"], [8, "maj"], [7, "maj"]], [[0, "min"], [3, "maj"], [10, "maj"], [8, "maj"]], [[0, "min"], [7, "min"], [8, "maj"], [5, "min"]],
+    [[0, "min"], [8, "maj"], [5, "min"], [7, "maj"]], [[5, "min"], [7, "min"], [0, "min"], [10, "maj"]], [[0, "min"], [10, "maj"], [5, "min"], [0, "min"]]];
+  var BED_QUALITY = { maj: "", min: "m", maj7: "maj7", min7: "m7", "7": "7", hdim7: "m7b5" };
+  var BED_SHARP = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"], BED_FLAT = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+  function chordBed(o) {
+    var bpm = Math.round(Number(o.bpm)), key = String(o.key || "").trim(), meter = String(o.meter || "4/4").trim();
+    fail(!(bpm >= 40 && bpm <= 240), "the tempo must be between 40 and 240 BPM");
+    fail(!(key in KEYS), "'" + key + "' is not a key: a tonic from A to G, an optional # or b, and m for minor, as in Em or Bb");
+    var mm = /^(\d+)\/(2|4|8)$/.exec(meter);
+    fail(!mm || +mm[1] < 1 || +mm[1] > 12, "'" + meter + "' is not a meter: 4/4, 3/4, 6/8 or 2/4");
+    var units = +mm[1] * 16 / +mm[2];
+    fail(!DURATIONS[units], "'" + meter + "' makes a bar no rest can fill");
+    var minor = /m$/.test(key), t = minor ? key.slice(0, -1) : key;
+    var tonic = (NATURAL[t[0]] + (t.slice(1) === "#" ? 1 : t.slice(1) === "b" ? -1 : 0) + 12) % 12;
+    var names = KEYS[key] < 0 ? BED_FLAT : BED_SHARP, pool = minor ? BED_MINOR : BED_MAJOR;
+    var MASK = (1n << 64n) - 1n, st = (BigInt.asUintN(64, BigInt(o.seed >>> 0)) ^ 0x9e3779b97f4a7c15n) & MASK, picked = [];
+    function draw(n) { st = (st * 6364136223846793005n + 1442695040888963407n) & MASK; return Number((st >> 33n) % BigInt(n)); }
+    while (picked.length < 3) { var i = draw(pool.length); if (picked.indexOf(i) < 0) picked.push(i); }
+    var prog = picked.map(function (pi) { return pool[pi].map(function (s) { return names[(tonic + s[0]) % 12] + BED_QUALITY[s[1]]; }); });
+    var secs = [], cur = null;
+    String(o.lyrics || "").replace(/\r/g, "").split("\n").forEach(function (line) {
+      var m = /^\s*\[([^\]]+)\]/.exec(line);
+      if (m) { cur = [m[1].split(":")[0].trim().toLowerCase().replace(/\s*\d+$/, ""), 0]; secs.push(cur); }
+      else if (line.trim() && cur) cur[1]++;
+    });
+    if (!secs.length) secs = [["verse", 2], ["chorus", 2], ["verse", 2], ["chorus", 2]];
+    function which(l) { return /^(chorus|post-chorus|pre-chorus and chorus|loop|refrain|hook)$/.test(l) ? 1 : /^(bridge|pre-outro|development|breakdown)$/.test(l) ? 2 : 0; }
+    // HERESY 1712 (Viktor 22.10.2026, his «Крик» given 312 bars, 13:00, where YuE2 itself plans it in 400–440 s): paced as the model paces a song,
+    // about two and a half seconds a sung line in pairs of bars (16 at most), a break five seconds' worth, an intro, an outro, an interlude or a solo eight,
+    // an «End» none
+    var barSec = units / 4 * 60 / bpm;
+    function pair(x) { return Math.max(2, Math.ceil(x / 2) * 2); }
+    function bars(l, n) {
+      if (n) return Math.min(16, pair(n * 2.5 / barSec));
+      if (/^(end|the end|fade|fade out|stop)$/.test(l)) return 0;
+      return /intro|outro|interlude|solo|development/.test(l) ? pair(8 / barSec) : pair(5 / barSec);
+    }
+    var out = ["X:1", "T:", "M:" + meter, "L:1/16", "Q:1/4=" + bpm, 'V: Vocal clef=treble name="Vocal Melody" snm="Vocal"', 'V: Ins clef=treble name="Ins Melody" snm="Inst."', "K:" + key];
+    var prev = null, total = 0;
+    secs.forEach(function (sec) {
+      var ch = prog[which(sec[0])], at = 0, row = [], n = bars(sec[0], sec[1]);
+      if (!n) return;                                               // HERESY 1712: an «End» has nothing to play
+      out.push("% " + sec[0]);
+      for (var b = 0; b < n; b++) {
+        var c = ch[at % ch.length];
+        if (c === prev) { at++; c = ch[at % ch.length]; }
+        at++; row.push('"' + c + '"z' + units); prev = c;
+        if (row.length === 4) { out.push("V: Vocal", row.join("|") + "|", "V: Ins", "Z4|"); row = []; }
+      }
+      if (row.length) out.push("V: Vocal", row.join("|") + "|", "V: Ins", "Z" + row.length + "|");
+      total += n;
+    });
+    var abc = out.join("\n");
+    parse(abc);                                                     // fail closed: what the page writes must read back
+    return { abc: abc, bars: total, progressions: prog, key: key };
+  }
+
+  window.HeresyAbc = { dress: dress, parse: parse, report: report, markers: markers, toMidi: toMidi, fromMidi: fromMidi, chordBed: chordBed,   // HERESY 1704
+                       shiftVoice: shiftVoice, noteName: noteName, grid: grid, rewrite: rewrite, groups: groupsOf,   // HERESY 1578: grid, rewrite; 1587: groups
+                       mend: mend, withWords: withWords };   // HERESY 1600
 })();

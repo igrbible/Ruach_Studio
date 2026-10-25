@@ -4,6 +4,7 @@
 // model intends to play. The score is the white box interface: read it, edit
 // it, and hand it back to the synthesis stage through the same request.
 
+#include "backend.h"
 #include "bpe.h"
 #include "generate.h"
 #include "prompt.h"
@@ -26,6 +27,8 @@ static void print_usage(const char * prog) {
             "  --request <json>       Input request JSON\n"
             "\n"
             "Optional:\n"
+            "  --device <name>        Compute device: CUDA0, Vulkan0, MTL0, CPU...\n"
+            "                         (default: best available)\n"
             "  --out <path>           Output score (default: score.abc)\n"
             "  --lm-seed <N>          Token sampling seed (default: random)\n"
             "\n"
@@ -55,6 +58,7 @@ int main(int argc, char ** argv) {
     }
 
     const char * model_path = nullptr;
+    const char * device     = nullptr;
     const char * out_path   = "score.abc";
     const char * dump_path  = nullptr;
     int          max_seq    = 0;
@@ -75,6 +79,8 @@ int main(int argc, char ** argv) {
             model_path = argv[++i];
         } else if (!strcmp(argv[i], "--request") && !last) {
             i++;  // parsed before the flag pass so the flags override it
+        } else if (!strcmp(argv[i], "--device") && !last) {
+            device = argv[++i];
         } else if (!strcmp(argv[i], "--out") && !last) {
             out_path = argv[++i];
         } else if (!strcmp(argv[i], "--lm-seed") && !last) {
@@ -99,6 +105,10 @@ int main(int argc, char ** argv) {
         print_usage(argv[0]);
         return 1;
     }
+    if (device && !backend_set_device(device)) {
+        print_usage(argv[0]);
+        return 1;
+    }
     Yue2Cot cot;
     if (!yue2_cot_parse(r.cot, &cot) || cot == YUE2_COT_OFF) {
         fprintf(stderr, "[Plan] FATAL: cot must be full or melody to write a score\n");
@@ -115,7 +125,7 @@ int main(int argc, char ** argv) {
     }
 
     Qwen3LM lm;
-    if (!qw3lm_load(&lm, model_path)) {
+    if (!qw3lm_load(&lm, model_path, {})) {
         return 1;
     }
     lm.use_flash_attn = lm.use_flash_attn && !no_fa;

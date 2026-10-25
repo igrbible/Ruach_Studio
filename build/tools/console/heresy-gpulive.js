@@ -84,6 +84,12 @@
       draw(box.querySelector("canvas"), ring, true);
     });
   }
+  // HERESY 1680: a card's label: GPUn for NVIDIA's, Arcn for an Intel card (the lab numbers them from 100), each with its short name
+  function gpuLabel(i, name) {
+    return (i >= 100 ? "Arc" + (i - 100) : "GPU" + i) + " · " + String(name || "").replace(/^NVIDIA GeForce /, "").replace(/^Intel\(R\) /, "")
+      .replace(/\(TM\)/g, "").replace(/ Graphics$/, "");
+  }
+  window.HeresyGpuLabel = gpuLabel;
   function shown() {                                  // the cards with a role, else all of them
     var ids = Object.keys(S.rings).map(Number).sort(function (a, b) { return a - b; });
     var withRole = ids.filter(function (i) { return roleOf(i); });
@@ -104,7 +110,7 @@
       var card = host.querySelector('.gl-card[data-gpu="' + i + '"]'), ring = S.rings[i] || [];
       card.classList.toggle("is-main", i === main);
       card.querySelector(".gl-role").textContent = roleOf(i) || tr("No role");
-      card.querySelector(".gl-name").textContent = "GPU" + i + " · " + String(S.names[i] || "").replace(/^NVIDIA GeForce /, "");
+      card.querySelector(".gl-name").textContent = gpuLabel(i, S.names[i]);   // HERESY 1680: an Intel card as Arc0
       card.querySelector(".gl-nums").innerHTML = nums(ring);
       draw(card.querySelector("canvas"), ring, false);
     });
@@ -134,7 +140,8 @@
   }
   function tick() {
     var on = where();
-    if (!on.length || S.busy) return;
+    if (S.busy) return;                                // HERESY 1625: the samples come in all the while; drawn where in sight
+
     S.busy = true;
     fetch("/lab/gpus/live?since=" + S.since).then(function (r) {
       return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || "HTTP " + r.status); return d; });
@@ -151,7 +158,17 @@
     }).catch(function (e) { S.error = tr("The lab does not answer") + ": " + e.message; paint(on); })
       .then(function () { S.busy = false; });
   }
-  setInterval(tick, 1000);
+  // HERESY 1625 (Viktor 20.10.2026: «правильнее рисовать их постоянно, чтобы при развороте граф видеокарт не начинался с пустоты. И шаг увеличь с
+  // секунды до 2-х»): asked every two seconds whether in sight or not, the lab's sampler at two seconds too (120 bars: four minutes); the log
+  // unfolded or the Engine room shown draws at once what came in meanwhile
+  var EVERY = 2000;
+  setInterval(tick, EVERY);
   document.addEventListener("visibilitychange", tick);
-  window.HeresyGpuLive = { tick: tick, state: S };
+  function seen() { var on = where(); if (on.length) paint(on); }
+  function watch() {
+    if (!window.MutationObserver) return;
+    ["logDock", "view-engine"].forEach(function (id) { var el = $(id); if (el) new MutationObserver(seen).observe(el, { attributes: true, attributeFilter: ["class"] }); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch); else watch();
+  window.HeresyGpuLive = { tick: tick, state: S, every: EVERY };
 })();

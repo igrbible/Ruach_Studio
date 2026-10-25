@@ -11,7 +11,7 @@ Run from the tests/ directory.
 
 Usage:
     ./test-lm.py
-    GGML_BACKEND=CPU ./test-lm.py
+    ./test-lm.py --device CPU
 """
 import os
 import subprocess
@@ -21,6 +21,8 @@ import numpy as np
 import torch
 
 BIN = "../build/test-lm"
+# A leading "--device <name>" is forwarded to the harness
+DEVICE = ["--device", sys.argv[2]] if sys.argv[1:2] == ["--device"] else []
 CKPT = "../checkpoints/YuE2-3B"
 GGUF = "../models/YuE2-3B-BF16.gguf"
 TMP = "tmp"
@@ -71,7 +73,7 @@ def main():
 
     ok = True
     for suffix, flags in (("", []), ("-clamp", ["--clamp-fp16"])):
-        subprocess.run([BIN, GGUF, TMP + "/lm"] + flags + args, check=True)
+        subprocess.run([BIN] + DEVICE + [GGUF, TMP + "/lm"] + flags + args, check=True)
         for s in range(len(SEQS)):
             for label, ref_logits in (("lm-prefill", ref[s][0]), ("lm-decode", ref[s][1])):
                 got = np.fromfile(TMP + "/lm_%s_%d_logits.bin" % (label[3:], s), dtype="float32")

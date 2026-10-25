@@ -4,16 +4,28 @@
 // reference, runs the mel frontend and the encoder, and dumps the probes of
 // every stage into a directory for comparison against the torch reference.
 
+#include "backend.h"
 #include "sheetsage.h"
 
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <string>
 #include <vector>
 
 int main(int argc, char ** argv) {
+    // A leading --device <name> picks the device, the positional arguments follow
+    if (argc > 2 && !strcmp(argv[1], "--device")) {
+        if (!backend_set_device(argv[2])) {
+            return 1;
+        }
+        for (int i = 3; i <= argc; i++) {
+            argv[i - 2] = argv[i];
+        }
+        argc -= 2;
+    }
     if (argc != 4) {
-        fprintf(stderr, "usage: %s sheetsage.gguf audio24k.bin dump_dir\n", argv[0]);
+        fprintf(stderr, "usage: %s [--device <name>] sheetsage.gguf audio24k.bin dump_dir\n", argv[0]);
         return 1;
     }
     SheetSage2 m;
@@ -39,7 +51,7 @@ int main(int argc, char ** argv) {
     debug_init(&dbg, argv[3]);
 
     // The reference pads every window to the full length with silence
-    int window = (int) lroundf(m.cfg.window_seconds * SS2_SAMPLE_RATE);
+    int window = (int) lroundf(m.cfg.window_seconds * MERT_SAMPLE_RATE);
     if ((int) audio.size() > window) {
         fprintf(stderr, "[Test-SheetSage] audio exceeds one window\n");
         return 1;
@@ -49,9 +61,9 @@ int main(int argc, char ** argv) {
     std::vector<float> mel;
     int                T_mel = 0;
     Timer              mel_timer;
-    ss2_mel(&m, audio.data(), (int) audio.size(), &mel, &T_mel);
+    mert_mel(&m.mert, audio.data(), (int) audio.size(), &mel, &T_mel);
     fprintf(stderr, "[Test-SheetSage] Mel: %d frames, %.0f ms\n", T_mel, mel_timer.ms());
-    debug_dump_2d(&dbg, "mel", mel.data(), T_mel, m.cfg.n_mels);
+    debug_dump_2d(&dbg, "mel", mel.data(), T_mel, m.mert.cfg.n_mels);
 
     SS2Encoded enc;
     if (!ss2_encode(&m, mel, T_mel, &enc, &dbg)) {
@@ -73,7 +85,7 @@ int main(int argc, char ** argv) {
     }
     prefix.push_back(m.tok.out);
     std::vector<int> tokens;
-    if (!ss2_generate(&m, &dec, prefix, (double) got / SS2_SAMPLE_RATE, &tokens, &dbg)) {
+    if (!ss2_generate(&m, &dec, prefix, (double) got / MERT_SAMPLE_RATE, &tokens, &dbg)) {
         return 1;
     }
     std::string path = std::string(argv[3]) + "/tokens.txt";
@@ -84,7 +96,7 @@ int main(int argc, char ** argv) {
     fclose(f);
 
     // The score, full and melody only, the way the reference writes them
-    double                duration = (double) got / SS2_SAMPLE_RATE;
+    double                duration = (double) got / MERT_SAMPLE_RATE;
     std::vector<NotEvent> events;
     if (!ss2_decode_events(m.cfg, m.tok, tokens, 0.0, 0.0, duration, duration, 0, &events)) {
         return 1;

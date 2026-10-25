@@ -27,6 +27,7 @@
       this.cap = 2 * this.cell + 16384;
       this.qL = new Float32Array(this.cap); this.qR = new Float32Array(this.cap); this.head = 0; this.size = this.cell;   // a cell of silence: the latency
       this.prev = 0; this.last = 0; this.gr = 0; this.lvl = -150;
+      this.gPrev = 0; this.gLast = 0; this.ggr = 0; this.gOn = false;   // HERESY 1760: the gate's own
       this.set({});
     }
     Comp.prototype.set = function (p) {
@@ -36,6 +37,13 @@
       var att = p.attack_ms != null ? +p.attack_ms : 10, rel = p.release_ms != null ? +p.release_ms : 120;
       this.aC = Math.exp(-this.cell / (this.rate * att / 1000)); this.rC = Math.exp(-this.cell / (this.rate * rel / 1000));
       this.mk = Math.exp((p.makeup_db || 0) * LN);
+      this.mix = p.mix != null && isFinite(+p.mix) ? Math.max(0, Math.min(1, +p.mix)) : 1;   // HERESY 1759: parallel compression, the wet's share
+      var gt = p.gate;                               // HERESY 1760: the gate, a downward expander listening to the strip itself
+      this.gOn = !!(gt && gt.on);
+      if (this.gOn) {
+        this.gTh = +gt.threshold_db; this.gRatio = Math.max(1, +gt.ratio); this.gRange = Math.max(0, +gt.range_db);
+        this.gA = Math.exp(-this.cell / (this.rate * Math.max(0.1, +gt.attack_ms) / 1000)); this.gR = Math.exp(-this.cell / (this.rate * Math.max(1, +gt.release_ms) / 1000));
+      } else { this.gPrev = 0; this.gLast = 0; }
       this.keyIdx = p.keyRel != null && p.keyRel >= 0 ? p.keyRel : -1;   // HERESY 1537: another strip of the bank it listens to
       if (!this.on) { this.prev = 0; }
     };
@@ -49,15 +57,26 @@
         this.prev = k * this.prev + (1 - k) * target;
         red = this.prev;
       }
-      var v0 = this.on ? this.last : 0, gm = this.on ? this.mk : 1, cap = this.cap, at = (this.head + this.size) % cap;
+      var gred = 0;
+      if (this.gOn) {                                // HERESY 1760: the gate's level is the strip's own, the compressor keyed or not
+        var gl = level;
+        if (this.keyed) { var so = 0; for (i = 0; i < c; i++) so += L[i] * L[i] + (this.ch > 1 ? R[i] * R[i] : 0); gl = 20 * Math.log10(Math.max(Math.sqrt(so / (c * this.ch)), 1e-15)); }
+        var gtg = gl >= this.gTh ? 0 : Math.max(-this.gRange, (this.gRatio - 1) * (gl - this.gTh)), gk = gtg > this.gPrev ? this.gA : this.gR;   // opening by the attack, closing by the release
+        this.gPrev = gk * this.gPrev + (1 - gk) * gtg;
+        gred = this.gPrev;
+      }
+      var v0 = this.on ? this.last : 0, gm = this.on ? this.mk : 1, w0 = this.gLast, cap = this.cap, at = (this.head + this.size) % cap;
       for (i = 0; i < c; i++) {
-        var g = this.on ? Math.exp((v0 + (red - v0) * i / c) * LN) * gm : 1;
+        var g = this.on ? (1 - this.mix) + this.mix * Math.exp((v0 + (red - v0) * i / c) * LN) * gm : 1;   // HERESY 1759: blended with the dry (mix 1: as before)
+        if (this.gOn) g *= Math.exp((w0 + (gred - w0) * i / c) * LN);   // HERESY 1760: the gate's gain over it
         this.qL[at] = L[i] * g; this.qR[at] = R[i] * g;
         at = at + 1 === cap ? 0 : at + 1;
       }
       this.size += c;
       this.last = red;
       if (-red > this.gr) this.gr = -red;
+      this.gLast = gred;                               // HERESY 1760
+      if (-gred > this.ggr) this.ggr = -gred;
     };
     Comp.prototype.run = function (inL, inR, outL, outR, n, kL, kR) {
       var i, c = this.cell;
@@ -167,6 +186,7 @@
       }
     };
     CompBank.prototype.gr = function () { return this.c.map(function (c) { var g = c.gr; c.gr = 0; return g; }); };
+    CompBank.prototype.ggr = function () { return this.c.map(function (c) { var g = c.ggr; c.ggr = 0; return g; }); };   // HERESY 1760: the gates' reduction
     function MeterBank(rate, n, master) { this.m = []; for (var i = 0; i < n; i++) this.m.push(new Meter(rate, i === master)); }
     MeterBank.prototype.run = function (ins, n) { for (var i = 0; i < this.m.length; i++) this.m[i].feed(ins[2 * i], ins[2 * i + 1], n); };
     MeterBank.prototype.take = function () { return this.m.map(function (m) { return m.take(); }); };
@@ -277,7 +297,7 @@
         process(inputs, outputs) {
           var inp = inputs[0] || [], out = outputs[0], n = out[0] ? out[0].length : 128;
           this.bank.run(inp, out, n);
-          if ((this.since += n) >= EVERY) { this.since = 0; this.port.postMessage({ gr: this.bank.gr() }); }
+          if ((this.since += n) >= EVERY) { this.since = 0; this.port.postMessage({ gr: this.bank.gr(), gg: this.bank.ggr() }); }   // HERESY 1760: gg
           return true;
         }
       };
@@ -327,7 +347,7 @@
   function make(ctx, o) {
     var n = o.strips, m = o.meters, ch = o.ch || 2, rate = ctx.sampleRate, useWorklet = !(o.force || window.ruachDspForce) && !!(ctx.audioWorklet && window.isSecureContext);   // ruachDspForce: the checks try the other road
     var e = { kind: useWorklet ? "worklet" : "script", cell: Math.max(1, Math.round(rate / 1000)), compIns: [], compOuts: [], meterIns: [], nodes: [],
-              grAcc: [], mAcc: [], params: [] };
+              grAcc: [], mAcc: [], params: [], ggAcc: [] };   // HERESY 1760: ggAcc
     var SP = 4096;                                    // HERESY 1536: the page's thread may stall a few tens of ms; 85 ms of room
     e.latency = (e.cell + (useWorklet ? 0 : SP)) / rate;
     e.masterDelay = e.cell + 20 + Math.floor(Math.max(1, Math.round(rate * 4 * 3 / 1000)) / 4);   // HERESY 1544: the master's compressor and limiter
@@ -347,7 +367,8 @@
         if (useWorklet) {
           node = new AudioWorkletNode(ctx, "ruach-comp-bank", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2 * k], channelCount: 2 * k,
                                                                  channelCountMode: "explicit", channelInterpretation: "discrete", processorOptions: { n: k, ch: ch } });
-          node.port.onmessage = function (ev) { (ev.data.gr || []).forEach(function (g, j) { e.grAcc[r[0] + j] = Math.max(e.grAcc[r[0] + j] || 0, g); }); };
+          node.port.onmessage = function (ev) { (ev.data.gr || []).forEach(function (g, j) { e.grAcc[r[0] + j] = Math.max(e.grAcc[r[0] + j] || 0, g); });
+            (ev.data.gg || []).forEach(function (g, j) { e.ggAcc[r[0] + j] = Math.max(e.ggAcc[r[0] + j] || 0, g); }); };   // HERESY 1760
         } else {
           var bank = new DSP.CompBank(rate, k, ch);
           node = ctx.createScriptProcessor(SP, 2 * k, 2 * k);
@@ -356,6 +377,7 @@
             for (c = 0; c < 2 * k; c++) { ins.push(ev.inputBuffer.getChannelData(c)); outs.push(ev.outputBuffer.getChannelData(c)); }
             bank.run(ins, outs, SP);
             bank.gr().forEach(function (g, j) { e.grAcc[r[0] + j] = Math.max(e.grAcc[r[0] + j] || 0, g); });
+            bank.ggr().forEach(function (g, j) { e.ggAcc[r[0] + j] = Math.max(e.ggAcc[r[0] + j] || 0, g); });   // HERESY 1760
           };
           node.bank = bank;
         }
@@ -428,7 +450,7 @@
       if (mn.port) mn.port.postMessage({ comp: p.comp, limit: p.limit });
       else if (mn.master) { mn.master.comp.set(p.comp); mn.master.lim.set(p.limit); }
     };
-    e.read = function () { var o2 = { gr: e.grAcc, m: e.mAcc, mg: e.mgNew ? e.mgAcc : null }; e.grAcc = []; e.mAcc = []; e.mgAcc = [0, 0]; e.mgNew = false; return o2; };   // 1544: mg null, no news
+    e.read = function () { var o2 = { gr: e.grAcc, gg: e.ggAcc, m: e.mAcc, mg: e.mgNew ? e.mgAcc : null }; e.grAcc = []; e.ggAcc = []; e.mAcc = []; e.mgAcc = [0, 0]; e.mgNew = false; return o2; };   // 1544: mg null, no news; 1760: gg
     e.close = function () { e.nodes.forEach(function (x) { try { x.disconnect(); } catch (err) { /* gone */ } if (x.port) x.port.onmessage = null; if (x.onaudioprocess) x.onaudioprocess = null; }); e.nodes = []; };
     return e;
   }

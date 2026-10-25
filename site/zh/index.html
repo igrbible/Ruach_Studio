@@ -133,6 +133,13 @@
   .nums span { color: var(--soft); font-size: 14px; line-height: 1.4; display: block; margin-top: 6px; }
   @media (max-width: 860px) { .nums { grid-template-columns: repeat(2, 1fr); } .nums div:last-child { grid-column: 1 / -1; } }
 
+  /* HERESY 1711 (Viktor 22.10.2026: «Декларацию на сайте-визитке врежь красиво между первым скриншотом и "Шесть комнат, одна студия"»): the declaration
+     under the first screenshot and its numbers, the accent's rule on its left, its last sentence the louder; as wide as the column */
+  section.declare { padding: 64px 0 0; }
+  .declare blockquote { margin: 0; padding: 4px 0 4px 28px; border-left: 3px solid var(--amber); }
+  .declare p { margin: 0 0 14px; font-size: 19px; line-height: 1.65; color: var(--soft); }
+  .declare p.loud { margin: 0; font-size: 22px; line-height: 1.5; color: var(--ink); font-weight: 500; }
+  @media (max-width: 600px) { section.declare { padding-top: 48px; } .declare blockquote { padding-left: 18px; } .declare p { font-size: 17px; } .declare p.loud { font-size: 19px; } }
   /* sections */
   section { padding: 72px 0 0; }
   h2 { font-size: clamp(25px, 3vw, 34px); line-height: 1.2; margin: 0 0 10px; font-weight: 700; }
@@ -261,7 +268,7 @@
     <h1>用文字与和弦写歌<br>在你自己的机器上</h1>
     <p class="lead">围绕开放歌曲模型 <b>YuE2</b> 的完整工作室。写下风格和歌词，工作室就在<b>你自己的 GPU</b> 上作曲、演唱并渲染歌曲。你的歌曲、文字和设置永远不会离开它。</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">在 GitHub 获取</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.zh.md">阅读指南</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face 上的模型</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 请我一台咖啡机</a></div>
-    <span class="rc"><b>2.0.0-pre</b> · 2.0.0 之前的最后一步 · 2026 年 10 月</span>
+    <span class="rc"><b>2.0.0</b> · 第一个稳定版本 · 2026 年 10 月</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -272,27 +279,37 @@
 
     <div class="nums">
       <div><b>8 min</b><span>完整的歌曲，最长八分钟</span></div>
-      <div><b>126 s</b><span>一首 6:12 的歌，只用一张 RTX 3090</span></div>
+      <div><b>135 s</b><span>一首 6:12 的歌，只用一张 RTX 3090</span></div>
       <div><b>6 个房间</b><span>用来创作、写作、精修、绘画、收藏和教学</span></div>
       <div><b>200</b><span>件乐器，逐一用耳朵试听</span></div>
       <div><b>12</b><span>种页面语言</span></div>
     </div>
   </div>
 
+  <!-- HERESY 1711: the declaration (approved 21.10.2026), as in the README and the Hub's cards -->
+  <section class="declare" aria-label="我们坚持的">
+    <div class="wrap">
+      <blockquote>
+        <p>Ruach Studio 是在你自己的硬件上运行的开放音乐生成：模型、乐谱、适配器和每一条录音都属于你，没有任何东西按 token 出租。开放模型如今已经足够好，可以独立站稳；缺少的是围绕它们的工作室：这正是我们公开建造的东西。</p>
+        <p class="loud">音乐应当可以自由地创作、自由地分享：没有嗓音、没有乐器、也没有录音室的人，同样有权把自己的思想和感受托付给声音。</p>
+      </blockquote>
+    </div>
+  </section>
+
   <section id="rooms">
     <div class="wrap">
       <h2>六个房间，一个工作室</h2>
       <p class="sub"><b>创作室</b>做出歌曲，<b>写作室</b>与聊天模型一起写它，<b>精修室</b>完成它，<b>画室</b>为它画图，<b>资料馆</b>收藏每一段录音，<b>LoRA 训练室</b>把你自己的歌教给 YuE2。每个房间的指南都在工作室里。</p>
       <div class="rooms">
-        <article class="room"><a class="pic" href="../assets/shots/studio-create.webp"><img src="../assets/shots/studio-create.webp" alt="创作室" loading="lazy"></a>
-          <div><h3>创作室</h3><p>风格、歌词、规划模式、解码器、滑块、在由绿到红的道路上的 LoRA；录音附带它的乐谱、种子以及重做它所需的一切。</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/studio-writer.webp"><img src="../assets/shots/studio-writer.webp" alt="写作室" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/studio-create.webp" data-night="assets/shots/studio-create-night.webp"><img class="day" src="../assets/shots/studio-create.webp" alt="创作室" loading="lazy"><img class="night" src="../assets/shots/studio-create-night.webp" alt="创作室" loading="lazy"></a>
+          <div><h3>创作室</h3><p>风格、歌词、规划模式、解码器、在由绿到红的道路上的 LoRA；录音附带它的乐谱、种子以及重做它所需的一切。</p></div></article>
+        <article class="room"><a class="pic" href="../assets/shots/studio-writer.webp" data-night="assets/shots/studio-writer-night.webp"><img class="day" src="../assets/shots/studio-writer.webp" alt="写作室" loading="lazy"><img class="night" src="../assets/shots/studio-writer-night.webp" alt="写作室" loading="lazy"></a>
           <div><h3>写作室</h3><p>把歌曲当作带版本的文档，文本配置，以及你自己的聊天模型（或 OpenRouter）与你一起起草和修改。</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/studio-post.webp"><img src="../assets/shots/studio-post.webp" alt="精修室" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/studio-post.webp" data-night="assets/shots/studio-post-night.webp"><img class="day" src="../assets/shots/studio-post.webp" alt="精修室" loading="lazy"><img class="night" src="../assets/shots/studio-post-night.webp" alt="精修室" loading="lazy"></a>
           <div><h3>精修室</h3><p>频谱、伪影、去嗡声、Whisper 歌词检查、分轨、母带处理、超分；一条链运行全部。</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/artist.webp"><img src="../assets/shots/artist.webp" alt="画室" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/artist.webp" data-night="assets/shots/artist-night.webp"><img class="day" src="../assets/shots/artist.webp" alt="画室" loading="lazy"><img class="night" src="../assets/shots/artist-night.webp" alt="画室" loading="lazy"></a>
           <div><h3>画室</h3><p>用你自己的提示词为歌曲作画：正方、横幅和竖幅出自同一个种子，由 Qwen-Image 2512 绘制；画面在你眼前显现，正方的那张成为录音的封面。早期预览。</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/studio-collection.webp"><img src="../assets/shots/studio-collection.webp" alt="资料馆" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/studio-collection.webp" data-night="assets/shots/studio-collection-night.webp"><img class="day" src="../assets/shots/studio-collection.webp" alt="资料馆" loading="lazy"><img class="night" src="../assets/shots/studio-collection-night.webp" alt="资料馆" loading="lazy"></a>
           <div><h3>资料馆</h3><p>每段录音都在工作区里：可搜索、点赞、备注、锁定、配图、发送到你的 DAW；回收站可以还原。</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/studio-train.webp" data-night="assets/shots/studio-train-night.webp"><img class="day" src="../assets/shots/studio-train.webp" alt="LoRA 训练室" loading="lazy"><img class="night" src="../assets/shots/studio-train-night.webp" alt="LoRA 训练室" loading="lazy"></a>
           <div><h3>LoRA 训练室</h3><p>从你自己的歌曲训练适配器：素材集、训练、两部分的曲线讲解、最值得先听的轮次。</p></div></article>
@@ -307,7 +324,7 @@
       <h2>是什么让它成为工作室</h2>
       <p class="sub">不是又一个模型外壳：而是围绕模型的工作站，彻底开放，每一处改动都有编号和记录。</p>
       <ul class="feats">
-        <li><b>完整的歌曲，最长八分钟。</b>一首 6:12 的歌用 126 秒；一首先写乐谱的 7:25 的歌用 198 秒，只用一张 RTX 3090。</li>
+        <li><b>完整的歌曲，最长八分钟。</b>一首 6:12 的歌用 135 秒；一首先写乐谱的 7:25 的歌用 212 秒，只用一张 RTX 3090。</li>
         <li><b>先有乐谱，并且由你编辑。</b>YuE2 在一个音响起之前就用 ABC 写出旋律与和弦：修改它们、移调、带来你自己的乐谱或 MIDI，歌曲就跟着它走。</li>
         <li><b>两个种子，而不是一个。</b>保留歌曲（音乐种子），听它重新渲染（声音种子）。</li>
         <li><b>你自己的声音。</b>在工作室里用你自己的歌训练 LoRA，不量化（bf16），遥测会告诉你先听哪些轮次。</li>
@@ -368,7 +385,7 @@
             <tr><td>进入 DAW</td><td>含乐谱、段落和歌词的 REAPER 工程（实验性）</td><td>音频分轨</td></tr>
             <tr><td>代码</td><td>开放，每处改动都有记录</td><td>封闭</td></tr>
             <tr class="honest"><td>开箱即用的精致度</td><td><b>较少</b>：混音可能有嗡声（去嗡声有帮助），歌词可能偏离（歌词检查会找到位置），有些乐器 YuE2 弹得单薄或根本不会（LoRA 能教会它）</td><td><b>较多</b></td></tr>
-            <tr class="honest"><td>你需要</td><td>一张 NVIDIA GPU（全精度运行一切需 24 GB）、Linux、约 30 GB 磁盘（含画室模型约 56 GB）</td><td>一个浏览器</td></tr>
+            <tr class="honest"><td>你需要</td><td>一张 NVIDIA GPU（全精度运行一切需 24 GB）、Linux、约 33 GB 磁盘（含画室模型约 60 GB）</td><td>一个浏览器</td></tr>
           </tbody>
         </table>
       </div>
@@ -382,7 +399,7 @@
         <div class="card"><h3>机器</h3><ul>
           <li><b>一张 NVIDIA GPU</b>：全精度运行一切需 24 GB</li>
           <li><b>Linux</b>（在 Ubuntu 24.04、CUDA 12.8 上制作）</li>
-          <li><b>约 30 GB</b> 磁盘，在全新安装上实测：程序及其 Python（16 GB），模型（视显卡 13 到 17 GB，由 <code>fetch-models.sh</code> 下载、固定版本并校验）；画室的模型另需 26 GB，💎 素材集 5 GB，都只在你要求时才下载</li></ul></div>
+          <li><b>约 33 GB</b> 磁盘，在全新安装上实测：程序及其 Python（16 GB），模型（视显卡 17 到 24 GB，由 <code>fetch-models.sh</code> 下载、固定版本并校验）；画室的模型另需 26 GB，💎 素材集 5 GB，都只在你要求时才下载</li></ul></div>
         <div class="card"><h3>屏幕</h3><ul>
           <li>为 <b>1920×1080、100 %</b> 的浏览器窗口而做</li>
           <li>理想：<b>2K</b>（2560×1440），22″ 或更大，16:9 或更宽</li>
@@ -398,7 +415,7 @@
   <section id="next">
     <div class="wrap">
       <h2>接下来</h2>
-      <p class="sub">2.0.0-pre 是我们每天做自己歌曲的工作室。以下是正在路上的较大部分，面向 2.0.0 及以后。</p>
+      <p class="sub">2.0.0 是我们每天做自己歌曲的工作室。以下是正在路上的较大部分，面向 2.1.0 及以后。</p>
       <ul class="feats">
         <li><b>像模型写歌那样编辑歌曲。</b>从任意位置延长一段录音；重写一个段落，保留相邻段落的嗓音、调性和小节，并在模型自己的 token 中缝合；在录音自己的乐谱上叠加一层器乐。</li>
         <li><b>精修室里的 DAW。</b>Plenio 的乐谱编辑器抢先预览：钢琴卷帘、和弦轨、音符上方的歌词、用来弹入想法的 MIDI 键盘。</li>
@@ -515,7 +532,7 @@
 </main>
 
 <footer>
-  <div class="wrap"><span>鲁阿赫工作室 · 2.0.0-pre · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> 的作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">更新记录</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 咖啡机</a></span></div>
+  <div class="wrap"><span>鲁阿赫工作室 · 2.0.0 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> 的作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">更新记录</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 咖啡机</a></span></div>
 </footer>
 
 <script>

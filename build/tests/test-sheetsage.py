@@ -12,7 +12,7 @@ Run from the tests/ directory.
 
 Usage:
     ./test-sheetsage.py
-    GGML_BACKEND=CPU ./test-sheetsage.py
+    ./test-sheetsage.py --device CPU
 """
 import os
 import struct
@@ -23,6 +23,8 @@ import numpy as np
 import torch
 
 BIN = "../build/test-sheetsage"
+# A leading "--device <name>" is forwarded to the harness
+DEVICE = ["--device", sys.argv[2]] if sys.argv[1:2] == ["--device"] else []
 CKPT = "../checkpoints/SheetSage2"
 PARENT = "../checkpoints/MERT-v2-FullSong"
 GGUF = "../models/SheetSage2-F32.gguf"
@@ -116,7 +118,7 @@ def main():
         scores[melody_only] = result["abc"]
         tokens = result["tokens"][0].tolist()
 
-    subprocess.run([BIN, GGUF, TMP + "/sheetsage_audio.bin", TMP + "/sheetsage"], check=True)
+    subprocess.run([BIN] + DEVICE + [GGUF, TMP + "/sheetsage_audio.bin", TMP + "/sheetsage"], check=True)
 
     ok = True
     for label in ("mel", "subsampled", "backbone", "mixed", "memory"):

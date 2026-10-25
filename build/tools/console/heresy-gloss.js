@@ -127,10 +127,11 @@
   function ktPaint(r) {
     var name = state.take && state.take.name, base = "/lab/timing?name=" + encodeURIComponent(name || "");
     var file = (state.take && state.take.label ? state.take.label : name || "take").replace(/[\\/:*?"<>|]+/g, " ").trim();
-    $("ktLrc").hidden = $("ktSrt").hidden = !r;
+    $("ktLrc").hidden = $("ktSrt").hidden = $("ktLrcW").hidden = !r;   // HERESY 1646: and every word timed
     $("ktRows").hidden = !r;
     if (!r) { $("ktRows").innerHTML = ""; return; }
     $("ktLrc").href = base + "&fmt=lrc"; $("ktLrc").download = file + ".lrc";
+    $("ktLrcW").href = base + "&fmt=lrcw"; $("ktLrcW").download = file + ".words.lrc";   // HERESY 1646: the enhanced LRC
     $("ktSrt").href = base + "&fmt=srt"; $("ktSrt").download = file + ".srt";
     var guessed = r.rows.filter(function (x) { return x.guessed; }).length;
     last.timing = r;

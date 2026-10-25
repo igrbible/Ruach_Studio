@@ -1637,7 +1637,9 @@
     cols.style.setProperty("--ar-avail", Math.max(240, Math.floor(window.innerHeight - stuck - under - 12)) + "px");
     // HERESY 1345b: the log folded on the left side lies over the form's foot (Draw's row): the form ends above it
     var dock = $("logDock"), foot = dock && dock.classList.contains("is-left") && dock.classList.contains("is-folded") && !dock.hidden ? Math.ceil(dock.getBoundingClientRect().height) + 10 : 0;
-    cols.style.setProperty("--ar-foot", foot + "px");
+    // HERESY 1652: and the Trainer's bars standing over that log
+    var ts = $("trainStrip"), bars = foot && ts && !ts.hidden ? Math.ceil(ts.getBoundingClientRect().height) + 6 : 0;
+    cols.style.setProperty("--ar-foot", (foot + bars) + "px");
   }
   function fitStage() {
     var b = document.querySelector("#arStage .ar-stage-pic"), box = $("arStage");
@@ -2788,6 +2790,7 @@
     });
     window.addEventListener("resize", fitStage);
     if ($("view-artist")) $("view-artist").addEventListener("scroll", paintAvail, { passive: true });   // HERESY 1340
+    window.addEventListener("heresy-activity", function () { setTimeout(paintAvail, 80); });   // HERESY 1652: the Trainer's bars come and go with it
     if ($("logDock") && window.MutationObserver) new MutationObserver(paintAvail).observe($("logDock"), { attributes: true, attributeFilter: ["class", "hidden"] });   // HERESY 1345b: its side, folded or not
     if (window.ResizeObserver) new ResizeObserver(function () { fitStage(); }).observe($("arStage"));   // shown after a hidden tab: its size then
     edges();

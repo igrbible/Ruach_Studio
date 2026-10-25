@@ -2163,6 +2163,13 @@ body[data-tab="write"] .col-grip.left, body[data-tab="post"] .col-grip.left, bod
 /* ------------------------------------------------ HERESY 1019: the key beside the title */
 .title-row { flex-wrap: nowrap; align-items: flex-start; }
 .keyfield { flex: none; width: 9.15em; }   /* HERESY 1169 · 1254: 128 px at 14 px, in em so a lifted frame's larger key fits */
+
+/* HERESY 1614: the version beside the title; the versions' branches */
+.versionfield { flex: none; width: 6.6em; }
+.versionfield input { font-variant-numeric: tabular-nums; }
+.vr-branch { display: flex; align-items: baseline; gap: 8px; padding: 10px 8px 4px; border-top: 1px solid var(--line); }
+.vr-branch:first-child { border-top: 0; padding-top: 2px; }
+.vr-branch-name { font-weight: 700; color: var(--amber); }
 .keyfield select { padding-left: 9px; padding-right: 4px; }
 #songKey.is-wanted { border-style: dashed; color: var(--amber); }
 
@@ -2658,6 +2665,13 @@ body.coll-dragging .coll-peek { display: none; }
 .post-chain { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px; padding: 8px 12px; border: 1px solid var(--line-a); border-radius: var(--r-md); background: var(--panel); }
 .pc-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 13px; }
 .pc-cap { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin-right: 4px; }
+/* HERESY 1569: the chain's row folds to its caption and what it runs */
+.pc-fold { border: 0; background: none; color: var(--dim); cursor: pointer; padding: 0 2px; font-size: 13px; line-height: 1; }
+.pc-fold:hover { color: var(--amber); }
+.pc-fold-say { display: none; color: var(--dim); font-size: 12.5px; }
+.post-chain.is-folded > :not(.pc-row) { display: none; }
+.post-chain.is-folded .pc-row > :not(.pc-fold):not(.pc-cap):not(.pc-fold-say) { display: none; }
+.post-chain.is-folded .pc-fold-say { display: inline; }
 .pc-node { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid var(--line-a); border-radius: var(--r-pill); }
 .pc-node.is-req { border-color: var(--amber-dim); }
 .pc-node em { font-style: normal; color: var(--muted); font-size: 12px; }
@@ -3021,7 +3035,9 @@ tr.is-no .hi-tag { color: var(--bad); }
 .sg-table { border-collapse: collapse; margin: 0 0 10px; font-size: 12.5px; width: 100%; }
 .sg-table th { text-align: left; font-weight: 500; color: var(--dim); padding: 2px 10px 2px 0; }
 .sg-table td { padding: 3px 10px 3px 0; border-top: 1px solid var(--line-soft); }
-.sg-table tr.is-red td { color: #c8372d; } .sg-table tr.is-amber td { color: #c99a1c; } .sg-table tr.is-green td:last-child { color: #3f9a4a; }
+.sg-table td { color: var(--ink); font-size: 13px; }   /* HERESY 1765: the adapter and its strength in the text's colour, the zone alone coloured */
+.sg-table tr.is-red td:last-child { color: var(--bad); font-weight: 600; } .sg-table tr.is-amber td:last-child { color: #9a6a00; font-weight: 600; } .sg-table tr.is-green td:last-child { color: var(--good); }
+:is(:root[data-theme="ink"], :root[data-theme="dark"], :root[data-theme="igr-night"], :root[data-theme="studio"], :root[data-theme="dmm"], :root[data-theme="graphite"], :root[data-theme="nord"], :root[data-theme="dracula"], :root[data-theme="gruvbox"], :root[data-theme="solarized-dark"], :root[data-theme="contrast"]) .sg-table tr.is-amber td:last-child { color: #f0bd52; }
 .sg-abc summary { cursor: pointer; font-size: 12px; color: var(--muted); }
 .sg-abc pre { max-height: 220px; overflow: auto; margin: 6px 0 0; padding: 8px; font: 11.5px/1.45 var(--mono); background: var(--sunk); border-radius: var(--r-sm);
   white-space: pre-wrap; word-break: break-all; }
@@ -3195,6 +3211,10 @@ body[data-tab="train"] .workspace { height: calc(100vh - var(--bar-h) - 8px); }
 .head-more-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; gap: 8px; font-size: 11px; letter-spacing: .1em;
   text-transform: uppercase; color: var(--dim); }
 .head-more-row select { width: 100%; }
+
+/* HERESY 1599: own plugins on or off, a row of ☰ like the model's */
+.head-more-row.hm-pro input { justify-self: start; width: 16px; height: 16px; accent-color: var(--amber); }
+.head-more-row.hm-pro[hidden] { display: none; }
 .head-more-items { display: flex; flex-direction: column; gap: 4px; }
 .head-more-items .btn, .head-more-items .menu-wrap { width: 100%; }
 .head-more-items .btn { justify-content: flex-start; gap: 10px; height: 32px; padding: 0 10px; }
@@ -3716,7 +3736,8 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
 .cmp-seek { flex: 1; accent-color: var(--amber); }
 .cmp-time, .cmp-total { font-size: 12px; color: var(--muted); min-width: 40px; text-align: center; }
 .cmp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.cmp-row { width: 100%; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 48px; align-items: center; gap: 10px; padding: 8px 10px;
+.cmp-row { width: 100%; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto 48px; align-items: center;   /* HERESY 1579: n, name, group, loudness (1550), length */
+  gap: 10px; padding: 8px 10px;
   border: 1px solid var(--line-a); border-radius: var(--r-md); background: var(--panel); color: var(--ink); text-align: left; cursor: pointer; }
 .cmp-row:hover { background: color-mix(in oklab, var(--amber) 5%, var(--panel)); }
 .cmp-row.is-on { border-color: var(--amber-a); background: color-mix(in oklab, var(--amber) 10%, var(--panel)); }
@@ -3769,7 +3790,7 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
   #derivedTree .dv-node audio { grid-column: 1 / -1; width: 100%; }
   #derivedTree .dv-node .dv-player { grid-column: 1 / -1; }   /* HERESY 1487 */
   #derivedTree .dv-node .btn { justify-self: start; }
-  .cmp-row { grid-template-columns: 22px minmax(0, 1fr) 48px; }
+  .cmp-row { grid-template-columns: 22px minmax(0, 1fr) auto 48px; }   /* HERESY 1579: the group hidden, the loudness kept */
   .cmp-group { display: none; }
 }
 
@@ -3918,7 +3939,7 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
   /* the takes in compact cards: the title, then its marks, length and time beside its workspace and its votes */
   body[data-tab="create"] .library .lib-list { gap: 2px; padding: 6px 8px; }
   body[data-tab="create"] .library .take {
-    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 8px; row-gap: 3px;
+    display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr) auto; align-items: center; column-gap: 8px; row-gap: 3px;   /* 1624: the votes always in */
     padding: 7px 10px;
   }
   body[data-tab="create"] .library .take-title { grid-column: 1 / -1; margin: 0; font-size: 13px; }
@@ -3926,7 +3947,7 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
      card too; left in the first column, its width (a long title and its tags) widened that column, and the workspace under it got a letter */
   body[data-tab="create"] .library .take-head { grid-column: 1 / -1; margin: 0; min-width: 0; }
   body[data-tab="create"] .library .take-style { display: none; }
-  body[data-tab="create"] .library .take-foot { grid-column: 1; grid-row: 2; margin: 0; flex-wrap: nowrap; white-space: nowrap; }
+  body[data-tab="create"] .library .take-foot { grid-column: 1; grid-row: 2; margin: 0; flex-wrap: nowrap; white-space: nowrap; min-width: 0; overflow: hidden; }
   body[data-tab="create"] .library .take-extra { display: contents; }
   body[data-tab="create"] .library .take-extra .coll-badges { grid-column: 2; grid-row: 2; margin: 0; flex-wrap: nowrap; overflow: hidden; }
   body[data-tab="create"] .library .take-extra .coll-badge { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
@@ -4272,6 +4293,16 @@ body:not([data-tab="train"]) .tr-logdock { display: none; }
 .hd-item-note { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .hd-item-tick { color: var(--amber); }
 .hd-acts .hd-spacer { flex: 1; }
+/* HERESY 1591 (Viktor: «Сразу зафикси кнопки в селекторе воркспейсов»): a dialog's row of buttons wraps instead of running out of its
+   box at the left, and a long name inside a button is cut with an ellipsis */
+.hd-acts { flex-wrap: wrap; }
+.hd-acts .hd-more { flex: 0 1 auto; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* HERESY 1593 (Viktor 19.10.2026: «Перерисуй все кнопки `Cancel ...` svg иконкой 🗙. Применить - ✔️, и т.п.»): a common act's button as its
+   icon, its word kept inside unseen (heresy-iconbtn.js) */
+.btn.btn-icon { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; padding-left: 10px; padding-right: 10px; position: relative; }
+.btn-icon .ib-svg { display: block; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.btn-icon .ib-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 /* HERESY 1167 (Viktor: «колонка со списком воркспейсов… ограничивалась по высоте видимого view выше плеера, и прокручивалась
    в своём ФРЕЙМЕ»): the Librarian's list of workspaces, a frame of its own that never reaches under the player */
 .coll-side { max-height: calc(100vh - var(--bar-h) - var(--playbar-h, 60px) - 96px); }
@@ -4443,6 +4474,8 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
 /* HERESY 1168 (Viktor 07.10.2026: «Может к хуям убираем из Композера VAE блок»): the VAE is chosen in the ☰ menu under the model;
    the form's radios stay as the page's own record of it, not shown */
 .k-sound fieldset[data-fold="vae"] { display: none; }
+/* HERESY 1625 (Viktor 20.10.2026: «А что это за пустышка?»): the card held only that field; it went empty with it, and goes too */
+.k-card.k-sound { display: none; }
 /* HERESY 1168 (Viktor: «То поле в блоке семплера вообще нужно убрать и передавать туда секундное значение»; «В Sound and Output
    поле max length так и осталось»): the song's Max length is set in Sampling (the music's time); Sound and output has no field
    of its own for it (the request's duration follows the one in Sampling) */
@@ -4952,6 +4985,8 @@ body[data-frame] .log-dock-side { display: none; }
 .coll-filter-btn.is-on { border-color: var(--amber); color: var(--amber); }
 .coll-fbadge { padding: 0 6px; border-radius: var(--r-pill); font-size: 11px; line-height: 17px; font-variant-numeric: tabular-nums; color: var(--amber); background: color-mix(in srgb, var(--amber) 16%, transparent); }
 .hd-box.hd-pick { width: min(520px, 100%); }
+/* HERESY 1619: a chooser of long names (the namesakes to compare) wide enough for them */
+.hd-box.hd-pick.is-wide { width: min(960px, 100%); }
 .hd-logic { display: flex; border: 1px solid var(--line-a); border-radius: var(--r-md); overflow: hidden; }
 .hd-logic-b { flex: 1; padding: 8px 10px; border: 0; border-right: 1px solid var(--line-a); background: none; color: var(--muted); font: inherit; font-size: 14px; cursor: pointer; }
 .hd-logic-b:last-child { border-right: 0; }
@@ -5519,6 +5554,23 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
 .hd-section .hd-text { width: 100%; min-height: 9em; resize: vertical; font-size: 13px; line-height: 1.5; }
 .hd-section .hd-warn { margin: 0; color: var(--amber); font-size: 12.5px; }
 .hd-section .hd-acts { display: flex; align-items: center; gap: 8px; }
+/* HERESY 1757: Sing a window anew: the take's wave with the window laid on it, its fields one height on one line */
+.hd-box.hd-window { width: min(780px, 100%); }
+.hw-wave { display: block; width: 100%; height: 96px; border: 1px solid var(--line-soft); border-radius: 6px; background: var(--sunk); cursor: crosshair; touch-action: none; }
+.hw-times, .hw-row { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.hw-times label, .hw-row label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+.hw-times input, .hw-row input, .hw-row select { height: 32px; box-sizing: border-box; padding-top: 0; padding-bottom: 0; }
+.hw-times input { width: 96px; }
+.hw-row input { width: 76px; }
+.hw-row label:first-child { flex: 1 1 220px; }
+.hw-row select { width: 100%; }
+.hw-shape { display: inline-flex; gap: 2px; align-self: flex-end; }
+.hw-shape .mc-chip { height: 32px; }
+.hw-row .mx-ms.hw-del { width: 32px; height: 32px; align-self: flex-end; }
+.hw-len { align-self: center; }
+.hw-sub { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.hw-rows { display: flex; flex-direction: column; gap: 8px; }
+.hw-more { display: flex; align-items: center; gap: 10px; }
 /* HERESY 1425: the sections of one go */
 .hd-section .hd-parts { display: flex; flex-wrap: wrap; gap: 6px; }
 .hd-section .hd-part { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid var(--line); border-radius: var(--r-xs); font-size: 12.5px; cursor: pointer; }
@@ -5532,6 +5584,15 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
    кнопки "Номера строк", "Орфография"»): dressed as those toggles (.lyr-tog: their frame, corners and amber when pressed), the head's
    capitals and spacing taken off it, the lyrics meter's size given to it */
 .free-tempo { margin-left: 8px; font-size: 11.5px; font-weight: 400; letter-spacing: normal; text-transform: none; }
+
+/* HERESY 1607: the planned score's chords, a row of chips under the planning modes */
+.harmony-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+
+/* HERESY 1609: Only the opening, under the score */
+.opening-check { margin: 6px 0 2px; }
+.harmony-row .label { margin: 0 6px 0 0; }
+.harmony-row .chip[aria-pressed="true"] { border-color: var(--amber); color: var(--ink); background: color-mix(in srgb, var(--amber) 16%, var(--panel)); }
+.free-tempo { white-space: nowrap; flex: none; }   /* HERESY 1602 (Viktor 20.10.2026: «Добавь в кнопку Free tempo неразрыв»): one line in every language */
 .style-tempo-warn { margin: 2px 0 0; color: var(--amber); }
 /* HERESY 1419 (Viktor 13.10.2026: «Что это за кнопка, частично покрытая mp3?»): a take's hover tools in one row at the right, each as wide
    as its word; Refine is «Огранить» in Russian, wider than the fixed place it had, and «mp3» lay over it. The title keeps clear of them
@@ -5633,7 +5694,7 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
 /* the Artist's hidden state: never a field on screen, whatever a .field rule says (1428 hid it by the attribute alone) */
 #arPainter, #arModel { display: none !important; }
 /* ▶ Play this song: filled, two of the take's icons wide, in their row */
-#playHere { width: 75px; min-width: 75px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+#playHere { width: 44px; min-width: 44px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; flex: none; }   /* 1628: narrower */
 #playHere.is-hidden { display: none; }
 #playHere .ui-ico { width: 17px; height: 17px; fill: currentColor; stroke-width: 1.6; margin-left: 2px; }
 /* Save style and Delete as icons beside the saved styles */
@@ -5659,7 +5720,8 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
 .head-more-pop { width: 360px; }
 .head-more-row { grid-template-columns: 84px minmax(0, 1fr); }
 /* a folded takes list opened over the take by the mouse */
-.library.is-folded.is-peek { width: var(--lib-peek-w, 380px); margin-left: calc(40px - var(--lib-peek-w, 380px)); z-index: 35; position: relative;
+.library.is-folded.is-peek { width: var(--lib-peek-w, 440px); margin-left: calc(40px - var(--lib-peek-w, 440px));   /* 1624: 380 cut the star */
+  z-index: 35; position: relative;
   border-left: 1px solid var(--line-a); box-shadow: -18px 0 34px -22px var(--shadow-lg); }
 .library.is-folded.is-peek > .lib-unfold { display: none; }
 /* a menu with no room under it opens upwards (1432) */
@@ -6061,11 +6123,20 @@ body.daw-full #dawPanel .mx-wave.mx-ruler { height: 22px; }
 #view-post.is-canvas > #postSteps, #view-post.is-canvas > .drawer.is-step, #view-post.is-canvas > .dv-tree-box, #view-post.is-canvas > #importPanel { display: none; }
 #view-post > #postCanvas { grid-column: 1 / -1; grid-row: 4; }
 .post-canvas { position: relative; margin-top: 4px; min-height: 420px; overflow: hidden; border: 1px solid var(--line-a); border-radius: var(--r-md);
-  background-color: var(--panel); background-image: radial-gradient(color-mix(in srgb, var(--ink) 16%, transparent) 1px, transparent 1.2px); background-size: 22px 22px; }
+  background-color: var(--panel); background-image: radial-gradient(color-mix(in srgb, var(--ink) 13%, transparent) .8px, transparent 1px); background-size: 10px 10px; }   /* 1569: the 10 px grid the nodes snap to */
 .pcv-wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 .pcv-wire { fill: none; stroke: color-mix(in srgb, var(--ink) 22%, transparent); stroke-width: 1.5; }
 .pcv-wire.is-any { stroke-dasharray: 4 5; }
 .pcv-wire.is-lit { stroke: var(--amber); stroke-width: 2.5; stroke-dasharray: none; }
+/* HERESY 1570: the way's wires cut by a click (a wide band of their own takes it); 1571: the test's flow along them, the nodes it reached */
+.pcv-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
+.pcv-hit:hover { stroke: color-mix(in srgb, var(--bad) 30%, transparent); }
+.pcv-wire.is-flow { stroke: var(--good); stroke-width: 3; stroke-dasharray: 9 6; animation: pcvFlow .5s linear infinite; }
+@keyframes pcvFlow { to { stroke-dashoffset: -15; } }
+.pcv-node.is-test-ok { box-shadow: 0 0 0 2px var(--good), 0 6px 18px var(--shadow-sm, rgba(0, 0, 0, .12)); }
+.pcv-node.is-test-bad { box-shadow: 0 0 0 2px var(--bad), 0 6px 18px var(--shadow-sm, rgba(0, 0, 0, .12)); }
+.pcv-target { flex: none; margin-left: 2px; color: var(--amber); font-size: 14px; line-height: 1; }
+.pcv-node.is-target { border-color: var(--amber); }
 .pcv-node { position: absolute; width: 196px; min-height: 84px; display: flex; flex-direction: column; gap: 3px; padding: 8px 10px 8px 11px; text-align: left;
   border: 1px solid var(--line-strong-a, var(--line-a)); border-top: 3px solid var(--pcv-edge, var(--line-a)); border-radius: var(--r-md); background: var(--ground);
   color: var(--ink); box-shadow: 0 6px 18px var(--shadow-sm, rgba(0, 0, 0, .12)); cursor: pointer; touch-action: none; user-select: none; }
@@ -6079,6 +6150,7 @@ body.daw-full #dawPanel .mx-wave.mx-ruler { height: 22px; }
 .pcv-look { --pcv-edge: #4f8fd6; }
 .pcv-mend { --pcv-edge: #c9a227; }
 .pcv-finish { --pcv-edge: #5aa864; }
+.pcv-setup { --pcv-edge: var(--dim); }   /* HERESY 1569: Audio I/O a setting, as the import is an input */
 .pcv-top { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .pcv-n { flex: none; display: inline-grid; place-items: center; width: 20px; height: 20px; border: 1px solid var(--line-strong-a, var(--line-a)); border-radius: 50%;
   font-size: 11px; color: var(--dim); }
@@ -6093,13 +6165,39 @@ body.daw-full #dawPanel .mx-wave.mx-ruler { height: 22px; }
 .pcv-tools { position: absolute; right: 10px; bottom: 8px; display: flex; align-items: center; gap: 10px; }
 .nd-veil { position: fixed; left: 0; right: 0; top: 0; bottom: var(--playbar-h); z-index: 26; background: color-mix(in srgb, var(--ground) 45%, rgba(0, 0, 0, .55));
   backdrop-filter: blur(3px); }
-.nd-box { position: fixed; z-index: 27; left: 1.5vw; width: 97vw; top: calc((100vh - var(--playbar-h)) * .015); height: calc((100vh - var(--playbar-h)) * .97);
+.nd-box { position: fixed; z-index: 27; left: max(1.5vw, calc(50vw - 550px)); width: min(1100px, 97vw); top: calc((100vh - var(--playbar-h)) * .015); height: auto; max-height: calc((100vh - var(--playbar-h)) * .97);   /* 1573: as large as what it holds */
   display: flex; flex-direction: column; background: var(--ground); border: 1px solid var(--line-strong-a, var(--line-a)); border-radius: var(--r-lg);
   box-shadow: 0 24px 80px var(--shadow-lg, rgba(0, 0, 0, .35)); }
 .nd-box[hidden], .nd-veil[hidden] { display: none; }
 .nd-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line-a); }
 .nd-title { font-size: 16px; }
-.nd-body { flex: 1; min-height: 0; overflow: auto; padding: 14px 18px 18px; }
+.nd-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 14px 18px 18px; }
+.nd-box.is-wide { left: 1.5vw; width: 97vw; }   /* HERESY 1573: a tree of waves, a spectrum, the lyrics, the DAW, the Remaster, Audio I/O */
+/* HERESY 1573: the canvas's room tighter: its profiles and Arrange as icons in the head, the head's note and the row above the canvas gone */
+.pcv-head { display: inline-flex; gap: 4px; align-items: center; margin-left: auto; }
+.pcv-head[hidden] { display: none; }
+
+/* HERESY 1598: no List button (its hidden lost to .btn's display); on the canvas the chain's row is the way's bar in the room's head:
+   the way in hand as a button that opens its list, New way, On the workspace…, Run the way; a batch says itself beside them */
+#postView[hidden] { display: none; }
+.pc-way-new { display: none; }
+.post-head > .post-chain.is-head { flex-direction: row; align-items: center; gap: 8px; margin: 0 0 0 auto; padding: 0; border: 0; background: none; min-width: 0; }
+.post-head > .post-chain.is-head > :not(.pc-row):not(.pc-batch) { display: none; }
+.post-head > .post-chain.is-head .pc-row { flex-wrap: nowrap; gap: 6px; }
+.post-head > .post-chain.is-head .pc-row > :is(.pc-fold, .pc-cap, .pc-fold-say, .pc-break, .pc-classic, .pc-pipe, .spacer) { display: none; }
+.post-head > .post-chain.is-head .pc-way-new { display: inline-flex; }
+.post-head > .post-chain.is-head .pc-batch { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 12px; }
+.post-head > .post-chain.is-head .pc-batch[hidden] { display: none; }
+.post-head > .post-chain.is-head .pc-batch .pc-bar { width: 80px; margin: 0; }
+.post-head > .post-chain.is-head .pc-prof .hc-box { display: inline-block; }
+.post-head > .post-chain.is-head .pc-prof select.hc-src { display: none; }
+.post-head > .post-chain.is-head .hc-pick { min-width: 150px; max-width: 260px; padding: 4px 10px; }
+.post-head > .post-chain.is-head + .pcv-head { margin-left: 4px; }
+.pcv-head .ui-ico { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.pcv-head + .post-view { margin-left: 4px; }
+#view-post.is-canvas > .post-head .col-note { display: none; }
+#view-post.is-canvas { row-gap: 0; }   /* 1573: the empty rows (the import, the chain, the profiles) leave no gaps */
+#view-post.is-canvas .post-canvas { margin-top: 8px; }
 .nd-body > .drawer, .nd-body > .dv-tree-box { margin: 0; display: block; }
 
 /* HERESY 1508 (Viktor 16.10.2026: «В модальных окнах нод не забудь снять ту старую рамку, что была на странице вкладки»): the step's panel in its
@@ -6265,6 +6363,23 @@ body.daw-full #dawPanel .mx-wave.mx-ruler { height: 22px; }
 .mx-ms.mx-undo { display: inline-grid; place-items: center; }
 .mx-ms.mx-undo:disabled { opacity: .35; cursor: default; }
 .mx-ms.mx-print { width: auto; padding: 0 7px; font: 600 11px/1 inherit; }
+/* HERESY 1753 (Viktor 23.10.2026, the DAW gone over as a sound engineer would): the DAW's head on one line, every control the height of the set's
+   select (they stood 20, 24, 28, 30 and 35 px tall, half of them up in the middle of the select's label) */
+.mx-head { --mx-head-h: 34px; }
+.mx-head .mx-set select { height: var(--mx-head-h); padding-top: 0; padding-bottom: 0; }
+.mx-head > .btn, .mx-head > .mx-ms, .mx-head > .mx-ab, .mx-head .mx-ab .mx-ms { height: var(--mx-head-h); align-self: flex-end; box-sizing: border-box; }
+.mx-head > .mx-ms, .mx-head .mx-ab .mx-ms { min-width: var(--mx-head-h); }
+.mx-head > .btn { display: inline-flex; align-items: center; justify-content: center; padding-top: 0; padding-bottom: 0; }
+.mx-head .mx-time { align-self: flex-end; line-height: var(--mx-head-h); }
+.mx-head .mx-ms.mx-print, .mx-head .mx-ms.mx-ref, .mx-head .mx-ms.mx-unsolo { padding: 0 10px; font-size: 12px; }
+/* HERESY 1754: the solo light, a solo's patina; 1755: the reference lit while it stands in for the mix */
+.mx-ms.mx-unsolo { width: auto; background: var(--patina, #6a9f8f); border-color: var(--patina, #6a9f8f); color: var(--ground); }
+.mx-head .mx-ms.mx-unsolo[hidden] { display: none; }
+.mx-ms.mx-ref { width: auto; font: 600 11px/1 inherit; }
+.mx-ms.mx-ref.is-on { background: #3f7fbf; border-color: #3f7fbf; color: #fff; }
+/* HERESY 1756: the master's fade, where it ends */
+.dv-fend { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dv-fend output { min-width: 96px; }
 #mxDockBtn { align-self: flex-end; gap: 5px; }
 .mx-dock { border-top: 1px solid var(--line-soft); padding-top: 8px; }
 .mx-dock[hidden] { display: none; }
@@ -6278,8 +6393,9 @@ body.daw-full #dawPanel .mx-wave.mx-ruler { height: 22px; }
 .mc-strip { flex: 0 0 80px; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding: 0 5px 6px; background: var(--sunk); border: 1px solid var(--line-soft); border-top: 3px solid var(--mc-hue, var(--line)); border-radius: 6px; }
 .mc-strip.is-sel { box-shadow: inset 0 0 0 1px var(--mc-hue, var(--amber)); }
 .mc-strip.is-quiet .fd-meter, .mc-strip.is-quiet .mc-name { opacity: .45; }
-.mc-name { margin: 4px 0 0; padding: 2px 0; border: 0; background: none; color: var(--mc-hue, var(--ink)); font: 600 12px/1.25 inherit; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.mc-name { margin: 4px -4px 0; padding: 2px 0; border: 0; background: none; color: var(--mc-hue, var(--ink)); font-weight: 600; font-size: 12px; line-height: 1.25; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .mc-ret .mc-name, .mc-master .mc-name { color: var(--ink); }
+.mc-name.is-two { white-space: normal; overflow-wrap: anywhere; font-size: 10px; line-height: 9.5px; padding: 0; height: 19px; }   /* HERESY 1764: two lines in the one line's height */
 .mc-ins { display: flex; flex-direction: column; gap: 3px; min-height: 51px; }
 .mc-slot { min-width: 0; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 4px; height: 24px; padding: 0 5px; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--dim); font: 600 10px/1 var(--mono, monospace); cursor: pointer; }
 .mc-slot.is-on { color: var(--ink); border-color: var(--amber); }
@@ -6311,6 +6427,9 @@ body.daw-full #dawPanel .mx-wave.mx-ruler { height: 22px; }
 .kn-ptr { stroke: var(--ink); stroke-width: 2; stroke-linecap: round; }
 .kn-lab { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 9px; line-height: 1.1; color: var(--dim); text-transform: uppercase; letter-spacing: .02em; white-space: nowrap; }
 .kn-out { font-size: 10px; line-height: 1.2; color: var(--muted); white-space: nowrap; }
+/* HERESY 1758: a value typed over a knob's or a fader's number */
+.kn-out, .mc-db { cursor: text; }
+.kn-edit { position: fixed; z-index: 200; height: 22px; box-sizing: border-box; padding: 0 4px; font-size: 11px; text-align: center; border: 1px solid var(--amber); border-radius: 4px; background: var(--field, var(--sunk)); color: var(--ink); outline: none; }
 .kn:focus-visible svg { filter: drop-shadow(0 0 2px var(--amber)); }
 /* a fader, its scale and its meter on one scale */
 .fd { position: relative; display: grid; grid-template-columns: 18px 16px 14px; justify-content: center; gap: 3px; height: var(--fd-h, 176px); margin: auto 0 4px; flex: none; }   /* every fader on one line, at the foot */
@@ -6359,7 +6478,12 @@ body.daw-full #dawPanel .mx-wave.mx-ruler { height: 22px; }
 .dv-band.is-on { background: var(--band); border-color: var(--band); color: #111; }
 .dv-band.is-off { opacity: .5; text-decoration: line-through; }
 .dv-knobs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.dv-knobs-2 { display: grid; grid-template-columns: repeat(3, 44px); gap: 8px; }
+.dv-knobs-2 { display: grid; grid-template-columns: repeat(4, 44px); gap: 8px; }   /* HERESY 1759: seven knobs, the blend the seventh */
+/* HERESY 1760: the gate, a third insert on every strip (the inserts one height everywhere, so the faders stay in a row), its card in the devices */
+.mc-ins { min-height: 78px; }
+.mc-ggr i, .dv-ggrm i { background: #3f9f8f; }
+.dv-gate .dv-grm { height: 120px; }
+.dv-knobs-gate { display: grid; grid-template-columns: repeat(3, 44px); gap: 8px; }
 .dv-comp { display: flex; align-items: center; gap: 10px; }
 .dv-curve { width: 170px; height: 170px; }
 .dv-grm { position: relative; width: 10px; height: 170px; border-radius: 2px; background: color-mix(in srgb, var(--ink) 10%, transparent); }
@@ -6410,6 +6534,8 @@ html[data-glow] body.daw-full #dawPanel { box-shadow: none; }
 .dv-mrow { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; }
 .dv-mrow .dv-loud { flex: 0 0 auto; }
 .dv-mrow .dv-loud .mc-name { display: none; }
+.mc-loud .mc-lra { display: none; }   /* HERESY 1763: the loudness range and PLR in the master's devices, the strip as tall as before */
+.dv-mrow .dv-loud .mc-loud .mc-lra { display: flex; }
 .dv-mrow .dv-spec { flex: 1 1 420px; width: 0; min-width: 320px; max-width: none; }
 /* HERESY 1541 (Viktor 18.10.2026: «Некоторые кнопки с двумя словами переносятся на две строки»): a button's words on one line */
 .btn { white-space: nowrap; }
@@ -6454,6 +6580,13 @@ body:not(.has-monitor) .dv-mon { display: none; }
   background: color-mix(in srgb, var(--ground) 82%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   border: 1px solid var(--line-a); border-radius: var(--r-md); box-shadow: 0 6px 24px rgba(0, 0, 0, .12); }
 .job-strip[hidden] { display: none; }
+/* HERESY 1569: the strip folded to one thin line, its button the one thing in it that takes a click */
+.js-fold { position: absolute; top: 3px; right: 6px; pointer-events: auto; border: 0; background: none; color: var(--dim); cursor: pointer; font-size: 12px; line-height: 1; padding: 2px 4px; }
+.js-fold:hover { color: var(--amber); }
+.job-strip.is-folded { flex-direction: row; align-items: center; gap: 10px; padding: 3px 30px 3px 12px; }
+.job-strip.is-folded .js-row { flex: 1 1 auto; min-width: 0; }
+.job-strip.is-folded .js-bar { display: none; }
+.js-also { flex: none; font-size: 11px; color: var(--dim); }
 .js-row { display: flex; flex-direction: column; gap: 4px; }
 .js-head { display: flex; align-items: baseline; gap: 8px; font-size: 12px; min-width: 0; }
 .js-head b { font-weight: 600; white-space: nowrap; }
@@ -6464,6 +6597,14 @@ body:not(.has-monitor) .dv-mon { display: none; }
 .js-row.is-waiting .js-bar i { opacity: .5; }
 @keyframes js-run { to { background-position: 22.6px 0; } }
 .js-more { font-size: 11px; text-align: center; }
+
+/* HERESY 1617: the training runs over the Server log, a run a line, the whole bar a way into the Trainer */
+.train-strip { position: fixed; z-index: 36; display: flex; flex-direction: column; gap: 4px; cursor: pointer; }
+.train-strip[hidden] { display: none; }
+.train-strip .ts-row { padding: 5px 10px 6px; border: 1px solid var(--line-a); border-radius: var(--r-md); box-shadow: 0 6px 24px rgba(0, 0, 0, .12);
+  background: color-mix(in srgb, var(--ground) 86%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.train-strip .ts-row:hover { border-color: var(--amber); }
+.train-strip .ts-say { font-size: 11px; color: var(--dim); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* HERESY 1550: each version's loudness in the compare window */
 .cmp-lufs { flex: none; font-size: 11px; color: var(--dim); white-space: nowrap; }
 /* HERESY 1553: the chain's profile and a pipeline's steps as chips */
@@ -6494,3 +6635,605 @@ body:not(.has-monitor) .dv-mon { display: none; }
 /* HERESY 1563: an audio bus among the console's strips */
 #mxDock .mc-strip.mc-bus { border-top: 2px solid var(--amber, #d99d10); }
 #mxDock .mc-addbus { margin-left: 4px; }
+#view-post.is-canvas > .post-head .post-daw { margin-left: 6px; }   /* 1573: the head icons take the free space before Canvas/List and the DAW */
+
+/* HERESY 1580 (Viktor 19.10.2026: «Провода пунктиром - это подсказка по рауингу а цельный жирный - реальный поток?»): one meaning a wire.
+   The way (what the chain runs) thick in the accent; made (which file from which) thin and quiet; a step's own source dotted, only off
+   the way; the roads a wire may take only while one is dragged, the nodes that can take it lit, the others faded. A legend in the corner. */
+.pcv-wire.is-lit { stroke: color-mix(in srgb, var(--ink) 40%, transparent); stroke-width: 1.5; stroke-dasharray: none; }
+.pcv-wire.is-chosen { stroke: var(--amber); stroke-width: 1.5; stroke-dasharray: 2 5; stroke-linecap: round; }
+.pcv-wire.is-lit.is-chosen { stroke: var(--amber); stroke-dasharray: 2 5; stroke-width: 1.5; }
+.pcv-wire.is-way { stroke: var(--amber); stroke-width: 3; stroke-dasharray: none; opacity: 1; }
+.pcv-wire.is-hint { display: none; }
+.post-canvas.is-linking .pcv-wire.is-hint { display: inline; stroke: color-mix(in srgb, var(--ink) 28%, transparent); stroke-width: 1.2; stroke-dasharray: 4 5; }
+.post-canvas.is-linking .pcv-node.can-take { box-shadow: 0 0 0 2px color-mix(in srgb, var(--amber) 70%, transparent), 0 6px 18px var(--shadow-sm, rgba(0, 0, 0, .12)); }
+.post-canvas.is-linking .pcv-node.cannot-take { opacity: .38; }
+.pcv-legend { position: absolute; left: 10px; bottom: 10px; z-index: 3; display: flex; flex-direction: column; gap: 3px; max-width: 340px; padding: 7px 26px 7px 10px;
+  border: 1px solid var(--line-a); border-radius: var(--r-md); background: color-mix(in srgb, var(--panel) 92%, transparent); font-size: 11.5px; color: var(--muted, var(--dim)); }
+.pcv-leg-row { display: flex; align-items: center; gap: 8px; line-height: 1.35; }
+.pcv-leg-row.is-hint { color: var(--dim); }
+.pcv-leg { flex: none; width: 26px; height: 0; border-top: 3px solid var(--amber); }
+.pcv-leg.is-made { border-top: 1.5px solid color-mix(in srgb, var(--ink) 40%, transparent); }
+.pcv-leg.is-src { border-top: 2px dotted var(--amber); }
+.pcv-leg-fold { position: absolute; top: 3px; right: 4px; width: 18px; height: 18px; padding: 0; border: 0; background: none; color: var(--dim); cursor: pointer; font-size: 12px; line-height: 18px; }
+.pcv-legend.is-folded { padding: 0; width: 22px; height: 22px; }
+.pcv-legend.is-folded .pcv-leg-row { display: none; }
+.pcv-legend.is-folded .pcv-leg-fold { top: 2px; right: 2px; }
+
+/* HERESY 1582: a node's slots, ComfyUI's way: inputs named on the left, outputs on the right, a colour a class. file amber, a set of stems
+   teal, one stem violet; a wire takes its class's colour (the way thick, made thin and quiet, a source dotted, as 1580 says). */
+.pcv-node { --t-file: var(--amber); --t-set: #2f9e8f; --t-stem: #8b6fd0; }
+.pcv-ports { display: flex; flex-direction: column; gap: 2px; margin: 4px -10px 0 -11px; }
+.pcv-prow { display: flex; justify-content: space-between; align-items: center; min-height: 15px; font-size: 10.5px; line-height: 15px; color: var(--dim); }
+.pcv-pin, .pcv-pout { position: relative; display: inline-flex; align-items: center; max-width: 49%; overflow: visible; white-space: nowrap; }
+.pcv-pin { padding-left: 11px; }
+.pcv-pout { padding-right: 11px; margin-left: auto; }
+.pcv-ports .pcv-port { top: 50%; width: 11px; height: 11px; margin-top: -5.5px; }
+.pcv-ports .pcv-port.is-in { left: -6px; background: var(--panel); border: 2px solid var(--t-file); }
+.pcv-ports .pcv-port.is-out { right: -6px; border: 2px solid var(--panel); }
+.pcv-port.is-in.t-set { border-color: var(--t-set); }
+.pcv-port.is-in.t-stem { border-color: var(--t-stem); }
+.pcv-port.is-out.t-file { background: var(--t-file); }
+.pcv-port.is-out.t-set { background: var(--t-set); }
+.pcv-port.is-out.t-stem { background: var(--t-stem); }
+.pcv-pin.t-set, .pcv-pout.t-set { color: color-mix(in srgb, #2f9e8f 75%, var(--ink)); }
+.pcv-pin.t-stem, .pcv-pout.t-stem { color: color-mix(in srgb, #8b6fd0 75%, var(--ink)); }
+.pcv-wires { --t-file: var(--amber); --t-set: #2f9e8f; --t-stem: #8b6fd0; }
+.pcv-wire.is-way.t-set, .pcv-wire.is-chosen.t-set { stroke: var(--t-set); }
+.pcv-wire.is-way.t-stem, .pcv-wire.is-chosen.t-stem { stroke: var(--t-stem); }
+.pcv-legend { --t-file: var(--amber); --t-set: #2f9e8f; --t-stem: #8b6fd0; }
+.pcv-leg-slots { gap: 5px; }
+.pcv-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--t-file); }
+.pcv-dot.t-set { background: var(--t-set); margin-left: 6px; }
+.pcv-dot.t-stem { background: var(--t-stem); margin-left: 6px; }
+.post-canvas.is-linking .pcv-node.can-take .pcv-port.is-in { transform: scale(1.3); }
+
+/* HERESY 1578 · 1584: the Creator's piano roll over the whole screen: a head of chips, the score on paper twice (as YuE2 wrote it, as it stands
+   now), then the lane where time flows down to two keyboards (drawn on the canvas), a line under it saying the note in hand */
+.roll-back { position: fixed; inset: 0; z-index: 60; background: var(--ground); }
+.roll-box { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--panel); }
+.roll-box:fullscreen { width: 100vw; height: 100vh; }
+.roll-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 14px; border-bottom: 1px solid var(--line-a); }
+.roll-title { font-size: 15px; margin-right: 4px; }
+.roll-grp { display: inline-flex; align-items: center; gap: 4px; }
+.roll-gap { width: 8px; }
+.roll-voice.is-vocal[aria-pressed="true"] { background: #d9a441; color: #1b1b1d; border-color: #d9a441; }
+.roll-voice.is-ins[aria-pressed="true"] { background: #4f8fd6; color: #fff; border-color: #4f8fd6; }
+.roll-head .chip[aria-pressed="true"]:not(.roll-voice) { border-color: var(--amber); color: var(--ink); background: color-mix(in srgb, var(--amber) 16%, var(--panel)); }
+.roll-head .btn[aria-pressed="true"] { border-color: var(--bad, #c33); color: var(--bad, #c33); }
+.roll-sp { flex: 1 1 auto; }
+.roll-papers { flex: 0 1 52%; min-height: 110px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--line-a);
+  background: var(--paper, #f7f2e6); }
+.roll-paper { position: relative; min-height: 0; overflow: auto; border: 1px solid var(--line-a); border-radius: var(--r-md); background: var(--paper, #fbf7ec); color: var(--paper-ink, #2a2318); }
+.roll-cap { position: sticky; top: 0; z-index: 1; display: block; padding: 4px 10px; font-size: 12px; color: var(--dim); background: inherit; border-bottom: 1px solid var(--line-a); }
+.roll-sheet { padding: 4px 8px; }
+.roll-stage { position: relative; flex: 1 0 300px; min-height: 300px; }   /* the lane and the keys keep room on a small window, the paper gives way */
+.roll-canvas { position: absolute; inset: 0; touch-action: none; }
+.roll-say { color: var(--ink); }
+.roll-say.is-bad { color: var(--bad); }
+.roll-btn { padding: 2px 10px; }
+.roll-btn-svg { display: block; color: var(--ink); }
+.roll-btn:hover .roll-btn-svg { color: var(--amber); }
+
+/* HERESY 1585 (Viktor 19.10.2026: «страницы партитуры в чёткой ночной инверсии. В дневном режиме лист партитуры сделай немного сероватым,
+   чтобы белое не било в глаза»): by night the paper dark and its ink light, by day a grey sheet; the bar in hand lit on both (1587);
+   the keys' guide faint over the lane's low octaves, its box the one thing in it taking a click; under the roll one line */
+.roll-box.is-night .roll-papers { background: var(--ground); }
+.roll-box.is-night .roll-paper { background: color-mix(in srgb, var(--ground) 70%, #000); color: #ececec; border-color: color-mix(in srgb, var(--ink) 16%, transparent); }
+.roll-box.is-day .roll-papers { background: var(--ground); }
+.roll-box.is-day .roll-paper { background: color-mix(in srgb, var(--ground) 86%, #8d939c); color: #1c1c1e; }
+.roll-box .roll-cap { color: var(--dim); }
+.roll-sheet .roll-now { color: var(--amber); }
+.roll-box.is-night .roll-sheet .roll-now { color: #f2b24c; }
+.roll-guide { position: absolute; z-index: 1; pointer-events: none; max-width: min(820px, 70vw); font-size: 12px; line-height: 1.6; color: var(--ink); }
+.roll-guide-fold { pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; opacity: .55; cursor: pointer; font-size: 11.5px; }
+.roll-guide-fold:hover { opacity: 1; }
+.roll-guide-body { display: none; margin-top: 3px; opacity: .45; text-shadow: 0 0 5px var(--ground), 0 0 2px var(--ground); }
+.roll-guide.is-open .roll-guide-body { display: block; }
+
+/* HERESY 1590 (Viktor 19.10.2026): the lever between the papers and the roll; ↑ to a paper's start, as chats have it; the arrows over the
+   keyboards' ends with the notes waiting beyond; the tempo beside Play, Play and Stop as the player's icons; the line of state under the
+   keys' guide, faint over the lane */
+.roll-split { flex: 0 0 9px; cursor: row-resize; touch-action: none; background: linear-gradient(var(--line-strong-a, var(--line-a)), var(--line-strong-a, var(--line-a))) center / 56px 3px no-repeat; border-bottom: 1px solid var(--line-a); }
+.roll-split:hover, .roll-split:focus-visible { outline: none; background-color: color-mix(in srgb, var(--amber) 16%, transparent); }
+.roll-top-wrap { position: sticky; bottom: 12px; z-index: 2; height: 0; display: flex; justify-content: flex-end; padding-right: 14px; pointer-events: none; }
+.roll-top { pointer-events: auto; transform: translateY(-100%); width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line-a); background: var(--panel); color: var(--ink); font-size: 18px; line-height: 1; cursor: pointer; box-shadow: 0 2px 10px rgba(0, 0, 0, .28); opacity: 0; visibility: hidden; transition: opacity .15s ease; }
+.roll-top.is-on { opacity: .92; visibility: visible; }
+.roll-top:hover { opacity: 1; color: var(--amber); }
+.roll-edge { position: absolute; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 0; border: 0; background: rgba(36, 36, 40, .9); color: #ececec; font-size: 20px; line-height: 1; cursor: pointer; }
+.roll-edge.is-hi { right: 0; }
+.roll-edge:hover:not(:disabled) { background: color-mix(in srgb, var(--amber) 60%, #1b1b1d); color: #fff; }
+.roll-edge:disabled { opacity: .3; cursor: default; }
+.roll-edge b { min-height: 12px; font-size: 10px; font-weight: 700; }
+.roll-edge.is-vocal b { color: #e2b45a; }
+.roll-edge.is-ins b { color: #86b8ee; }
+.roll-tempo { display: inline-flex; align-items: center; gap: 4px; }
+.roll-tempo b { min-width: 66px; text-align: center; font-size: 12.5px; font-weight: 500; font-variant-numeric: tabular-nums; cursor: ns-resize; user-select: none; }
+
+/* HERESY 1600: the keyboard's size and the tempo, a button each with its list under it */
+.roll-head { position: relative; }
+.roll-pop-btn b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.roll-tempo.is-free b { font-style: italic; }
+.roll-pop { position: absolute; z-index: 30; display: flex; flex-direction: column; gap: 6px; width: 340px; padding: 10px 12px; border: 1px solid var(--line-strong-a);
+  border-radius: var(--r-md); background: var(--panel); box-shadow: 0 14px 40px var(--shadow-lg); }
+.roll-pop[hidden] { display: none; }
+.roll-pop-row { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: baseline; gap: 10px; padding: 6px 8px; border: 1px solid transparent; border-radius: var(--r-sm);
+  background: none; color: var(--muted); text-align: left; font-size: 12.5px; line-height: 1.35; cursor: pointer; }
+.roll-pop-row b { font: 700 15px/1.2 var(--heading); color: var(--ink); }
+.roll-pop-row:hover { border-color: var(--line-a); }
+.roll-pop-row[aria-pressed="true"] { border-color: var(--amber); background: color-mix(in srgb, var(--amber) 12%, var(--panel)); }
+.roll-pop-oct { display: flex; align-items: center; gap: 6px; padding-top: 8px; border-top: 1px solid var(--line-soft); color: var(--muted); font-size: 12px; }
+.roll-pop-oct span { margin-right: auto; }
+.roll-pop-tempo { width: 260px; }
+.roll-pop-big { font: 700 22px/1.2 var(--heading); text-align: center; color: var(--ink); font-variant-numeric: tabular-nums; }
+.roll-pop-steps { display: flex; justify-content: center; gap: 6px; }
+.roll-pop-tempo input[type="range"] { width: 100%; accent-color: var(--amber); }
+.roll-play { padding: 4px 12px; }
+.roll-icon { display: block; }
+.roll-guide .roll-say { margin-top: 5px; font-size: 12px; white-space: nowrap; opacity: .9; text-shadow: 0 0 5px var(--ground), 0 0 2px var(--ground); }
+
+/* HERESY 1594 (Viktor 19.10.2026: «Транспозировать сегмент, поворачивать ролл горизонтально, по кривой рисовать сдвиг»): the segment laid
+   across the stage: a head of chips, its notes above (faint as they are, bright as they will be), the shift's line of points below */
+.roll-tp { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; background: var(--panel); border-top: 2px solid var(--amber); }
+.roll-tp[hidden] { display: none; }
+.roll-tp-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 14px; border-bottom: 1px solid var(--line-a); }
+.roll-tp-head .chip[aria-pressed="true"] { border-color: var(--amber); color: var(--ink); background: color-mix(in srgb, var(--amber) 16%, var(--panel)); }
+.roll-tp-bars { color: var(--dim); font-size: 12.5px; }
+.roll-tp-key { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; cursor: pointer; }
+.roll-tp-cv { flex: 1 1 auto; min-height: 0; width: 100%; touch-action: none; cursor: crosshair; }
+.roll-tp-hint { padding: 3px 14px 6px; font-size: 11.5px; color: var(--dim); }
+/* HERESY 1588 (Viktor: «Кнопку пиано ролла уведи вправо»; «при наведении… растворять этот оверлей прогресса») */
+.drawer-act #rollOpen { margin-left: auto; }
+/* HERESY 1615 (Viktor 20.10.2026: «Кнопки съезжают. Слишком широкие. Пиано ролл ужми до размера svg»): as wide as their words, the roll's as its staff */
+.drawer-act { flex-wrap: nowrap; }
+.drawer-act .btn { width: auto; }
+.drawer-act #rollOpen { padding: 0 6px; }
+.job-strip { transition: opacity .16s ease; }
+.job-strip.is-thin { opacity: .06; }
+.job-strip.is-thin .js-fold { pointer-events: none; }
+
+/* HERESY 1589: Engine → Machine → MIDI: its ports, each with what it is taken for */
+.midi-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 10px 0 6px; }
+.midi-say.is-bad { color: var(--bad); }
+.midi-ports { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 10px; }
+.midi-port { display: flex; gap: 16px; align-items: baseline; font-size: 13px; flex-wrap: wrap; }
+.midi-name { min-width: 240px; font-family: var(--mono, ui-monospace, monospace); font-size: 12.5px; }
+.midi-role { color: var(--dim); }
+.midi-port.is-keys .midi-role { color: var(--ink); }
+.midi-port.is-control .midi-role { color: var(--amber); }
+/* HERESY 1624: the roll's Sound: the pedal, the acoustics, the lid, a row each */
+.roll-pop-sound { width: 380px; }
+.roll-pop-sound .roll-pop-oct:first-child { border-top: 0; padding-top: 0; }
+/* HERESY 1628 (Viktor 20.10.2026: «Второй строкой идёт тайтл с краткой инфой. Туда узкой колонкой кнопку Play/Pause. Так верхняя строка начнёт
+   дышать»): in the room the first row is the take's buttons and ⇆ ⤡ alone; Play/Pause a narrow column before the title, the numbers under the title */
+body:not([data-frame="take"]) #view-take > .col-head > #playHere { order: 9; align-self: flex-start; margin-top: 2px; }
+body:not([data-frame="take"]) #view-take > .col-head > #takeTitle { order: 10; flex: 1 1 calc(100% - 60px); min-width: 0; }
+body:not([data-frame="take"]) #view-take > .col-head > #takeEyebrow { order: 20; margin-left: 52px; flex: 1 1 calc(100% - 60px); }
+body:not([data-frame="take"]) #view-take > .col-head > #playHere.is-hidden ~ #takeEyebrow { margin-left: 0; }
+/* HERESY 1628: the row breaks before Play/Pause even where the first row has room for it (a line of nothing, the head's own row gap taken back) */
+body:not([data-frame="take"]) #view-take > .col-head::after { content: ""; order: 8; flex: 0 0 100%; height: 0; margin-top: -8px; }
+/* HERESY 1629: Past the limits at the end of the budget's row, amber while it holds; the budget's two asleep under it; an adapter out of the score tagged */
+.lora-free { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; font-size: calc(12px + var(--fs, 0px)); color: var(--dim); cursor: pointer; }
+.lora-free input { margin: 0; }
+.lora-free.is-on { color: #c99a1c; }
+.lora-budget .curve-mode:disabled { opacity: .45; cursor: default; }
+/* HERESY 1630: the dock's server lines by the room they come from; a room with none says so */
+#logDockBody[data-only="creator"] > .log-line:not([data-src="creator"]),
+#logDockBody[data-only="trainer"] > .log-line:not([data-src="trainer"]),
+#logDockBody[data-only="refiner"] > .log-line:not([data-src="refiner"]) { display: none; }
+#logDockBody[data-none]:not([data-none=""])::before { content: attr(data-none); display: block; padding: 6px 8px; color: var(--dim); }
+/* HERESY 1632 (Viktor 20.10.2026: «Убери… бордюр из выбранного воркспейса. Лучше полужирным… шрифтовой стиль вкладок комнат… Значок ВНИЗ тоже убери…
+   реверсивный бекграунд по стилю имён вкладок, но чтобы утопал»): the workspace in hand in the rooms' letters, bold, no frame and no caret, on a sunk
+   ground (the rooms' own, pressed in), in the middle between the Trainer and the lamp (app.js centreWs) */
+.ws-current { transform: translateX(var(--ws-shift, 0px)); }
+.topbar .ws-btn, .topbar .ws-btn.is-set, .topbar .ws-btn.is-none { border: 0; padding: 5px 16px; border-radius: calc(var(--r-md) - 2px);
+  background: var(--sunk); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .45), inset 0 -1px 0 color-mix(in srgb, var(--ink) 6%, transparent);
+  font-family: var(--rooms, var(--sans)); font-size: 13px; font-weight: 700; line-height: 1.3; text-transform: uppercase; letter-spacing: .08em; color: var(--amber); }
+.topbar .ws-btn { --fs: calc(var(--fs-g) + var(--fs-frame) + var(--fsr-rooms, 0pt)); }
+.topbar .ws-btn.is-none { color: color-mix(in srgb, var(--amber) 70%, var(--muted)); font-style: italic; }
+.topbar .ws-btn:hover { background: color-mix(in srgb, var(--sunk) 80%, #000); color: var(--amber); }
+.topbar .ws-btn:active { transform: none; }
+.topbar .ws-btn .ws-btn-caret { display: none; }
+/* HERESY 1632 (Viktor: «Дальше справа в баре убери бордюры с кнопок. Пусть при наведении мышки хайлайтятся только иконки и селектор языков. Бекграунд с
+   кнопки выгрузки модели тоже убери. Достаточно свечения самой кнопки»): the bar's right buttons with no frame and no ground; the pointer lights their
+   icon (and the language's letters) in the accent; the unload button, a model loaded, glows red by itself */
+.topbar .head-actions .btn, .topbar .head-actions .btn:hover, .topbar .head-actions .btn[aria-expanded="true"] { border-color: transparent; background: transparent; box-shadow: none; }
+.topbar .head-actions .btn:hover, .topbar .head-actions .btn:focus-visible { color: var(--amber); }
+#unloadModel.is-loaded { background: transparent; border-color: transparent; color: var(--bad-ink, var(--bad));
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--bad) 80%, transparent)) drop-shadow(0 0 7px color-mix(in srgb, var(--bad) 45%, transparent)); }
+#unloadModel.is-loaded:hover { color: var(--bad); }
+/* HERESY 1636 (Viktor 20.10.2026: «две колонки, а уже при приближении к 2K… 3-4 колонки… Раскраска левой полоской… по типам… voice-* второй чёрточкой…
+   800px высота блока, а что не вмещается, в прокрутку»): Add a LoRA: a search and the kinds above, two columns at 1080p, more as the column widens, a box of
+   its own height that scrolls; each adapter a stripe by its kind, a speaker's voice a second one by the first letter of the name */
+.lora-find { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin: 0 0 8px; }
+.lora-search { flex: 1 1 220px; min-width: 0; font-size: 13px; padding: 5px 10px; }
+.lora-kinds { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.lora-kind { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border: 1px solid var(--line-soft); border-radius: var(--r-pill, 999px);
+  background: transparent; color: var(--muted); font: 600 10.5px/1.5 var(--sans); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+.lora-kind::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--lk); }
+.lora-kind:hover { color: var(--ink); border-color: var(--lk); }
+.lora-kind.is-on { color: var(--ink); border-color: var(--lk); background: color-mix(in srgb, var(--lk) 16%, transparent); }
+.lora-find-n { margin-left: auto; color: var(--dim); font-size: 11.5px; }
+.lora-chips { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); max-height: 800px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+.lora-pick { position: relative; padding-left: 15px; }
+.lora-pick::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: var(--r-sm) 0 0 var(--r-sm); background: var(--lk, var(--line-soft)); }
+.lora-pick[data-kind="voice"] { padding-left: 19px; }
+.lora-pick[data-kind="voice"]::after { content: ""; position: absolute; left: 7px; top: 7px; bottom: 7px; width: 4px; border-radius: 2px; background: var(--lk2, transparent); }
+.lora-pick.is-on { box-shadow: none; }
+.lora-pick[hidden] { display: none; }
+/* HERESY 1645 (Viktor: «Нижние паддинги… Уменьшить на 5+ px. Оставить такой же паддинг как и со сторон»): the last row of a Creator card adds no margin to the
+   card's padding: 16 px under it, as at the sides */
+.k-card > .lib-row:last-child { margin-bottom: 0; }
+/* HERESY 1637 (Viktor: «подзаголовки как Budget… chapter style… чтобы было видно, что то раздел/опция/триггер/настройка»): a heading over a group of options in
+   the one chapter look of the studio's .label (Profile, Planning mode, Chords): small capitals, spaced, muted */
+.lora-budget-name, .lora-total > span:first-child { font-size: calc(11px + var(--fs, 0px)); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 400; }
+/* HERESY 1650: what tells two tiles of one name apart (bf16, or a size), small and quiet beside the name */
+.lora-pick .lora-pick-twin { font-size: 10.5px; font-weight: 500; color: var(--dim); letter-spacing: .02em; margin-left: 4px; }
+/* HERESY 1652: the Trainer's bars (over the folded log) take room as the log does: the last takes and runs scroll clear of them */
+#libList { padding-bottom: calc(66px + var(--train-strip-room, 0px)); }
+.tr-rlist { padding-bottom: calc(10px + var(--train-strip-room, 0px)); }
+/* HERESY 1653: while the Trainer's bars stand, each room's column ends with room for them (1652 gave it to the takes, the runs and the Artist) */
+body.has-train-strip .col::after { content: ""; display: block; flex: none; height: var(--train-strip-room, 0px); pointer-events: none; }
+/* HERESY 1654: in a day theme the workspace's press-in is faint (black at 45 % drew a frame round it there); at night as 1632 */
+:root[data-tone="light"] .topbar .ws-btn, :root[data-tone="light"] .topbar .ws-btn.is-set, :root[data-tone="light"] .topbar .ws-btn.is-none {
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--ink) 14%, transparent); }
+/* HERESY 1659: a paused run, amber and still; the states' row under the runs' filters, each with its count, an empty one quiet */
+.tr-st.is-paused, .tr-st.is-pausing { color: #c99a1c; }
+.tr-states { padding-top: 4px; }
+.tr-states [data-state]::after { content: attr(data-n); margin-left: 5px; font-family: var(--mono); font-size: 10.5px; color: var(--dim); }
+.tr-states [data-state].is-none { opacity: .45; }
+
+/* HERESY 1660 (Viktor 21.10.2026: «оживим хедер Студии во время воспроизведения мелодии»): the bar's logo on the song's beat, as the sounding
+   card (--beat from the song's own peaks, 1118): a glow and a breath of 2.5 %; the bar's lower line lit by the same beat. While the peaks
+   are not in yet, an even pulse. Still for those who ask for less motion (the page sets nothing then). The beat's rule outranks the
+   pulse's (body … .is-rubato): with the pulse's specificity the keyframes' filter won over the beat (the kitchen's 1660 check). */
+.topbar .brand-full { transform-origin: 50% 50%; }
+body.is-sounding-page .topbar .brand-full { animation: logo-pulse 1.6s ease-in-out infinite; }
+body.is-sounding-page .topbar.is-rubato .brand-full { animation: none; transform: scale(calc(1 + var(--beat, 0) * 0.025));
+  filter: drop-shadow(0 0 calc(2px + var(--beat, 0) * 12px) color-mix(in srgb, var(--amber) calc(var(--beat, 0) * 75%), transparent)); }
+.topbar.is-rubato { box-shadow: 0 1px 0 0 color-mix(in srgb, var(--amber) calc(var(--beat, 0) * 70%), transparent); }
+@keyframes logo-pulse {
+  0%, 100% { filter: drop-shadow(0 0 2px color-mix(in srgb, var(--amber) 15%, transparent)); }
+  50% { filter: drop-shadow(0 0 10px color-mix(in srgb, var(--amber) 50%, transparent)); }
+}
+@media (prefers-reduced-motion: reduce) { body.is-sounding-page .topbar .brand-full { animation: none; } }
+
+/* HERESY 1663 (Viktor 21.10.2026: «расширь на 40px, убери грёбаный бекграунд, а сверху и снизу по 2px полосы такой градиентной, в центре 60% прозрачности
+   по альфа каналу. Дугу делай базовым цветом темы. С текста убери п/ж, но оставь капс»): the workspace in hand 40 px wider, on no ground and no press-in
+   (1632's sunk ground and 1654's day one undone); a 2 px line above and below in the theme's accent, clear at the ends and 60 % in the middle, whole under
+   the pointer; capitals, not bold */
+.topbar .ws-btn, .topbar .ws-btn.is-set, .topbar .ws-btn.is-none,
+:root[data-tone="light"] .topbar .ws-btn, :root[data-tone="light"] .topbar .ws-btn.is-set, :root[data-tone="light"] .topbar .ws-btn.is-none {
+  --ws-a: 60%; --ws-line: linear-gradient(90deg, transparent, color-mix(in srgb, var(--amber) var(--ws-a), transparent), transparent);
+  background: var(--ws-line) top / 100% 2px no-repeat, var(--ws-line) bottom / 100% 2px no-repeat; box-shadow: none; border-radius: 0;
+  font-weight: 400; }
+/* 40 px more where the bar has room; a narrow bar steps down as before (app.js centreWs: ws-tight, then ws-tighter), so it stays one row */
+.topbar .ws-btn { max-width: 280px; }
+.topbar.ws-tight .ws-btn { max-width: 240px; }
+.topbar.ws-tighter .ws-btn { max-width: 150px; }
+.topbar .ws-btn.is-none, :root[data-tone="light"] .topbar .ws-btn.is-none { --ws-a: 30%; }
+.topbar .ws-btn:hover, :root[data-tone="light"] .topbar .ws-btn:hover { --ws-a: 100%;
+  background: var(--ws-line) top / 100% 2px no-repeat, var(--ws-line) bottom / 100% 2px no-repeat; }
+
+/* HERESY 1665: a wave by sections: the song's sections as chips under the graph, a ticked one in the accent */
+.lora-secs { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 2px; }
+.lora-sec { padding: 2px 9px; border: 1px solid var(--line-soft); border-radius: var(--r-pill, 999px); background: transparent; color: var(--muted);
+  font: 600 10.5px/1.5 var(--sans); letter-spacing: .04em; cursor: pointer; }
+.lora-sec:hover { color: var(--ink); border-color: var(--amber); }
+.lora-sec.is-on { color: var(--ink); border-color: var(--amber); background: color-mix(in srgb, var(--amber) 16%, transparent); }
+
+/* HERESY 1666 (Viktor 21.10.2026: «Слева и справа добавь больше пикселов тумана»): a wide soft fog behind the logo on the song's beat, 48 px past each
+   end; an even breath while the peaks are not in; none for those who ask for less motion (the page marks nothing then) */
+.topbar .brand .brand-logo { position: relative; }
+.topbar .brand .brand-logo::before { content: ""; position: absolute; top: 14%; bottom: 14%; left: -48px; right: -48px; border-radius: 50%; pointer-events: none;
+  z-index: -1; background: radial-gradient(ellipse at center, color-mix(in srgb, var(--amber) 60%, transparent) 0%, transparent 72%); filter: blur(10px); opacity: 0; }
+body.is-sounding-page .topbar .brand .brand-logo::before { animation: logo-fog 1.6s ease-in-out infinite; }
+body.is-sounding-page .topbar.is-rubato .brand .brand-logo::before { animation: none; opacity: calc(var(--beat, 0) * .9); }
+@keyframes logo-fog { 0%, 100% { opacity: .12; } 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { body.is-sounding-page .topbar .brand .brand-logo::before { animation: none; opacity: 0; } }
+/* HERESY 1667 (Viktor 21.10.2026: «Переносы только блоками. nowrap на полный сегмент типа "18 GENERATED"»): each of the Librarian's counts whole */
+#collNote > span { white-space: nowrap; }
+
+/* HERESY 1680: an Intel card's row in Engine → GPUs, the studio's framed as a CUDA studio card is */
+.gpu-table tr.gpu-arc.is-studio td:first-child b { color: var(--amber); }
+
+/* HERESY 1683 (Viktor 21.10.2026: «B, но дай растворение на 40-60%, чтобы не было резкости на этих вертикальных полосках»): a chapter heading (a .label
+   standing alone, not a field's caption; the LoRA budget's and togethers' names) has a tick before it in the accent, dissolved 40 % → 60 % → 40 % */
+.label:not(.field .label), .lora-budget-name, .lora-total > span:first-child,
+.plan-field .plan-head > .label, .plan-field .harmony-row > .label { position: relative; padding-left: 9px; }   /* HERESY 1684: the plan-field's two */
+.label:not(.field .label)::before, .lora-budget-name::before, .lora-total > span:first-child::before,
+.plan-field .plan-head > .label::before, .plan-field .harmony-row > .label::before {
+  content: ""; position: absolute; left: 0; top: .12em; bottom: .12em; width: 2px; border-radius: 2px; pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--amber) 40%, transparent), color-mix(in srgb, var(--amber) 60%, transparent) 50%,
+    color-mix(in srgb, var(--amber) 40%, transparent)); }
+
+/* HERESY 1685 (Viktor 21.10.2026: «прикрути ручку для сворачивания подкатегорий»): a workspace's handle that folds its sections, in its row's left
+   padding, so the names stay where they stand; ▾ open, ▸ folded; a section in hand under a folded parent shows as a dim accent edge on the parent */
+.coll-place { position: relative; }
+.coll-sec-fold { position: absolute; left: 0; top: 50%; width: 11px; height: 16px; margin-top: -8px; display: grid; place-items: center;
+  border-radius: 3px; color: var(--dim); opacity: .6; cursor: pointer; }
+.coll-sec-fold::before { content: ""; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid currentColor; }
+.coll-sec-fold[aria-expanded="false"]::before { border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: 5px solid currentColor; border-right: 0; }
+.coll-place:hover .coll-sec-fold, .coll-sec-fold[aria-expanded="false"] { opacity: 1; }
+.coll-sec-fold:hover { color: var(--amber); background: var(--sunk); }
+.coll-place.is-sub.d2 .coll-sec-fold { left: 12px; }
+.coll-place.is-sec-away { display: none; }
+.coll-place.has-on-inside { box-shadow: inset 2px 0 0 color-mix(in srgb, var(--amber) 55%, transparent); }
+
+/* HERESY 1686 (Viktor 21.10.2026: «одобряю карточки библиотеки твоим B предложением, но их фон сделай более прозрачным, чтобы не было серости, но чтобы
+   и видима была сама карточка, не сливаясь с бекграундом. Для ночной схемы может менее прозрачную»): the Library's card, look B. Its ground the panel
+   at 55 % by day, 82 % by night (the earlier grounds and the fixed light under them give way: !important on the ground only); its edge and a soft
+   shadow carry it; a 3 px stripe on its left says the verdict: ⭐ the accent, 👍 green, 👎 a muted red, none grey */
+.coll-grid:not(.artbin) .coll-card, .coll-grid:not(.artbin) .coll-card:hover, .coll-grid:not(.artbin) .coll-card.is-sel, .coll-grid:not(.artbin) .coll-card.is-current {
+  background: color-mix(in srgb, var(--panel) 55%, transparent) !important; background-attachment: scroll !important; }
+:root[data-tone="dark"] .coll-grid:not(.artbin) .coll-card, :root[data-tone="dark"] .coll-grid:not(.artbin) .coll-card:hover,
+:root[data-tone="dark"] .coll-grid:not(.artbin) .coll-card.is-sel, :root[data-tone="dark"] .coll-grid:not(.artbin) .coll-card.is-current {
+  background: color-mix(in srgb, var(--panel) 82%, transparent) !important; }
+.coll-grid:not(.artbin) .coll-card { border: 1px solid var(--line-a); border-left: 3px solid var(--line-strong-a, var(--line-a)); border-radius: var(--r-md);
+  box-shadow: 0 1px 2px rgb(0 0 0 / .06); }
+.coll-grid:not(.artbin) .coll-card:hover { box-shadow: 0 4px 14px rgb(0 0 0 / .10); }
+:root[data-tone="dark"] .coll-grid:not(.artbin) .coll-card:hover { box-shadow: 0 4px 14px rgb(0 0 0 / .35); }
+.coll-grid:not(.artbin) .coll-card.is-current { border-color: var(--amber-a); }
+.coll-grid:not(.artbin) .coll-card.is-sel { box-shadow: inset 0 0 0 1px var(--amber), 0 1px 2px rgb(0 0 0 / .06); }
+.coll-grid:not(.artbin) .coll-card:has([data-crate="1"][aria-pressed="true"]) { border-left-color: var(--good); }
+.coll-grid:not(.artbin) .coll-card:has([data-crate="-1"][aria-pressed="true"]) { border-left-color: color-mix(in srgb, var(--bad) 70%, transparent); }
+.coll-grid:not(.artbin) .coll-card:has([data-cfav][aria-pressed="true"]) { border-left-color: var(--amber); }
+/* the tiles: a little more air, the title a step up, ▶ in a ring of the accent, a hairline over the likes' row */
+.coll-grid.tiles .coll-card { padding: 11px 13px 8px 12px; row-gap: 4px; }
+.coll-grid.tiles .coll-title { font-size: 14.5px; }
+.coll-grid.tiles .coll-play { width: 30px; height: 30px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--amber) 55%, transparent); }
+.coll-grid.tiles .coll-play .ui-ico { width: 17px; height: 17px; }
+.coll-grid.tiles .coll-play .ui-play { margin-left: 2px; }
+.coll-grid.tiles .coll-check, .coll-grid.tiles .coll-acts { border-top: 1px solid var(--line-soft, var(--line-a)); padding-top: 6px; margin-top: 5px; }
+.coll-grid.tiles .coll-check { margin-right: -8px; padding-right: 8px; display: flex; align-items: center; }
+.coll-grid.tiles .coll-acts { padding-left: 0; }
+/* Refine an outlined button; the badges outlined (the regen mark keeps its dashed edge) */
+.coll-grid:not(.artbin) .coll-act.post { border: 1px solid var(--line-a); padding: 2px 10px; color: var(--ink); opacity: 1; }
+.coll-grid:not(.artbin) .coll-act.post:hover { border-color: var(--amber); color: var(--amber); }
+.coll-grid .coll-badge:not(.rg) { background: transparent; border: 1px solid var(--line-a); padding: 0 7px; }
+
+/* HERESY 1687 (Viktor 21.10.2026: «разукраску имён кнопок комнат? Сверху никакой линии. Снизу 4 пиксела такая же, но жирнее. При перемещении мышью
+   бегать по именам комнат перекатами… Активную комнату полужирным, неактивные обычным начертанием»): the rooms on no ground and no raised pill; one
+   4 px line under each row of rooms in 1663's gradient (clear at its ends, the accent at 60 % in the middle; under the pointer the whole accent), rolling
+   from name to name; the room in hand semibold, the others regular, each name as wide as its semibold (::after keeps the room) */
+.topbar .tabs { background: none; gap: 0; padding: 2px 0; }   /* .tabs is positioned already (1428); the Trainer's row stays absolute by the logo */
+.topbar .tabs button, .topbar .tabs button.is-active { background: none; box-shadow: none; border-radius: 0; display: inline-flex; flex-direction: column;
+  align-items: center; font-weight: 400; color: var(--muted); }
+.topbar .tabs button:hover { color: var(--ink); }
+.topbar .tabs button.is-active { font-weight: 600; color: var(--ink); }
+/* and 1428's arch of light under the room in hand goes: the line says it now (Viktor 21.10.2026, asked «Убрать арку…?»: «АМЭН») */
+.topbar .tabs button.is-active::before { content: none; }
+.topbar .tabs button::after { content: attr(data-text); height: 0; overflow: hidden; visibility: hidden; font-weight: 600; pointer-events: none; user-select: none; }
+.topbar .tabs .tab-glide { --tg-a: 60%; position: absolute; left: 0; bottom: -3px; width: 0; height: 4px; opacity: 0; pointer-events: none;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--amber) var(--tg-a), transparent), transparent); }
+.topbar .tabs .tab-glide.is-over { --tg-a: 100%; }
+.topbar .tabs .tab-glide.is-ready { transition: transform .34s cubic-bezier(.34, 1.32, .64, 1), width .34s cubic-bezier(.34, 1.32, .64, 1), opacity .2s ease; }
+@media (prefers-reduced-motion: reduce) { .topbar .tabs .tab-glide.is-ready { transition: opacity .2s ease; } }
+/* the engine's lamp 12 px right of the logo («ближе к лого, 10-15 пикселов от правого края»; the chip's 4 px padding counted), the Trainer 22 px further,
+   wherever the logo stands centred (from 1660 px; below it the logo goes and the lamp keeps its place by the buttons) */
+@media (min-width: 1660px) {
+  .topbar .engine-chip { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3;
+    left: calc(50% + var(--logo-h) / 2 * var(--logo-aspect, 9.7216) + 8px); }
+  .topbar .tabs-side { left: calc(50% + var(--logo-h) / 2 * var(--logo-aspect, 9.7216) + 34px); }
+}
+
+/* HERESY 1688 (Viktor 21.10.2026: «колонку со списком воркспейсов нужно добить… чтобы не приходилось листать всю страницу вверх»): the workspaces' column
+   and its resizer stick right under the room's head (fitSide measures it into --coll-side-top), never under it */
+.coll-side, .coll-resizer { top: var(--coll-side-top, 8px); }
+
+/* HERESY 1700 (Viktor 21.10.2026: «через стопорный барьер усиление в промежутке 100-150»): the volume's track marks the detent at 100 % (two thirds
+   of its way, by the thumb's reach) and tints the boost past it in the accent; a boosted thumb wears a ring */
+#volume, #volume:hover { --vd: calc(6px + (100% - 12px) * .6667);
+  background: linear-gradient(90deg, var(--line) 0 calc(var(--vd) - 1px), var(--ink) calc(var(--vd) - 1px) calc(var(--vd) + 1px),
+    color-mix(in srgb, var(--amber) 38%, var(--line)) calc(var(--vd) + 1px) 100%); }
+#volume.is-boost::-webkit-slider-thumb { box-shadow: 0 0 0 3px color-mix(in srgb, var(--amber) 35%, transparent); }
+#volume.is-boost::-moz-range-thumb { box-shadow: 0 0 0 3px color-mix(in srgb, var(--amber) 35%, transparent); }
+
+/* HERESY 1701 (Viktor 21.10.2026: «Замки выровняй, бро»): the workspaces' counts one width (four figures, right-aligned, figures of one width), so the
+   locks and snowflakes before them stand in one column */
+#collSide .coll-n { flex: none; min-width: 4ch; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* HERESY 1703: a voice adapter's ▼ ▲ for the score's Vocal line, by its name, only while the plan mode is Full and the form holds a score */
+.lora-vshift { display: none; gap: 2px; margin-left: 6px; vertical-align: middle; }
+body.vshift-ok .lora-vshift { display: inline-flex; }
+.lora-vshift .icon-btn { width: 20px; height: 18px; min-width: 0; padding: 0; font-size: 9px; line-height: 1; color: var(--muted); }
+.lora-vshift .icon-btn:hover { color: var(--amber); }
+
+/* HERESY 1704: the chord bed's row under the score */
+.bed-row .bed-bpm { width: 4.6em; }
+
+/* HERESY 1705 (Viktor 22.10.2026: «на комбинацию звезды и лайка красится в красный, и сама звезда красится в красный. Дай этим комбинациям
+   тёмно-золотой. И в ахуй звезды с пальчиком добавь ещё мелкий, но не токсичный золотой песок в бекграунд»): the star gold wherever it marks a
+   favourite, a starred card's stripe gold, a starred and liked card sprinkled with a fine gold sand (four sparse layers of dots under a pixel, a
+   tenth of gold washing from the corner; nothing moves); and the chord bed's tempo as tall as its selects («поле с 96 - высота не равная») */
+:root { --star-gold: #a3790f; --star-gold-rgb: 163 121 15; }
+:root[data-tone="dark"] { --star-gold: #c9a13b; --star-gold-rgb: 201 161 59; }
+.coll-act.fav[aria-pressed="true"], #pbFav[aria-pressed="true"], #sheetFav[aria-pressed="true"], #favTake[aria-pressed="true"], .take.is-fav .take-fav { color: var(--star-gold); }
+.take.is-fav .take-fav { border-color: rgb(var(--star-gold-rgb) / .45); }
+.coll-grid:not(.artbin) .coll-card:has([data-cfav][aria-pressed="true"]) { border-left-color: var(--star-gold); }
+/* HERESY 1728 («Песок сделай гуще… 20-25% смело, со скоплениями… выцветшие золотые кляксы»; 1726: grain from each card's own place): faded gold blots,
+   about a fifth to a quarter of the card, a faint wash in them and the fine grain gathered inside them; a 480 px tile */
+.coll-grid:not(.artbin) .coll-card:has([data-cfav][aria-pressed="true"]):has([data-crate="1"][aria-pressed="true"]) {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='480'%20height='480'%3E%3Cfilter%20id='s'%20filterUnits='userSpaceOnUse'%20x='0'%20y='0'%20width='480'%20height='480'%20color-interpolation-filters='sRGB'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.028'%20numOctaves='3'%20seed='7'%20stitchTiles='stitch'%20result='n1'/%3E%3CfeColorMatrix%20in='n1'%20type='matrix'%20values='0%200%200%200%200.7%200%200%200%200%200.52%200%200%200%200%200.1%200%200%200%205%20-2.750'%20result='blot'/%3E%3CfeColorMatrix%20in='n1'%20type='matrix'%20values='0%200%200%200%200.7%200%200%200%200%200.52%200%200%200%200%200.1%200%200%200%200.800%20-0.440'%20result='wash'/%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.85'%20numOctaves='1'%20seed='10'%20stitchTiles='stitch'%20result='n2'/%3E%3CfeColorMatrix%20in='n2'%20type='matrix'%20values='0%200%200%200%200.7%200%200%200%200%200.52%200%200%200%200%200.1%200%200%200%209.100%20-5.460'%20result='grain'/%3E%3CfeComposite%20in='grain'%20in2='blot'%20operator='in'%20result='gin'/%3E%3CfeMerge%3E%3CfeMergeNode%20in='wash'/%3E%3CfeMergeNode%20in='gin'/%3E%3C/feMerge%3E%3C/filter%3E%3Crect%20width='480'%20height='480'%20filter='url(%23s)'/%3E%3C/svg%3E"), linear-gradient(135deg, rgb(var(--star-gold-rgb) / .09), transparent 62%) !important;
+  background-size: 480px 480px, 100% 100% !important;
+  background-position: var(--sand-x, 0) var(--sand-y, 0), 0 0 !important;
+  background-repeat: repeat, no-repeat !important; }
+:root[data-tone="dark"] .coll-grid:not(.artbin) .coll-card:has([data-cfav][aria-pressed="true"]):has([data-crate="1"][aria-pressed="true"]) {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='480'%20height='480'%3E%3Cfilter%20id='s'%20filterUnits='userSpaceOnUse'%20x='0'%20y='0'%20width='480'%20height='480'%20color-interpolation-filters='sRGB'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.028'%20numOctaves='3'%20seed='7'%20stitchTiles='stitch'%20result='n1'/%3E%3CfeColorMatrix%20in='n1'%20type='matrix'%20values='0%200%200%200%200.79%200%200%200%200%200.63%200%200%200%200%200.23%200%200%200%205%20-2.800'%20result='blot'/%3E%3CfeColorMatrix%20in='n1'%20type='matrix'%20values='0%200%200%200%200.79%200%200%200%200%200.63%200%200%200%200%200.23%200%200%200%200.600%20-0.336'%20result='wash'/%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.85'%20numOctaves='1'%20seed='10'%20stitchTiles='stitch'%20result='n2'/%3E%3CfeColorMatrix%20in='n2'%20type='matrix'%20values='0%200%200%200%200.79%200%200%200%200%200.63%200%200%200%200%200.23%200%200%200%208.400%20-5.040'%20result='grain'/%3E%3CfeComposite%20in='grain'%20in2='blot'%20operator='in'%20result='gin'/%3E%3CfeMerge%3E%3CfeMergeNode%20in='wash'/%3E%3CfeMergeNode%20in='gin'/%3E%3C/feMerge%3E%3C/filter%3E%3Crect%20width='480'%20height='480'%20filter='url(%23s)'/%3E%3C/svg%3E"), linear-gradient(135deg, rgb(var(--star-gold-rgb) / .09), transparent 62%) !important; }
+.bed-row .bed-bpm { padding-top: 4px; padding-bottom: 4px; }
+
+/* HERESY 1707 (Viktor 22.10.2026: «что, если я хочу сравнить с версией на 10 правок в историю?»): «Compare with…» pressed, the list waiting for a click */
+.vr-acts [data-vr="cmpwith"][aria-pressed="true"] { border-color: var(--patina, var(--good)); color: var(--patina, var(--good)); }
+.vr-back.is-arming .vr-row:not(.is-a):not(.is-trashed) { cursor: copy; }
+.vr-back.is-arming .vr-row:not(.is-a):not(.is-trashed):hover { border-color: var(--patina, var(--good)); border-style: dashed; }
+.vr-back.is-arming .vr-keys { color: var(--patina, var(--good)); }
+
+/* HERESY 1709 (Viktor 22.10.2026: «на неактивные тоже внизу полосочку, но меньше, серенькую… Подумай, как сделать более лаконично»): under each room not
+   in hand a short grey line at the level of 1687's (2 px, the middle half of the name, the muted ink at 45 % fading to its ends); it steps aside while
+   the pointer's line rolls over that name. The rooms' buttons are positioned already (1428) */
+.topbar .tabs button:not(.is-active)::before { content: ""; position: absolute; left: 24%; right: 24%; bottom: -4px; height: 2px; z-index: 0; pointer-events: none;
+  border-radius: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--muted) 45%, transparent), transparent); transition: opacity .2s ease; }
+.topbar .tabs button:not(.is-active):hover::before { opacity: 0; }
+/* («кнопка переключения режима темы очень выделяется. Дай ей 40% прозрачности»): the day/night button at 60 %, whole under the pointer or the keyboard */
+#dayNight { opacity: .6; transition: opacity .15s ease; }
+#dayNight:hover, #dayNight:focus-visible { opacity: 1; }
+/* a tip whose target is in the studio's dialog stands over it (the page's tip is under the dialogs' veil otherwise) */
+.tip.tip-over { z-index: 130; }
+
+/* HERESY 1713: the crossfade's ⋈ beside Play on, as the speed is drawn; it goes where the speed goes on a narrow bar */
+#playbar .xfade-pick { max-width: 58px; }
+@media (max-width: 1360px) { #playbar .pb-side .xfade-pick { display: none; } }
+@media (max-width: 600px) { #playbar #xfadePick { display: none; } }
+
+/* HERESY 1716 (Viktor 22.10.2026: «Градиентную бегалку под именами комнат подними на 2px»): the rolling line 2 px higher, 1709's grey lines with it */
+.topbar .tabs .tab-glide { bottom: -1px; }
+.topbar .tabs button:not(.is-active)::before { bottom: -2px; }
+/* («мигалку сделай дополнительным столбцом, чтобы имена треков не передвигались вправо»): the playing dot a column of its own, before the number */
+.cmp-row { grid-template-columns: 10px 22px minmax(0, 1fr) auto auto 48px; }
+.cmp-row::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: transparent; justify-self: center; }
+.cmp-row.is-playing::before { background: var(--amber); animation: status-pulse 1.2s ease-in-out infinite; }
+.cmp-row.is-playing .cmp-name::before { content: none; }
+/* («прогресс бар, пока не загрузится»): the bytes in, a thin bar beside the count, gone once all are in memory */
+.cmp-load { flex: 1 1 120px; height: 4px; border-radius: 2px; background: var(--line-a); overflow: hidden; align-self: center; }
+.cmp-load > i { display: block; height: 100%; width: 0; background: var(--amber); transition: width .2s ease; }
+
+/* HERESY 1720: a take's time flips on a click (how long ago, the exact time) */
+.when[data-when] { cursor: pointer; border-bottom: 1px dotted transparent; }
+.when[data-when]:hover { border-bottom-color: currentColor; }
+
+/* HERESY 1722 (Viktor 22.10.2026: «Кроссфейд на строке кнопок плеера очень широкий. Вообще убери стрелку»): ⋈ as narrow as its words, no arrow */
+#playbar .xfade-pick { -webkit-appearance: none; appearance: none; background-image: none; max-width: 44px; padding: 0 6px; text-align: center; text-align-last: center; }
+#playbar .xfade-pick::-ms-expand { display: none; }
+
+/* HERESY 1724: «Equal loudness» right after the time (the flex gap and 10 px: 20 px), the note lit when the take has one */
+.cmp-transport .cmp-eq { margin-left: 10px; }
+.cmp-time { min-width: 0; white-space: nowrap; }
+.cmp-rate .cmp-note[aria-pressed="true"] { color: var(--amber); }
+
+/* HERESY 1729: the take's own wave over an edit dialog, its stretches marked */
+.hd-wave { display: block; width: 100%; height: 64px; margin: 10px 0 8px; border-radius: var(--r-sm, 6px); background: color-mix(in oklab, var(--ink) 4%, transparent); }
+
+/* HERESY 1731: the playlist: its view (wide cards of three rows), its window, the player's strip */
+.coll-grid.pl-view { display: block; }
+.pl-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 12px; }
+.pl-hint { color: var(--muted); font-size: 12.5px; }
+.pl-list { display: flex; flex-direction: column; gap: 6px; }
+.pl-card { width: min(720px, 100%); display: grid; grid-template-columns: 30px minmax(0, 1fr) 64px; align-items: center; gap: 12px; padding: 5px 5px 5px 10px;
+  border: 1px solid var(--line-a); border-radius: var(--r-md); background: var(--panel); cursor: grab; }
+.pl-card.is-current { border-color: var(--amber); }
+.pl-play { width: 30px; height: 30px; display: inline-grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--amber); cursor: pointer;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--amber) 55%, transparent); }
+.pl-play:hover, .pl-play.is-playing { color: var(--amber-hi); }
+.pl-play .ui-ico { width: 17px; height: 17px; stroke-width: 1.5; }
+.pl-play .ui-play { margin-left: 2px; }
+.pl-card.is-dragging { opacity: .45; }
+.pl-main { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.pl-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-meta { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-marks { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.pl-mark { display: inline-flex; opacity: .28; }
+.pl-mark .ui-ico { width: 14px; height: 14px; }
+.pl-mark.is-on { opacity: 1; color: var(--amber); }
+.pl-out { margin-left: auto; padding: 0 4px; border: 0; background: none; color: var(--muted); cursor: pointer; }
+.pl-out:hover { color: var(--bad); }
+.pl-cover { width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: var(--sunk);
+  clip-path: polygon(9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px), calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px), 0 9px); }
+.pl-cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.pl-nocover { opacity: .35; }
+.cmp-back.pl-back { bottom: var(--playbar-h); }
+.pl-box { width: min(800px, 100%); }
+.pl-box .pl-body { margin-top: 12px; }
+:root.pl-on { --playbar-h: 152px; }
+.pl-strip { display: grid; grid-template-columns: 5fr 2fr 5fr; align-items: center; gap: 10px; min-height: 22px; color: var(--muted); font-size: 12px; }
+.pl-strip[hidden] { display: none; }
+.pl-prev, .pl-next { min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.pl-prev { text-align: left; }
+.pl-next { text-align: right; }
+.pl-prev:hover:not(:disabled), .pl-next:hover:not(:disabled) { color: var(--ink); }
+.pl-mid { text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-leave { margin-left: 6px; padding: 0 2px; border: 0; background: none; color: inherit; cursor: pointer; }
+@media (max-width: 1659px) and (min-width: 601px) {
+  :root.pl-on { --playbar-h: 98px; }
+  :root.pl-on #playbar { flex-wrap: wrap; align-content: center; row-gap: 4px; }
+  #playbar .pl-strip { order: 99; flex: 1 0 100%; }
+}
+
+/* HERESY 1733: the workspace column's box reaches into the room's bottom padding (.col's 60 px), so the room's end never pushes the sticky column up */
+.coll-col .coll-layout { margin-bottom: -60px; padding-bottom: 60px; }
+
+/* HERESY 1734: a muted menu item, greyed as a disabled one, its why beside the menu on hover or focus */
+.hm-item.is-muted { color: var(--dim); cursor: help; }
+.hm-item.is-muted .hm-icon { opacity: .6; }
+
+/* HERESY 1735: the Seeds block first in Sampling and Denoising: no rule and no room over it (a rule only between blocks) */
+#advDrawer .drawer-body > .seed-sub:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+
+/* HERESY 1737: the playlist's crossfade, in its head and on the strip */
+.pl-xf { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12.5px; }
+.pl-xf input { width: 110px; }
+.pl-xfn { margin-left: 8px; opacity: .8; }
+
+/* HERESY 1739: the run filters, chips of one height: an icon, and the state's count beside it */
+.tr-ichips { gap: 6px; flex-wrap: nowrap; }
+.tr-ichips .lib-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 28px; min-width: 36px; padding: 0 10px; line-height: 1; }
+.tr-ichips .lib-toggle .ui-ico { width: 15px; height: 15px; flex: none; }
+.tr-ichips.tr-states [data-state]::after { margin-left: 0; font-size: 11px; }
+
+/* HERESY 1740: the spectrum's view beside Log / Linear */
+.spec-modes { display: inline-flex; gap: 4px; margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--line-a); }
+.wave-scope .ws-mode { margin-left: 8px; }
+
+/* HERESY 1741: the names fill the left group (as wide as the right one, mirrorPlayer) up to its marks; the style line unfolds on hover over the controls,
+   800 px at most, no tip */
+#playbar .pb-names { flex: 1 1 0; }
+#playbar .pb-names:hover .pb-sub { position: relative; z-index: 6; width: max-content; max-width: 800px; padding-right: 10px; border-radius: 4px;
+  background: color-mix(in oklab, var(--panel) 97%, transparent); box-shadow: 10px 0 14px -6px color-mix(in oklab, var(--panel) 92%, transparent); }
+
+/* HERESY 1742 («на твои золотые SVG кляксы добавь нехилый блюр… на все типы состояний карточек, в разных пастельных цветах»): blurred pastel blots on every
+   card, the colour of its state through one white tile (the blur drawn into it once), each card its own part of it, under its words */
+:root { --blot-none: #a9bcd6; --blot-like: #93cf9b; --blot-dislike: #e9a0a0; --blot-star: #e7cf8c; --blot-gold: #d8ad48; --blot-o: .30; }
+:root[data-tone="dark"] { --blot-none: #7f93b3; --blot-like: #6fae79; --blot-dislike: #c27a7a; --blot-star: #c9ad62; --blot-gold: #c99a32; --blot-o: .16; }
+.coll-grid:not(.artbin) .coll-card { isolation: isolate; --blot-c: var(--blot-none); }
+.coll-grid:not(.artbin) .coll-card::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; opacity: var(--blot-o); background: var(--blot-c);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='900'%20height='900'%3E%3Cfilter%20id='b'%20filterUnits='userSpaceOnUse'%20x='0'%20y='0'%20width='900'%20height='900'%20color-interpolation-filters='sRGB'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.011'%20numOctaves='3'%20seed='11'%20result='n'/%3E%3CfeColorMatrix%20in='n'%20type='matrix'%20values='0%200%200%200%201%20%200%200%200%200%201%20%200%200%200%200%201%20%200%200%200%206%20-3.05'%20result='blot'/%3E%3CfeGaussianBlur%20in='blot'%20stdDeviation='16'/%3E%3C/filter%3E%3Crect%20width='900'%20height='900'%20filter='url%28%23b%29'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='900'%20height='900'%3E%3Cfilter%20id='b'%20filterUnits='userSpaceOnUse'%20x='0'%20y='0'%20width='900'%20height='900'%20color-interpolation-filters='sRGB'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.011'%20numOctaves='3'%20seed='11'%20result='n'/%3E%3CfeColorMatrix%20in='n'%20type='matrix'%20values='0%200%200%200%201%20%200%200%200%200%201%20%200%200%200%200%201%20%200%200%200%206%20-3.05'%20result='blot'/%3E%3CfeGaussianBlur%20in='blot'%20stdDeviation='16'/%3E%3C/filter%3E%3Crect%20width='900'%20height='900'%20filter='url%28%23b%29'/%3E%3C/svg%3E");
+  -webkit-mask-size: 900px 900px; mask-size: 900px 900px; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-position: calc(var(--sand-x, 0px) * -1) calc(var(--sand-y, 0px) * -1); mask-position: calc(var(--sand-x, 0px) * -1) calc(var(--sand-y, 0px) * -1); }
+.coll-grid:not(.artbin) .coll-card:has([data-crate="1"][aria-pressed="true"]) { --blot-c: var(--blot-like); }
+.coll-grid:not(.artbin) .coll-card:has([data-crate="-1"][aria-pressed="true"]) { --blot-c: var(--blot-dislike); }
+.coll-grid:not(.artbin) .coll-card:has([data-cfav][aria-pressed="true"]) { --blot-c: var(--blot-star); }
+/* a star and a like: 1728's gold wash kept, its grain tile gone (the blurred gold blots in its place) */
+.coll-grid:not(.artbin) .coll-card:has([data-cfav][aria-pressed="true"]):has([data-crate="1"][aria-pressed="true"]),
+:root[data-tone="dark"] .coll-grid:not(.artbin) .coll-card:has([data-cfav][aria-pressed="true"]):has([data-crate="1"][aria-pressed="true"]) { --blot-c: var(--blot-gold);
+  background-image: linear-gradient(135deg, rgb(var(--star-gold-rgb) / .09), transparent 62%) !important; background-size: 100% 100% !important;
+  background-position: 0 0 !important; background-repeat: no-repeat !important; }
+
+/* HERESY 1741b: in the two-row player too a long name wraps, two lines at most, never cut (1106); the one-row player's own rule stands */
+#playbar .pb-names strong { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.2; overflow-wrap: anywhere; }
+
+/* HERESY 1743: the Creator Heresy card, one field wide */
+#view-engine .engine-grid > .card.eg-creator { flex: 0 1 720px; }
+
+/* HERESY 1745: past twenty seconds and the page not all in, the veil's line runs instead of standing full (still loading, not stuck) */
+html.booting.veil-wait .boot-veil .boot-line i { width: 28%; animation: boot-sweep 1.6s ease-in-out infinite; }
+@keyframes boot-sweep { from { transform: translateX(-100%); } to { transform: translateX(360%); } }
+
+/* HERESY 1746: how much of the take has come into the page; ▶ asked and waiting for it breathes */
+#playbar .pb-hold { font-size: 11px; color: var(--amber); margin-right: 8px; white-space: nowrap; }
+#playbar.is-holding #playBtn { animation: pb-hold-breathe 1.2s ease-in-out infinite; }
+@keyframes pb-hold-breathe { 50% { opacity: .55; } }
+
+/* HERESY 1795: a beta's mark (the DAW, the piano roll): the kind badge's look, in amber */
+.beta-badge { display: inline-block; margin-left: 8px; padding: 0 6px; vertical-align: 2px; border: 1px solid var(--amber-dim); border-radius: var(--r-pill);
+  color: var(--amber); font: 600 9.5px/1.5 var(--sans); font-style: normal; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; cursor: help; }
+.pcv-top > .beta-badge, .roll-head > .beta-badge, .nd-head > .beta-badge { margin-left: 0; vertical-align: 0; flex: none; }
+
+/* HERESY 1796 (Viktor 25.10.2026: «В колонке пространств "С глаз долой" раздел пометь полоской "главы". Также и "Пространства", чтобы было видно
+   разделение»): the column's headings, Workspaces and Out of sight, in the chapter look of 1683: its tick in the accent, a little more air above */
+#collSide .coll-cap { position: relative; margin-top: 14px; padding-left: 9px; }
+#collSide .coll-cap::before { content: ""; position: absolute; left: 0; top: .12em; bottom: .12em; width: 2px; border-radius: 2px; pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--amber) 40%, transparent), color-mix(in srgb, var(--amber) 60%, transparent) 50%,
+    color-mix(in srgb, var(--amber) 40%, transparent)); }
+
+/* HERESY 1797: the DAW's «beta» in its own head, only over the whole window (in the room its drawer's summary carries it) */
+.mx-beta { display: none; align-self: center; margin-left: 0; }
+body.daw-full .mx-beta { display: inline-block; }

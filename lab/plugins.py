@@ -24,6 +24,13 @@ nothing to list, and the Refiner shows its own steps only.
 HERESY 1484: a file of the step's named .txt, .json, .md or .csv is a report, read and not played (its entry says "kind": "text"),
 and the step's JSON may carry "summary": one line (300 characters at most) that the page shows with its branch.
 
+HERESY 1589: a plugin may bring MIDI scripts for its controllers, and may be made of them alone:
+
+    "midi": [{"id": "oxygen", "name": "Oxygen's DAW port", "script": "midi/oxygen.js", "ports": "Oxygen.*(MIDIIN2|MIDI 2)"}]
+
+The page runs each in a worker of its own for the ports whose names the pattern finds (ruach.midi/1: PLUGINS.md, «MIDI scripts»);
+the lab gives its text at /plugins/midi?plugin=ID&id=ID, never its path. A script is JavaScript of 256 KB at most.
+
 HERESY 1464: a step may say "input": "stems" (a set of stems of the take, not one file: AUDIO is then the set's folder with its
 manifest.json) and a "python" of its own (relative to the folder), which wins over the plugin's.
 """
@@ -76,7 +83,26 @@ def _step(raw, folder):
             "need_mb": _need(raw.get("need_mb")), "prefer": [str(w) for w in raw.get("prefer") or [] if ID.match(str(w))][:8],
             "input": "stems" if raw.get("input") == "stems" else "file", "python": py,
             "rate": _rate(raw.get("rate")),             # HERESY 1549/1553: its pace, kept (it was dropped here)
-            "group": raw.get("group") if raw.get("group") in GROUPS else "finish", "after": str(raw.get("after") or "")[:48]}
+            "group": raw.get("group") if raw.get("group") in GROUPS else "finish", "after": str(raw.get("after") or "")[:48],
+            "hardware": bool(raw.get("hardware", False)),   # HERESY 1572: it waits on gear outside the machine, not on the CPU
+            "stem": str(raw.get("stem")) if ID.match(str(raw.get("stem") or "")) else ""}   # HERESY 1572: the one stem it mends
+
+
+def _midi(raw, folder):
+    """HERESY 1589: one MIDI script of a plugin, or None: a plain id, a .js inside the folder, a pattern that compiles."""
+    if not isinstance(raw, dict) or not ID.match(str(raw.get("id", ""))):
+        return None
+    script = (folder / str(raw.get("script", ""))).resolve()
+    if folder.resolve() not in script.parents or not script.is_file() or script.suffix != ".js" or script.stat().st_size > 256 * 1024:
+        return None
+    ports = str(raw.get("ports") or "")[:200]
+    try:
+        re.compile(ports)
+    except re.error:
+        return None
+    if not ports:
+        return None
+    return {"id": raw["id"], "name": str(raw.get("name") or raw["id"])[:80], "ports": ports, "tip": str(raw.get("tip") or "")[:300], "script": str(script)}
 
 
 def _rate(v):
@@ -124,10 +150,11 @@ def load(root, builtin=False):
                 if not Path(py).exists():
                     raise ValueError(f"its python is not there: {py}")
             steps = [s for s in (_step(r, folder) for r in raw.get("steps") or []) if s]
-            if not steps:
-                raise ValueError("no step with a script inside its folder")
+            midi = [m for m in (_midi(r, folder) for r in raw.get("midi") or []) if m][:16]   # HERESY 1589
+            if not steps and not midi:
+                raise ValueError("no step and no MIDI script inside its folder")
             out.append({"id": raw["id"], "name": str(raw.get("name") or raw["id"]), "folder": str(folder.resolve()),
-                        "python": str(py), "steps": steps, "builtin": bool(builtin),
+                        "python": str(py), "steps": steps, "builtin": bool(builtin), "midi": midi,
                         "pipelines": [x for x in raw.get("pipelines") or [] if isinstance(x, dict)][:24]})   # HERESY 1553: its own profiles
         except (OSError, ValueError, TypeError, AttributeError) as e:
             errors.append({"plugin": folder.name, "error": str(e)})
@@ -137,7 +164,8 @@ def load(root, builtin=False):
 def public(plugins):
     """What the page sees: names, words and fields, not the paths."""
     return [{"id": p["id"], "name": p["name"], "builtin": p.get("builtin", False),
-             "steps": [{k: s[k] for k in ("id", "label", "say", "tip", "gpu", "params", "input", "prefer", "group", "after")} for s in p["steps"]]}
+             "steps": [{k: s[k] for k in ("id", "label", "say", "tip", "gpu", "params", "input", "prefer", "group", "after", "hardware", "stem")} for s in p["steps"]],
+             "midi": [{k: m[k] for k in ("id", "name", "ports", "tip")} for m in p.get("midi") or []]}   # HERESY 1589
             for p in plugins]
 
 

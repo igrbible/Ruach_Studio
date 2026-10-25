@@ -84,6 +84,7 @@ cleanup() {
   fi
   # only the browser this test's page check started (its own profile folder)
   pkill -9 -f -- "--user-data-dir=$PROFILE" 2>/dev/null || true
+  [ -n "${LPID:-}" ] && kill "$LPID" 2>/dev/null; LPID=""   # HERESY 1567: the test's stand-in lab
 }
 trap cleanup EXIT INT TERM
 
@@ -121,6 +122,16 @@ export RUACH_PAGE="$PAGE"
 # HERESY 1145: never the studio's own lab: the test page would read and write the user's page settings, workspaces and styles
 # there (on 03.10.2026 it replaced Viktor's Creator draft). The test server's /lab goes to a port nobody listens on.
 export LAB_PORT=$(python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
+# HERESY 1567: and that port answers 404 to everything: a studio with no Librarian, where a new take lands in no workspace (since 1473
+# Generate sends nothing while a Librarian it expects does not answer, and a port nobody listens on is that)
+python3 -c 'import http.server, sys
+class H(http.server.BaseHTTPRequestHandler):
+    def no(self):
+        self.send_response(404); self.send_header("Content-Type", "application/json"); self.end_headers(); self.wfile.write(b"{\"error\": \"no Librarian in this test\"}")
+    do_GET = do_POST = no
+    def log_message(self, *a): pass
+http.server.HTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_forever()' "$LAB_PORT" &
+LPID=$!
 ${HIDE[@]+"${HIDE[@]}"} nice -n 15 ${PIN[@]+"${PIN[@]}"} "$BIN" --host 127.0.0.1 --port "$PORT" \
   --model "$MODEL=models/YuE2-3B-$MODEL.gguf" --vae "standard=models/YuE2-Vae-F32.gguf" --vae "legacy=models/YuE2-Vae-legacy-F32.gguf" --vae "blend=models/YuE2-Vae-blend-F32.gguf" \
   --loras loras --outputs "$T/library" --settings "$T/settings.json" > "$T/server.log" 2>&1 &

@@ -205,7 +205,8 @@
 		}
 	}
 
-	// draw: red (range) > green (played) > gray
+	// draw: red (range) > green (played) > gray, the range shown while the
+	// waveform is selectable
 	// cursors: red at range edges, green at playhead (on top)
 	function draw() {
 		if (!canvas || peaks.length === 0) return;
@@ -220,7 +221,7 @@
 		const progress = dur > 0 ? currentTime() / dur : 0;
 		const mid = ch / 2;
 		const barW = cw / peaks.length;
-		const hasRange = rangeEnd > rangeStart && dur > 0;
+		const hasRange = selectable && rangeEnd > rangeStart && dur > 0;
 		const rA = hasRange ? Math.max(0, rangeStart / dur) : 0;
 		const rB = hasRange ? Math.min(1, rangeEnd / dur) : 0;
 
@@ -252,7 +253,8 @@
 		}
 	}
 
-	// loop logic lives here: when playhead passes rangeEnd, restart at rangeStart
+	// loop logic lives here: when playhead passes rangeEnd of a selectable
+	// waveform, restart at rangeStart
 	function tick() {
 		if (!source) return;
 		if (gain) gain.gain.value = app.volume / Math.sqrt(playingCount());
@@ -264,7 +266,7 @@
 			draw();
 			return;
 		}
-		if (rangeEnd > rangeStart && t >= rangeEnd) {
+		if (selectable && rangeEnd > rangeStart && t >= rangeEnd) {
 			startPlayback(Math.max(0, rangeStart));
 		}
 		time = currentTime();

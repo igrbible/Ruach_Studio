@@ -12,15 +12,22 @@
 #                                    vae.h vocabulary; weight norm pairs and
 #                                    log scale snake parameters stay raw, vae.h
 #                                    folds w = g*v/||v|| and exponentiates at load)
-#   SheetSage2/ + MERT-v2-FullSong/ -> SheetSage2-F32.gguf
-#                                   (the audio to score transcriber: the MERT-v2
-#                                    conformer under encoder. with the SheetSage2
-#                                    LoRA adapters merged into its attention
-#                                    projections in float32 like the reference
-#                                    does at load, the layer mix, the encoder
-#                                    projection and the BART decoder as shipped,
-#                                    both configs and the symbolic token tables
-#                                    embedded so nothing is rebuilt at load)
+#   MERT-v2-FullSong/ -> MERT-v2-FullSong-F32.gguf
+#                                   (the audio encoder: mel frontend tables,
+#                                    ConvNeXt subsampling and conformer layers,
+#                                    with its config json)
+#   SheetSage2/ -> SheetSage2-F32.gguf
+#                                   (the audio to score head over MERT: the LoRA
+#                                    factors of the attention projections, the
+#                                    layer mix, the encoder projection and the
+#                                    BART decoder as shipped, with the config
+#                                    json and the symbolic token tables; it
+#                                    loads on the GGUF of its base model)
+#   yue2-mothersuperior-realaudio-tokenizer-v4/ -> yue2-mothersuperior-realaudio-tokenizer-v4-F32.gguf
+#                                   (the audio to semantic codes head over MERT
+#                                    layer 20, tokenizer_head_joint_v9 as shipped,
+#                                    with a config json naming its base model;
+#                                    it loads on the GGUF of its base model)
 
 import os
 import sys
@@ -37,9 +44,28 @@ OUTPUT_DIR = os.path.join(SCRIPT_DIR, "models")
 COMPONENTS = {
     "backbone":    "YuE2-3B",
     "vae":         "YuE2-Vae",
+    "mert":        "MERT-v2-FullSong",
     "transcriber": "SheetSage2",
+    "tokenizer":   "yue2-mothersuperior-realaudio-tokenizer-v4",
 }
-TRANSCRIBER_PARENT = "MERT-v2-FullSong"
+
+# The audio tokenizer of Mothersuperior: the head the v9 audio domain round
+# trained against MERT-v2-FullSong layer 20, and the recipe its scripts run
+TOKENIZER_HEAD = "tokenizer_head_joint_v9.safetensors"
+TOKENIZER_CONFIG = {
+    "base_model_name_or_path": "m-a-p/MERT-v2-FullSong",
+    "mert_layer": 20,
+    "chunk_seconds": 30,
+    "frame_rate": 25,
+    "window": 512,
+    "hidden_size": 512,
+    "num_hidden_layers": 8,
+    "num_attention_heads": 8,
+    "intermediate_size": 2048,
+    "layer_norm_eps": 1e-5,
+    "instance_norm_eps": 1e-5,
+    "vocab_size": 32768,
+}
 
 def log(tag, msg):
     print("[%s] %s" % (tag, msg), file=sys.stderr, flush=True)
@@ -238,19 +264,6 @@ def convert_vae():
     w.close()
     log("vae", "wrote %s (%.1f MB)" % (out_path, os.path.getsize(out_path) / 1e6))
 
-# SheetSage2 LoRA: W += B @ A * alpha / rank on the four attention projections
-# of every MERT layer, float32 like the reference merge
-LORA_PROJECTIONS = ("query_proj", "key_proj", "value_proj", "out_proj")
-
-def load_sf_tensor(path, meta, data_start, name):
-    t = meta[name]
-    with open(path, "rb") as f:
-        f.seek(data_start + t["data_offsets"][0])
-        raw = f.read(t["data_offsets"][1] - t["data_offsets"][0])
-    if t["dtype"] != "F32":
-        raise SystemExit("expected F32 for %s, got %s" % (name, t["dtype"]))
-    return np.frombuffer(raw, dtype=np.float32).reshape(t["shape"])
-
 def transcriber_tokenizer_json(model_dir, cfg):
     """Instantiate the checkpoint tokenizer and dump the tables the C++ reads:
     the token ranges, and the label lists of the classes that are not a plain
@@ -290,60 +303,72 @@ def transcriber_tokenizer_json(model_dir, cfg):
     }
     return json.dumps(table, separators=(",", ":")), t.n_tokens
 
-def convert_transcriber():
-    """SheetSage2/ + MERT-v2-FullSong/ -> SheetSage2-F32.gguf, adapters merged."""
-    model_dir = os.path.join(CHECKPOINT_DIR, COMPONENTS["transcriber"])
-    parent_dir = os.path.join(CHECKPOINT_DIR, TRANSCRIBER_PARENT)
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    out_path = os.path.join(OUTPUT_DIR, "SheetSage2-F32.gguf")
-
+def convert_mert():
+    """MERT-v2-FullSong/ -> MERT-v2-FullSong-F32.gguf"""
+    model_dir = os.path.join(CHECKPOINT_DIR, COMPONENTS["mert"])
+    out_path = os.path.join(OUTPUT_DIR, "MERT-v2-FullSong-F32.gguf")
     with open(os.path.join(model_dir, "config.json"), "r", encoding="utf-8") as f:
         cfg = json.load(f)
-    if cfg["weights_format"] != "adapter":
-        raise SystemExit("expected adapter weights, got %s" % cfg["weights_format"])
-    scale = cfg["lora_alpha"] / cfg["lora_rank"]
+
+    w = gguf.GGUFWriter(out_path, arch="mert2")
+    w.add_name("MERT-v2-FullSong music audio encoder")
+    w.add_string("mert2.config_json", json.dumps(cfg, separators=(",", ":")))
+    stream_native_tensors(w, model_dir, "mert")
+
+    w.write_header_to_file()
+    w.write_kv_data_to_file()
+    w.write_tensors_to_file()
+    w.close()
+    log("mert", "wrote %s (%.1f MB)" % (out_path, os.path.getsize(out_path) / 1e6))
+
+def convert_transcriber():
+    """SheetSage2/ -> SheetSage2-F32.gguf"""
+    model_dir = os.path.join(CHECKPOINT_DIR, COMPONENTS["transcriber"])
+    out_path = os.path.join(OUTPUT_DIR, "SheetSage2-F32.gguf")
+    with open(os.path.join(model_dir, "config.json"), "r", encoding="utf-8") as f:
+        cfg = json.load(f)
 
     w = gguf.GGUFWriter(out_path, arch="sheetsage2")
-    w.add_name("SheetSage2 audio to score transcriber on MERT-v2-FullSong")
+    w.add_name("SheetSage2 audio to score transcriber head on MERT-v2-FullSong")
     w.add_string("sheetsage2.config_json", json.dumps(cfg, separators=(",", ":")))
     tokenizer_json, n_tokens = transcriber_tokenizer_json(model_dir, cfg)
     if n_tokens != cfg["vocab_size"]:
         raise SystemExit("tokenizer has %d tokens, config says %d" % (n_tokens, cfg["vocab_size"]))
     w.add_string("sheetsage2.tokenizer_json", tokenizer_json)
-    log("transcriber", "tokenizer: %d tokens, lora scale %.1f" % (n_tokens, scale))
-
-    F32 = gguf.GGMLQuantizationType.F32
-    adapter_path = find_sf_files(model_dir)[0]
-    adapter_meta, adapter_start = read_sf_header(adapter_path)
-
-    # The parent, every tensor native, the four projections of each layer
-    # merged with their adapter
-    parent_path = find_sf_files(parent_dir)[0]
-    parent_meta, parent_start = read_sf_header(parent_path)
-    merged = 0
-    for name in sorted(parent_meta):
-        arr = load_sf_tensor(parent_path, parent_meta, parent_start, name)
-        parts = name.split(".")
-        if len(parts) == 5 and parts[0] == "layers" and parts[2] == "attn" and parts[3] in LORA_PROJECTIONS and parts[4] == "weight":
-            prefix = "adapter.layers.%s.attn.%s." % (parts[1], parts[3])
-            a = load_sf_tensor(adapter_path, adapter_meta, adapter_start, prefix + "lora_A.weight")
-            b = load_sf_tensor(adapter_path, adapter_meta, adapter_start, prefix + "lora_B.weight")
-            arr = arr + (b @ a) * np.float32(scale)
-            merged += 1
-        w.add_tensor("encoder." + name, np.ascontiguousarray(arr), raw_dtype=F32)
-    if merged != 4 * cfg["backbone_config"]["num_hidden_layers"]:
-        raise SystemExit("merged %d projections, expected %d" % (merged, 4 * cfg["backbone_config"]["num_hidden_layers"]))
-    log("transcriber", "parent: %d tensors, %d projections merged" % (len(parent_meta), merged))
-
-    # The head as shipped, adapters consumed above
-    stream_native_tensors(w, model_dir, "transcriber",
-                          skip={n for n in adapter_meta if n.startswith("adapter.")})
+    log("transcriber", "tokenizer: %d tokens" % n_tokens)
+    stream_native_tensors(w, model_dir, "transcriber")
 
     w.write_header_to_file()
     w.write_kv_data_to_file()
     w.write_tensors_to_file()
     w.close()
     log("transcriber", "wrote %s (%.1f MB)" % (out_path, os.path.getsize(out_path) / 1e6))
+
+def convert_tokenizer():
+    """yue2-mothersuperior-realaudio-tokenizer-v4/ -> yue2-mothersuperior-realaudio-tokenizer-v4-F32.gguf"""
+    head = os.path.join(CHECKPOINT_DIR, COMPONENTS["tokenizer"], TOKENIZER_HEAD)
+    out_path = os.path.join(OUTPUT_DIR, "yue2-mothersuperior-realaudio-tokenizer-v4-F32.gguf")
+
+    w = gguf.GGUFWriter(out_path, arch="yue2-tokenizer")
+    w.add_name("YuE2 audio tokenizer, the v9 head of Mothersuperior, on MERT-v2-FullSong")
+    w.add_string("yue2-tokenizer.config_json", json.dumps(TOKENIZER_CONFIG, separators=(",", ":")))
+    F32 = gguf.GGMLQuantizationType.F32
+    meta, data_start = read_sf_header(head)
+    with open(head, "rb") as f:
+        for name in sorted(meta):
+            t = meta[name]
+            if t["dtype"] != "F32":
+                raise SystemExit("unexpected dtype %s for %s" % (t["dtype"], name))
+            f.seek(data_start + t["data_offsets"][0])
+            raw = f.read(t["data_offsets"][1] - t["data_offsets"][0])
+            w.add_tensor(name, np.frombuffer(raw, dtype=np.float32).reshape(t["shape"]), raw_dtype=F32)
+    log("tokenizer", "%d tensors" % len(meta))
+
+    w.write_header_to_file()
+    w.write_kv_data_to_file()
+    w.write_tensors_to_file()
+    w.close()
+    log("tokenizer", "wrote %s (%.1f MB)" % (out_path, os.path.getsize(out_path) / 1e6))
 
 def convert(component):
     if component == "backbone":
@@ -352,8 +377,14 @@ def convert(component):
     if component == "vae":
         convert_vae()
         return
+    if component == "mert":
+        convert_mert()
+        return
     if component == "transcriber":
         convert_transcriber()
+        return
+    if component == "tokenizer":
+        convert_tokenizer()
 
 def main():
     if not os.path.isdir(CHECKPOINT_DIR):
@@ -362,10 +393,14 @@ def main():
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    native = {"backbone": "BF16", "vae": "F32", "transcriber": "F32"}
+    native = {"backbone": "BF16", "vae": "F32", "mert": "F32", "transcriber": "F32", "tokenizer": "F32"}
     converted = 0
     for comp in COMPONENTS:
         output_path = os.path.join(OUTPUT_DIR, "%s-%s.gguf" % (COMPONENTS[comp], native[comp]))
+        # HERESY 1610: the audio tokenizer only serves /tokenize; an install without its checkpoint converts the rest, and says so
+        if comp == "tokenizer" and not os.path.isdir(os.path.join(CHECKPOINT_DIR, COMPONENTS[comp])):
+            log("GGUF", "skip tokenizer: no checkpoints/%s (only /tokenize reads it)" % COMPONENTS[comp])
+            continue
         if os.path.exists(output_path):
             log("GGUF", "skip %s: %s exists" % (comp, os.path.basename(output_path)))
             converted += 1

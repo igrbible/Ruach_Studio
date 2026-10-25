@@ -19,10 +19,12 @@ for type in Q5_K_M Q6_K Q8_0; do
     quantize models/YuE2-3B-BF16.gguf "$type"
 done
 
-# Transcriber 632M (native F32): the linear projections of the conformer
-# and the decoder, convolutions and tables kept exact
-for type in Q5_K_M Q6_K Q8_0; do
-    quantize models/SheetSage2-F32.gguf "$type"
-done
+# Audio encoder 632M, transcriber head 57M and audio tokenizer head 43M
+# (native F32): Q8_0 alone, the quant a head and its encoder share; the
+# linear projections, convolutions, tables, positions and LoRA factors kept
+# exact
+quantize models/MERT-v2-FullSong-F32.gguf Q8_0
+quantize models/SheetSage2-F32.gguf Q8_0
+quantize models/yue2-mothersuperior-realaudio-tokenizer-v4-F32.gguf Q8_0
 
 # VAE: never quantized, its weights carry the audio and stay native F32

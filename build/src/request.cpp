@@ -35,8 +35,12 @@ void request_init(Yue2Request * r) {
     r->cfg_scale        = -1.0f;
     r->cfg_lyrics       = -1.0f;   // HERESY 1397
     r->free_tempo       = false;   // HERESY 1416
+    r->nar_ladder       = false;   // HERESY 1768
+    r->vocal_octave     = 0;       // HERESY 1743
+    r->score_planned    = false;   // HERESY 1618
     r->semantic_tokens  = "";
     r->semantic_keep    = "";
+    r->backbone         = "";   // HERESY 1661
     r->end_at           = 0.0f;
     r->fade_out         = 0.0f;
     r->fade_in          = 0.0f;   // HERESY 1324
@@ -57,6 +61,13 @@ void request_init(Yue2Request * r) {
     r->parent    = "";
     r->score_guard = true;
     r->decode_from = "";
+    r->adapters.clear();
+    r->source_tokens = "";
+    r->source_start  = 0.0f;
+    r->source_end    = -1.0f;
+    r->harmony       = Yue2Harmony();   // HERESY 1606
+    r->abc_continue  = false;           // HERESY 1608
+    r->harmony_error = "";
 }
 
 static inline std::string yy_str(yyjson_val * v) {
@@ -178,6 +189,73 @@ static void request_curve_out(yyjson_mut_doc * doc, yyjson_mut_val * item, const
     yyjson_mut_obj_add_val(doc, item, "curve", pts);
 }
 
+// HERESY 1606 (timoncool/yue2.cpp 1e21e63): the «harmony» object, its bounds checked; false with the reason
+static bool request_parse_harmony(yyjson_val * node, Yue2Harmony * h, std::string * error) {
+    auto fail = [&](const char * why) {
+        fprintf(stderr, "[Request] ERROR: harmony %s\n", why);
+        *error = std::string("harmony ") + why;
+        return false;
+    };
+    if (!yyjson_is_obj(node)) {
+        return fail("must be an object");
+    }
+    yyjson_val * v;
+    if ((v = yyjson_obj_get(node, "identity"))) {
+        if (!yyjson_is_str(v) || (yy_str(v) != "root" && yy_str(v) != "spelling")) {
+            return fail("identity must be \"root\" or \"spelling\"");
+        }
+        h->by_root = yy_str(v) == "root";
+    }
+    struct Num {
+        const char * key;
+        float *      out;
+    };
+    for (Num n : { Num{ "strength", &h->strength }, Num{ "outside_bonus", &h->outside_bonus },
+                   Num{ "outside_limit", &h->outside_limit }, Num{ "section_strength", &h->section_strength } }) {
+        if ((v = yyjson_obj_get(node, n.key))) {
+            if (!yyjson_is_num(v)) {
+                return fail("numbers must be numbers");
+            }
+            *n.out = (float) yyjson_get_num(v);
+        }
+    }
+    struct Int {
+        const char * key;
+        int *        out;
+    };
+    for (Int n : { Int{ "window", &h->window }, Int{ "hold_limit", &h->hold_limit }, Int{ "section_open", &h->section_open } }) {
+        if ((v = yyjson_obj_get(node, n.key))) {
+            if (!yyjson_is_int(v)) {
+                return fail("counts must be integers");
+            }
+            *n.out = (int) yyjson_get_int(v);
+        }
+    }
+    if ((v = yyjson_obj_get(node, "follow"))) {
+        if (!yyjson_is_arr(v)) {
+            return fail("follow must be a list of section names");
+        }
+        h->follow.clear();
+        size_t       i, max;
+        yyjson_val * name;
+        yyjson_arr_foreach(v, i, max, name) {
+            if (!yyjson_is_str(name)) {
+                return fail("follow must be a list of section names");
+            }
+            std::string lower = yy_str(name);
+            for (char & c : lower) {
+                c = (char) std::tolower((unsigned char) c);
+            }
+            h->follow.push_back(lower);
+        }
+    }
+    if (!yue2_harmony_valid(*h)) {
+        return fail("is out of bounds: strength 0-64, window 1-512, hold_limit 0-64, outside_bonus 0-20, "
+                    "outside_limit 0-1, section_strength 0-64, section_open 1-16, up to 64 section names");
+    }
+    return true;
+}
+
 static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
     yyjson_val * v;
 
@@ -225,6 +303,9 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
     if ((v = yyjson_obj_get(obj, "semantic_keep")) && yyjson_is_str(v)) {
         r->semantic_keep = yy_str(v);
     }
+    if ((v = yyjson_obj_get(obj, "backbone")) && yyjson_is_str(v)) {   // HERESY 1661
+        r->backbone = yy_str(v);
+    }
     if ((v = yyjson_obj_get(obj, "end_at")) && yyjson_is_num(v)) {   // HERESY 1169
         r->end_at = (float) yyjson_get_num(v);
     }
@@ -240,8 +321,18 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
     if ((v = yyjson_obj_get(obj, "cfg_lyrics")) && yyjson_is_num(v)) {   // HERESY 1397
         r->cfg_lyrics = (float) yyjson_get_num(v);
     }
+    if ((v = yyjson_obj_get(obj, "score_planned")) && yyjson_is_bool(v)) {   // HERESY 1618
+        r->score_planned = yyjson_get_bool(v);
+    }
     if ((v = yyjson_obj_get(obj, "free_tempo")) && yyjson_is_bool(v)) {   // HERESY 1416
         r->free_tempo = yyjson_get_bool(v);
+    }
+    if ((v = yyjson_obj_get(obj, "nar_ladder")) && yyjson_is_bool(v)) {   // HERESY 1768
+        r->nar_ladder = yyjson_get_bool(v);
+    }
+    if ((v = yyjson_obj_get(obj, "vocal_octave")) && yyjson_is_num(v)) {   // HERESY 1743: whole octaves, three at most either way
+        int o           = (int) yyjson_get_num(v);
+        r->vocal_octave = o < -3 ? -3 : o > 3 ? 3 : o;
     }
     if ((v = yyjson_obj_get(obj, "output_format")) && yyjson_is_str(v)) {
         r->output_format = yy_str(v);
@@ -316,6 +407,35 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
             g.mode = mode && yyjson_is_str(mode) && std::string(yy_str(mode)) == "order" ? 1 : 0;
             r->lora_groups.push_back(g);
         }
+    }
+    if ((v = yyjson_obj_get(obj, "source_tokens")) && yyjson_is_str(v)) {
+        r->source_tokens = yy_str(v);
+    }
+    if ((v = yyjson_obj_get(obj, "source_start")) && yyjson_is_num(v)) {
+        r->source_start = (float) yyjson_get_num(v);
+    }
+    if ((v = yyjson_obj_get(obj, "source_end")) && yyjson_is_num(v)) {
+        r->source_end = (float) yyjson_get_num(v);
+    }
+    if ((v = yyjson_obj_get(obj, "adapters")) && yyjson_is_arr(v)) {
+        size_t       i, n;
+        yyjson_val * item;
+        yyjson_arr_foreach(v, i, n, item) {
+            yyjson_val * name  = yyjson_obj_get(item, "name");
+            yyjson_val * scale = yyjson_obj_get(item, "scale");
+            if (name && yyjson_is_str(name)) {
+                r->adapters.push_back(
+                    { yy_str(name), scale && yyjson_is_num(scale) ? (float) yyjson_get_num(scale) : 1.0f });
+            }
+        }
+    }
+    if ((v = yyjson_obj_get(obj, "harmony")) && !yyjson_is_null(v)) {   // HERESY 1606: refused here, said by the server (a 400)
+        if (!request_parse_harmony(v, &r->harmony, &r->harmony_error)) {
+            r->harmony = Yue2Harmony();
+        }
+    }
+    if ((v = yyjson_obj_get(obj, "abc_continue")) && yyjson_is_bool(v)) {   // HERESY 1608
+        r->abc_continue = yyjson_get_bool(v);
     }
 }
 
@@ -405,6 +525,9 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
     if (!r->semantic_keep.empty()) {   // HERESY 1037: written only when used
         yyjson_mut_obj_add_strncpy(doc, root, "semantic_keep", r->semantic_keep.c_str(), r->semantic_keep.size());
     }
+    if (!r->backbone.empty()) {   // HERESY 1661: written only when used
+        yyjson_mut_obj_add_strncpy(doc, root, "backbone", r->backbone.c_str(), r->backbone.size());
+    }
     if (r->end_at > 0.0f) {   // HERESY 1169: written only when used
         yyjson_mut_obj_add_real(doc, root, "end_at", r->end_at);
     }
@@ -420,8 +543,17 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
     if (!sparse || r->cfg_lyrics != d.cfg_lyrics) {   // HERESY 1397
         yyjson_mut_obj_add_real(doc, root, "cfg_lyrics", r->cfg_lyrics);
     }
+    if (r->score_planned) {   // HERESY 1618: written only when used
+        yyjson_mut_obj_add_bool(doc, root, "score_planned", true);
+    }
     if (r->free_tempo) {   // HERESY 1416: written only when used
         yyjson_mut_obj_add_bool(doc, root, "free_tempo", true);
+    }
+    if (r->nar_ladder) {   // HERESY 1768: written only when used
+        yyjson_mut_obj_add_bool(doc, root, "nar_ladder", true);
+    }
+    if (r->vocal_octave != 0) {   // HERESY 1743: written only when used
+        yyjson_mut_obj_add_int(doc, root, "vocal_octave", r->vocal_octave);
     }
     if (!sparse || r->output_format != d.output_format) {
         yyjson_mut_obj_add_strncpy(doc, root, "output_format", r->output_format.c_str(), r->output_format.size());
@@ -488,6 +620,47 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
     if (!r->decode_from.empty()) {   // HERESY 1168: only on its way in; a take's own request never keeps it
         yyjson_mut_obj_add_strncpy(doc, root, "decode_from", r->decode_from.c_str(), r->decode_from.size());
     }
+    if (!sparse || r->source_tokens != d.source_tokens) {
+        yyjson_mut_obj_add_strncpy(doc, root, "source_tokens", r->source_tokens.c_str(), r->source_tokens.size());
+    }
+    if (!sparse || r->source_start != d.source_start) {
+        yyjson_mut_obj_add_real(doc, root, "source_start", r->source_start);
+    }
+    if (!sparse || r->source_end != d.source_end) {
+        yyjson_mut_obj_add_real(doc, root, "source_end", r->source_end);
+    }
+    if (!sparse || !r->adapters.empty()) {
+        yyjson_mut_val * list = yyjson_mut_arr(doc);
+        for (const Yue2Adapter & a : r->adapters) {
+            yyjson_mut_val * item = yyjson_mut_arr_add_obj(doc, list);
+            yyjson_mut_obj_add_strncpy(doc, item, "name", a.name.c_str(), a.name.size());
+            yyjson_mut_obj_add_real(doc, item, "scale", a.scale);
+        }
+        yyjson_mut_obj_add_val(doc, root, "adapters", list);
+    }
+
+    if (!sparse || r->harmony.active()) {   // HERESY 1606
+        const Yue2Harmony & h    = r->harmony;
+        yyjson_mut_val *    node = yyjson_mut_obj(doc);
+        yyjson_mut_obj_add_str(doc, node, "identity", h.by_root ? "root" : "spelling");
+        yyjson_mut_obj_add_real(doc, node, "strength", h.strength);
+        yyjson_mut_obj_add_int(doc, node, "window", h.window);
+        yyjson_mut_obj_add_int(doc, node, "hold_limit", h.hold_limit);
+        yyjson_mut_obj_add_real(doc, node, "outside_bonus", h.outside_bonus);
+        yyjson_mut_obj_add_real(doc, node, "outside_limit", h.outside_limit);
+        yyjson_mut_obj_add_real(doc, node, "section_strength", h.section_strength);
+        yyjson_mut_obj_add_int(doc, node, "section_open", h.section_open);
+        yyjson_mut_val * names = yyjson_mut_arr(doc);
+        for (const std::string & name : h.follow) {
+            yyjson_mut_arr_add_strncpy(doc, names, name.c_str(), name.size());
+        }
+        yyjson_mut_obj_add_val(doc, node, "follow", names);
+        yyjson_mut_obj_add_val(doc, root, "harmony", node);
+    }
+
+    if (!sparse || r->abc_continue) {   // HERESY 1608
+        yyjson_mut_obj_add_bool(doc, root, "abc_continue", r->abc_continue);
+    }
 
     char *      json = yyjson_mut_write(doc, WRITE_FLAGS, NULL);
     std::string out  = json ? json : "{}";
@@ -526,5 +699,9 @@ Yue2Request request_replay(const Yue2Request & base,
     r.seed             = base.seed + variation;
     r.lm_batch_size    = 1;
     r.synth_batch_size = 1;
+    r.source_tokens    = "";
+    r.source_start     = 0.0f;
+    r.source_end       = -1.0f;
+    r.abc_continue     = false;   // HERESY 1608: the replay holds the whole plan, the opening in it
     return r;
 }

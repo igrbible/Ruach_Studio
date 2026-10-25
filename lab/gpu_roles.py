@@ -98,6 +98,9 @@ def save(kit, data, cards):
     return out
 
 
+ARC_BASE = 100   # HERESY 1680: the Intel cards' indices (gpu_live), past any CUDA card's
+
+
 def studio_now():
     """The card the running studio computes on, or None when it is not running: GGML_BACKEND=CUDAn names it
     (HERESY 1109), an older start's CUDA_VISIBLE_DEVICES did; neither means the first card, the engine's own choice.
@@ -108,6 +111,14 @@ def studio_now():
         if not pid or pid == "0":
             return None
         env = dict(e.split(b"=", 1) for e in Path(f"/proc/{pid}/environ").read_bytes().split(b"\0") if b"=" in e)
+        # HERESY 1680: a studio on the Intel Arc (start.sh's YUE2_ENGINE=sycl, or the SYCL engine alone, 1656) computes on no CUDA card: the
+        # Arc's index, so a run training on GPU0 never makes its syntheses wait and the live graphs frame the Arc
+        try:
+            exe = os.readlink(f"/proc/{pid}/exe")
+        except OSError:
+            exe = ""
+        if "build-sycl" in exe or env.get(b"YUE2_ENGINE", b"").strip() == b"sycl":
+            return ARC_BASE
         backend = env.get(b"GGML_BACKEND", b"").decode().strip()
         if backend.startswith("CUDA") and backend[4:].isdigit():
             return int(backend[4:])

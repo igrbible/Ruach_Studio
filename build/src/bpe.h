@@ -395,6 +395,30 @@ static std::string bpe_decode(const BPETokenizer * tok, const std::vector<int> &
     return out;
 }
 
+// HERESY 1606 (timoncool/yue2.cpp 1e21e63): the text of each id in [0, n) alone, as bpe_decode gives it for {id}
+static std::vector<std::string> bpe_decode_each(const BPETokenizer * tok, int n) {
+    std::unordered_map<std::string, char> str2byte;
+    for (int b = 0; b < 256; b++) {
+        str2byte[tok->byte2str[b]] = (char) b;
+    }
+    std::vector<std::string> texts((size_t) n);
+    for (int id = 0; id < n && id < (int) tok->id_to_str.size(); id++) {
+        const std::string & encoded = tok->id_to_str[(size_t) id];
+        std::string &       out     = texts[(size_t) id];
+        size_t              pos     = 0;
+        while (pos < encoded.size()) {
+            unsigned char lead = (unsigned char) encoded[pos];
+            size_t        len  = lead < 0x80 ? 1 : (lead < 0xE0 ? 2 : 3);
+            auto          it   = str2byte.find(encoded.substr(pos, len));
+            if (it != str2byte.end()) {
+                out += it->second;
+            }
+            pos += len;
+        }
+    }
+    return texts;
+}
+
 // Full encode: text -> token ids
 static std::vector<int> bpe_encode(const BPETokenizer * tok, const std::string & text) {
     std::vector<int> ids;

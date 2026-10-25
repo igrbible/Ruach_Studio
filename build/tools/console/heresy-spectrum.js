@@ -164,14 +164,26 @@
   // The take comes as FLAC when the server offers it (the same samples, about 40% fewer bytes),
   // else as it is. Every phase is timed; the times go to the status line.
   var cache = [];
+  // HERESY 1740: one view of the spectrum for the player's scope and the Refiner's card: mono (the default), lr, ms, pan
+  var MODES = ["mono", "lr", "ms", "pan"], PAN_L = [80, 170, 255], PAN_R = [255, 150, 60];
+  function specMode() { var m = null; try { m = localStorage.getItem("yue2.specMode"); } catch (e) { /* a private window */ } return MODES.indexOf(m) > 0 ? m : "mono"; }
+  function setSpecMode(m) {
+    m = MODES.indexOf(m) >= 0 ? m : "mono";
+    try { if (m === "mono") localStorage.removeItem("yue2.specMode"); else localStorage.setItem("yue2.specMode", m); } catch (e) { /* a private window */ }
+    window.dispatchEvent(new CustomEvent("heresy-specmode", { detail: { mode: m } }));
+  }
+  function panPixel(px, o, t, p) {                      // the level as light, the side as colour: blue left, orange right, pale in the middle
+    var gl = 235 * Math.pow(t, 0.85), a = Math.min(1, Math.abs(p) * 1.5), col = p < 0 ? PAN_L : PAN_R;
+    px[o] = gl * (1 - a) + col[0] * t * a; px[o + 1] = gl * (1 - a) + col[1] * t * a; px[o + 2] = gl * (1 - a) + col[2] * t * a; px[o + 3] = 255;
+  }
   // HERESY 1020: the spectrum computed on Forge by heresy-lab (lab/spectrum_job.py, the same
   // method in numpy), fetched through the Kit at /lab/spectrum: about 10 MB for 7 minutes, as it is
   // (HERESY 1166: nothing gzipped), instead of the whole take. 202 while it is computed. Its layout: "HSP1", uint32 header length, header
   // JSON, uint8 spectrogram (0.5 dB steps from -120 dB), float32 Welch average, float32 bands.
-  function fromLab(name, say, source) {
+  function fromLab(name, say, source, mode) {
     var started = performance.now(), tries = 0;
     function ask() {
-      return fetch("/lab/spectrum?name=" + encodeURIComponent(name) + (source ? "&source=" + encodeURIComponent(source) : "")).then(function (r) {
+      return fetch("/lab/spectrum?name=" + encodeURIComponent(name) + (source ? "&source=" + encodeURIComponent(source) : "") + (mode && mode !== "mono" ? "&mode=" + mode : "")).then(function (r) {   // HERESY 1740
         if (r.status === 202) {
           say("Forge is measuring\u2026 " + Math.round((performance.now() - started) / 1000) + "s");
           return new Promise(function (resolve) { setTimeout(resolve, 1000); }).then(ask);
@@ -194,21 +206,29 @@
       var n = h.frames * h.bins, q = new Uint8Array(raw, o, n), db = new Float32Array(n);
       for (var i = 0; i < n; i++) db[i] = h.db0 + q[i] * h.dbStep;
       o += n;
+      var db2 = null, pan = null;                       // HERESY 1740: a second plane after the first (two sides, or where each bin stands)
+      if (h.planes && h.planes.length > 1) {
+        if ((h.kinds || [])[1] === "pan") pan = new Uint8Array(raw.slice(o, o + n));
+        else { var q2 = new Uint8Array(raw, o, n); db2 = new Float32Array(n); for (var i2 = 0; i2 < n; i2++) db2[i2] = h.db0 + q2[i2] * h.dbStep; }
+        o += n;
+      }
       var avg = new Float32Array(raw.slice(o, o + 4 * h.welchBins)); o += 4 * h.welchBins;
       var bands = Array.prototype.slice.call(new Float32Array(raw.slice(o, o + 24)));
       var freqs = new Float64Array(h.welchBins);
       for (var k = 0; k < h.welchBins; k++) freqs[k] = k * h.sr / h.welchN;
       return { seconds: h.seconds, peak: h.peak, sr: h.sr, spec: { db: db, frames: h.frames, bins: h.bins, hop: h.hop },
+               spec2: db2 ? { db: db2, frames: h.frames, bins: h.bins, hop: h.hop } : null, pan: pan, mode: h.mode || "mono", planes: h.planes || ["mono"],   // HERESY 1740
                freqs: freqs, avg: avg, bands: bands, bytes: bytes, where: "Forge",
                times: { fetch: fetched, decode: 0, stft: 0, welch: 0 } };
     });
   }
 
-  function analyse(take, say) {
-    var key0 = take.url;
+  function analyse(take, say, mode) {
+    mode = mode && mode !== "mono" ? mode : "";          // HERESY 1740: each view kept apart
+    var key0 = take.url + (mode ? "|" + mode : "");
     for (var j = 0; j < cache.length; j++) if (cache[j].url === key0) return cache[j].promise;
     if (take.name) {
-      var viaLab = fromLab(take.name, say, take.source).catch(function (error) {
+      var viaLab = fromLab(take.name, say, take.source, mode).catch(function (error) {
         cache = cache.filter(function (c) { return c.url !== key0; });
         // only with no lab at all is the whole file fetched to measure here: on a phone line a
         // silent 30–120 MB download is a bad answer to one dropped transfer
@@ -217,7 +237,7 @@
         return analyseHere(take, say);
       });
       cache.unshift({ url: key0, promise: viaLab });
-      if (cache.length > 4) cache.length = 4;
+      if (cache.length > 6) cache.length = 6;          // HERESY 1740: a view beside its mono
       return viaLab;
     }
     return analyseHere(take, say);
@@ -291,25 +311,31 @@
   }
 
   function drawSpectrogram(el, data, label, color, scale, range, w, h) {
-    var c = canvasFor(el, h || 250, w), g = c.g, pw = c.w - PAD.l - PAD.r, ph = c.h - PAD.t - PAD.b;
-    var s = data.spec, nyq = (data.sr || SR) / 2, dpr = c.dpr;   // HERESY 1020: Forge's spectrum keeps 48 kHz
+    // HERESY 1740: two planes (left and right, mid and side) one under the other, each with its own frequencies; a pan plane colours one picture
+    var planes = data.spec2 ? [data.spec, data.spec2] : [data.spec], rows = planes.length, pan = data.pan || null;
+    var c = canvasFor(el, h || (rows > 1 ? 380 : 250), w), g = c.g, pw = c.w - PAD.l - PAD.r, ph = c.h - PAD.t - PAD.b;
+    var nyq = (data.sr || SR) / 2, dpr = c.dpr;   // HERESY 1020: Forge's spectrum keeps 48 kHz
     var W = Math.round(pw * dpr), H = Math.round(ph * dpr), img = g.createImageData(W, H), px = img.data;
     var lo = range[0], span = Math.max(1e-6, range[1] - range[0]);
-    // the bin under each pixel row, found once
-    var rowBin = new Float64Array(H);
-    for (var y = 0; y < H; y++) rowBin[y] = freqAt(1 - (y + 0.5) / H, scale, nyq) / nyq * (s.bins - 1);
-    for (var x = 0; x < W; x++) {
-      // a pixel column spans several frames: take the loudest, so short hits stay visible
-      var f0 = Math.floor(x / W * s.frames), f1 = Math.max(f0 + 1, Math.floor((x + 1) / W * s.frames));
-      for (y = 0; y < H; y++) {
-        var b = rowBin[y], k = Math.floor(b), t = b - k, v = -1e9;
-        for (var f = f0; f < f1 && f < s.frames; f++) {
-          var base = f * s.bins, a = s.db[base + k], z = k + 1 < s.bins ? s.db[base + k + 1] : a;
-          var here = a + (z - a) * t;
-          if (here > v) v = here;
+    for (var r = 0; r < rows; r++) {
+      var s = planes[r], y0 = Math.round(r * H / rows), hh = Math.round((r + 1) * H / rows) - y0;
+      // the bin under each pixel row, found once
+      var rowBin = new Float64Array(hh);
+      for (var y = 0; y < hh; y++) rowBin[y] = freqAt(1 - (y + 0.5) / hh, scale, nyq) / nyq * (s.bins - 1);
+      for (var x = 0; x < W; x++) {
+        // a pixel column spans several frames: take the loudest, so short hits stay visible
+        var f0 = Math.floor(x / W * s.frames), f1 = Math.max(f0 + 1, Math.floor((x + 1) / W * s.frames));
+        for (y = 0; y < hh; y++) {
+          var b = rowBin[y], k = Math.floor(b), t = b - k, v = -1e9, vf = f0;
+          for (var f = f0; f < f1 && f < s.frames; f++) {
+            var base = f * s.bins, a = s.db[base + k], z = k + 1 < s.bins ? s.db[base + k + 1] : a;
+            var here = a + (z - a) * t;
+            if (here > v) { v = here; vf = f; }
+          }
+          var i = Math.max(0, Math.min(255, Math.round((v - lo) / span * 255))), o = ((y0 + y) * W + x) * 4;
+          if (pan && vf < s.frames) panPixel(px, o, i / 255, (pan[vf * s.bins + Math.min(s.bins - 1, Math.round(b))] - 127.5) / 127.5);
+          else { px[o] = LUT[i * 3]; px[o + 1] = LUT[i * 3 + 1]; px[o + 2] = LUT[i * 3 + 2]; px[o + 3] = 255; }
         }
-        var i = Math.max(0, Math.min(255, Math.round((v - lo) / span * 255))), o = (y * W + x) * 4;
-        px[o] = LUT[i * 3]; px[o + 1] = LUT[i * 3 + 1]; px[o + 2] = LUT[i * 3 + 2]; px[o + 3] = 255;
       }
     }
     g.putImageData(img, Math.round(PAD.l * dpr), Math.round(PAD.t * dpr));
@@ -317,17 +343,26 @@
     g.fillStyle = TEXT; g.strokeStyle = GRID; g.lineWidth = 1;
     g.textAlign = "right"; g.textBaseline = "middle";
     var ticks = scale === "log" ? [50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000] : [0, 2500, 5000, 7500, 10000, 12500, 15000, 17500, 20000];
-    ticks.forEach(function (f) {
+    var rph = ph / rows;
+    for (var rr = 0; rr < rows; rr++) ticks.forEach(function (f) {
       if (f < 20 || f > nyq) return;
-      var yy = PAD.t + ph * (1 - yOf(f, scale, nyq));
+      var yy = PAD.t + rr * rph + rph * (1 - yOf(f, scale, nyq));
+      if (rows > 1 && (yy < PAD.t + rr * rph + 8 || yy > PAD.t + (rr + 1) * rph - 4)) return;   // clear of the rows' edges
       g.fillText(khz(f), PAD.l - 5, yy);
       g.globalAlpha = 0.35; g.beginPath(); g.moveTo(PAD.l, yy + 0.5); g.lineTo(PAD.l + pw, yy + 0.5); g.stroke(); g.globalAlpha = 1;
     });
+    if (rows > 1) {                                     // the rows' names and the line between them
+      g.fillStyle = "rgba(0,0,0,.55)"; g.fillRect(PAD.l, Math.round(PAD.t + rph) - 1, pw, 2);
+      g.font = "600 11px 'IBM Plex Mono', monospace"; g.textAlign = "left"; g.textBaseline = "top";
+      (data.planes || []).forEach(function (n, j) { g.fillStyle = "rgba(0,0,0,.6)"; g.fillRect(PAD.l + 4, PAD.t + j * rph + 4, 16, 15); g.fillStyle = "#f3e7c9"; g.fillText(n, PAD.l + 8, PAD.t + j * rph + 6); });
+      g.fillStyle = TEXT; g.font = "";
+    }
     g.textAlign = "center"; g.textBaseline = "top";
     var every = data.seconds > 360 ? 60 : data.seconds > 120 ? 30 : 10;
     for (var t = 0; t <= data.seconds; t += every) g.fillText(clock(t), PAD.l + pw * t / data.seconds, PAD.t + ph + 4);
     g.textAlign = "left"; g.textBaseline = "top"; g.font = "600 12px 'IBM Plex Sans', sans-serif"; g.fillStyle = color;
-    g.fillText(label + " — spectrogram (" + (scale === "log" ? "log" : "linear") + ")", PAD.l, 4);
+    var said = { lr: " · L / R", ms: " · M / S", pan: " · pan" }[data.mode] || "";
+    g.fillText(label + " — spectrogram (" + (scale === "log" ? "log" : "linear") + said + ")", PAD.l, 4);
     return { x: PAD.l, w: pw, seconds: data.seconds };
   }
 
@@ -454,8 +489,8 @@
     // HERESY 1166: a render overtaken by a newer one (another take, a click on its step) says nothing more: its
     // "Forge is measuring…" used to land over the newer one's result and stay there
     var sayHere = function (text, bad) { if (token === state.drawn) say(text, bad); };
-    var jobs = [analyse(take, sayHere)];
-    if (wantB) jobs.push(analyse(state.hooks.byUrl(wantB) || { url: wantB }, sayHere));
+    var view = specMode(), jobs = [analyse(take, sayHere, view)];   // HERESY 1740: the view in hand
+    if (wantB) jobs.push(analyse(state.hooks.byUrl(wantB) || { url: wantB }, sayHere, view));
     Promise.all(jobs).then(function (res) {
       if (token !== state.drawn) return;      // another take or setting since
       var a = res[0], b = res[1] || null;
@@ -552,6 +587,11 @@
     panel.addEventListener("toggle", function () { if (panel.open) { paintCompare(); render(); } });
     $("specCompare").addEventListener("change", function () { state.other = this.value; render(); });
     window.addEventListener("heresy-derived", function () { if (panel.open) paintCompare(); });   // HERESY 1021
+    // HERESY 1740: the view, one setting with the player's scope
+    var paintModes = function () { Array.prototype.forEach.call(panel.querySelectorAll("[data-spec-mode]"), function (b) { var on = b.dataset.specMode === specMode(); b.classList.toggle("is-active", on); b.setAttribute("aria-pressed", on ? "true" : "false"); }); };
+    Array.prototype.forEach.call(panel.querySelectorAll("[data-spec-mode]"), function (btn) { btn.addEventListener("click", function () { setSpecMode(btn.dataset.specMode); }); });
+    window.addEventListener("heresy-specmode", function () { paintModes(); if (panel.open) render(); });
+    paintModes();
     Array.prototype.forEach.call(panel.querySelectorAll("[data-spec-scale]"), function (btn) {
       btn.addEventListener("click", function () {
         state.scale = btn.dataset.specScale;
@@ -590,6 +630,6 @@
 
   // HERESY 1169 · 1374: the measuring and the palette for the wave's scope (heresy-wavescope.js), one cache with the card's; drop: a take
   // measured anew when next asked
-  function drop(url) { cache = cache.filter(function (c) { return c.url !== url; }); }
-  window.HeresySpectrum = { init: init, setTake: setTake, compareWith: compareWith, data: analyse, lut: LUT, drop: drop };
+  function drop(url) { cache = cache.filter(function (c) { return c.url !== url && c.url.indexOf(url + "|") !== 0; }); }   // HERESY 1740: its views too
+  window.HeresySpectrum = { init: init, setTake: setTake, compareWith: compareWith, data: analyse, lut: LUT, drop: drop, mode: specMode, setMode: setSpecMode, panPixel: panPixel };
 })();

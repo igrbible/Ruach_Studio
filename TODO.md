@@ -10,9 +10,11 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 - ✅ **2.0.0-rc4**, cut as a whole on Viktor's word of 10.10.2026 («собирай RC4 как unified version с багфиксом по факту воспроизведения поведения развёртывания Студии под Pinokio»): the models converted once in goldhub/Ruach_Studio_Models_v2, the install made whole, the Artist as it stands; tried from a clean clone and by a whole fresh install. The community's gate («при росте Issues и PR, и 100+ stars») moves to rc5.
 - ✅ 2.0.0-rc6 cut and published 12.10.2026 (tag v2.0.0-rc6, the pre-release with its tarball, the card on rc6).
 - ✅ 2.0.0-rc7 cut and published 13.10.2026 (tag v2.0.0-rc7, release commit 34e0b23, the pre-release with its tarball, the card on rc7).
+- ✅ 2.0.0-pre cut and published 18.10.2026, tagged v2.0.0-rc9 (Viktor: «Разрешаю срез RC9 и пуш по всем репо»; release commit e2c9658, the pre-release with its tarball, the card on 2.0.0-pre): the Refiner as a canvas with pipelines, the DAW as a preview, the 2.0.0 shots, the release locked against a private plugin and unread pictures.
 - ✅ 2.0.0-rc8 cut and published in the night of 14–15.10.2026 (Viktor: «смело собирай RC8»; tag v2.0.0-rc8, release commit c1d62e6, the pre-release with its tarball, the card on rc8): every weight from one repo, the release locked against private names.
 - ✅ 1398: the spectrogram out of the section card's tip, only in the full scope (Viktor 12.10.2026).
-- ☐ **2.0.0, the release.** Before it, in one go: every screenshot of the guide, the README and the site taken again (curated: nothing private in them), the new strings in the six other languages, every approved 💎 probe made again full length on its own seeds, and the promo video with everything in.
+- ☐ **2.0.0, the release** (Viktor 25.10.2026, the 2.0.0 briefing: «Заканчивайте эти мелкие долги и начинаем выкат»): the screenshots of the guide, the README and the site taken again (nothing private in them), the strings in every language, the DAW and the piano roll as a beta, the First Wave's merges public with the default his ear picks. What would hold it back goes to 2.0.x and 2.1.0 («То, что держит 2.0.0, уходит в 2.0.x и 2.1.0»); the promo video after it, «когда я буду дома, без стресса».
+- ☐ **2.0.x** (out of 2.0.0 by the briefing of 25.10.2026): REAPER's lyrics as MIDI events, Bitwig's crash test, the transcriber's first bar, Viktor's fresh Pinokio install and the registry, Windows through WSL2.
 - ☐ **2.1.0**: the Videographer room (below) and what SUNO's interface teaches us (below); the working release once issues and pull requests settle.
 - ❓→2.1.0 (Viktor 12.10.2026: the DAW phase of the Refiner «нужно досконально обсудить и обмозговать», with SeedVR). The closing pass of 2.0.0 together, by RC6. Proposed for his choice: Extend from a position (2.0.0), Replace a section and an instrumental layer on the take's score (2.1.0).
 - 💡 YuE3 → Ruach Studio 3.
@@ -32,6 +34,8 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 - 💡 A grid render over adapter weights (style × score × sound strengths), on the batch we already have.
 - 💡 A negative prompt, if the engine can carry one.
 - ❓ The Creator's MIDI import and a chord track: the lab leaves a chord track out of the Ins line (an instrument took the tune in 2 of 3 takes with it); the same rule in the page?
+- ✅ 1768: **the decode ladder as a Creator option** (Viktor 24.10.2026: «Делай это опцией Sampling блоке Творца… А этот в тултипе подсказки пометь как экспериментальный и отличающийся выхлопом»): «Sound decode» in Sampling › Sound and output, *Whole song · standard* by default, *Ladder · experimental* (pieces of about 20 s hearing 2 s past their edges, his «отлично» of the probes); the standard decode everywhere else in the Studio. ☐ Still to come: the pieces solved while the music half sings on (a second KV slot), the VAE piece by piece, streaming.
+- ❓ **Sing a window anew** (1757, live since 23.10.2026): sung end to end on a take of the 2.0 probes; outside the window the codes are the take's own and the sound is decoded again (correlation 0.93 and 0.87). Viktor 24.10: the three A/B files noisy as the take itself is; in «as sung» and «spliced» drums come in about 58 s into the song, inside the window, where the original has none; «нужно ещё тестить». No verdict on splicing the window into the original sound yet.
 
 ## Writer
 
@@ -41,10 +45,11 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 
 ## Refiner and the DAW
 
-- ☐ **The DAW bundle**: Plenio's score editor (jplenio/Plenio-Music-Production-System, Apache-2.0: piano roll, chord lane, lyrics over notes, MIDI keyboard), its Vue front end built apart and mounted in the Refiner, with a bridge ABC ↔ its song sheet. Viktor: «аж слюнки потекли».
-- ☐ REAPER: the lyrics as MIDI lyric events; the sections from the score where they are not timed; a chord track as chord symbols.
-- ☐ Bitwig: our DAWproject opened by it, the crash test.
-- ☐ The transcriber's first bar: in 5 of 16 takes the score written from the sound began about a bar early; a shift of one bar in the datasheet.
+- ✅ **The DAW bundle**: ours instead (Viktor 25.10.2026, the 2.0.0 briefing: «Наш DAW и Piano Roll в разы лучше, чем у Plenio. Так что всё это идёт уже в 2.0.0, но как beta»): the DAW and the piano roll ship in 2.0.0 with a «beta» mark (1795). Plenio's score editor (jplenio/Plenio-Music-Production-System, Apache-2.0) stays a source of ideas.
+- ☐ (2.0.x) The DAW over the whole window after its set came with the drawer shut: the console measured 0 px then (--mx-dock-h), so the lanes keep their height and the console stands under the window's edge until it is painted again (its button twice does); setFull asking it to paint did not change it (1797, 25.10.2026).
+- ☐ (2.0.x) REAPER: the lyrics as MIDI lyric events; the sections from the score where they are not timed; a chord track as chord symbols.
+- ☐ (2.0.x) Bitwig: our DAWproject opened by it, the crash test.
+- ☐ (2.0.x) The transcriber's first bar: in 5 of 16 takes the score written from the sound began about a bar early; a shift of one bar in the datasheet.
 - ☐ Viktor's own test pass of the room.
 - 💡 Seed-VC (singing voice conversion) and AudioSR-class restoration as Refiner steps.
 
@@ -75,6 +80,7 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 
 - ✅ rc1–rc3: workspaces and sections, locks and freezing, pins, filters in a window (and, or, nor), the menu on every checked take, dragging takes, 💎 workspaces from Hugging Face, artwork with the old one kept.
 - ❓ 1268 took the peek on hover away (it showed a take's prompt and lyrics, what Viktor had taken out of the player's tip); the sheet on click stays. Back on his word.
+- 💡 **Names of deleted takes kept in the workspaces' lists** (measured 24.10.2026): user/collection.json keeps 820 names whose takes are gone, deleted and the trash emptied (394 of them in the 💎 sets, the rest across his own workspaces). Nothing shows them: /catalog lists only the takes that exist, and every published 💎 set is whole on disk. If wanted, a lab patch drops a take's name from its workspaces when the trash is emptied, with one sweep of the old ones; Viktor's word, it is his own state.
 
 ## LoRA mixing
 
@@ -120,14 +126,15 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 - ✅ 1379b: A choice list of words, not data, in the page's language: the updates question's Every week, Every day, Every month, Never stay English in every language (heresy-dialog.js marks a choice's label translate="no", for names and files); found 11.10 while probing 1374.
 - ✅ 1361: the WAV fallback goes on with a take asked to play (Chrome had paused it silently before its error was heard); a take whose sound is all here and that does not start is loaded again in place, then said (the long test's readyState 1, met where it shows).
 - ✅ 1349: the never-break-lines pass over the page's strings and the docs: no newline inside a sentence in the page's strings, no hard-wrapped paragraph in the docs, and the last three boxes measured in ch wrap at their column (code comments stay as they are).
+- ✅ **EAGLE3, closed: dropped** (Viktor 24.10.2026: «Отбой по EAGLE3. Нет смысла в этом.»). Measured the night before: a draft of K 2 gave 1.77 codes a round, the same with the studio's sampler, and the draft head refuses CFG. The draft and engival's CPU build stay in heresy/MISC/claude-eagle3 as a record only.
 
 ## Install and platforms
 
 - ✅ rc3: Pinokio on Linux (Install, Start, Open, More models, Update, Reset; its own CUDA 12.8 where the machine has none).
-- ☐ Viktor's own Pinokio install at home, fresh, with rc4 (10.10: the rc3 one removed to imitate a new user); then the registry: an Issue at pinokiocomputer/pinokio (Featured asked; Community otherwise).
+- ☐ (2.0.x) Viktor's own Pinokio install at home, fresh, with rc4 (10.10: the rc3 one removed to imitate a new user); then the registry: an Issue at pinokiocomputer/pinokio (Featured asked; Community otherwise).
 - ☐ Pinokio's own CUDA path tested on a machine without a toolkit.
 - ✅ 1352: **Pinokio's environment page** answered 500 on `/env` (the laptop, 10.10.2026): with our `pinokio/` folder Pinokio wrote its `ENVIRONMENT` there and looked for it in the root. The launcher's scripts are in `launcher/` now (Viktor 11.10: «Добро, переименовывай pinokio/ → launcher/»); an install of rc5 or before is led through its first update by the menu (Finish the update).
-- ☐ **Windows**: the Pinokio launcher through WSL2 (Windows paths with backslashes and drive letters understood).
+- ☐ (2.0.x) **Windows**: the Pinokio launcher through WSL2 (Windows paths with backslashes and drive letters understood).
 - ☐ **Desktop**: a PWA manifest first, then Electron (Linux first: the services checked and started, a tray, asked on exit whether to stop them; Ctrl+digit for the rooms), an AppImage. No Flatpak (Viktor: «растрата дискового места и интернет трафика»).
 - ✅ 1362: from the audit: build.sh's page guard (the install's own path, not its folder's name: studio and music build) and the in-page updater under Pinokio (it sends to Pinokio's Update). ✅ 1285: the extras are made by fetch-heresy.sh itself (convert-extras.py), no convert-models.sh on a fresh install.
 
