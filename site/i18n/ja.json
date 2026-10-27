@@ -188,5 +188,9 @@
  "Play or pause": "再生または一時停止",
  "The card before": "前のカード",
  "The next card": "次のカード",
- "Close the player": "プレーヤーを閉じる"
+ "Close the player": "プレーヤーを閉じる",
+ "The First Wave's vocabulary": "ファーストウェーブの語彙",
+ "Every word our fine-tune's 32,633 training tracks were told, counted and searchable: genres, instruments, voice, the emotion words the audio itself was given, keys and BPM, and the scores' own keys. Few fine-tunes publish what their model was told.": "私たちのファインチューンが 32,633 曲の学習データで受け取ったすべての語を、数えて検索できるようにしました。ジャンル、楽器、声、音そのものに付けられた感情語、調と BPM、そして楽譜のフィールド。モデルに何を伝えたかを公開するファインチューンはほとんどありません。",
+ "Open the vocabulary": "語彙を開く",
+ "Close": "閉じる"
 }

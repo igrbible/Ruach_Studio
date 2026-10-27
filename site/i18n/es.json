@@ -194,5 +194,9 @@
  "Play or pause": "Reproducir o pausar",
  "The card before": "La tarjeta anterior",
  "The next card": "La tarjeta siguiente",
- "Close the player": "Cerrar el reproductor"
+ "Close the player": "Cerrar el reproductor",
+ "The First Wave's vocabulary": "El vocabulario de la Primera Ola",
+ "Every word our fine-tune's 32,633 training tracks were told, counted and searchable: genres, instruments, voice, the emotion words the audio itself was given, keys and BPM, and the scores' own keys. Few fine-tunes publish what their model was told.": "Cada palabra que recibió nuestro fine-tune en sus 32.633 pistas de entrenamiento, contada y con buscador: géneros, instrumentos, voz, las palabras de emoción que el propio audio recibió, tonalidades y BPM, y las claves de las partituras. Pocos fine-tunes publican lo que se le dijo a su modelo.",
+ "Open the vocabulary": "Abrir el vocabulario",
+ "Close": "Cerrar"
 }

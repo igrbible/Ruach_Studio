@@ -194,5 +194,9 @@
  "Play or pause": "Граць або паўза",
  "The card before": "Папярэдняя картка",
  "The next card": "Наступная картка",
- "Close the player": "Закрыць плэер"
+ "Close the player": "Закрыць плэер",
+ "The First Wave's vocabulary": "Слоўнік Першай хвалі",
+ "Every word our fine-tune's 32,633 training tracks were told, counted and searchable: genres, instruments, voice, the emotion words the audio itself was given, keys and BPM, and the scores' own keys. Few fine-tunes publish what their model was told.": "Кожнае слова, якое пачуў наш файнцюн у сваіх 32 633 навучальных трэках, палічана, і па ім ёсць пошук: жанры, інструменты, голас, словы эмоцый, якія даў сам гук, танальнасці і BPM, і ключы партытур. Мала які файнцюн паказвае, што казалі яго мадэлі.",
+ "Open the vocabulary": "Адкрыць слоўнік",
+ "Close": "Закрыць"
 }

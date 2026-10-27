@@ -276,6 +276,26 @@
     .ring-card { flex-wrap: wrap; }
     .ring-sides { justify-content: flex-start; }
   }
+  /* HERESY 1801: the First Wave's vocabulary, a window over the page */
+  .vocab-call { display: flex; align-items: center; gap: 22px; margin: 26px 0 0; padding: 20px 22px; border: 1px solid var(--rule); border-radius: 14px;
+                background: linear-gradient(90deg, var(--wash), transparent 75%), var(--paper); box-shadow: var(--shadow); }
+  .vocab-call h3 { margin: 0 0 4px; font-size: 19px; }
+  .vocab-call p { margin: 0; color: var(--soft); font-size: 15.5px; }
+  .vocab-open { flex: none; font: inherit; font-weight: 600; height: 42px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--amber);
+                background: var(--amber); color: var(--on-amber); cursor: pointer; }
+  .vocab-open:hover { filter: brightness(1.08); }
+  @media (max-width: 700px) { .vocab-call { flex-direction: column; align-items: flex-start; } }
+  .vocab-modal { position: fixed; inset: 0; z-index: 50; background: rgba(10, 10, 10, .55); display: flex; align-items: center; justify-content: center;
+                 padding: 3vh 2vw; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+  .vocab-modal[hidden] { display: none; }
+  .vocab-panel { width: min(1240px, 100%); height: 100%; background: var(--ground); border: 1px solid var(--rule); border-radius: 14px; overflow: hidden;
+                 display: flex; flex-direction: column; box-shadow: 0 30px 80px rgba(0, 0, 0, .45); }
+  .vocab-head { display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 18px; border-bottom: 1px solid var(--rule); background: var(--paper); }
+  .vocab-head b { flex: 1; }
+  .vocab-head button { font: inherit; width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--rule); background: var(--paper); color: var(--ink);
+                       cursor: pointer; font-size: 20px; line-height: 1; }
+  .vocab-panel iframe { flex: 1; width: 100%; border: 0; background: var(--ground); }
+  @media (max-width: 600px) { .vocab-modal { padding: 0; } .vocab-panel { border-radius: 0; border: 0; } }
 </style>
 <script>
   // the visitor's day or night, kept in this browser only; the page works without it
@@ -476,6 +496,13 @@
         </table>
       </div>
       <p class="ring-note">Їхні треки приходять відмастереними, наші — сирими: справжній пік понад нуль нам належить виправити, як це робить Огранювач студії. Інші сиди та інші промпти звучать по-іншому в кожної сторони; ринг показує якість і розкид, а не остаточний рейтинг. Уся таблиця і те, як її виміряно: <a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-RS-Finetunes">картка моделі</a>.</p>
+      <div class="vocab-call" id="vocabulary">
+        <div>
+          <h3>Словник Першої хвилі</h3>
+          <p>Кожне слово, яке почув наш файнтюн у своїх 32 633 навчальних треках, пораховано, і за ним є пошук: жанри, інструменти, голос, слова емоцій, які дав сам звук, тональності й BPM, і ключі партитур. Мало який файнтюн показує, що казали його моделі.</p>
+        </div>
+        <button class="vocab-open" id="vocab-open" type="button">Відкрити словник</button>
+      </div>
     </div>
   </section>
 
@@ -772,6 +799,32 @@
     });
     new MutationObserver(function () { if (ws) ws.setOptions(colours()); }).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { if (ws) ws.setOptions(colours()); });
+  })();
+</script>
+<div class="vocab-modal" id="vocab-modal" hidden role="dialog" aria-modal="true" aria-label="Словник Першої хвилі">
+  <div class="vocab-panel">
+    <div class="vocab-head"><b>Словник Першої хвилі</b><button type="button" id="vocab-close" aria-label="Закрити">×</button></div>
+    <iframe id="vocab-frame" title="Словник Першої хвилі"></iframe>
+  </div>
+</div>
+<script>
+  // HERESY 1801: the vocabulary's window; its page in the card's language and day or night
+  (function () {
+    var m = document.getElementById("vocab-modal"), f = document.getElementById("vocab-frame");
+    function open() {
+      var th = document.documentElement.getAttribute("data-theme");
+      if (!th) th = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      var src = "/vocabulary/index.html?embed=1&lang=" + encodeURIComponent(document.documentElement.lang || "en") + "&theme=" + th;
+      if (f.getAttribute("src") !== src) f.setAttribute("src", src);
+      m.hidden = false; document.body.style.overflow = "hidden";
+    }
+    function close() { m.hidden = true; document.body.style.overflow = ""; if (location.hash === "#vocabulary") history.replaceState(null, "", location.pathname + location.search); }
+    document.getElementById("vocab-open").addEventListener("click", open);
+    document.getElementById("vocab-close").addEventListener("click", close);
+    m.addEventListener("click", function (e) { if (e.target === m) close(); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !m.hidden) close(); });
+    if (location.hash === "#vocabulary") open();
+    window.addEventListener("hashchange", function () { if (location.hash === "#vocabulary") open(); });
   })();
 </script>
 </body>

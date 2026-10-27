@@ -194,5 +194,9 @@
  "Play or pause": "Αναπαραγωγή ή παύση",
  "The card before": "Η προηγούμενη κάρτα",
  "The next card": "Η επόμενη κάρτα",
- "Close the player": "Κλείσιμο του προγράμματος αναπαραγωγής"
+ "Close the player": "Κλείσιμο του προγράμματος αναπαραγωγής",
+ "The First Wave's vocabulary": "Το λεξιλόγιο του Πρώτου Κύματος",
+ "Every word our fine-tune's 32,633 training tracks were told, counted and searchable: genres, instruments, voice, the emotion words the audio itself was given, keys and BPM, and the scores' own keys. Few fine-tunes publish what their model was told.": "Κάθε λέξη που άκουσε το fine-tune μας στα 32.633 κομμάτια εκπαίδευσής του, μετρημένη και με αναζήτηση: είδη, όργανα, φωνή, οι λέξεις συναισθήματος που έδωσε ο ίδιος ο ήχος, τονικότητες και BPM, και τα πεδία των παρτιτούρων. Λίγα fine-tunes δημοσιεύουν τι ειπώθηκε στο μοντέλο τους.",
+ "Open the vocabulary": "Άνοιγμα του λεξιλογίου",
+ "Close": "Κλείσιμο"
 }

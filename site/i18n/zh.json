@@ -188,5 +188,9 @@
  "Play or pause": "播放或暂停",
  "The card before": "上一张卡片",
  "The next card": "下一张卡片",
- "Close the player": "关闭播放器"
+ "Close the player": "关闭播放器",
+ "The First Wave's vocabulary": "第一波的词汇",
+ "Every word our fine-tune's 32,633 training tracks were told, counted and searchable: genres, instruments, voice, the emotion words the audio itself was given, keys and BPM, and the scores' own keys. Few fine-tunes publish what their model was told.": "我们的微调在 32,633 首训练曲目中收到的每个词，都已统计并可搜索：流派、乐器、人声、由音频本身得出的情感词、调与 BPM，以及乐谱的字段。很少有微调会公开它的模型被告知了什么。",
+ "Open the vocabulary": "打开词汇表",
+ "Close": "关闭"
 }
