@@ -2,9 +2,18 @@
 
 Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): one machine with an NVIDIA card, your own songs, nothing in a cloud. It grew over [YuE2 Kit](https://github.com/IronWolve/yue2-kit) v12 by IronWolve, which runs [yue2.cpp](https://github.com/ServeurpersoCom/yue2.cpp) by ServeurpersoCom. Every change has a number (HERESY 1001 and up); `heresy/docs/HERESY.md` tells each one with what was measured, and `heresy/engine/` keeps each change to the engine and the page as a patch of its own.
 
-## 2.0.2 · In the Making
+## 2.0.3 · In the Making
 
-After 2.0.1 (patches 1812 and up).
+After 2.0.2 (patches 1815 and up).
+
+## 2.0.2 · 2026-10-28
+
+A training that goes on when one card runs out of memory, the studio's writer that leaves its card to the other rooms, the playlist's «Up next» and «Play only» (HERESY 1812–1814).
+
+- **A training goes on when one card runs out of memory** (HERESY 1812): with gradient checkpointing on, the card that ran out leaves its tracks out of that step and sends zero gradients, so every card sends the same list and the run goes on instead of ending.
+- **The studio's writer leaves its card when a room needs it** (HERESY 1813): a job that finds no room asks the writer to leave a card where that makes the room; it stays while it answers a question.
+- **The playlist's «Up next» and «Play only»** (HERESY 1814): the next take's card in a take's last seconds, a click plays it now; «Play only» 👍, 🔥, 💎 or ⭐, the playlist keeping every take.
+- **The release's guard** reads more names that stay home.
 
 ## 2.0.1 · 2026-10-28
 

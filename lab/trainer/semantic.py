@@ -71,7 +71,7 @@ class SemanticTokenizer(nn.Module):
 
     @torch.no_grad()
     def mert_features(self, mono24: torch.Tensor) -> torch.Tensor:
-        """mono24 [samples] at 24 kHz -> [T25, 1024] float32 layer-20 features."""
+        """mono24 [samples] at 24 kHz -> [frames at 25 Hz, 1024] float32 layer-20 features."""
         device = self.device
         chunk = MERT_SAMPLE_RATE * 30
         chunks = [mono24[s: s + chunk] for s in range(0, mono24.shape[0], chunk)]

@@ -7312,3 +7312,22 @@ body.has-train-strip .coll-col::after { height: 0; }
 .key-icons .ui-ico { width: 16px; height: 16px; stroke-width: 1.8; }
 .key-icons .ui-rewind, .key-icons .ui-forward { width: 14px; height: 14px; stroke-width: 2; }
 .key-plus::before { content: "+"; margin: 0 2px; color: var(--muted); }
+
+/* HERESY 1814: the playlist's «Up next» card, left above the player (the log and the toasts keep the right); «Play only» beside the crossfade */
+.up-next { position: fixed; left: 18px; bottom: calc(var(--playbar-h, 60px) + 14px); z-index: 41; display: flex; align-items: center; gap: 10px; max-width: min(380px, calc(100vw - 36px));
+  padding: 8px 12px 8px 8px; border: 1px solid var(--line-strong-a, var(--line)); border-radius: var(--r-md, 10px); background: var(--panel); color: var(--ink);
+  box-shadow: 0 10px 30px rgb(0 0 0 / .35); cursor: pointer; text-align: left; font: inherit; animation: up-next-in .25s ease-out; }
+.up-next[hidden] { display: none; }
+.up-next:hover { border-color: var(--amber); }
+.up-next .un-cover { flex: none; width: 44px; height: 44px; border-radius: 6px; overflow: hidden; background: var(--sunk); }
+.up-next .un-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.up-next .un-text { display: flex; flex-direction: column; min-width: 0; }
+.up-next .un-label { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); }
+.up-next .un-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.up-next .un-in { flex: none; margin-left: 4px; color: var(--muted); font-size: 12px; }
+@keyframes up-next-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .up-next { animation: none; } }
+.pl-only { display: inline-flex; align-items: center; gap: 6px; }
+.pl-only select { max-width: 12em; }
+.up-next .un-cover:empty { display: grid; place-items: center; }
+.up-next .un-cover:empty::before { content: "\266A"; color: var(--muted); font-size: 20px; }   /* HERESY 1814: a take without artwork shows the note, as the playlist cards do */

@@ -13629,10 +13629,10 @@ const t23 = await ev(`(async () => { const w = (ms) => new Promise((r) => setTim
   const back = document.querySelector('input[name="cot"][value="' + cot + '"]'); if (back) back.click();
   YueLoras.set(keep); await w(100);
   return JSON.stringify(o); })()`);
-const T23 = JSON.parse(t23);
+const ladder23 = JSON.parse(t23);
 check("no score in the form: 1.2/1.3/1.4, the bar at most 1.4 in tenths, 1.4 together red and said (8 plans of 9 past 1.2); a score typed in: 1.75/2.25/3.5, the bar to 3.5, 1.4 green",
-  T23.plan === "1.2/1.3/1.4" && T23.planMax === "1.4" && T23.planStep === "0.1" && T23.planRed && /while the model writes the score: past 1\.2 together, 8 plans of 9 broke/.test(T23.note) &&
-  T23.scored === "1.75/2.25/3.5" && T23.scoredMax === "3.5" && T23.scoredGreen, t23);
+  ladder23.plan === "1.2/1.3/1.4" && ladder23.planMax === "1.4" && ladder23.planStep === "0.1" && ladder23.planRed && /while the model writes the score: past 1\.2 together, 8 plans of 9 broke/.test(ladder23.note) &&
+  ladder23.scored === "1.75/2.25/3.5" && ladder23.scoredMax === "3.5" && ladder23.scoredGreen, t23);
 
 // 1623 · (Viktor: «На IRAEv3 чаще падения… На v3 нужно понижать общее AR адаптеров»)
 const f23 = await ev(`JSON.stringify({ v3: window.ruachPlanArSafe("IRAEv3-BF16"), irae: window.ruachPlanArSafe("IRAE-Q8_0"), base: window.ruachPlanArSafe("BF16") })`);

@@ -98,8 +98,12 @@ def verdict(cards):
 
 
 def check(card, need_mb=0, root=KIT):
-    """A card named by hand (the trainer's "GPU 1"): refused aloud when the guard would not give it."""
-    for c in snapshot(root):
+    """A card named by hand (the trainer's "GPU 1"): refused aloud when the guard would not give it; a helper on it leaves first when that makes the room (1813)."""
+    cards = snapshot(root)
+    short = [c for c in cards if c["index"] == card and c["ok"] and c["room_mb"] < need_mb]
+    if short and _make_room(need_mb, short, "room_mb"):
+        cards = _settle(lambda cs: any(c["index"] == card and c["room_mb"] >= need_mb for c in cs), root) or cards
+    for c in cards:
         if c["index"] == card:
             if not c["ok"]:
                 raise ValueError(f"GPU{card} is not given to work now: {c['why']}")
@@ -108,6 +112,35 @@ def check(card, need_mb=0, root=KIT):
                                  f"; this needs {need_mb}")
             return c
     raise ValueError(f"there is no GPU{card}")
+
+
+# HERESY 1813 (Viktor 28.10.2026: «…чтобы загруженная модель вытеснялась из GPU, если другим комнатам Студии нужны видеокарты?»): a helper of the studio
+# that holds a card and may leave it (the writer's llama-server) registers here: held() → {card: MiB it holds and would give back now}, leave(card) → True
+# when it left. A job that finds no room asks one to leave a card where that alone makes the room; the guard then waits for the memory to come back.
+YIELDERS = []
+YIELD_WAIT_S = 15
+
+
+def register_yielder(held, leave):
+    YIELDERS.append((held, leave))
+
+
+def _make_room(need_mb, candidates, key):
+    """True when a helper left a card on which its memory and the room there cover the job."""
+    for held, leave in YIELDERS:
+        try:
+            have = held() or {}
+        except Exception:  # noqa: BLE001 — a helper that cannot say is not asked
+            continue
+        for c in sorted(candidates, key=lambda x: -x[key]):
+            mb = have.get(c["index"]) or 0
+            if mb and c["ok"] and c[key] < need_mb <= c[key] + mb:
+                try:
+                    if leave(c["index"]):
+                        return True
+                except Exception:  # noqa: BLE001
+                    continue
+    return False
 
 
 EMPTY_MB = 1024                     # HERESY 1331: a card with so little taken is empty (the driver's own share)
@@ -121,7 +154,7 @@ def empty_fits(c, need_mb):
             and need_mb <= c["total_mb"] - SPARE_MB)
 
 
-def pick(preferred, fallback=True, need_mb=0, root=KIT, limited=True, less=None, held=None):
+def pick(preferred, fallback=True, need_mb=0, root=KIT, limited=True, less=None, held=None, _yielded=False):
     """The preferred cards in their order of free memory, then (with fallback) any card the guard passes; None when
     none will do (the caller says why, with verdict()). limited (HERESY 1294): the room under each card's limit counts, not
     its whole free memory (the studio's own start passes False). less (HERESY 1376): {index: MiB} given to jobs a moment ago
@@ -139,9 +172,32 @@ def pick(preferred, fallback=True, need_mb=0, root=KIT, limited=True, less=None,
     def room(c):
         return c[key] - less.get(c["index"], 0)
     good = [c for c in cards if c["ok"] and (room(c) >= need_mb or (not less.get(c["index"]) and empty_fits(c, need_mb)))]
+    if not good and need_mb > 0 and YIELDERS and not _yielded:   # HERESY 1813: no room anywhere: a helper may leave a card that then has it
+        allowed = [c for c in cards if c["index"] in preferred or fallback]
+        for c in allowed:
+            c["_room"] = room(c)
+        if _make_room(need_mb, allowed, "_room"):
+            fits = lambda cs: any(c["ok"] and (c["index"] in preferred or fallback) and c[key] - less.get(c["index"], 0) >= need_mb for c in cs)
+            _settle(fits, root)
+            return pick(preferred, fallback, need_mb, root, limited, less, held, _yielded=True)
     first = sorted((c for c in good if c["index"] in preferred), key=lambda c: -room(c))
     rest = sorted((c for c in good if c["index"] not in preferred), key=lambda c: -room(c)) if fallback else []
     return (first + rest or [None])[0], cards
+
+
+def _settle(fits, root):
+    """After a helper left: the cards read again until the room is there (its process gone, its memory back), up to YIELD_WAIT_S."""
+    import time
+    t0 = time.time()
+    while time.time() - t0 < YIELD_WAIT_S:
+        time.sleep(0.5)
+        try:
+            cs = snapshot(root)
+        except (OSError, RuntimeError, subprocess.SubprocessError):
+            continue
+        if fits(cs):
+            return cs
+    return None
 
 
 if __name__ == "__main__":

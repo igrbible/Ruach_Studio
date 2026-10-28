@@ -49,7 +49,7 @@ for bid, kind, src, label in (("debuzz-1", "debuzz", "the take", ""), ("stems-1"
     json.dump({"id": bid, "kind": kind, "source": src, "label": label}, open(take / "derived" / bid / "manifest.json", "w"))
 assert C.edits_of(take, "derived/plugin-x/vocal.flac") == ["Debuzz", "Stems", "Vocal step"] and C.edits_of(take, "") == []; n += 1
 # the ZIP: each audio file as sign says, counted
-json.dump({"title": "T1"}, open(take / "meta.json", "w")); json.dump({}, open(take / "request.json", "w"))
+json.dump({"title": "Take one"}, open(take / "meta.json", "w")); json.dump({}, open(take / "request.json", "w"))
 sf.write(str(take / "audio.wav"), x, 48000, subtype="PCM_16")
 sf.write(str(take / "derived" / "debuzz-1" / "d.flac"), x, 48000)
 json.dump({"id": "debuzz-1", "kind": "debuzz", "source": "the take", "files": [{"name": "d", "path": "derived/debuzz-1/d.flac"}]}, open(take / "derived" / "debuzz-1" / "manifest.json", "w"))
@@ -58,7 +58,7 @@ for f in ("stems-1", "plugin-x"):
 said = []
 def sign(d, data, kind, rel=""):
     said.append((kind, rel))
-    return C.sign(cfg, data, kind, "T1", "2", C.edits_of(d, rel)), "signed"
+    return C.sign(cfg, data, kind, "Take one", "2", C.edits_of(d, rel)), "signed"
 job = collection.export_start(td, td / "out", ["t1"], "wav", True, sign=sign)
 import time
 for _ in range(100):

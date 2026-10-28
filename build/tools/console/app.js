@@ -7061,7 +7061,7 @@
   // as its search and filters show it now, or the takes column as its search shows it
   function listOrder() {
     var HC = window.HeresyCollection;
-    if (STATE.playZone === "playlist" && HC && HC.playlist) return HC.playlist();   // HERESY 1731: the playlist's own order
+    if (STATE.playZone === "playlist" && HC && HC.playlist) return HC.playlistOrder ? HC.playlistOrder(STATE.playerTake && STATE.playerTake.name) : HC.playlist();   // HERESY 1731; 1814: «Play only»
     if (STATE.playZone === "collection" && HC && HC.order && HC.loaded()) return HC.order();
     var seen = {}, names = [];
     all("#libList .take[data-name]").forEach(function (card) {
@@ -7091,7 +7091,7 @@
   function paintPlStrip() {
     var HC = window.HeresyCollection, el = $("plStrip");
     if (!el) return;
-    var names = HC && HC.playlist ? HC.playlist() : [], at = STATE.playerTake ? names.indexOf(STATE.playerTake.name) : -1;
+    var names = HC && HC.playlistOrder ? HC.playlistOrder(STATE.playerTake && STATE.playerTake.name) : HC && HC.playlist ? HC.playlist() : [], at = STATE.playerTake ? names.indexOf(STATE.playerTake.name) : -1;   // 1814
     var on = STATE.playZone === "playlist" && at >= 0;
     el.hidden = !on;
     document.documentElement.classList.toggle("pl-on", on);
@@ -7103,6 +7103,26 @@
     $("plMid").textContent = "Playlist · " + (at + 1) + " / " + names.length;
     var xs = xfSeconds(); $("plXfN").textContent = xs ? "\u22c8 " + xs + " s" : ""; $("plXfN").hidden = !xs;   // HERESY 1737
   }
+  // HERESY 1814 (Plenio's «Up next»): in a playlist take's last 12 seconds, the next one's card above the player: its cover, its title, the seconds
+  // left; a click plays it now. A take shorter than half a minute, a pause or the end of the list shows none
+  function paintUpNext() {
+    var el = $("upNext"), next = $("plNext") && $("plNext").dataset.name, d = audio.duration, left = d - audio.currentTime;
+    var on = STATE.playZone === "playlist" && !!next && !audio.paused && isFinite(d) && d > 30 && left <= 12 && left > 0;
+    if (!el) return;
+    if (!on) { if (!el.hidden) el.hidden = true; return; }
+    if (el.dataset.name !== next) {
+      var t = findTake(next), art = window.HeresyArt ? window.HeresyArt.url(next) : "";
+      el.dataset.name = next;
+      $("unTitle").textContent = t ? displayTitle(t) : next;
+      $("unCover").innerHTML = art ? '<img alt="" src="' + escape(art) + '" />' : "";
+    }
+    $("unIn").textContent = "in " + Math.max(1, Math.ceil(left)) + " s";
+    el.hidden = false;
+  }
+  audio.addEventListener("timeupdate", paintUpNext);
+  ["pause", "ended", "emptied"].forEach(function (k) { audio.addEventListener(k, paintUpNext); });
+  $("upNext").addEventListener("click", function () { var t = this.dataset.name ? findTake(this.dataset.name) : null; if (t) { this.hidden = true; STATE.playZone = "playlist"; playNow(t); paintPlStrip(); } });
+  window.ruachUpNext = paintUpNext;   // for the checks
   ["plPrev", "plNext"].forEach(function (id) {
     $(id).addEventListener("click", function () { var t = this.dataset.name ? findTake(this.dataset.name) : null; if (t) { STATE.playZone = "playlist"; playNow(t); paintPlStrip(); } });
   });

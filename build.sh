@@ -63,7 +63,7 @@ mkdir -p "$(dirname "$PAGE")"   # HERESY 1167: a fresh clone has no public/ (the
 for f in index.html app.css themes.css instrumental.js help.js loras.js vaes.js themes.js app.js; do
     [ -f "$SRC/$f" ] || { echo -e "${R}missing ${SRC#"$ROOT"/}/$f${X}"; exit 1; }
 done
-T0=$(date +%s%N)
+TS0=$(date +%s%N)
 stats=$("$HPY" - "$SRC" "$EXAMPLES" "$PAGE.part" "$ROOT" <<'PY'
 import json, pathlib, re, sys
 
@@ -185,7 +185,7 @@ PY
 ) || { echo -e "${R}⛔ the page did not build (above: why)${X}"; rm -f "$PAGE.part"; exit 1; }
 mv "$PAGE.part" "$PAGE"
 IFS=$'\t' read -r s_html s_css s_js s_ex s_page l_html l_css l_js n_ex n_css n_js <<<"$stats"
-echo -e "  ${PAGE#"$ROOT"/} · $(( s_page / 1024 )) KB · $((1 + n_css + n_js)) files and $n_ex examples inside · $(( ($(date +%s%N) - T0) / 1000000 )) ms"
+echo -e "  ${PAGE#"$ROOT"/} · $(( s_page / 1024 )) KB · $((1 + n_css + n_js)) files and $n_ex examples inside · $(( ($(date +%s%N) - TS0) / 1000000 )) ms"
 
 # ── HERESY 1613 (Viktor 20.10.2026: «Докачиваем новый транскрайбер (1 ГБ) прямо в апдейте»): since 1604 the engine reads SheetSage2's
 #    head with MERT-v2-FullSong beside it; an install whose transcriber is the older one-file kind, or a head with no MERT beside it, fetches
@@ -225,7 +225,7 @@ sycl_build() {
     step "${1:-③} the engine for Intel Arc (beta, SYCL)"
     [ -f /opt/intel/oneapi/setvars.sh ] || { echo -e "${R}⛔ Intel's oneAPI Base Toolkit is not at /opt/intel/oneapi: install it first (icpx and the SYCL runtime)${X}"; exit 1; }
     set +u; source /opt/intel/oneapi/setvars.sh >/dev/null 2>&1 || true; set -u
-    local GF="" g T1
+    local GF="" g TS1
     for g in $(ls -d /usr/lib/gcc/x86_64-linux-gnu/* 2>/dev/null | sort -V -r); do [ -d "/usr/include/c++/${g##*/}" ] && { GF="--gcc-install-dir=$g"; break; }; done
     if [ ! -f "$ROOT/build/build-sycl/CMakeCache.txt" ]; then
         echo -e "  configuring cmake (the first time): SYCL (icpx${GF:+, $GF}), Release"
@@ -233,10 +233,10 @@ sycl_build() {
               ${GF:+"-DCMAKE_C_FLAGS=$GF" "-DCMAKE_CXX_FLAGS=$GF" "-DCMAKE_EXE_LINKER_FLAGS=$GF" "-DCMAKE_SHARED_LINKER_FLAGS=$GF"} >/dev/null \
             || { echo -e "${R}⛔ cmake did not configure for SYCL: build/build-sycl/CMakeFiles/CMakeError.log says why${X}"; exit 1; }
     fi
-    T1=$(date +%s)
+    TS1=$(date +%s)
     nice -n 10 cmake --build build/build-sycl -j "$(nproc)" --target yue-server 2>&1 | grep -E "error|Linking CXX executable yue-server|no work" || true
     [ "${PIPESTATUS[0]}" = 0 ] || { echo -e "${R}⛔ the SYCL build failed: cmake --build build/build-sycl says why${X}"; exit 1; }
-    echo -e "  built in $(( $(date +%s) - T1 )) s: build/build-sycl/yue-server"
+    echo -e "  built in $(( $(date +%s) - TS1 )) s: build/build-sycl/yue-server"
 }
 # the studio runs the SYCL engine: start.sh would take it (YUE2_ENGINE=sycl in its unit, or no CUDA engine)
 studio_on_sycl() {
@@ -266,10 +266,10 @@ if [ $SYCL = 0 ]; then
         cmake -S "$ROOT/build" -B "$ROOT/build/build" "${GEN[@]}" -DCMAKE_BUILD_TYPE=Release -DGGML_CUDA=ON -DGGML_CUDA_FA=ON \
               -DCMAKE_CUDA_COMPILER="$NVCC" -DCMAKE_CUDA_ARCHITECTURES=native >/dev/null || { echo -e "${R}⛔ cmake did not configure: it needs the CUDA toolkit 12.8 (nvcc); an Intel Arc card: ./build.sh --sycl${X}"; exit 1; }
     fi
-    T1=$(date +%s)
+    TS1=$(date +%s)
     nice -n 10 cmake --build build/build -j "$(nproc)" 2>&1 | grep -E "error|Linking CXX executable yue-server|no work" || true
     [ "${PIPESTATUS[0]}" = 0 ] || { echo -e "${R}⛔ the build failed: cmake --build build/build says why${X}"; exit 1; }
-    echo -e "  built in $(( $(date +%s) - T1 )) s"
+    echo -e "  built in $(( $(date +%s) - TS1 )) s"
     # HERESY 1661: the Intel Arc engine beside it, on the same code
     if [ -f "$ROOT/build/build-sycl/CMakeCache.txt" ]; then sycl_build "③b"; fi
 fi

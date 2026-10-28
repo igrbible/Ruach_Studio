@@ -2084,6 +2084,14 @@
   }
   // HERESY 1731 (Viktor 22.10.2026, the playlist): its takes in his order, apart from the workspaces; its view in the Librarian and in a window
   var plWin = null;
+  // HERESY 1814 (Plenio's presets, our marks): «Play only» a mark; the playlist keeps every take, the playing goes through the marked ones
+  state.plOnly = recall("yue2.plOnly") || "";
+  function plMatches(n) {
+    var r = rowOf(n), k = state.plOnly;
+    if (!k || !r) return !k;
+    return k === "like" ? r.rating > 0 : k === "star" ? favOf(n, r) : markOf(n, k === "fire" ? "fire" : "gem");
+  }
+  function plPlayOrder(current) { return (state.playlist || []).filter(function (n) { return n === current || plMatches(n); }); }
   function plRows() { var by = {}; state.rows.forEach(function (r) { by[r.name] = r; }); return (state.playlist || []).map(function (n) { return by[n]; }).filter(Boolean); }
   function plCard(r) {
     var now = state.hooks.playing ? state.hooks.playing() : {}, mine = now.name === r.name, on = mine && now.playing, art = window.HeresyArt ? window.HeresyArt.url(r.name) : "";
@@ -2104,6 +2112,9 @@
       '<button type="button" class="btn ghost small" data-pl-shuffle="1"' + (rows.length > 1 ? "" : " disabled") + ' title="A deck\'s shuffle: every take to a new place">Shuffle the deck</button>' +
       '<label class="pl-xf" title="The crossfade between the playlist\'s takes, 0 to 4 s; Previous and Next change at once"><span>Crossfade</span>' +   // HERESY 1737
       '<input type="range" min="0" max="4" step="1" value="' + (+state.plXfade || 0) + '" data-pl-xf="1" /><span class="mono pl-xf-n">' + (+state.plXfade || 0) + " s</span></label>" +
+      '<label class="pl-only" title="Only the takes with this mark play; the playlist keeps every take"><span>Play only</span><select data-pl-only="1">' +   // HERESY 1814
+      [["", "every take"], ["like", "Liked"], ["fire", "On fire"], ["gem", "A gem"], ["star", "Favourite"]].map(function (o) {
+        return '<option value="' + o[0] + '"' + (state.plOnly === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></label>" +
       '<span class="pl-hint">Drag a take to its place; × takes it out of the playlist, never out of the library</span></div>' +
       (rows.length ? '<div class="pl-list">' + rows.map(plCard).join("") + "</div>"
         : '<p class="row-hint coll-empty">The playlist is empty: «Add to playlist» in a take\'s menu puts takes here</p>');
@@ -2157,6 +2168,13 @@
     // HERESY 1737: the crossfade, 0 to 4 s, kept by the lab
     root.addEventListener("input", function (e) { var x = e.target.closest && e.target.closest("[data-pl-xf]"), n = x && root.querySelector(".pl-xf-n"); if (n) n.textContent = x.value + " s"; });
     root.addEventListener("change", function (e) { var x = e.target.closest && e.target.closest("[data-pl-xf]"); if (x) plOp({ op: "playlist-xfade", seconds: +x.value }); });
+    root.addEventListener("change", function (e) {        // HERESY 1814: «Play only», this viewer's own
+      var x = e.target.closest && e.target.closest("[data-pl-only]");
+      if (!x) return;
+      state.plOnly = x.value;
+      if (x.value) store("yue2.plOnly", x.value); else { try { localStorage.removeItem("yue2.plOnly"); } catch (y) { /* private */ } }
+      plChanged();
+    });
     root.addEventListener("contextmenu", function (e) {   // the take's own menu, as on its card
       var card = e.target.closest(".pl-card[data-pl]");
       if (!card || !state.hooks.menu) return;
@@ -2231,7 +2249,7 @@
   }
 
   window.HeresyCollection = { init: init, reload: load, hubOpen: hubOpen, repaint: paint, paintArts: paintArts, isHidden: isHidden, isFresh: isFresh, markPlayed: markPlayed, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
-                              current: current, landable: landable, closedWs: closedWs, firstWs: firstWs, absent: function () { return state.loadStatus === 404; }, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, rateMany: rateMany, favMany: favMany, exportChecked: exportZip, note: note, setNote: setNote, playlist: function () { return (state.playlist || []).slice(); }, playlistAdd: plAdd, openPlaylist: plOpen, playlistXfade: function () { return +state.plXfade || 0; }, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
+                              current: current, landable: landable, closedWs: closedWs, firstWs: firstWs, absent: function () { return state.loadStatus === 404; }, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, rateMany: rateMany, favMany: favMany, exportChecked: exportZip, note: note, setNote: setNote, playlist: function () { return (state.playlist || []).slice(); }, playlistOrder: plPlayOrder, playlistOnly: function () { return state.plOnly; }, playlistAdd: plAdd, openPlaylist: plOpen, playlistXfade: function () { return +state.plXfade || 0; }, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
                               order: function () { return state.place === "__trash" ? [] : state.place === "__playlist" ? (state.playlist || []).slice() : shown().map(function (r) { return r.name; }); },
                               datasheet: openDatasheet, modelLine: modelLine, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
                               row: rowOf, workspaces: function () { return state.ws.slice(); }, act: act, openSheet: openSheet, requestOf: requestOf,

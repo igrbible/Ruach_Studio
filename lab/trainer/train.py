@@ -657,13 +657,22 @@ def main():
             mine = take(batch)[rank_id * accum:(rank_id + 1) * accum]   # HERESY 1631: this card's share of the step's tracks
             while True:
                 opt.zero_grad(set_to_none=True)
-                short = False
+                short = oom = False
                 try:
                     got = [micro(i) for i in mine]
                 except torch.cuda.OutOfMemoryError:
-                    if ckpt_on:
-                        raise
-                    short = True
+                    if ckpt_on:                               # HERESY 1812: too long for the card even so (28.10: a ~9.7 k-token AR input ended a three-card run)
+                        oom = True
+                    else:
+                        short = True
+                if oom:                                       # out of the except, whose traceback held the step's tensors
+                    got = []                                  # this card's tracks left out of the step; zeros from it, so every card sends the same
+                    opt.zero_grad(set_to_none=True)
+                    torch.cuda.empty_cache()
+                    for p in ar_p + nar_p:
+                        p.grad = torch.zeros_like(p)
+                    print(f"[card {rank_id}] out of memory at step {step} with gradient checkpointing on: its tracks left out of the step", flush=True)
+                    break
                 if not short:
                     break
                 ckpt_on = True                                # HERESY 1631: no room without it: on for the rest of the run, the step again
@@ -718,7 +727,7 @@ def main():
                 shown = min(step, cfg["steps"])
                 eta = per * max(0, cfg["steps"] - step)
                 print(f"{run}: {100 * shown // cfg['steps']:3d}%| {shown}/{cfg['steps']} [{int(el // 60):02d}:{int(el % 60):02d}<{int(eta // 3600)}:{int(eta % 3600 // 60):02d}:{int(eta % 60):02d}, "
-                      f"{per:.2f}s/it, lr: {lr_now:.1e} loss: {values['loss/loss']:.3e}]", flush=True)   # HERESY 1752: the rate this step used
+                      f"{per:.2f}s/it, lr: {lr_now:.1e} loss: {values.get('loss/loss', float('nan')):.3e}]", flush=True)   # HERESY 1752: the rate this step used
             if step // cfg["save_every"] > prev // cfg["save_every"] or step >= cfg["steps"]:
                 at = cfg["steps"] if step >= cfg["steps"] else step - step % cfg["save_every"]   # a save at its epoch's own number
                 if main0:

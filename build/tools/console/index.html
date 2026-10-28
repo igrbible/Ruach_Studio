@@ -2142,6 +2142,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
   </div>
   </div>
   <!-- HERESY 1731: the playlist's strip under the player, while a take of it plays: the take before, its place, the take after -->
+  <!-- HERESY 1814 (Plenio's «Up next»): the next take of the playlist in this one's last seconds -->
+  <button type="button" class="up-next" id="upNext" hidden data-tip="Play it now"><span class="un-cover" id="unCover"></span><span class="un-text"><span class="un-label">Up next</span><span class="un-title" id="unTitle" translate="no"></span></span><span class="un-in mono" id="unIn"></span></button>
   <div class="pl-strip" id="plStrip" hidden><button type="button" class="pl-prev" id="plPrev" translate="no"></button><span class="pl-mid"><span id="plMid"></span><span class="pl-xfn mono" id="plXfN" hidden title="The playlist's crossfade"></span><button type="button" class="pl-leave" id="plLeave" aria-label="Leave the playlist" data-tip="Leave the playlist">✕</button></span><button type="button" class="pl-next" id="plNext" translate="no"></button></div>
   <audio id="audio" preload="auto"></audio>
 </footer>

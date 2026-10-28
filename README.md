@@ -339,6 +339,13 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
+### Done › 2.0.2 (October 2026)
+
+- **The writer gives its card back**: a room that needs the card the studio's writer holds gets it; the writer leaves unless it is answering.
+- **The playlist's «Up next» and «Play only»**, and a training that goes on when one of its cards runs out of memory.
+
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
 ### To Do › After 2.0.0
 
 2.0.0 is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:

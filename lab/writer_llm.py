@@ -221,5 +221,21 @@ def _idle():
                     stop(f"{IDLE_S // 60} minutes without a question")
 
 
+def _held():
+    """HERESY 1813: the card the writer holds and the memory it would give back, while it is not answering (a question in flight keeps it)."""
+    if not _alive() or S["gpu"] is None or S["busy"]:
+        return {}
+    return {S["gpu"]: VARIANTS.get(S["variant"] or "", {}).get("need_mb", 0)}
+
+
+def _leave(card):
+    with LOCK:
+        if S["gpu"] != card or S["busy"] or not _alive():
+            return False
+        stop("a room of the studio needs its card")
+        return True
+
+
+gpu_guard.register_yielder(_held, _leave)
 threading.Thread(target=_idle, daemon=True, name="writer-idle").start()
 atexit.register(stop, "the lab stops")
