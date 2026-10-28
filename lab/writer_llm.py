@@ -117,7 +117,7 @@ def _health(timeout=2):
 def _card(kit, need):
     """The card for the writer: one the guard gives with room for all of it (the lab's job cards first), else the processor. Never a part of it on a card
     without that room: what holds the rest of that card (the songs' engine, a training at its peak) would lose the memory it grows into (the fork,
-    28.10.2026: a T1 card with 0.5 GB free stops the run at an out-of-memory)."""
+    28.10.2026: a training's card with 0.5 GB free stops the run at an out-of-memory)."""
     try:
         roles = gpu_roles.load(kit, gpu_guard.snapshot(kit))
         c, _cards = gpu_guard.pick(roles.get("jobs") or [], need_mb=need, root=kit)
