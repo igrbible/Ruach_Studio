@@ -86,6 +86,7 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
        GET /train/listen?name= · POST /train/listen {dataset, model} · POST /train/styles {dataset, trigger, shared, tags} (1078)
        GET /train/starter · POST /train/starter {name}: the starter sets from Hugging Face into datasets/raw/ (HERESY 1100)
        GET /collection/diamonds · POST /collection/diamonds {name, restore}: the 💎 workspaces from Hugging Face (HERESY 1166)
+       GET /collection/lora-notes: the user's notes on adapters · GET /vocab/: the user's own vocabularies in user/vocab/ (HERESY 1802)
        GET /weights · POST /weights/check · POST /weights/fetch {part | backbone | listener | artwork | trainer}: what the
        install brings, here or not, fetched again by heresy/fetch-heresy.sh, and the extras (weights.py, HERESY 1289)
   GET /daw                       which DAWs the studio's machine has: REAPER, Waveform, … (HERESY 1102)
@@ -174,6 +175,7 @@ import section  # noqa: E402   HERESY 1414: Replace a section
 import machine  # noqa: E402   HERESY 1304: the machine as a new studio's first start reads it
 import artist_loras  # noqa: E402   HERESY 1316: the Artist's adapters
 import weights  # noqa: E402   HERESY 1289: the Engine's Models card over heresy/fetch-heresy.sh
+import writer_llm  # noqa: E402   HERESY 1811: the studio's own writer, llama.cpp's llama-server behind /llm/v1
 import lora_alchemy  # HERESY 1447: what each LoRA touches, which share layers
 import takeloop  # noqa: E402   HERESY 1325: a loop from a take
 import takeedit  # noqa: E402   HERESY 1356: a take cropped, a section taken out, its speed changed: a new take
@@ -1900,17 +1902,12 @@ def batch_async(spec):
 
 
 # HERESY 1120: artwork for a take (art_job.py, Viktor 02.10.2026: «просто иконка в плеере, в карточке и в mp3»): a
-# small language model writes a picture prompt from the take's style and words, an SDXL finetune draws it. One at a
-# time with the other heavy jobs, on a card the guard gives (the two models one after the other; measured 02.10.2026:
-# 14.2 GB reserved at the peak, SDXL at 1024 px and its decoder).
-ART_NEED_MB = 15000
-# HERESY 1167 (Viktor 05.10.2026, the A/B: «Muse - отличный файнтюн»; «Для карт ниже 24GB VRAM… оставим SDXL»; «Изначальным
-# выставь Q4»): the painters, each its room on a card at the peak with the prompter before it (RTX 3090, 05.10.2026: Krea 2
-# Muse Q4 11.6 GB, Q8 17.4 GB; SDXL 14.2 GB) and its Python (Krea paints in .venv-art: transformers 5, diffusers 0.40)
-# HERESY 1297: measured again on GPU2 10.10.2026, the prompter (Qwen3-4B) before the painter, at 1024 px: Krea 2 Muse Q4 12.6 GB
-# (42 s), SDXL 14.2 GB (17 s); Q8 17.4 GB (05.10). A margin of about half a gigabyte: a 16 GB card (15 GB left by a desktop) takes Q4
-ART_NEED = {}                                       # HERESY 1405: SDXL gone; 1428: Krea 2 gone (the Qwen painters below)
-# HERESY 1405: a card too small for the painter whole: its blocks stream from RAM (artist.STREAM_NEED, with Krea's encoder and the prompt
+# small language model writes a picture prompt from the take's style and words, a painter draws it. One at a time with
+# the other heavy jobs, on a card the guard gives, each painter its room at the peak with the prompter before it and its
+# Python (.venv-art). HERESY 1800: the painters before Qwen-Image (an SDXL fine-tune, Krea 2 Muse) left in 1405 and 1428,
+# their rooms with them (HERESY.md keeps the numbers)
+ART_NEED = {}                                       # the Qwen painters' (below)
+# HERESY 1405: a card too small for the painter whole: its blocks stream from RAM (artist.STREAM_NEED, with its text encoder and the prompt
 # writer moving to the CPU when the card has no room for them), a little room over the streamed peak
 ART_STREAM_NEED = dict(artist.STREAM_NEED)          # HERESY 1428: the Qwen painters' streamed peaks (artist.py)
 ART_PY = Path(os.environ.get("LAB_ART_PY", HERE.parent / ".venv-art/bin/python"))
@@ -1935,8 +1932,8 @@ def art_here(asked):
 
 def art_painter(asked=None):
     """HERESY 1167: the painter for an artwork: the one asked for, else the user's setting (yue2.artPainter), else by the
-    cards: Krea 2 Muse at Q4 (1405: streamed below 16 GB, SDXL gone); Krea only where its files and environment are. HERESY 1338: a Qwen
-    painter as well (a fine-tune as «qwen2512-fp8:FILE»); one whose files are not here gives way to the cards' choice."""
+    cards (art_by_cards). HERESY 1338: a Qwen painter (a fine-tune as «qwen2512-fp8:FILE»), the only kind since 1428 (SDXL left
+    in 1405, Krea 2 in 1428); one whose files are not here gives way to the cards' choice."""
     p = art_here(asked)
     if not p:
         try:
@@ -1951,9 +1948,9 @@ def art_painter(asked=None):
 def art_by_cards():
     """HERESY 1423 (Viktor 13.10.2026: «ставь на обложки 2512… для 24GB+ имеем 2512 а для менее жирных оставляем Krea 2 Muse?»): the
     painter by the cards the lab's jobs may take: Qwen-Image 2512 where one holds it whole (Q6 from 20 GB, Q4 from 15.5 GB: it follows
-    the prompt best and letters a title), else Krea 2 Muse Q4 (HERESY 1405: whole where it fits, streamed from RAM below); "" when
-    neither's files are here. Measured on an RTX 3090 (13.10.2026, the prompt writer and the critic included): Qwen Q6 131 s, Q4 125 s,
-    Krea Q4 65 s a cover: a Qwen cover takes twice Krea's time, and Q4 is no quicker than Q6 (the painting is compute, not memory)."""
+    the prompt best and letters a title), else Q4 streamed from RAM on a smaller card (HERESY 1428: Krea 2 Muse, the smaller cards'
+    painter before, gone); "" when its files are not here. Measured on an RTX 3090 (13.10.2026, the prompt writer and the critic
+    included): Q6 131 s, Q4 125 s a cover: Q4 is no quicker than Q6 (the painting is compute, not memory)."""
     try:
         cards = training.gpus()
         roles = gpu_roles.load(KIT, cards)
@@ -2376,6 +2373,17 @@ def act_watch():
                 elif old is None and r["status"] == "queued":
                     act_say(f"{r['what']} · {r['name']} · waits for a card")
                     seen[k] = r
+                if k.startswith("train:") and r["status"] == "running" and r.get("steps"):
+                    # HERESY 1806 (Viktor 28.10.2026: «ВО вкладке Тренера ничего нет, тогда как в других есть инфа»): its way, not its start and end
+                    # alone: a line at each new percent of its steps, or every 20 minutes, so the Trainer's tab of the log has it while it runs
+                    pct, said = int(100 * (r.get("step") or 0) / r["steps"]), ACT.setdefault("train_said", {})
+                    last = said.get(k)
+                    if last is None or pct > last[0] or time.time() - last[1] >= 1200:
+                        if last is not None:
+                            eta = r.get("eta")
+                            left = f" · about {int(eta) // 3600}:{int(eta) % 3600 // 60:02d} h left" if isinstance(eta, (int, float)) else ""
+                            act_say(f"{r['what']} · {r['name']} · step {r.get('step')} of {r['steps']} ({pct} %){left}")
+                        said[k] = (pct, time.time())
             for k in list(seen):
                 if k not in now:
                     kind, _, name = k.partition(":")
@@ -2696,6 +2704,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, places.listing(q.get("refresh") == "1"))
             if url.path == "/places/plan":
                 return self.send(200, places.plan(q.get("name", ""), q.get("to", "")))
+            if url.path == "/llm/v1/models":                # HERESY 1811: the studio's own writer, listed as any chat server lists its model
+                return self.send(200, writer_llm.models(KIT))
+            if url.path == "/llm/status":                   # HERESY 1811: here, chosen, asleep or on which card
+                return self.send(200, writer_llm.status(KIT))
             if url.path == "/weights":                      # HERESY 1289: what the install brings, and a run under way
                 return self.send(200, weights.listing(KIT))
             if url.path == "/lora/profile":                 # HERESY 1447: LoRA alchemy: each adapter by layer, the pairs, the budgets
@@ -2875,12 +2887,31 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, gpus_state())
             if url.path == "/machine":                       # HERESY 1304: the first start's scan
                 return self.send(200, machine_state())
+            if url.path == "/vocab/":                       # HERESY 1802: what user/vocab/ holds, for the ♪ sheet to lay over the First Wave's
+                base, sets = KIT / "user" / "vocab", []
+                for f in sorted(base.glob("*.json")) if base.is_dir() else []:
+                    try:
+                        v = json.load(open(f, encoding="utf-8"))
+                        name = str(v.get("name") or (v.get("meta") or {}).get("name") or f.stem)
+                    except (OSError, ValueError, AttributeError):
+                        continue
+                    sets.append({"url": "/lab/vocab/" + urllib.parse.quote(f.name), "name": name[:60]})
+                return self.send(200, {"sets": sets})
+            if url.path == "/collection/lora-notes":        # HERESY 1802: the user's notes on adapters, for the Creator's tips
+                return self.send(200, {"notes": collection.load(config_dir()).get("lora_notes", {})})
+            if url.path.startswith("/vocab/"):              # HERESY 1801b: a vocabulary of the user's own (user/vocab/NAME.json), for the vocabulary page
+                base = (KIT / "user" / "vocab").resolve()
+                f = (base / Path(urllib.parse.unquote(url.path[len("/vocab/"):])).name).resolve()
+                if base not in f.parents or f.suffix != ".json" or not f.is_file():
+                    raise FileNotFoundError("no such vocabulary here")
+                return self.send_file(f, "application/json")
             if url.path.startswith("/guide/"):              # HERESY 1096: docs/GUIDE.md and its pictures, for the page's guide
                 base = (KIT / "docs").resolve()
                 f = (base / urllib.parse.unquote(url.path[len("/guide/"):])).resolve()
                 if base not in f.parents or not f.is_file():
                     raise FileNotFoundError("no such page of the guide")
-                kinds = {".md": "text/markdown; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp", ".svg": "image/svg+xml"}
+                kinds = {".md": "text/markdown; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp", ".svg": "image/svg+xml",
+                         ".html": "text/html; charset=utf-8", ".json": "application/json"}   # HERESY 1801: the First Wave's vocabulary, a page of the guide
                 return self.send_file(f, kinds.get(f.suffix.lower(), "application/octet-stream"))
             if url.path == "/train/trash":                  # HERESY 1090: deleted runs, kept until emptied
                 return self.send(200, training.trashed_runs(KIT))
@@ -3043,6 +3074,21 @@ class Handler(BaseHTTPRequestHandler):
             if size <= 0 or size > 1024 ** 3:
                 raise ValueError("send the file as the body, up to 1 GB")
             body = self.rfile.read(size)
+            if url.path == "/llm/v1/chat/completions":      # HERESY 1811: a question to the studio's own writer, started if it sleeps
+                code, out = writer_llm.chat(KIT, body)
+                self.send_response(code)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Content-Length", str(len(out)))
+                self.end_headers()
+                return self.wfile.write(out)
+            if url.path == "/llm/variant":                  # HERESY 1811: quality or compact; a test page changes nothing
+                v = str(json.loads(body.decode("utf-8")).get("variant") or "")
+                return self.send(200, writer_llm.status(KIT) if q.get("scope") else writer_llm.choose(KIT, v))
+            if url.path == "/llm/stop":                     # HERESY 1811: its card back now; the next question starts it again
+                if not q.get("scope"):
+                    writer_llm.stop("asked")
+                return self.send(200, writer_llm.status(KIT))
             if url.path == "/weights/check":                # HERESY 1289
                 return self.send(202, weights.check(KIT))
             if url.path == "/weights/fetch":                # HERESY 1289: on the user's word; a test page fetches nothing

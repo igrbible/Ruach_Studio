@@ -42,6 +42,12 @@ def load(config_dir):
     # HERESY 1730: the playlist, one ordered list of takes apart from the workspaces (never renamed, deleted or frozen), and its crossfade (0–4 s)
     d.setdefault("playlist", [])
     d.setdefault("playlist_xfade", 0)
+    # HERESY 1802 (Viktor 27.10.2026: «прикрутим к картам треков 🔥 и 💎»; «в воркспейсы и их подкатегории прикрутим Notes… к LoRA адаптерам заметки
+    # пользовательские… ограничить длину заметок разумными 500-600 знаков»): two marks of a take's own, a note on a workspace, a note on an adapter
+    d.setdefault("fire", [])
+    d.setdefault("gems", [])
+    d.setdefault("ws_notes", {})
+    d.setdefault("lora_notes", {})
     if "fresh_since" not in d:                   # from the day this came: the takes before it are not all fresh at once
         d["fresh_since"] = int(time.time())
         save(config_dir, d)
@@ -163,16 +169,18 @@ def frozen_takes(d):
 
 def _frozen_guard(d, op, ws, names, data):
     ice = frozen_takes(d)
-    if op in ("hide", "show", "rate", "note", "pin", "ws-add", "ws-move", "ws-remove", "protect"):
+    if op in ("hide", "show", "rate", "note", "pin", "ws-add", "ws-move", "ws-remove", "protect", "mark"):
         n = sum(1 for x in names if x in ice)
         if n:
             raise ValueError(f"{n} take{'s' if n > 1 else ''} frozen with {'their' if n > 1 else 'its'} workspace: unfreeze it first")
     places = []
     if op in ("ws-add", "ws-remove", "ws-move", "ws-create"):
         places.append(ws)
-    if op in ("ws-rename", "ws-delete", "ws-merge") and ws in d["workspaces"]:
+    if op in ("ws-rename", "ws-delete", "ws-merge", "ws-pour") and ws in d["workspaces"]:
         places += family(d, ws)
-    if op == "ws-merge" and data.get("to"):
+    if op == "ws-rename" and data.get("to"):           # HERESY 1808: nor under a frozen one
+        places.append(SEP.join(ws_name(data.get("to")).split(SEP)[:-1]))
+    if op in ("ws-merge", "ws-pour") and data.get("to"):
         places.append(ws_name(data.get("to")))
     if op == "ws-move" and data.get("from"):
         places.append(ws_name(data.get("from")))
@@ -215,6 +223,7 @@ def catalog(outputs, config_dir):
     rows, played, since = [], set(marks["played"]), marks.get("fresh_since") or 0
     ice = frozen_takes(marks)                    # HERESY 1166
     shield = set(marks["protected"])             # HERESY 1368
+    fire, gems = set(marks["fire"]), set(marks["gems"])   # HERESY 1802
     for d in sorted(outputs.iterdir()) if outputs.is_dir() else []:
         mp = d / "meta.json"
         if not mp.is_file():
@@ -252,11 +261,15 @@ def catalog(outputs, config_dir):
                      "hidden": d.name in hidden, "workspaces": sorted(ws_of.get(d.name, [])),
                      "rating": marks["ratings"].get(d.name, 0), "note": marks["notes"].get(d.name, ""), "seeds": req.get("seeds"),
                      "fresh": (meta.get("created") or 0) >= since and d.name not in played,     # HERESY 1162
-                     "regen_of": marks["regen_of"].get(d.name, ""), "frozen": d.name in ice, "protected": d.name in shield})
+                     "regen_of": marks["regen_of"].get(d.name, ""), "frozen": d.name in ice, "protected": d.name in shield,
+                     "fire": d.name in fire, "gem": d.name in gems})   # HERESY 1802
     return {"takes": rows, "workspaces": sorted(marks["workspaces"]), "trash_days": marks["trash_days"], "locks": marks["locks"],
             "pins": marks["pins"], "frozen": marks["frozen"],
             "playlist": (lambda here: [n for n in marks["playlist"] if n in here])({r["name"] for r in rows}),   # HERESY 1730: only the takes still here
-            "playlist_xfade": marks["playlist_xfade"]}
+            "playlist_xfade": marks["playlist_xfade"], "ws_notes": marks["ws_notes"]}   # HERESY 1802: the workspaces' notes
+
+
+NOTE_MAX = 600   # HERESY 1802: a workspace's or an adapter's note (Viktor: «500-600 знаков, чтобы тултипы не разлулись»)
 
 
 def collection_post(config_dir, outputs, data):
@@ -303,6 +316,8 @@ def collection_post(config_dir, outputs, data):
                     d["locks"][to] = d["locks"].pop(old)
                 if old in d["pins"]:               # and the pins
                     d["pins"][to] = d["pins"].pop(old)
+                if old in d["ws_notes"]:           # HERESY 1802: and the note
+                    d["ws_notes"][to] = d["ws_notes"].pop(old)
         elif op == "pin":                          # HERESY 1103: place = a workspace, "" (All), __fav, __none; on = true | false
             place = str(data.get("place") or "")[:200]
             have = [n for n in d["pins"].get(place, []) if n not in names]
@@ -325,15 +340,28 @@ def collection_post(config_dir, outputs, data):
                 lk.pop(what, None)
             if not lk:
                 d["locks"].pop(ws, None)
-        elif op in ("ws-delete", "ws-merge") and any(locked(d, w, "workspace") for w in family(d, ws)):
+        elif op in ("ws-delete", "ws-merge", "ws-pour") and any(locked(d, w, "workspace") for w in family(d, ws)):
             w = next(w for w in family(d, ws) if locked(d, w, "workspace"))
             raise ValueError(f"\u201c{w}\u201d is locked against deletion: unlock it first (right-click on its name)")
+        elif op == "ws-pour":                      # HERESY 1808: its takes and its sections' into another, then it goes with its sections
+            to, fam = ws_name(data.get("to")), family(d, ws)
+            if not ws or ws not in d["workspaces"] or not to or to not in d["workspaces"] or to in fam:
+                raise ValueError("move the takes of an existing workspace into another one, not into itself or a section of its own")
+            moved = set()
+            for w in fam:
+                moved |= set(d["workspaces"][w])
+            d["workspaces"][to] = sorted(set(d["workspaces"][to]) | moved)
+            for w in fam:
+                d["workspaces"].pop(w, None)
+                d["pins"].pop(w, None)
+                d["ws_notes"].pop(w, None)
         elif op == "ws-merge" and len(family(d, ws)) > 1:
             raise ValueError(f"\u201c{ws}\u201d has sections: merge or delete them first")
         elif op == "ws-delete":            # the workspace goes, its sections with it (1161); its takes stay where they are
             for w in family(d, ws):
                 d["workspaces"].pop(w, None)
                 d["pins"].pop(w, None)
+                d["ws_notes"].pop(w, None)         # HERESY 1802
         elif op == "ws-add":
             if not ws:
                 raise ValueError("which workspace?")
@@ -351,6 +379,8 @@ def collection_post(config_dir, outputs, data):
             if not ws or ws not in d["workspaces"] or not to or to == ws:
                 raise ValueError("merge an existing workspace into another")
             d["workspaces"][to] = sorted(set(d["workspaces"].get(to, [])) | set(d["workspaces"].pop(ws)))
+            if ws in d["ws_notes"]:                # HERESY 1802: its note goes to the other when that one has none
+                d["ws_notes"].setdefault(to, d["ws_notes"].pop(ws))
         elif op == "ws-remove":
             if ws in d["workspaces"] and ws_locked(d, ws):          # HERESY 1473
                 raise ValueError(f"\u201c{ws}\u201d is locked: unlock it first to take takes out of it (right-click on its name)")
@@ -372,6 +402,32 @@ def collection_post(config_dir, outputs, data):
                     d["notes"][n] = text
                 else:
                     d["notes"].pop(n, None)
+        elif op == "mark":                         # HERESY 1802: 🔥 fire, 💎 gem; on = true | false
+            key = {"fire": "fire", "gem": "gems"}.get(str(data.get("mark") or ""))
+            if not key:
+                raise ValueError("mark: fire or gem")
+            d[key] = sorted(set(d[key]) | set(names)) if data.get("on") else sorted(set(d[key]) - set(names))
+        elif op == "ws-note":                      # HERESY 1802: a workspace's or a section's note, its tip in the column
+            if ws not in d["workspaces"]:
+                raise ValueError("a note on an existing workspace")
+            text = str(data.get("text") or "").strip()
+            if len(text) > NOTE_MAX:
+                raise ValueError(f"a note is {NOTE_MAX} characters at most ({len(text)} given)")
+            if text:
+                d["ws_notes"][ws] = text
+            else:
+                d["ws_notes"].pop(ws, None)
+        elif op == "lora-note":                    # HERESY 1802: the user's note on an adapter, under a line in its tip in the Creator
+            lid = str(data.get("id") or "").strip()
+            if not lid or len(lid) > 300 or ".." in lid or lid.startswith("/"):
+                raise ValueError("which adapter? (its id under loras/)")
+            text = str(data.get("text") or "").strip()
+            if len(text) > NOTE_MAX:
+                raise ValueError(f"a note is {NOTE_MAX} characters at most ({len(text)} given)")
+            if text:
+                d["lora_notes"][lid] = text
+            else:
+                d["lora_notes"].pop(lid, None)
         elif op == "protect":                      # HERESY 1368: on = true | false; only a take in the library is protected
             if data.get("on"):
                 have = [n for n in names if (outputs / n / "meta.json").is_file()]

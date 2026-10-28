@@ -377,11 +377,30 @@
     return t === null ? ru : t;
   }
   function paint() { paintTable(); markIn(); }
+  // HERESY 1802 (Viktor 27.10.2026: «В Студию ты шпаргалку по First Wave оформил?»): the First Wave's vocabulary in the ♪ sheet, the page F1 links to,
+  // in the page's language and tone; the user's own vocabularies (user/vocab/, the lab's /vocab/) laid over it when there are any
+  var vocabSrc = "";
+  function paintVocab() {
+    var lang = String(document.documentElement.lang || "en").split("-")[0], night = (document.documentElement.dataset.tone || "") !== "light";
+    var base = "/lab/guide/fw-vocabulary/index.html?embed=1&lang=" + encodeURIComponent(lang) + "&theme=" + (night ? "dark" : "light");
+    $("hiCount").innerHTML = "";
+    var go = function (src) {
+      if (vocabSrc === src && $("hiTable").querySelector("iframe.hi-fw")) return;
+      vocabSrc = src;
+      $("hiTable").innerHTML = '<tr><td class="hi-fw-cell"><iframe class="hi-fw" title="First Wave" src="' + esc(src) + '"></iframe></td></tr>';
+    };
+    fetch("/lab/vocab/").then(function (r) { return r.ok ? r.json() : { sets: [] }; }).catch(function () { return { sets: [] }; }).then(function (d) {
+      var sets = (d && d.sets) || [];
+      go(!sets.length ? base : base + "&data=" + encodeURIComponent(["fw-vocabulary.json"].concat(sets.map(function (s) { return s.url; })).join(",")) +
+        "&names=" + encodeURIComponent(["First Wave"].concat(sets.map(function (s) { return s.name; })).join(",")));
+    });
+  }
   function paintTable() {
     Array.prototype.forEach.call(document.querySelectorAll("[data-hi-tab]"), function (b) { b.classList.toggle("is-on", b.dataset.hiTab === state.tab); });
     $("hiFam").hidden = $("hiHeardBox").hidden = state.tab !== "instruments";
     if (state.tab === "styles") return paintStyles();
     if (state.tab === "tags") return paintTags();   // HERESY 1168
+    if (state.tab === "fw") return paintVocab();     // HERESY 1802
     var f = fold(state.q), fams = DATA.families, html = "";
     Object.keys(fams).forEach(function (fam) {
       if (state.fam && state.fam !== fam) return;
@@ -407,7 +426,7 @@
     back.innerHTML = '<div class="hi-box" aria-label="Instruments">' +
       '<div class="hi-head"><b>♪</b><span class="hi-tabs"><button type="button" class="hi-tabb" data-hi-tab="instruments">Instruments</button>' +
       '<button type="button" class="hi-tabb" data-hi-tab="styles">Styles</button>' +
-      '<button type="button" class="hi-tabb" data-hi-tab="tags">Lyrics tags</button></span><span class="row-hint" id="hiCount"></span><span class="spacer"></span>' +
+      '<button type="button" class="hi-tabb" data-hi-tab="tags">Lyrics tags</button><button type="button" class="hi-tabb" data-hi-tab="fw">First Wave</button></span><span class="row-hint" id="hiCount"></span><span class="spacer"></span>' +
       '<button type="button" class="btn ghost small" id="hiClose">Close</button></div>' +
       // HERESY 1167 (Viktor: «Дизайн аудио шпаргалки пересмотри. Там в голове навалено сплошными потоками»): the head in parts:
       // the warning in a line, a legend of four, how the probes were made folded

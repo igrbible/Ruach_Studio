@@ -91,6 +91,10 @@ Le ♪ à côté du style ouvre un tableau de 200 instruments que le studio a so
 
 ![L'aide-mémoire des instruments](guide/instruments.png)
 
+### Le vocabulaire de la Première Vague <!-- #the-first-wave-s-vocabulary -->
+
+**YuE2-RS-FW**, le fine-tune du studio (*Engine → Models and LoRAs → RS-FW merge*), a appris de 32 633 morceaux, et chaque mot de leurs lignes de style est compté dans **[son vocabulaire](fw-vocabulary/index.html?lang=fr)** : genres, instruments, voix, humeur, les mots d'émotion donnés par l'audio lui-même, tonalités et BPM, et les clés des partitions (sections, mesures, tempos, accords). Cherche, filtre par sorte et par source, vois avec quels mots chacun allait. Un clic place un mot dans une ligne de style dans l'ordre que le modèle a appris ; *Copier* emporte la ligne pour le champ Style. Un mot vu dans des centaines de morceaux, le modèle le comprend ; vu deux fois, c'est un indice. La même référence en document est sur [la page du modèle](https://huggingface.co/goldhub/YuE2-RS-Finetunes/blob/main/FW-VOCABULARY.md).
+
 ### Paroles et profils de texte <!-- #lyrics-and-text-profiles -->
 
 - Les balises de section sur leurs propres lignes ; YuE2 connaît `[Intro]`, `[Verse]`, `[Pre-Chorus]`, `[Chorus]`, `[Bridge]`, `[Interlude]`, `[Outro]`.
@@ -555,6 +559,16 @@ Une LoRA est un petit adaptateur sur les deux moitiés. **Le style vient surtout
 **Un adaptateur de voix apprend de n'importe quelle forme de la voix**, pas seulement du chant : les lectures et les livres audio marchent aussi. Mesuré ici (05.10.2026) : un adaptateur entraîné sur les lectures d'un acteur a parlé avec sa voix, et quand il chantait, il chantait avec sa couleur. Nomme un tel adaptateur par sa sorte (basse, baryténor, contralto…), jamais par une personne : `lab/voice_kind.py` mesure la voix d'un jeu à partir de sa hauteur parlée.
 
 **Quelle force pour un adaptateur de voix.** Écouté sur une chanson (19.10.2026 : l'adaptateur d'un narrateur, rang 32, sur une ballade folk tragique) : à 1.0 la voix noie la musique et la prise devient instable, à 0.8 elle la brûle encore, 0.7 est le plafond d'où partir, et 0.4–0.6 rend le mieux la voix. Une force basse laisse la hauteur propre de la personne et garde la tonalité de la voix : la chanson en prend la couleur, pas l'empreinte. Ses deux moitiés ne se valent pas : la musicale (AR) écrit la partition avec le modèle, pour les deux portées, et une voix apprise sur la parole étouffe les notes quand elle est haute ; garde-la à 0.5 au plus, et donne à la sonore (NAR), qui porte le timbre, jusqu'à 1.0 (entendu le même jour : AR 0.4 avec NAR 1.0 ont gardé la musique entière et la voix stable). Les curseurs tracent ainsi la route d'un adaptateur de voix : celui dont le nom dit voice ou vocal rougit après 0.5 sur la moitié musicale et après 1.0 sur la sonore.
+
+### Une voix à soi : questions du terrain
+
+Réponses données sur GitHub (issue #2) à quelqu'un qui voulait la seule voix principale, gardées ici.
+
+- **Une prise avec la voix seule.** YuE2 a appris à chanter sur des chansons entières, et son phrasé s'appuie sur la musique sous la voix : « a cappella » dans le style le pousse vers des chœurs ou vers tout le groupe. Demande plutôt une seule chose calme sous la voix (un pad doux, une seule guitare acoustique) avec `solo lead, single voice, no harmonies, no backing vocals, dry vocal, close mic`, puis sépare la prise dans l'Affineur (huit stems) : *Voix lead entière* ramène ce que la séparation a mis parmi les chœurs, *Suréchantillonnage des voix* redessine l'air que le séparateur a éteint. Moins il y a sous la voix, plus le stem est propre.
+- **Un adaptateur de voix à partir de tes enregistrements.** Des voix principales sèches d'un seul chanteur avec leurs paroles, en 44,1 ou 48 kHz depuis des sources sans perte. La même pièce légère sur chaque clip nuit moins que des pièces différentes, et un clip très réverbéré vaut mieux laissé de côté que nettoyé à moitié : ce qu'un de-reverb laisse derrière lui s'apprend comme une part de la voix.
+- **Rang.** 16 pour une voix, 32 au plus : le rang fixe combien l'adaptateur peut changer, pas combien il s'approchera du chanteur.
+- **Ressemblance.** Le timbre est porté par la moitié du son : joue-la à 0,8–1,0 avec la moitié musicale à 0,3–0,5. Nomme dans le style le sexe et le registre du chanteur (`male baritone vocal`). Juge-la sur les poids où il a appris : un adaptateur appris sur le modèle de base déchirait la voix sur un fine-tune, même à faible force.
+- **Le coude des courbes à la fin.** Avec *S'arrêter au plateau, puis la moitié son seule*, la moitié musicale se fige quand celle du son cesse de s'améliorer, et celle du son continue seule : les courbes changent alors de forme, et ces dernières époques donnent souvent la voix la plus propre. Quand ar_ce approche de 0, la moitié musicale connaît les clips par cœur : écoute une époque plus tôt (les puces vertes).
 
 ![L'Entraîneur LoRA : la télémétrie d'une exécution](guide/studio-train.png)
 

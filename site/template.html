@@ -283,6 +283,7 @@
                        cursor: pointer; font-size: 20px; line-height: 1; }
   .vocab-panel iframe { flex: 1; width: 100%; border: 0; background: var(--ground); }
   @media (max-width: 600px) { .vocab-modal { padding: 0; } .vocab-panel { border-radius: 0; border: 0; } }
+  .warn-free { grid-column: 1 / -1; margin: 0 0 14px; padding: 12px 16px; border-left: 3px solid #d9a441; background: color-mix(in srgb, #d9a441 10%, transparent); border-radius: 6px; }
 </style>
 <script>
   // the visitor's day or night, kept in this browser only; the page works without it
@@ -319,7 +320,7 @@
       <a class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Models on Hugging Face</a>
       <a class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Buy me a Coffee Machine</a>
     </div>
-    <span class="rc"><b>2.0.0</b> · the first stable release · October 2026</span>
+    <span class="rc"><b>2.0.1</b> · the studio's own Writer · October 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -508,6 +509,8 @@
           <li>Made for a browser window of <b>1920×1080 at 100 %</b></li>
           <li>The ideal: <b>2K</b> (2560×1440), 22″ or larger, 16:9 or wider</li>
           <li>Two themes for hours of work: Scroll &amp; Brick by day, Scroll by Lamplight by night, and 20 more</li></ul></div>
+        <!-- HERESY 1807 (Viktor 28.10.2026: «на всех наших карточках чёрным по белому… предупреди… Слишком массивная она у нас») -->
+        <p class="warn-free"><b>Not on free cloud GPUs.</b> Ruach Studio does not run on Google Colab, Kaggle or any free notebook GPU, so don't spend an evening on it there: it is a whole studio, not a notebook. It builds its C++/CUDA engine on the machine it lives on, keeps a server and a lab of Python services running beside it, and takes about 33 GB of disk (60 GB with the Artist). A free session's card, memory, wiped disk and hours-long limit cannot hold that. It wants your own Linux computer, or a server you rent and keep, with an NVIDIA card: 24 GB for everything, 16 GB with the smaller model copies.</p>
         <div class="card"><h3>Optional</h3><ul>
           <li>A chat server for the Writer (vLLM, LM Studio, Ollama) or an OpenRouter key</li>
           <li>A DAW: REAPER, Waveform 14+, Bitwig</li>
@@ -650,7 +653,7 @@
 
 <footer>
   <div class="wrap">
-    <span>Ruach Studio · 2.0.0 · a work of <a href="https://igr.bible">igr.bible</a></span> <span class="links"><a href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changelog</a><a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Coffee Machine</a></span>
+    <span>Ruach Studio · 2.0.1 · a work of <a href="https://igr.bible">igr.bible</a></span> <span class="links"><a href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changelog</a><a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Coffee Machine</a></span>
   </div>
 </footer>
 

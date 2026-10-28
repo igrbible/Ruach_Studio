@@ -1,0 +1,19 @@
+# Ruach Studio's https door (HERESY 1805), a systemd user unit: a second way into the studio over https, beside its own port and changing nothing of it,
+# for what a browser gives only to a secure page (Web MIDI from another computer). Who may come in is Engine → Security's choice (user/access.json).
+# A template: systemd/install-units.sh writes it into ~/.config/systemd/user/. It starts only when asked:
+#   systemctl --user enable --now ruach-tls-door     then https://<this machine>:7443 (the studio's own certificate: the browser asks once)
+[Unit]
+Description=Ruach Studio https door (HERESY 1805)
+After=ruach-studio.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=@ROOT@
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 @ROOT@/lab/tls_door.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

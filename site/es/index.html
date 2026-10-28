@@ -296,6 +296,7 @@
                        cursor: pointer; font-size: 20px; line-height: 1; }
   .vocab-panel iframe { flex: 1; width: 100%; border: 0; background: var(--ground); }
   @media (max-width: 600px) { .vocab-modal { padding: 0; } .vocab-panel { border-radius: 0; border: 0; } }
+  .warn-free { grid-column: 1 / -1; margin: 0 0 14px; padding: 12px 16px; border-left: 3px solid #d9a441; background: color-mix(in srgb, #d9a441 10%, transparent); border-radius: 6px; }
 </style>
 <script>
   // the visitor's day or night, kept in this browser only; the page works without it
@@ -331,7 +332,7 @@
     <h1>Canciones a partir de palabras y acordes<br>en tu propia máquina</h1>
     <p class="lead">Todo un estudio alrededor de <b>YuE2</b>, el modelo abierto de canciones. Escribe el estilo y la letra, y el estudio compone, canta y renderiza la canción en <b>tu propia GPU</b>. Tus canciones, palabras y ajustes nunca salen de ella.</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Consíguelo en GitHub</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.es.md">Lee la guía</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Modelos en Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Invítame a una cafetera</a></div>
-    <span class="rc"><b>2.0.0</b> · la primera versión estable · octubre de 2026</span>
+    <span class="rc"><b>2.0.1</b> · el Escritor propio del estudio · octubre de 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -518,6 +519,8 @@
           <li>Hecho para una ventana de navegador de <b>1920×1080 al 100 %</b></li>
           <li>Lo ideal: <b>2K</b> (2560×1440), de 22″ o más, 16:9 o más ancha</li>
           <li>Dos temas para horas de trabajo: Scroll &amp; Brick de día, Scroll by Lamplight de noche, y 20 más</li></ul></div>
+        <!-- HERESY 1807 (Viktor 28.10.2026: «на всех наших карточках чёрным по белому… предупреди… Слишком массивная она у нас») -->
+        <p class="warn-free"><b>No en GPU gratuitas en la nube.</b> Ruach Studio no funciona en Google Colab, Kaggle ni en ninguna GPU gratuita de cuadernos, así que no pierdas una tarde ahí: es un estudio entero, no un cuaderno. Compila su motor de C++/CUDA en la máquina donde vive, mantiene a su lado un servidor y un laboratorio de servicios en Python, y ocupa unos 33 GB de disco (60 GB con el Artista). La tarjeta, la memoria, el disco que se borra y el límite de horas de una sesión gratuita no lo sostienen. Pide tu propio ordenador con Linux, o un servidor que alquiles y conserves, con una tarjeta NVIDIA: 24 GB para todo, 16 GB con las copias menores del modelo.</p>
         <div class="card"><h3>Opcional</h3><ul>
           <li>Un servidor de chat para el Escritor (vLLM, LM Studio, Ollama) o una clave de OpenRouter</li>
           <li>Un DAW: REAPER, Waveform 14+, Bitwig</li>
@@ -659,7 +662,7 @@
   </div>
 
 <footer>
-  <div class="wrap"><span>Ruaj Estudio · 2.0.0 · una obra de <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Cambios</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Cafetera</a></span></div>
+  <div class="wrap"><span>Ruaj Estudio · 2.0.1 · una obra de <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Cambios</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Cafetera</a></span></div>
 </footer>
 
 <script src="../assets/wavesurfer.min.js"></script>

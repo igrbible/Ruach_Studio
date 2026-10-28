@@ -8,7 +8,7 @@ ROOT="$(cd "$HERE/.." && pwd)"
 DEST="$HOME/.config/systemd/user"
 Z="\e[1;32m"; S="\e[1;33m"; R="\e[0m"
 mkdir -p "$DEST"
-for u in ruach-studio.service heresy-lab.service; do
+for u in ruach-studio.service heresy-lab.service ruach-tls-door.service; do   # HERESY 1805: the https door, written, started only when asked
     sed "s|@ROOT@|$ROOT|g" "$HERE/$u" > "$DEST/$u.part" && mv "$DEST/$u.part" "$DEST/$u"
     chmod 644 "$DEST/$u"
     echo -e "${Z}  ✓ $u → $DEST${R}  (root: $ROOT)"

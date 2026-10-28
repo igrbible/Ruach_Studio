@@ -2,7 +2,7 @@
 Preview»; «Код Художника оправданнее строит на рабочем Krea2, который у тебя уже bulletproof»).
 
 A run is what one press of Draw asks for: a prompt of one's own, the shapes (1:1, 16:9, 9:16, all from one seed), one to
-four variations (the seed, the seed + 1, …), the painter (Krea 2 Muse at Q4 or Q8). artist_job.py draws it in .venv-art
+four variations (the seed, the seed + 1, …), the painter (a Qwen-Image brush; Krea 2 Muse until 1428). artist_job.py draws it in .venv-art
 on a card the guard gives, in the lab's queue with its other heavy jobs, and the run is kept in KIT/artist/RUN/: ask.json
 (what was asked), run.json (that and what came, picture by picture), the pictures as PNG and their thumbnails (thumbs/).
 A square picture becomes a take's artwork on the user's word, the old one kept in artwork-removed/ as a redraw keeps it.

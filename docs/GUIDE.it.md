@@ -91,6 +91,10 @@ Il ♪ accanto allo stile apre una tabella di 200 strumenti che lo studio ha pro
 
 ![Il prontuario degli strumenti](guide/instruments.png)
 
+### Il vocabolario della Prima Onda <!-- #the-first-wave-s-vocabulary -->
+
+**YuE2-RS-FW**, il fine-tune dello studio (*Engine → Models and LoRAs → RS-FW merge*), ha imparato da 32.633 brani, e ogni parola delle loro righe di stile è contata nel **[suo vocabolario](fw-vocabulary/index.html?lang=it)**: generi, strumenti, voce, umore, le parole d'emozione date dall'audio stesso, tonalità e BPM, e le chiavi delle partiture (sezioni, tempi, metronomi, accordi). Cercalo, filtralo per tipo e per fonte, guarda con quali parole andava ognuna. Un clic mette una parola in una riga di stile nell'ordine che il modello ha imparato; *Copia* prende la riga per il campo Style. Una parola vista in centinaia di brani il modello la capisce; vista due volte, è un indizio. Lo stesso riferimento come documento è sulla [pagina del modello](https://huggingface.co/goldhub/YuE2-RS-Finetunes/blob/main/FW-VOCABULARY.md).
+
 ### Testo e profili del testo <!-- #lyrics-and-text-profiles -->
 
 - Tag di sezione su righe a sé; YuE2 conosce `[Intro]`, `[Verse]`, `[Pre-Chorus]`, `[Chorus]`, `[Bridge]`, `[Interlude]`, `[Outro]`.
@@ -555,6 +559,16 @@ Una LoRA è un piccolo adattatore sopra entrambe le metà. **Lo stile viene sopr
 **Un adattatore di voce impara da qualsiasi forma della voce**, non solo dal canto: vanno bene anche letture e audiolibri. Misurato qui (05.10.2026): un adattatore addestrato sulle letture di un attore parlava con la sua voce e, cantando, cantava con il suo colore. Chiama un adattatore così per il tipo di voce (basso, baritenore, contralto…), mai per una persona: `lab/voice_kind.py` misura la voce di un set dall'altezza del parlato.
 
 **Quanta forza a un adattatore di voce.** Ascoltato su una canzone (19.10.2026: l'adattatore di un narratore, rango 32, su una ballata folk tragica): a 1.0 la voce copre la musica e il take diventa instabile, a 0.8 la brucia ancora, 0.7 è il tetto da cui partire, e 0.4–0.6 rende meglio la voce. Una forza bassa lascia andare l'altezza propria della persona e tiene la tonalità della voce: la canzone ne prende il colore, non il marchio. Le sue due metà non sono uguali: quella musicale (AR) scrive la partitura con il modello, per entrambi i pentagrammi, e una voce imparata dal parlato spegne le note quando è alta; tienila a 0.5 al massimo, e dai a quella sonora (NAR), che porta il timbro, fino a 1.0 (ascoltato lo stesso giorno: AR 0.4 con NAR 1.0 hanno tenuto intera la musica e stabile la voce). I cursori disegnano così la strada di un adattatore di voce: uno il cui nome dice voice o vocal diventa rosso oltre 0.5 sulla metà musicale e oltre 1.0 su quella sonora.
+
+### Una voce tutta tua: domande dal campo
+
+Risposte date su GitHub (issue #2) a chi cercava la sola voce principale, conservate qui.
+
+- **Una ripresa con la sola voce.** YuE2 ha imparato a cantare da canzoni intere, e il suo fraseggio poggia sulla musica sotto la voce: «a cappella» nello stile lo spinge verso cori o verso tutta la band. Meglio chiedere una sola cosa quieta sotto la voce (un pad morbido, una sola chitarra acustica) con `solo lead, single voice, no harmonies, no backing vocals, dry vocal, close mic`, poi separare la ripresa nel Rifinitore (otto stem): *Voce principale intera* riporta ciò che la separazione ha messo tra i cori, *Upscale delle voci* ridisegna l'aria che il separatore ha spento. Meno c'è sotto la voce, più pulito è lo stem.
+- **Un adattatore di voce dalle tue registrazioni.** Voci principali asciutte di un solo cantante con il testo, a 44,1 o 48 kHz da sorgenti senza perdita. La stessa stanza leggera su ogni clip fa meno danno di stanze diverse, e un clip con molto riverbero è meglio lasciarlo fuori che pulirlo a metà: ciò che un de-reverb lascia dietro di sé viene appreso come parte della voce.
+- **Rank.** 16 per una voce, 32 al massimo: il rank stabilisce quanto l'adattatore può cambiare, non quanto si avvicinerà al cantante.
+- **Somiglianza.** Il timbro lo porta la metà del suono: suonala a 0,8–1,0 con la metà musicale a 0,3–0,5. Indica nello stile il sesso e il registro del cantante (`male baritone vocal`). Giudicala sui pesi su cui è stato addestrato: un adattatore appreso sul modello base strappava la voce su un fine-tune, anche a forza bassa.
+- **La piega delle curve alla fine.** Con *Fermati al plateau, poi solo la metà del suono*, la metà musicale si ferma quando quella del suono smette di migliorare, e quella del suono prosegue da sola: lì le curve cambiano forma, e quelle ultime epoche danno spesso la voce più pulita. Quando ar_ce si avvicina a 0, la metà musicale sa i clip a memoria: ascolta un'epoca precedente (i chip verdi).
 
 ![L'Addestratore LoRA: la telemetria di un'esecuzione](guide/studio-train.png)
 

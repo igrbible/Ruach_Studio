@@ -47,11 +47,42 @@ if sr != 48000:
     x = torchaudio.functional.resample(torch.from_numpy(x.T.copy()), sr, 48000).numpy().T
     sr = 48000
 n = len(x)
-# HERESY 1445: the studio's own universr/ (fetched from goldhub/Ruach_Studio_Models_v2) when it holds both files; else woongzip1's,
-# from hf_cache/ as an install before 1445 has it
-OWN = Path(__file__).resolve().parent.parent / "universr"
-model = UniverSR.from_pretrained(str(OWN) if (OWN / "config.yaml").is_file() and (OWN / "pytorch_model.bin").is_file()
-                                 else "woongzip1/universr-audio", device="cuda")
+# HERESY 1445: the studio's own universr/ (fetched from goldhub/Ruach_Studio_Models_v2); 1799 (Viktor 26.10.2026: «удаление .cache и hf_cache
+# никогда не должно сломать ни одного из пайплайнов Студии»): never from a cache; an install without it fetches it into universr/ first
+STUDIO = Path(__file__).resolve().parent.parent
+OWN = STUDIO / "universr"
+OWN_REPO = "goldhub/Ruach_Studio_Models_v2"
+FILES = ("config.yaml", "pytorch_model.bin")
+
+
+def pin(repo):
+    """The studio's pinned revision of a repository (heresy/hf-revisions.txt), «main» without one."""
+    try:
+        for line in (STUDIO / "heresy" / "hf-revisions.txt").read_text(encoding="utf-8").splitlines():
+            parts = line.split()
+            if len(parts) >= 2 and parts[0] == repo:
+                return parts[1]
+    except OSError:
+        pass
+    return "main"
+
+
+def own_universr():
+    """universr/ with both its files: the studio's copy at its pin, else woongzip1's at his, each straight into the folder."""
+    if all((OWN / f).is_file() and (OWN / f).stat().st_size > 0 for f in FILES):
+        return OWN
+    from huggingface_hub import hf_hub_download
+    try:
+        for f in FILES:
+            hf_hub_download(OWN_REPO, "universr/" + f, revision=pin(OWN_REPO), local_dir=str(STUDIO))
+    except Exception as e:  # noqa: BLE001 - offline, a pin before 1445: the author's copy is the same bytes
+        print(f"UniverSR: the studio's copy did not come ({type(e).__name__}: {e}); from its author", file=sys.stderr)
+        for f in FILES:
+            hf_hub_download("woongzip1/universr-audio", f, revision=pin("woongzip1/universr-audio"), local_dir=str(OWN))
+    return OWN
+
+
+model = UniverSR.from_pretrained(str(own_universr()), device="cuda")
 load_s = time.time() - t0
 
 

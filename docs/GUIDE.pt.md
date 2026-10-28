@@ -91,6 +91,10 @@ O ♪ ao lado do estilo abre uma tabela de 200 instrumentos que o estúdio sondo
 
 ![A cola de instrumentos](guide/instruments.png)
 
+### O vocabulário da Primeira Onda <!-- #the-first-wave-s-vocabulary -->
+
+O **YuE2-RS-FW**, o fine-tune próprio do estúdio (*Engine → Models and LoRAs → RS-FW merge*), aprendeu com 32.633 faixas, e cada palavra das linhas de estilo delas está contada no **[seu vocabulário](fw-vocabulary/index.html?lang=pt)**: gêneros, instrumentos, voz, clima, as palavras de emoção que o próprio áudio recebeu, tonalidades e BPM, e as chaves das partituras (seções, compassos, andamentos, acordes). Busque, filtre por tipo e por fonte, veja com que palavras cada uma andava. Um clique põe uma palavra numa linha de estilo na ordem que o modelo aprendeu; *Copiar* leva a linha para o campo Style. Uma palavra vista em centenas de faixas o modelo entende; vista duas vezes, é uma dica. A mesma referência como documento está na [página do modelo](https://huggingface.co/goldhub/YuE2-RS-Finetunes/blob/main/FW-VOCABULARY.md).
+
 ### Letra e perfis de texto <!-- #lyrics-and-text-profiles -->
 
 - Tags de seção em linhas próprias; o YuE2 conhece `[Intro]`, `[Verse]`, `[Pre-Chorus]`, `[Chorus]`, `[Bridge]`, `[Interlude]`, `[Outro]`.
@@ -555,6 +559,16 @@ Uma LoRA é um pequeno adaptador sobre as duas metades. **O estilo vem sobretudo
 **Um adaptador de voz aprende com qualquer forma da voz**, não só com canto: leituras e audiolivros funcionam também. Medido aqui (05.10.2026): um adaptador treinado com as leituras de um ator falou com a voz dele, e quando cantou, cantou com a cor dele. Dê a um adaptador assim o nome do tipo (baixo, baritenor, contralto…), nunca de uma pessoa: `lab/voice_kind.py` mede a voz de um conjunto pela altura da fala.
 
 **Que força para um adaptador de voz.** Ouvido numa canção (19.10.2026: o adaptador de um narrador, rank 32, numa balada folk trágica): em 1.0 a voz abafa a música e o take fica instável, em 0.8 ainda a queima, 0.7 é o teto de onde partir, e 0.4–0.6 passa melhor a voz. Uma força baixa solta a altura própria da pessoa e guarda a tonalidade da voz: a canção pega a cor dela, não o carimbo. Suas duas metades não são iguais: a musical (AR) escreve a partitura com o modelo, para as duas pautas, e uma voz aprendida da fala apaga as notas quando está alta; mantenha-a em 0.5 no máximo, e dê à sonora (NAR), que leva o timbre, até 1.0 (ouvido no mesmo dia: AR 0.4 com NAR 1.0 mantiveram a música inteira e a voz estável). Os controles desenham assim o caminho de um adaptador de voz: um cujo nome diz voice ou vocal fica vermelho depois de 0.5 na metade musical e depois de 1.0 na sonora.
+
+### Uma voz só tua: perguntas do terreno
+
+Respostas dadas no GitHub (issue #2) a alguém que queria só a voz principal, guardadas aqui.
+
+- **Um take só com a voz.** O YuE2 aprendeu a cantar com canções inteiras, e o seu fraseado apoia-se na música por baixo da voz: «a cappella» no estilo puxa-o para coros ou para a banda inteira. Pede antes uma só coisa calma por baixo da voz (um pad suave, uma só guitarra acústica) com `solo lead, single voice, no harmonies, no backing vocals, dry vocal, close mic`, e depois separa o take no Lapidador (oito stems): *Voz principal inteira* traz de volta o que a separação pôs entre os coros, *Upscale das vozes* redesenha o ar que o separador abafou. Quanto menos houver por baixo da voz, mais limpo o stem.
+- **Um adaptador de voz das tuas próprias gravações.** Vozes principais secas de um só cantor com as letras, a 44,1 ou 48 kHz de fontes sem perdas. A mesma sala leve em todos os clipes faz menos mal do que salas diferentes, e um clipe com muita reverberação é melhor deixá-lo de fora do que limpá-lo a meio: o que um de-reverb deixa para trás é aprendido como parte da voz.
+- **Rank.** 16 para uma voz, 32 no máximo: o rank define quanto o adaptador pode mudar, não quanto se aproximará do cantor.
+- **Semelhança.** O timbre vem da metade do som: toca-a a 0,8–1,0 com a metade musical a 0,3–0,5. Diz no estilo o sexo e o registo do cantor (`male baritone vocal`). Julga-a nos pesos em que foi treinado: um adaptador aprendido no modelo base rasgava a voz num ajuste fino, mesmo com pouca força.
+- **A curva dos gráficos no fim.** Com *Parar no platô, depois só a metade do som*, a metade musical fica parada quando a do som deixa de melhorar, e a do som continua sozinha: aí as curvas mudam de forma, e essas últimas épocas dão muitas vezes a voz mais limpa. Quando o ar_ce se aproxima de 0, a metade musical sabe os clipes de cor: ouve uma época anterior (os chips verdes).
 
 ![O Treinador LoRA: a telemetria de uma execução](guide/studio-train.png)
 

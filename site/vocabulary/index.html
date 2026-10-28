@@ -700,6 +700,7 @@
   function load() {
     var m = D.meta;
     rows = D.tags;
+    document.querySelector("h1").textContent = sets.length > 1 && cur > 0 ? (NAMES[cur] || m.name) : t("title");   // a set laid over the First Wave says its own name
     var srcn = Object.keys(m.sources).length;
     $("sub").innerHTML = t("sub").replace("{name}", esc(m.name));
     $("nums").innerHTML = [[m.tracks, t("tracks")], [m.hours ? "≈ " + nf(m.hours) : "", t("hours")], [m.distinct_words, t("distinct")], [m.words_listed, t("listed")], [D.sheets ? D.sheets.sheets : 0, t("scoresN")]]

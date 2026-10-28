@@ -129,7 +129,7 @@ Il modulo dice entrambi gli avvisi quando valgono. I sampler sono stati scritti 
 
 ## 8. Adattatori (LoRA)
 
-**Dove vivono**: `artwork/loras/<famiglia>/`, la famiglia quella del pittore: `krea2`, `qwen-image-2512`, `qwen-image-2.1`. Le cartelle dentro diventano gruppi nella libreria; un'immagine accanto a un file con il suo nome (`NAME.jpg`, `NAME.png`, `NAME.preview.png`) si mostra sulla sua scheda; ciò che il LoRA Manager di ComfyUI (`NAME.metadata.json`) o Stability Matrix (`NAME.cm-info.json`) hanno scritto accanto a un file si legge anch'esso.
+**Dove vivono**: `artwork/loras/<famiglia>/`, la famiglia quella del pittore: `qwen-image-2512`, `qwen-image-2.1`. Le cartelle dentro diventano gruppi nella libreria; un'immagine accanto a un file con il suo nome (`NAME.jpg`, `NAME.png`, `NAME.preview.png`) si mostra sulla sua scheda; ciò che il LoRA Manager di ComfyUI (`NAME.metadata.json`) o Stability Matrix (`NAME.cm-info.json`) hanno scritto accanto a un file si legge anch'esso.
 
 **La lista e l'esecuzione**: fino a otto adattatori nella lista sotto il pittore, fino a quattro attivi in un'esecuzione; ciascuno alla sua forza (il cursore da 0 a 1,5); un clic destro **zittisce** uno (resta nella lista ed esce dall'esecuzione), e un adattatore a zero non si carica nemmeno. Le sue parole d'innesco si mostrano sotto, e un clic su una la mette nel prompt (un'esecuzione aggiunge anche da sé le parole d'innesco di un adattatore attivo).
 

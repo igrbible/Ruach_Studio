@@ -170,7 +170,7 @@ def openapi():
                 "/takes/{name}/upscale": {"post": op("UniverSR upscale", {"mode": {"type": "string", "enum": ["subtle", "normal", "high", "extreme"]}, "variants": i, "keep": b, "source": s}, [("name", "path", "string")])},
                 "/takes/{name}/lyrics-check": {"post": op("Whisper against the lyrics", {"source": s, "again": b}, [("name", "path", "string")])},
                 "/takes/{name}/artwork": {"get": op("The take's artwork (a redirect to the JPEG)", params=[("name", "path", "string")]),
-                                          "post": op("Draw the artwork: a prompt from the style and words, a Krea 2 Muse picture; ask again until it is done",
+                                          "post": op("Draw the artwork: a prompt from the style and words, a Qwen-Image picture; ask again until it is done",
                                                      {"again": b, "seed": i}, [("name", "path", "string")])},
                 "/workspaces": {"get": op("The workspaces and how many takes each holds")},
                 "/workspaces/{ws}": {"post": op("Add, take out or move takes", {"op": {"type": "string", "enum": ["add", "remove", "move"]},

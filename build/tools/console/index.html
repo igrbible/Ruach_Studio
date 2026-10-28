@@ -371,10 +371,60 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       </div>
     </div>
 
+    <!-- HERESY 1804 (Viktor 28.10.2026: «подумай, что можно добавить в Engine в определение юзерских дефолтов. Например ПРЯТАТЬ ДИЗЛАЙКИ или нет,
+         перекрутка по треку в плеере кнопкой вправо/влево… Дать юзеру максимальную свободу изменять дефолты… Дефолты выставляем как у нас сейчас») -->
+    <div class="card wide defaults-card eg-defaults" id="defaultsCard">
+      <h3>Defaults</h3>
+      <div class="look-parts">
+      <section class="look-part">
+        <h4 class="mini">Player</h4>
+        <!-- HERESY 1810 (Viktor 28.10.2026: «в ШАГ иконки emoji замени на реальные плеерные, И нарисуй svg иконки клавиш-стрелок клавиатуры»): the player's
+             own ⏪ ⏩, the keys as key caps; the three steps on one row -->
+        <div class="seek-row">
+        <label class="field"><span class="label key-label">Step <span class="key-icons"><span data-ui="rewind"></span><span data-ui="forward"></span></span></span>
+          <select data-def="yue2.seekBtn" data-def-is="15"><option value="5">5 s</option><option value="10">10 s</option><option value="15">15 s</option><option value="30">30 s</option><option value="60">60 s</option></select></label>
+        <label class="field"><span class="label key-label">Keys <span class="key-icons"><span data-ui="key-left"></span><span data-ui="key-right"></span></span></span>
+          <select data-def="yue2.seekKey" data-def-is="5"><option value="1">1 s</option><option value="2">2 s</option><option value="5">5 s</option><option value="10">10 s</option><option value="15">15 s</option></select></label>
+        <label class="field"><span class="label key-label"><span class="key-icons"><span data-ui="key-shift"></span><span class="key-plus"></span><span data-ui="key-left"></span><span data-ui="key-right"></span></span></span>
+          <select data-def="yue2.seekKeyShift" data-def-is="30" aria-label="Shift + ← →"><option value="10">10 s</option><option value="15">15 s</option><option value="30">30 s</option><option value="60">60 s</option></select></label>
+        </div>
+        <label class="field"><span class="label">Start playing</span>
+          <select data-def="yue2.holdStart" data-def-is="minute" data-tip="On a slow line (a studio far away), a take can start before all of it has come: once its first minute is in and the rest will come before the playing reaches it; where it changes to the whole, it does so at a quiet moment. At home the whole comes within seconds, and it waits for it either way."><option value="minute">when its first minute is in and the rest will come in time</option><option value="whole">when the whole take is in</option></select></label>
+        <div class="look-checks">
+          <label class="check"><input type="checkbox" data-def-check="yue2.clickPlay" data-def-off="off" /> <span>A click on a take plays it</span></label>
+          <label class="check"><input type="checkbox" data-def-check="yue2.playNew" data-def-off="off" /> <span>New takes play when they are done</span></label>
+          <label class="check"><input type="checkbox" data-def-check="yue2.dblPlay" data-def-off="off" /> <span>A double-click on a card plays or stops it</span></label>
+        </div>
+      </section>
+      <section class="look-part">
+        <h4 class="mini">Library</h4>
+        <div class="look-checks">
+          <label class="check"><input type="checkbox" data-def-check="yue2.showDisliked" data-def-on="1" /> <span>Show disliked takes in the lists</span></label>
+        </div>
+        <p class="row-hint">Each is the studio's own until you change it here; the player's and the lists' own switches set the same.</p>
+      </section>
+      </div>
+      <div class="card-actions"><button type="button" class="btn ghost small" id="defaultsReset">The studio's defaults</button></div>
+    </div>
+
     <div class="card wide writer-card eg-writer">
       <h3>Writer</h3>
       <p class="hint">A local language model turns a one-line idea into a title, style prompt and
         lyrics. The browser talks to the chat server directly.</p>
+      <!-- HERESY 1811 (Viktor 28.10.2026: «Не многие смогут настроить LLM для Писателя… прикручивай как Local Studio LLM… пусть это будет опция по
+           умолчанию для установок, где VRAM позволяет»): the studio's own writer, through llama.cpp on this machine; the default where its weights are here -->
+      <div class="writer-pane" id="paneOwn">
+        <div class="pane-head">
+          <h4 class="mini">The Studio's Own Writer</h4>
+          <span class="pill" id="ownState" data-s="missing">not here</span>
+          <div class="spacer"></div>
+          <button type="button" class="btn ghost small" id="ownUse" data-tip="The Writer and its helpers ask this model, at the studio's own address">Use this writer</button>
+          <button type="button" class="btn ghost small" id="ownStop" data-tip="Free its card now; the next question starts it again">Unload</button>
+        </div>
+        <label class="field"><span class="label">Quant</span>
+          <select id="ownVariant" data-tip="Which quant the studio's writer runs: quality keeps the AutoRound 4 bits as they are (about 7.5 GB of VRAM), compact keeps those and lowers the rest (about 6.5 GB). Only those here can be chosen"><option value="quality">Quality: the AutoRound 4 bits as they are (a 12 GB card)</option><option value="compact">Compact: for an 8 GB card</option></select></label>
+        <p class="row-hint" id="ownHint">Not here yet: Engine → Models and LoRAs → Studio writer fetches it (6.7 GB; compact 5.5 GB).</p>
+      </div>
       <div class="writer-pane" id="paneServer">
         <div class="pane-head">
           <h4 class="mini">Local Chat Server</h4>
@@ -1180,7 +1230,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 
       <!-- HERESY 1044: a note of your own on this take -->
       <label class="field take-note"><span class="label">Note <em id="takeNoteState"></em></span>
-        <textarea id="takeNote" rows="2" maxlength="4000" data-tip="Your note on this take, kept with it: saved as you type, and the same note in the Librarian." placeholder="A note on this take: what works, what to fix, where it goes…"></textarea></label>
+        <textarea id="takeNote" rows="2" maxlength="600" data-tip="Your note on this take, kept with it: saved as you type, and the same note in the Librarian." placeholder="A note on this take: what works, what to fix, where it goes…"></textarea></label>
       <div class="meta-card" id="metaGrid"></div>
       <div class="decode-switch" id="decodeSwitch"></div>
       <div class="decode-switch" id="soundSwitch"></div>
@@ -2037,6 +2087,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     <div class="pb-names"><strong id="playbarTitle">Nothing loaded</strong><span class="pb-sub" id="playbarSub"></span></div>
     <span class="pb-rate" id="pbRate" hidden>
       <button type="button" class="pb-btn" id="pbLike" aria-pressed="false" aria-label="Like" data-ui="like">👍</button>
+      <button type="button" class="pb-btn hmark hmark-fire" id="pbFire" data-hmark="fire" aria-pressed="false" aria-label="On fire" data-tip="On fire" data-ui="flame">🔥</button>
+      <button type="button" class="pb-btn hmark hmark-gem" id="pbGem" data-hmark="gem" aria-pressed="false" aria-label="A gem" data-tip="A gem" data-ui="gem">💎</button>
       <button type="button" class="pb-btn" id="pbDislike" aria-pressed="false" aria-label="Dislike" data-ui="dislike">👎</button>
       <button type="button" class="pb-btn" id="pbFav" aria-pressed="false" aria-label="Favourite" data-ui="star">☆</button>
     </span>
@@ -2112,13 +2164,13 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <button type="button" role="tab" class="log-view" data-view="trainer" aria-selected="false" data-tip="The Trainer's lines of the server's log: its runs as they start and end">Trainer</button>
         <button type="button" role="tab" class="log-view" data-view="refiner" aria-selected="false" data-tip="The Refiner's lines of the server's log: stems, remaster, upscale, the gateway, the DAW's mixes">Refiner</button>
         <button type="button" role="tab" class="log-view" data-view="artist" id="logViewArtist" translate="no" aria-selected="false" data-tip="The Artist's own log: what was asked, what the lab answered, each run's way to its end; kept in this browser">Artist</button></span>
-      <label class="check small-check"><input type="checkbox" id="logDockFollow" checked data-tip="Follow: the log keeps to its newest line as the engine writes. Off: it stays where you scrolled to read." /> <span>Follow</span></label>
+      <label class="check small-check log-follow" data-tip="Follow: the log keeps to its newest line as the engine writes. Off: it stays where you scrolled to read."><input type="checkbox" id="logDockFollow" checked aria-label="Follow" /> <span class="log-ico" data-ui="follow"></span></label>
       <!-- HERESY 1166 (Viktor: «кнопочку полной распашки консоли на всю высоту»): the log the window's full height, or back -->
       <button type="button" class="btn ghost small log-dock-tall" id="logDockTall" aria-pressed="false" aria-label="Full height"
-        data-tip="The log the window's full height, or back">⤢</button>
-      <button type="button" class="btn ghost small" id="logDockCopy">Copy</button>
-      <button type="button" class="btn ghost small" id="logDockEngine" data-tip="The whole log, in Engine">Engine</button>
-      <button type="button" class="btn ghost small" id="logDockPop" aria-label="The log in a window of its own" data-tip="The log in a window of its own, the cards beside it: over every window where the browser can (Chrome), else one to carry to another monitor; the log here folds meanwhile and unfolds when it closes">⧉</button>
+        data-tip="The log the window's full height, or back" data-ui="maximize">⤢</button>
+      <button type="button" class="btn ghost small icon-btn log-ico-btn" id="logDockCopy" aria-label="Copy" data-tip="Copy the lines of the log shown" data-ui="copy">Copy</button>
+      <button type="button" class="btn ghost small icon-btn log-ico-btn" id="logDockEngine" aria-label="Engine" data-tip="The whole log, in Engine" data-ui="cog">Engine</button>
+      <button type="button" class="btn ghost small icon-btn log-ico-btn" id="logDockPop" data-ui="pop-out" aria-label="The log in a window of its own" data-tip="The log in a window of its own, the cards beside it: over every window where the browser can (Chrome), else one to carry to another monitor; the log here folds meanwhile and unfolds when it closes">⧉</button>
     </span>
   </div>
   <!-- HERESY 1264 (Viktor 09.10.2026: «btop ересь можно прикрутить и к фрейму лога сервера. Разрешаю сделать его шире на 200-400px, В две

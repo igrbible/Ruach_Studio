@@ -2,11 +2,27 @@
 
 Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): one machine with an NVIDIA card, your own songs, nothing in a cloud. It grew over [YuE2 Kit](https://github.com/IronWolve/yue2-kit) v12 by IronWolve, which runs [yue2.cpp](https://github.com/ServeurpersoCom/yue2.cpp) by ServeurpersoCom. Every change has a number (HERESY 1001 and up); `heresy/docs/HERESY.md` tells each one with what was measured, and `heresy/engine/` keeps each change to the engine and the page as a patch of its own.
 
-## 2.0.1 · In the Making
+## 2.0.2 · In the Making
 
-After 2.0.0 (patches 1798 and up).
+After 2.0.1 (patches 1812 and up).
+
+## 2.0.1 · 2026-10-28
+
+The studio's own Writer on your machine, a take that plays before all of it has come on a slow line, Engine → Defaults, an https door for MIDI, and the fixes of the days after 2.0.0 (HERESY 1798–1811).
 
 - **The ring on the visiting card** (HERESY 1798): twenty cards, YuE2 and our own fine-tune against SUNO v6 and musicful, each side at the same loudness, in a player of its own; in twelve languages.
+- **The studio's models never read from a cache** (HERESY 1799): UniverSR, Apollo-vocal, FlashSR and the rest from the studio's own folders, fetched there from our models repository at its pin; deleting `.cache` or `hf_cache` breaks no pipeline.
+- **The last of SDXL and Krea 2** (HERESY 1800, 1800b): what the lab, the API, the MCP tool and the dictionaries still said of them, gone; the starter sets on Hugging Face carry Qwen-Image covers.
+- **The night's fixes in the Library and the player** (HERESY 1802): a star right after a like; 🔥 and 💎 on every card after 👍; a note on a workspace or a section in its tip, a LoRA's note under a line, up to 600 characters; a double-click on a card plays or stops it, the playing card's button filled; the workspace in hand centred after a reload; the Refiner's marks on the cards named; the First Wave's words in ♪; the guide's «A Voice of Your Own: Questions from the Field».
+- **A take starts before all of it has come, on a slow line** (HERESY 1803): its first minute in and the rest due in time, it plays; at home it waits for the whole as before (Engine → Defaults).
+- **Engine → Defaults** (HERESY 1804): the ⏪ ⏩ step, the arrow keys' steps, when a take starts, click and double-click, new takes playing, disliked takes in the lists; each the studio's own until you change it. The server log's buttons as icons, its head no longer overlapping.
+- **An https door for MIDI** (HERESY 1805): a browser gives Web MIDI only to a secure page; `lab/tls_door.py` on port 7443 with the studio's own certificate passes every byte to the studio, Engine → Security deciding who comes in (`systemd/ruach-tls-door.service`).
+- **The Trainer's tab of the log** (HERESY 1806): a running training says each new percent, with the time left.
+- **Not on free cloud GPUs** (HERESY 1807): said on the cards and in the README.
+- **Move into…** (HERESY 1808): a workspace into another, as a subfolder or only its samples.
+- **The log's own window** (HERESY 1809): every view of the dock; the dock folds while it is open.
+- **Engine laid out** (HERESY 1810): Writer and Artwork the other way round, the chapters with the Creator's look, Defaults in two parts with the player's own icons and the keys as key caps.
+- **The studio's own Writer** (HERESY 1811): Qwopus3.5-9B-v3 (Jackrong's, on Qwen3.5-9B, Apache-2.0), quantized with AutoRound and moved into GGUF bit for bit, runs on your machine through llama.cpp's llama-server behind the lab's `/llm/v1`: nothing leaves it. Two quants, **quality** (6.7 GB, a 12 GB card) and **compact** (5.5 GB, an 8 GB card), from [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2); `launcher/extras.sh` fetches the one your card takes and builds llama-server; where it is here and no chat server was chosen, the Writer asks it. It starts at the first question and leaves the card after ten minutes without one (Engine → Writer → Unload sooner).
 
 ## 2.0.0 · 2026-10-25
 

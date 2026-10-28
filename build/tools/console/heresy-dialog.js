@@ -55,7 +55,7 @@
       back.className = "hd-back";
       back.innerHTML = '<div class="hd-box" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
         '<div class="hd-title">' + esc(title) + "</div>" + (body ? '<div class="hd-body">' + esc(body) + "</div>" : "") + waveHtml(opts) +
-        (kind === "prompt" && opts.area ? '<textarea class="hd-input hd-area" rows="' + (opts.rows || 8) + '" maxlength="' + (opts.max || 4000) + '" placeholder="' + esc(opts.placeholder || "") + '"></textarea>'   // HERESY 1428: lines, Ctrl+Enter keeps
+        (kind === "prompt" && opts.area ? '<textarea class="hd-input hd-area" rows="' + (opts.rows || 8) + '" maxlength="' + (opts.max || 4000) + '" placeholder="' + esc(opts.placeholder || "") + '"></textarea>' + (opts.max && opts.max <= 1000 ? '<div class="hd-count" aria-live="polite"></div>' : "")   // HERESY 1428: lines, Ctrl+Enter keeps; 1802: a short one counts
           : kind === "prompt" ? '<input type="text" class="hd-input" maxlength="' + (opts.max || 200) + '" placeholder="' + esc(opts.placeholder || "") + '" />' : "") +
         '<div class="hd-acts">' + (kind === "alert" ? "" : '<button type="button" class="btn ghost small hd-no">' + esc(opts.cancel || "Cancel") + "</button>") +
         (opts.alt && kind === "confirm" ? '<button type="button" class="btn ghost small hd-alt">' + esc(opts.alt) + "</button>" : "") +
@@ -63,6 +63,11 @@
       document.body.appendChild(back);
       var input = back.querySelector(".hd-input");
       if (input) { input.value = value == null ? "" : String(value); }
+      var count = back.querySelector(".hd-count");       // HERESY 1802: how much of the note's room is taken
+      if (count && input) {
+        var said = function () { count.textContent = input.value.length + " / " + opts.max; count.classList.toggle("is-full", input.value.length >= opts.max); };
+        input.addEventListener("input", said); said();
+      }
       function done(yes) {
         document.removeEventListener("keydown", key, true);
         back.classList.add("is-leaving");

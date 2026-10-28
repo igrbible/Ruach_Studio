@@ -129,7 +129,7 @@ Qwen-Image 2512 の **テキストエンコーダー**（Qwen2.5-VL-7B、およ�
 
 ## 8. アダプター（LoRA）
 
-**住む場所**：`artwork/loras/<ファミリー>/`。ファミリーは画家のもの、`krea2`、`qwen-image-2512`、`qwen-image-2.1`。中のフォルダーはライブラリでグループになります。同じ名前でファイルの横に置いた絵（`NAME.jpg`、`NAME.png`、`NAME.preview.png`）はカードに表示されます。ComfyUI の LoRA Manager（`NAME.metadata.json`）や Stability Matrix（`NAME.cm-info.json`）がファイルの横に書いたものも読みます。
+**住む場所**：`artwork/loras/<ファミリー>/`。ファミリーは画家のもの、`qwen-image-2512`、`qwen-image-2.1`。中のフォルダーはライブラリでグループになります。同じ名前でファイルの横に置いた絵（`NAME.jpg`、`NAME.png`、`NAME.preview.png`）はカードに表示されます。ComfyUI の LoRA Manager（`NAME.metadata.json`）や Stability Matrix（`NAME.cm-info.json`）がファイルの横に書いたものも読みます。
 
 **リストとラン**：画家の下のリストに最大 8 個、ランで有効なのは最大 4 個。それぞれ自分の強さで（スライダーは 0〜1.5）。右クリックで一つを **ミュート** します（リストには残り、ランからは外れます）。強さ 0 のアダプターも読み込まれません。トリガーワードがその下に出て、一つをクリックするとプロンプトに入ります（ランは有効なアダプターのトリガーワードを自分でも加えます）。
 

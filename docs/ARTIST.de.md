@@ -129,7 +129,7 @@ Das Formular sagt beide Warnungen, wenn sie zutreffen. Die Sampler wurden für d
 
 ## 8. Adapter (LoRA)
 
-**Wo sie wohnen**: `artwork/loras/<Familie>/`, die Familie die des Malers: `krea2`, `qwen-image-2512`, `qwen-image-2.1`. Ordner darin werden zu Gruppen in der Bibliothek; ein Bild neben einer Datei mit ihrem Namen (`NAME.jpg`, `NAME.png`, `NAME.preview.png`) zeigt sich auf ihrer Karte; was der LoRA Manager von ComfyUI (`NAME.metadata.json`) oder Stability Matrix (`NAME.cm-info.json`) neben eine Datei geschrieben haben, wird ebenfalls gelesen.
+**Wo sie wohnen**: `artwork/loras/<Familie>/`, die Familie die des Malers: `qwen-image-2512`, `qwen-image-2.1`. Ordner darin werden zu Gruppen in der Bibliothek; ein Bild neben einer Datei mit ihrem Namen (`NAME.jpg`, `NAME.png`, `NAME.preview.png`) zeigt sich auf ihrer Karte; was der LoRA Manager von ComfyUI (`NAME.metadata.json`) oder Stability Matrix (`NAME.cm-info.json`) neben eine Datei geschrieben haben, wird ebenfalls gelesen.
 
 **Die Liste und der Lauf**: bis zu acht Adapter in der Liste unter dem Maler, bis zu vier aktiv in einem Lauf; jeder in seiner Stärke (der Regler 0 bis 1,5); ein Rechtsklick **stummschaltet** einen (er bleibt in der Liste und verlässt den Lauf), und ein Adapter auf null wird auch nicht geladen. Seine Triggerwörter zeigen sich darunter, und ein Klick auf eines setzt es in den Prompt (ein Lauf fügt die Triggerwörter eines aktiven Adapters auch von selbst hinzu).
 

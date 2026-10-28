@@ -23,8 +23,9 @@
   function why() {
     if (!window.isSecureContext) {
       var port = location.port || (location.protocol === "https:" ? "443" : "80");
-      return tr("MIDI needs the studio opened as localhost or over https; this page is {0}. From another computer: ssh -L {1} {2}, then {3}")
-        .replace("{0}", location.origin).replace("{1}", port + ":localhost:" + port).replace("{2}", location.hostname).replace("{3}", "http://localhost:" + port);
+      // HERESY 1805: the studio's https door first (lab/tls_door.py, systemctl --user enable --now ruach-tls-door), ssh -L beside it
+      return tr("MIDI needs the studio opened as localhost or over https; this page is {0}. From another computer: the studio's https door, {1} (its own certificate: the browser asks once), or ssh -L {2} {3}, then {4}")
+        .replace("{0}", location.origin).replace("{1}", "https://" + location.hostname + ":7443").replace("{2}", port + ":localhost:" + port).replace("{3}", location.hostname).replace("{4}", "http://localhost:" + port);
     }
     if (!navigator.requestMIDIAccess) return tr("This browser gives no MIDI (Chrome and Edge do)");
     return "";

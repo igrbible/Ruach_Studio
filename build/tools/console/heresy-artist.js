@@ -1819,7 +1819,7 @@
   function noteIt(r, p) {
     if (!window.HeresyDialog) return;
     window.HeresyDialog.prompt(tr("A note on the picture") + "\n\n" + tr("Kept with the picture in its run: what it was made for, the words that lettered it, what to try next. Ctrl+Enter keeps it; an empty note takes it off."),
-      p.note || "", { area: true, max: 4000, ok: tr("Keep"), placeholder: tr("Your note") }).then(function (v) {
+      p.note || "", { area: true, max: 600, ok: tr("Keep"), placeholder: tr("Your note") }).then(function (v) {
       if (v === null) return;
       v = String(v).replace(/\s+$/, "");
       if (v === (p.note || "")) return;

@@ -10,6 +10,8 @@
 
 > Ruach Studio is open music generation that runs on your own hardware: the model, the score, the adapters and every take stay yours, and nothing is rented by the token. Open models are now good enough to stand on their own, and what was missing is the studio around them: that is what we build, in the open. Music should be free to make and to share: whoever has no voice, no instrument and no studio still has the right to lay their thoughts and feelings onto sound.
 
+> **⚠ Not on free cloud GPUs.** Ruach Studio does not run on Google Colab, Kaggle or any free notebook GPU, so don't spend an evening on it there: it is a whole studio, not a notebook. It builds its C++/CUDA engine on the machine it lives on, keeps a server and a lab of Python services running beside it, and takes about 33 GB of disk (60 GB with the Artist). A free session's card, memory, wiped disk and hours-long limit cannot hold that. It wants your own Linux computer, or a server you rent and keep, with an NVIDIA card: 24 GB for everything, 16 GB with the smaller model copies.
+
 > **⚠ The screen.** The studio's design adapts to the window, but everything has its limit. It is made for a browser window of **1920×1080 at 100 % zoom**; the ideal monitor is **2K (2560×1440), 22″ or larger, 16:9 or wider**.
 
 **Songs from words, on your own machine.** A full studio around **YuE2**, the open song model: write the style and the lyrics, and the studio composes, sings and renders the song on your own GPU. Your songs, words and settings never leave it: the Writer goes to a cloud chat model only if you point it there, and the page itself fetches only its fonts and its score renderer from the internet (see [Dependencies](#dependencies)).
@@ -203,6 +205,7 @@ Everything the studio uses, and what for. The engine comes with the repository; 
 | UniverSR | upscale | CC BY 4.0 |
 | Apollo-vocal (baicai1145, on Apollo by JusperLee) | the Voice upscale's bundle | CC BY-NC-SA 4.0 (the model's code CC BY-SA 4.0) |
 | FlashSR (Jaekwon Im) · on first use: its weights from our models' repository, its code from him | the Voice upscale's bundle | the weights Apache 2.0, his code MIT (as he stated on 20.10.2026) |
+| Qwopus3.5-9B-v3 (Jackrong's, on Qwen3.5-9B; GGUF of our AutoRound quant, through [llama.cpp](https://github.com/ggml-org/llama.cpp)'s llama-server, built by `launcher/extras.sh`) · extra | the Writer's own language model: quality for a 12 GB card, compact for 8 GB | Apache-2.0 |
 | Qwen2.5-Omni-7B (GGUF, through [llama.cpp](https://github.com/ggml-org/llama.cpp), built by you) · extra | the style listener for training sets | Apache-2.0 |
 | Qwen3-4B-Instruct-2507 · extra | the artwork's prompt writer | Apache-2.0 |
 | the content filter (Falconsai's nsfw_image_detection) · extra | every picture the Artist and a take's artwork paint passes it | Apache-2.0 |
@@ -213,7 +216,7 @@ Everything the studio uses, and what for. The engine comes with the repository; 
 
 **In the page** (one file, made by `build.sh`): the icons (Font Awesome Free, CC BY 4.0; Lucide, ISC), the logo's words (Montserrat, SIL OFL, as paths) and [abcjs](https://www.abcjs.net/) 6.7 (MIT), which draws the staff, are inside it; YuE2 Studio's score checker (Apache-2.0) is ported into it, and the lab carries the original (`lab/abc_tools.py`). **The fonts** (Raleway, Michroma and Liberation Mono by default; Noto Sans and Noto Sans Mono, IBM Plex Sans and Mono, Bodoni Moda, Space Grotesk, Roboto, Lato, Unbounded, Tektur and Jura to choose from; SIL OFL) are served by the lab from `lab/fonts/`. **The piano roll's instruments** (the Salamander Grand Piano by Alexander Holm; the choir «aah» and the voice «ooh» of FluidR3 GM by Frank Wen; CC BY 3.0, shortened and made mono) are served by the lab from `lab/sounds/`. The page loads no script, stylesheet or font from the internet.
 
-**Optional:** a chat server for the Writer (vLLM, LM Studio or Ollama on your machine) or OpenRouter (the cloud, your key); a DAW (above); `node` 22+ (YouTube in yt-dlp, the page tests) and Chrome or Chromium (the page tests); `flac` and `metaflac` (the FLAC test); `pip install mcp` on an agent's machine (`extras/ruach-mcp.py`).
+**Optional:** the Writer's own model (Qwopus3.5-9B through llama.cpp's llama-server, which `launcher/extras.sh` fetches and builds where the card has 8 GB or more), or a chat server of your own (vLLM, LM Studio or Ollama) or OpenRouter (the cloud, your key); a DAW (above); `node` 22+ (YouTube in yt-dlp, the page tests) and Chrome or Chromium (the page tests); `flac` and `metaflac` (the FLAC test); `pip install mcp` on an agent's machine (`extras/ruach-mcp.py`).
 
 ## Extras
 
@@ -325,6 +328,14 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 - **The Trainer**: on several cards; a rank for each half, and tracks without the music lesson; saves in tenths of an epoch, Pause and Resume, the held-out best; the learning rate honest, with a fade; datasets as parquet.
 - **Lettering on a cover**: the title and a second line painted into the picture by Qwen-Image, each picture read back and painted again when misspelled.
 - **The engine**: at upstream's level; AB2 at 48 steps by default; Full an octave lower by default; a job names its backbone and Regenerate keeps a take's own; the IRAE merges in the lineage; the sound decode's ladder, an experiment in the Creator's Sampling; Intel Arc as a beta.
+
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
+### Done › 2.0.1 (October 2026)
+
+- **The studio's own Writer**: Qwopus3.5-9B-v3, quantized with AutoRound and moved into GGUF bit for bit, on your own card through llama.cpp's llama-server, quality for 12 GB and compact for 8 GB; the default where it is here, so the Writer needs no chat server of yours and nothing leaves the machine.
+- **Playing and choosing**: a take starts on a slow line before all of it has come; Engine → Defaults for the player's steps, its clicks and the disliked takes; a double-click plays a card; a workspace moved into another.
+- **An https door for MIDI**, the log's own window with every view, the Trainer's progress in the log, and the fixes of the days after 2.0.0.
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 

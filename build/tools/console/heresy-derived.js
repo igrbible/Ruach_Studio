@@ -976,7 +976,7 @@
       var rb = e.target.closest("[data-cmp-rate]"), fb = e.target.closest("[data-cmp-fav]"), nb = e.target.closest("[data-cmp-note]");
       if (nb) {                                          // HERESY 1724: the take's note, as its card's menu writes it
         var vn = versions[+nb.closest("[data-cmp-li]").dataset.cmpLi];
-        window.HeresyDialog.prompt("A note on “" + vn.label + "”\n\nEmpty removes it.", noteOf(vn), { ok: "Keep the note", max: 4000 })
+        window.HeresyDialog.prompt("A note on “" + vn.label + "”\n\nEmpty removes it.", noteOf(vn), { ok: "Keep the note", max: 600, area: true, rows: 5 })
           .then(function (t) { if (t !== null) { var p = hk.setNote(vn.take, t); if (p && p.then) p.then(paintRates, paintRates); else paintRates(); } box.focus(); });
         return;
       }

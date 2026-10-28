@@ -129,7 +129,7 @@ The form says both warnings when they apply. The samplers were written for the s
 
 ## 8. Adapters (LoRA)
 
-**Where they live**: `artwork/loras/<family>/`, the family the painter's: `krea2`, `qwen-image-2512`, `qwen-image-2.1`. Folders inside become groups in the library; a picture beside a file with its name (`NAME.jpg`, `NAME.png`, `NAME.preview.png`) shows on its card; what ComfyUI's LoRA Manager (`NAME.metadata.json`) or Stability Matrix (`NAME.cm-info.json`) wrote beside a file is read as well.
+**Where they live**: `artwork/loras/<family>/`, the family the painter's: `qwen-image-2512`, `qwen-image-2.1`. Folders inside become groups in the library; a picture beside a file with its name (`NAME.jpg`, `NAME.png`, `NAME.preview.png`) shows on its card; what ComfyUI's LoRA Manager (`NAME.metadata.json`) or Stability Matrix (`NAME.cm-info.json`) wrote beside a file is read as well.
 
 **The list and the run**: up to eight adapters in the list under the painter, up to four active in a run; each at its strength (the slider 0 to 1.5); a right click **mutes** one (it stays in the list and leaves the run), and an adapter at nought is not loaded either. Its trigger words show under it, and a click on one puts it into the prompt (a run also adds an active adapter's trigger words by itself).
 

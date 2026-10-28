@@ -296,6 +296,7 @@
                        cursor: pointer; font-size: 20px; line-height: 1; }
   .vocab-panel iframe { flex: 1; width: 100%; border: 0; background: var(--ground); }
   @media (max-width: 600px) { .vocab-modal { padding: 0; } .vocab-panel { border-radius: 0; border: 0; } }
+  .warn-free { grid-column: 1 / -1; margin: 0 0 14px; padding: 12px 16px; border-left: 3px solid #d9a441; background: color-mix(in srgb, #d9a441 10%, transparent); border-radius: 6px; }
 </style>
 <script>
   // the visitor's day or night, kept in this browser only; the page works without it
@@ -331,7 +332,7 @@
     <h1>Des chansons à partir de mots et d'accords<br>sur ta propre machine</h1>
     <p class="lead">Un studio complet autour de <b>YuE2</b>, le modèle de chanson ouvert. Écris le style et les paroles, et le studio compose, chante et rend la chanson sur <b>ton propre GPU</b>. Tes chansons, tes mots et tes réglages n'en sortent jamais.</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Le prendre sur GitHub</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.fr.md">Lire le guide</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Modèles sur Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Offre-moi une machine à café</a></div>
-    <span class="rc"><b>2.0.0</b> · la première version stable · octobre 2026</span>
+    <span class="rc"><b>2.0.1</b> · l'Écrivain du studio · octobre 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -518,6 +519,8 @@
           <li>Fait pour une fenêtre de navigateur de <b>1920×1080 à 100 %</b></li>
           <li>L'idéal : <b>2K</b> (2560×1440), 22″ ou plus, 16:9 ou plus large</li>
           <li>Deux thèmes pour des heures de travail : Scroll &amp; Brick le jour, Scroll by Lamplight la nuit, et 20 autres</li></ul></div>
+        <!-- HERESY 1807 (Viktor 28.10.2026: «на всех наших карточках чёрным по белому… предупреди… Слишком массивная она у нас») -->
+        <p class="warn-free"><b>Pas sur les GPU gratuits du cloud.</b> Ruach Studio ne tourne pas sur Google Colab, Kaggle ni sur aucun GPU gratuit de notebook, alors n'y passe pas une soirée : c'est un studio entier, pas un notebook. Il compile son moteur C++/CUDA sur la machine où il vit, garde à côté un serveur et un laboratoire de services Python, et prend environ 33 Go de disque (60 Go avec le Peintre). La carte, la mémoire, le disque effacé et la limite d'heures d'une session gratuite ne le tiennent pas. Il lui faut ton propre ordinateur sous Linux, ou un serveur que tu loues et gardes, avec une carte NVIDIA : 24 Go pour tout, 16 Go avec les copies plus petites du modèle.</p>
         <div class="card"><h3>En option</h3><ul>
           <li>Un serveur de chat pour l'Écrivain (vLLM, LM Studio, Ollama) ou une clé OpenRouter</li>
           <li>Une DAW : REAPER, Waveform 14+, Bitwig</li>
@@ -659,7 +662,7 @@
   </div>
 
 <footer>
-  <div class="wrap"><span>Rouah Studio · 2.0.0 · une œuvre d'<a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changements</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Machine à café</a></span></div>
+  <div class="wrap"><span>Rouah Studio · 2.0.1 · une œuvre d'<a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changements</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Machine à café</a></span></div>
 </footer>
 
 <script src="../assets/wavesurfer.min.js"></script>

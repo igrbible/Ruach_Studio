@@ -129,7 +129,7 @@ Le formulaire dit les deux avertissements quand ils s'appliquent. Les échantill
 
 ## 8. Adaptateurs (LoRA)
 
-**Où ils vivent** : `artwork/loras/<famille>/`, la famille celle du peintre : `krea2`, `qwen-image-2512`, `qwen-image-2.1`. Les dossiers à l'intérieur deviennent des groupes dans la bibliothèque ; une image à côté d'un fichier portant son nom (`NAME.jpg`, `NAME.png`, `NAME.preview.png`) s'affiche sur sa carte ; ce que le LoRA Manager de ComfyUI (`NAME.metadata.json`) ou Stability Matrix (`NAME.cm-info.json`) ont écrit à côté d'un fichier est lu aussi.
+**Où ils vivent** : `artwork/loras/<famille>/`, la famille celle du peintre : `qwen-image-2512`, `qwen-image-2.1`. Les dossiers à l'intérieur deviennent des groupes dans la bibliothèque ; une image à côté d'un fichier portant son nom (`NAME.jpg`, `NAME.png`, `NAME.preview.png`) s'affiche sur sa carte ; ce que le LoRA Manager de ComfyUI (`NAME.metadata.json`) ou Stability Matrix (`NAME.cm-info.json`) ont écrit à côté d'un fichier est lu aussi.
 
 **La liste et l'exécution** : jusqu'à huit adaptateurs dans la liste sous le peintre, jusqu'à quatre actifs dans une exécution ; chacun à sa force (le curseur de 0 à 1,5) ; un clic droit en **rend un muet** (il reste dans la liste et sort de l'exécution), et un adaptateur à zéro n'est pas chargé non plus. Ses mots déclencheurs s'affichent dessous, et un clic sur l'un le met dans le prompt (une exécution ajoute aussi d'elle-même les mots déclencheurs d'un adaptateur actif).
 

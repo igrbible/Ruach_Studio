@@ -10,7 +10,7 @@
 
   // HERESY 1706 (Viktor 22.10.2026: «метку `created` замени на `raw / сырец`»): a take straight from the model is «raw»; its key stays «generated»
   var KINDS = { generated: "raw", imported: "imported", regenerated: "regenerated", rerendered: "re-rendered" };
-  var DERIVED = { stems: "stems", debuzz: "debuzz", remaster: "remaster", upscale: "upscale" };
+  var DERIVED = { stems: "stems", debuzz: "debuzz", remaster: "remaster", upscale: "upscale", daw: "DAW mix", gate: "Digital Gateway", plugin: "plugin" };   // 1802: every kind
   var VIEW_KEY = "yue2.collView", SORT_KEY = "yue2.collSort", WS_KEY = "yue2.workspace";
   // HERESY 1685 (Viktor 21.10.2026: «прикрути ручку для сворачивания подкатегорий»): the workspaces whose sections are folded out of the column
   var SECFOLD_KEY = "yue2.collSecFold";
@@ -67,9 +67,17 @@
   // HERESY 1167 (Viktor: «thumbdown не убирает трек из списка»): a catalog asked for before a rating was given and answered
   // after it is only older, not truer: the ratings given since stay as given (the lab has them)
   var rated = {}, rateSeq = 0;
+  // HERESY 1802 (Viktor 27.10.2026: «после того как я поставил лайк… по клику на звёздочку нужно ждать иногда до 10 секунд, пока станет активной»): a
+  // like's answer is the whole list as the lab read it when the like was asked; a star (a 🔥, a 💎) set while it travelled was not in it, and the
+  // list put it out again until the next reload. What is set here is held as the ratings are, by its turn: a list older than it keeps it
+  var held = {};
   function remember(name, value) { rated[name] = { v: value, seq: ++rateSeq }; }
+  function hold(name, field, v) { (held[name] = held[name] || {})[field] = { v: v, seq: ++rateSeq }; }
   function fresh(rows, asked) {
-    (rows || []).forEach(function (r) { var x = rated[r.name]; if (x && x.seq > asked) r.rating = x.v; });
+    (rows || []).forEach(function (r) {
+      var x = rated[r.name]; if (x && x.seq > asked) r.rating = x.v;
+      var h = held[r.name]; if (h) Object.keys(h).forEach(function (f) { if (h[f].seq > asked) r[f] = h[f].v; });
+    });
     return rows;
   }
   function load() {
@@ -79,6 +87,7 @@
       state.loadStatus = 200;                      // HERESY 1434
       state.frozen = d.frozen || [];               // HERESY 1166
       state.playlist = d.playlist || []; state.plXfade = d.playlist_xfade || 0;   // HERESY 1731
+      state.wsNotes = d.ws_notes || {};            // HERESY 1802
       firstWs();                                   // HERESY 1434
       var names = {};
       state.rows.forEach(function (r) { names[r.name] = 1; });
@@ -160,17 +169,20 @@
   // HERESY 1169 · 1241 (Viktor 08.10.2026: «трансформируй полосу фильтров показа карточек… Идея фильтра SUNO, с чекбоксами, логикой AND, OR, NOR»): what can be ticked, and how a take answers each
   var FILTERS = [
     { label: "Made", items: [["generated", "raw", "sparkles"], ["imported", "imported", "import"], ["regenerated", "regenerated", "refresh"], ["rerendered", "re-rendered", "waveform"]] },
-    { label: "Marked", items: [["__liked", "liked", "like"], ["__disliked", "disliked", "dislike"], ["__starred", "favourites", "star"], ["__note", "with a note", "note"], ["__art", "with artwork", "image"], ["__protected", "protected", "shield"]] },
-    { label: "Has", items: [["stems", "stems", "layers"], ["debuzz", "debuzz", "eraser"], ["remaster", "remaster", "sliders"], ["upscale", "upscale", "chevrons-up"]] }
+    { label: "Marked", items: [["__liked", "liked", "like"], ["__disliked", "disliked", "dislike"], ["__starred", "favourites", "star"], ["__note", "with a note", "note"], ["__art", "with artwork", "image"], ["__protected", "protected", "shield"], ["__fire", "on fire", "flame"], ["__gem", "gems", "gem"]] },
+    { label: "Has", items: [["stems", "stems", "layers"], ["debuzz", "debuzz", "eraser"], ["remaster", "remaster", "sliders"], ["upscale", "upscale", "chevrons-up"], ["daw", "DAW mix", "music"], ["gate", "Digital Gateway", "gauge"], ["plugin", "plugin", "braces"]] }
   ];
-  var DERIVED = { stems: 1, debuzz: 1, remaster: 1, upscale: 1 }, LOGIC_KEY = "yue2.collLogic";
+  // HERESY 1802 (Viktor 27.10.2026: «На карточках наш Огранщик рисует свои прометки, но что это - одному Клоду известно»): this map was named DERIVED
+  // too, declared again over the names above in the same scope, so a card said «1» where it meant stems, Debuzz, a remaster or an upscale
+  var HAS = { stems: 1, debuzz: 1, remaster: 1, upscale: 1, daw: 1, gate: 1, plugin: 1 }, LOGIC_KEY = "yue2.collLogic";
   function filterTest(v) {
-    if (DERIVED[v]) return function (r) { return (r.derived || []).indexOf(v) >= 0; };
+    if (HAS[v]) return function (r) { return (r.derived || []).indexOf(v) >= 0; };
     if (v === "__liked") return function (r) { return r.rating > 0; };
     if (v === "__disliked") return function (r) { return r.rating < 0; };
     if (v === "__starred") return function (r) { return !!r.favorite; };
     if (v === "__note") return function (r) { return !!r.note; };
     if (v === "__protected") return function (r) { return !!r.protected; };   // HERESY 1368
+    if (v === "__fire" || v === "__gem") return function (r) { return markOf(r.name, v.slice(2)); };   // HERESY 1802
     if (v === "__art") return function (r) { return !!(window.HeresyArt && window.HeresyArt.url(r.name)); };
     return function (r) { return r.kind === v; };
   }
@@ -244,6 +256,7 @@
         var depth = wsParts(w).length;               // a section: its own name, indented under its parent (1161)
         return item(w, depth > 1 ? wsLeaf(w) : w, perWs[w] || 0, depth < 2 || !STUDIO_SECTIONS[wsLeaf(w)]).replace('class="coll-place', 'class="coll-place' + (depth > 1 ? " is-sub d" + depth : "") + (frozenWs(w) ? " is-frozen" : "") +
             (secAway(w) ? " is-sec-away" : "") + (secShut.indexOf(w) >= 0 && String(state.place || "").indexOf(w + SEP) === 0 ? " has-on-inside" : ""))
+          .replace('<button type="button" ', '<button type="button" ' + wsTip(w))   // HERESY 1802: its note under the pointer
           .replace('<span class="coll-n">', lock + secHandle(w) + '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Rename, delete, lock, a section…" role="button">\u22ef</span><span class="coll-n">');
       }).join("") +
       '<button type="button" class="coll-place coll-new" data-ws-new="1">+ New workspace</button>' +
@@ -275,6 +288,14 @@
       bottom = Math.min(bottom, rr.bottom);
     }
     side.style.maxHeight = Math.max(160, Math.floor(bottom - top - 10)) + "px";
+    // HERESY 1802 (Viktor 27.10.2026: «При Тяжёлой перезагрузке страницы Библиотекаря пусть активный воркспейс в левой колонке центруется максимально
+    // при жирном списке»): once a page, when the column first stands with its list, its lit place in the middle of what the column shows
+    if (!state.centred && state.loaded && side.clientHeight > 0) {
+      state.centred = true;
+      var lit = side.querySelector(".coll-place.is-on");
+      if (lit && side.scrollHeight > side.clientHeight)
+        side.scrollTop = Math.max(0, side.scrollTop + lit.getBoundingClientRect().top - side.getBoundingClientRect().top - (side.clientHeight - lit.offsetHeight) / 2);
+    }
   }
   function fitSideSoon() { if (!sideFrame) sideFrame = requestAnimationFrame(function () { sideFrame = 0; fitSide(); }); }
   function watchSide() {
@@ -292,6 +313,10 @@
   // HERESY 1165: the plan mode by the name the form gives it (the card said its raw value, off), so it reads and translates
   function cotWord(c) { return { off: "direct", full: "full plan", melody: "melody only" }[c] || c; }
   function badge(text, cls) { return '<span class="coll-badge ' + (cls || "") + '">' + esc(text) + "</span>"; }
+  function dbadge(k) {                               // HERESY 1802: what the Refiner made from it, by its name, the why under the pointer
+    var name = DERIVED[k] || k;
+    return '<span class="coll-badge d" data-tip="Made from it in the Refiner: ' + esc(name) + '">' + esc(name) + "</span>";
+  }
 
   // HERESY 1368 (Viktor 11.10.2026: «И на аудио треки в студии тоже защиту добавь в опцию и в фильтр в Библиотеке не забудь эту
   // опцию»): the shield beside the star; lit, the take never goes to the trash nor is deleted for good
@@ -305,9 +330,10 @@
   function cardExtras(name) {
     var r = rowOf(name);
     if (!r) return "";
-    return '<div class="take-extra"><span class="coll-badges">' + r.derived.map(function (k) { return badge(DERIVED[k] || k, "d"); }).join("") +
+    return '<div class="take-extra"><span class="coll-badges">' + r.derived.map(dbadge).join("") +
       r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</span>" +
       '<span class="take-rate"><button type="button" class="coll-act" data-lrate="1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating > 0) + '" aria-label="Like">' + ico("like") + "</button>" +
+      markBtns(name) +                                 // HERESY 1802: 🔥 💎 after 👍
       '<button type="button" class="coll-act" data-lrate="-1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating < 0) + '" aria-label="Dislike">' + ico("dislike") + "</button>" +
       // HERESY 1167 (Viktor: «У Творца во фрейме Takes… И нет звёздочки»): the favourite beside them, as on the Librarian's cards
       '<button type="button" class="coll-act fav" data-lfav="1" data-name="' + esc(name) + '" aria-pressed="' + favOf(name, r) + '" aria-label="Favourite">' + ico("star") + "</button>" +
@@ -315,6 +341,39 @@
       (r.note ? '<span class="coll-act coll-hasnote" aria-label="Has a note">' + ico("note") + "</span>" : "") + "</span></div>";
   }
   function favOf(name, r) { var t = state.hooks && state.hooks.findTake ? state.hooks.findTake(name) : null; return t ? !!t.favorite : !!r.favorite; }
+  // HERESY 1802 (Viktor 27.10.2026: «Может давай повсюду в Студии прикрутим к картам треков 🔥 и 💎? После кнопки thumbup?»): two marks of a take's own
+  // after 👍 wherever a take shows its marks (the cards, the Creator's takes, the sheet, the take's head, the player); on or off, seen at once,
+  // confirmed by the lab, held over an older list as the star is; one handler for all of them (data-hmark)
+  var MARKS = [["fire", "flame", "On fire"], ["gem", "gem", "A gem"]];
+  function markOf(name, m) { var r = rowOf(name), h = held[name] && held[name][m]; return h ? !!h.v : !!(r && r[m]); }
+  function markBtns(name, cls) {
+    return MARKS.map(function (k) {
+      var on = markOf(name, k[0]);
+      return '<button type="button" class="' + (cls || "coll-act") + " hmark hmark-" + k[0] + '" data-hmark="' + k[0] + '" data-name="' + esc(name) + '" aria-pressed="' + on +
+        '" aria-label="' + k[2] + '" data-tip="' + k[2] + '">' + ico(k[1]) + "</button>";
+    }).join("");
+  }
+  function paintMarks(name) {
+    Array.prototype.forEach.call(document.querySelectorAll("[data-hmark]"), function (b) {
+      if (b.dataset.name === name) b.setAttribute("aria-pressed", String(markOf(name, b.dataset.hmark)));
+    });
+  }
+  function setMark(name, m, on) {
+    var r = rowOf(name), asked = rateSeq;
+    hold(name, m, on);
+    if (r) r[m] = on;
+    paintMarks(name);
+    return api("/collection", { op: "mark", mark: m, names: [name], on: on }).then(function (d) {
+      state.rows = d.takes ? fresh(d.takes, asked) : state.rows; paint(); paintMarks(name);
+      if (state.hooks.libraryChanged) state.hooks.libraryChanged();
+    }, function (e) { hold(name, m, !on); if (r) r[m] = !on; paintMarks(name); toast(e.message, true); });
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("[data-hmark]");
+    if (!b || !b.dataset.name) return;
+    e.preventDefault(); e.stopPropagation();
+    setMark(b.dataset.name, b.dataset.hmark, !markOf(b.dataset.name, b.dataset.hmark));
+  }, true);
 
   // HERESY 1166: a frozen card's check, rename and actions answer nothing; its play button and its title still do
   function iceCards() {
@@ -404,7 +463,7 @@
         '<button type="button" class="coll-ren" data-ren="' + esc(r.name) + '" title="Rename" aria-label="Rename">✎</button></div>' +
         // HERESY 1165: each piece its own text, so the words among the numbers translate (heresy-i18n.js matches whole texts)
         '<div class="coll-meta">' + (state.hooks.when ? state.hooks.when(r.created, r.name) : "<span>" + esc(r.created ? ago(r.created) : "") + "</span>") + (r.seconds ? " · <span>" + clock(r.seconds) + "</span>" : "") /* HERESY 1720 */ + (r.cot ? " · <span>" + esc(cotWord(r.cot)) + "</span>" : "") + "</div>" +
-        '<div class="coll-badges">' + badge(KINDS[r.kind] || r.kind, "k-" + r.kind) + r.derived.map(function (k) { return badge(DERIVED[k] || k, "d"); }).join("") +
+        '<div class="coll-badges">' + badge(KINDS[r.kind] || r.kind, "k-" + r.kind) + r.derived.map(dbadge).join("") +
         r.workspaces.map(function (w) { return badge(w, "w"); }).join("") +
         // HERESY 1162: what it was made again from, on its card
         (r.regen_of ? '<span class="coll-badge rg" data-tip="Regenerated with a new seed from ' + esc(r.regen_of) + '">regen</span>' : "") + "</div>" +
@@ -413,6 +472,7 @@
         (art ? '<button type="button" class="coll-art" data-art="' + esc(r.name) + '" style="background-image:url(&quot;' + esc(art) + '&quot;)" data-tip="The artwork: see it whole" aria-label="The artwork"></button>' : "") +
         // HERESY 1048: like, dislike, favourite, Post and the menu, on the card itself
         '<div class="coll-acts"><button type="button" class="coll-act" data-crate="1" aria-pressed="' + (r.rating > 0) + '" aria-label="Like">' + ico("like") + '</button>' +
+        markBtns(r.name) +                             // HERESY 1802: 🔥 💎 after 👍
         '<button type="button" class="coll-act" data-crate="-1" aria-pressed="' + (r.rating < 0) + '" aria-label="Dislike">' + ico("dislike") + '</button>' +
         '<button type="button" class="coll-act fav" data-cfav="1" aria-pressed="' + r.favorite + '" aria-label="Favourite">' + ico("star") + "</button>" +
         protBtn(r, 'data-cprot="1"') +
@@ -444,7 +504,7 @@
   function countWith(values, logic) {
     var kinds = state.kinds, derived = state.derived, lg = state.logic;
     state.kinds = {}; state.derived = {}; state.logic = logic;
-    values.forEach(function (v) { (DERIVED[v] ? state.derived : state.kinds)[v] = 1; });
+    values.forEach(function (v) { (HAS[v] ? state.derived : state.kinds)[v] = 1; });
     var n = shown().length;
     state.kinds = kinds; state.derived = derived; state.logic = lg;
     return n;
@@ -463,7 +523,7 @@
     }).then(function (r) {
       if (!r) return;
       state.kinds = {}; state.derived = {};
-      r.values.forEach(function (v) { (DERIVED[v] ? state.derived : state.kinds)[v] = 1; });
+      r.values.forEach(function (v) { (HAS[v] ? state.derived : state.kinds)[v] = 1; });
       state.logic = r.logic || "and";
       if (state.logic === "and") { try { localStorage.removeItem(LOGIC_KEY); } catch (e) { /* private */ } } else store(LOGIC_KEY, state.logic);   // AND, the default, leaves no key
       paint();
@@ -511,6 +571,7 @@
       : "Pin up to four takes of this place here: right-click a take \u2192 Pin here.") + '</p>';
   }
   function markFavorite(name, on) {              // HERESY 1105: a favourite set elsewhere, shown here without asking the lab
+    hold(name, "favorite", on);                  // HERESY 1802: and kept over a list the lab read before it
     var r = rowOf(name);
     if (r && r.favorite !== on) { r.favorite = on; paint(); }
   }
@@ -916,6 +977,7 @@
       state.pins = d.pins || state.pins || {};
       state.frozen = d.frozen || state.frozen || [];   // HERESY 1166
       if (d.playlist) state.playlist = d.playlist;     // HERESY 1731: a take gone from the library is gone from the playlist
+      if (d.ws_notes) state.wsNotes = d.ws_notes;      // HERESY 1802
       if (done) { if (undo) undoable(done, undo); else toast(done); }
       paint();
       paintCurrent();
@@ -1194,8 +1256,12 @@
       if (e.target.closest("[data-cprot]")) { if (many) protectMany(names()); else protect([cname], !isProtected(cname)); return; }   // HERESY 1368
       if (crate) { var v = +crate.dataset.crate; rate(cname, rating(cname) === v ? 0 : v).then(function () { if (hooks.libraryChanged) hooks.libraryChanged(); }); return; }
       if (e.target.closest("[data-cfav]")) {          // HERESY 1105: the card and the player follow at once
-        var ft = hooks.findTake(cname);
-        if (ft) hooks.updateTake(ft, { favorite: !ft.favorite }).then(function (entry) { markFavorite(cname, !!(entry || ft).favorite); if (hooks.libraryChanged) hooks.libraryChanged(); });
+        var ft = hooks.findTake(cname), want = !!ft && !ft.favorite;
+        if (ft) {                                      // HERESY 1802: lit at the click, as the like is; the server's word confirms it or takes it back
+          markFavorite(cname, want);
+          hooks.updateTake(ft, { favorite: want }).then(function (entry) { markFavorite(cname, !!(entry || ft).favorite); if (hooks.libraryChanged) hooks.libraryChanged(); },
+            function (er) { markFavorite(cname, !want); toast(er.message, true); });
+        }
         return;
       }
       var cgo = e.target.closest("[data-cgo]");
@@ -1221,6 +1287,17 @@
     $("collGrid").addEventListener("mouseleave", function () { clearTimeout(peekTimer); clearTimeout(peekHide); peekHide = setTimeout(hidePeek, 1200); });
     $("collPeek").addEventListener("mouseenter", function () { clearTimeout(peekTimer); clearTimeout(peekHide); });
     $("collPeek").addEventListener("mouseleave", function () { clearTimeout(peekHide); peekHide = setTimeout(hidePeek, 300); });
+    // HERESY 1802 (Viktor 27.10.2026: «двойной клик по пространству карточки - плей/стоп»): a double-click on a card's own ground does what its round
+    // button does; never on its buttons, fields, checkbox or title (a click there opens the sheet)
+    document.addEventListener("dblclick", function (e) {
+      if (recall("yue2.dblPlay") === "off") return;   // HERESY 1804: Engine → Defaults
+      var card = e.target.closest && e.target.closest(".coll-card[data-name], .pl-card[data-pl]");
+      if (!card || e.target.closest("button, a, input, textarea, select, label, [data-open], [data-ren], [contenteditable], .coll-title-edit")) return;
+      var btn = card.querySelector(".coll-play, .pl-play");
+      if (!btn) return;
+      if (window.getSelection) { var sel = window.getSelection(); if (sel && sel.removeAllRanges) sel.removeAllRanges(); }   // the word the double-click selected
+      btn.click();
+    });
     $("collGrid").addEventListener("contextmenu", function (e) {   // HERESY 1048: the studio's own menu
       var card = e.target.closest(".coll-card[data-name]");
       if (!card || !hooks.menu) return;
@@ -1616,12 +1693,13 @@
       (r.seconds ? " \u00b7 <span>" + state.hooks.clock(r.seconds) + "</span>" : "") + (req.cot ? " \u00b7 <span>" + esc(cotWord(req.cot)) + "</span>" : "") + " \u00b7 <span>" + esc(KINDS[r.kind] || r.kind) + "</span>" +
       (r.derived.length ? " \u00b7 <span>made from it: " + esc(r.derived.join(", ")) + "</span>" : "") + "</div></div>" +
       '<span class="pb-rate"><button type="button" class="pb-btn" data-sheet-rate="1" aria-pressed="' + (r.rating > 0) + '">' + ico("like") + '</button>' +
+      markBtns(r.name, "pb-btn") +                     // HERESY 1802
       '<button type="button" class="pb-btn" data-sheet-rate="-1" aria-pressed="' + (r.rating < 0) + '">' + ico("dislike") + '</button>' +
       '<button type="button" class="pb-btn" id="sheetFav" aria-pressed="' + r.favorite + '" >' + ico("star") + "</button></span></div>" +
       (r.workspaces.length ? '<div class="coll-badges">' + r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</div>" : "") +
       '<div class="sheet-cols"><div><div class="peek-cap">Style</div><pre class="sheet-text">' + esc(req.style || "") + "</pre></div>" +
       '<div><div class="peek-cap">Lyrics</div><pre class="sheet-text sheet-lyrics">' + esc(req.lyrics || "") + "</pre></div></div>" +
-      '<label class="field"><span class="label">Note <em id="sheetNoteState"></em></span><textarea id="sheetNote" rows="3" maxlength="4000">' + esc(r.note || "") + "</textarea></label>" +
+      '<label class="field"><span class="label">Note <em id="sheetNoteState"></em></span><textarea id="sheetNote" rows="3" maxlength="600">' + esc(r.note || "") + "</textarea></label>" +
       '<div class="dv-actions sheet-acts"><button type="button" class="btn ghost small" data-sheet-go="create">Open in the Creator</button>' +
       '<button type="button" class="btn ghost small" data-sheet-go="post">Open in the Refiner</button><span class="spacer"></span>' +
       '<button type="button" class="btn ghost small" data-sheet-close="1">Close</button></div>';
@@ -1648,6 +1726,25 @@
     });
   }
 
+  // HERESY 1802 (Viktor 27.10.2026: «Давай в воркспейсы и их подкатегории прикрутим Notes, и будем выводить их как тултипы. Больше места для
+  // заметок»): a workspace's or a section's note, the tip of its name in the column (its name underlined with dots); 600 characters, empty takes it off
+  var NOTE_MAX = 600;
+  function wsNote(w) {
+    if (!window.HeresyDialog) return;
+    var had = (state.wsNotes || {})[w] || "";
+    window.HeresyDialog.prompt("A note on “" + w + "”\n\nShown when the pointer rests on its name; 600 characters at most.\nEmpty removes it.", had,
+      { area: true, rows: 6, max: NOTE_MAX, ok: "Keep" }).then(function (t) {
+      if (t == null) return;
+      t = String(t).trim();
+      if (t === had) return;
+      act({ op: "ws-note", workspace: w, text: t }, t ? "Note kept on “" + w + "”" : "Note taken off “" + w + "”", true);
+    });
+  }
+  function wsTip(w) {
+    var n = (state.wsNotes || {})[w];
+    return n ? 'data-tip="' + esc(n.length > NOTE_MAX ? n.slice(0, NOTE_MAX - 1) + "…" : n) + '" data-has-note="1" ' : "";
+  }
+
   // ---- HERESY 1050: a workspace renamed or deleted (three ways)
   function wsMenu(w, x, y) {
     if (!window.HeresyMenu) return;
@@ -1657,6 +1754,7 @@
       return window.HeresyMenu.open(x, y, [
         { head: w + " \u00b7 " + n + " take" + (n === 1 ? "" : "s") },
         { icon: "\u25a6", label: "Open", action: function () { openPlace(w); paint(); } },
+        { icon: "✎", label: "Note…", hint: (state.wsNotes || {})[w] ? "✓" : "", action: function () { wsNote(w); } },   // HERESY 1802
         { sep: true },
         own ? { icon: "\u2600", label: "Unfreeze", action: function () { act({ op: "freeze", workspace: w, on: false }, "Unfrozen: \u201c" + w + "\u201d", true); } }
             : { icon: "\u2744", label: "Frozen with \u201c" + by + "\u201d", disabled: true }
@@ -1675,6 +1773,8 @@
         });
       } } : null,
       { icon: "Aa", label: "Rename\u2026", action: function () { renameWs(w); } },
+      { icon: "✎", label: "Note…", hint: (state.wsNotes || {})[w] ? "✓" : "", action: function () { wsNote(w); } },   // HERESY 1802
+      { icon: "↳", label: "Move into…", action: function () { moveWs(w); } },   // HERESY 1808
       { sep: true },                                   // HERESY 1070: the safety catches
       { icon: "\u2744", label: "Freeze\u2026", hint: "heard, never changed", action: function () { freezeWs(w); } },   // HERESY 1166
       lockItem(w, "workspace", "Workspace Deletion"),
@@ -1716,6 +1816,33 @@
       if (!to || to === w) return;
       if (state.ws.indexOf(to) >= 0) return toast("There is a workspace \u201c" + to + "\u201d already", true);
       act({ op: "ws-rename", workspace: w, to: to }, "Workspace renamed").then(function (ok) { if (ok) { followRename(w, to); paint(); paintCurrent(); } });
+    });
+  }
+  // HERESY 1808 (Viktor 28.10.2026: «добавь в функционал воркспейсов Move into ... Workspace > Move as a subfolder / Move just the samples»): another
+  // workspace chosen, then as a section of it (a rename under it: its sections and takes go along, its name kept; two levels of sections at most) or only
+  // its takes (they go in, and the workspace goes, empty, with its sections). The 💎 sets, the frozen and the regeneration's sections are not offered
+  function moveWs(w) {
+    if (!window.HeresyDialog) return;
+    var subs = state.ws.filter(function (x) { return x.indexOf(w + SEP) === 0; });
+    var height = Math.max.apply(null, [w].concat(subs).map(function (x) { return wsParts(x).length; })) - wsParts(w).length;
+    var items = state.ws.filter(function (x) { return x !== w && x.indexOf(w + SEP) !== 0 && !closedWs(x) && wsLeaf(x) !== SOURCED; }).map(function (x) {
+      var n = state.rows.filter(function (r) { return inTree(r, x); }).length;
+      return { value: x, label: wsParts(x).length > 1 ? wsLeaf(x) : x, depth: wsParts(x).length - 1, note: String(n) };
+    });
+    window.HeresyDialog.choose("Move “" + w + "” into", items, { cancel: "Cancel", filter: "Filter the workspaces" }).then(function (to) {
+      if (!to) return;
+      var fits = wsParts(to).length + 1 + height <= DEPTH, asSec = to + SEP + wsLeaf(w);
+      return window.HeresyDialog.confirm("Move “" + w + "” into “" + to + "”\n\n" +
+          (fits ? "As a section: it goes inside it, with its sections and its takes, its name kept." : "As a section: it would be more than two levels of sections deep, so not here.") +
+          "\nOnly its takes: they go in, and the workspace itself goes, empty (its sections too).",
+          { ok: fits ? "As a section" : "Only its takes", alt: fits ? "Only its takes" : null, cancel: "Cancel" }).then(function (how) {
+        if (!how) return;
+        var section = fits && how === true;
+        if (section && state.ws.indexOf(asSec) >= 0) return toast("There is a workspace “" + asSec + "” already", true);
+        return (section ? act({ op: "ws-rename", workspace: w, to: asSec }, "“" + wsLeaf(w) + "” is a section of “" + to + "” now", true)
+                        : act({ op: "ws-pour", workspace: w, to: to }, "The takes of “" + w + "” are in “" + to + "” now", true))
+          .then(function (ok) { if (ok) { followRename(w, section ? asSec : to); paint(); paintCurrent(); } });
+      });
     });
   }
   function closeDialog() { $("collDialog").hidden = true; $("collDialogBody").innerHTML = ""; }
@@ -1966,7 +2093,7 @@
       '<button type="button" class="pl-play' + (on ? " is-playing" : "") + '" data-pl-play="' + esc(r.name) + '" aria-label="' + (on ? "Pause" : "Play") + '">' + ico(on ? "pause" : "play") + "</button>" +
       '<div class="pl-main"><div class="pl-title" translate="no">' + esc(r.title) + "</div>" +
       '<div class="pl-meta">' + when + (r.seconds ? " · <span>" + state.hooks.clock(r.seconds) + "</span>" : "") + (r.cot ? " · <span>" + esc(cotWord(r.cot)) + "</span>" : "") + "</div>" +
-      '<div class="pl-marks">' + mk(r.rating > 0, "like", "Liked") + mk(r.rating < 0, "dislike", "Disliked") + mk(favOf(r.name, r), "star", "Favourite") +
+      '<div class="pl-marks">' + mk(r.rating > 0, "like", "Liked") + mk(markOf(r.name, "fire"), "flame", "On fire") + mk(markOf(r.name, "gem"), "gem", "A gem") + mk(r.rating < 0, "dislike", "Disliked") + mk(favOf(r.name, r), "star", "Favourite") +
       mk(!!r.note, "note", r.note ? String(r.note).slice(0, 160) : "Without a note") +
       '<button type="button" class="pl-out" data-pl-out="' + esc(r.name) + '" title="Out of the playlist (the take stays)" aria-label="Out of the playlist (the take stays)">✕</button></div></div>' +
       '<div class="pl-cover">' + (art ? '<img alt="" loading="lazy" src="' + esc(art) + '" />' : '<span class="pl-nocover">' + ico("music") + "</span>") + "</div></article>";
@@ -2109,7 +2236,7 @@
                               datasheet: openDatasheet, modelLine: modelLine, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
                               row: rowOf, workspaces: function () { return state.ws.slice(); }, act: act, openSheet: openSheet, requestOf: requestOf,
                               selected: names, place: function () { return state.place; }, moveTo: moveTo,
-                              markFavorite: markFavorite,
+                              markFavorite: markFavorite, markBtns: markBtns, markOf: markOf, paintMarks: paintMarks,   // HERESY 1802
                               pinned: function (name) { return ((state.pins || {})[state.place] || []).indexOf(name) >= 0; }, pin: pin,
                               pinPlaces: pinPlaces, unpinAll: unpinAll, pinTarget: pinTarget, pinIn: pinIn,   // HERESY 1167
                               isFrozen: function (name) { var r = rowOf(name); return !!(r && r.frozen); },   // HERESY 1166

@@ -129,7 +129,7 @@ O formulário diz os dois avisos quando se aplicam. Os amostradores foram escrit
 
 ## 8. Adaptadores (LoRA)
 
-**Onde moram**: `artwork/loras/<família>/`, a família a do pintor: `krea2`, `qwen-image-2512`, `qwen-image-2.1`. As pastas dentro viram grupos na biblioteca; uma imagem ao lado de um arquivo com o nome dele (`NAME.jpg`, `NAME.png`, `NAME.preview.png`) aparece no seu card; o que o LoRA Manager do ComfyUI (`NAME.metadata.json`) ou o Stability Matrix (`NAME.cm-info.json`) escreveram ao lado de um arquivo também é lido.
+**Onde moram**: `artwork/loras/<família>/`, a família a do pintor: `qwen-image-2512`, `qwen-image-2.1`. As pastas dentro viram grupos na biblioteca; uma imagem ao lado de um arquivo com o nome dele (`NAME.jpg`, `NAME.png`, `NAME.preview.png`) aparece no seu card; o que o LoRA Manager do ComfyUI (`NAME.metadata.json`) ou o Stability Matrix (`NAME.cm-info.json`) escreveram ao lado de um arquivo também é lido.
 
 **A lista e a execução**: até oito adaptadores na lista sob o pintor, até quatro ativos numa execução; cada um na sua força (o controle deslizante de 0 a 1,5); um clique direito **silencia** um (ele fica na lista e sai da execução), e um adaptador em zero também não é carregado. As suas palavras-gatilho aparecem embaixo, e um clique numa a põe no prompt (uma execução também adiciona sozinha as palavras-gatilho de um adaptador ativo).
 

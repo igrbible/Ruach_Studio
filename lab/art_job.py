@@ -1,30 +1,26 @@
 """HERESY 1120: artwork for a take (Viktor, 02.10.2026: «просто иконка в плеере, в карточке и в mp3 файле… спойлер на
 багажнике нашего Руах-Феррари»). Nothing special, and conservative: a small language model reads the take's style
-and words and writes one picture prompt; an SDXL finetune draws it once, 1024 px, a fixed number of steps; the
-picture is kept at 768 px as JPEG. Runs as its own process on the card the lab gives it and leaves nothing behind.
+and words and writes one picture prompt; a painter draws it once (Qwen-Image: HERESY 1338, 1428 below) and the
+picture is kept as a JPEG. Runs as its own process on the card the lab gives it and leaves nothing behind.
 
 HERESY 1156 (Viktor, 03.10.2026: «Пропускать через VLM вместе с промптом, и регенерить по адаптации промпта самой
 VLM»; «что не знает, то не генерит»): a picture whose subject is named (an instrument's probe) is looked at. Omni (the
 listener's model, through llama.cpp) gets the picture and says what it sees and whether the subject is there; when it
 is not, Omni writes the prompt again from the prompt and what it saw, and the painter tries once more, three pictures
 at most. A subject an image model does not know by name (a duduk came out a board on a table) is described to both of
-them in plain visual words (art_looks.json, from the instruments cheat-sheet). The painter was then the SDXL behind the link artwork/SDXL-Artwork-Model (gone since 1405; Viktor: «чтобы на этот
-симлинк можно было бы посадить другие веса SDXL»; «SDXL — лёгкая и качественная. Никаких FLUX»).
+them in plain visual words (art_looks.json, from the instruments cheat-sheet).
 
     .venv/bin/python lab/art_job.py TAKE_DIR OUT.jpg [SEED]
 
     prompter  artwork/Qwen3-4B-Instruct-2507   (Apache 2.0; absent: the prompt is built from the style)
-    painter   artwork/Krea-2-Muse              Krea 2 Muse by Stable Yogi, Q4 or Q8 (HERESY 1167); a Qwen painter (1338)
+    painter   artwork/Qwen-Image-2512, -2.1    Qwen-Image (HERESY 1338; the only painter since 1428)
     critic    checkpoints/Qwen2.5-Omni-7B-GGUF (llama.cpp's llama-mtmd-cli; absent: the first picture is kept, unseen)
 
-HERESY 1167 (Viktor 05.10.2026, the A/B of SDXL against Krea 2 on twelve instruments: «Muse - отличный файнтюн… убирай
-SDXL долой с глаз»; «Для карт ниже 24GB VRAM… оставим SDXL»): the painter is Krea 2 Muse by Stable Yogi (a fine-tune of Krea 2
-Turbo; the author's GGUF, Q4 or Q8; 8 steps, no guidance) through diffusers' Krea2Pipeline with Krea's own text encoder
-(Qwen3-VL-4B), VAE and tokenizer (artwork/Krea-2-Turbo), in its own environment (.venv-art: transformers 5, diffusers 0.40);
-(1405: SDXL is gone; a card too small for Krea whole streams its blocks from RAM, ART_STREAM=1). ART_PAINTER says which: krea2-q4 (11.6 GB at the peak, 23 s a picture on an RTX
-3090), krea2-q8 (17.4 GB, 21.5 s); the lab sets it. A Krea picture passes a content
-filter before it is kept (Krea 2 Community License, 4.2: Falconsai/nsfw_image_detection in artwork/nsfw-filter): flagged, it
-is dropped and the next seed tries.
+HERESY 1167 · 1405 · 1428: the painters before Qwen-Image, an SDXL fine-tune and then Krea 2 Muse by Stable Yogi, left the studio (SDXL in
+1405, Krea 2 in 1428; HERESY 1800 took what was said of them out of here, HERESY.md keeps their story). What came with them stays: the
+painter runs in its own environment (.venv-art), a card too small for it whole streams its blocks from RAM (ART_STREAM=1), ART_PAINTER
+says which (the lab sets it), and every picture passes the content filter before it is kept (Falconsai/nsfw_image_detection in
+artwork/nsfw-filter): flagged, it is dropped and the next seed tries.
 
 HERESY 1338 (Viktor 10.10.2026: «в Engine не забудь прописать выборы всех генеративных art моделей»; the plan he took: «Автообложки
 дублей с Lightning»): Qwen-Image paints a take's artwork as well, through the Artist room's loader (artist_qwen.build): 2512 from the

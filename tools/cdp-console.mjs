@@ -1093,9 +1093,10 @@ const likes = await ev(`(async () => {
   document.getElementById("dislikeTake").click(); await until(() => document.getElementById("dislikeTake").getAttribute("aria-pressed") === "true");
   const swap = { like: document.getElementById("likeTake").getAttribute("aria-pressed"), dislike: document.getElementById("dislikeTake").getAttribute("aria-pressed"), rating: HC.rating(name) };
   document.getElementById("dislikeTake").click(); await until(() => document.getElementById("dislikeTake").getAttribute("aria-pressed") === "false");
-  return { was, on, swap, off: HC.rating(name), order: [...document.getElementById("takeActions").querySelectorAll("button")].map(b => b.id).slice(0, 3).join(",") }; })()`);
-check("  👍 and 👎 beside ☆ (the player's order): a click marks the take, the other takes its place, a second click takes it back",
-  likes.order === "likeTake,dislikeTake,favTake" && likes.on.pressed === "true" && likes.on.rating === 1 && likes.swap.like === "false" && likes.swap.dislike === "true" &&
+  return { was, on, swap, off: HC.rating(name), order: [...document.getElementById("takeActions").querySelectorAll("button:not(.hmark)")].map(b => b.id).slice(0, 3).join(","),
+    marks: [...document.getElementById("takeActions").querySelectorAll("button")].map(b => b.id || b.dataset.hmark).slice(0, 5).join(",") }; })()`);
+check("  👍 and 👎 beside ☆ (the player's order), 🔥 💎 right after 👍 (1802): a click marks the take, the other takes its place, a second click takes it back",
+  likes.order === "likeTake,dislikeTake,favTake" && likes.marks === "likeTake,fire,gem,dislikeTake,favTake" && likes.on.pressed === "true" && likes.on.rating === 1 && likes.swap.like === "false" && likes.swap.dislike === "true" &&
   likes.swap.rating === -1 && likes.off === 0, JSON.stringify(likes));
 
 // HERESY 1169 (Viktor 07.10.2026: «Takes… Нет дефолта и нет сторожа»; «вынести sound variations… бок о бок к Takes… ползунками
@@ -4506,8 +4507,8 @@ check("the Artist's room opens the dock on the Artist's log, the Creator on the 
 check("  a run's way to its end: waits and why, paints on its GPU, failed and why; the folded line says the last; kept in this browser",
   al34.run.length === 3 && /waits: no card can take this now/.test(al34.run[0]) && /paints on GPU 1/.test(al34.run[1]) && /failed: CUDA out of memory/.test(al34.run[2]) &&
   /failed: CUDA out of memory/.test(al34.last) && al34.kept === 3, JSON.stringify(al34));
-check("  the log's own window mirrors it: both views, the Artist's lines, a new one as it comes",
-  !!al34.pop && al34.pop.artist && al34.pop.mirrored && al34.pop.views === 2, JSON.stringify(al34.pop));
+check("  the log's own window mirrors it: the dock's five views (1809), the Artist's lines, a new one as it comes",
+  !!al34.pop && al34.pop.artist && al34.pop.mirrored && al34.pop.views === 5, JSON.stringify(al34.pop));
 
 // HERESY 1169 · 1335 (Viktor 10.10.2026: «И по LoRA адаптерам сделай также суммарную силу как у Творца, чтобы не было прежёга из-за наложения адаптеров»)
 section("the Artist's adapters together: from two of them a bar of their strengths' sum, zoned as the Creator's; dragged, all of them in proportion; Draw carries what the rows show");
@@ -4858,7 +4859,7 @@ const tr39 = await ev(`(async () => {
   return o; })()`);
 check("a count says itself in each language's forms: 1 картинка, 3 картинки, 5 картинок, 21 картинка; 3 малюнкі, 3 εικόνες, 3 imágenes, 3 immagini",
   JSON.stringify(tr39.forms.ru.slice(0, 4)) === JSON.stringify(["1 картинка", "3 картинки", "5 картинок", "21 картинка"]) && tr39.forms.be[1] === "3 малюнкі" &&
-  tr39.forms.el[1] === "3 εικόνες" && tr39.forms.es[1] === "3 imágenes" && tr39.forms.it[1] === "3 immagini" && /^2 рана в корзине$/.test(tr39.forms.ru[4]), JSON.stringify(tr39.forms));
+  tr39.forms.el[1] === "3 εικόνες" && tr39.forms.es[1] === "3 imágenes" && tr39.forms.it[1] === "3 immagini" && /^2 прогона в корзине$/.test(tr39.forms.ru[4]), JSON.stringify(tr39.forms));
 check("  a dialog in Russian: its title, its buttons, and its paragraphs kept apart (pre-line: «\\n\\n» between them)",
   tr39.title === "Перезагрузить страницу?" && tr39.stay === "Остаться" && /^Она заберёт:/.test(tr39.body) && /\n\nОна сохранит:/.test(tr39.body) && /\n\nCtrl\+F5/.test(tr39.body), JSON.stringify([tr39.title, tr39.stay, tr39.body.slice(0, 80)]));
 check("  the lyrics' mirror keeps the typed word though the catalog knows it («" + tr39.known + "»); the gutter's section names as tagged, never translated (1732)",
@@ -17290,8 +17291,8 @@ const fre = await waitFor(`(() => { const b = document.querySelector(".hd-back.i
 await ev(`(() => { const b = document.querySelector(".hd-back.is-on .hd-pick"); b.querySelector(".hd-clear").click(); b.querySelector('[data-logic="and"]').click(); b.querySelector(".hd-yes").click(); return true; })()`);
 await sleep(300);
 const foff = await ev(`({ hidden: document.getElementById("collFilterN").hidden, on: document.getElementById("collFilterBtn").classList.contains("is-on"), kept: localStorage.getItem("yue2.collLogic") })`);
-check("the Librarian's filter is a button at the end of the search row (the search 240–320 px wide, the old row gone): its window holds three groups (made · marked · has), fourteen ticks each with an icon (1368: the protected) and a count of the place, the logic AND · OR · NOR and Show; two ticked with OR show «2 · OR» on the button and come back ticked; Clear and Show take them off",
-  fsearch.min === "240px" && fsearch.max === "320px" && fsearch.last && fsearch.barGone && fsearch.icon && !!fpop && fpop.groups === "Made|Marked|Has" && fpop.items === 14 && fpop.icons && fpop.counts &&
+check("the Librarian's filter is a button at the end of the search row (the search 240–320 px wide, the old row gone): its window holds three groups (made · marked · has), nineteen ticks each with an icon (1368: the protected; 1802: 🔥, 💎, the DAW mix, the Digital Gateway, a plugin) and a count of the place, the logic AND · OR · NOR and Show; two ticked with OR show «2 · OR» on the button and come back ticked; Clear and Show take them off",
+  fsearch.min === "240px" && fsearch.max === "320px" && fsearch.last && fsearch.barGone && fsearch.icon && !!fpop && fpop.groups === "Made|Marked|Has" && fpop.items === 19 && fpop.icons && fpop.counts &&
   fpop.logics === "and*,or,nor" && /^Show \d+$/.test(fpop.yes) && fon.badge === "2 · OR" && fon.on && !!fre && fre.gen && fre.liked && fre.logic === "or" && foff.hidden && !foff.on && foff.kept === null,
   JSON.stringify({ fre, foff, fon, fpop, fsearch }));
 // the mock keeps no collection: two real takes of the Creator's column stand in for the Librarian's checked ones, the menu opened as the Librarian opens it

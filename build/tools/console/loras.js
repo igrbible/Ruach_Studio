@@ -15,7 +15,7 @@
 (function (root) {
   "use strict";
 
-  var S = { catalog: [], choice: [], host: null, opts: {}, list: null, note: null, sources: {}, budget: "off", profile: null, profileKey: "" };
+  var S = { catalog: [], choice: [], host: null, opts: {}, list: null, note: null, sources: {}, budget: "off", profile: null, profileKey: "", userNotes: {} };
   try { S.free = root.localStorage.getItem("yue2.loraFree") === "on"; } catch (e) { S.free = false; }   // HERESY 1629: Past the limits, kept with the page
 
   // HERESY 1165: a text glued from names and numbers is translated here, whole, from the English it is made as (the
@@ -160,7 +160,39 @@
   function aboutTip(e) {
     var src = source(e.id), lines = chipTip(e).split("\n");
     if (src && src.about) lines.splice(1, 0, tr(src.about), "");   // HERESY 1166: the recap in the page's language
+    var mine = userNote(e);                                          // HERESY 1802: the user's own note, under a line
+    if (mine) lines.push("────────────", mine);
     return lines.join("\n");
+  }
+  // HERESY 1802 (Viktor 27.10.2026: «в Творце можно и к LoRA адаптерам заметки пользовательские, выводить их в тултипе адаптеров, но под чертой»):
+  // one note an adapter whatever its precision (its bf16 and its q8 share it), kept by the Librarian's lab in user/collection.json; 600 characters
+  var NOTE_MAX = 600;
+  function noteKey(id) { return String(id || "").replace(/(\.(bf16|fp16|f16|fp32|f32|q8_0|q5_k_m|int8))?\.safetensors$/i, ""); }
+  function userNote(e) { var n = e && S.userNotes[noteKey(e.id)]; return n ? (n.length > NOTE_MAX ? n.slice(0, NOTE_MAX - 1) + "…" : n) : ""; }
+  function loadNotes() {
+    if (!root.fetch) return;
+    root.fetch("/lab/collection/lora-notes").then(function (r) { return r.ok ? r.json() : { notes: {} }; }).then(function (d) {
+      S.userNotes = (d && d.notes) || {};
+      paint();
+    }).catch(function () { /* no lab here: no notes */ });
+  }
+  function editNote(e) {
+    if (!root.HeresyDialog || !e) return;
+    var key = noteKey(e.id), had = S.userNotes[key] || "", name = nameOf(e.id);
+    root.HeresyDialog.prompt("Your note on “" + name + "”\n\nShown in its tooltip, under a line; 600 characters at most.\nEmpty removes it.", had,
+      { area: true, rows: 6, max: NOTE_MAX, ok: "Keep" }).then(function (t) {
+      if (t == null) return;
+      t = String(t).trim();
+      if (t === had) return;
+      root.fetch("/lab/collection", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "lora-note", id: key, text: t }) })
+        .then(function (r) { return r.ok ? r : r.json().then(function (d) { throw new Error((d && d.error) || "HTTP " + r.status); }); })
+        .then(function () {
+          if (t) S.userNotes[key] = t; else delete S.userNotes[key];
+          paint();
+          if (root.HeresyToast) root.HeresyToast(t ? "Note kept on “" + name + "”" : "Note taken off “" + name + "”");
+        })
+        .catch(function (er) { if (root.HeresyToast) root.HeresyToast(er.message, "bad"); });
+    });
   }
 
   // A strength as written: at least `min` decimals, more only when the value has
@@ -1055,6 +1087,7 @@
     host.addEventListener("mouseleave", dropFull);
     root.addEventListener("scroll", dropFull, true);
     S.opts = opts || {};
+    loadNotes();                                      // HERESY 1802
     // HERESY 1167: the adapters not in use behind one line, open or closed as it was left; the ones in use stay above it
     host.innerHTML = '<div class="lora-active"></div><details class="lora-lib"><summary><span class="chev" aria-hidden="true"></span>' +
       '<span class="lora-lib-name">Add a LoRA</span><span class="lora-lib-count mono"></span></summary>' +
@@ -1352,6 +1385,8 @@
             action: function () { mine.forEach(function (c) { if (isMuted) delete c.muted; else c.muted = true; }); changed(); } }
         ].concat(arOnes.length && !isMuted ? [{ label: outOf ? "Back in the score: its music half writes the score too" : "Out of the score: its music half sings it, the plan is written without it",
           icon: "\u266a", action: function () { mine.forEach(function (c) { if (outOf) delete c.noscore; else c.noscore = true; }); changed(); } }] : []).concat([
+          { label: "Your note…", icon: "✎", hint: userNote(entry(mine[0] && mine[0].id)) ? "✓" : "",   // HERESY 1802
+            action: function () { editNote(entry(mine[0] && mine[0].id)); } },
           { sep: true },
           { label: "Remove from the song", icon: "\u2715", action: function () { S.choice = S.choice.filter(function (c) { return ids.indexOf(c.id) < 0; }); changed(); } }
         ]));
@@ -1363,6 +1398,7 @@
       var items = [{ label: inSong ? "Take it out of the song" : "Add it to the song", action: function () { toggle(e.id); } }], hid = isHidden(e.id);
       items.push({ sep: true }, { label: hid ? "Show it in the list again" : "Hide from the list (Show hidden brings it back)", icon: hid ? "\u25c9" : "\u25cc",   // HERESY 1496
         action: function () { setHidden(idsOf(e.id), !hid); } });
+      items.push({ label: "Your note…", hint: userNote(e) ? "✓" : "", icon: "✎", action: function () { editNote(e); } });   // HERESY 1802
       if (ownAdapter(e) && S.opts.unpublish) items.push({ label: "Remove from the list (the adapter stays in its Trainer session)", icon: "\u21a9",
         action: function () { S.opts.unpublish(idsOf(e.id)); } });
       if (S.opts.deleteFiles) items.push({ label: "Delete from loras/ for good\u2026", icon: "\u2715", danger: true,   // HERESY 1496: asked, with what goes

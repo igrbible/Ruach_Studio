@@ -4,6 +4,9 @@
 #   heresy/fetch-heresy.sh --check     say what is here and what is missing, download nothing
 #   heresy/fetch-heresy.sh             fetch what is missing; what is here stays as it is
 #   heresy/fetch-heresy.sh --replace   also fetch the pinned copy over one that is here but differs
+#   heresy/fetch-heresy.sh --writer quality|compact [--yes]
+#                                      also the studio's writer (Qwopus3.5-9B-v3 as GGUF, HERESY 1811), asked first with its size;
+#                                      it runs through llama.cpp's llama-server (vendor/llama.cpp, cloned here, built by launcher/extras.sh)
 #   heresy/fetch-heresy.sh --listener Q8_0|Q5_K_M|Q4_K_M|bf16 [--yes]
 #                                      also the style listener (Qwen2.5-Omni-7B), asked first with its size;
 #                                      GGUF ones run through llama.cpp (vendor/llama.cpp, cloned here, built by you)
@@ -56,7 +59,7 @@
 # Needs: python3, git, the lab venv for audio-separator (lab/install-venv.sh), ~8 GB of disk.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""; QFINE=""; ARTLORAS=""; IRA=""; IRAE=""; FW=""   # HERESY 1794: FW
+MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""; QFINE=""; ARTLORAS=""; IRA=""; IRAE=""; FW=""; WRITER=""   # HERESY 1794: FW; 1811: WRITER
 while [ $# -gt 0 ]; do
   case "$1" in
     --check) MODE=check ;; --replace) MODE=replace ;; --yes) YES=1 ;;
@@ -66,13 +69,14 @@ while [ $# -gt 0 ]; do
     --ira) IRA="${2:-}"; shift ;;                   # HERESY 1490
     --irae) IRAE="${2:-}"; shift ;;                 # HERESY 1689
     --fw) FW="${2:-}"; shift ;;                     # HERESY 1794
+    --writer) WRITER="${2:-}"; shift ;;             # HERESY 1811
     --only) ONLY=",${2:-},"; shift ;;
     --artwork) ARTWORK=1 ;;
     --artwork-q8) ARTWORK=1; ARTQ8=1 ;;
     --qwen) QWEN="${2:-}"; shift ;;
     --qwen-fine) QFINE="${2:-}"; shift ;;           # HERESY 1347
     --art-loras) ARTLORAS="${2:-all}"; shift ;;
-    *) echo "--check, --replace, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --ira BF16|Q8_0|Q6_K, --irae IRAE|IRAEv2|IRAEv3-BF16|Q8_0|Q6_K, --fw 2.4x0.75-BF16|Q8_0|Q6_K (and 0.7x0.75, 1.5x0.75, 3.4x0.7, 3.4x0.75, 4.0x0.65, 4.0x0.7), --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --qwen-fine jibmix-v6|intorealism-v1|real-v2|base-fp8, --art-loras all, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
+    *) echo "--check, --replace, --writer quality|compact, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --ira BF16|Q8_0|Q6_K, --irae IRAE|IRAEv2|IRAEv3-BF16|Q8_0|Q6_K, --fw 2.4x0.75-BF16|Q8_0|Q6_K (and 0.7x0.75, 1.5x0.75, 3.4x0.7, 3.4x0.75, 4.0x0.65, 4.0x0.7), --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --qwen-fine jibmix-v6|intorealism-v1|real-v2|base-fp8, --art-loras all, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
   esac
   shift
 done
@@ -213,23 +217,6 @@ hf_into_at() {
   if hf_complete "$repo" "$rev" "$dir" --include "$@" >/dev/null 2>&1; then say_got "$what" "$tag"; else say_fail "$what" "$tag: $(why)"; fi
 }
 
-# --- a repo kept in a Hugging Face cache (as the lab's code loads it):  hf_cached REPO HF_HOME
-hf_cached() {
-  local repo=$1 home=$2 rev; shift 2; rev=$(pin "$repo")
-  local snap="$home/hub/models--${repo//\//--}/snapshots/$rev" tag="($repo @ ${rev:0:7}, cache)"
-  local rc=1
-  if [ -d "$snap" ]; then hf_complete "$repo" "$rev" "$snap" "$@" >/dev/null 2>&1; rc=$?; fi
-  [ $rc = 0 ] && { say_here "$repo" "$tag"; return; }
-  [ $rc = 2 ] && { say_unknown "$repo" "$tag — the pinned file list could not be read (offline?)"; return; }
-  if [ $MODE = check ]; then
-    if ls -d "$home"/hub/models--${repo//\//--}/snapshots/* >/dev/null 2>&1; then say_odd "$repo" "$tag — another revision is cached"; else say_miss "$repo" "$tag"; fi
-    return
-  fi
-  hf_ready >/dev/null || { say_fail "$repo" "(the pinned downloader would not install)"; return; }
-  again env HF_HOME="$home" HF_HUB_CACHE="$home/hub" "$HF" download --quiet "$repo" --revision "$rev" "$@"
-  if [ -d "$snap" ] && hf_complete "$repo" "$rev" "$snap" "$@" >/dev/null 2>&1; then say_got "$repo" "$tag"; else say_fail "$repo" "$tag: $(why)"; fi
-}
-
 # --- a separation model through audio-separator (it keeps its own list; no Hugging Face pin):
 #     sep_model FILE DIR FILE…  (every file named must be there and not empty)
 sep_model() {
@@ -284,12 +271,14 @@ fi
 
 if want upscale; then
   part upscale "Upscale: UniverSR"
-  # HERESY 1445: from v2 into universr/, where lab/upscale_job.py reads it; an install that holds woongzip1's in hf_cache/ keeps it
-  if [ ! -d "$ROOT/universr" ] && [ -d "$ROOT/hf_cache/hub/models--woongzip1--universr-audio/snapshots/$(pin woongzip1/universr-audio)" ]; then
-    hf_cached woongzip1/universr-audio "$ROOT/hf_cache" "${WORK[@]}"
-  else
-    hf_into "universr (woongzip1/universr-audio)" goldhub/Ruach_Studio_Models_v2 "universr/*"
+  # HERESY 1445: from v2 into universr/, where lab/upscale_job.py reads it; 1799 (Viktor 26.10.2026: «удаление .cache и hf_cache никогда не
+  # должно сломать ни одного из пайплайнов Студии»): an older install's woongzip1's in hf_cache/ (the same bytes as v2's) is copied into
+  # universr/, then checked by the pin like any download; nothing reads it where it lies
+  snap="$ROOT/hf_cache/hub/models--woongzip1--universr-audio/snapshots/$(pin woongzip1/universr-audio)"
+  if [ $MODE != check ] && [ ! -s "$ROOT/universr/pytorch_model.bin" ] && [ -s "$snap/pytorch_model.bin" ] && [ -s "$snap/config.yaml" ]; then
+    mkdir -p "$ROOT/universr" && cp -L "$snap/config.yaml" "$snap/pytorch_model.bin" "$ROOT/universr/"
   fi
+  hf_into "universr (woongzip1/universr-audio)" goldhub/Ruach_Studio_Models_v2 "universr/*"
   clone https://github.com/woongzip1/UniverSR.git "$ROOT/vendor/UniverSR"
   # HERESY 1583: the Voice upscale's bundle: Apollo-vocal (baicai1145, CC BY-NC-SA 4.0) and its model code, from v2 into models/upbundle/apollo/
   # where lab/upbundle_job.py reads them; FlashSR comes on first use (1611: its weights from our copy in v2, Apache-2.0 as its author stated on 20.10.2026; its code from him)
@@ -335,6 +324,27 @@ if [ -n "$LISTENER" ]; then
     if [ -x "$ROOT/vendor/llama.cpp/build/bin/llama-mtmd-cli" ]; then say_here "llama-mtmd-cli" "(vendor/llama.cpp/build)"
     else say_miss "llama-mtmd-cli" "→ cd vendor/llama.cpp && cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_COMPILER=\$(which nvcc) && cmake --build build -j --target llama-mtmd-cli"; fi
   fi
+fi
+
+# HERESY 1811 (Viktor 28.10.2026: «прикручивай как Local Studio LLM… пусть это будет опция по умолчанию для установок, где VRAM позволяет»): the studio's
+# own writer, Qwopus3.5-9B-v3 as AutoRound moved into GGUF, from our models repo v2 at its pin; asked first with its size; it runs through llama-server
+if [ -n "$WRITER" ]; then
+  asked writer "The studio's writer: Qwopus3.5-9B-v3 ($WRITER)"
+  V2=goldhub/Ruach_Studio_Models_v2; O="checkpoints/Qwopus3.5-9B-GGUF"
+  case "$WRITER" in
+    quality) SIZE="6.7 GB"; PEAK="about 7.5 GB of VRAM"; W_FILE="$O/Qwopus3.5-9B-v3-AR-Q4_0.gguf" ;;
+    compact) SIZE="5.5 GB"; PEAK="about 6.5 GB of VRAM"; W_FILE="$O/Qwopus3.5-9B-v3-AR-compact.gguf" ;;
+    *) echo "${R}--writer takes quality or compact${X}"; exit 2 ;;
+  esac
+  go=1
+  if [ $MODE != check ] && [ $YES = 0 ] && ! hf_complete "$V2" "$(pin "$V2")" "$ROOT" --include "$W_FILE" >/dev/null 2>&1; then
+    printf "%s" "Download $SIZE? It needs $PEAK when it writes. [y/N] "
+    read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
+  fi
+  [ $go = 1 ] && hf_into "$O ($WRITER and its licence)" "$V2" "$W_FILE" "$O/LICENSE"
+  clone https://github.com/ggml-org/llama.cpp.git "$ROOT/vendor/llama.cpp"
+  if [ -x "$ROOT/vendor/llama.cpp/build/bin/llama-server" ]; then say_here "llama-server" "(vendor/llama.cpp/build)"
+  else say_miss "llama-server" "→ bash launcher/extras.sh builds it (or: cd vendor/llama.cpp && cmake -B build -DGGML_CUDA=ON && cmake --build build -j --target llama-server)"; fi
 fi
 
 # HERESY 1120: artwork for takes, only when asked for, and asked again with its size (HERESY 1291: from our models repo v2, at its pin). The painter is CyberRealistic

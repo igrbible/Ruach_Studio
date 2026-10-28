@@ -3,7 +3,7 @@ artwork/loras/<семейство>/»; «предусмотри скан под�
 представление. И прикрути сканирование Civitai по хешу с подтяжкой инфы по адаптеру, если он там есть. Такое в LoRA Manager в
 ComfyUI заточено»; «Адаптеры пользователи пусть себе тянут по твоему Гайду прямо в комнате»).
 
-KIT/artwork/loras/FAMILY/… holds the adapters, each family a painter's: krea2 (Krea 2 Muse), qwen-image-2.1, qwen-image-2512 (1405: sdxl gone);
+KIT/artwork/loras/FAMILY/… holds the adapters, each family a painter's: qwen-image-2.1, qwen-image-2512 (1405: sdxl gone; 1428: krea2);
 any depth of folders below it, a folder a group. Beside an adapter: its picture (NAME.preview.png, .jpg…, or NAME.png, .jpeg…),
 and what other tools wrote of it: NAME.metadata.json (ComfyUI's LoRA Manager), NAME.civitai.info (Civitai Helper),
 NAME.cm-info.json (Stability Matrix). A look-up on Civitai sends the file's SHA-256 alone and keeps the answer as
@@ -495,8 +495,6 @@ def plain_named(sd, family):
         sd = {k.replace(".lora_A.default.", ".lora_A.").replace(".lora_B.default.", ".lora_B."): v for k, v in sd.items()}
     if not sd or any(k.startswith(("transformer.", "diffusion_model.", "base_model.model.", "lora_unet_", "lora_te", "lycoris_", "text_encoder")) for k in sd):
         return sd
-    if family == "krea2" and any(re.match(r"blocks\.\d+\.(attn|mlp)\.", k) for k in sd):
-        return {"diffusion_model." + k: v for k, v in sd.items()}      # Krea 2's own names: diffusers' Krea 2 converter takes them so
     if any(k.endswith(".alpha") for k in sd):
         return sd                                       # diffusers' Qwen converter takes these (Lightning's own files) and prefixes them itself
     out = {}

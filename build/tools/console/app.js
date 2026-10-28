@@ -334,6 +334,7 @@
     if (view === "engine") {
       if (!$("view-engine").classList.contains("is-hidden")) return void leaveEngine();
       $("view-engine").classList.remove("is-hidden");
+      if (window.ruachPaintDefaults) window.ruachPaintDefaults();   // HERESY 1804: the defaults as they stand now
       engineTab($("view-engine").dataset.etab || recall("yue2.engineTab") || "server", false, true);   // HERESY 1450: the tab it was left on
       scrollLogToEnd();
       if (window.HeresyPlaces) window.HeresyPlaces.load();   // HERESY 1283: the Folders card asks the lab when the page is seen
@@ -479,7 +480,7 @@
     // HERESY 1111: seek and mute from the keyboard, outside text fields and menus; 1169: to the marks of 5 s (Shift: 30) from 0:00
     if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && audio.getAttribute("src") && isFinite(audio.duration) && !event.target.closest(".menu-pop, [role=menu], .col-grip")) {
       event.preventDefault();
-      seekMark(event.shiftKey ? 30 : 5, event.key === "ArrowRight" ? 1 : -1);
+      seekMark(event.shiftKey ? seekStep("shift") : seekStep("key"), event.key === "ArrowRight" ? 1 : -1);   // HERESY 1804
     }
     if ((event.key === "m" || event.key === "M") && !event.ctrlKey && !event.metaKey && !event.altKey) $("muteBtn").click();
   });
@@ -3661,10 +3662,16 @@
   })();
   // the log's own window: Document Picture-in-Picture (over every window) where the browser has it, else a pop-up; a mirror of both logs
   var POP = null;
+  function popNone() {                                 // HERESY 1809: a room with nothing in the log yet says so, in the window too
+    if (!POP || !POP.server) return;
+    var v = POP.server.dataset.only;
+    POP.server.dataset.none = v && !POP.server.querySelector('.log-line[data-src="' + v + '"]') ? tr("Nothing from this room in the log yet") : "";
+  }
   function popMirror(view, rows) {
     if (!POP || POP.win.closed) return;
     var box = POP[view];
     Array.prototype.forEach.call(rows, function (r) { box.appendChild(POP.win.document.importNode(r, true)); });
+    if (view === "server") popNone();
     while (box.childElementCount > LOG_KEEP * 2) box.removeChild(box.firstChild);
     if (POP.follow.checked) box.scrollTop = box.scrollHeight;
   }
@@ -3674,32 +3681,42 @@
     if (document.documentElement.dataset.theme) d.documentElement.dataset.theme = document.documentElement.dataset.theme;
     d.title = "Ruach Studio · " + tr("Server log");
     d.body.className = "log-pop";
-    d.body.innerHTML = '<div class="log-pop-head"><span class="log-dock-views"><button type="button" class="log-view" data-view="server">' + tr("Server") +
-      '</button><button type="button" class="log-view" data-view="artist" translate="no">' + artistRoom() + '</button></span><label class="check small-check"><input type="checkbox" checked /> <span>' + tr("Follow") +
+    d.body.innerHTML = '<div class="log-pop-head"><span class="log-dock-views">' +   // HERESY 1809: the dock's every view
+      [["server", "Server"], ["creator", "Creator"], ["trainer", "Trainer"], ["refiner", "Refiner"]].map(function (v) { return '<button type="button" class="log-view" data-view="' + v[0] + '">' + tr(v[1]) + "</button>"; }).join("") +
+      '<button type="button" class="log-view" data-view="artist" translate="no">' + artistRoom() + '</button></span><label class="check small-check"><input type="checkbox" checked /> <span>' + tr("Follow") +
       '</span></label></div><div class="log-pop-main"><div class="log-pop-logs"><div class="log-dock-body mono" data-body="server"></div>' +
       '<div class="log-dock-body log-dock-artist mono" data-body="artist" hidden></div></div><div class="log-pop-gpus" data-body="gpus" aria-label="' + tr("The cards, live") + '"></div></div>';   // HERESY 1343: the cards beside it
     POP = { win: win, server: d.querySelector('[data-body="server"]'), artist: d.querySelector('[data-body="artist"]'), follow: d.querySelector("input"), gpus: d.querySelector('[data-body="gpus"]') };
     Array.prototype.forEach.call(($("logDockBody") || {}).childNodes || [], function (r) { POP.server.appendChild(d.importNode(r, true)); });
     artLog.forEach(function (e) { POP.artist.appendChild(artLogRow(e, d)); });
-    var view = function (v) {
+    var view = function (v) {                          // HERESY 1809: a room's view is the server's lines of that room, as in the dock
       Array.prototype.forEach.call(d.querySelectorAll(".log-view"), function (b) { b.classList.toggle("is-on", b.dataset.view === v); });
-      POP.server.hidden = v !== "server"; POP.artist.hidden = v !== "artist";
-      var box = POP[v]; box.scrollTop = box.scrollHeight;
+      var room = v === "creator" || v === "trainer" || v === "refiner";
+      POP.server.hidden = v === "artist"; POP.artist.hidden = v !== "artist";
+      POP.server.dataset.only = room ? v : "";
+      popNone();
+      var box = v === "artist" ? POP.artist : POP.server; box.scrollTop = box.scrollHeight;
     };
     Array.prototype.forEach.call(d.querySelectorAll(".log-view"), function (b) { b.addEventListener("click", function () { view(b.dataset.view); }); });
     view(logView());
     // HERESY 1343: the cards ticked by the window itself (a hidden page's timers are slowed, a window in sight is not); closed, the dock
     // unfolds again if it was open when the window came
     if (window.HeresyGpuLive) { win.setInterval(function () { window.HeresyGpuLive.tick(); }, 1000); window.HeresyGpuLive.tick(); }
-    win.addEventListener("pagehide", function () { var p = POP; POP = null; if (p && p.unfold && window.ruachLogDockFold) window.ruachLogDockFold(false); });
+    win.addEventListener("pagehide", function () {
+      var p = POP; POP = null;
+      if (p && p.tall && $("logDock")) $("logDock").classList.add("is-tall");   // HERESY 1809: its full height back, if it had it
+      if (p && p.unfold && window.ruachLogDockFold) window.ruachLogDockFold(false);
+    });
   }
   // HERESY 1343 (Viktor: «при детаче сразу сворачиваем открытый фрейм… при закрытии консоли с логом, если был фрейм в состоянии открытого,
   // обратно открываем его»): the window filled, the dock folded if it was open, and that remembered for the window's close
   function popOpened(win) {
-    var was = !!$("logDock") && !$("logDock").classList.contains("is-folded");
+    var dock = $("logDock"), was = !!dock && !dock.classList.contains("is-folded"), tallWas = !!dock && dock.classList.contains("is-tall");
     popFill(win);
-    if (POP) POP.unfold = was;
-    if (was && window.ruachLogDockFold) window.ruachLogDockFold(true);
+    if (POP) { POP.unfold = was; POP.tall = tallWas; }
+    // HERESY 1809 (Viktor: «при отсоединении фрейма серверного лога схлопывай наш разворачивающийся логгер»): folded whatever it was, and low
+    if (dock) dock.classList.remove("is-tall");
+    if (window.ruachLogDockFold) window.ruachLogDockFold(true);
   }
   if ($("logDockPop")) $("logDockPop").addEventListener("click", function () {
     if (POP && !POP.win.closed) { try { POP.win.focus(); } catch (e) { /* over the others already */ } return; }
@@ -3733,7 +3750,11 @@
     }
     fold(recall("yue2.logDock") !== "open");
     window.ruachLogDockFold = function (folded) { fold(folded, true); };   // HERESY 1343: for the log's window
-    $("logDockTab").addEventListener("click", function () { fold(!dock.classList.contains("is-folded")); });
+    $("logDockTab").addEventListener("click", function () {
+      // HERESY 1809: while the log has a window of its own, the dock stays folded and its tab brings that window up
+      if (POP && POP.win && !POP.win.closed && dock.classList.contains("is-folded")) { try { POP.win.focus(); } catch (e) { /* over the others already */ } return; }
+      fold(!dock.classList.contains("is-folded"));
+    });
     $("logDockCopy").addEventListener("click", function () {   // HERESY 1334: the view's own lines
       if (logView() !== "artist") return $("logCopy").click();
       navigator.clipboard.writeText(artLog.map(function (e) { return (e.lab ? "" : hhmmss(e.t) + "  ") + e.x; }).join("\n"))
@@ -3749,9 +3770,10 @@
     // HERESY 1166 (Viktor: «кнопочку полной распашки консоли на всю высоту»): the log the window's full height, kept as chosen;
     // asked while folded, it unfolds too
     function tall(on) {
+      if (on && POP && POP.win && !POP.win.closed) { try { POP.win.focus(); } catch (e) { /* over the others already */ } return; }   // HERESY 1809
       dock.classList.toggle("is-tall", on);
       $("logDockTall").setAttribute("aria-pressed", on ? "true" : "false");
-      $("logDockTall").textContent = on ? "\u2921" : "\u2922";
+      $("logDockTall").innerHTML = window.HeresyIcons ? window.HeresyIcons.ui(on ? "minimize" : "maximize") : (on ? "\u2921" : "\u2922");   // HERESY 1804: icons
       store("yue2.logDockTall", on ? "1" : null);
       if (on && dock.classList.contains("is-folded")) fold(false);
       if ($("logDockFollow").checked) $("logDockBody").scrollTop = $("logDockBody").scrollHeight;
@@ -5209,6 +5231,7 @@
     $("takeActions").innerHTML = (HCh && !take.session
       ? '<button type="button" class="btn ghost small icon-act" id="likeTake" data-rate="1" aria-pressed="' + (rated > 0) + '" aria-label="Like" data-tip="Like">' +
         (IC ? IC.ui("like") : "👍") + "</button>" +
+        (HCh.markBtns ? HCh.markBtns(take.name, "btn ghost small icon-act") : "") +   // HERESY 1802: 🔥 💎 after 👍
         '<button type="button" class="btn ghost small icon-act" id="dislikeTake" data-rate="-1" aria-pressed="' + (rated < 0) + '" aria-label="Dislike" data-tip="Dislike">' +
         (IC ? IC.ui("dislike") : "👎") + "</button>" : "") +
       '<button type="button" class="btn ghost small icon-act' + (take.favorite ? " is-on" : "") + '" id="favTake" aria-pressed="' +
@@ -6256,11 +6279,14 @@
   }
 
   function toggleFavorite(take) {
-    return updateTake(take, { favorite: !take.favorite }).then(function (entry) {
+    // HERESY 1802: lit at the click and held over a list the lab read before it (a like's answer put it out again, 10 s at times)
+    var HC0 = window.HeresyCollection, want = !take.favorite, mark = HC0 && HC0.markFavorite && !take.session;
+    if (mark) HC0.markFavorite(take.name, want);
+    return updateTake(take, { favorite: want }).then(function (entry) {
       var HC = window.HeresyCollection;                 // HERESY 1105: the Librarian's cards follow at once
       if (HC && HC.markFavorite) HC.markFavorite(take.name, !!entry.favorite);
       toast(entry.favorite ? "Kept as a favourite: " + displayTitle(entry) : "Removed from favourites: " + displayTitle(entry));
-    }).catch(function (error) { toast(error.message, "bad"); });
+    }).catch(function (error) { if (mark) HC0.markFavorite(take.name, !want); toast(error.message, "bad"); });
   }
 
   // HERESY 1049: a rename from anywhere (the Librarian's cards and sheet, the menu); true when it changed
@@ -7023,6 +7049,7 @@
   ["playing", "pause", "emptied"].forEach(function (ev) { audio.addEventListener(ev, function () { clearTimeout(stall.timer); }); });
   window.ruachPlayerChecks = { stall: stall, listenOff: function (v) { if (v !== undefined) STATE.listenOff = !!v; return !!STATE.listenOff; } };   // for the checks
   audio.addEventListener("ended", function () {
+    if (EARLY.part && audio.currentSrc === EARLY.part.src) return void earlyRanOut();   // HERESY 1803: what had come ran out, not the take
     paintPlayButton(false); markPlaying();
     if (repeatMode() === "one") { audio.currentTime = 0; audio.play().catch(function () {}); return; }   // HERESY 1106
     if (playOn() || repeatMode() === "all" || STATE.playZone === "playlist") stepTake(1);   // HERESY 1731: a playlist plays on
@@ -7204,13 +7231,14 @@
     if (XFB.urls[url]) { if (done) done(XFB.urls[url]); return; }
     if (done) (XFB.wait[url] = XFB.wait[url] || []).push(done);
     if (XFB.pending[url]) return;
-    var q = XFB.pending[url] = { got: 0, total: 0 };
+    var q = XFB.pending[url] = { got: 0, total: 0, t0: Date.now(), parts: null, type: "" };   // HERESY 1803: when it began, what has come
     var finish = function (b) {
       delete XFB.pending[url];
       var w = XFB.wait[url] || [];
       delete XFB.wait[url];
       if (b && !XFB.urls[url]) { XFB.urls[url] = URL.createObjectURL(b); XFB.bytes[url] = b.size; XFB.order.push(url); xfTrim(); }
       w.forEach(function (f) { try { f(XFB.urls[url] || ""); } catch (e) { console.warn(e); } });
+      if (XFB.after && STATE.playerTake && url === takeAudioUrl(STATE.playerTake)) { XFB.after = false; xfPrefetch(); }   // HERESY 1803: the next once this one is whole
       holdPaint();
     };
     fetch(url).then(function (r) {
@@ -7222,6 +7250,7 @@
         return reader.read().then(function (x) {
           if (x.done) return new Blob(parts, { type: type });
           parts.push(x.value); q.got += x.value.length; holdPaint();
+          q.parts = parts; q.type = type; early(url, q);   // HERESY 1803
           return pump();
         });
       })();
@@ -7245,7 +7274,9 @@
   }
   function xfPrefetch() {                              // as a take of the playlist plays: it and the next one, whole
     if (!STATE.playerTake) return;                     // HERESY 1746: always now (1737: with a crossfade only)
-    xfKeep(takeAudioUrl(STATE.playerTake));
+    var cur = takeAudioUrl(STATE.playerTake);
+    xfKeep(cur);
+    if (XFB.pending[cur]) { XFB.after = true; return; }   // HERESY 1803: while the one playing comes, it keeps the whole line; the next after it
     var n = xfNextName(), t = n ? findTake(n) : null;
     if (t) xfKeep(takeAudioUrl(t));
   }
@@ -7256,20 +7287,23 @@
   function playerHolds(url) {                          // the player has this take: its address, and the element on its stream, its blob or waiting for it
     if (!url || audio.dataset.url !== url) return false;   // (whoever set the element's src past loadPlayer, a check or an error's fallback, is seen)
     var src = audio.getAttribute("src") || "";
-    return src === url || (!!src && src === xfBlob(url)) || (!src && HOLD.url === url);
+    return src === url || (!!src && src === xfBlob(url)) || (!src && HOLD.url === url) ||
+      (!!src && EARLY.url === url && !!EARLY.part && src === EARLY.part.src);   // HERESY 1803: playing from what came
   }
   function holdWhole(take, url) {
     var have = xfBlob(url);
     if (!take || take.session || !url || /^blob:/.test(url) || have) { HOLD.url = ""; HOLD.want = false; holdPaint(); audio.src = have || url; return; }
+    earlyReset(url, take);                             // HERESY 1803
     HOLD.url = url; HOLD.want = false;
     realPause(); audio.removeAttribute("src"); audio.load();   // the take before goes now; this one waits for its whole (a fast line: well within the grace)
     holdPaint();
     var slow = setTimeout(function () {                // a slow line: the stream gives the length and the wave meanwhile; ▶ still waits for the whole
-      if (audio.dataset.url === url && HOLD.url === url && !audio.getAttribute("src")) audio.src = url;
+      if (audio.dataset.url === url && HOLD.url === url && !audio.getAttribute("src") && !earlyOn()) audio.src = url;   // 1803: not beside an early start (one line, one download)
     }, HOLD_GRACE);
     xfKeep(url, function (blob) {
       clearTimeout(slow);
       if (audio.dataset.url !== url) return;            // another take since
+      if (EARLY.url === url && (EARLY.part || EARLY.resumeAt != null)) { if (blob) earlyWhole(blob); return; }   // HERESY 1803: playing from what came
       var want = HOLD.want, streaming = !!audio.getAttribute("src");
       HOLD.url = ""; HOLD.want = false; holdPaint();
       if (!blob) {                                      // not held (a dropped line, an older server): the stream plays it, as before
@@ -7298,11 +7332,111 @@
   function holdPaint() {
     var el = $("pbHold");
     if (!el) return;
-    var on = !!(HOLD.url && HOLD.url === audio.dataset.url), q = on ? XFB.pending[HOLD.url] : null;
+    var early1803 = !!(EARLY.part && EARLY.url === audio.dataset.url);   // HERESY 1803: how much has come, while it plays from it too
+    var on = !!(HOLD.url && HOLD.url === audio.dataset.url) || early1803, q = on ? XFB.pending[HOLD.url || EARLY.url] : null;
     el.hidden = !on;
     if (on) el.textContent = q && q.total ? Math.min(99, Math.floor(100 * q.got / q.total)) + " %" : "\u2026";
     $("playbar").classList.toggle("is-holding", on && HOLD.want);
   }
+  // HERESY 1803 (Viktor 28.10.2026: «У нас сейчас кешируется весь первый трек. На удалёнке время занимает. Что, если начинать воспроизведение с первой
+  // минуты закешированной?»): on a line slow enough that the whole would keep ▶ waiting, the take starts from what has come once its first minute is in
+  // and the rest will come before the playing reaches it (the measured pace, a margin kept). What came plays as one file: measured 28.10, a FLAC cut short
+  // says the whole take's length and, where its bytes end, jumps to that end and fires ended, and a seek past them stands silent. So a longer piece is put
+  // in its place 20 s before it runs out and the whole when it is in, each at the quietest moment of the wave ahead; a line that falls behind, or a seek
+  // past what came, waits on the bar as the hold did and goes on from where it stood. A fast line (the whole within 3 s) waits for the whole, as before.
+  // Engine → Defaults → Start playing: «when the whole take is in» is 1746 as it was.
+  var EARLY = { url: "", take: null, part: null, next: null, timer: 0, resumeAt: null, swaps: 0 };
+  function earlyOn() { return recall("yue2.holdStart") !== "whole"; }
+  function earlySecs() { var s = +(EARLY.take && EARLY.take.seconds) || 0; return s > 0 ? s : (isFinite(audio.duration) ? audio.duration : 0); }
+  function earlyDrop(p) { if (p && p.mine) { try { URL.revokeObjectURL(p.src); } catch (e) { /* gone */ } } }
+  function earlyReset(url, take) {
+    clearTimeout(EARLY.timer);
+    earlyDrop(EARLY.part); earlyDrop(EARLY.next);
+    EARLY.url = url || ""; EARLY.take = take || null; EARLY.part = null; EARLY.next = null; EARLY.resumeAt = null; EARLY.swaps = 0;
+  }
+  function earlyPart(q) {                              // what has come as one file, and how much of the take it holds (a margin: a FLAC's bitrate varies)
+    return { src: URL.createObjectURL(new Blob(q.parts.slice(), { type: q.type || "audio/flac" })), secs: earlySecs() * q.got / q.total * 0.97, mine: true };
+  }
+  function early(url, q) {
+    if (!earlyOn() || EARLY.url !== url || EARLY.part || EARLY.resumeAt != null || audio.dataset.url !== url || HOLD.url !== url || !HOLD.want) return;
+    var secs = earlySecs(), took = (Date.now() - q.t0) / 1000;
+    if (!q.total || !secs || took < 1 || q.got >= q.total) return;
+    var rate = q.got / took, left = (q.total - q.got) / rate, have = secs * q.got / q.total;
+    if (left < 3) return;                              // the whole is near: it waits for it, as before
+    if (have < Math.min(60, secs / 2)) return;         // its first minute (half a short take)
+    if (left > secs - 20) return;                      // the rest would not come before the playing reaches it: more first
+    EARLY.part = earlyPart(q);
+    HOLD.url = ""; HOLD.want = false;
+    audio.src = EARLY.part.src;
+    realPlay().catch(playRefused);
+    holdPaint();
+  }
+  function quietAt(from, to) {                         // the quietest moment of the wave between two times (its peaks)
+    var pk = STATE.peaks, d = earlySecs();
+    if (!pk || pk === "none" || !pk.length || !d || to <= from) return from;
+    var n = pk.length, a = Math.max(0, Math.floor(from / d * n)), b = Math.min(n - 1, Math.ceil(to / d * n)), best = a;
+    for (var i = a; i <= b; i++) if (pk[i] < pk[best]) best = i;
+    return Math.max(from, best / n * d);
+  }
+  function earlyPut(p, at, play) {                     // the new file in the old one's place, at a time, playing as it was
+    var old = EARLY.part;
+    clearTimeout(EARLY.timer); EARLY.timer = 0;
+    if (EARLY.next && EARLY.next !== p) earlyDrop(EARLY.next);
+    EARLY.next = null;
+    EARLY.part = p.whole ? null : p;
+    EARLY.swaps++;
+    audio.src = p.src;
+    var back = function () {
+      audio.removeEventListener("loadedmetadata", back);
+      try { audio.currentTime = at; } catch (e) { /* not seekable yet */ }
+      if (play) realPlay().catch(playRefused);
+    };
+    audio.addEventListener("loadedmetadata", back);
+    if (old && old !== p) setTimeout(function () { earlyDrop(old); }, 4000);
+    holdPaint();
+  }
+  function earlySwap(p) {                              // at the quietest moment of the next seconds, before what plays runs out
+    clearTimeout(EARLY.timer);
+    if (EARLY.next && EARLY.next !== p) earlyDrop(EARLY.next);
+    EARLY.next = p;
+    var now = audio.currentTime, end = EARLY.part ? EARLY.part.secs - 3 : now + 8;
+    var at = quietAt(now + 0.4, Math.max(now + 0.5, Math.min(now + 40, end))), url = EARLY.url;   // 28.10: the change stands 0.3 s, so the quietest of all the time it has
+    EARLY.timer = setTimeout(function () {
+      EARLY.timer = 0;
+      if (EARLY.url !== url || audio.dataset.url !== url || EARLY.next !== p) return;
+      earlyPut(p, audio.currentTime, !audio.paused);
+    }, Math.max(0, (at - now) / (audio.playbackRate || 1) * 1000));
+  }
+  function earlyWhole(blob) {                          // the whole is in: in its place (at once when the bar was waiting or nothing plays)
+    var p = { src: blob, whole: true, mine: false };
+    if (EARLY.resumeAt != null) { var at = EARLY.resumeAt; EARLY.resumeAt = null; HOLD.url = ""; HOLD.want = false; earlyPut(p, at, true); return; }
+    if (EARLY.part && audio.currentSrc === EARLY.part.src && !audio.paused) return earlySwap(p);
+    earlyPut(p, audio.currentTime, !audio.paused);
+  }
+  function earlyWait(at) {                             // the line fell behind, or a seek went past what came: the bar waits as the hold did
+    clearTimeout(EARLY.timer); EARLY.timer = 0;
+    EARLY.resumeAt = at;
+    HOLD.url = EARLY.url; HOLD.want = true; holdPaint();
+  }
+  function earlyRanOut() {
+    var q = XFB.pending[EARLY.url], at = EARLY.part.secs;
+    if (q && q.parts) { var p = earlyPart(q); if (p.secs > at + 10) { earlyPut(p, at, true); return; } earlyDrop(p); }
+    earlyWait(at);
+  }
+  audio.addEventListener("timeupdate", function () {   // a longer piece 20 s before this one runs out
+    if (!EARLY.part || EARLY.next || audio.paused || audio.currentSrc !== EARLY.part.src || EARLY.part.secs - audio.currentTime > 20) return;
+    var q = XFB.pending[EARLY.url];
+    if (!q || !q.parts) return;
+    var p = earlyPart(q);
+    if (p.secs > EARLY.part.secs + 5) earlySwap(p); else earlyDrop(p);
+  });
+  audio.addEventListener("seeking", function () {      // past what came: wait for it there
+    if (EARLY.part && audio.currentSrc === EARLY.part.src && audio.currentTime > EARLY.part.secs - 1) { var at = audio.currentTime; realPause(); earlyWait(at); }
+  });
+  window.ruachEarly = function () {                    // for the checks
+    return { on: earlyOn(), url: EARLY.url, part: EARLY.part ? +EARLY.part.secs.toFixed(1) : null, next: !!EARLY.next, swaps: EARLY.swaps, resumeAt: EARLY.resumeAt,
+             blob: /^blob:/.test(audio.currentSrc || ""), at: +audio.currentTime.toFixed(2), paused: audio.paused };
+  };
   window.ruachHeld = function () {                     // for the checks
     var u = audio.dataset.url || "";
     return { url: u, held: !!xfBlob(u), blob: /^blob:/.test(audio.currentSrc || ""), waiting: !!(HOLD.url && HOLD.url === u), want: HOLD.want, kept: XFB.order.length };
@@ -7339,6 +7473,43 @@
   }
   $("playNew").addEventListener("click", function () { store("yue2.playNew", playNew() ? "off" : null); paintPlayNew(); });
   paintPlayNew();
+  // HERESY 1804 (Viktor 28.10.2026: «Дать юзеру максимальную свободу изменять дефолты в Engine настройках… Дефолты выставляем как у нас сейчас в Студии»):
+  // Engine → Defaults, each field a yue2.* key (user/settings.json keeps it as every key), empty = the studio's own; the player's and the lists' own
+  // switches set the same keys, and the card reads them again whenever Engine opens
+  var SEEK = { btn: ["yue2.seekBtn", 15], key: ["yue2.seekKey", 5], shift: ["yue2.seekKeyShift", 30] };
+  function seekStep(kind) { var k = SEEK[kind], v = +recall(k[0]); return v > 0 && v <= 600 ? v : k[1]; }
+  function paintSeekTips() {
+    var b = seekStep("btn"), k = seekStep("key"), s = seekStep("shift");
+    $("pbRew").setAttribute("aria-label", "Back " + b + " s"); $("pbFwd").setAttribute("aria-label", "On " + b + " s");
+    $("pbRew").dataset.tip = "Back to the last mark of every " + b + " s; the \u2190 key: every " + k + " s, with Shift every " + s + " s";
+    $("pbFwd").dataset.tip = "On to the next mark of every " + b + " s; the \u2192 key: every " + k + " s, with Shift every " + s + " s";
+  }
+  function paintDefaults() {
+    if (!$("defaultsCard")) return;
+    Array.prototype.forEach.call(document.querySelectorAll("#defaultsCard [data-def]"), function (sel) { sel.value = recall(sel.dataset.def) || sel.dataset.defIs; });
+    Array.prototype.forEach.call(document.querySelectorAll("#defaultsCard [data-def-check]"), function (c) {
+      var v = recall(c.dataset.defCheck);
+      c.checked = c.dataset.defOn ? v === c.dataset.defOn : v !== c.dataset.defOff;
+    });
+  }
+  function defaultsChanged() {
+    paintClickPlay(); paintPlayNew(); paintSeekTips(); paintDefaults(); paintLibrary();
+    if (window.HeresyCollection && window.HeresyCollection.repaint) window.HeresyCollection.repaint();
+  }
+  if ($("defaultsCard")) {
+    $("defaultsCard").addEventListener("change", function (e) {
+      var sel = e.target.closest("[data-def]"), c = e.target.closest("[data-def-check]");
+      if (sel) store(sel.dataset.def, sel.value === sel.dataset.defIs ? null : sel.value);
+      if (c) store(c.dataset.defCheck, c.dataset.defOn ? (c.checked ? c.dataset.defOn : null) : (c.checked ? null : c.dataset.defOff));
+      defaultsChanged();
+    });
+    $("defaultsReset").addEventListener("click", function () {
+      ["yue2.seekBtn", "yue2.seekKey", "yue2.seekKeyShift", "yue2.holdStart", "yue2.clickPlay", "yue2.playNew", "yue2.dblPlay", "yue2.showDisliked"].forEach(function (k) { store(k, null); });
+      defaultsChanged();
+    });
+  }
+  window.ruachPaintDefaults = paintDefaults;
+  paintSeekTips(); paintDefaults();
   // HERESY 1275 (Viktor 28.09.2026: «звуковое оповещение при окончании генерации»): a sound when a run made here ends, two
   // notes up when it is done, two down when it failed; made here (no file), as loud as the player, none when it is muted
   function runChime() { return recall("yue2.runChime") !== "off"; }
@@ -7389,8 +7560,8 @@
   }
   $("autoplay").addEventListener("click", function () { store("yue2.playOn", playOn() ? "off" : null); paintPlayOn(); });
   $("prevTake").addEventListener("click", function () { stepTake(-1); });
-  $("pbRew").addEventListener("click", function () { seekMark(15, -1); });   // HERESY 1169
-  $("pbFwd").addEventListener("click", function () { seekMark(15, 1); });
+  $("pbRew").addEventListener("click", function () { seekMark(seekStep("btn"), -1); });   // HERESY 1804: the step from Engine → Defaults   // HERESY 1169
+  $("pbFwd").addEventListener("click", function () { seekMark(seekStep("btn"), 1); });
   $("nextTake").addEventListener("click", function () { stepTake(1); });
   paintPlayOn();
   audio.addEventListener("emptied", markPlaying);
@@ -9378,7 +9549,7 @@
       status.models = list.map(function (m) { return m.id || ""; });
       // HERESY 1006: vLLM lists only what it serves, so every model it names is loaded.
       // Asking it the other runners' native paths only fills the console with 404s.
-      status.vllm = list.length > 0 && list.every(function (m) { return m.owned_by === "vllm"; });
+      status.vllm = list.length > 0 && list.every(function (m) { return m.owned_by === "vllm" || m.owned_by === "ruach"; });   // 1811: and the studio's own
     }).catch(function (error) {
       status.error = error.status ? error.message : unreachable(base);
       throw status;
@@ -9434,6 +9605,7 @@
       : '<span class="dim">none yet · ' + (!status.configured ? "set the chat server under Engine"
         : (status.available ? "load a model in the chat server" : "the chat server is not answering")) + "</span>";
     $("museBtn").disabled = !status.use;
+    if ($("ownUse")) paintOwn(OWN);   // HERESY 1811: «Use this writer» lit while the Writer asks the studio's own
     // the state is the Chat Server button; what to do about it is its tip
     var link = $("chatLink");
     link.dataset.s = status.available ? "on" : "off";
@@ -9482,6 +9654,49 @@
   }
 
   $("chatUrl").value = recall("yue2.chatUrl") || "";
+  // HERESY 1811 (Viktor 28.10.2026: «прикручивай как Local Studio LLM… и пусть это будет опция по умолчанию для установок, где VRAM позволяет. Так не
+  // нужно будет юзеру коннектиться на внешние сервисы»): the studio's own writer behind the lab's /llm/v1. Where its weights are here and no chat server
+  // was ever chosen, the Writer asks it: that default follows the page's own address and is not stored, so it holds through the https door too
+  var OWN = {}, OWN_SCOPE = (function () { try { return new URLSearchParams(location.search).get("scope") || ""; } catch (e) { return ""; } })();
+  function ownBase() { return location.origin + "/lab/llm/v1"; }
+  function paintOwn(st) {
+    OWN = st || {};
+    var here = OWN.here || [], ready = here.length > 0 && !!OWN.server;
+    $("ownState").textContent = !here.length ? "not here" : (!OWN.server ? "llama-server not built" : (!OWN.running ? "asleep"
+      : (OWN.gpu === null || OWN.gpu === undefined ? "on the processor" : (OWN.fit ? "on GPU " + OWN.gpu + " and the processor" : "on GPU " + OWN.gpu))));
+    $("ownState").dataset.s = ready ? "ready" : "missing";
+    Array.prototype.forEach.call($("ownVariant").options, function (o) { o.disabled = here.indexOf(o.value) < 0; });
+    if (OWN.variant) $("ownVariant").value = OWN.variant;
+    $("ownVariant").disabled = here.length < 2;
+    $("ownUse").disabled = !ready;
+    $("ownUse").classList.toggle("is-on", ready && chatBase() === ownBase());
+    $("ownStop").disabled = !OWN.running;
+    $("ownHint").textContent = !here.length ? "Not here yet: Engine → Models and LoRAs → Studio writer fetches it (6.7 GB; compact 5.5 GB)."
+      : (!OWN.server ? "Its weights are here; llama.cpp's llama-server is not built yet: launcher/extras.sh builds it."
+        : "Qwopus3.5-9B-v3 (Jackrong's, on Qwen3.5-9B, Apache-2.0), quantized with AutoRound, through llama.cpp on this machine: nothing leaves it. It starts at the first question and leaves the card after 10 minutes without one.");
+  }
+  function ownStatus() {
+    return fetch("/lab/llm/status").then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }).then(function (st) {
+      paintOwn(st);
+      if (!recall("yue2.chatUrl") && (st.here || []).length && st.server && $("chatUrl").value !== ownBase()) {
+        $("chatUrl").value = ownBase();
+        refreshChat().catch(function () {});
+      }
+      return st;
+    });
+  }
+  function ownPost(path, body) {
+    return fetch("/lab/llm/" + path + (OWN_SCOPE ? "?scope=" + encodeURIComponent(OWN_SCOPE) : ""), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) })
+      .then(function (r) { return r.json(); }).then(paintOwn).catch(function () { ownStatus(); });
+  }
+  $("ownUse").addEventListener("click", function () {
+    $("chatUrl").value = ownBase();
+    $("chatUrl").dispatchEvent(new Event("change", { bubbles: true }));
+    paintOwn(OWN);
+  });
+  $("ownStop").addEventListener("click", function () { ownPost("stop"); });
+  $("ownVariant").addEventListener("change", function () { ownPost("variant", { variant: this.value }); });
+  ownStatus();
   all("[data-chat-url]").forEach(function (b) {   // HERESY 1012
     b.addEventListener("click", function () {
       $("chatUrl").value = b.dataset.chatUrl;
@@ -10370,6 +10585,12 @@
     if (!take) return;
     var r = HC ? HC.rating(take.name) : 0;
     $("pbLike").setAttribute("aria-pressed", r > 0 ? "true" : "false");
+    ["pbFire", "pbGem"].forEach(function (id) {        // HERESY 1802: 🔥 💎 of the take in the player
+      var b = $(id);
+      if (!b || !HC || !HC.markOf) return;
+      b.dataset.name = take.name;
+      b.setAttribute("aria-pressed", HC.markOf(take.name, b.dataset.hmark) ? "true" : "false");
+    });
     $("pbDislike").setAttribute("aria-pressed", r < 0 ? "true" : "false");
     $("pbFav").setAttribute("aria-pressed", take.favorite ? "true" : "false");
   }
@@ -10699,7 +10920,7 @@
         : { icon: "🛡", label: HC.isProtected(name) ? "Take its protection off" : "Protect it", hint: HC.isProtected(name) ? "" : "never to the trash, never deleted", checked: HC.isProtected(name),
             action: function () { HC.protect([name], !HC.isProtected(name)); } }) : null,
       HC ? { icon: "✍", label: "Note…", action: function () {
-        window.HeresyDialog.prompt("A note on “" + displayTitle(take) + "”\n\nEmpty removes it.", HC.note(name), { ok: "Keep the note", max: 4000 })
+        window.HeresyDialog.prompt("A note on “" + displayTitle(take) + "”\n\nEmpty removes it.", HC.note(name), { ok: "Keep the note", max: 600, area: true, rows: 5 })   // HERESY 1802: 600 characters
           .then(function (t) { if (t !== null) HC.setNote(name, t).then(paintNote); });
       } } : null,
       { icon: "Aa", label: "Rename…", action: function () {
@@ -11471,7 +11692,7 @@
     $("orKey").value = orKey;
     $("orRemember").checked = !!orKey;
     // HERESY 1133 (Viktor): OpenRouter by default when no chat server is set (Qwen and DeepSeek in the quick picks)
-    $("assistProvider").value = saved.provider ? (saved.provider === "openrouter" ? "openrouter" : "engine") : (recall("yue2.chatUrl") ? "engine" : "openrouter");
+    $("assistProvider").value = saved.provider ? (saved.provider === "openrouter" ? "openrouter" : "engine") : (recall("yue2.chatUrl") || $("chatUrl").value ? "engine" : "openrouter");   // 1811: the studio's own writer counts
     $("orModel").value = saved.orModel || "deepseek/deepseek-v4-pro";
     saveAssist();                                     // HERESY 1167: now, with the writer and the model put back
     all("[data-or-model]").forEach(function (b) {

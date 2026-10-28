@@ -27,7 +27,7 @@ UA = "RuachStudio (an adapter fetched on the user's word)"
 TYPES = ("LORA", "LoCon", "DoRA")
 PICKLE = (".ckpt", ".pt", ".pth", ".bin", ".pkl")
 # Civitai's base models (its /api/v1/enums, 11.10.2026) by the family whose painters take them: Qwen is Qwen-Image's own (2509, 2512)
-BASES = {"krea2": ("Krea 2",), "qwen-image-2512": ("Qwen",), "qwen-image-2.1": ("Qwen 2.1",)}   # HERESY 1405: SDXL gone
+BASES = {"qwen-image-2512": ("Qwen",), "qwen-image-2.1": ("Qwen 2.1",)}   # HERESY 1405: SDXL gone; 1800: Krea 2 (gone since 1428) too
 ROOM = 256 * 2 ** 20                                   # what the disk keeps free beyond the file
 LOCK = threading.Lock()
 JOB = {}

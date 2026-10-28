@@ -7237,3 +7237,78 @@ html.booting.veil-wait .boot-veil .boot-line i { width: 28%; animation: boot-swe
 /* HERESY 1797: the DAW's «beta» in its own head, only over the whole window (in the room its drawer's summary carries it) */
 .mx-beta { display: none; align-self: center; margin-left: 0; }
 body.daw-full .mx-beta { display: inline-block; }
+
+/* HERESY 1802 (Viktor 27.10.2026: «Опять какая-то хрень с нижней страницы частью Библиотекаря. Сдвинулось над плеером вверх»): while the Trainer's bars
+   stand, 1653's spacer under the Librarian's layout left a band above the player and the sticky workspace column rode up with the layout's end (1733 had
+   cured the room's own 60 px the same way); the cards' grid carries that room now, under its last card, and the column reaches the player */
+body.has-train-strip .coll-col::after { height: 0; }
+.coll-col .coll-layout { padding-bottom: 0; }
+.coll-col #collGrid { padding-bottom: calc(60px + var(--train-strip-room, 0px)); }
+/* HERESY 1802 (Viktor: «когда кнопка || (играет) на карточке активна - заполни бекграунд кнопки кружка цветом, а саму кнопку в инверсию»): found at a glance */
+.coll-play.is-playing, .pl-play.is-playing { background: var(--amber); color: var(--on-amber); border-radius: 50%; box-shadow: none; }
+.coll-play.is-playing:hover, .pl-play.is-playing:hover { background: var(--amber-hi); color: var(--on-amber); }
+.art-cap .coll-play.is-playing { background: rgba(241, 236, 228, .92); color: #1b1410; }
+/* HERESY 1802: 🔥 and 💎, each lit in its own colour */
+.hmark-fire[aria-pressed="true"] { opacity: 1; color: #e8742a; }
+.hmark-gem[aria-pressed="true"] { opacity: 1; color: #3fb6c8; }
+.hmark[aria-pressed="true"] .ui-ico { fill: currentColor; fill-opacity: .28; }
+/* HERESY 1802: a workspace with a note, its name underlined with dots; a short note's count of characters */
+.coll-place[data-has-note] > span:first-child { text-decoration: underline dotted color-mix(in srgb, var(--amber) 60%, transparent); text-underline-offset: 3px; }
+.hd-count { text-align: right; font-size: 11px; color: var(--muted); margin: 4px 2px 0; font-variant-numeric: tabular-nums; }
+.hd-count.is-full { color: var(--amber-hi); }
+/* HERESY 1802: the ♪ sheet's First Wave tab, the vocabulary page in its body */
+.hi-fw-cell { padding: 0 !important; }
+.hi-fw { width: 100%; height: min(70vh, 760px); border: 0; display: block; background: transparent; }
+
+/* HERESY 1804 (his picture 28.10.2026: «Forge · 540 мс» under «Сервер Творец Тренер Огранщик Художник»): the log's tab keeps its room (its name, the line's
+   ping and its last line clipped in it, never over the buttons); the buttons go under it when the dock is narrower than both, and wrap there */
+.log-dock-head { flex-wrap: wrap; row-gap: 4px; }
+.log-dock-tab { min-width: 220px; overflow: hidden; }
+.log-dock-tab .net-say { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.log-dock-acts { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; justify-content: flex-end; row-gap: 4px; }
+/* HERESY 1804 (Viktor: «по кнопкам в фрейме системного лога ... захерачь понятные и внятные svg иконки»): the log's buttons as icons; Follow lit while it follows */
+.log-ico-btn, .log-dock-tall { min-width: 28px; padding: 3px 6px; display: inline-grid; place-items: center; }
+.log-ico-btn .ui-ico, .log-dock-tall .ui-ico, .log-follow .ui-ico { width: 15px; height: 15px; }
+.log-follow { position: relative; display: inline-grid; place-items: center; padding: 3px 6px; border-radius: var(--r-sm, 4px); cursor: pointer; color: var(--muted); }
+.log-follow input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.log-follow:has(input:checked) { color: var(--amber-hi); }
+.log-follow:has(input:focus-visible) { outline: 2px solid var(--amber); outline-offset: 1px; }
+.log-follow:hover { background: var(--hover); }
+
+/* HERESY 1809 (Viktor: «Лог сервера в отдельном окне имеет только Сервер и Художник. Синхронизируй там все вкладки»): the window's views, filtered as the dock's */
+.log-pop [data-body="server"][data-only="creator"] > .log-line:not([data-src="creator"]),
+.log-pop [data-body="server"][data-only="trainer"] > .log-line:not([data-src="trainer"]),
+.log-pop [data-body="server"][data-only="refiner"] > .log-line:not([data-src="refiner"]) { display: none; }
+.log-pop [data-body="server"][data-none]:not([data-none=""])::before { content: attr(data-none); display: block; padding: 6px 8px; color: var(--dim); }
+
+/* HERESY 1810 (Viktor 28.10.2026: «Нелогичная ширина колонок. Наоборот я бы сделал»): Engine → Writer and Artwork the other way round, the Artwork
+   wider (its painters' names are long), the Writer narrower */
+#view-engine .engine-grid > .card.eg-writer { flex: 1 1 420px; }
+#view-engine .engine-grid > .card.eg-art { flex: 2 1 560px; }
+/* HERESY 1810 («В Engine сделай "Главы" так же красиво, как в Творце»): the Engine's chapter heads as the Creator's (1683): the .label's size and
+   colour, the accent tick before it */
+#view-engine .card h4.mini { position: relative; padding-left: 9px; font-size: 11px; letter-spacing: .1em; font-weight: 400; color: var(--muted); }
+#view-engine .card h4.mini::before {
+  content: ""; position: absolute; left: 0; top: .12em; bottom: .12em; width: 2px; border-radius: 2px; pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--amber) 40%, transparent), color-mix(in srgb, var(--amber) 60%, transparent) 50%,
+    color-mix(in srgb, var(--amber) 40%, transparent)); }
+/* HERESY 1810: Defaults as Appearance: two parts under a thin line (stacked in a narrow card), the three seek steps on one row, a field no wider
+   than its words */
+.defaults-card { container-type: inline-size; }
+.defaults-card .look-parts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 28px; }
+.defaults-card .look-part { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.defaults-card .look-part + .look-part { padding-left: 28px; border-left: 1px solid var(--line-soft); }
+@container (max-width: 700px) {
+  .defaults-card .look-parts { grid-template-columns: minmax(0, 1fr); }
+  .defaults-card .look-part + .look-part { padding: 12px 0 0; border-left: 0; border-top: 1px solid var(--line-soft); }
+}
+.defaults-card .mini { margin: 0; }
+.defaults-card .look-checks { display: flex; flex-direction: column; gap: 7px; }
+.defaults-card .look-part > .field { max-width: 34em; }
+.defaults-card .seek-row { display: grid; grid-template-columns: repeat(3, minmax(0, 10em)); gap: 10px 16px; }
+.defaults-card .seek-row .field { margin: 0; min-width: 0; }
+.key-label { display: inline-flex; align-items: center; gap: 7px; }
+.key-icons { display: inline-flex; align-items: center; gap: 3px; color: var(--ink); }
+.key-icons .ui-ico { width: 16px; height: 16px; stroke-width: 1.8; }
+.key-icons .ui-rewind, .key-icons .ui-forward { width: 14px; height: 14px; stroke-width: 2; }
+.key-plus::before { content: "+"; margin: 0 2px; color: var(--muted); }

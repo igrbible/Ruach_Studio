@@ -113,6 +113,14 @@ EXTRAS = [
      "what": "YuE2-3B with Ruach Studio's own fine-tune folded in (YuE2-RS-FW, at seven points of its training: epoch x strength): 2.4x0.75 is the studio's default, the safest; from goldhub/YuE2-RS-Finetunes (CC BY-NC-SA 4.0). Compute chooses it beside m-a-p's backbones; the adapters themselves are not published",
      "variants": [dict({"id": f"{v}-{q}", "size": size, "files": [f"models/YuE2-3B-RS-FW-{v}-{q}.gguf"]}, **({"note": "the studio's default"} if v == FW_DEFAULT else {}))
                   for v in FW_MERGES for q, size in FW_SIZES.items()]},
+    # HERESY 1811 (Viktor 28.10.2026: «прикручивай как Local Studio LLM… дай выбор юзеру выбрать либо мой качественный квант, либо более сжатый»)
+    {"name": "writer", "label": "Studio writer",
+     "what": "Qwopus3.5-9B-v3 (Jackrong's fine-tune of Qwen3.5-9B, Apache-2.0), quantized with AutoRound and moved into GGUF bit for bit, from goldhub/Ruach_Studio_Models_v2: the Writer's own language model on this machine, through llama.cpp (vendor/llama.cpp, built by launcher/extras.sh); Engine → Writer chooses between those here",
+     "variants": [
+         {"id": "quality", "label": "Quality", "size": "6.7 GB", "note": "about 7.5 GB of VRAM with its 12K context: a 12 GB card",
+          "files": ["checkpoints/Qwopus3.5-9B-GGUF/Qwopus3.5-9B-v3-AR-Q4_0.gguf"]},
+         {"id": "compact", "label": "Compact", "size": "5.5 GB", "note": "about 6.5 GB of VRAM with its 12K context: an 8 GB card",
+          "files": ["checkpoints/Qwopus3.5-9B-GGUF/Qwopus3.5-9B-v3-AR-compact.gguf"]}]},
     {"name": "listener", "label": "Style listener",
      "what": "Qwen2.5-Omni-7B: hears the songs of a training set and writes each one's style tags; the GGUF ones run through llama.cpp (vendor/llama.cpp, built by you)",
      "variants": [
@@ -324,7 +332,7 @@ def _args(body):
         if name == "artwork":
             return ["--only", "none", "--artwork-q8" if v == "q8" else "--artwork", "--yes"], what
         return ["--only", "none", "--" + name, v, "--yes"], what
-    raise ValueError("say what to fetch: a part (missing, " + ", ".join(list(PARTS) + ["fw"]) + ") or an extra (backbone, ira, irae, fw, listener, artwork, qwen, qwen-fine, art-loras, trainer)")
+    raise ValueError("say what to fetch: a part (missing, " + ", ".join(list(PARTS) + ["fw"]) + ") or an extra (backbone, ira, irae, fw, writer, listener, artwork, qwen, qwen-fine, art-loras, trainer)")
 
 
 def _bytes(size):

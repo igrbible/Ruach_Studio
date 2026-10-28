@@ -93,18 +93,21 @@ def own_pin(repo):
 
 def flash_weights():
     """HERESY 1611: the folder FlashSR's three weights are in: the studio's own copy (fetched into models/upbundle/flashsr/weights/
-    at the pin on first use), else its author's dataset at its pinned revision, as before; why the first did not come is said."""
+    at the pin on first use), else its author's dataset at its pinned revision; why the first did not come is said. HERESY 1799
+    (Viktor 26.10.2026: «удаление .cache и hf_cache никогда не должно сломать ни одного из пайплайнов Студии»): the author's copy
+    comes into the same folder, never into a cache."""
     own = HOME / "flashsr" / "weights"
     if all((own / n).is_file() for n in FLASH_FILES):
         return own
-    from huggingface_hub import hf_hub_download, snapshot_download
+    from huggingface_hub import hf_hub_download
     try:
         for n in FLASH_FILES:
             hf_hub_download(OWN_REPO, "models/upbundle/flashsr/weights/" + n, revision=own_pin(OWN_REPO), local_dir=str(STUDIO))
-        return own
     except Exception as e:  # noqa: BLE001 - offline, a pin before 1611: the author's copy is the same bytes
         print(f"FlashSR: the studio's copy of the weights did not come ({type(e).__name__}: {e}); from its author", file=sys.stderr)
-        return Path(snapshot_download(FLASH_REPO, repo_type="dataset", revision=FLASH_REV))
+        for n in FLASH_FILES:
+            hf_hub_download(FLASH_REPO, n, repo_type="dataset", revision=FLASH_REV, local_dir=str(own))
+    return own
 
 
 def crossfade_chunks(x, length, overlap, run):
@@ -133,7 +136,7 @@ def apollo(x48):
     sys.path.insert(0, str(apollo_code()))
     from look2hear.apollo import Apollo
     own = HOME / "apollo" / "model_apollo_vocals_ep_54.ckpt"   # from the studio's own v2 (fetch-heresy.sh), else from its author
-    ckpt = str(own) if own.is_file() else hf_hub_download(APOLLO_REPO, "model_apollo_vocals_ep_54.ckpt", revision=APOLLO_REV)
+    ckpt = str(own) if own.is_file() else hf_hub_download(APOLLO_REPO, own.name, revision=APOLLO_REV, local_dir=str(own.parent))   # 1799: not a cache
     m = Apollo(sr=44100, win=20, feature_dim=384, layer=8)
     sd = torch.load(ckpt, map_location="cpu", weights_only=False)
     sd = sd.get("state_dict", sd) if isinstance(sd, dict) else sd

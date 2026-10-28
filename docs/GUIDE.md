@@ -91,6 +91,10 @@ The ♪ beside the style opens a table of 200 instruments the studio probed: the
 
 ![The instruments cheat-sheet](guide/instruments.png)
 
+### The First Wave's Vocabulary
+
+**YuE2-RS-FW**, the studio's own fine-tune (*Engine → Models and LoRAs → RS-FW merge*), learned from 32,633 tracks, and every word of their style lines is counted in **[its vocabulary](fw-vocabulary/index.html?lang=en)**: genres, instruments, voice, mood, the emotion words the audio itself was given, keys and BPM, and the scores' own keys (sections, meters, tempi, chords). Search it, filter it by kind and by source, see the words each one came with. A click puts a word into a style line in the order the model learned; *Copy* takes the line for the Style field. A word met in hundreds of tracks is a word the model understands; one met twice is a hint. The same reference as a document is on [the model's page](https://huggingface.co/goldhub/YuE2-RS-Finetunes/blob/main/FW-VOCABULARY.md).
+
 ### Lyrics and Text Profiles
 
 - Section tags on their own lines; YuE2 knows `[Intro]`, `[Verse]`, `[Pre-Chorus]`, `[Chorus]`, `[Bridge]`, `[Interlude]`, `[Outro]`.
@@ -555,6 +559,16 @@ A LoRA is a small adapter over both halves. **The style comes mostly from the so
 **A voice adapter learns from any form of the voice**, not only from singing: readings and audiobooks work too. Measured here (05.10.2026): an adapter trained on an actor's readings spoke in his voice, and when it sang, it sang with his colour. Name such an adapter by its kind (bass, baritenor, contralto…), never by a person: `lab/voice_kind.py` measures a set's voice from its speaking pitch.
 
 **How strong a voice adapter.** Heard on a song (19.10.2026: a narrator's adapter, rank 32, on a tragic folk ballad): at 1.0 the voice drowns the music and the take grows unstable, 0.8 still burns it, 0.7 is the ceiling to start from, and 0.4–0.6 carries the voice best. A low strength lets the persona's own pitch go and keeps the voice's tonality: the song takes its colour, not its stamp. Its two halves are not alike: the music half (AR) writes the score with the model, for both staves, and a voice taught on speech mutes the notes when it stands high; keep it at 0.5 at most, and give the sound half (NAR), which carries the timbre, up to 1.0 (heard the same day: AR 0.4 with NAR 1.0 kept the music whole and the voice steady). The sliders draw a voice adapter's road so: an adapter whose name says voice or vocal turns red past 0.5 on the music half and past 1.0 on the sound half.
+
+### A Voice of Your Own: Questions from the Field
+
+Answers given on GitHub (issue #2) to someone after a lead vocal alone, kept here.
+
+- **A take with the voice alone.** YuE2 learned to sing from whole songs, and its phrasing leans on the music under it: «a cappella» in the style makes it reach for harmonies or for the band. Ask for one quiet thing under the voice instead (a soft pad, a single acoustic guitar) with `solo lead, single voice, no harmonies, no backing vocals, dry vocal, close mic`, then split the take in the Refiner (eight stems): *Whole lead* brings back what the split put among the backing voices, *Voice upscale* redraws the air the separator dulled. The less there is under the voice, the cleaner the stem.
+- **A voice adapter from your own recordings.** Dry lead vocals of one singer with their lyrics, at 44.1 or 48 kHz from lossless sources. The same light room on every clip harms less than rooms that differ, and a clip with heavy reverb is better left out than half cleaned: what a de-reverb leaves behind is learned as part of the voice.
+- **Rank.** 16 for one voice, 32 at most: the rank sets how much the adapter can change, not how close it comes to the singer.
+- **Likeness.** The sound half carries the timbre: play it at 0.8–1.0 with the music half at 0.3–0.5. Name the singer's sex and register in the style (`male baritone vocal`). Judge it on the weights it was trained on: an adapter learned on the base model tore the voice on a fine-tune, even at a low strength.
+- **The curves' bend at the end.** With *Stop at the plateau, then the sound half alone*, the music half stands still once the sound half stops getting better, and the sound half goes on alone: the curves change their shape there, and those last epochs are often where a voice comes out cleanest. When ar_ce nears 0 the music half knows the clips by heart: hear an earlier epoch (the green chips).
 
 ![The LoRA Trainer: a run's telemetry](guide/studio-train.png)
 

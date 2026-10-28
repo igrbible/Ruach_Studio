@@ -129,7 +129,7 @@ Qwen-Image 2512 的 **文本编码器**（Qwen2.5-VL-7B，约 15.5 GB）在显�
 
 ## 8. 适配器（LoRA）
 
-**放在哪里**：`artwork/loras/<家族>/`，家族就是画师的家族：`krea2`、`qwen-image-2512`、`qwen-image-2.1`。里面的文件夹在库里成为分组；和文件同名放在旁边的图（`NAME.jpg`、`NAME.png`、`NAME.preview.png`）会显示在它的卡片上；ComfyUI 的 LoRA Manager（`NAME.metadata.json`）或 Stability Matrix（`NAME.cm-info.json`）写在文件旁边的东西也会被读取。
+**放在哪里**：`artwork/loras/<家族>/`，家族就是画师的家族：`qwen-image-2512`、`qwen-image-2.1`。里面的文件夹在库里成为分组；和文件同名放在旁边的图（`NAME.jpg`、`NAME.png`、`NAME.preview.png`）会显示在它的卡片上；ComfyUI 的 LoRA Manager（`NAME.metadata.json`）或 Stability Matrix（`NAME.cm-info.json`）写在文件旁边的东西也会被读取。
 
 **列表与运行**：画师下面的列表最多八个适配器，一次运行最多四个生效；每个用自己的强度（滑块 0 到 1.5）；右键 **静音** 一个（它留在列表里，退出运行），强度为零的适配器也不加载。它的触发词显示在下面，点一个就放进提示词（运行也会自己加上生效适配器的触发词）。
 

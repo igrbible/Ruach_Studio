@@ -91,6 +91,10 @@ Das ♪ neben dem Stil öffnet eine Tabelle von 200 Instrumenten, die das Studio
 
 ![Der Spickzettel der Instrumente](guide/instruments.png)
 
+### Das Vokabular der Ersten Welle <!-- #the-first-wave-s-vocabulary -->
+
+**YuE2-RS-FW**, das eigene Fine-Tune des Studios (*Engine → Models and LoRAs → RS-FW merge*), hat aus 32.633 Tracks gelernt, und jedes Wort ihrer Stilzeilen ist in **[seinem Vokabular](fw-vocabulary/index.html?lang=de)** gezählt: Genres, Instrumente, Stimme, Stimmung, die Emotionswörter, die der Klang selbst bekam, Tonarten und BPM, und die Felder der Partituren (Teile, Taktarten, Tempi, Akkorde). Durchsuch es, filtere nach Art und Quelle, sieh, mit welchen Wörtern jedes ging. Ein Klick setzt ein Wort in eine Stilzeile, in der Reihenfolge, die das Modell gelernt hat; *Kopieren* nimmt die Zeile fürs Style-Feld mit. Ein Wort aus Hunderten Tracks versteht das Modell; eines, das zweimal vorkam, ist nur ein Hinweis. Dieselbe Referenz als Dokument steht auf [der Seite des Modells](https://huggingface.co/goldhub/YuE2-RS-Finetunes/blob/main/FW-VOCABULARY.md).
+
 ### Text und Textprofile <!-- #lyrics-and-text-profiles -->
 
 - Abschnitts-Tags in eigenen Zeilen; YuE2 kennt `[Intro]`, `[Verse]`, `[Pre-Chorus]`, `[Chorus]`, `[Bridge]`, `[Interlude]`, `[Outro]`.
@@ -555,6 +559,16 @@ Eine LoRA ist ein kleiner Adapter über beiden Hälften. **Der Stil kommt meist 
 **Ein Stimm-Adapter lernt aus jeder Form der Stimme**, nicht nur aus Gesang: Lesungen und Hörbücher gehen auch. Hier gemessen (05.10.2026): ein auf den Lesungen eines Schauspielers trainierter Adapter sprach mit seiner Stimme, und wenn er sang, sang er mit seiner Farbe. Benenne so einen Adapter nach seiner Art (Bass, Baritenor, Alt…), nie nach einer Person: `lab/voice_kind.py` misst die Stimme eines Sets an seiner Sprechtonhöhe.
 
 **Wie stark ein Stimmadapter.** Auf einem Song gehört (19.10.2026: der Adapter eines Sprechers, Rang 32, auf einer tragischen Folk-Ballade): bei 1.0 übertönt die Stimme die Musik und der Take wird instabil, bei 0.8 brennt sie noch durch, 0.7 ist die Decke, von der man ausgeht, und 0.4–0.6 trägt die Stimme am besten. Eine niedrige Stärke lässt die eigene Tonhöhe der Person los und behält die Tonalität der Stimme: der Song nimmt ihre Farbe an, nicht ihren Stempel. Seine zwei Hälften sind nicht gleich: die musikalische (AR) schreibt die Partitur mit dem Modell, für beide Systeme, und eine aus Sprache gelernte Stimme dämpft die Noten, wenn sie hoch steht; halte sie bei höchstens 0.5, und gib der klanglichen (NAR), die die Klangfarbe trägt, bis 1.0 (am selben Tag gehört: AR 0.4 mit NAR 1.0 hielten die Musik ganz und die Stimme stabil). Die Regler zeichnen den Weg eines Stimmadapters so: einer, dessen Name voice oder vocal sagt, wird auf der musikalischen Hälfte nach 0.5 rot und auf der klanglichen nach 1.0.
+
+### Eine eigene Stimme: Fragen aus der Praxis
+
+Antworten auf GitHub (issue #2) an jemanden, der nur den Leadgesang wollte, hier festgehalten.
+
+- **Eine Aufnahme nur mit der Stimme.** YuE2 hat das Singen an ganzen Liedern gelernt, und seine Phrasierung stützt sich auf die Musik unter der Stimme: «a cappella» im Stil zieht es zu Chören oder zur ganzen Band. Bitte lieber um eine einzige ruhige Sache unter der Stimme (ein weiches Pad, eine einzelne Akustikgitarre) mit `solo lead, single voice, no harmonies, no backing vocals, dry vocal, close mic`, und trenne die Aufnahme dann im Veredler (acht Stems): *Ganze Leadstimme* holt zurück, was die Trennung zu den Backgroundstimmen gelegt hat, *Stimmen-Upscale* zeichnet die Luft neu, die der Separator gedämpft hat. Je weniger unter der Stimme liegt, desto sauberer der Stem.
+- **Ein Stimm-Adapter aus eigenen Aufnahmen.** Trockener Leadgesang eines einzigen Sängers mit seinem Text, in 44,1 oder 48 kHz aus verlustfreien Quellen. Derselbe leichte Raum auf jedem Clip schadet weniger als verschiedene Räume, und ein Clip mit viel Hall bleibt besser draußen, als halb gereinigt zu werden: Was ein De-Reverb zurücklässt, wird als Teil der Stimme gelernt.
+- **Rang.** 16 für eine Stimme, höchstens 32: Der Rang legt fest, wie viel der Adapter ändern kann, nicht wie nah er dem Sänger kommt.
+- **Ähnlichkeit.** Die Klangfarbe trägt die Klanghälfte: spiel sie auf 0,8–1,0, die Musikhälfte auf 0,3–0,5. Nenne im Stil Geschlecht und Stimmlage des Sängers (`male baritone vocal`). Beurteile sie auf den Gewichten, auf denen er gelernt hat: Ein auf dem Basismodell gelernter Adapter zerriss die Stimme auf einem Fine-Tuning, selbst bei geringer Stärke.
+- **Der Knick der Kurven am Ende.** Mit *Am Plateau anhalten, dann nur die Klanghälfte* bleibt die Musikhälfte stehen, sobald die Klanghälfte nicht mehr besser wird, und die Klanghälfte macht allein weiter: Dort ändern die Kurven ihre Form, und gerade diese letzten Epochen geben oft die sauberste Stimme. Wenn ar_ce gegen 0 geht, kennt die Musikhälfte die Clips auswendig: hör eine frühere Epoche (die grünen Chips).
 
 ![Der LoRA-Trainer: die Telemetrie eines Laufs](guide/studio-train.png)
 

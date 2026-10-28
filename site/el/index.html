@@ -296,6 +296,7 @@
                        cursor: pointer; font-size: 20px; line-height: 1; }
   .vocab-panel iframe { flex: 1; width: 100%; border: 0; background: var(--ground); }
   @media (max-width: 600px) { .vocab-modal { padding: 0; } .vocab-panel { border-radius: 0; border: 0; } }
+  .warn-free { grid-column: 1 / -1; margin: 0 0 14px; padding: 12px 16px; border-left: 3px solid #d9a441; background: color-mix(in srgb, #d9a441 10%, transparent); border-radius: 6px; }
 </style>
 <script>
   // the visitor's day or night, kept in this browser only; the page works without it
@@ -331,7 +332,7 @@
     <h1>Τραγούδια από λέξεις και συγχορδίες<br>στο δικό σου μηχάνημα</h1>
     <p class="lead">Ένα ολόκληρο στούντιο γύρω από το <b>YuE2</b>, το ανοιχτό μοντέλο τραγουδιών. Γράφεις το ύφος και τους στίχους, και το στούντιο συνθέτει, τραγουδά και αποδίδει το τραγούδι στη <b>δική σου GPU</b>. Τα τραγούδια, οι λέξεις και οι ρυθμίσεις σου δεν φεύγουν ποτέ από εκεί.</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Πάρ' το από το GitHub</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.el.md">Διάβασε τον οδηγό</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Μοντέλα στο Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Κέρασέ με μια μηχανή καφέ</a></div>
-    <span class="rc"><b>2.0.0</b> · η πρώτη σταθερή έκδοση · Οκτώβριος 2026</span>
+    <span class="rc"><b>2.0.1</b> · ο δικός Συγγραφέας του Στούντιο · Οκτώβριος 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -518,6 +519,8 @@
           <li>Φτιαγμένο για ένα παράθυρο προγράμματος περιήγησης <b>1920×1080 στο 100 %</b></li>
           <li>Το ιδανικό: <b>2K</b> (2560×1440), 22″ ή μεγαλύτερη, 16:9 ή πλατύτερη</li>
           <li>Δύο θέματα για ώρες δημιουργίας: Scroll &amp; Brick τη μέρα, Scroll by Lamplight τη νύχτα, και 20 ακόμη</li></ul></div>
+        <!-- HERESY 1807 (Viktor 28.10.2026: «на всех наших карточках чёрным по белому… предупреди… Слишком массивная она у нас») -->
+        <p class="warn-free"><b>Όχι σε δωρεάν GPU στο cloud.</b> Το Ruach Studio δεν τρέχει στο Google Colab, στο Kaggle ή σε οποιαδήποτε δωρεάν GPU για notebooks, οπότε μη χάσεις ένα βράδυ εκεί: είναι ολόκληρο στούντιο, όχι notebook. Χτίζει τη μηχανή του σε C++/CUDA στο μηχάνημα όπου ζει, κρατά δίπλα έναν διακομιστή κι ένα εργαστήριο υπηρεσιών Python, και πιάνει περίπου 33 GB δίσκου (60 GB με τον Καλλιτέχνη). Η κάρτα, η μνήμη, ο δίσκος που σβήνεται και το όριο ωρών μιας δωρεάν συνεδρίας δεν τα σηκώνουν αυτά. Θέλει δικό σου υπολογιστή με Linux, ή διακομιστή που νοικιάζεις και κρατάς, με κάρτα NVIDIA: 24 GB για όλα, 16 GB με τα μικρότερα αντίγραφα του μοντέλου.</p>
         <div class="card"><h3>Προαιρετικά</h3><ul>
           <li>Ένας διακομιστής συνομιλίας για τον Συγγραφέα (vLLM, LM Studio, Ollama) ή ένα κλειδί OpenRouter</li>
           <li>Ένα DAW: REAPER, Waveform 14+, Bitwig</li>
@@ -659,7 +662,7 @@
   </div>
 
 <footer>
-  <div class="wrap"><span>Ροῦαχ Στούντιο · 2.0.0 · ένα έργο του <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Αλλαγές</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Μηχανή καφέ</a></span></div>
+  <div class="wrap"><span>Ροῦαχ Στούντιο · 2.0.1 · ένα έργο του <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Αλλαγές</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Μηχανή καφέ</a></span></div>
 </footer>
 
 <script src="../assets/wavesurfer.min.js"></script>
