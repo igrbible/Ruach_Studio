@@ -1,0 +1,6 @@
+ComfyUI-SeedVR2_VideoUpscaler (https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler), Apache-2.0 (LICENSE beside this file)
+commit 4490bd1f482e026674543386bb2a4d176da245b9 2025-12-24
+
+SeedVR2 itself: ByteDance Seed (https://github.com/ByteDance-Seed/SeedVR), Apache-2.0.
+Taken in by heresy/MISC/claude-arc/seedvr2/vendor_sr.py: inference_cli.py, src/ without src/interfaces (the ComfyUI nodes), configs_3b, configs_7b,
+pos_emb.pt, neg_emb.pt; unchanged. Weights: models/seedvr2 (heresy/fetch-heresy.sh --upscaler 3b|7b|all).

@@ -82,10 +82,15 @@
   }
   function load() {
     var asked = rateSeq;
-    return api("/catalog").then(function (d) {
+    // HERESY 1846: with the catalog, the takes timed already and whether each is sung to its end (a lab without it: none marked)
+    return Promise.all([api("/catalog"), api("/sung/marks").catch(function () { return { marks: {} }; })]).then(function (both) {
+      var d = both[0];
+      state.sung = (both[1] && both[1].marks) || {};
+      if (window.ruachPaintUnsung) window.ruachPaintUnsung();   // HERESY 1854
       state.rows = fresh(d.takes || [], asked); state.ws = d.workspaces || []; state.trashDays = d.trash_days || 0; state.loaded = true; state.locks = d.locks || {}; state.pins = d.pins || {};
       state.loadStatus = 200;                      // HERESY 1434
       state.frozen = d.frozen || [];               // HERESY 1166
+      state.blind = d.blind || [];                 // HERESY 1874
       state.playlist = d.playlist || []; state.plXfade = d.playlist_xfade || 0;   // HERESY 1731
       state.wsNotes = d.ws_notes || {};            // HERESY 1802
       firstWs();                                   // HERESY 1434
@@ -132,6 +137,7 @@
   // HERESY 1167 (Viktor: «как в SUNO… дизлайк прятал трек, не удаляя»): a disliked take leaves the lists unless this says
   // show them (the Librarian's box, the column's ⋯: one setting); the 👎 chip shows them whatever it says
   var DISLIKED_KEY = "yue2.showDisliked";
+  var DIS_TIP = "Dislike: the take leaves the lists while «Show disliked takes in the lists» is off (Engine → Defaults); «Only the disliked» still finds it";   // HERESY 1820
   function showDis() { return recall(DISLIKED_KEY) === "1"; }
   // HERESY 1167 (Viktor: «В Библиотеке переход по воркспейсам не синхронизирует выбор в баре»): a workspace opened here is
   // the one in hand in the bar too (new takes land in it, the rooms' column shows it); All Workspaces is All again; the
@@ -145,6 +151,8 @@
       if (state.hooks.libraryChanged) state.hooks.libraryChanged();
     }
   }
+  function blindWs(w) { return (state.blind || []).some(function (b) { return w === b || String(w).indexOf(b + SEP) === 0; }); }   // HERESY 1874
+  function isBlind(name) { var r = rowOf(name); return !!(r && r.blind); }
   function frozenWs(w) { return (state.frozen || []).some(function (f) { return w === f || String(w).indexOf(f + SEP) === 0; }); }
   // HERESY 1434 (Viktor 14.10.2026: «В наши 💎 пространства и их сабы - запрет генерации»): a 💎 set and its sections, or a frozen
   // workspace, take no new take; the workspace in hand for new takes is one that does («» when there is none)
@@ -167,9 +175,11 @@
   }
   function iceHere(r) { return !r.frozen || (!!state.place && state.place.charAt(0) !== "_" && frozenWs(state.place)); }
   // HERESY 1169 · 1241 (Viktor 08.10.2026: «трансформируй полосу фильтров показа карточек… Идея фильтра SUNO, с чекбоксами, логикой AND, OR, NOR»): what can be ticked, and how a take answers each
+  // HERESY 1873: a take's reactions, by their emotional zones (the lab's own order): [key, face, word, zone]
+  var REACTS = [["love", "❤️‍🔥", "Burning love", "Love"], ["adore", "🥰", "Tenderness", "Love"], ["hundred", "💯", "Spot on", "A hit"], ["party", "🎉", "A win", "A hit"], ["lol", "🤣", "Hilarious", "Laughter"], ["mindblown", "🤯", "Mind blown", "Wonder"], ["wow", "😮", "Wow", "Wonder"], ["tears", "😭", "To tears", "Tears"], ["think", "🤔", "Makes me think", "Thought"], ["look", "👀", "Worth a closer look", "Thought"], ["nerd", "🤓", "Clever", "Thought"], ["peek", "🫣", "Awkward to hear", "Awkward"], ["melt", "🫠", "Melting away", "Awkward"], ["poop", "💩", "Crap", "Refusal"]];
   var FILTERS = [
     { label: "Made", items: [["generated", "raw", "sparkles"], ["imported", "imported", "import"], ["regenerated", "regenerated", "refresh"], ["rerendered", "re-rendered", "waveform"]] },
-    { label: "Marked", items: [["__liked", "liked", "like"], ["__disliked", "disliked", "dislike"], ["__starred", "favourites", "star"], ["__note", "with a note", "note"], ["__art", "with artwork", "image"], ["__protected", "protected", "shield"], ["__fire", "on fire", "flame"], ["__gem", "gems", "gem"]] },
+    { label: "Marked", items: [["__liked", "liked", "like"], ["__disliked", "disliked", "dislike"], ["__starred", "favourites", "star"], ["__unrated", "no like or dislike", "filter-x"], ["__note", "with a note", "note"], ["__art", "with artwork", "image"], ["__protected", "protected", "shield"], ["__fire", "on fire", "flame"], ["__gem", "gems", "gem"]] },
     { label: "Has", items: [["stems", "stems", "layers"], ["debuzz", "debuzz", "eraser"], ["remaster", "remaster", "sliders"], ["upscale", "upscale", "chevrons-up"], ["daw", "DAW mix", "music"], ["gate", "Digital Gateway", "gauge"], ["plugin", "plugin", "braces"]] }
   ];
   // HERESY 1802 (Viktor 27.10.2026: «На карточках наш Огранщик рисует свои прометки, но что это - одному Клоду известно»): this map was named DERIVED
@@ -179,6 +189,7 @@
     if (HAS[v]) return function (r) { return (r.derived || []).indexOf(v) >= 0; };
     if (v === "__liked") return function (r) { return r.rating > 0; };
     if (v === "__disliked") return function (r) { return r.rating < 0; };
+    if (v === "__unrated") return function (r) { return !r.rating; };   // HERESY 1877
     if (v === "__starred") return function (r) { return !!r.favorite; };
     if (v === "__note") return function (r) { return !!r.note; };
     if (v === "__protected") return function (r) { return !!r.protected; };   // HERESY 1368
@@ -192,6 +203,10 @@
     var hits = on.filter(function (v) { return filterTest(v)(r); }).length;
     return logic === "or" ? hits > 0 : logic === "nor" ? hits === 0 : hits === on.length;
   }
+  // HERESY 1863 (Viktor 29.10.2026: «режим "Shuffled / Вперемешку". Так мне будет меньше шанса схалтурить во время прослушки»): each take its own
+  // random place, kept while the list repaints, dealt anew when «shuffled» is chosen again and on every load
+  var DEAL = {};
+  function dealt(name) { if (!(name in DEAL)) DEAL[name] = Math.random(); return DEAL[name]; }
   function shown() {
     var m = matcher(state.q), on = filterOn(), logic = state.logic || "and";
     var rows = state.rows.filter(function (r) {
@@ -212,6 +227,7 @@
       if (sort === "old") return (a.created || 0) - (b.created || 0);
       if (sort === "title") return fold(a.title).localeCompare(fold(b.title));
       if (sort === "long") return (b.seconds || 0) - (a.seconds || 0);
+      if (sort === "shuffle") return dealt(a.name) - dealt(b.name);   // HERESY 1863
       return (b.created || 0) - (a.created || 0);
     });
     return rows;
@@ -250,7 +266,8 @@
       item("__pinned", "\ud83d\udccc Pinned", pinN) +
       item("__none", "Not in a workspace", counts.__none) +
       '<div class="coll-cap">Workspaces</div>' + treeOrder(state.ws).map(function (w) {
-        var ice = frozenWs(w) ? '<span class="coll-ice" title="Frozen: its takes are heard, never changed">\u2744</span>' : "";   // HERESY 1166
+        var ice = (frozenWs(w) ? '<span class="coll-ice" title="Frozen: its takes are heard, never changed">\u2744</span>' : "") +   // HERESY 1166
+          ((state.blind || []).indexOf(w) >= 0 ? '<span class="coll-blind" data-tip="Blind: what made its takes is hidden">\ud83d\ude48</span>' : "");   // HERESY 1874
         var lk = (state.locks || {})[w] || {}, lock = ice + (lk.workspace || lk.tracks ?   // HERESY 1070
           '<span class="coll-lock" title="' + (lk.workspace ? "the workspace is locked against deletion" : "") + (lk.workspace && lk.tracks ? "; " : "") + (lk.tracks ? "its takes are locked against deletion" : "") + '">\ud83d\udd12</span>' : "");
         var depth = wsParts(w).length;               // a section: its own name, indented under its parent (1161)
@@ -313,6 +330,20 @@
   // HERESY 1165: the plan mode by the name the form gives it (the card said its raw value, off), so it reads and translates
   function cotWord(c) { return { off: "direct", full: "full plan", melody: "melody only" }[c] || c; }
   function badge(text, cls) { return '<span class="coll-badge ' + (cls || "") + '">' + esc(text) + "</span>"; }
+  // HERESY 1906 (Viktor 29.10.2026: «Как мне понять по меткам на карточках, какая реально — рефайн?»): a workspace's badge as the heading draws it: the name
+  // kept as typed, the studio's own sections («Refined» → «Огранённые») in the page's language
+  function wsBadge(w) {
+    return '<span class="coll-badge w">' + wsParts(w).map(function (p, i) {
+      return "<span" + (i && STUDIO_SECTIONS[p] ? "" : ' translate="no"') + ">" + esc(p) + "</span>";
+    }).join(esc(SEP)) + "</span>";
+  }
+  function sungMark(name, done) {                     // HERESY 1854: what a timing found, on the cards and in the player at once
+    state.sung = state.sung || {}; state.sung[name] = done;
+    if (window.ruachPaintUnsung) window.ruachPaintUnsung();
+  }
+  function unsungBadge(name) {                       // HERESY 1846: its timing heard its lyrics stop before their end
+    return (state.sung || {})[name] === false ? '<span class="coll-badge unsung" data-tip="' + esc(tr("The end not sung: its last lines were not heard; Sung to the end? in its datasheet says which")) + '">' + esc(tr("end not sung")) + "</span>" : "";
+  }
   function dbadge(k) {                               // HERESY 1802: what the Refiner made from it, by its name, the why under the pointer
     var name = DERIVED[k] || k;
     return '<span class="coll-badge d" data-tip="Made from it in the Refiner: ' + esc(name) + '">' + esc(name) + "</span>";
@@ -331,14 +362,14 @@
     var r = rowOf(name);
     if (!r) return "";
     return '<div class="take-extra"><span class="coll-badges">' + r.derived.map(dbadge).join("") +
-      r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</span>" +
+      r.workspaces.map(function (w) { return wsBadge(w); }).join("") + unsungBadge(name) + "</span>" +
       '<span class="take-rate"><button type="button" class="coll-act" data-lrate="1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating > 0) + '" aria-label="Like">' + ico("like") + "</button>" +
       markBtns(name) +                                 // HERESY 1802: 🔥 💎 after 👍
-      '<button type="button" class="coll-act" data-lrate="-1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating < 0) + '" aria-label="Dislike">' + ico("dislike") + "</button>" +
+      '<button type="button" class="coll-act" data-lrate="-1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating < 0) + '" aria-label="Dislike" data-tip="' + DIS_TIP + '">' + ico("dislike") + "</button>" +
       // HERESY 1167 (Viktor: «У Творца во фрейме Takes… И нет звёздочки»): the favourite beside them, as on the Librarian's cards
-      '<button type="button" class="coll-act fav" data-lfav="1" data-name="' + esc(name) + '" aria-pressed="' + favOf(name, r) + '" aria-label="Favourite">' + ico("star") + "</button>" +
+      '<button type="button" class="coll-act fav" data-lfav="1" data-name="' + esc(name) + '" aria-pressed="' + favOf(name, r) + '" aria-label="Favourite" data-tip="Favourite">' + ico("star") + "</button>" +
       protBtn(r, 'data-lprot="1" data-name="' + esc(name) + '"', true) +
-      (r.note ? '<span class="coll-act coll-hasnote" aria-label="Has a note">' + ico("note") + "</span>" : "") + "</span></div>";
+      noteBtn(r, 'data-lnote="' + esc(name) + '"') + "</span></div>";   // HERESY 1825: on every card, grey without a note
   }
   function favOf(name, r) { var t = state.hooks && state.hooks.findTake ? state.hooks.findTake(name) : null; return t ? !!t.favorite : !!r.favorite; }
   // HERESY 1802 (Viktor 27.10.2026: «Может давай повсюду в Студии прикрутим к картам треков 🔥 и 💎? После кнопки thumbup?»): two marks of a take's own
@@ -351,12 +382,112 @@
       var on = markOf(name, k[0]);
       return '<button type="button" class="' + (cls || "coll-act") + " hmark hmark-" + k[0] + '" data-hmark="' + k[0] + '" data-name="' + esc(name) + '" aria-pressed="' + on +
         '" aria-label="' + k[2] + '" data-tip="' + k[2] + '">' + ico(k[1]) + "</button>";
-    }).join("");
+    }).join("") + reactBtn(name, cls);                 // HERESY 1873: the take's reaction after 🔥 💎
   }
+  // HERESY 1873 (Viktor 29.10.2026: «как на Фейсбуке сделаем полосу с emoji?»; «выбранной реакцией заменяй кнопку плюса. Так не будет сдвигов в
+  // полосе… иконку в ту полосу 14 в самом начале добавь на обнуление реакции»): one reaction a take. The button is its face, or a smile with a plus
+  // when there is none, so the row never moves; a click opens the palette by zones: «No reaction» first, a face sets it (the chosen one again takes
+  // it off), and the palette closes. Kept by the lab, seen at once wherever the take shows its marks
+  var REACT_ADD = '<svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M21 12a9 9 0 1 1-6.2-8.56"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/><path d="M19 2v6M16 5h6"/></svg>';
+  var REACT_NONE = '<svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>';
+  function reactOf(name) {
+    var h = held[name] && held[name].react, r = rowOf(name);
+    return (h ? h.v : (r && r.react)) || "";
+  }
+  function reactRow(key) { return REACTS.filter(function (x) { return x[0] === key; })[0] || null; }
+  function reactFace(name) { var x = reactRow(reactOf(name)); return x ? '<span class="hreact-e">' + x[1] + "</span>" : REACT_ADD; }
+  function reactTip(name) { var x = reactRow(reactOf(name)); return x ? tr(x[2]) + " \u00b7 " + tr("a click changes it or takes it off") : "Reactions: a click opens them all, by zones"; }
+  function reactBtn(name, cls) {
+    return '<button type="button" class="' + (cls || "coll-act") + ' hreact" data-hreact="' + esc(name) + '" aria-haspopup="dialog" aria-pressed="' + !!reactOf(name) +
+      '" aria-label="Reactions" data-tip="' + esc(reactTip(name)) + '">' + reactFace(name) + "</button>";
+  }
+  var reactPal = null;
+  // HERESY 1877 (Viktor 29.10.2026: «прорисовываем эту реакцию, едва заметную монотонную в песочном бекграунде карточки. И эту опцию в юзерские
+  // предпочтения в Движке»): Engine → Defaults → «A take's reaction faint in its card's background», off unless ticked
+  function reactMark(name) {
+    var on = false;
+    try { on = localStorage.getItem("yue2.reactMark") === "on"; } catch (e) { on = false; }
+    var x = on ? reactRow(reactOf(name)) : null;
+    return x ? '<span class="coll-react-wm" aria-hidden="true">' + x[1] + "</span>" : "";
+  }
+  function reactPaint(name) {
+    Array.prototype.forEach.call(document.querySelectorAll("[data-hreact]"), function (b) {
+      if (b.dataset.hreact !== name) return;
+      b.innerHTML = reactFace(name);
+      b.setAttribute("aria-pressed", String(!!reactOf(name)));
+      b.dataset.tip = reactTip(name);
+    });
+  }
+  function setReact(name, key) {
+    var r = rowOf(name), asked = rateSeq, was = reactOf(name);
+    key = reactRow(key) ? key : "";
+    hold(name, "react", key);
+    if (r) r.react = key;
+    reactPaint(name);
+    return api("/collection", { op: "react", react: key, names: [name] }).then(function (d) {
+      state.rows = d.takes ? fresh(d.takes, asked) : state.rows; paint(); reactPaint(name);
+      if (state.hooks.libraryChanged) state.hooks.libraryChanged();
+    }, function (e) { hold(name, "react", was); if (r) r.react = was; reactPaint(name); toast(e.message, true); });
+  }
+  function reactClose() {
+    if (!reactPal) return;
+    reactPal.el.remove();
+    if (reactPal.from && reactPal.from.isConnected) reactPal.from.setAttribute("aria-expanded", "false");
+    reactPal = null;
+  }
+  function reactOpen(btn) {
+    var name = btn.dataset.hreact;
+    if (reactPal && reactPal.name === name && reactPal.from === btn) return reactClose();
+    reactClose();
+    var el = document.createElement("div"), on = reactOf(name), zones = [];
+    el.className = "hreact-pal";
+    el.setAttribute("role", "dialog");
+    el.setAttribute("aria-label", "Reactions");
+    REACTS.forEach(function (x) { if (zones.indexOf(x[3]) < 0) zones.push(x[3]); });
+    el.innerHTML = '<div class="hreact-zone hreact-clear"><div class="hreact-row"><button type="button" class="hreact-pick" data-hreact-key="" aria-pressed="' + !on +
+      '" aria-label="No reaction" data-tip="No reaction">' + REACT_NONE + '</button></div><div class="hreact-z" aria-hidden="true">\u00a0</div></div>' +
+      zones.map(function (z) {
+        return '<div class="hreact-zone"><div class="hreact-row">' + REACTS.filter(function (x) { return x[3] === z; }).map(function (x) {
+          return '<button type="button" class="hreact-pick" data-hreact-key="' + x[0] + '" aria-pressed="' + (on === x[0]) + '" aria-label="' + x[2] + '" data-tip="' + x[2] + '">' +
+            '<span class="hreact-e">' + x[1] + "</span></button>";
+        }).join("") + '</div><div class="hreact-z">' + z + "</div></div>";
+      }).join("");
+    document.body.appendChild(el);
+    reactPal = { el: el, name: name, from: btn };
+    btn.setAttribute("aria-expanded", "true");
+    var b = btn.getBoundingClientRect(), p = el.getBoundingClientRect(), gap = 8;
+    var top = b.top - p.height - gap >= 8 ? b.top - p.height - gap : Math.min(window.innerHeight - p.height - 8, b.bottom + gap);   // above it, as Facebook's, else below
+    var left = Math.max(8, Math.min(window.innerWidth - p.width - 8, b.left + b.width / 2 - p.width / 2));
+    el.style.top = Math.round(top) + "px"; el.style.left = Math.round(left) + "px";
+    el.addEventListener("click", function (e) {
+      var k = e.target.closest("[data-hreact-key]");
+      if (!k) return;
+      e.preventDefault(); e.stopPropagation();
+      var key = k.dataset.hreactKey;
+      setReact(name, key && key !== reactOf(name) ? key : "");
+      reactClose();
+    });
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("[data-hreact]");
+    if (!b || !b.dataset.hreact) return;
+    e.preventDefault(); e.stopPropagation();
+    reactOpen(b);
+  }, true);
+  document.addEventListener("mousedown", function (e) {
+    if (reactPal && !reactPal.el.contains(e.target) && !(e.target.closest && e.target.closest("[data-hreact]"))) reactClose();
+  }, true);
+  window.addEventListener("keydown", function (e) {   // before the windows' own keys (the compare closes on Esc): the palette first
+    if (reactPal && e.key === "Escape") { e.preventDefault(); e.stopPropagation(); reactClose(); }
+  }, true);
+  window.addEventListener("resize", reactClose);
   function paintMarks(name) {
     Array.prototype.forEach.call(document.querySelectorAll("[data-hmark]"), function (b) {
       if (b.dataset.name === name) b.setAttribute("aria-pressed", String(markOf(name, b.dataset.hmark)));
     });
+    reactPaint(name);                                  // HERESY 1873
   }
   function setMark(name, m, on) {
     var r = rowOf(name), asked = rateSeq;
@@ -456,7 +587,7 @@
       var sel = !!state.sel[r.name], now = state.hooks.playing ? state.hooks.playing() : {};
       var mine = now.name === r.name;
       var art = window.HeresyArt ? window.HeresyArt.url(r.name) : "";   // HERESY 1154: beside the title, not in the play button
-      return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden-take" : "") + (r.frozen ? " is-frozen" : "") + (r.fresh ? " is-fresh" : "") + (window.HeresyRegen && window.HeresyRegen.has(r.name) ? " is-regenerating" : "") + (mine ? " is-current" : "") + (mine && now.playing ? " is-sounding" : "") + (art ? " has-art" : "") + '" data-name="' + esc(r.name) + '"' + sandAt(r.name) + ' draggable="true">' +
+      return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden-take" : "") + (r.frozen ? " is-frozen" : "") + (r.fresh ? " is-fresh" : "") + (window.HeresyRegen && window.HeresyRegen.has(r.name) ? " is-regenerating" : "") + (mine ? " is-current" : "") + (mine && now.playing ? " is-sounding" : "") + (art ? " has-art" : "") + '" data-name="' + esc(r.name) + '"' + sandAt(r.name) + ' draggable="true">' + reactMark(r.name) +   // HERESY 1877
         '<label class="coll-check"><input type="checkbox" data-sel="' + esc(r.name) + '"' + (sel ? " checked" : "") + ' aria-label="Select" /></label>' +
         '<button type="button" class="coll-play' + (mine && now.playing ? " is-playing" : "") + '" data-play="' + esc(r.name) + '" aria-label="' + (mine && now.playing ? "Pause" : "Play") + '">' + ico(mine && now.playing ? "pause" : "play") + "</button>" +
         '<div class="coll-body"><div class="coll-title"><span class="coll-title-text" data-open="' + esc(r.name) + '">' + esc(r.title) + "</span>" +
@@ -464,23 +595,23 @@
         // HERESY 1165: each piece its own text, so the words among the numbers translate (heresy-i18n.js matches whole texts)
         '<div class="coll-meta">' + (state.hooks.when ? state.hooks.when(r.created, r.name) : "<span>" + esc(r.created ? ago(r.created) : "") + "</span>") + (r.seconds ? " · <span>" + clock(r.seconds) + "</span>" : "") /* HERESY 1720 */ + (r.cot ? " · <span>" + esc(cotWord(r.cot)) + "</span>" : "") + "</div>" +
         '<div class="coll-badges">' + badge(KINDS[r.kind] || r.kind, "k-" + r.kind) + r.derived.map(dbadge).join("") +
-        r.workspaces.map(function (w) { return badge(w, "w"); }).join("") +
+        r.workspaces.map(function (w) { return wsBadge(w); }).join("") +
         // HERESY 1162: what it was made again from, on its card
-        (r.regen_of ? '<span class="coll-badge rg" data-tip="Regenerated with a new seed from ' + esc(r.regen_of) + '">regen</span>' : "") + "</div>" +
+        (r.regen_of ? '<span class="coll-badge rg" data-tip="Regenerated with a new seed from ' + esc(r.regen_of) + '">regen</span>' : "") + unsungBadge(r.name) + "</div>" +
         "</div>" +
         // HERESY 1155 (Viktor: «Не уходим из студии в другие окна и вкладки, если не нужно»): the whole picture over the page
         (art ? '<button type="button" class="coll-art" data-art="' + esc(r.name) + '" style="background-image:url(&quot;' + esc(art) + '&quot;)" data-tip="The artwork: see it whole" aria-label="The artwork"></button>' : "") +
         // HERESY 1048: like, dislike, favourite, Post and the menu, on the card itself
         '<div class="coll-acts"><button type="button" class="coll-act" data-crate="1" aria-pressed="' + (r.rating > 0) + '" aria-label="Like">' + ico("like") + '</button>' +
         markBtns(r.name) +                             // HERESY 1802: 🔥 💎 after 👍
-        '<button type="button" class="coll-act" data-crate="-1" aria-pressed="' + (r.rating < 0) + '" aria-label="Dislike">' + ico("dislike") + '</button>' +
-        '<button type="button" class="coll-act fav" data-cfav="1" aria-pressed="' + r.favorite + '" aria-label="Favourite">' + ico("star") + "</button>" +
+        '<button type="button" class="coll-act fav" data-cfav="1" aria-pressed="' + r.favorite + '" aria-label="Favourite" data-tip="Favourite">' + ico("star") + "</button>" +
         protBtn(r, 'data-cprot="1"') +
-        '<button type="button" class="coll-act post" data-cgo="post">Refine</button>' +
-        '<button type="button" class="coll-act" data-cmenu="1" title="More (or right-click the card)" aria-label="More">\u22ef</button>' +
-        // HERESY 1058: a note is a mark at the row's end (its words on hover, the sheet to edit), so cards keep one height
-        (r.note ? '<button type="button" class="coll-act coll-hasnote" data-open="' + esc(r.name) + '" aria-label="Has a note">' + ico("note") + "</button>"
-                : '<span class="coll-act coll-nonote" aria-hidden="true"></span>') + "</div></article>";
+        // HERESY 1900 (Viktor 29.10.2026: «дизлайк вынеси из общей полосы реакций и тоже обособь… после щита защиты, чтобы ненароком не кликнуть пальцем вниз»)
+        '<button type="button" class="coll-act coll-dis" data-crate="-1" aria-pressed="' + (r.rating < 0) + '" aria-label="Dislike" data-tip="' + DIS_TIP + '">' + ico("dislike") + '</button>' +
+        // HERESY 1058: a note is a mark at the row's end (its words on hover, the sheet to edit), so cards keep one height; 1825: on every card, a click writes it
+        noteBtn(r, 'data-cnote="' + esc(r.name) + '"') +
+        // HERESY 1900 («уведи вправо троеточие… иконку заметки поставь перед троеточием с небольшим отступом»): ⋯ last, at the strip's right end
+        '<button type="button" class="coll-act coll-more-btn" data-cmenu="1" title="More (or right-click the card)" aria-label="More">\u22ef</button>' + "</div></article>";
     }
   }
   function placeRows() {   // the takes of the place open (HERESY 1169 · 1241: the head's counts and the filter window's)
@@ -564,7 +695,7 @@
     el.innerHTML = list.length ? list.map(function (r) {
       var on = now.name === r.name && now.playing;
       return '<div class="coll-pin" data-name="' + esc(r.name) + '"><button type="button" class="coll-play' + (on ? " is-playing" : "") + '" data-play="' + esc(r.name) + '" aria-label="' + (on ? "Pause" : "Play") + '">' + ico(on ? "pause" : "play") + "</button>" +
-        '<div class="coll-pin-body"><span class="coll-title-text" data-open="' + esc(r.name) + '">' + esc(r.title) + '</span><span class="coll-meta"><span>' + esc(state.hooks.ago(r.created)) + "</span>" +
+        '<div class="coll-pin-body"><span class="coll-title-text" data-open="' + esc(r.name) + '">' + esc(r.title) + '</span><span class="coll-meta"><span>' + esc(state.hooks.ago(r.created, r.name)) + "</span>" +
         (r.seconds ? " \u00b7 <span>" + state.hooks.clock(r.seconds) + "</span>" : "") + "</span></div>" +
         '<button type="button" class="coll-unpin" data-unpin="' + esc(r.name) + '" aria-label="Unpin" data-tip="Unpin">\u00d7</button></div>';
     }).join("") : '<p class="row-hint coll-pins-hint">' + (state.place === "__pinned" ? "Every take pinned in any workspace is below; each workspace shows its own four in this strip."
@@ -640,6 +771,65 @@
     hb.dataset.tip = hid ? "Show again: back in the lists" : "Out of the lists, not deleted: Hidden on the left shows them again";
     $("collWsOut").hidden = !state.place || state.place.charAt(0) === "_";
     $("collCompare").disabled = n < 2 || n > 6;                // HERESY 1415: two to four; 1621: to six
+  }
+
+  // HERESY 1843 (TODO 2.0.x from RC3's report of 08.10.2026: «Проверка лирики пачкой на отмеченных дублях из меню Библиотекаря»): sung to the end,
+  // the checked takes one after another (1842's check: the take's timing, Whisper on its lyrics; one timed already answers at once), a list that
+  // fills as they come, each one not sung to its end with its Regenerate from. Closing it stops the queue; a timing running finishes in the lab
+  function sungMany(list) {
+    var h = state.hooks, takes = list.map(function (n) { return h.findTake(n); }).filter(function (t) { return t && !t.session; }), stop = false, got = [];
+    if (!takes.length) return;
+    var back = document.createElement("div");
+    back.className = "ds-back";
+    back.innerHTML = '<div class="ds-box sung-many" role="dialog" aria-modal="true"><div class="ds-head"><div><div class="sheet-title">' + esc(tr("Sung to the end?")) + "</div>" +
+      '<div class="coll-meta sm-meta">' + esc(tr("Whisper listens to each in turn, on the processor: a minute or two a take")) + "</div></div>" +
+      '<span class="spacer"></span><button type="button" class="btn ghost small" data-sm="close">' + esc(tr("Close")) + "</button></div>" +
+      '<div class="sm-list">' + takes.map(function (t, i) {
+        return '<div class="sm-row" data-smi="' + i + '"><span class="sm-name" translate="no">' + esc(h.title ? h.title(t) : (t.title || t.name)) + '</span><span class="sm-say">' + esc(tr("waits its turn")) + "</span></div>";
+      }).join("") + "</div></div>";
+    document.body.appendChild(back);
+    function close() { stop = true; document.removeEventListener("keydown", key, true); back.remove(); paint(); }   // HERESY 1846: the cards say what was found
+    function key(e) { if (e.key === "Escape" && !document.querySelector(".hd-back")) { e.preventDefault(); e.stopPropagation(); close(); } }
+    document.addEventListener("keydown", key, true);
+    back.addEventListener("mousedown", function (e) { if (e.target === back) close(); });
+    function clk(t) { var m = Math.floor(t / 60), s = t - m * 60; return m + ":" + (s < 10 ? "0" : "") + s.toFixed(1); }
+    function cell(i) { return back.querySelector('[data-smi="' + i + '"] .sm-say'); }
+    function show(i, sg) {
+      var c = cell(i), t = takes[i];
+      got[i] = sg.done;
+      sungMark(t.name, sg.done);                    // HERESY 1846 · 1854
+      c.className = "sm-say" + (sg.done === true ? " is-good" : "");
+      if (sg.done === true) c.textContent = "✓ " + tr("Every line heard; the last ends at {0}").replace("{0}", clk(sg.last || 0));
+      else if (sg.done === false) c.innerHTML = '<span class="is-bad">✗ ' + esc(tr("Lines not heard at the end: {0}, after {1}").replace("{0}", sg.count).replace("{1}", clk(sg.suggest))) + "</span>" +
+        ' <button type="button" class="btn ghost small" data-sm="regen" data-name="' + esc(t.name) + '" data-at="' + esc(String(sg.suggest)) + '">' + esc(tr("Regenerate from {0}").replace("{0}", clk(sg.suggest))) + "</button>";
+      else c.textContent = tr("The timing heard too little of this take to say");
+    }
+    function ask(name, run) {
+      return fetch("/lab/sung?name=" + encodeURIComponent(name) + (run ? "&run=1" : "")).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); });
+    }
+    function one(i) {
+      if (stop) return;
+      if (i >= takes.length) {
+        var yes = got.filter(function (x) { return x === true; }).length, no = got.filter(function (x) { return x === false; }).length;
+        back.querySelector(".sm-meta").textContent = tr("Done: {0} sung to the end, {1} not, {2} could not say").replace("{0}", yes).replace("{1}", no).replace("{2}", takes.length - yes - no);
+        return;
+      }
+      cell(i).textContent = tr("Whisper listens…");
+      (function poll(run, n) {
+        ask(takes[i].name, run).then(function (sg) {
+          if (stop) return;
+          if (sg.timed === false && n < 400) return setTimeout(function () { poll(false, n + 1); }, 2500);
+          show(i, sg); one(i + 1);
+        }).catch(function (e) { if (stop) return; var c = cell(i); c.textContent = e.message; c.className = "sm-say is-bad"; one(i + 1); });
+      })(true, 0);
+    }
+    back.querySelector(".ds-box").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-sm]");
+      if (!b) return;
+      if (b.dataset.sm === "close") return close();
+      if (b.dataset.sm === "regen") { var at = +b.dataset.at, n = b.dataset.name; close(); h.openTake(n, "create"); if (window.ruachRegenFrom) window.ruachRegenFrom(at, n); }
+    });
+    one(0);
   }
 
   function paintTrash() {
@@ -865,7 +1055,7 @@
     var cur = current();
     var items = state.ws.filter(function (w) { return !closedWs(w) && wsLeaf(w) !== SOURCED; }).map(function (w) {   // 1434: no 💎 set
       var n = state.rows.filter(function (r) { return inTree(r, w); }).length;
-      return { value: w, label: wsParts(w).length > 1 ? wsLeaf(w) : w, depth: wsParts(w).length - 1, current: w === cur, note: String(n) };
+      return { value: w, label: wsParts(w).length > 1 ? wsLeaf(w) : w, depth: wsParts(w).length - 1, path: wsParts(w).slice(0, -1).join(" \u203a "), current: w === cur, note: String(n) };   // 1853: path
     });
     var more = [{ label: "+ New workspace\u2026", value: "__new" }];
     if (cur && wsParts(cur).length < DEPTH) more.push({ label: "+ New section of \u201c" + wsLeaf(cur) + "\u201d\u2026", value: "__section" });
@@ -976,6 +1166,7 @@
       state.rows = d.takes ? fresh(d.takes, asked) : state.rows; state.ws = d.workspaces || state.ws; state.trashDays = d.trash_days || 0; state.locks = d.locks || state.locks || {};
       state.pins = d.pins || state.pins || {};
       state.frozen = d.frozen || state.frozen || [];   // HERESY 1166
+      state.blind = d.blind || state.blind || [];   // HERESY 1874
       if (d.playlist) state.playlist = d.playlist;     // HERESY 1731: a take gone from the library is gone from the playlist
       if (d.ws_notes) state.wsNotes = d.ws_notes;      // HERESY 1802
       if (done) { if (undo) undoable(done, undo); else toast(done); }
@@ -1107,7 +1298,7 @@
     state.hooks = hooks;
     $("collSearch").addEventListener("input", function () { state.q = this.value; paint(); });
     $("collSort").value = recall(SORT_KEY) || "new";
-    $("collSort").addEventListener("change", function () { store(SORT_KEY, this.value); paint(); });
+    $("collSort").addEventListener("change", function () { if (this.value === "shuffle") DEAL = {}; store(SORT_KEY, this.value); paint(); });   // HERESY 1863: dealt anew
     // HERESY 1167: the disliked shown or not: the rooms' takes column's ⋯ («The disliked ones too»), one setting with this
     window.addEventListener("ruach-disliked", function () { paint(); });
     window.addEventListener("ruach-catalog", function () { if (state.loaded) load(); });   // HERESY 1425: a take landed from the lab
@@ -1205,6 +1396,11 @@
       });
     });
     $("collCompare").addEventListener("click", function () { if (window.HeresyCompare) window.HeresyCompare.takes(names()); });   // HERESY 1415
+    if ($("collSung")) $("collSung").addEventListener("click", function () {   // HERESY 1843: past ten, asked first
+      var list = names();
+      (list.length > 10 ? window.HeresyDialog.confirm(tr("Whisper listens to {0} takes in turn, a minute or two each. Start?").replace("{0}", list.length), { ok: "Start" }) : Promise.resolve(true))
+        .then(function (ok) { if (ok) sungMany(list); });
+    });
     $("collWsMove").addEventListener("change", function () {   // HERESY 1050: into one workspace, out of this one
       var w = this.value; this.value = "";
       if (!w) return;
@@ -1244,6 +1440,8 @@
         if (now.name === play.dataset.play) { hooks.togglePlay(); return; }
         var t = hooks.findTake(play.dataset.play); if (t) hooks.playNow(t); return;
       }
+      var cnote = e.target.closest("[data-cnote]");           // HERESY 1825: the note's window, not the menu
+      if (cnote) { editNote(cnote.dataset.cnote).then(function () { if (hooks.libraryChanged) hooks.libraryChanged(); }); return; }
       var ren = e.target.closest("[data-ren]");               // HERESY 1049: rename in place
       if (ren) { renameIn(ren.closest(".coll-title").querySelector(".coll-title-text"), ren.dataset.ren); return; }
       if (e.target.closest(".coll-title-edit")) return;
@@ -1640,7 +1838,7 @@
     requestOf(name).then(function (req) {
       if (peekFor !== name) return;
       var box = $("collPeek"), style = String(req.style || "");
-      box.innerHTML = '<div class="peek-title">' + esc(r.title) + '</div><div class="coll-meta"><span>' + esc(state.hooks.ago(r.created)) + "</span>" +
+      box.innerHTML = '<div class="peek-title">' + esc(r.title) + '</div><div class="coll-meta"><span>' + esc(state.hooks.ago(r.created, r.name)) + "</span>" +
         (r.seconds ? " \u00b7 <span>" + state.hooks.clock(r.seconds) + "</span>" : "") + (req.cot ? " \u00b7 <span>" + esc(cotWord(req.cot)) + "</span>" : "") + "</div>" +
         (style ? '<div class="peek-cap">Style</div><div class="peek-style">' + esc(style) + "</div>" : "") +   // HERESY 1167: whole (three lines until hovered)
         (req.lyrics ? '<div class="peek-cap">Lyrics</div><pre class="peek-lyrics">' + esc(lyricsTight(req.lyrics, 6)) + "</pre>" +
@@ -1689,14 +1887,14 @@
     var now = state.hooks.playing(), mine = now.name === r.name && now.playing;
     $("collSheetBody").innerHTML =
       '<div class="sheet-head"><button type="button" class="coll-play' + (mine ? " is-playing" : "") + '" data-sheet-play="1">' + ico(mine ? "pause" : "play") + "</button>" +
-      '<div><div class="sheet-title"><span class="coll-title-text" data-sheet-ren="1" title="Click to rename">' + esc(r.title) + '</span></div><div class="coll-meta"><span>' + esc(state.hooks.ago(r.created)) + "</span>" +
+      '<div><div class="sheet-title"><span class="coll-title-text" data-sheet-ren="1" title="Click to rename">' + esc(r.title) + '</span></div><div class="coll-meta"><span>' + esc(state.hooks.ago(r.created, r.name)) + "</span>" +
       (r.seconds ? " \u00b7 <span>" + state.hooks.clock(r.seconds) + "</span>" : "") + (req.cot ? " \u00b7 <span>" + esc(cotWord(req.cot)) + "</span>" : "") + " \u00b7 <span>" + esc(KINDS[r.kind] || r.kind) + "</span>" +
       (r.derived.length ? " \u00b7 <span>made from it: " + esc(r.derived.join(", ")) + "</span>" : "") + "</div></div>" +
       '<span class="pb-rate"><button type="button" class="pb-btn" data-sheet-rate="1" aria-pressed="' + (r.rating > 0) + '">' + ico("like") + '</button>' +
       markBtns(r.name, "pb-btn") +                     // HERESY 1802
       '<button type="button" class="pb-btn" data-sheet-rate="-1" aria-pressed="' + (r.rating < 0) + '">' + ico("dislike") + '</button>' +
       '<button type="button" class="pb-btn" id="sheetFav" aria-pressed="' + r.favorite + '" >' + ico("star") + "</button></span></div>" +
-      (r.workspaces.length ? '<div class="coll-badges">' + r.workspaces.map(function (w) { return badge(w, "w"); }).join("") + "</div>" : "") +
+      (r.workspaces.length ? '<div class="coll-badges">' + r.workspaces.map(function (w) { return wsBadge(w); }).join("") + "</div>" : "") +
       '<div class="sheet-cols"><div><div class="peek-cap">Style</div><pre class="sheet-text">' + esc(req.style || "") + "</pre></div>" +
       '<div><div class="peek-cap">Lyrics</div><pre class="sheet-text sheet-lyrics">' + esc(req.lyrics || "") + "</pre></div></div>" +
       '<label class="field"><span class="label">Note <em id="sheetNoteState"></em></span><textarea id="sheetNote" rows="3" maxlength="600">' + esc(r.note || "") + "</textarea></label>" +
@@ -1777,6 +1975,12 @@
       { icon: "↳", label: "Move into…", action: function () { moveWs(w); } },   // HERESY 1808
       { sep: true },                                   // HERESY 1070: the safety catches
       { icon: "\u2744", label: "Freeze\u2026", hint: "heard, never changed", action: function () { freezeWs(w); } },   // HERESY 1166
+      (function () {                                   // HERESY 1874: blind listening, its sections with it
+        var own = (state.blind || []).indexOf(w) >= 0, by = !own && blindWs(w);
+        return by ? { icon: "\ud83d\ude48", label: "Blind listening", hint: "with its parent", disabled: true }
+          : { icon: "\ud83d\ude48", label: own ? "Lift the blindness" : "Blind listening", hint: own ? "" : "what made its takes hidden", checked: own,
+              action: function () { act({ op: "blind", workspace: w, on: !own }, (own ? "Seen again: \u201c" : "Blind: \u201c") + w + "\u201d", true); } };
+      })(),
       lockItem(w, "workspace", "Workspace Deletion"),
       lockItem(w, "tracks", "Tracks Deletion"),
       { sep: true },
@@ -1827,7 +2031,7 @@
     var height = Math.max.apply(null, [w].concat(subs).map(function (x) { return wsParts(x).length; })) - wsParts(w).length;
     var items = state.ws.filter(function (x) { return x !== w && x.indexOf(w + SEP) !== 0 && !closedWs(x) && wsLeaf(x) !== SOURCED; }).map(function (x) {
       var n = state.rows.filter(function (r) { return inTree(r, x); }).length;
-      return { value: x, label: wsParts(x).length > 1 ? wsLeaf(x) : x, depth: wsParts(x).length - 1, note: String(n) };
+      return { value: x, label: wsParts(x).length > 1 ? wsLeaf(x) : x, depth: wsParts(x).length - 1, path: wsParts(x).slice(0, -1).join(" \u203a "), note: String(n) };   // 1853: path
     });
     window.HeresyDialog.choose("Move “" + w + "” into", items, { cancel: "Cancel", filter: "Filter the workspaces" }).then(function (to) {
       if (!to) return;
@@ -1936,11 +2140,14 @@
         '<button type="button" class="btn ghost small" data-ds="create">Open in the Creator</button><button type="button" class="btn ghost small" data-ds="close">Close</button></div>' +
         '<div class="ds-cols"><div class="ds-texts"><div class="peek-cap">Style <em>' + (q.style || "").length + ' chars</em></div><pre class="sheet-text">' + esc(q.style || "") + "</pre>" +
         '<div class="peek-cap">Lyrics</div><pre class="sheet-text ds-lyrics">' + esc(q.lyrics || "") + "</pre>" +
+        (String(q.lyrics || "").trim() ? '<div class="ds-sung"></div>' : "") +   // HERESY 1842: sung to the end?
         // HERESY 1131 (Viktor: «нотный ряд ABC… сложенный аккордеон не нужен»): the score open and drawn, its ABC under it;
         // a Direct take writes none: the one written from its sound, or the way to write it
         '<div class="peek-cap">Score <em class="ds-score-say"></em></div><div class="ds-staff"></div>' +
         '<pre class="sheet-text mono ds-abc"' + (q.abc ? "" : " hidden") + ">" + esc(q.abc || "") + "</pre>" +
         (q.abc ? "" : '<div class="ds-noscore row-hint">A Direct take writes no score. <button type="button" class="btn ghost small" data-ds="score">Write it from the sound</button> <span class="ds-score-run mono"></span></div>') +
+        '<div class="peek-cap">MIDI <em class="ds-midi-say"></em></div><div class="ds-midi"></div>' +   // HERESY 1834
+        '<div class="ds-covers-wrap" hidden><div class="peek-cap">Covers <em class="ds-cov-say"></em></div><div class="ds-covers"></div></div>' +   // HERESY 1848
         "</div>" +
         '<div class="ds-knobs"><div class="ds-group"><div class="peek-cap">Song</div>' + kv("mode", MODES[q.cot] || q.cot) + kv("length asked", q.duration ? h.clock(q.duration) : "") +
         kv("format", q.output_format + (q.output_format === "mp3" ? " " + q.mp3_bitrate : "")) + modelRow(t.model || r.model) + kv("VAE", q.vae) + kv("peak clip", q.peak_clip) +
@@ -2015,11 +2222,136 @@
           }).catch(function (e) { said("not written: " + (e.message || e)); btn.disabled = false; })
           .then(function () { clearInterval(tick); });
       }
+      // HERESY 1834 (Viktor 28.10.2026: «вживляй MuScriptor в Студию — в паспорт треков и в самого Огранщика»): the take as multi-instrument
+      // MIDI (MuScriptor): its sets, each with its instruments and its file; a size to pick (the suggested first, the ones done marked) and the
+      // run, its progress here while the datasheet is open
+      var midiBox = back.querySelector(".ds-midi"), midiSay = back.querySelector(".ds-midi-say"), midiState = { status: null, sets: [], jobs: [], timer: 0, pick: "" };
+      function midiLab(path) {
+        return fetch("/lab" + path).then(function (res) { return res.json().then(function (b) { if (!res.ok && res.status !== 202) throw new Error(b.error || res.statusText); return b; }); });
+      }
+      function midiSize(s) { return tr(s === "large" ? "Large" : s === "medium" ? "Medium" : "Small"); }
+      function midiFile(path) { return "/library/file?name=" + encodeURIComponent(name) + "&path=" + encodeURIComponent(path); }
+      function midiPaint() {
+        if (!document.body.contains(back) || !midiBox) return;
+        var st = midiState.status, sets = midiState.sets, done = {};
+        var run = midiState.jobs.filter(function (j) { return j.status === "queued" || j.status === "running"; })[0];
+        var failed = midiState.jobs.filter(function (j) { return j.status === "failed"; })[0];
+        sets.forEach(function (m) { if ((m.source || "the take") === "the take" && !m.only) done[m.size] = 1; });
+        midiSay.textContent = st ? tr(st.licence) : "";
+        var html = sets.map(function (m) {
+          var file = (m.files || [])[0] || {};
+          return '<div class="ds-midi-set"><div class="ds-midi-head"><b>' + esc(midiSize(m.size)) + "</b><span>" + esc(tr("{0} notes").replace("{0}", m.notes)) + "</span><span>" + esc(h.clock(m.took || 0)) + "</span>" +
+            (m.source && m.source !== "the take" ? '<span translate="no">' + esc(String(m.source).replace(/^derived\//, "")) + "</span>" : "") +
+            '<span class="spacer"></span><button type="button" class="btn ghost small" data-ds="midi-roll" data-id="' + esc(m.id) + '">' + esc(tr("Open in the roll")) + "</button>" +   // HERESY 1835
+            '<a class="btn ghost small" translate="no" href="' + esc(midiFile(file.path || "")) + '" download="' + esc((r.title || t.title || name) + " · " + m.size + ".mid") + '">MIDI</a></div>' +
+            '<div class="ds-midi-chips">' + (m.instruments || []).slice().sort(function (a, b) { return b.notes - a.notes; }).map(function (i) {
+              return '<span class="ds-midi-chip" translate="no">' + esc(String(i.label).replace(/_/g, " ")) + " <b>" + i.notes + "</b></span>"; }).join("") + "</div></div>";
+        }).join("");
+        if (st && !st.built) html += '<p class="row-hint">' + esc(tr("The transcriber is not built: ./build.sh builds it")) + "</p>";
+        else if (st && !st.here.length) html += '<p class="row-hint">' + esc(tr("No MuScriptor model here: Engine → Models and LoRAs → Sound to MIDI fetches one")) +
+          ' <button type="button" class="btn ghost small" data-ds="midi-engine">' + esc(tr("Engine → Models and LoRAs")) + "</button></p>";
+        else if (st) {
+          var pick = st.here.indexOf(midiState.pick) >= 0 ? midiState.pick : st.here.indexOf(st.suggest) >= 0 ? st.suggest : st.here[0];
+          html += '<div class="ds-midi-go"><select class="ds-midi-size" aria-label="' + esc(tr("Size")) + '">' + st.here.map(function (s) {
+              return '<option value="' + s + '"' + (s === pick ? " selected" : "") + ">" + esc(midiSize(s)) + (s === st.suggest ? " · " + esc(tr("suggested")) : "") + (done[s] ? " · " + esc(tr("done")) : "") + "</option>";
+            }).join("") + "</select>" +
+            '<button type="button" class="btn ghost small" data-ds="midi"' + (run || done[pick] ? " disabled" : "") + ">" + esc(tr("Transcribe to MIDI")) + "</button>" +
+            '<span class="ds-midi-run mono">' + (run ? esc(run.status === "queued" ? tr("waits its turn") : tr("{0} % · {1} notes").replace("{0}", Math.round((run.progress || 0) * 100)).replace("{1}", run.notes || 0)) :
+              failed ? esc(failed.error || "") : "") + "</span></div>";
+        }
+        midiBox.innerHTML = html;
+      }
+      function midiLoad() {
+        if (!midiBox) return Promise.resolve();
+        return Promise.all([midiLab("/midi/status"), midiLab("/midi/sets?name=" + encodeURIComponent(name))]).then(function (x) {
+          midiState.status = x[0]; midiState.sets = x[1].sets || []; midiState.jobs = x[1].jobs || [];
+          midiPaint();
+          clearTimeout(midiState.timer);
+          if (midiState.jobs.some(function (j) { return j.status === "queued" || j.status === "running"; }) && document.body.contains(back)) midiState.timer = setTimeout(midiLoad, 2000);
+        }).catch(function (err) { midiBox.innerHTML = '<p class="row-hint">' + esc(err.message) + "</p>"; });
+      }
+      function midiGo() {
+        var sel = midiBox.querySelector(".ds-midi-size");
+        midiState.pick = sel ? sel.value : "";
+        midiLab("/midi?name=" + encodeURIComponent(name) + "&size=" + encodeURIComponent(midiState.pick)).then(midiLoad).catch(function (err) { toast(err.message, true); });
+      }
+      if (midiBox) {
+        midiBox.addEventListener("change", function (e) { if (e.target.classList.contains("ds-midi-size")) { midiState.pick = e.target.value; midiPaint(); } });
+        midiLoad();
+      }
+      // HERESY 1842: sung to the end? The take's timing (Whisper on its lyrics, line by line) says whether its last lines were heard; run on the word
+      var sungBox = back.querySelector(".ds-sung"), sungTimer = 0;
+      function sungClock(t) { var m = Math.floor(t / 60), s = t - m * 60; return m + ":" + (s < 10 ? "0" : "") + s.toFixed(1); }
+      function sungPaint(sg) {
+        if (!sungBox) return;
+        if (sg && sg.timed) sungMark(name, sg.done);   // HERESY 1846: its card says so at the next paint; 1854: the player at once
+        var tip = tr("Whisper listens to the take and times its lyrics line by line (on the processor, a minute or two): were its last lines sung?");
+        sungBox.innerHTML = !sg || sg.timed === false ? (sg && sg.running ? '<span class="ds-sung-say mono">' + esc(tr("Whisper listens…")) + "</span>" :
+            '<button type="button" class="btn ghost small" data-ds="sung" data-tip="' + esc(tip) + '">' + esc(tr("Sung to the end?")) + "</button>")
+          : sg.done === true ? '<span class="ds-sung-say is-good">✓ ' + esc(tr("Every line heard; the last ends at {0}").replace("{0}", sungClock(sg.last || 0))) + "</span>"
+          : sg.done === false ? '<span class="ds-sung-say is-bad">✗ ' + esc(tr("Lines not heard at the end: {0}, after {1}").replace("{0}", sg.count).replace("{1}", sungClock(sg.suggest))) + "</span>" +
+            ((sg.unsung || [])[0] ? '<q translate="no">' + esc(sg.unsung[0]) + "</q>" : "") +
+            '<button type="button" class="btn ghost small" data-ds="sung-regen" data-at="' + esc(String(sg.suggest)) + '">' + esc(tr("Regenerate from {0}").replace("{0}", sungClock(sg.suggest))) + "</button>"
+          : '<span class="ds-sung-say">' + esc(tr("The timing heard too little of this take to say")) + "</span>";
+      }
+      function sungLoad(run) {
+        if (!sungBox) return;
+        fetch("/lab/sung?name=" + encodeURIComponent(name) + (run ? "&run=1" : "")).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); })
+          .then(function (sg) { sungPaint(sg); clearTimeout(sungTimer); if (sg.running && document.body.contains(back)) sungTimer = setTimeout(function () { sungLoad(false); }, 2500); })
+          .catch(function (err) { if (run) sungBox.innerHTML = '<span class="ds-sung-say is-bad">' + esc(err.message) + "</span>"; else sungPaint(null); });
+      }
+      sungLoad(false);
+      // HERESY 1848 (TODO: «версии картинки дубля»): the take's cover and its earlier ones, each to put back (the one it had goes among the earlier)
+      var covWrap = back.querySelector(".ds-covers-wrap"), covBox = back.querySelector(".ds-covers");
+      function covLoad() {
+        if (!covBox) return;
+        fetch("/lab/art/versions?name=" + encodeURIComponent(name)).then(function (r) { return r.ok ? r.json() : null; }).then(function (cv) {
+          var vs = (cv && cv.versions) || [], now = window.HeresyArt ? window.HeresyArt.url(name) : "";
+          covWrap.hidden = !cv || (!cv.current && !vs.length);
+          if (covWrap.hidden) return;
+          back.querySelector(".ds-cov-say").textContent = vs.length ? tr("{0} earlier").replace("{0}", vs.length) : "";
+          covBox.innerHTML = (cv.current && now ? '<figure class="ds-cov is-now"><img src="' + esc(now) + '" alt="" loading="lazy" /><figcaption>' + esc(tr("now")) + "</figcaption></figure>" : "") +
+            vs.map(function (v) {
+              return '<figure class="ds-cov"><img src="/lab/artist/bin-file?take=' + encodeURIComponent(name) + "&stamp=" + encodeURIComponent(v.stamp) + '" alt="" loading="lazy" data-tip="' +
+                esc((v.painter ? v.painter + " · " : "") + (v.prompt || "")) + '" /><figcaption>' + esc(h.ago(v.when)) +
+                (cv.frozen ? "" : ' <button type="button" class="btn ghost small" data-ds="cov-back" data-stamp="' + esc(v.stamp) + '">' + esc(tr("Put it back")) + "</button>") + "</figcaption></figure>";
+            }).join("");
+        }).catch(function () { if (covWrap) covWrap.hidden = true; });
+      }
+      covLoad();
       back.querySelector(".ds-box").addEventListener("click", function (e) {
         var b = e.target.closest("[data-ds]");
         if (!b) return;
         if (b.dataset.ds === "close") return close();
         if (b.dataset.ds === "score") return scoreFromSound(b);
+        if (b.dataset.ds === "midi") return midiGo();   // HERESY 1834
+        if (b.dataset.ds === "sung") { b.disabled = true; return sungLoad(true); }   // HERESY 1842
+        if (b.dataset.ds === "cov-back") {               // HERESY 1848: an earlier cover back on the take; the one it had goes among the earlier
+          b.disabled = true;
+          fetch("/lab/artist/bin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "restore", items: [{ kind: "cover", take: name, stamp: b.dataset.stamp }] }) })
+            .then(function (r) { return r.json().then(function (x) { if (!r.ok) throw new Error(x.error || r.status); if ((x.kept || []).length) throw new Error(x.kept[0].why); return x; }); })
+            .then(function () { toast(tr("The earlier cover is back; the one it had is among the earlier")); return window.HeresyArt ? window.HeresyArt.refresh() : null; })
+            .then(covLoad, function (err) { b.disabled = false; toast(err.message, true); });
+          return;
+        }
+        if (b.dataset.ds === "sung-regen") { var at = +b.dataset.at; close(); h.openTake(name, "create"); if (window.ruachRegenFrom) window.ruachRegenFrom(at, name); return; }
+        if (b.dataset.ds === "midi-roll") {             // HERESY 1835: the set's MIDI as the form's score, the roll on it
+          midiLab("/midi/score?name=" + encodeURIComponent(name) + "&id=" + encodeURIComponent(b.dataset.id)).then(function (sc) {
+            var box = document.getElementById("abc");
+            if (!box) return;
+            return (box.value.trim() ? window.HeresyDialog.confirm(tr("Replace the score in the form with this MIDI?"), { ok: "Replace" }) : Promise.resolve(true)).then(function (ok) {
+              if (!ok) return;
+              close();
+              box.value = sc.abc; box.dispatchEvent(new Event("input", { bubbles: true }));
+              var tab = document.querySelector('.topbar [data-tab="create"]');
+              if (tab) tab.click();
+              setTimeout(function () { if (window.HeresyRoll) window.HeresyRoll.open(); }, 300);
+              toast(tr("The roll opens on the MIDI: {0}, {1} BPM, {2} bars").replace("{0}", sc.key).replace("{1}", sc.bpm).replace("{2}", sc.bars));
+            });
+          }).catch(function (err) { toast(err.message, true); });
+          return;
+        }
+        if (b.dataset.ds === "midi-engine") { close(); var et = document.getElementById("engineToggle"); if (et) et.click(); if (window.ruachEngineTab) window.ruachEngineTab("models"); return; }
         if (b.dataset.ds === "create") { close(); h.openTake(name, "create"); return; }
         if (b.dataset.ds === "json") {
           var copy = Object.assign({}, q);
@@ -2096,7 +2428,7 @@
   function plCard(r) {
     var now = state.hooks.playing ? state.hooks.playing() : {}, mine = now.name === r.name, on = mine && now.playing, art = window.HeresyArt ? window.HeresyArt.url(r.name) : "";
     var mk = function (lit, icon, tip) { return '<span class="pl-mark' + (lit ? " is-on" : "") + '" title="' + esc(tip) + '">' + ico(icon) + "</span>"; };
-    var when = state.hooks.when ? state.hooks.when(r.created, r.name) : "<span>" + esc(r.created ? state.hooks.ago(r.created) : "") + "</span>";
+    var when = state.hooks.when ? state.hooks.when(r.created, r.name) : "<span>" + esc(r.created ? state.hooks.ago(r.created, r.name) : "") + "</span>";
     return '<article class="pl-card' + (mine ? " is-current" : "") + '" draggable="true" data-pl="' + esc(r.name) + '">' +
       '<button type="button" class="pl-play' + (on ? " is-playing" : "") + '" data-pl-play="' + esc(r.name) + '" aria-label="' + (on ? "Pause" : "Play") + '">' + ico(on ? "pause" : "play") + "</button>" +
       '<div class="pl-main"><div class="pl-title" translate="no">' + esc(r.title) + "</div>" +
@@ -2229,6 +2561,18 @@
     back.addEventListener("mousedown", function (e) { if (e.target === back) shut(); });
     back.querySelector("[data-pl-close]").addEventListener("click", shut);
   }
+  // HERESY 1825: the note's button, on every card: its own colour with a note (its words as the tip), grey without one; a click opens its window
+  function noteBtn(r, attr) {
+    return '<button type="button" class="coll-act coll-note' + (r.note ? " coll-hasnote" : "") + '" ' + attr + ' aria-label="' + (r.note ? "Has a note" : "Note…") +
+      '" data-tip="' + esc(r.note ? String(r.note).slice(0, 300) : NOTE_NONE) + '"' + (r.note ? ' translate="no"' : "") + ">" + ico("note") + "</button>";
+  }
+  var NOTE_NONE = "No note yet: a click writes one";
+  function editNote(name, title) {                    // the same window as the menu's «Note…», its text 2 pt larger
+    if (!window.HeresyDialog) return Promise.resolve();
+    var had = note(name), h = state.hooks || {}, t = h.findTake ? h.findTake(name) : null;
+    return window.HeresyDialog.prompt("A note on “" + (title || (t && (t.title || t.name)) || name) + "”\n\nEmpty removes it.", had,
+      { ok: "Keep the note", max: 600, area: true, rows: 6, cls: "hd-note" }).then(function (v) { if (v !== null && v !== had) return setNote(name, v); });
+  }
   // HERESY 1044: a note on a take (the take card edits it)
   function note(name) { var r = state.rows.filter(function (x) { return x.name === name; })[0]; return r ? r.note || "" : ""; }
   function setNote(name, text) {
@@ -2249,12 +2593,13 @@
   }
 
   window.HeresyCollection = { init: init, reload: load, hubOpen: hubOpen, repaint: paint, paintArts: paintArts, isHidden: isHidden, isFresh: isFresh, markPlayed: markPlayed, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
-                              current: current, landable: landable, closedWs: closedWs, firstWs: firstWs, absent: function () { return state.loadStatus === 404; }, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, rateMany: rateMany, favMany: favMany, exportChecked: exportZip, note: note, setNote: setNote, playlist: function () { return (state.playlist || []).slice(); }, playlistOrder: plPlayOrder, playlistOnly: function () { return state.plOnly; }, playlistAdd: plAdd, openPlaylist: plOpen, playlistXfade: function () { return +state.plXfade || 0; }, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
+                              current: current, landable: landable, closedWs: closedWs, firstWs: firstWs, absent: function () { return state.loadStatus === 404; }, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, rateMany: rateMany, favMany: favMany, exportChecked: exportZip, note: note, setNote: setNote, editNote: editNote, playlist: function () { return (state.playlist || []).slice(); }, playlistOrder: plPlayOrder, playlistOnly: function () { return state.plOnly; }, playlistAdd: plAdd, openPlaylist: plOpen, playlistXfade: function () { return +state.plXfade || 0; }, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
                               order: function () { return state.place === "__trash" ? [] : state.place === "__playlist" ? (state.playlist || []).slice() : shown().map(function (r) { return r.name; }); },
-                              datasheet: openDatasheet, modelLine: modelLine, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
+                              deal: function (names) { if (!names) { DEAL = {}; return []; } return names.slice().sort(function (x, y) { return dealt(x) - dealt(y); }); },   // HERESY 1863: for the checks
+                              datasheet: openDatasheet, sung: sungMany, sungOf: function (n) { return (state.sung || {})[n]; }, sungMark: sungMark, modelLine: modelLine, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
                               row: rowOf, workspaces: function () { return state.ws.slice(); }, act: act, openSheet: openSheet, requestOf: requestOf,
                               selected: names, place: function () { return state.place; }, moveTo: moveTo,
-                              markFavorite: markFavorite, markBtns: markBtns, markOf: markOf, paintMarks: paintMarks,   // HERESY 1802
+                              markFavorite: markFavorite, markBtns: markBtns, markOf: markOf, isBlind: isBlind, paintMarks: paintMarks, reactBtn: reactBtn, reactOf: reactOf, setReact: setReact, reactClose: reactClose, REACTS: REACTS,   // HERESY 1802
                               pinned: function (name) { return ((state.pins || {})[state.place] || []).indexOf(name) >= 0; }, pin: pin,
                               pinPlaces: pinPlaces, unpinAll: unpinAll, pinTarget: pinTarget, pinIn: pinIn,   // HERESY 1167
                               isFrozen: function (name) { var r = rowOf(name); return !!(r && r.frozen); },   // HERESY 1166

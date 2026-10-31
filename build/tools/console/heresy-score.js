@@ -113,7 +113,7 @@
         var r;
         try {
           r = A.chordBed({ key: $("bedKey").value, meter: $("bedMeter").value, bpm: $("bedBpm").value, lyrics: ($("lyrics") || {}).value || "",
-                           seed: Math.floor(Math.random() * 4294967296) });
+                           seed: window.ruachShortSeed ? +window.ruachShortSeed() : 1000 + Math.floor(Math.random() * 999999000) });   // HERESY 1877
         } catch (error) { toast(error.message, true); return; }
         (($("abc").value || "").trim() ? window.HeresyDialog.confirm("Replace the score in the form with a chord bed?", { ok: "Replace" }) : Promise.resolve(true)).then(function (ok) {
           if (!ok) return;

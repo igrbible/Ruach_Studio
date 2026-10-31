@@ -75,8 +75,34 @@ def set_info(d, rel, derived):
                     grew = True
         versions[1:] = sorted(versions[1:], key=lambda v: v.get("created", ""))
         strips.append({"name": f["name"], "title": f.get("title") or f["name"].replace("_", " ").capitalize(), "path": own, "versions": versions})
+    strips += added_strips(d, derived, seconds, info.samplerate, {s["name"] for s in strips})
     return {"set": rel_set, "mode": man.get("mode"), "source": source, "seconds": round(seconds, 3), "rate": info.samplerate,
             "channels": info.channels, "strips": strips, "rest": REST}
+
+
+def added_strips(d, derived, seconds, rate, taken):
+    """HERESY 1929: the strips a step adds (a file that says "track", of the take's length): one a track, its first file its own, a later
+    one its version; a name the set already has is left out."""
+    out = {}
+    for m in sorted(derived, key=lambda m: m.get("created", "")):
+        for f in m.get("files") or []:
+            tr = str(f.get("track") or "")
+            if not tr or tr in taken:
+                continue
+            path = f.get("path") or f"derived/{m.get('id')}/{f.get('file')}"
+            try:
+                fi = sf.info(str(_inside(d, path)))
+            except (OSError, RuntimeError, ValueError):
+                continue
+            if abs(fi.frames / fi.samplerate - seconds) >= 0.05 or fi.samplerate != rate:
+                continue
+            v = {"id": m.get("id", ""), "label": f.get("name") or m.get("label") or tr, "path": path, "created": m.get("created", "")}
+            if tr in out:
+                out[tr]["versions"].append(v)
+            else:
+                out[tr] = {"name": tr, "title": f.get("title") or tr.replace("_", " ").capitalize(), "path": path, "added": True,
+                           "versions": [dict(v, id="")]}
+    return list(out.values())
 
 
 def _slice(path, a, n, channels):
@@ -99,7 +125,8 @@ def chunk(d, info, strip, path, start, seconds):
     elif strip == REST:
         x = _slice(_inside(d, info["source"]), a, n, ch).astype(np.float64)
         for s in info["strips"]:
-            x -= _slice(_inside(d, s["path"]), a, n, ch)
+            if not s.get("added"):                    # HERESY 1929: an added strip is no part of the set
+                x -= _slice(_inside(d, s["path"]), a, n, ch)
     else:
         s = next((s for s in info["strips"] if s["name"] == strip), None)
         if not s or path not in [v["path"] for v in s["versions"]]:
@@ -155,7 +182,7 @@ def peaks(d, info, strip, path, n=1200):
             raise ValueError(f"{path} is not a version of {strip}")
         files = [(_inside(d, path), 1.0)]
     else:
-        files = [(_inside(d, info["source"]), 1.0)] + [(_inside(d, s["path"]), -1.0) for s in info["strips"]]
+        files = [(_inside(d, info["source"]), 1.0)] + [(_inside(d, s["path"]), -1.0) for s in info["strips"] if not s.get("added")]   # 1929
     out = np.zeros(n)
     block = step * 64
     handles = [(sf.SoundFile(str(p)), k) for p, k in files]

@@ -300,7 +300,9 @@ DEFAULTS = {"steps": 1500, "rank": 32, "rank_ar": 0, "rank_nar": 0, "lr": 1e-4, 
             "val_fraction": 0.0, "patience": 0,              # HERESY 1497: held-out tracks and the early stop (train.py)
             "nar_phase_epochs": 12,                          # HERESY 1622: at the plateau the sound half on alone, up to 12 epochs
             "ema_epochs": 1.0, "ar_max_tokens": 0,           # HERESY 1662: the moving average's span and the AR's tokens, as train.py's defaults
-            "lr_tail_epochs": 0.0, "lr_tail_floor": 0.0}     # HERESY 1752: the rate's fade over the last epochs, down to floor × itself
+            "lr_tail_epochs": 0.0, "lr_tail_floor": 0.0,     # HERESY 1752: the rate's fade over the last epochs, down to floor × itself
+            "vram_meter": False, "ar_cap_tokens": 0, "long_off_card0": False,   # HERESY 1832: 1815's meter and guard, off as train.py's own
+            "val_groups": {}, "stop_ce_groups": [], "stop_ce_rises": 2, "stop_kl_max": 0.0}   # HERESY 1944: held-out by group, the stop-crane (train.py)
 # HERESY 1085: engine "ruach" is the studio's own trainer (lab/trainer, ported from Ostris' MIT code, exact on
 # parity: lab/trainer/PARITY.md), bf16 weights (Viktor: "не квантуй ничего"), Direct, score mode (1420), separated (1422).
 # HERESY 1422: the only one: AI-Toolkit, kept as the reference till then, left the studio.
@@ -332,6 +334,10 @@ CKPT_RE = re.compile(r"_(\d{6,})\.safetensors$")
 SERIES = {}                                           # HERESY 1507: (path) -> ((size, mtime_ns), curves)
 
 
+class _Restarting(Exception):
+    """HERESY 1823: the step log's copy in short steps gave up on a writer faster than its steps."""
+
+
 def _series(d, keep=400):
     """HERESY 1067: a run's step log (AI-Toolkit's loss_log.db) as curves for its card: flow loss, ar_ce,
     ar_kl, each averaged into at most `keep` points; with the wall time, the seconds a step."""
@@ -357,11 +363,23 @@ def _series(d, keep=400):
     try:
         src = sqlite3.connect(f"file:{dbs[0]}?mode=ro", uri=True, timeout=5)
         con = sqlite3.connect(":memory:")
-        src.backup(con, pages=256, sleep=0.002)
+        t0 = time.monotonic()
+
+        def slow(status, remaining, total):            # HERESY 1823: a commit during the copy starts it again; not for ever
+            if time.monotonic() - t0 > 3.0:
+                raise _Restarting()
+        try:
+            src.backup(con, pages=256, sleep=0.002, progress=slow)
+        except _Restarting:                            # copied in one go: a read lock of milliseconds
+            con.close()
+            con = sqlite3.connect(":memory:")
+            src.backup(con)
         src.close()
         rows = con.execute("SELECT step, key, value_real FROM metrics WHERE value_real IS NOT NULL AND key IN "
                            "('loss/loss', 'loss/ar_ce', 'loss/ar_kl', 'loss/flow') ORDER BY step").fetchall()
         wall = con.execute("SELECT MIN(step), MAX(step), MIN(wall_time), MAX(wall_time) FROM steps").fetchone()
+        vram = (con.execute("SELECT key, step, value_real FROM metrics WHERE key LIKE 'vram/peak_gb_card%' AND value_real IS NOT NULL").fetchall()
+                if (_meta(d).get("options") or {}).get("vram_meter") else [])   # HERESY 1832: only a run with the meter on
         con.close()
     except sqlite3.Error as e:
         return {"error": f"the step log could not be read: {e}"}      # said aloud: not "no steps"
@@ -390,6 +408,13 @@ def _series(d, keep=400):
                                   "min": round(min(v for _, v in pts), 4), "first": round(pts[0][1], 4)}
     if wall and wall[1] and wall[1] > wall[0]:
         out["sec_per_step"] = round((wall[3] - wall[2]) / (wall[1] - wall[0]), 2)
+    peaks = {}
+    for k, st, v in vram:                              # HERESY 1832: each card's highest of the run (by its rank in the run), with its step
+        r = k.rsplit("card", 1)[1]
+        if r.isdigit() and math.isfinite(v) and v > peaks.get(r, (0.0, 0))[0]:
+            peaks[r] = (round(v, 2), st)
+    if peaks:
+        out["vram_cards"] = {r: {"gb": g, "step": st} for r, (g, st) in sorted(peaks.items(), key=lambda x: int(x[0]))}
     SERIES[str(dbs[0])] = (stamp, out)
     if len(SERIES) > 64:
         SERIES.pop(next(iter(SERIES)))
@@ -423,6 +448,28 @@ def checkpoints(kit, run, d=None):
                     "bytes": f.stat().st_size, "saved": f.stat().st_mtime,
                     "lora": f"{run}/{name}" if name and (P["loras"] / run / name).is_file() else None})
     return out
+
+
+def gone(kit, run, d=None, cks=None):
+    """HERESY 1816 (Viktor 28.10.2026: «опознания исчезнувших чекпоинтов, чтобы они помечались в ранах как отсутствующие/удалённые»): the saves the run
+    made that are not on disk any more: every save_every up to the step it reached, and the steps its held-out measures name, less the files there."""
+    P = paths(kit)
+    d = d or _safe_dir(P["runs"], run)
+    try:
+        meta = json.load(open(d / "run.json", encoding="utf-8")) if (d / "run.json").is_file() else {}
+    except (OSError, ValueError):
+        meta = {}
+    o = meta.get("options") or {}
+    every, reached = int(o.get("save_every") or 0), int(meta.get("step") or 0)
+    per = meta.get("tracks") or o.get("steps_per_epoch") or 0
+    want = set(range(every, reached + 1, every)) if every > 0 and reached >= every else set()
+    try:
+        v = json.load(open(d / "output" / run / "val.json", encoding="utf-8"))
+        want |= {e["step"] for e in v.get("history") or [] if isinstance(e, dict) and isinstance(e.get("step"), int)}
+    except (OSError, ValueError, AttributeError):
+        pass
+    have = {c["step"] for c in (cks if cks is not None else checkpoints(kit, run, d))}
+    return [{"step": s, "epoch": round(s / per, 2) if per else None} for s in sorted(want - have)]
 
 
 def publish(kit, run, file):
@@ -493,6 +540,8 @@ def delete_run(kit, run, with_loras):
     if _unit_state(run) == "active":
         raise ValueError(f"{run} is running: stop it first")
     d = _safe_dir(P["runs"], run)
+    if protected(d):                                       # HERESY 1817
+        raise ValueError(f"{run} is protected: ⋯ → Unprotect first")
     dest = run_trash(kit) / f"{run}@{time.strftime('%Y%m%d-%H%M%S')}"
     dest.mkdir(parents=True)
     shutil.move(str(d), str(dest / "run"))
@@ -503,6 +552,66 @@ def delete_run(kit, run, with_loras):
     (dest / "trashed.json").write_text(json.dumps({"run": run, "when": time.time(), "loras": moved}, indent=1), encoding="utf-8")
     RUNS.pop(run, None)
     return {"name": run, "trash": dest.name, "loras": moved}
+
+
+# ---- HERESY 1817 (Viktor 28.10.2026: «…опцию выбора чекпоинтов для удаления, но не скопом… FW вообще не трогаем, а защищаем такие раны тренинга»): a run
+# protected (a mark beside it, not in run.json, which a live run writes) gives neither its saves nor itself to deletion; the saves of an unprotected,
+# stopped run go one by one, as chosen, and their twins in loras/ only when asked
+PROTECT = ".protected"
+
+
+def protected(d):
+    return (Path(d) / PROTECT).is_file()
+
+
+def protect(kit, run, on):
+    d = _safe_dir(paths(kit)["runs"], run)
+    m = d / PROTECT
+    if on:
+        m.write_text(time.strftime("%F %T") + "\n", encoding="utf-8")
+    elif m.exists():
+        m.unlink()
+    return {"name": run, "protected": bool(on)}
+
+
+def delete_saves(kit, run, files, with_loras):
+    """The saves chosen, deleted for good (the space is what the user asked for); their twins in loras/ (the same file, a hard link) with them only
+    when asked, else they stay usable in the Creator and the space stays taken."""
+    P = paths(kit)
+    d = _safe_dir(P["runs"], run)
+    if protected(d):
+        raise ValueError(f"{run} is protected: ⋯ → Unprotect first")
+    if _unit_state(run) == "active":
+        raise ValueError(f"{run} is running: stop it first")
+    have = {c["file"] for c in checkpoints(kit, run, d)}
+    picked = sorted(set(str(f) for f in files or []))
+    if not picked or any(f not in have for f in picked):
+        raise ValueError("choose saves of this run")
+    inos = {}
+    for f in picked:
+        st = (d / f).stat()
+        inos[(st.st_dev, st.st_ino)] = f
+    twins = []
+    ld = P["loras"] / run
+    for q in sorted(ld.glob("*.safetensors")) if ld.is_dir() else []:
+        st = q.stat()
+        if (st.st_dev, st.st_ino) in inos:
+            twins.append(q)
+    freed = 0
+    for f in picked:
+        st = (d / f).stat()
+        (d / f).unlink()
+        if st.st_nlink == 1:
+            freed += st.st_size
+    out = []
+    for q in twins:
+        if with_loras:
+            st = q.stat()
+            q.unlink()
+            if st.st_nlink == 1:
+                freed += st.st_size
+            out.append(q.name)
+    return {"name": run, "deleted": picked, "loras_deleted": out, "loras_kept": [q.name for q in twins if q.name not in out], "freed": freed}
 
 
 def trashed_runs(kit):
@@ -625,6 +734,8 @@ def runs(kit):
                 except (OSError, ValueError):
                     r["val"] = {"error": "val.json unreadable"}
             r["checkpoints"] = checkpoints(kit, d.name, d)
+            r["gone"] = gone(kit, d.name, d, r["checkpoints"])   # HERESY 1816
+            r["protected"] = protected(d)                         # HERESY 1817
             if live and live.get("tail"):                 # HERESY 1090: the time it has run and has left, from tqdm's line
                 m = ETA_RE.search(live["tail"][-1])
                 if m:
@@ -805,6 +916,12 @@ def train(kit, spec, gpu_picker, more_cards=None):
     o["steps_per_epoch"] = tracks                     # batch 1: one step a track
     o["lr_tail_epochs"] = max(0.0, min(float(o["lr_tail_epochs"]), 1000.0))   # HERESY 1752: none below 0; one longer than the run fades all of it
     o["lr_tail_floor"] = max(0.0, min(float(o["lr_tail_floor"]), 1.0))
+    o["ar_cap_tokens"] = max(0, min(int(o["ar_cap_tokens"]), 65536))   # HERESY 1832: 0 no cap
+    # HERESY 1944: at most 12 groups of 64 tracks, their names as strings; 1…10 rises; a KL ceiling 0 (off) … 10
+    o["val_groups"] = {str(g)[:24]: [str(n) for n in (v or [])][:64] for g, v in list(dict(o["val_groups"] or {}).items())[:12]}
+    o["stop_ce_groups"] = [str(g)[:24] for g in (o["stop_ce_groups"] or [])][:12]
+    o["stop_ce_rises"] = max(1, min(int(o["stop_ce_rises"]), 10))
+    o["stop_kl_max"] = max(0.0, min(float(o["stop_kl_max"]), 10.0))
     o["steps"] = math.ceil(o["steps"] / tracks) * tracks  # whole epochs: the last save closes one too
     o["save_every"] = max(1, round(tracks * min(100.0, max(0.1, o["save_epochs"]))))   # HERESY 1658: every tenth of an epoch at the least
     if str(spec.get("gpu", "")).strip().isdigit():     # a card named: the studio's own is never taken by chance
@@ -847,7 +964,8 @@ def train(kit, spec, gpu_picker, more_cards=None):
         cfg = {"name": run, "out": str(d), "dataset": str(P["prepared"] / dataset), "checkpoint": str(ckpt),
                **{k: o[k] for k in ("steps", "save_every", "rank", "rank_ar", "rank_nar", "lr", "ar_loss_weight", "ar_kl_weight", "ar_lr_multiplier", "train_window_frames", "cot",
                                     "val_fraction", "patience", "nar_phase_epochs", "steps_per_epoch", "ema_epochs", "ar_max_tokens",
-                                    "lr_tail_epochs", "lr_tail_floor")}}   # HERESY 1497, 1622, 1662, 1752
+                                    "lr_tail_epochs", "lr_tail_floor", "vram_meter", "ar_cap_tokens", "long_off_card0",
+                                    "val_groups", "stop_ce_groups", "stop_ce_rises", "stop_kl_max")}}   # HERESY 1944   # HERESY 1497, 1622, 1662, 1752, 1832
         if o["cot"] != "off":                         # HERESY 1420: score mode, AI-Toolkit's abc_dropout
             cfg["abc_dropout"] = 0.5
         if o["do_separation"]:                        # HERESY 1422: the separation, AI-Toolkit's weights

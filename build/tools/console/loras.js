@@ -11,11 +11,13 @@
      describe(list)        "sv-billie (music 0.8 · sound 1.0), ..." for a song's info
      listInto(list, note)  also keep an Engine-panel list (a <ul>) of every installed LoRA
      setSources(map)       {id or folder prefix: {repo, url, about, trigger}} from loras/sources.json:
-                           a link and a recap per LoRA, and a trigger word for files that carry none */
+                           a link and a recap per LoRA, and a trigger word for files that carry none
+     setBases(report)      the lab's /lab/lora/bases: what each was trained on against the engine's model (HERESY 1960) */
 (function (root) {
   "use strict";
 
-  var S = { catalog: [], choice: [], host: null, opts: {}, list: null, note: null, sources: {}, budget: "off", profile: null, profileKey: "", userNotes: {} };
+  var S = { catalog: [], choice: [], host: null, opts: {}, list: null, note: null, sources: {}, budget: "off", profile: null, profileKey: "", userNotes: {},
+    fit: {}, model: null };                       // HERESY 1960: each adapter's base against the engine's model
   try { S.free = root.localStorage.getItem("yue2.loraFree") === "on"; } catch (e) { S.free = false; }   // HERESY 1629: Past the limits, kept with the page
 
   // HERESY 1165: a text glued from names and numbers is translated here, whole, from the English it is made as (the
@@ -32,6 +34,56 @@
   function entry(id) {
     for (var i = 0; i < S.catalog.length; i++) if (S.catalog[i].id === id) return S.catalog[i];
     return null;
+  }
+
+  // HERESY 1960 (Viktor 30.10.2026: «флагирование и отключение адаптеров, которые не на своих моделях/файнтюнах тренились как несовместимые.
+  // Отключать как в списке LoRA адаптеров, так и в подгруженных, если вдруг переключил модели»): what each was trained on (the lab reads its
+  // file and the run that made it) against the model the engine runs. «other»: YuE2's on the fine-tune or the fine-tune's on YuE2, asked
+  // before it goes in and muted when the model changes to one it was not trained for; «near»: the fine-tune at another epoch, marked only
+  function fitOf(id) { var f = S.fit[id]; return S.model && S.model.known && f ? f.fit : ""; }
+  function pairFit(e) {                            // a pair is as far as its farther file
+    if (!e) return "";
+    var p = pairOf(e), a = fitOf(e.id), b = p ? fitOf(p.id) : "";
+    return a === "other" || b === "other" ? "other" : a === "near" || b === "near" ? "near" : a || b;
+  }
+  function baseOf(id) {
+    var f = S.fit[id];
+    return !f ? "" : f.how === "assumed" ? tr("{0}, assumed: the file does not say").replace("{0}", f.base) : f.base;
+  }
+  function fitTip(e) {
+    if (!e) return "";                             // a row whose file left loras/ has no base to say (1960: it broke the picker's paint)
+    var out = [];
+    [e].concat(pairOf(e) ? [pairOf(e)] : []).forEach(function (x) {
+      var k = fitOf(x.id), f = S.fit[x.id];
+      if (k === "other") out.push("\u2298 " + tr("Trained on {0}; the model is {1}: what it learnt does not hold here. It goes in only when asked.").replace("{0}", baseOf(x.id)).replace("{1}", S.model.label));
+      else if (k === "near") out.push("\u2248 " + tr("Trained on {0}; the model is {1}: the same fine-tune at another epoch, it may sound a little off.").replace("{0}", baseOf(x.id)).replace("{1}", S.model.label));
+      if (k && f && f.inside) out.push(tr("Already folded into this model: added again, it counts twice."));
+    });
+    return out.filter(function (x, i) { return out.indexOf(x) === i; }).join("\n");
+  }
+  function fitMark(e) {
+    var k = pairFit(e), f = S.fit[e.id] || {};
+    return k === "other" ? '<b class="lora-pick-fit is-other" translate="no">\u2298 ' + escape(f.base || "") + "</b> "
+      : k === "near" ? '<b class="lora-pick-fit is-near" translate="no">\u2248 ' + escape(f.base || "") + "</b> " : "";
+  }
+  // the model changed, or came: another model's adapters muted (said once), the ones it muted back in when theirs again; «anyway» holds for the
+  // model it was said on. Returns whether the choice changed
+  function modelSays() {
+    if (!S.model || !S.model.known) return false;
+    var off = [], back = [], now = S.model.label;
+    S.choice.forEach(function (c) {
+      var e = entry(c.id), k = pairFit(e), name = nameOf(c.id);
+      if (k === "other" && !c.muted && c.anyway !== now) { c.muted = true; c.offModel = true; if (off.indexOf(name) < 0) off.push(name); }
+      else if (k !== "other" && c.offModel && e) { delete c.offModel; delete c.muted; if (back.indexOf(name) < 0) back.push(name); }
+    });
+    if (root.HeresyToast && off.length) root.HeresyToast(tr("The model is {0}: muted, trained on another: {1}").replace("{0}", now).replace("{1}", off.join(", ")), "warn");
+    if (root.HeresyToast && back.length) root.HeresyToast(tr("The model is {0}: back in the run: {1}").replace("{0}", now).replace("{1}", back.join(", ")));
+    return off.length > 0 || back.length > 0;
+  }
+  function setBases(d) {
+    S.model = d && d.model ? d.model : null;
+    S.fit = d && d.loras && typeof d.loras === "object" ? d.loras : {};
+    if (modelSays()) changed(); else paint();
   }
 
   // A name for an id whose file is gone: the file stem, or its folders when the stem is generic
@@ -341,7 +393,7 @@
   // adapters that push on the same layers (the lab's word, /lab/lora/profile) under one budget a half: off, Share (each
   // gives way in proportion past the red line) or In order (served from the top row; what one lets go, the next takes). The
   // engine runs such an adapter with the graph (lora-rt.h) and keeps the budget at every moment of the song
-  var WAVE_ARCH = [[0, 0.15], [0.5, 1], [1, 0.15]], waveOpen = {}, waveDrag = null, WW = 300, WH = 90, WP = 8;
+  var WAVE_ARCH = [[0, 0.15], [0.5, 1], [1, 0.15]], WAVE_RISE = [[0, 0.1], [1, 1]], WAVE_FALL = [[0, 1], [1, 0.1]], waveOpen = {}, waveDrag = null, WW = 300, WH = 90, WP = 8;
 
   // HERESY 1665 (Viktor 20.10.2026, RIVALS 3 «LoRA по секциям — маска из лирики»: «ОДОБРЯЮ»): a wave by the song's sections. The adapter sounds in
   // the ticked ones and rests in the others, a ramp of 1.5 s at each border. The sections and their times: the score's «% verse» blocks counted in
@@ -423,9 +475,13 @@
     if (pts.length < 2 || pts.every(function (q) { return q[1] === 1; })) return null;
     return pts;
   }
+  function waveShape(w) {                         // HERESY 1841: a wave that is one of the shapes, named so
+    var s = JSON.stringify(w);
+    return s === JSON.stringify(WAVE_ARCH) ? "arch" : s === JSON.stringify(WAVE_RISE) ? "rise" : s === JSON.stringify(WAVE_FALL) ? "fall" : "draw";
+  }
   function waveMode(c) {
     if (!c.curve) return "flat";
-    return c.curveMode || (JSON.stringify(c.curve) === JSON.stringify(WAVE_ARCH) ? "arch" : "draw");
+    return c.curveMode || waveShape(c.curve);
   }
   function wavePath(c, w, h, pad) {
     var d = "";
@@ -549,7 +605,7 @@
     var mode = waveMode(c), L = songAxis(), g = songGuess();
     return '<div class="curve-edit lora-wave-edit" data-wave-edit="' + escape(key) + '">' +
       '<div class="lora-wave-head"><div class="curve-modes" role="group" aria-label="' + escape(tr(name + ": its curve through the song")) + '">' +
-      [["flat", "Flat"], ["arch", "Arch"], ["draw", "Draw"], ["sections", "Sections"]].map(function (m) {
+      [["flat", "Flat"], ["arch", "Arch"], ["rise", "Rise"], ["fall", "Fall"], ["draw", "Draw"], ["sections", "Sections"]].map(function (m) {   // HERESY 1841: Rise, Fall
         return '<button type="button" class="curve-mode' + (mode === m[0] ? " is-on" : "") + '" data-wave-mode="' + m[0] + '" aria-pressed="' + (mode === m[0]) + '">' + m[1] + "</button>";
       }).join("") + "</div>" + '<span class="lora-wave-at mono"></span>' +
       (L ? '<label class="lora-wave-len" data-tip="' + escape(tr("About how long the song will run, minutes:seconds. The wave runs over the length set in Output (" + clockOf(L) +
@@ -788,7 +844,9 @@
       var e = entry(c.id);
       if (!e) { notes.push(fallbackName(c.id) + " is no longer in loras/ and will be left out."); return; }
       var name = nameOf(c.id);
+      if (c.muted && c.offModel) { notes.push(tr("{0} is muted: trained on {1}, and the model is {2} (right-click: back in the run anyway).").replace("{0}", name).replace("{1}", baseOf(c.id)).replace("{2}", S.model ? S.model.label : "")); return; }   // HERESY 1960
       if (c.muted) { notes.push(name + " is muted: left out of the run (right-click: back in it)."); return; }   // HERESY 1167
+      if (pairFit(e) === "other") notes.push("\u26a0 " + tr("{0} was trained on {1}, and the model is {2}: it goes in as you asked.").replace("{0}", name).replace("{1}", baseOf(c.id)).replace("{2}", S.model.label));   // HERESY 1960
       if (c.noscore && has(e, "ar") && c.ar > 0) notes.push(name + " is out of the score: the plan is written without it, then it sings with the others.");   // HERESY 1629
       // HERESY 1167: the run adds the word itself; said only so its effect is not a surprise
       if (triggerOf(e) && !(S.opts.styleText && S.opts.styleText().toLowerCase().indexOf(triggerOf(e).toLowerCase()) >= 0))
@@ -848,7 +906,8 @@
       var parts = String(e.name).split(" / "), main = parts.pop(), folder = parts.join(" / "), title = (source(e.id) || {}).title || main;
       // HERESY 1165: each piece its own text, so its words translate; the folder and the trigger word are names
       var meta = e.error ? escape(tr("cannot load: " + e.error))
-        : [[halvesText(e)], [folder, 1], ["rank " + e.rank], [e.size_mb + " MB"], [triggerOf(e) ? triggerOf(e) : "", 2], [e.mode ? e.mode + " mode" : ""]]
+        : [[halvesText(e)], [folder, 1], ["rank " + e.rank], [e.size_mb + " MB"], [triggerOf(e) ? triggerOf(e) : "", 2], [e.mode ? e.mode + " mode" : ""],
+           [S.fit[e.id] ? tr("trained on {0}").replace("{0}", baseOf(e.id)) : "", 1]]   // HERESY 1960
           .filter(function (p) { return p[0]; })
           .map(function (p) { return p[1] === 2 ? "<span>trigger</span> <span translate=\"no\">" + escape(p[0]) + "</span>" : "<span" + (p[1] ? ' translate="no"' : "") + ">" + escape(p[0]) + "</span>"; })
           .join(" · ");
@@ -867,15 +926,23 @@
     }
   }
 
-  function toggle(id) {
+  function toggle(id, sure) {
     var ids = idsOf(id), on = S.choice.some(function (c) { return ids.indexOf(c.id) >= 0; });   // HERESY 1167: a pair as one
+    if (!on && !sure && pairFit(entry(id)) === "other" && root.HeresyDialog) {   // HERESY 1960: another model's, asked first
+      root.HeresyDialog.confirm(tr("{0} was trained on {1}, and the model is {2}").replace("{0}", nameOf(id)).replace("{1}", baseOf(id)).replace("{2}", S.model.label) + "\n\n" +
+        tr("What it learnt does not hold on another model: a voice tears, a style smears. Use it here anyway?"), { ok: tr("Use it anyway") })
+        .then(function (yes) { if (yes) toggle(id, true); }, function () { /* left out */ });
+      return;
+    }
     if (on) {
       S.choice = S.choice.filter(function (c) { return ids.indexOf(c.id) < 0; });
     } else {
       ids.forEach(function (x) {
         var e = entry(x);
         if (!e || e.error) return;
-        S.choice.push({ id: x, ar: has(e, "ar") ? zones(e, "ar").safe : 0, nar: has(e, "nar") ? zones(e, "nar").safe : 0 });   // HERESY 1623: at its green
+        var o = { id: x, ar: has(e, "ar") ? zones(e, "ar").safe : 0, nar: has(e, "nar") ? zones(e, "nar").safe : 0 };   // HERESY 1623: at its green
+        if (sure && S.model) o.anyway = S.model.label;   // HERESY 1960: said for this model
+        S.choice.push(o);
       });
     }
     changed();
@@ -909,7 +976,8 @@
       var key = ids.join("|"), name = nameOf(c.id);   // HERESY 1447: its wave; dragged in order
       return '<div class="lora-row' + (e ? "" : " is-missing") + (muted ? " is-muted" : "") + (S.budget === "order" ? " is-ordered" : "") + '" data-ids="' + escape(key) +
         '"><span class="lora-who"' + (S.budget === "order" ? ' draggable="true"' : "") + '><span class="lora-name" translate="no" data-tip="' + escape(e ? aboutTip(e) + (p ? "\n\n" + aboutTip(p) : "") : tr("Not in loras/ any more")) + '">' +
-        escape(nameOf(c.id)) + "</span>" + (muted ? '<span class="lora-muted-tag" data-tip="Right-click: back in the run">muted</span>' : "") +
+        escape(nameOf(c.id)) + "</span>" + (muted ? (c.offModel ? '<span class="lora-muted-tag lora-foreign-tag" data-tip="' + escape(fitTip(e) + "\n" + tr("Muted when the model changed. Right-click: back in the run anyway")) + '">' + escape(tr("another model's")) + "</span>"   // HERESY 1960
+          : '<span class="lora-muted-tag" data-tip="Right-click: back in the run">muted</span>') : pairFit(e) === "other" ? '<span class="lora-muted-tag lora-foreign-tag is-live" data-tip="' + escape(fitTip(e)) + '">' + escape(tr("another model's")) + "</span>" : "") +
         (!muted && S.choice.some(function (x) { return ids.indexOf(x.id) >= 0 && x.noscore && has(entry(x.id), "ar"); })   // HERESY 1629
           ? '<span class="lora-muted-tag lora-noscore-tag" data-tip="Out of the score: its music half sings the score, the plan is written without it. Right-click: back in the score">sung only</span>' : "") +
         // HERESY 1167 (Viktor: «суффиксом приклинивай все триггеры… кнопка не нужна»): the run puts the word at the style's end
@@ -929,12 +997,13 @@
       if (hid) nHidden++;
       if (hid && !S.showHidden) return "";            // HERESY 1496
       var tag = e.error ? "cannot load" : p ? (tagOf(e) || "music + sound halves") : tagOf(e) || halvesText(e) + (has(e, "ar") && has(e, "nar") ? " halves" : " half");
-      return '<button type="button" class="lora-pick' + (isOn ? " is-on" : "") + (hid ? " is-hidden-lora" : "") + '" data-lora-chip="' + escape(e.id) + '"' +
+      var pf = pairFit(e), ft = fitTip(e);            // HERESY 1960
+      return '<button type="button" class="lora-pick' + (isOn ? " is-on" : "") + (hid ? " is-hidden-lora" : "") + (pf === "other" ? " is-foreign" : pf === "near" ? " is-near" : "") + '" data-lora-chip="' + escape(e.id) + '"' +
         ' data-kind="' + kindOf(e) + '" style="' + kindStyle(e) + '" data-find="' + escape(findText(e, p)) + '"' +   // HERESY 1636
-        (e.error ? " disabled" : "") + ' aria-pressed="' + (isOn ? "true" : "false") + '" data-tip="' + escape(aboutTip(e) + (p ? "\n\n" + aboutTip(p) : "")) + '">' +
+        (e.error ? " disabled" : "") + ' aria-pressed="' + (isOn ? "true" : "false") + '" data-tip="' + escape((ft ? ft + "\n\n" : "") + aboutTip(e) + (p ? "\n\n" + aboutTip(p) : "")) + '">' +
         '<span class="lora-pick-name" translate="no">' + escape(nameOf(e.id)) + (twinOf(e) ? ' <span class="lora-pick-twin mono">' + escape(twinOf(e)) + "</span>" : "") + "</span>" +   // HERESY 1650
         (e.error ? "" : '<span class="lora-pick-half">' + (p ? "both" : halfShort(e)) + "</span>") +
-        '<span class="lora-pick-tag">' + escape(tag) + "</span></button>";
+        '<span class="lora-pick-tag">' + fitMark(e) + escape(tag) + "</span></button>";
     }).join("");
     filterChips();                                   // HERESY 1636: the search and the kind as they stand
     paintNotes();
@@ -1246,6 +1315,8 @@
       if (!c) return;
       if (wm.dataset.waveMode === "flat") setWave(key, null);
       else if (wm.dataset.waveMode === "arch") setWave(key, WAVE_ARCH, "arch");
+      else if (wm.dataset.waveMode === "rise") setWave(key, WAVE_RISE, "rise");   // HERESY 1841
+      else if (wm.dataset.waveMode === "fall") setWave(key, WAVE_FALL, "fall");
       else if (wm.dataset.waveMode === "sections") {   // HERESY 1665: every section at first
         rowChoices(key).forEach(function (r) { if (!r.sections) r.sections = allSections(); });
         sectionWave(key);
@@ -1381,8 +1452,8 @@
         // HERESY 1629 (Viktor: «можно секинить адаптеры, которые вообще не должны участвовать в написании ABC, хотя у них есть AR, - но это идёт в синтез»)
         var arOnes = mine.filter(function (c) { return has(entry(c.id), "ar"); }), outOf = arOnes.length > 0 && arOnes.every(function (c) { return c.noscore; });
         root.HeresyMenu.open(event.clientX, event.clientY, [
-          { label: isMuted ? "Unmute: back in the run" : "Mute: left out of the run, its strengths kept", icon: isMuted ? "\u25b6" : "\u23f8",
-            action: function () { mine.forEach(function (c) { if (isMuted) delete c.muted; else c.muted = true; }); changed(); } }
+          { label: isMuted ? (mine.some(function (c) { return c.offModel; }) ? "Back in the run anyway: trained on another model" : "Unmute: back in the run") : "Mute: left out of the run, its strengths kept", icon: isMuted ? "\u25b6" : "\u23f8",
+            action: function () { mine.forEach(function (c) { if (isMuted) { delete c.muted; if (c.offModel && S.model) c.anyway = S.model.label; delete c.offModel; } else c.muted = true; }); changed(); } }
         ].concat(arOnes.length && !isMuted ? [{ label: outOf ? "Back in the score: its music half writes the score too" : "Out of the score: its music half sings it, the plan is written without it",
           icon: "\u266a", action: function () { mine.forEach(function (c) { if (outOf) delete c.noscore; else c.noscore = true; }); changed(); } }] : []).concat([
           { label: "Your note…", icon: "✎", hint: userNote(entry(mine[0] && mine[0].id)) ? "✓" : "",   // HERESY 1802
@@ -1485,13 +1556,16 @@
     S.choice = (list || []).map(function (c) {
       var o = { id: String(c.id), ar: Number(c.ar) || 0, nar: Number(c.nar) || 0 };
       if (c.muted) o.muted = true;                    // HERESY 1167: a muted one comes back muted
+      if (c.offModel) o.offModel = true;              // HERESY 1960: muted by a model's change, and the model it was taken in anyway on
+      if (c.anyway) o.anyway = String(c.anyway);
       if (c.noscore) o.noscore = true;                // HERESY 1629: out of the score, as it was
       var w = waveClean(c.curve);                     // HERESY 1447: its wave, as the take ran it
-      if (w) { o.curve = w; o.curveMode = JSON.stringify(w) === JSON.stringify(WAVE_ARCH) ? "arch" : "draw"; }
+      if (w) { o.curve = w; o.curveMode = waveShape(w); }   // HERESY 1841: Rise and Fall come back named too
       if (Array.isArray(c.sections)) { o.sections = c.sections.map(Number); o.curveMode = "sections"; o.curve = o.curve || [[0, 1], [1, 1]]; }   // HERESY 1665
       return o;
     }).filter(function (c) { return c.id && (c.ar || c.nar); });
     if (Array.isArray(groups)) S.budget = groups.length ? (groups[0].mode === "order" ? "order" : "share") : S.budget;   // HERESY 1447
+    modelSays();                                    // HERESY 1960: a take made on another model comes back with its adapters weighed against this one
     changed();
   }
 
@@ -1511,6 +1585,8 @@
       if (c.curveMode === "sections") c.curve = sectionCurve(c.sections) || [[0, 1], [1, 1]];   // HERESY 1665: from the form as it is now
       var o = { id: c.id, ar: c.ar || 0, nar: c.nar || 0 }, w = waveClean(c.curve);
       if (c.muted) o.muted = true;
+      if (c.offModel) o.offModel = true;              // HERESY 1960
+      if (c.anyway) o.anyway = c.anyway;
       if (c.noscore) o.noscore = true;                // HERESY 1629
       if (w) o.curve = w;                             // HERESY 1447
       if (c.curveMode === "sections") o.sections = (c.sections || []).slice();   // HERESY 1665: kept as ticks, the wave worked out again
@@ -1577,7 +1653,8 @@
   root.YueLoras = { mount: mount, setCatalog: setCatalog, set: set, value: value, kept: kept, groups: loraGroups,   // HERESY 1447: the budgets
     budget: function () { return S.budget; }, profile: function () { return S.profile; }, triggersFor: triggersFor, describe: describe, has: inCatalog, lines: lines, repaint: paint,
     relayout: layoutWaves, over: function (on) { if (on !== undefined) loraOver(!!on); return !!S.over; },   // HERESY 1458
-    listInto: listInto, setSources: setSources, zone: function (id, half) { return zones(entry(id), half); }, catalog: function () { return S.catalog.slice(); }, name: nameOf, toGreen: toGreen,   // 1595: catalog, read for the checks
+    listInto: listInto, setSources: setSources, setBases: setBases, fit: function (id) { return id ? pairFit(entry(id)) : S.model; },   // HERESY 1960
+    zone: function (id, half) { return zones(entry(id), half); }, catalog: function () { return S.catalog.slice(); }, name: nameOf, toGreen: toGreen,   // 1595: catalog, read for the checks
     missing: missingIds, askMissing: askMissing, hidden: function () { return (S.hidden || []).slice(); },   // HERESY 1496
     total: function () { var z = totalZone("ar"); return { value: arTotal(), stacked: arStacked(), safe: z.safe, limit: z.limit, max: z.max }; },   // HERESY 1623: of the moment
     scoreSays: scoreSays, sections: songSections, scoreSections: scoreSections, kind: kindOf, twin: twinOf, free: function (on) { if (on !== undefined) setFree(on); return !!S.free; } };   // HERESY 1629

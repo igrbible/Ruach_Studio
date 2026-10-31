@@ -216,11 +216,12 @@
     document.removeEventListener("mousedown", outside, true);
     document.removeEventListener("keydown", key, true);
     pop.el.remove();
+    if (pop.veil) pop.veil.remove();                   // HERESY 1951
     var back = pop.anchor;
     pop = null;
     if (back && back.isConnected) back.focus();
   }
-  function outside(e) { if (pop && !pop.el.contains(e.target) && !pop.anchor.contains(e.target)) close(); }
+  function outside(e) { if (pop && e.target !== pop.veil && !pop.el.contains(e.target) && !pop.anchor.contains(e.target)) close(); }   // 1951: the veil closes by its click
   function rows() { return pop ? Array.prototype.filter.call(pop.el.querySelectorAll(".hc-row"), function (r) { return !r.hidden; }) : []; }
   function mark(r) {
     Array.prototype.forEach.call(pop.el.querySelectorAll(".hc-row.is-cur"), function (x) { x.classList.remove("is-cur"); });
@@ -236,20 +237,34 @@
   function open(sel, anchor) {
     close();
     var opts = Array.prototype.slice.call(sel.options), r = anchor.getBoundingClientRect(), el = document.createElement("div");
-    el.className = "hc-pop";
+    var modal = opts.length > 10, veil = null;          // HERESY 1951: a list long enough for a Find opens as the studio's other finds do, in the middle
+    el.className = "hc-pop" + (modal ? " is-modal" : "");
     el.setAttribute("role", "listbox");
     el.innerHTML = (opts.length > 10 ? '<input type="search" class="hc-find" placeholder="Find" autocomplete="off" spellcheck="false">' : "") +
       '<div class="hc-rows">' + opts.map(function (o, i) {
         return '<button type="button" class="hc-row' + (i === sel.selectedIndex ? " is-cur" : "") + '" role="option" data-i="' + i + '" aria-selected="' + (i === sel.selectedIndex) + '"' +
           (o.disabled ? " disabled" : "") + (own(o) ? ' translate="no"' : "") + ">" + esc(text(o)) + "</button>";
       }).join("") + "</div>";
+    if (modal) {
+      veil = document.createElement("div");
+      veil.className = "hc-veil";
+      veil.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); close(); });
+      document.body.appendChild(veil);
+    }
     document.body.appendChild(el);
-    pop = { el: el, sel: sel, anchor: anchor };
-    var w = Math.max(r.width, 380), h = el.offsetHeight, room = window.innerHeight - r.bottom - 12;
-    el.style.width = Math.min(w, window.innerWidth - 24) + "px";
-    el.style.left = Math.max(12, Math.min(r.left, window.innerWidth - el.offsetWidth - 12)) + "px";
-    if (h > room && r.top > room) { el.style.maxHeight = Math.min(h, r.top - 12) + "px"; el.style.top = Math.max(12, r.top - 4 - Math.min(h, r.top - 12)) + "px"; }
-    else { el.style.maxHeight = Math.max(160, room) + "px"; el.style.top = (r.bottom + 4) + "px"; }
+    pop = { el: el, sel: sel, anchor: anchor, veil: veil };
+    if (modal) {
+      el.style.width = Math.min(560, window.innerWidth - 32) + "px";
+      el.style.maxHeight = Math.round(window.innerHeight * 0.76) + "px";
+      el.style.left = Math.round((window.innerWidth - el.offsetWidth) / 2) + "px";
+      el.style.top = Math.round(window.innerHeight * 0.12) + "px";
+    } else {
+      var w = Math.max(r.width, 380), h = el.offsetHeight, room = window.innerHeight - r.bottom - 12;
+      el.style.width = Math.min(w, window.innerWidth - 24) + "px";
+      el.style.left = Math.max(12, Math.min(r.left, window.innerWidth - el.offsetWidth - 12)) + "px";
+      if (h > room && r.top > room) { el.style.maxHeight = Math.min(h, r.top - 12) + "px"; el.style.top = Math.max(12, r.top - 4 - Math.min(h, r.top - 12)) + "px"; }
+      else { el.style.maxHeight = Math.max(160, room) + "px"; el.style.top = (r.bottom + 4) + "px"; }
+    }
     el.addEventListener("click", function (e) {
       var b = e.target.closest(".hc-row");
       if (!b || b.disabled) return;

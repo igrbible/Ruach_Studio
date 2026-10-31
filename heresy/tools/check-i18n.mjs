@@ -14,7 +14,7 @@ await send("Page.navigate", { url: BASE });
 await waitFor(`document.readyState === "complete" && document.querySelectorAll("#libList .take").length >= 1`, 20000);
 const enTabs = await ev(`[...document.querySelectorAll(".topbar .tabs button")].map(b => b.textContent.trim()).join("|")`);
 const enVb = await ev(`document.querySelector(".brand-full").getAttribute("viewBox")`);
-check("English by default: the rooms in English, the button EN", enTabs === "Creator|Writer|Refiner|Artist|Librarian|Trainer" &&
+check("English by default: the rooms in English, the button EN", enTabs === "Creator|Writer|Refiner|Artist|Videographer|Trainer|Librarian" &&
   (await ev(`document.getElementById("langButton").textContent`)) === "EN" && (await ev(`document.documentElement.lang`)) === "en", enTabs);
 await ev(`localStorage.setItem("yue2.lang", "ru"); true`);
 await send("Page.reload", {});
@@ -22,7 +22,7 @@ await sleep(300);
 await waitFor(`document.readyState === "complete" && document.querySelectorAll("#libList .take").length >= 1`, 20000);
 await sleep(300);
 const ruTabs = await ev(`[...document.querySelectorAll(".topbar .tabs button")].map(b => b.textContent.trim()).join("|")`);
-check("after a reload in Russian: the rooms in Russian", ruTabs === "Творец|Писатель|Огранщик|Художник|Библиотекарь|Тренер", ruTabs);
+check("after a reload in Russian: the rooms in Russian", ruTabs === "Творец|Писатель|Огранщик|Художник|Видеограф|Тренер|Библиотекарь", ruTabs);
 check("  <html lang> is ru, the button RU, the page shown (no hold left)", (await ev(`document.documentElement.lang`)) === "ru" &&
   (await ev(`document.getElementById("langButton").textContent`)) === "RU" && (await ev(`!document.documentElement.classList.contains("i18n-wait")`)) === true);
 check("  attributes too: the button's tip and label", (await ev(`document.getElementById("langButton").dataset.tip`)) === "Язык страницы" &&

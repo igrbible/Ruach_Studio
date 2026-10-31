@@ -332,7 +332,7 @@
     <h1>Des chansons à partir de mots et d'accords<br>sur ta propre machine</h1>
     <p class="lead">Un studio complet autour de <b>YuE2</b>, le modèle de chanson ouvert. Écris le style et les paroles, et le studio compose, chante et rend la chanson sur <b>ton propre GPU</b>. Tes chansons, tes mots et tes réglages n'en sortent jamais.</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Le prendre sur GitHub</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.fr.md">Lire le guide</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Modèles sur Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Offre-moi une machine à café</a></div>
-    <span class="rc"><b>2.0.2</b> · l'Écrivain du studio · octobre 2026</span>
+    <span class="rc"><b>2.0.3</b> · le Vidéaste jusqu'au clip fini · octobre 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -344,7 +344,7 @@
     <div class="nums">
       <div><b>8 min</b><span>des chansons entières, jusqu'à huit minutes</span></div>
       <div><b>135 s</b><span>une chanson de 6:12 sur une seule RTX 3090</span></div>
-      <div><b>6 salles</b><span>pour créer, écrire, affiner, peindre, garder et enseigner</span></div>
+      <div><b>7 salles</b><span>pour créer, écrire, affiner, peindre, filmer, garder et enseigner</span></div>
       <div><b>200</b><span>instruments sondés à l'oreille</span></div>
       <div><b>12</b><span>langues de la page</span></div>
     </div>
@@ -362,8 +362,8 @@
 
   <section id="rooms">
     <div class="wrap">
-      <h2>Six salles, un studio</h2>
-      <p class="sub">Le <b>Créateur</b> fait la chanson, l'<b>Écrivain</b> l'écrit avec un modèle de chat, l'<b>Affineur</b> la termine, le <b>Peintre</b> peint ses images, le <b>Bibliothécaire</b> garde chaque prise, et l'<b>Entraîneur LoRA</b> apprend tes propres chansons à YuE2. Un guide pour chaque salle se trouve dans le studio.</p>
+      <h2>Sept salles, un studio</h2>
+      <p class="sub">Le <b>Créateur</b> fait la chanson, l'<b>Écrivain</b> l'écrit avec un modèle de chat, l'<b>Affineur</b> la termine, le <b>Peintre</b> peint ses images, le <b>Vidéaste</b> prépare son clip, le <b>Bibliothécaire</b> garde chaque prise, et l'<b>Entraîneur LoRA</b> apprend tes propres chansons à YuE2. Un guide pour chaque salle se trouve dans le studio.</p>
       <div class="rooms">
         <article class="room"><a class="pic" href="../assets/shots/studio-create.webp" data-night="assets/shots/studio-create-night.webp"><img class="day" src="../assets/shots/studio-create.webp" alt="Créateur" loading="lazy"><img class="night" src="../assets/shots/studio-create-night.webp" alt="Créateur" loading="lazy"></a>
           <div><h3>Créateur</h3><p>Style, paroles, mode de planification, décodeur, LoRA sur une route du vert au rouge ; la prise avec sa partition, ses graines et tout pour la refaire.</p></div></article>
@@ -662,7 +662,7 @@
   </div>
 
 <footer>
-  <div class="wrap"><span>Rouah Studio · 2.0.2 · une œuvre d'<a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changements</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Machine à café</a></span></div>
+  <div class="wrap"><span>Rouah Studio · 2.0.3 · une œuvre d'<a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changements</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Machine à café</a></span></div>
 </footer>
 
 <script src="../assets/wavesurfer.min.js"></script>
@@ -814,13 +814,22 @@
   // HERESY 1801: the vocabulary's window; its page in the card's language and day or night
   (function () {
     var m = document.getElementById("vocab-modal"), f = document.getElementById("vocab-frame");
-    function open() {
+    function theme() {
       var th = document.documentElement.getAttribute("data-theme");
-      if (!th) th = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-      var src = "/vocabulary/index.html?embed=1&lang=" + encodeURIComponent(document.documentElement.lang || "en") + "&theme=" + th;
-      if (f.getAttribute("src") !== src) f.setAttribute("src", src);
+      return th || (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    }
+    // 28.10.2026 (Viktor: «при переключении режима темы не подхватывает активный день/ночь. Только по F5»): the frame is told the page's day or
+    // night whenever it changes, and when it loads; reopening keeps the frame it has
+    function sync() { try { var d = f.contentDocument; if (d && d.documentElement) d.documentElement.setAttribute("data-theme", theme()); } catch (e) {} }
+    function open() {
+      var base = "/vocabulary/index.html?embed=1&lang=" + encodeURIComponent(document.documentElement.lang || "en");
+      if ((f.getAttribute("src") || "").split("&theme=")[0] !== base) f.setAttribute("src", base + "&theme=" + theme());
+      else sync();
       m.hidden = false; document.body.style.overflow = "hidden";
     }
+    f.addEventListener("load", sync);
+    new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", sync);
     function close() { m.hidden = true; document.body.style.overflow = ""; if (location.hash === "#vocabulary") history.replaceState(null, "", location.pathname + location.search); }
     document.getElementById("vocab-open").addEventListener("click", open);
     document.getElementById("vocab-close").addEventListener("click", close);

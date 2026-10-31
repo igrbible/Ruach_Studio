@@ -102,7 +102,7 @@ The client's configuration (Claude Desktop: `claude_desktop_config.json`; Claude
 }
 ```
 
-Then ask the agent in plain words: *make a two-minute instrumental for solo duduk and put it in the workspace "Sketches"*; *list my liked takes in Fosforida*; *export the last take to REAPER*.
+Then ask the agent in plain words: *make a two-minute instrumental for solo duduk and put it in the workspace "Sketches"*; *list my liked takes in Demos*; *export the last take to REAPER*.
 
 ## What it does not do (yet)
 

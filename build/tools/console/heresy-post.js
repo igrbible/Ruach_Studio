@@ -11,6 +11,7 @@
     { id: "spectrumPanel", step: "spectrum", label: "Spectrum", say: "look", group: "look" },
     { id: "inspectPanel", step: "inspect", label: "Artifacts", say: "find faults", group: "look" },
     { id: "glossPanel", step: "gloss", label: "Lyrics", say: "check the words", group: "look" },
+    { id: "midiPanel", step: "midi", label: "MIDI", say: "the notes out", group: "look" },   // HERESY 1834: sound to MIDI (MuScriptor), the last of the looks
     { id: "debuzzPanel", step: "debuzz", label: "Debuzz", say: "the frame buzz out", group: "mend" },
     { id: "upscalePanel", step: "upscale", label: "Upscale", say: "redraw the top", group: "mend" },
     { id: "derivedPanel", step: "stems", label: "Stems", say: "split", group: "mend" },
@@ -120,7 +121,7 @@
       '<label class="pc-check" data-tip="Then the spectrum of the final file, ready in the Spectrum step."><input type="checkbox" id="pcSpectrum"' + (p.spectrum ? " checked" : "") + " /> Spectrum</label>" +
       '<label class="pc-check" data-tip="Whisper on the take: are the words the lyrics"><input type="checkbox" id="pcGloss"' + (p.gloss ? " checked" : "") + " /> Lyrics</label>" +
       '</span><span class="pc-pipe" id="pcPipe"></span>' +   // HERESY 1553: a pipeline's steps
-      '<span class="spacer"></span><button type="button" class="btn ghost small" id="pcBatch" data-tip="The way in hand on every take of the workspace in hand (all takes when none is), one after another on Forge; asked first">On the workspace\u2026</button>' +   // HERESY 1562; 1598: the way's words
+      '<span class="spacer"></span><button type="button" class="btn ghost small" id="pcBatch" data-tip="The bucket: up to ten takes the way runs on, one after another on Forge. Tune the way on one take first, then put the takes in">Bucket <b class="pc-bk-n mono" id="pcBucketN">0</b></button>' +   // HERESY 1562; 1955 (Viktor 30.10.2026: «Никому не нужно это «Прогнать на пространстве»»): the bucket
       '<button type="button" class="btn primary small" id="pcRun" data-tip="Run the way in hand on this take, up to the target \u25ce when one is set">Run the chain</button></div>' +
       '<div class="pc-prof-say row-hint" id="pcProfSay"></div>' +
       '<div class="pc-batch row-hint" id="pcBatchSay" hidden></div>' +
@@ -135,11 +136,13 @@
     $("pcRmSay").textContent = (stems ? (s.preset || "balanced") + (s.deess ? " · de-ess" : "") + " · " : "") +
       (s.hz432 === false ? "440" : "432") + " Hz · " + (s.loudnorm === false ? "no loudnorm" : s.lufs + " LUFS");
   }
-  var MARK = { waiting: "·", running: "…", done: "✓", failed: "✕" };
+  var MARK = { waiting: "·", running: "…", done: "✓", failed: "✕", stopped: "■" };   // HERESY 1962: stopped by hand
   var NAMES = { gate: "Digital Gateway", debuzz: "Debuzz", upscale: "Upscale", remaster: "Remaster", inspect: "Artifacts", spectrum: "Spectrum", gloss: "Lyrics", stems: "Stems", daw: "DAW" };
   function stepWord(s) { return s.step === "plugin" ? (s.label || s.sid) : NAMES[s.step] || s.step; }   // HERESY 1553: a plugin's step by its label
   function paintChain(job) {
     chain.job = job;                                 // HERESY 1510: for the chain's node
+    chain.got = Date.now();                          // HERESY 1962: the lab's clock (job.now) read at this moment
+    if (typeof progTick === "function") setTimeout(progTick, 0);
     if (typeof cvPaint === "function") setTimeout(cvPaint, 0);
     var box = $("pcStatus");
     if (!box) return;
@@ -151,12 +154,53 @@
       return '<span class="pc-st is-' + s.status + '" title="' + esc(s.error || s.file || "") + '">' + MARK[s.status] + " " + esc(stepWord(s)) + "</span>";
     }).join('<span class="pc-arrow">›</span>') +
       (job.status === "done" ? '<span class="pc-say">done' + (job.final ? (job.steps.some(function (s) { return s.end; }) ? ": the remaster, its top drawn anew, is in the tree" : ": the remaster is in the tree") : "") + "</span>" : "") +
-      (job.status === "failed" ? '<span class="pc-say is-bad">' + esc(job.error || "failed") + " · what was made before stays</span>" : "");
+      (job.status === "failed" ? '<span class="pc-say is-bad">' + esc(job.error || "failed") + " · what was made before stays</span>" : "") +
+      (job.status === "stopped" ? '<span class="pc-say">' + esc(tr("stopped by hand · what was made before stays")) + "</span>" : "");   // HERESY 1962
     $("pcRun").disabled = job.status === "running";
     $("pcRun").textContent = job.status === "running" ? "\u2728 Enjoy the magic\u2026 " + (done + 1) + " / " + n + (cur ? " \u00b7 " + stepWord(cur) : "") : runWord();
     $("pcRun").classList.toggle("is-magic", job.status === "running");
   }
   function runWord() { return CV.on ? "Run the way" : "Run the chain"; }   // HERESY 1598: on the canvas it runs the way drawn there
+  // HERESY 1962 (Viktor 30.10.2026: «На активную работающую ноду можно приделать индикатор прогресса с примерным просчётом ETA. ETA можно вычислять по
+  // движению самого прогресса бара. И явная кнопка остановки работающего процесса… прогрессы на каждую ноду прикрутить в стиле Комфи»): the running
+  // node's bar. A job that says how far it is moves it, and its ETA comes from that movement; else the pace this kind of step kept before on a song
+  // this long (said as such), past it «longer than usual»; with neither, the time so far and a bar that only breathes
+  var PROG = { key: "", seen: [] };
+  function clockOf(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
+  function progTick() {
+    var job = chain.job, cur = job && job.status === "running" && Array.isArray(job.steps) ? job.steps.filter(function (s) { return s.status === "running"; })[0] : null;
+    var el = CV.runId ? document.querySelector('#postCanvas .pcv-node[data-node="' + CV.runId + '"] .pcv-run') : null;
+    if (!cur || !el) return;
+    var el0 = (job.now || 0) - (cur.started || 0), at = Math.max(0, (job.now && cur.started ? el0 : 0) + (Date.now() - (chain.got || Date.now())) / 1000);
+    var bar = el.querySelector(".pcv-prog"), fill = bar.querySelector("i"), eta = el.querySelector(".pcv-eta"), key = (cur.started || 0) + ":" + cur.step;
+    if (PROG.key !== key) { PROG.key = key; PROG.seen = []; }
+    var p = typeof cur.progress === "number" ? Math.max(0, Math.min(1, cur.progress)) : null, frac = null, say = "";
+    if (p !== null && p > 0.02) {
+      frac = p; say = tr("≈ {0} left").replace("{0}", clockOf(at * (1 - p) / p));
+    } else if (cur.expect > 0) {
+      frac = Math.min(0.97, at / cur.expect);
+      say = at <= cur.expect ? tr("≈ {0} left, by its past runs").replace("{0}", clockOf(cur.expect - at)) : tr("longer than usual · {0}").replace("{0}", clockOf(at));
+    } else {
+      say = tr("{0} · its first run here, no pace yet").replace("{0}", clockOf(at));
+    }
+    bar.classList.toggle("is-unknown", frac === null);
+    bar.classList.toggle("is-over", frac !== null && p === null && at > cur.expect);
+    fill.style.width = frac === null ? "" : (100 * frac).toFixed(1) + "%";
+    if (eta.textContent !== say) eta.textContent = say;
+    var stop = el.querySelector(".pcv-stop");
+    if (stop) stop.classList.toggle("is-stopping", !!job.stopping);
+  }
+  setInterval(function () { if (CV.on && CV.runId && document.body.dataset.tab === "post") progTick(); }, 1000);
+  function chainStopAsk() {
+    var t = state.take;
+    if (!t || !chain.job || chain.job.status !== "running") return;
+    var ask = window.HeresyDialog ? window.HeresyDialog.confirm(tr("Stop the way here?") + "\n\n" + tr("The step running ends now and the steps after it are left; what was made before stays."), { ok: tr("Stop"), danger: true }) : Promise.resolve(true);
+    ask.then(function (yes) {
+      if (!yes) return;
+      fetch("/lab/chain/stop", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: t.name }) })
+        .then(function (r) { return r.json(); }).then(function () { watchChain(t.name); }, function () { /* said by the next look */ });
+    }, function () { /* left running */ });
+  }   // HERESY 1598: on the canvas it runs the way drawn there
   function wayEmpty() {                            // HERESY 1598: a way with no step on it: said, nothing sent
     var p = pipeOf();
     if (!p || pipeSteps().length) return false;
@@ -177,6 +221,10 @@
         if (window.RuachChime) window.RuachChime.ring(true);   // HERESY 1275
         // HERESY 1059: the checks were made on the final file: the Artifacts step shows that one, not the take
         if (job.final && window.HeresyInspect && window.HeresyInspect.useSource && job.steps.some(function (s) { return s.step === "inspect"; })) window.HeresyInspect.useSource(job.final);
+      }
+      if (job.status === "stopped" && chain.started === name) {   // HERESY 1962
+        chain.started = "";
+        chain.hooks && chain.hooks.toast && chain.hooks.toast(tr("The way stopped where it stood: what was made before stays"));
       }
       if (job.status === "failed" && chain.started === name) {
         chain.started = "";
@@ -221,13 +269,73 @@
   var BETA_TIP = "Beta: we make our songs here every day, and it is all still growing; what it keeps and how it looks may change in a later release.";
   function betaBadge(cls) { return '<span class="beta-badge' + (cls ? " " + cls : "") + '" data-tip="' + esc(tr(BETA_TIP)) + '">' + esc(tr("beta")) + "</span>"; }
   function titleOf(n) { var t = (window.ruachTakes ? window.ruachTakes() : []).filter(function (x) { return x.name === n; })[0]; return t ? t.title : n; }
-  function batchAsk() {
-    var HC = window.HeresyCollection, all = window.ruachTakes ? window.ruachTakes() : [], ws = HC && HC.current ? HC.current() : "";
-    var names = (ws ? all.filter(function (t) { return HC.inCurrent(t.name); }) : all).map(function (t) { return t.name; });
+  // ---- HERESY 1955 (Viktor 30.10.2026: «в моём примере 13 треков в пространстве. Это сколько времени всё это будет херачиться?… ограничиться,
+  // как и в Видеографе, выбором одного трека, настроить и протестить под ним воркфлоу, а вот потом… бакета, в который пользователь может сложить от
+  // одного… до 10 треков, и вот тогда только гнать батчем»): the bucket, up to ten takes kept in this browser; the take in hand put in from here,
+  // checked takes from the Librarian's menu; the way runs on them one after another, asked first
+  var BK = { names: [], max: 10, el: null }, BK_KEY = "yue2.refinerBucket";
+  function bucketRecall() { try { BK.names = (JSON.parse(localStorage.getItem(BK_KEY) || "[]") || []).filter(function (n) { return typeof n === "string" && n; }).slice(0, BK.max); } catch (e) { BK.names = []; } }
+  function bucketStore() { try { localStorage.setItem(BK_KEY, JSON.stringify(BK.names)); } catch (e) { /* private mode */ } }
+  function bucketCount() { var n = $("pcBucketN"); if (n) n.textContent = String(BK.names.length); if (BK.el && !BK.el.hidden) bucketPaint(); }
+  function bucketAdd(names) {                         // the number put in; what did not fit said
+    var put = 0, full = 0;
+    (names || []).forEach(function (n) { if (!n || BK.names.indexOf(n) >= 0) return; if (BK.names.length >= BK.max) { full++; return; } BK.names.push(n); put++; });
+    bucketStore(); bucketCount();
+    var say = tr("{0} into the bucket ({1} of {2})").replace("{0}", put).replace("{1}", BK.names.length).replace("{2}", BK.max) +
+      (full ? " \u00b7 " + tr("{0} did not fit: ten at most").replace("{0}", full) : "");
+    if (chain.hooks && chain.hooks.toast) chain.hooks.toast(say, full && !put ? "bad" : "");
+    return put;
+  }
+  function bucketOut(name) { BK.names = BK.names.filter(function (n) { return n !== name; }); bucketStore(); bucketCount(); }
+  function bucketPaint() {
+    var b = BK.el;
+    if (!b) return;
+    var inHand = state.take && state.take.name, can = !!inHand && BK.names.indexOf(inHand) < 0 && BK.names.length < BK.max;
+    b.querySelector(".bk-n").textContent = BK.names.length + " / " + BK.max;
+    b.querySelector(".bk-list").innerHTML = BK.names.length ? BK.names.map(function (n) {
+      return '<div class="bk-row"><span class="bk-title" translate="no">' + esc(titleOf(n)) + '</span><button type="button" class="btn ghost small" data-bk-out="' + esc(n) + '" data-tip="' + esc(tr("Out of the bucket")) + '">\u2715</button></div>';
+    }).join("") : '<p class="row-hint">' + esc(tr("Empty. Tune the way on one take, then put it in here, or check takes in the Librarian and put them in from its menu.")) + "</p>";
+    b.querySelector("[data-bk=add]").disabled = !can;
+    b.querySelector("[data-bk=empty]").disabled = !BK.names.length;
+    var run = b.querySelector("[data-bk=run]");
+    run.disabled = !BK.names.length || chainBusy();
+    run.textContent = tr("Run the way on {0}").replace("{0}", BK.names.length);
+  }
+  function bucketOpen() {
+    if (!BK.el) {
+      var veil = document.createElement("div"), b = document.createElement("div");
+      veil.className = "bk-veil"; veil.hidden = true;
+      b.className = "bk-box"; b.hidden = true; b.setAttribute("role", "dialog"); b.setAttribute("aria-modal", "true");
+      b.innerHTML = '<div class="bk-head"><strong>' + esc(tr("The bucket")) + '</strong><span class="bk-n mono"></span><span class="spacer"></span>' +
+        '<button type="button" class="btn ghost small" data-bk="close">' + esc(tr("Close")) + '</button></div><div class="bk-list"></div>' +
+        '<div class="bk-acts"><button type="button" class="btn ghost small" data-bk="add">' + esc(tr("+ The take in hand")) + '</button>' +
+        '<button type="button" class="btn ghost small" data-bk="empty">' + esc(tr("Empty it")) + '</button><span class="spacer"></span>' +
+        '<button type="button" class="btn primary small" data-bk="run"></button></div>' +
+        '<p class="row-hint">' + esc(tr("One after another on Forge, the way in hand as it is set now; Stop lets the take in hand finish.")) + "</p>";
+      document.body.appendChild(veil); document.body.appendChild(b);
+      var shut = function () { b.hidden = true; veil.hidden = true; };
+      veil.addEventListener("click", shut);
+      b.addEventListener("click", function (e) {
+        var out = e.target.closest("[data-bk-out]"), k = e.target.closest("[data-bk]");
+        if (out) { bucketOut(out.dataset.bkOut); return; }
+        if (!k) return;
+        if (k.dataset.bk === "close") shut();
+        else if (k.dataset.bk === "add" && state.take) bucketAdd([state.take.name]);
+        else if (k.dataset.bk === "empty") { BK.names = []; bucketStore(); bucketCount(); }
+        else if (k.dataset.bk === "run") { shut(); batchAsk(BK.names.slice()); }
+      });
+      document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !b.hidden && !document.querySelector(".hd-back")) { e.preventDefault(); e.stopPropagation(); shut(); } }, true);
+      BK.el = b; BK.veil = veil;
+    }
+    BK.el.hidden = false; BK.veil.hidden = false;
+    bucketPaint();
+  }
+  function batchAsk(names) {                          // HERESY 1955: the bucket's takes, asked first
+    if (!Array.isArray(names)) { bucketOpen(); return; }
     if (wayEmpty()) return;                          // HERESY 1598
     if (!names.length) { chain.hooks.toast && chain.hooks.toast(tr("No takes here to refine"), "bad"); return; }
-    var text = tr(CV.on ? "Run this way on {0} takes?" : "Run this chain on {0} takes?").replace("{0}", names.length) + "\n\n" + (ws ? tr("Every take of the workspace «{0}».").replace("{0}", ws) + " " : tr("Every take of the library: no workspace is in hand.") + " ") +
-      tr("One after another on Forge; Stop lets the take in hand finish.");
+    var text = tr(CV.on ? "Run this way on {0} takes?" : "Run this chain on {0} takes?").replace("{0}", names.length) + "\n\n" + tr("The bucket:") + " " +
+      names.map(titleOf).join(" \u00b7 ") + "\n\n" + tr("One after another on Forge; Stop lets the take in hand finish.");
     window.HeresyDialog.confirm(text, { ok: tr("Run on {0}").replace("{0}", names.length), cancel: tr("Cancel") }).then(function (yes) { if (yes === true) startBatch(names); });
   }
   function startBatch(names) {
@@ -358,8 +466,10 @@
   function pipeBody(untilNode) {
     var p = pipeOf(), off = pipeOff(), D = window.HeresyDerived, out = [], until = null;
     if (!p) return null;                              // 1562: a batch has no take in hand
+    var stop = false;                                 // HERESY 1954: a muted step stops the way there (what follows takes its output); a muted check is left out
     p.pipeline.forEach(function (x, i) {
-      if (off.indexOf(i) >= 0) return;
+      if (off.indexOf(i) >= 0 || stop) return;
+      if (CV.muted[pipeNode(x)]) { if (!CHECKS[x.step]) stop = true; return; }
       var s = JSON.parse(JSON.stringify(x));
       if (s.step === "daw" && s.mix === "current") s.mix = dawNow();
       if (s.step === "remaster") s.settings = Object.assign(D && D.remasterSettings ? D.remasterSettings() : {}, s.settings || {});   // the profile's preset over the step's own settings
@@ -391,10 +501,17 @@
     $("pcFold").addEventListener("click", function () { foldSet(!$("postChain").classList.contains("is-folded")); });
     pipeRecall();                                    // HERESY 1553: the chain's profiles
     ownRecall();                                     // HERESY 1570
-    $("pcProfile").addEventListener("change", function () { PIPE.on = this.value; pipeStore(); pipePaint(); });
+    $("pcProfile").addEventListener("change", function () {
+      var was = flowKey();
+      if (CV.on && CV.posBy) CV.posBy[was] = CV.pos;   // HERESY 1957: the flow left keeps its layout
+      PIPE.on = this.value; pipeStore();
+      if (CV.on) { CV.pos = (CV.posBy && CV.posBy[flowKey()]) || {}; cvStore(); var h = $("postCanvas") && $("postCanvas").querySelector(".pcv-nodes"); if (h) h.dataset.html = ""; }   // HERESY 1951: laid out anew by its way (1957: its own when it has one)
+      pipePaint();
+    });
     $("pcPipe").addEventListener("change", function (e) { var b = e.target.closest("[data-pipe-on]"); if (b) pipeToggle([+b.dataset.pipeOn]); });
     pipeLoad();
-    $("pcBatch").addEventListener("click", batchAsk);  // HERESY 1562
+    $("pcBatch").addEventListener("click", function () { bucketOpen(); });  // HERESY 1562; 1955: the bucket
+    bucketRecall(); bucketCount();
     $("pcWayNew").addEventListener("click", wayNew);   // HERESY 1598
     $("postChain").addEventListener("click", function (e) {
       if (!e.target.closest("#pcBatchStop")) return;
@@ -466,7 +583,7 @@
   // and after, Esc or a click beside it back. Dragged nodes stay where put (Arrange lays them out anew)
   var CV = { on: false, pos: {}, open: "", el: null, hold: null, drag: null, quietUntil: 0, timer: 0 };
   var CV_KEY = "yue2.refinerView", CV_POS = "yue2.refinerCanvasPos", NODE_W = 196, NODE_H = 84;
-  var KIND_NODE = { debuzz: "debuzzPanel", upscale: "upscalePanel", stems: "derivedPanel", remaster: "remasterPanel", daw: "dawPanel", gate: "gatePanel" };   // 1547
+  var KIND_NODE = { debuzz: "debuzzPanel", upscale: "upscalePanel", stems: "derivedPanel", remaster: "remasterPanel", daw: "dawPanel", gate: "gatePanel", midi: "midiPanel" };   // 1547; 1834
   var LANE = { debuzzPanel: [1, 0], upscalePanel: [2, 0], derivedPanel: [3, 0], dawPanel: [4, 0], remasterPanel: [4, 1], gatePanel: [3, 1],   // 1547
                spectrumPanel: [1, 2], inspectPanel: [2, 2], glossPanel: [3, 2], audioPanel: [4, 2],   // 1512: the Audio I/O under the Remaster
                "pl-ruach-leadPanel": [1, 1], "pl-ruach-vupscalePanel": [2, 1] };   // HERESY 1553: the stems mended, the second row's way to the gateway
@@ -476,11 +593,21 @@
   // place on the canvas's 10 px grid, a drag as well
   var GRID = 10;
   CV.rowH = 110; CV.nodeH = 94; CV.needH = 0;
+  // HERESY 1951 (Viktor 30.10.2026: «По вертикали при автовыстройке нод в два раза расстояние между ними можно уменьшить»; «зафиксировать
+  // прокрутки как в Комфи… Ctrl+Колесо… до -50 - +150% разрешить скейлинг»): a row as tall as the nodes mostly are and a gap of 24 px (a taller one
+  // pushes the next in its column down); the canvas a window as tall as the room has left over a world the nodes stand in, moved by the wheel or
+  // a drag on its empty ground, scaled by Ctrl+wheel from 50 % to 250 % about the pointer, kept as it was left
+  CV.gap = 24; CV.hs = null; CV.worldW = 0; CV.worldH = 0; CV.z = 1; CV.px = 0; CV.py = 0;
+  CV.sel = {}; CV.way = null;                          // HERESY 1951: the nodes selected (Ctrl+drag a frame, Ctrl+click), the way's own nodes
+  CV.muted = {}; CV.hover = "";                         // HERESY 1954: the nodes muted (Ctrl+M), the node under the pointer
+  var MUTE_KEY = "yue2.refinerMuted", LEG_AT = "yue2.pcvLegendAt";
+  try { CV.muted = JSON.parse(localStorage.getItem(MUTE_KEY) || "{}") || {}; } catch (e) { CV.muted = {}; }
+  var ZOOM_KEY = "yue2.refinerZoom", ZMIN = 0.5, ZMAX = 2;   // HERESY 1953 (Viktor: «zoom out до 50% от чистого 100%… до 200% общего - потолок»)
   function snap(v) { return Math.round(v / GRID) * GRID; }
   function cvColOf(nd) {
     if (nd.id === "take" || nd.id === "chain") return 0;
     if (nd.id === "importPanel" || nd.id === "audioPanel") return -1;
-    if (nd.id === "madePanel") return -2;              // HERESY 1581: at the bottom right
+    if (nd.id === "madePanel") return 6;               // HERESY 1581; 1951 («в последнюю дополнительную колонку вверх»): a column of its own, the last
     var st = nd.step || {}, g = st.group || "finish", stems = !!(st.spec && st.spec.input === "stems") || !!(st.spec && st.spec.stem);
     if (g === "look") return 5;
     if (nd.id === "debuzzPanel" || nd.id === "upscalePanel") return 1;
@@ -488,10 +615,50 @@
     if (nd.id === "dawPanel" || stems) return 3;
     return 4;
   }
+  // HERESY 1951 (Viktor 30.10.2026: «чтобы перестраивались ноды в красивый порядок. Всё, что не подключено, смещалось вниз со своей сортировкой»):
+  // the way chosen or drawn as the canvas lays it out: its nodes in its order, each check under the step it hangs off (the last step's beside it)
+  function wayShape() {
+    if (!pipeOf()) return null;                       // the classic chain (the list's) keeps the columns
+    var src = waySource(), main = [src], hang = {}, on = {}, last = src;
+    on[src] = 1;
+    wayNow().forEach(function (st) {
+      var id = pipeNode(st);
+      if (CHECKS[st.step]) { if (!on[id]) { (hang[last] = hang[last] || []).push(id); on[id] = 1; } return; }
+      if (!on[id]) { main.push(id); on[id] = 1; }
+      last = id;
+    });
+    return main.length + Object.keys(hang).length > 1 ? { main: main, hang: hang, on: on } : null;
+  }
   function cvLayout(nodes, W, H) {
-    var cols = [[], [], [], [], [], []], low = [], right = [], at = {};
-    nodes.forEach(function (nd) { if (nd.clone) return; var c = cvColOf(nd); if (c === -2) right.push(nd); else if (c < 0) low.push(nd); else cols[c].push(nd); });
-    nodes.forEach(function (nd) {                     // a clone right under its own (and its own clones before it)
+    var PADX = 20, PADY = 20, rh = CV.rowH, gap = CV.gap, at = {}, byId = {}, top = PADY;
+    var fits = function (n) { return (W - 2 * PADX - NODE_W) / (n - 1) >= NODE_W + 16; };
+    var hOf = function (nd) { return (CV.hs && CV.hs[nd.id]) || CV.nodeH; };   // HERESY 1951: each node's own height, as last drawn
+    nodes.forEach(function (nd) { byId[nd.id] = nd; });
+    var ws = wayShape();
+    CV.way = ws ? ws.on : null;
+    if (ws) {                                         // HERESY 1951: the way along the top, left to right, in rows when it is long
+      var main = ws.main.filter(function (id) { return byId[id]; }), hangOf = function (id) { return (ws.hang[id] || []).filter(function (h) { return byId[h]; }); };
+      var n = main.length + (hangOf(main[main.length - 1]).length ? 1 : 0), sx = Math.min(NODE_W + 80, (W - 2 * PADX - NODE_W) / Math.max(1, n - 1)), perRow = n;
+      if (sx < NODE_W + 24) { sx = NODE_W + 40; perRow = Math.max(1, Math.floor((W - 2 * PADX - NODE_W) / sx) + 1); }
+      var rowTop = PADY, rowBottom = PADY;
+      main.forEach(function (id, i) {
+        var c = i % perRow;
+        if (i && !c) rowTop = rowBottom + 40;
+        var x = snap(PADX + c * sx), y = snap(rowTop), yb = y + hOf(byId[id]), hs = hangOf(id), yy;
+        at[id] = [x, y];
+        nodes.forEach(function (nd) { if (nd.clone === id) { at[nd.id] = [x, snap(yb + gap)]; yb = snap(yb + gap) + hOf(nd); } });   // its clones right under it
+        if (i === main.length - 1 && hs.length && c + 1 < perRow) {   // the last step's checks beside it
+          yy = y; hs.forEach(function (h) { at[h] = [snap(PADX + (c + 1) * sx), snap(yy)]; yy = snap(yy) + hOf(byId[h]) + gap; });
+        } else {                                      // the others' under their step
+          yy = yb + gap; hs.forEach(function (h) { at[h] = [x, snap(yy)]; yy = snap(yy) + hOf(byId[h]) + gap; });
+        }
+        rowBottom = Math.max(rowBottom, yb, yy - gap);
+      });
+      top = snap(rowBottom + 50);                     // what is off the way, under it in its columns
+    }
+    var rest = nodes.filter(function (nd) { return !at[nd.id]; }), cols = [[], [], [], [], [], [], []], low = [];   // the seventh, the made node's own
+    rest.forEach(function (nd) { if (nd.clone) return; var c = cvColOf(nd); if (c < 0) low.push(nd); else cols[c].push(nd); });
+    rest.forEach(function (nd) {                      // a clone right under its own (and its own clones before it)
       if (!nd.clone) return;
       for (var c = 0; c < cols.length; c++) {
         var ids = cols[c].map(function (x) { return x.id; }), i = ids.indexOf(nd.clone);
@@ -501,23 +668,29 @@
       }
       cols[4].push(nd);
     });
-    var PADX = 20, PADY = 20, rh = CV.rowH, per = (W - 2 * PADX - NODE_W) / (cols.length - 1) >= NODE_W + 16 ? cols.length : 3;   // too narrow: two bands of three
-    var step = (W - 2 * PADX - NODE_W) / Math.max(1, per - 1), bands = [], y0 = PADY;
+    if (!fits(cols.length)) { cols[5] = cols[6].concat(cols[5]); cols.pop(); }   // a narrower canvas: the made node atop the looks
+    var per = fits(cols.length) ? cols.length : 3;    // too narrow: two bands of three
+    var step = (W - 2 * PADX - NODE_W) / Math.max(1, per - 1), bands = [], y0 = top;
     for (var b0 = 0; b0 < cols.length; b0 += per) bands.push(cols.slice(b0, b0 + per));
     bands.forEach(function (band, bi) {
-      var tall = Math.max.apply(null, band.map(function (l) { return l.length; }).concat([bi === 0 ? 0 : 0]));
-      band.forEach(function (list, c) { list.forEach(function (nd, r) { at[nd.id] = [snap(PADX + c * step), snap(y0 + r * rh)]; }); });
-      y0 += tall * rh + (bi < bands.length - 1 ? 16 : 0);
+      var bottom = y0;
+      band.forEach(function (list, c) {
+        var y = y0;
+        list.forEach(function (nd, r) {               // on its row, or under a taller one above it with the gap
+          y = snap(Math.max(y0 + r * rh, y));
+          at[nd.id] = [snap(PADX + c * step), y];
+          y += hOf(nd) + gap;
+        });
+        if (list.length) bottom = Math.max(bottom, y - gap);
+      });
+      y0 = bottom + (bi < bands.length - 1 ? 30 : 0);
     });
-    var top = cols[0].length, under = bands.length > 1 ? y0 : PADY + top * rh;   // the import and the setup under the first column, or under everything
-    CV.needH = snap(Math.max(y0, under + low.length * rh) + PADY);
-    low.forEach(function (nd, k) { at[nd.id] = [snap(PADX), snap(Math.max(under + k * rh, (bands.length > 1 ? 0 : H - PADY - CV.nodeH - (low.length - 1 - k) * rh)))]; });
-    var lastCol = bands[bands.length - 1], rx = snap(PADX + (lastCol.length - 1) * step), lastTall = lastCol[lastCol.length - 1].length;   // HERESY 1581: the made node at the bottom right
-    right.forEach(function (nd, k) {
-      var yb = bands.length > 1 ? y0 - (lastCol[lastCol.length - 1].length ? 0 : 0) + k * rh : H - PADY - CV.nodeH - (right.length - 1 - k) * rh;
-      at[nd.id] = [rx, snap(Math.max(bands.length > 1 ? y0 + k * rh : PADY + lastTall * rh + k * rh, yb))];
-    });
-    if (right.length) CV.needH = Math.max(CV.needH, snap((bands.length > 1 ? y0 : PADY + lastTall * rh) + right.length * rh + PADY));
+    var lowH = low.reduce(function (t, nd) { return t + hOf(nd) + gap; }, 0) - (low.length ? gap : 0);
+    var under = bands.length > 1 ? y0 + 30 : (cols[0].length ? at[cols[0][cols[0].length - 1].id][1] + hOf(cols[0][cols[0].length - 1]) + gap : top);   // the import and the setup under the first column, or under everything
+    CV.needH = snap(Math.max(y0 + PADY, under + lowH + PADY));
+    CV.worldH = Math.max(H, CV.needH);                // HERESY 1951: the world the nodes stand in, at least the window's height
+    var ly = bands.length > 1 ? under : Math.max(under, CV.worldH - PADY - lowH);   // at the world's bottom left, the legend between them and the take
+    low.forEach(function (nd) { at[nd.id] = [snap(PADX), snap(ly)]; ly = snap(ly) + hOf(nd) + gap; });
     return at;
   }
   // HERESY 1508: the chain's nodes: what «up to here» names, and the chain's own check a node is bypassed by (the Remaster always runs)
@@ -557,30 +730,33 @@
   // HERESY 1523: how the room opens, the Engine's Refiner Room tab: as it was left (the default), always the list, always the canvas
   var OPENS_KEY = "yue2.refinerOpens";
   function recallOpens() { try { return localStorage.getItem(OPENS_KEY) || "last"; } catch (e) { return "last"; } }
-  function openAs() {
-    return true;                                      // HERESY 1581: the Refiner is its canvas (the list only in the checks' hands)
-    var o = recallOpens();
-    if (o === "list" || o === "canvas") return o === "canvas";
-    try { return localStorage.getItem(CV_KEY) === "canvas"; } catch (e) { return false; }
+  function openAs() {                                // HERESY 1959: the list when chosen, else the canvas (1581's room; «as it was left» gone)
+    return recallOpens() !== "list";
   }
   function opensInit() {
     var box = $("refinerOpens");
     if (!box) return;
     var now = recallOpens();
-    Array.prototype.forEach.call(box.querySelectorAll('input[name="refinerOpens"]'), function (r) { r.checked = r.value === now; });
+    Array.prototype.forEach.call(box.querySelectorAll('input[name="refinerOpens"]'), function (r) { r.checked = r.value === (now === "list" ? "list" : "canvas"); });
     box.addEventListener("change", function (e) {
       var r = e.target.closest('input[name="refinerOpens"]');
       if (!r) return;
       try { localStorage.setItem(OPENS_KEY, r.value); } catch (x) { /* private mode */ }
-      if (r.value !== "last" && (r.value === "canvas") !== CV.on) cvSet(r.value === "canvas");   // the room as chosen, at once
+      if ((r.value === "canvas") !== CV.on) cvSet(r.value === "canvas");   // the room as chosen, at once
     });
   }
   function cvRecall() {
     try { CV.on = openAs(); CV.pos = JSON.parse(localStorage.getItem(CV_POS) || "{}") || {}; } catch (e) { CV.pos = {}; }
+    try { CV.posBy = JSON.parse(localStorage.getItem("yue2.refinerPosBy") || "{}") || {}; } catch (e) { CV.posBy = {}; }   // HERESY 1957: each flow's layout
     clRecall();                                       // HERESY 1516
   }
+  function flowKey() { return PIPE.on || "classic"; }   // HERESY 1957: the flow in hand, whose layout the canvas shows
   function cvStore() {
-    try { localStorage.setItem(CV_KEY, CV.on ? "canvas" : "list"); localStorage.setItem(CV_POS, JSON.stringify(CV.pos)); } catch (e) { /* private mode */ }
+    if (CV.posBy) CV.posBy[flowKey()] = CV.pos;
+    try {
+      localStorage.setItem(CV_KEY, CV.on ? "canvas" : "list"); localStorage.setItem(CV_POS, JSON.stringify(CV.pos));
+      if (CV.posBy) localStorage.setItem("yue2.refinerPosBy", JSON.stringify(CV.posBy));
+    } catch (e) { /* private mode */ }
   }
   function cvNodes() {
     var title = state.take ? (($("postTitle") && $("postTitle").textContent.trim()) || state.take.name) : "";   // 1506b: the head's title, the name only without it
@@ -591,7 +767,7 @@
       var at = LANE[st.id] || [5, pl++];
       out.push({ id: st.id, name: st.label, say: st.say, n: String(i + 1), col: at[0], row: at[1], step: st, own: !!st.plugin && !st.builtin });
     });
-    out.push({ id: "madePanel", name: "Made from This Take", say: "every file made from it", col: 5, row: 9 });   // HERESY 1581
+    out.push({ id: "madePanel", name: "Made from This Take", say: "every file made from it", col: 6, row: 0 });   // HERESY 1581; 1951: the top of a column of its own
     CV.num = flowNumbers(out);                        // HERESY 1581: numbered as the work flows
     out.forEach(function (nd) { nd.n = CV.num[nd.id] ? String(CV.num[nd.id]) : ""; });
     CV.clones.forEach(function (c) {                  // HERESY 1516: a clone beside its own, its own choice said
@@ -610,7 +786,8 @@
                 dawPanel: [[["set", "stems"], ["stem", "versions"]], [["file", "mix"]]],
                 gatePanel: [[["file", "file"]], [["file", "file"]]],
                 remasterPanel: [[["file", "file"], ["set", "stems"], ["stem", "versions"]], [["file", "master"]]],
-                spectrumPanel: [[["file", "file"]], []], inspectPanel: [[["file", "file"]], []], glossPanel: [[["file", "file"]], []] };
+                spectrumPanel: [[["file", "file"]], []], inspectPanel: [[["file", "file"]], []], glossPanel: [[["file", "file"]], []],
+                midiPanel: [[["file", "file"]], []] };   // HERESY 1834: its MIDI feeds no other step
   function portsOf(nd) {
     var id = nd.clone || nd.id;
     if (PORTS[id]) return PORTS[id];
@@ -649,7 +826,7 @@
       .forEach(function (n) { num[n.id] = ++k; });
     return num;
   }
-  var NODE_TIP = { "take": "The take in hand: what every step starts from. A click opens the Takes, to pick another", "importPanel": "A track from anywhere (WAV, FLAC, MP3…) into the library as a take, marked imported; a way wired from here runs on each one imported next", "madePanel": "Every file made from this take, each under the one it came from: play, compare, rate, delete", "spectrumPanel": "The spectrum of the take or of a file made from it: how loud each band is, over time", "inspectPanel": "Faults measured in a file: clicks, clipping, the frame buzz, a hum", "glossPanel": "The lyrics held against what is sung (Whisper): which lines came and which did not", "debuzzPanel": "The frame buzz of YuE2's sound out of the take: needed for every YuE2 take, off for a track from elsewhere", "upscalePanel": "UniverSR redraws the top of the spectrum above a cutoff, the original kept below it", "derivedPanel": "The file split into stems: four, six, eight, or the voice and the rest", "dawPanel": "The stems on lanes: levels, versions, buses and automation, then a mix", "gatePanel": "The Digital Gateway: tape, console and tube in numbers, on a file or a mix", "remasterPanel": "The Debunker: a file or a set of stems balanced, compressed, toned and brought to a loudness", "audioPanel": "This machine's interfaces: the gateway's out and in, the monitor" };
+  var NODE_TIP = { "midiPanel": "MuScriptor: the file into multi-instrument MIDI, 34 named instrument groups and the drums; each run a set of the tree", "take": "The take in hand: what every step starts from. A click opens the Takes, to pick another", "importPanel": "A track from anywhere (WAV, FLAC, MP3…) into the library as a take, marked imported; a way wired from here runs on each one imported next", "madePanel": "Every file made from this take, each under the one it came from: play, compare, rate, delete", "spectrumPanel": "The spectrum of the take or of a file made from it: how loud each band is, over time", "inspectPanel": "Faults measured in a file: clicks, clipping, the frame buzz, a hum", "glossPanel": "The lyrics held against what is sung (Whisper): which lines came and which did not", "debuzzPanel": "The frame buzz of YuE2's sound out of the take: needed for every YuE2 take, off for a track from elsewhere", "upscalePanel": "UniverSR redraws the top of the spectrum above a cutoff, the original kept below it", "derivedPanel": "The file split into stems: four, six, eight, or the voice and the rest", "dawPanel": "The stems on lanes: levels, versions, buses and automation, then a mix", "gatePanel": "The Digital Gateway: tape, console and tube in numbers, on a file or a mix", "remasterPanel": "The Debunker: a file or a set of stems balanced, compressed, toned and brought to a loudness", "audioPanel": "This machine's interfaces: the gateway's out and in, the monitor" };
   function nodeTip(nd) {
     if (NODE_TIP[nd.id]) return tr(NODE_TIP[nd.id]);
     var st = nd.step;
@@ -678,7 +855,7 @@
     var d = /^derived\/([^/]+)/.exec(String(v || ""));
     return d && by[d[1]] ? cvNodeOf(by[d[1]]) : "";
   }
-  var SRC_SEL = { gatePanel: "gtSource", debuzzPanel: "dbSource", upscalePanel: "upSource", derivedPanel: "stSource", remasterPanel: "rmSource", inspectPanel: "inSource", glossPanel: "glossSource" };
+  var SRC_SEL = { midiPanel: "mdSource", gatePanel: "gtSource", debuzzPanel: "dbSource", upscalePanel: "upSource", derivedPanel: "stSource", remasterPanel: "rmSource", inspectPanel: "inSource", glossPanel: "glossSource" };
   function srcSelect(id) { return SRC_SEL[id] ? $(SRC_SEL[id]) : /^pl-/.test(id) ? document.querySelector("#" + id + " .pl-source") : null; }
   var OUT_NODES = { take: 1, debuzzPanel: 1, upscalePanel: 1, derivedPanel: 1, remasterPanel: 1, dawPanel: 1, gatePanel: 1 };   // 1547
   function cvLink(from, to, quiet) {                    // the newest branch of «from» as «to»'s source, as a pick in its Source would make it
@@ -712,7 +889,7 @@
   function cvWireList(f) {
     var w = [["take", "debuzzPanel"], ["debuzzPanel", "upscalePanel"], ["upscalePanel", "derivedPanel"], ["derivedPanel", "dawPanel"], ["derivedPanel", "remasterPanel"],
              ["dawPanel", "gatePanel", 1], ["gatePanel", "remasterPanel", 1],   // HERESY 1547: a mix through the gateway, the gateway's into the Remaster
-             ["take", "spectrumPanel", 1], ["take", "inspectPanel", 1], ["take", "glossPanel", 1], ["importPanel", "take", 1]];
+             ["take", "spectrumPanel", 1], ["take", "inspectPanel", 1], ["take", "glossPanel", 1], ["take", "midiPanel", 1], ["importPanel", "take", 1]];   // 1834
     STEPS.forEach(function (st) { if (st.plugin) w.push(st.spec && st.spec.input === "stems" ? ["derivedPanel", st.id] : ["take", st.id, 1]); });
     if (pipeOf()) {                                  // HERESY 1553: the pipeline's way, step to step (the checks hang off the file before them)
       w.forEach(function (x) { x[2] = 1; });
@@ -789,6 +966,7 @@
     ownSync();
   }
   function wayNew() {                                 // a new way from nothing: the take alone (Ctrl+Z gives the way before back)
+    pfDirty();                                        // HERESY 1957
     ownStart();
     PIPE.own.pipeline = []; PIPE.own.source = "take";
     CV.target = "";
@@ -813,7 +991,7 @@
   function ownBack() { if (!PIPE.undo) return; PIPE.own = PIPE.undo.own; PIPE.on = PIPE.undo.on; PIPE.undo = null; }
   function ownUndo() {
     if (!PIPE.undo) return false;
-    ownBack(); ownSync(); pfSay(tr("The way before is back"));
+    ownBack(); ownSync(); pfDirty(); pfSay(tr("The way before is back"));   // 1957
     return true;
   }
   var NODE_STEP = { debuzzPanel: { step: "debuzz", strength: 0.8 }, upscalePanel: { step: "upscale", mode: "subtle" }, derivedPanel: { step: "stems", mode: "eight" },
@@ -876,6 +1054,7 @@
     return pairs;
   }
   function ownCut(from, to) {
+    pfDirty();                                        // HERESY 1957
     var pl = ownStart(), start = isSource(from) ? 0 : lastAt(pl, from) + 1, at = -1;
     for (var i = Math.max(0, start); i < pl.length; i++) if (pipeNode(pl[i]) === to) { at = i; break; }
     if (start < 0 || at < 0) { ownBack(); pfSay(tr("{0} is not on the chain's way").replace("{0}", nodeWord(to)), true); return; }
@@ -885,7 +1064,8 @@
     pfSay(tr("Cut: the way now ends at {0}").replace("{0}", nodeWord(from)) + " \u00b7 " + tr("Ctrl+Z gives it back"));
   }
   function ownLink(from, to) {
-    if (!stepFor(to)) return false;                   // the take, the chain, an import, Audio I/O: no step to put on the way
+    if (!stepFor(to)) return false;
+    pfDirty();                                        // HERESY 1957                   // the take, the chain, an import, Audio I/O: no step to put on the way
     var pl = ownStart(), at = isSource(from) ? 0 : lastAt(pl, from) + 1;
     if (isSource(from)) PIPE.own.source = from === "importPanel" ? "import" : "take";   // the way's first wire: from which source
     var placed = false;
@@ -902,7 +1082,8 @@
           (from === "importPanel" ? " \u00b7 " + tr("your way runs by itself on each track imported next") : ""));
     return true;
   }
-  function ownOff(id) {                               // a step off the way, the steps around it joined
+  function ownOff(id) {                               // a step off the way, the steps around it joined (1957: the canvas changed)
+    pfDirty();
     var pl = ownStart(), n = pl.length;
     for (var i = pl.length - 1; i >= 0; i--) if (pipeNode(pl[i]) === id) pl.splice(i, 1);
     if (pl.length === n) { ownBack(); return; }
@@ -979,19 +1160,44 @@
     if (box) return box;
     box = document.createElement("section");
     box.className = "post-canvas"; box.id = "postCanvas"; box.hidden = true;
-    box.innerHTML = '<svg class="pcv-wires" aria-hidden="true"></svg><div class="pcv-nodes"></div>' +   // 1517: its tools in the row above, not over a node
+    box.innerHTML = '<div class="pcv-world"><svg class="pcv-wires" aria-hidden="true"></svg><div class="pcv-nodes"></div>' +   // 1517: its tools in the row above, not over a node; 1951: in a world of their own
       '<div class="pcv-legend" id="pcvLegend"><button type="button" class="pcv-leg-fold" id="pcvLegFold" data-tip="Fold the legend">\u25be</button>' +   // HERESY 1580: what each wire says
       '<span class="pcv-leg-row"><i class="pcv-leg is-way"></i>The way: what Run the way runs, step to step</span>' +   // HERESY 1598
       '<span class="pcv-leg-row"><i class="pcv-leg is-made"></i>Made: which file came from which</span>' +
       '<span class="pcv-leg-row"><i class="pcv-leg is-src"></i>A step\'s own source, for a run from its window</span>' +
       '<span class="pcv-leg-row pcv-leg-slots"><i class="pcv-dot t-file"></i>a file<i class="pcv-dot t-set"></i>a set of stems<i class="pcv-dot t-stem"></i>one stem</span>' +   // HERESY 1582
-      '<span class="pcv-leg-row is-hint">Drag from a node\'s dot onto another: it joins the way after it; the nodes that can take it light up</span></div>';
+      '<span class="pcv-leg-row is-hint">Drag from a node\'s dot onto another: it joins the way after it; the nodes that can take it light up</span>' +
+      '<span class="pcv-leg-row is-hint">Ctrl+M mutes, Ctrl+B bypasses the nodes selected or the one under the pointer; drag this legend where it suits</span></div></div>' +   // HERESY 1954, 1956
+      '<button type="button" class="pcv-leg-open" id="pcvLegOpen" hidden data-tip="Unfold the legend: what each wire says"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9.5\"/><path d=\"M9.3 9.4a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.3-2.7 4.1\"/><circle cx=\"12\" cy=\"17.4\" r=\".6\"/></svg></button>' +   // HERESY 1956
+      '<div class="pcv-zoom"><button type="button" class="btn ghost small" id="pcvZoomFit" data-tip="The whole canvas in sight. Ctrl+wheel scales it (50–200 %), the wheel or a drag on its empty ground moves it">⤢</button>' +   // HERESY 1951
+      '<button type="button" class="btn ghost small mono" id="pcvZoom100" data-tip="Back to 100 %">100 %</button></div>';
     var legFold = function (on) {                       // HERESY 1580: the legend folded or not, as it was left
       var lg = box.querySelector(".pcv-legend"), b = box.querySelector(".pcv-leg-fold");
-      lg.classList.toggle("is-folded", on); b.textContent = on ? "?" : "\u25be"; b.dataset.tip = on ? "Unfold the legend" : "Fold the legend";
+      lg.classList.toggle("is-folded", on); b.textContent = "\u25be"; b.dataset.tip = "Fold the legend";
+      box.querySelector(".pcv-leg-open").hidden = !on;   // HERESY 1956 (Viktor: «при сворачивании… кнопочку со значком вопроса влево вниз на канвасе, и побольше её»)
       try { localStorage.setItem("yue2.pcvLegend", on ? "1" : "0"); } catch (e) { /* private mode */ }
     };
     box.querySelector(".pcv-leg-fold").addEventListener("click", function (e) { e.stopPropagation(); legFold(!box.querySelector(".pcv-legend").classList.contains("is-folded")); });
+    box.querySelector(".pcv-leg-open").addEventListener("click", function (e) { e.stopPropagation(); legFold(false); });
+    var lgEl = box.querySelector(".pcv-legend");
+    lgEl.addEventListener("pointerdown", function (e) {   // HERESY 1956 (Viktor: «подсказки с легендами… переносить их не получается»): dragged where it suits, kept until Arrange
+      if (e.button !== 0 || e.target.closest(".pcv-leg-fold")) return;
+      e.preventDefault(); e.stopPropagation();
+      var z = CV.z || 1, d = { x0: e.clientX, y0: e.clientY, left: lgEl.offsetLeft, top: lgEl.offsetTop, moved: false };
+      var move = function (ev) {
+        var dx = (ev.clientX - d.x0) / z, dy = (ev.clientY - d.y0) / z;
+        if (!d.moved && Math.abs(dx) + Math.abs(dy) < 4) return;
+        d.moved = true; lgEl.classList.add("is-dragged");
+        lgEl.style.left = Math.round(Math.max(0, Math.min((CV.worldW || box.clientWidth) - lgEl.offsetWidth, d.left + dx))) + "px";
+        lgEl.style.top = Math.round(Math.max(0, Math.min((CV.worldH || box.clientHeight) - lgEl.offsetHeight, d.top + dy))) + "px";
+      };
+      var up = function () {
+        window.removeEventListener("pointermove", move, true); window.removeEventListener("pointerup", up, true);
+        lgEl.classList.remove("is-dragged");
+        if (d.moved) { try { localStorage.setItem(LEG_AT, JSON.stringify([lgEl.offsetLeft, lgEl.offsetTop])); } catch (x) { /* private mode */ } }
+      };
+      window.addEventListener("pointermove", move, true); window.addEventListener("pointerup", up, true);
+    });
     try { legFold(localStorage.getItem("yue2.pcvLegend") === "1"); } catch (e) { /* private mode */ }
     var chain = $("postChain"), view = $("view-post");
     if (chain && chain.parentNode) chain.parentNode.insertBefore(box, chain.nextSibling); else if (view) view.appendChild(box);
@@ -1024,17 +1230,123 @@
     var box = $("postCanvas");
     if (!box || box.hidden) return;
     var bar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--playbar-h")) || 0;
-    box.style.height = Math.max(420, CV.needH || 0, Math.floor(window.innerHeight - box.getBoundingClientRect().top - bar - 16)) + "px";   // 1569
+    var top = box.getBoundingClientRect().top + (window.scrollY || 0);   // HERESY 1951: where it stands on the page, not on the screen: a scroll grows it no more
+    box.style.height = Math.max(420, Math.floor(window.innerHeight - top - bar - 16)) + "px";   // 1569; 1951: the room's height left, the world in it
+  }
+  function zClamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function zRecall() {
+    try { var v = JSON.parse(localStorage.getItem(ZOOM_KEY) || "null"); if (v && +v.z) { CV.z = zClamp(+v.z, ZMIN, ZMAX); CV.px = +v.x || 0; CV.py = +v.y || 0; } } catch (e) { /* none kept */ }
+  }
+  function zStore() {
+    clearTimeout(CV.zTimer);
+    CV.zTimer = setTimeout(function () { try { localStorage.setItem(ZOOM_KEY, JSON.stringify({ z: CV.z, x: Math.round(CV.px), y: Math.round(CV.py) })); } catch (e) { /* private mode */ } }, 300);
+  }
+  function zApply() {                                 // HERESY 1951: the world in its window: scaled, moved, never out of it
+    var box = $("postCanvas"), w = box && box.querySelector(".pcv-world");
+    if (!w) return;
+    var bw = box.clientWidth, bh = box.clientHeight, ww = (CV.worldW || bw) * CV.z, wh = (CV.worldH || bh) * CV.z;
+    CV.px = ww <= bw ? zClamp(CV.px, 0, bw - ww) : zClamp(CV.px, bw - ww, 0);
+    CV.py = wh <= bh ? zClamp(CV.py, 0, bh - wh) : zClamp(CV.py, bh - wh, 0);
+    w.style.transform = "translate(" + Math.round(CV.px) + "px, " + Math.round(CV.py) + "px) scale(" + CV.z + ")";
+    box.style.backgroundSize = 10 * CV.z + "px " + 10 * CV.z + "px";   // the grid goes with it
+    box.style.backgroundPosition = Math.round(CV.px) + "px " + Math.round(CV.py) + "px";
+    var b = $("pcvZoom100");
+    if (b) b.textContent = Math.round(CV.z * 100) + " %";
+  }
+  function zTo(z, mx, my) {                            // scaled about a point of the window (its middle when none)
+    var box = $("postCanvas");
+    if (!box) return;
+    if (mx == null) { mx = box.clientWidth / 2; my = box.clientHeight / 2; }
+    z = zClamp(z, ZMIN, ZMAX);
+    CV.px = mx - (mx - CV.px) * z / CV.z; CV.py = my - (my - CV.py) * z / CV.z; CV.z = z;
+    zApply(); zStore();
+  }
+  function zFit() {                                    // the whole world in sight, never above 100 %
+    var box = $("postCanvas");
+    if (!box) return;
+    CV.z = zClamp(Math.min(1, box.clientWidth / Math.max(1, CV.worldW), box.clientHeight / Math.max(1, CV.worldH)), ZMIN, ZMAX);
+    CV.px = 0; CV.py = 0; zApply(); zStore();
+  }
+  function selPaint() {                               // HERESY 1951: the selection's outline, without drawing the canvas anew
+    var box = $("postCanvas");
+    if (box) Array.prototype.forEach.call(box.querySelectorAll(".pcv-node"), function (n) { n.classList.toggle("is-selected", !!CV.sel[n.dataset.node]); });
+    var h = box && box.querySelector(".pcv-nodes");
+    if (h) h.dataset.html = "";                       // the next paint writes it into the nodes' own markup
+  }
+  function selClear() { if (Object.keys(CV.sel).length) { CV.sel = {}; selPaint(); } }
+  // HERESY 1954 (Viktor 30.10.2026: «давай как в Comfy настоящий Mute с шорткатами Комфи»): Ctrl+M mutes the nodes selected (else the one under the
+  // pointer, or the one whose window is open): a muted node does not run, from its window or on the way (the way stops before it, what follows it
+  // takes its output); Ctrl+B bypasses them on the way, as their right-click does. Kept in this browser
+  function mutable(id) {
+    if (!id || id === "take" || id === "importPanel" || id === "madePanel" || id === "audioPanel") return false;
+    var st = STEPS.filter(function (x) { return x.id === id; })[0];
+    return !!(st || cloneOf(id));
+  }
+  function targets() {
+    if (CV.open) return [CV.open];
+    var sel = Object.keys(CV.sel);
+    return sel.length ? sel : CV.hover ? [CV.hover] : [];
+  }
+  function muteToggle(ids) {
+    ids = (ids || []).filter(mutable);
+    if (!ids.length) return false;
+    var all = ids.every(function (id) { return CV.muted[id]; });
+    ids.forEach(function (id) { if (all) delete CV.muted[id]; else CV.muted[id] = 1; });
+    try { localStorage.setItem(MUTE_KEY, JSON.stringify(CV.muted)); } catch (e) { /* private mode */ }
+    pfDirty();                                        // HERESY 1957
+    pfSay(tr(all ? "{0} unmuted" : "{0} muted: it does not run, nor what follows it on the way").replace("{0}", ids.map(nodeWord).join(", ")));
+    if (CV.open && $("ndBox")) ndMuted($("ndBox"), CV.open);
+    var h = $("postCanvas") && $("postCanvas").querySelector(".pcv-nodes"); if (h) h.dataset.html = "";
+    cvPaint();
+    return true;
+  }
+  function bypassMany(ids) {
+    ids = (ids || []).filter(function (id) { return !!chainNode(id); });
+    ids.forEach(toggleBypass);
+    return ids.length > 0;
+  }
+  function ndMuted(box, id) {                          // the window of a muted node says so, its runs held
+    var on = !!CV.muted[id], say = box.querySelector(".nd-muted");
+    box.classList.toggle("is-muted", on);
+    if (say) say.hidden = !on;
+    var until = box.querySelector(".nd-until");
+    if (until && on) until.disabled = true;
+  }
+  function legPlace() {                               // HERESY 1951 («Подсказки проводкой подними вертикально в центр между этими нодами»)
+    var box = $("postCanvas"), lg = box && box.querySelector(".pcv-legend"), tk = box && box.querySelector('.pcv-node[data-node="take"]'),
+        im = box && box.querySelector('.pcv-node[data-node="importPanel"]');
+    if (!lg) return;
+    var kept = null;                                   // HERESY 1956: where it was dragged, kept until Arrange
+    try { kept = JSON.parse(localStorage.getItem(LEG_AT) || "null"); } catch (e) { kept = null; }
+    if (Array.isArray(kept)) {
+      lg.style.left = Math.round(Math.max(0, Math.min((CV.worldW || box.clientWidth) - lg.offsetWidth, +kept[0] || 0))) + "px";
+      lg.style.top = Math.round(Math.max(0, Math.min((CV.worldH || box.clientHeight) - lg.offsetHeight, +kept[1] || 0))) + "px";
+      return;
+    }
+    if (!tk || !im) return;
+    var rs = Array.prototype.map.call(box.querySelectorAll(".pcv-node"), function (n) { return [n.offsetLeft - 8, n.offsetTop - 8, n.offsetLeft + n.offsetWidth + 8, n.offsetTop + n.offsetHeight + 8]; });
+    var w = lg.offsetWidth, h = lg.offsetHeight, free = function (x, y) { return rs.every(function (r) { return x + w <= r[0] || x >= r[2] || y + h <= r[1] || y >= r[3]; }); };
+    var x = im.offsetLeft, a = tk.offsetTop + tk.offsetHeight + 10, b = im.offsetTop - h - 10, mid = Math.round((a + b) / 2), at = null;
+    for (var d = 0; a <= b && !at && d <= (b - a) / 2 + 10; d += 10) {   // the middle between the take and the import, else the nearest free place in that column
+      if (mid - d >= a && free(x, mid - d)) at = [x, mid - d]; else if (mid + d <= b && free(x, mid + d)) at = [x, mid + d];
+    }
+    if (!at) at = [im.offsetLeft + im.offsetWidth + 20, im.offsetTop];   // no room there: beside the import
+    lg.style.left = Math.round(at[0]) + "px"; lg.style.top = Math.round(Math.max(0, at[1])) + "px";
   }
   function cvPaint() {
     var box = $("postCanvas");
     if (!box || box.hidden || CV.drag) return;
     cvFit();
     var nodes = cvNodes(), f = cvFlows(), W = box.clientWidth, H = box.clientHeight, PAD = 22;
+    var cur = chain.job && chain.job.status === "running" && Array.isArray(chain.job.steps) ? chain.job.steps.filter(function (s) { return s.status === "running"; })[0] : null;
+    CV.runId = cur ? pipeNode(cur) : "";              // HERESY 1953: the step the way runs now, its node alive
     var L = cvLayout(nodes, W, H);                   // HERESY 1569
+    var WH = CV.worldH, world = box.querySelector(".pcv-world");   // HERESY 1951: the world as wide as the window, as tall as its columns need
+    CV.worldW = W;
+    if (world) { world.style.width = W + "px"; world.style.height = WH + "px"; }
     var row = state.take && window.HeresyCollection && window.HeresyCollection.row ? window.HeresyCollection.row(state.take.name) : null, secs = row && row.seconds;
     var html = nodes.map(function (nd) {
-      var p = CV.pos[nd.id], x = p ? snap(p[0] * (W - NODE_W)) : L[nd.id][0], y = p ? snap(p[1] * (H - NODE_H)) : L[nd.id][1];   // 1569: on the grid
+      var p = CV.pos[nd.id], x = p ? snap(p[0] * (W - NODE_W)) : L[nd.id][0], y = p ? snap(p[1] * (WH - NODE_H)) : L[nd.id][1];   // 1569: on the grid
       var st = nd.step, done = st && !nd.clone && state.done[st.step], tab = st && !nd.clone && document.querySelector('#postSteps [data-step-panel="' + st.id + '"]');   // 1516: the step's marks on its own
       var made = nd.id === "take" ? f.total : nd.id === "chain" ? 0 : f.count[nd.id] || 0, own = nd.own ? ' translate="no"' : "";
       var meta = (done ? '<span class="pcv-done">\u2713</span>' : "") + (made ? '<span class="pcv-made">' + esc(tr("{0} made").replace("{0}", made)) + "</span>" : "") +
@@ -1042,31 +1354,46 @@
       if (nd.id === "chain") meta = chainMeta();          // HERESY 1510
       var by = bypassed(nd.id);                         // HERESY 1508
       if (by) meta = '<span class="pcv-by">bypassed</span>' + meta;
+      if (CV.muted[nd.id]) meta = '<span class="pcv-mute">muted</span>' + meta;   // HERESY 1954
       var tst = CV.test || {};                         // HERESY 1571
       var cls = (tst.ok && tst.ok[nd.id] ? "is-test-ok " : "") + (tst.bad && tst.bad[nd.id] ? "is-test-bad " : "") + (nd.id === CV.target ? "is-target " : "") + "pcv-node pcv-" + (st ? st.group || "finish" : nd.id === "take" ? "take" : "import") + (st && st.plugin ? " is-plugin" : "") + (done ? " is-done" : "") + (by ? " is-bypassed" : "") +
-        ((tab && tab.classList.contains("is-running")) || (nd.id === "chain" && chain.job && chain.job.status === "running") ? " is-running" : "") + (st && !nd.clone && st.id === state.current ? " is-active" : "") + (nd.id === CV.open ? " is-open" : "") + (nd.clone ? " is-clone" : "");
+        ((tab && tab.classList.contains("is-running")) || (nd.id === "chain" && chain.job && chain.job.status === "running") || nd.id === CV.runId ? " is-running" : "") + (st && !nd.clone && st.id === state.current ? " is-active" : "") + (nd.id === CV.open ? " is-open" : "") + (nd.clone ? " is-clone" : "") +
+        (CV.way && st && st.group !== "setup" && !CV.way[nd.clone || nd.id] ? " is-off-way" : "") + (CV.sel[nd.id] ? " is-selected" : "") + (CV.muted[nd.id] ? " is-muted" : "");   // HERESY 1951; 1954
       return '<button type="button" class="' + cls + '" data-node="' + esc(nd.id) + '"' + (nodeTip(nd) ? ' data-tip="' + esc(nodeTip(nd)) + '"' : "") + ' style="left:' + Math.round(x) + "px;top:" + Math.round(y) + 'px">' +
         '<span class="pcv-top">' + (nd.n ? '<span class="pcv-n">' + nd.n + "</span>" : "") + '<span class="pcv-name"' + (st && st.plugin && !st.builtin || nd.clone ? ' translate="no"' : "") + ">" + esc(nd.name) + "</span>" + (nd.id === "dawPanel" ? betaBadge() : "") +
         (nd.id === CV.target ? '<span class="pcv-target" data-tip="The target: Run the way runs up to here">\u25ce</span>' : "") +   // HERESY 1571
         '<i class="pcv-live" aria-hidden="true"></i></span><span class="pcv-say"' + own + ">" + esc(nd.say) + '</span><span class="pcv-meta">' + meta + "</span>" +
+        (nd.id === CV.runId && CV.runId ? '<span class="pcv-run"><span class="pcv-prog is-unknown"><i></i></span><span class="pcv-eta mono"></span>' +   // HERESY 1962
+          '<span class="pcv-stop" role="button" tabindex="-1" data-pcv-stop="1" data-tip="' + esc(tr("Stop the way here: the step running ends now, what was made before stays")) + '" aria-label="' + esc(tr("Stop")) + '">\u25a0</span></span>' : "") +
         portsHtml(nd) + "</button>";                     // HERESY 1582: its slots, named, of a class each (1510, 1570: where a wire is drawn to, and from)
     }).join("");
     var holder = box.querySelector(".pcv-nodes");
     if (holder.dataset.html !== html) { holder.innerHTML = html; holder.dataset.html = html; }
-    var tall = 0;                                     // 1569: a row as tall as the tallest node and a gap; laid out again once when that moved
-    Array.prototype.forEach.call(holder.children, function (n) { tall = Math.max(tall, n.offsetHeight); });
-    if (tall && Math.abs(snap(tall + 16) - CV.rowH) >= GRID && !CV.relaid) { CV.nodeH = tall; CV.rowH = Math.max(100, snap(tall + 16)); CV.relaid = true; holder.dataset.html = ""; cvPaint(); CV.relaid = false; return; }
+    var hs = {}, seen = [], moved = !CV.hs;          // HERESY 1951: each node's height as drawn; a row as tall as most are and the gap
+    Array.prototype.forEach.call(holder.children, function (n) {
+      var h = n.offsetHeight; hs[n.dataset.node] = h; seen.push(h);
+      if (CV.hs && Math.abs((CV.hs[n.dataset.node] || 0) - h) >= GRID) moved = true;
+    });
+    seen.sort(function (a, b) { return a - b; });
+    var mid = seen.length ? seen[seen.length >> 1] : 0, rh = mid ? Math.max(100, snap(mid + CV.gap)) : CV.rowH;
+    if (mid && (moved || rh !== CV.rowH) && !CV.relaid) { CV.hs = hs; CV.nodeH = mid; CV.rowH = rh; CV.relaid = true; holder.dataset.html = ""; cvPaint(); CV.relaid = false; return; }
     CV.wires = cvWireList(f);
     cvWires();
+    legPlace();                                     // HERESY 1951
+    zApply();
+  }
+  function cvWorldRect() {                            // HERESY 1951: the world's own box on the screen (its scale and its move in it)
+    var box = $("postCanvas"), w = box && box.querySelector(".pcv-world");
+    return (w || box).getBoundingClientRect();
   }
   function cvWires() {
     var box = $("postCanvas"), svg = box && box.querySelector(".pcv-wires");
     if (!svg) return;
-    var at = {}, B = box.getBoundingClientRect();
+    var at = {}, B = cvWorldRect(), z = CV.z || 1;     // HERESY 1951: places in the world, whatever its scale
     Array.prototype.forEach.call(box.querySelectorAll(".pcv-node"), function (n) {
       var slots = { ins: [], outs: [] };               // HERESY 1582: each slot's place on the canvas
       Array.prototype.forEach.call(n.querySelectorAll(".pcv-port"), function (p) {
-        var r = p.getBoundingClientRect(), c = { x: r.left + r.width / 2 - B.left, y: r.top + r.height / 2 - B.top };
+        var r = p.getBoundingClientRect(), c = { x: (r.left + r.width / 2 - B.left) / z, y: (r.top + r.height / 2 - B.top) / z };
         if (p.classList.contains("is-out")) slots.outs.push({ t: p.dataset.type, x: c.x, y: c.y }); else slots.ins.push({ t: p.dataset.in, x: c.x, y: c.y });
       });
       at[n.dataset.node] = { x: n.offsetLeft, y: n.offsetTop, w: n.offsetWidth, h: n.offsetHeight, ins: slots.ins, outs: slots.outs };
@@ -1095,7 +1422,7 @@
       if (w[4] && !way[k] && onWay[w[1]] && !w[3]) return "";
       var hint = !way[k] && !w[3] && !w[4] && !flow[k];   // HERESY 1580: a road it may take, drawn only while a wire is dragged
       var sp = slotPath(a, b), d = sp ? sp.d : path(a, b), cls = sp ? " t-" + sp.t : "";   // HERESY 1582: a node with no slot keeps the old way
-      return '<path class="pcv-wire' + cls + (w[2] ? " is-any" : "") + (hint ? " is-hint" : "") + (w[3] ? " is-lit" : "") + (w[4] ? " is-chosen" : "") + (bypassed(w[0]) || bypassed(w[1]) ? " is-bypass" : "") + (way[k] ? " is-way" : "") + (flow[k] ? " is-flow" : "") + '" data-wire="' + esc(k) + '" d="' + d + '"/>' +
+      return '<path class="pcv-wire' + cls + (way[k] && CV.runId && w[1] === CV.runId ? " is-live" : "") + (w[2] ? " is-any" : "") + (hint ? " is-hint" : "") + (w[3] ? " is-lit" : "") + (w[4] ? " is-chosen" : "") + (bypassed(w[0]) || bypassed(w[1]) ? " is-bypass" : "") + (way[k] ? " is-way" : "") + (flow[k] ? " is-flow" : "") + '" data-wire="' + esc(k) + '" d="' + d + '"/>' +
         (way[k] ? '<path class="pcv-hit" data-cut="' + esc(k) + '" d="' + d + '"><title>' + esc(tr("A click cuts the way here")) + "</title></path>" : "");
     }).join("");
   }
@@ -1104,6 +1431,31 @@
   // (each control says change, its own prefs kept by its own module), its right-click sets it, keeps the setup as it is now under its name,
   // or deletes it (asked first)
   var PF = { list: [], loaded: false };
+  // HERESY 1957 (Viktor 30.10.2026: «При F5 моя раскладка исчезла из канваса Огранщика… продумай кеширование в браузере и сохранение состояния в
+  // файлах пользователя в Студии. Предложение сохранить текущий изменённый воркфлоу, если нет уже сохранения, и если этот же редактируется,
+  // предложить перезаписать. Ctrl+S те же действия»): the profile in hand (the lab keeps profiles in the user's files: the way, its steps' settings,
+  // where the nodes stand, the clones) and whether the canvas changed since it was set or kept; Ctrl+S keeps it, overwriting the one in hand when
+  // asked; another profile set over changes not kept asks first
+  PF.cur = ""; PF.dirty = false;
+  try { PF.cur = localStorage.getItem("yue2.refinerProfileCur") || ""; PF.dirty = localStorage.getItem("yue2.refinerDirty") === "1"; } catch (e) { /* private mode */ }
+  function pfMark(on) {
+    PF.dirty = !!on;
+    try { localStorage.setItem("yue2.refinerDirty", PF.dirty ? "1" : "0"); } catch (e) { /* private mode */ }
+    var b = $("pcvProfBtn");
+    if (!b) return;
+    if (b.dataset.tipBase == null) b.dataset.tipBase = b.dataset.tip || "";
+    b.classList.toggle("is-dirty", PF.dirty);
+    b.dataset.tip = tr(b.dataset.tipBase) + "\n" + (PF.cur ? tr("In hand: «{0}»").replace("{0}", PF.cur) : tr("No profile in hand")) +
+      (PF.dirty ? " \u00b7 " + tr("changed, not kept: Ctrl+S keeps it") : "");
+  }
+  function pfCur(name) { PF.cur = name || ""; try { localStorage.setItem("yue2.refinerProfileCur", PF.cur); } catch (e) { /* private mode */ } pfMark(false); }
+  function pfDirty() { if (!PF.dirty) pfMark(true); }
+  function pfKeepAsk() {                              // Ctrl+S: the profile in hand overwritten, or the way kept under a new name
+    if (!PF.cur || !window.HeresyDialog || !window.HeresyDialog.choose) { pfSaveAs(); return; }
+    window.HeresyDialog.choose(tr("Keep the way as it is now?") + "\n\n" + tr("The way, its steps' settings, where the nodes stand and the clones, in the studio's files."), [
+      { label: tr("Overwrite «{0}»").replace("{0}", PF.cur), value: "over" }, { label: tr("Save as a new profile\u2026"), value: "new" }], { cancel: tr("Cancel") })
+      .then(function (v) { if (v === "over") pfSave(PF.cur); else if (v === "new") pfSaveAs(); });
+  }
   var PF_SKIP = /Source$|^specCompare$|^rmTrim|^mx|^au|^imp|^pcv|^hc/;   // a take's own: its sources and its cut points
   function fieldsOf(root, into) {                   // 1516: a root's settings (the page's, a panel's), by id, a plugin's by its key
     var fields = into || {};
@@ -1197,6 +1549,7 @@
     return [o.col, Math.min(maxRow, o.row + 0.25)];
   }
   function cvClone(id) {
+    pfDirty();                                        // HERESY 1957
     var src = cloneOf(id), of = src ? src.of : id, el = $(of);
     if (!el || !clonable(of)) return "";
     if (CV.clones.filter(function (c) { return c.of === of; }).length >= CLONE_MAX) { pfSay(tr("Eight clones of one step are enough"), true); return ""; }
@@ -1216,7 +1569,7 @@
       if (yes !== true) return;
       if (CV.open === id) cvClose();
       CV.clones = CV.clones.filter(function (c) { return c.id !== id; });
-      delete CV.pos[id];
+      delete CV.pos[id]; pfDirty();                   // 1957
       clStore(); cvStore(); cvPaint();
     });
   }
@@ -1238,20 +1591,34 @@
       .then(function (d) { PF.list = d.profiles || []; PF.loaded = true; pfPaint(); }, function () { PF.loaded = true; pfPaint(); });
   }
   function pfSave(name) {
-    return pfAsk({ op: "save", name: name, setup: setupNow() }).then(function () { pfSay(tr("Profile «{0}» kept").replace("{0}", name)); },
+    return pfAsk({ op: "save", name: name, setup: setupNow() }).then(function () { pfCur(name); pfSay(tr("Profile «{0}» kept").replace("{0}", name)); },   // 1957: in hand now
       function (e) { pfSay(tr("The profiles could not be kept: {0}").replace("{0}", e.message), true); });
   }
-  function pfSaveAs() {
+  function pfSaveAs(then) {
     if (!window.HeresyDialog) return;
-    window.HeresyDialog.prompt(tr("A name for this setup"), "", { ok: tr("Keep it"), cancel: tr("Cancel"), max: 60 }).then(function (name) {
+    window.HeresyDialog.prompt(tr("A name for this setup"), PF.cur || "", { ok: tr("Keep it"), cancel: tr("Cancel"), max: 60 }).then(function (name) {
       name = String(name || "").trim();
-      if (name) pfSave(name);
+      if (!name) return;
+      var there = PF.list.some(function (x) { return x.name === name; });   // HERESY 1957: a name kept already, overwritten only when asked
+      var go = there ? window.HeresyDialog.confirm(tr("The profile «{0}» is there already: overwrite it?").replace("{0}", name), { ok: tr("Overwrite"), cancel: tr("Cancel") }) : Promise.resolve(true);
+      go.then(function (yes) { if (yes === true) pfSave(name).then(function () { if (typeof then === "function") then(); }); });
     });
   }
-  function pfSet(name) {
+  function pfSet(name, sure) {
     var p = PF.list.filter(function (x) { return x.name === name; })[0];
     if (!p) return 0;
+    if (PF.dirty && !sure && window.HeresyDialog && window.HeresyDialog.choose) {   // HERESY 1957: changes not kept, asked first
+      window.HeresyDialog.choose(tr("The way in hand has changes not kept") + "\n\n" + tr("Setting «{0}» puts its own in their place.").replace("{0}", name), [
+        { label: PF.cur ? tr("Overwrite «{0}» first").replace("{0}", PF.cur) : tr("Keep them under a name first\u2026"), value: "keep" }, { label: tr("Drop them"), value: "drop" }], { cancel: tr("Cancel") })
+        .then(function (v) {
+          if (v === "drop") pfSet(name, true);
+          else if (v === "keep" && PF.cur) pfSave(PF.cur).then(function () { pfSet(name, true); });
+          else if (v === "keep") pfSaveAs(function () { pfSet(name, true); });
+        });
+      return 0;
+    }
     var n = setupApply(p.setup);
+    pfCur(name);                                      // HERESY 1957
     pfSay(tr("Profile «{0}» set: {1} settings changed").replace("{0}", name).replace("{1}", n));
     return n;
   }
@@ -1259,7 +1626,7 @@
     var go = window.HeresyDialog ? window.HeresyDialog.confirm(tr("Delete the profile «{0}»?").replace("{0}", name), { ok: tr("Delete"), cancel: tr("Cancel"), danger: true }) : Promise.resolve(true);
     go.then(function (yes) {
       if (yes !== true) return;
-      pfAsk({ op: "delete", name: name }).then(function () { pfSay(tr("Profile «{0}» deleted").replace("{0}", name)); },
+      pfAsk({ op: "delete", name: name }).then(function () { if (PF.cur === name) pfCur(""); pfSay(tr("Profile «{0}» deleted").replace("{0}", name)); },
         function (e) { pfSay(tr("The profiles could not be kept: {0}").replace("{0}", e.message), true); });
     });
   }
@@ -1308,11 +1675,19 @@
     box.innerHTML = '<div class="nd-head"><button type="button" class="btn ghost small nd-prev" data-nd="prev"></button><strong class="nd-title"></strong>' +
       '<button type="button" class="btn ghost small nd-next" data-nd="next"></button>' +
       '<button type="button" class="btn primary small nd-until" data-nd="until" hidden data-tip="The way up to this node and no further: a step bypassed on it is skipped, this one runs">Run up to here</button>' +
+      '<span class="nd-muted" hidden>muted: Ctrl+M unmutes</span>' +   // HERESY 1954
       '<span class="spacer"></span>' +
       '<span class="row-hint nd-keys">Alt+\u2190 \u2192 the step before and after \u00b7 Esc back</span>' +
       '<button type="button" class="btn ghost small" data-nd="close">Close</button></div><div class="nd-body"></div>';
     document.body.appendChild(back); document.body.appendChild(box);
     back.addEventListener("click", function () { cvClose(); });
+    box.addEventListener("click", function (e) {      // HERESY 1954: a muted node's own runs held
+      if (!CV.open || !CV.muted[CV.open]) return;
+      var run = e.target.closest(".nd-body .btn.primary, .nd-body .pl-run, [data-nd=until]");
+      if (!run) return;
+      e.preventDefault(); e.stopPropagation();
+      pfSay(tr("{0} is muted: Ctrl+M unmutes it").replace("{0}", nodeWord(CV.open)), true);
+    }, true);
     box.addEventListener("click", function (e) {
       var b = e.target.closest("[data-nd]");
       if (!b) return;
@@ -1323,7 +1698,17 @@
   }
   // HERESY 1573: a node's window as large as what it holds: a column of 1100 px for a step's settings, the window's width for what is wide;
   // as tall as its panel up to the room's height, centred in it, and centred again as the panel grows or folds
-  var ND_WIDE = { take: 1, madePanel: 1, spectrumPanel: 1, glossPanel: 1, dawPanel: 1, remasterPanel: 1, audioPanel: 1 };
+  var ND_WIDE = { dawPanel: 1 };                     // HERESY 1953: only the DAW the window's width, its lanes a timeline
+  // HERESY 1953 (Viktor 30.10.2026: «На 2K мониторе всё растянуто, куча воды в модалке… адаптивные высоты и ширины модалок нод, чтобы не было
+  // слишком тесно, и не разбухало окно на всю ширину экрана»): a node's window as wide as what it holds: a few settings a narrow column, a step
+  // of many a middle one, a tree of waves, a spectrum or the lyrics a large one; never past 96 % of the screen
+  var ND_SIZE = { madePanel: "l", spectrumPanel: "l", glossPanel: "l", remasterPanel: "m", audioPanel: "m", derivedPanel: "m", gatePanel: "m", inspectPanel: "m",
+                  midiPanel: "m", debuzzPanel: "s", upscalePanel: "s", importPanel: "s" };
+  function ndSize(pid, el) {
+    if (ND_WIDE[pid]) return "";
+    if (ND_SIZE[pid]) return ND_SIZE[pid];
+    return el && el.querySelectorAll("[data-pl-key]").length > 6 ? "m" : "s";   // a plugin's step: by the settings it has
+  }
   function ndPlace(box) {
     var go = function () {
       if (box.hidden) return;
@@ -1354,13 +1739,16 @@
     var betaWas = m.box.querySelector(".nd-beta"); if (betaWas) betaWas.remove();   // HERESY 1795: beside the title, its text as it was
     if (pid === "dawPanel") m.box.querySelector(".nd-title").insertAdjacentHTML("afterend", betaBadge("nd-beta"));
     m.box.classList.toggle("is-clone", !!cl);          // HERESY 1516
-    m.box.classList.toggle("is-wide", !!ND_WIDE[pid]); // HERESY 1573: what is wide (a tree of waves, a spectrum, the DAW) the window's width
+    m.box.classList.toggle("is-wide", !!ND_WIDE[pid]); // HERESY 1573: what is wide the window's width (1953: the DAW alone)
+    var sz = ndSize(pid, el);
+    ["s", "m", "l"].forEach(function (k) { m.box.classList.toggle("nd-" + k, sz === k); });   // HERESY 1953
     m.box.querySelector(".nd-prev").textContent = "\u2039 " + cvTitle(prev).replace(/^\d+ \u00b7 /, "");
     m.box.querySelector(".nd-next").textContent = cvTitle(next).replace(/^\d+ \u00b7 /, "") + " \u203a";
     if (window.HeresyChoices) window.HeresyChoices.within(el);   // HERESY 1509: its choices in sight, no dropdowns in a node's window
     var until = m.box.querySelector(".nd-until");    // HERESY 1508: the chain's nodes run up to themselves from here too
     until.hidden = !chainNode(id);                   // HERESY 1553: a pipeline's node too
     until.disabled = !state.take || chainBusy();
+    ndMuted(m.box, id);                               // HERESY 1954
     m.back.hidden = false; m.box.hidden = false;
     document.body.dataset.node = id;
     ndPlace(m.box);                                   // HERESY 1573
@@ -1426,11 +1814,12 @@
     }
     var box = cvBox();
     box.addEventListener("pointerdown", function (e) {
+      if (e.target.closest("[data-pcv-stop]")) { e.stopPropagation(); return; }   // HERESY 1962: Stop is pressed, the node not dragged
       var port = e.target.closest(".pcv-port.is-out");   // HERESY 1510: a wire drawn from here
       if (port && e.button === 0) {
         e.preventDefault(); e.stopPropagation();
-        var r = box.getBoundingClientRect(), pr = port.getBoundingClientRect();
-        CV.link = { from: port.dataset.port, x: pr.left + pr.width / 2 - r.left, y: pr.top + pr.height / 2 - r.top };
+        var r = cvWorldRect(), pr = port.getBoundingClientRect(), z = CV.z || 1;   // HERESY 1951: in the world's places
+        CV.link = { from: port.dataset.port, x: (pr.left + pr.width / 2 - r.left) / z, y: (pr.top + pr.height / 2 - r.top) / z };
         box.classList.add("is-linking");               // HERESY 1580: the roads drawn, the nodes that can take it lit, the others faded
         CV.link.t = port.dataset.type || "file";         // HERESY 1582: only an input of its class takes it
         Array.prototype.forEach.call(box.querySelectorAll(".pcv-node"), function (n) {
@@ -1442,26 +1831,65 @@
         return;
       }
       var nd = e.target.closest(".pcv-node");
+      if (!nd && e.button === 0 && (e.ctrlKey || e.metaKey) && !e.target.closest(".pcv-legend, .pcv-zoom")) {   // HERESY 1951: Ctrl+drag a frame, as ComfyUI's
+        var wr = cvWorldRect(), z0 = CV.z || 1, mq = document.createElement("div");
+        mq.className = "pcv-marquee";
+        box.querySelector(".pcv-world").appendChild(mq);
+        CV.marq = { x0: (e.clientX - wr.left) / z0, y0: (e.clientY - wr.top) / z0, add: e.shiftKey, el: mq };
+        try { box.setPointerCapture(e.pointerId); } catch (x) { /* gone */ }
+        return;
+      }
+      if (!nd && (e.button === 0 || e.button === 1) && !e.target.closest(".pcv-legend, .pcv-zoom, .pcv-hit, .pcv-leg-open")) {   // HERESY 1951: the empty ground moves the world
+        if (e.button === 1) e.preventDefault();
+        CV.pan = { x0: e.clientX, y0: e.clientY, px: CV.px, py: CV.py, moved: false };
+        try { box.setPointerCapture(e.pointerId); } catch (x) { /* gone */ }
+        return;
+      }
       if (!nd || e.button !== 0) return;
-      CV.drag = { el: nd, id: nd.dataset.node, x0: e.clientX, y0: e.clientY, left: nd.offsetLeft, top: nd.offsetTop, moved: false };
+      if (e.ctrlKey || e.metaKey) {                      // HERESY 1951: Ctrl+click puts a node into the selection or takes it out
+        var sid = nd.dataset.node;
+        if (CV.sel[sid]) delete CV.sel[sid]; else CV.sel[sid] = 1;
+        selPaint();
+        return;
+      }
+      if (!CV.sel[nd.dataset.node]) selClear();         // a node not selected moves alone
+      var group = Object.keys(CV.sel).length > 1 ? Array.prototype.filter.call(box.querySelectorAll(".pcv-node"), function (n) { return CV.sel[n.dataset.node]; })
+        .map(function (n) { return { el: n, id: n.dataset.node, left: n.offsetLeft, top: n.offsetTop }; }) : null;   // HERESY 1951: the selected move together
+      CV.drag = { el: nd, id: nd.dataset.node, x0: e.clientX, y0: e.clientY, left: nd.offsetLeft, top: nd.offsetTop, moved: false, group: group };
       try { nd.setPointerCapture(e.pointerId); } catch (x) { /* gone */ }
     });
     box.addEventListener("pointermove", function (e) {
       if (CV.link) {                                     // HERESY 1510: the wire follows the pointer
-        var r = box.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, svg = box.querySelector(".pcv-wires"), t = svg.querySelector(".pcv-temp");
+        var r = cvWorldRect(), x = (e.clientX - r.left) / (CV.z || 1), y = (e.clientY - r.top) / (CV.z || 1), svg = box.querySelector(".pcv-wires"), t = svg.querySelector(".pcv-temp");
         if (!t) { t = document.createElementNS("http://www.w3.org/2000/svg", "path"); t.setAttribute("class", "pcv-wire pcv-temp"); svg.appendChild(t); }
         var k = Math.max(40, Math.abs(x - CV.link.x) / 2);
         t.setAttribute("d", "M" + CV.link.x + "," + CV.link.y + " C" + (CV.link.x + k) + "," + CV.link.y + " " + (x - k) + "," + y + " " + x + "," + y);
         return;
       }
+      if (CV.marq) {                                     // HERESY 1951: the frame follows the pointer
+        var q = CV.marq, qr = cvWorldRect(), qz = CV.z || 1, qx = (e.clientX - qr.left) / qz, qy = (e.clientY - qr.top) / qz;
+        q.x1 = qx; q.y1 = qy;
+        q.el.style.left = Math.min(q.x0, qx) + "px"; q.el.style.top = Math.min(q.y0, qy) + "px";
+        q.el.style.width = Math.abs(qx - q.x0) + "px"; q.el.style.height = Math.abs(qy - q.y0) + "px";
+        return;
+      }
+      if (CV.pan) {                                      // HERESY 1951
+        var pm = CV.pan, mx = e.clientX - pm.x0, my = e.clientY - pm.y0;
+        if (!pm.moved && Math.abs(mx) + Math.abs(my) < 4) return;
+        pm.moved = true; box.classList.add("is-panning");
+        CV.px = pm.px + mx; CV.py = pm.py + my; zApply();
+        return;
+      }
       var d = CV.drag;
       if (!d) return;
-      var dx = e.clientX - d.x0, dy = e.clientY - d.y0;
-      if (!d.moved && Math.abs(dx) + Math.abs(dy) < 5) return;
+      var z = CV.z || 1, dx = (e.clientX - d.x0) / z, dy = (e.clientY - d.y0) / z;   // HERESY 1951: the pointer's move in the world's pixels
+      if (!d.moved && (Math.abs(dx) + Math.abs(dy)) * z < 5) return;
       d.moved = true;
       d.el.classList.add("is-dragged");
-      d.el.style.left = snap(Math.max(0, Math.min(box.clientWidth - d.el.offsetWidth, d.left + dx))) + "px";   // 1569: on the grid
-      d.el.style.top = snap(Math.max(0, Math.min(box.clientHeight - d.el.offsetHeight, d.top + dy))) + "px";
+      (d.group || [d]).forEach(function (g) {          // 1951: the selected with it
+        g.el.style.left = snap(Math.max(0, Math.min((CV.worldW || box.clientWidth) - g.el.offsetWidth, g.left + dx))) + "px";   // 1569: on the grid
+        g.el.style.top = snap(Math.max(0, Math.min((CV.worldH || box.clientHeight) - g.el.offsetHeight, g.top + dy))) + "px";
+      });
       cvWires();
     });
     function linkDrop(e) {                               // HERESY 1510: dropped on a node, it takes this one's newest as its source
@@ -1487,11 +1915,31 @@
     box.addEventListener("pointerup", function (e) { if (CV.link) linkDrop(e); }, true);
     box.addEventListener("pointercancel", function () { if (CV.link) linkDrop(null); }, true);
     function drop() {
+      if (CV.marq) {                                     // HERESY 1951: the nodes the frame touches selected (Shift: added to those already)
+        var q = CV.marq; CV.marq = null; q.el.remove();
+        if (q.x1 == null) return;
+        var x0 = Math.min(q.x0, q.x1), x1 = Math.max(q.x0, q.x1), y0 = Math.min(q.y0, q.y1), y1 = Math.max(q.y0, q.y1);
+        if (!q.add) CV.sel = {};
+        Array.prototype.forEach.call(box.querySelectorAll(".pcv-node"), function (n) {
+          if (n.offsetLeft < x1 && n.offsetLeft + n.offsetWidth > x0 && n.offsetTop < y1 && n.offsetTop + n.offsetHeight > y0) CV.sel[n.dataset.node] = 1;
+        });
+        CV.quietUntil = Date.now() + 300;
+        selPaint();
+        return;
+      }
+      if (CV.pan) {                                      // HERESY 1951: the world left where it was moved to; a click on the ground clears the selection
+        var pm = CV.pan; CV.pan = null; box.classList.remove("is-panning");
+        if (pm.moved) { CV.quietUntil = Date.now() + 300; zStore(); } else selClear();
+        return;
+      }
       var d = CV.drag;
       CV.drag = null;
       if (!d || !d.moved) return;
       d.el.classList.remove("is-dragged");
-      CV.pos[d.id] = [d.el.offsetLeft / Math.max(1, box.clientWidth - NODE_W), d.el.offsetTop / Math.max(1, box.clientHeight - NODE_H)];
+      pfDirty();                                      // HERESY 1957: where the nodes stand changed
+      (d.group || [d]).forEach(function (g) {          // 1951: each of the selected kept where it was put
+        CV.pos[g.id] = [g.el.offsetLeft / Math.max(1, (CV.worldW || box.clientWidth) - NODE_W), g.el.offsetTop / Math.max(1, (CV.worldH || box.clientHeight) - NODE_H)];
+      });
       CV.quietUntil = Date.now() + 300;                  // the click that ends a drag opens nothing (by time: the node it fell on is drawn anew)
       cvStore();
       box.querySelector(".pcv-nodes").dataset.html = "";
@@ -1499,7 +1947,7 @@
     }
     box.addEventListener("pointerup", drop);
     box.addEventListener("pointercancel", drop);
-    function arrange() { CV.pos = {}; cvStore(); box.querySelector(".pcv-nodes").dataset.html = ""; cvPaint(); }
+    function arrange() { CV.pos = {}; pfDirty(); cvStore(); try { localStorage.removeItem(LEG_AT); } catch (e) { /* private mode */ } box.querySelector(".pcv-nodes").dataset.html = ""; cvPaint(); }   // 1956: the legend too
     CV.arrange = arrange;                             // HERESY 1517: its button is in the row above the canvas
     // HERESY 1508: a node's right-click, as ComfyUI's: open it, run the chain up to it, bypass it in the chain, lay the canvas out anew
     box.addEventListener("contextmenu", function (e) {
@@ -1514,6 +1962,8 @@
       if (clonable(id) || cloneOf(id)) items.push({ label: "Clone", icon: "\u2750", action: function () { cvClone(id); },   // HERESY 1516
                                                     hint: "A second node of this step with its own settings, beside it: its window holds them, and a run from there runs with them" });
       if (cloneOf(id)) items.push({ label: "Delete the clone", icon: "\u2715", danger: true, action: function () { cvUnclone(id); } });
+      if (mutable(id)) items.push({ label: CV.muted[id] ? "Unmute" : "Mute", icon: "\u2298", action: function () { muteToggle(Object.keys(CV.sel).length && CV.sel[id] ? Object.keys(CV.sel) : [id]); },   // HERESY 1954
+                                    hint: "Ctrl+M: it does not run, nor what follows it on the way; Ctrl+B bypasses" });
       if (stepFor(id) || id === "take") {               // HERESY 1570, 1571
         items.push({ sep: true }, { label: "Test the way up to here", icon: "\u2713", action: function () { wayTest(id === "take" ? "" : id); },
                      hint: "The way drawn as it flows up to this node, each step checked against what comes to it: a set of stems, the stem it mends, the gateway. Nothing runs" });
@@ -1527,11 +1977,12 @@
     });
     box.addEventListener("click", function (e) {
       if (e.target.closest("#pcvArrange")) { arrange(); return; }
+      if (e.target.closest("[data-pcv-stop]")) { e.stopPropagation(); chainStopAsk(); return; }   // HERESY 1962: the running node's Stop
       var cut = e.target.closest(".pcv-hit");          // HERESY 1570
       if (cut) { var kk = cut.getAttribute("data-cut").split(">"); ownCut(kk[0], kk[1]); return; }
       var nd = e.target.closest(".pcv-node");
       if (!nd) return;
-      if (Date.now() < CV.quietUntil) return;
+      if (Date.now() < CV.quietUntil || e.ctrlKey || e.metaKey) return;   // 1951: Ctrl+click selects, it opens nothing
       cvOpen(nd.dataset.node);
     });
     document.addEventListener("keydown", function (e) {   // HERESY 1570: Ctrl+Z on the canvas, no window open, no field in hand
@@ -1556,6 +2007,34 @@
       DIG.first = e.key;
       DIG.timer = setTimeout(function () { DIG.first = ""; digOpen(one); }, 500);
     }, true);
+    document.addEventListener("keydown", function (e) {   // HERESY 1957: Ctrl+S keeps the way (Shift: under a new name), not the browser's page
+      if (!CV.on || document.body.dataset.tab !== "post" || !(e.ctrlKey || e.metaKey) || e.altKey || (e.key || "").toLowerCase() !== "s") return;
+      if (document.querySelector(".hd-back")) return;
+      e.preventDefault(); e.stopPropagation();
+      if (e.shiftKey) pfSaveAs(); else pfKeepAsk();
+    }, true);
+    document.addEventListener("change", function (e) {   // HERESY 1957: a step's setting changed by hand (its sources and cut points are the take's own)
+      var t = e.target;
+      if (!e.isTrusted || !t || !t.closest || !t.closest("#view-post, #ndBox") || t.closest("#postChain") || (t.id && PF_SKIP.test(t.id))) return;
+      if (t.id || (t.dataset && t.dataset.plKey)) pfDirty();
+    }, true);
+    pfMark(PF.dirty);
+    document.addEventListener("keydown", function (e) {   // HERESY 1954: Ctrl+M mutes, Ctrl+B bypasses, as ComfyUI's
+      if (!CV.on || document.body.dataset.tab !== "post" || !(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
+      var k = (e.key || "").toLowerCase();
+      if (k !== "m" && k !== "b") return;
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || "") || (document.activeElement || {}).isContentEditable) return;
+      if (document.querySelector(".hd-back, .hc-pop, .hm-menu") || (BK.el && !BK.el.hidden)) return;
+      var ids = targets();
+      if (!ids.length) return;
+      e.preventDefault(); e.stopPropagation();
+      if (k === "m") muteToggle(ids); else if (!CV.open) bypassMany(ids);
+    }, true);
+    box.addEventListener("pointerover", function (e) { var n = e.target.closest(".pcv-node"); CV.hover = n ? n.dataset.node : ""; });
+    box.addEventListener("pointerleave", function () { CV.hover = ""; });
+    document.addEventListener("keydown", function (e) {   // HERESY 1951: Esc with no window open lets the selection go
+      if (e.key === "Escape" && !CV.open && CV.on && Object.keys(CV.sel).length && document.body.dataset.tab === "post" && !document.querySelector(".hd-back, .hc-pop, .hm-menu")) { selClear(); }
+    });
     document.addEventListener("keydown", function (e) {
       if (!CV.open) return;
       if (document.querySelector(".hd-back, .cmp-back, .ds-back, .hc-pop, .hm-menu") || document.fullscreenElement || document.body.classList.contains("daw-full")) return;   // theirs first (1509: a list, a menu)
@@ -1567,6 +2046,26 @@
     if (window.MutationObserver) new MutationObserver(function () { if (CV.open && document.body.dataset.tab !== "post") cvClose(); }).observe(document.body, { attributes: true, attributeFilter: ["data-tab"] });
     window.addEventListener("heresy-step", function () { cvPaint(); });
     window.addEventListener("resize", function () { if (!CV.drag) { var h = box.querySelector(".pcv-nodes"); if (h) h.dataset.html = ""; cvPaint(); } });
+    // HERESY 1951: the wheel moves the world (Shift: sideways), Ctrl+wheel (a touchpad's pinch too) scales it about the pointer instead of the
+    // browser's page; ⤢ the whole of it in sight, the percent back to 100 %
+    box.addEventListener("wheel", function (e) {
+      e.preventDefault();
+      var k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? box.clientHeight : 1;
+      if (e.ctrlKey || e.metaKey) {
+        var r = box.getBoundingClientRect();
+        zTo(CV.z * Math.exp(-e.deltaY * k * 0.0015), e.clientX - r.left - box.clientLeft, e.clientY - r.top - box.clientTop);
+        return;
+      }
+      var side = e.shiftKey && !e.deltaX;
+      CV.px -= (side ? e.deltaY : e.deltaX) * k; CV.py -= (side ? 0 : e.deltaY) * k;
+      zApply(); zStore();
+    }, { passive: false });
+    box.querySelector(".pcv-zoom").addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (e.target.closest("#pcvZoomFit")) zFit();
+      else if (e.target.closest("#pcvZoom100")) { CV.z = 1; CV.px = 0; CV.py = 0; zApply(); zStore(); }
+    });
+    zRecall();
     if (CV.on) wayInit();                             // HERESY 1598
     cvSet(CV.on);
   }
@@ -1956,7 +2455,7 @@
   window.HeresyPost = { init: init, setTake: setTake, select: select, has: function (id) { return STEPS.some(function (s) { return s.id === id; }); },
     plugins: loadPlugins, unplug: unplug,   // HERESY 1460
     pipes: function () { return { list: PIPE.list, on: PIPE.on, off: pipeOff(), body: pipeOf() ? pipeBody() : null }; }, pipeLoad: pipeLoad,   // HERESY 1553
-    batch: startBatch, batchAsk: batchAsk, watchBatch: watchBatch,   // HERESY 1562
+    batch: startBatch, batchAsk: batchAsk, watchBatch: watchBatch, bucketAdd: bucketAdd, bucketOpen: bucketOpen, bucket: function () { return BK.names.slice(); },   // HERESY 1955   // HERESY 1562
     audio: { load: function () { au.data = null; auLoad(true); }, data: function () { return au.data; } },   // HERESY 1512
     canvas: { set: function (on) { cvSet(on); }, on: function () { return CV.on; }, open: cvOpen, close: function () { cvClose(); }, opened: function () { return CV.open; },
               step: cvStep, paint: cvPaint, until: runUntil, bypass: toggleBypass, bypassed: bypassed, link: cvLink,
@@ -1966,7 +2465,12 @@
               way: { fresh: wayNew, init: wayInit, bar: function () { var c = $("postChain"); return !!(c && c.classList.contains("is-head")); },   // HERESY 1598
                      now: wayNow, pairs: wayPairs, cut: ownCut, link: ownLink, off: ownOff, undo: ownUndo, check: wayCheck, test: wayTest,   // HERESY 1570, 1571
                      target: function (id) { if (id !== undefined && id !== CV.target) targetSet(id); return CV.target; }, tested: function () { return CV.test ? JSON.parse(JSON.stringify(CV.test)) : null; },
-                     layout: function () { return { rowH: CV.rowH, needH: CV.needH }; },
+                     layout: function () { return { rowH: CV.rowH, needH: CV.needH, worldW: CV.worldW, worldH: CV.worldH, z: CV.z, x: CV.px, y: CV.py, gap: CV.gap }; },
+                     selected: function () { return Object.keys(CV.sel).sort(); }, muted: function () { return Object.keys(CV.muted).sort(); }, mute: muteToggle,   // HERESY 1954
+                     bucket: function () { return BK.names.slice(); }, bucketAdd: bucketAdd, bucketOpen: bucketOpen,   // HERESY 1955
+                     wayNodes: function () { return CV.way ? Object.keys(CV.way).sort() : null; },   // HERESY 1951
+                     profile: function () { return { cur: PF.cur, dirty: PF.dirty }; }, profileClean: function (all) { if (all) pfCur(""); else pfMark(false); }, keep: pfKeepAsk,   // HERESY 1957
+                     zoom: function (z, x, y) { CV.z = Math.max(ZMIN, Math.min(ZMAX, +z || 1)); CV.px = +x || 0; CV.py = +y || 0; zApply(); zStore(); return { z: CV.z, x: CV.px, y: CV.py }; },   // HERESY 1951
                      reset: function () { PIPE.own = null; PIPE.undo = null; CV.target = ""; CV.test = null; if (PIPE.on === "own") PIPE.on = "";
                        try { localStorage.removeItem(OWN_KEY); localStorage.removeItem(TARGET_KEY); } catch (e) { /* private mode */ } ownSync(); },
                      own: function () { return PIPE.own ? JSON.parse(JSON.stringify(PIPE.own)) : null; } } } };   // HERESY 1506, 1508, 1510, 1515, 1516, 1569

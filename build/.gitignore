@@ -15,3 +15,11 @@ training/datasets/
 training/checkpoints/
 # HERESY 1130: the page build.sh makes, read from disk by the server
 tools/public/index.html
+# HERESY 1834: the MIDI transcriber build and its logs (build.sh)
+/build-muscriptor/
+/muscriptor-configure.log
+# HERESY 1880: the MIDI orchestra's renderers, sfizz and FluidSynth, built from their sources (heresy/MISC/claude-tc/midi/build-renderers.sh)
+/build-sfizz/
+/build-fluidsynth/
+/build-libgig/
+/muscriptor-build.log

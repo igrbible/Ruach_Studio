@@ -332,7 +332,7 @@
     <h1>Песні са слоў і акордаў<br>на тваёй уласнай машыне</h1>
     <p class="lead">Цэлая студыя вакол <b>YuE2</b>, адкрытай мадэлі песень. Пішаш стыль і тэкст, а студыя складае, спявае і зводзіць песню на <b>тваёй уласнай відэакарце</b>. Твае песні, словы і налады ніколі яе не пакідаюць.</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Узяць на GitHub</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.be.md">Чытаць даведнік</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Мадэлі на Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Купі мне кававарку</a></div>
-    <span class="rc"><b>2.0.2</b> · уласны Пісьменнік Студыі · кастрычнік 2026</span>
+    <span class="rc"><b>2.0.3</b> · Відэограф да гатовага кліпа · кастрычнік 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -344,7 +344,7 @@
     <div class="nums">
       <div><b>8 хв</b><span>цэлыя песні, да васьмі хвілін</span></div>
       <div><b>135 с</b><span>песня на 6:12 на адной RTX 3090</span></div>
-      <div><b>6 пакояў</b><span>складаць, пісаць, граніць, маляваць, захоўваць і вучыць</span></div>
+      <div><b>7 пакояў</b><span>складаць, пісаць, граніць, маляваць, здымаць, захоўваць і вучыць</span></div>
       <div><b>200</b><span>інструментаў, правераных на слых</span></div>
       <div><b>12</b><span>моў старонкі</span></div>
     </div>
@@ -362,8 +362,8 @@
 
   <section id="rooms">
     <div class="wrap">
-      <h2>Шэсць пакояў, адна студыя</h2>
-      <p class="sub"><b>Творца</b> стварае песню, <b>Пісьменнік</b> піша яе з чат-мадэллю, <b>Гранільшчык</b> даводзіць яе, <b>Мастак</b> малюе яе малюнкі, <b>Бібліятэкар</b> захоўвае кожны сэмпл, а <b>Трэнер LoRA</b> вучыць YuE2 тваіх уласных песень. Даведнік па кожным пакоі — унутры студыі.</p>
+      <h2>Сем пакояў, адна студыя</h2>
+      <p class="sub"><b>Творца</b> стварае песню, <b>Пісьменнік</b> піша яе з чат-мадэллю, <b>Гранільшчык</b> даводзіць яе, <b>Мастак</b> малюе яе малюнкі, <b>Відэограф</b> рыхтуе ёй кліп, <b>Бібліятэкар</b> захоўвае кожны сэмпл, а <b>Трэнер LoRA</b> вучыць YuE2 тваіх уласных песень. Даведнік па кожным пакоі — унутры студыі.</p>
       <div class="rooms">
         <article class="room"><a class="pic" href="../assets/shots/studio-create.webp" data-night="assets/shots/studio-create-night.webp"><img class="day" src="../assets/shots/studio-create.webp" alt="Творца" loading="lazy"><img class="night" src="../assets/shots/studio-create-night.webp" alt="Творца" loading="lazy"></a>
           <div><h3>Творца</h3><p>Стыль, тэкст, рэжым планавання, дэкодар, LoRA на дарозе ад зялёнага да чырвонага; сэмпл з яго партытурай, сідамі і ўсім, каб стварыць яго зноў.</p></div></article>
@@ -662,7 +662,7 @@
   </div>
 
 <footer>
-  <div class="wrap"><span>Руах Студыя · 2.0.2 · твор <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Змены</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Кававарка</a></span></div>
+  <div class="wrap"><span>Руах Студыя · 2.0.3 · твор <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Змены</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Кававарка</a></span></div>
 </footer>
 
 <script src="../assets/wavesurfer.min.js"></script>
@@ -814,13 +814,22 @@
   // HERESY 1801: the vocabulary's window; its page in the card's language and day or night
   (function () {
     var m = document.getElementById("vocab-modal"), f = document.getElementById("vocab-frame");
-    function open() {
+    function theme() {
       var th = document.documentElement.getAttribute("data-theme");
-      if (!th) th = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-      var src = "/vocabulary/index.html?embed=1&lang=" + encodeURIComponent(document.documentElement.lang || "en") + "&theme=" + th;
-      if (f.getAttribute("src") !== src) f.setAttribute("src", src);
+      return th || (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    }
+    // 28.10.2026 (Viktor: «при переключении режима темы не подхватывает активный день/ночь. Только по F5»): the frame is told the page's day or
+    // night whenever it changes, and when it loads; reopening keeps the frame it has
+    function sync() { try { var d = f.contentDocument; if (d && d.documentElement) d.documentElement.setAttribute("data-theme", theme()); } catch (e) {} }
+    function open() {
+      var base = "/vocabulary/index.html?embed=1&lang=" + encodeURIComponent(document.documentElement.lang || "en");
+      if ((f.getAttribute("src") || "").split("&theme=")[0] !== base) f.setAttribute("src", base + "&theme=" + theme());
+      else sync();
       m.hidden = false; document.body.style.overflow = "hidden";
     }
+    f.addEventListener("load", sync);
+    new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", sync);
     function close() { m.hidden = true; document.body.style.overflow = ""; if (location.hash === "#vocabulary") history.replaceState(null, "", location.pathname + location.search); }
     document.getElementById("vocab-open").addEventListener("click", open);
     document.getElementById("vocab-close").addEventListener("click", close);

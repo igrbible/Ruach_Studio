@@ -46,8 +46,11 @@ def load(config_dir):
     # пользовательские… ограничить длину заметок разумными 500-600 знаков»): two marks of a take's own, a note on a workspace, a note on an adapter
     d.setdefault("fire", [])
     d.setdefault("gems", [])
+    d.setdefault("reacts", {})
+    d.setdefault("blind", [])                  # HERESY 1874: the workspaces for blind listening (their sections with them)                 # HERESY 1873: a take's reaction, {name: key}
     d.setdefault("ws_notes", {})
     d.setdefault("lora_notes", {})
+    with_parents(d)                              # HERESY 1935: an orphan section of before gets its parents back
     if "fresh_since" not in d:                   # from the day this came: the takes before it are not all fresh at once
         d["fresh_since"] = int(time.time())
         save(config_dir, d)
@@ -85,6 +88,16 @@ def fresh_parts(d, ws):
     for i, p in enumerate(parts):
         if SEP.join(parts[:i + 1]) not in d["workspaces"] and len(p) > PART_MAX:
             raise ValueError(f"a workspace's name is {PART_MAX} characters at most on each level (“{p}” has {len(p)})")
+
+
+def with_parents(d):
+    """HERESY 1935: every section's parents, as ws-create makes them: a key «A / B» alone (put there by ws-add, ws-move or by hand)
+    showed on the page under whatever workspace sorted before it (nine ambient sections under another workspace, 30.10.2026)."""
+    for w in list(d["workspaces"]):
+        parts = w.split(SEP)
+        for i in range(1, len(parts)):
+            d["workspaces"].setdefault(SEP.join(parts[:i]), [])
+    return d
 
 
 def keep_sourced(config_dir, ws, names):
@@ -167,9 +180,21 @@ def frozen_takes(d):
     return {n for n, wss in places.items() if all(frozen_ws(d, w) for w in wss)}
 
 
+# HERESY 1873 (Viktor 29.10.2026: «Отсортируй их правильно по эмоциональным зонам»): a take's reactions, by their zones: love, a hit, laughter, wonder,
+# tears, thought, awkward, refusal (the page holds their faces and words)
+# one a take, Facebook's way («выбранной реакцией заменяй кнопку плюса»)
+REACTIONS = ("love", "adore", "hundred", "party", "lol", "mindblown", "wow", "tears", "think", "look", "nerd", "peek", "melt", "poop")
+
+
+def blind_takes(d):
+    """HERESY 1874: the takes in a workspace for blind listening, or in one of its sections."""
+    bl = [b for b in d.get("blind", []) if b in d["workspaces"]]
+    return {n for w, names in d["workspaces"].items() if any(w == b or w.startswith(b + SEP) for b in bl) for n in names}
+
+
 def _frozen_guard(d, op, ws, names, data):
     ice = frozen_takes(d)
-    if op in ("hide", "show", "rate", "note", "pin", "ws-add", "ws-move", "ws-remove", "protect", "mark"):
+    if op in ("hide", "show", "rate", "note", "pin", "ws-add", "ws-move", "ws-remove", "protect", "mark", "react"):
         n = sum(1 for x in names if x in ice)
         if n:
             raise ValueError(f"{n} take{'s' if n > 1 else ''} frozen with {'their' if n > 1 else 'its'} workspace: unfreeze it first")
@@ -196,6 +221,8 @@ def save(config_dir, d):
     config_dir.mkdir(parents=True, exist_ok=True)
     p = _store(config_dir)
     tmp = Path(str(p) + ".part")
+    if isinstance(d.get("workspaces"), dict):
+        with_parents(d)                          # HERESY 1935: none written without its parents
     json.dump(d, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     os.replace(tmp, p)
 
@@ -224,6 +251,9 @@ def catalog(outputs, config_dir):
     ice = frozen_takes(marks)                    # HERESY 1166
     shield = set(marks["protected"])             # HERESY 1368
     fire, gems = set(marks["fire"]), set(marks["gems"])   # HERESY 1802
+    reacts = marks["reacts"]                                # HERESY 1873: one a take (an older list reads as its first)
+    blind = blind_takes(marks)                              # HERESY 1874
+    react_of = lambda v: v if v in REACTIONS else (v[0] if isinstance(v, list) and v and v[0] in REACTIONS else "")   # noqa: E731
     for d in sorted(outputs.iterdir()) if outputs.is_dir() else []:
         mp = d / "meta.json"
         if not mp.is_file():
@@ -262,9 +292,11 @@ def catalog(outputs, config_dir):
                      "rating": marks["ratings"].get(d.name, 0), "note": marks["notes"].get(d.name, ""), "seeds": req.get("seeds"),
                      "fresh": (meta.get("created") or 0) >= since and d.name not in played,     # HERESY 1162
                      "regen_of": marks["regen_of"].get(d.name, ""), "frozen": d.name in ice, "protected": d.name in shield,
-                     "fire": d.name in fire, "gem": d.name in gems})   # HERESY 1802
+                     "fire": d.name in fire, "gem": d.name in gems,   # HERESY 1802
+                     "react": react_of(reacts.get(d.name, "")),   # HERESY 1873
+                     "blind": d.name in blind})               # HERESY 1874
     return {"takes": rows, "workspaces": sorted(marks["workspaces"]), "trash_days": marks["trash_days"], "locks": marks["locks"],
-            "pins": marks["pins"], "frozen": marks["frozen"],
+            "pins": marks["pins"], "frozen": marks["frozen"], "blind": [b for b in marks["blind"] if b in marks["workspaces"]],   # HERESY 1874
             "playlist": (lambda here: [n for n in marks["playlist"] if n in here])({r["name"] for r in rows}),   # HERESY 1730: only the takes still here
             "playlist_xfade": marks["playlist_xfade"], "ws_notes": marks["ws_notes"]}   # HERESY 1802: the workspaces' notes
 
@@ -318,6 +350,8 @@ def collection_post(config_dir, outputs, data):
                     d["pins"][to] = d["pins"].pop(old)
                 if old in d["ws_notes"]:           # HERESY 1802: and the note
                     d["ws_notes"][to] = d["ws_notes"].pop(old)
+                if old in d["blind"]:              # HERESY 1874: and the blindness
+                    d["blind"] = sorted((set(d["blind"]) - {old}) | {to})
         elif op == "pin":                          # HERESY 1103: place = a workspace, "" (All), __fav, __none; on = true | false
             place = str(data.get("place") or "")[:200]
             have = [n for n in d["pins"].get(place, []) if n not in names]
@@ -407,6 +441,19 @@ def collection_post(config_dir, outputs, data):
             if not key:
                 raise ValueError("mark: fire or gem")
             d[key] = sorted(set(d[key]) | set(names)) if data.get("on") else sorted(set(d[key]) - set(names))
+        elif op == "blind":                        # HERESY 1874: {workspace, on}: blind listening, its sections with it
+            if ws not in d["workspaces"]:
+                raise ValueError("blind listening in an existing workspace")
+            d["blind"] = sorted(set(d["blind"]) | {ws}) if data.get("on") else sorted(b for b in d["blind"] if b != ws)
+        elif op == "react":                        # HERESY 1873: {react: key, or "" for none, names}: one a take
+            key = str(data.get("react") or "")
+            if key and key not in REACTIONS:
+                raise ValueError("react: " + ", ".join(REACTIONS) + " or none")
+            for n in names:
+                if key:
+                    d["reacts"][n] = key
+                else:
+                    d["reacts"].pop(n, None)
         elif op == "ws-note":                      # HERESY 1802: a workspace's or a section's note, its tip in the column
             if ws not in d["workspaces"]:
                 raise ValueError("a note on an existing workspace")

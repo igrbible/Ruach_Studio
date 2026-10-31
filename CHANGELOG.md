@@ -2,9 +2,83 @@
 
 Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): one machine with an NVIDIA card, your own songs, nothing in a cloud. It grew over [YuE2 Kit](https://github.com/IronWolve/yue2-kit) v12 by IronWolve, which runs [yue2.cpp](https://github.com/ServeurpersoCom/yue2.cpp) by ServeurpersoCom. Every change has a number (HERESY 1001 and up); `heresy/docs/HERESY.md` tells each one with what was measured, and `heresy/engine/` keeps each change to the engine and the page as a patch of its own.
 
-## 2.0.3 · In the Making
+## 2.0.4 · In the Making
 
-After 2.0.2 (patches 1815 and up).
+After 2.0.3 (patches 1964 and up).
+
+## 2.0.3 · 2026-10-31
+
+Sound to MIDI with MuScriptor, a MIDI orchestra and an Ambient step in the Refiner; the Refiner's canvas closer to ComfyUI, with Mute and Bypass, a bucket of takes, the way kept as a profile and a Stop on the running node; the Videographer in four rooms on one canvas, its shots drawn by the Artist around one hero, moving shots (MiniMax H3), an upscaler (SeedVR2), an edit page, cuts on the beat, titles, a dissolve, an editor's project and a clip in three shapes; adapters weighed against the model they were trained on; reactions and blind listening in the Library; a check that a take is sung to its end; the Trainer's meter and guard; and the player's and the Library's fixes (HERESY 1815–1963).
+
+- **Sound to MIDI** (HERESY 1834, 1835): MuScriptor (Mirelo and Kyutai; its weights CC BY-NC 4.0, non-commercial use only) through muscriptor.cpp turns a take, a stem or any file of its tree into multi-instrument MIDI, 34 named instrument groups and the drums, from the take's datasheet or the Refiner's own MIDI step; its three sizes in Engine → Models and LoRAs; a set opens in the piano roll as the Creator's score. On the processor for now.
+- **The Videographer (beta)** (HERESY 1824, 1827, 1830, 1837–1840, 1844): a room between the Artist and the Trainer (Ctrl+Alt+5). A take is cut into shots at its sung lines; the clip's look and each shot's scene are written with the Writer and yours to change; the room follows the player, a shot plays from its start, its prompt is copied for a video model, the storyboard comes as Markdown, and an animatic shows the plan in the song's own time (a frame a shot over its own picture, else the take's cover, with its sound) as an MP4 made on the processor. Each shot takes a picture of its own, one of the Artist's or one from the disk, and 🎨 puts a shot's picture prompt into the Artist's form; **Clip** cuts the clip from them at 1920 × 1080 in the song's time, each shot moving slowly as its scene's camera says, or as you choose for it, on the processor too. Ctrl+Alt+5 opens the room, and the guide has its section. The moving pictures come with MiniMax H3.
+- **The Trainer's meter and guard** (HERESY 1815, 1832): each card's VRAM peak at every step, a cap on the music half's input, the shortest tracks to the first card; three knobs before Cards, said in the confirmation and on the run's card with each card's highest VRAM and the step it came at.
+- **The Trainer's runs** (HERESY 1816, 1817, 1819, 1823, 1833): saves gone from disk shown as such; a run protected against deleting, its saves deleted one by one; the live run in two lines with its saves along the progress; the step log read without holding a fast run; the held-out best two tiles wide and «What it was given» always open.
+- **Engine → Defaults and Engine → Studio performance** (HERESY 1818, 1821): the defaults a tab of their own; the time with the studio, the speed of its songs, its disks and its processor, kept over time.
+- **The player** (HERESY 1820): PREV once to the start, twice to the take before; its buttons a little more opaque at rest, as you set them; the page's tips and helps switched by kind; a line for the take's loading; a change of piece without a gap.
+- **The Writer** (HERESY 1822, 1826): it knows the First Wave's words; when its chat server is silent, it offers the studio's own.
+- **The Library** (HERESY 1825, 1828, 1831): a note's button on every card; a double-click plays or stops; with the date asked for, downloads are named `stamp_Title_·_Part_vX.Y.Z`; the tree's long workspace names on two lines.
+- **The piano roll's head in one row on 1920** (HERESY 1829): the lengths under one button, Transpose its ⇅ alone; open as before from 2200 px.
+- **The tail guard** (HERESY 1836): End at… offers the second where a take's sound comes back after a silence in its last half minute, and says why.
+- **Sung to the end?** (HERESY 1842, 1843, 1846): the take's datasheet asks Whisper, line by line, whether its last lines were sung, names those that were not and offers Regenerate from the second the singing stopped; Regenerate from… offers that second itself when the take is timed; the Librarian checks the checked takes one after another; a take timed already whose end was not sung wears «end not sung» on its card.
+- **Rise and Fall in an adapter's wave** (HERESY 1841), beside Flat, Arch, Draw and Sections.
+- **A take's earlier covers** (HERESY 1848): its datasheet shows them beside the one it has, newest first, each to put back.
+- **Three more Colours in the Remaster** (HERESY 1845): a cassette's hiss with its wow and flutter, an old radio's band in mono with the air's static, and a hall's hum and air, beside vinyl, tape and room.
+- **The player's stream: FLAC or Opus** (HERESY 1851): Engine → Defaults → Player: FLAC as before, or Opus 128 kbit/s made on the studio's machine at a take's first play, for a phone or a slow line; downloads stay WAV and FLAC.
+- **The player comes back to where it left a take** (HERESY 1852): the last hundred takes; played to its end, it starts anew; a take deleted loses its place.
+- **The Library and the bar** (HERESY 1849, 1853, 1854, 1863): the Librarian beside the logo, the Trainer last, the rooms' keys in the bar's order (Ctrl+Alt+1…7); a section found in the workspace dialog says its parents; a take whose end was not sung says so in signal red in the player and on its cards; «shuffled» among the sorts.
+- **The loader's line is a wave** (HERESY 1850) that breathes as it fills.
+- **The Trainer's curves zoom** (HERESY 1855): a drag, + and −, ⟲ the whole run; the y scale fits the steps in view.
+- **The Writer's latest documents** as cards while none is open (HERESY 1858).
+- **The Videographer's edit page** (HERESY 1860, 1861, 1864): a timeline in the manner of DaVinci Resolve, the program monitor beside the shot chosen; the blade, the join, a cut moved, undo, Resolve's keys; the program monitor on a second screen. The films in a player in the manner of YouTube; a mini library on the right, folded, or half the screen as tiles.
+- **The server log as a chip** in the busy rooms (HERESY 1862), unfolding as it was.
+- **The Videographer's shots alive** (HERESY 1868): 🎬 on a shot sends it to MiniMax H3 (downloaded by `heresy/fetch-heresy.sh --h3 int8`, run by the studio's own runtime on the cards free for jobs, HERESY 1870): a draft at 8 steps or the final at 768p, the shot's picture its first frame; each shot's way on its card and on the timeline; its video on the timeline, in the program monitor and in the clip. «Shoot all» sends every shot.
+- **MiniMax H3 in Engine → Models** (HERESY 1869): int8 (69 GB, the studio's own), every int8 tier or BF16, its licence said where it is fetched.
+- **Opus only where it helps** (HERESY 1871): the footer's player and the window comparing takes stream Opus when chosen; everywhere else the lossless FLAC.
+- **The compare window** (HERESY 1871, 1872): 🔥 and 💎 beside 👍, the note as large as the cards'; 📄 opens the take's style and lyrics in a sheet to its right, sized and kept, following the version playing.
+- **Reactions** (HERESY 1873): ❤️‍🔥 🥰 💯 🎉 🤣 🤯 😮 😭 🤔 👀 🤓 🫣 🫠 💩 beside 🔥 and 💎 on every take's marks: one a take, its face in the plus's place, a palette by zones as Facebook has it, «No reaction» first.
+- **Blind listening** (HERESY 1874): a workspace's ⋯ menu hides its takes' times, folders and datasheets until the blindness is lifted.
+- **The Videographer's upscaler** (HERESY 1876): SeedVR2 3B or 7B sharp (`heresy/fetch-heresy.sh --upscaler 3b|7b|all`) makes a shot's video 1080p or 1440p on the free cards; the clip takes it.
+- **Seeds** (HERESY 1877): every seed the studio draws is 1000…999 999 999; a typed one or a take's own is kept.
+- **«✨ Refine»** (HERESY 1877) heads a take's menu; the Librarian's filter has «no like or dislike»; Engine → Defaults can show a take's reaction faint behind its card.
+- **Long shots** (HERESY 1879): a MiniMax H3 shot past what one card holds at once (4.4 s at 768p, 11.5 s at 480p) is made in pieces on its card, each starting on the last frame of the one before, the whole decoded as one; the guide's Videographer says the moving shots, long shots, upscaling and how long a shot runs.
+- **A card's strip** (HERESY 1900): 👎 set apart after the shield, so a thumb does not land on it by chance; the note and ⋯ at the strip's right end.
+- **The Refiner says «Reading…»** (HERESY 1906) until the lab answers, never «Nothing made» before it; a card's studio sections («Refined») in the page's language; «Open in the Refiner» in a take's «Open ›» again.
+- **The Artist draws the Videographer's shots** (HERESY 1913): «🎨 Draw the shots» fills every shot without a picture, two at a time; the clip's hero (one Artist picture) keeps the same face through the clip; 👤 on each shot; «The idea of the clip» for the Writer.
+- **Less plastic in the Artist's shots** (HERESY 1915): 2512 draws them with the skin detailer and film adapters where they are installed.
+- **The clip's lyrics and transitions** (HERESY 1916): «Lyrics on the clip» burns the sung lines in, each in its own time; «Between sections»: a cut, through black or a flash.
+- **The clip's shape** (HERESY 1917): 16:9, 9:16 or 1:1 beside «Between sections», each shape a clip of its own, the pictures cut to it.
+- **No section without its parents** (HERESY 1935): a section filled before its workspace was made showed under another one in the Library's column; its parents are made with it now, and the old ones are repaired.
+- **The workspaces' fold arrows** (HERESY 1937) stand clear of their names, 10 px further left.
+- **« over the workspaces' scrollbar** (HERESY 1938): the Library's tiles 22 px from the column instead of 42.
+- **The Videographer's folded Clips strip** (HERESY 1939) lights and answers along its whole height.
+- **An ambient layer keeps its level** (HERESY 1941): one crack in a recording is held down alone, instead of lowering the whole layer.
+- **The Videographer's room made over** (HERESY 1940): its head in one row with «🔍 Find a take…» (a window with the workspaces, Ctrl+K) and the whole screen (F11); the clips slide out over the room and hide, the canvas keeps its width; below the canvas Shots, The idea and the look, Animatic and clip, the shots one at a time.
+- **Seeds as typed** (HERESY 1943): by hand 1…999 999 999; −1 or 0 a new seed each run; a take's own seed kept however long; Next goes round, Previous down to −1.
+- **The Trainer's held-out groups and stop-crane** (HERESY 1944): a run can name held-out tracks by group, each measured on its own at every save, and stop itself when a group's AR loss rises two saves in a row or the AR's KL passes a ceiling, naming the save to take.
+- **The rooms' heads** (HERESY 1945): each room's note a column of two lines, the take in hand at the right end; the Videographer's head the room's whole width, its take search a wide field.
+- **The Videographer's editor's project** (HERESY 1946): «Editor (.zip)» gathers an OpenTimelineIO timeline and an EDL for DaVinci Resolve or Kdenlive, the sung lines as subtitles, the shots' videos and pictures and the take's sound; downloads under a Cyrillic name no longer come empty.
+- **Cuts on the beat** (HERESY 1947): the Videographer moves each cut between shots onto the take's nearest beat, and takes them back where they were sung.
+- **Titles on the clip** (HERESY 1948): the Videographer sets the song's title over a clip's first seconds and the credits over its last ones, as written in «The idea and the look».
+- **A dissolve between sections** (HERESY 1949): the Videographer lets the next section of a clip fade in over the last half second of the one before.
+- **The Refiner's canvas as ComfyUI's** (HERESY 1951): a window over its world that the wheel moves and Ctrl+wheel scales (50–250 %), the way along the top and the rest dimmed under it, Ctrl+frame selection, half the gaps, the legend off the Audio I/O node, a long list in a window of its own.
+- **The Refiner's node windows by what they hold** (HERESY 1953): a few settings, many, a tree or a spectrum, each its own width, only the DAW the screen's; the step the way runs breathes amber, its wire flows; the zoom up to 200 %.
+- **Mute and bypass by ComfyUI's keys** (HERESY 1954): Ctrl+M mutes the nodes selected or pointed at, the way stops before a muted one; Ctrl+B bypasses them.
+- **The Refiner's bucket** (HERESY 1955): up to ten takes for the way's batch, in place of the run on the whole workspace.
+- **The canvas's legend dragged, its «?»** (HERESY 1956): kept where it is put; folded, a round «?» at the bottom left.
+- **The Refiner's way kept with Ctrl+S** (HERESY 1957): the profile in hand, a dot when the canvas changed, Ctrl+S to keep or overwrite, each flow its own layout.
+- **The detached server log after a reload** (HERESY 1958): taken back by the studio's page loaded anew, and as tall as its window.
+- **The Engine's About and Updates** (HERESY 1959): the studio's repository, its author and AGPL-3.0 in About's first line; the first column ours, then the models, then the code it grew from; «when it comes out» always in hand.
+- **The Hardware tab in one row** (HERESY 1959): Hardware, Compute and MIDI at 3 : 5 : 4, the GPUs the whole width under them; the Refiner's setting two modes, no «as it was left»; the time-with-the-studio bars apart; a rendering take's «running» mark stays put under the pointer.
+- **Adapters trained on another model** (HERESY 1960): the Creator marks an adapter learnt on YuE2 while RS-FW runs (or the other way round) ⊘, asks before it goes in, mutes it when the model changes and brings it back when the model is its own again; ≈ for RS-FW of another epoch; the studio's trainer writes the base into each adapter it saves.
+- **The Videographer's inner rooms** (HERESY 1961): Editing, Shots, The idea and the look, Animatic and clip, one in sight and as tall as the room, nothing scrolling on a 1080p screen; each room's own buttons in it.
+- **The running node's progress and Stop** (HERESY 1962): a bar under the running node, moved by the job's progress or by its kind's past pace, with the time left; ■ stops the way where it stands, the step's own process ended.
+- **The console's chips in their own size** (HERESY 1963): the room's Room / Plate / Hall, the tabs, M/S and the rest of the console no longer drawn at the page's 15 px.
+- **The MIDI orchestra** (HERESY 1880–1885): a stem of the Refiner's set played again by sampled instruments, without Wine: sfizz (SFZ) and FluidSynth (SF2) built from their sources beside the transcriber; MuScriptor on the stem with that stem's own instruments, each note as strong as in the stem; what comes back is a version of the stem's strip in the DAW (instead of it, over it, or an octave away), offered among a stem strip's inserts in the console. The instrument sets lie under models/instruments, fetched apart.
+- **Instruments heard, not read** (HERESY 1888, 1889, 1891, 1924): a set with keys of its own plays through a keymap heard from it (a bass sounding an octave under its key, noises and switches below); Karoryfer's drum kits play a GM part (a piece a kit lacks on the GM bank, its hi-hat opened by its pedal); an instrument that renders silence, or a fragment a program only includes, is never offered.
+- **Ambient** (HERESY 1928–1931, 1934, 1936): a Refiner step lays a fireplace, rain, thunder, a forest, a waterfall, a mountain river, tropical birds or a canary under the song, as a strip of its own in the DAW: field recordings from a bank (radio aporee's, under their recordists' own CC0 or public-domain mark), looped without a seam and chosen by ear, or synthesis for light rain and thunder; its level under the song, fades, breathing with the song, closer before the voice comes in, thunder on the song's peaks. The bank (models/ambient) is not in the repository yet: without it only the synthesis plays.
+- **A strip the DAW adds** (HERESY 1929): a step's file that names a track becomes a strip beside the set's own, made again a version of it, never taken out of the rest.
+- **The server log** (HERESY 1865, 1866): the Videographer a view of its own; long lines wrapped or each on one line with sideways scrolling.
 
 ## 2.0.2 · 2026-10-28
 

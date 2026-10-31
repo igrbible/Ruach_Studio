@@ -319,7 +319,7 @@ def adapt(crit, image, prompt, subject, shows):
 
 def main():
     d, out = Path(sys.argv[1]), Path(sys.argv[2])
-    seed = int(sys.argv[3]) if len(sys.argv) > 3 and sys.argv[3] else random.randrange(2 ** 31)
+    seed = int(sys.argv[3]) if len(sys.argv) > 3 and sys.argv[3] else random.randint(1000, 999999999)   # HERESY 1877
     import torch
     t0 = time.time()
     title, style, lyrics = take_words(d)

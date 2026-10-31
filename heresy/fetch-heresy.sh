@@ -59,7 +59,7 @@
 # Needs: python3, git, the lab venv for audio-separator (lab/install-venv.sh), ~8 GB of disk.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""; QFINE=""; ARTLORAS=""; IRA=""; IRAE=""; FW=""; WRITER=""   # HERESY 1794: FW; 1811: WRITER
+MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""; QFINE=""; ARTLORAS=""; IRA=""; IRAE=""; FW=""; WRITER=""; MUSC=""; H3=""; UPSCALER=""   # HERESY 1794: FW; 1811: WRITER; 1834; 1867: H3: MUSC; 1876a: UPSCALER
 while [ $# -gt 0 ]; do
   case "$1" in
     --check) MODE=check ;; --replace) MODE=replace ;; --yes) YES=1 ;;
@@ -70,13 +70,16 @@ while [ $# -gt 0 ]; do
     --irae) IRAE="${2:-}"; shift ;;                 # HERESY 1689
     --fw) FW="${2:-}"; shift ;;                     # HERESY 1794
     --writer) WRITER="${2:-}"; shift ;;             # HERESY 1811
+    --muscriptor) MUSC="${2:-}"; shift ;;           # HERESY 1834
+    --h3) H3="${2:-int8}"; shift ;;                 # HERESY 1867
+    --upscaler) UPSCALER="${2:-7b}"; shift ;;       # HERESY 1876a
     --only) ONLY=",${2:-},"; shift ;;
     --artwork) ARTWORK=1 ;;
     --artwork-q8) ARTWORK=1; ARTQ8=1 ;;
     --qwen) QWEN="${2:-}"; shift ;;
     --qwen-fine) QFINE="${2:-}"; shift ;;           # HERESY 1347
     --art-loras) ARTLORAS="${2:-all}"; shift ;;
-    *) echo "--check, --replace, --writer quality|compact, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --ira BF16|Q8_0|Q6_K, --irae IRAE|IRAEv2|IRAEv3-BF16|Q8_0|Q6_K, --fw 2.4x0.75-BF16|Q8_0|Q6_K (and 0.7x0.75, 1.5x0.75, 3.4x0.7, 3.4x0.75, 4.0x0.65, 4.0x0.7), --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --qwen-fine jibmix-v6|intorealism-v1|real-v2|base-fp8, --art-loras all, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
+    *) echo "--check, --replace, --h3 int8|all|bf16, --upscaler 3b|7b|all, --muscriptor small|medium|large, --writer quality|compact, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --ira BF16|Q8_0|Q6_K, --irae IRAE|IRAEv2|IRAEv3-BF16|Q8_0|Q6_K, --fw 2.4x0.75-BF16|Q8_0|Q6_K (and 0.7x0.75, 1.5x0.75, 3.4x0.7, 3.4x0.75, 4.0x0.65, 4.0x0.7), --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --qwen-fine jibmix-v6|intorealism-v1|real-v2|base-fp8, --art-loras all, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
   esac
   shift
 done
@@ -345,6 +348,93 @@ if [ -n "$WRITER" ]; then
   clone https://github.com/ggml-org/llama.cpp.git "$ROOT/vendor/llama.cpp"
   if [ -x "$ROOT/vendor/llama.cpp/build/bin/llama-server" ]; then say_here "llama-server" "(vendor/llama.cpp/build)"
   else say_miss "llama-server" "→ bash launcher/extras.sh builds it (or: cd vendor/llama.cpp && cmake -B build -DGGML_CUDA=ON && cmake --build build -j --target llama-server)"; fi
+fi
+
+# HERESY 1834 (Viktor 28.10.2026: «забирай large модель muscriptor, и пропишешь все три размера в Engine»): the weights of the sound-to-MIDI
+# transcriber, MuScriptor (Mirelo and Kyutai; CC BY-NC 4.0: non-commercial use only) as DamRsn converted it to GGUF, from his repo at its pin, into
+# models/muscriptor with its notice and licence; asked first with its size. The program that reads it, build.sh builds (build/build-muscriptor)
+if [ -n "$MUSC" ]; then
+  asked muscriptor "Sound to MIDI: MuScriptor $MUSC (Mirelo and Kyutai, CC BY-NC 4.0: non-commercial use only)"
+  case "$MUSC" in
+    small) SIZE="209 MB" ;; medium) SIZE="618 MB" ;; large) SIZE="2.7 GB" ;;
+    *) echo "${R}--muscriptor takes small, medium or large${X}"; exit 2 ;;
+  esac
+  M_REPO=DamRsn/muscriptor-gguf; go=1
+  if [ $MODE != check ] && [ $YES = 0 ] && ! hf_complete "$M_REPO" "$(pin "$M_REPO")" "$ROOT/models/muscriptor" --include "v1/muscriptor-$MUSC-f16.gguf" >/dev/null 2>&1; then
+    printf "%s" "Download $SIZE? [y/N] "
+    read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
+  fi
+  [ $go = 1 ] && hf_into_at "models/muscriptor ($MUSC, its notice and licence)" "$M_REPO" "$ROOT/models/muscriptor" "v1/muscriptor-$MUSC-f16.gguf" "NOTICE.md" "LICENSE"
+  if [ -x "$ROOT/build/build-muscriptor/ruach-muscriptor" ]; then say_here "ruach-muscriptor" "(build/build-muscriptor)"
+  else say_miss "ruach-muscriptor" "→ ./build.sh builds it"; fi
+fi
+
+# HERESY 1867 (Viktor 29.10.2026: «BF16 веса H3 просчитай по затратам и их тоже пропиши в загрузчик, но мы не насилуем наше железо, достаточно int8
+# с головой»): the Videographer's moving pictures, MiniMax H3 (MiniMax H3 Community License: not to be run in the US, the EU, the UK or South Korea
+# without MiniMax's own leave; commercial use past its threshold needs a licence of MiniMax) as Comfy-Org packs it, and with «all» FastH3 (FastVideo),
+# into models/minimax-h3 in its Comfy layout, at their pins; the original's tokenizer, processor and encoder config (64 MB) beside them. HERESY 1869:
+# the drafts are H3 itself at 8 steps (measured 29.10: FastH3 is past 24 GB at 768p and knows no first frame), so int8 goes without FastH3
+if [ -n "$H3" ]; then
+  asked h3 "The Videographer's moving pictures: MiniMax H3 ($H3). Its licence (MiniMax H3 Community License) forbids running it in the US, the EU, the UK and South Korea without MiniMax's leave, and commercial use past its threshold needs MiniMax's licence: read it first (models/minimax-h3/original/LICENSE)"
+  C_REPO=Comfy-Org/MiniMax-H3; F_REPO=FastVideo/FastVideo-FastH3-Comfy; O_REPO=MiniMaxAI/MiniMax-H3
+  H3_INT8=(diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors
+           text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors vae/minimax_h3_video_vae_fp16.safetensors vae/minimax_h3_audio_vae_fp32.safetensors
+           loras/minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_bf16.safetensors loras/minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors
+           loras/minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors)
+  H3_ALL=(diffusion_models/minimax_h3_fl2va_int8_convrot.safetensors diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors
+          text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors vae/minimax_h3_sol_vae_fp16.safetensors
+          loras/pika_h3_flex_fl2va_v1_bf16.safetensors loras/pika_h3_flex_ref2va_v1_bf16.safetensors
+          model_patches/minimax_h3_fun_controlnet_union_2.0_pruned_int8_convrot.safetensors model_patches/minimax_h3_fun_controlnet_union_pruned_int8_convrot.safetensors)
+  H3_BF16=(diffusion_models/minimax_h3_fl2va_bf16.safetensors diffusion_models/minimax_h3_ref2va_bf16.safetensors
+           diffusion_models/minimax_h3_fl2va_pruned_bf16.safetensors diffusion_models/minimax_h3_ref2va_pruned_bf16.safetensors
+           text_encoders/qwen3vl_32b_minimax_h3_bf16.safetensors
+           model_patches/minimax_h3_fun_controlnet_union_2.0_pruned_bf16.safetensors model_patches/minimax_h3_fun_controlnet_union_pruned_bf16.safetensors)
+  case "$H3" in
+    int8) FILES=("${H3_INT8[@]}"); SIZE="69 GB; a card of 24 GB, a part of the DiT streamed from RAM (64 GB of RAM or more)"; FAST=0; EFFECTS=0 ;;
+    all) FILES=("${H3_INT8[@]}" "${H3_ALL[@]}"); SIZE="192 GB: every int8 tier, FastH3, ControlNet Union, the effects; cards of 24 GB"; FAST=1; EFFECTS=1 ;;
+    bf16) FILES=("${H3_INT8[@]}" "${H3_ALL[@]}" "${H3_BF16[@]}"); SIZE="469 GB: the int8 tiers and the unquantized DiTs (66 GB each whole, 40 GB pruned) and encoder (51.5 GB): for cards of 80 GB, or two and more of 48 GB; on 24 GB they only stream from RAM, slowly"; FAST=1; EFFECTS=1 ;;
+    *) echo "${R}--h3 takes int8, all or bf16${X}"; exit 2 ;;
+  esac
+  go=1
+  if [ $MODE != check ] && [ $YES = 0 ]; then
+    printf "%s" "Download up to $SIZE? [y/N] "
+    read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
+  fi
+  if [ $go = 1 ]; then
+    [ $EFFECTS = 1 ] && FILES+=(embeddings/minimaxh3_art_is_explosion.safetensors embeddings/minimaxh3_blooming_flowers.safetensors embeddings/minimaxh3_bullet_time.safetensors
+                                embeddings/minimaxh3_dark_magic.safetensors embeddings/minimaxh3_fire_breath.safetensors embeddings/minimaxh3_four_seasons.safetensors
+                                embeddings/minimaxh3_kiss_camera.safetensors embeddings/minimaxh3_spiral_ascent.safetensors embeddings/minimaxh3_storm_magic.safetensors
+                                embeddings/minimaxh3_truman_show.safetensors)
+    hf_into_at "models/minimax-h3 (MiniMax H3, $H3)" "$C_REPO" "$ROOT/models/minimax-h3" "${FILES[@]}" "README.md"
+    [ $FAST = 1 ] && hf_into_at "models/minimax-h3 (FastH3, 8 steps)" "$F_REPO" "$ROOT/models/minimax-h3" "diffusion_models/fastvideo_fasth3_8step_v2_pruned_int8_convrot.safetensors"
+    hf_into_at "models/minimax-h3/original (its tokenizer, processor and encoder config, its licence)" "$O_REPO" "$ROOT/models/minimax-h3/original" \
+      FL2VA/tokenizer/merges.txt FL2VA/tokenizer/tokenizer.json FL2VA/tokenizer/tokenizer_config.json FL2VA/tokenizer/vocab.json \
+      FL2VA/processor/chat_template.json FL2VA/processor/merges.txt FL2VA/processor/preprocessor_config.json FL2VA/processor/tokenizer.json \
+      FL2VA/processor/tokenizer_config.json FL2VA/processor/video_preprocessor_config.json FL2VA/processor/vocab.json FL2VA/text_encoder/config.json \
+      Ref2VA/tokenizer/merges.txt Ref2VA/tokenizer/tokenizer.json Ref2VA/tokenizer/tokenizer_config.json Ref2VA/tokenizer/vocab.json \
+      Ref2VA/processor/chat_template.json Ref2VA/processor/merges.txt Ref2VA/processor/preprocessor_config.json Ref2VA/processor/tokenizer.json \
+      Ref2VA/processor/tokenizer_config.json Ref2VA/processor/video_preprocessor_config.json Ref2VA/processor/vocab.json Ref2VA/text_encoder/config.json LICENSE README.md
+  fi
+fi
+
+# HERESY 1876a (Viktor 29.10.2026: «SeedVR2 обе 3B и 7B просчитай по ресурсам и прогони 7B на предмет на OOM под 24GB VRAM… Прикручиваем в загрузчик оба
+# веса»): the Videographer's upscaler, SeedVR2 (ByteDance, Apache-2.0) as numz packs it, into models/seedvr2 at its pin. Measured 29.10 on a 3090, 107 frames
+# of 768p: 3B to 1080p 284 s, 18.6 GB of the card at its peak; 7B sharp to 1080p 367 s, 19.7 GB with 16 of its blocks in RAM (22.4 GB without: 1.2 GB to
+# spare, which Comfy's own takes); 7B sharp to 1440p 592 s, 20.9 GB
+if [ -n "$UPSCALER" ]; then
+  S_REPO=numz/SeedVR2_comfyUI
+  case "$UPSCALER" in
+    3b) FILES=(seedvr2_ema_3b_fp16.safetensors); SIZE="7.3 GB: SeedVR2 3B, the quick one (18.6 GB of a card at 1080p)" ;;
+    7b) FILES=(seedvr2_ema_7b_sharp_fp16.safetensors); SIZE="17 GB: SeedVR2 7B sharp, the studio's own (20 GB of a card at 1080p, 16 of its blocks in RAM)" ;;
+    all) FILES=(seedvr2_ema_3b_fp16.safetensors seedvr2_ema_7b_sharp_fp16.safetensors seedvr2_ema_7b_fp16.safetensors); SIZE="41 GB: 3B, 7B sharp and 7B" ;;
+    *) echo "${R}--upscaler takes 3b, 7b or all${X}"; exit 2 ;;
+  esac
+  go=1
+  if [ $MODE != check ] && [ $YES = 0 ]; then
+    printf "%s" "Download up to $SIZE? [y/N] "
+    read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
+  fi
+  [ $go = 1 ] && hf_into_at "models/seedvr2 (SeedVR2, $UPSCALER)" "$S_REPO" "$ROOT/models/seedvr2" "${FILES[@]}" ema_vae_fp16.safetensors
 fi
 
 # HERESY 1120: artwork for takes, only when asked for, and asked again with its size (HERESY 1291: from our models repo v2, at its pin). The painter is CyberRealistic

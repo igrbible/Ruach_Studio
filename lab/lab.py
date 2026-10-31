@@ -12,6 +12,24 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
                                    ready, {"status": …} with 202 while it is computed
   GET /stems?name=TAKE&mode=vocals|four|six|eight   split into stems (stems_job.py, BS-Roformer + htdemucs_ft; six: + BS-Roformer-SW;
                                    eight: + the karaoke Mel-Roformer and UVR's winds; each stem with a proper title)
+  GET /midi?name=TAKE[&size=small|medium|large][&source=derived/…][&only=a,b]   HERESY 1834: the take, or a file of its tree, into
+                                   multi-instrument MIDI with MuScriptor (muscriptor.py): {status, progress, notes} with 202 while it
+                                   runs, then the set's manifest (derived/midi-SIZE-…: song.mid, notes.json); the size asked, else the
+                                   one Engine → Models suggests, else what is here
+  GET /orchestra[?name=TAKE]     HERESY 1884: the MIDI orchestra (orchestra.py): the renderers built, the instrument sets under
+                                   models/instruments (SFZ, SF2 with their presets), the map group → instrument (a take's own over the
+                                   studio's), the GM bank, the groups, each stem's groups, the modes
+  GET /orchestra/suggest?stem=piano|bass|drums|…   what the console offers a stem: the map first, then a set's main patch
+  POST /orchestra/map {group, instrument|null[, name]}   one group's instrument in the studio's map (user/orchestra.json) or the take's
+                                   own (its orchestra.json); null: back to the studio's map, or to its GM program
+  GET /orchestra/render?name=TAKE&source=derived/stems-…/STEM.flac&mode=instead|over|octave[&shift=12][&instrument=JSON][&size=]
+                                   the stem played by the instrument (none: each group as the map says) as a version of it in the
+                                   Refiner's DAW (derived/orchestra-…), transcribed first when the take has no MIDI of it: 202 while
+                                   it runs, then the branch's manifest; the same render asked again is the one made
+  GET /midi/sets?name=TAKE         HERESY 1834: the take's MIDI sets, newest first · GET /midi/status: the program, the sizes here, the suggested
+  GET /midi/score?name=TAKE&id=midi-…   HERESY 1835: a MIDI set's file as the Creator's score (midi_score.py)
+  GET /tail?name=TAKE              HERESY 1836: where the take's sound comes back after a silence in its last half minute (tailguard.py):
+                                   {seconds, suggest, gap, back, why}, suggest null when its end is clean
   GET /arts                        HERESY 1120: every take that has artwork (name -> time), the ones being drawn;
                                    HERESY 1156: the unseen (its subject not found by the critic: a guess)
   GET /art?name=TAKE               its artwork (JPEG, 768 px)
@@ -169,6 +187,10 @@ import refiner_profiles  # noqa: E402   HERESY 1515: the Refiner's setups by nam
 import creator_versions  # noqa: E402   HERESY 1519: the Creator's words on each Generate, apart from the takes
 import derived_trash  # noqa: E402   HERESY 1527: a branch into its take's trash and back
 import c2pa_sign  # noqa: E402   HERESY 1489: Content Credentials on the downloads
+import playback_marks  # noqa: E402   HERESY 1852: where the player left each take
+import h3_shots  # noqa: E402   HERESY 1868: the Videographer's shots made alive by MiniMax H3
+import frames_job  # noqa: E402   HERESY 1913: the Artist draws a plan's shots
+import upscale_shots  # noqa: E402   HERESY 1876b: and made larger by SeedVR2
 import file_tags  # noqa: E402   HERESY 1635: the song's tags on the downloads, before the signature
 import gpu_live  # noqa: E402   HERESY 1264: the cards second by second, for the page's live graphs
 import section  # noqa: E402   HERESY 1414: Replace a section
@@ -177,7 +199,13 @@ import artist_loras  # noqa: E402   HERESY 1316: the Artist's adapters
 import weights  # noqa: E402   HERESY 1289: the Engine's Models card over heresy/fetch-heresy.sh
 import writer_llm  # noqa: E402   HERESY 1811: the studio's own writer, llama.cpp's llama-server behind /llm/v1
 import lora_alchemy  # HERESY 1447: what each LoRA touches, which share layers
+import lora_bases  # noqa: E402   HERESY 1960: what each adapter was trained on, against the model in use
 import takeloop  # noqa: E402   HERESY 1325: a loop from a take
+import perf  # noqa: E402   HERESY 1821: the studio over time (Engine → Performance)
+import videographer  # noqa: E402   HERESY 1824: the Videographer's plan of a take
+import muscriptor  # noqa: E402   HERESY 1834: a take, a stem or any sound into multi-instrument MIDI (MuScriptor)
+import orchestra  # noqa: E402   HERESY 1881–1884: the MIDI orchestra: a stem's MIDI with its dynamics, played by sampled instruments
+import tailguard  # noqa: E402   HERESY 1836: where a take's sound comes back after a silence at its end
 import takeedit  # noqa: E402   HERESY 1356: a take cropped, a section taken out, its speed changed: a new take
 import takechanges  # noqa: E402   HERESY 1358: where a take's music changes; a slice of its spectrogram
 import civitai_fetch  # noqa: E402   HERESY 1360: an adapter from Civitai on the user's word, with their own key
@@ -649,7 +677,7 @@ def gloss_async(name, force=False, source=""):
                 jobs.pop(key, None)
         except Exception as e:                      # kept for the next poll to report
             job.update(status="failed", error=str(e))
-    threading.Thread(target=work, daemon=True).start()
+    _spawn(work)                                        # HERESY 1962: owned as its starter
     return dict(job, name=name)
 
 
@@ -743,7 +771,7 @@ def timing_async(name, force=False, cached_only=False):
                 jobs.pop(key, None)
         except Exception as e:
             job.update(status="failed", error=str(e))
-    threading.Thread(target=work, daemon=True).start()
+    _spawn(work)                                        # HERESY 1962: owned as its starter
     return dict(job, name=name)
 
 
@@ -800,7 +828,7 @@ def timing_recording(data):
         finally:
             job.pop("lyrics", None)
             threading.Timer(600, lambda: REC_JOBS.pop(sid, None) if REC_JOBS.get(sid) is job else None).start()
-    threading.Thread(target=work, daemon=True).start()
+    _spawn(work)                                        # HERESY 1962: owned as its starter
     return {"status": job["status"], "id": sid}
 
 
@@ -871,7 +899,7 @@ def spectrum_async(name, source="", mode="mono"):
                 jobs.pop(key, None)
         except Exception as e:
             job.update(status="failed", error=str(e))
-    threading.Thread(target=work, daemon=True).start()
+    _spawn(work)                                        # HERESY 1962: owned as its starter
     return dict(job, name=name)
 
 
@@ -888,7 +916,8 @@ def derived_list(name):
             pass
     with jobs_lock:
         running = [dict(v, key=k) for k, v in jobs.items()
-                   if any(k.startswith(kind + ":" + name) for kind in ("stems", "remaster", "upscale", "debuzz", "plugin", "daw", "gate"))]   # 1460, 1470, 1547
+                   if any(k.startswith(kind + ":" + name) for kind in ("stems", "remaster", "upscale", "debuzz", "plugin", "daw", "gate", "midi",
+                                                                       "orchestra"))]   # 1460, 1470, 1547, 1834, 1884
     return {"name": name, "derived": out, "running": running, "marks": derived_marks.read(take_dir(name)),   # HERESY 1504
             "trash": derived_trash.listing(take_dir(name))}   # HERESY 1527
 
@@ -948,6 +977,10 @@ def c2pa_file(q):
     data, tagged = file_tags.tag(data, fmt, file_tags.song_of(d), author=str(c2pa_sign.load(config_dir()).get("author") or ""),
                                  software="Ruach Studio " + studio_version())
     head["X-Tags"] = tagged.encode("ascii", "replace").decode("ascii")[:200]   # a header is latin-1
+    dl = re.sub(r'[\x00-\x1f\x7f\\/:*?"<>|]+', " ", q.get("dl", "")).strip()[:240]
+    if dl:                                           # HERESY 1828: the page's own name for it (the name-builder), over the engine's
+        head["Content-Disposition"] = ('attachment; filename="' + dl.encode("ascii", "replace").decode("ascii").replace('"', "") +
+                                       "\"; filename*=UTF-8''" + urllib.parse.quote(dl, safe=""))
     if q.get("sign") == "0":                         # HERESY 1635: the page asks for the tags alone (signing off or not available there)
         return data, head, "unsigned: not asked"
     data, said = c2pa_for(d, data, fmt, rel)
@@ -1043,7 +1076,7 @@ def daw_async(name, rel, mix, versions, printed=False):
                 act_say(f"DAW mix · {name} · stopped")
                 return
             job.update(status="failed", error=str(e))
-    threading.Thread(target=work, daemon=True).start()
+    _spawn(work)                                        # HERESY 1962: owned as its starter
     return dict(job, name=name)
 
 
@@ -1119,8 +1152,275 @@ def stems_async(name, mode, source=""):
                 jobs.pop(key, None)
         except Exception as e:
             job.update(status="failed", error=str(e))
-    threading.Thread(target=work, daemon=True).start()
+    _spawn(work)                                        # HERESY 1962: owned as its starter
     return dict(job, name=name)
+
+
+# HERESY 1834 (Viktor 28.10.2026: «вживляй MuScriptor в Студию — в паспорт треков и в самого Огранщика»): the take, or a file of its tree (a
+# stem, a mix, a remaster), into multi-instrument MIDI: a set of its own under derived/ (midi-SIZE-STAMP: song.mid, notes.json, manifest.json),
+# as the stems are. The same sound at the same size and choice again answers with the set it gave. On the processor, one at a time
+# (muscriptor.py's own lock), never waiting for a card
+def midi_async(name, size="", source="", only=""):
+    d = take_dir(name)
+    if not muscriptor.binary(KIT).is_file():
+        raise FileNotFoundError("the MIDI transcriber is not built: ./build.sh builds it")
+    size = muscriptor.pick(KIT, size)
+    if not size:
+        raise FileNotFoundError("no MuScriptor model here: Engine → Models → Sound to MIDI fetches one")
+    if only and not re.fullmatch(r"[a-z_]+(,[a-z_]+)*", only):
+        raise ValueError("only is a list of instrument groups, as electric_bass,drums")
+    audio = source_of(name, source)[0]
+    if not audio:
+        raise FileNotFoundError(f"no audio in {name}")
+    said = source or "the take"
+    for man in sorted(d.glob(f"derived/midi-{size}-*/manifest.json"), reverse=True):
+        try:
+            made = json.load(open(man, encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if made.get("source") == said and made.get("only", "") == only:
+            return made
+    key = f"midi:{name}:{size}:{said}:{only}"
+    with jobs_lock:
+        job = jobs.get(key)
+        if job and job["status"] in ("queued", "running"):
+            return dict(job, name=name)
+        if job and job["status"] == "failed":
+            jobs.pop(key)
+            return dict(job, name=name)
+        did = f"midi-{size}-" + time.strftime("%Y%m%d-%H%M%S")
+        job = {"status": "queued", "started": time.time(), "kind": "midi", "size": size, "id": did, "source": said, "progress": 0.0}
+        jobs[key] = job
+
+    def work():
+        try:
+            tmp, target = d / "derived" / (did + ".part"), d / "derived" / did
+            shutil.rmtree(tmp, ignore_errors=True)
+            r = muscriptor.run(KIT, audio, tmp, size, only, job)
+            manifest = {"id": did, "kind": "midi", "parent": name, "source": said, "size": size, "only": only,
+                        "engine": r.get("engine"), "device": r.get("device"), "seconds": r.get("seconds"), "took": r.get("took"),
+                        "instruments": r.get("instruments", []), "notes": len(r.get("notes", [])),
+                        "files": [{"file": "song.mid", "path": f"derived/{did}/song.mid", "kind": "midi", "title": "MIDI"},
+                                  {"file": "notes.json", "path": f"derived/{did}/notes.json", "kind": "text", "title": "the notes"}],
+                        "created": time.strftime("%Y-%m-%d %H:%M")}
+            json.dump(manifest, open(tmp / "manifest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+            shutil.rmtree(target, ignore_errors=True)
+            tmp.rename(target)
+            with jobs_lock:
+                jobs.pop(key, None)
+        except Exception as e:
+            job.update(status="failed", error=str(e))
+    _spawn(work)                                        # HERESY 1962: owned as its starter
+    return dict(job, name=name)
+
+
+def animatic_async(name, labels):
+    """HERESY 1837: the Videographer's animatic of a take as a job (videographer.animatic): drawn again on each ask, one at a time a take."""
+    d = take_dir(name)
+    audio = source_of(name, "")[0]
+    if not audio:
+        raise FileNotFoundError(f"no audio in {name}")
+    cover = d / "artwork.jpg"
+    key = f"video:{name}:animatic"
+    with jobs_lock:
+        job = jobs.get(key)
+        if job and job["status"] in ("queued", "running"):
+            return dict(job, name=name)
+        job = {"status": "running", "started": time.time(), "kind": "video", "progress": 0.0}
+        jobs[key] = job
+
+    def work():
+        try:
+            videographer.animatic(KIT, name, audio, cover if cover.is_file() else None, labels if isinstance(labels, dict) else {}, job)
+            with jobs_lock:
+                jobs.pop(key, None)
+        except Exception as e:
+            job.update(status="failed", error=str(e))
+    _spawn(work)                                        # HERESY 1962: owned as its starter
+    return dict(job, name=name)
+
+
+def clip_async(name, labels=None, lyrics=False, between="cut", shape="16:9", titles=False):
+    """HERESY 1838: the Videographer's clip of a take as a job (videographer.clip): cut again on each ask, one at a time a take."""
+    d = take_dir(name)
+    audio = source_of(name, "")[0]
+    if not audio:
+        raise FileNotFoundError(f"no audio in {name}")
+    cover = d / "artwork.jpg"
+    key = f"video:{name}:clip" + ("" if shape == "16:9" else f":{shape}")   # HERESY 1917: a job a shape
+    with jobs_lock:
+        job = jobs.get(key)
+        if job and job["status"] in ("queued", "running"):
+            return dict(job, name=name)
+        job = {"status": "running", "started": time.time(), "kind": "video", "progress": 0.0}
+        jobs[key] = job
+
+    def work():
+        try:
+            rows = None
+            if lyrics:                                         # HERESY 1916: the sung lines in their own time, as the plan was cut from them
+                try:
+                    rows = timing_async(name, cached_only=True).get("rows")
+                except (ValueError, FileNotFoundError, OSError):
+                    rows = None
+            videographer.clip(KIT, name, audio, cover if cover.is_file() else None, job, labels if isinstance(labels, dict) else {}, rows=rows,
+                              lyrics=bool(lyrics), between=between, shape=shape, titles=bool(titles))   # HERESY 1948
+            with jobs_lock:
+                jobs.pop(key, None)
+        except Exception as e:
+            job.update(status="failed", error=str(e))
+    _spawn(work)                                        # HERESY 1962: owned as its starter
+    return dict(job, name=name)
+
+
+def sung_end(name, run=False):
+    """HERESY 1842 (RC3's report of 08.10.2026: «проверка, допет ли текст… значок «конец не спет» и Regenerate from… с готовой секундой»): whether
+    the take's lyrics are sung to their end, by its timing (Whisper on its lyrics, line by line): the lines after the last one heard were not heard.
+    {timed, done, count, unsung, suggest (where the last heard line ends), last, heard, why}; only what is timed already unless run."""
+    try:
+        r = timing_async(name, cached_only=not run)
+    except FileNotFoundError:
+        return {"name": name, "timed": False}
+    if "rows" not in r:
+        if r.get("status") == "failed":
+            raise RuntimeError("the timing failed: " + str(r.get("error") or ""))
+        return {"name": name, "timed": False, "running": True}
+    return sung_of(name, r)
+
+
+def sung_of(name, r):
+    """HERESY 1842 · 1846: a timing's word on the end: the lines after the last one heard were not heard."""
+    rows, share = r["rows"], float(r.get("heard") or 0)
+    heard = [i for i, x in enumerate(rows) if not x.get("guessed")]
+    out = {"name": name, "timed": True, "lines": len(rows), "heard": round(share, 3)}
+    if not heard or share < 0.4:                         # too little heard: Whisper did not catch this voice, the end says nothing
+        return dict(out, done=None, why="the timing heard too little of this take to say")
+    last, tail = heard[-1], rows[heard[-1] + 1:]
+    end = round(float(rows[last]["end"] or 0), 1)
+    if not tail:
+        return dict(out, done=True, last=end)
+    return dict(out, done=False, count=len(tail), unsung=[x["text"] for x in tail[:4]], suggest=end,
+                why=f"{len(tail)} lines at the end were not heard after {end} s")
+
+
+def sung_marks():
+    """HERESY 1846 (RC3's report: «значок «конец не спет»»): each take timed already, sung to its end or not, from the timings the lab keeps;
+    nothing is run, and a timing older than its take's sound or request is left out. {marks: {name: true | false | null}}"""
+    out = {}
+    for f in CACHE.glob("*.timing.json"):
+        name = f.name[:-len(".timing.json")]
+        try:
+            d = take_dir(name)
+            audio = source_of(name, "")[0]
+            if not audio or f.stat().st_mtime < max(audio.stat().st_mtime, (d / "request.json").stat().st_mtime):
+                continue
+            r = json.load(open(f, encoding="utf-8"))
+            if r.get("rows"):
+                out[name] = sung_of(name, r).get("done")
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+    return {"marks": out}
+
+
+_OPUS_LOCKS = {}
+
+
+def listen_opus(name):
+    """HERESY 1851 (Viktor 29.10.2026: «поток плеера на страницу вместо listen.flac — это да и амен… OPUS 128 или FLAC. Как раз для мобильного и
+    VPN»): the take's listen.opus beside it (libopus 128 kbit/s VBR, its title in the tags), made the first time it is asked and again when the
+    take's sound is newer; one encode at a time a take. Only for the player: downloads stay WAV and FLAC."""
+    d = take_dir(name)
+    src = source_of(name, "")[0]
+    if not src:
+        raise FileNotFoundError(f"no audio in {name}")
+    out = d / "listen.opus"
+    with jobs_lock:
+        lock = _OPUS_LOCKS.setdefault(name, threading.Lock())
+    with lock:
+        if out.is_file() and out.stat().st_mtime >= src.stat().st_mtime:
+            return out
+        try:
+            title = json.load(open(d / "meta.json", encoding="utf-8")).get("title") or name
+        except (OSError, ValueError):
+            title = name
+        part = d / "listen.opus.part"
+        p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-map", "0:a:0", "-c:a", "libopus", "-b:a", "128k", "-vbr", "on",
+                            "-application", "audio", "-metadata", f"title={title}", "-f", "ogg", str(part)], capture_output=True, text=True, timeout=600)
+        if p.returncode != 0 or not part.is_file():
+            part.unlink(missing_ok=True)
+            raise RuntimeError("ffmpeg: " + (p.stderr.strip()[-300:] or "no output"))
+        part.replace(out)
+        return out
+
+
+def orchestra_async(name, source, mode="instead", shift="12", instrument="", size=""):
+    """HERESY 1884: orchestra.make_version as a job, one a take's stem, mode, octave and instrument; the one made is returned as it is."""
+    d = take_dir(name)
+    if not orchestra.sfizz(KIT).is_file() or not orchestra.fluidsynth(KIT).is_file():
+        raise FileNotFoundError("the renderers are not built: heresy/MISC/claude-tc/midi/build-renderers.sh builds them")
+    if mode not in orchestra.MODES:
+        raise ValueError("the mode is instead, over or octave")
+    if not source.startswith("derived/") or not source.endswith((".flac", ".wav")):
+        raise ValueError("source is a stem: derived/stems-…/NAME.flac")
+    inst = json.loads(instrument) if instrument else None
+    shift = int(shift or 12) if mode == "octave" else 0
+    for man in sorted(d.glob("derived/orchestra-*/manifest.json"), reverse=True):
+        try:
+            made = json.load(open(man, encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if made.get("source") == source and made.get("mode") == mode and made.get("instrument") == inst and int(made.get("shift", 0)) == shift:
+            return made
+    key = f"orchestra:{name}:{source}:{mode}:{shift}:{json.dumps(inst, sort_keys=True)}"
+    with jobs_lock:
+        job = jobs.get(key)
+        if job and job["status"] in ("queued", "running"):
+            return dict(job, name=name)
+        if job and job["status"] == "failed":
+            jobs.pop(key)
+            return dict(job, name=name)
+        oid = "orchestra-" + time.strftime("%Y%m%d-%H%M%S")    # the branch's id beforehand: the console's insert watches /derived for it
+        job = {"status": "queued", "started": time.time(), "kind": "orchestra", "id": oid, "source": source, "mode": mode, "progress": 0.0}
+        jobs[key] = job
+
+    def work():
+        try:
+            orchestra.make_version(KIT, d, source, inst, mode, shift, size, job, oid)
+            with jobs_lock:
+                jobs.pop(key, None)
+        except Exception as e:
+            job.update(status="failed", error=str(e))
+    _spawn(work)                                        # HERESY 1962: owned as its starter
+    return dict(job, name=name)
+
+
+def midi_score_of(name, did):
+    """HERESY 1835: a MIDI set's file as the Creator's score (midi_score.py: the key guessed from the notes, the voice for Vocal, an instrument's
+    line for Ins, a chordal one left to the instruments)."""
+    import midi_score
+    if not re.fullmatch(r"midi-[a-z]+-\d{8}-\d{6}", did or ""):
+        raise ValueError("no such MIDI set")
+    f = take_dir(name) / "derived" / did / "song.mid"
+    if not f.is_file():
+        raise FileNotFoundError("no such MIDI set")
+    try:
+        return midi_score.from_midi(f.read_bytes())
+    except Exception as e:                               # its reason in words (abc_tools.AbcError and the reader's own)
+        raise ValueError(f"this MIDI could not become a score: {e}")
+
+
+def midi_sets(name):
+    """HERESY 1834: the take's MIDI sets, newest first, with the jobs under way for it."""
+    d = take_dir(name)
+    out = []
+    for man in sorted(d.glob("derived/midi-*/manifest.json"), reverse=True):
+        try:
+            out.append(json.load(open(man, encoding="utf-8")))
+        except (OSError, ValueError):
+            continue
+    with jobs_lock:
+        going = [dict(v, key=k) for k, v in jobs.items() if k.startswith(f"midi:{name}:")]
+    return {"sets": out, "jobs": going}
 
 
 # HERESY 1022: the Debunker v6 (lab/debunker.py) as a job. CPU and ffmpeg only, so it does not
@@ -1166,7 +1466,7 @@ def remaster_async(name, settings):
                 jobs.pop(key, None)
         except Exception as e:
             job.update(status="failed", error=str(e))
-    threading.Thread(target=work, daemon=True).start()
+    _spawn(work)                                        # HERESY 1962: owned as its starter
     return dict(job, name=name)
 
 
@@ -1396,7 +1696,7 @@ def upscale_async(name, mode, source="", variants=2, keep=True, ceiling=None):
                 jobs.pop(key, None)
         except Exception as e:
             job.update(status="failed", error=str(e))
-    threading.Thread(target=work, daemon=True).start()
+    _spawn(work)                                        # HERESY 1962: owned as its starter
     return dict(job, name=name)
 
 
@@ -1499,7 +1799,7 @@ def plugin_async(name, pid, sid, source="", given=None, versions=None, history=N
                 jobs.pop(key, None)
         except Exception as e:
             job.update(status="failed", error=str(e))
-    threading.Thread(target=work, daemon=True).start()
+    _spawn(work)                                        # HERESY 1962: owned as its starter
     return dict(job, name=name)
 
 
@@ -1541,7 +1841,7 @@ def debuzz_async(name, source="", strength=0.8, period=1920, rate=48000):
                 jobs.pop(key, None)
         except Exception as e:
             job.update(status="failed", error=str(e))
-    threading.Thread(target=work, daemon=True).start()
+    _spawn(work)                                        # HERESY 1962: owned as its starter
     return dict(job, name=name)
 
 
@@ -1593,7 +1893,7 @@ def gate_async(name, source="", params=None):
                 jobs.pop(key, None)
         except Exception as e:
             job.update(status="failed", error=str(e))
-    threading.Thread(target=work, daemon=True).start()
+    _spawn(work)                                        # HERESY 1962: owned as its starter
     return dict(job, name=name)
 
 
@@ -1639,7 +1939,7 @@ def textend_async(name, force=False, cached_only=False):
                 jobs.pop(key, None)
         except Exception as e:
             job.update(status="failed", error=str(e))
-    threading.Thread(target=work, daemon=True).start()
+    _spawn(work)                                        # HERESY 1962: owned as its starter
     return dict(job, name=name)
 
 
@@ -1678,7 +1978,7 @@ def inspect_async(name, source="", force=False, cached_only=False):
                 jobs.pop(key, None)
         except Exception as e:
             job.update(status="failed", error=str(e))
-    threading.Thread(target=work, daemon=True).start()
+    _spawn(work)                                        # HERESY 1962: owned as its starter
     return dict(job, name=name)
 
 
@@ -1689,9 +1989,103 @@ def inspect_async(name, source="", force=False, cached_only=False):
 CHAINS = {}
 
 
+# HERESY 1962 (Viktor 30.10.2026: «на активную работающую ноду можно приделать индикатор прогресса с примерным просчётом ETA… и явная кнопка
+# остановки работающего процесса»): what a chain starts is the chain's own. A thread knows its owner ("chain:<take>"), the job threads a chain starts
+# inherit it (_spawn), and every process an owned thread starts is kept under it, in a group of its own; Stop ends those groups and the chain stops
+# where it stands. A step working inside the lab itself (no process of its own) finishes first.
+_TL = threading.local()
+OWNED, STOPS, OWN_LOCK = {}, set(), threading.Lock()
+_Popen = subprocess.Popen
+
+
+class _OwnedPopen(_Popen):
+    def __init__(self, *a, **k):
+        owner = getattr(_TL, "owner", None)
+        if owner:
+            if owner in STOPS:
+                raise RuntimeError("stopped")
+            k.setdefault("start_new_session", True)    # its own group: Stop ends the tool and what it started
+        super().__init__(*a, **k)
+        if owner:
+            with OWN_LOCK:
+                OWNED.setdefault(owner, []).append(self)
+
+
+subprocess.Popen = _OwnedPopen                        # subprocess.run starts its process through this name
+
+
+def _spawn(fn):
+    """A job's thread, owned as the thread that started it is (a chain's steps are the chain's)."""
+    owner = getattr(_TL, "owner", None)
+
+    def run():
+        _TL.owner = owner
+        fn()
+    threading.Thread(target=run, daemon=True).start()
+
+
+def chain_stop(name):
+    """Stop a take's chain where it stands: its steps' processes ended, the step running said stopped, the rest left."""
+    with jobs_lock:
+        job = CHAINS.get(name)
+    if not job or job.get("status") != "running":
+        return {"ok": False, "status": job.get("status") if job else "none", "name": name}
+    owner = "chain:" + name
+    STOPS.add(owner)
+    job["stopping"] = True
+    with OWN_LOCK:
+        procs = [p for p in OWNED.get(owner, []) if p.poll() is None]
+    for p in procs:
+        try:
+            os.killpg(p.pid, 15)
+        except (ProcessLookupError, PermissionError, OSError):
+            try:
+                p.terminate()
+            except OSError:
+                pass
+    return {"ok": True, "ended": len(procs), "name": name}
+
+
+# each step's pace, the seconds of work for a second of song, the last 20, for the next run's ETA
+PACE_FILE = KIT / "user" / "refiner-pace.json"
+PACE_LOCK = threading.Lock()
+
+
+def _pace_key(st):
+    k = st.get("step", "")
+    return k + ":" + (f"{st.get('plugin', '')}:{st.get('sid', '')}" if k == "plugin" else str(st.get("mode") or ""))
+
+
+def _pace(key):
+    try:
+        rates = (json.load(open(PACE_FILE, encoding="utf-8")) or {}).get(key) or []
+    except (OSError, ValueError):
+        rates = []
+    rates = sorted(float(r) for r in rates if isinstance(r, (int, float)) and r > 0)
+    return rates[len(rates) // 2] if rates else None
+
+
+def _pace_put(key, rate):
+    with PACE_LOCK:
+        try:
+            d = json.load(open(PACE_FILE, encoding="utf-8")) or {}
+        except (OSError, ValueError):
+            d = {}
+        d[key] = ((d.get(key) or []) + [round(rate, 4)])[-20:]
+        PACE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = PACE_FILE.with_suffix(".part")
+        json.dump(d, open(tmp, "w", encoding="utf-8"))
+        tmp.replace(PACE_FILE)
+
+
 def _wait(key, timeout=7200):
     t0 = time.time()
+    st = getattr(_TL, "step", None)
+    if isinstance(st, dict):
+        st["key"] = key                                 # HERESY 1962: the job the step waits on, its progress read by /chain
     while True:
+        if getattr(_TL, "owner", None) in STOPS:        # HERESY 1962
+            raise RuntimeError("stopped")
         with jobs_lock:
             j = jobs.get(key)
         if j is None:                                   # a job that ends well leaves the list
@@ -1740,9 +2134,21 @@ def chain_async(name, spec):
     def work():
         src, stems, st = "", "", None
         versions, flow, history = {}, "file", {}         # HERESY 1553: a set's versions made on the way (and each stem's way); what the last step made
+        owner = _TL.owner = "chain:" + name              # HERESY 1962: what its steps start is its own
+        STOPS.discard(owner)
+        secs = take_secs(name) or 0.0
         try:
             for st in steps:
+                if st is not steps[0] and steps[steps.index(st) - 1].get("status") == "done":
+                    prev = steps[steps.index(st) - 1]
+                    if prev.get("started") and secs > 0:   # HERESY 1962: the step before, its pace kept
+                        _pace_put(_pace_key(prev), (time.time() - prev["started"]) / secs)
                 st["status"] = "running"
+                st["started"] = time.time()             # HERESY 1962: when it began, and what its kind took before on a song this long
+                rate = _pace(_pace_key(st))
+                if rate and secs > 0:
+                    st["expect"] = round(rate * secs, 1)
+                _TL.step = st
                 job["current"] = st["step"]
                 k = st["step"]
                 if k == "gate":                         # HERESY 1553: the Digital Gateway on the file before
@@ -1845,12 +2251,24 @@ def chain_async(name, spec):
                 if k in ("debuzz", "upscale", "remaster"):
                     st["file"] = src
                     flow = "file"
+            if steps and steps[-1].get("status") == "done" and steps[-1].get("started") and secs > 0:
+                _pace_put(_pace_key(steps[-1]), (time.time() - steps[-1]["started"]) / secs)   # HERESY 1962
             job.update(status="done", ended=time.time(), current="")
         except Exception as e:                          # said on the step that failed; what was made stays
-            if st is not None:
-                st.update(status="failed", error=str(e))
-            job.update(status="failed", error=f"{st['step'] if st else 'chain'}: {e}", ended=time.time())
-    threading.Thread(target=work, daemon=True).start()
+            if owner in STOPS:                          # HERESY 1962: stopped by hand, not failed
+                if st is not None:
+                    st.update(status="stopped")
+                job.update(status="stopped", ended=time.time(), current="")
+            else:
+                if st is not None:
+                    st.update(status="failed", error=str(e))
+                job.update(status="failed", error=f"{st['step'] if st else 'chain'}: {e}", ended=time.time())
+        finally:
+            STOPS.discard(owner)
+            with OWN_LOCK:
+                OWNED.pop(owner, None)
+            job.pop("stopping", None)
+    _spawn(work)
     return dict(job, name=name)
 
 
@@ -1889,7 +2307,7 @@ def batch_async(spec):
                 chain_async(it["name"], dict(one, name=it["name"]))
                 while True:
                     j = CHAINS.get(it["name"]) or {}
-                    if j.get("status") in ("done", "failed"):
+                    if j.get("status") in ("done", "failed", "stopped"):   # HERESY 1962: stopped by hand too
                         break
                     time.sleep(2)
                 it.update(status=j["status"], final=j.get("final", ""), error=j.get("error", ""))
@@ -1897,7 +2315,7 @@ def batch_async(spec):
                 it.update(status="failed", error=str(e))
             it["ended"] = time.time()
         BATCH.update(status="stopped" if BATCH.get("stop") else "done", ended=time.time())
-    threading.Thread(target=work, daemon=True).start()
+    _spawn(work)                                        # HERESY 1962: owned as its starter
     return dict(BATCH)
 
 
@@ -2178,7 +2596,7 @@ def art_async(name, again=False, seed=None, painter=None):
                 jobs.pop(key, None)
         except Exception as e:
             job.update(status="failed", error=str(e))
-    threading.Thread(target=work, daemon=True).start()
+    _spawn(work)                                        # HERESY 1962: owned as its starter
     return dict(job, name=name)
 
 
@@ -2248,7 +2666,7 @@ def api_ctx():
 # now, for the bar's lamp. GET /activity?since=SEQ
 ACT = {"seq": 0, "lines": collections.deque(maxlen=400), "seen": {}}
 ACT_LOCK = threading.Lock()
-ACT_SAY = {"art": "artwork", "stems": "stems (BS-Roformer, htdemucs)", "remaster": "remaster", "upscale": "upscale (UniverSR)",
+ACT_SAY = {"art": "artwork", "stems": "stems (BS-Roformer, htdemucs)", "midi": "sound to MIDI (MuScriptor)", "video": "the Videographer (animatic, clip)", "remaster": "remaster", "upscale": "upscale (UniverSR)",
            "debuzz": "debuzz", "gate": "digital gateway", "timing": "lyrics timing (Whisper)", "textend": "lyrics check (Whisper)", "spectrum": "spectrum",
            "inspect": "inspection", "train": "LoRA training", "listen": "listener (Omni)", "artist": "the Artist"}
 
@@ -2648,8 +3066,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         if cache:                                          # HERESY 1274: a file that never changes under its name (the fonts)
             self.send_header("Cache-Control", cache)
-        if download:                                       # HERESY 1090: saved under this name
-            self.send_header("Content-Disposition", 'attachment; filename="' + download.replace('"', "") + '"')
+        if download:                                       # HERESY 1090: saved under this name; 1946: one beyond Latin-1 as RFC 5987 has it
+            name = download.replace('"', "")               # (a Cyrillic title broke the header and the zip went out empty)
+            plain = name.encode("ascii", "replace").decode().replace("?", "_")
+            self.send_header("Content-Disposition", f"attachment; filename=\"{plain}\"; filename*=UTF-8''{urllib.parse.quote(name)}")
         self.send_header("Content-Length", str(length))
         self.end_headers()
         with open(path, "rb") as f:
@@ -2696,6 +3116,68 @@ class Handler(BaseHTTPRequestHandler):
         if url.path.startswith("/api/"):
             return self.api("GET", url, q, None)
         try:
+            if url.path == "/perf":                         # HERESY 1821: Engine → Performance
+                return self.send(200, perf.report())
+            if url.path == "/listen":                       # HERESY 1851: the player's stream in Opus 128 (codec=opus), with Range
+                if q.get("codec") != "opus":
+                    return self.send(400, {"error": "codec=opus, the FLAC is the engine's own /library/listen"})
+                return self.send_file(listen_opus(q.get("name", "")), "audio/ogg", cache="no-cache")
+            if url.path == "/playback":                     # HERESY 1852: where the player left each take (the takes gone are dropped)
+                return self.send(200, {"marks": playback_marks.listing(config_dir(), OUTPUTS)})
+            if url.path == "/sung/marks":                   # HERESY 1846: the takes timed already, sung to their end or not
+                return self.send(200, sung_marks())
+            if url.path == "/sung":                         # HERESY 1842: whether the take's lyrics are sung to their end (its timing)
+                r = sung_end(q.get("name", ""), q.get("run") == "1")
+                return self.send(202 if r.get("running") else 200, r)
+            if url.path == "/video/plan":                   # HERESY 1824: a take's plan, if it has one
+                return self.send(200, videographer.get(KIT, q.get("name", "")))
+            if url.path == "/video/plans":
+                return self.send(200, videographer.listing(KIT))
+            if url.path == "/video/animatic":               # HERESY 1837: the animatic's job while it is drawn, else whether one is there
+                with jobs_lock:
+                    job = jobs.get(f"video:{q.get('name', '')}:animatic")
+                if job:
+                    return self.send(500 if job["status"] == "failed" else 202, dict(job))
+                return self.send(200, videographer.animatic_info(KIT, q.get("name", "")))
+            if url.path == "/video/animatic.mp4":           # HERESY 1837: the animatic itself, with Range (the player seeks)
+                f = videographer.animatic_path(KIT, q.get("name", ""))
+                if not f.is_file():
+                    return self.send(404, {"error": "no animatic for this take yet"})
+                return self.send_file(f, "video/mp4")
+            if url.path == "/video/clip":                   # HERESY 1838: the clip's job while it is cut, else whether one is there
+                shape = q.get("shape") or "16:9"               # HERESY 1917
+                with jobs_lock:
+                    job = jobs.get(f"video:{q.get('name', '')}:clip" + ("" if shape == "16:9" else f":{shape}"))
+                if job:
+                    return self.send(500 if job["status"] == "failed" else 202, dict(job))
+                return self.send(200, videographer.clip_info(KIT, q.get("name", ""), shape))
+            if url.path == "/video/edit.zip":               # HERESY 1946: the editor's project, built by POST /video/edit
+                name = q.get("name", "")
+                f = videographer.edit_path(KIT, name)
+                if not f.is_file():
+                    return self.send(404, {"error": "no editor's project for this take yet"})
+                title = ""
+                try:
+                    title = json.load(open(take_dir(name) / "meta.json", encoding="utf-8")).get("title") or ""
+                except (OSError, ValueError):
+                    pass
+                return self.send_file(f, "application/zip", download=(title or name) + " · edit.zip")
+            if url.path == "/video/clip.mp4":               # HERESY 1838: the clip itself, with Range (the player seeks)
+                f = videographer.clip_path(KIT, q.get("name", ""), q.get("shape") or "16:9")   # HERESY 1917
+                if not f.is_file():
+                    return self.send(404, {"error": "no clip for this take yet"})
+                return self.send_file(f, "video/mp4")
+            if url.path == "/video/upscale":                # HERESY 1876b: a take's upscales on their way
+                return self.send(200, upscale_shots.status(KIT, q.get("name", "")))
+            if url.path == "/video/frames":                 # HERESY 1913: a plan's shots on their way through the Artist
+                return self.send(200, frames_job.status(KIT, q.get("name", "")))
+            if url.path == "/video/shots":                  # HERESY 1868: a take's shots on their way to H3, and its workers
+                return self.send(200, h3_shots.status(KIT, q.get("name", "")))
+            if url.path in ("/video/shot.mp4", "/video/shot.jpg"):   # HERESY 1868: a shot's own video (Range), its first frame
+                f = videographer.shot_video_path(KIT, q.get("name", ""), q.get("f", ""), thumb=url.path.endswith(".jpg"))
+                return self.send_file(f, "video/mp4" if f.suffix == ".mp4" else "image/jpeg", cache="private, max-age=600")
+            if url.path == "/video/frame":                  # HERESY 1838: a shot's own picture
+                return self.send_file(videographer.frame_path(KIT, q.get("name", ""), q.get("f", "")), "image/jpeg", cache="private, max-age=600")
             if url.path == "/gpus/live":                    # HERESY 1264: the cards second by second, and what each is given to
                 out = gpu_live.live(float(q.get("since") or 0))
                 out["roles"] = live_roles()
@@ -2712,6 +3194,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, weights.listing(KIT))
             if url.path == "/lora/profile":                 # HERESY 1447: LoRA alchemy: each adapter by layer, the pairs, the budgets
                 return self.send(200, lora_alchemy.report((q.get("ids") or "").split(",")))
+            if url.path == "/lora/bases":                   # HERESY 1960: each adapter's base against the engine's model, for the Creator's flags
+                return self.send(200, lora_bases.report(KIT, q.get("model") or "", [x for x in (q.get("ids") or "").split(",") if x]))
             if url.path == "/health":
                 with jobs_lock:
                     active = {k: v["status"] for k, v in jobs.items()}
@@ -2759,6 +3243,8 @@ class Handler(BaseHTTPRequestHandler):
                 if not f.is_file():
                     return self.send(404, {"error": "no artwork for this take"})
                 return self.send_file(f, "image/jpeg")
+            if url.path == "/art/versions":                  # HERESY 1848: a take's earlier covers (artwork-removed/), the newest first
+                return self.send(200, artist.cover_versions(q.get("name", "")))
             if url.path == "/art/remove":                    # HERESY 1156
                 r = art_remove(q.get("name", ""))
                 return self.send(409 if r.get("error") else 200, r)
@@ -2816,6 +3302,41 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/stems":
                 r = stems_async(q.get("name", ""), q.get("mode", "four"), q.get("source", ""))
                 return self.send(500 if r.get("status") == "failed" else 202 if r.get("status") else 200, r)
+            if url.path == "/tail":                         # HERESY 1836: the tail guard
+                try:
+                    audio = source_of(q.get("name", ""), "")[0]
+                    if not audio:
+                        raise FileNotFoundError("no audio in this take")
+                    return self.send(200, tailguard.tail(audio))
+                except (ValueError, FileNotFoundError, RuntimeError) as e:
+                    return self.send(400, {"error": str(e)})
+            if url.path in ("/midi", "/midi/sets", "/midi/status", "/midi/score"):   # HERESY 1834: sound to MIDI (MuScriptor); 1835: as a score
+                try:
+                    if url.path == "/midi/score":
+                        return self.send(200, midi_score_of(q.get("name", ""), q.get("id", "")))
+                    if url.path == "/midi/status":
+                        return self.send(200, muscriptor.status(KIT))
+                    if url.path == "/midi/sets":
+                        return self.send(200, midi_sets(q.get("name", "")))
+                    r = midi_async(q.get("name", ""), q.get("size", ""), q.get("source", ""), q.get("only", ""))
+                    return self.send(500 if r.get("status") == "failed" else 202 if r.get("status") else 200, r)
+                except (ValueError, FileNotFoundError) as e:
+                    return self.send(400, {"error": str(e)})
+            if url.path in ("/orchestra", "/orchestra/render", "/orchestra/suggest"):   # HERESY 1884: the MIDI orchestra
+                try:
+                    if url.path == "/orchestra/suggest":
+                        return self.send(200, {"stem": q.get("stem", ""), "offer": orchestra.suggest(KIT, q.get("stem", ""))})
+                    if url.path == "/orchestra":
+                        return self.send(200, {"built": {"sfizz": orchestra.sfizz(KIT).is_file(), "fluidsynth": orchestra.fluidsynth(KIT).is_file()},
+                                               "library": orchestra.library(KIT), "gm": orchestra.gm_bank(KIT),
+                                               "map": orchestra.instrument_map(KIT, take_dir(q["name"]) if q.get("name") else None),
+                                               "groups": list(orchestra.GROUPS), "stems": {k: list(v) for k, v in orchestra.STEMS.items()},
+                                               "modes": list(orchestra.MODES)})
+                    r = orchestra_async(q.get("name", ""), q.get("source", ""), q.get("mode", "instead"), q.get("shift", "12"),
+                                        q.get("instrument", ""), q.get("size", ""))
+                    return self.send(500 if r.get("status") == "failed" else 202 if r.get("status") else 200, r)
+                except (ValueError, FileNotFoundError) as e:
+                    return self.send(400, {"error": str(e)})
             if url.path == "/loudness":                      # HERESY 1550
                 try:
                     return self.send(200, loudness_of(q.get("name", ""), q.get("path", "")))
@@ -2924,6 +3445,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, dict(BATCH))
             if url.path == "/chain":                        # HERESY 1054: the chain's state for a take
                 job = CHAINS.get(q.get("name", ""))
+                if job:                                     # HERESY 1962: the step running says how far its job is, when the job says it
+                    job = dict(job, now=time.time(), steps=[dict(s) for s in job.get("steps") or []])
+                    for s in job["steps"]:
+                        if s.get("status") == "running" and s.get("key"):
+                            with jobs_lock:
+                                pj = jobs.get(s["key"]) or {}
+                            if isinstance(pj.get("progress"), (int, float)):
+                                s["progress"] = float(pj["progress"])
                 return self.send(200, dict(job, name=q.get("name", "")) if job else {"status": "none", "name": q.get("name", "")})
             if url.path == "/derived":
                 return self.send(200, derived_list(q.get("name", "")))
@@ -3089,6 +3618,9 @@ class Handler(BaseHTTPRequestHandler):
                 if not q.get("scope"):
                     writer_llm.stop("asked")
                 return self.send(200, writer_llm.status(KIT))
+            if url.path == "/lora/bases":                   # HERESY 1960: as the GET, the catalog's ids in the body (the studio's door refuses a long URL: 414)
+                d = json.loads(body.decode("utf-8") or "{}")
+                return self.send(200, lora_bases.report(KIT, str(d.get("model") or ""), [str(x) for x in (d.get("ids") or []) if x]))
             if url.path == "/weights/check":                # HERESY 1289
                 return self.send(202, weights.check(KIT))
             if url.path == "/weights/fetch":                # HERESY 1289: on the user's word; a test page fetches nothing
@@ -3193,6 +3725,16 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(*diamond.fetch(KIT, OUTPUTS, config_dir(), str(data.get("name", "")), bool(data.get("restore"))))
             if url.path == "/c2pa":                          # HERESY 1489: the switch, the author, one's own certificate
                 return self.send(200, dict(c2pa_sign.save(config_dir(), json.loads(body.decode("utf-8"))), **c2pa_sign.status(config_dir())))
+            if url.path == "/playback":                     # HERESY 1852: {name, at, seconds}; at null forgets the take
+                data = json.loads(body.decode("utf-8"))
+                return self.send(200, {"mark": playback_marks.mark(config_dir(), OUTPUTS, data.get("name"), data.get("at"), data.get("seconds") or 0)})
+            if url.path == "/orchestra/map":                 # HERESY 1884: one group's instrument
+                data = json.loads(body.decode("utf-8"))
+                try:
+                    return self.send(200, {"map": orchestra.set_map(KIT, str(data.get("group", "")), data.get("instrument"),
+                                                                    take_dir(str(data["name"])) if data.get("name") else None)})
+                except (ValueError, FileNotFoundError) as e:
+                    return self.send(400, {"error": str(e)})
             if url.path in ("/collection", "/trash", "/export"):     # HERESY 1041
                 data = json.loads(body.decode("utf-8"))
                 if url.path == "/collection":
@@ -3202,7 +3744,9 @@ class Handler(BaseHTTPRequestHandler):
                                                                   data.get("format", "flac"), bool(data.get("derived")), sign=c2pa_for))   # 1489
                 op = data.get("op")
                 if op == "move":
-                    return self.send(200, collection.trash_move(KIT, OUTPUTS, [str(n) for n in data.get("names") or []], config_dir()))
+                    moved = collection.trash_move(KIT, OUTPUTS, [str(n) for n in data.get("names") or []], config_dir())
+                    playback_marks.forget(config_dir(), moved["moved"])   # HERESY 1852: the guard: a take in the trash loses its place
+                    return self.send(200, moved)
                 if op == "restore":
                     return self.send(200, collection.trash_restore(KIT, OUTPUTS, data.get("items") or []))
                 if op == "empty":                      # the page asks first; items or everything
@@ -3240,6 +3784,126 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/lora/delete":                  # HERESY 1496: adapter files out of loras/ for good, a dry run first
                 data = json.loads(body.decode("utf-8"))
                 return self.send(200, training.delete_loras(KIT, [str(x) for x in (data.get("ids") or [])], data.get("dry", True) is not False))
+            if url.path == "/perf/beat":                    # HERESY 1821: a minute with the studio
+                data = json.loads(body.decode("utf-8") or "{}")
+                return self.send(200, perf.beat(str(data.get("kind", ""))))
+            if url.path == "/perf/measure":                 # HERESY 1821: the folders and disks measured again
+                return self.send(202, perf.measure())
+            if url.path == "/video/plan":                   # HERESY 1824: cut from the take's timing (asked for first when it has none)
+                data = json.loads(body.decode("utf-8") or "{}")
+                name = str(data.get("name", ""))
+                r = timing_async(name)
+                if "rows" not in r:
+                    if r.get("error"):
+                        raise ValueError(r["error"])
+                    return self.send(202, {"waiting": "timing", "status": r.get("status")})
+                d = take_dir(name)
+                return self.send(200, videographer.make(KIT, name, json.load(open(d / "meta.json", encoding="utf-8")),
+                                                        json.load(open(d / "request.json", encoding="utf-8")), r["rows"]))
+            if url.path == "/video/animatic":               # HERESY 1837: draw the take's animatic (its labels in the page's language)
+                data = json.loads(body.decode("utf-8") or "{}")
+                return self.send(202, animatic_async(str(data.get("name", "")), data.get("labels") or {}))
+            if url.path == "/video/beats":                  # HERESY 1947: the cuts between shots on the take's beats {name[, undo]}
+                data = json.loads(body.decode("utf-8") or "{}")
+                name = str(data.get("name", ""))
+                audio = source_of(name, "")[0]
+                if not audio:
+                    return self.send(404, {"error": f"no audio in {name}"})
+                return self.send(200, videographer.on_beat(KIT, name, audio, bool(data.get("undo"))))
+            if url.path == "/video/edit":                   # HERESY 1946: the plan as an editor's project (OTIO, EDL, SRT and its media) in a zip
+                data = json.loads(body.decode("utf-8") or "{}")
+                name = str(data.get("name", ""))
+                audio = source_of(name, "")[0]
+                if not audio:
+                    return self.send(404, {"error": f"no audio in {name}"})
+                rows, title = None, ""
+                try:
+                    rows = timing_async(name, cached_only=True).get("rows")
+                except (ValueError, FileNotFoundError, OSError):
+                    rows = None
+                try:
+                    title = json.load(open(take_dir(name) / "meta.json", encoding="utf-8")).get("title") or ""
+                except (OSError, ValueError):
+                    pass
+                return self.send(200, videographer.edit_bundle(KIT, name, audio, title, rows))
+            if url.path == "/video/clip":                   # HERESY 1838: cut the take's clip from its shots' pictures
+                data = json.loads(body.decode("utf-8") or "{}")
+                between = str(data.get("between") or "cut")
+                if between not in videographer.BETWEEN:
+                    return self.send(400, {"error": "between the sections: a cut, through black, a flash or a dissolve"})
+                shape = str(data.get("shape") or "16:9")      # HERESY 1917
+                if shape not in videographer.SHAPES:
+                    return self.send(400, {"error": "the clip's shape: 16:9, 9:16 or 1:1"})
+                return self.send(202, clip_async(str(data.get("name", "")), data.get("labels") or {}, bool(data.get("lyrics")), between, shape,
+                                                 bool(data.get("titles"))))   # HERESY 1916, 1948
+            if url.path == "/video/frame":                  # HERESY 1838: a shot's picture from the Artist's runs {name, i, run, file}; {name, i, off} takes it off
+                data = json.loads(body.decode("utf-8") or "{}")
+                name, i = str(data.get("name", "")), data.get("i")
+                if data.get("off"):
+                    return self.send(200, videographer.frame_off(KIT, name, i))
+                run, file = str(data.get("run", "")), str(data.get("file", ""))
+                return self.send(200, videographer.frame_set(KIT, name, i, artist.picture(run, file)[0], {"run": run, "file": file}))
+            if url.path == "/video/frame-upload":           # HERESY 1838: a shot's picture from the user's disk, its bytes the body (?name=&i=)
+                i = q.get("i", "")
+                return self.send(200, videographer.frame_set(KIT, q.get("name", ""), int(i) if i.isdigit() else -1, body, "disk"))
+            if url.path in ("/video/upscale", "/video/upscale-cancel"):   # HERESY 1876b: {name, shots, model 7b|3b, res 1080|1440}
+                data = json.loads(body.decode("utf-8") or "{}")
+                name = str(data.get("name", ""))
+                if url.path == "/video/upscale-cancel":
+                    return self.send(200, upscale_shots.cancel(KIT, name))
+                cards = more_gpus(upscale_shots.NEED_MB, most=3, role="jobs")
+                out = upscale_shots.start(KIT, name, [int(i) for i in data.get("shots") or []], str(data.get("model") or "7b"), int(data.get("res") or 1080), cards)
+                act_say(f"{ACT_SAY['video']} · {name} · SeedVR2 {data.get('model') or '7b'} {data.get('res') or 1080}p: {sum(len(j['shots']) for j in out['jobs'])} shot(s) on {len(out['jobs'])} card(s)")
+                return self.send(202, dict(out, **upscale_shots.status(KIT, name)))
+            if url.path in ("/video/frames", "/video/frames-cancel", "/video/hero"):   # HERESY 1913: the Artist draws the shots; the clip's hero
+                data = json.loads(body.decode("utf-8") or "{}")
+                name = str(data.get("name", ""))
+                if url.path == "/video/frames-cancel":
+                    return self.send(200, frames_job.cancel(KIT, name))
+                if url.path == "/video/hero":
+                    return self.send(200, frames_job.hero_off(KIT, name) if data.get("off") else frames_job.hero_set(KIT, name, data.get("run", ""), data.get("file", "")))
+                out = frames_job.start(KIT, name, data.get("shots") or [], data.get("prompts") or {}, data.get("heroes") or [],
+                                       data.get("refine", frames_job.REFINE), data.get("seed"))
+                act_say(f"{ACT_SAY['video']} · {name} · the Artist draws {out['total']} shot(s)")
+                return self.send(202, out)
+            if url.path in ("/video/shoot", "/video/shoot-cancel", "/video/shot-off", "/video/h3-stop"):   # HERESY 1868
+                data = json.loads(body.decode("utf-8") or "{}")
+                name = str(data.get("name", ""))
+                if url.path == "/video/shoot-cancel":
+                    return self.send(200, h3_shots.cancel(KIT, name, data.get("i")))
+                if url.path == "/video/shot-off":
+                    return self.send(200, videographer.shot_video_off(KIT, name, data.get("i")))
+                if url.path == "/video/h3-stop":
+                    return self.send(200, h3_shots.stop_workers(KIT))
+                cards = more_gpus(h3_shots.NEED_MB, most=3, role="jobs")
+                out = []
+                for i in data.get("shots") or [data.get("i")]:
+                    sh = videographer._shot_of(videographer.get(KIT, name), int(i))
+                    prompt = (data.get("prompts") or {}).get(str(i)) or data.get("prompt") or ""
+                    out.append(h3_shots.shoot(KIT, name, int(i), prompt, str(data.get("mode") or "draft"), cards, data.get("seed"), bool(data.get("first", True)),
+                                              str(data.get("size") or "16:9")))
+                    del sh
+                act_say(f"{ACT_SAY['video']} · {name} · H3 {data.get('mode') or 'draft'}: {len(out)} shot(s) queued")
+                return self.send(202, {"queued": out, **h3_shots.status(KIT, name)})
+            if url.path == "/video/cuts":                   # HERESY 1864: the timeline's edits {name, cuts, parents} or {name, undo: true}
+                data = json.loads(body.decode("utf-8") or "{}")
+                name = str(data.get("name", ""))
+                if data.get("undo"):
+                    return self.send(200, videographer.recut_undo(KIT, name))
+                try:
+                    rows = timing_async(name, cached_only=True).get("rows")
+                except (ValueError, FileNotFoundError, OSError):
+                    rows = None
+                lyrics = json.load(open(take_dir(name) / "request.json", encoding="utf-8")).get("lyrics", "")
+                return self.send(200, videographer.recut(KIT, name, data.get("cuts"), data.get("parents"), rows, lyrics))
+            if url.path == "/video/save":                   # HERESY 1824: the look and the scenes as the page edited them
+                data = json.loads(body.decode("utf-8") or "{}")
+                return self.send(200, videographer.save(KIT, str(data.get("name", "")), data))
+            if url.path in ("/train/protect", "/train/delete-saves"):   # HERESY 1817: a run protected; its saves deleted one by one, as chosen
+                data = json.loads(body.decode("utf-8"))
+                if url.path == "/train/protect":
+                    return self.send(200, training.protect(KIT, str(data.get("name", "")), bool(data.get("on", True))))
+                return self.send(200, training.delete_saves(KIT, str(data.get("name", "")), data.get("files") or [], bool(data.get("loras"))))
             if url.path in ("/train/archive", "/train/delete", "/train/restore", "/train/purge", "/train/unpublish"):   # HERESY 1090
                 data = json.loads(body.decode("utf-8"))
                 if url.path == "/train/archive":
@@ -3276,7 +3940,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(202, batch_async(json.loads(body.decode("utf-8"))))
             if url.path == "/chain/batch/stop":
                 BATCH["stop"] = True
+                for it in BATCH.get("items") or []:          # HERESY 1962: the take in hand stops too, where it stands
+                    if it.get("status") == "running":
+                        chain_stop(it["name"])
                 return self.send(200, dict(BATCH))
+            if url.path == "/chain/stop":                    # HERESY 1962: {name}: the take's chain stopped where it stands
+                return self.send(200, chain_stop(str(json.loads(body.decode("utf-8") or "{}").get("name", ""))))
             if url.path == "/chain":
                 data = json.loads(body.decode("utf-8"))
                 return self.send(202, chain_async(str(data.get("name", "")), data))
@@ -3415,6 +4084,7 @@ def prune_loop():
 if __name__ == "__main__":
     threading.Thread(target=prune_loop, daemon=True).start()
     threading.Thread(target=act_watch, daemon=True).start()     # HERESY 1157
+    perf.start(KIT, OUTPUTS)         # HERESY 1821: the machine once a minute, the folders every six hours
     places.boot()                    # HERESY 1261: a folder linked back from the record, a missing one made, a dangling one said
     print(f"[lab] heresy-lab on :{PORT} · outputs {OUTPUTS} · whisper {WHISPER_DIR}", file=sys.stderr, flush=True)
     training.resume(KIT)            # HERESY 1072: runs still going in their own units are watched again
@@ -3424,4 +4094,6 @@ if __name__ == "__main__":
     if owed:
         print(f"[lab] {owed} API job(s) still to file into their workspaces: watched again", file=sys.stderr, flush=True)
     # HERESY 1114: this machine only; the page reaches the lab through the engine (/lab/), which keeps out the world
+    threading.Thread(target=h3_shots.collector, args=(KIT,), daemon=True).start()   # HERESY 1868: the H3 workers' shots set into their plans
+    threading.Thread(target=upscale_shots.collector, args=(KIT,), daemon=True).start()   # HERESY 1876b: and the upscales
     ThreadingHTTPServer((os.environ.get("LAB_HOST", "127.0.0.1"), PORT), Handler).serve_forever()

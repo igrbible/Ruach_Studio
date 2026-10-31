@@ -54,7 +54,7 @@ If you came looking for a **YuE2 WebUI** or a **YuE studio**: this is one, grown
   <img src="docs/guide/studio-create.png" alt="Ruach Studio: the song form, the take you are listening to, and every take" width="100%">
 </p>
 
-Around the model there is a whole studio of six rooms: the **Creator** makes the song, the **Writer** writes it with a chat model, the **Refiner** finishes it, the **Artist** paints its pictures, the **Librarian** keeps every take, and the **LoRA Trainer** teaches YuE2 your own songs with its own trainer.
+Around the model there is a whole studio of seven rooms: the **Creator** makes the song, the **Writer** writes it with a chat model, the **Refiner** finishes it, the **Artist** paints its pictures, the **Videographer** plans its music video, the **Librarian** keeps every take, and the **LoRA Trainer** teaches YuE2 your own songs with its own trainer.
 
 **The full guide, room by room, is inside the studio** (the **?** in the bar) and here: [docs/GUIDE.md](docs/GUIDE.md). The Artist in depth: [docs/ARTIST.md](docs/ARTIST.md), in the twelve languages of the studio beside it.
 
@@ -346,14 +346,26 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
+### Done › 2.0.3 (October 2026)
+
+- **Sound to MIDI**: MuScriptor turns a take, a stem or any file into multi-instrument MIDI, in the datasheet and as a Refiner step, and opens it in the piano roll.
+- **The Videographer (beta)**: four rooms on one canvas (Editing, Shots, The idea and the look, Animatic and clip); a take cut into shots at its sung lines, the cuts moved onto the beat, the scenes written with the Writer, every shot drawn by the Artist in one go around one hero kept across them, an animatic and a clip with the sung lines, a title and credits, a cut, a dip to black, a flash or a dissolve between sections, in 16:9, 9:16 or 1:1; each shot set in motion by MiniMax H3 (draft or final, long shots in pieces without a seam) and made larger by SeedVR2; an edit page in the manner of DaVinci Resolve, and the plan as an editor's project (OTIO, EDL).
+- **The Refiner's canvas, closer to ComfyUI**: each node's window as large as what it holds, Ctrl+wheel from 50 to 200 %, Mute and Bypass (Ctrl+M, Ctrl+B), a bucket of up to ten takes run as a batch, the way kept as a profile (Ctrl+S, each flow its own layout), and on the running node a bar with its time left and a Stop.
+- **Adapters against their model**: one trained on another model (YuE2's on the RS-FW fine-tune, or the other way round) is marked, asked before it goes in and muted when the model changes; the studio's trainer writes its base into every adapter it saves.
+- **The Refiner's MIDI orchestra and Ambient**: a stem played again by sampled instruments (sfizz, FluidSynth); a fireplace, rain, thunder, a forest, water or birds under the song, as a strip of its own in the DAW.
+- **Sung to the end?**: Whisper says whether a take's last lines were sung and Regenerate from… starts where they stopped; the Librarian checks many at once and marks the takes.
+- **The Library**: reactions beside 🔥 and 💎, blind listening for a workspace, the player's stream in FLAC or Opus, and its place kept in a take.
+- **The Remaster's Colour** gains cassette, radio and hall; an adapter's wave gains Rise and Fall; End at… finds the coda after the song.
+
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
 ### To Do › After 2.0.0
 
 2.0.0 is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
 
 - **Right-to-left languages** (Arabic, Hebrew, Urdu), once the page itself runs right to left.
-- **The Videographer** (2.1.0): a music video for the song, its scenes prompted by a helper and its key frames painted by the Artist.
-- **SeedVR** as an upscaler (2.1.0).
-- **A desktop app**: the studio as an installable page (PWA) first, then an Electron app that starts and stops its services itself (Ctrl+1…6 for the rooms there), packed as an **AppImage**: the studio, its Python and its CUDA libraries in one file, the models fetched at the first start, and the models and the songs kept wherever you choose on your disk.
+- **The Videographer** (2.1.0): several takes a shot with the best kept, and a shot's last frame carried into the next.
+- **A desktop app**: the studio as an installable page (PWA) first, then an Electron app that starts and stops its services itself (Ctrl+1…7 for the rooms there), packed as an **AppImage**: the studio, its Python and its CUDA libraries in one file, the models fetched at the first start, and the models and the songs kept wherever you choose on your disk.
 - **Pinokio on Windows 11**: the launcher runs on Linux now; on Windows its steps will run inside WSL2, the path of INSTALL_WINDOWS.md (asked for in [#1](https://github.com/igrbible/Ruach_Studio/issues/1)).
 - **Native plugins** for REAPER, Waveform and Bitwig, once the studio has found its people.
 
@@ -365,7 +377,7 @@ Issues and pull requests are welcome: they are read and answered.
 - **[yue2.cpp](https://github.com/ServeurpersoCom)** by ServeurpersoCom, the C++ engine on ggml; this studio carries it with its own patches (upstream alone will not run the studio).
 - **[timoncool's yue2.cpp](https://github.com/timoncool/yue2.cpp)** (MIT): the planned score's chords (after Yeufonic) and the opening a plan goes on from (after Mothersuperior's hum-to-song), ported into our engine.
 - **[YuE2 Kit](https://github.com/IronWolve/yue2-kit)** by SeattleSysop (IronWolve), the base of the page and the scripts (Apache License 2.0).
-- **[AI-Toolkit](https://github.com/ostris/ai-toolkit)** by Ostris (MIT): the trainer's YuE2 code was ported from it.
+- **[AI-Toolkit](https://github.com/ostris/ai-toolkit)** by Ostris (MIT): the trainer's YuE2 code was ported from it, and the Videographer's MiniMax H3 runtime (`lab/h3rt`) is taken from it.
 - **Mothersuperior**: the realaudio tokenizer head (CC BY-NC 4.0) and the VAE merge.
 - **Qwen2.5-Omni** (the listener), **Whisper** (the lyrics check), **BS-Roformer** and **htdemucs_ft** (stems), **UniverSR**, **Apollo-vocal** and **FlashSR** (upscale), the **Salamander Grand Piano** and **FluidR3 GM** (the piano roll's instruments), **GTSinger** (CC BY-NC-SA 4.0, training data for voices).
 - **Qwen-Image 2512** by Qwen and its **Lightning** by lightx2v (the artwork's painter) and **Qwen3-4B** (its prompts); **[YuE2 Studio](https://github.com/vrgamegirl19/Yue2_Studio)** (Apache-2.0): the score checker the page and the lab use.
@@ -394,7 +406,7 @@ He did not knock the studio together just to have something that runs. He built 
 
 Виктор Журомский, автор Ruach Studio, публикует её не ради хайпа. Он делал её для себя. После более чем полугода мучений с Suno на платных тарифах и поисков достойной модели (ACE-Step, MiniMax и другие) он взялся построить собственную аудиостудию, на своей машине. Выбор пал на YuE2: из всех открытых моделей она самая рентабельная и самая изысканная.
 
-Студию он делал не тяп-ляп, лишь бы работало, а в своём стиле, потому что и работа у него своя: собственные переводы, подстрочники и многое другое. Он постарался вместить в неё максимум, отполировать интерфейс до блеска и сделать работу со студией не тыканьем и кликаньем среди костылей и ям, а по-настоящему продуктивной.
+Студию он делал не тяп-ляп, лишь бы как-то шло, а в своём стиле, потому что и труд у него свой: собственные переводы, подстрочники и многое другое. Он постарался вместить в неё максимум, отполировать интерфейс до блеска и сделать творчество в студии не тыканьем и кликаньем среди костылей и ям, а по-настоящему продуктивным.
 
 *Вот и вся история. Теперь эта студия и ваша.*
 
@@ -403,9 +415,9 @@ He did not knock the studio together just to have something that runs. He built 
 
 #### Маленька історія
 
-Віктор Журомський, автор Ruach Studio, публікує її не заради хайпу. Він робив її для себе. Після понад пів року мук із Suno на платних тарифах і пошуків гідної моделі (ACE-Step, MiniMax та інші) він узявся збудувати власну аудіостудію, на своїй машині. Вибір упав на YuE2: з усіх відкритих моделей вона найвигідніша й найвишуканіша.
+Віктор Журомський, автор Ruach Studio, публікує її не заради хайпу. Він творив її для себе. Після понад пів року мук із Suno на платних тарифах і пошуків гідної моделі (ACE-Step, MiniMax та інші) він узявся збудувати власну аудіостудію, на своїй машині. Вибір упав на YuE2: з усіх відкритих моделей вона найвигідніша й найвишуканіша.
 
-Студію він робив не абияк, аби лиш працювало, а у своєму стилі, бо й робота в нього своя: власні переклади, підрядники та багато іншого. Він намагався вмістити в неї максимум, відшліфувати інтерфейс до блиску й зробити роботу зі студією не тицянням і клацанням серед милиць і ям, а справді продуктивною.
+Студію він творив не абияк, аби лиш працювало, а у своєму стилі, бо й праця в нього своя: власні переклади, підрядники та багато іншого. Він намагався вмістити в неї максимум, відшліфувати інтерфейс до блиску, щоб творчість у студії була не тицянням і клацанням серед милиць і ям, а справді продуктивною.
 
 *Ось і вся історія. Тепер ця студія і ваша.*
 
@@ -414,9 +426,9 @@ He did not knock the studio together just to have something that runs. He built 
 
 #### Маленькая гісторыя
 
-Віктар Журомскі, аўтар Ruach Studio, публікуе яе не дзеля хайпу. Ён рабіў яе для сябе. Пасля больш як паўгода пакут з Suno на платных тарыфах і пошукаў годнай мадэлі (ACE-Step, MiniMax і іншыя) ён узяўся пабудаваць уласную аўдыястудыю, на сваёй машыне. Выбар упаў на YuE2: з усіх адкрытых мадэляў яна самая выгадная і самая вытанчаная.
+Віктар Журомскі, аўтар Ruach Studio, публікуе яе не дзеля хайпу. Ён ствараў яе для сябе. Пасля больш як паўгода пакут з Suno на платных тарыфах і пошукаў годнай мадэлі (ACE-Step, MiniMax і іншыя) ён узяўся пабудаваць уласную аўдыястудыю, на сваёй машыне. Выбар упаў на YuE2: з усіх адкрытых мадэляў яна самая выгадная і самая вытанчаная.
 
-Студыю ён рабіў не абы-як, абы працавала, а ў сваім стылі, бо і праца ў яго свая: уласныя пераклады, падрадкоўнікі і шмат іншага. Ён стараўся змясціць у яе максімум, адшліфаваць інтэрфейс да бляску і зрабіць працу са студыяй не тыцканнем і клікамі сярод мыліц і ям, а сапраўды прадуктыўнай.
+Студыю ён ствараў не абы-як, абы працавала, а ў сваім стылі, бо і праца ў яго свая: уласныя пераклады, падрадкоўнікі і шмат іншага. Ён стараўся змясціць у яе максімум, адшліфаваць інтэрфейс да бляску, каб творчасць у студыі была не тыцканнем і клікамі сярод мыліц і ям, а сапраўды прадуктыўнай.
 
 *Вось і ўся гісторыя. Цяпер гэтая студыя і ваша.*
 

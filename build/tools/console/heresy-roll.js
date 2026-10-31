@@ -219,9 +219,11 @@
           '<span class="roll-grp" role="group" aria-label="' + esc(tr("The staff in hand")) + '">' +
             '<button type="button" class="chip roll-voice is-vocal" data-roll-voice="Vocal" aria-pressed="true" data-tip="' + esc(tr("The vocal staff in hand: what is sung. Ins stays drawn faint behind it")) + '">Vocal</button>' +
             '<button type="button" class="chip roll-voice is-ins" data-roll-voice="Ins" aria-pressed="false" data-tip="' + esc(tr("The instruments' staff in hand: their melody. Vocal stays drawn faint behind it")) + '">Ins</button></span>' +
-          '<span class="roll-grp" role="group" aria-label="' + esc(tr("Grid and the length of a new note")) + '">' + snapChips() + "</span>" +
+          '<span class="roll-grp roll-snap-inline" role="group" aria-label="' + esc(tr("Grid and the length of a new note")) + '">' + snapChips() + "</span>" +
+          // HERESY 1829: under 2200 px the lengths are one button, its window holding them all
+          '<button type="button" class="btn ghost small roll-pop-btn roll-snap-btn" id="rollSnapBtn" data-roll-pop="snap" aria-haspopup="true" aria-expanded="false" data-tip="' + esc(tr("Grid and the length of a new note")) + '"><b id="rollSnapN"></b> \u25be</button>' +
           '<button type="button" class="btn ghost small roll-pop-btn" id="rollKeysBtn" data-roll-pop="keys" aria-haspopup="true" aria-expanded="false" data-tip="' + esc(tr("The keys of one's own MIDI keyboard: how many it has (marked over the keyboards) and which octaves are in sight")) + '"><b id="rollKeysN"></b> \u25be</button>' +   // 1600
-          '<button type="button" class="btn ghost small" id="rollTpOpen" data-tip="' + esc(tr("Transpose a segment: drag along the bar numbers at the left to pick its bars, then draw the shift on a curve")) + '">⇅ ' + esc(tr("Transpose")) + "</button>" +
+          '<button type="button" class="btn ghost small" id="rollTpOpen" data-tip="' + esc(tr("Transpose a segment: drag along the bar numbers at the left to pick its bars, then draw the shift on a curve")) + '">⇅<span class="roll-tp-word"> ' + esc(tr("Transpose")) + "</span></button>" +   // HERESY 1829: the word from 2200 px
           '<span class="roll-sp"></span>' +
           '<span class="roll-grp" role="group" aria-label="' + esc(tr("What is heard")) + '">' +
             chip("data-roll-from", "original", false, tr("Original"), "Hear the score as YuE2 wrote it") + chip("data-roll-from", "edited", true, tr("Edited"), "Hear the score as it stands now") +
@@ -276,7 +278,7 @@
     tempo.addEventListener("wheel", function (e) { e.preventDefault(); bpm(R.bpm + (e.deltaY < 0 ? 1 : -1)); }, { passive: false });
     tempo.addEventListener("dblclick", function () { bpm(R.G.free ? 80 : R.G.bpm); });
     bpm(R.G.free ? keptFreeBpm() : R.G.bpm);
-    keysSay();                                        // 1600
+    keysSay(); snapSay();                             // 1600, 1829
     $("rollBpmRange").addEventListener("input", function (e) { bpm(+e.target.value); });
     R.popOut = function (e) { if (R && R.pop && !R.pop.contains(e.target) && !(R.popBtn && R.popBtn.contains(e.target))) popClose(); };
     document.addEventListener("pointerdown", R.popOut, true);
@@ -303,7 +305,8 @@
         '<div class="roll-pop-big" id="rollBpmBig"></div>' +
         '<div class="roll-pop-steps">' + [-4, -1, 1, 4].map(function (d) { return '<button type="button" class="chip" data-roll-bpm="' + d + '">' + (d < 0 ? "\u2212" + -d : "+" + d) + "</button>"; }).join("") + "</div>" +
         '<input type="range" id="rollBpmRange" min="30" max="240" step="1" aria-label="' + esc(tr("Tempo")) + '">' +
-        '<button type="button" class="btn ghost small" data-roll-bpm-own="1">' + esc(tr("The score's own")) + "</button></div>" + soundPop();
+        '<button type="button" class="btn ghost small" data-roll-bpm-own="1">' + esc(tr("The score's own")) + "</button></div>" + soundPop() +
+      '<div class="roll-pop roll-pop-snap" id="rollSnapPop" hidden role="menu"><div class="roll-pop-oct"><span>' + esc(tr("Grid and the length of a new note")) + "</span>" + snapChips() + "</div></div>";   // HERESY 1829
   }
   // 1624: the pedal, the acoustics and the grand's lid, a row each
   var SOUND_ROWS = [["pedal", "Pedal", "The sustain pedal, as a pianist uses it: a note does not stop at its end but rings on, dying away, until the pedal is changed on the next bar line (three seconds at most). Long notes: a beat or longer; Always: every note; otherwise the damper falls at each note's end",
@@ -318,7 +321,7 @@
     }).join("") + "</div>";
   }
   function popOpen(kind, btn) {
-    var p = $(kind === "keys" ? "rollKeysPop" : kind === "sound" ? "rollSoundPop" : "rollTempoPop"), head = R.back.querySelector(".roll-head");
+    var p = $(kind === "keys" ? "rollKeysPop" : kind === "sound" ? "rollSoundPop" : kind === "snap" ? "rollSnapPop" : "rollTempoPop"), head = R.back.querySelector(".roll-head");
     if (R.pop === p) { popClose(); return; }
     popClose();
     p.hidden = false; R.pop = p; R.popBtn = btn;
@@ -330,6 +333,7 @@
   }
   function popClose() { if (!R || !R.pop) return; R.pop.hidden = true; if (R.popBtn) R.popBtn.setAttribute("aria-expanded", "false"); R.pop = null; R.popBtn = null; }
   function keysSay() { var b = $("rollKeysN"); if (b) b.textContent = tr("{0} keys").replace("{0}", R.profile); }
+  function snapSay() { var b = $("rollSnapN"); if (b) b.textContent = lenName(R.snap); }   // HERESY 1829
   function snapChips() {
     var q = R.G.unit / 4, list = [[q * 4, "1/1"], [q * 2, "1/2"], [q, "1/4"], [q / 2, "1/8"], [q / 4, "1/16"], [q / 8, "1/32"]];
     return list.filter(function (x) { return x[0] >= 1 && x[0] === Math.round(x[0]); }).map(function (x) {
@@ -849,7 +853,7 @@
     if (b.dataset.rollPop) { popOpen(b.dataset.rollPop, b); return; }   // 1600
     if (b.dataset.rollBpmOwn) { bpm(R.G.free ? 80 : R.G.bpm); return; }
     if (b.dataset.rollVoice) voice(b.dataset.rollVoice);
-    else if (b.dataset.rollSnap) { R.snap = +b.dataset.rollSnap; R.len = R.snap; pick("data-roll-snap", b.dataset.rollSnap); paint(); say(); }
+    else if (b.dataset.rollSnap) { R.snap = +b.dataset.rollSnap; R.len = R.snap; pick("data-roll-snap", b.dataset.rollSnap); snapSay(); if (R.pop && R.pop.id === "rollSnapPop") popClose(); paint(); say(); }
     else if (b.dataset.rollKeys) { profile(+b.dataset.rollKeys); pick("data-roll-keys", b.dataset.rollKeys); keysSay(); popClose(); try { localStorage.setItem("yue2.rollKeys", b.dataset.rollKeys); } catch (x) { /* private mode */ } paint(); }
     else if (b.dataset.rollOct) { if (+b.dataset.rollOct === 0) { center(); paint(); } else shiftWindow(+b.dataset.rollOct); }
     else if (b.dataset.rollTop) b.closest(".roll-paper").scrollTo({ top: 0, behavior: "smooth" });
@@ -1136,7 +1140,7 @@
     var q = R.G.unit / 4, lens = [q * 4, q * 2, q, q / 2, q / 4, q / 8].filter(function (x) { return x >= 1 && x === Math.round(x); });
     var l = lens[Math.min(lens.length - 1, Math.floor(v / 128 * lens.length))];
     if (l === R.len) return;
-    R.len = R.snap = l; pick("data-roll-snap", l); paint(); say(tr("new note") + " " + lenName(l));
+    R.len = R.snap = l; pick("data-roll-snap", l); snapSay(); paint(); say(tr("new note") + " " + lenName(l));
   }
   function lights() { if (R && window.HeresyMidi) window.HeresyMidi.transport({ playing: !!R.play, recording: !!R.rec }); }
   document.addEventListener("keydown", function (e) { if (R && e.key === "Shift") R.shift = true; });

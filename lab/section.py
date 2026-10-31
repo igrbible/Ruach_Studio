@@ -140,7 +140,7 @@ def _run(jid, name, req, codes, parts, lyrics, state):
     state["status"] = "running"
     made = []
     for ver in state["versions"]:
-        v, seed = ver["v"], random.randrange(1, 2 ** 31)
+        v, seed = ver["v"], random.randint(1000, 999999999)
         ver.update(status="running", lm_seed=seed)
         drafts = []
         try:
@@ -377,7 +377,7 @@ def _repeat_run(jid, name, req, codes, a, b, section, lyrics, abc, state, gap=0.
     try:
         base = int(req.get("lm_seed"))
     except (TypeError, ValueError):
-        base = random.randrange(1, 2 ** 31)
+        base = random.randint(1000, 999999999)
     state["status"] = "running"
     made = []
     for i, ver in enumerate(state["versions"]):
@@ -559,7 +559,7 @@ def _window_run(jid, name, req, codes, own, win, a, b, A, B, lyrics, state):
     state["status"] = "running"
     made = []
     for ver in state["versions"]:
-        v, seed = ver["v"], random.randrange(1, 2 ** 31)
+        v, seed = ver["v"], random.randint(1000, 999999999)
         ver.update(status="running", lm_seed=seed)
         drafts = []
         try:

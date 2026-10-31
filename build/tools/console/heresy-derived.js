@@ -14,10 +14,17 @@
   // HERESY 1484: a step's report (read, not played)
   function isText(f) { return f.kind === "text" || /\.(txt|json|md|csv)$/i.test(f.file || f.path || ""); }
   function isImage(f) { return f.kind === "image" || /\.(png|jpe?g|webp|svg)$/i.test(f.file || f.path || ""); }   // HERESY 1557: a step's picture
+  function isMidi(f) { return f.kind === "midi" || /\.midi?$/i.test(f.file || f.path || ""); }   // HERESY 1834: a MIDI set's file: downloaded, not played
   // HERESY 1489: a download signed on the way when Content Credentials are on (app.js holds the switch)
   function signed(url, fmt, take, path) { return window.HeresyC2pa ? window.HeresyC2pa.url(url, fmt, take, path) : url; }
   function fileUrl(name, path) { return "/library/file?name=" + encodeURIComponent(name) + "&path=" + encodeURIComponent(path); }
-  var KIND = { stems: "Stems", remaster: "Remaster", upscale: "Upscale", debuzz: "Debuzz", daw: "DAW mix", gate: "Digital Gateway" };   // HERESY 1471; 1547
+  var KIND = { stems: "Stems", remaster: "Remaster", upscale: "Upscale", debuzz: "Debuzz", daw: "DAW mix", gate: "Digital Gateway", midi: "Sound to MIDI" };   // HERESY 1471; 1547; 1834
+  // HERESY 1834: a MIDI set in a line: its size, its notes, its instruments by how many notes each played
+  function midiSummary(m) {
+    var size = tt(m.size === "large" ? "Large" : m.size === "medium" ? "Medium" : "Small");
+    return [size, tt("{0} notes").replace("{0}", m.notes || 0)].concat((m.instruments || []).slice().sort(function (a, b) { return b.notes - a.notes; }).slice(0, 5)
+      .map(function (i) { return String(i.label).replace(/_/g, " ") + " " + i.notes; })).join(" · ");
+  }
   // HERESY 1471: a DAW mix in a line: its set, its loudness, the stems it played in another version
   function dawSummary(m) {
     var l = m.loudness || {}, v = m.versions || {}, other = Object.keys(v).filter(function (k) { return !/^derived\/stems-/.test(v[k]); });
@@ -50,7 +57,7 @@
     if (!take) return out;
     state.list.forEach(function (m) {
       (m.files || []).forEach(function (f) {
-        if (isText(f) || isImage(f)) return;            // HERESY 1484: a report is no source (1557: nor a picture)
+        if (isText(f) || isImage(f) || isMidi(f)) return;   // HERESY 1484: a report is no source (1557: nor a picture; 1834: nor MIDI)
         out.push({ name: take.name, source: f.path, url: fileUrl(take.name, f.path), kind: m.kind,
                    step: m.kind === "plugin" ? "plugin:" + m.plugin + ":" + m.step : undefined,   // HERESY 1460
                    label: "↳ " + title(f) + " (" + kindName(m) + (m.mode ? ", " + (MODE[m.mode] || m.mode) : "") + stemsFrom(m) + ")" });
@@ -197,7 +204,7 @@
       '<span class="dv-acts"><button type="button" class="btn small primary dv-compare" data-dv-compare="0" data-tip="Every version of this take in one player: switch between them at the same second (1–9, Space)">Compare all</button>' +
       '<button type="button" class="btn ghost small dv-mon" data-dv-mon="' + esc("") + '" aria-pressed="false" data-tip="Play it through Forge\'s monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before">On Forge</button>' +   // HERESY 1548
       '<a class="btn ghost small" href="' + esc(signed("/library/flac?name=" + encodeURIComponent(take.name), "flac", take)) + '" download="' + esc((take.label || take.name) + ".flac") + '">FLAC</a></span></div>';   // HERESY 1489; 1513: its buttons one column
-    if (!state.list.length && !state.running.length) html += state.unread ? '<p class="row-hint dv-empty is-unread">What was made from this take could not be read: the lab\'s answer broke off or did not parse. Open the take again; if it stays, a branch\'s manifest.json is at fault (Engine → Server and log)</p>'   // HERESY 1576: not an empty that lies
+    if (!state.list.length && !state.running.length) html += state.reading ? '<p class="row-hint dv-empty is-reading">Reading what was made from this take…</p>' : state.unread ? '<p class="row-hint dv-empty is-unread">What was made from this take could not be read: the lab\'s answer broke off or did not parse. Open the take again; if it stays, a branch\'s manifest.json is at fault (Engine → Server and log)</p>'   // HERESY 1576: not an empty that lies
       : '<p class="row-hint dv-empty">Nothing made from this take yet.</p>';
     // HERESY 1129: what runs now stands first: the tree grows upward, the newest on top
     state.running.forEach(function (j, i) {
@@ -215,6 +222,7 @@
         (m.mode ? " · " + esc(MODE[m.mode] || m.mode) : "") + esc(stemsFrom(m).replace(", from", " · from")) + (m.kind === "remaster" ? " · " + esc(summary(m)) : "") +
         (m.kind === "debuzz" ? " · " + esc(debuzzSummary(m)) : "") +
         (m.kind === "gate" ? " · " + esc(gateSummary(m)) : "") +   // HERESY 1547
+        (m.kind === "midi" ? ' · <span translate="no">' + esc(midiSummary(m)) + "</span>" : "") +   // HERESY 1834
         (m.kind === "daw" ? " · " + esc(dawSummary(m)) : "") +   // HERESY 1471
         (m.kind === "upscale" ? " · from " + esc(String(m.source || "the take").replace("derived/", "")) + ", above " + Math.round((m.cutoff_hz || 0) / 1000) + " kHz" + (m.keep_low ? ", original kept below" : "") : "") +
         '<span class="dv-meta">' + esc((m.models || []).join(" + ")) + " · " + esc(m.created || "") + (m.took ? " · " + Math.round(m.took) + " s" : "") + "</span>" +
@@ -228,6 +236,10 @@
           html += '<div class="dv-node is-image">' + nm + '<a class="dv-pic" href="' + esc(url) + '" target="_blank" rel="noopener"><img src="' + esc(url) + '" alt="" loading="lazy" /></a>' +
             '<a class="btn ghost small" translate="no" href="' + esc(url) + '" download="' + esc((take.label || take.name) + " - " + (f.file || title(f))) + '">' +
             esc(String(f.file || f.path).split(".").pop().toUpperCase()) + "</a></div>";
+          return;
+        }
+        if (isMidi(f)) {                                // HERESY 1834: a MIDI file: downloaded (a DAW, the roll), not played here
+          html += '<div class="dv-node is-midi">' + nm + '<a class="btn ghost small" translate="no" href="' + esc(url) + '" download="' + esc((take.label || take.name) + " · " + (m.size || "midi") + ".mid") + '">MIDI</a></div>';
           return;
         }
         if (isText(f)) {                                // HERESY 1484: a report: read here, or its file
@@ -277,6 +289,8 @@
   var RATE = { debuzz: 0.18, remaster: 0.12, upscale: 1.8, stems: 0.7, daw: 0.05, gate: 0.12 };   // 1547: 36–50 s for 6:37 at 4×   // HERESY 1471: 18 s for 6:37 of eight stems
   function progress(j) {
     var el = Math.max(0, Math.round(Date.now() / 1000 - (j.started || Date.now() / 1000)));
+    if (j.kind === "midi" && j.status === "running" && j.progress != null)   // HERESY 1834: the program says how far: the real bar
+      return { pct: Math.max(3, Math.round(j.progress * 100)), say: tt("{0} % · {1} notes").replace("{0}", Math.round(j.progress * 100)).replace("{1}", j.notes || 0) };
     var len = state.take && state.take.seconds || 0, rate = RATE[j.kind] * (j.kind === "stems" && j.mode === "four" ? 1.8 : j.kind === "stems" && j.mode === "six" ? 1.1 : j.kind === "stems" && j.mode === "eight" ? 2.1 : 1);   // 1462: six measured 0.75 s a second
     var clockS = function (s) { return s >= 60 ? Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2) : s + " s"; };
     if (j.status === "queued") return { pct: 3, say: "waiting for Forge\u2026 " + clockS(el) };
@@ -288,8 +302,8 @@
   // the step's own block carries its jobs at its top, its tab a beating dot; each step shows what it has made for the
   // take (a click finds it in the tree), and the step open lights its own branches in the tree. The floating card of
   // 1060 (it sat over the server log and the takes) is retired.
-  var PANEL = { stems: "derivedPanel", remaster: "remasterPanel", upscale: "upscalePanel", debuzz: "debuzzPanel", gate: "gatePanel" };   // 1547
-  var STEP_KIND = { derivedPanel: "stems", remasterPanel: "remaster", upscalePanel: "upscale", debuzzPanel: "debuzz", dawPanel: "daw", gatePanel: "gate" };   // 1471; 1547
+  var PANEL = { stems: "derivedPanel", remaster: "remasterPanel", upscale: "upscalePanel", debuzz: "debuzzPanel", gate: "gatePanel", midi: "midiPanel" };   // 1547; 1834
+  var STEP_KIND = { derivedPanel: "stems", remasterPanel: "remaster", upscalePanel: "upscale", debuzzPanel: "debuzz", dawPanel: "daw", gatePanel: "gate", midiPanel: "midi" };   // 1471; 1547; 1834
   function slots(kind) {
     var p = $(PANEL[kind]), body = p && p.querySelector(".drawer-body");
     if (!body) return null;
@@ -384,6 +398,7 @@
     return fetch("/lab/derived?name=" + encodeURIComponent(name), { priority: "low" }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (token !== state.token) return;
+        state.reading = false;                        // HERESY 1906
         if (!d) { state.unread = true; if (!state.list.length) paint(); return; }   // HERESY 1576
         state.unread = false;
         state.list = d.derived || [];
@@ -395,11 +410,12 @@
         paintUpSources();
         paintDbSources();
         paintStSources();
+        paintMdSources();                               // HERESY 1834
         // while Forge works on this take, look again every three seconds
         clearTimeout(state.watch);
         if (state.running.some(function (j) { return j.status !== "failed"; })) state.watch = setTimeout(refresh, 3000);
       }).catch(function () {
-        if (token === state.token) { state.unread = true; if (!state.list.length) paint(); }   // HERESY 1576: an answer that did not parse is said, not shown as nothing
+        if (token === state.token) { state.reading = false; state.unread = true; if (!state.list.length) paint(); }   // HERESY 1576: an answer that did not parse is said, not shown as nothing
         // a dropped answer on a slow line: keep watching while something was running
         if (token === state.token && state.running.some(function (j) { return j.status !== "failed"; })) {
           clearTimeout(state.watch);
@@ -505,6 +521,42 @@
       .then(function () { $("upRun").disabled = false; });
   }
 
+  // ---- HERESY 1834: sound to MIDI (MuScriptor): the take or any file of the tree, at a size the lab has (the suggested first)
+  function paintMdSources() {
+    var sel = $("mdSource");
+    if (!sel) return;
+    var keep = sel.value;
+    sel.innerHTML = '<option value="">the take</option>' + files().map(function (f) {
+      return '<option value="' + esc(f.source) + '">' + esc(f.label.replace(/^↳ /, "")) + "</option>";
+    }).join("");
+    sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }) ? keep : "";
+  }
+  function paintMdSizes() {
+    var sel = $("mdSize");
+    if (!sel) return Promise.resolve();
+    return fetch("/lab/midi/status").then(function (r) { return r.json(); }).then(function (st) {
+      var keep = sel.value, here = st.here || [];
+      sel.innerHTML = here.map(function (s) {
+        return '<option value="' + s + '">' + esc(tt(s === "large" ? "Large" : s === "medium" ? "Medium" : "Small")) + (s === st.suggest ? " · " + esc(tt("suggested")) : "") + "</option>";
+      }).join("");
+      sel.value = here.indexOf(keep) >= 0 ? keep : here.indexOf(st.suggest) >= 0 ? st.suggest : (here[0] || "");
+      $("mdRun").disabled = !st.built || !here.length;
+      $("mdState").textContent = !st.built ? tt("The transcriber is not built: ./build.sh builds it") :
+        !here.length ? tt("No MuScriptor model here: Engine → Models and LoRAs → Sound to MIDI fetches one") : "";
+    }).catch(function () { /* the lab answers later: asked again when the step opens */ });
+  }
+  function midi() {
+    if (!state.take) return;
+    var q = "name=" + encodeURIComponent(state.take.name) + "&size=" + encodeURIComponent($("mdSize").value || "") +
+      ($("mdSource").value ? "&source=" + encodeURIComponent($("mdSource").value) : "");
+    $("mdRun").disabled = true;
+    $("mdState").textContent = "sending to Forge…";
+    fetch("/lab/midi?" + q).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); })
+      .then(function () { $("mdState").textContent = "running on Forge: the bar above says how far; it lands in the tree"; refresh(); })
+      .catch(function (e) { $("mdState").textContent = "Could not: " + (e.message || e); })
+      .then(function () { $("mdRun").disabled = false; });
+  }
+
   // ---- debuzz (HERESY 1030): the take or any file of the tree but a debuzzed or upscaled one
   function paintDbSources() {
     var sel = $("dbSource");
@@ -559,6 +611,11 @@
     if (!$("derivedPanel")) return;
     state.hooks = hooks || {};
     if ($("upRun")) $("upRun").addEventListener("click", upscale);
+    if ($("mdRun")) {                                   // HERESY 1834
+      $("mdRun").addEventListener("click", midi);
+      $("midiPanel").addEventListener("toggle", function () { if (this.open) paintMdSizes(); });
+      paintMdSizes();
+    }
     if ($("dbRun")) $("dbRun").addEventListener("click", debuzz);   // HERESY 1030
     if ($("rmRun")) {
       $("rmRun").addEventListener("click", remaster);
@@ -730,6 +787,17 @@
     if (hk.pauseMain) hk.pauseMain();
     active = Math.max(0, Math.min(versions.length - 1, active || 0));
     var audios = versions.map(function (v) { var a = new Audio(); a.preload = "metadata"; a.src = v.url; a.dataset.oneSound = "compare"; return a; });   // HERESY 1476: they hand over among themselves
+    // HERESY 1871: a take's Opus the lab cannot make: its FLAC, as the footer's player does
+    audios.forEach(function (a, i) {
+      a.addEventListener("error", function () {
+        var v = versions[i];
+        if (!v.flac || v.url === v.flac || a.dataset.cached === "1") return;
+        var t = a.currentTime || 0, was = !a.paused;
+        v.url = v.flac; a.src = v.flac;
+        if (t) a.addEventListener("loadedmetadata", function () { try { a.currentTime = t; } catch (e) { /* not seekable yet */ } }, { once: true });
+        if (was) a.play().catch(function () {});
+      });
+    });
     // HERESY 1504: a take rated through the Librarian's hooks, a file made from one through the lab's marks
     var byTake = !!(hk.rating && hk.rate);
     var rated = (byTake && versions.some(function (v) { return v.take; })) || versions.some(function (v) { return v.mark; });
@@ -750,8 +818,10 @@
     var rateHtml = function (v) {
       if (!rated || !rateable(v)) return "";
       return '<span class="cmp-rate"><button type="button" class="coll-act" data-cmp-rate="1" aria-label="Like">' + ico("like") + "</button>" +
+        (v.take && window.HeresyCollection && window.HeresyCollection.markBtns ? window.HeresyCollection.markBtns(v.take) : "") +   // HERESY 1871: 🔥 💎 after 👍, as on the cards
         '<button type="button" class="coll-act" data-cmp-rate="-1" aria-label="Dislike">' + ico("dislike") + "</button>" +
         (v.mark || hk.favorite ? '<button type="button" class="coll-act fav" data-cmp-fav="1" aria-label="Favourite">' + ico("star") + "</button>" : "") +
+        (v.take && hk.sheet ? '<button type="button" class="coll-act cmp-sheet-btn" data-cmp-sheet="1" aria-pressed="false" aria-label="Style and lyrics" data-tip="Its style and lyrics in a sheet beside the window">' + ico("sheet-portrait") + "</button>" : "") +   // HERESY 1872
         (v.take && hk.note && hk.setNote ? '<button type="button" class="coll-act cmp-note" data-cmp-note="1" aria-label="Note" data-tip="A note on this take">' + ico("note") + "</button>" : "") + "</span>";   // HERESY 1724
     };
     var back = document.createElement("div");
@@ -834,6 +904,9 @@
     }
     function fetchWhole(i) {
       return fetch(versions[i].url).then(function (r) {
+        if (!r.ok && versions[i].flac && versions[i].url !== versions[i].flac) { versions[i].url = versions[i].flac; return fetch(versions[i].flac); }   // HERESY 1871
+        return r;
+      }).then(function (r) {
         if (!r.ok) throw new Error(r.status);
         size[i] = +r.headers.get("Content-Length") || 0;
         if (!r.body || !r.body.getReader) return r.blob();
@@ -925,8 +998,98 @@
       wantPeaks(active);
       drawWave();
     }
+    // HERESY 1872: a take's sheet beside the window: its style (five lines, scrolling) over its lyrics, the window a fifth narrower to its left,
+    // the pair centred; its corner makes it wider and taller (kept), its text − + ⟲ (kept); it follows the version playing
+    var sheet = null, SHEET_SIZE = "yue2.cmpSheetSize", SHEET_Z = "yue2.cmpSheetZoom";
+    function sheetGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+    function sheetPut(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* the session's own */ } }
+    function sheetZoom() { var k = parseInt(sheetGet(SHEET_Z) || "0", 10); return isFinite(k) ? Math.max(-2, Math.min(2, k)) : 0; }
+    function sheetPaintZoom() {
+      if (!sheet) return;
+      var k = sheetZoom();
+      sheet.el.style.setProperty("--sheet-t", String(Math.round(Math.pow(1.1, k) * 1000) / 1000));
+      sheet.el.querySelector('[data-sheet-z="-1"]').disabled = k <= -2;
+      sheet.el.querySelector('[data-sheet-z="1"]').disabled = k >= 2;
+      sheet.el.querySelector('[data-sheet-z="0"]').disabled = k === 0;
+    }
+    function sheetFill(i) {
+      if (!sheet) return;
+      var v = versions[i], my = sheet.seq = (sheet.seq || 0) + 1, el = sheet.el;
+      sheet.i = i;
+      Array.prototype.forEach.call(box.querySelectorAll("[data-cmp-sheet]"), function (b) { b.setAttribute("aria-pressed", String(+b.closest("[data-cmp-li]").dataset.cmpLi === i)); });
+      el.querySelector(".cmp-sheet-name").textContent = v.label;
+      var put = function (d) {
+        if (!sheet || sheet.seq !== my) return;
+        var st = el.querySelector(".cmp-sheet-style"), ly = el.querySelector(".cmp-sheet-lyrics"), style = d && d.style ? String(d.style) : "", lyrics = d && d.lyrics ? String(d.lyrics) : "";
+        st.classList.toggle("is-empty", !style);
+        st.textContent = style || tt("No style");
+        ly.classList.toggle("is-empty", !lyrics);
+        ly.innerHTML = lyrics ? lyrics.replace(/\r\n?/g, "\n").split("\n").map(function (line) {
+          return /^\s*\[[^\]]*\]\s*$/.test(line) ? '<span class="cmp-sheet-tag">' + esc(line) + "</span>" : esc(line);
+        }).join("\n") : esc(tt("No lyrics"));
+        ly.scrollTop = 0; st.scrollTop = 0;
+      };
+      var p = v.take && hk.sheet ? hk.sheet(v.take) : null;
+      if (p && p.then) p.then(put, function () { put(null); }); else put(null);
+    }
+    function sheetOpen(i) {
+      if (sheet) { if (sheet.i === i) return sheetClose(); return sheetFill(i); }
+      var el = document.createElement("aside");
+      el.className = "cmp-sheet";
+      el.setAttribute("aria-label", "Style and lyrics");
+      var ui = function (n) { return window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(n) : ""; };
+      el.innerHTML = '<div class="cmp-sheet-head" data-tip="Drag its corner to make it wider and taller; a double click here puts its size back"><div class="cmp-sheet-title">' +
+        '<span class="cmp-sheet-k">Style and lyrics</span><b class="cmp-sheet-name" translate="no"></b></div>' +
+        '<span class="lyr-over-fs" role="group" aria-label="Text size"><button type="button" class="btn ghost small icon-btn" data-sheet-z="-1" aria-label="Smaller text" data-tip="Smaller text here">' + ui("text-smaller") +
+        '</button><button type="button" class="btn ghost small icon-btn" data-sheet-z="1" aria-label="Larger text" data-tip="Larger text here">' + ui("text-larger") +
+        '</button><button type="button" class="btn ghost small icon-btn" data-sheet-z="0" aria-label="The text as it starts" data-tip="The text as it starts">' + ui("text-reset") + "</button></span>" +
+        '<button type="button" class="btn ghost small icon-btn" data-sheet="close" aria-label="Close the sheet (Esc)" data-tip="Close the sheet (Esc)">' + ui("x") + "</button></div>" +
+        '<div class="cmp-sheet-label">Style</div><div class="cmp-sheet-style" translate="no"></div>' +
+        '<div class="cmp-sheet-label">Lyrics</div><div class="cmp-sheet-lyrics" translate="no"></div>';
+      var kept = null;
+      try { kept = JSON.parse(sheetGet(SHEET_SIZE) || "null"); } catch (e) { kept = null; }
+      if (kept && kept.w > 0 && kept.h > 0) { el.style.width = Math.round(kept.w) + "px"; el.style.height = Math.round(kept.h) + "px"; }
+      back.appendChild(el);
+      back.classList.add("has-sheet");
+      sheet = { el: el, i: -1, w0: 0, h0: 0 };
+      var r0 = el.getBoundingClientRect();
+      sheet.w0 = r0.width; sheet.h0 = r0.height;
+      if (window.ResizeObserver) {                       // its corner dragged: the size kept for the next time
+        sheet.ro = new ResizeObserver(function () {
+          if (!sheet || sheet.el !== el) return;
+          var r = el.getBoundingClientRect();
+          if (Math.abs(r.width - sheet.w0) > 2 || Math.abs(r.height - sheet.h0) > 2) { sheetPut(SHEET_SIZE, JSON.stringify({ w: Math.round(r.width), h: Math.round(r.height) })); sheet.w0 = r.width; sheet.h0 = r.height; }
+          drawWave();
+        });
+        sheet.ro.observe(el);
+      }
+      el.querySelector(".cmp-sheet-head").addEventListener("dblclick", function (e) {
+        if (e.target.closest("button")) return;
+        sheetPut(SHEET_SIZE, null); el.style.width = ""; el.style.height = "";
+        var r = el.getBoundingClientRect(); sheet.w0 = r.width; sheet.h0 = r.height;
+      });
+      el.addEventListener("click", function (e) {
+        var z = e.target.closest("[data-sheet-z]"), c = e.target.closest('[data-sheet="close"]');
+        if (c) return sheetClose();
+        if (z) { var k = +z.dataset.sheetZ === 0 ? 0 : Math.max(-2, Math.min(2, sheetZoom() + +z.dataset.sheetZ)); sheetPut(SHEET_Z, k ? String(k) : null); sheetPaintZoom(); }
+      });
+      sheetPaintZoom();
+      sheetFill(i);
+      requestAnimationFrame(drawWave);
+    }
+    function sheetClose() {
+      if (!sheet) return;
+      if (sheet.ro) sheet.ro.disconnect();
+      sheet.el.remove();
+      sheet = null;
+      back.classList.remove("has-sheet");
+      Array.prototype.forEach.call(box.querySelectorAll("[data-cmp-sheet]"), function (b) { b.setAttribute("aria-pressed", "false"); });
+      requestAnimationFrame(drawWave);
+      box.focus();
+    }
     function pick(i) {
       if (i < 0 || i >= audios.length || i === active) return;
+      if (sheet && versions[i].take) sheetFill(i);       // HERESY 1872: the sheet follows the version playing
       var from = cur(), to = audios[i], t = from.readyState >= 1 ? (from.currentTime || 0) : lastT, playing = !from.paused;
       lastT = t;
       var place = function () { try { to.currentTime = Math.min(t, isFinite(to.duration) ? Math.max(0, to.duration - 0.05) : t); } catch (e) { /* not seekable yet */ } };
@@ -939,6 +1102,8 @@
     }
     function toggle() { var a = cur(); if (a.paused) a.play().catch(function () {}); else a.pause(); paint(); }
     function close() {
+      if (sheet && sheet.ro) sheet.ro.disconnect();     // HERESY 1872
+      sheet = null;
       audios.forEach(function (a) { a.pause(); a.removeAttribute("src"); a.load(); });
       cached.forEach(function (u) { if (u) URL.revokeObjectURL(u); });   // HERESY 1621: the memory given back
       document.removeEventListener("keydown", key, true);
@@ -948,7 +1113,7 @@
     }
     function key(e) {
       if (document.querySelector(".hd-back")) return;   // HERESY 1724: a dialog over the window (the note) has the keys
-      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); return close(); }
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); return sheet ? sheetClose() : close(); }   // HERESY 1872: the sheet first
       if (e.target && box.contains(e.target) && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && e.target.type !== "checkbox") return;
       if (e.key === " ") { e.preventDefault(); return toggle(); }
       if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); var a = cur(); a.currentTime = Math.max(0, (a.currentTime || 0) + (e.key === "ArrowRight" ? 5 : -5)); return paint(); }
@@ -973,10 +1138,11 @@
       paintRates();
     });
     box.addEventListener("click", function (e) {
-      var rb = e.target.closest("[data-cmp-rate]"), fb = e.target.closest("[data-cmp-fav]"), nb = e.target.closest("[data-cmp-note]");
+      var rb = e.target.closest("[data-cmp-rate]"), fb = e.target.closest("[data-cmp-fav]"), nb = e.target.closest("[data-cmp-note]"), sb = e.target.closest("[data-cmp-sheet]");
+      if (sb) return sheetOpen(+sb.closest("[data-cmp-li]").dataset.cmpLi);   // HERESY 1872
       if (nb) {                                          // HERESY 1724: the take's note, as its card's menu writes it
         var vn = versions[+nb.closest("[data-cmp-li]").dataset.cmpLi];
-        window.HeresyDialog.prompt("A note on “" + vn.label + "”\n\nEmpty removes it.", noteOf(vn), { ok: "Keep the note", max: 600, area: true, rows: 5 })
+        window.HeresyDialog.prompt("A note on “" + vn.label + "”\n\nEmpty removes it.", noteOf(vn), { ok: "Keep the note", max: 600, area: true, rows: 6, cls: "hd-note" })
           .then(function (t) { if (t !== null) { var p = hk.setNote(vn.take, t); if (p && p.then) p.then(paintRates, paintRates); else paintRates(); } box.focus(); });
         return;
       }
@@ -1026,6 +1192,7 @@
     clearTimeout(state.watch);
     state.list = [];
     state.running = [];
+    state.reading = !!take;                         // HERESY 1906: until the lab answers, «Reading…», never «Nothing made»
     say("");
     paint();
     refresh();
@@ -1033,7 +1200,7 @@
 
   // HERESY 1169: the de-esser as set, for the chain when it splits stems (remasterSettings says it for this step's own source)
   function chainDeess() { return !!($("rmDeess") && $("rmDeess").checked); }
-  window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh, remasterSettings: remasterSettings, chainDeess: chainDeess, compareList: openCompare,
+  window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh, mdSizes: paintMdSizes, remasterSettings: remasterSettings, chainDeess: chainDeess, compareList: openCompare,
                            list: function () { return state.list.slice(); },   // 1506: the branches as the lab names them (kind, source), for the Refiner's canvas
                            marks: function (name) { return Object.assign({}, MARKS[name] || {}); } };   // 1415; 1504
 })();

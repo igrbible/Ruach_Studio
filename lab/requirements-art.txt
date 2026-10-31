@@ -32,3 +32,8 @@ kernels                       # diffusers imports it; its remote kernels are not
 peft                          # HERESY 1316: the Artist's LoRA adapters (diffusers' loaders)
 scipy                         # HERESY 1319: the beta schedule
 spandrel                      # HERESY 1322: the Artist's upscalers (MIT; its loader unpickles only what a model is made of)
+omegaconf==2.4.0              # HERESY 1876b: the Videographer's upscaler, SeedVR2 (lab/seedvr2rt): its configs
+rotary-embedding-torch==0.9.1 # its DiT's rotary embedding
+opencv-python-headless==5.0.0.93   # its frames in and out (headless: no GUI libraries)
+# HERESY 1870: the Videographer's MiniMax H3 (lab/h3rt, lab/h3_worker.py) runs here too and needs nothing more: torch, transformers 5,
+# accelerate, safetensors and triton (torch's own) are above; its weights are models/minimax-h3 (heresy/fetch-heresy.sh --h3)

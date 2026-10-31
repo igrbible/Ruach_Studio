@@ -169,7 +169,7 @@ document.addEventListener("keydown", function (e) {
   }
 
   function system(preferences) {
-    var text = SONGWRITER.replace(/\s+$/, "") + "\n" + HERESY_ADDENDUM + heard() + unheard() + adapters() + styles() + voices();
+    var text = SONGWRITER.replace(/\s+$/, "") + "\n" + HERESY_ADDENDUM + heard() + unheard() + adapters() + styles() + voices() + fwWords();   // 1822
     var own = String(preferences || "").trim();
     return own ? text + "\n\nUSER WRITING PREFERENCES\n" + own : text;
   }
@@ -201,7 +201,10 @@ document.addEventListener("keydown", function (e) {
   }
 
   // HERESY 1167: what this studio knows of its engine, for the Creator's idea writer too (its own prompt is the Kit's)
-  function knowledge() { return HERESY_ADDENDUM + heard() + unheard() + adapters() + styles() + voices(); }
+  // HERESY 1822 (Viktor 28.10.2026: «Для Писателя нужна наша FW шпаргалка»): the words the First Wave learned, by the part of the style line they fill
+  var FW_WORDS = "The First Wave (the studio's fine-tune) was taught on 32633 tracks; these are the words their style lines were written in most. A style line goes: language (or Instrumental), genre, voice, instruments, mood, up to four emotion words, the key, tempo in BPM. Prefer these words; a word the model never met is a guess.\nLanguages: English, Spanish, Portuguese, French, russian, Italian, Japanese, German, Chinese, Korean, Turkish\nGenres: Electronic, pop, soundtrack, Folk, classical, rock, ambient, easy listening, jazz, Hip-Hop, Experimental, dance, Singer-Songwriter, chill out, indie, house, alternative, hip hop, funk, Experimental Pop, pop rock, lounge, pop folk, rap, Indie-Rock, Techno, instrumental pop, reggae, new age, blues, orchestral, Country, world, Downtempo, Ambient Electronic, IDM, Trip-Hop, cinematic, atmospheric, disco, relaxing, International, R&B, Electroacoustic, Americana\nVoice: female alto vocal, female voice, male voice, male tenor vocal, falsetto, mixed voice, breathy, vibrato, distant choir, clear diction, female singer, No singing, No sung chorus, a male rapper\nInstruments: piano, bass, drums, guitar, electric guitar, synthesizer, acoustic guitar, keyboard, violin, drum machine, strings, cello, saxophone, flute, classical guitar, electric piano, percussion, brass, bell, bongo, double bass, harp, orchestra, accordion, sampler, acoustic bass guitar, viola, trumpet, Celtic harp, ukulele, rhodes, harmonica, organ, clarinet, horn, pipe organ, oboe, psaltery, breathy flute, celesta\nMood: energetic, meditative, upbeat, dramatic, groovy, calm, catchy, funny, smooth, intimate, soulful, slow rubato, ethereal, jazzy, dreamy, hypnotic, intense, sexy\nEmotion words (up to four): playful, numb, low energy, menacing, restrained, harsh, bright, ecstatic, cold, aching, anguished, angry, bitter, grateful, soothing, euphoric, romantic, fragile, solemn, triumphant, hopeful, sensual, melancholic, commanding, warm, expressive, humorous, ominous, awe-struck, proud, tender, contemplative, yearning, dark, serene, soft, high energy, detached, vulnerable, yielding\nSound and space: Natural room, Wide, close-miked, deep reverb, dusty, reverb-heavy, long tape delay, immersive depth, vinyl haze, reverse swells, vinyl crackle dust texture\nPace: fast pace, slow pace, moderate pace, slow tempo\nUse: corporate, drama, documentary, motivational, action, commercial, movie, soundscape, sport, game\nKeys are written like «A minor» or «Eb major», tempo like «96 BPM».";
+  function fwWords() { return "\n\nTHE WORDS THE FIRST WAVE LEARNED\n" + FW_WORDS; }
+  function knowledge() { return HERESY_ADDENDUM + heard() + unheard() + adapters() + styles() + voices() + fwWords(); }
   window.HeresyAssist = { SONGWRITER: SONGWRITER, TASKS: TASKS, CHIPS: CHIPS, system: system, user: user, parse: parse, abcHeader: abcHeader,
                           knowledge: knowledge };
 })();

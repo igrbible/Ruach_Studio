@@ -320,7 +320,7 @@
       <a class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Models on Hugging Face</a>
       <a class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Buy me a Coffee Machine</a>
     </div>
-    <span class="rc"><b>2.0.2</b> · the studio's own Writer · October 2026</span>
+    <span class="rc"><b>2.0.3</b> · the Videographer to a finished clip · October 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -332,7 +332,7 @@
     <div class="nums">
       <div><b>8 min</b><span>whole songs, up to eight minutes</span></div>
       <div><b>135 s</b><span>a 6:12 song on one RTX 3090</span></div>
-      <div><b>6 rooms</b><span>to make, write, refine, paint, keep and teach</span></div>
+      <div><b>7 rooms</b><span>to make, write, refine, paint, film, keep and teach</span></div>
       <div><b>200</b><span>instruments probed by ear</span></div>
       <div><b>12</b><span>languages of the page</span></div>
     </div>
@@ -350,9 +350,9 @@
 
   <section id="rooms">
     <div class="wrap">
-      <h2>Six rooms, one studio</h2>
+      <h2>Seven rooms, one studio</h2>
       <p class="sub">The <b>Creator</b> makes the song, the <b>Writer</b> writes it with a chat model, the <b>Refiner</b>
-        finishes it, the <b>Artist</b> paints its pictures, the <b>Librarian</b> keeps every take, and the <b>LoRA Trainer</b> teaches YuE2 your own songs.
+        finishes it, the <b>Artist</b> paints its pictures, the <b>Videographer</b> plans its music video, the <b>Librarian</b> keeps every take, and the <b>LoRA Trainer</b> teaches YuE2 your own songs.
         A guide for every room is inside the studio.</p>
       <div class="rooms">
         <article class="room"><a class="pic" href="assets/shots/studio-create.webp" data-night="assets/shots/studio-create-night.webp"><img class="day" src="assets/shots/studio-create.webp" alt="Creator" loading="lazy"><img class="night" src="assets/shots/studio-create-night.webp" alt="Creator" loading="lazy"></a>
@@ -653,7 +653,7 @@
 
 <footer>
   <div class="wrap">
-    <span>Ruach Studio · 2.0.2 · a work of <a href="https://igr.bible">igr.bible</a></span> <span class="links"><a href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changelog</a><a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Coffee Machine</a></span>
+    <span>Ruach Studio · 2.0.3 · a work of <a href="https://igr.bible">igr.bible</a></span> <span class="links"><a href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changelog</a><a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Coffee Machine</a></span>
   </div>
 </footer>
 
@@ -806,13 +806,22 @@
   // HERESY 1801: the vocabulary's window; its page in the card's language and day or night
   (function () {
     var m = document.getElementById("vocab-modal"), f = document.getElementById("vocab-frame");
-    function open() {
+    function theme() {
       var th = document.documentElement.getAttribute("data-theme");
-      if (!th) th = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-      var src = "/vocabulary/index.html?embed=1&lang=" + encodeURIComponent(document.documentElement.lang || "en") + "&theme=" + th;
-      if (f.getAttribute("src") !== src) f.setAttribute("src", src);
+      return th || (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    }
+    // 28.10.2026 (Viktor: «при переключении режима темы не подхватывает активный день/ночь. Только по F5»): the frame is told the page's day or
+    // night whenever it changes, and when it loads; reopening keeps the frame it has
+    function sync() { try { var d = f.contentDocument; if (d && d.documentElement) d.documentElement.setAttribute("data-theme", theme()); } catch (e) {} }
+    function open() {
+      var base = "/vocabulary/index.html?embed=1&lang=" + encodeURIComponent(document.documentElement.lang || "en");
+      if ((f.getAttribute("src") || "").split("&theme=")[0] !== base) f.setAttribute("src", base + "&theme=" + theme());
+      else sync();
       m.hidden = false; document.body.style.overflow = "hidden";
     }
+    f.addEventListener("load", sync);
+    new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", sync);
     function close() { m.hidden = true; document.body.style.overflow = ""; if (location.hash === "#vocabulary") history.replaceState(null, "", location.pathname + location.search); }
     document.getElementById("vocab-open").addEventListener("click", open);
     document.getElementById("vocab-close").addEventListener("click", close);

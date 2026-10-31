@@ -112,6 +112,22 @@
         '<span class="wr-item-meta"><span>' + esc(when(d.updated)) + "</span>" + (d.takes ? " · <span>" + d.takes + " take" + (d.takes > 1 ? "s" : "") + "</span>" : "") +   // HERESY 1166
         (d.versions ? " · <span>" + d.versions + " v</span>" : "") + "</span></button>";
     }).join("") : '<p class="row-hint wr-empty">' + (state.docs.length ? "Nothing for “" + esc(state.q) + "”." : "No documents yet. ＋ New, or “Save to Writer” in the Creator.") + "</p>";
+    paintRecent();                                       // HERESY 1858
+  }
+  // HERESY 1858 (Viktor 29.10.2026, UIX #2: «сделай»): with no document open, the room's right side shows the latest documents as cards; a click opens one
+  function paintRecent() {
+    var box = $("wrRecent");
+    if (!box) return;
+    var hand = recall(HAND_KEY), t = function (d) { return +d.updated || Date.parse(d.updated) / 1000 || 0; };
+    var docs = state.docs.slice().sort(function (x, y) { return t(y) - t(x); }).slice(0, 12);
+    box.hidden = !!state.doc || !docs.length;
+    box.innerHTML = !docs.length ? "" : '<h3 class="wr-cap">' + esc(tr("Recent documents")) + '</h3><div class="wr-cards">' + docs.map(function (d) {
+      return '<button type="button" class="wr-card" data-doc="' + esc(d.id) + '">' +
+        '<span class="wr-card-title" translate="no">' + (d.id === hand ? '<span class="wr-hand-dot" title="In hand in the Creator">✎</span> ' : "") + esc(d.title) + "</span>" +
+        '<span class="wr-card-ex" translate="no">' + esc(d.excerpt || d.style || "") + "</span>" +
+        '<span class="wr-item-meta"><span>' + esc(when(d.updated)) + "</span>" + (d.takes ? " · <span>" + d.takes + " take" + (d.takes > 1 ? "s" : "") + "</span>" : "") +
+        (d.versions ? " · <span>" + d.versions + " v</span>" : "") + "</span></button>";
+    }).join("") + "</div>";
   }
 
   // ---- one document
@@ -125,6 +141,7 @@
   function paintDoc() {
     var doc = state.doc, v = state.view !== null && doc ? doc.versions[state.view] : null, src = v || doc;
     $("wrEmpty").hidden = !!doc; $("wrDoc").hidden = !doc;
+    if ($("wrRecent")) $("wrRecent").hidden = !!doc || !state.docs.length;   // HERESY 1858
     if (!doc) return;
     $("wrTitle").value = src.title || "";
     $("wrStyle").value = src.style || "";
@@ -293,6 +310,7 @@
     })();
     $("wrSearch").addEventListener("input", function () { state.q = this.value; paintList(); });
     $("wrList").addEventListener("click", function (e) { var b = e.target.closest("[data-doc]"); if (b) open(b.dataset.doc); });
+    $("wrRecent").addEventListener("click", function (e) { var b = e.target.closest("[data-doc]"); if (b) open(b.dataset.doc); });   // HERESY 1858
     $("wrNew").addEventListener("click", function () {
       flush().then(function () { return api({ op: "put", title: "Untitled" }); })
         .then(function (doc) { return loadList().then(function () { return open(doc.id); }); })

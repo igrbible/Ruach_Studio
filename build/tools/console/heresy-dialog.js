@@ -53,7 +53,7 @@
     return new Promise(function (resolve) {
       var back = document.createElement("div"), before = document.activeElement;
       back.className = "hd-back";
-      back.innerHTML = '<div class="hd-box" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
+      back.innerHTML = '<div class="hd-box' + (opts.cls ? " " + esc(opts.cls) : "") + '" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +   // HERESY 1825: a class of its own
         '<div class="hd-title">' + esc(title) + "</div>" + (body ? '<div class="hd-body">' + esc(body) + "</div>" : "") + waveHtml(opts) +
         (kind === "prompt" && opts.area ? '<textarea class="hd-input hd-area" rows="' + (opts.rows || 8) + '" maxlength="' + (opts.max || 4000) + '" placeholder="' + esc(opts.placeholder || "") + '"></textarea>' + (opts.max && opts.max <= 1000 ? '<div class="hd-count" aria-live="polite"></div>' : "")   // HERESY 1428: lines, Ctrl+Enter keeps; 1802: a short one counts
           : kind === "prompt" ? '<input type="text" class="hd-input" maxlength="' + (opts.max || 200) + '" placeholder="' + esc(opts.placeholder || "") + '" />' : "") +
@@ -117,7 +117,8 @@
         waveHtml(opts) + (long ? '<input type="search" class="hd-input hd-filter" placeholder="' + esc(opts.filter || "Filter") + '" />' : "") +
         '<div class="hd-list" role="listbox">' + items.map(function (it, i) {
           return '<button type="button" role="option" class="hd-item' + (it.current ? " is-current" : "") + '" data-i="' + i +
-            '" style="--depth:' + (it.depth || 0) + '"' + tipAttrs(it, opts) + (it.current ? ' aria-selected="true"' : "") + '><span class="hd-item-label"' + (it.words ? "" : ' translate="no"') + '>' +   // HERESY 1379b: words: true, a word to translate, not a name
+            '" data-q="' + esc((String(it.label || "") + " " + (it.note == null ? "" : String(it.note))).toLowerCase()) +
+            '" style="--depth:' + (it.depth || 0) + '"' + tipAttrs(it, opts) + (it.current ? ' aria-selected="true"' : "") + '>' + (it.path ? '<span class="hd-item-path" translate="no">' + esc(it.path) + " \u203a </span>" : "") + '<span class="hd-item-label"' + (it.words ? "" : ' translate="no"') + '>' +   // HERESY 1853: the parents before the name   // HERESY 1379b: words: true, a word to translate, not a name
             esc(it.label) + "</span>" + (it.note != null && it.note !== "" ? '<span class="hd-item-note">' + esc(it.note) + "</span>" : "") +
             (it.current ? '<span class="hd-item-tick" aria-hidden="true">\u2713</span>' : "") + "</button>";
         }).join("") + "</div>" +
@@ -158,7 +159,8 @@
       back.querySelector(".hd-no").addEventListener("click", function () { done(null); });
       if (filter) filter.addEventListener("input", function () {
         var q = filter.value.trim().toLowerCase();
-        rows.forEach(function (r) { r.hidden = !!q && r.textContent.toLowerCase().indexOf(q) < 0; });
+        rows.forEach(function (r) { r.hidden = !!q && r.dataset.q.indexOf(q) < 0; });   // HERESY 1853: its own name and note, not its parents'
+        back.querySelector(".hd-list").classList.toggle("is-filtering", !!q);          // HERESY 1853: a section found says where it stands
       });
       requestAnimationFrame(function () {
         back.classList.add("is-on");

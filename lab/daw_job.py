@@ -48,7 +48,8 @@ def fit(x):
 names, signals, residual, used = [], [], source.copy(), {}
 for s in info["strips"]:
     own = fit(read(s["path"]))
-    residual -= own                                   # the rest: what the source holds beyond the set's own parts
+    if not s.get("added"):                            # HERESY 1929: an added strip (an ambient layer) is no part of the set
+        residual -= own                               # the rest: what the source holds beyond the set's own parts
     path = picked.get(s["name"]) or s["path"]
     if path not in [v["path"] for v in s["versions"]]:
         raise SystemExit(f"{path} is not a version of {s['name']}")

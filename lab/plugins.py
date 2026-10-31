@@ -222,6 +222,9 @@ def result(stdout):
         src = str(f.get("source") or "")          # HERESY 1553: the stem it is a version of, inside the take
         if src and src.startswith("derived/") and ".." not in src.split("/") and not src.startswith("/"):
             files[-1]["source"] = src
+        track = str(f.get("track") or "")         # HERESY 1929: a strip the DAW adds (an ambient layer), by a plain name
+        if re.fullmatch(r"[a-z][a-z0-9_]{0,39}", track):
+            files[-1]["track"] = track
     if not files:
         raise RuntimeError("the step made no file")
     return {"files": files, "measure": r.get("measure") or {}, "took": r.get("took"), "summary": str(r.get("summary") or "")[:300]}

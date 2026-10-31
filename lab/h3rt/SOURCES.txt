@@ -1,0 +1,23 @@
+AI-Toolkit (https://github.com/ostris/ai-toolkit), MIT, Copyright (c) 2024 Ostris, LLC
+commit b69b98314557f7c8b08e11bbb14e48d959e6ab26 2026-10-27
+
+memory_management/__init__.py                        ← toolkit/memory_management/__init__.py
+memory_management/manager.py                         ← toolkit/memory_management/manager.py
+memory_management/manager_modules.py                 ← toolkit/memory_management/manager_modules.py
+minimax_h3/audio_vae.py                              ← extensions_built_in/diffusion_models/minimax_h3/src/audio_vae.py
+minimax_h3/packing.py                                ← extensions_built_in/diffusion_models/minimax_h3/src/packing.py
+minimax_h3/pipeline.py                               ← extensions_built_in/diffusion_models/minimax_h3/src/pipeline.py
+minimax_h3/text_encoder.py                           ← extensions_built_in/diffusion_models/minimax_h3/src/text_encoder.py
+minimax_h3/transformer.py                            ← extensions_built_in/diffusion_models/minimax_h3/src/transformer.py
+minimax_h3/vae.py                                    ← extensions_built_in/diffusion_models/minimax_h3/src/vae.py
+minimax_h3/vsa.py                                    ← extensions_built_in/diffusion_models/minimax_h3/src/vsa.py
+minimax_h3/vsa_kernels/__init__.py                   ← extensions_built_in/diffusion_models/minimax_h3/src/vsa_kernels/__init__.py
+minimax_h3/vsa_kernels/block_sparse_attn_triton.py   ← extensions_built_in/diffusion_models/minimax_h3/src/vsa_kernels/block_sparse_attn_triton.py
+minimax_h3/vsa_kernels/index.py                      ← extensions_built_in/diffusion_models/minimax_h3/src/vsa_kernels/index.py
+quant/comfy_quant_import.py                          ← toolkit/util/comfy_quant_import.py
+quant/convrot_quant.py                               ← toolkit/util/convrot_quant.py
+quant/convrot_w4a8_quant.py                          ← toolkit/util/convrot_w4a8_quant.py
+quant/float8_quant.py                                ← toolkit/util/float8_quant.py
+quant/nvfp4_quant.py                                 ← toolkit/util/nvfp4_quant.py
+quant/ostris_quant.py                                ← toolkit/util/ostris_quant.py
+qwen3_vl.py                                          ← toolkit/models/v2/text_encoders/qwen3_vl.py

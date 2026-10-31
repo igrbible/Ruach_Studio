@@ -202,6 +202,23 @@ if [ -f "$SS2" ] && { [ ! -f "$ROOT/models/MERT-v2-FullSong-${SS2##*-}" ] || [ "
     fi
 fi
 
+# ── HERESY 1834 (Viktor 28.10.2026: «вживляй MuScriptor в Студию — в паспорт треков и в самого Огранщика»): the transcriber of any sound into
+#    multi-instrument MIDI is a small program of its own (build/muscriptor: muscriptor.cpp at its pinned commit, with the ggml it pins), built into
+#    build/build-muscriptor the first time and when its source is newer. Not the server's build: it never restarts the studio. Its fetch needs
+#    the network once; a failure is said and the build goes on (Engine → Models says the transcriber is missing)
+MSC_BIN="$ROOT/build/build-muscriptor/ruach-muscriptor"
+if [ -f "$ROOT/build/muscriptor/CMakeLists.txt" ] && { [ ! -x "$MSC_BIN" ] || [ -n "$(find "$ROOT/build/muscriptor" -type f -newer "$MSC_BIN" 2>/dev/null | head -1)" ]; }; then
+    step "the MIDI transcriber (MuScriptor)"
+    MSC_GEN=(); ninja --version >/dev/null 2>&1 && MSC_GEN=(-G Ninja)
+    if { [ -f "$ROOT/build/build-muscriptor/CMakeCache.txt" ] || cmake -S "$ROOT/build/muscriptor" -B "$ROOT/build/build-muscriptor" "${MSC_GEN[@]}" \
+            -DCMAKE_BUILD_TYPE=Release >"$ROOT/build/muscriptor-configure.log" 2>&1; } \
+       && nice -n 10 cmake --build "$ROOT/build/build-muscriptor" -j "$(nproc)" >"$ROOT/build/muscriptor-build.log" 2>&1; then
+        echo -e "${G}  build/build-muscriptor/ruach-muscriptor${X}"
+    else
+        echo -e "${Y}  not built (build/muscriptor-configure.log, build/muscriptor-build.log say why): sound to MIDI stays off${X}"
+    fi
+fi
+
 # ── HERESY 1169: our fixes to ggml (a submodule, someone else's fork) are patch files of our own, build/ggml-patches/:
 #    put on before the server is built, each once (one already on is passed over; one that no longer fits is said)
 GGML_PUT=0

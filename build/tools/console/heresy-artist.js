@@ -1227,7 +1227,7 @@
         { ok: tr("Outpaint"), placeholder: tr("a stormy sea, more of the cliff…"), allowEmpty: true }).then(function (words) {
         if (words === null || words === undefined) return;
         var brush = $("arPainter").value, painter = /^qwen21/.test(brush) && PAINTER_INFO[brush] && PAINTER_INFO[brush].outpaint ? brush : "qwen21";
-        var body = { prompt: String(words || "").trim(), shapes: [to], count: 1, seed: p.seed || Math.floor(Math.random() * 2147483000), painter: painter,
+        var body = { prompt: String(words || "").trim(), shapes: [to], count: 1, seed: p.seed || (window.ruachShortSeed ? +window.ruachShortSeed() : 1000 + Math.floor(Math.random() * 999999000)),   /* HERESY 1877 */ painter: painter,
                      ref: { id: r.id, file: p.file }, ref_as: "edit", outpaint: true, preview: $("arLive").checked };
         if (painter === "qwen21-fp8") body.model = $("arModel").value;
         if (state.take) body.take = state.take.name;
@@ -2811,5 +2811,10 @@
     painters: loadPainters, sampling: { now: sampNow, body: samplingBody, paint: paintSampling },   // HERESY 1318, 1319
     forget: function () { state.painted = false; },     // HERESY 1375: for the checks: a page whose list of painters has not come yet
     canvas: { open: openCanvas, place: function () { return state.place; } },   // HERESY 1346: for the checks
-    get: openGet };                                      // HERESY 1347
+    get: openGet,                                        // HERESY 1347
+    form: function (prompt, shape, said) {               // HERESY 1839: the Videographer's shot, its picture to draw: its words and shape, the lettering off
+      fillForm({ prompt: prompt, shapes: [shape || "16:9"], count: 1 }, false);
+      lettersLoad({}); lettersKeep(); paintLetters();
+      if (said && state.hooks.toast) state.hooks.toast(said);
+    } };
 })();

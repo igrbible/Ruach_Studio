@@ -71,6 +71,28 @@ pk = daw.peaks(d, info, "drums", info["strips"][2]["path"], 300)
 assert len(pk) == 300 and abs(max(pk) - float(np.abs(parts["drums"]).max())) < 2e-3, (len(pk), max(pk))
 pr = daw.peaks(d, info, "rest", "", 300)
 assert abs(max(pr) - float(np.abs(miss).max())) < 2e-3, max(pr)
+# HERESY 1929: an added strip: a step's file that says "track", of the take's length; made again, a version of it; never in the rest
+(d / "derived/plugin-amb-1").mkdir(parents=True); (d / "derived/plugin-amb-2").mkdir(parents=True)
+amb1, amb2 = (rng.standard_normal((n, 2)) * 0.02).astype(np.float32), (rng.standard_normal((n, 2)) * 0.02).astype(np.float32)
+sf.write(d / "derived/plugin-amb-1/rain.flac", amb1, rate, subtype="PCM_24"); sf.write(d / "derived/plugin-amb-2/rain.flac", amb2, rate, subtype="PCM_24")
+am = [{"id": f"plugin-amb-{k}", "kind": "plugin", "label": "Ambient", "source": "derived/stems-eight", "created": f"2026-10-30 1{k}:00",
+       "files": [{"name": f"rain {k}", "file": "rain.flac", "path": f"derived/plugin-amb-{k}/rain.flac", "track": "ambient_rain"}]} for k in (1, 2)]
+for k, m in enumerate(am, 1):
+    json.dump(m, open(d / f"derived/plugin-amb-{k}/manifest.json", "w"))
+info2 = daw.set_info(d, "derived/stems-eight", [pm] + am)
+add = [s for s in info2["strips"] if s.get("added")]
+assert [s["name"] for s in add] == ["ambient_rain"] and [v["path"] for v in add[0]["versions"]] == [m["files"][0]["path"] for m in am], add
+xr, _ = sf.read(io.BytesIO(daw.chunk(d, info2, "rest", "", 1.0, 0.5)), dtype="float64")
+assert np.max(np.abs(xr - miss[48000:72000])) < 2e-4, "an added strip was taken out of the rest"
+assert abs(max(daw.peaks(d, info2, "rest", "", 300)) - float(np.abs(miss).max())) < 2e-3
+y, res = mixdown({"schema": S, "strips": {}})
+assert np.max(np.abs(y - (song + amb1))) < 1e-4, "the mix does not play the added strip on top"
+y, res = mixdown({"schema": S, "strips": {}}, {"ambient_rain": am[1]["files"][0]["path"]})
+assert np.max(np.abs(y - (song + amb2))) < 1e-4, "the added strip's version is not played"
+y, res = mixdown({"schema": S, "strips": {"ambient_rain": {"mute": True}}})
+assert np.max(np.abs(y - song)) < 1e-4, "a muted added strip still sounds"
+for k in (1, 2):
+    (d / f"derived/plugin-amb-{k}/manifest.json").unlink()
 # HERESY 1487: the wave of any file of the tree: n stretches, 0…1, its length; a path outside the take refused
 def _check_file_peaks():
     import tempfile

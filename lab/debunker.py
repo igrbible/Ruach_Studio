@@ -607,11 +607,25 @@ COLOUR = {
               ("velvet", "highpass=f=800,lowpass=f=7000", ":density=0.0003", -12, -40.7),   # мелкий треск
               ("velvet", "lowpass=f=3000", ":density=0.00002", -20, -56.4),                # редкие щелчки
               ("brown", "lowpass=f=40", "", -6, -21.5)],                                    # рокот проигрывателя
+    # HERESY 1845 (TODO: «кассетный wow и flutter, полоса старого радио, воздух зала»); RMS кирпичей замерены 29.10.2026, 20 с
+    "cassette": [("pink", "highpass=f=2000,lowpass=f=11000", "", 0, -21.7)],             # шипение кассеты: выше и ярче ленты
+    "radio": [("white", "highpass=f=900,lowpass=f=5000", "", 0, -12.2),                 # эфир
+              ("velvet", "highpass=f=600,lowpass=f=5000", ":density=0.0008", -10, -37.7)],   # его треск
+    "hall": [("brown", "highpass=f=25,lowpass=f=220", "", 0, -17.0),                     # гул зала
+             ("pink", "highpass=f=180,lowpass=f=2500", "", -9, -19.7)],                  # воздух публики
 }
+# HERESY 1845: окраска, что трогает и саму песню. Кассета: медленное плавание 0,55 Гц и быстрая детонация 6,5 Гц (замер на синусе 1 кГц
+# 29.10.2026: ±0,115 % и ±0,078 % высоты; глубина vibrato не линейна, d подобраны замером), верх срезан на 12,5 кГц. Радио: моно, полоса
+# 300 Гц – 3,4 кГц, чуть сжато; его эфир тоже моно (один сид на оба канала)
+COLOUR_MUSIC = {
+    "cassette": "vibrato=f=0.55:d=0.015,vibrato=f=6.5:d=0.006,lowpass=f=12500",
+    "radio": "pan=stereo|c0=0.5*c0+0.5*c1|c1=0.5*c0+0.5*c1,highpass=f=300,lowpass=f=3400,acompressor=threshold=0.125:ratio=3:attack=5:release=120:makeup=2",
+}
+COLOUR_MONO = {"radio"}
 
 
 def apply_colour(input_path, output_path, kind, under_db=-36.0, sample_rate=48000, seed=None):
-    """Окраска: слой шума kind (tape | room | vinyl) на under_db дБ под громкостью музыки."""
+    """Окраска: слой шума kind (tape | room | vinyl | cassette | radio | hall) на under_db дБ под громкостью музыки; кассета и радио трогают и песню."""
     import random
     if kind not in COLOUR:
         print(_cvet(f"  ✗ Окраска: нет такой ({kind})", K))
@@ -620,16 +634,17 @@ def apply_colour(input_path, output_path, kind, under_db=-36.0, sample_rate=4800
     if lufs is None:
         print(_cvet("  ✗ Окраска: громкость не замерилась", K))
         return False
-    ref, seed = lufs + float(under_db), int(seed) if seed is not None else random.randrange(1, 2 ** 30)
+    ref, seed = lufs + float(under_db), int(seed) if seed is not None else random.randint(1000, 999999999)   # HERESY 1877
     print(f"  Окраска «{kind}»: {under_db:+.0f} дБ под музыкой ({lufs:.1f} LUFS), сид {seed}...")
     graph, labels = [], []
     for i, (col, chain, extra, rel, rms) in enumerate(COLOUR[kind]):
         gain = ref + rel - rms
         for ch in (0, 1):
-            graph.append(f"anoisesrc=c={col}:a=1:r={sample_rate}:seed={seed + 2 * i + ch}{extra},{chain},volume={gain:.2f}dB[n{i}{ch}]")
+            graph.append(f"anoisesrc=c={col}:a=1:r={sample_rate}:seed={seed + 2 * i + (0 if kind in COLOUR_MONO else ch)}{extra},{chain},volume={gain:.2f}dB[n{i}{ch}]")
         graph.append(f"[n{i}0][n{i}1]join=inputs=2:channel_layout=stereo[n{i}]")
         labels.append(f"[n{i}]")
-    graph.append(f"[0:a]aformat=channel_layouts=stereo[m];[m]{''.join(labels)}amix=inputs={1 + len(labels)}:duration=first:normalize=0[out]")
+    music = ("," + COLOUR_MUSIC[kind]) if kind in COLOUR_MUSIC else ""      # HERESY 1845
+    graph.append(f"[0:a]aformat=channel_layouts=stereo{music}[m];[m]{''.join(labels)}amix=inputs={1 + len(labels)}:duration=first:normalize=0[out]")
     ok = run_ffmpeg(["-i", input_path, "-filter_complex", ";".join(graph), "-map", "[out]", "-ar", str(sample_rate),
                      "-c:a", "pcm_s24le", output_path], "Окраска")
     if ok:

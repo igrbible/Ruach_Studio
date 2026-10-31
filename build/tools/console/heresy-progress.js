@@ -38,6 +38,11 @@
   }
   function paintTrain(list, since) {
     var el = trainStrip(), dock = $("logDock"), eng = $("view-engine");
+    // HERESY 1862: the log folded to a chip carries the training: its percent and a thin line along its foot; the bar itself waits for the unfold
+    var chipped = !!(dock && dock.classList.contains("is-chip")), cp = $("logDockChipPct"), t0 = list[0], tp = t0 && t0.steps ? Math.min(1, (t0.step || 0) / t0.steps) : null;
+    if (dock) { dock.classList.toggle("has-train", !!list.length); dock.style.setProperty("--chip-train", tp != null ? (tp * 100).toFixed(1) + "%" : "0%"); }
+    if (cp) { cp.hidden = !chipped || tp == null; cp.textContent = tp != null ? Math.round(tp * 100) + "%" : ""; }
+    if (chipped) { el.hidden = true; roomFor(null); return; }
     if (!list.length) { el.hidden = true; el.innerHTML = ""; roomFor(null); return; }
     // HERESY 1630 (Viktor 20.10.2026: «При открытом Engine прогресс бары Тренера поверх идут и не скрываются»): Engine has the log and the cards of its own
     if (eng && !eng.classList.contains("is-hidden")) { el.hidden = true; roomFor(null); return; }

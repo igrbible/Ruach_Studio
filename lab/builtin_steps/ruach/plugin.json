@@ -277,6 +277,175 @@
    ]
   },
   {
+   "id": "ambient",
+   "label": "Ambient",
+   "say": "a layer of nature under the song",
+   "tip": "A fireplace, rain, thunder, a forest, a waterfall, a mountain river, tropical birds or a canary under the song, as a strip of its own in the DAW, with its own fader. Recordings are field recordings from the bank, looped without a seam; Synthesis is made here. It sits under the song by the dB asked where it sounds, fades in and out, and may breathe with the song; thunder strikes near and far by turns, on the song's peaks or at random. Made again, it is a version of its strip.",
+   "script": "ambience.py",
+   "input": "stems",
+   "rate": 0.06,
+   "group": "mend",
+   "after": "derivedPanel",
+   "params": [
+    {
+     "key": "layer",
+     "label": "Layer",
+     "type": "select",
+     "default": "rain",
+     "options": [
+      [
+       "fire",
+       "Fireplace"
+      ],
+      [
+       "rain",
+       "Rain"
+      ],
+      [
+       "thunder",
+       "Thunder"
+      ],
+      [
+       "forest",
+       "Forest"
+      ],
+      [
+       "waterfall",
+       "Waterfall"
+      ],
+      [
+       "river",
+       "Mountain river"
+      ],
+      [
+       "birds",
+       "Tropical birds"
+      ],
+      [
+       "canary",
+       "Canary"
+      ]
+     ],
+     "tip": "What sounds under the song"
+    },
+    {
+     "key": "source",
+     "label": "Sound",
+     "type": "select",
+     "default": "bank",
+     "options": [
+      [
+       "bank",
+       "Recordings"
+      ],
+      [
+       "bank2",
+       "Recordings II"
+      ],
+      [
+       "synth",
+       "Synthesis"
+      ]
+     ],
+     "tip": "Recordings: the layer's first field recording in the bank, chosen by ear (for the fireplace, Dartington); Recordings II: its second. Synthesis only where it held up by ear, light rain and thunder; the other layers are recordings only"
+    },
+    {
+     "key": "level",
+     "label": "Under the song, dB",
+     "type": "number",
+     "min": -40,
+     "max": -3,
+     "step": 1,
+     "default": -18,
+     "tip": "How far under the song the layer sits where it sounds"
+    },
+    {
+     "key": "fade_in",
+     "label": "Fade in, s",
+     "type": "number",
+     "min": 0,
+     "max": 30,
+     "step": 0.5,
+     "default": 4,
+     "tip": "From silence up to its level at the start"
+    },
+    {
+     "key": "fade_out",
+     "label": "Fade out, s",
+     "type": "number",
+     "min": 0,
+     "max": 30,
+     "step": 0.5,
+     "default": 6,
+     "tip": "From its level down to silence at the end"
+    },
+    {
+     "key": "breathe",
+     "label": "Breathe with the song, dB",
+     "type": "number",
+     "min": 0,
+     "max": 8,
+     "step": 0.5,
+     "default": 3,
+     "tip": "Louder where the song swells, softer where it rests, within this many dB; 0: steady"
+    },
+    {
+     "key": "closer",
+     "label": "Closer before the voice, dB",
+     "type": "number",
+     "min": 0,
+     "max": 12,
+     "step": 0.5,
+     "default": 0,
+     "tip": "Louder by this much while the song has no voice yet (its intro), settling under the voice over the 6 s before it comes in; 0: the same all through"
+    },
+    {
+     "key": "strikes",
+     "label": "Thunder strikes",
+     "type": "number",
+     "min": 1,
+     "max": 16,
+     "step": 1,
+     "default": 4,
+     "tip": "For thunder: how many strikes, near and far by turns"
+    },
+    {
+     "key": "place",
+     "label": "Strikes fall",
+     "type": "select",
+     "default": "peaks",
+     "options": [
+      [
+       "peaks",
+       "On the song's peaks"
+      ],
+      [
+       "random",
+       "At random"
+      ]
+     ],
+     "tip": "For thunder: where the strikes fall"
+    },
+    {
+     "key": "seed",
+     "label": "Variation",
+     "type": "number",
+     "min": 1,
+     "max": 999,
+     "step": 1,
+     "default": 7,
+     "tip": "Another number: another loop, other strikes, another canary"
+    },
+    {
+     "key": "public",
+     "label": "Shareable only",
+     "type": "check",
+     "default": true,
+     "tip": "Only recordings whose own recordist set a free licence (CC0 or the public domain mark); off, a private recording may sound too"
+    }
+   ]
+  },
+  {
    "id": "vupscale",
    "label": "Voice upscale",
    "say": "the voices' top redrawn",

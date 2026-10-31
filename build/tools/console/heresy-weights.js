@@ -44,8 +44,9 @@
   }
   function when(t) {
     var d = new Date(t * 1000), now = new Date();
-    var hm = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    return d.toDateString() === now.toDateString() ? hm : d.toLocaleDateString() + " " + hm;
+    var L = window.RuachI18n && window.RuachI18n.locales ? window.RuachI18n.locales() : undefined;   // HERESY 1826: in the page's language
+    var hm = d.toLocaleTimeString(L, { hour: "2-digit", minute: "2-digit" });
+    return d.toDateString() === now.toDateString() ? hm : d.toLocaleDateString(L) + " " + hm;
   }
   function scoped(path) {                                      // a test page says so to the lab, which then fetches nothing
     var m = /[?&]scope=([^&#]+)/.exec(location.search);
@@ -115,7 +116,7 @@
     if (top) { top.hidden = !going({ part: "missing" }); top.innerHTML = top.hidden ? "" : progress(); }
     $("wtCheck").disabled = busy || !d.script;
     $("wtExtras").innerHTML = (d.extras || []).map(function (e) {
-      var pick = S.pick[e.name] || (going({ extra: e.name }) && job().which.variant) || (e.variants.filter(function (v) { return !v.here; })[0] || e.variants[0]).id;
+      var pick = S.pick[e.name] || (going({ extra: e.name }) && job().which.variant) || e.suggest || (e.variants.filter(function (v) { return !v.here; })[0] || e.variants[0]).id;   // HERESY 1834: the suggested size first
       var v = e.variants.filter(function (x) { return x.id === pick; })[0] || e.variants[0];
       return '<div class="wt-extra" data-extra="' + esc(e.name) + '"><div class="wt-x-name"><b>' + esc(tr(e.label)) + "</b><span>" + esc(tr(e.what)) + "</span></div>" +
         '<select data-wt-pick="' + esc(e.name) + '" aria-label="' + esc(tr(e.label)) + '">' + e.variants.map(function (x) {
@@ -189,7 +190,7 @@
   function fetchExtra(name, asked) {                 // HERESY 1347: a variant asked by its id (the Artist's list), else the one picked
     var e = ((S.data && S.data.extras) || []).filter(function (x) { return x.name === name; })[0];
     if (!e) return;
-    var id = asked || S.pick[name] || (e.variants.filter(function (v) { return !v.here; })[0] || e.variants[0]).id;
+    var id = asked || S.pick[name] || e.suggest || (e.variants.filter(function (v) { return !v.here; })[0] || e.variants[0]).id;   // HERESY 1834
     var v = e.variants.filter(function (x) { return x.id === id; })[0];
     if (!v || v.here) return;
     var body = {};

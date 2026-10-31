@@ -27,6 +27,7 @@
     var m = Math.round((Date.now() / 1000 - ts) / 60);
     return m < 2 ? "just now" : m < 120 ? m + " min ago" : m < 2880 ? Math.round(m / 60) + " h ago" : Math.round(m / 1440) + " days ago";
   }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }   // HERESY 1959
   function size(b) { return b >= 1e9 ? (b / 1e9).toFixed(1) + " GB" : Math.max(1, Math.round(b / 1e6)) + " MB"; }
   function rcWanted(st) { var p = prefs(); return p.rc == null ? /-rc/.test((st && st.current) || "") : !!p.rc; }
 
@@ -41,8 +42,8 @@
     $("updEvery").value = p.every;
     $("updMode").value = p.mode;
     $("updRc").checked = rcWanted(st);
-    $("updMode").disabled = !st.can_run;
-    $("updWhy").textContent = st.can_run || !st.why ? "" : st.why;
+    $("updMode").disabled = false;                     // HERESY 1959 (Viktor: «дропдаун селектор КОГДА ВЫЙДЕТ не выпадает»): chosen always, said when it cannot act
+    $("updWhy").innerHTML = st.can_run || !st.why ? "" : "<span>" + esc(st.why) + "</span>" + (p.mode === "auto" ? " <span>" + esc(tr("Until it can, it asks you.")) + "</span>" : "");
     $("updRun").hidden = !(st.newer && st.can_run);
     $("updRun").textContent = st.newer ? "Update to " + l.version : "Update";
     $("updNotes").hidden = !l;
@@ -143,7 +144,7 @@
     S.hooks = hooks || {};
     if ($("updEvery")) {
       $("updEvery").addEventListener("change", function () { var p = prefs(); p.every = this.value; p.asked = true; keep(p); });
-      $("updMode").addEventListener("change", function () { var p = prefs(); p.mode = this.value; keep(p); });
+      $("updMode").addEventListener("change", function () { var p = prefs(); p.mode = this.value; keep(p); paint(); });   // 1959: its line said again
       $("updRc").addEventListener("change", function () { var p = prefs(); p.rc = this.checked; keep(p); });
       $("updCheck").addEventListener("click", function () { check(true); });
       $("updRun").addEventListener("click", function () { if (S.st && S.st.newer) offer(S.st, true); });

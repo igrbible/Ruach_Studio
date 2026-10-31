@@ -268,7 +268,7 @@ def draw(body):
     if not 1 <= count <= 4:
         raise ValueError("variations: one to four")
     seed = body.get("seed")
-    seed = int(seed) if re.fullmatch(r"\d{1,10}", str(seed if seed is not None else "").strip()) else random.randint(0, 2**31 - 1)
+    seed = int(seed) if re.fullmatch(r"\d{1,10}", str(seed if seed is not None else "").strip()) else random.randint(1000, 999999999)   # HERESY 1877: the studio's seeds, 1000…999 999 999
     seed = min(seed, 2**31 - 1 - count)
     asked = str(body.get("painter") or "").strip().lower()
     painter = asked if asked in QWEN else H["painter"](body.get("painter"))   # HERESY 1318: a Qwen painter by its own name
@@ -1665,6 +1665,25 @@ def bin_file(take, stamp):
     if not f.is_file():
         raise FileNotFoundError("no such cover in the trash")
     return f
+
+
+def cover_versions(take):
+    """HERESY 1848 (TODO: «версии картинки дубля (листать artwork-removed/ как версии)»): a take's covers taken off or drawn over, the newest first,
+    and whether it has one now; {name, current, versions: [{stamp, when, painter, prompt, by}], frozen}."""
+    d = H["take_dir"](str(take or ""))
+    keep, out = d / "artwork-removed", []
+    if keep.is_dir():
+        for f in keep.glob("*.jpg"):
+            if not STAMP_RE.match(f.stem):
+                continue
+            try:
+                meta = json.load(open(f.with_suffix(".json"), encoding="utf-8"))
+            except (OSError, ValueError):
+                meta = {}
+            out.append({"stamp": f.stem, "when": int(f.stat().st_mtime), "painter": meta.get("painter") or "", "prompt": str(meta.get("prompt") or "")[:300],
+                        "by": meta.get("by") or ""})
+    out.sort(key=lambda c: c["stamp"], reverse=True)
+    return {"name": take, "current": (d / "artwork.jpg").is_file(), "versions": out, "frozen": take in _frozen()}
 
 
 def _cover_back(take, stamp):

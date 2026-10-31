@@ -10,7 +10,7 @@
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
   function recall(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function keep(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* private window */ } }
-  function roll() { return String(Math.floor(Math.random() * 2147483647)); }
+  function roll() { return window.ruachShortSeed ? window.ruachShortSeed() : String(1000 + Math.floor(Math.random() * 999999000)); }   // HERESY 1877
   function attach(input, key, opts) {
     opts = opts || {};
     if (!input) return null;
@@ -48,8 +48,14 @@
         var n = Math.max(1, +used || 1), next;
         if (opts.big && window.BigInt) {
           var b = BigInt(v) + (sel.value === "next" ? BigInt(n) : -BigInt(n));
-          next = String(b < 0n ? 0n : b);
-        } else next = String(Math.max(0, +v + (sel.value === "next" ? n : -n)));
+          if (BigInt(v) <= 999999999n && b > 999999999n) b -= 999999999n;   // HERESY 1943: within 1…999 999 999 it goes round; an older take's long seed moves on as it is
+          next = b <= 0n ? "" : String(b);
+        } else {
+          var m = +v + (sel.value === "next" ? n : -n);
+          if (+v <= 999999999 && m > 999999999) m -= 999999999;
+          next = m <= 0 ? "" : String(m);
+        }
+        if (!next) { input.value = ""; ctl.set("random"); said(); return; }   // HERESY 1943: down to nothing: −1 again, a new seed each run
         input.value = next;
         said();
       }

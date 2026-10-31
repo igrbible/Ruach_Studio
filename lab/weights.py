@@ -121,6 +121,32 @@ EXTRAS = [
           "files": ["checkpoints/Qwopus3.5-9B-GGUF/Qwopus3.5-9B-v3-AR-Q4_0.gguf"]},
          {"id": "compact", "label": "Compact", "size": "5.5 GB", "note": "about 6.5 GB of VRAM with its 12K context: an 8 GB card",
           "files": ["checkpoints/Qwopus3.5-9B-GGUF/Qwopus3.5-9B-v3-AR-compact.gguf"]}]},
+    # HERESY 1834 (Viktor 28.10.2026: «забирай large модель muscriptor, и пропишешь все три размера в Engine. Автоматом предлагаем large для
+    # нормальной видеокарты»): the sound-to-MIDI transcriber's three sizes; the row suggests large where the program runs on a card of 8 GB or more
+    {"name": "muscriptor", "label": "Sound to MIDI",
+     "what": "MuScriptor (Mirelo and Kyutai; its weights CC BY-NC 4.0, non-commercial use only), as DamRsn converted it to GGUF: a take, a stem or any sound into multi-instrument MIDI, 34 named instrument groups and the drums, through build/build-muscriptor/ruach-muscriptor (muscriptor.cpp, MIT; build.sh builds it). The take's datasheet and the Refiner offer the suggested size first: large where it runs on a card of 8 GB or more, small on the processor",
+     "variants": [
+         {"id": "small", "label": "Small", "size": "209 MB", "note": "the quick one: on the processor several times faster than the song plays",
+          "files": ["models/muscriptor/v1/muscriptor-small-f16.gguf"]},
+         {"id": "medium", "label": "Medium", "size": "618 MB", "note": "on the processor somewhat faster than the song plays",
+          "files": ["models/muscriptor/v1/muscriptor-medium-f16.gguf"]},
+         {"id": "large", "label": "Large", "size": "2.7 GB", "note": "the most exact: for a card with 8 GB of VRAM or more; on the processor about three times slower than the song",
+          "files": ["models/muscriptor/v1/muscriptor-large-f16.gguf"]}]},
+    # HERESY 1869 (Viktor 29.10.2026: «То предупреждение по ограничению использования весов H3 в некоторых странах перенеси в Движок к месту загрузки
+    # компонентов H3»): the Videographer's moving pictures, its licence said here, where it is fetched (fetch-heresy.sh --h3)
+    {"name": "h3", "label": "Videographer · MiniMax H3",
+     "what": "MiniMax H3 (MiniMax) as Comfy-Org packs it: the Videographer's moving pictures, a shot at a time on a card of 24 GB, the shot's picture its first frame. Its licence (the MiniMax H3 Community License) does not allow running it on your own machines in the United States, the European Union, the United Kingdom or South Korea, and commercial use beyond the threshold it names needs MiniMax's own licence. Where you run it and what you make with it is yours to answer for: read the licence before you fetch it",
+     "variants": [
+         {"id": "int8", "label": "int8", "size": "69 GB", "note": "the studio's own: a card of 24 GB and 64 GB of RAM", "files": ['models/minimax-h3/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors', 'models/minimax-h3/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors', 'models/minimax-h3/vae/minimax_h3_video_vae_fp16.safetensors', 'models/minimax-h3/vae/minimax_h3_audio_vae_fp32.safetensors', 'models/minimax-h3/original/FL2VA/text_encoder/config.json']},
+         {"id": "all", "label": "All int8 tiers", "size": "192 GB", "note": "both modes whole and pruned, FastH3, ControlNet Union and the effects too", "files": ['models/minimax-h3/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors', 'models/minimax-h3/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors', 'models/minimax-h3/vae/minimax_h3_video_vae_fp16.safetensors', 'models/minimax-h3/vae/minimax_h3_audio_vae_fp32.safetensors', 'models/minimax-h3/original/FL2VA/text_encoder/config.json', 'models/minimax-h3/diffusion_models/fastvideo_fasth3_8step_v2_pruned_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_fl2va_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors', 'models/minimax-h3/text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors', 'models/minimax-h3/model_patches/minimax_h3_fun_controlnet_union_2.0_pruned_int8_convrot.safetensors']},
+         {"id": "bf16", "label": "BF16", "size": "469 GB", "note": "unquantized, for cards of 80 GB; on 24 GB only streamed from RAM, slowly", "files": ['models/minimax-h3/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors', 'models/minimax-h3/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors', 'models/minimax-h3/vae/minimax_h3_video_vae_fp16.safetensors', 'models/minimax-h3/vae/minimax_h3_audio_vae_fp32.safetensors', 'models/minimax-h3/original/FL2VA/text_encoder/config.json', 'models/minimax-h3/diffusion_models/fastvideo_fasth3_8step_v2_pruned_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_fl2va_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors', 'models/minimax-h3/text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors', 'models/minimax-h3/model_patches/minimax_h3_fun_controlnet_union_2.0_pruned_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_fl2va_bf16.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_ref2va_bf16.safetensors', 'models/minimax-h3/text_encoders/qwen3vl_32b_minimax_h3_bf16.safetensors']}]},
+    # HERESY 1876a (Viktor 29.10.2026: «SeedVR2 обе 3B и 7B просчитай по ресурсам… Прикручиваем в загрузчик оба веса»): the Videographer's upscaler
+    {"name": "upscaler", "label": "Videographer · SeedVR2 upscaler",
+     "what": "SeedVR2 (ByteDance, Apache-2.0) as numz packs it: the Videographer's upscaler, a shot's video to 1080p or 1440p in one step, the details made anew. Measured on an RTX 3090, 107 frames of 768p: 3B to 1080p in 284 s, 7B sharp in 367 s, 7B sharp to 1440p in 592 s",
+     "variants": [
+         {"id": "3b", "label": "3B", "size": "7.3 GB", "note": 'the quick one: 18.6 GB of a card at 1080p, 10 GB of RAM', "files": ['models/seedvr2/seedvr2_ema_3b_fp16.safetensors', 'models/seedvr2/ema_vae_fp16.safetensors']},
+         {"id": "7b", "label": "7B sharp", "size": "17 GB", "note": "the studio's own: 20 GB of a card at 1080p (16 of its blocks in RAM), 21 GB of RAM; 1440p fits too", "files": ['models/seedvr2/seedvr2_ema_7b_sharp_fp16.safetensors', 'models/seedvr2/ema_vae_fp16.safetensors']},
+         {"id": "all", "label": "All", "size": "41 GB", "note": '3B, 7B sharp and 7B', "files": ['models/seedvr2/seedvr2_ema_3b_fp16.safetensors', 'models/seedvr2/seedvr2_ema_7b_sharp_fp16.safetensors', 'models/seedvr2/seedvr2_ema_7b_fp16.safetensors', 'models/seedvr2/ema_vae_fp16.safetensors']}]},
     {"name": "listener", "label": "Style listener",
      "what": "Qwen2.5-Omni-7B: hears the songs of a training set and writes each one's style tags; the GGUF ones run through llama.cpp (vendor/llama.cpp, built by you)",
      "variants": [
@@ -239,6 +265,9 @@ def _extras(kit):
         e = e or ARTWORK_BIG                        # HERESY 1405: any card (SDXL gone)
         out.append(dict({k: v for k, v in e.items() if k != "variants"},
                         variants=[dict({k: v for k, v in x.items() if k != "files"}, here=_here(kit, x["files"])) for x in e["variants"]]))
+        if e["name"] == "muscriptor":               # HERESY 1834: the size the row offers first
+            import muscriptor
+            out[-1]["suggest"] = muscriptor.suggest(kit)
     return out
 
 
@@ -332,7 +361,7 @@ def _args(body):
         if name == "artwork":
             return ["--only", "none", "--artwork-q8" if v == "q8" else "--artwork", "--yes"], what
         return ["--only", "none", "--" + name, v, "--yes"], what
-    raise ValueError("say what to fetch: a part (missing, " + ", ".join(list(PARTS) + ["fw"]) + ") or an extra (backbone, ira, irae, fw, writer, listener, artwork, qwen, qwen-fine, art-loras, trainer)")
+    raise ValueError("say what to fetch: a part (missing, " + ", ".join(list(PARTS) + ["fw"]) + ") or an extra (backbone, ira, irae, fw, writer, listener, artwork, qwen, qwen-fine, art-loras, trainer, h3, upscaler)")
 
 
 def _bytes(size):

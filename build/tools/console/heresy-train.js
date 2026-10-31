@@ -163,12 +163,41 @@
       var loss = ser.flow ? ser.flow.last : r.loss, ar = ser.ar_ce ? ser.ar_ce.last : r.ar_ce;
       return '<button type="button" class="tr-liverow' + (r.name === state.sel && state.pane === "run" ? " is-on" : "") + '" data-open="' + esc(r.name) + '" data-tip="Its telemetry">' +
         '<span class="tr-lname"><i class="tr-pulse"></i><b translate="no">' + esc(r.name) + "</b><em>" + esc(r.kind || "") + " · " + (engineOf(r) === "ruach" ? "Ruach" : "AI-Toolkit") + " · GPU" + esc(r.gpus && r.gpus.length > 1 ? r.gpus.join("+") : r.gpu) + "</em></span>" +
-        '<span class="tr-lbar"><i style="width:' + pct.toFixed(1) + '%"></i></span>' +
         '<span class="tr-lnums mono">' + pct.toFixed(0) + " % · " + (r.step || 0) + "/" + (r.steps || "?") +
           (r.tracks ? " · e" + ((r.step || 0) / r.tracks).toFixed(1) + "/" + Math.round(epochs(r)) : "") +
-          (r.eta_s != null ? " · " + span(r.eta_s) + " left" : "") + (ser.sec_per_step ? " · " + ser.sec_per_step + " s/step" : "") +
-          (loss != null ? " · flow " + Number(loss).toFixed(3) : "") + (ar != null ? " · ar_ce " + Number(ar).toFixed(2) : "") + "</span></button>";
+          (r.eta_s != null ? " · " + tr("{0} left").replace("{0}", tr(span(r.eta_s))) : "") + (ser.sec_per_step ? " · " + ser.sec_per_step + " s/step" : "") +
+          (loss != null ? " · flow " + Number(loss).toFixed(3) : "") + (ar != null ? " · ar_ce " + Number(ar).toFixed(2) : "") + "</span>" +
+        (function (m) { return '<span class="tr-lprog"><span class="tr-lbar"><i style="width:' + pct.toFixed(1) + '%"></i>' + m.over + "</span>" + m.under + "</span>"; })(liveMarks(r, ser)) +   // HERESY 1819
+        "</button>";
     }).join("");
+  }
+  // HERESY 1819 (Viktor 28.10.2026: «…прогресс с пометками… ожидаемые/готовые сохранения чекпоинтов, и дубляж зелёных»): the saves along the progress:
+  // on disk (amber in loras/), to come (hollow, each with when it is due at this speed), deleted (a red ring), worth hearing first green, on the bar too
+  function liveMarks(r, ser) {
+    var total = r.steps || 0, now = r.step || 0, every = +((r.options || {}).save_every) || 0, per = r.tracks || 0;
+    if (!total) return { under: "", over: "" };
+    var cand = candidates(r), marks = [], at = function (s) { return Math.min(100, 100 * s / total).toFixed(2) + "%"; };
+    var sps = +ser.sec_per_step || (r.eta_s && total > now ? r.eta_s / (total - now) : 0);
+    var said = function (s, e) { return e != null ? "e" + epochSaid(e) : per ? "e" + epochSaid(s / per) : tr("step " + s); };
+    (r.checkpoints || []).forEach(function (k) {
+      if (!k.step) return;
+      marks.push({ s: k.step, c: "is-done" + (k.lora ? " is-in" : "") + (cand[k.file] ? " is-cand" : ""),
+        t: [said(k.step, k.epoch), tr("step " + k.step), tr("saved") + " " + when(k.saved), k.lora ? tr("in loras/") : "", cand[k.file] ? tr("worth hearing first: " + cand[k.file]) : ""] });
+    });
+    (r.gone || []).forEach(function (g) { marks.push({ s: g.step, c: "is-gone", t: [said(g.step, g.epoch), tr("step " + g.step), tr("deleted from disk")] }); });
+    if (every > 0 && total / every <= 400) {
+      var due = []; for (var s = every; s <= total; s += every) due.push(s);
+      if (due[due.length - 1] !== total) due.push(total);           // the run's end saves too
+      due.forEach(function (s) {
+        if (s <= now || marks.some(function (m) { return Math.abs(m.s - s) < every / 2; })) return;
+        marks.push({ s: s, c: "is-next", t: [said(s), tr("step " + s), sps ? tr("due in {0}").replace("{0}", tr(span((s - now) * sps))) : tr("to come")] });
+      });
+    }
+    marks.sort(function (a, b) { return (a.c.indexOf("is-cand") >= 0) - (b.c.indexOf("is-cand") >= 0) || a.s - b.s; });   // the green ones drawn last, on top
+    return {
+      under: '<span class="tr-lmarks">' + marks.map(function (m) { return '<i class="' + m.c + '" style="left:' + at(m.s) + '" data-tip="' + esc(m.t.filter(Boolean).join(" · ")) + '"></i>'; }).join("") + "</span>",
+      over: marks.filter(function (m) { return m.c.indexOf("is-cand") >= 0; }).map(function (m) { return '<b style="left:' + at(m.s) + '"></b>'; }).join("")
+    };
   }
 
   // ------------------------------------------------------------------ the column of runs
@@ -230,7 +259,7 @@
       '<div class="take-foot"><span class="tag tr-st is-' + esc(r.status) + '">' + esc(r.status) + "</span>" +
         '<span class="tag">' + (engineOf(r) === "ruach" ? "Ruach" : "AITK") + "</span>" +
         "<span>" + ep + "</span>" + (r.loras && r.loras.length ? '<span data-tip="In loras/, ready in the Creator">' + r.loras.length + " in loras/</span>" : "") +
-        "<span>" + esc(ago(r.started)) + "</span></div>" +
+        "<span>" + esc(ago(r.started)) + "</span>" + (r.protected ? '<span class="tag tr-lock" data-tip="' + esc(tr(LOCK_TIP)) + '">🔒</span>' : "") + "</div>" +   // HERESY 1817
       '<button type="button" class="tr-rmenu" data-menu="' + esc(r.name) + '" aria-label="Run actions">⋯</button></article>';
   }
   function menu(btn) {
@@ -249,8 +278,9 @@
       '<button type="button" role="menuitem" data-act="' + (r.archived ? "unarchive" : "archive") + '">' + (r.archived ? "Out of the archive" : "Archive") + "</button>" +
       (r.status === "running" ? '<button type="button" role="menuitem" data-act="pause">' + esc(tr("Pause")) + "</button>" : "") +   // HERESY 1659
       (r.status === "paused" ? '<button type="button" role="menuitem" data-act="resume">' + esc(tr("Resume")) + "</button>" : "") +
+      '<button type="button" role="menuitem" data-act="' + (r.protected ? "unprotect" : "protect") + '">' + (r.protected ? "Unprotect…" : "Protect") + "</button>" +   // HERESY 1817
       (isLive(r) ? '<button type="button" role="menuitem" class="danger" data-act="stop">Stop…</button>'
-                 : '<button type="button" role="menuitem" class="danger" data-act="delete">Delete…</button>');
+                 : r.protected ? "" : '<button type="button" role="menuitem" class="danger" data-act="delete">Delete…</button>');
     document.body.appendChild(pop);
     pop.dataset.run = r.name;
     pop.addEventListener("click", function (e) { var b = e.target.closest("[data-act]"); if (b) { closeMenu(); act(r.name, b.dataset.act); } });
@@ -354,6 +384,33 @@
     if (what === "pause") return api("/train/pause", { name: name }).then(function () { toast(tr("Pausing {0}: it saves what it has learned and waits for Resume").replace("{0}", name)); load(); }).catch(function (e) { toast(e.message, true); });   // HERESY 1659
     if (what === "resume") return api("/train/resume", { name: name }).then(function () { toast(tr("Resuming {0} from its last save").replace("{0}", name)); load(); }).catch(function (e) { toast(e.message, true); });
     if (what === "delete") return deleteRun(name);
+    if (what === "protect") return api("/train/protect", { name: name, on: true }).then(function () { toast(tr("{0} is protected").replace("{0}", name)); load(); }).catch(function (e) { toast(e.message, true); });   // HERESY 1817
+    if (what === "unprotect") return confirmBox(tr("Unprotect {0}? Its saves and the run itself can then be deleted.").replace("{0}", name), { ok: "Unprotect", danger: true })
+      .then(function (ok) { if (ok) return api("/train/protect", { name: name, on: false }).then(function () { toast(tr("{0} is no longer protected").replace("{0}", name)); load(); }); }).catch(function (e) { toast(e.message, true); });
+  }
+  // HERESY 1817: the saves chosen one by one, for an unprotected, stopped run
+  var LOCK_TIP = "Protected: neither its saves nor the run itself can be deleted; ⋯ → Unprotect to change that";
+  function pickOn(r) { return !!(state.pick && state.pick.run === r.name); }
+  function pickGo(r) {
+    var chosen = (r.checkpoints || []).filter(function (c) { return state.pick.files[c.file]; });
+    if (!chosen.length) return;
+    var bytes = chosen.reduce(function (s, c) { return s + (c.bytes || 0); }, 0), pub = chosen.filter(function (c) { return c.lora; });
+    var list = chosen.map(function (c) { return c.epoch != null ? "e" + epochSaid(c.epoch) : "final"; }).join(", ");
+    confirmBox(tr("Delete {0} saves of {1} for good?").replace("{0}", chosen.length).replace("{1}", r.name) + "\n\n" + list + " · " + gb(bytes), { ok: "Delete", danger: true })
+      .then(function (ok) {
+        if (!ok) return null;
+        if (!pub.length) return { loras: false };
+        return confirmBox(tr("{0} of them are in loras/, in the Creator's LoRAs. Take them out too (the space comes back), or keep them usable?").replace("{0}", pub.length),
+          { ok: "Take them out", cancel: "Keep them" }).then(function (out) { return { loras: !!out }; });
+      })
+      .then(function (how) {
+        if (!how) return;
+        return api("/train/delete-saves", { name: r.name, files: chosen.map(function (c) { return c.file; }), loras: how.loras }).then(function (d) {
+          state.pick = null;
+          toast(tr("{0} saves deleted, {1} back on the disk").replace("{0}", (d.deleted || []).length).replace("{1}", gb(d.freed || 0)));
+          load();
+        });
+      }).catch(function (e) { toast(e.message, true); });
   }
   function stopRun(name) {
     var r = runOf(name);
@@ -447,15 +504,46 @@
     add(ok[ok.length - 1], "the last before the music half knows the songs by heart");
     return out;
   }
+  // HERESY 1855 (Viktor 29.10.2026: «в графики кривых добавь увеличение/ресет скейла»): the steps in view, both curves alike, kept while the run stays
+  // chosen; the y scale fits what is in view
+  function zoomOf(r, last) {
+    var z = state.zoom && state.zoom.run === r.name ? state.zoom : null;
+    if (!z) return [0, last];
+    var a = Math.max(0, Math.min(z.a, last - 1));
+    return [a, Math.max(a + 1, Math.min(z.b, last))];
+  }
+  function zoomSet(a, b, last) {
+    var min = Math.max(10, last / 500);
+    if (b - a < min) { var m = (a + b) / 2; a = m - min / 2; b = m + min / 2; }
+    if (a < 0) { b -= a; a = 0; }
+    if (b > last) { a -= b - last; b = last; }
+    a = Math.max(0, a);
+    state.zoom = a <= 0 && b >= last ? null : { run: state.sel, a: a, b: b };
+    paintRun();
+  }
+  function zoomBar(z, last) {
+    var on = z[0] > 0 || z[1] < last;
+    return '<span class="tr-zoom">' + (on ? '<span class="mono tr-zspan">' + esc(tr("steps {0}–{1}").replace("{0}", Math.round(z[0])).replace("{1}", Math.round(z[1]))) + "</span>" : "") +
+      '<button type="button" class="btn ghost small tr-zbtn" data-zoom="out"' + (on ? "" : " disabled") + ' aria-label="' + esc(tr("Zoom out")) + '" data-tip="' + esc(tr("Zoom out: twice the steps")) + '">\u2212</button>' +
+      '<button type="button" class="btn ghost small tr-zbtn" data-zoom="in" aria-label="' + esc(tr("Zoom in")) + '" data-tip="' + esc(tr("Zoom in on the steps: half of them, around the middle. Or drag across a curve; Ctrl and the wheel zoom where the pointer is")) + '">+</button>' +
+      '<button type="button" class="btn ghost small tr-zbtn" data-zoom="reset"' + (on ? "" : " disabled") + ' aria-label="' + esc(tr("The whole run")) + '" data-tip="' + esc(tr("The whole run again (a double-click on a curve does it too)")) + '">\u27f2</button></span>';
+  }
   function chart(key, ser, r, title, say) {
     var s = ser[key];
     if (!s || !s.curve || s.curve.length < 2) return "";
     var other = runOf(state.cmp), oc = other && other !== r ? (((other.series || {})[key] || {}).curve || []) : [];
     var c = s.curve, W = 600, H = 150, L = 0, lo = Infinity, hi = -Infinity, last = Math.max(r.steps || 0, c[c.length - 1][0], other ? other.steps || 0 : 0) || 1;
-    c.concat(oc.length > 1 ? ema(oc, 0.08) : []).forEach(function (p) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); });
+    var z = zoomOf(r, last), x0 = z[0], x1 = z[1];        // HERESY 1855: the steps in view
+    var clip = function (pts) {                            // the points in view, and one on each side for the line to run out of it
+      var i0 = 0, i1 = pts.length - 1;
+      for (var i = 0; i < pts.length; i++) { if (pts[i][0] <= x0) i0 = i; if (pts[i][0] >= x1) { i1 = i; break; } }
+      return pts.slice(i0, i1 + 1);
+    };
+    c.concat(oc.length > 1 ? ema(oc, 0.08) : []).forEach(function (p) { if (p[0] >= x0 && p[0] <= x1) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); } });
+    if (!isFinite(lo)) clip(c).forEach(function (p) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); });
     var pad = (hi - lo) * 0.06 || 0.05; lo -= pad; hi += pad;
-    var x = function (st) { return L + (W - L) * st / last; }, y = function (v) { return H - 6 - (H - 14) * (v - lo) / (hi - lo); };
-    var path = function (pts) { return pts.map(function (p, i) { return (i ? "L" : "M") + x(p[0]).toFixed(1) + " " + y(p[1]).toFixed(1); }).join(" "); };
+    var x = function (st) { return L + (W - L) * (st - x0) / (x1 - x0); }, y = function (v) { return H - 6 - (H - 14) * (v - lo) / (hi - lo); };
+    var path = function (pts) { return clip(pts).map(function (p, i) { return (i ? "L" : "M") + x(p[0]).toFixed(1) + " " + y(p[1]).toFixed(1); }).join(" "); };
     var grid = [0, 0.5, 1].map(function (f) { var v = lo + (hi - lo) * (1 - f), yy = y(v); return '<line class="g" x1="0" x2="' + W + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '"/>'; }).join("");
     var cand = candidates(r);
     var ticks = (r.checkpoints || []).filter(function (k) { return k.step; }).map(function (k) {
@@ -463,8 +551,8 @@
       return '<line class="t' + (k.lora ? " on" : "") + (cand[k.file] ? " cand" : "") + (k.file === state.epoch ? " sel" : "") + '" x1="' + xx + '" x2="' + xx + '" y1="' + (k.file === state.epoch ? 0 : cand[k.file] ? H - 18 : H - 6) + '" y2="' + H + '"/>';
     }).join("");
     var labels = [hi, (hi + lo) / 2, lo].map(function (v, i) { return '<span style="top:' + [2, 46, 90][i] + '%">' + v.toFixed(v < 10 ? 3 : 2) + "</span>"; }).join("");
-    return '<figure class="tr-chart" data-key="' + key + '" data-last="' + last + '" data-lo="' + lo + '" data-hi="' + hi + '">' +
-      '<figcaption><b>' + title + '</b><span class="mono">' + s.first.toFixed(3) + " → " + s.last.toFixed(3) + " · min " + s.min.toFixed(3) + '</span><span class="tr-read mono is-hint">over the curve: the step, its epoch, the value there</span></figcaption>' +
+    return '<figure class="tr-chart" data-key="' + key + '" data-last="' + last + '" data-x0="' + x0 + '" data-x1="' + x1 + '" data-lo="' + lo + '" data-hi="' + hi + '">' +
+      '<figcaption><b>' + title + '</b>' + zoomBar(z, last) + '<span class="mono">' + s.first.toFixed(3) + " → " + s.last.toFixed(3) + " · min " + s.min.toFixed(3) + '</span><span class="tr-read mono is-hint">over the curve: the step, its epoch, the value there</span></figcaption>' +
       '<div class="tr-plot"><div class="tr-ylab mono">' + labels + "</div>" +
       '<svg viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none">' + grid + ticks +
         '<path class="raw" d="' + path(c) + '"/>' + (oc.length > 1 ? '<path class="cmp" d="' + path(ema(oc, 0.08)) + '"/>' : "") +
@@ -473,7 +561,7 @@
       '<p class="tr-say">' + say + "</p></figure>";
   }
   function paintRun() {
-    var el = $("trRunPane"), r = runOf(state.sel), facts = el.querySelector(".tr-facts"), factsOpen = !!(facts && facts.open);
+    var el = $("trRunPane"), r = runOf(state.sel);
     if (!r) { el.innerHTML = '<p class="row-hint">No run chosen: pick one in the column on the right, or start one in step 3.</p>'; return; }
     var o = r.options || {}, ser = r.series || {}, live = isLive(r);
     var cks = (r.checkpoints || []).slice().sort(function (a, b) {        // by step; the run's final file after its last numbered one
@@ -482,7 +570,7 @@
     var pct = r.steps ? 100 * (r.step || 0) / r.steps : 0, took = (r.ended || (live ? Date.now() / 1000 : r.started)) - r.started;
     var ar = ser.ar_ce ? ser.ar_ce.last : r.ar_ce, memo = ar != null && ar < 0.3;
     var bytes = cks.reduce(function (s, c) { return s + (c.bytes || 0); }, 0);
-    var tile = function (k, v, hint) { return '<div class="tr-tile"' + (hint ? ' data-tip="' + esc(hint) + '"' : "") + "><span>" + k + "</span><b>" + v + "</b></div>"; };
+    var tile = function (k, v, hint, wide) { return '<div class="tr-tile' + (wide ? " tr-tile-wide" : "") + '"' + (hint ? ' data-tip="' + esc(hint) + '"' : "") + "><span>" + k + "</span><b>" + v + "</b></div>"; };
     var pick = cks.filter(function (c) { return c.file === state.epoch; })[0], cand = candidates(r);
     el.innerHTML =
       '<div class="tr-rhead"><div class="tr-rname"><b translate="no">' + esc(r.name) + '</b><span class="tag tr-st is-' + esc(r.status) + '">' + esc(r.status) + "</span>" +
@@ -516,7 +604,7 @@
         tile("GPU", r.gpus && r.gpus.length > 1 ? "GPU" + esc(r.gpus.join("+")) : r.gpu != null ? "GPU" + esc(r.gpu) : "—") +   // HERESY 1631
         // HERESY 1736: the held-out best (1497), its epoch
         (r.val && r.val.best && r.val.best.flow != null ? tile("held-out best", Number(r.val.best.flow).toFixed(4) + (r.tracks && r.val.best.step ? " · e" + epochSaid(r.val.best.step / r.tracks) : ""),
-          "The sound half's loss on " + ((r.val.held_out || []).length || 16) + " tracks it never trains on, measured at each save: the lowest so far, and the epoch it came at") : "") +
+          "The sound half's loss on " + ((r.val.held_out || []).length || 16) + " tracks it never trains on, measured at each save: the lowest so far, and the epoch it came at", true) : "") +   // HERESY 1833: two tiles wide
       "</div>" +
       (memo ? '<p class="tr-err">ar_ce ' + Number(ar).toFixed(3) + ": the music half is learning the songs by heart; an earlier epoch may be the better adapter.</p>" : "") +
       (ser.error ? '<p class="tr-err">' + esc(ser.error) + "</p>" : "") + (r.error ? '<p class="tr-err">' + esc(r.error) + "</p>" : "") +
@@ -526,37 +614,53 @@
         chart("ar_ce", ser, r, "Music half · ar_ce (AR)",
           "How well the music half predicts the song’s own tokens. Lower is better; close to 0 it knows the songs by heart, and an earlier epoch is then the better adapter.") +
       "</div>" +
-      (cks.length ? '<div class="tr-epochs"><div class="tr-ehead"><span class="label">Epochs · ' + cks.length + " saved · " + gb(bytes) + "</span>" +
+      (cks.length || (r.gone || []).length ? '<div class="tr-epochs"><div class="tr-ehead"><span class="label">Epochs · ' + cks.length + " saved · " + gb(bytes) + "</span>" +
+          ((r.gone || []).length ? '<span class="tr-gone-n">' + r.gone.length + " deleted from disk</span>" : "") +   // HERESY 1816
+          // HERESY 1817: choosing saves to delete, one by one; none for a protected or a running run
+          (r.protected ? '<span class="tag tr-lock" data-tip="' + esc(tr(LOCK_TIP)) + '">🔒 protected</span>'
+            : live ? "" : pickOn(r) ? (function () {
+              var ch = cks.filter(function (c) { return state.pick.files[c.file]; }), bb = ch.reduce(function (s, c) { return s + (c.bytes || 0); }, 0);
+              return '<span class="tr-pickbar"><button type="button" class="btn small danger" data-pickgo' + (ch.length ? "" : " disabled") + ">" + esc(tr("Delete {0} chosen · {1}").replace("{0}", ch.length).replace("{1}", gb(bb))) + "</button>" +
+                '<button type="button" class="btn ghost small" data-pickoff>Cancel</button></span>';
+            })() : '<button type="button" class="btn ghost small tr-pickon" data-pickon>Choose saves to delete…</button>') +
           '<span class="row-hint">a click: into the Creator’s LoRAs or out of them; a right-click: its file \u00b7 <span class="tr-key-cand"></span>' + (heldOutBest(r) ? " worth hearing first, by the held-out tracks (the ear decides) \u00b7 \u2713 in loras/" : " worth hearing first, read off the curves (a guess: the ear decides) \u00b7 \u2713 in loras/") + "</span></div>" +   // HERESY 1736
-        '<div class="tr-echips">' + cks.map(function (c) {
+        // HERESY 1816: the saves no longer on disk, struck through in the same row, by step
+        '<div class="tr-echips">' + cks.concat((r.gone || []).map(function (g) { return { gone: true, step: g.step, epoch: g.epoch }; })).sort(function (a, b) {
+          return (a.step || 0) - (b.step || 0) || (a.gone ? -1 : 0) - (b.gone ? -1 : 0);
+        }).map(function (c) {
+          if (c.gone) return '<span class="coll-chip is-gone" data-tip="' + esc([tr("step " + c.step), tr("deleted from disk")].join(" · ")) + '">' + (c.epoch != null ? "e" + epochSaid(c.epoch) : tr("step " + c.step)) + "</span>";
           var why = cand[c.file];
-          return '<button type="button" class="coll-chip' + (c.lora ? " is-in" : "") + (why ? " is-cand" : "") + (c.file === state.epoch ? " is-on" : "") + '" data-epoch="' + esc(c.file) + '" data-tip="' + esc([tr("step " + c.step), when(c.saved), c.lora ? tr("in loras/") : "", why ? tr("worth hearing first: " + why) : ""].filter(Boolean).join(" · ")) + '">' + (c.epoch != null ? "e" + epochSaid(c.epoch) : "final") + (c.lora ? " ✓" : "") + "</button>";
+          return '<button type="button" class="coll-chip' + (c.lora ? " is-in" : "") + (why ? " is-cand" : "") + (c.file === state.epoch ? " is-on" : "") + (pickOn(r) && state.pick.files[c.file] ? " is-pick" : "") + '" data-epoch="' + esc(c.file) + '" data-tip="' + esc([tr("step " + c.step), when(c.saved), c.lora ? tr("in loras/") : "", why ? tr("worth hearing first: " + why) : ""].filter(Boolean).join(" · ")) + '">' + (c.epoch != null ? "e" + epochSaid(c.epoch) : "final") + (c.lora ? " ✓" : "") + "</button>";
         }).join("") + "</div>" +
         "</div>" : "") +
-      '<details class="tr-facts"><summary>What it was given</summary><div class="tr-fgrid">' +
+      '<div class="tr-facts"><div class="tr-facts-head">What it was given</div><div class="tr-fgrid">' +   // HERESY 1833: open always
         "<span><em>set</em> <span translate=\"no\">" + esc(r.dataset) + "</span>" + (r.tracks ? " · <span>" + r.tracks + " tracks</span>" : "") + "</span>" +   // HERESY 1166
         "<span><em>rank</em> " + esc(o.rank) + " · lr " + esc(o.lr) + "</span>" +
         (+o.lr_tail_epochs > 0 ? "<span><em>fade</em> " + esc(tr("the last {0} epochs to {1} %").replace("{0}", o.lr_tail_epochs).replace("{1}", Math.round((+o.lr_tail_floor || 0) * 100))) + "</span>" : "") +   // HERESY 1752
         "<span><em>music half</em> AR " + esc(o.ar_loss_weight) + " · KL " + esc(o.ar_kl_weight) + " · <span>speed ×" + esc(o.ar_lr_multiplier) + "</span></span>" +
         "<span><em>mode</em> <span>" + esc(o.cot) + "</span> · " + esc(o.quant) + (o.do_separation ? " · <span>separated</span>" : "") + "</span>" +
         "<span><em>window</em> " + Math.round((o.train_window_frames || 0) / 25) + " s</span>" +
+        (guardSaid(o) ? "<span><em>guard</em> " + esc(guardSaid(o)) + "</span>" : "") +   // HERESY 1832
+        (ser.vram_cards ? "<span><em>VRAM peaks</em> " + Object.keys(ser.vram_cards).map(function (k) {
+          var c = ser.vram_cards[k], card = (r.gpus || [])[+k];
+          return "GPU" + (card != null ? card : k) + " " + esc(tr("{0} GB at step {1}").replace("{0}", c.gb).replace("{1}", c.step));
+        }).join(" · ") + "</span>" : "") +
         "<span><em>started</em> " + esc(when(r.started)) + "</span>" +
-      "</div></details>";
-    if (factsOpen) el.querySelector(".tr-facts").open = true;          // a repaint every few seconds keeps what you opened
+      "</div></div>";
   }
   // the reading under the cursor: the step, its epoch and both values there
   function readout(e) {
     var fig = e.target.closest(".tr-chart"), r = runOf(state.sel);
     if (!fig || !r) return;
     var svg = fig.querySelector("svg"), box = svg.getBoundingClientRect(), last = +fig.dataset.last;
-    var f = Math.max(0, Math.min(1, (e.clientX - box.left) / box.width)), step = f * last;
+    var f = Math.max(0, Math.min(1, (e.clientX - box.left) / box.width)), step = +fig.dataset.x0 + f * (+fig.dataset.x1 - +fig.dataset.x0);   // HERESY 1855: in view
     var c = ((r.series || {})[fig.dataset.key] || {}).curve || [];
     if (!c.length) return;
     var best = c.reduce(function (b, p) { return Math.abs(p[0] - step) < Math.abs(b[0] - step) ? p : b; }, c[0]);
     var sm = ema(c, 0.08).filter(function (p) { return p[0] === best[0]; })[0];
     Array.prototype.forEach.call(document.querySelectorAll("#trRunPane .tr-chart"), function (g) {
       var cc = ((r.series || {})[g.dataset.key] || {}).curve || [], pt = cc.reduce(function (b, p) { return Math.abs(p[0] - best[0]) < Math.abs(b[0] - best[0]) ? p : b; }, cc[0] || [0, 0]);
-      var x = (600 * best[0] / +g.dataset.last).toFixed(1), line = g.querySelector("line.cur");
+      var x = (600 * (best[0] - +g.dataset.x0) / (+g.dataset.x1 - +g.dataset.x0)).toFixed(1), line = g.querySelector("line.cur");   // HERESY 1855
       line.setAttribute("x1", x); line.setAttribute("x2", x);
       var avg = ema(cc, 0.08).filter(function (p) { return p[0] === pt[0]; })[0];
       g.querySelector(".tr-read").classList.remove("is-hint");
@@ -808,6 +912,14 @@
   }
   // HERESY 1631: the cards asked last time, kept in this browser
   (function () { var c = $("tr_cards"), v = recall("yue2.trCards"); if (c && v && c.querySelector('option[value="' + v + '"]')) c.value = v; })();
+  // HERESY 1832: 1815's meter and guard as a run was given them, in words (its confirmation, its card)
+  function guardSaid(o) {
+    var said = [];
+    if (o.vram_meter) said.push(tr("each card's VRAM measured"));
+    if (+o.ar_cap_tokens > 0) said.push(tr("over {0} AR tokens a track trains Direct").replace("{0}", +o.ar_cap_tokens));
+    if (o.long_off_card0) said.push(tr("the shortest tracks to the first card"));
+    return said.join(", ");
+  }
   function startRun() {
     var set = state.set;
     if (!set) return toast("Pick a set (made in step 2)", true);
@@ -818,6 +930,10 @@
     spec.lr_tail_floor = Math.max(0, Math.min(100, parseFloat($("tr_lr_tail_floor") && $("tr_lr_tail_floor").value) || 0)) / 100;
     spec.cot = $("tr_cot").value; spec.quant = $("tr_quant").value; spec.do_separation = $("tr_sep").checked;
     spec.cards = Math.max(1, parseInt($("tr_cards") && $("tr_cards").value, 10) || 1);   // HERESY 1631
+    spec.vram_meter = !!($("tr_vram_meter") && $("tr_vram_meter").checked);   // HERESY 1832: 1815's meter and guard
+    spec.long_off_card0 = !!($("tr_long_off_card0") && $("tr_long_off_card0").checked);
+    spec.ar_cap_tokens = Math.max(0, Math.min(65536, parseInt($("tr_ar_cap_tokens") && $("tr_ar_cap_tokens").value, 10) || 0));
+    var guard = guardSaid(spec);
     keep("yue2.trCards", String(spec.cards));
     if ($("tr_plateau") && $("tr_plateau").checked) { spec.val_fraction = 0.02; spec.patience = 3; }   // HERESY 1622: the plateau, then the sound half alone
     if (runOf(spec.name)) return toast("A run named " + spec.name + " is there already: give this one its own name", true);
@@ -833,7 +949,8 @@
         tr("It takes a GPU of its own for hours" + (spec.engine === "ruach" ? "; a set without its latent cache gets one first (a second or two a track)." : "; the first run also fetches Comfy-Org’s YuE2 weights.")) +
         (shared ? "\n\n" + tr("Training may take GPU" + g.roles.studio + ", the studio’s own card: if it does, synthesis waits until the run ends (Engine → GPUs gives training another card).") : "") +
         (spec.cards > 1 ? "\n\n" + tr("On {0} cards at once: each learns its own songs, their lessons averaged every step.").replace("{0}", spec.cards) : "") +
-        (spec.lr_tail_epochs > 0 ? "\n\n" + tr("The learning rate fades over the last {0} epochs to {1} % of itself.").replace("{0}", spec.lr_tail_epochs).replace("{1}", Math.round(spec.lr_tail_floor * 100)) : ""), { ok: "Start training" });   // HERESY 1752   // HERESY 1631   // 1166: "Train" is the step's name
+        (spec.lr_tail_epochs > 0 ? "\n\n" + tr("The learning rate fades over the last {0} epochs to {1} % of itself.").replace("{0}", spec.lr_tail_epochs).replace("{1}", Math.round(spec.lr_tail_floor * 100)) : "") +
+        (guard ? "\n\n" + tr("The meter and the guard: {0}.").replace("{0}", guard) : ""), { ok: "Start training" });   // HERESY 1752   // HERESY 1631   // 1166: "Train" is the step's name
     }).then(function (ok) {
       if (!ok) return;
       return api("/train/run", spec).then(function () { toast("Training " + spec.name); state.sel = spec.name; keep("yue2.trRun", spec.name); return load().then(function () { showPane("run"); }); });
@@ -891,9 +1008,18 @@
       if (t.id === "trLApply") return listenApply();
       if ((b = t.closest("[data-menu]"))) { e.stopPropagation(); return menu(b); }
       if (t.closest("[data-stack]")) { state.stacked = !state.stacked; keep("yue2.trStacked", state.stacked ? "1" : null); return paintRun(); }   // HERESY 1299
+      if ((b = t.closest("[data-zoom]"))) {               // HERESY 1855: −, +, the whole run
+        var zf = b.closest(".tr-chart"), za = +zf.dataset.x0, zb = +zf.dataset.x1, zm = (za + zb) / 2, zs = zb - za;
+        if (b.dataset.zoom === "reset") { state.zoom = null; return paintRun(); }
+        return b.dataset.zoom === "in" ? zoomSet(zm - zs / 4, zm + zs / 4, +zf.dataset.last) : zoomSet(zm - zs, zm + zs, +zf.dataset.last);
+      }
       if ((b = t.closest("[data-act][data-run]"))) return act(b.dataset.run, b.dataset.act);
       if ((b = t.closest("[data-restore]"))) return restore(b.dataset.restore);
       if ((b = t.closest("[data-purge]"))) return purge(b.dataset.purge, b.dataset.name, b.dataset.size);
+      if ((b = t.closest("[data-pickon]"))) { state.pick = { run: state.sel, files: {} }; return paintRun(); }   // HERESY 1817
+      if (t.closest("[data-pickoff]")) { state.pick = null; return paintRun(); }
+      if (t.closest("[data-pickgo]")) { var pr = runOf(state.sel); if (pr) pickGo(pr); return; }
+      if ((b = t.closest("[data-epoch]")) && state.pick && state.pick.run === state.sel) { var pf = state.pick.files; pf[b.dataset.epoch] = !pf[b.dataset.epoch]; return paintRun(); }
       if ((b = t.closest("[data-epoch]"))) { state.epoch = b.dataset.epoch; paintRun(); return epochAsk(b.dataset.epoch); }   // HERESY 1496
       if ((b = t.closest("[data-pub]"))) return publish(b.dataset.pub);
       if ((b = t.closest("[data-unpub]"))) return unpublish(b.dataset.unpub);
@@ -901,6 +1027,39 @@
     });
     $("trRunList").addEventListener("keydown", function (e) { var c = e.target.closest(".tr-rcard[data-open]"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openRun(c.dataset.open); } });
     $("trRunPane").addEventListener("mousemove", function (e) { if (e.target.closest(".tr-plot")) readout(e); });
+    // HERESY 1855: a drag across a curve zooms both to its steps; a double-click shows the whole run; Ctrl and the wheel zoom where the pointer is
+    var zd = null;
+    $("trRunPane").addEventListener("mousedown", function (e) {
+      var svg = e.button === 0 && e.target.closest(".tr-plot svg"), fig = svg && svg.closest(".tr-chart");
+      if (!fig) return;
+      e.preventDefault();
+      zd = { fig: fig, box: svg.getBoundingClientRect(), x: e.clientX, x0: +fig.dataset.x0, x1: +fig.dataset.x1, last: +fig.dataset.last, band: null };
+    });
+    document.addEventListener("mousemove", function (e) {
+      if (!zd || Math.abs(e.clientX - zd.x) < 4) return;
+      var plot = zd.fig.querySelector(".tr-plot");
+      if (!plot || !plot.isConnected) return;
+      if (!zd.band) { zd.band = document.createElement("i"); zd.band.className = "tr-band"; plot.appendChild(zd.band); }
+      var lft = Math.max(zd.box.left, Math.min(zd.x, e.clientX)), rgt = Math.min(zd.box.right, Math.max(zd.x, e.clientX)), pb = plot.getBoundingClientRect();
+      zd.band.style.left = (lft - pb.left) + "px"; zd.band.style.width = Math.max(0, rgt - lft) + "px";
+    });
+    document.addEventListener("mouseup", function (e) {
+      if (!zd) return;
+      var d = zd; zd = null;
+      if (d.band) d.band.remove();
+      if (Math.abs(e.clientX - d.x) < 6) return;
+      var at = function (cx) { return d.x0 + (d.x1 - d.x0) * Math.max(0, Math.min(1, (cx - d.box.left) / d.box.width)); };
+      zoomSet(at(Math.min(d.x, e.clientX)), at(Math.max(d.x, e.clientX)), d.last);
+    });
+    $("trRunPane").addEventListener("dblclick", function (e) { if (e.target.closest(".tr-plot svg") && state.zoom) { state.zoom = null; paintRun(); } });
+    $("trRunPane").addEventListener("wheel", function (e) {
+      var svg = (e.ctrlKey || e.metaKey) && e.target.closest(".tr-plot svg"), fig = svg && svg.closest(".tr-chart");
+      if (!fig) return;
+      e.preventDefault();
+      var box = svg.getBoundingClientRect(), a = +fig.dataset.x0, b = +fig.dataset.x1, k = e.deltaY < 0 ? 0.8 : 1.25;
+      var at = a + (b - a) * Math.max(0, Math.min(1, (e.clientX - box.left) / box.width));
+      zoomSet(at - (at - a) * k, at + (b - at) * k, +fig.dataset.last);
+    }, { passive: false });
     // HERESY 1496: an epoch's file by a right-click (what to do with it, by a click)
     $("trRunPane").addEventListener("contextmenu", function (e) {
       var b = e.target.closest("[data-epoch]"), r = runOf(state.sel), c = b && epochOf(b.dataset.epoch);

@@ -333,7 +333,7 @@
     <h1>用文字与和弦写歌<br>在你自己的机器上</h1>
     <p class="lead">围绕开放歌曲模型 <b>YuE2</b> 的完整工作室。写下风格和歌词，工作室就在<b>你自己的 GPU</b> 上作曲、演唱并渲染歌曲。你的歌曲、文字和设置永远不会离开它。</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">在 GitHub 获取</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.zh.md">阅读指南</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face 上的模型</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 请我一台咖啡机</a></div>
-    <span class="rc"><b>2.0.2</b> · 工作室自带的写作模型 · 2026 年 10 月</span>
+    <span class="rc"><b>2.0.3</b> · 影像室直达成片 · 2026 年 10 月</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -345,7 +345,7 @@
     <div class="nums">
       <div><b>8 min</b><span>完整的歌曲，最长八分钟</span></div>
       <div><b>135 s</b><span>一首 6:12 的歌，只用一张 RTX 3090</span></div>
-      <div><b>6 个房间</b><span>用来创作、写作、精修、绘画、收藏和教学</span></div>
+      <div><b>7 个房间</b><span>用来创作、写作、精修、绘画、拍摄、收藏和教学</span></div>
       <div><b>200</b><span>件乐器，逐一用耳朵试听</span></div>
       <div><b>12</b><span>种页面语言</span></div>
     </div>
@@ -363,8 +363,8 @@
 
   <section id="rooms">
     <div class="wrap">
-      <h2>六个房间，一个工作室</h2>
-      <p class="sub"><b>创作室</b>做出歌曲，<b>写作室</b>与聊天模型一起写它，<b>精修室</b>完成它，<b>画室</b>为它画图，<b>资料馆</b>收藏每一段录音，<b>LoRA 训练室</b>把你自己的歌教给 YuE2。每个房间的指南都在工作室里。</p>
+      <h2>七个房间，一个工作室</h2>
+      <p class="sub"><b>创作室</b>做出歌曲，<b>写作室</b>与聊天模型一起写它，<b>精修室</b>完成它，<b>画室</b>为它画图，<b>影像室</b>为它策划音乐视频，<b>资料馆</b>收藏每一段录音，<b>LoRA 训练室</b>把你自己的歌教给 YuE2。每个房间的指南都在工作室里。</p>
       <div class="rooms">
         <article class="room"><a class="pic" href="../assets/shots/studio-create.webp" data-night="assets/shots/studio-create-night.webp"><img class="day" src="../assets/shots/studio-create.webp" alt="创作室" loading="lazy"><img class="night" src="../assets/shots/studio-create-night.webp" alt="创作室" loading="lazy"></a>
           <div><h3>创作室</h3><p>风格、歌词、规划模式、解码器、在由绿到红的道路上的 LoRA；录音附带它的乐谱、种子以及重做它所需的一切。</p></div></article>
@@ -663,7 +663,7 @@
   </div>
 
 <footer>
-  <div class="wrap"><span>鲁阿赫工作室 · 2.0.2 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> 的作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">更新记录</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 咖啡机</a></span></div>
+  <div class="wrap"><span>鲁阿赫工作室 · 2.0.3 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> 的作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">更新记录</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 咖啡机</a></span></div>
 </footer>
 
 <script src="../assets/wavesurfer.min.js"></script>
@@ -815,13 +815,22 @@
   // HERESY 1801: the vocabulary's window; its page in the card's language and day or night
   (function () {
     var m = document.getElementById("vocab-modal"), f = document.getElementById("vocab-frame");
-    function open() {
+    function theme() {
       var th = document.documentElement.getAttribute("data-theme");
-      if (!th) th = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-      var src = "/vocabulary/index.html?embed=1&lang=" + encodeURIComponent(document.documentElement.lang || "en") + "&theme=" + th;
-      if (f.getAttribute("src") !== src) f.setAttribute("src", src);
+      return th || (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    }
+    // 28.10.2026 (Viktor: «при переключении режима темы не подхватывает активный день/ночь. Только по F5»): the frame is told the page's day or
+    // night whenever it changes, and when it loads; reopening keeps the frame it has
+    function sync() { try { var d = f.contentDocument; if (d && d.documentElement) d.documentElement.setAttribute("data-theme", theme()); } catch (e) {} }
+    function open() {
+      var base = "/vocabulary/index.html?embed=1&lang=" + encodeURIComponent(document.documentElement.lang || "en");
+      if ((f.getAttribute("src") || "").split("&theme=")[0] !== base) f.setAttribute("src", base + "&theme=" + theme());
+      else sync();
       m.hidden = false; document.body.style.overflow = "hidden";
     }
+    f.addEventListener("load", sync);
+    new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", sync);
     function close() { m.hidden = true; document.body.style.overflow = ""; if (location.hash === "#vocabulary") history.replaceState(null, "", location.pathname + location.search); }
     document.getElementById("vocab-open").addEventListener("click", open);
     document.getElementById("vocab-close").addEventListener("click", close);

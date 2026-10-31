@@ -373,7 +373,7 @@
   var POWER = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 2v6M4.6 4.2a5 5 0 1 0 6.8 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
   // HERESY 1561: inserts: a strip's version through a processor on Forge, the result its new version; the master printed through the gateway
   var CHARS = [["tape", "Tape"], ["console", "Console"], ["tube", "Tube"], ["transformer", "Transformer"], ["vinyl", "Vinyl"]];
-  var INS = { plugins: null, run: {}, timer: 0 };
+  var INS = { plugins: null, run: {}, timer: 0, orch: {}, mode: {} };   // HERESY 1885: the orchestra's offer a stem, its mode a strip
   function insPlugins() {
     if (INS.plugins || !window.fetch) return;
     INS.plugins = [];
@@ -400,6 +400,7 @@
         return '<button type="button" class="mc-chip" data-act="insgate" data-v="' + c[0] + '"' + (busy ? " disabled" : "") + ">" + esc(tr(c[1])) + "</button>"; }).join("") + "</div>" +
       ((INS.plugins || []).length ? '<div class="mc-chips dv-ins" role="group">' + INS.plugins.map(function (p) {
         return '<button type="button" class="mc-chip" data-act="insplug" data-v="' + esc(p.pid + "|" + p.sid) + '"' + (p.builtin ? "" : ' translate="no"') + (busy ? " disabled" : "") + ">" + esc(p.label) + "</button>"; }).join("") + "</div>" : "") +
+      orchHtml(n, busy) +
       '<p class="row-hint dv-ins-say" data-ins="' + esc(n) + '"' + (r && r.err ? ' style="color:var(--bad,#c33)"' : "") + ">" + esc(insSay(n)) + "</p>";
   }
   function insTick() {
@@ -427,6 +428,41 @@
     var run = INS.run[n] = { label: label, t0: Date.now(), id: "", err: "", done: false };
     paint(); insTick();
     fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); })
+      .then(function (job) { run.id = job.id; insWatch(n, take.name, run); if (window.HeresyDerived) window.HeresyDerived.refresh(); })
+      .catch(function (e) { run.err = e.message || String(e); run.done = true; paint(); });
+  }
+  // HERESY 1885: the stem into MIDI (MuScriptor, its own instruments), its notes' strength from the stem, played by a sampled instrument on
+  // Forge; what comes back is a version of the strip: instead of it, over it, or an octave away (the lab's orchestra.make_version)
+  var ORCH_MODES = [["instead", "instead"], ["over", "over"], ["up", "an octave up"], ["down", "an octave down"]];
+  var ORCH_STEMS = ["piano", "bass", "drums", "guitar", "winds", "other", "lead_vocal", "vocals"];
+  function orchHtml(n, busy) {
+    if (ORCH_STEMS.indexOf(n) < 0) return "";
+    if (INS.orch[n] === undefined && window.fetch) {
+      INS.orch[n] = null;
+      fetch("/lab/orchestra/suggest?stem=" + encodeURIComponent(n), { priority: "low" }).then(function (r) { return r.ok ? r.json() : { offer: [] }; })
+        .then(function (d) { INS.orch[n] = d.offer || []; paint(); }).catch(function () { INS.orch[n] = []; });
+    }
+    var offer = INS.orch[n] || [], mode = INS.mode[n] || "instead";
+    if (!offer.length) return "";
+    return '<div class="mc-chips dv-ins dv-orch" role="group" aria-label="' + esc(tr("MIDI orchestra")) + '" data-tip="' +
+      esc(tr("MIDI orchestra: the stem into MIDI with its own instruments, each note as strong as in the stem, played by a sampled instrument on Forge; what comes back is the strip's new version, instead of it, over it or an octave away")) +
+      '"><span class="dv-ins-k">' + esc(tr("MIDI orchestra")) + "</span>" + ORCH_MODES.map(function (m) {
+        var on = m[0] === mode;
+        return '<button type="button" class="mc-chip' + (on ? " is-on" : "") + '" data-act="orchmode" data-v="' + m[0] + '" aria-pressed="' + on + '">' + esc(tr(m[1])) + "</button>"; }).join("") + "</div>" +
+      '<div class="mc-chips dv-ins dv-orch" role="group">' + offer.map(function (o, k) {
+        return '<button type="button" class="mc-chip" data-act="insorch" data-v="' + k + '"' + (o.instrument ? ' translate="no"' : "") + (busy ? " disabled" : "") + ">" +
+          esc(o.instrument ? o.label : tr("By the map")) + "</button>"; }).join("") + "</div>";
+  }
+  function runOrchestra(n, k) {
+    var M = K(), take = M && M.S.take, st = take && (M.info().strips || []).filter(function (x) { return x.name === n; })[0], o = (INS.orch[n] || [])[k];
+    if (!take || !st || !o || (INS.run[n] && !INS.run[n].done)) return;
+    var mode = INS.mode[n] || "instead", q = { name: take.name, source: st.path, mode: mode === "up" || mode === "down" ? "octave" : mode };
+    if (q.mode === "octave") q.shift = mode === "up" ? 12 : -12;
+    if (o.instrument) q.instrument = JSON.stringify(o.instrument);
+    var run = INS.run[n] = { label: tr("MIDI orchestra") + " \u00b7 " + (o.instrument ? o.label : tr("By the map")), t0: Date.now(), id: "", err: "", done: false };
+    paint(); insTick();
+    fetch("/lab/orchestra/render?" + Object.keys(q).map(function (x) { return x + "=" + encodeURIComponent(q[x]); }).join("&"))
       .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); })
       .then(function (job) { run.id = job.id; insWatch(n, take.name, run); if (window.HeresyDerived) window.HeresyDerived.refresh(); })
       .catch(function (e) { run.err = e.message || String(e); run.done = true; paint(); });
@@ -816,6 +852,8 @@
     if (act === "peaks") { M.resetLoud(); return; }
     if (act === "loudreset") { M.resetLoud(); return; }
     if (act === "insgate" || act === "insplug") { runInsert(C.sel, act, v); return; }   // HERESY 1561: a job on Forge, its undo the versions
+    if (act === "orchmode") { INS.mode[C.sel] = v; paint(); return; }   // HERESY 1885: the orchestra's mode for this strip
+    if (act === "insorch") { runOrchestra(C.sel, +v); return; }         // HERESY 1885: rendered on Forge, the strip's new version
     if (act === "mprint") { runPrint(v); return; }
     if (act === "solo" && e.altKey && M.clearSolo) { M.clearSolo(); return; }   // HERESY 1754: Alt+click on an S, every solo off
     M.mark();
