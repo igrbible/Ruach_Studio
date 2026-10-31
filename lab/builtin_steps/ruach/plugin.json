@@ -446,6 +446,225 @@
    ]
   },
   {
+   "id": "pianoteq",
+   "label": "Pianoteq",
+   "say": "a stem played again on a piano",
+   "tip": "A stem of the set played again by the Pianoteq installed here (your own copy, bought and activated: the Studio ships none of it): its MIDI the take's own when the MIDI step made one of that stem, else transcribed here on the CPU; each note's touch read from the stem, the pedal held through each phrase, at the stem's level and length. A lane of its own in the DAW, or the stem's version. Its sound is not for training a model (Modartt's licence).",
+   "script": "pianoteq.py",
+   "input": "stems",
+   "rate": 2.0,
+   "group": "mend",
+   "after": "pl-ruach-ambientPanel",
+   "params": [
+    {
+     "key": "stem",
+     "label": "Stem",
+     "type": "select",
+     "default": "piano",
+     "options": [
+      [
+       "piano",
+       "Piano"
+      ],
+      [
+       "other",
+       "Other"
+      ],
+      [
+       "guitar",
+       "Guitar"
+      ],
+      [
+       "bass",
+       "Bass"
+      ],
+      [
+       "winds",
+       "Winds"
+      ],
+      [
+       "vocals",
+       "Vocals (its melody)"
+      ],
+      [
+       "instrumental",
+       "Instrumental"
+      ]
+     ],
+     "tip": "Which stem the piano plays; a set without it gives the first of piano, other, instrumental, guitar"
+    },
+    {
+     "key": "preset",
+     "label": "Instrument",
+     "type": "select",
+     "default": "NY Steinway D Classical",
+     "options": [
+      [
+       "NY Steinway D Classical",
+       "NY Steinway D Classical"
+      ],
+      [
+       "NY Steinway D Warm",
+       "NY Steinway D Warm"
+      ],
+      [
+       "NY Steinway D Jazz",
+       "NY Steinway D Jazz"
+      ],
+      [
+       "NY Steinway D Felt I",
+       "NY Steinway D Felt I"
+      ],
+      [
+       "HB Steinway D Classical",
+       "HB Steinway D Classical"
+      ],
+      [
+       "HB Steinway D Intimate",
+       "HB Steinway D Intimate"
+      ],
+      [
+       "HB Steinway D Warm",
+       "HB Steinway D Warm"
+      ],
+      [
+       "Bösendorfer 280VC",
+       "Bösendorfer 280VC"
+      ],
+      [
+       "Bösendorfer VC Warm",
+       "Bösendorfer VC Warm"
+      ],
+      [
+       "Bösendorfer VC Sombre",
+       "Bösendorfer VC Sombre"
+      ],
+      [
+       "Bösendorfer VC Pop Mix",
+       "Bösendorfer VC Pop Mix"
+      ],
+      [
+       "C. Bechstein DG Warm",
+       "C. Bechstein DG Warm"
+      ],
+      [
+       "C. Bechstein DG Sweet",
+       "C. Bechstein DG Sweet"
+      ],
+      [
+       "C. Bechstein DG Recording 1",
+       "C. Bechstein DG Recording 1"
+      ],
+      [
+       "C. Bechstein DG Felt I",
+       "C. Bechstein DG Felt I"
+      ],
+      [
+       "Classical Guitar",
+       "Classical Guitar"
+      ],
+      [
+       "Classical Guitar Warm",
+       "Classical Guitar Warm"
+      ],
+      [
+       "Classical Guitar Arpeggio",
+       "Classical Guitar Arpeggio"
+      ]
+     ],
+     "tip": "A Pianoteq preset: an instrument you have not bought plays as a demo, some of its keys silent"
+    },
+    {
+     "key": "lay",
+     "label": "In the DAW",
+     "type": "select",
+     "default": "lane",
+     "options": [
+      [
+       "lane",
+       "A lane of its own"
+      ],
+      [
+       "version",
+       "The stem's version"
+      ]
+     ],
+     "tip": "A lane of its own plays beside the stem; the stem's version plays in its place (the lane's version button)"
+    },
+    {
+     "key": "dynamics",
+     "label": "Dynamics",
+     "type": "select",
+     "default": "stem",
+     "options": [
+      [
+       "stem",
+       "From the stem"
+      ],
+      [
+       "even",
+       "Even"
+      ]
+     ],
+     "tip": "Each note as loud as the stem played it at its attack, or all of them alike"
+    },
+    {
+     "key": "touch",
+     "label": "Touch",
+     "type": "number",
+     "min": -30,
+     "max": 30,
+     "step": 2,
+     "default": 0,
+     "tip": "Every velocity moved by this much: softer below zero, harder above"
+    },
+    {
+     "key": "pedal",
+     "label": "Sustain pedal",
+     "type": "select",
+     "default": "phrases",
+     "options": [
+      [
+       "phrases",
+       "Held through each phrase"
+      ],
+      [
+       "none",
+       "No pedal"
+      ]
+     ],
+     "tip": "Down at a phrase's first note, up as its last one ends; a phrase ends where nothing sounds for 0.6 s"
+    },
+    {
+     "key": "parts",
+     "label": "What it plays",
+     "type": "select",
+     "default": "all",
+     "options": [
+      [
+       "all",
+       "Every pitched part"
+      ],
+      [
+       "keys",
+       "The keyboard parts"
+      ]
+     ],
+     "tip": "The stem's MIDI may hold several instruments: all of them, or only its pianos, keys and organs"
+    },
+    {
+     "key": "shift",
+     "label": "Transpose, semitones",
+     "type": "number",
+     "min": -24,
+     "max": 24,
+     "step": 1,
+     "default": 0,
+     "tip": "Every note moved by this many semitones (12: an octave up), kept within the piano's 88 keys"
+    }
+   ]
+  },
+  {
    "id": "vupscale",
    "label": "Voice upscale",
    "say": "the voices' top redrawn",

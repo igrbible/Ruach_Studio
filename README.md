@@ -359,6 +359,16 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
+### Done › 2.0.4 (October 2026)
+
+- **The DAW as an audio editor**: a drag selects; the selection is moved, copied, cut, silenced, faded or raised from its right-click; the level's line over every wave is taken at a point up into a peak or down into a fade; Ctrl+E splits; the place a stretch leaves fades into its silence and out of it, its fades drawn with the right button or set by sliders; a selection's edges cling to sections, splits and the playhead.
+- **The DAW's lanes and console**: each lane its own height and its own right-click menu; the console pinned beside the lanes, on hover at the right edge, or floating.
+- **Pianoteq**: a step of the studio's own on a set of stems, played by the Pianoteq you installed and activated, into a lane of its own in the DAW.
+- **The Refiner's nodes in FULL**: every step's settings on its node's face as ComfyUI's rows (name … ◀ value ▶), folded and unfolded; a node's output in its window.
+- **The studio on a phone**: the Creator, the Writer and the Librarian in one column, the player in one row.
+
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
 ### To Do › After 2.0.0
 
 2.0.0 is the studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:

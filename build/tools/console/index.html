@@ -523,6 +523,13 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <label class="mode"><input type="radio" name="refinerOpens" value="canvas" /><span class="mode-body"><strong>Always the canvas</strong>
           <small>The nodes and their wires; a click opens one; nothing to scroll at 1080p.</small></span></label>
       </div>
+      <!-- HERESY 1969 (Viktor 30.10.2026: «SIMPLE with Options Pop-Up / FULL in ComfyUI Style… под „Всегда холстом“»): how a node shows its settings -->
+      <div class="modes rf-opens rf-nodes" id="refinerNodes" role="radiogroup" aria-label="How a node shows its settings">
+        <label class="mode"><input type="radio" name="refinerNodes" value="simple" /><span class="mode-body"><strong>SIMPLE with Options Pop-Up</strong>
+          <small>A node is its name and what it does; a click opens its settings in a window.</small></span></label>
+        <label class="mode"><input type="radio" name="refinerNodes" value="full" /><span class="mode-body"><strong>FULL in ComfyUI Style</strong>
+          <small>Every node carries all its settings on its face, as ComfyUI's do; a click on its name opens only what went in and what it made.</small></span></label>
+      </div>
     </div>
 
     <div class="card wide lora-card eg-vae">

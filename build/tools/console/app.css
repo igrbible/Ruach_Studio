@@ -6083,7 +6083,7 @@ body:has(#view-engine:not(.is-hidden)) :is(.topbar, #playbar) { z-index: 37; }
 .mx-head .mx-set select { min-width: 200px; }
 .mx-head .mx-bus select { min-width: 90px; }
 .mx-time { font-size: 13px; color: var(--muted); min-width: 92px; align-self: center; }
-.mx-state { align-self: center; }
+.mx-state { align-self: center; flex: 1 1 220px; min-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* HERESY 1968: one line of its own width, whatever it says: the lanes never jump under the hand */
 .mx-state.is-bad { color: var(--bad, #e06c5a); }
 .mx-lanes { position: relative; display: flex; flex-direction: column; gap: 4px; }
 .mx-lane { display: grid; grid-template-columns: minmax(650px, 700px) minmax(0, 1fr); align-items: center; gap: 8px; border: 1px solid var(--line-soft); border-radius: 6px; padding: 3px 6px; background: var(--sunk); }
@@ -8039,3 +8039,156 @@ html.log-nowrap .log-dock-body, html.log-nowrap .log-body, html.log-nowrap [data
 .pcv-stop.is-stopping { opacity: .5; pointer-events: none; }
 .pc-st.is-stopped { color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .pcv-prog.is-unknown > i { animation: none; left: 35%; } }
+
+/* HERESY 1964 (Viktor 30.10.2026: «вкладку "Выхлоп ноды"»): a step's window in two tabs; its output in the tree's own rows */
+.nd-tabs { display: flex; gap: 6px; padding: 10px 18px 0; }
+.nd-tabs[hidden] { display: none; }
+.nd-tabs .btn[aria-selected="true"] { border-color: var(--amber); color: var(--amber); }
+.nd-box .nd-body[hidden], .nd-out[hidden] { display: none; }
+.nd-out { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 14px 18px 18px; display: flex; flex-direction: column; gap: 16px; }
+.nd-out-part { display: flex; flex-direction: column; gap: 6px; }
+.nd-out-none { margin: 0; }
+@media (min-width: 601px) {
+  .nd-out-tree .dv-node:not(.is-text), .nd-out-tree .dv-node.dv-orig {
+    grid-template-columns: calc(var(--dv-name, 300px) - var(--dv-off, 0px)) 48px minmax(0, 1fr) var(--dv-acts, auto); }
+}
+.nd-out-tree .dv-acts { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.nd-out-tree .dv-node.is-image { flex-wrap: wrap; }
+.nd-out-tree .dv-node.is-image .dv-pic { display: block; flex: 1 1 100%; order: 3; margin: 4px 0 2px; }
+.nd-out-tree .dv-node.is-image .dv-pic img { display: block; width: 100%; max-width: 1100px; height: auto; border-radius: 6px; border: 1px solid var(--line-soft); }
+
+/* HERESY 1965 (Viktor 30.10.2026: «каждая полоса фиксированной высоты по умолчанию, 60–80px… тянет снизу до ~120px»; «сама страница не прокручивается…
+   дорожки прокручиваются внутри»): a lane its own height, not the screen's share; the lanes scroll inside the DAW under a ruler that stays */
+#dawPanel .mx-wave:not(.mx-ruler), #dawPanel .mx-lane.is-open .mx-wave:not(.mx-ruler), body.daw-full #dawPanel .mx-wave:not(.mx-ruler),
+body.daw-full #dawPanel .mx-lane.is-open .mx-wave:not(.mx-ruler), body.daw-full #dawPanel.has-dock .mx-wave:not(.mx-ruler) { height: var(--mx-h, 72px); }
+#dawPanel .mx-lanes { overflow-y: auto; max-height: var(--mx-lanes-max, 62vh); overscroll-behavior: contain; }
+body.daw-full #dawPanel .mx-lanes { --mx-lanes-max: calc(100vh - 150px); }
+body.daw-full #dawPanel.has-dock .mx-lanes { --mx-lanes-max: calc(100vh - 150px - var(--mx-dock-h, 440px)); }
+#dawPanel .mx-ruler-row { position: sticky; top: 0; z-index: 3; background: var(--panel); }
+#dawPanel .mx-lane { position: relative; }
+.mx-grip { position: absolute; left: 6px; right: 6px; bottom: -4px; height: 7px; cursor: ns-resize; z-index: 2; border-radius: 3px; }
+.mx-grip:hover, .mx-grip.is-drag { background: color-mix(in srgb, var(--amber) 45%, transparent); }
+#dawPanel .mx-head-line { bottom: auto; }
+/* HERESY 1975: a cut's two fades as sliders, by the pointer */
+.mx-fadebox { position: fixed; z-index: 45; width: 300px; max-width: calc(100vw - 12px); padding: 10px 12px 8px; border: 1px solid var(--line-a); border-radius: var(--r-md);
+  background: var(--ground); box-shadow: 0 18px 50px var(--shadow-lg, rgba(0, 0, 0, .3)); font-size: 12px; }
+.mx-fb-head { margin-bottom: 8px; font-weight: 600; color: var(--ink); }
+.mx-fb-row { display: grid; grid-template-columns: minmax(0, 1fr) 120px 58px; align-items: center; gap: 8px; margin: 4px 0; color: var(--muted); }
+.mx-fb-row output { text-align: right; color: var(--ink); }
+.mx-fb-link { margin: 6px 0 2px; font-size: 12px; }
+.mx-fb-hint { margin: 6px 0 0; font-size: 11px; color: var(--dim); }
+
+/* HERESY 1969: FULL in ComfyUI Style: a node carries its step's own settings on its face; the head still drags it and opens its output */
+/* HERESY 1974 (Viktor 31.10.2026: «Ноды максимально компактные… адаптивную ширину и высоту, но держи минимальные размеры… чтобы не было карликов и
+   гигантов»): as wide as its rows ask, 248…340 px; its words on its head's tip, its slots under the head */
+.pcv-node.is-full { width: max-content; min-width: 248px; max-width: 340px; cursor: default; }
+.pcv-node.is-full > .pcv-say { display: none; }
+.pcv-node.is-full > .pcv-meta:empty { display: none; }
+.pcv-node.is-full > .pcv-top { cursor: grab; }
+.pcv-face { margin: 4px -2px 0; padding-top: 5px; border-top: 1px solid var(--line-soft); font-size: 11px; cursor: auto; text-align: left; }
+.pcv-face:empty { display: none; }
+.pcv-fold { margin-left: auto; padding: 0 4px; border-radius: 4px; color: var(--muted); cursor: pointer; font-size: 12px; line-height: 1.2; }   /* HERESY 1971 */
+.pcv-fold:hover { color: var(--ink); background: color-mix(in srgb, var(--amber) 22%, transparent); }
+.pcv-face > details > summary { display: none; }
+.pcv-face > .drawer.is-step.is-step-off { display: block; }   /* every face shows its settings, not the list's one step */
+.pcv-face > details { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.pcv-face .drawer-body { padding: 0; margin: 0; }
+.pcv-face p.row-hint { display: none; }   /* its words are its tip and the guide's; the face holds what is set */
+.pcv-face .rm-grid, .pcv-face .dv-actions { gap: 6px 8px; }
+.pcv-face .field .label { font-size: 11px; }
+/* HERESY 1974 (Viktor 31.10.2026: «Строка: название функции > дропдаун с вариантами… как в Комфи»): a field one pill row, «name … ◀ value ▶»;
+   a check one with its switch; what the step made and runs is its window's and its head's, not its face's */
+.pcv-face .drawer-body, .pcv-face .rm-grid { display: flex; flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 2px; }
+.pcv-face .drawer-body > * { margin-top: 0; margin-bottom: 0; }
+.pcv-face .rm-grid > .field:not(.rm-num) { flex: none; }
+.pcv-node .pcv-face .rm-grid > .field, .pcv-node .pcv-face .rm-grid > .check, .pcv-node .pcv-face .rm-grid > .hc-box, .pcv-node .pcv-face .drawer-body > .check {
+  align-self: stretch; }   /* every row the face's width (over 1509's start for a field with choices and the plugins' centred checks) */
+.pcv-face .dv-made, .pcv-face .dv-live, .pcv-face .kt-box { display: none; }   /* the lyrics held against the singing (kt-box) are its window's too */
+.pcv-face .spec-stage ~ .spec-stage { display: none; }   /* the face previews the spectrogram, as ComfyUI's preview; the curves and the bands in its window */
+.pcv-face .spec-stage canvas { max-height: 140px; object-fit: contain; }
+.pcv-node .pcv-face .rm-grid > .rm-num { width: auto; }   /* over the list's 110 px a number */
+.pcv-face .mc-chips > * { min-height: 0; padding: 1px 7px; font-size: 10.5px; }
+.pcv-face .field, .pcv-face .rm-grid > .hc-box, .pcv-face .check { flex-direction: row; align-items: center; gap: 4px; min-height: 18px; margin: 0;
+  padding: 0 3px 0 9px; border: 1px solid var(--line-soft); border-radius: 9px; background: color-mix(in srgb, var(--ink) 5%, transparent); }
+.pcv-face .field:hover, .pcv-face .rm-grid > .hc-box:hover, .pcv-face .check:hover { border-color: color-mix(in srgb, var(--amber) 45%, transparent); }
+.pcv-face .field > .label, .pcv-face .hc-lab { flex: 0 1 auto; min-width: 0; margin: 0 auto 0 0; font-size: 11px; letter-spacing: 0; text-transform: none;
+  color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pcv-face .field > .label em, .pcv-face .field > .label .kind-badge { display: none; }
+.pcv-face .hc-box { display: flex; flex: 1 1 auto; min-width: 0; align-items: center; justify-content: flex-end; gap: 0; }
+.pcv-face .field > .hc-box { flex: 0 1 auto; max-width: 70%; }
+.pcv-face .hc-pick { min-width: 0; max-width: 100%; height: 16px; padding: 0 2px; gap: 0; border: 0; background: none; font-size: 11px; color: var(--ink); }
+.pcv-face .hc-pick:hover { color: var(--amber-hi, var(--amber)); }
+.pcv-face .hc-step, .pcv-face .pcv-nstep { flex: none; display: inline-grid; place-items: center; width: 14px; height: 16px; padding: 0; border: 0;
+  background: none; color: var(--dim); font-size: 8px; line-height: 1; cursor: pointer; user-select: none; }
+.pcv-face .hc-step:hover:not(:disabled), .pcv-face .pcv-nstep:hover { color: var(--amber); }
+.pcv-face .hc-step:disabled { opacity: .3; cursor: default; }
+.pcv-nstep { display: none; }
+.pcv-face .field > input[type="number"], .pcv-face .field > input[type="text"] { flex: 0 1 64px; width: 64px; min-width: 36px; height: 16px; padding: 0 2px;
+  border: 0; border-radius: 0; background: none; box-shadow: none; text-align: right; font: 11px/16px var(--mono); color: var(--ink); }
+.pcv-face .field > input[type="number"] { cursor: ew-resize; -moz-appearance: textfield; }
+.pcv-face .field > input[type="number"]:focus { cursor: text; background: color-mix(in srgb, var(--amber) 10%, transparent); }
+.pcv-face .field > input[type="number"]::-webkit-inner-spin-button, .pcv-face .field > input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.pcv-face .field > select { flex: 0 1 auto; max-width: 70%; height: 16px; padding: 0 16px 0 4px; border: 0; background-color: transparent; font-size: 11px; }
+.pcv-face .field > input[type="range"] { flex: 1 1 80px; min-width: 60px; margin: 0 4px; }
+.pcv-face .field > textarea { flex: 1 1 100%; min-height: 0; font-size: 11px; }
+.pcv-face .field:has(> textarea) { flex-wrap: wrap; padding: 3px 6px 4px 9px; border-radius: 8px; }
+.pcv-face .check, .pcv-face .field.pl-check { flex-direction: row-reverse; justify-content: space-between; padding: 0 6px 0 9px; font-size: 11px; color: var(--muted); }
+.pcv-face .check input[type="checkbox"], .pcv-face .field > input[type="checkbox"] { -webkit-appearance: none; appearance: none; flex: none; width: 22px; height: 12px; margin: 0;
+  border-radius: 6px; cursor: pointer; background: radial-gradient(circle at 6px 50%, var(--panel) 0 3.5px, transparent 4px), var(--line-a); }
+.pcv-face .check input[type="checkbox"]:checked, .pcv-face .field > input[type="checkbox"]:checked {
+  background: radial-gradient(circle at calc(100% - 6px) 50%, var(--panel) 0 3.5px, transparent 4px), var(--amber); }
+.pcv-face .dv-actions { gap: 4px 6px; margin-top: 2px; }
+.pcv-face .dv-actions .btn { min-height: 0; padding: 2px 10px; font-size: 11px; line-height: 16px; }
+.pcv-face .dv-actions .row-hint { font-size: 10.5px; }
+.pcv-face img, .pcv-face canvas, .pcv-face svg { max-width: 100%; height: auto; }
+
+/* HERESY 1967 (Viktor 30.10.2026: «блок с консолью, устройствами и Миксами — рамкой справа, по наведению или закреплённой… открепляемой как
+   плавающая панель»): the console on the right, pinned, on hover or floating */
+#dawPanel { --mx-dock-w: clamp(520px, 34vw, 900px); }   /* its strips scroll inside it */
+#dawPanel[data-dock="pin"][data-dock-room].has-dock #mxBody { display: grid; grid-template-columns: minmax(0, 1fr) var(--mx-dock-w); column-gap: 10px; align-items: start; }
+#dawPanel[data-dock="pin"][data-dock-room].has-dock #mxBody > .mx-head, #dawPanel[data-dock="pin"][data-dock-room].has-dock #mxBody > .mx-note { grid-column: 1 / -1; }
+#dawPanel[data-dock="pin"][data-dock-room].has-dock #mxBody > .mx-lanes { grid-column: 1; grid-row: 2; }
+#dawPanel[data-dock="pin"][data-dock-room].has-dock #mxBody > .mx-dock { grid-column: 2; grid-row: 2; border-top: 0; border-left: 1px solid var(--line-soft); padding: 0 0 0 10px;
+  max-height: var(--mx-lanes-max, 62vh); overflow: auto; }
+#dawPanel[data-dock="hover"][data-dock-room] #mxBody { position: relative; overflow-x: clip; }   /* the console slid away is no width of the window's or the page's */
+#dawPanel[data-dock="hover"][data-dock-room] #mxBody > .mx-dock { position: absolute; top: 44px; right: 0; bottom: 0; width: var(--mx-dock-w); z-index: 20; overflow: auto;
+  padding: 8px 10px 8px 30px; border-top: 0; border-left: 1px solid var(--line-soft); background: var(--panel); box-shadow: -14px 0 32px rgba(0, 0, 0, .28);
+  transform: translateX(calc(100% - 24px)); transition: transform .18s ease; }
+#dawPanel[data-dock="hover"][data-dock-room] #mxBody > .mx-dock::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 24px; border-right: 1px solid var(--line-soft);
+  background: repeating-linear-gradient(0deg, transparent 0 5px, color-mix(in srgb, var(--amber) 22%, transparent) 5px 6px); }
+#dawPanel[data-dock="hover"][data-dock-room] #mxBody > .mx-dock:hover, #dawPanel[data-dock="hover"][data-dock-room] #mxBody > .mx-dock:focus-within { transform: none; }
+#dawPanel[data-dock="float"] #mxBody > .mx-dock { position: fixed; left: var(--mx-fx, calc(100vw - var(--mx-dock-w) - 40px)); top: var(--mx-fy, 120px); width: var(--mx-dock-w);
+  max-height: 72vh; overflow: auto; z-index: 70; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, .38); resize: both; }
+#dawPanel[data-dock="float"] #mxDock .mc-tabs { cursor: move; }
+body.daw-full #dawPanel.has-dock[data-dock] .mx-lanes { --mx-lanes-max: calc(100vh - 150px); }
+.mc-dockmode { display: inline-flex; gap: 4px; margin-left: auto; }
+#dawPanel[data-dock] #mxDock .mc-tabs { flex-wrap: wrap; row-gap: 4px; }
+#dawPanel[data-dock] #mxDock .mc-how { order: 9; flex: 1 1 100%; margin-left: 0; }   /* a docked console is narrow: the hint under its tabs */
+.mc-dm { padding: 3px 8px; }
+
+/* HERESY 1976 (Viktor 31.10.2026: «пробовал Студию на мобиле… Творец, Писатель и Библиотекарь, сделай адаптивными, а остальные комнаты вообще
+   отключать при таком низком разрешении»): a phone, up to 760 px wide: one column, nothing past the screen's edge; the rooms a phone does not
+   hold greyed in the bar (app.js says why when one is asked for) */
+@media (max-width: 760px) {
+  html, body { max-width: 100%; overflow-x: hidden; }
+  .topbar { padding: 6px 10px; gap: 6px 10px; }
+  .topbar .tabs { margin-left: 0; max-width: 100%; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  .topbar .tabs::-webkit-scrollbar { display: none; }
+  .topbar .tabs > button { flex: none; }
+  .topbar .tabs > [data-tab="post"], .topbar .tabs > [data-tab="artist"], .topbar .tabs > [data-tab="video"], .topbar .tabs > [data-tab="train"] { opacity: .4; }
+  .workspace, .workspace.lib-folded { grid-template-columns: minmax(0, 1fr) !important; height: auto; }
+  .col { min-width: 0; padding: 12px 10px 40px; }
+  .col-head { margin: -12px -10px 0; padding: 12px 10px 10px; }
+  .k-split, .col-grip, .coll-resizer, .wr-resizer { display: none !important; }
+  .k-col, .k-card, .k-song { min-width: 0; max-width: 100%; }
+  .field-row, .wr-hand-acts, .drawer-act, .wr-hand, .panel-head, .k-head, .dv-actions { flex-wrap: wrap; }
+  .field-row > .field, .field-row > label { flex: 1 1 140px; min-width: 0; }
+  .coll-layout, .coll-layout.is-folded { grid-template-columns: minmax(0, 1fr) !important; }
+  .coll-side { position: static; max-height: 28vh; flex-direction: column; flex-wrap: nowrap; margin-left: 0; padding-left: 0; }
+  .coll-title, .coll-meta, .coll-badges { flex-wrap: wrap; white-space: normal; min-width: 0; max-width: 100%; }
+  .train-strip { left: 8px !important; right: 8px !important; width: auto !important; padding: 6px 10px; font-size: 11px; }
+  #playbar .pb-row { grid-template-columns: auto auto; justify-content: center; column-gap: 12px; }   /* one row: the transport and the time */
+  #playbar #pbShuffle, #playbar #pbRew, #playbar #pbFwd, #playbar #pbRepeat { display: none; }
+  #playbar .pb-side > :not(.time):not(#pbHold) { display: none; }
+}

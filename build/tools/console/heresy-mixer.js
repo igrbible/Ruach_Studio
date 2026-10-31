@@ -39,7 +39,7 @@
   function getJson(path) {
     return fetch("/lab" + path).then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); });
   }
-  function say(text, bad) { var el = $("mxState"); if (el) { el.textContent = text || ""; el.classList.toggle("is-bad", !!bad); } }
+  function say(text, bad) { var el = $("mxState"); if (el) { el.textContent = text || ""; el.title = text || ""; el.classList.toggle("is-bad", !!bad); } }   // 1968: all of it in its tip
 
   // ---- what is kept: the mix of a set of a take, in this browser
   function keyOf() { return "yue2.mixer:" + (S.take ? S.take.name : "") + ":" + S.set; }
@@ -512,7 +512,7 @@
     }
     html += "</div>";
     if (S.info) html += '<div class="mx-dock" id="mxDock"' + (S.dock ? "" : " hidden") + "></div>";   // HERESY 1531: the console (heresy-console.js)
-    html += '<p class="row-hint mx-note">' + esc(tr("Everything set here is heard as it is set and mixed on Forge as it is heard: the same EQ, compressor, pan, room and delay. Drag along a wave to silence a stretch, right-click it to give it back, click to play from there.")) + " " +
+    html += '<p class="row-hint mx-note">' + esc(tr("Everything set here is heard as it is set and mixed on Forge as it is heard: the same EQ, compressor, pan, room and delay. A drag along a wave selects: drag the selection to move it (Ctrl copies), its edges to change it, right-click it to fade it in or out, raise, lower or silence it; Ctrl+C, Ctrl+X and Ctrl+V copy, cut and lay at the playhead, Delete silences, Ctrl+E splits, a double-click takes a segment whole. The line over a wave is its level: take it at a point up into a peak or down into a fade. A click plays from there; a right-click on a silence gives it back.")) + " " +   // HERESY 1968
       esc(tr("A silenced stretch: its top corners fade into it and out of it (a double-click gives back 10 ms), its sides move it.")) + "</p>";   // HERESY 1542
     body.innerHTML = html;
     if ($("dawPanel")) $("dawPanel").style.setProperty("--mx-lanes", String(Math.max(1, names().length)));   // HERESY 1499: the lanes share the screen
@@ -538,13 +538,13 @@
       '<button type="button" class="mx-ms mx-undo" id="mxUndo"' + (S.undo.length ? "" : " disabled") + ' aria-label="' + esc(tr("Undo")) + '" data-tip="' + esc(tr("Undo (Ctrl+Z)")) + '">' + UNDO_SVG + "</button>" +
       '<button type="button" class="mx-ms mx-undo" id="mxRedo"' + (S.redo.length ? "" : " disabled") + ' aria-label="' + esc(tr("Redo")) + '" data-tip="' + esc(tr("Redo (Ctrl+Shift+Z)")) + '">' + REDO_SVG + "</button>" +
       '<button type="button" class="btn ghost small" id="mxReset"' + (S.info ? "" : " disabled") + ' data-tip="' + esc(tr("Every lane back to as split: level 0 dB, nothing muted, no silence, no sends")) + '">' + esc(tr("Reset")) + "</button>" +
-      '<button type="button" class="btn ghost small icon-act" id="mxDockBtn" aria-pressed="' + S.dock + '" data-tip="' + esc(tr("The console under the lanes: every strip's inserts, sends, pan and fader, the returns and the master")) + '">' +
+      '<button type="button" class="btn ghost small icon-act" id="mxDockBtn" aria-pressed="' + S.dock + '" data-tip="' + esc(tr("The console beside the lanes, pinned, on hover or floating: every strip's inserts, sends, pan and fader, the returns and the master")) + '">' +
         icon("sliders", "\u2261") + "<span>" + esc(tr("Console")) + "</span></button>" +
       '<button type="button" class="mx-ms mx-print' + (S.print ? " is-on" : "") + '" id="mxPrint" aria-pressed="' + S.print + '" data-tip="' + esc(tr("Mix with its stems: every strip as it sounds in the mix, and each return, its own file beside the mix")) + '">+' + esc(tr("stems")) + "</button>" +
       (S.busy && S.mixId ? '<button type="button" class="btn ghost small mx-stop" id="mxStop" data-tip="' + esc(tr("Stop the mix on Forge: nothing is made")) + '">' + esc(tr("Stop")) + "</button>" : "") +   // HERESY 1539
       '<button type="button" class="btn primary small" id="mxMix"' + (S.info && !S.busy ? "" : " disabled") + ' data-tip="' + esc(tr("Mix it on Forge as it is heard here: a branch of the tree, its loudness measured")) + '">' + esc(tr("Mix")) + "</button>" +
       '<button type="button" class="btn ghost small icon-act mx-full" id="mxFull" aria-pressed="' + (isFull() ? "true" : "false") + '" aria-label="' + esc(tr(isFull() ? "Back from full screen" : "Full screen")) +
-        '" data-tip="' + esc(tr("The DAW over the whole screen, its lanes as tall as the screen gives them; F11 here does the same. Esc, F11 or this button back")) + '">' +
+        '" data-tip="' + esc(tr("The DAW over the whole screen, each lane at its own height and the lanes scrolling inside; F11 here does the same. Esc, F11 or this button back")) + '">' +
         icon(isFull() ? "minimize" : "maximize", isFull() ? "\u2921" : "\u26f6") + "</button>" +   // HERESY 1499
       '<span class="row-hint mono mx-state" id="mxState"></span>';
     soloPaint();                                      // HERESY 1754
@@ -581,13 +581,34 @@
     if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
     else if (root.requestFullscreen) root.requestFullscreen().catch(function () {});
   }, true);
+  // HERESY 1965: a lane's height, 72 px unless dragged (40–120), kept by the stem's name with the page
+  var LANE_H = (function () { try { return JSON.parse(localStorage.getItem("yue2.mxLaneH") || "{}") || {}; } catch (e) { return {}; } })();
+  var LANE_DEF = 72, LANE_MIN = 40, LANE_MAX = 120;
+  function laneH(n) { var h = +LANE_H[n]; return h >= LANE_MIN && h <= LANE_MAX ? h : LANE_DEF; }
+  function laneKeep() { try { localStorage.setItem("yue2.mxLaneH", JSON.stringify(LANE_H)); } catch (e) { /* a private window */ } }
+  function gripDown(e) {
+    var g = e.target.closest && e.target.closest("[data-mx-grip]");
+    if (!g || e.button !== 0) return false;
+    e.preventDefault(); e.stopPropagation();
+    var n = g.dataset.mxGrip, row = g.closest(".mx-lane"), y0 = e.clientY, h0 = laneH(n), h = h0;
+    g.classList.add("is-drag");
+    var move = function (ev) { h = Math.max(LANE_MIN, Math.min(LANE_MAX, Math.round(h0 + ev.clientY - y0))); row.style.setProperty("--mx-h", h + "px"); draw(n); paintPlayhead(); };
+    var up = function () {
+      document.removeEventListener("pointermove", move); document.removeEventListener("pointerup", up);
+      g.classList.remove("is-drag");
+      if (h === LANE_DEF) delete LANE_H[n]; else LANE_H[n] = h;
+      laneKeep();
+    };
+    document.addEventListener("pointermove", move); document.addEventListener("pointerup", up);
+    return true;
+  }
   function lane(n) {
     var s = strip(n), st = n === REST ? null : S.info.strips.filter(function (x) { return x.name === n; })[0];
     var title = st ? st.title : tr("Rest"), cur = versionOf(n);
     var ver = st ? '<select class="mx-ver" data-mx="version" aria-label="' + esc(tr("Version")) + '">' + st.versions.map(function (v) {
       return '<option value="' + esc(v.path) + '"' + (v.path === cur ? " selected" : "") + ' translate="no">' + esc(v.id ? v.label + (v.created ? " · " + v.created.slice(11) : "") : tr("as split")) + "</option>";
     }).join("") + "</select>" + verButton(n, st) : '<span class="mx-ver mx-rest-say" data-tip="' + esc(tr("What the source holds beyond the stems: what the separation missed. All lanes as they are give the source back")) + '">' + esc(tr("the source less the stems")) + "</span>";
-    return '<div class="mx-lane' + (audible(n) ? "" : " is-quiet") + (S.focus === n ? " is-focus" : "") + '" data-strip="' + esc(n) + '" style="--mx-lane:' + hueOf(n) + ';--mx-wave:' + hueOf(n) + '">' +   // HERESY 1501
+    return '<div class="mx-lane' + (audible(n) ? "" : " is-quiet") + (S.focus === n ? " is-focus" : "") + '" data-strip="' + esc(n) + '" style="--mx-lane:' + hueOf(n) + ';--mx-wave:' + hueOf(n) + ";--mx-h:" + laneH(n) + 'px">' +   // HERESY 1501; 1965: its height
       '<div class="mx-ctl"><span class="mx-meter" data-meter="' + esc(n) + '" data-tip="' + esc(tr("Its level as it plays (the peak, the last held a moment)")) + '"><i></i></span>' +
       '<span class="mx-name" translate="no" title="' + esc(title) + '">' + esc(title) + "</span>" + ver +
       '<button type="button" class="mx-ms' + (s.mute ? " is-on" : "") + '" data-mx="mute" aria-pressed="' + s.mute + '" data-tip="' + esc(tr("Mute")) + '">M</button>' +
@@ -598,7 +619,8 @@
         esc(tr("Which knob the line draws: volume, pan, width, the room's send or the delay's; a click goes to the next. A knob drawn plays its line in place of its own value")) + '">' + esc(tr(AUTO_P[autoParam(n)].short)) + "</button>" +
       '<label class="mx-fader" data-tip="' + esc(tr("Level, −60 to +12 dB; a double-click puts it back at 0")) + '"><input type="range" min="-60" max="12" step="0.5" value="' + s.gain_db + '" data-mx="gain_db" /><output class="mono">' + fmtDb(s.gain_db) + "</output></label>" +
       "</div>" +   // HERESY 1531: the compressor, the sends and the rest of the strip in the console
-      '<div class="mx-wave"><canvas data-mx-wave="' + esc(n) + '"></canvas></div></div>';
+      '<div class="mx-wave"><canvas data-mx-wave="' + esc(n) + '"></canvas></div>' +
+      '<i class="mx-grip" data-mx-grip="' + esc(n) + '" data-tip="' + esc(tr("Drag: the lane's height, 40 to 120 px; a double-click puts it back")) + '"></i></div>';   // HERESY 1965
   }
   // HERESY 1538: a lane's version without a dropdown: a click steps to the next (two compared as it plays), a right-click opens its devices
   function verLabel(v) { return v.id ? v.label + (v.created ? " · " + v.created.slice(11) : "") : tr("as split"); }
@@ -691,10 +713,11 @@
     if (pk) {
       g.fillStyle = on;
       var base = full ? h / 2 : h - 1, amp = full ? h / 2 - 1 : h - 2;
+      var vp = sortedPts(n, "volume"), vg = function (px) { return vp.length ? db(autoDb(vp, xt(px + 0.5, w))) : 1; };   // HERESY 1968: the wave as the level's line makes it
       for (var x = 0; x < w; x++) {
         var i0 = Math.floor(xt(x, w) / L * pk.length), i1 = Math.max(i0 + 1, Math.floor(xt(x + 1, w) / L * pk.length)), m = 0;   // HERESY 1501: through the view
         for (var i = i0; i < i1 && i < pk.length; i++) if (pk[i] > m) m = pk[i];
-        var y = Math.max(1, m * amp);
+        var y = Math.max(1, Math.min(amp, m * amp * vg(x)));
         g.fillRect(x, base - y, 1, full ? 2 * y : y);
       }
     }
@@ -728,7 +751,7 @@
         for (var px2 = Math.max(0, Math.floor(xa)); px2 < Math.min(w, Math.ceil(xb)); px2++) {
           var ts = e2.a + (xt(px2, w) - e2.to), te = e2.a + (xt(px2 + 1, w) - e2.to), j0 = Math.floor(ts / L * pk.length), j1 = Math.max(j0 + 1, Math.floor(te / L * pk.length)), mm = 0;
           for (var j = j0; j < j1 && j < pk.length; j++) if (j >= 0 && pk[j] > mm) mm = pk[j];
-          var yy = Math.max(1, mm * amp2);
+          var yy = Math.max(1, Math.min(amp2, mm * amp2 * vg(px2)));   // 1968: the level's line over a laid stretch too
           g.fillRect(px2, base2 - yy, 1, 2 * yy);
         }
       }
@@ -744,13 +767,21 @@
       }
       g.globalAlpha = 1;
     }
-    if (S.pick && S.pick.n === n) {                   // HERESY 1564: the stretch in hand
-      g.fillStyle = acc; g.globalAlpha = 0.22; g.fillRect(tx(S.pick.a, w), 0, (S.pick.b - S.pick.a) / span() * w, h); g.globalAlpha = 1;
+    var md = S.mdrag && S.mdrag.n === n && S.mdrag.moved ? S.mdrag : null;
+    if (S.pick && S.pick.n === n) {                   // HERESY 1564: the stretch in hand (1968: its edges, and where it is carried)
+      var pa = tx(S.pick.a, w), pb = tx(S.pick.b, w);
+      g.fillStyle = acc; g.globalAlpha = md ? 0.1 : 0.22; g.fillRect(pa, 0, pb - pa, h); g.globalAlpha = 1;
+      g.fillRect(Math.round(pa), 0, 1, h); g.fillRect(Math.round(pb) - 1, 0, 1, h);
+      if (md) {
+        var ga = tx(Math.max(0, S.pick.a + md.dt), w), gb = ga + (pb - pa);
+        g.globalAlpha = 0.3; g.fillRect(ga, 0, gb - ga, h); g.globalAlpha = 1;
+        g.setLineDash([4, 3]); g.strokeStyle = acc; g.lineWidth = 1.5; g.strokeRect(Math.round(ga) + 0.5, 1, Math.max(1, Math.round(gb - ga) - 1), h - 2); g.setLineDash([]);
+        if (gb - ga > 40) { g.font = "10px sans-serif"; g.fillText((md.copy ? "\u29c9 " : "\u21e2 ") + clock(Math.max(0, S.pick.a + md.dt)), ga + 4, 11); }
+      }
     }
-    if (S.drag && S.drag.name === n && S.drag.moved) {
+    if (S.drag && S.drag.name === n && S.drag.moved) {   // 1968: a drag selects
       var a = Math.min(S.drag.a, S.drag.b), b = Math.max(S.drag.a, S.drag.b);
-      if (S.drag.pick) { g.fillStyle = acc; g.globalAlpha = 0.22; } else g.fillStyle = off;   // 1564: Shift picks, a plain drag silences
-      g.fillRect(tx(a, w), 0, (b - a) / span() * w, h); g.globalAlpha = 1;
+      g.fillStyle = acc; g.globalAlpha = 0.22; g.fillRect(tx(a, w), 0, (b - a) / span() * w, h); g.globalAlpha = 1;
     }
     if (S.loop && S.loopOn) { g.fillStyle = "rgba(217,157,16,.08)"; g.fillRect(tx(S.loop[0], w), 0, Math.max(1, (S.loop[1] - S.loop[0]) / span() * w), h); }   // HERESY 1501
     sections().forEach(function (sc) {                // HERESY 1532: a thin line through the lane at each section's start
@@ -758,18 +789,26 @@
       if (x < 0 || x > w) return;
       g.fillStyle = "rgba(" + secHue(sc.name) + ",.55)"; g.fillRect(x, 0, 1, h);
     });
+    var inkS = css.getPropertyValue("--ink").trim() || "#222";
+    splitsOf(n).forEach(function (t) {                // HERESY 1968: the lane's splits, a line with a notch at its top
+      var x = Math.round(tx(t, w)) + 0.5;
+      if (x < 0 || x > w) return;
+      g.fillStyle = inkS; g.globalAlpha = 0.75; g.fillRect(x - 0.5, 0, 1, h);
+      g.beginPath(); g.moveTo(x - 4, 0); g.lineTo(x + 4, 0); g.lineTo(x, 6); g.closePath(); g.fill(); g.globalAlpha = 1;
+    });
     var prm = S.autoShow[n] ? autoParam(n) : "volume", au = sortedPts(n, prm);   // HERESY 1535: the lane's volume over time; 1559: or the knob in hand
-    if (au.length || S.autoShow[n]) {
+    if (au.length || S.autoShow[n] || prm === "volume") {   // HERESY 1968: the level's line always there, faint while it is flat, to be taken
       var amber = css.getPropertyValue("--amber").trim() || "#d99d10", inkc = css.getPropertyValue("--ink").trim() || "#222";
       if (S.autoShow[n] && prm !== "volume") {        // the knob's rest, a thin line
         g.globalAlpha = 0.35; g.fillStyle = amber; g.fillRect(0, Math.round(aY(prm, AUTO_P[prm].rest, h)), w, 1); g.globalAlpha = 1;
       }
-      g.strokeStyle = amber; g.lineWidth = 1.5; g.globalAlpha = S.autoShow[n] ? 1 : 0.6; g.beginPath();
+      var hov = S.lineHover === n;
+      g.strokeStyle = amber; g.lineWidth = au.length || hov || S.autoShow[n] ? 1.5 : 1; g.globalAlpha = S.autoShow[n] || hov ? 1 : au.length ? 0.6 : 0.3; g.beginPath();
       for (var ax = 0; ax <= w; ax += 2) { var ay = aY(prm, au.length ? autoDb(au, xt(ax, w)) : AUTO_P[prm].rest, h); if (ax) g.lineTo(ax, ay); else g.moveTo(ax, ay); }
       g.stroke(); g.globalAlpha = 1;
-      if (S.autoShow[n]) au.forEach(function (q) {
+      if (S.autoShow[n] || prm === "volume") au.forEach(function (q) {   // 1968: the level's points on every wave
         var qx = tx(q[0], w); if (qx < -6 || qx > w + 6) return;
-        g.beginPath(); g.arc(qx, aY(prm, q[1], h), 3.5, 0, Math.PI * 2); g.fillStyle = amber; g.fill(); g.strokeStyle = inkc; g.lineWidth = 1; g.stroke();
+        g.beginPath(); g.arc(qx, aY(prm, q[1], h), S.autoShow[n] || hov ? 3.5 : 3, 0, Math.PI * 2); g.fillStyle = amber; g.fill(); g.strokeStyle = inkc; g.lineWidth = 1; g.stroke();
       });
     }
   }
@@ -778,6 +817,7 @@
     if (!ph || !c || !S.info) return;
     var box = c.parentNode, px = tx(heard(), box.clientWidth), x = box.offsetLeft + px;   // HERESY 1501: through the view; 1531: as heard
     ph.style.left = Math.round(x) + "px";
+    ph.style.height = lanes.scrollHeight + "px";       // HERESY 1965: the lanes scroll inside; the line runs down all of them
     ph.style.display = px < 0 || px > box.clientWidth ? "none" : "";
     var t = $("mxTime");
     if (t) t.textContent = clock(pos()) + " / " + clock(S.info.seconds);
@@ -1531,6 +1571,15 @@
         return;
       }
     }
+    var dc = e.target.closest && e.target.closest("canvas[data-mx-wave]");   // HERESY 1968: the level's point back to 0 dB; a laid stretch or a segment taken whole
+    if (dc && S.info && !S.autoShow[dc.dataset.mxWave]) {
+      var dn = dc.dataset.mxWave, lp = autoAt(dc, e, "volume");
+      if (lp.hit) { mark(); lp.hit[1] = 0; keep(); draw(dn); autoSchedule(dn); emit("change", { n: dn, key: "auto" }); return; }
+      var dt = timeAt(dc, e.clientX), ds = S.strips[dn], led = ds && Array.isArray(ds.edits) ? ds.edits.filter(function (e2) { return e2.to <= dt && dt <= e2.to + (e2.b - e2.a); }).pop() : null;
+      var sg = led ? [led.to, led.to + (led.b - led.a)] : segmentAt(dn, dt);
+      pickSet(dn, sg[0], sg[1]);
+      return;
+    }
     var ac = e.target.closest && e.target.closest("canvas[data-mx-wave]");   // HERESY 1535: a point to 0 dB
     if (ac && S.info && S.autoShow[ac.dataset.mxWave]) {
       var a = autoAt(ac, e);
@@ -1574,25 +1623,24 @@
   document.addEventListener("keydown", function (e) {
     var typing = /^(INPUT|SELECT|TEXTAREA)$/.test((e.target && e.target.tagName) || "") && e.target.type !== "range" || (e.target && e.target.isContentEditable);
     if (inSight() && (e.ctrlKey || e.metaKey) && !e.altKey && /^[cxv]$/i.test(e.key) && !typing && !document.querySelector(".hd-back") && (S.pick || S.clip) && !(window.getSelection && String(window.getSelection()))) {
-      var kk = e.key.toLowerCase();                   // HERESY 1564: copy, take to move, lay at the playhead
+      var kk = e.key.toLowerCase();                   // HERESY 1564: copy, cut (1968: at once, as an audio editor cuts), lay at the playhead
       if (kk === "c" || kk === "x") {
         if (!S.pick) return;
         e.preventDefault();
-        S.clip = { n: S.pick.n, a: S.pick.a, b: S.pick.b, op: kk === "x" ? "move" : "copy" };
-        say(tr(kk === "x" ? "Taken {0}–{1}: Ctrl+V moves it to the playhead" : "Copied {0}–{1}: Ctrl+V lays it at the playhead").replace("{0}", clock(S.clip.a)).replace("{1}", clock(S.clip.b)));
+        clipTake(kk);
         return;
       }
       if (!S.clip || !S.info) return;
       e.preventDefault();
-      var cl = S.clip, to = Math.round(Math.max(0, Math.min(S.info.seconds - 0.05, S.playing ? pos() : S.at)) * 1000) / 1000, sc = S.strips[cl.n] || (S.strips[cl.n] = {});
-      mark();
-      if (!Array.isArray(sc.edits)) sc.edits = [];
-      sc.edits.push({ op: cl.op, a: cl.a, b: cl.b, to: to });
-      if (cl.op === "move") cl.op = "copy";          // moved once; the next lays a copy
-      keep(); draw(cl.n); rangesNow(cl.n);
-      if (S.playing) play(pos());
-      emit("change", { n: cl.n, key: "edits" });
-      say(tr("Laid at {0}").replace("{0}", clock(to)));
+      clipLay();
+      return;
+    }
+    if (inSight() && (e.ctrlKey || e.metaKey) && !e.altKey && /^[ae]$/i.test(e.key) && !typing && !document.querySelector(".hd-back") && S.info && !(window.getSelection && String(window.getSelection()))) {
+      var ln = (S.pick && S.pick.n) || S.focus;       // HERESY 1968: Ctrl+A the whole lane, Ctrl+E a split at the playhead (at a selection's edges)
+      if (!ln || ln === "*" || ln.charAt(0) === "%" || names().indexOf(ln) < 0) return;
+      e.preventDefault();
+      if (/a/i.test(e.key)) { pickSet(ln, 0, S.info.seconds); return; }
+      splitAt(ln, S.pick && S.pick.n === ln ? [S.pick.a, S.pick.b] : [S.playing ? pos() : S.at]);
       return;
     }
     if (inSight() && (e.ctrlKey || e.metaKey) && !e.altKey && /^[zy]$/i.test(e.key) && !typing && !document.querySelector(".hd-back")) {
@@ -1608,13 +1656,9 @@
     if (k === "Home") { e.preventDefault(); var to = S.loopOn && S.loop ? S.loop[0] : 0; if (S.playing) play(to); else { S.at = to; paintPlayhead(); } return; }
     if (k === "l" || k === "L") { e.preventDefault(); S.loopOn = !S.loopOn; loopPaint(); return; }
     if (k === "r" || k === "R") { e.preventDefault(); refToggle(); return; }   // HERESY 1755
-    if ((k === "Delete" || k === "Backspace") && S.pick) {   // HERESY 1564: the stretch in hand silenced, as a drag would
+    if ((k === "Delete" || k === "Backspace") && S.pick) {   // HERESY 1564: the stretch in hand silenced (1968: a stretch laid over it trimmed too)
       e.preventDefault();
-      var pn = S.pick.n, ps = S.strips[pn] || (S.strips[pn] = {});
-      mark();
-      ps.muted = (ps.muted || []).concat([[S.pick.a, S.pick.b]]).sort(function (x, y) { return x[0] - y[0]; });
-      S.pick = null;
-      keep(); draw(pn); rangesNow(pn); emit("change", { n: pn, key: "muted" });
+      pickSilence();
       return;
     }
     if (k === "Escape" && S.pick) { var en = S.pick.n; S.pick = null; draw(en); say(""); return; }
@@ -1647,8 +1691,8 @@
     var p = AUTO_P[prm], v = p.lo + f * (p.hi - p.lo);
     return Math.abs(v - p.rest) < (p.hi - p.lo) * 0.02 ? p.rest : Math.round(v * 100) / 100;   // the rest catches the pointer
   }
-  function autoAt(c, e) {                            // the point under the pointer, or null; and the time and level there (1559: of the knob in hand)
-    var r = c.getBoundingClientRect(), n = c.dataset.mxWave, x = e.clientX - r.left, y = e.clientY - r.top, prm = autoParam(n), pts = rawPts(n, prm), hit = null, best = 8;
+  function autoAt(c, e, prm0) {                      // the point under the pointer, or null; and the time and level there (1559: of the knob in hand; 1968: or the one asked)
+    var r = c.getBoundingClientRect(), n = c.dataset.mxWave, x = e.clientX - r.left, y = e.clientY - r.top, prm = prm0 || autoParam(n), pts = rawPts(n, prm), hit = null, best = 8;
     pts.forEach(function (q) { var d = Math.hypot(tx(q[0], r.width) - x, aY(prm, q[1], r.height) - y); if (d < best) { best = d; hit = q; } });
     return { n: n, prm: prm, hit: hit, t: Math.max(0, Math.min(S.info.seconds, xt(x, r.width))), db: aV(prm, y, r.height), r: r };
   }
@@ -1686,23 +1730,313 @@
     else if (d.kind === "start") r[0] = Math.round(Math.max(i > 0 ? cuts[i - 1][1] : 0, Math.min(r[1] - 0.05, t)) * 1000) / 1000;
     else r[1] = Math.round(Math.min(i < cuts.length - 1 ? cuts[i + 1][0] : L, Math.max(r[0] + 0.05, t)) * 1000) / 1000;
   }
+  // HERESY 1968 (Viktor 31.10.2026: «как в ocenaudio есть возможности мышкой браться за точку на треке и вести её вверх в пик или вниз в
+  // затухание… Разрезка по сегментам, копирование, вырезание, передвигание… в общем как в аудио редакторе… это красивая обёртка, а толку из
+  // неё мало»): a wave is edited as an audio editor's is. A drag selects; the selection's edges move, a drag inside it moves what it holds
+  // (Ctrl: a copy), its right-click fades it in or out, raises or lowers it, silences, cuts, copies, lays; the level's line over every wave
+  // is taken at a point up into a peak or down into a fade; Ctrl+E splits the lane, a double-click takes a segment or a laid stretch whole.
+  // All of it in the mix's own words (muted, auto, edits), so Forge renders what is heard; the splits are the page's marks only
+  var HIT = 5, MAX_EDITS = 64, MAX_SPLITS = 64;
+  var HOLE_F = 0.03;                                  // HERESY 1975: a cut left by a stretch carried away or cut out fades into its silence and rises out of it
+  function r3(t) { return Math.round(t * 1000) / 1000; }
+  function splitsOf(n) { var s = S.strips[n]; return s && Array.isArray(s.splits) ? s.splits : []; }
+  function pickAt(c, e) {                            // the selection under the pointer: an edge, or inside
+    var p = S.pick;
+    if (!p || p.n !== c.dataset.mxWave) return null;
+    var r = c.getBoundingClientRect(), x = e.clientX - r.left, xa = tx(p.a, r.width), xb = tx(p.b, r.width);
+    if (Math.abs(x - xa) <= HIT && xb - xa > 2 * HIT) return "a";
+    if (Math.abs(x - xb) <= HIT) return "b";
+    return x > xa && x < xb ? "in" : null;
+  }
+  function lineAt(c, e) {                            // the level's line under the pointer (its point, or the line itself), or null
+    var a = autoAt(c, e, "volume");
+    if (a.hit) return a;
+    var y = e.clientY - a.r.top, ly = aY("volume", autoDb(sortedPts(a.n, "volume"), a.t), a.r.height);
+    return Math.abs(y - ly) <= HIT ? a : null;
+  }
+  function lineDown(e, c, a) {
+    e.preventDefault();
+    var q = a.hit, pending = null;
+    if (q) mark();
+    else {                                            // a point where it was pressed, and its neighbours kept 30 px away, so a peak or a dip stays where it is drawn
+      var pts = sortedPts(a.n, "volume"), L = S.info.seconds, wd = Math.max(0.25, span() * 30 / Math.max(1, a.r.width)), lv = function (t) { return Math.round(autoDb(pts, t) * 10) / 10; };
+      q = [r3(a.t), lv(a.t)];
+      var before = pts.filter(function (p) { return p[0] < q[0]; }).pop(), after = pts.filter(function (p) { return p[0] > q[0]; })[0];
+      pending = [q];
+      if ((!before || q[0] - before[0] > wd) && q[0] - wd > 0) pending.push([r3(q[0] - wd), lv(q[0] - wd)]);
+      if ((!after || after[0] - q[0] > wd) && q[0] + wd < L) pending.push([r3(q[0] + wd), lv(q[0] + wd)]);
+    }
+    S.adrag = { n: a.n, c: c, q: q, prm: "volume", pending: pending, x: e.clientX, y: e.clientY, t: a.t };
+    try { if (c.setPointerCapture) c.setPointerCapture(e.pointerId); } catch (x) { /* gone */ }
+    draw(a.n);
+  }
+  // HERESY 1972 (my proposal 31.10.2026): a selection's edges cling to what stands on the lane within 6 px: the song's sections, its splits,
+  // the playhead, the edges of a laid stretch and of a silence; Alt held lets them go free
+  var SNAP_PX = 6;
+  function snapT(n, t, c, e) {
+    if (e && e.altKey) return t;
+    var w = c.getBoundingClientRect().width, best = null, bd = SNAP_PX, s = S.strips[n] || {};
+    var cand = sections().map(function (x) { return x.t; }).concat(splitsOf(n), [S.playing ? pos() : S.at]);
+    (Array.isArray(s.edits) ? s.edits : []).forEach(function (e2) { cand.push(e2.to, e2.to + (e2.b - e2.a)); });
+    (Array.isArray(s.muted) ? s.muted : []).forEach(function (r) { cand.push(r[0], r[1]); });
+    cand.forEach(function (x) { if (x == null || !isFinite(x)) return; var dp = Math.abs(tx(x, w) - tx(t, w)); if (dp <= bd) { bd = dp; best = x; } });
+    return best == null ? t : r3(best);
+  }
+  function pickSay() { return S.pick ? tr("Selected {0}–{1}: drag it to move it (Ctrl copies), Ctrl+C copies, Ctrl+X cuts, Delete silences, a right-click for fades and level").replace("{0}", clock(S.pick.a)).replace("{1}", clock(S.pick.b)) : ""; }
+  function pickSet(n, a, b) {
+    var was = S.pick && S.pick.n;
+    S.pick = { n: n, a: r3(Math.max(0, a)), b: r3(Math.min(S.info.seconds, b)) };
+    if (was && was !== n) draw(was);
+    draw(n); select(n); say(pickSay());
+  }
+  function segmentAt(n, t) {                         // between the splits around t (the lane's ends where there are none)
+    var a = 0, b = S.info.seconds;
+    splitsOf(n).forEach(function (x) { if (x <= t && x > a) a = x; if (x > t && x < b) b = x; });
+    return [a, b];
+  }
+  function splitAt(n, ts) {
+    var s = S.strips[n] || (S.strips[n] = {}), L = S.info.seconds, have = splitsOf(n);
+    var add = ts.map(r3).filter(function (t, i, all) { return t > 0.01 && t < L - 0.01 && all.indexOf(t) === i && have.every(function (h) { return Math.abs(h - t) > 0.005; }); });
+    if (!add.length) return;
+    if (have.length + add.length > MAX_SPLITS) { say(tr("A lane holds at most 64 splits"), true); return; }
+    mark();
+    s.splits = have.concat(add).sort(function (x, y) { return x - y; });
+    keep(); draw(n);
+    say(tr("Split at {0}").replace("{0}", add.map(clock).join(", ")));
+  }
+  function splitNear(c, e) {                         // a split within reach of the pointer, or null
+    var r = c.getBoundingClientRect(), x = e.clientX - r.left, hit = null;
+    splitsOf(c.dataset.mxWave).forEach(function (t) { if (hit == null && Math.abs(tx(t, r.width) - x) <= 4) hit = t; });
+    return hit;
+  }
+  function mergeCuts(list) {                         // HERESY 1542: one that touches another is one: the first's fall, the last's rise
+    var merged = [];
+    list.slice().sort(function (x, y) { return x[0] - y[0]; }).forEach(function (r) {
+      var last = merged[merged.length - 1], f = fadesOf(r);
+      if (last && r[0] <= last[1]) { if (r[1] > last[1]) { last[1] = r[1]; last[3] = f[1]; } }
+      else merged.push([r[0], r[1], f[0], f[1]]);
+    });
+    return merged;
+  }
+  function silenceRange(n, a, b, f) {                // a…b silent as heard: the lane's own sound cut there, a stretch laid over it trimmed or split around it (f: its fades, 1975)
+    var s = S.strips[n] || (S.strips[n] = {}), cuts = (s.muted || []).slice(), eds = [];
+    (Array.isArray(s.edits) ? s.edits : []).forEach(function (e2) {
+      var ea = e2.to, eb = e2.to + (e2.b - e2.a);
+      if (eb <= a || ea >= b) { eds.push(e2); return; }
+      if (e2.op === "move") cuts.push([e2.a, e2.b]);   // a move's source stays silent when the move is cut into pieces
+      if (ea < a && a - ea >= 0.01) eds.push({ op: "copy", a: e2.a, b: r3(e2.a + (a - ea)), to: e2.to });
+      if (eb > b && eb - b >= 0.01) eds.push({ op: "copy", a: r3(e2.a + (b - ea)), b: e2.b, to: r3(b) });
+    });
+    cuts.push(f ? [r3(a), r3(b), f, f] : [r3(a), r3(b)]);   // HERESY 1975: its fades when it is a stretch cut out
+    s.muted = mergeCuts(cuts);
+    s.edits = eds;
+  }
+  function pickSilence() {
+    var p = S.pick, n = p.n;
+    mark();
+    silenceRange(n, p.a, p.b);
+    S.pick = null;
+    keep(); draw(n); rangesNow(n); if (S.playing) play(pos());
+    emit("change", { n: n, key: "muted" });
+    say(tr("Silenced {0}–{1}: a right-click on it gives it back").replace("{0}", clock(p.a)).replace("{1}", clock(p.b)));
+  }
+  function clipTake(kk) {                            // Ctrl+C keeps the selection to lay; Ctrl+X keeps it and silences it here at once
+    var p = S.pick;
+    S.clip = { n: p.n, a: p.a, b: p.b, op: "copy" };
+    var s = S.strips[p.n], own = s && Array.isArray(s.edits) ? s.edits.filter(function (e2) { return e2.to <= p.a + 0.002 && p.b <= e2.to + (e2.b - e2.a) + 0.002; }).pop() : null;
+    if (own) { S.clip.a = r3(own.a + (p.a - own.to)); S.clip.b = r3(S.clip.a + (p.b - p.a)); }   // inside a laid stretch: what it lays there
+    if (kk === "x") {
+      mark(); silenceRange(p.n, p.a, p.b, HOLE_F); S.pick = null;   // HERESY 1975: the place cut out fades into its silence and rises out of it
+      keep(); draw(p.n); rangesNow(p.n); if (S.playing) play(pos());
+      emit("change", { n: p.n, key: "muted" });
+    }
+    say(tr(kk === "x" ? "Cut {0}–{1}: silenced here, Ctrl+V lays it at the playhead" : "Copied {0}–{1}: Ctrl+V lays it at the playhead").replace("{0}", clock(p.a)).replace("{1}", clock(p.b)));
+  }
+  function clipLay() {                               // the stretch kept laid at the playhead on its own lane, and selected there
+    var cl = S.clip, to = r3(Math.max(0, Math.min(S.info.seconds - 0.05, S.playing ? pos() : S.at))), sc = S.strips[cl.n] || (S.strips[cl.n] = {});
+    if (!Array.isArray(sc.edits)) sc.edits = [];
+    if (sc.edits.length >= MAX_EDITS) { say(tr("A lane holds at most 64 laid stretches: take one away first (a right-click on it)"), true); return; }
+    mark();
+    sc.edits.push({ op: "copy", a: cl.a, b: cl.b, to: to });
+    S.pick = { n: cl.n, a: to, b: r3(Math.min(S.info.seconds, to + (cl.b - cl.a))) };
+    keep(); draw(cl.n); rangesNow(cl.n);
+    if (S.playing) play(pos());
+    emit("change", { n: cl.n, key: "edits" });
+    say(tr("Laid at {0}").replace("{0}", clock(to)));
+  }
+  function pickMove(n, dt, copy) {                   // the selection laid dt along: a laid stretch moves itself (or lays a copy); else the lane's own sound moves (or is copied)
+    var p = S.pick, L = S.info.seconds, len = p.b - p.a, to = r3(Math.max(0, Math.min(L - 0.05, p.a + dt))), s = S.strips[n] || (S.strips[n] = {});
+    if (Math.abs(to - p.a) < 0.005) { draw(n); return; }
+    if (!Array.isArray(s.edits)) s.edits = [];
+    var own = s.edits.filter(function (e2) { return e2.to <= p.a + 0.002 && p.b <= e2.to + (e2.b - e2.a) + 0.002; }).pop();
+    var whole = own && Math.abs(own.to - p.a) < 0.002 && Math.abs((own.b - own.a) - len) < 0.002;
+    if (!(whole && !copy) && s.edits.length >= MAX_EDITS - 2) { say(tr("A lane holds at most 64 laid stretches: take one away first (a right-click on it)"), true); draw(n); return; }
+    mark();
+    if (whole) {
+      if (copy) s.edits.push({ op: "copy", a: own.a, b: own.b, to: to }); else own.to = to;
+    } else if (own) {                                 // a part of a laid stretch: that part of what it lays, the rest of it stays
+      var sa = r3(own.a + (p.a - own.to));
+      if (!copy) silenceRange(n, p.a, p.b, HOLE_F);
+      s.edits.push({ op: "copy", a: sa, b: r3(sa + len), to: to });
+    } else {                                          // HERESY 1975: the lane's own sound carried away leaves a cut that fades and rises (its handles, a right-drag, its box)
+      if (!copy) s.muted = mergeCuts((Array.isArray(s.muted) ? s.muted : []).concat([[p.a, p.b, HOLE_F, HOLE_F]]));
+      s.edits.push({ op: "copy", a: p.a, b: p.b, to: to });   // laid from the sound as it was (the render cuts first, then lays)
+    }
+    S.pick = { n: n, a: to, b: r3(Math.min(L, to + len)) };
+    keep(); draw(n); rangesNow(n); if (S.playing) play(pos());
+    emit("change", { n: n, key: "edits" });
+    say(tr(copy ? "Copied to {0}" : "Moved to {0}").replace("{0}", clock(to)));
+  }
+  function pickLevel(n, how) {                       // the level's line over the selection: in from silence, out into it, or 3 dB up or down; 10 ms to it from outside
+    var p = S.pick, L = S.info.seconds, pts = sortedPts(n, "volume"), a = p.a, b = p.b;
+    var at = function (t) { return Math.round(autoDb(pts, t) * 10) / 10; }, lim = function (v) { return Math.max(-60, Math.min(12, Math.round(v * 10) / 10)); };
+    var keepOut = pts.filter(function (q) { return q[0] < a - 0.0105 || q[0] > b + 0.0105; }), add = [];
+    if (a > 0.0105) add.push([r3(a - 0.01), at(a - 0.01)]);
+    if (b < L - 0.0105) add.push([r3(b + 0.01), at(b + 0.01)]);
+    if (how === "in") add.push([a, -60], [b, at(b)]);
+    else if (how === "out") add.push([a, at(a)], [b, -60]);
+    else {
+      add.push([a, lim(at(a) + how)], [b, lim(at(b) + how)]);
+      pts.forEach(function (q) { if (q[0] > a && q[0] < b) add.push([q[0], lim(q[1] + how)]); });
+    }
+    mark();
+    var s = S.strips[n] || (S.strips[n] = {});
+    s.auto = keepOut.concat(add).sort(function (x, y) { return x[0] - y[0]; });
+    keep(); draw(n); autoSchedule(n); lanePaintAuto(n);
+    emit("change", { n: n, key: "auto" });
+    say(tr(how === "in" ? "Faded in over {0}–{1}" : how === "out" ? "Faded out over {0}–{1}" : how > 0 ? "Louder by 3 dB over {0}–{1}" : "Quieter by 3 dB over {0}–{1}").replace("{0}", clock(a)).replace("{1}", clock(b)));
+  }
+  // HERESY 1975 (Viktor 31.10.2026: «как в ocenaudio… на вырезанном месте затухания/подъёмы, и возможность ползунком или правой кнопкой мыши тянуть
+  // длительность»): a cut pressed with the right button and dragged: its fade on the nearer side follows the pointer (Shift: both alike); let go,
+  // a box with a slider for each stays by it. Pressed and let go without a drag: the sound given back, as a right-click always did (1531)
+  function holeDown(e) {
+    var c = e.target.closest && e.target.closest("canvas[data-mx-wave]");
+    if (!c || e.button !== 2 || !S.info || S.autoShow[c.dataset.mxWave]) return false;
+    var n = c.dataset.mxWave, t = timeAt(c, e.clientX), s = S.strips[n];
+    if (!s || !Array.isArray(s.muted) || autoAt(c, e, "volume").hit || splitNear(c, e) != null || pickAt(c, e)) return false;
+    if (Array.isArray(s.edits) && s.edits.some(function (e2) { return e2.to <= t && t <= e2.to + (e2.b - e2.a); })) return false;   // a laid stretch's own right-click
+    var r = s.muted.filter(function (q) { return q[0] <= t && t <= q[1]; }).pop();
+    if (!r) return false;
+    e.preventDefault();
+    fadeBoxClose();
+    S.rdrag = { n: n, c: c, r: r, x: e.clientX, side: e.shiftKey ? "both" : (t < (r[0] + r[1]) / 2 ? "fall" : "rise"), near: t < (r[0] + r[1]) / 2, moved: false };
+    try { if (c.setPointerCapture) c.setPointerCapture(e.pointerId); } catch (x) { /* gone */ }
+    return true;
+  }
+  function fadeSay(r) { var f = fadesOf(r); return tr("Into the silence {0} ms · out of it {1} ms").replace("{0}", Math.round(f[0] * 1000)).replace("{1}", Math.round(f[1] * 1000)); }
+  function fadeSet(r, k, v) {                        // one side's fade, as long as the cut leaves room for the other's
+    var f = fadesOf(r), len = r[1] - r[0];
+    if (r.length < 4) { r[2] = f[0]; r[3] = f[1]; }
+    if (k === "both") { r[2] = r[3] = r3(Math.max(0, Math.min(len / 2, v))); return; }
+    var other = k === "fall" ? r[3] : r[2];
+    r[k === "fall" ? 2 : 3] = r3(Math.max(0, Math.min(len - Math.min(other, len), v)));
+  }
+  function holeMove(e) {
+    var d = S.rdrag;
+    if (!d.moved && Math.abs(e.clientX - d.x) < 4) return;
+    if (!d.moved) { d.moved = true; mark(); }
+    var t = timeAt(d.c, e.clientX), r = d.r;
+    fadeSet(r, d.side, d.side === "rise" || (d.side === "both" && !d.near) ? r[1] - t : t - r[0]);
+    draw(d.n); rangesNow(d.n); say(fadeSay(r));
+  }
+  function holeUp(e) {
+    var d = S.rdrag, s = S.strips[d.n];
+    S.rdrag = null; S.rlast = Date.now();
+    if (d.moved) { keep(); draw(d.n); rangesNow(d.n); emit("change", { n: d.n, key: "muted" }); fadeBox(d.n, d.r, e.clientX, e.clientY); return; }
+    mark();                                           // HERESY 1531: a right-click gives the sound back, undoable
+    s.muted = s.muted.filter(function (q) { return q !== d.r; });
+    keep(); draw(d.n); rangesNow(d.n);
+    emit("change", { n: d.n, key: "muted" });
+  }
+  function fadeBoxClose() {
+    var b = $("mxFadeBox");
+    if (!b) return;
+    document.removeEventListener("pointerdown", b._out, true); window.removeEventListener("keydown", b._key, true);
+    b.remove();
+  }
+  function fadeBox(n, r, x, y) {                     // the cut's two fades as sliders, by the pointer; Esc or a click away closes it
+    fadeBoxClose();
+    var len = r[1] - r[0], top = Math.max(20, Math.min(5000, Math.round(len * 1000))), b = document.createElement("div"), marked = true;
+    b.id = "mxFadeBox"; b.className = "mx-fadebox"; b.setAttribute("role", "dialog");
+    var row = function (k, label) {
+      return '<label class="mx-fb-row"><span>' + esc(tr(label)) + '</span><input type="range" min="0" max="' + top + '" step="5" data-k="' + k + '" aria-label="' + esc(tr(label)) + '">' +
+        '<output class="mono" data-o="' + k + '"></output></label>';
+    };
+    b.innerHTML = '<div class="mx-fb-head">' + esc(tr("Fades of {0}–{1}").replace("{0}", clock(r[0])).replace("{1}", clock(r[1]))) + "</div>" +
+      row("fall", "Into the silence") + row("rise", "Out of the silence") +
+      '<label class="check mx-fb-link"><input type="checkbox" data-both> <span>' + esc(tr("Both alike")) + "</span></label>" +
+      '<p class="mx-fb-hint">' + esc(tr("A right-drag on a cut draws its fades; a right-click gives the sound back")) + "</p>";
+    document.body.appendChild(b);
+    var both = b.querySelector("[data-both]");
+    function paint() { var f = fadesOf(r); [["fall", f[0]], ["rise", f[1]]].forEach(function (p) { b.querySelector('[data-k="' + p[0] + '"]').value = Math.round(p[1] * 1000); b.querySelector('[data-o="' + p[0] + '"]').textContent = Math.round(p[1] * 1000) + " ms"; }); }
+    both.checked = Math.abs(fadesOf(r)[0] - fadesOf(r)[1]) < 0.0005;
+    paint();
+    b.addEventListener("input", function (e) {
+      var k = e.target.dataset && e.target.dataset.k;
+      if (!k) return;
+      if (!marked) { mark(); marked = true; }
+      fadeSet(r, both.checked ? "both" : k, (+e.target.value || 0) / 1000);
+      paint(); draw(n); rangesNow(n); say(fadeSay(r));
+    });
+    b.addEventListener("change", function (e) {
+      if (e.target === both) { if (both.checked) { mark(); fadeSet(r, "both", fadesOf(r)[0]); paint(); draw(n); rangesNow(n); } }
+      keep(); emit("change", { n: n, key: "muted" }); marked = false;
+    });
+    marked = false;
+    var w = b.offsetWidth, h = b.offsetHeight;
+    b.style.left = Math.max(6, Math.min(x + 10, window.innerWidth - w - 6)) + "px";
+    b.style.top = Math.max(6, Math.min(y + 10, window.innerHeight - h - 6)) + "px";
+    b._out = function (e) { if (!b.contains(e.target)) fadeBoxClose(); };
+    b._key = function (e) { if (e.key === "Escape") { e.stopImmediatePropagation(); e.preventDefault(); fadeBoxClose(); } };   // its Esc its own: not the canvas window's under it
+    document.addEventListener("pointerdown", b._out, true); window.addEventListener("keydown", b._key, true);
+  }
+  function pickMenu(n, x, y) {
+    var p = S.pick;
+    window.HeresyMenu.open(x, y, [
+      { label: "Copy", icon: "⧉", action: function () { clipTake("c"); } },
+      { label: "Cut out", icon: "✂", action: function () { clipTake("x"); } },
+      { label: "Lay at the playhead", icon: "↓", disabled: !S.clip || S.clip.n !== n, action: function () { clipLay(); } },
+      { label: "Silence it", icon: "✕", action: function () { pickSilence(); } },
+      { sep: true },
+      { label: "Fade in from silence", icon: "◢", action: function () { pickLevel(n, "in"); } },
+      { label: "Fade out into silence", icon: "◣", action: function () { pickLevel(n, "out"); } },
+      { label: "Louder by 3 dB", icon: "+", action: function () { pickLevel(n, 3); } },
+      { label: "Quieter by 3 dB", icon: "−", action: function () { pickLevel(n, -3); } },
+      { sep: true },
+      { label: "Split at its edges", icon: "│", action: function () { splitAt(n, [p.a, p.b]); } },
+      { label: "Select the whole lane", icon: "↔", action: function () { pickSet(n, 0, S.info.seconds); } }
+    ]);
+  }
   function onDown(e) {
+    if (gripDown(e)) return;                          // HERESY 1965: a lane's height in hand
     if (rulerDown(e)) return;                         // HERESY 1501
+    if (holeDown(e)) return;                          // HERESY 1975: a cut's fades drawn with the right button
     var c = e.target.closest && e.target.closest("canvas[data-mx-wave]");
     if (!c || e.button !== 0 || !S.info) return;
     if (S.autoShow[c.dataset.mxWave]) { autoDown(e, c); return; }   // HERESY 1535
     e.preventDefault();
+    var n = c.dataset.mxWave, pe = pickAt(c, e), hold = function () { try { if (c.setPointerCapture) c.setPointerCapture(e.pointerId); } catch (x) { /* gone */ } };
+    if (pe === "a" || pe === "b") { S.sdrag = { n: n, c: c, side: pe }; hold(); return; }   // HERESY 1968: the selection's edge in hand
     var hit = cutAt(c, e);                            // HERESY 1542: a stretch's edge in hand
     if (hit) {
       S.cdrag = { n: c.dataset.mxWave, c: c, r: hit.r, kind: hit.kind, x: e.clientX, moved: false };
-      try { if (c.setPointerCapture) c.setPointerCapture(e.pointerId); } catch (x) { /* gone */ }
+      hold();
       return;
     }
-    var t = timeAt(c, e.clientX);
-    S.drag = { name: c.dataset.mxWave, canvas: c, x: e.clientX, a: t, b: t, moved: false, pick: !!e.shiftKey };   // HERESY 1564: Shift picks a stretch
-    try { if (c.setPointerCapture) c.setPointerCapture(e.pointerId); } catch (x) { /* a pointer the browser no longer holds */ }
+    var la = lineAt(c, e);                            // HERESY 1968: a point of the level's line in hand
+    if (la && la.hit) { lineDown(e, c, la); return; }
+    if (pe === "in") {                                // HERESY 1968: the selection taken to move (Ctrl: a copy of it)
+      S.mdrag = { n: n, c: c, x: e.clientX, t0: timeAt(c, e.clientX), dt: 0, copy: !!(e.ctrlKey || e.metaKey), moved: false };
+      hold();
+      return;
+    }
+    if (la) { lineDown(e, c, la); return; }           // HERESY 1968: the line pressed: a point made there once the pointer moves
+    var t = timeAt(c, e.clientX), far = e.shiftKey && S.pick && S.pick.n === n ? (t < (S.pick.a + S.pick.b) / 2 ? S.pick.b : S.pick.a) : null;
+    S.drag = { name: n, canvas: c, x: e.clientX, a: far == null ? t : far, a0: far == null ? t : far, b: t, moved: far != null };   // HERESY 1968: a drag selects (Shift stretches the selection)
+    hold();
   }
   function onMove(e) {
+    if (S.rdrag) { holeMove(e); return; }             // HERESY 1975
     var rr = S.rule;                                  // HERESY 1501: the loop drawn
     if (rr) {
       if (rr.sec) return;                             // HERESY 1532: a section's block is clicked, not dragged
@@ -1712,10 +2046,31 @@
       return;
     }
     if (S.adrag) {                                    // HERESY 1535: a point moved, between its neighbours
-      var ad = S.adrag, at = autoAt(ad.c, e), pts = sortedPts(ad.n, at.prm), i = pts.indexOf(ad.q);   // 1559: of the knob in hand
+      var ad = S.adrag, at = autoAt(ad.c, e, ad.prm), pts, i;   // 1559: of the knob in hand (1968: the level's line, when it was taken there)
+      if (ad.pending) {                               // HERESY 1968: a point made on the line only once it moves (a click on it plays from there)
+        if (Math.abs(e.clientX - ad.x) < 3 && Math.abs(e.clientY - ad.y) < 3) return;
+        mark(); var made = rawPts(ad.n, "volume", true); ad.pending.forEach(function (q2) { made.push(q2); }); ad.pending = null;
+      }
+      pts = sortedPts(ad.n, at.prm); i = pts.indexOf(ad.q);
       var lo = i > 0 ? pts[i - 1][0] + 0.001 : 0, hi = i >= 0 && i < pts.length - 1 ? pts[i + 1][0] - 0.001 : S.info.seconds;
       ad.q[0] = Math.round(Math.max(lo, Math.min(hi, at.t)) * 1000) / 1000; ad.q[1] = at.db; ad.moved = true;
       draw(ad.n);
+      return;
+    }
+    if (S.sdrag) {                                    // HERESY 1968: the selection's edge moved
+      var sd = S.sdrag, st = snapT(sd.n, timeAt(sd.c, e.clientX), sd.c, e);   // 1972: it clings
+      if (sd.side === "a") S.pick.a = r3(Math.min(S.pick.b - 0.05, st)); else S.pick.b = r3(Math.max(S.pick.a + 0.05, st));
+      draw(sd.n);
+      return;
+    }
+    if (S.mdrag) {                                    // HERESY 1968: the selection carried along, drawn where it would be laid
+      var md = S.mdrag;
+      if (!md.moved && Math.abs(e.clientX - md.x) < 4) return;
+      md.moved = true; md.copy = md.copy || !!(e.ctrlKey || e.metaKey); md.dt = timeAt(md.c, e.clientX) - md.t0;
+      var len = S.pick.b - S.pick.a, s0 = S.pick.a + md.dt, sa = snapT(md.n, s0, md.c, e), sb = snapT(md.n, s0 + len, md.c, e);   // 1972: its start clings, or its end
+      md.dt = sa !== r3(s0) ? sa - S.pick.a : sb !== r3(s0 + len) ? sb - len - S.pick.a : md.dt;
+      md.c.style.cursor = md.copy ? "copy" : "grabbing";
+      draw(md.n);
       return;
     }
     var cd = S.cdrag;                                 // HERESY 1542
@@ -1729,14 +2084,21 @@
     var d = S.drag;
     if (!d) {                                         // HERESY 1542: the pointer says what a press would take
       var hc = e.target.closest && e.target.closest("canvas[data-mx-wave]");
-      if (hc && S.info && !S.autoShow[hc.dataset.mxWave]) { var hh = cutAt(hc, e); hc.style.cursor = hh ? "ew-resize" : ""; }
+      if (hc && S.info && !S.autoShow[hc.dataset.mxWave]) {   // 1968: the selection's edges and inside, the level's line
+        var hp = pickAt(hc, e), hh = cutAt(hc, e), hl = !hh && hp !== "a" && hp !== "b" && lineAt(hc, e);
+        hc.style.cursor = hp === "a" || hp === "b" || hh ? "ew-resize" : hl && hl.hit ? "move" : hp === "in" ? "grab" : hl ? "ns-resize" : "";
+        var lh = hl ? hc.dataset.mxWave : "";
+        if (lh !== S.lineHover) { var lw = S.lineHover; S.lineHover = lh; if (lw) draw(lw); if (lh) draw(lh); }
+      } else if (S.lineHover) { var lw2 = S.lineHover; S.lineHover = ""; draw(lw2); }
       return;
     }
-    d.b = timeAt(d.canvas, e.clientX);
+    d.b = snapT(d.name, timeAt(d.canvas, e.clientX), d.canvas, e);   // 1972: both edges cling
     if (Math.abs(e.clientX - d.x) > 4) d.moved = true;
+    if (d.moved && d.a0 != null) d.a = snapT(d.name, d.a0, d.canvas, e);
     if (d.moved) draw(d.name);
   }
   function onUp(e) {
+    if (S.rdrag) { holeUp(e); return; }               // HERESY 1975
     var rr = S.rule;                                  // HERESY 1501: the ruler let go: a click goes there, a drag keeps its loop
     if (rr) {
       S.rule = null;
@@ -1747,8 +2109,16 @@
     }
     if (S.adrag) {                                    // HERESY 1535: the point let go: kept, heard
       var ad = S.adrag; S.adrag = null;
+      if (ad.pending) { if (S.playing) play(ad.t); else { S.at = ad.t; paintPlayhead(); } return; }   // HERESY 1968: the line clicked, not taken
       keep(); draw(ad.n); autoSchedule(ad.n); lanePaintAuto(ad.n);
       emit("change", { n: ad.n, key: "auto" });
+      return;
+    }
+    if (S.sdrag) { S.sdrag = null; say(pickSay()); return; }   // HERESY 1968
+    if (S.mdrag) {                                    // HERESY 1968: laid where it was carried; a click in it plays from there and lets it go
+      var md = S.mdrag; S.mdrag = null; md.c.style.cursor = "";
+      if (!md.moved) { S.pick = null; draw(md.n); say(""); if (S.playing) play(md.t0); else { S.at = md.t0; paintPlayhead(); } return; }
+      pickMove(md.n, md.dt, md.copy);
       return;
     }
     if (S.cdrag) {                                    // HERESY 1542: the stretch's edge let go: kept, heard
@@ -1759,27 +2129,14 @@
     var d = S.drag;
     if (!d) return;
     S.drag = null;
-    if (!d.moved) { if (S.playing) play(d.a); else { S.at = d.a; paintPlayhead(); } return; }
-    var a = Math.min(d.a, d.b), b = Math.max(d.a, d.b);
-    if (b - a < 0.05) return draw(d.name);
-    if (d.pick) {                                     // HERESY 1564: a stretch in hand, nothing silenced
-      var was = S.pick && S.pick.n;
-      S.pick = { n: d.name, a: Math.round(a * 1000) / 1000, b: Math.round(b * 1000) / 1000 };
-      if (was && was !== d.name) draw(was);
-      draw(d.name); select(d.name);
-      say(tr("Picked {0}–{1}: Ctrl+C copies it, Ctrl+X takes it to move, Delete silences it").replace("{0}", clock(S.pick.a)).replace("{1}", clock(S.pick.b)));
+    if (!d.moved) {                                   // a click: from there, the selection let go (1968)
+      if (S.pick) { var pw = S.pick.n; S.pick = null; draw(pw); say(""); }
+      if (S.playing) play(d.a); else { S.at = d.a; paintPlayhead(); }
       return;
     }
-    var s = S.strips[d.name] || (S.strips[d.name] = {}), list = (s.muted || []).concat([[a, b]]).sort(function (x, y) { return x[0] - y[0]; }), merged = [];
-    list.forEach(function (r) {                       // HERESY 1542: one that touches another is one: the first's fall, the last's rise
-      var last = merged[merged.length - 1], f = fadesOf(r);
-      if (last && r[0] <= last[1]) { if (r[1] > last[1]) { last[1] = r[1]; last[3] = f[1]; } }
-      else merged.push([r[0], r[1], f[0], f[1]]);
-    });
-    mark();
-    s.muted = merged;
-    keep(); draw(d.name); rangesNow(d.name);
-    emit("change", { n: d.name, key: "muted" });
+    var a = Math.min(d.a, d.b), b = Math.max(d.a, d.b);
+    if (b - a < 0.05) return draw(d.name);
+    pickSet(d.name, a, b);                            // HERESY 1968 (1564's Shift no more needed): a drag selects, nothing silenced
   }
   function lanePaintAuto(n) {
     var b = document.querySelector('.mx-lane[data-strip="' + n + '"] [data-mx="auto"]');
@@ -1787,7 +2144,53 @@
     var bp = document.querySelector('.mx-lane[data-strip="' + n + '"] [data-mx="autop"]');   // HERESY 1559
     if (bp) { bp.hidden = !S.autoShow[n]; bp.textContent = tr(AUTO_P[autoParam(n)].short); bp.classList.toggle("has-auto", autoParam(n) === "volume" ? strip(n).auto.length > 0 : rawPts(n, autoParam(n)).length > 0); }
   }
+  // HERESY 1966: a lane's own menu, as a DAW has one
+  function laneRow(n) { return Array.prototype.filter.call(document.querySelectorAll("#mxLanes .mx-lane[data-strip]"), function (r) { return r.dataset.strip === n; })[0] || null; }
+  function setLaneH(n, h) {
+    if (h === LANE_DEF) delete LANE_H[n]; else LANE_H[n] = h;
+    laneKeep();
+    var row = laneRow(n);
+    if (row) row.style.setProperty("--mx-h", h + "px");
+    draw(n); paintPlayhead();
+  }
+  function devicesOf(n) {
+    if (!S.dock) { S.dock = true; keepFlag("yue2.mixer.dock", true); var dk = $("mxDock"); if (dk) dk.hidden = false; paintHead(); }
+    if (window.HeresyConsole) window.HeresyConsole.select(n, "devices");
+    var dk2 = $("mxDock"); if (dk2) dk2.scrollIntoView({ block: "nearest" });
+  }
+  function laneMenu(n, x, y) {
+    var s = strip(n), row = laneRow(n), press = function (k) { var b = row && row.querySelector('[data-mx="' + k + '"]'); if (b) b.click(); };
+    var H = [[LANE_MIN, "Short (40 px)"], [LANE_DEF, "As it comes (72 px)"], [96, "Tall (96 px)"], [LANE_MAX, "Tallest (120 px)"]];
+    var cut = s.muted.length > 0 || s.edits.length > 0 || splitsOf(n).length > 0;
+    window.HeresyMenu.open(x, y, [
+      { label: s.mute ? "Unmute" : "Mute", icon: "M", checked: s.mute, action: function () { press("mute"); } },
+      { label: s.solo ? "Unsolo" : "Solo", icon: "S", checked: s.solo, action: function () { press("solo"); } },
+      { label: S.autoShow[n] ? "Hide its automation" : "Its automation", icon: "A", action: function () { press("auto"); } },
+      { label: "Its devices in the console", icon: "\u2261", action: function () { devicesOf(n); } },
+      { sep: true },
+      { label: "Split at the playhead", icon: "\u2502", action: function () { splitAt(n, [S.playing ? pos() : S.at]); } },   // HERESY 1968
+      { label: "Select the whole lane", icon: "\u2194", action: function () { pickSet(n, 0, S.info.seconds); } },
+      { label: "Height", icon: "\u2195", items: H.map(function (h) { return { label: h[1], checked: laneH(n) === h[0], action: function () { setLaneH(n, h[0]); } }; }) },
+      { label: "Level back to 0 dB", icon: "0", action: function () {
+        mark(); (S.strips[n] || (S.strips[n] = {})).gain_db = 0; changed(n);
+        var f = row && row.querySelector('input[data-mx="gain_db"]'); if (f) { f.value = 0; var o = f.parentNode.querySelector("output"); if (o) o.textContent = fmtDb(0); }
+      } },
+      cut && { label: "Its silences and moves taken off", icon: "\u2715", action: function () {   // only when it has some
+        mark(); var t = S.strips[n] || (S.strips[n] = {}); t.muted = []; t.edits = []; t.splits = [];   // 1968: its splits with them
+        keep(); draw(n); rangesNow(n); if (S.playing) play(pos()); emit("change", { n: n });
+      } },
+      { label: "The lane as split: its level, mute, silences, sends and devices", icon: "\u21ba", action: function () { mark(); delete S.strips[n]; delete S.versions[n]; restored(); } }
+    ].filter(Boolean));
+  }
   function onMenu(e) {
+    // HERESY 1966 (Viktor: «контекстное меню, как в Bitwig… Mute трека и остальное»): the lane's left part, its name and buttons (its version's
+    // own right-click and the fields aside)
+    var ctl = e.target.closest && e.target.closest(".mx-lane[data-strip]");   // the whole left part: a lane is taller than its row of buttons
+    if (ctl && window.HeresyMenu && !e.target.closest(".mx-wave, .mx-grip, .mx-verb, input, select")) {
+      e.preventDefault();
+      laneMenu(ctl.dataset.strip, e.clientX, e.clientY);
+      return;
+    }
     var vbm = e.target.closest && e.target.closest(".mx-lane[data-strip] .mx-verb");   // HERESY 1538: its versions as chips, in its devices
     if (vbm) {
       e.preventDefault();
@@ -1810,6 +2213,23 @@
       emit("change", { n: a.n, key: "auto" });
       return;
     }
+    if (S.info) {                                     // HERESY 1968: the level's point taken away, a split joined, the selection's own menu
+      var lq = autoAt(c, e, "volume");
+      if (lq.hit) {
+        e.preventDefault(); mark();
+        var lst = rawPts(lq.n, "volume"), li = lst.indexOf(lq.hit); if (li >= 0) lst.splice(li, 1);
+        keep(); draw(lq.n); autoSchedule(lq.n); lanePaintAuto(lq.n); emit("change", { n: lq.n, key: "auto" });
+        return;
+      }
+      var sp = splitNear(c, e);
+      if (sp != null) {
+        e.preventDefault(); mark();
+        var ss = S.strips[c.dataset.mxWave]; ss.splits = ss.splits.filter(function (x) { return x !== sp; });
+        keep(); draw(c.dataset.mxWave); say(tr("Joined at {0}").replace("{0}", clock(sp)));
+        return;
+      }
+      if (pickAt(c, e) && window.HeresyMenu) { e.preventDefault(); pickMenu(c.dataset.mxWave, e.clientX, e.clientY); return; }
+    }
     var n = c.dataset.mxWave, t = timeAt(c, e.clientX), s = S.strips[n];
     var ed = s && Array.isArray(s.edits) ? s.edits.filter(function (e2) { return e2.to <= t && t <= e2.to + (e2.b - e2.a); }).pop() : null;   // HERESY 1564: the last laid there
     if (ed) {
@@ -1821,6 +2241,8 @@
       emit("change", { n: n, key: "edits" });
       return;
     }
+    if (S.rdrag) { e.preventDefault(); return; }      // HERESY 1975: pressed with the right button (the menu comes with the press here): decided when let go
+    if (S.rlast && Date.now() - S.rlast < 600) { e.preventDefault(); S.rlast = 0; return; }   // …or the menu comes after it was let go: done then
     if (!s || !s.muted) return;
     var left = s.muted.filter(function (r) { return !(r[0] <= t && t <= r[1]); });
     if (left.length === s.muted.length) return;
@@ -1881,6 +2303,12 @@
     body.addEventListener("click", onClick);
     body.addEventListener("dblclick", onDbl);
     body.addEventListener("pointerdown", onDown);
+    body.addEventListener("dblclick", function (e) {   // HERESY 1965: a grip's double-click: the lane back to its 72 px
+      var g = e.target.closest && e.target.closest("[data-mx-grip]");
+      if (!g) return;
+      var n = g.dataset.mxGrip, row = g.closest(".mx-lane");
+      delete LANE_H[n]; laneKeep(); row.style.setProperty("--mx-h", LANE_DEF + "px"); draw(n); paintPlayhead();
+    });
     body.addEventListener("pointermove", onMove);
     body.addEventListener("pointerup", onUp);
     body.addEventListener("pointerup", function () { S.gesture = false; });   // HERESY 1531: a fader's drag ends its undo

@@ -11887,6 +11887,15 @@
   // song beside it) and Post (what is done to a finished take). The takes list stays in all
   // three: a take picked there is the one Post works on. Kept per browser.
   var TAB_KEY = "yue2.tab";
+  // HERESY 1976 (Viktor 31.10.2026: «как минимум Творец, Писатель и Библиотекарь, сделай адаптивными, а остальные комнаты вообще отключать при
+  // таком низком разрешении, и "Будьте вы мне здоровы!"»): up to 760 px wide the Creator, the Writer and the Librarian; the others greyed in the
+  // bar (app.css), asked for they say so and the room in hand stays
+  var PHONE_MQ = window.matchMedia ? window.matchMedia("(max-width: 760px)") : null, PHONE_ROOMS = { create: 1, write: 1, collection: 1 };
+  function phoneSize() { return !!(PHONE_MQ && PHONE_MQ.matches); }
+  function phoneSay(tab) {
+    var b = document.querySelector('.topbar [data-tab="' + tab + '"]'), room = b ? b.textContent.trim() : tab;
+    toast(tr("Be well!") + " " + tr("{0} wants a wider screen: open it on a computer or a tablet. On a phone: the Creator, the Writer and the Librarian.").replace("{0}", room));
+  }
   function currentTab() { return document.body.dataset.tab || "create"; }
   function paintCurrentSong() {
     var style = $("style").value.trim(), lyrics = $("lyrics").value.trim(), abc = $("abc").value.trim() || STATE.abcRendered || "";
@@ -11911,6 +11920,7 @@
   }
   function setTab(tab) {
     if (["create", "write", "post", "artist", "video", "collection", "train"].indexOf(tab) < 0) tab = "create";   // HERESY 1824: the Videographer   // HERESY 1255: the Artist
+    if (phoneSize() && !PHONE_ROOMS[tab]) { phoneSay(tab); tab = PHONE_ROOMS[currentTab()] ? currentTab() : "create"; }   // HERESY 1976: a phone's three rooms
     document.body.dataset.tab = tab;
     $("view-compose").classList.toggle("is-hidden", tab !== "create");
     $("view-take").classList.toggle("is-hidden", tab !== "create");
@@ -11938,6 +11948,7 @@
   }
   // HERESY 1166: a room in the bar leaves the Engine page for that room (asked first when the GPU roles are not saved)
   all(".topbar [data-tab]").forEach(function (b) { b.addEventListener("click", function () { leaveEngine().then(function (ok) { if (ok) setTab(b.dataset.tab); }); }); });
+  if (PHONE_MQ && PHONE_MQ.addEventListener) PHONE_MQ.addEventListener("change", function () { if (phoneSize() && !PHONE_ROOMS[currentTab()]) setTab(currentTab()); });   // HERESY 1976: narrowed in a wide room
   // HERESY 1169: the Artist's greyed place in the bar by the page's language (the catalogs' "Artist" is the Trainer's
   // performer, «Артист»; the room is Viktor's «Художник», the pictures for the songs)
   var ARTIST_ROOM = { ru: "Художник", uk: "Художник", be: "Мастак", el: "Καλλιτέχνης", es: "Artista", it: "Artista",

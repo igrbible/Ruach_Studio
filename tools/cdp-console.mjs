@@ -9037,6 +9037,7 @@ const mx71 = await ev(`(async () => {
   c.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: x(20), clientY: y, pointerId: 71 }));
   c.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, clientX: x(20), clientY: y, pointerId: 71 }));
   await wait(50);
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true, cancelable: true })); await wait(50);   // 1968: a drag selects, Delete silences
   const v1 = HeresyMixer.value();
   o.value = JSON.stringify(v1.strips);
   o.range = (v1.strips.other && v1.strips.other.muted || []).map((q) => q.map((t) => Math.round(t))).join(";");
@@ -10106,6 +10107,14 @@ const fs99 = await ev(`(async () => {
   document.getElementById("mxDockBtn").click(); await wait(300);
   const dk = document.getElementById("mxDock").getBoundingClientRect();
   o.h2 = h(); o.dock = !document.getElementById("mxDock").hidden && dk.height > 200 && dk.bottom <= innerHeight + 2;
+  // HERESY 1965: a lane's grip drags its height, a double-click puts it back; the lanes scroll inside
+  const grip = document.querySelector('#mxLanes .mx-lane[data-strip="drums"] .mx-grip'), gr = grip.getBoundingClientRect();
+  grip.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, clientX: gr.left + 20, clientY: gr.top + 3 }));
+  document.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: gr.left + 20, clientY: gr.top + 33 }));
+  document.dispatchEvent(new PointerEvent("pointerup", { bubbles: true })); await wait(100);
+  o.dragged = h(); try { o.keptH = (JSON.parse(localStorage.getItem("yue2.mxLaneH") || "{}") || {}).drums; } catch (e) { o.keptH = "private"; }
+  grip.dispatchEvent(new MouseEvent("dblclick", { bubbles: true })); await wait(100);
+  o.back72 = h(); o.scrolls = getComputedStyle(document.getElementById("mxLanes")).overflowY;
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await wait(200);
   o.esc = !document.body.classList.contains("daw-full");
   const f11 = new KeyboardEvent("keydown", { key: "F11", bubbles: true, cancelable: true });
@@ -10118,9 +10127,113 @@ const fs99 = await ev(`(async () => {
   HeresyMixer.setTake(null);
   document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
   return o; })()`);
-check("the DAW's own button lays it over the whole window, the lanes sharing the screen's height (five lanes: the stems and the rest), its button pressed",
-  fs99.btn && fs99.full && fs99.cover === "0,0,true,true" && fs99.h1 > fs99.h0 && fs99.lanes === "5" && fs99.pressed === "true", JSON.stringify(fs99));
-check("  with the console shown (1531) the lanes share what is left above it, and the console is whole in the window", fs99.dock && fs99.h2 < fs99.h1 && fs99.h2 >= 26, JSON.stringify(fs99));
+check("the DAW's own button lays it over the whole window (five lanes: the stems and the rest), its button pressed; each lane its own 72 px there as in the window (1965)",
+  fs99.btn && fs99.full && fs99.cover === "0,0,true,true" && fs99.h0 === 72 && fs99.h1 === 72 && fs99.lanes === "5" && fs99.pressed === "true", JSON.stringify(fs99));
+check("  with the console shown (1531) the lanes keep their height and scroll inside above it, the console whole in the window", fs99.dock && fs99.h2 === 72 && fs99.scrolls === "auto", JSON.stringify(fs99));
+check("  a lane's grip drags its height (30 px down: 102 px), kept by the stem's name; a double-click puts it back at 72 px (1965)",
+  fs99.dragged === 102 && (fs99.keptH === 102 || fs99.keptH === "private") && fs99.back72 === 72, JSON.stringify(fs99));
+
+// HERESY 1966: a lane's own menu
+section("A lane's own menu in the DAW (1966): a right-click on its name: mute, solo, its automation, its devices, its height, its level, the lane as split");
+const lm66 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, o = {}, T = "x-1966-take";
+  const json = (b, st) => Promise.resolve(new Response(JSON.stringify(b), { status: st || 200, headers: { "Content-Type": "application/json" } }));
+  const strips = ["lead_vocal", "drums", "bass", "other"].map((n) => ({ name: n, title: n, path: "derived/stems-eight/" + n + ".flac", versions: [{ id: "", label: "as split", path: "derived/stems-eight/" + n + ".flac" }] }));
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/daw/set")) return json({ set: "derived/stems-eight", mode: "eight", source: "audio.wav", seconds: 40, rate: 48000, channels: 2, strips, rest: "rest" });
+    if (u.startsWith("/lab/daw/peaks")) return json({ peaks: Array.from({ length: 400 }, (_, i) => Math.abs(Math.sin(i / 30)) * 0.8), seconds: 40 });
+    if (u.startsWith("/lab/derived?name=" + T)) return json({ name: T, derived: [], running: [] });
+    return real(u, opt); };
+  const item = (label) => [...document.querySelectorAll(".hm-menu .hm-item")].filter((x) => x.textContent.indexOf(label) >= 0)[0];
+  try {
+    document.querySelector('.topbar [data-tab="post"]').click(); await wait(300);
+    document.querySelector('#postSteps [data-step-panel="dawPanel"]').click(); await wait(200);
+    HeresyMixer.setTake({ name: T, label: "Take 1966", seconds: 40 });
+    window.dispatchEvent(new CustomEvent("heresy-derived", { detail: { name: T, files: [{ kind: "stems", source: "derived/stems-eight/lead_vocal.flac", label: "↳ Lead Vocal" }] } }));
+    for (let i = 0; i < 40 && document.querySelectorAll("#mxLanes .mx-lane").length < 5; i++) await wait(100);
+    await wait(200);
+    const row = () => document.querySelector('#mxLanes .mx-lane[data-strip="drums"]');
+    const menu = async () => { row().querySelector(".mx-name").dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 300, clientY: 300 })); await wait(150); };
+    await menu();
+    o.items = [...document.querySelectorAll(".hm-menu .hm-item .hm-label")].map((x) => x.textContent).join("|");
+    HeresyMenu.close(); await wait(100);
+    row().dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 300, clientY: 300 })); await wait(150);
+    o.onLane = document.querySelectorAll(".hm-menu .hm-item").length > 3;
+    HeresyMenu.close(); await wait(100);
+    await menu();
+    item("Mute").click(); await wait(150);
+    o.muted = row().querySelector('[data-mx="mute"]').classList.contains("is-on");
+    await menu(); item("Height").click(); await wait(150);
+    const tall = item("Tall (96 px)"); o.sub = !!tall; if (tall) tall.click(); await wait(150);
+    o.h96 = Math.round(row().querySelector(".mx-wave").getBoundingClientRect().height);
+    await menu(); item("The lane as split").click(); await wait(300);
+    o.unmuted = !row().querySelector('[data-mx="mute"]').classList.contains("is-on");
+    await menu(); item("Height").click(); await wait(150); const back = item("As it comes (72 px)"); if (back) back.click(); await wait(150);
+    o.h72 = Math.round(row().querySelector(".mx-wave").getBoundingClientRect().height);
+  } finally {
+    if (window.HeresyMenu) HeresyMenu.close();
+    window.fetch = real;
+    HeresyMixer.setTake(null);
+    document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
+  }
+  return o; })()`);
+check("a right-click on a lane's name, or on the lane around its buttons, opens its menu (Mute, Solo, its automation, its devices, Height, its level, the lane as split); Mute mutes it; Height › Tall makes it 96 px; the lane as split unmutes it; As it comes puts it back at 72 px",
+  lm66.items.indexOf("Mute") === 0 && lm66.items.indexOf("Solo") > 0 && lm66.items.indexOf("Height") > 0 && lm66.items.indexOf("Level back to 0 dB") > 0 && lm66.onLane && lm66.muted && lm66.sub && lm66.h96 === 96 && lm66.unmuted && lm66.h72 === 72, JSON.stringify(lm66));
+
+// HERESY 1967: the console on the right: pinned, on hover, floating
+section("The DAW's console on the right (1967): pinned beside the lanes, a strip at the right edge on hover, or a floating panel kept in the page; the mode in its tabs' row, kept");
+const cf67 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, o = {}, T = "x-1967-take";
+  const json = (b, st) => Promise.resolve(new Response(JSON.stringify(b), { status: st || 200, headers: { "Content-Type": "application/json" } }));
+  const strips = ["lead_vocal", "drums", "bass", "other"].map((n) => ({ name: n, title: n, path: "derived/stems-eight/" + n + ".flac", versions: [{ id: "", label: "as split", path: "derived/stems-eight/" + n + ".flac" }] }));
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/daw/set")) return json({ set: "derived/stems-eight", mode: "eight", source: "audio.wav", seconds: 40, rate: 48000, channels: 2, strips, rest: "rest" });
+    if (u.startsWith("/lab/daw/peaks")) return json({ peaks: Array.from({ length: 400 }, (_, i) => Math.abs(Math.sin(i / 30)) * 0.8), seconds: 40 });
+    if (u.startsWith("/lab/derived?name=" + T)) return json({ name: T, derived: [], running: [] });
+    return real(u, opt); };
+  let was = null;
+  try { was = localStorage.getItem("yue2.mixer.dockMode"); localStorage.removeItem("yue2.mixer.dockMode"); } catch (e) {}
+  try {
+    document.querySelector('.topbar [data-tab="post"]').click(); await wait(300);
+    document.querySelector('#postSteps [data-step-panel="dawPanel"]').click(); await wait(200);
+    HeresyMixer.setTake({ name: T, label: "Take 1967", seconds: 40 });
+    window.dispatchEvent(new CustomEvent("heresy-derived", { detail: { name: T, files: [{ kind: "stems", source: "derived/stems-eight/lead_vocal.flac", label: "↳ Lead Vocal" }] } }));
+    for (let i = 0; i < 40 && document.querySelectorAll("#mxLanes .mx-lane").length < 5; i++) await wait(100);
+    const dockWas = !document.getElementById("mxDock").hidden;
+    if (!dockWas) { document.getElementById("mxDockBtn").click(); await wait(250); }
+    document.getElementById("mxFull").click(); await wait(300);
+    const panel = document.getElementById("dawPanel"), dock = () => document.getElementById("mxDock"), lanes = document.getElementById("mxLanes");
+    o.mode = panel.dataset.dock;
+    const d1 = dock().getBoundingClientRect(), l1 = lanes.getBoundingClientRect();
+    o.pinned = d1.left >= l1.right - 2 && d1.width > 300 && Math.abs(d1.top - l1.top) < 30;
+    const mode = async (v) => { const b = document.querySelector('#mxDock [data-act="dockmode"][data-v="' + v + '"]'); if (b) b.click(); await wait(350); };
+    await mode("hover");
+    const d2 = dock().getBoundingClientRect();
+    o.hover = panel.dataset.dock === "hover" && d2.left > innerWidth - 60 && lanes.getBoundingClientRect().right > innerWidth - 80;
+    const side = () => { for (let e = document.getElementById("mxBody").parentElement; e && e !== document.body; e = e.parentElement) {
+      const ox = getComputedStyle(e).overflowX; if (ox === "auto" || ox === "scroll" || ox === "hidden") return e.scrollWidth > e.clientWidth + 1; }
+      return document.scrollingElement.scrollWidth > innerWidth + 1; };
+    o.noSide = !side();
+    document.getElementById("mxFull").click(); await wait(300);
+    o.noSideInPage = !side() && document.scrollingElement.scrollWidth <= innerWidth + 1;
+    document.getElementById("mxFull").click(); await wait(300);
+    await mode("float");
+    o.float = panel.dataset.dock === "float" && getComputedStyle(dock()).position === "fixed" && !!dock().closest("#dawPanel");
+    try { o.kept = localStorage.getItem("yue2.mixer.dockMode"); } catch (e) { o.kept = "private"; }
+    await mode("pin");
+    o.back = panel.dataset.dock === "pin";
+    document.getElementById("mxFull").click(); await wait(200);
+    if (!dockWas) document.getElementById("mxDockBtn").click();
+  } finally {
+    try { if (was === null) localStorage.removeItem("yue2.mixer.dockMode"); else localStorage.setItem("yue2.mixer.dockMode", was); } catch (e) {}
+    if (document.body.classList.contains("daw-full")) document.getElementById("mxFull").click();
+    window.fetch = real;
+    HeresyMixer.setTake(null);
+    document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
+  }
+  return o; })()`);
+check("the console pinned on the right of the lanes by default; on hover a strip at the right edge, the lanes the whole width, nothing scrolling sideways over the whole screen or in the page; floating a fixed panel still inside the DAW's panel; the mode kept, and pinned again",
+  cf67.mode === "pin" && cf67.pinned && cf67.hover && cf67.noSide && cf67.noSideInPage && cf67.float && (cf67.kept === "float" || cf67.kept === "private") && cf67.back, JSON.stringify(cf67));
 check("  Esc brings it back; F11 in sight of the DAW is the studio's (the browser's own kept from it): over the window, and again back", fs99.esc && fs99.f11 && fs99.f11back, JSON.stringify(fs99));
 
 // HERESY 1169 · 1501 (Viktor 15–16.10.2026: «DAW UX должен быть как в Bitwig»; «DAW будет самым интересным»)
@@ -10554,8 +10667,8 @@ const dw11 = await ev(`(async () => {
   HeresyMixer.setTake(null);
   document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
   return o; })()`);
-check("the DAW's lanes 64 px high, the same before and after the pointer goes over one (none opened), each wave whole: ink above its middle and below",
-  /^(64,)+64$/.test(dw11.before) && dw11.after === dw11.before && dw11.opened === 0 && dw11.top && dw11.bottom, JSON.stringify(dw11));
+check("the DAW's lanes 72 px high (1965), the same before and after the pointer goes over one (none opened), each wave whole: ink above its middle and below",
+  /^(72,)+72$/.test(dw11.before) && dw11.after === dw11.before && dw11.opened === 0 && dw11.top && dw11.bottom, JSON.stringify(dw11));
 
 // HERESY 1169 · 1512 (Viktor 16.10.2026: «Предлагаю отдельной вкладкой в Огранщике создать детект и настройку аудио интерфейсов как физических, так и виртуальных»)
 section("The Refiner's Audio I/O: a Setup step of its own, last; the interfaces physical (by card, a USB one with its formats) and virtual, what does not run said; the gateway's output, input and rate kept; an input's floor measured");
@@ -11043,8 +11156,8 @@ const rr23 = await ev(`(async () => {
   document.getElementById("engineToggle").click(); await wait(150);
   document.querySelector('.topbar [data-tab="create"]').click(); await wait(150);
   return o; })()`);
-check("The Engine's Refiner Room tab shows its own card alone, no dropdown: the room's two modes in sight (1959: «as it was left» gone), the canvas by default",
-  rr23.tab && rr23.shown && rr23.noSelect && !rr23.optsHidden && rr23.cards === "Always the list|Always the canvas" && /canvas/.test(rr23.say) && rr23.byDefault, JSON.stringify(rr23));
+check("The Engine's Refiner Room tab shows its own card alone, no dropdown: the room's two modes in sight (1959: «as it was left» gone), the node view's two under them (1969), the canvas by default",
+  rr23.tab && rr23.shown && rr23.noSelect && !rr23.optsHidden && rr23.cards === "Always the list|Always the canvas|SIMPLE with Options Pop-Up|FULL in ComfyUI Style" && /canvas/.test(rr23.say) && rr23.byDefault, JSON.stringify(rr23));
 check("  a mode chosen is kept and the room follows it at once", rr23.canvas && rr23.list, JSON.stringify(rr23));
 check("  the room opens on its canvas whatever it was left in, until the list is chosen (1581 · 1959)", rr23.byDefault, JSON.stringify(rr23));
 
@@ -11715,6 +11828,7 @@ const ct42 = await ev(`(async () => {
   const drag = (x0, y0, x1, y1, id) => { ev2("pointerdown", x0, y0, id); ev2("pointermove", x0 + (x1 - x0) / 2, y1, id); ev2("pointermove", x1, y1, id); ev2("pointerup", x1, y1, id); };
   const mid = () => R().top + R().height * 0.6, top = () => R().top + 3, cut = () => (HeresyMixer.value().strips.lead_vocal || {}).muted;
   drag(X(16), mid(), X(24), mid(), 421); await wait(80);
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true, cancelable: true })); await wait(50);   // 1968: a drag selects, Delete silences
   o.drawn = JSON.stringify(cut());
   // the fall's handle (its top-left corner, 10 ms in) dragged to 18 s; the rise's (top-right) to 21 s
   ev2("pointermove", X(16.01), top(), 0); o.cursor = C().style.cursor;
@@ -12492,7 +12606,7 @@ check("  its fader at −6 dB moves the sum (the −12 dBFS tone at −18 on the
 // 21.10.2026: muted, the master read −58.8 against −59 on some runs (the meter's floor about −59…−60, not a sound): −55 is still 37 dB under the bus
 
 // HERESY 1169 · 1564 (Viktor 18.10.2026, «DAW в продакшн»: region editing, move, cut, copy)
-section("The DAW's region editing: Shift and a drag picks a stretch; Ctrl+C copies, Ctrl+X takes it, Ctrl+V lays it at the playhead; a right-click takes it away; Delete silences; a move's source silent, a laid stretch heard over a cut; Mix sends «edits»");
+section("The DAW's region editing: a drag picks a stretch; Ctrl+C copies, Ctrl+X cuts it at once, Ctrl+V lays it at the playhead and selects it; a right-click takes it away; Delete silences; a move's source silent, a laid stretch heard over a cut; Mix sends «edits»");
 const ed64 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, o = {}, T = "x-1564-take-" + Date.now(), asked = [];
   const json = (b, st) => Promise.resolve(new Response(JSON.stringify(b), { status: st || 200, headers: { "Content-Type": "application/json" } }));
@@ -12522,17 +12636,21 @@ const ed64 = await ev(`(async () => {
   const X = (t) => R().left + t / 40 * R().width, Y = R().top + R().height / 2;
   const key = (k, ctrl) => document.dispatchEvent(new KeyboardEvent("keydown", { key: k, ctrlKey: !!ctrl, bubbles: true, cancelable: true }));
   const V = () => (HeresyMixer.value().strips.lead_vocal || {});
-  c().dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, clientX: X(2), clientY: Y, button: 0, pointerId: 71, shiftKey: true }));
-  c().dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: X(4), clientY: Y, pointerId: 71, shiftKey: true }));
-  c().dispatchEvent(new PointerEvent("pointerup", { bubbles: true, clientX: X(4), clientY: Y, pointerId: 71, shiftKey: true }));
-  await wait(50);
+  const sel = (a, b, id) => { c().dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, clientX: X(a), clientY: Y, button: 0, pointerId: id }));
+    c().dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: X(b), clientY: Y, pointerId: id }));
+    c().dispatchEvent(new PointerEvent("pointerup", { bubbles: true, clientX: X(b), clientY: Y, pointerId: id })); };
+  sel(2, 4, 71); await wait(50);
   const P = HeresyMixer.k.S.pick;
   o.pick = !!P && Math.abs(P.a - 2) < 0.15 && Math.abs(P.b - 4) < 0.15 && !V().muted;
   key("c", true); await wait(20);
   HeresyMixer.k.S.at = 20; key("v", true); await wait(50);
-  const e1 = (V().edits || [])[0];
+  const e1 = (V().edits || [])[0], P2 = HeresyMixer.k.S.pick;
   o.copy = !!e1 && e1.op === "copy" && Math.abs(e1.to - 20) < 0.01 && Math.abs(e1.a - 2) < 0.15;
-  key("x", true); await wait(20);
+  o.laidPicked = !!P2 && Math.abs(P2.a - 20) < 0.01 && Math.abs(P2.b - 22) < 0.2;
+  key("Escape"); await wait(20);
+  sel(2, 4, 72); await wait(50);
+  key("x", true); await wait(30);
+  o.cutNow = JSON.stringify((V().muted || []).map((r) => r.slice(0, 2).map((t) => Math.round(t)))) === "[[2,4]]" && !HeresyMixer.k.S.pick;
   HeresyMixer.k.S.at = 30; key("v", true); await wait(30);
   HeresyMixer.k.S.at = 35; key("v", true); await wait(30);
   o.ops = (V().edits || []).map((x) => x.op + "@" + Math.round(x.to)).join(",");
@@ -12541,7 +12659,7 @@ const ed64 = await ev(`(async () => {
   HeresyMixer.undo(); await wait(80);
   o.back = (V().edits || []).length === 3;
   key("Delete"); await wait(40);
-  o.silenced = (V().muted || []).length === 1;
+  o.silenced = (V().muted || []).length === 2 && (V().edits || []).map((x) => Math.round(x.to)).join(",") === "20,30";
   // heard: a move's source silent; a laid stretch heard over a cut
   HeresyMixer.k.S.strips.lead_vocal = { edits: [{ op: "move", a: 1, b: 6, to: 30 }] };
   HeresyMixer.play(2); await wait(1600);
@@ -12563,12 +12681,373 @@ const ed64 = await ev(`(async () => {
   HeresyMixer.setTake(null);
   document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
   return o; })()`);
-check("Shift and a drag picks a stretch (nothing silenced); Ctrl+C then Ctrl+V lays a copy at the playhead; Ctrl+X moves it once, the next lays a copy",
-  ed64.pick && ed64.copy && ed64.ops === "copy@20,move@30,copy@35", JSON.stringify(ed64));
-check("  a right-click on a laid stretch takes it away, undo brings it back; Delete silences the stretch in hand",
+check("a drag picks a stretch (nothing silenced); Ctrl+C then Ctrl+V lays a copy at the playhead and selects it there; Ctrl+X cuts at once (silent there), each Ctrl+V lays a copy",
+  ed64.pick && ed64.copy && ed64.laidPicked && ed64.cutNow && ed64.ops === "copy@20,copy@30,copy@35", JSON.stringify(ed64));
+check("  a right-click on a laid stretch takes it away, undo brings it back; Delete silences the stretch in hand, a stretch laid there with it",
   ed64.gone === "copy@20,copy@35" && ed64.back && ed64.silenced, JSON.stringify(ed64));
 check("  heard: a move's source silent; a laid stretch over a cut heard at its level (the cut alone silent); Mix sends «edits»",
   ed64.src != null && ed64.src < -50 && ed64.over != null && ed64.over > -14 && ed64.cutOnly != null && ed64.cutOnly < -50 && ed64.sent === '{"edits":[{"op":"copy","a":1,"b":4,"to":12}]}', JSON.stringify(ed64));
+
+// HERESY 1968 (Viktor 31.10.2026: «как в ocenaudio… мышкой браться за точку на треке и вести её вверх в пик или вниз в затухание… Разрезка по сегментам, копирование, вырезание, передвигание… в общем как в аудио редакторе»)
+section("The DAW edited as in an audio editor: a drag selects and its edge draws it out; the selection dragged moves the lane's sound (Ctrl a copy) and a laid stretch itself; its right-click fades and raises; the level's line taken at a point; Ctrl+E splits, a double-click takes a segment, a right-click on a split joins it");
+const ed68 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, o = {}, T = "x-1968-take";
+  const json = (b, st) => Promise.resolve(new Response(JSON.stringify(b), { status: st || 200, headers: { "Content-Type": "application/json" } }));
+  const strips = ["lead_vocal", "drums", "bass", "other"].map((n) => ({ name: n, title: n, path: "derived/stems-four/" + n + ".flac", versions: [{ id: "", label: "as split", path: "derived/stems-four/" + n + ".flac" }] }));
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/daw/set")) return json({ set: "derived/stems-four", mode: "four", source: "audio.wav", seconds: 40, rate: 48000, channels: 2, strips, rest: "rest" });
+    if (u.startsWith("/lab/daw/peaks")) return json({ peaks: Array.from({ length: 400 }, (_, i) => Math.abs(Math.sin(i / 30)) * 0.8), seconds: 40 });
+    if (u.startsWith("/lab/derived?name=" + T)) return json({ name: T, derived: [], running: [] });
+    return real(u, opt); };
+  try { localStorage.removeItem("yue2.mixer:" + T + ":derived/stems-four"); } catch (e) {}
+  try {
+    document.querySelector('.topbar [data-tab="post"]').click(); await wait(300);
+    document.querySelector('#postSteps [data-step-panel="dawPanel"]').click(); await wait(200);
+    HeresyMixer.setTake({ name: T, label: "Take 1968", seconds: 40 });
+    window.dispatchEvent(new CustomEvent("heresy-derived", { detail: { name: T, files: [{ kind: "stems", source: "derived/stems-four/lead_vocal.flac", label: "↳ Lead Vocal" }] } }));
+    for (let i = 0; i < 40 && !document.querySelector('canvas[data-mx-wave="drums"]'); i++) await wait(100);
+    await wait(200);
+    const S = HeresyMixer.k.S, c = () => document.querySelector('canvas[data-mx-wave="drums"]'), R = () => c().getBoundingClientRect();
+    const X = (t) => R().left + t / 40 * R().width, Y = () => R().top + R().height * 0.7;
+    const LY = (f) => R().top + R().height - 2 - f * (R().height - 4);   // the fader's taper: 0 dB at 0.78 of the height, −20 dB at 0.36
+    const pe = (type, x, y, id, more) => c().dispatchEvent(new PointerEvent(type, Object.assign({ bubbles: true, clientX: x, clientY: y, button: 0, pointerId: id }, more || {})));
+    const drag = (x0, y0, x1, y1, id, more) => { pe("pointerdown", x0, y0, id, more); pe("pointermove", (x0 + x1) / 2, (y0 + y1) / 2, id, more); pe("pointermove", x1, y1, id, more); pe("pointerup", x1, y1, id, more); };
+    const key = (k, ctrl) => document.dispatchEvent(new KeyboardEvent("keydown", { key: k, ctrlKey: !!ctrl, bubbles: true, cancelable: true }));
+    const V = () => (HeresyMixer.value().strips.drums || {}), near = (a, b) => Math.abs(a - b) < 0.15;
+    // a drag selects, nothing silenced; its right edge drawn out to 12 s
+    drag(X(4), Y(), X(8), Y(), 81); await wait(40);
+    o.selected = !!S.pick && near(S.pick.a, 4) && near(S.pick.b, 8) && !V().muted && !V().edits;
+    o.top1 = Math.round(document.getElementById("mxLanes").getBoundingClientRect().top);   // the lanes where they stood while the state line said much
+    drag(X(8), Y(), X(12), Y(), 82); await wait(40);
+    o.edge = !!S.pick && near(S.pick.a, 4) && near(S.pick.b, 12);
+    // dragged inside: the lane's own sound moved to 20 s (1975: a copy laid there, its place a cut fading in and out 30 ms), the selection with it
+    drag(X(6), Y(), X(22), Y(), 83); await wait(60);
+    const m1 = (V().edits || [])[0] || {}, h1 = (V().muted || [])[0] || [];
+    o.moved = m1.op === "copy" && near(m1.a, 4) && near(m1.b, 12) && near(m1.to, 20) && !!S.pick && near(S.pick.a, 20) &&
+      near(h1[0], 4) && near(h1[1], 12) && h1[2] === 0.03 && h1[3] === 0.03;
+    // dragged again: the laid stretch itself goes to 26 s (no second edit); with Ctrl a copy of it at 2 s
+    drag(X(22), Y(), X(28), Y(), 84); await wait(60);
+    o.relaid = (V().edits || []).length === 1 && near(V().edits[0].to, 26);
+    drag(X(28), Y(), X(4), Y(), 85, { ctrlKey: true }); await wait(60);
+    o.copied = (V().edits || []).map((e2) => e2.op + "@" + Math.round(e2.to)).join(",");
+    // its right-click: a fade in from silence over it; louder by 3 dB over another stretch
+    const menu = async (t) => { c().dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: X(t), clientY: Y() })); await wait(150); };
+    const item = (label) => [...document.querySelectorAll(".hm-menu .hm-item")].filter((x) => x.textContent.indexOf(label) >= 0)[0];
+    await menu(6);
+    o.items = [...document.querySelectorAll(".hm-menu .hm-item .hm-label")].map((x) => x.textContent).join("|");
+    const fin = item("Fade in from silence"); if (fin) fin.click(); await wait(60);
+    o.fade = JSON.stringify(V().auto || []);
+    key("Escape"); await wait(20);
+    o.top0 = Math.round(document.getElementById("mxLanes").getBoundingClientRect().top);   // and with it empty
+    drag(X(30), Y(), X(34), Y(), 86); await wait(40);
+    await menu(32);
+    const up = item("Louder by 3 dB"); if (up) up.click(); await wait(60);
+    o.louder = JSON.stringify((V().auto || []).filter((p) => p[0] > 29));
+    // the level's line taken at 15 s where it has no point and pulled down to −20 dB: a point there, its neighbours kept at 0 dB
+    key("Escape"); await wait(20);
+    S.strips.drums.auto = [];
+    drag(X(15), LY(0.78), X(15.1), LY(0.36), 87); await wait(60);
+    const au = V().auto || [];
+    o.line = JSON.stringify(au);
+    o.lineOk = au.length === 3 && au.filter((p) => p[1] === 0).length === 2 && au.some((p) => Math.abs(p[1] + 20) < 1.5);
+    // a click on the line (no move) makes no point and plays from there
+    S.strips.drums.auto = [];
+    pe("pointerdown", X(25), LY(0.78), 88); pe("pointerup", X(25), LY(0.78), 88); await wait(40);
+    o.clickLine = !(V().auto || []).length && near(S.at, 25);
+    // Ctrl+E at the playhead (10 s, then 18 s); a double-click between takes that segment; a right-click on a split joins it
+    S.focus = "drums"; S.at = 10; key("e", true); await wait(30);
+    S.at = 18; key("e", true); await wait(30);
+    o.splits = JSON.stringify(S.strips.drums.splits || []);
+    c().dispatchEvent(new MouseEvent("dblclick", { bubbles: true, clientX: X(14), clientY: Y() })); await wait(40);
+    o.segment = !!S.pick && near(S.pick.a, 10) && near(S.pick.b, 18);
+    key("Escape"); await wait(20);
+    c().dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: X(18), clientY: Y() })); await wait(40);
+    o.joined = JSON.stringify(S.strips.drums.splits || []);
+    S.strips.drums.auto = [[0, -40], [40, -40]]; key("0"); await wait(60);   // the wave as the level's line makes it: 40 dB down, a thread
+    const g2 = c().getContext("2d"), col = (t) => { const x = Math.round((X(t) - R().left) * c().width / R().width), d = g2.getImageData(x, 0, 1, c().height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 40) n++; return n; };
+    const quiet = col(17); S.strips.drums.auto = []; key("0"); await wait(60);
+    o.wave = quiet + "/" + col(17); o.waveFollows = quiet * 4 < col(17);
+    o.notSent = !("splits" in V());
+    o.note = /a double-click takes a segment whole/.test((document.querySelector("#dawPanel .mx-note") || {}).textContent || "");
+  } finally {
+    if (window.HeresyMenu) HeresyMenu.close();
+    window.fetch = real;
+    try { localStorage.removeItem("yue2.mixer:" + T + ":derived/stems-four"); } catch (e) {}
+    HeresyMixer.setTake(null);
+    document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
+  }
+  return o; })()`);
+check("a drag selects (nothing silenced) and its edge draws it out; dragged inside, the lane's own sound moves (laid there, its place a cut with 30 ms fades) and the selection with it; dragged again, the laid stretch itself goes (no second edit); with Ctrl, a copy of it",
+  ed68.selected && ed68.edge && ed68.moved && ed68.relaid && ed68.copied === "copy@26,copy@2", JSON.stringify(ed68));   // 1975: a copy and a cut, not a move
+check("  its right-click: Copy first, the fades, Split at its edges; a fade in from silence over it is the level's line from −60 dB, 10 ms to it from outside; louder by 3 dB over another stretch, 10 ms to it",
+  (ed68.items || "").indexOf("Copy|") === 0 && (ed68.items || "").indexOf("Fade in from silence") > 0 && (ed68.items || "").indexOf("Split at its edges") > 0 &&
+  ed68.fade === "[[1.99,0],[2,-60],[10,0],[10.01,0]]" && ed68.louder === "[[29.99,0],[30,3],[34,3],[34.01,0]]", JSON.stringify(ed68));
+check("  the level's line taken where it has no point and pulled down: a point at −20 dB, its two neighbours kept at 0 dB; a click on the line makes none and plays from there",
+  ed68.lineOk && ed68.clickLine, JSON.stringify(ed68));
+check("  Ctrl+E splits at the playhead (10 s, 18 s); a double-click between takes that segment whole; a right-click on a split joins it; the splits never in the mix sent; the DAW's note says how",
+  ed68.splits === "[10,18]" && ed68.segment && ed68.joined === "[10]" && ed68.notSent && ed68.note, JSON.stringify(ed68));
+check("  the wave drawn as the level's line makes it (40 dB down, a thread); the state line keeps its place, the lanes standing still whatever it says",
+  ed68.waveFollows && ed68.top1 === ed68.top0, JSON.stringify(ed68));
+const dg68 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), P = HeresyPost.canvas, was = P.on(), o = {};
+  try {
+    document.querySelector('.topbar [data-tab="post"]').click(); await wait(300);
+    if (!P.on()) { P.set(true); await wait(400); }
+    P.open("dawPanel"); await wait(300);
+    o.opened = P.opened();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "0", bubbles: true, cancelable: true })); await wait(700);
+    o.stayed = P.opened() === "dawPanel";
+  } finally { P.close(); if (!was) P.set(false); document.querySelector('.topbar [data-tab="create"]').click(); await wait(300); }
+  return o; })()`);
+check("  in the DAW's node window on the canvas «0» is the DAW's (its fit), not the canvas's node 10 (1581)", dg68.opened === "dawPanel" && dg68.stayed, JSON.stringify(dg68));
+
+// HERESY 1972 (my proposal 31.10.2026: a selection's edges cling)
+section("The DAW's selection clings within 6 px to a split, the playhead and a laid stretch's edges; Alt lets it go free");
+const ed72 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, o = {}, T = "x-1972-take";
+  const json = (b, st) => Promise.resolve(new Response(JSON.stringify(b), { status: st || 200, headers: { "Content-Type": "application/json" } }));
+  const strips = ["lead_vocal", "drums", "bass", "other"].map((n) => ({ name: n, title: n, path: "derived/stems-four/" + n + ".flac", versions: [{ id: "", label: "as split", path: "derived/stems-four/" + n + ".flac" }] }));
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/daw/set")) return json({ set: "derived/stems-four", mode: "four", source: "audio.wav", seconds: 40, rate: 48000, channels: 2, strips, rest: "rest" });
+    if (u.startsWith("/lab/daw/peaks")) return json({ peaks: Array.from({ length: 400 }, (_, i) => Math.abs(Math.sin(i / 30)) * 0.8), seconds: 40 });
+    if (u.startsWith("/lab/derived?name=" + T)) return json({ name: T, derived: [], running: [] });
+    return real(u, opt); };
+  try { localStorage.removeItem("yue2.mixer:" + T + ":derived/stems-four"); } catch (e) {}
+  try {
+    document.querySelector('.topbar [data-tab="post"]').click(); await wait(300);
+    document.querySelector('#postSteps [data-step-panel="dawPanel"]').click(); await wait(200);
+    HeresyMixer.setTake({ name: T, label: "Take 1972", seconds: 40 });
+    window.dispatchEvent(new CustomEvent("heresy-derived", { detail: { name: T, files: [{ kind: "stems", source: "derived/stems-four/lead_vocal.flac", label: "↳ Lead Vocal" }] } }));
+    for (let i = 0; i < 40 && !document.querySelector('canvas[data-mx-wave="bass"]'); i++) await wait(100);
+    await wait(200);
+    const S = HeresyMixer.k.S, c = () => document.querySelector('canvas[data-mx-wave="bass"]'), R = () => c().getBoundingClientRect();
+    const X = (t) => R().left + t / 40 * R().width, Y = () => R().top + R().height * 0.7;
+    const pe = (type, x, id, more) => c().dispatchEvent(new PointerEvent(type, Object.assign({ bubbles: true, clientX: x, clientY: Y(), button: 0, pointerId: id }, more || {})));
+    const drag = (x0, x1, id, more) => { pe("pointerdown", x0, id, more); pe("pointermove", (x0 + x1) / 2, id, more); pe("pointermove", x1, id, more); pe("pointerup", x1, id, more); };
+    S.strips.bass = { splits: [10] }; S.at = 20;
+    drag(X(5), X(10) + 3, 91); await wait(40);
+    o.split = !!S.pick && S.pick.b === 10;
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })); await wait(20);
+    drag(X(5), X(10) + 3, 92, { altKey: true }); await wait(40);
+    o.free = !!S.pick && S.pick.b !== 10 && S.pick.b > 10;
+    drag(X(S.pick.b), X(20) - 3, 93); await wait(40);
+    o.playhead = !!S.pick && S.pick.b === 20;
+    o.alt = o.free;
+  } finally {
+    window.fetch = real;
+    try { localStorage.removeItem("yue2.mixer:" + T + ":derived/stems-four"); } catch (e) {}
+    HeresyMixer.setTake(null);
+    document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
+  }
+  return o; })()`);
+check("a drag's edge 3 px past a split clings to it; with Alt it stays free; the selection's edge drawn near the playhead clings to it",
+  ed72.split && ed72.free && ed72.playhead, JSON.stringify(ed72));
+
+// HERESY 1975 (Viktor 31.10.2026: «затухание при переносе отрезка делай как в ocenaudio, чтобы на вырезанном месте были затухания/подъёмы, и возможность ползунком или правой кнопкой мыши тянуть длительность по fade/gain»)
+section("A stretch carried away or cut out leaves a cut that fades into its silence and rises out of it (30 ms); a right-drag on a cut draws its nearer fade and leaves a box of sliders by it; a right-click without a drag gives the sound back");
+const dw75 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, o = {}, T = "x-1975-take";
+  const json = (b, st) => Promise.resolve(new Response(JSON.stringify(b), { status: st || 200, headers: { "Content-Type": "application/json" } }));
+  const strips = ["lead_vocal", "drums", "bass", "other"].map((n) => ({ name: n, title: n, path: "derived/stems-four/" + n + ".flac", versions: [{ id: "", label: "as split", path: "derived/stems-four/" + n + ".flac" }] }));
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/daw/set")) return json({ set: "derived/stems-four", mode: "four", source: "audio.wav", seconds: 40, rate: 48000, channels: 2, strips, rest: "rest" });
+    if (u.startsWith("/lab/daw/peaks")) return json({ peaks: Array.from({ length: 400 }, (_, i) => Math.abs(Math.sin(i / 30)) * 0.8), seconds: 40 });
+    if (u.startsWith("/lab/derived?name=" + T)) return json({ name: T, derived: [], running: [] });
+    return real(u, opt); };
+  try { localStorage.removeItem("yue2.mixer:" + T + ":derived/stems-four"); } catch (e) {}
+  try {
+    document.querySelector('.topbar [data-tab="post"]').click(); await wait(300);
+    document.querySelector('#postSteps [data-step-panel="dawPanel"]').click(); await wait(200);
+    HeresyMixer.setTake({ name: T, label: "Take 1975", seconds: 40 });
+    window.dispatchEvent(new CustomEvent("heresy-derived", { detail: { name: T, files: [{ kind: "stems", source: "derived/stems-four/lead_vocal.flac", label: "↳ Lead Vocal" }] } }));
+    for (let i = 0; i < 40 && !document.querySelector('canvas[data-mx-wave="drums"]'); i++) await wait(100);
+    await wait(200);
+    const S = HeresyMixer.k.S, c = () => document.querySelector('canvas[data-mx-wave="drums"]'), R = () => c().getBoundingClientRect();
+    const X = (t) => R().left + t / 40 * R().width, Y = () => R().top + R().height * 0.7;
+    const LY = (f) => R().top + R().height - 2 - f * (R().height - 4);   // the fader's taper: 0 dB at 0.78 of the height, −20 dB at 0.36
+    const pe = (type, x, y, id, more) => c().dispatchEvent(new PointerEvent(type, Object.assign({ bubbles: true, clientX: x, clientY: y, button: 0, pointerId: id }, more || {})));
+    const drag = (x0, y0, x1, y1, id, more) => { pe("pointerdown", x0, y0, id, more); pe("pointermove", (x0 + x1) / 2, (y0 + y1) / 2, id, more); pe("pointermove", x1, y1, id, more); pe("pointerup", x1, y1, id, more); };
+    const key = (k, ctrl) => document.dispatchEvent(new KeyboardEvent("keydown", { key: k, ctrlKey: !!ctrl, bubbles: true, cancelable: true }));
+    const V = () => (HeresyMixer.value().strips.drums || {}), near = (a, b) => Math.abs(a - b) < 0.15;
+    // 4–12 s carried to 20 s: the copy laid there, the place it left a cut with 30 ms fades
+    drag(X(4), Y(), X(12), Y(), 91); await wait(40);
+    drag(X(6), Y(), X(22), Y(), 92); await wait(60);
+    const h1 = (V().muted || [])[0] || [];
+    o.hole = near(h1[0], 4) && near(h1[1], 12) && h1[2] === 0.03 && h1[3] === 0.03 && (V().edits || []).length === 1 && V().edits[0].op === "copy";
+    // pressed with the right button at 5 s (the menu comes with the press, as on Linux) and dragged to 6 s: the fade into the silence about 2 s
+    pe("pointerdown", X(5), Y(), 93, { button: 2, buttons: 2 }); c().dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: X(5), clientY: Y() }));
+    pe("pointermove", X(5.5), Y(), 93, { buttons: 2 }); pe("pointermove", X(6), Y(), 93, { buttons: 2 }); pe("pointerup", X(6), Y(), 93, { button: 2 }); await wait(80);
+    const h2 = (V().muted || [])[0] || [];
+    o.fall = h2.length === 4 && Math.abs(h2[2] - 2) < 0.15 && h2[3] === 0.03 && !document.querySelector(".hm-menu");
+    const box = document.getElementById("mxFadeBox");
+    o.box = !!box && box.querySelectorAll('input[type="range"]').length === 2;
+    if (box) {
+      const rise = box.querySelector('[data-k="rise"]'); rise.value = "500";
+      rise.dispatchEvent(new Event("input", { bubbles: true })); rise.dispatchEvent(new Event("change", { bubbles: true })); await wait(40);
+      const h3 = (V().muted || [])[0] || []; o.slider = Math.abs(h3[3] - 0.5) < 0.006 && Math.abs(h3[2] - h2[2]) < 0.006;
+      const both = box.querySelector("[data-both]"); both.checked = true; both.dispatchEvent(new Event("change", { bubbles: true })); await wait(40);
+      const h4 = (V().muted || [])[0] || []; o.both = Math.abs(h4[2] - h4[3]) < 0.002 && h4[2] > 0.4;
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })); await wait(40);
+      o.closed = !document.getElementById("mxFadeBox") && !!c() && c().getBoundingClientRect().width > 0;   // its Esc closes it alone, the DAW stays
+    }
+    // pressed and let go where it was: the sound given back, as a right-click always did; Ctrl+Z brings the cut and its fades back
+    pe("pointerdown", X(8), Y(), 94, { button: 2, buttons: 2 }); c().dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: X(8), clientY: Y() }));
+    pe("pointerup", X(8), Y(), 94, { button: 2 }); await wait(60);
+    o.given = !V().muted && !document.getElementById("mxFadeBox") && !document.querySelector(".hm-menu");
+    key("z", true); await wait(60);
+    const h5 = (V().muted || [])[0] || []; o.undo = h5.length === 4 && Math.abs(h5[2] - h5[3]) < 0.002 && h5[2] > 0.4;
+    // a contextmenu alone (the menu key, or a browser that sends it after the release): given back at once, as before
+    await wait(650);                                 // past the moment a release's own contextmenu is taken for done
+    c().dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: X(8), clientY: Y() })); await wait(40);
+    o.menuKey = !V().muted;
+    // Ctrl+X: the place cut out fades too
+    drag(X(30), Y(), X(34), Y(), 95); await wait(40);
+    key("x", true); await wait(60);
+    o.cutX = (V().muted || []).some((q) => near(q[0], 30) && near(q[1], 34) && q[2] === 0.03 && q[3] === 0.03);
+  } finally {
+    if (window.HeresyMenu) HeresyMenu.close();
+    const fb = document.getElementById("mxFadeBox"); if (fb) fb.remove();
+    window.fetch = real;
+    try { localStorage.removeItem("yue2.mixer:" + T + ":derived/stems-four"); } catch (e) {}
+    HeresyMixer.setTake(null);
+    document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
+  }
+  return o; })()`);
+check("a stretch carried away leaves a cut with 30 ms fades (its copy laid there); a right-drag on it draws its nearer fade (no menu) and leaves a box: a slider sets the other, «Both alike» evens them, Esc closes it",
+  dw75.hole && dw75.fall && dw75.box && dw75.slider && dw75.both && dw75.closed, JSON.stringify(dw75));
+check("  a right press let go where it was gives the sound back (no menu, no box), Ctrl+Z brings the cut and its fades back, a contextmenu alone gives it back at once; Ctrl+X's place fades too",
+  dw75.given && dw75.undo && dw75.menuKey && dw75.cutX, JSON.stringify(dw75));
+
+// HERESY 1969 (Viktor 30.10.2026: «ComfyUI-style nodes with all parameters on the node face… SIMPLE with Options Pop-Up / FULL in ComfyUI Style»)
+section("The Refiner's nodes in FULL, as ComfyUI's: each step's own settings on its node's face (the DAW's node as it was); a click on a face's field opens nothing, a click on its name its output alone; SIMPLE puts every panel back");
+const fu69 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), P = HeresyPost.canvas, was = P.on(), o = {};
+  let full0 = null; try { full0 = localStorage.getItem("yue2.refinerNodes"); } catch (e) {}
+  const radio = (v) => { const r = document.querySelector('#refinerNodes input[value="' + v + '"]'); if (!r) return; r.checked = true; r.dispatchEvent(new Event("change", { bubbles: true })); };
+  try {
+    document.querySelector('.topbar [data-tab="post"]').click(); await wait(300);
+    if (!P.on()) { P.set(true); await wait(400); }
+    radio("simple"); await wait(400);
+    o.simple = !document.querySelector("#postCanvas .pcv-node.is-full") && !document.querySelector("#postCanvas #debuzzPanel");
+    radio("full"); await wait(600);
+    const node = document.querySelector('#postCanvas .pcv-node[data-node="debuzzPanel"]');
+    o.full = !!node && node.classList.contains("is-full") && node.tagName === "DIV" && !!node.querySelector(".pcv-face #debuzzPanel #dbRun");
+    o.wide = node ? node.offsetWidth : 0;
+    o.dawPlain = !!document.querySelector('#postCanvas .pcv-node[data-node="dawPanel"]:not(.is-full)') && !document.querySelector("#postCanvas #dawPanel");
+    o.shown = !!node && !!node.querySelector("#debuzzPanel") && getComputedStyle(node.querySelector("#debuzzPanel")).display !== "none" && node.offsetHeight > 120;
+    const f = node && node.querySelector("#dbSource");
+    if (f) f.dispatchEvent(new MouseEvent("click", { bubbles: true })); await wait(300);
+    o.fieldStays = !P.opened();
+    node.querySelector(".pcv-name").click(); await wait(500);
+    const box = document.getElementById("ndBox");
+    o.opened = P.opened() === "debuzzPanel" && box.querySelector(".nd-tabs").hidden && !box.querySelector(".nd-out").hidden && !!document.querySelector('#postCanvas .pcv-node[data-node="debuzzPanel"] .pcv-face #debuzzPanel');
+    P.close(); await wait(300);
+    radio("simple"); await wait(600);
+    o.home = !document.querySelector("#postCanvas .pcv-face") && !!document.getElementById("debuzzPanel") && !document.querySelector("#postCanvas #debuzzPanel");
+  } finally {
+    try { if (full0 === null) localStorage.removeItem("yue2.refinerNodes"); else localStorage.setItem("yue2.refinerNodes", full0); } catch (e) {}
+    radio(full0 === "full" ? "full" : "simple"); await wait(200);
+    P.close(); if (!was) P.set(false);
+    document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
+  }
+  return o; })()`);
+check("SIMPLE as it was; FULL: the Debuzz node a group 248…340 px wide carrying its own panel (its Run on its face, shown, the node as tall as it), the DAW's node as it was",
+  fu69.simple && fu69.full && fu69.wide >= 248 && fu69.wide <= 340 && fu69.dawPlain && fu69.shown, JSON.stringify(fu69));   // 1974: as wide as its rows ask
+check("  a click on a face's field opens nothing; a click on its name opens its output alone, the panel left on its face; SIMPLE puts every panel back in the list",
+  fu69.fieldStays && fu69.opened && fu69.home, JSON.stringify(fu69));
+
+// HERESY 1971 (my proposal 31.10.2026, ComfyUI's Collapse)
+section("A FULL node folded away and back: ▾ on its head folds its settings (the node as SIMPLE draws it, its panel home), kept; ▸ brings them back on its face");
+const fo71 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), P = HeresyPost.canvas, was = P.on(), o = {};
+  let full0 = null, fold0 = null; try { full0 = localStorage.getItem("yue2.refinerNodes"); fold0 = localStorage.getItem("yue2.refinerFold"); } catch (e) {}
+  const radio = (v) => { const r = document.querySelector('#refinerNodes input[value="' + v + '"]'); if (!r) return; r.checked = true; r.dispatchEvent(new Event("change", { bubbles: true })); };
+  const node = () => document.querySelector('#postCanvas .pcv-node[data-node="debuzzPanel"]');
+  try {
+    document.querySelector('.topbar [data-tab="post"]').click(); await wait(300);
+    if (!P.on()) { P.set(true); await wait(400); }
+    radio("full"); await wait(600);
+    o.face = !!node() && node().classList.contains("is-full") && !!node().querySelector("[data-pcv-fold]");
+    if (o.face) { node().querySelector("[data-pcv-fold]").dispatchEvent(new MouseEvent("click", { bubbles: true })); await wait(500); }
+    o.folded = !!node() && !node().classList.contains("is-full") && !document.querySelector("#postCanvas #debuzzPanel") && !!node().querySelector("[data-pcv-fold]") && !P.opened();
+    try { o.kept = JSON.parse(localStorage.getItem("yue2.refinerFold") || "{}").debuzzPanel === 1; } catch (e) { o.kept = "private"; }
+    if (node() && node().querySelector("[data-pcv-fold]")) { node().querySelector("[data-pcv-fold]").dispatchEvent(new MouseEvent("click", { bubbles: true })); await wait(500); }
+    o.back = !!node() && node().classList.contains("is-full") && !!document.querySelector("#postCanvas .pcv-face #debuzzPanel");
+  } finally {
+    try { if (fold0 === null) localStorage.removeItem("yue2.refinerFold"); else localStorage.setItem("yue2.refinerFold", fold0); } catch (e) {}
+    try { if (full0 === null) localStorage.removeItem("yue2.refinerNodes"); else localStorage.setItem("yue2.refinerNodes", full0); } catch (e) {}
+    radio(full0 === "full" ? "full" : "simple"); await wait(300);
+    P.close(); if (!was) P.set(false);
+    document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
+  }
+  return o; })()`);
+check("a FULL node's ▾ folds its settings away (drawn as SIMPLE draws it, its panel home, nothing opened), kept; ▸ brings them back on its face",
+  fo71.face && fo71.folded && (fo71.kept === true || fo71.kept === "private") && fo71.back, JSON.stringify(fo71));
+
+// HERESY 1974 (Viktor 31.10.2026: «Строка: название функции > дропдаун с вариантами… Доделай ноды именно так, как в Комфи»)
+section("FULL's faces as ComfyUI's rows: a choice «name … ◀ value ▶» (the arrows step it, the value opens its list under it), a number with ◀ ▶ and a drag, every node 248…340 px; SIMPLE gives the panel its list back");
+const fu74 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), P = HeresyPost.canvas, was = P.on(), o = {};
+  let full0 = null; try { full0 = localStorage.getItem("yue2.refinerNodes"); } catch (e) {}
+  const radio = (v) => { const r = document.querySelector('#refinerNodes input[value="' + v + '"]'); if (!r) return; r.checked = true; r.dispatchEvent(new Event("change", { bubbles: true })); };
+  const node = () => document.querySelector('#postCanvas .pcv-node[data-node="debuzzPanel"]');
+  const put = (inp, v) => { inp.value = v; inp.dispatchEvent(new Event("input", { bubbles: true })); inp.dispatchEvent(new Event("change", { bubbles: true })); };
+  try {
+    document.querySelector('.topbar [data-tab="post"]').click(); await wait(300);
+    if (!P.on()) { P.set(true); await wait(400); }
+    radio("full"); await wait(700);
+    const sel = document.getElementById("dbStrength"), box = sel && sel.nextElementSibling;
+    o.row = !!box && !!sel.closest(".pcv-face") && box.querySelectorAll(".hc-step").length === 2 && !!box.querySelector(".hc-pick") && !box.querySelector(".hc-list");
+    o.noLists = !document.querySelector("#postCanvas .pcv-face .hc-list");
+    if (o.row) {
+      const i0 = sel.selectedIndex, n = sel.options.length, d = i0 < n - 1 ? 1 : -1;
+      box.querySelector('.hc-step[data-d="' + d + '"]').click(); await wait(120);
+      o.stepped = sel.selectedIndex === i0 + d && box.querySelector(".hc-pick-now").textContent.trim() === sel.options[sel.selectedIndex].textContent.trim();
+      box.querySelector('.hc-step[data-d="' + (-d) + '"]').click(); await wait(120);
+      o.back = sel.selectedIndex === i0;
+      box.querySelector(".hc-pick").click(); await wait(250);
+      const pop = document.querySelector(".hc-pop"), pr = box.querySelector(".hc-pick").getBoundingClientRect(), qr = pop && pop.getBoundingClientRect();
+      o.list = !!pop && pop.querySelectorAll(".hc-row").length === n && Math.abs(qr.top - pr.bottom) < 24;
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await wait(200);
+      o.closed = !document.querySelector(".hc-pop");
+    }
+    const step = (i) => parseFloat(i.step) || 1;
+    const inp = [...document.querySelectorAll('#postCanvas .pcv-face .field > input[type="number"]')].find((i) => !i.disabled && (i.max === "" || +i.value + 4 * step(i) <= +i.max));
+    if (inp) {
+      const a = inp.value, s = step(inp);
+      o.arrows = getComputedStyle(inp.parentNode.querySelector(".pcv-nstep")).display !== "none";
+      inp.parentNode.querySelector('.pcv-nstep[data-d="1"]').click(); await wait(80);
+      o.num = Math.abs(+inp.value - (+a + s)) < 1e-6;
+      inp.parentNode.querySelector('.pcv-nstep[data-d="-1"]').click(); await wait(80);
+      o.numBack = inp.value === a;
+      const r = inp.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+      inp.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, clientX: x, clientY: y, button: 0, buttons: 1, pointerId: 7 }));
+      window.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: x + 13, clientY: y, buttons: 1, pointerId: 7 }));
+      window.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: x + 26, clientY: y, buttons: 1, pointerId: 7 }));
+      window.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, clientX: x + 26, clientY: y, button: 0, pointerId: 7 }));
+      await wait(80);
+      o.drag = Math.abs(+inp.value - (+a + 4 * s)) < 1e-6;
+      put(inp, a);
+    }
+    const rows = node() ? [...node().querySelectorAll(".pcv-face .field")].filter((f) => f.offsetParent) : [];
+    o.rowH = rows.length ? Math.max(...rows.map((f) => f.offsetHeight)) : 0;
+    o.widths = [...document.querySelectorAll("#postCanvas .pcv-node.is-full")].map((n) => n.offsetWidth);
+    o.fits = o.widths.length > 0 && o.widths.every((w) => w >= 248 && w <= 340);
+    radio("simple"); await wait(700);
+    o.home = !!sel && !!sel.nextElementSibling.querySelector(".hc-list") && !sel.nextElementSibling.querySelector(".hc-step") &&
+      ![...document.querySelectorAll(".pcv-nstep")].some((x) => x.offsetParent);
+  } finally {
+    try { if (full0 === null) localStorage.removeItem("yue2.refinerNodes"); else localStorage.setItem("yue2.refinerNodes", full0); } catch (e) {}
+    radio(full0 === "full" ? "full" : "simple"); await wait(300);
+    P.close(); if (!was) P.set(false);
+    document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
+  }
+  delete o.widths;
+  return o; })()`);
+check("a choice on a face one row: ◀ ▶ step it and back, its value opens the list right under it, Esc closes it; no list of rows on any face",
+  fu74.row && fu74.noLists && fu74.stepped && fu74.back && fu74.list && fu74.closed, JSON.stringify(fu74));
+check("  a number's ◀ ▶ on a face step it up and back, a drag of 26 px moves it four steps; a row at most 22 px tall; every FULL node 248…340 px wide; SIMPLE gives the panel its list back, no arrows anywhere",
+  fu74.arrows && fu74.num && fu74.numBack && fu74.drag && fu74.rowH > 0 && fu74.rowH <= 22 && fu74.fits && fu74.home, JSON.stringify(fu74));
 
 // HERESY 1169 · 1568 (Viktor 19.10.2026: «Monitor Out листит активный девайс в Шлюзе. Разве возможно без глюков на тот же девайс посылать монитор?»)
 section("Audio I/O's monitor never on the gateway's own card: a monitor kept there is said and offered none; the gateway moved to another card, the monitor's choices follow");
@@ -19920,6 +20399,57 @@ const fc63 = await ev(`(() => {
 check("the console's chips, tabs, M/S marks, monitor, reverb picker and +VCA in their own sizes (11, 12, 11, 11, 10, 12, 11 px); the room's Room / Plate / Hall inside their strip, a long word cut short",
   fc63.own && fc63.fit && fc63.cut, JSON.stringify(fc63));
 
+// HERESY 1964: a step's window in two tabs: its settings and what it made
+section("A node's output (1964): a step's window in two tabs; «The node's output» shows what went in (the original) and what this node made from the take, in the tree's own rows with their players; the take's tree and the import have no such tab");
+const no64 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), o = {}, P = HeresyPost.canvas, real = window.fetch, T = "x-1964-take";
+  const was = P.on();
+  const json = (b, st) => Promise.resolve(new Response(JSON.stringify(b), { status: st || 200, headers: { "Content-Type": "application/json" } }));
+  const branch = { id: "d1964", kind: "debuzz", source: "", strength: 0.5, created: "2026-10-31 01:00", took: 3, files: [{ name: "debuzzed", file: "debuzzed.wav", path: "derived/d1964/debuzzed.wav", seconds: 10 }] };
+  try {
+    document.querySelector('.topbar [data-tab="post"]').click(); await wait(300);
+    if (!P.on()) { P.set(true); await wait(400); }
+    window.fetch = (u, opt) => { u = String(u);
+      if (u.startsWith("/lab/derived?name=")) return json({ name: T, derived: [branch], running: [], marks: {} });
+      if (u.indexOf("/peaks") >= 0) return json({ peaks: [0.1, 0.5, 0.3], seconds: 10 });
+      return real(u, opt); };
+    HeresyPost.setTake({ name: T, label: "Take 1964", seconds: 10 }); await wait(600);
+    P.open("debuzzPanel"); await wait(300);
+    const box = document.getElementById("ndBox"), tabs = box.querySelector(".nd-tabs");
+    o.tabs = !!tabs && !tabs.hidden && [...tabs.querySelectorAll("[data-ndtab]")].map((b) => b.dataset.ndtab + ":" + b.getAttribute("aria-selected")).join(",");
+    tabs.querySelector('[data-ndtab="out"]').click(); await wait(300);
+    const out = box.querySelector(".nd-out");
+    o.shown = !out.hidden && box.querySelector(".nd-body").hidden;
+    o.input = !!out.querySelector(".dv-orig .dv-player");
+    o.made = !!out.querySelector('.dv-group[data-dv-id="d1964"]') && out.querySelectorAll(".dv-player").length === 2;
+    o.labels = [...out.querySelectorAll(".nd-out-part > .label")].map((l) => l.textContent).join("|");
+    P.close(); await wait(200);
+    o.cleared = out.innerHTML === "";
+    P.open("debuzzPanel"); await wait(300);
+    o.kept = !box.querySelector(".nd-out").hidden;
+    P.close(); await wait(200);
+    P.open("upscalePanel"); await wait(300);
+    o.emptySet = !box.querySelector(".nd-tabs").hidden && !box.querySelector(".nd-body").hidden && box.querySelector(".nd-out").hidden;
+    P.close(); await wait(200);
+    P.open("debuzzPanel"); await wait(400);
+    o.keptAfter =!box.querySelector(".nd-out").hidden;
+    const ws = [...box.querySelectorAll(".nd-out-tree")].map((t) => t.style.getPropertyValue("--dv-acts"));
+    o.oneColumn = ws.length === 2 && ws[0] !== "" && ws[0] === ws[1];
+    P.close(); await wait(200);
+    P.open("importPanel"); await wait(300);
+    o.importNone = box.querySelector(".nd-tabs").hidden && !box.querySelector(".nd-body").hidden;
+    P.close(); await wait(200);
+  } finally {
+    window.fetch = real; P.close();
+    const b = document.querySelector('#ndBox [data-ndtab="set"]'); if (b) b.click();
+    P.close();
+    if (!was) P.set(false);
+    document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
+  }
+  return o; })()`);
+check("a step's window: «Its settings» and «The node's output»; the output shows the original that went in and this node's branch with its player, in the tree's rows, both parts one column; closed, its players go; opened again, the output tab kept; a step with nothing made opens on its settings and the choice stays for the next; the import's window has no output tab",
+  no64.tabs === "set:true,out:false" && no64.shown && no64.input && no64.made && no64.labels.indexOf("What went in") === 0 && no64.cleared && no64.kept && no64.emptySet && no64.keptAfter && no64.oneColumn && no64.importNone, JSON.stringify(no64));
+
 // HERESY 1951: the Refiner's canvas as a window over its world
 section("The Refiner's canvas (1951): a window over its world that Ctrl+wheel scales; the legend in a free place by the take and the import; the made node atop the rightmost column; half the gaps; the way along the top, the rest dimmed under it; Ctrl+frame selects, the selected move together; a long list a window of its own");
 const rc51 = await ev(`(async () => {
@@ -21091,6 +21621,34 @@ const copied = await ev(`(() => { const real = document.execCommand.bind(documen
   return window.ruachCopyText("cyberpunk electro-pop, 125 BPM").then(() => { document.execCommand = real; return got; }, (e) => { document.execCommand = real; return "refused: " + e.message; }); })()`);
 check("the page's own copy puts the text on the clipboard (the stand-in for http://192.168.… where there is no navigator.clipboard)",
   copied === "cyberpunk electro-pop, 125 BPM", String(copied));
+
+// HERESY 1976 (Viktor 31.10.2026: «пробовал Студию на мобиле… Творец, Писатель и Библиотекарь, сделай адаптивными, а остальные комнаты вообще отключать при таком низком разрешении, и "Будьте вы мне здоровы!"»)
+section("A phone (412 px): the Creator, the Writer and the Librarian in one column, nothing past the screen's edge; the Refiner greyed, asked for it says «Be well!» and the room in hand stays");
+const wasMo = await ev(`[innerWidth, innerHeight, document.body.dataset.tab || "create"]`);
+await send("Emulation.setDeviceMetricsOverride", { width: 412, height: 915, deviceScaleFactor: 1, mobile: true });
+const mo76 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), o = { wide: {} };
+  await wait(500);
+  for (const t of ["create", "write", "collection"]) {
+    document.querySelector('.topbar [data-tab="' + t + '"]').click(); await wait(600);
+    o.wide[t] = document.documentElement.scrollWidth - document.documentElement.clientWidth;
+  }
+  o.oneCol = getComputedStyle(document.querySelector(".workspace")).gridTemplateColumns.trim().split(/\\s+/).length === 1;
+  o.greyed = +getComputedStyle(document.querySelector('.topbar [data-tab="post"]')).opacity < 0.6 && +getComputedStyle(document.querySelector('.topbar [data-tab="write"]')).opacity === 1;
+  const n0 = document.querySelectorAll("#toasts .toast").length;
+  document.querySelector('.topbar [data-tab="post"]').click(); await wait(400);
+  const ts = [...document.querySelectorAll("#toasts .toast")], last = ts.length ? ts[ts.length - 1].textContent : "";
+  o.stayed = document.body.dataset.tab === "collection";
+  o.said = ts.length > n0 && /^Be well! Refiner wants a wider screen/.test(last) && /On a phone: the Creator, the Writer and the Librarian/.test(last);
+  const pb = document.querySelector("#playbar .pb-row").getBoundingClientRect();
+  o.playbarRow = Math.round(pb.height) <= 64 && pb.right <= innerWidth + 1;
+  const t = document.getElementById("toasts"); if (t) t.innerHTML = "";
+  return o; })()`);
+await send("Emulation.setDeviceMetricsOverride", { width: wasMo[0], height: wasMo[1], deviceScaleFactor: 1, mobile: false });
+await ev(`(async () => { await new Promise((r) => setTimeout(r, 400)); const b = document.querySelector('.topbar [data-tab="${wasMo[2]}"]'); if (b) b.click(); await new Promise((r) => setTimeout(r, 300)); return document.body.dataset.tab; })()`);
+check("on a phone the Creator, the Writer and the Librarian hold one column and nothing passes the screen's edge; the player's controls one row",
+  mo76.oneCol && mo76.wide.create <= 0 && mo76.wide.write <= 0 && mo76.wide.collection <= 0 && mo76.playbarRow, JSON.stringify(mo76));
+check("  the Refiner greyed in the bar; asked for, it says «Be well!» and why, and the Librarian stays", mo76.greyed && mo76.said && mo76.stayed, JSON.stringify(mo76));
 
 section("page health");
 check("no script errors during the whole run", errors.length === 0, errors.slice(0, 3).join(" | ") || "none");

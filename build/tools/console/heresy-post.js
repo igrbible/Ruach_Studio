@@ -551,7 +551,7 @@
     });
     select(recall() || STEPS[0].id);
     window.addEventListener("heresy-derived", paintTree);   // HERESY 1540: its count as the branches come
-    document.addEventListener("click", function (e) { var mb = e.target.closest && e.target.closest("#derivedTree [data-dv-mon]"); if (mb) monRow(mb); });   // HERESY 1548
+    document.addEventListener("click", function (e) { var mb = e.target.closest && e.target.closest("#derivedTree [data-dv-mon], .nd-out [data-dv-mon]"); if (mb) monRow(mb); });   // HERESY 1548; 1964: a node's output too
     window.addEventListener("heresy-derived", function () { if (MON.on) monPaintRows(MON.on); });
     fetch("/lab/audio/devices", { priority: "low" }).then(function (r) { return r.json(); }).then(function (d) { monSet((d.monitor || {}).out || ""); }, function () { /* no lab: no monitor */ });
     loadPlugins();                                   // HERESY 1460
@@ -583,6 +583,7 @@
   // and after, Esc or a click beside it back. Dragged nodes stay where put (Arrange lays them out anew)
   var CV = { on: false, pos: {}, open: "", el: null, hold: null, drag: null, quietUntil: 0, timer: 0 };
   var CV_KEY = "yue2.refinerView", CV_POS = "yue2.refinerCanvasPos", NODE_W = 196, NODE_H = 84;
+  var NODE_W_SIMPLE = 196, NODE_W_FULL = 300;           // HERESY 1969: FULL's nodes carry their settings, so they are wider (1974: 248…340 as their rows ask, about 300)
   var KIND_NODE = { debuzz: "debuzzPanel", upscale: "upscalePanel", stems: "derivedPanel", remaster: "remasterPanel", daw: "dawPanel", gate: "gatePanel", midi: "midiPanel" };   // 1547; 1834
   var LANE = { debuzzPanel: [1, 0], upscalePanel: [2, 0], derivedPanel: [3, 0], dawPanel: [4, 0], remasterPanel: [4, 1], gatePanel: [3, 1],   // 1547
                spectrumPanel: [1, 2], inspectPanel: [2, 2], glossPanel: [3, 2], audioPanel: [4, 2],   // 1512: the Audio I/O under the Remaster
@@ -745,16 +746,140 @@
       if ((r.value === "canvas") !== CV.on) cvSet(r.value === "canvas");   // the room as chosen, at once
     });
   }
+  // HERESY 1969 (Viktor 30.10.2026: «ComfyUI-style nodes with all parameters on the node face… a click then shows only the input and output…
+  // SIMPLE with Options Pop-Up / FULL in ComfyUI Style… под „Всегда холстом“»): how a node shows its settings, the Engine's Refiner card
+  var NODES_KEY = "yue2.refinerNodes";
+  function nodesFull() { try { return localStorage.getItem(NODES_KEY) === "full"; } catch (e) { return false; } }
+  function nodesInit() {
+    var box = $("refinerNodes");
+    CV.full = nodesFull();
+    if (CV.full) CV.pos = (CV.posBy && CV.posBy[flowKey()]) || {};   // FULL's own places: its nodes wider and taller than SIMPLE's
+    if (!box) return;
+    Array.prototype.forEach.call(box.querySelectorAll('input[name="refinerNodes"]'), function (r) { r.checked = r.value === (CV.full ? "full" : "simple"); });
+    box.addEventListener("change", function (e) {
+      var r = e.target.closest('input[name="refinerNodes"]');
+      if (!r) return;
+      try { localStorage.setItem(NODES_KEY, r.value); } catch (x) { /* private mode */ }
+      nodesSet(r.value === "full");
+    });
+  }
+  function nodesSet(on) {                           // at once: the faces put on, or every panel home
+    if (CV.posBy) CV.posBy[flowKey()] = CV.pos;     // each mode its own places
+    CV.full = !!on;
+    CV.pos = (CV.posBy && CV.posBy[flowKey()]) || {};
+    cvStore();
+    cvClose(true);
+    if (!CV.full) facesOff();
+    var holder = $("postCanvas") && $("postCanvas").querySelector(".pcv-nodes");
+    if (holder) holder.dataset.html = "";
+    CV.hs = null;
+    cvPaint();
+  }
+  // a node with a face: a step of its own panel (not a clone, which shares its own's), but the DAW and the Audio I/O, too big for one
+  var FACE = {}, FACE_NOT = { dawPanel: 1, audioPanel: 1 };
+  function faceKind(id) { return !!CV.full && !cloneOf(id) && !FACE_NOT[id] && STEPS.some(function (st) { return st.id === id; }) && (!!FACE[id] || !!$(id)); }
+  function faceable(id) { return faceKind(id) && !CV.fold[id]; }   // HERESY 1971: a face folded away is drawn as SIMPLE draws it
+  // HERESY 1971 (my proposal 31.10.2026, ComfyUI's Collapse): FULL's tall canvas made shorter node by node: ▾ on a face's head folds its
+  // settings away (the panel home, the node a SIMPLE one, its window its settings), ▸ brings them back; kept in yue2.refinerFold
+  var NODE_FOLD_KEY = "yue2.refinerFold";
+  CV.fold = (function () { try { return JSON.parse(localStorage.getItem(NODE_FOLD_KEY) || "{}") || {}; } catch (e) { return {}; } })();
+  function foldToggle(id) {
+    if (CV.fold[id]) delete CV.fold[id]; else CV.fold[id] = 1;
+    try { localStorage.setItem(NODE_FOLD_KEY, JSON.stringify(CV.fold)); } catch (e) { /* private mode */ }
+    if (CV.fold[id]) faceOff(id);
+    if (CV.open === id) cvClose(true);
+    var holder = $("postCanvas") && $("postCanvas").querySelector(".pcv-nodes");
+    if (holder) holder.dataset.html = "";
+    CV.hs = null;
+    cvPaint();
+  }   // a face's panel is out of the page while its node is drawn anew
+  function facesMount() {                          // each face given its panel (moved, so its fields and their handlers stay its own); a face gone, its panel home
+    var box = $("postCanvas"), want = {};
+    if (box && CV.on && CV.full) Array.prototype.forEach.call(box.querySelectorAll(".pcv-face[data-face]"), function (f) { want[f.dataset.face] = f; });
+    Object.keys(FACE).forEach(function (id) { if (!want[id]) faceOff(id); });
+    var act = document.activeElement, keep = act && act.closest && act.closest(".pcv-face") ? { el: act, s: act.selectionStart, e: act.selectionEnd } : null;
+    Object.keys(want).forEach(function (id) {
+      var el = FACE[id] ? FACE[id].el : $(id);       // by the panel kept: drawn anew, the old face took it out of the page
+      if (!el) return;
+      if (!FACE[id]) {
+        var hold = document.createComment("face " + id);
+        el.parentNode.insertBefore(hold, el);
+        FACE[id] = { el: el, hold: hold };
+        if (el.tagName === "DETAILS") el.open = true;
+      }
+      if (el.parentNode !== want[id]) {
+        want[id].appendChild(el);
+        if (window.HeresyChoices) window.HeresyChoices.within(el);   // HERESY 1509: its choices in sight, as in a node's window (1974: on a face a row each)
+        faceNumbers(el);
+      }
+    });
+    if (keep && keep.el.isConnected && document.activeElement !== keep.el) {   // a field in hand stays in hand when the canvas is drawn anew
+      try { keep.el.focus({ preventScroll: true }); if (keep.s != null && keep.el.setSelectionRange) keep.el.setSelectionRange(keep.s, keep.e); } catch (x) { /* a field that takes no range */ }
+    }
+  }
+  function faceOff(id) {
+    var f = FACE[id]; delete FACE[id];
+    if (f && f.hold.parentNode) { f.hold.parentNode.insertBefore(f.el, f.hold); f.hold.remove(); if (window.HeresyChoices) window.HeresyChoices.within(f.el); }   // 1974: its lists again
+  }
+  // HERESY 1974 (Viktor 31.10.2026, ComfyUI's nodes): a number on a face is «name … ◀ value ▶»: the arrows a step down or up, a drag along the value
+  // moves it a step for every 6 px, a click on it without a drag types it. The arrows sit in the panel and show only on a face (app.css)
+  function faceNumbers(root) {
+    Array.prototype.forEach.call(root.querySelectorAll('.field > input[type="number"]'), function (inp) {
+      if (inp.dataset.nstep) return;
+      inp.dataset.nstep = "1";
+      ["-1", "1"].forEach(function (d) {
+        var s = document.createElement("span");
+        s.className = "pcv-nstep"; s.dataset.d = d; s.setAttribute("aria-hidden", "true"); s.textContent = d === "1" ? "\u25b6" : "\u25c0";
+        inp.parentNode.insertBefore(s, d === "1" ? inp.nextSibling : inp);
+      });
+    });
+  }
+  function numSet(inp, v, done) {
+    var st = parseFloat(inp.step) || 1, dec = ((String(inp.step).split(".")[1]) || "").length;
+    v = Math.round(v / st) * st;                      // on its step, then within its bounds
+    if (inp.min !== "" && !isNaN(parseFloat(inp.min))) v = Math.max(parseFloat(inp.min), v);
+    if (inp.max !== "" && !isNaN(parseFloat(inp.max))) v = Math.min(parseFloat(inp.max), v);
+    var s = String(+v.toFixed(Math.max(dec, 0)));
+    if (s !== inp.value) { inp.value = s; inp.dispatchEvent(new Event("input", { bubbles: true })); }
+    if (done) inp.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  document.addEventListener("click", function (e) {
+    var s = e.target.closest && e.target.closest(".pcv-face .pcv-nstep");
+    if (!s) return;
+    e.preventDefault();                                // the label around it focuses nothing
+    var inp = s.parentNode.querySelector('input[type="number"]');
+    if (inp && !inp.disabled) numSet(inp, (parseFloat(inp.value) || 0) + (+s.dataset.d) * (parseFloat(inp.step) || 1), true);
+  });
+  document.addEventListener("pointerdown", function (e) {
+    var inp = e.target.closest && e.target.closest('.pcv-face .field > input[type="number"]');
+    if (!inp || inp.disabled || e.button !== 0 || document.activeElement === inp) return;   // in hand already: the caret is its own
+    e.preventDefault();
+    var x0 = e.clientX, v0 = parseFloat(inp.value) || 0, st = parseFloat(inp.step) || 1, moved = false;
+    function mv(ev) {
+      var dx = ev.clientX - x0;
+      if (!moved && Math.abs(dx) < 4) return;
+      moved = true;
+      numSet(inp, v0 + Math.round(dx / 6) * st, false);
+    }
+    function up() {
+      window.removeEventListener("pointermove", mv);
+      if (moved) numSet(inp, parseFloat(inp.value) || 0, true);
+      else { inp.focus({ preventScroll: true }); try { inp.select(); } catch (x) { /* a field without a selection */ } }
+    }
+    window.addEventListener("pointermove", mv);
+    window.addEventListener("pointerup", up, { once: true });
+  }, true);
+  function facesOff() { Object.keys(FACE).forEach(faceOff); }
   function cvRecall() {
     try { CV.on = openAs(); CV.pos = JSON.parse(localStorage.getItem(CV_POS) || "{}") || {}; } catch (e) { CV.pos = {}; }
     try { CV.posBy = JSON.parse(localStorage.getItem("yue2.refinerPosBy") || "{}") || {}; } catch (e) { CV.posBy = {}; }   // HERESY 1957: each flow's layout
     clRecall();                                       // HERESY 1516
   }
-  function flowKey() { return PIPE.on || "classic"; }   // HERESY 1957: the flow in hand, whose layout the canvas shows
+  function flowKey() { return (PIPE.on || "classic") + (CV.full ? ":full" : ""); }   // HERESY 1957: the flow in hand, whose layout the canvas shows (1969: FULL's own)
   function cvStore() {
     if (CV.posBy) CV.posBy[flowKey()] = CV.pos;
     try {
-      localStorage.setItem(CV_KEY, CV.on ? "canvas" : "list"); localStorage.setItem(CV_POS, JSON.stringify(CV.pos));
+      localStorage.setItem(CV_KEY, CV.on ? "canvas" : "list"); localStorage.setItem(CV.full ? CV_POS + "Full" : CV_POS, JSON.stringify(CV.pos));   // 1969: FULL's places its own
       if (CV.posBy) localStorage.setItem("yue2.refinerPosBy", JSON.stringify(CV.posBy));
     } catch (e) { /* private mode */ }
   }
@@ -1337,7 +1462,8 @@
     var box = $("postCanvas");
     if (!box || box.hidden || CV.drag) return;
     cvFit();
-    var nodes = cvNodes(), f = cvFlows(), W = box.clientWidth, H = box.clientHeight, PAD = 22;
+    var nodes = cvNodes(), f = cvFlows(), W = box.clientWidth * (CV.full ? 2 : 1), H = box.clientHeight, PAD = 22;   // 1969: FULL's world twice the window's width, its tall nodes in more columns
+    NODE_W = CV.full ? NODE_W_FULL : NODE_W_SIMPLE;   // HERESY 1969
     var cur = chain.job && chain.job.status === "running" && Array.isArray(chain.job.steps) ? chain.job.steps.filter(function (s) { return s.status === "running"; })[0] : null;
     CV.runId = cur ? pipeNode(cur) : "";              // HERESY 1953: the step the way runs now, its node alive
     var L = cvLayout(nodes, W, H);                   // HERESY 1569
@@ -1359,16 +1485,22 @@
       var cls = (tst.ok && tst.ok[nd.id] ? "is-test-ok " : "") + (tst.bad && tst.bad[nd.id] ? "is-test-bad " : "") + (nd.id === CV.target ? "is-target " : "") + "pcv-node pcv-" + (st ? st.group || "finish" : nd.id === "take" ? "take" : "import") + (st && st.plugin ? " is-plugin" : "") + (done ? " is-done" : "") + (by ? " is-bypassed" : "") +
         ((tab && tab.classList.contains("is-running")) || (nd.id === "chain" && chain.job && chain.job.status === "running") || nd.id === CV.runId ? " is-running" : "") + (st && !nd.clone && st.id === state.current ? " is-active" : "") + (nd.id === CV.open ? " is-open" : "") + (nd.clone ? " is-clone" : "") +
         (CV.way && st && st.group !== "setup" && !CV.way[nd.clone || nd.id] ? " is-off-way" : "") + (CV.sel[nd.id] ? " is-selected" : "") + (CV.muted[nd.id] ? " is-muted" : "");   // HERESY 1951; 1954
-      return '<button type="button" class="' + cls + '" data-node="' + esc(nd.id) + '"' + (nodeTip(nd) ? ' data-tip="' + esc(nodeTip(nd)) + '"' : "") + ' style="left:' + Math.round(x) + "px;top:" + Math.round(y) + 'px">' +
-        '<span class="pcv-top">' + (nd.n ? '<span class="pcv-n">' + nd.n + "</span>" : "") + '<span class="pcv-name"' + (st && st.plugin && !st.builtin || nd.clone ? ' translate="no"' : "") + ">" + esc(nd.name) + "</span>" + (nd.id === "dawPanel" ? betaBadge() : "") +
+      var face = faceable(nd.id);                      // HERESY 1969: FULL: its settings on its face, the node a group (a button holds no fields)
+      return (face ? '<div role="group" class="' + cls + ' is-full"' : '<button type="button" class="' + cls + '"') + ' data-node="' + esc(nd.id) + '"' + (nodeTip(nd) && !face ? ' data-tip="' + esc(nodeTip(nd)) + '"' : "") + ' style="left:' + Math.round(x) + "px;top:" + Math.round(y) + 'px">' +
+        '<span class="pcv-top"' + (face && nodeTip(nd) ? ' data-tip="' + esc(nodeTip(nd)) + '"' : "") + '>' + (nd.n ? '<span class="pcv-n">' + nd.n + "</span>" : "") +   // 1969: a face's tip on its head
+         '<span class="pcv-name"' + (st && st.plugin && !st.builtin || nd.clone ? ' translate="no"' : "") + ">" + esc(nd.name) + "</span>" + (nd.id === "dawPanel" ? betaBadge() : "") +
         (nd.id === CV.target ? '<span class="pcv-target" data-tip="The target: Run the way runs up to here">\u25ce</span>' : "") +   // HERESY 1571
+        (faceKind(nd.id) ? '<span class="pcv-fold" role="button" tabindex="-1" data-pcv-fold="' + esc(nd.id) + '" data-tip="' +   // HERESY 1971
+          esc(tr(face ? "Fold its settings away: a click on its name opens them in its window" : "Its settings back on its face")) + '">' + (face ? "\u25be" : "\u25b8") + "</span>" : "") +
         '<i class="pcv-live" aria-hidden="true"></i></span><span class="pcv-say"' + own + ">" + esc(nd.say) + '</span><span class="pcv-meta">' + meta + "</span>" +
         (nd.id === CV.runId && CV.runId ? '<span class="pcv-run"><span class="pcv-prog is-unknown"><i></i></span><span class="pcv-eta mono"></span>' +   // HERESY 1962
           '<span class="pcv-stop" role="button" tabindex="-1" data-pcv-stop="1" data-tip="' + esc(tr("Stop the way here: the step running ends now, what was made before stays")) + '" aria-label="' + esc(tr("Stop")) + '">\u25a0</span></span>' : "") +
-        portsHtml(nd) + "</button>";                     // HERESY 1582: its slots, named, of a class each (1510, 1570: where a wire is drawn to, and from)
+        (face ? portsHtml(nd) + '<div class="pcv-face" data-face="' + esc(nd.id) + '"></div>' : portsHtml(nd)) +   // 1974: on a face the slots under its head, as ComfyUI's
+        (face ? "</div>" : "</button>");   // HERESY 1582: its slots, named, of a class each (1510, 1570: where a wire is drawn to, and from)
     }).join("");
     var holder = box.querySelector(".pcv-nodes");
     if (holder.dataset.html !== html) { holder.innerHTML = html; holder.dataset.html = html; }
+    facesMount();                                    // HERESY 1969: before the heights are measured, as tall as their settings make them
     var hs = {}, seen = [], moved = !CV.hs;          // HERESY 1951: each node's height as drawn; a row as tall as most are and the gap
     Array.prototype.forEach.call(holder.children, function (n) {
       var h = n.offsetHeight; hs[n.dataset.node] = h; seen.push(h);
@@ -1632,6 +1764,7 @@
   }
   function cvSet(on) {
     CV.on = !!on;
+    if (!CV.on) facesOff();                          // HERESY 1969: the list has its panels back
     if (CV.on && !PF.loaded) pfLoad();                // HERESY 1515
     cvStore();
     if (!CV.on) cvClose();
@@ -1678,7 +1811,11 @@
       '<span class="nd-muted" hidden>muted: Ctrl+M unmutes</span>' +   // HERESY 1954
       '<span class="spacer"></span>' +
       '<span class="row-hint nd-keys">Alt+\u2190 \u2192 the step before and after \u00b7 Esc back</span>' +
-      '<button type="button" class="btn ghost small" data-nd="close">Close</button></div><div class="nd-body"></div>';
+      '<button type="button" class="btn ghost small" data-nd="close">Close</button></div>' +
+      // HERESY 1964 (Viktor 30.10.2026: «вкладку "Выхлоп ноды"»): a step's window in two tabs, its settings and what it made
+      '<div class="nd-tabs" role="tablist" aria-label="The node\'s window"><button type="button" role="tab" class="btn ghost small" data-ndtab="set" aria-selected="true">Its settings</button>' +
+      '<button type="button" role="tab" class="btn ghost small" data-ndtab="out" aria-selected="false">The node\'s output</button></div>' +
+      '<div class="nd-body"></div><div class="nd-out" hidden></div>';
     document.body.appendChild(back); document.body.appendChild(box);
     back.addEventListener("click", function () { cvClose(); });
     box.addEventListener("click", function (e) {      // HERESY 1954: a muted node's own runs held
@@ -1689,6 +1826,8 @@
       pfSay(tr("{0} is muted: Ctrl+M unmutes it").replace("{0}", nodeWord(CV.open)), true);
     }, true);
     box.addEventListener("click", function (e) {
+      var tb = e.target.closest("[data-ndtab]");       // HERESY 1964
+      if (tb) { ndTab(tb.dataset.ndtab); return; }
       var b = e.target.closest("[data-nd]");
       if (!b) return;
       if (b.dataset.nd === "until") { if (runUntil(CV.open)) b.disabled = true; return; }   // HERESY 1508
@@ -1696,6 +1835,27 @@
     });
     return { back: back, box: box, body: box.querySelector(".nd-body") };
   }
+  // HERESY 1964 (Viktor 30.10.2026: «вкладку "Выхлоп ноды"… только её вход и то, что эта нода сделала, с богатыми плеерами дерева»): a step's
+  // window in two tabs; the output one draws, in the tree's own rows, what went in and what this node made from the take, newest first
+  function ndOutIds(id) {
+    var cl = cloneOf(id), own = cl ? cl.of : id, D = window.HeresyDerived;
+    return (D && D.list ? D.list() : []).filter(function (m) { return cvNodeOf(m) === own; }).map(function (m) { return m.id; });
+  }
+  function ndOutPaint(force) {
+    var m = cvModal(), out = m.box.querySelector(".nd-out"), ids = ndOutIds(CV.open), key = (state.take ? state.take.name : "") + "|" + ids.join(",");
+    if (!force && out.dataset.ids === key) return;     // the same branches: a player that plays keeps playing
+    out.dataset.ids = key;
+    if (window.HeresyDerived && window.HeresyDerived.renderInto) window.HeresyDerived.renderInto(out, ids);
+  }
+  function ndTab(k) {
+    var m = cvModal(), out = m.box.querySelector(".nd-out"), tabs = m.box.querySelector(".nd-tabs");
+    if (k === "out" && tabs.hidden && !CV.faceOnly) k = "set";
+    CV.ndTab = k;
+    Array.prototype.forEach.call(m.box.querySelectorAll("[data-ndtab]"), function (b) { b.setAttribute("aria-selected", b.dataset.ndtab === k ? "true" : "false"); });
+    m.body.hidden = k === "out"; out.hidden = k !== "out";
+    if (k === "out") ndOutPaint(true); else { out.innerHTML = ""; out.dataset.ids = ""; }
+  }
+  window.addEventListener("heresy-derived", function () { var m = cvModal(); if (CV.open && !m.box.hidden && !m.box.querySelector(".nd-out").hidden) ndOutPaint(false); });
   // HERESY 1573: a node's window as large as what it holds: a column of 1100 px for a step's settings, the window's width for what is wide;
   // as tall as its panel up to the room's height, centred in it, and centred again as the panel grows or folds
   var ND_WIDE = { dawPanel: 1 };                     // HERESY 1953: only the DAW the window's width, its lanes a timeline
@@ -1723,32 +1883,41 @@
     if (id === "take") { pickTake(); return true; }  // HERESY 1581: the take's node opens the Takes, to pick another
     if (id === "chain") return false;               // HERESY 1598: no Chain node (and #chain is the Creator's run strip)
     var el = id === "madePanel" ? document.querySelector("#view-post > .dv-tree-box") : $(pid);   // 1581: the tree its own node's (1598: the chain's strip no node of its own)
+    var faced = !cl && !!FACE[pid];                   // HERESY 1969: its settings on its face: the window its output only, the panel left there
     if (!el && CV.open === id) el = CV.el;
     if (!el) return false;
     cvClose(true);
     if (STEPS.some(function (st) { return st.id === pid; })) select(pid);   // the step's own: its events, its place in the list
     if (cl) { CV.swap = { id: id, keep: fieldsOf(el) }; fieldsSet(cl.fields); }   // 1516: the clone's settings in, the step's own kept aside
     var m = cvModal();
-    CV.hold = document.createComment("node " + id);
-    el.parentNode.insertBefore(CV.hold, el);
-    m.body.appendChild(el);
-    if (el.tagName === "DETAILS") el.open = true;
-    CV.open = id; CV.el = el;
+    CV.faceOnly = faced;
+    if (!faced) {
+      CV.hold = document.createComment("node " + id);
+      el.parentNode.insertBefore(CV.hold, el);
+      m.body.appendChild(el);
+      if (el.tagName === "DETAILS") el.open = true;
+    }
+    CV.open = id; CV.el = faced ? null : el;
     var order = cvOrder(), i = order.indexOf(id), prev = order[(i - 1 + order.length) % order.length], next = order[(i + 1) % order.length];
     m.box.querySelector(".nd-title").textContent = cvTitle(id);
     var betaWas = m.box.querySelector(".nd-beta"); if (betaWas) betaWas.remove();   // HERESY 1795: beside the title, its text as it was
     if (pid === "dawPanel") m.box.querySelector(".nd-title").insertAdjacentHTML("afterend", betaBadge("nd-beta"));
     m.box.classList.toggle("is-clone", !!cl);          // HERESY 1516
     m.box.classList.toggle("is-wide", !!ND_WIDE[pid]); // HERESY 1573: what is wide the window's width (1953: the DAW alone)
-    var sz = ndSize(pid, el);
+    var sz = faced ? "l" : ndSize(pid, el);       // 1969: a face's window is its output, the tree's rows: large
     ["s", "m", "l"].forEach(function (k) { m.box.classList.toggle("nd-" + k, sz === k); });   // HERESY 1953
     m.box.querySelector(".nd-prev").textContent = "\u2039 " + cvTitle(prev).replace(/^\d+ \u00b7 /, "");
     m.box.querySelector(".nd-next").textContent = cvTitle(next).replace(/^\d+ \u00b7 /, "") + " \u203a";
-    if (window.HeresyChoices) window.HeresyChoices.within(el);   // HERESY 1509: its choices in sight, no dropdowns in a node's window
+    if (window.HeresyChoices && !faced) window.HeresyChoices.within(el);   // HERESY 1509: its choices in sight, no dropdowns in a node's window
     var until = m.box.querySelector(".nd-until");    // HERESY 1508: the chain's nodes run up to themselves from here too
     until.hidden = !chainNode(id);                   // HERESY 1553: a pipeline's node too
     until.disabled = !state.take || chainBusy();
     ndMuted(m.box, id);                               // HERESY 1954
+    var hasOut = STEPS.some(function (st) { return st.id === pid; });   // HERESY 1964: a step's window has its output; the take, the import, the tree none
+    m.box.querySelector(".nd-tabs").hidden = !hasOut || faced;   // 1969: a face's window has its output alone
+    var keep = CV.ndTab || "set";                    // 1964: a node with nothing made opens on its settings; the tab chosen stays for the next
+    ndTab(faced || (hasOut && keep === "out" && ndOutIds(id).length) ? "out" : "set");
+    CV.ndTab = keep;
     m.back.hidden = false; m.box.hidden = false;
     document.body.dataset.node = id;
     ndPlace(m.box);                                   // HERESY 1573
@@ -1771,7 +1940,9 @@
     }
     if (window.HeresyChoices) window.HeresyChoices.close();   // HERESY 1509: a list opened from it goes with it
     if (CV.hold && CV.hold.parentNode) { CV.hold.parentNode.insertBefore(CV.el, CV.hold); CV.hold.remove(); }
-    CV.open = ""; CV.el = null; CV.hold = null;
+    CV.open = ""; CV.el = null; CV.hold = null; CV.faceOnly = false;
+    var mo = cvModal(), oo = mo.box.querySelector(".nd-out");   // HERESY 1964: its players gone with it
+    if (oo) { oo.innerHTML = ""; oo.dataset.ids = ""; }
     if (!quiet) {
       var m = cvModal();
       m.back.hidden = true; m.box.hidden = true;
@@ -1788,6 +1959,7 @@
   function cvInit() {
     cvRecall();
     opensInit();                                      // HERESY 1523
+    nodesInit();                                      // HERESY 1969
     var head = document.querySelector("#view-post > .post-head"), daw = $("postDaw");
     if (head && !$("postView")) {
       var b = document.createElement("button");
@@ -1815,6 +1987,8 @@
     var box = cvBox();
     box.addEventListener("pointerdown", function (e) {
       if (e.target.closest("[data-pcv-stop]")) { e.stopPropagation(); return; }   // HERESY 1962: Stop is pressed, the node not dragged
+      if (e.target.closest(".pcv-face")) return;       // HERESY 1969: a face's field in hand, the node stays
+      if (e.target.closest("[data-pcv-fold]")) { e.stopPropagation(); return; }   // HERESY 1971: the chevron is pressed, the node not dragged
       var port = e.target.closest(".pcv-port.is-out");   // HERESY 1510: a wire drawn from here
       if (port && e.button === 0) {
         e.preventDefault(); e.stopPropagation();
@@ -1952,7 +2126,7 @@
     // HERESY 1508: a node's right-click, as ComfyUI's: open it, run the chain up to it, bypass it in the chain, lay the canvas out anew
     box.addEventListener("contextmenu", function (e) {
       var nd = e.target.closest(".pcv-node");
-      if (!nd || !window.HeresyMenu) return;
+      if (!nd || !window.HeresyMenu || e.target.closest(".pcv-face")) return;   // 1969: a face's field keeps its own menu
       e.preventDefault();
       var id = nd.dataset.node, c = chainNode(id), items = [{ label: "Open", icon: "\u2197", action: function () { cvOpen(id); } }];
       if (c) items.push({ label: "Run up to here", icon: "\u25b6", disabled: !state.take || chainBusy(), action: function () { runUntil(id); },
@@ -1972,16 +2146,19 @@
         if (id !== "take" && lastAt(wayNow(), id) >= 0) items.push({ label: "Off the way", icon: "\u2702", action: function () { ownOff(id); },
                      hint: "This step out of your way, the steps around it joined; Ctrl+Z gives it back" });
       }
+      if (faceKind(id)) items.push({ label: CV.fold[id] ? "Unfold" : "Fold", icon: CV.fold[id] ? "\u25b8" : "\u25be", action: function () { foldToggle(id); } });   // HERESY 1971
       items.push({ sep: true }, { label: "Arrange", icon: "\u2316", action: arrange });
       window.HeresyMenu.open(e.clientX, e.clientY, items);
     });
     box.addEventListener("click", function (e) {
       if (e.target.closest("#pcvArrange")) { arrange(); return; }
       if (e.target.closest("[data-pcv-stop]")) { e.stopPropagation(); chainStopAsk(); return; }   // HERESY 1962: the running node's Stop
+      var fo = e.target.closest("[data-pcv-fold]");    // HERESY 1971: folded away or back
+      if (fo) { e.stopPropagation(); foldToggle(fo.dataset.pcvFold); return; }
       var cut = e.target.closest(".pcv-hit");          // HERESY 1570
       if (cut) { var kk = cut.getAttribute("data-cut").split(">"); ownCut(kk[0], kk[1]); return; }
       var nd = e.target.closest(".pcv-node");
-      if (!nd) return;
+      if (!nd || e.target.closest(".pcv-face")) return;   // 1969: a click on a face's field opens nothing
       if (Date.now() < CV.quietUntil || e.ctrlKey || e.metaKey) return;   // 1951: Ctrl+click selects, it opens nothing
       cvOpen(nd.dataset.node);
     });
@@ -1998,6 +2175,7 @@
       if (!CV.on || document.body.dataset.tab !== "post" || e.ctrlKey || e.metaKey || e.altKey || !/^[0-9]$/.test(e.key)) return;
       if (/^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || "") || (document.activeElement || {}).isContentEditable) return;
       if (document.querySelector(".hd-back, .cmp-back, .ds-back, .hc-pop, .hm-menu, .roll-back") || document.fullscreenElement || document.body.classList.contains("daw-full")) return;
+      if (CV.open === "dawPanel") return;           // HERESY 1968: the DAW's own keys there (0 fits its view)
       clearTimeout(DIG.timer);
       if (DIG.first) { var two = +(DIG.first + e.key); DIG.first = ""; e.preventDefault(); e.stopPropagation(); digOpen(two); return; }
       var d = +e.key, one = d === 0 ? 10 : d, more = d > 0 && Object.keys(CV.num || {}).some(function (k) { return CV.num[k] >= d * 10 && CV.num[k] < d * 10 + 10; });
@@ -2096,7 +2274,7 @@
           }
           plug.steps[id] = s;
           var panel = pluginPanel(s);
-          var box = document.querySelector("#view-post > .dv-tree-box"), ref = s.afterOf && $(s.afterOf);   // HERESY 1461: before what is made, as the studio's own
+          var box = document.querySelector("#view-post > .dv-tree-box"), ref = s.afterOf && (FACE[s.afterOf] ? FACE[s.afterOf].hold : $(s.afterOf));   // HERESY 1461: before what is made, as the studio's own (1969: a step on a face: after its place in the list)
           if (ref && ref.parentNode) ref.parentNode.insertBefore(panel, ref.nextSibling);   // HERESY 1553
           else if (box) box.parentNode.insertBefore(panel, box); else if (after && after.parentNode) after.parentNode.appendChild(panel);
           panel.classList.add("is-step");
@@ -2318,7 +2496,7 @@
   }
   function monPaintRows(on) {
     MON.on = on || "";
-    Array.prototype.forEach.call(document.querySelectorAll("#derivedTree [data-dv-mon]"), function (b) { var x = b.dataset.dvMon === MON.on; b.classList.toggle("is-on", x); b.setAttribute("aria-pressed", x); });
+    Array.prototype.forEach.call(document.querySelectorAll("#derivedTree [data-dv-mon], .nd-out [data-dv-mon]"), function (b) { var x = b.dataset.dvMon === MON.on; b.classList.toggle("is-on", x); b.setAttribute("aria-pressed", x); });
     clearInterval(MON.timer);
     if (on !== false && MON.on !== "") MON.timer = setInterval(function () {   // ended by itself: the button goes dark
       fetch("/lab/audio/devices", { priority: "low" }).then(function (r) { return r.json(); }).then(function (d) { if (!d.playing || !d.playing.playing) monPaintRows(false); }, function () { /* try again */ });

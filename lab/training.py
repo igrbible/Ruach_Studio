@@ -463,6 +463,11 @@ def gone(kit, run, d=None, cks=None):
     every, reached = int(o.get("save_every") or 0), int(meta.get("step") or 0)
     per = meta.get("tracks") or o.get("steps_per_epoch") or 0
     want = set(range(every, reached + 1, every)) if every > 0 and reached >= every else set()
+    try:   # HERESY 1973: a run that began from a save carried in (output/RUN/carried.json {"from", "step"}) made none before that step
+        start = int(json.load(open(d / "output" / run / "carried.json", encoding="utf-8")).get("step") or 0)
+        want = {s for s in want if s >= start}
+    except (OSError, ValueError, AttributeError, TypeError):
+        pass
     try:
         v = json.load(open(d / "output" / run / "val.json", encoding="utf-8"))
         want |= {e["step"] for e in v.get("history") or [] if isinstance(e, dict) and isinstance(e.get("step"), int)}
@@ -1023,11 +1028,15 @@ def stop(kit, run, pause=False):
     if pause:
         meta["pausing"] = True
     _save_meta(d, meta)
+    # HERESY 1973 (31.10.2026: a pause at 12:02:45 and a resume at 12:03:15 under the same unit name; the minute's stop came at 12:03:45 and
+    # ended the resumed run): the late stop is for the start that was paused, known by its unit's InvocationID, never for a later one
+    inv = _systemctl("show", "-p", "InvocationID", "--value", _unit(run) + ".service").stdout.strip()
     _systemctl("kill", "--signal=SIGINT", _unit(run) + ".service")
 
     def later():
         time.sleep(60)
-        if _unit_state(run) == "active":
+        now = _systemctl("show", "-p", "InvocationID", "--value", _unit(run) + ".service").stdout.strip()
+        if _unit_state(run) == "active" and (not inv or now == inv):
             _systemctl("stop", _unit(run) + ".service")
     threading.Thread(target=later, daemon=True).start()
     return {"name": run, "status": "pausing" if pause else "stopping"}

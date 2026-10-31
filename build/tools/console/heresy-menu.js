@@ -182,7 +182,8 @@
     sel.addEventListener("change", paint);
   }
   function enhance(sel) {
-    if (sel.dataset.hc || sel.multiple || sel.matches(SKIP)) return;
+    if (sel.dataset.hc) { if (sel._hcPaint) sel._hcPaint(); return; }   // HERESY 1974: drawn anew where it stands now (a node's face, or home)
+    if (sel.multiple || sel.matches(SKIP)) return;
     sel.dataset.hc = "1";
     var box = document.createElement("div");
     box.className = "hc-box";
@@ -190,7 +191,17 @@
     sel.classList.add("hc-src");
     function paint() {
       var opts = Array.prototype.slice.call(sel.options), cur = sel.selectedIndex, html;
-      if (opts.length > MAX || sel.dataset.hcPick === "1") {   // HERESY 1598: or a button as its own asks (a head has no room for rows)
+      // HERESY 1974 (Viktor 31.10.2026: «Строка: название функции > дропдаун с вариантами. Здесь мы отклоняемся от нашей ереси попапов»): on a
+      // FULL node's face one row, as ComfyUI's: its value between ◀ ▶ (the one before and after it), a click on the value opens the list over the page
+      var near = function (d) { for (var i = cur + d; i >= 0 && i < opts.length; i += d) if (!opts[i].disabled) return i; return -1; };
+      if (sel.closest(".pcv-face")) {
+        var on = cur >= 0 ? opts[cur] : null, lab = sel.closest(".field") ? "" : sel.getAttribute("aria-label") || "";
+        html = (lab ? '<span class="hc-lab">' + esc(lab) + "</span>" : "") +
+          '<button type="button" class="hc-step" data-d="-1" tabindex="-1" aria-hidden="true"' + (sel.disabled || near(-1) < 0 ? " disabled" : "") + ">\u25c0</button>" +
+          '<button type="button" class="hc-pick"' + (sel.disabled ? " disabled" : "") + ' aria-haspopup="listbox"><span class="hc-pick-now"' + (on && own(on) ? ' translate="no"' : "") + ">" +
+          esc(on ? text(on) : "\u2014") + "</span></button>" +
+          '<button type="button" class="hc-step" data-d="1" tabindex="-1" aria-hidden="true"' + (sel.disabled || near(1) < 0 ? " disabled" : "") + ">\u25b6</button>";
+      } else if (opts.length > MAX || sel.dataset.hcPick === "1") {   // HERESY 1598: or a button as its own asks (a head has no room for rows)
         var now = cur >= 0 ? opts[cur] : null;
         html = '<button type="button" class="hc-pick"' + (sel.disabled ? " disabled" : "") + ' aria-haspopup="listbox"><span class="hc-pick-now"' + (now && own(now) ? ' translate="no"' : "") + ">" +
           esc(now ? text(now) : "—") + '</span><span class="hc-pick-n mono">' + opts.length + "</span></button>";
@@ -204,11 +215,17 @@
       if (box.dataset.html !== html) { box.innerHTML = html; box.dataset.html = html; }
     }
     box.addEventListener("click", function (e) {
-      var b = e.target.closest(".hc-opt"), p = e.target.closest(".hc-pick");
+      var b = e.target.closest(".hc-opt"), p = e.target.closest(".hc-pick"), s = e.target.closest(".hc-step");
       if (b && !b.disabled) { e.preventDefault(); choose(sel, +b.dataset.i); return; }
+      if (s) {                                         // HERESY 1974: the choice before or after, past the ones that cannot be taken
+        e.preventDefault();
+        for (var i = sel.selectedIndex + +s.dataset.d; !s.disabled && i >= 0 && i < sel.options.length; i += +s.dataset.d) if (!sel.options[i].disabled) { choose(sel, i); break; }
+        return;
+      }
       if (p && !p.disabled) { e.preventDefault(); open(sel, p); }
     });
     watch(sel, paint);
+    sel._hcPaint = paint;                              // HERESY 1974
     paint();
   }
   function close() {

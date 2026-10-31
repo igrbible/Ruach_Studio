@@ -9,6 +9,27 @@
   "use strict";
 
   var C = { sel: "", tab: "mixer", band: "", drag: null, wheelAt: 0, eqRaf: 0, lastFrame: 0 };
+  // HERESY 1967: where the console stands: pinned on the right, on hover at the right edge, or floating; kept with the page
+  var DOCK_MODES = ["pin", "hover", "float"];
+  function dockMode() { try { var v = localStorage.getItem("yue2.mixer.dockMode"); return DOCK_MODES.indexOf(v) >= 0 ? v : "pin"; } catch (e) { return "pin"; } }
+  // 1967: beside the lanes (docked, or on hover) only where they keep 1000 px; a narrower panel has the console under them, as before
+  function dockRoom() {
+    var panel = document.getElementById("dawPanel");
+    if (!panel) return;
+    var on = panel.clientWidth >= Math.min(900, Math.max(520, window.innerWidth * 0.34)) + 1000;   // the CSS's --mx-dock-w, and the lanes' 1000
+    if ((panel.dataset.dockRoom === "1") === on) return;
+    if (on) panel.dataset.dockRoom = "1"; else delete panel.dataset.dockRoom;
+    window.dispatchEvent(new Event("resize"));      // the waves drawn again at their new width
+  }
+  var roomWatch = null;
+  function dockPlace() {
+    var panel = document.getElementById("dawPanel");
+    if (!panel) return;
+    panel.dataset.dock = dockMode();
+    dockRoom();
+    if (!roomWatch && window.ResizeObserver) { roomWatch = new ResizeObserver(dockRoom); roomWatch.observe(panel); }
+    try { var xy = JSON.parse(localStorage.getItem("yue2.mixer.dockXY") || "null"); if (xy) { panel.style.setProperty("--mx-fx", xy[0] + "px"); panel.style.setProperty("--mx-fy", xy[1] + "px"); } } catch (e) { /* as it comes */ }
+  }
   function K() { return window.HeresyMixer && window.HeresyMixer.k; }
   function $(id) { return document.getElementById(id); }
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
@@ -316,6 +337,7 @@
     if (!dock || !M || !M.info()) return;
     var panel = $("dawPanel");
     if (panel) panel.classList.toggle("has-dock", !dock.hidden);
+    dockPlace();                                     // HERESY 1967
     if (dock.hidden) return;
     var ns = M.names();
     if (C.sel && C.sel !== "*" && C.sel !== "~room" && C.sel !== "~delay" && ns.indexOf(C.sel) < 0 && !grp(C.sel) && !subOf2(C.sel)) C.sel = "";   // 1543: a VCA; 1563: a bus
@@ -325,7 +347,12 @@
         esc(tr("Devices")) + (C.sel ? ' · <b translate="no">' + esc(selTitle()) + "</b>" : "") + "</button>" +
       '<button type="button" role="tab" class="mc-tab' + (C.tab === "mixes" ? " is-on" : "") + '" aria-selected="' + (C.tab === "mixes") + '" data-act="tab" data-v="mixes">' +   // HERESY 1533
         esc(tr("Mixes")) + (M.mixes.list().length ? " \u00b7 " + M.mixes.list().length : "") + "</button>" +
-      '<span class="row-hint mc-how">' + esc(tr("Knobs: drag up and down, Shift finer, a double-click back to where it was; a click on a number, or a digit, to type one")) + "</span></div>";   // HERESY 1758
+      '<span class="row-hint mc-how">' + esc(tr("Knobs: drag up and down, Shift finer, a double-click back to where it was; a click on a number, or a digit, to type one")) + "</span>" +   // HERESY 1758
+      // HERESY 1967: where it stands
+      '<span class="mc-dockmode" role="group" aria-label="' + esc(tr("Where the console stands")) + '">' + [["pin", "Docked", "On the right, a column of its own beside the lanes"],
+        ["hover", "On hover", "A strip at the right edge: the pointer on it slides the console out over the lanes, away again when it leaves"],
+        ["float", "Floating", "A panel of its own, moved by this row; it stays with the page and hides with its room"]].map(function (m) {
+        return '<button type="button" class="mc-tab mc-dm' + (dockMode() === m[0] ? " is-on" : "") + '" data-act="dockmode" data-v="' + m[0] + '" aria-pressed="' + (dockMode() === m[0]) + '" data-tip="' + esc(tr(m[2])) + '">' + esc(tr(m[1])) + "</button>"; }).join("") + "</span></div>";
     var body = C.tab === "mixes" ? mixesHtml() : C.tab === "devices" && C.sel ? devicesHtml(C.sel)
       : '<div class="mc" role="group" aria-label="' + esc(tr("Console")) + '">' + ns.map(stripHtml).join("") + '<span class="mc-gap"></span>' +
         M.groups().map(vcaHtml).join("") +             // HERESY 1543: the VCAs, then the way to add one
@@ -829,6 +856,12 @@
       if (hk) { editOpen(hk, "knob"); return; }
       if (fd0 && fd0.classList.contains("fd")) { editOpen(fd0, "fader"); return; }
     }
+    var dm = e.target.closest && e.target.closest('[data-act="dockmode"]');   // HERESY 1967
+    if (dm) {
+      try { localStorage.setItem("yue2.mixer.dockMode", dm.dataset.v); } catch (x) { /* a private window */ }
+      paint(); window.dispatchEvent(new Event("resize"));
+      return;
+    }
     var b = e.target.closest && e.target.closest("[data-act]"), M = K();
     if (!b || !M || b.disabled) return;
     var act = b.dataset.act, n = stripOf(b), v = b.dataset.v, s;
@@ -902,6 +935,21 @@
   function onDown(e) {
     var M = K();
     if (!M || e.button !== 0) return;
+    var row = e.target.closest && e.target.closest("#mxDock .mc-tabs"), panel = $("dawPanel");   // HERESY 1967: the floating console moved by its tabs' row
+    if (row && dockMode() === "float" && panel && !e.target.closest("button, input, select")) {
+      e.preventDefault();
+      var dock = $("mxDock"), r = dock.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top, x = r.left, y = r.top;
+      var mv = function (ev) {
+        x = Math.max(0, Math.min(innerWidth - 120, ev.clientX - dx)); y = Math.max(0, Math.min(innerHeight - 60, ev.clientY - dy));
+        panel.style.setProperty("--mx-fx", Math.round(x) + "px"); panel.style.setProperty("--mx-fy", Math.round(y) + "px");
+      };
+      var up = function () {
+        document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up);
+        try { localStorage.setItem("yue2.mixer.dockXY", JSON.stringify([Math.round(x), Math.round(y)])); } catch (x2) { /* a private window */ }
+      };
+      document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+      return;
+    }
     var kn = e.target.closest && e.target.closest(".kn"), fd = e.target.closest && e.target.closest(".fd-track"), eqc = e.target.closest && e.target.closest("canvas.dv-eq");
     if (kn) {
       e.preventDefault();
@@ -1076,6 +1124,7 @@
   function init() {
     var M = K();
     if (!M) return;
+    dockPlace();                                     // HERESY 1967
     M.on("paint", paint);
     M.on("frame", function () { frame(false); });
     M.on("change", changed);

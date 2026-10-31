@@ -192,18 +192,72 @@
     return out;
   }
 
-  function paint() {
-    var host = $("derivedTree"), take = state.take;
-    if (!take) { host.innerHTML = '<p class="row-hint">Pick a take on the right.</p>'; return; }
-    // HERESY 1138: the take itself is a node of the tree like its branches: it plays, it downloads, and it opens the
-    // comparison of every version (the original first)
+  // HERESY 1964: the original's row and one branch as the tree draws them, for the tree and for a node window's Output
+  function origHtml(take) {
     var orig = "/library/listen?name=" + encodeURIComponent(take.name);
-    var html = '<div class="dv-node dv-root dv-orig"><span class="dv-name"><span translate="no">' + esc(take.label || take.name) + '</span> <em class="dv-orig-tag">the original</em></span>' +
+    return '<div class="dv-node dv-root dv-orig"><span class="dv-name"><span translate="no">' + esc(take.label || take.name) + '</span> <em class="dv-orig-tag">the original</em></span>' +
       '<span class="dv-meta mono">' + (take.seconds ? clock(take.seconds) : "") + "</span>" +
       player(orig, "/library/peaks?name=" + encodeURIComponent(take.name)) +   // HERESY 1487
       '<span class="dv-acts"><button type="button" class="btn small primary dv-compare" data-dv-compare="0" data-tip="Every version of this take in one player: switch between them at the same second (1–9, Space)">Compare all</button>' +
       '<button type="button" class="btn ghost small dv-mon" data-dv-mon="' + esc("") + '" aria-pressed="false" data-tip="Play it through Forge\'s monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before">On Forge</button>' +   // HERESY 1548
       '<a class="btn ghost small" href="' + esc(signed("/library/flac?name=" + encodeURIComponent(take.name), "flac", take)) + '" download="' + esc((take.label || take.name) + ".flac") + '">FLAC</a></span></div>';   // HERESY 1489; 1513: its buttons one column
+  }
+  function branchHtml(c, take) {
+    var h = "";
+    var m = c.m;
+    h += '<div class="dv-group" data-dv-id="' + esc(m.id || "") + '" data-kind="' + esc(m.kind || "") + '"' +
+      (c.depth ? ' data-depth="' + c.depth + '" style="--dv-depth:' + c.depth + '"' : "") + '><div class="dv-group-head"><strong' + (m.kind === "plugin" && !m.builtin ? ' translate="no"' : "") + ">" + esc(kindName(m)) + "</strong>" +
+      (m.kind === "plugin" ? '<span translate="no"> · ' + esc(pluginSummary(m)) + "</span>" : "") +
+      (m.kind === "plugin" && m.summary ? '<span class="dv-say" translate="no"> · ' + esc(m.summary) + "</span>" : "") +   // HERESY 1484
+      (m.mode ? " · " + esc(MODE[m.mode] || m.mode) : "") + esc(stemsFrom(m).replace(", from", " · from")) + (m.kind === "remaster" ? " · " + esc(summary(m)) : "") +
+      (m.kind === "debuzz" ? " · " + esc(debuzzSummary(m)) : "") +
+      (m.kind === "gate" ? " · " + esc(gateSummary(m)) : "") +   // HERESY 1547
+      (m.kind === "midi" ? ' · <span translate="no">' + esc(midiSummary(m)) + "</span>" : "") +   // HERESY 1834
+      (m.kind === "daw" ? " · " + esc(dawSummary(m)) : "") +   // HERESY 1471
+      (m.kind === "upscale" ? " · from " + esc(String(m.source || "the take").replace("derived/", "")) + ", above " + Math.round((m.cutoff_hz || 0) / 1000) + " kHz" + (m.keep_low ? ", original kept below" : "") : "") +
+      '<span class="dv-meta">' + esc((m.models || []).join(" + ")) + " · " + esc(m.created || "") + (m.took ? " · " + Math.round(m.took) + " s" : "") + "</span>" +
+      (m.kind === "plugin" && m.plugin === "ruach" && m.step === "match" && m.measure && (m.measure.bands || []).length ?   // HERESY 1558
+        '<button type="button" class="btn ghost small" data-dv-eq="' + esc(m.id || "") + '" data-tip="Put the match\'s bands on the DAW\'s master EQ, to hear the match live on the mix in hand">Onto the DAW\'s master</button>' : "") +
+      '<button type="button" class="btn ghost small dv-del" data-dv-del="' + esc(m.id || "") + '" data-tip="Into this take\'s trash, from where it comes back">Delete</button></div>';   // HERESY 1527
+    (m.files || []).forEach(function (f) {
+      var url = fileUrl(take.name, f.path);
+      var nm = m.builtin ? '<span class="dv-name">↳ <span>' + esc(title(f)) + "</span></span>" : '<span class="dv-name" translate="no">↳ ' + esc(title(f)) + "</span>";   // HERESY 1557: the studio's own in the page's words
+      if (isImage(f)) {                               // HERESY 1557: a step's picture, looked at here, or its file
+        h += '<div class="dv-node is-image">' + nm + '<a class="dv-pic" href="' + esc(url) + '" target="_blank" rel="noopener"><img src="' + esc(url) + '" alt="" loading="lazy" /></a>' +
+          '<a class="btn ghost small" translate="no" href="' + esc(url) + '" download="' + esc((take.label || take.name) + " - " + (f.file || title(f))) + '">' +
+          esc(String(f.file || f.path).split(".").pop().toUpperCase()) + "</a></div>";
+        return;
+      }
+      if (isMidi(f)) {                                // HERESY 1834: a MIDI file: downloaded (a DAW, the roll), not played here
+        h += '<div class="dv-node is-midi">' + nm + '<a class="btn ghost small" translate="no" href="' + esc(url) + '" download="' + esc((take.label || take.name) + " · " + (m.size || "midi") + ".mid") + '">MIDI</a></div>';
+        return;
+      }
+      if (isText(f)) {                                // HERESY 1484: a report: read here, or its file
+        h += '<div class="dv-node is-text">' + nm +
+          '<button type="button" class="btn ghost small" data-dv-read="' + esc(f.path) + '" data-dv-read-title="' + esc(title(f)) + '">Read</button>' +
+          '<a class="btn ghost small" translate="no" href="' + esc(url) + '" download="' + esc((take.label || take.name) + " - " + (f.file || title(f))) + '">' +
+          esc(String(f.file || f.path).split(".").pop().toUpperCase()) + "</a></div>";
+        return;
+      }
+      h += '<div class="dv-node">' + nm + '<span class="dv-meta mono">' + (f.seconds ? clock(f.seconds) : "") + "</span>" +
+        player(url, "/lab/peaks?name=" + encodeURIComponent(take.name) + "&path=" + encodeURIComponent(f.path) + "&n=400") +   // HERESY 1487
+        '<span class="dv-acts"><button type="button" class="btn ghost small" data-dv-compare-path="' + esc(f.path) + '" data-tip="Compare it with the original and every other version, at the same second">Compare</button>' +
+        '<button type="button" class="btn ghost small" data-dv-spectrum="' + esc(f.path) + '" data-tip="Lay this file over the take in the spectrum">Spectrum</button>' +
+        (window.HeresyPost && window.HeresyPost.has && window.HeresyPost.has("pl-ruach-reportPanel") ?   // HERESY 1557
+          '<button type="button" class="btn ghost small" data-dv-report="' + esc(f.path) + '" data-tip="Measure this file against what it was made from: loudness, true peak, range, width, bands, the spectra at equal loudness; a page and a picture in the tree">Before / after</button>' : "") +
+        '<button type="button" class="btn ghost small dv-mon" data-dv-mon="' + esc(f.path) + '" aria-pressed="false" data-tip="Play it through Forge\'s monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before">On Forge</button>' +   // HERESY 1548
+        (/vocal/i.test(f.name) ? '<button type="button" class="btn ghost small" data-dv-gloss="' + esc(f.path) + '" data-tip="Whisper on this file against the lyrics">Lyrics check</button>' : "") +
+        '<a class="btn ghost small" href="' + esc(signed(url, String(f.file || f.path).split(".").pop().toLowerCase(), take, f.path)) + '" download="' + esc((take.label || take.name) + " - " + title(f) + ".flac") + '">FLAC</a></span></div>';   // HERESY 1489; 1513
+    });
+    h += "</div>";
+    return h;
+  }
+  function paint() {
+    var host = $("derivedTree"), take = state.take;
+    if (!take) { host.innerHTML = '<p class="row-hint">Pick a take on the right.</p>'; return; }
+    // HERESY 1138: the take itself is a node of the tree like its branches: it plays, it downloads, and it opens the
+    // comparison of every version (the original first)
+    var html = origHtml(take);
     if (!state.list.length && !state.running.length) html += state.reading ? '<p class="row-hint dv-empty is-reading">Reading what was made from this take…</p>' : state.unread ? '<p class="row-hint dv-empty is-unread">What was made from this take could not be read: the lab\'s answer broke off or did not parse. Open the take again; if it stays, a branch\'s manifest.json is at fault (Engine → Server and log)</p>'   // HERESY 1576: not an empty that lies
       : '<p class="row-hint dv-empty">Nothing made from this take yet.</p>';
     // HERESY 1129: what runs now stands first: the tree grows upward, the newest on top
@@ -213,54 +267,7 @@
         (j.mode ? " · " + esc(MODE[j.mode] || j.mode) : "") + '<span class="dv-meta">' + (failed ? "failed: " + esc(j.error || "") : esc(p.say)) + "</span></div>" +
         (failed ? "" : '<div class="job-bar' + (j.status === "queued" ? " is-queued" : "") + '"><i style="width:' + p.pct + '%"></i></div>') + "</div>";
     });
-    chain(state.list).forEach(function (c) {             // HERESY 1486: in the chain's order
-      var m = c.m;
-      html += '<div class="dv-group" data-dv-id="' + esc(m.id || "") + '" data-kind="' + esc(m.kind || "") + '"' +
-        (c.depth ? ' data-depth="' + c.depth + '" style="--dv-depth:' + c.depth + '"' : "") + '><div class="dv-group-head"><strong' + (m.kind === "plugin" && !m.builtin ? ' translate="no"' : "") + ">" + esc(kindName(m)) + "</strong>" +
-        (m.kind === "plugin" ? '<span translate="no"> · ' + esc(pluginSummary(m)) + "</span>" : "") +
-        (m.kind === "plugin" && m.summary ? '<span class="dv-say" translate="no"> · ' + esc(m.summary) + "</span>" : "") +   // HERESY 1484
-        (m.mode ? " · " + esc(MODE[m.mode] || m.mode) : "") + esc(stemsFrom(m).replace(", from", " · from")) + (m.kind === "remaster" ? " · " + esc(summary(m)) : "") +
-        (m.kind === "debuzz" ? " · " + esc(debuzzSummary(m)) : "") +
-        (m.kind === "gate" ? " · " + esc(gateSummary(m)) : "") +   // HERESY 1547
-        (m.kind === "midi" ? ' · <span translate="no">' + esc(midiSummary(m)) + "</span>" : "") +   // HERESY 1834
-        (m.kind === "daw" ? " · " + esc(dawSummary(m)) : "") +   // HERESY 1471
-        (m.kind === "upscale" ? " · from " + esc(String(m.source || "the take").replace("derived/", "")) + ", above " + Math.round((m.cutoff_hz || 0) / 1000) + " kHz" + (m.keep_low ? ", original kept below" : "") : "") +
-        '<span class="dv-meta">' + esc((m.models || []).join(" + ")) + " · " + esc(m.created || "") + (m.took ? " · " + Math.round(m.took) + " s" : "") + "</span>" +
-        (m.kind === "plugin" && m.plugin === "ruach" && m.step === "match" && m.measure && (m.measure.bands || []).length ?   // HERESY 1558
-          '<button type="button" class="btn ghost small" data-dv-eq="' + esc(m.id || "") + '" data-tip="Put the match\'s bands on the DAW\'s master EQ, to hear the match live on the mix in hand">Onto the DAW\'s master</button>' : "") +
-        '<button type="button" class="btn ghost small dv-del" data-dv-del="' + esc(m.id || "") + '" data-tip="Into this take\'s trash, from where it comes back">Delete</button></div>';   // HERESY 1527
-      (m.files || []).forEach(function (f) {
-        var url = fileUrl(take.name, f.path);
-        var nm = m.builtin ? '<span class="dv-name">↳ <span>' + esc(title(f)) + "</span></span>" : '<span class="dv-name" translate="no">↳ ' + esc(title(f)) + "</span>";   // HERESY 1557: the studio's own in the page's words
-        if (isImage(f)) {                               // HERESY 1557: a step's picture, looked at here, or its file
-          html += '<div class="dv-node is-image">' + nm + '<a class="dv-pic" href="' + esc(url) + '" target="_blank" rel="noopener"><img src="' + esc(url) + '" alt="" loading="lazy" /></a>' +
-            '<a class="btn ghost small" translate="no" href="' + esc(url) + '" download="' + esc((take.label || take.name) + " - " + (f.file || title(f))) + '">' +
-            esc(String(f.file || f.path).split(".").pop().toUpperCase()) + "</a></div>";
-          return;
-        }
-        if (isMidi(f)) {                                // HERESY 1834: a MIDI file: downloaded (a DAW, the roll), not played here
-          html += '<div class="dv-node is-midi">' + nm + '<a class="btn ghost small" translate="no" href="' + esc(url) + '" download="' + esc((take.label || take.name) + " · " + (m.size || "midi") + ".mid") + '">MIDI</a></div>';
-          return;
-        }
-        if (isText(f)) {                                // HERESY 1484: a report: read here, or its file
-          html += '<div class="dv-node is-text">' + nm +
-            '<button type="button" class="btn ghost small" data-dv-read="' + esc(f.path) + '" data-dv-read-title="' + esc(title(f)) + '">Read</button>' +
-            '<a class="btn ghost small" translate="no" href="' + esc(url) + '" download="' + esc((take.label || take.name) + " - " + (f.file || title(f))) + '">' +
-            esc(String(f.file || f.path).split(".").pop().toUpperCase()) + "</a></div>";
-          return;
-        }
-        html += '<div class="dv-node">' + nm + '<span class="dv-meta mono">' + (f.seconds ? clock(f.seconds) : "") + "</span>" +
-          player(url, "/lab/peaks?name=" + encodeURIComponent(take.name) + "&path=" + encodeURIComponent(f.path) + "&n=400") +   // HERESY 1487
-          '<span class="dv-acts"><button type="button" class="btn ghost small" data-dv-compare-path="' + esc(f.path) + '" data-tip="Compare it with the original and every other version, at the same second">Compare</button>' +
-          '<button type="button" class="btn ghost small" data-dv-spectrum="' + esc(f.path) + '" data-tip="Lay this file over the take in the spectrum">Spectrum</button>' +
-          (window.HeresyPost && window.HeresyPost.has && window.HeresyPost.has("pl-ruach-reportPanel") ?   // HERESY 1557
-            '<button type="button" class="btn ghost small" data-dv-report="' + esc(f.path) + '" data-tip="Measure this file against what it was made from: loudness, true peak, range, width, bands, the spectra at equal loudness; a page and a picture in the tree">Before / after</button>' : "") +
-          '<button type="button" class="btn ghost small dv-mon" data-dv-mon="' + esc(f.path) + '" aria-pressed="false" data-tip="Play it through Forge\'s monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before">On Forge</button>' +   // HERESY 1548
-          (/vocal/i.test(f.name) ? '<button type="button" class="btn ghost small" data-dv-gloss="' + esc(f.path) + '" data-tip="Whisper on this file against the lyrics">Lyrics check</button>' : "") +
-          '<a class="btn ghost small" href="' + esc(signed(url, String(f.file || f.path).split(".").pop().toLowerCase(), take, f.path)) + '" download="' + esc((take.label || take.name) + " - " + title(f) + ".flac") + '">FLAC</a></span></div>';   // HERESY 1489; 1513
-      });
-      html += "</div>";
-    });
+    chain(state.list).forEach(function (c) { html += branchHtml(c, take); });   // HERESY 1486: in the chain's order (1964: each branch drawn by branchHtml)
     var bin = state.trash || [];                        // HERESY 1527: the take's trash, under its tree
     if (bin.length) {
       html += '<div class="dv-trash"><button type="button" class="btn ghost small" data-dv-trash="1" aria-expanded="' + !!state.trashOpen + '">' + esc(tt("Trash ({0})").replace("{0}", bin.length)) + "</button>" +
@@ -607,6 +614,54 @@
       .then(function () { $("rmRun").disabled = false; });
   }
 
+  // HERESY 1964: the tree's own handlers, kept to be put on a node window's Output as well
+  var TREE_ON = [];
+  function onTree(type, fn, cap) { TREE_ON.push([type, fn, !!cap]); $("derivedTree").addEventListener(type, fn, !!cap); }
+  function wire(host) {
+    if (!host || host.dataset.dvWired) return;
+    host.dataset.dvWired = "1";
+    TREE_ON.forEach(function (x) { host.addEventListener(x[0], x[1], x[2]); });
+  }
+  // what went into a branch: the take, one of its files, or a set of the tree
+  function sourceHtml(take, src) {
+    src = String(src || "");
+    if (!src || src === "the take") return origHtml(take);
+    var dir = /^derived\/([^/]+)$/.exec(src), byId = {};
+    state.list.forEach(function (x) { byId[x.id] = x; });
+    if (dir && byId[dir[1]]) return branchHtml({ m: byId[dir[1]], depth: 0 }, take);
+    var f = null;
+    state.list.forEach(function (x) { (x.files || []).forEach(function (y) { if (y.path === src) f = y; }); });
+    var url = fileUrl(take.name, src), nm = f ? title(f) : src.split("/").pop();
+    return '<div class="dv-node"><span class="dv-name" translate="no">' + esc(nm) + '</span><span class="dv-meta mono">' + (f && f.seconds ? clock(f.seconds) : "") + "</span>" +
+      player(url, "/lab/peaks?name=" + encodeURIComponent(take.name) + "&path=" + encodeURIComponent(src) + "&n=400") +
+      '<span class="dv-acts"><button type="button" class="btn ghost small" data-dv-compare-path="' + esc(src) + '">Compare</button>' +
+      '<button type="button" class="btn ghost small dv-mon" data-dv-mon="' + esc(src) + '" aria-pressed="false">On Forge</button></span></div>';
+  }
+  // a node window's Output: what went in, then what the node made (by the branches' ids, newest first)
+  function renderInto(host, ids) {
+    var take = state.take;
+    if (!host) return 0;
+    var want = {}, cs;
+    (ids || []).forEach(function (i) { want[i] = 1; });
+    cs = state.list.filter(function (m) { return want[m.id]; });
+    if (!take || !cs.length) {
+      host.innerHTML = '<p class="row-hint nd-out-none">' + esc(tt(take ? "Nothing made by this node from this take yet: run it, and what it makes comes here." : "Pick a take first.")) + "</p>";
+      return 0;
+    }
+    host.innerHTML = '<div class="nd-out-part"><span class="label">' + esc(tt("What went in")) + '</span><div class="dv-tree nd-out-tree">' + sourceHtml(take, cs[0].source || cs[0].set || "") + "</div></div>" +
+      '<div class="nd-out-part"><span class="label">' + esc(tt("What this node made")) + " · " + cs.length + '</span><div class="dv-tree nd-out-tree">' +
+      cs.map(function (m) { return branchHtml({ m: m, depth: 0 }, take); }).join("") + "</div></div>";
+    wire(host);
+    var ts = host.querySelectorAll(".nd-out-tree"), align = function () {   // the two parts one column, as the tree's: every wave ends where the take's does
+      var w = 0;
+      Array.prototype.forEach.call(ts, function (t) { alignTree(t); w = Math.max(w, parseInt(t.style.getPropertyValue("--dv-acts"), 10) || 0); });
+      if (w) Array.prototype.forEach.call(ts, function (t) { t.style.setProperty("--dv-acts", w + "px"); });
+      Array.prototype.forEach.call(host.querySelectorAll(".dv-player"), drawPlayer);
+    };
+    if (host.offsetWidth) align(); else requestAnimationFrame(align);   // a window opened straight on its output is still hidden here: once it shows
+    Array.prototype.forEach.call(ts, function (t) { initPlayers(t); });
+    return cs.length;
+  }
   function init(hooks) {
     if (!$("derivedPanel")) return;
     state.hooks = hooks || {};
@@ -650,7 +705,7 @@
         });
       });
     }
-    $("derivedTree").addEventListener("click", function (event) {
+    onTree("click", function (event) {
       var del = event.target.closest("[data-dv-del]"), tg = event.target.closest("[data-dv-trash]"), back = event.target.closest("[data-dv-back]"), em = event.target.closest("[data-dv-empty]");
       if (del) { delBranch(del.dataset.dvDel, false); return; }
       if (tg) { state.trashOpen = !state.trashOpen; paint(); return; }
@@ -664,7 +719,7 @@
       }
     });
     // HERESY 1484: a report read in the studio's dialog
-    $("derivedTree").addEventListener("click", function (event) {
+    onTree("click", function (event) {
       var rd = event.target.closest("[data-dv-read]");
       if (!rd || !state.take) return;
       var head = rd.dataset.dvReadTitle || "";
@@ -673,7 +728,7 @@
         .catch(function (e) { say(head + ": " + e.message, true); });
     });
     // HERESY 1557: Before / after on a file of the tree; 1558: a match's bands onto the DAW's master EQ
-    $("derivedTree").addEventListener("click", function (event) {
+    onTree("click", function (event) {
       var rp = event.target.closest("[data-dv-report]"), eq = event.target.closest("[data-dv-eq]");
       if (rp && state.take) {
         rp.disabled = true;
@@ -690,13 +745,13 @@
         say(tt("The match's bands are on the DAW's master EQ"));
       }
     });
-    $("derivedTree").addEventListener("click", function (event) {
+    onTree("click", function (event) {
       var sp = event.target.closest("[data-dv-spectrum]"), gl = event.target.closest("[data-dv-gloss]");
       if (sp && state.hooks.compare) state.hooks.compare(sp.dataset.dvSpectrum);
       if (gl && state.hooks.gloss) state.hooks.gloss(gl.dataset.dvGloss);
     });
     // HERESY 1138: the comparison, from the original's row or any branch's
-    $("derivedTree").addEventListener("click", function (event) {
+    onTree("click", function (event) {
       var all = event.target.closest("[data-dv-compare]"), one = event.target.closest("[data-dv-compare-path]");
       if (all) compare("");
       if (one) compare(one.dataset.dvComparePath);
@@ -717,8 +772,8 @@
     });
     window.addEventListener("heresy-post-step", function (e) { lightStep(e.detail && e.detail.panel); });
     // one player at a time: starting a stem pauses the others
-    $("derivedTree").addEventListener("play", function (event) {
-      Array.prototype.forEach.call($("derivedTree").querySelectorAll("audio"), function (a) { if (a !== event.target) a.pause(); });
+    onTree("play", function (event) {
+      Array.prototype.forEach.call(document.querySelectorAll(".dv-player audio"), function (a) { if (a !== event.target) a.pause(); });   // 1964: the windows' players too
       if (state.hooks.pauseMain) state.hooks.pauseMain();
     }, true);
   }
@@ -1201,6 +1256,6 @@
   // HERESY 1169: the de-esser as set, for the chain when it splits stems (remasterSettings says it for this step's own source)
   function chainDeess() { return !!($("rmDeess") && $("rmDeess").checked); }
   window.HeresyDerived = { init: init, setTake: setTake, files: files, refresh: refresh, mdSizes: paintMdSizes, remasterSettings: remasterSettings, chainDeess: chainDeess, compareList: openCompare,
-                           list: function () { return state.list.slice(); },   // 1506: the branches as the lab names them (kind, source), for the Refiner's canvas
+                           list: function () { return state.list.slice(); }, renderInto: renderInto,   // HERESY 1964   // 1506: the branches as the lab names them (kind, source), for the Refiner's canvas
                            marks: function (name) { return Object.assign({}, MARKS[name] || {}); } };   // 1415; 1504
 })();

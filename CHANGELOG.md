@@ -2,9 +2,27 @@
 
 Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): one machine with an NVIDIA card, your own songs, nothing in a cloud. It grew over [YuE2 Kit](https://github.com/IronWolve/yue2-kit) v12 by IronWolve, which runs [yue2.cpp](https://github.com/ServeurpersoCom/yue2.cpp) by ServeurpersoCom. Every change has a number (HERESY 1001 and up); `heresy/docs/HERESY.md` tells each one with what was measured, and `heresy/engine/` keeps each change to the engine and the page as a patch of its own.
 
-## 2.0.4 · In the Making
+## 2.0.5 · In the Making
 
-After 2.0.3 (patches 1964 and up).
+After 2.0.4 (patches 1977 and up).
+
+## 2.0.4 · 2026-10-31
+
+The DAW edited as in an audio editor: a selection moved, copied, cut, faded or raised, the level's line taken at a point, splits, cuts that fade in and out as in ocenaudio, edges that cling, lanes of their own height with a menu of their own and a console docked beside them; Pianoteq as a step of the studio's own; the Refiner's nodes in FULL as ComfyUI's rows, folded and unfolded, and a node's output in its window; the studio on a phone; and a pause in the Trainer that ends only its own start (HERESY 1964–1976).
+
+- **The node's output** (HERESY 1964): a step's window in two tabs, its settings and what went in and came out, in the tree's own rows with their players.
+- **The DAW's lanes their own height** (HERESY 1965): 72 px each, a grip from 40 to 120 px kept by the stem's name, the lanes scrolling inside under a ruler that stays.
+- **A lane's own menu** (HERESY 1966): a right-click on its name: mute, solo, its automation, its devices, its height, its level, the lane as split.
+- **The DAW's console on the right** (HERESY 1967): pinned beside the lanes, on hover at the right edge, or a floating panel kept in the page; its mode in its tabs' row.
+- **The DAW edited as in an audio editor** (HERESY 1968): a drag selects; the selection is moved, copied, cut, silenced, faded in or out, raised or lowered from its right-click; the level's line over every wave is taken at a point up into a peak or down into a fade; Ctrl+E splits, a double-click takes a segment.
+- **The Refiner's nodes in FULL** (HERESY 1969): in the Engine's Refiner card, SIMPLE with Options Pop-Up or FULL in ComfyUI Style: every step's settings on its node's face, a click on its name its output alone.
+- **Pianoteq** (HERESY 1970): a step of the studio's own on a set of stems: a stem played again by the Pianoteq you installed and activated, its MIDI the take's own or transcribed, its touch from the stem, the pedal through each phrase; a lane of its own in the DAW or the stem's version. Its install and activation in the guide.
+- **A FULL node folded** (HERESY 1971): ▾ on its head folds its settings away, ▸ or its right-click brings them back, as ComfyUI collapses a node.
+- **A selection that clings** (HERESY 1972): the DAW's selection edges snap to sections, splits, the playhead and the edges of what is laid or silenced; Alt lets them go free.
+- **A pause that ends only itself** (HERESY 1973): the Trainer's pause stops only the start it paused, so a run resumed within the minute goes on; a run begun from another run's save shows no earlier saves as gone.
+- **FULL's nodes as ComfyUI's** (HERESY 1974): every setting one row, its name on the left and its value between ◀ ▶ on the right; a choice's list opens right under it, a number is dragged or typed, a switch turns on and off; a node as wide as its rows ask, 248 to 340 px, two to three times shorter.
+- **A cut's fades, as in ocenaudio** (HERESY 1975): the place a stretch was carried from, or cut out, fades into its silence and rises out of it, 30 ms each; a right-drag on it draws the nearer fade, then a box of sliders sets both; a right-click without a drag still gives the sound back.
+- **The studio on a phone** (HERESY 1976): up to 760 px wide the Creator, the Writer and the Librarian in one column, nothing past the screen's edge, the player one row; the other rooms greyed, and asked for they say they want a wider screen.
 
 ## 2.0.3 · 2026-10-31
 
