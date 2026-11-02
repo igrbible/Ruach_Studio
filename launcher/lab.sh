@@ -1,5 +1,5 @@
 #!/bin/bash
-# Ruach Studio under Pinokio (HERESY 1259): the lab, the studio's Python neighbour, in this terminal as its systemd unit runs it
+# Ruach Studio under Pinokio (HERESY 1259): the lab, the Studio's Python neighbour, in this terminal as its systemd unit runs it
 # (systemd/heresy-lab.service). A lab that answers already (its unit, a hand start) is left alone; this terminal only says so.
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PORT="${LAB_PORT:-41870}"

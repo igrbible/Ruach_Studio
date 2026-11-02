@@ -141,15 +141,15 @@
     });
   }
 
-  // HERESY 1086: what the chosen trainer lacks, said by name; the studio's own needs no AI-Toolkit
+  // HERESY 1086: what the chosen trainer lacks, said by name; the Studio's own needs no AI-Toolkit
   function warn() {
     var d = state.data || {}, own = d.own || {}, q = $("tr_quant").value, html = "";
-    var lack = [];                                       // HERESY 1422: the studio's own trainer, the only one
+    var lack = [];                                       // HERESY 1422: the Studio's own trainer, the only one
     if (!own[q]) lack.push("Comfy-Org's YuE2 " + q + " weights");
     if (!own.mert) lack.push("MERT-v2-FullSong");
     if (!own.head) lack.push("the realaudio tokenizer head");
     // HERESY 1672: each name in the page's language before the join (the pattern's «{0}» is the whole list, which no key knows)
-    if (lack.length) html += '<p class="tr-warn">The studio’s trainer is missing ' + esc(lack.map(tr).join(", ")) + ": <code>heresy/fetch-heresy.sh --trainer " + esc(q) + "</code>" +
+    if (lack.length) html += '<p class="tr-warn">The Studio’s trainer is missing ' + esc(lack.map(tr).join(", ")) + ": <code>heresy/fetch-heresy.sh --trainer " + esc(q) + "</code>" +
       (own.mert ? "" : " and <code>tools/download-checkpoints.sh</code>") + ".</p>";
     $("trWarn").innerHTML = html;
   }
@@ -347,7 +347,7 @@
       if (r && isLive(r)) logDock.timer = setTimeout(pullLog, 3000);
     }).catch(function () { logDock.timer = setTimeout(pullLog, 6000); });
   }
-  // HERESY 1300 (Viktor 10.10.2026: «можно ли на завершённом тренинге продолжить по большему количеству эпох?»): a run of the studio's
+  // HERESY 1300 (Viktor 10.10.2026: «можно ли на завершённом тренинге продолжить по большему количеству эпох?»): a run of the Studio's
   // own trainer that has ended with a save goes on to more epochs: the lab's run of the same name takes its last save and its
   // optimizer's state (lab/trainer/train.py), the same set and knobs, only the steps more
   function canGoOn(r) {
@@ -414,7 +414,7 @@
   }
   function stopRun(name) {
     var r = runOf(name);
-    confirmBox("Stop " + name + "?\n\n" + (engineOf(r) === "ruach" ? "The studio’s trainer" : "AI-Toolkit") + " saves what it has learned on the way out; the epochs saved so far stay.", { ok: "Stop", danger: true })
+    confirmBox("Stop " + name + "?\n\n" + (engineOf(r) === "ruach" ? "The Studio’s trainer" : "AI-Toolkit") + " saves what it has learned on the way out; the epochs saved so far stay.", { ok: "Stop", danger: true })
       .then(function (ok) { if (ok) return api("/train/stop", { name: name }).then(function () { toast("Stopping " + name); load(); }); }).catch(function (e) { toast(e.message, true); });
   }
   function deleteRun(name) {
@@ -906,8 +906,8 @@
     $("trRunSay").innerHTML = say;
   }
   function engineKnobs() {
-    // HERESY 1420 (Viktor: «Режим можно выбрать только с AI-Toolkit. Это твоя недоработка в коде?»): Mode is the studio's own trainer's
-    // too (Direct, Full, Melody); HERESY 1422: and Separate (AI-Toolkit left the studio: the studio's own is the only trainer)
+    // HERESY 1420 (Viktor: «Режим можно выбрать только с AI-Toolkit. Это твоя недоработка в коде?»): Mode is the Studio's own trainer's
+    // too (Direct, Full, Melody); HERESY 1422: and Separate (AI-Toolkit left the Studio: the Studio's own is the only trainer)
     $("tr_cot").disabled = false; $("tr_sep").disabled = false;
   }
   // HERESY 1631: the cards asked last time, kept in this browser
@@ -940,14 +940,14 @@
     var tracks = ((state.data.prepared || []).filter(function (p) { return p.name === set; })[0] || {}).tracks || 1;
     var ep = Math.max(1, parseInt($("tr_epochs").value, 10) || 1);   // HERESY 1410: epochs asked, the steps the set's tracks times them
     spec.steps = ep * tracks;
-    // HERESY 1091: said when the run may take the studio's own card (synthesis then waits while it trains)
+    // HERESY 1091: said when the run may take the Studio's own card (synthesis then waits while it trains)
     api("/gpus").catch(function () { return null; }).then(function (g) {
       var shared = g && g.roles && g.roles.train.indexOf(g.roles.studio) >= 0;
       // HERESY 1166: its sentences translated each where they are made
       return confirmBox(tr("Train " + spec.name + "?") + "\n\n" + tr(ep * tracks + " steps (" + ep + " epochs of " + tracks + " tracks) on " + set + ", rank " + spec.rank + ", AR weight " + spec.ar_loss_weight + ", " + spec.quant + " weights, " +
-        (spec.engine === "ruach" ? "the studio’s trainer" : "AI-Toolkit") + "; a checkpoint every " + (spec.save_epochs > 1 ? spec.save_epochs + " epochs" : "epoch") + ", all kept.") + " " +
+        (spec.engine === "ruach" ? "the Studio’s trainer" : "AI-Toolkit") + "; a checkpoint every " + (spec.save_epochs > 1 ? spec.save_epochs + " epochs" : "epoch") + ", all kept.") + " " +
         tr("It takes a GPU of its own for hours" + (spec.engine === "ruach" ? "; a set without its latent cache gets one first (a second or two a track)." : "; the first run also fetches Comfy-Org’s YuE2 weights.")) +
-        (shared ? "\n\n" + tr("Training may take GPU" + g.roles.studio + ", the studio’s own card: if it does, synthesis waits until the run ends (Engine → GPUs gives training another card).") : "") +
+        (shared ? "\n\n" + tr("Training may take GPU" + g.roles.studio + ", the Studio’s own card: if it does, synthesis waits until the run ends (Engine → GPUs gives training another card).") : "") +
         (spec.cards > 1 ? "\n\n" + tr("On {0} cards at once: each learns its own songs, their lessons averaged every step.").replace("{0}", spec.cards) : "") +
         (spec.lr_tail_epochs > 0 ? "\n\n" + tr("The learning rate fades over the last {0} epochs to {1} % of itself.").replace("{0}", spec.lr_tail_epochs).replace("{1}", Math.round(spec.lr_tail_floor * 100)) : "") +
         (guard ? "\n\n" + tr("The meter and the guard: {0}.").replace("{0}", guard) : ""), { ok: "Start training" });   // HERESY 1752   // HERESY 1631   // 1166: "Train" is the step's name

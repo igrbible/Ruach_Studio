@@ -1,4 +1,4 @@
-"""HERESY 1116 (Viktor, 02.10.2026): the studio's API, for this machine and its network (the engine answers private
+"""HERESY 1116 (Viktor, 02.10.2026): the Studio's API, for this machine and its network (the engine answers private
 addresses only, HERESY 1114). One door for a script, a DAW, an agent: the engine's /api/… comes here as it is.
 
     GET  /api/v1                          what this is, and every route
@@ -32,7 +32,7 @@ from pathlib import Path
 import midi_score                                       # HERESY 1145
 
 VERSION = "1"
-# HERESY 1136: the studio's own version beside the API's
+# HERESY 1136: the Studio's own version beside the API's
 STUDIO = (Path(__file__).resolve().parent.parent / "VERSION").read_text().strip() if (Path(__file__).resolve().parent.parent / "VERSION").is_file() else "?"
 ENGINE = f"http://127.0.0.1:{os.environ.get('YUE2CPP_PORT', '7777')}"
 MODES = {"direct": "off", "off": "off", "full": "full", "melody": "melody"}
@@ -186,7 +186,7 @@ def handle(method, path, query, body, headers, ctx):
     if not m:
         return 404, {"error": "the API lives at /api/v1"}
     if m.group(1) != VERSION:
-        return 404, {"error": f"API v{m.group(1)} does not exist; this studio speaks v{VERSION}"}
+        return 404, {"error": f"API v{m.group(1)} does not exist; this Studio speaks v{VERSION}"}
     rest = (m.group(2) or "/").rstrip("/") or "/"
     data = json.loads(body.decode("utf-8")) if body else {}
     col, outputs, cfg = ctx["collection"], ctx["outputs"], ctx["config_dir"]

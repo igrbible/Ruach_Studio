@@ -1,7 +1,7 @@
 // HERESY 1824 (Viktor 28.10.2026: «Я помню Видеографа на примере Maestro репо + воркфлоу китайца… можно закодить и LLM интеракцию в создании видео
 // роликов + hyperframes»; «Пишем своим кодом то, что берём из Maestro»; «Именно MiniMax H3… Уведомление о лицензии и ограничениях по странам - в
 // предупреждение в видеографе, и не более»): the Videographer, its first room. A take's song cut into shots at its sung lines (lab/videographer.py,
-// from its Whisper timing), the look of the whole clip and each shot's scene written by the Writer (the chat server the studio writes with), a dozen
+// from its Whisper timing), the look of the whole clip and each shot's scene written by the Writer (the chat server the Studio writes with), a dozen
 // shots a question; everything editable, kept in user/videos/, and a storyboard to take away. The moving pictures come with MiniMax H3.
 (function () {
   "use strict";
@@ -717,7 +717,7 @@
     }).join("") : '<p class="row-hint vd-side-none">' + esc(tr(SIDE.plans.length ? "Nothing here for these words" : "No plans yet: find a take above and make its plan")) + "</p>";
   }
   function sideOpen(name, then) {
-    if (!window.ruachOpenTake || !window.ruachFindTakeFull || !window.ruachFindTakeFull(name)) return say(tr("This take is not in the studio's list"), true);
+    if (!window.ruachOpenTake || !window.ruachFindTakeFull || !window.ruachFindTakeFull(name)) return say(tr("This take is not in the Studio's list"), true);
     window.ruachOpenTake(name);
     var t = window.ruachCurrentTake ? window.ruachCurrentTake() : null;
     if (t) window.HeresyVideo.take(t);
@@ -900,7 +900,7 @@
     if (TL.win && !TL.win.closed) { try { TL.win.focus(); } catch (e) { /* over the others already */ } return; }
     var open = function (feat) {
       var w = window.open("", "ruach-program", feat);
-      if (!w) return say(tr("The browser kept the window from opening: allow pop-ups for the studio"), true);
+      if (!w) return say(tr("The browser kept the window from opening: allow pop-ups for the Studio"), true);
       TL.win = w; TL.mirror = "";
       var d = w.document;
       d.title = "Ruach Studio · Program";
@@ -1320,7 +1320,7 @@
     $("view-video").addEventListener("dblclick", function (e) { var b = e.target.closest("[data-vdgo]"); if (b) play(+b.dataset.vdgo); });   // HERESY 1830
     var a = $("audio");
     if (a) ["timeupdate", "seeked", "play", "pause", "emptied", "loadedmetadata"].forEach(function (n) { a.addEventListener(n, function () { follow(); }); });
-    if (a) a.addEventListener("play", function () {          // HERESY 1860: the studio's player and a film, one sound at a time
+    if (a) a.addEventListener("play", function () {          // HERESY 1860: the Studio's player and a film, one sound at a time
       Array.prototype.forEach.call(document.querySelectorAll("#view-video .vp video"), function (vv) { if (!vv.paused) vv.pause(); });
     });
   }

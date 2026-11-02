@@ -58,7 +58,8 @@ with tempfile.TemporaryDirectory() as t:
         check("  its before is what it was made from (the take)", m["before"] and m["before"]["file"] == "audio.wav", m.get("before"))
         check("  the air's share up by the shelf, the lows' down", m["after"]["bands"]["air"] - m["before"]["bands"]["air"] > 3 and m["after"]["bands"]["lows"] <= m["before"]["bands"]["lows"],
               (m["after"]["bands"], m["before"]["bands"]))
-        check("  a page and a picture, the page read and the picture looked at", [(f["file"], f.get("kind")) for f in r["files"]] == [("report.md", "text"), ("report.png", "image")], r["files"])
+        check("  a page and two pictures (1991: the measures, the spectrograms and their difference), the page read and the pictures looked at",
+              [(f["file"], f.get("kind")) for f in r["files"]] == [("report.md", "text"), ("report.png", "image"), ("spectrograms.jpg", "image")], r["files"])
         check("  its line says the loudness and where it changed most", r["summary"].startswith("against audio.wav: +") and "Hz" in r["summary"], r["summary"])
     st = take / "derived/stems-1"
     st.mkdir()
@@ -72,6 +73,10 @@ with tempfile.TemporaryDirectory() as t:
           err or (r2 and r2["measure"]))
     r3, err = run("report.py", take / "audio.wav", Path(t, "r3"), {})
     check("  the take itself measured alone", r3 and r3["measure"]["before"] is None and "LUFS" in r3["summary"], err or (r3 and r3["summary"]))
+    r6, err = run("report.py", take / "audio.wav", Path(t, "r6"), {"before": str(br / "out.flac"), "before_name": "the shelved one"})   # HERESY 1991
+    check("  (1991) against a file chosen as Before: named by the lab's name, the shelf's air its own, a verdict", r6 and r6["measure"]["before"]["file"] == "the shelved one" and
+          r6["summary"].startswith("against the shelved one: ") and r6["measure"]["after"]["bands"]["air"] < r6["measure"]["before"]["bands"]["air"] and r6["measure"]["verdict"],
+          err or (r6 and r6["summary"]))
 
     ref = Path(t, "ref.wav")
     sf.write(str(ref), (shelf_up(pink, 5) * 1.4).astype(np.float32), sr)
@@ -97,6 +102,9 @@ with tempfile.TemporaryDirectory() as t:
     mp = {q["key"]: q for q in steps["match"]["params"]}
     check("a file field kept, its default empty, cleaned to a string", mp["reference"]["type"] == "file" and mp["reference"]["default"] == ""
           and pk.clean(steps["match"], {"reference": "take:x"})["reference"] == "take:x", mp["reference"])
+    rp = {q["key"]: q for q in steps["report"]["params"]}
+    check("  (1991) Before and after's second input: a file field whose empty choice is what it was made from",
+          rp["before"]["type"] == "file" and rp["before"]["blank"] == "what it was made from" and "blank" not in mp["reference"], rp)
     check("  Before and after among the looks, after Artifacts; Match in Finish, after the Remaster",
           (steps["report"]["group"], steps["report"]["after"], steps["match"]["group"], steps["match"]["after"]) == ("look", "inspectPanel", "finish", "remasterPanel"))
 print("test_builtin_steps:", "FAILED " + ", ".join(bad) if bad else "all passed")

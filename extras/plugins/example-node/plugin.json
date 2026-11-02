@@ -1,0 +1,33 @@
+{
+  "id": "example-node",
+  "name": "Example node",
+  "steps": [
+    {
+      "id": "tilt",
+      "label": "Tilt and width",
+      "say": "the tone tilted, the stereo wider or narrower",
+      "tip": "An example node to copy: the tone tilted about a pivot (the highs up and the lows down by half the tilt each, or the other way), the stereo made wider or narrower, the file back as loud as it came and never clipped. A page of what it did beside the sound.",
+      "script": "tilt_width.py",
+      "group": "finish",
+      "params": [
+        {"key": "tilt", "label": "Tilt, dB", "type": "number", "min": -6, "max": 6, "step": 0.5, "default": 1.5,
+         "tip": "Plus: brighter (the highs up, the lows down, half each); minus: darker"},
+        {"key": "pivot", "label": "About", "type": "select", "default": "1000",
+         "options": [["500", "500 Hz"], ["1000", "1 kHz"], ["2000", "2 kHz"]], "tip": "The frequency that stays where it was"},
+        {"key": "width", "label": "Width, %", "type": "number", "min": 0, "max": 200, "step": 5, "default": 100,
+         "tip": "100 leaves the stereo as it is, 0 makes it mono, 150 half again as wide"},
+        {"key": "keep_loudness", "label": "As loud as it came", "type": "check", "default": true,
+         "tip": "The result turned to the loudness it came at, so you hear the change and not the level"}
+      ]
+    },
+    {
+      "id": "meter",
+      "label": "Width meter",
+      "say": "how wide, band by band",
+      "tip": "An example of a node that only looks: the stereo's width, correlation and the balance of left and right in the lows, the mids and the highs, as a page in the tree and a line beside its branch. It changes nothing.",
+      "script": "width_meter.py",
+      "group": "look",
+      "params": []
+    }
+  ]
+}

@@ -1,6 +1,6 @@
-// HERESY 1102 (Viktor, 02.10.2026): the DAW button's landing. Two ways out of the studio, and only two: the mixed
+// HERESY 1102 (Viktor, 02.10.2026): the DAW button's landing. Two ways out of the Studio, and only two: the mixed
 // track as it is, with no DAW's magic, or the whole take handed to the user's own DAW, where whatever happens next
-// happens outside the studio. Bitwig first (DAWproject), REAPER second (HERESY 1478: Waveform out); others by pull request. The lab says which DAWs the
+// happens outside the Studio. Bitwig first (DAWproject), REAPER second (HERESY 1478: Waveform out); others by pull request. The lab says which DAWs the
 // studio's own machine has (GET /lab/daw); a DAW on another computer cannot be seen from there, so the user names
 // theirs, and the choice is kept with the page.
 (function () {
@@ -30,9 +30,9 @@
   function paint() {
     var d = state.data, mine = recall(KEY) || "", title = state.hooks.title ? state.hooks.title() : "";
     var links = mixLinks();
-    var html = '<header class="dw-head"><div><b>Out of the studio</b><span class="row-hint">two ways: the mixed track as it is, or the whole take into your DAW, where the rest happens outside the studio</span></div>' +
+    var html = '<header class="dw-head"><div><b>Out of the Studio</b><span class="row-hint">two ways: the mixed track as it is, or the whole take into your DAW, where the rest happens outside the Studio</span></div>' +
       '<button type="button" class="btn ghost small dw-close" aria-label="Close">✕</button></header>' +
-      '<section class="dw-way"><h3>The mixed track</h3><p class="row-hint">As the studio made it (and the Refiner finished it), no DAW in between.' +
+      '<section class="dw-way"><h3>The mixed track</h3><p class="row-hint">As the Studio made it (and the Refiner finished it), no DAW in between.' +
       (title ? " The take in hand: <b>" + esc(title) + "</b>" : "") + "</p>" +
       (links ? '<div class="dw-links">' + links + "</div>" : '<p class="row-hint">Open a take, play one, or check one in the Librarian: its WAV, FLAC and MP3 come here.</p>') + "</section>" +
       '<section class="dw-way"><h3>Into your DAW <span class="dw-exp" data-tip="It works and was checked, but it still needs crash tests on other machines and projects, and more work">experimental</span></h3><p class="row-hint">The whole take as a project of your DAW: the stems on their tracks, the score as MIDI, ' +
@@ -43,8 +43,8 @@
       var on = mine === x.id;
       return '<div class="dw-daw' + (on ? " is-on" : "") + '"><div class="dw-daw-head"><b>' + esc(x.name) + "</b><span>" + esc(x.by) + "</span>" +
         '<span class="dw-state">' + esc(x.state === "first" ? "first" : x.state === "second" ? "next" : x.state) + "</span></div>" +
-        (x.here ? '<p class="dw-here">✓ on the studio’s machine' + (x.version ? " · " + esc(x.version) : "") + "<br><code>" + esc(x.path) + "</code></p>"
-                : '<p class="row-hint">not on the studio’s machine; on your own computer it may well be</p>') +
+        (x.here ? '<p class="dw-here">✓ on the Studio’s machine' + (x.version ? " · " + esc(x.version) : "") + "<br><code>" + esc(x.path) + "</code></p>"
+                : '<p class="row-hint">not on the Studio’s machine; on your own computer it may well be</p>') +
         '<p class="row-hint">' + esc(x.licence) + "</p>" +
         (x.here ? "" : '<details class="dw-install"><summary>How to install it</summary><p>' + esc(x.install) + "</p></details>") +
         '<div class="dw-acts"><button type="button" class="btn small' + (on ? " primary" : " ghost") + '" data-dw-pick="' + esc(x.id) + '">' + (on ? "Your DAW ✓" : "I use this one") + "</button>" +
@@ -64,7 +64,7 @@
   function build() {
     var el = document.createElement("div");
     el.className = "dw-back"; el.hidden = true;
-    el.innerHTML = '<div class="dw-box" role="dialog" aria-modal="true" aria-label="Out of the studio"></div>';
+    el.innerHTML = '<div class="dw-box" role="dialog" aria-modal="true" aria-label="Out of the Studio"></div>';
     document.body.appendChild(el);
     el.addEventListener("click", function (e) {
       var b;

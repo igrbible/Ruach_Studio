@@ -102,9 +102,9 @@
     box.innerHTML =
       '<div class="pc-row"><button type="button" class="pc-fold" id="pcFold" aria-expanded="true" data-tip="Fold the chain\'s row">\u25be</button><strong class="pc-cap">Chain</strong>' +   // HERESY 1569
       '<span class="pc-fold-say" id="pcFoldSay"></span>' +
-      // HERESY 1553: the profile: the classic chain, or a pipeline the studio or a plugin brings
-      '<span class="pc-prof" data-tip="The chain\'s profile: the classic chain (its steps fixed, each checked or not), or a pipeline the studio or a plugin brings, its steps in their own order. Uncheck a step of a pipeline to bypass it">' +
-        '<select id="pcProfile" data-hc-row="1" data-tip="The way in hand: My way, drawn on the canvas node to node, or a pipeline the studio or a plugin brings to start from"><option value="">Classic chain</option></select></span>' +
+      // HERESY 1553: the profile: the classic chain, or a pipeline the Studio or a plugin brings
+      '<span class="pc-prof" data-tip="The chain\'s profile: the classic chain (its steps fixed, each checked or not), or a pipeline the Studio or a plugin brings, its steps in their own order. Uncheck a step of a pipeline to bypass it">' +
+        '<select id="pcProfile" data-hc-row="1" data-tip="The way in hand: My way, drawn on the canvas node to node, or a pipeline the Studio or a plugin brings to start from"><option value="">Classic chain</option></select></span>' +
       '<button type="button" class="btn ghost small icon-act pc-way-new" id="pcWayNew" aria-label="New way" data-tip="A new way from nothing: the take alone, then drag from its dot onto the first step (Ctrl+Z gives the way before back)">' +   // HERESY 1598
         (window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui("eraser") : "\u2715") + "</button>" + '<span class="pc-break" aria-hidden="true"></span><span class="pc-classic">' +
       '<label class="pc-node is-req" data-tip="The VAE frame buzz out: needed for every YuE2 take; off for a track imported from elsewhere"><input type="checkbox" id="pcDebuzz" checked /> Debuzz ' +
@@ -375,7 +375,7 @@
     }).catch(function () { /* an older lab: no batches */ });
   }
 
-  // ---- HERESY 1553: the chain's profiles. The pipelines the studio ships and the plugins bring (the lab's GET /refiner/profiles,
+  // ---- HERESY 1553: the chain's profiles. The pipelines the Studio ships and the plugins bring (the lab's GET /refiner/profiles,
   // «pipelines»), checked there against the steps that are here; the one chosen and its bypassed steps kept in this browser
   var PIPE = { list: [], on: "", off: {} }, PIPE_KEY = "yue2.chainPipe";
   function pipeRecall() { try { var p = JSON.parse(localStorage.getItem(PIPE_KEY) || "{}") || {}; PIPE.on = String(p.on || ""); PIPE.off = p.off || {}; } catch (e) { /* none kept */ } }
@@ -561,7 +561,7 @@
   function paintBar() {
     var bar = $("postSteps");
     bar.innerHTML = STEPS.map(function (s, i) {
-      var own = s.plugin && !s.builtin ? ' translate="no"' : "";   // HERESY 1460: a plugin's words are its own (1553: the studio's translated)
+      var own = s.plugin && !s.builtin ? ' translate="no"' : "";   // HERESY 1460: a plugin's words are its own (1553: the Studio's translated)
       var head = !i || STEPS[i - 1].group !== s.group ? '<span class="ps-group">' + GROUPS[s.group || "finish"] + "</span>" : "";   // HERESY 1461
       return head + (i ? '<span class="ps-arrow" aria-hidden="true">›</span>' : "") +
         '<button type="button" role="tab" class="ps-step' + (s.plugin ? " is-plugin" : "") + '" data-step-panel="' + s.id + '"><span class="ps-mark">' + (i + 1) +
@@ -576,7 +576,7 @@
   // ---- HERESY 1506 (Viktor 16.10.2026: «По нодам Огранщика… идею ComfyUI расположения нод на канвасе. Вертикально страница на 1080p
   // разрешении не прокручивается, всё под рукой и на глазах. Щёлк по ноде - модальное окно как в Творце с Композитором и музыкантом,
   // навигация вперёд-назад по нодам»): the Refiner as a canvas of nodes beside its list (Canvas / List in the room's head, kept per
-  // browser). The take, the import, every step (the studio's and the plugins') a node where the work flows; thin wires the chain's
+  // browser). The take, the import, every step (the Studio's and the plugins') a node where the work flows; thin wires the chain's
   // way, bright ones the way the take in hand went (each branch's source); a node its number, name, what it does, ✓ when done for
   // the take, how many branches it made, a pulse while it runs. A click lifts its panel over the room (moved there while open and
   // put back where it stood: a fixed box inside a transformed ancestor would not hold, 1499); ‹ › and Alt+← → go to the step before
@@ -609,6 +609,9 @@
     if (nd.id === "take" || nd.id === "chain") return 0;
     if (nd.id === "importPanel" || nd.id === "audioPanel") return -1;
     if (nd.id === "madePanel") return 6;               // HERESY 1581; 1951 («в последнюю дополнительную колонку вверх»): a column of its own, the last
+    // HERESY 1993 (Viktor 01.11.2026: «Статистические и финальные ноды без выходных проводов в авто организации канваса раздели на две колонки и выстрой
+    // выходные последней, а статистические предпоследней колонками»): what ends a way, no wire going out of it and a file made (MIDI), under the made node
+    if (nd.id === "midiPanel" || (nd.step && nd.step.spec && nd.step.spec.final)) return 6;   // HERESY 1997: a plugin's step that says it ends a way
     var st = nd.step || {}, g = st.group || "finish", stems = !!(st.spec && st.spec.input === "stems") || !!(st.spec && st.spec.stem);
     if (g === "look") return 5;
     if (nd.id === "debuzzPanel" || nd.id === "upscalePanel") return 1;
@@ -659,6 +662,7 @@
     }
     var rest = nodes.filter(function (nd) { return !at[nd.id]; }), cols = [[], [], [], [], [], [], []], low = [];   // the seventh, the made node's own
     rest.forEach(function (nd) { if (nd.clone) return; var c = cvColOf(nd); if (c < 0) low.push(nd); else cols[c].push(nd); });
+    cols[6].sort(function (x, y) { return (x.id === "madePanel" ? 0 : 1) - (y.id === "madePanel" ? 0 : 1); });   // HERESY 1993: the made node atop the outputs
     rest.forEach(function (nd) {                      // a clone right under its own (and its own clones before it)
       if (!nd.clone) return;
       for (var c = 0; c < cols.length; c++) {
@@ -669,7 +673,7 @@
       }
       cols[4].push(nd);
     });
-    if (!fits(cols.length)) { cols[5] = cols[6].concat(cols[5]); cols.pop(); }   // a narrower canvas: the made node atop the looks
+    if (!fits(cols.length)) { cols[0] = cols[0].concat(cols[1]); cols.splice(1, 1); }   // a narrower canvas: the file mended before the split under the take (1993: the looks and the outputs stay two columns)
     var per = fits(cols.length) ? cols.length : 3;    // too narrow: two bands of three
     var step = (W - 2 * PADX - NODE_W) / Math.max(1, per - 1), bands = [], y0 = top;
     for (var b0 = 0; b0 < cols.length; b0 += per) bands.push(cols.slice(b0, b0 + per));
@@ -1458,6 +1462,18 @@
     if (!at) at = [im.offsetLeft + im.offsetWidth + 20, im.offsetTop];   // no room there: beside the import
     lg.style.left = Math.round(at[0]) + "px"; lg.style.top = Math.round(Math.max(0, at[1])) + "px";
   }
+  // HERESY 1998 (Viktor 01.11.2026: «К нодам, как в Комфи, в строку с заголовкам… лучше без пёстрости, а нашим SVG стилем»): a node's outline before
+  // its name, in the head's own colour: the Studio's own nodes by name, its built-in steps by id, a plugin's by its group
+  var NODE_ICO = { take: "disc", chain: "layers", importPanel: "import", audioPanel: "vol-hi", debuzzPanel: "waveform", upscalePanel: "chevrons-up",
+                   derivedPanel: "rows-2", dawPanel: "sliders", gatePanel: "activity", remasterPanel: "gauge", spectrumPanel: "spectrum", inspectPanel: "scope",
+                   glossPanel: "spell-check", midiPanel: "music", madePanel: "folder", treePanel: "folder" };
+  var STEP_ICO = { lead: "ear", tamer: "shield", shape: "activity", duck: "vol-lo", ambient: "sparkles", pianoteq: "music", vupscale: "chevrons-up",
+                   report: "cols-2", match: "swap", lift: "text-larger", mono: "scaling", glue: "layers", ceiling: "gauge" };
+  var GROUP_ICO = { mend: "eraser", finish: "sparkles", look: "eye", setup: "cog" };
+  function nodeIco(nd) {
+    var id = nd.clone || nd.id, st = nd.step, n = NODE_ICO[id] || (st && st.builtin && STEP_ICO[st.pstep]) || (st && GROUP_ICO[st.group || "finish"]) || "";
+    return n && window.HeresyIcons && window.HeresyIcons.ui ? '<span class="pcv-ico" aria-hidden="true">' + window.HeresyIcons.ui(n) + "</span>" : "";
+  }
   function cvPaint() {
     var box = $("postCanvas");
     if (!box || box.hidden || CV.drag) return;
@@ -1488,7 +1504,7 @@
       var face = faceable(nd.id);                      // HERESY 1969: FULL: its settings on its face, the node a group (a button holds no fields)
       return (face ? '<div role="group" class="' + cls + ' is-full"' : '<button type="button" class="' + cls + '"') + ' data-node="' + esc(nd.id) + '"' + (nodeTip(nd) && !face ? ' data-tip="' + esc(nodeTip(nd)) + '"' : "") + ' style="left:' + Math.round(x) + "px;top:" + Math.round(y) + 'px">' +
         '<span class="pcv-top"' + (face && nodeTip(nd) ? ' data-tip="' + esc(nodeTip(nd)) + '"' : "") + '>' + (nd.n ? '<span class="pcv-n">' + nd.n + "</span>" : "") +   // 1969: a face's tip on its head
-         '<span class="pcv-name"' + (st && st.plugin && !st.builtin || nd.clone ? ' translate="no"' : "") + ">" + esc(nd.name) + "</span>" + (nd.id === "dawPanel" ? betaBadge() : "") +
+         nodeIco(nd) + '<span class="pcv-name"' + (st && st.plugin && !st.builtin || nd.clone ? ' translate="no"' : "") + ">" + esc(nd.name) + "</span>" + (nd.id === "dawPanel" ? betaBadge() : "") +
         (nd.id === CV.target ? '<span class="pcv-target" data-tip="The target: Run the way runs up to here">\u25ce</span>' : "") +   // HERESY 1571
         (faceKind(nd.id) ? '<span class="pcv-fold" role="button" tabindex="-1" data-pcv-fold="' + esc(nd.id) + '" data-tip="' +   // HERESY 1971
           esc(tr(face ? "Fold its settings away: a click on its name opens them in its window" : "Its settings back on its face")) + '">' + (face ? "\u25be" : "\u25b8") + "</span>" : "") +
@@ -1558,7 +1574,7 @@
         (way[k] ? '<path class="pcv-hit" data-cut="' + esc(k) + '" d="' + d + '"><title>' + esc(tr("A click cuts the way here")) + "</title></path>" : "");
     }).join("");
   }
-  // ---- HERESY 1515 (Viktor 16.10.2026: «Профили по сетапу нод»): the Refiner's setups by name, kept by the lab (every browser of the studio):
+  // ---- HERESY 1515 (Viktor 16.10.2026: «Профили по сетапу нод»): the Refiner's setups by name, kept by the lab (every browser of the Studio):
   // what its steps are set to and where the canvas's nodes stand, never a take's own sources; a click on one sets every step as a hand would
   // (each control says change, its own prefs kept by its own module), its right-click sets it, keeps the setup as it is now under its name,
   // or deletes it (asked first)
@@ -1584,7 +1600,7 @@
   function pfDirty() { if (!PF.dirty) pfMark(true); }
   function pfKeepAsk() {                              // Ctrl+S: the profile in hand overwritten, or the way kept under a new name
     if (!PF.cur || !window.HeresyDialog || !window.HeresyDialog.choose) { pfSaveAs(); return; }
-    window.HeresyDialog.choose(tr("Keep the way as it is now?") + "\n\n" + tr("The way, its steps' settings, where the nodes stand and the clones, in the studio's files."), [
+    window.HeresyDialog.choose(tr("Keep the way as it is now?") + "\n\n" + tr("The way, its steps' settings, where the nodes stand and the clones, in the Studio's files."), [
       { label: tr("Overwrite «{0}»").replace("{0}", PF.cur), value: "over" }, { label: tr("Save as a new profile\u2026"), value: "new" }], { cancel: tr("Cancel") })
       .then(function (v) { if (v === "over") pfSave(PF.cur); else if (v === "new") pfSaveAs(); });
   }
@@ -1601,7 +1617,7 @@
     });
     return fields;
   }
-  function fieldsSet(f) {                            // as a hand would: each control says change; a choice this studio has not is skipped
+  function fieldsSet(f) {                            // as a hand would: each control says change; a choice this Studio has not is skipped
     var n = 0;
     Object.keys(f || {}).forEach(function (k) {
       var el;
@@ -2249,7 +2265,7 @@
   }
 
   // ---- HERESY 1460 (Viktor 15.10.2026: «написать всё как единый плагин, который мы не выложим в паблик, но он будет висеть у меня
-  // в пайплайне»): the steps of the plugins in the studio's user/plugins/ (the lab's GET /plugins), after the studio's own. Each
+  // в пайплайне»): the steps of the plugins in the Studio's user/plugins/ (the lab's GET /plugins), after the Studio's own. Each
   // panel is drawn from what its plugin says: a source (the take or a file of its tree) and its fields; Run asks the lab
   // (POST /plugin/run), the branch lands in the tree like any other. Without a plugin nothing here shows.
   var plug = { steps: {}, timer: 0 };
@@ -2258,11 +2274,11 @@
     fetch("/lab/plugins", { priority: "low" }).then(function (r) { return r.ok ? r.json() : { plugins: [] }; }).then(function (d) {
       var added = 0, after = $("debuzzPanel") || $("upscalePanel");
       (d.plugins || []).filter(function (pl) { return !window.HeresyPro || window.HeresyPro.keep(pl); }).forEach(function (pl) {   // HERESY 1599
-        (pl.steps || []).forEach(function (st) {
+        (pl.steps || []).filter(function (st) { return st.canvas !== false; }).forEach(function (st) {   // HERESY 2006: a step another room runs is no node
           var id = "pl-" + pl.id + "-" + st.id + "Panel";
           if ($(id)) return;
           var s = { id: id, step: "plugin:" + pl.id + ":" + st.id, label: st.label, say: st.say || pl.name, plugin: pl.id, pstep: st.id, spec: st, name: pl.name,
-                    group: st.group || "finish", builtin: !!pl.builtin };   // HERESY 1553: the studio's own, its words translated
+                    group: st.group || "finish", builtin: !!pl.builtin };   // HERESY 1553: the Studio's own, its words translated
           var ai = st.after ? STEPS.map(function (x) { return x.id; }).indexOf(st.after) : -1;
           if (ai >= 0) {                                 // HERESY 1553: where it belongs, after the step it follows
             while (STEPS[ai + 1] && STEPS[ai + 1].afterOf === st.after) ai++;
@@ -2274,7 +2290,7 @@
           }
           plug.steps[id] = s;
           var panel = pluginPanel(s);
-          var box = document.querySelector("#view-post > .dv-tree-box"), ref = s.afterOf && (FACE[s.afterOf] ? FACE[s.afterOf].hold : $(s.afterOf));   // HERESY 1461: before what is made, as the studio's own (1969: a step on a face: after its place in the list)
+          var box = document.querySelector("#view-post > .dv-tree-box"), ref = s.afterOf && (FACE[s.afterOf] ? FACE[s.afterOf].hold : $(s.afterOf));   // HERESY 1461: before what is made, as the Studio's own (1969: a step on a face: after its place in the list)
           if (ref && ref.parentNode) ref.parentNode.insertBefore(panel, ref.nextSibling);   // HERESY 1553
           else if (box) box.parentNode.insertBefore(panel, box); else if (after && after.parentNode) after.parentNode.appendChild(panel);
           panel.classList.add("is-step");
@@ -2287,7 +2303,7 @@
       var want = recall();
       select(STEPS.some(function (s) { return s.id === want; }) ? want : state.current);
       paintPluginSources();
-    }).catch(function () { /* no lab, or an older one: the studio's own steps */ });
+    }).catch(function () { /* no lab, or an older one: the Studio's own steps */ });
   }
   function field(s, p) {
     var key = ' data-pl-key="' + esc(p.key) + '"', tip = p.tip ? ' data-tip="' + esc(p.tip) + '"' : "", no = s.builtin ? "" : ' translate="no"';   // HERESY 1553
@@ -2295,8 +2311,10 @@
       return '<label class="field pl-check"' + tip + '><input type="checkbox"' + key + (p.default ? " checked" : "") + ' /> <span' + no + ">" + esc(p.label) + "</span></label>";
     }
     if (p.type === "file") {                            // HERESY 1557: a file of this take's tree or another take, filled with the tree
-      return '<label class="field"' + tip + '><span class="label"' + no + ">" + esc(p.label) + '</span><select class="pl-file"' + key + '><option value="">choose a file</option></select></label>';
+      var blank = p.blank || "choose a file";        // HERESY 1991: what the empty choice means, when the step says
+      return '<label class="field"' + tip + '><span class="label"' + no + ">" + esc(p.label) + '</span><select class="pl-file"' + key + ' data-blank="' + esc(blank) + '"><option value="">' + esc(blank) + "</option></select></label>";
     }
+    if (p.type === "text") return '<input type="hidden"' + key + ' value="' + esc(String(p.default || "")) + '" />';   // HERESY 1977: a step's own state, its panel keeps it
     var input = p.type === "select"
       ? "<select" + key + ">" + p.options.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === p.default ? " selected" : "") + no + ">" + esc(o[1]) + "</option>"; }).join("") + "</select>"
       : '<input type="number"' + key + ' min="' + p.min + '" max="' + p.max + '" step="' + p.step + '" value="' + p.default + '" />';
@@ -2306,13 +2324,13 @@
     var d = document.createElement("details");
     d.className = "drawer pl-panel";
     d.id = s.id;
-    var no = s.builtin ? "" : ' translate="no"';         // HERESY 1553: the studio's own steps speak the page's language
+    var no = s.builtin ? "" : ' translate="no"';         // HERESY 1553: the Studio's own steps speak the page's language
     d.innerHTML = '<summary><span class="chev" aria-hidden="true"></span><span class="sum-head"' + no + '><span class="sum-name">' + esc(s.label) +
       '</span><span class="sum-say">' + esc(s.say) + "</span></span></summary>" +
       '<div class="drawer-body rm-body"><div class="rm-grid">' +
       (s.spec.input === "stems"                       // HERESY 1464: a step on a set of stems picks a set, not a file
-        ? '<label class="field"><span class="label">A set of stems</span><select class="pl-source pl-stems"></select></label>'
-        : '<label class="field"><span class="label">Source</span><select class="pl-source" data-prefer="' + esc((s.spec.prefer || []).join(",")) +
+        ? '<label class="field" data-tip="Which set of the take\'s stems the step works on"><span class="label">A set of stems</span><select class="pl-source pl-stems"></select></label>'   // HERESY 2003
+        : '<label class="field" data-tip="What the step works on: the take or a file of its tree"><span class="label">Source</span><select class="pl-source" data-prefer="' + esc((s.spec.prefer || []).join(",")) +
           '"><option value="">the take</option></select></label>') +
       s.spec.params.map(function (p) { return field(s, p); }).join("") + "</div>" +
       '<div class="dv-actions"><button type="button" class="btn primary small pl-run"' + no + ">" + esc(s.label) + '</button><span class="row-hint mono pl-state"></span>' +
@@ -2320,6 +2338,7 @@
       (s.spec.tip ? '<p class="row-hint"' + no + ">" + esc(s.spec.tip) + "</p>" : "") + "</div>";
     d.querySelector(".pl-run").addEventListener("click", function () { runPlugin(s, d); });
     d.querySelector(".pl-source").addEventListener("change", function () { this.dataset.touched = "1"; });   // HERESY 1465: his pick stays
+    if (s.builtin && s.pstep === "pianoteq" && window.HeresyPianoteq) window.HeresyPianoteq.mount(d);   // HERESY 1977: Pianoteq's own panel
     return d;
   }
   function paintPluginSources() {
@@ -2360,7 +2379,7 @@
     var mine = state.take ? state.take.name : "", others = window.ruachTakes ? window.ruachTakes().filter(function (t) { return t.name !== mine; }) : [];
     Array.prototype.forEach.call(document.querySelectorAll(".pl-panel .pl-file"), function (sel) {
       var keep = sel.value;
-      sel.innerHTML = '<option value="">choose a file</option>' + files.map(function (f) {
+      sel.innerHTML = '<option value="">' + esc(sel.dataset.blank || "choose a file") + "</option>" + files.map(function (f) {
         return '<option value="' + esc(f.source) + '" translate="no">' + esc(f.label.replace(/^↳ /, "")) + "</option>"; }).join("") +
         others.map(function (t) { return '<option value="take:' + esc(t.name) + '" translate="no">\u2197 ' + esc(t.title) + "</option>"; }).join("");
       sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }) ? keep : "";
@@ -2415,24 +2434,25 @@
     d.id = "audioPanel";
     d.innerHTML = '<summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Audio I/O</span>' +
       '<span class="sum-say">The machine\'s audio interfaces, physical and virtual, and the analog gateway\'s choice of them</span></span></summary>' +
-      '<div class="drawer-body au-body"><div class="au-head"><button type="button" class="btn ghost small" id="auLook">Look again</button><span class="row-hint" id="auSaid"></span></div>' +
+      '<div class="drawer-body au-body"><div class="au-head"><button type="button" class="btn ghost small" id="auLook" data-tip="Read the machine\'s audio interfaces again (one plugged in since)">Look again</button><span class="row-hint" id="auSaid"></span></div>' +
       '<div class="au-cols"><section class="au-col"><div class="peek-cap">Physical</div><div id="auPhysical" class="au-list"></div></section>' +
       '<section class="au-col"><div class="peek-cap">Virtual</div><div id="auVirtual" class="au-list"></div></section></div>' +
       '<div class="au-gate"><div class="peek-cap">The analog gateway</div><div class="rm-grid">' +
       '<label class="field" data-tip="The interface the gateway plays a take out through, to the gear"><span class="label">Out to the gear</span><select id="auOut"></select></label>' +
       '<label class="field" data-tip="The interface the gateway records the gear back from"><span class="label">In from the gear</span><select id="auIn"></select></label>' +
       '<label class="field" data-tip="The rate both run at: the ones the chosen output and input both take"><span class="label">Rate</span><select id="auRate"></select></label></div>' +
-      '<div class="dv-actions"><button type="button" class="btn primary small" id="auKeep">Keep</button>' +
+      '<div class="dv-actions"><button type="button" class="btn primary small" id="auKeep" data-tip="Keep the gateway\'s output, input and rate, for the steps that print through it">Keep</button>' +
       '<button type="button" class="btn ghost small" id="auProbe" data-tip="Two seconds from the input: with nothing playing into it, the converter\'s own noise">Measure the input\'s floor</button>' +
       '<button type="button" class="btn ghost small" id="auLoop" data-tip="A 1 kHz tone at −20 dBFS out through the output and back from the input: did it come back, its gain, the noise before it, its THD">Loop test</button>' +
       '<span class="row-hint mono" id="auState"></span></div>' +
+      '<div class="au-bal" id="auBal"></div>' +   // HERESY 2002: the channels' balance, asked after the loop test
       '<p class="row-hint">A plugin\'s analog step plays through the output chosen here and records from the input, at this rate.</p></div>' +
       // HERESY 1548: the monitor, a second output on Forge
       '<div class="au-gate au-mon"><div class="peek-cap">The monitor</div>' +
       '<p class="row-hint">A second output on Forge, to listen there: the analog gateway\'s return plays through it live while it prints, and any file of the tree plays through it from its «On Forge». The browser\'s own output stays as it is.</p><div class="rm-grid">' +
       '<label class="field" data-tip="The interface you listen through on Forge; not the gateway\'s own output"><span class="label">Monitor out</span><select id="auMon"></select></label>' +
       '<label class="field" data-tip="The rate it runs at"><span class="label">Rate</span><select id="auMonRate"></select></label></div>' +
-      '<div class="dv-actions"><button type="button" class="btn primary small" id="auMonKeep">Keep</button>' +
+      '<div class="dv-actions"><button type="button" class="btn primary small" id="auMonKeep" data-tip="Keep the monitor\'s output and rate">Keep</button>' +
       '<button type="button" class="btn ghost small" id="auMonTone" data-tip="A 1 kHz tone at −20 dBFS through the monitor for a second and a half">Tone</button>' +
       '<button type="button" class="btn ghost small" id="auMonStop" data-tip="Stop what plays through the monitor">Stop</button>' +
       '<span class="row-hint mono" id="auMonState"></span></div></div></div>';
@@ -2592,8 +2612,54 @@
             .replace("{0}", ch(j.gain_db, function (x) { return (x > 0 ? "+" : "") + x.toFixed(2); }))
             .replace("{1}", ch(j.noise_db, function (x) { return x <= -199 ? "silence" : x.toFixed(1); }))
             .replace("{2}", ch(j.thd_pct, function (x) { return x.toFixed(3); })));
+          au.offer = j.gain_db.length === 2 && j.gain_db[0] != null && j.gain_db[1] != null ? j.gain_db[0] - j.gain_db[1] : null;   // HERESY 2002
+          balPaint();
         }, function (e) { $("auLoop").disabled = false; auSay(tr("The loop did not run: {0}").replace("{0}", e.message), true); });
     });
+  }
+  // HERESY 2002 (Viktor 01.11.2026: «балансируем каналы именно в микро значениях, которые не удалось регистрами точно выставить в паритет, и не
+  // более, как опцию»): after a loop test whose two sides came back 0.05 to 1.5 dB apart, the balance asked; a quiet tone (−36 dBFS, under the gear's
+  // knee) measures it and the hotter side is lowered by the difference; kept with the gateway, taken off by a click
+  var BAL_MAX = 1.5, BAL_LEVEL = -36;
+  function sideDb(b) { return (b[0] < 0 ? "L " + b[0].toFixed(2) : "R " + b[1].toFixed(2)) + " dB"; }
+  function balPaint() {
+    var el = $("auBal"), g = au.data && au.data.gateway || {}, kept = g.balance_db, d = au.offer;
+    if (!el) return;
+    if (kept && (kept[0] || kept[1])) {
+      el.innerHTML = '<span class="au-bal-say">' + esc(tr("The channels balanced on the way back: {0} (measured at {1} dBFS)").replace("{0}", sideDb(kept)).replace("{1}", String(g.balance_level_db != null ? g.balance_level_db : BAL_LEVEL))) + "</span>" +
+        '<button type="button" class="btn ghost small" id="auBalOff" data-tip="' + esc(tr("The return as the gear gives it, both sides as they came")) + '">' + esc(tr("Take the balance off")) + "</button>";
+    } else if (d != null && Math.abs(d) >= 0.05 && Math.abs(d) <= BAL_MAX) {
+      el.innerHTML = '<span class="au-bal-say">' + esc(tr("The channels came back {0} dB apart, {1} hotter: what one click of a knob cannot set. Balance them on the way back?")
+        .replace("{0}", Math.abs(d).toFixed(2)).replace("{1}", d > 0 ? "L" : "R")) + "</span>" +
+        '<button type="button" class="btn primary small" id="auBalGo" data-tip="' + esc(tr("A quiet tone at −36 dBFS, under the gear's knee so its compression does not enter, measures each side's gain; the hotter one is lowered by the difference, never the quieter lifted")) + '">' + esc(tr("Balance the channels")) + "</button>";
+    } else if (d != null && Math.abs(d) > BAL_MAX) {
+      el.innerHTML = '<span class="au-bal-say is-bad">' + esc(tr("The channels came back {0} dB apart: more than a knob's click, set them by the knobs").replace("{0}", Math.abs(d).toFixed(2))) + "</span>";
+    } else el.innerHTML = "";
+    var go = $("auBalGo"), off = $("auBalOff");
+    if (go) go.addEventListener("click", balMeasure);
+    if (off) off.addEventListener("click", function () { balKeep([0, 0], null); });
+  }
+  function balKeep(b, level) {
+    return fetch("/lab/audio/balance", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ balance: b, level: level }) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j; }); })
+      .then(function (j) { if (au.data) au.data.gateway = j.gateway; au.offer = null; balPaint();
+        auSay(b[0] || b[1] ? tr("Balanced: {0} on the way back").replace("{0}", sideDb(b)) : tr("The balance is off: the return as it comes")); },
+            function (e) { auSay(tr("Not kept: {0}").replace("{0}", e.message), true); });
+  }
+  function balMeasure() {
+    var out = $("auOut").value, inp = $("auIn").value, rate = +$("auRate").value || 48000, go = $("auBalGo");
+    if (go) go.disabled = true;
+    auSay(tr("A quiet tone measures the balance\u2026"));
+    fetch("/lab/audio/loop", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ out: out, in: inp, rate: rate, level: BAL_LEVEL }) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j; }); })
+      .then(function (j) {
+        var g = j.gain_db || [];
+        if (!j.answered || g.length !== 2 || g[0] == null || g[1] == null) { if (go) go.disabled = false; auSay(tr("The quiet tone did not come back on both sides"), true); return; }
+        var d = g[0] - g[1];
+        if (Math.abs(d) > BAL_MAX) { au.offer = d; balPaint(); return; }
+        if (Math.abs(d) < 0.05) { au.offer = null; balPaint(); auSay(tr("Under the knee the two sides are level: nothing to balance")); return; }
+        balKeep(d > 0 ? [-Math.round(d * 100) / 100, 0] : [0, -Math.round(-d * 100) / 100], BAL_LEVEL);
+      }, function (e) { if (go) go.disabled = false; auSay(tr("The loop did not run: {0}").replace("{0}", e.message), true); });
   }
   function auProbe() {
     var dev = $("auIn").value;

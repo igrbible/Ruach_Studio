@@ -30,7 +30,7 @@
   // ---- kept on landing: a refusal said aloud, never silent (the words are what a version is for)
   // HERESY 1596: why it was kept (generate, save, roll, before) and the form's knobs with it
   // HERESY 1629: one keep at a time, in the order asked: a burst of them (examples loaded one after another, each keeping the form first) held all
-  // six connections the browser gives the studio while the lab answered them one by one, and the song's own request waited behind them
+  // six connections the browser gives the Studio while the lab answered them one by one, and the song's own request waited behind them
   var keeping = Promise.resolve();
   function keep(words, takes, mode, why, params) {
     if (!words || !(String(words.style || "").trim() || String(words.lyrics || "").trim() || String(words.abc || "").trim())) return Promise.resolve(null);

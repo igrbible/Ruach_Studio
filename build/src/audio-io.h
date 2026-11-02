@@ -238,53 +238,52 @@ static float * audio_read(const char * path, int * T_out, int * sr_out) {
     return audio_io_read_wav(path, T_out, sr_out);
 }
 
-// maximize perceived loudness via percentile normalization.
-// peak_clip controls the tradeoff between loudness and clipping:
-//   0   = peak normalization (100.0000th percentile, no clipping)
-//   10  = default (99.9990th percentile, clips top 0.001%)
-//   999 = max (99.9001th percentile, clips top 0.1%)
-// the target percentile is 1.0 - peak_clip/1000000.0.
+// HERESY 2007 (Viktor 01.11.2026: «убираем это говно из кода Студии»): peak normalization only, the song's highest sample at full scale and
+// nothing cut. Upstream raised the song until the (1 - peak_clip / 1e6) percentile of |sample| met full scale and cut the rest flat
+// (peak_clip 10 by default: the loudest 0.001 %, a hard clip with no look-ahead at every loud moment); peak_clip is read and ignored here.
+// Loudness is the master's work, after the song is made.
 // n_total = number of float samples (both channels combined).
-static void audio_normalize(float * audio, int n_total, int peak_clip = 10) {
+static void audio_normalize(float * audio, int n_total, int peak_clip = 0) {
+    (void) peak_clip;
     if (n_total <= 0) {
         return;
     }
-
-    // clamp to valid range
-    if (peak_clip < 0) {
-        peak_clip = 0;
-    }
-    if (peak_clip > 999) {
-        peak_clip = 999;
-    }
-
-    // collect absolute values
-    std::vector<float> absvals((size_t) n_total);
+    float peak = 0.0f;
     for (int i = 0; i < n_total; i++) {
-        absvals[i] = audio[i] < 0.0f ? -audio[i] : audio[i];
+        float a = audio[i] < 0.0f ? -audio[i] : audio[i];
+        if (a > peak) {
+            peak = a;
+        }
     }
-
-    // partial sort to find the target percentile
-    double pct = 1.0 - (double) peak_clip / 1000000.0;
-    size_t idx = (size_t) ((double) (n_total - 1) * pct);
-    std::nth_element(absvals.begin(), absvals.begin() + idx, absvals.end());
-    float ref = absvals[idx];
-
-    if (ref < 1e-6f) {
+    if (peak < 1e-6f) {
         return;
     }
-
-    // scale so the target percentile hits 1.0, hard clip the rest
-    float gain = 1.0f / ref;
+    float gain = 1.0f / peak;
     for (int i = 0; i < n_total; i++) {
-        float v = audio[i] * gain;
-        if (v > 1.0f) {
-            v = 1.0f;
-        } else if (v < -1.0f) {
-            v = -1.0f;
-        }
-        audio[i] = v;
+        audio[i] *= gain;
     }
+}
+
+// HERESY 2008 (Viktor 01.11.2026: «ни wav, ни flac, ничего в Студии мы не нормализуем, кроме как в Огранщике»): a WAV of 16 or 24 bits
+// carries the decoder's own level, never raised; only a peak past full scale, which those bits cannot hold, turns the whole song down to fit
+// (a gain, never a cut), and the log says how much. WAV 32 float keeps even that; MP3, a quick demo, alone is normalized (audio_normalize).
+static void audio_fit(float * audio, int n_total) {
+    float peak = 0.0f;
+    for (int i = 0; i < n_total; i++) {
+        float a = audio[i] < 0.0f ? -audio[i] : audio[i];
+        if (a > peak) {
+            peak = a;
+        }
+    }
+    if (peak <= 1.0f) {
+        return;
+    }
+    float gain = 1.0f / peak;
+    for (int i = 0; i < n_total; i++) {
+        audio[i] *= gain;
+    }
+    fprintf(stderr, "[Audio] the decoder's peak stood %.2f dB past full scale: the song turned down to fit the WAV (a gain, nothing cut)\n",
+            20.0f * log10f(peak));
 }
 
 // WAV output format
@@ -724,9 +723,11 @@ static bool audio_write(const char * path,
                         bool         is_mp3,
                         WavFormat    wav_fmt   = WAV_S16,
                         int          kbps      = 128,
-                        int          peak_clip = 10) {
-    if (is_mp3 || wav_fmt != WAV_F32) {
+                        int          peak_clip = 0) {
+    if (is_mp3) {                                        // HERESY 2008: an MP3, a quick demo, normalized; a WAV raw
         audio_normalize(audio, T_audio * 2, peak_clip);
+    } else if (wav_fmt != WAV_F32) {
+        audio_fit(audio, T_audio * 2);
     }
     if (is_mp3) {
         return audio_write_mp3(path, audio, T_audio, sr, kbps);

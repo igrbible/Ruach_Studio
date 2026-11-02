@@ -1,4 +1,4 @@
-// HERESY 1145: the studio's player as a new user has it (1040 play on click, 1009 play on), against the mock, on a fresh page:
+// HERESY 1145: the Studio's player as a new user has it (1040 play on click, 1009 play on), against the mock, on a fresh page:
 // a click on a take plays it, and when it ends the next take of the list plays. Muted.
 //   node heresy/tools/check-player.mjs        (YUE2_CHROME, YUE2_NODE as for tools/test-real.sh)
 // The Kit's long page test (tools/cdp-console.mjs) runs its own checks with these two off, as the Kit had them; late in that

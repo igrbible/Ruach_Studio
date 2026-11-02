@@ -6,7 +6,7 @@ given to it as CUDA_VISIBLE_DEVICES; its "need_mb" (8000 when not said) is the r
 files it is made for, by name without the extension ("prefer": ["lead_vocal", "vocals"]): the page then picks the last of them as
 its source, until the source is picked by hand.
 
-A plugin is a folder in the studio's user/plugins/ (or a link to one) with a plugin.json:
+A plugin is a folder in the Studio's user/plugins/ (or a link to one) with a plugin.json:
 
     {"id": "my-post", "name": "My post", "python": ".venv/bin/python",          python: its own interpreter, relative to
      "steps": [{"id": "master", "label": "Master", "say": "a few words",         the folder; the lab's own when absent
@@ -18,7 +18,7 @@ A plugin is a folder in the studio's user/plugins/ (or a link to one) with a plu
 
 A step runs as `PYTHON SCRIPT AUDIO OUTDIR PARAMS.json` in the plugin's folder and prints, as its last line, one line of
 JSON: {"files": [{"name", "file", "seconds"?}], "measure"?: {…}, "took"?}. Its files land in the take's derived/ as a
-branch of kind "plugin", beside the studio's own. Nothing of any plugin is in the studio: without the folder there is
+branch of kind "plugin", beside the Studio's own. Nothing of any plugin is in the Studio: without the folder there is
 nothing to list, and the Refiner shows its own steps only.
 
 HERESY 1484: a file of the step's named .txt, .json, .md or .csv is a report, read and not played (its entry says "kind": "text"),
@@ -41,8 +41,10 @@ from pathlib import Path
 ID = re.compile(r"^[a-z0-9][a-z0-9_-]{0,47}$")
 TEXT = (".txt", ".json", ".md", ".csv")          # HERESY 1484: a step's report
 IMAGE = (".png", ".jpg", ".jpeg", ".svg", ".webp")  # HERESY 1553: a step's picture
+MIDI = (".mid", ".midi")                          # HERESY 1978: a step's notes (Basic Pitch, a plugin of manchuwook's): downloaded, not played
 GROUPS = ("look", "mend", "finish")
-TYPES = ("select", "number", "check", "file")    # HERESY 1557: file: a file of the take's tree or another take, the lab gives its path
+TYPES = ("select", "number", "check", "file", "text")    # HERESY 1557: file: a file of the take's tree or another take, the lab gives its path
+# HERESY 1977: text: a step's own state as the page's panel of it keeps it (the Pianoteq's settings), a string of up to 20 000 characters
 
 
 def _step(raw, folder):
@@ -70,6 +72,10 @@ def _step(raw, folder):
             q["default"] = min(hi, max(lo, float(p.get("default", lo))))
         elif p["type"] == "file":
             q["default"] = ""
+            if p.get("blank"):                          # HERESY 1991: what the empty choice means; then it may stay empty
+                q["blank"] = str(p["blank"])[:80]
+        elif p["type"] == "text":                       # HERESY 1977
+            q["default"] = str(p.get("default") or "")[:20000]
         else:
             q["default"] = bool(p.get("default", False))
         params.append(q)
@@ -85,6 +91,8 @@ def _step(raw, folder):
             "rate": _rate(raw.get("rate")),             # HERESY 1549/1553: its pace, kept (it was dropped here)
             "group": raw.get("group") if raw.get("group") in GROUPS else "finish", "after": str(raw.get("after") or "")[:48],
             "hardware": bool(raw.get("hardware", False)),   # HERESY 1572: it waits on gear outside the machine, not on the CPU
+            "final": bool(raw.get("final", False)),     # HERESY 1997: it ends a way (MIDI, a render kept): the canvas's last column
+            "canvas": raw.get("canvas", True) is not False,   # HERESY 2006: a step another room runs (the DAW's Layer), not a node
             "stem": str(raw.get("stem")) if ID.match(str(raw.get("stem") or "")) else ""}   # HERESY 1572: the one stem it mends
 
 
@@ -121,14 +129,14 @@ def _need(v):
 
 
 def load_all(user_root, builtin_root):
-    """HERESY 1553: the studio's built-in steps first (shipped in the lab, their names the page translates), then the user's plugins;
+    """HERESY 1553: the Studio's built-in steps first (shipped in the lab, their names the page translates), then the user's plugins;
     a user's plugin of a built-in's id is left out, said."""
     built, e1 = load(builtin_root, builtin=True)
     users, e2 = load(user_root)
     ids = {p["id"] for p in built}
     for p in users:
         if p["id"] in ids:
-            e2.append({"plugin": p["id"], "error": "the studio has a step of this id"})
+            e2.append({"plugin": p["id"], "error": "the Studio has a step of this id"})
     return built + [p for p in users if p["id"] not in ids], e1 + e2
 
 
@@ -194,6 +202,8 @@ def clean(step, given):
             out[p["key"]] = min(p["max"], max(p["min"], v))
         elif p["type"] == "file":                       # HERESY 1557: checked and made a path by the lab (lab.file_param)
             out[p["key"]] = str(v or "")[:400]
+        elif p["type"] == "text":                       # HERESY 1977: kept as it came, its length bounded; the step reads it
+            out[p["key"]] = str(v if v is not None else "")[:20000]
         else:
             out[p["key"]] = v is True or str(v).lower() in ("1", "true", "on", "yes")
     return out
@@ -219,6 +229,8 @@ def result(stdout):
             files[-1]["kind"] = "text"
         elif Path(name).suffix.lower() in IMAGE:  # HERESY 1553: looked at
             files[-1]["kind"] = "image"
+        elif Path(name).suffix.lower() in MIDI:   # HERESY 1978: opened in a DAW or a piano roll, never played as a sound
+            files[-1]["kind"] = "midi"
         src = str(f.get("source") or "")          # HERESY 1553: the stem it is a version of, inside the take
         if src and src.startswith("derived/") and ".." not in src.split("/") and not src.startswith("/"):
             files[-1]["source"] = src

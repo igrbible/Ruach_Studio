@@ -268,7 +268,7 @@ def draw(body):
     if not 1 <= count <= 4:
         raise ValueError("variations: one to four")
     seed = body.get("seed")
-    seed = int(seed) if re.fullmatch(r"\d{1,10}", str(seed if seed is not None else "").strip()) else random.randint(1000, 999999999)   # HERESY 1877: the studio's seeds, 1000…999 999 999
+    seed = int(seed) if re.fullmatch(r"\d{1,10}", str(seed if seed is not None else "").strip()) else random.randint(1000, 999999999)   # HERESY 1877: the Studio's seeds, 1000…999 999 999
     seed = min(seed, 2**31 - 1 - count)
     asked = str(body.get("painter") or "").strip().lower()
     painter = asked if asked in QWEN else H["painter"](body.get("painter"))   # HERESY 1318: a Qwen painter by its own name
@@ -301,7 +301,7 @@ def draw(body):
     if is21(painter) and (body.get("mask") or body.get("fit")):
         raise ValueError("Qwen-Image 2.1 edits a picture by the prompt's words: a mask or «Paint around it» wants Qwen-Image 2512")
     if painter not in NEED:
-        raise ValueError("the Artist paints with Qwen-Image's brushes (Krea 2 left the studio, HERESY 1428): Engine → Models and LoRAs → Qwen painters")
+        raise ValueError("the Artist paints with Qwen-Image's brushes (Krea 2 left the Studio, HERESY 1428): Engine → Models and LoRAs → Qwen painters")
     loras = artist_loras.chosen(H["kit"], painter, body.get("loras"))   # HERESY 1316: checked now, their size asked of the card too
     need = dict(NEED, **{painter: NEED[painter] + sum(x["mb"] for x in loras)})
     why = H["refusal"](painter, need, "choose it as the painter here") if H.get("refusal") else ""   # HERESY 1297: said now

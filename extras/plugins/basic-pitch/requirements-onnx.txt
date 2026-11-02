@@ -1,0 +1,21 @@
+# Runtime dependencies for Basic Pitch WITHOUT TensorFlow (ONNX Runtime backend).
+#
+# Use this on Python 3.12+ (e.g. 3.14), where basic-pitch's pinned
+# `tensorflow<2.15.1` has no wheel. Install basic-pitch itself with --no-deps first:
+#
+#     pip install --no-deps basic-pitch==0.4.0
+#     pip install -r requirements-onnx.txt
+#
+# Basic Pitch picks whichever model runtime is installed; with only onnxruntime
+# present it loads its bundled ONNX model, so the plugin code is unchanged.
+onnxruntime
+numpy
+scipy
+librosa
+resampy>=0.2.2,<0.4.3
+pretty_midi
+mir_eval
+scikit-learn
+typing-extensions
+# resampy 0.4.2 imports pkg_resources, which setuptools 81+ no longer ships.
+setuptools<81

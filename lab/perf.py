@@ -1,12 +1,12 @@
 """HERESY 1821 (Viktor 28.10.2026: «В Engine аккумулятивная метрика по перформансу Студии… Время взаимодействия юзера со Студией, скорости генераций,
-используемые дисковые и процессорные ресурсы»): the studio over time, kept in user/perf.sqlite.
+используемые дисковые и процессорные ресурсы»): the Studio over time, kept in user/perf.sqlite.
 
-- The time with the studio: a minute counts once, whoever sends it (a page that plays, or one looked at and handled in the last two minutes, says so every
+- The time with the Studio: a minute counts once, whoever sends it (a page that plays, or one looked at and handled in the last two minutes, says so every
   minute; two pages, or two machines, in the same minute are one minute). Kind: «play» when it played, else «work».
 - The takes made: read from each take's meta.json (its length, how long it took, the stages' times, the model), cached by the file's time.
 - The machine: once a minute CPU and RAM from /proc, the NVIDIA cards' load and memory from one nvidia-smi query; kept per hour (averages, the memory's
   highest). Nothing of a take or a run is read here, and no file is written but the database.
-- The disks: the studio's folders' sizes (links not followed: what lives on another disk is said by that disk) and the free space of each disk they are on,
+- The disks: the Studio's folders' sizes (links not followed: what lives on another disk is said by that disk) and the free space of each disk they are on,
   every six hours.
 """
 import json
@@ -37,7 +37,7 @@ def _db():
 
 
 def beat(kind):
-    """A minute with the studio (kind «play» or «work»); the same minute twice counts once, «play» kept over «work»."""
+    """A minute with the Studio (kind «play» or «work»); the same minute twice counts once, «play» kept over «work»."""
     kind = "play" if kind == "play" else "work"
     m = int(time.time() // 60)
     with LOCK:
@@ -127,7 +127,7 @@ def _size(p):
 
 
 def sizes(force=False):
-    """The studio's folders here (links not followed) and the disks they and their links are on."""
+    """The Studio's folders here (links not followed) and the disks they and their links are on."""
     if not force and STATE["sizes"] and time.time() - STATE["sizes_at"] < 6 * 3600:
         return STATE["sizes"]
     kit = STATE["kit"]

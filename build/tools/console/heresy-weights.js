@@ -4,8 +4,11 @@
 // Fetch, and one Fetch takes everything missing, each asked with its size first; a download cut short goes on where it stopped.
 // The extras (another backbone, the style listener, the Artist's painter, the trainer's base) a row each, with their variants
 // and sizes, a variant here said so. While a run goes, its words; when it is over, what came; where a backbone, a decoder or
-// the sliders came, that the engine lists them at its next start (Restart the engine, where the studio runs as a service).
+// the sliders came, that the engine lists them at its next start (Restart the engine, where the Studio runs as a service).
 // A test page (?scope=…) fetches nothing: the lab refuses.
+// HERESY 1984 (Viktor 01.11.2026: «в Движке может даже оформить скачивание скопом по тем же Tiers, замеряя свободное место на диске и честно
+// предупреждая о нестаче места на диске»): By room, a tier a row: a room's models at this machine's card, what is here, what is left; Fetch the
+// tier only when the disk has room for it and 2 GB to spare (the lab refuses too), and every Fetch's question says the disk's free room.
 //
 //   HeresyWeights.init(hooks) · HeresyWeights.load() · HeresyWeights.state()   (the last for the checks)
 (function () {
@@ -29,6 +32,15 @@
   function cap(s) { s = String(s || ""); return s.charAt(0).toUpperCase() + s.slice(1); }
   // HERESY 1302: a fetch's progress at the row pressed: what the disk took against the size the card said (decimal, as said)
   function dgb(b) { return b >= 1e9 ? (b / 1e9).toFixed(1) + " GB" : Math.max(0, Math.round(b / 1e6)) + " MB"; }
+  // HERESY 1984: «7.2 GB», «618 MB» → bytes (decimal, as the sizes are measured); the disk's free room said, or its shortfall
+  function bytes(s) { var m = /^\s*(\d+(?:\.\d+)?)\s*(GB|MB)\b/.exec(String(s || "")); return m ? parseFloat(m[1]) * (m[2] === "GB" ? 1e9 : 1e6) : 0; }
+  function room(b) {
+    var d = S.data || {}, f = d.free, spare = d.spare || 0;
+    if (f == null) return "";
+    if (b && b + spare > f) return "⚠ " + tr("Not enough room on this disk: {0} free, {1} short with 2 GB to spare.").replace("{0}", dgb(f)).replace("{1}", dgb(b + spare - f));
+    return tr("{0} free on this disk.").replace("{0}", dgb(f));
+  }
+  function last(s) { return s ? "\n\n" + s : ""; }   // the free room, said last in a Fetch's question
   function going(which) {
     var j = job();
     if (!(j && j.status === "running" && j.kind === "fetch" && j.which)) return false;
@@ -126,9 +138,36 @@
           esc(tr(going({ extra: e.name, variant: v.id }) ? "Fetching…" : v.here ? "Here" : "Fetch")) + "</button>" +
         (going({ extra: e.name }) ? progress() : "") + "</div>";      // HERESY 1302
     }).join("");
+    paintTiers(d, busy);                             // HERESY 1984
     paintLog(job());
     var j = job();
     $("wtRestart").hidden = !(j && j.status !== "running" && j.restart);
+  }
+  // HERESY 1984: By room, a tier a row; the disk's free room above them
+  function paintTiers(d, busy) {
+    var el = $("wtTiers"), fr = $("wtFree");
+    if (!el) return;
+    if (fr) fr.textContent = d.free == null ? "" : tr("{0} free on this disk.").replace("{0}", dgb(d.free));
+    el.innerHTML = (d.tiers || []).map(function (t) {
+      var now = going({ tier: t.id }), short = d.free != null && t.need > 0 && t.need + (d.spare || 0) > d.free;
+      var size = !t.items.length ? tr("not on this machine: it needs {0}").replace("{0}", tr(t.why))
+        : !t.need ? tr("all here") + " · " + dgb(t.total)
+        : tr("up to {0} to fetch").replace("{0}", dgb(t.need)) + (t.need < t.total ? " · " + tr("{0} in all").replace("{0}", dgb(t.total)) : "");
+      var items = t.items.map(function (i) {
+        return '<li class="wt-t-item' + (i.here ? " is-here" : "") + '"><span>' + esc(tr(i.label)) + " · " + esc(tr(i.vlabel)) + '</span><span class="wt-size"> · ' +
+          esc(i.size) + (i.here ? " · " + esc(tr("here")) : "") + "</span></li>";
+      }).join("");
+      var can = t.items.length && t.need > 0;
+      return '<div class="wt-tier' + (now ? " is-going" : "") + (short ? " is-short" : "") + (t.items.length && !t.need ? " is-whole" : "") + '" data-tier="' + esc(t.id) + '">' +
+        '<div class="wt-head"><b>' + esc(tr(t.label)) + '</b><span class="wt-size wt-sum">' + esc(size) + "</span>" +
+        (can ? '<button type="button" class="btn ghost small" data-wt-tier="' + esc(t.id) + '"' + (busy || short || !d.script ? " disabled" : "") + ">" +
+          esc(tr(now ? "Fetching…" : short ? "Not enough room" : "Fetch the tier")) + "</button>" : "") + "</div>" +
+        '<div class="wt-t-what">' + esc(tr(t.what)) + "</div>" +
+        (items ? '<ul class="wt-t-items">' + items + "</ul>" : "") +
+        (short ? '<div class="wt-t-short">' + esc(tr("Not enough room on this disk: up to {0} and 2 GB to spare, {1} free; {2} short.")
+          .replace("{0}", dgb(t.need)).replace("{1}", dgb(d.free)).replace("{2}", dgb(t.need + (d.spare || 0) - d.free))) + "</div>" : "") +
+        (now ? progress() : "") + "</div>";
+    }).join("");
   }
   function paintLine(d) {
     var el = $("wtLine"), j = d.job, txt, cls = "";
@@ -173,12 +212,12 @@
   function fetchPart(name) {
     var p = parts().filter(function (x) { return x.part === name; })[0];
     if (!p) return;
-    start({ part: name }, tr("Fetch {0}?").replace("{0}", tr(p.label)) + "\n\n" + tr("About {0}.").replace("{0}", p.size) + " " + tr(HOW));
+    start({ part: name }, tr("Fetch {0}?").replace("{0}", tr(p.label)) + "\n\n" + tr("About {0}.").replace("{0}", p.size) + " " + tr(HOW) + last(room(bytes(p.size))));   // HERESY 1984
   }
   function fetchAll() {
     var need = parts().filter(function (p) { return !whole(p); });
     var list = need.length ? need.map(function (p) { return "· " + tr(p.label) + " (" + p.size + ")"; }).join("\n") : tr("Everything the install brings that is not here.");
-    start({ part: "missing" }, tr("Fetch what is missing?") + "\n\n" + list + "\n\n" + tr(HOW));
+    start({ part: "missing" }, tr("Fetch what is missing?") + "\n\n" + list + "\n\n" + tr(HOW) + last(room(need.reduce(function (s, p) { return s + bytes(p.size); }, 0))));   // HERESY 1984
   }
   var AFTER = { backbone: "The engine lists it at its next start; Compute then offers it.",
                 listener: "The Trainer's listener hears a set's songs with it; a GGUF one needs llama.cpp built in vendor/llama.cpp (the fetch says how).",
@@ -196,7 +235,27 @@
     var body = {};
     body[name] = v.id;
     start(body, tr("Fetch {0}: {1} ({2})?").replace("{0}", tr(e.label)).replace("{1}", v.label || v.id).replace("{2}", v.size) +
-      (v.note ? "\n\n" + tr(v.note.charAt(0).toUpperCase() + v.note.slice(1)) + "." : "") + "\n\n" + tr(AFTER[name] || "") + " " + tr(HOW));
+      (v.note ? "\n\n" + tr(v.note.charAt(0).toUpperCase() + v.note.slice(1)) + "." : "") + "\n\n" + tr(AFTER[name] || "") + " " + tr(HOW) + last(room(bytes(v.size))));   // HERESY 1984
+  }
+  // HERESY 1984: a tier: what it brings, each with what it is (its licence among it), its size and the disk's free room; the lab fetches it item by item
+  function fetchTier(id) {
+    var d = S.data || {}, t = (d.tiers || []).filter(function (x) { return x.id === id; })[0];
+    if (!t || running()) return;
+    var todo = t.items.filter(function (i) { return !i.here; }), seen = {};
+    var list = todo.map(function (i) { return "· " + tr(i.label) + ": " + tr(i.vlabel) + " (" + i.size + ")"; }).join("\n");
+    var what = todo.map(function (i) {
+      if (seen[i.extra]) return "";
+      seen[i.extra] = 1;
+      var e = (d.extras || []).filter(function (x) { return x.name === i.extra; })[0];
+      return e ? tr(e.label) + ": " + tr(e.what) + "." : "";
+    }).filter(Boolean).join("\n\n");
+    if (d.free != null && t.need + (d.spare || 0) > d.free) {
+      window.HeresyDialog.alert(tr("Not enough room on this disk: up to {0} and 2 GB to spare, {1} free; {2} short.")
+        .replace("{0}", dgb(t.need)).replace("{1}", dgb(d.free)).replace("{2}", dgb(t.need + (d.spare || 0) - d.free)));
+      return;
+    }
+    start({ tier: id }, tr("Fetch the {0} tier?").replace("{0}", tr(t.label)) + "\n\n" + list + "\n\n" +
+      tr("Up to {0}; {1} free on this disk.").replace("{0}", dgb(t.need)).replace("{1}", d.free == null ? "?" : dgb(d.free)) + "\n\n" + what + "\n\n" + tr(HOW), tr("Fetch the tier"));
   }
   function check() {
     if (running()) return;
@@ -219,7 +278,7 @@
           })();
         });
       }).catch(function (e) {
-        toast(/as a service/.test(e.message) ? tr("The studio does not run as a service here (Pinokio, or ./start.sh by hand): stop it and start it again there, and the engine lists what came.")
+        toast(/as a service/.test(e.message) ? tr("The Studio does not run as a service here (Pinokio, or ./start.sh by hand): stop it and start it again there, and the engine lists what came.")
           : tr("Not restarted:") + " " + e.message, "bad");
       });
   }
@@ -233,6 +292,7 @@
       if (!b || b.disabled) return;
       if (b.dataset.wtPart) fetchPart(b.dataset.wtPart);
       else if (b.dataset.wtExtra) fetchExtra(b.dataset.wtExtra);
+      else if (b.dataset.wtTier) fetchTier(b.dataset.wtTier);        // HERESY 1984
       else if (b.id === "wtFetch") fetchAll();
       else if (b.id === "wtCheck") check();
       else if (b.id === "wtRestart") restart();
@@ -245,6 +305,6 @@
     });
     window.addEventListener("ruach-lang", paint);
   }
-  window.HeresyWeights = { init: init, load: load, fetchExtra: fetchExtra,   // HERESY 1347: for the Artist's own list
+  window.HeresyWeights = { init: init, load: load, fetchExtra: fetchExtra, fetchTier: fetchTier,   // HERESY 1347: for the Artist's own list; 1984
     state: function () { return { data: S.data, running: running(), pick: S.pick }; } };
 })();

@@ -1,8 +1,8 @@
-// HERESY 1107 (Viktor, 02.10.2026): the guard of the line. The studio may run on this very machine (127.0.0.1)
-// or far away (a laptop on a phone's connection, through a VPN, to the studio's server). The guard measures the
-// round trip to the studio every 20 s (the engine's /health, the median of the last five), says it beside the
+// HERESY 1107 (Viktor, 02.10.2026): the guard of the line. The Studio may run on this very machine (127.0.0.1)
+// or far away (a laptop on a phone's connection, through a VPN, to the Studio's server). The guard measures the
+// round trip to the Studio every 20 s (the engine's /health, the median of the last five), says it beside the
 // server log ("Forge · 85 ms"), and lets the page lean on it: a mark (like, dislike, favourite, pin) shows at once
-// and the studio's answer only confirms it (or takes it back, said); far, patience before a silence is called a
+// and the Studio's answer only confirms it (or takes it back, said); far, patience before a silence is called a
 // failure is three times as long (HeresyNet.patience).
 (function () {
   "use strict";
@@ -17,9 +17,9 @@
     if (S.down) { el.textContent = where + " · no answer"; el.dataset.q = "bad"; }
     else if (S.rtt == null) { el.textContent = where + " · …"; el.dataset.q = ""; }
     else { el.textContent = where + " · " + Math.round(S.rtt) + " ms"; el.dataset.q = S.rtt < 60 ? "good" : S.rtt < 250 ? "slow" : "bad"; }
-    el.dataset.tip = "The line to the studio: the round trip, the middle of the last five (every 20 s). " +
-      (S.far ? "Far: marks show at once and the studio confirms them; the page waits longer before it calls a silence a failure."
-             : "Near: the studio answers at once.");
+    el.dataset.tip = "The line to the Studio: the round trip, the middle of the last five (every 20 s). " +
+      (S.far ? "Far: marks show at once and the Studio confirms them; the page waits longer before it calls a silence a failure."
+             : "Near: the Studio answers at once.");
   }
   // HERESY 1143: the time on the line only (the request's start to its first byte, from Resource Timing), not the wait in
   // the browser's own queue: during a render the log stream, the audio and the polls hold the six connections a host

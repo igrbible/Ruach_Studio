@@ -2,7 +2,7 @@
 
 [English](ARTIST.md) · [Русский](ARTIST.ru.md) · [Українська](ARTIST.uk.md) · [Беларуская](ARTIST.be.md) · [Ελληνικά](ARTIST.el.md) · [Español](ARTIST.es.md) · [Italiano](ARTIST.it.md) · **Français** · [Português](ARTIST.pt.md) · [Deutsch](ARTIST.de.md) · [日本語](ARTIST.ja.md) · [中文](ARTIST.zh.md)
 
-Le Peintre est la salle de Ruach Studio pour les images : une pochette pour chaque prise, un 16:9 pour sa vidéo, un 9:16 pour un short. Le guide dans le studio (F1 dans le Peintre) dit en quelques lignes ce que fait chaque commande ; ce document va jusqu'au fond : chaque commande, comment elle est faite à l'intérieur, les recettes qui marchent, ce qui tourne mal et pourquoi, et les chiffres mesurés sur une RTX 3090. Tout ce qui est ici est dans le studio tel qu'il est ; ce qui reste à venir est dit à la fin.
+Le Peintre est la salle de Ruach Studio pour les images : une pochette pour chaque prise, un 16:9 pour sa vidéo, un 9:16 pour un short. Le guide dans le Studio (F1 dans le Peintre) dit en quelques lignes ce que fait chaque commande ; ce document va jusqu'au fond : chaque commande, comment elle est faite à l'intérieur, les recettes qui marchent, ce qui tourne mal et pourquoi, et les chiffres mesurés sur une RTX 3090. Tout ce qui est ici est dans le Studio tel qu'il est ; ce qui reste à venir est dit à la fin.
 
 ## Sommaire
 
@@ -36,9 +36,9 @@ La salle a trois colonnes. À gauche le formulaire : le prompt et chaque command
 
 ## 2. Une première pochette en six étapes
 
-1. Choisis une prise à droite du studio (la liste du Créateur ou du Bibliothécaire) : l'image que tu mettras en pochette va à elle.
+1. Choisis une prise à droite du Studio (la liste du Créateur ou du Bibliothécaire) : l'image que tu mettras en pochette va à elle.
 2. Dans le Peintre, appuie sur **De la prise** pour avoir un prompt de départ, ou écris le tien (section 3).
-3. Laisse **Formats** sur **1:1**, mets **Variations** à 4 et garde le pinceau que le studio a choisi (Qwen-Image 2512 Q4 avec ⚡ Lightning sur la plupart des cartes).
+3. Laisse **Formats** sur **1:1**, mets **Variations** à 4 et garde le pinceau que le Studio a choisi (Qwen-Image 2512 Q4 avec ⚡ Lightning sur la plupart des cartes).
 4. Appuie sur **Dessiner** (Ctrl+Entrée). Regarde les images se révéler sur la scène ; environ une demi-minute chacune sur une 3090.
 5. Clique sur celle qui te plaît ; **Mettre en pochette** en fait la pochette de la prise : sur sa carte, dans le lecteur et dans son MP3.
 6. Elle te plaît mais tu la veux plus fine ? **Seconde passe… ×2** (section 12), puis **Suréchantillonner… 4K** (section 13).
@@ -61,7 +61,7 @@ Les mots qui marchent bien : le sujet dit simplement (*a red fox sitting in the 
 | **Qwen-Image 2512 fp8 BASE** | Apache-2.0 | 22,5 Go | 8 pas avec Lightning, comme les GGUF | 2512 lui-même en fp8 |
 | **Qwen-Image 2.1** | Qwen Research Licence | 21 Go (en flux avec moins) | environ deux minutes | retouche par les mots, référence de style |
 
-**Les pinceaux du Peintre** sont une seule liste de chaque modèle et fichier présents, par groupes : Qwen-Image 2512 depuis un GGUF (Q4, Q6), chaque fichier fp8 de `artwork/Qwen-Image-2512/checkpoints/` (le BASE propre à 2512 et les fine-tunes) et Qwen-Image 2.1. **⚡ Lightning** marque un pinceau qui peint avec lui par défaut ; un fine-tune est marqué comme tel. Un fichier déposé dans `checkpoints/` devient un pinceau à lui quand la salle relit la liste (après un téléchargement ou au rechargement de la page). Krea 2 Muse a quitté le studio en octobre 2026 : Qwen-Image 2512 suit mieux les mots et lettre juste un titre.
+**Les pinceaux du Peintre** sont une seule liste de chaque modèle et fichier présents, par groupes : Qwen-Image 2512 depuis un GGUF (Q4, Q6), chaque fichier fp8 de `artwork/Qwen-Image-2512/checkpoints/` (le BASE propre à 2512 et les fine-tunes) et Qwen-Image 2.1. **⚡ Lightning** marque un pinceau qui peint avec lui par défaut ; un fine-tune est marqué comme tel. Un fichier déposé dans `checkpoints/` devient un pinceau à lui quand la salle relit la liste (après un téléchargement ou au rechargement de la page). Krea 2 Muse a quitté le Studio en octobre 2026 : Qwen-Image 2512 suit mieux les mots et lettre juste un titre.
 
 **Qwen-Image 2512** est le grand peintre : un réalisme plus fin, il lit bien les longs prompts, il trace juste les lettres quand tu les demandes. Il vient en GGUF Q4 ou Q6, ou en **fine-tune fp8** : les fichiers uniques de ComfyUI posés dans `artwork/Qwen-Image-2512/checkpoints/` chacun un pinceau à lui (Jib Mix Qwen, IntoRealism Qwen, Real-Qwen-Image et 2512 lui-même se récupèrent depuis **Récupérer peintres et adaptateurs…**, 20,4 Go chacun). Le BASE propre à 2512 peint avec Lightning comme les GGUF, un fine-tune sans lui sauf si tu l'allumes. Un fichier fp8 se lit en bf16, reste sur la carte dans son propre fp8, et chaque couche calcule en bf16 pendant qu'elle tourne ; les adaptateurs posés dessus gardent leurs couches en bf16.
 
@@ -75,27 +75,27 @@ Chaque peintre n'apparaît que lorsque ses fichiers sont là ; ceux qui manquent
 
 **La file.** Un appui sur Dessiner est une exécution : un prompt, ses formats, ses variations. Elle attend dans la file du labo une carte qui a de la place, comme les pochettes des prises, les stems et les suréchantillonnages ; pendant qu'elle attend, **Hors de la file** la reprend, et **Arrêter** à côté de Dessiner termine une exécution qui peint (les images qu'elle a finies restent). Deux exécutions peuvent se tenir à la fois : l'une peint, la suivante attend derrière.
 
-**Quelle carte.** Les tâches du labo s'en tiennent aux cartes qu'on leur a données dans **Moteur → GPU** (la carte propre du studio n'est jamais prise par hasard). Une carte que rien d'autre n'utilise prend une exécution dont le besoin tient dans sa mémoire moins 512 Mio (la part propre du runtime CUDA) ; une carte occupée la prend quand sa mémoire libre contient le besoin ; une carte avec une limite de VRAM compte sa limite comme plafond. Le besoin est celui du peintre plus la taille de ses adaptateurs, et 6 Go de plus pour une seconde passe ×2.
+**Quelle carte.** Les tâches du labo s'en tiennent aux cartes qu'on leur a données dans **Moteur → GPU** (la carte propre du Studio n'est jamais prise par hasard). Une carte que rien d'autre n'utilise prend une exécution dont le besoin tient dans sa mémoire moins 512 Mio (la part propre du runtime CUDA) ; une carte occupée la prend quand sa mémoire libre contient le besoin ; une carte avec une limite de VRAM compte sa limite comme plafond. Le besoin est celui du peintre plus la taille de ses adaptateurs, et 6 Go de plus pour une seconde passe ×2.
 
 **Quand aucune carte ne le tient entier**, Qwen-Image 2512 fait venir leurs blocs en flux depuis la RAM : les blocs qui tiennent restent sur la carte, les autres viennent au fur et à mesure (le group offloading de diffusers sur un stream CUDA : un bloc arrive pendant que le précédent calcule), et l'image est la même, plus lente de ce que le bus ne peut pas cacher. Tous ses blocs en flux, il prend 2,3 Go de la carte (1328², Lightning, quatre adaptateurs), si bien qu'une carte de 6 Go le peint, avec environ 30 Go de RAM. Qwen-Image 2.1 fait venir en flux son transformer (bloc par bloc) et son encodeur de texte (couche par couche) : sous une limite de 15,5 Go, il a peint à partir des mots à 4,1 Go au pic et retouché à 7,9 Go, à peu près dans le même temps qu'entier. Un peintre qui ne peut pas aller en flux et ne tient sur aucune carte est refusé tout de suite, avec les chiffres et le peintre qui tiendrait.
 
 **Plusieurs cartes.** Une exécution de plusieurs images est répartie sur les cartes du labo qui ont de la place et assez de RAM pour un peintre de plus (trois formats sur deux cartes : le premier et le troisième sur l'une, le deuxième sur l'autre), chaque carte peignant sa part avec les graines propres de l'exécution : les images sont les mêmes bit pour bit que sur une carte.
 
-**Un peintre gardé.** Après une exécution, son peintre retourne en RAM et sa carte est de nouveau libre ; une exécution suivante du même peintre, du même fine-tune et des mêmes adaptateurs dans le même ordre peint aussitôt, sans la minute ou deux de chargement. Un peintre gardé est relâché après dix minutes d'inactivité, quand la RAM est demandée pour un autre, ou par **Décharger** dans la Barre (qui relâche tout ce que le studio tient sur ses cartes).
+**Un peintre gardé.** Après une exécution, son peintre retourne en RAM et sa carte est de nouveau libre ; une exécution suivante du même peintre, du même fine-tune et des mêmes adaptateurs dans le même ordre peint aussitôt, sans la minute ou deux de chargement. Un peintre gardé est relâché après dix minutes d'inactivité, quand la RAM est demandée pour un autre, ou par **Décharger** dans la Barre (qui relâche tout ce que le Studio tient sur ses cartes).
 
 **Dans une exécution** : le prompt est lu une fois par l'encodeur de texte ; chaque image est tracée à la taille propre du peintre et gardée à celle de la salle (Qwen-Image trace en 1328², 1664 × 928 et 928 × 1664 et ramène chacune à 1280², 1920 × 1080 et 1080 × 1920) ; le décodeur travaille par tuiles, si bien que son pic reste bas.
 
 **Aperçu en direct** (activé par défaut) : les latents de chaque pas deviennent une image d'un huitième de la taille sans le décodeur (avec les facteurs de couleur propres de l'espace latent, tels qu'InvokeAI les porte), donc il ne coûte rien ; une barre en haut de la scène suit l'exécution, image par image et pas à pas.
 
-**Le filtre de contenu** : chaque image passe un filtre de contenu (nsfw_image_detection de Falconsai, Apache-2.0), la règle du studio pour tout peintre : une image qu'il signale n'est pas gardée, et l'exécution le dit.
+**Le filtre de contenu** : chaque image passe un filtre de contenu (nsfw_image_detection de Falconsai, Apache-2.0), la règle du Studio pour tout peintre : une image qu'il signale n'est pas gardée, et l'exécution le dit.
 
-**Sur le disque** : chaque exécution est un dossier dans `artist/` du studio : `ask.json` (ce qui a été demandé), `run.json` (écrit image par image), les images `NN-SHAPE-sSEED.png`, leurs `thumbs/`, et une référence ou un masque à côté quand l'exécution en avait. Un chien de garde arrête un peintre muet trop longtemps (dix minutes pendant le chargement, cinq une fois qu'il peint), et une exécution que le labo a perdue lors d'un redémarrage le dit au lieu de peindre pour toujours.
+**Sur le disque** : chaque exécution est un dossier dans `artist/` du Studio : `ask.json` (ce qui a été demandé), `run.json` (écrit image par image), les images `NN-SHAPE-sSEED.png`, leurs `thumbs/`, et une référence ou un masque à côté quand l'exécution en avait. Un chien de garde arrête un peintre muet trop longtemps (dix minutes pendant le chargement, cinq une fois qu'il peint), et une exécution que le labo a perdue lors d'un redémarrage le dit au lieu de peindre pour toujours.
 
 ## 6. Lightning
 
 **Ce que c'est** : un adaptateur (lightx2v, Apache-2.0) qui apprend à Qwen-Image 2512 à peindre en quelques pas sans guidage : le long chemin guidé propre au modèle distillé en 8 pas. Son fichier vit dans `artwork/Qwen-Image-2512/lightning/` et vient avec la récupération des peintres Qwen.
 
-**Comment le studio le pose** : Lightning activé, le peintre le charge comme un adaptateur de plus sous les tiens, à **1.0** pour les GGUF Q4 et Q6 et le fp8 BASE propre à 2512 (la base dont il a été distillé, 8 pas) et à **0.55** pour un fine-tune fp8 en 12 pas (un fine-tune s'est éloigné de la base, et Lightning à pleine force le ramènerait en arrière). Le programme devient celui de Lightning (un décalage de log 3 à toute taille), et le guidage est coupé : une passe du modèle par pas.
+**Comment le Studio le pose** : Lightning activé, le peintre le charge comme un adaptateur de plus sous les tiens, à **1.0** pour les GGUF Q4 et Q6 et le fp8 BASE propre à 2512 (la base dont il a été distillé, 8 pas) et à **0.55** pour un fine-tune fp8 en 12 pas (un fine-tune s'est éloigné de la base, et Lightning à pleine force le ramènerait en arrière). Le programme devient celui de Lightning (un décalage de log 3 à toute taille), et le guidage est coupé : une passe du modèle par pas.
 
 **Lui coupé**, 2512 peint à sa façon : 30 pas par défaut (de 10 à 60) et **Guidage** 4 (un vrai CFG contre un négatif vide : deux passes par pas). Soixante passes contre huit : environ sept fois la peinture, et le détail et la lumière du réalisme abouti.
 
@@ -125,7 +125,7 @@ Le **programme** dit où les pas sont dépensés entre tout le bruit et aucun : 
 | Qwen-Image 2512 avec Lightning | Simple, Beta, Beta 57, SGM uniform, Bong tangent | Karras, Exponential, KL optimal (ils peuvent peindre le sujet deux fois) |
 | Qwen-Image 2512 sans Lightning | Euler, ER-SDE, RES 2s / 3s | Euler SDE (doux et brumeux) |
 
-Le formulaire dit les deux avertissements quand ils s'appliquent. Les échantillonneurs ont été écrits pour le studio d'après leurs articles et les formules de ComfyUI ; RES4LYF n'a été lu que pour ses mathématiques (sa licence interdit les services commerciaux), et Heun++ est de Carzit (MIT).
+Le formulaire dit les deux avertissements quand ils s'appliquent. Les échantillonneurs ont été écrits pour le Studio d'après leurs articles et les formules de ComfyUI ; RES4LYF n'a été lu que pour ses mathématiques (sa licence interdit les services commerciaux), et Heun++ est de Carzit (MIT).
 
 ## 8. Adaptateurs (LoRA)
 
@@ -155,9 +155,9 @@ Les régions sont gardées dans ce navigateur ; une région sans mots n'est pas 
 
 ## 10. Lettrage
 
-**Lettrage**, sous Régions, replié : un titre, et une seconde ligne dessous, lettrés comme une part de la peinture plutôt que posés par-dessus comme un calque qui reste à part de l'image. Ses mots vont dans des champs à eux, jamais dans le prompt, et le studio écrit ce que le peintre lit. Deux façons, choisies sous **Comment** :
+**Lettrage**, sous Régions, replié : un titre, et une seconde ligne dessous, lettrés comme une part de la peinture plutôt que posés par-dessus comme un calque qui reste à part de l'image. Ses mots vont dans des champs à eux, jamais dans le prompt, et le Studio écrit ce que le peintre lit. Deux façons, choisies sous **Comment** :
 
-- **Peint avec l'image** (Qwen-Image 2512 ou 2.1) : le studio ajoute une phrase au prompt : où, le titre entre guillemets, à quoi ressemblent les lettres, la seconde ligne plus petite dessous, puis *painted in the same technique and light as the picture. No other text.* Un prompt d'un paragraphe la reçoit à sa fin ; un prompt écrit en paragraphes la reçoit comme paragraphe à part, *TEXT RENDERING:*, deuxième, après le premier : à la fin d'un long prompt elle se noie (le prompt d'un album, 3 200 caractères en dix paragraphes, a peint ainsi trois images sans une lettre). Le prompt d'une prise demande pas de texte (*No text, no letters.*) : cette phrase est retirée d'abord.
+- **Peint avec l'image** (Qwen-Image 2512 ou 2.1) : le Studio ajoute une phrase au prompt : où, le titre entre guillemets, à quoi ressemblent les lettres, la seconde ligne plus petite dessous, puis *painted in the same technique and light as the picture. No other text.* Un prompt d'un paragraphe la reçoit à sa fin ; un prompt écrit en paragraphes la reçoit comme paragraphe à part, *TEXT RENDERING:*, deuxième, après le premier : à la fin d'un long prompt elle se noie (le prompt d'un album, 3 200 caractères en dix paragraphes, a peint ainsi trois images sans une lettre). Le prompt d'une prise demande pas de texte (*No text, no letters.*) : cette phrase est retirée d'abord.
 - **Sur l'image de référence** (Qwen-Image 2.1) : une image finie lettrée par les mots, le reste gardé. La consigne s'écrit à partir des seuls champs, si bien que le prompt peut rester vide. **Lettrer**, sur la scène ou dans le menu d'une image, fait de cette image la référence, règle Comment et ouvre le bloc, le titre en main.
 
 **Les champs** : **Titre** (60 caractères) ; **Seconde ligne** (80 : l'artiste, l'album ; vide pour aucune) ; **Les lettres** (400, leur aspect en mots, aussi long qu'un paragraphe de typographie d'un prompt ; vide : *large elegant classical serif capitals in warm gold, with even letter spacing*) ; **Où** (en haut, au milieu, en bas). **Le titre de la prise** remplit le titre depuis la prise choisie à droite. Le bloc est gardé dans ce navigateur ; **Encore** lettre avec les mots de l'exécution ; la ligne de l'exécution garde la phrase que le peintre a lue.
@@ -172,7 +172,7 @@ Les régions sont gardées dans ce navigateur ; une région sans mots n'est pas 
 
 **Cyrillique** : le titre d'un album en cyrillique, sur deux lignes (un mot, puis une ligne avec Щ et Ш), dans le style de son propre prompt. Qwen-Image 2512 a écrit juste le titre dans les neuf images ; la seconde ligne en minuscules dans aucun de six essais (les minuscules Щ et Ш griffonnées) ; en capitales, Щ et Ш sont sorties justes à chaque fois et seule la dernière lettre s'est trompée, avec aussi la forme des lettres dite (son idée, HERESY 1396 : Ы, Щ, Ш et les autres lettres qu'un peintre entraîné sur le latin a rarement vues, et Ф à côté du Φ grec, chacune décrite quand les mots la portent). Une aide épelée (les lettres séparées par des traits d'union) a été essayée puis abandonnée : le peintre peut peindre ses traits d'union dans le titre. Pour le cyrillique : des capitales, et regarde la marque.
 
-**Pourquoi peint, et non composé** : une vraie police composée par le studio (crénage, approche et interlignage par raqm) et légèrement repeinte par-dessus écrit exactement, mais reste un calque sur l'image. Des quatre façons essayées, Viktor a choisi les deux où le peintre écrit lui-même les lettres.
+**Pourquoi peint, et non composé** : une vraie police composée par le Studio (crénage, approche et interlignage par raqm) et légèrement repeinte par-dessus écrit exactement, mais reste un calque sur l'image. Des quatre façons essayées, Viktor a choisi les deux où le peintre écrit lui-même les lettres.
 
 ## 11. Une image d'où peindre
 
@@ -230,7 +230,7 @@ Le bord d'un masque rond peut rester visible sans eux ; Étendre 16, Bord 24, Do
 
 **Comment son flux le fait**, lu nœud par nœud : l'image de la première passe 2× en nearest-exact, encodée par tuiles, InjectLatentNoise 0,6, puis un second KSampler à partir du pas 20 sur 60 à CFG 4,5, avec le même échantillonneur et le même programme que la première passe (tous deux viennent d'un seul packer : ER-SDE et Bong tangent tel que le flux est enregistré).
 
-**Dans le studio** : **Combien elle peut changer** (0,5 d'abord : 0,3 garde le dessin et ajoute du détail, 0,5 affûte sa matière, 0,7 repeint ses formes) et **Bruit ajouté** (0,6 d'abord, comme le sien) sur sa ligne ; les pas, l'échantillonneur, le programme et Lightning sont ceux du formulaire quand le formulaire peint avec le même peintre, sinon ceux de l'exécution. Sa recette donne à la seconde passe beaucoup de pas et pas de Lightning : règle-les dans le formulaire avant d'appuyer sur ×2.
+**Dans le Studio** : **Combien elle peut changer** (0,5 d'abord : 0,3 garde le dessin et ajoute du détail, 0,5 affûte sa matière, 0,7 repeint ses formes) et **Bruit ajouté** (0,6 d'abord, comme le sien) sur sa ligne ; les pas, l'échantillonneur, le programme et Lightning sont ceux du formulaire quand le formulaire peint avec le même peintre, sinon ceux de l'exécution. Sa recette donne à la seconde passe beaucoup de pas et pas de Lightning : règle-les dans le formulaire avant d'appuyer sur ×2.
 
 **Ce qu'elle coûte et donne** : un 16:9 de 1920 × 1080 en sort en 3840 × 2160. Sur une 3090, un fine-tune fp8 de Qwen-Image 2512 en 3840 × 2160 en 220 s avec 12 pas et Lightning (22,9 Go, ses blocs en flux). À 0,6, il a gardé la scène et déplacé un peu ses parties ; à 0,5, la composition a tenu. Pas pour Qwen-Image 2.1 ; ni masque ni toile avec elle. **Encore** sur une seconde passe la repeint à sa taille.
 
@@ -305,7 +305,7 @@ Le suréchantillonnage et la seconde passe font des choses différentes : un sur
 
 ## 18. Les chiffres
 
-Mesurés sur une RTX 3090 (24 Go) avec les outils propres du studio.
+Mesurés sur une RTX 3090 (24 Go) avec les outils propres du Studio.
 
 | quoi | temps | carte au pic |
 |---|---|---|
@@ -325,7 +325,7 @@ La première exécution d'un peintre ajoute son chargement : une minute ou deux 
 
 ## 19. Pour les scripts et les agents
 
-Le labo répond sur la machine du studio (par la page à `/lab/…`) ; l'API du studio (`/api/v1`, OpenAPI 3.1) et son serveur MCP se tiennent à côté. Les points d'accès propres du Peintre :
+Le labo répond sur la machine du Studio (par la page à `/lab/…`) ; l'API du Studio (`/api/v1`, OpenAPI 3.1) et son serveur MCP se tiennent à côté. Les points d'accès propres du Peintre :
 
 - `POST /artist/draw` : une exécution. Son corps : `prompt` ; `shapes` (`1:1`, `16:9`, `9:16`) ; `count` (de 1 à 4) ; `seed` ; `painter` (`qwen2512-q4`, `qwen2512-q6`, `qwen2512-fp8`, `qwen21`) ; `model` (le fichier d'un fine-tune fp8) ; `sampling` (`steps`, `sampler`, `schedule`, `lightning`, `cfg`) ; `loras` (`[{id, weight, keys}]`) ; `ref` (une data URL, ou `{id, file}` d'une image d'une exécution antérieure) avec `strength` (de 0,2 à 1) et `ref_as` (`edit`, `style`) ; `mask` avec `mask_opts` (`grow`, `edge`, `soft`, `grain`) ; `fit` (peindre autour) ; `place` (la toile : `{shape: {x, y, s}}`) ; `inject` (de 0 à 2) ; `scale` (1,5 ou 2, une seconde passe) ; `regions` (`[{prompt, box: [x, y, w, h]}]`, trois au plus) ; `letters` (`{title, sub, look, where, way}` : `where` `top`, `middle` ou `bottom`, `way` `paint` ou `letter` ; avec `letter` le peintre est `qwen21` avec un `ref`, et `prompt` peut être vide) ; `preview` ; `take`. Une exécution lettrée porte `letters_prompt` (la phrase que le peintre a lue), et chacune de ses images `letters` : `{read, exact, near, tries}`, ou `{unread}` quand l'auditeur n'a pas pu la lire.
 - `GET /artist/runs`, `GET /artist/file`, `POST /artist/stop`, `POST /artist/cover`, `POST /artist/star`, `POST /artist/note` (`{id, file, note}`), `POST /artist/protect`, `POST /artist/trash`, `POST /artist/restore`, `POST /artist/aside`.
@@ -337,7 +337,7 @@ Un refus revient en `400` avec la raison en mots, les mêmes mots que montre la 
 
 ## 20. Licences
 
-Le filtre de contenu (Falconsai) et le rédacteur de prompts (Qwen3-4B) : Apache-2.0 ; le filtre regarde chaque image que peint le studio. Qwen-Image 2512 et Lightning : Apache-2.0. Les fine-tunes fp8 : les conditions de chaque auteur. Qwen-Image 2.1 : la Qwen Research Licence, recherche et évaluation seulement. Adaptateurs : les conditions de chaque auteur, telles que Civitai les liste. Suréchantillonneurs : chacun les siennes ; les notes d'OpenModelDB disent lesquels sont non commerciaux, et la salle les marque. Ce que tu peux faire des images que tu peins en découle ; quand cela compte, lis-les avant de vendre.
+Le filtre de contenu (Falconsai) et le rédacteur de prompts (Qwen3-4B) : Apache-2.0 ; le filtre regarde chaque image que peint le Studio. Qwen-Image 2512 et Lightning : Apache-2.0. Les fine-tunes fp8 : les conditions de chaque auteur. Qwen-Image 2.1 : la Qwen Research Licence, recherche et évaluation seulement. Adaptateurs : les conditions de chaque auteur, telles que Civitai les liste. Suréchantillonneurs : chacun les siennes ; les notes d'OpenModelDB disent lesquels sont non commerciaux, et la salle les marque. Ce que tu peux faire des images que tu peins en découle ; quand cela compte, lis-les avant de vendre.
 
 ## 21. Ce qui vient ensuite
 

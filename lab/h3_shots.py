@@ -1,6 +1,6 @@
 """HERESY 1868 (Viktor 29.10.2026: «мне нужна реальная DDiT генерация живого видеоклипа, а не просто слайдшоу»; «Забирай все GPUs»): the Videographer's
 shots made alive by MiniMax H3. A shot asked for goes as a job into a card's spool (user/videos/.h3/gpuN-KIND/); a worker a card (lab/h3_worker.py in the
-Artist's environment, on the studio's own runtime lab/h3rt since 1870) takes it, keeps H3 loaded while shots come and leaves the card when none has come for ten minutes. Both modes are H3 FL2VA with
+Artist's environment, on the Studio's own runtime lab/h3rt since 1870) takes it, keeps H3 loaded while shots come and leaves the card when none has come for ten minutes. Both modes are H3 FL2VA with
 the shot's picture as its first frame: «draft» at 8 steps and 832×480 (measured 29.10 on a 3090: 102 s, a peak of 15 GB, a clean picture), «final» at
 28 steps and H3's own 768p; so one worker a card serves both. What a worker made is set into the shot by collect() (the lab's thread and every
 status): the video in NAME.shots/, its first frame beside it for the timeline, the one before put off (kept). A shot whose times changed since it was

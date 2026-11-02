@@ -69,7 +69,7 @@
     var l = st.latest, p = prefs();
     var text = tr("Ruach Studio {0} is out").replace("{0}", l.version) + "\n\n" +   // HERESY 1339: the notes stay as written
       (l.candidate ? tr("A release candidate: everything in it works and was checked, the last polish comes in the release.") + "\n\n" : "") +
-      said(l.notes) + "\n\n" + (st.can_run ? tr("The update fetches it, builds it and restarts the studio when nothing runs; your songs, models and settings stay.")
+      said(l.notes) + "\n\n" + (st.can_run ? tr("The update fetches it, builds it and restarts the Studio when nothing runs; your songs, models and settings stay.")
         : tr("Here it cannot update by itself: {0}.").replace("{0}", tr(st.why)));
     return window.HeresyDialog.confirm(text, { ok: st.can_run ? "Update now" : "Open the release page", cancel: "Later", alt: fromCard ? "" : "Skip this version" }).then(function (a) {
       if (a === "alt") { p.skip = l.version; keep(p); toast("Skipped " + l.version + ": the next release will be offered"); return; }
@@ -81,7 +81,7 @@
   function run(st) {
     if (S.hooks.idle && !S.hooks.idle()) { toast("A run is going: the update waits until nothing runs", "bad"); return; }
     return lab("/update", { run: st.latest.version }).then(function () {
-      toast("Updating to " + st.latest.version + ": the studio builds it, then restarts");
+      toast("Updating to " + st.latest.version + ": the Studio builds it, then restarts");
       watch(st.latest.version);
     }, function (e) { toast("No update: " + e.message, "bad"); });
   }
@@ -96,7 +96,7 @@
     }, 3000);
   }
   function askHowOften() {
-    return window.HeresyDialog.choose("How often should the studio look for a new release?\n\nIt asks GitHub for the list of its releases, nothing more. When one is out you are asked first; Engine → Updates can update by itself instead, and look whenever you ask.",
+    return window.HeresyDialog.choose("How often should the Studio look for a new release?\n\nIt asks GitHub for the list of its releases, nothing more. When one is out you are asked first; Engine → Updates can update by itself instead, and look whenever you ask.",
       // HERESY 1379b: words, not names: in the page's language (they stayed English under the list's translate="no")
       [{ label: "Every week", value: "week", note: "recommended", current: true, words: true }, { label: "Every day", value: "day", words: true },
         { label: "Every month", value: "month", words: true }, { label: "Never", value: "never", note: "Engine → Updates looks when you ask", words: true }],
@@ -113,7 +113,7 @@
       q.seen = st.current; keep(q);
       if (!missing.length) return;
       var list = missing.map(function (s) { return "💎 " + String(s.name).replace(/^💎\s*/, "") + (s.takes ? " · " + tr(s.takes === 1 ? "1 take" : s.takes + " takes") : "") + (s.bytes ? " · " + tr(size(s.bytes)) : ""); }).join("\n");
-      return window.HeresyDialog.confirm(tr("The studio's 💎 sets") + "\n\n" + tr("Takes made with this studio and approved by its author, to hear what YuE2 does and make it again: instruments, " +
+      return window.HeresyDialog.confirm(tr("The Studio's 💎 sets") + "\n\n" + tr("Takes made with this Studio and approved by its author, to hear what YuE2 does and make it again: instruments, " +
         "styles and voices, each with its whole request. You do not have these yet:") + "\n\n" + list + "\n\n" + tr("Each comes as a workspace of its own; only what you pick is downloaded."),
         { ok: "Open the sets", cancel: "Not now", alt: "Don't ask again" }).then(function (a) {
         if (a === "alt") { var r = prefs(); r.gems = "never"; keep(r); }

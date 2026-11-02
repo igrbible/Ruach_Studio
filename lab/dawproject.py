@@ -1,5 +1,5 @@
 """HERESY 1074: a take as a DAWproject. DAWproject is the open project format of Bitwig and PreSonus;
-Bitwig, Studio One and Cubase import it. (It was made for openDAW beside the studio; openDAW left with
+Bitwig, Studio One and Cubase import it. (It was made for openDAW beside the Studio; openDAW left with
 HERESY 1102, the format stays for the DAWs that read it.)
 
 A track for the mix and one for every stem the take has (derived/stems-*/), each a clip from 0 over the

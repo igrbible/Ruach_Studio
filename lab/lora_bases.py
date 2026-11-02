@@ -3,11 +3,11 @@
 адаптеров, так и в подгруженных, если вдруг переключил модели»; his voice adapter, learnt on YuE2, tears on the fine-tune: 27.10).
 
 An adapter's base, the first that says it:
-  1. its file's metadata: base_model (the studio's trainer writes it since 1960; others write a file name or a repo), or
+  1. its file's metadata: base_model (the Studio's trainer writes it since 1960; others write a file name or a repo), or
      ss_base_model_version;
-  2. the run of this studio that made it (training/<its folder>/run.json, options.base: empty is YuE2 itself, else the
+  2. the run of this Studio that made it (training/<its folder>/run.json, options.base: empty is YuE2 itself, else the
      checkpoint it trained on, named by its file);
-  3. nothing said: YuE2 itself, as every YuE2 adapter outside this studio was trained (said so: «assumed»).
+  3. nothing said: YuE2 itself, as every YuE2 adapter outside this Studio was trained (said so: «assumed»).
 The model's line, from its GGUF: the adapters merge-loras folded into it (heresy.merged_loras, lab/merges.py), an RS-FW epoch
 among them making it RS-FW of that epoch; else its file name (RS-FW-2.4…); else, a YuE2 file or a merge of YuE2 with adapters
 (IRA, IRAE), YuE2. A model told by none of these is unknown, and then nothing is flagged.
@@ -84,7 +84,7 @@ def _run_base(kit, run):
 
 
 def adapter_line(kit, rel):
-    """(line, how) of loras/<rel>: how is "file" (its metadata), "run" (this studio's run) or "assumed"."""
+    """(line, how) of loras/<rel>: how is "file" (its metadata), "run" (this Studio's run) or "assumed"."""
     p = Path(kit) / "loras" / rel
     meta = _meta(p) if p.is_file() else {}
     for k in ("base_model", "ss_base_model_version", "base_checkpoint"):

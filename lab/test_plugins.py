@@ -16,6 +16,7 @@ with tempfile.TemporaryDirectory() as t:
             {"key": "gain", "type": "number", "min": -6, "max": 6, "step": 0.5, "default": 1},
             {"key": "mode", "type": "select", "options": [["a", "A"], ["b", "B"]], "default": "b"},
             {"key": "glue", "type": "check", "default": True},
+            {"key": "state", "type": "text", "default": "{}"},          # HERESY 1977: a step's own state, kept as it came, bounded
             {"key": "bad key", "type": "number"}, {"key": "odd", "type": "slider"}]},
         {"id": "escape", "script": "../outside.py"}, {"id": "missing", "script": "nope.py"}]}, open(good / "plugin.json", "w"))
     bad = root / "bad"; bad.mkdir()
@@ -27,12 +28,14 @@ with tempfile.TemporaryDirectory() as t:
     assert sorted(e["plugin"] for e in errors) == ["bad", "noid"], errors
     steps = plugs[0]["steps"]
     assert [s["id"] for s in steps] == ["copy"], steps                      # outside its folder and missing: left out
-    assert [p["key"] for p in steps[0]["params"]] == ["gain", "mode", "glue"], steps[0]["params"]
+    assert [p["key"] for p in steps[0]["params"]] == ["gain", "mode", "glue", "state"], steps[0]["params"]
     pub = k.public(plugs)
     assert "script" not in pub[0]["steps"][0] and "folder" not in pub[0], pub
     plugin, step = k.find(plugs, "good", "copy")
-    assert k.clean(step, {"gain": "99", "mode": "z", "glue": "0"}) == {"gain": 6.0, "mode": "b", "glue": False}
-    assert k.clean(step, None) == {"gain": 1.0, "mode": "b", "glue": True}
+    assert k.clean(step, {"gain": "99", "mode": "z", "glue": "0", "state": "x" * 30000}) == {"gain": 6.0, "mode": "b", "glue": False, "state": "x" * 20000}
+    assert k.clean(step, None) == {"gain": 1.0, "mode": "b", "glue": True, "state": "{}"}
+    kinds = [f.get("kind") for f in k.result('{"files": [{"name": "Bass (MIDI)", "file": "bass.mid"}, {"name": "n", "file": "report.csv"}, {"name": "v", "file": "v.flac"}]}')["files"]]
+    assert kinds == ["midi", "text", None], kinds                           # HERESY 1978: a step's MIDI is no sound to play
     try:
         k.find(plugs, "good", "nope"); raise SystemExit("found a step that is not there")
     except ValueError:
@@ -88,7 +91,7 @@ with tempfile.TemporaryDirectory() as t:
     assert (h[0]["hardware"], h[0]["stem"], h[1]["hardware"], h[1]["stem"]) == (True, "lead_vocal", False, ""), h
     pub = k.public(plugs)[[p["id"] for p in plugs].index("hw")]["steps"]
     assert (pub[0]["hardware"], pub[0]["stem"]) == (True, "lead_vocal"), pub
-print("plugins: 24 checks passed")
+print("plugins: 27 checks passed")
 
 
 # HERESY 1589: MIDI scripts: a plugin of them alone is listed; a script outside its folder, not .js, or with a broken pattern is left out;

@@ -1,0 +1,5 @@
+# What extras/plugins ships (heresy/tools/check-no-pro.sh): the Studio's public shelf of plugins. A private plugin never goes here.
+README.md
+install.sh
+basic-pitch
+example-node

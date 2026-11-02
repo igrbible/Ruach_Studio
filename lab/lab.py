@@ -20,8 +20,8 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
                                    models/instruments (SFZ, SF2 with their presets), the map group → instrument (a take's own over the
                                    studio's), the GM bank, the groups, each stem's groups, the modes
   GET /orchestra/suggest?stem=piano|bass|drums|…   what the console offers a stem: the map first, then a set's main patch
-  POST /orchestra/map {group, instrument|null[, name]}   one group's instrument in the studio's map (user/orchestra.json) or the take's
-                                   own (its orchestra.json); null: back to the studio's map, or to its GM program
+  POST /orchestra/map {group, instrument|null[, name]}   one group's instrument in the Studio's map (user/orchestra.json) or the take's
+                                   own (its orchestra.json); null: back to the Studio's map, or to its GM program
   GET /orchestra/render?name=TAKE&source=derived/stems-…/STEM.flac&mode=instead|over|octave[&shift=12][&instrument=JSON][&size=]
                                    the stem played by the instrument (none: each group as the map says) as a version of it in the
                                    Refiner's DAW (derived/orchestra-…), transcribed first when the take has no MIDI of it: 202 while
@@ -79,7 +79,10 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
   POST /audio/gateway              {out, in, rate}: the analog gateway's devices (user/audio.json) (1512)
   POST /audio/probe                {device, rate, seconds}: an input's floor, dBFS per channel (1512)
   POST /audio/loop                 {out, in, rate, level}: a 1 kHz tone out and back: answered, gain, noise, THD (1514)
-  GET /refiner/profiles            the Refiner's setups by name (1515); its «pipelines»: the studio's and the plugins' (1553)
+  GET /banks[?fresh=1]             the shelf of banks, each its card: kind, licence, may ship, author, its .sfz, its size (2006)
+  GET|POST /relay?to=URL         a chat server on this machine or the local network, for a page over https (2005)
+  POST /audio/balance              {balance: [l, r] dB, level}: the gateway's channel balance on the way back, 0 to −1.5 each; [0, 0] off (2002)
+  GET /refiner/profiles            the Refiner's setups by name (1515); its «pipelines»: the Studio's and the plugins' (1553)
   GET /chain/batch · POST /chain/batch {names, …a chain}   one chain on many takes, one after another (1562); POST /chain/batch/stop
   GET /writer/versions[?id=|?title=] · POST /writer/versions {op: keep|mark|delete|undelete}   the Creator's words on each
                                    Generate, one file per base title in KIT/writer-versions/ (1519)
@@ -107,7 +110,7 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
        GET /collection/lora-notes: the user's notes on adapters · GET /vocab/: the user's own vocabularies in user/vocab/ (HERESY 1802)
        GET /weights · POST /weights/check · POST /weights/fetch {part | backbone | listener | artwork | trainer}: what the
        install brings, here or not, fetched again by heresy/fetch-heresy.sh, and the extras (weights.py, HERESY 1289)
-  GET /daw                       which DAWs the studio's machine has: REAPER, Waveform, … (HERESY 1102)
+  GET /daw                       which DAWs the Studio's machine has: REAPER, Waveform, … (HERESY 1102)
   POST /daw/reaper {name, midi}  the take as a REAPER project in its derived/ (the engine serves it); midi: the
                                  page's MIDI of the score, base64 (HERESY 1104)
                                    LoRA training through AI-Toolkit (training.py)
@@ -152,7 +155,7 @@ CACHE = HERE / "cache"
 WHISPER_DIR = KIT / "whisper" / "whisper-large-v3-ct2-float16"
 # HERESY 1021: everything inside the Kit (Viktor: «Ничего не привязываем к извне»). The lab's own
 # venv has torch, audio-separator, faster-whisper and numpy; cuDNN 9 and cuBLAS come with torch.
-LAB_PY = Path(os.environ.get("LAB_PY", HERE.parent / ".venv/bin/python"))   # HERESY 1080: the studio's one environment
+LAB_PY = Path(os.environ.get("LAB_PY", HERE.parent / ".venv/bin/python"))   # HERESY 1080: the Studio's one environment
 WHISPER_PY = Path(os.environ.get("LAB_WHISPER_PY", LAB_PY))
 NV = Path(os.environ.get("LAB_NVIDIA_LIBS", HERE.parent / ".venv/lib/python3.12/site-packages/nvidia"))
 PORT = int(os.environ.get("LAB_PORT", "41870"))
@@ -182,6 +185,8 @@ import daw_mixes  # noqa: E402   HERESY 1533: the DAW's mixes kept beside their 
 import merges  # noqa: E402   HERESY 1494: what a merged backbone carries, read from its file
 import derived_marks  # noqa: E402   HERESY 1504: likes, dislikes and stars on the files made from a take
 import chain_plan  # noqa: E402   HERESY 1508: the chain's steps, and «up to this node»
+import banks as bank_shelf  # noqa: E402   HERESY 2006: the shelf of banks (banks/, models/ambient, models/instruments)
+import relay as chat_relay  # noqa: E402   HERESY 2005: a chat server on the local network, for a page over https
 import audio_io  # noqa: E402   HERESY 1512: the audio interfaces, physical and virtual, and the analog gateway's choice
 import refiner_profiles  # noqa: E402   HERESY 1515: the Refiner's setups by name
 import creator_versions  # noqa: E402   HERESY 1519: the Creator's words on each Generate, apart from the takes
@@ -196,12 +201,15 @@ import gpu_live  # noqa: E402   HERESY 1264: the cards second by second, for the
 import section  # noqa: E402   HERESY 1414: Replace a section
 import machine  # noqa: E402   HERESY 1304: the machine as a new studio's first start reads it
 import artist_loras  # noqa: E402   HERESY 1316: the Artist's adapters
+import pianoteq_live  # noqa: E402   HERESY 1977: the Pianoteq installed here, through its own JSON-RPC
 import weights  # noqa: E402   HERESY 1289: the Engine's Models card over heresy/fetch-heresy.sh
-import writer_llm  # noqa: E402   HERESY 1811: the studio's own writer, llama.cpp's llama-server behind /llm/v1
+import lineage  # noqa: E402   HERESY 1988: a take's family tree
+import https_door  # noqa: E402   HERESY 1985: the Studio over https: its door, its authority, the settings handed over
+import writer_llm  # noqa: E402   HERESY 1811: the Studio's own writer, llama.cpp's llama-server behind /llm/v1
 import lora_alchemy  # HERESY 1447: what each LoRA touches, which share layers
 import lora_bases  # noqa: E402   HERESY 1960: what each adapter was trained on, against the model in use
 import takeloop  # noqa: E402   HERESY 1325: a loop from a take
-import perf  # noqa: E402   HERESY 1821: the studio over time (Engine → Performance)
+import perf  # noqa: E402   HERESY 1821: the Studio over time (Engine → Performance)
 import videographer  # noqa: E402   HERESY 1824: the Videographer's plan of a take
 import muscriptor  # noqa: E402   HERESY 1834: a take, a stem or any sound into multi-instrument MIDI (MuScriptor)
 import orchestra  # noqa: E402   HERESY 1881–1884: the MIDI orchestra: a stem's MIDI with its dynamics, played by sampled instruments
@@ -352,7 +360,7 @@ ENGINE_URL = "http://127.0.0.1:" + os.environ.get("YUE2CPP_PORT", "7777")
 
 def engine_unload(why):
     """HERESY 1297 (Viktor 10.10.2026: «На единственной видеокарте нужно автоматом выгружать модели, если другие задания требуют
-    загрузку иных весов. Иначе никак»): the studio's engine lets its models go when it is idle and holds some, so a job that needs
+    загрузку иных весов. Иначе никак»): the Studio's engine lets its models go when it is idle and holds some, so a job that needs
     the card gets it; they load again with the next song. The MiB freed: 0 when there was nothing to free, or the engine renders,
     or it does not answer (the job then waits as before). The engine shows no queue, only «busy»: it must be idle at two looks
     three seconds apart, so the page's next take, sent the moment one ends, is not left without its models."""
@@ -383,7 +391,7 @@ def free_gpu(need=None, role="jobs", why="a lab job", only=None, claim=True, unl
     """A card for a job, through the guard (HERESY 1112, 1113): no heavy stranger on it (a service above 2 GiB), and room
     for the job.
     The cards given to `role` (HERESY 1091: user/gpus.json), the most free first. HERESY 1378b: the lab's jobs keep to their
-    own cards as training does (spill True, asked by no one now, would let them take any card the guard passes, the studio's
+    own cards as training does (spill True, asked by no one now, would let them take any card the guard passes, the Studio's
     among them). None will do: refused aloud, card by card."""
     need = need or NEED_MB
     # HERESY 1376: claim, the card held for the need 90 s (a look that only asks claims nothing); unload False, the idle engine's
@@ -519,8 +527,8 @@ def live_roles():
 
 
 def gpus_state():
-    """HERESY 1091: the cards, what each is given to, what runs on it now; the studio's card as saved and as
-    running (they differ until a restart); and whether the studio's card is training (the page waits then)."""
+    """HERESY 1091: the cards, what each is given to, what runs on it now; the Studio's card as saved and as
+    running (they differ until a restart); and whether the Studio's card is training (the page waits then)."""
     cards = training.gpus()
     roles = gpu_roles.load(KIT, cards)
     live = {}                                           # the live runs only (the full history is heavy to read)
@@ -572,19 +580,19 @@ def machine_state():
 
 
 def studio_restart():
-    """Restart the studio (a new card for it, from user/gpus.json), only when it is not rendering."""
+    """Restart the Studio (a new card for it, from user/gpus.json), only when it is not rendering."""
     port = os.environ.get("YUE2CPP_PORT", "7777")
     import urllib.request
     try:
         hw = json.load(urllib.request.urlopen(f"http://127.0.0.1:{port}/hardware", timeout=5))
     except (OSError, ValueError) as e:
-        raise RuntimeError(f"the studio does not answer: {e}")
+        raise RuntimeError(f"the Studio does not answer: {e}")
     if hw.get("busy"):
-        raise ValueError("the studio is rendering now: restart it when the run is done")
+        raise ValueError("the Studio is rendering now: restart it when the run is done")
     # HERESY 1259: only a studio that runs as its systemd unit is restarted from here. Under Pinokio or by hand (./start.sh) there is
-    # no unit: «restarting» was a word for nothing, and the page then said the studio was back. The card is saved all the same.
+    # no unit: «restarting» was a word for nothing, and the page then said the Studio was back. The card is saved all the same.
     if subprocess.run(["systemctl", "--user", "is-active", "--quiet", "ruach-studio"], timeout=10).returncode != 0:
-        raise ValueError("the studio does not run as a service here (Pinokio, or ./start.sh by hand): stop it and start it again "
+        raise ValueError("the Studio does not run as a service here (Pinokio, or ./start.sh by hand): stop it and start it again "
                          "there to move it; the card is saved")
 
     def later():
@@ -973,7 +981,7 @@ def c2pa_file(q):
         raise ValueError("format: wav, flac or mp3")
     with urllib.request.urlopen(ENGINE_URL + src, timeout=900) as r:
         data, head = r.read(), {k: r.headers.get(k) for k in ("Content-Type", "Content-Disposition") if r.headers.get(k)}
-    # HERESY 1635 (RIVALS 8): the title, the lyrics, the style, the cover and the studio in the file, so a player shows the song whole; signed after
+    # HERESY 1635 (RIVALS 8): the title, the lyrics, the style, the cover and the Studio in the file, so a player shows the song whole; signed after
     data, tagged = file_tags.tag(data, fmt, file_tags.song_of(d), author=str(c2pa_sign.load(config_dir()).get("author") or ""),
                                  software="Ruach Studio " + studio_version())
     head["X-Tags"] = tagged.encode("ascii", "replace").decode("ascii")[:200]   # a header is latin-1
@@ -1494,7 +1502,7 @@ def slug(text):
 IMPORTED = "\U0001f6a8 IMPORTED"                     # HERESY 1481: where every import lands
 
 
-def import_track(filename, title, body):
+def import_track(filename, title, body, parent="", what=""):   # HERESY 1988: and what it is a version of, for the take's family tree
     ext = Path(filename).suffix.lower()
     if ext not in (".wav", ".flac", ".mp3", ".m4a", ".ogg", ".aiff", ".aif"):
         raise ValueError("WAV, FLAC, MP3, M4A, OGG or AIFF")
@@ -1515,9 +1523,13 @@ def import_track(filename, title, body):
     json.dump({"title": title, "created": int(time.time()), "seconds": secs, "format": "wav24", "favorite": False,
                "truncated": False, "render_seconds": 0, "song": 0, "variation": 0, "provided_score": False,
                "model": "import"}, open(d / "meta.json", "w", encoding="utf-8"), ensure_ascii=False, indent=4)
-    json.dump({"title": title, "style": "imported: " + filename, "lyrics": "", "cot": "off",
-               "imported": {"file": filename, "bytes": len(body), "at": time.strftime("%Y-%m-%d %H:%M")}},
-              open(d / "request.json", "w", encoding="utf-8"), ensure_ascii=False)
+    req = {"title": title, "style": "imported: " + filename, "lyrics": "", "cot": "off",
+           "imported": {"file": filename, "bytes": len(body), "at": time.strftime("%Y-%m-%d %H:%M")}}
+    if parent and lineage.SAFE.match(parent) and (OUTPUTS / parent).is_dir():   # HERESY 1988: a version of a take here, said so in its family tree
+        req["parent"] = parent
+        if what:
+            req["what"] = str(what)[:80]
+    json.dump(req, open(d / "request.json", "w", encoding="utf-8"), ensure_ascii=False)
     out = {"name": name, "title": title, "seconds": round(secs, 2)}
     try:                                                 # HERESY 1481: every import lands in 🚨 IMPORTED; said only when it did
         collection.collection_post(config_dir(), OUTPUTS, {"op": "ws-add", "workspace": IMPORTED, "names": [name]})
@@ -1528,7 +1540,7 @@ def import_track(filename, title, body):
 
 
 # HERESY 1027: the page's settings on disk, per platform, as other desktop programs keep theirs.
-# HERESY 1066 (Viktor): the user's settings live in the studio itself, user/ (git ignores it): a
+# HERESY 1066 (Viktor): the user's settings live in the Studio itself, user/ (git ignores it): a
 # single-user system leaves nothing in ~/.config. The first start copies what the old place held
 # (~/.config/yue2_os, from the YuE2 OS days) and leaves the old folder as it was.
 USER_DIR = KIT / "user"
@@ -1704,7 +1716,7 @@ def upscale_async(name, mode, source="", variants=2, keep=True, ceiling=None):
 # HERESY 1460: a plugin's step on the take or a file of its tree, a branch of its own (plugins.py says what a plugin is). On the
 # CPU, one at a time as the other CPU jobs; its files are checked to be where it said before the branch appears
 PLUGINS = Path(os.environ.get("LAB_PLUGINS", KIT / "user" / "plugins"))
-BUILTIN_STEPS = HERE / "builtin_steps"              # HERESY 1553: the studio's own steps, shipped (plugins.load_all)
+BUILTIN_STEPS = HERE / "builtin_steps"              # HERESY 1553: the Studio's own steps, shipped (plugins.load_all)
 
 
 def file_param(name, value, label):
@@ -1732,7 +1744,7 @@ def plugin_async(name, pid, sid, source="", given=None, versions=None, history=N
     d = take_dir(name)
     files_in = {}
     for fp in step["params"]:                          # HERESY 1557: a file field made a path now: a wrong one said before the queue
-        if fp["type"] == "file":
+        if fp["type"] == "file" and not (fp.get("blank") and not params.get(fp["key"])):   # HERESY 1991: an empty one with a blank is the step's own choice
             files_in[fp["key"]] = file_param(name, params.get(fp["key"]), fp["label"])
     if step["input"] == "stems":                     # HERESY 1464: a set of stems, its folder with its manifest
         sd = (d / source).resolve() if source else None
@@ -1773,7 +1785,7 @@ def plugin_async(name, pid, sid, source="", given=None, versions=None, history=N
 
     def work():
         try:
-            if step["gpu"]:                              # HERESY 1465: as the lab's own GPU jobs, never on the studio's card
+            if step["gpu"]:                              # HERESY 1465: as the lab's own GPU jobs, never on the Studio's card
                 with turn(job):
                     job["status"] = "running"
                     gpu, _free = free_gpu(step["need_mb"], why=step["label"])
@@ -1788,7 +1800,7 @@ def plugin_async(name, pid, sid, source="", given=None, versions=None, history=N
                 if not (tmp / f["file"]).is_file():
                     raise RuntimeError(f"{f['file']} is not where {step['label']} said")
             manifest = {"id": did, "kind": "plugin", "plugin": pid, "plugin_name": plugin["name"], "step": sid, "label": step["label"],
-                        "builtin": plugin.get("builtin", False),   # HERESY 1553: the studio's own step, its name translated
+                        "builtin": plugin.get("builtin", False),   # HERESY 1553: the Studio's own step, its name translated
                         "parent": name, "source": source or "the take", "params": params, "measure": r["measure"],
                         "summary": r.get("summary", ""),   # HERESY 1484: the step's own line
                         "files": [dict(f, path=f"derived/{did}/{f['file']}") for f in r["files"]],
@@ -2678,6 +2690,9 @@ def act_say(text):
     print("[lab] " + text, file=sys.stderr, flush=True)
 
 
+writer_llm.SAY = act_say                         # HERESY 1990: the Writer's model said in the Studio's log, its own view there
+
+
 # HERESY 1550: a file's loudness for an honest comparison, kept per file and its time
 LOUD = {}
 LOUD_LOCK = threading.Lock()
@@ -2699,6 +2714,30 @@ def loudness_of(name, path=""):
          "sample_peak_dbfs": None if m.sample_peak_dbfs is None else round(m.sample_peak_dbfs, 2), "seconds": round(len(x) / sr, 2)}
     with LOUD_LOCK:
         LOUD[key] = r
+    return r
+
+
+# HERESY 2000: where a version's music sits against another's (a print through gear comes back late): the lag in ms (+: later), how alike
+# the two are (0–1), the polarity; ab_compare's own alignment on the first two minutes, kept by the two files and their times
+ALIGN, ALIGN_LOCK = {}, threading.Lock()
+
+
+def align_of(name, path, ref, ref_path):
+    a, _t = source_of(ref, ref_path)
+    b, _u = source_of(name, path)
+    if not a or not b:
+        raise FileNotFoundError("no audio to align")
+    key = (str(a), a.stat().st_mtime_ns, str(b), b.stat().st_mtime_ns)
+    with ALIGN_LOCK:
+        if key in ALIGN:
+            return ALIGN[key]
+    import ab_compare
+    sr = ab_compare.SR
+    A, B = ab_compare.read(a), ab_compare.read(b)
+    lag, sign, like = ab_compare.align(A[:120 * sr], B[:150 * sr])
+    r = {"lag_ms": round(lag / sr * 1000, 1), "likeness": like, "polarity": "inverted" if sign < 0 else "same"}
+    with ALIGN_LOCK:
+        ALIGN[key] = r
     return r
 
 
@@ -3082,6 +3121,13 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(chunk)
                 left -= len(chunk)
 
+    def relayed(self, code, out, ctype):                # HERESY 2005: a relayed answer as it came
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(out)))
+        self.end_headers()
+        return self.wfile.write(out)
+
     def send(self, code, body):
         data = json.dumps(body, ensure_ascii=False).encode()
         self.send_response(code)
@@ -3091,7 +3137,7 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
-    # HERESY 1116: the studio's API (lab/api.py), reached through the engine's /api/…
+    # HERESY 1116: the Studio's API (lab/api.py), reached through the engine's /api/…
     def api(self, method, url, q, body):
         ctx = api_ctx()
         try:
@@ -3186,7 +3232,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, places.listing(q.get("refresh") == "1"))
             if url.path == "/places/plan":
                 return self.send(200, places.plan(q.get("name", ""), q.get("to", "")))
-            if url.path == "/llm/v1/models":                # HERESY 1811: the studio's own writer, listed as any chat server lists its model
+            if url.path == "/banks":                        # HERESY 2006: the shelf of banks
+                return self.send(200, {"banks": bank_shelf.shelf(KIT, q.get("fresh") == "1")})
+            if url.path == "/relay":                        # HERESY 2005: a chat server's models for a page over https
+                return self.relayed(*chat_relay.relay(q.get("to", ""), "GET", timeout=30))
+            if url.path == "/llm/v1/models":                # HERESY 1811: the Studio's own writer, listed as any chat server lists its model
                 return self.send(200, writer_llm.models(KIT))
             if url.path == "/llm/status":                   # HERESY 1811: here, chosen, asleep or on which card
                 return self.send(200, writer_llm.status(KIT))
@@ -3248,13 +3298,13 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/art/remove":                    # HERESY 1156
                 r = art_remove(q.get("name", ""))
                 return self.send(409 if r.get("error") else 200, r)
-            if url.path.startswith("/fonts/"):               # HERESY 1274: the page's fonts, in the studio itself (no CDN)
+            if url.path.startswith("/fonts/"):               # HERESY 1274: the page's fonts, in the Studio itself (no CDN)
                 name = url.path[len("/fonts/"):]
                 font = HERE / "fonts" / name
                 if not re.fullmatch(r"[A-Za-z0-9_-]+\.(woff2|ttf)", name) or not font.is_file():   # HERESY 1426: Liberation Mono as TTF
                     return self.send(404, {"error": "no such font"})
                 return self.send_file(font, "font/ttf" if name.endswith(".ttf") else "font/woff2", cache="public, max-age=31536000, immutable")
-            if url.path.startswith("/sounds/"):              # HERESY 1586: the piano roll's instruments, in the studio itself
+            if url.path.startswith("/sounds/"):              # HERESY 1586: the piano roll's instruments, in the Studio itself
                 name = url.path[len("/sounds/"):]
                 snd = HERE / "sounds" / name
                 if name == "vowels.json" and snd.is_file():   # HERESY 1624: the sung vowels' loops, read fresh
@@ -3337,6 +3387,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(500 if r.get("status") == "failed" else 202 if r.get("status") else 200, r)
                 except (ValueError, FileNotFoundError) as e:
                     return self.send(400, {"error": str(e)})
+            if url.path == "/align":                         # HERESY 2000: a version's place against another's, by its sound
+                try:
+                    return self.send(200, align_of(q.get("name", ""), q.get("path", ""), q.get("ref", ""), q.get("ref_path", "")))
+                except (ValueError, FileNotFoundError) as e:
+                    return self.send(404, {"error": str(e)})
             if url.path == "/loudness":                      # HERESY 1550
                 try:
                     return self.send(200, loudness_of(q.get("name", ""), q.get("path", "")))
@@ -3357,6 +3412,26 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/remaster":
                 r = remaster_async(q.get("name", ""), q.get("s", ""))
                 return self.send(202, r)
+            if url.path == "/tls":                          # HERESY 1985: the https door: answering, its port, its certificate's authority
+                return self.send(200, https_door.status(KIT))
+            if url.path == "/tls/ca.crt":                   # HERESY 1985: the Studio's own authority, to trust once in a browser or a system
+                return self.send_file(https_door.ca_file(KIT), "application/x-x509-ca-cert", download="Ruach-Studio-authority.crt")
+            if url.path == "/handoff":                      # HERESY 1985: the settings a page handed over before it moved to https, taken once
+                return self.send(200, https_door.handoff_take(q.get("token", "")))
+            if url.path == "/lineage":                      # HERESY 1988: a take's family: its parents, what came of it, what the Refiner made in each
+                return self.send(200, lineage.tree(KIT, q.get("name", ""), collection.load(config_dir()).get("regen_of") or {}))
+            if url.path == "/pianoteq/status":              # HERESY 1986: the Engine's Pianoteq tab: what is installed and activated here
+                return self.send(200, pianoteq_live.status(KIT))
+            if url.path == "/pianoteq/catalog":             # HERESY 1977: the Pianoteq here: its presets, small presets and parameters in its words
+                return self.send(200, pianoteq_live.catalog(KIT, refresh=q.get("refresh") == "1"))
+            if url.path == "/pianoteq/preset":              # HERESY 1977: one preset's values and small presets
+                small = json.loads(q.get("small") or "{}")    # HERESY 1981: as these small presets leave it
+                return self.send(200, pianoteq_live.preset(KIT, q.get("name", ""), q.get("bank", ""), small if isinstance(small, dict) else {}))
+            if url.path == "/pianoteq/listen":              # HERESY 1977: a phrase heard with a state
+                f = CACHE / "pianoteq-preview" / (re.sub(r"[^0-9a-f]", "", q.get("id", ""))[:40] + ".wav")
+                if not f.is_file():
+                    raise FileNotFoundError("no such phrase: play it again")
+                return self.send_file(f, "audio/wav", cache="private, max-age=600")
             if url.path == "/loop":                         # HERESY 1325: a loop cut from a take's own WAV, seamless
                 d = take_dir(q.get("name", ""))
                 src = d / "audio.wav"
@@ -3603,7 +3678,9 @@ class Handler(BaseHTTPRequestHandler):
             if size <= 0 or size > 1024 ** 3:
                 raise ValueError("send the file as the body, up to 1 GB")
             body = self.rfile.read(size)
-            if url.path == "/llm/v1/chat/completions":      # HERESY 1811: a question to the studio's own writer, started if it sleeps
+            if url.path == "/relay":                        # HERESY 2005: a question to a chat server for a page over https
+                return self.relayed(*chat_relay.relay(q.get("to", ""), "POST", body, self.headers.get("Content-Type") or "application/json"))
+            if url.path == "/llm/v1/chat/completions":      # HERESY 1811: a question to the Studio's own writer, started if it sleeps
                 code, out = writer_llm.chat(KIT, body)
                 self.send_response(code)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -3618,11 +3695,27 @@ class Handler(BaseHTTPRequestHandler):
                 if not q.get("scope"):
                     writer_llm.stop("asked")
                 return self.send(200, writer_llm.status(KIT))
-            if url.path == "/lora/bases":                   # HERESY 1960: as the GET, the catalog's ids in the body (the studio's door refuses a long URL: 414)
+            if url.path == "/lora/bases":                   # HERESY 1960: as the GET, the catalog's ids in the body (the Studio's door refuses a long URL: 414)
                 d = json.loads(body.decode("utf-8") or "{}")
                 return self.send(200, lora_bases.report(KIT, str(d.get("model") or ""), [str(x) for x in (d.get("ids") or []) if x]))
             if url.path == "/weights/check":                # HERESY 1289
                 return self.send(202, weights.check(KIT))
+            if url.path == "/pianoteq/preview":             # HERESY 1977: {state, kind} → the phrase played with it (cached by what it was)
+                d = json.loads(body.decode("utf-8") or "{}")
+                f = pianoteq_live.preview(KIT, d.get("state") or {}, str(d.get("kind") or "chords"), CACHE / "pianoteq-preview")
+                return self.send(200, {"id": f.stem, "url": "/lab/pianoteq/listen?id=" + f.stem})
+            if url.path == "/handoff":                      # HERESY 1985: a page's settings, kept ten minutes for the https page it moves to
+                return self.send(200, https_door.handoff_put(json.loads(body.decode("utf-8") or "{}")))
+            if url.path == "/pianoteq/activate":            # HERESY 1986: {serial} → Pianoteq activated through its own RPC; the serial kept nowhere
+                if q.get("scope"):                          # a test page activates nothing
+                    raise ValueError("a test page activates nothing: open the Studio without ?scope= to activate")
+                d = json.loads(body.decode("utf-8") or "{}")
+                return self.send(200, pianoteq_live.activate(KIT, d.get("serial")))
+            if url.path == "/pianoteq/keep":                # HERESY 1977: {state, name} → the user's own Pianoteq preset, bank «Ruach Studio»
+                d = json.loads(body.decode("utf-8") or "{}")
+                if q.get("scope"):                          # a test page leaves the user's Pianoteq as it is
+                    return self.send(200, {"name": str(d.get("name") or ""), "bank": pianoteq_live.BANK, "test": True})
+                return self.send(200, pianoteq_live.keep(KIT, d.get("state") or {}, str(d.get("name") or "")))
             if url.path == "/weights/fetch":                # HERESY 1289: on the user's word; a test page fetches nothing
                 return self.send(202, weights.fetch(KIT, json.loads(body.decode("utf-8")), q.get("scope", "")))
             if url.path in ("/places/move", "/places/relink"):   # HERESY 1261
@@ -3747,11 +3840,14 @@ class Handler(BaseHTTPRequestHandler):
                     moved = collection.trash_move(KIT, OUTPUTS, [str(n) for n in data.get("names") or []], config_dir())
                     playback_marks.forget(config_dir(), moved["moved"])   # HERESY 1852: the guard: a take in the trash loses its place
                     return self.send(200, moved)
-                if op == "restore":
-                    return self.send(200, collection.trash_restore(KIT, OUTPUTS, data.get("items") or []))
+                if op == "restore":                    # HERESY 1996: back where it stood, its workspaces made again
+                    return self.send(200, collection.trash_restore(KIT, OUTPUTS, data.get("items") or [], config_dir()))
+                if op == "restore-all":                # HERESY 1996: the whole trash back, each where it stood
+                    items = [{"day": i["day"], "name": i["name"]} for i in collection.trash_list(KIT)["items"]]
+                    return self.send(200, collection.trash_restore(KIT, OUTPUTS, items, config_dir()))
                 if op == "empty":                      # the page asks first; items or everything
                     return self.send(200, collection.trash_empty(KIT, data.get("items"), config_dir=config_dir()))     # 1368: the protected stay
-                raise ValueError("move, restore or empty")
+                raise ValueError("move, restore, restore-all or empty")
             if url.path == "/score":                         # HERESY 1131: keep what the transcriber wrote
                 d = take_dir(q.get("name", ""))
                 abc = str(json.loads(body.decode("utf-8")).get("abc") or "")
@@ -3784,7 +3880,7 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/lora/delete":                  # HERESY 1496: adapter files out of loras/ for good, a dry run first
                 data = json.loads(body.decode("utf-8"))
                 return self.send(200, training.delete_loras(KIT, [str(x) for x in (data.get("ids") or [])], data.get("dry", True) is not False))
-            if url.path == "/perf/beat":                    # HERESY 1821: a minute with the studio
+            if url.path == "/perf/beat":                    # HERESY 1821: a minute with the Studio
                 data = json.loads(body.decode("utf-8") or "{}")
                 return self.send(200, perf.beat(str(data.get("kind", ""))))
             if url.path == "/perf/measure":                 # HERESY 1821: the folders and disks measured again
@@ -3960,6 +4056,9 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/audio/loop":                    # HERESY 1514: {out, in, rate, level}: a tone out and back, measured
                 data = json.loads(body.decode("utf-8"))
                 return self.send(200, audio_io.loop(str(data.get("out") or ""), str(data.get("in") or ""), int(data.get("rate") or 48000), float(data.get("level") or -20)))
+            if url.path == "/audio/balance":                 # HERESY 2002: {balance: [l, r], level}: the gateway's channel balance
+                data = json.loads(body.decode("utf-8") or "{}")
+                return self.send(200, {"gateway": audio_io.set_balance(config_dir(), data.get("balance"), data.get("level"))})
             if url.path == "/audio/monitor":                 # HERESY 1548: {out, rate}: the monitor kept in user/audio.json
                 data = json.loads(body.decode("utf-8"))
                 return self.send(200, {"monitor": audio_io.set_monitor(config_dir(), str(data.get("out") or ""), data.get("rate") or 0)})
@@ -4028,7 +4127,7 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/writer/versions":               # HERESY 1519: {op: keep|mark|delete|undelete, …}
                 return self.send(200, creator_versions.post(KIT, json.loads(body.decode("utf-8")), q.get("scope", "")))
             if url.path == "/import":
-                return self.send(200, import_track(q.get("file", "track.wav"), q.get("title", ""), body))
+                return self.send(200, import_track(q.get("file", "track.wav"), q.get("title", ""), body, q.get("parent", ""), q.get("what", "")))
             if url.path == "/settings":
                 return self.send(200, settings_put(body, q.get("scope", "")))
             if url.path == "/presets":
@@ -4086,6 +4185,8 @@ if __name__ == "__main__":
     threading.Thread(target=act_watch, daemon=True).start()     # HERESY 1157
     perf.start(KIT, OUTPUTS)         # HERESY 1821: the machine once a minute, the folders every six hours
     places.boot()                    # HERESY 1261: a folder linked back from the record, a missing one made, a dangling one said
+    pianoteq_live.sweep(KIT)         # HERESY 1977: a Pianoteq server's folder left by a crash (its copy of the preferences) goes
+    https_door.start(KIT)            # HERESY 1985: the https door beside the lab, unless something answers on its port already
     print(f"[lab] heresy-lab on :{PORT} · outputs {OUTPUTS} · whisper {WHISPER_DIR}", file=sys.stderr, flush=True)
     training.resume(KIT)            # HERESY 1072: runs still going in their own units are watched again
     for r in _regen_pending():           # HERESY 1160: regenerations still owed their swap

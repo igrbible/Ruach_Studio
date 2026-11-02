@@ -22,7 +22,7 @@ const moveOld = () => {
 module.exports = {
   version: "4.0",
   title: "Ruach Studio",
-  description: "Songs on your own NVIDIA card: YuE2 through yue2.cpp, with a Creator, a Writer, a Refiner, a Librarian, an Artist and a Trainer. Linux, a card of 12 GB or more, about 30 GB of disk.",
+  description: "Songs on your own NVIDIA card: YuE2 through yue2.cpp, with a Creator, a Writer, a Refiner, a Librarian, an Artist and a Trainer. Linux, a card of 12 GB or more, about 34 GB of disk.",
   icon: "src/brand/ruach-icon-512.png",
   menu: async (kernel, info) => {
     // where a script of ours runs from: launcher/, or pinokio/ while an Update the old scripts began goes on
@@ -40,8 +40,8 @@ module.exports = {
       const url = info.local(started).url
       if (!url) return [{ default: true, icon: "fa-solid fa-terminal", text: "Starting", href: started }]
       return [
-        // HERESY 1433: the port named where the user clicks (the studio's own is 7777)
-        { default: true, icon: "fa-solid fa-music", text: "Open the studio · port " + (url.match(/:(\d+)\/?$/) || [, "80"])[1], href: url },
+        // HERESY 1433: the port named where the user clicks (the Studio's own is 7777)
+        { default: true, icon: "fa-solid fa-music", text: "Open the Studio · port " + (url.match(/:(\d+)\/?$/) || [, "80"])[1], href: url },
         { icon: "fa-solid fa-terminal", text: "Terminal", href: started }
       ]
     }

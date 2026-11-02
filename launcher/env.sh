@@ -1,7 +1,7 @@
 # Ruach Studio under Pinokio (HERESY 1259): the toolchain that install.sh, update.sh, studio.sh and extras.sh share; sourced,
 # never run. Nothing here installs anything except ruach_tools (cmake and ninja into .venv, when the machine has none fit).
 #
-# The CUDA toolkit 12.8: /usr/local/cuda-12.8 when it is there (the way the studio is made and tested), else the one
+# The CUDA toolkit 12.8: /usr/local/cuda-12.8 when it is there (the way the Studio is made and tested), else the one
 # Pinokio's AI bundle brings (its CUDA_HOME), else an nvcc 12.8 on the PATH. build.sh and start.sh take it as
 # RUACH_CUDA_HOME. With the machine's toolkit the machine's gcc builds too, when CUDA 12.8 takes it (11 to 14).
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""HERESY 1838 · 1844 · 1845 · 1847: lab/videographer.py and the Remaster's new Colours on a studio of their own in a temporary folder (never this studio's):
+"""HERESY 1838 · 1844 · 1845 · 1847: lab/videographer.py and the Remaster's new Colours on a studio of their own in a temporary folder (never this Studio's):
 a shot's picture set from a file and from bytes (a wide one, a square one), replaced and taken off (kept in off/, never deleted), refused when it is no
 picture; the moves (the camera's words, the turn, a choice saved and cleared, «auto» never in the file); a new cut on the same times keeping a shot's
 picture and move; the clip of a short plan (its length, its picture size, a shot with no picture shown as its words); and the cassette, radio and hall

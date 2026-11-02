@@ -1,6 +1,6 @@
 """HERESY 1515 (Viktor 16.10.2026: «Профили по сетапу нод»): the Refiner's setups by name: what its steps are set to (the chain's checks
 and modes, the remaster's preset, the debuzz's strength, a plugin's fields…) and where its canvas's nodes stand; never a take's own
-sources. Kept in user/refiner_profiles.json, for every browser of this studio."""
+sources. Kept in user/refiner_profiles.json, for every browser of this Studio."""
 import json
 import os
 import re
@@ -56,7 +56,7 @@ def delete(user_dir, name):
     return load(user_dir)
 
 
-# HERESY 1553 (Viktor 18.10.2026: «сотвори несколько профилей пайплайна… для Про и Паблик»): the pipelines shipped with the studio
+# HERESY 1553 (Viktor 18.10.2026: «сотвори несколько профилей пайплайна… для Про и Паблик»): the pipelines shipped with the Studio
 # (refiner_pipelines.json beside the lab) and those a plugin brings in its plugin.json, each checked against the steps here; one
 # naming a step that is not here is left out (a plugin taken away takes its pipelines with it)
 def pipelines(lab_dir, plugins):

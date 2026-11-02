@@ -78,7 +78,7 @@ def changes(take_dir):
 
 
 def _map(x):
-    """0–1 to a dark-to-amber colour, as the studio's wave is drawn: night blue, plum, red, amber, pale gold."""
+    """0–1 to a dark-to-amber colour, as the Studio's wave is drawn: night blue, plum, red, amber, pale gold."""
     stops = np.array([[11, 12, 26], [52, 22, 74], [150, 36, 72], [230, 110, 40], [252, 214, 120]], dtype=np.float32)
     x = np.clip(x, 0, 1) * (len(stops) - 1)
     i = np.minimum(np.floor(x).astype(int), len(stops) - 2)

@@ -58,16 +58,19 @@ with tempfile.TemporaryDirectory() as t:
     check("its preferences a copy in a folder of its own, under the work folder (never the user's file)", pr.parent.parent == work and pr.name == "prefs", pr)
     if pr.is_file():
         check("the copy readable by its owner alone", oct(os.stat(pr).st_mode & 0o777) == "0o600", oct(os.stat(pr).st_mode & 0o777))
-LAB = Path(__file__).resolve().parent                # the studio's own steps as the lab reads them at each asking (plugins.load_all)
+LAB = Path(__file__).resolve().parent                # the Studio's own steps as the lab reads them at each asking (plugins.load_all)
 sys.path.insert(0, str(LAB))
 import plugins as PK  # noqa: E402
 with tempfile.TemporaryDirectory() as t:
     found, broken = PK.load_all(Path(t), LAB / "builtin_steps")
     st = next((x for p in found if p["id"] == "ruach" for x in p["steps"] if x["id"] == "pianoteq"), None)
-    check("the lab lists Pianoteq among the studio's own steps, on a set of stems in Mend, after the Ambient",
+    check("the lab lists Pianoteq among the Studio's own steps, on a set of stems in Mend, after the Ambient",
           bool(st) and st.get("input") == "stems" and st.get("group") == "mend" and st.get("after") == "pl-ruach-ambientPanel", st and {k: st.get(k) for k in ("input", "group", "after")})
     keys = [q["key"] for q in (st or {}).get("params", [])]
-    check("its fields: stem, preset, lay, dynamics, touch, pedal, parts, shift", keys == ["stem", "preset", "lay", "dynamics", "touch", "pedal", "parts", "shift"], keys)
+    check("its fields: stem, preset, lay, dynamics, touch, pedal, parts, shift, and the panel's state (HERESY 1977)",
+          keys == ["stem", "preset", "lay", "dynamics", "touch", "pedal", "parts", "shift", "state"], keys)
+    sq = next((q for q in (st or {}).get("params", []) if q["key"] == "state"), {})
+    check("the state a text field, empty by default (the step's own preset then says it all)", sq.get("type") == "text" and sq.get("default") == "", sq)
     pr = next((q for q in (st or {}).get("params", []) if q["key"] == "preset"), {})
     check("18 presets, NY Steinway D Classical first and by default", len(pr.get("options", [])) == 18 and pr.get("default") == "NY Steinway D Classical"
           and pr["options"][0][0] == "NY Steinway D Classical", (len(pr.get("options", [])), pr.get("default")))

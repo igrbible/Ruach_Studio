@@ -4,7 +4,7 @@ published; 04.10.2026: «Воркспейсы с 💎 — именно эти и
 и краткий быстрый гайд в попап оверлее… хотите сохранить это — сначала переименуйте воркспейс, а затем мы воссоздадим
 запрошенное пространство из HF репозитория… Вдруг чел туда своего напишет, а мы перезатрём всё»).
 
-A published workspace is a folder of the studio's Storage Bucket on Hugging Face (Viktor 04.10.2026: «Упаковывай
+A published workspace is a folder of the Studio's Storage Bucket on Hugging Face (Viktor 04.10.2026: «Упаковывай
 воркспейсы 💎 в goldhub/Ruach_Studio_Instruments_Probe_WS бакет»): each take as MP3 320k with its cover, and workspace.json
 (heresy/tools/workspace_export.py writes it): the takes in order with their titles, notes and sections, the meta and the
 request of each (seeds, settings, music codes). Fetched only on the user's word: the files into tmp/diamond/ first, then
@@ -25,8 +25,8 @@ from pathlib import Path
 import collection
 
 # where the 💎 workspaces are published: one Storage Bucket, a folder each. heresy/tools/publish-workspaces.sh reads this
-# list too, so the studio fetches from where the tool puts. A bucket is read over plain HTTPS: its files from
-# /buckets/…/resolve/… (a redirect to the bytes); the studio's huggingface_hub (pinned 0.36) knows no buckets.
+# list too, so the Studio fetches from where the tool puts. A bucket is read over plain HTTPS: its files from
+# /buckets/…/resolve/… (a redirect to the bytes); the Studio's huggingface_hub (pinned 0.36) knows no buckets.
 HUB = "https://huggingface.co"
 BUCKET = "goldhub/Ruach_Studio_Instruments_Probe_WS"
 SOURCES = [
@@ -103,7 +103,7 @@ def _say(e):
         if e.code == 404:
             return "not in the bucket yet: no " + MANIFEST
         if e.code in (401, 403):
-            return "the bucket is not open to this studio (private: the owner's token is needed)"
+            return "the bucket is not open to this Studio (private: the owner's token is needed)"
         return f"Hugging Face answered {e.code}: {first}"
     if isinstance(e, (urllib.error.URLError, TimeoutError)):
         return "Hugging Face does not answer: " + first
@@ -117,7 +117,7 @@ def _manifest(kit, src, refresh=False):
     try:
         m = json.loads(_get(src["folder"] + "/" + MANIFEST).decode("utf-8"))
         if m.get("format") != FORMAT:
-            raise ValueError(f"{MANIFEST} is {m.get('format')!r}, this studio reads {FORMAT!r}")
+            raise ValueError(f"{MANIFEST} is {m.get('format')!r}, this Studio reads {FORMAT!r}")
         if m.get("workspace") != src["name"]:
             raise ValueError(f"{MANIFEST} holds {m.get('workspace')!r}, not {src['name']!r}")
         out = (m, "")
@@ -191,7 +191,7 @@ def _run(kit, outputs, config_dir, src, m, restore):
         for t in m.get("takes") or []:
             n, audio, cover = str(t.get("name") or ""), str(t.get("audio") or ""), t.get("cover")
             if not SAFE_NAME.fullmatch(n) or ".." in n or not SAFE_FILE.fullmatch(audio) or (cover and not SAFE_FILE.fullmatch(str(cover))):
-                raise ValueError(f"{MANIFEST} names a take or a file this studio will not write: {n!r}")
+                raise ValueError(f"{MANIFEST} names a take or a file this Studio will not write: {n!r}")
             takes.append(t)
         need = [t for t in takes if not (outputs / t["name"] / "meta.json").is_file()]
         fresh = {t["name"] for t in need}

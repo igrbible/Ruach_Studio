@@ -4,12 +4,12 @@
 настроек в самом репо… Мы менеджим кастомно только пути для самих генераций, скачанных воркспейсов и т.п.»): where the user's own
 work lives.
 
-The four folders the studio's .gitignore calls the user's work: outputs/ (the takes, and the workspaces fetched from Hugging Face,
+The four folders the Studio's .gitignore calls the user's work: outputs/ (the takes, and the workspaces fetched from Hugging Face,
 which land there too), trash/, artist/ (the Artist's runs), writer/ (the Writer's documents). Each may live anywhere: its name in the
 studio's folder is then a link to it, and every reader (the engine, the lab, the scripts, a file manager) goes on using outputs/ as
-before; nothing else in the studio needs to know. The models, the LoRAs and the training sets keep their places.
+before; nothing else in the Studio needs to know. The models, the LoRAs and the training sets keep their places.
 
-Where a folder is now is what the studio's folder holds (a folder or a link): an install of any age is read as it is, nothing to
+Where a folder is now is what the Studio's folder holds (a folder or a link): an install of any age is read as it is, nothing to
 migrate. A move runs only while nothing renders or runs: on the same disk a rename; on another a copy into <to>.part, counted file by
 file, a pass for anything written meanwhile, then the link switched. The old copy is never deleted here: it stays, renamed
 <name>.moved-<stamp>, and the page says where, so its owner removes it after a look. Where each folder went is written into
@@ -152,7 +152,7 @@ def listing(refresh=False):
             row["missing"] = True                    # a link to a folder that is not there: a disk not mounted?
         at = (rec.get(name) or {}).get("at") or ""
         if at and not link and at != real:
-            row["elsewhere"] = at                    # the record says it lives at `at`, the studio's folder holds a folder of its own
+            row["elsewhere"] = at                    # the record says it lives at `at`, the Studio's folder holds a folder of its own
         size = SIZES.get(name)
         if here and (refresh or not size or size["real"] != real or time.time() - size["at"] > 600):
             _count_soon(name, real)
@@ -183,7 +183,7 @@ def _why_busy():
     if H["busy"]():
         return "the lab is working on something: move it when that is done"
     if _studio_busy():
-        return "the studio is rendering, or did not answer: move it when the song is done"
+        return "the Studio is rendering, or did not answer: move it when the song is done"
     with LOCK:
         if JOB and JOB.get("phase") not in ("done", "failed"):
             return f"{JOB['name']} is moving now"
@@ -193,7 +193,7 @@ def _why_busy():
 def plan(name, to):
     """What a move would do, nothing done: the folder it ends in, the same disk or not, the room it needs and has, or why not."""
     if name not in NAMES:
-        raise ValueError("no such folder of the studio: " + str(name))
+        raise ValueError("no such folder of the Studio: " + str(name))
     kit = H["kit"]
     p = kit / name
     real = os.path.realpath(p)
@@ -202,13 +202,13 @@ def plan(name, to):
         return {"ok": False, "why": f"{name} is not there now ({real}): link it back, or mount its disk, first"}
     if home:
         if not p.is_symlink():
-            return {"ok": False, "why": f"{name} is in the studio's folder already"}
+            return {"ok": False, "why": f"{name} is in the Studio's folder already"}
         dest, parent = str(p), str(kit)
     else:
         parent = norm(to)
         dest = os.path.join(parent, name)
         if not os.path.isdir(parent):
-            return {"ok": False, "why": f"no folder {parent}: make it first (the studio creates no folders out of a typo)", "dest": dest}
+            return {"ok": False, "why": f"no folder {parent}: make it first (the Studio creates no folders out of a typo)", "dest": dest}
         if not os.access(parent, os.W_OK | os.X_OK):
             return {"ok": False, "why": f"{parent} is not writable for this user", "dest": dest}
         rp = os.path.realpath(dest)
@@ -217,7 +217,7 @@ def plan(name, to):
         if (rp + "/").startswith(real + "/"):
             return {"ok": False, "why": f"{dest} is inside {name} itself", "dest": dest}
         if (os.path.realpath(parent) + "/").startswith(str(kit) + "/"):
-            return {"ok": False, "why": "inside the studio's folder: a folder there needs no link", "dest": dest}
+            return {"ok": False, "why": "inside the Studio's folder: a folder there needs no link", "dest": dest}
         if os.path.lexists(dest) and not (os.path.isdir(dest) and not os.path.islink(dest) and not os.listdir(dest)):
             return {"ok": False, "why": f"{dest} is there already: choose another folder, or empty it", "dest": dest}
     same = os.stat(real).st_dev == os.stat(parent).st_dev
@@ -357,7 +357,7 @@ def _run(name, dest, home, same):
                 os.symlink(dest, tmp)
                 os.replace(tmp, p)                   # the link points elsewhere in one step
             else:
-                if os.path.lexists(p):               # the folder of the studio's own, full (a copy) or gone (a rename)
+                if os.path.lexists(p):               # the folder of the Studio's own, full (a copy) or gone (a rename)
                     old = gone = str(p) + ".moved-" + stamp
                     os.rename(p, old)
                 os.symlink(dest, p)
@@ -372,7 +372,7 @@ def _run(name, dest, home, same):
     except Exception as e:                           # every step before the switch leaves the folder where it was
         try:
             if gone and not os.path.lexists(p):
-                os.rename(gone, p)                   # the switch half done: the studio's own folder back under its name
+                os.rename(gone, p)                   # the switch half done: the Studio's own folder back under its name
             if same and not os.path.lexists(real) and os.path.lexists(built):
                 os.rename(built, real)               # a rename half done goes back
             elif made and os.path.isdir(built) and not os.path.islink(built):
@@ -384,12 +384,12 @@ def _run(name, dest, home, same):
 
 
 def relink(data, scope=""):
-    """The record says where a folder lives; the studio's folder holds none, or an empty one: the link again."""
+    """The record says where a folder lives; the Studio's folder holds none, or an empty one: the link again."""
     if scope:
         raise ValueError("a test page links no folders")
     name = str(data.get("name", ""))
     if name not in NAMES:
-        raise ValueError("no such folder of the studio: " + name)
+        raise ValueError("no such folder of the Studio: " + name)
     at = (record().get(name) or {}).get("at") or ""
     p = H["kit"] / name
     if not at:
@@ -412,7 +412,7 @@ def relink(data, scope=""):
 
 
 def boot():
-    """At the lab's start: a folder the record places elsewhere is linked back where the studio's folder holds none or an empty one
+    """At the lab's start: a folder the record places elsewhere is linked back where the Studio's folder holds none or an empty one
     (a fresh clone given the old user/); one with no record and no folder is made; a link to nothing is said loudly."""
     rec = record()
     for name in NAMES:

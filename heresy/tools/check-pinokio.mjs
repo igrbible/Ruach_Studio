@@ -45,7 +45,7 @@ const states = [
   ["installed but a model is missing", done.slice(0, 2), [], null, "Install", "launcher/install.js"],
   ["installed", done, [], null, "Start", "launcher/start.js"],
   ["starting, the server not yet listening", done, ["launcher/start.js"], null, "Starting", "launcher/start.js"],
-  ["running", done, ["launcher/start.js"], "http://127.0.0.1:7777", "Open the studio · port 7777", "http://127.0.0.1:7777"],
+  ["running", done, ["launcher/start.js"], "http://127.0.0.1:7777", "Open the Studio · port 7777", "http://127.0.0.1:7777"],
   ["while it updates", done, ["launcher/update.js"], null, "Updating", "launcher/update.js"],
   ["while more models download", done, ["launcher/extras.js"], null, "Downloading models", "launcher/extras.js"],
   ["while it resets", done, ["launcher/reset.js"], null, "Resetting", "launcher/reset.js"],
@@ -87,8 +87,8 @@ const trees = [];
   check("while the old Update still runs, nothing is moved and «Updating» opens its terminal",
     existsSync(join(t, "pinokio/AGENTS.md")) && items[0].text === "Updating" && items[0].href === "pinokio/update.js", JSON.stringify(items));
   items = await menuOf(t, ["pinokio/start.js"], "http://127.0.0.1:7777");
-  check("  nor while the studio runs from the old folder (Open the studio, its Terminal there)",
-    existsSync(join(t, "pinokio/AGENTS.md")) && items[0].text === "Open the studio · port 7777" && items[1].href === "pinokio/start.js", JSON.stringify(items));
+  check("  nor while the studio runs from the old folder (Open the Studio, its Terminal there)",
+    existsSync(join(t, "pinokio/AGENTS.md")) && items[0].text === "Open the Studio · port 7777" && items[1].href === "pinokio/start.js", JSON.stringify(items));
   items = await menuOf(t, []);
   const away = existsSync(join(t, "tmp")) ? moved(t) : [];
   check("when nothing runs, the old folder is moved out of Pinokio's way: its ENVIRONMENT to the root, the rest under tmp/",

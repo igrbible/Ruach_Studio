@@ -1,5 +1,5 @@
-// HERESY 1096 (Viktor, 02.10.2026): the studio's own guide, room by room, in the studio itself. The ? in the bar
-// (and Guide in the ☰) opens it on the room you are in; a browser that has never seen the studio gets it by
+// HERESY 1096 (Viktor, 02.10.2026): the Studio's own guide, room by room, in the Studio itself. The ? in the bar
+// (and Guide in the ☰) opens it on the room you are in; a browser that has never seen the Studio gets it by
 // itself a minute after the first start ("so the user sees that somebody took care of them, not just a hard tool").
 // One source: docs/GUIDE.md (the repository's guide too), served by the lab at /lab/guide/; every "## " is a
 // tab, every "### " a stop in the tab's own contents; pictures from docs/guide/, a click shows one large.
@@ -202,7 +202,7 @@
       e.stopPropagation();
       if (state.el && !state.el.hidden) close(); else open();
     }, true);
-    // a browser that has never seen the studio: the guide comes by itself, once, a minute after the start
+    // a browser that has never seen the Studio: the guide comes by itself, once, a minute after the start
     if (!recall(SEEN)) setTimeout(function () { if (!recall(SEEN)) open("start"); }, 60000);
   }
   window.HeresyGuide = { open: open, close: close };

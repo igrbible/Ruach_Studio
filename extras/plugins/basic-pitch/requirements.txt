@@ -1,0 +1,4 @@
+# Cap the minor so a future basic-pitch release can't change behaviour or its
+# dependency set without a deliberate bump here. The ONNX path pins 0.4.0 exactly
+# (see requirements-onnx.txt); this is the tested, supported range.
+basic-pitch>=0.4.0,<0.5

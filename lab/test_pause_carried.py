@@ -1,5 +1,5 @@
 """HERESY 1973: a pause's late stop ends only the start it paused (a run resumed within the minute under the same unit name lives on); a run begun
-from a save carried in names no save before that step as gone. A kit of its own in a temporary folder, systemctl played: nothing of the studio's is touched."""
+from a save carried in names no save before that step as gone. A kit of its own in a temporary folder, systemctl played: nothing of the Studio's is touched."""
 import json, sys, tempfile, threading
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))

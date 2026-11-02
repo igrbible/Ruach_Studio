@@ -1,8 +1,8 @@
 # Ruach Studio · the API
 
-The studio's own door for scripts, DAWs and agents **on this machine and its local network**. It is the same server as the page (`http://HOST:7777`), under `/api/v1`. The studio answers private addresses only: this machine, 10.x, 172.16–31.x, 192.168.x, 100.64–127.x (carrier-grade NAT, where Tailscale lives), link-local, and their IPv6 kin. Anyone else gets `403`. `RUACH_ALLOW_PUBLIC=1` (in the studio's environment) opens it to all, for those who put their own proxy and guard in front.
+The Studio's own door for scripts, DAWs and agents **on this machine and its local network**. It is the same server as the page (`http://HOST:7777`), under `/api/v1`. The Studio answers private addresses only: this machine, 10.x, 172.16–31.x, 192.168.x, 100.64–127.x (carrier-grade NAT, where Tailscale lives), link-local, and their IPv6 kin. Anyone else gets `403`. `RUACH_ALLOW_PUBLIC=1` (in the Studio's environment) opens it to all, for those who put their own proxy and guard in front.
 
-A token is asked only when `RUACH_API_TOKEN` is set in the studio's environment, and only of callers not on the studio's machine: `Authorization: Bearer <token>`.
+A token is asked only when `RUACH_API_TOKEN` is set in the Studio's environment, and only of callers not on the Studio's machine: `Authorization: Bearer <token>`.
 
 The full description, for tools that read it: `GET /api/v1/openapi.json` (OpenAPI 3.1).
 
@@ -73,7 +73,7 @@ curl -s -X POST -H "Content-Type: application/json" \
 ## From the shell
 
 ```bash
-B=http://127.0.0.1:7777/api/v1          # from another machine: the studio's address on your network
+B=http://127.0.0.1:7777/api/v1          # from another machine: the Studio's address on your network
 J=$(curl -s -X POST -H "Content-Type: application/json" -d '{"style":"Instrumental, solo cello, slow","instrumental":true,"duration":60}' $B/songs | python3 -c "import json,sys; print(json.load(sys.stdin)['job'])")
 until curl -s $B/jobs/$J | grep -q '"status": *"done"'; do sleep 3; done
 T=$(curl -s $B/jobs/$J | python3 -c "import json,sys; print(json.load(sys.stdin)['takes'][0])")
@@ -82,7 +82,7 @@ curl -sL -o cello.wav $B/takes/$T/audio
 
 ## For agents: the MCP server
 
-`extras/ruach-mcp.py` puts the API before any MCP client (Claude Desktop, Claude Code, others) as twelve tools (`generate_song` takes a MIDI file on the agent's machine as `midi_file`): `generate_song`, `job_status`, `cancel_job`, `list_takes`, `get_take`, `mark_take`, `list_workspaces`, `file_takes`, `export_reaper`, `draw_artwork`, `refine_take`, `studio_health`. It runs where the agent runs and talks HTTP to the studio.
+`extras/ruach-mcp.py` puts the API before any MCP client (Claude Desktop, Claude Code, others) as twelve tools (`generate_song` takes a MIDI file on the agent's machine as `midi_file`): `generate_song`, `job_status`, `cancel_job`, `list_takes`, `get_take`, `mark_take`, `list_workspaces`, `file_takes`, `export_reaper`, `draw_artwork`, `refine_take`, `studio_health`. It runs where the agent runs and talks HTTP to the Studio.
 
 ```bash
 pip install mcp          # once; the SDK's v1 and v2 both do

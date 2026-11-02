@@ -5,8 +5,8 @@ You are installing Ruach Studio for a person, on their Linux machine. Read `INST
 ## Rules
 
 - **Ask before anything large or lasting**: a download over 1 GB, installing system packages (`sudo`), enabling services, `loginctl enable-linger`. Say the size and what it is for.
-- **Never** run the studio as root, never put a token or key in a file of the repository, never set `RUACH_ALLOW_PUBLIC` (it opens the studio past the private network) unless the person asks in those words.
-- **Never** set `CUDA_VISIBLE_DEVICES` for the studio: it picks its cards itself and refuses a card another heavy program holds. To give it another card: `YUE2CPP_GPU=N` for `start.sh`, or Engine → GPUs in the page.
+- **Never** run the Studio as root, never put a token or key in a file of the repository, never set `RUACH_ALLOW_PUBLIC` (it opens the Studio past the private network) unless the person asks in those words.
+- **Never** set `CUDA_VISIBLE_DEVICES` for the Studio: it picks its cards itself and refuses a card another heavy program holds. To give it another card: `YUE2CPP_GPU=N` for `start.sh`, or Engine → GPUs in the page.
 - Downloads come pinned (`heresy/hf-revisions.txt`, `tools/hf-revisions.txt`) and are checked after; do not fetch models from elsewhere "to save time". The models' licences are mostly non-commercial: tell the person once.
 - If a step fails, read its output, fix the cause, run the step again. Every step is safe to repeat.
 
@@ -30,7 +30,7 @@ Missing pieces: tell the person, with the command (`sudo apt install git cmake n
 ./lab/install-venv.sh
 ```
 
-Success: its last line starts with `ok torch` and says `cuda True`. It also clones `vendor/UniverSR` (the upscale's code) at the commit the studio was tested with.
+Success: its last line starts with `ok torch` and says `cuda True`. It also clones `vendor/UniverSR` (the upscale's code) at the commit the Studio was tested with.
 
 ## 2 · Models
 
@@ -56,7 +56,7 @@ Success: `build/build/yue-server` exists and `build/tools/public/index.html` was
 systemctl --user enable --now heresy-lab ruach-studio
 sleep 5
 curl -s http://127.0.0.1:7777/api/v1/health      # {"lab": true, "engine": {...}, "cards": [...]}
-curl -s http://127.0.0.1:7777/api/v1 | head -c 200   # the studio's version
+curl -s http://127.0.0.1:7777/api/v1 | head -c 200   # the Studio's version
 ```
 
 Then give the person the address `start.sh` printed (`journalctl --user -u ruach-studio | grep -m1 http`), and say: the **?** in the bar is the guide.

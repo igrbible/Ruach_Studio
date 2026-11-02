@@ -1,5 +1,5 @@
 """HERESY 1962: a chain's own processes known by their owner and ended by Stop; the job threads it starts inherit the owner; a wait in a stopped chain
-ends; each step's pace kept for the next run's ETA. The lab is imported, nothing reaches the studio. python3 lab/test_chain_stop.py"""
+ends; each step's pace kept for the next run's ETA. The lab is imported, nothing reaches the Studio. python3 lab/test_chain_stop.py"""
 import importlib.util
 import json
 import os

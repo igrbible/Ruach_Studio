@@ -4,8 +4,8 @@
 // (Songs, Trash, Pictures, Writer), what it holds and the room left on its disk. Move… asks where to, has the lab say what the
 // move would do (a rename on the same disk; else a copy, checked file by file, then the link switched, the old copy kept,
 // renamed), and moves only on a second yes; the move's progress shows while it runs, and where the old copy stays when it is
-// done. Back home brings a folder that lives elsewhere into the studio's folder again; Link again where the record knows a place
-// the studio's folder does not point to (a fresh clone, a disk mounted late). A test page (?scope=…) moves nothing: the lab refuses.
+// done. Back home brings a folder that lives elsewhere into the Studio's folder again; Link again where the record knows a place
+// the Studio's folder does not point to (a fresh clone, a disk mounted late). A test page (?scope=…) moves nothing: the lab refuses.
 //
 //   HeresyPlaces.init(hooks) · HeresyPlaces.load() · HeresyPlaces.state()   (the last for the checks)
 (function () {
@@ -53,7 +53,7 @@
     var busy = moving();
     box.innerHTML = d.places.map(function (p) {
       var size = p.bytes != null ? count(p.files) + " " + tr("files") + " · " + gb(p.bytes) : p.counting ? tr("counting…") : "";
-      var note = p.missing ? tr("not there: a disk not mounted?") : p.linked ? tr("linked from the studio's folder") : tr("in the studio's folder");
+      var note = p.missing ? tr("not there: a disk not mounted?") : p.linked ? tr("linked from the Studio's folder") : tr("in the Studio's folder");
       if (p.elsewhere) note = tr("the record says it lives at") + " " + p.elsewhere;
       var acts = '<button type="button" class="btn ghost small" data-pl-move="' + esc(p.name) + '"' + (busy || p.missing ? " disabled" : "") + ">" + esc(tr("Move…")) + "</button>";
       if (p.linked && !p.missing) acts += '<button type="button" class="btn ghost small" data-pl-home="' + esc(p.name) + '"' + (busy ? " disabled" : "") + ">" + esc(tr("Back home")) + "</button>";
@@ -73,7 +73,7 @@
     if (!j) return;
     var label = (place(j.name) || {}).label || j.name, txt;
     if (j.phase === "done") {
-      txt = tr("{0} moved to {1}.").replace("{0}", tr(label)).replace("{1}", j.home ? tr("the studio's folder") : j.to) +
+      txt = tr("{0} moved to {1}.").replace("{0}", tr(label)).replace("{1}", j.home ? tr("the Studio's folder") : j.to) +
         (j.old ? " " + tr("The old copy stays at {0}: remove it after a look.").replace("{0}", j.old) : "");
     } else if (j.phase === "failed") {
       txt = tr("{0} did not move: {1}").replace("{0}", tr(label)).replace("{1}", j.error || "");
@@ -105,8 +105,8 @@
         var how = pl.same_disk ? tr("The same disk: the folder is renamed there at once, nothing is copied.")
           : tr("Another disk: {0} copied (free there: {1}), checked file by file, then the link switched. The old copy stays, renamed, until you remove it.")
             .replace("{0}", pl.need == null ? tr("all it holds") : gb(pl.need)).replace("{1}", gb(pl.free));
-        return window.HeresyDialog.confirm(tr("Move {0} to {1}?").replace("{0}", L).replace("{1}", pl.home ? tr("the studio's folder") : pl.dest) + "\n\n" + how + "\n\n" +
-          tr("Nothing may render or run while it moves; the studio says so if something does."), { ok: tr("Move") }).then(function (yes) {
+        return window.HeresyDialog.confirm(tr("Move {0} to {1}?").replace("{0}", L).replace("{1}", pl.home ? tr("the Studio's folder") : pl.dest) + "\n\n" + how + "\n\n" +
+          tr("Nothing may render or run while it moves; the Studio says so if something does."), { ok: tr("Move") }).then(function (yes) {
           if (!yes) return;
           return lab("/places/move", { name: name, to: to }).then(function (d) { S.data = d; paint(); schedule(); });
         });
@@ -117,7 +117,7 @@
     var p = place(name);
     if (!p || !p.record || !p.record.at) return;
     return window.HeresyDialog.confirm(tr("Link {0} to {1} again?").replace("{0}", tr(p.label)).replace("{1}", p.record.at) + "\n\n" +
-      tr("The record says it lives there; the studio's folder is pointed at it again. Nothing is copied or deleted."), { ok: tr("Link again") }).then(function (yes) {
+      tr("The record says it lives there; the Studio's folder is pointed at it again. Nothing is copied or deleted."), { ok: tr("Link again") }).then(function (yes) {
       if (!yes) return;
       return lab("/places/relink", { name: name }).then(function (d) { S.data = d; paint(); toast(tr("{0} linked again").replace("{0}", tr(p.label)), "good"); });
     }).catch(function (e) { toast(tr("Not linked:") + " " + e.message, "bad"); });

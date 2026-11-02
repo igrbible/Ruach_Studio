@@ -7,9 +7,9 @@ Voice upscale's bundle, on one voice file, on the card the lab gave:
     FlashSR        Jaekwon Im's one-step audio super-resolution (his code MIT, the weights Apache 2.0, as he stated on 20.10.2026:
                    jakeoneijk/FlashSR_Inference issue 1); 48 kHz, its fixed 5.12-second pieces
 
-Neither is shipped with the studio's code. Apollo-vocal and its model code come with the studio's models (goldhub/Ruach_Studio_Models_v2,
+Neither is shipped with the Studio's code. Apollo-vocal and its model code come with the Studio's models (goldhub/Ruach_Studio_Models_v2,
 models/upbundle/apollo/, as its licence lets them be shared), or from their authors when an install lacks them. FlashSR comes on first
-use: its weights from the studio's own copy (the same repository at its pin, models/upbundle/flashsr/weights/; HERESY 1611), else from
+use: its weights from the Studio's own copy (the same repository at its pin, models/upbundle/flashsr/weights/; HERESY 1611), else from
 him, and its code from him at a pinned revision (it carries third-party parts under their own terms, so it is not copied). Each piece joins the next by an equal-power crossfade of a second (half a second for
 FlashSR). Both come back at 48 kHz, whole, as they drew it: the Voice upscale keeps the original below its cut and blends the top.
 
@@ -36,7 +36,7 @@ MSST_SHA = "6fdad13686bb7e84d029ec66f9dbe76e65c93ebf"            # ZFTurbo/Music
 FLASH_SHA = "2292814a7ef74f61a5479c8d96e653d2f90f369d"           # jakeoneijk/FlashSR_Inference
 APOLLO_REPO, APOLLO_REV = "baicai1145/Apollo-vocal-msst", "b4646cdc4081d90f0df3839838c198c33b95b620"
 FLASH_REPO, FLASH_REV = "jakeoneijk/FlashSR_weights", "5701dea5f6a45ed964f5cb5b9280b3a1f9b39882"
-OWN_REPO = "goldhub/Ruach_Studio_Models_v2"                     # HERESY 1611: FlashSR's weights kept beside the studio's other models
+OWN_REPO = "goldhub/Ruach_Studio_Models_v2"                     # HERESY 1611: FlashSR's weights kept beside the Studio's other models
 FLASH_FILES = ("student_ldm.pth", "sr_vocoder.pth", "vae.pth")
 
 
@@ -80,7 +80,7 @@ def flash_code():
 
 
 def own_pin(repo):
-    """The studio's pinned revision of one of its repositories (heresy/hf-revisions.txt), «main» without one."""
+    """The Studio's pinned revision of one of its repositories (heresy/hf-revisions.txt), «main» without one."""
     try:
         for line in (STUDIO / "heresy" / "hf-revisions.txt").read_text(encoding="utf-8").splitlines():
             parts = line.split()
@@ -92,7 +92,7 @@ def own_pin(repo):
 
 
 def flash_weights():
-    """HERESY 1611: the folder FlashSR's three weights are in: the studio's own copy (fetched into models/upbundle/flashsr/weights/
+    """HERESY 1611: the folder FlashSR's three weights are in: the Studio's own copy (fetched into models/upbundle/flashsr/weights/
     at the pin on first use), else its author's dataset at its pinned revision; why the first did not come is said. HERESY 1799
     (Viktor 26.10.2026: «удаление .cache и hf_cache никогда не должно сломать ни одного из пайплайнов Студии»): the author's copy
     comes into the same folder, never into a cache."""
@@ -104,7 +104,7 @@ def flash_weights():
         for n in FLASH_FILES:
             hf_hub_download(OWN_REPO, "models/upbundle/flashsr/weights/" + n, revision=own_pin(OWN_REPO), local_dir=str(STUDIO))
     except Exception as e:  # noqa: BLE001 - offline, a pin before 1611: the author's copy is the same bytes
-        print(f"FlashSR: the studio's copy of the weights did not come ({type(e).__name__}: {e}); from its author", file=sys.stderr)
+        print(f"FlashSR: the Studio's copy of the weights did not come ({type(e).__name__}: {e}); from its author", file=sys.stderr)
         for n in FLASH_FILES:
             hf_hub_download(FLASH_REPO, n, repo_type="dataset", revision=FLASH_REV, local_dir=str(own))
     return own
@@ -135,7 +135,7 @@ def apollo(x48):
     from huggingface_hub import hf_hub_download
     sys.path.insert(0, str(apollo_code()))
     from look2hear.apollo import Apollo
-    own = HOME / "apollo" / "model_apollo_vocals_ep_54.ckpt"   # from the studio's own v2 (fetch-heresy.sh), else from its author
+    own = HOME / "apollo" / "model_apollo_vocals_ep_54.ckpt"   # from the Studio's own v2 (fetch-heresy.sh), else from its author
     ckpt = str(own) if own.is_file() else hf_hub_download(APOLLO_REPO, own.name, revision=APOLLO_REV, local_dir=str(own.parent))   # 1799: not a cache
     m = Apollo(sr=44100, win=20, feature_dim=384, layer=8)
     sd = torch.load(ckpt, map_location="cpu", weights_only=False)

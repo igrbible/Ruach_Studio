@@ -1,11 +1,11 @@
 """HERESY 1169 (Viktor 07.10.2026: «проверка на обновления — раз в сутки, неделю, месяц, никогда, кнопка "проверить сейчас",
 ... обновить автоматом, вручную. Попап для пользователя нового, скажем, через сутки. Настройка в Engine… наверное на тегах
-новых релизов»): the studio's releases on GitHub against its own VERSION. Read over plain HTTPS, no token (sixty asks an
+новых релизов»): the Studio's releases on GitHub against its own VERSION. Read over plain HTTPS, no token (sixty asks an
 hour from one address; a daily look is one). When to look is the page's (its schedule, or «Check now»); the lab keeps
 only the last answer (user/updates.json), nothing about the user, and sends nothing but the request itself.
 
-An update runs only where the studio is a clone of its own repository (git, origin igrbible/Ruach_Studio, nothing that git
-tracks changed by hand): there it fetches the tag, checks it out, builds, and restarts the studio's units, while nothing
+An update runs only where the Studio is a clone of its own repository (git, origin igrbible/Ruach_Studio, nothing that git
+tracks changed by hand): there it fetches the tag, checks it out, builds, and restarts the Studio's units, while nothing
 runs. Anywhere else (a development tree, a copy without git) the answer says why, and how to update by hand.
 
     GET  /update                       the version here, the last check, the release candidates' choice, can it run here
@@ -61,13 +61,13 @@ def can_run(root):
     """(True, "") where an update can run; else (False, why), said as it is."""
     root = Path(root)
     # HERESY 1362: Pinokio keeps the clone on main and pulls it (its Update, launcher/update.sh): a tag checked out here would leave its
-    # pull on a detached head, and the studio there is Pinokio's to start (launcher/lab.sh says it runs there)
+    # pull on a detached head, and the Studio there is Pinokio's to start (launcher/lab.sh says it runs there)
     if os.environ.get("RUACH_LAUNCHER") == "pinokio":
-        return False, "this studio runs under Pinokio: update it there, by Update in Pinokio's menu"
+        return False, "this Studio runs under Pinokio: update it there, by Update in Pinokio's menu"
     if not shutil.which("systemd-run"):
         return False, "this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)"
     if not (root / ".git").exists():
-        return False, "this studio is not a git clone: update it by hand (download the new release, keep models/, outputs/ and user/)"
+        return False, "this Studio is not a git clone: update it by hand (download the new release, keep models/, outputs/ and user/)"
     code, origin, _ = _git(root, "remote", "get-url", "origin")
     if code or REPO.lower() not in origin.lower():
         return False, "this is a development tree (its origin is not " + REPO + "): update it by hand"
@@ -132,8 +132,8 @@ def run(root, config_dir, tag, busy):
     restart = "systemctl --user restart ruach-studio heresy-lab"
     script = ("set -e; cd " + _q(root) + "; echo \"── $(date '+%F %T') · " + ref + "\"; git fetch --tags --force origin; "
               "git checkout -q " + _q(ref) + "; NO_COLOR=1 ./build.sh --no-restart; "
-              "if systemctl --user is-enabled --quiet ruach-studio 2>/dev/null; then echo '── restarting the studio'; " + restart + "; "
-              "else echo '── built: start the studio again (./start.sh) to run " + ref + "'; fi; echo '── done'")
+              "if systemctl --user is-enabled --quiet ruach-studio 2>/dev/null; then echo '── restarting the Studio'; " + restart + "; "
+              "else echo '── built: start the Studio again (./start.sh) to run " + ref + "'; fi; echo '── done'")
     subprocess.run(["systemd-run", "--user", "--quiet", "--collect", "--unit=" + UNIT, "--working-directory=" + str(root),
                     "/bin/bash", "-c", "(" + script + ") > " + _q(log) + " 2>&1"], check=True, timeout=30)
     return 202, {"started": ref}

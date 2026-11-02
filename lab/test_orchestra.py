@@ -79,7 +79,7 @@ with tempfile.TemporaryDirectory() as t:
         check(name + ": sound, at 48 kHz", r == 48000 and peak > 0.01, (r, peak))
         check(name + ": the notes and their releases (sfizz to the voices' end, FluidSynth 2 s past the MIDI)", 3.5 <= len(a) / r <= 6.5, len(a) / r)
 
-with tempfile.TemporaryDirectory() as t:              # HERESY 1883–1884: a take's own map over the studio's; the studio's never written here
+with tempfile.TemporaryDirectory() as t:              # HERESY 1883–1884: a take's own map over the Studio's; the Studio's never written here
     take = Path(t)
     studio_before = O.map_file(KIT).read_bytes() if O.map_file(KIT).is_file() else None
     sal = [i for i in O.library(KIT) if i["kind"] == "sfz" and i["set"] == "salamander"]
@@ -89,14 +89,14 @@ with tempfile.TemporaryDirectory() as t:              # HERESY 1883–1884: a ta
         check("a take's map: its piano is its own", m.get("acoustic_piano") == inst, m.get("acoustic_piano"))
         check("a take's map: in its own folder", (take / "orchestra.json").is_file())
         m = O.set_map(KIT, "acoustic_piano", None, take)
-        check("a take's map: cleared, the studio's again", m.get("acoustic_piano") == O.instrument_map(KIT).get("acoustic_piano"))
+        check("a take's map: cleared, the Studio's again", m.get("acoustic_piano") == O.instrument_map(KIT).get("acoustic_piano"))
     try:
         O.set_map(KIT, "kazoo", {"kind": "sfz", "file": "x.sfz"}, take)
         check("a group not MuScriptor's refused", False)
     except ValueError:
         check("a group not MuScriptor's refused", True)
     after = O.map_file(KIT).read_bytes() if O.map_file(KIT).is_file() else None
-    check("the studio's map untouched by the test", after == studio_before)
+    check("the Studio's map untouched by the test", after == studio_before)
 
 check("every stem with words has them", all(k in O.WORDS for k in ("piano", "bass", "drums", "guitar", "winds", "other")), sorted(O.WORDS))
 for st in ("piano", "bass", "drums", "other"):          # HERESY 1884: what the console offers a stem

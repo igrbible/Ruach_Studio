@@ -1,6 +1,6 @@
 #!/bin/bash
 # Ruach Studio under Pinokio (HERESY 1259, Viktor 09.10.2026: «Пиши pinokio.js… Давай в RC3 включаем»): INSTALL.md's install in
-# six steps, in the studio's folder. launcher/install.js runs it; from a terminal it runs the same: bash launcher/install.sh
+# six steps, in the Studio's folder. launcher/install.js runs it; from a terminal it runs the same: bash launcher/install.sh
 # Each step says what it does; one that fails ends the install with its reason on the last line, «ruach install stopped: …»,
 # the words launcher/install.js stops on. Safe to run again: what is here stays, a download goes on where it stopped.
 set -uo pipefail
@@ -13,8 +13,8 @@ stop() { echo; echo "${R}ruach install stopped: $1${X}"; exit 1; }
 echo "${D}Ruach Studio $(cat VERSION 2>/dev/null) · $ROOT${X}"
 
 step "① the machine"
-[ "$(uname -s)/$(uname -m)" = Linux/x86_64 ] || stop "the studio runs on Linux x86_64 with an NVIDIA card (on Windows: INSTALL_WINDOWS.md, through WSL)"
-nvidia-smi -L >/dev/null 2>&1 || stop "no NVIDIA card answers nvidia-smi: the studio needs one, with its driver"
+[ "$(uname -s)/$(uname -m)" = Linux/x86_64 ] || stop "the Studio runs on Linux x86_64 with an NVIDIA card (on Windows: INSTALL_WINDOWS.md, through WSL)"
+nvidia-smi -L >/dev/null 2>&1 || stop "no NVIDIA card answers nvidia-smi: the Studio needs one, with its driver"
 nvidia-smi --query-gpu=index,name,memory.total,compute_cap --format=csv,noheader | sed 's/^/  GPU/'
 for t in git curl ffmpeg; do command -v "$t" >/dev/null || stop "$t is missing (on Ubuntu: sudo apt install $t)"; done
 
@@ -23,7 +23,7 @@ step "② the CUDA toolkit 12.8"
 [ -n "$RUACH_CUDA_HOME" ] || stop "no CUDA toolkit 12.8 (nvcc): Pinokio's AI bundle brings one, or NVIDIA's cuda-toolkit-12-8 (INSTALL.md)"
 echo "  nvcc $(ruach_nvcc_release "$RUACH_CUDA_HOME/bin/nvcc") in $RUACH_CUDA_HOME · C++: ${CXX:-$(command -v c++ || command -v g++ || echo none)} $("${CXX:-g++}" -dumpversion 2>/dev/null)"
 
-step "③ Python 3.12: .venv (the studio) and .venv-art (the Artist), about 16 GB"
+step "③ Python 3.12: .venv (the Studio) and .venv-art (the Artist), about 16 GB"
 for v in .venv .venv-art; do
     [ -x "$v/bin/python" ] && continue
     [ -e "$v" ] && stop "$v is here but has no Python in it: move it away (or Reset) and install again"
@@ -51,15 +51,16 @@ bash build.sh --server --no-restart || stop "the engine did not build (build.sh 
 step "⑥ the models: pinned, checked, each with its size"
 Q=$(ruach_quant)
 echo "  the backbone for a card of $(ruach_vram) MiB: ${Q:-BF16}"
-# HERESY 1292: what this step brings, measured on fresh installs (10.10.2026): 9.4 GB beside the backbone
-case "${Q:-BF16}" in BF16) GBS=16.5 ;; Q8_0) GBS=13.2 ;; Q6_K) GBS=12.3 ;; *) GBS=12.0 ;; esac
-echo "  about $GBS GB in all: the backbone, three decoders, the transcriber, the LoRAs, Whisper, the stems' models, UniverSR"
-case "$Q" in Q6_K|Q5_K_M) echo "${Y}  under 7 GB: short songs only (a context of 8 192 rows); the studio is made for 12 GB and more${X}" ;; esac   # HERESY 1304
-# HERESY 1285: what did not come is named above with its reason; the studio starts without it, and Install again goes on from there
-bash fetch-models.sh ${Q:+--quant "$Q"} || stop "a download did not complete (the lines marked failed above say which and why): the studio starts without it; Install again goes on from there"
+# HERESY 1292: what this step brings, measured on fresh installs (10.10.2026); 1984: by the pinned lists anew (01.11.2026), 9.3 GB beside the backbone
+# and the fine-tune at its quant (none at Q5_K_M)
+case "${Q:-BF16}" in BF16) GBS=23.7 ;; Q8_0) GBS=17.0 ;; Q6_K) GBS=15.2 ;; *) GBS=12.0 ;; esac
+echo "  about $GBS GB in all: the backbone and Ruach Studio's own fine-tune, three decoders, the transcriber, the LoRAs, Whisper, the stems' models, UniverSR and Apollo-vocal"
+case "$Q" in Q6_K|Q5_K_M) echo "${Y}  under 7 GB: short songs only (a context of 8 192 rows); the Studio is made for 12 GB and more${X}" ;; esac   # HERESY 1304
+# HERESY 1285: what did not come is named above with its reason; the Studio starts without it, and Install again goes on from there
+bash fetch-models.sh ${Q:+--quant "$Q"} || stop "a download did not complete (the lines marked failed above say which and why): the Studio starts without it; Install again goes on from there"
 
 rm -f tmp/update-unfinished                             # HERESY 1352: a whole install sets this version up, as an update does
 echo
 echo "${G}Ruach Studio is installed.${X} Start it from Pinokio's menu (by hand: ./lab/start-lab.sh, then ./start.sh)."
 echo "${D}$(du -sb --exclude=outputs "$ROOT" 2>/dev/null | awk '{printf "%.1f", $1/1e9}') GB on this disk now (your songs not counted).${X}"   # HERESY 1292
-echo "${D}More models when you want them, each asked first with its size: «More models» in the menu (the Artist's models 26 GB, the style listener 6 to 22 GB, the trainer's base 4 or 7.8 GB, the BF16 backbone 7.2 GB beside a Q8_0 one).${X}"
+echo "${D}More models when you want them, each asked first with its size: «More models» in the menu, or Engine → Models and LoRAs → By room (the Writer's 5.5 or 6.7 GB, the Artist's 39 to 43 GB, the Videographer's 86 GB, the trainer's base 6.7 or 10.5 GB and the style listener 6 to 22 GB, the BF16 backbone 7.2 GB beside a Q8_0 one).${X}"

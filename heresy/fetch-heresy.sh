@@ -59,7 +59,7 @@
 # Needs: python3, git, the lab venv for audio-separator (lab/install-venv.sh), ~8 GB of disk.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""; QFINE=""; ARTLORAS=""; IRA=""; IRAE=""; FW=""; WRITER=""; MUSC=""; H3=""; UPSCALER=""   # HERESY 1794: FW; 1811: WRITER; 1834; 1867: H3: MUSC; 1876a: UPSCALER
+MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""; QFINE=""; ARTLORAS=""; IRA=""; IRAE=""; FW=""; WRITER=""; MUSC=""; H3=""; UPSCALER=""; FLASHSR=""   # HERESY 1794: FW; 1811: WRITER; 1834; 1867: H3: MUSC; 1876a: UPSCALER; 1984: FLASHSR
 while [ $# -gt 0 ]; do
   case "$1" in
     --check) MODE=check ;; --replace) MODE=replace ;; --yes) YES=1 ;;
@@ -73,13 +73,14 @@ while [ $# -gt 0 ]; do
     --muscriptor) MUSC="${2:-}"; shift ;;           # HERESY 1834
     --h3) H3="${2:-int8}"; shift ;;                 # HERESY 1867
     --upscaler) UPSCALER="${2:-7b}"; shift ;;       # HERESY 1876a
+    --flashsr) FLASHSR="${2:-all}"; shift ;;        # HERESY 1984
     --only) ONLY=",${2:-},"; shift ;;
     --artwork) ARTWORK=1 ;;
     --artwork-q8) ARTWORK=1; ARTQ8=1 ;;
     --qwen) QWEN="${2:-}"; shift ;;
     --qwen-fine) QFINE="${2:-}"; shift ;;           # HERESY 1347
     --art-loras) ARTLORAS="${2:-all}"; shift ;;
-    *) echo "--check, --replace, --h3 int8|all|bf16, --upscaler 3b|7b|all, --muscriptor small|medium|large, --writer quality|compact, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --ira BF16|Q8_0|Q6_K, --irae IRAE|IRAEv2|IRAEv3-BF16|Q8_0|Q6_K, --fw 2.4x0.75-BF16|Q8_0|Q6_K (and 0.7x0.75, 1.5x0.75, 3.4x0.7, 3.4x0.75, 4.0x0.65, 4.0x0.7), --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --qwen-fine jibmix-v6|intorealism-v1|real-v2|base-fp8, --art-loras all, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
+    *) echo "--check, --replace, --h3 int8|all|bf16, --upscaler 3b|7b|all, --muscriptor small|medium|large, --flashsr all, --writer quality|compact, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --ira BF16|Q8_0|Q6_K, --irae IRAE|IRAEv2|IRAEv3-BF16|Q8_0|Q6_K, --fw 2.4x0.75-BF16|Q8_0|Q6_K (and 0.7x0.75, 1.5x0.75, 3.4x0.7, 3.4x0.75, 4.0x0.65, 4.0x0.7), --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --qwen-fine jibmix-v6|intorealism-v1|real-v2|base-fp8, --art-loras all, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
   esac
   shift
 done
@@ -391,8 +392,8 @@ if [ -n "$H3" ]; then
            model_patches/minimax_h3_fun_controlnet_union_2.0_pruned_bf16.safetensors model_patches/minimax_h3_fun_controlnet_union_pruned_bf16.safetensors)
   case "$H3" in
     int8) FILES=("${H3_INT8[@]}"); SIZE="69 GB; a card of 24 GB, a part of the DiT streamed from RAM (64 GB of RAM or more)"; FAST=0; EFFECTS=0 ;;
-    all) FILES=("${H3_INT8[@]}" "${H3_ALL[@]}"); SIZE="192 GB: every int8 tier, FastH3, ControlNet Union, the effects; cards of 24 GB"; FAST=1; EFFECTS=1 ;;
-    bf16) FILES=("${H3_INT8[@]}" "${H3_ALL[@]}" "${H3_BF16[@]}"); SIZE="469 GB: the int8 tiers and the unquantized DiTs (66 GB each whole, 40 GB pruned) and encoder (51.5 GB): for cards of 80 GB, or two and more of 48 GB; on 24 GB they only stream from RAM, slowly"; FAST=1; EFFECTS=1 ;;
+    all) FILES=("${H3_INT8[@]}" "${H3_ALL[@]}"); SIZE="201 GB: every int8 tier, FastH3, ControlNet Union, the effects; cards of 24 GB"; FAST=1; EFFECTS=1 ;;
+    bf16) FILES=("${H3_INT8[@]}" "${H3_ALL[@]}" "${H3_BF16[@]}"); SIZE="478 GB: the int8 tiers and the unquantized DiTs (66 GB each whole, 40 GB pruned) and encoder (51.5 GB): for cards of 80 GB, or two and more of 48 GB; on 24 GB they only stream from RAM, slowly"; FAST=1; EFFECTS=1 ;;
     *) echo "${R}--h3 takes int8, all or bf16${X}"; exit 2 ;;
   esac
   go=1
@@ -426,7 +427,7 @@ if [ -n "$UPSCALER" ]; then
   case "$UPSCALER" in
     3b) FILES=(seedvr2_ema_3b_fp16.safetensors); SIZE="7.3 GB: SeedVR2 3B, the quick one (18.6 GB of a card at 1080p)" ;;
     7b) FILES=(seedvr2_ema_7b_sharp_fp16.safetensors); SIZE="17 GB: SeedVR2 7B sharp, the studio's own (20 GB of a card at 1080p, 16 of its blocks in RAM)" ;;
-    all) FILES=(seedvr2_ema_3b_fp16.safetensors seedvr2_ema_7b_sharp_fp16.safetensors seedvr2_ema_7b_fp16.safetensors); SIZE="41 GB: 3B, 7B sharp and 7B" ;;
+    all) FILES=(seedvr2_ema_3b_fp16.safetensors seedvr2_ema_7b_sharp_fp16.safetensors seedvr2_ema_7b_fp16.safetensors); SIZE="40 GB: 3B, 7B sharp and 7B" ;;
     *) echo "${R}--upscaler takes 3b, 7b or all${X}"; exit 2 ;;
   esac
   go=1
@@ -435,6 +436,19 @@ if [ -n "$UPSCALER" ]; then
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
   [ $go = 1 ] && hf_into_at "models/seedvr2 (SeedVR2, $UPSCALER)" "$S_REPO" "$ROOT/models/seedvr2" "${FILES[@]}" ema_vae_fp16.safetensors
+fi
+
+# HERESY 1984: the Voice upscale's FlashSR (its weights Apache-2.0, as its author stated on 20.10.2026), which lab/upbundle_job.py fetches on its first
+# use (HERESY 1611), beforehand: from v2 at its pin into models/upbundle/flashsr/, where upbundle_job.py reads them; asked first with its size
+if [ -n "$FLASHSR" ]; then
+  [ "$FLASHSR" = all ] || { echo "${R}--flashsr takes all${X}"; exit 2; }
+  asked flashsr "The Voice upscale's FlashSR (its three weights, Apache-2.0: goldhub/Ruach_Studio_Models_v2)"
+  go=1
+  if [ $MODE != check ] && [ $YES = 0 ] && ! [ -s "$ROOT/models/upbundle/flashsr/weights/vae.pth" ]; then
+    printf "%s" "Download 3.3 GB? The Voice upscale fetches it on its first use otherwise. [y/N] "
+    read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
+  fi
+  [ $go = 1 ] && hf_into "models/upbundle/flashsr (FlashSR's weights)" goldhub/Ruach_Studio_Models_v2 "models/upbundle/flashsr/weights/*"
 fi
 
 # HERESY 1120: artwork for takes, only when asked for, and asked again with its size (HERESY 1291: from our models repo v2, at its pin). The painter is CyberRealistic

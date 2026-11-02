@@ -45,6 +45,7 @@
 
 # ---- this machine only
 /tmp/*
+/extras/plugins/*/.venv/
 !/tmp/.gitkeep
 /install-record/
 /settings.json

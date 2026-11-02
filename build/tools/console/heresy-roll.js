@@ -895,7 +895,7 @@
   }
 
   // ---- the MIDI keyboard (Web MIDI): its keys play the staff in hand; held together with Shift, a chord; with Rec, they write
-  // 1585 · 1589: MIDI through the studio's own (heresy-midi.js): its keys play the staff in hand, a controller's DAW port runs the roll's
+  // 1585 · 1589: MIDI through the Studio's own (heresy-midi.js): its keys play the staff in hand, a controller's DAW port runs the roll's
   // transport (Play, Stop, Record, a bar back and on, the staves, the octaves); listened to as soon as the roll opens when MIDI is on;
   // the keys' guide folds while a keyboard is there
   function midiSay(st) {

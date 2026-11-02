@@ -486,7 +486,7 @@
     box.querySelector("em").textContent = tr("On the canvas:") + " " + shapesPicked().map(function (s) {
       return s + " " + tr(window.HeresyCanvas.covers(s, pl[s], rw, rh) ? "from it" : "around"); }).join(" · ");
   }
-  // HERESY 1347 (Viktor 10.10.2026: «настрой выборочное скачивание прямо в студии Художника, чтобы было всё под рукой»): what the studio
+  // HERESY 1347 (Viktor 10.10.2026: «настрой выборочное скачивание прямо в студии Художника, чтобы было всё под рукой»): what the Studio
   // can fetch for the Artist, from Engine → Models and LoRAs' own list (heresy-weights.js) and through its own fetch
   var GET = ["artwork", "qwen", "qwen-fine", "art-loras"];
   function openGet() {
@@ -967,7 +967,7 @@
         (r.count > 1 ? "…" + esc(r.seed + r.count - 1) : "") + "</span>" + runState(r) +
         '<span class="ar-acts"><button type="button" class="btn ghost small" data-act="form" data-tip="' + esc(tr("Its prompt, shapes, variations and seed back in the form above")) + '">' + esc(tr("To the form")) + "</button>" +
         '<button type="button" class="btn ghost small" data-act="again" data-tip="' + esc(tr(r.kind === "upscale" ? "The same picture upscaled once more" : "The same prompt and shapes once more, from a new seed")) + '"' + (live(r) ? " disabled" : "") + ">" + esc(tr("Again")) + "</button>" +
-        '<button type="button" class="btn ghost small danger" data-act="trash" data-tip="' + esc(tr("The run and its pictures to the trash (the studio's trash/artist/)")) + '"' + (live(r) ? " disabled" : "") + ">" + esc(tr("Trash")) + "</button></span></header>" +
+        '<button type="button" class="btn ghost small danger" data-act="trash" data-tip="' + esc(tr("The run and its pictures to the trash (the Studio's trash/artist/)")) + '"' + (live(r) ? " disabled" : "") + ">" + esc(tr("Trash")) + "</button></span></header>" +
         '<p class="ar-prompt' + (open ? " is-open" : "") + '" data-act="fold" translate="no">' + esc(r.prompt) + "</p>" +
         '<div class="ar-pics">' + pics + "</div></article>";
     }).join("");
@@ -1043,7 +1043,7 @@
     back.setAttribute("role", "dialog");
     back.setAttribute("aria-label", tr("What each upscaler is for"));
     back.innerHTML = '<div class="ar-lib ar-get ar-ug"><div class="ar-lib-head"><b>' + esc(tr("What each upscaler is for")) + "</b>" +
-      '<span class="row-hint">' + esc(tr("The time: a 1024² picture through it on an RTX 3090, the studio's own way")) + "</span>" +
+      '<span class="row-hint">' + esc(tr("The time: a 1024² picture through it on an RTX 3090, the Studio's own way")) + "</span>" +
       '<span class="spacer"></span><button type="button" class="btn primary small" data-ug="close">' + esc(tr("Done")) + "</button></div>" +
       '<div class="ar-get-body">' + UP_GROUPS.map(function (g) {
         var rows = list.filter(function (u) { return (u.info ? u.info.group : "") === g[0]; })
@@ -1453,7 +1453,7 @@
     var head = tr("The run and its " + countOf((r.pictures || []).filter(function (p) { return p.kept; }).length, "picture", "pictures") + " to the trash?");
     return coverTakes({ id: r.id }).then(function (takes) {   // HERESY 1372: a cover it gave a take, asked about
       return takes.length ? coverHow(takes, head) : window.HeresyDialog.confirm(head + "\n\n" +
-        tr("They go to the studio's trash/artist/ and can come back from there; a cover already given to a take stays with the take."),
+        tr("They go to the Studio's trash/artist/ and can come back from there; a cover already given to a take stays with the take."),
         { ok: tr("To the trash"), danger: true }).then(function (ok) { return ok ? "keep" : null; });
     }).then(function (how) {
       if (!how) return;
@@ -1461,7 +1461,7 @@
         coversSaid(d);
         state.runs = state.runs.filter(function (x) { return x.id !== r.id; });
         paintRuns();
-        toast(tr("In the trash: the studio's trash/artist/ keeps it; the library's Trash brings it back"));   // HERESY 1310
+        toast(tr("In the trash: the Studio's trash/artist/ keeps it; the library's Trash brings it back"));   // HERESY 1310
       }).catch(function (e) { toast(e.message, "bad"); });
     });
   }
@@ -2323,7 +2323,7 @@
       '<div class="ar-cv-keyrow"><label class="field"><span class="label">' + esc(tr("API key")) + '</span><input type="password" class="ar-cv-key" spellcheck="false" autocomplete="off" placeholder="' +
         esc(tr("civitai.com \u2192 Account settings \u2192 API Keys")) + '" /></label>' +
       '<label class="check"><input type="checkbox" class="ar-cv-keep" /> <span>' + esc(tr("Remember the key")) + "</span></label></div>" +
-      '<p class="row-hint">' + esc(tr("Many adapters come without a key; some ask for one. The key goes from this page to the studio's lab and from there to civitai.com alone, never into a file.")) + "</p>" +
+      '<p class="row-hint">' + esc(tr("Many adapters come without a key; some ask for one. The key goes from this page to the Studio's lab and from there to civitai.com alone, never into a file.")) + "</p>" +
       '<div class="ar-cv-what"></div></div>' +
       '<div class="ar-li-acts"><button type="button" class="btn small" data-cv="look">' + esc(tr("Look")) + "</button>" +
       '<button type="button" class="btn primary small" data-cv="fetch" disabled>' + esc(tr("Fetch")) + "</button>" +
@@ -2459,7 +2459,7 @@
       var list = shown();
       if (!rows.length) {
         grid.innerHTML = '<div class="ar-lib-empty"><p>' + esc(tr("No adapters for " + (titles[fam] || fam) + " here yet.")) + "</p><p>" +   // HERESY 1339: one sentence each
-          esc(tr("Put .safetensors files into the studio's artwork/loras/" + fam + "/ folder: any folders inside it become groups here; a picture beside a file with its name (NAME.jpg, NAME.png, NAME.preview.png) shows on its card.")) + "</p><p>" +
+          esc(tr("Put .safetensors files into the Studio's artwork/loras/" + fam + "/ folder: any folders inside it become groups here; a picture beside a file with its name (NAME.jpg, NAME.png, NAME.preview.png) shows on its card.")) + "</p><p>" +
           esc(tr("On Civitai, pick adapters by their base model (" + ({ "qwen-image-2.1": "Qwen 2.1", "qwen-image-2512": "Qwen" }[fam] || fam) + "), " +
             "download the .safetensors and put it there; Look up on Civitai then fills in its name and its trigger words.")) + "</p><p>" +
           esc(tr("Or From Civitai\u2026 above: its link, and your own API key when it asks for one; the lab fetches it here.")) + "</p></div>";   // HERESY 1360

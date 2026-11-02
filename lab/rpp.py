@@ -1,5 +1,5 @@
 """HERESY 1104: a take as a REAPER project (Viktor, 02.10.2026: the whole take handed to the user's DAW, where the
-rest happens outside the studio). What the studio knows of a song and no plain stems export carries:
+rest happens outside the Studio). What the Studio knows of a song and no plain stems export carries:
 
   · the mix, and every stem the take has (derived/stems-*/), each on its own track from 0; the mix muted when
     there are stems, so the stems sound and the mix waits as the reference

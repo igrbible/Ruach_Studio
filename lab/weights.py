@@ -1,5 +1,5 @@
 """HERESY 1289 (Viktor 10.10.2026: «И нужно в Engine добавить докачку моделей и LoRA»): the Engine's Models card over
-heresy/fetch-heresy.sh, the one list of what the studio needs beside itself: its pins, its sizes checked file by file, a
+heresy/fetch-heresy.sh, the one list of what the Studio needs beside itself: its pins, its sizes checked file by file, a
 download cut short going on from where it stopped, a second try after half a minute. The lab runs it and keeps its words.
 
     GET  /weights               the last whole run's verdicts, part by part (the install's own run too: fetch-heresy.sh keeps
@@ -8,6 +8,8 @@ download cut short going on from where it stopped, a second try after half a min
     POST /weights/fetch {…}     one run at a time, on the user's word (the page has said the size): {"part": "missing"}
                                 everything the install brings that is not here, {"part": "loras"} one part of it, or one
                                 extra: {"backbone": "BF16"}, {"ira": "Q8_0"} (1490), {"irae": "IRAEv2-Q8_0"} (1689), {"fw": "2.4x0.75-Q8_0"} (1794), {"listener": "Q8_0"}, {"artwork": "q4"}, {"trainer": "int8"}
+                                HERESY 1984: or a tier, {"tier": "artist"}: a room's models at the variants this machine's card takes,
+                                fetched item by item, and only when the disk has room for what is not here and 2 GB to spare
 
 A test page (?scope=…) checks but fetches nothing: the lab refuses. New LoRAs reach the engine at once; new backbones,
 decoders and sliders at its next start (it reads them when it starts), which the card says."""
@@ -21,7 +23,8 @@ from pathlib import Path
 
 # what the install brings, part by part (fetch-heresy.sh --only NAME): what a fetch of the whole part takes, measured on the
 # Forge 10.10.2026 (HERESY 1290: the extras come converted, from goldhub/Ruach_Studio_Models_v2: nothing is made here any more)
-PARTS = {"extras": "1.3 GB", "whisper": "3.1 GB", "stems": "1.0 GB", "upscale": "0.2 GB", "loras": "2.3 GB"}   # HERESY 1292: du -sb, decimal
+PARTS = {"extras": "1.1 GB", "whisper": "3.1 GB", "stems": "1.0 GB", "upscale": "0.4 GB", "loras": "2.3 GB"}   # HERESY 1292: du -sb, decimal
+# HERESY 1984: measured anew by the pinned file lists (01.11.2026): the decoders without the sliders (1449: 1.06 GB), UniverSR with Apollo-vocal (1583: 0.42)
 # HERESY 1794 (Viktor 25.10.2026: «2.4 ep - самый безопасный, и пусть он будет базовой моделью»): Ruach Studio's own fine-tune, YuE2-RS-FW, its
 # saves folded into m-a-p's base at seven points (epoch x strength), from goldhub/YuE2-RS-Finetunes; the default one comes with the install as a
 # part, at the quant of m-a-p's backbone here (BF16, Q8_0 or Q6_K: there is no Q5_K_M of it, so a Q5_K_M install keeps m-a-p's alone)
@@ -110,8 +113,8 @@ EXTRAS = [
          {"id": "IRAE-IRv2-Q6_K", "size": "2.9 GB", "files": ["models/YuE2-3B-IRAE-IRv2-Q6_K.gguf"]}]},
     # HERESY 1794: Ruach Studio's own fine-tune, the seven merges at three quants each (models/YuE2-3B-RS-FW-<merge>-<quant>.gguf)
     {"name": "fw", "label": "RS-FW merge", "restart": True,
-     "what": "YuE2-3B with Ruach Studio's own fine-tune folded in (YuE2-RS-FW, at seven points of its training: epoch x strength): 2.4x0.75 is the studio's default, the safest; from goldhub/YuE2-RS-Finetunes (CC BY-NC-SA 4.0). Compute chooses it beside m-a-p's backbones; the adapters themselves are not published",
-     "variants": [dict({"id": f"{v}-{q}", "size": size, "files": [f"models/YuE2-3B-RS-FW-{v}-{q}.gguf"]}, **({"note": "the studio's default"} if v == FW_DEFAULT else {}))
+     "what": "YuE2-3B with Ruach Studio's own fine-tune folded in (YuE2-RS-FW, at seven points of its training: epoch x strength): 2.4x0.75 is the Studio's default, the safest; from goldhub/YuE2-RS-Finetunes (CC BY-NC-SA 4.0). Compute chooses it beside m-a-p's backbones; the adapters themselves are not published",
+     "variants": [dict({"id": f"{v}-{q}", "size": size, "files": [f"models/YuE2-3B-RS-FW-{v}-{q}.gguf"]}, **({"note": "the Studio's default"} if v == FW_DEFAULT else {}))
                   for v in FW_MERGES for q, size in FW_SIZES.items()]},
     # HERESY 1811 (Viktor 28.10.2026: «прикручивай как Local Studio LLM… дай выбор юзеру выбрать либо мой качественный квант, либо более сжатый»)
     {"name": "writer", "label": "Studio writer",
@@ -132,21 +135,26 @@ EXTRAS = [
           "files": ["models/muscriptor/v1/muscriptor-medium-f16.gguf"]},
          {"id": "large", "label": "Large", "size": "2.7 GB", "note": "the most exact: for a card with 8 GB of VRAM or more; on the processor about three times slower than the song",
           "files": ["models/muscriptor/v1/muscriptor-large-f16.gguf"]}]},
+    # HERESY 1984: the Voice upscale's FlashSR, which upbundle_job.py fetches on its first use (1611), beforehand: its tier says it
+    {"name": "flashsr", "label": "Voice upscale · FlashSR",
+     "what": "FlashSR (Apache-2.0, as its author stated): one of the three the Refiner's Voice upscale draws a voice's top with, beside UniverSR and Apollo-vocal; from goldhub/Ruach_Studio_Models_v2. Fetched here beforehand, it does not come on the Voice upscale's first use",
+     "variants": [{"id": "all", "label": "its three weights", "size": "3.3 GB",
+                   "files": ["models/upbundle/flashsr/weights/student_ldm.pth", "models/upbundle/flashsr/weights/sr_vocoder.pth", "models/upbundle/flashsr/weights/vae.pth"]}]},
     # HERESY 1869 (Viktor 29.10.2026: «То предупреждение по ограничению использования весов H3 в некоторых странах перенеси в Движок к месту загрузки
     # компонентов H3»): the Videographer's moving pictures, its licence said here, where it is fetched (fetch-heresy.sh --h3)
     {"name": "h3", "label": "Videographer · MiniMax H3",
      "what": "MiniMax H3 (MiniMax) as Comfy-Org packs it: the Videographer's moving pictures, a shot at a time on a card of 24 GB, the shot's picture its first frame. Its licence (the MiniMax H3 Community License) does not allow running it on your own machines in the United States, the European Union, the United Kingdom or South Korea, and commercial use beyond the threshold it names needs MiniMax's own licence. Where you run it and what you make with it is yours to answer for: read the licence before you fetch it",
      "variants": [
-         {"id": "int8", "label": "int8", "size": "69 GB", "note": "the studio's own: a card of 24 GB and 64 GB of RAM", "files": ['models/minimax-h3/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors', 'models/minimax-h3/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors', 'models/minimax-h3/vae/minimax_h3_video_vae_fp16.safetensors', 'models/minimax-h3/vae/minimax_h3_audio_vae_fp32.safetensors', 'models/minimax-h3/original/FL2VA/text_encoder/config.json']},
-         {"id": "all", "label": "All int8 tiers", "size": "192 GB", "note": "both modes whole and pruned, FastH3, ControlNet Union and the effects too", "files": ['models/minimax-h3/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors', 'models/minimax-h3/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors', 'models/minimax-h3/vae/minimax_h3_video_vae_fp16.safetensors', 'models/minimax-h3/vae/minimax_h3_audio_vae_fp32.safetensors', 'models/minimax-h3/original/FL2VA/text_encoder/config.json', 'models/minimax-h3/diffusion_models/fastvideo_fasth3_8step_v2_pruned_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_fl2va_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors', 'models/minimax-h3/text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors', 'models/minimax-h3/model_patches/minimax_h3_fun_controlnet_union_2.0_pruned_int8_convrot.safetensors']},
-         {"id": "bf16", "label": "BF16", "size": "469 GB", "note": "unquantized, for cards of 80 GB; on 24 GB only streamed from RAM, slowly", "files": ['models/minimax-h3/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors', 'models/minimax-h3/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors', 'models/minimax-h3/vae/minimax_h3_video_vae_fp16.safetensors', 'models/minimax-h3/vae/minimax_h3_audio_vae_fp32.safetensors', 'models/minimax-h3/original/FL2VA/text_encoder/config.json', 'models/minimax-h3/diffusion_models/fastvideo_fasth3_8step_v2_pruned_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_fl2va_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors', 'models/minimax-h3/text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors', 'models/minimax-h3/model_patches/minimax_h3_fun_controlnet_union_2.0_pruned_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_fl2va_bf16.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_ref2va_bf16.safetensors', 'models/minimax-h3/text_encoders/qwen3vl_32b_minimax_h3_bf16.safetensors']}]},
+         {"id": "int8", "label": "int8", "size": "69 GB", "note": "the Studio's own: a card of 24 GB and 64 GB of RAM", "files": ['models/minimax-h3/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors', 'models/minimax-h3/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors', 'models/minimax-h3/vae/minimax_h3_video_vae_fp16.safetensors', 'models/minimax-h3/vae/minimax_h3_audio_vae_fp32.safetensors', 'models/minimax-h3/original/FL2VA/text_encoder/config.json']},
+         {"id": "all", "label": "All int8 tiers", "size": "201 GB", "note": "both modes whole and pruned, FastH3, ControlNet Union and the effects too", "files": ['models/minimax-h3/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors', 'models/minimax-h3/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors', 'models/minimax-h3/vae/minimax_h3_video_vae_fp16.safetensors', 'models/minimax-h3/vae/minimax_h3_audio_vae_fp32.safetensors', 'models/minimax-h3/original/FL2VA/text_encoder/config.json', 'models/minimax-h3/diffusion_models/fastvideo_fasth3_8step_v2_pruned_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_fl2va_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors', 'models/minimax-h3/text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors', 'models/minimax-h3/model_patches/minimax_h3_fun_controlnet_union_2.0_pruned_int8_convrot.safetensors']},
+         {"id": "bf16", "label": "BF16", "size": "478 GB", "note": "unquantized, for cards of 80 GB; on 24 GB only streamed from RAM, slowly", "files": ['models/minimax-h3/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors', 'models/minimax-h3/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors', 'models/minimax-h3/vae/minimax_h3_video_vae_fp16.safetensors', 'models/minimax-h3/vae/minimax_h3_audio_vae_fp32.safetensors', 'models/minimax-h3/original/FL2VA/text_encoder/config.json', 'models/minimax-h3/diffusion_models/fastvideo_fasth3_8step_v2_pruned_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_fl2va_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors', 'models/minimax-h3/text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors', 'models/minimax-h3/model_patches/minimax_h3_fun_controlnet_union_2.0_pruned_int8_convrot.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_fl2va_bf16.safetensors', 'models/minimax-h3/diffusion_models/minimax_h3_ref2va_bf16.safetensors', 'models/minimax-h3/text_encoders/qwen3vl_32b_minimax_h3_bf16.safetensors']}]},
     # HERESY 1876a (Viktor 29.10.2026: «SeedVR2 обе 3B и 7B просчитай по ресурсам… Прикручиваем в загрузчик оба веса»): the Videographer's upscaler
     {"name": "upscaler", "label": "Videographer · SeedVR2 upscaler",
      "what": "SeedVR2 (ByteDance, Apache-2.0) as numz packs it: the Videographer's upscaler, a shot's video to 1080p or 1440p in one step, the details made anew. Measured on an RTX 3090, 107 frames of 768p: 3B to 1080p in 284 s, 7B sharp in 367 s, 7B sharp to 1440p in 592 s",
      "variants": [
          {"id": "3b", "label": "3B", "size": "7.3 GB", "note": 'the quick one: 18.6 GB of a card at 1080p, 10 GB of RAM', "files": ['models/seedvr2/seedvr2_ema_3b_fp16.safetensors', 'models/seedvr2/ema_vae_fp16.safetensors']},
-         {"id": "7b", "label": "7B sharp", "size": "17 GB", "note": "the studio's own: 20 GB of a card at 1080p (16 of its blocks in RAM), 21 GB of RAM; 1440p fits too", "files": ['models/seedvr2/seedvr2_ema_7b_sharp_fp16.safetensors', 'models/seedvr2/ema_vae_fp16.safetensors']},
-         {"id": "all", "label": "All", "size": "41 GB", "note": '3B, 7B sharp and 7B', "files": ['models/seedvr2/seedvr2_ema_3b_fp16.safetensors', 'models/seedvr2/seedvr2_ema_7b_sharp_fp16.safetensors', 'models/seedvr2/seedvr2_ema_7b_fp16.safetensors', 'models/seedvr2/ema_vae_fp16.safetensors']}]},
+         {"id": "7b", "label": "7B sharp", "size": "17 GB", "note": "the Studio's own: 20 GB of a card at 1080p (16 of its blocks in RAM), 21 GB of RAM; 1440p fits too", "files": ['models/seedvr2/seedvr2_ema_7b_sharp_fp16.safetensors', 'models/seedvr2/ema_vae_fp16.safetensors']},
+         {"id": "all", "label": "All", "size": "40.2 GB", "note": '3B, 7B sharp and 7B', "files": ['models/seedvr2/seedvr2_ema_3b_fp16.safetensors', 'models/seedvr2/seedvr2_ema_7b_sharp_fp16.safetensors', 'models/seedvr2/seedvr2_ema_7b_fp16.safetensors', 'models/seedvr2/ema_vae_fp16.safetensors']}]},
     {"name": "listener", "label": "Style listener",
      "what": "Qwen2.5-Omni-7B: hears the songs of a training set and writes each one's style tags; the GGUF ones run through llama.cpp (vendor/llama.cpp, built by you)",
      "variants": [
@@ -186,9 +194,9 @@ EXTRAS = [
     {"name": "trainer", "label": "LoRA trainer's base",
      "what": "Comfy-Org's YuE2 for the Trainer, with Mothersuperior's tokenizer head and m-a-p's MERT-v2-FullSong (the set's latent cache hears with it), from goldhub/Ruach_Studio_Models_v2 (CC BY-NC 4.0)",
      "variants": [
-         {"id": "bf16", "size": "10.3 GB", "note": "trains on unquantized weights; MERT-v2-FullSong's 2.5 GB among them, less when it is here",
+         {"id": "bf16", "size": "10.5 GB", "note": "trains on unquantized weights; MERT-v2-FullSong's 2.5 GB and the tokenizer head's 0.2 GB among them, less when they are here",
           "files": ["checkpoints/comfy/checkpoints/yue2_3b_bf16.safetensors", "checkpoints/MERT-v2-FullSong/model.safetensors"]},
-         {"id": "int8", "size": "6.5 GB", "note": "for a smaller card; MERT-v2-FullSong's 2.5 GB among them, less when it is here",
+         {"id": "int8", "size": "6.7 GB", "note": "for a smaller card; MERT-v2-FullSong's 2.5 GB and the tokenizer head's 0.2 GB among them, less when they are here",
           "files": ["checkpoints/comfy/checkpoints/yue2_3b_int8_convrot.safetensors", "checkpoints/MERT-v2-FullSong/model.safetensors"]}]},
 ]
 # HERESY 1425 (Viktor 13.10.2026: «В МОДЕЛЯХ и LoRA только Krea 2 Muse доступна, тогда как выше я могу выбрать из полного списка»):
@@ -327,12 +335,83 @@ def _job_view(kit):
 def listing(kit):
     script = kit / "heresy" / "fetch-heresy.sh"
     return {"script": script.is_file(), "last": _last_run(kit), "extras": _extras(kit), "parts": parts_of(kit),   # HERESY 1794
+            "tiers": tiers(kit), "free": _free(kit), "spare": SPARE,      # HERESY 1984
             "job": _job_view(kit), "now": int(time.time())}
 
 
 def running():
     with LOCK:
         return bool(JOB) and JOB.get("status") == "running"
+
+
+# HERESY 1984 (Viktor 01.11.2026: «разложил честную таблицу по объёмам данных, скачиваемых на машину пользователя, по разным уровням… и в Движке
+# может даже оформить скачивание скопом по тем же Tiers, замеряя свободное место на диске и честно предупреждая о нестаче места на диске»): a tier is a
+# room's models at the variants this machine's biggest card takes, as launcher/extras.sh chooses them. What is here counts nothing; a variant not
+# whole counts whole (so «up to»). A tier is fetched item by item, and only when the disk has room for what is not here and SPARE beside it.
+SPARE = 2e9
+IRAE_SETS = ["IRAE", "IRAEv2", "IRAEv3", "IRAE-IR", "IRAE-IRv2"]
+TIERS = [
+    {"id": "writer", "label": "Writer", "what": "the Writer's own language model on this machine, through llama.cpp's llama-server (launcher/extras.sh builds it)"},
+    {"id": "refiner", "label": "Refiner", "what": "sound to MIDI (MuScriptor) and the Voice upscale's FlashSR, which else comes on its first use"},
+    {"id": "artist", "label": "Artist", "what": "the covers' helpers and the Qwen-Image 2512 painter with Lightning's 8 steps"},
+    {"id": "videographer", "label": "Videographer", "what": "MiniMax H3 for the moving shots and SeedVR2 7B sharp to upscale them; the shots' pictures are the Artist's"},
+    {"id": "trainer", "label": "LoRA Trainer", "what": "the trainer's base and the style listener that tags a set's songs"},
+    {"id": "merges", "label": "Sound engines", "what": "every merge beside the default: IRA, the five IRAE and the six other RS-FW, at the quant of the backbone here"},
+]
+
+
+def _entry(name):
+    return next(e for e in [x or ARTWORK_BIG for x in EXTRAS] if e["name"] == name)
+
+
+def _picks(kit, tid):
+    """The items [(extra, variant)] a tier takes on this machine, and why it takes none ("" when it takes some)."""
+    v = _biggest_card_mb()
+    if tid == "writer":
+        return ([("writer", "quality" if v >= 11500 else "compact")], "") if v >= 7500 else ([], "a card of 8 GB or more")
+    if tid == "refiner":
+        import muscriptor
+        return [("muscriptor", muscriptor.suggest(kit)), ("flashsr", "all")], ""
+    if tid == "artist":
+        return [("artwork", "all"), ("qwen", "2512-q6" if v >= 23000 else "2512-q4")], ""
+    if tid == "videographer":
+        return ([("h3", "int8"), ("upscaler", "7b")], "") if v >= 23000 else ([], "a card of 24 GB and 64 GB of RAM")
+    if tid == "trainer":
+        return [("trainer", "bf16" if v >= 23000 else "int8"), ("listener", "Q8_0" if v >= 12000 else "Q4_K_M")], ""
+    q = fw_quant(kit) or "Q6_K"                      # merges: none at Q5_K_M, the nearest above it
+    return [("ira", q)] + [("irae", f"{n}-{q}") for n in IRAE_SETS] + [("fw", f"{m}-{q}") for m in FW_MERGES if m != FW_DEFAULT], ""
+
+
+def tiers(kit):
+    """The tiers on this machine: each its items (label, variant, size, here), what is not here (need, bytes) and the whole (total)."""
+    out = []
+    for t in TIERS:
+        picks, why = _picks(kit, t["id"])
+        items = []
+        for name, vid in picks:
+            e = _entry(name)
+            x = next(y for y in e["variants"] if y["id"] == vid)
+            items.append({"extra": name, "variant": vid, "label": e["label"], "vlabel": x.get("label") or vid, "size": x["size"],
+                          "bytes": _bytes(x["size"]) or 0, "here": _here(kit, x["files"])})
+        out.append(dict(t, items=items, why=why, need=sum(i["bytes"] for i in items if not i["here"]), total=sum(i["bytes"] for i in items)))
+    return out
+
+
+def _fetch_tier(kit, tid):
+    t = next((x for x in tiers(kit) if x["id"] == tid), None)
+    if t is None:
+        raise ValueError("a tier is " + ", ".join(x["id"] for x in TIERS))
+    if not t["items"]:
+        raise ValueError(f"the {t['label']} tier needs {t['why']}: none of it is fetched on this machine")
+    todo = [i for i in t["items"] if not i["here"]]
+    if not todo:
+        raise ValueError(f"all of the {t['label']} tier is here")
+    free = _free(kit)
+    if free is not None and t["need"] + SPARE > free:
+        raise ValueError(f"not enough room on this disk: the {t['label']} tier takes up to {t['need'] / 1e9:.1f} GB and 2 GB to spare, "
+                         f"{free / 1e9:.1f} GB are free")
+    runs = [_args({i["extra"]: i["variant"]})[0] for i in todo]
+    return _start(kit, runs, f"the {t['label']} tier", "fetch", False, {"tier": tid}, t["need"])
 
 
 NAMES = {"extras": "the extra decoders", "whisper": "Whisper", "stems": "the stems' models", "upscale": "UniverSR",
@@ -361,7 +440,7 @@ def _args(body):
         if name == "artwork":
             return ["--only", "none", "--artwork-q8" if v == "q8" else "--artwork", "--yes"], what
         return ["--only", "none", "--" + name, v, "--yes"], what
-    raise ValueError("say what to fetch: a part (missing, " + ", ".join(list(PARTS) + ["fw"]) + ") or an extra (backbone, ira, irae, fw, writer, listener, artwork, qwen, qwen-fine, art-loras, trainer, h3, upscaler)")
+    raise ValueError("say what to fetch: a part (missing, " + ", ".join(list(PARTS) + ["fw"]) + "), an extra (backbone, ira, irae, fw, writer, muscriptor, flashsr, listener, artwork, qwen, qwen-fine, art-loras, trainer, h3, upscaler) or a tier (" + ", ".join(x["id"] for x in TIERS) + ")")
 
 
 def _bytes(size):
@@ -406,10 +485,12 @@ def check(kit):
 
 def fetch(kit, body, scope=""):
     if scope:
-        raise ValueError("a test page fetches nothing: open the studio without ?scope= to fetch")
+        raise ValueError("a test page fetches nothing: open the Studio without ?scope= to fetch")
     if not (kit / "heresy" / "fetch-heresy.sh").is_file():
         raise FileNotFoundError("no heresy/fetch-heresy.sh in this tree")
     body = body if isinstance(body, dict) else {}
+    if body.get("tier") is not None:                # HERESY 1984: a room's models at once
+        return _fetch_tier(kit, str(body["tier"]))
     args, what = _args(body)
     which, expect = _which(body, kit)               # HERESY 1302: the page's progress at the row pressed (1794: the kit, for the fine-tune's size)
     # a part fetched alone leaves the whole list as it was: a check after it says where everything stands
@@ -437,9 +518,21 @@ def _say(kit, args):
 
 def _run(kit, args, then_check):
     try:
-        rc = _say(kit, args)
+        runs = args if args and isinstance(args[0], list) else [args]   # HERESY 1984: a tier is a run an item, their counts summed
+        rc, total = 0, {}
+        for n, a in enumerate(runs):
+            if len(runs) > 1:
+                with LOCK:
+                    JOB["lines"].append(("\n" if n else "") + f"— {n + 1} of {len(runs)} —")
+                    JOB["counts"] = None
+            rc = _say(kit, a) or rc
+            with LOCK:
+                for k, c in (JOB["counts"] or {}).items():
+                    total[k] = total.get(k, 0) + c
         with LOCK:
             JOB["rc"] = rc
+            if len(runs) > 1:
+                JOB["counts"] = total
         if then_check:
             with LOCK:
                 JOB["lines"].append("")

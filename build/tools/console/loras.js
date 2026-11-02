@@ -289,7 +289,7 @@
   }
   function capOf(e, half) { return zones(e, half).max; }
   // HERESY 1089 (Viktor, 02.10.2026): the shared ceiling of the music half. Each strength may sit in its own
-  // green and the run still break: stacked, they add up. Measured on the studio's takes (02.10.2026, the runs with
+  // green and the run still break: stacked, they add up. Measured on the Studio's takes (02.10.2026, the runs with
   // adapters on the music half and a written score): whole at 1.55, 1.75 and 2.25 together, broken at 2.5, 2.5
   // and 3.1 — every time. Green to 1.75, amber to 2.25, red past it; a sources.json "ar_total" may move it.
   var AR_TOTAL = { safe: 1.75, limit: 2.25, max: 3.5 };
@@ -326,9 +326,9 @@
     if (capable(half) < 2) return "";
     var t = halfTotal(half), z = totalZone(half), music = half === "ar";
     var road = "--z1:" + (100 * z.safe / z.max).toFixed(1) + "%;--z2:" + (100 * z.limit / z.max).toFixed(1) + "%";
-    var tip = music ? (scored() ? tr("All the music strengths together. Measured on this studio's takes: the score came out whole up to " +
+    var tip = music ? (scored() ? tr("All the music strengths together. Measured on this Studio's takes: the score came out whole up to " +
         z.limit + " in every run, broken from 2.5 in every run. Green to " + z.safe + ", amber to " + z.limit + ", red past it.")
-      : tr("All the music strengths together while the model writes the score. Measured on this studio's plans (13–20.10.2026): up to 1.0 together none of 6 broke, " +
+      : tr("All the music strengths together while the model writes the score. Measured on this Studio's plans (13–20.10.2026): up to 1.0 together none of 6 broke, " +
         "from 1.0 to 1.2 14 of 35 (on IRAEv3 8 of 10), past 1.2 8 of 9. Green to " + z.safe + ", amber to " + z.limit + ", red past it, " + z.max + " at most."))   // HERESY 1623
       : tr("All the sound strengths together. By ear (05.10.2026): two adapters at sound 1.0 each, 2.0 together, brought a heavy bass; 0.55 together sounded right. Green to " +
         z.safe + ", amber to " + z.limit + ", red past it.");
@@ -1233,7 +1233,7 @@
       var lastW = 0;
       new root.ResizeObserver(function () { var w = host.clientWidth; if (w && Math.abs(w - lastW) > 1) { lastW = w; layoutWaves(); } }).observe(host);
     }
-    // HERESY 1458: the song's expected length, kept in this browser (and so in the studio's settings), one for every wave
+    // HERESY 1458: the song's expected length, kept in this browser (and so in the Studio's settings), one for every wave
     host.addEventListener("change", function (event) {
       var inp = event.target.closest && event.target.closest(".lora-wave-len-in");
       if (!inp) return;
@@ -1441,7 +1441,7 @@
       }
     });
     // HERESY 1167 (Viktor: «по правому клику мыши Mute/Пропустить и наоборот Unmute/Вернуть в строй»; «Если у нас адаптер из
-    // локального тренинга… Убрать из списка (адаптер в своей сессии Тренера)»): the studio's own right-click menus
+    // локального тренинга… Убрать из списка (адаптер в своей сессии Тренера)»): the Studio's own right-click menus
     host.addEventListener("contextmenu", function (event) {
       var row = event.target.closest(".lora-row[data-ids]"), chip = event.target.closest("[data-lora-chip]");
       if (!root.HeresyMenu || (!row && !chip) || event.target.closest("input")) return;

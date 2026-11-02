@@ -1,5 +1,5 @@
 """HERESY 1767: a take made again (/regen) is made on the backbone it was sung on; a probe (and the Keys Probe) at full length. The lab is imported
-with its engine, its takes and its workspaces stood in for, so nothing reaches the studio. python3 lab/test_regen_backbone.py"""
+with its engine, its takes and its workspaces stood in for, so nothing reaches the Studio. python3 lab/test_regen_backbone.py"""
 import importlib.util
 import json
 import sys

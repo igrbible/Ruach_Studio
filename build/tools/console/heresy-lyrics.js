@@ -45,7 +45,7 @@
 
   // HERESY 1168 (Viktor 07.10.2026: «Считает гласные, а нужно считать слоги. Каждый слог забирает часть доли музыкальной…
   // Сможешь унифицировать счётчики и для всех языков, что у нас запланированы в финальный релиз?»): a syllable is one vowel
-  // sound, one note; each language counts it by its own rules (the studio's seven, Hebrew by its points, Chinese, Japanese and
+  // sound, one note; each language counts it by its own rules (the Studio's seven, Hebrew by its points, Chinese, Japanese and
   // Korean by their signs). In Russian, Ukrainian and Belarusian that is one vowel letter each, as before: his «Я|же|ви|жу|
   // глу|п|цо́в|с|при|ду́р|чес|ким|пла|ном» is fourteen parts, and two have no vowel (п, с): consonants that take time when sung,
   // not syllables (глуп-цо́в спри-ду́р-чес-ким): twelve. What the count got wrong was elsewhere: Spanish and Italian went by

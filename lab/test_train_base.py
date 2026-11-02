@@ -19,7 +19,7 @@ d = Path(tempfile.mkdtemp())
 (d / "checkpoints" / "yue2_3b_RS-FW-e004-m0.75-s0.75_bf16.safetensors").write_bytes(b"x")
 P = {"models": d}
 c, q, b = training.base_checkpoint(P, {})
-check("no base: the studio's own bf16, as before", c.name == "yue2_3b_bf16.safetensors" and q == "bf16" and b == "", (c, q, b))
+check("no base: the Studio's own bf16, as before", c.name == "yue2_3b_bf16.safetensors" and q == "bf16" and b == "", (c, q, b))
 c, q, b = training.base_checkpoint(P, {"base": "yue2_3b_RS-FW-e004-m0.75-s0.75_bf16.safetensors", "quant": "int8"})
 check("a base named: that file, bf16, said", c.name == "yue2_3b_RS-FW-e004-m0.75-s0.75_bf16.safetensors" and q == "bf16" and b == c.name, (c, q, b))
 for name, why in (("../yue2_3b_bf16.safetensors", "a folder"), ("x/y.safetensors", "a folder"), ("model.gguf", "not a safetensors")):

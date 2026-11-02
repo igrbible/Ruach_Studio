@@ -1,4 +1,4 @@
-"""HERESY 1489 · Content Credentials (C2PA) on the studio's downloads (Viktor 16.10.2026: «Подпись C2PA поддерживаю»; «для паблика
+"""HERESY 1489 · Content Credentials (C2PA) on the Studio's downloads (Viktor 16.10.2026: «Подпись C2PA поддерживаю»; «для паблика
 нужен выключатель, и в настройках Engine нужные поля для ввода своей инфы»; «Принимаю твоё предложение»).
 
 A signed record of where a file came from, inside the file: a RIFF chunk in a WAV, an ID3 frame in an MP3, a metadata block in a
@@ -6,7 +6,7 @@ FLAC. The sound is not touched. It says:
   created  by AI (YuE2) in Ruach Studio <version>: digitalSourceType trainedAlgorithmicMedia
   edited   for a file the Refiner made: its steps, from the take on, done by a person in Ruach Studio
   author   the name and the site or contact set in Engine, when they are set
-A take imported from elsewhere is not the studio's to sign: it goes out as it came (and the lab says so in X-C2PA).
+A take imported from elsewhere is not the Studio's to sign: it goes out as it came (and the lab says so in X-C2PA).
 
 Who signs:
   own      the install's own key and certificate, made at first use (a root and a leaf under it, P-256), kept beside the settings
@@ -52,7 +52,7 @@ def save(cfg, data):
         if k in data:
             s[k] = str(data[k] or "").strip()[:300]
     if bool(s["cert"]) != bool(s["key"]):
-        raise ValueError("a certificate needs its key: give both files, or neither (the studio then signs with its own)")
+        raise ValueError("a certificate needs its key: give both files, or neither (the Studio then signs with its own)")
     if s["cert"]:
         for k in ("cert", "key"):
             if not Path(s[k]).expanduser().is_file():

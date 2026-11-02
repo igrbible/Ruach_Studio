@@ -1,7 +1,7 @@
 """HERESY 1169 · 1333 (Viktor 10.10.2026: «По моему набору семплеров хочу попросить, чтобы ты их внедрил… Семплеры: er_sde, res_*s,
 res_*s_ode, heun(pp2), exp_heun_2_x0(_sde). Планировщики: bong_tangent, sgm_uniform, exponential, beta, kl_optimal, beta57»): the Artist's
-own sampling for diffusers' flow-matching painters (Krea 2, Qwen-Image), written for this studio from the methods' papers and from the
-formulas of ComfyUI (GPL-3.0, as the studio's AGPL may take) and RES4LYF (read for its mathematics only: its licence bars commercial
+own sampling for diffusers' flow-matching painters (Krea 2, Qwen-Image), written for this Studio from the methods' papers and from the
+formulas of ComfyUI (GPL-3.0, as the Studio's AGPL may take) and RES4LYF (read for its mathematics only: its licence bars commercial
 services, so none of its code is here):
   · er_sde: the ER-SDE-Solver-3 (Cui et al. 2023, arXiv 2309.06169), one evaluation a step, the two before it kept;
   · res_2s, res_3s: the refined exponential solver's single-step methods (Zhang et al. 2023), two stages at c = ½ and three at ½ and 1
@@ -86,7 +86,7 @@ def bong_tangent(n, start=1.0, middle=0.5, end=0.0, p1=0.6, p2=0.6, k1=0.2, k2=0
 
 # ------------------------------------------------------------------------------------------------------------------ the scheduler
 class HeresyFlowScheduler(FlowMatchEulerDiscreteScheduler):
-    """diffusers' flow-match Euler with the studio's own samplers and schedules; set .heresy = {sampler, schedule, seed} before use."""
+    """diffusers' flow-match Euler with the Studio's own samplers and schedules; set .heresy = {sampler, schedule, seed} before use."""
     heresy = {}
 
     def set_timesteps(self, num_inference_steps=None, device=None, sigmas=None, mu=None, timesteps=None):

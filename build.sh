@@ -1,7 +1,7 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════
 #  BUILD · одна команда Студии: страница, сервер, перезапуск
-#  (the studio's one build command: the page, the server when its C++ changed, the restart when idle)
+#  (the Studio's one build command: the page, the server when its C++ changed, the restart when idle)
 #
 #  Слово Виктора 02.10.2026: «Сделай build.sh основным без обвеса этим
 #  build-page.sh» · «Система Студии для локальной машины и максимум
@@ -25,7 +25,7 @@
 # ═══════════════════════════════════════════════════════════════════════
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HPY="$ROOT/.venv/bin/python"; [ -x "$HPY" ] || HPY=python3   # HERESY 1080: the studio's one environment
+HPY="$ROOT/.venv/bin/python"; [ -x "$HPY" ] || HPY=python3   # HERESY 1080: the Studio's one environment
 export TMPDIR="$ROOT/tmp"
 mkdir -p "$TMPDIR"
 export CUDA_HOME="${RUACH_CUDA_HOME:-/usr/local/cuda-12.8}"   # HERESY 1259: the toolkit launcher/env.sh found (Pinokio's own where the machine has none)
@@ -204,7 +204,7 @@ fi
 
 # ── HERESY 1834 (Viktor 28.10.2026: «вживляй MuScriptor в Студию — в паспорт треков и в самого Огранщика»): the transcriber of any sound into
 #    multi-instrument MIDI is a small program of its own (build/muscriptor: muscriptor.cpp at its pinned commit, with the ggml it pins), built into
-#    build/build-muscriptor the first time and when its source is newer. Not the server's build: it never restarts the studio. Its fetch needs
+#    build/build-muscriptor the first time and when its source is newer. Not the server's build: it never restarts the Studio. Its fetch needs
 #    the network once; a failure is said and the build goes on (Engine → Models says the transcriber is missing)
 MSC_BIN="$ROOT/build/build-muscriptor/ruach-muscriptor"
 if [ -f "$ROOT/build/muscriptor/CMakeLists.txt" ] && { [ ! -x "$MSC_BIN" ] || [ -n "$(find "$ROOT/build/muscriptor" -type f -newer "$MSC_BIN" 2>/dev/null | head -1)" ]; }; then
@@ -255,7 +255,7 @@ sycl_build() {
     [ "${PIPESTATUS[0]}" = 0 ] || { echo -e "${R}⛔ the SYCL build failed: cmake --build build/build-sycl says why${X}"; exit 1; }
     echo -e "  built in $(( $(date +%s) - TS1 )) s: build/build-sycl/yue-server"
 }
-# the studio runs the SYCL engine: start.sh would take it (YUE2_ENGINE=sycl in its unit, or no CUDA engine)
+# the Studio runs the SYCL engine: start.sh would take it (YUE2_ENGINE=sycl in its unit, or no CUDA engine)
 studio_on_sycl() {
     [ ! -f "$ROOT/build/build/yue-server" ] || systemctl --user show -p Environment --value ruach-studio 2>/dev/null | grep -q "YUE2_ENGINE=sycl"
 }
@@ -299,19 +299,19 @@ if ! systemctl --user is-active --quiet ruach-studio 2>/dev/null; then
     if pgrep -x yue-server >/dev/null; then
         echo -e "${Y}⚠ a server runs outside systemd, on the old binary: stop it and run ./start.sh${X}"
     else
-        echo -e "${G}  the studio is not running: ./start.sh (or systemctl --user start ruach-studio)${X}"
+        echo -e "${G}  the Studio is not running: ./start.sh (or systemctl --user start ruach-studio)${X}"
     fi
     exit 0
 fi
 BUSY=$(curl -s -m 5 "http://127.0.0.1:$PORT/hardware" | grep -o '"busy": *[a-z]*' | grep -o '[a-z]*$' || true)
 if [ "$BUSY" = "true" ]; then
-    echo -e "${Y}⚠ the studio is rendering: left alone. When it is done: systemctl --user restart ruach-studio${X}"
+    echo -e "${Y}⚠ the Studio is rendering: left alone. When it is done: systemctl --user restart ruach-studio${X}"
     exit 0
 fi
 systemctl --user restart ruach-studio
 for i in $(seq 1 30); do
     sleep 1
-    curl -s -m 2 -o /dev/null "http://127.0.0.1:$PORT/health" && { echo -e "${G}  the studio is up in ${i} s: reload the page${X}"; exit 0; }
+    curl -s -m 2 -o /dev/null "http://127.0.0.1:$PORT/health" && { echo -e "${G}  the Studio is up in ${i} s: reload the page${X}"; exit 0; }
 done
-echo -e "${R}⛔ the studio did not answer in 30 s: journalctl --user -u ruach-studio -n 50${X}"
+echo -e "${R}⛔ the Studio did not answer in 30 s: journalctl --user -u ruach-studio -n 50${X}"
 exit 1

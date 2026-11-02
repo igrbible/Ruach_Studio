@@ -392,7 +392,7 @@ def gm_bank(kit):
 
 
 def map_file(kit, d=None):
-    """The map's file: the studio's (user/orchestra.json), or a take's own (its folder's orchestra.json, over the studio's)."""
+    """The map's file: the Studio's (user/orchestra.json), or a take's own (its folder's orchestra.json, over the Studio's)."""
     return Path(d) / "orchestra.json" if d else Path(kit) / "user" / "orchestra.json"
 
 
@@ -405,13 +405,13 @@ def _read_map(f):
 
 
 def instrument_map(kit, d=None):
-    """{group: instrument} as the user set it: the studio's map, a take's own (d) over it; a group missing plays its GM program."""
+    """{group: instrument} as the user set it: the Studio's map, a take's own (d) over it; a group missing plays its GM program."""
     return dict(_read_map(map_file(kit)), **(_read_map(map_file(kit, d)) if d else {}))
 
 
 def set_map(kit, group, inst, d=None):
-    """One group's instrument into the studio's map, or a take's own (d); inst None: the group back to the studio's map (a take) or to
-    its GM program (the studio). Returns the map in force (the take's over the studio's)."""
+    """One group's instrument into the Studio's map, or a take's own (d); inst None: the group back to the Studio's map (a take) or to
+    its GM program (the Studio). Returns the map in force (the take's over the Studio's)."""
     if group not in GROUPS:
         raise ValueError(f"no instrument group {group}")
     if inst is not None:
@@ -503,7 +503,7 @@ def make_version(kit, d, source, inst=None, mode="instead", shift=12, size="", j
     if job is not None:
         job.update(stage="render")
     groups = {}                                       # each part on its own instrument: the one asked, or the map's, or its GM program
-    cmap = instrument_map(kit, d) if inst is None else {}       # the take's own map over the studio's
+    cmap = instrument_map(kit, d) if inst is None else {}       # the take's own map over the Studio's
     gm = gm_bank(kit)
     label = (inst or {}).get("label") or ("the map" if inst is None else Path(inst.get("file", "")).stem)
     for n, v in zip(notes, vel):

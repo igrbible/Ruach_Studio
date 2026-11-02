@@ -1,17 +1,17 @@
 """HERESY 1112 (Viktor, 02.10.2026: "по видеокартам сторож жёсткий, с фолбеками, во избежание OOM"), as HERESY 1113 made
-it fit a laptop. A card is given to the studio's work only when
+it fit a laptop. A card is given to the Studio's work only when
 
-  1  no heavy stranger computes on it: a program not of the studio holding more than 2 GiB (a vLLM, someone's own
+  1  no heavy stranger computes on it: a program not of the Studio holding more than 2 GiB (a vLLM, someone's own
      run) closes the card, whatever memory it leaves; the desktop's small ones (X11, a browser, a clipboard, a
      dictionary: a gig or two between them) are legitimate and do not;
   2  the job fits: the memory free covers what the job needs (our weights and their cache); HERESY 1294: on a card with a VRAM
      limit (user/gpus.json, the page's Engine → GPUs), the room left under it does (the limit less what the card holds).
-     The studio's own start (--pick, start.sh) reads the free memory as before: its knobs keep it under the limit.
+     The Studio's own start (--pick, start.sh) reads the free memory as before: its knobs keep it under the limit.
 
-What our own trainer or inference holds is ours: a stranger starting after it and finding no room is not the studio's
+What our own trainer or inference holds is ours: a stranger starting after it and finding no room is not the Studio's
 to prevent (Viktor: "пусть другие новые процессы падают").
 
-The studio's own processes are known by where they run from (the studio's folder in their program or command
+The Studio's own processes are known by where they run from (the Studio's folder in their program or command
 line): its engine (which since HERESY 1109 opens 256 MiB on every card it can see), its lab, the lab's jobs, its runs.
 A failure to read the cards is said, never taken for "every card free".
 
@@ -87,7 +87,7 @@ def snapshot(root=KIT):
         why = ("a service on it: " + ", ".join(f"{n} (pid {p}, {mb} MiB)" for p, n, mb in heavy)) if heavy else ""
         lim = limits.get(int(i))
         lim = lim if lim and lim < total else None
-        room = max(0, free - (total - lim)) if lim else free     # what the studio's work may still take under the card's limit
+        room = max(0, free - (total - lim)) if lim else free     # what the Studio's work may still take under the card's limit
         cards.append({"index": int(i), "total_mb": total, "free_mb": free, "limit_mb": lim, "room_mb": room, "share": round(share, 3),
                       "foreign": foreign, "ok": not why, "why": why})
     return cards
@@ -114,7 +114,7 @@ def check(card, need_mb=0, root=KIT):
     raise ValueError(f"there is no GPU{card}")
 
 
-# HERESY 1813 (Viktor 28.10.2026: «…чтобы загруженная модель вытеснялась из GPU, если другим комнатам Студии нужны видеокарты?»): a helper of the studio
+# HERESY 1813 (Viktor 28.10.2026: «…чтобы загруженная модель вытеснялась из GPU, если другим комнатам Студии нужны видеокарты?»): a helper of the Studio
 # that holds a card and may leave it (the writer's llama-server) registers here: held() → {card: MiB it holds and would give back now}, leave(card) → True
 # when it left. A job that finds no room asks one to leave a card where that alone makes the room; the guard then waits for the memory to come back.
 YIELDERS = []
@@ -157,7 +157,7 @@ def empty_fits(c, need_mb):
 def pick(preferred, fallback=True, need_mb=0, root=KIT, limited=True, less=None, held=None, _yielded=False):
     """The preferred cards in their order of free memory, then (with fallback) any card the guard passes; None when
     none will do (the caller says why, with verdict()). limited (HERESY 1294): the room under each card's limit counts, not
-    its whole free memory (the studio's own start passes False). less (HERESY 1376): {index: MiB} given to jobs a moment ago
+    its whole free memory (the Studio's own start passes False). less (HERESY 1376): {index: MiB} given to jobs a moment ago
     whose processes may not hold them yet, taken off the card's room; a card with such a claim is not an empty one. held (HERESY
     1378): {index: MiB} a process holds that will do the job itself (a kept painter), counted as free on its card."""
     cards = snapshot(root)
@@ -203,7 +203,7 @@ def _settle(fits, root):
 if __name__ == "__main__":
     try:
         if len(sys.argv) in (3, 4) and sys.argv[1] == "--pick":
-            c, cards = pick([int(sys.argv[2])], need_mb=int(sys.argv[3]) if len(sys.argv) == 4 else 0, limited=False)   # the studio's own start
+            c, cards = pick([int(sys.argv[2])], need_mb=int(sys.argv[3]) if len(sys.argv) == 4 else 0, limited=False)   # the Studio's own start
             print(c["index"] if c else "")
             print(verdict(cards), file=sys.stderr)
         else:

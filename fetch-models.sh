@@ -1,5 +1,5 @@
 #!/bin/bash
-# Ruach Studio · fetch-models.sh — every weight in one go: YuE2 (m-a-p's models as GGUF), then the studio's own.
+# Ruach Studio · fetch-models.sh — every weight in one go: YuE2 (m-a-p's models as GGUF), then the Studio's own.
 #
 #   ./fetch-models.sh                     BF16 backbone + F32 VAE + the transcriber, then heresy/fetch-heresy.sh
 #   ./fetch-models.sh --quant Q8_0        a Q8_0 backbone instead (3.8 GB; for 12-16 GB cards)

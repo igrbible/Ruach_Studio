@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""HERESY 1261: lab/places.py on a studio of its own in a temporary folder (never this studio's folders): a move on the same disk, one
-to another disk (/dev/shm, when it is another device here), back to the studio's folder, the link put back from the record, the
+"""HERESY 1261: lab/places.py on a studio of its own in a temporary folder (never this Studio's folders): a move on the same disk, one
+to another disk (/dev/shm, when it is another device here), back to the Studio's folder, the link put back from the record, the
 lab's start, a Windows path under WSL and outside it, and the refusals (busy, a test page, no folder, no room). The page's keys in
 user/settings.json must outlive every write of "paths".
   .venv/bin/python lab/test_places.py"""
@@ -65,13 +65,13 @@ try:
 
     print("the listing")
     rows = {r["name"]: r for r in places.listing()["places"]}
-    check("four folders, all in the studio's folder, none linked", sorted(rows) == ["artist", "outputs", "trash", "writer"]
+    check("four folders, all in the Studio's folder, none linked", sorted(rows) == ["artist", "outputs", "trash", "writer"]
           and all(r["here"] and not r["linked"] for r in rows.values()), json.dumps(rows)[:300])
 
     print("the refusals")
     check("no folder there: nothing made out of a typo", not places.plan("outputs", str(base / "nowhere"))["ok"])
     check("inside the folder itself", not places.plan("outputs", str(kit / "outputs"))["ok"])
-    check("inside the studio's folder", not places.plan("trash", str(kit / "user"))["ok"])
+    check("inside the Studio's folder", not places.plan("trash", str(kit / "user"))["ok"])
     busy["on"] = True
     try:
         places.move({"name": "outputs", "to": str(base)})
@@ -100,7 +100,7 @@ try:
     j = wait_job()
     out = kit / "outputs"
     check("done, by a rename", j["phase"] == "done" and j["same_disk"] and not j["old"], json.dumps(j))
-    check("  the studio's outputs is a link to the new place, the takes whole (a link inside kept a link)",
+    check("  the Studio's outputs is a link to the new place, the takes whole (a link inside kept a link)",
           out.is_symlink() and os.path.realpath(out) == str(base / "same/outputs") and tree(out) == before)
     d = json.load(open(settings))
     check("  user/settings.json keeps the place, and the page's keys", d.get("paths", {}).get("outputs", {}).get("at") == str(base / "same/outputs")
@@ -115,12 +115,12 @@ try:
         check("  the link goes there, the takes whole", os.path.realpath(out) == str(shm / "outputs") and tree(out) == before)
         check("  the old copy kept, renamed, the same files", j["old"].startswith(str(base / "same/outputs.moved-")) and tree(j["old"]) == before, j["old"])
         check("  no .part left behind", not os.path.lexists(str(shm / "outputs.part")))
-        print("back to the studio's folder")
+        print("back to the Studio's folder")
         places.move({"name": "outputs", "to": ""})
         j = wait_job()
-        check("done: a folder of the studio's own again, the takes whole", j["phase"] == "done" and not out.is_symlink() and out.is_dir() and tree(out) == before, json.dumps(j))
+        check("done: a folder of the Studio's own again, the takes whole", j["phase"] == "done" and not out.is_symlink() and out.is_dir() and tree(out) == before, json.dumps(j))
         check("  the copy on the other disk kept, renamed", j["old"].startswith(str(shm / "outputs.moved-")) and tree(j["old"]) == before, j["old"])
-        check("  the record says the studio's folder", json.load(open(settings))["paths"]["outputs"]["at"] == "")
+        check("  the record says the Studio's folder", json.load(open(settings))["paths"]["outputs"]["at"] == "")
         print("no room there")
         keep = places.MARGIN
         places.MARGIN = 1 << 50
@@ -147,7 +147,7 @@ try:
     (base / "pics/artist/run-1").mkdir()
     places._write_record("artist", {"at": str(base / "pics/artist"), "since": time.time(), "old": ""})
     rows = {r["name"]: r for r in places.listing()["places"]}
-    check("the record says elsewhere, the studio's folder holds a folder of its own: said", rows["artist"].get("elsewhere") == str(base / "pics/artist"))
+    check("the record says elsewhere, the Studio's folder holds a folder of its own: said", rows["artist"].get("elsewhere") == str(base / "pics/artist"))
     places.relink({"name": "artist"})
     check("relinked: artist/ is the link to the recorded place", (kit / "artist").is_symlink() and os.path.realpath(kit / "artist") == str(base / "pics/artist"))
     (kit / "trash").rmdir()

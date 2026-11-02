@@ -3,7 +3,7 @@
 // одной живой лог, в другой живая шкала активных GPU, где главная карта особо обрамлена. Пометки над блоками графов — какая роль
 // карты»): the cards second by second (the lab's /gpus/live: one nvidia-smi while a page looks), drawn as btop draws them: a bar a
 // second for the load and one for the memory, two minutes wide, green to yellow to red. In Engine → GPUs under each card's row; beside
-// the server log, a column of the cards that have a role, each block headed by what its card is given to, the studio's card framed.
+// the server log, a column of the cards that have a role, each block headed by what its card is given to, the Studio's card framed.
 // It asks only while one of the two is in sight, and the page is.
 (function () {
   "use strict";

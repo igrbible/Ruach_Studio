@@ -106,9 +106,6 @@
       "MP3: small, lossy; nothing better can be made from it later.",
     mp3Bitrate: "Bitrate when the song itself is made as MP3 (Format: MP3). 320 is near transparent; the server's own default is 128. " +
       "To share a WAV song as MP3, use the MP3 download on its page instead.",
-    peakClip: "Loudness. The song is normalised so its loudest part reaches full scale after ignoring this many samples per million " +
-      "(default 10: the top 0.001% are clipped, which also lifts quiet songs). 0 normalises to the true peak: no clipping, a little quieter. " +
-      "WAV 32-bit float is not normalised.",
     instrumental: null,   // has its own (i)
     lookTheme: "The page's colours. The same choice as the swatches behind the theme button in the top bar; this browser keeps it.",
     lookCorners: "How round the corners of buttons, fields and cards are: Rounded (the default), Softer or Square.",
@@ -310,7 +307,7 @@
     return !!(row && row.querySelector(".info"));
   }
 
-  // HERESY 1148: the controls of the studio's own rooms whose label or placeholder already says all (a title, a search, a
+  // HERESY 1148: the controls of the Studio's own rooms whose label or placeholder already says all (a title, a search, a
   // sort, a note, a file): no tip for them; every other control of the page has a tip or an (i), and the page test holds it
   var SELF_EVIDENT = {
     wrSearch: 1, wrTitle: 1, wrStyle: 1, wrLyrics: 1, wrNotes: 1, assistBrief: 1, assistTask: 1, assistStructure: 1, assistPrefs: 1,
@@ -353,7 +350,7 @@
   function mmss(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ":" + ("0" + s % 60).slice(-2); }
 
   // An estimate without the tokenizer: English runs about 3.6 characters a token.
-  // HERESY 1167: the other scripts measured with YuE2's own BPE on the studio's texts (06.10.2026); the old «~1 a
+  // HERESY 1167: the other scripts measured with YuE2's own BPE on the Studio's texts (06.10.2026); the old «~1 a
   // character» made Russian 1.7–2.1 times too long, Ukrainian and Belarusian 1.5–1.6, Hebrew 2.1:
   // · Cyrillic: 0.5 tokens a letter (lyrics run dearer than prose), 0.6 when Ukrainian or Belarusian letters show;
   // · Greek: 1;

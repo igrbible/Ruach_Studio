@@ -36,7 +36,8 @@ REST = "rest"
 CEILING_DBFS = -0.3
 TAIL_FADE_SECONDS = 0.050
 BAND_TYPES = ("peak", "low_shelf", "high_shelf", "highpass", "lowpass", "notch")
-STRIP_KEYS = {"gain_db", "mute", "solo", "muted", "trim_db", "invert", "eq", "comp", "width", "pan", "reverb", "delay", "auto", "autos", "edits", "gate"}   # 1535: auto; 1559: autos; 1564: edits; 1760: gate
+STRIP_KEYS = {"gain_db", "mute", "solo", "muted", "trim_db", "invert", "eq", "comp", "width", "pan", "reverb", "delay", "auto", "autos", "edits", "gate",
+              "chan", "offset_s"}   # HERESY 1989: the lane's channel and its shift in time   # 1535: auto; 1559: autos; 1564: edits; 1760: gate
 GATE_KEYS = {"on", "threshold_db", "ratio", "range_db", "attack_ms", "release_ms"}   # HERESY 1760: a downward expander
 GATE_DEFAULT = {"on": True, "threshold_db": -50.0, "ratio": 4.0, "range_db": 40.0, "attack_ms": 2.0, "release_ms": 150.0}
 MAX_EDITS = 64
@@ -83,6 +84,32 @@ def _known(d: Any, keys: set[str], where: str) -> dict:
     if extra:
         raise PlenioUserError(f"{where}: unknown fields {extra}.")
     return d
+
+
+def _chan(v: Any, where: str) -> str:
+    """HERESY 1989: a lane's channel: st (both as they are), l or r (that side on both), m (the two summed, half each)."""
+    if v not in ("st", "l", "r", "m"):
+        raise PlenioUserError(f"{where} chan: st, l, r or m, got {v!r}.")
+    return v
+
+
+def lane_of(x: np.ndarray, rate: int, s: dict) -> np.ndarray:
+    """HERESY 1989: the lane as its channel and its shift make it, the song's length kept: later (+) by silence first, earlier (−) its
+    first stretch dropped and silence at its end."""
+    y = np.asarray(x, dtype=np.float64)
+    c = s.get("chan", "st")
+    if c != "st" and y.shape[0] > 1:
+        m = y[0] if c == "l" else y[1] if c == "r" else 0.5 * (y[0] + y[1])
+        y = np.stack([m, m])
+    k = round(float(s.get("offset_s") or 0) * rate)
+    if k:
+        z, frames = np.zeros_like(y), y.shape[1]
+        if 0 < k < frames:
+            z[:, k:] = y[:, :frames - k]
+        elif -frames < k < 0:
+            z[:, :frames + k] = y[:, -k:]
+        y = z
+    return y
 
 
 def comp_of(raw: Any, where: str) -> dict | None:
@@ -228,7 +255,8 @@ def parse(value: Any, names: list[str], rate: int) -> dict:
                         "trim_db": _num(s.get("trim_db", 0), where + " trim_db", -24, 24), "invert": _flag(s.get("invert", False), where + " invert"),
                         "eq": eq_of(s.get("eq"), where, rate), "comp": comp_of(s.get("comp"), where), "gate": gate_of(s.get("gate"), where),   # 1760
                         "width": _num(s.get("width", 1), where + " width", 0, 2), "pan": _num(s.get("pan", 0), where + " pan", -1, 1),
-                        "reverb": _num(s.get("reverb", 0), where + " reverb", 0, 1), "delay": _num(s.get("delay", 0), where + " delay", 0, 1)}
+                        "reverb": _num(s.get("reverb", 0), where + " reverb", 0, 1), "delay": _num(s.get("delay", 0), where + " delay", 0, 1),
+                        "chan": _chan(s.get("chan", "st"), where), "offset_s": _num(s.get("offset_s", 0), where + " offset_s", -30, 30)}   # HERESY 1989
     for name, st in strips.items():                   # HERESY 1537: a key is a strip of this set, not the strip itself
         k = st["comp"] and st["comp"]["key"]
         if k and (k not in names or k == name):
@@ -486,6 +514,7 @@ def place(y: np.ndarray, x: np.ndarray, rate: int, edits) -> np.ndarray:
 
 def pre(x: np.ndarray, rate: int, s: dict, item: dict) -> np.ndarray:
     """HERESY 1537: a strip up to its compressor: the silence drawn, trim and polarity, the EQ (what a key listens to)."""
+    x = lane_of(x, rate, s)                           # HERESY 1989: its channel and its shift first, the cuts and the copies on what is heard
     y = np.asarray(x, dtype=np.float64)
     if s["muted"]:
         env = cut_envelope(y.shape[1], rate, s["muted"])   # HERESY 1542
@@ -546,7 +575,7 @@ def strip(x: np.ndarray, rate: int, s: dict, item: dict, key: np.ndarray | None 
 
 
 NEUTRAL = {"gain_db": 0.0, "mute": False, "solo": False, "muted": [], "trim_db": 0.0, "invert": False, "eq": None, "comp": None, "gate": None,
-           "width": 1.0, "pan": 0.0, "reverb": 0.0, "delay": 0.0, "auto": [], "autos": {}, "edits": []}
+           "width": 1.0, "pan": 0.0, "reverb": 0.0, "delay": 0.0, "auto": [], "autos": {}, "edits": [], "chan": "st", "offset_s": 0.0}
 
 
 def _tail_fade(x: np.ndarray, rate: int) -> np.ndarray:

@@ -129,8 +129,8 @@ struct Yue2Request {
     int   vocal_octave;  // HERESY 1743: a score the model plans whole has its Vocal line moved by this many octaves before it is sung (−3…3; 0: as planned)
 
     // output normalization percentile control, the peak being the
-    // 1 - peak_clip / 1e6 percentile of the absolute signal
-    int peak_clip;  // 10
+    // HERESY 2007: read and ignored; the output is peak-normalized, nothing cut (upstream: the 1 - peak_clip / 1e6 percentile, 10)
+    int peak_clip;
 
     // audio output format: "mp3", "wav16", "wav24", "wav32"
     std::string output_format;

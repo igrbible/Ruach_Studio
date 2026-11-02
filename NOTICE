@@ -3,6 +3,10 @@ Copyright 2026 Viktor Zhuromskyy
 
 Ruach Studio grew over yue2-kit. Its own code is under the GNU Affero General Public License, version 3 or any later version (LICENSE); its logo, its name and the audio and pictures published with it are under LICENSE-ASSETS.md. The models, the datasets and the other projects inside keep their own licences and notices (README.md, Licence).
 
+extras/plugins/basic-pitch is the Basic Pitch plugin by Steven Altsman (manchuwook), https://github.com/null-angel/ruach-basic-pitch-plugin, given to Ruach Studio under the MIT licence (Copyright (c) 2026 Steven Altsman; the licence text in extras/plugins/basic-pitch/LICENSE). It runs Spotify's Basic Pitch (Apache License 2.0, https://github.com/spotify/basic-pitch), which is installed from PyPI into the plugin's own environment and not shipped here.
+
+From version 2.0.5 the parts whose copyright Viktor Zhuromskyy holds carry additional terms under section 7 of the AGPL: the author's attribution kept in sight in every interface and README of a copy or a derived work, a modified version marked as such, and no rights to the studio's name or logo. They are in LICENSE-ADDITIONAL-TERMS.md and belong to the licence of every file they cover.
+
 The notice of yue2-kit, kept as its Apache License 2.0 asks (section 4(d)); its licence text is in LICENSES/yue2-kit-Apache-2.0.txt:
 
 ----------------------------------------------------------------------

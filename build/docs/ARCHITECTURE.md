@@ -559,9 +559,10 @@ crossfade and no zero padding.
 
 The pipeline outputs planar stereo float `[L: T][R: T]` at 48000 Hz, full
 range. Normalization and encoding belong to the output stage (server worker
-or CLI): percentile peak normalization targeting the `1 - peak_clip / 1e6`
-percentile (`peak_clip = 0` is plain peak normalization; WAV32 skips
-normalization entirely and writes raw IEEE float), then MP3 at
+or CLI). In Ruach Studio a WAV is raw (HERESY 2008): WAV16 and WAV24 carry the
+decoder's own level, turned down only when a peak would pass full scale (a gain,
+never a cut), and WAV32 writes raw IEEE float; an MP3 alone is peak-normalized.
+Upstream's percentile clip, `peak_clip`, is taken out (HERESY 2007), then MP3 at
 `mp3_bitrate`, or WAV 16/24/32 encoding in memory. `src/audio-io.h` is the
 same file as in the other ports, so the post-processing is identical.
 
@@ -585,7 +586,6 @@ the server rejects a request with neither.
     "synth_batch_size": 1,
     "cfg_scale":       -1.0,
     "semantic_tokens": "",
-    "peak_clip":       10,
     "output_format":   "wav24",
     "mp3_bitrate":     128,
     "source_tokens":   "",
@@ -662,10 +662,10 @@ the codes of a recording from `/tokenize` among them. Written by
 `yue-synth --tokens` and `yue-tokenize`, and returned by the server as the
 JSON part paired with the audio.
 
-**`peak_clip`** (int, default `10`)
-Output normalization percentile control: the normalization peak is the
-`1 - peak_clip / 1e6` percentile of the absolute signal. `0` normalizes to
-the true peak with no clipping. Ignored by `wav32`.
+**`peak_clip`** (int): read and ignored in Ruach Studio (HERESY 2007). Upstream
+raises the song until the `1 - peak_clip / 1e6` percentile of the absolute signal
+meets full scale and cuts the rest flat (`10` by default); here nothing is cut, a
+WAV keeps the decoder's level and an MP3 is peak-normalized (HERESY 2008).
 
 **`output_format`** (string, default `"wav24"`; HERESY 1413)
 Audio encoder: `"mp3"`, `"wav16"`, `"wav24"`, `"wav32"`.

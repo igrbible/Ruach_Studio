@@ -5,7 +5,7 @@
 // meters: peaks and RMS of every strip, and on the master the K-weighted loudness (BS.1770, Plenio's filters), a 4× true peak and
 // the correlation of the sides. One source of truth, run where the page can: in the audio thread (an AudioWorklet, built from this
 // very function) when the page is a secure context, as on localhost; on the page's thread (a ScriptProcessor) when it is not, as
-// when the studio is opened by its address on the network. The same numbers either way.
+// when the Studio is opened by its address on the network. The same numbers either way.
 (function () {
   "use strict";
 

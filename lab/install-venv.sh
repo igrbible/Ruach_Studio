@@ -1,5 +1,5 @@
 #!/bin/bash
-# HERESY 1080 (Viktor 02.10.2026): the studio has ONE Python environment, Ruach_Studio/.venv, and every
+# HERESY 1080 (Viktor 02.10.2026): the Studio has ONE Python environment, Ruach_Studio/.venv, and every
 # script and unit names it. This makes it: torch (CUDA 12.8), audio-separator, faster-whisper and the lab's
 # requirements; the Kit's downloader (huggingface_hub, pinned in tools/downloader-requirements.txt) and
 # its converter's packages (gguf, mir_eval, pretty_midi) live in it too.
@@ -8,6 +8,9 @@
 # Ruach_Studio/.venv-art, from lab/requirements-art.txt:   install-venv.sh --art   (the art only; a plain run makes both)
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# HERESY 1984: pip keeps no copy of the wheels it fetched: 8.7 GB for the two environments (measured 01.11.2026), which it kept in ~/.cache/pip,
+# outside the Studio, unsaid; an update fetches only what changed either way
+export PIP_NO_CACHE_DIR=1
 art_venv() {
     local A="$ROOT/.venv-art"
     [ -x "$A/bin/python" ] || python3.12 -m venv "$A"
@@ -21,7 +24,7 @@ V="$ROOT/.venv"
 "$V/bin/pip" install -q -U pip wheel
 "$V/bin/pip" install -q torch torchaudio --index-url https://download.pytorch.org/whl/cu128
 # HERESY 1137 (found by a fresh install of the release): UniverSR, the upscale's code, is cloned here at the commit
-# the studio was tested with and installed from that folder; pip cannot take a relative path in a requirements file
+# the Studio was tested with and installed from that folder; pip cannot take a relative path in a requirements file
 U="$ROOT/vendor/UniverSR"; UREV=d8636623fe0c0704296239c1d3d3c5b911ecb2e0
 if [ ! -d "$U/.git" ]; then git clone -q https://github.com/woongzip1/UniverSR.git "$U"; fi
 git -C "$U" checkout -q "$UREV"

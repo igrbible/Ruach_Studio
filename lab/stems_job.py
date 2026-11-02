@@ -1,4 +1,4 @@
-"""Split one take into stems on Forge (HERESY 1021). Runs in the studio's .venv (torch + audio-separator).
+"""Split one take into stems on Forge (HERESY 1021). Runs in the Studio's .venv (torch + audio-separator).
 
   vocals   BS-Roformer ep317 (SDR 12.97 on vocals; separation/roformer):
            vocals.flac + instrumental.flac

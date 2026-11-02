@@ -203,7 +203,7 @@ SEMANTIC_SAMPLING = {"temperature": 0.9, "top_p": 0.95, "top_k": 100, "repetitio
 DEFAULTS = {"style": "", "lyrics": "", "abc": "", "cot": "full", "duration": 360.0, "lm_seed": -1, "seed": -1,
             "steps": 32, "lm_batch_size": 1, "synth_batch_size": 1, "abc_sampling": ABC_SAMPLING,
             "semantic_sampling": SEMANTIC_SAMPLING, "semantic_tokens": "", "cfg_scale": -1.0,
-            "output_format": "mp3", "peak_clip": 10, "mp3_bitrate": 128, "title": "", "vae": "",
+            "output_format": "mp3", "peak_clip": 0, "mp3_bitrate": 128, "title": "", "vae": "",
             "sliders": [], "loras": [], "plan_only": False, "parent": ""}
 
 SCORE_FULL = """X:1

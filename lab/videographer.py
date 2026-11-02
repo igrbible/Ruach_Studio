@@ -401,7 +401,7 @@ def frame_set(kit, name, i, src, origin):
     try:
         im = ImageOps.exif_transpose(Image.open(io.BytesIO(src) if isinstance(src, (bytes, bytearray)) else src)).convert("RGB")
     except (UnidentifiedImageError, OSError) as e:
-        raise ValueError(f"not a picture the studio can read ({e})")
+        raise ValueError(f"not a picture the Studio can read ({e})")
     im.thumbnail((3840, 3840))
     d = frames_dir(kit, name)
     d.mkdir(parents=True, exist_ok=True)

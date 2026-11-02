@@ -1,7 +1,7 @@
 """HERESY 1394: a picture's lettering (Viktor 12.10.2026: «Нужен и кернинг правильный, и интерлиньяж»; on the tries: «A & B - лучшие. B -
 реально круто. Впиливай всю эту ересь! 🔥»; on its words in fields of their own: «По надписи всё правильно»).
 
-Its words never come in the prompt: the title and a second line are asked apart, and the studio writes the phrase the painter reads.
+Its words never come in the prompt: the title and a second line are asked apart, and the Studio writes the phrase the painter reads.
 A («paint»): Qwen-Image paints them with the picture, the phrase after the prompt. B («letter»): Qwen-Image 2.1 letters a finished
 picture, the reference, by words, the order written from the fields alone. The painters misspell a word they have rarely seen («RUOCH
 STUDIO», «RUUCH STUDIO» on the 1390 lighthouse), so each picture is read back by the listener (Qwen2.5-Omni, art_job's critic: on the

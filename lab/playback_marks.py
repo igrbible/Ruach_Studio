@@ -67,7 +67,7 @@ def mark(config_dir, outputs, name, at, seconds=0):
 
 
 def forget(config_dir, names):
-    """The takes gone from the studio (the trash's move): their lines go at once."""
+    """The takes gone from the Studio (the trash's move): their lines go at once."""
     p = _path(config_dir)
     with _lock:
         d = _load(p)

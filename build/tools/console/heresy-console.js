@@ -25,12 +25,62 @@
   function dockPlace() {
     var panel = document.getElementById("dawPanel");
     if (!panel) return;
-    panel.dataset.dock = dockMode();
+    panel.dataset.dock = POPW ? "window" : dockMode();   // HERESY 1983
     dockRoom();
     if (!roomWatch && window.ResizeObserver) { roomWatch = new ResizeObserver(dockRoom); roomWatch.observe(panel); }
     try { var xy = JSON.parse(localStorage.getItem("yue2.mixer.dockXY") || "null"); if (xy) { panel.style.setProperty("--mx-fx", xy[0] + "px"); panel.style.setProperty("--mx-fy", xy[1] + "px"); } } catch (e) { /* as it comes */ }
   }
   function K() { return window.HeresyMixer && window.HeresyMixer.k; }
+  // HERESY 1983 (Viktor 01.11.2026: «детач миксера DAW не выходит за пределы браузерного окна»): a fourth place, a window of its own (Chrome's
+  // Document Picture-in-Picture), over every other, to carry to another monitor. The mixer paints #mxDock afresh with its body, so the window holds
+  // a console of its own (the same id in its own document); the console paints it and hears the hand there; closed, it is back where it stood
+  var POPW = null;
+  function D() { return POPW ? POPW.doc : document; }
+  function dockEl() { return POPW ? POPW.el : document.getElementById("mxDock"); }
+  function popOpen() {
+    if (POPW) { try { POPW.win.focus(); } catch (e) { /* in front already */ } return; }
+    var from = document.getElementById("mxDock"), r = from && !from.hidden ? from.getBoundingClientRect() : null;
+    var size = { width: Math.max(720, Math.round(r && r.width ? r.width : 900) + 40), height: Math.max(520, Math.min(980, Math.round(r && r.height ? r.height : 640) + 60)) };
+    var pip = window.documentPictureInPicture && window.documentPictureInPicture.requestWindow;   // over every other (https or localhost only)
+    (pip ? window.documentPictureInPicture.requestWindow(size) : new Promise(function (ok, no) {   // else a window of the browser's own, as the log's
+      var w = window.open("", "ruach-console", "popup,width=" + size.width + ",height=" + size.height);
+      if (w) ok(w); else no(new Error(tr("The browser kept the console's window from opening: allow pop-ups for the Studio")));
+    })).then(function (win) {
+        var d = win.document;
+        d.head.innerHTML = ""; d.body.innerHTML = "";   // a window kept from an earlier time: filled afresh
+        Array.prototype.forEach.call(document.querySelectorAll('style, link[rel="stylesheet"]'), function (x) { d.head.appendChild(x.cloneNode(true)); });
+        d.documentElement.lang = document.documentElement.lang || "en";
+        if (document.documentElement.dataset.theme) d.documentElement.dataset.theme = document.documentElement.dataset.theme;
+        d.title = "Ruach Studio · " + tr("Console");
+        d.body.className = "mx-pop";
+        var el = d.createElement("div");
+        el.className = "mx-dock"; el.id = "mxDock";
+        d.body.appendChild(el);
+        POPW = { win: win, doc: d, el: el };
+        FIT = "";                                    // HERESY 1987: fitted to what it shows at once
+        wire(d.body);
+        var back = function () { if (POPW && POPW.win === win) { POPW = null; paint(); window.dispatchEvent(new Event("resize")); } };
+        win.addEventListener("pagehide", back);
+        var watch = setInterval(function () { if (win.closed) { clearInterval(watch); back(); } }, 800);   // a pop-up's close says nothing else
+        paint(); window.dispatchEvent(new Event("resize"));
+      }).catch(function (e) { if (window.HeresyDialog && window.HeresyDialog.alert) window.HeresyDialog.alert(e.message); });
+  }
+  function popClose() { var p = POPW; if (!p) return; POPW = null; try { p.win.close(); } catch (e) { /* gone already */ } }
+  // HERESY 1987 (Viktor 01.11.2026: «По окну микшера DAW убедись, что оно в авто ресайзе»): the window as large as what it shows, measured at its natural
+  // size (max-content), when it opens and whenever that changes; between those a size the hand gave it stays; never past the screen's free room
+  var FIT = "";
+  function fitPop(key) {
+    var p = POPW;
+    if (!p || key === FIT) return;
+    FIT = key;
+    var el = p.el, w = p.win, keep = [el.style.width, el.style.height, el.style.overflow];
+    el.style.width = "max-content"; el.style.height = "auto"; el.style.overflow = "visible";
+    var needW = Math.ceil(el.getBoundingClientRect().width), needH = Math.ceil(el.getBoundingClientRect().height);
+    el.style.width = keep[0]; el.style.height = keep[1]; el.style.overflow = keep[2];
+    var dw = Math.max(0, (w.outerWidth || 0) - (w.innerWidth || 0)), dh = Math.max(0, (w.outerHeight || 0) - (w.innerHeight || 0));
+    var sw = (w.screen && w.screen.availWidth) || 1920, sh = (w.screen && w.screen.availHeight) || 1080;
+    try { w.resizeTo(Math.min(sw, Math.max(480, needW + dw)), Math.min(sh, Math.max(300, needH + dh))); } catch (e) { /* a window that may not be sized: as it is */ }
+  }
   function $(id) { return document.getElementById(id); }
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -78,11 +128,11 @@
     var p = kind === "fader" ? { min: +host.dataset.lo, max: +host.dataset.hi, step: 0.1, fmt: fdb } : P[k];
     var out = kind === "fader" ? host.parentNode.querySelector(".mc-db") : host.querySelector(".kn-out");
     if (!out || !p) return;
-    var r = out.getBoundingClientRect(), w = Math.max(58, Math.round(r.width) + 12), inp = document.createElement("input");
+    var r = out.getBoundingClientRect(), w = Math.max(58, Math.round(r.width) + 12), inp = D().createElement("input");
     inp.type = "text"; inp.className = "kn-edit mono"; inp.spellcheck = false; inp.setAttribute("aria-label", tr("Type a value"));
     inp.value = first != null ? first : p.fmt(get(kt, n, k));
     inp.style.left = Math.round(r.left + r.width / 2 - w / 2) + "px"; inp.style.top = Math.round(r.top + r.height / 2 - 11) + "px"; inp.style.width = w + "px";
-    document.body.appendChild(inp);
+    D().body.appendChild(inp);
     EDIT = { inp: inp, host: host, kind: kind, kt: kt, n: n, k: k, p: p };
     inp.focus({ preventScroll: true });
     if (first == null) inp.select(); else inp.setSelectionRange(inp.value.length, inp.value.length);
@@ -100,14 +150,14 @@
     var v = commit ? typed(E.p, E.inp.value) : NaN;
     E.inp.remove();
     var back = E.kind === "fader" ? E.host.querySelector(".fd-track") : E.host;
-    if (isFinite(v) && document.body.contains(E.host)) {
+    if (isFinite(v) && E.host.ownerDocument.body.contains(E.host)) {
       K().mark();
       v = clamp(+(Math.round(v / E.p.step) * E.p.step).toFixed(4), E.p.min, E.p.max);
       put(E.kt, E.n, E.k, v);
       if (E.kind === "fader") { faderValue(E.host, v); var o = E.host.parentNode.querySelector(".mc-db"); if (o) o.textContent = fdb(v); }
       else { paintKnob(E.host); after(E.host); }
     }
-    try { if (back && document.body.contains(back)) back.focus({ preventScroll: true }); } catch (x) { /* gone */ }
+    try { if (back && back.ownerDocument.body.contains(back)) back.focus({ preventScroll: true }); } catch (x) { /* gone */ }
   }
 
   // ---- what each knob turns: its range, how it moves (lin, log, send: the amount squared, so the middle is −12 dB) and how it reads
@@ -333,15 +383,16 @@
     });
   }
   function paint() {
-    var dock = $("mxDock"), M = K();
+    if (POPW) { var inPage = document.getElementById("mxDock"); if (inPage && inPage.hidden) popClose(); }   // HERESY 1983: the console turned off: its window goes
+    var dock = dockEl(), M = K();
     if (!dock || !M || !M.info()) return;
     var panel = $("dawPanel");
-    if (panel) panel.classList.toggle("has-dock", !dock.hidden);
+    if (panel) panel.classList.toggle("has-dock", !POPW && !dock.hidden);
     dockPlace();                                     // HERESY 1967
     if (dock.hidden) return;
     var ns = M.names();
     if (C.sel && C.sel !== "*" && C.sel !== "~room" && C.sel !== "~delay" && ns.indexOf(C.sel) < 0 && !grp(C.sel) && !subOf2(C.sel)) C.sel = "";   // 1543: a VCA; 1563: a bus
-    var tabs = '<div class="mc-tabs" role="tablist">' +
+    var tabs = '<div class="mc-tabs" role="tablist" data-tip="' + esc(tr("Knobs: drag up and down, Shift finer, a double-click back to where it was; a click on a number, or a digit, to type one")) + '">' +
       '<button type="button" role="tab" class="mc-tab' + (C.tab === "mixer" ? " is-on" : "") + '" aria-selected="' + (C.tab === "mixer") + '" data-act="tab" data-v="mixer">' + esc(tr("Console")) + "</button>" +
       '<button type="button" role="tab" class="mc-tab' + (C.tab === "devices" ? " is-on" : "") + '" aria-selected="' + (C.tab === "devices") + '" data-act="tab" data-v="devices"' + (C.sel ? "" : " disabled") + ">" +
         esc(tr("Devices")) + (C.sel ? ' · <b translate="no">' + esc(selTitle()) + "</b>" : "") + "</button>" +
@@ -351,8 +402,10 @@
       // HERESY 1967: where it stands
       '<span class="mc-dockmode" role="group" aria-label="' + esc(tr("Where the console stands")) + '">' + [["pin", "Docked", "On the right, a column of its own beside the lanes"],
         ["hover", "On hover", "A strip at the right edge: the pointer on it slides the console out over the lanes, away again when it leaves"],
-        ["float", "Floating", "A panel of its own, moved by this row; it stays with the page and hides with its room"]].map(function (m) {
-        return '<button type="button" class="mc-tab mc-dm' + (dockMode() === m[0] ? " is-on" : "") + '" data-act="dockmode" data-v="' + m[0] + '" aria-pressed="' + (dockMode() === m[0]) + '" data-tip="' + esc(tr(m[2])) + '">' + esc(tr(m[1])) + "</button>"; }).join("") + "</span></div>";
+        ["float", "Floating", "A panel of its own, moved by this row; it stays with the page and hides with its room"],
+        ["window", "In a window", "A window of its own, to carry to another monitor; closed, the console is back where it stood"]].map(function (m) {   // HERESY 1983
+        var on = POPW ? m[0] === "window" : dockMode() === m[0];
+        return '<button type="button" class="mc-tab mc-dm' + (on ? " is-on" : "") + '" data-act="dockmode" data-v="' + m[0] + '" aria-pressed="' + (dockMode() === m[0]) + '" data-tip="' + esc(tr(m[2])) + '">' + esc(tr(m[1])) + "</button>"; }).join("") + "</span></div>";
     var body = C.tab === "mixes" ? mixesHtml() : C.tab === "devices" && C.sel ? devicesHtml(C.sel)
       : '<div class="mc" role="group" aria-label="' + esc(tr("Console")) + '">' + ns.map(stripHtml).join("") + '<span class="mc-gap"></span>' +
         M.groups().map(vcaHtml).join("") +             // HERESY 1543: the VCAs, then the way to add one
@@ -367,6 +420,7 @@
     M.subs().forEach(function (x) { eqMini("%" + x.id); });   // HERESY 1563
     if (C.tab === "devices" && C.sel) { drawEq(); drawComp(); }
     frame(true);
+    if (POPW) fitPop([C.tab, C.sel || "", ns.length, M.groups().length, M.subs().length, M.mixes.list().length].join("|"));   // HERESY 1987
   }
   // HERESY 1533: the mixes of this set, kept on Forge beside its stems
   function when(ms) { var d = new Date(ms), z = function (n) { return (n < 10 ? "0" : "") + n; }; return z(d.getDate()) + "." + z(d.getMonth() + 1) + " " + z(d.getHours()) + ":" + z(d.getMinutes()); }
@@ -434,7 +488,7 @@
     clearTimeout(INS.timer);
     var any = false;
     Object.keys(INS.run).forEach(function (n) {
-      var el = document.querySelector('#mxDock .dv-ins-say[data-ins="' + n + '"]');
+      var el = D().querySelector('#mxDock .dv-ins-say[data-ins="' + n + '"]');
       if (el) el.textContent = insSay(n);
       if (!INS.run[n].done) any = true;
     });
@@ -517,7 +571,7 @@
       '<p class="row-hint dv-print-say"></p>';
   }
   function runPrint(v) {
-    var M = K(), take = M && M.S.take, say = document.querySelector("#mxDock .dv-print-say");
+    var M = K(), take = M && M.S.take, say = D().querySelector("#mxDock .dv-print-say");
     if (!take || !M.S.set) return;
     var body = { name: take.name, pipeline: [{ step: "stems", set: M.S.set }, { step: "daw", mix: window.HeresyMixer.value(), versions: Object.assign({}, M.S.versions || {}) },
                                               { step: "gate", params: { character: v } }] };
@@ -681,7 +735,7 @@
   function yd(y, h) { return (h / 2 - y) / (h / 2 - 6) * DBR; }
   function css(el, name, d) { var v = getComputedStyle(el).getPropertyValue(name).trim(); return v || d; }
   function eqMini(n) {
-    var c = document.querySelector('.mc-strip[data-n="' + CSS.escape(n) + '"] .mc-eqmini');
+    var c = D().querySelector('.mc-strip[data-n="' + CSS.escape(n) + '"] .mc-eqmini');
     if (!c) return;
     var g = c.getContext("2d"), w = c.width, h = c.height, s = K().strip(n);
     g.clearRect(0, 0, w, h);
@@ -692,7 +746,7 @@
     g.stroke();
   }
   function drawEq() {
-    var c = document.querySelector("#mxDock canvas.dv-eq"), M = K();
+    var c = D().querySelector("#mxDock canvas.dv-eq"), M = K();
     if (!c || !M) return;
     var n = C.sel, box = c.parentNode, w = Math.max(320, Math.min(900, box.clientWidth - 4)), h = 230, dpr = window.devicePixelRatio || 1;
     if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); c.style.width = w + "px"; c.style.height = h + "px"; }
@@ -740,7 +794,7 @@
     });
   }
   function drawComp() {
-    var c = document.querySelector("#mxDock canvas.dv-curve"), M = K();
+    var c = D().querySelector("#mxDock canvas.dv-curve"), M = K();
     if (!c || !M) return;
     var n = C.sel, s = M.strip(n), p = Object.assign({ threshold_db: -18, ratio: 2, knee_db: 6, makeup_db: 0 }, s.comp || {}), w = 170, h = 170, dpr = window.devicePixelRatio || 1;
     if (c.width !== w * dpr) { c.width = w * dpr; c.height = h * dpr; c.style.width = w + "px"; c.style.height = h + "px"; }
@@ -758,7 +812,7 @@
 
   // ---- the meters, each frame
   function frame(force) {
-    var M = K(), dock = $("mxDock");
+    var M = K(), dock = dockEl();
     if (!M || !dock || dock.hidden) return;
     var now = performance.now();
     if (!force && now - C.lastFrame < 30) return;      // thirty a second is enough for the eye
@@ -814,7 +868,7 @@
   // HERESY 1538: the goniometer: each pair of samples a dot, mid (L+R) up and side (L−R) across, scaled to the loudest of the block
   var GL = null, GR2 = null;
   function drawGonio() {
-    var c = document.querySelector("#mxDock canvas.dv-gonio"), M = K(), aL = M && M.analyser("*L"), aR = M && M.analyser("*R");
+    var c = D().querySelector("#mxDock canvas.dv-gonio"), M = K(), aL = M && M.analyser("*L"), aR = M && M.analyser("*R");
     if (!c || !aL || !aR) return;
     if (!GL || GL.length !== aL.fftSize) { GL = new Float32Array(aL.fftSize); GR2 = new Float32Array(aR.fftSize); }
     aL.getFloatTimeDomainData(GL); aR.getFloatTimeDomainData(GR2);
@@ -828,7 +882,7 @@
     g.globalAlpha = 1;
   }
   function drawSpec() {
-    var c = document.querySelector('#mxDock canvas.dv-spec[data-spec="*"]'), M = K(), an = M && M.analyser("*");
+    var c = D().querySelector('#mxDock canvas.dv-spec[data-spec="*"]'), M = K(), an = M && M.analyser("*");
     if (!c || !an) return;
     var w = c.width, h = c.height, g = c.getContext("2d"), bins = new Float32Array(an.frequencyBinCount), rate = (M.info() || {}).rate || 48000;
     an.getFloatFrequencyData(bins);
@@ -858,6 +912,8 @@
     }
     var dm = e.target.closest && e.target.closest('[data-act="dockmode"]');   // HERESY 1967
     if (dm) {
+      if (dm.dataset.v === "window") { popOpen(); return; }   // HERESY 1983: the hand's click opens it (the browser asks for one)
+      popClose();
       try { localStorage.setItem("yue2.mixer.dockMode", dm.dataset.v); } catch (x) { /* a private window */ }
       paint(); window.dispatchEvent(new Event("resize"));
       return;
@@ -868,9 +924,9 @@
     if (act === "tab") { C.tab = v; paint(); return; }
     if (act === "select") { select(n, "devices"); return; }
     if (act === "pick") { select(v, "devices"); return; }
-    if (act === "eq" || act === "comp" || act === "lim" || act === "gate") { C.focusCard = act; select(n, "devices"); var cd = document.querySelector("#mxDock .dv-" + (act === "eq" ? "eqc" : act === "lim" ? "limc" : act === "gate" ? "gatec" : "compc")); if (cd) cd.scrollIntoView({ block: "nearest", inline: "nearest" }); return; }   // 1544: lim; 1760: gate
+    if (act === "eq" || act === "comp" || act === "lim" || act === "gate") { C.focusCard = act; select(n, "devices"); var cd = D().querySelector("#mxDock .dv-" + (act === "eq" ? "eqc" : act === "lim" ? "limc" : act === "gate" ? "gatec" : "compc")); if (cd) cd.scrollIntoView({ block: "nearest", inline: "nearest" }); return; }   // 1544: lim; 1760: gate
     if (act === "msave") {                            // HERESY 1533
-      var inp = document.querySelector("#mxDock .mm-name"), nm = inp ? inp.value.trim() : "";
+      var inp = D().querySelector("#mxDock .mm-name"), nm = inp ? inp.value.trim() : "";
       if (!nm) { if (inp) inp.focus(); return; }
       M.mixes.saveAs(nm).then(function () { paint(); }, function (e) { var k = M.mixes.lab(); k.err = e.message || String(e); paint(); });
       return;
@@ -881,7 +937,7 @@
       ask.then(function (yes) { if (yes === true) M.mixes.del(v).then(function () { paint(); }, function (e) { var k = M.mixes.lab(); k.err = e.message || String(e); paint(); }); });
       return;
     }
-    if (act === "mon") { M.monitor(v); Array.prototype.forEach.call(document.querySelectorAll('#mxDock [data-act="mon"][data-v="' + v + '"]'), function (x) { var on2 = !!M.monitor()[v]; x.classList.toggle("is-on", on2); x.setAttribute("aria-pressed", on2); }); return; }   // HERESY 1536
+    if (act === "mon") { M.monitor(v); Array.prototype.forEach.call(D().querySelectorAll('#mxDock [data-act="mon"][data-v="' + v + '"]'), function (x) { var on2 = !!M.monitor()[v]; x.classList.toggle("is-on", on2); x.setAttribute("aria-pressed", on2); }); return; }   // HERESY 1536
     if (act === "peaks") { M.resetLoud(); return; }
     if (act === "loudreset") { M.resetLoud(); return; }
     if (act === "insgate" || act === "insplug") { runInsert(C.sel, act, v); return; }   // HERESY 1561: a job on Forge, its undo the versions
@@ -903,7 +959,7 @@
     if (act === "bmute" || act === "bmute-dev") { var bus = b.closest("[data-bus]") ? b.closest("[data-bus]").dataset.bus : (C.sel === "~room" ? "reverb" : "delay"); M.setBus(bus, "mute", !M.S.buses[bus].mute); paint(); return; }
     if (act === "preset") { M.setBus("reverb", "preset", v); paint(); return; }
     if (act === "dtime") { M.setBus("delay", "time_ms", +v); paint(); return; }
-    if (act === "dnote") { var bpm = clamp(+((document.querySelector("#mxDock .dv-bpm") || {}).value) || 120, 20, 400); C.bpm = bpm; M.setBus("delay", "time_ms", clamp(Math.round(+v * 60000 / bpm * 100) / 100, 5, 2000)); paint(); return; }
+    if (act === "dnote") { var bpm = clamp(+((D().querySelector("#mxDock .dv-bpm") || {}).value) || 120, 20, 400); C.bpm = bpm; M.setBus("delay", "time_ms", clamp(Math.round(+v * 60000 / bpm * 100) / 100, 5, 2000)); paint(); return; }
     if (act === "version") { M.setVersion(C.sel, v); paint(); return; }
     if (act === "eqon") { editBand(C.sel, "", function (x, eq) { eq.on = !eq.on; }); paint(); return; }
     if (act === "limon") { s = M.strip(C.sel); M.set(C.sel, "limit", Object.assign({}, s.limit || { on: false }, { on: !(s.limit && s.limit.on) })); paint(); return; }   // HERESY 1544
@@ -938,7 +994,7 @@
     var row = e.target.closest && e.target.closest("#mxDock .mc-tabs"), panel = $("dawPanel");   // HERESY 1967: the floating console moved by its tabs' row
     if (row && dockMode() === "float" && panel && !e.target.closest("button, input, select")) {
       e.preventDefault();
-      var dock = $("mxDock"), r = dock.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top, x = r.left, y = r.top;
+      var dock = dockEl(), r = dock.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top, x = r.left, y = r.top;
       var mv = function (ev) {
         x = Math.max(0, Math.min(innerWidth - 120, ev.clientX - dx)); y = Math.max(0, Math.min(innerHeight - 60, ev.clientY - dy));
         panel.style.setProperty("--mx-fx", Math.round(x) + "px"); panel.style.setProperty("--mx-fy", Math.round(y) + "px");
@@ -1025,7 +1081,7 @@
       C.band = String(hit.id);
       editBand(C.sel, hit.id, function (b) { if (b) b.q = clamp(Math.round(+b.q * (e.deltaY < 0 ? 1.12 : 1 / 1.12) * 1000) / 1000, 0.2, 10); });
       drawEq(); eqMini(C.sel);
-      var qk = document.querySelector('#mxDock .kn[data-k="band.q"]'); if (qk) paintKnob(qk);
+      var qk = D().querySelector('#mxDock .kn[data-k="band.q"]'); if (qk) paintKnob(qk);
     }
   }
   function onKey(e) {
@@ -1074,7 +1130,7 @@
     var gdb = clamp(Math.round((d.g0 + (d.y - e.clientY) * fine / ((r.height / 2 - 6) / DBR)) * 10) / 10, -12, 12);
     editBand(C.sel, d.id, function (b) { if (b) { b.frequency_hz = f; if (GAIN_TYPES[b.type]) b.gain_db = gdb; } });
     drawEq(); eqMini(C.sel);
-    Array.prototype.forEach.call(document.querySelectorAll('#mxDock .kn[data-kt="e"]'), paintKnob);
+    Array.prototype.forEach.call(D().querySelectorAll('#mxDock .kn[data-kt="e"]'), paintKnob);
   }
   function onMenu(e) {
     var c = e.target.closest && e.target.closest("canvas.dv-eq");
@@ -1090,7 +1146,7 @@
 
   // ---- what the mixer says
   function changed(d) {
-    var M = K(), dock = $("mxDock");
+    var M = K(), dock = dockEl();
     if (!M || !dock || dock.hidden) return;
     if (C.drag) return;                               // the hand's own turn: drawn as it turns
     if (!d || (!d.n && !d.bus)) { paint(); return; }
@@ -1121,17 +1177,7 @@
       else { Array.prototype.forEach.call(dock.querySelectorAll(".dv-row .kn"), paintKnob); drawEq(); drawComp(); }
     }
   }
-  function init() {
-    var M = K();
-    if (!M) return;
-    dockPlace();                                     // HERESY 1967
-    M.on("paint", paint);
-    M.on("frame", function () { frame(false); });
-    M.on("change", changed);
-    M.on("mixes", function () { if (C.tab === "mixes") paint(); else { var t = document.querySelector('#mxDock .mc-tab[data-v="mixes"]'); if (t) t.textContent = tr("Mixes") + (M.mixes.list().length ? " \u00b7 " + M.mixes.list().length : ""); } });   // HERESY 1533
-    M.on("select", function (n) { if (n && n !== C.sel) { C.sel = n; if (C.tab === "devices") paint(); else Array.prototype.forEach.call(document.querySelectorAll("#mxDock .mc-strip[data-n]"), function (r) { r.classList.toggle("is-sel", r.dataset.n === n); }); var dt = document.querySelector('#mxDock .mc-tab[data-v="devices"]'); if (dt) { dt.disabled = false; dt.innerHTML = esc(tr("Devices")) + ' · <b translate="no">' + esc(selTitle()) + "</b>"; } } });
-    var body = $("mxBody");
-    if (!body) return;
+  function wire(body) {                            // HERESY 1983: the page's body, or the console's own window's
     body.addEventListener("click", function (e) { if (e.target.closest && e.target.closest("#mxDock")) onClick(e); });
     body.addEventListener("pointerdown", function (e) { if (e.target.closest && e.target.closest("#mxDock")) onDown(e); });
     body.addEventListener("pointermove", function (e) { if (C.drag) onMove(e); });
@@ -1155,8 +1201,21 @@
       if (nm && nm !== gx.name) { K().mark(); K().groupSet(gx.id, "name", nm); paint(); }
     });
     body.addEventListener("keydown", function (e) {   // HERESY 1533: Enter in the name saves
-      if (e.key === "Enter" && e.target.classList && e.target.classList.contains("mm-name")) { e.preventDefault(); var b = document.querySelector('#mxDock [data-act="msave"]'); if (b) b.click(); }
+      if (e.key === "Enter" && e.target.classList && e.target.classList.contains("mm-name")) { e.preventDefault(); var b = D().querySelector('#mxDock [data-act="msave"]'); if (b) b.click(); }
     });
+  }
+  function init() {
+    var M = K();
+    if (!M) return;
+    dockPlace();                                     // HERESY 1967
+    M.on("paint", paint);
+    M.on("frame", function () { frame(false); });
+    M.on("change", changed);
+    M.on("mixes", function () { if (C.tab === "mixes") paint(); else { var t = D().querySelector('#mxDock .mc-tab[data-v="mixes"]'); if (t) t.textContent = tr("Mixes") + (M.mixes.list().length ? " \u00b7 " + M.mixes.list().length : ""); } });   // HERESY 1533
+    M.on("select", function (n) { if (n && n !== C.sel) { C.sel = n; if (C.tab === "devices") paint(); else Array.prototype.forEach.call(D().querySelectorAll("#mxDock .mc-strip[data-n]"), function (r) { r.classList.toggle("is-sel", r.dataset.n === n); }); var dt = D().querySelector('#mxDock .mc-tab[data-v="devices"]'); if (dt) { dt.disabled = false; dt.innerHTML = esc(tr("Devices")) + ' · <b translate="no">' + esc(selTitle()) + "</b>"; } } });
+    var body = $("mxBody");
+    if (!body) return;
+    wire(body);
     if (window.ResizeObserver) new ResizeObserver(function () { if (C.tab === "devices") drawEq(); }).observe(body);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();

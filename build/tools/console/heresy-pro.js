@@ -1,6 +1,6 @@
 // HERESY 1599 (Viktor 20.10.2026: «если есть в активе мои Pro плагины, отключение оных ради теста Паблик воркфлоу. Так сможем имитировать
 // публичный код в Промо и на скринах… И чтобы не было видно выключателя, помести его в системный бар Студии в ниспадающее меню»): a row in
-// ☰, shown only when a plugin that is not the studio's own is in user/plugins/. Off, the page reads the plugins as a public studio would: no
+// ☰, shown only when a plugin that is not the Studio's own is in user/plugins/. Off, the page reads the plugins as a public studio would: no
 // step, pipeline, DAW insert or MIDI script of such a plugin (the lab keeps them; nothing is deleted); the page reloads to read them anew.
 // Kept in this browser
 (function () {
@@ -13,7 +13,7 @@
     if (!items || document.getElementById("proRow")) return document.getElementById("proRow");
     var r = document.createElement("label");
     r.className = "head-more-row hm-pro"; r.id = "proRow"; r.hidden = true;
-    r.dataset.tip = "Your own plugins (not the studio's) on or off for this browser: off, the Refiner, the DAW and MIDI show only what a public studio has, for a test of the public way, the promo and the pictures. Nothing is deleted; the page reloads";
+    r.dataset.tip = "Your own plugins (not the Studio's) on or off for this browser: off, the Refiner, the DAW and MIDI show only what a public studio has, for a test of the public way, the promo and the pictures. Nothing is deleted; the page reloads";
     r.innerHTML = '<span>Own plugins</span><input type="checkbox" id="proOn" aria-label="Own plugins" />';
     items.parentNode.insertBefore(r, items);
     r.querySelector("input").addEventListener("change", function () {

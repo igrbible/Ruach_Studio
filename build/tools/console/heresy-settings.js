@@ -1,5 +1,5 @@
 // HERESY 1027: the page's settings (its yue2.* keys in the browser's storage) mirrored to disk on
-// Forge through the lab: the studio's user/settings.json (since 02.10.2026; before, ~/.config/yue2_os, which the lab
+// Forge through the lab: the Studio's user/settings.json (since 02.10.2026; before, ~/.config/yue2_os, which the lab
 // copies once). A cleared browser, a private window or another device gets them back.
 //
 // Load: before app.js reads anything, the file is read at once (a synchronous request for one

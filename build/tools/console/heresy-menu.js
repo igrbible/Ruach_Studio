@@ -1,4 +1,4 @@
-// HERESY 1048: the studio's own right-click menu (Viktor, 01.10.2026): the actions on a clip live
+// HERESY 1048: the Studio's own right-click menu (Viktor, 01.10.2026): the actions on a clip live
 // here, so the cards stay small and the list of actions can grow. HeresyMenu.open(x, y, items):
 // an item is {label, icon, hint, checked, danger, disabled, action} or {sep: true} or
 // {label, items: [...]} for a submenu (opens on hover or →); raw: true keeps the label as typed (a name: HERESY 1166,
@@ -188,6 +188,7 @@
     var box = document.createElement("div");
     box.className = "hc-box";
     sel.parentNode.insertBefore(box, sel.nextSibling);
+    if (sel.dataset.tip && !box.parentNode.closest("[data-tip]")) box.dataset.tip = sel.dataset.tip;   // HERESY 2003: the select's tip on what stands for it
     sel.classList.add("hc-src");
     function paint() {
       var opts = Array.prototype.slice.call(sel.options), cur = sel.selectedIndex, html;
@@ -254,7 +255,7 @@
   function open(sel, anchor) {
     close();
     var opts = Array.prototype.slice.call(sel.options), r = anchor.getBoundingClientRect(), el = document.createElement("div");
-    var modal = opts.length > 10, veil = null;          // HERESY 1951: a list long enough for a Find opens as the studio's other finds do, in the middle
+    var modal = opts.length > 10, veil = null;          // HERESY 1951: a list long enough for a Find opens as the Studio's other finds do, in the middle
     el.className = "hc-pop" + (modal ? " is-modal" : "");
     el.setAttribute("role", "listbox");
     el.innerHTML = (opts.length > 10 ? '<input type="search" class="hc-find" placeholder="Find" autocomplete="off" spellcheck="false">' : "") +

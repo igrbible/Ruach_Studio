@@ -41,7 +41,7 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 
 - ✅ rc3: OpenRouter's models with their prices; the notebook's export and import.
 - ✅ 1268: the documents list as wide as its edge is dragged.
-- ☐ A local chat model started by the studio itself (Ollama on a port of its own, under the guard).
+- ☐ A local chat model started by the Studio itself (Ollama on a port of its own, under the guard).
 
 ## Refiner and the DAW
 
@@ -86,7 +86,7 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 
 - ✅ 1447: the per-layer delta measured by the lab (/lab/lora/profile: ‖B·A‖ by layer and module, attention against MLP, how far an adapter moves a layer at 1.0, the overlap of two and the cosine of their deltas); the adapters that touch the same layers share a budget a half (Viktor's «1+2 в общую суммарную силу, либо 3 и 4 — отдельно»): Off, Share (Variant A: the sum capped at the red line, in proportion), In order (Variant B: the order dragged); the caps the red lines, music 2.25, sound 1.5. The six library adapters all reach the 28 layers (overlap 0.7–0.97), their deltas nearly at right angles (cosine 0.00–0.05).
 - ✅ 1447: a LoRA's strength over the song as a wave (Flat, Arch, Draw; Viktor: «динамичную волну, именно ту, что ты воплотил в слайдерах стилей»), the engine applying the adapters at run time with the graph (lora-rt.h), not merged into the weights at load: token for token the same as merged.
-- ✅ 1449: the voice and genre sliders out of the studio, the install and Models v2 (Viktor: «Нахер убирай это слайдерное говно из нашей Студии, но сами адаптации волнового инджеста забери»), measured first: no pull toward their genre.
+- ✅ 1449: the voice and genre sliders out of the Studio, the install and Models v2 (Viktor: «Нахер убирай это слайдерное говно из нашей Студии, но сами адаптации волнового инджеста забери»), measured first: no pull toward their genre.
 - ✅ The sliders' code stays in the engine (Viktor 15.10.2026: «не чини то, что пока что не сломано. Легче воскресить, чем кремировать»); the LoRA wave lives on its slider_curve_at. ✅ 1451: the page's words that still named them.
 - 💡 Rise and Fall beside Arch in the wave's editor: the request takes them already.
 
@@ -94,8 +94,8 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 
 - ✅ Our own trainer, a voice's kind by pitch on the raw folder, runs, telemetry, epochs worth hearing first; the duduk and shofar adapters.
 - ✅ 1298: a run's log as wide as its lines, beside the server log. 1299: the two curves one under the other at a click.
-- ❓ **Closed for now, not to the end** (Viktor 10.10: «не на 100%, но Тренера закрываем также на данный момент. Но нужно будет все режимы и типы адаптеров перепроверить»). ☐ Every mode checked again (Direct, Full, Melody, separated vocals; the studio's trainer and AI-Toolkit) and every kind (style, voice, language, artist), each to a heard adapter.
-- ✅ 1300: **a finished run goes on to more epochs** from its ⋯ menu (the studio's own trainer; tried 40 → 60 steps on GPU2); the rank's line is its tip's first line; **the guide explains every field**, and AR weight, anchor and speed as measured (the anchor counts as a share of the weight, the speed is the music half's throttle). AI-Toolkit out of the studio since 1422, so its runs' «go on» is not needed.
+- ❓ **Closed for now, not to the end** (Viktor 10.10: «не на 100%, но Тренера закрываем также на данный момент. Но нужно будет все режимы и типы адаптеров перепроверить»). ☐ Every mode checked again (Direct, Full, Melody, separated vocals; the Studio's trainer and AI-Toolkit) and every kind (style, voice, language, artist), each to a heard adapter.
+- ✅ 1300: **a finished run goes on to more epochs** from its ⋯ menu (the Studio's own trainer; tried 40 → 60 steps on GPU2); the rank's line is its tip's first line; **the guide explains every field**, and AR weight, anchor and speed as measured (the anchor counts as a share of the weight, the speed is the music half's throttle). AI-Toolkit out of the Studio since 1422, so its runs' «go on» is not needed.
 - ☐ **Diction adapters** from the audiobook archive: one voice at rank 16, cohorts at rank 64 (the music half learns diction at 24 kHz; the sound half wants a source above it). Real readers' voices and Viktor's own stay private.
 - ☐ The material checked in the raw pane for every user: repeats (a loop of the same minutes), what CLAP and the listener hear in each stretch, a VAE round trip (if the decoder cannot carry the sound, no LoRA will).
 - ☐ The lyrics adapter (`heresy/docs/LYRICS-ADAPTER-PLAN.md`).
@@ -107,7 +107,7 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 
 - ✅ rc3: Updates from GitHub's releases; Folders' code in the lab (where the user's work lives, moved with a checked copy); the cards live as btop draws them. 1266: the logo the name alone, the bar of one height, the favicon the name's first letter in the page's language. 1272: the unfolded server log 180 px narrower.
 - ✅ 1283: **Engine → Folders**: the card to choose and move where the generations, the trash, the Artist's and the Writer's work live (Windows paths through WSL understood; planned, then a second yes; the old copy kept).
-- ✅ 1294: **a VRAM limit for each card** (Engine → GPUs); Compute's Auto fits the studio card's limit. 1295: the veil's words over its bar, the versions under it.
+- ✅ 1294: **a VRAM limit for each card** (Engine → GPUs); Compute's Auto fits the Studio card's limit. 1295: the veil's words over its bar, the versions under it.
 - ✅ 1297: **one card for everything**: the idle engine lets its models go when another job needs the card.
 - ✅ 1304: **the first start scans the machine** and offers the backbone, Auto's knobs and the painter in one window; Auto's tiers as measured on GPU2 (the backbones, contexts and VAE tiles), down to 6 GB; Pinokio takes Q8_0 from 7 GB. ✅ 1359: its window in the six other languages (its words were there since 1339; the dialog's lines now kept in every language).
 - ✅ 1301: **the server log's dock on either side**, an arrow on its inner edge, the side kept for each room.
@@ -126,7 +126,7 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 - ✅ 1379b: A choice list of words, not data, in the page's language: the updates question's Every week, Every day, Every month, Never stay English in every language (heresy-dialog.js marks a choice's label translate="no", for names and files); found 11.10 while probing 1374.
 - ✅ 1361: the WAV fallback goes on with a take asked to play (Chrome had paused it silently before its error was heard); a take whose sound is all here and that does not start is loaded again in place, then said (the long test's readyState 1, met where it shows).
 - ✅ 1349: the never-break-lines pass over the page's strings and the docs: no newline inside a sentence in the page's strings, no hard-wrapped paragraph in the docs, and the last three boxes measured in ch wrap at their column (code comments stay as they are).
-- ✅ **EAGLE3, closed: dropped** (Viktor 24.10.2026: «Отбой по EAGLE3. Нет смысла в этом.»). Measured the night before: a draft of K 2 gave 1.77 codes a round, the same with the studio's sampler, and the draft head refuses CFG. The draft and engival's CPU build stay in heresy/MISC/claude-eagle3 as a record only.
+- ✅ **EAGLE3, closed: dropped** (Viktor 24.10.2026: «Отбой по EAGLE3. Нет смысла в этом.»). Measured the night before: a draft of K 2 gave 1.77 codes a round, the same with the Studio's sampler, and the draft head refuses CFG. The draft and engival's CPU build stay in heresy/MISC/claude-eagle3 as a record only.
 
 ## Install and platforms
 
@@ -134,20 +134,20 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 - ☐ (2.0.x) Viktor's own Pinokio install at home, fresh, with rc4 (10.10: the rc3 one removed to imitate a new user); then the registry: an Issue at pinokiocomputer/pinokio (Featured asked; Community otherwise).
 - ☐ Pinokio's own CUDA path tested on a machine without a toolkit.
 - ✅ 1352: **Pinokio's environment page** answered 500 on `/env` (the laptop, 10.10.2026): with our `pinokio/` folder Pinokio wrote its `ENVIRONMENT` there and looked for it in the root. The launcher's scripts are in `launcher/` now (Viktor 11.10: «Добро, переименовывай pinokio/ → launcher/»); an install of rc5 or before is led through its first update by the menu (Finish the update).
-- ☐ (2.0.x) **Windows**: the Pinokio launcher through WSL2 (Windows paths with backslashes and drive letters understood).
+- ☐ (2.0.x) **Windows**: the Pinokio launcher through WSL2 (Windows paths with backslashes and drive letters understood); Pinokio sets up WSL2 and Ubuntu 24.04 where they are missing and runs launcher/*.sh inside. Decided 01.11.2026: WSL2 only. A native build (MSVC, a portable CUDA, a process manager of its own) is not our initiative: only a fork or a pull request made whole, turnkey, with attribution. Viktor: «Нейро-ересь вселенская изначально под UNIX/BSD/Linux, и портирование под Виндоуз — это сломанный костыль и имитация жизни».
 - ☐ **Desktop**: a PWA manifest first, then Electron (Linux first: the services checked and started, a tray, asked on exit whether to stop them; Ctrl+digit for the rooms), an AppImage. No Flatpak (Viktor: «растрата дискового места и интернет трафика»).
 - ✅ 1362: from the audit: build.sh's page guard (the install's own path, not its folder's name: studio and music build) and the in-page updater under Pinokio (it sends to Pinokio's Update). ✅ 1285: the extras are made by fetch-heresy.sh itself (convert-extras.py), no convert-models.sh on a fresh install.
 
 ## Models, Hugging Face, data
 
-- ✅ goldhub/Ruach_Studio_Models_v2 rebuilt whole as the studio's own disk (1440), files known by their content (1441); v1 deleted by Viktor 15.10.2026 (Hugging Face would not make it private); nothing read it since rc8.
-- ✅ Every weight from v2 at one pin (1445): the Trainer's base in it, the listener as the studio reads it; from their authors still the stems' models (audio-separator), the Kit's library of adapters, Qwen2.5-Omni-7B whole.
+- ✅ goldhub/Ruach_Studio_Models_v2 rebuilt whole as the Studio's own disk (1440), files known by their content (1441); v1 deleted by Viktor 15.10.2026 (Hugging Face would not make it private); nothing read it since rc8.
+- ✅ Every weight from v2 at one pin (1445): the Trainer's base in it, the listener as the Studio reads it; from their authors still the stems' models (audio-separator), the Kit's library of adapters, Qwen2.5-Omni-7B whole.
 - ✅ 1446: the Kit's library's five licensed adapters in v2 (Instrumental, sv-billie, DreamPop v2, J-pop, Real audio v4 and v9) at the Kit's pins, each checked against its author's SHA-256; `tools/download-loras.sh` takes them from v2.
 - ❓ Death metal, Industrial rock, Epic trailer (Steps from Hell) carry no licence: asked on Hugging Face 15.10.2026 ([1](https://huggingface.co/pduncan/YuE2_Deathmetalv1_lora/discussions/1), [2](https://huggingface.co/monsterovich/yue2-industrial-rock-lora/discussions/4), [3](https://huggingface.co/monsterovich/yue2-steps-from-hell/discussions/3)); fetched from their authors until they answer.
 - ✅ 1449: v2 without the sliders, at 094e03a (163 files, 256 GB).
 
 - ✅ The Models, LoRAs and Starter Sets repos and the 💎 bucket public on Hugging Face.
-- ✅ 1289: Engine → Models and LoRAs: what the install brings, here or not, fetched again from the studio (a part at a time or all), and the extras each asked with its size.
+- ✅ 1289: Engine → Models and LoRAs: what the install brings, here or not, fetched again from the Studio (a part at a time or all), and the extras each asked with its size.
 - ✅ 1296: one's own copy of a published LoRA is kept and counted whole («differs», «own copies kept»).
 - ✅ 1302: **Fetch's progress at the row pressed**. 1303: the trainer's base brings MERT-v2-FullSong. ✅ 1339: the Models card's strings in the six other languages.
 - ✅ 1290: the converted models in a repo of their own, [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2): the legacy and blend decoders and the 16 sliders, production only, byte for byte; the install fetches no checkpoints. The sliders gone again with 1449.
@@ -162,7 +162,7 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 - ✅ README, CHANGELOG, INSTALL, the guide in seven languages, the visiting card in seven languages with its logo and icon in each, six rooms counted.
 - ☐ The screenshots of the guide, the README and the site for 2.0.0, in one go.
 - ✅ 1446: the visiting card counts its visitors (Umami on our own server, no cookies).
-- ✅ 1448: the studio's name in every language as its logo says it, in the page and on the card.
+- ✅ 1448: the Studio's name in every language as its logo says it, in the page and on the card.
 - ✅ 1449: the guide in twelve languages without the sliders, a LoRA's wave and the budget in their place.
 - ❓ The site's `/favicon.ico` comes from the server's shared icons (nginx): a location of the site's own, on Viktor's word.
 - ☐ Posts (Reddit, Hugging Face, X) when Viktor says.
@@ -199,14 +199,14 @@ Viktor's screenshots of SUNO's newest interface, 09.10.2026 (its Studio, a DAW, 
 - ✅ 1416 (13.10.2026): Free tempo (the score's Q: out before the music; on by the Style's own words; a score without Q: native).
 - ✅ 1417 (13.10.2026): the lyrics' timing in two passes (hotwords, the vocal stem); stable-ts tried and dropped (its developer left it in June).
 - ✅ 1419 (13.10.2026): the guidances as roads; Free tempo as the lyrics' toggles; every corner from Engine's profile; a take's hover tools in one row.
-- ✅ 1420 (13.10.2026): score mode (Full, Melody) in the studio's own trainer; next: the separation, then AI-Toolkit out of the studio.
+- ✅ 1420 (13.10.2026): score mode (Full, Melody) in the Studio's own trainer; next: the separation, then AI-Toolkit out of the Studio.
 - ✅ 1421 (13.10.2026): compare plays on; the Style as one line; the find bar's ✕; Max length as typed; guidances in tenths; the take card's face; the sambuca in his words.
-- ✅ 1422 (13.10.2026): the separation in the studio's own trainer; AI-Toolkit out of the studio (his own AI_Toolkit folder untouched).
+- ✅ 1422 (13.10.2026): the separation in the Studio's own trainer; AI-Toolkit out of the Studio (his own AI_Toolkit folder untouched).
 - ✅ 1430 (14.10.2026): the audit's fixes: the lab's reload behind a failed job, timeouts, silences that lied, the critic's stand-ins, links from the internet.
-- ✅ 1429 (14.10.2026): Engine → Security, who may open the studio (this computer, private networks, the networks listed), kept by the engine; the first start asks it.
-- ✅ 1428 (14.10.2026): Krea 2 out of the studio; The Artist's brushes with ⚡ Lightning (fp8 BASE as the base); a picture's note; the rooms' font and the active room an arch.
+- ✅ 1429 (14.10.2026): Engine → Security, who may open the Studio (this computer, private networks, the networks listed), kept by the engine; the first start asks it.
+- ✅ 1428 (14.10.2026): Krea 2 out of the Studio; The Artist's brushes with ⚡ Lightning (fp8 BASE as the base); a picture's note; the rooms' font and the active room an arch.
 - ✅ 1427 (14.10.2026): the lyrics' toggles by its title and the meter in blocks; Unbounded, Tektur and Jura.
-- ✅ 1426 (14.10.2026): the voices among the lyrics' tags and the guide's lyrics in twelve languages; covers that do not lie; the Artist's stage as icons; Raleway, Michroma and Liberation Mono by default, carried by the studio; Unload reaches the Artist again.
+- ✅ 1426 (14.10.2026): the voices among the lyrics' tags and the guide's lyrics in twelve languages; covers that do not lie; the Artist's stage as icons; Raleway, Michroma and Liberation Mono by default, carried by the Studio; Unload reaches the Artist again.
 - ✅ 1425 (13.10.2026): several sections replaced in one go, their versions named by section and stretch and in Takes as they land; compare at 1200 px with its wave, thumbs and «Hide disliked»; the Refiner's Colour (vinyl, tape, room); a cover to its namesakes; Compute's VAE, the memory preset gone; the scan suggests Qwen-Image 2512.
 - ✅ 1423 (13.10.2026): covers by the cards: Qwen-Image 2512 where it fits whole, else Krea 2 Muse; the speeds measured. ☐ 2.1.0: a quicker Qwen cover (the Artist room's kept painter for covers, or nunchaku's int4 kernels, or a 4-step Lightning), on his go.
 
@@ -217,7 +217,7 @@ Viktor's screenshots of SUNO's newest interface, 09.10.2026 (its Studio, a DAW, 
 - ☐ **Simple and Advanced** in the Creator: three knobs for a newcomer (SUNO's Weirdness, Style Influence, Variety) mapped onto our sampling, the whole form behind Advanced.
 - ☐ **Speech** and **Sounds** beside Songs: a script with its tone and a background on or off (our Speech profile behind it); short samples, one-shots and loops with BPM and key.
 - ☐ **More stems**: up to twelve instruments, one instrument against the rest, MIDI from each stem, matched to the project's tempo (SUNO's Extract Stems and MIDI).
-- ☐ **The studio's assistant**: one line to ask the studio in words («a gritty delay on this track», «an 8-bar drum loop here», «remaster it brighter»), answered by the Writer's model calling our own API (the MCP server has the tools already).
+- ☐ **The Studio's assistant**: one line to ask the Studio in words («a gritty delay on this track», «an 8-bar drum loop here», «remaster it brighter»), answered by the Writer's model calling our own API (the MCP server has the tools already).
 - ☐ **Mashup**, **Song radio**, **Use as inspiration** (an audio prompt), **Personalize** (my taste, from my likes).
 - ☐ **The DAW timeline** with Plenio: takes and stems as clips, split, duplicate, heal edits, MIDI from a clip.
 

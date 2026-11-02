@@ -1,4 +1,4 @@
-// HERESY 1057 (Viktor): the studio's own dialogs instead of the browser's confirm() and prompt().
+// HERESY 1057 (Viktor): the Studio's own dialogs instead of the browser's confirm() and prompt().
 // HeresyDialog.confirm(text, {ok, cancel, alt, danger, must}) -> Promise<boolean|"alt">; alt: a third button between the two
 // (HERESY 1169), its answer "alt"; must: one of the buttons and nothing else
 // answers (Esc and a click beside the box do not), for a choice the page cannot make for you (HERESY 1166)
@@ -68,6 +68,34 @@
         var said = function () { count.textContent = input.value.length + " / " + opts.max; count.classList.toggle("is-full", input.value.length >= opts.max); };
         input.addEventListener("input", said); said();
       }
+      // HERESY 2001 (Viktor: «предохранитель, если нечаянно кликнул мимо… при изменённом тексте заметки»): a window of many lines asks before
+      // changed words go (a click beside it, Esc, Cancel); unchanged, it closes at once
+      var initial = input ? input.value : null, guarded = kind === "prompt" && !!opts.area && opts.guard !== false;
+      function dismiss() {
+        if (!guarded || !input || input.value === initial) return done(false);
+        var g = back.querySelector(".hd-guard");
+        if (g) { g.querySelector(".hd-guard-back").focus(); return; }
+        var acts = back.querySelector(".hd-acts");
+        acts.hidden = true;
+        g = document.createElement("div");
+        g.className = "hd-guard";
+        g.setAttribute("role", "alert");
+        g.innerHTML = '<div class="hd-guard-say">The text has changed: keep it, or let the changes go?</div><div class="hd-acts">' +
+          '<button type="button" class="btn ghost small hd-guard-drop">Let the changes go</button>' +
+          '<button type="button" class="btn ghost small hd-guard-back">Back to the text</button>' +
+          '<button type="button" class="btn primary small hd-guard-keep">' + esc(opts.ok || "OK") + "</button></div>";
+        acts.parentNode.insertBefore(g, acts.nextSibling);
+        g.querySelector(".hd-guard-drop").addEventListener("click", function () { done(false); });
+        g.querySelector(".hd-guard-back").addEventListener("click", unguard);
+        g.querySelector(".hd-guard-keep").addEventListener("click", function () { done(true); });
+        g.querySelector(".hd-guard-back").focus();
+      }
+      function unguard() {
+        var g = back.querySelector(".hd-guard");
+        if (g) g.remove();
+        back.querySelector(".hd-acts").hidden = false;
+        if (input) input.focus();
+      }
       function done(yes) {
         document.removeEventListener("keydown", key, true);
         back.classList.add("is-leaving");
@@ -78,8 +106,8 @@
       // HERESY 1169 (Viktor: «По кнопкам в F5 диалоге - добавь LEFT/RIGHT клавиатурными передвижение по кнопкам»): ← and → go along
       // the buttons; Enter presses the one in focus (with arrows it may be another than Yes), else Yes as before
       function key(e) {
-        var buttons = Array.prototype.slice.call(back.querySelectorAll(".hd-acts button")), at = buttons.indexOf(document.activeElement);
-        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); if (!opts.must) done(false); }
+        var buttons = Array.prototype.slice.call(back.querySelectorAll(".hd-acts:not([hidden]) button")), at = buttons.indexOf(document.activeElement);   // HERESY 2001: the guard's when it asks
+        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); if (back.querySelector(".hd-guard")) unguard(); else if (!opts.must) dismiss(); }
         else if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && document.activeElement !== input && buttons.length > 1) {
           e.preventDefault(); e.stopPropagation();
           var to = at < 0 ? buttons.length - 1 : (at + (e.key === "ArrowRight" ? 1 : -1) + buttons.length) % buttons.length;
@@ -92,15 +120,15 @@
         }
       }
       document.addEventListener("keydown", key, true);
-      back.addEventListener("mousedown", function (e) { if (e.target === back && !opts.must) done(false); });
+      back.addEventListener("mousedown", function (e) { if (e.target === back && !opts.must) dismiss(); });   // HERESY 2001: through the guard
       back.querySelector(".hd-yes").addEventListener("click", function () { done(true); });
       var no = back.querySelector(".hd-no"), alt = back.querySelector(".hd-alt");
-      if (no) no.addEventListener("click", function () { done(false); });
+      if (no) no.addEventListener("click", function () { dismiss(); });
       if (alt) alt.addEventListener("click", function () { done("alt"); });
       requestAnimationFrame(function () { back.classList.add("is-on"); waveDraw(back, opts); (input || back.querySelector(".hd-yes")).focus(); if (input && !opts.area) input.select(); });
     });
   }
-  // HERESY 1167 (Viktor: «кликаешь на него... и вуаля»): a list in the studio's dialog; a click on a row is the answer
+  // HERESY 1167 (Viktor: «кликаешь на него... и вуаля»): a list in the Studio's dialog; a click on a row is the answer
   // HERESY 1709: an item's own tip (opts.tipSide, opts.tipWidth: where the page's tip stands and how wide)
   function tipAttrs(it, opts) {
     if (!it.tip) return "";

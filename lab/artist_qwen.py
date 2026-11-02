@@ -390,7 +390,7 @@ def build(painter, model, loras, speed, extra=None):
 
 
 def flagged(img, state={}):
-    """The content filter's word (the studio's rule for every painter, as Krea 2's licence asks for its own): the nsfw score."""
+    """The content filter's word (the Studio's rule for every painter, as Krea 2's licence asks for its own): the nsfw score."""
     if not (art_job.FILTER / "config.json").is_file():
         return None
     if "f" not in state:

@@ -1,8 +1,8 @@
 // HERESY 1589 (Viktor 19.10.2026: «Хорошо, беру M-Audio Oxygen 61 MKV»; «официально с 2.0.0 релизом выкатим early-release поддержку
 // M-Audio миди контроллеров. И предусмотреть интерфейс для 3rd party плагинов для MIDI. Откроем "MIDI API", люди начнут писать свои
-// плагины»): the studio's MIDI, one for the whole page.
+// плагины»): the Studio's MIDI, one for the whole page.
 //   A keyboard's keys go to whoever listens (the piano roll). A controller's control port goes to a script that turns its buttons,
-//   faders and knobs into the studio's actions: the built-in one speaks Mackie Control, as the Oxygen MKV's DAW port does in its
+//   faders and knobs into the Studio's actions: the built-in one speaks Mackie Control, as the Oxygen MKV's DAW port does in its
 //   «Mc» presets (and many controllers with it); a plugin's script (user/plugins/NAME/plugin.json, "midi") runs in a worker of its
 //   own, away from the page: it is handed each message and answers with actions by name, words to say and bytes to send back (a
 //   light, a display). The actions are the rooms': the one that offered them last answers (the roll over the DAW over the player).
@@ -23,8 +23,8 @@
   function why() {
     if (!window.isSecureContext) {
       var port = location.port || (location.protocol === "https:" ? "443" : "80");
-      // HERESY 1805: the studio's https door first (lab/tls_door.py, systemctl --user enable --now ruach-tls-door), ssh -L beside it
-      return tr("MIDI needs the studio opened as localhost or over https; this page is {0}. From another computer: the studio's https door, {1} (its own certificate: the browser asks once), or ssh -L {2} {3}, then {4}")
+      // HERESY 1805: the Studio's https door first (lab/tls_door.py, systemctl --user enable --now ruach-tls-door), ssh -L beside it
+      return tr("MIDI needs the Studio opened as localhost or over https; this page is {0}. From another computer: the Studio's https door, {1} (its own certificate: the browser asks once), or ssh -L {2} {3}, then {4}")
         .replace("{0}", location.origin).replace("{1}", "https://" + location.hostname + ":7443").replace("{2}", port + ":localhost:" + port).replace("{3}", location.hostname).replace("{4}", "http://localhost:" + port);
     }
     if (!navigator.requestMIDIAccess) return tr("This browser gives no MIDI (Chrome and Edge do)");

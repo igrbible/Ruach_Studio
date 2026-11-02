@@ -4,7 +4,7 @@ Every word in the style lines of the **32,633 tracks** that taught [YuE2-RS-FW](
 
 A word the model met hundreds of times is a word it understands. Write your style in these words, in this order, and the model hears what you mean; a word it never met is a guess. The counts are tracks, each counted once.
 
-**Search it** on [Ruach Studio's page](https://ruachstudio.igr.bible/#vocabulary) or in the studio (F1 → The First Wave's vocabulary); **take it whole** as [fw-vocabulary.json](fw-vocabulary/fw-vocabulary.json) (every word met in two tracks or more, with its sources and the words it came with).
+**Search it** on [Ruach Studio's page](https://ruachstudio.igr.bible/#vocabulary) or in the Studio (F1 → The First Wave's vocabulary); **take it whole** as [fw-vocabulary.json](fw-vocabulary/fw-vocabulary.json) (every word met in two tracks or more, with its sources and the words it came with).
 
 ## Contents
 
@@ -28,7 +28,7 @@ A word the model met hundreds of times is a word it understands. Write your styl
 
 ## How a style line was written
 
-Each track's line follows YuE2's own order: **language or Instrumental → genre → instruments → mood → emotion words → key → BPM**. Where a set wrote its own lines (the Suno-made sets, GTSinger, the studio's own takes), its words come first and the emotion words follow. Lyrics, where a track sings, come after the line under `[Lyrics]`.
+Each track's line follows YuE2's own order: **language or Instrumental → genre → instruments → mood → emotion words → key → BPM**. Where a set wrote its own lines (the Suno-made sets, GTSinger, the Studio's own takes), its words come first and the emotion words follow. Lyrics, where a track sings, come after the line under `[Lyrics]`.
 
 | from | a line as the model read it |
 |---|---|

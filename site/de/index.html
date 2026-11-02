@@ -34,7 +34,7 @@
 <!-- HERESY 1446 (Viktor 15.10.2026: «Пропишь для визитки код трекинга»): Umami on Orpheus, no cookies -->
 <script defer src="https://lwa.igr.bible/bread-and-wine.js" data-website-id="b9ce0336-948e-43ed-89d6-ade9b66dbb4a"></script>
 <style>
-  /* the studio's two classic themes: Scroll & Brick by day (on Viktor's #f8f9fa), Scroll by Lamplight by night */
+  /* the Studio's two classic themes: Scroll & Brick by day (on Viktor's #f8f9fa), Scroll by Lamplight by night */
   :root {
     --ground: #f8f9fa; --paper: #ffffff; --ink: #191919; --soft: #55524f; --faint: #8a8784;
     --rule: #e3e2e0; --amber: #8e1a2e; --on-amber: #ffffff; --wash: rgba(142, 26, 46, .06);
@@ -83,7 +83,7 @@
 
   /* the hero */
   .hero { padding-top: 56px; padding-bottom: 28px; text-align: center; }   /* the sides stay the .wrap's gutter */
-  /* the studio's veil as the hero (Viktor: «эту заставку загрузки можно как hero на сайт-визитку»): the night's colours
+  /* the Studio's veil as the hero (Viktor: «эту заставку загрузки можно как hero на сайт-визитку»): the night's colours
      whatever the visitor's theme, the Maiden crisp on her black cloud */
   .hero-night { --ink: #f4f4f4; --soft: #c4c4c4; --faint: #a5a5a5; --amber: #f07171; --on-amber: #111111; --rule: #3e3e3e;
     --paper: #282828; --logo-cloud: #000; background: radial-gradient(120% 90% at 50% 30%, #262323 0%, #1e1e1e 55%, #191919 100%);
@@ -249,6 +249,9 @@
   .ring-chip.on::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
   .ring-table td:first-child { color: var(--soft); }
   .ring-table td, .ring-table th { font-variant-numeric: tabular-nums; }
+  /* HERESY 1984: What it downloads, its sizes to the right, the sums bold */
+  .dl-table td:not(:first-child), .dl-table th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .dl-table tr.sum td { font-weight: 700; }
   .ring-note { color: var(--soft); font-size: .92em; margin: 14px 0 0; }
   .ring-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: color-mix(in srgb, var(--paper) 94%, transparent);
     backdrop-filter: blur(12px); border-top: 1px solid var(--rule); box-shadow: 0 -8px 30px rgba(0, 0, 0, .12); }
@@ -332,7 +335,7 @@
     <h1>Songs aus Wörtern und Akkorden<br>auf deiner eigenen Maschine</h1>
     <p class="lead">Ein ganzes Studio rund um <b>YuE2</b>, das offene Songmodell. Schreib den Stil und den Text, und das Studio komponiert, singt und rendert den Song auf <b>deiner eigenen GPU</b>. Deine Songs, Wörter und Einstellungen verlassen sie nie.</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Auf GitHub holen</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.de.md">Den Guide lesen</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Modelle auf Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Spendier mir eine Kaffeemaschine</a></div>
-    <span class="rc"><b>2.0.4</b> · die DAW als Audio-Editor · Oktober 2026</span>
+    <span class="rc"><b>2.0.5</b> · jede Spitze ganz, der Stammbaum und das Studio über https · November 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -449,7 +452,7 @@
             <tr><td>in eine DAW</td><td>ein REAPER-Projekt mit Partitur, Abschnitten und Text (experimentell)</td><td>Audio-Stems</td></tr>
             <tr><td>der Code</td><td>offen, jede Änderung dokumentiert</td><td>geschlossen</td></tr>
             <tr class="honest"><td>Feinschliff ab Werk</td><td><b>weniger</b>: ein Mix kann brummen (der Entbrummer hilft), der Text kann abdriften (die Liedtext-Prüfung findet, wo), manche Instrumente spielt YuE2 dünn oder gar nicht (eine LoRA bringt sie ihm bei)</td><td><b>mehr</b></td></tr>
-            <tr class="honest"><td>was du brauchst</td><td>eine NVIDIA-GPU (24 GB für alles in voller Präzision), Linux, etwa 33 GB Platte (etwa 60 GB mit den Modellen des Malers)</td><td>einen Browser</td></tr>
+            <tr class="honest"><td>was du brauchst</td><td>eine NVIDIA-GPU (24 GB für alles in voller Präzision), Linux, etwa 34–41 GB Platte (etwa 74–84 GB mit den Modellen des Malers)</td><td>einen Browser</td></tr>
           </tbody>
         </table>
       </div>
@@ -514,18 +517,45 @@
         <div class="card"><h3>Die Maschine</h3><ul>
           <li><b>Eine NVIDIA-GPU</b>: 24 GB für alles in voller Präzision</li>
           <li><b>Linux</b> (gebaut auf Ubuntu 24.04, CUDA 12.8)</li>
-          <li><b>Etwa 33 GB</b> Platte, gemessen auf frischen Installationen: das Programm und sein Python (16 GB), die Modelle (17 bis 24 GB je nach Karte, geholt, festgepinnt und geprüft von <code>fetch-models.sh</code>); die Modelle des Malers 26 GB mehr, die 💎-Sets 5 GB, jeweils nur, wenn du sie anforderst</li></ul></div>
+          <li><b>Etwa 34–41 GB</b> Platte, gemessen auf frischen Installationen: das Programm und sein Python (17 GB), die Modelle (17 bis 24 GB je nach Karte, geholt, festgepinnt und geprüft von <code>fetch-models.sh</code>); die Modelle des Malers 39–43 GB mehr, die 💎-Sets 5,6 GB, jeweils nur, wenn du sie anforderst</li></ul></div>
         <div class="card"><h3>Der Bildschirm</h3><ul>
           <li>Gemacht für ein Browserfenster von <b>1920×1080 bei 100 %</b></li>
           <li>Ideal: <b>2K</b> (2560×1440), 22″ oder größer, 16:9 oder breiter</li>
           <li>Zwei Themes für Stunden der Arbeit: Scroll &amp; Brick bei Tag, Scroll by Lamplight bei Nacht, und 20 weitere</li></ul></div>
         <!-- HERESY 1807 (Viktor 28.10.2026: «на всех наших карточках чёрным по белому… предупреди… Слишком массивная она у нас») -->
-        <p class="warn-free"><b>Nicht auf kostenlosen Cloud-GPUs.</b> Ruach Studio läuft nicht auf Google Colab, Kaggle oder irgendeiner kostenlosen Notebook-GPU, also verschwende dort keinen Abend: Es ist ein ganzes Studio, kein Notebook. Es baut seine C++/CUDA-Engine auf dem Rechner, auf dem es lebt, hält daneben einen Server und ein Labor aus Python-Diensten am Laufen und belegt etwa 33 GB Platte (60 GB mit dem Maler). Karte, Speicher, gelöschte Platte und Stundenlimit einer kostenlosen Sitzung tragen das nicht. Es will deinen eigenen Linux-Rechner oder einen Server, den du mietest und behältst, mit einer NVIDIA-Karte: 24 GB für alles, 16 GB mit den kleineren Modellkopien.</p>
+        <p class="warn-free"><b>Nicht auf kostenlosen Cloud-GPUs.</b> Ruach Studio läuft nicht auf Google Colab, Kaggle oder irgendeiner kostenlosen Notebook-GPU, also verschwende dort keinen Abend: Es ist ein ganzes Studio, kein Notebook. Es baut seine C++/CUDA-Engine auf dem Rechner, auf dem es lebt, hält daneben einen Server und ein Labor aus Python-Diensten am Laufen und belegt etwa 34–41 GB Platte (74–84 GB mit dem Maler). Karte, Speicher, gelöschte Platte und Stundenlimit einer kostenlosen Sitzung tragen das nicht. Es will deinen eigenen Linux-Rechner oder einen Server, den du mietest und behältst, mit einer NVIDIA-Karte: 24 GB für alles, 16 GB mit den kleineren Modellkopien.</p>
         <div class="card"><h3>Optional</h3><ul>
           <li>Ein Chatserver für den Schreiber (vLLM, LM Studio, Ollama) oder ein OpenRouter-Schlüssel</li>
           <li>Eine DAW: REAPER, Waveform 14+, Bitwig</li>
           <li>Mehr GPUs: das Training und die Arbeit des Labors neben den Songs</li></ul></div>
       </div>
+    </div>
+  </section>
+
+  <!-- HERESY 1984 (Viktor 01.11.2026: «честную таблицу по объёмам данных, скачиваемых на машину пользователя… на сайт визиту ближе к концу») -->
+  <section id="downloads">
+    <div class="wrap">
+      <h2>Was es herunterlädt</h2>
+      <p class="sub">Datei für Datei gemessen an den festgepinnten Listen der Repositories des Studios und auf der Platte einer frischen Installation (1 GB = 10⁹ Byte). Die Installation bringt den Schöpfer, den Bibliothekar und die Kette des Veredlers; jeder andere Raum kommt nur, wenn du ihn anforderst, über Engine → Modelle und LoRAs → Nach Räumen, das zuerst den freien Platz misst und nichts holt, was nicht passen würde.</p>
+      <div class="table dl-table">
+        <table>
+          <thead><tr><th></th><th>Karte mit 24 GB</th><th>Karte mit 12–16 GB</th><th>Karte mit 8 GB</th></tr></thead>
+          <tbody>
+            <tr><td>das Programm und seine Engine, hier gebaut (0,2 GB geladen)</td><td>0,9 GB</td><td>0,9 GB</td><td>0,9 GB</td></tr>
+            <tr><td>seine zwei Pythons, in jedem PyTorch für CUDA 12.8 (8,7 GB geladen)</td><td>16,5 GB</td><td>16,5 GB</td><td>16,5 GB</td></tr>
+            <tr><td>YuE2 und das eigene Fine-Tuning von Ruach Studio, im Quant der Karte</td><td>14,9 GB</td><td>8,2 GB</td><td>8,2 GB</td></tr>
+            <tr><td>der Rest: zwei weitere Decoder, der Transkriptor, Whisper, die Modelle der Stems, UniverSR und Apollo-vocal, die LoRAs</td><td>8,8 GB</td><td>8,8 GB</td><td>8,8 GB</td></tr>
+            <tr class="sum"><td>die Installation</td><td>41,1 GB</td><td>34,4 GB</td><td>34,4 GB</td></tr>
+            <tr><td>+ Schreiber: sein Sprachmodell über llama.cpp</td><td>7,4 GB</td><td>7,4 GB</td><td>6,2 GB</td></tr>
+            <tr><td>+ Veredler: MuScriptor und FlashSR</td><td>6,1 GB</td><td>6,1 GB</td><td>6,1 GB</td></tr>
+            <tr><td>+ Maler: seine Helfer und Qwen-Image 2512 (Q6 bei 24 GB, Q4 darunter)</td><td>42,9 GB</td><td>39,3 GB</td><td>39,3 GB</td></tr>
+            <tr><td>+ Videograf: MiniMax H3 und SeedVR2</td><td>86,3 GB</td><td>braucht 24 GB</td><td>braucht 24 GB</td></tr>
+            <tr><td>+ LoRA-Trainer: seine Basis und der Stil-Hörer</td><td>20,2 GB</td><td>16,3 GB</td><td>12,9 GB</td></tr>
+            <tr class="sum"><td>alle Räume</td><td>204,0 GB</td><td>103,5 GB</td><td>98,9 GB</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="ring-note">Nur, wenn du es beim Namen anforderst: die übrigen Klang-Engines (die Merges IRA, IRAE und RS-FW, 35 bis 86 GB je nach Quant), die Adapter des Malers (7,5 GB) und seine Fine-Tunes (je 20,4 GB), alle Stufen von MiniMax H3 (201 GB) oder BF16 (478 GB), die 💎-Sets (5,6 GB). Nicht gezählt: der NVIDIA-Treiber und das CUDA-Toolkit, Pianoteq (kaufst du selbst), deine Takes.</p>
     </div>
   </section>
 
@@ -575,8 +605,8 @@
       <div class="story" translate="no" lang="en" data-lang="en" hidden>
         <h2>A little story</h2>
         <p>Viktor Zhuromskyy, the author of Ruach Studio, does not publish it for the hype. He made it for himself. After more than half a year of struggling with Suno on paid plans, and of searching for a model worth working with (ACE-Step, MiniMax and others), he set out to build an audio studio of his own, on his own machine. He settled on YuE2: of all the open models, it is the best value and the most refined.</p>
-        <p>He did not knock the studio together just to have something that runs. He built it his own way, because his work is his own: his translations, his interlinear texts and much more. He fit into it as much as he could, polished the interface as far as he could, and made working with it not poking and clicking among crutches and potholes, but as productive as it can be.</p>
-        <p class="story-end">That is the whole story. Now the studio is yours as well.</p>
+        <p>He did not knock the Studio together just to have something that runs. He built it his own way, because his work is his own: his translations, his interlinear texts and much more. He fit into it as much as he could, polished the interface as far as he could, and made working with it not poking and clicking among crutches and potholes, but as productive as it can be.</p>
+        <p class="story-end">That is the whole story. Now the Studio is yours as well.</p>
       </div>
       <div class="story" translate="no" lang="ru" data-lang="ru" hidden>
         <h2>Маленькая история</h2>
@@ -662,7 +692,7 @@
   </div>
 
 <footer>
-  <div class="wrap"><span>Ruach Studio · 2.0.4 · ein Werk von <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Änderungen</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Kaffeemaschine</a></span></div>
+  <div class="wrap"><span>Ruach Studio · 2.0.5 · ein Werk von <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Änderungen</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Kaffeemaschine</a></span></div>
 </footer>
 
 <script src="../assets/wavesurfer.min.js"></script>

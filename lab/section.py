@@ -236,7 +236,7 @@ def _bar(abc):
 
 def _voice(wav, a, b):
     """HERESY 1717: where the voice sings in a–b of a take: vocal_rest.py beside this file, in a process of its own (torch never in the lab's)
-    on the processor, in the studio's environment (setup's py, as stems_job's): [[start, end], …], or the reason it could not say"""
+    on the processor, in the Studio's environment (setup's py, as stems_job's): [[start, end], …], or the reason it could not say"""
     import os, subprocess, sys as _sys
     try:
         p = subprocess.run([str(P.get("py") or _sys.executable), os.path.join(os.path.dirname(os.path.abspath(__file__)), "vocal_rest.py"), str(wav),

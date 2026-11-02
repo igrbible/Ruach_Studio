@@ -1,9 +1,9 @@
 """HERESY 1555 · Voice upscale (the Refiner's open order of 15.10.2026, «Vocal upscale per stem»): the separators work at 44.1 kHz and
 dull a voice's top (its air, its breath, the edge of its consonants); UniverSR draws it anew stem by stem, the voices only, each at
-the mode asked, the original kept below the cutoff sample for sample (the studio's own upscale_job.py, one variant), then back at the
+the mode asked, the original kept below the cutoff sample for sample (the Studio's own upscale_job.py, one variant), then back at the
 set's own rate and length so the DAW takes it as a version of its stem. The rest of the set is left as it is.
 HERESY 1583 (Viktor 19.10.2026, after the A/B on Krik's voice: «тройка в среднем и громчайший чистят отдельно в своём ракурсе… связка
-даёт баланс»): the bundle. UniverSR, Apollo-vocal and FlashSR each draw the top (upbundle_job.py fetches the two from the studio's own models or their authors on
+даёт баланс»): the bundle. UniverSR, Apollo-vocal and FlashSR each draw the top (upbundle_job.py fetches the two from the Studio's own models or their authors on
 first use), each is joined to the original below the cut, and above it they are blended as UVR blends separators: «avg» the complex
 average of the three (measured closest to a voice's true top, 9.5 dB LSD against 11.6–13.9 alone), «max» the loudest of them in each
 cell (the brightest), «air» the average up to 16 kHz and the loudest above it; «top» lifts or lowers what was drawn.

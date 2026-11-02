@@ -5,7 +5,7 @@
 #   ./start.sh                      the backbone settings.json picks (else Ruach Studio's default, RS-FW 2.4x0.75; else the first one present)
 #   YUE2CPP_QUANT=Q8_0 ./start.sh   a given backbone copy, if present
 #   YUE2CPP_PORT=7778 ./start.sh   another port
-#   YUE2CPP_GPU=1 ./start.sh        another card than user/gpus.json gives the studio
+#   YUE2CPP_GPU=1 ./start.sh        another card than user/gpus.json gives the Studio
 #   YUE2CPP_BATCH=1 ./start.sh      one song per pass instead of 2 (a GPU with 12 GB or less)
 #   YUE2CPP_DRY_RUN=1 ./start.sh    only print the server command it would run
 #   YUE2CPP_FP16_MATMUL=0 ./start.sh   keep BF16 maths on an RTX 20 / Volta card (the matmul block below)
@@ -23,7 +23,7 @@ export TORCH_CUDA_ARCH_LIST="8.6"
 export PYTHONUNBUFFERED=1
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HPY="$ROOT/.venv/bin/python"; [ -x "$HPY" ] || HPY=python3   # HERESY 1080: the studio's one environment
+HPY="$ROOT/.venv/bin/python"; [ -x "$HPY" ] || HPY=python3   # HERESY 1080: the Studio's one environment
 # HERESY 1656 (Viktor 21.10.2026: «выпускай бета поддержку для интеловских карт»): Intel Arc (beta). YUE2_ENGINE=sycl, or a SYCL engine with no
 # CUDA one beside it (./build.sh --sycl), runs build/build-sycl/yue-server under oneAPI's runtime, NVIDIA's guard and card left out.
 # SYCL_CACHE_PERSISTENT stays 0: with the kernels' disk cache, libsycl (oneAPI 2026.1) dies at the first kernel it runs, a fresh cache
@@ -35,7 +35,7 @@ if [ "${YUE2_ENGINE:-}" = sycl ] || { [ ! -f "$ROOT/build/build/yue-server" ] &&
     export ONEAPI_DEVICE_SELECTOR="${ONEAPI_DEVICE_SELECTOR:-level_zero:*}" SYCL_CACHE_PERSISTENT=0
     case "${GGML_BACKEND:-}" in SYCL*|CPU*|"") ;; *) unset GGML_BACKEND ;; esac
 fi
-# HERESY 1091: the studio's card (Engine -> GPUs in the page writes user/gpus.json); YUE2CPP_GPU overrides; 0 by default
+# HERESY 1091: the Studio's card (Engine -> GPUs in the page writes user/gpus.json); YUE2CPP_GPU overrides; 0 by default
 STUDIO_GPU="${YUE2CPP_GPU:-}"
 if [ -z "$STUDIO_GPU" ] && [ -f "$ROOT/user/gpus.json" ]; then
     STUDIO_GPU=$("$HPY" -c 'import json, sys; print(int(json.load(open(sys.argv[1])).get("studio", 0)))' "$ROOT/user/gpus.json" 2>/dev/null || true)
@@ -44,7 +44,7 @@ fi
 # computes on the first card by itself; another studio card (Engine -> GPUs, or YUE2CPP_GPU) is named to it as
 # GGML_BACKEND=CUDAn (CUDA_DEVICE_ORDER=PCI_BUS_ID keeps n = nvidia-smi's number). Measured 02.10.2026: with every
 # card visible the engine opens a context of 256 MiB on each card as it lists them (the page asks for that list).
-# HERESY 1112, 1113: the guard: the studio's card only with no heavy stranger on it (a service above 2 GiB, a vLLM's
+# HERESY 1112, 1113: the guard: the Studio's card only with no heavy stranger on it (a service above 2 GiB, a vLLM's
 # kind; the desktop's small ones are fine) and 8 GB free for the weights and their cache; else the freest card that
 # passes; none passes: the saved card, said loudly (the engine may run out of memory)
 GUARD_SAY=""
@@ -165,7 +165,7 @@ TTY=0; [ -t 1 ] && TTY=1      # tested here: inside $(...) stdout is a pipe
 link() { if [ "$TTY" = 1 ]; then printf '\e]8;;%s\e\\%s\e]8;;\e\\' "$1" "$1"; else printf '%s' "$1"; fi; }
 echo "${B}Ruach Studio $(cat "$ROOT/VERSION" 2>/dev/null || echo "?")${X} · $(basename "$ROOT")  ${G}$(link "$URL")${X}"   # HERESY 1136
 # HERESY 1433 (Viktor: «пропиши жирно, чтобы юзеры знали, на какой порт коннектиться»): the port said on its own, bold
-echo "${B}The studio's port: $PORT${X}  ${D}·${X} this machine: ${G}$(link "http://127.0.0.1:$PORT")${X}  ${D}·${X} your network: ${G}$(link "$URL")${X}"
+echo "${B}The Studio's port: $PORT${X}  ${D}·${X} this machine: ${G}$(link "http://127.0.0.1:$PORT")${X}  ${D}·${X} your network: ${G}$(link "$URL")${X}"
 [ -n "$GUARD_SAY" ] && echo "${Y}guard${X} $GUARD_SAY"
 if [ $SYCL = 1 ]; then
     ARC=$(sycl-ls 2>/dev/null | grep -m1 '^\[level_zero:gpu\]' | sed -E 's/.*Level-Zero[^,]*, //; s/ [0-9]+\.[0-9.]+ \[.*//' || true)

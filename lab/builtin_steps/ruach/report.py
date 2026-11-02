@@ -1,13 +1,17 @@
 """HERESY 1557 · Before and after (Viktor 18.10.2026, the ideas he approved: «отчёт до/после на каждую ветку»; after his first print
 through the lamp: «Нужны твои замеры и сравнение спектрограмм, в доказательство»). A branch of the tree against what it was made from:
 the file a step took (its manifest's source; a set of stems or a mix of one goes back to the file the set was split from; the take when
-nothing else). Both measured the same way: integrated loudness, true peak, loudness range (Plenio's BS.1770), crest, width (side over
-mid), correlation, the share of four bands; the average spectra in sixth-octave bands at equal loudness and their difference; the
-short-term loudness through the song. A picture of it and the numbers as a page beside it. The take itself has no before: it is
-measured alone.
-    report.py AUDIO OUTDIR PARAMS.json"""
+nothing else). The take itself has no before: it is measured alone (integrated loudness, true peak, loudness range, crest, width,
+correlation, the share of four bands, the average spectrum, the short-term loudness; a picture and a page).
+HERESY 1991 (Viktor 01.11.2026: «заказываю тебе ноду анализатора ДО и ПОСЛЕ… со спектрограммами, разницами в сравнительном наложении
+спектрограмм, замеры до и после, разница. Вердикт, что и как, и куда пошло… ей должно быть похер, откуда брать источники. Два аудио входа на
+ней»): its second input, Before: what it was made from when nothing is chosen, else any file of the tree or another take (an import: a print
+through gear, a reference). The two are measured by lab/ab_compare.py: found where they meet, compared at equal loudness, the spectrograms of
+both and their difference, the measures and the dynamics, what no filter makes from the before, a verdict in words.
+    report.py AUDIO OUTDIR PARAMS.json   (PARAMS: before = its path and before_name, given by the lab; empty: what it was made from)"""
 import json
 import math
+import os
 import sys
 import time
 from pathlib import Path
@@ -112,111 +116,85 @@ def read(p):
     return x[:, :2], sr
 
 
-def clock(s):
-    return f"{int(s) // 60}:{int(s) % 60:02d}"
-
-
-def main():
-    t0 = time.time()
-    audio, outdir = Path(sys.argv[1]), Path(sys.argv[2])
-    take, rel = take_of(audio)
-    before = before_of(take, rel)
+def alone(audio, rel, outdir, t0):
+    """The take itself: nothing before it, measured alone."""
     x, sr = read(audio)
     a = {"file": rel, **measures(x, sr)}
     fa, pa = spectrum(x, sr)
     a["bands"] = shares(fa, pa)
     sa = short_term(x, sr)
-    b = None
-    if before is not None:
-        y, sry = read(before)
-        b = {"file": before.relative_to(take.resolve()).as_posix() if take.resolve() in before.parents else before.name, **measures(y, sry)}
-        fb, pb = spectrum(y, sry)
-        b["bands"] = shares(fb, pb)
-        sb = short_term(y, sry)
     ca, da = sixth(fa, pa)
-    # equal loudness: each spectrum referred to its own loudness, so the difference is of shape, not of level
-    da_eq = da - (a["lufs"] or 0)
-    if b:
-        cb, db_ = sixth(fb, pb)
-        n = min(len(ca), len(cb))
-        diff = da_eq[:n] - (db_[:n] - (b["lufs"] or 0))
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     plt.rcParams.update({"font.size": 10, "axes.grid": True, "grid.alpha": 0.25, "axes.spines.top": False, "axes.spines.right": False})
-    rows = 3 if b else 2
-    fig, ax = plt.subplots(rows, 1, figsize=(12, 3.2 * rows), dpi=110)
-    k = 0
-    ax[k].semilogx(ca, da_eq, color="#b5163a", lw=1.6, label="after" if b else "this file")
-    if b:
-        ax[k].semilogx(cb, db_ - (b["lufs"] or 0), color="#6b7280", lw=1.4, label="before")
-    ax[k].set_xlim(25, 20000)
-    ax[k].set_ylabel("dB (equal loudness)")
-    ax[k].set_title("Average spectrum, sixth-octave bands")
-    ax[k].legend(loc="lower left")
-    k += 1
-    if b:
-        ax[k].semilogx(ca[:n], diff, color="#b5163a", lw=1.6)
-        ax[k].axhline(0, color="#111", lw=0.8)
-        ax[k].fill_between(ca[:n], -1, 1, color="#9ca3af", alpha=0.18, lw=0)
-        ax[k].set_xlim(25, 20000)
-        lim = max(3.0, float(np.ceil(np.abs(diff).max() + 0.5)))
-        ax[k].set_ylim(-lim, lim)
-        ax[k].set_ylabel("after − before, dB")
-        ax[k].set_title("What changed in the balance (equal loudness; the grey band is ±1 dB)")
-        k += 1
-    t = np.arange(len(sa))
-    ax[k].plot(t, sa, color="#b5163a", lw=1.2, label="after" if b else "this file")
-    if b:
-        ax[k].plot(np.arange(len(sb)), sb, color="#6b7280", lw=1.0, label="before")
-    ax[k].set_ylim(max(-50, float(np.percentile(sa, 2)) - 6), float(np.max(sa)) + 3)
-    ax[k].set_xlabel("seconds")
-    ax[k].set_ylabel("LUFS (3 s)")
-    ax[k].set_title("Short-term loudness through the song")
-    ax[k].legend(loc="lower left")
+    fig, ax = plt.subplots(2, 1, figsize=(12, 6.4), dpi=110)
+    ax[0].semilogx(ca, da - (a["lufs"] or 0), color="#b5163a", lw=1.6, label="this file")
+    ax[0].set_xlim(25, 20000)
+    ax[0].set_ylabel("dB (equal loudness)")
+    ax[0].set_title("Average spectrum, sixth-octave bands")
+    ax[0].legend(loc="lower left")
+    ax[1].plot(np.arange(len(sa)), sa, color="#b5163a", lw=1.2, label="this file")
+    ax[1].set_ylim(max(-50, float(np.percentile(sa, 2)) - 6), float(np.max(sa)) + 3)
+    ax[1].set_xlabel("seconds")
+    ax[1].set_ylabel("LUFS (3 s)")
+    ax[1].set_title("Short-term loudness through the song")
+    ax[1].legend(loc="lower left")
     fig.tight_layout()
     fig.savefig(str(outdir / "report.png"))
     plt.close(fig)
-
-    def row(name, key, unit):
-        va = a.get(key)
-        if not b:
-            return f"| {name} | {'—' if va is None else f'{va:.2f}'} {unit} |"
-        vb = b.get(key)
-        d = "—" if va is None or vb is None else f"{va - vb:+.2f}"
-        return f"| {name} | {'—' if vb is None else f'{vb:.2f}'} | {'—' if va is None else f'{va:.2f}'} | {d} | {unit} |"
-    lines = [f"# Before and after · {rel}", ""]
-    if b:
-        lines += [f"Before: `{b['file']}`  ", f"After: `{a['file']}`", "", "| | before | after | change | |", "|---|---|---|---|---|"]
-    else:
-        lines += ["The take itself: nothing before it, measured alone.", "", "| | | |", "|---|---|---|"]
-    lines += [row("Integrated loudness", "lufs", "LUFS"), row("True peak", "true_peak_dbtp", "dBTP"), row("Loudness range", "lra_lu", "LU"),
-              row("Crest", "crest_db", "dB"), row("Width (side over mid)", "width_db", "dB"), row("Correlation", "correlation", "")]
-    for name, _lo, _hi in BANDS:
-        va = a["bands"][name]
-        lines.append(f"| Share of the {name} | {b['bands'][name]:.2f} | {va:.2f} | {va - b['bands'][name]:+.2f} | dB |" if b else f"| Share of the {name} | {va:.2f} dB |")
-    said = []
-    if b:
-        lines += ["", "**The balance at equal loudness** (sixth-octave bands, after − before):", ""]
-        big = sorted(range(n), key=lambda i: -abs(diff[i]))[:6]
-        for i in sorted(big):
-            lines.append(f"- {ca[i]:.0f} Hz: {diff[i]:+.2f} dB")
-        if a["lufs"] is not None and b["lufs"] is not None:
-            said.append(f"{a['lufs'] - b['lufs']:+.1f} LU")
-        if a["true_peak_dbtp"] is not None and b["true_peak_dbtp"] is not None:
-            said.append(f"true peak {b['true_peak_dbtp']:.1f} → {a['true_peak_dbtp']:.1f} dBTP")
-        i = int(np.argmax(np.abs(diff)))
-        said.append(f"most at {ca[i]:.0f} Hz ({diff[i]:+.1f} dB)")
-        if a.get("crest_db") is not None and b.get("crest_db") is not None:
-            said.append(f"crest {b['crest_db']:.1f} → {a['crest_db']:.1f} dB")
-        summary = "against " + b["file"] + ": " + ", ".join(said)
-    else:
-        summary = f"{a['lufs']} LUFS, true peak {a['true_peak_dbtp']} dBTP, range {a['lra_lu']} LU"
-    lines += [""]
+    rows = [("Integrated loudness", "lufs", "LUFS"), ("True peak", "true_peak_dbtp", "dBTP"), ("Loudness range", "lra_lu", "LU"),
+            ("Crest", "crest_db", "dB"), ("Width (side over mid)", "width_db", "dB"), ("Correlation", "correlation", "")]
+    lines = [f"# Before and after · {rel}", "", "The take itself: nothing before it, measured alone.", "", "| | | |", "|---|---|---|"]
+    lines += [f"| {n} | {'—' if a.get(k) is None else f'{a[k]:.2f}'} {u} |" for n, k, u in rows]
+    lines += [f"| Share of the {name} | {a['bands'][name]:.2f} dB |" for name, _lo, _hi in BANDS] + [""]
     (outdir / "report.md").write_text("\n".join(lines), encoding="utf-8")
-    secs = round(len(x) / sr, 2)
     print(json.dumps({"files": [{"name": "Before and after", "file": "report.md"}, {"name": "Before and after (picture)", "file": "report.png"}],
-                      "measure": {"after": a, "before": b}, "summary": summary, "took": round(time.time() - t0, 1), "seconds": secs}))
+                      "measure": {"after": a, "before": None}, "summary": f"{a['lufs']} LUFS, true peak {a['true_peak_dbtp']} dBTP, range {a['lra_lu']} LU",
+                      "took": round(time.time() - t0, 1), "seconds": round(len(x) / sr, 2)}))
+
+
+def against(audio, rel, before, bname, outdir, t0):
+    """HERESY 1991: the two through ab_compare: the page, the measures' picture, the spectrograms; the four bands' shares as 1557 gave them."""
+    import ab_compare as ab
+    R = ab.compare(before, audio, (bname, rel), outdir)
+    os.replace(outdir / "compare.md", outdir / "report.md")
+    os.replace(outdir / "measures.png", outdir / "report.png")
+    x, sr = read(audio)
+    y, sry = read(before)
+    fa, pa = spectrum(x, sr)
+    fb, pb = spectrum(y, sry)
+    a, b = {"file": rel, **R["after"], "bands": shares(fa, pa)}, {"file": bname, **R["before"], "bands": shares(fb, pb)}
+    t, i = R["tone"], int(np.argmax(np.abs(R["tone"]["db"]))) if R["tone"]["db"] else 0
+    said = [f"{R['level_db']:+.1f} LU"]
+    if a.get("true_peak_dbtp") is not None and b.get("true_peak_dbtp") is not None:
+        said.append(f"true peak {b['true_peak_dbtp']:.1f} → {a['true_peak_dbtp']:.1f} dBTP")
+    if t["db"]:
+        said.append(f"most at {t['centres'][i]:.0f} Hz ({t['db'][i]:+.1f} dB)")
+    said.append(f"crest {b['crest_db']:.1f} → {a['crest_db']:.1f} dB")
+    d = R["dynamics"]
+    said.append(f"loud moments {d['glue_db']:+.1f} dB, peaks {d['peak_shave_db']:+.1f} dB")
+    print(json.dumps({"files": [{"name": "Before and after", "file": "report.md"}, {"name": "Before and after (measures)", "file": "report.png"},
+                                {"name": "Before and after (spectrograms)", "file": "spectrograms.jpg"}],
+                      "measure": {"after": a, "before": b, "level_db": R["level_db"], "lag_ms": R["lag_ms"], "polarity": R["polarity"], "likeness": R["likeness"],
+                                  "zones_db": R["zones_db"], "glue_db": d["glue_db"], "peak_shave_db": d["peak_shave_db"], "nonlinear_db": R["nonlinear"]["whole_db"],
+                                  "verdict": [ab.said(s) for s in R["verdict"]]},
+                      "summary": ("against " + bname + ": " + ", ".join(said))[:300], "took": round(time.time() - t0, 1), "seconds": R["seconds"]}))
+
+
+def main():
+    t0 = time.time()
+    audio, outdir = Path(sys.argv[1]), Path(sys.argv[2])
+    p = {}
+    if len(sys.argv) > 3 and Path(sys.argv[3]).is_file():
+        p = json.load(open(sys.argv[3], encoding="utf-8"))
+    take, rel = take_of(audio)
+    given = str(p.get("before") or "")                 # HERESY 1991: the second input, chosen; else what it was made from
+    before = Path(given) if given else before_of(take, rel)
+    if before is None:
+        return alone(audio, rel, outdir, t0)
+    bname = str(p.get("before_name") or "") or (before.resolve().relative_to(take.resolve()).as_posix() if take.resolve() in before.resolve().parents else before.name)
+    against(audio, rel, before, bname, outdir, t0)
 
 
 if __name__ == "__main__":

@@ -34,7 +34,7 @@
 <!-- HERESY 1446 (Viktor 15.10.2026: «Пропишь для визитки код трекинга»): Umami on Orpheus, no cookies -->
 <script defer src="https://lwa.igr.bible/bread-and-wine.js" data-website-id="b9ce0336-948e-43ed-89d6-ade9b66dbb4a"></script>
 <style>
-  /* the studio's two classic themes: Scroll & Brick by day (on Viktor's #f8f9fa), Scroll by Lamplight by night */
+  /* the Studio's two classic themes: Scroll & Brick by day (on Viktor's #f8f9fa), Scroll by Lamplight by night */
   :root {
     --ground: #f8f9fa; --paper: #ffffff; --ink: #191919; --soft: #55524f; --faint: #8a8784;
     --rule: #e3e2e0; --amber: #8e1a2e; --on-amber: #ffffff; --wash: rgba(142, 26, 46, .06);
@@ -83,7 +83,7 @@
 
   /* the hero */
   .hero { padding-top: 56px; padding-bottom: 28px; text-align: center; }   /* the sides stay the .wrap's gutter */
-  /* the studio's veil as the hero (Viktor: «эту заставку загрузки можно как hero на сайт-визитку»): the night's colours
+  /* the Studio's veil as the hero (Viktor: «эту заставку загрузки можно как hero на сайт-визитку»): the night's colours
      whatever the visitor's theme, the Maiden crisp on her black cloud */
   .hero-night { --ink: #f4f4f4; --soft: #c4c4c4; --faint: #a5a5a5; --amber: #f07171; --on-amber: #111111; --rule: #3e3e3e;
     --paper: #282828; --logo-cloud: #000; background: radial-gradient(120% 90% at 50% 30%, #262323 0%, #1e1e1e 55%, #191919 100%);
@@ -249,6 +249,9 @@
   .ring-chip.on::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
   .ring-table td:first-child { color: var(--soft); }
   .ring-table td, .ring-table th { font-variant-numeric: tabular-nums; }
+  /* HERESY 1984: What it downloads, its sizes to the right, the sums bold */
+  .dl-table td:not(:first-child), .dl-table th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .dl-table tr.sum td { font-weight: 700; }
   .ring-note { color: var(--soft); font-size: .92em; margin: 14px 0 0; }
   .ring-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: color-mix(in srgb, var(--paper) 94%, transparent);
     backdrop-filter: blur(12px); border-top: 1px solid var(--rule); box-shadow: 0 -8px 30px rgba(0, 0, 0, .12); }
@@ -333,7 +336,7 @@
     <h1>言葉とコードから歌を<br>自分のマシンで</h1>
     <p class="lead">オープンな歌モデル <b>YuE2</b> を中心にした本格的なスタジオ。スタイルと歌詞を書けば、スタジオが<b>あなた自身の GPU</b> で作曲し、歌い、曲をレンダリングします。あなたの歌、言葉、設定がそこから出ることはありません。</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">GitHub で入手</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.ja.md">ガイドを読む</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face のモデル</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ コーヒーマシンをおごってください</a></div>
-    <span class="rc"><b>2.0.4</b> · DAW をオーディオエディターのように · 2026 年 10 月</span>
+    <span class="rc"><b>2.0.5</b> · ピークはすべてそのまま、系譜ツリーと https のスタジオ · 2026 年 11 月</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -450,7 +453,7 @@
             <tr><td>DAW へ</td><td>楽譜、セクション、歌詞を含む REAPER プロジェクト（実験的）</td><td>オーディオステム</td></tr>
             <tr><td>コード</td><td>オープン、すべての変更を記録</td><td>クローズド</td></tr>
             <tr class="honest"><td>箱から出してすぐの仕上がり</td><td><b>劣る</b>：ミックスがバズることがある（バズ除去が助けます）、歌詞がずれることがある（歌詞チェックが場所を見つけます）、YuE2 が薄くしか、または全く弾けない楽器がある（LoRA が教えます）</td><td><b>勝る</b></td></tr>
-            <tr class="honest"><td>必要なもの</td><td>NVIDIA の GPU（フル精度ですべてに 24 GB）、Linux、ディスク約 33 GB（絵師のモデル込みで約 60 GB）</td><td>ブラウザー</td></tr>
+            <tr class="honest"><td>必要なもの</td><td>NVIDIA の GPU（フル精度ですべてに 24 GB）、Linux、ディスク約 34–41 GB（絵師のモデル込みで約 74–84 GB）</td><td>ブラウザー</td></tr>
           </tbody>
         </table>
       </div>
@@ -515,18 +518,45 @@
         <div class="card"><h3>マシン</h3><ul>
           <li><b>NVIDIA の GPU</b>：フル精度ですべてに 24 GB</li>
           <li><b>Linux</b>（Ubuntu 24.04、CUDA 12.8 で作成）</li>
-          <li>ディスク<b>約 33 GB</b>、新規インストールで計測：プログラムとその Python（16 GB）、モデル（カードにより 17〜24 GB、<code>fetch-models.sh</code> が取得し、固定し、検証）。絵師のモデルはさらに 26 GB、💎 セットは 5 GB、どちらも求めたときだけ</li></ul></div>
+          <li>ディスク<b>約 34–41 GB</b>、新規インストールで計測：プログラムとその Python（17 GB）、モデル（カードにより 17〜24 GB、<code>fetch-models.sh</code> が取得し、固定し、検証）。絵師のモデルはさらに 39–43 GB、💎 セットは 5.6 GB、どちらも求めたときだけ</li></ul></div>
         <div class="card"><h3>画面</h3><ul>
           <li><b>1920×1080、100 %</b> のブラウザーウィンドウ向けに作られています</li>
           <li>理想：<b>2K</b>（2560×1440）、22″ 以上、16:9 またはそれより横長</li>
           <li>長時間の作業のための 2 つのテーマ：昼は Scroll &amp; Brick、夜は Scroll by Lamplight、ほかに 20</li></ul></div>
         <!-- HERESY 1807 (Viktor 28.10.2026: «на всех наших карточках чёрным по белому… предупреди… Слишком массивная она у нас») -->
-        <p class="warn-free"><b>無料のクラウド GPU では動きません。</b>Ruach Studio は Google Colab や Kaggle、無料のノートブック用 GPU では動かないので、そこで一晩を費やさないでください。ノートブックではなく、まるごとのスタジオです。住むマシンの上で C++/CUDA のエンジンをビルドし、その横でサーバーと Python のラボを動かし続け、ディスクを約 33 GB（絵師込みで 60 GB）使います。無料セッションのカード、メモリ、消えるディスク、数時間の制限では支えきれません。自分の Linux マシンか、借りて持ち続けるサーバーに NVIDIA のカードを。すべてに 24 GB、小さいモデルのコピーなら 16 GB です。</p>
+        <p class="warn-free"><b>無料のクラウド GPU では動きません。</b>Ruach Studio は Google Colab や Kaggle、無料のノートブック用 GPU では動かないので、そこで一晩を費やさないでください。ノートブックではなく、まるごとのスタジオです。住むマシンの上で C++/CUDA のエンジンをビルドし、その横でサーバーと Python のラボを動かし続け、ディスクを約 34–41 GB（絵師込みで 74–84 GB）使います。無料セッションのカード、メモリ、消えるディスク、数時間の制限では支えきれません。自分の Linux マシンか、借りて持ち続けるサーバーに NVIDIA のカードを。すべてに 24 GB、小さいモデルのコピーなら 16 GB です。</p>
         <div class="card"><h3>オプション</h3><ul>
           <li>ライター用のチャットサーバー（vLLM、LM Studio、Ollama）または OpenRouter のキー</li>
           <li>DAW：REAPER、Waveform 14+、Bitwig</li>
           <li>さらなる GPU：歌と並行してトレーニングとラボの作業を</li></ul></div>
       </div>
+    </div>
+  </section>
+
+  <!-- HERESY 1984 (Viktor 01.11.2026: «честную таблицу по объёмам данных, скачиваемых на машину пользователя… на сайт визиту ближе к концу») -->
+  <section id="downloads">
+    <div class="wrap">
+      <h2>ダウンロードするもの</h2>
+      <p class="sub">スタジオのリポジトリの固定リストと新規インストールのディスクで、ファイルごとに計測（1 GB = 10⁹ バイト）。インストールで入るのはクリエイター、司書、仕上げ師のチェーン。ほかの部屋は求めたときだけ、エンジン → モデルと LoRA → 部屋ごと から。先に空き容量を測り、収まらないものは取得しません。</p>
+      <div class="table dl-table">
+        <table>
+          <thead><tr><th></th><th>24 GB のカード</th><th>12–16 GB のカード</th><th>8 GB のカード</th></tr></thead>
+          <tbody>
+            <tr><td>プログラムと、ここでビルドするエンジン（ダウンロード 0.2 GB）</td><td>0.9 GB</td><td>0.9 GB</td><td>0.9 GB</td></tr>
+            <tr><td>二つの Python、それぞれに CUDA 12.8 用の PyTorch（ダウンロード 8.7 GB）</td><td>16.5 GB</td><td>16.5 GB</td><td>16.5 GB</td></tr>
+            <tr><td>YuE2 と Ruach Studio 独自のファインチューン、カードに合う量子化で</td><td>14.9 GB</td><td>8.2 GB</td><td>8.2 GB</td></tr>
+            <tr><td>残り：追加のデコーダー二つ、トランスクライバー、Whisper、ステムのモデル、UniverSR と Apollo-vocal、LoRA</td><td>8.8 GB</td><td>8.8 GB</td><td>8.8 GB</td></tr>
+            <tr class="sum"><td>インストール</td><td>41.1 GB</td><td>34.4 GB</td><td>34.4 GB</td></tr>
+            <tr><td>+ ライター：llama.cpp で動く言語モデル</td><td>7.4 GB</td><td>7.4 GB</td><td>6.2 GB</td></tr>
+            <tr><td>+ 仕上げ師：MuScriptor と FlashSR</td><td>6.1 GB</td><td>6.1 GB</td><td>6.1 GB</td></tr>
+            <tr><td>+ 絵師：助手と Qwen-Image 2512（24 GB で Q6、それ未満は Q4）</td><td>42.9 GB</td><td>39.3 GB</td><td>39.3 GB</td></tr>
+            <tr><td>+ 映像師：MiniMax H3 と SeedVR2</td><td>86.3 GB</td><td>24 GB が必要</td><td>24 GB が必要</td></tr>
+            <tr><td>+ LoRA トレーナー：ベースとスタイルの聞き手</td><td>20.2 GB</td><td>16.3 GB</td><td>12.9 GB</td></tr>
+            <tr class="sum"><td>すべての部屋</td><td>204.0 GB</td><td>103.5 GB</td><td>98.9 GB</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="ring-note">名前で求めたときだけ：ほかのサウンドエンジン（IRA、IRAE、RS-FW のマージ、量子化により 35〜86 GB）、絵師のアダプター（7.5 GB）とファインチューン（各 20.4 GB）、MiniMax H3 の全ティア（201 GB）または BF16（478 GB）、💎 セット（5.6 GB）。含まないもの：NVIDIA のドライバーと CUDA toolkit、Pianoteq（各自で購入）、あなたのテイク。</p>
     </div>
   </section>
 
@@ -576,8 +606,8 @@
       <div class="story" translate="no" lang="en" data-lang="en" hidden>
         <h2>A little story</h2>
         <p>Viktor Zhuromskyy, the author of Ruach Studio, does not publish it for the hype. He made it for himself. After more than half a year of struggling with Suno on paid plans, and of searching for a model worth working with (ACE-Step, MiniMax and others), he set out to build an audio studio of his own, on his own machine. He settled on YuE2: of all the open models, it is the best value and the most refined.</p>
-        <p>He did not knock the studio together just to have something that runs. He built it his own way, because his work is his own: his translations, his interlinear texts and much more. He fit into it as much as he could, polished the interface as far as he could, and made working with it not poking and clicking among crutches and potholes, but as productive as it can be.</p>
-        <p class="story-end">That is the whole story. Now the studio is yours as well.</p>
+        <p>He did not knock the Studio together just to have something that runs. He built it his own way, because his work is his own: his translations, his interlinear texts and much more. He fit into it as much as he could, polished the interface as far as he could, and made working with it not poking and clicking among crutches and potholes, but as productive as it can be.</p>
+        <p class="story-end">That is the whole story. Now the Studio is yours as well.</p>
       </div>
       <div class="story" translate="no" lang="ru" data-lang="ru" hidden>
         <h2>Маленькая история</h2>
@@ -663,7 +693,7 @@
   </div>
 
 <footer>
-  <div class="wrap"><span>ルアハ・スタジオ · 2.0.4 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> の作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">変更履歴</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ コーヒーマシン</a></span></div>
+  <div class="wrap"><span>ルアハ・スタジオ · 2.0.5 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> の作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">変更履歴</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ コーヒーマシン</a></span></div>
 </footer>
 
 <script src="../assets/wavesurfer.min.js"></script>

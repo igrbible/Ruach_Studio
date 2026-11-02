@@ -34,7 +34,7 @@
 <!-- HERESY 1446 (Viktor 15.10.2026: «Пропишь для визитки код трекинга»): Umami on Orpheus, no cookies -->
 <script defer src="https://lwa.igr.bible/bread-and-wine.js" data-website-id="b9ce0336-948e-43ed-89d6-ade9b66dbb4a"></script>
 <style>
-  /* the studio's two classic themes: Scroll & Brick by day (on Viktor's #f8f9fa), Scroll by Lamplight by night */
+  /* the Studio's two classic themes: Scroll & Brick by day (on Viktor's #f8f9fa), Scroll by Lamplight by night */
   :root {
     --ground: #f8f9fa; --paper: #ffffff; --ink: #191919; --soft: #55524f; --faint: #8a8784;
     --rule: #e3e2e0; --amber: #8e1a2e; --on-amber: #ffffff; --wash: rgba(142, 26, 46, .06);
@@ -83,7 +83,7 @@
 
   /* the hero */
   .hero { padding-top: 56px; padding-bottom: 28px; text-align: center; }   /* the sides stay the .wrap's gutter */
-  /* the studio's veil as the hero (Viktor: «эту заставку загрузки можно как hero на сайт-визитку»): the night's colours
+  /* the Studio's veil as the hero (Viktor: «эту заставку загрузки можно как hero на сайт-визитку»): the night's colours
      whatever the visitor's theme, the Maiden crisp on her black cloud */
   .hero-night { --ink: #f4f4f4; --soft: #c4c4c4; --faint: #a5a5a5; --amber: #f07171; --on-amber: #111111; --rule: #3e3e3e;
     --paper: #282828; --logo-cloud: #000; background: radial-gradient(120% 90% at 50% 30%, #262323 0%, #1e1e1e 55%, #191919 100%);
@@ -249,6 +249,9 @@
   .ring-chip.on::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
   .ring-table td:first-child { color: var(--soft); }
   .ring-table td, .ring-table th { font-variant-numeric: tabular-nums; }
+  /* HERESY 1984: What it downloads, its sizes to the right, the sums bold */
+  .dl-table td:not(:first-child), .dl-table th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .dl-table tr.sum td { font-weight: 700; }
   .ring-note { color: var(--soft); font-size: .92em; margin: 14px 0 0; }
   .ring-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: color-mix(in srgb, var(--paper) 94%, transparent);
     backdrop-filter: blur(12px); border-top: 1px solid var(--rule); box-shadow: 0 -8px 30px rgba(0, 0, 0, .12); }
@@ -333,7 +336,7 @@
     <h1>用文字与和弦写歌<br>在你自己的机器上</h1>
     <p class="lead">围绕开放歌曲模型 <b>YuE2</b> 的完整工作室。写下风格和歌词，工作室就在<b>你自己的 GPU</b> 上作曲、演唱并渲染歌曲。你的歌曲、文字和设置永远不会离开它。</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">在 GitHub 获取</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.zh.md">阅读指南</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face 上的模型</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 请我一台咖啡机</a></div>
-    <span class="rc"><b>2.0.4</b> · DAW 化身音频编辑器 · 2026 年 10 月</span>
+    <span class="rc"><b>2.0.5</b> · 每个峰值完整、家族树与 https 上的工作室 · 2026 年 11 月</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -450,7 +453,7 @@
             <tr><td>进入 DAW</td><td>含乐谱、段落和歌词的 REAPER 工程（实验性）</td><td>音频分轨</td></tr>
             <tr><td>代码</td><td>开放，每处改动都有记录</td><td>封闭</td></tr>
             <tr class="honest"><td>开箱即用的精致度</td><td><b>较少</b>：混音可能有嗡声（去嗡声有帮助），歌词可能偏离（歌词检查会找到位置），有些乐器 YuE2 弹得单薄或根本不会（LoRA 能教会它）</td><td><b>较多</b></td></tr>
-            <tr class="honest"><td>你需要</td><td>一张 NVIDIA GPU（全精度运行一切需 24 GB）、Linux、约 33 GB 磁盘（含画室模型约 60 GB）</td><td>一个浏览器</td></tr>
+            <tr class="honest"><td>你需要</td><td>一张 NVIDIA GPU（全精度运行一切需 24 GB）、Linux、约 34–41 GB 磁盘（含画室模型约 74–84 GB）</td><td>一个浏览器</td></tr>
           </tbody>
         </table>
       </div>
@@ -515,18 +518,45 @@
         <div class="card"><h3>机器</h3><ul>
           <li><b>一张 NVIDIA GPU</b>：全精度运行一切需 24 GB</li>
           <li><b>Linux</b>（在 Ubuntu 24.04、CUDA 12.8 上制作）</li>
-          <li><b>约 33 GB</b> 磁盘，在全新安装上实测：程序及其 Python（16 GB），模型（视显卡 17 到 24 GB，由 <code>fetch-models.sh</code> 下载、固定版本并校验）；画室的模型另需 26 GB，💎 素材集 5 GB，都只在你要求时才下载</li></ul></div>
+          <li><b>约 34–41 GB</b> 磁盘，在全新安装上实测：程序及其 Python（17 GB），模型（视显卡 17 到 24 GB，由 <code>fetch-models.sh</code> 下载、固定版本并校验）；画室的模型另需 39–43 GB，💎 素材集 5.6 GB，都只在你要求时才下载</li></ul></div>
         <div class="card"><h3>屏幕</h3><ul>
           <li>为 <b>1920×1080、100 %</b> 的浏览器窗口而做</li>
           <li>理想：<b>2K</b>（2560×1440），22″ 或更大，16:9 或更宽</li>
           <li>两个适合长时间工作的主题：白天 Scroll &amp; Brick，夜晚 Scroll by Lamplight，另有 20 个</li></ul></div>
         <!-- HERESY 1807 (Viktor 28.10.2026: «на всех наших карточках чёрным по белому… предупреди… Слишком массивная она у нас») -->
-        <p class="warn-free"><b>不能用免费的云端 GPU。</b>Ruach Studio 无法在 Google Colab、Kaggle 或任何免费的笔记本 GPU 上运行，所以别在那儿浪费一个晚上：它是一整个工作室，不是一个笔记本。它在所在的机器上编译自己的 C++/CUDA 引擎，旁边一直运行着一个服务器和一组 Python 服务，并占用约 33 GB 磁盘（加上画室约 60 GB）。免费会话的显卡、内存、会被清空的磁盘和几小时的时限都撑不住。它需要你自己的 Linux 电脑，或你租下并长期保留的服务器，配一块 NVIDIA 显卡：全部功能 24 GB，用较小的模型副本 16 GB。</p>
+        <p class="warn-free"><b>不能用免费的云端 GPU。</b>Ruach Studio 无法在 Google Colab、Kaggle 或任何免费的笔记本 GPU 上运行，所以别在那儿浪费一个晚上：它是一整个工作室，不是一个笔记本。它在所在的机器上编译自己的 C++/CUDA 引擎，旁边一直运行着一个服务器和一组 Python 服务，并占用约 34–41 GB 磁盘（加上画室约 74–84 GB）。免费会话的显卡、内存、会被清空的磁盘和几小时的时限都撑不住。它需要你自己的 Linux 电脑，或你租下并长期保留的服务器，配一块 NVIDIA 显卡：全部功能 24 GB，用较小的模型副本 16 GB。</p>
         <div class="card"><h3>可选</h3><ul>
           <li>为写作室准备的聊天服务器（vLLM、LM Studio、Ollama）或 OpenRouter 密钥</li>
           <li>一个 DAW：REAPER、Waveform 14+、Bitwig</li>
           <li>更多 GPU：在做歌的同时进行训练和实验室的工作</li></ul></div>
       </div>
+    </div>
+  </section>
+
+  <!-- HERESY 1984 (Viktor 01.11.2026: «честную таблицу по объёмам данных, скачиваемых на машину пользователя… на сайт визиту ближе к концу») -->
+  <section id="downloads">
+    <div class="wrap">
+      <h2>它下载什么</h2>
+      <p class="sub">按工作室各仓库的固定清单和全新安装的磁盘逐文件测量（1 GB = 10⁹ 字节）。安装带来创作室、资料馆和精修室的处理链；其他房间只在你要求时才下载，经由 引擎 → 模型与 LoRA → 按房间，它先测量可用空间，放不下的不下载。</p>
+      <div class="table dl-table">
+        <table>
+          <thead><tr><th></th><th>24 GB 显卡</th><th>12–16 GB 显卡</th><th>8 GB 显卡</th></tr></thead>
+          <tbody>
+            <tr><td>程序及在本机构建的引擎（下载 0.2 GB）</td><td>0.9 GB</td><td>0.9 GB</td><td>0.9 GB</td></tr>
+            <tr><td>两套 Python 环境，各含适配 CUDA 12.8 的 PyTorch（下载 8.7 GB）</td><td>16.5 GB</td><td>16.5 GB</td><td>16.5 GB</td></tr>
+            <tr><td>YuE2 与 Ruach Studio 自有的微调模型，采用适合显卡的量化</td><td>14.9 GB</td><td>8.2 GB</td><td>8.2 GB</td></tr>
+            <tr><td>其余：另外两个解码器、转录器、Whisper、分轨模型、UniverSR 与 Apollo-vocal、LoRA</td><td>8.8 GB</td><td>8.8 GB</td><td>8.8 GB</td></tr>
+            <tr class="sum"><td>安装</td><td>41.1 GB</td><td>34.4 GB</td><td>34.4 GB</td></tr>
+            <tr><td>+ 写作室：经 llama.cpp 运行的语言模型</td><td>7.4 GB</td><td>7.4 GB</td><td>6.2 GB</td></tr>
+            <tr><td>+ 精修室：MuScriptor 与 FlashSR</td><td>6.1 GB</td><td>6.1 GB</td><td>6.1 GB</td></tr>
+            <tr><td>+ 画室：其助手与 Qwen-Image 2512（24 GB 用 Q6，以下用 Q4）</td><td>42.9 GB</td><td>39.3 GB</td><td>39.3 GB</td></tr>
+            <tr><td>+ 影像室：MiniMax H3 与 SeedVR2</td><td>86.3 GB</td><td>需要 24 GB</td><td>需要 24 GB</td></tr>
+            <tr><td>+ LoRA 训练室：其基座与风格聆听者</td><td>20.2 GB</td><td>16.3 GB</td><td>12.9 GB</td></tr>
+            <tr class="sum"><td>全部房间</td><td>204.0 GB</td><td>103.5 GB</td><td>98.9 GB</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="ring-note">仅在点名要求时下载：其余声音引擎（IRA、IRAE 与 RS-FW 合并模型，按量化 35 至 86 GB）、画室的适配器（7.5 GB）与微调模型（各 20.4 GB）、MiniMax H3 的全部层级（201 GB）或 BF16（478 GB）、💎 工作区（5.6 GB）。不计入：NVIDIA 驱动与 CUDA toolkit、Pianoteq（需自行购买）、你的作品。</p>
     </div>
   </section>
 
@@ -576,8 +606,8 @@
       <div class="story" translate="no" lang="en" data-lang="en" hidden>
         <h2>A little story</h2>
         <p>Viktor Zhuromskyy, the author of Ruach Studio, does not publish it for the hype. He made it for himself. After more than half a year of struggling with Suno on paid plans, and of searching for a model worth working with (ACE-Step, MiniMax and others), he set out to build an audio studio of his own, on his own machine. He settled on YuE2: of all the open models, it is the best value and the most refined.</p>
-        <p>He did not knock the studio together just to have something that runs. He built it his own way, because his work is his own: his translations, his interlinear texts and much more. He fit into it as much as he could, polished the interface as far as he could, and made working with it not poking and clicking among crutches and potholes, but as productive as it can be.</p>
-        <p class="story-end">That is the whole story. Now the studio is yours as well.</p>
+        <p>He did not knock the Studio together just to have something that runs. He built it his own way, because his work is his own: his translations, his interlinear texts and much more. He fit into it as much as he could, polished the interface as far as he could, and made working with it not poking and clicking among crutches and potholes, but as productive as it can be.</p>
+        <p class="story-end">That is the whole story. Now the Studio is yours as well.</p>
       </div>
       <div class="story" translate="no" lang="ru" data-lang="ru" hidden>
         <h2>Маленькая история</h2>
@@ -663,7 +693,7 @@
   </div>
 
 <footer>
-  <div class="wrap"><span>鲁阿赫工作室 · 2.0.4 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> 的作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">更新记录</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 咖啡机</a></span></div>
+  <div class="wrap"><span>鲁阿赫工作室 · 2.0.5 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> 的作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">更新记录</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 咖啡机</a></span></div>
 </footer>
 
 <script src="../assets/wavesurfer.min.js"></script>

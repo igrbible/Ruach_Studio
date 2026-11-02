@@ -16,6 +16,10 @@ the LoRA Trainer, checking material before training on it, weighing a LoRA's ran
 | [`lora-cost.py`](lora-cost.py) | What a rank costs on YuE2: parameters, share of the weights adapted, file size, per half, read from an adapter's own shapes. |
 | [`../lab/gtsinger.py`](../lab/gtsinger.py) | GTSinger (one language of it) into a training folder: phrases joined into songs, lyrics from the word timings, a style line from its labels. It lives in the lab; it is a converter all the same. |
 
+## Plugins made by others
+
+[`plugins/`](plugins/README.md) holds Refiner plugins written by people outside the studio and given to it, each under its author's licence and installed only when you ask: `extras/plugins/install.sh basic-pitch` (Steven Altsman's Basic Pitch, a set of stems into MIDI).
+
 ## Clients of the studio's API
 
 These two are part of the studio and tested with it (docs/API.md), kept here because they run elsewhere: in an

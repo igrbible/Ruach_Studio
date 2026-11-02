@@ -8,7 +8,7 @@ trash_*()            to the trash (trash/DATE/TAKE, never deleted here), list, r
                      page asks first), and an automatic empty after N days (0 = never, the default)
 export_*()           a ZIP of chosen takes (FLAC or WAV, with or without what is made from them),
                      built as a job into tmp/exports and fetched as a file
-The marks live in the studio's user/ folder (user/collection.json), as the settings do.
+The marks live in the Studio's user/ folder (user/collection.json), as the settings do.
 """
 import json, os, random, re, shutil, subprocess, threading, time, uuid, zipfile
 from pathlib import Path
@@ -292,6 +292,7 @@ def catalog(outputs, config_dir):
                      "rating": marks["ratings"].get(d.name, 0), "note": marks["notes"].get(d.name, ""), "seeds": req.get("seeds"),
                      "fresh": (meta.get("created") or 0) >= since and d.name not in played,     # HERESY 1162
                      "regen_of": marks["regen_of"].get(d.name, ""), "frozen": d.name in ice, "protected": d.name in shield,
+                     "parent": req.get("parent") or "",           # HERESY 1988: what it was made from, for its card's family tree
                      "fire": d.name in fire, "gem": d.name in gems,   # HERESY 1802
                      "react": react_of(reacts.get(d.name, "")),   # HERESY 1873
                      "blind": d.name in blind})               # HERESY 1874
@@ -523,8 +524,8 @@ def collection_post(config_dir, outputs, data):
             d["playlist_xfade"] = sec
         elif op == "trash-days":
             days = int(data.get("days") or 0)
-            if days not in (0, 7, 14, 28):
-                raise ValueError("0 (never), 7, 14 or 28 days")
+            if days not in (0, 7, 14, 28, 30):            # HERESY 1996: 30 (28 still kept as it was set)
+                raise ValueError("0 (never), 7, 14 or 30 days")
             d["trash_days"] = days
         else:
             raise ValueError("unknown op")
@@ -582,12 +583,17 @@ def trash_move(kit, outputs, names, config_dir=None):
             continue
         shutil.move(str(src), str(dst))
         os.utime(dst, None)                       # the time it went to the trash
+        places = sorted(w for w, ns in (marks["workspaces"].items() if marks else []) if n in ns)   # HERESY 1996: where it stood, to stand there again
+        if places:
+            (dst / ".places.json").write_text(json.dumps({"workspaces": places}, ensure_ascii=False), encoding="utf-8")
         moved.append(n)
     return {"moved": moved, "locked": kept, "protected": shielded}
 
 
-def trash_restore(kit, outputs, items):
-    back = []
+def trash_restore(kit, outputs, items, config_dir=None):
+    """Takes given back. HERESY 1996: with config_dir each stands again where it stood when it went (its .places.json), the workspaces and
+    sections it stood in made again when they are gone; the list of those made again said."""
+    back, stood = [], {}
     for it in items:
         day, n = str(it.get("day", "")), str(it.get("name", ""))
         if "/" in day or "/" in n or day.startswith(".") or n.startswith("."):
@@ -596,7 +602,24 @@ def trash_restore(kit, outputs, items):
         if src.is_dir() and not (outputs / n).exists():
             shutil.move(str(src), str(outputs / n))
             back.append(n)
-    return {"restored": back}
+            pf = outputs / n / ".places.json"
+            if pf.is_file():
+                try:
+                    stood[n] = [str(w) for w in json.load(open(pf, encoding="utf-8")).get("workspaces") or [] if str(w).strip()]
+                except (OSError, ValueError):
+                    pass
+                pf.unlink(missing_ok=True)
+    made = []
+    if config_dir and stood:
+        with LOCK:
+            d = load(config_dir)
+            for n, ws in stood.items():
+                for w in ws:
+                    if w not in d["workspaces"]:
+                        made.append(w)
+                    d["workspaces"][w] = sorted(set(d["workspaces"].get(w, [])) | {n})
+            save(config_dir, d)
+    return {"restored": back, "made_again": sorted(set(made))}
 
 
 def trash_empty(kit, items=None, older_than_days=None, config_dir=None):

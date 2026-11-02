@@ -192,7 +192,8 @@
              gate: s.gate && typeof s.gate === "object" ? Object.assign({}, GATE_DEF, s.gate) : null,   // HERESY 1760
              auto: Array.isArray(s.auto) ? s.auto : [],   // HERESY 1535: [[t, dB], …]
              autos: s.autos && typeof s.autos === "object" && !Array.isArray(s.autos) ? s.autos : {},   // HERESY 1559: pan, width, sends
-             edits: Array.isArray(s.edits) ? s.edits : [] };   // HERESY 1564: stretches copied or moved along the lane
+             edits: Array.isArray(s.edits) ? s.edits : [],   // HERESY 1564: stretches copied or moved along the lane
+             chan: ["l", "r", "m"].indexOf(s.chan) >= 0 ? s.chan : "st", offset_s: +s.offset_s || 0 };   // HERESY 1989: its channel, its shift
   }
   function names() { return S.info ? S.info.strips.map(function (s) { return s.name; }).concat([REST]) : []; }
   // HERESY 1542: a silenced stretch [start, end, fall, rise]; 10 ms edges when it says none; edges longer than it shared by their lengths
@@ -233,7 +234,16 @@
   }
   var LANE_HUES = [[/vocal|voice|vox/i, "#d99d10"], [/drum|perc|kick|snare/i, "#c8573d"], [/bass/i, "#8a63d2"], [/guitar/i, "#4f9a4a"],
                    [/piano|keys|synth/i, "#3f7fbf"], [/^rest$/, "#8a8a8a"]];
-  function hueOf(n) { for (var i = 0; i < LANE_HUES.length; i++) if (LANE_HUES[i][0].test(n)) return LANE_HUES[i][1]; return "#2f9a8f"; }
+  function hueOf(n) { if (LANE_C[n]) return LANE_C[n]; for (var i = 0; i < LANE_HUES.length; i++) if (LANE_HUES[i][0].test(n)) return LANE_HUES[i][1]; return "#2f9a8f"; }
+  // HERESY 1989: a lane's own colour, folded or not, and the lanes' order, kept with the page by the stem's name (the set's order for the last)
+  function lsGet(k, d) { try { return JSON.parse(localStorage.getItem(k) || "null") || d; } catch (e) { return d; } }
+  function lsPut(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* a private window */ } }
+  var LANE_C = lsGet("yue2.mxLaneC", {}), LANE_F = lsGet("yue2.mxLaneF", {}), LANE_O = lsGet("yue2.mxLaneO", {});
+  var PALETTE = ["#b5163a", "#d9a441", "#2f9a8f", "#3f7fd1", "#8a5cc7", "#c2549d", "#5f9e3a", "#d06a2c", "#6b7280", "#0f8fb5"];
+  function laneOrder() {
+    var ns = names(), want = (LANE_O[S.set] || []).filter(function (n) { return ns.indexOf(n) >= 0; });
+    return want.concat(ns.filter(function (n) { return want.indexOf(n) < 0; }));
+  }
   // the value the render reads (HERESY 1531: ruach.mix/1, lab/daw_mix.py): every strip's settings that are not its defaults, the
   // returns and the master
   function rnd(v, k) { var m = Math.pow(10, k); return Math.round(v * m) / m; }
@@ -249,6 +259,8 @@
         return f[0] === EDGE && f[1] === EDGE ? o2 : o2.concat([Math.round(f[0] * 1000) / 1000, Math.round(f[1] * 1000) / 1000]); });
       if (s.trim_db) o.trim_db = rnd(s.trim_db, 2);
       if (s.invert) o.invert = true;
+      if (s.chan !== "st") o.chan = s.chan;           // HERESY 1989
+      if (s.offset_s) o.offset_s = rnd(s.offset_s, 3);
       if (s.eq && s.eq.bands.length) o.eq = { on: s.eq.on, bands: s.eq.bands.map(function (x) {
         return { id: String(x.id), type: x.type, enabled: x.enabled !== false, frequency_hz: rnd(+x.frequency_hz, 1), gain_db: rnd(+x.gain_db || 0, 2), q: rnd(+x.q, 3) }; }) };
       if (s.comp) o.comp = { on: !!s.comp.on, threshold_db: rnd(s.comp.threshold_db, 2), ratio: rnd(s.comp.ratio, 2), knee_db: rnd(s.comp.knee_db, 2),
@@ -507,7 +519,7 @@
     if (S.info) {
       S.secKey = secKey();                            // HERESY 1532
       html += ruler().replace('<div class="mx-ruler-row">', '<div class="mx-ruler-row' + (S.secKey ? " has-secs" : "") + '">');                                 // HERESY 1501
-      names().forEach(function (n) { html += lane(n); });
+      laneOrder().forEach(function (n) { html += lane(n); });   // HERESY 1989: in the order they were dragged to
       html += '<div class="mx-head-line" id="mxPlayhead" aria-hidden="true"></div>';
     }
     html += "</div>";
@@ -537,6 +549,8 @@
       refButton() +                                    // HERESY 1755: the sound as it came, as loud as the mix
       '<button type="button" class="mx-ms mx-undo" id="mxUndo"' + (S.undo.length ? "" : " disabled") + ' aria-label="' + esc(tr("Undo")) + '" data-tip="' + esc(tr("Undo (Ctrl+Z)")) + '">' + UNDO_SVG + "</button>" +
       '<button type="button" class="mx-ms mx-undo" id="mxRedo"' + (S.redo.length ? "" : " disabled") + ' aria-label="' + esc(tr("Redo")) + '" data-tip="' + esc(tr("Redo (Ctrl+Shift+Z)")) + '">' + REDO_SVG + "</button>" +
+      '<button type="button" class="mx-ms mx-layer" id="mxLayerBtn"' + (S.info ? "" : " disabled") + ' aria-label="' + esc(tr("Layer")) + '" data-tip-head="' + esc(tr("Layer")) + '" data-tip="' +   // HERESY 2006: an icon, its name in the tip (the head is full)
+        esc(tr("A layer from a bank on the shelf: an instrument, an effect, a drone or field recordings under the song, a strip of its own")) + '">' + icon("layers", "+") + "</button>" +
       '<button type="button" class="btn ghost small" id="mxReset"' + (S.info ? "" : " disabled") + ' data-tip="' + esc(tr("Every lane back to as split: level 0 dB, nothing muted, no silence, no sends")) + '">' + esc(tr("Reset")) + "</button>" +
       '<button type="button" class="btn ghost small icon-act" id="mxDockBtn" aria-pressed="' + S.dock + '" data-tip="' + esc(tr("The console beside the lanes, pinned, on hover or floating: every strip's inserts, sends, pan and fader, the returns and the master")) + '">' +
         icon("sliders", "\u2261") + "<span>" + esc(tr("Console")) + "</span></button>" +
@@ -551,8 +565,8 @@
   }
   // HERESY 1499 (Viktor 16.10.2026: «DAW будет самым интересным. И сразу внедряй переключение в максимальный full screen режим, и перехватывай
   // в нём браузерный F11 на вкладке Студии»): the DAW over the whole window (the page's dialogs, menus and tips still over it), the window full
-  // screen when the browser lets it; Esc, F11 or the button back. F11 on the studio's tab is the studio's: the DAW in sight goes full and
-  // back, elsewhere the studio itself full screen and back (Esc as well)
+  // screen when the browser lets it; Esc, F11 or the button back. F11 on the Studio's tab is the Studio's: the DAW in sight goes full and
+  // back, elsewhere the Studio itself full screen and back (Esc as well)
   function isFull() { return document.body.classList.contains("daw-full"); }
   function setFull(on) {
     var panel = $("dawPanel"), root = document.documentElement;
@@ -608,19 +622,32 @@
     var ver = st ? '<select class="mx-ver" data-mx="version" aria-label="' + esc(tr("Version")) + '">' + st.versions.map(function (v) {
       return '<option value="' + esc(v.path) + '"' + (v.path === cur ? " selected" : "") + ' translate="no">' + esc(v.id ? v.label + (v.created ? " · " + v.created.slice(11) : "") : tr("as split")) + "</option>";
     }).join("") + "</select>" + verButton(n, st) : '<span class="mx-ver mx-rest-say" data-tip="' + esc(tr("What the source holds beyond the stems: what the separation missed. All lanes as they are give the source back")) + '">' + esc(tr("the source less the stems")) + "</span>";
-    return '<div class="mx-lane' + (audible(n) ? "" : " is-quiet") + (S.focus === n ? " is-focus" : "") + '" data-strip="' + esc(n) + '" style="--mx-lane:' + hueOf(n) + ';--mx-wave:' + hueOf(n) + ";--mx-h:" + laneH(n) + 'px">' +   // HERESY 1501; 1965: its height
+    return '<div class="mx-lane' + (audible(n) ? "" : " is-quiet") + (S.focus === n ? " is-focus" : "") + (LANE_F[n] ? " is-folded" : "") + '" data-strip="' + esc(n) + '" style="--mx-lane:' + hueOf(n) + ';--mx-wave:' + hueOf(n) + ";--mx-h:" + laneH(n) + 'px">' +   // HERESY 1501; 1965: its height
       '<div class="mx-ctl"><span class="mx-meter" data-meter="' + esc(n) + '" data-tip="' + esc(tr("Its level as it plays (the peak, the last held a moment)")) + '"><i></i></span>' +
-      '<span class="mx-name" translate="no" title="' + esc(title) + '">' + esc(title) + "</span>" + ver +
+      '<button type="button" class="mx-col" data-mx-col="1" style="background:' + hueOf(n) + '" aria-label="' + esc(tr("Colour")) + '" data-tip="' +   // HERESY 1989
+        esc(tr("Its colour: a click steps through the palette, Alt+click gives it its own again")) + '"></button>' +
+      '<span class="mx-name" translate="no" title="' + esc(title) + '" data-tip="' + esc(tr("A click picks the lane; dragged up or down, the lane goes there")) + '">' + esc(title) + "</span>" + ver +
+      '<span class="mx-chg" role="group" aria-label="' + esc(tr("Channel")) + '">' + [["st", "S", "Both sides as they are"], ["l", "L", "The left side on both"], ["r", "R", "The right side on both"], ["m", "M", "The two sides summed, on both"]].map(function (c) {
+        return '<button type="button" class="mx-ch' + (s.chan === c[0] ? " is-on" : "") + '" data-mx-ch="' + c[0] + '" aria-pressed="' + (s.chan === c[0]) + '" data-tip="' + esc(tr(c[2])) + '">' + c[1] + "</button>"; }).join("") + "</span>" +
+      '<button type="button" class="mx-ms mx-inv' + (s.invert ? " is-on" : "") + '" data-mx="invert" aria-pressed="' + s.invert + '" data-tip="' + esc(tr("Polarity turned over (Ø)")) + '">\u00d8</button>' +
       '<button type="button" class="mx-ms' + (s.mute ? " is-on" : "") + '" data-mx="mute" aria-pressed="' + s.mute + '" data-tip="' + esc(tr("Mute")) + '">M</button>' +
       '<button type="button" class="mx-ms mx-solo' + (s.solo ? " is-on" : "") + '" data-mx="solo" aria-pressed="' + s.solo + '" data-tip="' + esc(tr("Solo: only the soloed lanes are heard")) + '">S</button>' +
       '<button type="button" class="mx-ms mx-auto' + (S.autoShow[n] ? " is-on" : "") + (hasAuto(n) ? " has-auto" : "") + '" data-mx="auto" aria-pressed="' + !!S.autoShow[n] + '" data-tip="' +   // HERESY 1535
         esc(tr("Automation: the lane's volume drawn over time. On, a click on the wave puts a point there and drags it, a right-click takes it away, a double-click sets it to 0 dB; heard and mixed after the fader")) + '">A</button>' +
       '<button type="button" class="mx-ms mx-autop" data-mx="autop"' + (S.autoShow[n] ? "" : " hidden") + ' data-tip="' +   // HERESY 1559
         esc(tr("Which knob the line draws: volume, pan, width, the room's send or the delay's; a click goes to the next. A knob drawn plays its line in place of its own value")) + '">' + esc(tr(AUTO_P[autoParam(n)].short)) + "</button>" +
-      '<label class="mx-fader" data-tip="' + esc(tr("Level, −60 to +12 dB; a double-click puts it back at 0")) + '"><input type="range" min="-60" max="12" step="0.5" value="' + s.gain_db + '" data-mx="gain_db" /><output class="mono">' + fmtDb(s.gain_db) + "</output></label>" +
+      offHtml(s) +   // HERESY 1989: the level in the console alone; the lane's shift, when it has one
+      '<button type="button" class="mx-fold" data-mx-fold="1" aria-expanded="' + !LANE_F[n] + '" data-tip="' + esc(tr("Fold the lane to its controls, or unfold it")) + '">' + (LANE_F[n] ? "\u25b8" : "\u25be") + "</button>" +
       "</div>" +   // HERESY 1531: the compressor, the sends and the rest of the strip in the console
       '<div class="mx-wave"><canvas data-mx-wave="' + esc(n) + '"></canvas></div>' +
       '<i class="mx-grip" data-mx-grip="' + esc(n) + '" data-tip="' + esc(tr("Drag: the lane's height, 40 to 120 px; a double-click puts it back")) + '"></i></div>';   // HERESY 1965
+  }
+  // HERESY 1989: the lane's shift as a badge, × back to 0
+  function offHtml(s) {
+    if (!s.offset_s) return "";
+    var v = s.offset_s, txt = (v > 0 ? "+" : "\u2212") + Math.abs(v).toFixed(3).replace(/0+$/, "").replace(/\.$/, "") + " s";
+    return '<span class="mx-off mono" data-tip="' + esc(tr("The whole lane shifted in time (Alt+Shift+drag on its wave)")) + '">' + txt +
+      '<button type="button" class="mx-off-x" data-mx-off="0" aria-label="' + esc(tr("Back to 0")) + '" data-tip="' + esc(tr("Back to 0")) + '">\u00d7</button></span>';
   }
   // HERESY 1538: a lane's version without a dropdown: a click steps to the next (two compared as it plays), a right-click opens its devices
   function verLabel(v) { return v.id ? v.label + (v.created ? " · " + v.created.slice(11) : "") : tr("as split"); }
@@ -714,8 +741,11 @@
       g.fillStyle = on;
       var base = full ? h / 2 : h - 1, amp = full ? h / 2 - 1 : h - 2;
       var vp = sortedPts(n, "volume"), vg = function (px) { return vp.length ? db(autoDb(vp, xt(px + 0.5, w))) : 1; };   // HERESY 1968: the wave as the level's line makes it
+      var o0 = strip(n).offset_s || 0;                  // HERESY 1989: the lane's shift
       for (var x = 0; x < w; x++) {
-        var i0 = Math.floor(xt(x, w) / L * pk.length), i1 = Math.max(i0 + 1, Math.floor(xt(x + 1, w) / L * pk.length)), m = 0;   // HERESY 1501: through the view
+        var i0 = Math.floor((xt(x, w) - o0) / L * pk.length), i1 = Math.max(i0 + 1, Math.floor((xt(x + 1, w) - o0) / L * pk.length)), m = 0;   // HERESY 1501: through the view
+        if (i1 <= 0 || i0 >= pk.length) continue;
+        i0 = Math.max(0, i0);
         for (var i = i0; i < i1 && i < pk.length; i++) if (pk[i] > m) m = pk[i];
         var y = Math.max(1, Math.min(amp, m * amp * vg(x)));
         g.fillRect(x, base - y, 1, full ? 2 * y : y);
@@ -1051,7 +1081,9 @@
     l.fader.gain.setTargetAtTime(db(s.gain_db + vcaDb(n)), t, k);   // HERESY 1543: as its VCAs move it
     if (l.w && !drawn(n, "width")) {                  // HERESY 1559: a knob drawn plays its line (knobsSchedule), not its value
       var a = (1 + s.width) / 2, b = (1 - s.width) / 2;
-      l.w[0].gain.setTargetAtTime(a, t, k); l.w[3].gain.setTargetAtTime(a, t, k); l.w[1].gain.setTargetAtTime(b, t, k); l.w[2].gain.setTargetAtTime(b, t, k);
+      var cm = { st: [1, 0, 0, 1], l: [1, 1, 0, 0], r: [0, 0, 1, 1], m: [0.5, 0.5, 0.5, 0.5] }[s.chan];   // HERESY 1989: the channel, then the width
+      l.w[0].gain.setTargetAtTime(cm[0] * a + cm[1] * b, t, k); l.w[1].gain.setTargetAtTime(cm[0] * b + cm[1] * a, t, k);
+      l.w[2].gain.setTargetAtTime(cm[2] * a + cm[3] * b, t, k); l.w[3].gain.setTargetAtTime(cm[2] * b + cm[3] * a, t, k);
     }
     if (l.pan && !drawn(n, "pan")) l.pan.pan.setTargetAtTime(s.pan, t, k);
     l.gate.gain.setTargetAtTime(audible(n) ? 1 : 0, t, k);
@@ -1184,7 +1216,7 @@
     strip(n).edits.forEach(function (e2) {
       var d0 = e2.to, d1 = Math.min(end, e2.to + (e2.b - e2.a)), s0 = Math.max(d0, at, S.startAt), s1 = Math.min(d1, at + CHUNK);
       if (s1 - s0 < 0.005) return;
-      fetch("/lab/daw/chunk?" + q({ name: S.take.name, set: S.set, strip: n, path: versionOf(n), start: e2.a + (s0 - d0), seconds: s1 - s0 }))
+      fetch("/lab/daw/chunk?" + q({ name: S.take.name, set: S.set, strip: n, path: versionOf(n), start: Math.max(0, e2.a + (s0 - d0) - (strip(n).offset_s || 0)), seconds: s1 - s0 }))   // HERESY 1989
         .then(function (r) { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
         .then(function (buf) { return ctx.decodeAudioData(buf); })
         .then(function (b) {
@@ -1211,7 +1243,16 @@
   function schedule(k, token) {
     if (token !== S.token || k * CHUNK >= S.info.seconds) return;
     var at = k * CHUNK, ns = names();
-    var asks = ns.map(function (n) { return fetchChunk(n, k).catch(function () { return null; }); });
+    // HERESY 1989: a lane shifted: its chunk asked from where its sound is at this second (silence before its start), placed by `lag`
+    var lag = {}, asks = ns.map(function (n) {
+      var o = strip(n).offset_s || 0, from = at - o;
+      if (!o) return fetchChunk(n, k).catch(function () { return null; });
+      if (from + CHUNK <= 0) return Promise.resolve(null);
+      lag[n] = Math.max(0, -from);
+      return fetch("/lab/daw/chunk?" + q({ name: S.take.name, set: S.set, strip: n, path: n === SOURCE ? "" : versionOf(n), start: Math.max(0, from), seconds: CHUNK - lag[n] }))
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+        .then(function (buf) { return S.ctx.decodeAudioData(buf); }).catch(function () { return null; });
+    });
     if (S.ref.armed) asks.push(fetchChunk(SOURCE, k).catch(function () { return null; }));   // HERESY 1755: the reference beside the lanes
     Promise.all(asks).then(function (bufs) {
       if (token !== S.token) return;
@@ -1219,10 +1260,10 @@
       bufs.forEach(function (b, i) {
         var l = S.graph && S.graph.lanes[ns[i]];
         if (!b || !l) return;
-        var n = ns[i], src = ctx.createBufferSource(), skip = Math.max(0, S.startAt - at);
+        var n = ns[i], src = ctx.createBufferSource(), a0 = at + (lag[n] || 0), skip = Math.max(0, S.startAt - a0);   // HERESY 1989: its own start
         src.buffer = b;
         src.connect(l.range);
-        var start = when + skip, late = Math.max(0, now - start);
+        var start = S.startCtx + (a0 - S.startAt) + skip, late = Math.max(0, now - start);
         if (skip + late < b.duration) { src.start(start + late, skip + late); S.srcs.push(src); }
         ranges(n, l, at, at + CHUNK);
         laid(n, l, at, token);                        // HERESY 1564
@@ -1420,13 +1461,27 @@
   function onClick(e) {
     if (e.target.closest && e.target.closest("#mxFull")) return setFull(!isFull());   // HERESY 1499
     var pick = e.target.closest && e.target.closest(".mx-lane[data-strip] .mx-name");   // HERESY 1501: the lane the keys act on
+    if (pick && S.laneDragged) { S.laneDragged = false; return; }   // HERESY 1989: a drag, not a pick
     if (pick) { select(pick.closest(".mx-lane").dataset.strip); return; }
+    var lr = e.target.closest && e.target.closest(".mx-lane[data-strip]");   // HERESY 1989: the lane's own buttons
+    if (lr) {
+      var ln = lr.dataset.strip, chb = e.target.closest("[data-mx-ch]"), cb = e.target.closest("[data-mx-col]"), fb = e.target.closest("[data-mx-fold]"), ob = e.target.closest("[data-mx-off]");
+      if (chb) { mark(); (S.strips[ln] || (S.strips[ln] = {})).chan = chb.dataset.mxCh === "st" ? undefined : chb.dataset.mxCh; changed(ln); lanePaint(ln); return; }
+      if (cb) {
+        if (e.altKey) delete LANE_C[ln];
+        else { var cur = hueOf(ln), ix = PALETTE.indexOf(cur); LANE_C[ln] = PALETTE[(ix + 1) % PALETTE.length]; }
+        lsPut("yue2.mxLaneC", LANE_C); lanePaint(ln); emit("paint"); return;
+      }
+      if (fb) { if (LANE_F[ln]) delete LANE_F[ln]; else LANE_F[ln] = 1; lsPut("yue2.mxLaneF", LANE_F); lanePaint(ln); return; }
+      if (ob) { mark(); delete (S.strips[ln] || {}).offset_s; changed(ln); lanePaint(ln); if (S.playing) play(pos()); return; }
+    }
     var el = e.target.closest && e.target.closest("button");
     if (!el) return;
     if (el.id === "mxLoop") { S.loopOn = !S.loopOn; loopPaint(); return; }
     if (el.id === "mxZoomIn" || el.id === "mxZoomOut") { var wb = waveBox(); if (wb) zoomAt(el.id === "mxZoomIn" ? 1.5 : 1 / 1.5, tx(pos(), wb.clientWidth), wb.clientWidth); return; }
     if (el.id === "mxFit") { S.view = { zoom: 1, t0: 0 }; redrawAll(); return; }
     if (el.id === "mxPlay") { if (S.playing) stop(); else play(); return; }
+    if (el.id === "mxLayerBtn") { layerOpen(); return; }   // HERESY 2006
     if (el.id === "mxReset") { mark(); S.strips = {}; S.versions = {}; S.buses = busesDefault(); restored(); return; }
     if (el.id === "mxMix") { mix(); return; }
     if (el.id === "mxStop") { stopMix(); return; }     // HERESY 1539
@@ -1451,7 +1506,7 @@
       return;
     }
     if (row && k === "solo" && e.altKey) { clearSolo(); return; }   // HERESY 1754: Alt+click on an S, every solo off
-    if (row && (k === "mute" || k === "solo")) {
+    if (row && (k === "mute" || k === "solo" || k === "invert")) {   // HERESY 1989: and the polarity
       var n = row.dataset.strip, s = S.strips[n] || (S.strips[n] = {});
       mark();
       s[k] = !s[k];
@@ -2007,8 +2062,207 @@
       { label: "Select the whole lane", icon: "↔", action: function () { pickSet(n, 0, S.info.seconds); } }
     ]);
   }
+  // HERESY 1989: one lane painted again where it stands (its controls, its colour, its fold), its wave drawn again
+  // HERESY 2006 (Viktor 01.11.2026: «универсальный плагин эффектов в сам DAW… банки эффектов или инструментов в SFZ формате… выбор доступных из
+  // списка, их описания с полным инфо»): «+ Layer»: the shelf (GET /lab/banks), a bank's card in full, how it plays; laid on Forge by the step
+  // «layer» as a strip of its own (1929's way), the set read again when it lands; its curves are the lane's own lines
+  var LAYER = { banks: null, kind: "", q: "", pick: null, how: "bed", busy: false };
+  var LAYER_KINDS = [["", "All"], ["instrument", "Instruments"], ["ambience", "Ambience"], ["effect", "Effects"], ["drone", "Drones"], ["voice", "Voices"]];
+  var KIND_WORD = { instrument: "Instrument", ambience: "Ambience", effect: "Effect", drone: "Drone", voice: "Voice" };
+  function layerOpen() {
+    if (!S.take || !S.set) return;
+    layerClose();
+    var back = document.createElement("div");
+    back.className = "mxl-back"; back.id = "mxLayer";
+    back.innerHTML = '<div class="mxl-box" role="dialog" aria-modal="true" aria-label="' + esc(tr("A layer from a bank")) + '">' +
+      '<div class="mxl-head"><b class="mxl-title">' + esc(tr("A layer from a bank")) + "</b>" +
+      '<input type="search" class="mxl-q" placeholder="' + esc(tr("Search the shelf")) + '" autocomplete="off" />' +
+      '<span class="mxl-kinds" role="group">' + LAYER_KINDS.map(function (k) {
+        return '<button type="button" class="mx-ms mxl-kind' + (LAYER.kind === k[0] ? " is-on" : "") + '" data-mxl-kind="' + k[0] + '">' + esc(tr(k[1])) + "</button>"; }).join("") + "</span>" +
+      '<button type="button" class="btn ghost small mxl-x" data-mxl="close" aria-label="' + esc(tr("Close")) + '" data-tip="' + esc(tr("Close")) + '">\u00d7</button></div>' +
+      '<div class="mxl-body"><ul class="mxl-list" role="listbox"></ul><section class="mxl-card"></section></div></div>';
+    document.body.appendChild(back);
+    back.addEventListener("click", layerClick);
+    back.addEventListener("mousedown", function (e) { if (e.target === back) layerClose(); });
+    back.querySelector(".mxl-q").value = LAYER.q;
+    back.querySelector(".mxl-q").addEventListener("input", function () { LAYER.q = this.value.trim().toLowerCase(); layerList(); });
+    document.addEventListener("keydown", layerKey, true);
+    if (LAYER.banks) layerList();
+    else {
+      back.querySelector(".mxl-list").innerHTML = '<li class="mxl-wait">' + esc(tr("Reading the shelf…")) + "</li>";
+      getJson("/banks").then(function (d) { LAYER.banks = d.banks || []; layerList(); },
+        function (e) { var b = $("mxLayer"); if (b) b.querySelector(".mxl-list").innerHTML = '<li class="mxl-wait is-bad">' + esc(e.message) + "</li>"; });
+    }
+    layerCard();
+    back.querySelector(".mxl-q").focus();
+  }
+  function layerKey(e) { if (e.key === "Escape" && $("mxLayer")) { e.preventDefault(); e.stopPropagation(); layerClose(); } }
+  function layerClose() { var b = $("mxLayer"); if (b) b.remove(); document.removeEventListener("keydown", layerKey, true); }
+  function layerShown() {
+    return (LAYER.banks || []).filter(function (b) {
+      return (!LAYER.kind || b.kind === LAYER.kind) && (!LAYER.q || [b.name, b.description, b.author, b.licence, b.id].join(" ").toLowerCase().indexOf(LAYER.q) >= 0);
+    });
+  }
+  function layerList() {
+    var box = $("mxLayer");
+    if (!box) return;
+    var list = layerShown();
+    box.querySelector(".mxl-list").innerHTML = list.length ? list.map(function (b) {
+      return '<li><button type="button" class="mxl-row' + (LAYER.pick && LAYER.pick.id === b.id ? " is-on" : "") + '" data-mxl-bank="' + esc(b.id) + '" role="option" aria-selected="' + !!(LAYER.pick && LAYER.pick.id === b.id) + '">' +
+        '<span class="mxl-name" translate="no">' + esc(b.name) + '</span><span class="mxl-meta"><span>' + esc(tr(KIND_WORD[b.kind] || b.kind)) + '</span> · <span translate="no">' + esc(b.licence) + "</span>" +
+        (b.may_ship ? "" : " \u26a0") + " · " + b.mb + " MB</span></button></li>";
+    }).join("") : '<li class="mxl-wait">' + esc(tr("Nothing on the shelf answers that")) + "</li>";
+    Array.prototype.forEach.call(box.querySelectorAll(".mxl-kind"), function (k) { k.classList.toggle("is-on", k.dataset.mxlKind === LAYER.kind); });
+  }
+  function layerCard() {
+    var box = $("mxLayer");
+    if (!box) return;
+    var c = LAYER.pick, el = box.querySelector(".mxl-card");
+    if (!c) { el.innerHTML = '<p class="mxl-hint">' + esc(tr("Choose a bank on the left: its card says what it is, whose, under which licence and how large")) + "</p>"; return; }
+    var amb = c.kind === "ambience" && !(c.sfz || []).length;
+    var rows = [["Kind", tr(KIND_WORD[c.kind] || c.kind)], ["Where", c.where], ["Licence", c.licence + " · " + tr(c.may_ship ? "may ship" : "not to ship as it stands")],
+                ["Author", c.author], ["Source", c.source], ["Samples", c.samples + " · " + c.mb + " MB"]];
+    var field = function (cls, tip, label, input) { return '<label class="field ' + cls + '" data-tip="' + esc(tr(tip)) + '"><span class="label">' + esc(tr(label)) + "</span>" + input + "</label>"; };
+    el.innerHTML = '<h4 class="mxl-cname" translate="no">' + esc(c.name) + "</h4>" + (c.description ? '<p class="mxl-desc" translate="no">' + esc(c.description) + "</p>" : "") +
+      '<dl class="mxl-dl">' + rows.filter(function (r) { return r[1]; }).map(function (r) { return "<dt>" + esc(tr(r[0])) + '</dt><dd translate="no">' + esc(r[1]) + "</dd>"; }).join("") + "</dl>" +
+      (amb ? '<p class="mxl-hint">' + esc(tr("Its field recordings as a bed under the song, looped without a seam")) + "</p>" :
+        ((c.sfz || []).length > 1 ? field("mxl-sfzwrap", "Which of the bank's instruments plays", "Instrument", '<select class="mxl-sfz">' + c.sfz.map(function (s) {
+          return '<option value="' + esc(s) + '" translate="no">' + esc(s.split("/").pop().replace(/\.sfz$/i, "")) + "</option>"; }).join("") + "</select>") : "") +
+        '<div class="mxl-how" role="radiogroup">' + [["bed", "Bed", "One note held through the song, struck again before it dies"], ["drone", "Drone", "The song's key, its root and fifth, held low"],
+          ["notes", "Notes", "A MIDI file of the tree, a stem's notes or yours, moved up or down"]].map(function (h) {
+          return '<button type="button" role="radio" class="mx-ms mxl-h' + (LAYER.how === h[0] ? " is-on" : "") + '" data-mxl-how="' + h[0] + '" aria-checked="' + (LAYER.how === h[0]) + '" data-tip="' + esc(tr(h[2])) + '">' + esc(tr(h[1])) + "</button>"; }).join("") + "</div>" +
+        '<div class="mxl-row2">' +
+        field("", "The note held, like C3 or 48; auto: C4 for a bed, the song's key for a drone", "Note", '<input type="text" class="mxl-note" value="auto" spellcheck="false" />') +
+        field("", "Semitones up or down", "Transpose", '<input type="number" class="mxl-tr" min="-24" max="24" step="1" value="0" />') +
+        field("mxl-midiwrap", "The MIDI file played (Notes): a stem's notes from MIDI or Basic Pitch, or one of yours in the tree", "MIDI", '<select class="mxl-midi"><option value="">' + esc(tr("none in the tree")) + "</option></select>") + "</div>") +
+      '<div class="mxl-row2">' +
+      field("", "Its level against the song where both sound, in dB", "Level, dB", '<input type="number" class="mxl-level" min="-40" max="0" step="1" value="-18" />') +
+      field("", "Seconds it takes to come in", "Fade in, s", '<input type="number" class="mxl-fin" min="0" max="30" step="0.5" value="4" />') +
+      field("", "Seconds it takes to go", "Fade out, s", '<input type="number" class="mxl-fout" min="0" max="30" step="0.5" value="6" />') + "</div>" +
+      '<div class="mxl-acts"><button type="button" class="btn primary small" data-mxl="lay"' + (LAYER.busy ? " disabled" : "") + ' data-tip="' +
+        esc(tr("Laid under the song on Forge as a strip of its own; its curves are the lane's own lines (A)")) + '">' + esc(tr("Lay it")) + '</button><span class="mxl-state row-hint"></span></div>';
+    if (!amb) layerMidi();
+  }
+  function layerMidi() {                               // the tree's MIDI files, for Notes
+    if (!S.take) return;
+    var name = S.take.name;
+    fetch("/lab/derived?name=" + encodeURIComponent(name), { priority: "low" }).then(function (r) { return r.json(); }).then(function (r) {
+      var box = $("mxLayer"), sel = box && box.querySelector(".mxl-midi");
+      if (!sel || !S.take || S.take.name !== name) return;
+      var mids = [];
+      (r.derived || []).forEach(function (m) { (m.files || []).forEach(function (f) {
+        if (/\.mid$/i.test(f.file || "")) mids.push({ v: f.path || ("derived/" + m.id + "/" + f.file), l: (m.label || m.id) + " · " + (f.name || f.file) });
+      }); });
+      if (mids.length) sel.innerHTML = mids.map(function (m) { return '<option value="' + esc(m.v) + '" translate="no">' + esc(m.l) + "</option>"; }).join("");
+    }, function () { /* no tree: none offered */ });
+  }
+  function layerClick(e) {
+    var t = e.target.closest && e.target.closest("button");
+    if (!t) return;
+    if (t.dataset.mxl === "close") { layerClose(); return; }
+    if (t.dataset.mxlKind != null) { LAYER.kind = t.dataset.mxlKind; layerList(); return; }
+    if (t.dataset.mxlBank) { LAYER.pick = (LAYER.banks || []).filter(function (b) { return b.id === t.dataset.mxlBank; })[0] || null; layerList(); layerCard(); return; }
+    if (t.dataset.mxlHow) {
+      LAYER.how = t.dataset.mxlHow;
+      Array.prototype.forEach.call($("mxLayer").querySelectorAll(".mxl-h"), function (b) { var on = b.dataset.mxlHow === LAYER.how; b.classList.toggle("is-on", on); b.setAttribute("aria-checked", on); });
+      return;
+    }
+    if (t.dataset.mxl === "lay") layerRun();
+  }
+  function layerRun() {
+    var box = $("mxLayer"), c = LAYER.pick;
+    if (!box || !c || !S.take) return;
+    var v = function (s) { var el = box.querySelector(s); return el ? el.value : ""; };
+    var amb = c.kind === "ambience" && !(c.sfz || []).length;
+    var params = { bank: c.id, sfz: v(".mxl-sfz"), how: amb ? "bed" : LAYER.how, note: v(".mxl-note") || "auto", transpose: v(".mxl-tr") || "0", midi: v(".mxl-midi"),
+                   level: v(".mxl-level") || "-18", fade_in: v(".mxl-fin") || "4", fade_out: v(".mxl-fout") || "6" };
+    var st = box.querySelector(".mxl-state"), said = function (s, bad) { if (st) { st.textContent = s; st.classList.toggle("is-bad", !!bad); } };
+    if (params.how === "notes" && !params.midi) { said(tr("Notes: choose a MIDI file of the tree"), true); return; }
+    var lay = box.querySelector('[data-mxl="lay"]'), name = S.take.name;
+    LAYER.busy = true; if (lay) lay.disabled = true;
+    said(tr("Laying it under the song…"));
+    fetch("/lab/plugin/run", { method: "POST", headers: { "Content-Type": "application/json" },
+                               body: JSON.stringify({ name: name, source: S.set, plugin: "ruach", step: "layer", params: params }) })
+      .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); })
+      .then(function (job) { layerWatch(name, job.id, said); },
+            function (e) { LAYER.busy = false; var b2 = $("mxLayer"); if (b2) b2.querySelector('[data-mxl="lay"]').disabled = false; said(tr("It did not start: {0}").replace("{0}", e.message), true); });
+  }
+  function layerWatch(name, id, said) {
+    fetch("/lab/derived?name=" + encodeURIComponent(name), { priority: "low" }).then(function (r) { return r.json(); }).then(function (r) {
+      var job = (r.running || []).filter(function (j) { return j.id === id; })[0], made = (r.derived || []).some(function (m) { return m.id === id; });
+      var free = function () { LAYER.busy = false; var b = $("mxLayer"); if (b) b.querySelector('[data-mxl="lay"]').disabled = false; };
+      if (job && job.status === "failed") { free(); said(job.error || "failed", true); return; }
+      if (made || !job) {
+        free();
+        said(made ? tr("Laid: a strip of its own in the DAW") : "");
+        if (made) { if (window.HeresyDerived) window.HeresyDerived.refresh(); if (S.take && S.take.name === name) open(); }
+        return;
+      }
+      setTimeout(function () { layerWatch(name, id, said); }, 2000);
+    }, function () { setTimeout(function () { layerWatch(name, id, said); }, 4000); });
+  }
+  function lanePaint(n) {
+    var row = document.querySelector('.mx-lane[data-strip="' + (window.CSS && CSS.escape ? CSS.escape(n) : n) + '"]');
+    if (!row) return;
+    var tmp = document.createElement("div");
+    tmp.innerHTML = lane(n);
+    row.replaceWith(tmp.firstChild);
+    draw(n);
+    paintPlayhead();
+  }
+  // HERESY 1989: a lane dragged by its name to another place among the lanes
+  function nameDown(e) {
+    var nm = e.target.closest && e.target.closest(".mx-lane[data-strip] .mx-name");
+    if (!nm || e.button !== 0) return false;
+    var row = nm.closest(".mx-lane"), n = row.dataset.strip, y0 = e.clientY, moved = false;
+    var move = function (ev) {
+      if (!moved && Math.abs(ev.clientY - y0) < 6) return;
+      moved = true;
+      row.classList.add("is-drag");
+      row.style.transform = "translateY(" + (ev.clientY - y0) + "px)";
+    };
+    var up = function (ev) {
+      document.removeEventListener("pointermove", move); document.removeEventListener("pointerup", up);
+      row.classList.remove("is-drag"); row.style.transform = "";
+      if (!moved) return;
+      S.laneDragged = true;
+      setTimeout(function () { S.laneDragged = false; }, 0);   // the click that follows a drag, if any, comes before this
+      var order = laneOrder().filter(function (m) { return m !== n; }), rows = Array.prototype.slice.call(document.querySelectorAll(".mx-lane[data-strip]")).filter(function (r) { return r !== row; });
+      var at = rows.filter(function (r) { var b = r.getBoundingClientRect(); return ev.clientY > b.top + b.height / 2; }).length;
+      order.splice(at, 0, n);
+      LANE_O[S.set] = order; lsPut("yue2.mxLaneO", LANE_O);
+      paint();
+      emit("paint");
+    };
+    document.addEventListener("pointermove", move); document.addEventListener("pointerup", up);
+    return true;
+  }
+  // HERESY 1989: Alt+Shift+drag on a wave: the whole lane later or earlier, 10 ms steps (1 ms with Ctrl too)
+  function shiftDown(e) {
+    var c = e.target.closest && e.target.closest("canvas[data-mx-wave]");
+    if (!c || e.button !== 0 || !e.altKey || !e.shiftKey || !S.info) return false;
+    e.preventDefault(); e.stopPropagation();
+    var n = c.dataset.mxWave, s = S.strips[n] || (S.strips[n] = {}), o0 = +s.offset_s || 0, x0 = e.clientX, w = c.getBoundingClientRect().width;
+    mark();
+    try { if (c.setPointerCapture) c.setPointerCapture(e.pointerId); } catch (x) { /* gone */ }
+    var move = function (ev) {
+      var step = ev.ctrlKey ? 0.001 : 0.01, v = o0 + (ev.clientX - x0) / Math.max(1, w) * span();
+      v = Math.max(-30, Math.min(30, Math.round(v / step) * step));
+      s.offset_s = Math.abs(v) < step / 2 ? undefined : +v.toFixed(3);
+      draw(n);
+    };
+    var up = function () {
+      document.removeEventListener("pointermove", move); document.removeEventListener("pointerup", up);
+      changed(n); lanePaint(n);
+      if (S.playing) play(pos());
+    };
+    document.addEventListener("pointermove", move); document.addEventListener("pointerup", up);
+    return true;
+  }
   function onDown(e) {
     if (gripDown(e)) return;                          // HERESY 1965: a lane's height in hand
+    if (nameDown(e)) return;                          // HERESY 1989: a lane's place in hand
+    if (shiftDown(e)) return;                         // HERESY 1989: a lane's shift in hand
     if (rulerDown(e)) return;                         // HERESY 1501
     if (holeDown(e)) return;                          // HERESY 1975: a cut's fades drawn with the right button
     var c = e.target.closest && e.target.closest("canvas[data-mx-wave]");

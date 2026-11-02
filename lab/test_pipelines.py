@@ -1,4 +1,4 @@
-"""HERESY 1553–1555: the chain as a pipeline, the studio's built-in steps, a version of a version, the shipped pipelines, «Whole
+"""HERESY 1553–1555: the chain as a pipeline, the Studio's built-in steps, a version of a version, the shipped pipelines, «Whole
 lead» on stems made here. python3 lab/test_pipelines.py"""
 import json
 import subprocess
@@ -49,7 +49,7 @@ with tempfile.TemporaryDirectory() as t:
               open(users / "mine" / "plugin.json", "w"))
     plugs, errors = pk.load_all(users, HERE / "builtin_steps")
     ids = [p["id"] for p in plugs]
-    check("the studio's own steps first, then the user's", ids == ["ruach", "mine"], ids)
+    check("the Studio's own steps first, then the user's", ids == ["ruach", "mine"], ids)
     check("a user's plugin of a built-in's id left out, said", any(e["plugin"] == "ruach" for e in errors), errors)
     check("built-in marked", plugs[0]["builtin"] is True and plugs[1]["builtin"] is False)
     lead = pk.find(plugs, "ruach", "lead")[1]
@@ -99,7 +99,7 @@ with tempfile.TemporaryDirectory() as t:
     pl = rp.pipelines(HERE, plugs)
     got = {p["id"]: p for p in pl}
     shipped = [p["id"] for p in json.load(open(HERE / "refiner_pipelines.json", encoding="utf-8"))["pipelines"]]
-    check("every shipped pipeline valid with the studio's steps", all(i in got for i in shipped), [i for i in shipped if i not in got])
+    check("every shipped pipeline valid with the Studio's steps", all(i in got for i in shipped), [i for i in shipped if i not in got])
     check("a plugin's pipeline listed under it", got.get("mine-pro", {}).get("plugin") == "mine" and got["mine-pro"]["group"] == "plugin")
     check("a pipeline naming a step not here left out", "mine-broken" not in got)
     check("shipped ones are public", all(got[i]["group"] == "public" for i in shipped))

@@ -31,7 +31,7 @@ void request_init(Yue2Request * r) {
     r->solver           = "midpoint";
     r->lm_batch_size    = 1;
     r->synth_batch_size = 1;
-    r->peak_clip        = 10;
+    r->peak_clip        = 0;     // HERESY 2007: read and ignored, nothing is cut (upstream 10)
     r->cfg_scale        = -1.0f;
     r->cfg_lyrics       = -1.0f;   // HERESY 1397
     r->free_tempo       = false;   // HERESY 1416

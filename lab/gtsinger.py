@@ -6,7 +6,7 @@ with word-level timing, notes, techniques and global labels. Each segment is a p
 
     LANG/SINGER/TECHNIQUE/SONG/GROUP/0000.wav + 0000.json (words) + .TextGrid + .musicxml
 
-This turns one language of it into datasets/raw/GTSinger-LANG/: the WAV, its lyrics as the studio reads
+This turns one language of it into datasets/raw/GTSinger-LANG/: the WAV, its lyrics as the Studio reads
 them (.txt: [Verse] and the sung words, a new line at every pause), and its own style (.style.txt):
 language, method, the singer's range, the technique the group sings, pace, emotion, "a cappella, dry".
 Paired speech is spoken, not sung: left out unless --speech. With --join (the default) the phrases of a

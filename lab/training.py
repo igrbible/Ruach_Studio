@@ -1,9 +1,9 @@
 """HERESY 1063: LoRA training for YuE2, the lab's side (Viktor, 01.10.2026). Imported by lab.py.
 
-The trainer is the studio's own (lab/trainer, ported line by line from Ostris' AI-Toolkit, MIT; HERESY 1083–1086, score
+The trainer is the Studio's own (lab/trainer, ported line by line from Ostris' AI-Toolkit, MIT; HERESY 1083–1086, score
 mode 1420, the separation 1422): one LoRA over both experts, the NAR flow loss always, the AR next-token loss when
 ar_loss_weight > 0, anchored to the base model by ar_kl_weight (the AR learns the training songs by heart on a small set: its
-notes). AI-Toolkit itself left the studio on 13.10.2026 (HERESY 1422), once all it trained was here. The lab prepares,
+notes). AI-Toolkit itself left the Studio on 13.10.2026 (HERESY 1422), once all it trained was here. The lab prepares,
 starts, watches and collects:
 
   datasets/raw/NAME/        the raw material, as it came (WAV, FLAC, MP3, with or without .txt)
@@ -96,7 +96,7 @@ def datasets(kit):
             m = json.load(open(man, encoding="utf-8"))
             prepared.append({"name": d.name, "tracks": len(m.get("tracks", [])), "from": m.get("from"), "made": m.get("made"),
                              "seconds": round(sum(t.get("seconds") or 0 for t in m.get("tracks", [])))})
-    # HERESY 1086: what the studio's own trainer needs, each said by name (heresy/fetch-heresy.sh --trainer fetches it)
+    # HERESY 1086: what the Studio's own trainer needs, each said by name (heresy/fetch-heresy.sh --trainer fetches it)
     own = {q: (P["models"] / "checkpoints" / f).is_file() for q, f in OWN_CKPT.items()}
     own.update(mert=(kit / "checkpoints" / "MERT-v2-FullSong" / "model.safetensors").is_file(),
                head=(P["head"] / "tokenizer_head_joint_v4.pt").is_file())
@@ -303,16 +303,16 @@ DEFAULTS = {"steps": 1500, "rank": 32, "rank_ar": 0, "rank_nar": 0, "lr": 1e-4, 
             "lr_tail_epochs": 0.0, "lr_tail_floor": 0.0,     # HERESY 1752: the rate's fade over the last epochs, down to floor × itself
             "vram_meter": False, "ar_cap_tokens": 0, "long_off_card0": False,   # HERESY 1832: 1815's meter and guard, off as train.py's own
             "val_groups": {}, "stop_ce_groups": [], "stop_ce_rises": 2, "stop_kl_max": 0.0}   # HERESY 1944: held-out by group, the stop-crane (train.py)
-# HERESY 1085: engine "ruach" is the studio's own trainer (lab/trainer, ported from Ostris' MIT code, exact on
+# HERESY 1085: engine "ruach" is the Studio's own trainer (lab/trainer, ported from Ostris' MIT code, exact on
 # parity: lab/trainer/PARITY.md), bf16 weights (Viktor: "не квантуй ничего"), Direct, score mode (1420), separated (1422).
-# HERESY 1422: the only one: AI-Toolkit, kept as the reference till then, left the studio.
+# HERESY 1422: the only one: AI-Toolkit, kept as the reference till then, left the Studio.
 OWN_CKPT = {"bf16": "yue2_3b_bf16.safetensors", "int8": "yue2_3b_int8_convrot.safetensors"}
 BASE_RE = re.compile(r"^[A-Za-z0-9_.\-]{1,160}\.safetensors$")
 
 
 def base_checkpoint(P, spec):
     """HERESY 1792: the weights a run trains on, (path, quant, base): «base», a file of checkpoints/comfy/checkpoints/ named by itself (a merge
-    folded into the trainer's own layout: heresy/MISC/claude-tc/finetune/fold_base.py), bf16; else the studio's own by its quant, as before"""
+    folded into the trainer's own layout: heresy/MISC/claude-tc/finetune/fold_base.py), bf16; else the Studio's own by its quant, as before"""
     base = str(spec.get("base") or "").strip()
     if base:
         if not BASE_RE.match(base) or ".." in base:
@@ -653,7 +653,7 @@ def restore_run(kit, tid):
 
 
 def purge_run(kit, tid):
-    """Gone for good: asked twice on the page, never done by the studio on its own."""
+    """Gone for good: asked twice on the page, never done by the Studio on its own."""
     t = run_trash(kit) / Path(tid).name
     if not (t / "trashed.json").is_file():
         raise FileNotFoundError(f"nothing in the trash as {tid}")
@@ -846,7 +846,7 @@ def _watch(kit, run):
     elif meta.get("stopping"):
         job["status"] = "stopped"
     elif state == "failed" or any("Traceback" in l for l in tail):
-        who = "The studio's trainer" if (meta.get("options") or {}).get("engine") == "ruach" else "AI-Toolkit"
+        who = "The Studio's trainer" if (meta.get("options") or {}).get("engine") == "ruach" else "AI-Toolkit"
         job.update(status="failed", error=who + " ended badly: " + (tail[-1] if tail else "no output"))
         _systemctl("reset-failed", _unit(run) + ".service")
     else:
@@ -899,7 +899,7 @@ def train(kit, spec, gpu_picker, more_cards=None):
     dataset = str(spec.get("dataset", ""))
     _safe_dir(P["prepared"], dataset)
     if str(spec.get("engine") or "ruach") != "ruach":       # HERESY 1422: said, not run
-        raise ValueError("AI-Toolkit left the studio (13.10.2026): its own trainer trains every mode now, Direct, with a score, separated")
+        raise ValueError("AI-Toolkit left the Studio (13.10.2026): its own trainer trains every mode now, Direct, with a score, separated")
     own = True
     run = str(spec.get("name") or f"{dataset}-{time.strftime('%Y%m%d-%H%M')}")
     if not NAME_RE.match(run):
@@ -929,7 +929,7 @@ def train(kit, spec, gpu_picker, more_cards=None):
     o["stop_kl_max"] = max(0.0, min(float(o["stop_kl_max"]), 10.0))
     o["steps"] = math.ceil(o["steps"] / tracks) * tracks  # whole epochs: the last save closes one too
     o["save_every"] = max(1, round(tracks * min(100.0, max(0.1, o["save_epochs"]))))   # HERESY 1658: every tenth of an epoch at the least
-    if str(spec.get("gpu", "")).strip().isdigit():     # a card named: the studio's own is never taken by chance
+    if str(spec.get("gpu", "")).strip().isdigit():     # a card named: the Studio's own is never taken by chance
         gpu = int(spec["gpu"])
         import gpu_guard                               # HERESY 1112: a named card passes the guard too
         gpu_guard.check(gpu, 20000, kit)
@@ -961,8 +961,8 @@ def train(kit, spec, gpu_picker, more_cards=None):
         if o["cot"] != "off" and not ((kit / "build" / "build" / "yue-transcribe").is_file() and list((kit / "models").glob("SheetSage2-*.gguf"))):
             raise FileNotFoundError("score mode needs the engine's transcriber (build/build/yue-transcribe and models/SheetSage2-*.gguf)")   # HERESY 1420
         if o["do_separation"] and not (kit / "separation" / "roformer" / "model_bs_roformer_ep_317_sdr_12.9755.ckpt").is_file():
-            raise FileNotFoundError("the separation needs the studio's separator (separation/roformer/model_bs_roformer_ep_317_sdr_12.9755.ckpt)")   # HERESY 1422
-        ckpt, o["quant"], base = base_checkpoint(P, spec)   # HERESY 1792: a base the run names (a merge), else the studio's own
+            raise FileNotFoundError("the separation needs the Studio's separator (separation/roformer/model_bs_roformer_ep_317_sdr_12.9755.ckpt)")   # HERESY 1422
+        ckpt, o["quant"], base = base_checkpoint(P, spec)   # HERESY 1792: a base the run names (a merge), else the Studio's own
         if base:
             o["base"] = base
         # the set's latent cache: train.py makes what is missing (lab/trainer/cache.py) before it loads the model

@@ -1,6 +1,6 @@
 # Installing Ruach Studio
 
-One Linux machine with an NVIDIA card. The studio runs there; you use it from a browser on that machine or on any other machine of your home network. Nothing goes to a cloud unless you ask (OpenRouter for the Writer, if you choose it).
+One Linux machine with an NVIDIA card. The Studio runs there; you use it from a browser on that machine or on any other machine of your home network. Nothing goes to a cloud unless you ask (OpenRouter for the Writer, if you choose it).
 
 ## What it needs
 
@@ -10,8 +10,8 @@ One Linux machine with an NVIDIA card. The studio runs there; you use it from a 
 | GPU | NVIDIA, **24 GB** runs everything at full precision; **8 to 16 GB** run songs with the Q8_0 model (measured: 5.1 GB with a context of 12 288 rows, 7.7 GB with the whole); **6 GB** Q8_0 with shorter songs, less Q6_K; int8 training under 24 GB. |
 | CUDA | the **CUDA toolkit 12.8** (`nvcc`), in `/usr/local/cuda-12.8` or on the `PATH`; a driver that supports it |
 | tools | `git`, `cmake` 3.24 or newer, `ninja` (optional, faster), `gcc`/`g++` 13, `python3.12` with `python3.12-venv`, `ffmpeg`, `curl` |
-| disk | **about 33 GB**, measured on fresh installs: the program and its two Pythons 16 GB, the models 17 GB for a 16 GB card (24 GB with BF16 for 24 GB), Ruach Studio's own fine-tune among them; the Artist's helpers 8.4 GB and its Qwen-Image 2512 at Q4 31 GB more when you take them (a card under 16 GB streams its blocks from RAM), the 💎 sets 5 GB; and room for your songs |
-| tests only | `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test; Node.js 22+ and Chrome or Chromium for the page tests. The studio itself needs none of them: FLAC is made by the engine and by ffmpeg |
+| disk | **34 GB** for the install on a 12–16 GB card, **41 GB** on a 24 GB card, measured file by file (01.11.2026): the program 0.9 GB, its two Pythons 16.5 GB (8.7 GB downloaded), the models 17.0 or 23.7 GB with Ruach Studio's own fine-tune among them; each other room only when you take it (the Writer's 6 to 7 GB, the Refiner's 6 GB, the Artist's 39 to 43 GB, the Videographer's 86 GB, the Trainer's 13 to 20 GB): [README › What It Downloads](README.md#what-it-downloads); and room for your songs |
+| tests only | `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test; Node.js 22+ and Chrome or Chromium for the page tests. The Studio itself needs none of them: FLAC is made by the engine and by ffmpeg |
 
 On Ubuntu 24.04, everything but CUDA in one line:
 
@@ -26,14 +26,14 @@ CUDA 12.8: NVIDIA's own repository for Ubuntu 24.04 (developer.nvidia.com → CU
 ```bash
 git clone https://github.com/igrbible/Ruach_Studio.git Ruach_Studio && cd Ruach_Studio
 
-./lab/install-venv.sh      # Python: torch for CUDA 12.8 and the studio's packages, in .venv (8.5 GB) and the Artist's .venv-art (7.4 GB), a few minutes
-./fetch-models.sh          # every model the studio uses, pinned and checked (asks before the big ones)
+./lab/install-venv.sh      # Python: torch for CUDA 12.8 and the Studio's packages, in .venv (8.5 GB) and the Artist's .venv-art (7.4 GB), a few minutes
+./fetch-models.sh          # every model the Studio uses, pinned and checked (asks before the big ones)
 ./build.sh --server        # the page and the engine (the first build of the engine: a few minutes)
 ./systemd/install-units.sh # the two services
 systemctl --user enable --now heresy-lab ruach-studio
 ```
 
-**The studio's port is 7777.** Open **http://127.0.0.1:7777** (on the same machine), or **http://THE-MACHINE'S-ADDRESS:7777** from another one on your network: `start.sh` prints it. The studio answers this machine and private networks only (10.x, 172.16–31.x, 192.168.x, Tailscale's 100.64.x), never the internet; its first start asks who may open it (this computer only, private networks, or the networks you list), and Engine → Security changes it.
+**The Studio's port is 7777.** Open **http://127.0.0.1:7777** (on the same machine), or **http://THE-MACHINE'S-ADDRESS:7777** from another one on your network: `start.sh` prints it. The Studio answers this machine and private networks only (10.x, 172.16–31.x, 192.168.x, Tailscale's 100.64.x), never the internet; its first start asks who may open it (this computer only, private networks, or the networks you list), and Engine → Security changes it.
 
 To have it running after a reboot without logging in: `sudo loginctl enable-linger $USER` (once).
 
@@ -53,11 +53,11 @@ heresy/fetch-heresy.sh --fw 3.4x0.75-Q8_0   # another merge of Ruach Studio's ow
 
 ## With Pinokio
 
-[Pinokio](https://pinokio.co) installs and starts the studio from its menu, on the same kind of machine: Linux x86_64 with an NVIDIA card. In Pinokio, download it from its address, `https://github.com/igrbible/Ruach_Studio`, and press **Install**. Pinokio first brings its AI bundle (conda, git, ffmpeg, uv and the CUDA toolkit 12.8; your own `/usr/local/cuda-12.8` is used instead when it is there), then the install does what the steps above do: the Python environments, the engine, and the models with the backbone your card takes (BF16 from 24 GB, Q8_0 from 7, Q6_K below). Each step says what it does, and a step that fails ends the install with its reason on the last line; **Install again** goes on from there.
+[Pinokio](https://pinokio.co) installs and starts the Studio from its menu, on the same kind of machine: Linux x86_64 with an NVIDIA card. In Pinokio, download it from its address, `https://github.com/igrbible/Ruach_Studio`, and press **Install**. Pinokio first brings its AI bundle (conda, git, ffmpeg, uv and the CUDA toolkit 12.8; your own `/usr/local/cuda-12.8` is used instead when it is there), then the install does what the steps above do: the Python environments, the engine, and the models with the backbone your card takes (BF16 from 24 GB, Q8_0 from 7, Q6_K below). Each step says what it does, and a step that fails ends the install with its reason on the last line; **Install again** goes on from there.
 
-**Start** runs the lab and the studio, each in a terminal of its own, and **Open the studio** opens the page (from another machine of your network: the address `start.sh` prints in that terminal). **More models** offers the Artist's painter, the style listener, the trainer's base and, where the install took Q8_0 for a smaller card, the BF16 backbone, each asked first with its size. The install itself brings the LoRAs the studio's 💎 sets were made with; a download that fails says why, and **Install** again goes on from where it stopped. The studio's **Engine → Models and LoRAs** says the same from inside: what is here, what is missing, and a **Fetch** for each part and for every extra, each asked first with its size. **Update** takes the newest release; **Reset** takes away the Python environments and the engine's build, never your songs, models or settings.
+**Start** runs the lab and the Studio, each in a terminal of its own, and **Open the Studio** opens the page (from another machine of your network: the address `start.sh` prints in that terminal). **More models** offers the Artist's painter, the style listener, the trainer's base and, where the install took Q8_0 for a smaller card, the BF16 backbone, each asked first with its size. The install itself brings the LoRAs the Studio's 💎 sets were made with; a download that fails says why, and **Install** again goes on from where it stopped. The Studio's **Engine → Models and LoRAs** says the same from inside: what is here, what is missing, and a **Fetch** for each part and for every extra, each asked first with its size. **Update** takes the newest release; **Reset** takes away the Python environments and the engine's build, never your songs, models or settings.
 
-The work is done by the bash scripts in `launcher/`, which run the same from a terminal (`bash launcher/install.sh`). Under Pinokio there are no systemd units: stop, start and update the studio from Pinokio's menu. On Windows 11 the studio runs through WSL2, by hand for now ([INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)).
+The work is done by the bash scripts in `launcher/`, which run the same from a terminal (`bash launcher/install.sh`). Under Pinokio there are no systemd units: stop, start and update the Studio from Pinokio's menu. On Windows 11 the Studio runs through WSL2, by hand for now ([INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)).
 
 Until 2.0.0-rc5 these scripts lived in `pinokio/`, a folder where Pinokio then kept its own environment out of its environment page's reach. The first **Update** of such an install stops halfway, its old script finding its folder gone; the menu then moves what Pinokio wrote there out of its way (its `ENVIRONMENT` beside `pinokio.js`, the rest under `tmp/`) and offers **Finish the update**, which sets the new version up.
 
@@ -78,7 +78,7 @@ With systemd and both kinds of engine on one machine: `systemctl --user edit rua
 
 ```bash
 git pull
-./build.sh                 # the page (and the engine, when its code changed; then the restart, when the studio is idle)
+./build.sh                 # the page (and the engine, when its code changed; then the restart, when the Studio is idle)
 ```
 
 The page is read from disk at every load: `./build.sh` and a reload of the browser tab are enough.
@@ -103,8 +103,8 @@ Measured on the machine it was made on: 6 passed (the page part 14), 470 passed 
 | `build.sh` stops at cmake | no CUDA toolkit, or `nvcc` not found | install CUDA 12.8; `export PATH=/usr/local/cuda-12.8/bin:$PATH` |
 | the page: *Forge is not answering* or a red lamp | the engine is not running | `systemctl --user status ruach-studio`; `journalctl --user -u ruach-studio -n 50` |
 | *no card can take this now* | another program holds the card, or the job does not fit | the message names the program and the card; Engine → GPUs says which card does what |
-| 403 from another machine | it is not on a private network, or Engine → Security keeps the studio to its own computer or to the networks listed | open it from your home network, or change Engine → Security on the studio's computer (deleting `user/access.json` goes back to private networks); or put your own proxy and guard in front (`RUACH_ALLOW_PUBLIC=1`) |
+| 403 from another machine | it is not on a private network, or Engine → Security keeps the Studio to its own computer or to the networks listed | open it from your home network, or change Engine → Security on the Studio's computer (deleting `user/access.json` goes back to private networks); or put your own proxy and guard in front (`RUACH_ALLOW_PUBLIC=1`) |
 | the Writer says *no chat server* | none is set | Engine → Chat server (vLLM, LM Studio, Ollama on your machine), or OpenRouter with your key in the Writer |
 | upscale, stems or the lyrics check refuse | their models are missing | `./fetch-models.sh` (or `--check` to see which) |
 
-The guide inside the studio (the **?** in the bar) explains every room. `docs/API.md` is the API; `CHANGELOG.md` what is in this version; `heresy/docs/HERESY.md` every change with what was measured.
+The guide inside the Studio (the **?** in the bar) explains every room. `docs/API.md` is the API; `CHANGELOG.md` what is in this version; `heresy/docs/HERESY.md` every change with what was measured.

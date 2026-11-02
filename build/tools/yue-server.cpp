@@ -1916,8 +1916,10 @@ static void decode_job(std::shared_ptr<Job> job, const Yue2Request & request) {
     bool      is_mp3  = false;
     WavFormat wav_fmt = WAV_S16;
     audio_parse_format(request.output_format.c_str(), is_mp3, wav_fmt);
-    if (is_mp3 || wav_fmt != WAV_F32) {
+    if (is_mp3) {                                        // HERESY 2008: an MP3, a quick demo, normalized; a WAV raw
         audio_normalize(song.audio.data(), song.T_audio * 2, request.peak_clip);
+    } else if (wav_fmt != WAV_F32) {
+        audio_fit(song.audio.data(), song.T_audio * 2);
     }
     std::string audio = is_mp3 ? audio_encode_mp3(song.audio.data(), song.T_audio, YUE2_SAMPLE_RATE, request.mp3_bitrate) :
                                  audio_encode_wav(song.audio.data(), song.T_audio, YUE2_SAMPLE_RATE, wav_fmt);
@@ -1969,14 +1971,16 @@ static void run_tokenize(std::shared_ptr<Job> job, std::vector<float> audio) {
     job->status.store(JobStatus::DONE);
 }
 
-// The audio part of a track: peak normalized except WAV32, then encoded in
-// the output format of the request
+// The audio part of a track: raw (HERESY 2008: a WAV at the decoder's own level, turned down only past full scale; an MP3 normalized),
+// then encoded in the output format of the request
 static std::string encode_audio(const Yue2Request & request, std::vector<float> & audio, int T_audio) {
     bool      is_mp3  = false;
     WavFormat wav_fmt = WAV_S16;
     audio_parse_format(request.output_format.c_str(), is_mp3, wav_fmt);
-    if (is_mp3 || wav_fmt != WAV_F32) {
+    if (is_mp3) {
         audio_normalize(audio.data(), T_audio * 2, request.peak_clip);
+    } else if (wav_fmt != WAV_F32) {
+        audio_fit(audio.data(), T_audio * 2);
     }
     return is_mp3 ? audio_encode_mp3(audio.data(), T_audio, YUE2_SAMPLE_RATE, request.mp3_bitrate) :
                     audio_encode_wav(audio.data(), T_audio, YUE2_SAMPLE_RATE, wav_fmt);
@@ -2119,9 +2123,11 @@ static void run_job(std::shared_ptr<Job> job, Yue2Request request) {
         if (request.fade_in > 0.0f) {   // HERESY 1324
             audio_fade_in(song.audio, song.T_audio, request.fade_in);
         }
-        // Normalization belongs to the output stage, WAV32 keeping the full range
-        if (is_mp3 || wav_fmt != WAV_F32) {
+        // HERESY 2008: raw at the output stage: a WAV at the decoder's own level (turned down only past full scale), an MP3 normalized
+        if (is_mp3) {
             audio_normalize(song.audio.data(), song.T_audio * 2, request.peak_clip);
+        } else if (wav_fmt != WAV_F32) {
+            audio_fit(song.audio.data(), song.T_audio * 2);
         }
         audio_parts.push_back(
             is_mp3 ? audio_encode_mp3(song.audio.data(), song.T_audio, YUE2_SAMPLE_RATE, request.mp3_bitrate) :

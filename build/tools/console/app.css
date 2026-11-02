@@ -618,6 +618,17 @@ body:has(#view-engine:not(.is-hidden)) #engineToggle { background: var(--amber);
 .wt-log { margin: 10px 0 0; max-height: 240px; overflow: auto; padding: 8px 10px; border-radius: var(--r-sm); background: var(--sunk);
   font: 12px/1.45 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; -webkit-user-select: text; user-select: text; }
 .wt-log .wt-st { min-width: 0; }
+/* HERESY 1984: By room, a tier a row: its room, its size and its Fetch; what it brings under it, what is here dimmed; no room said in red */
+.wt-free { margin: 0 0 4px; font-size: 12.5px; color: var(--muted); }
+.wt-tiers { display: flex; flex-direction: column; }
+.wt-tier { padding: 7px 0; border-top: 1px solid var(--line-soft); }
+.wt-tier:first-child { border-top: 0; }
+.wt-tier.is-whole .wt-sum { color: var(--good); }
+.wt-tier.is-going { background: color-mix(in srgb, var(--amber) 6%, transparent); }
+.wt-t-what { margin-top: 2px; font-size: 12px; color: var(--muted); }
+.wt-t-items { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 2px 18px; font-size: 12.5px; }
+.wt-t-item.is-here { color: var(--muted); }
+.wt-t-short { margin-top: 4px; font-size: 12.5px; color: var(--bad); }
 /* HERESY 1289: a button the Engine hides stays hidden: .btn's own display won over the attribute (Updates' «Update» and «What's
    new» showed with nothing new, getComputedStyle 10.10.2026), as the GPU card's rule of its own already says for its button */
 .engine-grid .btn[hidden] { display: none; }
@@ -5809,7 +5820,7 @@ html.i18n-wait .boot-veil > .boot-line { visibility: visible; }
    stylesheets is calc(N + var(--fs)): an element of a role takes --fs with its role's step on top (a lifted frame's step kept) */
 :root { --fs-frame: 0pt; }
 body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take { --fs-frame: var(--fs-f); }
-:is(.about-project h4, .engine-title, .col-head h2, .take-empty .take-empty-title, .card h3, .lib-head h3, .panel-head h3, .title-edit, .hub-name, .hg-title, .hg-body h3, #playbar .pb-names strong, .boot-words, .post-head .post-take, .lyr-over-head) { --fs: calc(var(--fs-g) + var(--fs-frame) + var(--fsr-heading, -1pt)); }
+:is(.about-project h4, .engine-title, .col-head h2, .take-empty .take-empty-title, .card h3, .lib-head h3, .panel-head h3, .title-edit, .hub-name, .hg-title, .hg-body h3, #playbar .pb-names strong, .boot-words, .post-head .post-take, .lyr-over-head) { --fs: calc(var(--fs-g) + var(--fs-frame) + var(--fsr-heading, 1pt)); }
 .tabs button { --fs: calc(var(--fs-g) + var(--fs-frame) + var(--fsr-rooms, 0pt)); }
 :is(.btn, .lyr-tog, .menu-pop button, .chip, .head-more-row button) { --fs: calc(var(--fs-g) + var(--fs-frame) + var(--fsr-buttons, 2pt)); }
 html.fonts-buttons :is(.btn, .lyr-tog, .menu-pop button, .chip, .head-more-row button) { font-family: var(--buttons); }
@@ -6085,6 +6096,7 @@ body:has(#view-engine:not(.is-hidden)) :is(.topbar, #playbar) { z-index: 37; }
 .mx-time { font-size: 13px; color: var(--muted); min-width: 92px; align-self: center; }
 .mx-state { align-self: center; flex: 1 1 220px; min-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* HERESY 1968: one line of its own width, whatever it says: the lanes never jump under the hand */
 .mx-state.is-bad { color: var(--bad, #e06c5a); }
+.mx-state::before { content: "\200b"; }   /* HERESY 2006: empty, it keeps its one line (the head wraps at narrow widths since the Layer button): the lanes never jump */
 .mx-lanes { position: relative; display: flex; flex-direction: column; gap: 4px; }
 .mx-lane { display: grid; grid-template-columns: minmax(650px, 700px) minmax(0, 1fr); align-items: center; gap: 8px; border: 1px solid var(--line-soft); border-radius: 6px; padding: 3px 6px; background: var(--sunk); }
 .mx-lane.is-quiet .mx-wave, .mx-lane.is-quiet .mx-name { opacity: .45; }
@@ -6448,6 +6460,9 @@ body.daw-full #dawPanel .mx-wave.mx-ruler { height: 22px; }
 .mx-head .mx-ms { align-self: center; }
 .mx-ms.mx-undo { display: inline-grid; place-items: center; }
 .mx-ms.mx-undo:disabled { opacity: .35; cursor: default; }
+.mx-ms.mx-layer { display: inline-grid; place-items: center; }   /* HERESY 2006: the Layer button, an icon like Undo */
+.mx-ms.mx-layer svg { width: 16px; height: 16px; display: block; }
+.mx-ms.mx-layer:disabled { opacity: .35; cursor: default; }
 .mx-ms.mx-print { width: auto; padding: 0 7px; font-family: inherit; font-weight: 600; font-size: 11px; line-height: 1; }
 /* HERESY 1753 (Viktor 23.10.2026, the DAW gone over as a sound engineer would): the DAW's head on one line, every control the height of the set's
    select (they stood 20, 24, 28, 30 and 35 px tall, half of them up in the middle of the select's label) */
@@ -6955,6 +6970,7 @@ body:not([data-frame="take"]) #view-take > .col-head::after { content: ""; order
 .lora-budget .curve-mode:disabled { opacity: .45; cursor: default; }
 /* HERESY 1630: the dock's server lines by the room they come from; a room with none says so */
 #logDockBody[data-only="creator"] > .log-line:not([data-src="creator"]),
+#logDockBody[data-only="writer"] > .log-line:not([data-src="writer"]),
 #logDockBody[data-only="trainer"] > .log-line:not([data-src="trainer"]),
 #logDockBody[data-only="refiner"] > .log-line:not([data-src="refiner"]),
 #logDockBody[data-only="video"] > .log-line:not([data-src="video"]) { display: none; }
@@ -7309,9 +7325,6 @@ body.vshift-ok .lora-vshift { display: inline-flex; }
 #advDrawer .drawer-body > .seed-sub:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
 
 /* HERESY 1737: the playlist's crossfade, in its head and on the strip */
-.pl-xf { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12.5px; }
-.pl-xf input { width: 110px; }
-.pl-xfn { margin-left: 8px; opacity: .8; }
 
 /* HERESY 1739: the run filters, chips of one height: an icon, and the state's count beside it */
 .tr-ichips { gap: 6px; flex-wrap: nowrap; }
@@ -7417,6 +7430,7 @@ body.has-train-strip .coll-col::after { height: 0; }
 
 /* HERESY 1809 (Viktor: «Лог сервера в отдельном окне имеет только Сервер и Художник. Синхронизируй там все вкладки»): the window's views, filtered as the dock's */
 .log-pop [data-body="server"][data-only="creator"] > .log-line:not([data-src="creator"]),
+.log-pop [data-body="server"][data-only="writer"] > .log-line:not([data-src="writer"]),
 .log-pop [data-body="server"][data-only="trainer"] > .log-line:not([data-src="trainer"]),
 .log-pop [data-body="server"][data-only="refiner"] > .log-line:not([data-src="refiner"]),
 .log-pop [data-body="server"][data-only="video"] > .log-line:not([data-src="video"]) { display: none; }
@@ -7910,7 +7924,7 @@ html.booting.veil-wait .boot-veil .boot-line i { width: 100%; transform: none; a
 .log-dock-chipbtn:hover, .log-dock-chipbtn:focus-visible { color: var(--amber); background: var(--hover); outline: 0; }
 .log-dock-chipbtn svg { width: 16px; height: 16px; }
 body[data-tab="train"] .log-dock-chipbtn { display: none; }
-.log-dock.is-chip { width: 128px !important; height: 32px; overflow: hidden; border-radius: var(--r-pill); }
+.log-dock.is-chip { width: 148px !important; height: 32px; overflow: hidden; border-radius: var(--r-pill); }
 .log-dock.is-chip .log-dock-grip, .log-dock.is-chip .log-dock-side, .log-dock.is-chip .net-say, .log-dock.is-chip .log-dock-last, .log-dock.is-chip .log-dock-acts,
 .log-dock.is-chip .log-dock-main, .log-dock.is-chip .log-dock-chipbtn { display: none !important; }
 .log-dock.is-chip .log-dock-head { height: 100%; padding: 0 3px; }
@@ -8176,7 +8190,7 @@ body.daw-full #dawPanel.has-dock[data-dock] .mx-lanes { --mx-lanes-max: calc(100
   .topbar .tabs { margin-left: 0; max-width: 100%; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
   .topbar .tabs::-webkit-scrollbar { display: none; }
   .topbar .tabs > button { flex: none; }
-  .topbar .tabs > [data-tab="post"], .topbar .tabs > [data-tab="artist"], .topbar .tabs > [data-tab="video"], .topbar .tabs > [data-tab="train"] { opacity: .4; }
+  .topbar .tabs > [data-tab="post"], .topbar .tabs > [data-tab="artist"], .topbar .tabs > [data-tab="video"], .topbar .tabs > [data-tab="train"] { display: none; }   /* HERESY 1982: out of the bar */
   .workspace, .workspace.lib-folded { grid-template-columns: minmax(0, 1fr) !important; height: auto; }
   .col { min-width: 0; padding: 12px 10px 40px; }
   .col-head { margin: -12px -10px 0; padding: 12px 10px 10px; }
@@ -8192,3 +8206,286 @@ body.daw-full #dawPanel.has-dock[data-dock] .mx-lanes { --mx-lanes-max: calc(100
   #playbar #pbShuffle, #playbar #pbRew, #playbar #pbFwd, #playbar #pbRepeat { display: none; }
   #playbar .pb-side > :not(.time):not(#pbHold) { display: none; }
 }
+
+/* HERESY 1977 (Viktor 31.10.2026: «Сделай интеграцию Pianoteq даже лучше и удобнее, чем официальный их X11 GUI»): the Pianoteq step's line
+   in its panel and node, its window, the browser of presets */
+.ptq-chip { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; margin: 6px 0 2px; padding: 5px 8px; border: 1px solid var(--line-a);
+  border-radius: var(--r-sm); background: var(--field); color: var(--ink); font: inherit; font-size: 12px; text-align: left; cursor: pointer; }
+.ptq-chip:hover, .ptq-chip:focus-visible { border-color: var(--amber); }
+.ptq-chip-k { flex: none; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.ptq-chip b { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.ptq-chip-n { flex: none; font-size: 11px; color: var(--amber); }
+.ptq-chip-go { flex: none; color: var(--dim); }
+.pcv-face .ptq-chip { margin: 3px 0 1px; padding: 2px 6px; font-size: 11px; }
+.pcv-face .ptq-chip-k { font-size: 9.5px; }
+.ptq-back-veil { position: fixed; inset: 0; z-index: 110; display: flex; align-items: center; justify-content: center; padding: 3vh 3vw;
+  background: color-mix(in srgb, var(--ground) 55%, transparent); backdrop-filter: blur(3px); }
+.ptq-win { display: flex; flex-direction: column; width: min(1320px, 100%); height: min(920px, 100%); border: 1px solid var(--line-strong-a, var(--line-a));
+  border-radius: var(--r-md); background: var(--ground); box-shadow: 0 18px 50px var(--shadow-lg, rgba(0, 0, 0, .3)); overflow: hidden; outline: none; }
+.ptq-wait { margin: 24px; }
+.ptq-w-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line-soft); }
+.ptq-inst { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 6px 10px; border: 1px solid var(--line-a);
+  border-radius: var(--r-md); background: var(--field); color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.ptq-inst:hover, .ptq-inst:focus-visible { border-color: var(--amber); }
+.ptq-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 600; }
+.ptq-instr { font-size: 12px; color: var(--muted); }
+.ptq-demo { font-size: 11.5px; font-weight: 400; color: var(--amber); }
+.ptq-ab { display: inline-flex; gap: 2px; flex: none; }
+.ptq-ab .btn[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
+.ptq-phrase { flex: 0 1 220px; min-width: 0; }
+.ptq-w-say { display: flex; align-items: center; gap: 10px; padding: 0 12px; }
+.ptq-w-say:has(.ptq-audio:not([hidden])), .ptq-w-say:has(.ptq-say:not(:empty)) { padding: 6px 12px; border-bottom: 1px solid var(--line-soft); }
+.ptq-audio { flex: 1 1 auto; min-width: 0; height: 32px; }
+.ptq-audio[hidden] { display: none; }
+.ptq-say.is-bad, .ptq-wait.is-bad { color: var(--red, #c0392b); }
+.ptq-w-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 12px 14px; }
+.ptq-comment { margin: 0 0 8px; }
+.ptq-small { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; margin-bottom: 10px; }
+.ptq-small > .field { margin: 0; min-width: 0; }
+.ptq-small > .field.is-changed > .label { color: var(--amber-hi, var(--amber)); }
+.ptq-cols { columns: 340px; column-gap: 12px; }
+.ptq-sec { break-inside: avoid; margin: 0 0 10px; padding: 6px 10px; border: 1px solid var(--line-soft); border-radius: var(--r-sm); }
+.ptq-sec > summary { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.ptq-sec.is-locked > summary { color: var(--dim); }
+.ptq-n { margin-left: auto; font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--amber); }
+.ptq-rows { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
+.ptq-win .ptq-row.field { display: flex; flex-direction: row; align-items: center; gap: 8px; margin: 0; min-width: 0; }
+.ptq-win .ptq-row.field > .label { flex: 0 0 38%; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px;
+  letter-spacing: 0; text-transform: none; color: var(--ink); }
+.ptq-win .ptq-row.field > input[type="range"] { flex: 1 1 80px; min-width: 60px; }
+.ptq-win .ptq-row.field > select { flex: 1 1 auto; min-width: 0; }
+.ptq-win .ptq-row output { flex: none; min-width: 72px; text-align: right; font-size: 12px; }
+.ptq-win .ptq-row.check { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12.5px; }
+.ptq-win .ptq-row.check > span[translate] { flex: 1 1 auto; }
+.ptq-back { visibility: hidden; flex: none; padding: 0 4px; color: var(--dim); cursor: pointer; }
+.ptq-row.is-changed .ptq-back, .ptq-mic.is-changed .ptq-back { visibility: visible; color: var(--amber); }
+.ptq-win .ptq-row.is-changed > .label, .ptq-win .ptq-row.is-changed > span[translate] { color: var(--amber-hi, var(--amber)); }
+.ptq-mics { display: grid; gap: 4px; margin-top: 6px; }
+.ptq-mic { display: grid; grid-template-columns: 78px minmax(50px, 1fr) 68px minmax(40px, .7fr) 44px 16px; align-items: center; gap: 6px; font-size: 12px; }
+.ptq-mic.is-off { opacity: .55; }
+.ptq-mic output { text-align: right; font-size: 11.5px; white-space: nowrap; }
+.ptq-mic-on { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; color: var(--muted); }
+.ptq-browse { position: fixed; z-index: 115; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column;
+  width: min(980px, calc(100vw - 24px)); height: min(700px, calc(100vh - 24px)); border: 1px solid var(--line-a); border-radius: var(--r-md);
+  background: var(--ground); box-shadow: 0 18px 50px var(--shadow-lg, rgba(0, 0, 0, .3)); }
+.ptq-b-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line-soft); }
+.ptq-b-find { flex: 1 1 auto; }
+.ptq-b-mine { flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.ptq-b-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(200px, 30%) minmax(0, 1fr); }
+.ptq-b-inst, .ptq-b-list { overflow-y: auto; padding: 6px; }
+.ptq-b-inst { border-right: 1px solid var(--line-soft); }
+.ptq-b-class { margin: 10px 8px 2px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+.ptq-b-i, .ptq-b-p { display: flex; width: 100%; border: 0; border-radius: var(--r-sm); background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.ptq-b-i { justify-content: space-between; gap: 8px; padding: 4px 8px; font-size: 13px; }
+.ptq-b-i span { flex: none; color: var(--dim); font-size: 11px; }
+.ptq-b-i.is-demo, .ptq-b-p.is-demo b { color: var(--muted); }
+.ptq-b-p { flex-direction: column; gap: 2px; padding: 6px 10px; }
+.ptq-b-p b { font-weight: 600; }
+.ptq-b-what { font-size: 12px; color: var(--muted); }
+.ptq-b-p small { font-size: 11.5px; color: var(--dim); }
+.ptq-b-i:hover, .ptq-b-p:hover { background: color-mix(in srgb, var(--amber) 8%, transparent); }
+.ptq-b-i.is-cur, .ptq-b-p.is-cur { background: color-mix(in srgb, var(--amber) 14%, transparent); }
+@media (max-width: 760px) { .ptq-b-body { grid-template-columns: minmax(0, 1fr); } .ptq-b-inst { max-height: 30vh; border-right: 0; border-bottom: 1px solid var(--line-soft); } }
+/* HERESY 1980: the licence's notices under About's first line (section 5(d) of the AGPL) */
+.about-legal { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.about-legal strong { color: var(--ink); font-weight: 600; }
+.about-legal a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+/* HERESY 1981: an effect slot's heading inside Pianoteq's Effects */
+.ptq-sub { margin: 8px 0 2px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+.ptq-rows > .ptq-sub:first-child { margin-top: 0; }
+
+/* HERESY 1982 (Viktor 01.11.2026: «Кнопки действия на FULL нодах… тоньше по высоте, меньше вертикального паддинга, и выключка вправо»; «в нодах огранщика
+   в полосах параметров асинхронный хаос. Сделай красиво с разбиением на колонки, чтобы всё было выровнено»): a face's rows in two columns, the name
+   and its value, the arrows at the value column's edges and the value in its middle; its buttons thin, on the right */
+.pcv-face .dv-actions { justify-content: flex-end; margin-top: 3px; }
+.pcv-face .dv-actions .btn { min-height: 0; padding: 0 9px; font-size: 10.5px; line-height: 15px; }
+.pcv-face .field > .label, .pcv-face .rm-grid > .hc-box > .hc-lab { flex: 0 0 47%; max-width: 47%; margin: 0; }
+.pcv-face .field > .hc-box { flex: 1 1 0; max-width: none; justify-content: space-between; }
+.pcv-face .rm-grid > .hc-box { justify-content: flex-start; }
+.pcv-face .hc-box > .hc-pick { flex: 1 1 0; min-width: 0; justify-content: center; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pcv-face .field.rm-num > input[type="number"] { flex: 1 1 0; width: auto; min-width: 0; text-align: center; }
+.pcv-face .field > select:not(.hc-src) { flex: 1 1 0; max-width: none; }
+.pcv-face .field > input[type="range"] { flex: 1 1 0; }
+
+/* HERESY 1983 (Viktor 01.11.2026: «детач миксера DAW не выходит за пределы браузерного окна. В прикреплённом режиме панель с регуляторами полос
+   высокая и имеет много воздуха под ними. Сделай компактнее вровень с отстёгнутым оверлеем»): the console in a window of its own (the page's
+   place for it left empty); docked, its strips as tall as their own content and its knobs' hint on the tabs row's tip */
+#dawPanel[data-dock="window"] #mxBody > .mx-dock { display: none; }
+body.mx-pop { margin: 0; background: var(--panel); color: var(--ink); overflow: hidden; }
+body.mx-pop > .mx-dock { display: block; box-sizing: border-box; height: 100vh; max-height: none; overflow: auto; margin: 0; padding: 8px 12px; border: 0; }
+body.mx-pop .mc-tabs { flex-wrap: wrap; row-gap: 4px; }
+#mxDock .mc { align-items: flex-start; }
+#dawPanel[data-dock="pin"] #mxDock .mc-how, #dawPanel[data-dock="hover"] #mxDock .mc-how, body.mx-pop .mc-how { display: none; }
+
+/* HERESY 1986: Engine → Pianoteq: what is here in a list of facts, its instruments in a table (what plays only as a demo dimmed), the serial's row,
+   how-tos folded under their names */
+.ptq-line.is-good { color: var(--good); }
+.ptq-line.is-warn { color: var(--amber); }
+.ptq-line.is-bad { color: var(--bad); }
+.ptq-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 3px 16px; margin: 6px 0 10px; font-size: 13px; }
+.ptq-facts dt { color: var(--muted); }
+.ptq-facts dd { margin: 0; overflow-wrap: anywhere; }
+.ptq-inst { max-height: 260px; overflow: auto; }
+.ptq-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.ptq-table th, .ptq-table td { padding: 3px 8px; border-bottom: 1px solid var(--line-soft); text-align: left; }
+.ptq-table th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel); }
+.ptq-table td:nth-child(3), .ptq-table td:nth-child(4), .ptq-table th:nth-child(3), .ptq-table th:nth-child(4) { text-align: right; font-variant-numeric: tabular-nums; }
+.ptq-table tr.is-demo td { color: var(--muted); }
+.ptq-act { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; }
+#ptqSerial { width: 300px; max-width: 100%; font-family: var(--mono); }
+.ptq-note { margin: 6px 0 10px; font-size: 12px; color: var(--muted); }
+.ptq-guide details { border-top: 1px solid var(--line-soft); padding: 6px 0; }
+.ptq-guide summary { cursor: pointer; font-weight: 600; }
+.ptq-guide p { margin: 6px 0 2px; font-size: 13px; line-height: 1.5; }
+
+/* HERESY 1987 (Viktor 01.11.2026: «В активном воркспейсе сдвинь полосу вправо на 2px и компенсируй -2px паддинга»): the open workspace's row, its bar and
+   its ground 2px off the caret beside it, its words where they stood */
+#collSide .coll-place.is-on { margin-left: 2px; padding-left: 8px; }
+
+/* HERESY 1988: a take's family tree over the room: the takes nested by descent (the one asked lit), under each what the Refiner made in it */
+/* HERESY 1992: the family tree in the compare window's clothes (its box, head and rows, as many as the family has), a row stepped in by its depth;
+   a take's row: the dot that plays, ▶, its name, what it is of its parent, when, how long, its marks, the Librarian; a Refiner version dashed and smaller */
+.ln-acts { display: flex; gap: 8px; flex: none; align-items: center; }
+.ln-acts [hidden] { display: none; }
+.ln-list { gap: 3px; }
+.ln-li { margin-left: calc(var(--d, 0) * 22px); }
+.ln-row { grid-template-columns: 10px 24px minmax(0, 1fr) minmax(0, 300px) 120px 44px auto 26px; padding: 5px 10px; cursor: default; }
+.ln-row.is-focus { box-shadow: inset 3px 0 0 var(--amber); }
+.ln-row.is-gone { opacity: .6; }
+.ln-play { width: 24px; height: 24px; padding: 0; border: 0; background: none; color: var(--amber); cursor: pointer; display: grid; place-items: center; }
+.ln-play .ui-ico { width: 16px; height: 16px; }
+.ln-title { border: 0; background: none; color: var(--ink); font: inherit; font-weight: 500; padding: 0; text-align: left; cursor: pointer; }
+.ln-title:hover:not(:disabled) { text-decoration: underline; }
+.ln-title:disabled { cursor: default; }
+.ln-tw { color: var(--dim); }
+.ln-when { font-size: 12px; color: var(--dim); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ln-here { color: var(--amber); }
+.ln-rate { justify-content: flex-end; }
+.ln-lib { padding: 3px; }
+.ln-dvrow { padding: 3px 10px; font-size: 12.5px; cursor: pointer; border-style: dashed; background: color-mix(in oklab, var(--panel) 94%, var(--ground)); }
+.ln-dvrow .cmp-name { font-weight: 400; }
+.ln-badge { display: inline-block; margin-right: 8px; padding: 0 6px; border: 1px solid var(--amber-a); border-radius: 999px; color: var(--amber); font-size: 10.5px;
+  letter-spacing: .06em; text-transform: uppercase; vertical-align: 1px; }
+.ln-gone { padding: 2px 4px; list-style: none; }
+.post-head .post-tree { align-self: center; margin-left: 6px; }
+.dv-group.is-flash { animation: ln-flash 1.7s ease; }
+@keyframes ln-flash { 0%, 60% { background: color-mix(in srgb, var(--amber) 22%, transparent); } 100% { background: transparent; } }
+
+/* HERESY 1995: the compare window's second under the pointer, its ruler, ⏪ ⏩, the switch that keeps the second, 👎 for the disliked, its strip 2 px larger */
+.cmp-wavebox { position: relative; }
+.cmp-hover { position: absolute; top: -2px; transform: translate(-50%, -100%); padding: 1px 6px; border-radius: var(--r-sm); background: var(--ink); color: var(--panel);
+  font-size: 12px; pointer-events: none; white-space: nowrap; }
+.cmp-hover[hidden] { display: none; }
+.cmp-ruler { display: block; width: 100%; height: 22px; margin-top: -8px; }
+.cmp-skip, .cmp-keep, .cmp-dis { flex: none; width: 32px; height: 32px; padding: 0; border: 0; border-radius: var(--r-sm); background: none; color: var(--amber); cursor: pointer;
+  display: grid; place-items: center; }
+.cmp-skip:hover, .cmp-keep:hover, .cmp-dis:hover { background: var(--hover); }
+.cmp-skip .ui-ico, .cmp-dis .ui-ico { width: 18px; height: 18px; }
+.cmp-keep[aria-pressed="false"], .cmp-dis[aria-pressed="false"] { color: var(--dim); filter: grayscale(1); opacity: .6; }
+.cmp-transport .cmp-time { font-size: 14px; }
+.cmp-transport .cmp-cache { font-size: 13.5px; }
+
+/* HERESY 1998: the Librarian's places and the Refiner's nodes with the studio's own outlines, in their text's colour, no colours of their own */
+.coll-place.has-ico { display: flex; align-items: center; gap: 7px; }
+.coll-place.has-ico > span:not(.coll-ico):not(.coll-n) { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.coll-place.has-ico > .coll-ico { flex: 0 0 16px; display: inline-grid; place-items: center; width: 16px; height: 16px; color: var(--muted); }
+.coll-place.has-ico > span:nth-child(2) { flex: 1 1 auto; text-align: left; }
+.coll-ico .ui-ico { width: 15px; height: 15px; stroke-width: 1.8; }
+.coll-place.is-on .coll-ico { color: var(--amber); }
+.pcv-ico { flex: none; display: inline-grid; place-items: center; width: 15px; height: 15px; color: var(--muted); opacity: .85; }
+.pcv-ico .ui-ico { width: 14px; height: 14px; stroke-width: 1.8; }
+.pcv-node.is-active .pcv-ico, .pcv-node.is-open .pcv-ico { color: var(--amber); opacity: 1; }
+
+/* HERESY 2000: a version's lag beside its name; blind: what tells the versions apart hidden, the rows where they stood */
+.cmp-off { margin-left: 8px; padding: 0 5px; border-radius: 999px; background: color-mix(in oklab, var(--amber) 14%, transparent); color: var(--amber); font-size: 11px; vertical-align: 1px; }
+.cmp-off[hidden] { display: none; }
+.cmp-box.is-blind .cmp-group, .cmp-box.is-blind .cmp-lufs, .cmp-box.is-blind .cmp-dur, .cmp-box.is-blind .cmp-off, .cmp-box.is-blind .cmp-sheet-btn { visibility: hidden; }
+.cmp-ruler { cursor: ew-resize; }
+
+/* HERESY 1985: the offer to move to https (a dialog of the Studio's own look), Engine → Security's https block */
+.hs-back { position: fixed; inset: 0; z-index: 130; display: flex; align-items: center; justify-content: center; padding: 16px; background: color-mix(in srgb, var(--ground) 60%, transparent); backdrop-filter: blur(2px); }
+.hs-box { width: min(640px, 100%); display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; border: 1px solid var(--line-strong-a); border-radius: var(--r-lg); background: var(--panel); box-shadow: 0 20px 60px var(--shadow-lg); }
+.hs-title { font: 600 17px/1.3 var(--sans); }
+.hs-p { margin: 0; line-height: 1.5; }
+.hs-warn { color: var(--amber); }
+.hs-note { color: var(--muted); font-size: 13px; }
+.hs-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.acc-https { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.acc-https:empty { display: none; }
+.hs-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+.hs-fp code { overflow-wrap: anywhere; font-size: 11.5px; }
+.hs-how summary { cursor: pointer; color: var(--muted); }
+.hs-how p { margin: 6px 0 0; line-height: 1.5; font-size: 13px; }
+
+/* HERESY 2001: the veil's line an oscilloscope's trace on a canvas, the <i> its clock (unseen); the note window's guard */
+.boot-line { height: 40px; }
+.boot-scope { position: absolute; left: 0; top: 0; width: min(60vw, 420px); height: 40px; display: block; }
+.boot-line > i { visibility: hidden; }
+html.booting .boot-veil .boot-words { bottom: 212px; }   /* over the scope's 40 px, as over the bars' 36 */
+.hd-guard { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; padding: 10px 12px; border: 1px solid color-mix(in oklab, var(--amber) 45%, var(--line-a)); border-radius: var(--r-md); background: color-mix(in oklab, var(--amber) 8%, transparent); }
+.hd-guard-say { color: var(--ink); font-weight: 500; }
+.hd-guard .hd-acts { margin: 0; }
+
+/* HERESY 1989: a lane's colour dot, its channel's four letters, its polarity, its shift's badge, its fold; a lane in hand */
+.mx-col { flex: none; width: 12px; height: 12px; padding: 0; border: 1px solid color-mix(in oklab, var(--ink) 25%, transparent); border-radius: 50%; cursor: pointer; }
+.mx-chg { display: inline-flex; flex: none; border: 1px solid var(--line-a); border-radius: 999px; overflow: hidden; }
+.mx-ch { width: 19px; height: 22px; padding: 0; border: 0; background: none; color: var(--dim); font: 600 10.5px/1 var(--mono, monospace); cursor: pointer; }
+.mx-ch + .mx-ch { border-left: 1px solid var(--line-a); }
+.mx-ch.is-on { background: color-mix(in oklab, var(--mx-lane, var(--amber)) 22%, transparent); color: var(--ink); }
+.mx-off { display: inline-flex; align-items: center; gap: 2px; flex: none; padding: 0 2px 0 6px; border-radius: 999px; background: color-mix(in oklab, var(--amber) 14%, transparent); color: var(--amber); font-size: 11px; }
+.mx-off-x { border: 0; background: none; color: inherit; cursor: pointer; padding: 0 3px; font-size: 13px; line-height: 1; }
+.mx-fold { flex: none; margin-left: auto; width: 22px; height: 22px; padding: 0; border: 0; background: none; color: var(--dim); cursor: pointer; }
+.mx-lane[data-strip] .mx-name { cursor: grab; }
+.mx-lane.is-drag { position: relative; z-index: 5; opacity: .85; box-shadow: 0 6px 18px var(--shadow-lg); }
+.mx-lane.is-folded { --mx-h: 26px !important; }
+.mx-lane.is-folded .mx-wave:not(.mx-ruler) { height: 26px !important; }
+.mx-lane.is-folded .mx-wave canvas { opacity: .35; }
+.mx-lane.is-folded .mx-grip { display: none; }
+
+/* HERESY 2002: the gateway's channel balance, asked under the loop test */
+.au-bal { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 0; }
+.au-bal:empty { display: none; }
+.au-bal-say { color: var(--ink); font-size: 13px; }
+.au-bal-say.is-bad { color: var(--amber); }
+
+/* HERESY 2004: the Librarian's head: a section's path a second, smaller line under its workspace; the sort, Tiles, List and Filter as icons;
+   the counts given the room, two lines where they took four */
+.coll-col .col-head h2 { max-width: min(42%, 620px); line-height: 1.3; }
+.coll-where .coll-sub { display: block; margin-top: 1px; font: 500 13px/1.3 var(--sans); letter-spacing: .01em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.coll-headtools .icon-btn { width: 34px; min-width: 34px; height: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.coll-headtools .icon-btn svg { width: 18px; height: 18px; }
+.coll-headtools .coll-filter-btn { min-width: 34px; height: 34px; padding: 0 8px; justify-content: center; }
+.coll-head #collNote { flex: 1 3 640px; min-width: 440px; }
+
+/* HERESY 2006: the DAW's Layer: the shelf of banks in a window, a bank's card, how it plays */
+.mxl-back { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 16px; background: color-mix(in srgb, var(--ground) 55%, transparent); }
+.mxl-box { width: min(1080px, 100%); height: min(720px, 100%); display: flex; flex-direction: column; border: 1px solid var(--line-strong-a); border-radius: var(--r-lg); background: var(--panel); box-shadow: 0 20px 60px var(--shadow-lg); overflow: hidden; }
+.mxl-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 14px; border-bottom: 1px solid var(--line-soft); }
+.mxl-title { font: 600 16px/1.3 var(--heading); }
+.mxl-q { flex: 1 1 220px; min-width: 160px; height: 32px; }
+.mxl-kinds { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.mxl-kind { width: auto; padding: 0 8px; }
+.mxl-x { margin-left: auto; font-size: 18px; }
+.mxl-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(260px, 38%) minmax(0, 1fr); }
+.mxl-list { margin: 0; padding: 6px; list-style: none; overflow: auto; border-right: 1px solid var(--line-soft); }
+.mxl-row { width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 8px; border: 1px solid transparent; border-radius: var(--r-md); background: none; color: var(--ink); text-align: left; cursor: pointer; }
+.mxl-row:hover { background: var(--sunk); }
+.mxl-row.is-on { border-color: var(--amber); background: color-mix(in oklab, var(--amber) 10%, transparent); }
+.mxl-name { font-weight: 600; }
+.mxl-meta { font-size: 12px; color: var(--muted); }
+.mxl-wait { padding: 10px; color: var(--muted); }
+.mxl-wait.is-bad, .mxl-state.is-bad { color: var(--amber); }
+.mxl-card { overflow: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+.mxl-cname { margin: 0; font: 600 18px/1.3 var(--heading); }
+.mxl-desc { margin: 0; line-height: 1.5; color: var(--ink); }
+.mxl-dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 0; font-size: 13px; }
+.mxl-dl dt { color: var(--muted); }
+.mxl-dl dd { margin: 0; overflow-wrap: anywhere; }
+.mxl-how { display: inline-flex; gap: 4px; }
+.mxl-h { width: auto; padding: 0 10px; height: 28px; }
+.mxl-row2 { display: flex; flex-wrap: wrap; gap: 10px; }
+.mxl-row2 .field { flex: 1 1 140px; }
+.mxl-midiwrap { flex: 2 1 260px !important; }
+.mxl-acts { display: flex; align-items: center; gap: 10px; margin-top: auto; }
+.mxl-hint { margin: 0; color: var(--muted); line-height: 1.5; }
+@media (max-width: 760px) { .mxl-body { grid-template-columns: 1fr; grid-template-rows: 40% 60%; } .mxl-list { border-right: 0; border-bottom: 1px solid var(--line-soft); } }

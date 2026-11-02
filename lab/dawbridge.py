@@ -1,9 +1,9 @@
-"""HERESY 1102: the DAW bridge (Viktor, 02.10.2026). Two ways out of the studio, and only two: the mixed
+"""HERESY 1102: the DAW bridge (Viktor, 02.10.2026). Two ways out of the Studio, and only two: the mixed
 track as it is, or the whole take handed to the user's own DAW, where whatever happens next happens outside
-the studio. Nothing comes back in: the studio does not import a DAW's project.
+the Studio. Nothing comes back in: the Studio does not import a DAW's project.
 
-Bitwig first (DAWproject), REAPER second (HERESY 1478: Waveform out, it opened our DAWproject empty); others by pull request. This part finds which of them the studio's own machine
-has. A DAW on another computer (the browser on a laptop, the studio on a server) cannot be seen from here: the
+Bitwig first (DAWproject), REAPER second (HERESY 1478: Waveform out, it opened our DAWproject empty); others by pull request. This part finds which of them the Studio's own machine
+has. A DAW on another computer (the browser on a laptop, the Studio on a server) cannot be seen from here: the
 page lets the user name it.
 
     GET /daw     the DAWs known to the bridge, which are on this machine, where, which version"""
@@ -14,7 +14,7 @@ KNOWN = [
     {"id": "bitwig", "name": "Bitwig Studio", "by": "Bitwig", "state": "first",   # HERESY 1478: first; Waveform out (an empty project)
      "paths": ["/opt/bitwig-studio/bitwig-studio", "/var/lib/flatpak/exports/bin/com.bitwig.BitwigStudio",
                "~/.local/share/flatpak/exports/bin/com.bitwig.BitwigStudio"], "which": ["bitwig-studio"],   # HERESY 1148: the Flatpak too
-     "licence": "30 days without limits after signing up, then Essentials $99, Producer $199 or Studio $399 (bitwig.com, 03.10.2026); opens the studio's DAWproject: the mix, the stems, the score as notes, the sections as markers",
+     "licence": "30 days without limits after signing up, then Essentials $99, Producer $199 or Studio $399 (bitwig.com, 03.10.2026); opens the Studio's DAWproject: the mix, the stems, the score as notes, the sections as markers",
      "install": "bitwig.com/download: the Ubuntu .deb (sudo apt install ./bitwig-studio-*.deb) or the Flatpak"},
     {"id": "reaper", "name": "REAPER", "by": "Cockos", "state": "second",
      "paths": ["/opt/REAPER/reaper", "~/opt/REAPER/reaper", "/usr/local/bin/reaper"], "which": ["reaper"],

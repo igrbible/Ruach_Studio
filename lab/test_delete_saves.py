@@ -1,5 +1,5 @@
 """HERESY 1817: the saves of an unprotected, stopped run deleted one by one, as chosen; a twin in loras/ only when asked; a protected run refuses.
-A kit of its own in a temporary folder: nothing of the studio's is touched."""
+A kit of its own in a temporary folder: nothing of the Studio's is touched."""
 import json, os, sys, tempfile
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))

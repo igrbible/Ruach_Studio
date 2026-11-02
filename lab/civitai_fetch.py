@@ -156,7 +156,7 @@ def pick(v):
     safe = [f for f in files if str(f.get("name") or "").lower().endswith(".safetensors")]
     if not safe:
         if any(str(f.get("name") or "").lower().endswith(PICKLE) for f in files):
-            raise ValueError("this version comes only as a pickle (.ckpt, .pt, .bin): that is code, not weights, and the studio never takes it")
+            raise ValueError("this version comes only as a pickle (.ckpt, .pt, .bin): that is code, not weights, and the Studio never takes it")
         raise ValueError("this version has no .safetensors file")
     safe.sort(key=lambda f: (f.get("type") not in (None, "Model"), not f.get("primary")))
     return safe[0]
@@ -211,7 +211,7 @@ def cancel():
 
 def start(kit, body, scope="", done=None):
     if scope:
-        raise ValueError("a test page fetches nothing: open the studio without ?scope= to fetch")
+        raise ValueError("a test page fetches nothing: open the Studio without ?scope= to fetch")
     body = body if isinstance(body, dict) else {}
     family = str(body.get("family") or "")
     if family not in artist_loras.FAMILIES:

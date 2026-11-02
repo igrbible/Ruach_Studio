@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Rouah Studio · des chansons à partir de mots, sur ta propre machine</title>
-<meta name="description" content="Un studio de chansons complet autour de YuE2, le modèle de chanson ouvert : écris le style et les paroles, et Rouah Studio compose, chante et rend la chanson sur ton propre GPU. Open source, AGPL.">
+<meta name="description" content="Un Studio de chansons complet autour de YuE2, le modèle de chanson ouvert : écris le style et les paroles, et Rouah Studio compose, chante et rend la chanson sur ton propre GPU. Open source, AGPL.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Rouah Studio · des chansons à partir de mots, sur ta propre machine">
-<meta property="og:description" content="Un studio de chansons complet autour de YuE2 sur ton propre GPU : la partition d'abord, l'entraînement de LoRA, les pistes séparées, le remastering, ta DAW. Open source.">
+<meta property="og:description" content="Un Studio de chansons complet autour de YuE2 sur ton propre GPU : la partition d'abord, l'entraînement de LoRA, les pistes séparées, le remastering, ta DAW. Open source.">
 <meta property="og:image" content="https://ruachstudio.igr.bible/assets/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="alternate" hreflang="en" href="https://ruachstudio.igr.bible/">
@@ -34,7 +34,7 @@
 <!-- HERESY 1446 (Viktor 15.10.2026: «Пропишь для визитки код трекинга»): Umami on Orpheus, no cookies -->
 <script defer src="https://lwa.igr.bible/bread-and-wine.js" data-website-id="b9ce0336-948e-43ed-89d6-ade9b66dbb4a"></script>
 <style>
-  /* the studio's two classic themes: Scroll & Brick by day (on Viktor's #f8f9fa), Scroll by Lamplight by night */
+  /* the Studio's two classic themes: Scroll & Brick by day (on Viktor's #f8f9fa), Scroll by Lamplight by night */
   :root {
     --ground: #f8f9fa; --paper: #ffffff; --ink: #191919; --soft: #55524f; --faint: #8a8784;
     --rule: #e3e2e0; --amber: #8e1a2e; --on-amber: #ffffff; --wash: rgba(142, 26, 46, .06);
@@ -83,7 +83,7 @@
 
   /* the hero */
   .hero { padding-top: 56px; padding-bottom: 28px; text-align: center; }   /* the sides stay the .wrap's gutter */
-  /* the studio's veil as the hero (Viktor: «эту заставку загрузки можно как hero на сайт-визитку»): the night's colours
+  /* the Studio's veil as the hero (Viktor: «эту заставку загрузки можно как hero на сайт-визитку»): the night's colours
      whatever the visitor's theme, the Maiden crisp on her black cloud */
   .hero-night { --ink: #f4f4f4; --soft: #c4c4c4; --faint: #a5a5a5; --amber: #f07171; --on-amber: #111111; --rule: #3e3e3e;
     --paper: #282828; --logo-cloud: #000; background: radial-gradient(120% 90% at 50% 30%, #262323 0%, #1e1e1e 55%, #191919 100%);
@@ -249,6 +249,9 @@
   .ring-chip.on::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
   .ring-table td:first-child { color: var(--soft); }
   .ring-table td, .ring-table th { font-variant-numeric: tabular-nums; }
+  /* HERESY 1984: What it downloads, its sizes to the right, the sums bold */
+  .dl-table td:not(:first-child), .dl-table th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .dl-table tr.sum td { font-weight: 700; }
   .ring-note { color: var(--soft); font-size: .92em; margin: 14px 0 0; }
   .ring-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: color-mix(in srgb, var(--paper) 94%, transparent);
     backdrop-filter: blur(12px); border-top: 1px solid var(--rule); box-shadow: 0 -8px 30px rgba(0, 0, 0, .12); }
@@ -310,7 +313,7 @@
 <header class="bar">
   <div class="wrap">
     <a class="mark" href="#top"><img src="../assets/ruach-icon-32.png?v=1272" alt="" width="28" height="28">Rouah Studio</a>
-    <nav aria-label="Sections"><a href="#rooms">Salles</a><a href="#studio">Ce qu'il fait</a><a href="#honestly">Honnêtement</a><a href="#ring">Le ring</a><a href="#need">Ce qu'il faut</a><a href="#next">La suite</a> <a href="#licences">Licences</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub ↗</a></nav>
+    <nav aria-label="Sections"><a href="#rooms">Salles</a><a href="#Studio">Ce qu'il fait</a><a href="#honestly">Honnêtement</a><a href="#ring">Le ring</a><a href="#need">Ce qu'il faut</a><a href="#next">La suite</a> <a href="#licences">Licences</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub ↗</a></nav>
     <details class="langs" translate="no"><summary aria-label="Language">FR</summary><div class="langs-pop"><a href="/" lang="en" hreflang="en">English</a><a href="/ru/" lang="ru" hreflang="ru">Русский</a><a href="/uk/" lang="uk" hreflang="uk">Українська</a><a href="/be/" lang="be" hreflang="be">Беларуская</a><a href="/el/" lang="el" hreflang="el">Ελληνικά</a><a href="/es/" lang="es" hreflang="es">Español</a><a href="/it/" lang="it" hreflang="it">Italiano</a><a href="/fr/" lang="fr" hreflang="fr" aria-current="page">Français</a><a href="/pt/" lang="pt" hreflang="pt">Português</a><a href="/de/" lang="de" hreflang="de">Deutsch</a><a href="/ja/" lang="ja" hreflang="ja">日本語</a><a href="/zh/" lang="zh" hreflang="zh">中文</a></div></details>
     <button class="theme" id="theme" type="button" aria-label="Jour ou nuit" title="Jour ou nuit"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5a9.5 9.5 0 0 1 0 19z" fill="currentColor"/></svg></button>
   </div>
@@ -330,9 +333,9 @@
 </svg></div>
     <div class="osem" translate="no"><b>OSEM</b><span class="say">Tout simplement AWESOME</span><span>Open Source, Engaged &amp; Musical</span></div>
     <h1>Des chansons à partir de mots et d'accords<br>sur ta propre machine</h1>
-    <p class="lead">Un studio complet autour de <b>YuE2</b>, le modèle de chanson ouvert. Écris le style et les paroles, et le studio compose, chante et rend la chanson sur <b>ton propre GPU</b>. Tes chansons, tes mots et tes réglages n'en sortent jamais.</p>
+    <p class="lead">Un Studio complet autour de <b>YuE2</b>, le modèle de chanson ouvert. Écris le style et les paroles, et le Studio compose, chante et rend la chanson sur <b>ton propre GPU</b>. Tes chansons, tes mots et tes réglages n'en sortent jamais.</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Le prendre sur GitHub</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.fr.md">Lire le guide</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Modèles sur Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Offre-moi une machine à café</a></div>
-    <span class="rc"><b>2.0.4</b> · le DAW comme éditeur audio · octobre 2026</span>
+    <span class="rc"><b>2.0.5</b> · chaque crête entière, l'arbre généalogique et le Studio en https · novembre 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -354,16 +357,16 @@
   <section class="declare" aria-label="Ce que nous défendons">
     <div class="wrap">
       <blockquote>
-        <p>Ruach Studio, c'est la génération musicale ouverte qui tourne sur ton propre matériel : le modèle, la partition, les adaptateurs et chaque prise restent à toi, et rien ne se loue au jeton. Les modèles ouverts sont désormais assez bons pour tenir seuls, et ce qui manquait, c'est le studio autour d'eux : c'est ce que nous construisons, au grand jour.</p>
-        <p class="loud">La musique doit être libre à créer et à partager : qui n'a ni voix, ni instrument, ni studio a tout de même le droit de poser ses pensées et ses sentiments sur le son.</p>
+        <p>Ruach Studio, c'est la génération musicale ouverte qui tourne sur ton propre matériel : le modèle, la partition, les adaptateurs et chaque prise restent à toi, et rien ne se loue au jeton. Les modèles ouverts sont désormais assez bons pour tenir seuls, et ce qui manquait, c'est le Studio autour d'eux : c'est ce que nous construisons, au grand jour.</p>
+        <p class="loud">La musique doit être libre à créer et à partager : qui n'a ni voix, ni instrument, ni Studio a tout de même le droit de poser ses pensées et ses sentiments sur le son.</p>
       </blockquote>
     </div>
   </section>
 
   <section id="rooms">
     <div class="wrap">
-      <h2>Sept salles, un studio</h2>
-      <p class="sub">Le <b>Créateur</b> fait la chanson, l'<b>Écrivain</b> l'écrit avec un modèle de chat, l'<b>Affineur</b> la termine, le <b>Peintre</b> peint ses images, le <b>Vidéaste</b> prépare son clip, le <b>Bibliothécaire</b> garde chaque prise, et l'<b>Entraîneur LoRA</b> apprend tes propres chansons à YuE2. Un guide pour chaque salle se trouve dans le studio.</p>
+      <h2>Sept salles, un Studio</h2>
+      <p class="sub">Le <b>Créateur</b> fait la chanson, l'<b>Écrivain</b> l'écrit avec un modèle de chat, l'<b>Affineur</b> la termine, le <b>Peintre</b> peint ses images, le <b>Vidéaste</b> prépare son clip, le <b>Bibliothécaire</b> garde chaque prise, et l'<b>Entraîneur LoRA</b> apprend tes propres chansons à YuE2. Un guide pour chaque salle se trouve dans le Studio.</p>
       <div class="rooms">
         <article class="room"><a class="pic" href="../assets/shots/studio-create.webp" data-night="assets/shots/studio-create-night.webp"><img class="day" src="../assets/shots/studio-create.webp" alt="Créateur" loading="lazy"><img class="night" src="../assets/shots/studio-create-night.webp" alt="Créateur" loading="lazy"></a>
           <div><h3>Créateur</h3><p>Style, paroles, mode de planification, décodeur, LoRA sur une route du vert au rouge ; la prise avec sa partition, ses graines et tout pour la refaire.</p></div></article>
@@ -385,13 +388,13 @@
 
   <section id="studio">
     <div class="wrap">
-      <h2>Ce qui en fait un studio</h2>
+      <h2>Ce qui en fait un Studio</h2>
       <p class="sub">Pas une enveloppe de modèle de plus : un poste de travail autour du modèle, ouvert jusqu'à l'os, chaque changement numéroté et documenté.</p>
       <ul class="feats">
         <li><b>Des chansons entières, jusqu'à huit minutes.</b> Une chanson de 6:12 en 135 s ; une chanson de 7:25 avec sa partition d'abord en 212 s, sur une seule RTX 3090.</li>
         <li><b>La partition d'abord, et modifiable par toi.</b> YuE2 écrit la mélodie et les accords en ABC avant qu'une note ne sonne : change-les, transpose-les, apporte ta propre partition ou ton MIDI, et la chanson la suit.</li>
         <li><b>Deux graines, pas une.</b> Garde la chanson (la graine musicale), écoute-la rendue à neuf (la graine sonore).</li>
-        <li><b>Ton propre son.</b> L'entraînement de LoRA sur tes propres chansons, dans le studio, sans quantification (bf16), avec une télémétrie qui te dit quelles époques écouter en premier.</li>
+        <li><b>Ton propre son.</b> L'entraînement de LoRA sur tes propres chansons, dans le Studio, sans quantification (bf16), avec une télémétrie qui te dit quelles époques écouter en premier.</li>
         <li><b>La post-production, toute en local.</b> Pistes séparées (BS-Roformer, htdemucs), antibourdon, remastering, suréchantillonnage (UniverSR), contrôle des paroles par Whisper.</li>
         <li><b>Vers ta DAW</b> <i>(expérimental)</i>. Un projet REAPER avec les pistes séparées, la partition en MIDI, les sections et les paroles sur la ligne de temps ; DAWproject pour Waveform et Bitwig.</li>
         <li><b>Des paroles qui tiennent le temps.</b> Les temps de chaque ligne face à la règle de sa section : les syllabes selon les règles propres à chaque langue, et les consonnes qui prennent un temps à elles ; les balises de section proposées dès que tu tapes «[» ; les accents égarés repérés.</li>
@@ -413,7 +416,7 @@
         <figure><img src="../assets/shots/train-charts.webp" alt="Les courbes de l'Entraîneur" loading="lazy"><figcaption>Les courbes des deux moitiés, expliquées</figcaption></figure>
         <div>
           <h3>Son propre entraîneur de LoRA</h3>
-          <p>Le studio entraîne lui-même les adaptateurs, sur des poids bf16 non quantifiés. Face à AI-Toolkit d'Ostris sur le même ensemble, la perte de la moitié musique concorde époque par époque à 0.015 près.</p>
+          <p>Le Studio entraîne lui-même les adaptateurs, sur des poids bf16 non quantifiés. Face à AI-Toolkit d'Ostris sur le même ensemble, la perte de la moitié musique concorde époque par époque à 0.015 près.</p>
           <p>Rang 16 sur 148 chansons : 2.1 s par pas dans 12 Go. Rang 32 sur 42 chansons entières : 6.7 s par pas dans 18 Go.</p>
         </div>
       </div>
@@ -443,13 +446,13 @@
             <tr><td>refaire une prise</td><td>exactement : deux graines que tu gardes</td><td>non</td></tr>
             <tr><td>guidage (CFG)</td><td>deux, séparés : la poussée du style et la prise des paroles, chacun son CFG</td><td>un bouton Style Influence</td></tr>
             <tr><td>remplacer une section</td><td>ses paroles rechantées entre les silences que trouve l'oreille, le reste de la prise gardé à l'échantillon près : la couture ne s'entend pas ; plusieurs sections d'un coup</td><td>Replace Section : dans nos essais presque jamais utilisable, les coutures s'entendent et la voix change</td></tr>
-            <tr><td>ton propre son</td><td>entraîner une LoRA sur tes chansons, dans le studio</td><td>pas d'entraînement</td></tr>
+            <tr><td>ton propre son</td><td>entraîner une LoRA sur tes chansons, dans le Studio</td><td>pas d'entraînement</td></tr>
             <tr><td>après le rendu</td><td>pistes séparées, antibourdon, remastering, suréchantillonnage, contrôle des paroles, tout en local</td><td>pistes séparées, dans le cloud</td></tr>
             <tr><td>voir le son</td><td>le spectrogramme de toute la prise au-dessus du lecteur, en phase avec son onde : les sections, la brillance et le volume, le spectre et la note sous le pointeur</td><td>une forme d'onde</td></tr>
             <tr><td>vers une DAW</td><td>un projet REAPER avec la partition, les sections et les paroles (expérimental)</td><td>pistes audio</td></tr>
             <tr><td>le code</td><td>ouvert, chaque changement documenté</td><td>fermé</td></tr>
             <tr class="honest"><td>le poli dès la sortie de la boîte</td><td><b>moins</b> : un mixage peut bourdonner (l'Antibourdon aide), les paroles peuvent dériver (le contrôle des paroles trouve où), certains instruments YuE2 les joue maigrement ou pas du tout (une LoRA les lui apprend)</td><td><b>plus</b></td></tr>
-            <tr class="honest"><td>ce qu'il faut</td><td>un GPU NVIDIA (24 Go pour tout en pleine précision), Linux, environ 33 Go de disque (environ 60 Go avec les modèles du Peintre)</td><td>un navigateur</td></tr>
+            <tr class="honest"><td>ce qu'il faut</td><td>un GPU NVIDIA (24 Go pour tout en pleine précision), Linux, environ 34–41 Go de disque (environ 74–84 Go avec les modèles du Peintre)</td><td>un navigateur</td></tr>
           </tbody>
         </table>
       </div>
@@ -496,7 +499,7 @@
           </tbody>
         </table>
       </div>
-      <p class="ring-note">Les leurs arrivent masterisés, les nôtres bruts : le true peak au-dessus de zéro, c'est à nous de le corriger, comme le fait l'Affineur du studio. D'autres graines et d'autres prompts sonnent autrement de chaque côté ; le ring montre la qualité et la dispersion, pas un classement définitif. Le tableau entier et la façon dont il a été mesuré : <a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-RS-Finetunes">la fiche du modèle</a>.</p>
+      <p class="ring-note">Les leurs arrivent masterisés, les nôtres bruts : le true peak au-dessus de zéro, c'est à nous de le corriger, comme le fait l'Affineur du Studio. D'autres graines et d'autres prompts sonnent autrement de chaque côté ; le ring montre la qualité et la dispersion, pas un classement définitif. Le tableau entier et la façon dont il a été mesuré : <a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-RS-Finetunes">la fiche du modèle</a>.</p>
       <div class="vocab-call" id="vocabulary">
         <div>
           <h3>Le vocabulaire de la Première Vague</h3>
@@ -514,13 +517,13 @@
         <div class="card"><h3>La machine</h3><ul>
           <li><b>Un GPU NVIDIA</b> : 24 Go pour tout en pleine précision</li>
           <li><b>Linux</b> (fait sur Ubuntu 24.04, CUDA 12.8)</li>
-          <li><b>Environ 33 Go</b> de disque, mesurés sur des installations neuves : le programme et son Python (16 Go), les modèles (17 à 24 Go selon la carte, téléchargés, épinglés et vérifiés par <code>fetch-models.sh</code>) ; les modèles du Peintre 26 Go de plus, les ensembles 💎 5 Go, chacun seulement quand tu le demandes</li></ul></div>
+          <li><b>Environ 34–41 Go</b> de disque, mesurés sur des installations neuves : le programme et son Python (17 Go), les modèles (17 à 24 Go selon la carte, téléchargés, épinglés et vérifiés par <code>fetch-models.sh</code>) ; les modèles du Peintre 39–43 Go de plus, les ensembles 💎 5,6 Go, chacun seulement quand tu le demandes</li></ul></div>
         <div class="card"><h3>L'écran</h3><ul>
           <li>Fait pour une fenêtre de navigateur de <b>1920×1080 à 100 %</b></li>
           <li>L'idéal : <b>2K</b> (2560×1440), 22″ ou plus, 16:9 ou plus large</li>
           <li>Deux thèmes pour des heures de travail : Scroll &amp; Brick le jour, Scroll by Lamplight la nuit, et 20 autres</li></ul></div>
         <!-- HERESY 1807 (Viktor 28.10.2026: «на всех наших карточках чёрным по белому… предупреди… Слишком массивная она у нас») -->
-        <p class="warn-free"><b>Pas sur les GPU gratuits du cloud.</b> Ruach Studio ne tourne pas sur Google Colab, Kaggle ni sur aucun GPU gratuit de notebook, alors n'y passe pas une soirée : c'est un studio entier, pas un notebook. Il compile son moteur C++/CUDA sur la machine où il vit, garde à côté un serveur et un laboratoire de services Python, et prend environ 33 Go de disque (60 Go avec le Peintre). La carte, la mémoire, le disque effacé et la limite d'heures d'une session gratuite ne le tiennent pas. Il lui faut ton propre ordinateur sous Linux, ou un serveur que tu loues et gardes, avec une carte NVIDIA : 24 Go pour tout, 16 Go avec les copies plus petites du modèle.</p>
+        <p class="warn-free"><b>Pas sur les GPU gratuits du cloud.</b> Ruach Studio ne tourne pas sur Google Colab, Kaggle ni sur aucun GPU gratuit de notebook, alors n'y passe pas une soirée : c'est un Studio entier, pas un notebook. Il compile son moteur C++/CUDA sur la machine où il vit, garde à côté un serveur et un laboratoire de services Python, et prend environ 34–41 Go de disque (74–84 Go avec le Peintre). La carte, la mémoire, le disque effacé et la limite d'heures d'une session gratuite ne le tiennent pas. Il lui faut ton propre ordinateur sous Linux, ou un serveur que tu loues et gardes, avec une carte NVIDIA : 24 Go pour tout, 16 Go avec les copies plus petites du modèle.</p>
         <div class="card"><h3>En option</h3><ul>
           <li>Un serveur de chat pour l'Écrivain (vLLM, LM Studio, Ollama) ou une clé OpenRouter</li>
           <li>Une DAW : REAPER, Waveform 14+, Bitwig</li>
@@ -529,16 +532,43 @@
     </div>
   </section>
 
+  <!-- HERESY 1984 (Viktor 01.11.2026: «честную таблицу по объёмам данных, скачиваемых на машину пользователя… на сайт визиту ближе к концу») -->
+  <section id="downloads">
+    <div class="wrap">
+      <h2>Ce qu'il télécharge</h2>
+      <p class="sub">Mesuré fichier par fichier sur les listes épinglées des dépôts du Studio et sur le disque d'une installation neuve (1 Go = 10⁹ octets). L'installation apporte le Créateur, le Bibliothécaire et la chaîne de l'Affineur ; toute autre salle ne vient que sur demande, depuis Moteur → Modèles et LoRA → Par salle, qui mesure d'abord la place libre et ne récupère rien qui ne tiendrait pas.</p>
+      <div class="table dl-table">
+        <table>
+          <thead><tr><th></th><th>carte de 24 Go</th><th>carte de 12–16 Go</th><th>carte de 8 Go</th></tr></thead>
+          <tbody>
+            <tr><td>le programme et son moteur, compilé ici (0,2 Go téléchargés)</td><td>0,9 Go</td><td>0,9 Go</td><td>0,9 Go</td></tr>
+            <tr><td>ses deux Python, avec PyTorch pour CUDA 12.8 dans chacun (8,7 Go téléchargés)</td><td>16,5 Go</td><td>16,5 Go</td><td>16,5 Go</td></tr>
+            <tr><td>YuE2 et l'affinage propre à Ruach Studio, à la quantification de la carte</td><td>14,9 Go</td><td>8,2 Go</td><td>8,2 Go</td></tr>
+            <tr><td>le reste : deux décodeurs de plus, le transcripteur, Whisper, les modèles des stems, UniverSR et Apollo-vocal, les LoRA</td><td>8,8 Go</td><td>8,8 Go</td><td>8,8 Go</td></tr>
+            <tr class="sum"><td>l'installation</td><td>41,1 Go</td><td>34,4 Go</td><td>34,4 Go</td></tr>
+            <tr><td>+ Écrivain : son modèle de langue par llama.cpp</td><td>7,4 Go</td><td>7,4 Go</td><td>6,2 Go</td></tr>
+            <tr><td>+ Affineur : MuScriptor et FlashSR</td><td>6,1 Go</td><td>6,1 Go</td><td>6,1 Go</td></tr>
+            <tr><td>+ Peintre : ses aides et Qwen-Image 2512 (Q6 sur 24 Go, Q4 en dessous)</td><td>42,9 Go</td><td>39,3 Go</td><td>39,3 Go</td></tr>
+            <tr><td>+ Vidéaste : MiniMax H3 et SeedVR2</td><td>86,3 Go</td><td>il faut 24 Go</td><td>il faut 24 Go</td></tr>
+            <tr><td>+ Entraîneur LoRA : sa base et l'écouteur de style</td><td>20,2 Go</td><td>16,3 Go</td><td>12,9 Go</td></tr>
+            <tr class="sum"><td>toutes les salles</td><td>204,0 Go</td><td>103,5 Go</td><td>98,9 Go</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="ring-note">Seulement sur demande nominative : les autres moteurs de son (les fusions IRA, IRAE et RS-FW, de 35 à 86 Go selon la quantification), les adaptateurs du Peintre (7,5 Go) et ses affinages (20,4 Go chacun), tous les paliers de MiniMax H3 (201 Go) ou le BF16 (478 Go), les ensembles 💎 (5,6 Go). Non comptés : le pilote NVIDIA et le CUDA toolkit, Pianoteq (à acheter soi-même), vos prises.</p>
+    </div>
+  </section>
+
   <section id="next">
     <div class="wrap">
       <h2>La suite</h2>
-      <p class="sub">2.0.0 est le studio où nous faisons nos propres chansons chaque jour. Voici les grandes pièces en route, pour 2.1.0 et après.</p>
+      <p class="sub">2.0.0 est le Studio où nous faisons nos propres chansons chaque jour. Voici les grandes pièces en route, pour 2.1.0 et après.</p>
       <ul class="feats">
         <li><b>Des chansons modifiées comme le modèle les écrit.</b> Une prise prolongée à partir de n'importe quel moment ; une section réécrite en gardant la voix, la tonalité et les mesures de ses voisines, cousue dans les propres tokens du modèle ; une couche instrumentale sur la partition de la prise elle-même.</li>
         <li><b>Une DAW dans l'Affineur.</b> L'éditeur de partition de Plenio en avant-première : un piano roll, une piste d'accords, les paroles au-dessus des notes, un clavier MIDI pour y jouer des idées.</li>
         <li><b>Une application de bureau.</b> D'abord une page installable (PWA), puis une application Electron qui démarre et arrête ses services elle-même.</li>
         <li><b>Le Vidéaste.</b> Un clip pour la chanson, ses scènes suggérées par un assistant et ses images clés peintes par le Peintre, dans la 2.1.0.</li>
-        <li><b>Des plugins natifs</b> pour REAPER, Waveform et Bitwig, une fois que le studio aura trouvé ses gens.</li>
+        <li><b>Des plugins natifs</b> pour REAPER, Waveform et Bitwig, une fois que le Studio aura trouvé ses gens.</li>
       </ul>
     </div>
   </section>
@@ -575,8 +605,8 @@
       <div class="story" translate="no" lang="en" data-lang="en" hidden>
         <h2>A little story</h2>
         <p>Viktor Zhuromskyy, the author of Ruach Studio, does not publish it for the hype. He made it for himself. After more than half a year of struggling with Suno on paid plans, and of searching for a model worth working with (ACE-Step, MiniMax and others), he set out to build an audio studio of his own, on his own machine. He settled on YuE2: of all the open models, it is the best value and the most refined.</p>
-        <p>He did not knock the studio together just to have something that runs. He built it his own way, because his work is his own: his translations, his interlinear texts and much more. He fit into it as much as he could, polished the interface as far as he could, and made working with it not poking and clicking among crutches and potholes, but as productive as it can be.</p>
-        <p class="story-end">That is the whole story. Now the studio is yours as well.</p>
+        <p>He did not knock the Studio together just to have something that runs. He built it his own way, because his work is his own: his translations, his interlinear texts and much more. He fit into it as much as he could, polished the interface as far as he could, and made working with it not poking and clicking among crutches and potholes, but as productive as it can be.</p>
+        <p class="story-end">That is the whole story. Now the Studio is yours as well.</p>
       </div>
       <div class="story" translate="no" lang="ru" data-lang="ru" hidden>
         <h2>Маленькая история</h2>
@@ -662,7 +692,7 @@
   </div>
 
 <footer>
-  <div class="wrap"><span>Rouah Studio · 2.0.4 · une œuvre d'<a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changements</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Machine à café</a></span></div>
+  <div class="wrap"><span>Rouah Studio · 2.0.5 · une œuvre d'<a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changements</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Machine à café</a></span></div>
 </footer>
 
 <script src="../assets/wavesurfer.min.js"></script>

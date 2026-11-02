@@ -446,6 +446,109 @@
    ]
   },
   {
+   "id": "layer",
+   "label": "Layer",
+   "say": "a bank from the shelf under the song",
+   "canvas": false,
+   "tip": "The DAW's Layer: a bank from the shelf (an instrument, an effect, a drone or field recordings) laid under the song as a strip of its own.",
+   "script": "layer.py",
+   "input": "stems",
+   "rate": 0.08,
+   "group": "mend",
+   "after": "derivedPanel",
+   "params": [
+    {
+     "key": "bank",
+     "label": "Bank",
+     "type": "text",
+     "default": "ambient:rain",
+     "tip": "The bank by its id on the shelf (GET /lab/banks)"
+    },
+    {
+     "key": "sfz",
+     "label": "Instrument",
+     "type": "text",
+     "default": "",
+     "tip": "One of the bank's .sfz files; empty: its first"
+    },
+    {
+     "key": "how",
+     "label": "How",
+     "type": "select",
+     "default": "bed",
+     "options": [
+      [
+       "bed",
+       "a bed held"
+      ],
+      [
+       "drone",
+       "a drone on the key"
+      ],
+      [
+       "notes",
+       "the notes of a MIDI file"
+      ]
+     ],
+     "tip": "A note held through the song, the song's key held low, or a MIDI file's notes"
+    },
+    {
+     "key": "note",
+     "label": "Note",
+     "type": "text",
+     "default": "auto",
+     "tip": "The note held, like C3 or 48; auto: C4 for a bed, the song's key for a drone"
+    },
+    {
+     "key": "transpose",
+     "label": "Transpose",
+     "type": "number",
+     "min": -24,
+     "max": 24,
+     "step": 1,
+     "default": 0,
+     "tip": "Semitones up or down"
+    },
+    {
+     "key": "midi",
+     "label": "MIDI",
+     "type": "file",
+     "blank": "none",
+     "tip": "The MIDI file played (Notes)"
+    },
+    {
+     "key": "level",
+     "label": "Level, dB",
+     "type": "number",
+     "min": -40,
+     "max": 0,
+     "step": 1,
+     "default": -18,
+     "tip": "Its level against the song where both sound"
+    },
+    {
+     "key": "fade_in",
+     "label": "Fade in, s",
+     "type": "number",
+     "min": 0,
+     "max": 30,
+     "step": 0.5,
+     "default": 4,
+     "tip": "Seconds it takes to come in"
+    },
+    {
+     "key": "fade_out",
+     "label": "Fade out, s",
+     "type": "number",
+     "min": 0,
+     "max": 30,
+     "step": 0.5,
+     "default": 6,
+     "tip": "Seconds it takes to go"
+    }
+   ]
+  },
+  {
    "id": "pianoteq",
    "label": "Pianoteq",
    "say": "a stem played again on a piano",
@@ -661,6 +764,13 @@
      "step": 1,
      "default": 0,
      "tip": "Every note moved by this many semitones (12: an octave up), kept within the piano's 88 keys"
+    },
+    {
+     "key": "state",
+     "type": "text",
+     "label": "Pianoteq's own settings",
+     "default": "",
+     "tip": "The panel's state: a preset of any of Pianoteq's, its small presets and the values set (HERESY 1977)"
     }
    ]
   },
@@ -668,7 +778,7 @@
    "id": "vupscale",
    "label": "Voice upscale",
    "say": "the voices' top redrawn",
-   "tip": "The separators work at 44.1 kHz and dull a voice's top: its air, its breath, the edge of its consonants. UniverSR draws that top anew on the voice stems only, keeping each below its cutoff sample for sample, and gives them back at the set's own rate as versions of their stems for the DAW. The rest of the set is left as it is. The bundle (HERESY 1583) draws it three times, with UniverSR, Apollo-vocal and FlashSR, and blends them above the cut as the separators' ensembles do: averaged, the loudest, or air (averaged up to 16 kHz, the loudest above). Apollo-vocal (baicai1145, CC BY-NC-SA 4.0: not for commercial use) and FlashSR (Jaekwon Im, no licence stated yet) come from their authors on first use, never with the studio.",
+   "tip": "The separators work at 44.1 kHz and dull a voice's top: its air, its breath, the edge of its consonants. UniverSR draws that top anew on the voice stems only, keeping each below its cutoff sample for sample, and gives them back at the set's own rate as versions of their stems for the DAW. The rest of the set is left as it is. The bundle (HERESY 1583) draws it three times, with UniverSR, Apollo-vocal and FlashSR, and blends them above the cut as the separators' ensembles do: averaged, the loudest, or air (averaged up to 16 kHz, the loudest above). Apollo-vocal (baicai1145, CC BY-NC-SA 4.0: not for commercial use) and FlashSR (Jaekwon Im, no licence stated yet) come from their authors on first use, never with the Studio.",
    "script": "vupscale.py",
    "input": "stems",
    "gpu": true,
@@ -691,7 +801,8 @@
        "lead",
        "the lead only"
       ]
-     ]
+     ],
+     "tip": "Which voices get a new top: the lead and the backing, or the lead alone"
     },
     {
      "key": "mode",
@@ -711,7 +822,8 @@
        "high",
        "high: above 6 kHz"
       ]
-     ]
+     ],
+     "tip": "From where the voices' top is drawn anew: subtle above 12 kHz, normal above 8, high above 6"
     },
     {
      "key": "blend",
@@ -768,14 +880,22 @@
   {
    "id": "report",
    "label": "Before and after",
-   "say": "what a step changed, measured",
-   "tip": "A file of the tree against what it was made from (a mix or a remaster of stems against the file the stems were split from; the take when nothing else): loudness, true peak, loudness range, crest, width, correlation and the share of four bands, side by side; the average spectra at equal loudness and their difference; the short-term loudness through the song. A picture and a page of numbers, in the tree. The take itself is measured alone.",
+   "say": "any two sounds measured against each other",
+   "tip": "This file (after) against what it was made from, or against any file of the tree or another take chosen as Before: a print through gear, a mix against its master, a reference. Both found where they meet (a print through a loop comes back late) and compared at equal loudness: loudness, true peak, peak over loudness, loudness range, crest, width, correlation, left against right, clipped runs; the spectrograms of both and their difference (red louder after, blue quieter); the average spectra and their difference; the dynamics (what the loud moments and the sharpest peaks lost); what no filter makes from the before (distortion, noise, pumping); a verdict in words. Pictures and a page in the tree. The take itself, with no Before chosen, is measured alone.",
    "script": "report.py",
    "input": "file",
-   "rate": 0.04,
+   "rate": 0.12,
    "group": "look",
    "after": "inspectPanel",
-   "params": []
+   "params": [
+    {
+     "key": "before",
+     "label": "Before",
+     "type": "file",
+     "blank": "what it was made from",
+     "tip": "What this file is held against: what it was made from, or any file of this take's tree, or another take (an import: a print through gear, a reference)"
+    }
+   ]
   },
   {
    "id": "match",

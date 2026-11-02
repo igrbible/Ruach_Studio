@@ -143,12 +143,30 @@ def main(set_dir, outdir, params_file):
     rate, frames = info.samplerate, info.frames
     wav = outdir / "pianoteq.wav"
     preset = str(p.get("preset") or "NY Steinway D Classical")
+    # HERESY 1977: the panel's own state (any of Pianoteq's presets, its small presets, the values set): a preset file made for this render
+    # (saved for a moment into the bank «Ruach Studio», copied out, deleted there; pianoteq_live.fxp), played with --fxp
+    try:
+        st = json.loads(str(p.get("state") or "") or "{}")
+    except ValueError:
+        st = {}
+    st = st if isinstance(st, dict) else {}
+    preset = str(st.get("preset") or preset)
+    import pianoteq_live
+    demo = pianoteq_live.licensed(KIT, preset, str(st.get("bank") or "")) is False   # Pianoteq's demo here: some of its keys are silent
+    fx, changed = None, len(st.get("values") or {})
+    if st.get("preset") or st.get("small") or changed:
+        try:
+            fx = pianoteq_live.fxp(KIT, dict(st, preset=preset), work / f"state-{os.getpid()}.fxp")
+        finally:
+            pianoteq_live.Server(KIT).stop()
     prefs = own_prefs(work)
     try:
-        r = subprocess.run([str(binary), "--headless", "--quiet", "--prefs", str(prefs), "--preset", preset, "--midi", str(mid),
-                            "--wav", str(wav), "--rate", str(rate)], capture_output=True, text=True, timeout=7200)
+        r = subprocess.run([str(binary), "--headless", "--quiet", "--prefs", str(prefs)] + (["--fxp", str(fx)] if fx else ["--preset", preset]) +
+                           ["--midi", str(mid), "--wav", str(wav), "--rate", str(rate)], capture_output=True, text=True, timeout=7200)
     finally:
         shutil.rmtree(prefs.parent, ignore_errors=True)
+        if fx:
+            Path(fx).unlink(missing_ok=True)
     if not wav.is_file():
         raise SystemExit("Pianoteq made no sound: " + ((r.stderr or "").strip() or (r.stdout or "").strip())[-300:])
     a, _ = sf.read(str(wav), always_2d=True, dtype="float32")
@@ -168,15 +186,16 @@ def main(set_dir, outdir, params_file):
     wav.unlink()
     Path(mid).unlink()                                  # the take keeps its MIDI set; the branch its sound
     lane = str(p.get("lay") or "lane") == "lane"
-    f = {"name": f"Pianoteq · {preset} · {name}", "file": out, "seconds": round(frames / rate, 2)}
+    f = {"name": f"Pianoteq · {preset}" + (" ✎" if changed or st.get("small") else "") + f" · {name}", "file": out, "seconds": round(frames / rate, 2)}
     if lane:
         f["track"] = "pianoteq"                         # a strip of its own in the DAW (1929's way), beside the stem it plays
     else:
         f["source"] = source                            # the stem's version: the DAW plays it instead
     print(json.dumps({"files": [f],
-                      "measure": {"licence": LICENCE, "preset": preset, "stem": name, "notes": len(notes), "midi": folder.name, "touch": touch,
+                      "measure": {"licence": LICENCE, "preset": preset, "demo": demo, "changed": changed, "small": st.get("small") or {}, "stem": name, "notes": len(notes), "midi": folder.name, "touch": touch,
                                   "shift": shift, "pedal": bool(cc), "lowered_db": round(20 * np.log10(0.98 / peak), 2) if peak > 0.98 else 0.0},
-                      "summary": f"{preset} played {len(notes)} notes of the {name} stem; " + ("a lane of its own in the DAW" if lane else "the stem's version in the DAW"),
+                      "summary": f"{preset}" + (f" with {changed} setting{'' if changed == 1 else 's'} of its own" if changed else "") + f" played {len(notes)} notes of the {name} stem; " + ("a lane of its own in the DAW" if lane else "the stem's version in the DAW") +
+                                 ("; a demo in this Pianoteq: some of its keys are silent" if demo else ""),
                       "took": round(time.time() - t0, 1)}))
 
 

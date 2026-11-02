@@ -1,7 +1,7 @@
 """HERESY 1169 · 1304 (Viktor 10.10.2026: «Давай допишем при самом старте новой Студии сканирование устройств и выбор оптимальных
 настроек для YuE2 BF16/кванта и для модели генерации обложек»): what the machine has, for the page's scan at a new studio's first
 start (and Engine → Compute's «Scan the machine» after it): each card's name, memory and compute capability (Turing, 7.5, has no
-BF16 tensor cores: BF16 runs there, slower than Q8_0), its VRAM limit (Engine → GPUs), the studio's card. Imported by lab.py,
+BF16 tensor cores: BF16 runs there, slower than Q8_0), its VRAM limit (Engine → GPUs), the Studio's card. Imported by lab.py,
 which adds the painter that fits (GET /machine)."""
 import subprocess
 

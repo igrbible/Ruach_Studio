@@ -1,6 +1,6 @@
 """HERESY 1169 · 1255: the Artist room's painter (lab/artist.py runs it in .venv-art). The painter (Qwen-Image; Krea 2 Muse
 until 1428) once for a run, the prompt read once, then every variation in every shape asked for, each picture through the
-content filter (the studio's rule for every painter: a flagged picture is not kept, and its line says so). A shape is drawn at multiples of 16 and cut
+content filter (the Studio's rule for every painter: a flagged picture is not kept, and its line says so). A shape is drawn at multiples of 16 and cut
 to its size from the middle; the VAE decodes in tiles (measured 08.10.2026 on an RTX 3090, Krea 2 Muse Q8: 1920×1088
 peaks at 16.9 GB so and 22.7 GB at once, in the same 46 s).
 
@@ -309,7 +309,7 @@ def set_schedule(pipe, sampling):
     """HERESY 1319: the schedule and the sampler asked (diffusers' flow-match Euler: Karras, exponential or beta spacing of the
     pipeline's own sigmas; stochastic for Euler SDE); nothing when the painter's own are asked."""
     from diffusers import FlowMatchEulerDiscreteScheduler
-    import artist_samplers                           # HERESY 1333: the studio's own samplers and schedules
+    import artist_samplers                           # HERESY 1333: the Studio's own samplers and schedules
     if artist_samplers.install(pipe, sampling):
         return
     sc = (sampling or {}).get("schedule") or "simple"
@@ -428,7 +428,7 @@ def main(run=None):
         import artist_qwen
         return artist_qwen.main(run, ask, asked)
     # HERESY 1428 (Viktor 14.10.2026: «Krea вырезаем, однозначно»): Krea 2's own path gone with it; any painter but Qwen-Image's is said so
-    raise SystemExit(f"{asked or 'no painter named'}: the Artist paints with Qwen-Image (Krea 2 left the studio, HERESY 1428)")
+    raise SystemExit(f"{asked or 'no painter named'}: the Artist paints with Qwen-Image (Krea 2 left the Studio, HERESY 1428)")
 
 if __name__ == "__main__":
     if SERVE and len(sys.argv) < 2:                  # HERESY 1370

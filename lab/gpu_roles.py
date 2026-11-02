@@ -1,15 +1,15 @@
-"""HERESY 1091 (Viktor, 02.10.2026): which card does what. The studio's synthesis runs on one card (start.sh
+"""HERESY 1091 (Viktor, 02.10.2026): which card does what. The Studio's synthesis runs on one card (start.sh
 reads it from here); training only on the cards given to training; the lab's other jobs (the listener,
-Whisper, stems, remaster, upscale) only on theirs. While a run trains on the studio's own card, the page
+Whisper, stems, remaster, upscale) only on theirs. While a run trains on the Studio's own card, the page
 does not start a synthesis: one card, one heavy job.
 
     user/gpus.json   {"studio": 0, "train": [1, 2], "jobs": [0, 1, 2], "limits": {"0": 14336}}
 
-HERESY 1294 (Viktor 10.10.2026: «ползунка для выбора лимита VRAM по GPU»): "limits", MiB a card, the most the studio's work may
+HERESY 1294 (Viktor 10.10.2026: «ползунка для выбора лимита VRAM по GPU»): "limits", MiB a card, the most the Studio's work may
 hold on it (a laptop's desktop and browser keep the rest); a card without one has its whole memory. The page's Auto sets the
-engine's knobs for the studio card's limit; the guard (gpu_guard.py) gives a card to a job only when the job fits under it.
+engine's knobs for the Studio card's limit; the guard (gpu_guard.py) gives a card to a job only when the job fits under it.
 
-Defaults when the file is missing: the studio on GPU0; training on every other card, or on GPU0 too when
+Defaults when the file is missing: the Studio on GPU0; training on every other card, or on GPU0 too when
 it is the only one (then synthesis waits while it trains); jobs on every card."""
 import json
 import os
@@ -83,7 +83,7 @@ def save(kit, data, cards):
     ids = indices(cards)
     studio = data.get("studio")
     if not isinstance(studio, int) or (ids and studio not in ids):
-        raise ValueError(f"the studio needs one card of {ids}")
+        raise ValueError(f"the Studio needs one card of {ids}")
     out = {"studio": studio}
     for role in ("train", "jobs"):
         got = data.get(role)

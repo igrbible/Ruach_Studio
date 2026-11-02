@@ -16,7 +16,7 @@ them in plain visual words (art_looks.json, from the instruments cheat-sheet).
     painter   artwork/Qwen-Image-2512, -2.1    Qwen-Image (HERESY 1338; the only painter since 1428)
     critic    checkpoints/Qwen2.5-Omni-7B-GGUF (llama.cpp's llama-mtmd-cli; absent: the first picture is kept, unseen)
 
-HERESY 1167 · 1405 · 1428: the painters before Qwen-Image, an SDXL fine-tune and then Krea 2 Muse by Stable Yogi, left the studio (SDXL in
+HERESY 1167 · 1405 · 1428: the painters before Qwen-Image, an SDXL fine-tune and then Krea 2 Muse by Stable Yogi, left the Studio (SDXL in
 1405, Krea 2 in 1428; HERESY 1800 took what was said of them out of here, HERESY.md keeps their story). What came with them stays: the
 painter runs in its own environment (.venv-art), a card too small for it whole streams its blocks from RAM (ART_STREAM=1), ART_PAINTER
 says which (the lab sets it), and every picture passes the content filter before it is kept (Falconsai/nsfw_image_detection in
@@ -28,7 +28,7 @@ GGUF Q4 or Q6 with Lightning at 1.0 and 8 steps, an fp8 fine-tune (ART_MODEL, a 
 Lightning at 0.55 and 12 steps, or 2.1 (Qwen's research licence: the page says what that means for a song that is sold), drawn at
 1328 px and kept at 1024, through the same content filter.
 
-HERESY 1428 (Viktor 14.10.2026: «Krea вырезаем, однозначно… КВЕН бьёт всё»): Krea 2 Muse gone from the studio; Qwen-Image paints every
+HERESY 1428 (Viktor 14.10.2026: «Krea вырезаем, однозначно… КВЕН бьёт всё»): Krea 2 Muse gone from the Studio; Qwen-Image paints every
 cover (by the cards: 2512 Q6 or Q4 whole, Q4 streamed from RAM on a smaller card), the prompt writer and the content filter as before. fp8 BASE
 is the base in fp8: Lightning at 1.0 and 8 steps, as the GGUF ones.
 

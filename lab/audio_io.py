@@ -202,7 +202,48 @@ def gateway(user_dir):
         g = json.loads(Path(user_dir, "audio.json").read_text()).get("gateway") or {}
     except (OSError, ValueError):
         g = {}
-    return {"out": g.get("out", ""), "in": g.get("in", ""), "rate": int(g.get("rate") or 0)}
+    out = {"out": g.get("out", ""), "in": g.get("in", ""), "rate": int(g.get("rate") or 0)}
+    b = g.get("balance_db")                               # HERESY 2002: the channels' balance, when one is kept
+    if isinstance(b, list) and len(b) == 2 and any(float(v or 0) for v in b):
+        out.update(balance_db=[round(float(v or 0), 2) for v in b], balance_level_db=g.get("balance_level_db"), balance_at=g.get("balance_at", ""))
+    return out
+
+
+BALANCE_MAX = 1.5                                         # HERESY 2002: what one click of a knob cannot set, not more
+
+
+def set_balance(user_dir, balance_db, level_db=None):
+    """HERESY 2002: the gateway's channel balance on the way back, [left, right] dB, each 0 to −1.5 (the hotter side lowered, never the quieter
+    lifted); [0, 0] or None takes it off. Kept with the gateway in user/audio.json; the gateway's own devices first."""
+    p = Path(user_dir, "audio.json")
+    try:
+        cfg = json.loads(p.read_text())
+    except (OSError, ValueError):
+        cfg = {}
+    g = cfg.get("gateway") or {}
+    if not g.get("out") or not g.get("in"):
+        raise ValueError("keep the gateway's output and input first")
+    if balance_db in (None, [], [0, 0], [0.0, 0.0]):
+        for k in ("balance_db", "balance_level_db", "balance_at"):
+            g.pop(k, None)
+    else:
+        if not isinstance(balance_db, (list, tuple)) or len(balance_db) != 2:
+            raise ValueError("a balance is two numbers, left and right")
+        try:
+            b = [float(v) for v in balance_db]
+        except (TypeError, ValueError):
+            raise ValueError("a balance is two numbers, left and right")
+        if any(not (-BALANCE_MAX <= v <= 0) for v in b):
+            raise ValueError(f"a balance lowers a side by 0 to {BALANCE_MAX:g} dB: more is the knobs' work")
+        g["balance_db"] = [round(v, 2) for v in b]
+        g["balance_level_db"] = None if level_db is None else round(float(level_db), 1)
+        g["balance_at"] = time.strftime("%Y-%m-%d %H:%M")
+    cfg["gateway"] = g
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = p.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(cfg, indent=1))
+    os.replace(tmp, p)
+    return gateway(user_dir)
 
 
 # HERESY 1548: the monitor, a second output for listening on this machine
@@ -336,7 +377,12 @@ def set_gateway(user_dir, out, inp, rate):
         cfg = json.loads(p.read_text())
     except (OSError, ValueError):
         cfg = {}
+    was = cfg.get("gateway") or {}
     cfg["gateway"] = {"out": out or "", "in": inp or "", "rate": rate}
+    if (was.get("out"), was.get("in"), int(was.get("rate") or 0)) == (out or "", inp or "", rate):   # HERESY 2002: the same devices keep their balance
+        for k in ("balance_db", "balance_level_db", "balance_at"):
+            if k in was:
+                cfg["gateway"][k] = was[k]
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(cfg, indent=1))
