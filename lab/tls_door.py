@@ -189,6 +189,72 @@ async def pipe(r, w):
             pass
 
 
+# HERESY 2011 (the audit of 02.11.2026, S3): to the engine every visitor through the door came from this very computer, which it trusts: the API's
+# token was never asked, and the lockout guard saw no one. So each request's head now carries X-Ruach-Peer, the visitor's own address (one the
+# visitor sent is dropped), which the engine takes from a loopback caller alone; the body passes as it is, by its length or by its chunks, and
+# a connection upgraded to another protocol passes byte for byte from there on.
+def heads(head):
+    lines = head[:-4].split(b"\r\n")
+    keep = [ln for ln in lines[1:] if not ln.lower().startswith(b"x-ruach-peer:")]
+    named = {}
+    for ln in keep:
+        k, sep, v = ln.partition(b":")
+        if sep:
+            named[k.strip().lower()] = v.strip().lower()
+    return lines[0], keep, named
+
+
+async def requests(r, w, peer):
+    tag = b"X-Ruach-Peer: " + peer.split("%")[0].encode("ascii", "replace") + b"\r\n"
+    try:
+        while True:
+            try:
+                head = await r.readuntil(b"\r\n\r\n")
+            except asyncio.IncompleteReadError as e:
+                if e.partial:
+                    w.write(e.partial)
+                    await w.drain()
+                break
+            first, keep, named = heads(head)
+            w.write(b"\r\n".join([first] + keep) + b"\r\n" + tag + b"\r\n")
+            if b"upgrade" in named.get(b"connection", b""):
+                await w.drain()
+                return await pipe(r, w)
+            if b"chunked" in named.get(b"transfer-encoding", b""):
+                while True:
+                    line = await r.readuntil(b"\r\n")
+                    w.write(line)
+                    left = int(line.split(b";")[0].strip() or b"0", 16)
+                    if left == 0:
+                        while (t := await r.readuntil(b"\r\n")) != b"\r\n":     # the trailers, to the empty line
+                            w.write(t)
+                        w.write(b"\r\n")
+                        break
+                    left += 2                                                       # the chunk and its CRLF
+                    while left > 0:
+                        b = await r.readexactly(min(65536, left))
+                        w.write(b)
+                        left -= len(b)
+                        await w.drain()
+            else:
+                left = int(named.get(b"content-length", b"0") or 0)
+                while left > 0:
+                    b = await r.read(min(65536, left))
+                    if not b:
+                        raise ConnectionError("the visitor left in the middle of a body")
+                    w.write(b)
+                    left -= len(b)
+                    await w.drain()
+            await w.drain()
+    except (ConnectionError, OSError, ValueError, asyncio.IncompleteReadError, asyncio.LimitOverrunError, asyncio.CancelledError):
+        pass
+    finally:
+        try:
+            w.close()
+        except (OSError, RuntimeError):
+            pass
+
+
 async def visit(r, w):
     peer = w.get_extra_info("peername") or ("?", 0)
     if not allowed(peer[0]):
@@ -206,7 +272,7 @@ async def visit(r, w):
         w.write(b"HTTP/1.1 502 Bad Gateway\r\nContent-Type: text/plain; charset=utf-8\r\nConnection: close\r\n\r\nThe studio does not answer on its port.")
         await w.drain(); w.close()
         return
-    await asyncio.gather(pipe(r, sw), pipe(sr, w))
+    await asyncio.gather(requests(r, sw, str(peer[0])), pipe(sr, w))       # HERESY 2011 (S3)
 
 
 async def main():

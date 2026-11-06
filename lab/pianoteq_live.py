@@ -36,6 +36,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 BANK = "Ruach Studio"
+# HERESY 2036: the Modartt product this instance drives; lab/modartt.py loads this file once more for Organteq and for Airteq and sets them
+NAME = "Pianoteq"
+SLUG = "pianoteq"
 IDLE = 20          # seconds: on the null sink nothing paces the engine, it spins a core and a quarter while up (31.10.2026); so it is up only while asked
 KINDS = ("reverb", "tuning", "vel", "mic", "equ", "effect1")
 SAMPLES = [i / 20 for i in range(21)]
@@ -53,13 +56,13 @@ def _step_module():
 
 
 def find(kit):
-    return _step_module().find_pianoteq(kit)
+    return _step_module().find_modartt(kit, SLUG)
 
 
 def _prefs_copy(kit):
     """The newest ~/.config/Modartt/Pianoteq*.prefs copied into a folder of its own under tmp/ (0700, the copy 0600)."""
-    srcs = sorted(Path.home().glob(".config/Modartt/Pianoteq*.prefs"), key=lambda q: q.stat().st_mtime, reverse=True)
-    root = Path(kit) / "tmp" / "pianoteq-live"
+    srcs = sorted(Path.home().glob(f".config/Modartt/{NAME}*.prefs"), key=lambda q: q.stat().st_mtime, reverse=True)
+    root = Path(kit) / "tmp" / f"{SLUG}-live"
     root.mkdir(parents=True, exist_ok=True)
     d = Path(tempfile.mkdtemp(prefix="srv-", dir=str(root)))
     os.chmod(d, 0o700)
@@ -92,7 +95,7 @@ def _silent(d, prefs):
 
 def sweep(kit):
     """At the lab's start: a server's folder left by a crash (its copy of the preferences) goes."""
-    root = Path(kit) / "tmp" / "pianoteq-live"
+    root = Path(kit) / "tmp" / f"{SLUG}-live"
     for d in root.glob("srv-*") if root.is_dir() else []:
         shutil.rmtree(d, ignore_errors=True)
 
@@ -110,7 +113,7 @@ def _call(port, method, params=None, timeout=30):
     req = urllib.request.Request(f"http://127.0.0.1:{port}/jsonrpc", body, {"Content-Type": "application/json"})
     j = json.loads(urllib.request.urlopen(req, timeout=timeout).read())
     if j.get("error"):
-        raise RuntimeError(f"Pianoteq {method}: {j['error'].get('message', j['error'])}")
+        raise RuntimeError(f"{NAME} {method}: {j['error'].get('message', j['error'])}")
     return j.get("result")
 
 
@@ -132,8 +135,8 @@ class Server:
             return
         binary = find(self.kit)
         if binary is None:
-            raise FileNotFoundError("no Pianoteq here: unpack the one you bought from modartt.com into models/instruments/pianoteq/ and "
-                                    "activate it, or name its program in user/pianoteq.json {\"path\": …} (the guide: Pianoteq)")
+            raise FileNotFoundError(f"no {NAME} here: unpack the one you bought (or its trial) from modartt.com into models/instruments/{SLUG}/ and "
+                                    f"activate it, or name its program in user/{SLUG}.json {{\"path\": …}} (the guide: {NAME})")
         self.stop()
         d, prefs = _prefs_copy(self.kit)
         env = _silent(d, prefs)
@@ -149,19 +152,25 @@ class Server:
             except Exception:  # noqa: BLE001 — not listening yet
                 if proc.poll() is not None:
                     self.stop()
-                    raise RuntimeError("Pianoteq did not start: is it installed for this machine?")
+                    raise RuntimeError(f"{NAME} did not start: is it installed for this machine?")
                 time.sleep(0.25)
         else:
             self.stop()
-            raise RuntimeError("Pianoteq's server did not answer in 20 s")
-        try:
-            dev = _call(port, "getAudioDeviceInfo", timeout=5)
-            dev = (dev[0] if isinstance(dev, list) else dev) or {}
-        except Exception:  # noqa: BLE001 — an older Pianoteq: said below as not running
-            dev = {}
+            raise RuntimeError(f"{NAME}'s server did not answer in 20 s")
+        dev = {}
+        for _ in range(24):                            # HERESY 2036: «started» a moment before «running» (Organteq), so asked until it runs
+            try:
+                dev = _call(port, "getAudioDeviceInfo", timeout=5)
+                dev = (dev[0] if isinstance(dev, list) else dev) or {}
+            except Exception:  # noqa: BLE001 — an older Pianoteq: said below as not running
+                dev = {}
+                break
+            if dev.get("status") != "started":
+                break
+            time.sleep(0.25)
         if dev.get("device_type") != "ALSA" or dev.get("audio_output_device_name") != SILENT or dev.get("status") != "running":
             self.stop()
-            raise RuntimeError("Pianoteq's engine did not start on the silent device (" + (dev.get("audio_output_device_name") or "none") +
+            raise RuntimeError(f"{NAME}'s engine did not start on the silent device (" + (dev.get("audio_output_device_name") or "none") +
                                "): without it no setting would reach the render")
         threading.Thread(target=self._idle, args=(proc,), daemon=True).start()
 
@@ -197,7 +206,7 @@ def _key(kit):
     if b is None:
         return None
     packs = sorted(str(p.relative_to(b.parents[2])) + ":" + str(int(p.stat().st_mtime)) for p in b.parents[2].glob("**/*.ptq"))
-    addons = Path.home() / ".local/share/Modartt/Pianoteq/Addons"   # the free collections Pianoteq itself downloads (KIViR, Champagne)
+    addons = Path.home() / f".local/share/Modartt/{NAME}/Addons"   # the free collections Pianoteq itself downloads (KIViR, Champagne)
     packs += sorted(p.name + ":" + str(int(p.stat().st_mtime)) for p in addons.glob("*")) if addons.is_dir() else []
     return hashlib.sha1(json.dumps([FORMAT, str(b), int(b.stat().st_mtime), packs]).encode()).hexdigest()[:16]
 
@@ -253,7 +262,7 @@ def catalog(kit, refresh=False):
     key = _key(kit)
     if key is None:
         return {"available": False, "why": "no Pianoteq here: the guide's Pianoteq says where to put the one you bought"}
-    cache = Path(kit) / "user" / "pianoteq-catalog.json"
+    cache = Path(kit) / "user" / f"{SLUG}-catalog.json"
     if not refresh and cache.is_file():
         try:
             c = json.load(open(cache, encoding="utf-8"))
@@ -285,21 +294,36 @@ def catalog(kit, refresh=False):
         pid, name = q["id"], str(q.get("name", ""))
         locked = name.startswith("(locked)")
         params[pid] = {"name": name.replace("(locked)", "").strip(), "locked": locked, "unit": q.get("unit", ""), "pedal": pid in PEDALS}
-    for pid, meta in params.items():
-        if meta["locked"] or meta["pedal"]:
-            continue
-        srv.call("loadPreset", {"name": first["name"], "bank": first.get("bank", "")})
-        _settle(srv)
-        scale = []
-        for x in SAMPLES:
-            srv.call("setParameters", {"list": [{"id": pid, "normalized_value": x}]})
+    free = [pid for pid, meta in params.items() if not meta["locked"] and not meta["pedal"]]
+    if SLUG == "pianoteq":                           # each parameter on its own (1977's way)
+        for pid in free:
+            srv.call("loadPreset", {"name": first["name"], "bank": first.get("bank", "")})
             _settle(srv)
-            r = next((r for r in srv.call("getParameters") if r["id"] == pid), None)
-            if r is not None:
-                scale.append([round(x, 4), round(float(r.get("normalized_value", x)), 4), str(r.get("text", ""))])
-        meta["scale"] = scale
-        meta["kind"] = _kind([s[2] for s in scale])
-        if len({s[2] for s in scale}) == 1:
+            scale = []
+            for x in SAMPLES:
+                srv.call("setParameters", {"list": [{"id": pid, "normalized_value": x}]})
+                _settle(srv)
+                r = next((r for r in srv.call("getParameters") if r["id"] == pid), None)
+                if r is not None:
+                    scale.append([round(x, 4), round(float(r.get("normalized_value", x)), 4), str(r.get("text", ""))])
+            params[pid]["scale"] = scale
+    else:                                            # HERESY 2036: hundreds of them (an organ's stops): a sample set on all at once, read back once
+        for pid in free:
+            params[pid]["scale"] = []
+        for x in SAMPLES:
+            srv.call("loadPreset", {"name": first["name"], "bank": first.get("bank", "")})
+            _settle(srv)
+            srv.call("setParameters", {"list": [{"id": pid, "normalized_value": x} for pid in free]})
+            _settle(srv)
+            got = {r["id"]: r for r in srv.call("getParameters")}
+            for pid in free:
+                r = got.get(pid)
+                if r is not None:
+                    params[pid]["scale"].append([round(x, 4), round(float(r.get("normalized_value", x)), 4), str(r.get("text", ""))])
+    for pid in free:
+        meta = params[pid]
+        meta["kind"] = _kind([s[2] for s in meta["scale"]])
+        if len({s[2] for s in meta["scale"]}) == 1:
             meta["locked"] = True                    # set and read back the same: this edition keeps it
     grouped = {pid for _g, ids in GROUPS for pid in ids}
     groups = [{"id": g, "params": [pid for pid in ids if pid in params]} for g, ids in GROUPS]
@@ -326,7 +350,7 @@ def _shown(kit, p):
 
 def status(kit):
     b = find(kit)
-    prefs = sorted(Path.home().glob(".config/Modartt/Pianoteq*.prefs"), key=lambda q: q.stat().st_mtime, reverse=True)
+    prefs = sorted(Path.home().glob(f".config/Modartt/{NAME}*.prefs"), key=lambda q: q.stat().st_mtime, reverse=True)
     out = {"installed": b is not None, "program": _shown(kit, b), "prefs": bool(prefs)}
     if b is None:
         return out
@@ -350,7 +374,7 @@ def status(kit):
     out.update(version=str(info.get("version") or ""), build=str(info.get("build_date") or ""), product=str(info.get("product_name") or ""),
                activation=act, presets={"total": len(presets), "full": sum(r["full"] for r in inst)}, instruments=inst, editable=None)
     try:                                             # what this edition lets one set, if the step's window has read it once
-        c = json.load(open(Path(kit) / "user" / "pianoteq-catalog.json", encoding="utf-8"))
+        c = json.load(open(Path(kit) / "user" / f"{SLUG}-catalog.json", encoding="utf-8"))
         if c.get("key") == _key(kit):
             out["editable"] = {"free": c.get("free"), "locked": c.get("locked")}
     except (OSError, ValueError):
@@ -373,15 +397,15 @@ def activate(kit, serial):
     in this call: never in a command line, a log, a file or the answer. Returns status() after it."""
     serial = re.sub(r"\s+", "", str(serial or ""))
     if not SERIAL.match(serial):
-        raise ValueError("a Pianoteq serial is letters, digits and dashes, as your Modartt user area shows it")
+        raise ValueError(f"a {NAME} serial is letters, digits and dashes, as your Modartt user area shows it")
     b = find(kit)
     if b is None:
-        raise FileNotFoundError("no Pianoteq here to activate: install it first (Engine → Pianoteq → Install)")
+        raise FileNotFoundError(f"no {NAME} here to activate: install it first (Engine → {NAME} → Install)")
     with _LOCK:
         Server(kit).stop()                           # its copy of the preferences would not see the activation
-        prefs = sorted(Path.home().glob(".config/Modartt/Pianoteq*.prefs"), key=lambda q: q.stat().st_mtime, reverse=True)
+        prefs = sorted(Path.home().glob(f".config/Modartt/{NAME}*.prefs"), key=lambda q: q.stat().st_mtime, reverse=True)
         before = prefs[0].read_text(encoding="utf-8", errors="surrogateescape") if prefs else None
-        root = Path(kit) / "tmp" / "pianoteq-live"
+        root = Path(kit) / "tmp" / f"{SLUG}-live"
         root.mkdir(parents=True, exist_ok=True)
         d = Path(tempfile.mkdtemp(prefix="act-", dir=str(root)))
         os.chmod(d, 0o700)
@@ -399,10 +423,10 @@ def activate(kit, serial):
                     break
                 except Exception:  # noqa: BLE001 — not listening yet
                     if proc.poll() is not None:
-                        raise RuntimeError("Pianoteq did not start: is it installed for this machine?")
+                        raise RuntimeError(f"{NAME} did not start: is it installed for this machine?")
                     time.sleep(0.25)
             else:
-                raise RuntimeError("Pianoteq did not answer in 20 s")
+                raise RuntimeError(f"{NAME} did not answer in 20 s")
             try:
                 _call(port, "activate", {"serial": serial, "device_name": socket.gethostname()}, timeout=120)
             except RuntimeError as e:                # Pianoteq's own words, without the serial
@@ -410,7 +434,7 @@ def activate(kit, serial):
             a = _call(port, "getActivationInfo", timeout=10)
             a = (a[0] if isinstance(a, list) else a) or {}
             if said is None and a.get("status") != 1:
-                said = str(a.get("error_msg") or "Pianoteq is still not activated")
+                said = str(a.get("error_msg") or f"{NAME} is still not activated")
         finally:
             serial = ""
             try:
@@ -437,7 +461,7 @@ def activate(kit, serial):
                     elif "</PROPERTIES>" in now:
                         now = now.replace("</PROPERTIES>", old + "\n</PROPERTIES>", 1)
                     prefs[0].write_text(now, encoding="utf-8", errors="surrogateescape")
-        cache = Path(kit) / "user" / "pianoteq-catalog.json"
+        cache = Path(kit) / "user" / f"{SLUG}-catalog.json"
         if cache.is_file():                          # what plays in full may have changed: read again when the window next asks
             try:
                 c = json.load(open(cache, encoding="utf-8"))
@@ -452,7 +476,7 @@ def activate(kit, serial):
 
 
 def _save_catalog(kit, c):
-    cache = Path(kit) / "user" / "pianoteq-catalog.json"
+    cache = Path(kit) / "user" / f"{SLUG}-catalog.json"
     cache.parent.mkdir(parents=True, exist_ok=True)
     tmp = cache.with_suffix(".part")
     json.dump(c, open(tmp, "w", encoding="utf-8"), ensure_ascii=False)
@@ -463,7 +487,7 @@ def _save_catalog(kit, c):
 def licensed(kit, name, bank=""):
     """Whether a preset plays in full here, by the catalog already built (None: not known yet; nothing is asked of Pianoteq)."""
     try:
-        c = json.load(open(Path(kit) / "user" / "pianoteq-catalog.json", encoding="utf-8"))
+        c = json.load(open(Path(kit) / "user" / f"{SLUG}-catalog.json", encoding="utf-8"))
     except (OSError, ValueError):
         return None
     if c.get("key") != _key(kit):
@@ -507,13 +531,13 @@ def _mini(i, kind):
 def _load_preset(srv, name, bank=""):
     srv.call("loadPreset", {"name": name, "bank": bank})
     if not _until(srv, lambda i: (i.get("current_preset") or {}).get("name") == name):
-        raise RuntimeError(f"Pianoteq did not load the preset «{name}»")
+        raise RuntimeError(f"{NAME} did not load the preset «{name}»")
 
 
 def _load_small(srv, kind, name):
     srv.call("loadPreset", {"name": name, "bank": "", "preset_type": kind})
     if not _until(srv, lambda i: _mini(i, kind) == name):
-        raise RuntimeError(f"Pianoteq did not load the small preset «{name}» ({kind})")
+        raise RuntimeError(f"{NAME} did not load the small preset «{name}» ({kind})")
 
 
 def _load(srv, state):
@@ -529,7 +553,7 @@ def _load(srv, state):
     if vals:
         srv.call("setParameters", {"list": vals})
         if not _until(srv, lambda i: bool(i.get("modified"))):
-            raise RuntimeError("Pianoteq did not take the settings: the render would play the bare preset")
+            raise RuntimeError(f"{NAME} did not take the settings: the render would play the bare preset")
         time.sleep(0.05)
 
 
@@ -591,7 +615,7 @@ def preset(kit, name, bank="", small=None):
 
 def _bank_dir_known():
     """Whether the bank's folder is there already, where Pianoteq keeps its user presets on Linux (taken away after a save only if it was not)."""
-    return (Path.home() / ".local/share/Modartt/Pianoteq/Presets" / BANK).is_dir()
+    return (Path.home() / f".local/share/Modartt/{NAME}/Presets" / BANK).is_dir()
 
 
 def _saved_file(srv, name):
@@ -612,7 +636,7 @@ def fxp(kit, state, dest):
         f = _saved_file(srv, name)
         try:
             if f is None or not f.is_file():
-                raise RuntimeError("Pianoteq saved no preset file")
+                raise RuntimeError(f"{NAME} saved no preset file")
             Path(dest).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(f, dest)
         finally:
@@ -715,14 +739,14 @@ def render(kit, fxp_file, midi, wav, rate=48000):
     finally:
         shutil.rmtree(d, ignore_errors=True)
     if not Path(wav).is_file():
-        raise RuntimeError("Pianoteq made no sound: " + ((r.stderr or "").strip() or (r.stdout or "").strip())[-300:])
+        raise RuntimeError(f"{NAME} made no sound: " + ((r.stderr or "").strip() or (r.stdout or "").strip())[-300:])
     return Path(wav)
 
 
 def preview(kit, state, kind="chords", cache=None):
     """A short phrase played with the state, kept by what it was (the last 40)."""
     kind = kind if kind in ("chords", "arpeggio", "ladder", "range") else "chords"
-    box = Path(cache or (Path(kit) / "tmp" / "pianoteq-preview"))
+    box = Path(cache or (Path(kit) / "tmp" / f"{SLUG}-preview"))
     box.mkdir(parents=True, exist_ok=True)
     h = hashlib.sha1(json.dumps([state, kind, _key(kit)], sort_keys=True).encode()).hexdigest()[:20]
     out = box / f"{h}.wav"
@@ -738,7 +762,7 @@ def preview(kit, state, kind="chords", cache=None):
         import soundfile as sf
         a, _ = sf.read(str(work / "out.wav"), always_2d=True, dtype="float32")
         if not a.size or 20 * np.log10(np.sqrt(np.mean(a.astype(np.float64) ** 2)) + 1e-12) < -70:
-            raise RuntimeError("Pianoteq played silence: is it activated? (run it once and activate it with your own serial)")
+            raise RuntimeError(f"{NAME} played silence: is it activated? (run it once and activate it with your own serial)")
         os.replace(work / "out.wav", out)
     finally:
         shutil.rmtree(work, ignore_errors=True)

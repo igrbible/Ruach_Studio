@@ -47,7 +47,7 @@ heresy/fetch-heresy.sh --artwork         # the covers' helpers: the prompt write
 heresy/fetch-heresy.sh --qwen 2512-q4    # the Artist's Qwen-Image 2512 at Q4 with Lightning (Apache-2.0), 31 GB, a 16 GB card (2512-q6: 34.5 GB, 24 GB; 2.1: 33 GB, research licence)
 heresy/fetch-heresy.sh --trainer bf16    # the base the LoRA trainer trains on, 7.8 GB (int8: 4.0 GB)
 heresy/fetch-heresy.sh --backbone BF16   # the full backbone beside a Q8_0 one, 7.2 GB
-heresy/fetch-heresy.sh --fw 3.4x0.75-Q8_0   # another merge of Ruach Studio's own fine-tune (seven, each at BF16, Q8_0 and Q6_K); the default, 2.4x0.75, comes with the install
+heresy/fetch-heresy.sh --fw 3.4x0.75-Q8_0   # another merge of Ruach Studio's own fine-tune (seven, each at BF16, Q8_0 and Q6_K); the Studio's default, RS-TW 2.0x0.75, comes with the install
 ./fetch-models.sh --check                # what is here, what is missing; downloads nothing
 ```
 
@@ -70,6 +70,7 @@ It needs Intel's GPU driver with Level Zero (the compute runtime) and Intel's **
 ```bash
 ./build.sh --sycl             # the engine for Intel Arc, in build/build-sycl (a CUDA engine beside it stays as it is)
 YUE2_ENGINE=sycl ./start.sh   # or plain ./start.sh, where there is no CUDA engine
+# or, with both engines built: Engine → GPUs, the Arc's radio in the «studio» column, Save, Restart (HERESY 2029)
 ```
 
 With systemd and both kinds of engine on one machine: `systemctl --user edit ruach-studio`, and under `[Service]` the line `Environment=YUE2_ENGINE=sycl`. Several Intel GPUs: `ONEAPI_DEVICE_SELECTOR=level_zero:0` picks one. The kernels are compiled at each start (a few seconds before the first song): oneAPI's kernel cache stays off, because with it libsycl 2026.1 fails at the first kernel.
@@ -103,6 +104,8 @@ Measured on the machine it was made on: 6 passed (the page part 14), 470 passed 
 | `build.sh` stops at cmake | no CUDA toolkit, or `nvcc` not found | install CUDA 12.8; `export PATH=/usr/local/cuda-12.8/bin:$PATH` |
 | the page: *Forge is not answering* or a red lamp | the engine is not running | `systemctl --user status ruach-studio`; `journalctl --user -u ruach-studio -n 50` |
 | *no card can take this now* | another program holds the card, or the job does not fit | the message names the program and the card; Engine → GPUs says which card does what |
+| 403 «does not answer this name» | the Studio was opened by a name a site on the internet could point at your machine (a name of your own DNS) | open it by its address, by a name of one label or a .local/.lan one, or name it in the Studio's environment: `RUACH_HOSTS=studio.example.org` |
+| the Studio blank inside another page (Pinokio on another port, a page of your own) | the Studio lets only its own pages and Pinokio's (`http://localhost:42000`) put it in a frame | name that page in the Studio's environment: `RUACH_FRAME_ANCESTORS=http://host:port` (commas or spaces between several) |
 | 403 from another machine | it is not on a private network, or Engine → Security keeps the Studio to its own computer or to the networks listed | open it from your home network, or change Engine → Security on the Studio's computer (deleting `user/access.json` goes back to private networks); or put your own proxy and guard in front (`RUACH_ALLOW_PUBLIC=1`) |
 | the Writer says *no chat server* | none is set | Engine → Chat server (vLLM, LM Studio, Ollama on your machine), or OpenRouter with your key in the Writer |
 | upscale, stems or the lyrics check refuse | their models are missing | `./fetch-models.sh` (or `--check` to see which) |

@@ -20,9 +20,22 @@ def _store(config_dir):
     return config_dir / "collection.json"
 
 
+PL_WS = "@ws:"   # HERESY 2042: a whole workspace in the playlist, one entry
+
+
+def pl_ws(n):
+    return n[len(PL_WS):] if isinstance(n, str) and n.startswith(PL_WS) else None
+
+
 def load(config_dir):
     p = _store(config_dir)
-    d = json.load(open(p, encoding="utf-8")) if p.is_file() else {}
+    try:
+        d = json.load(open(p, encoding="utf-8")) if p.is_file() else {}
+    except ValueError:                           # HERESY 2083: truly broken (read again first): put back from the newest snapshot that reads whole
+        import backups                           # the lab's own (lab/backups.py)
+        if not backups.recover(p, "the Librarian's read"):
+            raise
+        d = json.load(open(p, encoding="utf-8"))
     d.setdefault("hidden", [])
     d.setdefault("workspaces", {})
     d.setdefault("trash_days", 0)
@@ -41,13 +54,14 @@ def load(config_dir):
     d.setdefault("protected", [])
     # HERESY 1730: the playlist, one ordered list of takes apart from the workspaces (never renamed, deleted or frozen), and its crossfade (0–4 s)
     d.setdefault("playlist", [])
-    d.setdefault("playlist_xfade", 0)
     # HERESY 1802 (Viktor 27.10.2026: «прикрутим к картам треков 🔥 и 💎»; «в воркспейсы и их подкатегории прикрутим Notes… к LoRA адаптерам заметки
     # пользовательские… ограничить длину заметок разумными 500-600 знаков»): two marks of a take's own, a note on a workspace, a note on an adapter
     d.setdefault("fire", [])
     d.setdefault("gems", [])
     d.setdefault("reacts", {})
     d.setdefault("blind", [])                  # HERESY 1874: the workspaces for blind listening (their sections with them)                 # HERESY 1873: a take's reaction, {name: key}
+    d.setdefault("archived", [])               # HERESY 2049: the workspaces archived (their sections with them)
+    d.setdefault("albums", [])                 # HERESY 2050: the playlist's albums, [{name, items}] in their order
     d.setdefault("ws_notes", {})
     d.setdefault("lora_notes", {})
     with_parents(d)                              # HERESY 1935: an orphan section of before gets its parents back
@@ -122,6 +136,45 @@ def family(d, ws):
     return [w for w in d["workspaces"] if w == ws or w.startswith(ws + SEP)]
 
 
+def forget_ws(d, gone, to=""):
+    """HERESY 2129 (the audit of 06.11.2026: «Удалённое пространство оставляет метки, и новое под тем же именем их наследует»): workspaces gone
+    (deleted, poured or merged away) take their marks with them, so one made or renamed into such a name later is born clean: not archived,
+    not blind, not frozen, not locked, no pins, no note. Their whole entries in the playlist and the albums go too; with `to` (their takes went
+    there) each becomes that workspace's entry, once."""
+    gone = {w for w in gone if w}
+    if not gone:
+        return
+    for key in ("archived", "blind", "frozen"):
+        d[key] = [w for w in d.get(key, []) if w not in gone]
+    for key in ("locks", "pins", "ws_notes"):
+        for w in gone:
+            d.get(key, {}).pop(w, None)
+
+    def remap(items):
+        out, seen = [], set()
+        for n in items:
+            w = pl_ws(n)
+            if w is not None and w in gone:
+                if not to:
+                    continue
+                n = PL_WS + to
+            if pl_ws(n) is not None:                   # a whole workspace once in a list
+                if n in seen:
+                    continue
+                seen.add(n)
+            out.append(n)
+        return out
+    d["playlist"] = remap(d.get("playlist", []))
+    for al in d.get("albums", []):
+        al["items"] = remap(al["items"])
+
+
+def born(d, ws):
+    """HERESY 2129: a workspace about to be made (and its parents not there yet) inherits nothing a workspace of that name left behind."""
+    parts = ws.split(SEP) if ws else []
+    forget_ws(d, [SEP.join(parts[:i]) for i in range(1, len(parts) + 1) if SEP.join(parts[:i]) not in d["workspaces"]])
+
+
 def prune_pins(d):
     """HERESY 1166 (Viktor: «Unpin исчез… И в меню нет Unpin»; «Анпинить можно только в воркспейсе, где прикреплено»): a
     workspace's pins hold only its own takes (its sections' too, as the page shows them), so a take moved out, taken out
@@ -151,6 +204,12 @@ def ws_locked(d, ws):
     """HERESY 1473: a workspace under a lock of either kind, its own or that of the workspace it is a section of."""
     parts = ws.split(SEP)
     return any(locked(d, SEP.join(parts[:i]), what) for i in range(1, len(parts) + 1) for what in ("workspace", "tracks"))
+
+
+def locks_on(d, ws):
+    """The locks that reach a workspace, as ws_locked reads them (its own and its parents'), each (workspace, kind)."""
+    parts = ws.split(SEP)
+    return {(SEP.join(parts[:i]), what) for i in range(1, len(parts) + 1) for what in ("workspace", "tracks") if locked(d, SEP.join(parts[:i]), what)}
 
 
 def locked_takes(d):
@@ -183,7 +242,26 @@ def frozen_takes(d):
 # HERESY 1873 (Viktor 29.10.2026: «Отсортируй их правильно по эмоциональным зонам»): a take's reactions, by their zones: love, a hit, laughter, wonder,
 # tears, thought, awkward, refusal (the page holds their faces and words)
 # one a take, Facebook's way («выбранной реакцией заменяй кнопку плюса»)
-REACTIONS = ("love", "adore", "hundred", "party", "lol", "mindblown", "wow", "tears", "think", "look", "nerd", "peek", "melt", "poop")
+REACTIONS = ("love", "adore", "hundred", "party", "hot", "lol", "mindblown", "wow", "boom", "tears", "think", "look", "nerd", "peek", "melt", "poop")   # 2027: 🔥 hot, 💥 boom
+
+
+def album_name(v):
+    """HERESY 2050: an album's name as typed, 60 characters at most, no control characters."""
+    return re.sub(r"[\x00-\x1f\x7f]+", " ", str(v or "")).strip()[:60]
+
+
+def archived_ws(d, ws):
+    """HERESY 2049: a workspace archived, or a section of one."""
+    return any(ws == a or ws.startswith(a + SEP) for a in d.get("archived", []))
+
+
+def archived_takes(d):
+    """HERESY 2049: the takes whose every workspace is archived (one also in a workspace not archived lives on there)."""
+    places = {}
+    for ws, names in d["workspaces"].items():
+        for n in names:
+            places.setdefault(n, []).append(ws)
+    return {n for n, wss in places.items() if all(archived_ws(d, w) for w in wss)}
 
 
 def blind_takes(d):
@@ -223,7 +301,10 @@ def save(config_dir, d):
     tmp = Path(str(p) + ".part")
     if isinstance(d.get("workspaces"), dict):
         with_parents(d)                          # HERESY 1935: none written without its parents
-    json.dump(d, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    with open(tmp, "w", encoding="utf-8") as fh:   # HERESY 2083: written whole and on the disk before it takes the file's place
+        json.dump(d, fh, ensure_ascii=False, indent=1)
+        fh.flush()
+        os.fsync(fh.fileno())
     os.replace(tmp, p)
 
 
@@ -237,6 +318,18 @@ def take_kind(name, meta, req):
     if req.get("parent") and req.get("semantic_tokens"):
         return "rerendered"
     return "generated"
+
+
+def albums_out(marks, here):
+    """HERESY 2050: the albums with the takes still here; 2058: and a whole workspace still here, and the take whose cover is the album's while
+    it is here (none: Automatic, the page's mosaic of its first covers)."""
+    out = []
+    for a in marks["albums"]:
+        al = {"name": a["name"], "items": [n for n in a["items"] if n in here or pl_ws(n) in marks["workspaces"]]}
+        if a.get("cover") in here:
+            al["cover"] = a["cover"]
+        out.append(al)
+    return out
 
 
 def catalog(outputs, config_dir):
@@ -253,6 +346,7 @@ def catalog(outputs, config_dir):
     fire, gems = set(marks["fire"]), set(marks["gems"])   # HERESY 1802
     reacts = marks["reacts"]                                # HERESY 1873: one a take (an older list reads as its first)
     blind = blind_takes(marks)                              # HERESY 1874
+    arch = archived_takes(marks)                            # HERESY 2049
     react_of = lambda v: v if v in REACTIONS else (v[0] if isinstance(v, list) and v and v[0] in REACTIONS else "")   # noqa: E731
     for d in sorted(outputs.iterdir()) if outputs.is_dir() else []:
         mp = d / "meta.json"
@@ -271,6 +365,10 @@ def catalog(outputs, config_dir):
                 req["semantic_keep"] = bool(r.get("semantic_keep"))
                 req["semantic_tokens"] = bool(r.get("semantic_tokens"))
                 req["lyrics_len"] = len(r.get("lyrics") or "")
+                # HERESY 2058 (Viktor 03.11.2026: «План (Full/Direct/Instrumental)»): an instrumental: its style begins with «Instrumental» (the Creator's
+                # switch writes it so) or its lyrics hold no word to sing (only [section] tags, or nothing); a request without lyrics at all says nothing
+                req["instrumental"] = bool(re.match(r"\s*instrumental\b", str(r.get("style") or ""), re.I)) or (
+                    "lyrics" in r and not re.sub(r"\[[^\]]*\]", "", str(r.get("lyrics") or "")).strip())
                 # HERESY 1156 (Viktor: «В шпаргалке указываем seed на каждый A/B»): the music and sound seeds, as text:
                 # 64-bit seeds are past what a page's numbers hold exact (2^53), and a seed rounded is another seed
                 if r.get("lm_seed") is not None or r.get("seed") is not None:
@@ -295,11 +393,50 @@ def catalog(outputs, config_dir):
                      "parent": req.get("parent") or "",           # HERESY 1988: what it was made from, for its card's family tree
                      "fire": d.name in fire, "gem": d.name in gems,   # HERESY 1802
                      "react": react_of(reacts.get(d.name, "")),   # HERESY 1873
-                     "blind": d.name in blind})               # HERESY 1874
+                     "blind": d.name in blind, "archived": d.name in arch,   # HERESY 1874; 2049
+                     "instrumental": bool(req.get("instrumental"))})   # HERESY 2058
+    here = {r["name"] for r in rows}
     return {"takes": rows, "workspaces": sorted(marks["workspaces"]), "trash_days": marks["trash_days"], "locks": marks["locks"],
-            "pins": marks["pins"], "frozen": marks["frozen"], "blind": [b for b in marks["blind"] if b in marks["workspaces"]],   # HERESY 1874
-            "playlist": (lambda here: [n for n in marks["playlist"] if n in here])({r["name"] for r in rows}),   # HERESY 1730: only the takes still here
-            "playlist_xfade": marks["playlist_xfade"], "ws_notes": marks["ws_notes"]}   # HERESY 1802: the workspaces' notes
+            "pins": {p: [n for n in ns if n in here] for p, ns in marks["pins"].items() if any(n in here for n in ns)},   # HERESY 2129: the takes here only
+            "frozen": marks["frozen"], "archived": [a for a in marks["archived"] if a in marks["workspaces"]],   # HERESY 2049
+            "blind": [b for b in marks["blind"] if b in marks["workspaces"]],   # HERESY 1874; 2057: out of 2049's comment again
+            "albums": albums_out(marks, {r["name"] for r in rows}),   # HERESY 2050; 2058: a whole workspace in one, and the cover chosen
+            "playlist": (lambda here: [n for n in marks["playlist"] if n in here or pl_ws(n) in marks["workspaces"]])({r["name"] for r in rows}),   # HERESY 1730, 2042
+            "ws_notes": marks["ws_notes"]}   # HERESY 1802: the workspaces' notes; 2019 (D1): the playlist's crossfade, gone from the player in 1990, gone here
+
+
+def trashed(outputs):
+    """The names lying in the trash (KIT/trash/DATE/TAKE beside KIT/outputs, as lab.py has them): a take there comes back when given back."""
+    base = trash_dir(outputs.parent)
+    return {t.name for day in base.iterdir() if day.is_dir() for t in day.iterdir()} if base.is_dir() else set()
+
+
+def in_order(old, new, here, keep):
+    """HERESY 2129 (the audit of 06.11.2026: «Перестановка плейлиста или альбома молча выкидывает дубли из корзины»): a list given again in a new
+    order, as the page shows it: its entries here take the new order, an entry whose take lies in the trash (keep) holds its place among them, so
+    given back it is where it was; one gone for good leaves the list, as before."""
+    it, out = iter(new), []
+    for n in old:
+        if here(n):
+            x = next(it, None)
+            if x is not None:
+                out.append(x)
+        elif n in keep:
+            out.append(n)
+    out.extend(it)
+    return out
+
+
+def covered(d, items):
+    """The takes a list holds, a whole workspace's entry (HERESY 2042) with its takes and its sections'."""
+    out = set()
+    for n in items:
+        out.add(n)
+        w = pl_ws(n)
+        if w is not None:
+            for x in family(d, w):
+                out |= set(d["workspaces"].get(x, []))
+    return out
 
 
 NOTE_MAX = 600   # HERESY 1802: a workspace's or an adapter's note (Viktor: «500-600 знаков, чтобы тултипы не разлулись»)
@@ -307,7 +444,7 @@ NOTE_MAX = 600   # HERESY 1802: a workspace's or an adapter's note (Viktor: «50
 
 def collection_post(config_dir, outputs, data):
     op = data.get("op")
-    names = [n for n in (data.get("names") or []) if isinstance(n, str) and "/" not in n and not n.startswith(".")]
+    names = [n for n in (data.get("names") or []) if isinstance(n, str) and ((str(op).startswith(("playlist-", "album-")) and pl_ws(n)) or ("/" not in n and not n.startswith(".") and not pl_ws(n)))]   # HERESY 2042: a playlist's own entry, there only; 2058: and an album's
     ws = ws_name(data.get("workspace"))
     with LOCK:
         d = load(config_dir)
@@ -329,6 +466,7 @@ def collection_post(config_dir, outputs, data):
             if not ws:
                 raise ValueError("a workspace needs a name")
             fresh_parts(d, ws)                         # HERESY 1167: 32 characters a level, for what is new
+            born(d, ws)                                # HERESY 2129: nothing inherited from one of that name gone
             parts = ws.split(SEP)
             for i in range(1, len(parts) + 1):         # a section's parents come with it
                 d["workspaces"].setdefault(SEP.join(parts[:i]), [])
@@ -343,6 +481,8 @@ def collection_post(config_dir, outputs, data):
                     raise ValueError(f"“{to}” would be more than two levels of sections deep")
                 if old != ws and to in d["workspaces"]:
                     raise ValueError(f"“{to}” is there already")
+            for _old, to in moves:                     # HERESY 2129: the new names take nothing a workspace of theirs gone left behind
+                born(d, to)
             for old, to in moves:
                 d["workspaces"][to] = d["workspaces"].pop(old)
                 if old in d["locks"]:              # the locks go with the name
@@ -353,9 +493,16 @@ def collection_post(config_dir, outputs, data):
                     d["ws_notes"][to] = d["ws_notes"].pop(old)
                 if old in d["blind"]:              # HERESY 1874: and the blindness
                     d["blind"] = sorted((set(d["blind"]) - {old}) | {to})
+                if old in d["archived"]:           # HERESY 2049: and the archive
+                    d["archived"] = sorted((set(d["archived"]) - {old}) | {to})
+                d["playlist"] = [PL_WS + to if n == PL_WS + old else n for n in d["playlist"]]   # HERESY 2042: and its place in the playlist
+                for al in d["albums"]:                 # HERESY 2058: and in the albums
+                    al["items"] = [PL_WS + to if n == PL_WS + old else n for n in al["items"]]
         elif op == "pin":                          # HERESY 1103: place = a workspace, "" (All), __fav, __none; on = true | false
             place = str(data.get("place") or "")[:200]
-            have = [n for n in d["pins"].get(place, []) if n not in names]
+            # HERESY 2129 (the audit of 06.11.2026: «Призрачные пины»): a pin of a take not in the library (deleted for good, or in the trash) holds
+            # no slot: the strip showed three, the fourth was refused, and the unseen one had nothing to unpin it
+            have = [n for n in d["pins"].get(place, []) if n not in names and (outputs / n / "meta.json").is_file()]
             if data.get("on"):
                 have = have + names
                 if len(have) > PINS_MAX:
@@ -390,22 +537,35 @@ def collection_post(config_dir, outputs, data):
                 d["workspaces"].pop(w, None)
                 d["pins"].pop(w, None)
                 d["ws_notes"].pop(w, None)
+            forget_ws(d, fam, to)                      # HERESY 2129: their marks go; their entries in the playlist and albums are the other's now
         elif op == "ws-merge" and len(family(d, ws)) > 1:
             raise ValueError(f"\u201c{ws}\u201d has sections: merge or delete them first")
         elif op == "ws-delete":            # the workspace goes, its sections with it (1161); its takes stay where they are
-            for w in family(d, ws):
+            fam = family(d, ws)
+            for w in fam:
                 d["workspaces"].pop(w, None)
                 d["pins"].pop(w, None)
                 d["ws_notes"].pop(w, None)         # HERESY 1802
+            forget_ws(d, fam)                      # HERESY 2129: and every other mark of theirs, their entries in the playlist and the albums
         elif op == "ws-add":
             if not ws:
                 raise ValueError("which workspace?")
+            born(d, ws)                                # HERESY 2129: one made by adding to it is born clean too
             d["workspaces"][ws] = sorted(set(d["workspaces"].get(ws, [])) | set(names))
         elif op == "ws-move":                      # HERESY 1050: into one workspace, out of the one it came from
             if not ws:
                 raise ValueError("which workspace?")
             src = ws_name(data.get("from")) if data.get("from") else ""
-            for w in ([src] if src else list(d["workspaces"])):   # from nowhere named: out of every other
+            # HERESY 2129 (the audit of 06.11.2026): tree = out of the named one and its sections, as its view shows them (a take of a section
+            # moved from its parent's view stayed where it was, and the toast said «out of» the parent); a frozen section keeps its own (1166)
+            froms = (family(d, src) if data.get("tree") else [src]) if src else list(d["workspaces"])   # from nowhere named: out of every other
+            # HERESY 2129: a named one under a lock lets nothing out, as ws-remove (1473); a move went round it. A move inside the lock's own tree (a
+            # locked 💎 set's takes into its section) leaves them under every lock they were under, so it goes on as before
+            for w in froms if src else []:
+                if w != ws and w in d["workspaces"] and not frozen_ws(d, w) and ws_locked(d, w) and not locks_on(d, w) <= locks_on(d, ws) and set(d["workspaces"][w]) & set(names):
+                    raise ValueError(f"\u201c{w}\u201d is locked: unlock it first to take takes out of it (right-click on its name)")
+            born(d, ws)
+            for w in froms:
                 if w != ws and w in d["workspaces"] and not frozen_ws(d, w) and (src or not ws_locked(d, w)):   # a frozen one keeps its takes (1166); a locked one too, unless named (1473)
                     d["workspaces"][w] = sorted(set(d["workspaces"][w]) - set(names))
             d["workspaces"][ws] = sorted(set(d["workspaces"].get(ws, [])) | set(names))
@@ -413,14 +573,21 @@ def collection_post(config_dir, outputs, data):
             to = ws_name(data.get("to"))
             if not ws or ws not in d["workspaces"] or not to or to == ws:
                 raise ValueError("merge an existing workspace into another")
+            born(d, to)                                # HERESY 2129: a new one to merge into is born clean
             d["workspaces"][to] = sorted(set(d["workspaces"].get(to, [])) | set(d["workspaces"].pop(ws)))
             if ws in d["ws_notes"]:                # HERESY 1802: its note goes to the other when that one has none
                 d["ws_notes"].setdefault(to, d["ws_notes"].pop(ws))
+            forget_ws(d, [ws], to)                     # HERESY 2129: its other marks go; its entries in the playlist and albums are the other's now
         elif op == "ws-remove":
-            if ws in d["workspaces"] and ws_locked(d, ws):          # HERESY 1473
-                raise ValueError(f"\u201c{ws}\u201d is locked: unlock it first to take takes out of it (right-click on its name)")
-            if ws in d["workspaces"]:
-                d["workspaces"][ws] = sorted(set(d["workspaces"][ws]) - set(names))
+            wss = [ws]
+            if data.get("tree") and ws in d["workspaces"]:   # HERESY 2129: out of its sections too, as its view shows them; a frozen one keeps its own (1166)
+                wss = [w for w in family(d, ws) if w == ws or (not frozen_ws(d, w) and set(d["workspaces"][w]) & set(names))]
+            for w in wss:
+                if w in d["workspaces"] and ws_locked(d, w):          # HERESY 1473
+                    raise ValueError(f"\u201c{w}\u201d is locked: unlock it first to take takes out of it (right-click on its name)")
+            for w in wss:
+                if w in d["workspaces"]:
+                    d["workspaces"][w] = sorted(set(d["workspaces"][w]) - set(names))
         elif op == "rate":                         # HERESY 1042: like (1), dislike (-1), none (0), as SUNO has
             v = int(data.get("value") or 0)
             if v not in (-1, 0, 1):
@@ -446,6 +613,10 @@ def collection_post(config_dir, outputs, data):
             if ws not in d["workspaces"]:
                 raise ValueError("blind listening in an existing workspace")
             d["blind"] = sorted(set(d["blind"]) | {ws}) if data.get("on") else sorted(b for b in d["blind"] if b != ws)
+        elif op == "archive":                      # HERESY 2049: {workspace, on}: out of the tree into Archived, its sections with it; back again
+            if ws not in d["workspaces"]:
+                raise ValueError("archive an existing workspace")
+            d["archived"] = sorted(set(d["archived"]) | {ws}) if data.get("on") else sorted(a for a in d["archived"] if a != ws and not a.startswith(ws + SEP))
         elif op == "react":                        # HERESY 1873: {react: key, or "" for none, names}: one a take
             key = str(data.get("react") or "")
             if key and key not in REACTIONS:
@@ -494,8 +665,11 @@ def collection_post(config_dir, outputs, data):
             where = str(data.get("where") or "last")
             if where not in ("first", "last", "random"):
                 raise ValueError("where: first, last or random")
-            pl = [n for n in d["playlist"] if n not in names]
-            add = [n for n in names if (outputs / n).is_dir()]
+            if ws and ws not in d["workspaces"]:       # HERESY 2042: a whole workspace, one entry; «Outside workspaces» is none
+                raise ValueError("no such workspace")
+            whole = [PL_WS + ws] if ws else []
+            pl = [n for n in d["playlist"] if n not in names and n not in whole]
+            add = whole or [n for n in names if (outputs / n).is_dir()]
             if not add:
                 raise ValueError("no such take")
             if where == "first":
@@ -509,19 +683,56 @@ def collection_post(config_dir, outputs, data):
         elif op == "playlist-remove":              # HERESY 1730: out of the playlist; the take itself untouched
             d["playlist"] = [n for n in d["playlist"] if n not in names]
         elif op == "playlist-order":               # HERESY 1730: the whole list again, as the page dragged it (the same takes)
-            here = [n for n in d["playlist"] if (outputs / n).is_dir()]   # HERESY 1730b: a take gone from the library no longer counts
+            here = [n for n in d["playlist"] if (outputs / n).is_dir() or pl_ws(n) in d["workspaces"]]   # HERESY 1730b, 2042: and a workspace still here
             if sorted(set(names)) != sorted(set(here)) or len(names) != len(set(names)):
                 raise ValueError("the order must hold the playlist's own takes, each once")
-            d["playlist"] = names
+            d["playlist"] = in_order(d["playlist"], names, lambda n: (outputs / n).is_dir() or pl_ws(n) in d["workspaces"], trashed(outputs))   # HERESY 2129
         elif op == "playlist-shuffle":             # HERESY 1730: a deck's shuffle
             pl = list(d["playlist"])
             random.shuffle(pl)
             d["playlist"] = pl
-        elif op == "playlist-xfade":               # HERESY 1730: the crossfade between its takes, 0 to 4 s
-            sec = int(data.get("seconds") or 0)
-            if not 0 <= sec <= 4:
-                raise ValueError("a crossfade of 0 to 4 seconds")
-            d["playlist_xfade"] = sec
+        elif op in ("album-create", "album-rename", "album-delete", "album-add", "album-remove", "album-order", "album-cover"):   # HERESY 2050: the playlist's albums
+            name = album_name(data.get("album"))
+            # HERESY 2058: an album's item is a take here, or a whole workspace here («@ws:NAME», one item, as in the playlist)
+            al_ok = lambda n: pl_ws(n) in d["workspaces"] if pl_ws(n) else (outputs / n).is_dir()   # noqa: E731
+            al = next((a for a in d["albums"] if a["name"] == name), None)
+            if op == "album-create":
+                if not name:
+                    raise ValueError("an album's name")
+                if al:
+                    raise ValueError("an album of that name is there already")
+                d["albums"].append({"name": name, "items": [n for n in names if al_ok(n)]})
+            elif not al:
+                raise ValueError("no such album")
+            elif op == "album-rename":
+                to = album_name(data.get("to"))
+                if not to or any(a["name"] == to for a in d["albums"]):
+                    raise ValueError("a new name, not one taken")
+                al["name"] = to
+            elif op == "album-delete":                 # the album goes; its takes stay where they are
+                d["albums"] = [a for a in d["albums"] if a is not al]
+                # HERESY 2129 (the audit of 06.11.2026): «Its takes stay in the library and in the playlist» was not so for a take only in the album: it left
+                # Everything. Such a take (or a whole workspace's entry) joins the playlist's end, in the album's order; one in the trash too, to come back
+                held, bin_ = covered(d, d["playlist"] + [n for a in d["albums"] for n in a["items"]]), trashed(outputs)
+                d["playlist"] = d["playlist"] + [n for n in al["items"] if n not in held and (al_ok(n) or n in bin_)]
+            elif op == "album-add":                    # where = first | last; a take already in it stays where it stands
+                add = [n for n in names if al_ok(n) and n not in al["items"]]
+                al["items"] = add + al["items"] if data.get("where") == "first" else al["items"] + add
+            elif op == "album-cover":                  # HERESY 2058 (Viktor: «1:1 обложку, которую подгружаем из обложек треков»): {take}, "" for Automatic
+                take = str(data.get("take") or "")
+                if take and (pl_ws(take) or "/" in take or take.startswith(".") or not (outputs / take / "meta.json").is_file()):
+                    raise ValueError("the cover of a take in the library, or none")
+                if take:
+                    al["cover"] = take
+                else:
+                    al.pop("cover", None)
+            elif op == "album-remove":
+                al["items"] = [n for n in al["items"] if n not in names]
+            elif op == "album-order":                  # the whole album again, as the page dragged or shuffled it
+                here = [n for n in al["items"] if al_ok(n)]
+                if sorted(set(names)) != sorted(set(here)) or len(names) != len(set(names)):
+                    raise ValueError("the order must hold the album's own takes, each once")
+                al["items"] = in_order(al["items"], names, al_ok, trashed(outputs))   # HERESY 2129: one in the trash keeps its place
         elif op == "trash-days":
             days = int(data.get("days") or 0)
             if days not in (0, 7, 14, 28, 30):            # HERESY 1996: 30 (28 still kept as it was set)
@@ -564,7 +775,7 @@ def trash_move(kit, outputs, names, config_dir=None):
     apart (HERESY 1368)."""
     day = trash_dir(kit) / time.strftime("%Y-%m-%d")
     day.mkdir(parents=True, exist_ok=True)
-    moved, kept, shielded = [], [], []
+    moved, kept, shielded, missing = [], [], [], []
     marks = load(config_dir) if config_dir else None
     guard = (locked_takes(marks) | frozen_takes(marks)) if marks else set()     # HERESY 1166: a frozen take stays too
     shield = set(marks["protected"]) if marks else set()
@@ -577,9 +788,11 @@ def trash_move(kit, outputs, names, config_dir=None):
             continue
         src = outputs / n
         if "/" in n or n.startswith(".") or not (src / "meta.json").is_file():
+            missing.append({"name": n, "why": "not in the library"})   # HERESY 2129: said, never left out silently
             continue
         dst = day / n
         if dst.exists():
+            missing.append({"name": n, "why": "one of that name is in today's trash already"})
             continue
         shutil.move(str(src), str(dst))
         os.utime(dst, None)                       # the time it went to the trash
@@ -587,18 +800,23 @@ def trash_move(kit, outputs, names, config_dir=None):
         if places:
             (dst / ".places.json").write_text(json.dumps({"workspaces": places}, ensure_ascii=False), encoding="utf-8")
         moved.append(n)
-    return {"moved": moved, "locked": kept, "protected": shielded}
+    out = {"moved": moved, "locked": kept, "protected": shielded}
+    if missing:
+        out["missing"] = missing
+    return out
 
 
 def trash_restore(kit, outputs, items, config_dir=None):
     """Takes given back. HERESY 1996: with config_dir each stands again where it stood when it went (its .places.json), the workspaces and
     sections it stood in made again when they are gone; the list of those made again said."""
-    back, stood = [], {}
+    back, stood, skipped = [], {}, []
     for it in items:
         day, n = str(it.get("day", "")), str(it.get("name", ""))
         if "/" in day or "/" in n or day.startswith(".") or n.startswith("."):
             continue
         src = trash_dir(kit) / day / n
+        if src.is_dir() and (outputs / n).exists():    # HERESY 2129 (the audit of 06.11.2026: «0 back in the library» said nothing more)
+            skipped.append({"name": n, "day": day, "why": "a take of that name is in the library already"})
         if src.is_dir() and not (outputs / n).exists():
             shutil.move(str(src), str(outputs / n))
             back.append(n)
@@ -619,16 +837,43 @@ def trash_restore(kit, outputs, items, config_dir=None):
                         made.append(w)
                     d["workspaces"][w] = sorted(set(d["workspaces"].get(w, [])) | {n})
             save(config_dir, d)
-    return {"restored": back, "made_again": sorted(set(made))}
+    out = {"restored": back, "made_again": sorted(set(made))}
+    if skipped:
+        out["skipped"] = skipped
+    return out
+
+
+def forget_takes(config_dir, outputs, names):
+    """HERESY 2129 (the audit of 06.11.2026): takes deleted for good leave no name behind where a name holds a place: the pins (a slot of four),
+    the workspaces, the playlist and the albums. A take of the same name back in the library keeps its own."""
+    gone = {n for n in names if not (outputs / n).exists()}
+    if not gone:
+        return
+    with LOCK:
+        d = load(config_dir)
+        d["pins"] = {p: [n for n in ns if n not in gone] for p, ns in d["pins"].items() if any(n not in gone for n in ns)}
+        for w in d["workspaces"]:
+            d["workspaces"][w] = [n for n in d["workspaces"][w] if n not in gone]
+        d["playlist"] = [n for n in d["playlist"] if n not in gone]
+        for al in d["albums"]:
+            al["items"] = [n for n in al["items"] if n not in gone]
+            if al.get("cover") in gone:
+                al.pop("cover", None)
+        save(config_dir, d)
 
 
 def trash_empty(kit, items=None, older_than_days=None, config_dir=None):
     """Delete from the trash: the given items, or all, or those older than N days. A protected take is never deleted, whatever
-    brought it there (HERESY 1368): it stays, said."""
-    gone, now, kept = [], time.time(), []
+    brought it there (HERESY 1368): it stays, said. HERESY 2129: an item asked for and not in the trash is said (absent), and with config_dir
+    the names deleted leave the marks (forget_takes)."""
+    gone, now, kept, failed = [], time.time(), [], []
     shield = set(load(config_dir)["protected"]) if config_dir else set()
-    for it in trash_list(kit)["items"]:
-        if items is not None and not any(i.get("day") == it["day"] and i.get("name") == it["name"] for i in items):
+    listed = trash_list(kit)["items"]
+    want = None if items is None else {(str(i.get("day", "")), str(i.get("name", ""))) for i in items if isinstance(i, dict)}
+    there = {(it["day"], it["name"]) for it in listed}
+    absent = [] if want is None else [{"day": k[0], "name": k[1]} for k in sorted(want - there)]
+    for it in listed:
+        if want is not None and (it["day"], it["name"]) not in want:
             continue
         if older_than_days is not None and now - it["trashed"] < older_than_days * 86400:
             continue
@@ -636,11 +881,21 @@ def trash_empty(kit, items=None, older_than_days=None, config_dir=None):
             kept.append(it["name"])
             continue
         shutil.rmtree(trash_dir(kit) / it["day"] / it["name"], ignore_errors=True)
+        if (trash_dir(kit) / it["day"] / it["name"]).exists():   # HERESY 2129: a deletion that failed is not counted as done
+            failed.append({"day": it["day"], "name": it["name"], "why": "could not be deleted (its files are held or not ours to delete)"})
+            continue
         gone.append(it["name"])
     for day in trash_dir(kit).iterdir() if trash_dir(kit).is_dir() else []:
         if day.is_dir() and not any(day.iterdir()):
             day.rmdir()
-    return {"emptied": gone, "protected": kept}
+    if config_dir and gone:
+        forget_takes(config_dir, kit / "outputs", gone)
+    out = {"emptied": gone, "protected": kept}
+    if absent:
+        out["absent"] = absent
+    if failed:
+        out["failed"] = failed
+    return out
 
 
 # ---- export: a ZIP built as a job, then fetched as a file
@@ -685,8 +940,18 @@ def export_start(kit, outputs, names, fmt, derived, sign=None):
                         data, said = sign(d, path.read_bytes(), kind, rel)
                         job["signed" if said == "signed" else "unsigned"] = job.get("signed" if said == "signed" else "unsigned", 0) + 1
                         z.writestr(arc, data)
-                    src = d / "audio.wav"
-                    if src.is_file():
+                    # HERESY 2011 (the audit, C2): the take's own song as the engine names it; an MP3 or a FLAC take was left out with no word
+                    src = next((d / f for f in ("audio.wav", "audio.flac", "audio.mp3") if (d / f).is_file()), None)
+                    if src is None:
+                        job["no_song"] = job.get("no_song", 0) + 1
+                    elif src.suffix == ".mp3" or (src.suffix == ".flac" and fmt != "wav"):   # as it was made: an MP3 made lossless only grows
+                        put(src, _fname(title, used, src.suffix), src.suffix.lstrip("."))
+                    elif src.suffix == ".flac":                # a FLAC take asked as WAV: 24 bits hold its 16 or 24 whole
+                        tmp = out_dir / f"{xid}.wav"
+                        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-c:a", "pcm_s24le", str(tmp)], check=True, timeout=1800)
+                        put(tmp, _fname(title, used, ".wav"), "wav")
+                        tmp.unlink()
+                    else:
                         if fmt == "wav":
                             put(src, _fname(title, used, ".wav"), "wav")
                         else:

@@ -20,7 +20,7 @@ fw = next((e for e in weights.EXTRAS if e and e["name"] == "fw"), None)
 ids = [v["id"] for v in fw["variants"]] if fw else []
 check("the extra «fw»: seven merges at BF16, Q8_0 and Q6_K, each its own file", len(ids) == 21 and "2.4x0.75-Q8_0" in ids and
       all(v["files"] == [f"models/YuE2-3B-RS-FW-{v['id']}.gguf"] for v in fw["variants"]), ids)
-check("  the default's three marked, no other", [v["id"] for v in fw["variants"] if v.get("note")] == ["2.4x0.75-BF16", "2.4x0.75-Q8_0", "2.4x0.75-Q6_K"], fw)
+check("  none of them said the Studio's default any more (HERESY 2074: RS-TW 2.0x0.75 is)", not [v["id"] for v in fw["variants"] if v.get("note")], fw)
 check("  a variant fetched as an extra", weights._args({"fw": "3.4x0.7-Q6_K"}) == (["--only", "none", "--fw", "3.4x0.7-Q6_K", "--yes"], "the RS-FW merge 3.4x0.7-Q6_K"),
       weights._args({"fw": "3.4x0.7-Q6_K"}))
 try:
@@ -46,6 +46,21 @@ with tempfile.TemporaryDirectory() as d:
     ex = next(e for e in weights._extras(k) if e["name"] == "fw")
     here = [v["id"] for v in ex["variants"] if v.get("here")]
     check("  a merge's file here: its variant said here, the others not", here == ["2.4x0.75-BF16"], here)
+# HERESY 2074: RS-TW beside it, two merges at three quants each, 2.0x0.75's three said the Studio's default; fetched as an extra with --tw
+tw = next((e for e in weights.EXTRAS if e and e["name"] == "tw"), None)
+tids = [v["id"] for v in tw["variants"]] if tw else []
+check("the extra «tw» (2074): 2.0x0.75 and 2.0x0.9 at BF16, Q8_0 and Q6_K, each its own file, a restart asked", len(tids) == 6 and tw["label"] == "RS-TW merge" and
+      tw["restart"] is True and all(v["files"] == [f"models/YuE2-3B-RS-TW-{v['id']}.gguf"] for v in tw["variants"]), tids)
+check("  the default's three said so, no other", [v["id"] for v in tw["variants"] if v.get("note")] == ["2.0x0.75-BF16", "2.0x0.75-Q8_0", "2.0x0.75-Q6_K"] and
+      all(v["note"] == "the Studio's default" for v in tw["variants"] if v.get("note")), tw)
+got = weights._args({"tw": "2.0x0.75-Q8_0"}), weights._which({"tw": "2.0x0.9-Q6_K"})
+check("  a variant fetched as an extra: fetch-heresy.sh --tw, its size expected", got[0] == (["--only", "none", "--tw", "2.0x0.75-Q8_0", "--yes"], "the RS-TW merge 2.0x0.75-Q8_0") and
+      got[1][0] == {"extra": "tw", "variant": "2.0x0.9-Q6_K"} and round(got[1][1]) == 2900000000, got)
+try:
+    weights._args({"tw": "2.4x0.75-BF16"}); bad = False
+except ValueError:
+    bad = True
+check("  RS-FW's merge refused as RS-TW's", bad)
 check("the other parts as they were", all(weights.PARTS[p] for p in ("extras", "whisper", "stems", "upscale", "loras")) and "fw" not in weights.PARTS, weights.PARTS)
 print(("FAILED " if fails else "all passed ") + str(fails))
 sys.exit(1 if fails else 0)

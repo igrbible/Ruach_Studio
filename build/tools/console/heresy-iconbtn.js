@@ -29,6 +29,10 @@
   }
   function iconize(b) {
     if (!b || b.tagName !== "BUTTON" || b.closest("[data-no-icon]")) return;
+    // HERESY 2106 (Viktor 06.11.2026 on the journal's «Sent. Your ticket»: «OK вылетело из кнопки»): a dialog's answer keeps its word inside, as every
+    // other answer of the Studio's dialogs does («Send it», «Download it»); its ✓ or bin with the word in a tip floated that word over the dialog's
+    // text when the dialog gave it the focus. The dialog's Cancel stays ✕ (1593)
+    if (b.matches(".hd-yes, .hd-alt, .hd-guard-keep")) return;
     if (b.dataset.iconized) { if (b.querySelector(".ib-svg")) return; delete b.dataset.iconized; b.classList.remove("btn-icon"); }   // filled anew by a script
     if (b.children.length) return;                     // only a button of words alone
     var key = table()[(b.textContent || "").trim()];

@@ -923,6 +923,17 @@ static bool pipeline_generate(Yue2Pipeline *          p,
     p->last_error.clear();
     g_nar_error.clear();   // HERESY 1169
     g_vae_error.clear();
+    g_qw3lm_error.clear();   // HERESY 2090
+    // HERESY 2090: a forward the music half refused (a cache of another backbone's shape) says why in the job, unless a nearer
+    // reason already did, whichever way the run ends
+    struct LmErrorScope {
+        Yue2Pipeline * p;
+        ~LmErrorScope() {
+            if (p->last_error.empty() && !g_qw3lm_error.empty()) {
+                p->last_error = g_qw3lm_error;
+            }
+        }
+    } lm_error{ p };
     // HERESY 1169: the music's KV sets were allocated as a request asked and never given back: after two guided probes four
     // sets (10.75 GB at the whole window) stayed, and a long song's sound found no room after them. More than two (one
     // guided probe, what most runs ask) go when this request is done, whichever way it ends; the next one asks for its own
@@ -1269,7 +1280,9 @@ static bool pipeline_generate(Yue2Pipeline *          p,
             if ((int) codes[i].tokens.size() > chunk_sizes[i]) {
                 int end = YUE2_MUSIC_END;
                 qw3lm_kv_trim(&p->kv, i, (int) prefixes[i].size() + chunk_sizes[i]);
-                qw3lm_forward(lm, &p->kv, &end, 1, i, probe.data(), row0, rows);
+                if (!qw3lm_forward(lm, &p->kv, &end, 1, i, probe.data(), row0, rows)) {   // HERESY 2090
+                    return false;
+                }
             }
         }
     }
@@ -1335,7 +1348,9 @@ static bool pipeline_generate(Yue2Pipeline *          p,
                     lora_rt_at(&p->lora_rt[0], mid > 1.0f ? 1.0f : mid, false, "the music half reads a chunk again at");
                 }
                 qw3lm_kv_trim(&p->kv, i, kept);
-                qw3lm_forward(lm_chunk, &p->kv, sequence.data() + kept, ar_len - kept, i, probe.data(), row0, rows);
+                if (!qw3lm_forward(lm_chunk, &p->kv, sequence.data() + kept, ar_len - kept, i, probe.data(), row0, rows)) {   // HERESY 2090
+                    return false;
+                }
             }
             if (!nar) {
                 nar = require_nar(p, nar_adapters);

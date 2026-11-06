@@ -1,0 +1,61 @@
+  /* 06.11.2026 (Viktor: «Сам займись ивритом на сайте»): the card in Hebrew, put in by build.py on he/index.html alone. The Hebrew letters in
+     Noto Sans Hebrew, served from the card itself (OFL 1.1, assets/fonts/noto-sans-hebrew/, its licence beside it), the Latin in the card's own
+     faces; the page right to left, every rule under [dir="rtl"]: the sides that were left are right, the gradients turn, and what reads left to
+     right keeps doing so inside (code, the stereo graph, the player; build.py puts a signed number in a <bdi dir="ltr">) */
+  @font-face { font-family: "Noto Sans Hebrew"; font-style: normal; font-weight: 400; font-display: swap;
+    src: url("/assets/fonts/noto-sans-hebrew/noto-sans-hebrew-400.woff2") format("woff2"); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+  @font-face { font-family: "Noto Sans Hebrew"; font-style: normal; font-weight: 500; font-display: swap;
+    src: url("/assets/fonts/noto-sans-hebrew/noto-sans-hebrew-500.woff2") format("woff2"); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+  @font-face { font-family: "Noto Sans Hebrew"; font-style: normal; font-weight: 600; font-display: swap;
+    src: url("/assets/fonts/noto-sans-hebrew/noto-sans-hebrew-600.woff2") format("woff2"); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+  @font-face { font-family: "Noto Sans Hebrew"; font-style: normal; font-weight: 700; font-display: swap;
+    src: url("/assets/fonts/noto-sans-hebrew/noto-sans-hebrew-700.woff2") format("woff2"); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+  [dir="rtl"] body, [dir="rtl"] .langs summary { font-family: "Noto Sans", "Noto Sans Hebrew", system-ui, sans-serif; }
+  [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] .nums b, [dir="rtl"] .ghs b, [dir="rtl"] .ring-table thead tr:first-child th:first-child,
+  [dir="rtl"] .stereo-table thead tr:first-child th:first-child { font-family: "Tektur", "Noto Sans Hebrew", "Noto Sans", system-ui, sans-serif; }
+  [dir="rtl"] code { direction: ltr; unicode-bidi: isolate; }
+
+  /* the logo «נפחות רוח» (MISC/claude-i18n/he/logo, final 06.11.2026): taller than the Latin line, so the hero's and the bar's are held to the
+     Latin one's weight */
+  [dir="rtl"] .hero .logo { max-width: 520px; }
+  [dir="rtl"] .bar .mark svg { height: 30px; }
+  @media (max-width: 520px) { [dir="rtl"] .bar .mark svg { height: 22px; } }
+
+  /* the bar: the sections and the menus go to the left end, the language menu opens toward the page */
+  [dir="rtl"] .bar nav { margin-left: 0; margin-right: auto; }
+  [dir="rtl"] .langs summary::after { margin-left: 0; margin-right: 6px; }
+  [dir="rtl"] .langs-pop { right: auto; left: 0; }
+  @media (max-width: 860px) { [dir="rtl"] .theme { margin-left: 0; } [dir="rtl"] .langs { margin-left: 0; margin-right: auto; } }
+
+  /* the accent's rules and the indents on the right */
+  [dir="rtl"] .declare blockquote { padding: 4px 28px 4px 0; border-left: 0; border-right: 3px solid var(--amber); }
+  @media (max-width: 600px) { [dir="rtl"] .declare blockquote { padding-right: 18px; } }
+  [dir="rtl"] .feats li { padding: 14px 18px 14px 14px; border-left: 0; border-right: 3px solid var(--amber); border-radius: 10px 0 0 10px;
+    background: linear-gradient(270deg, var(--wash), transparent 70%); }
+  [dir="rtl"] .feats li:hover { background: linear-gradient(270deg, color-mix(in oklab, var(--amber) 11%, transparent), transparent 75%); }
+  [dir="rtl"] .card ul, [dir="rtl"] .credits { padding-left: 0; padding-right: 18px; }
+  [dir="rtl"] .story { border-left: 0; border-right: 3px solid var(--amber); padding: 2px 24px 2px 0; }
+  [dir="rtl"] .warn-free { border-left: 0; border-right: 3px solid #d9a441; }
+  [dir="rtl"] .vocab-call { background: linear-gradient(270deg, var(--wash), transparent 75%), var(--paper); }
+  [dir="rtl"] .vocab-head { padding: 10px 18px 10px 12px; }
+  [dir="rtl"] section > .wrap > h2::before, [dir="rtl"] .story h2::before, [dir="rtl"] .card::before { background: linear-gradient(270deg, var(--amber), var(--gold)); }
+  [dir="rtl"] footer .links { margin-left: 0; margin-right: auto; }
+  [dir="rtl"] .lb .lb-x { right: auto; left: 18px; }
+
+  /* the tables: the words from the right; the numbers stay flush right, as they are in every language; ours behind the amber line on its right */
+  [dir="rtl"] th, [dir="rtl"] td { text-align: right; }
+  [dir="rtl"] .stereo-table thead tr:first-child th:first-child { text-align: right; }
+  [dir="rtl"] .ring-table thead th.ours, [dir="rtl"] .ring-table .ours-row th:first-child, [dir="rtl"] .ring-table tbody td:nth-child(5) {
+    border-left: 0; border-right: 2px solid var(--amber); }
+
+  /* the ring's list */
+  [dir="rtl"] .ring-name b { margin-right: 0; margin-left: 4px; }
+  [dir="rtl"] .ring-name i { margin-left: 0; margin-right: 4px; }
+  [dir="rtl"] .rh-group, [dir="rtl"] .ring-ours-icons { margin-left: 0; margin-right: 2px; padding-left: 0; padding-right: 10px; border-left: 0;
+    border-right: 2px solid var(--amber); }
+
+  /* left to right inside: the stereo graph (its ticks are anchored at their end, its minus signs lead) and the player (a time line runs left to
+     right in every language, and the wave is drawn so); the card's name and the side in it each read in their own direction */
+  [dir="rtl"] .st-svg { direction: ltr; }
+  [dir="rtl"] .ring-bar .wrap { direction: ltr; }
+  [dir="rtl"] .rb-what b, [dir="rtl"] .rb-what span { unicode-bidi: plaintext; text-align: left; }

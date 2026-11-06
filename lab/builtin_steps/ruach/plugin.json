@@ -775,6 +775,380 @@
    ]
   },
   {
+   "id": "organteq",
+   "label": "Organteq",
+   "say": "a stem played again on a pipe organ",
+   "tip": "A stem of the set played again by the Organteq installed here (your own copy, bought, or Modartt's trial: the Studio ships none of it): its MIDI the take's own when the MIDI step made one of that stem, else transcribed here on the CPU, on the organ's manual (C2–C7, notes beyond it moved by octaves), at the stem's level and length. A lane of its own in the DAW, or the stem's version. Its sound is not for training a model (Modartt's licence).",
+   "script": "organteq.py",
+   "input": "stems",
+   "rate": 2.0,
+   "group": "mend",
+   "after": "pl-ruach-pianoteqPanel",
+   "params": [
+    {
+     "key": "stem",
+     "label": "Stem",
+     "type": "select",
+     "default": "piano",
+     "options": [
+      [
+       "piano",
+       "Piano"
+      ],
+      [
+       "other",
+       "Other"
+      ],
+      [
+       "guitar",
+       "Guitar"
+      ],
+      [
+       "bass",
+       "Bass"
+      ],
+      [
+       "winds",
+       "Winds"
+      ],
+      [
+       "vocals",
+       "Vocals (its melody)"
+      ],
+      [
+       "instrumental",
+       "Instrumental"
+      ]
+     ],
+     "tip": "Which stem Organteq plays; a set without it gives the first it has of piano, other, instrumental, guitar"
+    },
+    {
+     "key": "preset",
+     "label": "Instrument",
+     "type": "select",
+     "default": "Romantic Cathedral",
+     "options": [
+      [
+       "Romantic Cathedral",
+       "Romantic Cathedral"
+      ],
+      [
+       "Romantic Church",
+       "Romantic Church"
+      ],
+      [
+       "Romantic Abbey",
+       "Romantic Abbey"
+      ],
+      [
+       "Romantic Chapel",
+       "Romantic Chapel"
+      ],
+      [
+       "Baroque Cathedral I",
+       "Baroque Cathedral I"
+      ],
+      [
+       "Baroque Church",
+       "Baroque Church"
+      ],
+      [
+       "Baroque Chapel",
+       "Baroque Chapel"
+      ],
+      [
+       "Romantic Cathedral - Solo",
+       "Romantic Cathedral - Solo"
+      ],
+      [
+       "Baroque Cathedral I - Solo",
+       "Baroque Cathedral I - Solo"
+      ],
+      [
+       "Classical French Organ I (Souvigny - 1783)",
+       "Classical French Organ I (Souvigny - 1783)"
+      ],
+      [
+       "Royal Chapel (Versailles - 1711)",
+       "Royal Chapel (Versailles - 1711)"
+      ],
+      [
+       "Baroque Two-Manual II (Arnstadt - 1703)",
+       "Baroque Two-Manual II (Arnstadt - 1703)"
+      ]
+     ],
+     "tip": "An Organteq preset (its own window holds every one): a trial plays as Modartt lets it"
+    },
+    {
+     "key": "lay",
+     "label": "In the DAW",
+     "type": "select",
+     "default": "lane",
+     "options": [
+      [
+       "lane",
+       "A lane of its own"
+      ],
+      [
+       "version",
+       "The stem's version"
+      ]
+     ],
+     "tip": "A lane of its own plays beside the stem; the stem's version plays in its place (the lane's version button)"
+    },
+    {
+     "key": "dynamics",
+     "label": "Dynamics",
+     "type": "select",
+     "default": "stem",
+     "options": [
+      [
+       "stem",
+       "From the stem"
+      ],
+      [
+       "even",
+       "Even"
+      ]
+     ],
+     "tip": "Each note as loud as the stem played it at its attack, or all of them alike"
+    },
+    {
+     "key": "touch",
+     "label": "Touch",
+     "type": "number",
+     "min": -30,
+     "max": 30,
+     "step": 2,
+     "default": 0,
+     "tip": "Every velocity moved by this much: softer below zero, harder above"
+    },
+    {
+     "key": "parts",
+     "label": "What it plays",
+     "type": "select",
+     "default": "all",
+     "options": [
+      [
+       "all",
+       "Every pitched part"
+      ],
+      [
+       "keys",
+       "The keyboard parts"
+      ]
+     ],
+     "tip": "The stem's MIDI may hold several instruments: all of them, or only its pianos, keys and organs"
+    },
+    {
+     "key": "shift",
+     "label": "Transpose, semitones",
+     "type": "number",
+     "min": -24,
+     "max": 24,
+     "step": 1,
+     "default": 0,
+     "tip": "Every note moved by this many semitones (12: an octave up), kept within the piano's 88 keys"
+    },
+    {
+     "key": "state",
+     "type": "text",
+     "label": "Pianoteq's own settings",
+     "default": "",
+     "tip": "The panel's state: a preset of any of Pianoteq's, its small presets and the values set (HERESY 1977)"
+    }
+   ]
+  },
+  {
+   "id": "airteq",
+   "label": "Airteq",
+   "say": "a stem played again by Modartt's air-driven instruments",
+   "tip": "A stem of the set played again by the Airteq installed here (your own copy, bought, or Modartt's trial: the Studio ships none of it): flutes, reeds, horns, bowed and blown pads, drones; its MIDI the take's own when the MIDI step made one of that stem, else transcribed here on the CPU, at the stem's level and length. A lane of its own in the DAW, or the stem's version. Its sound is not for training a model (Modartt's licence).",
+   "script": "airteq.py",
+   "input": "stems",
+   "rate": 2.0,
+   "group": "mend",
+   "after": "pl-ruach-organteqPanel",
+   "params": [
+    {
+     "key": "stem",
+     "label": "Stem",
+     "type": "select",
+     "default": "winds",
+     "options": [
+      [
+       "piano",
+       "Piano"
+      ],
+      [
+       "other",
+       "Other"
+      ],
+      [
+       "guitar",
+       "Guitar"
+      ],
+      [
+       "bass",
+       "Bass"
+      ],
+      [
+       "winds",
+       "Winds"
+      ],
+      [
+       "vocals",
+       "Vocals (its melody)"
+      ],
+      [
+       "instrumental",
+       "Instrumental"
+      ]
+     ],
+     "tip": "Which stem Airteq plays; a set without it gives the first it has of winds, other, vocals, instrumental, piano"
+    },
+    {
+     "key": "preset",
+     "label": "Instrument",
+     "type": "select",
+     "default": "Classical Flute",
+     "options": [
+      [
+       "Classical Flute",
+       "Classical Flute"
+      ],
+      [
+       "Aria Flute I",
+       "Aria Flute I"
+      ],
+      [
+       "Sakuhachi Vibe",
+       "Sakuhachi Vibe"
+      ],
+      [
+       "Peruvian Flute",
+       "Peruvian Flute"
+      ],
+      [
+       "Tropical Flute",
+       "Tropical Flute"
+      ],
+      [
+       "Reed of West",
+       "Reed of West"
+      ],
+      [
+       "Jericho Horns",
+       "Jericho Horns"
+      ],
+      [
+       "Trumpets!",
+       "Trumpets!"
+      ],
+      [
+       "Bowed Ensemble",
+       "Bowed Ensemble"
+      ],
+      [
+       "Ambient Strings",
+       "Ambient Strings"
+      ],
+      [
+       "Self Evolving Drone - Poly",
+       "Self Evolving Drone - Poly"
+      ],
+      [
+       "Bourdon Generator",
+       "Bourdon Generator"
+      ],
+      [
+       "Radiant Pad",
+       "Radiant Pad"
+      ]
+     ],
+     "tip": "An Airteq preset (its own window holds every one): a trial plays as Modartt lets it"
+    },
+    {
+     "key": "lay",
+     "label": "In the DAW",
+     "type": "select",
+     "default": "lane",
+     "options": [
+      [
+       "lane",
+       "A lane of its own"
+      ],
+      [
+       "version",
+       "The stem's version"
+      ]
+     ],
+     "tip": "A lane of its own plays beside the stem; the stem's version plays in its place (the lane's version button)"
+    },
+    {
+     "key": "dynamics",
+     "label": "Dynamics",
+     "type": "select",
+     "default": "stem",
+     "options": [
+      [
+       "stem",
+       "From the stem"
+      ],
+      [
+       "even",
+       "Even"
+      ]
+     ],
+     "tip": "Each note as loud as the stem played it at its attack, or all of them alike"
+    },
+    {
+     "key": "touch",
+     "label": "Touch",
+     "type": "number",
+     "min": -30,
+     "max": 30,
+     "step": 2,
+     "default": 0,
+     "tip": "Every velocity moved by this much: softer below zero, harder above"
+    },
+    {
+     "key": "parts",
+     "label": "What it plays",
+     "type": "select",
+     "default": "all",
+     "options": [
+      [
+       "all",
+       "Every pitched part"
+      ],
+      [
+       "keys",
+       "The keyboard parts"
+      ]
+     ],
+     "tip": "The stem's MIDI may hold several instruments: all of them, or only its pianos, keys and organs"
+    },
+    {
+     "key": "shift",
+     "label": "Transpose, semitones",
+     "type": "number",
+     "min": -24,
+     "max": 24,
+     "step": 1,
+     "default": 0,
+     "tip": "Every note moved by this many semitones (12: an octave up), kept within the piano's 88 keys"
+    },
+    {
+     "key": "state",
+     "type": "text",
+     "label": "Pianoteq's own settings",
+     "default": "",
+     "tip": "The panel's state: a preset of any of Pianoteq's, its small presets and the values set (HERESY 1977)"
+    }
+   ]
+  },
+  {
    "id": "vupscale",
    "label": "Voice upscale",
    "say": "the voices' top redrawn",

@@ -1,12 +1,12 @@
 # Ruach Studio · the logo
 
-The name alone (Viktor, 09.10.2026: «Одного названия более чем достаточно»): **RUACH** in Montserrat Black and the **STUDIO** block a touch above Light, in the theme's accent, both turned into paths, so the logo needs no font. In each language of the page the name is its own (РУАХ СТУДИЯ, РУАХ СТУДІЯ, РУАХ СТУДЫЯ, ΠΝΕΥΜΑ ΣΤΟΥΝΤΙΟ, RUAJ ESTUDIO, RUACH STUDIO); RUACH is carried over, never translated as "spirit", and Greek takes the Scriptures' own ΠΝΕΥΜΑ.
+The name alone (Viktor, 09.10.2026: «Одного названия более чем достаточно»): **RUACH** in Montserrat Black and the **STUDIO** block a touch above Light, in the theme's accent, both turned into paths, so the logo needs no font. In each language of the page the name is its own (РУАХ СТУДИЯ, РУАХ СТУДІЯ, РУАХ СТУДЫЯ, ΠΝΕΥΜΑ ΣΤΟΥΝΤΙΟ, RUAJ ESTUDIO, RUACH STUDIO, and in Hebrew the brand itself, נפחות רוח, drawn in David CLM with נפחות on the accent's plate); RUACH is carried over, never translated as "spirit", and Greek takes the Scriptures' own ΠΝΕΥΜΑ.
 
 | file | what |
 |---|---|
 | `ruach-logo.svg` | the logo; its colours follow the page's theme (CSS variables, with fallbacks) |
 | `i18n/ruach-logo-LANG.svg` | the logo in each language of the page, and in the languages planned next: French (ROUAH STUDIO), Portuguese, German, Japanese (ルアハ スタジオ), Chinese (鲁阿赫 工作室), the new ones proposals |
-| `ruach-icon.svg`, `ruach-icon-{32,64,180,192,512}.png` | the icon: the logo's cloud of the theme's accent with the name's first letter, white. R here; the page's tab shows Р for the Cyrillic names, Π for the Greek, ル for the Japanese, 鲁 for the Chinese |
+| `ruach-icon.svg`, `ruach-icon-{32,64,180,192,512}.png` | the icon: the logo's cloud of the theme's accent with the name's first letter, white. R here; the page's tab shows Р for the Cyrillic names, Π for the Greek, ル for the Japanese, 鲁 for the Chinese, and ר on a plate of the accent for the Hebrew (`site/assets/ruach-icon-he-*.png`) |
 | `ruach-banner.png` | the README's banner: the veil the page boots under, by night |
 | `yue2/` | not ours: YuE2's mark (M-A-P's), traced for the About card's credits; its README says how |
 

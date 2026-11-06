@@ -135,9 +135,13 @@
 
   function set(id) {
     if (!find(id)) return;
+    // HERESY 2126: a pick of the theme a hover already shows changes the kept one all the same, so onChange hears it: apply() alone says
+    // nothing then, and a theme clicked with the mouse never became the day or night theme (the next load brought the old one back)
+    var silent = S.kept !== id && S.shown === id;
     S.kept = id;
     save("yue2.theme", id);
     apply(id);
+    if (silent && S.onChange) S.onChange(id);
     paintButton();
     if (S.popup && !S.popup.hidden) paintGrid();
   }

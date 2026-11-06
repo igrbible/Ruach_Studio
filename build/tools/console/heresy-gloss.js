@@ -14,6 +14,8 @@
   var state = { take: null, hooks: null, token: 0, source: "" };   // source: "" the take, or derived/… (HERESY 1021)
   function src() { return state.source ? "&source=" + encodeURIComponent(state.source) : ""; }
   function $(id) { return document.getElementById(id); }
+  // HERESY 2126: a derived file's source and label go into the source list's HTML escaped, as heresy-inspect.js does (a name with < or " was markup)
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   // through the Kit server (/lab/… → 127.0.0.1:41870): one origin, one port to reach
   function lab() { return "/lab"; }
   function clock(t) { var m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ":" + (s < 10 ? "0" : "") + s; }
@@ -145,7 +147,7 @@
   function ktPeek() {
     if (!state.take) return;
     var name = state.take.name;
-    fetch("/lab/timing?name=" + encodeURIComponent(name) + "&cached=1", { priority: "low" }).then(function (r) { return r.ok ? r.json() : null; })
+    fetch("/lab/timing?name=" + encodeURIComponent(name) + "&cached=1", { priority: "low" }).then(function (r) { return r.status === 200 ? r.json() : null; })   // HERESY 2103: 204, not timed yet
       .then(function (r) { if (state.take && state.take.name === name) ktPaint(r && r.rows ? r : null); }).catch(function () {});
   }
   function ktRun(force) {
@@ -181,7 +183,7 @@
       var keep = state.source, sel = $("glossSource");
       sel.innerHTML = '<option value="">the take</option>' + event.detail.files.filter(function (f) { return f.kind === "stems"; })
         .sort(function (a, b) { return (/vocal/i.test(b.label) ? 1 : 0) - (/vocal/i.test(a.label) ? 1 : 0); })
-        .map(function (f) { return '<option value="' + f.source + '">' + f.label.replace(/^\u21b3 /, "") + "</option>"; }).join("");
+        .map(function (f) { return '<option value="' + esc(f.source) + '">' + esc(f.label.replace(/^\u21b3 /, "")) + "</option>"; }).join("");
       sel.value = Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }) ? keep : "";
     });
     // An already measured take shows at once when the drawer opens (the lab keeps a cache).
@@ -191,7 +193,7 @@
   function peek() {
     if (!state.take) return;
     var token = state.token, name = state.take.name;
-    fetch(lab() + "/gloss?name=" + encodeURIComponent(name) + src() + "&cached=1", { priority: "low" }).then(function (r) { return r.ok ? r.json() : null; })
+    fetch(lab() + "/gloss?name=" + encodeURIComponent(name) + src() + "&cached=1", { priority: "low" }).then(function (r) { return r.status === 200 ? r.json() : null; })   // HERESY 2103: 204, not heard yet
       .then(function (r) { if (r && !r.error && token === state.token && state.take && state.take.name === name) { paint(r); $("glossRun").textContent = "Listen again"; } })
       .catch(function () { /* nothing measured yet, or no lab: the button says the rest */ });
   }

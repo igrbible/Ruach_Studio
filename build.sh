@@ -72,6 +72,67 @@ root = sys.argv[4]                # HERESY 1362: the install's root (a bare name
 html = (src / "index.html").read_text(encoding="utf-8")
 css = (src / "app.css").read_text(encoding="utf-8")
 
+# HERESY 2139 (Viktor 06.11.2026, from his remote connection: «Вот очередная загрузка шрифтов без кеширования - это неприятно на удалённом соединении.
+# Да и все assets загружать с кешированием, но в каждом иметь ключ ?675tg9 релиз тега»): every URL of the page's own files gets its file's key, the
+# first ten hex of its SHA-256 (?v=KEY), so a file that did not change keeps its key across builds and releases, the fonts above all, and one that
+# did gets a new key at once. The engine and the lab keep a file a year (immutable) only under its own key (tools/asset-cache.h, lab/byte_ranges.py),
+# anything else is asked again. Keyed here: the stylesheets' url() (the fonts' faces), the page's links (the manifest, its icon), the manifest's
+# icons (the manifest goes beside the page, its icons keyed), and the files the page's scripts ask for by name (the piano roll's sounds), handed to
+# them in window.RUACH_BUILD with the build's id and the release (VERSION). Only the page's line count is kept: every key goes inside a line
+# (RUACH_BUILD_MAP stays true). A URL whose file is not here stays as it was, said below, never given a key made up
+import hashlib, os
+LAB = pathlib.Path(root) / "lab"
+ASSET_ROOTS = (("/lab/fonts/", LAB / "fonts"), ("/lab/sounds/", LAB / "sounds"), ("/pwa/", src / "pwa"))
+ASSET_URL = r"/(?:lab/fonts|lab/sounds|pwa)/[A-Za-z0-9._-]+"
+asset_keys, asset_missing, asset_count = {}, [], {"css": 0, "links": 0, "manifest": 0}
+
+
+def keyed(url, where=None):
+    """url with ?v=KEY of the file it names; as it was (and said) when that file is not here"""
+    for prefix, folder in ASSET_ROOTS:
+        if url.startswith(prefix) and url not in asset_keys:
+            f = folder / url[len(prefix):]
+            if f.is_file():
+                asset_keys[url] = hashlib.sha256(f.read_bytes()).hexdigest()[:10]
+    if url not in asset_keys:
+        asset_missing.append(url)
+        return url
+    if where:
+        asset_count[where] += 1
+    return url + "?v=" + asset_keys[url]
+
+
+def keyed_css(text):
+    return re.sub(r"url\(\s*(['\"]?)(" + ASSET_URL + r")\1\s*\)", lambda m: "url(" + m.group(1) + keyed(m.group(2), "css") + m.group(1) + ")", text)
+
+
+manifest_src = src / "pwa" / "manifest.webmanifest"
+if manifest_src.is_file():   # beside the page, its icons keyed: the engine serves this one (and the source's when there is none)
+    mtext = re.sub(r'"(' + ASSET_URL + r')"', lambda m: '"' + keyed(m.group(1), "manifest") + '"', manifest_src.read_text(encoding="utf-8"))
+    built_manifest = page.parent / "manifest.webmanifest"
+    (page.parent / "manifest.webmanifest.part").write_text(mtext, encoding="utf-8")
+    os.replace(page.parent / "manifest.webmanifest.part", built_manifest)
+    asset_keys["/manifest.webmanifest"] = hashlib.sha256(built_manifest.read_bytes()).hexdigest()[:10]
+html = re.sub(r'(\b(?:href|src)=")(' + ASSET_URL + r'|/manifest\.webmanifest)(")', lambda m: m.group(1) + keyed(m.group(2), "links") + m.group(3), html)
+# the piano roll's sounds by name (heresy-roll.js asks window.RuachAsset): the names the lab's /sounds/ serves
+for f in sorted((LAB / "sounds").glob("*.mp3")) if (LAB / "sounds").is_dir() else []:
+    if re.fullmatch(r"[a-z]+-\d{2,3}\.mp3", f.name):
+        keyed("/lab/sounds/" + f.name)
+try:
+    release = (pathlib.Path(root) / "VERSION").read_text(encoding="utf-8").strip()
+except OSError:
+    release = ""
+    print("  \u26a0 no VERSION beside build.sh: the page says no release", file=sys.stderr)
+runtime = {u: k for u, k in sorted(asset_keys.items()) if u.startswith("/lab/sounds/")}
+BUILD_SLOT = 'window.RUACH_BUILD = { id: "dev", release: "dev", keys: {} };'
+if html.count(BUILD_SLOT) > 1:
+    sys.exit(f"{BUILD_SLOT!r} appears {html.count(BUILD_SLOT)} times in index.html (want exactly 1)")
+had_slot = html.count(BUILD_SLOT) == 1
+if not had_slot:   # an index.html from before the slot: the stylesheets and links are keyed all the same, the scripts' files are not
+    print("  ⚠ index.html has no window.RUACH_BUILD slot: the files its scripts ask for by name go unkeyed (no-cache), the build's id in the meta only",
+          file=sys.stderr)
+html = html.replace(BUILD_SLOT, "window.RUACH_BUILD = " + json.dumps({"id": "dev", "release": release, "keys": runtime}, separators=(",", ":")) + ";")
+
 
 # HERESY 1169 (Viktor 07.10.2026: «три кнопочки svg -, +, reset для скейла… В минус шагом 2pt до минус 4, а в плюс… до макс 8pt…
 # глобальный скейл шрифтов с минус 2 и плюс до 4»): every font size of the stylesheets, in px or pt (never 0), is written
@@ -82,14 +143,14 @@ def scaled(text):
                   r"\1calc(\2 + var(--fs, 0pt))", text)
 
 
-css = scaled(css)
+css = keyed_css(scaled(css))   # HERESY 2139: and its files' keys
 js = (src / "app.js").read_text(encoding="utf-8")
 ins = (src / "instrumental.js").read_text(encoding="utf-8")
 helps = (src / "help.js").read_text(encoding="utf-8")
 lorajs = (src / "loras.js").read_text(encoding="utf-8")
 vaejs = (src / "vaes.js").read_text(encoding="utf-8")
 themecss = (src / "themes.css").read_text(encoding="utf-8")
-themecss = scaled(themecss)
+themecss = keyed_css(scaled(themecss))
 themejs = (src / "themes.js").read_text(encoding="utf-8")
 
 prompts = []
@@ -136,7 +197,7 @@ for name in re.findall(r'<script src="(vendor/[A-Za-z0-9._-]+\.js)"></script>', 
         sys.exit(f"{name} contains '</script>', which would end its inlined block")
     swaps.append((f'<script src="{name}"></script>', "<script>\n" + text + "\n</script>"))
 for name in re.findall(r'<link rel="stylesheet" href="(vendor/[A-Za-z0-9._-]+\.css)" />', html):
-    text = (src / name).read_text(encoding="utf-8")
+    text = keyed_css((src / name).read_text(encoding="utf-8"))   # HERESY 2139: the fonts' faces by their files' keys
     if "</style" in text.lower():
         sys.exit(f"{name} contains '</style>', which would end its inlined block")
     swaps.append((f'<link rel="stylesheet" href="{name}" />', "<style>\n" + text + "</style>"))
@@ -147,13 +208,37 @@ for marker, replacement in swaps:
         sys.exit(f"marker {marker!r} appears {count} times in index.html (want exactly 1)")
     found.append((html.index(marker), marker, replacement))
 found.sort()
-out, at = [], 0
+# HERESY 2102 (Viktor's debug journal of 05.11.2026: a stack pointed at line 108 976 of the built page, which no source has): as the page is put
+# together, a map of its lines to their files ([its first line here, the file, that line in the file]) goes at its very end, where it moves no line,
+# and the build's id (its time and the start of its hash) into its <meta name="ruach-build">; the debug journal writes both beside every stack
+out, at, bmap, rline = [], 0, [], 1
 for index, marker, replacement in found:
-    out.append(html[at:index])
+    seg = html[at:index]
+    bmap.append([rline, "index.html", html.count("\n", 0, at) + 1])
+    out.append(seg)
+    rline += seg.count("\n")
+    named = re.search(r'(?:src|href)="([^"]+)"', marker)
+    bmap.append([rline + (1 if replacement.startswith(("<script>\n", "<style>\n")) else 0), named.group(1) if named else "?", 1])
     out.append(replacement)
+    rline += replacement.count("\n")
     at = index + len(marker)
+bmap.append([rline, "index.html", html.count("\n", 0, at) + 1])
 out.append(html[at:])
 result = "".join(out)
+import hashlib, time
+build_id = time.strftime("%Y%m%dT%H%M%S") + "-" + hashlib.sha1(result.encode("utf-8")).hexdigest()[:8]   # a T in it: «20261106-020305-…» read as a take's name, and the journal's scrub made it a take# mark
+result = result.replace('<meta name="ruach-build" content="dev" />', '<meta name="ruach-build" content="' + build_id + '" />', 1)
+if result.count('window.RUACH_BUILD = {"id":"dev",') > 1:   # HERESY 2139: beside the release, never in it (2104's test reads the id's form)
+    sys.exit("window.RUACH_BUILD's id slot is in the page more than once")
+result = result.replace('window.RUACH_BUILD = {"id":"dev",', 'window.RUACH_BUILD = {"id":"' + build_id + '",', 1)
+missing = sorted(set(asset_missing))
+print(f"  keys: {asset_count['css']} url() in the stylesheets, {asset_count['links']} links of the page, {asset_count['manifest']} icons of the manifest,"
+      f" {len(runtime) if had_slot else 0} files the scripts ask for by name; release {release or '?'}", file=sys.stderr)
+for u in missing:
+    print(f"  \u26a0 not keyed, no such file here: {u} (asked for as it is: no-cache, never kept a year)", file=sys.stderr)
+if "</body>" in result:
+    at_end = result.rindex("</body>")
+    result = result[:at_end] + "<script>window.RUACH_BUILD_MAP=" + json.dumps(bmap, separators=(",", ":")) + ";</script>" + result[at_end:]
 
 # The install's own path is data: the page must not carry it, nor any home path. External links whose name happens to match
 # (upstream's own repo, which the CPP badge opens, and the collection's own repo, which the status note opens) are not paths, so they

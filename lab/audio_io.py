@@ -241,7 +241,10 @@ def set_balance(user_dir, balance_db, level_db=None):
     cfg["gateway"] = g
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(cfg, indent=1))
+    with open(tmp, "w", encoding="utf-8") as fh:   # HERESY 2083: written whole and on the disk before it takes the file's place
+        fh.write(json.dumps(cfg, indent=1))
+        fh.flush()
+        os.fsync(fh.fileno())
     os.replace(tmp, p)
     return gateway(user_dir)
 
@@ -278,7 +281,10 @@ def set_monitor(user_dir, out, rate):
     cfg["monitor"] = {"out": out or "", "rate": rate}
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(cfg, indent=1))
+    with open(tmp, "w", encoding="utf-8") as fh:   # HERESY 2083: written whole and on the disk before it takes the file's place
+        fh.write(json.dumps(cfg, indent=1))
+        fh.flush()
+        os.fsync(fh.fileno())
     os.replace(tmp, p)
     return cfg["monitor"]
 
@@ -385,7 +391,10 @@ def set_gateway(user_dir, out, inp, rate):
                 cfg["gateway"][k] = was[k]
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(cfg, indent=1))
+    with open(tmp, "w", encoding="utf-8") as fh:   # HERESY 2083: written whole and on the disk before it takes the file's place
+        fh.write(json.dumps(cfg, indent=1))
+        fh.flush()
+        os.fsync(fh.fileno())
     os.replace(tmp, p)
     return cfg["gateway"]
 

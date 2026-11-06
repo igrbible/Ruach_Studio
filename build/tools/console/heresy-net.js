@@ -14,7 +14,9 @@
     var el = $("netSay");
     if (!el) return;
     var where = LOCAL ? "here" : "Forge";
-    if (S.down) { el.textContent = where + " · no answer"; el.dataset.q = "bad"; }
+    // HERESY 2101: the line stuck (heresy-link.js: several requests waiting together, none answered) is said here first, quietly
+    if (window.HeresyLink && window.HeresyLink.stuck()) { el.textContent = where + " · " + (window.RuachI18n ? window.RuachI18n.t("the line is stuck") : "the line is stuck"); el.dataset.q = "stuck"; }
+    else if (S.down) { el.textContent = where + " · no answer"; el.dataset.q = "bad"; }
     else if (S.rtt == null) { el.textContent = where + " · …"; el.dataset.q = ""; }
     else { el.textContent = where + " · " + Math.round(S.rtt) + " ms"; el.dataset.q = S.rtt < 60 ? "good" : S.rtt < 250 ? "slow" : "bad"; }
     el.dataset.tip = "The line to the Studio: the round trip, the middle of the last five (every 20 s). " +
@@ -43,7 +45,7 @@
     }).catch(function () { S.down = true; paint(); });
   }
   function patience(ms) { return S.far ? ms * 3 : ms; }
-  window.HeresyNet = { far: function () { return S.far; }, rtt: function () { return S.rtt; }, patience: patience, ping: ping };
+  window.HeresyNet = { far: function () { return S.far; }, rtt: function () { return S.rtt; }, patience: patience, ping: ping, paint: paint };
   function start() {
     paint(); ping();
     setInterval(function () { if (!document.hidden) ping(); }, 20000);

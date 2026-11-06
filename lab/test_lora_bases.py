@@ -1,4 +1,4 @@
-"""HERESY 1960: lora_bases — each adapter's base (the file, the run, assumed), the model's line from its GGUF, and the fit between them.
+"""HERESY 1960 (2111: the Tsunami Wave): lora_bases — each adapter's base (the file, the run, assumed), the model's line from its GGUF, and the fit between them.
 Run: .venv/bin/python lab/test_lora_bases.py"""
 import json
 import struct
@@ -55,6 +55,13 @@ with tempfile.TemporaryDirectory() as t:
     gguf(kit / "models/YuE2-3B-RS-FW-2.4x0.75-BF16.gguf", "loras/YuE2-RS-FW/YuE2-RS-FW-e002.4.safetensors@0.75,0.75")
     gguf(kit / "models/YuE2-3B-RS-FW-2.4-voice-BF16.gguf", "loras/voice-a/voice-a-e010.safetensors@0.5,0.5")
     gguf(kit / "models/Other-7B.gguf", None)
+    # HERESY 2111: the Tsunami Wave, RS-TW 2.0 folded over RS-FW 2.4 (its merges' header lists both), a run on its trainer base, a model told by name only
+    safetensors(L / "tw-voice/tw-voice-e004.safetensors", {"studio": "ruach"}); run(kit, "tw-voice", "yue2_3b_RS-TW-2.0x0.75_bf16.safetensors")
+    safetensors(L / "YuE2-RS-TW/YuE2-RS-TW-e002.0.safetensors", {}); run(kit, "YuE2-RS-TW", "yue2_3b_RS-FW-e002.4-m0.75-s0.75_bf16.safetensors")
+    TW_SAID = "loras/YuE2-RS-FW/YuE2-RS-FW-e002.4.safetensors@0.75,0.75; loras/YuE2-RS-TW/YuE2-RS-TW-e002.0.safetensors@{0},{0}"
+    gguf(kit / "models/YuE2-3B-RS-TW-2.0x0.75-BF16.gguf", TW_SAID.format("0.75"))
+    gguf(kit / "models/YuE2-3B-RS-TW-2.0x0.9-Q8_0.gguf", TW_SAID.format("0.9"))
+    gguf(kit / "models/YuE2-3B-RS-TW-2.0x0.75-Q6_K.gguf", None)
 
     check("names: an RS-FW epoch from a checkpoint, a model, a LoRA file", B.line_of("yue2_3b_RS-FW-e003.4-m0.75-s0.75_bf16.safetensors") == ("fw", "3.4")
           and B.line_of("YuE2-3B-RS-FW-2.4x0.75-BF16.gguf") == ("fw", "2.4") and B.line_of("YuE2-RS-FW-e004.safetensors") == ("fw", "4.0"))
@@ -84,5 +91,31 @@ with tempfile.TemporaryDirectory() as t:
     n = B.report(kit, "../models/YuE2-3B-BF16.gguf", ["voice-a/voice-a-e010.safetensors"])
     check("a model told by nothing, or a path, is unknown: nothing flagged", not u["model"]["known"] and u["loras"]["voice-a/voice-a-e010.safetensors"]["fit"] == "unknown"
           and not n["model"]["known"], (u, n))
+
+    # HERESY 2111: the Tsunami Wave's own family, before RS-FW and YuE2
+    check("names (2111): an RS-TW epoch from its LoRA file, a model, the trainer's base (no longer YuE2's)", B.line_of("YuE2-RS-TW-e002.0.safetensors") == ("tw", "2.0")
+          and B.line_of("YuE2-3B-RS-TW-2.0x0.75-Q8_0.gguf") == ("tw", "2.0") and B.line_of("yue2_3b_RS-TW-2.0x0.75_bf16.safetensors") == ("tw", "2.0")
+          and B.label(("tw", "2.0")) == "RS-TW 2.0" and B.line_of("yue2_3b_RS-FW-e002.4-m0.75-s0.75_bf16.safetensors") == ("fw", "2.4"))
+    t = B.report(kit, "YuE2-3B-RS-TW-2.0x0.75-BF16.gguf", [])
+    tl = t["loras"]
+    check("the Tsunami Wave's merge (RS-FW 2.4, then RS-TW 2.0 in its header) reads as RS-TW 2.0, both folded adapters inside", t["model"]["label"] == "RS-TW 2.0" and t["model"]["known"]
+          and tl["YuE2-RS-TW/YuE2-RS-TW-e002.0.safetensors"]["inside"] and tl["YuE2-RS-FW/YuE2-RS-FW-e002.4.safetensors"]["inside"], t)
+    check("on RS-TW 2.0: a run on its base same (RS-TW 2.0), RS-FW 2.4's and 3.4's near, YuE2's other", tl["tw-voice/tw-voice-e004.safetensors"]["base"] == "RS-TW 2.0"
+          and tl["tw-voice/tw-voice-e004.safetensors"]["how"] == "run" and tl["tw-voice/tw-voice-e004.safetensors"]["fit"] == "same"
+          and tl["new/new-e001.safetensors"]["fit"] == "near" and tl["fw34-style/fw34-style-e000.5.safetensors"]["fit"] == "near"
+          and tl["voice-a/voice-a-e010.safetensors"]["fit"] == "other" and tl["hf/style.safetensors"]["fit"] == "other", tl)
+    b9 = B.report(kit, "YuE2-3B-RS-TW-2.0x0.9-Q8_0.gguf", ["tw-voice/tw-voice-e004.safetensors"])
+    q6 = B.report(kit, "YuE2-3B-RS-TW-2.0x0.75-Q6_K.gguf", ["tw-voice/tw-voice-e004.safetensors", "new/new-e001.safetensors"])
+    check("RS-TW at another strength (2.0x0.9) is the same line; a TW model told by its name alone reads as RS-TW too", b9["model"]["label"] == "RS-TW 2.0"
+          and b9["loras"]["tw-voice/tw-voice-e004.safetensors"]["fit"] == "same" and q6["model"]["label"] == "RS-TW 2.0"
+          and q6["loras"]["tw-voice/tw-voice-e004.safetensors"]["fit"] == "same" and q6["loras"]["new/new-e001.safetensors"]["fit"] == "near", (b9, q6))
+    f24 = B.report(kit, "YuE2-3B-RS-FW-2.4x0.75-BF16.gguf", ["tw-voice/tw-voice-e004.safetensors", "new/new-e001.safetensors"])
+    y = B.report(kit, "YuE2-3B-BF16.gguf", ["tw-voice/tw-voice-e004.safetensors"])
+    check("an RS-TW adapter: near on RS-FW 2.4 (the wave it grew over), other on YuE2; RS-FW 2.4's own still same there", f24["model"]["label"] == "RS-FW 2.4"
+          and f24["loras"]["tw-voice/tw-voice-e004.safetensors"]["fit"] == "near" and f24["loras"]["new/new-e001.safetensors"]["fit"] == "same"
+          and y["loras"]["tw-voice/tw-voice-e004.safetensors"]["fit"] == "other", (f24, y))
+    check("fit by families: tw/tw same at its epoch, tw/fw near either way, tw/yue2 other either way", B.fit(("tw", "2.0"), ("tw", "2.0")) == "same"
+          and B.fit(("tw", "2.0"), ("fw", "2.4")) == "near" and B.fit(("fw", "2.4"), ("tw", "2.0")) == "near" and B.fit(("tw", "2.0"), ("yue2", "")) == "other"
+          and B.fit(("yue2", ""), ("tw", "2.0")) == "other" and B.fit(("fw", "2.4"), ("yue2", "")) == "other" and B.fit(("fw", "2.4"), ("fw", "3.4")) == "near")
 
 sys.exit(1 if FAILS else 0)

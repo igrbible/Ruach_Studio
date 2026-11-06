@@ -13,3 +13,10 @@ endif()
 if(WIN32)
     target_link_libraries(httplib PRIVATE ws2_32)
 endif()
+
+# HERESY 2035: gzip where the machine has zlib: the page and the JSON over the https door on a slow link
+find_package(ZLIB)
+if(ZLIB_FOUND)
+    target_compile_definitions(httplib PUBLIC CPPHTTPLIB_ZLIB_SUPPORT)
+    target_link_libraries(httplib PUBLIC ZLIB::ZLIB)
+endif()

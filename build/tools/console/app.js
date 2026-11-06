@@ -143,10 +143,10 @@
   function whenExact(name) { return (savedLook().when === "exact") !== !!(name && whenFlip[name]); }
   // HERESY 1874: a take in a workspace for blind listening shows no time (the batches would tell which is which)
   function blindTake(name) { var HC = window.HeresyCollection; return !!(name && HC && HC.isBlind && HC.isBlind(name)); }
-  function takeTime(epoch, name) { return !epoch ? "" : blindTake(name) ? "\ud83d\ude48" : whenExact(name) ? exactTime(epoch) : ago(epoch); }
+  function takeTime(epoch, name) { return !epoch ? "" : blindTake(name) ? "\ud83e\udee3" : whenExact(name) ? exactTime(epoch) : ago(epoch); }   // HERESY 2043: 🫣
   function whenHtml(epoch, name) {                      // a card's time: the one the setting says, the other in its tip, a click flips it
     if (!epoch) return "<span></span>";
-    if (blindTake(name)) return '<span class="when-blind" data-tip="Blind: what made its takes is hidden">\ud83d\ude48</span>';   // HERESY 1874
+    if (blindTake(name)) return '<span class="when-blind" data-tip="Blind: what made its takes is hidden">' + (window.HeresyIcons ? window.HeresyIcons.ui("blind") : "\ud83e\udee3") + "</span>";   // HERESY 1874; 2043
     var x = whenExact(name);
     return '<span class="when" data-when="' + epoch + '" data-when-name="' + escape(name || "") + '" data-tip="' + escape(tr(x ? ago(epoch) : exactTime(epoch))) + '">' +
       escape(tr(x ? exactTime(epoch) : ago(epoch))) + "</span>";
@@ -170,16 +170,25 @@
   }, true);
   window.ruachTakeTime = takeTime; window.ruachWhenHtml = whenHtml;   // for the checks
 
-  function toast(message, kind) {
+  function toast(message, kind, act) {
     var el = document.createElement("div");
     el.className = "toast" + (kind ? " " + kind : "");
     el.textContent = message;
+    // HERESY 2135: act { label, fn }: a toast that offers its way out (a take not filed: «File them again»), the button under the words
+    if (act && act.label && typeof act.fn === "function") {
+      var row = document.createElement("div"), b = document.createElement("button");
+      row.className = "toast-acts";
+      b.type = "button"; b.className = "btn ghost small toast-act"; b.textContent = act.label;
+      b.addEventListener("click", function () { el.remove(); act.fn(); });
+      row.appendChild(b);
+      el.appendChild(row);
+    }
     $("toasts").appendChild(el);
     setTimeout(function () {
       el.style.transition = "opacity .3s ease";
       el.style.opacity = "0";
       setTimeout(function () { el.remove(); }, 320);
-    }, kind === "bad" ? 13000 : 9200);   // HERESY 1026: five seconds more to read
+    }, act ? 20000 : kind === "bad" ? 13000 : 9200);   // HERESY 1026: five seconds more to read; 2135: longer with a button to reach
   }
   window.HeresyToast = toast;                       // HERESY 1960: loras.js speaks through it (its notes since 1802 had no one to show them)
 
@@ -294,8 +303,8 @@
   // начала в конец»): the Engine's cards by theme, a tab each theme, in the order one goes through them: the server and its
   // log, the machine, the models, the rooms' helpers, where the work lives and who may open it, the look, the updates. One
   // tab's cards are shown, the rest stay in the page (their code runs as before); a card no tab names shows with the last
-  var ENGINE_TABS = { server: ["eg-server", "eg-log"], machine: ["eg-hardware", "eg-compute", "eg-gpus", "eg-midi"], perf: ["eg-perf"], models: ["eg-models", "eg-vae", "eg-loras"], creator: ["eg-creator"],
-    rooms: ["eg-writer", "eg-art"], refiner: ["eg-refiner"], pianoteq: ["eg-pianoteq"], places: ["eg-folders", "eg-access", "eg-c2pa"], look: ["eg-look"], defaults: ["eg-defaults"], about: ["eg-updates", "eg-about"] };   // HERESY 1818: Defaults a tab of their own
+  var ENGINE_TABS = { server: ["eg-server", "eg-log"], machine: ["eg-hardware", "eg-compute", "eg-gpus", "eg-midi", "eg-topology"], perf: ["eg-perf"], models: ["eg-models", "eg-vae", "eg-loras"], creator: ["eg-creator"],
+    rooms: ["eg-writer", "eg-art"], refiner: ["eg-refiner"], pianoteq: ["eg-pianoteq"], places: ["eg-folders", "eg-access", "eg-c2pa", "eg-backups"], look: ["eg-look"], defaults: ["eg-defaults"], debug: ["eg-debug"], about: ["eg-updates", "eg-about"] };   // HERESY 2054: the debug journal   // HERESY 1818: Defaults a tab of their own
   function engineTabOf(card) {
     for (var k in ENGINE_TABS) if (ENGINE_TABS[k].some(function (c) { return card.classList.contains(c); })) return k;
     return "about";
@@ -313,6 +322,7 @@
     $("view-engine").querySelector(".engine-grid").scrollTop = 0;
     if (!quiet) store("yue2.engineTab", name);
     if (name === "server") scrollLogToEnd();
+    if (name === "rooms" && typeof LLM === "object" && LLM && !$("view-engine").classList.contains("is-hidden")) refreshWriter(false).catch(function () {});   // HERESY 2097
   }
   window.ruachEngineTab = function (where) {   // a tab by its name, or the tab of the card an element sits in
     var card = where && where.closest ? where.closest("#view-engine .engine-grid > .card") : null;
@@ -346,6 +356,8 @@
       engineTab($("view-engine").dataset.etab || recall("yue2.engineTab") || "server", false, true);   // HERESY 1450: the tab it was left on
       scrollLogToEnd();
       if (window.HeresyPlaces) window.HeresyPlaces.load();   // HERESY 1283: the Folders card asks the lab when the page is seen
+      if (window.HeresyBackups) window.HeresyBackups.load(); // HERESY 2083: and the backups' card
+      if (window.HeresyTopology) window.HeresyTopology.load(true); // HERESY 2085: and the topology, looked at afresh
       if (window.HeresyWeights) window.HeresyWeights.load(); // HERESY 1289: and the Models and LoRAs card
     } else if (view === "take") {
       $("view-engine").classList.add("is-hidden");
@@ -400,7 +412,8 @@
       close();
     });
     document.addEventListener("keydown", function (event) { if (event.key === "Escape") close(); });
-    ["openPrompt", "unloadModel", "engineToggle", "dawOpen"].forEach(function (id) { var b = $(id); if (b) b.addEventListener("click", function () { setTimeout(close, 0); }); });
+    // HERESY 2064 (Viktor 04.11.2026: «Строку "Экспорт в DAW" к хуям»): no DAW button in ☰ to close it after
+    ["openPrompt", "unloadModel", "engineToggle"].forEach(function (id) { var b = $(id); if (b) b.addEventListener("click", function () { setTimeout(close, 0); }); });
     pop.addEventListener("click", function (event) { if (event.target.closest("#exampleMenu [data-example]")) setTimeout(close, 0); });
   })();
   menuToggle("savePrompt", "saveMenu");
@@ -408,9 +421,11 @@
   // HERESY 1149 (Viktor, 03.10.2026: «даже при 1920×1080 WORKSPACE упирается в лого»): the bar breathes by what it holds,
   // not by the window's width alone (a workspace's long name made the difference): when its right side comes within 18 px
   // of the centred logo, the word WORKSPACE goes first, then the workspace box narrows; the logo loses its words at 1659 px
+  var barPair = null;                                  // HERESY 2114: the workspace and what it is centred by, once fitBar has got that far
   function fitBar() {
     var bar = document.querySelector(".topbar"), logo = document.querySelector(".topbar .brand"), ws = document.querySelector(".topbar .ws-current");
     if (!bar || !logo || !ws) return;
+    barPair = null;
     bar.classList.remove("ws-tight", "ws-tighter");
     ws.style.removeProperty("--ws-shift");             // HERESY 1632: measured where the flow puts it, then moved (centreWs)
     // HERESY 1493: with the buttons a step larger (his +2 pt by default) the bar at ~1100 px ran onto a second row: the workspace box
@@ -427,7 +442,8 @@
     var gap = function () { return ws.getBoundingClientRect().left - side.getBoundingClientRect().right; };
     if (gap() < 18) bar.classList.add("ws-tight");
     if (gap() < 18) bar.classList.add("ws-tighter");
-    centreWs(ws, side);
+    barPair = { ws: ws, side: side };
+    centerTrainer();                                   // HERESY 2114: centreWs and the Trainer's place in turn, until both hold
   }
   // HERESY 1632 (Viktor 20.10.2026: «Выровняй по центру между TRAINER и кружком активности»): the workspace's middle at the middle of the room
   // between the Trainer's pill (or the logo) and the engine's lamp; moved, not laid out again, so nothing beside it moves
@@ -1329,7 +1345,15 @@
   ["odeSteps", "maxLength"].forEach(function (id) { $(id).addEventListener("input", paintOutput); });
   // HERESY 1169: Songs × Sounds beside Generate, and how many takes that makes
   function paintCounts() {
-    var songs = +$("versions").value || 1, sounds = +$("variations").value || 1, takes = songs * sounds;
+    // HERESY 2137 (the audit of 06.11.2026): loaded codes render one song whatever Probes says (queueVersions), so the count says one and the slider
+    // is dimmed with its reason («Retake, Probes 4, Variations 2: = 8 takes» where 2 came)
+    var codes = !!STATE.codes, songs = codes ? 1 : +$("versions").value || 1, sounds = +$("variations").value || 1, takes = songs * sounds;
+    var probes = $("versions").closest(".count-slider");
+    if (probes) {
+      probes.classList.toggle("is-off", codes);
+      if (codes) probes.dataset.tip = "Loaded codes render one song: Probes waits until they are dropped; Variations still makes more takes of it";
+      else delete probes.dataset.tip;
+    }
     $("versionsOut").textContent = songs;
     $("variationsOut").textContent = sounds;
     ["versions", "variations"].forEach(function (id) {               // HERESY 1169 · 1236: the track filled to the thumb (the page draws it)
@@ -1531,6 +1555,7 @@
     }
     paintSliders();
     paintSubmitNote();
+    paintCounts();                                       // HERESY 2137: «= N takes» as the codes make them
   }
 
   function countCodes(tokens) {
@@ -1702,6 +1727,7 @@
     paintDice();
     setCodes(null);
     setCot(ex.cot || "full");
+    $("instrumental").checked = ex.instrumental === true;   // HERESY 2136: an example is sung unless it says it is an instrumental
     if (ex.abc) $("scoreDrawer").open = true;
     ["style", "lyrics", "abc"].forEach(function (id) { $(id).dispatchEvent(new Event("input", { bubbles: true })); });
     growLyrics();
@@ -1933,16 +1959,26 @@
     toast(tr(fixed ? "The planned score is broken ({0}) and the music seed is fixed: nothing sung. Change the seed, the Chords or the adapters' music strength"
                    : "The planned score is broken again ({0}): nothing sung. Change the Chords or the adapters' music strength").replace("{0}", why), "bad");
   }
+  // HERESY 2133 (the audit of 06.11.2026): the plans waiting to be sung, each by its own run (one slot each for a key and an instrumental lost the
+  // first song when a second Generate came during its plan: its score went into the form under the second one's title and was never sung). A
+  // plan's record { kind: "key" | "instrumental" | "score", body, versions, retried } goes into yue2.jobs with its run, so an F5 brings it back
+  STATE.plans = {};
+  function planTake(job, kind) {                          // the run's plan, taken out of the waiting ones; null when it is not one of that kind
+    var p = job && STATE.plans[job.id];
+    if (!p || (kind && p.kind !== kind)) return null;
+    delete STATE.plans[job.id];
+    return p;
+  }
+  function planOthers(job) { return Object.keys(STATE.plans).filter(function (id) { return id !== job.id && STATE.plans[id].kind !== "score"; }).length; }
+  window.ruachPlans = function () { return JSON.parse(JSON.stringify(STATE.plans)); };   // for the checks
   // HERESY 1623: a plan the page asked for that the engine refused (its own guard, 1087) goes the way of one the page found broken (1618)
   function planRefused(job, why, abc) {
-    var k = STATE.keyPlan && STATE.keyPlan.job === job.id ? "keyPlan" : STATE.instrumentalPlan && STATE.instrumentalPlan.job === job.id ? "instrumentalPlan" : "";
-    if (!k) return false;
-    var pending = STATE[k];
-    STATE[k] = null;
-    planAgainOrStop(pending, why, function () { (k === "keyPlan" ? planForKey : planForInstrumental)(pending.body, pending.versions, true); }, job, abc);
+    var pending = planTake(job);
+    if (!pending || pending.kind === "score") return false;   // the Score button's own: the Babel window, as before
+    planAgainOrStop(pending, why, function () { (pending.kind === "key" ? planForKey : planForInstrumental)(pending.body, pending.versions, true); }, job, abc);
     return true;
   }
-  function planForInstrumental(body, versions, retried) {
+  function planForInstrumental(body, versions, retried, sent) {   // sent: called once its run is in the engine's hands (HERESY 2137)
     if (!body.style) return toast("A style prompt is required", "bad");
     if (document.body.dataset.frame) frameOver("take");   // HERESY 1168: a run starts: the take's frame, where it shows
     var plan = Object.assign({}, body, { plan_only: true, cot: body.cot === "off" ? "full" : body.cot,
@@ -1951,7 +1987,9 @@
     if (eased) planWith(plan, eased);
     $("generateBtn").disabled = true;
     submitJob(plan, { kind: "plan", title: plan.title }).then(function (job) {
-      STATE.instrumentalPlan = { job: job.id, versions: versions, body: body, retried: !!retried };   // HERESY 1618
+      STATE.plans[job.id] = { kind: "instrumental", versions: versions, body: body, retried: !!retried };   // HERESY 1618; 2133: by its run
+      saveJobs();
+      if (sent) sent();
       watchJob(job);
       show("take");
       toast("Instrumental: planning the score first, then the vocal line moves to the instrument and it renders");
@@ -1962,11 +2000,11 @@
   // HERESY 1743 (Viktor 22.10.2026: «автоматом в FULL режиме херачить октавой ниже? И в `Engine > Creator Heresy` дадим настройку по октавам?»): the
   // Vocal line of a score the model plans in Full, moved by the engine before it is sung (each version its own plan); an octave down unless set
   var FULL_OCTAVE_KEY = "yue2.fullOctave", OCTAVE_SAID = { "-2": "Two octaves down", "-1": "An octave down", "0": "As the model wrote it", "1": "An octave up", "2": "Two octaves up" };
-  function fullOctave() { var v = parseInt(recall(FULL_OCTAVE_KEY), 10); return isFinite(v) && v >= -2 && v <= 2 ? v : -1; }
+  function fullOctave() { var v = parseInt(recall(FULL_OCTAVE_KEY), 10); return isFinite(v) && v >= -2 && v <= 2 ? v : 0; }   // HERESY 2057 (Viktor: «Меняй дефолт студии на 0»): as the model wrote it unless set
   function octaveSaid(v) { return OCTAVE_SAID[String(v)] || String(v); }
   if ($("setFullOctave")) {
     $("setFullOctave").value = String(fullOctave());
-    $("setFullOctave").addEventListener("change", function () { store(FULL_OCTAVE_KEY, this.value === "-1" ? null : this.value); });
+    $("setFullOctave").addEventListener("change", function () { store(FULL_OCTAVE_KEY, this.value === "0" ? null : this.value); });
   }
   window.ruachFullOctave = fullOctave;   // for the checks
   // HERESY 1480: Full with a key chosen beside the title and no score in the form: the score is planned, moved to the key, sung
@@ -2017,14 +2055,16 @@
     if (eased.out.length) toast(tr("Out of the score: {0}. The score is planned without them, then sung with them").replace("{0}", eased.out.join(", ")));
   }
   window.ruachPlanEased = planEased;   // for the checks
-  function planForKey(body, versions, retried) {
+  function planForKey(body, versions, retried, sent) {   // sent: as planForInstrumental's
     if (!body.style || !body.lyrics.trim()) return toast("A style prompt and lyrics are both required", "bad");
     if (document.body.dataset.frame) frameOver("take");
     var plan = Object.assign({}, body, { plan_only: true }), eased = planEased(body);
     if (eased) planWith(plan, eased);                    // HERESY 1620: the fuse; 1629: and the adapters out of the score
     $("generateBtn").disabled = true;
     submitJob(plan, { kind: "plan", title: plan.title }).then(function (job) {
-      STATE.keyPlan = { job: job.id, versions: versions, body: body, retried: !!retried };   // HERESY 1618
+      STATE.plans[job.id] = { kind: "key", versions: versions, body: body, retried: !!retried };   // HERESY 1618; 2133: by its run
+      saveJobs();
+      if (sent) sent();
       watchJob(job);
       show("take");
       if (wantedKey()) toast("Full in " + window.HeresyTranspose.keyLabel(wantedKey()) + ": the score is planned first, moved to the key, then sung");
@@ -2033,33 +2073,37 @@
       .then(function () { $("generateBtn").disabled = false; });
   }
   function keyAfterPlan(job, abc) {
-    var pending = STATE.keyPlan;
-    if (!pending || pending.job !== job.id) return false;
-    STATE.keyPlan = null;
+    var pending = planTake(job, "key");
+    if (!pending) return false;
     var broken = planBroken(abc);                         // HERESY 1618: never sung off the dialect
     if (broken) { planAgainOrStop(pending, broken, function () { planForKey(pending.body, pending.versions, true); }, job, abc); return true; }
-    var moved = toWanted(abc), seed = job.resolved.lm_seed || job.request.lm_seed;
-    $("abc").value = moved.abc;
-    $("abc").dispatchEvent(new Event("input", { bubbles: true }));
+    var moved = toWanted(abc), seed = job.resolved.lm_seed || job.request.lm_seed, others = planOthers(job);
+    if (!others) {                                        // HERESY 2133: another song's plan still running: the form holds that one's words now
+      $("abc").value = moved.abc;
+      $("abc").dispatchEvent(new Event("input", { bubbles: true }));
+    }
     // HERESY 1623: the plan's seed goes with the song (below), not into the field, which keeps to its mode: written there, the next Generate took it
     // as Fixed, and 26 of 63 runs went on one seed (19–20.10.2026)
     toast("Score planned, " + moved.said + "; singing it now", "good");
     STATE.planScore = planScoreOf(job);                  // HERESY 1625: the plan's count goes with the song
-    queueVersions(Object.assign({}, pending.body, { abc: moved.abc, score_planned: true }, seed && /^\d+$/.test(String(seed)) ? { lm_seed: String(seed) } : {}), pending.versions);   // HERESY 1618: planned, not supplied
+    job.song = queueVersions(Object.assign({}, pending.body, { abc: moved.abc, score_planned: true }, seed && /^\d+$/.test(String(seed)) ? { lm_seed: String(seed) } : {}), pending.versions,   // HERESY 1618: planned, not supplied; 2161: its song's group
+                  null, others ? planWords(pending.body, moved.abc) : null);   // HERESY 2133: its own words, not the other song's in the form
     return true;
   }
+  // HERESY 2133 (the review): the words a plan's song keeps as its Creator version (1519) while the form holds another song's: its own request's
+  function planWords(body, abc) { return { title: body.title, style: body.style || "", lyrics: body.lyrics || "", abc: abc || "" }; }
 
   function instrumentalAfterPlan(job, abc) {
-    var pending = STATE.instrumentalPlan;
-    if (!pending || pending.job !== job.id) return false;
-    STATE.instrumentalPlan = null;
+    var pending = planTake(job, "instrumental");
+    if (!pending) return false;
     var broken = planBroken(abc);                         // HERESY 1618
     if (broken) { planAgainOrStop(pending, broken, function () { planForInstrumental(pending.body, pending.versions, true); }, job, abc); return true; }
     var keyed = toWanted(abc);                          // HERESY 1480: an instrumental in the key chosen too
     if (keyed.said) { abc = keyed.abc; toast("The planned score: " + keyed.said); }
-    var seed = job.resolved.lm_seed || job.request.lm_seed, made;
+    var seed = job.resolved.lm_seed || job.request.lm_seed, made, formAbc = $("abc").value, others = planOthers(job);
     try {
       made = instrumentalBody(Object.assign({}, pending.body, { abc: abc }, seed && /^\d+$/.test(String(seed)) ? { lm_seed: String(seed) } : {}));
+      if (others) $("abc").value = formAbc;               // HERESY 2133: the form holds another song's words now: its score stays
     } catch (error) {
       toast("The planned score could not be made instrumental: " + error.message, "bad");
       return true;
@@ -2067,7 +2111,7 @@
     toast("Score planned; " + made.note + ". Rendering the instrumental.", "good");
     made.body.score_planned = true;                       // HERESY 1618: planned, not supplied
     STATE.planScore = planScoreOf(job);                  // HERESY 1625
-    queueVersions(made.body, pending.versions);
+    job.song = queueVersions(made.body, pending.versions, null, others ? planWords(pending.body, made.body.abc) : null);   // HERESY 2133: its own words; 2161: its song's group
     return true;
   }
 
@@ -2233,13 +2277,27 @@
     if (!STATE.codes) { if (SEEDMODE.music) SEEDMODE.music.before(); if (SEEDMODE.sound) SEEDMODE.sound.before(); paintDice(); }   // HERESY 1330
     var body, instrumental = $("instrumental").checked;
     try { body = buildRequest(false, instrumental); } catch (error) { return toast(error.message, "bad"); }
+    // HERESY 2153 (the audit's review of 2136, 06.11.2026): the box goes with the request, and the engine keeps it in the take's own (request.json), so
+    // Reuse and Retake set it as the song was made: an instrumental's Reuse unticked it, and its tag-only lyrics went down the vocal path
+    body.instrumental = instrumental;
     if (/^\d+$/.test(String(body.lm_seed || ""))) seedRan(body);   // HERESY 1623: this seed, with these adapters
     if (alsoChosen().length) body.title = solverTitle(body.title, $("odeSolver").value, parseInt($("odeSteps").value, 10));   // HERESY 1498: whose sound it is
     var versions = Math.max(1, Math.min(10, parseInt($("versions").value, 10) || 1));
     var seedsGone = { music: body.lm_seed, sound: body.seed, versions: versions, variations: body.synth_batch_size || 1 };   // HERESY 1330
-    if (instrumental) {
+    // HERESY 1330; 2137 (the audit of 06.11.2026): Next or Previous moves past the seeds this Generate used once its first run is in the engine's
+    // hands, not at the click: a refused one (the card busy, the engine away) left the field a seed ahead of a run that never went
+    var stepped = false, codes = !!body.semantic_tokens, stepSeeds = function () {
+      if (stepped || codes) return;
+      stepped = true;
+      if (SEEDMODE.music) SEEDMODE.music.after(seedsGone.versions, seedsGone.music);
+      if (SEEDMODE.sound) SEEDMODE.sound.after(seedsGone.variations, seedsGone.sound);
+      paintDice();
+    };
+    // HERESY 2153: the codes of an instrumental take (its Retake, the box ticked from its request) are that instrumental already: rendered as they are
+    var codesOfIns = !!(body.semantic_tokens && STATE.codes && STATE.codes.instrumental);
+    if (instrumental && !codesOfIns) {
       if (body.semantic_tokens) return toast("Loaded codes already fix the music; clear them to make an instrumental", "bad");
-      if (!body.abc) return planForInstrumental(body, versions);
+      if (!body.abc) return planForInstrumental(body, versions, false, stepSeeds);
       try {
         var made = instrumentalBody(body);
         body = made.body;
@@ -2250,13 +2308,8 @@
     }
     // HERESY 1480: Full, a key chosen and no score yet: plan, move to the key, sing, in one press
     if (!instrumental && body.cot === "full" && !body.abc && !body.semantic_tokens && (wantedKey() || planEased(body))) {   // HERESY 1620: or the plan's fuse
-      planForKey(body, versions);
-    } else queueVersions(body, versions);
-    if (!body.semantic_tokens) {                         // HERESY 1330: Next or Previous moves past the seeds this Generate used
-      if (SEEDMODE.music) SEEDMODE.music.after(seedsGone.versions, seedsGone.music);
-      if (SEEDMODE.sound) SEEDMODE.sound.after(seedsGone.variations, seedsGone.sound);
-      paintDice();
-    }
+      planForKey(body, versions, false, stepSeeds);
+    } else queueVersions(body, versions, stepSeeds);
   });
 
   // HERESY 1169: what a pass of probes needs on the card, by the parts measured on a 24 GB one (07.10.2026, tmp/claude-vram):
@@ -2283,7 +2336,11 @@
     var ctx = STATE.settings && +STATE.settings.max_seq ? Math.min(1, +STATE.settings.max_seq / fullContext()) : 1;   // HERESY 1498
     return fitBatchFor(gpuGib(), (STATE.settings && STATE.settings.model) || "BF16", parseFloat($("maxLength").value) || outDefault("duration") || 240, kvSetsNow(), ctx);
   }
-  function queueVersions(body, versions) {
+  // HERESY 2134 (the audit of 06.11.2026): a Generate's passes by their group: how many versions it means, how many went, and whether its Cancel came;
+  // a pass not sent yet when the run is cancelled is never sent, and one sent while the question stood is cancelled as it lands
+  STATE.groups = {};
+  window.ruachGroups = function () { return JSON.parse(JSON.stringify(STATE.groups)); };   // for the checks
+  function queueVersions(body, versions, sent, held) {   // sent: called once, when the first pass is in the engine's hands (HERESY 2133); held: the song's own words (a plan's while the form holds another song)
     // HERESY 1168 (Viktor, the same night: «при начале генерации всё же не нужно схлопывать фрейм… Просто переключаться на
     // правый, где генерация идёт. Так можно стоять в этих оверлеях Вечно»): a lifted frame turns to the take's, the run
     if (document.body.dataset.frame) frameOver("take");
@@ -2298,8 +2355,11 @@
       toast("This card holds " + fits + " probe" + (fits === 1 ? "" : "s") + " of this length at once with " + (((STATE.settings && STATE.settings.model) || "BF16")) +
         ": they go " + (fits === 1 ? "one after another" : fits + " at a time"));
     }
-    var group = "g" + Date.now(), baseTitle = body.title, first = null, chain = Promise.resolve();
-    var words = { title: baseTitle, style: $("style").value, lyrics: $("lyrics").value, abc: $("abc").value };   // HERESY 1519: as the form holds them
+    // HERESY 2133 (the review): its own group even when two plans' songs are queued in one millisecond (two plans done in one poll), so one's Cancel
+    // never takes the other's versions with it, nor its STATE.groups record
+    var group = "g" + Date.now() + "-" + (queueVersions.seq = (queueVersions.seq || 0) + 1), baseTitle = body.title, first = null, chain = Promise.resolve();
+    var G = STATE.groups[group] = { versions: versions, sent: 0, unsent: 0, late: 0, cancelled: false, done: false };
+    var words = held || { title: baseTitle, style: $("style").value, lyrics: $("lyrics").value, abc: $("abc").value };   // HERESY 1519: as the form holds them
     var variations = body.synth_batch_size || 1;
     $("generateBtn").disabled = true;
     for (var i = 0; i < passes; i++) {
@@ -2307,6 +2367,7 @@
         chain = chain.then(function () {
           var each = Object.assign({}, body);
           var count = Math.min(batch, versions - index * batch);
+          if (G.cancelled) { G.unsent += count; return; }   // HERESY 2134: its run was cancelled: never sent
           if (count > 1) each.lm_batch_size = count;
           // every pass continues the music seeds where the last one stopped
           if (body.lm_seed !== undefined && index > 0) each.lm_seed = (BigInt(body.lm_seed) + BigInt(index * batch)).toString();
@@ -2315,22 +2376,37 @@
             versioned: versions > 1, variations: variations, baseTitle: baseTitle, words: words,   // HERESY 1498; 1519
             also: alsoChosen().map(function (a) { return each.nar_ladder ? Object.assign({ nar_ladder: true }, a) : a; })   // 1768: the run's decode with them
           }).then(function (job) {
+            G.sent += count;
+            if (sent && G.sent === count) sent();           // the first pass registered: the seed field moves on now
+            if (G.cancelled) {                         // HERESY 2134: sent while the Cancel was asked: cancelled as it lands
+              G.late += count;
+              return post("/job?id=" + encodeURIComponent(job.id) + "&cancel=1").catch(function (error) { toast(error.message, "bad"); });
+            }
             if (!first) { first = job; watchJob(job); show("take"); }
           });
         });
       })(i);
     }
     chain.then(function () {
+      G.done = true;
+      if (G.cancelled) {                                 // HERESY 2134: never «Queued N» over a cancelled run
+        if (G.unsent) toast("Cancelled: " + G.unsent + " more versions of \u201c" + baseTitle + "\u201d were never sent");   // the catalogs: {#0}, {1}
+        if (G.late) toast("Cancelled: " + G.late + " versions of \u201c" + baseTitle + "\u201d sent while the question stood were cancelled too");
+        if (!G.unsent && !G.late) toast("Cancelled: " + baseTitle);
+        return;
+      }
       toast(versions > 1
         ? "Queued " + versions + " versions of " + baseTitle + (passes > 1 ? " in " + passes + " passes of up to " + batch : "")
         : "Queued: " + baseTitle);
     }).catch(function (error) {
+      G.done = true;
       toast(error.message, "bad");
     }).then(function () {
       // Runs queue server-side, so the button only stays down for the requests
       // themselves. It must never depend on a later event to come back to life.
       $("generateBtn").disabled = false;
     });
+    return group;                                        // HERESY 2161: a plan's song, known by its plan (planSongOn)
   }
 
   $("planBtn").addEventListener("click", function () {
@@ -2354,6 +2430,8 @@
       if (eased) planWith(body, eased);
       button.disabled = true;
       submitJob(body, { kind: "plan", title: body.title }).then(function (job) {
+        STATE.plans[job.id] = { kind: "score", title: body.title };   // HERESY 2133: an F5 during it knows whose score it is
+        saveJobs();
         watchJob(job);
         show("take");
         toast("Creating the ABC score for " + job.title);
@@ -2386,6 +2464,10 @@
     paintDice();
     var cot = MODES[req.cot] ? req.cot : "full";
     document.querySelector('input[name="cot"][value="' + cot + '"]').checked = true;
+    // HERESY 2136 (the audit of 06.11.2026): Instrumental as the request says it (a draft, a prompt file, a take: Retake, Reuse). HERESY 2153 (its
+    // review): a take keeps the box in its request since the engine stores it (true or false); one that does not say (a take or a prompt file made
+    // before, the API's) leaves the box as it is, rather than unticking an instrumental's (its Reuse sang its tag-only lyrics on the vocal path)
+    if (typeof req.instrumental === "boolean") $("instrumental").checked = req.instrumental;
     paintPlanBtn();   // HERESY 1169 · 1249 (Viktor: «Кнопка … в режиме FULL неактивна»): a mode set here (the draft on load, Retake, Reuse, a prompt file) moved no change event, and the button kept the Direct it was first painted in
     $("cfgLyrics").value = typeof req.cfg_lyrics === "number" && req.cfg_lyrics >= 0 ? round(req.cfg_lyrics, 4) : "";   // HERESY 1397
     setFreeTempo(req.free_tempo === true);                // HERESY 1416: a take's own, the draft's, a prompt file's
@@ -2433,7 +2515,9 @@
     paintCounts();
     var tokens = typeof req.semantic_tokens === "string" ? req.semantic_tokens.trim() : "";
     setCodes(tokens ? { tokens: tokens, from: opts.fromTake || null, title: opts.codesTitle || $("title").value,
-                        frames: countCodes(tokens) } : null);
+                        frames: countCodes(tokens),
+                        // HERESY 2153: the codes of an instrumental (its request says so): Generate renders them with the box ticked, no refusal
+                        instrumental: opts.codesInstrumental !== undefined ? !!opts.codesInstrumental : req.instrumental === true } : null);
     // HERESY 1167: the music's ceiling follows Max length now; a prompt that capped the music lower than its Max length
     // gets that as its Max length (the engine took the lower of the two either way)
     var semCap = req.semantic_sampling && req.semantic_sampling.max_tokens, lenNow = parseFloat($("maxLength").value);
@@ -2443,6 +2527,8 @@
     paintOutput();
     growLyrics();
     queueComfort();   // HERESY 1145: every box's height, the style's too: Retake, Reuse and Open land after their click
+    // HERESY 2015: the instruments' chips under the Style follow it (they listen to its input event, which a load does not fire)
+    if (window.HeresyInstruments && window.HeresyInstruments.paintArts) window.HeresyInstruments.paintArts();
   }
 
   // HERESY 1168 (Viktor 07.10.2026, of Open: «О том, что сброшено, Open молчит… да, конечно, это нужно допилить»): what of a
@@ -2570,6 +2656,7 @@
     closeMenus();
     var body;
     try { body = buildRequest(false); } catch (error) { return toast(error.message, "bad"); }
+    body.instrumental = $("instrumental").checked;   // HERESY 2153: a prompt file says the box as a take does (Open sets it from there)
     var versions = Math.max(1, Math.min(STATE.maxBatch, parseInt($("versions").value, 10) || 1));
     if (versions > 1 && !body.semantic_tokens) body.lm_batch_size = versions;
     var name = slug(body.title);
@@ -2801,6 +2888,7 @@
       variations: meta.variations || body.synth_batch_size || 1, parent: meta.parent || null, what: meta.what || "",
       task: meta.task || null, fileName: meta.fileName || null, also: meta.also || null,   // HERESY 1498: the solvers each take goes through after
       words: meta.words || null,   // HERESY 1519: the form's words the run went with, kept as the Creator's version when it lands
+      ws: meta.ws || "",           // HERESY 2135: the workspace it was sent into (wsGuard's answer), for a landing after an F5
       request: summarize(body), status: "queued", submitted: Date.now(), started: 0, finished: 0,
       takes: [], saved: [], error: "", resolved: {}, notes: {}
     };
@@ -2813,7 +2901,7 @@
   function registerJob(id, meta, body) {
     var job = jobById(id), fresh = makeJob(id, meta, body);
     if (job) {
-      ["kind", "title", "group", "index", "count", "versioned", "baseTitle", "variations", "parent", "what", "task", "fileName", "also", "words"]
+      ["kind", "title", "group", "index", "count", "versioned", "baseTitle", "variations", "parent", "what", "task", "fileName", "also", "words", "ws"]
         .forEach(function (key) { job[key] = fresh[key]; });
       job.request = fresh.request;
       job.submitted = fresh.submitted;
@@ -2868,7 +2956,7 @@
   window.ruachWsGuard = wsGuard;
 
   function submitJob(body, meta) {
-    if (!meta || !meta.guarded) return wsGuard().then(function () { return submitJob(body, Object.assign({}, meta, { guarded: true })); });   // HERESY 1434
+    if (!meta || !meta.guarded) return wsGuard().then(function (w) { return submitJob(body, Object.assign({}, meta, { guarded: true, ws: typeof w === "string" ? w : "" })); });   // HERESY 1434; 2135: where it lands, kept
     // HERESY 1091: no synthesis on the Studio's card while a run trains on it (the lab knows; it says why)
     var free = window.HeresyGpus ? window.HeresyGpus.guard() : Promise.resolve(true);
     return free.then(function (ok) {
@@ -2895,7 +2983,8 @@
     var keep = STATE.jobs.filter(function (j) { return isLive(j) && !j.provisional && j.kind !== "external"; }).map(function (j) {
       return { id: j.id, kind: j.kind, title: j.title, group: j.group, index: j.index, count: j.count, versioned: j.versioned,
                baseTitle: j.baseTitle, variations: j.variations, parent: j.parent, what: j.what, task: j.task,
-               fileName: j.fileName, words: j.words || null, request: j.request, submitted: j.submitted, started: j.started || 0, approx: !!j.approx };   // 1168: its clock; 1519: its words
+               fileName: j.fileName, words: j.words || null, request: j.request, submitted: j.submitted, started: j.started || 0, approx: !!j.approx,   // 1168: its clock; 1519: its words
+               plan: STATE.plans[j.id] || null, ws: j.ws || "" };   // HERESY 2135: the plan it is to be sung by, the workspace it lands in
     });
     store(JOB_KEY, keep.length ? JSON.stringify(keep) : null);
   }
@@ -2909,12 +2998,13 @@
       var job = {
         id: s.id, kind: s.kind, title: s.title, group: s.group, index: s.index || 0, count: s.count || 1,
         versioned: !!s.versioned, baseTitle: s.baseTitle, variations: s.variations || 1, parent: s.parent, what: s.what || "",
-        task: s.task, fileName: s.fileName, words: s.words || null, request: s.request, status: s.started ? "running" : "queued", submitted: s.submitted || Date.now(),
+        task: s.task, fileName: s.fileName, words: s.words || null, ws: s.ws || "", request: s.request, status: s.started ? "running" : "queued", submitted: s.submitted || Date.now(),
         // HERESY 1168 (Viktor: «Когда идёт генерация, счётчик тикает, но стоит во время генерации нажать F5, счётчик времени
         // обнуляется»): the run's start as this page saw it comes back with it; one it never saw start is marked approximate
         started: s.started || 0, approx: !!s.approx, finished: 0, takes: [], saved: [], error: "", resolved: {}, notes: {}, restored: true
       };
       job.stages = stageSkeleton(job);
+      if (s.plan && typeof s.plan === "object") STATE.plans[s.id] = s.plan;   // HERESY 2133
       STATE.jobs.push(job);
     });
     if (saved.length) ensurePolling();
@@ -2984,7 +3074,8 @@
     if (!job.started) job.started = job.finished;
     job.stages.forEach(function (s) {
       if (status === "done" && s.state !== "skipped") s.state = "completed";
-      if (status !== "done" && s.state === "running") s.state = "failed";
+      // HERESY 2137 (the audit of 06.11.2026): a cancel stops the stage it reached, which is no failure: muted, not the red of one
+      if (status !== "done" && s.state === "running") s.state = status === "cancelled" ? "stopped" : "failed";
     });
     saveJobs();
     paintAllRuns();
@@ -3005,6 +3096,7 @@
       }
       return showBrokenScore(job, message.replace(/^Broken score: /, ""), (data && data.abc) || "");
     }
+    planTake(job);                                        // HERESY 2133: a failed plan is sung by no one
     // HERESY 1169 (Viktor 07.10.2026: «при OOM сторож ловит падение и предлагает пользователю осознанно с текущих весов
     // опуститься на порядок ниже. Т.е. с BF16 на Q8, с честным предупреждением, что качество начнёт страдать, при Q5 и ниже
     // галлюцинировать и ронять как ABC, так и музыкальные токены»): the engine says it ran out, the page offers the next copy
@@ -3087,6 +3179,7 @@
 
   function cancelledJob(job) {
     if (!isLive(job)) return;
+    planTake(job);                                        // HERESY 2133: a cancelled plan is sung by no one
     job.error = "";
     settle(job, "cancelled");
     toastOnce(job.id, "Cancelled: " + job.title);
@@ -3099,16 +3192,26 @@
     if (job.kind === "transcribe") { settle(job, "done"); chimeFor(job, true); return finishTranscription(job); }   // HERESY 1275
     if (job.request.plan) { settle(job, "done"); return finishPlan(job, data); }
     var names = data.takes || [];
-    var land = names.length || STATE.library ? Promise.resolve(names) : sessionTakes(job);
+    // HERESY 2132 (the audit of 06.11.2026): a library that kept fewer takes than the run made (none at all: a full disk, no rights, no outputs
+    // folder) said, never «Song complete»; what the engine still holds in its ?result fetched into this tab, so the song is not lost unseen
+    // (an engine before this says no «made»: then only the page's own song, never a run from elsewhere that may have been a plan, counts as lost)
+    var made = typeof data.made === "number" ? data.made : 0;
+    var short = made > names.length || (!made && !names.length && !data.abc && job.kind !== "external");
+    job.lost = STATE.library && short ? { made: made, kept: names.length, why: String(data.library_error || ""), tab: 0, gone: "" } : null;
+    var land = job.lost && job.kind !== "external" ? rescueTakes(job, names)
+      : names.length || STATE.library ? Promise.resolve(names) : sessionTakes(job);
     land.then(function (takes) {
       job.takes = takes;
       settle(job, "done");
+      var filed = takes.filter(function (n) { return !/^session-/.test(n); });   // a take kept only in this tab is no workspace's
       // HERESY 1116: only a run this page started is filed by it; a run from elsewhere (the API, another browser) is
       // filed by whoever started it (the API's own workspace field), never into this page's workspace in hand
       // HERESY 1168 (Viktor: «Play new takes вроде бы как перестал работать»): a run this page started and an F5 brought back
       // while it still ran (seenRunning) is its own as well: it lands in the workspace in hand and plays when done
-      var mine = (!job.restored || job.seenRunning) && job.kind !== "external";
-      if (window.HeresyCollection && mine) window.HeresyCollection.landed(takes);   // HERESY 1041: into the workspace in hand
+      // HERESY 2135 (the audit of 06.11.2026): and one that ended during the reload itself (seenRunning false) is filed all the same, into the
+      // workspace it was sent into: it lay in no workspace, out of the Takes column; only the toast, the jump and the play wait on seenRunning
+      var mine = job.kind !== "external";
+      if (window.HeresyCollection && mine) window.HeresyCollection.landed(filed, job.ws);   // HERESY 1041: into the workspace in hand
       if (window.HeresyWriter && mine) window.HeresyWriter.landed(takes);           // HERESY 1047: to the document in hand
       if (window.HeresyVersions && mine && job.kind === "song" && job.words) window.HeresyVersions.keep(job.words, takes, job.request && job.request.cot, "generate", (function () { var r = Object.assign({}, job.request || {}); ["title", "style", "lyrics", "abc", "semantic_tokens", "parent"].forEach(function (k) { delete r[k]; }); return r; })());   // HERESY 1519 · 1596
       return refreshLibrary().catch(function () {}).then(function () { return nameVersions(job); });
@@ -3117,9 +3220,10 @@
       if (job.also && job.also.length && job.kind === "song" && (!job.restored || job.seenRunning)) alsoRender(job);   // HERESY 1498
       if (job.kind === "replay") return replayLanded(job);
       var count = job.takes.length;
+      if (job.lost) sayLost(job);                     // HERESY 2132: said even for a run that ended while the page was away
       if (job.restored && !job.seenRunning) return;   // one that ended while the page was away: no toast, no jump, no play
       var watching = STATE.job === job && !STATE.take && count, playing = isPlaying();
-      toastOnce(job.id, "Song complete — " + job.title + (count > 1 ? " (" + count + " takes)" : "") +
+      if (!job.lost) toastOnce(job.id, "Song complete — " + job.title + (count > 1 ? " (" + count + " takes)" : "") +
                 (watching && playing ? ". What you are playing keeps playing; ▶ Play this song when you are ready." : ""), "good");
       // Only jump to the new song if the run is what you were looking at;
       // opening it never cuts off a song that is playing.
@@ -3131,13 +3235,50 @@
         var fresh = findTake(job.takes[0]);
         if (fresh) { playNow(fresh); plays = true; }
       }
-      if (!plays) chimeFor(job, true);   // HERESY 1275: the end heard, unless the new song itself is
+      if (!plays && !job.lost) chimeFor(job, true);   // HERESY 1275: the end heard, unless the new song itself is; 2132: no chime over a loss
+      var guarded = job.takes.filter(function (n) { return !/^session-/.test(n); });
+      if (job.kind !== "external" && tailGuard() && guarded.length) guardTails(guarded, false);   // HERESY 2056: the tail guards, when chosen
     }).catch(function (error) {
       job.error = error.message;
       settle(job, "failed");
       toast(error.message, "bad");
     });
   }
+
+  // HERESY 2132: the tracks the library did not keep, from the engine's ?result into this tab (as a Studio without a library keeps them); a track
+  // the library did keep (its song and variation) is not kept twice
+  function rescueTakes(job, names) {
+    return sessionTakes(job).then(function (sess) {
+      return refreshLibrary().catch(function () {}).then(function () {
+        var have = {}, keep = [];
+        names.forEach(function (n) { var t = findTake(n); if (t) have[(t.song || 0) + ":" + (t.variation || 0)] = 1; });
+        sess.forEach(function (n) {
+          var t = STATE.session.filter(function (x) { return x.name === n; })[0];
+          if (t && have[(t.song || 0) + ":" + (t.variation || 0)]) {
+            STATE.session = STATE.session.filter(function (x) { return x !== t; });
+            delete STATE.requests[n];
+            if (t.url) URL.revokeObjectURL(t.url);
+          } else keep.push(n);
+        });
+        job.lost.tab = keep.length;
+        if (!job.lost.made) job.lost.made = names.length + keep.length;
+        return names.concat(keep);
+      });
+    }, function (error) {
+      job.lost.gone = error.message;
+      return names;
+    });
+  }
+  function sayLost(job) {
+    var L = job.lost, made = L.made || "?", missing = L.made ? L.made - L.kept : "?";
+    var why = L.why || "the engine gave no reason; its log (Engine) has it";
+    if (job.kind === "external") {
+      return toastOnce(job.id, "A run started elsewhere, “" + job.title + "”: " + missing + " of " + made + " takes did not land in the library (" + why + ")", "bad");
+    }
+    toastOnce(job.id, L.tab ? missing + " of " + made + " takes of “" + job.title + "” did not land in the library (" + why + "): they are only in this tab; download them before it closes"
+      : missing + " of " + made + " takes of “" + job.title + "” did not land in the library (" + why + "), and the engine no longer holds them: " + (L.gone || "nothing came back"), "bad");
+  }
+  window.ruachSayLost = sayLost;   // for the checks
 
   // Versions and sound variations get titles of their own ("· v2", "· sound 3"),
   // written into the library so every page sees the same names.
@@ -3161,12 +3302,15 @@
       : api("/job?id=" + encodeURIComponent(job.id) + "&result=1").then(function (r) { return (r && r.abc) || ""; });
     got.then(function (abc) {
       job.abc = abc;
-      if (job.restored) return;
-      if (!abc) return toast("The plan finished without a score", "bad");
+      // HERESY 2133 (the audit of 06.11.2026): a plan an F5 brought back while it still ran (seenRunning) goes on as if no F5 came (it was dropped:
+      // «Complete · score only», nothing sung, no score in the form); one that ended during the reload itself puts its score in the form and says so
+      if (job.restored && !job.seenRunning) return planAway(job, abc);
+      if (!abc) { planTake(job); return toast("The plan finished without a score", "bad"); }
       if (!toasted["plan" + job.id]) {
         toasted["plan" + job.id] = true;
         if (keyAfterPlan(job, abc)) return;                 // HERESY 1480
         if (instrumentalAfterPlan(job, abc)) return;
+        planTake(job);                                      // HERESY 2133: the Score button's own, done with
         keepForm("before");                            // HERESY 1596: a plan's score over the one in the form
         $("abc").value = abc;
         scoreWrittenBy(job.request.loras || [], "planned");   // HERESY 1327
@@ -3176,7 +3320,28 @@
         chimeFor(job, true);   // HERESY 1275 (an instrumental run after it rings when it ends)
       }
       if (STATE.job === job && !STATE.take) showPlanScore(job);
-    }).catch(function (error) { toast("Could not fetch the planned score: " + error.message, "bad"); });
+    }).catch(function (error) { planTake(job); toast("Could not fetch the planned score: " + error.message, "bad"); });   // HERESY 2133 (review): sung by no one now
+  }
+
+  // HERESY 2133: a plan of this page's that ended while the page reloaded: its score into the form when the form still holds its song (a key's moved
+  // to the key), said; Generate sings it. One this page did not ask for: nothing, as before; one of its own with nothing in it: said (the review)
+  function planAway(job, abc) {
+    var p = planTake(job);
+    if (!p || toasted["plan" + job.id]) return;
+    toasted["plan" + job.id] = true;
+    if (!abc) return toast("The plan finished without a score", "bad");
+    var title = (p.kind === "score" ? p.title : p.body && p.body.title) || job.title;
+    if (title !== songTitle() || planOthers(job)) {
+      return toast(tr("The plan of “{0}” ended while the page reloaded; the form holds another song now, so its score was not put in").replace("{0}", title), "bad");
+    }
+    var moved = p.kind === "key" ? toWanted(abc) : { abc: abc, said: "" };
+    keepForm("before");
+    $("abc").value = moved.abc;
+    $("abc").dispatchEvent(new Event("input", { bubbles: true }));
+    $("scoreDrawer").open = true;
+    if (!STATE.take && (!STATE.job || STATE.job === job)) watchJob(job);   // the run's card, its score under it (job.abc)
+    toast(tr(p.kind === "score" ? "The score of “{0}” was planned while the page reloaded: it is under Supply your own score"
+                                : "The plan of “{0}” ended while the page reloaded: its score is under Supply your own score, and Generate sings it").replace("{0}", title), "good");
   }
 
   // The plan's score stands in the take column under the finished run.
@@ -3192,8 +3357,11 @@
 
   function replayLanded(job) {
     var name = job.takes[0];
-    toastOnce(job.id, (job.what || "New version") + " ready — " + job.title, "good");
-    chimeFor(job, true);   // HERESY 1275
+    if (job.lost) sayLost(job);                            // HERESY 2132: never «ready» over a take the library did not keep
+    else {
+      toastOnce(job.id, (job.what || "New version") + " ready — " + job.title, "good");
+      chimeFor(job, true);   // HERESY 1275
+    }
     // Only switch if you are still listening to the take it came from.
     if (name && STATE.take && STATE.take.name === job.parent && !isPlaying()) openTake(name, { keep: true });
     else if (STATE.take) { paintDecodeSwitch(); paintSoundSwitch(); }
@@ -3488,6 +3656,7 @@
       s = runStage(job, "sound");
       s.chunks = +m[4];
       s.song = +m[1];
+      (s.songChunks = s.songChunks || {})[m[1]] = +m[4];   // HERESY 2137: each song its own chunks, summed for the stage's total
       s.music = Math.max(s.music || 0, +m[3]);
       job.request.variations = +m[6];
       if (!s.stepsPer) s.stepsPer = job.request.steps;
@@ -3560,6 +3729,7 @@
 
   function logClass(text, client) {
     if (client) return "dim";
+    if (/^\[Library\] cannot/.test(text)) return "bad";   // HERESY 2132: a take the library could not keep
     if (/FATAL|failed|Cancel|error/i.test(text)) return "bad";
     if (/^\[Pipeline\] Done|^\[Library\] Saved/.test(text)) return "good";
     if (/^\[Server\]/.test(text)) return "srv";
@@ -3757,6 +3927,12 @@
     // unfolds again if it was open when the window came
     if (win.__ruachTick) win.clearInterval(win.__ruachTick);   // HERESY 1958: the old page's tick gone with it
     if (window.HeresyGpuLive) { win.__ruachTick = win.setInterval(function () { window.HeresyGpuLive.tick(); }, 1000); window.HeresyGpuLive.tick(); }
+    // HERESY 2087 (Viktor 05.11.2026: «Детачнул окно логгера, по высоте не адаптивный. Перепроверь и в браузере, и в PWA.»): the cards share the column's
+    // height (app.css), so a change of its size (the window resized, its fonts landed) draws them again at once, a frame at a time, not at the next tick;
+    // watched anew when a reloaded page takes the window back (the old watch let go)
+    if (win.__ruachFit) { try { win.__ruachFit.disconnect(); } catch (e) { /* the old page's, gone */ } win.__ruachFit = null; }
+    var fitAt = 0, fit = function () { if (fitAt) return; fitAt = win.requestAnimationFrame(function () { fitAt = 0; if (window.HeresyGpuLive && window.HeresyGpuLive.paint) window.HeresyGpuLive.paint(); }); };
+    if (win.ResizeObserver && POP && POP.gpus) { win.__ruachFit = new win.ResizeObserver(fit); win.__ruachFit.observe(POP.gpus); } else win.addEventListener("resize", fit);
     win.addEventListener("pagehide", function () {
       var p = POP; POP = null;
       if (p && p.tall && $("logDock")) $("logDock").classList.add("is-tall");   // HERESY 1809: its full height back, if it had it
@@ -3978,12 +4154,12 @@
         read += "<br>" + (s.seconds || elapsed).toFixed(1) + "s";
       }
     } else if (s.key === "sound") {
-      var total = soundTotal(job, s);
-      read = "<b>" + s.done + "</b>" + (total ? " / " + total : "") + " steps";
+      var total = soundTotal(job, s), sure = soundSure(job, s);
+      read = "<b>" + s.done + "</b>" + (total ? " / " + (sure ? "" : "\u2248") + Math.max(total, s.done) : "") + " steps";
       if (s.state === "running" && total && s.done > 0) {
         // A long song's sound runs for minutes at full tilt; without a
-        // countdown that is indistinguishable from a hang.
-        read += "<br>" + clock((total - s.done) * (elapsed / s.done)) + " left";
+        // countdown that is indistinguishable from a hang. HERESY 2137: past the total (a count the engine did not say) «—», not «0:00»
+        read += "<br>" + (s.done < total ? clock((total - s.done) * (elapsed / s.done)) : "\u2014") + " left";
       } else if (s.state === "completed" && elapsed > 0.05) {
         read += "<br>" + elapsed.toFixed(1) + "s";
       }
@@ -3994,10 +4170,19 @@
     return read;
   }
 
+  // HERESY 2137 (the audit of 06.11.2026): the steps of every song, each by its own chunks (the last song's chunks times the songs said «69 / 64
+  // steps · 0:00 left» where 96 was true); a song not begun yet counted as the longest begun, so the steps done never pass the total (it falls to
+  // the true one when a shorter song begins). sure: every song has said its chunks
   function soundTotal(job, s) {
-    var per = s.stepsPer || job.request.steps || 0;
-    return (job.request.songs || 1) * (s.chunks || 1) * per;
+    var per = s.stepsPer || job.request.steps || 0, songs = job.request.songs || 1, sc = s.songChunks;
+    if (!per) return 0;
+    if (!sc) return songs * (s.chunks || 1) * per;
+    var keys = Object.keys(sc), sum = 0, most = 1;
+    keys.forEach(function (k) { sum += sc[k]; most = Math.max(most, sc[k]); });
+    return (sum + Math.max(0, songs - keys.length) * most) * per;
   }
+  function soundSure(job, s) { return !!s.songChunks && Object.keys(s.songChunks).length >= (job.request.songs || 1); }
+  window.ruachSoundTotal = function (job, s) { return { total: soundTotal(job, s), sure: soundSure(job, s) }; };   // for the checks
 
   function stagePercent(job, s) {
     if (s.key === "sound") { var t = soundTotal(job, s); return t ? Math.min(100, (s.done / t) * 100) : 0; }
@@ -4018,6 +4203,7 @@
     if (s.key === "sound" && s.music) extra.push(clock(s.music) + " of music" + (s.chunks > 1 ? " in " + s.chunks + " chunks" : ""));
     if (s.planned) extra.push("planned first");          // HERESY 1625
     if (s.truncated) extra.push("hit the token cap");
+    if (s.state === "stopped") extra.push("stopped here: the run was cancelled");   // HERESY 2137
     return [s.note].concat(extra).map(tr).join(" · ");   // HERESY 1166
   }
 
@@ -4131,22 +4317,45 @@
   });
   function cancelJob(job) {
     if (!job || !isLive(job)) return;
-    // Queued versions of the same song go with it.
-    var doomed = STATE.jobs.filter(function (j) {
-      return j === job || (job.group && j.group === job.group && j.status === "queued");
-    });
+    // HERESY 2134 (the audit of 06.11.2026): what goes with it is read when the answer comes, not at the click (the passes still being sent, a
+    // first pass done while the question stood); the question says «its versions» by the run's own plan, the versions not sent yet with them
+    var G = job.group ? STATE.groups[job.group] : null;
+    // the queued ones, as the question says (a version already running goes on, as ever, unless this one ends while asked)
+    var siblings = job.group ? STATE.jobs.filter(function (j) { return j !== job && j.group === job.group && isLive(j) && j.status === "queued"; }).length : 0;
+    var more = siblings || (G && !G.done && G.sent < G.versions);
     // HERESY 1410 (Viktor 13.10.2026: «Для `Cancel run` добавь диалоговое окно»): asked first, the run named
     var title = String((job.request && job.request.title) || "").trim();
     window.HeresyDialog.confirm("Cancel this run?" + (title ? "\n\n\u00ab" + title + "\u00bb" : "") + "\n\nWhat the engine has made of it so far is lost." +
-      (doomed.length > 1 ? "\n\nIts queued versions go with it." : ""), { ok: "Cancel it", cancel: "Keep it running", danger: true })   // HERESY 1482
-      .then(function (ok) { if (ok && isLive(job)) cancelNow(job, doomed); });
+      (more ? "\n\nIts queued versions go with it." : ""), { ok: "Cancel it", cancel: "Keep it running", danger: true })   // HERESY 1482
+      .then(function (ok) {
+        if (!ok) return;
+        if (G) G.cancelled = true;                       // the passes not sent yet are never sent
+        var live = isLive(job);
+        // still running: it and its waiting versions (as ever); done while asked: whatever of its group still runs or waits
+        var doomed = STATE.jobs.filter(function (j) {
+          return isLive(j) && !j.provisional && (j === job || (job.group && j.group === job.group && (j.status === "queued" || !live)));
+        });
+        if (doomed.length) return cancelNow(job, doomed, live);
+        if (planSongOn(job)) return toast("Its plan was done, and its song runs on: the song's own \u2715 stops it");   // HERESY 2161
+        if (!G || G.done) toast("It had already finished: nothing was left to cancel");
+      });
   }
-  function cancelNow(job, doomed) {
+  // HERESY 2161 (the audit's review of 2137, 06.11.2026): a key's or an instrumental's plan is a run of its own that queues its song when it ends; its ✕
+  // asked as it ended said «nothing was left to cancel» while the song it had just queued ran on. That song is known by its plan (job.song, its group):
+  // still on its way, waiting or running, the page says so and where its ✕ is
+  function planSongOn(job) {
+    var g = job && job.kind === "plan" && job.song, G = g ? STATE.groups[g] : null;
+    if (!g) return false;
+    return (!!G && !G.done && !G.cancelled) || STATE.jobs.some(function (j) { return j.group === g && isLive(j); });
+  }
+  function cancelNow(job, doomed, live) {
     Promise.all(doomed.map(function (j) {
       return post("/job?id=" + encodeURIComponent(j.id) + "&cancel=1").catch(function (error) { toast(error.message, "bad"); });
     })).then(function () {
-      toast(doomed.length > 1 ? "Cancelling this run and " + (doomed.length - 1) + " queued version" + (doomed.length > 2 ? "s" : "")
-                              : "Cancelling after the current step");
+      var others = doomed.filter(function (j) { return j !== job; }).length;
+      if (!live) toast("It had already finished; " + others + " of its versions still running or waiting are cancelled");   // the catalogs: {#0}
+      else toast(others ? "Cancelling this run and " + others + " queued version" + (others > 1 ? "s" : "")
+                        : "Cancelling after the current step");
       pollJobs();
     });
   }
@@ -4306,8 +4515,16 @@
     QP.gone[key] = 1;
     paintQueue();
     var kind = key.split(":")[0], id = key.slice(kind.length + 1);
-    (kind === "engine" ? post("/job?id=" + encodeURIComponent(id) + "&cancel=1") : post("/lab/jobs/cancel", { key: id })).then(function () {
-      toast("Taken off the queue");
+    // HERESY 2137 (the audit of 06.11.2026): the engine's job only while it waits (&queued=1); begun meanwhile, it runs on, said, and its row comes back.
+    // The review: one that had ended by then (done, failed, cancelled) runs on nowhere: said so, its row left to the next poll
+    (kind === "engine" ? post("/job?id=" + encodeURIComponent(id) + "&cancel=1&queued=1") : post("/lab/jobs/cancel", { key: id })).then(function (d) {
+      var ended = kind === "engine" && d && d.cancel === false && d.status && d.status !== "running";
+      if (ended && planSongOn(jobById(id))) toast("Its plan was done, and its song runs on: the song's own \u2715 stops it");   // HERESY 2161
+      else if (ended) toast("It had already finished: nothing was left to cancel");
+      else if (kind === "engine" && d && d.cancel === false) {
+        delete QP.gone[key]; paintQueue();
+        toast("It began meanwhile, so it runs on: its run's \u2715 stops it", "bad");
+      } else toast("Taken off the queue");
       if (kind === "engine") pollJobs(); else pollActivity();
     }).catch(function (e) { delete QP.gone[key]; paintQueue(); toast(e.message, "bad"); });
   }
@@ -4765,15 +4982,27 @@
     // HERESY 1425 (Viktor 13.10.2026: «На RTX3090 я бы однозначно советовал QWEN Image 2512»): by the cards, as Engine → Artwork's first line
     "qwen2512-q6": "Qwen-Image 2512 Q6 by the cards (about 20 GB at its peak, the text encoder gone from the card by then)",
     "qwen2512-q4": "Qwen-Image 2512 Q4 by the cards (about 15 GB at its peak, the text encoder gone from the card by then)" };
-  function machinePlan(m) {
-    var have = (STATE.settings && STATE.settings.models) || [], list = m.cards || [];
+  // HERESY 2065 (Viktor 04.11.2026: «выставляй дефолтную модель в Студии — RS-TW-2.0 для среза 2.0.6. Она у нас лучшая и безопасная по силе слияния»): the Studio's
+  // default merges in their order, as start.sh starts the first one here when no model is chosen, and the quants they come at (none at Q5_K_M)
+  var DEFAULT_MERGES = ["RS-TW-2.0x0.75", "RS-FW-2.4x0.75"], MERGE_QUANTS = ["BF16", "Q8_0", "Q6_K"];
+  function machinePlan(m, models) {   // HERESY 2065: models, the list to plan from (the checks'); the engine's own without it
+    var have = models || (STATE.settings && STATE.settings.models) || [], list = m.cards || [];
     var card = list.filter(function (c) { return c.index === m.studio; })[0] || list[0];
     if (!card) return null;
     var gib = Math.min(card.total_mb, card.limit_mb || Infinity) / 1024, knobs = autoKnobs(gib), why = [];
     var want = knobs ? knobs.model : "Q5_K_M";
     if (want === "BF16" && card.bf16_cores === false) { want = "Q8_0"; why.push(tr("compute {0} has no BF16 tensor cores: BF16 runs slower than Q8_0 here").replace("{0}", card.compute)); }   // HERESY 1339
-    var model = have.indexOf(want) >= 0 ? want : BACKBONES.slice(BACKBONES.indexOf(want)).filter(function (q) { return have.indexOf(q) >= 0; })[0] || "";
-    if (model !== want) why.push(tr("{0} is not on this machine: Engine → Models and LoRAs fetches it").replace("{0}", want));
+    var stock = have.indexOf(want) >= 0 ? want : BACKBONES.slice(BACKBONES.indexOf(want)).filter(function (q) { return have.indexOf(q) >= 0; })[0] || "";
+    // HERESY 2065: the backbone offered is the Studio's default at the quant the card wants, or the next smaller here: RS-TW 2.0x0.75, else RS-FW 2.4x0.75
+    // (1794), else m-a-p's own as before (the scan offered m-a-p's own even where start.sh had started RS-FW, and «Set them» took a new Studio off it)
+    var at = MERGE_QUANTS.indexOf(want), mine = "";
+    if (at >= 0) DEFAULT_MERGES.some(function (d) {
+      mine = MERGE_QUANTS.slice(at).map(function (q) { return d + "-" + q; }).filter(function (x) { return have.indexOf(x) >= 0; })[0] || "";
+      return !!mine;
+    });
+    var model = mine || stock;
+    if (mine) why.push(tr("the Studio's default"));
+    else if (model !== want) why.push(tr("{0} is not on this machine: Engine → Models and LoRAs fetches it").replace("{0}", want));
     return { card: card, gib: gib, knobs: knobs, model: model, want: want, why: why, painter: (m.painter || {}).suggest || "", ready: (m.painter || {}).ready || {} };
   }
   function machineScan(asked) {
@@ -4816,6 +5045,143 @@
     }).catch(function (e) { if (asked) toast("The machine could not be read: " + e.message, "bad"); return null; });
   }
   window.ruachMachineScan = machineScan;               // for the checks: a test browser is never asked by itself
+  window.ruachMachinePlan = machinePlan;               // HERESY 2065: for the checks (a machine and a list of models; nothing asked or set)
+  // HERESY 2077 (Viktor 05.11.2026: «Да, модель по умолчанию предлагаем один раз обновляющимся.»): the Studio's default, RS-TW 2.0x0.75 (2065),
+  // offered once to a Studio updated from an earlier version: its engine still runs the model settings.json keeps (the engine writes it there at any save
+  // of Compute, so an update never moved it). Asked once the page has started, the engine is up and no run goes, after the access ask and the machine's
+  // scan; not on the start whose scan meets a new Studio (the scan offers the default there), nor where the engine runs an RS-TW merge (kept as «had», so
+  // a model chosen later is never asked about), nor on a backbone RS-TW has no copy at (Q5_K_M: nothing kept, a later start asks); never by itself in a
+  // test browser (the checks call window.ruachDefaultOffer.ask over a mock of their own). Switch to RS-TW: RS-TW 2.0x0.75 at the format the backbone runs
+  // now, set as Compute's Save sets a model (POST /settings); one the engine does not list is fetched first through the lab's weights fetch where it is
+  // not here (its progress at RS-TW's row of Engine → Models and LoRAs, as the card shows any fetch), and the engine restarted to list it (the lab's own
+  // restart, asked again while a run goes). Keep mine, or the window closed: nothing. Either answer is kept in yue2.defaultModelOffer, a page setting the
+  // lab keeps in user/settings.json (a test page's ?scope= in a file of its own), so the question never comes back; a switch a page could not end (closed
+  // while it fetched, a Studio not run as a service) goes on at the next start while the engine still runs the model it was asked from
+  var OFFER_KEY = "yue2.defaultModelOffer", OFFER_TO = "RS-TW-2.0x0.75";
+  function offerRead() { try { return JSON.parse(recall(OFFER_KEY) || "null"); } catch (e) { return null; } }
+  function offerKeep(o) { store(OFFER_KEY, JSON.stringify(o)); return o; }
+  function offerDone(o, why) { o.done = true; if (why) o.why = why; return offerKeep(o); }
+  function offerBusy() { return STATE.jobs.some(function (j) { return isLive(j) && !j.provisional; }) || !!(STATE.hardware && STATE.hardware.busy); }
+  function offerLab(path, body) {    // the lab as the Models card asks it: a POST says a test page's scope, and the lab then fetches nothing
+    var m = body ? /[?&]scope=([^&#]+)/.exec(location.search) : null;
+    return api("/lab" + path + (m ? "?scope=" + m[1] : ""), body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : undefined);
+  }
+  function offerRow(d, v) {          // RS-TW's variant in the lab's list: its size, and whether it is here
+    var e = ((d && d.extras) || []).filter(function (x) { return x.name === "tw"; })[0];
+    return (e && e.variants.filter(function (x) { return x.id === v; })[0]) || null;
+  }
+  function offerRoom(d, size) {      // the disk's free room, as the Models card says it before a fetch
+    var m = /^\s*(\d+(?:\.\d+)?)\s*(GB|MB)\b/.exec(String(size || "")), b = m ? parseFloat(m[1]) * (m[2] === "GB" ? 1e9 : 1e6) : 0;
+    var f = d && d.free, spare = (d && d.spare) || 0, g = function (n) { return n >= 1e9 ? (n / 1e9).toFixed(1) + " GB" : Math.max(0, Math.round(n / 1e6)) + " MB"; };
+    if (f == null) return "";
+    return b + spare > f ? "⚠ " + tr("Not enough room on this disk: {0} free, {1} short with 2 GB to spare.").replace("{0}", g(f)).replace("{1}", g(b + spare - f))
+      : tr("{0} free on this disk.").replace("{0}", g(f));
+  }
+  function defaultOffer(opts) {
+    opts = opts || {};
+    return Promise.all([refreshSettings(), refreshHardware()]).then(function () {
+      var had = offerRead(), s = STATE.settings || {}, model = s.model || "", q = model.split("-").pop();
+      if (had) return had.answer === "switch" && !had.done && !opts.fresh ? offerGo(had, false) : had;   // asked already; a switch left unended goes on
+      if (opts.fresh || !STATE.online || !model) return null;                                              // a later start asks
+      if (/^RS-TW-/.test(model)) return offerKeep({ at: Math.round(Date.now() / 1000), from: model, answer: "had" });
+      if (MERGE_QUANTS.indexOf(q) < 0 || offerBusy()) return null;                                         // no RS-TW at Q5_K_M; a run goes: a later start asks
+      var to = OFFER_TO + "-" + q, listed = (s.models || []).indexOf(to) >= 0;
+      return (listed ? Promise.resolve(null) : offerLab("/weights").catch(function () { return null; })).then(function (d) {
+        var x = offerRow(d, to.replace(/^RS-TW-/, "")), room = x && !x.here ? offerRoom(d, x.size) : "";
+        if (!listed && !x) return null;                                                                    // the lab silent, or without RS-TW: a later start asks
+        var how = listed ? tr("Switch to RS-TW: the engine takes {0} at once, as Engine → Compute does.").replace("{0}", modelLabel(to))
+          : x.here ? tr("Switch to RS-TW: {0} is here; the engine restarts to list it, then takes it, as Engine → Compute does.").replace("{0}", modelLabel(to))
+          : tr("Switch to RS-TW: {0} ({1}) is fetched first, at the format your backbone runs now, its progress in Engine → Models and LoRAs; then the engine restarts to list it and takes it, as Engine → Compute does.").replace("{0}", modelLabel(to)).replace("{1}", x.size) + (room ? "\n" + room : "");
+        var text = tr("The Studio's new default model: RS-TW 2.0 ×0.75") + "\n\n" + tr("The Tsunami Wave over RS-FW 2.4 ×0.75, our safe balance: a new Studio starts with it. Your engine runs {0} and keeps it unless you switch.").replace("{0}", modelLabel(model)) + "\n\n" + how + "\n\n" + tr("Keep mine: nothing changes. Either answer is kept, and this is asked only once.");
+        return window.HeresyDialog.confirm(text, { ok: tr("Switch to RS-TW"), cancel: tr("Keep mine") }).then(function (yes) {
+          var o = offerKeep({ at: Math.round(Date.now() / 1000), from: model, to: to, answer: yes ? "switch" : "keep" });
+          return yes ? offerGo(o, true, d) : o;
+        });
+      });
+    });
+  }
+  // the switch from wherever it stands: listed by the engine, set; here, the engine restarted first; being fetched, watched; missing, fetched, on the
+  // answer itself only (a later start says so instead of fetching gigabytes unasked)
+  function offerGo(o, asked, d) {
+    var s = STATE.settings || {}, v = o.to.replace(/^RS-TW-/, "");
+    if (s.model === o.to) return Promise.resolve(offerDone(o));
+    if (!asked && s.model !== o.from) return Promise.resolve(offerDone(o, "the model was changed since"));   // a model chosen since stands
+    if (!asked && offerBusy()) return Promise.resolve(o);
+    if ((s.models || []).indexOf(o.to) >= 0) return offerSet(o);
+    return (d ? Promise.resolve(d) : offerLab("/weights")).then(function (d) {
+      var x = offerRow(d, v), j = d && d.job;
+      if (x && x.here) return offerRestart(o);
+      if (j && j.status === "running" && j.which && j.which.extra === "tw" && j.which.variant === v) { offerShow(v); return offerWatch(o); }
+      if (!asked) { toast(tr("RS-TW 2.0 ×0.75 did not come: Engine → Models and LoRAs says why and fetches it again."), "bad"); return offerDone(o, "not fetched"); }
+      return offerLab("/weights/fetch", { tw: v }).then(function () { offerShow(v); return offerWatch(o); }, function (e) {
+        toast(tr("RS-TW 2.0 ×0.75 was not fetched: {0}").replace("{0}", e.message), "bad");
+        return offerDone(o, "not fetched");
+      });
+    }, function () { return o; });                                       // the lab silent: the next start goes on
+  }
+  function offerShow(v) {            // the fetch's progress where the Models card shows one: at RS-TW's row in Engine → Models and LoRAs, its variant picked
+    if ($("view-engine").classList.contains("is-hidden")) show("engine");
+    engineTab("models", false, true);
+    if (window.HeresyWeights) window.HeresyWeights.load().then(function () {
+      var row = function () { return document.querySelector('#wtExtras .wt-extra[data-extra="tw"]'); }, pick = row() && row().querySelector("select[data-wt-pick]");
+      if (pick && pick.value !== v && [].some.call(pick.options, function (x) { return x.value === v; })) { pick.value = v; pick.dispatchEvent(new Event("change", { bubbles: true })); }
+      if (row()) row().scrollIntoView({ block: "center" });
+    });
+  }
+  function offerWatch(o) {           // the lab's fetch looked at until it ends (the card looks for itself while it is seen)
+    var v = o.to.replace(/^RS-TW-/, "");
+    return new Promise(function (done) {
+      (function look() {
+        setTimeout(function () {
+          offerLab("/weights").then(function (d) {
+            var j = d && d.job;
+            if (j && j.status === "running") return look();
+            if ((offerRow(d, v) || {}).here) return done(offerRestart(o));
+            toast(tr("RS-TW 2.0 ×0.75 did not come: Engine → Models and LoRAs says why and fetches it again."), "bad");
+            done(offerDone(o, "not fetched"));
+          }, look);
+        }, 2000);
+      })();
+    });
+  }
+  function offerRestart(o) {         // the engine lists its backbones as it starts: the lab's restart (refused while a run goes: asked again), then set
+    var again = function () { return new Promise(function (r) { setTimeout(function () { r(offerRestart(o)); }, 15000); }); };
+    if (offerBusy()) return again();
+    return offerLab("/studio/restart", {}).then(function () {
+      toast(tr("The engine restarts to list RS-TW 2.0 ×0.75…"));
+      return new Promise(function (done) {
+        var tries = 0;
+        (function look() {
+          setTimeout(function () {
+            api("/settings").then(function (s) {
+              if ((s.models || []).indexOf(o.to) < 0) throw new Error("not listed yet");
+              paintSettings(s);
+              done(offerSet(o));
+            }).catch(function () {
+              if (++tries < 90) return look();
+              toast(tr("The engine has not listed RS-TW 2.0 ×0.75 yet: the page switches to it at its next start."), "bad");
+              done(o);
+            });
+          }, 2000);
+        })();
+      });
+    }, function (e) {
+      if (/rendering/.test(e.message)) return again();
+      toast(/as a service/.test(e.message) ? tr("RS-TW 2.0 ×0.75 is here. The Studio does not run as a service here: start it again (Pinokio, or ./start.sh), and the page switches to it at its next start.") : tr("Not restarted:") + " " + e.message, "bad");
+      return o;
+    });
+  }
+  function offerSet(o) {             // as Compute's Save sets a model: the engine takes it now, or before the next song while it is busy
+    return post("/settings", { model: o.to }).then(function (data) {
+      paintSettings(data, true);
+      toast(tr("Switched to {0}: the next song loads it").replace("{0}", modelLabel(o.to)), "good");
+      pollProps();
+      refreshHardware();
+      return offerDone(o);
+    }, function (e) { toast(tr("Not switched: {0}").replace("{0}", e.message), "bad"); return o; });
+  }
+  window.ruachDefaultOffer = { ask: defaultOffer, key: OFFER_KEY, busy: offerBusy,   // HERESY 2077 (Viktor 05.11.2026: «Да, модель по умолчанию предлагаем один раз обновляющимся.»): for the checks; a test browser is never asked by itself
+    refresh: function () { return Promise.all([refreshSettings(), refreshHardware()]); } };
   // HERESY 1429 (Viktor 14.10.2026: «IP Студии и Лаба мы же раньше уже ограничивали локалхостом и масками локальных сетей… юзеры без
   // файрвола... или на публичном вайфае - это проблема. Может в Engine настройки блок по безопасности IP сетки добавить? И напоминалку
   // попапом для свежих инсталляций. С минигайдом там же, и чекбокс "Моё решение осознанное"»): who may open the Studio, the engine's
@@ -5329,7 +5695,7 @@
     if (!take) return;
     // how old, how long, how long it took (the seeds are in the details below)
     var blindHere = blindTake(take.name);              // HERESY 1874: no time, no render time, no folder
-    var eyebrow = [blindHere ? "\ud83d\ude48 " + tr("blind") : takeTime(take.created, take.name)];   // HERESY 1720
+    var eyebrow = [blindHere ? "\ud83e\udee3 " + tr("blind") : takeTime(take.created, take.name)];   // HERESY 1720; 2043: 🫣
     if (take.seconds) eyebrow.push(clock(take.seconds) + " long");
     if (take.render_seconds && !blindHere) eyebrow.push("made in " + clock(take.render_seconds));
     $("takeEyebrow").textContent = eyebrow.map(tr).join(" · ");   // HERESY 1166
@@ -5403,7 +5769,7 @@
     var take = STATE.take;
     if (!take) return;
     if (blindTake(take.name)) {                         // HERESY 1874: the datasheet names the model and the adapters: blind, none of it
-      $("metaGrid").innerHTML = '<p class="meta-blind">\ud83d\ude48 <span>Blind listening: what made this take (its model, adapters, seeds and decoder, its time and its folder) stays hidden until its workspace\'s blindness is lifted (⋯ beside its name)</span></p>';
+      $("metaGrid").innerHTML = '<p class="meta-blind">' + (window.HeresyIcons ? window.HeresyIcons.ui("blind") : "\ud83e\udee3") + ' <span>Blind listening: what made this take (its model, adapters, seeds and decoder, its time and its folder) stays hidden until its workspace\'s blindness is lifted (⋯ beside its name)</span></p>';
       return;
     }
     var labels = sliderLabels();
@@ -6555,30 +6921,88 @@
   });
   paintDlNames();
 
+  // HERESY 2131 (the audit of 06.11.2026; Viktor: «полнейший Аудит Студии на скрытые баги, уязвимости и проёбы по UIX»): this took the whole
+  // library past the trash on one OK (1 983 takes for good, 509 👍, 203 🔥, 119 💎 and 257 with notes among them) and said «278 favourites
+  // stay» where 1 562 would have. Now: the column's own workspace (every one only under «From all Workspaces»); what no deletion may reach left
+  // out before the count (a star, a shield, a lock, a freeze, an archive, a hidden take the column does not show); a take with a mark of the
+  // ear (👍, 👎, 🔥, 💎, a reaction, a note, a published 💎 set, an import) stays unless each of its marks is ticked; asked as every mass action
+  // is (1473: the guard, a second question when it reaches far); into the Librarian's trash, never past it, with Undo; one summary at the end
+  var NONFAV_KINDS = [["liked", "liked"], ["disliked", "disliked"], ["fire", "on fire"], ["gem", "gems"], ["react", "with a reaction"],
+                      ["note", "with a note"], ["set", "in a published 💎 set"], ["imported", "imported"]];
+  function nonFavMarks(HC, t, r) {
+    var has = [], rate = HC.rating ? HC.rating(t.name) : r.rating || 0;
+    if (rate > 0) has.push("liked");
+    if (rate < 0) has.push("disliked");
+    if (HC.markOf && HC.markOf(t.name, "fire")) has.push("fire");
+    if (HC.markOf && HC.markOf(t.name, "gem")) has.push("gem");
+    if (HC.reactOf && HC.reactOf(t.name)) has.push("react");
+    if (HC.note ? HC.note(t.name) : r.note) has.push("note");
+    if ((r.workspaces || []).some(function (w) { return /^\s*💎/.test(w); })) has.push("set");
+    if (r.kind === "imported") has.push("imported");
+    return has;
+  }
+  // what the column's ⋯ would send: { where, open: [{ take, has }], stay: {…}, counts: {mark: n} }; for the checks too
+  function nonFavPlan() {
+    var HC = window.HeresyCollection, F = libFilters(), ws = HC.current ? HC.current() : "", everywhere = F.allWs || !ws;
+    var stay = { fav: 0, prot: 0, locked: 0, frozen: 0, archived: 0, hidden: 0, unread: 0, tab: 0 }, open = [], counts = {};
+    STATE.takes.forEach(function (t) {
+      if (!F.allWs && !HC.inCurrent(t.name)) return;                 // the column's own workspace
+      if (t.session) { stay.tab++; return; }                         // kept in this tab only: no trash holds it
+      var r = HC.row(t.name);
+      if (t.favorite) stay.fav++;
+      else if (!r) stay.unread++;
+      else if (r.protected) stay.prot++;
+      else if (HC.takeLocked(t.name)) stay.locked++;
+      else if (r.frozen) stay.frozen++;
+      else if (r.archived) stay.archived++;
+      else if (!F.hidden && HC.isHidden(t.name)) stay.hidden++;
+      else {
+        var has = nonFavMarks(HC, t, r);
+        has.forEach(function (k) { counts[k] = (counts[k] || 0) + 1; });
+        open.push({ take: t, has: has });
+      }
+    });
+    return { where: everywhere ? (ws ? "From all Workspaces, as the column shows them." : "All Workspaces: the whole library.")
+                               : "The workspace in the column: “" + ws + "”.", open: open, stay: stay, counts: counts };
+  }
+  window.ruachNonFavPlan = nonFavPlan;   // for the checks
   $("deleteNonFav").addEventListener("click", function () {
     closeMenus();
-    // HERESY 1368: the protected pass by, said
-    var HCd = window.HeresyCollection, shielded = function (t) { return !!(HCd && HCd.isProtected && HCd.isProtected(t.name)); };
-    var spared = STATE.takes.filter(function (t) { return !t.favorite && shielded(t); }).length;
-    var doomed = STATE.takes.filter(function (t) { return !t.favorite && !shielded(t); });
-    var kept = STATE.takes.length - doomed.length - spared;
-    if (!doomed.length) return toast(!STATE.takes.length ? "The library is empty" : spared ? "Every take is a favourite or protected; nothing to delete" : "Every take is a favourite; nothing to delete");
-    var chain, count = 0;
-    window.HeresyDialog.confirm("Delete " + doomed.length + (doomed.length === 1 ? " take that is" : " takes that are") +
-                        " not a favourite, with their files?\n\n" + kept + (kept === 1 ? " favourite stays." : " favourites stay.") + " This is for good." +
-                        (spared ? "\n\n" + (spared === 1 ? "1 protected take stays too." : spared + " protected takes stay too.") : ""), { danger: true }).then(function (ok) {
-      if (!ok) return;
-      chain = Promise.resolve();
-      doomed.forEach(function (take) {
-        chain = chain.then(function () { return deleteTake(take, true, true).then(function (ok) { if (ok) count++; }); });
-      });
-      return chain.then(function () {
+    var HC = window.HeresyCollection;
+    if (!HC || !HC.loaded || !HC.loaded() || !HC.trash || !HC.guard || !HC.row) {
+      return toast("Nothing went to the trash: the Librarian (Forge's lab) does not answer, and without it there is no trash to send takes to", "bad");
+    }
+    var P = nonFavPlan(), open = P.open, stay = P.stay;
+    if (!open.length) return toast("No take in the column goes to the trash: each has a star, a shield or a lock, or is frozen, archived or hidden");
+    var lines = [P.where, "Without a star, a shield or a lock: " + open.length + ". Those with no mark go to the trash, which gives them back until it is emptied."];
+    [["fav", "Favourites stay: "], ["prot", "Protected takes stay: "], ["locked", "Takes in a workspace that locks them stay: "],
+     ["frozen", "Takes frozen with their workspace stay: "], ["archived", "Takes of an archived workspace stay: "],
+     ["hidden", "Hidden takes stay (the column does not show them): "], ["unread", "Takes the Librarian has not read yet stay: "],
+     ["tab", "Takes kept only in this tab stay: "]].forEach(function (k) { if (stay[k[0]]) lines.push(k[1] + stay[k[0]] + "."); });
+    var items = NONFAV_KINDS.filter(function (k) { return P.counts[k[0]]; }).map(function (k) { return { value: k[0], label: k[1], note: String(P.counts[k[0]]), checked: false }; });
+    if (items.length) lines.push("A take with a mark stays unless each of its marks is ticked below.");
+    var goes = function (vals) { return open.filter(function (o) { return o.has.every(function (k) { return vals.indexOf(k) >= 0; }); }); };
+    var text = "Non-favourites to the trash\n\n" + lines.join("\n");
+    var asked = items.length
+      ? window.HeresyDialog.pick(text, [{ label: "Send these too", items: items }], { ok: "To the trash", clear: "Untick all", count: function (vals) { return goes(vals).length; } })
+      : window.HeresyDialog.confirm(text, { ok: "To the trash " + open.length, danger: true }).then(function (ok) { return ok ? { values: [] } : null; });
+    asked.then(function (v) {
+      if (!v) return null;
+      var list = goes(v.values || []).map(function (o) { return o.take.name; });
+      if (!list.length) { toast("Nothing went to the trash: every take left has a mark you did not tick"); return null; }
+      return HC.guard((list.length === 1 ? "Move 1 take to the trash?" : "Move " + list.length + " takes to the trash?") + "\n\n" +
+                      "Nothing is deleted: the trash gives them back until it is emptied.", "To the trash", list)
+        .then(function (ok) { return ok ? HC.trash(list).then(function (d) { return { d: d || {}, list: list }; }) : null; });
+    }).then(function (res) {
+      if (!res) return;
+      var moved = res.d.moved || [];
+      moved.forEach(function (n) { var t = findTake(n); if (t) removeTake(t); });
       paintLibrary();
       paintCoverTakes();
-      toast("Deleted " + count + (count === 1 ? " take; " : " takes; ") + kept + (kept === 1 ? " favourite kept" : " favourites kept"), "good");
-      if (spared) toast(spared === 1 ? "1 protected take kept" : spared + " protected takes kept");
-      });
-    });
+      refreshLibrary().catch(function () {});
+      var said = "Moved to the trash: " + moved.length;   // what stayed, HC.trash says itself with the lab's reasons (HERESY 2130: saidProtected, saidSkipped, the locked ones)
+      if (moved.length && HC.undoable && HC.untrash) HC.undoable(said, HC.untrash(moved)); else toast(said, moved.length ? "good" : "bad");
+    }).catch(function (error) { toast("Nothing went to the trash: " + error.message, "bad"); });
   });
 
   $("refreshLib").addEventListener("click", function () {
@@ -6619,6 +7043,10 @@
 
   /* -------------------------------------------------------------- player */
 
+  // HERESY 2044b (Viktor 04.11.2026: «Когда мышкой как-то зацепишь какой-то DOM элемент, появляется фрейм с бордюрной обводкой… вылечить глобально?»):
+  // the focus ring is the keyboard's: a pointer's touch puts it away (html.by-pointer), Tab brings it back
+  document.addEventListener("pointerdown", function () { document.documentElement.classList.add("by-pointer"); }, true);
+  document.addEventListener("keydown", function (e) { if (e.key === "Tab") document.documentElement.classList.remove("by-pointer"); }, true);
   var audio = $("audio");
   var pendingSeek = null;   // the A/B switch's "same bar" handler, while its file loads
 
@@ -6665,6 +7093,11 @@
   }
   function ppNow() { var t = STATE.playerTake; if (t && PP.live && PP.name === t.name) ppKeep(t, audio.currentTime, true); }
   window.addEventListener("pagehide", ppNow);
+  // HERESY 2024 (Viktor 02.11.2026: «Десктоп делаем с добрым PWA»): the Studio installable as an app (Chrome or Edge: the install button in the
+  // address bar, over https or on this machine); its worker keeps nothing, so the Studio is the same in its own window
+  if ("serviceWorker" in navigator && window.isSecureContext) {
+    window.addEventListener("load", function () { navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(function () { /* an engine before 2024 has no worker */ }); });
+  }
   document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") ppNow(); });
   ppLoad();
 
@@ -6848,6 +7281,28 @@
     }
   }
   window.ruachVolumeBoost = function () { return { want: boost.want, made: !!boost.ctx, gain: boost.gain ? boost.gain.gain.value : 1, limiter: boost.on }; };   // for the checks
+  // HERESY 2037 (Viktor 03.11.2026: «кнопочка… для увеличения dB на 1-3.4dB ради восстановления громкости по усреднённому максимуму»): since
+  // 2007 no take is cut, so each plays as loud as its own highest peak lets it; the old Peak clip raised a take until its 99.999th percentile met
+  // full scale. +dB plays each take that much louder (its own measure, peakedge's «cut»), the limiter above 1 holding the few peaks over it; the
+  // file stays as it is. The graph is made only once a hand has touched the page (made before, it stays suspended and the take plays silent)
+  var loud = { on: recall("yue2.oldLoud") === "1", db: 0 }, touched = false;
+  function loudGain() { return loud.on ? Math.pow(10, loud.db / 20) : 1; }
+  function volNow() { var v = parseFloat($("volume").value); return isFinite(v) ? v : 1; }
+  function paintLoud() {
+    var b = $("loudBtn");
+    if (!b) return;
+    b.setAttribute("aria-pressed", String(loud.on));
+    (b.querySelector(".loud-t") || b).textContent = loud.on && loud.db >= 0.05 ? "+" + loud.db.toFixed(1) + " dB" : "+dB";   // HERESY 2044b: its word over its wave
+  }
+  function loudApply() {
+    if ((loud.on && touched) || boost.ctx) boostTo(volNow() * loudGain());
+    paintLoud();
+  }
+  ["pointerdown", "keydown"].forEach(function (ev) {
+    document.addEventListener(ev, function () { if (touched) return; touched = true; if (loud.on) loudApply(); }, true);
+  });
+  window.ruachLoud = function () { return { on: loud.on, db: loud.db, gain: loudGain(), hot: STATE.hot }; };   // for the checks
+  window.addEventListener("ruach-loud", function () { loud.on = recall("yue2.oldLoud") === "1"; loudApply(); });   // asked in the compare window
   var wantVolume = storedVolume === null ? 1 : Math.min(1.5, Math.max(0, parseFloat(storedVolume) || 0));
   audio.volume = Math.min(1, wantVolume);
   boost.want = wantVolume;
@@ -6980,9 +7435,19 @@
     paint();
     requestAnimationFrame(function () { back.classList.add("is-on"); back.querySelector(".art-fig").focus({ preventScroll: true }); });
   }
-  $("pbCover").addEventListener("click", function () {
-    if (STATE.playerTake && artUrl(STATE.playerTake.name)) showArt(STATE.playerTake.name);
+  // HERESY 2021 (Viktor 02.11.2026: «В основной плеер Студии нужно добавить переход в Библиотеку на карточку трека… на квадрат обложки трека»):
+  // the square takes to the take's card in the Librarian, the window's own path (1059); the artwork, large, from the square's corner
+  function coverGo() {
+    var t = STATE.playerTake, HC = window.HeresyCollection;
+    if (!t || !HC || !HC.reveal) return;
+    if (t.session) return toast("Kept in this tab: not in the Library yet");
+    setTab("collection"); HC.reveal(t.name);
+  }
+  $("pbCover").addEventListener("click", function (e) {
+    if (e.target.closest("#pbCoverZoom")) { e.stopPropagation(); if (STATE.playerTake && artUrl(STATE.playerTake.name)) showArt(STATE.playerTake.name); return; }
+    coverGo();
   });
+  $("pbCover").addEventListener("keydown", function (e) { if ((e.key === "Enter" || e.key === " ") && e.target === this) { e.preventDefault(); coverGo(); } });
   // HERESY 1167 (Viktor: «Когда пошла генерация обложки, запрещай на том же треке повторный запуск процесса»): one drawing
   // a take at a time from this page: while its artwork is drawn or waits for a card, a second ask is told so and not sent
   // (the lab keeps one job a take anyway; the page started a second poller and a second pair of toasts). The lab now holds
@@ -7128,6 +7593,12 @@
   window.HeresyArt = { url: artUrl, draw: drawArt, refresh: refreshArts, show: showArt, unseen: artUnseen, remove: removeArt, many: artMany };
   // HERESY 1136: the Studio's version (VERSION, through the API) in Engine → About
   api("/api/v1").then(function (d) { if (d && d.studio && $("studioVersion")) $("studioVersion").textContent = d.studio; }).catch(function () {});
+  // HERESY 2139: and the page's own build beside it (build.sh's id), the release the page was built from until the API says the Studio's
+  (function () {
+    var b = window.RUACH_BUILD || {};
+    if ($("studioBuild")) $("studioBuild").textContent = b.id || "";
+    if ($("studioVersion") && !$("studioVersion").textContent && b.release && b.release !== "dev") $("studioVersion").textContent = b.release;
+  })();
   setTimeout(refreshArts, 1200);
 
   function paintCover(take) {
@@ -7138,6 +7609,7 @@
     $("pbCover").style.background = take ? "linear-gradient(135deg, hsl(" + h + " 32% 52%), hsl(" + ((h + 48) % 360) + " 30% 30%))" : "";
     var art = take ? artUrl(take.name) : "";                     // HERESY 1120: the artwork, when the take has one
     $("pbCover").classList.toggle("has-art", !!art);
+    $("pbCoverZoom").hidden = !art;   // HERESY 2021
     if (art) $("pbCover").style.background = "center / cover no-repeat url(\"" + art + "\")";
   }
   function paintVolume() {
@@ -7157,12 +7629,20 @@
     if ((volFrom !== null && volFrom < 1 && v > 1) || (v > 1 && !boostable())) { v = 1; this.value = "1"; }
     audio.volume = Math.min(1, v);
     audio.muted = v === 0;
-    boostTo(v);
+    boostTo(v * loudGain());                         // HERESY 2037: and the take's own +dB when asked
     store("yue2.volume", String(v));
     this.classList.toggle("is-boost", v > 1);
     this.setAttribute("aria-valuetext", Math.round(v * 100) + " %");
     paintVolume();
   });
+
+  $("loudBtn").addEventListener("click", function () {   // HERESY 2037
+    loud.on = !loud.on;
+    touched = true;
+    store("yue2.oldLoud", loud.on ? "1" : null);
+    loudApply();
+  });
+  paintLoud();
 
   $("muteBtn").addEventListener("click", function () {
     audio.muted = !audio.muted;
@@ -7338,16 +7818,87 @@
     var w = Math.round(hi - lo) + "px";
     if (id.style.width !== w) { id.style.width = w; id.style.flex = "none"; }
   }
+  // HERESY 2107 (Viktor 06.11.2026, his PWA at 110 % on 1920 × 1080: the shuffle on the ☆ after 👎, an icon over the time's first digit, the red
+  // «END NOT SUNG» taking the room): the player never covers itself. Its parts are laid out as before (the take's group as wide as what it holds, its
+  // title the one part that gives way: app.css); then, while a part would cover another, leave the bar or fall to a second line, or the title would
+  // be under its floor (120 px) while the lesser parts still take room, the next step is taken: 1 the amber mark (the tail heard) to its icon, 2 the
+  // red one (the end not sung) to its icon, 3 the speed, 4 the volume's slider, 5 the one-row wave down to 60 px, 6 the spectrum and the ear; 7 the
+  // title itself when it would still be a sliver (under 60 px); past these only a part over another: 8 Play new takes and Play on click, 9 the tail
+  // guards and the bell, 10 the fire, the gem and the reaction, 11 Play on and the loudness, 12 the cover, 13 shuffle, repeat and the playlist,
+  // 14 back and on 15 s. The steps are data-fit on #playbar; measured anew from none whenever the bar, one of its parts or the room changes
+  var PB_FLOOR = 120, PB_SLIVER = 60, PB_STEPS = 14, PB_FLOOR_STEPS = 6, PB_SLIVER_STEPS = 7;
+  function pbParts(pb) {
+    var out = [$("wave")];
+    ["playbar-id", "pb-ctrl", "pb-side"].forEach(function (c) {
+      var g = pb.querySelector(".pb-row > ." + c);
+      if (g) Array.prototype.forEach.call(g.children, function (k) {
+        if (!k.matches(".pb-rate, .volume")) { out.push(k); return; }
+        Array.prototype.forEach.call(k.children, function (x) { if (x.matches(".pb-react")) Array.prototype.push.apply(out, x.children); else out.push(x); });
+      });
+    });
+    return out.filter(function (e) { return e && e.getClientRects().length && getComputedStyle(e).visibility !== "hidden"; })
+      .map(function (e) { return { e: e, r: e.getBoundingClientRect() }; }).filter(function (p) { return p.r.width >= 1 && p.r.height >= 1; });
+  }
+  // what covers what in the bar now (for fitPlayer and the checks): [] when nothing does
+  function pbClashes(pb) {
+    pb = pb || $("playbar");
+    var out = [], bar = pb.getBoundingClientRect(), parts = pbParts(pb), wave = $("wave"), play = $("playBtn");
+    var name = function (p) { return p.e.id || String(p.e.className || p.e.tagName).split(" ")[0]; };
+    var p0 = play && play.getClientRects().length ? play.getBoundingClientRect() : null;
+    parts.forEach(function (p, i) {
+      if (p.r.left < bar.left - 0.5 || p.r.right > bar.right + 0.5) out.push(name(p) + " leaves the bar");
+      if (p0 && p.e !== wave && (p.r.top >= p0.bottom || p.r.bottom <= p0.top)) out.push(name(p) + " on another line");
+      for (var j = i + 1; j < parts.length; j++) {
+        var q = parts[j].r;
+        if (Math.min(p.r.right, q.right) - Math.max(p.r.left, q.left) > 0.5 && Math.min(p.r.bottom, q.bottom) - Math.max(p.r.top, q.top) > 0.5) out.push(name(p) + " over " + name(parts[j]));
+      }
+    });
+    return out;
+  }
+  function pbTitle(pb) { var n = pb.querySelector(".pb-names"); return n && n.getClientRects().length ? n.getBoundingClientRect().width : null; }
+  // the title's room: its width, less what the take's group would still need past its own width (a title squeezed to nothing gains no width from
+  // one step while the group still runs over: that step still gives it room)
+  function pbRoom(pb) {
+    var w = pbTitle(pb), g = pb.querySelector(".pb-row > .playbar-id");
+    return w === null ? null : w - (g ? Math.max(0, g.scrollWidth - g.clientWidth) : 0);
+  }
+  // HERESY 2122 (the review of 2107: in the two-row player of the Creator and the Librarian from 1660 px, 1741's mirror makes the take's group as wide as
+  // the right side, so the speed, the slider, the spectrum and the ear hidden for the title narrowed the title with them, 368 → 287 → 166 → 86 px at 1920,
+  // until step 7 hid it): a step taken for the title alone stays only when the title gained by it; a step taken because a part covers another stays as
+  // before. The steps are a set (data-fit «1 2 7»), never a count. Returns the steps taken
+  function fitPlayer() {
+    var pb = $("playbar"), steps = [];
+    if (!pb || !pb.getClientRects().length) return null;
+    var put = function () { if (steps.length) pb.dataset.fit = steps.join(" "); else delete pb.dataset.fit; mirrorPlayer(); };
+    put();
+    for (var k = 1; k <= PB_STEPS; k++) {
+      var least = k <= PB_FLOOR_STEPS ? PB_FLOOR : k <= PB_SLIVER_STEPS ? PB_SLIVER : 0;
+      var clash = pbClashes(pb).length > 0, w = pbTitle(pb), short = !!least && w !== null && w < least, room = pbRoom(pb);
+      if (!clash && !short) break;
+      steps.push(k); put();
+      if (!clash && k < PB_SLIVER_STEPS) {             // for the title alone: kept only when it gave the title room
+        var room2 = pbRoom(pb);
+        if (room2 === null || room2 <= room + 0.5) { steps.pop(); put(); }
+      }
+    }
+    return steps.slice();
+  }
   var mirrorFrame = 0;
-  function mirrorSoon() { if (!mirrorFrame) mirrorFrame = requestAnimationFrame(function () { mirrorFrame = 0; mirrorPlayer(); }); }
+  function mirrorSoon() { if (!mirrorFrame) mirrorFrame = requestAnimationFrame(function () { mirrorFrame = 0; fitPlayer(); }); }
   if (window.ResizeObserver) {
     var mirrorWatch = new ResizeObserver(mirrorSoon);
     mirrorWatch.observe($("playbar"));
     Array.prototype.forEach.call(document.querySelectorAll("#playbar .pb-side > *"), function (k) { mirrorWatch.observe(k); });   // the time growing, a part hidden
+    // HERESY 2107: and the take's group, its title, its marks and likes, the controls (a mark shown or gone, a take of a session without likes)
+    Array.prototype.forEach.call(document.querySelectorAll("#playbar .playbar-id, #playbar .pb-names, #pbUnsung, #pbTail, #pbRate, #playbar .pb-ctrl"), function (k) { mirrorWatch.observe(k); });
   }
+  // HERESY 2107: a room of its own player (one row or two) or a frame lifted
+  if (window.MutationObserver) new MutationObserver(mirrorSoon).observe(document.body, { attributes: true, attributeFilter: ["data-tab", "data-frame"] });
   window.addEventListener("resize", mirrorSoon);
   mirrorSoon();
   window.ruachMirrorPlayer = mirrorPlayer;   // for the checks
+  window.ruachFitPlayer = fitPlayer;         // HERESY 2107: for the checks
+  window.ruachPlayerClashes = pbClashes;
   $("pbPlaylist").addEventListener("click", function () { var HC = window.HeresyCollection; if (HC && HC.openPlaylist) HC.openPlaylist(); });
 
   // HERESY 1990 (Viktor 01.11.2026: «В плейлисте кроссфейд, с которым мы мучались, так и не работает. К хуям вырежь его»): the crossfade of
@@ -7368,7 +7919,7 @@
       delete XFB.wait[url];
       if (b && !XFB.urls[url]) { XFB.urls[url] = URL.createObjectURL(b); XFB.bytes[url] = b.size; XFB.order.push(url); xfTrim(); }
       w.forEach(function (f) { try { f(XFB.urls[url] || ""); } catch (e) { console.warn(e); } });
-      if (XFB.after && STATE.playerTake && url === playerAudioUrl(STATE.playerTake)) { XFB.after = false; xfPrefetch(); }   // HERESY 1803: the next once this one is whole
+      if (XFB.after && STATE.playerTake && url === playerAudioUrl(STATE.playerTake)) { XFB.after = false; if (b) xfPrefetch(); }   // HERESY 1803: the next once this one is whole; 2044b: not after a refusal (it asked for the refused one again, without end)
       holdPaint();
     };
     fetch(url).then(function (r) {
@@ -7676,6 +8227,57 @@
   }
   $("playNew").addEventListener("click", function () { store("yue2.playNew", playNew() ? "off" : null); paintPlayNew(); });
   paintPlayNew();
+  // HERESY 2056 (Viktor 04.11.2026: «Если по ресурсам не будет у пользователей затыка, запускай сторожей хвоста трека автоматом, но в плеере и в контекстном
+  // меню трека выставь дефолт off с выбором, опция и иконка»): the tail guards on each take made here, off unless chosen (∿ in the player, Tail guards › in
+  // a take's menu, Engine → Defaults): the tail guard (1836: where the sound comes back after a silence near the end; a moment's arithmetic in the lab, kept
+  // beside the take) and, for a take with lyrics, Sung to the end? (1842: Whisper; asked automatically it runs only while a card has room, never on the
+  // processor, so a lone card busy singing leaves it to its button). Asked from the menu, both run as their own buttons do
+  function tailGuard() { return recall("yue2.tailGuard") === "on"; }
+  function paintTailGuard() {
+    var on = tailGuard(), b = $("tailGuard");
+    if (!b) return;
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.classList.toggle("is-on", on);
+  }
+  function setTailGuard(on) {
+    store("yue2.tailGuard", on ? "on" : null);
+    paintTailGuard(); paintDefaults();
+    toast(on ? "Tail guards on: each new take's end is checked as it lands" : "Tail guards off: the checks wait for their buttons");
+  }
+  if ($("tailGuard")) $("tailGuard").addEventListener("click", function () { setTailGuard(!tailGuard()); });
+  paintTailGuard();
+  function tailClock(t) { var m = Math.floor(t / 60), s = t - m * 60; return m + ":" + (s < 10 ? "0" : "") + s.toFixed(1); }
+  function tailTip(t) {
+    return tr("The sound comes back at {0} after {1} s of silence; End at… offers to end it there").replace("{0}", tailClock(t.gap[1])).replace("{1}", (t.gap[1] - t.gap[0]).toFixed(1));
+  }
+  function guardTails(names, asked) {
+    var HC = window.HeresyCollection;
+    (names || []).forEach(function (name) {
+      var take = findTake(name);
+      if (!take || take.session) return;
+      fetch("/lab/tail?name=" + encodeURIComponent(name)).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }).then(function (tl) {
+        if (!tl) { if (asked) toast("The tail guard could not hear this take", "bad"); return; }
+        var found = tl.suggest != null && tl.gap ? { suggest: tl.suggest, gap: tl.gap, back: tl.back } : null;
+        if (HC && HC.tailMark) HC.tailMark(name, found);
+        if (asked) toast(found ? tailTip(found) : tr("A clean end: no sound comes back after a silence"));
+      });
+      if (!String(take.lyrics || "").trim() || !HC || !HC.sungMark) return;
+      (function poll(run, n) {
+        fetch("/lab/sung?name=" + encodeURIComponent(name) + (run ? "&run=1" + (asked ? "" : "&auto=1") : "")).then(function (r) {
+          return r.json().then(function (b) { return { ok: r.ok || r.status === 202, b: b }; });
+        }).then(function (x) {
+          if (!x.ok || x.b.skipped) return;              // a timing that failed, or no card with room: its button stays for it
+          if (x.b.timed === false) { if (n < 400) setTimeout(function () { poll(false, n + 1); }, 2500); return; }
+          HC.sungMark(name, x.b.done);
+          if (asked) toast(x.b.done === true ? tr("Every line heard; the last ends at {0}").replace("{0}", tailClock(x.b.last || 0))
+            : x.b.done === false ? tr("Lines not heard at the end: {0}, after {1}").replace("{0}", x.b.count).replace("{1}", tailClock(x.b.suggest))
+            : tr("The timing heard too little of this take to say"), x.b.done === false ? "bad" : "");
+          if (HC.repaint) HC.repaint();
+        }).catch(function () {});
+      })(true, 0);
+    });
+  }
+  window.ruachGuardTails = guardTails;                  // the suite's handle
   // HERESY 1804 (Viktor 28.10.2026: «Дать юзеру максимальную свободу изменять дефолты в Engine настройках… Дефолты выставляем как у нас сейчас в Студии»):
   // Engine → Defaults, each field a yue2.* key (user/settings.json keeps it as every key), empty = the Studio's own; the player's and the lists' own
   // switches set the same keys, and the card reads them again whenever Engine opens
@@ -7707,7 +8309,7 @@
     });
   }
   function defaultsChanged() {
-    paintClickPlay(); paintPlayNew(); paintSeekTips(); paintDefaults(); paintLibrary();
+    paintClickPlay(); paintPlayNew(); paintTailGuard(); paintSeekTips(); paintDefaults(); paintLibrary();   // HERESY 2056: the tail guards' switch too
     if (window.HeresyCollection && window.HeresyCollection.repaint) window.HeresyCollection.repaint();
   }
   if ($("defaultsCard")) {
@@ -7722,7 +8324,7 @@
       if (r) { store(r.dataset.def, r.value === r.dataset.defIs ? null : r.value); applyLookDefaults(); }
     });
     $("defaultsReset").addEventListener("click", function () {
-      ["yue2.seekBtn", "yue2.seekKey", "yue2.seekKeyShift", "yue2.holdStart", "yue2.clickPlay", "yue2.playNew", "yue2.dblPlay", "yue2.showDisliked", "yue2.pbRest", "yue2.tips", "yue2.hintLines", "yue2.infoDots"].forEach(function (k) { store(k, null); });
+      ["yue2.seekBtn", "yue2.seekKey", "yue2.seekKeyShift", "yue2.holdStart", "yue2.clickPlay", "yue2.playNew", "yue2.tailGuard", "yue2.dblPlay", "yue2.showDisliked", "yue2.pbRest", "yue2.tips", "yue2.hintLines", "yue2.infoDots"].forEach(function (k) { store(k, null); });
       defaultsChanged();
     });
   }
@@ -7819,9 +8421,12 @@
   // heard its lyrics stop before their end says so in signal red, beside its title in the player and in its card in the Takes column
   function paintUnsung() {
     var HC = window.HeresyCollection, of = HC && HC.sungOf ? HC.sungOf : function () { return undefined; };
-    all("#libList .take[data-name]").forEach(function (card) { card.classList.toggle("is-unsung", of(card.dataset.name) === false); });
+    var tl = HC && HC.tailOf ? HC.tailOf : function () { return null; };   // HERESY 2056: what the tail guard heard, in amber beside it
+    all("#libList .take[data-name]").forEach(function (card) { card.classList.toggle("is-unsung", of(card.dataset.name) === false); card.classList.toggle("is-tail", !!tl(card.dataset.name)); });
     var mark = $("pbUnsung");
     if (mark) mark.hidden = !(STATE.playerTake && !STATE.playerTake.session && of(STATE.playerTake.name) === false);
+    var tail = $("pbTail"), heard = STATE.playerTake && !STATE.playerTake.session ? tl(STATE.playerTake.name) : null;
+    if (tail) { tail.hidden = !heard; if (heard) tail.dataset.tip = tailTip(heard); }
   }
   window.ruachPaintUnsung = paintUnsung;
   // The card of the song that is playing says so (the list redraws often, so this runs after it too)
@@ -8111,7 +8716,7 @@
     }).catch(function () {});
     var tagged = taggedParts(take.lyrics) >= 2;
     var timed = !tagged ? Promise.resolve(null) : sectionsTimed[name] ? Promise.resolve(sectionsTimed[name])
-      : fetch("/lab/timing?cached=1&name=" + encodeURIComponent(name), { priority: "low" }).then(function (r) { return r.ok ? r.json() : null; })
+      : fetch("/lab/timing?cached=1&name=" + encodeURIComponent(name), { priority: "low" }).then(function (r) { return r.status === 200 ? r.json() : null; })   // HERESY 2103: 204, not timed yet
           .then(function (d) { if (d && d.rows) { sectionsTimed[name] = d; return d; } return null; }).catch(function () { return null; });
     var got = take.has_score ? getRequest(take).then(function (req) { return (req && req.abc) || ""; })
       : sectionsNone[name] ? Promise.resolve("")
@@ -8579,8 +9184,16 @@
     setTimeout(tick, 3000);
   }
   window.ruachFollowSection = followSection;
-  fetch("/lab/section/live", { priority: "low" }).then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (d) { ((d && d.live) || []).forEach(function (j) { if (j.id) followSection(j.id); }); }).catch(function () {});
+  // HERESY 2105 (Viktor's debug journal of 05.11.2026: section/live, refiner/profiles, chain/batch and audio/devices ended last on every load, 98–232 s
+  // on the road, holding the line while the page came up): the sections sung anew are asked after the page's first paint, not before it
+  window.ruachAfterPaint = function (fn) {
+    var go = function () { setTimeout(fn, 0); };
+    if (window.requestAnimationFrame) requestAnimationFrame(function () { requestAnimationFrame(go); }); else setTimeout(fn, 50);
+  };
+  window.ruachAfterPaint(function () {
+    fetch("/lab/section/live", { priority: "low" }).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { ((d && d.live) || []).forEach(function (j) { if (j.id) followSection(j.id); }); }).catch(function () {});
+  });
   window.ruachLyricParts = lyricParts;
   function sectionAt(t) {
     var at = null;
@@ -8640,6 +9253,7 @@
     var url = takeAudioUrl(take);
     STATE.peaks = STATE.peakCache[url] || null;
     loadWaveSections(take);                                    // HERESY 1282
+    loadHot(take);                                             // HERESY 2037
     drawWave();
     if (STATE.peaks || STATE.peakLoading[url]) return;
     STATE.peakLoading[url] = true;
@@ -8661,6 +9275,22 @@
     }).catch(function () {
       if (STATE.playerTake && takeAudioUrl(STATE.playerTake) === url) { STATE.peaks = "none"; drawWave(); }
     }).then(function () { delete STATE.peakLoading[url]; });
+  }
+
+  // HERESY 2037: the take's peaks over the old Peak clip's level (red at the wave's edges) and that level as its +dB
+  STATE.hot = null;
+  function loadHot(take) {
+    STATE.hot = null;
+    loud.db = 0;
+    if (!take || take.session) { loudApply(); return; }
+    var name = take.name;
+    fetch("/lab/take/wave?name=" + encodeURIComponent(name) + "&n=600").then(function (r) { return r.ok ? r.json() : null; }).then(function (w) {
+      if (!w || !STATE.playerTake || STATE.playerTake.name !== name) return;
+      STATE.hot = { n: 600, hot: w.hot || [], flats: w.over > 0 ? [] : (w.flats || []) };
+      loud.db = w.cut > 0 && w.cut < 1 ? Math.min(6, -20 * Math.log10(w.cut)) : 0;
+      loudApply();
+      drawWave();
+    }, function () { /* no lab: no marks, no +dB */ });
   }
 
   function decodePeaks(buffer) {
@@ -8812,6 +9442,15 @@
           ctx.fillRect(bx, middle - bh / 2, Math.max(1, width / bars - 1), bh);
         }
       }
+    }
+
+    // HERESY 2037: the peaks the old Peak clip would have cut, red at the wave's top (2053: the top only); a take cut before 2007, its flat tops in amber
+    if (STATE.hot && STATE.peaks && STATE.peaks !== "none") {
+      var hw = Math.max(1, Math.ceil(width / STATE.hot.n));
+      [[STATE.hot.flats, themeRGBA("amber", 0.85)], [STATE.hot.hot, themeRGBA("bad", 0.95)]].forEach(function (m) {
+        ctx.fillStyle = m[1];
+        m[0].forEach(function (i) { var hx = Math.floor(i / STATE.hot.n * width); ctx.fillRect(hx, 0, hw, 3); });   // HERESY 2053: at the top only
+      });
     }
 
     // HERESY 1282: the take's sections: a thin line at each start, its name at the foot of its block where there is room
@@ -9098,7 +9737,8 @@
         // HERESY 1421 (Viktor: «со второй строки лучше перенести в хвост первой ИДЁТ/ИГРАЕТ и VAE. Так во второй появится больше места
         // для имени воркспейса»): playing and the decoder at the tail of the title's row
         '<div class="take-head"><div class="take-title">' + escape(title) + '</div><span class="tag playing-tag">playing</span>' + vaeTag +
-        '<span class="tag unsung-tag unsung-pill" data-tip="The end not sung: its last lines were not heard; Sung to the end? in its datasheet says which">end not sung</span></div>' +   // HERESY 1854
+        '<span class="tag unsung-tag unsung-pill" data-tip="The end not sung: its last lines were not heard; Sung to the end? in its datasheet says which">end not sung</span>' +   // HERESY 1854
+        '<span class="tag tail-tag tail-pill" data-tip="The tail guard heard the sound come back after a silence near the end; End at… offers that second">tail after the end</span></div>' +   // HERESY 2056
         '<div class="take-style">' + escape(take.style || "") + "</div>" +
         '<div class="take-foot">' + tags + "<span>" + clock(take.seconds) + "</span>" +
         whenHtml(take.created, take.name) + "</div>" + extras + "</article>";   // HERESY 1082; 1720: its time flips
@@ -9758,16 +10398,58 @@
     return fence ? fence[1].trim() : text;
   }
 
-  var CHAT = { status: null };
+  // HERESY 2097 (Viktor 05.11.2026: «Перенеси настройки все прямо в Движок по всем опциям выбора LLM хостов, а в писателе только динамично выводим
+  // то, что доступно… И по подключениям к vLLM/ Ollama / LM Studio / Local Qwopus 9B / OpenRouter в движке предусмотри чекбоксы по активации
+  // соединений… будут опрашиваться и работать только те, что отмечены галочкой как активные»): the Writer's five hosts in Engine → Writer and Artwork,
+  // each with its own switch and, for the three servers, its own address; the lab keeps them (user/llm.json) and the OpenRouter key (user/secrets.json),
+  // which no page is ever sent back. Only a host ticked is asked anything (its models, a question, a test); the Writer, Tighten, the style's suggestions,
+  // the Creator's idea writer and the Videographer write with the Writer's pick among the ticked ones that answer, else the first of them that does
+  var LLM = { ids: ["own", "vllm", "lmstudio", "ollama", "openrouter"], hosts: null, key: { set: false, tail: "" }, exists: false, lab: false,
+              ready: null, loadedAt: 0, st: {}, at: {}, asking: {}, gen: {}, want: "", models: {}, pick: "", orList: "", orListed: false, orListing: null, orErr: "" };
+  var LLM_NAME = { own: "The Studio's own writer", vllm: "vLLM", lmstudio: "LM Studio", ollama: "Ollama", openrouter: "OpenRouter" };
+  var LLM_SHORT = { own: "The Studio's own", vllm: "vLLM", lmstudio: "LM Studio", ollama: "Ollama", openrouter: "OpenRouter" };
+  var LLM_DEFAULT = { vllm: "http://127.0.0.1:8000/v1", lmstudio: "http://127.0.0.1:1234/v1", ollama: "http://127.0.0.1:11434/v1" };
+  var LLM_ON = { own: "ownOn", vllm: "vllmOn", lmstudio: "lmstudioOn", ollama: "ollamaOn", openrouter: "orOn" };
+  var LLM_TEST = { own: "ownTest", vllm: "vllmTest", lmstudio: "lmstudioTest", ollama: "ollamaTest", openrouter: "orTest" };
+  var LLM_MODEL = "deepseek/deepseek-v4-pro", HOST_FRESH = 8000;
+  var LLM_SCOPE = (function () { try { return new URLSearchParams(location.search).get("scope") || ""; } catch (e) { return ""; } })();
+  (function () { var a = assistSaved(); LLM.want = typeof a.provider === "string" ? a.provider : ""; LLM.models = a.models && typeof a.models === "object" ? a.models : {}; })();
+  function llmUrl(path) { return "/lab/llm/" + path + (LLM_SCOPE ? "?scope=" + encodeURIComponent(LLM_SCOPE) : ""); }
+  function llmOn(id) { return !!(LLM.hosts && LLM.hosts[id] && LLM.hosts[id].active); }
+  function errText(d) { return !d ? "" : typeof d.error === "string" ? d.error : d.error && d.error.message ? String(d.error.message) : ""; }
+  function llmJson(r) {
+    return r.json().catch(function () { return {}; }).then(function (d) {
+      if (r.ok) return d;
+      var e = new Error(errText(d) || "HTTP " + r.status);
+      e.status = r.status;
+      throw e;
+    });
+  }
+  function llmPost(path, body) {
+    return fetch(llmUrl(path), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(llmJson);
+  }
+  function assistSaved() { try { var a = JSON.parse(recall("yue2.assist") || "{}"); return a && typeof a === "object" ? a : {}; } catch (e) { return {}; } }
+  function keepWant(id) {                              // the Writer's own pick, kept with the room's other choices (yue2.assist)
+    LLM.want = id || "";
+    var a = assistSaved();
+    if (a.provider === LLM.want) return;
+    a.provider = LLM.want;
+    store("yue2.assist", JSON.stringify(a));
+  }
 
-  function chatBase() {
-    var url = ($("chatUrl").value || "").trim().replace(/\/+$/, "");
+  function normBase(raw) {                             // an address as typed: the /v1 base the requests go under
+    var url = String(raw || "").trim().replace(/\/+$/, "");
     ["/chat/completions", "/models"].forEach(function (suffix) {
       if (url.slice(-suffix.length) === suffix) url = url.slice(0, -suffix.length);
     });
     if (url && !/^https?:\/\//i.test(url)) url = "http://" + url;
     if (url && url.slice(-3) !== "/v1") url += "/v1";
     return url;
+  }
+  function hostBase(id) {
+    if (id === "own") return location.origin + "/lab/llm/v1";
+    if (!LLM_DEFAULT[id]) return "";
+    return normBase((LLM.hosts && LLM.hosts[id] && LLM.hosts[id].url) || LLM_DEFAULT[id]);
   }
 
   function chatCall(url, payload, timeoutMs) {
@@ -9784,23 +10466,29 @@
     return fetch(url, options).then(function (r) {
       return r.text().then(function (text) {
         if (!r.ok) {
-          var failure = new Error("HTTP " + r.status + (text ? ": " + text.slice(0, 200) : ""));
+          // HERESY 2123: a relay's or a server's answer {"error": "…"} (or {"error": {"message": "…"}}) says its words, not its JSON; the text stays whole beside it
+          var said = "";
+          try { said = errText(text ? JSON.parse(text) : null); } catch (e) { said = ""; }
+          var failure = new Error("HTTP " + r.status + (said ? ": " + said.slice(0, 200) : text ? ": " + text.slice(0, 200) : ""));
           failure.status = r.status;
+          failure.text = text;                         // HERESY 2097: OpenRouter's own words, read whole
           throw failure;
         }
         return text ? JSON.parse(text) : {};
       });
     }).then(function (data) { clearTimeout(timer); return data; }, function (error) { clearTimeout(timer); throw error; });
   }
+  window.ruachChatCall = chatCall;                   // HERESY 2123: for the checks
 
   function unreachable(base) {
+    // HERESY 2097: over https the lab asks the server for the page (/lab/relay, 2005), so CORS is not the reason there
+    if (location.protocol === "https:") return "The Studio could not reach " + base + " through its lab: the server is not running there, or the address is wrong.";
     return "The browser could not reach " + base + ". Either the chat server is not running, or it refuses " +
       "requests from this page (CORS): turn CORS on in its settings, or open this page from the same machine name.";
   }
 
   // Reachability and the loaded model, without asking the server to load anything.
-  function chatStatus() {
-    var base = chatBase();
+  function serverStatus(base) {
     if (!base) return Promise.resolve({ configured: false, available: false, models: [], loaded: null, use: null });
     var root = base.slice(0, -3);
     var status = { configured: true, available: false, models: [], loaded: null, use: null, base: base };
@@ -9836,58 +10524,311 @@
       throw failed;
     });
   }
+  function orUse() {                                   // the Writer's OpenRouter model: its own field, else the Engine's default
+    var f = $("orModel"), v = f ? f.value.trim() : "";
+    return v || (LLM.hosts && LLM.hosts.openrouter && LLM.hosts.openrouter.model) || LLM_MODEL;
+  }
+  // OpenRouter's state is the lab's own word (ticked, a key kept): no request on a page's load. Its list of models and prices (the Writer's field) is asked
+  // only on a hand's gesture: its model field taken, OpenRouter picked in the Writer, its Test; once a page's session (the lab keeps it an hour), never
+  // while OpenRouter is not ticked. A list that did not come says OpenRouter is not answering until a gesture asks again
+  function hostStatus(id) {
+    if (id === "openrouter") {
+      if (!LLM.key.set) return Promise.resolve({ configured: true, available: false, nokey: true, models: [], loaded: null, use: null,
+        error: "No OpenRouter key is kept: put it in under Engine → Writer and Artwork" });
+      if (LLM.orErr) return Promise.resolve({ configured: true, available: false, models: [], loaded: null, use: null, error: "OpenRouter: " + LLM.orErr });
+      return Promise.resolve({ configured: true, available: true, models: [], loaded: null, use: orUse(), base: "openrouter.ai" });
+    }
+    return serverStatus(hostBase(id));
+  }
+  function orList(force) {
+    if (!llmOn("openrouter") || !LLM.key.set) return Promise.resolve(false);
+    if (LLM.orListing) return LLM.orListing;
+    if (LLM.orListed && !force) return Promise.resolve(true);
+    var was = LLM.orErr;
+    LLM.orListing = fetch(llmUrl("openrouter/models")).then(llmJson).then(function (d) {   // through the lab, kept an hour there
+      var list = d.data || [], mark = list.length + ":" + ((list[0] || {}).id || "") + ":" + ((list[list.length - 1] || {}).id || "");
+      if (mark !== LLM.orList && window.HeresyOrModels) { LLM.orList = mark; window.HeresyOrModels.take(list); }
+      LLM.orListed = true; LLM.orErr = "";
+      return true;
+    }, function (e) { LLM.orErr = e.message || "no answer"; return false; }).then(function (ok) {
+      LLM.orListing = null;
+      if (was !== LLM.orErr) { forget("openrouter"); refreshWriter(false).catch(function () {}); }
+      return ok;
+    });
+    return LLM.orListing;
+  }
+  function forget(id) { LLM.gen[id] = (LLM.gen[id] || 0) + 1; delete LLM.st[id]; delete LLM.at[id]; delete LLM.asking[id]; }
 
-  // HERESY 1110: the Writing room's own line: which writer, where, and whether it answers
-  function paintAssistLine(status) {
+  // the hosts as the lab keeps them; a lab that does not answer yet is asked again after 5 s (the page then shows every host as not set)
+  function llmReady() {
+    if (!LLM.ready || (!LLM.lab && Date.now() - LLM.loadedAt > 5000)) LLM.ready = loadHosts();
+    return LLM.ready;
+  }
+  function loadHosts() {
+    LLM.loadedAt = Date.now();
+    return fetch(llmUrl("hosts")).then(llmJson).then(function (d) { LLM.lab = true; takeHosts(d); return migrate(d); })
+      .catch(function () { if (!LLM.lab) takeHosts(null); });
+  }
+  function takeHosts(d) {
+    var h = d && d.hosts;
+    if (!h) { h = {}; LLM.ids.forEach(function (id) { h[id] = { active: false }; }); }
+    LLM.hosts = h;
+    LLM.exists = !!(d && d.exists);
+    LLM.key = { set: !!(d && d.openrouter && d.openrouter.key_set), tail: (d && d.openrouter && d.openrouter.key_tail) || "" };
+    if (d && d.default_model) LLM_MODEL = d.default_model;
+    if (d && d.own) paintOwn(d.own);
+    LLM.ids.forEach(function (id) { if (!llmOn(id)) forget(id); });
+    paintHostsConfig();
+  }
+  function saveHosts(patch) {
+    return llmPost("hosts", { hosts: patch }).then(function (s) { takeHosts(s); return s; }, function (e) { paintHostsConfig(); throw e; });
+  }
+  function postKey(key) { return llmPost("key", { key: key }).then(function (s) { takeHosts(s); return s; }); }
+  function urlHost(url) {                              // the host an address of before 2097 was: the Studio's own, LM Studio, Ollama, else vLLM
+    if (/\/lab\/llm\/v1/.test(url)) return "own";
+    if (/:1234(\/|$)/.test(url)) return "lmstudio";
+    if (/:11434(\/|$)/.test(url)) return "ollama";
+    return "vllm";
+  }
+  // Once: what this browser held before 2097 moves to the lab. The key a page kept (1012's Remember) goes to the Studio and leaves the browser (one the
+  // Studio keeps already stays, and the browser's goes); the chat server's address becomes its host's, ticked; the Writer's «engine» becomes that host.
+  // A test page (?scope=) never moves a key, nor takes anything out of the browser: its files are its own, the browser may be the user's
+  // HERESY 2157 (the audit's review of 2097, 06.11.2026): the key goes to the lab only from a page on this computer (loopback) or over https; a page over
+  // plain http from another computer sent it in the clear once, the very thing 2138 keeps the http hand-over from doing. There it stays where it was
+  // (the browser), is not sent, and the page says once on this device where to put it in (a ruach.* mark, never mirrored); a key the Studio keeps
+  // already sends nothing, and the browser's goes as before
+  function lineSafe(protocol, host) {                 // this computer (loopback), or https: a key sent there crosses no network in the clear
+    return protocol === "https:" || /^(localhost|127(\.\d{1,3}){3}|\[::1\]|::1)$/i.test(host) || /\.localhost$/i.test(host);
+  }
+  // the browser's key, decided: "send" (to the lab, then out of the browser), "drop" (the Studio keeps one: out of the browser, nothing sent), "hold" (stays)
+  function keyMove(key, studioHas, safe) { return !key ? "" : studioHas ? "drop" : safe ? "send" : "hold"; }
+  var KEY_HELD = "ruach.orKeyHeld";
+  function keyHeld() {                                 // said once on this device
+    if (recall(KEY_HELD)) return false;
+    store(KEY_HELD, String(Date.now()));
+    toast(tr("The OpenRouter key this browser kept stays in it: over plain http from another computer it would cross the network in the clear. Put it in under Engine → Writer and Artwork on the Studio's https page, or on the Studio's own computer"), "warn");
+    return true;
+  }
+  window.ruachKeyMove = { move: keyMove, safe: lineSafe, held: keyHeld };   // for the checks
+  function migrate(d) {
+    var mine = !LLM_SCOPE, key = mine ? (recall("yue2.orKey") || "").trim() : "", steps = Promise.resolve();
+    if (keyMove(key, LLM.key.set, lineSafe(location.protocol, location.hostname)) === "hold") {
+      keyHeld();
+      key = "";                                        // not sent, not taken out of the browser
+    }
+    if (key) steps = steps.then(function () { return LLM.key.set ? null : postKey(key); })
+      .then(function () { store("yue2.orKey", null); }, function () { /* the Studio did not take it: it waits in this browser for the next start */ });
+    return steps.then(function () {
+      var url = (recall("yue2.chatUrl") || "").trim(), a = assistSaved(), plan = {}, to = url ? urlHost(url) : "";
+      if (LLM.exists || (d && d.exists)) { if (mine && url) store("yue2.chatUrl", null); return; }   // moved already, from another browser or door
+      if (!url && !key && !a.provider) return;          // nothing here to move: the defaults stand until a first change writes them
+      if (to) plan[to] = to === "own" ? { active: true } : { url: url, active: true };
+      if (a.provider === "openrouter" && LLM.key.set) plan.openrouter = { active: true };
+      return llmPost("hosts", { migrate: plan }).then(function (s) {
+        takeHosts(s);
+        if (a.provider === "engine" || a.provider === "openrouter") keepWant(a.provider === "openrouter" ? "openrouter" : (to || "own"));
+        if (mine && url) store("yue2.chatUrl", null);
+      });
+    });
+  }
+
+  // Only a host ticked is asked; an answer under 8 s old is used again (a room entered, a drawer opened), a change or a test asks afresh
+  function refreshHosts(force, only) {
+    return llmReady().then(function () {
+      return Promise.all(LLM.ids.filter(function (id) { return !only || only === id; }).map(function (id) {
+        if (!llmOn(id)) { forget(id); paintHost(id); return null; }
+        if (!force && LLM.st[id] && Date.now() - (LLM.at[id] || 0) < HOST_FRESH) return LLM.st[id];
+        if (!force && LLM.asking[id]) return LLM.asking[id];
+        var gen = LLM.gen[id] = (LLM.gen[id] || 0) + 1;
+        var p = hostStatus(id).catch(function (e) { return { configured: true, available: false, models: [], loaded: null, use: null, error: e.message }; })
+          .then(function (s) {
+            if (LLM.gen[id] !== gen) return LLM.st[id] || null;   // its switch or address changed meanwhile: a newer answer is on its way
+            s.id = id;
+            LLM.st[id] = s;
+            LLM.at[id] = Date.now();
+            delete LLM.asking[id];
+            paintHost(id);
+            return s;
+          });
+        LLM.asking[id] = p;
+        paintHost(id);
+        return p;
+      }));
+    });
+  }
+  function hostModel(id) {                             // the model the Writer writes with there: its pick among those loaded, else the first loaded
+    var s = LLM.st[id];
+    if (!s || !s.available) return null;
+    if (id === "openrouter") return orUse();
+    var list = s.loaded ? s.loaded : (s.use ? [s.use] : []), m = LLM.models[id];
+    return m && list.indexOf(m) >= 0 ? m : (s.use || null);
+  }
+  function usable(id) { return llmOn(id) && !!hostModel(id); }
+  function writerPick() {
+    if (LLM.ids.indexOf(LLM.want) >= 0 && usable(LLM.want)) return LLM.want;
+    for (var i = 0; i < LLM.ids.length; i++) if (usable(LLM.ids[i])) return LLM.ids[i];
+    return "";
+  }
+  // what the old refreshChat said, for the pick: {configured, available, use, conn, base, error}; with none to write, the host that explains why
+  function writerState() {
+    var id = writerPick();
+    LLM.pick = id;
+    if (id) return { configured: true, available: true, use: hostModel(id), conn: id, base: id === "openrouter" ? "openrouter.ai" : hostBase(id) };
+    var on = LLM.ids.filter(llmOn), why = on.indexOf(LLM.want) >= 0 ? LLM.want : (on[0] || ""), s = (why && LLM.st[why]) || {};
+    return { configured: on.length > 0, available: !!s.available, use: null, conn: why, base: why === "openrouter" ? "openrouter.ai" : (why ? hostBase(why) : ""),
+             error: s.error, nokey: !!s.nokey, none: true };
+  }
+  function writerWhy(st) {
+    if (!st.configured) return "No writer is ticked under Engine → Writer and Artwork";
+    if (st.nokey) return st.error;
+    if (!st.available) return st.error || LLM_NAME[st.conn] + " is not answering";
+    return "No model is loaded in the chat server; load one there (this page never loads one)";
+  }
+  function refreshWriter(force) {
+    return refreshHosts(force).then(function () { var s = writerState(); paintWriter(s); return s; });
+  }
+  function viaOf(conn, model) { return conn === "openrouter" ? model + " on OpenRouter" : conn === "own" ? model : model + " on " + LLM_NAME[conn]; }
+
+  // ---- what the hosts show: Engine → Writer and Artwork
+  function paintHost(id) {
+    var on = llmOn(id), s = LLM.st[id], test = $(LLM_TEST[id]), pane = document.querySelector('.llm-pane[data-llm="' + id + '"]');
+    if (test) test.disabled = !on || !LLM.lab || !!LLM.asking[id];
+    if (pane) pane.classList.toggle("is-off", !on);
+    if (id === "own") return;                          // its pill and its hint say what the lab knows of it (paintOwn)
+    var pill = $(id === "openrouter" ? "orState" : id + "State"), hint = $(id === "openrouter" ? "orHint" : id + "Hint"), text, kind;
+    if (!pill) return;
+    if (!LLM.lab) { text = "not set"; kind = "missing"; }
+    else if (!on) { text = "inactive"; kind = "missing"; }
+    else if (!s) { text = "checking"; kind = "missing"; }
+    else if (s.nokey) { text = "no key"; kind = "bad"; }
+    else if (!s.available) { text = "not answering"; kind = "bad"; }
+    else if (!hostModel(id)) { text = "no model loaded"; kind = "bad"; }
+    else { text = "ready"; kind = "ready"; }
+    pill.textContent = text;
+    pill.dataset.s = kind;
+    if (!hint) return;
+    hint.textContent = !LLM.lab ? "The lab does not answer: the writers are read again when it is back."
+      : !on ? (id === "openrouter" ? "Not ticked: OpenRouter is never asked, not even for its list of models." : "Not ticked: never asked. Its address is kept.")
+      : !s ? ""
+      : s.nokey ? s.error
+      : !s.available ? (s.error || "")
+      : id === "openrouter" ? "Asked through the Studio, which adds the key: the brief and the song go to openrouter.ai."
+      : s.use ? "Loaded now: " + s.use + ". This page uses it as is and never loads, switches or unloads a model."
+      : "The server answers but reports no loaded model. Load one there first.";
+  }
+  function paintHostsConfig() {
+    if (!LLM.hosts) return;
+    LLM.ids.forEach(function (id) {
+      var box = $(LLM_ON[id]);
+      if (box) { box.checked = llmOn(id); box.disabled = !LLM.lab; }
+      if (LLM_DEFAULT[id] && $(id + "Url")) {
+        var f = $(id + "Url");
+        if (document.activeElement !== f) f.value = (LLM.hosts[id] && LLM.hosts[id].url) || "";
+        f.placeholder = LLM_DEFAULT[id];
+      }
+      paintHost(id);
+    });
+    if ($("orKeySay")) $("orKeySay").textContent = LLM.key.set
+      ? "A key is kept: …" + LLM.key.tail + ". It lives in the Studio's settings on this machine, never in a browser; the Studio adds it to each call to OpenRouter."
+      : "No key is kept yet: openrouter.ai gives one under Settings → Keys.";
+    if ($("orKeyForget")) $("orKeyForget").disabled = !LLM.key.set || !LLM.lab;
+    if ($("orKeySave")) $("orKeySave").disabled = !LLM.lab;
+    if ($("orKeyNew")) $("orKeyNew").placeholder = LLM.key.set ? "…" + LLM.key.tail : "sk-or-…";
+    var dm = $("orDefault");
+    if (dm) {
+      if (document.activeElement !== dm) dm.value = (LLM.hosts.openrouter && LLM.hosts.openrouter.model) || "";
+      dm.placeholder = LLM_MODEL;
+    }
+    if ($("llmCors")) $("llmCors").textContent = location.protocol === "https:"
+      ? "Over https the Studio asks vLLM, LM Studio and Ollama through its lab, from its own machine: an address is as that machine sees it."
+      : "This browser asks vLLM, LM Studio and Ollama itself: each needs CORS on in its settings, or this page opened from the same machine name.";
+    if (window.HeresyChoices) all("#view-engine .eg-writer, #view-engine .eg-art").forEach(function (c) { window.HeresyChoices.within(c); });
+  }
+
+  // ---- what the rooms show: the Writer's line and its pick, the Creator's idea writer, the Chat Server button
+  function openEngineAt(tab) {
+    if ($("view-engine").classList.contains("is-hidden")) show("engine");
+    engineTab(tab);
+  }
+  function paintAssistLine(st) {
     var el = $("assistLine");
     if (!el) return;
-    if ($("assistProvider") && $("assistProvider").value === "openrouter") {
-      el.dataset.s = "ready"; el.textContent = "Writer: OpenRouter, with your key; the brief and the song go to openrouter.ai.";
-      return;
+    st = st || writerState();
+    el.textContent = "";
+    var line = document.createElement("span");
+    el.appendChild(line);
+    if (st.use && st.conn === "openrouter") line.textContent = "Writer: " + st.use + " on OpenRouter, asked through the Studio, which adds your key; the brief and the song go to openrouter.ai.";
+    else if (st.use) line.textContent = "Writer: " + st.use + " at " + st.base + ", ready.";
+    else if (!st.configured) line.textContent = "Writer: no writer is ticked under Engine → Writer and Artwork.";
+    else if (st.available && !st.nokey) line.textContent = "Writer: the chat server at " + st.base + " answers, but has no model loaded: load one there.";
+    else line.textContent = "Writer: none of the writers ticked answers (" + LLM.ids.filter(llmOn).map(function (id) { return LLM_SHORT[id]; }).join(", ") + ").";
+    el.dataset.s = st.use ? "ready" : (st.configured && st.available && !st.nokey ? "warn" : "bad");
+    if (st.use && LLM.want && LLM.want !== st.conn && llmOn(LLM.want)) {   // the Writer's own pick is ticked but cannot write now: said, and the next writes
+      var also = document.createElement("span");
+      also.className = "assist-line-also";
+      also.textContent = LLM_NAME[LLM.want] + " does not answer now.";
+      el.appendChild(document.createTextNode(" "));
+      el.appendChild(also);
     }
-    status = status || CHAT.status || {};
-    var base = status.base || chatBase() || "";
-    if (!status.configured) { el.dataset.s = "bad"; el.textContent = "Writer: no chat server set. Engine → Chat server (vLLM, LM Studio, Ollama), or choose OpenRouter below."; }
-    else if (!status.available && OWN.here && OWN.here.length && OWN.server && base !== ownBase()) {   // HERESY 1826: the Studio's own stands ready: offered
-      el.dataset.s = "bad"; el.textContent = tr("Writer: the chat server at {0} does not answer. The Studio's own Writer is here:").replace("{0}", base) + " ";
-      var ob = document.createElement("button"); ob.type = "button"; ob.className = "btn small"; ob.textContent = tr("Use this writer");
-      ob.addEventListener("click", function () { $("ownUse").click(); refreshChat().catch(function () {}); });
+    if (st.use) return;
+    var go = document.createElement("button");
+    go.type = "button"; go.className = "btn small"; go.textContent = "Engine → Writer and Artwork";
+    go.addEventListener("click", function () { openEngineAt("rooms"); });
+    el.appendChild(document.createTextNode(" "));
+    el.appendChild(go);
+    var own = OWN.here && OWN.here.length && OWN.server;
+    if (own && !llmOn("own")) {                        // HERESY 1826: the Studio's own stands ready, not ticked: offered
+      var ob = document.createElement("button");
+      ob.type = "button"; ob.className = "btn small"; ob.textContent = "Use this writer";
+      ob.addEventListener("click", function () { $("ownUse").click(); });
+      el.appendChild(document.createTextNode(" "));
       el.appendChild(ob);
     }
-    else if (!status.available) { el.dataset.s = "bad"; el.textContent = "Writer: the chat server at " + base + " does not answer. Start it there, or choose OpenRouter below. (Checked just now; entering the Writer checks again.)"; }
-    else if (!status.use) { el.dataset.s = "warn"; el.textContent = "Writer: the chat server at " + base + " answers, but has no model loaded: load one there."; }
-    else { el.dataset.s = "ready"; el.textContent = "Writer: " + status.use + " at " + base + ", ready."; }
   }
-  function paintChat(status) {
-    paintAssistLine(status);
-    var pill = $("chatState");
-    pill.textContent = !status.configured ? "not set" : (!status.available ? "not answering" : (status.use ? "ready" : "no model loaded"));
-    pill.dataset.s = status.use ? "ready" : (status.configured ? "bad" : "missing");
-    $("chatHint").textContent = status.use
-      ? "Loaded now: " + status.use + ". This page uses it as is and never loads, switches or unloads a model."
-      : (status.available ? "The server answers but reports no loaded model. Load one there first."
-         : (status.error || "Uses whatever model the server has loaded. This page never loads, switches or unloads a model on it."));
-    $("museModel").innerHTML = status.use
-      ? escape(status.use) + ' <span class="dim">loaded on the chat server</span>'
-      : '<span class="dim">none yet · ' + (!status.configured ? "set the chat server under Engine"
-        : (status.available ? "load a model in the chat server" : "the chat server is not answering")) + "</span>";
-    $("museBtn").disabled = !status.use;
-    if ($("ownUse")) paintOwn(OWN);   // HERESY 1811: «Use this writer» lit while the Writer asks the Studio's own
-    // the state is the Chat Server button; what to do about it is its tip
+  function paintPicker(st) {
+    var sel = $("assistProvider");
+    if (!sel) return;
+    var ok = LLM.ids.filter(usable), pick = st.use ? st.conn : "";
+    var opts = ok.map(function (id) { return '<option value="' + id + '">' + escape(LLM_SHORT[id]) + "</option>"; }).join("");
+    if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; }
+    if (pick && sel.value !== pick) sel.value = pick;
+    all("#assistDrawer .or-only").forEach(function (e) { e.classList.toggle("is-hidden", pick !== "openrouter"); });
+    all("#assistDrawer .local-only").forEach(function (e) { e.classList.toggle("is-hidden", !pick || pick === "openrouter"); });
+    var lm = $("assistLocalModel");
+    if (lm && pick && pick !== "openrouter") {
+      var s = LLM.st[pick] || {}, list = s.loaded ? s.loaded : (s.use ? [s.use] : []);
+      var o2 = list.map(function (m) { return '<option value="' + escape(m) + '" translate="no">' + escape(m) + "</option>"; }).join("");
+      if (lm.dataset.opts !== o2) { lm.innerHTML = o2; lm.dataset.opts = o2; }
+      if (lm.value !== st.use) lm.value = st.use;
+    }
+    var row = sel.closest(".assist-provider");
+    if (row) row.classList.toggle("is-hidden", !ok.length);   // no writer answers: no empty picker; the line above says where to go
+    if (window.HeresyChoices) window.HeresyChoices.within(row);
+  }
+  function paintWriter(st) {
+    st = st || writerState();
+    paintAssistLine(st);
+    paintPicker(st);
+    if ($("museModel")) $("museModel").innerHTML = st.use
+      ? escape(st.use) + ' <span class="dim">· ' + escape(LLM_NAME[st.conn]) + "</span>"
+      : '<span class="dim">' + escape(!st.configured ? "none yet · tick a writer under Engine → Writer and Artwork"
+        : (st.available && !st.nokey ? "none yet · load a model in the chat server" : "none yet · the writer is not answering")) + "</span>";
+    if ($("museBtn")) $("museBtn").disabled = !st.use;
+    if ($("ownUse")) paintOwn(OWN);                    // HERESY 1811: «Use this writer» lit while the Writer writes with the Studio's own
     var link = $("chatLink");
-    link.dataset.s = status.available ? "on" : "off";
-    link.dataset.tip = !status.configured ? "Set the chat server address under Engine"
-      : (!status.available ? "The chat server is not answering — check its address under Engine"
-        : (status.use ? "Loaded now: " + status.use : "The server answers but has no model loaded: load one there first")) + ". Click to check again.";
-    if (tipFor === link) showTip(link);
-    if (!$("museBtn").dataset.busy || $("museBtn").dataset.busy === "0") {
+    if (link) {                                        // the state is the Chat Server button; what to do about it is its tip
+      link.dataset.s = st.use ? "on" : "off";
+      link.dataset.tip = (st.use ? "Writing with " + st.use + " on " + LLM_NAME[st.conn]
+        : !st.configured ? "No writer is ticked under Engine → Writer and Artwork"
+          : st.nokey ? "OpenRouter has no key yet: put it in under Engine → Writer and Artwork"
+            : st.available ? LLM_NAME[st.conn] + " answers but has no model loaded: load one there first"
+              : LLM_NAME[st.conn] + " is not answering — check it under Engine → Writer and Artwork") + ". Click to check again.";
+      if (tipFor === link) showTip(link);
+    }
+    if ($("museBtn") && (!$("museBtn").dataset.busy || $("museBtn").dataset.busy === "0")) {
       $("museStatus").textContent = "";
       $("museStatus").classList.remove("bad");
     }
-  }
-
-  function refreshChat() {
-    return chatStatus().then(function (status) { paintChat(status); return status; });
   }
 
   // Structured output first, then plain chat, then the system turn folded into
@@ -9895,10 +10836,22 @@
   // worth another shape.
   // HERESY 1010: temperature is optional — left out it stays 0.9 (the idea writer), null lets
   // the server choose, as Studio's "Automatic"; top_p goes with the page's own temperature only.
-  function chatComplete(messages, model, maxTokens, schema, temperature) {
+  // HERESY 2097: on the host given, else the Writer's pick; OpenRouter through the lab, which adds the key: one shape, as 1012 asked it
+  function chatComplete(messages, model, maxTokens, schema, temperature, conn) {
+    conn = conn || LLM.pick || writerPick();
+    if (!conn) return Promise.reject(new Error(writerWhy(writerState())));
     var payload = { model: model, messages: messages, max_tokens: maxTokens, stream: false };
     if (temperature === undefined) { payload.temperature = 0.9; payload.top_p = 0.95; }
     else if (temperature !== null) payload.temperature = temperature;
+    if (conn === "openrouter") {
+      return chatCall(llmUrl("openrouter/chat/completions"), payload).catch(function (error) {
+        var d = null;
+        try { d = JSON.parse(error.text || "null"); } catch (e) { d = null; }
+        var e2 = new Error(!error.status ? "The Studio did not answer: " + error.message : d && d.setup ? errText(d) : "OpenRouter: " + (errText(d) || error.message));
+        e2.status = error.status;
+        throw e2;
+      });
+    }
     var attempts = [];
     if (schema) attempts.push(Object.assign({}, payload, { response_format: { type: "json_schema", json_schema: { name: "brief", schema: schema } } }));
     attempts.push(payload);
@@ -9907,7 +10860,7 @@
     if (system && rest.length) {
       attempts.push(Object.assign({}, payload, { messages: [Object.assign({}, rest[0], { content: system + "\n\n" + rest[0].content })].concat(rest.slice(1)) }));
     }
-    var base = chatBase(), n = 0;
+    var base = hostBase(conn), n = 0;
     function next(lastError) {
       if (n >= attempts.length) return Promise.reject(lastError);
       var attempt = attempts[n++];
@@ -9920,16 +10873,34 @@
     return next(null);
   }
 
-  window.ruachChat = { refresh: refreshChat, complete: chatComplete };   // HERESY 1824: the Videographer writes with the Writer's server
+  window.ruachChat = { refresh: function () { return refreshWriter(false); },   // HERESY 1824: the Videographer writes with the Writer's pick (2097)
+                       complete: function (messages, model, max, schema, temperature) { return chatComplete(messages, model, max, schema, temperature, LLM.pick); } };
+  // HERESY 2097: the checks' hand on the hosts: one ticked (its address, when given) and made the Writer's pick; a patch; what the page knows
+  window.HeresyLLM = {
+    use: function (id, url) {
+      var p = {}, patch = {};
+      p.active = true;
+      if (url !== undefined && LLM_DEFAULT[id]) p.url = url;
+      patch[id] = p;
+      forget(id);
+      keepWant(id);
+      return saveHosts(patch).then(function () { return refreshWriter(true); });
+    },
+    set: function (patch, ask) {                     // ask false: kept, nothing asked yet (the next check or click asks)
+      Object.keys(patch).forEach(forget);
+      return saveHosts(patch).then(function () { return ask === false ? writerState() : refreshWriter(true); });
+    },
+    refresh: function (force) { return refreshWriter(force !== false); },
+    state: function () { return { hosts: LLM.hosts, key: LLM.key, want: LLM.want, pick: writerPick(), lab: LLM.lab, st: LLM.st }; },
+    want: keepWant
+  };
   window.ruachCurrentTake = function () { return STATE.take; };
   window.ruachOpenTake = function (name) { openTake(name); };   // HERESY 1827: the Videographer opens a take it found
   window.ruachFindTakeFull = function (name) { return findTake(name); };
-  $("chatUrl").value = recall("yue2.chatUrl") || "";
   // HERESY 1811 (Viktor 28.10.2026: «прикручивай как Local Studio LLM… и пусть это будет опция по умолчанию для установок, где VRAM позволяет. Так не
-  // нужно будет юзеру коннектиться на внешние сервисы»): the Studio's own writer behind the lab's /llm/v1. Where its weights are here and no chat server
-  // was ever chosen, the Writer asks it: that default follows the page's own address and is not stored, so it holds through the https door too
-  var OWN = {}, OWN_SCOPE = (function () { try { return new URLSearchParams(location.search).get("scope") || ""; } catch (e) { return ""; } })();
-  function ownBase() { return location.origin + "/lab/llm/v1"; }
+  // нужно будет юзеру коннектиться на внешние сервисы»): the Studio's own writer behind the lab's /llm/v1; since 2097 a host of its own, ticked by
+  // default where its weights and llama-server are here (the lab's default, user/llm.json)
+  var OWN = {}, OWN_SCOPE = LLM_SCOPE;
   function paintOwn(st) {
     OWN = st || {};
     var here = OWN.here || [], ready = here.length > 0 && !!OWN.server;
@@ -9940,68 +10911,104 @@
     if (OWN.variant) $("ownVariant").value = OWN.variant;
     $("ownVariant").disabled = here.length < 2;
     $("ownUse").disabled = !ready;
-    $("ownUse").classList.toggle("is-on", ready && chatBase() === ownBase());
+    $("ownUse").classList.toggle("is-on", ready && LLM.pick === "own");
     $("ownStop").disabled = !OWN.running;
+    // HERESY 2060 (Viktor 04.11.2026: «И твои трёхсуточного бдения долги тоже, плиз»): a writer an earlier lab left on its card and this lab took over
+    // says so in its pill's tip; it leaves as the Studio's own does
+    // HERESY 2063 (Viktor 04.11.2026: «И твои трёхсуточного бдения долги тоже, плиз»; 2060's re-audit): a writer left running on the processor has no card
+    // to free, so its tip says the processor
+    if (OWN.running && OWN.adopted) $("ownState").dataset.tip = OWN.gpu === null || OWN.gpu === undefined
+      ? "Left running on the processor by an earlier lab and taken over as the Studio's own: Unload stops it, and it leaves after 10 minutes without a question"
+      : "Left on its card by an earlier lab and taken over as the Studio's own: Unload frees it, and it leaves after 10 minutes without a question";
+    else delete $("ownState").dataset.tip;
     $("ownHint").textContent = !here.length ? "Not here yet: Engine → Models and LoRAs → Studio writer fetches it (6.7 GB; compact 5.5 GB)."
       : (!OWN.server ? "Its weights are here; llama.cpp's llama-server is not built yet: launcher/extras.sh builds it."
         : "Qwopus3.5-9B-v3 (Jackrong's, on Qwen3.5-9B, Apache-2.0), quantized with AutoRound, through llama.cpp on this machine: nothing leaves it. It starts at the first question and leaves the card after 10 minutes without one.");
   }
   function ownStatus() {
-    return fetch("/lab/llm/status").then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }).then(function (st) {
-      paintOwn(st);
-      if (!recall("yue2.chatUrl") && (st.here || []).length && st.server && $("chatUrl").value !== ownBase()) {
-        $("chatUrl").value = ownBase();
-        refreshChat().catch(function () {});
-      }
-      return st;
-    });
+    return fetch("/lab/llm/status").then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }).then(function (st) { paintOwn(st); return st; });
   }
   function ownPost(path, body) {
     return fetch("/lab/llm/" + path + (OWN_SCOPE ? "?scope=" + encodeURIComponent(OWN_SCOPE) : ""), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) })
       .then(function (r) { return r.json(); }).then(paintOwn).catch(function () { ownStatus(); });
   }
-  $("ownUse").addEventListener("click", function () {
-    $("chatUrl").value = ownBase();
-    $("chatUrl").dispatchEvent(new Event("change", { bubbles: true }));
-    paintOwn(OWN);
+  $("ownUse").addEventListener("click", function () {   // HERESY 2097: ticked if it was not, and the Writer's pick
+    keepWant("own");
+    (llmOn("own") ? Promise.resolve() : saveHosts({ own: { active: true } })).then(function () { return refreshWriter(true); })
+      .catch(function (e) { toast(e.message, "bad"); });
   });
   $("ownStop").addEventListener("click", function () { ownPost("stop"); });
   $("ownVariant").addEventListener("change", function () { ownPost("variant", { variant: this.value }); });
-  ownStatus();
-  all("[data-chat-url]").forEach(function (b) {   // HERESY 1012
-    b.addEventListener("click", function () {
-      $("chatUrl").value = b.dataset.chatUrl;
-      $("chatUrl").dispatchEvent(new Event("change", { bubbles: true }));
-    });
-  });
-  $("chatUrl").addEventListener("change", function () {
-    store("yue2.chatUrl", this.value.trim() || null);
-    refreshChat().catch(function () {});
-  });
 
-  $("chatTest").addEventListener("click", function () {
-    var button = this;
+  // ---- the hosts' own controls
+  function testHost(id, button) {
+    if (!llmOn(id)) return toast("Tick it first: a writer not ticked is never asked", "bad");
     button.disabled = true;
-    store("yue2.chatUrl", $("chatUrl").value.trim() || null);
-    var started = performance.now();
-    refreshChat().then(function (status) {
-      if (!status.configured) throw new Error("Type the chat server's address first");
-      if (!status.available) throw new Error(status.error || "The chat server is not answering");
-      if (!status.use) throw new Error("No model is loaded in the chat server; load one there (this page never loads one)");
+    var started = 0;
+    (id === "openrouter" ? orList(true) : Promise.resolve()).then(function () { return refreshHosts(true, id); }).then(function () {
+      var s = LLM.st[id] || {}, model = hostModel(id);
+      if (s.nokey) throw new Error(s.error);
+      if (!s.available) throw new Error(s.error || LLM_NAME[id] + " is not answering");
+      if (!model) throw new Error("No model is loaded in the chat server; load one there (this page never loads one)");
+      if (id === "openrouter") model = (LLM.hosts.openrouter && LLM.hosts.openrouter.model) || orUse();
       started = performance.now();
-      return chatComplete([{ role: "user", content: "Reply with the single word OK." }], status.use, 8).then(function (response) {
+      return chatComplete([{ role: "user", content: "Reply with the single word OK." }], model, id === "openrouter" ? 16 : 8, null, undefined, id).then(function (response) {
         var reply = ((((response.choices || [])[0] || {}).message || {}).content || "").trim().slice(0, 40);
-        toast("Chat server OK: " + status.use + " answered \u201c" + reply + "\u201d in " + ((performance.now() - started) / 1000).toFixed(2) + " s", "good");
+        toast(LLM_NAME[id] + " OK: " + model + " answered “" + reply + "” in " + ((performance.now() - started) / 1000).toFixed(2) + " s", "good");
       });
     }).catch(function (error) { toast(error.message, "bad"); })
-      .then(function () { button.disabled = false; });
+      .then(function () { paintHost(id); paintWriter(); });
+  }
+  LLM.ids.forEach(function (id) {
+    var box = $(LLM_ON[id]), field = LLM_DEFAULT[id] ? $(id + "Url") : null, test = $(LLM_TEST[id]);
+    if (box) box.addEventListener("change", function () {
+      var patch = {};
+      patch[id] = { active: box.checked };
+      forget(id);
+      saveHosts(patch).then(function () { return refreshWriter(true); }).catch(function (e) { toast(e.message, "bad"); paintWriter(); });
+    });
+    if (field) field.addEventListener("change", function () {
+      var patch = {};
+      patch[id] = { url: field.value.trim() };
+      forget(id);
+      saveHosts(patch).then(function () { return refreshWriter(true); }).catch(function (e) { toast(e.message, "bad"); });
+    });
+    if (test) test.addEventListener("click", function () { testHost(id, test); });
   });
+  if ($("orDefault")) $("orDefault").addEventListener("change", function () {
+    saveHosts({ openrouter: { model: this.value.trim() } }).then(function () { paintWriter(); }).catch(function (e) { toast(e.message, "bad"); });
+  });
+  function keepKey() {                                 // the key goes to the lab and leaves the field; the first one ticks OpenRouter
+    var k = $("orKeyNew").value.trim();
+    if (!k) { $("orKeyNew").focus(); return toast("Paste the OpenRouter key first", "bad"); }
+    var first = !LLM.key.set;
+    $("orKeySave").disabled = true;
+    postKey(k).then(function () {
+      $("orKeyNew").value = "";
+      toast("The OpenRouter key is kept by the Studio", "good");
+      forget("openrouter");
+      if (first && !llmOn("openrouter")) return saveHosts({ openrouter: { active: true } });
+    }).then(function () { return refreshWriter(true); })
+      .catch(function (e) { toast(e.message, "bad"); }).then(function () { paintHostsConfig(); });
+  }
+  if ($("orKeySave")) $("orKeySave").addEventListener("click", keepKey);
+  if ($("orKeyNew")) $("orKeyNew").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); keepKey(); } });
+  if ($("orKeyForget")) $("orKeyForget").addEventListener("click", function () {
+    window.HeresyDialog.confirm("Forget the OpenRouter key the Studio keeps?\n\nOpenRouter is then not asked until a key is put in again.",
+      { ok: "Forget the key", cancel: "Keep it" }).then(function (yes) {
+      if (!yes) return;
+      forget("openrouter");
+      return postKey("").then(function () { return saveHosts({ openrouter: { active: false } }); }).then(function () { return refreshWriter(true); })
+        .then(function () { toast("The OpenRouter key is forgotten", "good"); });
+    }).catch(function (e) { toast(e.message, "bad"); });
+  });
+  llmReady().then(function () { paintWriter(); });
 
-  $("chatLink").addEventListener("click", function () { refreshChat().catch(function () {}); });
+  $("chatLink").addEventListener("click", function () { refreshWriter(true).catch(function () {}); });
 
   $("museDrawer").addEventListener("toggle", function () {
     if (this.open) paintStructureHint();
-    if (this.open) refreshChat().catch(function () {});
+    if (this.open) refreshWriter(false).catch(function () {});
   });
 
   $("idea").addEventListener("keydown", function (event) {
@@ -10015,11 +11022,11 @@
   function writeBrief() {
     var idea = $("idea").value.trim();
     if (!idea) { $("idea").focus(); return toast("Describe the song in a line first", "bad"); }
-    var button = $("museBtn"), started = Date.now(), model = null;
+    var button = $("museBtn"), started = Date.now(), model = null, conn = "";
     button.dataset.busy = "1";
     $("museLabel").textContent = $("autoRun").checked ? "Writing, then generating…" : "Writing…";
     $("museStatus").classList.remove("bad");
-    $("museStatus").textContent = "asking the chat server";
+    $("museStatus").textContent = "asking the writer";
     var ticker = setInterval(function () {
       $("museStatus").textContent = "writing… " + Math.round((Date.now() - started) / 1000) + "s";
     }, 1000);
@@ -10033,18 +11040,16 @@
     var retried = false, finishReason = null, schema = MUSE_SCHEMA;
 
     function ask(history) {
-      return chatComplete(history, model, 4096, schema).then(function (response) {
+      return chatComplete(history, model, 4096, schema, undefined, conn).then(function (response) {
         var choice = (response.choices || [])[0] || {};
         finishReason = choice.finish_reason || finishReason;
         return (choice.message || {}).content || "";
       });
     }
 
-    refreshChat().then(function (status) {
-      if (!status.configured) throw new Error("Set the chat server address under Engine first");
-      if (!status.available) throw new Error(status.error || "The chat server is not answering at " + status.base);
-      if (!status.use) throw new Error("No model is loaded in the chat server. Load one there; this page never loads or switches models.");
-      model = status.use;
+    refreshWriter(false).then(function (status) {   // HERESY 2097: the Writer's pick among the hosts ticked that answer
+      if (!status.use) throw new Error(writerWhy(status));
+      model = status.use; conn = status.conn;
       return ask(messages);
     }).then(function (content) {
       var parsed = looseBrief(content);
@@ -10414,7 +11419,12 @@
     rooms: { select: "fontRooms", generic: "sans-serif", own: "Noto Sans", back: "var(--sans)" },   // HERESY 1428: the rooms' names in the bar
     // HERESY 1437: the sections' names on the wave and the buttons with words
     marks: { select: "fontMarks", generic: "monospace", own: "Raleway", back: '"IBM Plex Mono", monospace' },
-    buttons: { select: "fontButtons", generic: "sans-serif", own: "Jura", back: "var(--sans)" }
+    buttons: { select: "fontButtons", generic: "sans-serif", own: "Jura", back: "var(--sans)" },
+    // HERESY 2066 (Viktor 05.11.2026: «…для иврита… DavidCLM… для греков… GFS Didot, и в Движке в выборе шрифтов добавить именно выбор ИВРИТ и ГРЕЧЕСКИЙ, и под капотом матчить греков и семитов на эти шрифты»): the Hebrew and the
+    // Greek letters' own fonts over every role above (index.html's ruachScriptFonts: --scripts, first in each role's stack); no role variable of their
+    // own; «Same as the text» ("") leaves those letters to each role's font
+    hebrew: { select: "fontHebrew", generic: "serif", own: "David CLM", back: "", script: true },
+    greek: { select: "fontGreek", generic: "serif", own: "GFS Didot", back: "", script: true }
   };
   function fontOf(role) { var saved = savedFonts()[role]; return typeof saved === "string" ? saved : FONT_ROLES[role].own; }   // HERESY 1493: the one in effect
   // HERESY 1437: each role's size against the text's, −2…+2 pt by 1 (yue2.fontSizes), on top of the page's own text size.
@@ -10429,11 +11439,13 @@
   // the canvas' own fonts (the wave, its scope): the role's family and size; «as they were» (none chosen): the role's own back font
   window.ruachCanvasFont = function (role, px, weight) {
     var r = FONT_ROLES[role], fam = fontOf(role), step = fontSizes()[role] || 0;
-    return (weight ? weight + " " : "") + (px + step * 4 / 3) + "px " + (fam ? JSON.stringify(fam) + ", " + r.back : r.back);
+    var sc = (getComputedStyle(document.documentElement).getPropertyValue("--scripts") || "").trim();   // HERESY 2066: the Hebrew and Greek letters' first
+    return (weight ? weight + " " : "") + (px + step * 4 / 3) + "px " + (sc ? sc + ", " : "") + (fam ? JSON.stringify(fam) + ", " + r.back : r.back);
   };
   // HERESY 1274 (Viktor 09.10.2026: «Добавь ещё в движок шрифты Raleway, Roboto, Lato»): ten of the app's own, all in the Studio itself
   var APP_FONTS = ["Noto Sans", "Noto Sans Mono", "IBM Plex Sans", "IBM Plex Mono", "Bodoni Moda", "Space Grotesk", "Michroma", "Raleway", "Roboto", "Lato",
     "Liberation Mono", "Unbounded", "Tektur", "Jura"];               // HERESY 1426; 1428: three Michroma-like ones with Cyrillic and weights
+  var SCRIPT_FONTS = ["David CLM", "GFS Didot"];                      // HERESY 2066: the page's for their letters only (vendor/fonts.css)
   var COMMON_FONTS = ["Aptos", "Arial", "Avenir", "Avenir Next", "Bahnschrift", "Baskerville", "Calibri", "Cambria", "Candara",
     "Cantarell", "Cascadia Code", "Cascadia Mono", "Charter", "Consolas", "Constantia", "Corbel", "Courier New", "DejaVu Sans",
     "DejaVu Sans Mono", "DejaVu Serif", "Didot", "Fira Mono", "Fira Sans", "Franklin Gothic Medium", "Futura", "Garamond",
@@ -10452,9 +11464,12 @@
   function applyFonts() {
     var saved = savedFonts(), root = document.documentElement, sizes = fontSizes();
     Object.keys(FONT_ROLES).forEach(function (role) {
-      if (typeof saved[role] === "string") root.style.setProperty("--" + role, saved[role] ? JSON.stringify(saved[role]) + ", " + FONT_ROLES[role].back : "var(--sans)");
+      if (FONT_ROLES[role].script) return;                         // HERESY 2066: Hebrew and Greek below, over every role
+      // HERESY 2066: a chosen font behind the Hebrew and Greek letters' own (--scripts), as app.css' defaults are
+      if (typeof saved[role] === "string") root.style.setProperty("--" + role, saved[role] ? "var(--scripts), " + JSON.stringify(saved[role]) + ", " + FONT_ROLES[role].back : "var(--sans)");
       else root.style.removeProperty("--" + role);
     });
+    if (window.ruachScriptFonts) window.ruachScriptFonts(saved);   // HERESY 2066: index.html's, as before the first paint
     root.classList.toggle("fonts-buttons", !!fontOf("buttons"));   // HERESY 1437: a font dresses the buttons; «Same as the text», as they were; 1493 Jura unless so
     FONT_STEPS.forEach(function (r) { root.style.setProperty("--fsr-" + r, sizes[r] + "pt"); });   // HERESY 1493: 0 pt said too (app.css' own are −1 and +2)
     all("[data-fstep-say]").forEach(function (el) { var v = sizes[el.dataset.fstepSay] || 0; el.textContent = (v > 0 ? "+" : v < 0 ? "\u2212" : "") + Math.abs(v) + " pt"; });
@@ -10487,7 +11502,17 @@
       var system = systemFonts.slice();
       if (want && APP_FONTS.indexOf(want) < 0 && system.indexOf(want) < 0) system.push(want);   // kept from a longer list
       system = system.filter(function (x) { return APP_FONTS.indexOf(x) < 0; });   // HERESY 1426: the Studio's own once, among its own
+      // HERESY 2066: David CLM and GFS Didot never a role's whole font (the page has them for their letters only), unless chosen so before
+      system = system.filter(function (x) { return SCRIPT_FONTS.indexOf(x) < 0 || (x === want && !r.script); });
       select.textContent = "";
+      if (r.script) {                                               // HERESY 2066: «Same as the text», the Studio's own, a line, this computer's
+        select.appendChild(fontOption("", "Same as the text"));
+        select.appendChild(fontOption(r.own, r.own + " (default)"));
+        select.appendChild(document.createElement("hr"));
+        system.sort(function (a, b) { return a.localeCompare(b); }).forEach(function (family) { select.appendChild(fontOption(family, family)); });
+        select.value = want;
+        return;
+      }
       if (role === "heading") select.appendChild(fontOption("", "Same as the text"));   // HERESY 1426: Michroma is the default now
       if (role === "rooms" || role === "buttons") select.appendChild(fontOption("", "Same as the text"));   // HERESY 1428; 1437; 1493 a choice, not the default
       if (role === "marks") select.appendChild(fontOption("", "IBM Plex Mono, as they were"));            // HERESY 1437; 1493
@@ -10599,6 +11624,7 @@
       free_tempo: freeTempoOn(),                                                                     // HERESY 1416
       harmony: harmonyBody(),                                                                        // HERESY 1607
       abc_continue: !!($("abcOpening") && $("abcOpening").checked),                                  // HERESY 1609
+      instrumental: $("instrumental").checked,                                                       // HERESY 2136: kept over an F5
       steps: parseInt($("odeSteps").value, 10), duration: parseFloat($("maxLength").value),
       solver: $("odeSolver").value, nar_ladder: $("narDecode").value === "ladder",                   // HERESY 1768
       synth_batch_size: parseInt($("variations").value, 10), lm_batch_size: parseInt($("versions").value, 10),
@@ -10780,10 +11806,15 @@
       Promise.all([refreshSettings(), refreshHardware()]).then(function () {
         if (navigator.webdriver || /[?&]scope=/.test(location.search)) { refreshAccess(); return; }
         // HERESY 1429: who may open it is asked first (a studio whose user never decided), then the machine's scan, never at once
-        setTimeout(function () { accessFirst().then(function () { if (!recall(MACHINE_KEY)) machineScan(false); }); }, 1500);
+        // HERESY 2077 (Viktor 05.11.2026: «Да, модель по умолчанию предлагаем один раз обновляющимся.»): and then, once, the Studio's default offered to a Studio updated
+        // from an earlier version (defaultOffer, below machinePlan); not on the start whose scan meets a new Studio
+        setTimeout(function () {
+          var fresh = !recall(MACHINE_KEY);
+          accessFirst().then(function () { if (fresh) return machineScan(false); }).catch(function () { /* asked again at the next start */ })
+            .then(function () { return defaultOffer({ fresh: fresh }); }).catch(function () { /* a later start asks */ });
+        }, 1500);
       });
-      if (chatBase()) refreshChat().catch(function () {});
-      else paintChat({ configured: false, available: false, models: [], loaded: null, use: null });
+      refreshWriter(true).catch(function () {});      // HERESY 2097: only the hosts ticked are asked
       // a library that cannot be read is its own problem, not a server that is down
       refreshLibrary().catch(function (error) { toastOnce("library", "Could not read the song library: " + error.message, "bad"); });
     }).catch(function (error) {
@@ -10822,10 +11853,10 @@
     return out;
   }
   function applySetup(setup) {
-    var cur = buildRequest(false, false, true), req = Object.assign({}, cur, setup);
+    var cur = buildRequest(false, false, true), req = Object.assign({}, cur, { instrumental: $("instrumental").checked }, setup);   // HERESY 2136: the box as it stands
     if (STATE.codes) req.semantic_tokens = STATE.codes.tokens;
     loadRequestIntoForm(req, { title: fullTitle(), fromTake: STATE.codes ? STATE.codes.from : null,
-                               codesTitle: STATE.codes ? STATE.codes.title : undefined });
+                               codesTitle: STATE.codes ? STATE.codes.title : undefined, codesInstrumental: STATE.codes ? !!STATE.codes.instrumental : undefined });   // HERESY 2153
     if (typeof markChanged === "function") markChanged();
   }
   if (window.HeresyPresets) window.HeresyPresets.init({
@@ -11009,6 +12040,7 @@
     dawproject: function () { var t = dawTake(); return t ? dawProject(t).catch(function (e) { toast("No DAWproject: " + e.message, "bad"); throw e; }) : Promise.reject(new Error("no take in hand")); } });
   // HERESY 1169: new releases on GitHub (Engine → Updates) and the 💎 sets offered on a new studio and after an update
   if (window.HeresyPlaces) window.HeresyPlaces.init({ toast: toast });   // HERESY 1283: Engine → Folders
+  if (window.HeresyBackups) window.HeresyBackups.init({ toast: toast });   // HERESY 2083: Engine → Folders and Security → Backups of your data
   // HERESY 1289: Engine → Models and LoRAs; after a fetch the engine's lists are asked again (LoRAs it reads each time)
   if (window.HeresyWeights) window.HeresyWeights.init({ toast: toast, props: pollProps });
   // HERESY 1988: a take's family tree. HERESY 1992 (Viktor 01.11.2026: «Клик по реальному дублю подтягивает его в библиотеке, но не закрывает модалку…
@@ -11024,6 +12056,17 @@
     },
     playing: function () { return isPlaying() && STATE.playerTake ? STATE.playerTake.name : ""; },
     audio: audio,
+    // HERESY 2022: the take the player holds (playing or not), and its wave's click: that second, played
+    current: function () { return STATE.playerTake ? STATE.playerTake.name : ""; },
+    seek: function (name, t) {
+      var tk = findTake(name);
+      if (!tk) return;
+      var go = function () { try { audio.currentTime = Math.max(0, Math.min(t, (audio.duration || t + 1) - 0.05)); } catch (e) { /* not seekable yet */ } };
+      if (STATE.playerTake && STATE.playerTake.name === name && audio.getAttribute("src")) { go(); if (!isPlaying()) audio.play().catch(playRefused); return; }
+      STATE.playZone = document.body.dataset.tab === "collection" ? "collection" : "list";
+      playNow(tk);
+      audio.addEventListener("loadedmetadata", function once() { audio.removeEventListener("loadedmetadata", once); if (STATE.playerTake && STATE.playerTake.name === name) go(); });
+    },
     open: function (name) {
       var HC = window.HeresyCollection;
       if (document.body.dataset.tab === "collection" && HC && HC.reveal) HC.reveal(name); else openTake(name);
@@ -11142,7 +12185,7 @@
           STATE.playZone = document.body.dataset.tab === "collection" ? "collection" : "list";
           playNow(take);
         } },
-        HC.datasheet ? { icon: "\u2630", label: "Open the datasheet", hint: "all it was made with", action: function () { HC.datasheet(name); } } : null,
+        HC.datasheet ? { icon: "\u2630", label: "Datasheet", hint: "all it was made with", action: function () { HC.datasheet(name); } } : null,   // HERESY 2020
         { sep: true },
         { icon: "\u2744", label: "Frozen with its workspace", hint: "unfreeze it to act on the take", disabled: true }
       ].filter(Boolean));
@@ -11165,6 +12208,9 @@
     var bulkRows = bulk ? bulk.map(function (n) { return HC.row(n); }).filter(Boolean) : [], bulkArt = bulk ? bulk.filter(function (n) { return !!artUrl(n); }) : [];
     var items = [
       bulk ? { head: bulk.length + " checked: a line with a number acts on all of them" } : null,
+      // HERESY 2020 (Viktor 02.11.2026: «Уведи Лист и Паспорт в корень вверху как Листовка и Паспорт»): the take's two readings head its menu
+      HC && HC.openSheet && here === "collection" ? { icon: "\u25a4", label: "Sheet", action: function () { HC.openSheet(name); } } : null,
+      HC && HC.datasheet ? { icon: "\u2630", label: "Datasheet", hint: "all it was made with", action: function () { HC.datasheet(name); } } : null,
       here !== "post" && !take.session ? { icon: "✨", label: "Refine", action: go("post") } : null,   // HERESY 1877: the card's button, at the head
       { icon: now ? "❚❚" : "▶", label: now ? "Pause" : "Play", action: function () {
         if (now) return togglePlay();
@@ -11172,11 +12218,10 @@
         playNow(take);
       } },
       // HERESY 1059 (Viktor): the other rooms only, never the one you are in
-      here !== "create" ? { icon: "✎", label: "Open in the Creator", action: function () { openInCreator(name); } } : null,
-      here !== "post" && !take.session ? { icon: "\u2697", label: "Open in the Refiner", action: go("post") } : null,   // HERESY 1906: in «Open ›» too, where he looks for it
-      HC && HC.reveal && here !== "collection" ? { icon: "▦", label: "Open in the Librarian", action: function () { setTab("collection"); HC.reveal(name); } } : null,
-      HC && HC.openSheet && here === "collection" ? { icon: "▤", label: "Open the sheet", action: function () { HC.openSheet(name); } } : null,
-      HC && HC.datasheet ? { icon: "☰", label: "Open the datasheet", hint: "all it was made with", action: function () { HC.datasheet(name); } } : null,
+      // HERESY 2020 («`Открыть в ...` > Творец, Огранщик, Видеограф»): a room by its name in «Open in… ›»
+      here !== "create" ? { icon: "✎", label: "Open in the Creator", room: "Creator", action: function () { openInCreator(name); } } : null,
+      here !== "post" && !take.session ? { icon: "\u2697", label: "Open in the Refiner", room: "Refiner", action: go("post") } : null,   // HERESY 1906: in «Open ›» too, where he looks for it
+      HC && HC.reveal && here !== "collection" ? { icon: "▦", label: "Open in the Librarian", room: "Librarian", action: function () { setTab("collection"); HC.reveal(name); } } : null,
       !take.session && !bulk && window.HeresyLineage ? { icon: "\ud83c\udf33", label: "Family tree…", hint: "where it came from and what came of it", action: function () { window.HeresyLineage.open(name); } } : null,   // HERESY 1988
       // HERESY 1315: the lyrics' sections placed on the wave by Whisper's hearing (once; the lab keeps it)
       !take.session && !bulk && taggedParts(take.lyrics) >= 2 ? { icon: "\u00a7", label: sectionsTimed[name] ? "Find the sections by ear again" : "Find the sections by ear",
@@ -11185,6 +12230,12 @@
           timeSections(name, !!sectionsTimed[name]).then(function (d) { toast("The sections found by ear (" + Math.round((d.heard || 0) * 100) + " % of the lines heard)"); },
             function (e) { toast("The sections were not found: " + e.message, "bad"); });
         } } : null,
+      // HERESY 2056 (Viktor 04.11.2026: «в контекстном меню трека выставь дефолт off с выбором, опция и иконка»): this take's end checked now (the tail guard,
+      // and Sung to the end? when it has lyrics), and the option, off unless chosen, that checks every new take's as it lands
+      !take.session ? { icon: "\u223f", label: "Tail guards", items: [
+        bulk ? null : { icon: "\u223f", label: "Check its end now", hint: "where its sound comes back after a silence; sung to the end? (Whisper)", action: function () { guardTails([name], true); } },
+        { label: "On every new take", hint: "off unless chosen; Whisper only while a card has room", checked: tailGuard(), action: function () { setTailGuard(!tailGuard()); } }
+      ].filter(Boolean) } : null,
       // HERESY 1415: its namesakes in one player, two to four of them
       bulk && bulk.length > 1 ? { icon: "\u2261", label: "Compare the selected\u2026", hint: "two to twelve of the checked", action: function () { compareTakes(bulk.slice(0, 12)); } } : null,   // HERESY 1716; 1724: twelve
       !take.session && !bulk && namesakes(take).length > 1 ? { icon: "\u2261", label: "Compare with its namesakes\u2026", hint: namesakes(take).length + " in all", action: function () { compareNamesakes(take); } } : null,
@@ -11260,14 +12311,21 @@
         { label: "First", action: function () { HC.playlistAdd(bulk || [name], "first"); } },
         { label: "Last", action: function () { HC.playlistAdd(bulk || [name], "last"); } },
         { label: "Random", hint: "anywhere in it", action: function () { HC.playlistAdd(bulk || [name], "random"); } }
-      ] } : null,
+      ].concat(HC.albumMenu ? HC.albumMenu(bulk || [name]) : []) } : null,   // HERESY 2050: and its albums
       HC ? { icon: "▦", label: bulk ? "Workspaces of " + bulk.length : "Workspaces", items: ws.map(function (w) {
         var whom = bulk || [name], on = bulk ? bulkRows.length > 0 && bulkRows.every(function (x) { return (x.workspaces || []).indexOf(w) >= 0; }) : inWs.indexOf(w) >= 0;
         var said = bulk ? " " + bulk.length : "";
-        return { label: w, raw: true, checked: on, action: function () {
-          HC.act({ op: on ? "ws-remove" : "ws-add", workspace: w, names: whom }, on ? "Taken out of “" + w + "”" + said : "Added to “" + w + "”" + said);
-          if (bulk && on && HC.unselect && HC.place && HC.place() === w) HC.unselect(bulk);   // HERESY 1169 · 1239: out of the workspace open, out of the choice
-        } };
+        return wsTreeItem(w, ws, { checked: on, action: function () {   // HERESY 2040
+          var send = function () {
+            HC.act({ op: on ? "ws-remove" : "ws-add", workspace: w, names: whom }, on ? "Taken out of “" + w + "”" + said : "Added to “" + w + "”" + said);
+            if (bulk && on && HC.unselect && HC.place && HC.place() === w) HC.unselect(bulk);   // HERESY 1169 · 1239: out of the workspace open, out of the choice
+          };
+          // HERESY 2059b (Viktor 03.11.2026: «Пройтись по бару… и добавить недостающие действия в контекстное меню»): with several checked, the open workspace's
+          // ticked row asks the bar's question first (its guard: 1108 · 1473), as «Take N out of “…”» does; another workspace's row and one take act at once
+          if (!(bulk && on && HC.guard && HC.place && HC.place() === w)) return send();
+          HC.guard(tr("Take " + bulk.length + " takes out of “" + w + "”?") + "\n\n" + tr("They stay in the library and in any other workspace; only this workspace lets them go."),
+                   tr("Take them out"), bulk, true).then(function (ok) { if (ok) send(); });
+        } });
       }).concat([{ sep: true }, { icon: "+", label: "New workspace…", action: function () {
         var whom = bulk || [name];
         window.HeresyDialog.prompt(bulk ? "A new workspace for the " + bulk.length + " checked takes" : "A new workspace for “" + displayTitle(take) + "”", "", { ok: "Make it", placeholder: "its name" }).then(function (w) {
@@ -11281,14 +12339,54 @@
         var inLib = here === "collection", sel = inLib && HC.selected ? HC.selected() : [];
         var list = sel.length > 1 && sel.indexOf(name) >= 0 ? sel : [name], place = inLib ? HC.place() : "";
         var many = list.length > 1 ? " " + list.length : "";
-        return { icon: "⇥", label: "Move" + many + " to", hint: inLib && place && place.charAt(0) !== "_" ? "out of “" + place + "”" : "out of every other", items: ws.filter(function (w) { return !(inLib && w === place); }).map(function (w) {
-          return { label: w, raw: true, action: function () { HC.moveTo(w, list, inLib); } };
+        return { icon: "⇥", label: "Move" + many + " to", hint: inLib && place && place.charAt(0) !== "_" ? "out of “" + place + "”" : "out of every other", items: ws.filter(function (w) { return !(inLib && w === place); }).map(function (w, i, to) {
+          return wsTreeItem(w, to, { action: function () { HC.moveTo(w, list, inLib); } });   // HERESY 2040
         }).concat([{ sep: true }, { icon: "+", label: "New workspace…", action: function () {
           window.HeresyDialog.prompt("A new workspace for " + (list.length > 1 ? "the " + list.length + " checked takes" : "“" + displayTitle(take) + "”"), "", { ok: "Move there", placeholder: "its name" }).then(function (w) {
             w = (w || "").trim();
             if (w) HC.moveTo(w, list, inLib);
           });
         } }]) };
+      })() : null,
+      // HERESY 2059 (Viktor 03.11.2026: «Пройтись по бару, который появляется при выделении более, чем одной карточки, и добавить недостающие действия
+      // в контекстное меню»): the bar's «Take out of this workspace» as a row of its own: several checked in a workspace or a section leave the workspace
+      // open, and only it, after the bar's own question (its guard: 1108 · 1473), then the choice, as the bar lets them go
+      HC && bulk && HC.guard && HC.place && HC.place() && HC.place().charAt(0) !== "_" ? (function () {
+        var place = HC.place();
+        return { icon: "▦", label: "Take " + bulk.length + " out of “" + place + "”", hint: "they stay in the library and in any other workspace; asks first", action: function () {
+          HC.guard(tr("Take " + bulk.length + " takes out of “" + place + "”?") + "\n\n" + tr("They stay in the library and in any other workspace; only this workspace lets them go."),
+                   tr("Take them out"), bulk, true).then(function (ok) {
+            if (!ok) return;
+            HC.act({ op: "ws-remove", workspace: place, tree: true, names: bulk }, bulk.length + " taken out of “" + place + "”");   // HERESY 2130: its sections too, as its view shows them
+            if (HC.unselect) HC.unselect(bulk);
+          });
+        } };
+      })() : null,
+      // HERESY 2038 (Viktor 03.11.2026: «Удалить из других пространств»): in the Librarian, in a workspace or a section, the take (or the checked
+      // ones) stays in the workspace open and its own tree (its parent, its sections) and leaves every other, after a question that names them
+      HC && here === "collection" && HC.place && HC.place() && HC.place().charAt(0) !== "_" ? (function () {
+        var place = HC.place(), root = place.split(" / ")[0];
+        var kin = function (w) { return w === place || w === root || w.indexOf(root + " / ") === 0; };
+        var rows = bulk ? bulkRows : [{ name: name, workspaces: inWs || [] }], other = {};
+        rows.forEach(function (r) { (r.workspaces || []).forEach(function (w) { if (!kin(w)) (other[w] = other[w] || []).push(r.name); }); });
+        var list = Object.keys(other).sort();
+        if (!list.length) return null;
+        return { icon: "▦", label: "Out of the other workspaces", hint: String(list.length), action: function () {
+          window.HeresyDialog.confirm(tr("Out of the other workspaces?") + "\n\n" + tr("It stays in “{0}” and its own tree; out of: {1}.").replace("{0}", place).replace("{1}", list.join(", ")),
+            { ok: tr("Take it out") }).then(function (yes) {
+            if (!yes) return;
+            // HERESY 2156 (the audit's review of 2038, 06.11.2026): HC.act never rejects (a refusal is its false, said by it with the lab's words), so
+            // «Out of N other workspaces» came after a refused step too: what was refused is counted and named, and only a whole success is one
+            var refused = [];
+            list.reduce(function (p, w) { return p.then(function () { return HC.act({ op: "ws-remove", workspace: w, names: other[w] }, null, true).then(function (ok) { if (ok !== true) refused.push(w); }); }); }, Promise.resolve())
+              .then(function () {
+                if (refused.length) return toast(tr("Taken out of the other workspaces: {0} of {1}; refused in {2}: {3}").replace("{0}", list.length - refused.length)
+                  .replace("{1}", list.length).replace("{2}", refused.length).replace("{3}", refused.join(", ")), "bad");
+                toast(list.length === 1 ? tr("Out of the other workspace “{0}”; it stays in “{1}”").replace("{0}", list[0]).replace("{1}", place)
+                                        : tr("Out of {0} other workspaces; it stays in “{1}”").replace("{0}", list.length).replace("{1}", place));
+              }, function (e) { toast(tr("Not all of it: {0}").replace("{0}", e && e.message || e), "bad"); });
+          });
+        } };
       })() : null,
       // HERESY 1103 (Viktor): up to four takes pinned in the strip above the Librarian's grid, per workspace
       HC && HC.pin && here === "collection" && HC.place() !== "__pinned" ? (function () {
@@ -11306,6 +12404,10 @@
       // HERESY 1166: in the Pinned view, Unpin takes it out of every strip it stands in
       HC && HC.unpinAll && here === "collection" && HC.place() === "__pinned" && HC.pinPlaces(name).length ?
         { icon: "\ud83d\udccc", label: "Unpin", action: function () { HC.unpinAll(name); } } : null,
+      HC && bulk && HC.sung ? { icon: "\ud83c\udfa4", label: "Sung to the end? " + bulk.length, hint: "Whisper, on the processor", action: function () {   // HERESY 2046: the bar's own, here too
+        (bulk.length > 10 ? window.HeresyDialog.confirm(tr("Whisper listens to {0} takes in turn, a minute or two each. Start?").replace("{0}", bulk.length), { ok: "Start" }) : Promise.resolve(true))
+          .then(function (ok) { if (ok) HC.sung(bulk); });
+      } } : null,
       HC && bulk ? (function () {
         var all = bulkRows.length > 0 && bulkRows.every(function (x) { return x.hidden; });
         return { icon: "◌", label: all ? "Show " + bulk.length + " again" : "Hide " + bulk.length + " from the lists", action: function () {
@@ -11350,7 +12452,7 @@
           HW.link(hand, [name]).then(function (doc) { toast("Linked to “" + doc.title + "”"); HW.reload(); }).catch(function (e) { toast(e.message, "bad"); });
         } }
       ] } : null,
-      take.session || bulk ? null : { icon: "🎞", label: "Open in the Videographer", action: function () { openTake(name); setTab("video"); } },   // HERESY 1827: beside the other rooms
+      take.session || bulk || here === "video" ? null : { icon: "🎞", label: "Open in the Videographer", room: "Videographer", action: function () { openTake(name); setTab("video"); } },   // HERESY 1827: beside the other rooms; 2020: by its name
       { icon: "⎘", label: "Copy", items: [
         { label: "Title", action: copy("Title", function () { return displayTitle(take); }) },
         { label: "Style", action: copy("Style", function () { return getRequest(take).then(function (q) { return q.style; }); }) },
@@ -11358,12 +12460,26 @@
         { label: "Take id", hint: name.slice(0, 15), action: copy("Take id", function () { return name; }) }
       ] },
       { icon: "⤓", label: "Download", items: [
-        bulk && HC.exportChecked ? { label: bulk.length + " as a ZIP", hint: "the bar's format, made on the Forge", action: function () { HC.exportChecked(); } } : null,
-        bulk ? { sep: true } : null,
-        { label: formatExt(take.format).toUpperCase(), action: save(downloadUrl(take), audioFileName(take)) },
+        // HERESY 2059 (Viktor 03.11.2026: «Пройтись по бару… и добавить недостающие действия в контекстное меню»): the ZIP of the checked names its format
+        // here, FLAC or WAV, alone or with what is made from them; the bar's ⤓ choice is ticked, and the one chosen is set there too, so the menu never packs
+        // with settings it does not show
+        bulk && HC.exportChecked ? (function () {
+          var how = HC.exportHow ? HC.exportHow() : { format: "flac", derived: false };
+          var made = "also every file made from each take (remasters, stems, upscales, debuzzed files), named after the take";
+          var zip = function (format, derived, label, hint) {
+            return { label: label, hint: hint, checked: how.format === format && how.derived === derived, action: function () { HC.exportChecked({ format: format, derived: derived }); } };
+          };
+          return { label: bulk.length + " as a ZIP", items: [
+            zip("flac", false, "FLAC", "lossless, about half the size of WAV"), zip("wav", false, "WAV", "for tools that take nothing else"), { sep: true },
+            zip("flac", true, "FLAC, with what is made from them", made), zip("wav", true, "WAV, with what is made from them", made)
+          ] };
+        })() : null,
+        // HERESY 2059b (Viktor 03.11.2026: «Пройтись по бару… и добавить недостающие действия в контекстное меню»): with several checked, Download › holds their ZIP
+        // alone; the right-clicked take's own files (its format, its MP3, its artwork) are for one take
+        bulk ? null : { label: formatExt(take.format).toUpperCase(), action: save(downloadUrl(take), audioFileName(take)) },
         bulk || take.session || formatExt(take.format) === "flac" ? null : cardItem(name, "#dlTakeFlac", "FLAC"),   // HERESY 1483: the card's own
-        convertible(take) ? { label: "MP3 · " + mp3Rate() + " kbps", hint: artUrl(name) ? "with its artwork" : "", action: save(mp3Url(take), fileTitle(take) + ".mp3") } : null,
-        artUrl(name) ? { label: "Artwork · JPEG", action: save(artUrl(name), fileTitle(take) + ".jpg") } : null,
+        !bulk && convertible(take) ? { label: "MP3 · " + mp3Rate() + " kbps", hint: artUrl(name) ? "with its artwork" : "", action: save(mp3Url(take), fileTitle(take) + ".mp3") } : null,
+        !bulk && artUrl(name) ? { label: "Artwork · JPEG", action: save(artUrl(name), fileTitle(take) + ".jpg") } : null,
         bulk || take.session ? null : { sep: true },
         bulk || take.session ? null : cardItem(name, "#dlRequest", "Request"),
         bulk || take.session ? null : cardItem(name, "#dlScore", "Score"),
@@ -11396,7 +12512,9 @@
           "\n\nNothing is deleted: the trash in the Librarian gives it back until it is emptied.", { ok: "To the trash", danger: true }))
           .then(function (ok) { if (ok) return HC.trash(list).then(function (d) {     // HERESY 1135: with its undo
             if (HC.undoable && d && d.moved && d.moved.length) HC.undoable("Moved to the trash", HC.untrash(d.moved));
-            else if (!d || !d.protected || !d.protected.length) toast("Moved to the trash");   // HERESY 1368: none went: HC.trash said why
+            // HERESY 1368: none went: HC.trash said why. HERESY 2130 (the audit of 06.11.2026): «Moved to the trash» when none went was a lie; said only when no reason was
+            else if (d && d.moved && d.moved.length) toast("Moved to the trash");
+            else if (!d || !((d.protected || []).length || (d.locked || []).length || (d.missing || []).length)) toast("Nothing went to the trash", "bad");
             return refreshLibrary();
           }); })
           .catch(function (e) { toast(e.message, "bad"); });
@@ -11444,15 +12562,23 @@
   // Copy, Download, Export to DAW and the trash stay where the hand finds them
   // HERESY 2001 (Viktor 01.11.2026: «раздел "Метки" с четырьмя нашими метками карточек — ненужное действо»): one take's menu leaves them out
   // (like, dislike, favourite and protect stand on its card); several checked takes keep them
+  // HERESY 2040 (Viktor 03.11.2026: the workspace lists «деревом»): a section by its own name, «↳» and a level under its parent when the parent is
+  // in the same list; else its full path
+  function wsTreeItem(w, all, o) {
+    var parts = w.split(" / "), parent = parts.slice(0, -1).join(" / "), under = parts.length > 1 && all.indexOf(parent) >= 0;
+    return Object.assign({ label: under ? "\u21b3 " + parts[parts.length - 1] : w, raw: true, depth: under ? parts.length - 1 : 0 }, o);
+  }
   function groupMenu(items, noMarks) {
-    var G = { open: { icon: "\u2197", label: "Open", items: [] }, mark: { icon: "\ud83d\udc4d", label: "Marks", items: [] },
+    var G = { open: { icon: "\u2197", label: "Open in\u2026", items: [] }, mark: { icon: "\ud83d\udc4d", label: "Marks", items: [] },   // HERESY 2020: «Open in…»
               art: { icon: "\u25a3", label: "Artwork", items: [] }, lib: { icon: "\u25a6", label: "Library", items: [] } };
     var kindOf = function (it) {
       if (!it || it.sep || it.head || !it.label || it.disabled && !it.action) return "";
-      if (/^Open (in|the) /.test(it.label)) return "open";
+      if (it.room) return "open";                                  // HERESY 2020: the rooms alone; the artwork goes to its own group
       if (["\ud83d\udc4d", "\ud83d\udc4e", "\u2606", "\ud83d\udee1"].indexOf(it.icon) >= 0) return "mark";
+      // HERESY 2059b (Viktor 03.11.2026: «Пройтись по бару… и добавить недостающие действия в контекстное меню»): the Library's icons before the artwork's words, so a
+      // workspace named with «cover» or «artwork» keeps «Take N out of “…”» and its pin row in Library ›, not under Artwork ›
+      if (["\u25a6", "\u21e5", "\ud83d\udccc"].indexOf(it.icon) >= 0) return "lib";   // HERESY 2046: Hide (◌) on the menu's own level, not inside Library ›
       if (/artwork|cover/i.test(it.label)) return "art";
-      if (["\u25a6", "\u21e5", "\ud83d\udccc", "\u25cc"].indexOf(it.icon) >= 0) return "lib";
       return "";
     };
     var out = [], seen = {};
@@ -11464,6 +12590,7 @@
       if (!seen[k]) { seen[k] = true; out.push(G[k]); }
     });
     out = out.map(function (it) { for (var k in G) if (G[k] === it && it.items.length === 1) return it.items[0]; return it; });
+    G.open.items = G.open.items.map(function (it) { var c = {}; for (var f in it) c[f] = it[f]; c.label = it.room; return c; });   // HERESY 2020: «Creator», not «Open in the Creator»
     return out.filter(function (it, i, a) { return !(it.sep && (i === 0 || i === a.length - 1 || a[i - 1].sep)); });
   }
 
@@ -11893,7 +13020,7 @@
     if (tab === "collection" && window.HeresyCollection) window.HeresyCollection.reload();
     if (tab === "artist" && window.HeresyArtist) window.HeresyArtist.reload();      // HERESY 1255
     if (tab === "video" && window.HeresyVideo) window.HeresyVideo.reload();         // HERESY 1824
-    if (tab === "write") refreshChat().catch(function () {});   // HERESY 1110: the Writing room says its state at once
+    if (tab === "write") refreshWriter(false).catch(function () {});   // HERESY 1110: the Writing room says its state at once (2097: the hosts ticked)
     paintLibFold();                                   // HERESY 1167: each room its own fold
     all(".topbar [data-tab]").forEach(function (b) { b.classList.toggle("is-active", b.dataset.tab === tab); b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false"); });
     store(TAB_KEY, tab === "create" ? null : tab);
@@ -12002,7 +13129,7 @@
     var saveAssist = function () {
       store(ASSIST_KEY, JSON.stringify({ brief: $("assistBrief").value, prefs: $("assistPrefs").value, task: $("assistTask").value,
                                          temp: $("assistTemp").value, max: $("assistMax").value,
-                                         provider: $("assistProvider").value, orModel: $("orModel").value,
+                                         provider: LLM.want, models: LLM.models, orModel: $("orModel").value,   // HERESY 2097: the Writer's own pick, not the one standing in
                                          structure: $("assistStructure").value }));
       $("assistPrefsSize").textContent = $("assistPrefs").value.trim() ? "· " + $("assistPrefs").value.trim().length + " characters" : "";
     };
@@ -12017,18 +13144,12 @@
     };
     $("draftStyle").addEventListener("input", paintDraftSize);
 
-    // HERESY 1012: OpenRouter. The key stays in memory unless the user asks to keep it;
-    // the page sends it only to openrouter.ai.
-    var OR = "https://openrouter.ai/api/v1", orKey = "", orListed = false;
-    try { orKey = recall("yue2.orKey") || ""; } catch (error) { orKey = ""; }
-    $("orKey").value = orKey;
-    $("orRemember").checked = !!orKey;
-    // HERESY 1133 (Viktor): OpenRouter by default when no chat server is set (Qwen and DeepSeek in the quick picks)
-    $("assistProvider").value = saved.provider ? (saved.provider === "openrouter" ? "openrouter" : "engine") : (recall("yue2.chatUrl") || $("chatUrl").value ? "engine" : "openrouter");   // 1811: the Studio's own writer counts
+    // HERESY 1012: OpenRouter. HERESY 2097: its key lives in the lab (Engine → Writer and Artwork) and goes out only with the lab's own calls; the room
+    // picks among the hosts ticked that answer (Engine's) and keeps its pick (LLM.want), OpenRouter's model with it
     $("orModel").value = saved.orModel || "deepseek/deepseek-v4-pro";
     saveAssist();                                     // HERESY 1167: now, with the writer and the model put back
     all("[data-or-model]").forEach(function (b) {
-      b.addEventListener("click", function () { $("orModel").value = b.dataset.orModel; saveAssist(); paintAssistLine(); paintOrPrice(); });
+      b.addEventListener("click", function () { $("orModel").value = b.dataset.orModel; saveAssist(); paintWriter(); paintOrPrice(); orList(false); });
     });
     // HERESY 1169 (the rc3 list: «The Writer's models with their prices, from OpenRouter's list, as you type»): each model with
     // its price per million tokens in and out and its context: in the list as you type, under the field, on the quick picks
@@ -12068,55 +13189,33 @@
       paintOrPrice();
     }
     window.HeresyOrModels = { take: takeOrModels, price: orPrice };   // for the checks
-    var paintProvider = function () {
-      var or = $("assistProvider").value === "openrouter";
-      all("#assistDrawer .or-only").forEach(function (el) { el.classList.toggle("is-hidden", !or); });
-      if (or && !orListed) {
-        orListed = true;
-        fetch(OR + "/models").then(function (r) { return r.json(); }).then(function (d) { takeOrModels((d && d.data) || []); })
-          .catch(function () { orListed = false; });
-      }
-    };
-    $("assistProvider").addEventListener("change", function () { paintProvider(); saveAssist(); paintAssistLine(); });
-    $("orModel").addEventListener("change", saveAssist);
+    $("assistProvider").addEventListener("change", function () {   // HERESY 2097: OpenRouter picked by hand: its list of models and prices, once
+      if (this.value) keepWant(this.value);
+      if (this.value === "openrouter") orList(false);
+      saveAssist(); paintWriter();
+    });
+    ["orModel", "orDefault"].forEach(function (id) {   // its model field taken: the list it offers, asked once a session (never on the page's load)
+      ["focus", "pointerdown"].forEach(function (ev) { $(id).addEventListener(ev, function () { orList(false); }); });
+    });
+    $("assistLocalModel").addEventListener("change", function () {   // HERESY 2097: with several loaded, the one to write with
+      if (LLM.pick && this.value) LLM.models[LLM.pick] = this.value;
+      saveAssist(); paintWriter();
+    });
+    $("orModel").addEventListener("change", function () { saveAssist(); paintWriter(); });
     $("orModel").addEventListener("input", paintOrPrice);
-    $("orKey").addEventListener("input", function () { if ($("orRemember").checked) store("yue2.orKey", this.value.trim() || null); });
-    $("orRemember").addEventListener("change", function () { store("yue2.orKey", this.checked ? ($("orKey").value.trim() || null) : null); });
-    paintProvider();
-
-    function openRouterComplete(messages, maxTokens, temperature) {
-      var key = $("orKey").value.trim(), model = $("orModel").value.trim();
-      if (!key) return Promise.reject(new Error("Put your OpenRouter API key in first"));
-      if (!model) return Promise.reject(new Error("Name an OpenRouter model first"));
-      var body = { model: model, messages: messages, max_tokens: maxTokens };
-      if (temperature !== null) body.temperature = temperature;
-      return fetch(OR + "/chat/completions", { method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key, "X-Title": "Ruach Studio" },
-        body: JSON.stringify(body) }).then(function (r) {
-        return r.json().catch(function () { return {}; }).then(function (d) {
-          if (!r.ok) throw new Error("OpenRouter: " + ((d.error && d.error.message) || r.status));
-          return d;
-        });
-      });
-    }
 
     // HERESY 1357: the Writer's model for a task of the page's own (Tighten, the style's suggestions): the room's choice, OpenRouter
     // or the chat server, its request and answer in the log as the room's are; a model that spent its answer thinking asked once again
+    // HERESY 2097: the room's pick among the hosts ticked that answer
     window.HeresyWriterAsk = function (messages, max, temperature, what) {
-      var started = Date.now(), model = null, or = $("assistProvider").value === "openrouter";
-      var via = or ? ($("orModel").value.trim() || "OpenRouter") + " on OpenRouter" : "the chat server";
-      addLogLine("[Writer] \u2192 " + via + ": " + (what || "a task") + ", up to " + max + " tokens", false);
-      var send = function (m) {
-        return or ? (model = $("orModel").value.trim() || "OpenRouter", openRouterComplete(messages, m, temperature))
-          : refreshChat().then(function (status) {
-            if (!status.configured) throw new Error("Set the chat server address under Engine first");
-            if (!status.available) throw new Error(status.error || "The chat server is not answering at " + status.base);
-            if (!status.use) throw new Error("No model is loaded in the chat server");
-            model = status.use;
-            return chatComplete(messages, model, m, null, temperature);
-          });
-      };
-      return send(max).then(function (r) {
+      var started = Date.now(), model = null, conn = "";
+      var send = function (m) { return chatComplete(messages, model, m, null, temperature, conn); };
+      return refreshWriter(false).then(function (st) {
+        if (!st.use) throw new Error(writerWhy(st));
+        model = st.use; conn = st.conn;
+        addLogLine("[Writer] \u2192 " + viaOf(conn, model) + ": " + (what || "a task") + ", up to " + max + " tokens", false);
+        return send(max);
+      }).then(function (r) {
         var ch = (r.choices || [])[0] || {};
         if (ch.finish_reason === "length" && !stripThinking(((ch.message || {}).content) || "").trim() && max < 16384) return send(Math.min(16384, max * 2));
         return r;
@@ -12149,24 +13248,21 @@
       button.disabled = true;
       $("assistLabel").textContent = "Writing…";
       // HERESY 1167 (Viktor: «OpenRouter активность не отображается в системном логе»): the page asks the writer itself, so
-      // the server never sees it: the page writes the request and its answer into the log
-      var via = $("assistProvider").value === "openrouter" ? ($("orModel").value.trim() || "OpenRouter") + " on OpenRouter" : "the chat server";
-      addLogLine("[Writer] \u2192 " + via + ": a brief of " + brief.length + " characters, up to " + max + " tokens", false);
+      // the server never sees it: the page writes the request and its answer into the log (2097: the lab carries OpenRouter's, the key added there)
+      var conn = "";
+      model = writerState().use;
       var ticker = setInterval(function () { $("assistStatus").textContent = "writing with " + (model || "the chat server") + "… " + Math.round((Date.now() - started) / 1000) + "s"; }, 1000);
       var song = { title: fullTitle(), style: $("style").value, lyrics: $("lyrics").value, abc: $("abc").value.trim() || STATE.abcRendered || "" };   // HERESY 1614
       // HERESY 1016: the idea writer's section templates, when a structure is picked
       var structure = $("assistStructure").value, fullBrief = structure ? brief + structureRequest(structure) : brief;
       var messages = [{ role: "system", content: A.system($("assistPrefs").value) }, { role: "user", content: A.user(task, fullBrief, song) }];
       var temperature = temp === "" ? null : parseFloat(temp);
-      var ask = $("assistProvider").value === "openrouter"
-        ? (model = $("orModel").value.trim() || "OpenRouter", openRouterComplete(messages, max, temperature))
-        : refreshChat().then(function (status) {
-          if (!status.configured) throw new Error("Set the chat server address under Engine first");
-          if (!status.available) throw new Error(status.error || "The chat server is not answering at " + status.base);
-          if (!status.use) throw new Error("No model is loaded in the chat server");
-          model = status.use;
-          return chatComplete(messages, model, max, null, temperature);
-        });
+      var ask = refreshWriter(false).then(function (status) {   // HERESY 2097: the room's pick among the hosts ticked that answer
+        if (!status.use) throw new Error(writerWhy(status));
+        model = status.use; conn = status.conn;
+        addLogLine("[Writer] \u2192 " + viaOf(conn, model) + ": a brief of " + brief.length + " characters, up to " + max + " tokens", false);
+        return chatComplete(messages, model, max, null, temperature, conn);
+      });
       // HERESY 1167: a model that thinks before it answers (Qwen on vLLM, DeepSeek on OpenRouter) can spend the whole
       // output on its thinking and give no draft: once, the same request with twice the room (up to 32768)
       ask = ask.then(function (response) {
@@ -12174,8 +13270,7 @@
         if (choice.finish_reason !== "length" || A.parse(stripThinking(((choice.message || {}).content) || "")) || max >= 32768) return response;
         max = Math.min(32768, max * 2);
         addLogLine("[Writer] " + model + " spent its answer on thinking: asked again with " + max + " tokens", false);
-        return $("assistProvider").value === "openrouter" ? openRouterComplete(messages, max, temperature)
-          : chatComplete(messages, model, max, null, temperature);
+        return chatComplete(messages, model, max, null, temperature, conn);
       });
       ask.then(function (response) {
         var choice = (response.choices || [])[0] || {};
@@ -12396,6 +13491,10 @@
       window.HeresyGloss.useSource(path, true);
     },
     pauseMain: function () { audio.pause(); },
+    // HERESY 2044 (Viktor: «если проигрывается трек, выбранный в сравнение, он продолжает играться в попапе. По ESC попапа оставляем проигрывание
+    // текущего в глобальном плеере»): the player's take and second for the compare window, and the version it played handed back here
+    playingAt: function () { return STATE.playerTake ? { name: STATE.playerTake.name, at: audio.currentTime || 0, playing: isPlaying() } : null; },
+    takeOver: function (name, at) { if (findTake(name)) { seekTake({ name: name }, at); paintPlayHere(); } },
     menu: function (name, x, y) { takeMenu(name, x, y); },   // HERESY 1995: a take's own menu on its row of the compare window
     // HERESY 1311: the take's family for «Compare all»: the same music in other takes, the disliked left out
     family: function (name) { return compareFamily(name); },
@@ -12441,6 +13540,14 @@
       .replace(/\b(?:take|version|ver|sound|edit|copy|remix|mix|final|draft|alt)\b\.?\s*\d*/g, " ").replace(/[#\u2116]\s*\d+/g, " ");
     return s.replace(/\s+/g, " ").replace(/[\s.,:;_\-\u2013\u2014|]+$/g, "").trim();
   }
+  // HERESY 2057 (Viktor: «Workspace имя уходит в lowcase»): the same base as written, its case kept, for the compare window's head (baseTitle is for
+  // matching, lowered)
+  function baseShown(text) {
+    var s = String(text || "").split(" \u00b7 ")[0];
+    s = s.replace(/\([^)]*\)/g, " ").replace(/\bv\s*\d+(?:[._]\d+)*\b/gi, " ")
+      .replace(/\b(?:take|version|ver|sound|edit|copy|remix|mix|final|draft|alt)\b\.?\s*\d*/gi, " ").replace(/[#\u2116]\s*\d+/g, " ");
+    return s.replace(/\s+/g, " ").replace(/[\s.,:;_\-\u2013\u2014|]+$/g, "").trim();
+  }
   function namesakes(take) {                                 // its namesakes, the newest first, itself among them
     var base = baseTitle(displayTitle(take));
     if (!base) return [take];
@@ -12459,23 +13566,23 @@
   }
   function compareTakes(names) {                             // two to four takes in the Refiner's compare player
     var list = names.map(findTake).filter(Boolean);
-    if (list.length < 2) return toast("Tick two at least, six at most", "bad");   // HERESY 1621: up to six
+    if (list.length < 2) return toast("Tick two at least, twelve at most", "bad");   // HERESY 1621; 2043: twelve
     if (list.length > 12) { toast("Twelve at most: the first twelve"); list = list.slice(0, 12); }   // HERESY 1724 («можно смело 12 вместо 6»)
     if (!window.HeresyDerived || !window.HeresyDerived.compareList) return;
-    window.HeresyDerived.compareList(baseTitle(displayTitle(list[0])) || displayTitle(list[0]), list.map(function (t) {
+    window.HeresyDerived.compareList(baseShown(displayTitle(list[0])) || displayTitle(list[0]), list.map(function (t) {   // HERESY 2057: its case kept
       return { label: displayTitle(t), path: "take:" + t.name, seconds: t.seconds, url: playerAudioUrl(t), flac: takeAudioUrl(t), take: t.name,   // HERESY 1871
-               group: blindTake(t.name) ? "\ud83d\ude48" : takeWhen(t.created) };   // HERESY 1619; 1874: blind, no time   // HERESY 1425: the thumbs and star its own buttons now
+               group: blindTake(t.name) ? "\ud83e\udee3" : takeWhen(t.created) };   // HERESY 1619; 1874: blind, no time   // HERESY 1425: the thumbs and star its own buttons now
     }), 0);
   }
   function compareNamesakes(take) {
     var all = namesakes(take);
-    window.HeresyDialog.pick("Compare with its namesakes\n\nTwo to six, played in one player from the same second: a click (or its number) switches.",   // HERESY 1621
+    window.HeresyDialog.pick("Compare with its namesakes\n\nTwo to twelve, played in one player from the same second: a click (or its number) switches.",   // HERESY 1621
       [{ label: "Its namesakes", items: all.map(function (t) {
         return { value: t.name, label: displayTitle(t), checked: t.name === take.name, note: (t.seconds ? clock(t.seconds) + " \u00b7 " : "") + takeWhen(t.created) };   // HERESY 1619
       }) }], { ok: "Compare", wide: true, count: function (v) { return v.length; } })
       .then(function (r) { if (r && r.values) compareTakes(r.values); });
   }
-  window.HeresyCompare = { takes: compareTakes, namesakes: function (name) { var t = findTake(name); return t ? namesakes(t).map(function (x) { return x.name; }) : []; }, base: baseTitle };
+  window.HeresyCompare = { shown: baseShown, takes: compareTakes, namesakes: function (name) { var t = findTake(name); return t ? namesakes(t).map(function (x) { return x.name; }) : []; }, base: baseTitle };
   window.ruachRefreshLibrary = refreshLibrary;
   if (window.HeresySpectrum) {
     window.HeresySpectrum.init({
@@ -13051,7 +14158,7 @@
   window.ruachDockWidth = dockWidth;                     // for the checks
   // HERESY 1169 · 1329 (Viktor 10.10.2026: «В баре кнопка TRAINER отцентри между лого и воркспейс селектором»): the Trainer's tab in the
   // middle between the logo's right edge and the workspace button's left one, wherever the logo stands centred in the bar
-  function centerTrainer() {
+  function placeTrainer() {
     var side = $("tabsSide"), logo = document.querySelector(".topbar .brand-logo"), brand = document.querySelector(".topbar .brand"), ws = document.querySelector(".topbar .ws-current");
     if (!side || !logo || !ws || !brand) return;
     side.style.marginLeft = "";
@@ -13061,6 +14168,26 @@
     var from = chip && getComputedStyle(chip).position === "absolute" ? lamp.getBoundingClientRect().right : lr.right;
     var want = (from + wr.left) / 2 - sr.width / 2;
     if (want > sr.left + 1) side.style.marginLeft = Math.round(want - sr.left) + "px";
+  }
+  // HERESY 2114 (the suite's «the bar of one height… when the room scrolls», run alone: at 1920 on a fresh page the Trainer stood 4 px and the workspace
+  // 8 px short of their places, and both moved by that much at the next room): the workspace is centred between the Trainer and the buttons (1632,
+  // centreWs) and the Trainer between the lamp and the workspace (1329, 1687), each by where the other stood, so one pass of each left the pair a step
+  // short, and whatever ran either again moved them. Now each placing starts from the Trainer's own place and runs both in turn until neither moves (a
+  // turn leaves a quarter of the miss): the same bar ends the same whatever came before. With no workspace to centre (no logo, or the bar on two rows,
+  // where fitBar stops early) the Trainer is placed alone, as before
+  function centerTrainer() {
+    var p = barPair, side = $("tabsSide"), logo = document.querySelector(".topbar .brand");
+    if (p && (!logo || getComputedStyle(logo).display === "none" || getComputedStyle(logo).position !== "absolute")) p = null;
+    if (!p) return placeTrainer();
+    if (side) side.style.marginLeft = "";
+    for (var i = 0, w0 = NaN, s0 = NaN; i < 8; i++) {
+      p.ws.style.removeProperty("--ws-shift");
+      centreWs(p.ws, p.side);
+      placeTrainer();
+      var w1 = p.ws.getBoundingClientRect().left, s1 = side ? side.getBoundingClientRect().left : 0;
+      if (Math.abs(w1 - w0) < 1 && Math.abs(s1 - s0) < 1) return;
+      w0 = w1; s0 = s1;
+    }
   }
   (function () {
     var soon = 0, again = function () { cancelAnimationFrame(soon); soon = requestAnimationFrame(centerTrainer); };
@@ -13091,14 +14218,26 @@
   // EMPTY 6, Тренер 7, Экспорт в Local DAW 8, Движок 9». 4 waits for the Artist room, 6 for a room to come. Each presses
   // its own button (leaving the Engine asks as it does); read by the key's code, so in any layout and from the number pad
   var ROOM_KEYS = { 1: "create", 2: "write", 3: "post", 4: "artist", 5: "video", 6: "train", 7: "collection" };   // HERESY 1255: 4 the Artist; 1849: as the bar has them, the Librarian 7th
+  // HERESY 2082 (Viktor 05.11.2026, after a day in the PWA: Ctrl+Alt+digit, F1 and Ctrl+N work there; Chrome's own Ctrl+digit for the rooms is missed): in the installed app
+  // (display-mode standalone, window-controls-overlay or minimal-ui: a window without the browser's tabs) Ctrl+1…9 do what Ctrl+Alt+1…9 do, as 1169
+  // planned («Ctrl+digit comes with the desktop app»); a browser's tab keeps Ctrl+1…9 for its tabs. window.ruachTestDisplayMode stands in for the
+  // display mode where a check's browser cannot be an app
+  var APP_MODES = ["standalone", "window-controls-overlay", "minimal-ui"];
+  function installedApp() {
+    if (window.ruachTestDisplayMode) return APP_MODES.indexOf(window.ruachTestDisplayMode) >= 0;
+    return !!window.matchMedia && APP_MODES.some(function (m) { return window.matchMedia("(display-mode: " + m + ")").matches; });
+  }
+  window.ruachInstalledApp = installedApp;
   window.addEventListener("keydown", function (event) {
-    if (!event.ctrlKey || !event.altKey || event.shiftKey || event.metaKey) return;
+    if (!event.ctrlKey || event.shiftKey || event.metaKey || (!event.altKey && !installedApp())) return;   // HERESY 2082: Ctrl alone in the app
     var m = /^(?:Digit|Numpad)([1-9])$/.exec(event.code || "");
     if (!m || document.querySelector(".hd-back:not(.is-leaving)")) return;
     event.preventDefault();
     var n = +m[1], tab = ROOM_KEYS[n], btn = tab && document.querySelector('.topbar [data-tab="' + tab + '"]');
     if (btn) btn.click();
-    else if (n === 8) $("dawOpen").click();
+    // HERESY 2064 (Viktor 04.11.2026: «Строку "Экспорт в DAW" к хуям. Эта команда дублируется у нас в контекстном меню»): the button the key
+    // pressed is out of ☰, so the key opens the DAW window itself, as the Refiner's buttons do
+    else if (n === 8) { if (window.HeresyDaw) window.HeresyDaw.open(); }
     else if (n === 9) $("engineToggle").click();
   }, true);
   // HERESY 1169 (Viktor 07.10.2026: «Давай шорткат Shift+Tab блокируем для обратного хождения по полям, а именно для
@@ -13147,7 +14286,9 @@
   }
   window.ruachSaveAll = saveAll;   // for the checks
   // HERESY 1596 (Viktor 19.10.2026: «Испортил, применил, F5, и ... проебал основу»): the form kept as a version, its knobs with it
-  var lastKept = "";
+  // HERESY 2126: the last print kept under a name of its own: as `lastKept` it was the themes' variable too (@733, one var in this closure), so a
+  // theme pick broke this dedupe and every keepForm broke the themes' guard (a hover preview rewrote the day or night theme)
+  var lastFormPrint = "";
   function formParams() {
     try { var r = buildRequest(false, false, true); ["title", "style", "lyrics", "abc", "semantic_tokens", "parent"].forEach(function (k) { delete r[k]; }); return r; }
     catch (e) { return {}; }
@@ -13157,8 +14298,8 @@
     var words = { title: songTitle(), style: $("style").value, lyrics: $("lyrics").value, abc: $("abc").value }, params = formParams();
     if (!(words.style.trim() || words.lyrics.trim() || words.abc.trim())) return null;
     var print = JSON.stringify([words, params]);
-    if (print === lastKept) return null;
-    lastKept = print;
+    if (print === lastFormPrint) return null;
+    lastFormPrint = print;
     return window.HeresyVersions.keep(words, [], currentCot(), why, params);
   }
   window.ruachKeepForm = keepForm;
@@ -13172,7 +14313,7 @@
     // (Viktor: «Помимо F5 можно ещё Ctrl+Shift+R»): F5 and Shift+F5, Ctrl+R and Ctrl+Shift+R; Ctrl+F5 is the reload at once
     var f5 = event.key === "F5" && !event.ctrlKey && !event.metaKey && !event.altKey;
     var ctrlR = (event.ctrlKey || event.metaKey) && !event.altKey && event.code === "KeyR";
-    if ((!f5 && !ctrlR) || (f5 && !event.shiftKey && document.body.dataset.tab === "collection") || reloading) return;
+    if ((!f5 && !ctrlR) || (f5 && !event.shiftKey && document.body.dataset.tab === "collection") || reloading) return;   // HERESY 1168, 2117: F5 in the Librarian is its reread (below)
     event.preventDefault();
     if (document.querySelector(".hd-back:not(.is-leaving)")) return;   // a dialog is open already (this one too)
     if (!edited) { reloading = true; saveDraft(); location.reload(); return; }   // HERESY 1269: nothing typed, nothing to ask
@@ -13194,13 +14335,15 @@
     });
   }, true);
   // HERESY 1168 (Viktor: «ты говорил, что перехватишь F5 в Библиотеке»): F5 in the Librarian reads the library again and
-  // leaves the page as it is, the music playing on; Ctrl+F5 or Shift+F5 still reload the page
+  // leaves the page as it is, the music playing on; Ctrl+F5 or Shift+F5 still reload the page. HERESY 2117: 2105 had given it back to the browser
+  // on our reading of his debug journal alone (five of his ten F5s there taken for eaten); his own word stands, and it is back as 1168 made it
   window.addEventListener("keydown", function (event) {
     if (event.key !== "F5" || event.ctrlKey || event.shiftKey || event.metaKey || event.altKey || document.body.dataset.tab !== "collection") return;
     event.preventDefault();
-    if (window.HeresyCollection) window.HeresyCollection.reload();
-    refreshLibrary().catch(function () {});
-    toast("The library read again (F5 here keeps the page and the music); Ctrl+F5 reloads the page");
+    // the review of 2117: said once the library has answered, and a library that did not answer said as such (1168 said «read again» at once, answered or not)
+    Promise.all([window.HeresyCollection ? window.HeresyCollection.reload() : null, refreshLibrary()]).then(function () {
+      toast("The library read again (F5 here keeps the page and the music); Ctrl+F5 reloads the page");
+    }, function (error) { toast("Could not read the song library: " + ((error && error.message) || error), "bad"); });
   }, true);
   window.addEventListener("keydown", function (event) {
     if (event.key !== "Escape" || !document.body.dataset.frame) return;
@@ -13217,8 +14360,50 @@
   paintLibrary();
   paintEngine();
   queueComfort();   // HERESY 1006
-  setTab(recall(TAB_KEY) || "create");   // HERESY 1014
+  // HERESY 2082 (Viktor 05.11.2026, after a day in the PWA: Ctrl+Alt+digit, F1 and Ctrl+N work there; Chrome's own Ctrl+digit for the rooms is missed): ?room=NAME (the app's
+  // shortcuts, a link) opens that room as the page comes up (the rooms by their ids or their English names; engine opens the Engine over the room
+  // the page keeps), and with song=new New song, asked first as Ctrl+N asks; the two leave the address once read, so a reload keeps the room you
+  // went to. A launch of the app while its window is open (the manifest's launch_handler, focus-existing) comes to that window: launchQueue's
+  // consumer takes it to the room asked for, and never opens a second Studio (HERESY 2081 guards a window opened anyway)
+  var ROOM_NAMES = { creator: "create", writer: "write", refiner: "post", videographer: "video", trainer: "train", librarian: "collection" };
+  function roomOf(href) {
+    var u;
+    try { u = new URL(String(href || ""), location.href); } catch (e) { return {}; }
+    var r = String(u.searchParams.get("room") || "").toLowerCase(), tab = ROOM_NAMES[r] || r, song = u.searchParams.get("song") === "new";
+    if (tab !== "engine" && ["create", "write", "post", "artist", "video", "train", "collection"].indexOf(tab) < 0) tab = "";
+    return { room: tab || (song ? "create" : ""), song: song };
+  }
+  function roomGo(r) {
+    if (!r || !r.room) return false;
+    if (r.room === "engine") { if ($("view-engine").classList.contains("is-hidden")) $("engineToggle").click(); return true; }
+    leaveEngine().then(function (ok) {
+      if (!ok) return;
+      setTab(r.room);
+      if (r.song && currentTab() === "create") $("newSong").click();
+    });
+    return true;
+  }
+  var LOAD_HREF = location.href, LOAD_ROOM = roomOf(LOAD_HREF);
+  if (LOAD_ROOM.room || LOAD_ROOM.song) {
+    try {
+      var cleaned = new URL(LOAD_HREF);
+      cleaned.searchParams.delete("room");
+      cleaned.searchParams.delete("song");
+      history.replaceState(history.state, "", cleaned.pathname + cleaned.search + cleaned.hash);
+    } catch (e) { /* the address as it came */ }
+  }
+  var launchFirst = true;
+  function launched(params) {
+    var href = params && params.targetURL ? String(params.targetURL) : "", first = launchFirst;
+    launchFirst = false;
+    if (!href || (first && href === LOAD_HREF)) return false;   // the launch that opened this very window: read as the page came up
+    return roomGo(roomOf(href));
+  }
+  window.ruachLaunch = launched;                    // for the checks: what a launch of the app hands the window open
+  if (window.launchQueue && typeof window.launchQueue.setConsumer === "function") window.launchQueue.setConsumer(launched);
+  setTab(LOAD_ROOM.room && LOAD_ROOM.room !== "engine" ? LOAD_ROOM.room : recall(TAB_KEY) || "create");   // HERESY 1014; 2082: ?room= first
   boot();
+  if (LOAD_ROOM.room === "engine" || LOAD_ROOM.song) setTimeout(function () { roomGo(LOAD_ROOM); }, 0);
 })();
 
 

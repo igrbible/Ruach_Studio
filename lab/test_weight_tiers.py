@@ -39,8 +39,9 @@ with tempfile.TemporaryDirectory() as d:
           picks["writer"] == [("writer", "quality")] and picks["artist"] == [("artwork", "all"), ("qwen", "2512-q6")] and
           picks["videographer"] == [("h3", "int8"), ("upscaler", "7b")] and picks["trainer"] == [("trainer", "bf16"), ("listener", "Q8_0")], picks)
     check("  the Refiner: MuScriptor's suggested size and FlashSR", picks["refiner"] == [("muscriptor", "large"), ("flashsr", "all")], picks["refiner"])
-    check("  every merge beside the default at the backbone's quant: IRA, five IRAE, six RS-FW", len(picks["merges"]) == 12 and
-          ("fw", "2.4x0.75-BF16") not in picks["merges"] and ("irae", "IRAE-IRv2-BF16") in picks["merges"] and all(v.endswith("BF16") for _, v in picks["merges"]), picks["merges"])
+    # HERESY 2074: the install brings RS-TW 2.0x0.75 now (2065): the room takes the seven RS-FW and RS-TW 2.0x0.9
+    check("  every merge beside the default at the backbone's quant: IRA, five IRAE, seven RS-FW and RS-TW 2.0x0.9 (2074)", len(picks["merges"]) == 14 and
+          ("fw", "2.4x0.75-BF16") in picks["merges"] and ("tw", "2.0x0.9-BF16") in picks["merges"] and ("tw", "2.0x0.75-BF16") not in picks["merges"] and ("irae", "IRAE-IRv2-BF16") in picks["merges"] and all(v.endswith("BF16") for _, v in picks["merges"]), picks["merges"])
     check("  the Artist's sizes: 8.4 + 34.5 GB, nothing here", near(t["artist"]["need"], 42.9e9) and near(t["artist"]["total"], 42.9e9), t["artist"])
     check("  the Videographer's: 69 + 17 GB", near(t["videographer"]["total"], 86e9), t["videographer"]["total"])
     (k / "models" / "muscriptor" / "v1").mkdir(parents=True)

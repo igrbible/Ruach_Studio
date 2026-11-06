@@ -29,7 +29,8 @@ NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 def paths(kit):
     return {"raw": kit / "datasets" / "raw", "prepared": kit / "datasets" / "prepared", "runs": kit / "training",
             "loras": kit / "loras", "models": kit / "checkpoints" / "comfy",
-            "head": kit / "checkpoints" / "yue2-mothersuperior-realaudio-tokenizer-v4"}
+            "head": kit / "checkpoints" / "yue2-mothersuperior-realaudio-tokenizer-v4",
+            "merges": kit / "models"}                       # HERESY 2112: a merge's own folder, its trainer file beside its GGUFs
 
 
 def _seconds(p):
@@ -79,16 +80,42 @@ def _voice(d):
         return None
 
 
+# HERESY 2034: a raw folder's count (its tracks, bytes, captions, parquet rows) kept while neither its own time nor its subfolders' change,
+# and at most RAW_TTL seconds: walking 95 folders whole took 15–25 s at each of the Trainer's calls (every 5 s while a run trains)
+RAW_COUNTS = {}
+RAW_TTL = 600
+
+
+def _raw_sig(d):
+    try:
+        sig = [d.stat().st_mtime_ns]
+        with os.scandir(d) as it:
+            sig += sorted(e.stat().st_mtime_ns for e in it if e.is_dir())
+        return tuple(sig)
+    except OSError:
+        return None
+
+
+def _raw_count(d):
+    sig, hit = _raw_sig(d), RAW_COUNTS.get(str(d))
+    if sig is not None and hit and hit[0] == sig and time.time() - hit[1] < RAW_TTL:
+        return hit[2]
+    files = [f for f in d.rglob("*") if f.suffix.lower() in AUDIO]
+    rows, rbytes = _trk().raw_count(str(d)) if any(d.rglob("*.parquet")) else (0, 0)   # HERESY 1626: a dataset's parquet shards, a row a track
+    out = {"tracks": len(files) + rows, "bytes": sum(f.stat().st_size for f in files) + rbytes,
+           "captions": sum(1 for f in files if f.with_suffix(".txt").is_file()), "parquet_rows": rows}
+    if sig is not None:
+        RAW_COUNTS[str(d)] = (sig, time.time(), out)
+    return out
+
+
 def datasets(kit):
     """The raw folders and the prepared sets, with what the trainer needs to know."""
     P = paths(kit)
     raw = []
     for d in sorted(P["raw"].iterdir()) if P["raw"].is_dir() else []:
         if d.is_dir():
-            files = [f for f in d.rglob("*") if f.suffix.lower() in AUDIO]
-            rows, rbytes = _trk().raw_count(str(d)) if any(d.rglob("*.parquet")) else (0, 0)   # HERESY 1626: a dataset's parquet shards, a row a track
-            raw.append({"name": d.name, "tracks": len(files) + rows, "bytes": sum(f.stat().st_size for f in files) + rbytes,
-                        "captions": sum(1 for f in files if f.with_suffix(".txt").is_file()), "voice": _voice(d), "parquet_rows": rows})
+            raw.append(dict({"name": d.name, "voice": _voice(d)}, **_raw_count(d)))
     prepared = []
     for d in sorted(P["prepared"].iterdir()) if P["prepared"].is_dir() else []:
         man = d / "dataset.json"
@@ -308,18 +335,29 @@ DEFAULTS = {"steps": 1500, "rank": 32, "rank_ar": 0, "rank_nar": 0, "lr": 1e-4, 
 # HERESY 1422: the only one: AI-Toolkit, kept as the reference till then, left the Studio.
 OWN_CKPT = {"bf16": "yue2_3b_bf16.safetensors", "int8": "yue2_3b_int8_convrot.safetensors"}
 BASE_RE = re.compile(r"^[A-Za-z0-9_.\-]{1,160}\.safetensors$")
+# HERESY 2112 (Viktor 27.10.2026: «адаптеры голосовые нужно тюнить/тренировать на тех весах YuE2, на которых собираешься их использовать»): the Studio's
+# default since 2.0.6, RS-TW 2.0x0.75, a run's base too. A merge named by itself (RS-TW-2.0x0.75) is its trainer file, yue2_3b_<merge>_bf16.safetensors,
+# as the fold writes it beside the merge's GGUFs in models/<merge>/ (comfy-made.json there says its size and sha256)
+MERGE_RE = re.compile(r"^RS-(?:FW|TW)-\d+(?:\.\d+)?x\d+(?:\.\d+)?$")
+FOLDED_RE = re.compile(r"^yue2_3b_(RS-(?:FW|TW)-\d+(?:\.\d+)?x\d+(?:\.\d+)?)_bf16\.safetensors$")
 
 
 def base_checkpoint(P, spec):
     """HERESY 1792: the weights a run trains on, (path, quant, base): «base», a file of checkpoints/comfy/checkpoints/ named by itself (a merge
-    folded into the trainer's own layout: heresy/MISC/claude-tc/finetune/fold_base.py), bf16; else the Studio's own by its quant, as before"""
+    folded into the trainer's own layout: heresy/MISC/claude-tc/finetune/fold_base.py), bf16; else the Studio's own by its quant, as before.
+    HERESY 2112: or a merge by its name (RS-TW-2.0x0.75), or its trainer file where the fold left it, models/<merge>/; the base said is the file's name"""
     base = str(spec.get("base") or "").strip()
     if base:
+        if MERGE_RE.match(base):
+            base = f"yue2_3b_{base}_bf16.safetensors"
         if not BASE_RE.match(base) or ".." in base:
-            raise ValueError("base: a .safetensors file name of checkpoints/comfy/checkpoints/, no folders")
+            raise ValueError("base: a .safetensors file name of checkpoints/comfy/checkpoints/ or a merge's name (RS-TW-2.0x0.75), no folders")
         ckpt = P["models"] / "checkpoints" / base
+        folded = FOLDED_RE.match(base)
+        if not ckpt.is_file() and folded and P.get("merges"):
+            ckpt = P["merges"] / folded.group(1) / base
         if not ckpt.is_file():
-            raise FileNotFoundError(f"{base} is not in checkpoints/comfy/checkpoints/")
+            raise FileNotFoundError(f"{base} is not in checkpoints/comfy/checkpoints/" + (f" nor in models/{folded.group(1)}/" if folded else ""))
         return ckpt, "bf16", base
     quant = str(spec.get("quant") or "bf16")
     ckpt = P["models"] / "checkpoints" / OWN_CKPT.get(quant, OWN_CKPT["bf16"])

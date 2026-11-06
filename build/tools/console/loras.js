@@ -50,13 +50,19 @@
     var f = S.fit[id];
     return !f ? "" : f.how === "assumed" ? tr("{0}, assumed: the file does not say").replace("{0}", f.base) : f.base;
   }
+  function waves(a, b) {                           // HERESY 2111: two labels of the two waves, «RS-FW 2.4» and «RS-TW 2.0»
+    var w = function (s) { var m = /^RS-(FW|TW)\b/.exec(String(s || "")); return m ? m[1] : ""; };
+    return !!w(a) && !!w(b) && w(a) !== w(b);
+  }
   function fitTip(e) {
     if (!e) return "";                             // a row whose file left loras/ has no base to say (1960: it broke the picker's paint)
     var out = [];
     [e].concat(pairOf(e) ? [pairOf(e)] : []).forEach(function (x) {
       var k = fitOf(x.id), f = S.fit[x.id];
       if (k === "other") out.push("\u2298 " + tr("Trained on {0}; the model is {1}: what it learnt does not hold here. It goes in only when asked.").replace("{0}", baseOf(x.id)).replace("{1}", S.model.label));
-      else if (k === "near") out.push("\u2248 " + tr("Trained on {0}; the model is {1}: the same fine-tune at another epoch, it may sound a little off.").replace("{0}", baseOf(x.id)).replace("{1}", S.model.label));
+      else if (k === "near") out.push("\u2248 " + (waves(f && f.base, S.model.label)   // HERESY 2111: RS-FW's on RS-TW, or RS-TW's on RS-FW: the other wave
+        ? tr("Trained on {0}; the model is {1}: the other wave of the same fine-tune (the Tsunami Wave grew over the First Wave), it may sound a little off.")
+        : tr("Trained on {0}; the model is {1}: the same fine-tune at another epoch, it may sound a little off.")).replace("{0}", baseOf(x.id)).replace("{1}", S.model.label));
       if (k && f && f.inside) out.push(tr("Already folded into this model: added again, it counts twice."));
     });
     return out.filter(function (x, i) { return out.indexOf(x) === i; }).join("\n");

@@ -112,6 +112,7 @@
   function load() {
     var t = state.take;
     state.plan = null; state.dirty = false; state.cur = 0;   // HERESY 1940: a new take from its first shot
+    lookPaint();                                      // HERESY 2010: the take's own look on its button
     if (!t || t.session) { paint(); return; }
     animLoad();                                       // HERESY 1837: its animatic, if it has one
     clipLoad();                                       // HERESY 1838: its clip
@@ -446,13 +447,139 @@
       if (was === "running") say(e.message, true);
     });
   }
+
+  // HERESY 2010 (Viktor 01.11.2026: «исследуй Davinci Resolve и вычлени самое лучшее… библиотеку с Luts'ами для применения цветовых эффектов»): the
+  // clip's look, a 3D LUT over every picture as Resolve's colourist lays one, its strength from a breath to all of it, under the lyrics and the
+  // titles. The window: each look a picture of the take's cover through it (a test card for a take with none), the packs (the Studio's own sixteen,
+  // CC0; the RawTherapee film stocks, CC BY-SA 4.0, fetched on asking; yours in user/luts/), the words. A take keeps its own in this browser.
+  var LOOK_KEY = "yue2.vdClipLook", LK = { shelf: null, pack: "", q: "", busy: false };
+  function looksAll() { try { return JSON.parse(localStorage.getItem(LOOK_KEY) || "{}") || {}; } catch (e) { return {}; } }
+  function lookOf(name) { var l = looksAll()[name]; return l && l.id ? { id: l.id, strength: typeof l.s === "number" ? l.s : 1 } : { id: "none", strength: 1 }; }
+  // HERESY 2017 (from Resolve, §2.4 of the research of 02.11.2026): the film over the clip, a grain that moves and a vignette, each 0–100 %, laid after
+  // the look and under the words; a take keeps its own in this browser, beside its look (a film needs no look); sent with the clip only when there
+  var FILM_KEY = "yue2.vdClipFilm";
+  function filmAll() { try { return JSON.parse(localStorage.getItem(FILM_KEY) || "{}") || {}; } catch (e) { return {}; } }
+  function filmOf(name) { var f = filmAll()[name] || {}; return { grain: +f.g || 0, vignette: +f.v || 0 }; }
+  function filmSet(name, g, v) {
+    var all = filmAll();
+    if (g > 0 || v > 0) all[name] = { g: g, v: v }; else delete all[name];
+    sideKeep(FILM_KEY, Object.keys(all).length ? JSON.stringify(all) : "");
+    lookPaint();
+  }
+  function lookSent(name) {                          // the look as the clip takes it: its film only when there is one
+    var l = lookOf(name), f = filmOf(name);
+    if (f.grain > 0) l.grain = f.grain;
+    if (f.vignette > 0) l.vignette = f.vignette;
+    return l;
+  }
+  function lookSet(name, id, label, s) {
+    var all = looksAll();
+    if (!id || id === "none") delete all[name]; else all[name] = { id: id, name: label || "", s: s };
+    sideKeep(LOOK_KEY, Object.keys(all).length ? JSON.stringify(all) : "");
+    lookPaint();
+  }
+  function lookPaint() {
+    var b = $("vdClipLook");
+    if (!b) return;
+    var l = state.take ? looksAll()[state.take.name] : null, f = state.take ? filmOf(state.take.name) : { grain: 0, vignette: 0 }, fm = f.grain > 0 || f.vignette > 0;
+    b.textContent = (l && l.id ? tr("Look: {0}").replace("{0}", (l.name || l.id) + (l.s < 0.999 ? " · " + Math.round(l.s * 100) + " %" : "")) : tr("Look")) + (fm ? " + " + tr("film") : "");   // 2017
+    b.setAttribute("aria-pressed", (l && l.id) || fm ? "true" : "false");
+  }
+  function looksClose() { var b = $("vdLooks"); if (b) b.remove(); document.removeEventListener("keydown", looksKey, true); }
+  function looksKey(e) { if (e.key === "Escape" && $("vdLooks")) { e.preventDefault(); e.stopPropagation(); looksClose(); } }
+  function looksOpen() {
+    if (!state.take) return say(tr("Choose a take first"), true);
+    looksClose();
+    var cur = lookOf(state.take.name), fm0 = filmOf(state.take.name), back = document.createElement("div");
+    back.className = "vdl-back"; back.id = "vdLooks";
+    back.innerHTML = '<div class="vdl-box" role="dialog" aria-modal="true" aria-label="' + esc(tr("The clip's look")) + '">' +
+      '<div class="vdl-head"><b class="vdl-title">' + esc(tr("The clip's look")) + "</b>" +
+      '<input type="search" class="vdl-q" placeholder="' + esc(tr("Search the looks")) + '" autocomplete="off" />' +
+      '<span class="vdl-packs" role="group"></span>' +
+      '<label class="vdl-s" data-tip="' + esc(tr("How much of the look: a breath of it at the left, all of it at the right")) + '"><span>' + esc(tr("Strength")) + '</span><input type="range" min="0" max="100" step="5" class="vdl-range" value="' + Math.round(cur.strength * 100) + '" /><b class="vdl-sv mono">' + Math.round(cur.strength * 100) + " %</b></label>" +
+      [["g", "Grain", "A film's grain over the whole clip, a new pattern each frame: none at the left, heavy at the right", fm0.grain],   // HERESY 2017
+       ["v", "Vignette", "The corners darkened, as an old lens darkens them: none at the left, deep at the right", fm0.vignette]].map(function (x) {
+        return '<label class="vdl-s" data-tip="' + esc(tr(x[2])) + '"><span>' + esc(tr(x[1])) + '</span><input type="range" min="0" max="100" step="5" class="vdl-film" data-film="' + x[0] +
+          '" value="' + Math.round(x[3] * 100) + '" /><b class="vdl-fv mono">' + Math.round(x[3] * 100) + " %</b></label>"; }).join("") +
+      '<button type="button" class="btn ghost small vdl-x" data-vdl="close" aria-label="' + esc(tr("Close")) + '" data-tip="' + esc(tr("Close")) + '">×</button></div>' +
+      '<div class="vdl-grid" role="listbox"><p class="vdl-wait">' + esc(tr("Reading the looks…")) + "</p></div>" +
+      '<div class="vdl-foot"><span class="vdl-about row-hint"></span><span class="vdl-fetch"></span></div></div>';
+    document.body.appendChild(back);
+    back.addEventListener("click", function (e) {
+      if (e.target === back) return looksClose();
+      var t = e.target.closest && e.target.closest("button");
+      if (!t) return;
+      if (t.dataset.vdl === "close") return looksClose();
+      if (t.dataset.vdl === "fetch") return looksFetch();
+      if (t.dataset.vdlPack != null) { LK.pack = t.dataset.vdlPack; return looksPaint(); }
+      if (t.dataset.vdlId) {
+        var s = +back.querySelector(".vdl-range").value / 100;
+        lookSet(state.take.name, t.dataset.vdlId, t.dataset.vdlName, s);
+        Array.prototype.forEach.call(back.querySelectorAll(".vdl-tile"), function (x) { var on = x === t; x.classList.toggle("is-on", on); x.setAttribute("aria-selected", on); });
+      }
+    });
+    back.querySelector(".vdl-q").addEventListener("input", function () { LK.q = this.value.trim().toLowerCase(); looksPaint(); });
+    var timer = null;
+    back.querySelector(".vdl-range").addEventListener("input", function () {
+      var s = +this.value / 100, l = looksAll()[state.take.name];
+      back.querySelector(".vdl-sv").textContent = Math.round(s * 100) + " %";
+      if (l && l.id) lookSet(state.take.name, l.id, l.name, s);
+      clearTimeout(timer); timer = setTimeout(looksPaint, 350);   // the pictures again at the new strength, once the hand stops
+    });
+    Array.prototype.forEach.call(back.querySelectorAll(".vdl-film"), function (r) {   // HERESY 2017: the film, kept as the hand moves
+      r.addEventListener("input", function () {
+        this.nextElementSibling.textContent = this.value + " %";
+        filmSet(state.take.name, +back.querySelector('.vdl-film[data-film="g"]').value / 100, +back.querySelector('.vdl-film[data-film="v"]').value / 100);
+      });
+    });
+    document.addEventListener("keydown", looksKey, true);
+    getShelf(false);
+    back.querySelector(".vdl-q").focus();
+  }
+  function getShelf(again) {
+    if (LK.shelf && !again) return looksPaint();
+    fetch("/lab/luts").then(function (r) { return r.json(); }).then(function (d) { LK.shelf = d; looksPaint(); },
+      function (e) { var g = $("vdLooks") && $("vdLooks").querySelector(".vdl-grid"); if (g) g.innerHTML = '<p class="vdl-wait is-bad">' + esc(e.message) + "</p>"; });
+  }
+  function looksPaint() {
+    var box = $("vdLooks"), d = LK.shelf;
+    if (!box || !d || !state.take) return;
+    var packs = d.packs || [], cur = lookOf(state.take.name), s = +box.querySelector(".vdl-range").value / 100;
+    box.querySelector(".vdl-packs").innerHTML = [{ id: "", name: "All" }].concat(packs.filter(function (p) { return p.present; })).map(function (p) {
+      return '<button type="button" class="mx-ms vdl-pack' + (LK.pack === p.id ? " is-on" : "") + '" data-vdl-pack="' + esc(p.id) + '">' + esc(tr(p.name)) + "</button>"; }).join("");
+    var list = (d.luts || []).filter(function (x) { return (!LK.pack || x.pack === LK.pack) && (!LK.q || (x.name + " " + x.group).toLowerCase().indexOf(LK.q) >= 0); });
+    var pic = function (id) { return "/lab/luts/preview?id=" + encodeURIComponent(id) + "&name=" + encodeURIComponent(state.take.name) + "&s=" + s.toFixed(2); };
+    var tile = function (id, name, meta) {
+      var on = cur.id === id;
+      return '<button type="button" class="vdl-tile' + (on ? " is-on" : "") + '" role="option" aria-selected="' + on + '" data-vdl-id="' + esc(id) + '" data-vdl-name="' + esc(name) + '">' +
+        '<img loading="lazy" alt="" src="' + pic(id) + '" /><span class="vdl-name" translate="no">' + esc(name) + "</span>" + (meta ? '<span class="vdl-meta">' + esc(meta) + "</span>" : "") + "</button>";
+    };
+    box.querySelector(".vdl-grid").innerHTML = (LK.q ? "" : tile("none", tr("As it is"), "")) + (list.length ? list.map(function (x) {
+      return tile(x.id, x.name, x.group && x.pack !== "ruach" ? x.group : ""); }).join("") : '<p class="vdl-wait">' + esc(tr("No look with these words")) + "</p>");
+    var film = packs.filter(function (p) { return p.id === "rawtherapee"; })[0], f = d.fetch || {};
+    box.querySelector(".vdl-about").textContent = tr("Lay your own .cube or HaldCLUT .png in user/luts/ (a folder a pack)");
+    var fe = box.querySelector(".vdl-fetch");
+    if (film && !film.present) {
+      if (f.state === "running") {
+        fe.innerHTML = '<span class="row-hint">' + esc(tr("Downloading the film looks… {0} %").replace("{0}", Math.round(100 * (f.done || 0) / (f.total || 1)))) + "</span>";
+        setTimeout(function () { getShelf(true); }, 2000);
+      } else {
+        fe.innerHTML = (f.state === "failed" ? '<span class="row-hint is-bad">' + esc(tr("The film looks did not come: {0}").replace("{0}", f.error || "")) + "</span> " : "") +
+          '<button type="button" class="btn ghost small" data-vdl="fetch" data-tip="' + esc(tr("{0} MB, CC BY-SA 4.0: film stocks by Pat David, Pavlov Dmitry and Michael Ezra (RawTherapee Film Simulation Collection)").replace("{0}", Math.round((film.bytes || 0) / 1e6))) + '">' +
+          esc(tr("Download the film looks")) + "</button>";
+      }
+    } else fe.innerHTML = "";
+  }
+  function looksFetch() {
+    fetch("/lab/luts/fetch", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).then(function (r) { return r.json(); }).then(function () { getShelf(true); }, function (e) { say(e.message, true); });
+  }
   function clipMake() {
     var t = state.take, labels = {};
     if (!t) return;
     SCENE.forEach(function (k) { labels[k] = tr(LABEL[k]); });   // a shot with nothing to show, in a take with no cover, shows its scene
     state.clip = "running"; paint(); say(tr("the clip: {0} %").replace("{0}", 0));
     var lyr = !!state.clipLyrics, btw = $("vdClipBetween") ? $("vdClipBetween").value : "cut";   // HERESY 1916
-    settled().then(function () { return api("/video/clip", { name: t.name, labels: labels, lyrics: lyr, between: btw, shape: clipShape(), titles: !!state.clipTitles }); }).then(function () { setTimeout(clipLoad, 1200); })
+    settled().then(function () { return api("/video/clip", { name: t.name, labels: labels, lyrics: lyr, between: btw, shape: clipShape(), titles: !!state.clipTitles, look: lookSent(t.name) }); }).then(function () { setTimeout(clipLoad, 1200); })
       .catch(function (e) { state.clip = ""; paint(); say(e.message, true); });
   }
   // HERESY 1830: a shot as a video model reads it: its scene, then the clip's look, then its length (the fields as they stand, saved or not)
@@ -683,6 +810,8 @@
   function sideLoad() { api("/video/plans").then(function (b) { SIDE.plans = b.plans || []; sidePaint(); }).catch(function () { SIDE.plans = []; sidePaint(); }); }
   function sideSoon() { clearTimeout(SIDE.timer); SIDE.timer = setTimeout(function () { if (document.body.dataset.tab === "video") sideLoad(); }, 800); }
   function frameUrl(name, f) { return "/lab/video/frame?name=" + encodeURIComponent(name) + "&f=" + encodeURIComponent(f); }
+  // HERESY 2139: a take's cover by its key, as the Librarian's (app.js HeresyArt.url: kept a year under it); a take /arts does not list yet, as it was
+  function artOf(name) { return (window.HeresyArt && window.HeresyArt.url(name)) || "/lab/art?name=" + encodeURIComponent(name); }
   function sidePaint() {
     var lay = $("vdLayout"), list = $("vdSideList");
     if (!lay || !list) return;
@@ -706,7 +835,7 @@
       return;
     }
     list.innerHTML = plans.length ? plans.map(function (p) {
-      var fr = (p.frames || [])[0], img = fr ? frameUrl(p.name, fr.f) : "/lab/art?name=" + encodeURIComponent(p.name);
+      var fr = (p.frames || [])[0], img = fr ? frameUrl(p.name, fr.f) : artOf(p.name);
       var films = (p.clip && p.clip.exists ? '<button type="button" class="vd-film-btn" data-vdside-play="clip" data-tip="' + esc(tr("Play the clip")) + '">▶ ' + esc(tr("Clip")) + "</button>" : "") +
         (p.animatic && p.animatic.exists ? '<button type="button" class="vd-film-btn" data-vdside-play="animatic" data-tip="' + esc(tr("Play the animatic")) + '">▶ ' + esc(tr("Animatic")) + "</button>" : "");
       return '<div class="vd-tile' + (p.name === cur ? " is-on" : "") + '" data-vdside-take="' + esc(p.name) + '" role="button" tabindex="0">' +
@@ -827,7 +956,7 @@
     $("tlTc").textContent = tlTc(t);
     if (tlMine() && !$("audio").paused && (x < sc.scrollLeft + 20 || x > sc.scrollLeft + sc.clientWidth - 40)) sc.scrollLeft = Math.max(0, x - sc.clientWidth * 0.2);   // it follows the playing
     var i = tlAt(t), s = tlShots()[i], take = state.take;
-    var src = s && s.frame ? picUrl(s.frame) : take && !take.session ? "/lab/art?name=" + encodeURIComponent(take.name) : "";
+    var src = s && s.frame ? picUrl(s.frame) : take && !take.session ? artOf(take.name) : "";
     var pic = $("tlPic");
     if (pic.dataset.src !== src) { pic.dataset.src = src; pic.style.backgroundImage = src ? "url(" + src + ")" : ""; }
     var tv = $("tlVid"), au = $("audio"), vsrc = s && s.video ? shotVid(s.video) : "";   // HERESY 1868: the shot's video in step with the song
@@ -1292,6 +1421,8 @@
     if ($("vdClipBetween")) $("vdClipBetween").addEventListener("change", function () { sideKeep("yue2.vdClipBetween", this.value === "cut" ? "" : this.value); });
     try { if ($("vdClipShape")) $("vdClipShape").value = localStorage.getItem("yue2.vdClipShape") || "16:9"; } catch (e) { /* private window */ }   // HERESY 1917
     if ($("vdClipShape")) $("vdClipShape").addEventListener("change", function () { sideKeep("yue2.vdClipShape", this.value === "16:9" ? "" : this.value); clipLoad(); });
+    if ($("vdClipLook")) $("vdClipLook").addEventListener("click", looksOpen);   // HERESY 2010
+    lookPaint();
     document.addEventListener("keydown", function (e) { if (e.key === "Escape" && pickAt >= 0) pickClose(); });
     document.addEventListener("mousedown", function (e) { if (pickAt >= 0 && !e.target.closest("#vdPick, [data-vdpic], [data-vdheropick]")) pickClose(); });
     window.addEventListener("scroll", function (e) { if (pickAt >= 0 && !(e.target.closest && e.target.closest("#vdPick"))) pickClose(); }, true);
@@ -1330,7 +1461,7 @@
     prompt: function (i) { return promptOf(i); }, follow: function (t) { follow(t); },   // HERESY 1830: for the checks
     picture: function (i) { return picturePromptOf(i); },   // HERESY 1839: for the checks
     frames: function () { return state.frames || null; },   // HERESY 1913: for the checks
-    clipOpts: function () { return { lyrics: !!state.clipLyrics, between: $("vdClipBetween") ? $("vdClipBetween").value : "", shape: clipShape(), titles: !!state.clipTitles }; },   // HERESY 1916, 1917, 1948: for the checks
+    clipOpts: function () { return { lyrics: !!state.clipLyrics, between: $("vdClipBetween") ? $("vdClipBetween").value : "", shape: clipShape(), titles: !!state.clipTitles, look: state.take ? lookSent(state.take.name) : null }; },   // 2010: the look   // HERESY 1916, 1917, 1948: for the checks
     shot: function (i) { if (i !== undefined) shotCur(i); return state.cur || 0; }, pane: function (k) { if (k) paneShow(k); return state.pane || "edit"; },   // HERESY 1940: for the checks
     full: function (on) { if (on !== undefined) vdSetFull(on); return vdIsFull(); }, findOpen: function () { findOpen(); }, findClose: function () { findClose(); },
     side: function (on) { if (on !== undefined) sideShow(on); return !SIDE.folded; },

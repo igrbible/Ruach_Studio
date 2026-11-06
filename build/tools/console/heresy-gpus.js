@@ -11,6 +11,9 @@
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function gb(mb) { return (mb / 1024).toFixed(1) + " GB"; }
+  // HERESY 2029: a card by the name the page shows it by: GPU0 for CUDA, Arc0 for the first Intel card (its index 100)
+  function cardName(i) { return i >= 100 ? "Arc" + (i - 100) : "GPU" + i; }
+  var ARC_TIP = "Training and the lab's jobs run PyTorch on a CUDA card; an Intel card runs the Studio's engine (beta)";
   function lab(path, body) {
     var opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
     return fetch("/lab" + path, opt).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); });
@@ -23,7 +26,7 @@
   function limitText(v, top) { return v >= top ? tr("no limit") + " · " + top.toFixed(1) + " GB" : v.toFixed(1) + " " + tr("of") + " " + top.toFixed(1) + " GB"; }
   function limitCell(c, r) {
     var top = maxGb(c), v = Math.min(top, limitOf(r, c.index) || top);
-    return '<input type="range" class="gpu-limit-range" data-limit="' + c.index + '" min="4" max="' + top + '" step="0.5" value="' + v + '" aria-label="VRAM limit of GPU' + c.index + '" />' +
+    return '<input type="range" class="gpu-limit-range" data-limit="' + c.index + '" min="4" max="' + top + '" step="0.5" value="' + v + '" aria-label="VRAM limit of ' + cardName(c.index) + '" />' +
       '<span class="gpu-limit-v mono" data-limit-v="' + c.index + '">' + esc(limitText(v, top)) + "</span>";
   }
   function paintLimit(x) {
@@ -57,11 +60,14 @@
             '<td class="gpu-limit">' + limitCell(c, r) + "</td>" +
             '<td class="mono">' + gb(c.total_mb - c.free_mb) + " used" + (now.length ? " · " + esc(now.join(", ")) : "") + "</td>" + guardCell(d.guard, i) + "</tr>" +
             '<tr class="gpu-live-row"><td colspan="7"><div class="gpu-live" data-gpu="' + i + '"></div></td></tr>';   // HERESY 1264: the card live
-        }).join("") + (d.arc || []).map(function (c) {   // HERESY 1680: each Intel card, the Studio's when it runs there; no roles of the CUDA kind
+        }).join("") + (d.arc || []).map(function (c) {   // HERESY 1680: each Intel card; 2029 (Viktor: «Сделай Arc таким же равноправным»): the Studio's card by choice, its VRAM limit
           var i = c.index, on = studioNow === i, lab = (window.HeresyGpuLabel ? window.HeresyGpuLabel(i, c.name) : "Arc" + (i - 100) + " · " + c.name).split(" · ");
           return '<tr class="gpu-arc' + (on ? " is-studio" : "") + '"><td><b>' + esc(lab[0]) + '</b> <span class="row-hint">' + esc(lab.slice(1).join(" · ")) +
             (c.total_mb ? " · " + gb(c.total_mb) : "") + "</span></td>" +
-            '<td>' + (on ? "●" : "") + '</td><td class="row-hint">—</td><td class="row-hint">—</td><td></td><td class="mono">' + (on ? esc(tr("the Studio, on SYCL")) : "") + "</td><td></td></tr>" +
+            '<td><input type="radio" name="gpuStudio" value="' + i + '"' + (r.studio === i ? " checked" : "") + " /></td>" +
+            '<td class="row-hint gpu-arc-no" data-tip="' + esc(tr(ARC_TIP)) + '">—</td><td class="row-hint gpu-arc-no" data-tip="' + esc(tr(ARC_TIP)) + '">—</td>' +
+            '<td class="gpu-limit">' + (c.total_mb ? limitCell(c, r) : "") + "</td>" +
+            '<td class="mono">' + (on ? esc(tr("the Studio, on SYCL")) : "") + "</td><td></td></tr>" +
             '<tr class="gpu-live-row"><td colspan="7"><div class="gpu-live" data-gpu="' + i + '"></div></td></tr>';
         }).join("") + "</table>";
       hint();
@@ -106,25 +112,21 @@
   function hint() {
     var d = state.data, c = chosen(), say = [];
     if (!d) return;
-    if (d.studio_now != null && d.studio_now >= 100) {   // HERESY 1680: the Studio on the Intel Arc: the CUDA cards are all for training and the lab
-      $("gpuHint").textContent = tr("The Studio runs on the Intel Arc (SYCL, beta): these cards are free for training and the lab's jobs.");
-      $("gpuRestart").hidden = true;
-      return;
-    }
-    if (c.train.indexOf(c.studio) >= 0) say.push("Training may take GPU" + c.studio + ", the Studio’s card: while it does, synthesis waits.");
+    if (c.studio >= 100) say.push("The Studio runs on the Intel Arc (SYCL, beta): these cards are free for training and the lab's jobs.");   // HERESY 1680 · 2029
+    else if (c.train.indexOf(c.studio) >= 0) say.push("Training may take GPU" + c.studio + ", the Studio’s card: while it does, synthesis waits.");
     else say.push("Training never takes GPU" + c.studio + ": synthesis and training go on side by side.");
-    if (d.studio_now != null && d.studio_now !== d.roles.studio) say.push("Saved: the Studio on GPU" + d.roles.studio + "; it still runs on GPU" + d.studio_now + " until it restarts.");
+    if (d.studio_now != null && d.studio_now !== d.roles.studio) say.push("Saved: the Studio on " + cardName(d.roles.studio) + "; it still runs on " + cardName(d.studio_now) + " until it restarts.");
     $("gpuHint").textContent = say.map(tr).join(" ");
     var b = $("gpuRestart");
     b.hidden = !(d.studio_now != null && d.studio_now !== d.roles.studio);
-    b.textContent = "Restart the Studio on GPU" + d.roles.studio;
+    b.textContent = "Restart the Studio on " + cardName(d.roles.studio);   // HERESY 2029: GPU1 or Arc0
   }
   function save() {      // true when the lab took it (HERESY 1166: the Engine page waits on it before it goes)
     var c = chosen();
     if (!c.train.length || !c.jobs.length) { toast("Give training and the lab’s jobs one card at least", "bad"); return Promise.resolve(false); }
     return lab("/gpus", c).then(function (d) {
       state.data = d; hint();
-      toast(d.studio_now != null && d.studio_now !== d.roles.studio ? "Saved: the Studio moves to GPU" + d.roles.studio + " when it restarts" : "Saved", "good");
+      toast(d.studio_now != null && d.studio_now !== d.roles.studio ? "Saved: the Studio moves to " + cardName(d.roles.studio) + " when it restarts" : "Saved", "good");
       if (state.hooks && state.hooks.limits) state.hooks.limits();     // HERESY 1294: Auto follows the Studio card's limit
       paint();
       return true;
@@ -150,15 +152,15 @@
   }
   function restart() {
     var to = state.data && state.data.roles.studio;
-    window.HeresyDialog.confirm("Restart the Studio on GPU" + to + "?\n\nThe models load again on the new card at the next song; the page reconnects by itself. Nothing is rendering now.", { ok: "Restart" })
+    window.HeresyDialog.confirm("Restart the Studio on " + cardName(to) + "?\n\nThe models load again on the new card at the next song; the page reconnects by itself. Nothing is rendering now.", { ok: "Restart" })
       .then(function (ok) {
         if (!ok) return;
         return lab("/studio/restart", {}).then(function () {
-          toast("The Studio restarts on GPU" + to + "…");
+          toast("The Studio restarts on " + cardName(to) + "…");
           var tries = 0;
           (function wait() {
             setTimeout(function () {
-              fetch("/hardware").then(function (r) { if (!r.ok) throw new Error(); toast("The Studio is back on GPU" + to, "good"); paint(); })
+              fetch("/hardware").then(function (r) { if (!r.ok) throw new Error(); toast("The Studio is back on " + cardName(to), "good"); paint(); })
                 .catch(function () { if (++tries < 60) wait(); });
             }, 2000);
           })();
@@ -172,7 +174,7 @@
     return lab("/gpus").then(function (d) {
       if (!d.studio_training) return true;
       var g = d.studio_now != null ? d.studio_now : d.roles.studio;
-      return window.HeresyDialog.confirm("GPU" + g + " is training " + d.studio_training + "\n\nIt is the Studio’s own card: a synthesis now would fight the training for its memory, and one of them would fail. " +
+      return window.HeresyDialog.confirm(cardName(g) + " is training " + d.studio_training + "\n\nIt is the Studio’s own card: a synthesis now would fight the training for its memory, and one of them would fail. " +
         "The synthesis waits until the run ends, or until you stop it (Train). To create while training, give training another card: Engine → GPUs.",
         { ok: "Open Train", cancel: "Wait" }).then(function (go) {
         if (go) { var t = document.querySelector('.topbar [data-tab="train"]'); if (t) t.click(); }
@@ -192,5 +194,5 @@
     if (open) open.addEventListener("click", function () { setTimeout(paint, 60); });
     paint();
   }
-  window.HeresyGpus = { init: init, paint: paint, guard: guard, unsaved: unsaved, save: save, reset: reset, studioLimitGib: studioLimitGib, state: function () { return state.data; } };
+  window.HeresyGpus = { init: init, paint: paint, guard: guard, unsaved: unsaved, save: save, reset: reset, studioLimitGib: studioLimitGib, state: function () { return state.data; }, cardName: cardName };
 })();

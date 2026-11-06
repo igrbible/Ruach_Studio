@@ -22,6 +22,8 @@
     "Fewer steps (8–16) are quicker drafts. Whether 64 sounds better than 32 has not been published: " +
     "to hear it, re-render one take's sound at both settings.";
 
+  var HOST_URL = "The /v1 address of this server, already running. Empty: its own default, shown faint in the field. The Studio uses whatever model " +
+    "it has loaded; it never loads, switches or unloads a model there.";
   var HELP = {
     // ------------------------------------------------------------ the form
     title: "Names the take in the library and every file it downloads as (date-time-title). " +
@@ -173,8 +175,8 @@
     setVaeCore: "The VAE decodes the song in tiles of this many frames (512 by default). Smaller tiles need less GPU memory " +
       "at about the same speed, and give the same audio.",
     setKeepLoaded: null,  // has its own (i)
-    chatUrl: "The /v1 address of a chat server that is already running, for the idea writer. The page uses whatever model it has loaded; " +
-      "it never loads, switches or unloads a model there.",
+    // HERESY 2097: each server its own address in Engine → Writer and Artwork (was one chatUrl for all three)
+    vllmUrl: HOST_URL, lmstudioUrl: HOST_URL, ollamaUrl: HOST_URL,
     logFollow: "Keep the log scrolled to the newest line."
   };
   HELP.memPresetCpp = "Fills model, context rows, keep loaded and VAE tiles for a card of that size; press Save to apply. " +
@@ -311,10 +313,13 @@
   // sort, a note, a file): no tip for them; every other control of the page has a tip or an (i), and the page test holds it
   var SELF_EVIDENT = {
     wrSearch: 1, wrTitle: 1, wrStyle: 1, wrLyrics: 1, wrNotes: 1, assistBrief: 1, assistTask: 1, assistStructure: 1, assistPrefs: 1,
-    orRemember: 1, draftTitle: 1, draftStyle: 1, draftLyrics: 1, tpEdPick: 1, tpEdName: 1, tpTestIn: 1,
+    draftTitle: 1, draftStyle: 1, draftLyrics: 1, tpEdPick: 1, tpEdName: 1, tpTestIn: 1,
     impFile: 1, impTitle: 1, impLyrics: 1, upMode: 1,
     trTrigger: 1, trStyle: 1, trSearch: 1,
-    collSearch: 1, collSort: 1, collTrashDays: 1, collWsPick: 1, collWsMove: 1
+    collSearch: 1, collSort: 1, collTrashDays: 1, collWsPick: 1, collWsMove: 1,
+    // HERESY 2115: outside the rooms, built the first time they open: the find bar's second field (its placeholder says it, its two buttons' tips the
+    // keys) and the cheat-sheet's search, family and «heard only» (its legend says what heard is)
+    findR: 1, hiSearch: 1, hiFam: 1, hiHeard: 1
   };
   function missing() {
     var skip = { themePick: 1, volume: 1, openFile: 1, wrImportFile: 1 };   // HERESY 1168: the Writer's backup file, as Open's

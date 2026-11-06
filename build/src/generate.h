@@ -28,7 +28,8 @@ struct Yue2Generation {
 
 // Prefill set s with a prefix, or copy the set of an equal prefix already
 // prefilled below it. The logits are the LM head rows [row0, row0 + rows).
-static void yue2_prefill(Qwen3LM *                             lm,
+// HERESY 2090: false when the forward refused (g_qw3lm_error says why)
+static bool yue2_prefill(Qwen3LM *                             lm,
                          Qw3lmKvCache *                        kv,
                          const std::vector<std::vector<int>> & prefixes,
                          int                                   first_set,
@@ -45,12 +46,15 @@ static void yue2_prefill(Qwen3LM *                             lm,
             memcpy(logits + (size_t) s * rows, logits + (size_t) (first_set + j) * rows, (size_t) rows * sizeof(float));
             fprintf(stderr, "[AR] %s song %d: %zu tokens copied from song %d, %.0f ms\n", label, i, prefixes[i].size(),
                     j, timer.ms());
-            return;
+            return true;
         }
     }
     qw3lm_kv_trim(kv, s, 0);
-    qw3lm_forward(lm, kv, prefixes[i].data(), (int) prefixes[i].size(), s, logits + (size_t) s * rows, row0, rows);
+    if (!qw3lm_forward(lm, kv, prefixes[i].data(), (int) prefixes[i].size(), s, logits + (size_t) s * rows, row0, rows)) {
+        return false;
+    }
     fprintf(stderr, "[AR] %s song %d: %zu tokens prefilled, %.0f ms\n", label, i, prefixes[i].size(), timer.ms());
+    return true;
 }
 
 // Guidance of exactly one keeps a single branch, which is the nominal path in
@@ -130,17 +134,23 @@ static bool yue2_generate(Qwen3LM *                             lm,
         lora_rt_progress(lm->lora_rt, 0, s.max_tokens);   // HERESY 1447: and the LoRAs' waves
     }
     Timer prefill_timer;
-    for (int i = 0; i < B; i++) {
-        yue2_prefill(lm, kv, prefixes, 0, i, batched.data(), row0, rows, label);
+    for (int i = 0; i < B; i++) {   // HERESY 2090: a refused prefill ends the run, never a decode over a cache it did not fill
+        if (!yue2_prefill(lm, kv, prefixes, 0, i, batched.data(), row0, rows, label)) {
+            return false;
+        }
     }
     if (guided) {
         for (int i = 0; i < B; i++) {
-            yue2_prefill(lm, kv, negatives, B, i, batched.data(), row0, rows, "Unconditional");
+            if (!yue2_prefill(lm, kv, negatives, B, i, batched.data(), row0, rows, "Unconditional")) {
+                return false;
+            }
         }
     }
     if (split) {
         for (int i = 0; i < B; i++) {
-            yue2_prefill(lm, kv, *lyricless, 2 * B, i, batched.data(), row0, rows, "Without lyrics");
+            if (!yue2_prefill(lm, kv, *lyricless, 2 * B, i, batched.data(), row0, rows, "Without lyrics")) {
+                return false;
+            }
         }
     }
     fprintf(stderr, "[AR] %s prefill: %.0f ms, CFG=%.2f%s, top_k=%d, budget=%d, songs=%d, batch=%d\n", label,
@@ -226,7 +236,9 @@ static bool yue2_generate(Qwen3LM *                             lm,
             sliders_progress(lm->sliders, step + 1, s.max_tokens);   // HERESY 1166: each slider where its curve is now
             lora_rt_progress(lm->lora_rt, step + 1, s.max_tokens);   // HERESY 1447: each LoRA where its wave is now
         }
-        qw3lm_forward_batch(lm, kv, tokens.data(), kv_sets.data(), N, batched.data(), row0, rows);
+        if (!qw3lm_forward_batch(lm, kv, tokens.data(), kv_sets.data(), N, batched.data(), row0, rows)) {   // HERESY 2090
+            return false;
+        }
         for (int i = 0; i < B; i++) {
             if (owed[i] > 0) {
                 owed[i]--;

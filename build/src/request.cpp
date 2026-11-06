@@ -38,6 +38,7 @@ void request_init(Yue2Request * r) {
     r->nar_ladder       = false;   // HERESY 1768
     r->vocal_octave     = 0;       // HERESY 1743
     r->score_planned    = false;   // HERESY 1618
+    r->instrumental     = -1;      // HERESY 2153: not said
     r->semantic_tokens  = "";
     r->semantic_keep    = "";
     r->backbone         = "";   // HERESY 1661
@@ -324,6 +325,9 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
     if ((v = yyjson_obj_get(obj, "score_planned")) && yyjson_is_bool(v)) {   // HERESY 1618
         r->score_planned = yyjson_get_bool(v);
     }
+    if ((v = yyjson_obj_get(obj, "instrumental")) && yyjson_is_bool(v)) {   // HERESY 2153: the Creator's box, kept with the take
+        r->instrumental = yyjson_get_bool(v) ? 1 : 0;
+    }
     if ((v = yyjson_obj_get(obj, "free_tempo")) && yyjson_is_bool(v)) {   // HERESY 1416
         r->free_tempo = yyjson_get_bool(v);
     }
@@ -545,6 +549,9 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
     }
     if (r->score_planned) {   // HERESY 1618: written only when used
         yyjson_mut_obj_add_bool(doc, root, "score_planned", true);
+    }
+    if (r->instrumental >= 0) {   // HERESY 2153: written whenever the request said it (false too), never when it did not, even in a full write
+        yyjson_mut_obj_add_bool(doc, root, "instrumental", r->instrumental == 1);
     }
     if (r->free_tempo) {   // HERESY 1416: written only when used
         yyjson_mut_obj_add_bool(doc, root, "free_tempo", true);

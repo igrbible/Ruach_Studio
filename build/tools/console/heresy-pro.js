@@ -14,7 +14,9 @@
     var r = document.createElement("label");
     r.className = "head-more-row hm-pro"; r.id = "proRow"; r.hidden = true;
     r.dataset.tip = "Your own plugins (not the Studio's) on or off for this browser: off, the Refiner, the DAW and MIDI show only what a public studio has, for a test of the public way, the promo and the pictures. Nothing is deleted; the page reloads";
-    r.innerHTML = '<span>Own plugins</span><input type="checkbox" id="proOn" aria-label="Own plugins" />';
+    // HERESY 2064 (Viktor 04.11.2026: «"Свои плагины" помести в колонку с чекбоксом, после него с отступом»): the box where the fields start, its
+    // word after it
+    r.innerHTML = '<input type="checkbox" id="proOn" aria-label="Own plugins" /><span>Own plugins</span>';
     items.parentNode.insertBefore(r, items);
     r.querySelector("input").addEventListener("change", function () {
       try { localStorage.setItem(KEY, this.checked ? "" : "1"); } catch (e) { /* private mode */ }

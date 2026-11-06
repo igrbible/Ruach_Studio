@@ -80,7 +80,7 @@ def _size(d):
 def _user(kit):
     root = Path(kit) / "banks"
     out = []
-    for d in sorted(p for p in root.iterdir() if p.is_dir()) if root.is_dir() else []:
+    for d in sorted(p for p in root.iterdir() if p.is_dir() and not p.name.startswith(".")) if root.is_dir() else []:   # HERESY 2031: a bank made again steps aside as .NAME.date.old
         meta = {}
         if (d / "bank.json").is_file():
             try:
@@ -92,7 +92,7 @@ def _user(kit):
         out.append({"id": "user:" + d.name, "name": meta.get("name") or d.name, "kind": meta.get("kind") if meta.get("kind") in KINDS else "effect",
                     "where": "banks/" + d.name, "sfz": sorted(str(p.relative_to(d)) for p in d.rglob("*.sfz")), "author": meta.get("author", ""),
                     "licence": lic, "may_ship": ships, "source": meta.get("source", ""), "description": meta.get("description", ""),
-                    "samples": n, "mb": mb, "own": True})
+                    "samples": n, "mb": mb, "own": True, "range": meta.get("range") if isinstance(meta.get("range"), list) else None})   # HERESY 2031
     return out
 
 

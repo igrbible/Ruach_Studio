@@ -7,9 +7,12 @@
 //   HeresyPtqEngine.load() · HeresyPtqEngine.state()   (the last for the checks)
 (function () {
   "use strict";
-  var S = { data: null, busy: false };
+  // HERESY 2036: which of Modartt's three the tab speaks of (kept); their words Pianoteq's, the name put in
+  var NAMES = { pianoteq: "Pianoteq", organteq: "Organteq", airteq: "Airteq" };
+  var S = { data: null, busy: false, product: kept() };
+  function kept() { try { var v = localStorage.getItem("yue2.ptqProduct"); return NAMES[v] ? v : "pianoteq"; } catch (e) { return "pianoteq"; } }
   function $(id) { return document.getElementById(id); }
-  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
+  function tr(s) { var t = window.RuachI18n ? window.RuachI18n.t(s) : s; return S.product === "pianoteq" ? t : String(t).replace(/Pianoteq/g, NAMES[S.product]); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function toast(t, k) { if (window.HeresyToast) window.HeresyToast(t, k); }
   function scoped(path) {                                      // a test page says so to the lab, which then activates nothing
@@ -26,7 +29,7 @@
     if (!line || S.busy) return Promise.resolve();
     line.textContent = tr("Asking Pianoteq…");
     line.className = "upd-line ptq-line";
-    return lab("/pianoteq/status").then(paint).catch(function (e) {
+    return lab("/pianoteq/status" + (S.product !== "pianoteq" ? "?product=" + S.product : "")).then(paint).catch(function (e) {
       line.textContent = tr("The lab does not answer:") + " " + e.message;
       line.className = "upd-line ptq-line is-bad";
     });
@@ -69,7 +72,7 @@
       S.busy = true;
       $("ptqLine").textContent = tr("Pianoteq asks Modartt…");
       $("ptqActivate").disabled = f.disabled = true;
-      var body = { serial: serial };
+      var body = { serial: serial, product: S.product };
       serial = "";
       return lab("/pianoteq/activate", body).then(function (d) {
         body = null;
@@ -92,6 +95,18 @@
     $("ptqActivate").addEventListener("click", activate);
     $("ptqAgain").addEventListener("click", load);
     $("ptqSerial").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); activate(); } });
+    var pr = $("ptqProducts");                                  // HERESY 2036: Pianoteq, Organteq or Airteq
+    var mark = function () { if (pr) Array.prototype.forEach.call(pr.querySelectorAll("[data-ptq-product]"), function (b) { b.setAttribute("aria-pressed", String(b.dataset.ptqProduct === S.product)); }); };
+    mark();
+    if (pr) pr.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-ptq-product]");
+      if (!b || S.busy || b.dataset.ptqProduct === S.product) return;
+      S.product = b.dataset.ptqProduct;
+      S.data = null;
+      try { localStorage.setItem("yue2.ptqProduct", S.product); } catch (x) { /* private mode: this visit only */ }
+      mark();
+      load();
+    });
     document.addEventListener("click", function (e) {           // asked again each time its tab opens
       if (e.target.closest && e.target.closest('#engineTabs [data-etab="pianoteq"]')) setTimeout(load, 0);
     });
@@ -100,5 +115,5 @@
     if (v && v.dataset.etab === "pianoteq" && !v.classList.contains("is-hidden")) load();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
-  window.HeresyPtqEngine = { load: load, state: function () { return { data: S.data, busy: S.busy }; } };
+  window.HeresyPtqEngine = { load: load, state: function () { return { data: S.data, busy: S.busy, product: S.product }; } };
 })();

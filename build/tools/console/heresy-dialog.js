@@ -70,7 +70,7 @@
       }
       // HERESY 2001 (Viktor: «предохранитель, если нечаянно кликнул мимо… при изменённом тексте заметки»): a window of many lines asks before
       // changed words go (a click beside it, Esc, Cancel); unchanged, it closes at once
-      var initial = input ? input.value : null, guarded = kind === "prompt" && !!opts.area && opts.guard !== false;
+      var initial = input ? input.value : null, guarded = kind === "prompt" && (!!opts.area ? opts.guard !== false : opts.guard === true);   // HERESY 2039: one line when told
       function dismiss() {
         if (!guarded || !input || input.value === initial) return done(false);
         var g = back.querySelector(".hd-guard");

@@ -46,12 +46,21 @@
     try { save(A.toMidi(A.parse(abc)), fileName(title, ".mid"), "audio/midi"); }
     catch (error) { toast("No MIDI: " + error.message, true); }
   }
+  // HERESY 2126: a cell as CSV quotes it (RFC 4180: a quote doubled; JSON's \" shifted the columns). HERESY 2160 (the audit's review of 2126,
+  // 06.11.2026): the file is REAPER's (its Region/Marker Manager imports #, Name, Start), and REAPER reads the name as written, so 2126's leading
+  // apostrophe against a spreadsheet's formulas came into REAPER as part of the name («'=drop»). The name goes as typed: in quotes, its quotes
+  // doubled, only where CSV needs them (a comma, a quote, a space at either end), so a plain name is the plain text a DAW's simplest reader takes;
+  // a name that starts with = + - @ is a section's name to a DAW. Opened in a spreadsheet, it is the spreadsheet's to ask before it runs one
+  function csvCell(s) {
+    s = String(s).replace(/[\r\n]+/g, " ");          // a section's name is one line; a break would split the row in a DAW that splits on lines
+    return /[",]|^\s|\s$/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
   function markersOut(abc, title) {
     try {
       var rows = A.markers(A.parse(abc));
       if (!rows.length) return toast("This score has no section comments (% verse …)", true);
       // Reaper's region/marker CSV: #, Name, Start; plain seconds work in most DAWs
-      var csv = "#,Name,Start\n" + rows.map(function (m, k) { return "M" + (k + 1) + "," + JSON.stringify(m.name) + "," + m.seconds.toFixed(3); }).join("\n") + "\n";
+      var csv = "#,Name,Start\n" + rows.map(function (m, k) { return "M" + (k + 1) + "," + csvCell(m.name) + "," + m.seconds.toFixed(3); }).join("\n") + "\n";
       save(csv, fileName(title, " markers.csv"), "text/csv");
     } catch (error) { toast("No markers: " + error.message, true); }
   }

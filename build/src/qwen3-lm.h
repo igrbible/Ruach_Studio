@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 #include <vector>
 
 // LM config (superset of encoder config)
@@ -514,11 +515,33 @@ static struct ggml_tensor * qw3lm_head_rows(struct ggml_context * ctx, const Qwe
                         (size_t) row0 * m->lm_head->nb[1]);
 }
 
+// HERESY 2090 (Viktor 05.11.2026: «…обязательно в Студию, в публичный код»): why a forward refused, in words for the job
+// (pipeline_generate puts it in last_error)
+inline std::string g_qw3lm_error;
+
+// HERESY 2090: the cache's views exist for its own layers only. A backbone deeper than the one the cache was shaped for (or with
+// other heads) would read a NULL view past its last layer and kill the engine (the segfault of 05.11): refused, and said
+static bool qw3lm_kv_fits(const Qwen3LM * m, const Qw3lmKvCache * kv) {
+    const Qwen3LMConfig & c = m->cfg;
+    if (c.n_layers <= kv->cfg.n_layers && c.n_kv_heads == kv->cfg.n_kv_heads && c.head_dim == kv->cfg.head_dim) {
+        return true;
+    }
+    char msg[400];
+    snprintf(msg, sizeof msg,
+             "The music cache is shaped for another backbone (%d layers, %d KV heads of %d) than the one loaded (%d layers, %d of %d): "
+             "the run stopped before reading past it. Choose the backbone again, or restart the engine.",
+             kv->cfg.n_layers, kv->cfg.n_kv_heads, kv->cfg.head_dim, c.n_layers, c.n_kv_heads, c.head_dim);
+    g_qw3lm_error = msg;
+    fprintf(stderr, "[LM-Forward] FATAL: %s\n", msg);
+    return false;
+}
+
 // Prefill forward: token_ids[n_tokens] -> logits[rows] of the last token, the
 // LM head rows [row0, row0 + rows).
 // kv_set: which KV cache set to use (0=conditional, 1=unconditional for CFG).
 // Rebuilds and reallocates its graph, which invalidates the static decode graph.
-static void qw3lm_forward(Qwen3LM *      m,
+// HERESY 2090: false when it did not run (a cache of another shape, a window past the cache), the reason in g_qw3lm_error
+static bool qw3lm_forward(Qwen3LM *      m,
                           Qw3lmKvCache * kv,
                           const int *    token_ids,
                           int            n_tokens,
@@ -526,6 +549,9 @@ static void qw3lm_forward(Qwen3LM *      m,
                           float *        logits,
                           int            row0,
                           int            rows) {
+    if (!qw3lm_kv_fits(m, kv)) {   // HERESY 2090
+        return false;
+    }
     if (m->batch_graph.graph.sched_allocated) {
         static_graph_release(&m->batch_graph.graph, m->sched);
         m->batch_graph.built = false;
@@ -539,7 +565,8 @@ static void qw3lm_forward(Qwen3LM *      m,
     const int max_seq = kv->cfg.max_seq_len;
     if (kv_len > max_seq) {
         fprintf(stderr, "[LM-Forward] FATAL: kv_len %d > max_seq %d\n", kv_len, max_seq);
-        return;
+        g_qw3lm_error = "the music needs " + std::to_string(kv_len) + " rows of a cache of " + std::to_string(max_seq);   // HERESY 2090
+        return false;
     }
 
     // Attention window rounded up to 256 and clamped to the cache size, the
@@ -663,6 +690,7 @@ static void qw3lm_forward(Qwen3LM *      m,
     // Advance KV position. The arena and the sched allocation persist
     // into the next forward.
     kv->pos[kv_set] += n_tokens;
+    return true;
 }
 
 // Decode forward: N tokens (1 per sequence), batched weight matmuls, the one
@@ -672,7 +700,8 @@ static void qw3lm_forward(Qwen3LM *      m,
 // kv_sets[N]: which KV set each token uses, always consecutive from kv_sets[0].
 // logits: [N * rows] output, N logit vectors of the LM head rows
 // [row0, row0 + rows) concatenated.
-static void qw3lm_forward_batch(Qwen3LM *      m,
+// HERESY 2090: false when a cache of another shape refused it, the reason in g_qw3lm_error
+static bool qw3lm_forward_batch(Qwen3LM *      m,
                                 Qw3lmKvCache * kv,
                                 const int *    token_ids,
                                 const int *    kv_sets,
@@ -680,6 +709,9 @@ static void qw3lm_forward_batch(Qwen3LM *      m,
                                 float *        logits,
                                 int            row0,
                                 int            rows) {
+    if (!qw3lm_kv_fits(m, kv)) {   // HERESY 2090
+        return false;
+    }
     const Qwen3LMConfig & c   = m->cfg;
     int                   D   = c.head_dim;
     int                   Nh  = c.n_heads;
@@ -944,6 +976,7 @@ static void qw3lm_forward_batch(Qwen3LM *      m,
     for (int i = 0; i < N; i++) {
         kv->pos[kv_sets[i]]++;
     }
+    return true;
 }
 
 // Free all resources

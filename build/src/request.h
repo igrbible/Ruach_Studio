@@ -124,6 +124,10 @@ struct Yue2Request {
     float cfg_scale;  // -1
     float cfg_lyrics;  // HERESY 1397: the lyrics' own guidance in the music stage; -1: as cfg_scale
     bool  score_planned;  // HERESY 1618: the page planned this score itself first (a key, an instrumental): sung as given, called planned
+    // HERESY 2153: the Creator's Instrumental box as the request was sent: 1 ticked, 0 not, -1 the request did not say (an older page, the API, a
+    // lab job of its own). The pipeline never reads it; the take keeps it, so Reuse and Retake set the box as the song was made, and leave it alone
+    // where the take does not say (a take made before this keeps no such field, and -1 is never written as a «false» it never was)
+    int   instrumental;  // -1
     bool  free_tempo;  // HERESY 1416: the music stage reads the score without its tempo (Q: lines and [Q:…] fields)
     bool  nar_ladder;  // HERESY 1768: the sound half in even pieces of about 20 s, each hearing 2 s past its edges (experimental)
     int   vocal_octave;  // HERESY 1743: a score the model plans whole has its Vocal line moved by this many octaves before it is sung (−3…3; 0: as planned)

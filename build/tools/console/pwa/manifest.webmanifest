@@ -1,0 +1,27 @@
+{
+  "id": "/",
+  "name": "Ruach Studio",
+  "short_name": "Ruach Studio",
+  "description": "A music studio on YuE2, on your own machine.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#14110e",
+  "theme_color": "#14110e",
+  "launch_handler": { "client_mode": "focus-existing" },
+  "icons": [
+    { "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "New song", "short_name": "New song", "description": "A new song in the Creator (it asks first when the form holds words)", "url": "/?room=create&song=new", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Creator", "short_name": "Creator", "description": "The Creator: the song form, the take, the player", "url": "/?room=create", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Writer", "short_name": "Writer", "description": "The Writer: songs as documents", "url": "/?room=write", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Refiner", "short_name": "Refiner", "description": "The Refiner: steps after the render", "url": "/?room=post", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Artist", "short_name": "Artist", "description": "The Artist: pictures for the songs", "url": "/?room=artist", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Videographer", "short_name": "Videographer", "description": "The Videographer: a video's plan for a take", "url": "/?room=video", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Trainer", "short_name": "Trainer", "description": "The LoRA Trainer", "url": "/?room=train", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Librarian", "short_name": "Librarian", "description": "The Librarian: every take", "url": "/?room=collection", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Engine", "short_name": "Engine", "description": "The Engine: the server, the hardware, the models, the settings", "url": "/?room=engine", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+  ]
+}

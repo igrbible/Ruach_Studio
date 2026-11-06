@@ -9,6 +9,7 @@
 // The binary orchestrates only: generation, cancellation and encoding all
 // live in src/.
 
+#include "asset-cache.h"   // HERESY 2139: the assets' keys and validators
 #include "audio-io.h"
 #include "flac-enc.h"
 #include "backend.h"
@@ -20,6 +21,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cctype>
+#include <cerrno>
 #include <chrono>
 #include <ctime>
 #include <filesystem>
@@ -47,10 +49,12 @@
 #ifdef _WIN32
 #    include <fcntl.h>
 #    include <io.h>
+#    include <sys/stat.h>   // HERESY 2083b: _S_IREAD, _S_IWRITE for a file written whole
 #    ifndef STDERR_FILENO
 #        define STDERR_FILENO 2
 #    endif
 #else
+#    include <fcntl.h>      // HERESY 2083b: open() for a file written whole and synced
 #    include <unistd.h>
 #endif
 
@@ -202,6 +206,9 @@ struct Job {
     std::string              abc;
     std::string              error;
     std::atomic<bool>        started{ false };  // false while it waits in the queue
+    int                      made         = 0;      // HERESY 2011 (P2): the tracks it made, beside takes (those of them in the library)
+    std::string              library_error;         // HERESY 2132: the first track the library could not keep, and why (the job is done all the same)
+    bool                     result_freed = false;  // its result_body let go, its takes in the library (under mtx_results)
     int64_t                  lm_seed = -1;      // resolved seeds of a synth job
     int64_t                  seed    = -1;
 
@@ -212,6 +219,7 @@ struct Job {
 };
 
 static std::mutex                                            mtx_jobs;
+static std::mutex                                            mtx_results;   // HERESY 2011 (P2): a result read while an older one is let go
 static std::unordered_map<std::string, std::shared_ptr<Job>> g_jobs;
 static std::deque<std::string>                               g_job_order;
 static const int                                             MAX_JOBS = 32;
@@ -688,6 +696,70 @@ static bool write_file(const std::string & path, const std::string & data) {
     return !ec;
 }
 
+// HERESY 2083b (Viktor 05.11.2026: «полностью закрой по автобекапу пользовательских json данных. Не нужно оставлять на 2.0.7»): the
+// user's JSON the engine writes (a take's meta.json and request.json, user/access.json, the Engine's settings.json) on the disk before
+// it takes the old file's place, as the lab writes its own since 2083: a .part beside it, fsync, one rename, then the folder's entry
+// synced (the rename itself on the disk). write_file above renamed without a sync, so a power cut could leave a new name over a file
+// still empty. The audio, the latents and the caches stay with write_file: they are not the user's JSON, and a sync there costs a song's bytes
+#ifdef _WIN32
+static int fd_create(const char * path) {
+    return _open(path, _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY, _S_IREAD | _S_IWRITE);
+}
+
+static int fd_sync(int fd) {
+    return _commit(fd);
+}
+#else
+static int fd_create(const char * path) {
+    return open(path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0666);   // 0666 less the umask, as the ofstream made it
+}
+
+static int fd_sync(int fd) {
+    return fsync(fd);
+}
+#endif
+
+static bool write_file_synced(const std::string & path, const std::string & data) {
+    std::string tmp = path + ".part";
+    int         fd  = fd_create(tmp.c_str());
+    if (fd < 0) {
+        return false;
+    }
+    const char * at   = data.data();
+    size_t       left = data.size();
+    while (left > 0) {
+        int n = fd_write(fd, at, left > (1u << 30) ? (size_t) (1u << 30) : left);
+        if (n < 0 && errno == EINTR) {
+            continue;
+        }
+        if (n <= 0) {
+            fd_close(fd);
+            return false;
+        }
+        at += n;
+        left -= (size_t) n;
+    }
+    if (fd_sync(fd) != 0) {
+        fd_close(fd);
+        return false;
+    }
+    fd_close(fd);
+    std::error_code ec;
+    std::filesystem::rename(tmp, path, ec);
+    if (ec) {
+        return false;
+    }
+#ifndef _WIN32
+    std::string dir = std::filesystem::path(path).parent_path().string();
+    int         dfd = open(dir.empty() ? "." : dir.c_str(), O_RDONLY | O_CLOEXEC);
+    if (dfd >= 0) {   // the folder's entry: a failure here costs only the rename's durability, the file itself is whole
+        fsync(dfd);
+        close(dfd);
+    }
+#endif
+    return true;
+}
+
 // catalog.json written by convert-extras.py: {"sliders": [{id, label, description, file}]}
 static bool load_slider_catalog(const std::string & dir) {
     std::string  text = read_file(dir + "/catalog.json");
@@ -835,6 +907,27 @@ static void audio_fade_in(std::vector<float> & audio, int T_audio, float seconds
     }
 }
 
+// HERESY 2091 (Viktor 05.11.2026: «после декодера убирать его сразу же… плавный вход… по умолчанию»): every decoder puts a tick in
+// the first millisecond of what it decodes, the edge of its window (the codec ceiling: −19.6 to −24.1 dBFS above 3 kHz against −39.7
+// in the original). A take's decoded audio starts on a raised cosine this long, by default: measured on 18 pieces × 3 decoders, 8 ms
+// and longer took the tick away from all 33 that had it, 5 ms left 3; 10 ms leaves an opening hit −1.6 dB over its first 20 ms (250 ms
+// would take −43 dB there and −16 dB over its first 100 ms: the downbeat itself). Only at the take's own start: every decode the engine
+// makes a take from begins there (a regenerated part is rendered with the whole song, kept codes and new together); the bare /vae
+// answer is the codec's own, untouched
+static int g_soft_start_ms = 10;   // --soft-start <ms>, 0 off
+
+static void audio_soft_start(std::vector<float> & audio, int T_audio) {
+    int n = std::min(T_audio, (int) ((int64_t) g_soft_start_ms * YUE2_SAMPLE_RATE / 1000));
+    if (n <= 0 || audio.size() < (size_t) 2 * T_audio) {
+        return;
+    }
+    for (int k = 0; k < n; k++) {
+        float g = 0.5f * (1.0f - cosf(3.14159265358979f * (float) k / (float) n));
+        audio[(size_t) k] *= g;
+        audio[(size_t) T_audio + k] *= g;
+    }
+}
+
 static bool listen_flac_fresh(const std::string & dir) {
     std::error_code ec;
     auto            f = std::filesystem::last_write_time(dir + "/listen.flac", ec);
@@ -941,6 +1034,31 @@ static std::string library_entry_json(const std::string & name) {
 }
 
 // Save one rendered track into the library: audio, replay request, meta
+// HERESY 2011 (the audit of 02.11.2026, P2): with a library, the two newest finished results stay for a client that asks ?result right after its
+// job; an older one whose every track is in the library is let go (its ?result: 410 with the takes' names). Without a library nothing is let go.
+static void results_trim() {
+    if (g_outputs_dir.empty()) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(mtx_jobs);
+    int                         kept = 0;
+    for (auto it = g_job_order.rbegin(); it != g_job_order.rend(); ++it) {
+        auto jit = g_jobs.find(*it);
+        if (jit == g_jobs.end() || jit->second->status.load() != JobStatus::DONE || jit->second->made == 0) {
+            continue;
+        }
+        Job & j = *jit->second;
+        if (kept++ < 2 || (int) j.takes.size() < j.made) {
+            continue;
+        }
+        std::lock_guard<std::mutex> r(mtx_results);
+        if (!j.result_freed) {
+            std::string().swap(j.result_body);
+            j.result_freed = true;
+        }
+    }
+}
+
 static std::string library_save(const Yue2Request & replay,
                                 const std::string & audio,
                                 bool                is_mp3,
@@ -950,7 +1068,8 @@ static std::string library_save(const Yue2Request & replay,
                                 int                 song_index,
                                 int                 variation,
                                 bool                provided_score,
-                                double              render_seconds) {
+                                double              render_seconds,
+                                std::string *       why = nullptr) {   // HERESY 2132: a refusal said to the job, not only to the log
     std::lock_guard<std::mutex> lock(mtx_library);
     char                        stamp[32];
     time_t                      now = time(nullptr);
@@ -974,10 +1093,13 @@ static std::string library_save(const Yue2Request & replay,
     std::filesystem::create_directories(dir, ec);
     if (ec) {
         fprintf(stderr, "[Library] cannot create %s: %s\n", dir.c_str(), ec.message().c_str());
+        if (why && why->empty()) {
+            *why = "cannot create " + dir + ": " + ec.message();
+        }
         return "";
     }
     bool ok = write_file(dir + (is_mp3 ? "/audio.mp3" : "/audio.wav"), audio) &&
-              write_file(dir + "/request.json", request_to_json(&replay, false));
+              write_file_synced(dir + "/request.json", request_to_json(&replay, false));   // HERESY 2083b
 
     yyjson_mut_doc * doc  = yyjson_mut_doc_new(NULL);
     yyjson_mut_val * root = yyjson_mut_obj(doc);
@@ -1014,13 +1136,16 @@ static std::string library_save(const Yue2Request & replay,
         yyjson_mut_obj_add_strcpy(doc, root, "model", replay.backbone.empty() ? g_settings.model.c_str() : replay.backbone.c_str());
     }
     char * json = yyjson_mut_write(doc, YYJSON_WRITE_PRETTY, NULL);
-    ok          = ok && json && write_file(dir + "/meta.json", json);
+    ok          = ok && json && write_file_synced(dir + "/meta.json", json);   // HERESY 2083b
     if (json) {
         free(json);
     }
     yyjson_mut_doc_free(doc);
     if (!ok) {
         fprintf(stderr, "[Library] cannot write %s\n", dir.c_str());
+        if (why && why->empty()) {
+            *why = "cannot write " + dir;
+        }
         return "";
     }
     if (!is_mp3) {
@@ -1058,7 +1183,7 @@ static bool library_update(const std::string & name, const std::string & body) {
         yyjson_mut_obj_add_bool(doc, root, "favorite", yyjson_get_bool(v));
     }
     char * json = yyjson_mut_write(doc, YYJSON_WRITE_PRETTY, NULL);
-    bool   ok   = json && write_file(path, json);
+    bool   ok   = json && write_file_synced(path, json);   // HERESY 2083b
     if (json) {
         free(json);
     }
@@ -1167,6 +1292,24 @@ static void refresh_loaded() {
     g_loaded_modules.store(store_gpu_module_count(g_pipeline.store));
 }
 
+// HERESY 2090 (Viktor 05.11.2026: «…обязательно в Студию, в публичный код»): the music cache takes its shape (layers, KV heads,
+// head size) from a backbone's own config, and pipeline_configure reads the boot backbone's alone. A deeper backbone chosen later
+// found a cache of fewer layers and read a NULL view past its last one (the engine's segfault of 05.11). After a switch, on the
+// worker between jobs: the new backbone's config read, the Engine's context kept, the cache freed, so the next run allocates it
+// in this backbone's shape
+static void kv_reshape_for(const std::string & path) {
+    Qwen3LMConfig cfg;
+    if (!qw3lm_read_config(path.c_str(), &cfg)) {   // the load fails the same way; the forward's guard stands behind it
+        fprintf(stderr, "[Server] %s: its config does not read, the music cache keeps its shape\n", path.c_str());
+        return;
+    }
+    cfg.max_seq_len = g_pipeline.kv.cfg.max_seq_len;   // the Engine's context, not the backbone's own
+    fprintf(stderr, "[Server] Music cache: %d layers (was %d), %d KV heads of %d, context %d, allocated on the next run\n",
+            cfg.n_layers, g_pipeline.kv.cfg.n_layers, cfg.n_kv_heads, cfg.head_dim, cfg.max_seq_len);
+    qw3lm_kv_free(&g_pipeline.kv);
+    g_pipeline.kv.cfg = cfg;
+}
+
 // Runs on the worker thread, between jobs: nothing is held while it acts
 static void settings_apply(const EngineSettings & next) {
     for (const auto & m : g_models) {
@@ -1175,6 +1318,7 @@ static void settings_apply(const EngineSettings & next) {
             g_pipeline.model_path = m.second;
             g_model_path          = m.second;
             store_unload_idle(g_pipeline.store);
+            kv_reshape_for(m.second);   // HERESY 2090
         }
     }
     store_set_policy(g_pipeline.store, next.keep_loaded ? EVICT_NEVER : EVICT_STRICT);
@@ -1191,7 +1335,7 @@ static void settings_apply(const EngineSettings & next) {
         g_settings = next;
     }
     if (!g_settings_path.empty()) {
-        write_file(g_settings_path, settings_json(next));
+        write_file_synced(g_settings_path, settings_json(next));   // HERESY 2083b
     }
 }
 
@@ -1382,6 +1526,14 @@ static std::string job_status_json(const Job & job) {
         if (!job.abc.empty()) {
             yyjson_mut_obj_add_strncpy(doc, root, "abc", job.abc.c_str(), job.abc.size());
         }
+        // HERESY 2132 (the audit of 06.11.2026): how many tracks it made beside the takes the library kept, and why one was not kept; a done
+        // job with fewer takes than tracks still holds the rest in its ?result (results_trim keeps it), and the page fetches them from there
+        if (job.made > 0) {
+            yyjson_mut_obj_add_int(doc, root, "made", job.made);
+        }
+        if (!job.library_error.empty()) {
+            yyjson_mut_obj_add_strncpy(doc, root, "library_error", job.library_error.c_str(), job.library_error.size());
+        }
     }
     if (status == JobStatus::FAILED && !job.error.empty()) {
         yyjson_mut_obj_add_strncpy(doc, root, "error", job.error.c_str(), job.error.size());
@@ -1436,6 +1588,293 @@ static bool is_loopback_addr(const std::string & addr) {
     return a == "::1" || a.rfind("127.", 0) == 0;
 }
 
+// HERESY 2011 (the audit of 02.11.2026, S1): a page of any site could drive the Studio. A simple cross-site POST (text/plain needs no preflight)
+// reached the engine and its lab, and a name of the attacker's own resolving to this machine (DNS rebinding) made that page the Studio's own
+// origin. The Studio answers the names it can trust: an address written as one, localhost, a name of one label (no site on the internet has one),
+// a name of a private suffix (.local, .lan, .home.arpa, .internal…, a Tailscale .ts.net), this machine's own name, and the names in RUACH_HOSTS
+// (commas or spaces between them; ".example.org" takes its subdomains as well). RUACH_ALLOW_PUBLIC=1 answers any name.
+static std::string lower_ascii(std::string s) {
+    for (auto & c : s) {
+        c = (char) tolower((unsigned char) c);
+    }
+    return s;
+}
+
+static std::string host_name_of(const std::string & host_header) {      // "Name:7777" → "name", "[fd00::1]:7777" → "fd00::1"
+    std::string h = lower_ascii(host_header);
+    if (!h.empty() && h[0] == '[') {
+        size_t end = h.find(']');
+        return end == std::string::npos ? h : h.substr(1, end - 1);
+    }
+    size_t colon = h.rfind(':');
+    if (colon != std::string::npos && h.find(':') == colon) {
+        h = h.substr(0, colon);
+    }
+    if (!h.empty() && h.back() == '.') {
+        h.pop_back();
+    }
+    return h;
+}
+
+static bool name_ends_with(const std::string & h, const std::string & suffix) {
+    return h.size() > suffix.size() && h.compare(h.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
+static bool host_trusted(const std::string & host_header) {
+    if (host_header.empty()) {
+        return true;                                                     // HTTP/1.0 without a Host: no browser sends that
+    }
+    std::string   h = host_name_of(host_header);
+    unsigned char ip[16];
+    if (inet_pton(AF_INET, h.c_str(), ip) == 1 || inet_pton(AF_INET6, h.c_str(), ip) == 1 || h.find('.') == std::string::npos) {
+        return true;
+    }
+    for (const char * s : { ".localhost", ".local", ".lan", ".home", ".home.arpa", ".internal", ".intranet", ".localdomain", ".corp", ".private",
+                            ".test", ".ts.net" }) {
+        if (name_ends_with(h, s)) {
+            return true;
+        }
+    }
+    char me[256] = { 0 };
+    if (gethostname(me, sizeof(me) - 1) == 0 && h == lower_ascii(me)) {
+        return true;
+    }
+    const char * extra = getenv("RUACH_HOSTS");
+    std::string  list  = extra ? lower_ascii(extra) : "";
+    for (char & c : list) {
+        if (c == ',') {
+            c = ' ';
+        }
+    }
+    size_t at = 0;
+    while (at < list.size()) {
+        size_t      end  = list.find(' ', at);
+        std::string name = host_name_of(list.substr(at, end == std::string::npos ? std::string::npos : end - at));
+        at               = end == std::string::npos ? list.size() : end + 1;
+        if (name.empty()) {
+            continue;
+        }
+        if (h == name || (name[0] == '.' && name_ends_with(h, name))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// ---- the frame and relay gates (HERESY 2138): who may frame the Studio, and the relay opened as a page
+// HERESY 2138 (the audit of 06.11.2026, 2.2; Viktor: «полнейший Аудит Студии на скрытые баги, уязвимости и проёбы по UIX»): a page of another site
+// could put the Studio in a frame (request_foreign let every navigation to / through, a frame's too, and no answer said who may frame it) and lay
+// its own clicks over the Studio's buttons. Every answer now says who may: the Studio itself, Pinokio's own page and the origins RUACH_FRAME_ANCESTORS
+// names (spaces or commas between them, each http://host:port). Pinokio's app view shows the Studio in a frame of its page at http://localhost:42000
+// (on the laptop the Studio's storage is keyed «http://127.0.0.1:41867/^0http://localhost», a frame's under that top page), so leaving it out
+// would blank the Studio there. X-Frame-Options SAMEORIGIN is for a browser that does not know frame-ancestors; one that does reads frame-ancestors alone.
+static const std::vector<std::string> & frame_ancestors() {
+    static const std::vector<std::string> list = [] {
+        std::vector<std::string> l = { "http://localhost:42000", "http://127.0.0.1:42000" };
+        const char *             extra = getenv("RUACH_FRAME_ANCESTORS");
+        std::string              names = extra ? lower_ascii(extra) : "";
+        for (char & c : names) {
+            if (c == ',') {
+                c = ' ';
+            }
+        }
+        size_t at = 0;
+        while (at < names.size()) {
+            size_t      end = names.find(' ', at);
+            std::string o   = names.substr(at, end == std::string::npos ? std::string::npos : end - at);
+            at              = end == std::string::npos ? names.size() : end + 1;
+            while (!o.empty() && o.back() == '/') {
+                o.pop_back();
+            }
+            if (o.empty()) {
+                continue;
+            }
+            size_t scheme = o.find("://");
+            bool   ok     = (o.rfind("http://", 0) == 0 || o.rfind("https://", 0) == 0) && o.find('/', scheme + 3) == std::string::npos &&
+                      o.size() > scheme + 3;
+            for (unsigned char c : o) {
+                ok = ok && (isalnum(c) || strchr(":/.-[]_", c));
+            }
+            if (ok) {
+                l.push_back(o);
+            } else {
+                fprintf(stderr, "[Server] RUACH_FRAME_ANCESTORS: «%s» is not an origin (http://host:port): left out\n", o.c_str());
+            }
+        }
+        return l;
+    }();
+    return list;
+}
+
+static std::string frame_policy() {
+    std::string p = "frame-ancestors 'self'";
+    for (const auto & o : frame_ancestors()) {
+        p += " " + o;
+    }
+    return p;
+}
+
+static std::string origin_of(const std::string & url) {        // "http://localhost:42000/p/x?y" → "http://localhost:42000"
+    std::string u = lower_ascii(url);
+    size_t      s = u.find("://");
+    if (s == std::string::npos) {
+        return "";
+    }
+    size_t end = u.find_first_of("/?#", s + 3);
+    return end == std::string::npos ? u : u.substr(0, end);
+}
+
+// a request a page of another site made, as the browser itself says: Sec-Fetch-Site cross-site or same-site (another port of this machine is
+// same-site), or, from a browser too old to say it, an Origin that is not the address asked on a request that writes. Refused, but for opening
+// the Studio's page by a link (GET / as a navigation). Scripts, DAWs and curl send neither header and pass as before.
+// HERESY 2138 (2.2): a navigation to / passes as a document (a browser before Sec-Fetch-Dest says none), and as a frame when the page it comes from
+// (its Referer) is one frame_ancestors() names (Pinokio); a frame whose page sends no Referer meets frame-ancestors in the answer; an embed or an
+// object never passes
+static bool request_foreign(const httplib::Request & req) {
+    bool        reads = req.method == "GET" || req.method == "HEAD";
+    std::string site  = req.get_header_value("Sec-Fetch-Site");
+    bool        foreign;
+    if (!site.empty()) {
+        foreign = site == "cross-site" || site == "same-site";
+    } else if (req.has_header("Origin") && !reads) {
+        std::string o = lower_ascii(req.get_header_value("Origin"));
+        size_t      s = o.find("://");
+        foreign       = s == std::string::npos || o.substr(s + 3) != lower_ascii(req.get_header_value("Host"));
+    } else {
+        foreign = false;
+    }
+    if (!foreign) {
+        return false;
+    }
+    if (!(reads && req.path == "/" && req.get_header_value("Sec-Fetch-Mode") == "navigate")) {
+        return true;
+    }
+    std::string dest = req.get_header_value("Sec-Fetch-Dest");
+    if (dest.empty() || dest == "document") {
+        return false;
+    }
+    if (dest == "iframe" || dest == "frame") {
+        std::string from = origin_of(req.get_header_value("Referer"));
+        if (from.empty()) {
+            return false;
+        }
+        for (const auto & o : frame_ancestors()) {
+            if (o == from) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+// HERESY 2138 (the audit of 06.11.2026, 2.1): the lab's relay (lab/relay.py) answers the page's own fetch() alone. Opened at its address (a link from a
+// messenger, a bookmark: Sec-Fetch-Site none passes request_foreign) or put in a frame, an object or a script, a chat server's page ran in the Studio's
+// origin and read its routes. The lab routes on the path before a ';' (urllib's urlparse), so the same here; lab/origin_gate.py refuses the same on
+// the lab's own port. A fetch() says Sec-Fetch-Dest empty; curl and scripts say nothing and pass
+static bool relay_opened(const httplib::Request & req) {
+    if (req.path.rfind("/lab/", 0) != 0) {
+        return false;
+    }
+    // the lab's http.server reads «//relay» as «/relay» (gh-87389 reduces a path's leading slashes to one), and httplib has decoded %2F to a slash
+    // already: the slashes after /lab are read as one, as the lab will read them
+    size_t      from = req.path.find_first_not_of('/', 4);
+    std::string lab  = from == std::string::npos ? "/" : "/" + req.path.substr(from);
+    if (lab.substr(0, lab.find(';')) != "/relay") {
+        return false;
+    }
+    std::string dest = req.get_header_value("Sec-Fetch-Dest");
+    return req.get_header_value("Sec-Fetch-Mode") == "navigate" || !(dest.empty() || dest == "empty");
+}
+// ---- the frame and relay gates end
+
+// HERESY 2011 (the audit of 02.11.2026, S4): protection (1368) and locks (1070) were held in the page alone, against its own copy of the Library:
+// a tab opened before a take was protected elsewhere deleted it for good. The engine reads user/collection.json (the lab's, beside access.json)
+// before it deletes, by the lab's own rules: a lock of either kind on the workspace or on one it is a section of (1473, collection.locked_takes),
+// and a take that lives in frozen workspaces only (1166, collection.frozen_takes). A file it cannot read refuses too, since then nobody knows.
+static std::string library_delete_refusal(const std::string & name) {
+    if (g_settings_path.empty()) {
+        return "";
+    }
+    std::string     path = (std::filesystem::path(g_settings_path).parent_path() / "user" / "collection.json").string();
+    std::error_code ec;
+    if (!std::filesystem::exists(path, ec)) {
+        return "";
+    }
+    std::string  body = read_file(path);
+    yyjson_doc * doc  = yyjson_read(body.c_str(), body.size(), 0);
+    yyjson_val * root = doc ? yyjson_doc_get_root(doc) : nullptr;
+    if (!root || !yyjson_is_obj(root)) {
+        if (doc) {
+            yyjson_doc_free(doc);
+        }
+        return "The Library's marks (user/collection.json) cannot be read, so whether this take is protected is not known: nothing deleted";
+    }
+    std::string  why;
+    size_t       i, n, j, m;
+    yyjson_val * e;
+    yyjson_val * k;
+    yyjson_val * v = yyjson_obj_get(root, "protected");
+    if (v && yyjson_is_arr(v)) {
+        yyjson_arr_foreach(v, i, n, e) {
+            if (yyjson_is_str(e) && name == yyjson_get_str(e)) {
+                why = "This take is protected: take its protection off first (its shield, or right-click)";
+            }
+        }
+    }
+    yyjson_val * locks  = yyjson_obj_get(root, "locks");
+    yyjson_val * ws     = yyjson_obj_get(root, "workspaces");
+    yyjson_val * frozen = yyjson_obj_get(root, "frozen");
+    auto         lock_on = [&](const std::string & w) {
+        yyjson_val * l = locks && yyjson_is_obj(locks) ? yyjson_obj_getn(locks, w.c_str(), w.size()) : nullptr;
+        return l && yyjson_is_obj(l) && (yyjson_is_true(yyjson_obj_get(l, "workspace")) || yyjson_is_true(yyjson_obj_get(l, "tracks")));
+    };
+    auto frozen_of = [&](const std::string & w) {
+        bool         hit = false;
+        size_t       fi, fn;
+        yyjson_val * f;
+        if (frozen && yyjson_is_arr(frozen)) {
+            yyjson_arr_foreach(frozen, fi, fn, f) {
+                std::string x = yyjson_is_str(f) ? yyjson_get_str(f) : "";
+                hit           = hit || (!x.empty() && (w == x || w.rfind(x + " / ", 0) == 0));
+            }
+        }
+        return hit;
+    };
+    int in_ws = 0, in_frozen = 0;
+    if (why.empty() && ws && yyjson_is_obj(ws)) {
+        yyjson_obj_foreach(ws, i, n, k, v) {
+            bool has = false;
+            if (yyjson_is_arr(v)) {
+                yyjson_arr_foreach(v, j, m, e) {
+                    has = has || (yyjson_is_str(e) && name == yyjson_get_str(e));
+                }
+            }
+            if (!has) {
+                continue;
+            }
+            std::string w = yyjson_get_str(k);
+            in_ws++;
+            in_frozen += frozen_of(w) ? 1 : 0;
+            for (size_t at = 0; why.empty();) {                     // its own lock, or a lock of a workspace it is a section of
+                size_t      cut = w.find(" / ", at);
+                std::string p   = cut == std::string::npos ? w : w.substr(0, cut);
+                if (lock_on(p)) {
+                    why = "This take is in the workspace \u201c" + w + "\u201d, which is locked: unlock it first (right-click on the workspace)";
+                }
+                if (cut == std::string::npos) {
+                    break;
+                }
+                at = cut + 3;
+            }
+        }
+    }
+    if (why.empty() && in_ws > 0 && in_ws == in_frozen) {
+        why = "This take lives in frozen workspaces only: thaw one of them first (right-click on the workspace)";
+    }
+    yyjson_doc_free(doc);
+    return why;
+}
+
 // a network as CIDR ("10.0.0.0/24", "fd00::/8"; an address alone is itself) into its bytes and its prefix's length
 static bool net_parse(const std::string & text, unsigned char ip[16], int * bits, bool * v6) {
     std::string a = text, b;
@@ -1470,6 +1909,28 @@ static bool net_has(const std::string & net, const std::string & addr) {
         }
     }
     return true;
+}
+
+// HERESY 2011 (the audit of 02.11.2026, S2): a listed network lies whole inside one of 1114's private ranges, or it opens the Studio, which has
+// no password, to the internet (0.0.0.0/0, ::/0, a public block): that is RUACH_ALLOW_PUBLIC=1's choice, made on the machine itself
+static bool net_private(const unsigned char ip[16], int bits, bool v6) {
+    for (const char * r : { "127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16", "100.64.0.0/10", "::1/128", "fc00::/7",
+                            "fe80::/10" }) {
+        unsigned char n[16];
+        int           nb;
+        bool          n6;
+        if (!net_parse(r, n, &nb, &n6) || n6 != v6 || bits < nb) {
+            continue;
+        }
+        bool in = true;
+        for (int i = 0; i < nb && in; i++) {
+            in = ((n[i / 8] >> (7 - i % 8)) & 1) == ((ip[i / 8] >> (7 - i % 8)) & 1);
+        }
+        if (in) {
+            return true;
+        }
+    }
+    return false;
 }
 
 static bool access_allows(const Access & a, const std::string & addr) {
@@ -1533,6 +1994,12 @@ static bool access_parse(const std::string & body, Access * out, bool * ack, boo
                 if (!net_parse(t, ip, &bits, &v6)) {
                     *why = "not a network: " + t.substr(0, 60) + " (a network is written as 10.0.0.0/24 or fd00::/8)";
                     ok   = false;
+                    break;
+                }
+                if (lockout && !access_public() && !net_private(ip, bits, v6)) {          // HERESY 2011 (S2): a request's list alone
+                    *why = "beyond the private networks: " + t.substr(0, 60) +
+                           " (it opens the Studio, which has no password, to the internet; RUACH_ALLOW_PUBLIC=1 is that choice, made on the machine itself)";
+                    ok = false;
                     break;
                 }
                 nets.push_back(t);
@@ -1907,6 +2374,7 @@ static void decode_job(std::shared_ptr<Job> job, const Yue2Request & request) {
         return;
     }
     fprintf(stderr, "[Server] Job %s: %s decoded again in %.1f s (%d frames)\n", job->id.c_str(), from.c_str(), render_seconds, song.T_lat);
+    audio_soft_start(song.audio, song.T_audio);   // HERESY 2091: the kept latents from the take's own start
     if (request.fade_out > 0.0f) {   // HERESY 1169
         audio_fade_out(song.audio, song.T_audio, request.fade_out);
     }
@@ -1938,7 +2406,8 @@ static void decode_job(std::shared_ptr<Job> job, const Yue2Request & request) {
     std::vector<std::string> request_parts = { request_to_json(&replay) };
     std::vector<std::string> audio_parts   = { audio };
     if (!g_outputs_dir.empty()) {
-        std::string name = library_save(replay, audio, is_mp3, song, 0, 1, 0, 0, !request.abc.empty() && !request.score_planned, render_seconds);
+        std::string name = library_save(replay, audio, is_mp3, song, 0, 1, 0, 0, !request.abc.empty() && !request.score_planned, render_seconds,
+                                        &job->library_error);
         if (!name.empty()) {
             job->takes.push_back(name);
             latents_save(g_outputs_dir + "/" + name, song);
@@ -1948,7 +2417,9 @@ static void decode_job(std::shared_ptr<Job> job, const Yue2Request & request) {
     job->result_body = multipart_build_tracks(request_parts, audio_parts, is_mp3 ? "audio/mpeg" : "audio/wav",
                                               std::vector<std::vector<float>>{ song.latents });   // upstream 1603: a latent part per track
     job->result_mime = MULTIPART_MIME;
+    job->made        = 1;
     job->status.store(JobStatus::DONE);
+    results_trim();
 }
 
 // Tokenize worker: the uploaded recording becomes its semantic codes, the
@@ -2051,6 +2522,7 @@ static bool backbone_for(const std::string & named) {
                 g_pipeline.model_path = m.second;
                 g_model_path          = m.second;
                 store_unload_idle(g_pipeline.store);
+                kv_reshape_for(m.second);   // HERESY 2090
             }
             return true;
         }
@@ -2117,6 +2589,7 @@ static void run_job(std::shared_ptr<Job> job, Yue2Request request) {
     std::vector<std::vector<float>> latents;
     for (size_t t = 0; t < songs.size(); t++) {
         Yue2Song & song = songs[t];
+        audio_soft_start(song.audio, song.T_audio);   // HERESY 2091: the whole song decoded from its start, kept part and new alike
         if (request.fade_out > 0.0f) {   // HERESY 1169
             audio_fade_out(song.audio, song.T_audio, request.fade_out);
         }
@@ -2143,7 +2616,8 @@ static void run_job(std::shared_ptr<Job> job, Yue2Request request) {
         // Local addition: every track lands in the library as it is encoded
         if (!g_outputs_dir.empty()) {
             std::string name = library_save(replay, audio_parts.back(), is_mp3, song, (int) t, (int) songs.size(),
-                                            (int) t / M, (int) t % M, !request.abc.empty() && !request.score_planned, render_seconds);
+                                            (int) t / M, (int) t % M, !request.abc.empty() && !request.score_planned, render_seconds,
+                                            &job->library_error);
             if (!name.empty()) {
                 job->takes.push_back(name);
                 latents_save(g_outputs_dir + "/" + name, song);   // HERESY 1168: for another decoder, in seconds
@@ -2155,7 +2629,9 @@ static void run_job(std::shared_ptr<Job> job, Yue2Request request) {
     active_job_set(nullptr);
     job->result_body = multipart_build_tracks(request_parts, audio_parts, is_mp3 ? "audio/mpeg" : "audio/wav", latents);
     job->result_mime = MULTIPART_MIME;
+    job->made        = (int) audio_parts.size();
     job->status.store(JobStatus::DONE);
+    results_trim();
 }
 
 static void print_usage(const char * prog) {
@@ -2183,6 +2659,8 @@ static void print_usage(const char * prog) {
             "  --max-batch <N>        Song batch limit, one KV set each (default: 1)\n"
             "  --keep-loaded          Keep every model resident in VRAM (default: evict between stages)\n"
             "  --fp16-matmul          BF16 prefills and flow matching on FP16 tensor cores (RTX 20, Volta)\n"
+            "  --soft-start <ms>      Raised-cosine fade-in on a take's decoded start, against the decoder's\n"
+            "                         first-millisecond tick (default: 10, 0 off, at most 250)\n"
             "\n"
             "Debug:\n"
             "  --max-seq <N>          KV cache size (default: model context)\n"
@@ -2283,11 +2761,18 @@ int main(int argc, char ** argv) {
             params.clamp_fp16 = true;
         } else if (!strcmp(argv[i], "--fp16-matmul")) {  // Local addition
             params.fp16_matmul = true;
+        } else if (!strcmp(argv[i], "--soft-start") && !last) {   // HERESY 2091
+            g_soft_start_ms = atoi(argv[++i]);
+            if (g_soft_start_ms < 0 || g_soft_start_ms > 250) {
+                print_usage(argv[0]);
+                return 1;
+            }
         } else {
             print_usage(argv[0]);
             return 1;
         }
     }
+    fprintf(stderr, "[Server] Soft start: %s\n", g_soft_start_ms > 0 ? (std::to_string(g_soft_start_ms) + " ms at a take's start").c_str() : "off");   // HERESY 2091
 
     if (g_model_path.empty() || g_vae_path.empty()) {
         print_usage(argv[0]);
@@ -2364,9 +2849,43 @@ int main(int argc, char ** argv) {
     svr.set_read_timeout(120, 0);
     svr.set_payload_max_length((size_t) 1024 * 1024 * 1024);
     g_svr = &svr;
+    // HERESY 2138 (the audit of 06.11.2026, 2.2): every answer says who may frame it (frame_ancestors above), the gate's 403s too; through the https
+    // door (lab/tls_door.py passes the bytes as they are) the same
+    svr.set_default_headers({ { "X-Frame-Options", "SAMEORIGIN" }, { "Content-Security-Policy", frame_policy() } });
     // HERESY 1114: this machine and private networks only, unless RUACH_ALLOW_PUBLIC=1; 1429: or as its user decided (Engine → Security)
     static const bool allow_public = access_public();
     svr.set_pre_routing_handler([](const httplib::Request & req, httplib::Response & res) {
+        // HERESY 2011 (the audit of 02.11.2026, S3): through the https door every visitor came from this computer, which the engine trusts:
+        // the API's token was never asked, and the lockout guard saw no one. The door names its visitor in X-Ruach-Peer (one the visitor sent
+        // is dropped there), taken from a loopback caller alone: this computer may only ever make itself less trusted by it.
+        if (is_loopback_addr(req.remote_addr) && req.has_header("X-Ruach-Peer")) {
+            std::string   peer = req.get_header_value("X-Ruach-Peer");
+            unsigned char ip[16];
+            if (inet_pton(AF_INET, peer.c_str(), ip) == 1 || inet_pton(AF_INET6, peer.c_str(), ip) == 1) {
+                const_cast<httplib::Request &>(req).remote_addr = peer;
+            }
+        }
+        // HERESY 2011 (S1): a name the Studio cannot trust, or a page of another site, is refused (said once in ten seconds in the log)
+        const char * refused = nullptr;
+        if (!allow_public && !host_trusted(req.get_header_value("Host"))) {
+            refused = "Ruach Studio does not answer this name: a site on the internet could point it at this machine (RUACH_HOSTS=name opens it)";
+        } else if (request_foreign(req)) {
+            refused = "Ruach Studio does not take requests a page of another site makes";
+        } else if (relay_opened(req)) {   // HERESY 2138 (2.1)
+            refused = "The relay answers the Studio's own requests only: it is not opened as a page, a frame or a script";
+        }
+        if (refused) {
+            static std::atomic<long> said{ 0 };
+            long                     now = (long) time(nullptr);
+            if (now - said.exchange(now) >= 10) {
+                fprintf(stderr, "[Server] Refused %s %s from %s (Host %s, Origin %s, Sec-Fetch-Site %s): %s\n", req.method.c_str(), req.path.c_str(),
+                        addr_plain(req.remote_addr).c_str(), req.get_header_value("Host").c_str(), req.get_header_value("Origin").c_str(),
+                        req.get_header_value("Sec-Fetch-Site").c_str(), refused);
+            }
+            res.status = 403;
+            res.set_content(json_string("error", refused), "application/json");
+            return httplib::Server::HandlerResponse::Handled;
+        }
         if (allow_public) return httplib::Server::HandlerResponse::Unhandled;
         std::string mode;
         {
@@ -2421,7 +2940,9 @@ int main(int argc, char ** argv) {
             query += (query.empty() ? "?" : "&") + httplib::encode_uri_component(p.first) + "=" +
                      httplib::encode_uri_component(p.second);
         }
-        auto r = lab.Post(path + query, req.body, req.get_header_value("Content-Type", "application/octet-stream").c_str());
+        // HERESY 2103 (Viktor's debug journal of 05.11.2026: the lab's log could not say who asked): the visitor named, as the API's calls name it
+        httplib::Headers fwd = { { "X-Remote-Addr", req.remote_addr } };
+        auto r = lab.Post(path + query, fwd, req.body, req.get_header_value("Content-Type", "application/octet-stream").c_str());
         if (!r) {
             res.status = 502;
             res.set_content(json_string("error", "heresy-lab is not running on this machine (lab/start-lab.sh)"),
@@ -2429,6 +2950,11 @@ int main(int argc, char ** argv) {
             return;
         }
         res.status = r->status;
+        for (const char * h : { "X-Content-Type-Options", "Content-Security-Policy" }) {   // HERESY 2138 (2.1): the relay's JSON runs nothing
+            if (r->has_header(h)) {
+                res.set_header(h, r->get_header_value(h));
+            }
+        }
         res.set_content(r->body, r->get_header_value("Content-Type", "application/json").c_str());
     });
 
@@ -2447,9 +2973,20 @@ int main(int argc, char ** argv) {
                      httplib::encode_uri_component(p.second);
         }
         // HERESY 1021: a Range goes through and comes back, so the page's players can seek a stem
-        httplib::Headers fwd;
+        httplib::Headers fwd = { { "X-Remote-Addr", req.remote_addr } };   // HERESY 2103: and the visitor named, for the lab's log
+        // HERESY 2139 (the network map's finding 12): the browser's validators on to the lab, so a file it has already comes back a 304 of a few bytes
+        for (const char * h : { "If-None-Match", "If-Modified-Since" }) {
+            if (req.has_header(h)) {
+                fwd.emplace(h, req.get_header_value(h));
+            }
+        }
         if (req.has_header("Range")) {
             fwd.emplace("Range", req.get_header_value("Range"));
+            // HERESY 2088 (Viktor's console 05.11.2026, over :7443: «/lab/listen?codec=opus&name=… 416 (Range Not Satisfiable)»): the lab cuts the
+            // Range itself and answers 206 with its piece; httplib then cut the request's Range out of that piece again (the wrong bytes from any start
+            // but 0 with a second Content-Range, and 416 from a start past the piece's length: a seek past the middle of the Opus stream, of a clip).
+            // The lab's answer is relayed as it came: the request's ranges are the lab's to read, not httplib's here
+            const_cast<httplib::Request &>(req).ranges.clear();
         }
         auto r = lab.Get(path + query, fwd);
         if (!r) {
@@ -2459,10 +2996,26 @@ int main(int argc, char ** argv) {
             return;
         }
         res.status = r->status;
-        for (const char * h : { "Content-Range", "Accept-Ranges", "Content-Disposition" }) {
+        // HERESY 2138 (the audit of 06.11.2026, 2.1): and the relay's own nosniff and sandbox (lab.py relayed), so its JSON runs nothing in the Studio's origin
+        for (const char * h : { "Content-Range", "Accept-Ranges", "Content-Disposition", "X-Content-Type-Options", "Content-Security-Policy" }) {
             if (r->has_header(h)) {
                 res.set_header(h, r->get_header_value(h));
             }
+        }
+
+        // HERESY 2139 (Viktor 06.11.2026: «Вот очередная загрузка шрифтов без кеширования - это неприятно на удалённом соединении»; the network
+        // map's finding 12): the lab's cache headers were dropped here, so its fonts (15 of them, 2.48 MB) came again at every reload. They go on as the
+        // lab says them; a validator the lab sends with no Cache-Control is said no-cache, so no browser keeps an answer by a guess of its own
+        for (const char * h : { "Cache-Control", "ETag", "Last-Modified", "Expires", "Vary" }) {
+            if (r->has_header(h)) {
+                res.set_header(h, r->get_header_value(h));
+            }
+        }
+        if (!r->has_header("Cache-Control") && (r->has_header("ETag") || r->has_header("Last-Modified"))) {
+            res.set_header("Cache-Control", "no-cache");
+        }
+        if (r->status == 304) {   // no body and no type: a 304 freshens the copy the browser has, and that copy's type stays its own
+            return;
         }
         res.set_content(r->body, r->get_header_value("Content-Type", "application/json").c_str());
     });
@@ -2501,7 +3054,10 @@ int main(int argc, char ** argv) {
         svr.Get(R"(/api/(.*))", [lab_client, query_of, answer](const httplib::Request & req, httplib::Response & res) {
             auto            c = lab_client();
             httplib::Headers fwd;
-            if (req.has_header("Range")) fwd.emplace("Range", req.get_header_value("Range"));
+            if (req.has_header("Range")) {   // HERESY 2088: the lab's 206 relayed as it came, never cut again here
+                fwd.emplace("Range", req.get_header_value("Range"));
+                const_cast<httplib::Request &>(req).ranges.clear();
+            }
             if (req.has_header("Authorization")) fwd.emplace("Authorization", req.get_header_value("Authorization"));
             fwd.emplace("X-Remote-Addr", req.remote_addr);
             auto r = c.Get("/api/" + std::string(req.matches[1]) + query_of(req), fwd);
@@ -2675,6 +3231,12 @@ int main(int argc, char ** argv) {
             res.set_content(json_string("error", "result not ready"), "application/json");
             return;
         }
+        std::lock_guard<std::mutex> lock(mtx_results);
+        if (job->result_freed) {                                     // HERESY 2011 (P2)
+            res.status = 410;
+            res.set_content(job_status_json(*job), "application/json");
+            return;
+        }
         res.set_content(job->result_body, job->result_mime.c_str());
     });
 
@@ -2685,11 +3247,27 @@ int main(int argc, char ** argv) {
             res.set_content(json_string("error", "job not found"), "application/json");
             return;
         }
-        if (req.has_param("cancel")) {
+        // HERESY 2137 (the audit of 06.11.2026): &queued=1, the queue's ✕: only a job that waits is taken off; one the engine has begun meanwhile
+        // runs on and the answer says so ("cancel": false), so a second ✕ on a row that still read «waits» never stops a render under way
+        bool refused = req.has_param("cancel") && req.has_param("queued") && job->started.load();
+        if (req.has_param("cancel") && !refused) {
             job->cancel.store(true);
             fprintf(stderr, "[Server] Cancel requested for job %s\n", job->id.c_str());
         }
-        res.set_content(json_string("status", job_status_str(job->status.load())), "application/json");
+        JobStatus        status = job->status.load();
+        yyjson_mut_doc * doc    = yyjson_mut_doc_new(NULL);
+        yyjson_mut_val * root   = yyjson_mut_obj(doc);
+        yyjson_mut_doc_set_root(doc, root);
+        yyjson_mut_obj_add_str(doc, root, "status", job_status_str(status));
+        yyjson_mut_obj_add_bool(doc, root, "started", job->started.load());
+        yyjson_mut_obj_add_bool(doc, root, "cancel", job->cancel.load());
+        char *      json = yyjson_mut_write(doc, 0, NULL);
+        std::string out  = json ? json : "{}";
+        if (json) {
+            free(json);
+        }
+        yyjson_mut_doc_free(doc);
+        res.set_content(out, "application/json");
     });
 
     // Local additions: engine settings, unload, hardware
@@ -2752,7 +3330,7 @@ int main(int argc, char ** argv) {
         }
         std::error_code ec;
         std::filesystem::create_directories(std::filesystem::path(g_access_path).parent_path(), ec);
-        if (!write_file(g_access_path, access_json(next, nullptr))) {
+        if (!write_file_synced(g_access_path, access_json(next, nullptr))) {   // HERESY 2083b
             res.status = 500;
             res.set_content(json_string("error", "could not write " + g_access_path), "application/json");
             return;
@@ -3015,6 +3593,11 @@ int main(int argc, char ** argv) {
                 res.set_content(json_string("error", "no such take"), "application/json");
                 return;
             }
+            if (std::string why = library_delete_refusal(name); !why.empty()) {     // HERESY 2011 (S4)
+                res.status = 409;
+                res.set_content(json_string("error", why), "application/json");
+                return;
+            }
             std::lock_guard<std::mutex> lock(mtx_library);
             std::error_code             ec;
             std::filesystem::remove_all(g_outputs_dir + "/" + name, ec);
@@ -3029,10 +3612,15 @@ int main(int argc, char ** argv) {
     }
 
     // HERESY 1130: the page from disk at every load, so a page built anew shows on a reload: no server build, no
-    // restart. HERESY 1166: and only from disk: no copy inside the server and nothing gzipped (a studio of one machine
-    // and its network has no use for it). RUACH_PAGE (start.sh points it at build/tools/public/index.html), else the
+    // restart. HERESY 1166: and only from disk: no copy inside the server (HERESY 2035 gzips it on the way out for a
+    // client that asks, from the file each time). RUACH_PAGE (start.sh points it at build/tools/public/index.html), else the
     // page beside this build (build/build/yue-server -> build/tools/public/index.html). A page not built yet is said
     // so, not served from an old copy.
+    // HERESY 2139 (Viktor 06.11.2026: «все assets загружать с кешированием, но в каждом иметь ключ»): no-cache with a validator, was no-store:
+    // the browser keeps it and asks each time with its ETag (its size and time; build.sh's mv gives each build a new time), and an unchanged
+    // page is a 304 of a few bytes, the file not even read, where it was 17 MB (5.3 MB gzipped, 1.2 s of a core) at every reload. A new build
+    // shows on the next reload as before (1130). Never immutable, never kept without asking; private (NETWORK-EDGE §3.2): the browser keeps it,
+    // a cache between never.
     static std::string page_path;
     if (const char * env_page = getenv("RUACH_PAGE"); env_page && *env_page) {
         page_path = env_page;
@@ -3045,7 +3633,17 @@ int main(int argc, char ** argv) {
         page_path = (exe.parent_path().parent_path() / "tools" / "public" / "index.html").string();
     }
     fprintf(stderr, "[Server] The page: %s\n", page_path.c_str());
-    svr.Get("/", [](const httplib::Request &, httplib::Response & res) {
+    svr.Get("/", [](const httplib::Request & req, httplib::Response & res) {
+        std::error_code ec, ec2;
+        uintmax_t       size  = std::filesystem::file_size(page_path, ec);
+        auto            mtime = std::filesystem::last_write_time(page_path, ec2);
+        std::string     tag   = ec || ec2 ? "" : asset_cache::page_tag(size, mtime);   // HERESY 2139: no file, no tag: the 503 below says why
+        if (!tag.empty() && asset_cache::none_match(req.get_header_value("If-None-Match"), tag)) {
+            res.status = 304;                                  // no body and no type: the browser's copy stays what it is
+            res.set_header("ETag", tag);
+            res.set_header("Cache-Control", "private, no-cache");
+            return;
+        }
         std::string page = read_file(page_path);
         if (page.empty()) {
             res.status = 503;
@@ -3054,8 +3652,43 @@ int main(int argc, char ** argv) {
                             "text/plain; charset=utf-8");
             return;
         }
-        res.set_header("Cache-Control", "no-store");
+        res.set_header("Cache-Control", "private, no-cache");   // HERESY 2139: was no-store
+        if (!tag.empty()) {
+            res.set_header("ETag", tag);
+        }
         res.set_content(page, "text/html; charset=utf-8");
+    });
+    // HERESY 2024 (Viktor 02.11.2026: «Десктоп делаем с добрым PWA»): the Studio installable as an app: its manifest, its icons and a worker
+    // that keeps nothing (tools/console/pwa/, beside the page's folder), from the root, so the worker's scope is the whole Studio
+    // HERESY 2139: the manifest as build.sh wrote it beside the page (its icons' URLs keyed), else the source's; a request whose ?v= is the very
+    // file's key (the page's link, the manifest's icons) is kept a year, any other is no-cache; each with its ETag, a 304 when the browser has
+    // it. The worker never: a browser asks for it past its own cache anyway, and a worker kept would keep an old Studio
+    svr.Get(R"(/(manifest\.webmanifest|sw\.js|pwa/icon-(192|512)\.png))", [](const httplib::Request & req, httplib::Response & res) {
+        std::string           name  = req.matches[1];
+        std::string           file  = name.rfind("pwa/", 0) == 0 ? name.substr(4) : name;
+        std::filesystem::path built = std::filesystem::path(page_path).parent_path() / file;
+        std::error_code       ec;
+        bool                  from_build = file == "manifest.webmanifest" && std::filesystem::is_regular_file(built, ec);
+        std::string body = read_file(from_build ? built.string()
+                                                : (std::filesystem::path(page_path).parent_path().parent_path() / "console" / "pwa" / file).string());
+        if (body.empty()) {
+            res.status = 404;
+            res.set_content("not in this install\n", "text/plain; charset=utf-8");
+            return;
+        }
+        std::string key   = asset_cache::key_of(body);
+        std::string tag   = asset_cache::etag(key);
+        bool        keyed = file != "sw.js" && req.has_param("v") && req.get_param_value("v") == key;
+        res.set_header("Cache-Control", keyed ? asset_cache::IMMUTABLE : "no-cache");
+        res.set_header("ETag", tag);
+        if (file == "sw.js") {
+            res.set_header("Service-Worker-Allowed", "/");
+        }
+        if (asset_cache::none_match(req.get_header_value("If-None-Match"), tag)) {
+            res.status = 304;
+            return;
+        }
+        res.set_content(body, file == "sw.js" ? "text/javascript; charset=utf-8" : file == "manifest.webmanifest" ? "application/manifest+json" : "image/png");
     });
 
     fprintf(stderr, "[Server] yue-server %s\n", YUE2_VERSION);

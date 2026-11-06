@@ -27,7 +27,8 @@
             autoShow: {}, adrag: null,                   // HERESY 1535: the lanes whose volume line is in hand
             autoParam: {},                               // HERESY 1559: which line a lane has in hand (volume when not said)
             mon: { mono: false, dim: false },            // HERESY 1536: the master's monitor, for the ear only
-            ref: refReset() };                           // HERESY 1755: the reference, the sound as it came
+            ref: refReset(),                             // HERESY 1755: the reference, the sound as it came
+            marks: [] };                                 // HERESY 2016: the markers of your own
   function $(id) { return document.getElementById(id); }
   var UNDO_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 3 2 6l3 3M2.5 6H10a4 4 0 0 1 0 8H7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var REDO_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M11 3l3 3-3 3M13.5 6H6a4 4 0 0 0 0 8h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -48,11 +49,11 @@
     clearTimeout(keepTimer); keepTimer = 0;
     if (!S.take || !S.set || S.owner !== keyOf()) return;   // HERESY 1545: kept only as whose it is
     S.t = Date.now();
-    try { localStorage.setItem(keyOf(), JSON.stringify({ strips: S.strips, versions: S.versions, buses: S.buses, ab: S.ab, t: S.t })); } catch (e) { /* private mode */ }
+    try { localStorage.setItem(keyOf(), JSON.stringify({ strips: S.strips, versions: S.versions, buses: S.buses, ab: S.ab, t: S.t, marks: S.marks })); } catch (e) { /* private mode */ }   // 2016: marks
     labKeep();
   }
   // HERESY 1533: the working mix on Forge, beside its set: sent a moment after the hand stops, so another browser opens it as it is
-  function snapState() { return { strips: S.strips, versions: S.versions, buses: S.buses, ab: S.ab, t: S.t || Date.now() }; }
+  function snapState() { return { strips: S.strips, versions: S.versions, buses: S.buses, ab: S.ab, t: S.t || Date.now(), marks: S.marks }; }   // 2016: marks
   function labCall(body) {
     try { return labFetch(body); } catch (e) { return Promise.reject(e); }   // a fetch that throws at once is a refusal too
   }
@@ -80,6 +81,7 @@
       var w = d.working && d.working.state;
       if (w && (+w.t || 0) > (+keptT || 0)) {         // Forge's is newer: the mix as it was left on another machine
         S.strips = migrate(w.strips || {}); S.versions = w.versions || {}; S.buses = busesOf(w.buses); S.ab = w.ab && w.ab.cur ? w.ab : { cur: "A", A: null, B: null };
+        S.marks = marksOf(w.marks);                   // HERESY 2016
         S.t = +w.t;
         try { localStorage.setItem(keyOf(), JSON.stringify(snapState())); } catch (e) { /* private mode */ }
         restored(true);
@@ -488,6 +490,7 @@
       S.info = info;
       var kept = recall() || {};
       S.strips = migrate(kept.strips || {}); S.versions = kept.versions || {}; S.buses = busesOf(kept.buses);   // HERESY 1531
+      S.marks = marksOf(kept.marks);                  // HERESY 2016
       S.owner = keyOf();                              // HERESY 1545: this mix is this take's and set's
       S.t = +kept.t || 0; S.named = []; S.lab = { saved: 0, err: "", broken: "" };
       labLoad(token, kept.t);                          // HERESY 1533: Forge's copy, when newer, replaces this browser's
@@ -666,7 +669,7 @@
       '<button type="button" class="mx-ms" id="mxZoomIn" data-tip="' + esc(tr("Zoom in (+); Ctrl+wheel zooms about the pointer, Shift+wheel goes along")) + '">+</button>' +
       '<button type="button" class="btn ghost small" id="mxFit" data-tip="' + esc(tr("The whole song in view (0)")) + '">' + esc(tr("Fit")) + "</button>" +
       '<span class="mx-meter mx-master" data-meter="*" data-tip="' + esc(tr("The whole mix's level as it plays")) + '"><i></i></span>' +
-      '<span class="row-hint mono mx-keys" data-tip="' + esc(tr("Space plays and stops; Home to the start (the loop's, when it is on); L the loop; M and S the lane picked by a click on its name; ↑ ↓ another lane; + − 0 the zoom; [ ] the section before and after; Ctrl+Z, Ctrl+Shift+Z undo and redo; R the sound as it came, as loud as the mix; Alt+click on an S: every solo off")) + '">' + esc(tr("keys")) + "</span></div>" +
+      '<span class="row-hint mono mx-keys" data-tip="' + esc(tr("Space plays and stops; Home to the start (the loop's, when it is on); L the loop; M and S the lane picked by a click on its name; ↑ ↓ another lane; + − 0 the zoom; [ ] the section before and after; Ctrl+Z, Ctrl+Shift+Z undo and redo; R the sound as it came, as loud as the mix; Alt+click on an S: every solo off") + " " + tr("K a marker at the playhead, «,» and «.» the marker before and after; a right-click on one goes to it, renames or deletes it")) + '">' + esc(tr("keys")) + "</span></div>" +
       '<div class="mx-wave mx-ruler" data-tip="' + esc(tr("The time: a click goes there, a drag draws the loop. Under it the song's sections, as the player has timed them: a click goes to one, a double-click loops it")) + '"><canvas data-mx-ruler="1"></canvas></div></div>';
   }
   // HERESY 1532: the song's sections, as the player's wave has them (the take in the player): [{t, name, end}], each to the next
@@ -676,6 +679,47 @@
     var f = window.ruachWaveSections, l = f && S.take ? f(S.take.name) : null, L = S.info ? S.info.seconds : 0;
     l = (l || []).filter(function (x) { return x && x.t != null && isFinite(x.t) && x.t < L; }).slice().sort(function (a, b) { return a.t - b.t; });
     return l.map(function (x, i) { return { t: x.t, name: String(x.name || ""), end: i + 1 < l.length ? l[i + 1].t : L }; });
+  }
+  // HERESY 2016 (the DAW research of 02.11.2026: Bitwig, REAPER, Live, Logic all have them): markers of your own on the time. K one at the playhead,
+  // «,» and «.» the one before and after, a right-click on the ruler at one goes to it, renames or deletes it. They live with the mix as it is
+  // kept (this browser, Forge, a named mix), never in what is rendered (ruach.mix/1 refuses what it does not know), outside undo and A/B
+  var MARK_MAX = 64;
+  function marksOf(v) {
+    return Array.isArray(v) ? v.filter(function (m) { return m && isFinite(+m.t) && +m.t >= 0; })
+      .map(function (m) { return { t: Math.round(+m.t * 1000) / 1000, name: String(m.name || "").slice(0, 40) }; })
+      .sort(function (a, b) { return a.t - b.t; }).slice(0, MARK_MAX) : [];
+  }
+  function markAdd(t) {
+    if (!S.info) return false;
+    t = Math.max(0, Math.min(S.info.seconds, +t || 0));
+    if (S.marks.some(function (m) { return Math.abs(m.t - t) < 0.05; })) { say(tr("A marker stands here already")); return false; }
+    if (S.marks.length >= MARK_MAX) { say(tr("{0} markers at most").replace("{0}", MARK_MAX), true); return false; }
+    S.marks = marksOf(S.marks.concat([{ t: t, name: tr("Marker {0}").replace("{0}", S.marks.length + 1) }]));
+    keep(); drawRuler(); say(tr("A marker at {0}").replace("{0}", clock(t)));
+    return true;
+  }
+  function markJump(dir) {
+    var now = pos(), to = null;
+    if (dir > 0) { for (var i = 0; i < S.marks.length; i++) if (S.marks[i].t > now + 0.05) { to = S.marks[i].t; break; } }
+    else { for (var j = S.marks.length - 1; j >= 0; j--) if (S.marks[j].t < now - (S.playing ? 1.5 : 0.05)) { to = S.marks[j].t; break; } }
+    if (to == null) return false;
+    if (S.playing) play(to); else { S.at = to; paintPlayhead(); }
+    return true;
+  }
+  function markNear(x, w) { var best = null, d = 6; S.marks.forEach(function (m) { var dd = Math.abs(tx(m.t, w) - x); if (dd <= d) { d = dd; best = m; } }); return best; }
+  function markMenu(mk, x, y) {
+    window.HeresyMenu.open(x, y, [
+      { label: "Go to the marker", icon: "\u2192", action: function () { if (S.playing) play(mk.t); else { S.at = mk.t; paintPlayhead(); } } },
+      { label: "Rename the marker", icon: "\u270e", action: function () {
+        if (!window.HeresyDialog) return;
+        window.HeresyDialog.prompt(tr("The marker at {0}: its name").replace("{0}", clock(mk.t)), mk.name, { max: 40, ok: tr("Rename") }).then(function (v) {
+          v = v == null ? "" : String(v).replace(/\s+/g, " ").trim().slice(0, 40);
+          if (!v) return;
+          mk.name = v; keep(); drawRuler();
+        });
+      } },
+      { sep: true },
+      { label: "Delete the marker", icon: "\u2715", danger: true, action: function () { S.marks = S.marks.filter(function (m) { return m !== mk; }); keep(); drawRuler(); } }]);
   }
   function secKey() { return sections().map(function (x) { return x.name + "@" + x.t; }).join("|"); }
   function secHue(name) { for (var i = 0; i < SEC_HUES.length; i++) if (SEC_HUES[i][0].test(name)) return SEC_HUES[i][1]; return "120,120,120"; }
@@ -701,6 +745,14 @@
       g.fillStyle = ink; g.fillText(clock(t) + (st < 1 && t % 1 ? ".5" : ""), x + 3, 2);
       for (var k = 1; k < 4 && st >= 1; k++) { g.fillStyle = dim; g.fillRect(Math.round(tx(t + k * st / 4, w)) + 0.5, top - 3, 1, 3); }
     }
+    S.marks.forEach(function (m) {                   // HERESY 2016: a flag with its name, a line to the sections
+      var mx = Math.round(tx(m.t, w));
+      if (mx < -2 || mx > w + 2) return;
+      var label = m.name;
+      while (label.length > 2 && g.measureText(label).width > 132) label = label.slice(0, -2) + "\u2026";
+      g.fillStyle = "rgb(178,34,52)"; g.fillRect(mx, 0, 2, top); g.fillRect(mx, 0, Math.ceil(g.measureText(label).width) + 8, 13);
+      g.fillStyle = "#fff"; g.fillText(label, mx + 4, 2);
+    });
     if (!band) return;
     g.font = "600 9px " + (css.getPropertyValue("--mono").trim() || "monospace"); g.textBaseline = "middle";
     secs.forEach(function (sc) {
@@ -1527,6 +1579,7 @@
   function put(text) {
     var was = JSON.stringify(S.versions), v = JSON.parse(text);
     S.strips = v.strips || {}; S.versions = v.versions || {}; S.buses = busesOf(v.buses);
+    if (Array.isArray(v.marks)) S.marks = marksOf(v.marks);   // HERESY 2016: a named mix's markers; undo and A/B carry none and leave them
     restored(was !== JSON.stringify(S.versions));
   }
   function restored(versionsMoved) {
@@ -1726,6 +1779,8 @@
     if (k === "+" || k === "=") { e.preventDefault(); zoomAt(1.5, tx(pos(), w), w); return; }
     if (k === "-" || k === "_") { e.preventDefault(); zoomAt(1 / 1.5, tx(pos(), w), w); return; }
     if (k === "0") { e.preventDefault(); S.view = { zoom: 1, t0: 0 }; redrawAll(); return; }
+    if (k === "k" || k === "K") { e.preventDefault(); markAdd(pos()); return; }   // HERESY 2016: a marker at the playhead
+    if (k === "," || k === ".") { if (markJump(k === "." ? 1 : -1)) e.preventDefault(); return; }   // and the one before, after
     if (k === "[" || k === "]") {                    // HERESY 1532: the section before, the section after
       var secs = sections(), now = pos(), to = null;
       if (!secs.length) return;
@@ -2412,15 +2467,49 @@
     if (window.HeresyConsole) window.HeresyConsole.select(n, "devices");
     var dk2 = $("mxDock"); if (dk2) dk2.scrollIntoView({ block: "nearest" });
   }
+  // HERESY 2018 (the DAW research of 02.11.2026, §1.11: a channel strip's preset, as every DAW keeps them): a lane's sound kept by name, its trim, EQ,
+  // gate, compressor, width, pan and sends; never its level, mute, solo, silences, moves, automation, channel, polarity or version. In this browser
+  // and with it in the Studio's settings (yue2.mixer.presets, as every yue2.* key), laid on any lane of any set from the lane's menu; undone as one
+  var PRESET_KEY = "yue2.mixer.presets", PRESET_FIELDS = ["trim_db", "eq", "gate", "comp", "width", "pan", "reverb", "delay"], PRESET_MAX = 50;
+  function presetsAll() { try { var p = JSON.parse(localStorage.getItem(PRESET_KEY) || "{}"); return p && typeof p === "object" && !Array.isArray(p) ? p : {}; } catch (e) { return {}; } }
+  function presetsKeep(all) { try { if (Object.keys(all).length) localStorage.setItem(PRESET_KEY, JSON.stringify(all)); else localStorage.removeItem(PRESET_KEY); } catch (e) { /* private mode */ } }
+  function presetOf(n) { var s = S.strips[n] || {}, out = {}; PRESET_FIELDS.forEach(function (k) { if (s[k] != null) out[k] = JSON.parse(JSON.stringify(s[k])); }); return out; }
+  function presetSave(n) {
+    if (!window.HeresyDialog) return Promise.resolve(false);
+    return window.HeresyDialog.prompt(tr("A name for this lane's sound (its EQ, gate, compressor, width, pan and sends)"), n.replace(/_/g, " "), { max: 40, ok: tr("Save") }).then(function (v) {
+      v = v == null ? "" : String(v).replace(/\s+/g, " ").trim().slice(0, 40);
+      if (!v) return false;
+      var all = presetsAll();
+      if (!all[v] && Object.keys(all).length >= PRESET_MAX) { say(tr("{0} presets at most").replace("{0}", PRESET_MAX), true); return false; }
+      all[v] = presetOf(n); presetsKeep(all); say(tr("Preset «{0}» kept").replace("{0}", v));
+      return true;
+    });
+  }
+  function presetLay(n, name) {
+    var p = presetsAll()[name];
+    if (!p || names().indexOf(n) < 0) return false;
+    mark();
+    var st = S.strips[n] || (S.strips[n] = {});
+    PRESET_FIELDS.forEach(function (k) { if (p[k] != null) st[k] = JSON.parse(JSON.stringify(p[k])); else delete st[k]; });
+    if (st.comp && st.comp.key && (st.comp.key === n || names().indexOf(st.comp.key) < 0)) st.comp.key = "";   // a key of another set is no key here
+    changed(n); emit("change", { n: n });
+    say(tr("«{0}» laid on {1}").replace("{0}", name).replace("{1}", n));
+    return true;
+  }
+  function presetDel(name) { var all = presetsAll(); delete all[name]; presetsKeep(all); say(tr("Preset «{0}» deleted").replace("{0}", name)); }
   function laneMenu(n, x, y) {
     var s = strip(n), row = laneRow(n), press = function (k) { var b = row && row.querySelector('[data-mx="' + k + '"]'); if (b) b.click(); };
     var H = [[LANE_MIN, "Short (40 px)"], [LANE_DEF, "As it comes (72 px)"], [96, "Tall (96 px)"], [LANE_MAX, "Tallest (120 px)"]];
-    var cut = s.muted.length > 0 || s.edits.length > 0 || splitsOf(n).length > 0;
+    var cut = s.muted.length > 0 || s.edits.length > 0 || splitsOf(n).length > 0, pks = Object.keys(presetsAll()).sort();   // 2018: the presets
     window.HeresyMenu.open(x, y, [
       { label: s.mute ? "Unmute" : "Mute", icon: "M", checked: s.mute, action: function () { press("mute"); } },
       { label: s.solo ? "Unsolo" : "Solo", icon: "S", checked: s.solo, action: function () { press("solo"); } },
       { label: S.autoShow[n] ? "Hide its automation" : "Its automation", icon: "A", action: function () { press("auto"); } },
       { label: "Its devices in the console", icon: "\u2261", action: function () { devicesOf(n); } },
+      { label: "Save its sound as a preset…", icon: "\u2913", action: function () { presetSave(n); } },   // HERESY 2018
+      { label: "Its sound from a preset", icon: "\u21e9", items: pks.length ? pks.map(function (k) { return { label: k, raw: true, action: function () { presetLay(n, k); } }; })
+        : [{ label: "No presets yet", muted: true, hint: "Save a lane's sound first: Save its sound as a preset… in its menu" }] },
+      pks.length && { label: "Delete a preset", icon: "\u2715", items: pks.map(function (k) { return { label: k, raw: true, danger: true, action: function () { presetDel(k); } }; }) },
       { sep: true },
       { label: "Split at the playhead", icon: "\u2502", action: function () { splitAt(n, [S.playing ? pos() : S.at]); } },   // HERESY 1968
       { label: "Select the whole lane", icon: "\u2194", action: function () { pickSet(n, 0, S.info.seconds); } },
@@ -2437,6 +2526,11 @@
     ].filter(Boolean));
   }
   function onMenu(e) {
+    var rcm = e.target.closest && e.target.closest("canvas[data-mx-ruler]");   // HERESY 2016: a marker's own menu on the ruler
+    if (rcm && S.info && window.HeresyMenu) {
+      var rr = rcm.getBoundingClientRect(), mk = markNear(e.clientX - rr.left, rr.width);
+      if (mk) { e.preventDefault(); markMenu(mk, e.clientX, e.clientY); return; }
+    }
     // HERESY 1966 (Viktor: «контекстное меню, как в Bitwig… Mute трека и остальное»): the lane's left part, its name and buttons (its version's
     // own right-click and the fields aside)
     var ctl = e.target.closest && e.target.closest(".mx-lane[data-strip]");   // the whole left part: a lane is taller than its row of buttons
@@ -2584,6 +2678,8 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 
   window.HeresyMixer = { setTake: setTake, value: value, play: play, stop: stop, undo: undo, redo: redo, ab: abTo,
+    marks: { add: markAdd, jump: markJump, list: function () { return S.marks.map(function (m) { return { t: m.t, name: m.name }; }); } },   // HERESY 2016
+    presets: { save: presetSave, lay: presetLay, del: presetDel, all: presetsAll },   // HERESY 2018
     state: function () { var g = S.graph; return { take: S.take && S.take.name, set: S.set, sets: S.sets.length, strips: names(), playing: S.playing, at: pos(), srcs: S.srcs.length, versions: S.versions, busy: S.busy,
       zoom: S.view.zoom, t0: S.view.t0, loop: S.loop, loopOn: S.loopOn, focus: S.focus, meters: Object.assign({}, S.meters),   // HERESY 1501
       peaks: Object.keys(S.peaks).length, ctx: S.ctx ? S.ctx.state : "",

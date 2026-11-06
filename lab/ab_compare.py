@@ -41,13 +41,19 @@ BANDS = (("lows", 20, 200), ("mids", 200, 2000), ("presence", 2000, 6000), ("air
 ZONES = (("sub", 20, 80), ("low", 80, 300), ("mid", 300, 2000), ("hi-mid", 2000, 6000), ("high", 6000, 12000), ("air", 12000, 20000))
 
 
-def read(path, sr=SR):
-    """Two channels at sr, float64; a file of one channel heard on both."""
+def read(path, sr=SR, seconds=None):
+    """Two channels at sr, float64; a file of one channel heard on both; its first `seconds` alone when given (HERESY 2011, P3)."""
     p = str(path)
     try:
-        x, r = sf.read(p, dtype="float64", always_2d=True)
+        frames = -1 if seconds is None else int(seconds * sf.info(p).samplerate)
+        x, r = sf.read(p, frames=frames, dtype="float64", always_2d=True)
     except (RuntimeError, sf.LibsndfileError):
-        raw = subprocess.run(["ffmpeg", "-v", "error", "-i", p, "-f", "f32le", "-ac", "2", "-ar", str(sr), "-"], capture_output=True, check=True).stdout
+        cut = [] if seconds is None else ["-t", str(seconds)]
+        try:                                          # HERESY 2011 (C12): a disk that stops answering held the request's thread for good
+            raw = subprocess.run(["ffmpeg", "-v", "error", "-i", p] + cut + ["-f", "f32le", "-ac", "2", "-ar", str(sr), "-"], capture_output=True,
+                                 check=True, timeout=600).stdout
+        except subprocess.TimeoutExpired:
+            raise RuntimeError(f"ffmpeg did not finish reading {Path(p).name} in 600 s")
         x, r = np.frombuffer(raw, np.float32).reshape(-1, 2).astype(np.float64), sr
     if x.shape[1] == 1:
         x = np.repeat(x, 2, 1)

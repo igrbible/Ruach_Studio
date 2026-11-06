@@ -131,8 +131,8 @@ add_executable(yue-synth tools/yue-synth.cpp src/request.cpp src/model-store.cpp
 target_link_libraries(yue-synth PRIVATE yyjson)
 link_ggml_backends(yue-synth)
 
-# HERESY 1166: no page inside the server and nothing gzipped (a studio of one machine and its network): yue-server
-# reads the page build.sh makes, tools/public/index.html, from disk at every load.
+# HERESY 1166: no page inside the server: yue-server reads the page build.sh makes, tools/public/index.html, from disk at every
+# load. HERESY 2035: what is text goes gzipped to a browser that asks (cpp-httplib with zlib, vendor/cpp-httplib/CMakeLists.txt).
 
 # yue-server: HTTP server (single slot job queue; the page from disk)
 add_executable(yue-server tools/yue-server.cpp src/request.cpp src/model-store.cpp)

@@ -2,7 +2,7 @@
 # yue2.cpp: the C++ YuE2 server and its own browser page.
 # Everything it needs lives in this folder: build/ (the engine: upstream plus the patches, compiled in build/build), models/, tmp/.
 #
-#   ./start.sh                      the backbone settings.json picks (else Ruach Studio's default, RS-FW 2.4x0.75; else the first one present)
+#   ./start.sh                      the backbone settings.json picks (else Ruach Studio's default, RS-TW 2.0x0.75, then RS-FW 2.4x0.75; else the first one present)
 #   YUE2CPP_QUANT=Q8_0 ./start.sh   a given backbone copy, if present
 #   YUE2CPP_PORT=7778 ./start.sh   another port
 #   YUE2CPP_GPU=1 ./start.sh        another card than user/gpus.json gives the Studio
@@ -28,11 +28,22 @@ HPY="$ROOT/.venv/bin/python"; [ -x "$HPY" ] || HPY=python3   # HERESY 1080: the 
 # CUDA one beside it (./build.sh --sycl), runs build/build-sycl/yue-server under oneAPI's runtime, NVIDIA's guard and card left out.
 # SYCL_CACHE_PERSISTENT stays 0: with the kernels' disk cache, libsycl (oneAPI 2026.1) dies at the first kernel it runs, a fresh cache
 # too (found 21.10.2026 on an Arc Pro B50); the kernels are compiled at each start instead, a few seconds on the first song
+# HERESY 2029 (Viktor 02.11.2026: «Сделай Arc таким же равноправным членом Студии как и CUDA карты»): Engine -> GPUs may give the Studio an Intel
+# card, its index 100 and up as the lab counts them: then the SYCL engine on the n-th Level Zero card (100 + n)
+ARC_PICK=""
+PICKED="${YUE2CPP_GPU:-}"
+if [ -z "$PICKED" ] && [ -f "$ROOT/user/gpus.json" ]; then
+    PICKED=$("$HPY" -c 'import json, sys; print(int(json.load(open(sys.argv[1])).get("studio", 0)))' "$ROOT/user/gpus.json" 2>/dev/null || true)
+fi
+if [ -n "$PICKED" ] && [ "$PICKED" -ge 100 ] 2>/dev/null; then
+    if [ -f "$ROOT/build/build-sycl/yue-server" ]; then ARC_PICK=$((PICKED - 100))
+    else echo "The Studio's card is an Intel Arc, but no SYCL engine is built (./build.sh --sycl): the CUDA engine instead"; fi
+fi
 SYCL=0
-if [ "${YUE2_ENGINE:-}" = sycl ] || { [ ! -f "$ROOT/build/build/yue-server" ] && [ -f "$ROOT/build/build-sycl/yue-server" ]; }; then
+if [ "${YUE2_ENGINE:-}" = sycl ] || [ -n "$ARC_PICK" ] || { [ ! -f "$ROOT/build/build/yue-server" ] && [ -f "$ROOT/build/build-sycl/yue-server" ]; }; then
     SYCL=1
     if [ -f /opt/intel/oneapi/setvars.sh ]; then set +u; source /opt/intel/oneapi/setvars.sh >/dev/null 2>&1 || true; set -u; fi
-    export ONEAPI_DEVICE_SELECTOR="${ONEAPI_DEVICE_SELECTOR:-level_zero:*}" SYCL_CACHE_PERSISTENT=0
+    export ONEAPI_DEVICE_SELECTOR="${ONEAPI_DEVICE_SELECTOR:-level_zero:${ARC_PICK:-*}}" SYCL_CACHE_PERSISTENT=0
     case "${GGML_BACKEND:-}" in SYCL*|CPU*|"") ;; *) unset GGML_BACKEND ;; esac
 fi
 # HERESY 1091: the Studio's card (Engine -> GPUs in the page writes user/gpus.json); YUE2CPP_GPU overrides; 0 by default
@@ -40,6 +51,7 @@ STUDIO_GPU="${YUE2CPP_GPU:-}"
 if [ -z "$STUDIO_GPU" ] && [ -f "$ROOT/user/gpus.json" ]; then
     STUDIO_GPU=$("$HPY" -c 'import json, sys; print(int(json.load(open(sys.argv[1])).get("studio", 0)))' "$ROOT/user/gpus.json" 2>/dev/null || true)
 fi
+if [ -n "$STUDIO_GPU" ] && [ "$STUDIO_GPU" -ge 100 ] 2>/dev/null; then STUDIO_GPU=0; fi   # HERESY 2029: an Arc's index is no CUDA card's
 # HERESY 1109 (Viktor): no CUDA_VISIBLE_DEVICES. Most have one card, and who has more knows the kitchen. The engine
 # computes on the first card by itself; another studio card (Engine -> GPUs, or YUE2CPP_GPU) is named to it as
 # GGML_BACKEND=CUDAn (CUDA_DEVICE_ORDER=PCI_BUS_ID keeps n = nvidia-smi's number). Measured 02.10.2026: with every
@@ -75,8 +87,12 @@ if [ -z "$QUANT" ] && [ -f "$ROOT/settings.json" ]; then
 fi
 # HERESY 1794 (Viktor 25.10.2026: «2.4 ep - самый безопасный, и пусть он будет базовой моделью»): no model named, Ruach Studio's own fine-tune
 # starts, its default merge at the fullest quant here (the install brings it at the backbone's); m-a-p's own when it is not here
+# HERESY 2065 (Viktor 04.11.2026: «выставляй дефолтную модель в Студии — RS-TW-2.0 для среза 2.0.6. Она у нас лучшая и безопасная по силе слияния»): RS-TW 2.0x0.75 first,
+# at the fullest quant here; RS-FW 2.4x0.75 where it is not (an install before the fine-tunes' repo had RS-TW), then m-a-p's own, as before
 if [ -z "$QUANT" ]; then
-    for q in BF16 Q8_0 Q6_K; do [ -f "$ROOT/models/YuE2-3B-RS-FW-2.4x0.75-$q.gguf" ] && { QUANT="RS-FW-2.4x0.75-$q"; break; }; done
+    for m in RS-TW-2.0x0.75 RS-FW-2.4x0.75; do
+        for q in BF16 Q8_0 Q6_K; do [ -f "$ROOT/models/YuE2-3B-$m-$q.gguf" ] && { QUANT="$m-$q"; break 2; }; done
+    done
 fi
 if [ -z "$QUANT" ] || [ ! -f "$ROOT/models/YuE2-3B-$QUANT.gguf" ]; then
     wanted="$QUANT"; QUANT=""

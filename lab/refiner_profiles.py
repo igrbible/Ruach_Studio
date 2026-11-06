@@ -24,7 +24,10 @@ def _write(user_dir, profiles):
     p = Path(user_dir, NAME)
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps({"profiles": profiles}, ensure_ascii=False, indent=1), encoding="utf-8")
+    with open(tmp, "w", encoding="utf-8") as fh:   # HERESY 2083: written whole and on the disk before it takes the file's place
+        fh.write(json.dumps({"profiles": profiles}, ensure_ascii=False, indent=1))
+        fh.flush()
+        os.fsync(fh.fileno())
     os.replace(tmp, p)
 
 

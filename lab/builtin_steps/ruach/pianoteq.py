@@ -27,13 +27,34 @@ LAB = HERE.parents[1]
 KIT = LAB.parent
 sys.path.insert(0, str(LAB))
 
-LICENCE = "Pianoteq (Modartt): played by the copy installed here; by its licence its sound is not for training a neural network"
-FIRST = ("piano", "other", "instrumental", "guitar")   # the stem asked when the set has none of that name
+# HERESY 2036: one script for Modartt's three; organteq.py and airteq.py set PRODUCT and call main(). Each its program's name, the stems it
+# plays first, its keyboard (notes beyond it moved by octaves) and whether a sustain pedal means anything to it
+PRODUCT = "pianoteq"
+KINDS = {"pianoteq": {"name": "Pianoteq", "exe": "Pianoteq *", "first": ("piano", "other", "instrumental", "guitar"), "keys": (21, 108), "pedal": True,
+                      "preset": "NY Steinway D Classical", "what": "a piano"},
+         "organteq": {"name": "Organteq", "exe": "Organteq *", "first": ("piano", "other", "instrumental", "guitar"), "keys": (36, 96), "pedal": False,
+                      "preset": "Romantic Cathedral", "what": "an organ"},
+         "airteq": {"name": "Airteq", "exe": "Airteq", "first": ("winds", "other", "vocals", "instrumental", "piano"), "keys": (24, 108), "pedal": False,
+                    "preset": "Classical Flute", "what": "Airteq"}}
+FIRST = KINDS["pianoteq"]["first"]   # the stem asked when the set has none of that name (stem_file reads the product's own)
+
+
+def licence():
+    return f"{KINDS[PRODUCT]['name']} (Modartt): played by the copy installed here; by its licence its sound is not for training a neural network"
+
+
+LICENCE = licence()
 
 
 def find_pianoteq(kit):
     """The Pianoteq program installed here, or None."""
-    cfg = Path(kit) / "user" / "pianoteq.json"
+    return find_modartt(kit, "pianoteq")
+
+
+def find_modartt(kit, slug):
+    """HERESY 2036: the program of this Modartt product installed here (user/<slug>.json, models/instruments/<slug>*/, ~, the PATH), or None."""
+    k = KINDS[slug]
+    cfg = Path(kit) / "user" / f"{slug}.json"
     if cfg.is_file():
         try:
             p = Path(os.path.expanduser(str(json.load(open(cfg, encoding="utf-8")).get("path") or "")))
@@ -41,13 +62,13 @@ def find_pianoteq(kit):
                 return p
         except (OSError, ValueError):
             pass
-    roots = sorted((Path(kit) / "models" / "instruments").glob("pianoteq*")) + sorted(Path.home().glob("pianoteq*")) + sorted(Path.home().glob("Pianoteq*"))
+    roots = sorted((Path(kit) / "models" / "instruments").glob(f"{slug}*")) + sorted(Path.home().glob(f"{slug}*")) + sorted(Path.home().glob(f"{k['name']}*"))
     for root in roots:
         for arch in ("x86-64bit", "arm-64bit"):
-            for b in sorted(root.glob(f"**/{arch}/Pianoteq *"), reverse=True):   # the newest version first; its .lv2 and .vst3 are folders
-                if b.is_file() and os.access(b, os.X_OK):
+            for b in sorted(root.glob(f"**/{arch}/{k['exe']}"), reverse=True):   # the newest version first; its .lv2 and .vst3 are folders, its .so a plugin
+                if b.is_file() and b.suffix not in (".so", ".lv2", ".vst3") and os.access(b, os.X_OK):
                     return b
-    for name in ("pianoteq", "Pianoteq"):
+    for name in (slug, k["name"]):
         w = shutil.which(name)
         if w:
             return Path(w)
@@ -58,8 +79,8 @@ def own_prefs(work):
     """A copy of Pianoteq's own preferences for one render, in a folder of its own (0600): a bought Pianoteq keeps its activation there, and
     with a file of its own it plays silence (−91 dB, 31.10.2026), while --no-prefs rewrites the user's file as it quits. The copy goes with
     the render; the user's file is never written."""
-    srcs = sorted(Path.home().glob(".config/Modartt/Pianoteq*.prefs"), key=lambda q: q.stat().st_mtime, reverse=True)
-    dst = Path(tempfile.mkdtemp(prefix="pianoteq-", dir=str(work))) / "prefs"
+    srcs = sorted(Path.home().glob(f".config/Modartt/{KINDS[PRODUCT]['name']}*.prefs"), key=lambda q: q.stat().st_mtime, reverse=True)
+    dst = Path(tempfile.mkdtemp(prefix=f"{PRODUCT}-", dir=str(work))) / "prefs"
     if srcs:
         shutil.copyfile(srcs[0], dst)
         os.chmod(dst, 0o600)
@@ -69,7 +90,7 @@ def own_prefs(work):
 def stem_file(set_dir, want):
     """The set's file for the stem asked (or the first of FIRST it has), and its name."""
     have = {p.stem: p for p in Path(set_dir).iterdir() if p.suffix.lower() in (".flac", ".wav")}
-    for name in [want] + [x for x in FIRST if x != want]:
+    for name in [want] + [x for x in KINDS[PRODUCT]["first"] if x != want]:
         if name in have:
             return have[name], name
     raise FileNotFoundError(f"the set has no {want} stem (it has {', '.join(sorted(have)) or 'none'})")
@@ -99,11 +120,13 @@ def main(set_dir, outdir, params_file):
     p = json.load(open(params_file, encoding="utf-8"))
     set_dir, outdir = Path(set_dir), Path(outdir)
     take = set_dir.parent.parent                       # derived/stems-…/ of a take
-    binary = find_pianoteq(KIT)
+    K = KINDS[PRODUCT]
+    N = K["name"]
+    binary = find_modartt(KIT, PRODUCT)
     if binary is None:
-        raise SystemExit("no Pianoteq here: unpack the one you bought from modartt.com into models/instruments/pianoteq/, activate it there, "
-                         "or name its program in user/pianoteq.json {\"path\": …} (the guide: Pianoteq)")
-    stem, name = stem_file(set_dir, str(p.get("stem") or "piano"))
+        raise SystemExit(f"no {N} here: unpack the one you bought (or its trial) from modartt.com into models/instruments/{PRODUCT}/, activate it there, "
+                         f"or name its program in user/{PRODUCT}.json {{\"path\": …}} (the guide: {N})")
+    stem, name = stem_file(set_dir, str(p.get("stem") or K["first"][0]))
     source = f"derived/{set_dir.name}/{stem.name}"
     only = orchestra.only_for(source)
     folder = orchestra.midi_set_of(take, source, only)
@@ -126,23 +149,30 @@ def main(set_dir, outdir, params_file):
     keys = str(p.get("parts") or "all") == "keys"
     notes = [n for n in notes if not n[4] and (not keys or int(n[3]) < 24)]   # no drums; «keys»: GM's pianos, chromatic percussion and organs
     if not notes:
-        raise SystemExit("the stem's MIDI has no notes for a piano to play")
+        raise SystemExit(f"the stem's MIDI has no notes for {K['what']} to play")
     if str(p.get("dynamics") or "stem") == "stem":
         vel = orchestra.velocities(notes, stem)         # read at each note's own pitch, before any shift
     else:
         vel = [80] * len(notes)
     shift = int(float(p.get("shift") or 0))
-    notes = [[a, b, min(108, max(21, int(q) + shift)), pr, dr] for a, b, q, pr, dr in notes]   # a piano's own 88 keys
+    lo, hi = K["keys"]                                  # HERESY 2036: the product's own keyboard (a piano's 88 keys, an organ's manual C2–C7),
+    def keyed(q):                                       # a note beyond it moved by octaves, not squashed onto its last key
+        while q < lo:
+            q += 12
+        while q > hi:
+            q -= 12
+        return q
+    notes = [[a, b, keyed(int(q) + shift), pr, dr] for a, b, q, pr, dr in notes]
     touch = int(float(p.get("touch") or 0))
     vel = [max(1, min(127, int(v) + touch)) for v in vel]
-    cc = pedal(notes) if str(p.get("pedal") or "phrases") == "phrases" else []
-    work = Path(KIT) / "tmp" / "pianoteq-step"
+    cc = pedal(notes) if K["pedal"] and str(p.get("pedal") or "phrases") == "phrases" else []
+    work = Path(KIT) / "tmp" / f"{PRODUCT}-step"
     work.mkdir(parents=True, exist_ok=True)
     mid = orchestra.write_mid([[a, b, q, 0, 0] for a, b, q, _pr, _dr in notes], vel, outdir / "part.mid", tail=3.0, cc=cc)
     info = sf.info(str(stem))
     rate, frames = info.samplerate, info.frames
-    wav = outdir / "pianoteq.wav"
-    preset = str(p.get("preset") or "NY Steinway D Classical")
+    wav = outdir / f"{PRODUCT}.wav"
+    preset = str(p.get("preset") or K["preset"])
     # HERESY 1977: the panel's own state (any of Pianoteq's presets, its small presets, the values set): a preset file made for this render
     # (saved for a moment into the bank «Ruach Studio», copied out, deleted there; pianoteq_live.fxp), played with --fxp
     try:
@@ -151,8 +181,9 @@ def main(set_dir, outdir, params_file):
         st = {}
     st = st if isinstance(st, dict) else {}
     preset = str(st.get("preset") or preset)
-    import pianoteq_live
-    demo = pianoteq_live.licensed(KIT, preset, str(st.get("bank") or "")) is False   # Pianoteq's demo here: some of its keys are silent
+    import modartt
+    pianoteq_live = modartt.live(PRODUCT)             # HERESY 2036: the product's own module (Pianoteq's when the step is Pianoteq)
+    demo = pianoteq_live.licensed(KIT, preset, str(st.get("bank") or "")) is False   # a demo here: some of its keys are silent
     fx, changed = None, len(st.get("values") or {})
     if st.get("preset") or st.get("small") or changed:
         try:
@@ -168,11 +199,11 @@ def main(set_dir, outdir, params_file):
         if fx:
             Path(fx).unlink(missing_ok=True)
     if not wav.is_file():
-        raise SystemExit("Pianoteq made no sound: " + ((r.stderr or "").strip() or (r.stdout or "").strip())[-300:])
+        raise SystemExit(f"{N} made no sound: " + ((r.stderr or "").strip() or (r.stdout or "").strip())[-300:])
     a, _ = sf.read(str(wav), always_2d=True, dtype="float32")
     if not a.size or 20 * np.log10(np.sqrt(np.mean(a.astype(np.float64) ** 2)) + 1e-12) < -70:   # silence is never raised to the stem's level
         wav.unlink()
-        raise SystemExit("Pianoteq played silence: is it activated? (run it once and activate it with your own serial; the guide: Pianoteq)")
+        raise SystemExit(f"{N} played silence: is it activated? (run it once and activate it with your own serial; the guide: {N})")
     a = np.pad(a, ((0, max(0, frames - len(a))), (0, 0)))[:frames]
     if a.shape[1] != info.channels:
         a = np.repeat(a[:, :1], info.channels, axis=1) if a.shape[1] == 1 else a[:, :info.channels]
@@ -181,21 +212,21 @@ def main(set_dir, outdir, params_file):
     peak = float(np.abs(a).max()) if a.size else 0.0
     if peak > 0.98:
         a = a * (0.98 / peak)
-    out = "pianoteq.flac"
+    out = f"{PRODUCT}.flac"
     sf.write(str(outdir / out), a, rate, subtype="PCM_24")
     wav.unlink()
     Path(mid).unlink()                                  # the take keeps its MIDI set; the branch its sound
     lane = str(p.get("lay") or "lane") == "lane"
-    f = {"name": f"Pianoteq · {preset}" + (" ✎" if changed or st.get("small") else "") + f" · {name}", "file": out, "seconds": round(frames / rate, 2)}
+    f = {"name": f"{N} · {preset}" + (" ✎" if changed or st.get("small") else "") + f" · {name}", "file": out, "seconds": round(frames / rate, 2)}
     if lane:
-        f["track"] = "pianoteq"                         # a strip of its own in the DAW (1929's way), beside the stem it plays
+        f["track"] = PRODUCT                            # a strip of its own in the DAW (1929's way), beside the stem it plays
     else:
         f["source"] = source                            # the stem's version: the DAW plays it instead
     print(json.dumps({"files": [f],
-                      "measure": {"licence": LICENCE, "preset": preset, "demo": demo, "changed": changed, "small": st.get("small") or {}, "stem": name, "notes": len(notes), "midi": folder.name, "touch": touch,
+                      "measure": {"licence": licence(), "product": N, "preset": preset, "demo": demo, "changed": changed, "small": st.get("small") or {}, "stem": name, "notes": len(notes), "midi": folder.name, "touch": touch,
                                   "shift": shift, "pedal": bool(cc), "lowered_db": round(20 * np.log10(0.98 / peak), 2) if peak > 0.98 else 0.0},
                       "summary": f"{preset}" + (f" with {changed} setting{'' if changed == 1 else 's'} of its own" if changed else "") + f" played {len(notes)} notes of the {name} stem; " + ("a lane of its own in the DAW" if lane else "the stem's version in the DAW") +
-                                 ("; a demo in this Pianoteq: some of its keys are silent" if demo else ""),
+                                 (f"; a demo in this {N}: some of its keys are silent" if demo else ""),
                       "took": round(time.time() - t0, 1)}))
 
 

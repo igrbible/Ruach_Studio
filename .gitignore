@@ -40,6 +40,7 @@
 /kit/
 /build/build/
 /build/tools/public/index.html
+/build/tools/public/manifest.webmanifest
 /vendor/*
 !/vendor/.gitkeep
 
@@ -81,16 +82,14 @@
 /user/*
 !/user/.gitkeep
 
-# ---- training sets (HERESY 1100): the user's songs and the big downloads stay home; only the two starter
-# samples travel with the code (GTSinger, CC BY-NC-SA 4.0; the full sets: the trainer's Starter sets button)
+# ---- training sets (HERESY 1100): the user's songs and the big downloads stay home; the two samples that travelled with the code are out (HERESY 2078,
+# 2093)
 /datasets/src/*
 !/datasets/src/.gitkeep
 /datasets/prepared/*
 !/datasets/prepared/.gitkeep
 /datasets/raw/*
 !/datasets/raw/.gitkeep
-!/datasets/raw/GTSinger-RU-sample/
-!/datasets/raw/GTSinger-EN-sample/
 
 # ---- what the studio makes on the machine beside the shipped folders
 /artwork/*

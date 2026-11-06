@@ -4,17 +4,15 @@
 
 <p align="center"><b>OSEM</b> <i>(say it: awesome)</i> · Open Source, Engaged &amp; Musical</p>
 
-<p align="center"><a href="https://ruachstudio.igr.bible">Website</a> · <a href="https://github.com/igrbible/Ruach_Studio">GitHub</a> ·
-<a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Models on Hugging Face</a> · <a href="docs/GUIDE.md">The guide</a> ·
-<a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02"><b>☕ Buy me a Coffee Machine</b></a></p>
+<p align="center"><a href="https://ruachstudio.art">Website</a> · <a href="https://github.com/igrbible/Ruach_Studio">GitHub</a> · <a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Models on Hugging Face</a> · <a href="docs/GUIDE.md">The guide</a> · <a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02"><b>☕ 24/7 coffee for Viktor and Claude</b></a></p>
 
 > Ruach Studio is open music generation that runs on your own hardware: the model, the score, the adapters and every take stay yours, and nothing is rented by the token. Open models are now good enough to stand on their own, and what was missing is the Studio around them: that is what we build, in the open. Music should be free to make and to share: whoever has no voice, no instrument and no studio still has the right to lay their thoughts and feelings onto sound.
 
-> **⚠ Not on free cloud GPUs.** Ruach Studio does not run on Google Colab, Kaggle or any free notebook GPU, so don't spend an evening on it there: it is a whole studio, not a notebook. It builds its C++/CUDA engine on the machine it lives on, keeps a server and a lab of Python services running beside it, and takes about 33 GB of disk (60 GB with the Artist). A free session's card, memory, wiped disk and hours-long limit cannot hold that. It wants your own Linux computer, or a server you rent and keep, with an NVIDIA card: 24 GB for everything, 16 GB with the smaller model copies.
+> **⚠ Not on free cloud GPUs.** Ruach Studio does not run on Google Colab, Kaggle or any free notebook GPU, so don't spend an evening on it there: it is a whole studio, not a notebook. It builds its C++/CUDA engine on the machine it lives on, keeps a server and a lab of Python services running beside it, and takes about 34–41 GB of disk (74–84 GB with the Artist). A free session's card, memory, wiped disk and hours-long limit cannot hold that. It wants your own Linux computer, or a server you rent and keep, with an NVIDIA card: 24 GB for everything, 16 GB with the smaller model copies.
 
 > **⚠ The screen.** The Studio's design adapts to the window, but everything has its limit. It is made for a browser window of **1920×1080 at 100 % zoom**; the ideal monitor is **2K (2560×1440), 22″ or larger, 16:9 or wider**.
 
-**Songs from words, on your own machine.** A full studio around **YuE2**, the open song model: write the style and the lyrics, and the Studio composes, sings and renders the song on your own GPU. Your songs, words and settings never leave it: the Writer goes to a cloud chat model only if you point it there, and the page itself fetches only its fonts and its score renderer from the internet (see [Dependencies](#dependencies)).
+**Songs from words, on your own machine.** A full studio around **YuE2**, the open song model: write the style and the lyrics, and the Studio composes, sings and renders the song on your own GPU. Your songs, words and settings never leave it: the Writer goes to a cloud chat model only if you point it there, a debug journal goes out only when you send it and say yes, and the page itself loads nothing from the internet (see [Dependencies](#dependencies)); the lab asks GitHub whether a new release is out, once a week unless Engine → Updates says otherwise.
 
 If you came looking for a **YuE2 WebUI** or a **YuE studio**: this is one, grown into a whole music workstation. It runs YuE2, the successor of YuE (m-a-p's open song models), through yue2.cpp on your own NVIDIA GPU.
 
@@ -22,7 +20,8 @@ If you came looking for a **YuE2 WebUI** or a **YuE studio**: this is one, grown
 > - **Whole songs**, up to eight minutes: a 6:12 song in 135 s, a 7:25 song with its score first in 212 s, on one RTX 3090.
 > - **The score first, and yours to edit**: YuE2 writes the melody and chords as ABC before a note sounds; change them, transpose them, bring your own score or MIDI, and the song follows it.
 > - **Two seeds, not one**: keep the song (music seed), hear it rendered anew (sound seed).
-> - **LoRA training on your own songs**, in the Studio, unquantized (bf16), with telemetry that tells you which epochs to hear first; starter sets to try it at once. Adapters stack on measured roads, under a measured ceiling, each with its own wave through the song.
+> - **Our own fine-tune as the default**: RS-TW 2.0 ×0.75, the safe balance, measured in [the ring](#the-ring-yue2-against-suno-v6-and-musicful) against SUNO v6 and Musicful V3.
+> - **LoRA training on your own songs**, in the Studio, unquantized (bf16), with telemetry that tells you which epochs to hear first. Adapters stack on measured roads, under a measured ceiling, each with its own wave through the song.
 > - **A guard against garbage**: a broken score is caught in seconds and the run stopped, before a minute of GPU is wasted on it.
 > - **Post-production**: spectrum, artifacts, debuzz, stems (BS-Roformer, htdemucs), remaster, upscale (UniverSR), a lyrics check by Whisper; one chain runs them all.
 > - **Into your DAW** (experimental): a REAPER project with the stems, the score as MIDI, the tempo, the sections as regions and the lyrics on the timeline; DAWproject for Waveform and Bitwig.
@@ -56,7 +55,7 @@ If you came looking for a **YuE2 WebUI** or a **YuE studio**: this is one, grown
 
 Around the model there is a whole studio of seven rooms: the **Creator** makes the song, the **Writer** writes it with a chat model, the **Refiner** finishes it, the **Artist** paints its pictures, the **Videographer** plans its music video, the **Librarian** keeps every take, and the **LoRA Trainer** teaches YuE2 your own songs with its own trainer.
 
-**The full guide, room by room, is inside the Studio** (the **?** in the bar) and here: [docs/GUIDE.md](docs/GUIDE.md). The Artist in depth: [docs/ARTIST.md](docs/ARTIST.md), in the twelve languages of the Studio beside it.
+**The full guide, room by room, is inside the Studio** (F1, or **Guide** in the bar's ☰) and here: [docs/GUIDE.md](docs/GUIDE.md). The Artist in depth: [docs/ARTIST.md](docs/ARTIST.md), in the twelve languages of the Studio beside it.
 
 ## What It Downloads
 
@@ -67,7 +66,7 @@ Measured file by file against the pinned lists of the Studio's Hugging Face repo
 | the program | the Studio's code (0.2 GB downloaded) and its engine, built here | 0.9 GB | 0.9 GB | 0.9 GB |
 | its two Pythons | `.venv` and `.venv-art`, PyTorch for CUDA 12.8 in each (8.7 GB downloaded) | 16.5 GB | 16.5 GB | 16.5 GB |
 | YuE2 | m-a-p's YuE2-3B as GGUF and its decoder | 7.7 GB (BF16) | 4.3 GB (Q8_0) | 4.3 GB (Q8_0) |
-| our fine-tune | YuE2-RS-FW 2.4×0.75, the Studio's default, at the backbone's quant | 7.2 GB | 3.8 GB | 3.8 GB |
+| our fine-tune | YuE2-RS-TW 2.0 ×0.75, the Studio's default, at the backbone's quant | 7.2 GB | 3.8 GB | 3.8 GB |
 | the rest | two more decoders, the transcriber for covers, Whisper, the stems' models, UniverSR and Apollo-vocal, the LoRAs | 8.8 GB | 8.8 GB | 8.8 GB |
 | **the install** | | **41.1 GB** | **34.4 GB** | **34.4 GB** |
 | + Writer | Qwopus3.5-9B through llama.cpp, built here (0.75 GB) | 7.4 GB | 7.4 GB | 6.2 GB (compact) |
@@ -79,9 +78,9 @@ Measured file by file against the pinned lists of the Studio's Hugging Face repo
 
 A card under 7 GB takes Q6_K (the install's models 15.2 GB) or, under 4.5 GB, Q5_K_M without the fine-tune (12.0 GB): short songs only.
 
-**Only when you ask for it by name:** another backbone beside yours (BF16 7.2, Q8_0 3.8, Q6_K 2.9, Q5_K_M 2.6 GB); every other sound engine, the IRA, five IRAE and six more RS-FW merges (By room → Sound engines: 86.0 GB at BF16, 45.7 at Q8_0, 35.3 at Q6_K); the Artist's ten shared adapters (7.5 GB), each fp8 fine-tune of Qwen-Image 2512 (20.4 GB), Qwen-Image 2.1 under Qwen's research licence (33.1 GB); MiniMax H3's every int8 tier (201 GB) or its BF16 (478 GB), SeedVR2 3B (7.3 GB) or all three (40.2 GB); the style listener in bf16 (22 GB); the Trainer's starter sets (0.2 GB for the two slices, 9.3 GB whole); MuScriptor small or medium (0.2 or 0.6 GB); the 💎 workspaces from the Librarian (5.6 GB, all seven).
+**Only when you ask for it by name:** another backbone beside yours (BF16 7.2, Q8_0 3.8, Q6_K 2.9, Q5_K_M 2.6 GB); every other sound engine: the IRA, five IRAE, the seven RS-FW merges (RS-FW 2.4 ×0.75 among them, the default before 2.0.6) and RS-TW 2.0 ×0.9 (By room → Sound engines: 100.8 GB at BF16, 53.2 at Q8_0, 40.6 at Q6_K; each also on its own in Engine → Models and LoRAs, 7.2, 3.8 or 2.9 GB); the Artist's ten shared adapters (7.5 GB), each fp8 fine-tune of Qwen-Image 2512 (20.4 GB), Qwen-Image 2.1 under Qwen's research licence (33.1 GB); MiniMax H3's every int8 tier (201 GB) or its BF16 (478 GB), SeedVR2 3B (7.3 GB) or all three (40.2 GB); the style listener in bf16 (22 GB); MuScriptor small or medium (0.2 or 0.6 GB); the 💎 workspaces from the Librarian (5.6 GB, all seven).
 
-**Not counted:** the NVIDIA driver and the CUDA toolkit 12.8 (the system's, or Pinokio's own), Pianoteq (yours to buy, if you want it), and your takes. pip keeps no copy of the wheels it fetched (since 2.0.5; before, `~/.cache/pip` kept 8.7 GB more).
+**Not counted:** the NVIDIA driver and the CUDA toolkit 12.8 (the system's, or Pinokio's own), Pianoteq, Organteq and Airteq (Modartt's, yours to buy or to try, if you want them), and your takes. pip keeps no copy of the wheels it fetched (since 2.0.5; before, `~/.cache/pip` kept 8.7 GB more).
 
 ## The Rooms
 
@@ -103,7 +102,7 @@ A card under 7 GB takes Q6_K (the install's models 15.2 GB) or, under 4.5 GB, Q5
     <td width="50%"><img src="docs/guide/studio-daw.png" alt="DAW"><br><sub><b>DAW</b> (a preview, in the Refiner): the take's stems on lanes over a console: a version per lane, level, pan, sends, buses and VCAs, automation, cuts with fades, a master chain; <b>Mix</b> renders what you hear</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/guide/studio-engine.png" alt="Engine"><br><sub><b>Engine</b>: the model, memory, which card does what, decoders, adapters, the writer's model, the look, the log</sub></td>
+    <td width="50%"><img src="docs/guide/studio-engine.png" alt="Engine"><br><sub><b>Engine</b>: the model, memory, which card does what, decoders, adapters, the writer's model, the look, the log, the debug journal (off unless you choose it)</sub></td>
   </tr>
 </table>
 
@@ -143,25 +142,51 @@ The Studio has 22 themes, kept for working in: clear, quiet, readable for hours.
 | LoRA training, bf16, rank 32, 42 full songs | 6.7 s a step, 18 GB |
 | a broken score caught | 15 s into the run |
 
-## The Ring: YuE2 against SUNO v6 and musicful
+## The Ring: YuE2 against SUNO v6 and Musicful
 
-Twenty cards, each a style line and lyrics, sent unchanged to every side: SUNO v6 and musicful V3 as their services deliver them, ours raw from the engine (the stock YuE2-3B and our own fine-tune, RS-FW, at its saves 0.7 and 1.5). 160 takes, one yardstick for all. **[Listen to them side by side](https://ruachstudio.igr.bible/#ring)** on the visiting card, every file at the same loudness, a name switched on the same second.
+Twenty cards, each a style line and lyrics, sent unchanged to every side: SUNO v6 and Musicful V3 as their services deliver them, ours raw from the engine, sung again in November with every peak whole: the stock YuE2-3B, our own fine-tune RS-FW at three of its saves, and RS-TW 2.0 at two strengths. Eight sides and 300 takes, one yardstick for all. **[Listen to them side by side](https://ruachstudio.art/#ring)** on the visiting card, every file at the same loudness, a name switched on the same second.
 
-| measured raw, the means | SUNO v6 | musicful V3 | YuE2-3B | RS-FW 0.7 | RS-FW 1.5 |
-|---|---|---|---|---|---|
-| Whisper's error on the lyrics, % (lower is better) | 23.0 | 17.2 | 20.6 | **18.1** | 26.2 |
-| sand in the quiet, 6–16 kHz, dB (lower is better) | -15.7 | -14.8 | -17.6 | **-18.1** | -17.4 |
-| stray standing tones (lower is better) | 2.2 | 1.9 | 4.25 | 1.95 | 2.3 |
-| the decoder's 25 Hz buzz in the highs, dB (lower is better) | 8.3 | 8.0 | 11.4 | 11.6 | 11.5 |
-| sub 20–60 Hz share, dB | -8.6 | -10.2 | -10.0 | -9.6 | -10.1 |
-| loudness as delivered, LUFS | -15.5 | -14.3 | -12.6 | -12.8 | -12.6 |
-| true peak as delivered, dBTP | -3.4 | -0.5 | +0.3 | +0.3 | +0.3 |
+FW and TW are the code names of our two fine-tunes of YuE2 3B: the First Wave and the Tsunami Wave. The Tsunami Wave was trained on 109,250 tracks, about 6,650 hours: 66.7 % of the hours instrumental, 31.6 % sung, 1.8 % spoken. The voices are in English (7.0 % of the hours), Russian (5.8 %), Hebrew (1.7 %), Greek and Ukrainian (0.6 % each), French and Spanish (0.5 % each), Portuguese (0.3 %), Italian (0.2 %) and fourteen more languages under 0.1 % each; in 15.9 % of the hours a voice is heard whose language was not identified.
 
-Theirs come mastered, ours raw: the true peak above zero is ours to fix, as the Refiner does. Other seeds and other prompts sound different on every side; the ring shows the quality and the spread, not a final ranking. The whole table and how it was measured are on the [model card](https://huggingface.co/goldhub/YuE2-RS-Finetunes).
+RS-TW 2.0 is our second fine-tune: its epoch 2.0, merged over RS-FW 2.4 at two strengths, ×0.75, the safe balance and the Studio's default, and ×0.9, more tectonic, with no promise of stability. Ours are two seeds a card, both on the visiting card, neither chosen over the other, and the table's means count both.
+
+<table>
+<thead>
+<tr><th rowspan="2">measured raw, the means</th><th rowspan="2">SUNO v6</th><th rowspan="2">Musicful V3</th><th rowspan="2">YuE2-3B</th><th colspan="5">Ruach Studio (RS-…) Finetunes of YuE2 3B</th></tr>
+<tr><th>FW 0.7</th><th>FW 1.5</th><th>FW 2.4</th><th>TW 2.0 ×0.75</th><th>TW 2.0 ×0.9</th></tr>
+</thead>
+<tbody>
+<tr><td>Whisper's error on the lyrics, heard on the mix, % (lower is better)</td><td>23.1</td><td><b>19.5</b></td><td>20.0</td><td>19.9</td><td>24.8</td><td>21.8</td><td>23.0</td><td>26.1</td></tr>
+<tr><td>Whisper's error on the lyrics, heard on the separated voice, % (lower is better)</td><td>27.4</td><td><b>18.9</b></td><td>21.6</td><td>24.8</td><td>31.1</td><td>28.8</td><td>29.5</td><td>33.7</td></tr>
+<tr><td>sand in the quiet, 6–16 kHz, dB (lower is better)</td><td>-15.7</td><td>-14.8</td><td>-17.6</td><td><b>-18.1</b></td><td>-17.3</td><td>-17.3</td><td>-17.9</td><td>-17.5</td></tr>
+<tr><td>stray standing tones (lower is better)</td><td>2.2</td><td>1.9</td><td>4.33</td><td>2.0</td><td>2.27</td><td>2.23</td><td>2.15</td><td><b>1.6</b></td></tr>
+<tr><td>the decoder's 25 Hz buzz in the highs, dB (lower is better)</td><td>8.3</td><td><b>8.0</b></td><td>11.4</td><td>11.6</td><td>11.6</td><td>11.5</td><td>11.6</td><td>11.1</td></tr>
+<tr><td>sub 20–60 Hz share, dB</td><td><b>-8.6</b></td><td>-10.2</td><td>-10.0</td><td>-9.6</td><td>-9.9</td><td>-10.4</td><td>-10.0</td><td>-9.8</td></tr>
+<tr><td>loudness as delivered, LUFS</td><td>-15.5</td><td><b>-14.3</b></td><td>-14.5</td><td>-14.7</td><td>-14.7</td><td>-14.4</td><td>-14.6</td><td>-14.8</td></tr>
+<tr><td>true peak as delivered, dBTP</td><td><b>-3.4</b></td><td>-0.5</td><td>-0.2</td><td>-0.2</td><td>-0.1</td><td>-0.2</td><td>-0.3</td><td>-0.1</td></tr>
+</tbody>
+</table>
+
+In bold, each row's best of the eight: the lowest where lower is better; for loudness the closest to −14 LUFS, for the true peak the closest to −1.0 dBTP from below, for the sub 20–60 Hz share the highest (denser lows).
+
+Every side is heard on an RTX 3090, the mix and the voice alike, by Whisper large-v3: the first Whisper row on the mix, the second on the separated voice, where BS-Roformer splits all of a take's voices from the music, the lead, the backing voices and the choir together, never the lead alone. Without the music Whisper sometimes loses whole lines and writes words nobody sang into the pauses, on every side, so the two rows are best read together.
+
+Theirs come mastered, ours raw at the decoder's own level with every peak whole: loudness is left to the master, which is the Refiner's to do. Other seeds and other prompts sound different on every side; the ring shows the quality and the spread, not a final ranking. The whole table and how it was measured are on the [model card](https://huggingface.co/goldhub/YuE2-RS-Finetunes).
+
+### What the Spectrum Says
+
+The ring measured instead of heard: 280 takes, 40 for each of our six sides, 20 of SUNO v6 and 20 of Musicful V3. Every take was first brought to −14 LUFS, so loudness wins nothing, and every curve is its take's own level, band by band, against that take's whole power: only the shape is compared. Ours are the engine's raw output and theirs come mastered, so some of the gaps below are the master's. The four graphs are on [the visiting card](https://ruachstudio.art/#spectrum).
+
+- **One curve, until the last octave.** From 100 Hz to 10 kHz the mean curves of all eight sides stay within 5.2 dB of one another; above 16 kHz they part. Musicful V3 holds nothing past 16 kHz in 38 of its 40 takes, SUNO v6 keeps the most up there (−31.0 dB in 16–20 kHz), and ours sit at −39.3 to −42.3 dB.
+- **The air: theirs brighter by 2.3 to 4.6 dB.** In the air band, 8–16 kHz, SUNO v6 and Musicful V3 sit at −19.4 and −19.6 dB of their takes' power, our six sides at −21.8 to −24.0 dB. A master usually lifts the air, and ours have had none: in the Studio that is the Refiner's to do.
+- **Peaks and range: ours breathe wider.** Crest factor, the peak over the average: SUNO v6 14.4 dB, Musicful V3 15.7 dB, ours 16.2 to 16.6 dB; loudness range: theirs 5.9 and 6.0 LU, ours 6.4 to 7.0 LU. RS-TW 2.0 ×0.9 is the widest of our fine-tunes, 16.6 dB and 7.0 LU, as wide as the stock YuE2-3B; ×0.75 is the tighter, 16.2 dB and 6.6 LU.
+- **Four strengths, one psalm.** The blind set: twelve cards sung at four strengths of RS-TW 2.0 over RS-FW 2.4, the same seed at every strength. On Psalm 22 in Greek the step from ×0.75/0.75 to ×0.8/0.8 took 36 dB out of the sub-bass, 20–60 Hz; across the twelve cards ×0.75/0.75 comes closest to the ring's own median curve on 6 cards of 12, a mean distance of 4.1 dB against 4.8 to 5.2 dB. That is why ×0.75 is the Studio's default in 2.0.6, and ×0.9 the one that promises no stability.
+
+Measured with our own code on the CPU: 1/3-octave bands from a Welch spectrum, loudness and its range by ITU-R BS.1770-4 and EBU Tech 3342.
 
 ## Into Your DAW (Experimental)
 
-**Experimental: it needs crash tests and more work.** Two ways out of the Studio, and only two: the mixed track as it is (WAV, FLAC, MP3), or the whole take into your own DAW, where the rest happens. No audio and no project comes back in; what REAPER can give the Studio is what a song is made from: its words, and a melody from its MIDI items.
+**Experimental: it needs crash tests and more work.** Two ways out of the Studio, and only two: the mixed track as it is (WAV, FLAC, MP3), or the whole take into your own DAW, where the rest happens. Export to DAW is in a take's menu and in the Refiner; Ctrl+Alt+8 opens it. No audio and no project comes back in; what REAPER can give the Studio is what a song is made from: its words, and a melody from its MIDI items.
 
 | DAW | what the Studio gives it | download | trial | licence |
 |---|---|---|---|---|
@@ -175,18 +200,18 @@ Checked so far: REAPER 7.81 opens the project and runs the actions (under Xvfb, 
 
 Made and tested on Viktor's setup:
 
-- **Forge**, the Studio's machine: `Description: Ubuntu 24.04.4 LTS`, kernel 7.0, NVIDIA driver 595.71, CUDA 12.8; three RTX 3090 (24 GB each); Xeon E5-2697A v4 (64 threads), 251 GB RAM; Python 3.12.3, gcc 13.3, cmake 3.28, ffmpeg 6.1.
+- **Forge**, the Studio's machine: `Description: Ubuntu 24.04.4 LTS`, kernel 7.0, NVIDIA driver 595.71, CUDA 12.8; three RTX 3090 (24 GB each) and an Intel Arc Pro B50 (16 GB); Xeon E5-2697A v4 (64 threads), 251 GB RAM; Python 3.12.3, gcc 13.3, cmake 3.28, ffmpeg 6.1.
 - **The laptop** the Studio is used from, over a VPN (the browser, REAPER, Waveform 14, Bitwig): `Description: Ubuntu 24.04.5 LTS`, a Quadro RTX 5000.
 
 What it needs:
 
 - Linux, an NVIDIA GPU with CUDA. 24 GB runs everything (synthesis in BF16, training in bf16); smaller cards use smaller model copies (Q8_0 3.8 GB, Q6_K, Q5_K_M) and int8 training.
-- An Intel Arc card runs the engine as a beta (oneAPI, `./build.sh --sycl`): songs, adapters, Extend; training and the Artist stay on NVIDIA. INSTALL.md, «Intel Arc (beta)».
+- An Intel Arc card runs the engine as a beta (oneAPI, `./build.sh --sycl`), chosen as the Studio's card in Engine → GPUs: songs in every mode, adapters, Extend; training, the Artist and the Refiner's GPU steps stay on NVIDIA ([INSTALL.md › Intel Arc (beta)](INSTALL.md#intel-arc-beta)).
 - About 34 GB of disk for the install on a 12–16 GB card and 41 GB on a 24 GB card, measured file by file (01.11.2026): the program 0.9 GB, its two Pythons 16.5 GB, the models 17.0 or 23.7 GB with Ruach Studio's own fine-tune among them; every other room only when you take it, 99 to 204 GB with all of them: [What It Downloads](#what-it-downloads) says each part. More for your takes.
 - The CUDA toolkit 12.8, `git`, `cmake`, `gcc`/`g++`, `python3.12`, `ffmpeg`, `curl`. FLAC needs nothing more: the engine encodes it itself, the Refiner and the exports through ffmpeg.
 - Only for the tests: `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test, which checks the engine's encoder against the reference; Node.js 22+ and Chrome or Chromium for the page tests.
 
-**The Studio answers on port 7777**: http://127.0.0.1:7777 on its machine, http://ITS-ADDRESS:7777 from your network. [INSTALL.md](INSTALL.md) installs it step by step (on Windows 11, through WSL2: [INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)); [INSTALL_by_LLM_Agent.md](INSTALL_by_LLM_Agent.md) is the same for an AI agent. With [Pinokio](https://pinokio.co) the install and the start are buttons of its menu, on Linux ([INSTALL.md › With Pinokio](INSTALL.md#with-pinokio)).
+**The Studio answers on port 7777**: http://127.0.0.1:7777 on its machine, http://ITS-ADDRESS:7777 from your network. Over https or on its own machine, Chrome and Edge install it as an app from the address bar: a web app (PWA) with its own window and icon, the same Studio, nothing of it kept offline. [INSTALL.md](INSTALL.md) installs it step by step (on Windows 11, through WSL2: [INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)); [INSTALL_by_LLM_Agent.md](INSTALL_by_LLM_Agent.md) is the same for an AI agent. With [Pinokio](https://pinokio.co) the install and the start are buttons of its menu, on Linux ([INSTALL.md › With Pinokio](INSTALL.md#with-pinokio)).
 
 ## Dependencies
 
@@ -213,15 +238,19 @@ Everything the Studio uses, and what for. The engine comes with the repository; 
 | transformers (below 5) | CLAP for the instrument probes, Qwen3-4B for the artwork's prompts |
 | soundfile, numpy, audioread, mutagen | audio in and out, MP3 tags |
 | yt-dlp | the audio of long recordings for instrument sets |
+| scipy, matplotlib | the Digital Gateway, the DAW's render and the measures; Before and after drawn |
+| c2pa-python 0.38, cryptography | Content Credentials (C2PA) on the downloads, signed by the install's own certificate |
 | [UniverSR](https://github.com/woongzip1/UniverSR) (cloned at its tested commit) | upscale |
 
-**The Artist's Python** (`lab/requirements-art.txt`, its own `.venv-art` by `lab/install-venv.sh --art`): torch 2.11 with torchvision; transformers 5 (Qwen-Image's text encoder, the prompt writer, the content filter); diffusers 0.41 (Qwen-Image 2512 and 2.1) with gguf (the quantized transformers) and peft (the LoRAs); scipy (the Beta schedule); [spandrel](https://github.com/chaiNNer-org/spandrel) 0.4 (the upscalers, MIT).
+**The Artist's Python** (`lab/requirements-art.txt`, its own `.venv-art` by `lab/install-venv.sh --art`): torch 2.11 with torchvision; transformers 5 (Qwen-Image's text encoder, the prompt writer, the content filter); diffusers 0.41 (Qwen-Image 2512 and 2.1) with gguf (the quantized transformers) and peft (the LoRAs); scipy (the Beta schedule); [spandrel](https://github.com/chaiNNer-org/spandrel) 0.4 (the upscalers, MIT); omegaconf, rotary-embedding-torch and OpenCV, headless (the Videographer's SeedVR2).
 
-**Models** (`fetch-models.sh`, and `heresy/fetch-heresy.sh` for the extras), all from [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2) at its pin, each file byte for byte as its author publishes it (the legacy and blend decoders and SheetSage2 F32 converted once by the Studio), but the stems' models, the Kit's three adapters without a licence and Qwen2.5-Omni-7B whole, which come from their authors; sizes, sources and licences in that repo's card and its `MANIFEST.tsv`:
+**Models** (`fetch-models.sh`, and `heresy/fetch-heresy.sh` for the extras), all from [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2) at its pin, each file byte for byte as its author publishes it (the legacy and blend decoders and SheetSage2 F32 converted once by the Studio), but the stems' models, the Kit's three adapters without a licence and Qwen2.5-Omni-7B whole, which come from their authors, and Ruach Studio's own merges, which come from their own repositories at their pins; sizes, sources and licences in that repo's card and its `MANIFEST.tsv`:
 
 | | what for | licence |
 |---|---|---|
 | YuE2-3B (GGUF: BF16, Q8_0, Q6_K, Q5_K_M) | the songs | CC BY-NC 4.0 |
+| YuE2-RS-TW 2.0 ×0.75, Ruach Studio's own fine-tune and the Studio's default, at the backbone's quant; RS-TW 2.0 ×0.9 and the seven RS-FW merges · extra ([goldhub/YuE2-RS-Finetunes](https://huggingface.co/goldhub/YuE2-RS-Finetunes)) | the songs | CC BY-NC-SA 4.0 |
+| the IRA merge and the five IRAE (YuE2-3B with Mothersuperior's Instrumental and Real Audio folded in, the IRAE with monsterovich's Epic Trailer on top) · extra ([goldhub/YuE2-3B-Ruach_Studio-IRA-Merge](https://huggingface.co/goldhub/YuE2-3B-Ruach_Studio-IRA-Merge)) | other sound engines | CC BY-NC 4.0 |
 | YuE2-Vae, YuE2-Vae-legacy, their 0.666 blend | the sound decoder | CC BY-NC 4.0 |
 | SheetSage2 with MERT-v2-FullSong | a score written from a recording (covers, a take's score from its sound) | CC BY-NC 4.0 |
 | the Kit's library of LoRAs: Instrumental and Real audio (Mothersuperior), sv-billie, DreamPop v2, J-pop | instrumental pieces, genres, a real-audio sound | CC BY-NC 4.0 |
@@ -239,17 +268,27 @@ Everything the Studio uses, and what for. The engine comes with the repository; 
 | the upscalers you put into `artwork/upscalers/` (ESRGAN, DAT, HAT, SPAN…) | the Artist's upscale | each its own |
 | YuE2-3B for training (bf16 or int8) · extra | the LoRA trainer | CC BY-NC 4.0 |
 
-**In the page** (one file, made by `build.sh`): the icons (Font Awesome Free, CC BY 4.0; Lucide, ISC), the logo's words (Montserrat, SIL OFL, as paths) and [abcjs](https://www.abcjs.net/) 6.7 (MIT), which draws the staff, are inside it; YuE2 Studio's score checker (Apache-2.0) is ported into it, and the lab carries the original (`lab/abc_tools.py`). **The fonts** (Raleway, Michroma and Liberation Mono by default; Noto Sans and Noto Sans Mono, IBM Plex Sans and Mono, Bodoni Moda, Space Grotesk, Roboto, Lato, Unbounded, Tektur and Jura to choose from; SIL OFL) are served by the lab from `lab/fonts/`. **The piano roll's instruments** (the Salamander Grand Piano by Alexander Holm; the choir «aah» and the voice «ooh» of FluidR3 GM by Frank Wen; CC BY 3.0, shortened and made mono) are served by the lab from `lab/sounds/`. The page loads no script, stylesheet or font from the internet.
+**In the page** (one file, made by `build.sh`): the icons (Font Awesome Free, CC BY 4.0; Lucide, ISC), the logo's words (Montserrat, SIL OFL, as paths) and [abcjs](https://www.abcjs.net/) 6.7 (MIT), which draws the staff, are inside it; YuE2 Studio's score checker (Apache-2.0) is ported into it, and the lab carries the original (`lab/abc_tools.py`). **The fonts** (Raleway, Michroma and Liberation Mono by default; Noto Sans and Noto Sans Mono, IBM Plex Sans and Mono, Bodoni Moda, Space Grotesk, Roboto, Lato, Unbounded, Tektur and Jura to choose from; SIL OFL), and the Hebrew and Greek letters' own (David CLM, GPL-2.0 with the font exception; GFS Didot, SIL OFL), are served by the lab from `lab/fonts/`. **The piano roll's instruments** (the Salamander Grand Piano by Alexander Holm; the choir «aah» and the voice «ooh» of FluidR3 GM by Frank Wen; CC BY 3.0, shortened and made mono) are served by the lab from `lab/sounds/`. The page loads no script, stylesheet or font from the internet.
 
-**Optional:** the Writer's own model (Qwopus3.5-9B through llama.cpp's llama-server, which `launcher/extras.sh` fetches and builds where the card has 8 GB or more), or a chat server of your own (vLLM, LM Studio or Ollama) or OpenRouter (the cloud, your key); a DAW (above); `node` 22+ (YouTube in yt-dlp, the page tests) and Chrome or Chromium (the page tests); `flac` and `metaflac` (the FLAC test); `pip install mcp` on an agent's machine (`extras/ruach-mcp.py`).
+**Optional:** the Writer's own model (Qwopus3.5-9B through llama.cpp's llama-server, which `launcher/extras.sh` fetches and builds where the card has 8 GB or more), or a chat server of your own (vLLM, LM Studio or Ollama) or OpenRouter (the cloud, your key); a DAW (above); Modartt's Pianoteq, Organteq or Airteq for the Refiner's steps that play a stem again; `node` 22+ (YouTube in yt-dlp, the page tests) and Chrome or Chromium (the page tests); `flac` and `metaflac` (the FLAC test); `pip install mcp` on an agent's machine (`extras/ruach-mcp.py`).
 
 ## Extras
 
-[`extras/`](extras/README.md) holds the helpers we wrote for our own work on the Studio and kept, because a user of the Studio may well need them too: a loop finder for long recordings (how much of a "three hour" video is new, and the new part cut out), a downloader of a video's audio for instrument sets, a slicer of training sets, a calculator of what a LoRA rank costs on YuE2. The GTSinger converter lives in the lab (`lab/gtsinger.py`). [`extras/plugins/`](extras/plugins/README.md) holds Refiner plugins made by others and given to the Studio, installed only when you ask: the first is Steven Altsman's (manchuwook) **Basic Pitch**, a set of stems into MIDI.
+[`extras/`](extras/README.md) holds the helpers we wrote for our own work on the Studio and kept, because a user of the Studio may well need them too: a loop finder for long recordings (how much of a "three hour" video is new, and the new part cut out), a downloader of a video's audio for instrument sets, a slicer of training sets, a calculator of what a LoRA rank costs on YuE2, a workspace sung again with fresh seeds. The GTSinger converter lives in the lab (`lab/gtsinger.py`). [`extras/plugins/`](extras/plugins/README.md) holds Refiner plugins made by others and given to the Studio, installed only when you ask: the first is Steven Altsman's (manchuwook) **Basic Pitch**, a set of stems into MIDI. [`extras/debug-receiver/`](extras/debug-receiver/README.md) is the whole of what receives a debug journal sent from Engine → Debugging, published so anyone can see what is kept and how.
 
 **Six voice adapters**, trained in the Studio's LoRA Trainer on Russian audiobook readers and named by the kind of voice they carry (a bass, two baritenors, three contraltos), never by the person, are on Hugging Face with their samples: [goldhub/Ruach_Studio_LoRAs `voices/`](https://huggingface.co/goldhub/Ruach_Studio_LoRAs/tree/main/voices); the instrument adapters (shofar, duduk) beside them.
 
 **No warranty.** We use them and they work here. They are not part of the Studio, nobody tests them on your machine, and if one eats your files, that is on you. Read before you run.
+
+## Roadmap
+
+Where the Studio goes next, in the order we make it. Dates follow the work, not the calendar.
+
+- **2.0.7: YuE2 VAE-RS, a decoder of our own.** Three to four times Standard's size, trained by us on the public set, run in full 32-bit precision and as an equal choice beside Standard, so any take can be decoded again from the music it already holds; its weights public. Two takes laid over each other in the compare window, and a compare node in the Refiner. Hebrew in the interface, right to left.
+- **2.1.0: learning the Studio by using it.** An interactive guide through the rooms; the Videographer's several takes a shot.
+- **2.2.0: the Narrator**, a room for the spoken word (VibeVoice, Higgs v3).
+
+Issues and pull requests are read and answered; the roadmap moves with them.
 
 ## What Comes Next
 
@@ -345,7 +384,7 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
 ### Done › 2.0.0 (October 2026)
 
-- **Ruach Studio's own fine-tune**: YuE2-RS-FW folded into the base at seven points of its training, each named by its epoch and strength ([goldhub/YuE2-RS-Finetunes](https://huggingface.co/goldhub/YuE2-RS-Finetunes), CC BY-NC-SA 4.0); RS-FW 2.4x0.75, the safest, is the Studio's default and comes with the install; the adapters themselves are not published. **Its vocabulary**, every word it was trained on and its scores' keys, counted: [docs/FW-VOCABULARY.md](docs/FW-VOCABULARY.md), searchable on [the Studio's page](https://ruachstudio.igr.bible/#vocabulary) and in F1.
+- **Ruach Studio's own fine-tune**: YuE2-RS-FW folded into the base at seven points of its training, each named by its epoch and strength ([goldhub/YuE2-RS-Finetunes](https://huggingface.co/goldhub/YuE2-RS-Finetunes), CC BY-NC-SA 4.0); RS-FW 2.4x0.75, the safest, was the Studio's default and came with the install until 2.0.6; the adapters themselves are not published. **Its vocabulary**, every word it was trained on and its scores' keys, counted: [docs/FW-VOCABULARY.md](docs/FW-VOCABULARY.md), searchable on [the Studio's page](https://ruachstudio.art/#vocabulary) and in F1.
 - **Songs edited as the model writes them**: Extend from any moment; a section sung once more, a line re-sung, a window sung anew with its neighbours kept and the sound decoded whole; a take arranged anew from its sections and matched section by section; music before a repeat and an interlude written by the model; the opening alone.
 - **The piano roll** (beta): the scores YuE2 writes opened and played on real instruments, its Vocal singing the vowels in phrases; Chords, and a chord bed the model sings over; a segment transposed; MIDI for the whole Studio and a MIDI API; a planned score read before it is sung.
 - **The Refiner is its canvas, and the DAW (beta) had a sound engineer's pass**: the nodes wired as the work flows; Voice tamer, Voice attack and body, Bass under the kick, Details up, Mono Maker, Peak glue, a true-peak ceiling and the voice transposer; the console's solo, reference, fades, typed values, parallel compression, a gate on every strip, returns with pre-delay, LRA and PLR.
@@ -407,13 +446,32 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
+### Done › 2.0.6 (November 2026)
+
+- **RS-TW 2.0 ×0.75, the Studio's default**: Ruach Studio's second fine-tune, the Tsunami Wave (TW), trained over RS-FW 2.4 ×0.75 of the First Wave (FW) and folded back into it, comes with the install at your backbone's format; a model you chose stays yours. ×0.75 is the safe balance; ×0.9 is «tectonic», the most fire in the blind listening and no promise of stability, fetched only when you ask (`heresy/fetch-heresy.sh --tw 2.0x0.9-Q8_0`). Both at [goldhub/YuE2-RS-Finetunes](https://huggingface.co/goldhub/YuE2-RS-Finetunes), both in [the ring](#the-ring-yue2-against-suno-v6-and-musicful).
+- **The debug journal**: Engine → Debugging, off unless you choose it, keeps a day of what goes wrong in this browser: what was clicked (never its words), keys pressed as commands (never what you type), the requests and the page's errors. *Download* and *Send* first scrub it on your own machine with the Studio's and the lab's logs (prompts cut out, names turned into marks, your folders, names, addresses and keys gone), show what the guard still found, and only on your yes save it or send it to the Studio's receiver for a ticket number ([what it keeps](extras/debug-receiver/README.md)). It tells a stalled line from a stalled page: keys by their code and never a modifier alone, nothing at all from a secret field, a hidden tab marked, the connection, the build beside every error, the long tasks and the memory, each write refused, sent again or lost; the lab's own log says when each request came, how long it took and who asked.
+- **A bad line said, never hidden**: each change the page sends is counted until the Studio answers (a cloud with the count in the bar), the quick ones sent again with the same id and done once, and a change lost after three tries said so, never left to look saved; a broken link in the bar when the line itself is stuck; the window that holds the Studio keeps it through a stall, and a read-only window greys what writes and says why a change was not saved.
+- **Every writer in one place**: Engine → Writer and Artwork holds the Studio's own writer, vLLM, LM Studio, Ollama and OpenRouter, each with a tick, its state and *Test connection*; the Writer, Tighten, the style's suggestions and the Videographer ask only the ticked ones that answer, and the OpenRouter key is kept by the Studio on this machine, never in a browser and in no backup.
+- **Tail guards on new takes**: ∿ among the player's switches, off unless you choose it (also in a take's menu and in Engine → Defaults): each new take's end checked as it lands, for a sound that comes back after a silence (End at… offers that second) and, with lyrics, whether its last lines were sung (Whisper only while a card has room, never on the processor).
+- **The compare window, anew**: Blind (🫣) across the Studio, a version titled «the original» keeping its name and the first place; one 📄 for the style and lyrics of the version playing; Play on, Ring and Shuffle; its own volume to 150 %; the wave ×2 and coloured by its bands; Wide to 2000 px; up to twelve takes from the Librarian. **+dB**, there and beside the player's volume, plays a take as loud as the old Peak clip made it.
+- **The More menu (☰) in a new order**: GPU and VRAM, Model, VAE, then Engine, Theme and Guide in one row, and Text size last; Export to DAW left it for a take's menu and the Refiner (Ctrl+Alt+8 opens it).
+- **Hebrew and Greek in fonts of their own**: every Hebrew letter in David CLM and every Greek letter in GFS Didot wherever they show (the lyrics, the titles, the styles), the rest of the line in its own font; Engine → Appearance → Fonts changes them.
+- **The Creator**: both waves' vocabularies, the First Wave's and the Tsunami Wave's, under the Style and as tabs of the ♪ cheat-sheet, every word of your style the training data knew and how many tracks named it in each; Full's planned Vocal line sung as the model wrote it by default (an octave down is a choice in Engine → Creator Heresy).
+- **The Librarian to the end**: a take found by its ID wherever it lives; hidden takes counted and shown again; workspaces archived out of sight; a loose search (words in any order, `*` and `?`, `!word` to leave out); a whole workspace in the playlist, albums with square covers.
+- **Sounds and the DAW**: SFZ banks built from your own recordings by the Trainer, ready in the DAW's + Layer; Organteq and Airteq beside Pianoteq in the Refiner; a DAW lane's sound as a preset, markers, and the master's loudness against a platform's target (it only says).
+- **A safer Studio, after a full audit**: a page of another website can no longer drive the Studio on your computer or network; Engine → Security refuses networks beyond the private ones; `RUACH_HOSTS` names the extra names your Studio may be reached by.
+- **What the last audit found in the rooms, mended**: the Takes column's ⋯ sends the non-favourites of its workspace to the Librarian's trash, never past it (a take with a mark, a reaction or a note stays unless you tick it); the Refiner keeps your way across F5; a take's note survives a 👍; a workspace's marks go with it when it is deleted, poured or merged; every run filed in the workspace it was sent into, a refusal said with its reason; Instrumental kept with the take; «Song complete» only over a kept take; a reload no longer says the Studio is open in another window.
+- **Doors, reloads and a new address**: another site can no longer put the Studio in a frame (Pinokio still can; `RUACH_FRAME_ANCESTORS` names more); the fonts, sounds, covers and icons are kept by your browser under a key of their own content, so a new build or release fetches only what changed; the Studio's page at its own address, [ruachstudio.art](https://ruachstudio.art), linked from F1 › About.
+- **The Studio as an app**, from Chrome's or Edge's address bar (a PWA, nothing of it kept offline); the Intel Arc an equal member of Engine → GPUs; the clip's look (3D LUTs) and film in the Videographer; the player whole at any zoom and width; the page gzipped over a slow link.
+
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
 ### To Do › After 2.0.0
 
 2.0.0 is the Studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
 
 - **Right-to-left languages** (Arabic, Hebrew, Urdu), once the page itself runs right to left.
 - **The Videographer** (2.1.0): several takes a shot with the best kept, and a shot's last frame carried into the next.
-- **A desktop app**: the Studio as an installable page (PWA) first, then an Electron app that starts and stops its services itself (Ctrl+1…7 for the rooms there), packed as an **AppImage**: the Studio, its Python and its CUDA libraries in one file, the models fetched at the first start, and the models and the songs kept wherever you choose on your disk.
 - **Windows 11 through WSL2, by Pinokio**: the launcher's steps run inside WSL2 (Ubuntu 24.04), which Pinokio is to set up where it is missing, the path of INSTALL_WINDOWS.md (asked for in [#1](https://github.com/igrbible/Ruach_Studio/issues/1)). A native Windows build is not our initiative: it comes in only as a fork or a pull request made whole, turnkey. In Viktor's words (01.11.2026): «Нейро-ересь вселенская изначально под UNIX/BSD/Linux, и портирование под Виндоуз — это сломанный костыль и имитация жизни» (the universal neuro-heresy was born for UNIX, BSD and Linux, and a port to Windows is a broken crutch and an imitation of life).
 - **Native plugins** for REAPER, Waveform and Bitwig, once the Studio has found its people.
 
@@ -422,7 +480,7 @@ Issues and pull requests are welcome: they are read and answered.
 ## Standing On
 
 - **[YuE2](https://huggingface.co/m-a-p/YuE2-3B)** by m-a-p, the model; **MERT-v2-FullSong** by m-a-p.
-- **[yue2.cpp](https://github.com/ServeurpersoCom)** by ServeurpersoCom, the C++ engine on ggml; this Studio carries it with its own patches (upstream alone will not run the Studio).
+- **[yue2.cpp](https://github.com/ServeurpersoCom/yue2.cpp)** by ServeurpersoCom, the C++ engine on ggml; this Studio carries it with its own patches (upstream alone will not run the Studio).
 - **[timoncool's yue2.cpp](https://github.com/timoncool/yue2.cpp)** (MIT): the planned score's chords (after Yeufonic) and the opening a plan goes on from (after Mothersuperior's hum-to-song), ported into our engine.
 - **[YuE2 Kit](https://github.com/IronWolve/yue2-kit)** by SeattleSysop (IronWolve), the base of the page and the scripts (Apache License 2.0).
 - **[Basic Pitch](https://github.com/spotify/basic-pitch)** by Spotify's Audio Intelligence Lab (Apache-2.0), in the **[Basic Pitch plugin](https://github.com/null-angel/ruach-basic-pitch-plugin)** Steven Altsman ([manchuwook](https://github.com/manchuwook)) wrote for the Studio and gave to it (MIT, `extras/plugins/basic-pitch/`).
@@ -430,6 +488,7 @@ Issues and pull requests are welcome: they are read and answered.
 - **Mothersuperior**: the realaudio tokenizer head (CC BY-NC 4.0) and the VAE merge.
 - **Qwen2.5-Omni** (the listener), **Whisper** (the lyrics check), **BS-Roformer** and **htdemucs_ft** (stems), **UniverSR**, **Apollo-vocal** and **FlashSR** (upscale), the **Salamander Grand Piano** and **FluidR3 GM** (the piano roll's instruments), **GTSinger** (CC BY-NC-SA 4.0, training data for voices).
 - **Qwen-Image 2512** by Qwen and its **Lightning** by lightx2v (the artwork's painter) and **Qwen3-4B** (its prompts); **[YuE2 Studio](https://github.com/vrgamegirl19/Yue2_Studio)** (Apache-2.0): the score checker the page and the lab use.
+- **David CLM** of the Culmus project (Maxim Iorsh) and **GFS Didot** of the Greek Font Society: the Hebrew and Greek letters.
 
 Every project is linked from the Studio's own Engine → About.
 
@@ -439,6 +498,7 @@ Every project is linked from the Studio's own Engine → About.
 - **The logo and the name «Ruach Studio», and the audio and pictures we publish with it** (the probe workspaces, the LoRA samples, their artworks): CC BY-NC-ND 4.0, in `LICENSE-ASSETS.md`.
 - **yue2.cpp, ggml and the other MIT projects** inside keep their MIT notices; MIT code may stand inside an AGPL work. So does the **Basic Pitch plugin** by Steven Altsman, given to the Studio under the MIT licence, its `LICENSE` in `extras/plugins/basic-pitch/`.
 - **YuE2 Kit** by SeattleSysop (IronWolve), the base of the page and the scripts: its original contributions (the scripts, the documentation, the Studio page's customisations, the engine's modifications) are under the **Apache License 2.0** since 22.10.2026 (its commit 5df6eaa). Its licence text is in `LICENSES/yue2-kit-Apache-2.0.txt` and its notice is kept word for word in `NOTICE`, as its section 4 asks; Apache 2.0 code may stand inside an AGPL-3.0 work.
+- **The Hebrew and Greek fonts** that come with the Studio keep their own licences, in `LICENSE-ASSETS.md`: David CLM of the Culmus project under the GNU General Public License version 2 with the font exception, GFS Didot of the Greek Font Society under the SIL Open Font License 1.1.
 - **The models and the datasets** keep their own licences, and several are non-commercial: the realaudio head (CC BY-NC 4.0), GTSinger (CC BY-NC-SA 4.0), and YuE2, whose licence file reads: *"The YuE2-3B, YuE2-Vae and YuE2-Vae-legacy checkpoint weights are licensed under Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)"*, and *"This weight license does not replace separately applicable licenses for code, text tokenization files, evaluation assets or other bundled material."* It speaks of the weights; it says nothing of the songs you make with them. What you may do with your songs is a question for your own judgement and, if it matters to you, a lawyer: this README gives no legal advice.
 
 ## A Little Story
@@ -455,9 +515,9 @@ He did not knock the Studio together just to have something that runs. He built 
 
 Виктор Журомский, автор Ruach Studio, публикует её не ради хайпа. Он делал её для себя. После более чем полугода мучений с Suno на платных тарифах и поисков достойной модели (ACE-Step, MiniMax и другие) он взялся построить собственную аудиостудию, на своей машине. Выбор пал на YuE2: из всех открытых моделей она самая рентабельная и самая изысканная.
 
-Студию он делал не тяп-ляп, лишь бы как-то шло, а в своём стиле, потому что и труд у него свой: собственные переводы, подстрочники и многое другое. Он постарался вместить в неё максимум, отполировать интерфейс до блеска и сделать творчество в студии не тыканьем и кликаньем среди костылей и ям, а по-настоящему продуктивным.
+Студию он делал не тяп-ляп, лишь бы как-то шло, а в своём стиле, потому что и труд у него свой: собственные переводы, подстрочники и многое другое. Он постарался вместить в неё максимум, отполировать интерфейс до блеска и сделать творчество в Студии не тыканьем и кликаньем среди костылей и ям, а по-настоящему продуктивным.
 
-*Вот и вся история. Теперь эта студия и ваша.*
+*Вот и вся история. Теперь эта Студия и ваша.*
 
 </details>
 <details><summary>Українська</summary>
@@ -466,9 +526,9 @@ He did not knock the Studio together just to have something that runs. He built 
 
 Віктор Журомський, автор Ruach Studio, публікує її не заради хайпу. Він творив її для себе. Після понад пів року мук із Suno на платних тарифах і пошуків гідної моделі (ACE-Step, MiniMax та інші) він узявся збудувати власну аудіостудію, на своїй машині. Вибір упав на YuE2: з усіх відкритих моделей вона найвигідніша й найвишуканіша.
 
-Студію він творив не абияк, аби лиш працювало, а у своєму стилі, бо й праця в нього своя: власні переклади, підрядники та багато іншого. Він намагався вмістити в неї максимум, відшліфувати інтерфейс до блиску, щоб творчість у студії була не тицянням і клацанням серед милиць і ям, а справді продуктивною.
+Студію він творив не абияк, аби лиш працювало, а у своєму стилі, бо й праця в нього своя: власні переклади, підрядники та багато іншого. Він намагався вмістити в неї максимум, відшліфувати інтерфейс до блиску, щоб творчість у Студії була не тицянням і клацанням серед милиць і ям, а справді продуктивною.
 
-*Ось і вся історія. Тепер ця студія і ваша.*
+*Ось і вся історія. Тепер ця Студія і ваша.*
 
 </details>
 <details><summary>Беларуская</summary>
@@ -477,9 +537,9 @@ He did not knock the Studio together just to have something that runs. He built 
 
 Віктар Журомскі, аўтар Ruach Studio, публікуе яе не дзеля хайпу. Ён ствараў яе для сябе. Пасля больш як паўгода пакут з Suno на платных тарыфах і пошукаў годнай мадэлі (ACE-Step, MiniMax і іншыя) ён узяўся пабудаваць уласную аўдыястудыю, на сваёй машыне. Выбар упаў на YuE2: з усіх адкрытых мадэляў яна самая выгадная і самая вытанчаная.
 
-Студыю ён ствараў не абы-як, абы працавала, а ў сваім стылі, бо і праца ў яго свая: уласныя пераклады, падрадкоўнікі і шмат іншага. Ён стараўся змясціць у яе максімум, адшліфаваць інтэрфейс да бляску, каб творчасць у студыі была не тыцканнем і клікамі сярод мыліц і ям, а сапраўды прадуктыўнай.
+Студыю ён ствараў не абы-як, абы працавала, а ў сваім стылі, бо і праца ў яго свая: уласныя пераклады, падрадкоўнікі і шмат іншага. Ён стараўся змясціць у яе максімум, адшліфаваць інтэрфейс да бляску, каб творчасць у Студыі была не тыцканнем і клікамі сярод мыліц і ям, а сапраўды прадуктыўнай.
 
-*Вось і ўся гісторыя. Цяпер гэтая студыя і ваша.*
+*Вось і ўся гісторыя. Цяпер гэтая Студыя і ваша.*
 
 </details>
 <details><summary>Ελληνικά</summary>
@@ -488,9 +548,9 @@ He did not knock the Studio together just to have something that runs. He built 
 
 Ο Viktor Zhuromskyy, ο δημιουργός του Ruach Studio, δεν το δημοσιεύει για εντυπωσιασμό. Το έφτιαξε για τον εαυτό του. Ύστερα από περισσότερους από έξι μήνες ταλαιπωρίας με το Suno σε πληρωμένα πακέτα, και αναζήτησης ενός μοντέλου που να αξίζει (ACE-Step, MiniMax και άλλα), αποφάσισε να φτιάξει ένα δικό του στούντιο ήχου, στο δικό του μηχάνημα. Κατέληξε στο YuE2: από όλα τα ανοιχτά μοντέλα είναι το πιο συμφέρον και το πιο εκλεπτυσμένο.
 
-Δεν έστησε το στούντιο πρόχειρα, απλώς για να δουλεύει. Το έφτιαξε με το δικό του ύφος, γιατί και η δουλειά του είναι δική του: οι μεταφράσεις του, τα διάστιχα κείμενά του και πολλά άλλα. Προσπάθησε να χωρέσει σε αυτό όσο περισσότερα γινόταν, να γυαλίσει το περιβάλλον εργασίας ως την τελευταία λεπτομέρεια και να κάνει τη δουλειά μαζί του όχι άσκοπα κλικ ανάμεσα σε δεκανίκια και λακκούβες, αλλά κάτι πραγματικά παραγωγικό.
+Δεν έστησε το Στούντιο πρόχειρα, απλώς για να δουλεύει. Το έφτιαξε με το δικό του ύφος, γιατί και η δουλειά του είναι δική του: οι μεταφράσεις του, τα διάστιχα κείμενά του και πολλά άλλα. Προσπάθησε να χωρέσει σε αυτό όσο περισσότερα γινόταν, να γυαλίσει το περιβάλλον εργασίας ως την τελευταία λεπτομέρεια και να κάνει τη δουλειά μαζί του όχι άσκοπα κλικ ανάμεσα σε δεκανίκια και λακκούβες, αλλά κάτι πραγματικά παραγωγικό.
 
-*Αυτή είναι όλη η ιστορία. Τώρα το στούντιο είναι και δικό σας.*
+*Αυτή είναι όλη η ιστορία. Τώρα το Στούντιο είναι και δικό σας.*
 
 </details>
 <details><summary>Español</summary>
@@ -499,9 +559,9 @@ He did not knock the Studio together just to have something that runs. He built 
 
 Viktor Zhuromskyy, el autor de Ruach Studio, no lo publica para llamar la atención. Lo hizo para sí mismo. Tras más de medio año de sufrir con Suno en planes de pago y de buscar un modelo que mereciera la pena (ACE-Step, MiniMax y otros), se propuso construir su propio estudio de audio, en su propia máquina. Se quedó con YuE2: de todos los modelos abiertos, es el más rentable y el más refinado.
 
-No montó el estudio de cualquier manera, solo para que funcionara. Lo hizo a su estilo, porque su trabajo también es suyo: sus traducciones, sus textos interlineales y mucho más. Procuró meter en él todo lo posible, pulir la interfaz hasta el último detalle y hacer que trabajar con el estudio no sea dar clics a ciegas entre muletas y baches, sino algo de verdad productivo.
+No montó el Estudio de cualquier manera, solo para que funcionara. Lo hizo a su estilo, porque su trabajo también es suyo: sus traducciones, sus textos interlineales y mucho más. Procuró meter en él todo lo posible, pulir la interfaz hasta el último detalle y hacer que trabajar con el Estudio no sea dar clics a ciegas entre muletas y baches, sino algo de verdad productivo.
 
-*Esa es toda la historia. Ahora el estudio también es tuyo.*
+*Esa es toda la historia. Ahora el Estudio también es tuyo.*
 
 </details>
 <details><summary>Italiano</summary>
@@ -532,9 +592,9 @@ Il n'a pas bricolé le Studio à la va-vite, juste pour avoir quelque chose qui 
 
 Viktor Zhuromskyy, o autor do Ruach Studio, não o publica pelo hype. Ele o fez para si mesmo. Depois de mais de meio ano sofrendo com o Suno em planos pagos, e procurando um modelo que valesse a pena (ACE-Step, MiniMax e outros), ele decidiu construir o seu próprio estúdio de áudio, na sua própria máquina. A escolha caiu no YuE2: de todos os modelos abertos, é o de melhor custo-benefício e o mais refinado.
 
-Ele não montou o estúdio de qualquer jeito, só para ter algo que rodasse. Fez do seu jeito, porque o trabalho dele é dele: as suas traduções, os seus textos interlineares e muito mais. Colocou nele o máximo que pôde, poliu a interface até onde pôde e fez do trabalho com o estúdio não um cutucar e clicar entre muletas e buracos, mas algo de fato produtivo.
+Ele não montou o Estúdio de qualquer jeito, só para ter algo que rodasse. Fez do seu jeito, porque o trabalho dele é dele: as suas traduções, os seus textos interlineares e muito mais. Colocou nele o máximo que pôde, poliu a interface até onde pôde e fez do trabalho com o Estúdio não um cutucar e clicar entre muletas e buracos, mas algo de fato produtivo.
 
-*Essa é a história toda. Agora o estúdio também é seu.*
+*Essa é a história toda. Agora o Estúdio também é seu.*
 
 </details>
 <details><summary>Deutsch</summary>

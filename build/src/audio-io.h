@@ -242,19 +242,36 @@ static float * audio_read(const char * path, int * T_out, int * sr_out) {
 // nothing cut. Upstream raised the song until the (1 - peak_clip / 1e6) percentile of |sample| met full scale and cut the rest flat
 // (peak_clip 10 by default: the loudest 0.001 %, a hard clip with no look-ahead at every loud moment); peak_clip is read and ignored here.
 // Loudness is the master's work, after the song is made.
+// HERESY 2011 (the audit of 02.11.2026, C1): the peak of the samples that are numbers. One +Inf from a decoder that overflowed once made the peak
+// infinite and the gain 0, the whole take silent. Such a sample, and a NaN, carries no sound: it becomes 0 here (the WAV writer made it 0 already),
+// the rest of the song keeps its level, and the log says how many there were.
+static float audio_peak(float * audio, int n_total) {
+    float peak = 0.0f;
+    int   bad  = 0;
+    for (int i = 0; i < n_total; i++) {
+        if (!std::isfinite(audio[i])) {
+            audio[i] = 0.0f;
+            bad++;
+            continue;
+        }
+        float a = audio[i] < 0.0f ? -audio[i] : audio[i];
+        if (a > peak) {
+            peak = a;
+        }
+    }
+    if (bad) {
+        fprintf(stderr, "[Audio] %d samples from the decoder were not numbers (Inf or NaN): silent there, the rest of the song kept\n", bad);
+    }
+    return peak;
+}
+
 // n_total = number of float samples (both channels combined).
 static void audio_normalize(float * audio, int n_total, int peak_clip = 0) {
     (void) peak_clip;
     if (n_total <= 0) {
         return;
     }
-    float peak = 0.0f;
-    for (int i = 0; i < n_total; i++) {
-        float a = audio[i] < 0.0f ? -audio[i] : audio[i];
-        if (a > peak) {
-            peak = a;
-        }
-    }
+    float peak = audio_peak(audio, n_total);
     if (peak < 1e-6f) {
         return;
     }
@@ -268,13 +285,7 @@ static void audio_normalize(float * audio, int n_total, int peak_clip = 0) {
 // carries the decoder's own level, never raised; only a peak past full scale, which those bits cannot hold, turns the whole song down to fit
 // (a gain, never a cut), and the log says how much. WAV 32 float keeps even that; MP3, a quick demo, alone is normalized (audio_normalize).
 static void audio_fit(float * audio, int n_total) {
-    float peak = 0.0f;
-    for (int i = 0; i < n_total; i++) {
-        float a = audio[i] < 0.0f ? -audio[i] : audio[i];
-        if (a > peak) {
-            peak = a;
-        }
-    }
+    float peak = n_total > 0 ? audio_peak(audio, n_total) : 0.0f;
     if (peak <= 1.0f) {
         return;
     }

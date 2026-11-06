@@ -380,19 +380,41 @@
   // HERESY 1802 (Viktor 27.10.2026: «В Студию ты шпаргалку по First Wave оформил?»): the First Wave's vocabulary in the ♪ sheet, the page F1 links to,
   // in the page's language and tone; the user's own vocabularies (user/vocab/, the lab's /vocab/) laid over it when there are any
   var vocabSrc = "";
-  function paintVocab() {
+  // HERESY 2051: the sheet's search is the vocabulary's too (its page is ours, on the same origin: its box, its own input event)
+  function vocabQuery() {
+    var fr = $("hiTable").querySelector("iframe.hi-fw");
+    if (!fr) return;
+    var put = function () {
+      try {
+        var q = fr.contentDocument && fr.contentDocument.getElementById("q");
+        if (!q) return false;
+        if (q.value !== (state.q || "")) { q.value = state.q || ""; q.dispatchEvent(new Event("input")); }
+      } catch (e) { /* not ours after all: leave it */ }
+      return true;
+    };
+    if (!put()) fr.addEventListener("load", function () { setTimeout(put, 50); }, { once: true });
+  }
+  // HERESY 2109 (Viktor 05.11.2026: «Tsunami Wave не в гайде тегов, как минимум не в статистике. Всё доделано в Студии?»; then «Словарь TW
+  // оформляй в паблик»): two tabs on the one page, the First Wave's (?set=0) and the Tsunami Wave's (?set=1), the page's own two files first,
+  // the user's own after them; the frame's title the wave it shows
+  function paintVocab(wave) {
     var lang = String(document.documentElement.lang || "en").split("-")[0], night = (document.documentElement.dataset.tone || "") !== "light";
     var base = "/lab/guide/fw-vocabulary/index.html?embed=1&lang=" + encodeURIComponent(lang) + "&theme=" + (night ? "dark" : "light");
     $("hiCount").innerHTML = "";
-    var go = function (src) {
-      if (vocabSrc === src && $("hiTable").querySelector("iframe.hi-fw")) return;
+    var go = function (src, title) {
+      if (vocabSrc === src && $("hiTable").querySelector("iframe.hi-fw")) return vocabQuery();
       vocabSrc = src;
-      $("hiTable").innerHTML = '<tr><td class="hi-fw-cell"><iframe class="hi-fw" title="First Wave" src="' + esc(src) + '"></iframe></td></tr>';
+      $("hiTable").innerHTML = '<tr><td class="hi-fw-cell"><iframe class="hi-fw" title="' + esc(title) + '" src="' + esc(src) + '"></iframe></td></tr>';
+      vocabQuery();
     };
-    fetch("/lab/vocab/").then(function (r) { return r.ok ? r.json() : { sets: [] }; }).catch(function () { return { sets: [] }; }).then(function (d) {
-      var sets = (d && d.sets) || [];
-      go(!sets.length ? base : base + "&data=" + encodeURIComponent(["fw-vocabulary.json"].concat(sets.map(function (s) { return s.url; })).join(",")) +
-        "&names=" + encodeURIComponent(["First Wave"].concat(sets.map(function (s) { return s.name; })).join(",")));
+    Promise.all([Promise.resolve(vocabs()), userVocabs()]).then(function (got) {
+      if (state.tab !== wave) return;                                 // another tab was chosen meanwhile
+      var tw = twHere(), sets = got[1];
+      if (wave === "tw" && !tw) { state.tab = "fw"; return paint(); }  // no Tsunami Wave here: its tab is hidden, the First Wave's shown
+      var data = ["fw-vocabulary.json"].concat(tw ? ["tw-vocabulary.json"] : []), names = ["First Wave"].concat(tw ? ["Tsunami Wave"] : []);
+      go(base + (!sets.length ? "" : "&data=" + encodeURIComponent(data.concat(sets.map(function (s) { return s.url; })).join(",")) +
+        "&names=" + encodeURIComponent(names.concat(sets.map(function (s) { return s.name; })).join(","))) + "&set=" + (wave === "tw" ? 1 : 0),
+        wave === "tw" ? "Tsunami Wave" : tr("First Wave"));
     });
   }
   function paintTable() {
@@ -400,7 +422,7 @@
     $("hiFam").hidden = $("hiHeardBox").hidden = state.tab !== "instruments";
     if (state.tab === "styles") return paintStyles();
     if (state.tab === "tags") return paintTags();   // HERESY 1168
-    if (state.tab === "fw") return paintVocab();     // HERESY 1802
+    if (state.tab === "fw" || state.tab === "tw") return paintVocab(state.tab);     // HERESY 1802, 2109
     var f = fold(state.q), fams = DATA.families, html = "";
     Object.keys(fams).forEach(function (fam) {
       if (state.fam && state.fam !== fam) return;
@@ -426,7 +448,8 @@
     back.innerHTML = '<div class="hi-box" aria-label="Instruments">' +
       '<div class="hi-head"><b>♪</b><span class="hi-tabs"><button type="button" class="hi-tabb" data-hi-tab="instruments">Instruments</button>' +
       '<button type="button" class="hi-tabb" data-hi-tab="styles">Styles</button>' +
-      '<button type="button" class="hi-tabb" data-hi-tab="tags">Lyrics tags</button><button type="button" class="hi-tabb" data-hi-tab="fw">First Wave</button></span><span class="row-hint" id="hiCount"></span><span class="spacer"></span>' +
+      '<button type="button" class="hi-tabb" data-hi-tab="tags">Lyrics tags</button><button type="button" class="hi-tabb" data-hi-tab="fw">First Wave</button>' +
+      '<button type="button" class="hi-tabb" data-hi-tab="tw" hidden>Tsunami Wave</button></span><span class="row-hint" id="hiCount"></span><span class="spacer"></span>' +
       '<button type="button" class="btn ghost small" id="hiClose">Close</button></div>' +
       // HERESY 1167 (Viktor: «Дизайн аудио шпаргалки пересмотри. Там в голове навалено сплошными потоками»): the head in parts:
       // the warning in a line, a legend of four, how the probes were made folded
@@ -449,6 +472,7 @@
       '<label class="check" id="hiHeardBox"><input type="checkbox" id="hiHeard" /> <span>heard only</span></label></div>' +
       '<div class="hi-scroll"><table class="hi-table"><tbody id="hiTable"></tbody></table></div></div>';
     document.body.appendChild(back);
+    twTab();                                                       // HERESY 2109
     back.addEventListener("click", function (e) {
       if (e.target === back || e.target.id === "hiClose") return close();
       var t = e.target.closest("[data-hi-tag]"), p = e.target.closest("[data-hi-play]"), a = e.target.closest("[data-hi-art]"), tb = e.target.closest("[data-hi-tab]");
@@ -484,6 +508,7 @@
     if (typeof q === "string") { state.q = q; $("hiSearch").value = q; }
     if (tab) state.tab = tab;
     paint();
+    Promise.resolve(vocabs()).then(twTab);                         // HERESY 2109: the Tsunami Wave's tab, when its vocabulary is here
     load().then(function () { paint(); paintChips(); });
     setTimeout(function () { $("hiSearch").focus(); }, 30);
   }
@@ -514,6 +539,120 @@
   // verdict in its colour; the pointer on one shows its card (the picture, its home, how it sounds, ▶ A and ▶ B with their
   // seeds); a click shows the picture whole; Alt+I opens the sheet from anywhere
   var KEYS = null, chipList = [], cardTimer = 0, cardFor = -1;
+
+  // HERESY 2051 (Viktor 03.11.2026: «подключил этот словарь и тот (мёржд с RS-TW словарём), прямо к этому блоку… после каждого в скобках выводить
+  // частотность, с которой мы увидели их в датасетах»): the fine-tunes' vocabularies under the Style prompt too. The First Wave's (the guide's own)
+  // and each of user/vocab/ (the lab's /vocab/), loaded once; every word of the style one of them knows becomes a chip with the tracks that named it in
+  // each, «(1 820 · 11 368)»; a cheat-sheet chip gets its numbers too; a part of the style (between commas) none of them knows, dashed: the model was
+  // never told it. The longest name first, as the cheat-sheet's: «female vocals» before «vocals».
+  var VOC = null, vocP = null, VOC_W = 1;
+  var VOC_SKIP = { out: 1, etc: 1, sy: 1, bg: 1, va: 1, "new": 1, close: 1, sound: 1, contrast: 1, mix: 1 };   // the data's stray words
+  function vkey(s) { return fold(s).replace(/[^\p{L}\p{N}#♭'&+\/-]+/gu, " ").replace(/\s+/g, " ").trim(); }
+  function vnf(n) { try { return Number(n).toLocaleString(String(document.documentElement.lang || "en").split("-")[0]); } catch (e) { return String(n); } }
+  // HERESY 2109 (Viktor 05.11.2026: «Словарь TW оформляй в паблик»): the page's own two, the First Wave's and the Tsunami Wave's (the Studio's default
+  // model, docs/fw-vocabulary/tw-vocabulary.json), then each of user/vocab/ but one named as one of them (his own Tsunami Wave there, from before it
+  // was public: counted once, from the public file)
+  var VOC_BUILTIN = [["/lab/guide/fw-vocabulary/fw-vocabulary.json", "First Wave", "fw"], ["/lab/guide/fw-vocabulary/tw-vocabulary.json", "Tsunami Wave", "tw"]];
+  function userVocabs() {
+    return fetch("/lab/vocab/").then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }).then(function (d) {
+      var built = VOC_BUILTIN.map(function (b) { return b[1].toLowerCase(); });
+      return ((d && d.sets) || []).filter(function (s) { return s && s.url && built.indexOf(String(s.name || "").toLowerCase()) < 0; });
+    }).catch(function (e) {                                       // said, not passed off as «you have none»
+      console.warn("HERESY 2109: the lab's /vocab/ did not answer (" + ((e && e.message) || e) + "): your own vocabularies in user/vocab/ are left out");
+      return [];
+    });
+  }
+  function vocabs() {
+    if (vocP) return vocP;
+    var one = function (url, name, key) {
+      return fetch(url).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }).then(function (d) {
+        if (!d || !d.tags) return { name: name, key: key, failed: true, idx: {} };   // HERESY 2109: kept, said as not loaded, never as «not in its data»
+        var idx = {};
+        d.tags.forEach(function (t) { var k = vkey(t.tag); if (k && !idx[k]) idx[k] = t; VOC_W = Math.max(VOC_W, Math.min(5, k.split(" ").length)); });
+        return { name: name, key: key, tracks: (d.meta || {}).tracks || 0, idx: idx };
+      });
+    };
+    vocP = userVocabs().then(function (sets) {
+      var list = VOC_BUILTIN.concat(sets.map(function (s) { return [s.url, s.name, ""]; }));
+      return Promise.all(list.map(function (x) { return one(x[0], x[1], x[2]); }));
+    }).then(function (all) {
+      if (!all.some(function (v) { return !v.failed; })) { vocP = null; return null; }   // none came: asked again at the next paint
+      VOC = all; chipsSoon(); twTab(); return VOC;
+    });
+    return vocP;
+  }
+  function twHere() { return !!(VOC && VOC.some(function (v) { return v.key === "tw" && !v.failed; })); }
+  function twTab() { var b = $("hiBack") && $("hiBack").querySelector('[data-hi-tab="tw"]'); if (b) b.hidden = !twHere(); }
+  function vname(v) { return v.key === "fw" ? tr("First Wave") : v.name; }   // the First Wave in the page's language; the Tsunami Wave by its name in every one
+  function waveOf(per) {              // HERESY 2109: the tab a word opens in: the First Wave's when it knows the word, else the Tsunami Wave's when that does
+    var at = function (key) { for (var i = 0; VOC && i < VOC.length; i++) if (VOC[i].key === key) return per[i] || null; return null; };
+    return !at("fw") && at("tw") ? "tw" : "fw";
+  }
+  function vocabOf(k) {               // the word in each vocabulary: [entry or null, …]
+    return VOC && k ? VOC.map(function (v) { return v.idx[k] || null; }) : [];
+  }
+  function vocabNums(per) {
+    if (!per.some(Boolean)) return "";
+    return ' <small class="hi-n">(' + per.map(function (e, i) { return e ? vnf(e.tracks) : VOC[i] && VOC[i].failed ? "?" : "–"; }).join(" · ") + ")</small>";
+  }
+  function vline(e, i) {              // one vocabulary's word on a word (HERESY 2109: one that did not load says so)
+    var v = VOC[i], name = vname(v);
+    return e ? tr("{0}: {1} tracks · {2} %").replace("{0}", name).replace("{1}", vnf(e.tracks)).replace("{2}", e.share >= 0.1 ? e.share.toFixed(1) : e.share.toFixed(2))
+      : v.failed ? tr("{0}: its vocabulary did not load").replace("{0}", name) : tr("{0}: not in its data").replace("{0}", name);
+  }
+  function vocabSay(per) {
+    return per.map(vline).join("; ");
+  }
+  function withVocab(found, text) {
+    if (!VOC || !VOC.length) return found;
+    var keysIn = found.map(function (f) { return " " + (f.k || vkey(chipName(f))) + " "; });
+    found.forEach(function (f) { f.per = vocabOf(vkey(chipName(f))); if (!f.per.some(Boolean) && f.k) f.per = vocabOf(f.k); });
+    var words = [], unknown = [], seen = {};
+    String(text || "").split(/[,;\n|]+/).forEach(function (part) {
+      var w = vkey(part).split(" ").filter(Boolean), hit = false;
+      if (!w.length) return;
+      var covered = keysIn.some(function (k) { return (" " + w.join(" ") + " ").indexOf(k) >= 0 || k.indexOf(" " + w.join(" ") + " ") >= 0; });
+      for (var i = 0; i < w.length;) {
+        var took = 0;
+        for (var n = Math.min(VOC_W, w.length - i); n >= 1 && !took; n--) {
+          var k = w.slice(i, i + n).join(" ");
+          if (VOC_SKIP[k] || k.length < 2) continue;
+          var per = vocabOf(k);
+          if (!per.some(Boolean)) continue;
+          took = n; hit = true;
+          if (seen[k] || keysIn.some(function (c) { return c.indexOf(" " + k + " ") >= 0; })) continue;   // the cheat-sheet's chip says it
+          seen[k] = 1;
+          var e = per.filter(Boolean)[0];
+          words.push({ kind: "w", item: { name: e.tag, slug: "" }, per: per, k: k });
+        }
+        i += took || 1;
+      }
+      var raw = part.trim();
+      if (!hit && !covered && /\p{L}/u.test(raw) && !/\d/.test(raw) && !seen["u:" + vkey(raw)]) {
+        seen["u:" + vkey(raw)] = 1;
+        unknown.push({ kind: "u", item: { name: raw.length > 40 ? raw.slice(0, 39) + "…" : raw, slug: "" }, per: [] });
+      }
+    });
+    return found.concat(words.slice(0, 24), unknown.slice(0, 8));
+  }
+  function vgone() {                  // HERESY 2109 (review): the vocabularies that did not load, said beside a «none knows it» only the ones that came can make
+    return (VOC || []).map(function (v, i) { return v.failed ? vline(null, i) : ""; }).filter(Boolean);
+  }
+  function vocabCardHtml(f) {
+    if (f.kind === "u") {
+      return '<div class="hc-body"><b translate="no">' + esc(f.item.name) + '</b><span class="hc-st is-no">' + esc(tr("Not in the fine-tunes' data")) + "</span><span>" +
+        esc(tr("No fine-tune's vocabulary here names it: the model was never told it in training, and may read it its own way or not at all.")) + "</span>" +
+        vgone().map(function (s) { return '<span class="hc-vset">' + esc(s) + "</span>"; }).join("") + "</div>";
+    }
+    var big = null;
+    f.per.forEach(function (e) { if (e && (!big || e.tracks > big.tracks)) big = e; });
+    var w = big && big["with"] ? big["with"].slice(0, 6).map(function (x) { return x.tag; }) : [];
+    return '<div class="hc-body"><b translate="no">' + esc(f.item.name) + "</b>" +
+      f.per.map(function (e, i) { return '<span class="hc-vset">' + esc(vline(e, i)) + "</span>"; }).join("") +
+      (w.length ? '<span class="hi-home">' + esc(tr("Often with: {0}").replace("{0}", w.join(" · "))) + "</span>" : "") +
+      '<div class="hc-plays"><button type="button" class="btn ghost small" data-hi-vocab="' + esc(f.item.name) + '" data-hi-wave="' + waveOf(f.per) + '">' +
+      esc(tr("Open in the vocabulary")) + "</button></div></div>";
+  }
   // HERESY 1167 (Viktor 05.10.2026: «Зону подсказок у Творца нужно добить. Теперь видно, каких стилей у нас нет»; his
   // «Female contralto profondo» gave no chip): the voices of 💎 Voice Types under the Style prompt too, by the words a style
   // names them with, each with its sung and spoken probes and the ear's verdict (the sheet's own, DATA.voices)
@@ -610,12 +749,14 @@
       var end = at + len + 1;
       if (used.some(function (u) { return at < u[1] && end > u[0]; })) return;   // inside a longer name found already
       used.push([at, end]);
-      found.push({ item: o.item, kind: o.kind, at: at });
+      found.push({ item: o.item, kind: o.kind, at: at, k: o.k });   // HERESY 2051: the name it was found by
     });
     return found.sort(function (a, b) { return a.at - b.at; }).slice(0, 16);
   }
   function chipName(f) { return f.kind === "i" ? (f.item.tag.replace(/\s*\(.*?\)\s*/g, " ").trim() || f.item.slug) : f.item.name; }
   function chipState(f) {
+    if (f.kind === "w") return { cls: "is-vocab", text: vocabSay(f.per) };            // HERESY 2051
+    if (f.kind === "u") return { cls: "is-unknown", text: [tr("Not in the fine-tunes' data")].concat(vgone()).join("; ") };   // 2109 (review): a vocabulary not loaded said
     var p = probes(f.item.slug);
     if (f.kind === "i") return status(f.item);
     if (f.kind === "v") return voiceState(f.item);              // HERESY 1167
@@ -624,17 +765,19 @@
   function paintChips() {
     var box = $("hiChips"), st = $("style");
     if (!box || !st) return;
-    chipList = named(st.value || "");
+    chipList = withVocab(named(st.value || ""), st.value || "");     // HERESY 2051: and the vocabularies' words
+    if (!VOC && !vocP && (st.value || "").trim()) setTimeout(vocabs, 0);
     var A = window.HeresyArt;
     box.innerHTML = chipList.map(function (f, n) {
-      var art = artOf(probes(f.item.slug)), c = chipState(f);
+      var art = f.kind === "w" || f.kind === "u" ? null : artOf(probes(f.item.slug)), c = chipState(f);
       return '<button type="button" class="hi-chip ' + c.cls + '" translate="no" data-chip="' + n + '" aria-label="' + esc(chipName(f) + ": " + c.text) + '">' +
-        (art ? '<i style="background-image:url(&quot;' + esc(A.url(art)) + '&quot;)"></i>' : "") + esc(chipName(f)) + "</button>";
+        (art ? '<i style="background-image:url(&quot;' + esc(A.url(art)) + '&quot;)"></i>' : "") + esc(chipName(f)) + vocabNums(f.per || []) + "</button>";
     }).join("");
   }
   var chipsSoon = (function () { var t = 0; return function () { clearTimeout(t); t = setTimeout(paintChips, 250); }; })();
   function cardHtml(f) {
     if (f.kind === "v") return voiceCardHtml(f);              // HERESY 1167
+    if (f.kind === "w" || f.kind === "u") return vocabCardHtml(f);   // HERESY 2051
     var it = f.item, p = probes(it.slug), art = artOf(p), A = window.HeresyArt, c = chipState(f), guess = art && A.unseen && A.unseen(art);
     return (art ? '<button type="button" class="hc-pic" data-hi-art="' + esc(art) + '" style="background-image:url(&quot;' + esc(A.url(art)) + '&quot;)" aria-label="See it whole">' +
              (guess ? '<i data-tip="A guess: the painter does not know it">\u2248</i>' : "") + "</button>" : "") +
@@ -679,7 +822,10 @@
       var b = e.target.closest("[data-chip]");
       if (!b) return;
       e.preventDefault(); e.stopPropagation();                   // inside the Style label: no focus jump into the field
-      var f = chipList[+b.dataset.chip], art = f && artOf(probes(f.item.slug));
+      var f = chipList[+b.dataset.chip];
+      if (f && f.kind === "w") { hideCard(); open(f.item.name, waveOf(f.per || [])); return; }   // HERESY 2051: the word in the vocabulary (2109: its wave's)
+      if (f && f.kind === "u") { clearTimeout(cardTimer); showCard(+b.dataset.chip, b); return; }
+      var art = f && artOf(probes(f.item.slug));
       if (f && f.kind === "v") { clearTimeout(cardTimer); showCard(+b.dataset.chip, b); return; }   // HERESY 1167: its card, its plays
       if (art && window.HeresyArt) {
         hideCard();
@@ -687,7 +833,8 @@
       } else if (f) { hideCard(); open(chipName(f), f.kind === "s" ? "styles" : "instruments"); }
     });
     card.addEventListener("click", function (e) {
-      var a = e.target.closest("[data-hi-art]"), pl = e.target.closest("[data-hi-play]");
+      var a = e.target.closest("[data-hi-art]"), pl = e.target.closest("[data-hi-play]"), vq = e.target.closest("[data-hi-vocab]");
+      if (vq) { hideCard(); open(vq.dataset.hiVocab, vq.dataset.hiWave === "tw" ? "tw" : "fw"); return; }   // HERESY 2051, 2109
       if (a && window.HeresyArt) { hideCard(); window.HeresyArt.show(a.dataset.hiArt); }
       if (pl) { var take = state.hooks.findTake(pl.dataset.hiPlay); if (take) state.hooks.playNow(take); else state.hooks.toast("The probe is not in the library now", "bad"); }
     });
@@ -695,6 +842,7 @@
       if (e.altKey && !e.ctrlKey && !e.metaKey && e.code === "KeyI") { e.preventDefault(); open(); }
     });
     setTimeout(paintChips, 1200);                                   // the style the page restored
+    setTimeout(vocabs, 1500);                                       // HERESY 2051: the vocabularies, once
   }
 
   // HERESY 1156: pictures drawn meanwhile reach the open sheet; 1158: and the chips under the style
@@ -703,5 +851,6 @@
   // HERESY 1672: the sheet's notes (.hi-st) are the probes' own words, kept as written (translate="no")
   window.HeresyInstruments = { init: init, open: open, heardTags: heardTags, notHeardTags: notHeardTags, paintArts: paintArts, data: function () { return DATA; },
     styleLines: styleLines, styleProbed: styleProbed, voices: voices, adapters: adapters,   // HERESY 1166: the Writer's charter
-    lyricTags: function () { return LYRIC_TAGS; } };   // HERESY 1168: the tags offered under a «[» in the lyrics (heresy-complete.js)
+    lyricTags: function () { return LYRIC_TAGS; },     // HERESY 1168: the tags offered under a «[» in the lyrics (heresy-complete.js)
+    vocabs: function (again) { if (again) { VOC = null; vocP = null; } return vocabs(); } };   // HERESY 2109: the vocabularies, loaded again when asked
 })();

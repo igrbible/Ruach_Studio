@@ -41,7 +41,7 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 
 - ✅ rc3: OpenRouter's models with their prices; the notebook's export and import.
 - ✅ 1268: the documents list as wide as its edge is dragged.
-- ☐ A local chat model started by the Studio itself (Ollama on a port of its own, under the guard).
+- ✅ A local chat model started by the Studio itself (1811: llama-server with the Studio's own Writer model on a port of its own, started when asked, unloaded when idle, under the guard; not Ollama).
 
 ## Refiner and the DAW
 
@@ -74,7 +74,7 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 
 ## Videographer · 2.1.0
 
-- ☐ **A room between the Artist and the Librarian, Ctrl+Alt+6**: a music video for the song. The pipeline from Maestro (Blizaine/Maestro), with an AI helper prompting its scenes; the key frames painted by our Artist. Viktor 09.10: «И это в 2.1.0 как недостижимый многими желанный ахуй… нужны и мощности (они у меня есть), и время».
+- ✅ **A room between the Artist and the Librarian, Ctrl+Alt+6** (1824, the Videographer, beta; its frames by the Artist 1913–1917, the clip's look 2010): a music video for the song. The pipeline from Maestro (Blizaine/Maestro), with an AI helper prompting its scenes; the key frames painted by our Artist. Viktor 09.10: «И это в 2.1.0 как недостижимый многими желанный ахуй… нужны и мощности (они у меня есть), и время».
 
 ## Librarian
 
@@ -135,7 +135,7 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 - ☐ Pinokio's own CUDA path tested on a machine without a toolkit.
 - ✅ 1352: **Pinokio's environment page** answered 500 on `/env` (the laptop, 10.10.2026): with our `pinokio/` folder Pinokio wrote its `ENVIRONMENT` there and looked for it in the root. The launcher's scripts are in `launcher/` now (Viktor 11.10: «Добро, переименовывай pinokio/ → launcher/»); an install of rc5 or before is led through its first update by the menu (Finish the update).
 - ☐ (2.0.x) **Windows**: the Pinokio launcher through WSL2 (Windows paths with backslashes and drive letters understood); Pinokio sets up WSL2 and Ubuntu 24.04 where they are missing and runs launcher/*.sh inside. Decided 01.11.2026: WSL2 only. A native build (MSVC, a portable CUDA, a process manager of its own) is not our initiative: only a fork or a pull request made whole, turnkey, with attribution. Viktor: «Нейро-ересь вселенская изначально под UNIX/BSD/Linux, и портирование под Виндоуз — это сломанный костыль и имитация жизни».
-- ☐ **Desktop**: a PWA manifest first, then Electron (Linux first: the services checked and started, a tray, asked on exit whether to stop them; Ctrl+digit for the rooms), an AppImage. No Flatpak (Viktor: «растрата дискового места и интернет трафика»).
+- ✗ **Desktop**: no Electron, no native wrapper (Viktor 04.11.2026: «PWA как единое верное решение для десктопа… Мы не будем делать нативное приложение, потому что оно всё равно никак не будет нативным»): the PWA is the desktop app (HERESY 2024); the item is out of README and the card.
 - ✅ 1362: from the audit: build.sh's page guard (the install's own path, not its folder's name: studio and music build) and the in-page updater under Pinokio (it sends to Pinokio's Update). ✅ 1285: the extras are made by fetch-heresy.sh itself (convert-extras.py), no convert-models.sh on a fresh install.
 
 ## Models, Hugging Face, data
@@ -146,7 +146,7 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 - ❓ Death metal, Industrial rock, Epic trailer (Steps from Hell) carry no licence: asked on Hugging Face 15.10.2026 ([1](https://huggingface.co/pduncan/YuE2_Deathmetalv1_lora/discussions/1), [2](https://huggingface.co/monsterovich/yue2-industrial-rock-lora/discussions/4), [3](https://huggingface.co/monsterovich/yue2-steps-from-hell/discussions/3)); fetched from their authors until they answer.
 - ✅ 1449: v2 without the sliders, at 094e03a (163 files, 256 GB).
 
-- ✅ The Models, LoRAs and Starter Sets repos and the 💎 bucket public on Hugging Face.
+- ✅ The Models and LoRAs repos and the 💎 bucket public on Hugging Face.
 - ✅ 1289: Engine → Models and LoRAs: what the install brings, here or not, fetched again from the Studio (a part at a time or all), and the extras each asked with its size.
 - ✅ 1296: one's own copy of a published LoRA is kept and counted whole («differs», «own copies kept»).
 - ✅ 1302: **Fetch's progress at the row pressed**. 1303: the trainer's base brings MERT-v2-FullSong. ✅ 1339: the Models card's strings in the six other languages.
@@ -160,7 +160,7 @@ Everything planned, wished for and put off, in one place: gathered from Viktor's
 ## Docs and the site
 
 - ✅ README, CHANGELOG, INSTALL, the guide in seven languages, the visiting card in seven languages with its logo and icon in each, six rooms counted.
-- ☐ The screenshots of the guide, the README and the site for 2.0.0, in one go.
+- ✅ The screenshots of the guide, the README and the site for 2.0.0, in one go (taken again for the 2.0.0 cut, 25.10.2026).
 - ✅ 1446: the visiting card counts its visitors (Umami on our own server, no cookies).
 - ✅ 1448: the Studio's name in every language as its logo says it, in the page and on the card.
 - ✅ 1449: the guide in twelve languages without the sliders, a LoRA's wave and the budget in their place.

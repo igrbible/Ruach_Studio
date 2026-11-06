@@ -6,10 +6,15 @@
 // stays on the http side. Staying is remembered and said: the MIDI devices, the console's own window and the clipboard want https from another computer.
 // The https page takes what was handed and starts again with it. Engine → Security: the door, the Studio's own authority to trust once, how.
 //
-//   HeresyHttps.offer(opts) · HeresyHttps.paint() · HeresyHttps.state()   (opts {host, port, go} for the checks)
+// HERESY 2138 (the audit of 06.11.2026, 2.3): the hand-over took the whole storage over plain http, the OpenRouter and Civitai keys a Remember kept
+// as well: a paid key seen once by anyone listening on the network, and HERESY 1012's promise (the key goes only to openrouter.ai) broken. The keys
+// heresy-settings.js keeps local as secrets (HeresySettings.secrets, the one list) now stay in the http page; the https page says which stayed and where
+// to put them in again. Without that list (the settings' script did not load) nothing is handed over, and that is said.
+//
+//   HeresyHttps.offer(opts) · HeresyHttps.paint() · HeresyHttps.state() · HeresyHttps.left()   (opts {host, port, go} for the checks)
 (function () {
   "use strict";
-  var STAY = "ruach.https.stay", MOVED = "ruach.https.moved", WAIT = 120;   // HERESY 2005: two minutes to read it («чтобы чел смог прочитать и хоть немного осмыслить»)
+  var STAY = "ruach.https.stay", MOVED = "ruach.https.moved", LEFT = "ruach.https.left", WAIT = 120;   // HERESY 2005: two minutes to read it («чтобы чел смог прочитать и хоть немного осмыслить»)
   var S = { tls: null, el: null, timer: 0 };
   function $(id) { return document.getElementById(id); }
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
@@ -24,6 +29,8 @@
     return fetch("/lab" + path, opt).then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || "HTTP " + r.status); return d; }); });
   }
   function target(port, host) { return "https://" + (host || location.hostname) + ":" + port + location.pathname + location.search; }
+  function secrets() { var s = window.HeresySettings && window.HeresySettings.secrets; return Array.isArray(s) ? s : null; }   // HERESY 2138
+  var WHERE = { "yue2.orKey": "the OpenRouter key (Engine → Writer and Artwork)", "yue2.civitaiKey": "the Civitai key (the Artist's window «An adapter from Civitai»)" };
 
   // ---- the https side: what the http page handed over, taken once, then the page starts again with it
   function take(hash, then) {
@@ -33,9 +40,21 @@
     lab("/handoff?token=" + m[1]).then(function (d) {
       Object.keys(d.storage || {}).forEach(function (k) { put(k, d.storage[k]); });
       put(MOVED, String(Date.now()));
-      if (then) then(d); else location.reload();
+      if (then) { left(); then(d); } else location.reload();
     }).catch(function (e) { toast(tr("The settings did not come over:") + " " + e.message, "bad"); });
     return true;
+  }
+
+  // HERESY 2138: on the https side, once: the keys the http page kept back, by name (a name not on the list of secrets is not repeated)
+  function left() {
+    var raw = get(LEFT), keep = secrets(), names = [];
+    if (raw === null || !keep) return [];              // without the settings' list the names wait for a load that has it: never dropped unsaid
+    put(LEFT, null);
+    try { names = JSON.parse(raw); } catch (e) { names = []; }
+    names = (Array.isArray(names) ? names : []).filter(function (k) { return keep.indexOf(k) >= 0; });
+    if (names.length) toast(tr("Kept on the http side, so they never crossed the network in the clear: {0}. Put them in again here.")
+      .replace("{0}", names.map(function (k) { return tr(WHERE[k] || k); }).join("; ")), "warn");
+    return names;
   }
 
   // ---- the http side: the offer
@@ -43,8 +62,17 @@
   function move(port, opts) {
     var moved = get(MOVED), go = (opts && opts.go) || function (url) { location.href = url; };
     if (moved) return Promise.resolve(go(target(port, opts && opts.host)));
-    var all = {};
-    try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k !== STAY && k !== MOVED) all[k] = localStorage.getItem(k); } } catch (e) { /* private */ }
+    var keep = secrets(), all = {}, held = [];
+    if (!keep) return Promise.reject(new Error(tr("the page's own settings did not load, so nothing was handed over: reload the page and move again")));
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (!k || k === STAY || k === MOVED || k === LEFT) continue;
+        if (keep.indexOf(k) >= 0) { if (localStorage.getItem(k)) held.push(k); continue; }   // HERESY 2138: a secret stays where it was typed
+        all[k] = localStorage.getItem(k);
+      }
+    } catch (e) { /* private */ }
+    if (held.length) all[LEFT] = JSON.stringify(held);
     return lab("/handoff", { storage: all }).then(function (d) {
       put(MOVED, String(Date.now()));
       return go(target(port, opts && opts.host) + "#handoff=" + d.token);
@@ -104,6 +132,7 @@
   }
   function init() {
     if (location.protocol === "https:" && take(location.hash)) return;
+    if (location.protocol === "https:") left();
     document.addEventListener("click", function (e) {
       if (e.target.closest && e.target.closest('#engineTabs [data-etab="places"]')) setTimeout(load, 0);
       var o = e.target.closest && e.target.closest("[data-hs-open]");
@@ -115,5 +144,5 @@
     load().then(function (t) { if (t && t.door && get(STAY) !== "1") offer(); });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
-  window.HeresyHttps = { offer: offer, paint: paint, load: load, close: close, take: take, state: function () { return { tls: S.tls, open: !!S.el, stay: get(STAY), moved: get(MOVED) }; } };
+  window.HeresyHttps = { offer: offer, paint: paint, load: load, close: close, take: take, left: left, state: function () { return { tls: S.tls, open: !!S.el, stay: get(STAY), moved: get(MOVED) }; } };
 })();

@@ -51,7 +51,7 @@ def load(kit, cards):
               file=sys.stderr, flush=True)
         saved = dict(_LAST)
     ids = indices(cards)
-    if isinstance(saved.get("studio"), int) and (not ids or saved["studio"] in ids):
+    if isinstance(saved.get("studio"), int) and (not ids or saved["studio"] in ids or saved["studio"] >= ARC_BASE):   # HERESY 2029: an Arc too
         roles["studio"] = saved["studio"]
     for role in ("train", "jobs"):
         if isinstance(saved.get(role), list):
@@ -71,7 +71,7 @@ def _limits(got, cards):
             i, mb = int(k), int(v)
         except (TypeError, ValueError):
             continue
-        if total and i not in total:
+        if total and i not in total and i < ARC_BASE:   # HERESY 2029: an Arc's limit kept (its size is the lab's to know)
             continue
         if mb < 4096 or (total.get(i) and mb >= total[i]):
             continue
@@ -79,11 +79,11 @@ def _limits(got, cards):
     return out
 
 
-def save(kit, data, cards):
+def save(kit, data, cards, arc=()):
     ids = indices(cards)
     studio = data.get("studio")
-    if not isinstance(studio, int) or (ids and studio not in ids):
-        raise ValueError(f"the Studio needs one card of {ids}")
+    if not isinstance(studio, int) or (ids and studio not in ids and studio not in arc):   # HERESY 2029: an Intel card may hold the Studio
+        raise ValueError(f"the Studio needs one card of {ids + list(arc)}")
     out = {"studio": studio}
     for role in ("train", "jobs"):
         got = data.get(role)
@@ -93,7 +93,10 @@ def save(kit, data, cards):
     out["limits"] = _limits(data.get("limits"), cards)       # HERESY 1294: a card's VRAM limit, MiB
     path(kit).parent.mkdir(parents=True, exist_ok=True)
     tmp = path(kit).with_suffix(".json.part")
-    tmp.write_text(json.dumps(out, indent=1), encoding="utf-8")
+    with open(tmp, "w", encoding="utf-8") as fh:   # HERESY 2083: written whole and on the disk before it takes the file's place
+        fh.write(json.dumps(out, indent=1))
+        fh.flush()
+        os.fsync(fh.fileno())
     os.replace(tmp, path(kit))
     return out
 
@@ -118,7 +121,9 @@ def studio_now():
         except OSError:
             exe = ""
         if "build-sycl" in exe or env.get(b"YUE2_ENGINE", b"").strip() == b"sycl":
-            return ARC_BASE
+            sel = env.get(b"ONEAPI_DEVICE_SELECTOR", b"").decode().strip()      # HERESY 2029: level_zero:N is the N-th Intel card
+            n = sel.split(":", 1)[1] if sel.startswith("level_zero:") else ""
+            return ARC_BASE + (int(n) if n.isdigit() else 0)
         backend = env.get(b"GGML_BACKEND", b"").decode().strip()
         if backend.startswith("CUDA") and backend[4:].isdigit():
             return int(backend[4:])

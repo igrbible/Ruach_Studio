@@ -15,6 +15,8 @@ training/datasets/
 training/checkpoints/
 # HERESY 1130: the page build.sh makes, read from disk by the server
 tools/public/index.html
+# HERESY 2139: and the manifest it writes beside the page, its icons keyed (the engine serves it, else the source's)
+tools/public/manifest.webmanifest
 # HERESY 1834: the MIDI transcriber build and its logs (build.sh)
 /build-muscriptor/
 /muscriptor-configure.log

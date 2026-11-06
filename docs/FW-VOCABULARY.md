@@ -4,7 +4,7 @@ Every word in the style lines of the **32,633 tracks** that taught [YuE2-RS-FW](
 
 A word the model met hundreds of times is a word it understands. Write your style in these words, in this order, and the model hears what you mean; a word it never met is a guess. The counts are tracks, each counted once.
 
-**Search it** on [Ruach Studio's page](https://ruachstudio.igr.bible/#vocabulary) or in the Studio (F1 → The First Wave's vocabulary); **take it whole** as [fw-vocabulary.json](fw-vocabulary/fw-vocabulary.json) (every word met in two tracks or more, with its sources and the words it came with).
+**Search it** on [Ruach Studio's page](https://ruachstudio.art/#vocabulary) or in the Studio (F1 → The First Wave's vocabulary); **take it whole** as [fw-vocabulary.json](fw-vocabulary/fw-vocabulary.json) (every word met in two tracks or more, with its sources and the words it came with).
 
 ## Contents
 
@@ -41,7 +41,9 @@ Each track's line follows YuE2's own order: **language or Instrumental → genre
 
 ## The data at a glance
 
-32,633 tracks, about 1,800 hours; 8,849 sing words. 10,230 distinct words in the style lines; 4,695 of them met in two tracks or more are listed in the JSON.
+32,633 tracks, about 1,800 hours; 8,849 sing words. 9,722 distinct words in the style lines; 4,326 of them met in two tracks or more are listed in the JSON.
+
+An FMA line is its genres and three tags its users wrote, and those tags name artists, labels, radio stations, people and places as often as a style. So only FMA's own genre names are counted from them: 490 words only FMA's users wrote are left out. 12 more were taken out by hand: names, titles and fragments of lines.
 
 | source | tracks |
 |---|---:|
@@ -56,19 +58,19 @@ Each track's line follows YuE2's own order: **language or Instrumental → genre
 | what the words say | distinct words | the most met |
 |---|---:|---|
 | Instrumental | 1 | Instrumental |
-| Genres and styles | 1,414 | Electronic, pop, soundtrack, Folk, classical, rock |
-| Instruments | 890 | piano, bass, drums, guitar, electric guitar, synthesizer |
-| Voice | 365 | dry studio vocal, audiobook narration, calm clear reading, Russian spoken word, no vocals, female alto vocal |
+| Genres and styles | 940 | Electronic, pop, soundtrack, Folk, classical, rock |
+| Instruments | 900 | piano, bass, drums, guitar, electric guitar, synthesizer |
+| Voice | 374 | dry studio vocal, audiobook narration, calm clear reading, Russian spoken word, no vocals, female alto vocal |
 | Emotion words | 40 | playful, numb, low energy, menacing, restrained, harsh |
-| Mood | 289 | energetic, deep, dream, meditative, upbeat, dramatic |
-| Use and theme | 15 | corporate, drama, documentary, motivational, action, commercial |
+| Mood | 309 | happy, sad, emotional, energetic, relaxing, deep |
+| Use and theme | 27 | love, advertising, corporate, summer, adventure, background |
 | Sound and space | 306 | no instruments, no music, close-mic, dry studio, nothing else playing, close-miked and in front |
-| Form and pace | 28 | fast pace, slow pace, slow, moderate pace, fast, slow tempo |
-| Key and harmony | 59 | C major, G major, C minor, D major, E minor, D minor |
+| Form and pace | 34 | melodic, fast pace, slow pace, slow, moderate pace, fast |
+| Key and harmony | 60 | C major, A minor, G major, C minor, D major, E minor |
 | Tempo (BPM) | 144 | 120 BPM, 90 BPM, 100 BPM, 119 BPM, 80 BPM, 130 BPM |
 | Language | 28 | English, Spanish, Portuguese, French, latin, russian |
 | Leading words of our own loops | 2 | duduk, shofar |
-| Free descriptions | 1,114 | glissando, Close, short 2 minute piece, syncopated claps, neo-soul, solo and in front |
+| Free descriptions | 1,161 | electro, glissando, rhythmic, abstract, bassline, modern |
 
 ## Emotion words
 
@@ -119,7 +121,7 @@ These were not written by anyone: LAION's Empathic Insight heads (an EmoWhisper 
 
 ## Genres and styles
 
-What kind of music: MTG-Jamendo's and FMA's own genre tags, and the styles the Suno-made sets wrote. 1,414 distinct words; the 160 most met:
+What kind of music: MTG-Jamendo's and FMA's own genre tags, and the styles the Suno-made sets wrote. 940 distinct words; the 160 most met:
 
 | word | tracks | | from | met with |
 |---|---:|---|---|---|
@@ -142,40 +144,34 @@ What kind of music: MTG-Jamendo's and FMA's own genre tags, and the styles the S
 | alternative | 836 | `█▋` | MTG 776 · FMA 43 | indie, harsh, bass, electric guitar |
 | hip hop | 828 | `█▋` | MTG 670 · Suno 114 · FMA 44 | rap, brass, bongo, bass |
 | funk | 762 | `█▌` | MTG 454 · FMA 185 · Suno 121 | bongo, brass, bell, hip hop |
-| happy | 759 | `█▌` | MTG 420 · GTS 303 | no instruments, dry studio vocal, a cappella, female alto vocal |
 | Experimental Pop | 755 | `█▌` | FMA 752 | Electronic, Indie-Rock, anguished, Synth Pop |
 | pop rock | 736 | `█▌` | MTG 699 | electric guitar, drums, bass, harsh |
 | lounge | 676 | `█▍` | MTG 557 · FMA 104 | chill out, easy listening, percussion, synthesizer |
+| a cappella | 666 | `█▍` | GTS 662 | no instruments, dry studio vocal, female alto vocal, serene |
 | pop folk | 662 | `█▍` | MTG 661 | Folk, acoustic guitar, pop, low energy |
 | rap | 648 | `█▍` | FMA 260 · MTG 193 · Suno 193 | hip hop, proud, Hip-Hop, commanding |
 | Indie-Rock | 643 | `█▎` | FMA 642 | Experimental Pop, anguished, pop, bitter |
 | Techno | 641 | `█▎` | FMA 398 · MTG 137 · Suno 106 | house, Electronic, menacing, ecstatic |
 | instrumental pop | 617 | `█▎` | MTG 606 | pop, easy listening, C major, 100 BPM |
 | reggae | 612 | `█▎` | MTG 565 · Suno 41 | playful, euphoric, dub, A minor |
-| sad | 608 | `█▎` | GTS 356 · MTG 148 · Suno 83 | no instruments, dry studio vocal, a cappella, female alto vocal |
 | new age | 602 | `█▎` | MTG 512 · FMA 74 | ambient, meditative, low energy, synthesizer |
 | blues | 551 | `█` | MTG 293 · FMA 208 · Suno 48 | Folk, Country, jazz, rock |
 | orchestral | 540 | `█` | MTG 506 | classical, soundtrack, grateful, epic |
-| Country | 507 | `█` | FMA 229 · MTG 197 · Suno 77 | Folk, blues, 1outro, bitter |
+| Country | 507 | `█` | FMA 229 · MTG 197 · Suno 77 | Folk, blues, bitter, English |
 | world | 500 | `▉` | MTG 492 | world fusion, orchestra, playful, ethno |
 | Downtempo | 498 | `▉` | FMA 322 · MTG 153 | Trip-Hop, Electronic, IDM, ambient |
-| emotional | 483 | `▉` | MTG 326 · Suno 112 · Studio 28 | drama, piano, low energy, acoustic guitar |
 | Ambient Electronic | 418 | `▊` | FMA 416 | Unclassifiable, IDM, Electronic, Chill-out |
-| melodic | 415 | `▊` | MTG 332 · Suno 74 | indie, electric guitar, pop, electric piano |
 | IDM | 371 | `▊` | FMA 354 | Electronic, Ambient Electronic, Downtempo, menacing |
 | Trip-Hop | 370 | `▊` | FMA 367 | Downtempo, Glitch, Electronic, menacing |
-| love | 349 | `▋` | MTG 330 | pop, C major, new age, low energy |
 | cinematic | 322 | `▋` | MTG 267 · Suno 34 | classical, orchestral, cello, symphonic |
 | atmospheric | 321 | `▋` | MTG 273 · Suno 28 | ambient, piano, aching, solemn |
 | disco | 321 | `▋` | MTG 153 · FMA 123 · Suno 45 | dance, funk, summer, ecstatic |
-| relaxing | 314 | `▋` | MTG 309 | easy listening, low energy, classical, meditative |
 | International | 277 | `▌` | FMA 277 | Turkish, Balkan, Middle East, Folk |
 | R&B | 277 | `▌` | MTG 159 · Suno 102 · Studio 16 | soul, funk, hip hop, romantic |
 | Electroacoustic | 269 | `▌` | FMA 269 | Electronic, Minimal Electronic, Indie-Rock, Trip-Hop |
 | Americana | 260 | `▌` | FMA 257 | Folk, Singer-Songwriter, anguished, Country |
 | Lo-Fi | 255 | `▌` | FMA 196 · Suno 59 | Freak-Folk, Singer-Songwriter, Experimental Pop, anguished |
 | electropop | 251 | `▌` | MTG 213 · Suno 22 · FMA 14 | Electronic, synthesizer, synthpop, drum machine |
-| inspiring | 245 | `▌` | MTG 239 | classical, orchestral, motivational, epic |
 | Hip-Hop Beats | 228 | `▌` | FMA 227 | Hip-Hop, Electronic, Soul-RnB, menacing |
 | Minimalism | 225 | `▌` | FMA 222 | Contemporary Classical, low energy, numb, solemn |
 | progressive | 224 | `▌` | MTG 161 · FMA 57 | guitar, metal, rock, harsh |
@@ -184,24 +180,15 @@ What kind of music: MTG-Jamendo's and FMA's own genre tags, and the styles the S
 | Avant-Garde | 215 | `▌` | FMA 202 · Suno 11 | Experimental, jazz, aching, progressive |
 | Synth Pop | 210 | `▍` | FMA 201 | Experimental Pop, New Wave, disco, Power-Pop |
 | Contemporary Classical | 207 | `▍` | FMA 207 | Minimalism, solemn, low energy, numb |
-| epic | 207 | `▍` | MTG 155 · Suno 38 | orchestral, soundtrack, classical, dramatic |
-| tracks to sync | 207 | `▍` | FMA 207 | 1outro, Folk, Country, Indie-Rock |
-| Chill-out | 202 | `▍` | FMA 202 | Ambient Electronic, Electronic, music for video, Trip-Hop |
+| Chill-out | 202 | `▍` | FMA 202 | Ambient Electronic, Electronic, Trip-Hop, ecstatic |
 | Dubstep | 196 | `▍` | FMA 124 · MTG 51 · Suno 19 | menacing, dub, Electronic, ominous |
 | Glitch | 196 | `▍` | FMA 170 · Suno 26 | Trip-Hop, menacing, Electronic, angry |
 | trip hop | 192 | `▍` | MTG 172 · FMA 13 | hip hop, bongo, brass, cello |
-| electro | 189 | `▍` | Suno 161 · FMA 28 | hopeful, house, bright, electro swing |
-| advertising | 181 | `▍` | MTG 148 · FMA 33 | bed music, motivational, soundtrack, electric piano |
 | Alternative Hip-Hop | 179 | `▍` | FMA 179 | Hip-Hop, proud, menacing, commanding |
 | Breakbeat | 179 | `▍` | FMA 116 · MTG 58 | syncopation, beats, Chiptune, menacing |
-| fun | 168 | `▍` | MTG 146 · Suno 20 | happy, pop, alternative, children |
 | symphonic | 167 | `▍` | MTG 156 | cinematic, classical, aching, orchestral |
 | fusion | 165 | `▍` | MTG 157 | jazz, electric guitar, funk, playful |
 | acid jazz | 158 | `▍` | MTG 134 · Suno 21 | playful, acoustic bass guitar, 70s, funk |
-| uplifting | 158 | `▍` | MTG 88 · Suno 41 · FMA 29 | Electronic, synthesizer, rap, vocal |
-| summer | 155 | `▍` | MTG 147 · FMA 8 | percussion, keyboard, deep, dance |
-| adventure | 153 | `▍` | MTG 150 | soundtrack, corporate, classical, orchestral |
-| background | 152 | `▍` | MTG 148 | piano, classical, easy listening, inspiring |
 | Chiptune | 151 | `▍` | FMA 145 | Chip Music, beats, syncopation, Breakbeat |
 | minimal | 148 | `▍` | MTG 90 · Suno 38 · FMA 13 | piano, numb, solemn, low energy |
 | Post-Rock | 147 | `▍` | FMA 142 | Shoegaze, Indie-Rock, acoustic, ambient |
@@ -213,12 +200,9 @@ What kind of music: MTG-Jamendo's and FMA's own genre tags, and the styles the S
 | electronica | 139 | `▎` | FMA 68 · MTG 59 · Suno 12 | Electronic, IDM, ecstatic, menacing |
 | instrumental rock | 139 | `▎` | MTG 134 | rock, electric guitar, harsh, cold |
 | trance | 137 | `▎` | MTG 97 · Suno 40 | Techno, ecstatic, euphoric, Electronic |
-| vocal | 137 | `▎` | FMA 64 · Suno 63 · Album 10 | Gospel, warm, jazz, deep |
-| children | 135 | `▎` | MTG 109 · FMA 24 | Kid-Friendly, documentary, soundtrack, orchestral |
 | hard rock | 134 | `▎` | MTG 96 · Suno 19 · Studio 10 · FMA 9 | angry, guitar, harsh, rock |
 | Chip Music | 132 | `▎` | FMA 132 | Chiptune, playful, ecstatic, house |
 | club | 131 | `▎` | MTG 127 | dance, summer, happy, disco |
-| female vocals | 130 | `▎` | Suno 116 · FMA 8 | English, hopeful, warm, sensual |
 | Industrial | 127 | `▎` | FMA 65 · MTG 52 · Suno 8 | menacing, Electronic, angry, Techno |
 | dub | 126 | `▎` | MTG 100 · FMA 18 · Suno 8 | bass, reggae, Dubstep, playful |
 | ska | 126 | `▎` | MTG 82 · Suno 35 · FMA 9 | rock, reggae, bass, playful |
@@ -231,13 +215,11 @@ What kind of music: MTG-Jamendo's and FMA's own genre tags, and the styles the S
 | jazz fusion | 109 | `▎` | MTG 91 · Suno 17 | jazz, drums, playful, bass |
 | Latin America | 109 | `▎` | FMA 109 | Spanish, menacing, Hip-Hop, Brazilian |
 | Punk | 104 | `▎` | FMA 84 · Suno 19 | bitter, hard rock, Power-Pop, rock |
-| positive | 103 | `▎` | MTG 99 | pop rock, happy, drums, electric guitar |
 | Minimal Electronic | 102 | `▎` | FMA 102 | Electroacoustic, house, Ambient Electronic, IDM |
-| cool | 101 | `▎` | MTG 82 · FMA 13 | lounge, chanson, relaxing, ambient |
 | punk rock | 101 | `▎` | MTG 95 | harsh, angry, menacing, cold |
 | chanson | 97 | `▎` | MTG 93 | guitar, pop folk, blues, pop |
 | Composed Music | 95 | `▎` | FMA 95 | jazz, aching, soundtrack, classical |
-| Holiday | 92 | `▎` | FMA 53 · MTG 39 | christmas, holiday music, happy, orchestral |
+| Holiday | 92 | `▎` | FMA 53 · MTG 39 | christmas, happy, orchestral, C major |
 | New Wave | 92 | `▎` | FMA 67 · Suno 25 | Synth Pop, Indie-Rock, Electro-Punk, electropop |
 | synthpop | 92 | `▎` | MTG 72 · Suno 18 | electropop, euphoric, synthesizer, ecstatic |
 | 70s | 90 | `▎` | MTG 80 · FMA 5 · Suno 5 | groovy, melodic, playful, funk |
@@ -246,10 +228,8 @@ What kind of music: MTG-Jamendo's and FMA's own genre tags, and the styles the S
 | psychedelic | 89 | `▎` | MTG 66 · Suno 14 · FMA 5 | drums, bass, improvisation, guitar |
 | improvisation | 86 | `▎` | MTG 69 · FMA 17 | jazz, low energy, piano, relaxing |
 | groove | 84 | `▎` | MTG 79 | funk, disco, fusion, playful |
-| mellow | 80 | `▎` | MTG 55 · Suno 19 · FMA 4 | atmospheric, Lo-Fi, emotional, low energy |
 | 80s | 79 | `▎` | MTG 57 · Suno 16 · FMA 6 | retro, synthesizer, guitar, lounge |
 | Balkan | 77 | `▎` | FMA 77 | International, Big Band/Swing, jazz, playful |
-| nature | 77 | `▎` | MTG 71 · FMA 4 | new age, easy listening, documentary, low energy |
 | alternative rock | 75 | `▎` | MTG 34 · Suno 31 · FMA 6 · Studio 4 | rock, hard rock, English, bitter |
 | ethno | 73 | `▎` | MTG 70 | world, new age, meditative, african |
 | Reggae - Dub | 70 | `` | FMA 70 | menacing, triumphant, Garage, Latin America |
@@ -257,9 +237,8 @@ What kind of music: MTG-Jamendo's and FMA's own genre tags, and the styles the S
 | Shoegaze | 68 | `` | FMA 64 | Indie-Rock, Post-Rock, anguished, yearning |
 | k-pop | 64 | `` | Suno 56 · Studio 8 | sensual, bright, hopeful, Korean |
 | grunge | 63 | `` | MTG 51 · Suno 7 · Studio 4 | alternative, electric guitar, drums, bass |
-| Kid-Friendly | 63 | `` | FMA 63 | childrens music, children, French, Singer-Songwriter |
+| Kid-Friendly | 63 | `` | FMA 63 | children, French, Singer-Songwriter, bright |
 | post rock | 63 | `` | MTG 56 · FMA 4 | ambient, alternative, synthesizer, drums |
-| raw | 63 | `` | Album 42 · Suno 14 · Studio 6 | slow rubato, singing bowls, Phrygian Dominant, modal harmony |
 | 90s | 62 | `` | MTG 55 · Suno 7 | hip hop, indie, 80s, A minor |
 | rock and roll | 62 | `` | MTG 60 | electric guitar, harsh, rock, drums |
 | african | 61 | `` | MTG 33 · FMA 26 | Afrobeat, playful, world, International |
@@ -270,23 +249,46 @@ What kind of music: MTG-Jamendo's and FMA's own genre tags, and the styles the S
 | Unclassifiable | 58 | `` | FMA 58 | Ambient Electronic, soundtrack, solemn, aching |
 | eurodance | 57 | `` | MTG 45 · Suno 12 | sampler, dance, synthesizer, electropop |
 | Post-Punk | 57 | `` | FMA 45 · Suno 10 | darkwave, harsh, Punk, New Wave |
-| trailer | 57 | `` | MTG 55 | classical, symphonic, cinematic, epic |
 | darkwave | 56 | `` | MTG 25 · FMA 19 · Suno 10 | Post-Punk, alternative, yearning, anguished |
 | Gospel | 56 | `` | FMA 32 · Suno 22 | vocal, Afrobeat, bitter, tender |
 | Psych-Rock | 56 | `` | FMA 56 | Nu-Jazz, Indie-Rock, anguished, Electroacoustic |
 | Drum & Bass | 55 | `` | FMA 54 | IDM, Jungle, Electronic, menacing |
 | jazzfunk | 54 | `` | MTG 54 | jazz, funk, playful, saxophone |
-| party | 54 | `` | MTG 42 · FMA 5 · Suno 5 | dance, sport, menacing, ecstatic |
 | Brazilian | 53 | `` | FMA 52 | International, Portuguese, Singer-Songwriter, grateful |
 | Jungle | 51 | `` | FMA 47 · Suno 4 | Breakbeat, IDM, Drum & Bass, Ambient Electronic |
-| female | 50 | `` | Suno 46 · FMA 4 | hopeful, sensual, English, Japanese |
 | Opera | 50 | `` | FMA 24 · Suno 16 · Album 10 | classical, Choral Music, awe-struck, slow rubato |
 | classic rock | 47 | `` | MTG 36 · FMA 4 · Studio 4 · Suno 3 | hard rock, guitar, E minor, rock |
 | indie folk | 47 | `` | FMA 31 · Suno 8 · Studio 8 | Indie-Rock, Singer-Songwriter, indie rock, Folk |
+| newwave | 45 | `` | MTG 45 | rock, harsh, cold, C major |
+| acoustic spiritual ballad | 44 | `` | Album 42 | slow rubato, singing bowls, Phrygian Dominant, modal harmony |
+| Afrobeat | 44 | `` | FMA 24 · Suno 18 | african, Gospel, bright, reggaeton |
+| electro swing | 44 | `` | Suno 44 | electro, bright, hopeful, house |
+| dark ambient | 43 | `` | MTG 31 · Suno 8 · Studio 4 | low energy, ambient, sad, solemn |
+| Drone | 43 | `` | FMA 22 · Suno 21 | Wide, ambient, Experimental, playful |
+| Freak-Folk | 43 | `` | FMA 43 | Lo-Fi, Hip-Hop Beats, Americana, Indie-Rock |
+| Garage | 43 | `` | FMA 41 | Punk, Indie-Rock, Reggae - Dub, rock |
+| Improv | 43 | `` | FMA 43 | Experimental, abstract, acoustic, low energy |
+| indie rock | 43 | `` | FMA 19 · Suno 12 · Studio 12 | indie folk, Indie-Rock, Experimental Pop, bitter |
+| Choral Music | 41 | `` | FMA 41 | awe-struck, Opera, Chamber Music, classical |
+| bluesrock | 40 | `` | MTG 39 | rock, electric guitar, blues, hard rock |
+| indie pop | 40 | `` | Suno 21 · FMA 15 · Studio 4 | English, soothing, alternative, Indie-Rock |
+| j-pop | 40 | `` | Suno 40 | hopeful, Japanese, bright, triumphant |
+| reggaeton | 39 | `` | Suno 33 · Studio 6 | Spanish, commanding, sensual, romantic |
+| Electro-Punk | 38 | `` | FMA 38 | New Wave, Indie-Rock, Avant-Garde, Industrial |
+| hiphop | 38 | `` | FMA 27 · Suno 11 | beats, Electronic, triumphant, Hip-Hop |
+| Tango | 38 | `` | FMA 25 · Suno 13 | Folk, Spanish, Country, blues |
+| gothic | 37 | `` | MTG 32 · Suno 5 | sampler, alternative, indie, harsh |
+| medieval | 37 | `` | MTG 24 · Suno 13 | Folk, epic, D minor, 119 BPM |
+| Nu-Jazz | 36 | `` | FMA 36 | Krautrock, lounge, Psych-Rock, Downtempo |
+| Bluegrass | 35 | `` | FMA 26 · Suno 9 | Americana, Punk, Composed Music, playful |
+| Power-Pop | 34 | `` | FMA 34 | Punk, hard rock, Synth Pop, bitter |
+| field recordings | 33 | `` | Suno 30 · FMA 3 | soft analog pads, dusty, Wide, 110 BPM |
+| Free-Folk | 33 | `` | FMA 33 | Experimental Pop, Ambient Electronic, fragile, melancholic |
+| Europe | 32 | `` | FMA 32 | Alternative Hip-Hop, proud, International, Hip-Hop |
 
 ## Instruments
 
-What plays: MTG-Jamendo's instrument tags (up to four a track) and the instruments the free style lines name. 890 distinct words; the 160 most met:
+What plays: MTG-Jamendo's instrument tags (up to four a track) and the instruments the free style lines name. 900 distinct words; the 160 most met:
 
 | word | tracks | | from | met with |
 |---|---:|---|---|---|
@@ -368,13 +370,17 @@ What plays: MTG-Jamendo's instrument tags (up to four a track) and the instrumen
 | didgeridoo | 10 | `` | Suno 10 |  |
 | hammond organ | 10 | `` | Suno 10 |  |
 | Hammond organ swells | 10 | `` | Suno 10 |  |
+| horror synth | 10 | `` | FMA 7 · Suno 3 |  |
 | MPC triggered beat chopped | 10 | `` | Suno 10 |  |
 | shamisen | 10 | `` | Suno 10 |  |
 | shuffled hi-hats | 10 | `` | Suno 10 |  |
 | shuffling percussion | 10 | `` | Suno 10 |  |
 | START WITH SOFT TRUMPET | 10 | `` | Suno 10 |  |
+| fingerstyle guitar | 9 | `` | FMA 7 · Suno 2 |  |
 | hard bass | 9 | `` | Suno 9 |  |
 | Piano Solo | 9 | `` | Suno 9 |  |
+| solo piano | 9 | `` | FMA 7 · Studio 2 |  |
+| spanish guitar | 9 | `` | Suno 5 · FMA 4 |  |
 | bass solo | 8 | `` | Suno 8 |  |
 | clean trumpet tone | 8 | `` | Suno 8 |  |
 | fingerstyle guitar no pick | 8 | `` | Suno 8 |  |
@@ -397,7 +403,9 @@ What plays: MTG-Jamendo's instrument tags (up to four a track) and the instrumen
 | subtle Rhodes | 8 | `` | Suno 8 |  |
 | atmospheric pads | 7 | `` | Suno 5 · Studio 2 |  |
 | bass house | 7 | `` | Suno 7 |  |
+| drum bass | 7 | `` | FMA 6 · Suno 1 |  |
 | lute | 7 | `` | Suno 5 · FMA 2 |  |
+| piano pop | 7 | `` | FMA 6 · Suno 1 |  |
 | shakuhachi | 7 | `` | Suno 7 |  |
 | synths | 7 | `` | Suno 7 |  |
 | theremin | 7 | `` | Suno 7 |  |
@@ -441,19 +449,13 @@ What plays: MTG-Jamendo's instrument tags (up to four a track) and the instrumen
 | baroque violin | 5 | `` | Suno 5 |  |
 | bass drop | 5 | `` | Suno 5 |  |
 | bass guitar | 5 | `` | Suno 4 · Album 1 |  |
-| bassoon | 5 | `` | FMA 5 |  |
 | full orchestra | 5 | `` | Studio 4 · Suno 1 |  |
 | hypnotic beats | 5 | `` | Suno 5 |  |
 | muted trumpet | 5 | `` | Suno 3 · Studio 2 |  |
-| pipa | 5 | `` | Suno 5 |  |
-| saz | 5 | `` | Suno 5 |  |
-| soft drums | 5 | `` | Studio 4 · Suno 1 |  |
-| solo Armenian duduk | 5 | `` | Album 5 |  |
-| string quartet | 5 | `` | Suno 3 · Studio 2 |  |
 
 ## Voice
 
-Who sings or speaks, and how: the voice's type, range, technique and place in the mix. 365 distinct words; the 100 most met:
+Who sings or speaks, and how: the voice's type, range, technique and place in the mix. 374 distinct words; the 100 most met:
 
 | word | tracks | | from | met with |
 |---|---:|---|---|---|
@@ -466,11 +468,14 @@ Who sings or speaks, and how: the voice's type, range, technique and place in th
 | female voice | 389 | `███████` | Speech 300 · Suno 89 | Russian spoken word, dry studio, close-mic, calm clear reading |
 | male voice | 353 | `██████▍` | Speech 300 · Suno 53 | Russian spoken word, dry studio, close-mic, calm clear reading |
 | male tenor vocal | 197 | `███▌` | GTS 197 | no instruments, dry studio vocal, a cappella, sad |
+| vocal | 137 | `██▌` | FMA 64 · Suno 63 · Album 10 | Gospel, warm, jazz, deep |
+| female vocals | 130 | `██▍` | Suno 116 · FMA 8 | English, hopeful, warm, sensual |
 | falsetto | 97 | `█▊` | GTS 96 | no instruments, dry studio vocal, a cappella, female alto vocal |
 | mixed voice | 96 | `█▊` | GTS 96 | no instruments, dry studio vocal, a cappella, female alto vocal |
 | female vocal | 64 | `█▎` | Suno 45 · Album 19 | slow rubato, singing bowls, Phrygian Dominant, modal harmony |
 | male vocals | 53 | `▉` | Suno 43 · Studio 10 | English, tender, romantic, soothing |
 | breathy | 52 | `▉` | GTS 49 · Suno 3 | no instruments, dry studio vocal, a cappella, female alto vocal |
+| female | 50 | `▉` | Suno 46 · FMA 4 | hopeful, sensual, English, Japanese |
 | male vocal | 50 | `▉` | Suno 26 · Album 24 | slow rubato, singing bowls, Phrygian Dominant, modal harmony |
 | pharyngeal | 47 | `▊` | GTS 47 | no instruments, dry studio vocal, a cappella, serene |
 | vibrato | 46 | `▊` | GTS 45 | no instruments, dry studio vocal, a cappella, female alto vocal |
@@ -481,25 +486,31 @@ Who sings or speaks, and how: the voice's type, range, technique and place in th
 | No sung chorus | 32 | `▋` | Studio 32 | No singing, No rock guitars, No metal, commanding |
 | a male rapper | 28 | `▌` | Studio 28 |  |
 | operatic | 27 | `▌` | Album 22 · Suno 5 |  |
-| vocaloid | 27 | `▌` | Suno 27 |  |
+| vocaloid | 26 | `▌` | Suno 26 |  |
 | choir | 24 | `▌` | Suno 12 · Studio 8 · Album 4 |  |
 | male baritone vocal | 24 | `▌` | Studio 24 |  |
+| soprano | 24 | `▌` | FMA 19 · Suno 5 |  |
 | male singer | 22 | `▍` | Suno 22 |  |
 | duet | 20 | `▍` | Suno 17 · Album 3 |  |
 | belted | 18 | `▍` | Album 18 |  |
 | male | 16 | `▍` | Suno 16 |  |
+| tenor | 16 | `▍` | FMA 14 · Suno 2 |  |
 | boy band | 15 | `▎` | Suno 15 |  |
 | freestyle | 15 | `▎` | Suno 15 |  |
 | powerful female vocals | 13 | `▎` | Studio 12 · Suno 1 |  |
 | clear vocals | 12 | `▎` | Suno 12 |  |
 | raspy male vocals | 12 | `▎` | Studio 12 |  |
+| singer songwriter | 12 | `▎` | FMA 9 · Suno 3 |  |
 | theatrical male vocals | 12 | `▎` | Studio 12 |  |
 | female vocalist | 10 | `▎` | Suno 10 |  |
 | pop rap | 10 | `▎` | Suno 8 · Studio 2 |  |
 | warm male vocals | 10 | `▎` | Studio 10 |  |
+| choral | 9 | `▎` | FMA 6 · Suno 2 · Album 1 |  |
 | emotional female vocals | 9 | `▎` | Studio 8 · Suno 1 |  |
 | girl group | 9 | `▎` | Suno 7 · Studio 2 |  |
 | male rapper | 9 | `▎` | Studio 8 · Suno 1 |  |
+| singing | 9 | `▎` | FMA 8 · Suno 1 |  |
+| vocals | 9 | `▎` | FMA 7 · Suno 2 |  |
 | alto solo | 8 | `▎` | Suno 8 |  |
 | both sing the chorus | 8 | `▎` | Studio 8 |  |
 | conversational phrasing | 8 | `▎` | Suno 8 |  |
@@ -521,7 +532,6 @@ Who sings or speaks, and how: the voice's type, range, technique and place in th
 | gregorian chant | 7 | `` | Suno 5 · Studio 2 |  |
 | powerful male vocals | 7 | `` | Studio 6 · Suno 1 |  |
 | soft female vocals | 7 | `` | Studio 6 · Suno 1 |  |
-| spoken word | 7 | `` | Suno 7 |  |
 | cantus firmus in soprano | 6 | `` | Suno 6 |  |
 | clear female vocals | 6 | `` | Suno 6 |  |
 | clear voice | 6 | `` | Suno 6 |  |
@@ -533,11 +543,13 @@ Who sings or speaks, and how: the voice's type, range, technique and place in th
 | sultry female vocals | 6 | `` | Suno 4 · Studio 2 |  |
 | sung by a duet | 6 | `` | Studio 6 |  |
 | vocal chops | 6 | `` | Suno 6 |  |
+| voice | 6 | `` | Suno 4 · FMA 2 |  |
 | emotional male vocals | 5 | `` | Studio 4 · Suno 1 |  |
 | harmony vocals | 5 | `` | Studio 4 · Suno 1 |  |
 | Jazz Rap | 5 | `` | Suno 3 · Studio 2 |  |
 | layered harmonies | 5 | `` | Suno 5 |  |
 | melodic rap | 5 | `` | Suno 5 |  |
+| rapping | 5 | `` | FMA 3 · Suno 2 |  |
 | warm breathy double-reed melody | 5 | `` | Album 5 |  |
 | a female rapper | 4 | `` | Studio 4 |  |
 | aggressive male rapper | 4 | `` | Studio 4 |  |
@@ -547,91 +559,102 @@ Who sings or speaks, and how: the voice's type, range, technique and place in th
 | bass solo voice | 4 | `` | Suno 4 |  |
 | breathy female vocals | 4 | `` | Studio 4 |  |
 | chopped vocal glitches | 4 | `` | Suno 4 |  |
-| clear narration | 4 | `` | Suno 4 |  |
-| dry male vocals | 4 | `` | Studio 4 |  |
-| energetic male rapper | 4 | `` | Studio 4 |  |
-| energetic male vocals | 4 | `` | Studio 4 |  |
-| fast aggressive male rap | 4 | `` | Studio 4 |  |
-| female voices | 4 | `` | Suno 4 |  |
-| French Voice | 4 | `` | Suno 4 |  |
-| male rapper with ad-libs | 4 | `` | Studio 4 |  |
-| melancholic male rapper | 4 | `` | Studio 4 |  |
-| mellow male rapper | 4 | `` | Studio 4 |  |
 
 ## Mood
 
-MTG-Jamendo's mood tags and the moods the free style lines name, beside the emotion words. 289 distinct words; the 100 most met:
+MTG-Jamendo's mood tags and the moods the free style lines name, beside the emotion words. 309 distinct words; the 100 most met:
 
 | word | tracks | | from | met with |
 |---|---:|---|---|---|
-| energetic | 341 | `████████████` | MTG 318 · Suno 21 | electric guitar, drums, bass, harsh |
-| deep | 295 | `██████████▍` | MTG 189 · Suno 106 | percussion, keyboard, house, bass |
-| dream | 217 | `███████▋` | MTG 215 | piano, chill out, easy listening, C major |
-| meditative | 163 | `█████▊` | MTG 155 | new age, relaxing, low energy, solemn |
-| upbeat | 148 | `█████▎` | MTG 81 · Suno 65 | brass, bass, hip hop, drums |
-| dramatic | 116 | `████` | MTG 78 · Suno 29 · Album 7 | epic, orchestral, classical, soundtrack |
-| groovy | 108 | `███▊` | MTG 71 · Suno 33 | funk, 70s, playful, bright |
-| calm | 93 | `███▎` | MTG 81 · Suno 12 | easy listening, synthesizer, lounge, soft |
-| ambiental | 74 | `██▋` | MTG 74 | Experimental, Electronic, lounge, world |
-| catchy | 71 | `██▌` | Suno 69 | English, hopeful, bright, expressive |
-| funny | 69 | `██▍` | MTG 56 · Suno 13 | dance, percussion, keyboard, happy |
-| smooth | 47 | `█▋` | Suno 45 | warm, rap, saxophone, deep |
-| intimate | 43 | `█▌` | Suno 31 · Studio 12 | warm, upright bass, soul, contemplative |
-| soulful | 43 | `█▌` | Suno 39 · Studio 4 | soul, English, warm, bitter |
-| slow rubato | 42 | `█▌` | Album 42 | singing bowls, Phrygian Dominant, modal harmony, Harmonic Minor |
-| ethereal | 30 | `█` | Suno 21 · Album 5 · Studio 4 | slow, female vocal, anguished, raw |
-| jazzy | 29 | `█` | Suno 29 |  |
-| dreamy | 28 | `▉` | Suno 24 · Studio 4 |  |
-| hypnotic | 27 | `▉` | Suno 25 · Studio 2 |  |
-| intense | 20 | `▋` | Suno 14 · Studio 6 |  |
-| sexy | 20 | `▋` | MTG 13 · Suno 7 |  |
-| simple loop hypnotic repeating | 20 | `▋` | Suno 20 |  |
-| SP1200 gritty bit depth | 20 | `▋` | Suno 20 |  |
-| danceable | 17 | `▋` | Suno 9 · Studio 8 |  |
-| heartfelt | 17 | `▋` | Suno 15 · Studio 2 |  |
-| melancholy | 17 | `▋` | Suno 15 · Studio 2 |  |
-| anthemic | 16 | `▌` | Suno 8 · Studio 8 |  |
-| gritty | 16 | `▌` | Suno 16 |  |
-| moody | 16 | `▌` | Suno 12 · Studio 4 |  |
-| festive | 15 | `▌` | Studio 10 · Suno 5 |  |
-| haunting | 15 | `▌` | Suno 15 |  |
-| heavy | 15 | `▌` | Suno 6 · Studio 6 · MTG 3 |  |
-| deep sub-bass | 14 | `▌` | Suno 14 |  |
-| beautiful and broken | 12 | `▍` | Suno 12 |  |
-| passionate | 12 | `▍` | Album 6 · Suno 4 · Studio 2 |  |
-| cute | 11 | `▍` | Suno 11 |  |
-| eerie | 11 | `▍` | Suno 11 |  |
-| aggressive | 10 | `▍` | Suno 8 · Studio 2 |  |
-| beautiful | 10 | `▍` | Suno 10 |  |
-| bittersweet final-track energy | 10 | `▍` | Suno 10 |  |
-| dancefloor but emotionally heavy | 10 | `▍` | Suno 10 |  |
-| saudade | 10 | `▍` | Suno 8 · Studio 2 |  |
-| introspective | 9 | `▍` | Studio 6 · Suno 3 |  |
-| ritual and solemn | 9 | `▍` | Album 9 |  |
-| smoky | 9 | `▍` | Suno 9 |  |
-| angular melodic line | 8 | `▎` | Suno 8 |  |
-| cheerful | 8 | `▎` | Suno 8 |  |
-| dreamy floating atmosphere | 8 | `▎` | Suno 8 |  |
-| groove-first | 8 | `▎` | Suno 8 |  |
-| melancholic but sunny | 8 | `▎` | Suno 8 |  |
-| mysterious | 8 | `▎` | Suno 8 |  |
-| night-city imagery | 8 | `▎` | Suno 8 |  |
-| rain | 8 | `▎` | Suno 8 |  |
-| spooky | 8 | `▎` | Suno 8 |  |
-| with emotional tension | 8 | `▎` | Suno 8 |  |
-| Christmas music | 7 | `▎` | Suno 7 |  |
-| deep flow | 7 | `▎` | Suno 7 |  |
-| aggressive bassline | 6 | `▎` | Studio 6 |  |
-| catchy melodies | 6 | `▎` | Suno 6 |  |
-| christmas song | 6 | `▎` | Suno 6 |  |
-| dark and hypnotic | 6 | `▎` | Suno 6 |  |
-| deep warm swung four-on-floor | 6 | `▎` | Suno 6 |  |
-| heavy guitars | 6 | `▎` | Studio 6 |  |
-| Soulful gospel-house chords (minor7 | 6 | `▎` | Suno 6 |  |
-| catchy hooks | 5 | `▎` | Suno 3 · Studio 2 |  |
-| dark electro | 5 | `▎` | Suno 5 |  |
-| deep basses | 5 | `▎` | Studio 4 · Suno 1 |  |
-| peaceful | 5 | `▎` | Suno 3 · Studio 2 |  |
+| happy | 759 | `████████████` | MTG 420 · GTS 303 | no instruments, dry studio vocal, a cappella, female alto vocal |
+| sad | 608 | `█████████▋` | GTS 356 · MTG 148 · Suno 83 | no instruments, dry studio vocal, a cappella, female alto vocal |
+| emotional | 483 | `███████▋` | MTG 326 · Suno 112 · Studio 28 | drama, piano, low energy, acoustic guitar |
+| energetic | 341 | `█████▍` | MTG 318 · Suno 21 | electric guitar, drums, bass, harsh |
+| relaxing | 314 | `████▉` | MTG 309 | easy listening, low energy, classical, meditative |
+| deep | 295 | `████▋` | MTG 189 · Suno 106 | percussion, keyboard, house, bass |
+| inspiring | 245 | `███▉` | MTG 239 | classical, orchestral, motivational, epic |
+| dream | 217 | `███▌` | MTG 215 | piano, chill out, easy listening, C major |
+| epic | 207 | `███▎` | MTG 155 · Suno 38 | orchestral, soundtrack, classical, dramatic |
+| fun | 168 | `██▋` | MTG 146 · Suno 20 | happy, pop, alternative, children |
+| meditative | 163 | `██▋` | MTG 155 | new age, relaxing, low energy, solemn |
+| uplifting | 158 | `██▌` | MTG 88 · Suno 41 · FMA 29 | Electronic, synthesizer, rap, vocal |
+| upbeat | 148 | `██▍` | MTG 81 · Suno 65 | brass, bass, hip hop, drums |
+| dramatic | 116 | `█▊` | MTG 78 · Suno 29 · Album 7 | epic, orchestral, classical, soundtrack |
+| groovy | 108 | `█▋` | MTG 71 · Suno 33 | funk, 70s, playful, bright |
+| positive | 103 | `█▋` | MTG 99 | pop rock, happy, drums, electric guitar |
+| cool | 101 | `█▋` | MTG 82 · FMA 13 | lounge, chanson, relaxing, ambient |
+| calm | 93 | `█▌` | MTG 81 · Suno 12 | easy listening, synthesizer, lounge, soft |
+| mellow | 80 | `█▎` | MTG 55 · Suno 19 · FMA 4 | atmospheric, Lo-Fi, emotional, low energy |
+| ambiental | 74 | `█▎` | MTG 74 | Experimental, Electronic, lounge, world |
+| catchy | 71 | `█` | Suno 69 | English, hopeful, bright, expressive |
+| funny | 69 | `█` | MTG 56 · Suno 13 | dance, percussion, keyboard, happy |
+| raw | 63 | `▉` | Album 42 · Suno 14 · Studio 6 | slow rubato, singing bowls, Phrygian Dominant, modal harmony |
+| powerful | 47 | `▊` | MTG 23 · Suno 19 · FMA 4 | epic, dramatic, Chinese, emotional |
+| smooth | 47 | `▊` | Suno 45 | warm, rap, saxophone, deep |
+| intimate | 43 | `▋` | Suno 31 · Studio 12 | warm, upright bass, soul, contemplative |
+| soulful | 43 | `▋` | Suno 39 · Studio 4 | soul, English, warm, bitter |
+| slow rubato | 42 | `▋` | Album 42 | singing bowls, Phrygian Dominant, modal harmony, Harmonic Minor |
+| sophisticated | 38 | `▋` | Suno 25 · FMA 13 | saxophone, sad, 95 BPM, Wide |
+| nostalgic | 35 | `▌` | Suno 34 | Lo-Fi, warm, soft, bitter |
+| chill | 32 | `▌` | Suno 24 · FMA 6 · Studio 2 | English, Lo-Fi, romantic, sensual |
+| ethereal | 30 | `▌` | Suno 21 · Album 5 · Studio 4 | slow, female vocal, anguished, raw |
+| jazzy | 29 | `▌` | Suno 29 |  |
+| dreamy | 28 | `▌` | Suno 24 · Studio 4 |  |
+| hypnotic | 27 | `▍` | Suno 25 · Studio 2 |  |
+| funky | 23 | `▍` | Suno 13 · FMA 10 |  |
+| intense | 20 | `▍` | Suno 14 · Studio 6 |  |
+| sexy | 20 | `▍` | MTG 13 · Suno 7 |  |
+| simple loop hypnotic repeating | 20 | `▍` | Suno 20 |  |
+| SP1200 gritty bit depth | 20 | `▍` | Suno 20 |  |
+| danceable | 17 | `▎` | Suno 9 · Studio 8 |  |
+| heartfelt | 17 | `▎` | Suno 15 · Studio 2 |  |
+| melancholy | 17 | `▎` | Suno 15 · Studio 2 |  |
+| anthemic | 16 | `▎` | Suno 8 · Studio 8 |  |
+| gritty | 16 | `▎` | Suno 16 |  |
+| moody | 16 | `▎` | Suno 12 · Studio 4 |  |
+| festive | 15 | `▎` | Studio 10 · Suno 5 |  |
+| haunting | 15 | `▎` | Suno 15 |  |
+| heavy | 15 | `▎` | Suno 6 · Studio 6 · MTG 3 |  |
+| deep sub-bass | 14 | `▎` | Suno 14 |  |
+| beautiful and broken | 12 | `▎` | Suno 12 |  |
+| passionate | 12 | `▎` | Album 6 · Suno 4 · Studio 2 |  |
+| cute | 11 | `▎` | Suno 11 |  |
+| eerie | 11 | `▎` | Suno 11 |  |
+| aggressive | 10 | `▎` | Suno 8 · Studio 2 |  |
+| beautiful | 10 | `▎` | Suno 10 |  |
+| bittersweet final-track energy | 10 | `▎` | Suno 10 |  |
+| dancefloor but emotionally heavy | 10 | `▎` | Suno 10 |  |
+| inspirational | 10 | `▎` | FMA 8 · Suno 2 |  |
+| saudade | 10 | `▎` | Suno 8 · Studio 2 |  |
+| gentle | 9 | `` | FMA 7 · Suno 2 |  |
+| introspective | 9 | `` | Studio 6 · Suno 3 |  |
+| ritual and solemn | 9 | `` | Album 9 |  |
+| smoky | 9 | `` | Suno 9 |  |
+| angular melodic line | 8 | `` | Suno 8 |  |
+| cheerful | 8 | `` | Suno 8 |  |
+| dreamy floating atmosphere | 8 | `` | Suno 8 |  |
+| groove-first | 8 | `` | Suno 8 |  |
+| melancholic but sunny | 8 | `` | Suno 8 |  |
+| mysterious | 8 | `` | Suno 8 |  |
+| night-city imagery | 8 | `` | Suno 8 |  |
+| rain | 8 | `` | Suno 8 |  |
+| spooky | 8 | `` | Suno 8 |  |
+| with emotional tension | 8 | `` | Suno 8 |  |
+| Christmas music | 7 | `` | Suno 7 |  |
+| deep flow | 7 | `` | Suno 7 |  |
+| love song | 7 | `` | Suno 6 · FMA 1 |  |
+| aggressive bassline | 6 | `` | Studio 6 |  |
+| background music | 6 | `` | FMA 4 · Suno 2 |  |
+| catchy melodies | 6 | `` | Suno 6 |  |
+| christmas song | 6 | `` | Suno 6 |  |
+| dark and hypnotic | 6 | `` | Suno 6 |  |
+| deep warm swung four-on-floor | 6 | `` | Suno 6 |  |
+| heavy guitars | 6 | `` | Studio 6 |  |
+| Soulful gospel-house chords (minor7 | 6 | `` | Suno 6 |  |
+| catchy hooks | 5 | `` | Suno 3 · Studio 2 |  |
+| dark electro | 5 | `` | Suno 5 |  |
+| deep basses | 5 | `` | Studio 4 · Suno 1 |  |
+| peaceful | 5 | `` | Suno 3 · Studio 2 |  |
 | a gentle three-four sway | 4 | `` | Studio 4 |  |
 | a nostalgic melody | 4 | `` | Studio 4 |  |
 | a slow ecstatic build | 4 | `` | Studio 4 |  |
@@ -643,49 +666,33 @@ MTG-Jamendo's mood tags and the moods the free style lines name, beside the emot
 | dark melodic riffs | 4 | `` | Studio 4 |  |
 | dark sweaty dancefloor | 4 | `` | Suno 4 |  |
 | Fast past | 4 | `` | Suno 4 |  |
-| G major nostalgic futuristic | 4 | `` | Suno 4 |  |
-| grand and dramatic | 4 | `` | Studio 4 |  |
-| groove-first arrangement | 4 | `` | Suno 4 |  |
-| heavy riffs | 4 | `` | Studio 4 |  |
-| intimate and vulnerable | 4 | `` | Suno 4 |  |
-| Lush | 4 | `` | Suno 2 · Studio 2 |  |
-| mathematics made emotional | 4 | `` | Suno 4 |  |
-| raw powerful energy | 4 | `` | Studio 4 |  |
-| raw resonant 303 bassline | 4 | `` | Suno 4 |  |
-| rebellious energy | 4 | `` | Studio 4 |  |
-| Scythian earthly epic | 4 | `` | Studio 4 |  |
-| slow chordal homophony | 4 | `` | Suno 4 |  |
-| smooth and melancholic | 4 | `` | Suno 4 |  |
-| smooth and sensual | 4 | `` | Suno 4 |  |
-| sophisticated extended chords | 4 | `` | Suno 4 |  |
-| bittersweet | 3 | `` | Suno 3 |  |
-| Catchy instrumental intro | 3 | `` | Suno 3 |  |
-| dark clubbing | 3 | `` | Suno 3 |  |
-| deep reverberation | 3 | `` | Suno 3 |  |
-| epic trailer music | 3 | `` | Studio 2 · Suno 1 |  |
-| funky basslines | 3 | `` | Studio 2 · Suno 1 |  |
 
 ## Use and theme
 
-What the music is for: MTG-Jamendo's themes (film, corporate, advertising…). 15 distinct words; the 15 most met:
+What the music is for: MTG-Jamendo's themes (film, corporate, advertising…). 27 distinct words; the 20 most met:
 
 | word | tracks | | from | met with |
 |---|---:|---|---|---|
-| corporate | 165 | `████████████` | MTG 165 | soundtrack, adventure, documentary, commercial |
-| drama | 150 | `██████████▉` | MTG 146 | emotional, soundtrack, documentary, adventure |
-| documentary | 148 | `██████████▊` | MTG 148 | soundtrack, corporate, drama, orchestral |
-| motivational | 126 | `█████████▎` | MTG 126 | advertising, inspiring, electric piano, ambient |
-| action | 98 | `███████` | MTG 97 | epic, orchestral, soundtrack, energetic |
-| commercial | 94 | `██████▊` | MTG 94 | corporate, documentary, advertising, soundtrack |
-| movie | 75 | `█████▌` | MTG 75 | soundtrack, cinematic, classical, orchestra |
-| soundscape | 74 | `█████▍` | MTG 74 | ambient, new age, atmospheric, soundtrack |
-| sport | 58 | `████▎` | MTG 58 | dance, energetic, action, party |
-| game | 49 | `███▌` | MTG 49 | cello, symphonic, double bass, cinematic |
-| travel | 26 | `█▉` | MTG 26 |  |
-| fantasy | 9 | `▋` | Suno 9 |  |
-| Romance | 4 | `▍` | Suno 4 |  |
-| Western | 4 | `▍` | Suno 4 |  |
-| sci-fi | 3 | `▎` | Suno 3 |  |
+| love | 349 | `████████████` | MTG 330 | pop, C major, new age, low energy |
+| advertising | 181 | `██████▎` | MTG 148 · FMA 33 | motivational, soundtrack, electric piano, ambient |
+| corporate | 165 | `█████▋` | MTG 165 | soundtrack, adventure, documentary, commercial |
+| summer | 155 | `█████▍` | MTG 147 · FMA 8 | percussion, keyboard, deep, dance |
+| adventure | 153 | `█████▎` | MTG 150 | soundtrack, corporate, classical, orchestral |
+| background | 152 | `█████▎` | MTG 148 | piano, classical, easy listening, inspiring |
+| drama | 150 | `█████▎` | MTG 146 | emotional, soundtrack, documentary, adventure |
+| documentary | 148 | `█████` | MTG 148 | soundtrack, corporate, drama, orchestral |
+| children | 135 | `████▋` | MTG 109 · FMA 24 | Kid-Friendly, documentary, soundtrack, orchestral |
+| motivational | 126 | `████▍` | MTG 126 | advertising, inspiring, electric piano, ambient |
+| action | 98 | `███▍` | MTG 97 | epic, orchestral, soundtrack, energetic |
+| commercial | 94 | `███▎` | MTG 94 | corporate, documentary, advertising, soundtrack |
+| nature | 77 | `██▋` | MTG 71 · FMA 4 | new age, easy listening, documentary, low energy |
+| movie | 75 | `██▋` | MTG 75 | soundtrack, cinematic, classical, orchestra |
+| soundscape | 74 | `██▌` | MTG 74 | ambient, new age, atmospheric, soundtrack |
+| sport | 58 | `█▉` | MTG 58 | dance, energetic, action, party |
+| trailer | 57 | `█▉` | MTG 55 | classical, symphonic, cinematic, epic |
+| party | 54 | `█▊` | MTG 42 · FMA 5 · Suno 5 | dance, sport, menacing, ecstatic |
+| game | 49 | `█▋` | MTG 49 | cello, symphonic, double bass, cinematic |
+| space | 45 | `█▌` | MTG 39 · Suno 4 | synthesizer, trance, Techno, ecstatic |
 
 ## Sound and space
 
@@ -722,14 +729,15 @@ The recording's space, its texture and its production. 306 distinct words; the 7
 | punchy | 16 | `▍` | Suno 16 |  |
 | crisp hats | 14 | `▎` | Suno 14 |  |
 | spacious | 14 | `▎` | Suno 14 |  |
+| live | 12 | `▎` | FMA 9 · Suno 3 |  |
 | vinyl crackle | 12 | `▎` | Suno 8 · Studio 4 |  |
 | king of glue disc | 11 | `▎` | Suno 11 |  |
-| sound effects | 11 | `▎` | Suno 11 |  |
 | high quality | 10 | `▎` | Suno 10 |  |
 | scratch | 10 | `▎` | Suno 10 |  |
 | side-chain breathing softly | 10 | `▎` | Suno 10 |  |
 | sidechain pump | 10 | `▎` | Suno 10 |  |
 | warm sub-bass | 10 | `▎` | Suno 10 |  |
+| analog | 9 | `▎` | Suno 6 · FMA 3 |  |
 | echo | 9 | `▎` | Suno 9 |  |
 | huge reverberant space | 9 | `▎` | Album 9 |  |
 | Crisp | 8 | `▎` | Suno 8 |  |
@@ -762,30 +770,35 @@ The recording's space, its texture and its production. 306 distinct words; the 7
 | heavy sidechain compression pumping | 4 | `` | Suno 4 |  |
 | Hi Records production warmth | 4 | `` | Suno 4 |  |
 | HI-FI | 4 | `` | Suno 4 |  |
-| intimate analog recording | 4 | `` | Suno 4 |  |
 
 ## Form and pace
 
-Tempo words, pace and form. 28 distinct words; the 28 most met:
+Tempo words, pace and form. 34 distinct words; the 30 most met:
 
 | word | tracks | | from | met with |
 |---|---:|---|---|---|
-| fast pace | 282 | `████████████` | GTS 281 | no instruments, dry studio vocal, a cappella, female alto vocal |
-| slow pace | 240 | `██████████▎` | GTS 240 | no instruments, dry studio vocal, a cappella, serene |
-| slow | 182 | `███████▊` | Suno 91 · MTG 65 · Album 24 | deep reverb, slow rubato, singing bowls, Phrygian Dominant |
-| moderate pace | 141 | `██████` | GTS 141 | no instruments, dry studio vocal, a cappella, female alto vocal |
-| fast | 35 | `█▌` | MTG 20 · Suno 15 | hopeful, funk, guitar, acoustic guitar |
-| slow tempo | 23 | `▉` | Suno 23 |  |
-| 4/4 | 20 | `▊` | Suno 20 |  |
+| melodic | 415 | `████████████` | MTG 332 · Suno 74 | indie, electric guitar, pop, electric piano |
+| fast pace | 282 | `████████▎` | GTS 281 | no instruments, dry studio vocal, a cappella, female alto vocal |
+| slow pace | 240 | `██████▉` | GTS 240 | no instruments, dry studio vocal, a cappella, serene |
+| slow | 182 | `█████▎` | Suno 91 · MTG 65 · Album 24 | deep reverb, slow rubato, singing bowls, Phrygian Dominant |
+| moderate pace | 141 | `████` | GTS 141 | no instruments, dry studio vocal, a cappella, female alto vocal |
+| fast | 35 | `█` | MTG 20 · Suno 15 | hopeful, funk, guitar, acoustic guitar |
+| syncopation | 34 | `▉` | FMA 33 | beats, Chiptune, Breakbeat, drums |
+| slow tempo | 23 | `▋` | Suno 23 |  |
+| 4/4 | 20 | `▋` | Suno 20 |  |
+| solo | 18 | `▌` | FMA 7 · Album 4 · Studio 4 · Suno 3 |  |
 | chorus | 10 | `▍` | Suno 10 |  |
+| down tempo | 9 | `▎` | FMA 7 · Suno 2 |  |
+| uptempo | 8 | `▎` | Suno 7 · FMA 1 |  |
+| harmony | 7 | `▎` | Suno 6 · FMA 1 |  |
 | fast tempo | 6 | `▎` | Suno 4 · Album 2 |  |
 | intro | 6 | `▎` | Suno 6 |  |
 | melody | 6 | `▎` | Suno 6 |  |
 | crescendo | 5 | `▎` | Suno 3 · Studio 2 |  |
 | medium tempo | 5 | `▎` | Suno 5 |  |
-| a variable heartbeat tempo | 4 | `▎` | Studio 4 |  |
-| outro | 4 | `▎` | Suno 4 |  |
-| polyphony | 4 | `▎` | Suno 4 |  |
+| a variable heartbeat tempo | 4 | `` | Studio 4 |  |
+| outro | 4 | `` | Suno 4 |  |
+| polyphony | 4 | `` | Suno 4 |  |
 | moderate | 3 | `` | Album 2 · Suno 1 |  |
 | up-tempo | 3 | `` | Suno 3 |  |
 | 3/4 | 2 | `` | Suno 2 |  |
@@ -794,24 +807,22 @@ Tempo words, pace and form. 28 distinct words; the 28 most met:
 | rubato | 2 | `` | Studio 2 |  |
 | Staccato | 2 | `` | Suno 2 |  |
 | syncopated | 2 | `` | Suno 2 |  |
-| tempo lento | 2 | `` | Suno 2 |  |
-| tempo NONE freeform | 2 | `` | Suno 2 |  |
-| tempo NONE freeform floating | 2 | `` | Suno 2 |  |
-| upbeat tempo | 2 | `` | Suno 2 |  |
 
 ## Key and harmony
 
-The key as MTG-Jamendo measured it, and the modes and harmony the free style lines name. 59 distinct words; the 59 most met:
+The key as MTG-Jamendo measured it, and the modes and harmony the free style lines name. 60 distinct words; the 60 most met:
 
 | word | tracks | | from | met with |
 |---|---:|---|---|---|
 | C major | 2,080 | `████████████` | MTG 2080 | piano, low energy, classical, easy listening |
+| A minor | 1,338 | `███████▊` | MTG 1336 | 120 BPM, playful, bass, classical |
 | G major | 1,168 | `██████▊` | MTG 1167 | pop, low energy, restrained, pop folk |
 | C minor | 966 | `█████▋` | MTG 957 | chill out, percussion, keyboard, bass |
 | D major | 915 | `█████▎` | MTG 913 | low energy, bass, electric guitar, pop folk |
 | E minor | 864 | `████▉` | MTG 860 | bass, harsh, guitar, drums |
 | D minor | 840 | `████▊` | MTG 838 | bass, drums, 90 BPM, harsh |
 | F major | 612 | `███▌` | MTG 610 | piano, low energy, solemn, classical |
+| A major | 543 | `███` | MTG 543 | low energy, pop, guitar, acoustic guitar |
 | G minor | 513 | `██▉` | MTG 511 | bass, piano, hip hop, classical |
 | E major | 503 | `██▉` | MTG 502 | drums, guitar, low energy, electric guitar |
 | B minor | 374 | `██▎` | MTG 373 | bass, drums, harsh, electric guitar |
@@ -848,7 +859,6 @@ The key as MTG-Jamendo measured it, and the modes and harmony the free style lin
 | chromatic saturation | 4 | `` | Suno 4 |  |
 | E-flat major | 4 | `` | Suno 4 |  |
 | major third substitutions | 4 | `` | Suno 4 |  |
-| minor musics finland | 3 | `` | FMA 3 |  |
 | Arabic maqam music | 2 | `` | Studio 2 |  |
 | arpeggiated minor bassline | 2 | `` | Suno 2 |  |
 | atonal harmonic clusters | 2 | `` | Suno 2 |  |
@@ -939,130 +949,130 @@ The duduk and shofar loops of the guard open their lines with the instrument's n
 
 ## Free descriptions
 
-Words from the free style lines that fit no list above. 1,114 distinct words; the 120 most met:
+Words from the free style lines that fit no list above. 1,161 distinct words; the 120 most met:
 
 | word | tracks | | from | met with |
 |---|---:|---|---|---|
-| glissando | 46 | `████████████` | GTS 46 | no instruments, dry studio vocal, a cappella, female alto vocal |
-| Close | 16 | `████▎` | Suno 16 |  |
-| short 2 minute piece | 16 | `████▎` | Suno 16 |  |
-| syncopated claps | 14 | `███▋` | Suno 14 |  |
-| neo-soul | 12 | `███` | Suno 6 · Studio 6 |  |
-| solo and in front | 12 | `███` | Studio 12 |  |
-| kpop | 11 | `██▉` | Suno 11 |  |
-| shevarim | 11 | `██▉` | Album 9 · Studio 2 |  |
-| teruah | 11 | `██▉` | Album 9 · Studio 2 |  |
-| chillstep | 10 | `██▋` | Suno 10 |  |
-| Out | 10 | `██▋` | FMA 10 |  |
-| sertanejo | 10 | `██▋` | Suno 10 |  |
-| Mozart | 9 | `██▍` | Suno 9 |  |
-| tekiah | 9 | `██▍` | Album 9 |  |
-| 140 BPM half-time feel | 8 | `██` | Studio 8 |  |
-| and human | 8 | `██` | Suno 8 |  |
-| but add shuffling hats | 8 | `██` | Suno 8 |  |
-| contrast | 8 | `██` | Suno 8 |  |
-| cycle of fourths harmony | 8 | `██` | Suno 8 |  |
-| dance-pop | 8 | `██` | Suno 6 · Studio 2 |  |
-| folktronica | 8 | `██` | Suno 6 · Studio 2 |  |
-| guitar-driven | 8 | `██` | Studio 6 · Suno 2 |  |
-| shakers | 8 | `██` | Suno 8 |  |
-| short stabs | 8 | `██` | Suno 8 |  |
-| sideways | 8 | `██` | Suno 8 |  |
-| sound | 8 | `██` | Suno 8 |  |
-| storytelling | 8 | `██` | Suno 6 · Studio 2 |  |
-| warm sunset vibes | 8 | `██` | Suno 8 |  |
-| boom bap | 7 | `█▊` | Suno 5 · Studio 2 |  |
-| cartoon | 7 | `█▊` | Suno 7 |  |
-| complex | 7 | `█▊` | Suno 5 · Studio 2 |  |
-| cyberpunk | 7 | `█▊` | Suno 7 |  |
-| dangdut | 7 | `█▊` | Suno 7 |  |
-| fast-paced | 7 | `█▊` | Suno 5 · Studio 2 |  |
-| high-energy | 7 | `█▊` | Suno 7 |  |
-| Hungarian text | 7 | `█▊` | Suno 7 |  |
-| motown | 7 | `█▊` | Suno 7 |  |
-| neurofunk | 7 | `█▊` | Suno 7 |  |
-| Percussive | 7 | `█▊` | Suno 7 |  |
-| rave | 7 | `█▊` | Suno 7 |  |
-| repetitive | 7 | `█▊` | Suno 7 |  |
-| simple | 7 | `█▊` | Suno 7 |  |
-| theatrical | 7 | `█▊` | Studio 6 · Suno 1 |  |
-| two chords | 7 | `█▊` | Suno 7 |  |
-| 80's | 6 | `█▌` | Suno 6 |  |
-| Add shuffled hats | 6 | `█▌` | Suno 6 |  |
-| airy | 6 | `█▌` | Suno 6 |  |
-| and detailed mixing | 6 | `█▌` | Suno 6 |  |
-| base | 6 | `█▌` | Suno 6 |  |
-| bridge) | 6 | `█▌` | Suno 6 |  |
-| built around a bouncy | 6 | `█▌` | Suno 6 |  |
-| creepy | 6 | `█▌` | Suno 6 |  |
-| dembow | 6 | `█▌` | Suno 6 |  |
-| desert | 6 | `█▌` | Studio 4 · Suno 2 |  |
-| Elenco Records aesthetic | 6 | `█▌` | Suno 6 |  |
-| folk-pop | 6 | `█▌` | Suno 6 |  |
-| functional warehouse energy | 6 | `█▌` | Suno 6 |  |
-| ghost claps | 6 | `█▌` | Suno 6 |  |
-| ghost hits | 6 | `█▌` | Suno 6 |  |
-| handclap accent | 6 | `█▌` | Suno 6 |  |
-| hipnotics bassline | 6 | `█▌` | Suno 6 |  |
-| Honky Tonk | 6 | `█▌` | Suno 6 |  |
-| immersive | 6 | `█▌` | Suno 6 |  |
-| instruments trading solos | 6 | `█▌` | Suno 6 |  |
-| invertible counterpoint | 6 | `█▌` | Suno 6 |  |
-| kawaii | 6 | `█▌` | Suno 6 |  |
-| key of Bb minor | 6 | `█▌` | Suno 6 |  |
-| late night headphone music | 6 | `█▌` | Suno 6 |  |
-| longing | 6 | `█▌` | Suno 4 · Studio 2 |  |
-| meditation | 6 | `█▌` | Suno 6 |  |
-| merengue | 6 | `█▌` | Suno 6 |  |
-| moog | 6 | `█▌` | Suno 6 |  |
-| neon afterhours atmosphere | 6 | `█▌` | Suno 6 |  |
-| no dominant melody | 6 | `█▌` | Suno 6 |  |
-| no other instruments | 6 | `█▌` | Studio 6 |  |
-| organic sounds | 6 | `█▌` | Suno 6 |  |
-| psybass | 6 | `█▌` | Suno 6 |  |
-| sarangi | 6 | `█▌` | Suno 6 |  |
-| stretto entries | 6 | `█▌` | Suno 6 |  |
-| Stripped down | 6 | `█▌` | Suno 6 |  |
-| wave | 6 | `█▌` | Suno 6 |  |
-| [Style | 5 | `█▍` | Suno 5 |  |
-| Angola | 5 | `█▍` | Suno 5 |  |
-| asmr | 5 | `█▍` | Suno 5 |  |
-| chillsynth | 5 | `█▍` | Suno 5 |  |
-| clapping | 5 | `█▍` | Suno 3 · Studio 2 |  |
-| claps | 5 | `█▍` | Suno 5 |  |
-| Eurobeat | 5 | `█▍` | Suno 5 |  |
-| footwork | 5 | `█▍` | Suno 5 |  |
-| guitars | 5 | `█▍` | Suno 3 · Studio 2 |  |
-| healing | 5 | `█▍` | Suno 5 |  |
-| mantra | 5 | `█▍` | Suno 5 |  |
-| p-funk | 5 | `█▍` | Suno 5 |  |
-| piano-driven | 5 | `█▍` | Studio 4 · Suno 1 |  |
-| Ragtime | 5 | `█▍` | Suno 5 |  |
-| ranchera | 5 | `█▍` | Suno 5 |  |
-| 140 BPM half-time | 4 | `█` | Studio 4 |  |
-| 1960 Atlantic Records sound | 4 | `█` | Suno 4 |  |
-| 432hz | 4 | `█` | Suno 4 |  |
-| 528hz | 4 | `█` | Suno 4 |  |
-| 9ths 13ths altered dominants | 4 | `█` | Suno 4 |  |
-| [Intro] | 4 | `█` | Suno 4 |  |
-| a grand and mournful atmosphere | 4 | `█` | Studio 4 |  |
-| a long fading resonance | 4 | `█` | Studio 4 |  |
-| a variable shamanic heartbeat | 4 | `█` | Studio 4 |  |
-| a village evening | 4 | `█` | Studio 4 |  |
-| an ancestral weight | 4 | `█` | Studio 4 |  |
-| an old song | 4 | `█` | Studio 4 |  |
-| ancient crystalline stillness | 4 | `█` | Studio 4 |  |
-| anti-folk | 4 | `█` | Suno 4 |  |
-| arabesque | 4 | `█` | Suno 4 |  |
-| augmented scale symmetry | 4 | `█` | Suno 4 |  |
-| Bach cantata style | 4 | `█` | Suno 4 |  |
-| baroque-pop | 4 | `█` | Studio 4 |  |
-| Bolero | 4 | `█` | Suno 4 |  |
-| bounce | 4 | `█` | Suno 4 |  |
-| bounce drop | 4 | `█` | Suno 4 |  |
-| bubblegum | 4 | `█` | Suno 4 |  |
-| chillhop | 4 | `█` | Suno 4 |  |
-| chromatic third root movement | 4 | `█` | Suno 4 |  |
+| electro | 189 | `████████████` | Suno 161 · FMA 28 | hopeful, house, bright, electro swing |
+| glissando | 46 | `██▉` | GTS 46 | no instruments, dry studio vocal, a cappella, female alto vocal |
+| rhythmic | 40 | `██▌` | FMA 25 · Suno 15 | soundtrack, Electronic, melodic, ecstatic |
+| abstract | 30 | `█▉` | FMA 23 · Suno 5 · Studio 2 | Experimental, Avant-Garde, Improv, IDM |
+| bassline | 29 | `█▊` | Suno 27 · FMA 2 |  |
+| modern | 28 | `█▊` | Suno 13 · FMA 13 · Studio 2 |  |
+| classic | 24 | `█▌` | Suno 19 · FMA 3 · Studio 2 |  |
+| bedroom | 22 | `█▍` | FMA 20 · Suno 2 |  |
+| rnb | 22 | `█▍` | Suno 12 · FMA 10 |  |
+| exotica | 20 | `█▎` | Suno 10 · FMA 10 |  |
+| remix | 19 | `█▎` | Suno 18 · FMA 1 |  |
+| dynamic | 17 | `█` | Suno 13 · FMA 4 |  |
+| eclectic | 17 | `█` | FMA 10 · Studio 6 · Suno 1 |  |
+| rumba | 17 | `█` | Suno 11 · FMA 6 |  |
+| acid | 16 | `█` | FMA 15 · Suno 1 |  |
+| Close | 16 | `█` | Suno 16 |  |
+| indietronica | 16 | `█` | FMA 11 · Suno 5 |  |
+| short 2 minute piece | 16 | `█` | Suno 16 |  |
+| halloween | 15 | `▉` | Suno 12 · FMA 3 |  |
+| breaks | 14 | `▉` | FMA 12 · Suno 2 |  |
+| ebm | 14 | `▉` | FMA 9 · Suno 5 |  |
+| syncopated claps | 14 | `▉` | Suno 14 |  |
+| avant garde | 13 | `▊` | FMA 12 · Suno 1 |  |
+| futuristic | 13 | `▊` | Suno 12 · FMA 1 |  |
+| neo-soul | 12 | `▊` | Suno 6 · Studio 6 |  |
+| rowdy | 12 | `▊` | FMA 10 · Studio 2 |  |
+| solo and in front | 12 | `▊` | Studio 12 |  |
+| kpop | 11 | `▋` | Suno 11 |  |
+| shevarim | 11 | `▋` | Album 9 · Studio 2 |  |
+| teruah | 11 | `▋` | Album 9 · Studio 2 |  |
+| chillstep | 10 | `▋` | Suno 10 |  |
+| fingerstyle | 10 | `▋` | FMA 8 · Suno 2 |  |
+| mariachi | 10 | `▋` | Suno 8 · FMA 2 |  |
+| Out | 10 | `▋` | FMA 10 |  |
+| sertanejo | 10 | `▋` | Suno 10 |  |
+| vocoder | 10 | `▋` | Suno 6 · FMA 4 |  |
+| bouncy | 9 | `▋` | FMA 6 · Suno 3 |  |
+| glitchhop | 9 | `▋` | FMA 8 · Suno 1 |  |
+| retrowave | 9 | `▋` | FMA 5 · Suno 4 |  |
+| tekiah | 9 | `▋` | Album 9 |  |
+| tekkno | 9 | `▋` | FMA 8 · Suno 1 |  |
+| turntablism | 9 | `▋` | Suno 7 · FMA 2 |  |
+| 140 BPM half-time feel | 8 | `▌` | Studio 8 |  |
+| and human | 8 | `▌` | Suno 8 |  |
+| but add shuffling hats | 8 | `▌` | Suno 8 |  |
+| contrast | 8 | `▌` | Suno 8 |  |
+| cycle of fourths harmony | 8 | `▌` | Suno 8 |  |
+| dance-pop | 8 | `▌` | Suno 6 · Studio 2 |  |
+| folktronica | 8 | `▌` | Suno 6 · Studio 2 |  |
+| guitar-driven | 8 | `▌` | Studio 6 · Suno 2 |  |
+| joy | 8 | `▌` | FMA 4 · Suno 4 |  |
+| manic | 8 | `▌` | FMA 7 · Suno 1 |  |
+| ocean | 8 | `▌` | Suno 7 · FMA 1 |  |
+| shakers | 8 | `▌` | Suno 8 |  |
+| short stabs | 8 | `▌` | Suno 8 |  |
+| sideways | 8 | `▌` | Suno 8 |  |
+| sound | 8 | `▌` | Suno 8 |  |
+| storytelling | 8 | `▌` | Suno 6 · Studio 2 |  |
+| warm sunset vibes | 8 | `▌` | Suno 8 |  |
+| bgm | 7 | `▌` | FMA 4 · Suno 3 |  |
+| boom bap | 7 | `▌` | Suno 5 · Studio 2 |  |
+| cartoon | 7 | `▌` | Suno 7 |  |
+| complex | 7 | `▌` | Suno 5 · Studio 2 |  |
+| cyberpunk | 7 | `▌` | Suno 7 |  |
+| dangdut | 7 | `▌` | Suno 7 |  |
+| eletronic | 7 | `▌` | FMA 4 · Suno 3 |  |
+| fast-paced | 7 | `▌` | Suno 5 · Studio 2 |  |
+| france | 7 | `▌` | FMA 6 · Suno 1 |  |
+| high-energy | 7 | `▌` | Suno 7 |  |
+| Hungarian text | 7 | `▌` | Suno 7 |  |
+| motown | 7 | `▌` | Suno 7 |  |
+| neurofunk | 7 | `▌` | Suno 7 |  |
+| Percussive | 7 | `▌` | Suno 7 |  |
+| raga | 7 | `▌` | FMA 4 · Suno 3 |  |
+| rave | 7 | `▌` | Suno 7 |  |
+| repetitive | 7 | `▌` | Suno 7 |  |
+| simple | 7 | `▌` | Suno 7 |  |
+| theatrical | 7 | `▌` | Studio 6 · Suno 1 |  |
+| two chords | 7 | `▌` | Suno 7 |  |
+| 1980s | 6 | `▍` | FMA 4 · Suno 2 |  |
+| 80's | 6 | `▍` | Suno 6 |  |
+| accordeon | 6 | `▍` | FMA 4 · Suno 2 |  |
+| Add shuffled hats | 6 | `▍` | Suno 6 |  |
+| airy | 6 | `▍` | Suno 6 |  |
+| and detailed mixing | 6 | `▍` | Suno 6 |  |
+| base | 6 | `▍` | Suno 6 |  |
+| bridge) | 6 | `▍` | Suno 6 |  |
+| built around a bouncy | 6 | `▍` | Suno 6 |  |
+| creepy | 6 | `▍` | Suno 6 |  |
+| dembow | 6 | `▍` | Suno 6 |  |
+| desert | 6 | `▍` | Studio 4 · Suno 2 |  |
+| folk-pop | 6 | `▍` | Suno 6 |  |
+| functional warehouse energy | 6 | `▍` | Suno 6 |  |
+| ghost claps | 6 | `▍` | Suno 6 |  |
+| ghost hits | 6 | `▍` | Suno 6 |  |
+| gypsy | 6 | `▍` | Suno 5 · FMA 1 |  |
+| handclap accent | 6 | `▍` | Suno 6 |  |
+| hipnotics bassline | 6 | `▍` | Suno 6 |  |
+| Honky Tonk | 6 | `▍` | Suno 6 |  |
+| immersive | 6 | `▍` | Suno 6 |  |
+| instruments trading solos | 6 | `▍` | Suno 6 |  |
+| invertible counterpoint | 6 | `▍` | Suno 6 |  |
+| kawaii | 6 | `▍` | Suno 6 |  |
+| key of Bb minor | 6 | `▍` | Suno 6 |  |
+| late night headphone music | 6 | `▍` | Suno 6 |  |
+| longing | 6 | `▍` | Suno 4 · Studio 2 |  |
+| meditation | 6 | `▍` | Suno 6 |  |
+| merengue | 6 | `▍` | Suno 6 |  |
+| moog | 6 | `▍` | Suno 6 |  |
+| neon afterhours atmosphere | 6 | `▍` | Suno 6 |  |
+| new york | 6 | `▍` | FMA 5 · Suno 1 |  |
+| no dominant melody | 6 | `▍` | Suno 6 |  |
+| no other instruments | 6 | `▍` | Studio 6 |  |
+| organic sounds | 6 | `▍` | Suno 6 |  |
+| psybass | 6 | `▍` | Suno 6 |  |
+| sarangi | 6 | `▍` | Suno 6 |  |
+| sleep | 6 | `▍` | Suno 4 · FMA 2 |  |
+| stretto entries | 6 | `▍` | Suno 6 |  |
+| Stripped down | 6 | `▍` | Suno 6 |  |
+| wave | 6 | `▍` | Suno 6 |  |
 
 ## The scores
 

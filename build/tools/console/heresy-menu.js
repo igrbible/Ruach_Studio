@@ -46,7 +46,7 @@
       if (it.sep) return '<div class="hm-sep" role="separator"></div>';
       if (it.head) return '<div class="hm-head">' + esc(it.head) + "</div>";
       return '<button type="button" class="hm-item' + (it.danger ? " is-danger" : "") + (it.muted ? " is-muted" : "") + '" role="menuitem" data-i="' + i + '"' +
-        (it.disabled ? " disabled" : "") + (it.muted ? ' aria-disabled="true"' : "") +   /* HERESY 1734: muted, greyed and saying why (a disabled one cannot) */ (it.checked !== undefined ? ' aria-checked="' + !!it.checked + '"' : "") + ">" +
+        (it.disabled ? " disabled" : "") + (it.muted ? ' aria-disabled="true"' : "") +   /* HERESY 1734: muted, greyed and saying why (a disabled one cannot) */ (it.checked !== undefined ? ' aria-checked="' + !!it.checked + '"' : "") + (it.depth ? ' style="--hm-depth:' + (+it.depth) + '"' : "") + ">" +   // HERESY 2040: a tree's level
         // HERESY 1474: in the page's language before it is measured (a menu laid out in English grew past the window in Russian)
         '<span class="hm-icon">' + (it.checked ? "✓" : esc(it.icon || "")) + '</span><span class="hm-label" translate="no">' + esc(it.raw || !window.RuachI18n ? it.label : window.RuachI18n.t(it.label)) + "</span>" +
         (it.items ? '<span class="hm-more">›</span>' : "") + "</button>";   // HERESY 1169 · 1248: the hint beside the menu (hintShow), not in the row

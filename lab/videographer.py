@@ -206,7 +206,10 @@ def _write(kit, name, plan):
     f = _file(kit, name)
     tmp = f.with_suffix(".json.part")
     plan = dict(plan, shots=[{k: v for k, v in s.items() if k != "auto"} for s in plan.get("shots", [])])   # HERESY 1844: «auto» is worked out, not kept
-    json.dump(plan, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    with open(tmp, "w", encoding="utf-8") as fh:   # HERESY 2083: written whole and on the disk before it takes the file's place
+        json.dump(plan, fh, ensure_ascii=False, indent=1)
+        fh.flush()
+        os.fsync(fh.fileno())
     tmp.replace(f)
 
 
@@ -521,7 +524,11 @@ def _srt_time(t):
 
 
 def _secs(p):
-    r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(p)], capture_output=True, text=True)
+    try:                                              # HERESY 2011 (C12): with a timeout, as 1430 gave every other one
+        r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(p)], capture_output=True, text=True,
+                           timeout=30)
+    except subprocess.TimeoutExpired:
+        return None
     try:
         return float(r.stdout.strip())
     except ValueError:
@@ -798,11 +805,12 @@ def _melt(tmp, parts, lens, melts, xd, nice=(), threads="2"):
     return out
 
 
-def clip(kit, name, audio, cover=None, job=None, labels=None, rows=None, lyrics=False, between="cut", shape="16:9", titles=False):
+def clip(kit, name, audio, cover=None, job=None, labels=None, rows=None, lyrics=False, between="cut", shape="16:9", titles=False, look="none", look_strength=1.0,
+         grain=0.0, vignette=0.0):
     """The clip cut from the shots' pictures in the song's time, with its sound; {file, shots, own, seconds}. A shot with no picture of its own
     shows the take's cover; in a take with none, its words and scene (the animatic's card, held still: what is still to picture).
     HERESY 1916: lyrics burns the sung lines in (rows: the take's Whisper timing); between: «cut», «black» or «flash» where a section changes;
-    1949: «dissolve»."""
+    1949: «dissolve». 2010: look, a 3D LUT over every picture at look_strength (lab/luts.py), under the lyrics and the titles."""
     if between not in BETWEEN:
         raise ValueError("between the sections: a cut, through black, a flash or a dissolve")
     W, H = SHAPES.get(shape) or (0, 0)                   # HERESY 1917
@@ -889,7 +897,11 @@ def clip(kit, name, audio, cover=None, job=None, labels=None, rows=None, lyrics=
     sung = lyrics_ass(rows, tmp / "lyrics.ass", end, W, H) if lyrics else 0      # HERESY 1916; 1917: in the clip's shape
     shown = titles_ass(tmp / "titles.ass", end, W, H, plan.get("clip_title") or plan.get("title") or "", plan.get("credits") or "") if titles else 0   # HERESY 1948
     subs = ",".join(x for x in ("subtitles=lyrics.ass" if sung else "", "subtitles=titles.ass" if shown else "") if x)
-    video = ["-vf", subs, "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-threads", threads] if subs else ["-c:v", "copy"]
+    import luts                                          # HERESY 2010: the look, under the words
+    graded = luts.vf(kit, look, look_strength, tmp) if look and look != "none" else None
+    film = luts.film_vf(grain, vignette)                 # HERESY 2017: the grain and the vignette, after the look, under the words
+    chain = ",".join(x for x in (graded, film, subs) if x)
+    video = ["-vf", chain, "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-threads", threads] if chain else ["-c:v", "copy"]
     p = subprocess.run(nice + ["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", "list.txt", "-i", str(audio), "-map", "0:v", "-map", "1:a",
                                *video, "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", "out.mp4"],
                        cwd=str(tmp), capture_output=True, text=True, timeout=1800)
@@ -900,7 +912,7 @@ def clip(kit, name, audio, cover=None, job=None, labels=None, rows=None, lyrics=
     if job is not None:
         job["progress"] = 1.0
     return {"file": out.name, "shots": len(shots), "own": own, "live": live, "seconds": round(end, 2), "lines": sung, "between": between, "shape": shape,
-            "titles": shown}
+            "titles": shown, "look": look if graded else "none", "film": {"grain": grain, "vignette": vignette} if film else None}
 
 
 # ---- HERESY 1864 (Viktor 29.10.2026: «Davinci Resolve стиль — это будет ахуй»): the timeline's edits. The page lays the cuts (a shot cut in two at

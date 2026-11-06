@@ -1124,7 +1124,9 @@ def cover(body):
     if (d / "artwork.jpg").is_file():
         keep = d / "artwork-removed"
         keep.mkdir(exist_ok=True)
-        stamp = time.strftime("%Y%m%d-%H%M%S")
+        stamp, k = time.strftime("%Y%m%d-%H%M%S"), 2
+        while (keep / f"{stamp}.jpg").exists():           # HERESY 2011 (C11): two cover changes within one second keep both
+            stamp, k = time.strftime("%Y%m%d-%H%M%S") + f"-{k}", k + 1
         (d / "artwork.jpg").replace(keep / f"{stamp}.jpg")
         if (d / "artwork.json").is_file():
             (d / "artwork.json").replace(keep / f"{stamp}.json")

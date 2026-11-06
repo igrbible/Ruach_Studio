@@ -8,29 +8,31 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="鲁阿赫工作室 · 用文字写歌，在你自己的机器上">
 <meta property="og:description" content="在你自己的 GPU 上围绕 YuE2 的完整歌曲工作室：先有乐谱，LoRA 训练，分轨，母带处理，你的 DAW。开源。">
-<meta property="og:image" content="https://ruachstudio.igr.bible/assets/og.jpg">
+<meta property="og:image" content="https://ruachstudio.art/assets/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="alternate" hreflang="en" href="https://ruachstudio.igr.bible/">
-<link rel="alternate" hreflang="ru" href="https://ruachstudio.igr.bible/ru/">
-<link rel="alternate" hreflang="uk" href="https://ruachstudio.igr.bible/uk/">
-<link rel="alternate" hreflang="be" href="https://ruachstudio.igr.bible/be/">
-<link rel="alternate" hreflang="el" href="https://ruachstudio.igr.bible/el/">
-<link rel="alternate" hreflang="es" href="https://ruachstudio.igr.bible/es/">
-<link rel="alternate" hreflang="it" href="https://ruachstudio.igr.bible/it/">
-<link rel="alternate" hreflang="fr" href="https://ruachstudio.igr.bible/fr/">
-<link rel="alternate" hreflang="pt" href="https://ruachstudio.igr.bible/pt/">
-<link rel="alternate" hreflang="de" href="https://ruachstudio.igr.bible/de/">
-<link rel="alternate" hreflang="ja" href="https://ruachstudio.igr.bible/ja/">
-<link rel="alternate" hreflang="zh" href="https://ruachstudio.igr.bible/zh/">
-<link rel="alternate" hreflang="x-default" href="https://ruachstudio.igr.bible/">
-<link rel="canonical" href="https://ruachstudio.igr.bible/zh/">
+<link rel="alternate" hreflang="en" href="https://ruachstudio.art/">
+<link rel="alternate" hreflang="ru" href="https://ruachstudio.art/ru/">
+<link rel="alternate" hreflang="uk" href="https://ruachstudio.art/uk/">
+<link rel="alternate" hreflang="be" href="https://ruachstudio.art/be/">
+<link rel="alternate" hreflang="el" href="https://ruachstudio.art/el/">
+<link rel="alternate" hreflang="es" href="https://ruachstudio.art/es/">
+<link rel="alternate" hreflang="it" href="https://ruachstudio.art/it/">
+<link rel="alternate" hreflang="fr" href="https://ruachstudio.art/fr/">
+<link rel="alternate" hreflang="pt" href="https://ruachstudio.art/pt/">
+<link rel="alternate" hreflang="de" href="https://ruachstudio.art/de/">
+<link rel="alternate" hreflang="ja" href="https://ruachstudio.art/ja/">
+<link rel="alternate" hreflang="zh" href="https://ruachstudio.art/zh/">
+<link rel="alternate" hreflang="he" href="https://ruachstudio.art/he/">
+<link rel="alternate" hreflang="x-default" href="https://ruachstudio.art/">
+<link rel="canonical" href="https://ruachstudio.art/zh/">
+<meta property="og:url" content="https://ruachstudio.art/zh/">
 
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/ruach-icon-zh-32.png?v=1272">
 <link rel="icon" type="image/png" sizes="192x192" href="../assets/ruach-icon-zh-192.png?v=1272">
 <link rel="apple-touch-icon" href="../assets/ruach-icon-zh-180.png?v=1272">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+Mono:wght@400;500&family=Tektur:wght@400;500;600&display=swap" rel="stylesheet">
 <!-- HERESY 1446 (Viktor 15.10.2026: «Пропишь для визитки код трекинга»): Umami on Orpheus, no cookies -->
 <script defer src="https://lwa.igr.bible/bread-and-wine.js" data-website-id="b9ce0336-948e-43ed-89d6-ade9b66dbb4a"></script>
 <style>
@@ -79,6 +81,10 @@
            cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
   .theme svg { width: 22px; height: 22px; display: block; }   /* HERESY 1394 (Viktor: «Кнопка режима тем на сайте очень маленькая, мизерная»): a drawn half moon, not a font's ◐ */
   .theme:hover { color: var(--amber); border-color: var(--amber); }
+  /* HERESY 2055 (Viktor 04.11.2026: «докрути автоматический (system) режим темы, и пусть он будет по умолчанию»): three marks, one shown:
+     ◐ as the screen has it (no data-theme, the default), the sun for day, the moon for night; their titles are the button's words */
+  .theme .th { display: none; pointer-events: none; }
+  :root:not([data-theme]) .theme .th-auto, :root[data-theme="light"] .theme .th-day, :root[data-theme="dark"] .theme .th-night { display: block; }
   @media (max-width: 860px) { .bar nav { display: none; } .theme { margin-left: auto; } }
 
   /* the hero */
@@ -252,6 +258,10 @@
   /* HERESY 1984: What it downloads, its sizes to the right, the sums bold */
   .dl-table td:not(:first-child), .dl-table th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .dl-table tr.sum td { font-weight: 700; }
+  /* 01.11.2026: its descriptions and a value in words («needs a 24 GB card») wrap inside their cells, so the table fits its column and does not scroll sideways; a size keeps to one line by its cell's least width */
+  .dl-table td:first-child, .dl-table td:not(:first-child), .dl-table th:not(:first-child) { white-space: normal; }
+  .dl-table td:not(:first-child), .dl-table th:not(:first-child) { min-width: 6.5em; }
+  .dl-table table { min-width: 0; }
   .ring-note { color: var(--soft); font-size: .92em; margin: 14px 0 0; }
   .ring-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: color-mix(in srgb, var(--paper) 94%, transparent);
     backdrop-filter: blur(12px); border-top: 1px solid var(--rule); box-shadow: 0 -8px 30px rgba(0, 0, 0, .12); }
@@ -271,15 +281,118 @@
   .rb-time { flex: 0 0 auto; color: var(--faint); font-size: .86em; font-variant-numeric: tabular-nums; min-width: 84px; text-align: right; }
   .rb-sides { display: flex; gap: 6px; flex: 0 0 auto; }
   .rb-sides .ring-chip { height: 28px; padding: 0 10px; }
+  /* 04.11.2026 night: ours at both seeds, the switch first in the row of sides; dimmed while one of theirs plays (it keeps the choice for ours) */
+  .rb-seed { display: inline-flex; flex: 0 0 auto; margin-right: 6px; border: 1px solid var(--rule); border-radius: 15px; overflow: hidden; }
+  .rb-seed button { font: inherit; font-size: .8em; line-height: 1; height: 26px; padding: 0 10px; border: 0; background: transparent; color: var(--soft); cursor: pointer; white-space: nowrap; }
+  .rb-seed button + button { border-left: 1px solid var(--rule); }
+  .rb-seed button:hover { color: var(--ink); }
+  .rb-seed button.on { background: var(--wash); color: var(--amber); font-weight: 600; }
+  .rb-seed.idle { opacity: .45; }
+  .ring-seeds { margin-top: -18px; }
+  /* 04.11.2026 night (Viktor: «Эти кодовые названия эпичны сами по себе»): the table's head in two rows, our four fine-tunes under one cell, a line between them and theirs */
+  .ring-table thead th[rowspan] { vertical-align: middle; }
+  .ring-table thead th.ours { text-align: center; }
+  .ring-table thead th.ours, .ring-table .ours-row th:first-child, .ring-table tbody td:nth-child(5) { border-left: 2px solid var(--amber); }
+  .ring-table .ours-row th { white-space: nowrap; }
+  .ring-table .nw { white-space: nowrap; }
+  /* 05.11.2026 (Viktor: «те же иконки… и ту же шапку, что и во второй»): the list's 20 rows get small round icons instead
+     of repeating the same seven names in text; one header above them, built like the table's own two-row head */
+  .ring-head { display: flex; align-items: center; gap: 14px; padding: 7px 16px; border-bottom: 1px solid var(--rule);
+    background: var(--wash); font-size: .82em; color: var(--soft); }
+  .ring-head-name { flex: 1 1 auto; min-width: 0; }
+  .ring-head-sides { display: flex; align-items: center; gap: 6px; }
+  .rh-cell { display: flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; }
+  .rh-group { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 254px;
+    margin-left: 2px; padding-left: 10px; border-left: 2px solid var(--amber); box-sizing: content-box; }
+  .rh-group-label { width: 100%; font-weight: 600; color: var(--ink); text-align: center; white-space: normal; line-height: 1.2; }
+  .rh-group-row { display: flex; gap: 6px; width: 100%; justify-content: center; }
+  .ring-chip-icon[data-side="suno"], .rh-cell[data-side="suno"] { width: 58px; }
+  .ring-chip-icon[data-side="musicful"], .rh-cell[data-side="musicful"] { width: 86px; }
+  .ring-chip-icon[data-side="bare"], .rh-cell[data-side="bare"] { width: 62px; }
+  .ring-ours-icons .ring-chip-icon, .rh-group-row .rh-cell { width: 46px; }
+  .ring-ours-icons { display: flex; gap: 6px; margin-left: 2px; padding-left: 10px; border-left: 2px solid var(--amber); }
+  .ring-chip-icon { height: 30px; padding: 0; border: 0; background: transparent; border-radius: 0; display: inline-flex;
+    align-items: center; justify-content: center; color: var(--soft); cursor: pointer; }
+  .ring-chip-icon:hover { color: var(--ink); }
+  .ring-chip-icon.ours { color: var(--ink); }
+  .ring-chip-icon.on, .ring-chip-icon:hover { background: transparent; border-color: transparent; }
+  .ring-chip-icon .rci-dot { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px;
+    border-radius: 50%; border: 1px solid var(--rule); }
+  .ring-chip-icon:hover .rci-dot { border-color: var(--amber); }
+  .ring-chip-icon.on .rci-dot { background: var(--amber); border-color: var(--amber); color: var(--on-amber); }
+  .ring-chip-icon svg { width: 14px; height: 14px; fill: currentColor; }
+  .ring-chip-icon .i-pause { display: none; }
+  body.ring-playing .ring-chip-icon.on .i-play { display: none; }
+  body.ring-playing .ring-chip-icon.on .i-pause { display: inline; }
+  .ring-chip-icon:disabled { opacity: .35; cursor: default; }
+  .ring-chip-icon.on::before { content: none; }
+  /* 05.11.2026: the eighth side; the two TW strengths' names in the list's header on two lines, in an icon's 46 px */
+  .rh-cell.rh-two { display: block; line-height: 1.15; }
+  .ring-table td:first-child { white-space: normal; min-width: 210px; }   /* nine columns: the labels wrap in their column, the table stays in the page */
+  /* 05.11.2026 (Viktor: «Таблица съехала»): a side's name never breaks onto a second line, the measures' names in the first column wrap instead */
+  .ring-table thead th[rowspan]:not(:first-child), .ring-table .ours-row th { white-space: nowrap; }
+  .ring-table tbody td b { color: var(--ink); }   /* the bold best, in ink in every column (the page's td:nth-child(3) is soft) */
+  /* 05.11.2026 (HERESY 2080, Viktor: «три лидирующие позиции, пометить разными цветами, под таблицей простую цветовую легенду»): each scored row's
+     first, second and third of the eight in gold, silver and bronze, each colour at 4.5:1 or more on its tint by day and by night; the first stays bold */
+  :root { --r1: #8a6100; --r1-bg: rgba(212, 160, 23, .16); --r2: #4f5b66; --r2-bg: rgba(120, 135, 150, .16); --r3: #8a4a1f; --r3-bg: rgba(176, 101, 50, .14); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --r1: #f2c94c; --r1-bg: rgba(242, 201, 76, .14); --r2: #c8d1da; --r2-bg: rgba(200, 209, 218, .12); --r3: #e09a6b; --r3-bg: rgba(224, 154, 107, .14); }
+  }
+  :root[data-theme="dark"] { --r1: #f2c94c; --r1-bg: rgba(242, 201, 76, .14); --r2: #c8d1da; --r2-bg: rgba(200, 209, 218, .12); --r3: #e09a6b; --r3-bg: rgba(224, 154, 107, .14); }
+  .ring-table tbody td.r1, .ring-legend .rk.r1 { color: var(--r1); background: var(--r1-bg); }
+  .ring-table tbody td.r2, .ring-legend .rk.r2 { color: var(--r2); background: var(--r2-bg); }
+  .ring-table tbody td.r3, .ring-legend .rk.r3 { color: var(--r3); background: var(--r3-bg); }
+  .ring-table tbody td.r1 b { color: var(--r1); }
+  .ring-legend .rk { padding: 1px 7px; border-radius: 6px; white-space: nowrap; }
+  /* 05.11.2026 (HERESY 2080, Viktor on the live table): a row under the pointer keeps its three places' colours, each framed in its own; the table's title a
+     heading of its head */
+  .ring-table tbody tr:hover td.r1 { background: var(--r1-bg); box-shadow: inset 0 0 0 1px var(--r1); }
+  .ring-table tbody tr:hover td.r2 { background: var(--r2-bg); box-shadow: inset 0 0 0 1px var(--r2); }
+  .ring-table tbody tr:hover td.r3 { background: var(--r3-bg); box-shadow: inset 0 0 0 1px var(--r3); }
+  .ring-table thead tr:first-child th:first-child { font-family: "Tektur", "Noto Sans", system-ui, sans-serif; font-size: 24px; font-weight: 700; line-height: 1.2;
+    color: var(--ink); vertical-align: middle; }
+  @media (max-width: 600px) { .ring-table thead tr:first-child th:first-child { font-size: 20px; } }
+  /* 05.11.2026 (Viktor: «в таблицах сделай выключку вправо по числам… так будет ровнее и читаемее»): the measured table's numbers flush right in tabular
+     figures, the sides' names over them flush right too; the measures' names stay left, the group's name stays over its five */
+  .ring-table tbody td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ring-table thead th[rowspan]:not(:first-child), .ring-table .ours-row th { text-align: right; }
+  .ring-name i { white-space: nowrap; }   /* a language tag («en-UK») is not broken by the narrow name column */
+  /* 05.11.2026 (Viktor: «в верхней таблице ужми колонку с именами треков, и дай больше свободы остальным… с кнопками»): the list's name column narrow, a long
+     name on two lines; its eight button columns equal shares of the rest, the header's cells the same shares, so each name stands over its icons */
+  @media (min-width: 1100px) {
+    .ring-name, .ring-head-name { flex: 0 0 260px; }
+    .ring-sides, .ring-head-sides { flex: 1 1 0; min-width: 0; gap: 0; flex-wrap: nowrap; justify-content: flex-start; }
+    .ring-deck .ring-sides .ring-chip-icon, .ring-deck .ring-head-sides .rh-cell { flex: 1 1 0; width: auto; min-width: 0; }
+    .ring-deck .ring-ours-icons, .ring-deck .rh-group { flex: 5 1 0; width: auto; min-width: 0; box-sizing: content-box; }
+    .ring-deck .ring-ours-icons, .ring-deck .rh-group-row { gap: 0; }
+  }
   body.ring-open { padding-bottom: 130px; }
+  /* 05.11.2026 (Viktor: «A spectral section on the site… в твоём ботаническом стиле»): the ring's spectrum, four graphs two by two, each drawn for the day
+     and for the night and shown by the page's own theme (as its colours are: the screen's, or the one the button chose) */
+  .spec-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+  .spec-fig { margin: 0; background: var(--paper); border: 1px solid var(--rule); border-radius: 14px; padding: 14px 14px 18px; box-shadow: var(--shadow); }
+  .spec-fig a.pic { display: block; border-radius: 8px; overflow: hidden; }
+  .spec-fig img { width: 100%; height: auto; }
+  .spec-fig .g-night { display: none; }
+  .spec-fig h3 { font-size: 18px; margin: 14px 4px 6px; }
+  .spec-fig p { color: var(--soft); font-size: 15px; line-height: 1.55; margin: 0 4px; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .spec-fig .g-day { display: none; }
+    :root:not([data-theme="light"]) .spec-fig .g-night { display: block; }
+  }
+  :root[data-theme="dark"] .spec-fig .g-day { display: none; }
+  :root[data-theme="dark"] .spec-fig .g-night { display: block; }
+  @media (max-width: 860px) { .spec-grid { grid-template-columns: minmax(0, 1fr); } }
   @media (max-width: 900px) {
     .rb-wave { height: 40px; }
     .rb-sides { order: 11; flex: 1 1 100%; overflow-x: auto; }
     body.ring-open { padding-bottom: 170px; }
     .ring-card { flex-wrap: wrap; }
     .ring-sides { justify-content: flex-start; }
+    .ring-head-name { display: none; }
+    .ring-head-sides { flex-wrap: wrap; justify-content: flex-start; }
   }
-  /* HERESY 1801: the First Wave's vocabulary, a window over the page */
+  /* HERESY 1801: the First Wave's vocabulary, a window over the page; 06.11.2026: the Tsunami Wave's beside it, one window for both */
   .vocab-call { display: flex; align-items: center; gap: 22px; margin: 26px 0 0; padding: 20px 22px; border: 1px solid var(--rule); border-radius: 14px;
                 background: linear-gradient(90deg, var(--wash), transparent 75%), var(--paper); box-shadow: var(--shadow); }
   .vocab-call h3 { margin: 0 0 4px; font-size: 19px; }
@@ -299,12 +412,127 @@
                        cursor: pointer; font-size: 20px; line-height: 1; }
   .vocab-panel iframe { flex: 1; width: 100%; border: 0; background: var(--ground); }
   @media (max-width: 600px) { .vocab-modal { padding: 0; } .vocab-panel { border-radius: 0; border: 0; } }
+
+  /* ---------------------------------------------------------------- HERESY 2026 (Viktor 02.11.2026: «пересмотри дизайн. Если имеешь фантазию,
+     придерживаясь строгости, добавить немного гламура, чтобы страница очаровала не только информацией, но и своим видом»): the Studio's own face
+     for the headings (Tektur), a gold beside the accent, a hairline over each section's title, cards that lift and glow, a slow warm light in the
+     hero, sections that rise into view (never for those who ask for less motion), the logo in the bar, the project's numbers in the footer */
+  :root { --gold: #a87a2a; --glow: rgba(142, 26, 46, .18); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --gold: #e3b062; --glow: rgba(240, 113, 113, .22); } }
+  :root[data-theme="dark"] { --gold: #e3b062; --glow: rgba(240, 113, 113, .22); }
+  h1, h2, h3, .nums b, .ghs b { font-family: "Tektur", "Noto Sans", system-ui, sans-serif; }
+  h2 { letter-spacing: .01em; }
+  section > .wrap > h2::before, .story h2::before { content: ""; display: block; width: 56px; height: 3px; border-radius: 3px; margin: 0 0 18px;
+    background: linear-gradient(90deg, var(--amber), var(--gold)); }
+  .sub { max-width: none; text-wrap: pretty; }
+  /* HERESY 2030 (Viktor: «весьма жирный. Облегчи его начертание»; «замерено сырым, средние > Замерено…»; six numbers; the downloads' heads on one line) */
+  h1 { font-weight: 600; }
+  h2, h3 { font-weight: 500; }
+  .nums b, .gh-stats .ghs b { font-weight: 600; }
+  .nums { grid-template-columns: repeat(6, 1fr); }
+  @media (max-width: 860px) { .nums { grid-template-columns: repeat(2, 1fr); } .nums div:last-child { grid-column: auto; } }
+  .ring-table th:first-child::first-letter { text-transform: uppercase; }
+  .dl-table th:not(:first-child) { white-space: nowrap; }    /* the column sets the width (his law: the box breaks the line, not a ceiling); its first line to the edge, not balanced */
+  /* the bar: the logo in the page's language, a shadow once the page moves */
+  .bar .mark { gap: 0; }
+  .bar .mark svg { height: 24px; width: auto; display: block; }
+  .bar.scrolled { box-shadow: 0 8px 28px -16px rgba(0, 0, 0, .45); }
+  @media (max-width: 520px) { .bar .mark svg { height: 17px; } .bar .wrap { gap: 12px; } }
+  /* the hero: a slow warm light behind the logo */
+  .hero-night { position: relative; overflow: hidden; isolation: isolate; }
+  .hero-night::before, .hero-night::after { content: ""; position: absolute; z-index: -1; width: 62vw; height: 62vw; max-width: 980px; max-height: 980px;
+    border-radius: 50%; filter: blur(90px); opacity: .32; pointer-events: none; }
+  .hero-night::before { left: -14%; top: -38%; background: radial-gradient(circle, rgba(240, 113, 113, .7), transparent 62%); animation: heroA 28s ease-in-out infinite alternate; }
+  .hero-night::after { right: -16%; top: -22%; background: radial-gradient(circle, rgba(227, 176, 98, .55), transparent 62%); animation: heroB 34s ease-in-out infinite alternate; }
+  @keyframes heroA { to { transform: translate(14%, 12%) scale(1.12); } }
+  @keyframes heroB { to { transform: translate(-12%, 10%) scale(.9); } }
+  .hero-night .btn.main { box-shadow: 0 10px 30px -12px rgba(240, 113, 113, .65); }
+  /* the numbers in gold */
+  .nums b { background: linear-gradient(120deg, var(--amber), var(--gold)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  /* the cards: lifted and lit when the pointer comes */
+  .card, .room, .vocab-call, .pair figure { transition: transform .28s ease, box-shadow .28s ease, border-color .28s ease; }
+  .card { position: relative; overflow: hidden; }
+  .card::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: linear-gradient(90deg, var(--amber), var(--gold));
+    opacity: .55; transition: opacity .28s ease; }
+  .card:hover, .room:hover, .vocab-call:hover, .pair figure:hover { transform: translateY(-3px);
+    box-shadow: var(--shadow), 0 22px 46px -22px var(--glow); border-color: color-mix(in oklab, var(--amber) 32%, var(--rule)); }
+  .card:hover::before { opacity: 1; }
+  .feats li { transition: background .28s ease; }
+  .feats li:hover { background: linear-gradient(90deg, color-mix(in oklab, var(--amber) 11%, transparent), transparent 75%); }
+  /* the tables: a quiet line under the pointer; in Honestly our column a touch brighter, theirs a touch fainter */
+  .table tbody tr { transition: background .2s ease; }
+  .table tbody tr:hover td { background: color-mix(in oklab, var(--amber) 4%, transparent); }
+  .honest-table thead th:nth-child(2) { color: var(--amber); }
+  .honest-table td:nth-child(3) { color: var(--faint); }
+  /* What you need: three cards on one line, the warning under them */
+  #need .cols .warn-free { margin: 0; }
+  /* sections rise into view */
+  .reveal { opacity: 0; transform: translateY(16px); transition: opacity .8s ease, transform .8s ease; }
+  .reveal.seen { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-night::before, .hero-night::after { animation: none; }
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .card, .room, .vocab-call, .pair figure { transition: none; }
+  }
+  /* the footer: the project's numbers */
+  footer { background: linear-gradient(180deg, transparent, var(--wash) 70%); }
+  .gh-stats { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; margin: 0 0 22px; }
+  .gh-stats[hidden] { display: none; }
+  .ghs { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid var(--rule); border-radius: 12px; background: var(--paper);
+    color: var(--soft); box-shadow: var(--shadow); transition: border-color .2s ease, transform .2s ease; }
+  .ghs:hover { text-decoration: none; border-color: var(--amber); transform: translateY(-2px); }
+  .ghs[hidden] { display: none; }
+  .ghs svg { width: 15px; height: 15px; fill: currentColor; color: var(--amber); flex: none; }
+  .ghs b { font-weight: 700; font-size: 19px; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .ghs span { font-size: 13px; line-height: 1.2; }
+  .gh-when { width: 100%; font-size: 12.5px; color: var(--faint); }
+  /* 05.11.2026 (HERESY 2080, Viktor on the live card: much too large): the GitHub numbers in the foot about 4 pt smaller, their boxes tighter */
+  .gh-stats { gap: 8px; margin: 0 0 18px; }
+  .ghs { gap: 6px; padding: 6px 10px; border-radius: 10px; }
+  .ghs svg { width: 12px; height: 12px; }
+  .ghs b { font-size: 14px; }
+  .ghs span { font-size: 11px; }
+  .gh-when { font-size: 11px; }
   .warn-free { grid-column: 1 / -1; margin: 0 0 14px; padding: 12px 16px; border-left: 3px solid #d9a441; background: color-mix(in srgb, #d9a441 10%, transparent); border-radius: 6px; }
+  /* 05.11.2026 (HERESY 2080, Viktor, evening): «What the stereo says», after the spectrum. The graph is drawn inline in the spectrum graphs' side colours
+     (spectrum_page.py's palette, by day and by night: SUNO aqua, Musicful yellow, TW x0.75 blue, TW x0.9 orange and dashed, the plain sides grey), its
+     words in the page's own ink, larger on a phone; the table beside it flush right in tabular figures, with no places and no colours (wider is not better) */
+  :root { --st-suno: #1baf7a; --st-musicful: #eda100; --st-tw: #2a78d6; --st-tw09: #eb6834; --st-plain: #8a8784; --st-band-op: .35; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --st-suno: #199e70; --st-musicful: #c98500; --st-tw: #3987e5; --st-tw09: #d95926; --st-plain: #908c88; --st-band-op: .55; } }
+  :root[data-theme="dark"] { --st-suno: #199e70; --st-musicful: #c98500; --st-tw: #3987e5; --st-tw09: #d95926; --st-plain: #908c88; --st-band-op: .55; }
+  .st-grid { display: grid; grid-template-columns: minmax(0, 1fr) fit-content(600px); gap: 22px; align-items: start; }
+  @media (max-width: 1100px) { .st-grid { grid-template-columns: minmax(0, 1fr); } .st-fig { max-width: 680px; } }
+  .st-suno { --c: var(--st-suno); } .st-musicful { --c: var(--st-musicful); } .st-tw { --c: var(--st-tw); } .st-tw09 { --c: var(--st-tw09); } .st-bare, .st-fwband { --c: var(--st-plain); }
+  .st-svg { display: block; width: 100%; height: auto; }
+  .st-svg text { font-family: inherit; font-size: 16px; fill: var(--soft); }
+  .st-svg .st-grid-line { stroke: var(--rule); stroke-width: 1; }
+  .st-svg .st-band { fill: var(--c); fill-opacity: var(--st-band-op); }
+  .st-svg .st-line { fill: none; stroke: var(--c); stroke-width: 2.6; stroke-linejoin: round; stroke-linecap: round; }
+  .st-svg .st-line.st-tw09 { stroke-dasharray: 8 4; }
+  .st-svg .st-dot { fill: var(--c); stroke: var(--paper); stroke-width: 1.6; }
+  .st-legend { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 10px 4px 14px; padding: 0; font-size: 14px; color: var(--ink); }
+  .st-legend li { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .st-key { display: inline-block; width: 24px; height: 0; border-top: 3px solid var(--c); }
+  .st-key.st-tw09 { border-top-style: dashed; }
+  .st-key.st-fwband { height: 10px; border: 0; border-radius: 2px; background: var(--c); opacity: var(--st-band-op); }
+  @media (max-width: 600px) { .st-fig { padding: 12px 8px 14px; } .st-svg text { font-size: 24px; } .st-svg .st-line { stroke-width: 3.6; } .st-svg .st-dot { r: 6px; } }
+  .stereo-table table { min-width: 520px; }
+  .stereo-table th, .stereo-table td { padding: 10px; }
+  .stereo-table thead th { text-align: right; vertical-align: bottom; }
+  .stereo-table thead tr:first-child th:first-child { text-align: left; vertical-align: middle; font-family: "Tektur", "Noto Sans", system-ui, sans-serif; font-size: 20px; font-weight: 700; line-height: 1.2; }
+  .stereo-table thead th[colspan] { text-align: center; }
+  .stereo-table thead tr:first-child th:first-child::first-letter { text-transform: uppercase; }
+  .stereo-table thead th small { font-weight: 400; color: var(--soft); white-space: nowrap; }
+  .stereo-table td { color: var(--ink); }
+  .stereo-table td:first-child { color: var(--soft); white-space: nowrap; }
+  .stereo-table tbody td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  @media (max-width: 600px) { .stereo-table thead tr:first-child th:first-child { font-size: 18px; } }
 </style>
 <script>
   // the visitor's day or night, kept in this browser only; the page works without it
   // ?theme=dark or ?theme=light in a link shows that one (not kept)
-  (function () { try { var t = new URLSearchParams(location.search).get("theme") || localStorage.getItem("ruach.theme");
+  // HERESY 2055: the screen's own choice is the default; a day or night kept under the old key, from when the button had only those two, is let go
+  (function () { try { localStorage.removeItem("ruach.theme"); var t = new URLSearchParams(location.search).get("theme") || localStorage.getItem("ruach.theme.mode");
     if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {} })();
 </script>
 <style>body, .langs summary { font-family: "Noto Sans", "Noto Sans SC", system-ui, sans-serif; }</style>
@@ -313,10 +541,18 @@
 
 <header class="bar">
   <div class="wrap">
-    <a class="mark" href="#top"><img src="../assets/ruach-icon-zh-32.png?v=1272" alt="" width="28" height="28">鲁阿赫工作室</a>
+    <a class="mark" href="#top" aria-label="鲁阿赫工作室"><svg xmlns="http://www.w3.org/2000/svg" viewBox="200.3 -108.0 723.1 116.0" class="ruach-logo bar-logo" aria-hidden="true">
+  <g class="rl-word" fill="var(--logo-word, var(--amber, #8e1a2e))">
+    <path transform="translate(199.48 -6.59)" d="M7.63 -42.04V-33.27H105.95V-42.04ZM35.09 -7.52H78.27V-2.28H35.09ZM35.09 -15.84V-20.85H78.27V-15.84ZM21.65 -30.3V10.25H35.09V6.84H78.27V9.91H92.39V-30.3ZM37.82 -81.91H61.86C60.72 -80.43 59.58 -78.95 58.44 -77.7H33.61ZM34.63 -97.41C28.71 -88.29 18.11 -78.15 2.85 -70.75C5.47 -68.7 9.11 -64.03 10.82 -61.18C13.22 -62.43 15.49 -63.8 17.66 -65.28V-44.89H96.38V-77.7H73.48C75.42 -80.2 77.24 -83.05 78.72 -86.01L69.72 -91.14L67.44 -90.46H44.89L47.85 -94.67ZM30.3 -57.53H50.47V-53.2H30.3ZM62.66 -57.53H83.28V-53.2H62.66ZM30.3 -69.38H50.47V-65.16H30.3ZM62.66 -69.38H83.28V-65.16H62.66ZM160.35 -89.66V-77.01H205.35V-4.9C205.35 -2.62 204.44 -1.94 201.82 -1.94C199.32 -1.82 190.2 -1.82 182 -2.05C183.71 1.25 185.65 6.61 186.1 10.14C198.18 10.25 206.15 10.03 211.28 8.09C216.41 6.27 218.23 2.96 218.23 -4.78V-77.01H226.54V-89.66ZM163.09 -64.03V-13.22H174.59V-20.28H196.58V-64.03ZM174.59 -52.52H184.73V-31.78H174.59ZM124.01 -91.82V10.25H135.97V-79.75H145.09C143.27 -72.34 140.87 -63 138.71 -55.94C145.2 -47.96 146.57 -40.56 146.57 -35.09C146.57 -31.78 146 -29.28 144.63 -28.25C143.84 -27.57 142.7 -27.34 141.56 -27.34C140.19 -27.23 138.59 -27.34 136.66 -27.46C138.48 -24.15 139.51 -19.03 139.51 -15.72C142.24 -15.61 144.97 -15.61 147.03 -15.95C149.53 -16.41 151.7 -17.09 153.52 -18.46C157.16 -21.19 158.65 -26.2 158.65 -33.61C158.65 -40.33 157.16 -48.42 150.33 -57.42C153.52 -66.19 157.28 -77.7 160.24 -87.27L151.24 -92.39L149.3 -91.82ZM240.51 -43.75C239.37 -34.86 237.32 -25.29 234.13 -18.91C236.41 -17.89 240.62 -15.61 242.44 -14.24C245.63 -21.08 248.37 -31.78 249.96 -41.81ZM291.2 -84.19V-72.23H308.29V-62.43H288.24V-50.01H302.71C302.37 -25.18 300.66 -9 286.99 0.8C289.72 2.96 293.14 7.29 294.62 10.25C310.23 -1.82 312.51 -21.53 313.08 -50.01H317.06V-1.94C317.06 -0.68 316.72 -0.34 315.47 -0.34C314.22 -0.34 310.34 -0.34 306.47 -0.46C307.95 2.73 309.2 7.41 309.54 10.48C316.04 10.59 320.59 10.37 323.9 8.54C327.2 6.72 327.89 3.53 327.89 -1.82V-38.28C330.85 -29.85 333.01 -19.94 333.47 -13.22L343.38 -15.72C342.58 -23.47 339.51 -35.32 335.63 -44.43L327.89 -42.61V-50.01H341.22V-62.43H320.82V-72.23H337.23V-84.19H320.82V-96.84H308.29V-84.19ZM240.96 -84.19V-72.23H256.46V-62.43H236.63V-50.01H251.22C250.87 -25.29 249.28 -9 236.29 0.91C239.03 3.19 242.56 7.52 244.15 10.59C259.08 -1.59 261.35 -21.53 261.92 -50.01H265.57V-2.62C265.57 -1.37 265.11 -1.14 263.97 -1.14C262.72 -1.03 259.19 -1.03 255.54 -1.14C256.91 2.05 258.28 6.72 258.51 9.8C264.89 9.8 269.22 9.57 272.41 7.75C275.59 5.92 276.39 2.85 276.39 -2.51V-36C278.44 -30.99 280.15 -25.63 280.72 -21.65L287.33 -24.15C286.42 -21.65 285.39 -19.37 284.14 -17.43C286.53 -16.29 290.63 -13.9 292.46 -12.42C296.78 -19.94 299.97 -31.44 301.68 -42.72L292.11 -44.54C291.32 -38.73 290.18 -32.92 288.58 -27.68C287.22 -32.7 284.82 -38.96 282.09 -43.97L276.39 -41.81V-50.01H285.51V-62.43H268.99V-72.23H283.23V-84.19H268.99V-96.84H256.46V-84.19Z"/>
+  </g>
+  <rect class="rl-box" x="580.86" y="-106.00" width="340.53" height="112.00" rx="13.44" fill="var(--logo-word, var(--amber, #8e1a2e))"/>
+  <g class="rl-studio" fill="var(--logo-on, var(--on-amber, #ffffff))">
+    <path transform="translate(624.51 -24.90)" d="M3.39 -4.69V0.2H61.91V-4.69H35.09V-42.32H58.59V-47.33H6.77V-42.32H29.69V-4.69ZM128.4 -53.9C125.15 -44.33 119.87 -34.89 114.01 -28.78C115.12 -27.99 117.01 -26.3 117.79 -25.45C121.11 -29.1 124.3 -33.85 127.1 -39.13H131.59V5.14H136.54V-10.68H156.14V-15.3H136.54V-25.19H155.29V-29.69H136.54V-39.13H156.79V-43.81H129.44C130.81 -46.68 132.05 -49.67 133.09 -52.67ZM112.71 -54.43C109.07 -44.53 102.95 -34.76 96.5 -28.45C97.41 -27.34 98.85 -24.67 99.37 -23.57C101.58 -25.85 103.73 -28.45 105.81 -31.31V5.08H110.69V-39C113.23 -43.42 115.58 -48.24 117.4 -52.99ZM198.02 -14.06V-9.77H218.33V-1.04H192.16V3.39H249.84V-1.04H223.34V-9.77H244.04V-14.06H223.34V-20.9H218.33V-14.06ZM200.68 -19.73C202.7 -20.51 205.76 -20.77 236.88 -23.18C238.38 -21.68 239.68 -20.18 240.59 -19.01L244.37 -21.68C241.7 -25.06 236.1 -30.08 231.54 -33.59L227.96 -31.18C229.66 -29.82 231.48 -28.32 233.24 -26.69L208.04 -24.93C211.75 -27.67 215.46 -30.92 218.91 -34.37H242.68V-38.61H199.58V-34.37H212.6C208.95 -30.66 205.11 -27.54 203.68 -26.56C201.99 -25.26 200.49 -24.41 199.25 -24.22C199.77 -22.98 200.42 -20.7 200.68 -19.73ZM216.63 -53.97C217.55 -52.47 218.46 -50.58 219.17 -48.89H192.87V-37.37H197.62V-44.46H243.98V-37.37H248.93V-48.89H224.64C223.93 -50.84 222.56 -53.38 221.32 -55.34Z"/>
+  </g>
+</svg></a>   <!-- HERESY 2026 (Viktor: «Давай туда наш логотип»): the logo in the page's language -->
     <nav aria-label="章节"><a href="#rooms">房间</a><a href="#studio">它能做什么</a><a href="#honestly">坦白说</a><a href="#ring">擂台</a><a href="#need">你需要</a><a href="#next">接下来</a> <a href="#licences">许可</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub ↗</a></nav>
-    <details class="langs" translate="no"><summary aria-label="Language">ZH</summary><div class="langs-pop"><a href="/" lang="en" hreflang="en">English</a><a href="/ru/" lang="ru" hreflang="ru">Русский</a><a href="/uk/" lang="uk" hreflang="uk">Українська</a><a href="/be/" lang="be" hreflang="be">Беларуская</a><a href="/el/" lang="el" hreflang="el">Ελληνικά</a><a href="/es/" lang="es" hreflang="es">Español</a><a href="/it/" lang="it" hreflang="it">Italiano</a><a href="/fr/" lang="fr" hreflang="fr">Français</a><a href="/pt/" lang="pt" hreflang="pt">Português</a><a href="/de/" lang="de" hreflang="de">Deutsch</a><a href="/ja/" lang="ja" hreflang="ja">日本語</a><a href="/zh/" lang="zh" hreflang="zh" aria-current="page">中文</a></div></details>
-    <button class="theme" id="theme" type="button" aria-label="白天或夜晚" title="白天或夜晚"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5a9.5 9.5 0 0 1 0 19z" fill="currentColor"/></svg></button>
+    <details class="langs" translate="no"><summary aria-label="Language">ZH</summary><div class="langs-pop"><a href="/" lang="en" hreflang="en">English</a><a href="/ru/" lang="ru" hreflang="ru">Русский</a><a href="/uk/" lang="uk" hreflang="uk">Українська</a><a href="/be/" lang="be" hreflang="be">Беларуская</a><a href="/el/" lang="el" hreflang="el">Ελληνικά</a><a href="/es/" lang="es" hreflang="es">Español</a><a href="/it/" lang="it" hreflang="it">Italiano</a><a href="/fr/" lang="fr" hreflang="fr">Français</a><a href="/pt/" lang="pt" hreflang="pt">Português</a><a href="/de/" lang="de" hreflang="de">Deutsch</a><a href="/ja/" lang="ja" hreflang="ja">日本語</a><a href="/zh/" lang="zh" hreflang="zh" aria-current="page">中文</a><a href="/he/" lang="he" hreflang="he">עברית</a></div></details>
+    <button class="theme" id="theme" type="button" aria-label="白天或夜晚" title="白天或夜晚"><span class="th th-auto" title="白天或夜晚，跟随你的屏幕"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5a9.5 9.5 0 0 1 0 19z" fill="currentColor"/></svg></span><span class="th th-day" title="白天"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.6" fill="currentColor"/><path d="M12 2v2.6M12 19.4V22M2 12h2.6M19.4 12H22M4.9 4.9l1.85 1.85M17.25 17.25l1.85 1.85M4.9 19.1l1.85-1.85M17.25 6.75l1.85-1.85" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="th th-night" title="夜晚"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor"/></svg></span></button>
   </div>
 </header>
 
@@ -335,8 +571,8 @@
     <div class="osem" translate="no"><b>OSEM</b><span class="say">简直 AWESOME</span><span>Open Source, Engaged &amp; Musical</span></div>
     <h1>用文字与和弦写歌<br>在你自己的机器上</h1>
     <p class="lead">围绕开放歌曲模型 <b>YuE2</b> 的完整工作室。写下风格和歌词，工作室就在<b>你自己的 GPU</b> 上作曲、演唱并渲染歌曲。你的歌曲、文字和设置永远不会离开它。</p>
-    <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">在 GitHub 获取</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.zh.md">阅读指南</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face 上的模型</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 请我一台咖啡机</a></div>
-    <span class="rc"><b>2.0.5</b> · 每个峰值完整、家族树与 https 上的工作室 · 2026 年 11 月</span>
+    <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">在 GitHub 获取</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.zh.md">阅读指南</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face 上的模型</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 给 Viktor 和 Claude 的 24/7 咖啡</a></div>
+    <span class="rc"><b>2.0.6</b> · 线路不佳也撑得住、每次失败都说明白、Tsunami Wave 与全面审计 · 2026 年 11 月</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -348,6 +584,7 @@
     <div class="nums">
       <div><b>8 min</b><span>完整的歌曲，最长八分钟</span></div>
       <div><b>135 s</b><span>一首 6:12 的歌，只用一张 RTX 3090</span></div>
+      <div><b>6 分钟</b><span>在 Intel Arc Pro B50（16 GB、70 W）上生成一首 4 分钟的歌（测试版）</span></div>   <!-- HERESY 2030: measured 02.11.2026, 51 takes on the Arc: render a median 1.5× the song -->
       <div><b>7 个房间</b><span>用来创作、写作、精修、绘画、拍摄、收藏和教学</span></div>
       <div><b>200</b><span>件乐器，逐一用耳朵试听</span></div>
       <div><b>12</b><span>种页面语言</span></div>
@@ -377,12 +614,16 @@
           <div><h3>精修室</h3><p>频谱、伪影、去嗡声、Whisper 歌词检查、分轨、母带处理、超分；一条链运行全部。</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/artist.webp" data-night="assets/shots/artist-night.webp"><img class="day" src="../assets/shots/artist.webp" alt="画室" loading="lazy"><img class="night" src="../assets/shots/artist-night.webp" alt="画室" loading="lazy"></a>
           <div><h3>画室</h3><p>用你自己的提示词为歌曲作画：正方、横幅和竖幅出自同一个种子，由 Qwen-Image 2512 绘制；画面在你眼前显现，正方的那张成为录音的封面。早期预览。</p></div></article>
+        <article class="room"><a class="pic" href="../assets/shots/studio-video.webp" data-night="assets/shots/studio-video-night.webp"><img class="day" src="../assets/shots/studio-video.webp" alt="影像室：歌曲上方时间线中的录音镜头" loading="lazy"><img class="night" src="../assets/shots/studio-video-night.webp" alt="影像室：歌曲上方时间线中的录音镜头" loading="lazy"></a>
+          <div><h3>影像室</h3><p>为录音制作音乐视频：按演唱的歌词行把歌曲切成镜头，场景与写作室一起写，关键帧由画师绘制，动态镜头由 MiniMax H3 生成；可剪辑的时间线、风格（3D LUT、颗粒）、动画样片和成片。测试版。</p></div></article>   <!-- HERESY 2030 (Viktor: «добавь Видеографа перед Библиотекарем») -->
         <article class="room"><a class="pic" href="../assets/shots/studio-collection.webp" data-night="assets/shots/studio-collection-night.webp"><img class="day" src="../assets/shots/studio-collection.webp" alt="资料馆" loading="lazy"><img class="night" src="../assets/shots/studio-collection-night.webp" alt="资料馆" loading="lazy"></a>
           <div><h3>资料馆</h3><p>每段录音都在工作区里：可搜索、点赞、备注、锁定、配图、发送到你的 DAW；回收站可以还原。</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/studio-train.webp" data-night="assets/shots/studio-train-night.webp"><img class="day" src="../assets/shots/studio-train.webp" alt="LoRA 训练室" loading="lazy"><img class="night" src="../assets/shots/studio-train-night.webp" alt="LoRA 训练室" loading="lazy"></a>
           <div><h3>LoRA 训练室</h3><p>从你自己的歌曲训练适配器：素材集、训练、两部分的曲线讲解、最值得先听的轮次。</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/instruments.webp"><img src="../assets/shots/instruments.webp" alt="乐器速查表" loading="lazy"></a>
           <div><h3>速查表 ♪</h3><p>200 件乐器，逐一用耳朵试听并评判：YuE2 真正会弹什么，弹得单薄的是什么，不认识的是什么。</p></div></article>
+        <article class="room"><a class="pic" href="../assets/shots/studio-guide.webp" data-night="assets/shots/studio-guide-night.webp"><img class="day" src="../assets/shots/studio-guide.webp" alt="创作室上方的指南（F1）" loading="lazy"><img class="night" src="../assets/shots/studio-guide-night.webp" alt="创作室上方的指南（F1）" loading="lazy"></a>
+          <div><h3>指南 · F1</h3><p>整个 Studio 在 Studio 内部讲清楚，一键即达：每个房间、每个旋钮，它做什么，我们测得的数字，十二种语言。为创作的乐趣而作，而不是为了在网上搜索好几个小时。</p></div></article>   <!-- HERESY 2030 (Viktor: «И последней Глобальный исчерпывающий гайд по F1 как ни у кого кроме нас») -->
       </div>
     </div>
   </section>
@@ -435,36 +676,62 @@
   <section id="honestly">
     <div class="wrap">
       <h2>鲁阿赫工作室 与 SUNO，坦白说</h2>
-      <p class="sub">每周都有视频说某个模型干掉了 SUNO。这不是一个模型：而是围绕一个模型的工作站。这里是它赢的地方，以及（暂时）没赢的地方。</p>
-      <div class="table">
+      <p class="sub">每周都有视频说某个模型干掉了 SUNO。这不是模型：而是围绕模型的整个 Studio，带有自己的微调。它赢在哪里，SUNO 又仍赢在哪里，直说。</p>
+      <div class="table honest-table">
         <table>
           <thead><tr><th></th><th>鲁阿赫工作室 (YuE2)</th><th>SUNO</th></tr></thead>
           <tbody>
-            <tr><td>在哪里运行</td><td>你的 GPU；你的歌永远不会离开它</td><td>他们的云</td></tr>
-            <tr><td>花费</td><td>电费</td><td>订阅和积分</td></tr>
-            <tr><td>乐谱</td><td>先写出来、可见、可编辑、属于你（ABC、MIDI）</td><td>隐藏</td></tr>
+            <tr><td>在哪里运行</td><td>你自己的 GPU；歌曲、歌词和设置从不离开它，安装后无需联网</td><td>他们的云</td></tr>
+            <tr><td>花费</td><td>电费而已：没有点数、没有套餐、没有每日上限</td><td>订阅和积分</td></tr>
+            <tr><td>模型</td><td>YuE2 和我们自己的微调 RS-FW，第一个大型开放微调：两半都在 32,633 首曲目、约 1,800 小时上重新训练，告诉它们的每个词都已公开</td><td>封闭；用什么训练的没有公开</td></tr>
+            <tr><td>乐谱</td><td>先写出、可见、可编辑、归你（ABC、MIDI）；整窗钢琴卷帘</td><td>隐藏</td></tr>
             <tr><td>歌词</td><td>每行旁边的节拍计：拍数对照其段落的标尺，音节按各语言自己的规则；输入 «[» 时提示段落标签</td><td>一个文本框；按需为你写歌词</td></tr>
             <tr><td>重复一段录音</td><td>精确：你保留的两个种子</td><td>不能</td></tr>
             <tr><td>引导（CFG）</td><td>两个，分开：风格的牵引与歌词的把握，各有自己的 CFG</td><td>一个 Style Influence 旋钮</td></tr>
             <tr><td>替换一个段落</td><td>在耳朵找到的停顿之间重唱其歌词，作品其余部分精确到采样保持不变：听不出接缝；可一次替换多个段落</td><td>Replace Section：在我们的试用中几乎从不可用，接缝可闻，嗓音改变</td></tr>
-            <tr><td>你自己的声音</td><td>在工作室里用你的歌训练 LoRA</td><td>不能训练</td></tr>
-            <tr><td>渲染之后</td><td>分轨、去嗡声、母带处理、超分、歌词检查，全部本地</td><td>分轨，在云端</td></tr>
+            <tr><td>录音的家谱</td><td>家谱：一段录音来自的每次截取、版本和重新生成，以及由它产生的一切，每个都带波形</td><td>—</td></tr>
+            <tr><td>曲库</td><td>带分区的工作区、十六种表情反应、笔记、保护和可以恢复的回收站、支持通配符和“排除”的搜索、用于公正试听的盲听集，每个片段都有传单和护照</td><td>工作区、点赞和歌单</td></tr>
+            <tr><td>比较录音</td><td>最多十二个版本在同一个播放器里从同一秒开始，具名或盲听，响度一致，按各自的声音对齐</td><td>—</td></tr>
+            <tr><td>你自己的声音</td><td>在工作室里用你的歌训练 LoRA</td><td>无训练；Personas 复用一首歌的声音和风格</td></tr>
+            <tr><td>YuE2 演奏不了的</td><td>按录音自身乐谱演奏的 MIDI 管弦乐（SFZ 音色组，若你有 Pianoteq 也可）以及铺在歌曲下方的自然声：火、雨、河流、鸟</td><td>—</td></tr>
+            <tr><td>你自己的乐器</td><td>音库构建器把一种乐器（杜杜克、羊角号）的录音做成 SFZ 音库：人声、喊叫和其他乐器被听出并去掉，逐键找出音符，校准音高并做成循环；在 DAW 里它在歌曲下方作为铺底、按歌曲调性的持续音或一条 MIDI 旋律来演奏</td><td>—</td></tr>
+            <tr><td>每个峰值都完整</td><td>输出端不削波：长长的混响尾音和安静都保持完整；家谱显示旧削波本会咬到的地方</td><td>交付即已母带处理（在我们的擂台上：−15.5 LUFS、−3.4 dBTP）</td></tr>
+            <tr><td>渲染之后</td><td>分轨、去嗡声、重制母带、升频、歌词检查，以及按目标响度出母带（Spotify −14、Apple Music −16、CD −9），全部本地</td><td>分轨和重制母带，在云端</td></tr>
+            <tr><td>调音台</td><td>精修室里的 DAW：带 EQ、门限、压缩、宽度和发送的轨道，自动化，标记，把一条轨道的声音存为预设</td><td>Suno Studio，在浏览器里，最高档套餐</td></tr>
             <tr><td>看见声音</td><td>播放器上方显示整段录音的频谱图，与波形同步：段落、明亮度与响度、指针处的频谱和音符</td><td>波形</td></tr>
+            <tr><td>图片和视频</td><td>画师按你的文字画封面、16:9 和 9:16；影像室规划音乐视频，画出关键帧并赋予它风格（3D LUT、颗粒、暗角）</td><td>一张封面图</td></tr>
             <tr><td>进入 DAW</td><td>含乐谱、段落和歌词的 REAPER 工程（实验性）</td><td>音频分轨</td></tr>
-            <tr><td>代码</td><td>开放，每处改动都有记录</td><td>封闭</td></tr>
+            <tr><td>脚本和智能体</td><td>一个 API（OpenAPI 3.1）和一个 MCP 服务器，在你的机器和网络上</td><td>没有公开 API</td></tr>
+            <tr><td>来源证明</td><td>每次下载都签入 Content Credentials（C2PA），如你愿意，以你的名义</td><td>—</td></tr>
+            <tr><td>代码</td><td>开放（AGPL），每次更改都有编号和记录</td><td>封闭</td></tr>
+            <tr><td>界面</td><td>一页七个房间，十二种语言；每个控件都有提示，每个房间都有指南；每个房间都有播放器和片段；常用操作有快捷键；可以作为应用安装</td><td>网页应用和手机应用</td></tr>
             <tr class="honest"><td>开箱即用的精致度</td><td><b>较少</b>：混音可能有嗡声（去嗡声有帮助），歌词可能偏离（歌词检查会找到位置），有些乐器 YuE2 弹得单薄或根本不会（LoRA 能教会它）</td><td><b>较多</b></td></tr>
-            <tr class="honest"><td>你需要</td><td>一张 NVIDIA GPU（全精度运行一切需 24 GB）、Linux、约 34–41 GB 磁盘（含画室模型约 74–84 GB）</td><td>一个浏览器</td></tr>
+            <tr class="honest"><td>你需要</td><td>NVIDIA 显卡（全精度运行全部需 24 GB；12–16 GB 和 8 GB 用较小副本），Linux，34–41 GB 磁盘</td><td>一个浏览器</td></tr>
           </tbody>
         </table>
       </div>
+      <p class="ring-note">「—」：在 SUNO 付费套餐上用了半年多也没找到。SUNO 变化很快；本表截至 2026 年 11 月。</p>
     </div>
   </section>
 
   <section id="ring">
     <div class="wrap">
-      <h2>擂台：YuE2 对阵 SUNO v6 与 musicful</h2>
-      <p class="sub">二十张卡片，每张有一行风格描述和一段歌词，原封不动地发给每一方。SUNO v6 和 musicful V3 按其服务交付的原样；我们的则直接取自引擎、未经处理：原版 YuE2-3B，以及我们自己的微调 RS-FW 的两个存档点。这里每个文件都以相同响度播放，谁也不会因为更响而胜出。点一个名字即可收听；同一张卡片上的另一个名字会从同一秒接着播放。</p>
+      <h2>擂台：YuE2 对阵 SUNO v6 与 Musicful</h2>
+      <p class="sub">二十张卡片，每张有一行风格描述和一段歌词，原封不动地发给每一方。SUNO v6 和 Musicful V3 按其服务交付的原样；我们的则直接取自引擎、未经处理，于十一月重新演唱，每个峰值都完整保留：原版 YuE2-3B、我们自己的微调 RS-FW 的三个存档点，以及 RS-TW 2.0。这里每个文件都以相同响度播放，谁也不会因为更响而胜出。点一个名字即可收听；同一张卡片上的另一个名字会从同一秒接着播放。</p>
+      <p class="sub ring-seeds">RS-TW 2.0 是我们的第二个微调：它训练到 2.0 个轮次，以两种强度合并在 RS-FW 2.4 之上：×0.75 是稳妥的平衡，×0.9 更具地壳运动般的起伏，不保证稳定。我们的每张卡片有两个种子，都在这里，没有挑出其中一个：播放器里的切换按钮给出种子 1 或种子 2，并在卡片之间保持不变；表中的平均值把两者都算在内。</p>
       <div class="ring-deck" id="ring-deck">
+        <div class="ring-head" aria-hidden="true">
+          <span class="ring-head-name"></span>
+          <div class="ring-head-sides">
+            <span class="rh-cell" data-side="suno">SUNO v6</span>
+            <span class="rh-cell" data-side="musicful">Musicful V3</span>
+            <span class="rh-cell" data-side="bare">YuE2-3B</span>
+            <div class="rh-group">
+              <span class="rh-group-label">Ruach Studio <span class="nw">(RS-…)</span>：YuE2 3B 的微调</span>
+              <div class="rh-group-row"><span class="rh-cell">FW 0.7</span><span class="rh-cell">FW 1.5</span><span class="rh-cell">FW 2.4</span><span class="rh-cell rh-two">TW 2.0<br>×0.75</span><span class="rh-cell rh-two">TW 2.0<br>×0.9</span></div>
+            </div>
+          </div>
+        </div>
         <div class="ring-card" data-n="01"><span class="ring-name"><b>01</b> <span>摇滚抒情曲</span> <i>ru</i></span><span class="ring-sides"></span></div>
         <div class="ring-card" data-n="02"><span class="ring-name"><b>02</b> <span>合成器流行</span> <i>ru</i></span><span class="ring-sides"></span></div>
         <div class="ring-card" data-n="03"><span class="ring-name"><b>03</b> <span>班杜拉民谣流行</span> <i>uk</i></span><span class="ring-sides"></span></div>
@@ -488,26 +755,106 @@
       </div>
       <div class="table ring-table">
         <table>
-          <thead><tr><th>按原样测量，平均值</th><th>SUNO v6</th><th>musicful V3</th><th>YuE2-3B</th><th>RS-FW 0.7</th><th>RS-FW 1.5</th></tr></thead>
+          <thead><tr><th rowspan="2">按原样测量，平均值</th><th rowspan="2">SUNO v6</th><th rowspan="2">Musicful V3</th><th rowspan="2">YuE2‑3B</th><th colspan="5" class="ours">Ruach Studio <span class="nw">(RS-…)</span>：YuE2 3B 的微调</th></tr>
+            <tr class="ours-row"><th>FW 0.7</th><th>FW 1.5</th><th>FW 2.4</th><th>TW 2.0 ×0.75</th><th>TW 2.0 ×0.9</th></tr></thead>
           <tbody>
-            <tr><td>Whisper 歌词错误率，%（越低越好）</td><td>23.0</td><td>17.2</td><td>20.6</td><td><b>18.1</b></td><td>26.2</td></tr>
-            <tr><td>安静处的沙声，6–16 kHz，dB（越低越好）</td><td>-15.7</td><td>-14.8</td><td>-17.6</td><td><b>-18.1</b></td><td>-17.4</td></tr>
-            <tr><td>杂散的持续音（越低越好）</td><td>2.2</td><td>1.9</td><td>4.25</td><td>1.95</td><td>2.3</td></tr>
-            <tr><td>解码器在高频的 25 Hz 嗡声，dB（越低越好）</td><td>8.3</td><td>8.0</td><td>11.4</td><td>11.6</td><td>11.5</td></tr>
-            <tr><td>20–60 Hz 超低频占比，dB</td><td>-8.6</td><td>-10.2</td><td>-10.0</td><td>-9.6</td><td>-10.1</td></tr>
-            <tr><td>交付时的响度，LUFS</td><td>-15.5</td><td>-14.3</td><td>-12.6</td><td>-12.8</td><td>-12.6</td></tr>
-            <tr><td>交付时的真峰值，dBTP</td><td>-3.4</td><td>-0.5</td><td>+0.3</td><td>+0.3</td><td>+0.3</td></tr>
+            <tr><td>Whisper 歌词错误率，在混音上，% ⁠↧</td><td>23.1</td><td class="r1"><b>19.5</b></td><td class="r3">20.0</td><td class="r2">19.9</td><td>24.8</td><td>21.8</td><td>23.0</td><td>26.1</td></tr>
+            <tr><td>Whisper 歌词错误率，在分离出的人声上，% ⁠↧</td><td>27.4</td><td class="r1"><b>18.9</b></td><td class="r2">21.6</td><td class="r3">24.8</td><td>31.1</td><td>28.8</td><td>29.5</td><td>33.7</td></tr>
+            <tr><td>安静处的沙声，6–16 kHz，dB ⁠↧</td><td>-15.7</td><td>-14.8</td><td class="r3">-17.6</td><td class="r1"><b>-18.1</b></td><td>-17.3</td><td>-17.3</td><td class="r2">-17.9</td><td>-17.5</td></tr>
+            <tr><td>杂散的持续音 ⁠↧</td><td>2.2</td><td class="r2">1.9</td><td>4.33</td><td class="r3">2.0</td><td>2.27</td><td>2.23</td><td>2.15</td><td class="r1"><b>1.6</b></td></tr>
+            <tr><td>解码器在高频的 25 Hz 嗡声，dB ⁠↧</td><td class="r2">8.3</td><td class="r1"><b>8.0</b></td><td>11.4</td><td>11.6</td><td>11.6</td><td>11.5</td><td>11.6</td><td class="r3">11.1</td></tr>
+            <tr><td>咔嗒声 ⁠↧</td><td>33.4</td><td>33.8</td><td class="r1"><b>27.7</b></td><td class="r2">31.9</td><td>35.3</td><td>34.7</td><td>34.5</td><td class="r3">32.8</td></tr>
+            <tr><td>削波段 ⁠↧</td><td class="r1"><b>0.0</b></td><td class="r1"><b>0.0</b></td><td class="r1"><b>0.0</b></td><td class="r1"><b>0.0</b></td><td class="r1"><b>0.0</b></td><td class="r1"><b>0.0</b></td><td class="r1"><b>0.0</b></td><td class="r1"><b>0.0</b></td></tr>
+            <tr><td>本底噪声，最安静的十分之一，dBFS ⁠↧</td><td>-26.6</td><td>-25.2</td><td class="r2">-27.7</td><td class="r3">-27.6</td><td>-27.0</td><td>-26.6</td><td>-27.1</td><td class="r1"><b>-28.2</b></td></tr>
+            <tr><td>频谱上限，kHz ⁠↥</td><td class="r1"><b>17.9</b></td><td class="r3">15.3</td><td class="r2">15.8</td><td>14.8</td><td>14.9</td><td>15.1</td><td>15.2</td><td>14.7</td></tr>
+            <tr><td>95% 滚降频率，kHz ⁠↥</td><td class="r2">2.5</td><td class="r1"><b>2.6</b></td><td class="r3">2.2</td><td>2.1</td><td class="r3">2.2</td><td>2.0</td><td>1.7</td><td>1.7</td></tr>
+            <tr><td>20–60 Hz 超低频占比，dB ⁠↥</td><td class="r1"><b>-8.6</b></td><td>-10.2</td><td>-10.0</td><td class="r2">-9.6</td><td>-9.9</td><td>-10.4</td><td>-10.0</td><td class="r3">-9.8</td></tr>
+            <tr><td>交付时的响度，LUFS ⁠→ ⁠−14</td><td>-15.5</td><td class="r1"><b>-14.3</b></td><td class="r3">-14.5</td><td>-14.7</td><td>-14.7</td><td class="r2">-14.4</td><td>-14.6</td><td>-14.8</td></tr>
+            <tr><td>交付时的真峰值，dBTP ⁠→ ⁠−1.0</td><td class="r1"><b>-3.4</b></td><td>-0.5</td><td>-0.2</td><td>-0.2</td><td>-0.1</td><td>-0.2</td><td>-0.3</td><td>-0.1</td></tr>
+            <tr><td>60–150 Hz 低音占比，dB ⁠↥</td><td>-6.0</td><td>-5.6</td><td class="r1"><b>-4.3</b></td><td>-4.8</td><td class="r3">-4.5</td><td class="r3">-4.5</td><td class="r2">-4.4</td><td>-4.8</td></tr>
+            <tr><td>2–5 kHz 临场感频段占比，dB ⁠↥</td><td>-17.1</td><td>-16.6</td><td class="r1"><b>-16.0</b></td><td class="r3">-16.3</td><td class="r2">-16.2</td><td class="r2">-16.2</td><td>-17.3</td><td>-16.9</td></tr>
+            <tr><td>峰值因数，dB ⁠↥</td><td>14.4</td><td>15.7</td><td class="r2">16.5</td><td class="r2">16.5</td><td class="r1"><b>16.6</b></td><td class="r3">16.3</td><td>16.2</td><td class="r1"><b>16.6</b></td></tr>
+            <tr><td>响度范围，LU ⁠↥</td><td>5.9</td><td>6.2</td><td class="r1"><b>7.1</b></td><td class="r2">6.6</td><td class="r3">6.5</td><td>6.4</td><td class="r2">6.6</td><td class="r1"><b>7.1</b></td></tr>
+            <tr><td>响度离散度 p95−p10，dB ⁠↥</td><td>9.4</td><td>9.0</td><td class="r2">11.5</td><td class="r3">10.8</td><td>10.4</td><td>10.3</td><td class="r3">10.8</td><td class="r1"><b>11.7</b></td></tr>
+            <tr><td>低频段离散度 p95−p10，dB ⁠↥</td><td class="r1"><b>23.3</b></td><td>20.0</td><td>21.9</td><td>21.1</td><td>20.6</td><td>19.7</td><td class="r3">22.0</td><td class="r2">22.6</td></tr>
+            <tr><td>中频立体声相关 ⁠↥</td><td>0.67</td><td>0.69</td><td class="r3">0.75</td><td class="r1"><b>0.77</b></td><td>0.73</td><td>0.74</td><td class="r1"><b>0.77</b></td><td class="r2">0.76</td></tr>
+            <tr><td>时长，秒 ⁠↥</td><td class="r1"><b>156.8</b></td><td class="r3">154.5</td><td>148.6</td><td>148.1</td><td class="r2">154.8</td><td>151.9</td><td>152.8</td><td>149.7</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="ring-note">他们的作品是母带处理过的，我们的是原样：超过零的真峰值由我们自己修正，就像工作室的精修室所做的那样。换了种子和提示词，每一方听起来都会不同；擂台展示的是质量和差异范围，而不是最终排名。完整表格及其测量方法：<a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-RS-Finetunes">模型卡</a>。</p>
+      <p class="ring-note ring-legend"><span class="rk r1">第一</span> · <span class="rk r2">第二</span> · <span class="rk r3">第三</span>：每行八项中的前三名，第一名另加粗体；↥ 越高越好，↧ 越低越好，→ 越接近所示数值越好（真峰值从下方）。数字相同的格子颜色相同。</p>
+      <p class="ring-note ring-voice">八方都在 RTX 3090 上由 Whisper large-v3 聆听，混音和人声一视同仁：Whisper 的第一行听混音，第二行听分离出的人声，即 BS-Roformer 把每条音轨的所有人声从音乐中分离出来（主唱、和声与合唱一起，从不只取主唱）。没有音乐时，Whisper 有时会漏掉整句歌词，并在停顿处写出没人唱过的字，每一方都会发生，所以两行最好对照着读。</p>
+      <p class="ring-note ring-waves">FW 和 TW 是我们对 YuE2 3B 的两个微调的代号：First Wave 和 Tsunami Wave。Tsunami Wave 在 109,250 首曲目、约 6,650 小时上训练：66.7% 的时长是器乐，31.6% 是演唱，1.8% 是说话。人声的语言有英语（时长的 7.0%）、俄语（5.8%）、希伯来语（1.7%）、希腊语和乌克兰语（各 0.6%）、法语和西班牙语（各 0.5%）、葡萄牙语（0.3%）、意大利语（0.2%），以及另外 14 种各占不到 0.1% 的语言；15.9% 的时长里能听到人声，但其语言未能识别。</p>
+      <p class="ring-note">他们的作品是母带处理过的，我们的是原样，保持解码器自身的电平，每个峰值都完整保留：响度留给母带处理，那是工作室精修室的事。换了种子和提示词，每一方听起来都会不同；擂台展示的是质量和差异范围，而不是最终排名。完整表格及其测量方法：<a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-RS-Finetunes">模型卡</a>。</p>
       <div class="vocab-call" id="vocabulary">
         <div>
-          <h3>第一波的词汇</h3>
-          <p>我们的微调在 32,633 首训练曲目中收到的每个词，都已统计并可搜索：流派、乐器、人声、由音频本身得出的情感词、调与 BPM，以及乐谱的字段。很少有微调会公开它的模型被告知了什么。</p>
+          <h3>Tsunami Wave 与第一波的词汇</h3>
+          <p>我们两个微调收到的每个词，都已统计并可搜索：Tsunami Wave 的 109,250 首训练曲目，以及在它之前第一波的 32,633 首。流派、乐器、人声、由音频本身得出的情感词、调与 BPM，以及乐谱的字段。很少有微调会公开它的模型被告知了什么。</p>
         </div>
         <button class="vocab-open" id="vocab-open" type="button">打开词汇表</button>
       </div>
+    </div>
+  </section>
+
+  <section id="spectrum">
+    <div class="wrap">
+      <h2>频谱告诉我们什么</h2>
+      <p class="sub">不是听，而是测量的擂台：280 个作品，我们六方各 40 个，SUNO v6 20 个，Musicful V3 20 个。每个作品先统一到 −14 LUFS，让响度赢不到任何东西；每条曲线都是该作品各频段相对其总功率的电平，所以比较的只是形状。我们的是引擎的原始输出，他们的经过母带处理，因此下面的一部分差距来自母带。</p>
+      <div class="spec-grid">
+        <figure class="spec-fig">
+          <a class="pic" href="/ring/spectrum/spectrum-day.png" data-night="/ring/spectrum/spectrum-night.png"><img class="g-day" src="/ring/spectrum/spectrum-day.png" width="1440" height="900" alt="擂台八方的平均 1/3 倍频程频谱，20 Hz 至 20 kHz" loading="lazy"><img class="g-night" src="/ring/spectrum/spectrum-night.png" width="1440" height="900" alt="擂台八方的平均 1/3 倍频程频谱，20 Hz 至 20 kHz" loading="lazy"></a>
+          <figcaption><h3>直到最后一个八度，都是同一条曲线</h3><p>从 100 Hz 到 10 kHz，八方的平均曲线彼此相差不超过 5.2 dB。高于 16 kHz，它们分开了。Musicful V3 在 40 个作品中有 38 个在 16 kHz 以上什么也没有保留：在 20 kHz，它的平均值位于 −90.6 dB，别人是斜坡的地方，它是一堵墙。SUNO v6 在那里保留得最多，16–20 kHz 为 −31.0 dB；我们的在 −39.3 到 −42.3 dB 之间，偶尔也会止于 16 kHz，40 个中有 1 到 6 个，最多的是 RS-TW 2.0 ×0.9。</p></figcaption>
+        </figure>
+        <figure class="spec-fig">
+          <a class="pic" href="/ring/spectrum/air-day.png" data-night="/ring/spectrum/air-night.png"><img class="g-day" src="/ring/spectrum/air-day.png" width="1440" height="900" alt="每一方的空气感频段（8–16 kHz）和最高频段（16–20 kHz），以相对作品功率的 dB 表示" loading="lazy"><img class="g-night" src="/ring/spectrum/air-night.png" width="1440" height="900" alt="每一方的空气感频段（8–16 kHz）和最高频段（16–20 kHz），以相对作品功率的 dB 表示" loading="lazy"></a>
+          <figcaption><h3>空气感：他们亮 2.3 到 4.6 dB</h3><p>在空气感频段 8–16 kHz，SUNO v6 和 Musicful V3 分别位于其作品功率的 −19.4 和 −19.6 dB，我们的六方在 −21.8 到 −24.0 dB 之间。母带处理通常会提升空气感，而我们的还没有经过任何母带：在工作室里，那是歌唱完之后精修室的事。</p></figcaption>
+        </figure>
+        <figure class="spec-fig">
+          <a class="pic" href="/ring/spectrum/dynamics-day.png" data-night="/ring/spectrum/dynamics-night.png"><img class="g-day" src="/ring/spectrum/dynamics-day.png" width="1440" height="900" alt="每一方的峰值因数（dB）与响度范围（LU）：平均值以及第 10 到第 90 百分位" loading="lazy"><img class="g-night" src="/ring/spectrum/dynamics-night.png" width="1440" height="900" alt="每一方的峰值因数（dB）与响度范围（LU）：平均值以及第 10 到第 90 百分位" loading="lazy"></a>
+          <figcaption><h3>峰值与范围：我们的呼吸更宽</h3><p>峰值因数，即峰值高出平均值的部分：SUNO v6 为 14.4 dB，Musicful V3 为 15.7 dB，我们的为 16.2 到 16.6 dB。响度范围：他们为 5.9 和 6.0 LU，我们为 6.4 到 7.0 LU。RS-TW 2.0 ×0.9 是我们的微调中最宽的，16.6 dB 和 7.0 LU，与原版 YuE2-3B（16.5 dB、7.0 LU）一样宽：这就是用数字表示的它的地壳运动。×0.75 更收敛，16.2 dB 和 6.6 LU。</p></figcaption>
+        </figure>
+        <figure class="spec-fig">
+          <a class="pic" href="/ring/spectrum/psalm-day.png" data-night="/ring/spectrum/psalm-night.png"><img class="g-day" src="/ring/spectrum/psalm-day.png" width="1440" height="900" alt="希腊语诗篇 22 在 Tsunami Wave 四种强度下的 1/3 倍频程频谱" loading="lazy"><img class="g-night" src="/ring/spectrum/psalm-night.png" width="1440" height="900" alt="希腊语诗篇 22 在 Tsunami Wave 四种强度下的 1/3 倍频程频谱" loading="lazy"></a>
+          <figcaption><h3>四种强度，一首诗篇</h3><p>盲测集：十二张卡片，在 RS-FW 2.4 之上以 Tsunami Wave 的四种强度演唱，每种强度用同一个种子。在希腊语的诗篇 22 上，从 ×0.75/0.75 到 ×0.8/0.8 的一步，让 20–60 Hz 的超低音少了 36 dB，从 −7.9 降到 −44.3 dB：歌曲脚下的地板消失了。在全部十二张卡片上，摆动要温和得多，超低音在 ×0.75/0.75 下为 −8.5 dB，其他三种为 −10.4 到 −11.0 dB；而且 ×0.75/0.75 在 12 张卡片中有 6 张最接近擂台自身的中位曲线，平均距离 4.1 dB，其他为 4.8 到 5.2 dB。因此在 2.0.6 中，×0.75 成为工作室的默认模型，而 ×0.9 是不承诺稳定性的那一个。</p></figcaption>
+        </figure>
+      </div>
+      <p class="ring-note">用我们自己的代码在 CPU 上测量：1/3 倍频程频段取自 Welch 频谱，响度及其范围依据 ITU-R BS.1770-4 和 EBU Tech 3342。每张图点击即可放大。</p>
+    </div>
+  </section>
+
+  <!-- HERESY 2080 (Viktor 05.11.2026, evening): the ring's stereo after its spectrum, a graph and a table (stereo/stereo.jsonl, stereo/REPORT-2026-11-05.md) -->
+  <section id="stereo">
+    <div class="wrap">
+      <h2>立体声告诉我们什么</h2>
+      <p class="sub">擂台上的 280 个作品，按宽度来测量。在四个频段中的每一个里，把侧信号（两个声道之差的一半）与中信号（两者之和的一半）相比：侧信号高出中信号的 dB 越多，这个频段听起来就越宽；单声道的作品根本没有侧信号。声像是一个作品里左右声道的电平差摆动得有多远，从第 5 到第 95 百分位，单位 dB。每个数字都是一方作品的中位数：SUNO v6 和 Musicful V3 各 20 个，我们的每一方各 40 个。这里更宽并不更好，只是更宽：这张表不排名次。</p>
+      <div class="st-grid">
+        <figure class="spec-fig st-fig">
+          <div class="st-plot">
+            <svg class="st-svg" viewBox="0 0 640 364" role="img" aria-label="擂台八方在四个频段中侧信号相对中信号的高度，中位数，单位 dB" data-scale="52 320 -4 -22"><line class="st-grid-line" x1="66" y1="290.2" x2="626" y2="290.2"/><text class="st-tick" x="56" y="295.2" text-anchor="end">−20</text><line class="st-grid-line" x1="66" y1="230.7" x2="626" y2="230.7"/><text class="st-tick" x="56" y="235.7" text-anchor="end">−16</text><line class="st-grid-line" x1="66" y1="171.1" x2="626" y2="171.1"/><text class="st-tick" x="56" y="176.1" text-anchor="end">−12</text><line class="st-grid-line" x1="66" y1="111.6" x2="626" y2="111.6"/><text class="st-tick" x="56" y="116.6" text-anchor="end">−8</text><line class="st-grid-line" x1="66" y1="52" x2="626" y2="52"/><text class="st-tick" x="56" y="57" text-anchor="end">−4</text><text class="st-tick" x="56" y="26" text-anchor="end">dB</text><line class="st-grid-line" x1="136" y1="52" x2="136" y2="320"/><text class="st-range" x="136" y="350" text-anchor="middle">20–200 Hz</text><line class="st-grid-line" x1="276" y1="52" x2="276" y2="320"/><text class="st-range" x="276" y="350" text-anchor="middle">0.2–2 kHz</text><line class="st-grid-line" x1="416" y1="52" x2="416" y2="320"/><text class="st-range" x="416" y="350" text-anchor="middle">2–8 kHz</text><line class="st-grid-line" x1="556" y1="52" x2="556" y2="320"/><text class="st-range" x="556" y="350" text-anchor="middle">8–20 kHz</text><polygon class="st-band st-fwband" points="136,238.1 276,104.1 416,90.7 556,144.3 556,159.2 416,110.1 276,119 136,251.5"/><polyline class="st-line st-bare" data-side="bare" points="136,251.5 276,114.5 416,110.1 556,150.3"/><polyline class="st-line st-suno" data-side="suno" points="136,178.6 276,96.7 416,93.7 556,135.4"/><polyline class="st-line st-musicful" data-side="musicful" points="136,186 276,99.6 416,80.3 556,110.1"/><polyline class="st-line st-tw" data-side="tw" points="136,275.3 276,113 416,110.1 556,165.2"/><polyline class="st-line st-tw09" data-side="tw09" points="136,291.7 276,125 416,114.5 556,171.1"/><circle class="st-dot st-bare" cx="136" cy="251.5" r="4.5"/><circle class="st-dot st-bare" cx="276" cy="114.5" r="4.5"/><circle class="st-dot st-bare" cx="416" cy="110.1" r="4.5"/><circle class="st-dot st-bare" cx="556" cy="150.3" r="4.5"/><circle class="st-dot st-suno" cx="136" cy="178.6" r="4.5"/><circle class="st-dot st-suno" cx="276" cy="96.7" r="4.5"/><circle class="st-dot st-suno" cx="416" cy="93.7" r="4.5"/><circle class="st-dot st-suno" cx="556" cy="135.4" r="4.5"/><circle class="st-dot st-musicful" cx="136" cy="186" r="4.5"/><circle class="st-dot st-musicful" cx="276" cy="99.6" r="4.5"/><circle class="st-dot st-musicful" cx="416" cy="80.3" r="4.5"/><circle class="st-dot st-musicful" cx="556" cy="110.1" r="4.5"/><circle class="st-dot st-tw" cx="136" cy="275.3" r="4.5"/><circle class="st-dot st-tw" cx="276" cy="113" r="4.5"/><circle class="st-dot st-tw" cx="416" cy="110.1" r="4.5"/><circle class="st-dot st-tw" cx="556" cy="165.2" r="4.5"/><circle class="st-dot st-tw09" cx="136" cy="291.7" r="4.5"/><circle class="st-dot st-tw09" cx="276" cy="125" r="4.5"/><circle class="st-dot st-tw09" cx="416" cy="114.5" r="4.5"/><circle class="st-dot st-tw09" cx="556" cy="171.1" r="4.5"/></svg>
+            <ul class="st-legend" translate="no"><li><i class="st-key st-suno"></i>SUNO v6</li><li><i class="st-key st-musicful"></i>Musicful V3</li><li><i class="st-key st-bare"></i>YuE2-3B</li><li><i class="st-key st-fwband"></i>RS-FW 0.7 · 1.5 · 2.4</li><li><i class="st-key st-tw"></i>RS-TW 2.0 ×0.75</li><li><i class="st-key st-tw09"></i>RS-TW 2.0 ×0.9</li></ul>
+          </div>
+          <figcaption><p>四个频段中侧信号相对中信号的高度（dB，各方作品的中位数）：越高越宽。</p></figcaption>
+        </figure>
+        <div class="table stereo-table">
+          <table>
+            <thead><tr><th rowspan="2">按原样测量，中位数</th><th colspan="4">侧信号相对中信号，dB</th><th rowspan="2">声像，dB</th></tr>
+              <tr><th>低频<br><small>20–200 Hz</small></th><th>中频<br><small>0.2–2 kHz</small></th><th>高频<br><small>2–8 kHz</small></th><th>空气感<br><small>8–20 kHz</small></th></tr></thead>
+            <tbody translate="no">
+            <tr><td>SUNO v6</td><td>−12.5</td><td>−7.0</td><td>−6.8</td><td>−9.6</td><td>6.4</td></tr>
+            <tr><td>Musicful V3</td><td>−13.0</td><td>−7.2</td><td>−5.9</td><td>−7.9</td><td>6.6</td></tr>
+            <tr><td>YuE2-3B</td><td>−17.4</td><td>−8.2</td><td>−7.9</td><td>−10.6</td><td>6.4</td></tr>
+            <tr><td>RS-FW 0.7</td><td>−17.2</td><td>−8.5</td><td>−7.3</td><td>−10.9</td><td>5.9</td></tr>
+            <tr><td>RS-FW 1.5</td><td>−17.4</td><td>−7.5</td><td>−6.6</td><td>−10.2</td><td>6.3</td></tr>
+            <tr><td>RS-FW 2.4</td><td>−16.5</td><td>−8.0</td><td>−7.9</td><td>−11.2</td><td>6.4</td></tr>
+            <tr><td>RS-TW 2.0 ×0.75</td><td>−19.0</td><td>−8.1</td><td>−7.9</td><td>−11.6</td><td>6.0</td></tr>
+            <tr><td>RS-TW 2.0 ×0.9</td><td>−20.1</td><td>−8.9</td><td>−8.2</td><td>−12.0</td><td>5.9</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p class="ring-note st-read">我们的合并把中频和高频保持在原版 YuE2-3B 所在的位置，相差都不超过 1.3 dB。RS-TW 2.0 在两端略窄：×0.75 在低频窄 1.6 dB、空气感窄 1.0 dB、声像窄 0.4 dB，×0.9 分别窄 2.7、1.4 和 0.5 dB。SUNO v6 和 Musicful V3 的低频比原版 YuE2-3B 宽 4.9 和 4.4 dB。</p>
+      <p class="ring-note st-ear">在 Viktor 听来，RS-TW 2.0 收窄的两端更稳，而不是丢了立体声：原版 YuE2-3B 常把一把吉他停在一个声道里 15 到 20 秒。</p>
+      <p class="ring-note st-how">用我们自己的代码在 CPU 上测得：对每个作品的前 240 秒，每 50 ms 取一次 4096 点的短时频谱；中信号和侧信号为 (L+R)/2 和 (L−R)/2；声像取自 200 Hz – 8 kHz 内两声道的电平差，只看与作品最响处相差 40 dB 以内的时刻。</p>
     </div>
   </section>
 
@@ -516,19 +863,19 @@
       <h2>你需要什么</h2>
       <div class="cols">
         <div class="card"><h3>机器</h3><ul>
-          <li><b>一张 NVIDIA GPU</b>：全精度运行一切需 24 GB</li>
+          <li><b>NVIDIA 显卡</b>：全精度运行全部需 24 GB；12–16 GB 和 8 GB 用较小副本也能运行（影像室需要 24 GB）</li>
           <li><b>Linux</b>（在 Ubuntu 24.04、CUDA 12.8 上制作）</li>
           <li><b>约 34–41 GB</b> 磁盘，在全新安装上实测：程序及其 Python（17 GB），模型（视显卡 17 到 24 GB，由 <code>fetch-models.sh</code> 下载、固定版本并校验）；画室的模型另需 39–43 GB，💎 素材集 5.6 GB，都只在你要求时才下载</li></ul></div>
         <div class="card"><h3>屏幕</h3><ul>
           <li>为 <b>1920×1080、100 %</b> 的浏览器窗口而做</li>
           <li>理想：<b>2K</b>（2560×1440），22″ 或更大，16:9 或更宽</li>
           <li>两个适合长时间工作的主题：白天 Scroll &amp; Brick，夜晚 Scroll by Lamplight，另有 20 个</li></ul></div>
-        <!-- HERESY 1807 (Viktor 28.10.2026: «на всех наших карточках чёрным по белому… предупреди… Слишком массивная она у нас») -->
-        <p class="warn-free"><b>不能用免费的云端 GPU。</b>Ruach Studio 无法在 Google Colab、Kaggle 或任何免费的笔记本 GPU 上运行，所以别在那儿浪费一个晚上：它是一整个工作室，不是一个笔记本。它在所在的机器上编译自己的 C++/CUDA 引擎，旁边一直运行着一个服务器和一组 Python 服务，并占用约 34–41 GB 磁盘（加上画室约 74–84 GB）。免费会话的显卡、内存、会被清空的磁盘和几小时的时限都撑不住。它需要你自己的 Linux 电脑，或你租下并长期保留的服务器，配一块 NVIDIA 显卡：全部功能 24 GB，用较小的模型副本 16 GB。</p>
         <div class="card"><h3>可选</h3><ul>
           <li>为写作室准备的聊天服务器（vLLM、LM Studio、Ollama）或 OpenRouter 密钥</li>
           <li>一个 DAW：REAPER、Waveform 14+、Bitwig</li>
-          <li>更多 GPU：在做歌的同时进行训练和实验室的工作</li></ul></div>
+          <li>更多 GPU：在做歌的同时进行训练和实验室的工作</li></ul></div>   <!-- HERESY 2026 (Viktor: «Третьей в ту строку перемести карточку `По желанию`») -->
+        <!-- HERESY 1807 (Viktor 28.10.2026: «на всех наших карточках чёрным по белому… предупреди… Слишком массивная она у нас») -->
+        <p class="warn-free"><b>不能用免费的云端 GPU。</b>Ruach Studio 无法在 Google Colab、Kaggle 或任何免费的笔记本 GPU 上运行，所以别在那儿浪费一个晚上：它是一整个工作室，不是一个笔记本。它在所在的机器上编译自己的 C++/CUDA 引擎，旁边一直运行着一个服务器和一组 Python 服务，并占用约 34–41 GB 磁盘（加上画室约 74–84 GB）。免费会话的显卡、内存、会被清空的磁盘和几小时的时限都撑不住。它需要你自己的 Linux 电脑，或你租下并长期保留的服务器，配一块 NVIDIA 显卡：全部功能 24 GB，用较小的模型副本 16 GB。</p>
       </div>
     </div>
   </section>
@@ -563,12 +910,13 @@
   <section id="next">
     <div class="wrap">
       <h2>接下来</h2>
-      <p class="sub">2.0.0 是我们每天做自己歌曲的工作室。以下是正在路上的较大部分，面向 2.1.0 及以后。</p>
+      <p class="sub">2.0.6 是我们每天创作自己歌曲所用的 Studio。以下是正在路上的较大部分，面向 2.0.7、2.1.0 及以后。</p>
       <ul class="feats">
+        <li><b>我们自己的解码器，在 2.0.7。</b>YuE2 VAE-RS 大小是标准解码器的三到四倍，由我们在公开数据集上训练，与标准解码器并列提供，任何一条录音都能从它已保存的音乐重新解码。权重公开。</li>
         <li><b>像模型写歌那样编辑歌曲。</b>从任意位置延长一段录音；重写一个段落，保留相邻段落的嗓音、调性和小节，并在模型自己的 token 中缝合；在录音自己的乐谱上叠加一层器乐。</li>
-        <li><b>精修室里的 DAW。</b>Plenio 的乐谱编辑器抢先预览：钢琴卷帘、和弦轨、音符上方的歌词、用来弹入想法的 MIDI 键盘。</li>
-        <li><b>桌面应用。</b>先是可安装的页面（PWA），然后是自行启动和停止服务的 Electron 应用。</li>
-        <li><b>视频师。</b>为歌曲制作音乐视频，场景由助手建议，关键帧由画室绘制，在 2.1.0 中。</li>
+        <li><b>DAW，更进一步。</b>录音上方的和弦轨与拍子网格，可从任何录音取参考，以及把你在 MIDI 键盘上弹的写进乐谱的钢琴卷帘。</li>
+        <li><b>影像室，更进一步。</b>歌词逐字出现在视频上，所有场景统一色彩。</li>
+        <li><b>Tsunami Wave 之后的下一波。</b>我们的下一个微调从 YuE2 唱得最差的地方学习，发布前先盲听。</li>
         <li>为 REAPER、Waveform 和 Bitwig 提供<b>原生插件</b>，等工作室找到它的用户之后。</li>
       </ul>
     </div>
@@ -606,73 +954,73 @@
       <div class="story" translate="no" lang="en" data-lang="en" hidden>
         <h2>A little story</h2>
         <p>Viktor Zhuromskyy, the author of Ruach Studio, does not publish it for the hype. He made it for himself. After more than half a year of struggling with Suno on paid plans, and of searching for a model worth working with (ACE-Step, MiniMax and others), he set out to build an audio studio of his own, on his own machine. He settled on YuE2: of all the open models, it is the best value and the most refined.</p>
-        <p>He did not knock the Studio together just to have something that runs. He built it his own way, because his work is his own: his translations, his interlinear texts and much more. He fit into it as much as he could, polished the interface as far as he could, and made working with it not poking and clicking among crutches and potholes, but as productive as it can be.</p>
+        <p>He did not knock the Studio together just to have something that runs. He built it his own way, because his creative work is his own too, refined and one of a kind: his translations, his interlinear texts and much more. He fit into it as much as he could, polished the interface as far as he could, and made creating in it not poking and clicking among crutches and potholes, but as productive as it can be.</p>
         <p class="story-end">That is the whole story. Now the Studio is yours as well.</p>
       </div>
       <div class="story" translate="no" lang="ru" data-lang="ru" hidden>
         <h2>Маленькая история</h2>
         <p>Виктор Журомский, автор Ruach Studio, публикует её не ради хайпа. Он делал её для себя. После более чем полугода мучений с Suno на платных тарифах и поисков достойной модели (ACE-Step, MiniMax и другие) он взялся построить собственную аудиостудию, на своей машине. Выбор пал на YuE2: из всех открытых моделей она самая рентабельная и самая изысканная.</p>
-        <p>Студию он делал не тяп-ляп, лишь бы работало, а в своём стиле, потому что и работа у него своя: собственные переводы, подстрочники и многое другое. Он постарался вместить в неё максимум, отполировать интерфейс до блеска и сделать работу со студией не тыканьем и кликаньем среди костылей и ям, а по-настоящему продуктивной.</p>
-        <p class="story-end">Вот и вся история. Теперь эта студия и ваша.</p>
+        <p>Студию он делал не тяп-ляп, лишь бы работало, а в своём стиле, потому что и творчество у него своё, изысканное и неповторимое: собственные переводы, подстрочники и многое другое. Он постарался вместить в неё максимум, отполировать интерфейс до блеска и сделать творчество в Студии не тыканьем и кликаньем среди костылей и ям, а по-настоящему продуктивным.</p>
+        <p class="story-end">Вот и вся история. Теперь эта Студия и ваша.</p>
       </div>
       <div class="story" translate="no" lang="uk" data-lang="uk" hidden>
         <h2>Маленька історія</h2>
-        <p>Віктор Журомський, автор Ruach Studio, публікує її не заради хайпу. Він робив її для себе. Після понад пів року мук із Suno на платних тарифах і пошуків гідної моделі (ACE-Step, MiniMax та інші) він узявся збудувати власну аудіостудію, на своїй машині. Вибір упав на YuE2: з усіх відкритих моделей вона найвигідніша й найвишуканіша.</p>
-        <p>Студію він робив не абияк, аби лиш працювало, а у своєму стилі, бо й робота в нього своя: власні переклади, підрядники та багато іншого. Він намагався вмістити в неї максимум, відшліфувати інтерфейс до блиску й зробити роботу зі студією не тицянням і клацанням серед милиць і ям, а справді продуктивною.</p>
-        <p class="story-end">Ось і вся історія. Тепер ця студія і ваша.</p>
+        <p>Віктор Журомський, автор Ruach Studio, публікує її не заради хайпу. Він творив її для себе. Після понад пів року мук із Suno на платних тарифах і пошуків гідної моделі (ACE-Step, MiniMax та інші) він узявся збудувати власну аудіостудію, на своїй машині. Вибір упав на YuE2: з усіх відкритих моделей вона найвигідніша й найвишуканіша.</p>
+        <p>Студію він творив не абияк, аби лиш працювало, а у своєму стилі, бо й творчість у нього своя, вишукана й неповторна: власні переклади, підрядники та багато іншого. Він намагався вмістити в неї максимум, відшліфувати інтерфейс до блиску, щоб творчість у Студії була не тицянням і клацанням серед милиць і ям, а справді продуктивною.</p>
+        <p class="story-end">Ось і вся історія. Тепер ця Студія і ваша.</p>
       </div>
       <div class="story" translate="no" lang="be" data-lang="be" hidden>
         <h2>Маленькая гісторыя</h2>
-        <p>Віктар Журомскі, аўтар Ruach Studio, публікуе яе не дзеля хайпу. Ён рабіў яе для сябе. Пасля больш як паўгода пакут з Suno на платных тарыфах і пошукаў годнай мадэлі (ACE-Step, MiniMax і іншыя) ён узяўся пабудаваць уласную аўдыястудыю, на сваёй машыне. Выбар упаў на YuE2: з усіх адкрытых мадэляў яна самая выгадная і самая вытанчаная.</p>
-        <p>Студыю ён рабіў не абы-як, абы працавала, а ў сваім стылі, бо і праца ў яго свая: уласныя пераклады, падрадкоўнікі і шмат іншага. Ён стараўся змясціць у яе максімум, адшліфаваць інтэрфейс да бляску і зрабіць працу са студыяй не тыцканнем і клікамі сярод мыліц і ям, а сапраўды прадуктыўнай.</p>
-        <p class="story-end">Вось і ўся гісторыя. Цяпер гэтая студыя і ваша.</p>
+        <p>Віктар Журомскі, аўтар Ruach Studio, публікуе яе не дзеля хайпу. Ён тварыў яе для сябе. Пасля больш як паўгода пакут з Suno на платных тарыфах і пошукаў годнай мадэлі (ACE-Step, MiniMax і іншыя) ён узяўся пабудаваць уласную аўдыястудыю, на сваёй машыне. Выбар упаў на YuE2: з усіх адкрытых мадэляў яна самая выгадная і самая вытанчаная.</p>
+        <p>Студыю ён тварыў не абы-як, абы працавала, а ў сваім стылі, бо і творчасць у яго свая, вытанчаная і непаўторная: уласныя пераклады, падрадкоўнікі і шмат іншага. Ён стараўся змясціць у яе максімум, адшліфаваць інтэрфейс да бляску, каб творчасць у Студыі была не тыцканнем і клікамі сярод мыліц і ям, а сапраўды прадуктыўнай.</p>
+        <p class="story-end">Вось і ўся гісторыя. Цяпер гэтая Студыя і ваша.</p>
       </div>
       <div class="story" translate="no" lang="el" data-lang="el" hidden>
         <h2>Μια μικρή ιστορία</h2>
         <p>Ο Viktor Zhuromskyy, ο δημιουργός του Ruach Studio, δεν το δημοσιεύει για εντυπωσιασμό. Το έφτιαξε για τον εαυτό του. Ύστερα από περισσότερους από έξι μήνες ταλαιπωρίας με το Suno σε πληρωμένα πακέτα, και αναζήτησης ενός μοντέλου που να αξίζει (ACE-Step, MiniMax και άλλα), αποφάσισε να φτιάξει ένα δικό του στούντιο ήχου, στο δικό του μηχάνημα. Κατέληξε στο YuE2: από όλα τα ανοιχτά μοντέλα είναι το πιο συμφέρον και το πιο εκλεπτυσμένο.</p>
-        <p>Δεν έστησε το στούντιο πρόχειρα, απλώς για να δουλεύει. Το έφτιαξε με το δικό του ύφος, γιατί και η δουλειά του είναι δική του: οι μεταφράσεις του, τα διάστιχα κείμενά του και πολλά άλλα. Προσπάθησε να χωρέσει σε αυτό όσο περισσότερα γινόταν, να γυαλίσει το περιβάλλον εργασίας ως την τελευταία λεπτομέρεια και να κάνει τη δουλειά μαζί του όχι άσκοπα κλικ ανάμεσα σε δεκανίκια και λακκούβες, αλλά κάτι πραγματικά παραγωγικό.</p>
-        <p class="story-end">Αυτή είναι όλη η ιστορία. Τώρα το στούντιο είναι και δικό σας.</p>
+        <p>Δεν έστησε το Στούντιο πρόχειρα, απλώς για να λειτουργεί. Το έφτιαξε με το δικό του ύφος, γιατί και η δημιουργία του είναι δική του, εκλεπτυσμένη και μοναδική: οι μεταφράσεις του, τα διάστιχα κείμενά του και πολλά άλλα. Προσπάθησε να χωρέσει σε αυτό όσο περισσότερα γινόταν, να γυαλίσει το περιβάλλον ως την τελευταία λεπτομέρεια και να κάνει τη δημιουργία στο Στούντιο όχι άσκοπα κλικ ανάμεσα σε δεκανίκια και λακκούβες, αλλά κάτι πραγματικά παραγωγικό.</p>
+        <p class="story-end">Αυτή είναι όλη η ιστορία. Τώρα το Στούντιο είναι και δικό σας.</p>
       </div>
       <div class="story" translate="no" lang="es" data-lang="es" hidden>
         <h2>Una pequeña historia</h2>
         <p>Viktor Zhuromskyy, el autor de Ruach Studio, no lo publica para llamar la atención. Lo hizo para sí mismo. Tras más de medio año de sufrir con Suno en planes de pago y de buscar un modelo que mereciera la pena (ACE-Step, MiniMax y otros), se propuso construir su propio estudio de audio, en su propia máquina. Se quedó con YuE2: de todos los modelos abiertos, es el más rentable y el más refinado.</p>
-        <p>No montó el estudio de cualquier manera, solo para que funcionara. Lo hizo a su estilo, porque su trabajo también es suyo: sus traducciones, sus textos interlineales y mucho más. Procuró meter en él todo lo posible, pulir la interfaz hasta el último detalle y hacer que trabajar con el estudio no sea dar clics a ciegas entre muletas y baches, sino algo de verdad productivo.</p>
-        <p class="story-end">Esa es toda la historia. Ahora el estudio también es tuyo.</p>
+        <p>No montó el Estudio de cualquier manera, solo para que funcionara. Lo hizo a su estilo, porque su creación también es suya, refinada e irrepetible: sus traducciones, sus textos interlineales y mucho más. Procuró meter en él todo lo posible, pulir la interfaz hasta el último detalle y hacer que crear en el Estudio no sea dar clics a ciegas entre muletas y baches, sino algo de verdad productivo.</p>
+        <p class="story-end">Esa es toda la historia. Ahora el Estudio también es tuyo.</p>
       </div>
       <div class="story" translate="no" lang="it" data-lang="it" hidden>
         <h2>Una piccola storia</h2>
         <p>Viktor Zhuromskyy, l'autore di Ruach Studio, non lo pubblica per fare clamore. Lo ha costruito per sé. Dopo più di sei mesi di tormenti con Suno sui piani a pagamento, e di ricerche di un modello all'altezza (ACE-Step, MiniMax e altri), ha deciso di crearsi uno studio audio tutto suo, sulla sua macchina. La scelta è caduta su YuE2: fra tutti i modelli aperti è il più conveniente e il più raffinato.</p>
-        <p>Non ha messo insieme lo studio alla buona, giusto perché funzionasse. Lo ha fatto a modo suo, perché anche il suo lavoro è suo: le sue traduzioni, i suoi testi interlineari e molto altro. Ha cercato di farci stare il massimo, di rifinire l'interfaccia fino all'ultimo dettaglio e di rendere il lavoro con lo studio non un cliccare a vuoto tra stampelle e buche, ma qualcosa di davvero produttivo.</p>
-        <p class="story-end">Questa è tutta la storia. Ora lo studio è anche tuo.</p>
+        <p>Non ha messo insieme lo Studio alla buona, giusto perché funzionasse. Lo ha fatto a modo suo, perché anche la sua opera creativa è sua, raffinata e irripetibile: le sue traduzioni, i suoi testi interlineari e molto altro. Ha cercato di farci stare il massimo, di rifinire l'interfaccia fino all'ultimo dettaglio e di rendere il creare nello Studio non un cliccare a vuoto tra stampelle e buche, ma qualcosa di davvero produttivo.</p>
+        <p class="story-end">Questa è tutta la storia. Ora lo Studio è anche tuo.</p>
       </div>
       <div class="story" translate="no" lang="fr" data-lang="fr" hidden>
         <h2>Une petite histoire</h2>
         <p>Viktor Zhuromskyy, l'auteur de Ruach Studio, ne le publie pas pour faire parler de lui. Il l'a fait pour lui-même. Après plus de six mois à se débattre avec Suno sur des formules payantes, et à chercher un modèle qui en vaille la peine (ACE-Step, MiniMax et d'autres), il s'est mis à construire son propre studio audio, sur sa propre machine. Son choix s'est arrêté sur YuE2 : de tous les modèles ouverts, c'est le plus rentable et le plus raffiné.</p>
-        <p>Il n'a pas bricolé le studio à la va-vite, juste pour avoir quelque chose qui tourne. Il l'a fait à sa manière, parce que son travail est le sien : ses traductions, ses textes interlinéaires et bien plus encore. Il y a fait entrer tout ce qu'il a pu, a poli l'interface aussi loin qu'il a pu, et a fait du travail avec le studio non pas un tâtonnement de clics entre béquilles et nids-de-poule, mais quelque chose de vraiment productif.</p>
-        <p class="story-end">Voilà toute l'histoire. Maintenant, le studio est aussi à toi.</p>
+        <p>Il n'a pas bricolé le Studio à la va-vite, juste pour avoir quelque chose qui tourne. Il l'a fait à sa manière, parce que sa création est la sienne, raffinée et inimitable : ses traductions, ses textes interlinéaires et bien plus encore. Il y a fait entrer tout ce qu'il a pu, a poli l'interface aussi loin qu'il a pu, et a fait de la création dans le Studio non pas un tâtonnement de clics entre béquilles et nids-de-poule, mais quelque chose de vraiment productif.</p>
+        <p class="story-end">Voilà toute l'histoire. Maintenant, le Studio est aussi à toi.</p>
       </div>
       <div class="story" translate="no" lang="pt" data-lang="pt" hidden>
         <h2>Uma pequena história</h2>
         <p>Viktor Zhuromskyy, o autor do Ruach Studio, não o publica pelo hype. Ele o fez para si mesmo. Depois de mais de meio ano sofrendo com o Suno em planos pagos, e procurando um modelo que valesse a pena (ACE-Step, MiniMax e outros), ele decidiu construir o seu próprio estúdio de áudio, na sua própria máquina. A escolha caiu no YuE2: de todos os modelos abertos, é o de melhor custo-benefício e o mais refinado.</p>
-        <p>Ele não montou o estúdio de qualquer jeito, só para ter algo que rodasse. Fez do seu jeito, porque o trabalho dele é dele: as suas traduções, os seus textos interlineares e muito mais. Colocou nele o máximo que pôde, poliu a interface até onde pôde e fez do trabalho com o estúdio não um cutucar e clicar entre muletas e buracos, mas algo de fato produtivo.</p>
-        <p class="story-end">Essa é a história toda. Agora o estúdio também é seu.</p>
+        <p>Ele não montou o Estúdio de qualquer jeito, só para ter algo que rodasse. Fez do seu jeito, porque a criação dele é dele, refinada e inimitável: as suas traduções, os seus textos interlineares e muito mais. Colocou nele o máximo que pôde, poliu a interface até onde pôde e fez da criação no Estúdio não um cutucar e clicar entre muletas e buracos, mas algo de fato produtivo.</p>
+        <p class="story-end">Essa é a história toda. Agora o Estúdio também é seu.</p>
       </div>
       <div class="story" translate="no" lang="de" data-lang="de" hidden>
         <h2>Eine kleine Geschichte</h2>
         <p>Viktor Zhuromskyy, der Autor von Ruach Studio, veröffentlicht es nicht für den Hype. Er hat es für sich selbst gemacht. Nach mehr als einem halben Jahr Mühe mit Suno in bezahlten Tarifen und der Suche nach einem Modell, mit dem sich arbeiten lässt (ACE-Step, MiniMax und andere), machte er sich daran, ein eigenes Audiostudio zu bauen, auf seiner eigenen Maschine. Die Wahl fiel auf YuE2: von allen offenen Modellen das lohnendste und das ausgefeilteste.</p>
-        <p>Er hat das Studio nicht zusammengeschustert, nur damit irgendetwas läuft. Er hat es auf seine Art gebaut, denn seine Arbeit ist seine eigene: seine Übersetzungen, seine Interlinearübersetzungen und vieles mehr. Er hat so viel hineingepackt, wie er konnte, die Oberfläche poliert, so weit er konnte, und die Arbeit damit nicht zu einem Stochern und Klicken zwischen Krücken und Schlaglöchern gemacht, sondern zu etwas wirklich Produktivem.</p>
+        <p>Er hat das Studio nicht zusammengeschustert, nur damit irgendetwas läuft. Er hat es auf seine Art gebaut, denn auch sein Schaffen ist sein eigenes, erlesen und unverwechselbar: seine Übersetzungen, seine Interlinearübersetzungen und vieles mehr. Er hat so viel hineingepackt, wie er konnte, die Oberfläche poliert, so weit er konnte, und das Schaffen darin nicht zu einem Stochern und Klicken zwischen Krücken und Schlaglöchern gemacht, sondern zu etwas wirklich Produktivem.</p>
         <p class="story-end">Das ist die ganze Geschichte. Jetzt ist das Studio auch deins.</p>
       </div>
       <div class="story" translate="no" lang="ja" data-lang="ja" hidden>
         <h2>ちょっとした話</h2>
         <p>Ruach Studio の作者 Viktor Zhuromskyy は、話題づくりのためにこれを公開しているのではありません。自分のために作ったのです。有料プランで Suno と半年以上格闘し、取り組むに値するモデルを探し回った末に（ACE-Step、MiniMax ほか）、彼は自分のマシンの上に自分だけのオーディオスタジオを作ろうと決めました。選んだのは YuE2 でした。オープンなモデルの中で、最も割に合い、最も洗練されているからです。</p>
-        <p>彼は、とりあえず動けばいいという作り方はしませんでした。自分の流儀で作りました。彼の仕事は彼自身のものだからです：自身の翻訳、行間対訳のテキスト、そのほか多くのもの。詰め込めるだけ詰め込み、磨けるだけインターフェースを磨き、スタジオでの作業を、松葉杖と穴ぼこの間を手探りでクリックすることではなく、本当に生産的なものにしました。</p>
+        <p>彼は、とりあえず動けばいいという作り方はしませんでした。自分の流儀で作りました。彼の創作は彼自身のもの、洗練された唯一無二のものだからです：自身の翻訳、行間対訳のテキスト、そのほか多くのもの。詰め込めるだけ詰め込み、磨けるだけインターフェースを磨き、スタジオでの創作を、松葉杖と穴ぼこの間を手探りでクリックすることではなく、本当に生産的なものにしました。</p>
         <p class="story-end">話はこれで全部です。これからは、このスタジオはあなたのものでもあります。</p>
       </div>
       <div class="story" translate="no" lang="zh" data-lang="zh">
         <h2>一个小故事</h2>
         <p>Ruach Studio 的作者 Viktor Zhuromskyy 发布它并不是为了炒作。他是为自己做的。在付费套餐上和 Suno 折腾了半年多，又四处寻找值得投入的模型（ACE-Step、MiniMax 等）之后，他决定在自己的机器上搭建一个属于自己的音频工作室。他选定了 YuE2：在所有开放模型中，它最划算，也最精致。</p>
-        <p>他没有随便拼凑一个能跑就行的工作室，而是按自己的方式来做，因为他的工作也是他自己的：他的译本、他的逐行对照文本，还有许多别的。他尽可能多地装进其中，把界面打磨到力所能及的极致，让用这个工作室工作不再是在拐杖和坑洼之间胡乱点击，而是真正高效的事。</p>
+        <p>他没有随便拼凑一个能跑就行的工作室，而是按自己的方式来做，因为他的创作也是他自己的，精致而独一无二：他的译本、他的逐行对照文本，还有许多别的。他尽可能多地装进其中，把界面打磨到力所能及的极致，让在这个工作室里的创作不再是在拐杖和坑洼之间胡乱点击，而是真正高效的事。</p>
         <p class="story-end">故事就是这样。现在，这个工作室也是你的了。</p>
       </div>
     </div>
@@ -685,7 +1033,7 @@
       <div class="rb-what"><b id="rb-card"></b><span id="rb-side"></span></div>
       <div class="rb-wave" id="rb-wave"></div>
       <span class="rb-time" id="rb-time">0:00</span>
-      <span class="rb-sides" id="rb-sides"></span>
+      <span class="rb-sides" id="rb-sides"><span class="rb-seed" id="rb-seed" role="group" aria-label="我们的哪个种子"><button type="button" data-seed="1" class="on" aria-pressed="true">种子 1</button><button type="button" data-seed="2" aria-pressed="false">种子 2</button></span></span>
       <button class="rb-btn" id="rb-prev" type="button" aria-label="上一张卡片"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
       <button class="rb-btn" id="rb-next" type="button" aria-label="下一张卡片"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18l8.5-6L6 6zM16 6h2v12h-2z"/></svg></button>
       <button class="rb-btn" id="rb-close" type="button" aria-label="关闭播放器"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg></button>
@@ -693,9 +1041,56 @@
   </div>
 
 <footer>
-  <div class="wrap"><span>鲁阿赫工作室 · 2.0.5 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> 的作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">更新记录</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 咖啡机</a></span></div>
+  <div class="wrap">
+    <div class="gh-stats" id="gh-stats" hidden role="group" aria-label="GitHub 上的项目">
+      <a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio/stargazers"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 .9 10.2 5.4l5 .7-3.6 3.5.9 5L8 12.3 3.5 14.6l.9-5L.8 6.1l5-.7z"/></svg><div class="ghs-n"><b data-gh="stars">–</b></div><span>星标</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio/forks"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.3a1.8 1.8 0 1 1-1.5 0v1.9c0 .7.6 1.3 1.3 1.3h6.4c.7 0 1.3-.6 1.3-1.3V3.3a1.8 1.8 0 1 1 1.5 0v1.9a2.8 2.8 0 0 1-2.8 2.8H8.8v4.7a1.8 1.8 0 1 1-1.5 0V8H4.8A2.8 2.8 0 0 1 2 5.2V3.3z"/></svg><div class="ghs-n"><b data-gh="forks">–</b></div><span>复刻</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio/watchers"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3C4 3 1.2 6.2.4 8 1.2 9.8 4 13 8 13s6.8-3.2 7.6-5C14.8 6.2 12 3 8 3zm0 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg><div class="ghs-n"><b data-gh="watchers">–</b></div><span>关注者</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio/issues"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 1.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zM8 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg><div class="ghs-n"><b data-gh="issues">–</b></div><span>未关闭的 issue</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio/releases"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7.2 1h1.6v8.1l2.7-2.7 1.1 1.1L8 12.1 3.4 7.5l1.1-1.1 2.7 2.7zM2 13.5h12V15H2z"/></svg><div class="ghs-n"><b data-gh="downloads">–</b></div><span>版本下载</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1h8.5c.8 0 1.5.7 1.5 1.5V11c0 .8-.7 1.5-1.5 1.5H5c-.8 0-1.5-.7-1.5-1.5V2.5C3.5 1.7 4.2 1 5 1zm0 1.5V11h8.5V2.5zM1 5h1.5v8.5H11V15H2.5C1.7 15 1 14.3 1 13.5z"/></svg><div class="ghs-n"><b data-gh="clones14">–</b></div><span>14 天克隆</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1h8.5c.8 0 1.5.7 1.5 1.5V11c0 .8-.7 1.5-1.5 1.5H5c-.8 0-1.5-.7-1.5-1.5V2.5C3.5 1.7 4.2 1 5 1zm0 1.5V11h8.5V2.5zM1 5h1.5v8.5H11V15H2.5C1.7 15 1 14.3 1 13.5z"/></svg><div class="ghs-n"><b data-gh="uniques14">–</b></div><span>独立克隆</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3C4 3 1.2 6.2.4 8 1.2 9.8 4 13 8 13s6.8-3.2 7.6-5C14.8 6.2 12 3 8 3zm0 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg><div class="ghs-n"><b data-gh="views14">–</b></div><span>14 天浏览</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3C4 3 1.2 6.2.4 8 1.2 9.8 4 13 8 13s6.8-3.2 7.6-5C14.8 6.2 12 3 8 3zm0 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg><div class="ghs-n"><b data-gh="visitors14">–</b></div><span>访客</span></a><a target="_blank" rel="noopener" class="ghs ghs-total" href="https://github.com/igrbible/Ruach_Studio"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1h8.5c.8 0 1.5.7 1.5 1.5V11c0 .8-.7 1.5-1.5 1.5H5c-.8 0-1.5-.7-1.5-1.5V2.5C3.5 1.7 4.2 1 5 1zm0 1.5V11h8.5V2.5zM1 5h1.5v8.5H11V15H2.5C1.7 15 1 14.3 1 13.5z"/></svg><div class="ghs-n"><b data-gh="clones_total">–</b></div><span data-tpl="since">自 {0} 起的克隆</span></a>
+      <span class="gh-when" data-tpl="when">截至 {0} 的 GitHub</span>
+    </div>
+    <span>鲁阿赫工作室 · 2.0.6 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> 的作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">更新记录</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24/7 咖啡</a></span>
+  </div>
 </footer>
 
+
+<script>
+  // HERESY 2026: the bar's shadow once the page moves; sections that rise into view (only where the browser can tell, never with less motion asked)
+  (function () {
+    var bar = document.querySelector(".bar");
+    var onScroll = function () { if (bar) bar.classList.toggle("scrolled", window.scrollY > 8); };
+    window.addEventListener("scroll", onScroll, { passive: true }); onScroll();
+    var calm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (calm || !("IntersectionObserver" in window)) return;
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("seen"); io.unobserve(e.target); } }); },
+      { rootMargin: "0px 0px -8% 0px" });
+    Array.prototype.forEach.call(document.querySelectorAll("main > section:not(.hero-night):not(.declare)"), function (s) {
+      var r = s.getBoundingClientRect();
+      if (r.top < window.innerHeight) return;        // what is on the screen already stays as it is
+      s.classList.add("reveal"); io.observe(s);
+    });
+  })();
+  // HERESY 2026 (Viktor: «Статистику с гитхаб репо в самый подвал»): the project's numbers from /stats.json (github_stats.py writes it on the
+  // server's side: no visitor asks GitHub anything); a number the file has not stays hidden, and the whole row with none
+  (function () {
+    var box = document.getElementById("gh-stats");
+    if (!box || !window.fetch) return;
+    fetch("/stats.json", { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      if (!d) return;
+      var lang = document.documentElement.lang || "en", any = false, nf;
+      try { nf = new Intl.NumberFormat(lang); } catch (e) { nf = new Intl.NumberFormat("en"); }
+      var day = function (s) { try { return new Date(s + "T12:00:00Z").toLocaleDateString(lang, { day: "numeric", month: "long", year: "numeric" }); } catch (e) { return s; } };
+      Array.prototype.forEach.call(box.querySelectorAll("[data-gh]"), function (b) {
+        var v = d[b.dataset.gh], item = b.closest(".ghs");
+        if (typeof v !== "number") { if (item) item.hidden = true; return; }
+        b.textContent = nf.format(v); any = true;
+      });
+      Array.prototype.forEach.call(box.querySelectorAll("[data-tpl]"), function (el) {
+        var v = d[el.dataset.tpl];
+        if (!v) { var item = el.closest(".ghs"); (item || el).hidden = true; return; }
+        el.textContent = el.textContent.replace("{0}", day(v));
+      });
+      if (any) box.hidden = false;
+    }).catch(function () {});
+  })();
+</script>
 <script src="../assets/wavesurfer.min.js"></script>
 <script>
   // the pictures open over the page: ‹ › and the arrow keys through them, Esc or a click beside to close
@@ -744,65 +1139,104 @@
     var open = document.querySelector(".langs[open]");
     if (open && !open.contains(e.target)) open.removeAttribute("open");
   });
-  // ◐: day, night, and back to the screen's own choice
+  // ◐ the screen's own choice (the default), then the look it isn't showing, then the screen's look kept, then the screen's own choice again:
+  // every click changes the look or the mark (HERESY 2055)
   (function () {
     var root = document.documentElement, btn = document.getElementById("theme");
-    var dark = function () { return root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; };
+    var screenDark = function () { return !!window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches; };
+    function words() {
+      var t = root.dataset.theme, s = btn.querySelector(t === "light" ? ".th-day" : t === "dark" ? ".th-night" : ".th-auto");
+      if (s) { btn.title = s.title; btn.setAttribute("aria-label", s.title); }
+    }
     btn.addEventListener("click", function () {
-      var next = dark() ? "light" : "dark";
-      root.dataset.theme = next;
-      try { localStorage.setItem("ruach.theme", next); } catch (e) {}
+      var t = root.dataset.theme, other = screenDark() ? "light" : "dark", own = screenDark() ? "dark" : "light";
+      var next = !t ? other : t === other ? own : "";
+      if (next) root.dataset.theme = next; else delete root.dataset.theme;
+      try { if (next) localStorage.setItem("ruach.theme.mode", next); else localStorage.removeItem("ruach.theme.mode"); } catch (e) {}
+      words();
     });
+    words();
   })();
-  // the ring's player (Viktor 25.10.2026): a card's five sides, each at −14 LUFS; another side of the same card goes on from the same second;
+  // the ring's player (Viktor 25.10.2026; seven sides since 04.11, RS-FW 2.4 and RS-TW 2.0 added, eight since 05.11, RS-TW 2.0 ×0.9 beside ×0.75, ours at both seeds by a switch kept from card to card): a card's sides, each at −14 LUFS; another side of the same card goes on from the same second;
   // the wave drawn from its peaks (wavesurfer.js, BSD-3, in assets/), the colours the page's own in day and night; keys while it is open:
-  // Space play or pause, 1–5 the sides, ← → five seconds, ↑ ↓ the card before or after
+  // Space play or pause, 1–8 the sides, ← → five seconds, ↑ ↓ the card before or after
   (function () {
     var deck = document.getElementById("ring-deck"), bar = document.getElementById("ring-bar");
     if (!deck || !bar || !window.WaveSurfer) return;
-    var SIDES = [["suno", "SUNO v6"], ["musicful", "musicful V3"], ["bare", "YuE2-3B"], ["fw", "RS-FW 0.7"], ["fw15", "RS-FW 1.5"]];
-    var OURS = { bare: 1, fw: 1, fw15: 1 }, BASE = "/ring/";
+    var SIDES = [["suno", "SUNO v6"], ["musicful", "Musicful V3"], ["bare", "YuE2-3B"], ["fw", "RS-FW 0.7"], ["fw15", "RS-FW 1.5"], ["fw24", "RS-FW 2.4"], ["tw", "RS-TW 2.0 ×0.75"], ["tw09", "RS-TW 2.0 ×0.9"]];
+    var OURS = { bare: 1, fw: 1, fw15: 1, fw24: 1, tw: 1, tw09: 1 }, BASE = "/ring/", seed = 1, loaded = false;   // ours: seed 1 or 2 (NN-side-s2.mp3), kept from card to card
+    var fileOf = function (n, side) { return n + "-" + side + (seed === 2 && OURS[side] ? "-s2" : ""); };
     var cards = Array.prototype.slice.call(deck.querySelectorAll(".ring-card")), info = {}, cur = { n: null, side: null };
     var root = document.documentElement, audio = new Audio(), ws = null;
     audio.preload = "metadata";
     var css = function (v) { return getComputedStyle(root).getPropertyValue(v).trim(); };
     var colours = function () { return { waveColor: css("--rule") || "#ccc", progressColor: css("--amber"), cursorColor: css("--amber") }; };
     var fmt = function (t) { t = Math.max(0, Math.floor(t || 0)); return Math.floor(t / 60) + ":" + ("0" + t % 60).slice(-2); };
-    var chip = function (n, s, go) {
+    var ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="i-play" d="M8 5v14l11-7z"/><path class="i-pause" d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
+    var chip = function (n, s, go, icon) {
       var b = document.createElement("button");
-      b.type = "button"; b.className = "ring-chip" + (OURS[s[0]] ? " ours" : ""); b.textContent = s[1];
+      b.type = "button"; b.className = "ring-chip" + (OURS[s[0]] ? " ours" : "") + (icon ? " ring-chip-icon" : "");
+      if (icon) { b.innerHTML = '<span class="rci-dot">' + ICON + '</span>'; b.setAttribute("aria-label", s[1]); b.title = s[1]; } else { b.textContent = s[1]; }
       b.dataset.n = n; b.dataset.side = s[0];
       b.addEventListener("click", go);
       return b;
     };
-    cards.forEach(function (c) { var box = c.querySelector(".ring-sides"); SIDES.forEach(function (s) { box.appendChild(chip(c.dataset.n, s, function () { play(c.dataset.n, s[0]); })); }); });
+    // the list's 20 rows: the first three sides loose, the four of ours behind the amber line, both as round icons
+    cards.forEach(function (c) {
+      var box = c.querySelector(".ring-sides"), ours = document.createElement("span");
+      ours.className = "ring-ours-icons";
+      SIDES.slice(0, 3).forEach(function (s) { box.appendChild(chip(c.dataset.n, s, function () { play(c.dataset.n, s[0]); }, true)); });
+      SIDES.slice(3).forEach(function (s) { ours.appendChild(chip(c.dataset.n, s, function () { play(c.dataset.n, s[0]); }, true)); });
+      box.appendChild(ours);
+    });
+    // the bar's own row of sides keeps its names in words, as it did
     var rbSides = document.getElementById("rb-sides");
     SIDES.forEach(function (s) { rbSides.appendChild(chip("", s, function () { if (cur.n) play(cur.n, s[0]); })); });
+    var seedBox = document.getElementById("rb-seed");
+    var seedWord = function () { var b = seedBox && seedBox.querySelector('[data-seed="' + seed + '"]'); return b ? b.textContent : "seed " + seed; };
+    // a card's chip is off where its file, at the seed chosen for ours, is not in ring.json
+    function avail() {
+      if (!loaded) return;
+      cards.forEach(function (c) { Array.prototype.forEach.call(c.querySelectorAll(".ring-chip"), function (b) { b.disabled = !info[fileOf(c.dataset.n, b.dataset.side)]; }); });
+    }
+    if (seedBox) seedBox.addEventListener("click", function (e) {
+      var b = e.target.closest("button[data-seed]");
+      if (!b || +b.dataset.seed === seed) return;
+      seed = +b.dataset.seed; avail();
+      if (cur.n && OURS[cur.side]) play(cur.n, cur.side); else mark();
+    });
     fetch(BASE + "ring.json").then(function (r) { return r.json(); }).then(function (rows) {
-      rows.forEach(function (row) { row.sides.forEach(function (s) { info[row.n + "-" + s.side] = s; }); });
-      cards.forEach(function (c) { Array.prototype.forEach.call(c.querySelectorAll(".ring-chip"), function (b) { if (!info[c.dataset.n + "-" + b.dataset.side]) b.disabled = true; }); });
+      rows.forEach(function (row) {
+        row.sides.forEach(function (s) { info[row.n + "-" + s.side] = s; });
+        (row.seed2 || []).forEach(function (s) { info[row.n + "-" + s.side + "-s2"] = s; });
+      });
+      loaded = true; avail();
     }).catch(function () {});
     function mark() {
       Array.prototype.forEach.call(document.querySelectorAll(".ring-chip"), function (b) {
         b.classList.toggle("on", b.dataset.side === cur.side && (b.dataset.n === cur.n || b.dataset.n === ""));
       });
       cards.forEach(function (c) { c.classList.toggle("on", c.dataset.n === cur.n); });
+      if (seedBox) {
+        Array.prototype.forEach.call(seedBox.querySelectorAll("button[data-seed]"), function (b) { var on = +b.dataset.seed === seed; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false"); });
+        seedBox.classList.toggle("idle", !!cur.side && !OURS[cur.side]);
+      }
     }
     function play(n, side) {
-      var key = n + "-" + side, s = info[key];
-      if (cur.n === n && cur.side === side) { audio.paused ? audio.play() : audio.pause(); return; }
+      var key = fileOf(n, side), s = info[key];
+      if (cur.n === n && cur.side === side && cur.key === key) { audio.paused ? audio.play() : audio.pause(); return; }
       var at = cur.n === n ? audio.currentTime : 0, card = deck.querySelector('.ring-card[data-n="' + n + '"]');
-      cur = { n: n, side: side };
+      cur = { n: n, side: side, key: key };
       bar.hidden = false; document.body.classList.add("ring-open");
       document.getElementById("rb-card").textContent = card ? card.querySelector(".ring-name").textContent.replace(/\s+/g, " ").trim() : n;
-      document.getElementById("rb-side").textContent = (SIDES.filter(function (x) { return x[0] === side; })[0] || ["", side])[1];
+      document.getElementById("rb-side").textContent = (SIDES.filter(function (x) { return x[0] === side; })[0] || ["", side])[1] + (OURS[side] ? " · " + seedWord() : "");
       mark();
       if (!ws) {
         ws = WaveSurfer.create(Object.assign({ container: "#rb-wave", height: "auto", barWidth: 2, barGap: 1, barRadius: 2, cursorWidth: 1,
           normalize: true, media: audio, interact: true, hideScrollbar: true }, colours()));
         ws.on("timeupdate", function (t) { document.getElementById("rb-time").textContent = fmt(t) + " / " + fmt(ws.getDuration()); });
-        audio.addEventListener("play", function () { bar.classList.add("playing"); });
-        audio.addEventListener("pause", function () { bar.classList.remove("playing"); });
+        audio.addEventListener("play", function () { bar.classList.add("playing"); document.body.classList.add("ring-playing"); });
+        audio.addEventListener("pause", function () { bar.classList.remove("playing"); document.body.classList.remove("ring-playing"); });
         audio.addEventListener("ended", function () { step(1); });
       }
       var go = function (peaks) {
@@ -827,7 +1261,7 @@
       if (bar.hidden || e.ctrlKey || e.metaKey || e.altKey || /input|textarea|select/i.test((e.target || {}).tagName || "")) return;
       var lb = document.querySelector(".lb"); if (lb && !lb.hidden) return;
       if (e.key === " ") { e.preventDefault(); audio.paused ? audio.play() : audio.pause(); }
-      else if (/^[1-5]$/.test(e.key)) play(cur.n, SIDES[+e.key - 1][0]);
+      else if (/^[1-8]$/.test(e.key)) play(cur.n, SIDES[+e.key - 1][0]);
       else if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); ws.setTime(Math.max(0, audio.currentTime + (e.key === "ArrowLeft" ? -5 : 5))); }
       else if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); step(e.key === "ArrowUp" ? -1 : 1); }
     });
@@ -835,14 +1269,15 @@
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { if (ws) ws.setOptions(colours()); });
   })();
 </script>
-<div class="vocab-modal" id="vocab-modal" hidden role="dialog" aria-modal="true" aria-label="第一波的词汇">
+<div class="vocab-modal" id="vocab-modal" hidden role="dialog" aria-modal="true" aria-label="Tsunami Wave 与第一波的词汇">
   <div class="vocab-panel">
-    <div class="vocab-head"><b>第一波的词汇</b><button type="button" id="vocab-close" aria-label="关闭">×</button></div>
-    <iframe id="vocab-frame" title="第一波的词汇"></iframe>
+    <div class="vocab-head"><b>Tsunami Wave 与第一波的词汇</b><button type="button" id="vocab-close" aria-label="关闭">×</button></div>
+    <iframe id="vocab-frame" title="Tsunami Wave 与第一波的词汇"></iframe>
   </div>
 </div>
 <script>
-  // HERESY 1801: the vocabulary's window; its page in the card's language and day or night
+  // HERESY 1801: the vocabulary's window; its page in the card's language and day or night. 06.11.2026: the page holds both waves
+  // (fw-vocabulary.json and tw-vocabulary.json beside it) and opens on the Tsunami Wave, the Studio's default; its switch gives the First
   (function () {
     var m = document.getElementById("vocab-modal"), f = document.getElementById("vocab-frame");
     function theme() {
@@ -853,7 +1288,7 @@
     // night whenever it changes, and when it loads; reopening keeps the frame it has
     function sync() { try { var d = f.contentDocument; if (d && d.documentElement) d.documentElement.setAttribute("data-theme", theme()); } catch (e) {} }
     function open() {
-      var base = "/vocabulary/index.html?embed=1&lang=" + encodeURIComponent(document.documentElement.lang || "en");
+      var base = "/vocabulary/index.html?embed=1&set=tw&lang=" + encodeURIComponent(document.documentElement.lang || "en");
       if ((f.getAttribute("src") || "").split("&theme=")[0] !== base) f.setAttribute("src", base + "&theme=" + theme());
       else sync();
       m.hidden = false; document.body.style.overflow = "hidden";

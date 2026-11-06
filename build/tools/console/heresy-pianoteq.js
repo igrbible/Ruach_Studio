@@ -9,22 +9,26 @@
 // and left alone. Nothing asks Pianoteq until the window is opened.
 (function () {
   "use strict";
-  var CAT_P = null, PRESETS = {}, OPEN_KEY = "yue2.ptqOpen";
+  var CAT_P = {}, PRESETS = {}, OPEN_KEY = "yue2.ptqOpen";
+  // HERESY 2036: Modartt's three, each its own catalog and presets; the lab hears the product in ?product= (a POST's «product»)
+  var NAMES = { pianoteq: "Pianoteq", organteq: "Organteq", airteq: "Airteq" };
+  function pq(P, sep) { return P && P !== "pianoteq" ? sep + "product=" + P : ""; }
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function json(r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); }
   function scope() { var m = /[?&]scope=([^&]*)/.exec(location.search); return m ? "?scope=" + m[1] : ""; }
   function fire(el) { el.dispatchEvent(new Event("input", { bubbles: true })); el.dispatchEvent(new Event("change", { bubbles: true })); }
-  function catalog() {
-    if (!CAT_P) { CAT_P = fetch("/lab/pianoteq/catalog").then(json); CAT_P.catch(function () { CAT_P = null; }); }
-    return CAT_P;
+  function catalog(P) {
+    P = P || "pianoteq";
+    if (!CAT_P[P]) { CAT_P[P] = fetch("/lab/pianoteq/catalog" + pq(P, "?")).then(json); CAT_P[P].catch(function () { delete CAT_P[P]; }); }
+    return CAT_P[P];
   }
-  function presetOf(name, bank, small) {                // HERESY 1981: with small presets, as they leave it (the base changes are marked against)
+  function presetOf(P, name, bank, small) {             // HERESY 1981: with small presets, as they leave it (the base changes are marked against)
     var sm = small && Object.keys(small).length ? JSON.stringify(small) : "";
-    var k = (bank || "") + "\u0000" + name + "\u0000" + sm;
+    var k = (P || "pianoteq") + "\u0000" + (bank || "") + "\u0000" + name + "\u0000" + sm;
     if (!PRESETS[k]) {
       PRESETS[k] = fetch("/lab/pianoteq/preset?name=" + encodeURIComponent(name) + "&bank=" + encodeURIComponent(bank || "") +
-        (sm ? "&small=" + encodeURIComponent(sm) : "")).then(json);
+        (sm ? "&small=" + encodeURIComponent(sm) : "") + pq(P, "&")).then(json);
       PRESETS[k].catch(function () { delete PRESETS[k]; });
     }
     return PRESETS[k];
@@ -87,7 +91,10 @@
     return true;
   }
 
-  function mount(panel) {
+  function mount(panel, product) {
+    // HERESY 2036: the step's product; its words Pianoteq's, the name put in (each language keeps the name as it is)
+    var P = NAMES[product] ? product : "pianoteq", NAME = NAMES[P];
+    function tr(s) { var t = window.RuachI18n ? window.RuachI18n.t(s) : s; return P === "pianoteq" ? t : String(t).replace(/Pianoteq/g, NAME); }
     var input = panel.querySelector('[data-pl-key="state"]');
     if (!input || panel.querySelector(".ptq-chip")) return;
     var sel = panel.querySelector('[data-pl-key="preset"]');
@@ -110,7 +117,7 @@
     }
     function chipPaint() {
       var w = read(), n = Object.keys(w.values || {}).length + Object.keys(w.small || {}).length;
-      chip.innerHTML = '<span class="ptq-chip-k">Pianoteq</span><b translate="no">' + esc(S.st.preset || "—") + "</b>" +
+      chip.innerHTML = '<span class="ptq-chip-k" translate="no">' + NAME + '</span><b translate="no">' + esc(S.st.preset || "—") + "</b>" +
         (n ? '<span class="ptq-chip-n">' + esc(tr("{0} changed").replace("{0}", n)) + "</span>" : "") + '<span class="ptq-chip-go" aria-hidden="true">⤢</span>';
     }
     function write() {                                // only what differs from the preset, so the state stays small and says what was done
@@ -143,10 +150,10 @@
     function load(name, bank, fresh) {
       var was = S.st.preset;
       if (fresh || (was && was !== name)) { S.st.values = {}; S.st.small = {}; }
-      return presetOf(name, bank || "").then(function (p) {
+      return presetOf(P, name, bank || "").then(function (p) {
         S.pre = p;                                      // the preset alone: what «the preset's» says in the small presets' lists
         var sm = S.st.small || {};
-        return Object.keys(sm).length ? presetOf(name, bank || "", sm) : p;
+        return Object.keys(sm).length ? presetOf(P, name, bank || "", sm) : p;
       }).then(function (p) {
         if (W && was !== name) { var au = W.win.querySelector(".ptq-audio"); if (au) { au.pause(); au.removeAttribute("src"); } say(""); }
         S.base = p;
@@ -158,7 +165,7 @@
     function rebase() {                                 // HERESY 1981: a small preset picked: the base it leaves, the effects it brings
       var at = S.st.preset;
       say(tr("Pianoteq loads it…"));
-      return presetOf(S.st.preset, S.st.bank || "", S.st.small || {}).then(function (p) {
+      return presetOf(P, S.st.preset, S.st.bank || "", S.st.small || {}).then(function (p) {
         if (S.st.preset !== at) return;
         S.base = p; paint(); write(); say("");
       }).catch(function (e) { say(tr("Pianoteq did not answer: {0}").replace("{0}", e.message), true); });
@@ -324,7 +331,7 @@
       var kind = W.win.querySelector(".ptq-phrase").value, btn = W.win.querySelector(".ptq-play");
       btn.disabled = true;
       say(tr("Pianoteq plays it…"));
-      fetch("/lab/pianoteq/preview" + scope(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state: full(), kind: kind }) })
+      fetch("/lab/pianoteq/preview" + scope(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state: full(), kind: kind, product: P }) })
         .then(json).then(function (r) {
           var a = W && W.win.querySelector(".ptq-audio");
           if (!a) return;
@@ -340,11 +347,11 @@
       var ask = D ? D.prompt(tr("A name for this preset in your Pianoteq (bank «Ruach Studio»)"), (S.st.preset || "Ruach") + " · Ruach") : Promise.resolve(window.prompt("Name", S.st.preset));
       ask.then(function (name) {
         if (!name) return;
-        return fetch("/lab/pianoteq/keep" + scope(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state: full(), name: name }) })
+        return fetch("/lab/pianoteq/keep" + scope(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state: full(), name: name, product: P }) })
           .then(json).then(function (r) {
             say(tr("Kept in Pianoteq: «{0}», bank «{1}»").replace("{0}", r.name).replace("{1}", r.bank));
-            CAT_P = null;                                 // HERESY 1981: the browser finds it at once
-            catalog().then(function (c) { C = c; }).catch(function () {});
+            delete CAT_P[P];                              // HERESY 1981: the browser finds it at once (2036: this product's catalog only)
+            catalog(P).then(function (c) { C = c; }).catch(function () {});
           });
       }).catch(function (e) { say(e.message, true); });
     }
@@ -435,8 +442,8 @@
       if (W) return;
       var veil = document.createElement("div"), win = document.createElement("div");   // not «back»: that is the ↺ above
       veil.className = "ptq-back-veil";
-      win.className = "ptq-win"; win.setAttribute("role", "dialog"); win.setAttribute("aria-modal", "true"); win.setAttribute("aria-label", "Pianoteq");
-      var bar = '<div class="ptq-w-head"><span class="ptq-name">Pianoteq</span><button type="button" class="btn ghost small ptq-close" aria-label="' + esc(tr("Close")) + '">✕</button></div>';
+      win.className = "ptq-win"; win.setAttribute("role", "dialog"); win.setAttribute("aria-modal", "true"); win.setAttribute("aria-label", NAME);
+      var bar = '<div class="ptq-w-head"><span class="ptq-name" translate="no">' + NAME + '</span><button type="button" class="btn ghost small ptq-close" aria-label="' + esc(tr("Close")) + '">✕</button></div>';
       win.innerHTML = bar + '<p class="row-hint ptq-wait">' + esc(tr("Asking Pianoteq…")) + "</p>";
       veil.appendChild(win);
       document.body.appendChild(veil);
@@ -478,7 +485,7 @@
         var d = e.target;
         if (d.classList && d.classList.contains("ptq-sec") && d.open !== isOpen(d.dataset.sec)) keepOpen(d.dataset.sec, d.open);
       }, true);
-      catalog().then(function (c) {
+      catalog(P).then(function (c) {
         if (!W) return;
         if (!c.available) {
           win.innerHTML = bar + '<p class="row-hint ptq-wait">' + esc(tr(c.why || "No Pianoteq here")) + "</p>";

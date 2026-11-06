@@ -37,8 +37,12 @@
 #   heresy/fetch-heresy.sh --irae IRAE|IRAEv2|IRAEv3|IRAE-IR|IRAE-IRv2-BF16|Q8_0|Q6_K [--yes]   (HERESY 1708: IRAE-IR, IRAE-IRv2)
 #                                      HERESY 1689: also an IRAE merge (IRA with monsterovich's Epic Trailer on top), from the same repo
 #   heresy/fetch-heresy.sh --fw 2.4x0.75-BF16|Q8_0|Q6_K [--yes]   (and 0.7x0.75, 1.5x0.75, 3.4x0.7, 3.4x0.75, 4.0x0.65, 4.0x0.7)
-#                                      HERESY 1794: also a merge of Ruach Studio's own fine-tune, from goldhub/YuE2-RS-Finetunes; the
-#                                      default one (2.4x0.75) comes with the install as the part «fw», at the backbone's quant
+#                                      HERESY 1794: also a merge of Ruach Studio's own fine-tune, from goldhub/YuE2-RS-Finetunes;
+#                                      2.4x0.75, the safest of the First Wave, comes with the install as the part «fw» only where the
+#                                      repo has no RS-TW 2.0x0.75 at its pin yet (HERESY 2065, 2074: that is the default the part brings)
+#   heresy/fetch-heresy.sh --tw 2.0x0.75-BF16|Q8_0|Q6_K [--yes]   (and 2.0x0.9)
+#                                      HERESY 2071: also a merge of RS-TW, the Tsunami Wave, trained on RS-FW 2.4x0.75 and folded back into
+#                                      it at epoch 2.0: x0.75 the safe balance, x0.9 the boldest; from the same repo, asked first with its size
 #   heresy/fetch-heresy.sh --only extras,whisper,stems,upscale,loras
 #                                      HERESY 1289: those parts of what the install brings, the others left alone; with
 #                                      none, only what the options above ask for (the Engine's Models card fetches so)
@@ -59,7 +63,7 @@
 # Needs: python3, git, the lab venv for audio-separator (lab/install-venv.sh), ~8 GB of disk.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""; QFINE=""; ARTLORAS=""; IRA=""; IRAE=""; FW=""; WRITER=""; MUSC=""; H3=""; UPSCALER=""; FLASHSR=""   # HERESY 1794: FW; 1811: WRITER; 1834; 1867: H3: MUSC; 1876a: UPSCALER; 1984: FLASHSR
+MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""; QFINE=""; ARTLORAS=""; IRA=""; IRAE=""; FW=""; TW=""; WRITER=""; MUSC=""; H3=""; UPSCALER=""; FLASHSR=""   # HERESY 1794: FW; 2071: TW; 1811: WRITER; 1834; 1867: H3: MUSC; 1876a: UPSCALER; 1984: FLASHSR
 while [ $# -gt 0 ]; do
   case "$1" in
     --check) MODE=check ;; --replace) MODE=replace ;; --yes) YES=1 ;;
@@ -69,6 +73,7 @@ while [ $# -gt 0 ]; do
     --ira) IRA="${2:-}"; shift ;;                   # HERESY 1490
     --irae) IRAE="${2:-}"; shift ;;                 # HERESY 1689
     --fw) FW="${2:-}"; shift ;;                     # HERESY 1794
+    --tw) TW="${2:-}"; shift ;;                     # HERESY 2071
     --writer) WRITER="${2:-}"; shift ;;             # HERESY 1811
     --muscriptor) MUSC="${2:-}"; shift ;;           # HERESY 1834
     --h3) H3="${2:-int8}"; shift ;;                 # HERESY 1867
@@ -80,7 +85,7 @@ while [ $# -gt 0 ]; do
     --qwen) QWEN="${2:-}"; shift ;;
     --qwen-fine) QFINE="${2:-}"; shift ;;           # HERESY 1347
     --art-loras) ARTLORAS="${2:-all}"; shift ;;
-    *) echo "--check, --replace, --h3 int8|all|bf16, --upscaler 3b|7b|all, --muscriptor small|medium|large, --flashsr all, --writer quality|compact, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --ira BF16|Q8_0|Q6_K, --irae IRAE|IRAEv2|IRAEv3-BF16|Q8_0|Q6_K, --fw 2.4x0.75-BF16|Q8_0|Q6_K (and 0.7x0.75, 1.5x0.75, 3.4x0.7, 3.4x0.75, 4.0x0.65, 4.0x0.7), --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --qwen-fine jibmix-v6|intorealism-v1|real-v2|base-fp8, --art-loras all, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
+    *) echo "--check, --replace, --h3 int8|all|bf16, --upscaler 3b|7b|all, --muscriptor small|medium|large, --flashsr all, --writer quality|compact, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --ira BF16|Q8_0|Q6_K, --irae IRAE|IRAEv2|IRAEv3-BF16|Q8_0|Q6_K, --fw 2.4x0.75-BF16|Q8_0|Q6_K (and 0.7x0.75, 1.5x0.75, 3.4x0.7, 3.4x0.75, 4.0x0.65, 4.0x0.7), --tw 2.0x0.75-BF16|Q8_0|Q6_K (and 2.0x0.9), --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --qwen-fine jibmix-v6|intorealism-v1|real-v2|base-fp8, --art-loras all, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
   esac
   shift
 done
@@ -632,14 +637,27 @@ fi
 
 # HERESY 1794 (Viktor 25.10.2026: «2.4 ep - самый безопасный, и пусть он будет базовой моделью»; «Привязывай все эти варианты в Студию и в
 # downloader»): Ruach Studio's own fine-tune, YuE2-RS-FW, folded into m-a-p's base at seven points of its training (epoch x strength), from
-# goldhub/YuE2-RS-Finetunes. The install brings the default one, RS-FW 2.4x0.75, at the quant of m-a-p's backbone here (start.sh starts it
-# when settings.json names no model); there is no Q5_K_M of it, so a Q5_K_M install keeps m-a-p's alone. --fw fetches any of the seven, asked.
+# goldhub/YuE2-RS-Finetunes. HERESY 2074 (Viktor 05.11.2026: «Давай, быстрецом гоним всё до и для среза 2.0.6»): the install brings the Studio's default,
+# RS-TW 2.0x0.75 (2065, below), at the quant of m-a-p's backbone here (start.sh starts it when settings.json names no model); RS-FW 2.4x0.75, the
+# safest of the First Wave, only where the pinned repo has no RS-TW yet; there is no Q5_K_M of either, so a Q5_K_M install keeps m-a-p's alone.
+# --fw fetches any of the seven, asked.
 FW_REPO=goldhub/YuE2-RS-Finetunes
+# HERESY 2065 (Viktor 04.11.2026: «выставляй дефолтную модель в Студии — RS-TW-2.0 для среза 2.0.6. Она у нас лучшая и безопасная по силе слияния»): the part brings RS-TW 2.0x0.75
+# at that quant when it is here already or the repo has it at its pin; RS-FW 2.4x0.75, as before, where the pinned repo has no RS-TW yet (said aloud).
+# Offline (the pinned file list unread) it is RS-TW, as on any other day: the row then says «unknown», as RS-FW's would
 if want fw; then
   FWQ=""; for q in BF16 Q8_0 Q6_K; do [ -s "$ROOT/models/YuE2-3B-$q.gguf" ] && { FWQ=$q; break; }; done
-  part fw "Ruach Studio's own fine-tune: RS-FW 2.4x0.75, the studio's default"
+  FWM=RS-TW-2.0x0.75
+  if [ -n "$FWQ" ] && [ ! -s "$ROOT/models/YuE2-3B-$FWM-$FWQ.gguf" ]; then
+    case "$(hf_complete $FW_REPO "$(pin $FW_REPO)" "$ROOT/models" --include "YuE2-3B-$FWM-$FWQ.gguf" 2>&1)" in *"no files matched"*) FWM=RS-FW-2.4x0.75 ;; esac
+  fi
+  if [ $FWM = RS-TW-2.0x0.75 ]; then part fw "Ruach Studio's own fine-tune: RS-TW 2.0x0.75, the Studio's default"
+  else
+    part fw "Ruach Studio's own fine-tune: RS-FW 2.4x0.75, the Studio's default"
+    echo "${D}          RS-TW 2.0x0.75 is not in $FW_REPO at its pin yet: RS-FW 2.4x0.75, as before${X}"
+  fi
   if [ -z "$FWQ" ]; then echo "${D}          no BF16, Q8_0 or Q6_K backbone here: m-a-p's alone (there is no Q5_K_M of the fine-tune)${X}"
-  else hf_into_at "models/YuE2-3B-RS-FW-2.4x0.75-$FWQ.gguf (Ruach Studio's own fine-tune, the default)" $FW_REPO "$ROOT/models" "YuE2-3B-RS-FW-2.4x0.75-$FWQ.gguf"; fi
+  else hf_into_at "models/YuE2-3B-$FWM-$FWQ.gguf (Ruach Studio's own fine-tune, the default)" $FW_REPO "$ROOT/models" "YuE2-3B-$FWM-$FWQ.gguf"; fi
 fi
 if [ -n "$FW" ]; then
   case "$FW" in 0.7x0.75-*|1.5x0.75-*|2.4x0.75-*|3.4x0.7-*|3.4x0.75-*|4.0x0.65-*|4.0x0.7-*) ;; *) FW=none ;; esac
@@ -652,6 +670,21 @@ if [ -n "$FW" ]; then
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
   [ $go = 1 ] && hf_into_at "models/YuE2-3B-RS-FW-$FW.gguf (Ruach Studio's RS-FW $FW merge)" $FW_REPO "$ROOT/models" "YuE2-3B-RS-FW-$FW.gguf"
+fi
+# HERESY 2071 (Viktor 04.11.2026: «Push both to HF YuE2-RS-Finetunes as full sets … Write them into the downloader»): RS-TW, the Tsunami Wave,
+# trained on the merged weights of RS-FW 2.4x0.75 and folded back into them at epoch 2.0, two strengths: 2.0x0.75 the safe balance, 2.0x0.9
+# the boldest, with no promise of stability. From the same repo as RS-FW; --tw fetches either at a quant, asked.
+if [ -n "$TW" ]; then
+  case "$TW" in 2.0x0.75-*|2.0x0.9-*) ;; *) TW=none ;; esac
+  case "$TW" in *-BF16) T_SIZE="7.2 GB" ;; *-Q8_0) T_SIZE="3.8 GB" ;; *-Q6_K) T_SIZE="2.9 GB" ;;
+    *) echo "${R}--tw takes 2.0x0.75 or 2.0x0.9 with -BF16, -Q8_0 or -Q6_K (2.0x0.75-Q8_0)${X}"; exit 2 ;; esac
+  asked tw "The RS-TW merge $TW (Ruach Studio's Tsunami Wave folded into RS-FW 2.4x0.75: $FW_REPO)"   # HERESY 2125: the wave by its name
+  go=1
+  if [ $MODE = fetch ] && [ $YES = 0 ] && [ ! -s "$ROOT/models/YuE2-3B-RS-TW-$TW.gguf" ]; then
+    printf "%s" "Download $T_SIZE? The studio's Engine (Compute) chooses it beside m-a-p's backbones after its next start. [y/N] "
+    read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
+  fi
+  [ $go = 1 ] && hf_into_at "models/YuE2-3B-RS-TW-$TW.gguf (Ruach Studio's RS-TW $TW merge)" $FW_REPO "$ROOT/models" "YuE2-3B-RS-TW-$TW.gguf"
 fi
 
 # HERESY 1285 (Viktor 09.10.2026: «LoRA пока что не скачались. Только Standard VAE»): the LoRAs the 💎 sets were made with come

@@ -41,7 +41,10 @@ def _read(d, did):
 def _write(d, doc):
     p = _path(d, doc["id"])
     tmp = Path(str(p) + ".part")
-    json.dump(doc, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    with open(tmp, "w", encoding="utf-8") as fh:   # HERESY 2083: written whole and on the disk before it takes the file's place
+        json.dump(doc, fh, ensure_ascii=False, indent=1)
+        fh.flush()
+        os.fsync(fh.fileno())
     os.replace(tmp, p)
 
 
@@ -201,7 +204,10 @@ def _import(kit, wd, backup, scope=""):
             told["trashed" if into is trash else "added"] += 1
         into.mkdir(exist_ok=True)
         tmp = into / f"{doc['id']}.json.part"
-        json.dump(doc, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        with open(tmp, "w", encoding="utf-8") as fh:   # HERESY 2083: written whole and on the disk before it takes the file's place
+            json.dump(doc, fh, ensure_ascii=False, indent=1)
+            fh.flush()
+            os.fsync(fh.fileno())
         os.replace(tmp, into / f"{doc['id']}.json")
     if isinstance(backup.get("creator_versions"), list):   # HERESY 1522: a backup from before carries none
         told["creator_versions"] = _versions().import_all(kit, backup["creator_versions"], scope)

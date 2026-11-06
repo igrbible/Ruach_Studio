@@ -30,6 +30,8 @@ def _save(p, d):
     tmp = p.with_name(p.name + ".part")
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(d, f, ensure_ascii=False, indent=1)
+        f.flush()
+        os.fsync(f.fileno())   # HERESY 2083: written whole and on the disk before it takes the file's place
     os.replace(tmp, p)
 
 

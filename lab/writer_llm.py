@@ -13,8 +13,14 @@ card after IDLE_S without a question, or when asked (Engine → Writer → Unloa
 Two quants (the user chooses in Engine → Writer; fetch-heresy.sh --writer brings either):
   quality  Viktor's AutoRound 4 bits as they are (Q4_0, exact), what he kept in BF16 at Q8_0: 6.7 GB, about 7.5 GB on a card with its 12K context
   compact  the same 4 bits byte for byte, what he kept in BF16 lower (the embeddings Q4_K, the output Q6_K, the linear attention Q5_K): 5.5 GB,
-           about 6.5 GB on a card: an 8 GB one"""
-import atexit, json, os, subprocess, sys, threading, time, urllib.error, urllib.request
+           about 6.5 GB on a card: an 8 GB one
+
+HERESY 2060 (Viktor 04.11.2026: «И твои трёхсуточного бдения долги тоже, плиз»; the audit of 02.11.2026, C10): a server left on the writer's port by a lab
+that ended without its stop (restarted by hand, under Pinokio, ./lab/start-lab.sh; under systemd it ends with its lab) is taken over as the lab's own:
+looked for at the lab's start and every 30 s while the lab runs none, and at the first question. Its pid is the port's owner, its quant its -m, its card
+its CUDA_VISIBLE_DEVICES; the idle unload, the guard's reclaim, Unload, a quant chosen anew, the lab's atexit and the status treat it as the one the lab
+starts. A server another running lab started (its parent a lab.py that lives) stays that lab's: used, never stopped from here."""
+import atexit, json, os, signal, subprocess, sys, threading, time, urllib.error, urllib.request
 from pathlib import Path
 
 import gpu_guard
@@ -30,7 +36,9 @@ PORT = 7790
 CTX = 12288
 IDLE_S = 600
 LOCK = threading.Lock()
-S = {"proc": None, "variant": None, "gpu": None, "fit": False, "started": 0.0, "used": 0.0, "busy": 0, "error": ""}
+# HERESY 2060: pid, a server an earlier lab left and this one took over (proc stays None then); elsewhere, the pid of another running lab whose server
+# answers on the port (that lab's own)
+S = {"proc": None, "pid": None, "elsewhere": None, "variant": None, "gpu": None, "fit": False, "started": 0.0, "used": 0.0, "busy": 0, "error": ""}
 
 
 def server(kit):
@@ -82,21 +90,30 @@ def choose(kit, variant):
     data["variant"] = variant
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_suffix(".part")
-    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+    with open(tmp, "w", encoding="utf-8") as fh:   # HERESY 2083: written whole and on the disk before it takes the file's place
+        fh.write(json.dumps(data, ensure_ascii=False, indent=1))
+        fh.flush()
+        os.fsync(fh.fileno())
     os.replace(tmp, p)
-    if S["proc"] and S["variant"] != variant:
+    if _alive() and S["variant"] != variant:          # HERESY 2060: the one taken over too
         stop("another quant chosen")
     return status(kit)
 
 
 def _alive():
     p = S["proc"]
-    return p is not None and p.poll() is None
+    if p is not None:
+        return p.poll() is None
+    return bool(S["pid"]) and _is_writer(S["pid"])   # HERESY 2060: the one taken over, while its pid is still the writer
 
 
 def status(kit):
-    return {"here": here(kit), "variant": chosen(kit), "server": server(kit).is_file(), "running": _alive(), "gpu": S["gpu"] if _alive() else None,
-            "fit": S["fit"] if _alive() else False, "ctx": CTX, "alias": ALIAS, "idle_s": IDLE_S, "error": S["error"],
+    up = _alive()
+    # HERESY 2060: adopted, a server an earlier lab left and this one took over (it runs on its card and leaves as the lab's own does); elsewhere, the pid
+    # of another running lab whose server answers the questions (that lab's to stop, not this one's)
+    return {"here": here(kit), "variant": chosen(kit), "server": server(kit).is_file(), "running": up, "gpu": S["gpu"] if up else None,
+            "fit": S["fit"] if up else False, "ctx": CTX, "alias": ALIAS, "idle_s": IDLE_S, "error": S["error"],
+            "adopted": up and S["proc"] is None, "elsewhere": None if up else S["elsewhere"],
             "variants": {v: {"label": x["label"], "need_mb": x["need_mb"], "here": v in here(kit)} for v, x in VARIANTS.items()}}
 
 
@@ -112,6 +129,103 @@ def _health(timeout=2):
             return r.status == 200
     except (OSError, urllib.error.URLError):
         return False
+
+
+def _cmd(pid):
+    try:
+        return [w.decode("utf-8", "replace") for w in Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0") if w]
+    except OSError:
+        return []
+
+
+def _arg(words, key):
+    return next((words[i + 1] for i in range(len(words) - 1) if words[i] == key), "")
+
+
+def _is_writer(pid):
+    """HERESY 2060: pid is the Studio's writer: a llama-server serving on its port (a pid the system has given to another process since is not; an ended
+    one's cmdline is empty)."""
+    w = _cmd(pid)
+    return bool(w) and os.path.basename(w[0]) == "llama-server" and _arg(w, "--port") == str(PORT)
+
+
+def _port_owner():
+    """HERESY 2060: the writer that holds its port, found by the port's owner: the listening socket's inode in /proc/net/tcp, then the llama-server whose
+    descriptors hold it. None when none does, or it is another user's (its descriptors cannot be read)."""
+    want, socks = f":{PORT:04X}", set()
+    for table in ("/proc/net/tcp", "/proc/net/tcp6"):
+        try:
+            rows = Path(table).read_text(encoding="ascii", errors="replace").splitlines()[1:]
+        except OSError:
+            continue
+        for row in rows:
+            f = row.split()
+            if len(f) > 9 and f[3] == "0A" and f[1].endswith(want):   # 0A: listening
+                socks.add(f"socket:[{f[9]}]")
+    for d in os.listdir("/proc") if socks else []:
+        if not d.isdigit() or not _is_writer(d):
+            continue
+        try:
+            if any(os.readlink(f"/proc/{d}/fd/{fd}") in socks for fd in os.listdir(f"/proc/{d}/fd")):
+                return int(d)
+        except OSError:
+            continue                                    # it ended while it was read
+    return None
+
+
+def _lab_of(pid):
+    """HERESY 2060: the pid of another running lab that started this server (its parent, a lab.py), else None: a server whose lab ended has the system
+    for its parent."""
+    try:
+        ppid = int(Path(f"/proc/{pid}/stat").read_text(encoding="utf-8", errors="replace").rsplit(")", 1)[1].split()[1])
+    except (OSError, ValueError, IndexError):
+        return None
+    if ppid in (0, 1, os.getpid()):
+        return None
+    return ppid if any(w.endswith("lab.py") for w in _cmd(ppid)) else None
+
+
+def _adopt():
+    """HERESY 2060 (the audit of 02.11.2026, C10): the server that answers on the writer's port, recorded when an earlier lab left it: its pid (the port's
+    owner), its quant (its -m), its card (its CUDA_VISIBLE_DEVICES; the processor with -ngl 0). Its 10 minutes without a question begin now. True when taken
+    over; a server another running lab started stays that lab's (S["elsewhere"]), and one whose owner cannot be found is used as it is. Under LOCK."""
+    pid = _port_owner()
+    if pid is None:
+        return False
+    other = _lab_of(pid)
+    if other:
+        if S["elsewhere"] != other:
+            print(f"[lab] the Studio's writer on port {PORT} is the lab's at pid {other}: used, never stopped from here", file=sys.stderr, flush=True)
+        S["elsewhere"] = other
+        return False
+    w = _cmd(pid)
+    model = os.path.basename(_arg(w, "-m"))
+    v = next((k for k, x in VARIANTS.items() if os.path.basename(x["file"]) == model), None)
+    try:
+        env = dict(e.split(b"=", 1) for e in Path(f"/proc/{pid}/environ").read_bytes().split(b"\0") if b"=" in e)
+    except OSError:
+        env = {}
+    cvd = env.get(b"CUDA_VISIBLE_DEVICES", b"").decode("ascii", "replace")
+    gpu = int(cvd) if cvd.isdigit() and _arg(w, "-ngl") != "0" else None
+    S.update(proc=None, pid=pid, elsewhere=None, variant=v, gpu=gpu, fit=gpu is None, started=time.time(), used=time.time(), error="")
+    where = "the processor" if gpu is None else f"GPU {gpu}"
+    print(f"[lab] the Studio's writer: the one an earlier lab left (pid {pid}, {v or model}) on {where}, taken over", file=sys.stderr, flush=True)
+    _say(f"its model ({v or model}) on {where}, left by an earlier lab, taken over")
+    return True
+
+
+def _look():
+    """HERESY 2060: a writer an earlier lab left on the port, looked for at the lab's start and every 30 s while the lab runs none, and taken over, so the
+    status says it runs and its 10 minutes begin before anyone asks it (a port nobody holds refuses at once: the look costs nothing then)."""
+    if not _health(1):
+        S["elsewhere"] = None
+        return
+    if LOCK.acquire(blocking=False):                   # ensure() starting one holds it
+        try:
+            if S["proc"] is None and not _alive():
+                _adopt()
+        finally:
+            LOCK.release()
 
 
 def _card(kit, need):
@@ -145,7 +259,8 @@ def ensure(kit):
             return
         if _alive():
             stop("not answering")
-        if _health():                                  # one left from a lab that ended without its stop: used as it is
+        if _health():                                  # one left from a lab that ended without its stop: HERESY 2060, taken over as the lab's own
+            _adopt()
             return
         v = chosen(kit)
         if not v:
@@ -163,7 +278,7 @@ def ensure(kit):
         print(f"[lab] the Studio's writer: {v} on " + ("the processor" if gpu is None else f"GPU{gpu}" + (", part on the processor" if fit else "")),
               file=sys.stderr, flush=True)
         S.update(proc=subprocess.Popen(cmd, env=env, stdout=open(log, "ab"), stderr=subprocess.STDOUT, start_new_session=True),
-                 variant=v, gpu=gpu, fit=fit or gpu is None, started=time.time(), used=time.time(), error="")
+                 pid=None, elsewhere=None, variant=v, gpu=gpu, fit=fit or gpu is None, started=time.time(), used=time.time(), error="")
         _say(f"its model ({v}) starting on " + ("the processor" if gpu is None else f"GPU {gpu}" + (", part on the processor" if fit else "")))
         t0 = time.time()
         while time.time() - t0 < 300:
@@ -223,21 +338,53 @@ def chat(kit, body):
 
 
 def stop(why=""):
-    p = S["proc"]
+    p, pid, ended = S["proc"], S["pid"], False
     if p is not None and p.poll() is None:
         p.terminate()
         try:
             p.wait(timeout=20)
         except subprocess.TimeoutExpired:
             p.kill()
+        ended = True
+    elif p is None and pid and _is_writer(pid):        # HERESY 2060: the one taken over ends as the lab's own does
+        _end(pid)
+        ended = True
+    if ended:
         print(f"[lab] the Studio's writer left its card" + (f": {why}" if why else ""), file=sys.stderr, flush=True)
         _say("its model left its card" + (f": {why}" if why else ""))
-    S.update(proc=None, gpu=None, fit=False)
+    S.update(proc=None, pid=None, gpu=None, fit=False)
     return {"running": False}
+
+
+def _ended(pid):
+    """HERESY 2060: pid has ended, its descriptors (the port among them) closed: gone from /proc, or a zombie the system has yet to reap. Its cmdline is
+    empty a moment earlier, while it still holds the port."""
+    try:
+        return Path(f"/proc/{pid}/stat").read_text(encoding="utf-8", errors="replace").rsplit(")", 1)[1].split()[0] in ("Z", "X")
+    except (OSError, IndexError):
+        return True
+
+
+def _end(pid):
+    """HERESY 2060: a writer the lab took over ends as Popen ends the lab's own: SIGTERM, 20 s to go, then SIGKILL; its pid checked to be the writer still
+    before each signal (not the lab's child, it is reaped by the system). Back when it has ended, or its pid already names another process."""
+    try:
+        os.kill(pid, signal.SIGTERM)
+        t0 = time.time()
+        while time.time() - t0 < 20:
+            if _ended(pid) or (_cmd(pid) and not _is_writer(pid)):
+                return
+            time.sleep(0.1)
+        if _is_writer(pid):
+            os.kill(pid, signal.SIGKILL)
+    except OSError:
+        pass                                            # gone already, or not this user's to end
 
 
 def _idle():
     while True:
+        if S["proc"] is None and not _alive():         # HERESY 2060: one an earlier lab left, taken over (looked for first as the lab starts)
+            _look()
         time.sleep(30)
         if _alive() and not S["busy"] and time.time() - S["used"] > IDLE_S:
             with LOCK:

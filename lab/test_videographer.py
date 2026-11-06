@@ -129,6 +129,21 @@ try:
     except ValueError as e:
         bad = str(e)
     check("an unknown transition refused, said so", bad and "between the sections" in bad, bad)
+    print("the clip's look (2010)")
+
+    def chroma(f, t=4.5):                                # the frame at t, its mean spread between the channels (0 grey … 255)
+        px = subprocess.run(["ffmpeg", "-v", "error", "-ss", str(t), "-i", str(f), "-frames:v", "1", "-vf", "scale=64:36", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                            capture_output=True).stdout
+        tri = [px[i:i + 3] for i in range(0, len(px) - 2, 3)]
+        return sum(max(p) - min(p) for p in tri) / max(1, len(tri))
+    v.clip(kit, "t", audio, None, {}, {"shot": "What is seen"})
+    c0 = chroma(out)
+    r = v.clip(kit, "t", audio, None, {}, {"shot": "What is seen"}, look="ruach:noir.cube", look_strength=1.0)
+    c1 = chroma(out)
+    r2 = v.clip(kit, "t", audio, None, {}, {"shot": "What is seen"}, look="ruach:noir.cube", look_strength=0.5)
+    c2 = chroma(out)
+    check("a look over the clip: noir takes its colour away, at half strength half of it; said in what comes back",
+          r["look"] == "ruach:noir.cube" and r2["look"] == "ruach:noir.cube" and c1 < 0.15 * max(c0, 1) and 0.3 * c0 < c2 < 0.75 * c0, (round(c0, 1), round(c1, 1), round(c2, 1), r["look"]))
     print("the clip's shapes (1917)")
     for shape, wh in (("9:16", "1080,1920"), ("1:1", "1080,1080")):
         r = v.clip(kit, "t", audio, None, {}, {"shot": "What is seen"}, rows=rows, lyrics=True, shape=shape)

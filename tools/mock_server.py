@@ -17,11 +17,17 @@ Test helpers that the real server does not have:
   GET  /mock/info        where its library is, relative to the install ({"outputs": "tmp/..."})
   POST /mock/clear       forget them
   POST /mock/flags       {"transcriber": bool, "outputs": bool, "peaks": bool} switches any off or on
+  POST /mock/stall       {"ms": N} every request but the checks' own waits until N ms from now (HERESY 2101: the line stalled); 0 ends it
+  POST /lab/mock-k98     {"path", "times", "ms" | "status", "error"} the next writes to path held back ms (or answered status, its {"error"} the words
+                         given, HERESY 2123), each sending kept (HERESY 2099)
+  POST /mock/batch       {"status", "id", "items"} the Refiner's batch as GET /lab/chain/batch answers it from now on; {} forgets it (HERESY 2118)
 Engine settings (/settings, /unload, /hardware) follow the server's rules: every
 stage loads its module and, unless keep_loaded is on, drops it when done.
   /fakechat-loaded/...   a stand-in local chat server with a loaded model
   /fakechat-none/...     one that answers but has nothing loaded
   /fakechat-plain/...    one without the native model-state endpoint
+  /fakeor/api/v1/...     a stand-in OpenRouter (HERESY 2097): its models, and a chat that answers only with the key the lab adds
+  GET  /mock/seen        every request to a stand-in chat server or the stand-in OpenRouter, GETs too (HERESY 2097: what a host was asked)
 A request whose style contains MOCK-FAIL fails in the sound stage; MOCK-HOLD runs eight times slower; MOCK-SLOW
 makes that run take three times as long.
 """
@@ -61,6 +67,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
+LABMODS = {}   # HERESY 2081, 2083: the lab's own lease.py and backups.py, loaded once (Handler.labmod)
 TMP = ROOT / "tmp"
 PAGE = TMP.parent / "build" / "tools" / "public" / "index.html"   # HERESY 1130: the page as build.sh makes it
 
@@ -319,6 +326,7 @@ class Mock:
         self.work = queue.Queue()
         self.library_lock = threading.Lock()
         self.requests = []
+        self.seen = []            # HERESY 2097: every request to a stand-in chat server or OpenRouter, GETs too
         self.slow = 1.0
         self.models = ["BF16", "Q8_0"]
         self.settings = {"model": "BF16", "keep_loaded": False, "max_seq": 0, "vae_core": 512}
@@ -682,6 +690,8 @@ def parse_request(body, mock):
             req[key] = value
     if raw.get("nar_ladder") is True:                  # HERESY 1768: the decode ladder, kept as yue-server keeps it (only when on)
         req["nar_ladder"] = True
+    if isinstance(raw.get("instrumental"), bool):      # HERESY 2153: the Creator's box, kept as yue-server keeps it (only when the request says it)
+        req["instrumental"] = raw["instrumental"]
     if req["cot"] not in ("full", "melody", "off"):
         return None, "cot must be full, melody or off"
     if req["output_format"] not in ("mp3", "wav16", "wav24", "wav32"):
@@ -813,10 +823,23 @@ def make_handler(mock):
                         pass
 
         def do_GET(self):
+            self.stalled()
             self.guarded(self.route_get)
 
         def do_POST(self):
+            self.stalled()
             self.guarded(self.route_post)
+
+        def stalled(self):
+            """HERESY 2101: the checks' own stall of the line (POST /mock/stall {ms}): every request but the checks' own waits until it ends, as on
+            a road where both the Studio and its lab fall silent in the same millisecond"""
+            until = LABMODS.get("stall_until", 0)
+            p = urlparse(self.path).path
+            if until and not p.startswith("/mock/") and p != "/lab/mock-k98":
+                import time as _time
+                left = until - _time.time()
+                if left > 0:
+                    _time.sleep(min(left, 30.0))
 
         # -------------------------------------------------------- helpers
         def send(self, code, body, mime="application/json", extra=None):
@@ -842,6 +865,31 @@ def make_handler(mock):
 
         def query(self):
             return {k: v[0] for k, v in parse_qs(urlparse(self.path).query, keep_blank_values=True).items()}
+
+        def labmod(self, name):
+            """HERESY 2081, 2083: the lab's own lab/lease.py or lab/backups.py (the nearest lab/ above the mock), loaded once: its state lives as long
+            as the mock; None when there is none (the routes then answer 404, as a lab before them)"""
+            if name in LABMODS:
+                return LABMODS[name]
+            m = None
+            try:
+                import importlib.util
+                import tempfile
+                found = next((d / "lab" / (name + ".py") for d in Path(__file__).resolve().parents if (d / "lab" / (name + ".py")).is_file()), None)
+                if found is not None:
+                    spec = importlib.util.spec_from_file_location("lab_" + name, found)
+                    m = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(m)
+                    if name == "backups":
+                        m.setup(tempfile.mkdtemp(prefix="ruach-mock-kit-"), mock.outputs)
+                    if name == "llm_hosts":   # HERESY 2097: the Writer's hosts in a folder of the mock's, OpenRouter its stand-in
+                        m.FOLDER = tempfile.mkdtemp(prefix="ruach-mock-llm-")
+                        m.OPENROUTER = "http://127.0.0.1:%d/fakeor/api/v1" % self.server.server_address[1]
+            except (OSError, ImportError) as e:
+                mock.log("[Server] no lab/%s.py beside the mock: %s" % (name, e))
+                m = None
+            LABMODS[name] = m
+            return m
 
         def writer(self, fn):
             """the lab's own lab/writer.py answers, on the mock's folder; its refusals as the lab sends them"""
@@ -896,8 +944,44 @@ def make_handler(mock):
                 if not f or not f.is_file():
                     return self.error(404, "no " + path)
                 return self.send(200, f.read_bytes(), "application/json" if f.suffix == ".json" else "audio/mpeg")
+            if path == "/lab/chain/batch" and LABMODS.get("batch"):   # HERESY 2118: the checks' batch (POST /mock/batch), as the lab answers it
+                return self.send(200, LABMODS["batch"])
+            if path == "/lab/lease":   # HERESY 2081: who holds the lease, as the lab says it
+                m = self.labmod("lease")
+                return self.send(200, m.state(q.get("scope", ""), q.get("id", ""))) if m else self.error(404, "no lab/lease.py beside the mock")
+            if path == "/lab/backups":   # HERESY 2083: the lab's own backups.py on a folder of the mock's
+                m = self.labmod("backups")
+                return self.send(200, m.status()) if m else self.error(404, "no lab/backups.py beside the mock")
+            if path == "/lab/topology":   # HERESY 2085: the lab's own topology.py on the Forge's sysfs and nvidia-smi (lab/test_topology.py's)
+                m, fx = self.labmod("topology"), self.labmod("test_topology")
+                if not m or not fx:
+                    return self.error(404, "no lab/topology.py beside the mock")
+                if "topo" not in LABMODS:
+                    import tempfile
+                    LABMODS["topo"] = {"root": fx.forge(tempfile.mkdtemp(prefix="ruach-mock-topo-")), "nvidia": True}
+                t = LABMODS["topo"]
+                mock.requests.append({"path": path, "fresh": q.get("fresh", "")})
+                return self.send(200, dict(m.gather(run=fx.smi(nvidia=t["nvidia"]), sysfs=t["root"], arc=fx.ARC), probed=0, age_s=0))
+            if path == "/lab/listen":   # HERESY 2088: the player's Opus stream, the take's audio through the lab's own byte_ranges.py
+                m, name = self.labmod("byte_ranges"), q.get("name", "")
+                if not m or q.get("codec") != "opus" or not name or "/" in name or name.startswith("."):
+                    return self.error(404 if not m else 400, "no lab/byte_ranges.py beside the mock" if not m else "codec=opus and a take")
+                audio = next((mock.outputs / name / f for f in ("audio.mp3", "audio.wav") if (mock.outputs / name / f).is_file()), None)
+                if audio is None:
+                    return self.error(404, "no take " + name)
+                mock.requests.append({"path": path, "name": name, "range": self.headers.get("Range", "")})
+                return m.send(self, audio, "audio/ogg", cache="no-cache")
             if path == "/lab/trash":   # HERESY 1168
                 return self.send(200, {"items": []})
+            if path in ("/lab/llm/hosts", "/lab/llm/openrouter/models"):   # HERESY 2097: the lab's own llm_hosts.py on a folder of the mock's; no writer of its own
+                m = self.labmod("llm_hosts")
+                if m is None:
+                    return self.error(404, "no lab/llm_hosts.py beside the mock")
+                if path == "/lab/llm/hosts":
+                    return self.send(200, m.state(m.FOLDER, q.get("scope", ""), {}))
+                return self.send(*m.models(m.FOLDER, q.get("scope", "")))
+            if path.startswith("/fakeor/"):
+                return self.fake_or(path)
             if path == "/lab/writer/versions":   # HERESY 1519: the Creator's versions, the lab's own code on a folder of the mock's
                 return self.versions(lambda m: m.get(mock.writer_kit, q.get("id", ""), q.get("title", ""), q.get("scope", "")) if (q.get("id") or q.get("title"))
                                      else m.listing(mock.writer_kit, q.get("scope", "")))
@@ -931,6 +1015,8 @@ def make_handler(mock):
                 return self.get_library(path, q)
             if path == "/mock/requests":
                 return self.send(200, mock.requests)
+            if path == "/mock/seen":   # HERESY 2097
+                return self.send(200, mock.seen)
             if path == "/mock/info":
                 return self.send(200, {"outputs": shown(mock.outputs)})
             if path.startswith("/fakechat-"):
@@ -1039,6 +1125,131 @@ def make_handler(mock):
         # ---------------------------------------------------------- POST
         def route_post(self):
             path, q = urlparse(self.path).path, self.query()
+            if path == "/mock/stall":   # HERESY 2101: the checks' own hook: the line stalled for ms (0: at once again)
+                import json as _json, time as _time
+                ms = int(_json.loads(self.body() or b"{}").get("ms", 0) or 0)
+                LABMODS["stall_until"] = _time.time() + ms / 1000.0 if ms > 0 else 0
+                return self.send(200, {"ms": ms})
+            if path == "/mock/batch":   # HERESY 2118: the checks' own hook: the Refiner's batch as the lab would answer it ({} forgets it)
+                import json as _json
+                LABMODS["batch"] = _json.loads(self.body() or b"{}") or None
+                return self.send(200, {"batch": LABMODS["batch"]})
+            if path == "/lab/mock-k98":   # HERESY 2098–2101: the checks' own hook, never the lab's: a write path held back, failed, its tries kept
+                import json as _json
+                LABMODS["k98"] = dict(_json.loads(self.body() or b"{}"), seen={})
+                return self.send(200, {"ok": True})
+            if path == "/lab/lease/mock-delay":   # HERESY 2081c: the checks' own hook, never the lab's: the lease's answers held back ms
+                import json as _json
+                LABMODS["lease_delay"] = int(_json.loads(self.body() or b"{}").get("ms", 0) or 0)
+                return self.send(200, {"ms": LABMODS["lease_delay"], "posts": LABMODS.get("lease_posts", 0)})   # HERESY 2100: and how many came
+            if path == "/lab/lease":   # HERESY 2100: the lease's requests counted, for the checks of one in flight
+                LABMODS["lease_posts"] = LABMODS.get("lease_posts", 0) + 1
+            if path == "/lab/lease" and LABMODS.get("lease_delay"):   # HERESY 2081c: held back, then answered as the lab answers (below)
+                import time as _time
+                _time.sleep(LABMODS["lease_delay"] / 1000.0)
+            if path == "/lab/k85-write":   # HERESY 2081c: a write the checks make, kept with the page it names
+                self.body()
+                mock.requests.append({"path": path, "inst": q.get("inst", "")})
+                return self.send(200, {"ok": True})
+            if path == "/lab/topology/mock-nvidia":   # HERESY 2085: the checks' own hook, never the lab's: NVIDIA taken away or given back
+                import json as _json
+                t = LABMODS.get("topo")
+                if t is None:
+                    return self.error(404, "ask /lab/topology first")
+                t["nvidia"] = bool(_json.loads(self.body() or b"{}").get("on", True))
+                return self.send(200, {"nvidia": t["nvidia"]})
+            # HERESY 2081: a write naming a page instance that does not hold its scope's lease is refused, as the lab refuses it (lab/lease.py)
+            if path.startswith("/lab/") and q.get("inst"):
+                m = self.labmod("lease")
+                no = m.refusal(path[len("/lab"):], q) if m else None
+                if no:
+                    self.body()
+                    mock.requests.append({"path": path, "refused": True, "inst": q.get("inst", "")})
+                    return self.send(409, no)
+            k98 = LABMODS.get("k98")
+            if k98 and path == k98.get("path"):   # HERESY 2099: each sending kept with its write id; held back or failed as the checks asked; a write id
+                import time as _time              # done once answered with its first answer (as lab/write_once.py answers it)
+                self.body()
+                w = q.get("wid", "")
+                mock.requests.append({"path": path, "k98": True, "wid": w, "inst": q.get("inst", ""), "at": _time.time()})
+                if k98.get("times", 0) > 0:
+                    k98["times"] -= 1
+                    if k98.get("status"):
+                        return self.send(int(k98["status"]), {"error": k98.get("error") or "held by the checks"})   # HERESY 2123: the words given
+                    _time.sleep(float(k98.get("ms", 0)) / 1000.0)
+                first = k98["seen"].get(w)
+                if first is None:
+                    first = k98["seen"][w] = {"ok": True, "wid": w, "done": len(k98["seen"]) + 1}
+                    return self.send(200, first)
+                return self.send(200, dict(first, again=True))
+            if path in ("/lab/llm/hosts", "/lab/llm/key", "/lab/llm/openrouter/chat/completions"):   # HERESY 2097: as the lab answers them
+                m = self.labmod("llm_hosts")
+                if m is None:
+                    return self.error(404, "no lab/llm_hosts.py beside the mock")
+                raw = self.body()
+                try:
+                    if path == "/lab/llm/hosts":
+                        return self.send(200, m.put(m.FOLDER, q.get("scope", ""), json.loads(raw or b"{}"), {}))
+                    if path == "/lab/llm/key":
+                        return self.send(200, m.set_key(m.FOLDER, q.get("scope", ""), json.loads(raw or b"{}").get("key"), {}))
+                except ValueError as e:
+                    return self.error(400, str(e))
+                code, out = m.chat(m.FOLDER, q.get("scope", ""), raw)
+                return self.send(code, out)
+            if path.startswith("/fakeor/"):
+                return self.fake_or(path)
+            if path == "/lab/lease":   # HERESY 2081: the page's claim, beat, take and release
+                m = self.labmod("lease")
+                if m is None:
+                    return self.error(404, "no lab/lease.py beside the mock")
+                try:
+                    return self.send(200, m.post(q, self.body()))
+                except ValueError as e:
+                    return self.error(400, str(e))
+            if path.startswith("/lab/backups"):   # HERESY 2083: the lab's own backups.py, on a folder of the mock's; a test page's scope changes nothing
+                m = self.labmod("backups")
+                if m is None:
+                    return self.error(404, "no lab/backups.py beside the mock")
+                data = json.loads(self.body() or b"{}")
+
+                def at(rel):
+                    rel = str(rel or "")
+                    if not rel or rel.startswith("/") or ".." in rel.split("/"):
+                        raise ValueError("a file of the mock's folder")
+                    return m._path(rel)
+                if path == "/lab/backups":
+                    return self.send(200, dict(m.status(), test=True) if q.get("scope") else m.configure(data))
+                if path == "/lab/backups/now":
+                    if q.get("scope"):
+                        return self.send(200, dict(m.status(), test=True))
+                    made = m.snapshot("now")
+                    return self.send(200, dict(m.status(), made=made))
+                if path == "/lab/backups/seen":
+                    return self.send(200, m.seen(data.get("ids") or []))
+                # the checks' own hooks, never the lab's: files laid (or broken), read; a snapshot of a kind; the start's check; a read over a file
+                if path == "/lab/backups/mock-files":
+                    for rel, text in (data.get("files") or {}).items():
+                        f = at(rel)
+                        f.parent.mkdir(parents=True, exist_ok=True)
+                        f.write_text(str(text), encoding="utf-8")
+                    return self.send(200, {"ok": True})
+                if path == "/lab/backups/mock-read":
+                    files = {rel: (at(rel).read_text(encoding="utf-8") if at(rel).is_file() else None) for rel in data.get("files") or []}
+                    broken = m.H["dir"] / "broken"
+                    return self.send(200, {"files": files, "broken": sorted(p.name for p in broken.iterdir()) if broken.is_dir() else []})
+                if path == "/lab/backups/mock-snap":
+                    return self.send(200, m.snapshot(str(data.get("kind") or "hourly")))
+                if path == "/lab/backups/mock-start":
+                    return self.send(200, dict(m.status(), fixed=m.check_all()))
+                if path == "/lab/backups/mock-recover":
+                    f = at(data.get("file"))
+                    before = (f.stat().st_mtime_ns, f.read_bytes())
+                    done = m.recover(f, "a read")
+                    return self.send(200, {"result": done, "same": before == (f.stat().st_mtime_ns, f.read_bytes())})
+                if path == "/lab/backups/mock-snapfiles":
+                    doc = m._load_snap(m.H["dir"] / str(data.get("name") or ""))
+                    return self.send(200, {"files": sorted(doc["files"]), "skipped": doc["skipped"], "kind": doc["kind"]})
+                return self.error(404, "unknown path")
             if path == "/synth":
                 raw = self.body()
                 mock.requests.append({"path": "/synth", "body": raw.decode("utf-8", "replace")})
@@ -1095,6 +1306,7 @@ def make_handler(mock):
                 return self.post_library(path, q)
             if path == "/mock/clear":
                 mock.requests.clear()
+                mock.seen.clear()   # HERESY 2097
                 return self.send(200, {"cleared": True})
             if path == "/mock/flags":
                 flags = json.loads(self.body() or b"{}")
@@ -1208,6 +1420,7 @@ def make_handler(mock):
             if not m:
                 return self.error(404, "not found")
             mode, rest = m.groups()
+            mock.seen.append({"path": path, "method": "GET"})   # HERESY 2097: a host asked for its models is a host asked
             if rest == "/v1/models":
                 return self.send(200, {"data": [{"id": "model-a"}, {"id": "model-b"}]})
             if rest == "/api/v0/models" and mode != "plain":
@@ -1220,6 +1433,7 @@ def make_handler(mock):
             if not m:
                 return self.error(404, "not found")
             body = json.loads(self.body() or b"{}")
+            mock.seen.append({"path": path, "method": "POST"})   # HERESY 2097
             mock.requests.append({"path": path, "model": body.get("model"), "json_schema": "response_format" in body,
                                   "roles": [x.get("role") for x in body.get("messages", [])]})
             if "response_format" in body:
@@ -1236,6 +1450,26 @@ def make_handler(mock):
                                    "style_tags": "dark country, baritone male, fiddle, banjo, half-time, 86 BPM"})
             return self.send(200, {"choices": [{"message": {"role": "assistant", "content": text}, "finish_reason": "stop"}],
                                    "usage": {"completion_tokens": 42}})
+
+        def fake_or(self, path):
+            """HERESY 2097: a stand-in OpenRouter: its list of models, and a chat that answers only with a key in Authorization (the lab adds it);
+            what it was asked is kept with whether a key came, never the key"""
+            auth = self.headers.get("Authorization") or ""
+            raw = self.body() if self.command == "POST" else b""
+            mock.seen.append({"path": path, "method": self.command, "auth": auth.startswith("Bearer ") and len(auth) > 7})
+            if path == "/fakeor/api/v1/models":
+                return self.send(200, {"data": [
+                    {"id": "deepseek/deepseek-v4-pro", "name": "DeepSeek: V4 Pro", "pricing": {"prompt": "0.0000004", "completion": "0.0000016"}, "context_length": 1000000},
+                    {"id": "test/cheap", "name": "Test: Cheap", "pricing": {"prompt": "0.0000004", "completion": "0.0000016"}, "context_length": 163840}]})
+            if path == "/fakeor/api/v1/chat/completions" and self.command == "POST":
+                if not auth.startswith("Bearer ") or len(auth) <= 7:
+                    return self.send(401, {"error": {"message": "No auth credentials found", "code": 401}})
+                body = json.loads(raw or b"{}")
+                mock.requests.append({"path": path, "model": body.get("model"), "stream": body.get("stream")})
+                text = "OK" if (body.get("max_tokens") or 0) <= 16 else json.dumps({"title": "Open Road", "style": "English, folk, warm male voice, guitar, 92 BPM",
+                                                                                   "lyrics": "[Verse]\nWheels on the gravel\n[Chorus]\nOpen road", "notes": "n"})
+                return self.send(200, {"choices": [{"message": {"role": "assistant", "content": text}, "finish_reason": "stop"}], "usage": {"completion_tokens": 3}})
+            return self.error(404, "not found")
 
     return Handler
 

@@ -86,6 +86,46 @@
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
   function minus(s) { return String(s).replace(/^-/, "−"); }
+  // HERESY 2013 (from the DAW research of 02.11.2026): the master's integrated loudness against the target of where the song goes, the services'
+  // own: how many LU over it (the service turns the song down by as much) or under it. It is said, never applied: nothing is normalized by it
+  var TARGETS = [["streaming", "Spotify, YouTube, Tidal, Amazon", -14], ["apple", "Apple Music", -16], ["deezer", "Deezer", -15], ["podcast", "A podcast", -16],
+                 ["broadcast", "Broadcast (EBU R128)", -23], ["club", "A club, a CD", -9]];
+  var TARGET_KEY = "yue2.mixTarget";
+  function target() {
+    var k = "";
+    try { k = localStorage.getItem(TARGET_KEY) || ""; } catch (e) { /* a private window */ }
+    return TARGETS.filter(function (t) { return t[0] === k; })[0] || TARGETS[0];
+  }
+  function targetTip() { var t = target(); return tr("The target: {0}, {1} LUFS. Beside it, how far the integrated loudness stands from it: over it, the service turns the song down by as much; nothing here changes the mix").replace("{0}", tr(t[1])).replace("{1}", minus(t[2])); }
+  function targetHtml() {
+    var t = target();
+    return '<div class="mc-tgt"><span>' + esc(tr("Target")) + '</span><button type="button" class="mc-tgtb mono" data-act="target" aria-haspopup="listbox" data-tip="' + esc(targetTip()) + '">' +
+      esc(minus(t[2])) + '</button><output class="mono" data-loud="tgt">—</output></div>';
+  }
+  function targetRead(i) {                           // the integrated loudness against the target, in LU, signed
+    if (i == null) return "—";
+    var v = i - target()[2];
+    return (v > 0.05 ? "+" : "") + minus(v.toFixed(1)) + " LU";
+  }
+  function targetOpen(b) {
+    var box = b.closest(".mc-tgt"), was = box.querySelector(".mc-tgtl"), t = target();
+    if (was) { was.remove(); return; }
+    var l = D().createElement("div");
+    l.className = "mc-tgtl"; l.setAttribute("role", "listbox");
+    l.innerHTML = TARGETS.map(function (x) {
+      return '<button type="button" role="option" class="mc-tgto" data-tgt="' + x[0] + '" aria-selected="' + (x[0] === t[0]) + '"><span class="mono">' + esc(minus(x[2])) + "</span><span>" + esc(tr(x[1])) + "</span></button>";
+    }).join("");
+    box.appendChild(l);
+    l.addEventListener("click", function (e) {
+      var o = e.target.closest("[data-tgt]");
+      if (!o) return;
+      try { localStorage.setItem(TARGET_KEY, o.dataset.tgt); } catch (x) { /* a private window */ }
+      l.remove();
+      Array.prototype.forEach.call(D().querySelectorAll(".mc-tgtb"), function (bb) { bb.textContent = minus(target()[2]); bb.setAttribute("data-tip", targetTip()); });
+    });
+    var off = function (e) { if (!l.contains(e.target) && e.target !== b) { l.remove(); D().removeEventListener("mousedown", off, true); } };
+    D().addEventListener("mousedown", off, true);
+  }
   function fdb(v) { v = +v || 0; return (v > 0 ? "+" : "") + minus(v.toFixed(1)) + " dB"; }   // as the lanes say it
   function fsend(v) { return v <= 0 ? "−∞" : fdb(20 * Math.log10(v)); }
   function fpan(v) { return Math.abs(v) < 0.005 ? "C" : (v < 0 ? "L" : "R") + Math.round(Math.abs(v) * 100); }
@@ -367,6 +407,7 @@
         '<div><span>I</span><output class="mono" data-loud="i">—</output></div><div><span>TP</span><output class="mono" data-loud="tp">—</output></div>' +
         '<div class="mc-lra" data-tip="' + esc(tr("The loudness range since play, by EBU Tech 3342: how far the song's short-term loudness moves, its quietest 10 % and its loudest 5 % left out; the mix on Forge says its own")) + '"><span>LRA</span><output class="mono" data-loud="lra">—</output></div>' +   // HERESY 1763: in the devices
         '<div class="mc-lra" data-tip="' + esc(tr("Peak to loudness: the true peak over the integrated loudness since play; the smaller, the more squashed the song")) + '"><span>PLR</span><output class="mono" data-loud="plr">—</output></div>' +
+        targetHtml() +                                 // HERESY 2013
         '<div class="mc-corr" aria-hidden="true"><i></i></div><span class="mc-corr-lab"><span>−1</span><span>0</span><span>+1</span></span>' +
         '<button type="button" class="btn ghost small" data-act="loudreset" data-tip="' + esc(tr("Clear the loudness, the true peak and every peak held")) + '">' + icon("refresh", "↺") + "</button></div>" +
       '<div class="mc-btns mc-mon" role="group" aria-label="' + esc(tr("Monitor")) + '">' + [["mono", "Mono", "Listen in mono, never in the mix: the two sides summed, as one speaker hears it"], ["dim", "Dim", "Listen 20 dB lower, never in the mix"]].map(function (x) {   // HERESY 1536
@@ -850,9 +891,9 @@
     if (mlr && mv) mlr.style.transform = "scaleX(" + clamp((mv.lim || 0) / 20, 0, 1).toFixed(3) + ")";
     var L = M.S.loud;
     Array.prototype.forEach.call(dock.querySelectorAll("[data-loud]"), function (el) {
-      var k = el.dataset.loud, v = !L ? null : k === "tp" ? (L.tp > 0 ? 20 * Math.log10(L.tp) : null) : k === "plr" ? (L.tp > 0 && L.i != null ? 20 * Math.log10(L.tp) - L.i : null) : L[k];   // HERESY 1763: plr
-      el.textContent = v == null ? "—" : minus(v.toFixed(1));
-      el.classList.toggle("is-hot", k === "tp" && v != null && v > -1);
+      var k = el.dataset.loud, v = !L ? null : k === "tp" ? (L.tp > 0 ? 20 * Math.log10(L.tp) : null) : k === "plr" ? (L.tp > 0 && L.i != null ? 20 * Math.log10(L.tp) - L.i : null) : k === "tgt" ? (L.i != null ? L.i - target()[2] : null) : L[k];   // HERESY 1763: plr; 2013: tgt
+      el.textContent = k === "tgt" ? targetRead(L ? L.i : null) : v == null ? "—" : minus(v.toFixed(1));
+      el.classList.toggle("is-hot", (k === "tp" && v != null && v > -1) || (k === "tgt" && v != null && v > 1));
     });
     Array.prototype.forEach.call(dock.querySelectorAll(".mc-corr i"), function (el) {
       var cr = L ? clamp(L.corr, -1, 1) : 1;
@@ -940,6 +981,7 @@
     if (act === "mon") { M.monitor(v); Array.prototype.forEach.call(D().querySelectorAll('#mxDock [data-act="mon"][data-v="' + v + '"]'), function (x) { var on2 = !!M.monitor()[v]; x.classList.toggle("is-on", on2); x.setAttribute("aria-pressed", on2); }); return; }   // HERESY 1536
     if (act === "peaks") { M.resetLoud(); return; }
     if (act === "loudreset") { M.resetLoud(); return; }
+    if (act === "target") { targetOpen(b); return; }   // HERESY 2013
     if (act === "insgate" || act === "insplug") { runInsert(C.sel, act, v); return; }   // HERESY 1561: a job on Forge, its undo the versions
     if (act === "orchmode") { INS.mode[C.sel] = v; paint(); return; }   // HERESY 1885: the orchestra's mode for this strip
     if (act === "insorch") { runOrchestra(C.sel, +v); return; }         // HERESY 1885: rendered on Forge, the strip's new version
@@ -1220,6 +1262,7 @@
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 
-  window.HeresyConsole = { paint: paint, state: function () { return { sel: C.sel, tab: C.tab, band: C.band }; }, select: select, typed: function (k, t) { return typed(P[k], t); },   // HERESY 1758
+  window.HeresyConsole = { targetHtml: targetHtml, targetOpen: targetOpen, targetRead: targetRead,   // HERESY 2013, for the checks
+                           paint: paint, state: function () { return { sel: C.sel, tab: C.tab, band: C.band }; }, select: select, typed: function (k, t) { return typed(P[k], t); },   // HERESY 1758
     response: response };
 })();

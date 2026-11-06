@@ -42,9 +42,10 @@
     return window.HeresyDialog.prompt(text, value, opts).then(function (v) { return (v || "").trim(); });
   }
   function toast(t, bad) { state.hooks && state.hooks.toast(t, bad ? "bad" : ""); }
-  function api(path, body) {
+  function api(path, body, keep) {   // keep (HERESY 2158): sent with keepalive, so a page going hidden or away still sends it
     var opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
-    return fetch("/lab" + path, opt).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) { var e = new Error(b.error || r.status); e.status = r.status; throw e; } return b; }); })
+    if (keep && body !== undefined) opt.keepalive = true;
+    return fetch("/lab" + path, opt).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) { var e = new Error(b.error || r.status); e.status = r.status; e.lease = !!(b && b.lease); throw e; } return b; }); })   // HERESY 2158: e.lease, the lease's refusal
       .then(function (b) {
         // HERESY 1168 (Viktor 06.10.2026: «Когда трек "Move to Trash"… и если проигрывается в данный момент, сразу снимай его
         // с проигрыша»): whichever way takes go to the trash (a card's menu, the checked ones, a workspace deleted), the page
@@ -54,14 +55,94 @@
       });
   }
 
-  // "*" any run, "?" one character; without either, a plain substring. Case and accents ignored.
+  // HERESY 2028 (Viktor 02.11.2026: «В поиск у Библиотекаря добавь простой regex для рваного матча типа "милости * 0.6", "милост * !0.75"»): the words
+  // found anywhere, in any order; with «*» (any run) or «?» (one character) a pattern found anywhere, its words in their order («милости * 0.6»);
+  // «!word» leaves out a take that has it in any of its fields («милост * !0.75»). Case and accents ignored. m(fields): a string or a list of them
   function fold(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
+  // HERESY 2048 (Viktor: «Поиск по авто-раскладке EN-RU-EN… многие русскоязычные будут благодарны»): the same keys in the other layout
+  var LAYOUT_EN = "qwertyuiop[]asdfghjkl;'zxcvbnm,.`";
+  var LAYOUTS = ["йцукенгшщзхъфывапролджэячсмитьбюё", "йцукенгшщзхїфівапролджєячсмитьбю'", "йцукенгшўзх'фывапролджэячсмітьбюё"];   // ru, uk, be
+  function relaid(q) {
+    var out = [], low = String(q || "").toLowerCase();
+    if (!/[a-z\u0400-\u04ff]/.test(low) || /!/.test(low)) return out;
+    LAYOUTS.forEach(function (L) {
+      var to = "", back = "";
+      for (var i = 0; i < low.length; i++) {
+        var c = low.charAt(i), a = LAYOUT_EN.indexOf(c), b = L.indexOf(c);
+        to += a >= 0 ? L.charAt(a) : c;
+        back += b >= 0 ? LAYOUT_EN.charAt(b) : c;
+      }
+      [to, back].forEach(function (x) { if (x !== low && out.indexOf(x) < 0) out.push(x); });
+    });
+    return out;
+  }
   function matcher(q) {
-    q = fold(q.trim());
-    if (!q) return function () { return true; };
-    if (!/[*?]/.test(q)) return function (s) { return fold(s).indexOf(q) >= 0; };
-    var re = new RegExp("^" + q.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$");
-    return function (s) { return re.test(fold(s)); };
+    var own = matcher1(q), alts = relaid(q).map(matcher1);
+    if (!alts.length) return own;
+    return function (fields) { return own(fields) || alts.some(function (m) { return m(fields); }); };
+  }
+  function matcher1(q) {
+    var esc = function (w) { return w.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, "."); };
+    var test = function (w) { if (/[*?]/.test(w)) { var re = new RegExp(esc(w)); return function (s) { return re.test(s); }; } return function (s) { return s.indexOf(w) >= 0; }; };
+    // HERESY 2095 (Viktor 05.11.2026: «При "seed 1" запросе выводит оба сида первый и второй, а должно же фильтровать»): a word of digits is a
+    // whole number, never a piece of a longer one (a «1» sits in nearly every title: 01, the dates), and typed after a word it goes with that
+    // word: «seed 1» is seed, at most three signs, then 1 («seed 1», «seed: 1», «seed1»), never seed 12 or seed 2 beside a card 01
+    // HERESY 2130 (the audit of 06.11.2026: «Поиск после HERESY 2095 зависит от порядка слов»): the number goes with the word before it only in a take where
+    // that word is followed by a number («seed 1»: seed 1, never seed 2 or seed 12); where the word stands without one («love song 2026», «фолк-фьюжн · №8»)
+    // the number is found anywhere, whole, as the words are: in any order. Each test is asked of a take's fields together
+    var any = function (t) { return function (all) { return all.some(t); }; };
+    var number = function (n, before) {
+      var whole = new RegExp("(^|[^\\p{N}])" + n + "(?![\\p{N}])", "u");
+      if (!before || /^\d+$/.test(before)) return any(function (s) { return whole.test(s); });
+      var w = before.replace(/[.+^${}()|[\]\\*?]/g, "\\$&");
+      var glued = new RegExp(w + "[^\\p{L}\\p{N}]{0,3}" + n + "(?![\\p{N}])", "u"), numbered = new RegExp(w + "[^\\p{L}\\p{N}]{0,3}\\p{N}", "u");
+      return function (all) {
+        if (all.some(function (s) { return glued.test(s); })) return true;
+        return !all.some(function (s) { return numbered.test(s); }) && all.some(function (s) { return whole.test(s); });
+      };
+    };
+    var words = fold(q).trim().split(/\s+/).filter(Boolean), yes = [], not = [];
+    words.forEach(function (w) { if (w.charAt(0) === "!") { if (w.length > 1) not.push(test(w.slice(1))); } else yes.push(w); });
+    var good = yes.some(function (w) { return /[*?]/.test(w); })
+      ? [any(test(yes.join(" ").replace(/\s*\*\s*/g, "*")))]          // the pattern whole: its words in their order, a « * » any run between them
+      : yes.map(function (w, i) { return /^\d+$/.test(w) ? number(w, yes[i - 1]) : any(test(w)); });   // HERESY 2095
+    if (!good.length && !not.length) return function () { return true; };
+    return function (fields) {
+      var all = (Array.isArray(fields) ? fields : [fields]).map(fold);
+      return good.every(function (t) { return t(all); }) && !not.some(function (t) { return all.some(t); });
+    };
+  }
+
+  // HERESY 2058 (Viktor 04.11.2026: «Как мне узнать, где проба 1e53bb? Прикрути поиск в библиотекаре по ID проб и будет нам счастье»): a search that
+  // looks like a take's ID (its folder's name or a part of it: «20261104-180155», the time «180155», a blind take's tail «1e53bb») looks through every
+  // take wherever it lives (every workspace and none, hidden, archived, frozen), whatever place is open and whatever is ticked; each card found says
+  // where it lives, and a click there opens that place with the take in sight
+  function idQuery(q) {
+    var s = String(q || "").trim().toLowerCase();
+    if (!s || !/^[a-z0-9-]+$/.test(s)) return "";
+    return /\d{6}/.test(s) || /(^|-)(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{6}(-|$)/.test(s) ? s : "";
+  }
+  function foundAt(r) {
+    var at = r.workspaces.map(function (w) { return [w, (archivedWs(w) ? "🗄 " : frozenWs(w) ? "❄ " : "") + w, true]; });
+    if (!r.workspaces.length) at.push(["__none", "Not in a workspace", false]);
+    if (r.hidden && !r.frozen && !r.archived) at.push(["__hidden", "Hidden", false]);
+    return '<div class="coll-found"><span class="coll-found-cap">Where it lives:</span>' + at.map(function (a) {
+      return '<button type="button" class="coll-found-at" data-found-at="' + esc(a[0]) + '" data-found-name="' + esc(r.name) + '" data-tip="Open it there">' +
+        (a[2] ? '<span translate="no">' + esc(a[1]) + "</span>" : esc(a[1])) + "</button>";
+    }).join("") + "</div>";
+  }
+  function openFound(name, place) {
+    state.q = ""; $("collSearch").value = ""; state.kinds = {}; state.derived = {};
+    openPlace(place);
+    var eye = $("collReveal");
+    if (!shown().some(function (x) { return x.name === name; }) && !state.reveal && eye) eye.click();   // hidden or disliked: the eye brings it, dimmed
+    else paint();
+    bringIn(name);
+    var card = document.querySelector('#collGrid .coll-card[data-name="' + (window.CSS && CSS.escape ? CSS.escape(name) : name) + '"]');
+    if (!card) return;
+    card.scrollIntoView({ block: "center", behavior: "smooth" });
+    card.classList.add("is-flash");
+    setTimeout(function () { card.classList.remove("is-flash"); }, 1800);
   }
 
   // HERESY 1167 (Viktor: «thumbdown не убирает трек из списка»): a catalog asked for before a rating was given and answered
@@ -71,28 +152,60 @@
   // like's answer is the whole list as the lab read it when the like was asked; a star (a 🔥, a 💎) set while it travelled was not in it, and the
   // list put it out again until the next reload. What is set here is held as the ratings are, by its turn: a list older than it keeps it
   var held = {};
+  // HERESY 2128 (the audit of 06.11.2026: «Заметка в листе откатывается от клика 👍/⭐, и следующая клавиша пишет старый текст поверх»): a note typed and
+  // not yet the lab's (waiting its 900 ms, or on its way) is newer than any list, whenever that list was asked: {name: {text, timer, flight}}
+  var notePend = {}, noteSent = {};
   function remember(name, value) { rated[name] = { v: value, seq: ++rateSeq }; }
   function hold(name, field, v) { (held[name] = held[name] || {})[field] = { v: v, seq: ++rateSeq }; }
   function fresh(rows, asked) {
     (rows || []).forEach(function (r) {
       var x = rated[r.name]; if (x && x.seq > asked) r.rating = x.v;
       var h = held[r.name]; if (h) Object.keys(h).forEach(function (f) { if (h[f].seq > asked) r[f] = h[f].v; });
+      var p = notePend[r.name]; if (p) r.note = p.text;   // HERESY 2128
     });
     return rows;
   }
+  var actsDone = 0;                                // HERESY 2130: the lab's answers to act(), counted: a list asked before one of them is older than it
+  // HERESY 2154: the gone places this device has been told of (a ruach.* key: heresy-settings.js mirrors only yue2.*, so it never reaches another device)
+  var GONE_KEY = "ruach.placeGone";
+  function goneSaid() { try { var v = JSON.parse(recall(GONE_KEY) || "[]"); return Array.isArray(v) ? v.filter(function (w) { return typeof w === "string"; }) : []; } catch (e) { return []; } }
+  function goneMark(list) { store(GONE_KEY, JSON.stringify(list.slice(-50))); }
   function load() {
-    var asked = rateSeq;
+    var asked = rateSeq, acts = actsDone;
     // HERESY 1846: with the catalog, the takes timed already and whether each is sung to its end (a lab without it: none marked)
-    return Promise.all([api("/catalog"), api("/sung/marks").catch(function () { return { marks: {} }; })]).then(function (both) {
-      var d = both[0];
-      state.sung = (both[1] && both[1].marks) || {};
+    // HERESY 2130 (the audit of 06.11.2026): a read that fails otherwise keeps the marks read before and says so once: «every take heard to its end» was
+    // what a lab in trouble said, the END NOT SUNG chips gone exactly when they matter
+    var marks = function (path) { return api(path).catch(function (e) { return e && e.status === 404 ? { marks: {} } : { failed: e }; }); };
+    return Promise.all([api("/catalog"), marks("/sung/marks"), marks("/tail/marks")]).then(function (both) {   // HERESY 2056: and what the tail guard heard
+      var d = both[0], bad = [both[1], both[2]].filter(function (x) { return x && x.failed; });
+      state.sung = both[1] && both[1].failed ? state.sung || {} : (both[1] && both[1].marks) || {};
+      state.tail = both[2] && both[2].failed ? state.tail || {} : (both[2] && both[2].marks) || {};
+      if (bad.length && !state.marksBad) toast("The sung marks could not be read: " + ((bad[0].failed && bad[0].failed.message) || bad[0].failed) + ". The cards keep the ones read before", true);
+      state.marksBad = bad.length > 0;
       if (window.ruachPaintUnsung) window.ruachPaintUnsung();   // HERESY 1854
       state.rows = fresh(d.takes || [], asked); state.ws = d.workspaces || []; state.trashDays = d.trash_days || 0; state.loaded = true; state.locks = d.locks || {}; state.pins = d.pins || {};
       state.loadStatus = 200;                      // HERESY 1434
       state.frozen = d.frozen || [];               // HERESY 1166
+      state.archived = d.archived || [];           // HERESY 2049
+      state.albums = d.albums || [];               // HERESY 2050
       state.blind = d.blind || [];                 // HERESY 1874
-      state.playlist = d.playlist || []; state.plXfade = d.playlist_xfade || 0;   // HERESY 1731
+      state.playlist = d.playlist || [];   // HERESY 1731; 2019 (D1): its crossfade gone, as from the player in 1990
       state.wsNotes = d.ws_notes || {};            // HERESY 1802
+      // HERESY 2130 (the audit of 06.11.2026: «Библиотекарь открывает пространство, которого нет»): the place kept from before (yue2.workspace, which other
+      // windows and devices share) gone, renamed or deleted elsewhere: All Workspaces opens and says why, instead of «Nothing here» under the old name
+      // HERESY 2154 (the audit's review of 2130): yue2.workspace keeps the gone name, and it is the key every window and device shares, so no window clears
+      // it (another device's choice is its own); the toast came again at every F5. Said once a gone name on this device (its own mark, never mirrored),
+      // with what to do; a name that is here again loses its mark, so it is said again should it go again
+      var saidGone = goneSaid(), stillGone = saidGone.filter(function (w) { return state.ws.indexOf(w) < 0; });
+      if (stillGone.length !== saidGone.length) goneMark(stillGone);
+      if (acts === actsDone && state.place && state.place.charAt(0) !== "_" && state.ws.indexOf(state.place) < 0) {
+        var lost = state.place;
+        state.place = ""; state.sel = {};
+        if (stillGone.indexOf(lost) < 0) {
+          goneMark(stillGone.concat([lost]));
+          toast(tr("\u201c{0}\u201d is not here any more (renamed or deleted, maybe in another window): All Workspaces is open. Choose a workspace in the bar to put one in hand; said once on this device").replace("{0}", lost));
+        }
+      }
       firstWs();                                   // HERESY 1434
       var names = {};
       state.rows.forEach(function (r) { names[r.name] = 1; });
@@ -156,7 +269,9 @@
   function frozenWs(w) { return (state.frozen || []).some(function (f) { return w === f || String(w).indexOf(f + SEP) === 0; }); }
   // HERESY 1434 (Viktor 14.10.2026: «В наши 💎 пространства и их сабы - запрет генерации»): a 💎 set and its sections, or a frozen
   // workspace, take no new take; the workspace in hand for new takes is one that does («» when there is none)
-  function closedWs(w) { return DIAMOND.test(wsParts(w)[0] || "") || frozenWs(w); }
+  function closedWs(w) { return DIAMOND.test(wsParts(w)[0] || "") || frozenWs(w) || archivedWs(w); }   // HERESY 2049: nor an archived one
+  function archivedWs(w) { return (state.archived || []).some(function (a) { return w === a || String(w).indexOf(a + SEP) === 0; }); }   // HERESY 2049
+  function archRoot(w) { return (state.archived || []).filter(function (a) { return w === a || String(w).indexOf(a + SEP) === 0; })[0] || w; }
   function landable() { var c = current(); return c && !closedWs(c) ? c : ""; }
   // a new install has a workspace in hand from the start: «My songs», made once when none takes new takes
   function firstWs() {
@@ -173,10 +288,17 @@
     });
     return state.making;
   }
-  function iceHere(r) { return !r.frozen || (!!state.place && state.place.charAt(0) !== "_" && frozenWs(state.place)); }
+  function iceHere(r) { return iceAt(r, state.place); }   // HERESY 1166; 2049: an archived take only in its archived workspace, or in Archived
+  // HERESY 2058b (the re-audit of 04.11.2026: Hidden's ⋯ brought back archived takes its list does not show): the list's test for any place, so Show the
+  // hidden again acts on what that place's list shows
+  function iceAt(r, place) {
+    var own = !!place && place.charAt(0) !== "_";
+    if (place === "__archived") return !!r.archived;
+    return (!r.frozen || (own && frozenWs(place))) && (!r.archived || (own && archivedWs(place)));
+  }
   // HERESY 1169 · 1241 (Viktor 08.10.2026: «трансформируй полосу фильтров показа карточек… Идея фильтра SUNO, с чекбоксами, логикой AND, OR, NOR»): what can be ticked, and how a take answers each
-  // HERESY 1873: a take's reactions, by their emotional zones (the lab's own order): [key, face, word, zone]
-  var REACTS = [["love", "❤️‍🔥", "Burning love", "Love"], ["adore", "🥰", "Tenderness", "Love"], ["hundred", "💯", "Spot on", "A hit"], ["party", "🎉", "A win", "A hit"], ["lol", "🤣", "Hilarious", "Laughter"], ["mindblown", "🤯", "Mind blown", "Wonder"], ["wow", "😮", "Wow", "Wonder"], ["tears", "😭", "To tears", "Tears"], ["think", "🤔", "Makes me think", "Thought"], ["look", "👀", "Worth a closer look", "Thought"], ["nerd", "🤓", "Clever", "Thought"], ["peek", "🫣", "Awkward to hear", "Awkward"], ["melt", "🫠", "Melting away", "Awkward"], ["poop", "💩", "Crap", "Refusal"]];
+  // HERESY 1873: a take's reactions, by their emotional zones (the lab's own order): [key, face, word, zone]; 2027 (Viktor: «Добавь ещё в ленту emoji 🔥 и 💥»): two more
+  var REACTS = [["love", "❤️‍🔥", "Burning love", "Love"], ["adore", "🥰", "Tenderness", "Love"], ["hundred", "💯", "Spot on", "A hit"], ["party", "🎉", "A win", "A hit"], ["hot", "🔥", "Hot", "A hit"], ["lol", "🤣", "Hilarious", "Laughter"], ["mindblown", "🤯", "Mind blown", "Wonder"], ["wow", "😮", "Wow", "Wonder"], ["boom", "💥", "Explosive", "Wonder"], ["tears", "😭", "To tears", "Tears"], ["think", "🤔", "Makes me think", "Thought"], ["look", "👀", "Worth a closer look", "Thought"], ["nerd", "🤓", "Clever", "Thought"], ["peek", "🫣", "Awkward to hear", "Awkward"], ["melt", "🫠", "Melting away", "Awkward"], ["poop", "💩", "Crap", "Refusal"]];
   var FILTERS = [
     { label: "Made", items: [["generated", "raw", "sparkles"], ["imported", "imported", "import"], ["regenerated", "regenerated", "refresh"], ["rerendered", "re-rendered", "waveform"]] },
     { label: "Marked", items: [["__liked", "liked", "like"], ["__disliked", "disliked", "dislike"], ["__starred", "favourites", "star"], ["__unrated", "no like or dislike", "filter-x"], ["__note", "with a note", "note"], ["__art", "with artwork", "image"], ["__protected", "protected", "shield"], ["__fire", "on fire", "flame"], ["__gem", "gems", "gem"]] },
@@ -208,19 +330,20 @@
   var DEAL = {};
   function dealt(name) { if (!(name in DEAL)) DEAL[name] = Math.random(); return DEAL[name]; }
   function shown() {
-    var m = matcher(state.q), on = filterOn(), logic = state.logic || "and";
+    var m = matcher(state.q), on = filterOn(), logic = state.logic || "and", idq = idQuery(state.q);
     var rows = state.rows.filter(function (r) {
+      if (idq) return m([r.title, r.name, r.note || ""].concat(r.workspaces));   // HERESY 2058: an ID: every take, wherever it lives
       if (!iceHere(r)) return false;               // HERESY 1166
       if (state.place === "__fav" && !r.favorite) return false;
       if (state.place === "__pinned" && !pinnedAll()[r.name]) return false;   // HERESY 1105
       if (state.place === "__none" && r.workspaces.length) return false;   // HERESY 1058
       if (state.place === "__hidden") { if (!r.hidden) return false; }
-      else if (r.hidden) return false;
-      if (r.rating < 0 && !showDis() && !(state.kinds.__disliked && logic !== "nor")) return false;   // HERESY 1167; 1241: shown when the filter asks for the disliked
+      else if (r.hidden && !state.reveal) return false;   // HERESY 2046: the eye shows them, dimmed
+      if (r.rating < 0 && !showDis() && !state.reveal && !(state.kinds.__disliked && logic !== "nor")) return false;   // HERESY 1167; 1241: shown when the filter asks for the disliked
       if (state.place && state.place.charAt(0) !== "_" && !inTree(r, state.place)) return false;   // its sections too (1161)
       if (!passes(r, on, logic)) return false;   // HERESY 1169 · 1241: the ticked filters, joined AND, OR or NOR
       // HERESY 1167: a take's workspaces and sections are searched too (a section's name finds its takes)
-      return m(r.title) || m(r.name) || (r.note && m(r.note)) || r.workspaces.some(function (w) { return m(w); });
+      return m([r.title, r.name, r.note || ""].concat(r.workspaces));   // HERESY 2028: all its fields at once, so «!word» leaves a take out whichever has it
     });
     var sort = recall(SORT_KEY) || "new";
     rows.sort(function (a, b) {
@@ -234,10 +357,24 @@
   }
 
   function paintSide() {
-    var counts = { "": 0, __fav: 0, __hidden: 0, __none: 0 }, perWs = {};
+    var counts = { "": 0, __fav: 0, __hidden: 0, __none: 0 }, perWs = {}, perHid = {};   // HERESY 2046: a workspace's hidden apart, «189/208»
+    var tally = function (map, r) {
+      var once = {};                                 // HERESY 1161: a take counted once in a parent, from any of its sections
+      r.workspaces.forEach(function (w) {
+        var parts = wsParts(w), from = wsLeaf(w) === SOURCED ? parts.length : 1;   // 1162: the replaced count in their section only
+        for (var i = from; i <= parts.length; i++) { var a = parts.slice(0, i).join(SEP); if (!once[a]) { once[a] = 1; map[a] = (map[a] || 0) + 1; } }
+      });
+    };
+    var hidSys = { "": 0, __none: 0 };               // HERESY 2058: the hidden of All Workspaces and of Not in a workspace, for their ⋯
+    // HERESY 2058b (Viktor 03.11.2026: «На счётчике … если есть скрытые … дробное отображение типа `189/208`»; the re-audit of 04.11.2026: ⓘ counts a disliked
+    // take the Engine keeps out as hidden, the tree did not): the tree counts the same way, out of a place's shown number and into its hidden part
+    var disOut = function (r) { return !r.hidden && r.rating < 0 && !showDis(); };
     state.rows.forEach(function (r) {
-      if (r.hidden) { counts.__hidden++; return; }
-      if (!r.frozen) { counts[""]++; if (r.favorite) counts.__fav++; }   // HERESY 1166: a frozen take only in its own
+      // HERESY 2074 (Viktor 05.11.2026: «Давай, быстрецом гоним всё до и для среза 2.0.6»): Hidden's own number counts what its list shows (no archived or frozen take,
+      // no disliked one the list leaves out), as its ⋯ does: the row, the list and the menu agree (the rule of 03.11.2026, «…дробное отображение типа `189/208`»)
+      if (r.hidden) { if (iceAt(r, "__hidden") && !disOutOfList(r)) counts.__hidden++; tally(perHid, r); if (!r.frozen && !r.archived) hidSys[""]++; if (!r.workspaces.length) hidSys.__none++; return; }
+      if (disOut(r)) { tally(perHid, r); return; }   // HERESY 2058b: disliked, out of the lists: hidden in its workspaces, shown nowhere
+      if (!r.frozen && !r.archived) { counts[""]++; if (r.favorite) counts.__fav++; }   // HERESY 1166: a frozen take only in its own; 2049: an archived one too
       if (!r.workspaces.length) counts.__none++;
       var once = {};                                 // HERESY 1161: a take counted once in a parent, from any of its sections
       r.workspaces.forEach(function (w) {
@@ -245,6 +382,37 @@
         for (var i = from; i <= parts.length; i++) { var a = parts.slice(0, i).join(SEP); if (!once[a]) { once[a] = 1; perWs[a] = (perWs[a] || 0) + 1; } }
       });
     });
+    // HERESY 2089 (Viktor 05.11.2026: «…Чтобы не раздувать по ширине колонку и не обрезать имена пространств, предлагаю при наведении мышки на число треков
+    // поднимать тултип с подсчётами, а ту косую так и оставить»): every place counted in one pass as ⓘ counts it since 2078b (the list's own test, iceAt):
+    // shown, hidden by hand, disliked kept out while the Engine hides them, and apart what only a frozen workspace or the archive shows. A place holding
+    // hidden takes shows «/» and the whole (ⓘ's number), so the names keep the column's width (the fraction ran under the ⋯); the counts in the number's tip,
+    // English in the page for the catalogs, a line each
+    var tallyN = {};
+    state.rows.forEach(function (r) {
+      var once = {}, at = function (a) {
+        if (once[a]) return;
+        once[a] = 1;
+        var c = tallyN[a] || (tallyN[a] = { shown: 0, hand: 0, dis: 0, ice: 0, arch: 0 });
+        if (!iceAt(r, a)) { if (r.archived) c.arch++; else c.ice++; } else if (r.hidden) c.hand++; else if (disOut(r)) c.dis++; else c.shown++;
+      };
+      if (r.archived) at("__archived");
+      r.workspaces.forEach(function (w) {
+        var parts = wsParts(w), from = wsLeaf(w) === SOURCED ? parts.length : 1;
+        for (var i = from; i <= parts.length; i++) at(parts.slice(0, i).join(SEP));
+      });
+    });
+    var nText = function (key) { var c = tallyN[key] || { shown: 0, hand: 0, dis: 0 }; return (c.hand + c.dis ? "/" : "") + (c.shown + c.hand + c.dis); };
+    var nSpan = function (key) {
+      var c = tallyN[key], tip = [];
+      if (c && (c.hand || c.dis || c.ice || c.arch)) {
+        tip.push("Shown: " + c.shown);
+        if (c.hand) tip.push("Hidden by hand: " + c.hand);
+        if (c.dis) tip.push("Hidden as disliked: " + c.dis);
+        if (c.ice) tip.push("In a frozen workspace: " + c.ice);
+        if (c.arch) tip.push("In the archive: " + c.arch);
+      }
+      return '<span class="coll-n"' + (tip.length ? ' data-tip="' + esc(tip.join("\n")) + '"' : "") + ">";
+    };
     // HERESY 1165: a workspace's name is the user's, kept as typed in every language; the Studio's own places translate
     var UIc = function (nm) { return window.HeresyIcons && window.HeresyIcons.ui ? '<span class="coll-ico" aria-hidden="true">' + window.HeresyIcons.ui(nm) + "</span>" : ""; };   // HERESY 1998
     var item = function (key, label, n, own, ico) {
@@ -260,26 +428,42 @@
       var open = secShut.indexOf(w) < 0;
       return '<span class="coll-sec-fold" data-sec-fold="' + esc(w) + '" role="button" aria-expanded="' + open + '" title="' + (open ? "Fold its sections" : "Unfold its sections") + '"></span>';
     };
-    var pinAll = pinnedAll(), pinN = state.rows.filter(function (r) { return pinAll[r.name] && !r.hidden && !r.frozen; }).length;
+    // HERESY 2049: Archived, and under it each archived workspace whole (its ⋯: back, or to the trash)
+    var arch = treeOrder(state.ws.filter(function (w) { return archivedWs(w); })), archN = state.rows.filter(function (r) { return r.archived && !r.hidden && !disOut(r); }).length;   /* HERESY 2058b */
+    // HERESY 2058 (Viktor 03.11.2026: «На счётчике … если есть скрытые … дробное отображение типа `189/208`»): Archived and its workspaces too
+    var archHid = state.rows.filter(function (r) { return r.archived && (r.hidden || disOut(r)); }).length, frac = function (n, h) { return h ? n + "/" + (n + h) : n; };   // HERESY 2058b: the disliked out too
+    var archivedHtml = arch.length ? item("__archived", "Archived", nText("__archived"), false, "archive").replace('<span class="coll-n">', nSpan("__archived")) + arch.map(function (w) {
+      var dp = wsParts(w).length;
+      return item(w, dp > 1 ? wsLeaf(w) : w, nText(w), true).replace('class="coll-place', 'class="coll-place is-sub d' + (dp + 1) + " is-archived")
+        .replace('<span class="coll-n">', '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Bring it back, or send it to the trash" role="button">\u22ef</span><span class="coll-n">').replace('<span class="coll-n">', nSpan(w));
+    }).join("") : "";
+    // HERESY 2078b (Viktor 05.11.2026, to the proposal «277 · ещё 1 в замороженном»: «Да, делай как предложил»): Pinned counts by its list's own test (iceAt), as ⓘ
+    // does: an archived pinned take, which Pinned's list never shows, is out too
+    var pinAll = pinnedAll(), pinN = state.rows.filter(function (r) { return pinAll[r.name] && !r.hidden && iceAt(r, "__pinned") && !disOut(r); }).length;   /* HERESY 2058b */
     // HERESY 1731: the playlist at the very top, never renamed or deleted (a place of the Studio's own, as Favourites)
-    $("collSide").innerHTML = item("__playlist", "Playlist", plRows().length, false, "playlist") +   // HERESY 1998: the Studio's own outlines
-      item("", "All Workspaces", counts[""], false, "horn") + item("__fav", "Favourites", counts.__fav, false, "star") +
+    // HERESY 2058 (Viktor 03.11.2026: «Нужна команда "Отобразить все скрытые"»): All Workspaces, Not in a workspace and Hidden have a ⋯ while they hold hidden takes
+    var sysMore = function (key, n) { return (n ? '<span class="coll-ws-more" data-sys-menu="' + key + '" title="Show the hidden again" role="button">\u22ef</span>' : "") + '<span class="coll-n">'; };
+    // HERESY 2058 (Viktor: «Корень Плейлиста видит все треки, даже те что в альбомах»): Playlist counts the root's whole list, whatever album or tag is open
+    $("collSide").innerHTML = item("__playlist", "Playlist", plRootCount(), false, "playlist") +   // HERESY 1998: the Studio's own outlines
+      item("", "All Workspaces", counts[""], false, "horn").replace('<span class="coll-n">', sysMore("", hidSys[""])) + item("__fav", "Favourites", counts.__fav, false, "star") +
       item("__pinned", "Pinned", pinN, false, "pin") +
-      item("__none", "Not in a workspace", counts.__none, false, "folder-minus") +
-      '<div class="coll-cap">Workspaces</div>' + treeOrder(state.ws).map(function (w) {
+      item("__none", "Not in a workspace", counts.__none, false, "folder-minus").replace('<span class="coll-n">', sysMore("__none", hidSys.__none)) +
+      '<div class="coll-cap">Workspaces</div>' + treeOrder(state.ws.filter(function (w) { return !archivedWs(w); })).map(function (w) {   // HERESY 2049: the archived under Archived
         var ice = (frozenWs(w) ? '<span class="coll-ice" title="Frozen: its takes are heard, never changed">\u2744</span>' : "") +   // HERESY 1166
-          ((state.blind || []).indexOf(w) >= 0 ? '<span class="coll-blind" data-tip="Blind: what made its takes is hidden">\ud83d\ude48</span>' : "");   // HERESY 1874
+          ((state.blind || []).indexOf(w) >= 0 ? '<span class="coll-blind" data-tip="Blind: what made its takes is hidden">' + ico("blind") + "</span>" : "");   // HERESY 1874
         var lk = (state.locks || {})[w] || {}, lock = ice + (lk.workspace || lk.tracks ?   // HERESY 1070
           '<span class="coll-lock" title="' + (lk.workspace ? "the workspace is locked against deletion" : "") + (lk.workspace && lk.tracks ? "; " : "") + (lk.tracks ? "its takes are locked against deletion" : "") + '">\ud83d\udd12</span>' : "");
         var depth = wsParts(w).length;               // a section: its own name, indented under its parent (1161)
-        return item(w, depth > 1 ? wsLeaf(w) : w, perWs[w] || 0, depth < 2 || !STUDIO_SECTIONS[wsLeaf(w)]).replace('class="coll-place', 'class="coll-place' + (depth > 1 ? " is-sub d" + depth : "") + (frozenWs(w) ? " is-frozen" : "") +
+        return item(w, depth > 1 ? wsLeaf(w) : w, nText(w), depth < 2 || !STUDIO_SECTIONS[wsLeaf(w)]).replace('class="coll-place', 'class="coll-place' + (depth > 1 ? " is-sub d" + depth : "") + (frozenWs(w) ? " is-frozen" : "") +
             (secAway(w) ? " is-sec-away" : "") + (secShut.indexOf(w) >= 0 && String(state.place || "").indexOf(w + SEP) === 0 ? " has-on-inside" : ""))
           .replace('<button type="button" ', '<button type="button" ' + wsTip(w))   // HERESY 1802: its note under the pointer
-          .replace('<span class="coll-n">', lock + secHandle(w) + '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Rename, delete, lock, a section…" role="button">\u22ef</span><span class="coll-n">');
+          .replace('<span class="coll-n">', lock + secHandle(w) + '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Rename, delete, lock, a section…" role="button">\u22ef</span><span class="coll-n">').replace('<span class="coll-n">', nSpan(w));
       }).join("") +
       '<button type="button" class="coll-place coll-new" data-ws-new="1">+ New workspace</button>' +
       '<button type="button" class="coll-place coll-new coll-hub" data-ws-hub="1">\ud83d\udc8e From Hugging Face\u2026</button>' +   // HERESY 1166
-      '<div class="coll-cap">Out of sight</div>' + item("__hidden", "Hidden", counts.__hidden, false, "eye-off") + item("__trash", "Trash", state.trash.length || undefined, false, "trash") +
+      '<div class="coll-cap">Out of sight</div>' + archivedHtml + item("__hidden", "Hidden", counts.__hidden, false, "eye-off").replace('<span class="coll-n">', sysMore("__hidden", counts.__hidden)) +
+      (state.trashErr ? item("__trash", "Trash", "?", false, "trash").replace('<button type="button" ', '<button type="button" data-tip="' + esc("The trash could not be read: " + state.trashErr) + '" ')   // HERESY 2130
+        : item("__trash", "Trash", state.trash.length || undefined, false, "trash")) +
       item("__trash_art", "Trash (Art)", artCount() || undefined, false, "trash");   // HERESY 1337; 1998: their outlines
     fitSide();
   }
@@ -342,6 +526,19 @@
     state.sung = state.sung || {}; state.sung[name] = done;
     if (window.ruachPaintUnsung) window.ruachPaintUnsung();
   }
+  function tailMark(name, heard) {                    // HERESY 2056: what the tail guard heard, on the cards and in the player at once
+    state.tail = state.tail || {};
+    if (heard) state.tail[name] = heard; else delete state.tail[name];
+    if (window.ruachPaintUnsung) window.ruachPaintUnsung();
+    if (state.loaded) paint();
+  }
+  function tailBadge(name) {                         // HERESY 2056: its sound comes back after a silence near its end
+    var t = (state.tail || {})[name];
+    if (!t || !t.gap) return "";
+    var clk = function (x) { var m = Math.floor(x / 60), s = x - m * 60; return m + ":" + (s < 10 ? "0" : "") + s.toFixed(1); };
+    return '<span class="coll-badge tail" data-tip="' + esc(tr("The sound comes back at {0} after {1} s of silence; End at… offers to end it there").replace("{0}", clk(t.gap[1]))
+      .replace("{1}", (t.gap[1] - t.gap[0]).toFixed(1))) + '">' + esc(tr("tail after the end")) + "</span>";
+  }
   function unsungBadge(name) {                       // HERESY 1846: its timing heard its lyrics stop before their end
     return (state.sung || {})[name] === false ? '<span class="coll-badge unsung" data-tip="' + esc(tr("The end not sung: its last lines were not heard; Sung to the end? in its datasheet says which")) + '">' + esc(tr("end not sung")) + "</span>" : "";
   }
@@ -374,7 +571,7 @@
     var r = rowOf(name);
     if (!r) return "";
     return '<div class="take-extra"><span class="coll-badges">' + r.derived.map(dbadge).join("") +
-      r.workspaces.map(function (w) { return wsBadge(w); }).join("") + unsungBadge(name) + "</span>" +
+      r.workspaces.map(function (w) { return wsBadge(w); }).join("") + unsungBadge(name) + tailBadge(name) + "</span>" +
       '<span class="take-rate"><button type="button" class="coll-act" data-lrate="1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating > 0) + '" aria-label="Like">' + ico("like") + "</button>" +
       markBtns(name) +                                 // HERESY 1802: 🔥 💎 after 👍
       '<button type="button" class="coll-act" data-lrate="-1" data-name="' + esc(name) + '" aria-pressed="' + (r.rating < 0) + '" aria-label="Dislike" data-tip="' + DIS_TIP + '">' + ico("dislike") + "</button>" +
@@ -545,7 +742,7 @@
     LAZY.shown = Math.max(batch(), Math.ceil(LAZY.shown / per) * per);
     LAZY.rows = rows;
     $("collGrid").innerHTML = rows.length ? rows.slice(0, LAZY.shown).map(cardHtml).join("")
-      : '<p class="row-hint coll-empty">Nothing here' + (state.q ? " for “" + esc(state.q) + "”" : "") + ".</p>";
+      : emptyHtml();                                 // HERESY 2046
     moreWatch();
     iceCards();                                    // HERESY 1166: a frozen card's controls off
     paintHead(rows);
@@ -599,7 +796,7 @@
       var sel = !!state.sel[r.name], now = state.hooks.playing ? state.hooks.playing() : {};
       var mine = now.name === r.name;
       var art = window.HeresyArt ? window.HeresyArt.url(r.name) : "";   // HERESY 1154: beside the title, not in the play button
-      return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden-take" : "") + (r.frozen ? " is-frozen" : "") + (r.fresh ? " is-fresh" : "") + (window.HeresyRegen && window.HeresyRegen.has(r.name) ? " is-regenerating" : "") + (mine ? " is-current" : "") + (mine && now.playing ? " is-sounding" : "") + (art ? " has-art" : "") + '" data-name="' + esc(r.name) + '"' + sandAt(r.name) + ' draggable="true">' + reactMark(r.name) +   // HERESY 1877
+      return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden-take" : "") + (!r.hidden && state.reveal && r.rating < 0 && !showDis() ? " is-dis-hidden" : "") /* HERESY 2058 */ + (r.frozen ? " is-frozen" : "") + (r.fresh ? " is-fresh" : "") + (window.HeresyRegen && window.HeresyRegen.has(r.name) ? " is-regenerating" : "") + (mine ? " is-current" : "") + (mine && now.playing ? " is-sounding" : "") + (art ? " has-art" : "") + '" data-name="' + esc(r.name) + '"' + sandAt(r.name) + ' draggable="true">' + reactMark(r.name) +   // HERESY 1877
         '<label class="coll-check"><input type="checkbox" data-sel="' + esc(r.name) + '"' + (sel ? " checked" : "") + ' aria-label="Select" /></label>' +
         '<button type="button" class="coll-play' + (mine && now.playing ? " is-playing" : "") + '" data-play="' + esc(r.name) + '" aria-label="' + (mine && now.playing ? "Pause" : "Play") + '">' + ico(mine && now.playing ? "pause" : "play") + "</button>" +
         '<div class="coll-body"><div class="coll-title"><span class="coll-title-text" data-open="' + esc(r.name) + '">' + esc(r.title) + "</span>" +
@@ -609,7 +806,8 @@
         '<div class="coll-badges">' + badge(KINDS[r.kind] || r.kind, "k-" + r.kind) + r.derived.map(dbadge).join("") +
         r.workspaces.map(function (w) { return wsBadge(w); }).join("") +
         // HERESY 1162: what it was made again from, on its card
-        (r.regen_of ? '<span class="coll-badge rg" data-tip="Regenerated with a new seed from ' + esc(r.regen_of) + '">regen</span>' : "") + unsungBadge(r.name) + "</div>" +
+        (r.regen_of ? '<span class="coll-badge rg" data-tip="Regenerated with a new seed from ' + esc(r.regen_of) + '">regen</span>' : "") + unsungBadge(r.name) + tailBadge(r.name) + "</div>" +
+        (idQuery(state.q) ? foundAt(r) : "") +            // HERESY 2058: where a take found by its ID lives, each place a button
         "</div>" +
         // HERESY 1155 (Viktor: «Не уходим из студии в другие окна и вкладки, если не нужно»): the whole picture over the page
         (art ? '<button type="button" class="coll-art" data-art="' + esc(r.name) + '" style="background-image:url(&quot;' + esc(art) + '&quot;)" data-tip="The artwork: see it whole" aria-label="The artwork"></button>' : "") +
@@ -626,6 +824,75 @@
         // HERESY 1900 («уведи вправо троеточие… иконку заметки поставь перед троеточием с небольшим отступом»): ⋯ last, at the strip's right end
         '<button type="button" class="coll-act coll-more-btn" data-cmenu="1" title="More (or right-click the card)" aria-label="More">\u22ef</button>' + "</div></article>";
     }
+  }
+  // HERESY 2046 (Viktor: «Если по фильтру ничего не найдено… очень мелкая. Увеличить, в две строки, отцентрировать»): what is empty and why
+  function emptyHtml() {
+    var on = filterOn().length, q = state.q;
+    var why = q && on ? tr("No take matches “{0}” with the filters on.").replace("{0}", q) : q ? tr("No take matches “{0}”.").replace("{0}", q)
+      : on ? tr("No take passes the filters.") : tr("This place has no takes to show.");
+    return '<div class="coll-empty coll-none"><p class="coll-none-1">' + esc(tr("Nothing here")) + '</p><p class="coll-none-2">' + esc(why) + "</p>" +
+      (q || on ? '<p class="coll-none-3"><button type="button" class="btn ghost small" data-coll-reset="1">' + esc(tr("Clear the search and the filters")) + "</button></p>" : "") + "</div>";
+  }
+  // HERESY 2046 (Viktor: «SVG иконкой `i`… оверлеем максимальную статистику по (под)пространству»): the place's numbers, its hidden too
+  function statsHtml() {
+    // HERESY 2078b (Viktor 05.11.2026, to the proposal «277 · ещё 1 в замороженном»: «Да, делай как предложил»): ⓘ counts the takes of the place its list shows,
+    // by the list's own test (iceAt, 2058b): a favourite, a pinned or a hidden take that only a frozen workspace or the archive shows is out of the number and
+    // said after it, frozen and archived apart (a take both frozen and archived: the archive's), so ⓘ's old total is the parts' sum; the plans, the time, the
+    // marks and the rest count what the list shows
+    var ofPlace = function (r) {
+      if (state.place === "__fav") return r.favorite;
+      if (state.place === "__pinned") return !!pinnedAll()[r.name];
+      if (state.place === "__none") return !r.workspaces.length;
+      if (state.place === "__hidden") return r.hidden;
+      if (state.place === "__archived") return r.archived;   // HERESY 2049
+      if (state.place && state.place.charAt(0) !== "_") return inTree(r, state.place);
+      return !r.frozen && !r.archived;
+    };
+    var all = state.rows.filter(function (r) { return ofPlace(r) && iceAt(r, state.place); });
+    var away = state.rows.filter(function (r) { return ofPlace(r) && !iceAt(r, state.place); }), awayArch = away.filter(function (r) { return r.archived; }).length;
+    var aways = (away.length > awayArch ? " \u00b7 " + esc(tr("{0} more in a frozen workspace").replace("{0}", away.length - awayArch)) : "") +
+      (awayArch ? " \u00b7 " + esc(tr("{0} more in the archive").replace("{0}", awayArch)) : "");
+    // HERESY 2058 (Viktor 03.11.2026: «максимальную статистику… План (Full/Direct/Instrumental)»): hidden by hand and, while the Engine keeps them out of the
+    // lists, disliked: both out of sight
+    var n = all.length, hidHand = all.filter(function (r) { return r.hidden; }).length, sec = all.reduce(function (s, r) { return s + (+r.seconds || 0); }, 0);
+    var hidDis = all.filter(function (r) { return !r.hidden && r.rating < 0 && !showDis(); }).length, hid = hidHand + hidDis;
+    var cnt = function (f) { return all.filter(f).length; }, clock = state.hooks.clock;
+    var hms = function (s) { s = Math.round(s); var h = Math.floor(s / 3600); return h ? h + ":" + ("0" + Math.floor(s % 3600 / 60)).slice(-2) + ":" + ("0" + s % 60).slice(-2) : clock(s); };
+    // HERESY 2058: one plan a take: imported first (its cot «off» is no Direct), then an instrumental (the lab's flag), then by its cot
+    var planOf = function (r) { return r.kind === "imported" ? "imported" : r.instrumental ? "instrumental" : ["full", "off", "melody"].indexOf(r.cot) >= 0 ? r.cot : ""; };
+    var plans = [["full", "Full"], ["off", "Direct"], ["melody", "Melody only"], ["instrumental", "Instrumental"], ["imported", "Imported"], ["", "unknown"]]
+      .map(function (p) { return [tr(p[1]), cnt(function (r) { return planOf(r) === p[0]; })]; }).filter(function (p) { return p[1]; });
+    var kinds = [["generated", "made here"], ["imported", "imported"], ["regenerated", "regenerated"], ["rerendered", "re-rendered"]]
+      .map(function (k) { return [tr(k[1]), cnt(function (r) { return r.kind === k[0]; })]; }).filter(function (k) { return k[1]; });
+    var marks = [["\ud83d\udc4d", cnt(function (r) { return r.rating > 0; })], ["\ud83d\udc4e", cnt(function (r) { return r.rating < 0; })], ["\u2b50", cnt(function (r) { return r.favorite; })],
+      ["\ud83d\udd25", cnt(function (r) { return markOf(r.name, "fire"); })], ["\ud83d\udc8e", cnt(function (r) { return markOf(r.name, "gem"); })],
+      ["\ud83d\udee1", cnt(function (r) { return r.protected; })], ["\u270e", cnt(function (r) { return !!(r.note || "").trim(); })]].filter(function (m) { return m[1]; });
+    var re = {};
+    all.forEach(function (r) { var k = reactOf(r.name); if (k) re[k] = (re[k] || 0) + 1; });
+    var reacts = REACTS.filter(function (x) { return re[x[0]]; }).map(function (x) { return [x[1], re[x[0]]]; });
+    var days = all.map(function (r) { return r.created || 0; }).filter(Boolean).sort();
+    var day = function (t) { var d = new Date(t * 1000), z = function (x) { return (x < 10 ? "0" : "") + x; }; return d.getFullYear() + "-" + z(d.getMonth() + 1) + "-" + z(d.getDate()); };   // HERESY 2130: the day here, as artDay (toISOString said UTC: an evening take in Canada fell on the morrow)
+    var row = function (k, v) { return v ? '<div class="cs-k">' + esc(tr(k)) + '</div><div class="cs-v">' + v + "</div>" : ""; };
+    var list = function (xs) { return xs.map(function (x) { return '<span class="cs-i">' + esc(x[0]) + ' <b class="mono">' + x[1] + "</b></span>"; }).join(""); };
+    return '<div class="cs-head">' + esc(placeName()) + "</div>" + '<div class="cs-grid">' +
+      row("Takes", '<b class="mono">' + n + "</b>" + (hid ? " \u00b7 " + esc((hidDis ? tr("{0} shown, {1} hidden ({2} by hand, {3} disliked)") : tr("{0} shown, {1} hidden")).replace("{0}", n - hid).replace("{1}", hid)
+        .replace("{2}", hidHand).replace("{3}", hidDis)) : "") + aways) +   // HERESY 2078b: the rest, after the number
+      row("Plan", list(plans)) +
+      row("Time", n ? esc(tr("{0} in all · {1} on average").replace("{0}", hms(sec)).replace("{1}", clock(sec / n))) : "") +
+      row("Marks", list(marks)) + row("Reactions", list(reacts)) + row("Made", list(kinds)) +
+      row("Days", days.length ? esc(day(days[0]) + (day(days[0]) !== day(days[days.length - 1]) ? " \u2192 " + day(days[days.length - 1]) : "")) : "") + "</div>";
+  }
+  function placeName() {
+    var own = { "": "All Workspaces", __fav: "Favourites", __pinned: "Pinned", __none: "Not in a workspace", __hidden: "Hidden", __archived: "Archived" };
+    return state.place in own ? tr(own[state.place]) : state.place;
+  }
+  function statsOpen(on) {
+    var pop = $("collStatsPop"), b = $("collStats");
+    if (!pop) return;
+    if (on === undefined) on = pop.hidden;
+    if (on) pop.innerHTML = statsHtml();
+    pop.hidden = !on;
+    b.setAttribute("aria-expanded", String(on));
   }
   function placeRows() {   // the takes of the place open (HERESY 1169 · 1241: the head's counts and the filter window's)
     return state.rows.filter(function (r) {
@@ -673,17 +940,46 @@
       paint();
     });
   }
+  // HERESY 2023: one line when the whole path fits the heading's room, measured as drawn; watched as the room changes
+  function fitHead() {
+    var w = $("collWhere"), h2 = w && w.parentNode;
+    if (!h2) return;
+    var sub = w.querySelector(".coll-sub"), base = w.firstElementChild;
+    if (sub) sub.style.marginLeft = "";
+    h2.classList.toggle("is-one", !!sub);
+    if (sub && h2.clientWidth && h2.scrollWidth > h2.clientWidth + 1) h2.classList.remove("is-one");
+    // HERESY 2025 (Viktor: «сдвинь поддиректорию прямо под саму основу»): under the workspace's first letter, as drawn
+    if (sub && base && base !== sub && !h2.classList.contains("is-one")) {
+      var cs = getComputedStyle(h2), at = base.getBoundingClientRect().left - h2.getBoundingClientRect().left - parseFloat(cs.paddingLeft) - parseFloat(cs.borderLeftWidth);
+      sub.style.marginLeft = Math.max(0, Math.round(at)) + "px";
+    }
+  }
+  var headFit = 0;
+  if (window.ResizeObserver && $("collWhere") && $("collWhere").parentNode) {
+    new ResizeObserver(function () { cancelAnimationFrame(headFit); headFit = requestAnimationFrame(fitHead); }).observe($("collWhere").parentNode.parentNode);
+  }
   function paintHead(rows) {
+    if (idQuery(state.q)) {                          // HERESY 2058: a search by ID is the whole library's, and the heading says so
+      $("collWhere").innerHTML = " \u203a <span>Search by ID: the whole library</span>";
+      if ($("collWhere").parentNode) $("collWhere").parentNode.removeAttribute("data-tip");
+      fitHead();
+      $("collNote").innerHTML = "<span>" + esc(tr("Found by ID: {0}, wherever they live").replace("{0}", rows.length)) + "</span> \u00b7 <span>" + esc(state.rows.length + " in the library") + "</span>";
+      paintFilterBtn();
+      return paintBulk(rows);
+    }
     // HERESY 1098 (Viktor, 02.10.2026): the heading says which collection is open, then what it holds
     var placeName = { "": "All Workspaces", __fav: "Favourites", __pinned: "Pinned", __none: "Not in a workspace", __hidden: "Hidden" }[state.place];
     // HERESY 1165: the Studio's places translate; a workspace's name is kept as typed (its studio-made sections translate)
     // HERESY 2004 (Viktor: «Поддиректорию… второй строкой меньшим кеглем прямо под названием её корневого пространства»): the workspace on the
     // heading's line, its sections under it in a smaller type; the whole path the heading's tip
     var wp = placeName ? [] : wsParts(state.place), wsp = function (p, i) { return "<span" + (i && STUDIO_SECTIONS[p] ? "" : ' translate="no"') + ">" + esc(p) + "</span>"; };
+    // HERESY 2023 (Viktor 02.11.2026: «Текст пошёл на вторую строку. Ты убрал ячейки здесь»): the path on the heading's line, its parts as before
+    // 2004, while it fits; under it only when that line would be cut
     $("collWhere").innerHTML = " \u203a " + (placeName ? "<span>" + esc(placeName) + "</span>" : wsp(wp[0], 0) +
-      (wp.length > 1 ? '<span class="coll-sub">' + wp.slice(1).map(function (p, i) { return wsp(p, i + 1); }).join(SEP) + "</span>" : ""));
+      (wp.length > 1 ? '<span class="coll-sub"><span class="coll-subsep">' + SEP + "</span>" + wp.slice(1).map(function (p, i) { return wsp(p, i + 1); }).join(SEP) + "</span>" : ""));
     var h2 = $("collWhere").parentNode;
     if (h2) { if (wp.length > 1) h2.setAttribute("data-tip", wp.join(SEP)); else h2.removeAttribute("data-tip"); }
+    fitHead();
     var inPlace = placeRows();
     var secs = inPlace.reduce(function (s, r) { return s + (r.seconds || 0); }, 0), hm = function (t) { var h = Math.floor(t / 3600), m = Math.round(t % 3600 / 60); return h ? h + " h " + m + " min" : m + " min"; };
     var count = function (f) { return inPlace.filter(f).length; }, kinds = {};
@@ -775,6 +1071,9 @@
     var n = Object.keys(state.sel).length;
     $("collBulk").hidden = !n;
     $("collPins").hidden = !!n;
+    $("collSlot").classList.toggle("is-sticky", n > 0 || pinsHere().length > 0);   // HERESY 2046: held under the head while it has pins or the checked
+    // HERESY 2058 (Viktor 03.11.2026: «Только если нет пинов и нет селекции — не показываем»): no pin and nothing checked: no strip at all
+    $("collSlot").hidden = !n && !pinsHere().length;
     if (!n) paintPins();
     $("collSelCount").textContent = n + " selected" + (n && !state.place ? " \u00b7 across ALL workspaces" : "");   // HERESY 1473
     $("collSelCount").classList.toggle("is-all", !!n && !state.place);
@@ -787,7 +1086,12 @@
     hb.setAttribute("aria-label", hid ? "Show again" : "Hide");
     hb.dataset.tip = hid ? "Show again: back in the lists" : "Out of the lists, not deleted: Hidden on the left shows them again";
     $("collWsOut").hidden = !state.place || state.place.charAt(0) === "_";
-    $("collCompare").disabled = n < 2 || n > 6;                // HERESY 1415: two to four; 1621: to six
+    // HERESY 1415: two to four; 1621: to six; 2043 (Viktor: «обещали до 12 треков»): to twelve, and over twelve it says why (a disabled button shows no tip)
+    var cb = $("collCompare"), over = n > 12;
+    cb.disabled = n < 2;
+    cb.classList.toggle("is-over", over);
+    cb.setAttribute("aria-disabled", String(over));
+    cb.dataset.tip = over ? tr("Twelve at most to compare: uncheck {0}").replace("{0}", n - 12) : "Compare the checked ones, two to twelve, in one player from the same second";
   }
 
   // HERESY 1843 (TODO 2.0.x from RC3's report of 08.10.2026: «Проверка лирики пачкой на отмеченных дублях из меню Библиотекаря»): sung to the end,
@@ -849,12 +1153,22 @@
     one(0);
   }
 
+  // HERESY 2130 (the audit of 06.11.2026: «Корзина не говорит, когда автоочистка удалит каждый дубль»): with a term set (Engine → Defaults, or the trash's own
+  // choice), each row says when the hourly empty takes it for good, amber in its last two days
+  function trashLeft(it) {
+    if (!state.trashDays || !it.trashed) return "";
+    var left = +it.trashed + state.trashDays * 86400 - Date.now() / 1000;
+    var text = left <= 0 ? "deleted for good within the hour" : left < 2 * 86400 ? "deleted for good in " + Math.max(1, Math.ceil(left / 3600)) + " h"
+      : "deleted for good in " + Math.ceil(left / 86400) + " days";
+    return ' · <span class="' + (left < 2 * 86400 ? "coll-soon" : "") + '">' + esc(text) + "</span>";
+  }
   function paintTrash() {
     var clock = state.hooks.clock;
     $("collTrashDays").value = String(state.trashDays === 28 ? 30 : state.trashDays || 0);   // HERESY 1996: 28 as it was set reads as 30 now
     if ($("defTrashDays")) $("defTrashDays").value = $("collTrashDays").value;
     $("collWhere").innerHTML = " \u203a <span>Trash</span>";   // HERESY 1165: the word its own text
-    $("collNote").innerHTML = "<span>" + state.trash.length + " in the trash</span> · <span>" + (state.trash.reduce(function (s, i) { return s + i.bytes; }, 0) / 1e9).toFixed(2) + " GB</span>";   // HERESY 1166
+    $("collNote").innerHTML = state.trashErr ? "<span>" + esc("The trash could not be read: " + state.trashErr) + "</span>"   // HERESY 2130: the list below is the one read before
+      : "<span>" + state.trash.length + " in the trash</span> · <span>" + (state.trash.reduce(function (s, i) { return s + i.bytes; }, 0) / 1e9).toFixed(2) + " GB</span>";   // HERESY 1166
     $("collGrid").className = "coll-grid list";
     var nsel = Object.keys(state.tsel).length;             // HERESY 1058: the button says what it will do
     $("collEmpty").textContent = nsel ? "Delete " + nsel + " for good" : "Wipe out the trash";
@@ -863,13 +1177,14 @@
     $("collGrid").innerHTML = state.trash.length ? state.trash.map(function (it) {
       var key = it.day + "/" + it.name, sel = !!state.tsel[key];
       return '<article class="coll-card' + (sel ? " is-sel" : "") + '"><label class="coll-check"><input type="checkbox" data-tsel="' + esc(key) + '"' + (sel ? " checked" : "") + " /></label>" +
-        '<div class="coll-body"><div class="coll-title" translate="no">' + esc(it.title) + '</div><div class="coll-meta"><span>in the trash since ' + esc(it.day) + "</span>" +
+        '<div class="coll-body"><div class="coll-title" translate="no">' + esc(it.title) + '</div><div class="coll-meta"><span>in the trash since ' + esc(it.day) + "</span>" + trashLeft(it) +
         (it.seconds ? " · <span>" + clock(it.seconds) + "</span>" : "") + " · <span>" + (it.bytes / 1e6).toFixed(0) + " MB</span></div></div></article>";
-    }).join("") : '<p class="row-hint coll-empty">The trash is empty.</p>';
+    }).join("") : '<p class="row-hint coll-empty">' + (state.trashErr ? esc("The trash could not be read: " + state.trashErr) : "The trash is empty.") + "</p>";   // HERESY 2130
   }
 
   function loadTrash() {
-    return api("/trash").then(function (d) { state.trash = d.items || []; state.tsel = {}; paint(); });
+    return api("/trash").then(function (d) { state.trash = d.items || []; state.trashErr = ""; state.tsel = {}; paint(); },
+      function (e) { state.trashErr = (e && e.message) || String(e); paint(); });   // HERESY 2130: said, never «The trash is empty.»
   }
 
   // HERESY 1337 (Viktor 10.10.2026: «картинки у нас куда удаляются с обложек треков и остального? Может отдельный Trash сделать в колонке
@@ -1043,7 +1358,9 @@
   function moveTo(w, list, fromHere) {
     var from = fromHere && state.place && state.place.charAt(0) !== "_" ? state.place : "", n = list.length;
     var go = function () {
-      return act({ op: "ws-move", workspace: w, from: from, names: list }, n + " moved to “" + w + "”" + (from ? " (out of “" + from + "”)" : " (out of every other workspace)"))
+      // HERESY 2130 (the audit of 06.11.2026): out of the place open and its sections (tree), as its view shows them: a section's take moved from its
+      // parent's view stayed where it was, and the toast said «out of» the parent
+      return act({ op: "ws-move", workspace: w, from: from, tree: !!from, names: list }, n + " moved to “" + w + "”" + (from ? " (out of “" + from + "”)" : " (out of every other workspace)"))
         .then(function (ok) { if (ok) { list.forEach(function (k) { delete state.sel[k]; }); paint(); } return ok; });
     };
     // HERESY 1474: from the take's menu as from the bar (1473): several takes, or one that lives in more than one workspace, asked first
@@ -1104,20 +1421,76 @@
     paint(); paintCurrent();
     if (state.hooks.libraryChanged) state.hooks.libraryChanged();
   }
-  function landed(takeNames) {
-    var cur = landable();                              // HERESY 1434: never into a 💎 set or a frozen workspace
-    if (!cur || !takeNames || !takeNames.length) return;
-    var asked = rateSeq;
-    api("/collection", { op: "ws-add", workspace: cur, names: takeNames }).then(function (d) {
-      state.rows = d.takes ? fresh(d.takes, asked) : state.rows;
-      if (state.hooks.libraryChanged) state.hooks.libraryChanged();
-    }).catch(function () { /* the take is in the library anyway */ });
+  // HERESY 2135 (the audit of 06.11.2026): ws, the workspace the run was sent into (an F5 between: the one in hand may be another), while it still
+  // takes takes; else the one in hand. A refusal (the lab busy or rising, a window read-only) was swallowed, and the next read of the catalog took
+  // the take out of the Takes column unseen: said with its reason and «File them again», the names held and sent again with the next landing
+  // there and by themselves a few times (10 s, 30 s, 90 s)
+  var UNFILED = {}, unfiledTimer = 0, unfiledTries = 0;
+  // HERESY 2159 (the audit's review of 2135): a read-only window (2081: the lease held by another) never files. Reloaded during a run, it took the
+  // run's end for its own and said «Not filed into…», then tried three times more (10, 30, 90 s), each refused; now it asks the lab nothing, holds
+  // nothing, and says one plain line, or nothing when the lab's own refusal was said already (heresy-link.js) or nothing would have been filed
+  function readOnlyHere() { var L = window.ruachLease; return !!(L && L.mayWrite && !L.mayWrite()); }
+  function unfiledOff(cur) { delete UNFILED[cur]; if (!Object.keys(UNFILED).length) { clearTimeout(unfiledTimer); unfiledTries = 0; } }
+  function landed(takeNames, ws, again) {
+    if (!takeNames || !takeNames.length) return Promise.resolve(false);
+    if (readOnlyHere()) {
+      var meant = ws || workable(recall(WS_KEY) || "");
+      if (meant) unfiledOff(meant);
+      if (meant && again !== "timer") toast("This window is read-only and files nothing: the new takes are in the library, not filed into \u201c" + meant + "\u201d from here");
+      return Promise.resolve(false);
+    }
+    var fail = function (cur, list, why) {
+      // HERESY 2135 (the review): with the ones held from an earlier refusal (the Librarian down twice in a row dropped the first run's names)
+      var held = UNFILED[cur] = list.concat((UNFILED[cur] || []).filter(function (n) { return list.indexOf(n) < 0; }));
+      if (!again || again === "button") {
+        // HERESY 2155: one take is «1 new take is», as English says it (the catalogs: the singular its own key, the plural their plural forms)
+        state.hooks.toast("Not filed into \u201c" + cur + "\u201d (" + why + "): " + (held.length === 1 ? "1 new take is" : held.length + " new takes are") +
+          " in the library, in no workspace yet", "bad", { label: "File them again", fn: function () { refile("button"); } });
+      }
+      if (unfiledTries < 3) {
+        clearTimeout(unfiledTimer);
+        unfiledTimer = setTimeout(function () { refile("timer"); }, [10000, 30000, 90000][unfiledTries++]);
+      }
+      return false;
+    };
+    return (state.loaded ? Promise.resolve() : load()).then(function () {
+      if (!state.loaded) {                               // the Librarian does not answer (404: none in this Studio, nothing to file into)
+        var meant = ws || workable(recall(WS_KEY) || "");
+        return state.loadStatus === 404 || !meant ? false : fail(meant, takeNames.slice(), "the Librarian does not answer");
+      }
+      var cur = ws && state.ws.indexOf(ws) >= 0 && !closedWs(ws) ? ws : landable();   // HERESY 1434: never into a 💎 set or a frozen workspace
+      // HERESY 2135 (the review): the run's workspace closed or gone meanwhile and none in hand that takes takes: said and held (File them again
+      // files them into the one in hand once there is one), not dropped unseen; a landing that names none (the import's) as before
+      if (!cur) return ws ? fail(ws, takeNames.slice(), "it takes no new takes now, nor does the workspace in hand") : false;
+      var list = takeNames.concat(UNFILED[cur] || []).filter(function (n, i, a) { return a.indexOf(n) === i; });
+      delete UNFILED[cur];
+      var asked = rateSeq;
+      return api("/collection", { op: "ws-add", workspace: cur, names: list }).then(function (d) {
+        state.rows = d.takes ? fresh(d.takes, asked) : state.rows;
+        if (state.hooks.libraryChanged) state.hooks.libraryChanged();
+        if (again) toast("Filed into \u201c" + cur + "\u201d after all: " + list.length);
+        if (!Object.keys(UNFILED).length) { clearTimeout(unfiledTimer); unfiledTries = 0; }
+        return true;
+      }, function (e) {
+        // HERESY 2159: refused by the lease (this window turned read-only while the run ran, or as it ended): heresy-link.js said it once; held for no retry
+        if ((e && e.lease) || readOnlyHere()) { unfiledOff(cur); return false; }
+        return fail(cur, list, (e && e.message) || String(e));
+      });
+    });
   }
+  function refile(how) {
+    Object.keys(UNFILED).forEach(function (w) { var names = UNFILED[w]; delete UNFILED[w]; landed(names, w, how); });
+  }
+  window.ruachUnfiled = function (clear) {                // for the checks; clear: a check's own refusal held no longer, its retry off
+    if (clear) { UNFILED = {}; clearTimeout(unfiledTimer); unfiledTries = 0; }
+    return JSON.parse(JSON.stringify(UNFILED));
+  };
   function inCurrent(name) {
     var cur = current();
     if (!cur) return true;
-    if (!state.rows.some(function (r) { return r.name === name; })) return true;   // HERESY 1434: just made, landing in the one in hand
-    return state.rows.some(function (r) { return r.name === name && inTree(r, cur); });   // HERESY 1161: with its sections
+    var r = rowOf(name);                                                             // HERESY 2011 (P1)
+    if (!r) return true;                                                             // HERESY 1434: just made, landing in the one in hand
+    return inTree(r, cur);                                                           // HERESY 1161: with its sections
   }
   // ---- HERESY 1135: undo, as a file manager has it. The last move, pin, hide, adding or taking out, marking or
   // trashing in the Librarian goes back: the pill's Undo, or Ctrl+Z, for ten seconds after.
@@ -1181,10 +1554,13 @@
   function act(body, done, quiet) {
     var undo = quiet ? null : undoFor(body), asked = rateSeq;   // what was, read before the change
     return api("/collection", body).then(function (d) {
+      actsDone++;
       state.rows = d.takes ? fresh(d.takes, asked) : state.rows; state.ws = d.workspaces || state.ws; state.trashDays = d.trash_days || 0; state.locks = d.locks || state.locks || {};
       state.pins = d.pins || state.pins || {};
       state.frozen = d.frozen || state.frozen || [];   // HERESY 1166
       state.blind = d.blind || state.blind || [];   // HERESY 1874
+      if (d.archived) state.archived = d.archived;     // HERESY 2050b: the archive (2049) and the albums (2050) as the lab answered
+      if (d.albums) state.albums = d.albums;
       if (d.playlist) state.playlist = d.playlist;     // HERESY 1731: a take gone from the library is gone from the playlist
       if (d.ws_notes) state.wsNotes = d.ws_notes;      // HERESY 1802
       if (done) { if (undo) undoable(done, undo); else toast(done); }
@@ -1289,8 +1665,16 @@
       }).catch(function (e) { toast(e.message, true); if (hub) hubLoad(); });
   }
 
-  function exportZip() {
+  // HERESY 2059 (Viktor 03.11.2026: «Пройтись по бару… и добавить недостающие действия в контекстное меню»): a take's menu packs the checked too and
+  // names the format and what goes with them itself; asked so, the bar's ⤓ is set to them first, so the bar and the menu say one choice. exportHow
+  // tells the menu which the bar holds now (its tick)
+  function exportHow() {
+    var f = $("collExportFmt"), d = $("collExportDer");
+    return { format: f ? f.value : "flac", derived: !!(d && d.checked) };
+  }
+  function exportZip(how) {
     var n = names(); if (!n.length) return;
+    if (how && (how.format === "flac" || how.format === "wav")) { $("collExportFmt").value = how.format; $("collExportDer").checked = !!how.derived; }
     var fmt = $("collExportFmt").value, derived = $("collExportDer").checked;
     toast("Packing " + n.length + " take" + (n.length > 1 ? "s" : "") + " as " + fmt.toUpperCase() + (derived ? " with what is made from them" : "") + "…");
     api("/export", { names: n, format: fmt, derived: derived }).then(function (j) {
@@ -1303,6 +1687,7 @@
           document.body.appendChild(a); a.click(); a.remove();
           toast("ZIP ready: " + s.file + " (" + (s.bytes / 1e6).toFixed(0) + " MB). The browser saves it where you tell it.");
           if (s.missing) toast(s.done + " of " + s.total + " takes are in it: " + s.missing + " were no longer in the library while it packed (in the trash, or gone).", true);   // HERESY 1473
+          if (s.no_song) toast(s.no_song + " of them had no song in their folder (audio.wav, .flac or .mp3): only what was made from them went in.", true);   // HERESY 2011 (C2)
           paintBulk(shown());
         });
       };
@@ -1315,6 +1700,33 @@
     if (!$("view-collection")) return;
     state.hooks = hooks;
     $("collSearch").addEventListener("input", function () { state.q = this.value; paint(); });
+    // HERESY 2046: the empty view's reset, the eye, ⓘ, and the pins' strip held right under the column's own sticky head
+    $("collGrid").addEventListener("click", function (e) {
+      if (!e.target.closest("[data-coll-reset]")) return;
+      state.q = ""; $("collSearch").value = ""; state.kinds = {}; state.derived = {};
+      paint();
+    });
+    if ($("collReveal")) {
+      $("collReveal").innerHTML = ico("eye");
+      $("collReveal").addEventListener("click", function () {
+        state.reveal = !state.reveal;
+        this.setAttribute("aria-pressed", String(state.reveal));
+        this.innerHTML = ico(state.reveal ? "eye-off" : "eye");
+        paint();
+      });
+    }
+    if ($("collStats")) {
+      $("collStats").addEventListener("click", function (e) { e.stopPropagation(); statsOpen(); });
+      document.addEventListener("mousedown", function (e) { if (!$("collStatsPop").hidden && !e.target.closest(".coll-stats-wrap")) statsOpen(false); }, true);
+      document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("collStatsPop").hidden) { e.stopPropagation(); statsOpen(false); } }, true);
+    }
+    (function () {
+      var head = document.querySelector("#view-collection > .col-head"), col = $("view-collection");
+      if (!head || !window.ResizeObserver) return;
+      var put = function () { col.style.setProperty("--coll-head-h", head.offsetHeight + "px"); };
+      new ResizeObserver(put).observe(head);
+      put();
+    })();
     $("collSort").value = recall(SORT_KEY) || "new";
     $("collSort").addEventListener("change", function () { if (this.value === "shuffle") DEAL = {}; store(SORT_KEY, this.value); paint(); });   // HERESY 1863: dealt anew
     // HERESY 2004: the sort's button opens its choices, the hidden select's own
@@ -1337,6 +1749,8 @@
     $("collSide").addEventListener("click", function (e) {
       var sf = e.target.closest("[data-sec-fold]");           // HERESY 1685: its sections folded or back, the place in hand as it was
       if (sf) { e.stopPropagation(); secFold(sf.dataset.secFold); return; }
+      var sysm = e.target.closest("[data-sys-menu]");         // HERESY 2058: All Workspaces, Not in a workspace, Hidden: their hidden shown again
+      if (sysm) { e.stopPropagation(); var rs = sysm.getBoundingClientRect(); sysMenu(sysm.dataset.sysMenu, rs.left, rs.bottom + 2); return; }
       var more = e.target.closest("[data-ws-menu]");          // HERESY 1050
       if (more) { e.stopPropagation(); var rc = more.getBoundingClientRect(); wsMenu(more.dataset.wsMenu, rc.left, rc.bottom + 2); return; }
       if (e.target.closest("[data-ws-hub]")) return void hubOpen();   // HERESY 1166: the published 💎 sets
@@ -1360,6 +1774,7 @@
     $("collSide").addEventListener("contextmenu", function (e) {
       var p = e.target.closest("[data-place]");
       if (p && p.dataset.place === "__trash" && window.HeresyMenu) { e.preventDefault(); return trashMenu(e.clientX, e.clientY); }   // HERESY 1996
+      if (p && /^(|__none|__hidden)$/.test(p.dataset.place) && window.HeresyMenu) { e.preventDefault(); return sysMenu(p.dataset.place, e.clientX, e.clientY); }   // HERESY 2058
       if (!p || !p.dataset.place || p.dataset.place.charAt(0) === "_" || !window.HeresyMenu) return;
       e.preventDefault();
       wsMenu(p.dataset.place, e.clientX, e.clientY);
@@ -1378,6 +1793,7 @@
             action: function () {
               api("/trash", { op: "restore-all" }).then(function (r) {
                 toast(r.restored.length + " back in the library" + (r.made_again && r.made_again.length ? ", " + r.made_again.length + " workspaces made again" : ""));
+                saidSkipped(r);                              // HERESY 2130
                 if (hooks.refreshLibrary) hooks.refreshLibrary();
                 return load().then(function () { if (state.place === "__trash") return loadTrash(); paint(); });
               }).catch(function (e) { toast(e.message, true); });
@@ -1386,7 +1802,10 @@
           { label: "Wipe out the trash for good…", icon: "\u2716", danger: true, disabled: !n,
             action: function () {
               ask("Wipe out the whole trash: " + n + " take" + (n > 1 ? "s" : "") + ", with everything made from them.\n\nThis cannot be undone.", { ok: "Wipe out", danger: true }).then(function (ok) {
-                if (ok) return api("/trash", { op: "empty", items: null }).then(function (r) { toast(r.emptied.length + " deleted for good"); saidProtected(r, true); state.tsel = {}; return state.place === "__trash" ? loadTrash() : load().then(paint); });
+                // HERESY 2130: the very takes the question counted, never what lies there by the time it is answered
+                if (ok) return api("/trash", { op: "empty", items: items.map(function (i) { return { day: i.day, name: i.name }; }) }).then(function (r) {
+                  toast(r.emptied.length + " deleted for good"); saidProtected(r, true); saidSkipped(r); state.tsel = {}; return state.place === "__trash" ? loadTrash() : load().then(paint);
+                });
               }).catch(function (e) { toast(e.message, true); });
             } }]);
       }).catch(function (e) { toast(e.message, true); });
@@ -1441,12 +1860,16 @@
         " Ctrl+Z gives it back.";
       window.HeresyDialog.confirm(text, { ok: add ? "Add" : "Move" }).then(function (yes) {
         if (!yes) return;
-        act(add ? { op: "ws-add", workspace: w, names: list } : { op: "ws-move", workspace: w, from: from, names: list },
+        act(add ? { op: "ws-add", workspace: w, names: list } : { op: "ws-move", workspace: w, from: from, tree: !!from, names: list },   // HERESY 2130
             n + (add ? " added to \u201c" : " moved to \u201c") + w + "\u201d" + (add ? "" : from ? " (out of \u201c" + from + "\u201d)" : " (out of every other workspace)"));
         state.sel = {};
       });
     });
-    $("collCompare").addEventListener("click", function () { if (window.HeresyCompare) window.HeresyCompare.takes(names()); });   // HERESY 1415
+    $("collCompare").addEventListener("click", function () {   // HERESY 1415; 2043: over twelve, a word instead
+      var n = names();
+      if (n.length > 12) return toast(tr("Twelve at most to compare: uncheck {0}").replace("{0}", n.length - 12), true);
+      if (window.HeresyCompare) window.HeresyCompare.takes(n);
+    });
     if ($("collSung")) $("collSung").addEventListener("click", function () {   // HERESY 1843: past ten, asked first
       var list = names();
       (list.length > 10 ? window.HeresyDialog.confirm(tr("Whisper listens to {0} takes in turn, a minute or two each. Start?").replace("{0}", list.length), { ok: "Start" }) : Promise.resolve(true))
@@ -1462,7 +1885,7 @@
         return guarded(tl("Move " + n + " takes to \u201c" + w + "\u201d?") + "\n\n" + (from ? tl("They leave \u201c" + from + "\u201d.") : tl("They leave every other workspace they are in (a locked one keeps its own).")),
                        tl("Move them"), names(), !!from).then(function (yes) {
           if (!yes) return;
-          act({ op: "ws-move", workspace: w, from: from, names: names() }, n + " moved to \u201c" + w + "\u201d" + (from ? " (out of \u201c" + from + "\u201d)" : " (out of every other workspace)"));
+          act({ op: "ws-move", workspace: w, from: from, tree: !!from, names: names() }, n + " moved to \u201c" + w + "\u201d" + (from ? " (out of \u201c" + from + "\u201d)" : " (out of every other workspace)"));   // HERESY 2130
           state.sel = {};
         });
       });
@@ -1475,6 +1898,8 @@
       var atile = e.target.closest(".coll-binart");      // HERESY 1406: a click on a tile of the art's trash ticks it
       if (atile && !e.target.closest("label, input")) { var abox = atile.querySelector("input[data-asel]:not(:disabled)"); if (abox) abox.click(); return; }
       if (band.ate) { band.ate = false; return; }             // the click that ends a rubber band is not a click
+      var fat = e.target.closest("[data-found-at]");          // HERESY 2058: a take found by its ID, opened where it lives
+      if (fat) { openFound(fat.dataset.foundName, fat.dataset.foundAt); return; }
       var artb = e.target.closest("[data-art]");             // HERESY 1155: ‹ › walk the pictures of the cards shown
       if (artb && window.HeresyArt && window.HeresyArt.show) {
         window.HeresyArt.show(artb.dataset.art, Array.prototype.map.call($("collGrid").querySelectorAll("[data-art]"), function (b) { return b.dataset.art; }));
@@ -1585,8 +2010,11 @@
       if (e.target === $("collSheet") || e.target.closest("[data-sheet-close]")) return closeSheet();
       var name = sheetName, r = rowOf(name);
       if (!r) return;
+      // HERESY 2128 (the audit of 06.11.2026): a 👍, 👎, ⭐ or a rename sends the note typed first (never after the list it brings back), and paints the
+      // sheet again only while it is still open, its head alone (paintSheet): a sheet closed meanwhile no longer opens by itself
+      var again = function () { if (sheetName === name && !$("collSheet").hidden) openSheet(name); };
       var sren = e.target.closest("[data-sheet-ren]");
-      if (sren) { renameIn(sren, name, function () { openSheet(name); }); return; }
+      if (sren) { noteFlush(name); renameIn(sren, name, again); return; }
       if (e.target.closest(".coll-title-edit")) return;
       if (e.target.closest("[data-sheet-play]")) {
         var now = hooks.playing();
@@ -1594,17 +2022,18 @@
         return;
       }
       var rt = e.target.closest("[data-sheet-rate]");
-      if (rt) { var v = +rt.dataset.sheetRate; rate(name, r.rating === v ? 0 : v).then(function () { openSheet(name); }); return; }
-      if (e.target.closest("#sheetFav")) { var tk = hooks.findTake(name); if (tk) hooks.updateTake(tk, { favorite: !tk.favorite }).then(load).then(function () { openSheet(name); }); return; }
+      if (rt) { var v = +rt.dataset.sheetRate; noteFlush(name); rate(name, r.rating === v ? 0 : v).then(again, function (er) { toast(er.message, true); }); return; }
+      if (e.target.closest("#sheetFav")) {
+        var tk = hooks.findTake(name);
+        if (tk) { noteFlush(name); hooks.updateTake(tk, { favorite: !tk.favorite }).then(load).then(again, function (er) { toast(er && er.message || String(er), true); }); }
+        return;
+      }
       var go = e.target.closest("[data-sheet-go]");
       if (go) { closeSheet(); hooks.openTake(name, go.dataset.sheetGo); }
     });
     $("collSheet").addEventListener("input", function (e) {
-      if (e.target.id !== "sheetNote") return;
-      var name = sheetName, text = e.target.value;
-      $("sheetNoteState").textContent = "\u2026";
-      clearTimeout(sheetNoteTimer);
-      sheetNoteTimer = setTimeout(function () { setNote(name, text).then(function () { if ($("sheetNoteState")) $("sheetNoteState").textContent = "saved"; }); }, 900);
+      if (e.target.id !== "sheetNote" || !sheetName) return;
+      noteQueue(sheetName, e.target.value);       // HERESY 2128: its own timer a take, held against every older list
     });
     document.addEventListener("keydown", function (e) {
       if (e.key !== "Escape") return;
@@ -1676,6 +2105,69 @@
     $("collDislike").addEventListener("click", function () { rateMany(names(), -1); });
     $("collFav").addEventListener("click", function () { favMany(names()); });
     if ($("collProtect")) $("collProtect").addEventListener("click", function () { protectMany(names()); });   // HERESY 1368
+    // HERESY 2048: add and move through the Studio's own chooser (the tree, its filter, a new one)
+    var wsChoose = function (title, but) {
+      var items = state.ws.filter(function (w) { return w !== but && !closedWs(w) && wsLeaf(w) !== SOURCED; }).map(function (w) {
+        return { value: w, label: wsParts(w).length > 1 ? wsLeaf(w) : w, depth: wsParts(w).length - 1, path: wsParts(w).slice(0, -1).join(" \u203a "),
+                 note: String(state.rows.filter(function (r) { return inTree(r, w); }).length) };
+      });
+      return window.HeresyDialog.choose(title, items, { more: [{ label: "+ New workspace\u2026", value: "__new" }], cancel: "Cancel", filter: "Filter the workspaces" })
+        .then(function (v) {
+          if (v !== "__new") return v || "";
+          return askName("A new workspace for the selected", "", { ok: "Make it", placeholder: "its name" }).then(function (n) {
+            n = String(n || "").replace(/\s*\/\s*/g, " ").trim();
+            return n ? act({ op: "ws-create", workspace: n }, null, true).then(function (ok) { return ok ? n : ""; }) : "";
+          });
+        });
+    };
+    if ($("collWsAddBtn")) $("collWsAddBtn").addEventListener("click", function () {
+      var n = names();
+      if (!n.length) return;
+      wsChoose(tr("Add {0} to a workspace").replace("{0}", n.length)).then(function (w) { if (w) act({ op: "ws-add", workspace: w, names: n }, n.length + " added to “" + w + "”"); });
+    });
+    if ($("collWsMoveBtn")) $("collWsMoveBtn").addEventListener("click", function () {
+      var n = names();
+      if (!n.length) return;
+      wsChoose(tr("Move {0} to a workspace").replace("{0}", n.length), state.place).then(function (w) { if (w) moveTo(w, n, true); });
+    });
+    // HERESY 2058 (Viktor's playlist, the audit of 04.11.2026: no «Add to playlist» in the bar): the checked into the playlist, first, last or anywhere, or
+    // into an album (a new one too), from the bar's own small overlay, closed by a click away and Esc as ⤓'s
+    if ($("collPlBtn")) {
+      var plPopHtml = function () {
+        var b = function (k, label, raw) { return '<button type="button" class="btn ghost small coll-plp" data-plp="' + esc(k) + '">' + (raw ? '<span translate="no">' + esc(label) + "</span>" : esc(label)) + "</button>"; };
+        return '<div class="coll-plp-cap">Playlist</div><div class="coll-plp-row">' + b("first", "First") + b("last", "Last") + b("random", "Random") + "</div>" +
+          '<div class="coll-plp-cap">Into an album</div><div class="coll-plp-col">' + (state.albums || []).map(function (a) { return b("album:" + a.name, "▣ " + a.name, true); }).join("") +
+          b("new", "New album…") + "</div>";
+      };
+      var plPopOpen = function (on) {
+        var p = $("collPlPop");
+        if (on === undefined) on = p.hidden;
+        if (on) p.innerHTML = plPopHtml();
+        p.hidden = !on;
+        $("collPlBtn").setAttribute("aria-expanded", String(on));
+      };
+      $("collPlBtn").addEventListener("click", function (e) { e.stopPropagation(); plPopOpen(); });
+      $("collPlPop").addEventListener("click", function (e) {
+        var b = e.target.closest("[data-plp]"), list = names();
+        if (!b) return;
+        plPopOpen(false);
+        if (!list.length) return;
+        var k = b.dataset.plp;
+        if (k === "new") plAlbumNew(list);
+        else if (k.indexOf("album:") === 0) { var al = k.slice(6); plOp({ op: "album-add", album: al, names: list, where: "last" }, tr("Into the album “{0}”: {1}").replace("{0}", al).replace("{1}", list.length)); }
+        else plAdd(list, k);
+      });
+      document.addEventListener("mousedown", function (e) { if (!$("collPlPop").hidden && !e.target.closest(".coll-pl-wrap")) plPopOpen(false); }, true);
+      document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("collPlPop").hidden) { e.stopPropagation(); plPopOpen(false); } }, true);
+    }
+    // HERESY 2048: ⤓ by the trash: the format, what goes with them, the ZIP, in one overlay
+    if ($("collDlBtn")) {
+      var dlOpen = function (on) { var p = $("collDlPop"); if (on === undefined) on = p.hidden; p.hidden = !on; $("collDlBtn").setAttribute("aria-expanded", String(on)); };
+      $("collDlBtn").addEventListener("click", function (e) { e.stopPropagation(); dlOpen(); });
+      $("collExport").addEventListener("click", function () { dlOpen(false); });
+      document.addEventListener("mousedown", function (e) { if (!$("collDlPop").hidden && !e.target.closest(".coll-dl-wrap")) dlOpen(false); }, true);
+      document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("collDlPop").hidden) { e.stopPropagation(); dlOpen(false); } }, true);
+    }
     $("collWsPick").addEventListener("change", function () {
       var w = this.value; this.value = "";
       if (!w) return;
@@ -1684,7 +2176,7 @@
       });
     });
     $("collWsOut").addEventListener("click", function () {     // HERESY 1108: more than one asks first
-      var n = names(), go = function () { act({ op: "ws-remove", workspace: state.place, names: n }, n.length + " taken out of “" + state.place + "”"); state.sel = {}; };
+      var n = names(), go = function () { act({ op: "ws-remove", workspace: state.place, tree: true, names: n }, n.length + " taken out of “" + state.place + "”"); state.sel = {}; };   // HERESY 2130: its sections too
       if (n.length < 2) return go();
       guarded(tl("Take " + n.length + " takes out of \u201c" + state.place + "\u201d?") + "\n\n" + tl("They stay in the library and in any other workspace; only this workspace lets them go."), tl("Take them out"), n, true)
         .then(function (ok) { if (ok) go(); });   // HERESY 1473
@@ -1707,6 +2199,7 @@
         var said = d.moved.length + " moved to the trash" + (d.locked && d.locked.length ? "; " + d.locked.length + " stayed: their workspace locks its takes" : "");
         if (d.moved.length) undoable(said, untrash(d.moved)); else toast(said, true);
         saidProtected(d);                                  // HERESY 1368
+        saidSkipped(d);                                    // HERESY 2130
         state.sel = {};
         if (hooks.refreshLibrary) hooks.refreshLibrary();
         return load();
@@ -1722,7 +2215,7 @@
     $("collRestore").addEventListener("click", function () {
       if (state.place === "__trash_art") return artBinAct("restore");   // HERESY 1337
       var items = chosen(); if (!items.length) return toast("Tick what to give back", true);
-      api("/trash", { op: "restore", items: items }).then(function (d) { toast(d.restored.length + " back in the library"); if (hooks.refreshLibrary) hooks.refreshLibrary(); return load().then(loadTrash); })
+      api("/trash", { op: "restore", items: items }).then(function (d) { toast(d.restored.length + " back in the library"); saidSkipped(d); if (hooks.refreshLibrary) hooks.refreshLibrary(); return load().then(loadTrash); })   // HERESY 2130
         .catch(function (e) { toast(e.message, true); });
     });
     $("collEmpty").addEventListener("click", function () {
@@ -1731,7 +2224,10 @@
       var n = all ? state.trash.length : items.length;
       if (!n) return;
       ask((all ? "Wipe out the whole trash: " : "Delete for good: ") + n + " take" + (n > 1 ? "s" : "") + ", with everything made from them.\n\nThis cannot be undone.", { ok: all ? "Wipe out" : "Delete for good", danger: true }).then(function (ok) {
-        if (ok) return api("/trash", { op: "empty", items: all ? null : items }).then(function (d) { toast(d.emptied.length + " deleted for good"); saidProtected(d, true); state.tsel = {}; return loadTrash(); });
+        // HERESY 2130: all is the list shown and counted, sent as it is (items: null wiped whatever lay there when it was answered)
+        if (ok) return api("/trash", { op: "empty", items: all ? state.trash.map(function (i) { return { day: i.day, name: i.name }; }) : items }).then(function (d) {
+          toast(d.emptied.length + " deleted for good"); saidProtected(d, true); saidSkipped(d); state.tsel = {}; return loadTrash();
+        });
       }).catch(function (e) { toast(e.message, true); });
     });
     function trashDaysAsk() {                         // HERESY 1996: the Librarian's trash and Engine → Defaults, one choice
@@ -1747,13 +2243,16 @@
     paintCurrent();
     state.place = recall(WS_KEY) || "";
     load();
-    api("/trash").then(function (d) { state.trash = d.items || []; paintSide(); }).catch(function () {});
+    // HERESY 2158: what the last page sent as it went, held to the lab's own list a few seconds on (a beacon still on its way when this page asked first)
+    if (recall(LEFT_KEY)) setTimeout(function () { api("/catalog").then(function (d) { notesLeftCheck(d.takes || []); }, function () { /* asked again at the next load */ }); }, 4000);
+    api("/trash").then(function (d) { state.trash = d.items || []; state.trashErr = ""; paintSide(); })
+      .catch(function (e) { state.trashErr = (e && e.message) || String(e); paintSide(); });   // HERESY 2130: «?» and why, never a 0 that was not read
     loadArtBin(true);                                    // HERESY 1337: its number in the column
   }
 
   // HERESY 1042: likes, as SUNO has them (the player sets them)
   // HERESY 1169: a take without a row here (the Creator's take head, another workspace's take) reads what rate() remembered
-  function rating(name) { var r = state.rows.filter(function (x) { return x.name === name; })[0]; return r ? r.rating || 0 : rated[name] ? rated[name].v || 0 : 0; }
+  function rating(name) { var r = rowOf(name); return r ? r.rating || 0 : rated[name] ? rated[name].v || 0 : 0; }
   // HERESY 1108: many takes rated at once; all of them rated so already: taken back to none
   function rateMany(list, value) {
     var rows = list.map(rowOf).filter(Boolean), all = rows.length && rows.every(function (r) { return r.rating === value; });
@@ -1804,6 +2303,23 @@
     toast(bin ? (n === 1 ? "1 protected take stayed in the trash: it is never deleted" : n + " protected takes stayed in the trash: they are never deleted")
               : (n === 1 ? "1 protected take stayed in the library: take its protection off first" : n + " protected takes stayed in the library: take their protection off first"));
   }
+  // HERESY 2130 (the audit of 06.11.2026: «0 back in the library»; «Wipe out the whole trash стирает не то, что посчитал диалог»): what the trash did not do,
+  // said with the lab's reason, apart from what it did: a take not moved (not in the library, one of its name in today's trash), not given back (a take of
+  // its name lives in the library), no longer in the trash, or not deleted (its files held)
+  function saidSkipped(d) {
+    var say = function (list, head) {
+      var by = {};
+      // HERESY 2162 (the audit's review of 2130): an item the lab names without a reason gets one the catalogs know, so the toast matches its key whole
+      // («{0} not moved to the trash: {1}»); without it the text matched no key and came out half translated («3 not перенесено…»)
+      (list || []).forEach(function (x) { var w = (x && x.why) || "the Librarian gave no reason"; by[w] = (by[w] || 0) + 1; });
+      Object.keys(by).forEach(function (w) { toast(by[w] + " " + head + ": " + w, true); });
+    };
+    if (!d) return;
+    say(d.missing, "not moved to the trash");
+    say(d.skipped, "not given back");
+    if (d.absent && d.absent.length) toast(d.absent.length + " no longer in the trash: given back or deleted meanwhile", true);
+    say(d.failed, "not deleted");
+  }
   function hk() { return state.hooks; }
   function rate(name, value) {
     // HERESY 1107: seen at once, confirmed by the lab; a refusal takes it back (and the caller says why)
@@ -1830,7 +2346,17 @@
     if (!t) return Promise.reject(new Error("not in the library"));
     return state.hooks.getRequest(t).then(function (r) { reqCache[name] = r; return r; });
   }
-  function rowOf(name) { return state.rows.filter(function (r) { return r.name === name; })[0]; }
+  // HERESY 2011 (the audit of 02.11.2026, P1): every lookup by name was a pass over the whole Library, several for each card (650 ms a paint of
+  // 3133 takes); one Map, made again whenever state.rows is replaced (it is never changed in place), and the first row of a name kept, as filter's [0]
+  var BY_NAME = null, BY_NAME_OF = null;
+  function rowOf(name) {
+    if (BY_NAME_OF !== state.rows) {
+      BY_NAME = new Map();
+      state.rows.forEach(function (r) { if (!BY_NAME.has(r.name)) BY_NAME.set(r.name, r); });
+      BY_NAME_OF = state.rows;
+    }
+    return BY_NAME.get(name);
+  }
   // HERESY 1473 (Viktor 15.10.2026: «Сторожа на все удаления, перемещения и т.п. По максимуму. Лучше семь раз спросить, чем за один
   // всё проебать»): where a mass action reaches, said before it goes; a second question when it reaches past the place you stand in
   function tl(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
@@ -1929,35 +2455,55 @@
     });
   }
 
-  var sheetName = "", sheetNoteTimer = 0;
+  var sheetName = "";
   function openSheet(name) {
     hidePeek();
     var r = rowOf(name);
     if (!r) return;
+    if (sheetName && sheetName !== name) noteFlush(sheetName);   // HERESY 2128: another take's sheet: the note typed in this one goes now
     sheetName = name;
-    requestOf(name).then(function (req) { paintSheet(r, req); }).catch(function (e) { paintSheet(r, {}); toast(e.message, true); });
+    requestOf(name).then(function (req) { if (sheetName === name) paintSheet(rowOf(name) || r, req); })
+      .catch(function (e) { if (sheetName === name) paintSheet(rowOf(name) || r, {}); toast(e.message, true); });
   }
+  // HERESY 2128 (the audit of 06.11.2026): the same take's sheet painted again (a 👍, a ⭐, a rename answered) gets its head and its workspaces anew, and its
+  // note stays as it stands while it is typed in or waits to be saved: the whole sheet made anew put the old note back, out of focus, and the next key
+  // wrote that old note over the new one
   function paintSheet(r, req) {
+    var body = $("collSheetBody"), ta = $("sheetNote");
+    if (ta && body.dataset.sheetFor === r.name && !$("collSheet").hidden) {
+      var head = body.querySelector(".sheet-head"), was = body.querySelector(".sheet-head + .coll-badges");
+      if (was) was.remove();
+      if (head) { head.insertAdjacentHTML("afterend", sheetBadges(r)); head.outerHTML = sheetHead(r, req); }
+      if (document.activeElement !== ta && !notePend[r.name]) ta.value = r.note || "";
+      return;
+    }
+    body.dataset.sheetFor = r.name;
+    body.innerHTML = sheetHead(r, req) + sheetBadges(r) +
+      '<div class="sheet-cols"><div><div class="peek-cap">Style</div><pre class="sheet-text">' + esc(req.style || "") + "</pre></div>" +
+      '<div><div class="peek-cap">Lyrics</div><pre class="sheet-text sheet-lyrics">' + esc(req.lyrics || "") + "</pre></div></div>" +
+      '<label class="field"><span class="label">Note <em id="sheetNoteState"></em></span><textarea id="sheetNote" rows="3" maxlength="600"' +
+        (r.frozen ? ' readonly aria-readonly="true" data-tip="' + esc(NOTE_ICE) + '"' : "") + ">" + esc(r.note || "") + "</textarea></label>" +   // HERESY 2128
+      '<div class="dv-actions sheet-acts"><button type="button" class="btn ghost small" data-sheet-go="create">Open in the Creator</button>' +
+      '<button type="button" class="btn ghost small" data-sheet-go="post">Open in the Refiner</button><span class="spacer"></span>' +
+      '<button type="button" class="btn ghost small" data-sheet-close="1">Close</button></div>';
+    var p = notePend[r.name];
+    if (r.frozen) $("sheetNoteState").textContent = "frozen: read only";   // HERESY 2128: the field read only, its tip says why
+    else if (p) $("sheetNoteState").textContent = "…";     // still on its way from before
+    $("collSheet").hidden = false;
+  }
+  function sheetBadges(r) { return r.workspaces.length ? '<div class="coll-badges">' + r.workspaces.map(function (w) { return wsBadge(w); }).join("") + "</div>" : ""; }
+  function sheetHead(r, req) {
     var now = state.hooks.playing(), mine = now.name === r.name && now.playing;
-    $("collSheetBody").innerHTML =
-      '<div class="sheet-head"><button type="button" class="coll-play' + (mine ? " is-playing" : "") + '" data-sheet-play="1">' + ico(mine ? "pause" : "play") + "</button>" +
+    return '<div class="sheet-head"><button type="button" class="coll-play' + (mine ? " is-playing" : "") + '" data-sheet-play="1">' + ico(mine ? "pause" : "play") + "</button>" +
       '<div><div class="sheet-title"><span class="coll-title-text" data-sheet-ren="1" title="Click to rename">' + esc(r.title) + '</span></div><div class="coll-meta"><span>' + esc(state.hooks.ago(r.created, r.name)) + "</span>" +
       (r.seconds ? " \u00b7 <span>" + state.hooks.clock(r.seconds) + "</span>" : "") + (req.cot ? " \u00b7 <span>" + esc(cotWord(req.cot)) + "</span>" : "") + " \u00b7 <span>" + esc(KINDS[r.kind] || r.kind) + "</span>" +
       (r.derived.length ? " \u00b7 <span>made from it: " + esc(r.derived.join(", ")) + "</span>" : "") + "</div></div>" +
       '<span class="pb-rate"><button type="button" class="pb-btn" data-sheet-rate="1" aria-pressed="' + (r.rating > 0) + '">' + ico("like") + '</button>' +
       markBtns(r.name, "pb-btn") +                     // HERESY 1802
       '<button type="button" class="pb-btn" data-sheet-rate="-1" aria-pressed="' + (r.rating < 0) + '">' + ico("dislike") + '</button>' +
-      '<button type="button" class="pb-btn" id="sheetFav" aria-pressed="' + r.favorite + '" >' + ico("star") + "</button></span></div>" +
-      (r.workspaces.length ? '<div class="coll-badges">' + r.workspaces.map(function (w) { return wsBadge(w); }).join("") + "</div>" : "") +
-      '<div class="sheet-cols"><div><div class="peek-cap">Style</div><pre class="sheet-text">' + esc(req.style || "") + "</pre></div>" +
-      '<div><div class="peek-cap">Lyrics</div><pre class="sheet-text sheet-lyrics">' + esc(req.lyrics || "") + "</pre></div></div>" +
-      '<label class="field"><span class="label">Note <em id="sheetNoteState"></em></span><textarea id="sheetNote" rows="3" maxlength="600">' + esc(r.note || "") + "</textarea></label>" +
-      '<div class="dv-actions sheet-acts"><button type="button" class="btn ghost small" data-sheet-go="create">Open in the Creator</button>' +
-      '<button type="button" class="btn ghost small" data-sheet-go="post">Open in the Refiner</button><span class="spacer"></span>' +
-      '<button type="button" class="btn ghost small" data-sheet-close="1">Close</button></div>';
-    $("collSheet").hidden = false;
+      '<button type="button" class="pb-btn" id="sheetFav" aria-pressed="' + r.favorite + '" >' + ico("star") + "</button></span></div>";
   }
-  function closeSheet() { if ($("collSheet")) $("collSheet").hidden = true; sheetName = ""; }
+  function closeSheet() { if (sheetName) noteFlush(sheetName); if ($("collSheet")) $("collSheet").hidden = true; sheetName = ""; }   // HERESY 2128: its note goes at once
 
   // the play buttons follow the player (called on play, pause, end, a new take)
   function paintPlaying() {
@@ -1997,25 +2543,110 @@
     return n ? 'data-tip="' + esc(n.length > NOTE_MAX ? n.slice(0, NOTE_MAX - 1) + "…" : n) + '" data-has-note="1" ' : "";
   }
 
+  // HERESY 2042: a whole workspace into the playlist, one entry, after a question (a slip of the hand would pour hundreds of takes in)
+  function plWsItem(w, n) {
+    if (!w || w.charAt(0) === "_" || !n) return null;
+    var inPl = (state.playlist || []).indexOf(PL_WS + w) >= 0;
+    var go = function (where) {
+      window.HeresyDialog.confirm(tr("The whole workspace “{0}” into the playlist?").replace("{0}", w) + "\n\n" +
+        tr("Its {0} takes, its sections with it, play as one item; × takes it out whole, the takes stay where they are.").replace("{0}", n), { ok: tr("Into the playlist") })
+        .then(function (yes) { if (yes) plOp({ op: "playlist-add", workspace: w, names: [], where: where }, tr("Into the playlist, whole: “{0}”").replace("{0}", w)); });
+    };
+    return { icon: "\u2630", label: inPl ? "In the playlist, whole" : "Add to playlist, whole", hint: n + "", items: [
+      { label: "First", action: function () { go("first"); } }, { label: "Last", action: function () { go("last"); } },
+      { label: "Random", hint: "anywhere in it", action: function () { go("random"); } }].concat(plWsAlbums(w, n)) };
+  }
+  // HERESY 2058 (the audit of 04.11.2026: «a whole workspace can go only into the root»): into an album too, one item there as in the root, after the same
+  // question; a new album made with it
+  function plWsAlbums(w, n) {
+    var into = function (al) {
+      window.HeresyDialog.confirm(tr("The whole workspace “{0}” into the album “{1}”?").replace("{0}", w).replace("{1}", al) + "\n\n" +
+        tr("Its {0} takes, its sections with it, play as one item; × takes it out whole, the takes stay where they are.").replace("{0}", n), { ok: tr("Into the album") })
+        .then(function (yes) { if (yes) plOp({ op: "album-add", album: al, names: [PL_WS + w], where: "last" }, tr("Into the album “{0}”, whole: “{1}”").replace("{0}", al).replace("{1}", w)); });
+    };
+    var made = function () {
+      askName(tr("A new album") + "\n\n" + tr("The whole workspace “{0}” goes into it as one item.").replace("{0}", w), "", { ok: "Make it", placeholder: "its name", max: 60 }).then(function (a) {
+        a = String(a || "").trim();
+        if (a) plOp({ op: "album-create", album: a, names: [PL_WS + w] }, tr("Album “{0}” made").replace("{0}", a));
+      });
+    };
+    return [{ sep: true }].concat((state.albums || []).map(function (a) { return { label: "▣ " + a.name, raw: true, action: function () { into(a.name); } }; }))
+      .concat([{ label: "New album…", action: made }]);
+  }
+
+  // HERESY 2058 (Viktor 03.11.2026: «Нужна команда "Отобразить все скрытые"»): the hidden takes of a place shown again, one command wherever there are any:
+  // a workspace's ⋯ (2046), an archived or a frozen one's, and the ⋯ (or a right click) of All Workspaces, Not in a workspace and Hidden. A take frozen
+  // with its workspace stays as it is (the lab refuses to change it)
+  // HERESY 2074 (Viktor 05.11.2026: «Давай, быстрецом гоним всё до и для среза 2.0.6»): the lists' dislike test (shown()): a disliked take is left out while the
+  // Engine hides the disliked, the eye is off and no filter asks for the disliked. Hidden's ⋯ and Hidden's own number take it too (2058b)
+  function disOutOfList(r) { return r.rating < 0 && !showDis() && !state.reveal && !(state.kinds.__disliked && (state.logic || "and") !== "nor"); }
+  function hiddenOf(place) {
+    return state.rows.filter(function (r) {
+      if (!r.hidden) return false;
+      if (!iceAt(r, place)) return false;            // HERESY 2058b: what the place's list shows, no more (Hidden holds no archived take)
+      if (place === "") return !r.frozen && !r.archived;
+      if (place === "__none") return !r.workspaces.length;
+      if (place === "__hidden") return !disOutOfList(r);   // HERESY 2074: nor a disliked take the list leaves out, so the menu sends and counts what it shows
+      return inTree(r, place);
+    });
+  }
+  // HERESY 2089b (Viktor 05.11.2026: «в контекстное меню пространства, если есть скрытые треки, динамически добавлять опцию вернуть из скрытых. Я это дал тебе
+  // в заказе вчера, но так и не сделано»): the count in the item's name, as the tree's tip counts the hidden by hand; the disliked a workspace's list leaves
+  // out (the tree counts them hidden too) said beside it: the eye shows them, their dislike stays the user's own (this command never undoes it); with none
+  // hidden by hand but some disliked, the item stands muted and says so. It acts on that place's takes hidden by hand alone, as before
+  function showHiddenItem(place) {
+    var all = hiddenOf(place), go = all.filter(function (r) { return !r.frozen; }).map(function (r) { return r.name; }), ice = all.length - go.length;
+    var dis = place && place.charAt(0) !== "_" ? state.rows.filter(function (r) { return !r.hidden && r.rating < 0 && !showDis() && iceAt(r, place) && inTree(r, place); }).length : 0;
+    var disSay = dis ? dis + " disliked stay out: the eye shows them" : "";
+    if (!all.length) return dis ? { icon: "👁", label: "Show the hidden again", muted: true, hint: disSay } : null;
+    if (!go.length) return { icon: "👁", label: "Show the hidden again", muted: true, hint: "Frozen with their workspace: unfreeze it first" };
+    return { icon: "👁", label: "Show the hidden again (" + go.length + ")", hint: (ice ? tr("{0} frozen stay hidden").replace("{0}", ice) : "") + (ice && dis ? " · " : "") + disSay, action: function () {
+      act({ op: "show", names: go }, "Shown again: " + go.length);
+    } };
+  }
+  function sysMenu(place, x, y) {
+    if (!window.HeresyMenu) return;
+    var label = { "": "All Workspaces", __none: "Not in a workspace", __hidden: "Hidden" }[place] || "";
+    window.HeresyMenu.open(x, y, [{ head: tr(label) }, showHiddenItem(place) || { icon: "👁", label: "Show the hidden again", muted: true, hint: "Nothing hidden here" }]);
+  }
+
   // ---- HERESY 1050: a workspace renamed or deleted (three ways)
   function wsMenu(w, x, y) {
     if (!window.HeresyMenu) return;
     var n = state.rows.filter(function (r) { return inTree(r, w); }).length;
+    if (archivedWs(w)) {                           // HERESY 2049: archived: opened, brought back, a note, or sent to the trash with its takes
+      var root = archRoot(w);
+      return window.HeresyMenu.open(x, y, [
+        { head: w + " \u00b7 " + n + " take" + (n === 1 ? "" : "s") },
+        { icon: "\u25a6", label: "Open", action: function () { openPlace(w); paint(); } },
+        { icon: "\u21ba", label: "Bring it back", hint: root !== w ? "\u201c" + root + "\u201d with its sections" : "", action: function () {
+          act({ op: "archive", workspace: root, on: false }, "Back from the archive: \u201c" + root + "\u201d", true);
+        } },
+        { icon: "✎", label: "Note…", hint: (state.wsNotes || {})[w] ? "✓" : "", action: function () { wsNote(w); } },
+        showHiddenItem(w),                             // HERESY 2058: its hidden shown again, here too
+        { sep: true },
+        { icon: "\ud83d\uddd1", label: "Send to the trash\u2026", danger: true, muted: !!delStop(w), hint: delStop(w) || "with its takes", action: function () { deleteWs(w, "trash"); } }   // HERESY 2130
+      ].filter(Boolean));
+    }
     if (frozenWs(w)) {                             // HERESY 1166: frozen, it is opened or thawed, nothing else
       var own = (state.frozen || []).indexOf(w) >= 0, by = (state.frozen || []).filter(function (f) { return w.indexOf(f + SEP) === 0; })[0];
       return window.HeresyMenu.open(x, y, [
         { head: w + " \u00b7 " + n + " take" + (n === 1 ? "" : "s") },
         { icon: "\u25a6", label: "Open", action: function () { openPlace(w); paint(); } },
         { icon: "✎", label: "Note…", hint: (state.wsNotes || {})[w] ? "✓" : "", action: function () { wsNote(w); } },   // HERESY 1802
+        plWsItem(w, n),                                // HERESY 2042: a frozen one is listened to most
+        showHiddenItem(w),                             // HERESY 2058: what of it is not frozen with it (a take frozen with it stays hidden)
         { sep: true },
         own ? { icon: "\u2600", label: "Unfreeze", action: function () { act({ op: "freeze", workspace: w, on: false }, "Unfrozen: \u201c" + w + "\u201d", true); } }
             : { icon: "\u2744", label: "Frozen with \u201c" + by + "\u201d", disabled: true }
-      ]);
+      ].filter(Boolean));
     }
     window.HeresyMenu.open(x, y, [
       { head: w + " \u00b7 " + n + " take" + (n === 1 ? "" : "s") },
       { icon: "\u25a6", label: "Open", action: function () { openPlace(w); paint(); } },
       { icon: "\u2193", label: "New takes land here", checked: current() === w, action: function () { store(WS_KEY, current() === w ? "" : w); paintCurrent(); state.hooks.libraryChanged && state.hooks.libraryChanged(); } },
+      plWsItem(w, n),                                  // HERESY 2042
+      showHiddenItem(w),                               // HERESY 2046 (Viktor: «Нужна команда "Отобразить все скрытые"»): its hidden, sections too; 2058: one helper, a frozen section's stay
       { sep: true },
       // HERESY 1161: a section inside it, two levels below a workspace at most
       wsParts(w).length < DEPTH ? { icon: "+", label: "New section\u2026", hint: "inside \u201c" + wsLeaf(w) + "\u201d", action: function () {
@@ -2028,18 +2659,26 @@
       { icon: "✎", label: "Note…", hint: (state.wsNotes || {})[w] ? "✓" : "", action: function () { wsNote(w); } },   // HERESY 1802
       { icon: "↳", label: "Move into…", action: function () { moveWs(w); } },   // HERESY 1808
       { sep: true },                                   // HERESY 1070: the safety catches
+      { icon: "\ud83d\uddc4", label: "Archive\u2026", hint: "out of the tree, kept whole", action: function () { archiveWs(w); } },   // HERESY 2049
       { icon: "\u2744", label: "Freeze\u2026", hint: "heard, never changed", action: function () { freezeWs(w); } },   // HERESY 1166
       (function () {                                   // HERESY 1874: blind listening, its sections with it
         var own = (state.blind || []).indexOf(w) >= 0, by = !own && blindWs(w);
-        return by ? { icon: "\ud83d\ude48", label: "Blind listening", hint: "with its parent", disabled: true }
-          : { icon: "\ud83d\ude48", label: own ? "Lift the blindness" : "Blind listening", hint: own ? "" : "what made its takes hidden", checked: own,
+        return by ? { icon: "\ud83e\udee3", label: "Blind listening", hint: "with its parent", disabled: true }   // HERESY 2043: 🫣
+          : { icon: "\ud83e\udee3", label: own ? "Lift the blindness" : "Blind listening", hint: own ? "" : "what made its takes hidden", checked: own,
               action: function () { act({ op: "blind", workspace: w, on: !own }, (own ? "Seen again: \u201c" : "Blind: \u201c") + w + "\u201d", true); } };
       })(),
       lockItem(w, "workspace", "Workspace Deletion"),
       lockItem(w, "tracks", "Tracks Deletion"),
       { sep: true },
-      { icon: "\ud83d\uddd1", label: "Delete\u2026", danger: true, disabled: isLocked(w, "workspace"), hint: isLocked(w, "workspace") ? "locked" : "", action: function () { deleteWs(w); } }
+      { icon: "\ud83d\uddd1", label: "Delete\u2026", danger: true, muted: !!delStop(w), hint: delStop(w), action: function () { deleteWs(w); } }   // HERESY 2130
     ].filter(Boolean));
+  }
+  function archiveWs(w) {                          // HERESY 2049
+    ask(tr("Archive “{0}”?").replace("{0}", w) + "\n\n" + tr("It leaves the tree for Archived (under Out of sight), its sections with it, whole with its takes: they leave All Workspaces and the search, and no new take lands in it. Its ⋯ there brings it back, or sends it to the trash."),
+        { ok: "Archive" }).then(function (yes) {
+      if (!yes) return;
+      act({ op: "archive", workspace: w, on: true }, "Archived: \u201c" + w + "\u201d", true);
+    });
   }
   function freezeWs(w) {                           // HERESY 1166
     ask("Freeze \u201c" + w + "\u201d?\n\nIts takes stay as they are: they are heard and read, never changed, moved or thrown away, " +
@@ -2051,25 +2690,47 @@
     });
   }
   function isLocked(w, what) { return !!((state.locks || {})[w] || {})[what]; }
+  // HERESY 2130 (the audit of 06.11.2026: «сначала корзина, потом отказ»): what keeps a workspace from going, as the lab sees it: a lock against deletion on it
+  // or on any of its sections, or a section frozen; said before anything moves (the takes went to the trash, and then the lab refused the workspace)
+  function delStop(w) {
+    var fam = state.ws.filter(function (x) { return x === w || x.indexOf(w + SEP) === 0; });
+    var lk = fam.filter(function (x) { return isLocked(x, "workspace"); })[0];
+    if (lk) return lk === w ? "locked" : tr("its section \u201c{0}\u201d is locked").replace("{0}", wsLeaf(lk));
+    var ice = fam.filter(function (x) { return frozenWs(x); })[0];
+    return ice ? tr("its section \u201c{0}\u201d is frozen").replace("{0}", wsLeaf(ice)) : "";
+  }
   function lockItem(w, what, label) {
     var on = isLocked(w, what);
     return { icon: on ? "\ud83d\udd13" : "\ud83d\udd12", label: (on ? "Unlock " : "Lock ") + label, action: function () {
       act({ op: "lock", workspace: w, what: what, on: !on }, (on ? "Unlocked: " : "Locked: ") + label.toLowerCase() + " of \u201c" + w + "\u201d").then(function () { paint(); });
     } };
   }
-  // a take no deletion may reach: it is in a workspace whose tracks are locked
+  // a take no deletion may reach: it is in a workspace under a lock of either kind, its own or that of a workspace it is a section of
+  // (HERESY 2011: the lab's rule since 1473, collection.locked_takes, which the engine keeps now as well; a lock on the tracks of the workspace
+  // itself alone let the 💎 sets, locked as workspaces, through to «Delete for good»)
   function takeLocked(name) {
     var r = rowOf(name);
-    return !!r && r.workspaces.some(function (w) { return isLocked(w, "tracks"); });
+    return !!r && r.workspaces.some(function (w) {
+      var parts = w.split(SEP);
+      return parts.some(function (x, i) { var p = parts.slice(0, i + 1).join(SEP); return isLocked(p, "tracks") || isLocked(p, "workspace"); });
+    });
   }
-  function followRename(from, to) {           // the place on the left and the workspace in hand follow it
-    if (state.place === from) state.place = to;
-    if (recall(WS_KEY) === from) store(WS_KEY, to);
+  // the place on the left and the workspace in hand follow it. HERESY 2130 (the audit of 06.11.2026): a section of it open or in hand follows too, by its
+  // prefix when renamed («A / B» is «C / B»), or to `to` itself when the takes went there whole (poured, merged) or nowhere (deleted: All Workspaces)
+  function followRename(from, to, whole) {
+    var map = function (w) {
+      if (w === from) return to;
+      if (w && from && w.indexOf(from + SEP) === 0) return whole || !to ? to : to + w.slice(from.length);
+      return null;
+    };
+    var p = map(state.place), h = map(recall(WS_KEY) || "");
+    if (p !== null) state.place = p;
+    if (h !== null) store(WS_KEY, h);
   }
   function renameWs(w) {
     var parent = wsParts(w).slice(0, -1).join(SEP);                       // HERESY 1161: a section keeps its parent
     askName((parent ? "Rename the section \u201c" + wsLeaf(w) + "\u201d of \u201c" + parent + "\u201d" : "Rename the workspace \u201c" + w + "\u201d"),
-            parent ? wsLeaf(w) : w, { ok: "Rename", max: WS_PART }).then(function (to) {
+            parent ? wsLeaf(w) : w, { ok: "Rename", max: WS_PART, guard: true }).then(function (to) {   // HERESY 2039: a slip of the hand asks first
       if (to && parent) to = parent + SEP + String(to).replace(/\s*\/\s*/g, " ").trim();
       if (!to || to === w) return;
       if (state.ws.indexOf(to) >= 0) return toast("There is a workspace \u201c" + to + "\u201d already", true);
@@ -2099,12 +2760,12 @@
         if (section && state.ws.indexOf(asSec) >= 0) return toast("There is a workspace “" + asSec + "” already", true);
         return (section ? act({ op: "ws-rename", workspace: w, to: asSec }, "“" + wsLeaf(w) + "” is a section of “" + to + "” now", true)
                         : act({ op: "ws-pour", workspace: w, to: to }, "The takes of “" + w + "” are in “" + to + "” now", true))
-          .then(function (ok) { if (ok) { followRename(w, section ? asSec : to); paint(); paintCurrent(); } });
+          .then(function (ok) { if (ok) { followRename(w, section ? asSec : to, !section); paint(); paintCurrent(); } });
       });
     });
   }
   function closeDialog() { $("collDialog").hidden = true; $("collDialogBody").innerHTML = ""; }
-  function deleteWs(w) {
+  function deleteWs(w, how) {                       // HERESY 2049: how, the choice made already (the archive's «Send to the trash»)
     var takes = state.rows.filter(function (r) { return inTree(r, w); });               // HERESY 1161: its sections go with it
     var shared = takes.filter(function (r) { return r.workspaces.length > 1; }), others = state.ws.filter(function (x) { return x !== w && x.indexOf(w + SEP) !== 0; });
     $("collDialogBody").innerHTML =
@@ -2121,25 +2782,43 @@
       '<div class="dv-actions sheet-acts"><span class="spacer"></span><button type="button" class="btn ghost small" data-dlg-close="1">Cancel</button>' +
       '<button type="button" class="btn small danger-fill" id="wsDelGo">Delete the workspace</button></div>';
     $("collDialog").hidden = false;
+    if (how) { var pre = $("collDialogBody").querySelector('input[name="wsDel"][value="' + how + '"]'); if (pre) pre.checked = true; }   // HERESY 2049
     $("wsDelTo").addEventListener("focus", function () { $("collDialogBody").querySelector('[value="move"]').checked = true; });
     $("wsDelGo").addEventListener("click", function () {
-      var how = $("collDialogBody").querySelector('input[name="wsDel"]:checked').value, done;
+      var how = $("collDialogBody").querySelector('input[name="wsDel"]:checked').value, done, stop = delStop(w);
+      if (stop) { closeDialog(); return toast(tr("\u201c{0}\u201d cannot go: {1}. Nothing was moved.").replace("{0}", w).replace("{1}", tr(stop)), true); }   // HERESY 2130
       if (how === "only") {
         done = act({ op: "ws-delete", workspace: w }, "Workspace \u201c" + w + "\u201d deleted; its takes stay unsorted").then(function (ok) { if (ok) followRename(w, ""); });
       } else if (how === "move") {
         var pick = $("wsDelTo").value;
+        var secs = state.ws.some(function (x) { return x.indexOf(w + SEP) === 0; });
         done = (pick === "__new" || !pick ? askName("A new workspace for its takes", "", { ok: "Move them there", placeholder: "its name" }) : Promise.resolve(pick)).then(function (to) {
           if (!to) return;
-          return act({ op: "ws-merge", workspace: w, to: to }, takes.length + " moved into \u201c" + to + "\u201d; \u201c" + w + "\u201d deleted").then(function (ok) { if (ok) followRename(w, to); });
+          // HERESY 2130 (the audit of 06.11.2026): with sections ws-merge was always refused («has sections: merge or delete them first»); its takes and its
+          // sections' are poured into the other instead (1808's ws-pour), a new one made first
+          var made = secs && state.ws.indexOf(to) < 0 ? act({ op: "ws-create", workspace: to }, null, true) : Promise.resolve(true);
+          return made.then(function (ok0) {
+            if (!ok0) return;
+            return act(secs ? { op: "ws-pour", workspace: w, to: to } : { op: "ws-merge", workspace: w, to: to }, takes.length + " moved into \u201c" + to + "\u201d; \u201c" + w + "\u201d deleted")
+              .then(function (ok) { if (ok) followRename(w, to, true); });
+          });
         });
       } else {
         var spare = $("wsDelSpare") && $("wsDelSpare").checked;
         var gone = takes.filter(function (r) { return !(spare && r.workspaces.length > 1); }).map(function (r) { return r.name; });
         done = api("/trash", { op: "move", names: gone }).then(function (d) {
           saidProtected(d);                                // HERESY 1368: they stay in the library, in no workspace
-          return act({ op: "ws-delete", workspace: w }, d.moved.length + " take" + (d.moved.length === 1 ? "" : "s") + " to the trash; \u201c" + w + "\u201d deleted" +
-            (d.locked && d.locked.length ? "; " + d.locked.length + " stayed: another workspace locks them" : ""));
-        }).then(function (ok) { if (ok) followRename(w, ""); if (state.hooks.refreshLibrary) state.hooks.refreshLibrary(); return load(); });
+          saidSkipped(d);                                  // HERESY 2130
+          var said = d.moved.length + " take" + (d.moved.length === 1 ? "" : "s") + " to the trash; \u201c" + w + "\u201d deleted" +
+            (d.locked && d.locked.length ? "; " + d.locked.length + " stayed: another workspace locks them" : "");
+          // HERESY 2130: Ctrl+Z gives the takes back, and the workspace with them (each stands again where it stood, 1996); a refusal that still comes after
+          // the takes went says how many went, with the same way back
+          return act({ op: "ws-delete", workspace: w }, null, true).then(function (ok) {
+            if (ok) { followRename(w, ""); if (d.moved.length) undoable(said, untrash(d.moved)); else toast(said); }
+            else if (d.moved.length) undoable(tr("Went to the trash before the refusal: {0}. Undo gives them back").replace("{0}", d.moved.length), untrash(d.moved));
+            return ok;
+          });
+        }).then(function () { if (state.hooks.refreshLibrary) state.hooks.refreshLibrary(); return load(); }, function (e) { toast(e.message, true); });
       }
       closeDialog();
       Promise.resolve(done).then(function () { paint(); paintCurrent(); });
@@ -2419,10 +3098,16 @@
 
   // ---- HERESY 1059: "Open in Collection": the Librarian with the take in sight, flashed
   function reveal(name) {
-    if (!shown().some(function (r) { return r.name === name; })) {   // out of the current view: the whole library, no search
-      state.place = ""; state.q = ""; state.kinds = {}; state.derived = {};
+    var here = function () { return shown().some(function (r) { return r.name === name; }); };
+    if (!here()) {                                    // out of the current view: no search, no filter, and its own workspace
+      state.q = ""; state.kinds = {}; state.derived = {};
       $("collSearch").value = "";
       Array.prototype.forEach.call(document.querySelectorAll("#collFilters .is-on"), function (b) { b.classList.remove("is-on"); });
+      // HERESY 2032 (Viktor 02.11.2026: «Баг со ссылкой на пространство трека. Перебрасывает во "Все пространства"»): the take's own workspace,
+      // the one in hand when it holds the take; All only for a take of no workspace, or one its workspace does not show (hidden, trashed)
+      var r = rowOf(name), own = ((r && r.workspaces) || []).filter(function (w) { return state.ws.indexOf(w) >= 0; }), cur = current();
+      openPlace(own.length ? (own.indexOf(cur) >= 0 ? cur : own[0]) : "");
+      if (!here()) state.place = "";
     }
     paint();
     bringIn(name);                                  // HERESY 1167: past the cards shown: the rows up to it come in
@@ -2477,36 +3162,218 @@
     if (!k || !r) return !k;
     return k === "like" ? r.rating > 0 : k === "star" ? favOf(n, r) : markOf(n, k === "fire" ? "fire" : "gem");
   }
-  function plPlayOrder(current) { return (state.playlist || []).filter(function (n) { return n === current || plMatches(n); }); }
-  function plRows() { var by = {}; state.rows.forEach(function (r) { by[r.name] = r; }); return (state.playlist || []).map(function (n) { return by[n]; }).filter(Boolean); }
+  // HERESY 2042: a whole workspace in the playlist, one entry («@ws:» and its name): every take of it and its sections (the hidden ones not), oldest first
+  var PL_WS = "@ws:";
+  function plWs(n) { return n && String(n).indexOf(PL_WS) === 0 ? String(n).slice(PL_WS.length) : ""; }
+  function plWsTakes(w) { return state.rows.filter(function (r) { return inTree(r, w) && !r.hidden; }).sort(function (a, b) { return (a.created || 0) - (b.created || 0); }); }
+  function plExpand(list) {
+    var out = [], seen = {};
+    (list || []).forEach(function (n) {
+      var w = plWs(n);
+      (w ? plWsTakes(w).map(function (r) { return r.name; }) : [n]).forEach(function (x) { if (!seen[x]) { seen[x] = 1; out.push(x); } });
+    });
+    return out;
+  }
+  function plFirst(n) { var w = plWs(n), t = w ? plWsTakes(w)[0] : null; return w ? (t ? t.name : "") : n; }
+  // HERESY 2050: albums. An album open: its own takes; Everything: the playlist's own, then every album's not among them («Корень видит все треки»)
+  state.plAlbum = recall("yue2.plAlbum") || "";
+  state.plTags = [];
+  function plAlbumOf(n) { return (state.albums || []).filter(function (a) { return a.name === n; })[0] || null; }
+  function plAlbumOpen() { var a = state.plAlbum ? plAlbumOf(state.plAlbum) : null; if (!a && state.plAlbum) state.plAlbum = ""; return a; }
+  function plList() {
+    var a = plAlbumOpen();
+    if (a) return plExpand(a.items);                   // HERESY 2058: an album may hold a whole workspace, as the root does
+    var out = plExpand(state.playlist);
+    (state.albums || []).forEach(function (x) { plExpand(x.items).forEach(function (n) { if (out.indexOf(n) < 0) out.push(n); }); });
+    return out;
+  }
+  function plRootCount() {                             // HERESY 2058: the root's whole list, whatever album is open (the tags never cut the list it plays from)
+    var keep = state.plAlbum;
+    state.plAlbum = "";
+    var n = plList().length;
+    state.plAlbum = keep;
+    return n;
+  }
+  function plStyle(n) { var t = state.hooks.findTake ? state.hooks.findTake(n) : null; return fold((t && t.style) || ""); }
+  // HERESY 2058 (the audit of 04.11.2026: the count by whole parts, the filter by a piece of text): a ticked tag is one of the style's parts, as the
+  // overlay counts them, so «rock» no longer finds «punk rock»
+  function plParts(n) { var out = {}; plStyle(n).split(/[,.;\n]+/).forEach(function (p) { p = p.replace(/\s+/g, " ").trim(); if (p) out[p] = 1; }); return out; }
+  function plTagOk(n) { if (!state.plTags.length) return true; var s = plParts(n); return state.plTags.every(function (t) { return !!s[t]; }); }
+  function plTags() {                                    // the styles' parts of the takes in view, by how often they come
+    var c = {};
+    plList().forEach(function (n) {
+      var seen = {};
+      plStyle(n).split(/[,.;\n]+/).forEach(function (p) {
+        p = p.replace(/\s+/g, " ").trim();
+        if (p.length < 2 || p.length > 40 || /^no\s/.test(p) || seen[p]) return;
+        seen[p] = 1; c[p] = (c[p] || 0) + 1;
+      });
+    });
+    return Object.keys(c).sort(function (x, y) { return c[y] - c[x] || x.localeCompare(y); }).slice(0, 48).map(function (k) { return [k, c[k]]; });
+  }
+  function plPlayOrder(current) { return plList().filter(function (n) { return n === current || (plMatches(n) && plTagOk(n)); }); }
+  function plRows() {
+    var by = {}; state.rows.forEach(function (r) { by[r.name] = r; });
+    var a = plAlbumOpen(), rows;
+    var entry = function (n) { var w = plWs(n); return w ? { ws: w, name: n, takes: plWsTakes(w) } : by[n]; };   // HERESY 2058: a whole workspace in an album too
+    if (a) rows = a.items.map(entry).filter(Boolean);
+    else {
+      rows = (state.playlist || []).map(entry).filter(Boolean);
+      var own = plExpand(state.playlist);
+      (state.albums || []).forEach(function (x) { x.items.forEach(function (n) {
+        if (rows.some(function (r) { return r.name === n; })) return;
+        if (plWs(n)) rows.push(Object.assign(entry(n), { inAlbum: x.name }));   // HERESY 2058
+        else if (own.indexOf(n) < 0 && by[n]) rows.push(Object.assign({}, by[n], { inAlbum: x.name }));
+      }); });
+    }
+    return state.plTags.length ? rows.filter(function (r) { return r.ws ? r.takes.some(function (t) { return plTagOk(t.name); }) : plTagOk(r.name); }) : rows;
+  }
+  function plCovers(names, pick) {
+    var one = pick && names.indexOf(pick) >= 0 && window.HeresyArt ? window.HeresyArt.url(pick) : "";   // HERESY 2058: the cover chosen, square and alone
+    if (one) return '<img alt="" loading="lazy" src="' + esc(one) + '" />';
+    var art = names.map(function (n) { return window.HeresyArt ? window.HeresyArt.url(n) : ""; }).filter(Boolean);
+    if (!art.length) return '<span class="pl-nocover">' + ico("music") + "</span>";
+    if (art.length < 4) return '<img alt="" loading="lazy" src="' + esc(art[0]) + '" />';
+    return '<span class="pl-mosaic">' + art.slice(0, 4).map(function (u) { return '<img alt="" loading="lazy" src="' + esc(u) + '" />'; }).join("") + "</span>";
+  }
+  function plAlbumsHtml() {
+    var tile = function (key, label, names, own) {
+      var on = (state.plAlbum || "") === key, al = own ? plAlbumOf(key) : null;
+      return '<button type="button" class="pl-album' + (on ? " is-on" : "") + '" data-pl-album="' + esc(key) + '"' + (own ? ' data-pl-album-own="1"' : "") + ">" +
+        '<span class="pl-album-cover">' + plCovers(names, al && al.cover) + "</span><span class=\"pl-album-name\"" + (own ? ' translate="no"' : "") + ">" + esc(label) + '</span><span class="pl-album-n mono">' + names.length + "</span>" +
+        // HERESY 2058 (the audit: renaming and deleting only by a right click): an album's ⋯ in sight on its tile
+        (own ? '<span class="pl-album-more" data-pl-album-menu="' + esc(key) + '" role="button" aria-label="More" data-tip="Rename, its cover, delete">\u22ef</span>' : "") + "</button>";
+    };
+    var keep = state.plAlbum; state.plAlbum = ""; var all = plList(); state.plAlbum = keep;
+    return '<div class="pl-albums">' + tile("", tr("Everything"), all, false) + (state.albums || []).map(function (a) { return tile(a.name, a.name, plExpand(a.items), true); }).join("") +
+      '<button type="button" class="pl-album pl-album-new" data-pl-album-new="1"><span class="pl-album-cover"><span class="pl-nocover">+</span></span><span class="pl-album-name">' + esc(tr("New album")) + "</span></button></div>";
+  }
+  function plAlbumNew(names) {
+    return askName(tr("A new album") + (names && names.length ? "\n\n" + tr("{0} takes go into it.").replace("{0}", names.length) : ""), "", { ok: "Make it", placeholder: "its name", max: 60 }).then(function (n) {
+      n = String(n || "").trim();
+      if (!n) return false;
+      return plOp({ op: "album-create", album: n, names: names || [] }, tr("Album “{0}” made").replace("{0}", n)).then(function (ok) { if (ok && !names) { state.plAlbum = n; store("yue2.plAlbum", n); plChanged(); } return ok; });
+    });
+  }
+  function plAlbumMenu(names) {                          // the take menu's albums under Add to playlist
+    var items = (state.albums || []).map(function (a) { return { label: "\u25a3 " + a.name, raw: true, action: function () { plOp({ op: "album-add", album: a.name, names: names, where: "last" }, tr("Into the album “{0}”: {1}").replace("{0}", a.name).replace("{1}", names.length)); } }; });
+    return [{ sep: true }].concat(items).concat([{ label: "New album\u2026", action: function () { plAlbumNew(names); } }]);
+  }
+  function plAlbumTileMenu(name, x, y) {
+    if (!window.HeresyMenu || !name) return;
+    window.HeresyMenu.open(x, y, [
+      { head: name },
+      { icon: "Aa", label: "Rename the album\u2026", action: function () {
+        askName(tr("Rename the album “{0}”").replace("{0}", name), name, { ok: "Rename", max: 60 }).then(function (to) {
+          to = String(to || "").trim();
+          if (to && to !== name) plOp({ op: "album-rename", album: name, to: to }).then(function (ok) { if (ok && state.plAlbum === name) { state.plAlbum = to; store("yue2.plAlbum", to); plChanged(); } });
+        });
+      } },
+      { icon: "\u25a3", label: "Cover from\u2026", hint: "Which take's cover is the album's; Automatic: its takes' first covers, as before", action: function () { plAlbumCover(name); } },   // HERESY 2058
+      { sep: true },
+      { icon: "\ud83d\uddd1", label: "Delete the album\u2026", danger: true, action: function () {
+        // HERESY 2130 (the audit of 06.11.2026): the promise is kept by the lab now (album-delete puts a take only in this album at the playlist's end), and
+        // the dialog says how many that is
+        var a = plAlbumOf(name), seen = {};
+        plExpand(state.playlist).forEach(function (n) { seen[n] = 1; });
+        (state.albums || []).forEach(function (x) { if (x.name !== name) plExpand(x.items).forEach(function (n) { seen[n] = 1; }); });
+        var only = a ? plExpand(a.items).filter(function (n) { return !seen[n]; }).length : 0;
+        ask(tr("Delete the album “{0}”?").replace("{0}", name) + "\n\n" + tr("Its takes stay in the library and in the playlist; only the album goes.") +
+            (only ? "\n" + tr("{0} of them are in no other album and not in the playlist yet: they go to the playlist's end, so Everything keeps them.").replace("{0}", only) : ""),
+            { ok: "Delete the album" }).then(function (yes) {
+          if (yes) plOp({ op: "album-delete", album: name }).then(function () { if (state.plAlbum === name) { state.plAlbum = ""; store("yue2.plAlbum", ""); plChanged(); } });
+        });
+      } }
+    ]);
+  }
+  // HERESY 2058 (Viktor 03.11.2026: «1:1 обложку, которую подгружаем из обложек треков»): the album's cover chosen from its takes' covers, square;
+  // Automatic, the mosaic of its first covers, stays while none is chosen
+  function plAlbumCover(name) {
+    var a = plAlbumOf(name);
+    if (!a || !window.HeresyDialog) return;
+    var art = plExpand(a.items).filter(function (n) { return window.HeresyArt && window.HeresyArt.url(n); });
+    if (!art.length) return toast(tr("None of its takes has a cover yet"), true);
+    var items = art.map(function (n) { var r = rowOf(n); return { value: n, label: r ? r.title : n, current: a.cover === n }; });
+    window.HeresyDialog.choose(tr("The cover of the album “{0}”").replace("{0}", name) + "\n\n" + tr("One of its takes' covers, square; Automatic: its first covers, as before."), items,
+      { more: [{ label: tr("Automatic"), value: "__auto" }], cancel: "Cancel", filter: "Filter the takes" }).then(function (v) {
+      if (!v) return;
+      plOp({ op: "album-cover", album: name, take: v === "__auto" ? "" : v }, v === "__auto" ? tr("The album's cover: automatic") : tr("The album's cover chosen"));
+    });
+  }
+  // HERESY 2058: the album tile a card is held over, lit
+  function plDropMark(tl) {
+    Array.prototype.forEach.call(document.querySelectorAll(".pl-album.is-drop"), function (x) { if (x !== tl) x.classList.remove("is-drop"); });
+    if (tl) tl.classList.add("is-drop");
+  }
+  // HERESY 2058 (the audit: the tags' overlay closed only by its own button): closed by a click away and by Esc too, as the Studio's other overlays
+  var plTagsWatched = false;
+  function plTagsWatch() {
+    if (plTagsWatched) return;
+    plTagsWatched = true;
+    document.addEventListener("mousedown", function (e) {
+      Array.prototype.forEach.call(document.querySelectorAll(".pl-tags-pop:not([hidden])"), function (p) { if (!p.parentNode.contains(e.target)) p.hidden = true; });
+    }, true);
+    window.addEventListener("keydown", function (e) {
+      var open = document.querySelectorAll(".pl-tags-pop:not([hidden])");
+      if (e.key !== "Escape" || !open.length) return;
+      e.preventDefault(); e.stopPropagation();
+      Array.prototype.forEach.call(open, function (p) { p.hidden = true; });
+    }, true);
+  }
+  function plWsCard(r) {
+    var secs = r.takes.reduce(function (a, t) { return a + (+t.seconds || 0); }, 0), now = state.hooks.playing ? state.hooks.playing() : {};
+    var mine = r.takes.some(function (t) { return t.name === now.name; }), on = mine && now.playing;
+    return '<article class="pl-card pl-ws' + (mine ? " is-current" : "") + '" draggable="' + !r.inAlbum + '" data-pl="' + esc(r.name) + '">' +   // HERESY 2058: an album's in Everything stays put
+      '<button type="button" class="pl-play' + (on ? " is-playing" : "") + '" data-pl-play="' + esc(r.name) + '" aria-label="' + (on ? "Pause" : "Play") + '">' + ico(on ? "pause" : "play") + "</button>" +
+      '<div class="pl-main"><div class="pl-title" translate="no">\u25a6 ' + esc(r.ws) + "</div>" +
+      '<div class="pl-meta"><span>' + r.takes.length + " " + (r.takes.length === 1 ? tr("take") : tr("takes")) + "</span> · <span>" + state.hooks.clock(secs) + "</span> · <span>" + tr("a whole workspace") + "</span></div>" +
+      '<div class="pl-marks">' + (r.inAlbum ? '<span class="pl-in-album" translate="no" title="' + esc(tr("In the album “{0}”").replace("{0}", r.inAlbum)) + '">\u25a3 ' + esc(r.inAlbum) + "</span>"   // HERESY 2058
+        : '<button type="button" class="pl-out" data-pl-out="' + esc(r.name) + '" title="' + esc(tr(plAlbumOpen() ? "Out of the album, whole (the workspace and its takes stay)" : "Out of the playlist, whole (the workspace and its takes stay)")) +
+          '" aria-label="' + esc(tr(plAlbumOpen() ? "Out of the album, whole (the workspace and its takes stay)" : "Out of the playlist, whole (the workspace and its takes stay)")) + '">✕</button>') + "</div></div>" +
+      '<div class="pl-cover"><span class="pl-nocover">' + ico("music") + "</span></div></article>";
+  }
   function plCard(r) {
+    if (r.ws) return plWsCard(r);                        // HERESY 2042
     var now = state.hooks.playing ? state.hooks.playing() : {}, mine = now.name === r.name, on = mine && now.playing, art = window.HeresyArt ? window.HeresyArt.url(r.name) : "";
     var mk = function (lit, icon, tip) { return '<span class="pl-mark' + (lit ? " is-on" : "") + '" title="' + esc(tip) + '">' + ico(icon) + "</span>"; };
     var when = state.hooks.when ? state.hooks.when(r.created, r.name) : "<span>" + esc(r.created ? state.hooks.ago(r.created, r.name) : "") + "</span>";
-    return '<article class="pl-card' + (mine ? " is-current" : "") + '" draggable="true" data-pl="' + esc(r.name) + '">' +
+    return '<article class="pl-card' + (mine ? " is-current" : "") + '" draggable="' + !r.inAlbum + '" data-pl="' + esc(r.name) + '">' +   // HERESY 2050: an album's take in Everything stays put
       '<button type="button" class="pl-play' + (on ? " is-playing" : "") + '" data-pl-play="' + esc(r.name) + '" aria-label="' + (on ? "Pause" : "Play") + '">' + ico(on ? "pause" : "play") + "</button>" +
       '<div class="pl-main"><div class="pl-title" translate="no">' + esc(r.title) + "</div>" +
       '<div class="pl-meta">' + when + (r.seconds ? " · <span>" + state.hooks.clock(r.seconds) + "</span>" : "") + (r.cot ? " · <span>" + esc(cotWord(r.cot)) + "</span>" : "") + "</div>" +
       '<div class="pl-marks">' + mk(r.rating > 0, "like", "Liked") + mk(markOf(r.name, "fire"), "flame", "On fire") + mk(markOf(r.name, "gem"), "gem", "A gem") + mk(r.rating < 0, "dislike", "Disliked") + mk(favOf(r.name, r), "star", "Favourite") +
       mk(!!r.note, "note", r.note ? String(r.note).slice(0, 160) : "Without a note") +
-      '<button type="button" class="pl-out" data-pl-out="' + esc(r.name) + '" title="Out of the playlist (the take stays)" aria-label="Out of the playlist (the take stays)">✕</button></div></div>' +
+      (r.inAlbum ? '<span class="pl-in-album" translate="no" title="' + esc(tr("In the album “{0}”").replace("{0}", r.inAlbum)) + '">\u25a3 ' + esc(r.inAlbum) + "</span>"   // HERESY 2050
+        : '<button type="button" class="pl-out" data-pl-out="' + esc(r.name) + '" title="' + esc(plAlbumOpen() ? tr("Out of the album (the take stays)") : "Out of the playlist (the take stays)") + '" aria-label="' +
+          esc(plAlbumOpen() ? tr("Out of the album (the take stays)") : "Out of the playlist (the take stays)") + '">✕</button>') + "</div></div>" +
       '<div class="pl-cover">' + (art ? '<img alt="" loading="lazy" src="' + esc(art) + '" />' : '<span class="pl-nocover">' + ico("music") + "</span>") + "</div></article>";
   }
   function plHtml() {
-    var rows = plRows();
-    return '<div class="pl-head"><button type="button" class="btn small primary" data-pl-go="1"' + (rows.length ? "" : " disabled") + ">Play from the top</button>" +
+    var rows = plRows(), tags = state.plTags.length;
+    return plAlbumsHtml() + '<div class="pl-head"><button type="button" class="btn small primary" data-pl-go="1"' + (rows.length ? "" : " disabled") + ">Play from the top</button>" +
       '<button type="button" class="btn ghost small" data-pl-shuffle="1"' + (rows.length > 1 ? "" : " disabled") + ' title="A deck\'s shuffle: every take to a new place">Shuffle the deck</button>' +
       '<label class="pl-only" title="Only the takes with this mark play; the playlist keeps every take"><span>Play only</span><select data-pl-only="1">' +   // HERESY 1814
       [["", "every take"], ["like", "Liked"], ["fire", "On fire"], ["gem", "A gem"], ["star", "Favourite"]].map(function (o) {
         return '<option value="' + o[0] + '"' + (state.plOnly === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></label>" +
+      '<span class="pl-tags-wrap"><button type="button" class="btn ghost small icon-btn pl-tags-btn' + (tags ? " is-on" : "") + '" data-pl-tags="1" aria-haspopup="dialog" aria-label="Tags" data-tip="' +   // HERESY 2050
+        esc(tr("The tags of the styles here: a click filters the playlist by them, all ticked at once, and what plays with it")) + '"><svg viewBox="0 0 24 24" class="ui-ico" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.6 2.6a2 2 0 0 0-1.4-.6H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg>' + (tags ? '<b class="pl-tags-n mono">' + tags + "</b>" : "") + "</button>" +
+        '<span class="pl-tags-pop" hidden></span></span>' +
       '<span class="pl-hint">Drag a take to its place; × takes it out of the playlist, never out of the library</span></div>' +
       (rows.length ? '<div class="pl-list">' + rows.map(plCard).join("") + "</div>"
         : '<p class="row-hint coll-empty">The playlist is empty: «Add to playlist» in a take\'s menu puts takes here</p>');
   }
+  function plTagsHtml() {
+    var list = plTags();
+    if (!list.length) return '<span class="row-hint">' + esc(tr("No styles to read tags from here")) + "</span>";
+    return list.map(function (t) { var on = state.plTags.indexOf(t[0]) >= 0; return '<button type="button" class="pl-tag' + (on ? " is-on" : "") + '" data-pl-tag="' + esc(t[0]) + '" translate="no">' + esc(t[0]) + ' <b class="mono">' + t[1] + "</b></button>"; }).join("") +
+      (state.plTags.length ? '<button type="button" class="pl-tag pl-tag-clear" data-pl-tag="">' + esc(tr("Clear the tags")) + "</button>" : "");
+  }
   function plHead() {                                    // the Librarian's heading, as for its other places
-    var rows = plRows(), secs = rows.reduce(function (a, r) { return a + (+r.seconds || 0); }, 0);
-    $("collWhere").innerHTML = " › <span>Playlist</span>";
-    $("collNote").innerHTML = "<span>" + rows.length + " takes</span> · <span>" + state.hooks.clock(secs) + "</span>";
+    // HERESY 2042: the takes it plays (a workspace's every one), the workspaces among them, the whole time
+    var names = plList(), ws = ((plAlbumOpen() ? plAlbumOpen().items : state.playlist) || []).filter(plWs).length,   /* HERESY 2058: an album's whole workspaces too */ secs = names.reduce(function (a, n) { var r = rowOf(n); return a + (r ? +r.seconds || 0 : 0); }, 0);
+    $("collWhere").innerHTML = " › <span>Playlist</span>" + (plAlbumOpen() ? ' › <span translate="no">' + esc(state.plAlbum) + "</span>" : "");   // HERESY 2050
+    $("collNote").innerHTML = "<span>" + names.length + " takes</span>" + (ws ? " · <span>" + ws + " " + (ws === 1 ? tr("workspace") : tr("workspaces")) + "</span>" : "") +
+      " · <span>" + state.hooks.clock(secs) + "</span>";
   }
   function plPaint() {                                   // paint() hands the place over here
     $("collGrid").className = "coll-grid pl-view";
@@ -2516,7 +3383,7 @@
     plHead();
   }
   function plChanged(d, asked) {
-    if (d) { state.playlist = d.playlist || []; state.plXfade = d.playlist_xfade || 0; if (d.takes) state.rows = fresh(d.takes, asked); }
+    if (d) { state.playlist = d.playlist || []; if (d.albums) state.albums = d.albums; if (d.takes) state.rows = fresh(d.takes, asked); }   // HERESY 2050: and the albums
     if (state.place === "__playlist") paint(); else paintSide();
     if (plWin) plWin.querySelector(".pl-body").innerHTML = plHtml();
     if (state.hooks.playlistChanged) state.hooks.playlistChanged();
@@ -2542,12 +3409,30 @@
   function plBind(root) {                                // the playlist's own clicks and drags, wherever its view stands
     if (root.dataset.plBound) return;
     root.dataset.plBound = "1";
+    plTagsWatch();                                     // HERESY 2058
     root.addEventListener("click", function (e) {
+      var am = e.target.closest("[data-pl-album-menu]");   // HERESY 2058: an album tile's ⋯: rename, its cover, delete
+      if (am) { e.preventDefault(); e.stopPropagation(); var ar = am.getBoundingClientRect(); plAlbumTileMenu(am.dataset.plAlbumMenu, ar.left, ar.bottom + 2); return; }
       var b = e.target.closest("[data-pl-play]"), out = e.target.closest("[data-pl-out]");
-      if (b) { if (state.hooks.playPlaylist) state.hooks.playPlaylist(b.dataset.plPlay); return; }
-      if (out) { plOp({ op: "playlist-remove", names: [out.dataset.plOut] }); return; }
-      if (e.target.closest("[data-pl-go]")) { var first = (state.playlist || [])[0]; if (first && state.hooks.playPlaylist) state.hooks.playPlaylist(first, true); return; }
-      if (e.target.closest("[data-pl-shuffle]")) plOp({ op: "playlist-shuffle" }, "Shuffled");
+      if (b) { var pn = plFirst(b.dataset.plPlay); if (pn && state.hooks.playPlaylist) state.hooks.playPlaylist(pn); return; }   // HERESY 2042: a workspace from its first
+      if (out) { var oa = plAlbumOpen(); plOp(oa ? { op: "album-remove", album: oa.name, names: [out.dataset.plOut] } : { op: "playlist-remove", names: [out.dataset.plOut] }); return; }   // HERESY 2050
+      if (e.target.closest("[data-pl-go]")) { var first = plPlayOrder("")[0]; if (first && state.hooks.playPlaylist) state.hooks.playPlaylist(first, true); return; }   // HERESY 2050: the view's own
+      var ab = e.target.closest("[data-pl-album]"), an = e.target.closest("[data-pl-album-new]"), tg = e.target.closest("[data-pl-tag]"), tb = e.target.closest("[data-pl-tags]");
+      if (an) { plAlbumNew(null); return; }
+      if (ab) { state.plAlbum = ab.dataset.plAlbum; state.plTags = []; store("yue2.plAlbum", state.plAlbum); plChanged(); return; }
+      if (tb) { var pop = root.querySelector(".pl-tags-pop"); if (pop.hidden) { pop.innerHTML = plTagsHtml(); pop.hidden = false; } else pop.hidden = true; return; }
+      if (tg) {
+        var k = tg.dataset.plTag;
+        state.plTags = k === "" ? [] : state.plTags.indexOf(k) >= 0 ? state.plTags.filter(function (x) { return x !== k; }) : state.plTags.concat([k]);
+        plChanged();
+        var pop2 = root.querySelector(".pl-tags-pop"); if (pop2) { pop2.innerHTML = plTagsHtml(); pop2.hidden = false; }
+        return;
+      }
+      if (e.target.closest("[data-pl-shuffle]")) {
+        var al = plAlbumOpen();
+        if (al) { var sh = al.items.slice(); for (var i = sh.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), x2 = sh[i]; sh[i] = sh[j]; sh[j] = x2; } plOp({ op: "album-order", album: al.name, names: sh }, "Shuffled"); }
+        else plOp({ op: "playlist-shuffle" }, "Shuffled");
+      }
     });
     root.addEventListener("change", function (e) {        // HERESY 1814: «Play only», this viewer's own
       var x = e.target.closest && e.target.closest("[data-pl-only]");
@@ -2557,21 +3442,28 @@
       plChanged();
     });
     root.addEventListener("contextmenu", function (e) {   // the take's own menu, as on its card
+      var tile = e.target.closest("[data-pl-album-own]");   // HERESY 2050: an album's tile: rename, delete
+      if (tile) { e.preventDefault(); plAlbumTileMenu(tile.dataset.plAlbum, e.clientX, e.clientY); return; }
       var card = e.target.closest(".pl-card[data-pl]");
       if (!card || !state.hooks.menu) return;
       e.preventDefault();
       state.hooks.menu(card.dataset.pl, e.clientX, e.clientY);
     });
-    var drag = null, dropped = false;
+    var drag = null, dropped = false, onTile = "";   // HERESY 2058: onTile, the album a card was let go on
     root.addEventListener("dragstart", function (e) {
       var card = e.target.closest && e.target.closest(".pl-card[data-pl]");
       if (!card) return;
       drag = card.dataset.pl; dropped = false;
       card.classList.add("is-dragging");
-      e.dataTransfer.effectAllowed = "move";
+      // HERESY 2058b (the re-audit of 04.11.2026: a card dragged onto an album's tile with a real mouse did nothing): the drag allowed «move» alone while
+      // the tile asks for «copy» (the take stays where it was and goes into the album too), and a browser drops only what the drag allows; both now
+      e.dataTransfer.effectAllowed = "copyMove";
       try { e.dataTransfer.setData("text/plain", drag); } catch (x) { /* some browsers */ }
     });
     root.addEventListener("dragover", function (e) {
+      var tl = drag && e.target.closest && e.target.closest("[data-pl-album-own]");   // HERESY 2058 (the audit: a card dragged onto an album's tile goes in)
+      plDropMark(tl || null);
+      if (tl) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; return; }
       if (!drag || !(e.target.closest && e.target.closest(".pl-list"))) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
@@ -2580,14 +3472,28 @@
       var box = card.getBoundingClientRect(), list = card.parentNode, moving = list.querySelector('.pl-card[data-pl="' + CSS.escape(drag) + '"]');
       if (moving) list.insertBefore(moving, e.clientY > box.top + box.height / 2 ? card.nextSibling : card);
     });
-    root.addEventListener("drop", function (e) { if (drag) { e.preventDefault(); dropped = true; } });
+    root.addEventListener("drop", function (e) {
+      if (!drag) return;
+      e.preventDefault();
+      var tl = e.target.closest && e.target.closest("[data-pl-album-own]");   // HERESY 2058: on an album's tile: into it, not a new order
+      if (tl) onTile = tl.dataset.plAlbum; else dropped = true;
+    });
     root.addEventListener("dragend", function (e) {
       if (!drag) return;
-      drag = null;
+      var held = drag, into = onTile, inAl = plAlbumOpen();
+      drag = null; onTile = ""; plDropMark(null);
+      if (into) {                                      // HERESY 2058: let go on an album's tile: into that album, the list as it was
+        plChanged();
+        if (!inAl || inAl.name !== into) plOp({ op: "album-add", album: into, names: [held], where: "last" }, tr("Into the album “{0}”: {1}").replace("{0}", into).replace("{1}", 1));
+        return;
+      }
       var list = root.querySelector(".pl-list"), pl = state.playlist || [];
       if (!list || !dropped) { plChanged(); return; }   // let go outside the list (or Esc): back where it was
       var order = Array.prototype.map.call(list.querySelectorAll(".pl-card[data-pl]"), function (x) { return x.dataset.pl; });
       Array.prototype.forEach.call(list.querySelectorAll(".is-dragging"), function (x) { x.classList.remove("is-dragging"); });
+      var oal = plAlbumOpen();                          // HERESY 2050: an album's own order; in Everything the playlist's own (an album's takes stay put)
+      if (oal) { if (order.join("\n") !== oal.items.join("\n") && !state.plTags.length) plOp({ op: "album-order", album: oal.name, names: order }); return; }
+      order = order.filter(function (n) { return pl.indexOf(n) >= 0; });
       var drawn = pl.filter(function (n) { return order.indexOf(n) >= 0; });
       if (order.join("\n") === drawn.join("\n")) return;
       plOp({ op: "playlist-order", names: order.concat(pl.filter(function (n) { return order.indexOf(n) < 0; })) });
@@ -2616,22 +3522,135 @@
       '" data-tip="' + esc(r.note ? String(r.note).slice(0, 300) : NOTE_NONE) + '"' + (r.note ? ' translate="no"' : "") + ">" + ico("note") + "</button>";
   }
   var NOTE_NONE = "No note yet: a click writes one";
-  function editNote(name, title) {                    // the same window as the menu's «Note…», its text 2 pt larger
+  var NOTE_ICE = "Frozen with its workspace: its note is read, never changed (unfreeze the workspace first)";   // HERESY 2128
+  // HERESY 2128 (the audit of 06.11.2026): a refusal said, and the window opened again with the text as typed (it was lost with the window); a frozen
+  // take's note is not offered to change (the lab refuses it)
+  function editNote(name, title, typed) {             // the same window as the menu's «Note…», its text 2 pt larger
     if (!window.HeresyDialog) return Promise.resolve();
-    var had = note(name), h = state.hooks || {}, t = h.findTake ? h.findTake(name) : null;
-    return window.HeresyDialog.prompt("A note on “" + (title || (t && (t.title || t.name)) || name) + "”\n\nEmpty removes it.", had,
-      { ok: "Keep the note", max: 600, area: true, rows: 6, cls: "hd-note" }).then(function (v) { if (v !== null && v !== had) return setNote(name, v); });
+    var had = note(name), h = state.hooks || {}, t = h.findTake ? h.findTake(name) : null, r = rowOf(name);
+    if (r && r.frozen) { toast(NOTE_ICE, true); return Promise.resolve(); }
+    return window.HeresyDialog.prompt("A note on “" + (title || (t && (t.title || t.name)) || name) + "”\n\nEmpty removes it.", typed !== undefined ? typed : had,
+      { ok: "Keep the note", max: 600, area: true, rows: 6, cls: "hd-note" }).then(function (v) {
+      if (v === null || v === had) return;
+      return setNote(name, v).catch(function (e) {
+        toast("Not saved: " + ((e && e.message) || String(e)), true);
+        return editNote(name, title, v);
+      });
+    });
   }
   // HERESY 1044: a note on a take (the take card edits it)
-  function note(name) { var r = state.rows.filter(function (x) { return x.name === name; })[0]; return r ? r.note || "" : ""; }
-  function setNote(name, text) {
-    return api("/collection", { op: "note", names: [name], text: text }).then(function (d) { state.rows = d.takes || state.rows; paint(); });
+  function note(name) { var r = rowOf(name); return r ? r.note || "" : ""; }
+  // HERESY 2128 (the audit of 06.11.2026): a note on its way is held against every list older than the lab's answer (fresh), and once answered it is
+  // held as the marks are (1802), so a 👍 asked before it and answered after it never puts the old note back. The answer that is not the last one
+  // sent for the take does neither. A refusal still goes to the caller (the sheet, the take's head, the compare's note say it)
+  function setNote(name, text, keep) {                 // keep (HERESY 2158): with keepalive, the page going hidden
+    var p = notePend[name] || (notePend[name] = {}), n = noteSent[name] = (noteSent[name] || 0) + 1, asked = rateSeq;
+    var last = function () { return noteSent[name] === n; }, done = function () { var q = notePend[name]; if (last() && q && !q.timer) delete notePend[name]; };
+    p.text = text;                                     // a sheet's timer still waiting sends the newest text when it fires
+    p.flight = api("/collection", { op: "note", names: [name], text: text }, keep).then(function (d) {
+      if (last()) hold(name, "note", text);
+      done();
+      state.rows = d.takes ? fresh(d.takes, asked) : state.rows; paint();
+    }, function (e) { done(); throw e; });
+    return p.flight;
   }
+  // the sheet's note: its own timer a take (a key in another take's sheet cancels nothing), sent at once when the sheet closes, gives way to
+  // another take's, or a 👍, 👎, ⭐ or a rename is clicked in it
+  function noteSay(name, text, bad) {
+    var el = $("sheetNoteState");
+    if (sheetName !== name || !el) return;
+    el.textContent = text;
+    el.classList.toggle("is-bad", !!bad);
+  }
+  // HERESY 2128 (the audit of 06.11.2026: «Отказ сохранить заметку проглатывается»): a refusal (a frozen take, a read-only window, the lab away) is
+  // said where the note was typed, and once by a toast; the status no longer stays «…» for ever
+  var noteBad = {};
+  function noteSave(name, text, keep) {
+    noteSay(name, "…");
+    return setNote(name, text, keep).then(function () {
+      delete noteBad[name];
+      if (!(notePend[name] && notePend[name].timer)) noteSay(name, "saved");
+      return true;
+    }, function (e) {
+      var why = (e && e.message) || String(e), r = rowOf(name);
+      if (keep) noteJournal("failed", 1, why);         // HERESY 2158: sent as the page went hidden, refused
+      noteSay(name, "not saved: " + why, true);
+      if (!noteBad[name] || sheetName !== name) toast("The note on \u201c" + (r ? r.title : name) + "\u201d is not saved: " + why, true);
+      noteBad[name] = 1;
+      return false;
+    });
+  }
+  function noteQueue(name, text) {
+    var p = notePend[name] || (notePend[name] = {});
+    clearTimeout(p.timer);
+    p.text = text;
+    noteSay(name, "…");
+    p.timer = setTimeout(function () { var q = notePend[name] || p; q.timer = 0; noteSave(name, q.text); }, 900);
+  }
+  function noteFlush(name, keep) {
+    var p = notePend[name];
+    if (!p) return Promise.resolve(true);
+    if (p.timer) { clearTimeout(p.timer); p.timer = 0; return noteSave(name, p.text, keep); }
+    return p.flight ? p.flight.then(function () { return true; }, function () { return false; }) : Promise.resolve(true);
+  }
+  // HERESY 2158 (the audit's review of 2128, 06.11.2026): a note typed within its 0.9 s before an F5 or a closed tab was lost with its timer. The page
+  // going hidden sends every note still waiting at once, with keepalive (the page lives on: its answer is read as ever); the page going away (pagehide,
+  // which comes first on a reload) sends them by sendBeacon. The beacon names no page instance: a keepalive write that named it would reach the lab
+  // after the lease's own release, and the lab gives a free lease to whoever writes (lease.py), so the reloaded page would find its own dead
+  // instance holding it; a read-only window sends nothing (2081). What went is kept on this device by a hash of its text (ruach.notesLeft, never
+  // mirrored), and the next load reads the lab: a note that is not there, or a beacon the browser would not queue, is said in the debug journal
+  var LEFT_KEY = "ruach.notesLeft";
+  function noteHash(t) { var h = 2166136261; t = String(t || ""); for (var i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h.toString(36) + "." + t.length; }
+  function noteJournal(what, n, why) {
+    var D = window.HeresyDebug;
+    if (!D || !D.note) return;
+    D.note({ k: "note-flush", what: what, n: n, why: String(why || "").slice(0, 120) });   // never the note's words nor the take's name
+    if (what !== "failed" && D.flush) D.flush();
+  }
+  function notesLeaving() {
+    var L = window.ruachLease, mine = !L || !L.mayWrite || L.mayWrite(), left = {}, unsent = 0;
+    Object.keys(notePend).forEach(function (name) {
+      var p = notePend[name];
+      if (!p || !p.timer) return;                      // on its way already (its keepalive or the sheet's own), or answered
+      clearTimeout(p.timer); p.timer = 0;
+      var ok = false;
+      try {
+        ok = mine && !!navigator.sendBeacon && navigator.sendBeacon("/lab/collection",
+          new Blob([JSON.stringify({ op: "note", names: [name], text: p.text })], { type: "application/json" }));
+      } catch (e) { ok = false; }
+      left[name] = { h: noteHash(p.text), sent: ok, ro: !mine };
+      if (!ok) unsent++;
+    });
+    if (!Object.keys(left).length) return;
+    store(LEFT_KEY, JSON.stringify({ at: Date.now(), notes: left }));
+    if (unsent) noteJournal(mine ? "not queued" : "read-only", unsent, mine ? "sendBeacon queued nothing as the page went" : "a read-only window sends no write");
+  }
+  function notesLeftCheck(rows) {                      // the next load: what went as the last page went, held to the lab's answer
+    var raw = recall(LEFT_KEY), rec = null;
+    if (!raw) return;
+    try { localStorage.removeItem(LEFT_KEY); } catch (e) { /* private */ }
+    try { rec = JSON.parse(raw); } catch (e) { rec = null; }
+    if (!rec || !rec.notes || typeof rec.notes !== "object") return;
+    var by = {}, lost = 0, unsent = 0;
+    (rows || []).forEach(function (r) { by[r.name] = r; });
+    Object.keys(rec.notes).forEach(function (name) {
+      var x = rec.notes[name] || {};
+      if (!x.sent) { unsent++; return; }
+      if (!by[name] || noteHash(by[name].note || "") !== x.h) lost++;
+    });
+    if (unsent) noteJournal("not sent", unsent, "the last page went with a note it could not send");
+    if (lost) noteJournal("not on the lab's disk", lost, "a note sent as the last page went is not what the lab holds");
+  }
+  window.addEventListener("pagehide", notesLeaving);
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState !== "hidden") return;
+    Object.keys(notePend).forEach(function (name) { if (notePend[name] && notePend[name].timer) noteFlush(name, true); });
+  });
 
   // for the takes column: hidden ones stay out of it
-  function isHidden(name) { return state.rows.some(function (r) { return r.name === name && r.hidden; }); }
+  function isHidden(name) { var r = rowOf(name); return !!(r && r.hidden); }
   // HERESY 1162 (Viktor: «снимать её при первом же проигрывании трека»): the first play takes a take's freshness off
-  function isFresh(name) { return state.rows.some(function (r) { return r.name === name && r.fresh; }); }
+  function isFresh(name) { var r = rowOf(name); return !!(r && r.fresh); }
   function markPlayed(name) {
     var r = rowOf(name);
     if (!r || !r.fresh) return;
@@ -2642,19 +3661,22 @@
   }
 
   window.HeresyCollection = { init: init, reload: load, hubOpen: hubOpen, repaint: paint, paintArts: paintArts, isHidden: isHidden, isFresh: isFresh, markPlayed: markPlayed, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
-                              current: current, landable: landable, closedWs: closedWs, firstWs: firstWs, absent: function () { return state.loadStatus === 404; }, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, rateMany: rateMany, favMany: favMany, exportChecked: exportZip, note: note, setNote: setNote, editNote: editNote, playlist: function () { return (state.playlist || []).slice(); }, playlistOrder: plPlayOrder, playlistOnly: function () { return state.plOnly; }, playlistAdd: plAdd, openPlaylist: plOpen, playlistXfade: function () { return +state.plXfade || 0; }, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
-                              order: function () { return state.place === "__trash" ? [] : state.place === "__playlist" ? (state.playlist || []).slice() : shown().map(function (r) { return r.name; }); },
+                              current: current, landable: landable, closedWs: closedWs, firstWs: firstWs, absent: function () { return state.loadStatus === 404; }, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, rateMany: rateMany, favMany: favMany, exportChecked: exportZip, exportHow: exportHow, note: note, setNote: setNote, editNote: editNote, playlist: function () { return (state.playlist || []).slice(); }, playlistOrder: plPlayOrder, playlistOnly: function () { return state.plOnly; }, playlistAdd: plAdd, openPlaylist: plOpen, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
+                              order: function () { return state.place === "__trash" ? [] : state.place === "__playlist" ? plList() : shown().map(function (r) { return r.name; }); },
                               deal: function (names) { if (!names) { DEAL = {}; return []; } return names.slice().sort(function (x, y) { return dealt(x) - dealt(y); }); },   // HERESY 1863: for the checks
-                              datasheet: openDatasheet, sung: sungMany, sungOf: function (n) { return (state.sung || {})[n]; }, sungMark: sungMark, modelLine: modelLine, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
-                              row: rowOf, workspaces: function () { return state.ws.slice(); }, act: act, openSheet: openSheet, requestOf: requestOf,
+                              notesLeft: notesLeftCheck, noteHash: noteHash,   // HERESY 2158: for the checks
+                              datasheet: openDatasheet, sung: sungMany, sungOf: function (n) { return (state.sung || {})[n]; }, sungMark: sungMark, tailOf: function (n) { return (state.tail || {})[n] || null; }, tailMark: tailMark, modelLine: modelLine, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
+                              row: rowOf, workspaces: function () { return state.ws.slice(); }, act: act, openSheet: openSheet, requestOf: requestOf, fitHead: fitHead, matcher: matcher,   // 2028: for the checks   // 2023: fitHead for the checks
                               selected: names, place: function () { return state.place; }, moveTo: moveTo,
+                              albumMenu: plAlbumMenu, albums: function () { return (state.albums || []).map(function (a) { return a.name; }); }, plTags: plTags,   // HERESY 2050
+                              idQuery: idQuery, plRootCount: plRootCount, plTagOk: plTagOk, tagsOn: function (t) { if (t) state.plTags = t.slice(); return state.plTags.slice(); },   // HERESY 2058: for the checks
                               markFavorite: markFavorite, markBtns: markBtns, markOf: markOf, isBlind: isBlind, paintMarks: paintMarks, reactBtn: reactBtn, reactOf: reactOf, setReact: setReact, reactClose: reactClose, REACTS: REACTS,   // HERESY 1802
                               pinned: function (name) { return ((state.pins || {})[state.place] || []).indexOf(name) >= 0; }, pin: pin,
                               pinPlaces: pinPlaces, unpinAll: unpinAll, pinTarget: pinTarget, pinIn: pinIn,   // HERESY 1167
                               isFrozen: function (name) { var r = rowOf(name); return !!(r && r.frozen); },   // HERESY 1166
                               isProtected: isProtected, protect: protect, protectMany: protectMany, protTip: function (on) { return on ? PROT_ON : PROT_OFF; },   // HERESY 1368
                               undoable: undoable, untrash: untrash, guard: guarded,   // HERESY 1474: the take's menu asks as the bar does
-                              trash: function (names) { return api("/trash", { op: "move", names: names }).then(function (d) { saidProtected(d); ((d && d.moved) || names).forEach(function (n) { delete state.sel[n]; }); return load().then(function () { return d; }); }); },
+                              trash: function (names) { return api("/trash", { op: "move", names: names }).then(function (d) { saidProtected(d); saidSkipped(d); if (d && d.locked && d.locked.length) toast(d.locked.length + " stayed: their workspace locks its takes", true); ((d && d.moved) || names).forEach(function (n) { delete state.sel[n]; }); return load().then(function () { return d; }); }); },
                               // HERESY 1169 · 1239 (Viktor 08.10.2026: «Я переместил в корзину три трека, а блок так и остался раскрытым, и не исчез обратно в "тень"»): what the menu sends away leaves the choice, as with the bar's own buttons
                               unselect: function (names) { (names || []).forEach(function (n) { delete state.sel[n]; }); paint(); } };
 })();

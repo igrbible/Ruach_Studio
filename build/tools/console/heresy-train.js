@@ -239,7 +239,7 @@
       html = list.length ? list.map(card).join("") : '<p class="row-hint tr-empty">' + (state.filter === "active" ? "Nothing trains now." : state.filter === "archived" ? "Nothing archived." : "No runs yet: steps 1 to 3.") + "</p>";
     }
     $("trRunList").innerHTML = html;
-    var n = runs().filter(function (r) { return !r.archived; }).length;
+    var n = state.data ? runs().filter(function (r) { return !r.archived; }).length : "\u2026";   // HERESY 2034: not 0 before the runs are known
     $("trRunCount").textContent = n;
     $("trUnfoldCount").textContent = n;
     $("trLayout").classList.toggle("is-folded", state.folded);
@@ -810,43 +810,8 @@
     }).catch(function (e) { state.voiceJob = { name: name, status: "failed", error: e.message }; paintVoice(); });
   }
 
-  // HERESY 1100: the starter sets (Viktor: "so a person can start experimenting, not beat their head against a wall").
-  // Shown on a click; each fetched only after its size and terms are read and agreed; while one downloads, its
-  // bytes so far; when it lands, the Material list reads it like any folder.
-  var starter = { open: false, data: null, timer: 0 };
-  function loadStarter() {
-    return api("/train/starter").then(function (d) { starter.data = d; paintStarter(); }).catch(function (e) {
-      $("trStarter").innerHTML = '<p class="tr-warn">The starter sets could not be listed: ' + esc(e.message) + "</p>";
-    });
-  }
-  function paintStarter() {
-    var d = starter.data, el = $("trStarter");
-    if (!d) return;
-    var busy = false, landed = false;
-    el.innerHTML = '<p class="row-hint">' + esc(d.terms) + ". Downloading means accepting them.</p>" + d.sets.map(function (s) {
-      var j = s.job || {}, right;
-      if (s.present) right = '<span class="tr-st-in">✓ in datasets/raw/</span>';
-      else if (j.status === "running") { busy = true; right = '<span class="tr-st-run">' + gb(j.got || 0) + " of " + gb(s.bytes) + "…</span>"; }
-      else right = (j.status === "failed" ? '<span class="tr-warn">' + esc(j.error) + "</span>" : "") + '<button type="button" class="btn ghost small" data-starter="' + esc(s.name) + '">Download · ' + gb(s.bytes) + "</button>";
-      if (j.status === "done") landed = true;
-      return '<div class="tr-st-row"><div><b>' + esc(s.name) + "</b><span>" + esc(s.what) + " · " + s.tracks + " tracks</span></div>" + right + "</div>";
-    }).join("");
-    clearTimeout(starter.timer);
-    if (busy && starter.open) starter.timer = setTimeout(loadStarter, 2000);
-    if (landed && !busy) load();
-  }
-  function toggleStarter() {
-    starter.open = !starter.open;
-    $("trStarter").hidden = !starter.open;
-    $("trStarterOpen").setAttribute("aria-expanded", String(starter.open));
-    if (starter.open) { $("trStarter").innerHTML = '<p class="row-hint">Asking the lab…</p>'; loadStarter(); } else clearTimeout(starter.timer);
-  }
-  function fetchStarter(name) {
-    var s = starter.data.sets.filter(function (x) { return x.name === name; })[0];
-    confirmBox("Download " + s.name + "?\n\n" + s.what + ", " + s.tracks + " tracks, " + gb(s.bytes) + " from Hugging Face (" + starter.data.repo + ") into datasets/raw/" + s.name + ".\n\n" + starter.data.terms + ".", { ok: "Download, terms accepted" })
-      .then(function (ok) { if (ok) return api("/train/starter", { name: name }).then(function (d) { starter.data = d; paintStarter(); }); })
-      .catch(function (e) { toast(e.message, true); });
-  }
+  // HERESY 2093 (Viktor 05.11.2026: «Давай вообще удалим … Слишком много услужливости. У нас есть гайды по тренеру… Ничего по стартовым датасетам не даём»): the ready sets
+  // (HERESY 1100, 2078) are gone; the Material step reads one's own folders in datasets/raw/
 
   // ------------------------------------------------------------------ 2 The set
   function makeSet() {
@@ -1093,8 +1058,6 @@
       $("trSetName").value = b.dataset.voiceName;
       toast("The set's name: " + b.dataset.voiceName);
     });
-    $("trStarterOpen").addEventListener("click", toggleStarter);
-    $("trStarter").addEventListener("click", function (e) { var b = e.target.closest("[data-starter]"); if (b) fetchStarter(b.dataset.starter); });
     $("trTracks").addEventListener("change", function (e) { var i = e.target.dataset.in; if (i !== undefined) { state.rows[+i].include = e.target.checked; paintTracks(); paintPills(); } });
     $("trTracks").addEventListener("input", function (e) {
       if (e.target.dataset.style !== undefined) state.rows[+e.target.dataset.style].style = e.target.value;

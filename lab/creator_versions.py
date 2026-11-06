@@ -112,7 +112,10 @@ def _read(d, vid):
 def _write(d, book):
     p = _path(d, book["id"])
     tmp = Path(str(p) + ".part")
-    json.dump(book, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    with open(tmp, "w", encoding="utf-8") as fh:   # HERESY 2083: written whole and on the disk before it takes the file's place
+        json.dump(book, fh, ensure_ascii=False, indent=1)
+        fh.flush()
+        os.fsync(fh.fileno())
     os.replace(tmp, p)
 
 

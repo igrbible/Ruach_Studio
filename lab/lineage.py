@@ -24,10 +24,22 @@ WHAT = {"trim": "trimmed to the text", "crop": "cropped", "cut": "a section remo
         "replace": "a section replaced", "once": "sung once more", "interlude": "an interlude inserted", "window": "a window sung anew", "vla": "through the analog loop"}
 
 
+EDITED = {"crop": "cropped", "remove": "a section removed", "cut": "a section removed", "arrange": "arranged", "speed": "its speed changed"}
+
+
 def _sig(out):
+    """outputs/' own mtime and count, and (HERESY 2011, the audit's C6) the newest meta.json and request.json in it: a rename changes a take's
+    meta.json, not outputs/, and the tree kept the old title."""
     try:
-        st = out.stat()
-        return (int(st.st_mtime_ns), sum(1 for _ in os.scandir(out)))
+        st, newest, n = out.stat(), 0, 0
+        for e in os.scandir(out):
+            n += 1
+            for f in ("meta.json", "request.json"):
+                try:
+                    newest = max(newest, os.stat(os.path.join(e.path, f)).st_mtime_ns)
+                except OSError:
+                    pass
+        return (int(st.st_mtime_ns), n, newest)
     except OSError:
         return None
 
@@ -52,6 +64,11 @@ def _index(kit):
             except (OSError, ValueError):
                 m = {}
             p = str(r.get("parent") or "")
+            ed = r.get("edited") if isinstance(r.get("edited"), dict) else {}
+            if not p and ed.get("from"):                 # HERESY 2011 (the audit's C8): a take made by Edit names its source in edited.from
+                p = str(ed["from"])
+                if not r.get("what") and str(ed.get("op") or "") in EDITED:
+                    r["what"] = EDITED[str(ed["op"])]
             if p and p != e.name:
                 parent[e.name] = p
                 kids.setdefault(p, []).append(e.name)

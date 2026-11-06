@@ -201,6 +201,17 @@
         .then(function (r) { return r.json(); }).then(function () { watchChain(t.name); }, function () { /* said by the next look */ });
     }, function () { /* left running */ });
   }   // HERESY 1598: on the canvas it runs the way drawn there
+  // HERESY 2127 (audit 06.11.2026): the way in hand is a pipeline the lab's list has not brought yet (the lab answers it in seconds after F5), or
+  // could not bring: nothing runs in its stead (the classic chain was sent), and the way is neither tested nor edited from the classic chain; said
+  function wayPending() { return !!PIPE.on && !pipeOf(); }
+  function waitWord() { return PIPE.failed ? tr("The pipeline did not load") + ": " + PIPE.failed : tr("Loading the pipeline…"); }
+  function wayHeld() {
+    if (!wayPending()) return false;
+    var say = chain.hooks && chain.hooks.toast;
+    if (PIPE.failed) { if (say) say(tr("The pipelines did not load ({0}): nothing done; asking the lab again").replace("{0}", PIPE.failed), "bad"); PIPE.tries = 0; pipeLoad(); }
+    else if (say) say(tr("The pipeline in hand is still loading: nothing done; try again in a moment"), "bad");
+    return true;
+  }
   function wayEmpty() {                            // HERESY 1598: a way with no step on it: said, nothing sent
     var p = pipeOf();
     if (!p || pipeSteps().length) return false;
@@ -248,6 +259,7 @@
   }
   function runChain() {
     if (!state.take) return;
+    if (wayHeld()) return;                           // HERESY 2127
     if (wayEmpty()) return;                          // HERESY 1598
     if (CV.target && chainNode(CV.target) && runUntil(CV.target)) return;   // HERESY 1571: up to the target
     if (pipeOf()) { var pb = pipeBody(); if (pb) startChain(pb); return; }   // HERESY 1553
@@ -258,6 +270,7 @@
   // ---- HERESY 1562: the chain on many takes, one after another on Forge
   var BATCH = { timer: 0, was: "" };
   function batchBody(names) {
+    if (wayHeld()) return null;                      // HERESY 2127
     var b = pipeOf() ? pipeBody() : (saveChainPrefs(), chainBody());
     if (!b) return null;
     delete b.name;
@@ -332,6 +345,7 @@
   }
   function batchAsk(names) {                          // HERESY 1955: the bucket's takes, asked first
     if (!Array.isArray(names)) { bucketOpen(); return; }
+    if (wayHeld()) return;                           // HERESY 2127
     if (wayEmpty()) return;                          // HERESY 1598
     if (!names.length) { chain.hooks.toast && chain.hooks.toast(tr("No takes here to refine"), "bad"); return; }
     var text = tr(CV.on ? "Run this way on {0} takes?" : "Run this chain on {0} takes?").replace("{0}", names.length) + "\n\n" + tr("The bucket:") + " " +
@@ -377,7 +391,9 @@
 
   // ---- HERESY 1553: the chain's profiles. The pipelines the Studio ships and the plugins bring (the lab's GET /refiner/profiles,
   // «pipelines»), checked there against the steps that are here; the one chosen and its bypassed steps kept in this browser
-  var PIPE = { list: [], on: "", off: {} }, PIPE_KEY = "yue2.chainPipe";
+  // HERESY 2127 (audit 06.11.2026): loaded once the lab's list has come (a 404 of an older lab counts: no pipelines there); failed, the reason
+  // the last ask got no list (the lab down or restarting), the one in hand kept and asked for again
+  var PIPE = { list: [], on: "", off: {}, loaded: false, failed: "", tries: 0, timer: 0 }, PIPE_KEY = "yue2.chainPipe";
   function pipeRecall() { try { var p = JSON.parse(localStorage.getItem(PIPE_KEY) || "{}") || {}; PIPE.on = String(p.on || ""); PIPE.off = p.off || {}; } catch (e) { /* none kept */ } }
   function pipeStore() { try { localStorage.setItem(PIPE_KEY, JSON.stringify({ on: PIPE.on, off: PIPE.off })); } catch (e) { /* private mode */ } }
   function pipeOf() { return PIPE.on ? PIPE.list.filter(function (p) { return p.id === PIPE.on; })[0] || null : null; }
@@ -419,9 +435,9 @@
     try { localStorage.setItem(FOLD_KEY, on ? "1" : ""); } catch (e) { /* private mode */ }
   }
   function pipePaint() {
-    var box = $("postChain"), p = pipeOf(), row = $("pcPipe"), say = $("pcProfSay");
+    var box = $("postChain"), p = pipeOf(), row = $("pcPipe"), say = $("pcProfSay"), wait = wayPending();
     if (!box || !row) return;
-    box.classList.toggle("is-pipe", !!p);
+    box.classList.toggle("is-pipe", !!p || wait);     // HERESY 2127: a pipeline still coming is no classic chain either
     var own = p && p.group !== "public" && p.group !== "builtin" && p.group !== "own", off = pipeOff();   // 1570: My way in the page's words
     row.innerHTML = !p ? "" : p.pipeline.map(function (x, i) {
       var mine = x.step === "plugin" && !pipeBuiltin(x), out = off.indexOf(i) >= 0;
@@ -429,7 +445,7 @@
         "<span" + (mine ? ' translate="no"' : "") + ">" + esc(pipeName(x)) + "</span>" + pipeModes(x).map(function (w) { return " <em>" + esc(w) + "</em>"; }).join("") + "</label>";
     }).join('<span class="pc-arrow">\u203a</span>');
     if (say) {
-      say.textContent = p ? p.tip || p.say || "" : "";
+      say.textContent = p ? p.tip || p.say || "" : wait ? waitWord() : "";
       if (own) say.setAttribute("translate", "no"); else say.removeAttribute("translate");
     }
     var sel = $("pcProfile");
@@ -443,8 +459,11 @@
     var ours = PIPE.list.filter(function (p) { return p.group === "public" || p.group === "builtin"; }), theirs = PIPE.list.filter(function (p) { return ours.indexOf(p) < 0 && p.id !== "own"; });
     sel.innerHTML = (CV.on ? "" : '<option value="">Classic chain</option>') + (PIPE.own ? '<option value="own">My way</option>' : "") + ours.map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.name) + "</option>"; }).join("") +
       theirs.map(function (p) {
-        return '<option value="' + esc(p.id) + '" translate="no">' + esc((p.plugin_name ? p.plugin_name + " \u00b7 " : "") + p.name) + "</option>"; }).join("");
-    if (!pipeOf()) {                                  // HERESY 1599: a pipeline gone (own plugins off) leaves My way in hand on the canvas
+        return '<option value="' + esc(p.id) + '" translate="no">' + esc((p.plugin_name ? p.plugin_name + " \u00b7 " : "") + p.name) + "</option>"; }).join("") +
+      (!PIPE.loaded && wayPending() ? '<option value="' + esc(PIPE.on) + '" disabled>' + esc(waitWord()) + "</option>" : "");   // HERESY 2127: the one in hand, still coming (once the list is here it is decided below, nothing left saying it loads)
+    // HERESY 2127 (audit 06.11.2026: after F5 the way in hand was lost and Run the way sent the classic chain): nothing is decided about the way in
+    // hand before the lab's list has come; until then it stays in hand as it was kept (My way is in the list from the start: ownRecall)
+    if (!pipeOf() && PIPE.loaded) {                   // HERESY 1599: a pipeline gone (own plugins off) leaves My way in hand on the canvas
       if (CV.on && PIPE.on && PIPE.on !== "own") { if (!PIPE.own) PIPE.own = { pipeline: [], source: "take" }; PIPE.on = "own"; ownSync(); return; }
       PIPE.on = "";
     }
@@ -453,11 +472,21 @@
   }
   function pipeLoad() {
     if (!window.fetch) return;
-    fetch("/lab/refiner/profiles", { priority: "low" }).then(function (r) { return r.ok ? r.json() : {}; }).then(function (d) {
+    clearTimeout(PIPE.timer);
+    fetch("/lab/refiner/profiles", { priority: "low" }).then(function (r) {
+      if (r.status === 404) return {};                // an older lab: the classic chain only
+      // HERESY 2127: any other refusal is no answer that there are no pipelines (an empty list kept the one in hand from coming back)
+      return r.json().then(function (b) { if (!r.ok) throw new Error((b && b.error) || "HTTP " + r.status); return b; }, function () { throw new Error("HTTP " + r.status); });
+    }).then(function (d) {
       PIPE.list = (Array.isArray(d.pipelines) ? d.pipelines : []).filter(function (p) { return !(window.HeresyPro && window.HeresyPro.off()) || p.group === "public" || p.group === "builtin"; });   // HERESY 1599
       if (PIPE.own) PIPE.list.push(ownEntry());     // HERESY 1570
+      PIPE.loaded = true; PIPE.failed = ""; PIPE.tries = 0;
       pipeFill();
-    }).catch(function () { /* an older lab: the classic chain only */ });
+    }, function (e) {                                 // HERESY 2127: the lab down or restarting: the way in hand kept as it is, said, asked again
+      PIPE.failed = String((e && e.message) || "no answer");
+      if (!PIPE.loaded && PIPE.tries++ < 12) PIPE.timer = setTimeout(pipeLoad, 10000);
+      pipeFill();
+    }).catch(function () { /* a paint that failed is no list that failed */ });
   }
   function dawNow() {                                // the DAW «as set now»: the mix it holds for this take, else the lab mixes neutrally
     var M = window.HeresyMixer, s = M && M.state ? M.state() : null;
@@ -491,6 +520,26 @@
       .catch(function (e) { $("pcRun").disabled = false; chain.hooks && chain.hooks.toast && chain.hooks.toast("The chain did not start: " + e.message, "bad"); });
   }
 
+  // HERESY 2105 (Viktor's debug journal of 05.11.2026: refiner/profiles, chain/batch and audio/devices, with section/live, ended last on every load and
+  // held the line while the page came up): what only the Refiner shows is asked when the Refiner is open, after the page's first paint; never before
+  var OPENED = { done: false, wait: [] };
+  function whenOpen(fn) {
+    if (OPENED.done) return fn();
+    OPENED.wait.push(fn);
+    if (OPENED.wait.length > 1) return;
+    var go = function () {
+      if (OPENED.done || document.body.dataset.tab !== "post") return;
+      OPENED.done = true;
+      var list = OPENED.wait.splice(0);
+      list.forEach(function (f) { try { f(); } catch (e) { if (window.console) console.warn("Refiner:", e); } });
+    };
+    var after = window.ruachAfterPaint || function (f) { setTimeout(f, 0); };
+    after(go);
+    if (window.MutationObserver) new MutationObserver(function (m, obs) { if (document.body.dataset.tab === "post") { obs.disconnect(); after(go); } })
+      .observe(document.body, { attributes: true, attributeFilter: ["data-tab"] });
+  }
+  window.ruachRefinerAsked = function () { return OPENED.done; };   // for the checks
+
   function init(hooks) {
     chain.hooks = hooks || {};
     var bar = $("postSteps");
@@ -509,7 +558,7 @@
       pipePaint();
     });
     $("pcPipe").addEventListener("change", function (e) { var b = e.target.closest("[data-pipe-on]"); if (b) pipeToggle([+b.dataset.pipeOn]); });
-    pipeLoad();
+    whenOpen(pipeLoad);                              // HERESY 2105: the Refiner's three asks once the Refiner is open, after the first paint
     $("pcBatch").addEventListener("click", function () { bucketOpen(); });  // HERESY 1562; 1955: the bucket
     bucketRecall(); bucketCount();
     $("pcWayNew").addEventListener("click", wayNew);   // HERESY 1598
@@ -518,7 +567,18 @@
       e.target.disabled = true;
       fetch("/lab/chain/batch/stop", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).then(function (r) { return r.json(); }).then(paintBatch, function () { /* said on the next look */ });
     });
-    watchBatch();                                    // a batch running when the page opened
+    whenOpen(watchBatch);                            // a batch running when the page opened (HERESY 2105: asked as the Refiner opens)
+    // HERESY 2118: a batch running through a reload is watched from the boot, the Refiner opened or not: one low ask after the first paint, and only
+    // a running one is followed (every 3 s, as watchBatch does), so its end is said, rung and its takes refreshed (2105 asked only as the Refiner opened)
+    (window.ruachAfterPaint || function (f) { setTimeout(f, 0); })(function () {
+      if (OPENED.done) return;                       // the Refiner opened as the page came up: its own ask has it
+      fetch("/lab/chain/batch", { priority: "low" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (b) {
+        if (!b || b.status !== "running" || BATCH.was) return;
+        paintBatch(b);
+        BATCH.was = b.id;
+        clearTimeout(BATCH.timer); BATCH.timer = setTimeout(watchBatch, 3000);
+      }).catch(function () { /* an older lab: no batches; the Refiner asks again as it opens */ });
+    });
     $("postChain").addEventListener("change", function (e) { if (e.target.id !== "pcDebuzz") saveChainPrefs(); if (e.target.id === "pcStems") paintRemasterSay(); cvPaint(); });
     $("postChain").addEventListener("mouseenter", paintRemasterSay);
     if ($("remasterPanel")) { $("remasterPanel").addEventListener("change", paintRemasterSay); $("remasterPanel").addEventListener("input", paintRemasterSay); }
@@ -553,7 +613,9 @@
     window.addEventListener("heresy-derived", paintTree);   // HERESY 1540: its count as the branches come
     document.addEventListener("click", function (e) { var mb = e.target.closest && e.target.closest("#derivedTree [data-dv-mon], .nd-out [data-dv-mon]"); if (mb) monRow(mb); });   // HERESY 1548; 1964: a node's output too
     window.addEventListener("heresy-derived", function () { if (MON.on) monPaintRows(MON.on); });
-    fetch("/lab/audio/devices", { priority: "low" }).then(function (r) { return r.json(); }).then(function (d) { monSet((d.monitor || {}).out || ""); }, function () { /* no lab: no monitor */ });
+    whenOpen(function () {                           // HERESY 2105: the monitor's device, asked as the Refiner opens
+      fetch("/lab/audio/devices", { priority: "low" }).then(function (r) { return r.json(); }).then(function (d) { monSet((d.monitor || {}).out || ""); }, function () { /* no lab: no monitor */ });
+    });
     loadPlugins();                                   // HERESY 1460
     cvInit();                                        // HERESY 1506
   }
@@ -716,6 +778,7 @@
     cvPaint();
   }
   function runUntil(id) {
+    if (wayHeld()) return false;                     // HERESY 2127
     if (pipeOf()) {                                  // HERESY 1553: the pipeline up to this node's last step in it
       var pb = state.take && !chainBusy() ? pipeBody(id) : null;
       if (!pb) return false;
@@ -877,9 +940,39 @@
   function cvRecall() {
     try { CV.on = openAs(); CV.pos = JSON.parse(localStorage.getItem(CV_POS) || "{}") || {}; } catch (e) { CV.pos = {}; }
     try { CV.posBy = JSON.parse(localStorage.getItem("yue2.refinerPosBy") || "{}") || {}; } catch (e) { CV.posBy = {}; }   // HERESY 1957: each flow's layout
+    try { CV.names = JSON.parse(localStorage.getItem(NAMES_KEY) || "{}") || {}; } catch (e) { CV.names = {}; }   // HERESY 2012: the nodes' own names
     clRecall();                                       // HERESY 1516
   }
-  function flowKey() { return (PIPE.on || "classic") + (CV.full ? ":full" : ""); }   // HERESY 1957: the flow in hand, whose layout the canvas shows (1969: FULL's own)
+  function flowKey() { return (PIPE.on || "classic") + (CV.full ? ":full" : ""); }
+  // HERESY 2012 (Viktor 01.11.2026: «в стиле Комфи дай возможность в кастомном воркфлоу переименовывать ноды, но с лимитом до… 40-50 знаков, чтобы не
+  // разбухли по ширине»): a node's name of your own, ComfyUI's way: Rename in its menu, up to 48 characters, kept for the flow in hand (each flow its
+  // own, SIMPLE and FULL one), and in a profile with the rest of the way; its own name stays in its tip, and an empty name gives it back
+  var NAMES_KEY = "yue2.refinerNames", NAME_MAX = 48;
+  function namesNow() { return (CV.names && CV.names[PIPE.on || "classic"]) || {}; }
+  function namesStore() { try { localStorage.setItem(NAMES_KEY, JSON.stringify(CV.names || {})); } catch (e) { /* private mode */ } }
+  function nameSet(id, v) {
+    var k = PIPE.on || "classic";
+    CV.names = CV.names || {};
+    var m = CV.names[k] = CV.names[k] || {};
+    if (v) m[id] = v; else delete m[id];
+    if (!Object.keys(m).length) delete CV.names[k];
+    namesStore();
+  }
+  function cvRename(id) {
+    var nd = cvNodes().filter(function (x) { return x.id === id; })[0];
+    if (!nd || !window.HeresyDialog) return Promise.resolve(false);
+    var own = nd.ownName || nd.name, ownSaid = nd.step && nd.step.plugin && !nd.step.builtin || nd.clone ? own : tr(own);
+    return window.HeresyDialog.prompt(tr("Rename the node\n\nIts own name: {0}. Up to {1} characters; an empty name gives its own back.").replace("{0}", ownSaid).replace("{1}", NAME_MAX),
+                                      nd.ownName ? nd.name : "", { max: NAME_MAX, ok: tr("Rename"), placeholder: ownSaid }).then(function (v) {
+      if (v === null) return false;
+      v = String(v).replace(/\s+/g, " ").trim().slice(0, NAME_MAX);
+      nameSet(id, v === own || v === ownSaid ? "" : v);
+      pfDirty();
+      var h = $("postCanvas") && $("postCanvas").querySelector(".pcv-nodes"); if (h) h.dataset.html = "";
+      cvPaint();
+      return true;
+    });
+  }   // HERESY 1957: the flow in hand, whose layout the canvas shows (1969: FULL's own)
   function cvStore() {
     if (CV.posBy) CV.posBy[flowKey()] = CV.pos;
     try {
@@ -905,6 +998,8 @@
       var at = clPlace(o, out);
       out.push({ id: c.id, name: (o.step.plugin && !o.step.builtin ? o.step.label : tr(o.step.label)) + " " + clMark(c.n), say: clSay(c), n: o.n, col: at[0], row: at[1], step: o.step, clone: c.of, own: true });
     });
+    var mine = namesNow();                            // HERESY 2012: a name of your own over its own
+    out.forEach(function (nd) { if (mine[nd.id]) { nd.ownName = nd.name; nd.name = mine[nd.id]; } });
     return out;
   }
   // HERESY 1582: a node's slots, ComfyUI's way: [class, name] in and out. file: an audio file (the take, a mix, a remaster); set: a set
@@ -956,7 +1051,13 @@
     return num;
   }
   var NODE_TIP = { "midiPanel": "MuScriptor: the file into multi-instrument MIDI, 34 named instrument groups and the drums; each run a set of the tree", "take": "The take in hand: what every step starts from. A click opens the Takes, to pick another", "importPanel": "A track from anywhere (WAV, FLAC, MP3…) into the library as a take, marked imported; a way wired from here runs on each one imported next", "madePanel": "Every file made from this take, each under the one it came from: play, compare, rate, delete", "spectrumPanel": "The spectrum of the take or of a file made from it: how loud each band is, over time", "inspectPanel": "Faults measured in a file: clicks, clipping, the frame buzz, a hum", "glossPanel": "The lyrics held against what is sung (Whisper): which lines came and which did not", "debuzzPanel": "The frame buzz of YuE2's sound out of the take: needed for every YuE2 take, off for a track from elsewhere", "upscalePanel": "UniverSR redraws the top of the spectrum above a cutoff, the original kept below it", "derivedPanel": "The file split into stems: four, six, eight, or the voice and the rest", "dawPanel": "The stems on lanes: levels, versions, buses and automation, then a mix", "gatePanel": "The Digital Gateway: tape, console and tube in numbers, on a file or a mix", "remasterPanel": "The Debunker: a file or a set of stems balanced, compressed, toned and brought to a loudness", "audioPanel": "This machine's interfaces: the gateway's out and in, the monitor" };
-  function nodeTip(nd) {
+  function nodeTip(nd) {                             // HERESY 2012: a node renamed says its own name first
+    var t = nodeTipOwn(nd);
+    if (!nd.ownName) return t;
+    var own = nd.step && nd.step.plugin && !nd.step.builtin || nd.clone ? nd.ownName : tr(nd.ownName);
+    return tr("Its own name: {0}").replace("{0}", own) + (t ? " \u00b7 " + t : "");
+  }
+  function nodeTipOwn(nd) {
     if (NODE_TIP[nd.id]) return tr(NODE_TIP[nd.id]);
     var st = nd.step;
     return st && st.tip ? (st.plugin && !st.builtin ? st.tip : tr(st.tip)) : "";
@@ -965,6 +1066,7 @@
   function chainSay() {
     var pp = pipeOf();                               // HERESY 1553: a pipeline's steps as they are set
     if (pp) return pipeSteps().map(function (x) { return x.step === "plugin" && !pipeBuiltin(x) ? pipeName(x) : tr(pipeName(x)); }).join(" \u203a ");
+    if (wayPending()) return waitWord();             // HERESY 2127
     var on = [["pcDebuzz", "Debuzz"], ["pcUpscale", "Upscale"], ["pcStems", "Stems"], [null, "Remaster"], ["pcUpEnd", "Upscale"]].filter(function (x) { return !x[0] || ($(x[0]) && $(x[0]).checked); });
     return on.map(function (x) { return tr(x[1]); }).join(" \u203a ");
   }
@@ -1020,6 +1122,7 @@
              ["dawPanel", "gatePanel", 1], ["gatePanel", "remasterPanel", 1],   // HERESY 1547: a mix through the gateway, the gateway's into the Remaster
              ["take", "spectrumPanel", 1], ["take", "inspectPanel", 1], ["take", "glossPanel", 1], ["take", "midiPanel", 1], ["importPanel", "take", 1]];   // 1834
     STEPS.forEach(function (st) { if (st.plugin) w.push(st.spec && st.spec.input === "stems" ? ["derivedPanel", st.id] : ["take", st.id, 1]); });
+    if (wayPending()) w.forEach(function (x) { x[2] = 1; });   // HERESY 2127: a pipeline still coming: no way drawn, the classic chain's neither
     if (pipeOf()) {                                  // HERESY 1553: the pipeline's way, step to step (the checks hang off the file before them)
       w.forEach(function (x) { x[2] = 1; });
       var last = waySource(), seen = {};             // 1570: from the take, or from the import
@@ -1052,6 +1155,10 @@
   function ownRecall() {
     try { var o = JSON.parse(localStorage.getItem(OWN_KEY) || "null"); PIPE.own = o && Array.isArray(o.pipeline) ? o : null; } catch (e) { PIPE.own = null; }
     try { CV.target = localStorage.getItem(TARGET_KEY) || ""; } catch (e) { CV.target = ""; }
+    // HERESY 2127 (audit 06.11.2026): My way in the list at once, so a kept «own» is the way in hand before the lab's list comes (it came seconds
+    // after the canvas asked, and «own» not found was taken for none: the classic chain in hand)
+    PIPE.list = PIPE.list.filter(function (x) { return x.id !== "own"; });
+    if (PIPE.own) PIPE.list.push(ownEntry());
   }
   function ownEntry() {
     return { id: "own", name: "My way", group: "own", pipeline: PIPE.own.pipeline,
@@ -1175,6 +1282,7 @@
   function lastAt(pl, id) { for (var i = pl.length - 1; i >= 0; i--) if (pipeNode(pl[i]) === id) return i; return -1; }
   function wayPairs() {                               // the wires of the chain's way, as cvWireList draws them: the checks hang off the step before
     var pairs = {}, last = waySource();
+    if (wayPending()) return pairs;                  // HERESY 2127: no way drawn (nor cut) while the pipeline in hand is still coming
     wayNow().forEach(function (st) {
       var id = pipeNode(st);
       if (id !== last) pairs[last + ">" + id] = 1;
@@ -1183,6 +1291,7 @@
     return pairs;
   }
   function ownCut(from, to) {
+    if (wayHeld()) return;                           // HERESY 2127: My way is never made from the classic chain in a pipeline's stead
     pfDirty();                                        // HERESY 1957
     var pl = ownStart(), start = isSource(from) ? 0 : lastAt(pl, from) + 1, at = -1;
     for (var i = Math.max(0, start); i < pl.length; i++) if (pipeNode(pl[i]) === to) { at = i; break; }
@@ -1194,6 +1303,7 @@
   }
   function ownLink(from, to) {
     if (!stepFor(to)) return false;
+    if (wayHeld()) return false;                     // HERESY 2127
     pfDirty();                                        // HERESY 1957                   // the take, the chain, an import, Audio I/O: no step to put on the way
     var pl = ownStart(), at = isSource(from) ? 0 : lastAt(pl, from) + 1;
     if (isSource(from)) PIPE.own.source = from === "importPanel" ? "import" : "take";   // the way's first wire: from which source
@@ -1212,6 +1322,7 @@
     return true;
   }
   function ownOff(id) {                               // a step off the way, the steps around it joined (1957: the canvas changed)
+    if (wayHeld()) return;                           // HERESY 2127
     pfDirty();
     var pl = ownStart(), n = pl.length;
     for (var i = pl.length - 1; i >= 0; i--) if (pipeNode(pl[i]) === id) pl.splice(i, 1);
@@ -1243,6 +1354,7 @@
     return { steps: out };
   }
   function wayTest(untilId) {
+    if (wayHeld()) return;                           // HERESY 2127
     clearTimeout(CV.testTimer);
     var go = function (gate) {
       var r = wayCheck(untilId, gate);
@@ -1467,7 +1579,7 @@
   var NODE_ICO = { take: "disc", chain: "layers", importPanel: "import", audioPanel: "vol-hi", debuzzPanel: "waveform", upscalePanel: "chevrons-up",
                    derivedPanel: "rows-2", dawPanel: "sliders", gatePanel: "activity", remasterPanel: "gauge", spectrumPanel: "spectrum", inspectPanel: "scope",
                    glossPanel: "spell-check", midiPanel: "music", madePanel: "folder", treePanel: "folder" };
-  var STEP_ICO = { lead: "ear", tamer: "shield", shape: "activity", duck: "vol-lo", ambient: "sparkles", pianoteq: "music", vupscale: "chevrons-up",
+  var STEP_ICO = { lead: "ear", tamer: "shield", shape: "activity", duck: "vol-lo", ambient: "sparkles", pianoteq: "music", organteq: "music", airteq: "music", vupscale: "chevrons-up",
                    report: "cols-2", match: "swap", lift: "text-larger", mono: "scaling", glue: "layers", ceiling: "gauge" };
   var GROUP_ICO = { mend: "eraser", finish: "sparkles", look: "eye", setup: "cog" };
   function nodeIco(nd) {
@@ -1504,7 +1616,7 @@
       var face = faceable(nd.id);                      // HERESY 1969: FULL: its settings on its face, the node a group (a button holds no fields)
       return (face ? '<div role="group" class="' + cls + ' is-full"' : '<button type="button" class="' + cls + '"') + ' data-node="' + esc(nd.id) + '"' + (nodeTip(nd) && !face ? ' data-tip="' + esc(nodeTip(nd)) + '"' : "") + ' style="left:' + Math.round(x) + "px;top:" + Math.round(y) + 'px">' +
         '<span class="pcv-top"' + (face && nodeTip(nd) ? ' data-tip="' + esc(nodeTip(nd)) + '"' : "") + '>' + (nd.n ? '<span class="pcv-n">' + nd.n + "</span>" : "") +   // 1969: a face's tip on its head
-         nodeIco(nd) + '<span class="pcv-name"' + (st && st.plugin && !st.builtin || nd.clone ? ' translate="no"' : "") + ">" + esc(nd.name) + "</span>" + (nd.id === "dawPanel" ? betaBadge() : "") +
+         nodeIco(nd) + '<span class="pcv-name"' + (st && st.plugin && !st.builtin || nd.clone || nd.ownName ? ' translate="no"' : "") + ">" + esc(nd.name) + "</span>" + (nd.id === "dawPanel" ? betaBadge() : "") +
         (nd.id === CV.target ? '<span class="pcv-target" data-tip="The target: Run the way runs up to here">\u25ce</span>' : "") +   // HERESY 1571
         (faceKind(nd.id) ? '<span class="pcv-fold" role="button" tabindex="-1" data-pcv-fold="' + esc(nd.id) + '" data-tip="' +   // HERESY 1971
           esc(tr(face ? "Fold its settings away: a click on its name opens them in its window" : "Its settings back on its face")) + '">' + (face ? "\u25be" : "\u25b8") + "</span>" : "") +
@@ -1646,13 +1758,20 @@
       if (cl && CV.el) cl.fields = fieldsOf(CV.el);
       Object.keys(CV.swap.keep).forEach(function (k) { fields[k] = CV.swap.keep[k]; });
     }
-    return { fields: fields, canvas: JSON.parse(JSON.stringify(CV.pos || {})), clones: JSON.parse(JSON.stringify(CV.clones)), own: PIPE.own ? JSON.parse(JSON.stringify(PIPE.own)) : null, target: CV.target };   // 1570, 1571
+    return { fields: fields, canvas: JSON.parse(JSON.stringify(CV.pos || {})), clones: JSON.parse(JSON.stringify(CV.clones)), own: PIPE.own ? JSON.parse(JSON.stringify(PIPE.own)) : null, target: CV.target,   // 1570, 1571
+             names: JSON.parse(JSON.stringify(namesNow())) };   // HERESY 2012
   }
   function setupApply(setup) {
     if (CV.swap) cvClose();                           // 1516: the step's own settings back in their panel first
     if (setup && setup.own) { PIPE.own = JSON.parse(JSON.stringify(setup.own)); ownSync(); }   // HERESY 1570: before the profile's choice is set
     if (setup && typeof setup.target === "string") { CV.target = setup.target; try { localStorage.setItem(TARGET_KEY, CV.target); } catch (e) { /* private mode */ } }
     var n = fieldsSet(setup && setup.fields);
+    if (setup && setup.names && typeof setup.names === "object") {   // HERESY 2012: the profile's names for its flow; one from before them leaves them
+      CV.names = CV.names || {};
+      var nk = PIPE.on || "classic";
+      if (Object.keys(setup.names).length) CV.names[nk] = JSON.parse(JSON.stringify(setup.names)); else delete CV.names[nk];
+      namesStore();
+    }
     if (setup && Array.isArray(setup.clones)) { CV.clones = JSON.parse(JSON.stringify(setup.clones)); clStore(); }   // 1516; a profile from before the clones leaves them
     if (setup && setup.canvas) { CV.pos = JSON.parse(JSON.stringify(setup.canvas)); cvStore(); var h = $("postCanvas") && $("postCanvas").querySelector(".pcv-nodes"); if (h) h.dataset.html = ""; }
     cvPaint();
@@ -1781,7 +1900,7 @@
   function cvSet(on) {
     CV.on = !!on;
     if (!CV.on) facesOff();                          // HERESY 1969: the list has its panels back
-    if (CV.on && !PF.loaded) pfLoad();                // HERESY 1515
+    if (CV.on && !PF.loaded && !PF.asked) { PF.asked = true; whenOpen(pfLoad); }   // HERESY 1515; 2105: asked as the Refiner opens, not at the page's boot
     cvStore();
     if (!CV.on) cvClose();
     var view = $("view-post"), box = cvBox(), btn = $("postView");
@@ -2097,7 +2216,9 @@
         return;
       }
       if (l && nd && nd.dataset.node !== l.from && !nd.classList.contains("cannot-take")) {
-        var to = nd.dataset.node, onWay = ownLink(l.from, to);   // HERESY 1570
+        var to = nd.dataset.node;
+        if (stepFor(to) && wayHeld()) return;          // HERESY 2127: a pipeline still coming: the wire neither on the way nor a Source, as the toast says
+        var onWay = ownLink(l.from, to);               // HERESY 1570
         if (to === "dawPanel") dawTake(l.from, onWay);           // HERESY 1580: the DAW's lanes, not a Source
         else cvLink(l.from, to, onWay);
       }
@@ -2144,7 +2265,8 @@
       var nd = e.target.closest(".pcv-node");
       if (!nd || !window.HeresyMenu || e.target.closest(".pcv-face")) return;   // 1969: a face's field keeps its own menu
       e.preventDefault();
-      var id = nd.dataset.node, c = chainNode(id), items = [{ label: "Open", icon: "\u2197", action: function () { cvOpen(id); } }];
+      var id = nd.dataset.node, c = chainNode(id), items = [{ label: "Open", icon: "\u2197", action: function () { cvOpen(id); } },
+        { label: "Rename", icon: "\u270e", action: function () { cvRename(id); }, hint: "A name of your own for this node, up to 48 characters; its own name stays in its tip" }];   // HERESY 2012
       if (c) items.push({ label: "Run up to here", icon: "\u25b6", disabled: !state.take || chainBusy(), action: function () { runUntil(id); },
                           hint: "The way up to this node and no further: a step bypassed on it is skipped, this one runs" });
       if (c && c.box) items.push({ label: bypassed(id) ? "Back onto the way" : "Bypass on the way", icon: "\u2933", action: function () { toggleBypass(id); },
@@ -2338,7 +2460,7 @@
       (s.spec.tip ? '<p class="row-hint"' + no + ">" + esc(s.spec.tip) + "</p>" : "") + "</div>";
     d.querySelector(".pl-run").addEventListener("click", function () { runPlugin(s, d); });
     d.querySelector(".pl-source").addEventListener("change", function () { this.dataset.touched = "1"; });   // HERESY 1465: his pick stays
-    if (s.builtin && s.pstep === "pianoteq" && window.HeresyPianoteq) window.HeresyPianoteq.mount(d);   // HERESY 1977: Pianoteq's own panel
+    if (s.builtin && /^(pianoteq|organteq|airteq)$/.test(s.pstep) && window.HeresyPianoteq) window.HeresyPianoteq.mount(d, s.pstep);   // HERESY 1977, 2036: Modartt's own panel
     return d;
   }
   function paintPluginSources() {
@@ -2698,10 +2820,11 @@
   }
   window.HeresyPost = { init: init, setTake: setTake, select: select, has: function (id) { return STEPS.some(function (s) { return s.id === id; }); },
     plugins: loadPlugins, unplug: unplug,   // HERESY 1460
-    pipes: function () { return { list: PIPE.list, on: PIPE.on, off: pipeOff(), body: pipeOf() ? pipeBody() : null }; }, pipeLoad: pipeLoad,   // HERESY 1553
+    pipes: function () { return { list: PIPE.list, on: PIPE.on, off: pipeOff(), body: pipeOf() ? pipeBody() : null, loaded: PIPE.loaded, failed: PIPE.failed }; }, pipeLoad: pipeLoad,   // HERESY 1553; 2127: loaded, failed
     batch: startBatch, batchAsk: batchAsk, watchBatch: watchBatch, bucketAdd: bucketAdd, bucketOpen: bucketOpen, bucket: function () { return BK.names.slice(); },   // HERESY 1955   // HERESY 1562
     audio: { load: function () { au.data = null; auLoad(true); }, data: function () { return au.data; } },   // HERESY 1512
-    canvas: { set: function (on) { cvSet(on); }, on: function () { return CV.on; }, open: cvOpen, close: function () { cvClose(); }, opened: function () { return CV.open; },
+    canvas: { rename: cvRename, names: function () { return JSON.parse(JSON.stringify(namesNow())); },   // HERESY 2012
+              set: function (on) { cvSet(on); }, on: function () { return CV.on; }, open: cvOpen, close: function () { cvClose(); }, opened: function () { return CV.open; },
               step: cvStep, paint: cvPaint, until: runUntil, bypass: toggleBypass, bypassed: bypassed, link: cvLink,
               setup: setupNow, apply: setupApply, profiles: function () { return PF.list.slice(); }, loadProfiles: pfLoad,
               clone: cvClone, unclone: cvUnclone, clones: function () { return JSON.parse(JSON.stringify(CV.clones)); },

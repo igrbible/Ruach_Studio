@@ -7,7 +7,7 @@ download cut short going on from where it stopped, a second try after half a min
     POST /weights/check         fetch-heresy.sh --check: what is here and what is missing; nothing is downloaded
     POST /weights/fetch {…}     one run at a time, on the user's word (the page has said the size): {"part": "missing"}
                                 everything the install brings that is not here, {"part": "loras"} one part of it, or one
-                                extra: {"backbone": "BF16"}, {"ira": "Q8_0"} (1490), {"irae": "IRAEv2-Q8_0"} (1689), {"fw": "2.4x0.75-Q8_0"} (1794), {"listener": "Q8_0"}, {"artwork": "q4"}, {"trainer": "int8"}
+                                extra: {"backbone": "BF16"}, {"ira": "Q8_0"} (1490), {"irae": "IRAEv2-Q8_0"} (1689), {"fw": "2.4x0.75-Q8_0"} (1794), {"tw": "2.0x0.9-Q8_0"} (2074), {"listener": "Q8_0"}, {"artwork": "q4"}, {"trainer": "int8"}
                                 HERESY 1984: or a tier, {"tier": "artist"}: a room's models at the variants this machine's card takes,
                                 fetched item by item, and only when the disk has room for what is not here and 2 GB to spare
 
@@ -26,11 +26,16 @@ from pathlib import Path
 PARTS = {"extras": "1.1 GB", "whisper": "3.1 GB", "stems": "1.0 GB", "upscale": "0.4 GB", "loras": "2.3 GB"}   # HERESY 1292: du -sb, decimal
 # HERESY 1984: measured anew by the pinned file lists (01.11.2026): the decoders without the sliders (1449: 1.06 GB), UniverSR with Apollo-vocal (1583: 0.42)
 # HERESY 1794 (Viktor 25.10.2026: «2.4 ep - самый безопасный, и пусть он будет базовой моделью»): Ruach Studio's own fine-tune, YuE2-RS-FW, its
-# saves folded into m-a-p's base at seven points (epoch x strength), from goldhub/YuE2-RS-Finetunes; the default one comes with the install as a
-# part, at the quant of m-a-p's backbone here (BF16, Q8_0 or Q6_K: there is no Q5_K_M of it, so a Q5_K_M install keeps m-a-p's alone)
+# saves folded into m-a-p's base at seven points (epoch x strength), from goldhub/YuE2-RS-Finetunes. HERESY 2074 (Viktor 05.11.2026: «Давай, быстрецом гоним всё до и для среза 2.0.6»):
+# the install's part «fw» brings the Studio's default, RS-TW 2.0x0.75 (2065), at the quant of m-a-p's backbone here (BF16, Q8_0 or Q6_K: there is no
+# Q5_K_M of either, so a Q5_K_M install keeps m-a-p's alone); RS-FW 2.4x0.75, the safest of the First Wave and RS-TW's base, only where the pinned
+# repo has no RS-TW yet
 FW_MERGES = ["0.7x0.75", "1.5x0.75", "2.4x0.75", "3.4x0.7", "3.4x0.75", "4.0x0.65", "4.0x0.7"]
-FW_DEFAULT = "2.4x0.75"
+FW_SAFEST = "2.4x0.75"   # HERESY 2074: the First Wave's safest, no longer the default (RS-TW 2.0x0.75 is, 2065): no RS-FW variant says so
 FW_SIZES = {"BF16": "7.2 GB", "Q8_0": "3.8 GB", "Q6_K": "2.9 GB"}
+# HERESY 2074: RS-TW, the second wave over RS-FW 2.4x0.75 (2071), at epoch 2.0 and two strengths, from the same repo and at the same three quants
+TW_MERGES = ["2.0x0.75", "2.0x0.9"]
+TW_DEFAULT = "2.0x0.75"
 
 
 def fw_quant(kit):
@@ -111,11 +116,17 @@ EXTRAS = [
          {"id": "IRAE-IRv2-BF16", "size": "7.2 GB", "files": ["models/YuE2-3B-IRAE-IRv2-BF16.gguf"]},
          {"id": "IRAE-IRv2-Q8_0", "size": "3.8 GB", "files": ["models/YuE2-3B-IRAE-IRv2-Q8_0.gguf"]},
          {"id": "IRAE-IRv2-Q6_K", "size": "2.9 GB", "files": ["models/YuE2-3B-IRAE-IRv2-Q6_K.gguf"]}]},
-    # HERESY 1794: Ruach Studio's own fine-tune, the seven merges at three quants each (models/YuE2-3B-RS-FW-<merge>-<quant>.gguf)
+    # HERESY 1794: Ruach Studio's own fine-tune, the seven merges at three quants each (models/YuE2-3B-RS-FW-<merge>-<quant>.gguf); 2074: none the default
     {"name": "fw", "label": "RS-FW merge", "restart": True,
-     "what": "YuE2-3B with Ruach Studio's own fine-tune folded in (YuE2-RS-FW, at seven points of its training: epoch x strength): 2.4x0.75 is the Studio's default, the safest; from goldhub/YuE2-RS-Finetunes (CC BY-NC-SA 4.0). Compute chooses it beside m-a-p's backbones; the adapters themselves are not published",
-     "variants": [dict({"id": f"{v}-{q}", "size": size, "files": [f"models/YuE2-3B-RS-FW-{v}-{q}.gguf"]}, **({"note": "the Studio's default"} if v == FW_DEFAULT else {}))
-                  for v in FW_MERGES for q, size in FW_SIZES.items()]},
+     "what": "YuE2-3B with Ruach Studio's own fine-tune folded in (YuE2-RS-FW, the First Wave, at seven points of its training: epoch x strength): 2.4x0.75 is the safest of the First Wave; from goldhub/YuE2-RS-Finetunes (CC BY-NC-SA 4.0). Compute chooses it beside m-a-p's backbones; the adapters themselves are not published",
+     "variants": [{"id": f"{v}-{q}", "size": size, "files": [f"models/YuE2-3B-RS-FW-{v}-{q}.gguf"]} for v in FW_MERGES for q, size in FW_SIZES.items()]},
+    # HERESY 2074 (Viktor 05.11.2026: «Давай, быстрецом гоним всё до и для среза 2.0.6»): RS-TW beside RS-FW, its two merges at three quants each
+    # (models/YuE2-3B-RS-TW-<merge>-<quant>.gguf, fetch-heresy.sh --tw); 2.0x0.75's three said the Studio's default, as the page's scan says it (2065)
+    # HERESY 2113: named the Tsunami Wave, as the First Wave's row names its wave
+    {"name": "tw", "label": "RS-TW merge", "restart": True,
+     "what": "RS-FW 2.4x0.75 with Ruach Studio's second wave folded in (YuE2-RS-TW, the Tsunami Wave, trained over it: epoch 2.0, two strengths): 2.0x0.75 is the Studio's default, the safe balance; 2.0x0.9 is the boldest, with no promise of stability; from goldhub/YuE2-RS-Finetunes (CC BY-NC-SA 4.0). Compute chooses it beside m-a-p's backbones; the adapters themselves are not published",
+     "variants": [dict({"id": f"{v}-{q}", "size": size, "files": [f"models/YuE2-3B-RS-TW-{v}-{q}.gguf"]}, **({"note": "the Studio's default"} if v == TW_DEFAULT else {}))
+                  for v in TW_MERGES for q, size in FW_SIZES.items()]},
     # HERESY 1811 (Viktor 28.10.2026: «прикручивай как Local Studio LLM… дай выбор юзеру выбрать либо мой качественный квант, либо более сжатый»)
     {"name": "writer", "label": "Studio writer",
      "what": "Qwopus3.5-9B-v3 (Jackrong's fine-tune of Qwen3.5-9B, Apache-2.0), quantized with AutoRound and moved into GGUF bit for bit, from goldhub/Ruach_Studio_Models_v2: the Writer's own language model on this machine, through llama.cpp (vendor/llama.cpp, built by launcher/extras.sh); Engine → Writer chooses between those here",
@@ -356,7 +367,7 @@ TIERS = [
     {"id": "artist", "label": "Artist", "what": "the covers' helpers and the Qwen-Image 2512 painter with Lightning's 8 steps"},
     {"id": "videographer", "label": "Videographer", "what": "MiniMax H3 for the moving shots and SeedVR2 7B sharp to upscale them; the shots' pictures are the Artist's"},
     {"id": "trainer", "label": "LoRA Trainer", "what": "the trainer's base and the style listener that tags a set's songs"},
-    {"id": "merges", "label": "Sound engines", "what": "every merge beside the default: IRA, the five IRAE and the six other RS-FW, at the quant of the backbone here"},
+    {"id": "merges", "label": "Sound engines", "what": "every merge beside the default: IRA, the five IRAE, the seven RS-FW and RS-TW 2.0x0.9, at the quant of the backbone here"},   # HERESY 2074
 ]
 
 
@@ -379,7 +390,10 @@ def _picks(kit, tid):
     if tid == "trainer":
         return [("trainer", "bf16" if v >= 23000 else "int8"), ("listener", "Q8_0" if v >= 12000 else "Q4_K_M")], ""
     q = fw_quant(kit) or "Q6_K"                      # merges: none at Q5_K_M, the nearest above it
-    return [("ira", q)] + [("irae", f"{n}-{q}") for n in IRAE_SETS] + [("fw", f"{m}-{q}") for m in FW_MERGES if m != FW_DEFAULT], ""
+    # HERESY 2074 (Viktor 05.11.2026: «Давай, быстрецом гоним всё до и для среза 2.0.6»): the install brings RS-TW 2.0x0.75 now (2065), not RS-FW 2.4x0.75:
+    # the room takes all seven RS-FW and RS-TW's other merge, 2.0x0.9
+    return ([("ira", q)] + [("irae", f"{n}-{q}") for n in IRAE_SETS] + [("fw", f"{m}-{q}") for m in FW_MERGES]
+            + [("tw", f"{m}-{q}") for m in TW_MERGES if m != TW_DEFAULT]), ""
 
 
 def tiers(kit):
@@ -440,7 +454,7 @@ def _args(body):
         if name == "artwork":
             return ["--only", "none", "--artwork-q8" if v == "q8" else "--artwork", "--yes"], what
         return ["--only", "none", "--" + name, v, "--yes"], what
-    raise ValueError("say what to fetch: a part (missing, " + ", ".join(list(PARTS) + ["fw"]) + "), an extra (backbone, ira, irae, fw, writer, muscriptor, flashsr, listener, artwork, qwen, qwen-fine, art-loras, trainer, h3, upscaler) or a tier (" + ", ".join(x["id"] for x in TIERS) + ")")
+    raise ValueError("say what to fetch: a part (missing, " + ", ".join(list(PARTS) + ["fw"]) + "), an extra (backbone, ira, irae, fw, tw, writer, muscriptor, flashsr, listener, artwork, qwen, qwen-fine, art-loras, trainer, h3, upscaler) or a tier (" + ", ".join(x["id"] for x in TIERS) + ")")
 
 
 def _bytes(size):

@@ -59,7 +59,12 @@ def save(cfg, data):
                 raise ValueError(f"no such file: {s[k]}")
         _read_yours(s)                                   # refused here, not at the first download
     Path(cfg).mkdir(parents=True, exist_ok=True)
-    json.dump(s, open(Path(cfg) / "c2pa.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    p, tmp = Path(cfg) / "c2pa.json", Path(cfg) / "c2pa.json.part"   # HERESY 2083: it was written in place; now beside it whole, on the disk, then in its place
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(s, fh, ensure_ascii=False, indent=1)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, p)
     return s
 
 

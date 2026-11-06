@@ -10,18 +10,24 @@
 // with the ones removed on purpose. The file merges them; it never forgets a key it was not
 // told to. When most keys vanish at once (site data cleared under a live page), that is not a
 // choice to forget: no removals are sent. Only the Engine room's Reset empties the file.
-// The OpenRouter key, the Civitai key (HERESY 1360) and the running-jobs list stay in the browser only: the file is served to
-// anyone on the network who opens the page, and the jobs belong to one session.
+// The Civitai key (HERESY 1360) and the running-jobs list stay in the browser only: the file is served to anyone on the network who
+// opens the page, and the jobs belong to one session. HERESY 2097: the OpenRouter key lives in the lab (user/secrets.json, never served); a key a
+// browser kept before that is moved there by the page once and leaves the browser, and until then it never goes into this file either.
 (function () {
   "use strict";
 
   var PREFIX = "yue2.", STAMP = "yue2.savedAt";
   var KEEP_LOCAL = { "yue2.orKey": 1, "yue2.jobs": 1, "yue2.savedAt": 1, "yue2.civitaiKey": 1 };   // HERESY 1360: the Civitai key too
+  // HERESY 2138 (the audit of 06.11.2026, 2.3): the move to https (heresy-https.js move) handed the whole storage over plain http, a key with Remember
+  // too. Of what stays local here, the running jobs and the stamp are this browser's state and go with the page; everything else is a secret and stays
+  // in the page it was typed into. One list, read there (HeresySettings.secrets): a key added to KEEP_LOCAL stays behind unless it is named below
+  var MOVES_TO_HTTPS = { "yue2.jobs": 1, "yue2.savedAt": 1 };
+  var SECRETS = Object.freeze(Object.keys(KEEP_LOCAL).filter(function (k) { return !MOVES_TO_HTTPS[k]; }));
   // ?scope=NAME in the page address keeps a separate file (a test page must not write into yours)
   var SCOPE = (function () { try { return new URLSearchParams(location.search).get("scope") || ""; } catch (e) { return ""; } })();
   var URL = "/lab/settings" + (SCOPE ? "?scope=" + encodeURIComponent(SCOPE) : "");
   var known = {};           // what the file holds as far as this page knows: key -> value
-  var ok = true, met = false;
+  var ok = true, met = false, sending = false, toldRO = "";
 
   function ls() { try { return window.localStorage; } catch (e) { return null; } }
   function collect() {
@@ -66,18 +72,29 @@
   // ---- 2. write back what changes
   function push(beacon) {
     if (!met) return;       // the lab was down at load: this page's defaults must not overwrite the file
+    // HERESY 2099: one at a time: on a stalled line a send every 4 s piled up behind the first (the next push sends what is still not on disk)
+    if (sending && !beacon) return;
     var now = collect(), changed = {}, removed = [];
     Object.keys(now).forEach(function (k) { if (known[k] !== now[k]) changed[k] = now[k]; });
     Object.keys(known).forEach(function (k) { if (!(k in now)) removed.push(k); });
     var before = Object.keys(known).length;
     if (removed.length > 3 && removed.length * 2 > before) removed = [];   // cleared, not chosen
     if (!Object.keys(changed).length && !removed.length) return;
+    if (window.ruachLease && !window.ruachLease.mayWrite()) {   // HERESY 2081: a page that does not hold the Studio's lease (read-only, asking, left) sends nothing
+      // HERESY 2098: and says so, once for each change, in a read-only window (nothing lost without a word)
+      var sig = JSON.stringify([changed, removed]);
+      if (window.ruachLease.state() === "read-only" && sig !== toldRO && !beacon && window.HeresyLink) { toldRO = sig; window.HeresyLink.refuse("the settings"); }
+      return;
+    }
     var at = Date.now() / 1000;
     try { ls().setItem(STAMP, String(at)); } catch (e) { /* storage off: the file is still written */ }
     var prev = known;
     known = Object.assign({}, known, changed);
     removed.forEach(function (k) { delete known[k]; });
-    send({ saved_at: at, keys: changed, removed: removed }, beacon).catch(function () { ok = false; known = prev; });
+    // HERESY 2011 (the audit, C9): an answer the lab refused (a full disk: 500) resolved as sent, and the keys were never sent again
+    var back = function () { ok = false; known = prev; sending = false; };
+    if (!beacon) sending = true;
+    send({ saved_at: at, keys: changed, removed: removed }, beacon).then(function (sent) { sending = false; if (!sent) back(); }, back);
   }
   setTimeout(function () { push(false); }, 1500);   // a browser that has keys the file lacks writes them out
   setInterval(function () { push(false); }, 4000);
@@ -93,5 +110,5 @@
       .then(function () { location.reload(); }, function () { location.reload(); });
   }
 
-  window.HeresySettings = { reset: reset, flush: function () { push(false); }, reachable: function () { return ok && met; } };
+  window.HeresySettings = { reset: reset, flush: function () { push(false); }, reachable: function () { return ok && met; }, secrets: SECRETS };
 })();

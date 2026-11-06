@@ -1,6 +1,6 @@
-"""The studio's visiting card (ruachstudio.igr.bible): template.html with the studio's logo inline from src/brand (its
+"""The Studio's visiting card (ruachstudio.art): template.html with the Studio's logo inline from src/brand (its
 colours follow the page: the night's in the hero), written as index.html beside it, in English, and as <lang>/index.html
-in the studio's six other languages (Viktor, 06.10.2026: «Я бы уже весь сайт сделал на семи языках»). A static page:
+in the Studio's six other languages (Viktor, 06.10.2026: «Я бы уже весь сайт сделал на семи языках»). A static page:
 serve this folder.
 
 A language's words are in i18n/<lang>.json: each English unit of the page and its translation. A unit is an element
@@ -15,12 +15,15 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 here = Path(__file__).resolve().parent
-SITE = "https://ruachstudio.igr.bible"
+# HERESY 2140 (Viktor 06.11.2026: «Меняй адрес в коде и готов замены в карточки репозиториев. Старый URL станет редиректом 301.»): the card at its own domain; the old address answers 301 to the same path
+SITE = "https://ruachstudio.art"
 SIMPLY = {"ru": "Просто", "uk": "Просто", "be": "Проста", "el": "Απλά", "es": "Simplemente", "it": "Semplicemente",
-          "fr": "Tout simplement", "pt": "Simplesmente", "de": "Einfach", "ja": "とにかく", "zh": "简直"}
+          "fr": "Tout simplement", "pt": "Simplesmente", "de": "Einfach", "ja": "とにかく", "zh": "简直", "he": "פשוט"}
 LANGS = [("en", "English"), ("ru", "Русский"), ("uk", "Українська"), ("be", "Беларуская"), ("el", "Ελληνικά"),
          ("es", "Español"), ("it", "Italiano"), ("fr", "Français"), ("pt", "Português"), ("de", "Deutsch"), ("ja", "日本語"),
-         ("zh", "中文")]   # HERESY 1383: the five the page speaks since 1379
+         ("zh", "中文"), ("he", "עברית")]   # HERESY 1383: the five the page speaks since 1379; 06.11.2026 Hebrew (Viktor: «Сам займись ивритом на сайте»)
+# the languages written right to left: <html dir="rtl">, i18n/<lang>.css (its rules under [dir="rtl"]) and the numbers kept left to right
+RTL = {"he"}
 INLINE = {"b", "i", "em", "strong", "code", "a", "span", "br", "small", "sup", "sub", "kbd", "img"}
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 RAW = {"script", "style", "svg"}
@@ -149,14 +152,23 @@ def page_for(code, template, units, catalog):
     alternates = "\n".join('<link rel="alternate" hreflang="%s" href="%s%s">' % (c, SITE, "/" if c == "en" else "/%s/" % c)
                            for c, _ in LANGS) + '\n<link rel="alternate" hreflang="x-default" href="%s/">' % SITE
     alternates += '\n<link rel="canonical" href="%s%s">' % (SITE, "/" if code == "en" else "/%s/" % code)
-    page = (page.replace('<html lang="en">', '<html lang="%s">' % code)
+    alternates += '\n<meta property="og:url" content="%s%s">' % (SITE, "/" if code == "en" else "/%s/" % code)   # HERESY 2140: the link preview's own address
+    page = (page.replace('<html lang="en">', '<html lang="%s"%s>' % (code, ' dir="rtl"' if code in RTL else ""))
             .replace("{{LANG}}", code.upper()).replace("{{LANGS}}", links).replace("{{ALTERNATES}}", alternates)
-            .replace("{{FIRST_VISIT}}", FIRST_VISIT if code == "en" else ""))
+            .replace("{{FIRST_VISIT}}", FIRST_VISIT.replace("{{HAVE}}", json.dumps([c for c, _ in LANGS])) if code == "en" else ""))
     page = page.replace('content="assets/og.jpg"', 'content="%s/assets/og.jpg"' % SITE)
     # HERESY 1393 (Viktor 12.10.2026: «девиз OSEM как есть, но `Simply` можно на другие языки. И `AWESOME` всё заглавными»): the
     # slogan stays untranslated (translate="no"), its first word speaks the page's language
     if code in SIMPLY:
         page = page.replace('<span class="say">Simply AWESOME</span>', '<span class="say">%s AWESOME</span>' % SIMPLY[code], 1)
+    # 06.11.2026: a language whose little story is not in the template brings it in i18n/<lang>.story.html, and only its own page
+    # carries it, after the template's last story (the other pages stay as they were)
+    story = here / "i18n" / (code + ".story.html")
+    if code != "en" and story.is_file() and 'data-lang="%s"' % code not in page:
+        end = page.find("\n    </div>\n  </section>", page.find('<section id="story">'))
+        if page.find('<section id="story">') < 0 or end < 0:
+            sys.exit("the little story's section has moved: %s's story has no place" % code)
+        page = page[:end] + "\n" + story.read_text(encoding="utf-8").rstrip("\n") + page[end:]
     # HERESY 1392: the little story is shown in the page's own language by the page itself, not only by its script (a reader
     # without scripts and a search engine saw the English one on every page)
     if code != "en" and 'data-lang="%s" hidden>' % code in page:
@@ -169,14 +181,18 @@ def page_for(code, template, units, catalog):
     if cjk:
         page = page.replace("&family=Noto+Sans+Mono:", "&family=" + cjk.replace(" ", "+") + ":wght@400;500;700&family=Noto+Sans+Mono:", 1)
         page = page.replace("</head>", '<style>body, .langs summary { font-family: "Noto Sans", "%s", system-ui, sans-serif; }</style>\n</head>' % cjk, 1)
+    # 06.11.2026: a language's own style (Hebrew: its self-hosted face and the right-to-left page) from i18n/<lang>.css, on its page only
+    own_css = here / "i18n" / (code + ".css")
+    if code != "en" and own_css.is_file():
+        page = page.replace("</head>", "<style>\n%s\n</style>\n</head>" % own_css.read_text(encoding="utf-8").strip("\n"), 1)
     return page, missing
 
 
-# the root page only: the browser's own language at the first visit; a language picked in the menu is kept
+# the root page only: the browser's own language at the first visit; a language picked in the menu is kept ({{HAVE}}: those built)
 FIRST_VISIT = """<script>
   // the browser's own language at the first visit; a language picked in the menu is kept (ruach.lang)
   (function () { try {
-    var have = ["en", "ru", "uk", "be", "el", "es", "it", "fr", "pt", "de", "ja", "zh"], kept = localStorage.getItem("ruach.lang");
+    var have = {{HAVE}}, kept = localStorage.getItem("ruach.lang");
     var want = have.indexOf(kept) >= 0 ? kept : (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || "en"])
       .map(function (l) { return String(l).toLowerCase().split("-")[0]; }).filter(function (l) { return have.indexOf(l) >= 0; })[0];
     if (want && want !== "en") location.replace("/" + want + "/" + location.search + location.hash);
@@ -212,9 +228,64 @@ def typeset(page, code):
         parts[i] = t
     return "".join(parts)
 
+# 06.11.2026 (Hebrew): in a right-to-left page a number led by a sign (−15.5, -18.1, ×0.75/0.75) or a size (1920×1080) is drawn
+# by the bidi algorithm with its sign on the wrong side when Hebrew or nothing stands before it in its block («15.5−»); after a
+# Latin word it is right already (RS-TW 2.0 ×0.9, Spotify −14), and an isolate there would move it. Such a number, and a number
+# with a prime (22″), goes into <bdi dir="ltr">, in the text between the tags only; a Hebrew prefix's hyphen (ב-135) is not a sign.
+# That hyphen keeps its word on its line: a word joiner after it (a line broke «ה-» from «GPU שלך» in the lead)
+BLOCKS = {"p", "li", "td", "th", "div", "h1", "h2", "h3", "h4", "figcaption", "blockquote", "summary", "button", "section", "header",
+          "footer", "nav", "main", "article", "figure", "ul", "ol", "table", "tr", "thead", "tbody", "details", "br", "body"}
+SIGN = "\u2212+\u00b1\u00d7-"                              # − + ± × and the hyphen-minus
+NUM = r"\d+(?:[.,]\d+)*"                                    # 32,633 and 0.75, not the comma after them
+LTR_NUM = re.compile(r"(?:^|(?<=[\s(\[\u2060-]))[" + SIGN + "]" + NUM + r"(?:[/\u00d7][" + SIGN + "]?" + NUM + ")*"
+                     "|" + NUM + "\u00d7" + NUM + "|" + NUM + "[\u2032\u2033]")
+PREFIX = re.compile(r"(?<![\u05d0-\u05ea])([\u05d1\u05d4\u05d5\u05db\u05dc\u05de\u05e9]{1,3})-(?=\S|$)")   # ב ה ו כ ל מ ש, alone or joined
+def bidi_of(text, was):
+    """The last strong letter of text (entities left out): "R" for Hebrew, "L" for any other letter, else was."""
+    for ch in re.sub(r"&#?\w+;", "", text):
+        if "\u0590" <= ch <= "\u05ff" or "\ufb1d" <= ch <= "\ufb4f":
+            was = "R"
+        elif ch.isalpha():
+            was = "L"
+    return was
+def isolate_numbers(page):
+    parts = re.split(r"(<!--.*?-->|<[^>]+>)", page, flags=re.S)
+    inside, last = [], None                                  # the skipped tags open; the last strong letter of the block
+    for i, p in enumerate(parts):
+        if i % 2:
+            m = re.match(r"<(/?)([a-zA-Z][\w-]*)", p)
+            if m:
+                tag = m.group(2).lower()
+                if tag in SKIP_TAGS and not p.endswith("/>"):
+                    if m.group(1):
+                        inside = inside[:-1]
+                    else:
+                        inside.append(tag)
+                if tag in BLOCKS:
+                    last = None
+            continue
+        if inside:                                           # code and pre are Latin text the reader sees; scripts and styles are not
+            if inside[-1] in ("code", "pre"):
+                last = bidi_of(p, last)
+            continue
+        p = PREFIX.sub("\\1-\u2060", p)
+        out, at = [], 0
+        for m in LTR_NUM.finditer(p):
+            last = bidi_of(p[at:m.start()], last)
+            out.append(p[at:m.start()])
+            n = m.group(0)
+            out.append(n if last == "L" and n[-1] not in "\u2032\u2033" else '<bdi dir="ltr">%s</bdi>' % n)
+            at = m.end()
+        out.append(p[at:])
+        last = bidi_of(p[at:], last)
+        parts[i] = "".join(out)
+    return "".join(parts)
+
 if __name__ == "__main__":
     svg = (here.parent / "src/brand/ruach-logo.svg").read_text(encoding="utf-8").strip()
-    template = (here / "template.html").read_text(encoding="utf-8").replace("{{LOGO}}", svg)
+    # HERESY 2026 (Viktor: «В шапке сайта… Давай туда наш логотип»): the bar's own copy, hidden from readers (the link says the name)
+    bar = re.sub(r'role="img" aria-label="[^"]*"', 'aria-hidden="true"', svg.replace('class="ruach-logo"', 'class="ruach-logo bar-logo"', 1), count=1)
+    template = (here / "template.html").read_text(encoding="utf-8").replace("{{LOGO_BAR}}", bar).replace("{{LOGO}}", svg)
     # a language is built once its catalog is here; the menu and the alternates name only the languages built
     built = [(c, n) for c, n in LANGS if c == "en" or (here / "i18n" / (c + ".json")).is_file()]
     LANGS[:] = built
@@ -237,18 +308,41 @@ if __name__ == "__main__":
         # HERESY 1266 (Viktor 09.10.2026: «Переделай лого для всех языков»): the logo in the page's language (src/brand/i18n), the
         # English one where none is
         own = here.parent / "src/brand/i18n" / ("ruach-logo-" + code + ".svg")
-        if code != "en" and own.is_file():
-            a = page.rfind("<svg", 0, page.index('class="ruach-logo"'))
-            page = page[:a] + own.read_text(encoding="utf-8").strip() + page[page.index("</svg>", a) + 6:]
+        if code != "en" and own.is_file():               # HERESY 2026: every logo of the page, the bar's too (its class and its hiding kept)
+            mine, at = own.read_text(encoding="utf-8").strip(), 0
+            while page.find('class="ruach-logo', at) >= 0:
+                i = page.find('class="ruach-logo', at)
+                a = page.rfind("<svg", 0, i)
+                b = page.index("</svg>", a) + 6
+                cls = re.search(r'class="(ruach-logo[^"]*)"', page[a:b]).group(1)
+                new = re.sub(r'class="ruach-logo[^"]*"', 'class="%s"' % cls, mine, count=1)   # 06.11.2026: the Hebrew one's class has a second word
+                if "bar-logo" in cls:
+                    new = re.sub(r'role="img" aria-label="[^"]*"', 'aria-hidden="true"', new, count=1)
+                page = page[:a] + new + page[b:]
+                at = a + len(new)
         # HERESY 1272 (Viktor 09.10.2026: «На сайте обнови фавку»): the icons of the page's language, the name's first letter on the
         # logo's cloud: Р for the Cyrillic names and the Greek Ροῦαχ since 1454 (Π for ΠΝΕΥΜΑ before; src/brand: make_letter_icon.py)
-        letter = {"ru": "er", "uk": "er", "be": "er", "el": "er", "ja": "ja", "zh": "zh"}.get(code)   # HERESY 1454: Ροῦαχ's Ρ, drawn as Р   # 1273: ル, 鲁 for the languages planned next
+        letter = {"ru": "er", "uk": "er", "be": "er", "el": "er", "ja": "ja", "zh": "zh", "he": "he"}.get(code)   # HERESY 1454: Ροῦαχ's Ρ, drawn as Р   # 1273: ル, 鲁 for the languages planned next
         if letter:
             page = re.sub(r"assets/ruach-icon-(32|180|192)\.png", lambda m: "assets/ruach-icon-" + letter + "-" + m.group(1) + ".png", page)
         page = typeset(page, code)
+        if code in RTL:
+            page = isolate_numbers(page)
         out = here / ("index.html" if code == "en" else code + "/index.html")
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(page, encoding="utf-8")
         print(out.relative_to(here), len(page) // 1024, "KB", ("· %d units still English" % len(missing)) if missing else "")
         for k in missing[:5]:
             print("   ", k[:100])
+    # HERESY 2140: where the card lives, for search engines: sitemap.xml (every language's page with its alternates, and the
+    # vocabulary's page) and robots.txt naming it; /debug/ is the debug-log receiver, no page
+    pages = [(c, SITE + ("/" if c == "en" else "/%s/" % c)) for c, _ in built]
+    alt = "".join('\n    <xhtml:link rel="alternate" hreflang="%s" href="%s"/>' % (c, u) for c, u in pages)
+    alt += '\n    <xhtml:link rel="alternate" hreflang="x-default" href="%s/"/>' % SITE
+    urls = ["  <url>\n    <loc>%s</loc>%s\n  </url>\n" % (u, alt) for c, u in pages]
+    if (here / "vocabulary" / "index.html").is_file():
+        urls.append("  <url>\n    <loc>%s/vocabulary/</loc>\n  </url>\n" % SITE)
+    (here / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
+                                      'xmlns:xhtml="http://www.w3.org/1999/xhtml">\n' + "".join(urls) + "</urlset>\n", encoding="utf-8")
+    (here / "robots.txt").write_text("User-agent: *\nDisallow: /debug/\n\nSitemap: %s/sitemap.xml\n" % SITE, encoding="utf-8")
+    print("sitemap.xml", len(urls), "pages · robots.txt")

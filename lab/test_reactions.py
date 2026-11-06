@@ -36,7 +36,7 @@ try:
     check("an unknown reaction refused", False)
 except ValueError:
     check("an unknown reaction refused", True)
-check("the fourteen, their zones' order", c.REACTIONS == ("love", "adore", "hundred", "party", "lol", "mindblown", "wow", "tears", "think", "look", "nerd", "peek", "melt", "poop"), c.REACTIONS)
+check("the sixteen (2027: 🔥 hot, 💥 boom), their zones' order", c.REACTIONS == ("love", "adore", "hundred", "party", "hot", "lol", "mindblown", "wow", "boom", "tears", "think", "look", "nerd", "peek", "melt", "poop"), c.REACTIONS)
 d = c.load(conf)
 d["reacts"]["old"] = ["tears", "lol"]
 d["workspaces"] = {"Cold": ["ice"]}

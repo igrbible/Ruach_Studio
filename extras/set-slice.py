@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A slice of a training set (Ruach Studio extras; the starter samples were cut with it): one singer, plain
+"""A slice of a training set (Ruach Studio extras): one singer, plain
 singing first (GTSinger's Control groups), then the rest, taken round the songs so that every song is heard,
 until the size is reached. Copies each track's WAV with its .txt (lyrics) and .style.txt, and the set's *.md.
 

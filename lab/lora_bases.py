@@ -9,12 +9,15 @@ An adapter's base, the first that says it:
      checkpoint it trained on, named by its file);
   3. nothing said: YuE2 itself, as every YuE2 adapter outside this Studio was trained (said so: «assumed»).
 The model's line, from its GGUF: the adapters merge-loras folded into it (heresy.merged_loras, lab/merges.py), an RS-FW epoch
-among them making it RS-FW of that epoch; else its file name (RS-FW-2.4…); else, a YuE2 file or a merge of YuE2 with adapters
-(IRA, IRAE), YuE2. A model told by none of these is unknown, and then nothing is flagged.
+among them making it RS-FW of that epoch, an RS-TW epoch folded over it making it RS-TW of that one (HERESY 2111: the Tsunami
+Wave's merges list RS-FW 2.4 and then RS-TW 2.0, and read as RS-TW 2.0); else its file name (RS-TW-2.0…, RS-FW-2.4…); else, a
+YuE2 file or a merge of YuE2 with adapters (IRA, IRAE), YuE2. A model told by none of these is unknown, and then nothing is flagged.
 
-The fit: «same» (the same line: YuE2 and its merges, or RS-FW of the same epoch at any strength), «near» (RS-FW of another
-epoch: the same run, a little further on or back), «other» (YuE2 against RS-FW, either way: muted by the page when the model
-changes, taken back in only when asked), «unknown». An adapter folded into the model already says so too (inside).
+The fit: «same» (the same line: YuE2 and its merges, RS-FW of the same epoch at any strength, RS-TW of the same epoch at any
+strength), «near» (RS-FW of another epoch: the same run, a little further on or back; HERESY 2111: RS-TW against RS-FW, either
+way: the Tsunami Wave grew over RS-FW 2.4, the other wave of the same fine-tune), «other» (YuE2 against RS-FW or RS-TW, either
+way: muted by the page when the model changes, taken back in only when asked), «unknown». An adapter folded into the model
+already says so too (inside).
 """
 import json
 import re
@@ -23,6 +26,7 @@ from pathlib import Path
 
 import merges
 
+TW_RE = re.compile(r"RS-TW-e?0*(\d+(?:\.\d+)?)", re.I)          # HERESY 2111: YuE2-RS-TW-e002.0.safetensors, RS-TW-2.0x0.75, yue2_3b_RS-TW-2.0x0.75_bf16
 FW_RE = re.compile(r"RS-FW-e?0*(\d+(?:\.\d+)?)", re.I)          # YuE2-RS-FW-e002.4.safetensors, RS-FW-2.4x0.75, RS-FW-e003.4-m0.75
 YUE2_RE = re.compile(r"(^|[/_\-])yue2([_\-]3b)?([_\-.]|$)", re.I)   # yue2_3b_bf16.safetensors, m-a-p/YuE2-3B, YuE2-3B-Q8_0.gguf, «yue2»
 ROOT_RE = re.compile(r"^[A-Za-z0-9_.+\-]{1,200}\.gguf$")
@@ -36,8 +40,12 @@ def _version(v):
 
 
 def line_of(text):
-    """(family, version) of a checkpoint's, a repo's or a model's name: ("fw", "2.4"), ("yue2", ""), or None."""
+    """(family, version) of a checkpoint's, a repo's or a model's name: ("tw", "2.0"), ("fw", "2.4"), ("yue2", ""), or None.
+    HERESY 2111: the Tsunami Wave first, before RS-FW and YuE2 (a TW base file, yue2_3b_RS-TW-2.0x0.75_bf16, read YuE2's before)."""
     s = str(text or "").strip()
+    m = TW_RE.search(s)
+    if m:
+        return "tw", _version(m.group(1))
     m = FW_RE.search(s)
     if m:
         return "fw", _version(m.group(1))
@@ -49,7 +57,7 @@ def line_of(text):
 def label(line):
     if not line:
         return "unknown"
-    return "YuE2" if line[0] == "yue2" else f"RS-FW {line[1]}"
+    return "YuE2" if line[0] == "yue2" else f"RS-TW {line[1]}" if line[0] == "tw" else f"RS-FW {line[1]}"
 
 
 def _meta(path):
@@ -107,23 +115,28 @@ def model_line(kit, name):
         said = merges.header_value(p, merges.KEY) or ""
     except (OSError, ValueError):
         said = ""
-    inside, line = [], None
+    inside, fw, tw = [], None, None
     for part in [x.strip() for x in said.split(";") if x.strip()]:
         file = part.split("@", 1)[0].strip()
         if file.startswith("loras/"):
             inside.append(file[len("loras/"):])
         got = line_of(Path(file).name)
         if got and got[0] == "fw":                    # an RS-FW epoch folded in makes the model RS-FW of that epoch
-            line = got
+            fw = got
+        elif got and got[0] == "tw":                  # HERESY 2111: and an RS-TW epoch folded over it, RS-TW of that one
+            tw = got
+    line = tw or fw
     if not line:
         got = line_of(name)
-        line = got if got and got[0] == "fw" else ("yue2", "") if (said or (got and got[0] == "yue2")) else None
+        line = got if got and got[0] in ("fw", "tw") else ("yue2", "") if (said or (got and got[0] == "yue2")) else None
     return {"line": line, "label": label(line), "inside": inside}
 
 
 def fit(model, adapter):
     if not model or not adapter:
         return "unknown"
+    if {model[0], adapter[0]} == {"fw", "tw"}:       # HERESY 2111: the Tsunami Wave grew over RS-FW 2.4: either wave's adapter on the other
+        return "near"
     if model[0] != adapter[0]:
         return "other"
     return "same" if model[0] == "yue2" or model[1] == adapter[1] else "near"

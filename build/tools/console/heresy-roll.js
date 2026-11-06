@@ -69,6 +69,8 @@
                 ["m7", [0, 3, 7, 10]], ["dim7", [0, 3, 6, 9]], ["m7b5", [0, 3, 6, 10]], ["sus4", [0, 5, 7]], ["sus2", [0, 2, 7]], ["6", [0, 4, 7, 9]],
                 ["m6", [0, 3, 7, 9]], ["7sus4", [0, 5, 7, 10]], ["m(maj7)", [0, 3, 7, 11]]];
   function tr(x) { return window.RuachI18n && window.RuachI18n.t ? window.RuachI18n.t(x) : x; }
+  // HERESY 2139: a sound by its file's key (build.sh hands the keys to window.RUACH_BUILD), so the lab keeps it a year; with no key, as it was
+  function soundUrl(n) { var u = "/lab/sounds/" + n + ".mp3"; return window.RuachAsset ? window.RuachAsset(u) : u; }
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function noteName(p) { return NAMES[((p % 12) + 12) % 12] + (Math.floor(p / 12) - 1); }
@@ -1209,7 +1211,7 @@
     VOWELS.wait = fetch("/lab/sounds/vowels.json").then(function (r) { if (!r.ok) throw new Error("vowels.json: " + r.status); return r.json(); }).then(function (loops) {
       VOWELS.loops = loops;
       return Promise.all(Object.keys(loops).map(function (n) {
-        return fetch("/lab/sounds/" + n + ".mp3").then(function (r) { if (!r.ok) throw new Error(n + ": " + r.status); return r.arrayBuffer(); })
+        return fetch(soundUrl(n)).then(function (r) { if (!r.ok) throw new Error(n + ": " + r.status); return r.arrayBuffer(); })
           .then(function (b) { return new Promise(function (ok, bad) { a.decodeAudioData(b, ok, bad); }); })
           .then(function (buf) { var m = /^v([aeiou])-(\d+)$/.exec(n); if (!m) return; SOUND.buf[n] = buf; (VOWELS.have[m[1]] = VOWELS.have[m[1]] || []).push(+m[2]); });
       }));
@@ -1266,7 +1268,7 @@
     Object.keys(SOUND_SETS).forEach(function (k) { for (var q = SOUND_SETS[k][0]; q <= SOUND_SETS[k][1]; q += 3) names.push(k + "-" + q); });
     SOUND.state = "loading";
     SOUND.wait = Promise.all(names.map(function (n) {
-      return fetch("/lab/sounds/" + n + ".mp3").then(function (r) { if (!r.ok) throw new Error(n + ": " + r.status); return r.arrayBuffer(); })
+      return fetch(soundUrl(n)).then(function (r) { if (!r.ok) throw new Error(n + ": " + r.status); return r.arrayBuffer(); })
         .then(function (b) { return new Promise(function (ok, bad) { a.decodeAudioData(b, ok, bad); }); }).then(function (buf) { SOUND.buf[n] = buf; });
     })).then(function () { SOUND.state = "ok"; }, function (e) {
       SOUND.state = "failed"; SOUND.wait = null;

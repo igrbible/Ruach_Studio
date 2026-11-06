@@ -3,12 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>First Wave Vocabulary</title>
-<meta name="description" content="Every word YuE2-RS-FW, Ruach Studio's fine-tune of YuE2, was trained on: genres, instruments, voice, emotion words, keys, tempi, and the scores' own keys, searchable.">
+<title>Tsunami Wave Vocabulary</title>
+<meta name="description" content="Every word Ruach Studio's two fine-tunes of YuE2, YuE2-RS-TW (the Tsunami Wave) and YuE2-RS-FW (the First Wave), were trained on: genres, instruments, voice, emotion words, keys, tempi, and the scores' own keys, searchable.">
 <!-- Viktor 26.10.2026: «документ с референсом по тому, какие эмо теги, инструментальные и стилистические, ключи партитурные в обучающих
      данных… в лучших манерах подачи информации и визуализации этого массивного перечня». One page for the visiting card's window and the
-     studio's F1: ?lang=xx the page's language, ?embed=1 inside a window, ?data=URL[,URL] the sets (a second one is compared with the first),
-     ?theme=light|dark. No library, no font from outside: the studio runs without the internet. -->
+     Studio's F1: ?lang=xx the page's language, ?embed=1 inside a window, ?data=URL[,URL] the sets (a second one is compared with the first),
+     ?set=N the set it opens on (0 the first; or fw, tw), ?theme=light|dark. No library, no font from outside: the Studio runs without the
+     internet. 06.11.2026 (Viktor: «Словарь TW оформляй в паблик»): without ?data both waves are built in, fw-vocabulary.json and
+     tw-vocabulary.json beside the page, and it opens on the Tsunami Wave, the Studio's default; a wave's file missing is left out. -->
 <style>
   :root {
     --ground: #f8f9fa; --paper: #ffffff; --ink: #191919; --soft: #55524f; --faint: #8a8784; --rule: #e3e2e0;
@@ -17,7 +19,7 @@
     --c-genre: #2f6fb3; --c-instrument: #b8742a; --c-voice: #b0336a; --c-emotion: #8e1a2e; --c-mood: #7a4fb0; --c-theme: #4b7f86;
     --c-sound: #3d8a5f; --c-form: #8a6d2f; --c-key: #3f5bb8; --c-tempo: #6b6b6b; --c-language: #a2462f; --c-trigger: #6d6a64;
     --c-other: #8a8784; --c-instrumental: #191919;
-    --s-mtg: #3f7fd0; --s-fma: #d79a30; --s-suno: #a467d6; --s-studio: #2fa37b; --s-gts: #d6567a; --s-speech: #8a94a6; --s-album: #b9a548;
+    --s-mtg: #3f7fd0; --s-fma: #d79a30; --s-suno: #a467d6; --s-studio: #2fa37b; --s-gts: #d6567a; --s-speech: #8a94a6; --s-album: #b9a548; --s-other: #8f6f5c;
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
@@ -28,6 +30,7 @@
       --c-genre: #7fb2ec; --c-instrument: #e7a764; --c-voice: #ec82ae; --c-emotion: #f07171; --c-mood: #b99be6; --c-theme: #86c2c9;
       --c-sound: #7fcf9f; --c-form: #d6b36a; --c-key: #93a8f2; --c-tempo: #b4b4b4; --c-language: #e99075; --c-trigger: #b5b1aa;
       --c-other: #908c88; --c-instrumental: #f4f4f4;
+      --s-other: #c3a08a;
       color-scheme: dark;
     }
   }
@@ -38,6 +41,7 @@
     --c-genre: #7fb2ec; --c-instrument: #e7a764; --c-voice: #ec82ae; --c-emotion: #f07171; --c-mood: #b99be6; --c-theme: #86c2c9;
     --c-sound: #7fcf9f; --c-form: #d6b36a; --c-key: #93a8f2; --c-tempo: #b4b4b4; --c-language: #e99075; --c-trigger: #b5b1aa;
     --c-other: #908c88; --c-instrumental: #f4f4f4;
+    --s-other: #c3a08a;
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
@@ -50,7 +54,7 @@
   .embed h1 { display: none; }   /* the window over the card says it in its own head */
   @media (max-width: 600px) { .wrap { padding: 14px 16px 50px; } }
   h1 { font-size: 26px; line-height: 1.2; margin: 0 0 6px; font-weight: 650; letter-spacing: -.01em; }
-  .sub { color: var(--soft); margin: 0 0 18px; max-width: 900px; }
+  .sub { color: var(--soft); margin: 0 0 18px; }
   .nums { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule);
           border-radius: 12px; overflow: hidden; margin: 0 0 18px; }
   .nums div { background: var(--paper); padding: 12px 14px; }
@@ -143,7 +147,7 @@
   .pole .num { font-size: 13px; color: var(--soft); }
   .pole .bar { grid-column: 1 / -1; }
   .pole .vo { font-size: 11.5px; color: var(--faint); font-weight: 400; margin-left: 6px; }
-  .note { color: var(--soft); max-width: 900px; margin: 0 0 14px; }
+  .note { color: var(--soft); margin: 0 0 14px; }
 
   /* the scores */
   .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -182,6 +186,21 @@
   .foot { color: var(--faint); font-size: 12.5px; margin-top: 22px; }
   .foot a, .sub a { color: var(--amber); }
   .empty { padding: 30px; text-align: center; color: var(--faint); }
+  /* 06.11.2026: Hebrew, right to left (?lang=he sets dir="rtl"): the sides that were left are right; code, the scores' ABC, the numbers' boxes,
+     the tempo's axis and the circle of fifths stay left to right */
+  [dir="rtl"] body { font-family: "Noto Sans", "Noto Sans Hebrew", system-ui, -apple-system, "Segoe UI", sans-serif; }
+  [dir="rtl"] .line { padding: 6px 12px 6px 8px; }
+  [dir="rtl"] .w { padding: 0 9px 0 4px; }
+  [dir="rtl"] .search input { padding: 0 36px 0 12px; }
+  [dir="rtl"] .search svg { left: auto; right: 11px; }
+  [dir="rtl"] .tag button, [dir="rtl"] .pole button { text-align: right; }
+  [dir="rtl"] .pole .vo { margin-left: 0; margin-right: 6px; }
+  [dir="rtl"] .detail { padding: 4px 17px 6px 0; }
+  [dir="rtl"] .how ol { padding-left: 0; padding-right: 20px; }
+  [dir="rtl"] code { direction: ltr; unicode-bidi: isolate; }
+  [dir="rtl"] pre.abc, [dir="rtl"] .cols, [dir="rtl"] .axis, [dir="rtl"] .wheel { direction: ltr; }
+  [dir="rtl"] .nums b, [dir="rtl"] .row .num, [dir="rtl"] .hbar .num { direction: ltr; text-align: right; }
+  [dir="rtl"] .fields td { unicode-bidi: plaintext; text-align: right; }   /* a line of numbers (L:) reads left to right, a Hebrew one right to left */
 </style>
 </head>
 <body>
@@ -253,10 +272,11 @@
   if (P.get("embed")) document.documentElement.classList.add("embed");
   var th = P.get("theme"); if (th === "light" || th === "dark") document.documentElement.setAttribute("data-theme", th);
   var LANG = (P.get("lang") || (navigator.language || "en")).slice(0, 2).toLowerCase();
-  var DATA = (P.get("data") || "fw-vocabulary.json").split(",");
+  var GIVEN = P.get("data");
+  var DATA = (GIVEN || "fw-vocabulary.json,tw-vocabulary.json").split(",");   // 06.11.2026: both waves built in, the First as the base
   var NAMES = (P.get("names") || "").split(",");
 
-  // the page's words in its twelve languages (the vocabulary itself stays as the model read it: English)
+  // the page's words in its thirteen languages (the vocabulary itself stays as the model read it: English)
   var T = {
     en: {}, ru: {
       hours: "часов", title: "Словарь Первой волны", tabWords: "Слова", tabEmotions: "Эмоции", tabScores: "Партитуры", tabHow: "Как писать стиль",
@@ -266,7 +286,9 @@
       emoNote: "Эти слова никто не писал: Empathic Insight от LAION прослушал по три 30-секундных окна каждого трека и оценил 55 измерений. Каждое мерилось относительно всего набора, так что слово значит «сильнее, чем у большинства в этом наборе»: трек получал слова тех измерений, что выше одного стандартного отклонения, самые сильные первыми, не больше четырёх. Качества голоса доставались только трекам с голосом.",
       anatomy: "Партитура, как её читает модель", fieldsTitle: "Её ключи", keysTitle: "Тональности (K:)", sectionsTitle: "Разделы (%)",
       metersTitle: "Размеры (M:)", tempoTitle: "Темп (Q:1/4=)", chordsTitle: "Аккорды", orderTitle: "Порядок, который выучила модель",
-      voiceOnly: "только голос", high: "высокое", low: "низкое", dimension: "Измерение", newIn: "новое"},
+      voiceOnly: "только голос", high: "высокое", low: "низкое", dimension: "Измерение", newIn: "новое",
+      titleTW: "Словарь Tsunami Wave", nameFW: "Первая волна", other: "Другое",
+      otherNote: "Меньшие источники, которые карточка модели не называет поимённо: греческие традиционные и народные песни, песни на иврите, русском и украинском, чтения Библии, прославление, несколько дублей скрипки и шофара."},
     uk: {
       hours: "годин", title: "Словник Першої хвилі", tabWords: "Слова", tabEmotions: "Емоції", tabScores: "Партитури", tabHow: "Як писати стиль",
       lineHint: "Тисни на слова, і стиль складеться сам: у тому порядку, якого навчилася модель.", clear: "Очистити", copy: "Копіювати",
@@ -275,7 +297,9 @@
       emoNote: "Цих слів ніхто не писав: Empathic Insight від LAION прослухав по три 30-секундні вікна кожного треку й оцінив 55 вимірів. Кожен міряли відносно всього набору, тож слово означає «сильніше, ніж у більшості в цьому наборі»: трек отримував слова вимірів, вищих за одне стандартне відхилення, найсильніші першими, не більше чотирьох. Якості голосу діставалися лише трекам із голосом.",
       anatomy: "Партитура, як її читає модель", fieldsTitle: "Її ключі", keysTitle: "Тональності (K:)", sectionsTitle: "Розділи (%)",
       metersTitle: "Розміри (M:)", tempoTitle: "Темп (Q:1/4=)", chordsTitle: "Акорди", orderTitle: "Порядок, якого навчилася модель",
-      voiceOnly: "лише голос", high: "високе", low: "низьке", dimension: "Вимір", newIn: "нове"},
+      voiceOnly: "лише голос", high: "високе", low: "низьке", dimension: "Вимір", newIn: "нове",
+      titleTW: "Словник Tsunami Wave", nameFW: "Перша хвиля", other: "Інше",
+      otherNote: "Менші джерела, яких картка моделі не називає поіменно: грецькі традиційні й народні пісні, пісні івритом, російською та українською, читання Біблії, прославлення, кілька дублів скрипки й шофара."},
     be: {
       hours: "гадзін", title: "Слоўнік Першай хвалі", tabWords: "Словы", tabEmotions: "Эмоцыі", tabScores: "Партытуры", tabHow: "Як пісаць стыль",
       lineHint: "Націскай на словы, і стыль складзецца сам: у тым парадку, якому навучылася мадэль.", clear: "Ачысціць", copy: "Скапіяваць",
@@ -284,7 +308,9 @@
       emoNote: "Гэтых слоў ніхто не пісаў: Empathic Insight ад LAION праслухаў па тры 30-секундныя вокны кожнага трэка і ацаніў 55 вымярэнняў. Кожнае мералі адносна ўсяго набору, таму слова значыць «мацней, чым у большасці ў гэтым наборы»: трэк атрымліваў словы вымярэнняў вышэй за адно стандартнае адхіленне, наймацнейшыя першымі, не больш за чатыры. Якасці голасу даставаліся толькі трэкам з голасам.",
       anatomy: "Партытура, як яе чытае мадэль", fieldsTitle: "Яе ключы", keysTitle: "Танальнасці (K:)", sectionsTitle: "Раздзелы (%)",
       metersTitle: "Памеры (M:)", tempoTitle: "Тэмп (Q:1/4=)", chordsTitle: "Акорды", orderTitle: "Парадак, якому навучылася мадэль",
-      voiceOnly: "толькі голас", high: "высокае", low: "нізкае", dimension: "Вымярэнне", newIn: "новае"},
+      voiceOnly: "толькі голас", high: "высокае", low: "нізкае", dimension: "Вымярэнне", newIn: "новае",
+      titleTW: "Слоўнік Tsunami Wave", nameFW: "Першая хваля", other: "Іншае",
+      otherNote: "Меншыя крыніцы, якіх картка мадэлі не называе паіменна: грэчаскія традыцыйныя і народныя песні, песні на іўрыце, рускай і ўкраінскай, чытанні Бібліі, праслаўленне, некалькі дубляў скрыпкі і шофара."},
     el: {
       hours: "ώρες", title: "Το λεξιλόγιο του Πρώτου Κύματος", tabWords: "Λέξεις", tabEmotions: "Συναισθήματα", tabScores: "Παρτιτούρες", tabHow: "Πώς γράφεται ένα στυλ",
       lineHint: "Πάτα λέξεις και το στυλ στήνεται μόνο του, με τη σειρά που έμαθε το μοντέλο.", clear: "Καθαρισμός", copy: "Αντιγραφή",
@@ -293,7 +319,9 @@
       emoNote: "Αυτές τις λέξεις δεν τις έγραψε κανείς: το Empathic Insight της LAION άκουσε τρία παράθυρα 30 δευτερολέπτων από κάθε κομμάτι και βαθμολόγησε 55 διαστάσεις. Η καθεμία μετρήθηκε απέναντι σε όλο το σύνολο, οπότε μια λέξη σημαίνει «περισσότερο απ' ό,τι στα περισσότερα του συνόλου»: ένα κομμάτι πήρε τις λέξεις των διαστάσεων πάνω από μία τυπική απόκλιση, τις ισχυρότερες πρώτα, το πολύ τέσσερις. Οι ιδιότητες της φωνής δόθηκαν μόνο σε κομμάτια με φωνή.",
       anatomy: "Μια παρτιτούρα όπως τη διαβάζει το μοντέλο", fieldsTitle: "Τα πεδία της", keysTitle: "Τονικότητες (K:)", sectionsTitle: "Μέρη (%)",
       metersTitle: "Μέτρα (M:)", tempoTitle: "Τέμπο (Q:1/4=)", chordsTitle: "Συγχορδίες", orderTitle: "Η σειρά που έμαθε το μοντέλο",
-      voiceOnly: "μόνο φωνή", high: "υψηλό", low: "χαμηλό", dimension: "Διάσταση", newIn: "νέο"},
+      voiceOnly: "μόνο φωνή", high: "υψηλό", low: "χαμηλό", dimension: "Διάσταση", newIn: "νέο",
+      titleTW: "Το λεξιλόγιο του Tsunami Wave", nameFW: "Πρώτο Κύμα", other: "Άλλα",
+      otherNote: "Οι μικρότερες πηγές που η κάρτα του μοντέλου δεν κατονομάζει μία μία: ελληνικό παραδοσιακό και δημοτικό τραγούδι, τραγούδια στα εβραϊκά, τα ρωσικά και τα ουκρανικά, αναγνώσεις της Βίβλου, λατρεία, λίγες λήψεις βιολιού και σοφάρ."},
     es: {
       hours: "horas", title: "El vocabulario de la Primera Ola", tabWords: "Palabras", tabEmotions: "Emociones", tabScores: "Partituras", tabHow: "Cómo escribir un estilo",
       lineHint: "Pulsa palabras y el estilo se arma solo, en el orden que aprendió el modelo.", clear: "Vaciar", copy: "Copiar",
@@ -302,7 +330,9 @@
       emoNote: "Nadie escribió estas palabras: Empathic Insight de LAION escuchó tres ventanas de 30 segundos de cada pista y puntuó 55 dimensiones. Cada una se midió frente al conjunto entero, así que una palabra significa «más que la mayoría de este conjunto»: una pista tomó las palabras de sus dimensiones por encima de una desviación típica, las más fuertes primero, cuatro como mucho. Las cualidades de la voz solo se dieron a pistas con voz.",
       anatomy: "Una partitura tal como la lee el modelo", fieldsTitle: "Sus claves", keysTitle: "Tonalidades (K:)", sectionsTitle: "Secciones (%)",
       metersTitle: "Compases (M:)", tempoTitle: "Tempo (Q:1/4=)", chordsTitle: "Acordes", orderTitle: "El orden que aprendió el modelo",
-      voiceOnly: "solo voz", high: "alto", low: "bajo", dimension: "Dimensión", newIn: "nuevo"},
+      voiceOnly: "solo voz", high: "alto", low: "bajo", dimension: "Dimensión", newIn: "nuevo",
+      titleTW: "El vocabulario de Tsunami Wave", nameFW: "Primera Ola", other: "Otras",
+      otherNote: "Las fuentes menores que la ficha del modelo no nombra una a una: canción tradicional y popular griega, canciones en hebreo, ruso y ucraniano, lecturas de la Biblia, adoración, algunas tomas de violín y de shofar."},
     it: {
       hours: "ore", title: "Il vocabolario della Prima Onda", tabWords: "Parole", tabEmotions: "Emozioni", tabScores: "Partiture", tabHow: "Come scrivere uno stile",
       lineHint: "Clicca le parole e lo stile si compone da sé, nell'ordine che il modello ha imparato.", clear: "Svuota", copy: "Copia",
@@ -311,7 +341,9 @@
       emoNote: "Queste parole non le ha scritte nessuno: Empathic Insight di LAION ha ascoltato tre finestre di 30 secondi di ogni brano e ha dato un punteggio a 55 dimensioni. Ognuna è misurata sull'insieme intero, quindi una parola significa «più della maggior parte di questo insieme»: un brano ha preso le parole delle dimensioni sopra una deviazione standard, le più forti prima, al massimo quattro. Le qualità della voce sono andate solo ai brani con una voce.",
       anatomy: "Una partitura come la legge il modello", fieldsTitle: "Le sue chiavi", keysTitle: "Tonalità (K:)", sectionsTitle: "Sezioni (%)",
       metersTitle: "Tempi (M:)", tempoTitle: "Tempo (Q:1/4=)", chordsTitle: "Accordi", orderTitle: "L'ordine che il modello ha imparato",
-      voiceOnly: "solo voce", high: "alto", low: "basso", dimension: "Dimensione", newIn: "nuovo"},
+      voiceOnly: "solo voce", high: "alto", low: "basso", dimension: "Dimensione", newIn: "nuovo",
+      titleTW: "Il vocabolario di Tsunami Wave", nameFW: "Prima Onda", other: "Altre",
+      otherNote: "Le fonti minori che la scheda del modello non nomina una per una: canto tradizionale e popolare greco, canzoni in ebraico, russo e ucraino, letture della Bibbia, adorazione, qualche ripresa di violino e di shofar."},
     fr: {
       hours: "heures", title: "Le vocabulaire de la Première Vague", tabWords: "Mots", tabEmotions: "Émotions", tabScores: "Partitions", tabHow: "Écrire un style",
       lineHint: "Clique sur des mots et le style se compose tout seul, dans l'ordre que le modèle a appris.", clear: "Vider", copy: "Copier",
@@ -320,7 +352,9 @@
       emoNote: "Personne n'a écrit ces mots : Empathic Insight de LAION a écouté trois fenêtres de 30 secondes de chaque morceau et noté 55 dimensions. Chacune est mesurée sur tout l'ensemble, donc un mot veut dire « plus que la plupart de cet ensemble » : un morceau a pris les mots de ses dimensions au-dessus d'un écart type, les plus fortes d'abord, quatre au plus. Les qualités de la voix ne sont allées qu'aux morceaux avec une voix.",
       anatomy: "Une partition telle que le modèle la lit", fieldsTitle: "Ses clés", keysTitle: "Tonalités (K:)", sectionsTitle: "Sections (%)",
       metersTitle: "Mesures (M:)", tempoTitle: "Tempo (Q:1/4=)", chordsTitle: "Accords", orderTitle: "L'ordre que le modèle a appris",
-      voiceOnly: "voix seule", high: "haut", low: "bas", dimension: "Dimension", newIn: "nouveau"},
+      voiceOnly: "voix seule", high: "haut", low: "bas", dimension: "Dimension", newIn: "nouveau",
+      titleTW: "Le vocabulaire de Tsunami Wave", nameFW: "Première Vague", other: "Autres",
+      otherNote: "Les petites sources que la fiche du modèle ne nomme pas une à une : chant traditionnel et populaire grec, chansons en hébreu, en russe et en ukrainien, lectures de la Bible, louange, quelques prises de violon et de shofar."},
     pt: {
       hours: "horas", title: "O vocabulário da Primeira Onda", tabWords: "Palavras", tabEmotions: "Emoções", tabScores: "Partituras", tabHow: "Como escrever um estilo",
       lineHint: "Clique nas palavras e o estilo se monta sozinho, na ordem que o modelo aprendeu.", clear: "Limpar", copy: "Copiar",
@@ -329,7 +363,9 @@
       emoNote: "Ninguém escreveu estas palavras: o Empathic Insight da LAION ouviu três janelas de 30 segundos de cada faixa e pontuou 55 dimensões. Cada uma foi medida contra o conjunto inteiro, então uma palavra quer dizer «mais que a maioria deste conjunto»: uma faixa levou as palavras das dimensões acima de um desvio padrão, as mais fortes primeiro, no máximo quatro. As qualidades da voz só foram para faixas com voz.",
       anatomy: "Uma partitura como o modelo a lê", fieldsTitle: "Suas chaves", keysTitle: "Tonalidades (K:)", sectionsTitle: "Seções (%)",
       metersTitle: "Compassos (M:)", tempoTitle: "Andamento (Q:1/4=)", chordsTitle: "Acordes", orderTitle: "A ordem que o modelo aprendeu",
-      voiceOnly: "só voz", high: "alto", low: "baixo", dimension: "Dimensão", newIn: "novo"},
+      voiceOnly: "só voz", high: "alto", low: "baixo", dimension: "Dimensão", newIn: "novo",
+      titleTW: "O vocabulário do Tsunami Wave", nameFW: "Primeira Onda", other: "Outras",
+      otherNote: "As fontes menores que o cartão do modelo não nomeia uma a uma: canção tradicional e popular grega, canções em hebraico, russo e ucraniano, leituras da Bíblia, adoração, algumas tomadas de violino e de shofar."},
     de: {
       hours: "Stunden", title: "Das Vokabular der Ersten Welle", tabWords: "Wörter", tabEmotions: "Emotionen", tabScores: "Partituren", tabHow: "Einen Stil schreiben",
       lineHint: "Klick Wörter an, und der Stil fügt sich von selbst, in der Reihenfolge, die das Modell gelernt hat.", clear: "Leeren", copy: "Kopieren",
@@ -338,7 +374,9 @@
       emoNote: "Diese Wörter hat niemand geschrieben: LAIONs Empathic Insight hat drei 30-Sekunden-Fenster jedes Tracks gehört und 55 Dimensionen bewertet. Jede wurde am ganzen Satz gemessen, ein Wort heißt also «mehr als bei den meisten dieses Satzes»: Ein Track bekam die Wörter seiner Dimensionen über einer Standardabweichung, die stärksten zuerst, höchstens vier. Die Eigenschaften der Stimme bekamen nur Tracks mit Stimme.",
       anatomy: "Eine Partitur, wie das Modell sie liest", fieldsTitle: "Ihre Felder", keysTitle: "Tonarten (K:)", sectionsTitle: "Teile (%)",
       metersTitle: "Takte (M:)", tempoTitle: "Tempo (Q:1/4=)", chordsTitle: "Akkorde", orderTitle: "Die Reihenfolge, die das Modell gelernt hat",
-      voiceOnly: "nur Stimme", high: "hoch", low: "niedrig", dimension: "Dimension", newIn: "neu"},
+      voiceOnly: "nur Stimme", high: "hoch", low: "niedrig", dimension: "Dimension", newIn: "neu",
+      titleTW: "Das Vokabular von Tsunami Wave", nameFW: "Erste Welle", other: "Andere",
+      otherNote: "Die kleineren Quellen, die die Modellkarte nicht einzeln nennt: griechisches traditionelles Lied und Volkslied, Lieder auf Hebräisch, Russisch und Ukrainisch, Lesungen der Bibel, Lobpreis, ein paar Takes von Geige und Schofar."},
     ja: {
       hours: "時間", title: "ファーストウェーブの語彙", tabWords: "語", tabEmotions: "感情語", tabScores: "楽譜", tabHow: "スタイルの書き方",
       lineHint: "語をクリックすると、モデルが学んだ順にスタイルが組み上がります。", clear: "クリア", copy: "コピー",
@@ -347,7 +385,9 @@
       emoNote: "これらの語は誰も書いていません。LAION の Empathic Insight が各曲の30秒の窓を3つ聴き、55の次元を採点しました。各次元はセット全体に対して測られているので、語の意味は「このセットの大半より強い」です。標準偏差1つを超えた次元の語を、強い順に最大4つまで付けています。声の性質は声のある曲にだけ付けました。",
       anatomy: "モデルが読む楽譜", fieldsTitle: "楽譜のフィールド", keysTitle: "調 (K:)", sectionsTitle: "セクション (%)",
       metersTitle: "拍子 (M:)", tempoTitle: "テンポ (Q:1/4=)", chordsTitle: "和音", orderTitle: "モデルが学んだ順序",
-      voiceOnly: "声のみ", high: "高", low: "低", dimension: "次元", newIn: "新"},
+      voiceOnly: "声のみ", high: "高", low: "低", dimension: "次元", newIn: "新",
+      titleTW: "Tsunami Wave の語彙", nameFW: "ファーストウェーブ", other: "その他",
+      otherNote: "モデルカードが一つずつは名前を挙げていない小さな出典です。ギリシャの伝統歌と民謡、ヘブライ語・ロシア語・ウクライナ語の歌、聖書の朗読、礼拝、バイオリンとショファルの数テイク。"},
     zh: {
       hours: "小时", title: "第一波的词汇", tabWords: "词语", tabEmotions: "情感词", tabScores: "乐谱", tabHow: "如何写风格",
       lineHint: "点击词语，风格会按模型学到的顺序自动排好。", clear: "清空", copy: "复制",
@@ -356,10 +396,26 @@
       emoNote: "这些词不是人写的：LAION 的 Empathic Insight 听了每首曲子的三个 30 秒窗口，为 55 个维度打分。每个维度都相对整个数据集衡量，所以一个词的意思是“比这个集合中的大多数更强”：一首曲子获得超过一个标准差的维度的词，最强的在前，最多四个。声音的特质只给有人声的曲子。",
       anatomy: "模型读到的乐谱", fieldsTitle: "乐谱的字段", keysTitle: "调 (K:)", sectionsTitle: "段落 (%)",
       metersTitle: "拍号 (M:)", tempoTitle: "速度 (Q:1/4=)", chordsTitle: "和弦", orderTitle: "模型学到的顺序",
-      voiceOnly: "仅人声", high: "高", low: "低", dimension: "维度", newIn: "新"}
+      voiceOnly: "仅人声", high: "高", low: "低", dimension: "维度", newIn: "新",
+      titleTW: "Tsunami Wave 的词汇", nameFW: "第一波", other: "其他",
+      otherNote: "模型卡没有逐一列出的较小来源：希腊传统与民间歌曲，希伯来语、俄语和乌克兰语歌曲，圣经朗读，敬拜，以及少量小提琴和羊角号录音。"},
+    // he: the scores' ABC fields (K:, M:, Q:1/4=) in an isolate, so their colon and equals stay to their right in a right-to-left heading
+    he: {
+      hours: "שעות", title: "אוצר המילים של הגל הראשון", tabWords: "מילים", tabEmotions: "מילות רגש", tabScores: "פרטיטורות", tabHow: "איך כותבים סגנון",
+      lineHint: "לחץ על מילים ושורת הסגנון תורכב מעצמה: בסדר שהמודל למד.", clear: "ניקוי", copy: "העתקה",
+      search: "חיפוש", byTracks: "לפי רצועות", az: "א–ת", showMore: "הצגת עוד", copied: "הועתק", all: "הכול", tracks: "רצועות",
+      shown: "{0} מתוך {1} מילים", metWith: "הופיעה לצד:", from: "מקורות:", none: "לא נמצא דבר",
+      emoNote: "את המילים האלה אף אחד לא כתב: Empathic Insight של LAION האזין לשלושה חלונות של 30 שניות מכל רצועה ונתן ציון ל-55 ממדים. כל ממד נמדד ביחס לסט כולו, כך שמילה פירושה \"יותר מרוב הסט הזה\": רצועה קיבלה את המילים של הממדים שלה שעלו על סטיית תקן אחת, החזקים ביותר קודם, לכל היותר ארבע. תכונות הקול ניתנו רק לרצועות שיש בהן קול.",
+      anatomy: "פרטיטורה כפי שהמודל קורא אותה", fieldsTitle: "השדות שלה", keysTitle: "סולמות (\u2066K:\u2069)", sectionsTitle: "קטעים (%)",
+      metersTitle: "משקלים (\u2066M:\u2069)", tempoTitle: "טמפו (\u2066Q:1/4=\u2069)", chordsTitle: "אקורדים", orderTitle: "הסדר שהמודל למד",
+      voiceOnly: "קול בלבד", high: "גבוה", low: "נמוך", dimension: "ממד", newIn: "חדשה",
+      titleTW: "אוצר המילים של ה-Tsunami Wave", nameFW: "הגל הראשון", other: "אחר",
+      otherNote: "מקורות קטנים יותר שכרטיס המודל לא מונה בשמם: שירים יווניים מסורתיים ועממיים, שירים בעברית, ברוסית ובאוקראינית, קריאות בכתבי הקודש, שירי הלל, וכמה טייקים של כינור ושל שופר."}
   };
   var EN = {hours: "hours", copied: "Copied", all: "All", tracks: "tracks", shown: "{0} of {1} words", metWith: "Met with:", from: "From:", none: "Nothing found",
-            voiceOnly: "voice only", high: "high", low: "low", dimension: "Dimension", newIn: "new"};
+            voiceOnly: "voice only", high: "high", low: "low", dimension: "Dimension", newIn: "new", title: "The First Wave's vocabulary",
+            titleTW: "The Tsunami Wave's vocabulary", nameFW: "First Wave", other: "Other",
+            otherNote: "The smaller sources the model card does not name one by one: Greek traditional and folk song, songs in Hebrew, Russian and Ukrainian, readings of the Bible, worship, a few violin and shofar takes."};
   var CATN = {
     en: {instrumental: "Instrumental", genre: "Genre", instrument: "Instrument", voice: "Voice", emotion: "Emotion", mood: "Mood", theme: "Use",
          sound: "Sound", form: "Form & pace", key: "Key & harmony", tempo: "BPM", language: "Language", trigger: "Loops' words", other: "Free words"},
@@ -384,7 +440,9 @@
     ja: {instrumental: "インスト", genre: "ジャンル", instrument: "楽器", voice: "声", emotion: "感情", mood: "ムード", theme: "用途",
          sound: "サウンド", form: "形式とペース", key: "調と和声", tempo: "BPM", language: "言語", trigger: "ループの語", other: "自由な語"},
     zh: {instrumental: "纯音乐", genre: "流派", instrument: "乐器", voice: "人声", emotion: "情感", mood: "情绪", theme: "用途",
-         sound: "声音", form: "曲式与速度", key: "调与和声", tempo: "BPM", language: "语言", trigger: "循环乐句词", other: "自由词"}
+         sound: "声音", form: "曲式与速度", key: "调与和声", tempo: "BPM", language: "语言", trigger: "循环乐句词", other: "自由词"},
+    he: {instrumental: "אינסטרומנטלי", genre: "ז'אנר", instrument: "כלי", voice: "קול", emotion: "רגש", mood: "מצב רוח", theme: "ייעוד",
+         sound: "צליל", form: "מבנה וקצב", key: "סולם והרמוניה", tempo: "BPM", language: "שפה", trigger: "מילות הלופים", other: "מילים חופשיות"}
   };
   var LONG = {
   "en": {
@@ -402,15 +460,16 @@
   "fK": "the key; changed in {0}",
   "fSec": "the section a passage belongs to",
   "fChord": "a chord over the bar; with «/», its bass ({0} %)",
-  "tip1": "<b>Keep its order</b>: language or Instrumental, genre, instruments, voice, mood and emotion words, key, BPM. The model read 32 thousand lines that way.",
+  "tip1": "<b>Keep its order</b>: language or Instrumental, genre, instruments, voice, mood and emotion words, key, BPM. The model read {lines} that way.",
   "tip2": "<b>Use its words</b>: <code>electric guitar</code>, not «shredding axe»; <code>female voice</code> or <code>female alto vocal</code>. A word met in hundreds of tracks lands; one met twice is a hint.",
   "tip3": "<b>Emotion words are relative</b>: <code>melancholic</code> means sadder than most of the set. Two to four, as the data had, read better than eight.",
   "tip4": "<b>Key and BPM are measured values</b>: <code>A minor, 92 BPM</code> is how MTG-Jamendo wrote them, and the model learned to keep them.",
   "tip5": "<b>Speech and a cappella are in it too</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> and <code>a cappella, dry studio vocal, no instruments</code> were whole lines in the data.",
+  "tip5TW": "<b>Speech is in it too</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> and <code>spoken word, Bible reading, male voice, with music</code> were whole lines in the data.",
   "tip6": "<b>Full mode plans first</b>: the score it writes uses the sections of the Scores tab (<code>intro</code>, <code>verse</code>, <code>chorus</code>, <code>bridge</code>, <code>pre-chorus</code>, <code>interlude</code>, <code>outro</code>), so name a song's sections the same way."
   },
   "ru": {
-  "sub": "Каждое слово стилевых строк, на которых учился <b>{name}</b>, собственный файнтюн YuE2 от Ruach Studio: сколько треков его несли, откуда оно и с какими словами ходило; и словарь его партитур.",
+  "sub": "Каждое слово стилевых строк, на которых училась модель <b>{name}</b>, собственный файнтюн YuE2 от Ruach Studio: сколько треков его несли, откуда оно и с какими словами ходило; и словарь его партитур.",
   "distinct": "разных слов",
   "listed": "слов в справочнике",
   "scoresN": "партитур",
@@ -424,15 +483,16 @@
   "fK": "тональность; меняется в {0}",
   "fSec": "раздел, к которому относится отрывок",
   "fChord": "аккорд над тактом; через «/» его бас ({0} %)",
-  "tip1": "<b>Держи её порядок</b>: язык или Instrumental, жанр, инструменты, голос, настроение и слова эмоций, тональность, BPM. Модель прочла так 32 тысячи строк.",
+  "tip1": "<b>Держи её порядок</b>: язык или Instrumental, жанр, инструменты, голос, настроение и слова эмоций, тональность, BPM. Модель прочла так {lines}.",
   "tip2": "<b>Пиши её словами</b>: <code>electric guitar</code>, а не «ревущий топор»; <code>female voice</code> или <code>female alto vocal</code>. Слово из сотен треков ложится точно, слово из двух — лишь намёк.",
   "tip3": "<b>Слова эмоций относительны</b>: <code>melancholic</code> значит «печальнее большинства набора». Двух–четырёх хватает, как и было в данных.",
   "tip4": "<b>Тональность и BPM — измеренные значения</b>: <code>A minor, 92 BPM</code> так их записал MTG-Jamendo, и модель научилась их держать.",
   "tip5": "<b>Речь и a cappella тоже есть</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> и <code>a cappella, dry studio vocal, no instruments</code> были целыми строками в данных.",
+  "tip5TW": "<b>Речь тоже есть</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> и <code>spoken word, Bible reading, male voice, with music</code> были целыми строками в данных.",
   "tip6": "<b>Full сначала планирует</b>: партитура, которую он пишет, делится на разделы со вкладки «Партитуры» (<code>intro</code>, <code>verse</code>, <code>chorus</code>, <code>bridge</code>, <code>pre-chorus</code>, <code>interlude</code>, <code>outro</code>), так что разделы песни называй так же."
   },
   "uk": {
-  "sub": "Кожне слово стильових рядків, на яких навчався <b>{name}</b>, власний файнтюн YuE2 від Ruach Studio: скільки треків його несли, звідки воно й з якими словами траплялося; і словник його партитур.",
+  "sub": "Кожне слово стильових рядків, на яких навчалася модель <b>{name}</b>, власний файнтюн YuE2 від Ruach Studio: скільки треків його несли, звідки воно й з якими словами траплялося; і словник його партитур.",
   "distinct": "різних слів",
   "listed": "слів у довіднику",
   "scoresN": "партитур",
@@ -446,15 +506,16 @@
   "fK": "тональність; змінюється в {0}",
   "fSec": "розділ, до якого належить уривок",
   "fChord": "акорд над тактом; через «/» його бас ({0} %)",
-  "tip1": "<b>Тримай її порядок</b>: мова або Instrumental, жанр, інструменти, голос, настрій і слова емоцій, тональність, BPM. Модель прочитала так 32 тисячі рядків.",
+  "tip1": "<b>Тримай її порядок</b>: мова або Instrumental, жанр, інструменти, голос, настрій і слова емоцій, тональність, BPM. Модель прочитала так {lines}.",
   "tip2": "<b>Пиши її словами</b>: <code>electric guitar</code>, а не «ревуча сокира»; <code>female voice</code> або <code>female alto vocal</code>. Слово із сотень треків лягає точно, слово з двох — лише натяк.",
   "tip3": "<b>Слова емоцій відносні</b>: <code>melancholic</code> означає «сумніше за більшість набору». Двох–чотирьох досить, як і було в даних.",
   "tip4": "<b>Тональність і BPM — виміряні значення</b>: <code>A minor, 92 BPM</code> так їх записав MTG-Jamendo, і модель навчилася їх тримати.",
   "tip5": "<b>Мовлення й a cappella теж є</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> та <code>a cappella, dry studio vocal, no instruments</code> були цілими рядками в даних.",
+  "tip5TW": "<b>Мовлення теж є</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> та <code>spoken word, Bible reading, male voice, with music</code> були цілими рядками в даних.",
   "tip6": "<b>Full спершу планує</b>: партитура, яку він пише, ділиться на розділи з вкладки «Партитури» (<code>intro</code>, <code>verse</code>, <code>chorus</code>, <code>bridge</code>, <code>pre-chorus</code>, <code>interlude</code>, <code>outro</code>), тож розділи пісні називай так само."
   },
   "be": {
-  "sub": "Кожнае слова стылёвых радкоў, на якіх вучыўся <b>{name}</b>, уласны файнцюн YuE2 ад Ruach Studio: колькі трэкаў яго неслі, адкуль яно і з якімі словамі сустракалася; і слоўнік яго партытур.",
+  "sub": "Кожнае слова стылёвых радкоў, на якіх вучылася мадэль <b>{name}</b>, уласны файнцюн YuE2 ад Ruach Studio: колькі трэкаў яго неслі, адкуль яно і з якімі словамі сустракалася; і слоўнік яго партытур.",
   "distinct": "розных слоў",
   "listed": "слоў у даведніку",
   "scoresN": "партытур",
@@ -468,11 +529,12 @@
   "fK": "танальнасць; мяняецца ў {0}",
   "fSec": "раздзел, да якога належыць урывак",
   "fChord": "акорд над тактам; праз «/» яго бас ({0} %)",
-  "tip1": "<b>Трымай яе парадак</b>: мова або Instrumental, жанр, інструменты, голас, настрой і словы эмоцый, танальнасць, BPM. Мадэль прачытала так 32 тысячы радкоў.",
+  "tip1": "<b>Трымай яе парадак</b>: мова або Instrumental, жанр, інструменты, голас, настрой і словы эмоцый, танальнасць, BPM. Мадэль прачытала так {lines}.",
   "tip2": "<b>Пішы яе словамі</b>: <code>electric guitar</code>, а не «раўучая сякера»; <code>female voice</code> або <code>female alto vocal</code>. Слова з сотняў трэкаў кладзецца дакладна, слова з двух — толькі намёк.",
   "tip3": "<b>Словы эмоцый адносныя</b>: <code>melancholic</code> значыць «сумней за большасць набору». Двух–чатырох дастаткова, як і было ў даных.",
   "tip4": "<b>Танальнасць і BPM — вымераныя значэнні</b>: <code>A minor, 92 BPM</code> так іх запісаў MTG-Jamendo, і мадэль навучылася іх трымаць.",
   "tip5": "<b>Маўленне і a cappella таксама ёсць</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> і <code>a cappella, dry studio vocal, no instruments</code> былі цэлымі радкамі ў даных.",
+  "tip5TW": "<b>Маўленне таксама ёсць</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> і <code>spoken word, Bible reading, male voice, with music</code> былі цэлымі радкамі ў даных.",
   "tip6": "<b>Full спачатку плануе</b>: партытура, якую ён піша, дзеліцца на раздзелы з укладкі «Партытуры» (<code>intro</code>, <code>verse</code>, <code>chorus</code>, <code>bridge</code>, <code>pre-chorus</code>, <code>interlude</code>, <code>outro</code>), таму раздзелы песні называй гэтак жа."
   },
   "el": {
@@ -490,15 +552,16 @@
   "fK": "η τονικότητα· αλλάζει σε {0}",
   "fSec": "το μέρος όπου ανήκει ένα απόσπασμα",
   "fChord": "μια συγχορδία πάνω από το μέτρο· με «/», το μπάσο της ({0} %)",
-  "tip1": "<b>Κράτα τη σειρά του</b>: γλώσσα ή Instrumental, είδος, όργανα, φωνή, διάθεση και λέξεις συναισθήματος, τονικότητα, BPM. Το μοντέλο διάβασε έτσι 32 χιλιάδες γραμμές.",
+  "tip1": "<b>Κράτα τη σειρά του</b>: γλώσσα ή Instrumental, είδος, όργανα, φωνή, διάθεση και λέξεις συναισθήματος, τονικότητα, BPM. Το μοντέλο διάβασε έτσι {lines}.",
   "tip2": "<b>Χρησιμοποίησε τις λέξεις του</b>: <code>electric guitar</code>, όχι «τσεκούρι που ουρλιάζει»· <code>female voice</code> ή <code>female alto vocal</code>. Μια λέξη από εκατοντάδες κομμάτια πιάνει· μια λέξη από δύο είναι νύξη.",
   "tip3": "<b>Οι λέξεις συναισθήματος είναι σχετικές</b>: το <code>melancholic</code> σημαίνει πιο λυπημένο από τα περισσότερα του συνόλου. Δύο ως τέσσερις, όπως στα δεδομένα, διαβάζονται καλύτερα από οκτώ.",
   "tip4": "<b>Τονικότητα και BPM είναι μετρημένες τιμές</b>: <code>A minor, 92 BPM</code> έτσι τις έγραψε το MTG-Jamendo, και το μοντέλο έμαθε να τις κρατά.",
   "tip5": "<b>Υπάρχουν και ομιλία και a cappella</b>: τα <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> και <code>a cappella, dry studio vocal, no instruments</code> ήταν ολόκληρες γραμμές στα δεδομένα.",
+  "tip5TW": "<b>Υπάρχει και ομιλία</b>: τα <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> και <code>spoken word, Bible reading, male voice, with music</code> ήταν ολόκληρες γραμμές στα δεδομένα.",
   "tip6": "<b>Το Full σχεδιάζει πρώτα</b>: η παρτιτούρα που γράφει χρησιμοποιεί τα μέρη της καρτέλας Παρτιτούρες (<code>intro</code>, <code>verse</code>, <code>chorus</code>, <code>bridge</code>, <code>pre-chorus</code>, <code>interlude</code>, <code>outro</code>), οπότε ονόμασε τα μέρη του τραγουδιού με τον ίδιο τρόπο."
   },
   "es": {
-  "sub": "Cada palabra de las líneas de estilo que enseñaron a <b>{name}</b>, el fine-tune propio de YuE2 de Ruach Studio: en cuántas pistas iba, de dónde vino y con qué palabras iba; y el vocabulario de sus partituras.",
+  "sub": "Cada palabra de las líneas de estilo que enseñaron al modelo <b>{name}</b>, el fine-tune propio de YuE2 de Ruach Studio: en cuántas pistas iba, de dónde vino y con qué palabras iba; y el vocabulario de sus partituras.",
   "distinct": "palabras distintas",
   "listed": "palabras en la lista",
   "scoresN": "partituras",
@@ -512,15 +575,16 @@
   "fK": "la tonalidad; cambia en {0}",
   "fSec": "la sección a la que pertenece un pasaje",
   "fChord": "un acorde sobre el compás; con «/», su bajo ({0} %)",
-  "tip1": "<b>Respeta su orden</b>: idioma o Instrumental, género, instrumentos, voz, ánimo y palabras de emoción, tonalidad, BPM. El modelo leyó así 32 mil líneas.",
+  "tip1": "<b>Respeta su orden</b>: idioma o Instrumental, género, instrumentos, voz, ánimo y palabras de emoción, tonalidad, BPM. El modelo leyó así {lines}.",
   "tip2": "<b>Usa sus palabras</b>: <code>electric guitar</code>, no «hacha rugiente»; <code>female voice</code> o <code>female alto vocal</code>. Una palabra vista en cientos de pistas acierta; una vista dos veces es una pista.",
   "tip3": "<b>Las palabras de emoción son relativas</b>: <code>melancholic</code> significa más triste que la mayoría del conjunto. De dos a cuatro, como en los datos, se leen mejor que ocho.",
   "tip4": "<b>Tonalidad y BPM son valores medidos</b>: <code>A minor, 92 BPM</code> es como los escribió MTG-Jamendo, y el modelo aprendió a mantenerlos.",
   "tip5": "<b>También hay voz hablada y a cappella</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> y <code>a cappella, dry studio vocal, no instruments</code> eran líneas enteras en los datos.",
+  "tip5TW": "<b>También hay voz hablada</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> y <code>spoken word, Bible reading, male voice, with music</code> eran líneas enteras en los datos.",
   "tip6": "<b>El modo Full planifica primero</b>: la partitura que escribe usa las secciones de la pestaña Partituras (<code>intro</code>, <code>verse</code>, <code>chorus</code>, <code>bridge</code>, <code>pre-chorus</code>, <code>interlude</code>, <code>outro</code>), así que nombra igual las secciones de una canción."
   },
   "it": {
-  "sub": "Ogni parola delle righe di stile che hanno insegnato a <b>{name}</b>, il fine-tune di YuE2 di Ruach Studio: in quanti brani compariva, da dove veniva e con quali parole andava; e il vocabolario delle sue partiture.",
+  "sub": "Ogni parola delle righe di stile che hanno insegnato al modello <b>{name}</b>, il fine-tune di YuE2 di Ruach Studio: in quanti brani compariva, da dove veniva e con quali parole andava; e il vocabolario delle sue partiture.",
   "distinct": "parole diverse",
   "listed": "parole in elenco",
   "scoresN": "partiture",
@@ -534,15 +598,16 @@
   "fK": "la tonalità; cambia in {0}",
   "fSec": "la sezione a cui appartiene un passaggio",
   "fChord": "un accordo sopra la battuta; con «/», il suo basso ({0} %)",
-  "tip1": "<b>Rispetta il suo ordine</b>: lingua o Instrumental, genere, strumenti, voce, umore e parole d'emozione, tonalità, BPM. Il modello ha letto così 32 mila righe.",
+  "tip1": "<b>Rispetta il suo ordine</b>: lingua o Instrumental, genere, strumenti, voce, umore e parole d'emozione, tonalità, BPM. Il modello ha letto così {lines}.",
   "tip2": "<b>Usa le sue parole</b>: <code>electric guitar</code>, non «ascia urlante»; <code>female voice</code> o <code>female alto vocal</code>. Una parola vista in centinaia di brani arriva; una vista due volte è un indizio.",
   "tip3": "<b>Le parole d'emozione sono relative</b>: <code>melancholic</code> vuol dire più triste della maggior parte dell'insieme. Da due a quattro, come nei dati, si leggono meglio di otto.",
   "tip4": "<b>Tonalità e BPM sono valori misurati</b>: <code>A minor, 92 BPM</code> è come li ha scritti MTG-Jamendo, e il modello ha imparato a tenerli.",
   "tip5": "<b>Ci sono anche parlato e a cappella</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> e <code>a cappella, dry studio vocal, no instruments</code> erano righe intere nei dati.",
+  "tip5TW": "<b>C'è anche il parlato</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> e <code>spoken word, Bible reading, male voice, with music</code> erano righe intere nei dati.",
   "tip6": "<b>La modalità Full pianifica prima</b>: la partitura che scrive usa le sezioni della scheda Partiture (<code>intro</code>, <code>verse</code>, <code>chorus</code>, <code>bridge</code>, <code>pre-chorus</code>, <code>interlude</code>, <code>outro</code>), quindi chiama allo stesso modo le sezioni di una canzone."
   },
   "fr": {
-  "sub": "Chaque mot des lignes de style qui ont formé <b>{name}</b>, le fine-tune de YuE2 de Ruach Studio : dans combien de morceaux il figurait, d'où il venait et avec quels mots il allait ; et le vocabulaire de ses partitions.",
+  "sub": "Chaque mot des lignes de style qui ont formé le modèle <b>{name}</b>, le fine-tune de YuE2 de Ruach Studio : dans combien de morceaux il figurait, d'où il venait et avec quels mots il allait ; et le vocabulaire de ses partitions.",
   "distinct": "mots distincts",
   "listed": "mots répertoriés",
   "scoresN": "partitions",
@@ -556,15 +621,16 @@
   "fK": "la tonalité ; changée dans {0}",
   "fSec": "la section à laquelle appartient un passage",
   "fChord": "un accord au-dessus de la mesure ; avec « / », sa basse ({0} %)",
-  "tip1": "<b>Garde son ordre</b> : langue ou Instrumental, genre, instruments, voix, humeur et mots d'émotion, tonalité, BPM. Le modèle a lu 32 mille lignes ainsi.",
+  "tip1": "<b>Garde son ordre</b> : langue ou Instrumental, genre, instruments, voix, humeur et mots d'émotion, tonalité, BPM. Le modèle a lu {lines} ainsi.",
   "tip2": "<b>Prends ses mots</b> : <code>electric guitar</code>, pas « hache hurlante » ; <code>female voice</code> ou <code>female alto vocal</code>. Un mot vu dans des centaines de morceaux porte ; un mot vu deux fois n'est qu'un indice.",
   "tip3": "<b>Les mots d'émotion sont relatifs</b> : <code>melancholic</code> veut dire plus triste que la plupart de l'ensemble. Deux à quatre, comme dans les données, se lisent mieux que huit.",
   "tip4": "<b>Tonalité et BPM sont des valeurs mesurées</b> : <code>A minor, 92 BPM</code>, c'est ainsi que MTG-Jamendo les a écrites, et le modèle a appris à les tenir.",
   "tip5": "<b>La voix parlée et l'a cappella y sont aussi</b> : <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> et <code>a cappella, dry studio vocal, no instruments</code> étaient des lignes entières dans les données.",
+  "tip5TW": "<b>La voix parlée y est aussi</b> : <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> et <code>spoken word, Bible reading, male voice, with music</code> étaient des lignes entières dans les données.",
   "tip6": "<b>Le mode Full planifie d'abord</b> : la partition qu'il écrit utilise les sections de l'onglet Partitions (<code>intro</code>, <code>verse</code>, <code>chorus</code>, <code>bridge</code>, <code>pre-chorus</code>, <code>interlude</code>, <code>outro</code>), alors nomme de même les sections d'une chanson."
   },
   "pt": {
-  "sub": "Cada palavra das linhas de estilo que ensinaram o <b>{name}</b>, o fine-tune próprio do YuE2 da Ruach Studio: em quantas faixas veio, de onde veio e com que palavras andava; e o vocabulário das suas partituras.",
+  "sub": "Cada palavra das linhas de estilo que ensinaram o modelo <b>{name}</b>, o fine-tune próprio do YuE2 da Ruach Studio: em quantas faixas veio, de onde veio e com que palavras andava; e o vocabulário das suas partituras.",
   "distinct": "palavras distintas",
   "listed": "palavras na lista",
   "scoresN": "partituras",
@@ -578,15 +644,16 @@
   "fK": "a tonalidade; muda em {0}",
   "fSec": "a seção a que um trecho pertence",
   "fChord": "um acorde sobre o compasso; com «/», o seu baixo ({0} %)",
-  "tip1": "<b>Mantenha a ordem dele</b>: idioma ou Instrumental, gênero, instrumentos, voz, clima e palavras de emoção, tonalidade, BPM. O modelo leu assim 32 mil linhas.",
+  "tip1": "<b>Mantenha a ordem dele</b>: idioma ou Instrumental, gênero, instrumentos, voz, clima e palavras de emoção, tonalidade, BPM. O modelo leu assim {lines}.",
   "tip2": "<b>Use as palavras dele</b>: <code>electric guitar</code>, não «machado que ruge»; <code>female voice</code> ou <code>female alto vocal</code>. Uma palavra vista em centenas de faixas acerta; uma vista duas vezes é uma dica.",
   "tip3": "<b>As palavras de emoção são relativas</b>: <code>melancholic</code> quer dizer mais triste que a maioria do conjunto. De duas a quatro, como nos dados, funcionam melhor que oito.",
   "tip4": "<b>Tonalidade e BPM são valores medidos</b>: <code>A minor, 92 BPM</code> é como o MTG-Jamendo os escreveu, e o modelo aprendeu a mantê-los.",
   "tip5": "<b>Fala e a cappella também estão lá</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> e <code>a cappella, dry studio vocal, no instruments</code> eram linhas inteiras nos dados.",
+  "tip5TW": "<b>A fala também está lá</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> e <code>spoken word, Bible reading, male voice, with music</code> eram linhas inteiras nos dados.",
   "tip6": "<b>O modo Full planeja primeiro</b>: a partitura que ele escreve usa as seções da aba Partituras (<code>intro</code>, <code>verse</code>, <code>chorus</code>, <code>bridge</code>, <code>pre-chorus</code>, <code>interlude</code>, <code>outro</code>), então nomeie as seções de uma canção do mesmo jeito."
   },
   "de": {
-  "sub": "Jedes Wort aus den Stilzeilen, mit denen <b>{name}</b> trainiert wurde, Ruach Studios eigenes Fine-Tune von YuE2: in wie vielen Tracks es stand, woher es kam und mit welchen Wörtern es ging; und das Vokabular seiner Partituren.",
+  "sub": "Jedes Wort aus den Stilzeilen, mit denen das Modell <b>{name}</b> trainiert wurde, Ruach Studios eigenes Fine-Tune von YuE2: in wie vielen Tracks es stand, woher es kam und mit welchen Wörtern es ging; und das Vokabular seiner Partituren.",
   "distinct": "verschiedene Wörter",
   "listed": "Wörter im Verzeichnis",
   "scoresN": "Partituren",
@@ -600,11 +667,12 @@
   "fK": "die Tonart; wechselt in {0}",
   "fSec": "der Teil, zu dem eine Passage gehört",
   "fChord": "ein Akkord über dem Takt; mit «/» sein Bass ({0} %)",
-  "tip1": "<b>Halte seine Reihenfolge</b>: Sprache oder Instrumental, Genre, Instrumente, Stimme, Stimmung und Emotionswörter, Tonart, BPM. So hat das Modell 32 tausend Zeilen gelesen.",
+  "tip1": "<b>Halte seine Reihenfolge</b>: Sprache oder Instrumental, Genre, Instrumente, Stimme, Stimmung und Emotionswörter, Tonart, BPM. So hat das Modell {lines} gelesen.",
   "tip2": "<b>Nimm seine Wörter</b>: <code>electric guitar</code>, nicht «heulende Axt»; <code>female voice</code> oder <code>female alto vocal</code>. Ein Wort aus Hunderten Tracks trifft; eines, das zweimal vorkam, ist nur ein Hinweis.",
   "tip3": "<b>Emotionswörter sind relativ</b>: <code>melancholic</code> heißt trauriger als die meisten im Satz. Zwei bis vier, wie in den Daten, lesen sich besser als acht.",
   "tip4": "<b>Tonart und BPM sind gemessene Werte</b>: <code>A minor, 92 BPM</code> hat MTG-Jamendo so geschrieben, und das Modell hat gelernt, sie zu halten.",
   "tip5": "<b>Sprache und a cappella sind auch drin</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> und <code>a cappella, dry studio vocal, no instruments</code> waren ganze Zeilen in den Daten.",
+  "tip5TW": "<b>Sprache ist auch drin</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> und <code>spoken word, Bible reading, male voice, with music</code> waren ganze Zeilen in den Daten.",
   "tip6": "<b>Der Full-Modus plant zuerst</b>: Die Partitur, die er schreibt, nutzt die Teile aus dem Reiter Partituren (<code>intro</code>, <code>verse</code>, <code>chorus</code>, <code>bridge</code>, <code>pre-chorus</code>, <code>interlude</code>, <code>outro</code>), also benenne die Teile eines Songs genauso."
   },
   "ja": {
@@ -622,11 +690,12 @@
   "fK": "調。途中で変わるのは {0}曲",
   "fSec": "その部分が属するセクション",
   "fChord": "小節の上のコード。「/」の後はベース音（{0} %）",
-  "tip1": "<b>順序を守る</b>: 言語または Instrumental、ジャンル、楽器、声、ムードと感情語、調、BPM。モデルはこの順で3万2千行を読みました。",
+  "tip1": "<b>順序を守る</b>: 言語または Instrumental、ジャンル、楽器、声、ムードと感情語、調、BPM。モデルはこの順で{lines}を読みました。",
   "tip2": "<b>モデルの語を使う</b>: 「唸る斧」ではなく <code>electric guitar</code>。<code>female voice</code> や <code>female alto vocal</code>。何百曲にも現れた語は届き、2回だけの語はヒントにすぎません。",
   "tip3": "<b>感情語は相対的</b>: <code>melancholic</code> はセットの大半より悲しいという意味です。データと同じく2〜4語のほうが、8語より伝わります。",
   "tip4": "<b>調と BPM は測定値</b>: <code>A minor, 92 BPM</code> は MTG-Jamendo の書き方で、モデルはそれを保つことを学びました。",
   "tip5": "<b>語りとアカペラも入っています</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> と <code>a cappella, dry studio vocal, no instruments</code> はデータの中で丸ごと1行でした。",
+  "tip5TW": "<b>語りも入っています</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> と <code>spoken word, Bible reading, male voice, with music</code> はデータの中で丸ごと1行でした。",
   "tip6": "<b>Full モードはまず設計する</b>: 書かれる楽譜は「楽譜」タブのセクション（<code>intro</code>, <code>verse</code>, <code>chorus</code>, <code>bridge</code>, <code>pre-chorus</code>, <code>interlude</code>, <code>outro</code>）を使うので、曲のセクション名も同じにしましょう。"
   },
   "zh": {
@@ -644,16 +713,42 @@
   "fK": "调；中途变化的有 {0} 份",
   "fSec": "一段音乐所属的段落",
   "fChord": "小节上方的和弦；“/”后为低音（{0} %）",
-  "tip1": "<b>保持它的顺序</b>：语言或 Instrumental、流派、乐器、人声、情绪和情感词、调、BPM。模型就是这样读了三万二千行。",
+  "tip1": "<b>保持它的顺序</b>：语言或 Instrumental、流派、乐器、人声、情绪和情感词、调、BPM。模型就是这样读了{lines}。",
   "tip2": "<b>用它的词</b>：写 <code>electric guitar</code>，不要写“咆哮的斧头”；写 <code>female voice</code> 或 <code>female alto vocal</code>。出现在数百首曲子里的词有效，只出现两次的词只是暗示。",
   "tip3": "<b>情感词是相对的</b>：<code>melancholic</code> 表示比集合中大多数更忧伤。像数据里那样用两到四个，比八个更好。",
   "tip4": "<b>调和 BPM 是测量值</b>：<code>A minor, 92 BPM</code> 是 MTG-Jamendo 的写法，模型学会了保持它们。",
   "tip5": "<b>其中也有朗读和无伴奏合唱</b>：<code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> 和 <code>a cappella, dry studio vocal, no instruments</code> 在数据里是完整的一行。",
+  "tip5TW": "<b>其中也有朗读</b>：<code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> 和 <code>spoken word, Bible reading, male voice, with music</code> 在数据里是完整的一行。",
   "tip6": "<b>Full 模式先做规划</b>：它写的乐谱使用“乐谱”标签页里的段落（<code>intro</code>, <code>verse</code>, <code>chorus</code>, <code>bridge</code>, <code>pre-chorus</code>, <code>interlude</code>, <code>outro</code>），所以给歌曲段落起同样的名字。"
+  },
+  "he": {
+  "sub": "כל מילה בשורות הסגנון שלימדו את <b>{name}</b>, הפיינטיון של YuE2 מבית נפחות רוח: בכמה רצועות היא הופיעה, מאיפה היא באה ולצד אילו מילים; ואוצר המילים של הפרטיטורות שלו.",
+  "distinct": "מילים שונות",
+  "listed": "מילים ברשימה",
+  "scoresN": "פרטיטורות",
+  "madeFrom": "נבנה מתוך הסט המוקפא של",
+  "withLyrics": "עם מילים",
+  "circle": "מעגל הקווינטות",
+  "scoreNote": "ל-{0} רצועות יש פרטיטורה משלהן, שתועתקה בידי SheetSage2 לכתיב ABC: התוכנית שחצי המוזיקה של YuE2 כותב קודם במצב Full ואחר כך שר. בכל אחת שני קולות, Vocal (המנגינה המושרת, הפסקות במקום שבו איש לא שר) ו-Ins (הקו של הכלי המוביל), ומעל התיבות אקורדים; ב-{1} מהן יש מנגינה מושרת.",
+  "fXT": "מספר המנגינה וכותרת ריקה",
+  "fM": "המשקל; משתנה באמצע ב-{0}",
+  "fQ": "הטמפו, רבעים לדקה",
+  "fK": "הסולם; משתנה ב-{0}",
+  "fSec": "הקטע שאליו שייכות התיבות",
+  "fChord": "אקורד מעל התיבה; עם \"/\" גם הבס שלו ({0} %)",
+  "tip1": "<b>שמור על הסדר שלו</b>: שפה או Instrumental, ז'אנר, כלים, קול, מצב רוח ומילות רגש, סולם, BPM. כך קרא המודל {lines}.",
+  "tip2": "<b>השתמש במילים שלו</b>: <code>electric guitar</code>, ולא \"גרזן שואג\"; <code>female voice</code> או <code>female alto vocal</code>. מילה שהופיעה במאות רצועות נוחתת במקום; מילה שהופיעה פעמיים היא רק רמז.",
+  "tip3": "<b>מילות רגש הן יחסיות</b>: <code>melancholic</code> פירושה עצוב יותר מרוב הסט. שתיים עד ארבע, כמו בנתונים, נקראות טוב יותר משמונה.",
+  "tip4": "<b>סולם ו-BPM הם ערכים מדודים</b>: <code>A minor, 92 BPM</code> הוא האופן שבו MTG-Jamendo כתב אותם, והמודל למד לשמור עליהם.",
+  "tip5": "<b>גם דיבור ושירה א-קפלה נמצאים בו</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> ו-<code>a cappella, dry studio vocal, no instruments</code> היו שורות שלמות בנתונים.",
+  "tip5TW": "<b>גם דיבור נמצא בו</b>: <code>spoken word, audiobook narration, calm clear reading, close-mic, dry studio, no music</code> ו-<code>spoken word, Bible reading, male voice, with music</code> היו שורות שלמות בנתונים.",
+  "tip6": "<b>מצב Full מתכנן קודם</b>: הפרטיטורה שהוא כותב משתמשת בקטעים שבכרטיסייה \"פרטיטורות\" (<code>intro</code>, <code>verse</code>, <code>chorus</code>, <code>bridge</code>, <code>pre-chorus</code>, <code>interlude</code>, <code>outro</code>), אז קרא לקטעי השיר באותם שמות."
   }
   };
   var L = T[LANG] ? LANG : "en";
   document.documentElement.lang = L;
+  var RTL = L === "he";                                       // 06.11.2026: Hebrew reads right to left
+  if (RTL) document.documentElement.dir = "rtl";
   function t(k) { return (T[L] && T[L][k]) || (LONG[L] && LONG[L][k]) || EN[k] || LONG.en[k] || null; }
   function tc(c) { return (CATN[L] || CATN.en)[c] || CATN.en[c] || c; }
   document.querySelectorAll("[data-t]").forEach(function (e) { var v = t(e.getAttribute("data-t")); if (v) e.textContent = v; });
@@ -663,8 +758,10 @@
   var ORDER = ["language", "instrumental", "genre", "instrument", "voice", "mood", "emotion", "theme", "sound", "form", "key", "tempo", "trigger", "other"];
   var CATS = ["genre", "instrument", "voice", "emotion", "mood", "theme", "sound", "form", "key", "tempo", "language", "instrumental", "trigger", "other"];
   var SRC = [["MTG-Jamendo", "mtg", "MTG"], ["FMA", "fma", "FMA"], ["Suno-made", "suno", "Suno"], ["Studio takes", "studio", "Studio"],
-             ["GTSinger", "gts", "GTSinger"], ["Speech", "speech", "Speech"], ["Album & loops", "album", "Loops"]];
+             ["GTSinger", "gts", "GTSinger"], ["Speech", "speech", "Speech"], ["Album & loops", "album", "Loops"], ["Other", "other", ""]];
   var SRCV = {}; SRC.forEach(function (s) { SRCV[s[0]] = "var(--s-" + s[1] + ")"; });
+  // «Other» (06.11.2026): the sources the model card does not name one by one, one group in the page's language; the named ones keep their names
+  function srcName(k, short) { return k === "Other" ? t("other") : short ? (SRC.filter(function (x) { return x[0] === k; })[0] || [k, "", k])[2] : k; }
   function nf(n) { return Number(n).toLocaleString(L === "en" ? "en-US" : L); }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return {"&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;"}[c]; }); }
   function $(id) { return document.getElementById(id); }
@@ -676,19 +773,63 @@
     function fallback() { var a = document.createElement("textarea"); a.value = s; document.body.appendChild(a); a.select(); try { document.execCommand("copy"); } catch (e) {} a.remove(); done(); }
   }
 
+  // a wave told by its meta.name; a set of the user's own by the name given (?names), its top-level name or its meta.name
+  function kind(s) { var n = (s && s.meta && s.meta.name) || ""; return n === "YuE2-RS-TW" ? "tw" : n === "YuE2-RS-FW" ? "fw" : ""; }
+  function label(i) { var s = sets[i], k = kind(s); return k === "fw" ? t("nameFW") : k === "tw" ? "Tsunami Wave" : (NAMES[i] || s.name || s.meta.name); }
+  function titleOf(i) { var k = kind(sets[i]); return k === "fw" ? t("title") : k === "tw" ? t("titleTW") : label(i); }
+  function pubName(i) { var l = label(i), n = sets[i].meta.name; return l === n ? n : l + " · " + n; }
+  // «The model read 32 thousand lines»: the set's own count, in the page's words and numerals
+  function plural(n, one, few, many) { var a = n % 10, b = n % 100; return a === 1 && b !== 11 ? one : a >= 2 && a <= 4 && (b < 12 || b > 14) ? few : many; }
+  function zhNum(n) {
+    var d = "〇一二三四五六七八九", tens = Math.floor(n / 10), u = n % 10;
+    return n < 10 ? d[n] : (tens === 1 ? "" : d[tens]) + "十" + (u ? d[u] : "");
+  }
+  function lines(n) {
+    var k = Math.floor(n / 1000), w = Math.floor(k / 10), r = k % 10;
+    switch (L) {
+      case "ru": return k + "\u00a0" + plural(k, "тысячу", "тысячи", "тысяч") + " строк";
+      case "uk": return k + "\u00a0" + plural(k, "тисячу", "тисячі", "тисяч") + " рядків";
+      case "be": return k + "\u00a0" + plural(k, "тысячу", "тысячы", "тысяч") + " радкоў";
+      case "el": return k + " χιλιάδες γραμμές";
+      case "es": return k + " mil líneas";
+      case "it": return k + " mila righe";
+      case "fr": return k + " mille lignes";
+      case "pt": return k + " mil linhas";
+      case "de": return k + " tausend Zeilen";
+      case "ja": return (w ? w + "万" : "") + (r ? r + "千" : "") + "行";
+      case "zh": return (w ? zhNum(w) + "万" : "") + (r ? zhNum(r) + "千" : "") + "行";
+      case "he": return k + " אלף שורות";
+      default: return k + " thousand lines";
+    }
+  }
+
   var sets = [], D = null, cur = 0;
-  Promise.all(DATA.map(function (u) { return fetch(u).then(function (r) { if (!r.ok) throw new Error(u + ": " + r.status); return r.json(); }); }))
-    .then(function (all) { sets = all; D = all[0]; start(); })
+  // the sets given (?data) must all come; of the built-in ones the first must, a later wave missing (an older Studio) is left out
+  Promise.all(DATA.map(function (u, i) {
+    return fetch(u).then(function (r) { if (!r.ok) throw new Error(u + ": " + r.status); return r.json(); })
+      .catch(function (e) { if (GIVEN || i === 0) throw e; return null; });
+  }))
+    .then(function (all) {
+      var urls = [], names = [];
+      all.forEach(function (s, i) { if (s) { sets.push(s); urls.push(DATA[i]); names.push(NAMES[i] || ""); } });
+      DATA = urls; NAMES = names; start();
+    })
     .catch(function (e) { $("list").innerHTML = '<div class="empty">' + esc(e.message) + "</div>"; });
 
   var state = {q: "", cat: "", src: "", sort: "tracks", n: 150, open: {}, line: []};
   var rows = [], baseIndex = {};
 
   function start() {
+    // ?set=N (0 the first) or ?set=fw|tw; else the Tsunami Wave when it is here, the Studio's default model; else the first
+    var want = (P.get("set") || "").toLowerCase(), pick = -1;
+    if (/^\d+$/.test(want) && +want < sets.length) pick = +want;
+    sets.forEach(function (s, i) { if (pick < 0 && want && kind(s) === want) pick = i; });
+    sets.forEach(function (s, i) { if (pick < 0 && kind(s) === "tw") pick = i; });
+    cur = pick < 0 ? 0 : pick; D = sets[cur];
     if (sets.length > 1) {
       var seg = $("setSeg"); seg.hidden = false;
       sets.forEach(function (s, i) {
-        var b = document.createElement("button"); b.textContent = NAMES[i] || s.meta.name; if (i === 0) b.className = "on";
+        var b = document.createElement("button"); b.textContent = label(i); if (i === cur) b.className = "on";
         b.onclick = function () { cur = i; D = sets[i]; seg.querySelectorAll("button").forEach(function (x, j) { x.classList.toggle("on", j === i); }); load(); };
         seg.appendChild(b);
       });
@@ -700,9 +841,8 @@
   function load() {
     var m = D.meta;
     rows = D.tags;
-    document.querySelector("h1").textContent = sets.length > 1 && cur > 0 ? (NAMES[cur] || m.name) : t("title");   // a set laid over the First Wave says its own name
-    var srcn = Object.keys(m.sources).length;
-    $("sub").innerHTML = t("sub").replace("{name}", esc(m.name));
+    document.querySelector("h1").textContent = document.title = titleOf(cur);   // each set says its own name, the tab too
+    $("sub").innerHTML = t("sub").replace("{name}", esc(pubName(cur)));
     $("nums").innerHTML = [[m.tracks, t("tracks")], [m.hours ? "≈ " + nf(m.hours) : "", t("hours")], [m.distinct_words, t("distinct")], [m.words_listed, t("listed")], [D.sheets ? D.sheets.sheets : 0, t("scoresN")]]
       .filter(function (x) { return x[0] !== ""; })
       .map(function (x) { return "<div><b>" + (typeof x[0] === "number" ? nf(x[0]) : esc(x[0])) + "</b><span>" + esc(x[1]) + "</span></div>"; }).join("");
@@ -711,13 +851,17 @@
       CATS.filter(function (c) { return cc[c]; }).map(function (c) {
         return '<button class="chip' + (state.cat === c ? " on" : "") + '" data-cat="' + c + '" style="--cc:var(--c-' + c + ')"><i></i>' + esc(tc(c)) + " <small>" + nf(cc[c]) + "</small></button>";
       }).join("");
+    if (state.src && !m.sources[state.src]) state.src = "";       // a source this set has not (GTSinger in the Tsunami Wave): the filter lifts
     $("srcs").innerHTML = SRC.filter(function (s) { return m.sources[s[0]]; }).map(function (s) {
-      return '<button class="chip' + (state.src === s[0] ? " on" : "") + '" data-src="' + esc(s[0]) + '" style="--cc:' + SRCV[s[0]] + '"><i></i>' + esc(s[2]) + " <small>" + nf(m.sources[s[0]].tracks) + "</small></button>";
+      return '<button class="chip' + (state.src === s[0] ? " on" : "") + '" data-src="' + esc(s[0]) + '" style="--cc:' + SRCV[s[0]] + '"' +
+        (s[0] === "Other" ? ' title="' + esc(t("otherNote")) + '"' : "") + "><i></i>" + esc(srcName(s[0], true)) + " <small>" + nf(m.sources[s[0]].tracks) + "</small></button>";
     }).join("");
-    $("legend").innerHTML = SRC.filter(function (s) { return m.sources[s[0]]; }).map(function (s) { return '<span style="--cc:' + SRCV[s[0]] + '"><i></i>' + esc(s[0]) + "</span>"; }).join("");
+    $("legend").innerHTML = SRC.filter(function (s) { return m.sources[s[0]]; }).map(function (s) {
+      return '<span style="--cc:' + SRCV[s[0]] + '"' + (s[0] === "Other" ? ' title="' + esc(t("otherNote")) + '"' : "") + "><i></i>" + esc(srcName(s[0])) + "</span>"; }).join("");
     renderList(); renderEmo(); renderScores(); renderHow();
-    $("foot").innerHTML = esc(t("madeFrom")) + " " + esc(m.name) + " · " + esc(m.made) +
-      ' · <a href="fw-vocabulary.json" download>fw-vocabulary.json</a> · CC BY-NC-SA 4.0';
+    var file = DATA[cur].split("?")[0].split("/").pop();          // the set's own file to take whole
+    $("foot").innerHTML = esc(t("madeFrom")) + " " + esc(pubName(cur)) + " · " + esc(m.made) +
+      ' · <a href="' + esc(DATA[cur]) + '" download="' + esc(file) + '">' + esc(file) + "</a> · CC BY-NC-SA 4.0";
   }
 
   function match(r) {
@@ -732,7 +876,7 @@
 
   function stack(s) {
     var tot = 0, k; for (k in s) tot += s[k];
-    var h = ""; SRC.forEach(function (x) { if (s[x[0]]) h += '<i style="width:' + (s[x[0]] / tot * 100).toFixed(2) + "%;background:" + SRCV[x[0]] + '" title="' + esc(x[0] + " " + nf(s[x[0]])) + '"></i>'; });
+    var h = ""; SRC.forEach(function (x) { if (s[x[0]]) h += '<i style="width:' + (s[x[0]] / tot * 100).toFixed(2) + "%;background:" + SRCV[x[0]] + '" title="' + esc(srcName(x[0]) + " " + nf(s[x[0]])) + '"></i>'; });
     return '<div class="stack">' + h + "</div>";
   }
 
@@ -749,9 +893,9 @@
         (isNew ? '<span class="new">' + esc(t("newIn")) + "</span>" : "") + '<span class="cat">' + esc(tc(r.category)) + (r.dimension ? " · " + esc(r.dimension) : "") + "</span></div>" +
         '<div class="bar"><i style="width:' + Math.max(1.5, r.tracks / top * 100).toFixed(1) + '%"></i></div>' +
         '<div class="num">' + nf(r.tracks) + "<small>" + (r.share >= 0.1 ? r.share.toFixed(1) : r.share.toFixed(2)) + " %</small></div>" + stack(r.sources || {}) +
-        '<button class="more" data-open="' + esc(key) + '" aria-label="more">' + (state.open[key] ? "▾" : "▸") + "</button>";
+        '<button class="more" data-open="' + esc(key) + '" aria-label="more">' + (state.open[key] ? "▾" : RTL ? "◂" : "▸") + "</button>";
       if (state.open[key]) {
-        var src = Object.keys(r.sources || {}).map(function (s) { return esc(s) + " " + nf(r.sources[s]); }).join(" · ");
+        var src = Object.keys(r.sources || {}).map(function (s) { return esc(srcName(s)) + " " + nf(r.sources[s]); }).join(" · ");
         h += '<div class="detail"><div>' + esc(t("from")) + " " + src + (r.with_lyrics ? " · " + esc(t("withLyrics")) + " " + nf(r.with_lyrics) : "") + "</div>" +
           (r["with"] && r["with"].length ? "<div>" + esc(t("metWith")) + '<div class="pills">' + r["with"].map(function (w) { return '<button data-q="' + esc(w.tag) + '">' + esc(w.tag) + " · " + nf(w.together) + "</button>"; }).join("") + "</div></div>" : "") + "</div>";
       }
@@ -869,7 +1013,10 @@
     var ex = [["language", "English"], ["genre", "folk"], ["instrument", "acoustic guitar"], ["voice", "female voice"], ["mood", "dreamy"],
               ["emotion", "tender"], ["emotion", "yearning"], ["key", "D major"], ["tempo", "92 BPM"]];
     $("order").innerHTML = ex.map(function (x, i) { return (i ? "<em>,</em>" : "") + '<span style="--cc:var(--c-' + x[0] + ')" title="' + esc(tc(x[0])) + '">' + esc(x[1]) + "</span>"; }).join("");
-    var tips = ["tip1", "tip2", "tip3", "tip4", "tip5", "tip6"].map(t);
+    var tw = kind(D) === "tw", has = {}; D.tags.forEach(function (r) { has[r.tag.toLowerCase()] = 1; });
+    var tips = ["tip1", "tip2", "tip3", "tip4", tw ? "tip5TW" : "tip5", "tip6"].map(t);
+    tips[0] = tips[0].replace("{lines}", lines(D.meta.tracks));
+    if (!has["female alto vocal"]) tips[1] = tips[1].replace(/\s+\S+\s+<code>female alto vocal<\/code>/, "");   // a word this set never met: not offered
     $("howList").innerHTML = tips.map(function (x) { return "<li>" + x + "</li>"; }).join("");
   }
   renderLine();

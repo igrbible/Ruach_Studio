@@ -1228,3 +1228,38 @@
   font-display: swap;
   src: url(/lab/fonts/Lato-BoldItalic.ttf) format('truetype');
 }
+/* HERESY 2066 (Viktor 05.11.2026: «…для иврита… DavidCLM… для греков… GFS Didot, и в Движке в выборе шрифтов добавить именно выбор ИВРИТ и ГРЕЧЕСКИЙ, и под капотом матчить греков и семитов на эти шрифты»): the Hebrew and the Greek letters' own fonts (lab/fonts/: David CLM, Culmus, GPL-2.0 with
+   the font exception; GFS Didot, OFL), given those letters only, so they stand first in every role's stack (app.css --scripts) and the role's
+   font keeps the rest; David CLM's medium is its regular. TTF as Viktor keeps them (GFS Didot's licence takes a change of format for a new font) */
+@font-face {
+  font-family: 'David CLM';
+  font-style: normal;
+  font-weight: 100 550;
+  font-display: swap;
+  src: url(/lab/fonts/DavidCLM-Medium.ttf) format('truetype');
+  unicode-range: U+0590-05FF, U+FB1D-FB4F;
+}
+@font-face {
+  font-family: 'David CLM';
+  font-style: normal;
+  font-weight: 551 900;
+  font-display: swap;
+  src: url(/lab/fonts/DavidCLM-Bold.ttf) format('truetype');
+  unicode-range: U+0590-05FF, U+FB1D-FB4F;
+}
+@font-face {
+  font-family: 'GFS Didot';
+  font-style: normal;
+  font-weight: 100 550;
+  font-display: swap;
+  src: url(/lab/fonts/GFSDidot-Regular.ttf) format('truetype');
+  unicode-range: U+0370-03FF, U+1F00-1FFF;
+}
+@font-face {
+  font-family: 'GFS Didot';
+  font-style: normal;
+  font-weight: 551 900;
+  font-display: swap;
+  src: url(/lab/fonts/GFSDidot-Bold.ttf) format('truetype');
+  unicode-range: U+0370-03FF, U+1F00-1FFF;
+}

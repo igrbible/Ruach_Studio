@@ -20,7 +20,7 @@ assert c.locked_takes(d) == {"a", "both", "s1"}, c.locked_takes(d)
 r = c.trash_move(kit, outputs, ["a", "b", "s1", "free", "both"], conf)
 assert sorted(r["moved"]) == ["b", "free"] and sorted(r["locked"]) == ["a", "both", "s1"], r
 assert (outputs / "a").is_dir() and not (outputs / "b").exists()
-# a move from no workspace named takes a take out of every other, but a locked one keeps it; a named locked source refuses nothing
+# a move from no workspace named takes a take out of every other, but a locked one keeps it (a named locked source refuses the move: test_ws_forget.py)
 c.collection_post(conf, outputs, {"op": "ws-move", "workspace": "Loose", "names": ["a"]})
 d = c.load(conf)
 assert "a" in d["workspaces"]["💎 Set"] and "a" in d["workspaces"]["Loose"], d["workspaces"]

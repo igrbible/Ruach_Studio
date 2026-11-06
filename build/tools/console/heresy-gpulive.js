@@ -170,5 +170,5 @@
     ["logDock", "view-engine"].forEach(function (id) { var el = $(id); if (el) new MutationObserver(seen).observe(el, { attributes: true, attributeFilter: ["class"] }); });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch); else watch();
-  window.HeresyGpuLive = { tick: tick, state: S, every: EVERY };
+  window.HeresyGpuLive = { tick: tick, state: S, every: EVERY, paint: seen };   // HERESY 2087: paint, drawn again where in sight (the log's window resized)
 })();

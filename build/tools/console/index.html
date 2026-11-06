@@ -3,6 +3,16 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="ruach-build" content="dev" />   <!-- HERESY 2102: build.sh writes the build's id here, for the debug journal -->
+<!-- HERESY 2139 (Viktor 06.11.2026: «все assets загружать с кешированием, но в каждом иметь ключ ?675tg9 релиз тега»): build.sh writes here the build's
+     id (as the meta above), the release it was built from (VERSION) and the keys of the files the page's scripts ask for by name (the first ten hex
+     of each one's SHA-256); RuachAsset(url) gives such a URL its ?v=KEY, kept a year by the lab, and leaves one with no key as it is (asked again) -->
+<script>window.RUACH_BUILD = { id: "dev", release: "dev", keys: {} };
+  window.RuachAsset = function (u) { var b = window.RUACH_BUILD, k = b && b.keys && b.keys[u]; return k ? u + (u.indexOf("?") < 0 ? "?" : "&") + "v=" + k : u; };</script>
+<!-- HERESY 2139: the page was no-store, so a browser never kept it in its back/forward memory; no-cache lets it. A page brought back from there would
+     come back with its stream (/logs), its lease and its timers as they were left: it loads again instead (a 304, the page itself unchanged), as before -->
+<script>addEventListener("pageshow", function (e) { if (e.persisted) location.reload(); });</script>
+<link rel="manifest" href="/manifest.webmanifest" /><meta name="theme-color" content="#14110e" /><link rel="apple-touch-icon" href="/pwa/icon-192.png" />   <!-- HERESY 2024: installable -->
 <title>Ruach Studio</title>
 <!-- HERESY 1266 (Viktor 09.10.2026: «фавиконку — бекграунд базовый из лого, и монтеррат букву R для английского, Р для
      русского, Π для греческого»): the logo's cloud with the name's first letter; heresy-i18n.js puts on the one of the
@@ -11,6 +21,32 @@
 <!-- HERESY 1274 (Viktor 09.10.2026: «abcjs и шрифты ложи всё в репо… Минимум интернета из Студии на локальной машине»): the
      page's fonts in the Studio itself: their faces inlined, their files from the lab (/lab/fonts/, cached a year) -->
 <link rel="stylesheet" href="vendor/fonts.css" />
+<script>
+  // HERESY 2066 (Viktor 05.11.2026: «…для иврита… DavidCLM… для греков… GFS Didot, и в Движке в выборе шрифтов добавить именно выбор ИВРИТ и ГРЕЧЕСКИЙ, и под капотом матчить греков и семитов на эти шрифты»): the Hebrew and the
+  // Greek letters' own fonts over every font role (--scripts, first in each role's stack: app.css), here before the first paint and at each
+  // change of the Fonts card (app.js applyFonts). David CLM and GFS Didot by default (vendor/fonts.css gives them those letters only); a font of
+  // this computer through faces of the Studio's own name («Ruach Hebrew», «Ruach Greek»: local(), the same letters only); «Same as the text» ("")
+  // leaves those letters to each role's font. A script of its own, so it stands where the next one's localStorage throws
+  window.ruachScriptFonts = function (f) {
+    var S = { hebrew: ["David CLM", "Ruach Hebrew", "U+0590-05FF, U+FB1D-FB4F"], greek: ["GFS Didot", "Ruach Greek", "U+0370-03FF, U+1F00-1FFF"] };
+    var names = [], css = "", k, want, el;
+    var local = function (list) { return list.map(function (x) { return "local(" + JSON.stringify(x) + ")"; }).join(", "); };
+    for (k in S) {
+      want = f && typeof f[k] === "string" ? f[k] : S[k][0];
+      if (!want) continue;                                                       // «Same as the text»
+      if (want === S[k][0]) { names.push(JSON.stringify(want)); continue; }     // the Studio's own
+      names.push(JSON.stringify(S[k][1]));
+      css += "@font-face { font-family: " + JSON.stringify(S[k][1]) + "; font-weight: 100 550; src: " + local([want, want + " Regular", want.replace(/ /g, "") + "-Regular"]) +
+        "; unicode-range: " + S[k][2] + "; }\n@font-face { font-family: " + JSON.stringify(S[k][1]) + "; font-weight: 551 900; src: " +
+        local([want + " Bold", want.replace(/ /g, "") + "-Bold", want]) + "; unicode-range: " + S[k][2] + "; }\n";
+    }
+    el = document.getElementById("scriptFaces");
+    if (!el) { el = document.createElement("style"); el.id = "scriptFaces"; document.head.appendChild(el); }
+    if (el.textContent !== css) el.textContent = css;
+    document.documentElement.style.setProperty("--scripts", names.length ? names.join(", ") : '"Ruach None"');   // a name no font has: the stack stays valid
+    return names;
+  };
+</script>
 <script>try { var t = localStorage.getItem("yue2.theme"); if (t) document.documentElement.dataset.theme = t;
   // HERESY 1167 (Viktor: «дефолтом поставь СИСТЕМА»): as the system, the system's day or night before the first paint
   var sc = localStorage.getItem("yue2.scheme");
@@ -18,7 +54,9 @@
     ? localStorage.getItem("yue2.theme.night") || "igr-night" : localStorage.getItem("yue2.theme.day") || "igr-day";
   // HERESY 1426: a chosen font falls back on the Studio's own (app.js FONT_BACK), the heading's «same as the text» on the text's
   var f = JSON.parse(localStorage.getItem("yue2.fonts") || "{}"), g = { sans: '"Noto Sans", sans-serif', heading: "var(--sans)", mono: '"Noto Sans Mono", monospace', rooms: "var(--sans)", buttons: "var(--sans)" };
-  for (var k in g) if (typeof f[k] === "string") document.documentElement.style.setProperty("--" + k, f[k] ? JSON.stringify(f[k]) + ", " + g[k] : "var(--sans)");
+  // HERESY 2066: a chosen font behind the Hebrew and Greek letters' own (--scripts), as app.css' defaults are; then those letters' fonts
+  for (var k in g) if (typeof f[k] === "string") document.documentElement.style.setProperty("--" + k, f[k] ? "var(--scripts), " + JSON.stringify(f[k]) + ", " + g[k] : "var(--sans)");
+  if (window.ruachScriptFonts) window.ruachScriptFonts(f);
   if (typeof f.buttons !== "string" || f.buttons) document.documentElement.classList.add("fonts-buttons");   // HERESY 1493: Jura on the buttons unless «Same as the text»
   var L = JSON.parse(localStorage.getItem("yue2.look") || '{"corners":"soft","glow":"on","hover":"accent"}'), o = ["hover", "glow", "motion", "corners"];
   for (var i = 0; i < o.length; i++) if (typeof L[o[i]] === "string") document.documentElement.dataset[o[i]] = L[o[i]];
@@ -164,6 +202,10 @@
     <!-- HERESY 1092 (Viktor, 02.10.2026): a short bar at any zoom: day/night, save, clear, the DAW; the rest
          (and what comes later) behind the ☰, each with its words -->
     <!-- HERESY 1148: the page's language (Viktor, 03.10.2026): its two letters; the menu names each language in its own words -->
+    <!-- HERESY 2099, 2101: the changes sent and not confirmed yet (a count, its tip naming them) and the line stuck (a quiet sign); both hidden until then -->
+    <button type="button" class="wire-badge" id="wireBadge" hidden translate="no" aria-label="Changes sent, not confirmed by the Studio yet"><span class="wb-ico" aria-hidden="true"></span><span class="wb-n mono">0</span></button>
+    <span class="link-badge" id="linkBadge" hidden role="status" translate="no" aria-label="The line to the Studio is stuck"></span>
+    <button type="button" class="debug-badge" id="debugBadge" hidden translate="no" data-tip="The debug journal is on: what you do in the Studio is kept in this browser for a day, never what you type. Click: Engine → Debugging">DEBUG</button>   <!-- HERESY 2054 -->
     <button type="button" class="btn ghost small lang-btn" id="langButton" aria-haspopup="true" aria-label="Language" data-tip="The language of the page">EN</button>
     <button type="button" class="btn ghost small day-night" id="dayNight" aria-label="Day, night or as the system">☀</button>
     <!-- HERESY 1167 (Viktor: «кнопку GUIDE убрать… а также перенести туда с бара SAVE»): Save and the guide live in ☰ -->
@@ -184,16 +226,18 @@ Standard · the cleanest sound, the newer model, the default
 Legacy · the older official decoder, the benchmarks were made with it
 Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <div class="head-more-items">
-          <!-- HERESY 1169 (Viktor 07.10.2026: «кнопку экспорта в DAW перенести в спадающее меню… И наверное продублировать в
-               правильных местах в самом Огранщике»): out of the bar into ☰; the Refiner has it beside the take in hand -->
-          <button type="button" class="btn ghost small" id="dawOpen" data-icon="daw" data-tip="Out of the Studio: the mixed track as it is, or the whole take into your DAW (Bitwig, REAPER)">Export to DAW</button>
+          <!-- HERESY 2064 (Viktor 04.11.2026: «Строку "Экспорт в DAW" к хуям. Эта команда дублируется у нас в контекстном меню… Три строки Движок,
+               Тема, Руководство в одну строку тремя равномерными колонками. Слово Руководство замени на Гайд»): Export to DAW out of ☰ (a take's menu
+               and the Refiner have it, Ctrl+Alt+8 opens it); the Engine, the theme and the guide in one row of three equal columns; the text size last -->
+          <div class="hm-three">
+            <button class="btn ghost small" id="engineToggle" data-icon="engine" data-tip="Engine: model, memory, chat server, log, look">Engine</button>
+            <button type="button" class="btn ghost small theme-button" id="themeButton">Theme</button>
+            <button type="button" class="btn ghost small" id="guideOpenMenu" data-icon="question" data-tip="The guide: every room, what each thing does">Guide</button>
+          </div>
           <!-- HERESY 1169 (Viktor 07.10.2026: «глобальный скейл шрифтов с минус 2 и плюс до 4… Три кнопочки глобального -=R в спадающее
                меню в баре»): the page's text, smaller or larger, the layout as it is -->
           <div class="hm-fs" data-tip="The whole page's text smaller or larger (−2 to +4 pt): the layout stays; a lifted frame has its own on top">
             <span class="hm-fs-name">Text size</span><output class="hm-fs-val mono" data-fs-say="g">0 pt</output><span class="fs-btns" role="group" aria-label="Text size"><button type="button" class="btn ghost small icon-btn" data-fs="g-" data-ui="text-smaller" aria-label="Smaller text" data-tip="Smaller text"></button><button type="button" class="btn ghost small icon-btn" data-fs="g+" data-ui="text-larger" aria-label="Larger text" data-tip="Larger text"></button><button type="button" class="btn ghost small icon-btn" data-fs="g0" data-ui="text-reset" aria-label="The text&#39;s own size" data-tip="The text&#39;s own size again"></button></span></div>
-          <button type="button" class="btn ghost small theme-button" id="themeButton">Theme</button>
-          <button class="btn ghost small" id="engineToggle" data-icon="engine" data-tip="Engine: model, memory, chat server, log, look">Engine</button>
-          <button type="button" class="btn ghost small" id="guideOpenMenu" data-icon="question" data-tip="The guide: every room, what each thing does">The guide</button>
         </div>
       </div>
     </div>
@@ -296,6 +340,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     <button type="button" role="tab" class="engine-tab" data-etab="places" aria-selected="false" tabindex="-1">Folders and Security</button>
     <button type="button" role="tab" class="engine-tab" data-etab="look" aria-selected="false" tabindex="-1">Appearance</button>
     <button type="button" role="tab" class="engine-tab" data-etab="defaults" aria-selected="false" tabindex="-1">Defaults</button>   <!-- HERESY 1818 -->
+    <button type="button" role="tab" class="engine-tab" data-etab="debug" aria-selected="false" tabindex="-1">Debugging</button>   <!-- HERESY 2054 -->
     <button type="button" role="tab" class="engine-tab" data-etab="about" aria-selected="false" tabindex="-1">Updates and About</button>
   </div>
   <div class="engine-grid">
@@ -383,6 +428,13 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       </div>
     </div>
 
+    <!-- HERESY 2085 (Viktor 05.11.2026: «в Движок в Hardware добавь топологию, она полезна тем, кто понимает в это, — как мы.»): how the cards sit on
+         the bus: each one's NUMA node, PCIe link and PCI address; NVIDIA's matrix and P2P under one-line legends (lab/topology.py, heresy-topology.js) -->
+    <div class="card wide eg-topology" id="topoCard">
+      <div class="lora-card-head"><h3>Topology</h3><span class="lora-card-note">how the cards sit on the bus</span></div>
+      <div class="topo-body" id="topoBody"><p class="row-hint">Asking the lab&hellip;</p></div>
+    </div>
+
     <!-- the look of the page: the theme and its options, then the fonts; all this browser's own (app.js: appearance) -->
     <div class="card wide appearance-card eg-look" id="appearanceCard">
       <h3>Appearance</h3>
@@ -419,6 +471,12 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <span class="font-row"><select id="fontButtons" data-font="buttons" data-tip="The font of every button with words, the toggles and the menus' items; Jura by default"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="buttons"><button type="button" class="btn ghost small icon-btn" data-fstep="buttons-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="buttons">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="buttons+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
         <label class="field"><span class="label" data-head="seeds, scores, the log">Numbers and code</span>
           <select id="fontMono" data-font="mono"></select></label>
+        <!-- HERESY 2066 (Viktor 05.11.2026: «…для иврита… DavidCLM… для греков… GFS Didot, и в Движке в выборе шрифтов добавить именно выбор ИВРИТ и ГРЕЧЕСКИЙ, и под капотом матчить греков и семитов на эти шрифты»):
+             the Hebrew and the Greek letters' own fonts, over every font above; each with its tip, as Section marks and Buttons have theirs -->
+        <label class="field"><span class="label">Hebrew</span>
+          <select id="fontHebrew" data-font="hebrew" data-tip="The font of every Hebrew letter in the Studio, whatever font the rest of the line is in; David CLM by default"></select></label>
+        <label class="field"><span class="label">Greek</span>
+          <select id="fontGreek" data-font="greek" data-tip="The font of every Greek letter in the Studio, whatever font the rest of the line is in; GFS Didot by default"></select></label>
         <p class="row-hint" id="fontsHint"></p>
       </section>
       </div>
@@ -450,7 +508,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       <section class="look-part">
         <h4 class="mini">Player</h4>
         <!-- HERESY 1810 (Viktor 28.10.2026: «в ШАГ иконки emoji замени на реальные плеерные, И нарисуй svg иконки клавиш-стрелок клавиатуры»): the player's
-             own ⏪ ⏩, the keys as key caps; the three steps on one row -->
+             own ⏪ ⏩, the keys as key caps; the three steps on one row. HERESY 2097b (Viktor 05.11.2026: «Прикрути сюда наши честные плеерные SVG иконки»):
+             drawn as the player draws them, its stroke, the step's and the keys' one size -->
         <div class="seek-row">
         <label class="field"><span class="label key-label">Step <span class="key-icons"><span data-ui="rewind"></span><span data-ui="forward"></span></span></span>
           <select data-def="yue2.seekBtn" data-def-is="15"><option value="5">5 s</option><option value="10">10 s</option><option value="15">15 s</option><option value="30">30 s</option><option value="60">60 s</option></select></label>
@@ -470,6 +529,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <div class="look-checks">
           <label class="check"><input type="checkbox" data-def-check="yue2.clickPlay" data-def-off="off" /> <span>A click on a take plays it</span></label>
           <label class="check"><input type="checkbox" data-def-check="yue2.playNew" data-def-off="off" /> <span>New takes play when they are done</span></label>
+          <label class="check"><input type="checkbox" data-def-check="yue2.tailGuard" data-def-on="on" /> <span>New takes have their end checked (tail guards)</span></label>   <!-- HERESY 2056 -->
           <label class="check"><input type="checkbox" data-def-check="yue2.dblPlay" data-def-off="off" /> <span>A double-click on a card plays or stops it</span></label>
           <label class="check"><input type="checkbox" data-def-check="yue2.reactMark" data-def-on="on" /> <span>A take's reaction faint in its card's background</span></label>   <!-- HERESY 1877 -->
         </div>
@@ -487,7 +547,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <div class="look-checks">
           <label class="check"><input type="checkbox" data-def-check="yue2.tips" data-def-off="off" /> <span>Tips over buttons and fields, on the pointer</span></label>
           <label class="check"><input type="checkbox" data-def-check="yue2.hintLines" data-def-off="off" /> <span>Hint lines under fields and in cards</span></label>
-          <label class="check"><input type="checkbox" data-def-check="yue2.infoDots" data-def-off="off" /> <span>The ⓘ marks beside labels</span></label>
+          <label class="check"><input type="checkbox" data-def-check="yue2.infoDots" data-def-off="off" /> <span class="info-mark" aria-hidden="true"></span><span>Info marks beside labels</span></label>   <!-- HERESY 2097b: the page's own drawn i, no ⓘ written -->
         </div>
         <p class="row-hint">Each is the Studio's own until you change it here; the player's and the lists' own switches set the same.</p>
       </section>
@@ -495,51 +555,96 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       <div class="card-actions"><button type="button" class="btn ghost small" id="defaultsReset">The Studio's defaults</button></div>
     </div>
 
+    <!-- HERESY 2097 (Viktor 05.11.2026: «Перенеси настройки все прямо в Движок по всем опциям выбора LLM хостов, а в писателе только динамично выводим то,
+         что доступно… предусмотри чекбоксы по активации соединений»): the Writer's five hosts, a pane each: its tick (ticked: asked; not: never asked), its
+         state, Test connection; the three servers each their own address (empty: its own default), OpenRouter its key (kept by the lab, never shown again)
+         and a default model. The Writer offers the ticked ones that answer -->
     <div class="card wide writer-card eg-writer">
       <h3>Writer</h3>
-      <p class="hint">A local language model turns a one-line idea into a title, style prompt and
-        lyrics. The browser talks to the chat server directly.</p>
+      <p class="hint">Who writes for the Writer, Tighten, the style's suggestions and the Videographer. Only the writers ticked here are ever asked; the Writer offers those of them that answer.</p>
+      <div class="llm-panes hc-on">
       <!-- HERESY 1811 (Viktor 28.10.2026: «Не многие смогут настроить LLM для Писателя… прикручивай как Local Studio LLM… пусть это будет опция по
-           умолчанию для установок, где VRAM позволяет»): the Studio's own writer, through llama.cpp on this machine; the default where its weights are here -->
-      <div class="writer-pane" id="paneOwn">
+           умолчанию для установок, где VRAM позволяет»): the Studio's own writer, through llama.cpp on this machine; ticked by default where its weights are here -->
+      <div class="writer-pane llm-pane" id="paneOwn" data-llm="own">
         <div class="pane-head">
-          <h4 class="mini">The Studio's Own Writer</h4>
+          <h4 class="mini"><label class="llm-on" data-tip="Ticked: the Studio may write with it and asks it. Not ticked: never asked"><input type="checkbox" id="ownOn" /><span>The Studio's Own Writer</span></label></h4>
           <span class="pill" id="ownState" data-s="missing">not here</span>
-          <div class="spacer"></div>
-          <button type="button" class="btn ghost small" id="ownUse" data-tip="The Writer and its helpers ask this model, at the Studio's own address">Use this writer</button>
-          <button type="button" class="btn ghost small" id="ownStop" data-tip="Free its card now; the next question starts it again">Unload</button>
         </div>
         <label class="field"><span class="label">Quant</span>
           <select id="ownVariant" data-tip="Which quant the Studio's writer runs: quality keeps the AutoRound 4 bits as they are (about 7.5 GB of VRAM), compact keeps those and lowers the rest (about 6.5 GB). Only those here can be chosen"><option value="quality">Quality: the AutoRound 4 bits as they are (a 12 GB card)</option><option value="compact">Compact: for an 8 GB card</option></select></label>
+        <div class="llm-acts">
+          <button type="button" class="btn ghost small" id="ownUse" data-tip="Ticks it, and the Writer and its helpers write with it">Use this writer</button>
+          <button type="button" class="btn ghost small" id="ownStop" data-tip="Free its card now; the next question starts it again">Unload</button>
+          <button type="button" class="btn ghost small" id="ownTest" data-tip="Asks it for one word (it starts if it sleeps)">Test connection</button>
+        </div>
         <p class="row-hint" id="ownHint">Not here yet: Engine → Models and LoRAs → Studio writer fetches it (6.7 GB; compact 5.5 GB).</p>
       </div>
-      <div class="writer-pane" id="paneServer">
+      <div class="writer-pane llm-pane" id="paneVllm" data-llm="vllm">
         <div class="pane-head">
-          <h4 class="mini">Local Chat Server</h4>
-          <span class="pill" id="chatState">not set</span>
-          <div class="spacer"></div>
-          <button type="button" class="btn ghost small" id="chatTest">Test connection</button>
+          <h4 class="mini"><label class="llm-on" data-tip="Ticked: the Studio may write with it and asks it. Not ticked: never asked"><input type="checkbox" id="vllmOn" /><span>vLLM</span></label></h4>
+          <span class="pill" id="vllmState" data-s="missing">inactive</span>
         </div>
         <label class="field"><span class="label" data-head="any server with a /v1 chat endpoint">Address</span>
-          <input type="text" id="chatUrl" placeholder="http://127.0.0.1:18000/v1" autocomplete="off" spellcheck="false" /></label>
-        <!-- HERESY 1012: the local runners YuE2 Studio knows, one click each -->
-        <div class="chat-presets" id="chatPresets">
-          <button type="button" class="btn ghost small" data-chat-url="http://127.0.0.1:8000/v1">vLLM :8000</button>
-          <button type="button" class="btn ghost small" data-chat-url="http://127.0.0.1:1234/v1">LM Studio :1234</button>
-          <button type="button" class="btn ghost small" data-chat-url="http://127.0.0.1:11434/v1">Ollama :11434</button>
+          <input type="text" id="vllmUrl" placeholder="http://127.0.0.1:8000/v1" autocomplete="off" spellcheck="false" /></label>
+        <div class="llm-acts">
+          <button type="button" class="btn ghost small" id="vllmTest" disabled>Test connection</button>
         </div>
-        <p class="row-hint" id="chatHint">Uses whatever model the server has loaded. This page never loads,
-          switches or unloads a model on it.</p>
+        <p class="row-hint" id="vllmHint"></p>
       </div>
+      <div class="writer-pane llm-pane" id="paneLmstudio" data-llm="lmstudio">
+        <div class="pane-head">
+          <h4 class="mini"><label class="llm-on" data-tip="Ticked: the Studio may write with it and asks it. Not ticked: never asked"><input type="checkbox" id="lmstudioOn" /><span>LM Studio</span></label></h4>
+          <span class="pill" id="lmstudioState" data-s="missing">inactive</span>
+        </div>
+        <label class="field"><span class="label" data-head="any server with a /v1 chat endpoint">Address</span>
+          <input type="text" id="lmstudioUrl" placeholder="http://127.0.0.1:1234/v1" autocomplete="off" spellcheck="false" /></label>
+        <div class="llm-acts">
+          <button type="button" class="btn ghost small" id="lmstudioTest" disabled>Test connection</button>
+        </div>
+        <p class="row-hint" id="lmstudioHint"></p>
+      </div>
+      <div class="writer-pane llm-pane" id="paneOllama" data-llm="ollama">
+        <div class="pane-head">
+          <h4 class="mini"><label class="llm-on" data-tip="Ticked: the Studio may write with it and asks it. Not ticked: never asked"><input type="checkbox" id="ollamaOn" /><span>Ollama</span></label></h4>
+          <span class="pill" id="ollamaState" data-s="missing">inactive</span>
+        </div>
+        <label class="field"><span class="label" data-head="any server with a /v1 chat endpoint">Address</span>
+          <input type="text" id="ollamaUrl" placeholder="http://127.0.0.1:11434/v1" autocomplete="off" spellcheck="false" /></label>
+        <div class="llm-acts">
+          <button type="button" class="btn ghost small" id="ollamaTest" disabled>Test connection</button>
+        </div>
+        <p class="row-hint" id="ollamaHint"></p>
+      </div>
+      <div class="writer-pane llm-pane" id="paneOr" data-llm="openrouter">
+        <div class="pane-head">
+          <h4 class="mini"><label class="llm-on" data-tip="Ticked: the Studio may write with it and asks it, its list of models too. Not ticked: never asked"><input type="checkbox" id="orOn" /><span>OpenRouter</span></label></h4>
+          <span class="pill" id="orState" data-s="missing">inactive</span>
+        </div>
+        <label class="field" data-tip="Your OpenRouter key. Kept by the Studio in its settings on this machine (user/secrets.json), never in a browser and never shown again: the Studio adds it to its own calls to openrouter.ai"><span class="label">API key</span>
+          <input type="password" id="orKeyNew" autocomplete="off" spellcheck="false" placeholder="sk-or-…" /></label>
+        <div class="llm-acts">
+          <button type="button" class="btn ghost small" id="orKeySave">Keep the key</button>
+          <button type="button" class="btn ghost small danger" id="orKeyForget" disabled>Forget the key</button>
+        </div>
+        <p class="row-hint" id="orKeySay"></p>
+        <label class="field" data-tip="The model Test connection asks, and the Writer's own while it has none; any of openrouter.ai/models, written provider/model"><span class="label">Default model</span>
+          <input type="text" id="orDefault" list="orModels" placeholder="deepseek/deepseek-v4-pro" autocomplete="off" spellcheck="false" /></label>
+        <div class="llm-acts">
+          <button type="button" class="btn ghost small" id="orTest" disabled data-tip="Asks the default model for one word, through the Studio (a few tokens on your OpenRouter account)">Test connection</button>
+        </div>
+        <p class="row-hint" id="orHint"></p>
+      </div>
+      </div>
+      <p class="row-hint llm-cors" id="llmCors"></p>
     </div>
 
     <!-- HERESY 1167 (Viktor: «Muse - отличный файнтюн… Для карт ниже 24GB VRAM… оставим SDXL»; «Переключатель квантов Q8 / Q4
          оформишь в Engine? Изначальным выставь Q4»): who paints a take's artwork; this browser's choice, every draw asks for it -->
-    <div class="card art-card eg-art" id="artCard">
+    <div class="card art-card eg-art hc-on" id="artCard">
       <h3>Artwork</h3>
       <p class="hint">Who paints a take's artwork: the player's, the cards', the MP3's cover. A drawing waits in the queue for a card with room.</p>
       <label class="field"><span class="label">Painter</span>
-        <select id="artPainter" data-tip="By the cards: Qwen-Image 2512 Q6 or Q4 where a card the lab's jobs may take holds it whole (it follows the prompt best and letters a title), else Q4 streamed from RAM on a smaller card. Measured on an RTX 3090 (14.10.2026), the prompt writer and the critic included: Q4 about 105 s a cover, its fp8 BASE about 95 s">   <!-- HERESY 1405: SDXL gone; 1428: Krea 2 gone -->
+        <select id="artPainter" data-hc-pick="1" data-tip="By the cards: Qwen-Image 2512 Q6 or Q4 where a card the lab's jobs may take holds it whole (it follows the prompt best and letters a title), else Q4 streamed from RAM on a smaller card. Measured on an RTX 3090 (14.10.2026), the prompt writer and the critic included: Q4 about 105 s a cover, its fp8 BASE about 95 s">   <!-- HERESY 1405: SDXL gone; 1428: Krea 2 gone -->
           <option value="">By the cards: Qwen-Image 2512 where a card holds it whole (Q6 from 20 GB, Q4 from 16 GB), else Q4 streamed from RAM</option>
         </select></label>
       <p class="row-hint">Qwen-Image 2512 (Apache-2.0) paints a cover with Lightning (lightx2v, Apache-2.0) when its file is here, and every picture passes a content filter; Qwen-Image 2.1 is under Qwen's research licence: research and evaluation only, not for a song that is sold. Times on an RTX 3090, the prompt and the look-over not counted.</p>
@@ -568,8 +673,27 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
          Refiner Room»): how the Refiner opens; the List / Canvas button in the room's head still switches at any time -->
     <!-- HERESY 1986 (Viktor 01.11.2026: «Для Pianoteq добавь динамическую вкладку в Движок… Всё в одном месте»): what is installed and activated
          here, asked of Pianoteq itself; the serial through its own RPC; how to install, activate, update and deactivate it (heresy-ptq-engine.js) -->
+    <!-- HERESY 2054 (Viktor 03.11.2026: «В Движке добавляем вкладку Debugging… ничего не отсылается никуда, кроме как по решению пользователя…
+         Анонимизация абсолютная… Сторож на приватные данные пользователя… "Скачать лог", "Отправить лог"»): the debug journal -->
+    <div class="card wide eg-debug" id="debugCard">
+      <h3>Debugging</h3>
+      <label class="check" data-tip="Keeps in this browser, for a day, what you do in the Studio: clicks by their element, commands, requests and errors, never what you type. Nothing leaves without your yes"><input type="checkbox" id="dbgOn" /> <span>Keep a debug journal of the last day</span></label>
+      <label class="check" data-tip="Adds the pointer's path to the journal: heavier, and it says more about how you work; only while the journal is on"><input type="checkbox" id="dbgTrail" disabled /> <span>With a detailed pointer trail (heavier, and it says more about how you work)</span></label>
+      <p class="upd-line" id="dbgLine">Off: nothing is kept</p>
+      <div class="dbg-acts">
+        <button type="button" class="btn small" id="dbgDownload">Download the journal</button>
+        <button type="button" class="btn primary small" id="dbgSend">Send the journal…</button>
+        <button type="button" class="btn ghost small" id="dbgClear">Clear the journal</button>
+      </div>
+      <p class="dbg-note">Kept in this browser, for a day: what was clicked (by the element's id, never its words), keys pressed as commands (never what was typed), the rooms and windows opened, each request to the Studio (its path and answer, never its values) and the page's errors. Download and Send add the Studio's and the lab's own logs of the same hours and scrub all of it first: styles, lyrics, titles, scores and notes are cut out; the names of takes and workspaces become marks; your home folder, user and machine names, addresses, mails and keys go. The guard then reads it once more and says what it still found. Send posts it to the Studio's own receiver and gives you a ticket number; nothing leaves without your yes.</p>
+    </div>
     <div class="card wide eg-pianoteq" id="pianoteqCard">
       <h3>Pianoteq <span class="info" tabindex="-1" role="img" aria-label="About Pianoteq" data-tip="Modartt's physically modelled pianos and other instruments, with which the Refiner's Pianoteq step plays a stem again. The Studio does not ship it: you buy it at modartt.com."></span></h3>
+      <div class="ptq-products" id="ptqProducts" role="group" aria-label="Which Modartt instrument">   <!-- HERESY 2036 -->
+        <button type="button" class="chip" data-ptq-product="pianoteq" aria-pressed="true" translate="no">Pianoteq</button>
+        <button type="button" class="chip" data-ptq-product="organteq" aria-pressed="false" translate="no">Organteq</button>
+        <button type="button" class="chip" data-ptq-product="airteq" aria-pressed="false" translate="no">Airteq</button>
+      </div>
       <p class="upd-line ptq-line" id="ptqLine">Asking Pianoteq…</p>
       <dl class="ptq-facts" id="ptqFacts"></dl>
       <div class="ptq-inst" id="ptqInst"></div>
@@ -588,6 +712,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <details><summary>How to update</summary><p>Download the newer build from your user area and unpack it over the old folder, or beside it with user/pianoteq.json pointing to it. Its activation and your own presets stay where Pianoteq keeps them in your home folder; the Studio sees the new version and reads its presets again.</p></details>
         <details><summary>How to deactivate</summary><p>Pianoteq has no command for it, so the Studio has no button. It is done in your Modartt user area, under Manage activations. Modartt's FAQ warns that a computer deactivated there cannot be activated again with that serial, and that reinstalling the system on the same computer needs no deactivation: ask Modartt first.</p></details>
         <details><summary>Its licence</summary><p>What you play with it may go out in your music, not as a library of its sounds. Its licence does not let it teach a neural network, so the Studio keeps Pianoteq's renders out of every training set.</p></details>
+        <details><summary>Organteq and Airteq</summary><p>Modartt's pipe organs (Organteq) and air-driven instruments (Airteq: flutes, reeds, horns, bowed and blown pads, drones) go the same way, each with a Refiner step of its own and the same window. Their free trials play in the Studio as Modartt lets them: download one at modartt.com and unpack it into models/instruments/organteq/ or models/instruments/airteq/. Choose it above to see what is here.</p></details>   <!-- HERESY 2036 -->
       </div>
     </div>
 
@@ -692,6 +817,22 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       <div class="card-actions"><button type="button" class="btn ghost small" id="plRefresh" data-tip="Count the folders' files and sizes again">Count again</button></div>
     </div>
 
+    <!-- HERESY 2083 (Viktor 05.11.2026: «в Движок умолчанием пропиши ежесуточный/ежечасовой бекап json данных пользователя, с предвыбранной ротацией gz бекапов…»): snapshots of the user's data
+         (lab/backups.py), put back by the lab alone over a file truly broken; on and off, how many to keep, Back up now, the last one (heresy-backups.js) -->
+    <div class="card wide eg-backups" id="backupsCard">
+      <h3>Backups of your data <span class="info" tabindex="-1" role="img" aria-label="About backups" data-tip="Snapshots of the files that hold your own work and choices, kept beside the Studio, one compressed file each. A file that breaks (it no longer reads as data) is put back from the newest snapshot that reads well, and the broken one is kept aside; a good file is never overwritten, and no button here puts a snapshot back."></span></h3>
+      <p class="upd-line" id="bkLine">Asking the lab…</p>
+      <div class="bk-row">
+        <label class="check" data-tip="Every hour while the Studio runs, a snapshot of your settings, styles, the Librarian, the Writer's documents and the rest named below"><input type="checkbox" id="bkHourly" /> <span>Every hour</span></label>
+        <label class="field field-inline bk-keep" data-tip="How many hourly snapshots stay, 1 to 1000 (24 at first): once a new one is written and reads back whole, the oldest past that number go"><span class="label">keep the last</span><input type="number" id="bkKeepHourly" min="1" max="1000" step="1" /></label>
+        <label class="check" data-tip="Once a day while the Studio runs, a snapshot of the same files and of each take's card too (its title, ♥ and time)"><input type="checkbox" id="bkDaily" /> <span>Every day</span></label>
+        <label class="field field-inline bk-keep" data-tip="How many daily snapshots stay, 1 to 1000 (30 at first): once a new one is written and reads back whole, the oldest past that number go"><span class="label">keep the last</span><input type="number" id="bkKeepDaily" min="1" max="1000" step="1" /></label>
+      </div>
+      <p class="hint" id="bkWhat">Kept: your settings, styles and profiles, the Librarian (workspaces, notes, marks, the playlist, albums), the Writer's documents and the Creator's versions, the Videographer's plans, your vocabularies and your own plugins; once a day each take's card too (its title, ♥ and time).</p>
+      <p class="hint" id="bkWhere"></p>
+      <div class="card-actions"><button type="button" class="btn primary small" id="bkNow">Back up now</button></div>
+    </div>
+
     <!-- HERESY 1489 (Viktor 16.10.2026: «Подпись C2PA поддерживаю»; «для паблика нужен выключатель, и в настройках Engine нужные поля
          для ввода своей инфы»): Content Credentials on the downloads, signed by the lab (c2pa_sign.py) -->
     <div class="card wide eg-c2pa" id="c2paCard">
@@ -732,14 +873,14 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <span class="about-logo"><span class="about-mark-holder" id="aboutLogo" role="img" aria-label="Ruach Studio"></span><small class="about-tagline" translate="no">a local studio for YuE2 · HERETICAL TANDEM</small></span>
           <!-- HERESY 1026: the links the header used to carry live here, with what YuE2 OS adds -->
           <!-- HERESY 1959 (Viktor: «Сначала идёт всё наше, а затем модели, что мы используем в Студии, и по мере важности сами репозитории заимствованного и пропатченного нами кода») -->
-          <section class="about-project"><h4>Ruach Studio <span class="about-version" id="studioVersion"></span></h4><p class="about-what">the heresy patches 1001+ over the collection below, and the lab beside it (once "YuE2 OS")</p><ul class="about-links about-ours">
+          <section class="about-project"><h4>Ruach Studio <span class="about-version" id="studioVersion"></span><span class="about-build" id="studioBuild" translate="no" data-tip="The page's build: when build.sh made it and the start of its hash. A reload after a new build shows the new one"></span></h4><p class="about-what">the heresy patches 1001+ over the collection below, and the lab beside it (once "YuE2 OS")</p><ul class="about-links about-ours">
             <li><a href="https://github.com/igrbible/Ruach_Studio" target="_blank" rel="noopener noreferrer">The source</a><span class="about-where" translate="no">github · igrbible/Ruach_Studio</span></li>
-            <li><a href="https://ruachstudio.igr.bible" target="_blank" rel="noopener noreferrer">The website</a><span class="about-where" translate="no">ruachstudio.igr.bible</span></li>
+            <!-- HERESY 2140 (Viktor 06.11.2026: «Меняй адрес в коде и готов замены в карточки репозиториев. Старый URL станет редиректом 301.»): the card at its own domain; the old address answers 301 -->
+            <li><a href="https://ruachstudio.art" target="_blank" rel="noopener noreferrer">The website</a><span class="about-where" translate="no">ruachstudio.art</span></li>
             <li><a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2" target="_blank" rel="noopener noreferrer">Model weights</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_Models_v2</span></li>
             <li><a href="https://huggingface.co/goldhub/Ruach_Studio_LoRAs" target="_blank" rel="noopener noreferrer">LoRAs</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_LoRAs</span></li>
-            <li><a href="https://huggingface.co/datasets/goldhub/Ruach_Studio_Starter_Sets" target="_blank" rel="noopener noreferrer">Starter sets</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_Starter_Sets</span></li>
             <li><a href="https://huggingface.co/buckets/goldhub/Ruach_Studio_Instruments_Probe_WS" target="_blank" rel="noopener noreferrer">Probes, styles and voices</a><span class="about-where" translate="no">hugging face · goldhub/Ruach_Studio_Instruments_Probe_WS</span></li>
-            <li><a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02" target="_blank" rel="noopener noreferrer">☕ Buy me a Coffee Machine</a><span class="about-where" translate="no">stripe</span></li>
+            <li><a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02" target="_blank" rel="noopener noreferrer">☕ 24/7 coffee for Viktor and Claude</a><span class="about-where" translate="no">stripe</span></li>
           </ul>
           <h5 class="about-cap">Models in the Studio</h5><ul class="about-links">
             <li><a href="https://huggingface.co/Qwen/Qwen-Image-2512" target="_blank" rel="noopener noreferrer">Artwork: Qwen-Image 2512, by Qwen</a><span class="about-where" translate="no">huggingface · Apache-2.0</span></li>
@@ -1505,13 +1646,13 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <button type="button" class="btn ghost small" id="assistBriefSave">Save brief…</button>
           <button type="button" class="btn ghost small danger" id="assistBriefDel" disabled>Delete</button>
         </div>
-        <!-- HERESY 1012: the writer is the page's chat server, or OpenRouter with the user's key -->
-        <div class="field-row wrap assist-provider">
-          <label class="field" data-tip="Who drafts. The chat server set under Engine runs on your own machine (vLLM, LM Studio, Ollama): nothing leaves it. OpenRouter is a service on the internet: the brief and the song go to openrouter.ai, with your key."><span class="label">Writer</span>
-            <select id="assistProvider">
-              <option value="engine">Chat server under Engine (vLLM, LM Studio, Ollama)</option>
-              <option value="openrouter">OpenRouter</option>
-            </select></label>
+        <!-- HERESY 1012: the writer is the page's chat server, or OpenRouter with the user's key. HERESY 2097: one of the hosts ticked under Engine →
+             Writer and Artwork that answers now, with its model; no address and no key here -->
+        <div class="field-row wrap assist-provider hc-on">
+          <label class="field" data-tip="Who drafts: the writers ticked under Engine → Writer and Artwork that answer now. The Studio's own, vLLM, LM Studio and Ollama run on your machine or network: nothing leaves it. OpenRouter is a service on the internet: the brief and the song go to openrouter.ai, through the Studio, which adds your key."><span class="label">Writer</span>
+            <select id="assistProvider" data-hc-row="1"></select></label>
+          <label class="field grow local-only is-hidden" data-tip="The model the writer has loaded now; with several loaded, the one to write with. The Studio never loads, switches or unloads one there."><span class="label">Model</span>
+            <select id="assistLocalModel"></select></label>
           <label class="field grow or-only" data-tip="Any model of openrouter.ai/models, written provider/model; the field offers the whole list as you type, each with its price per million tokens in and out. The quick picks fill it in."><span class="label">Model</span>
             <input type="text" id="orModel" list="orModels" placeholder="provider/model" autocomplete="off" spellcheck="false" /><datalist id="orModels"></datalist></label>
           <div class="or-only or-picks" aria-label="Quick picks"><span class="label">Quick picks</span>
@@ -1521,11 +1662,6 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
             <button type="button" class="btn ghost small" data-or-model="qwen/qwen3.8-flash">Qwen3.8 Flash</button></div>
           <!-- HERESY 1169: the chosen model's price per million tokens and its context, from OpenRouter's own list -->
           <p class="row-hint or-only or-price" id="orPrice" aria-live="polite"></p>
-          <!-- HERESY 1168 (Viktor 06.10.2026: «И поле API Key расширь, и `Remember the key` в одну строчку с этим полем ключа») -->
-          <div class="or-only or-key-row">
-            <label class="field" data-tip="Your OpenRouter key. The page sends it to openrouter.ai and nowhere else: not to the Studio, not into its settings file. Without Remember it is gone when the page closes."><span class="label">API key</span><input type="password" id="orKey" autocomplete="off" spellcheck="false" placeholder="sk-or-…" /></label>
-            <label class="check" data-tip-size="big" data-tip="Remember the key in this browser. Otherwise it lives only until the page is closed. The page sends it to openrouter.ai and nowhere else: not to the Studio, not into its settings file."><input type="checkbox" id="orRemember" /> <span>Remember the key</span></label>
-          </div>
         </div>
         <div class="field-row wrap">
           <label class="field grow"><span class="label">Help me with</span><select id="assistTask"></select></label>
@@ -1552,7 +1688,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <button type="button" class="btn primary" id="assistBtn" data-tip="Ctrl+Enter in the brief does the same"><span aria-hidden="true">✦</span> <span id="assistLabel">Send the request to LLM</span></button>
           <span class="row-hint" id="assistStatus"></span>
         </div>
-        <p class="row-hint">Your brief and the current song go to the chat server set under Engine.</p>
+        <p class="row-hint">Your brief and the current song go to the writer picked above.</p>
         <section class="assist-draft is-hidden" id="assistDraft">
           <div class="assist-draft-head"><strong>Your draft</strong><span class="dim mono" id="assistModel"></span></div>
           <label class="field"><span class="label">Title</span><input type="text" id="draftTitle" /></label>
@@ -1634,7 +1770,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <div class="dv-actions">
             <!-- HERESY 1169 (Viktor 08.10.2026: «По дефолту стеммер - four»): four first; from the take or a file made from it -->
             <label class="field dv-src" data-tip="What is split: the take, or a debuzzed or upscaled file of it (the chain splits the one before its remaster). Each source keeps its own set."><span class="label">Source</span><select id="stSource"><option value="">the take</option></select></label>
-            <button type="button" class="btn ghost small" data-dv-split="four" data-tip="BS-Roformer ep317 (SDR 12.97) for the voice, then htdemucs_ft on the instrumental: vocals, drums, bass, other and the instrumental, about 6 minutes for 7">Split: four stems</button>
+            <button type="button" class="btn ghost small" data-dv-split="four" data-tip="BS-Roformer ep317 (SDR 12.97) for the voice, then htdemucs_ft on the instrumental: vocals, drums, bass, other and the instrumental, about 6 minutes for 7 minutes of song on a 3090">Split: four stems</button>
             <!-- HERESY 1462 (Viktor 15.10.2026: «BS-RoFormer-SW на 6 стемов — только ЗА»): the guitar and the piano of their own -->
             <button type="button" class="btn ghost small" data-dv-split="six" data-tip="BS-Roformer ep317 (SDR 12.97) for the voice, then jarredou&#39;s BS-Roformer-SW on the instrumental: vocals, drums, bass, guitar, piano, other and the instrumental, about 5 minutes for 7 minutes of song on a 3090">Split: six stems</button>
             <!-- HERESY 1463 (Viktor 15.10.2026: «правильное именование… lead vocal, backing/choir vocals, winds»): the voice in two, the winds apart -->
@@ -1999,6 +2135,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
        one open at a time; the telemetry of a run right under them; every run a card in the column on the right -->
   <section class="col train-col is-hidden" id="view-train">
     <div class="col-head"><h2>LoRA Trainer</h2><span class="col-note col-note-two">a LoRA for YuE2 from your own songs · the guide: LORA-TRAINING.md</span>
+      <span class="col-note col-note-two bb-note" hidden>an SFZ bank from recordings of one instrument: the instrument alone, its notes, the bank for the DAW</span>
+      <span class="tr-modes" role="tablist" aria-label="What the Trainer makes"><!-- HERESY 2031: a LoRA, or an SFZ bank from recordings --><button type="button" role="tab" class="tr-mode is-on" data-trmode="lora" aria-selected="true" data-tip="A LoRA for YuE2 from your own songs">LoRA</button><button type="button" role="tab" class="tr-mode" data-trmode="banks" aria-selected="false" data-tip="An SFZ bank from recordings of one instrument, for the DAW's Layer and the orchestra">SFZ banks</button></span>
       <span class="spacer"></span><button type="button" class="btn ghost small" id="trReload">Reload</button></div>
     <div class="tr-layout" id="trLayout">
       <div class="tr-main" id="trBody">
@@ -2015,10 +2153,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         </nav>
 
         <section class="tr-pane" data-pane="raw">
-          <div class="tr-phead"><b>Material</b><span class="row-hint">a folder of songs in <code>datasets/raw/</code>; pick it, choose the tracks, give each its lyrics</span>
-            <span class="spacer"></span><button type="button" class="btn ghost small" id="trStarterOpen" aria-expanded="false" data-tip="Ready sets to try a first adapter with: GTSinger joined into songs, Russian and English">Starter sets</button></div>
-          <!-- HERESY 1100: the starter sets, fetched on the user's word (lab/starter.py) -->
-          <div class="tr-starter" id="trStarter" hidden></div>
+          <div class="tr-phead"><b>Material</b><span class="row-hint">a folder of songs in <code>datasets/raw/</code>; pick it, choose the tracks, give each its lyrics</span></div>
+          <!-- HERESY 2093 (Viktor 05.11.2026: «Давай вообще удалим … Слишком много услужливости. У нас есть гайды по тренеру… Ничего по стартовым датасетам не даём»): no ready sets offered here; one's own songs in datasets/raw/ -->
           <div class="tr-picks" id="trRaw"></div>
           <div class="tr-voice" id="trVoice" hidden></div>   <!-- HERESY 1169: the picked folder's voice, measured -->
           <div class="tr-bar"><span class="row-hint" id="trTracksNote"></span><span class="spacer"></span>
@@ -2078,7 +2214,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       <aside class="tr-side" id="trSide">
         <button type="button" class="lib-unfold tr-unfold" id="trUnfold" data-tip="Unfold the runs">
           <span class="lib-unfold-name">Runs</span><span class="lib-unfold-count mono" id="trUnfoldCount"></span></button>
-        <header class="lib-head"><h3>Runs</h3><span class="count mono" id="trRunCount">0</span><div class="spacer"></div>
+        <header class="lib-head"><h3>Runs</h3><span class="count mono" id="trRunCount">…</span><div class="spacer"></div>
           <button type="button" class="icon-btn lib-fold" id="trFold" data-icon="collapse" data-tip="Fold the runs to the right">Fold</button></header>
         <!-- HERESY 1739 (Viktor 22.10.2026: «Если всё в SVG иконки можешь превратить - гони огонь. Высоты элементов в общий стиль»): icons of one height -->
         <div class="tr-filters tr-ichips" id="trFilters" data-no-icon>
@@ -2097,6 +2233,68 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         </div>
         <div class="lib-search"><input type="search" id="trSearch" placeholder="Search runs · set · kind" autocomplete="off" /></div>
         <div class="tr-rlist" id="trRunList"></div>
+      </aside>
+    </div>
+    <!-- HERESY 2031 (Viktor 02.11.2026: «можно из них две банки SFZ смастерить в Тренере, и проверим сразу и Тренера и дорожку SFZ DAW»): the Bank Builder
+         (heresy-bankbuilder.js, lab/bankbuilder.py): recordings of one wind instrument, cleaned of voices and of everything else, into an SFZ bank -->
+    <div class="tr-layout bb-layout" id="bbView" hidden>
+      <div class="tr-main">
+        <nav class="post-steps tr-pills" id="bbPills" role="tablist" aria-label="Bank steps">
+          <button type="button" role="tab" class="ps-step" data-bbpane="material"><span class="ps-mark">1</span><span class="ps-text"><span class="ps-name">Material</span><span class="ps-say">a folder, one instrument</span></span></button>
+          <span class="ps-arrow" aria-hidden="true">›</span>
+          <button type="button" role="tab" class="ps-step" data-bbpane="clean"><span class="ps-mark">2</span><span class="ps-text"><span class="ps-name">Clean</span><span class="ps-say">the instrument alone</span></span></button>
+          <span class="ps-arrow" aria-hidden="true">›</span>
+          <button type="button" role="tab" class="ps-step" data-bbpane="notes"><span class="ps-mark">3</span><span class="ps-text"><span class="ps-name">Notes</span><span class="ps-say">every clean note, by key</span></span></button>
+          <span class="ps-arrow" aria-hidden="true">›</span>
+          <button type="button" role="tab" class="ps-step" data-bbpane="bank"><span class="ps-mark">4</span><span class="ps-text"><span class="ps-name">The bank</span><span class="ps-say">an SFZ on the shelf</span></span></button>
+        </nav>
+
+        <section class="bb-pane" data-bbpane="material">
+          <div class="tr-phead"><b>Material</b><span class="row-hint">recordings of one wind instrument in a folder of <code>datasets/raw/</code>; the Bank Builder keeps only where it sounds alone</span></div>
+          <div class="field-row wrap">
+            <label class="field" data-tip="The bank's name: its work in datasets/banks/NAME/, the bank itself in banks/NAME/"><span class="label">Bank name</span><input type="text" id="bbName" placeholder="Duduk" autocomplete="off" /></label>
+            <label class="field" data-tip="The recordings: every audio file of the folder, its yt-dlp .info.json beside it read for the title, the uploader and the licence"><span class="label">Folder</span><select id="bbFolder"></select></label>
+            <label class="field" data-tip="What the Listener is told the clip should be; a duduk's range (E3–E5) keeps a drone under a melody from passing for a note of its own"><span class="label">Instrument</span><input type="text" id="bbInst" list="bbInsts" placeholder="duduk" autocomplete="off" /><datalist id="bbInsts"><option value="duduk"></option><option value="shofar"></option></datalist></label>
+            <label class="field" data-tip="Notes: a melodic instrument, sampled key by key (a duduk). Calls: an instrument of a few blasts, each kind on a key of its own (a shofar: tekiah, shevarim, teruah, tekiah gedolah)"><span class="label">Kind</span><select id="bbMode"><option value="chromatic">Notes</option><option value="blasts">Calls</option></select></label>
+            <label class="field" data-tip="On a card: the winds split from the rest, the voice detector and the Listener on one card of the lab's jobs (16 GB). On the processor: several workers on three quarters of the cores, the voice detector on the seconds that could be kept only; slower than a card, and the cards stay free"><span class="label">Where</span><select id="bbWhere"><option value="card">On a card</option><option value="processor">On the processor</option></select></label>
+            <label class="check" data-tip="The Listener (Omni) hears every ten seconds that could be kept and is asked yes or no: a wind instrument, a human voice, drums, strings or keys, a crowd or noise. Off: the measures alone decide"><input type="checkbox" id="bbListen" checked /> <span>Ask the Listener</span></label>
+          </div>
+          <div class="tr-bar"><button type="button" class="btn primary small" id="bbClean">Start the clean</button><button type="button" class="btn ghost small" id="bbStop" hidden>Stop</button>
+            <span class="row-hint">a long recording goes in ten-minute pieces; a file cleaned before is not cleaned again</span></div>
+        </section>
+
+        <section class="bb-pane" data-bbpane="clean">
+          <div class="tr-phead"><b>Clean</b><span class="row-hint">every second of every file, a column of its strip; a click listens there</span>
+            <span class="spacer"></span><label class="field bb-src" data-tip="What a click on a strip plays: the recording as it is, or the winds the separator left (what the samples are cut from)"><span class="label">Listen to</span><select id="bbSrc"><option value="mix">the recording</option><option value="winds">the winds alone</option></select></label></div>
+          <div class="bb-legend"><span><i class="bb-k bb-k-kept"></i><span>wind alone, kept</span></span><span><i class="bb-k bb-k-refused"></i><span>refused: a voice, or the Listener heard something else</span></span>
+            <span><i class="bb-k bb-k-over"></i><span>wind over a bed</span></span><span><i class="bb-k bb-k-bed"></i><span>a bed</span></span><span><i class="bb-k bb-k-quiet"></i><span>silence</span></span><span><i class="bb-k bb-k-skip"></i><span>not heard: a long recording between its six pieces</span></span></div>
+          <div id="bbProgress"></div>
+          <div class="bb-files" id="bbFiles"></div>
+        </section>
+
+        <section class="bb-pane" data-bbpane="notes">
+          <div class="tr-phead"><b>Notes</b><span class="row-hint">in the kept seconds: a note is a steady pitch of 0.35 s or more; a call is its blasts by their shape</span></div>
+          <div class="tr-bar"><button type="button" class="btn primary small" id="bbNotes">Find the notes</button><span class="row-hint" id="bbNotesSay"></span></div>
+          <div class="bb-keys" id="bbKeys"></div>
+          <div class="bb-cands" id="bbCands"></div>
+        </section>
+
+        <section class="bb-pane" data-bbpane="bank">
+          <div class="tr-phead"><b>The bank</b><span class="row-hint">the best of every key cut into samples, tuned and looped where they loop cleanly; banks/NAME/ with its .sfz and bank.json</span></div>
+          <div class="field-row wrap">
+            <label class="field" data-tip="The bank's name on the shelf; made again under the same name, the old one steps aside whole"><span class="label">Name on the shelf</span><input type="text" id="bbBankName" autocomplete="off" /></label>
+            <label class="field" data-tip="Takes of one key and layer played in turn, so a repeated note is not the same sample every time"><span class="label">Round robins</span><input type="number" id="bbRR" min="1" max="8" step="1" value="3" /></label>
+            <label class="field" data-tip="Velocity layers, soft to loud, where the playing itself was soft and loud (6 dB or more between a key's takes)"><span class="label">Layers</span><input type="number" id="bbLayers" min="1" max="4" step="1" value="3" /></label>
+          </div>
+          <div class="tr-bar"><button type="button" class="btn primary small" id="bbBuild">Build the bank</button><span class="row-hint">recordings under a licence that does not say they may ship make a private bank: the Studio never ships it</span></div>
+          <div id="bbProgress2"></div>
+          <div id="bbBuilt"></div>
+        </section>
+      </div>
+
+      <aside class="tr-side bb-side">
+        <header class="lib-head"><h3>Banks in the making</h3><span class="count mono" id="bbCount">0</span></header>
+        <div class="tr-rlist" id="bbList"></div>
       </aside>
     </div>
   </section>
@@ -2177,6 +2375,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <button type="button" class="btn ghost small" id="vdClipLyrics" aria-pressed="false" data-tip="The sung lines burnt into the clip, each in its own time from the take's timing, at the foot of the picture">Lyrics on the clip</button>   <!-- HERESY 1916 -->
         <select id="vdClipBetween" class="vd-move" aria-label="Between sections" data-tip="How the clip passes from one section of the song to the next: a plain cut, through black, a flash of white, or a dissolve (the next section fading in over the last one's last half second); within a section the shots cut"><option value="cut">a cut</option><option value="black">through black</option><option value="flash">a flash</option><option value="dissolve">a dissolve</option></select>   <!-- HERESY 1949 -->
         <select id="vdClipShape" class="vd-move" aria-label="The clip's shape" data-tip="The clip's shape: wide 16:9 (1920 × 1080) for a screen, tall 9:16 (1080 × 1920) for a phone's stories and shorts, square 1:1 (1080 × 1080); each shape is a clip of its own, the pictures cropped to it"><option value="16:9">16:9 wide</option><option value="9:16">9:16 tall</option><option value="1:1">1:1 square</option></select>   <!-- HERESY 1917 --></div>
+        <button type="button" class="btn ghost small" id="vdClipLook" data-tip="The clip's colour: a look over every picture, a 3D LUT as a colourist lays one, from a breath of it to all of it; the lyrics and the titles stay as they are">Look</button>   <!-- HERESY 2010 -->
         <p class="row-hint vd-films-none">No animatic or clip yet: «Animatic» and «Clip» make them.</p>
         <!-- HERESY 1837: the animatic, the plan in the song's time -->
         <div class="vd-films">
@@ -2202,13 +2401,17 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
   <section class="col coll-col is-hidden" id="view-collection">
     <div class="col-head coll-head"><h2>Librarian<span class="coll-where" id="collWhere"></span></h2><span class="col-note" id="collNote"></span>
       <div class="coll-headtools" id="collHeadTools">
-        <input type="search" id="collSearch" placeholder="Search: words, or * and ? as wildcards" autocomplete="off" />
+        <input type="search" id="collSearch" placeholder="Search: words, * and ?, !to leave out" autocomplete="off" data-tip="Words found anywhere, in any order. A number is a whole number: «1» never finds 12 or 01; typed after a word, it goes with that word where a take has the word followed by a number: «seed 1» finds seed 1, never seed 2. * any letters and ? one letter, the words then kept in their order: «милости * 0.6». !word leaves out the takes that have it: «милост * !0.75». An ID, or a part of it («180155», «1e53bb»), finds a take wherever it lives: in any workspace or none, hidden, archived, frozen." />   <!-- HERESY 2028; 2058: an ID finds a take wherever it lives; 2130: the number's rule -->
         <!-- HERESY 2004: the sort a button with arrows, its choices in a menu; the select stays, hidden, the one the Librarian reads -->
         <button type="button" class="btn ghost small icon-btn coll-sortbtn" id="collSortBtn" aria-haspopup="menu" aria-label="Sort" data-tip="How the takes are ordered; a click chooses"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 19V5M4.5 8.5 8 5l3.5 3.5M16 5v14M12.5 15.5 16 19l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <select id="collSort" aria-label="Sort" hidden><option value="new">newest first</option><option value="old">oldest first</option>
           <option value="title">by title</option><option value="long">longest first</option><option value="shuffle">shuffled</option></select>
         <span class="coll-views"><button type="button" class="btn ghost small icon-btn" data-coll-view="tiles" aria-label="Tiles" data-tip="Tiles"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
           <button type="button" class="btn ghost small icon-btn" data-coll-view="list" aria-label="List" data-tip="List"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6.5h10M9.5 12h10M9.5 17.5h10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M5 6.5h.01M5 12h.01M5 17.5h.01" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></button></span>
+        <!-- HERESY 2046: the hidden and the disliked shown here too; the place's numbers in an overlay -->
+        <button type="button" class="btn ghost small icon-btn coll-reveal" id="collReveal" aria-pressed="false" aria-label="Show the hidden and the disliked" data-tip="Show the hidden and the disliked here too, dimmed; off, they stay out (this session only)"></button>
+        <span class="coll-stats-wrap"><button type="button" class="btn ghost small icon-btn" id="collStats" aria-haspopup="dialog" aria-expanded="false" aria-label="About this place" data-tip="About this place: its takes, plans, time, marks and reactions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 11v6M12 7.6h.01" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></button>
+          <div class="coll-stats-pop" id="collStatsPop" role="dialog" aria-label="About this place" hidden></div></span>
         <!-- HERESY 1169 · 1241 (Viktor 08.10.2026: «Фильтр прикрути как кнопку в ту же строку с поиском и сортировкой - в самый конец справа»): the filters in a window, as the workspace's chooser; the button says how many are on and how they join -->
         <button type="button" class="btn ghost small coll-filter-btn" id="collFilterBtn" aria-haspopup="dialog" aria-label="Filter" data-tip="Filter the takes shown: tick what to look for, and whether a take needs all of it (AND), any of it (OR) or none of it (NOR)"><span data-ui="filter"></span><span class="coll-fbadge" id="collFilterN" hidden></span></button>
       </div></div>
@@ -2248,19 +2451,27 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
             <button type="button" class="btn ghost small icon-btn" id="collFav" data-ui="star" aria-label="Favourite the checked" data-tip="Favourite every checked take (all favourites already: taken back)"></button>
             <button type="button" class="btn ghost small icon-btn" id="collProtect" data-ui="shield" aria-label="Protect them" data-tip="Protect them all: never to the trash, never deleted for good (when all are protected, the protection comes off)"></button></span>
           <span class="coll-group" role="group" aria-label="Workspaces">
-            <select id="collWsPick" aria-label="Add to workspace"></select>
-            <select id="collWsMove" aria-label="Move to workspace" title="Into that workspace and out of this one (out of every other when you are in All Workspaces)"></select>
+            <button type="button" class="btn ghost small icon-btn" id="collWsAddBtn" data-ui="folder-plus" aria-label="Add to a workspace" data-tip="Add the checked to a workspace: the tree to choose from, a new one too"></button>   <!-- HERESY 2048 -->
+            <button type="button" class="btn ghost small icon-btn" id="collWsMoveBtn" data-ui="folder-input" aria-label="Move to a workspace" data-tip="Move the checked into a workspace and out of this one (out of every other in All Workspaces): the tree to choose from"></button>
+            <select id="collWsPick" aria-label="Add to workspace" hidden></select>
+            <select id="collWsMove" hidden aria-label="Move to workspace" title="Into that workspace and out of this one (out of every other when you are in All Workspaces)"></select>
             <button type="button" class="btn ghost small icon-btn" id="collWsOut" data-ui="folder-minus" aria-label="Take out of this workspace" data-tip="Take out of this workspace"></button>
             <button type="button" class="btn ghost small icon-btn" id="collHide" data-ui="eye-off" aria-label="Hide" data-tip="Out of the lists, not deleted: Hidden on the left shows them again"></button></span>
+          <!-- HERESY 2058 (the audit of Viktor's playlist, 04.11.2026: no «Add to playlist» in the bar): the checked into the playlist, first, last, anywhere, or into an album,
+               from a small overlay of its own, as the take's menu offers them -->
+          <span class="coll-group coll-pl-wrap" role="group" aria-label="Playlist">
+            <button type="button" class="btn ghost small icon-btn" id="collPlBtn" data-ui="playlist" aria-haspopup="dialog" aria-expanded="false" aria-label="Add to playlist" data-tip="Add the checked to the playlist: first, last or anywhere in it, or into an album"></button>
+            <span class="coll-pl-pop" id="collPlPop" role="dialog" aria-label="Add to playlist" hidden></span></span>
           <span class="coll-group" role="group" aria-label="Compare">   <!-- HERESY 1415 -->
-            <button type="button" class="btn ghost small icon-btn" id="collCompare" data-ui="cols-2" aria-label="Compare" data-tip="Compare the checked ones, two to four, in one player from the same second"></button></span>
+            <button type="button" class="btn ghost small icon-btn" id="collCompare" data-ui="cols-2" aria-label="Compare" data-tip="Compare the checked ones, two to twelve, in one player from the same second"></button></span>
           <span class="coll-group" role="group" aria-label="Checks">   <!-- HERESY 1843 -->
             <button type="button" class="btn ghost small icon-btn" id="collSung" data-ui="spell-check" aria-label="Sung to the end?" data-tip="Sung to the end? Whisper times the checked takes' lyrics one after another (on the processor, a minute or two each) and says, for each, whether its last lines were heard"></button></span>
-          <span class="coll-group" role="group" aria-label="Export">
+          <span class="spacer"></span>
+          <span class="coll-dl-wrap"><button type="button" class="btn ghost small icon-btn" id="collDlBtn" data-ui="download" aria-haspopup="dialog" aria-expanded="false" aria-label="Download" data-tip="Download the checked: the format and what goes with them, then a ZIP"></button>   <!-- HERESY 2048: one button by the trash -->
+          <span class="coll-group coll-dl-pop" id="collDlPop" role="dialog" aria-label="Download" hidden>
             <select id="collExportFmt" aria-label="Export format" data-tip="FLAC: lossless, about half the size of WAV. WAV: for tools that take nothing else."><option value="flac">FLAC</option><option value="wav">WAV</option></select>
             <label class="icon-check" data-tip="With what is made from them: also every file made from each take (remasters, stems, upscales, debuzzed files), named after the take."><input type="checkbox" id="collExportDer" aria-label="with what is made from them" /><span class="icon-check-face" data-ui="layers"></span></label>
-            <button type="button" class="btn ghost small icon-btn" id="collExport" data-ui="archive" aria-label="Export ZIP" data-tip="Export ZIP: made on Forge, then saved by the browser where you tell it"></button></span>
-          <span class="spacer"></span>
+            <button type="button" class="btn small" id="collExport" data-ui="archive" aria-label="Export ZIP" data-tip="Export ZIP: made on Forge, then saved by the browser where you tell it">ZIP</button></span></span>
           <button type="button" class="btn ghost small icon-btn danger" id="collTrash" data-ui="trash" aria-label="To the trash" data-tip="To the trash: it gives them back until it is emptied"></button>
         </div>
         </div>
@@ -2307,7 +2518,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <div class="menu-sep"></div>
           <button type="button" role="menuitem" id="refreshLib">Refresh the list</button>
           <button type="button" role="menuitemcheckbox" aria-checked="false" id="dlNamesDate">Put the date in download names</button>
-          <button type="button" role="menuitem" class="danger" id="deleteNonFav">Delete non-favourites…</button>
+          <!-- HERESY 2131 (the audit of 06.11.2026): into the Librarian's trash, the column's own workspace, the marked kept unless ticked -->
+          <button type="button" role="menuitem" class="danger" id="deleteNonFav" data-tip="The takes of the column's workspace (every workspace under From all Workspaces) with no star, shield or lock go to the Librarian's trash; a take with a mark stays unless you tick it; asked first">Non-favourites to the trash…</button>
         </div>
       </div>
     </header>
@@ -2337,9 +2549,11 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
   <canvas id="wave" height="52"></canvas>
   <div class="pb-row">
   <div class="playbar-id">
-    <div class="pb-cover" id="pbCover" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+    <div class="pb-cover" id="pbCover" role="link" tabindex="0" aria-label="Its card in the Librarian" data-tip="Its card in the Librarian"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><button type="button" class="pb-cover-zoom" id="pbCoverZoom" hidden aria-label="The artwork, large" data-tip="The artwork, large"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg></button></div>   <!-- HERESY 2021: to the take's card; the artwork from the corner -->
     <div class="pb-names"><strong id="playbarTitle">Nothing loaded</strong><span class="pb-sub" id="playbarSub"></span></div>
-    <span class="pb-unsung unsung-pill" id="pbUnsung" hidden data-tip="The end not sung: its last lines were not heard; Sung to the end? in its datasheet says which">end not sung</span>
+    <!-- HERESY 2107: each mark its drawn icon before its words; where the room is short the words go and the icon stays, its tip saying them -->
+    <span class="pb-unsung unsung-pill" id="pbUnsung" hidden data-tip="The end not sung: its last lines were not heard; Sung to the end? in its datasheet says which"><span class="pb-chip-ico" data-ui="alert" aria-hidden="true"></span><span class="pb-chip-w">end not sung</span></span>
+    <span class="pb-tail tail-pill" id="pbTail" hidden data-tip="The tail guard heard the sound come back after a silence near the end; End at… offers that second"><span class="pb-chip-ico" data-ui="tailguard" aria-hidden="true"></span><span class="pb-chip-w">tail after the end</span></span>   <!-- HERESY 2056 -->
     <span class="pb-rate" id="pbRate" hidden>
       <button type="button" class="pb-btn" id="pbLike" aria-pressed="false" aria-label="Like" data-ui="like">👍</button>
       <button type="button" class="pb-btn hmark hmark-fire" id="pbFire" data-hmark="fire" aria-pressed="false" aria-label="On fire" data-tip="On fire" data-ui="flame">🔥</button>
@@ -2374,6 +2588,10 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
          выключатель третий добавить») -->
     <button type="button" class="icon-btn pb-tog autoplay-btn" id="playNew" aria-pressed="true" aria-label="Play new takes"
       data-tip="Play new takes: a song made here plays when it is done, unless something plays. Click to only open it." data-ui="playnew">✦</button>
+    <!-- HERESY 2056 (Viktor 04.11.2026: «запускай сторожей хвоста трека автоматом, но в плеере и в контекстном меню трека выставь дефолт off с выбором,
+         опция и иконка»): the tail guards on every new take, off unless chosen -->
+    <button type="button" class="icon-btn pb-tog autoplay-btn" id="tailGuard" aria-pressed="false" aria-label="Tail guards on new takes"
+      data-tip="Tail guards on new takes: off. On, each take made here has its end checked as it lands: where its sound comes back after a silence (marked in amber; End at… offers that second), and, with lyrics, whether they are sung to the end (Whisper, only while a card has room, never on the processor). A take's menu: Tail guards › checks one now." data-ui="tailguard">∿</button>
     <!-- HERESY 1713 (RIVALS 11, Viktor 20.10.2026: «ОДОБРЯЮ с созданием функционала плейлиста»): the crossfade between the takes of Play on, just
          before it (the bell stays right after Play on) -->
     <button type="button" class="icon-btn pb-tog autoplay-btn" id="autoplay" aria-pressed="true" aria-label="Play on"
@@ -2393,6 +2611,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     <div class="volume">
       <button class="icon-btn" id="muteBtn" aria-label="Mute"><span id="muteGlyph">🔊</span></button>
       <input type="range" id="volume" min="0" max="1.5" step="0.01" value="1" aria-label="Volume" data-tip="Volume. Past 100 % a boost up to 150 % for a quiet take: the slider stops at 100 % first; let go and drag again to go past it" />   <!-- HERESY 1700: to 150 % -->
+      <button type="button" class="vol-loud mono" id="loudBtn" aria-pressed="false" aria-label="As loud as before the cut" data-tip="As loud as before the cut came out: each take raised by its own measure (the level the old Peak clip raised to full scale, about 2 dB), a limiter holding the few peaks over it; the file stays as it is"><svg class="loud-wave" viewBox="0 0 44 18" preserveAspectRatio="none" aria-hidden="true"><path class="loud-body" d="M0 18 L0 13 L2 10 L4 12 L6 8 L8 11 L10 6 L12 10 L14 3 L16 9 L18 7 L20 11 L22 5 L24 9 L26 8 L28 12 L30 2 L32 8 L34 6 L36 10 L38 4 L40 9 L42 7 L44 12 L44 18Z"/><path class="loud-tips" d="M13.43 5 L14 3 L14.67 5Z M29.4 5 L30 2 L31 5Z M37.67 5 L38 4 L38.4 5Z"/></svg><span class="loud-t">+dB</span></button>   <!-- HERESY 2037; 2044b: its wave under it -->
     </div>
     <button type="button" class="status-pill" id="statusPill" data-s="idle" data-tip="Nothing is being made or played"><span class="status-dot" aria-hidden="true"></span><span id="statusText" aria-live="polite">Idle</span></button>
   </div>
@@ -2552,10 +2771,14 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     the same for every probe). A probe's variations are made in one pass; each costs about the time of one sound, hardly any memory.</p>
   <p>Probes &times; Variations is how many takes come out: 2 &times; 4 = 8, music m and m&nbsp;+&nbsp;1, each with sounds s to s&nbsp;+&nbsp;3.</p>
 </template>
+<script src="heresy-debug.js"></script>   <!-- HERESY 2054: the debug journal, first of ours: its watch on the requests and errors up early -->
 <script src="heresy-dialog.js"></script>
+<script src="heresy-lease.js"></script>   <!-- HERESY 2081: one Studio at a time (the lab's lease), before any module that writes -->
+<script src="heresy-link.js"></script>   <!-- HERESY 2098–2101: the writes counted, sent again, refused aloud; the line stuck said -->
 <script src="heresy-seedmode.js"></script>
 <script src="heresy-updates.js"></script>
 <script src="heresy-places.js"></script>
+<script src="heresy-backups.js"></script>   <!-- HERESY 2083: Engine → Folders and Security → Backups of your data -->
 <script src="heresy-weights.js"></script>
 <script src="heresy-gpulive.js"></script>
 <script src="heresy-settings.js"></script>
@@ -2594,7 +2817,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 <script src="heresy-writer.js"></script>
 <script src="heresy-versions.js"></script>
 <script src="heresy-train.js"></script>
+<script src="heresy-bankbuilder.js"></script>
 <script src="heresy-gpus.js"></script>
+<script src="heresy-topology.js"></script>   <!-- HERESY 2085: Engine → Hardware → Topology -->
 <script src="heresy-perf.js"></script>   <!-- HERESY 1821 -->
 <script src="heresy-video.js"></script>   <!-- HERESY 1824 -->
 <script src="heresy-guide.js"></script>

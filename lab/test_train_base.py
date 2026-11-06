@@ -1,4 +1,4 @@
-"""HERESY 1792: a run's base by name (training.base_checkpoint). python3 lab/test_train_base.py"""
+"""HERESY 1792, 2112: a run's base by name (training.base_checkpoint), RS-TW 2.0x0.75 among them. python3 lab/test_train_base.py"""
 import sys, tempfile
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -35,5 +35,22 @@ try:
     training.base_checkpoint({"models": d / "none"}, {}); check("no own file: said, as before", False, "taken")
 except FileNotFoundError:
     check("no own file: said, as before", True)
+# HERESY 2112: the Studio's default, RS-TW 2.0x0.75, by its merge's name or its file's, from models/<merge>/ where the fold left it
+(d / "models" / "RS-TW-2.0x0.75").mkdir(parents=True)
+(d / "models" / "RS-TW-2.0x0.75" / "yue2_3b_RS-TW-2.0x0.75_bf16.safetensors").write_bytes(b"x")
+P2 = {"models": d, "merges": d / "models"}
+c, q, b = training.base_checkpoint(P2, {"base": "RS-TW-2.0x0.75", "quant": "int8"})
+check("RS-TW-2.0x0.75 by its name: its trainer file in models/RS-TW-2.0x0.75/, bf16, the file's name said", c == d / "models" / "RS-TW-2.0x0.75" / "yue2_3b_RS-TW-2.0x0.75_bf16.safetensors"
+      and q == "bf16" and b == "yue2_3b_RS-TW-2.0x0.75_bf16.safetensors", (c, q, b))
+c, q, b = training.base_checkpoint(P2, {"base": "yue2_3b_RS-TW-2.0x0.75_bf16.safetensors"})
+check("  by its file's name too, the same file", c.parent.name == "RS-TW-2.0x0.75" and b == c.name, (c, q, b))
+(d / "checkpoints" / "yue2_3b_RS-TW-2.0x0.75_bf16.safetensors").write_bytes(b"x")
+c, q, b = training.base_checkpoint(P2, {"base": "RS-TW-2.0x0.75"})
+check("  one put into checkpoints/comfy/checkpoints/ goes first, as every base there", c == d / "checkpoints" / "yue2_3b_RS-TW-2.0x0.75_bf16.safetensors", (c, q, b))
+try:
+    training.base_checkpoint(P2, {"base": "RS-TW-2.0x0.9"}); check("refused: RS-TW 2.0x0.9 not folded here, said where it was looked for", False, "taken")
+except FileNotFoundError as e:
+    check("refused: RS-TW 2.0x0.9 not folded here, said where it was looked for", "models/RS-TW-2.0x0.9/" in str(e), e)
+check("the kit's paths name the merges' folder", training.paths(Path("/k"))["merges"] == Path("/k/models"), training.paths(Path("/k")))
 print("test_train_base: " + ("all passed" if not bad else f"{len(bad)} FAILED"))
 sys.exit(1 if bad else 0)
