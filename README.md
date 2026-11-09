@@ -213,6 +213,24 @@ What it needs:
 
 **The Studio answers on port 7777**: http://127.0.0.1:7777 on its machine, http://ITS-ADDRESS:7777 from your network. Over https or on its own machine, Chrome and Edge install it as an app from the address bar: a web app (PWA) with its own window and icon, the same Studio, nothing of it kept offline. [INSTALL.md](INSTALL.md) installs it step by step (on Windows 11, through WSL2: [INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)); [INSTALL_by_LLM_Agent.md](INSTALL_by_LLM_Agent.md) is the same for an AI agent. With [Pinokio](https://pinokio.co) the install and the start are buttons of its menu, on Linux ([INSTALL.md › With Pinokio](INSTALL.md#with-pinokio)).
 
+## Linux: AppImage
+
+One file and nothing to build: the Studio with its engine, its Python and ffmpeg inside, for Linux on x86-64 with glibc 2.35 or newer (Ubuntu 22.04, Debian 12, Fedora 36 and later). It is v2.0.6 with the packaging's changes, which the [release notes](https://github.com/igrbible/Ruach_Studio/releases/tag/v2.0.6) name.
+
+Download `RuachStudio-2.0.6-core-x86_64.AppImage` (1.2 GB) and its `.sha256` from the [v2.0.6 release](https://github.com/igrbible/Ruach_Studio/releases/tag/v2.0.6), then:
+
+```bash
+sha256sum -c RuachStudio-2.0.6-core-x86_64.AppImage.sha256
+chmod +x RuachStudio-2.0.6-core-x86_64.AppImage
+./RuachStudio-2.0.6-core-x86_64.AppImage
+```
+
+**The first start** names each model it needs with its size, the total and the free disk, then asks: `[Y/n]` in a terminal, a dialog from the desktop (zenity or kdialog). It brings only what a song needs: the Studio's default backbone, RS-TW 2.0 ×0.75, at your card's quant, and the decoder (0.53 GB). That is 7.7 GB on a 24 GB card (BF16), 4.3 GB on 7 to 16 GB (Q8_0), 3.5 GB below (Q6_K), and 3.2 GB on the processor or a card under 4.5 GB (m-a-p's YuE2-3B Q5_K_M). Everything else comes from **Engine → Models** when you want it: Whisper for the lyrics check, the transcriber for covers from a recording, the extra decoders, upscale, the LoRAs. The stems need the full Python with PyTorch (`lab/install-venv.sh`), which the AppImage does not carry. The page opens at http://127.0.0.1:7777; the Studio keeps its things in `~/.local/share/ruach-studio` (`RUACH_HOME=/another/disk` puts them elsewhere).
+
+**The GPU** is NVIDIA's, with the driver 570 or newer: the RTX 20xx, 30xx, 40xx and 50xx, the GTX 16xx, Quadro RTX and the RTX A and Ada cards, the A100 and the other Ampere cards, the H100 and H200, the B200 and B300. Pascal and Volta run as an experiment (the GTX 10xx, Quadro P, Tesla P4 and P40, Titan V, V100). On any other card, or with none, the Studio computes on the processor, slowly; `CUDA_VISIBLE_DEVICES= ./RuachStudio-2.0.6-core-x86_64.AppImage` makes it do so on any card.
+
+**An update** is the next AppImage started in place of this one: your models, songs and settings stay where they are, and its first start asks only for what changed among the models you have. `--fetch-models --only whisper,transcriber` (or `--help` after `--fetch-models`) fetches the packs from a terminal.
+
 ## Dependencies
 
 Everything the Studio uses, and what for. The engine comes with the repository; the rest is fetched, pinned and checked by the scripts named.
