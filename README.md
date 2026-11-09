@@ -1,4 +1,4 @@
-# Ruach Studio
+# Ruach Studio · the YuE2 Studio · songs from words, on your own machine
 
 <p align="center"><img src="src/brand/ruach-banner.png" alt="Ruach Studio · OSEM: Open Source, Engaged &amp; Musical" width="860"></p>
 
