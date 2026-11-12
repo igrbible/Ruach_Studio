@@ -142,10 +142,15 @@
           CHORD.lastIndex = i;
           m = CHORD.exec(line);
           if (m) {
-            var acc = /[#\u266f]/.test(m[2]) ? 1 : /[b\u266d]/.test(m[2]) ? -1 : 0;
-            var pc = NAT[m[1]] + acc + semis, nl = LETTERS.charAt(((LETTERS.indexOf(m[1]) + steps) % 7 + 7) % 7);
-            var d = ((pc - NAT[nl]) % 12 + 18) % 12 - 6;
-            res += '"' + nl + (d === -1 ? "b" : d === 1 ? "#" : d === -2 ? "bb" : d === 2 ? "##" : "") + m[3] + '"';
+            // HERESY 2328: the bass of a slash chord (C/E, SheetSage2-Refined's Am7/G) moves with its root; it stood still before
+            var moveName = function (letter, accText) {
+              var acc = /[#\u266f]/.test(accText) ? 1 : /[b\u266d]/.test(accText) ? -1 : 0;
+              var pc = NAT[letter] + acc + semis, nl = LETTERS.charAt(((LETTERS.indexOf(letter) + steps) % 7 + 7) % 7);
+              var d = ((pc - NAT[nl]) % 12 + 18) % 12 - 6;
+              return nl + (d === -1 ? "b" : d === 1 ? "#" : d === -2 ? "bb" : d === 2 ? "##" : "");
+            };
+            var rest = m[3].replace(/\/([A-G])([b#\u266d\u266f]?)$/, function (_, l, a) { return "/" + moveName(l, a); });
+            res += '"' + moveName(m[1], m[2]) + rest + '"';
             i = CHORD.lastIndex; continue;
           }
           var q = line.indexOf('"', i + 1);

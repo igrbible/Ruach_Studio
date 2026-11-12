@@ -1,6 +1,6 @@
 ---
 name: An idea
-about: Something the studio could do
+about: Something the Studio could do
 title: "Idea: "
 labels: idea
 ---
@@ -11,4 +11,4 @@ labels: idea
 
 **Elsewhere**: a studio, a DAW or a model that does it already, if you know one.
 
-**The studio**: its version (☰ → About, or the VERSION file), how it was installed (Pinokio or by hand), the system, the card and its memory.
+**The Studio**: its version (☰ → About, or the VERSION file), how it was installed (Pinokio or by hand), the system, the card and its memory.

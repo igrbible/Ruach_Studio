@@ -28,9 +28,12 @@
             autoParam: {},                               // HERESY 1559: which line a lane has in hand (volume when not said)
             mon: { mono: false, dim: false },            // HERESY 1536: the master's monitor, for the ear only
             ref: refReset(),                             // HERESY 1755: the reference, the sound as it came
-            marks: [] };                                 // HERESY 2016: the markers of your own
+            marks: [],                                   // HERESY 2016: the markers of your own
+            grid: { on: recallFlag("yue2.mixer.grid", true), chords: recallFlag("yue2.mixer.chords", true), wait: false, err: "", lit: null },   // HERESY 2313–2314
+            aud: null };                                 // HERESY 2317: the lane auditioned while Alt is held on it
   function $(id) { return document.getElementById(id); }
   var UNDO_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 3 2 6l3 3M2.5 6H10a4 4 0 0 1 0 8H7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var GRID_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2 3v10M6 6v7M10 6v7M14 3v10M1.5 13h13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';   // HERESY 2313
   var REDO_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M11 3l3 3-3 3M13.5 6H6a4 4 0 0 0 0 8h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
@@ -249,6 +252,12 @@
   // the value the render reads (HERESY 1531: ruach.mix/1, lab/daw_mix.py): every strip's settings that are not its defaults, the
   // returns and the master
   function rnd(v, k) { var m = Math.pow(10, k); return Math.round(v * m) / m; }
+  function shaped(p, o) {                            // HERESY 2318: a point's shape, said only when it has one (a bend from −1 to 1, "hold", "s")
+    var k = p[2];
+    if (k === "hold" || k === "s") o.push(k);
+    else if (typeof k === "number" && Math.abs(k) >= 0.001) o.push(rnd(Math.max(-1, Math.min(1, k)), 3));
+    return o;
+  }
   function value() {
     var b = S.buses, out = { schema: SCHEMA, strips: {} };
     names().forEach(function (n) {
@@ -275,9 +284,9 @@
       if (s.pan) o.pan = rnd(s.pan, 3);
       if (s.reverb) o.reverb = rnd(s.reverb, 3);
       if (s.delay) o.delay = rnd(s.delay, 3);
-      if (s.auto.length) o.auto = s.auto.slice().sort(function (a, b) { return a[0] - b[0]; }).map(function (p) { return [rnd(p[0], 3), rnd(p[1], 2)]; });   // HERESY 1535
+      if (s.auto.length) o.auto = s.auto.slice().sort(function (a, b) { return a[0] - b[0]; }).map(function (p) { return shaped(p, [rnd(p[0], 3), rnd(p[1], 2)]); });   // HERESY 1535; 2318: its shape
       var oa = {};                                    // HERESY 1559
-      Object.keys(AUTO_P).forEach(function (k2) { var pp = s.autos[k2]; if (k2 !== "volume" && Array.isArray(pp) && pp.length) oa[k2] = pp.slice().sort(function (a, b) { return a[0] - b[0]; }).map(function (p) { return [rnd(p[0], 3), rnd(p[1], 3)]; }); });
+      Object.keys(AUTO_P).forEach(function (k2) { var pp = s.autos[k2]; if (k2 !== "volume" && Array.isArray(pp) && pp.length) oa[k2] = pp.slice().sort(function (a, b) { return a[0] - b[0]; }).map(function (p) { return shaped(p, [rnd(p[0], 3), rnd(p[1], 3)]); }); });
       if (Object.keys(oa).length) o.autos = oa;
       if (s.edits.length) o.edits = s.edits.map(function (e2) { return { op: e2.op === "move" ? "move" : "copy", a: rnd(e2.a, 3), b: rnd(e2.b, 3), to: rnd(e2.to, 3) }; });   // HERESY 1564
       if (Object.keys(o).length) out.strips[n] = o;
@@ -331,6 +340,7 @@
   function groupsOf(n) { return (S.buses.groups || []).filter(function (x) { return x.members.indexOf(n) >= 0; }); }
   function vcaDb(n) { return groupsOf(n).reduce(function (a, x) { return a + (+x.gain_db || 0); }, 0); }
   function audible(name) {
+    if (S.aud) return name === S.aud.n;              // HERESY 2317: the lane auditioned alone, the mix as it is set untouched
     var soloing = names().some(function (n) { return strip(n).solo; }) || (S.buses.groups || []).some(function (x) { return x.solo && x.members.length; });
     var gs = groupsOf(name);
     return soloing ? strip(name).solo || gs.some(function (x) { return x.solo; }) : !(strip(name).mute || gs.some(function (x) { return x.mute; }));
@@ -364,18 +374,19 @@
   // the mix's place, as loud as the mix over what has played (the lab's blocks of it, /lab/daw/loudness, gated as the mix's are): louder
   // sounds better, so a compare not matched in level is no compare
   var SOURCE = "source";
-  function refReset() { return { on: false, armed: false, asked: false, z: null, block: 0.1, match: null, t: 0 }; }
+  function refReset() { return { on: false, armed: false, asked: false, z: null, block: 0.1, match: null, t: 0, spec: null, title: "" }; }   // HERESY 2315: spec, title
   function refLabel() { return tr("Ref") + (S.ref.match != null ? " " + fmtDb(S.ref.match) : ""); }
   function refButton() {
-    return '<button type="button" class="mx-ms mx-ref' + (S.ref.on ? " is-on" : "") + '" id="mxRef" aria-pressed="' + S.ref.on + '"' + (S.info ? "" : " disabled") +
-      ' data-tip="' + esc(tr("The sound as it came, the one the stems were split from (a neutral mix gives it back), heard in place of the mix and as loud as it over what has played: so the compare is of the sound, not of the level. The button says by how much it is raised or lowered; R does the same; Mono and Dim hear it too")) + '">' + esc(refLabel()) + "</button>";
+    return '<button type="button" class="mx-ms mx-ref' + (S.ref.on ? " is-on" : "") + (S.ref.spec ? " is-other" : "") + '" id="mxRef" aria-pressed="' + S.ref.on + '"' + (S.info ? "" : " disabled") +
+      ' data-tip="' + esc(tr("The sound as it came, the one the stems were split from (a neutral mix gives it back), heard in place of the mix and as loud as it over what has played: so the compare is of the sound, not of the level. The button says by how much it is raised or lowered; R does the same; Mono and Dim hear it too") +
+        " " + tr("A right-click: another reference, a sound of this take, another take or a song of your own, as loud as the mix too") + " · " + tr("Now: {0}").replace("{0}", refTitle())) + '">' + esc(refLabel()) + "</button>";   // HERESY 2315
   }
-  function refPaint() { var b = $("mxRef"); if (b) { b.classList.toggle("is-on", S.ref.on); b.setAttribute("aria-pressed", S.ref.on); b.textContent = refLabel(); } }
+  function refPaint() { var b = $("mxRef"); if (b) { b.classList.toggle("is-on", S.ref.on); b.classList.toggle("is-other", !!S.ref.spec); b.setAttribute("aria-pressed", S.ref.on); b.textContent = refLabel(); } }
   function refLoad() {
     if (!S.take || !S.set || S.ref.asked) return;
     var R = S.ref, set = S.set;
     R.asked = true;
-    getJson("/daw/loudness?" + q({ name: S.take.name, set: set })).then(function (d) {
+    getJson(R.spec ? "/daw/ref/loudness?" + q({ spec: R.spec }) : "/daw/loudness?" + q({ name: S.take.name, set: set })).then(function (d) {   // HERESY 2315: any reference
       if (S.ref !== R || S.set !== set) return;
       R.z = d.z || null; R.block = d.block || 0.1;
     }, function (e) { if (S.ref === R) { R.asked = false; say(tr("The source's loudness did not come from the lab: the reference plays as it is, not matched") + " (" + (e.message || e) + ")", true); } });
@@ -390,7 +401,7 @@
   }
   function applyRef(g) {
     if (!g || !g.ref || !S.ctx) return;
-    var t = S.ctx.currentTime, on = S.ref.on && S.ref.armed;
+    var t = S.ctx.currentTime, on = S.ref.on && S.ref.armed && !S.aud;   // HERESY 2317: an audition hears the lane, not the reference
     g.ref.delay.delayTime.setValueAtTime(Math.min(1, latency(g)), t);   // as late as the console makes the mix
     g.mixMon.gain.setTargetAtTime(on ? 0 : 1, t, 0.006);
     g.ref.out.gain.setTargetAtTime(on ? db(S.ref.match || 0) : 0, t, on && g.refWas ? 0.3 : 0.006);   // a switch quick, a new match gliding
@@ -455,6 +466,8 @@
     clearTimeout(S.watch); S.busy = ""; S.mixId = "";   // HERESY 1536: a mix watched for another take is no longer this one's
     S.owner = "";                                     // HERESY 1545: the mix in hand was the last take's
     S.take = take ? { name: take.name, label: take.label || take.name, seconds: take.seconds || 0 } : null;
+    S.aud = null; S.grid.err = ""; S.grid.wait = false;   // HERESY 2313, 2317
+    S.grid.on = recallFlag(gridKey(), !narratorTake());   // HERESY 2366: a Narrator's take opens with the grid off
     S.sets = []; S.set = ""; S.info = null; S.peaks = {};
     paint();
   }
@@ -481,6 +494,7 @@
     S.info = null; S.peaks = {}; S.lv = {}; S.undo = []; S.redo = [];
     S.pick = null; S.clip = null;                     // HERESY 1564: a stretch in hand is this set's
     S.ref = refReset();                               // HERESY 1755: the reference is this set's source
+    var rr0 = refRecall(); if (rr0) { S.ref.spec = rr0.spec; S.ref.title = rr0.title || rr0.spec; }   // HERESY 2315: or the one chosen for it
     paint();
     if (!S.take || !S.set) return;
     var token = ++S.token;
@@ -501,6 +515,7 @@
       paint();
       names().forEach(function (n) { loadPeaks(n); });
       labLoad(token, kept.t);                          // HERESY 1533: Forge's copy, when newer, replaces this browser's (after the lanes are up)
+      gridLoad();                                      // HERESY 2313: the take's bar grid, heard once a take
     }).catch(function (e) { if (token === S.token) say(e.message, true); });
   }
   function loadPeaks(name) {
@@ -521,7 +536,7 @@
     var html = '<div class="mx-head" id="mxHead"></div>' + '<div class="mx-lanes" id="mxLanes">';
     if (S.info) {
       S.secKey = secKey();                            // HERESY 1532
-      html += ruler().replace('<div class="mx-ruler-row">', '<div class="mx-ruler-row' + (S.secKey ? " has-secs" : "") + '">');                                 // HERESY 1501
+      html += ruler().replace('<div class="mx-ruler-row">', '<div class="mx-ruler-row' + (S.secKey ? " has-secs" : "") + (gridShown() ? " has-grid" : "") + '">');   // HERESY 2313                                 // HERESY 1501
       laneOrder().forEach(function (n) { html += lane(n); });   // HERESY 1989: in the order they were dragged to
       html += '<div class="mx-head-line" id="mxPlayhead" aria-hidden="true"></div>';
     }
@@ -665,18 +680,22 @@
   function ruler() {
     return '<div class="mx-ruler-row"><div class="mx-ctl mx-ruler-ctl">' +   // HERESY 1501b: the lanes' grid, not a lane
       '<button type="button" class="mx-ms mx-loop' + (S.loopOn ? " is-on" : "") + '" id="mxLoop" aria-pressed="' + S.loopOn + '" data-tip="' + esc(tr("Loop (L): the stretch drawn on the ruler played round; drag on the ruler to draw it")) + '">' + icon("repeat", "\u21bb") + "</button>" +
+      '<button type="button" class="mx-ms mx-grid' + (S.grid.on && gridData() ? " is-on" : "") + '" id="mxGrid" aria-pressed="' + !!(S.grid.on && gridData()) + '" aria-label="' + esc(tr("The bar grid")) + '">' + GRID_SVG + "</button>" +   // HERESY 2313
       '<button type="button" class="mx-ms" id="mxZoomOut" data-tip="' + esc(tr("Zoom out (−)")) + '">−</button>' +
       '<button type="button" class="mx-ms" id="mxZoomIn" data-tip="' + esc(tr("Zoom in (+); Ctrl+wheel zooms about the pointer, Shift+wheel goes along")) + '">+</button>' +
       '<button type="button" class="btn ghost small" id="mxFit" data-tip="' + esc(tr("The whole song in view (0)")) + '">' + esc(tr("Fit")) + "</button>" +
       '<span class="mx-meter mx-master" data-meter="*" data-tip="' + esc(tr("The whole mix's level as it plays")) + '"><i></i></span>' +
-      '<span class="row-hint mono mx-keys" data-tip="' + esc(tr("Space plays and stops; Home to the start (the loop's, when it is on); L the loop; M and S the lane picked by a click on its name; ↑ ↓ another lane; + − 0 the zoom; [ ] the section before and after; Ctrl+Z, Ctrl+Shift+Z undo and redo; R the sound as it came, as loud as the mix; Alt+click on an S: every solo off") + " " + tr("K a marker at the playhead, «,» and «.» the marker before and after; a right-click on one goes to it, renames or deletes it")) + '">' + esc(tr("keys")) + "</span></div>" +
-      '<div class="mx-wave mx-ruler" data-tip="' + esc(tr("The time: a click goes there, a drag draws the loop. Under it the song's sections, as the player has timed them: a click goes to one, a double-click loops it")) + '"><canvas data-mx-ruler="1"></canvas></div></div>';
+      '<span class="row-hint mono mx-keys" data-tip="' + esc(tr("Space plays and stops; Home to the start (the loop's, when it is on); L the loop; M and S the lane picked by a click on its name; ↑ ↓ another lane; + − 0 the zoom; [ ] the section before and after; Ctrl+Z, Ctrl+Shift+Z undo and redo; R the sound as it came, as loud as the mix; Alt+click on an S: every solo off") + " " + tr("K a marker at the playhead, «,» and «.» the marker before and after; a right-click on one goes to it, renames or deletes it") + " " + tr("G the bar grid; Alt pressed on a wave plays that lane alone while it is held")) + '">' + esc(tr("keys")) + "</span></div>" +   // HERESY 2313, 2317
+      '<div class="mx-wave mx-ruler" data-tip="' + esc(tr("The time: a click goes there, a drag draws the loop. Under it the song's sections, as the player has timed them: a click goes to one, a double-click loops it")) + '"><canvas data-mx-ruler="1"></canvas></div>' +
+      // HERESY 2314: the chord lane, the score's chords on the bar grid (hidden while there are none)
+      '<div class="mx-ctl mx-chord-ctl" hidden><span class="mx-chord-word">' + esc(tr("Chords")) + '</span><span class="mx-chord-key mono" translate="no"></span></div>' +
+      '<div class="mx-wave mx-ruler mx-chordlane" hidden data-tip="' + esc(tr("The score's chords on the bar grid: a click goes to one, a double-click loops it; the key at the left")) + '"><canvas data-mx-chords="1"></canvas></div></div>';
   }
   // HERESY 1532: the song's sections, as the player's wave has them (the take in the player): [{t, name, end}], each to the next
   var SEC_HUES = [[/chorus|hook|refrain|припев/i, "217,157,16"], [/verse|куплет/i, "47,154,143"], [/bridge|pre|бридж/i, "138,99,210"],
                   [/intro|outro|вступ|кода|end/i, "138,138,138"], [/instr|break|solo|проигр/i, "63,127,191"]];
   function sections() {
-    var f = window.ruachWaveSections, l = f && S.take ? f(S.take.name) : null, L = S.info ? S.info.seconds : 0;
+    var f = window.ruachTakeSections, l = f && S.take ? f(S.take.name) : null, L = S.info ? S.info.seconds : 0;   // HERESY 2233: the take's own accessor, not the checks' helper
     l = (l || []).filter(function (x) { return x && x.t != null && isFinite(x.t) && x.t < L; }).slice().sort(function (a, b) { return a.t - b.t; });
     return l.map(function (x, i) { return { t: x.t, name: String(x.name || ""), end: i + 1 < l.length ? l[i + 1].t : L }; });
   }
@@ -745,6 +764,7 @@
       g.fillStyle = ink; g.fillText(clock(t) + (st < 1 && t % 1 ? ".5" : ""), x + 3, 2);
       for (var k = 1; k < 4 && st >= 1; k++) { g.fillStyle = dim; g.fillRect(Math.round(tx(t + k * st / 4, w)) + 0.5, top - 3, 1, 3); }
     }
+    gridLines(g, w, top, true);                       // HERESY 2313: the bars numbered, the beats ticked
     S.marks.forEach(function (m) {                   // HERESY 2016: a flag with its name, a line to the sections
       var mx = Math.round(tx(m.t, w));
       if (mx < -2 || mx > w + 2) return;
@@ -769,7 +789,7 @@
     });
     g.textBaseline = "top";
   }
-  function redrawAll() { if (S.info) { drawRuler(); names().forEach(draw); paintPlayhead(); } }
+  function redrawAll() { if (S.info) { drawRuler(); names().forEach(draw); paintPlayhead(); gridPaint(); } }   // HERESY 2313: and the chord lane
   function zoomAt(f, x, w) {                        // HERESY 1501: about a point of the view (x of w), the time under it kept
     var t = xt(x, w);
     S.view.zoom *= f; clampView();
@@ -787,12 +807,13 @@
     var g = c.getContext("2d"), pk = S.peaks[n + "|" + versionOf(n)], full = true;   // HERESY 1499: full screen, whole waves; 1511 (Viktor: «В DAW волну рисуй полную… не экономь на этом»): whole always
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, w, h);
+    gridLines(g, w, h, false);                        // HERESY 2313: the bar grid under the wave
     var css = getComputedStyle(c), on = css.getPropertyValue("--mx-wave").trim() || "#d99d10", off = css.getPropertyValue("--mx-quiet").trim() || "rgba(0,0,0,.45)";
     var L = S.info.seconds || 1;
     if (pk) {
       g.fillStyle = on;
       var base = full ? h / 2 : h - 1, amp = full ? h / 2 - 1 : h - 2;
-      var vp = sortedPts(n, "volume"), vg = function (px) { return vp.length ? db(autoDb(vp, xt(px + 0.5, w))) : 1; };   // HERESY 1968: the wave as the level's line makes it
+      var vp = linePts(n, "volume"), vg = function (px) { return vp.length ? db(autoDb(vp, xt(px + 0.5, w))) : 1; };   // HERESY 1968: the wave as the level's line makes it; 2318: laid out
       var o0 = strip(n).offset_s || 0;                  // HERESY 1989: the lane's shift
       for (var x = 0; x < w; x++) {
         var i0 = Math.floor((xt(x, w) - o0) / L * pk.length), i1 = Math.max(i0 + 1, Math.floor((xt(x + 1, w) - o0) / L * pk.length)), m = 0;   // HERESY 1501: through the view
@@ -878,7 +899,7 @@
       g.fillStyle = inkS; g.globalAlpha = 0.75; g.fillRect(x - 0.5, 0, 1, h);
       g.beginPath(); g.moveTo(x - 4, 0); g.lineTo(x + 4, 0); g.lineTo(x, 6); g.closePath(); g.fill(); g.globalAlpha = 1;
     });
-    var prm = S.autoShow[n] ? autoParam(n) : "volume", au = sortedPts(n, prm);   // HERESY 1535: the lane's volume over time; 1559: or the knob in hand
+    var prm = S.autoShow[n] ? autoParam(n) : "volume", au = sortedPts(n, prm), aul = expandPts(au);   // HERESY 1535: the lane's volume over time; 1559: or the knob in hand; 2318: laid out
     if (au.length || S.autoShow[n] || prm === "volume") {   // HERESY 1968: the level's line always there, faint while it is flat, to be taken
       var amber = css.getPropertyValue("--amber").trim() || "#d99d10", inkc = css.getPropertyValue("--ink").trim() || "#222";
       if (S.autoShow[n] && prm !== "volume") {        // the knob's rest, a thin line
@@ -886,7 +907,7 @@
       }
       var hov = S.lineHover === n;
       g.strokeStyle = amber; g.lineWidth = au.length || hov || S.autoShow[n] ? 1.5 : 1; g.globalAlpha = S.autoShow[n] || hov ? 1 : au.length ? 0.6 : 0.3; g.beginPath();
-      for (var ax = 0; ax <= w; ax += 2) { var ay = aY(prm, au.length ? autoDb(au, xt(ax, w)) : AUTO_P[prm].rest, h); if (ax) g.lineTo(ax, ay); else g.moveTo(ax, ay); }
+      for (var ax = 0; ax <= w; ax += 2) { var ay = aY(prm, aul.length ? autoDb(aul, xt(ax, w)) : AUTO_P[prm].rest, h); if (ax) g.lineTo(ax, ay); else g.moveTo(ax, ay); }
       g.stroke(); g.globalAlpha = 1;
       if (S.autoShow[n] || prm === "volume") au.forEach(function (q) {   // 1968: the level's points on every wave
         var qx = tx(q[0], w); if (qx < -6 || qx > w + 6) return;
@@ -903,6 +924,7 @@
     ph.style.display = px < 0 || px > box.clientWidth ? "none" : "";
     var t = $("mxTime");
     if (t) t.textContent = clock(pos()) + " / " + clock(S.info.seconds);
+    chordsFollow();                                   // HERESY 2314
   }
   function timeAt(canvas, clientX) {
     var r = canvas.getBoundingClientRect();
@@ -1093,16 +1115,16 @@
     if (!l || !S.ctx) return;
     var now = S.ctx.currentTime, from = S.playing ? Math.max(S.startAt, pos()) : S.at, at = S.playing ? Math.max(now, S.startCtx + (from - S.startAt)) : now;
     var s = strip(n), still = function (params, v) { params.forEach(function (p) { p.cancelScheduledValues(0); p.setValueAtTime(v, now); }); };   // a line taken away: the knob's own value
-    if (l.pan) { if (drawn(n, "pan")) knobLine([l.pan.pan], sortedPts(n, "pan"), function (v) { return v; }, from, now, at); else if (l.panLine) still([l.pan.pan], s.pan); }
+    if (l.pan) { if (drawn(n, "pan")) knobLine([l.pan.pan], linePts(n, "pan"), function (v) { return v; }, from, now, at); else if (l.panLine) still([l.pan.pan], s.pan); }   // 2318: laid out
     if (l.w) {
       if (drawn(n, "width")) {
-        var wp = sortedPts(n, "width");
+        var wp = linePts(n, "width");
         knobLine([l.w[0].gain, l.w[3].gain], wp, function (v) { return (1 + v) / 2; }, from, now, at);
         knobLine([l.w[1].gain, l.w[2].gain], wp, function (v) { return (1 - v) / 2; }, from, now, at);
       } else if (l.wLine) { still([l.w[0].gain, l.w[3].gain], (1 + s.width) / 2); still([l.w[1].gain, l.w[2].gain], (1 - s.width) / 2); }
     }
-    if (drawn(n, "reverb")) knobLine([l.rv.gain], sortedPts(n, "reverb"), function (v) { return v; }, from, now, at); else if (l.rvLine) still([l.rv.gain], s.reverb);
-    if (drawn(n, "delay")) knobLine([l.dl.gain], sortedPts(n, "delay"), function (v) { return v; }, from, now, at); else if (l.dlLine) still([l.dl.gain], s.delay);
+    if (drawn(n, "reverb")) knobLine([l.rv.gain], linePts(n, "reverb"), function (v) { return v; }, from, now, at); else if (l.rvLine) still([l.rv.gain], s.reverb);
+    if (drawn(n, "delay")) knobLine([l.dl.gain], linePts(n, "delay"), function (v) { return v; }, from, now, at); else if (l.dlLine) still([l.dl.gain], s.delay);
     l.panLine = drawn(n, "pan"); l.wLine = drawn(n, "width"); l.rvLine = drawn(n, "reverb"); l.dlLine = drawn(n, "delay");   // what had a line, to give its value back once
   }
   function autoDb(pts, t) {
@@ -1115,7 +1137,7 @@
     var l = S.graph && S.graph.lanes[n];
     if (!l || !S.ctx) return;
     knobsSchedule(n);                                 // HERESY 1559: and the other knobs' lines
-    var p = l.auto.gain, now = S.ctx.currentTime, pts = autoPts(n);
+    var p = l.auto.gain, now = S.ctx.currentTime, pts = expandPts(autoPts(n));   // HERESY 2318: its shapes laid out as the render lays them
     p.cancelScheduledValues(0);
     if (!pts.length) { p.setValueAtTime(1, now); return; }
     var from = S.playing ? Math.max(S.startAt, pos()) : S.at;
@@ -1288,6 +1310,9 @@
     });
   }
   function fetchChunk(n, k) {
+    if (n === SOURCE && S.ref.spec) return fetch("/lab/daw/ref/chunk?" + q({ spec: S.ref.spec, start: k * CHUNK, seconds: CHUNK }))   // HERESY 2315: a reference of any take or yours
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+      .then(function (buf) { return S.ctx.decodeAudioData(buf); });
     return fetch("/lab/daw/chunk?" + q({ name: S.take.name, set: S.set, strip: n, path: n === SOURCE ? "" : versionOf(n), start: k * CHUNK, seconds: CHUNK }))   // 1755
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
       .then(function (buf) { return S.ctx.decodeAudioData(buf); });
@@ -1665,6 +1690,12 @@
   function on(ev, fn) { (EV[ev] || (EV[ev] = [])).push(fn); }
   function emit(ev, d) { (EV[ev] || []).forEach(function (fn) { try { fn(d); } catch (e) { if (window.console) console.error(e); } }); }
   function onDbl(e) {
+    var chc = e.target.closest && e.target.closest("canvas[data-mx-chords]"), chg = gridData();   // HERESY 2314: a chord looped
+    if (chc && chg && S.info) {
+      var chd = window.RuachBars.chordAt(chg, timeAt(chc, e.clientX));
+      if (chd) { S.loop = [chd.t0, chd.t1]; S.loopOn = true; loopPaint(); if (S.playing) play(chd.t0); else { S.at = chd.t0; paintPlayhead(); } }
+      return;
+    }
     var rc = e.target.closest && e.target.closest("canvas[data-mx-ruler]");   // HERESY 1532: a section's block looped
     if (rc && S.info) {
       var r = rc.getBoundingClientRect(), sc = e.clientY > r.bottom - 15 ? sectionAt(timeAt(rc, e.clientX)) : null;
@@ -1692,6 +1723,7 @@
     if (ac && S.info && S.autoShow[ac.dataset.mxWave]) {
       var a = autoAt(ac, e);
       if (a.hit) { mark(); a.hit[1] = AUTO_P[a.prm].rest; keep(); draw(a.n); autoSchedule(a.n); emit("change", { n: a.n, key: "auto" }); }   // 1559: the knob's rest
+      else { var sg0 = segAt(a.n, a.prm, a.t); if (sg0 && sg0.p.length > 2) shapeSet(a.n, a.prm, sg0.p, null); }   // HERESY 2318: a segment straight again
       return;
     }
     var f = e.target.closest && e.target.closest(".mx-fader input");
@@ -1709,6 +1741,7 @@
     e.preventDefault();
     var t = timeAt(c, e.clientX), r = c.getBoundingClientRect(), onBand = sections().length && e.clientY > r.bottom - 15, sc = onBand ? sectionAt(t) : null;
     if (sc) t = sc.t;                                 // HERESY 1532: a section's block: its start
+    else t = gridSnap(t, r.width, e);                 // HERESY 2313: the loop's start and a click on the grid
     S.rule = { canvas: c, x: e.clientX, a: t, b: t, moved: false, sec: sc };
     try { if (c.setPointerCapture) c.setPointerCapture(e.pointerId); } catch (x) { /* gone */ }
     return true;
@@ -1780,6 +1813,7 @@
     if (k === "-" || k === "_") { e.preventDefault(); zoomAt(1 / 1.5, tx(pos(), w), w); return; }
     if (k === "0") { e.preventDefault(); S.view = { zoom: 1, t0: 0 }; redrawAll(); return; }
     if (k === "k" || k === "K") { e.preventDefault(); markAdd(pos()); return; }   // HERESY 2016: a marker at the playhead
+    if (k === "g" || k === "G") { e.preventDefault(); gridToggle(); return; }   // HERESY 2313: the bar grid
     if (k === "," || k === ".") { if (markJump(k === "." ? 1 : -1)) e.preventDefault(); return; }   // and the one before, after
     if (k === "[" || k === "]") {                    // HERESY 1532: the section before, the section after
       var secs = sections(), now = pos(), to = null;
@@ -1861,7 +1895,7 @@
   function lineAt(c, e) {                            // the level's line under the pointer (its point, or the line itself), or null
     var a = autoAt(c, e, "volume");
     if (a.hit) return a;
-    var y = e.clientY - a.r.top, ly = aY("volume", autoDb(sortedPts(a.n, "volume"), a.t), a.r.height);
+    var y = e.clientY - a.r.top, ly = aY("volume", autoDb(linePts(a.n, "volume"), a.t), a.r.height);
     return Math.abs(y - ly) <= HIT ? a : null;
   }
   function lineDown(e, c, a) {
@@ -1869,7 +1903,7 @@
     var q = a.hit, pending = null;
     if (q) mark();
     else {                                            // a point where it was pressed, and its neighbours kept 30 px away, so a peak or a dip stays where it is drawn
-      var pts = sortedPts(a.n, "volume"), L = S.info.seconds, wd = Math.max(0.25, span() * 30 / Math.max(1, a.r.width)), lv = function (t) { return Math.round(autoDb(pts, t) * 10) / 10; };
+      var pts = sortedPts(a.n, "volume"), lp = expandPts(pts), L = S.info.seconds, wd = Math.max(0.25, span() * 30 / Math.max(1, a.r.width)), lv = function (t) { return Math.round(autoDb(lp, t) * 10) / 10; };
       q = [r3(a.t), lv(a.t)];
       var before = pts.filter(function (p) { return p[0] < q[0]; }).pop(), after = pts.filter(function (p) { return p[0] > q[0]; })[0];
       pending = [q];
@@ -1890,6 +1924,8 @@
     (Array.isArray(s.edits) ? s.edits : []).forEach(function (e2) { cand.push(e2.to, e2.to + (e2.b - e2.a)); });
     (Array.isArray(s.muted) ? s.muted : []).forEach(function (r) { cand.push(r[0], r[1]); });
     cand.forEach(function (x) { if (x == null || !isFinite(x)) return; var dp = Math.abs(tx(x, w) - tx(t, w)); if (dp <= bd) { bd = dp; best = x; } });
+    var gl = gridShown() ? window.RuachBars.nearest(gridData(), t, w / span(), SNAP_PX) : null;   // HERESY 2313: the bars and beats too
+    if (gl != null && Math.abs(tx(gl, w) - tx(t, w)) < bd) best = gl;
     return best == null ? t : r3(best);
   }
   function pickSay() { return S.pick ? tr("Selected {0}–{1}: drag it to move it (Ctrl copies), Ctrl+C copies, Ctrl+X cuts, Delete silences, a right-click for fades and level").replace("{0}", clock(S.pick.a)).replace("{1}", clock(S.pick.b)) : ""; }
@@ -1998,8 +2034,8 @@
     say(tr(copy ? "Copied to {0}" : "Moved to {0}").replace("{0}", clock(to)));
   }
   function pickLevel(n, how) {                       // the level's line over the selection: in from silence, out into it, or 3 dB up or down; 10 ms to it from outside
-    var p = S.pick, L = S.info.seconds, pts = sortedPts(n, "volume"), a = p.a, b = p.b;
-    var at = function (t) { return Math.round(autoDb(pts, t) * 10) / 10; }, lim = function (v) { return Math.max(-60, Math.min(12, Math.round(v * 10) / 10)); };
+    var p = S.pick, L = S.info.seconds, pts = sortedPts(n, "volume"), lp = expandPts(pts), a = p.a, b = p.b;
+    var at = function (t) { return Math.round(autoDb(lp, t) * 10) / 10; }, lim = function (v) { return Math.max(-60, Math.min(12, Math.round(v * 10) / 10)); };
     var keepOut = pts.filter(function (q) { return q[0] < a - 0.0105 || q[0] > b + 0.0105; }), add = [];
     if (a > 0.0105) add.push([r3(a - 0.01), at(a - 0.01)]);
     if (b < L - 0.0105) add.push([r3(b + 0.01), at(b + 0.01)]);
@@ -2007,7 +2043,7 @@
     else if (how === "out") add.push([a, at(a)], [b, -60]);
     else {
       add.push([a, lim(at(a) + how)], [b, lim(at(b) + how)]);
-      pts.forEach(function (q) { if (q[0] > a && q[0] < b) add.push([q[0], lim(q[1] + how)]); });
+      pts.forEach(function (q) { if (q[0] > a && q[0] < b) add.push(q.length > 2 ? [q[0], lim(q[1] + how), q[2]] : [q[0], lim(q[1] + how)]); });   // 2318: its shape kept
     }
     mark();
     var s = S.strips[n] || (S.strips[n] = {});
@@ -2112,6 +2148,8 @@
       { label: "Fade out into silence", icon: "◣", action: function () { pickLevel(n, "out"); } },
       { label: "Louder by 3 dB", icon: "+", action: function () { pickLevel(n, 3); } },
       { label: "Quieter by 3 dB", icon: "−", action: function () { pickLevel(n, -3); } },
+      { label: "An LFO on its level…", icon: "\u223f", action: function () { lfoBox(n, "volume", p.a, p.b, x, y); } },   // HERESY 2318
+      { label: "The spread of its level…", icon: "\u2195", disabled: !sortedPts(n, "volume").some(function (q2) { return q2[0] >= p.a && q2[0] <= p.b; }), action: function () { rangeBox(n, "volume", p.a, p.b, x, y); } },
       { sep: true },
       { label: "Split at its edges", icon: "│", action: function () { splitAt(n, [p.a, p.b]); } },
       { label: "Select the whole lane", icon: "↔", action: function () { pickSet(n, 0, S.info.seconds); } }
@@ -2319,10 +2357,15 @@
     if (nameDown(e)) return;                          // HERESY 1989: a lane's place in hand
     if (shiftDown(e)) return;                         // HERESY 1989: a lane's shift in hand
     if (rulerDown(e)) return;                         // HERESY 1501
+    if (chordDown(e)) return;                         // HERESY 2314
     if (holeDown(e)) return;                          // HERESY 1975: a cut's fades drawn with the right button
     var c = e.target.closest && e.target.closest("canvas[data-mx-wave]");
     if (!c || e.button !== 0 || !S.info) return;
-    if (S.autoShow[c.dataset.mxWave]) { autoDown(e, c); return; }   // HERESY 1535
+    if (e.altKey && !e.shiftKey) {                    // HERESY 2317: Alt pressed, the lane alone while held; 2318: with its line in hand, a segment bent
+      if (S.autoShow[c.dataset.mxWave]) { if (bendDown(e, c)) return; }
+      else { auditionDown(e, c); return; }
+    }
+    if (S.autoShow[c.dataset.mxWave] && !e.shiftKey) { autoDown(e, c); return; }   // HERESY 1535; 2318: Shift+drag selects a stretch for an LFO or a range
     e.preventDefault();
     var n = c.dataset.mxWave, pe = pickAt(c, e), hold = function () { try { if (c.setPointerCapture) c.setPointerCapture(e.pointerId); } catch (x) { /* gone */ } };
     if (pe === "a" || pe === "b") { S.sdrag = { n: n, c: c, side: pe }; hold(); return; }   // HERESY 1968: the selection's edge in hand
@@ -2349,7 +2392,7 @@
     var rr = S.rule;                                  // HERESY 1501: the loop drawn
     if (rr) {
       if (rr.sec) return;                             // HERESY 1532: a section's block is clicked, not dragged
-      rr.b = timeAt(rr.canvas, e.clientX);
+      rr.b = gridSnap(timeAt(rr.canvas, e.clientX), rr.canvas.getBoundingClientRect().width, e);   // HERESY 2313
       if (Math.abs(e.clientX - rr.x) > 4) rr.moved = true;
       if (rr.moved) { S.loop = [Math.min(rr.a, rr.b), Math.max(rr.a, rr.b)]; drawRuler(); }
       return;
@@ -2440,7 +2483,8 @@
     S.drag = null;
     if (!d.moved) {                                   // a click: from there, the selection let go (1968)
       if (S.pick) { var pw = S.pick.n; S.pick = null; draw(pw); say(""); }
-      if (S.playing) play(d.a); else { S.at = d.a; paintPlayhead(); }
+      var da = snapT(d.name, d.a, d.canvas, e);       // HERESY 2313: a click clings too (Alt held: free)
+      if (S.playing) play(da); else { S.at = da; paintPlayhead(); }
       return;
     }
     var a = Math.min(d.a, d.b), b = Math.max(d.a, d.b);
@@ -2506,6 +2550,7 @@
       { label: s.solo ? "Unsolo" : "Solo", icon: "S", checked: s.solo, action: function () { press("solo"); } },
       { label: S.autoShow[n] ? "Hide its automation" : "Its automation", icon: "A", action: function () { press("auto"); } },
       { label: "Its devices in the console", icon: "\u2261", action: function () { devicesOf(n); } },
+      { label: "Bounce in place", icon: "\u2913", items: bounceItems(n) },   // HERESY 2316
       { label: "Save its sound as a preset…", icon: "\u2913", action: function () { presetSave(n); } },   // HERESY 2018
       { label: "Its sound from a preset", icon: "\u21e9", items: pks.length ? pks.map(function (k) { return { label: k, raw: true, action: function () { presetLay(n, k); } }; })
         : [{ label: "No presets yet", muted: true, hint: "Save a lane's sound first: Save its sound as a preset… in its menu" }] },
@@ -2526,10 +2571,13 @@
     ].filter(Boolean));
   }
   function onMenu(e) {
+    var rfb = e.target.closest && e.target.closest("#mxRef, #mxGrid");   // HERESY 2315: the reference's menu; 2313: the grid's
+    if (rfb && S.info && window.HeresyMenu) { e.preventDefault(); if (rfb.id === "mxRef") refMenu(e.clientX, e.clientY); else gridMenu(e.clientX, e.clientY); return; }
     var rcm = e.target.closest && e.target.closest("canvas[data-mx-ruler]");   // HERESY 2016: a marker's own menu on the ruler
     if (rcm && S.info && window.HeresyMenu) {
       var rr = rcm.getBoundingClientRect(), mk = markNear(e.clientX - rr.left, rr.width);
       if (mk) { e.preventDefault(); markMenu(mk, e.clientX, e.clientY); return; }
+      e.preventDefault(); gridMenu(e.clientX, e.clientY, timeAt(rcm, e.clientX)); return;   // HERESY 2313: «a bar begins here» and the rest
     }
     // HERESY 1966 (Viktor: «контекстное меню, как в Bitwig… Mute трека и остальное»): the lane's left part, its name and buttons (its version's
     // own right-click and the fields aside)
@@ -2553,7 +2601,7 @@
     if (S.autoShow[c.dataset.mxWave] && S.info) {     // HERESY 1535: a point taken away
       var a = autoAt(c, e);
       e.preventDefault();
-      if (!a.hit) return;
+      if (!a.hit) { if (window.HeresyMenu) shapeMenu(a.n, a.prm, a.t, e.clientX, e.clientY); return; }   // HERESY 2318: a segment's shape, an LFO, a range
       mark();
       var gone = rawPts(a.n, a.prm), at2 = gone.indexOf(a.hit);   // HERESY 1559: from the knob in hand's list
       if (at2 >= 0) gone.splice(at2, 1);
@@ -2599,6 +2647,542 @@
     s.muted = left;
     keep(); draw(n); rangesNow(n);
     emit("change", { n: n, key: "muted" });
+  }
+
+  // ---- HERESY 2313–2318 (Viktor's plan of 08.11.2026, §2.4, the DAW list of 02.11; his «агенты как не в себя гонят» of 10.11): the bar grid and
+  // the chord lane, the reference from anywhere, bounce in place, the audition, the lines' shapes
+
+  // HERESY 2313: the take's bar grid (heresy-bars.js, lab/bargrid.py), heard once a take on Forge; drawn on the ruler and through the lanes, and the
+  // cuts, the copies, the loop and a click cling to its lines within 6 px while it is on (G; Alt held lets go)
+  function gridData() { var g = S.take && window.RuachBars ? window.RuachBars.get(S.take.name) : null; return g && window.RuachBars.usable(g) ? g : null; }
+  function gridShown() { return S.grid.on && !!gridData(); }
+  function gridLoad(force) {
+    if (!S.take || !window.RuachBars) return;
+    var name = S.take.name;
+    S.grid.err = "";
+    if (!window.RuachBars.get(name) || force) S.grid.wait = true;
+    gridPaint();
+    window.RuachBars.load(name, force).then(function () {
+      if (!S.take || S.take.name !== name) return;
+      S.grid.wait = false; gridPaint(); redrawAll();
+    }, function (e) {
+      if (!S.take || S.take.name !== name) return;
+      S.grid.wait = false; S.grid.err = e.message || String(e); gridPaint();
+    });
+  }
+  function gridSummary(g) {                         // the grid in the page's words: its tempo against the take's own, the tracker's level, the bar's first beat
+    var p = g.prior || {}, d = p.bpm ? (g.bpm / p.bpm - 1) * 100 : 0, sd = (d >= 0 ? "+" : "\u2212") + Math.abs(d).toFixed(1);
+    var out = p.from === "score" ? tr("{0} bpm heard (the score says {1}, {2} %)") : p.from === "style" ? tr("{0} bpm heard (the style says {1}, {2} %)") : tr("{0} bpm heard");
+    out = out.replace("{0}", g.bpm).replace("{1}", p.bpm).replace("{2}", sd);
+    if (g.level && g.level !== 1) out += ", " + tr("the tracker's beats ×{0}").replace("{0}", g.level);
+    if ((g.bars || []).length) out += "; " + tr("{0}/{1}, bar 1 at {2}").replace("{0}", g.num).replace("{1}", g.den).replace("{2}", clock(g.bars[0]) + "." + String(Math.round((g.bars[0] % 1) * 100)).padStart(2, "0")) +
+      (g.phase_how === "set by hand" ? " (" + tr("set by hand") + ")" : g.phase_sure === false ? " (" + tr("unsure: set it by hand") + ")" : "");
+    return out;
+  }
+  function gridSay() {
+    var g = gridData();
+    if (S.grid.wait) return tr("Hearing the take's beats on Forge (some seconds, once a take)…");
+    if (S.grid.err) return tr("The bar grid did not come from the lab: {0}").replace("{0}", S.grid.err);
+    if (!g) { var raw = S.take && window.RuachBars ? window.RuachBars.get(S.take.name) : null; return raw && raw.how === "none" ? tr("Too few beats heard in the take's sound to lay a grid on") : tr("No bar grid yet"); }
+    return gridSummary(g);
+  }
+  function gridPaint() {
+    var b = $("mxGrid");
+    if (b) {
+      var on = S.grid.on && !!gridData();
+      b.classList.toggle("is-on", on); b.setAttribute("aria-pressed", on);
+      b.classList.toggle("is-wait", !!S.grid.wait); b.classList.toggle("is-bad", !!S.grid.err);
+      b.setAttribute("data-tip", tr("The bar grid (G): bars and beats as heard in the take, the cuts, the copies, the loop and a click cling to them; Alt held lets them go. A right-click: twice or half the tempo, where a bar begins, beats a bar, the chord lane") + " · " + gridSay());
+    }
+    var row = document.querySelector(".mx-ruler-row"), g = gridData(), has = !!(g && (g.chords || []).length && S.grid.chords);
+    if (row) {
+      row.classList.toggle("has-chords", has);
+      Array.prototype.forEach.call(row.querySelectorAll(".mx-chord-ctl, .mx-chordlane"), function (el) { el.hidden = !has; });
+      var key = row.querySelector(".mx-chord-key");
+      if (key && g) key.textContent = (g.keys || []).length ? g.keys.map(function (k) { return k[1]; }).filter(function (k, i, a) { return a.indexOf(k) === i; }).join(" → ") : "";
+    }
+    if (has) drawChords();
+  }
+  // HERESY 2366 (Viktor 11.11.2026, «Пока что делай как советуешь там»: «в мире Чтеца сетку выключить по умолчанию»): a reading has no bars, so a take of
+  // the Narrator's world opens with the grid off; its switch is remembered apart (G there is kept for the Narrator's takes, the songs keep theirs)
+  function narratorTake() { var HC = window.HeresyCollection, r = S.take && HC && HC.row ? HC.row(S.take.name) : null; return !!(r && r.realm === "reader"); }
+  function gridKey() { return narratorTake() ? "yue2.mixer.grid.narrator" : "yue2.mixer.grid"; }
+  function gridToggle() { S.grid.on = !S.grid.on; keepFlag(gridKey(), S.grid.on); gridPaint(); redrawAll(); say(tr(S.grid.on ? "The bar grid on: the cuts, copies and the loop cling to its lines" : "The bar grid off")); }
+  function gridSet(change, what) {
+    if (!S.take || !window.RuachBars) return;
+    var name = S.take.name;
+    S.grid.wait = true; gridPaint();
+    window.RuachBars.set(name, change).then(function (g) {
+      if (!S.take || S.take.name !== name) return;
+      S.grid.wait = false; S.grid.err = ""; gridPaint(); redrawAll(); var sum = window.RuachBars.usable(g) ? gridSummary(g) : ""; say(what ? what + (sum ? " · " + sum : "") : sum);
+    }, function (e) { S.grid.wait = false; gridPaint(); say(e.message || String(e), true); });
+  }
+  function gridMenu(x, y, at) {
+    var g = gridData(), raw = S.take && window.RuachBars ? window.RuachBars.get(S.take.name) : null, num = raw ? raw.num || 4 : 4, t = at == null ? (S.playing ? pos() : S.at) : at;
+    window.HeresyMenu.open(x, y, [
+      { label: "The bar grid", icon: "#", checked: S.grid.on, hint: "G", action: gridToggle },
+      { label: "The chord lane", icon: "♯", checked: S.grid.chords, disabled: !(g && (g.chords || []).length), hint: "The score's chord symbols and keys on the grid, under the ruler", action: function () {
+        S.grid.chords = !S.grid.chords; keepFlag("yue2.mixer.chords", S.grid.chords); paint(); } },
+      { sep: true },
+      { label: "A bar begins here", icon: "│", disabled: !raw, hint: tr("On the beat nearest {0}").replace("{0}", clock(t)), action: function () { gridSet({ downbeat: Math.round(t * 1000) / 1000 }, tr("A bar begins at {0}").replace("{0}", clock(t))); } },
+      { label: "Twice the tempo", icon: "×2", disabled: !raw, action: function () { gridSet({ factor: 2 }, tr("Twice the tempo")); } },
+      { label: "Half the tempo", icon: "÷2", disabled: !raw, action: function () { gridSet({ factor: 0.5 }, tr("Half the tempo")); } },
+      { label: "Beats a bar", icon: "№", disabled: !raw, items: [2, 3, 4, 5, 6, 7, 9, 12].map(function (k) { return { label: String(k), raw: true, checked: num === k, action: function () { gridSet({ num: k }); } }; }) },
+      { label: "As heard", icon: "↺", disabled: !(raw && raw.settings && Object.keys(raw.settings).length), hint: "The tempo, the bars and the meter as the take's sound says", action: function () { gridSet({ reset: true }); } },
+      { label: "Hear it again", icon: "↻", hint: "When the take's sound changed", action: function () { gridLoad(true); } }
+    ]);
+  }
+  function gridSnap(t, w, e) {                       // the grid's line nearest t within 6 px at this zoom, or t
+    if (!gridShown() || (e && e.altKey)) return t;
+    var hit = window.RuachBars.nearest(gridData(), t, w / span(), SNAP_PX);
+    return hit == null ? t : hit;
+  }
+  function gridLines(g2, w, h, onRuler) {             // the grid on a canvas: the bars stronger, the beats faint, their halves fainter
+    var g = gridData();
+    if (!S.grid.on || !g) return;
+    var css = getComputedStyle(g2.canvas), ink = css.getPropertyValue("--ink").trim() || "#ccc";
+    window.RuachBars.lines(g, S.view.t0, S.view.t0 + span(), w / span()).forEach(function (l) {
+      var x = Math.round(tx(l.t, w)) + 0.5;
+      if (x < 0 || x > w) return;
+      g2.globalAlpha = l.kind === "bar" ? (onRuler ? 0.85 : 0.22) : l.kind === "beat" ? (onRuler ? 0.5 : 0.1) : (onRuler ? 0.3 : 0.05);
+      g2.fillStyle = ink;
+      if (onRuler) { var hh = l.kind === "bar" ? 9 : l.kind === "beat" ? 5 : 3; g2.fillRect(x - 0.5, h - hh, 1, hh); }
+      else g2.fillRect(x - 0.5, 0, 1, h);
+      if (onRuler && l.kind === "bar" && l.label) { g2.globalAlpha = 0.9; g2.fillText(String(l.n), x + 2, h - 11); }
+    });
+    g2.globalAlpha = 1;
+  }
+  // HERESY 2314: the chord lane under the ruler: the take's score's chord symbols laid on the grid (each to the next), its key at the left; a click
+  // goes to a chord, a double-click loops it, the cuts cling to its changes
+  function drawChords() {
+    var c = document.querySelector("canvas[data-mx-chords]"), g = gridData();
+    if (!c || !S.info || !g) return;
+    var box = c.parentNode, w = Math.max(50, box.clientWidth), h = Math.max(10, box.clientHeight), dpr = window.devicePixelRatio || 1;
+    c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); c.style.width = w + "px"; c.style.height = h + "px";
+    var x2 = c.getContext("2d"), css = getComputedStyle(c), ink = css.getPropertyValue("--ink").trim() || "#ccc", acc = css.getPropertyValue("--accent").trim() || "#b5163a";
+    x2.setTransform(dpr, 0, 0, dpr, 0, 0); x2.clearRect(0, 0, w, h);
+    x2.font = "600 10px " + (css.getPropertyValue("--mono").trim() || "monospace"); x2.textBaseline = "middle";
+    var now = heard(), cur = window.RuachBars.chordAt(g, now);
+    (g.chords || []).forEach(function (ch, i) {
+      var a = Math.max(0, tx(ch[0], w)), b = Math.min(w, tx(ch[1], w));
+      if (b <= 0 || a >= w) return;
+      var here = cur && Math.abs(cur.t0 - ch[0]) < 1e-6;
+      x2.fillStyle = here ? acc : ink; x2.globalAlpha = here ? 0.32 : i % 2 ? 0.08 : 0.14;
+      x2.fillRect(a + 0.5, 1, Math.max(1, b - a - 1), h - 2);
+      x2.globalAlpha = 1; x2.fillStyle = ink; x2.fillRect(Math.round(a), 1, 1, h - 2);
+      var room = b - a - 6, label = ch[2];
+      if (room > 10) { while (label.length > 1 && x2.measureText(label).width > room) label = label.slice(0, -1); x2.fillText(label, a + 4, h / 2 + 0.5); }
+    });
+    (g.keys || []).forEach(function (k, i) {                // a change of key: its name over the lane, accented
+      if (!i) return;
+      var x = Math.round(tx(k[0], w));
+      if (x < 0 || x > w) return;
+      x2.fillStyle = acc; x2.fillRect(x, 0, 2, h);
+    });
+  }
+  function chordDown(e) {
+    var c = e.target.closest && e.target.closest("canvas[data-mx-chords]"), g = gridData();
+    if (!c || e.button !== 0 || !S.info || !g) return false;
+    e.preventDefault();
+    var ch = window.RuachBars.chordAt(g, timeAt(c, e.clientX));
+    if (!ch) return true;
+    if (S.playing) play(ch.t0); else { S.at = ch.t0; paintPlayhead(); }
+    return true;
+  }
+  function chordsFollow() {                           // the chord sounding lit as it plays (drawn again only when it changes)
+    var g = gridData();
+    if (!g || !S.grid.chords || !(g.chords || []).length) return;
+    var ch = window.RuachBars.chordAt(g, heard()), k = ch ? ch.t0 : -1;
+    if (k !== S.grid.lit) { S.grid.lit = k; drawChords(); }
+  }
+  function chordTip(e) {
+    var c = e.target.closest && e.target.closest("canvas[data-mx-chords]"), g = gridData();
+    if (!c || !g) return;
+    var t = timeAt(c, e.clientX), ch = window.RuachBars.chordAt(g, t), ba = window.RuachBars.barAt(g, t), k = window.RuachBars.keyAt(g, t);
+    c.title = (ch ? ch.name + " · " : "") + (ba ? tr("bar {0}, beat {1}").replace("{0}", ba.bar).replace("{1}", ba.beat) : "") + (k ? " · " + tr("key {0}").replace("{0}", k) : "");
+  }
+
+  // HERESY 2315: the reference from anywhere: the set's source (as before), a sound of this take's tree, another take, or a song of your own on
+  // Forge; kept for this take and set in this browser; as loud as the mix over what has played, whichever it is
+  function refKey() { return "yue2.mixer.ref:" + (S.take ? S.take.name : "") + ":" + S.set; }
+  function refRecall() { var v = lsGet(refKey(), null); return v && typeof v.spec === "string" && /^(take|own):/.test(v.spec) ? v : null; }
+  function refTitle() { return S.ref.spec ? S.ref.title || S.ref.spec : tr("the sound as it came"); }
+  function refChoose(spec, title) {
+    var was = S.ref;
+    S.ref = Object.assign(refReset(), { armed: was.armed, on: was.armed ? true : was.on, spec: spec || null, title: spec ? String(title || spec) : "" });
+    if (spec) lsPut(refKey(), { spec: spec, title: S.ref.title }); else { try { localStorage.removeItem(refKey()); } catch (e) { /* private mode */ } }
+    if (!S.ref.armed) { S.ref.armed = true; S.ref.on = true; }
+    refLoad(); applyRef(S.graph); refPaint();
+    say(tr("The reference: {0}").replace("{0}", refTitle()));
+    if (S.playing) play(pos());                        // its stream from this second, beside the lanes
+  }
+  function refMenu(x, y) {
+    if (!S.take) return;
+    var name = S.take.name, pick = function (spec, title) { return function () { refChoose(spec, title); }; };
+    var build = function (d) {
+      var mine = (d.take || []).filter(function (r) { return r.spec !== "take:" + name || S.info.source !== "audio.wav"; });
+      var own = d.own || [];
+      window.HeresyMenu.open(x, y, [
+        { label: "The sound as it came", icon: "○", checked: !S.ref.spec, hint: "The source the stems were split from", action: pick(null, "") },
+        { label: "A sound of this take", icon: "⑂", items: mine.length ? mine.map(function (r) { return { label: r.label, raw: true, checked: S.ref.spec === r.spec, action: pick(r.spec, r.label) }; })
+          : [{ label: "None in its tree", muted: true }] },
+        { label: "Another take…", icon: "♫", action: function () { refPicker(); } },
+        { label: "A song of your own…", icon: "⤒", hint: "Someone else's song, a mix you trust: WAV, FLAC, MP3… kept on Forge for every take", action: function () { refUpload(); } },
+        { label: "Your references", icon: "★", items: own.length ? own.map(function (r) { return { label: r.title + (r.seconds ? " · " + clock(r.seconds) : ""), raw: true, checked: S.ref.spec === r.spec, action: pick(r.spec, r.title) }; })
+          : [{ label: "None yet", muted: true, hint: "A song of your own… keeps one here" }] },
+        own.length && { label: "Forget a reference", icon: "✕", items: own.map(function (r) { return { label: r.title, raw: true, danger: true, action: function () { refForget(r); } }; }) }
+      ].filter(Boolean));
+    };
+    getJson("/daw/refs?" + q({ name: name })).then(build, function () { build({ take: [], own: [] }); });
+  }
+  function refForget(r) {
+    var go = window.HeresyDialog ? window.HeresyDialog.confirm(tr("Forget the reference «{0}»? Its sound goes from Forge").replace("{0}", r.title), { ok: tr("Forget"), cancel: tr("Cancel"), danger: true }) : Promise.resolve(true);
+    go.then(function (ok) {
+      if (!ok) return;
+      fetch("/lab/daw/ref/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: r.id }) })
+        .then(function (x) { return x.json(); }).then(function () { if (S.ref.spec === r.spec) refChoose(null, ""); say(tr("Forgotten: {0}").replace("{0}", r.title)); },
+          function (e) { say(e.message || String(e), true); });
+    });
+  }
+  function refUpload() {
+    var inp = document.createElement("input");
+    inp.type = "file"; inp.accept = "audio/*,.wav,.flac,.mp3,.m4a,.ogg,.opus,.aif,.aiff";
+    inp.addEventListener("change", function () {
+      var f = inp.files && inp.files[0];
+      if (!f) return;
+      say(tr("Sending «{0}» to Forge…").replace("{0}", f.name));
+      fetch("/lab/daw/ref?" + q({ file: f.name, title: f.name.replace(/\.[^.]+$/, "") }), { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: f })
+        .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); })
+        .then(function (r) { refChoose(r.spec, r.title); }, function (e) { say(tr("The song did not reach Forge: {0}").replace("{0}", e.message || e), true); });
+    });
+    inp.click();
+  }
+  function refPicker() {                              // another take of the Library, found by its title
+    var all = typeof window.ruachTakes === "function" ? window.ruachTakes() : [], back = document.createElement("div");
+    back.className = "mxl-back mx-refpick"; back.id = "mxRefPick";
+    back.innerHTML = '<div class="mxl-box mx-refpick-box" role="dialog" aria-modal="true" aria-label="' + esc(tr("Another take as the reference")) + '">' +
+      '<div class="mxl-head"><b class="mxl-title">' + esc(tr("Another take as the reference")) + '</b><input type="search" class="mxl-q" placeholder="' + esc(tr("Search the Library")) + '" autocomplete="off" />' +
+      '<button type="button" class="btn ghost small mxl-x" data-x="1" aria-label="' + esc(tr("Close")) + '">×</button></div><ul class="mxl-list mx-refpick-list" role="listbox"></ul></div>';
+    document.body.appendChild(back);
+    var list = back.querySelector("ul"), inp = back.querySelector("input");
+    var shut = function () { back.remove(); document.removeEventListener("keydown", key, true); };
+    var key = function (e) { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); shut(); } };
+    var show = function () {
+      var qq = inp.value.trim().toLowerCase(), hits = all.filter(function (t) { return !S.take || t.name !== S.take.name; }).filter(function (t) { return !qq || (t.title + " " + t.name).toLowerCase().indexOf(qq) >= 0; }).slice(0, 200);
+      list.innerHTML = hits.length ? hits.map(function (t) { return '<li><button type="button" class="mxl-row" data-take="' + esc(t.name) + '"><span class="mxl-name" translate="no">' + esc(t.title) + '</span><span class="mxl-meta mono" translate="no">' + esc(t.name) + "</span></button></li>"; }).join("")
+        : '<li class="mxl-wait">' + esc(tr("No take answers that")) + "</li>";
+    };
+    back.addEventListener("click", function (e) {
+      if (e.target === back || (e.target.closest && e.target.closest("[data-x]"))) { shut(); return; }
+      var b = e.target.closest && e.target.closest("[data-take]");
+      if (!b) return;
+      var t = all.filter(function (x) { return x.name === b.dataset.take; })[0];
+      shut(); refChoose("take:" + b.dataset.take, t ? t.title : b.dataset.take);
+    });
+    inp.addEventListener("input", show);
+    document.addEventListener("keydown", key, true);
+    show(); inp.focus();
+  }
+
+  // HERESY 2316: bounce in place: a bus, a VCA's lanes or one lane rendered on Forge as they sound in the mix (with their share of the room and
+  // the delay) into a lane of their own; when it lands, its members are muted and it plays at 0 dB, so the mix sounds as before; one undo
+  // puts the members back and mutes the new lane
+  function reread() {                                  // the set read again, its new lanes taken in, the mix in hand kept
+    if (!S.take || !S.set) return Promise.resolve(null);
+    var token = S.token, set = S.set;
+    return getJson("/daw/set?" + q({ name: S.take.name, set: set })).then(function (info) {
+      if (token !== S.token || S.set !== set) return null;
+      var was = S.playing, t = pos();
+      S.info = info;
+      closeGraph(); paint();
+      names().forEach(function (n) { loadPeaks(n); });
+      if (was) play(t);
+      return info;
+    });
+  }
+  function bounceRun(members, title) {
+    if (!S.info || S.busy) return;
+    var ms = members.filter(function (n) { return names().indexOf(n) >= 0; });
+    if (!ms.length) return;
+    var versions = {};
+    S.info.strips.forEach(function (s) { var v = versionOf(s.name); if (v !== s.path) versions[s.name] = v; });
+    S.busy = "bouncing"; paintHead();
+    var dry = bounceDry();                               // HERESY 2366
+    say(tr(dry ? "Bouncing {0} dry on Forge…" : "Bouncing {0} on Forge…").replace("{0}", title));
+    var name = S.take.name, set = S.set;
+    fetch("/lab/daw/bounce", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, set: set, mix: value(), versions: versions, members: ms, title: title, dry: dry }) })
+      .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); })
+      .then(function (job) { S.mixId = job.id; S.mixGone = 0; S.bounceAsk = { dry: dry, heard: job.dry === dry }; paintHead(); bounceWatch(name, set, job.id, ms, job.track, title); },   // HERESY 2366: a lab before it answers no «dry»
+            function (e) { S.busy = ""; paintHead(); say(e.message || String(e), true); });
+  }
+  function bounceWatch(name, set, id, members, track, title) {
+    clearTimeout(S.watch);
+    if (!S.take || S.take.name !== name) return;
+    getJson("/derived?" + q({ name: name })).then(function (d) {
+      var run = (d.running || []).filter(function (j) { return j.id === id; })[0], made = (d.derived || []).filter(function (m) { return m.id === id; })[0];
+      if (run && run.status === "failed") { S.busy = ""; S.mixId = ""; paintHead(); say(run.error || tr("failed"), true); return; }
+      if (!made) {
+        if (!run && ++S.mixGone >= 2) { S.busy = ""; S.mixId = ""; paintHead(); say(tr("The bounce is no longer running on Forge"), true); return; }
+        if (run) S.mixGone = 0;
+        S.watch = setTimeout(function () { bounceWatch(name, set, id, members, track, title); }, 2000);
+        return;
+      }
+      S.busy = ""; S.mixId = ""; paintHead();
+      if (window.HeresyDerived) window.HeresyDerived.refresh();
+      if (S.set !== set) return;
+      reread().then(function () {
+        if (names().indexOf(track) < 0) { say(tr("Bounced, but its lane is not in the set: {0}").replace("{0}", track), true); return; }
+        bounceLand(members, track, +made.gain_db || 0, title);
+      });
+    }).catch(function () { S.watch = setTimeout(function () { bounceWatch(name, set, id, members, track, title); }, 4000); });
+  }
+  function bounceLand(members, track, gainDb, title) {   // its members muted (their solo given to it), it at 0 dB; the undo before it the inverse
+    var solo = soloing(), soloed = members.some(function (n) { return S.strips[n] && S.strips[n].solo; });
+    var before = JSON.parse(snap());
+    before.strips[track] = { mute: true };               // undone: the members as they were, the new lane silent
+    S.undo.push(JSON.stringify(before)); if (S.undo.length > 120) S.undo.shift(); S.redo = [];
+    members.forEach(function (n) { var s = S.strips[n] || (S.strips[n] = {}); s.mute = true; if (s.solo) s.solo = false; });
+    var t = S.strips[track] || (S.strips[track] = {});
+    t.mute = false; if (gainDb) t.gain_db = Math.round(gainDb * 100) / 100;
+    if (solo && soloed) t.solo = true;
+    restored(false); paintUndo();
+    var ask = S.bounceAsk || {}; S.bounceAsk = null;   // HERESY 2366: said as it was made, a lab that did not hear «dry» said so
+    if (ask.dry && !ask.heard) say(tr("Bounced {0} with the room and the delay: this lab was started before the dry bounce came; restart the lab for a dry one").replace("{0}", title), true);
+    else say(tr(ask.dry ? "Bounced {0} dry into a lane of its own: its lanes muted, without their room and delay (Ctrl+Z puts them back)" : "Bounced {0} into a lane of its own: its lanes muted, the mix as it was (Ctrl+Z puts them back)").replace("{0}", title));
+  }
+  function bounceItems(n) {
+    var bus = subOfStrip(n), gs = groupsOf(n), busy = !!S.busy, out = [];
+    if (bus) out.push({ label: tr("Its bus «{0}»").replace("{0}", bus.name), raw: true, disabled: busy, action: function () { bounceRun(bus.members.slice(), bus.name); } });
+    gs.forEach(function (gr) {
+      var inBus = gr.members.map(subOfStrip).filter(Boolean), partial = inBus.some(function (b2) { return b2.members.some(function (m) { return gr.members.indexOf(m) < 0; }); });
+      out.push({ label: tr("Its VCA «{0}»").replace("{0}", gr.name), raw: true, disabled: busy || partial, hint: partial ? "A lane of this VCA shares a bus with lanes outside it: bounce the bus" : "",
+                 action: function () { bounceRun(gr.members.slice(), gr.name); } });
+    });
+    var lonely = bus && bus.members.length > 1;
+    out.push({ label: tr("This lane alone, with its devices"), raw: true, disabled: busy || lonely, hint: lonely ? "It shares a bus: bounce the bus" : "",
+               action: function () { bounceRun([n], (S.info.strips.filter(function (x) { return x.name === n; })[0] || { title: tr("Rest") }).title); } });
+    // HERESY 2366 (Viktor 11.11.2026, «Пока что делай как советуешь там»: «сухой баунс — сделать вариантом»): the bounce without its share of the room and
+    // the delay, a switch kept in this browser; with its lanes muted the mix then has less of both (the new lane's own sends bring them back)
+    var dry = bounceDry();
+    out.push({ sep: true });
+    out.push({ label: tr("Dry: without the room and the delay"), raw: true, checked: dry, hint: "The new lane without its lanes' share of the room and the delay; with them muted the mix has less of both, the new lane's own sends bring them back",
+               action: function () { keepFlag("yue2.mixer.bounceDry", !dry); say(tr(!dry ? "The next bounce is dry: without the room and the delay" : "The next bounce keeps the room and the delay: the mix as it was")); } });
+    return out;
+  }
+  function bounceDry() { return recallFlag("yue2.mixer.bounceDry", false); }   // HERESY 2366
+
+  // HERESY 2317 (the DAW list of 02.11.2026, §1.9, Bitwig 6's audition): Alt pressed on a wave plays that lane alone from there while it is held; let
+  // go, the mix as it was (playing on, or the playhead back where it stood). Nothing of the mix changes
+  function auditionDown(e, c) {
+    var n = c.dataset.mxWave, t = timeAt(c, e.clientX);
+    e.preventDefault();
+    S.aud = { n: n, playing: S.playing, at: S.playing ? pos() : S.at };
+    var row = laneRow(n); if (row) row.classList.add("is-audition");
+    applyRef(S.graph); liveGains();
+    play(t);
+    say(tr("Audition: {0} alone from {1}, while held").replace("{0}", (S.info.strips.filter(function (x) { return x.name === n; })[0] || { title: tr("Rest") }).title).replace("{1}", clock(t)));
+    var up = function () {
+      document.removeEventListener("pointerup", up, true); document.removeEventListener("pointercancel", up, true);
+      var a = S.aud; S.aud = null;
+      var r2 = laneRow(a.n); if (r2) r2.classList.remove("is-audition");
+      liveGains(); applyRef(S.graph);
+      if (a.playing) play(pos()); else { stop(); S.at = a.at; paintPlayhead(); }
+      say("");
+    };
+    document.addEventListener("pointerup", up, true); document.addEventListener("pointercancel", up, true);
+  }
+
+  // HERESY 2318: the lines' shapes. A point may say how the line goes on to the next: a bend (−1…1), "hold", "s" (half a cosine). expandPts lays a
+  // shaped segment out as the points a straight line goes through, exactly as the render does (lab/daw_mix.py expand), so the line heard,
+  // drawn and rendered is one
+  var BEND_K = 5, HOLD_EDGE = 0.001, SUB_S = 0.02, SUB_MAX = 24;
+  function expandPts(pts) {
+    var out = [];
+    for (var i = 0; i < pts.length; i++) {
+      var p = pts[i], sh = p[2];
+      out.push([p[0], p[1]]);
+      if (sh == null || i + 1 >= pts.length) continue;
+      var t0 = p[0], v0 = p[1], t1 = pts[i + 1][0], v1 = pts[i + 1][1], span2 = t1 - t0;
+      if (!(span2 > 0)) continue;
+      if (sh === "hold") { if (span2 > 2 * HOLD_EDGE) out.push([t1 - HOLD_EDGE, v0]); continue; }
+      if (sh !== "s" && !(typeof sh === "number" && Math.abs(sh) >= 1e-3)) continue;
+      var k = Math.max(2, Math.min(SUB_MAX, Math.floor(span2 / SUB_S + 0.5))), a = sh === "s" ? 0 : BEND_K * sh;
+      for (var j = 1; j < k; j++) {
+        var u = j / k, f = sh === "s" ? 0.5 - 0.5 * Math.cos(Math.PI * u) : (Math.exp(a * u) - 1) / (Math.exp(a) - 1);
+        out.push([t0 + span2 * u, v0 + (v1 - v0) * f]);
+      }
+    }
+    return out;
+  }
+  function linePts(n, prm) { return expandPts(sortedPts(n, prm)); }
+  function segAt(n, prm, t) {                          // the line's segment around t: its first point (with its shape), or null
+    var pts = sortedPts(n, prm);
+    for (var i = 0; i + 1 < pts.length; i++) if (t >= pts[i][0] && t <= pts[i + 1][0]) return { p: pts[i], q: pts[i + 1] };
+    return null;
+  }
+  function shapeSet(n, prm, p, sh) {
+    mark();
+    if (sh == null || sh === 0) p.length = 2; else p[2] = sh;
+    keep(); draw(n); autoSchedule(n); lanePaintAuto(n); emit("change", { n: n, key: "auto" });
+  }
+  function bendDown(e, c) {                            // Alt+drag on a segment of the knob in hand: its bend follows the pointer (up lifts its middle)
+    var n = c.dataset.mxWave, prm = autoParam(n), sg = segAt(n, prm, timeAt(c, e.clientX));
+    if (!sg) return false;
+    e.preventDefault();
+    var y0 = e.clientY, k0 = typeof sg.p[2] === "number" ? sg.p[2] : 0, rising = aY(prm, sg.q[1], 100) < aY(prm, sg.p[1], 100), moved = false;
+    try { if (c.setPointerCapture) c.setPointerCapture(e.pointerId); } catch (x) { /* gone */ }
+    var move = function (ev) {
+      var dy = y0 - ev.clientY;
+      if (!moved && Math.abs(dy) < 2) return;
+      if (!moved) { moved = true; mark(); }
+      var k = Math.max(-1, Math.min(1, k0 + (rising ? -1 : 1) * dy / 80));
+      if (Math.abs(k) < 0.02) sg.p.length = 2; else sg.p[2] = Math.round(k * 100) / 100;
+      draw(n);
+    };
+    var up = function () {
+      c.removeEventListener("pointermove", move); c.removeEventListener("pointerup", up);
+      if (!moved) return;
+      keep(); autoSchedule(n); lanePaintAuto(n); emit("change", { n: n, key: "auto" });
+      say(typeof sg.p[2] === "number" ? tr("Bend {0}").replace("{0}", sg.p[2]) : tr("Straight"));
+    };
+    c.addEventListener("pointermove", move); c.addEventListener("pointerup", up);
+    return true;
+  }
+  function stretchFor(n) {                             // where an LFO or a range acts: the lane's selection, else the loop, else the section at the playhead, else the song
+    if (S.pick && S.pick.n === n) return [S.pick.a, S.pick.b, "the selection", true];
+    if (S.loop && S.loopOn) return [S.loop[0], S.loop[1], "the loop", true];
+    var sc = sectionAt(S.playing ? pos() : S.at);
+    if (sc) return [sc.t, sc.end, sc.name, false];
+    return [0, S.info.seconds, "the whole song", true];
+  }
+  function shapeMenu(n, prm, t, x, y) {
+    var sg = segAt(n, prm, t), cur = sg ? sg.p[2] : undefined, st = stretchFor(n), where = st[3] ? tr(st[2]) : st[2];
+    window.HeresyMenu.open(x, y, [
+      { label: "Straight", icon: "╱", checked: !!sg && cur == null, disabled: !sg, action: function () { shapeSet(n, prm, sg.p, null); } },
+      { label: "Curve: the change comes late", icon: "⌐", checked: !!sg && typeof cur === "number" && cur > 0, disabled: !sg, hint: "Alt+drag on the segment bends it by hand", action: function () { shapeSet(n, prm, sg.p, 0.6); } },
+      { label: "Curve: the change comes early", icon: "⌙", checked: !!sg && typeof cur === "number" && cur < 0, disabled: !sg, hint: "Alt+drag on the segment bends it by hand", action: function () { shapeSet(n, prm, sg.p, -0.6); } },
+      { label: "Hold, then step", icon: "┐", checked: cur === "hold", disabled: !sg, action: function () { shapeSet(n, prm, sg.p, "hold"); } },
+      { label: "S-curve", icon: "∿", checked: cur === "s", disabled: !sg, action: function () { shapeSet(n, prm, sg.p, "s"); } },
+      { sep: true },
+      { label: tr("An LFO over {0}…").replace("{0}", where), raw: true, icon: "∿", action: function () { lfoBox(n, prm, st[0], st[1], x, y); } },
+      { label: tr("The spread over {0}…").replace("{0}", where), raw: true, icon: "↕", disabled: !sortedPts(n, prm).some(function (p) { return p[0] >= st[0] && p[0] <= st[1]; }), action: function () { rangeBox(n, prm, st[0], st[1], x, y); } },
+      { sep: true },
+      { label: "The line taken off", icon: "✕", danger: true, disabled: !drawn(n, prm), action: function () {
+        mark(); var lst = rawPts(n, prm); lst.splice(0, lst.length); keep(); draw(n); autoSchedule(n); lanePaintAuto(n); emit("change", { n: n, key: "auto" }); } }
+    ]);
+  }
+  function boxShell(id, head, rows, x, y) {           // a small floating box by the pointer (the fades' box's look); Esc or a click away closes it
+    var old = $(id); if (old && old._close) old._close();
+    var b = document.createElement("div");
+    b.id = id; b.className = "mx-fadebox mx-shapebox"; b.setAttribute("role", "dialog");
+    b.innerHTML = '<div class="mx-fb-head">' + esc(head) + "</div>" + rows;
+    document.body.appendChild(b);
+    var w = b.offsetWidth, h = b.offsetHeight;
+    b.style.left = Math.max(6, Math.min(x + 10, window.innerWidth - w - 6)) + "px";
+    b.style.top = Math.max(6, Math.min(y + 10, window.innerHeight - h - 6)) + "px";
+    var out = function (e) { if (!b.contains(e.target)) close2(); }, key = function (e) { if (e.key === "Escape") { e.stopImmediatePropagation(); e.preventDefault(); close2(); } };
+    function close2() { document.removeEventListener("pointerdown", out, true); window.removeEventListener("keydown", key, true); b.remove(); }
+    b._close = close2;
+    setTimeout(function () { document.addEventListener("pointerdown", out, true); window.addEventListener("keydown", key, true); }, 0);
+    return b;
+  }
+  function rangeBox(n, prm, a, b, x, y) {               // «размах»: the points of the stretch spread or drawn in about their middle, 0 to 200 %
+    var lst = rawPts(n, prm), inside = lst.filter(function (p) { return p[0] >= a - 1e-6 && p[0] <= b + 1e-6; });
+    if (!inside.length) return;
+    var orig = inside.map(function (p) { return p[1]; }), lo = Math.min.apply(null, orig), hi = Math.max.apply(null, orig), mid = (lo + hi) / 2, P = AUTO_P[prm], marked = false;
+    var box = boxShell("mxRangeBox", tr("The spread of {0} points, {1}–{2}").replace("{0}", inside.length).replace("{1}", clock(a)).replace("{2}", clock(b)),
+      '<label class="mx-fb-row"><span>' + esc(tr("Spread")) + '</span><input type="range" min="0" max="200" step="5" value="100" data-r="1" aria-label="' + esc(tr("Spread")) + '"><output class="mono">100 %</output></label>' +
+      '<p class="mx-fb-hint">' + esc(tr("About their middle: 0 % flat, 100 % as drawn, 200 % twice as wide; heard as it moves")) + "</p>", x, y);
+    box.addEventListener("input", function (e) {
+      if (!e.target.dataset.r) return;
+      if (!marked) { mark(); marked = true; }
+      var f = (+e.target.value || 0) / 100;
+      inside.forEach(function (p, i) { var v = mid + (orig[i] - mid) * f; p[1] = prm === "volume" ? Math.round(Math.max(P.lo, Math.min(P.hi, v)) * 10) / 10 : Math.round(Math.max(P.lo, Math.min(P.hi, v)) * 100) / 100; });
+      box.querySelector("output").textContent = Math.round(f * 100) + " %";
+      draw(n); autoSchedule(n);
+    });
+    box.addEventListener("change", function () { keep(); lanePaintAuto(n); emit("change", { n: n, key: "auto" }); marked = false; });
+  }
+  var LFO_SVG = function (d) { return '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="' + d + '" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>'; };
+  var LFO_SHAPES = [["sine", "Sine", LFO_SVG("M1 8C3 1.5 5 1.5 8 8S13 14.5 15 8")], ["triangle", "Triangle", LFO_SVG("M1 12 4.5 4 8 12 11.5 4 15 12")],
+                    ["square", "Square wave", LFO_SVG("M1 12V4h4v8h4V4h4v8h2")], ["up", "Saw up", LFO_SVG("M1 12 7 4v8l6-8v8")], ["down", "Saw down", LFO_SVG("M1 4l6 8V4l6 8V4")]];
+  function lfoRates(g) {                               // in quarter notes: notes, then bars of the take's meter
+    var bar = g ? (g.num || 4) * 4 / (g.den || 4) : 4;
+    return [[0.25, "1/16"], [0.5, "1/8"], [1, "1/4"], [2, "1/2"], [bar, "1 bar"], [2 * bar, "2 bars"], [4 * bar, "4 bars"]];
+  }
+  function lfoPoints(o) {                              // the LFO as the line's points: two a cycle, each segment shaped (an S for the sine, a hold for the square)
+    var g = gridData(), out = [], P = AUTO_P[o.prm], clamp = function (v) { v = Math.max(P.lo, Math.min(P.hi, v)); return o.prm === "volume" ? Math.round(v * 10) / 10 : Math.round(v * 1000) / 1000; };
+    var at = function (cyc) {                           // a cycle's start time: on the grid's beats (in quarter notes there), else in seconds at its Hz
+      if (g) { var per = (g.den || 4) / 4, b0 = window.RuachBars.beatIndex(g, o.a); return window.RuachBars.timeOf(g, b0 + cyc * o.rate * per); }
+      return o.a + cyc / o.hz;
+    };
+    var v = function (f) { return clamp(o.center + o.depth * f); }, up = o.phase === 180 ? -1 : 1;
+    for (var k = 0; k < 4000; k++) {
+      var c0 = at(k), c1 = at(k + 1), half = (c0 + c1) / 2;
+      if (c0 >= o.b - 0.002) break;
+      if (o.shape === "sine" || o.shape === "triangle") {
+        var sh = o.shape === "sine" ? "s" : null;
+        out.push(sh ? [c0, v(up), sh] : [c0, v(up)]);
+        if (half < o.b) out.push(sh ? [half, v(-up), sh] : [half, v(-up)]);
+      } else if (o.shape === "square") {
+        out.push([c0, v(up), "hold"]);
+        if (half < o.b) out.push([half, v(-up), "hold"]);
+      } else {
+        var lo2 = o.shape === "up" ? -up : up;
+        out.push([c0, v(lo2)]);
+        if (c1 - 0.001 < o.b) out.push([c1 - 0.001, v(-lo2)]);
+      }
+    }
+    return out.filter(function (p) { return p[0] >= o.a - 1e-6 && p[0] <= o.b + 1e-6; }).map(function (p) { p[0] = Math.round(p[0] * 1000) / 1000; return p; });
+  }
+  function lfoBox(n, prm, a, b, x, y) {
+    var g = gridData(), P = AUTO_P[prm], pts0 = linePts(n, prm), center0 = pts0.length ? autoDb(pts0, a) : P.rest, isVol = prm === "volume";
+    var rates = lfoRates(g), o = { prm: prm, a: a, b: b, shape: "sine", rate: rates[4][0], hz: 1, depth: isVol ? 6 : (P.hi - P.lo) / 4, center: Math.round(center0 * 100) / 100, phase: 0 }, marked = false, before = null;
+    var chip = function (k, list, cur, lab) { return '<span class="mx-lfo-chips" role="group" aria-label="' + esc(tr(lab)) + '">' + list.map(function (s) {
+      return '<button type="button" class="mx-ms' + (s[2] ? " mx-lfo-ico" : " mx-lfo-word") + (cur === s[0] ? " is-on" : "") + '" data-' + k + '="' + s[0] + '" aria-pressed="' + (cur === s[0]) + '" aria-label="' + esc(tr(s[1])) + '" data-tip="' + esc(tr(s[1])) + '">' + (s[2] || esc(tr(s[1]))) + "</button>"; }).join("") + "</span>"; };
+    var rows = '<div class="mx-lfo-row">' + chip("shape", LFO_SHAPES, o.shape, "Shape") + "</div>" +
+      (g ? '<div class="mx-lfo-row">' + chip("rate", rates, o.rate, "Cycle length") + "</div>"
+         : '<label class="mx-fb-row"><span>' + esc(tr("Rate, Hz")) + '</span><input type="range" min="0.05" max="8" step="0.05" value="1" data-hz="1"><output class="mono">1 Hz</output></label>') +
+      '<label class="mx-fb-row"><span>' + esc(tr(isVol ? "Depth, dB" : "Depth")) + '</span><input type="range" min="0" max="' + (isVol ? 24 : (P.hi - P.lo) / 2) + '" step="' + (isVol ? 0.5 : 0.01) + '" value="' + o.depth + '" data-depth="1"><output class="mono"></output></label>' +
+      '<label class="mx-fb-row"><span>' + esc(tr(isVol ? "Centre line, dB" : "Centre line")) + '</span><input type="range" min="' + P.lo + '" max="' + P.hi + '" step="' + (isVol ? 0.5 : 0.01) + '" value="' + o.center + '" data-center="1"><output class="mono"></output></label>' +
+      '<div class="mx-lfo-row">' + chip("phase", [[0, "From the top"], [180, "From the bottom"]], o.phase, "Phase") + "</div>" +
+      '<p class="mx-fb-hint">' + esc(g ? tr("On the bar grid: its cycles follow the take's beats") : tr("No bar grid for this take: the rate in Hz")) + "</p>" +
+      '<div class="mxl-acts"><button type="button" class="btn ghost small" data-lfo="undo">' + esc(tr("Take it off")) + '</button><button type="button" class="btn primary small" data-lfo="ok">' + esc(tr("Keep it")) + "</button></div>";
+    var box = boxShell("mxLfoBox", tr("An LFO on {0}, {1}–{2}").replace("{0}", tr(P.short)).replace("{1}", clock(a)).replace("{2}", clock(b)), rows, x, y);
+    var fmt = function (v) { return isVol ? (v > 0 ? "+" : "") + (+v).toFixed(1) + " dB" : (+v).toFixed(2); };
+    var lay = function () {                              // the stretch's own points out, the LFO's in, 10 ms from the line outside
+      var lst = rawPts(n, prm, true);
+      if (!before) { mark(); before = lst.map(function (p) { return p.slice(); }); }
+      var keepOut = before.filter(function (p) { return p[0] < a - 0.0105 || p[0] > b + 0.0105; }), outside = expandPts(before.slice().sort(function (p1, p2) { return p1[0] - p2[0]; }));
+      var add = lfoPoints(o);
+      if (a > 0.0105 && before.length) add.unshift([r3(a - 0.01), Math.round(autoDb(outside, a - 0.01) * 100) / 100]);
+      if (b < S.info.seconds - 0.0105 && before.length) add.push([r3(b + 0.01), Math.round(autoDb(outside, b + 0.01) * 100) / 100]);
+      var all = keepOut.concat(add).sort(function (p1, p2) { return p1[0] - p2[0]; });
+      if (all.length > 2000) { say(tr("The LFO would draw {0} points, 2000 at most on a line: a slower rate or a shorter stretch").replace("{0}", all.length), true); return; }
+      lst.splice.apply(lst, [0, lst.length].concat(all));
+      box.querySelector("[data-depth] + output").textContent = fmt(o.depth);
+      box.querySelector("[data-center] + output").textContent = fmt(o.center);
+      keep(); draw(n); autoSchedule(n); lanePaintAuto(n);
+    };
+    box.addEventListener("click", function (e) {
+      var t = e.target.closest && e.target.closest("button");
+      if (!t) return;
+      if (t.dataset.shape) o.shape = t.dataset.shape;
+      else if (t.dataset.rate) o.rate = +t.dataset.rate;
+      else if (t.dataset.phase != null) o.phase = +t.dataset.phase;
+      else if (t.dataset.lfo === "ok") { keep(); emit("change", { n: n, key: "auto" }); box._close(); say(tr("An LFO laid over {0}–{1}").replace("{0}", clock(a)).replace("{1}", clock(b))); return; }
+      else if (t.dataset.lfo === "undo") { if (before) { var lst = rawPts(n, prm, true); lst.splice.apply(lst, [0, lst.length].concat(before)); S.undo.pop(); paintUndo(); draw(n); autoSchedule(n); lanePaintAuto(n); } box._close(); return; }
+      Array.prototype.forEach.call(t.parentNode.querySelectorAll("button"), function (x2) { x2.classList.toggle("is-on", x2 === t); x2.setAttribute("aria-pressed", x2 === t); });
+      lay();
+    });
+    box.addEventListener("input", function (e) {
+      var d = e.target.dataset;
+      if (d.depth) o.depth = +e.target.value; else if (d.center) o.center = +e.target.value;
+      else if (d.hz) { o.hz = +e.target.value; e.target.nextElementSibling.textContent = o.hz + " Hz"; }
+      lay();
+    });
+    box.addEventListener("change", function () { keep(); emit("change", { n: n, key: "auto" }); });
+    lay();
   }
 
   // ---- «Mix»: on Forge, a branch of the tree
@@ -2663,6 +3247,10 @@
     body.addEventListener("contextmenu", onMenu);
     body.addEventListener("wheel", onWheel, { passive: false });   // HERESY 1501: Ctrl+wheel zooms (not the page), Shift+wheel goes along
     // HERESY 1511 (Viktor 16.10.2026: «строки бегают по движению мышки»): no lane grows under the pointer any more; every wave is whole
+    window.addEventListener("ruach-grid", function (e) {   // HERESY 2313: the take's grid arrived or was set again
+      if (S.take && e.detail && e.detail.name === S.take.name) { var row = document.querySelector(".mx-ruler-row"); if (row) row.classList.toggle("has-grid", gridShown()); gridPaint(); redrawAll(); }
+    });
+    body.addEventListener("pointermove", chordTip);   // HERESY 2314: the chord, bar and key under the pointer
     window.addEventListener("heresy-derived", function (e) {
       if (!S.take || !e.detail || e.detail.name !== S.take.name) return;
       onTree(e.detail.files);
@@ -2680,13 +3268,18 @@
   window.HeresyMixer = { setTake: setTake, value: value, play: play, stop: stop, undo: undo, redo: redo, ab: abTo,
     marks: { add: markAdd, jump: markJump, list: function () { return S.marks.map(function (m) { return { t: m.t, name: m.name }; }); } },   // HERESY 2016
     presets: { save: presetSave, lay: presetLay, del: presetDel, all: presetsAll },   // HERESY 2018
+    grid: { data: gridData, load: gridLoad, set: gridSet, toggle: gridToggle, snap: function (n, t, c) { return snapT(n, t, c, null); } },   // HERESY 2313
+    ref: { choose: refChoose, title: refTitle, menu: refMenu },   // HERESY 2315
+    bounce: bounceRun, bounceItems: bounceItems,                  // HERESY 2316
+    shapes: { expand: expandPts, lfo: lfoPoints, set: shapeSet, seg: segAt },   // HERESY 2318
     state: function () { var g = S.graph; return { take: S.take && S.take.name, set: S.set, sets: S.sets.length, strips: names(), playing: S.playing, at: pos(), srcs: S.srcs.length, versions: S.versions, busy: S.busy,
       zoom: S.view.zoom, t0: S.view.t0, loop: S.loop, loopOn: S.loopOn, focus: S.focus, meters: Object.assign({}, S.meters),   // HERESY 1501
       peaks: Object.keys(S.peaks).length, ctx: S.ctx ? S.ctx.state : "",
       graph: g ? { kind: g.eng.kind, on: !!g.on, lanes: Object.keys(g.lanes).length, room: !!g.rv.conv, latency: latency(g), master: !!g.mOn } : null,   // HERESY 1531; 1544: master
       levels: Object.keys(S.lv).length, loud: S.loud ? { m: S.loud.m, s: S.loud.s, i: S.loud.i, tp: S.loud.tp, lra: S.loud.lra } : null, undo: S.undo.length, redo: S.redo.length, ab: S.ab.cur,
       dock: S.dock, print: S.print, auto: Object.keys(S.autoShow).filter(function (k2) { return S.autoShow[k2]; }), mon: Object.assign({}, S.mon),
-      ref: { armed: S.ref.armed, on: S.ref.on, match: S.ref.match, blocks: S.ref.z ? S.ref.z.length : 0 }, fade: S.info ? fadeOf() : null }; },   // HERESY 1755, 1756
+      ref: { armed: S.ref.armed, on: S.ref.on, match: S.ref.match, blocks: S.ref.z ? S.ref.z.length : 0, spec: S.ref.spec }, fade: S.info ? fadeOf() : null,   // HERESY 1755, 1756; 2315: spec
+      grid: { on: S.grid.on, chords: S.grid.chords, wait: S.grid.wait, err: S.grid.err, bars: gridData() ? gridData().bars.length : 0 }, aud: S.aud ? S.aud.n : null }; },   // HERESY 2313, 2317
     // HERESY 1531: the console's way in (heresy-console.js)
     k: { S: S, names: names, strip: strip, set: setStrip, setBus: setBus, mark: mark, on: on, select: select, setVersion: setVersion, versionOf: versionOf, refresh: refreshVersions,   // 1561
          mixes: { list: function () { return S.named; }, lab: function () { return S.lab; }, saveAs: saveAs, load: loadNamed, del: delNamed },   // HERESY 1533

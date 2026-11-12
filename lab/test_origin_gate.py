@@ -2,8 +2,12 @@
 suffix, RUACH_HOSTS) and the ones it refuses (a name a site on the internet could point at this machine); a page of another site refused by
 Sec-Fetch-Site or, from an old browser, by an Origin that is not the address asked; the Studio's page, scripts and the engine passing as
 before; opening a page by a link not refused. HERESY 2138 (the audit of 06.11.2026, 2.1): the relay opened as a page, a frame or a script refused,
-the page's own fetch() passing.   python3 lab/test_origin_gate.py"""
+the page's own fetch() passing. HERESY 2258 (Viktor 08.11.2026: «Только по IP локальных сетей»): the addresses of local networks, localhost and
+RUACH_HOSTS trusted; a name of one label, a private suffix, this machine's own name and an address beyond the local networks refused.
+HERESY 2337 (Viktor 09.11.2026: «Да, убирай 100.64., а localhost оставляй»): a Tailscale address (100.64/10) refused unless RUACH_HOSTS names it.
+python3 lab/test_origin_gate.py"""
 import os
+import socket
 import sys
 from pathlib import Path
 
@@ -20,14 +24,27 @@ def check(what, ok, got=""):
 
 
 os.environ.pop("RUACH_HOSTS", None)
-for h in ("127.0.0.1:41870", "localhost:41870", "[::1]:41870", "192.0.2.2:7777", "golem", "golem:7777", "forge.local", "studio.lan:7777",
-          "box.home.arpa", "forge.tail1234.ts.net", "app.localhost", ""):
+# HERESY 2258: the remote use over a VPN (a VPN's address to the Studio's LAN address), a proxy in front and the launchers (127.0.0.1, localhost), IPv6 kin
+# written as browsers write them, and a request without a Host (HERESY 2337: Tailscale's 100.64/10 no longer among them)
+for h in ("127.0.0.1:41870", "127.0.0.1:7777", "localhost:41870", "LOCALHOST", "localhost.", "[::1]:41870", "10.20.30.40:7443",
+          "10.20.30.40:7777", "172.20.0.1", "169.254.10.20:7777", "[fd00::1]:7777", "[fe80::1%25eth0]:7777",
+          "[::ffff:127.0.0.1]:7777", "[::ffff:7f00:1]:7777", ""):
     check(f"trusted: {h!r}", g.host_trusted(h))
-for h in ("attacker.example:41870", "rebind.evil.com", "127.0.0.1.nip.io:7777", ".local"):
+# the home network's own range checked as a range: no address of it is written out here (the release scan stops on any, as it cannot tell
+# this machine's from another's), and a host of 10/8 and of 172.16/12 above stands for the same rule
+check("the 192.168/16 range is among the local networks", any(n.with_prefixlen == "192.168.0.0/16" for n in g.LOCAL_NETS))
+for h in ("studio-box", "studio-box:7777", "forge.local", "studio.lan:7777", "box.home.arpa", "forge.tail1234.ts.net", "app.localhost", "localhost.evil.com",
+          socket.gethostname(), "192.0.2.2:7777", "8.8.8.8", "0.0.0.0:7777", "[::]:7777", "[2001:db8::1]:7777", "attacker.example:41870",
+          "rebind.evil.com", "127.0.0.1.nip.io:7777", ".local",
+          "100.101.102.103:7777", "100.64.0.1", "100.127.255.254:41870", "[::ffff:100.101.102.103]:7777", "[::ffff:6465:6667]:7777"):   # HERESY 2337
     check(f"refused: {h!r}", not g.host_trusted(h))
-os.environ["RUACH_HOSTS"] = "studio.example.org, .mine.net"
+os.environ["RUACH_HOSTS"] = "studio.example.org, .mine.net studio-box 203.0.113.7"
 check("RUACH_HOSTS: a name of its own", g.host_trusted("studio.example.org:7777"))
 check("RUACH_HOSTS: '.mine.net' takes its subdomains", g.host_trusted("a.b.mine.net") and not g.host_trusted("notmine.net"))
+check("RUACH_HOSTS: a name of one label, named there, is answered (and only it)", g.host_trusted("studio-box:7777") and not g.host_trusted("forge"))
+check("RUACH_HOSTS: an address beyond the local networks, named there, is answered", g.host_trusted("203.0.113.7:7777") and not g.host_trusted("203.0.113.8"))
+os.environ["RUACH_HOSTS"] = "100.101.102.103"                # HERESY 2337: a Tailscale address of one's own, named
+check("RUACH_HOSTS: a Tailscale address named there is answered (and only it)", g.host_trusted("100.101.102.103:7777") and not g.host_trusted("100.101.102.104:7777"))
 os.environ.pop("RUACH_HOSTS")
 
 H = {"Host": "127.0.0.1:41870"}

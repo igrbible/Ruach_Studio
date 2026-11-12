@@ -24,6 +24,12 @@ export PYTHONUNBUFFERED=1
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HPY="$ROOT/.venv/bin/python"; [ -x "$HPY" ] || HPY=python3   # HERESY 1080: the Studio's one environment
+# HERESY 2330 (Viktor 10.11.2026: «упаковать под основную папку Models со своими поддиректориями»): every weight's place from launcher/paths.sh
+# (written from lab/paths.py); an install of 2.0.6 moved into models/<room>/ once, before anything is read (the lab's start waits on the same lock;
+# user/migration-2.0.7.hold keeps it for its owner's word)
+source "$ROOT/launcher/paths.sh"
+"$HPY" "$ROOT/lab/migrate_models.py" --auto || echo "the move of the weights into their rooms stopped: user/migration-2.0.7.log says where"
+bb() { rs_engine_gguf "YuE2-3B-$1.gguf"; }            # a backbone's file by its name (Q8_0, RS-TW-2.0x0.75-Q8_0, IRA-Q8_0)
 # HERESY 1656 (Viktor 21.10.2026: «выпускай бета поддержку для интеловских карт»): Intel Arc (beta). YUE2_ENGINE=sycl, or a SYCL engine with no
 # CUDA one beside it (./build.sh --sycl), runs build/build-sycl/yue-server under oneAPI's runtime, NVIDIA's guard and card left out.
 # SYCL_CACHE_PERSISTENT stays 0: with the kernels' disk cache, libsycl (oneAPI 2026.1) dies at the first kernel it runs, a fresh cache
@@ -91,22 +97,32 @@ fi
 # at the fullest quant here; RS-FW 2.4x0.75 where it is not (an install before the fine-tunes' repo had RS-TW), then m-a-p's own, as before
 if [ -z "$QUANT" ]; then
     for m in RS-TW-2.0x0.75 RS-FW-2.4x0.75; do
-        for q in BF16 Q8_0 Q6_K; do [ -f "$ROOT/models/YuE2-3B-$m-$q.gguf" ] && { QUANT="$m-$q"; break 2; }; done
+        for q in BF16 Q8_0 Q6_K; do [ -f "$(bb "$m-$q")" ] && { QUANT="$m-$q"; break 2; }; done
     done
 fi
-if [ -z "$QUANT" ] || [ ! -f "$ROOT/models/YuE2-3B-$QUANT.gguf" ]; then
+# HERESY 2183 (decision D13, Viktor's «yes» 05.11.2026): a model named but gone (settings.json keeps a merge deleted since) starts the Studio's default,
+# RS-TW 2.0x0.75, else RS-FW 2.4x0.75, at the fullest quant here, as an install that names none; m-a-p's own only where neither is here (it went
+# straight to m-a-p's own)
+if [ -n "$QUANT" ] && [ ! -f "$(bb "$QUANT")" ]; then
+    wanted="$QUANT"
+    for m in RS-TW-2.0x0.75 RS-FW-2.4x0.75; do
+        for q in BF16 Q8_0 Q6_K; do [ -f "$(bb "$m-$q")" ] && { QUANT="$m-$q"; break 2; }; done
+    done
+    [ "$QUANT" != "$wanted" ] && echo "${Y}no $(basename "$(bb "$wanted")")${X}: using $QUANT, the Studio's default"
+fi
+if [ -z "$QUANT" ] || [ ! -f "$(bb "$QUANT")" ]; then
     wanted="$QUANT"; QUANT=""
-    for q in BF16 Q8_0 Q6_K Q5_K_M; do [ -f "$ROOT/models/YuE2-3B-$q.gguf" ] && { QUANT="$q"; break; }; done
-    [ -n "$wanted" ] && [ -n "$QUANT" ] && echo "${Y}no models/YuE2-3B-$wanted.gguf${X}: using $QUANT"
+    for q in BF16 Q8_0 Q6_K Q5_K_M; do [ -f "$(bb "$q")" ] && { QUANT="$q"; break; }; done
+    [ -n "$wanted" ] && [ -n "$QUANT" ] && echo "${Y}no $(basename "$(bb "$wanted")")${X}: using $QUANT"
     [ -n "$QUANT" ] || QUANT="${wanted:-BF16}"      # nothing present: the check below names what is missing
 fi
 BIN="$ROOT/build/build/yue-server"
 [ $SYCL = 1 ] && BIN="$ROOT/build/build-sycl/yue-server"
-MODEL="$ROOT/models/YuE2-3B-$QUANT.gguf"
-VAE="$ROOT/models/YuE2-Vae-F32.gguf"
+MODEL="$(bb "$QUANT")"
+VAE="$RS_ENGINE_VAE/YuE2-Vae-F32.gguf"
 OUTPUTS="$ROOT/outputs"
-TRANSCRIBER="$ROOT/models/SheetSage2-Q8_0.gguf"     # downloaded; convert-models.sh makes F32
-[ -f "$TRANSCRIBER" ] || TRANSCRIBER="$ROOT/models/SheetSage2-F32.gguf"
+TRANSCRIBER="$RS_MISC/SheetSage2-Q8_0.gguf"     # downloaded; convert-models.sh makes F32
+[ -f "$TRANSCRIBER" ] || TRANSCRIBER="$RS_MISC/SheetSage2-F32.gguf"
 
 missing=0
 for f in "$BIN" "$MODEL" "$VAE"; do
@@ -124,25 +140,29 @@ size() { du -h "$1" 2>/dev/null | cut -f1 | tr -d ' '; }
 count() { wc -l | tr -d ' '; }          # macOS pads wc's number with spaces
 plural() { if [ "$1" = 1 ]; then printf '%s %s' "$1" "$2"; else printf '%s %ss' "$1" "$2"; fi; }   # plural 2 song -> 2 songs
 row() { printf '  %s%-12s%s %s\n' "$C" "$1" "$X" "$2"; }
-args=(--host 0.0.0.0 --port "$PORT" --model "$QUANT=$MODEL" --vae "standard=$VAE" --outputs "$OUTPUTS"
+# HERESY 2306 (Viktor 10.11.2026: «прикручивай основным VAE версию 1»): our RS x3 v1 is the first decoder, so the default, when it is
+# there; v2 after it; Standard still loads, the encoder's file and the decoder of the takes made with it
+rsfirst=()
+for rs in v1 v2; do [ -f "$RS_ENGINE_VAE/YuE2-VAE-RS-x3_$rs-F32.gguf" ] && rsfirst+=(--vae "rs-x3-$rs=$RS_ENGINE_VAE/YuE2-VAE-RS-x3_$rs-F32.gguf"); done
+args=(--host 0.0.0.0 --port "$PORT" --model "$QUANT=$MODEL" "${rsfirst[@]}" --vae "standard=$VAE" --outputs "$OUTPUTS"
       --max-batch "$BATCH" --settings "$ROOT/settings.json")
 # every other backbone that is present can be picked in the page (Engine -> Model); HERESY 1490: a merge's too, each by its file's
-# name (models/YuE2-3B-IRA-Q8_0.gguf is «IRA-Q8_0»), m-a-p's own first, so a choice kept in settings.json starts again as itself
+# name (YuE2-3B-IRA-Q8_0.gguf is «IRA-Q8_0»), m-a-p's own first, so a choice kept in settings.json starts again as itself; HERESY 2330: wherever
+# under models/engine/ its file lies (yue2/, finetunes/<merge>/, finetunes/legacy/)
 models="${B}$QUANT${X} $(size "$MODEL") ${G}starts${X}"
 others=(BF16 Q8_0 Q6_K Q5_K_M)
-for f in "$ROOT"/models/YuE2-3B-*-*.gguf; do [ -f "$f" ] && { f=${f##*/YuE2-3B-}; others+=("${f%.gguf}"); }; done
+while IFS= read -r f; do f=${f##*/YuE2-3B-}; f=${f%.gguf}; [[ $f == *-* ]] && others+=("$f"); done < <(rs_backbones)
 for q in "${others[@]}"; do
-    if [ "$q" != "$QUANT" ] && [ -f "$ROOT/models/YuE2-3B-$q.gguf" ]; then
-        args+=(--model "$q=$ROOT/models/YuE2-3B-$q.gguf")
-        models="$models, ${B}$q${X} $(size "$ROOT/models/YuE2-3B-$q.gguf")"
+    if [ "$q" != "$QUANT" ] && [ -f "$(bb "$q")" ]; then
+        args+=(--model "$q=$(bb "$q")")
+        models="$models, ${B}$q${X} $(size "$(bb "$q")")"
     fi
 done
+# HERESY 2307 (Viktor 10.11.2026: «Из Студии… выбрасываем Legacy и 0.666 микс. В HF репо пусть остаются»): Standard and ours only
 vaes="${B}standard${X}"
-for extra in legacy blend; do
-    if [ -f "$ROOT/models/YuE2-Vae-$extra-F32.gguf" ]; then
-        args+=(--vae "$extra=$ROOT/models/YuE2-Vae-$extra-F32.gguf")
-        vaes="$vaes, ${B}$extra${X}"
-    fi
+# HERESY 2304: our fat decoders, YuE2-VAE-RS x3 v1 and v2 (float32, 60 frames of tile context, read from the file); 2306: passed first, above
+for rs in v2 v1; do
+    [ -f "$RS_ENGINE_VAE/YuE2-VAE-RS-x3_$rs-F32.gguf" ] && vaes="${B}rs-x3-$rs${X}, $vaes"
 done
 
 # The GPU: one query for its name, memory and compute capability (NVIDIA), else what runs instead.
@@ -175,7 +195,7 @@ fi
 # The page's address as a terminal hyperlink (OSC 8) when printing to a terminal: clickable even where
 # the terminal does not spot links itself. Terminals without OSC 8 show the plain address; so do logs.
 # HERESY 1133: the address this machine has on its network (the first one), or 127.0.0.1 without one
-LAN_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+LAN_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || true)   # Fedora's base has no hostname, Arch's has no -I: under set -e and pipefail the start ended here (07.11, the AppImage trials)
 URL="http://${LAN_IP:-127.0.0.1}:$PORT"
 TTY=0; [ -t 1 ] && TTY=1      # tested here: inside $(...) stdout is a pipe
 link() { if [ "$TTY" = 1 ]; then printf '\e]8;;%s\e\\%s\e]8;;\e\\' "$1" "$1"; else printf '%s' "$1"; fi; }
@@ -211,10 +231,16 @@ nsongs=$(find "$OUTPUTS" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | count)
 row library "${B}$nsongs${X} $([ "$nsongs" = 1 ] && echo song || echo songs) ${D}· $(du -sh "$OUTPUTS" 2>/dev/null | cut -f1 | tr -d ' ') in ${OUTPUTS#"$ROOT"/}/${X}"
 # HERESY 1610: the engine reads SheetSage2's head with MERT-v2-FullSong of the same kind beside it (1604); an older install's SheetSage2
 # file held both in one (957 MB as Q8_0, 2.7 GB as F32, against the head's 106 and 229 MB): passed on, it would fail on the first cover
-MERT="$ROOT/models/MERT-v2-FullSong-${TRANSCRIBER##*-}"
+MERT="$RS_MISC/MERT-v2-FullSong-${TRANSCRIBER##*-}"
 if [ -f "$TRANSCRIBER" ] && [ -f "$MERT" ] && [ "$(wc -c < "$TRANSCRIBER" | tr -d ' ')" -lt 500000000 ]; then
     args+=(--transcriber "$TRANSCRIBER")
     row transcriber "$(basename "$TRANSCRIBER") ${D}· $(size "$TRANSCRIBER"), MERT beside it $(size "$MERT") · covers from a recording${X}"
+    # HERESY 2328: anime-song's SheetSage2-Refined, the second transcriber, an overlay on SheetSage2's GGUF beside it
+    REFINED="$RS_MISC/SheetSage2-Refined-F16.gguf"
+    if [ -f "$REFINED" ]; then
+        args+=(--transcriber-refined "$REFINED")
+        row refined "$(basename "$REFINED") ${D}· $(size "$REFINED") · the second transcriber, on $(basename "$( [ -f "$RS_MISC/SheetSage2-F32.gguf" ] && echo "$RS_MISC/SheetSage2-F32.gguf" || echo "$TRANSCRIBER")")${X}"
+    fi
 elif [ -f "$TRANSCRIBER" ]; then
     row transcriber "${Y}an older one${X} ${D}(this engine reads SheetSage2's head with MERT-v2-FullSong beside it; covers from a recording are off):${X} ./download-models.sh --transcriber"
 else

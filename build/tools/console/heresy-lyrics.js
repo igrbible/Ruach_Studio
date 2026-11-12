@@ -127,6 +127,32 @@
     return score.es > score.en && score.es >= score.it ? "es" : score.it > score.en && score.it > score.es ? "it" : "en";
   }
   // HERESY 1169 · 1240 (Viktor 08.10.2026: «При скейле 125% именно в полной странице в редакторе съезжают хайлайтинги секций. При 100-110% - НОРМ»): a mirror wraps the lines as the box does only at the box's own width; clientWidth is a whole number, and at 125 % the box is, say, 512.6 px wide, so a line that fits in one wrapped in the other and every row after it stood one off. The width now is the box's used width (fractional) less its borders and its scrollbar
+  // HERESY 2350 (Timon's cherry ⑥): the worn words of the lyrics' language (heresy-worn.js): each in a span of the mirror of its own, then a thin amber
+  // line under it, never inside a [tag]; the style beside the box tells Ukrainian or Belarusian Cyrillic, and the language of Latin lyrics
+  function wornOf(area, style) {
+    var W = window.HeresyWorn;
+    return W ? W.find(area.value, W.lang(area.value, style)) : [];
+  }
+  function wornStyle(area) {
+    var s = document.getElementById(area.id === "wrLyrics" ? "wrStyle" : "style");
+    return s ? s.value : "";
+  }
+  function mirrorRow(r, worn) {                       // a line of the mirror: its [tags] and its worn words in spans, the rest as written
+    if (!r) return "\u200b";
+    var cuts = [], m, re = /\[[^\]\n]*\]/g;
+    while ((m = re.exec(r))) cuts.push({ a: m.index, b: m.index + m[0].length, cls: "lyr-tm" });
+    (worn || []).forEach(function (w) {
+      if (!cuts.some(function (c) { return w.col < c.b && w.col + w.len > c.a; })) cuts.push({ a: w.col, b: w.col + w.len, cls: "lyr-wm" });
+    });
+    cuts.sort(function (x, y) { return x.a - y.a; });
+    var out = "", at = 0;
+    cuts.forEach(function (c) {
+      if (c.a < at) return;
+      out += esc(r.slice(at, c.a)) + '<span class="' + c.cls + '">' + esc(r.slice(c.a, c.b)) + "</span>";
+      at = c.b;
+    });
+    return out + esc(r.slice(at));
+  }
   function innerWidth(area, cs) {
     if (cs.boxSizing !== "border-box") return area.clientWidth;
     var bl = parseFloat(cs.borderLeftWidth) || 0, br = parseFloat(cs.borderRightWidth) || 0;
@@ -454,7 +480,9 @@
       ["fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
        "tabSize", "wordSpacing", "fontVariantLigatures"].forEach(function (k) { mirror.style[k] = cs[k]; });
       mirror.style.width = innerWidth(area, cs) + "px";
-      mirror.innerHTML = area.value.split("\n").map(function (r) { return "<div>" + (r ? esc(r).replace(/\[[^\]\n]*\]/g, '<span class="lyr-tm">$&</span>') : "​") + "</div>"; }).join("");
+      var wornAt = {};                                // HERESY 2350: the worn words by line, beside the tags
+      wornOf(area, wornStyle(area)).forEach(function (w) { (wornAt[w.line] = wornAt[w.line] || []).push(w); });
+      mirror.innerHTML = area.value.split("\n").map(function (r, i) { return "<div>" + mirrorRow(r, wornAt[i]) + "</div>"; }).join("");
       var bt = parseFloat(cs.borderTopWidth) || 0, bl = parseFloat(cs.borderLeftWidth) || 0, lh = parseFloat(cs.lineHeight) || 20;
       var H = area.clientHeight, st = area.scrollTop, kids = mirror.children, rows = [], bands = [], lints = {};
       lintShown(area).forEach(function (f) { lints[f.line] = lints[f.line] === "bad" || f.bad ? "bad" : "near"; });   // HERESY 1169
@@ -471,11 +499,12 @@
       nums.innerHTML = shown() ? rows.join("") : "";
       tagsl.style.width = innerWidth(area, cs) + "px";
       var mr = mirror.getBoundingClientRect(), k = mirror.offsetWidth ? mr.width / mirror.offsetWidth : 1;
-      Array.prototype.forEach.call(mirror.querySelectorAll(".lyr-tm"), function (t) {
+      Array.prototype.forEach.call(mirror.querySelectorAll(".lyr-tm, .lyr-wm"), function (t) {
+        var cls = t.classList.contains("lyr-wm") ? "lyr-worn" : "lyr-tag";   // HERESY 2350: a worn word's line under it
         Array.prototype.forEach.call(t.getClientRects(), function (r) {
           var y = (r.top - mr.top) / k - st;
           if (y < -lh || y > H) return;
-          bands.push('<span class="lyr-tag" style="left:' + ((r.left - mr.left) / k) + "px;top:" + y + "px;width:" + (r.width / k) + "px;height:" + (r.height / k) + 'px"></span>');
+          bands.push('<span class="' + cls + '" style="left:' + ((r.left - mr.left) / k) + "px;top:" + y + "px;width:" + (r.width / k) + "px;height:" + (r.height / k) + 'px"></span>');
         });
       });
       tagsl.innerHTML = bands.join("");
@@ -676,10 +705,19 @@
         parts.push('<button type="button" class="lyr-tog lyr-warn near" data-lyr="arc" data-tip="' + esc(tr("The song's arc and its verses' numbers. Press to go to the next one.") + "\n" + asays.join("\n")) + '">' +
           esc(tr("Arc to look at: {0}").replace("{0}", num(ar.length))) + "</button>");
       }
+      // HERESY 2350: the worn words of the lyrics' language, a press to the next one; their list's own button among the tools
+      var wf = wornOf(area, styleBox ? styleBox.value : "");
+      if (wf.length) {
+        var wseen = {}, wsays = [];
+        wf.forEach(function (f) { var w = f.word.replace(/\u0301/g, "").toLowerCase(); if (!wseen[w]) { wseen[w] = 1; wsays.push(f.word); } });
+        parts.push('<button type="button" class="lyr-tog lyr-warn near" data-lyr="worn" data-tip="' + esc(tr("Words worn out in songs, from the list of the lyrics' language: the Writer's model is told to leave them out. Press to go to the next one.") +
+          "\n" + wsays.slice(0, 24).join(", ") + (wsays.length > 24 ? " …" : "")) + '">' + esc(tr("Worn words: {0}").replace("{0}", num(wf.length))) + "</button>");
+      }
       // HERESY 1169: the marks (Alt+K) and the line numbers
       var mk = ax ? ax.marks().length : 0;
       if (mk) parts.push('<button type="button" class="lyr-tog lyr-marks" data-lyr="mark" data-tip="' + esc(tr("Marked lines: Alt+K marks the cursor's line or unmarks it, Alt+J goes to the next, Alt+Shift+J to the one before, Alt+Shift+K clears them. Press to go to the next one.")) + '">' +
         esc(tr("Marks: {0}").replace("{0}", num(mk))) + "</button>");
+      if (window.HeresyWorn) parts.push('<button type="button" class="lyr-tog" data-lyr="wornList" data-tip="' + esc(tr("The list of worn words for the lyrics' language: see it, edit it, take the Studio's own back, or mark none")) + '">' + esc(tr("Worn words")) + "</button>");   // HERESY 2350
       parts.push('<button type="button" class="lyr-tog lyr-keys" data-lyr="keys" data-tip="' + esc(tr(KEYS)) + '">' + esc(tr("Keys")) + "</button>");   // HERESY 1169
       if (!head) {
       parts.push('<button type="button" class="lyr-tog" data-lyr="nums" aria-pressed="' + (recall("yue2.lyrNums") !== "off") + '" data-tip="' + esc(tr("The lines' numbers in the box, as a code editor shows them (Alt+K marks a line, Alt+J goes to the next mark)")) + '">' + esc(tr("Line numbers")) + "</button>");
@@ -780,7 +818,7 @@
     // HERESY 1168: to a stress mark astray: the letter and its mark selected, the line brought into view (in the box when it
     // scrolls, and in the frame or page around it when it is not seen there: under a lifted frame's sticky Generate bar too,
     // which the frame's own box reaches under; the browser itself scrolls a probe set where the line stands)
-    var visit = { stress: -1, stress2: -1, lint: -1, lint2: -1, arc: -1 };
+    var visit = { stress: -1, stress2: -1, lint: -1, lint2: -1, arc: -1, worn: -1 };   // HERESY 2350: the worn words too
     function lintNext(bad) {                                  // HERESY 1169: to the next bracket fault of its kind
       var list = lintShown(area).filter(function (f) { return !!f.bad === bad; }), k = bad ? "lint" : "lint2";
       if (!list.length) return draw();
@@ -837,6 +875,18 @@
         return;
       }
       if (b.dataset.lyr === "mark" && ax) return ax.next();                 // HERESY 1169
+      if (b.dataset.lyr === "worn") {                      // HERESY 2350: to the next worn word, selected
+        var wl = wornOf(area, styleBox ? styleBox.value : "");
+        if (!wl.length) return draw();
+        visit.worn = (visit.worn + 1) % wl.length;
+        draw();
+        return goTo(wl[visit.worn]);
+      }
+      if (b.dataset.lyr === "wornList") {                  // HERESY 2350: the list of the lyrics' language (the song's when the box is empty)
+        var WW = window.HeresyWorn;
+        if (WW) WW.edit(WW.lang(area.value, styleBox ? styleBox.value : "") || WW.songLang()).then(function (changed) { if (changed) { if (ax) ax.draw(); draw(); } });
+        return;
+      }
       if (b.dataset.lyr === "lint" || b.dataset.lyr === "lint2") return lintNext(b.dataset.lyr === "lint");
       if (b.dataset.lyr === "arc") {                       // HERESY 1436
         var al = arc(area.value);

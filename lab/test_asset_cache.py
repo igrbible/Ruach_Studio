@@ -3,7 +3,8 @@ and validators. byte_ranges.key is the first ten hex of the file's SHA-256, read
 Last-Modified, a year (immutable) only when the URL's key is the file's own, no-cache otherwise, and 304 to a request that has the file already
 (If-None-Match weakly, a list, *, or If-Modified-Since when there is none); keyed=None sends as before. Then the lab's own routes, through its own
 Handler on a port of its own (its library and docs temporary folders): /fonts, /sounds, /guide, /arts and /art (the user's own: private), and the
-four routes whose URL does not name their content, each no-cache with its validator now: /artist/lora-picture, /daw/ir, /spectrogram, /luts/preview.
+four routes whose URL does not name their content, each with its validator now: /daw/ir no-cache; HERESY 2178 (D04, Viktor 06.11.2026: «yes, except
+/daw/ir → no-cache»): /artist/lora-picture, /spectrogram and /luts/preview keep their max-age (10 min, an hour, 10 min), then a 304.
     python3 lab/test_asset_cache.py"""
 import email.utils
 import hashlib
@@ -233,7 +234,7 @@ def revalidated(name, path, want_cc, replace):
 
 
 fam = next(iter(lab.artist_loras.FAMILIES))
-lora = tmp / "artwork" / "loras" / fam / "tcache.safetensors"
+lora = lab.paths.at(lab.paths.ARTIST_LORAS, tmp) / fam / "tcache.safetensors"
 lora.parent.mkdir(parents=True)
 lora.write_bytes(b"\0" * 16)
 PIC = lora.with_suffix(".png")
@@ -246,7 +247,7 @@ def new_pic():
     return data
 
 
-revalidated("/artist/lora-picture (by the adapter's id, was 10 min)", "/artist/lora-picture?id=" + fam + "/tcache.safetensors", "private, no-cache", new_pic)
+revalidated("/artist/lora-picture (by the adapter's id, its 10 min kept: 2178)", "/artist/lora-picture?id=" + fam + "/tcache.safetensors", "private, max-age=600", new_pic)
 lab.DAW_IR[("room", 48000)] = b"RIFF-the room as this lab makes it"
 
 
@@ -268,7 +269,7 @@ def new_spec():
     return data
 
 
-revalidated("/spectrogram (by take and window, was an hour)", "/spectrogram?name=" + take.name + "&t0=0&t1=10", "private, no-cache", new_spec)
+revalidated("/spectrogram (by take and window, its hour kept: 2178)", "/spectrogram?name=" + take.name + "&t0=0&t1=10", "private, max-age=3600", new_spec)
 LOOK = tmp / "cache" / "luts" / "preview" / "test.jpg"
 LOOK.parent.mkdir(parents=True, exist_ok=True)
 LOOK.write_bytes(os.urandom(2000))
@@ -281,7 +282,7 @@ def new_look():
     return data
 
 
-revalidated("/luts/preview (by look, take and strength, was 10 min)", "/luts/preview?name=" + take.name + "&id=none&s=1", "private, no-cache", new_look)
+revalidated("/luts/preview (by look, take and strength, its 10 min kept: 2178)", "/luts/preview?name=" + take.name + "&id=none&s=1", "private, max-age=600", new_look)
 lsrv.shutdown()
 
 print(("FAILED: " + ", ".join(bad)) if bad else "all asset-cache checks pass")

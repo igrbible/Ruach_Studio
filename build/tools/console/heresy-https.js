@@ -11,10 +11,10 @@
 // heresy-settings.js keeps local as secrets (HeresySettings.secrets, the one list) now stay in the http page; the https page says which stayed and where
 // to put them in again. Without that list (the settings' script did not load) nothing is handed over, and that is said.
 //
-//   HeresyHttps.offer(opts) · HeresyHttps.paint() · HeresyHttps.state() · HeresyHttps.left()   (opts {host, port, go} for the checks)
+//   HeresyHttps.offer(opts) · HeresyHttps.paint() · HeresyHttps.state() · HeresyHttps.left() · HeresyHttps.dropped()   (opts {host, port, go} for the checks)
 (function () {
   "use strict";
-  var STAY = "ruach.https.stay", MOVED = "ruach.https.moved", LEFT = "ruach.https.left", WAIT = 120;   // HERESY 2005: two minutes to read it («чтобы чел смог прочитать и хоть немного осмыслить»)
+  var STAY = "ruach.https.stay", MOVED = "ruach.https.moved", LEFT = "ruach.https.left", DROPPED = "ruach.https.dropped", WAIT = 120;   // HERESY 2005: two minutes to read it («чтобы чел смог прочитать и хоть немного осмыслить»)
   var S = { tls: null, el: null, timer: 0 };
   function $(id) { return document.getElementById(id); }
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
@@ -40,7 +40,8 @@
     lab("/handoff?token=" + m[1]).then(function (d) {
       Object.keys(d.storage || {}).forEach(function (k) { put(k, d.storage[k]); });
       put(MOVED, String(Date.now()));
-      if (then) { left(); then(d); } else location.reload();
+      if (Array.isArray(d.dropped) && d.dropped.length) put(DROPPED, JSON.stringify(d.dropped));   // HERESY 2225: said after the reload
+      if (then) { left(); dropped(); then(d); } else location.reload();
     }).catch(function (e) { toast(tr("The settings did not come over:") + " " + e.message, "bad"); });
     return true;
   }
@@ -57,6 +58,19 @@
     return names;
   }
 
+  // HERESY 2225 (the audit of 06.11.2026, §2.5; 2177 left it to the lab's log): on the https side, once: the settings the lab did not hand over (one
+  // naming an address, or not the Studio's own), by name, so nothing stays behind unsaid
+  function dropped() {
+    var raw = get(DROPPED), names = [];
+    if (raw === null) return [];
+    put(DROPPED, null);
+    try { names = JSON.parse(raw); } catch (e) { names = []; }
+    names = (Array.isArray(names) ? names : []).filter(function (k) { return typeof k === "string" && k; });
+    if (names.length) toast(tr("Not handed over to https, since they name an address or are not the Studio's own settings: {0}. Set them again here if you need them.")
+      .replace("{0}", names.slice(0, 12).join(", ") + (names.length > 12 ? ", …" : "")), "warn");
+    return names;
+  }
+
   // ---- the http side: the offer
   function close() { clearInterval(S.timer); S.timer = 0; if (S.el) { S.el.remove(); S.el = null; } }
   function move(port, opts) {
@@ -67,7 +81,7 @@
     try {
       for (var i = 0; i < localStorage.length; i++) {
         var k = localStorage.key(i);
-        if (!k || k === STAY || k === MOVED || k === LEFT) continue;
+        if (!k || k === STAY || k === MOVED || k === LEFT || k === DROPPED) continue;
         if (keep.indexOf(k) >= 0) { if (localStorage.getItem(k)) held.push(k); continue; }   // HERESY 2138: a secret stays where it was typed
         all[k] = localStorage.getItem(k);
       }
@@ -132,7 +146,7 @@
   }
   function init() {
     if (location.protocol === "https:" && take(location.hash)) return;
-    if (location.protocol === "https:") left();
+    if (location.protocol === "https:") { left(); dropped(); }
     document.addEventListener("click", function (e) {
       if (e.target.closest && e.target.closest('#engineTabs [data-etab="places"]')) setTimeout(load, 0);
       var o = e.target.closest && e.target.closest("[data-hs-open]");
@@ -144,5 +158,5 @@
     load().then(function (t) { if (t && t.door && get(STAY) !== "1") offer(); });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
-  window.HeresyHttps = { offer: offer, paint: paint, load: load, close: close, take: take, left: left, state: function () { return { tls: S.tls, open: !!S.el, stay: get(STAY), moved: get(MOVED) }; } };
+  window.HeresyHttps = { offer: offer, paint: paint, load: load, close: close, take: take, left: left, dropped: dropped, state: function () { return { tls: S.tls, open: !!S.el, stay: get(STAY), moved: get(MOVED) }; } };
 })();

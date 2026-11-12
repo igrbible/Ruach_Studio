@@ -10,6 +10,7 @@
 #include "prompt.h"
 #include "request.h"
 #include "version.h"
+#include "atomic-write.h"   // HERESY 2371
 
 #include <cstdio>
 #include <cstdlib>
@@ -42,12 +43,10 @@ static void print_usage(const char * prog) {
 }
 
 static bool write_file(const char * path, const std::string & data) {
-    FILE * f = fopen(path, "wb");
-    if (!f || fwrite(data.data(), 1, data.size(), f) != data.size()) {
+    if (!atomic_write_file(path, data)) {   // HERESY 2371: whole or not at all
         fprintf(stderr, "[Plan] FATAL: cannot write %s\n", path);
         return false;
     }
-    fclose(f);
     return true;
 }
 

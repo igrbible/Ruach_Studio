@@ -155,6 +155,7 @@ def page_for(code, template, units, catalog):
     alternates += '\n<meta property="og:url" content="%s%s">' % (SITE, "/" if code == "en" else "/%s/" % code)   # HERESY 2140: the link preview's own address
     page = (page.replace('<html lang="en">', '<html lang="%s"%s>' % (code, ' dir="rtl"' if code in RTL else ""))
             .replace("{{LANG}}", code.upper()).replace("{{LANGS}}", links).replace("{{ALTERNATES}}", alternates)
+            .replace("{{VAE_STUDY}}", "/vae/study.%s.html" % code if code != "en" and (here / "vae" / ("study.%s.html" % code)).is_file() else "/vae/study.html")   # 11.11.2026: the study in the page's language once translated
             .replace("{{FIRST_VISIT}}", FIRST_VISIT.replace("{{HAVE}}", json.dumps([c for c, _ in LANGS])) if code == "en" else ""))
     page = page.replace('content="assets/og.jpg"', 'content="%s/assets/og.jpg"' % SITE)
     # HERESY 1393 (Viktor 12.10.2026: «девиз OSEM как есть, но `Simply` можно на другие языки. И `AWESOME` всё заглавными»): the
@@ -162,17 +163,23 @@ def page_for(code, template, units, catalog):
     if code in SIMPLY:
         page = page.replace('<span class="say">Simply AWESOME</span>', '<span class="say">%s AWESOME</span>' % SIMPLY[code], 1)
     # 06.11.2026: a language whose little story is not in the template brings it in i18n/<lang>.story.html, and only its own page
-    # carries it, after the template's last story (the other pages stay as they were)
-    story = here / "i18n" / (code + ".story.html")
-    if code != "en" and story.is_file() and 'data-lang="%s"' % code not in page:
-        end = page.find("\n    </div>\n  </section>", page.find('<section id="story">'))
-        if page.find('<section id="story">') < 0 or end < 0:
-            sys.exit("the little story's section has moved: %s's story has no place" % code)
-        page = page[:end] + "\n" + story.read_text(encoding="utf-8").rstrip("\n") + page[end:]
+    # carries it, after the template's last story (the other pages stay as they were). 09.11.2026: Claude's word the same way,
+    # i18n/<lang>.tandem.html into <section id="tandem">; each section is asked on its own (a language in one is not in the other)
+    for part in ("tandem", "story"):
+        own = here / "i18n" / ("%s.%s.html" % (code, part))
+        if code == "en" or not own.is_file():
+            continue
+        start = page.find('<section id="%s">' % part)
+        end = page.find("\n    </div>\n  </section>", start)
+        if start < 0 or end < 0:
+            sys.exit("the %s section has moved: %s's text has no place" % (part, code))
+        if 'data-lang="%s"' % code not in page[start:end]:
+            page = page[:end] + "\n" + own.read_text(encoding="utf-8").rstrip("\n") + page[end:]
     # HERESY 1392: the little story is shown in the page's own language by the page itself, not only by its script (a reader
     # without scripts and a search engine saw the English one on every page)
     if code != "en" and 'data-lang="%s" hidden>' % code in page:
-        page = page.replace('data-lang="en">', 'data-lang="en" hidden>', 1).replace('data-lang="%s" hidden>' % code, 'data-lang="%s">' % code, 1)
+        # 09.11.2026: every such section (Claude's word, the little story), not the first alone
+        page = page.replace('data-lang="en">', 'data-lang="en" hidden>').replace('data-lang="%s" hidden>' % code, 'data-lang="%s">' % code)
     # Viktor 06.10.2026: «внешние ссылки сделай с таргетом _blank»: a link out of the site opens a new tab
     page = re.sub(r'<a (?![^>]*target=)([^>]*href="https?://)', r'<a target="_blank" rel="noopener" \1', page)
     if deep:
@@ -180,7 +187,7 @@ def page_for(code, template, units, catalog):
     cjk = {"ja": "Noto Sans JP", "zh": "Noto Sans SC"}.get(code)   # HERESY 1383: a CJK face of the same family, after Noto Sans
     if cjk:
         page = page.replace("&family=Noto+Sans+Mono:", "&family=" + cjk.replace(" ", "+") + ":wght@400;500;700&family=Noto+Sans+Mono:", 1)
-        page = page.replace("</head>", '<style>body, .langs summary { font-family: "Noto Sans", "%s", system-ui, sans-serif; }</style>\n</head>' % cjk, 1)
+        page = page.replace("</head>", '<style>body, .langs summary { font-family: "GFS Didot", "David CLM", "Noto Sans", "%s", system-ui, sans-serif; }</style>\n</head>' % cjk, 1)
     # 06.11.2026: a language's own style (Hebrew: its self-hosted face and the right-to-left page) from i18n/<lang>.css, on its page only
     own_css = here / "i18n" / (code + ".css")
     if code != "en" and own_css.is_file():

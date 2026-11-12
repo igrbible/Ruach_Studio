@@ -9,10 +9,13 @@ rest happens outside the Studio). What the Studio knows of a song and no plain s
     [Chorus], …) as regions, both when Whisper has already timed the take (the Refiner's lyrics check); a take
     not timed goes out without them, and the answer says so
   · the recipe in the project's notes: title, style, seeds, the take's name
+  · HERESY 2201: the markers of your own (K in the DAW) as REAPER's plain markers, their names exactly as typed
+  · HERESY 2226: the timed lyrics once more as MIDI lyric events, a word each (REAPER's MIDI editor and notation show them)
+  · HERESY 2227: the score's chord symbols on a Chords track, a MIDI item a chord, named by it and carrying it as a text event
 
 Packed as derived/reaper/TITLE.zip in the take (the engine hands it over): TITLE/TITLE.RPP beside TITLE/audio/.
 REAPER reads plain-text projects; the format here was checked by REAPER itself (7.81), not only written."""
-import json, re, subprocess, time, uuid, zipfile
+import base64, json, re, subprocess, time, uuid, zipfile
 from pathlib import Path
 
 PPQ = 960                                               # REAPER's ticks a quarter note in a MIDI item
@@ -117,6 +120,51 @@ def _midi_chunk(div, tr):
     return lines, end
 
 
+# ---- HERESY 2201: the markers of your own (the DAW's K, HERESY 2016), as the page sends them: [{"t": seconds, "name": text}]
+MARK_MAX = 64                                           # the page keeps 64 at most (heresy-mixer.js MARK_MAX)
+
+
+def user_marks(v):
+    """([(t, name)] sorted, how many were refused): a time finite and not below 0; the name as typed, 40 characters at
+    most (Decision D07: no formula guard, REAPER is no spreadsheet). Refused ones are counted, so the answer says so."""
+    out, bad = [], 0
+    for m in (v if isinstance(v, list) else []):
+        try:
+            t = float(m.get("t"))
+        except (AttributeError, TypeError, ValueError):
+            bad += 1
+            continue
+        if not (t == t and 0 <= t < 1e7):                # NaN, below 0, beyond any song
+            bad += 1
+            continue
+        out.append((round(t, 3), str(m.get("name") or "")[:40]))
+    out.sort(key=lambda x: x[0])
+    if len(out) > MARK_MAX:
+        bad += len(out) - MARK_MAX
+        out = out[:MARK_MAX]
+    if v is not None and not isinstance(v, list):
+        bad += 1
+    return out, bad
+
+
+def _marker(i, t, name):
+    """A plain marker's lines. A name holding all three quote kinds cannot stand on the MARKER line as typed, so it goes
+    as REAPER 7.81 itself writes one (read back from a project REAPER saved, 06.11.2026, HERESY 2202): the line's fields
+    to the end and the whole name in a MARKER_TEXT block, which REAPER reads over the line's quoted copy."""
+    n = str(name).replace("\n", " ").replace("\r", " ")
+    if all(q in n for q in ('"', "'", "`")):
+        return [f"MARKER {i} {t:.3f} {_q(n)} 0 0 1 B {{{str(uuid.uuid4()).upper()}}} 0 2", "<MARKER_TEXT", "|" + n, ">"]
+    return [f"MARKER {i} {t:.3f} {_q(n)} 0"]
+
+
+def marks_said(marks, bad):
+    """The answer's line on them, '' when none was sent."""
+    if not marks and not bad:
+        return ""
+    s = f"{len(marks)} marker{'s' if len(marks) != 1 else ''} of yours"
+    return s + (f" ({bad} refused)" if bad else "")
+
+
 # ---- the lyrics' sections and lines, on the timing Whisper gave
 def sections(lyrics, rows):
     """[(name, start, end)] from the [Tag] lines, on the timed rows (rows follow timing.rows_of's order)."""
@@ -139,8 +187,77 @@ def sections(lyrics, rows):
     return [(x["name"], x["start"], (timed[i + 1]["start"] if i + 1 < len(timed) else None)) for i, x in enumerate(timed)]
 
 
-def build(kit, outputs, name, midi=None, cache=None):
-    """The take NAME as derived/reaper/TITLE.zip; returns its path and what went in."""
+# ---- HERESY 2226 and 2227: the lyrics as MIDI lyric events and the score's chords as chord symbols, as REAPER 7.81 itself saves a
+# MIDI item's text: a <X delta 0 block, the event's bytes (FF, its type, the text, no length) in base64, 40 bytes a line
+# (read back from a project REAPER saved, 07.11.2026)
+def _text_event(dt, kind, text):
+    b = bytes([0xFF, kind]) + str(text).replace("\n", " ").replace("\r", " ").encode("utf-8")
+    return [f"<X {dt} 0", *(base64.b64encode(b[i:i + 40]).decode("ascii") for i in range(0, len(b), 40)), ">"]
+
+
+def lyric_events(rows):
+    """[(seconds, text)] in time order: a word an event at the time Whisper heard it (the row's tt, HERESY 1646), a word
+    not heard riding with the one before; a row without word times (older timing, a guessed line) one event at its start."""
+    from gloss_core import norm                          # the tokens timing.align counted, so the words meet their times
+    out = []
+    for r in rows or []:
+        if r.get("start") is None:
+            continue
+        text = re.sub(r"\([^)]*\)", "", r.get("text") or "")
+        words, tt = text.split(), r.get("tt") or []
+        counts = [len(norm(w).split()) for w in words]
+        evs = []
+        if words and tt and sum(counts) == len(tt):
+            k = 0
+            for w, c in zip(words, counts):
+                t = next((x[0] for x in tt[k:k + c] if x), None)
+                k += c
+                if t is None and evs:
+                    evs[-1][1] += " " + w
+                else:
+                    evs.append([r["start"] if t is None else t, w])
+        elif words:
+            evs = [[r["start"], " ".join(words)]]
+        out += [(max(0.0, float(t)), w) for t, w in evs]
+    out.sort(key=lambda x: x[0])                          # stable: words of one time keep their order
+    return out
+
+
+def chord_symbols(abc):
+    """([(start, end, symbol)] in quarter notes from the score's start, why): the score's chord symbols ("Am" in the ABC),
+    read by the lab's own checker of the score (abc_tools, HERESY 1145); a chord held over several bars is one span.
+    WHY is '' when the score was read (with or without chords), else what kept it from being read."""
+    if not (abc or "").strip():
+        return [], ""
+    import abc_tools
+    try:
+        score = abc_tools.parse_abc(abc)
+    except (ValueError, KeyError, IndexError) as e:      # AbcError is a ValueError
+        return [], str(e)[:120] or type(e).__name__
+    marks = sorted((t, c) for v in score.voices.values() for t, c in v.chords)
+    end = max(v.time for v in score.voices.values())
+    out = []
+    for t, c in marks:
+        if out and out[-1][2] == c:
+            continue
+        out.append([t, None, c])
+    for i, x in enumerate(out):
+        x[1] = out[i + 1][0] if i + 1 < len(out) else max(end, x[0])
+    return [(float(a), float(b), c) for a, b, c in out], ""
+
+
+def chords_said(chords, why, abc):
+    """The answer's words on them: '' when the take has no score."""
+    if why:
+        return f"no chord track (the score could not be read: {why})"
+    if not (abc or "").strip():
+        return ""
+    return f"chords: {len(chords)} as chord symbols" if chords else "no chord symbols in the score"
+
+
+def build(kit, outputs, name, midi=None, cache=None, marks=None):
+    """The take NAME as derived/reaper/TITLE.zip; returns its path and what went in. MARKS: the markers of your own
+    (HERESY 2201), as user_marks reads them."""
     from dawproject import tempo_meter                   # the score's Q: and M: (or the style's bpm), as there
     d = outputs / name
     if "/" in name or name.startswith(".") or not (d / "meta.json").is_file():
@@ -209,9 +326,36 @@ def build(kit, outputs, name, midi=None, cache=None):
         tracks.append(["<TRACK", f"NAME {_q('Lyrics')}", f"PEAKCOL {_col('lyrics')}", "MUTESOLO 0 0 0", *items, ">"])
         for i, (sec, a, b) in enumerate(sections(req.get("lyrics") or "", rows), 1):
             markers += [f"MARKER {i} {a:.3f} {_q(sec)} 1", f"MARKER {i} {(b if b is not None else length):.3f} \"\" 1"]
-        said.append(f"lyrics: {sum(1 for r in rows if r.get('start') is not None)} lines, {len(markers) // 2} sections")
+        lyr = f"lyrics: {sum(1 for r in rows if r.get('start') is not None)} lines, {len(markers) // 2} sections"
+        words = lyric_events(rows)                       # HERESY 2226: the same words as MIDI lyric events (FF 05), a word each
+        if words:
+            ev, last, qps = [], 0, bpm / 60.0 * PPQ       # one tempo over the whole project: seconds to ticks at it
+            for t, w in words:
+                tt = round(t * qps)
+                ev += _text_event(tt - last, 0x05, w)
+                last = tt
+            end = max(last, round(length * qps))
+            tracks.append(["<TRACK", f"NAME {_q('Lyrics (MIDI)')}", f"PEAKCOL {_col('lyrics')}", "MUTESOLO 0 0 0",
+                           "<ITEM", "POSITION 0", f"LENGTH {end / qps:.6f}", f"NAME {_q('Lyrics (MIDI)')}",
+                           "<SOURCE MIDI", "HASDATA 1 960 QN", *ev, f"E {end - last} b0 7b 00", ">", ">", ">"])
+            lyr += f", {len(words)} lyric events as MIDI"
     else:
-        said.append("no lyrics on the timeline (the take is not timed yet: Refiner → Lyrics check)")
+        lyr = "no lyrics on the timeline (the take is not timed yet: Refiner → Lyrics check)"
+    chords, why = chord_symbols(req.get("abc"))           # HERESY 2227: the score's chords, a MIDI item a chord named by it
+    if chords:
+        items, spq = [], 60.0 / bpm                      # seconds a quarter note, as the score's MIDI tracks run
+        for a, b, c in chords:
+            ticks = max(1, round((b - a) * PPQ))
+            items += ["<ITEM", f"POSITION {a * spq:.6f}", f"LENGTH {ticks / PPQ * spq:.6f}", f"NAME {_q(c)}",
+                      "<SOURCE MIDI", "HASDATA 1 960 QN", *_text_event(0, 0x01, c), f"E {ticks} b0 7b 00", ">", ">"]
+        tracks.append(["<TRACK", f"NAME {_q('Chords')}", f"PEAKCOL {_col('score')}", "MUTESOLO 0 0 0", *items, ">"])
+    cs = chords_said(chords, why, req.get("abc"))
+    said.append(lyr + ("; " + cs if cs else ""))        # one line still: the page shows the third and, with markers, the last
+    mine, refused = user_marks(marks)                    # HERESY 2201: plain markers (flag 0), numbered apart from the regions as REAPER numbers them
+    for i, (t, n) in enumerate(mine, 1):
+        markers += _marker(i, t, n)
+    if marks_said(mine, refused):
+        said.append(marks_said(mine, refused))
     notes = [title, f"Made in Ruach Studio, {time.strftime('%Y-%m-%d %H:%M')}: {name}", "",
              "Style: " + (req.get("style") or "").replace("\n", " "),
              f"Seeds: music {req.get('lm_seed', '?')} · sound {req.get('seed', '?')}",
@@ -245,4 +389,5 @@ def build(kit, outputs, name, midi=None, cache=None):
     for f in sorted(work.rglob("*"), reverse=True):        # the build folder is ours, made a moment ago
         f.unlink() if f.is_file() else f.rmdir()
     work.rmdir()
-    return z, {"tracks": [t[1][5:].strip('"\'`') for t in tracks], "bpm": round(bpm, 2), "meter": f"{num}/{den}", "said": said}
+    return z, {"tracks": [t[1][5:].strip('"\'`') for t in tracks], "bpm": round(bpm, 2), "meter": f"{num}/{den}", "said": said, "marks": len(mine),
+                "lyric_events": len(words) if rows else 0, "chords": len(chords)}

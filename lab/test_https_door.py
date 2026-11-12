@@ -71,7 +71,7 @@ with tempfile.TemporaryDirectory() as d:
 
 t = https_door.handoff_put({"storage": {"yue2.tab": "post", "yue2.workspace": "Фосфорида", "n": 3}})
 got = https_door.handoff_take(t["token"])
-check("a page's settings handed over by a token (strings only), taken once", got == {"storage": {"yue2.tab": "post", "yue2.workspace": "Фосфорида"}} and t["keys"] == 2, got)
+check("a page's settings handed over by a token (strings only), taken once", got == {"storage": {"yue2.tab": "post", "yue2.workspace": "Фосфорида"}, "dropped": []} and t["keys"] == 2, got)
 try:
     https_door.handoff_take(t["token"]); said = ""
 except FileNotFoundError as e:
@@ -88,5 +88,37 @@ try:
 except ValueError as e:
     said = str(e)
 check("  too much refused", "too much" in said, said)
+# HERESY 2177 (H05): bound to the computer that made it, the page's own settings alone, the stale ones swept at a take too
+LAN_A, LAN_B = "192.0.2.5", "192.0.2.6"                 # RFC 5737 documentation addresses
+t = https_door.handoff_put({"storage": {"yue2.tab": "post", "ruach.https.left": "[]", "heresy-x": "1", "yue2.chatUrl": "http://evil.example/v1",
+                                        "yue2.orKey": "TEST-OR-NOT-REAL", "evil": "1", "remoteHost": "x"}}, LAN_A)
+check("  only the page's own families kept; a paid key, a setting naming an address and a stranger left out, each said",
+      t["keys"] == 3 and sorted(t["dropped"]) == ["evil", "remoteHost", "yue2.chatUrl", "yue2.orKey"], t)
+try:
+    https_door.handoff_take(t["token"], LAN_B); said = ""
+except ValueError as e:
+    said = str(e)
+check("  taken from another computer: refused, and said why", "another computer" in said, said)
+try:
+    https_door.handoff_take(t["token"], LAN_A); said = ""
+except FileNotFoundError as e:
+    said = str(e)
+check("  a refused hand-over is spent, not left to try again", "no such hand-over" in said, said)
+t = https_door.handoff_put({"storage": {"yue2.tab": "post"}}, "::ffff:" + LAN_A)
+got = https_door.handoff_take(t["token"], LAN_A)
+check("  the same computer (an IPv4 address written as IPv6) takes it, the names left out said again", got == {"storage": {"yue2.tab": "post"}, "dropped": []}, got)
+t = https_door.handoff_put({"storage": {"yue2.tab": "post"}}, "")
+got = https_door.handoff_take(t["token"], "::1")
+check("  this computer is one: a request the engine did not name and its loopback addresses", got["storage"] == {"yue2.tab": "post"}, got)
+check("  peers as one computer: 127.0.0.1, ::1, localhost and none", len({https_door.peer_of(a) for a in ("127.0.0.1", "::1", "localhost", "", "127.0.1.1")}) == 1)
+old_t = https_door.handoff_put({"storage": {"yue2.tab": "post"}}, LAN_A)["token"]
+with https_door.LOCK:
+    at, store, peer, dropped = https_door.HANDOFF[old_t]
+    https_door.HANDOFF[old_t] = (at - https_door.TTL - 1, store, peer, dropped)
+try:
+    https_door.handoff_take("not-a-token", LAN_A)
+except FileNotFoundError:
+    pass
+check("  a stale hand-over swept at a take, not only at the next put", old_t not in https_door.HANDOFF)
 print(("FAILED " if fails else "all passed ") + str(fails))
 sys.exit(1 if fails else 0)

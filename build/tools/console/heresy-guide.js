@@ -9,7 +9,7 @@
   "use strict";
 
   var SEEN = "yue2.guideSeen", LAST = "yue2.guideTab";
-  var ROOM_TAB = { create: "creator", write: "writer", post: "refiner", artist: "artist", collection: "librarian", train: "lora" };   // HERESY 1255: the Artist
+  var ROOM_TAB = { create: "creator", write: "writer", post: "refiner", artist: "artist", video: "videographer", collection: "librarian", train: "lora" };   // HERESY 1255: the Artist; 2292: the Videographer
   var state = { tabs: null, title: "", lead: "", el: null, loading: null, lang: "" };
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
@@ -76,12 +76,25 @@
     var parts = md.split(/\n(?=## )/), head = parts.shift();
     state.title = ((head.match(/^#\s+(.*)$/m) || [])[1] || "The guide").trim();
     state.lead = head.replace(/^#\s+.*$/m, "").trim();
-    state.tabs = parts.map(function (p) {
+    state.tabs = parts.map(tabOf);
+  }
+  // HERESY 2292 (Viktor 09.11.2026: «Записывай в Хелп F1. Раздел Чтеца там не завёл ещё? Пора»): a room a module brings (the Reader, kept
+  // home until it is turnkey) brings its own part of the guide: window.RuachRooms[room].guide names docs/<guide>.md (and .<lang>.md), its
+  // tabs stand after the tab guideAfter names; a page without the module reads none, and the public guide never names the room
+  function roomParts() {
+    var rooms = window.RuachRooms || {};
+    return Object.keys(rooms).map(function (k) { return rooms[k]; }).filter(function (r) { return r && /^[\w-]+$/.test(r.guide || ""); });
+  }
+  function addPart(md, after) {
+    var tabs = md.split(/\n(?=## )/).filter(function (p) { return /^## /.test(p); }).map(tabOf), at = -1;
+    state.tabs.forEach(function (t, i) { if (t.id === after) at = i; });
+    Array.prototype.splice.apply(state.tabs, [at < 0 ? state.tabs.length : at + 1, 0].concat(tabs));
+  }
+  function tabOf(p) {
       var hd = heading(p.match(/^##\s+(.*)$/m)[1]), name = hd.text, body = p.replace(/^##\s+.*$/m, "");
       var stops = (body.match(/^###\s+.*$/gm) || []).map(function (h) { return heading(h.replace(/^###\s+/, "")); });
       var id = ANCHOR.test(p.match(/^##\s+(.*)$/m)[1]) ? hd.id : slug(name.replace(/^[^\w]+/, "")).split("-")[0] || slug(name);
       return { id: id, name: name, html: render(body), stops: stops };
-    });
   }
   function load() {
     var lang = pageLang();
@@ -89,7 +102,17 @@
     if (state.lang !== lang) { state.tabs = null; state.loading = null; state.lang = lang; }
     var get = function (file) { return fetch("/lab/guide/" + file).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); }); };
     if (!state.loading) state.loading = (lang === "en" ? get("GUIDE.md") : get("GUIDE." + lang + ".md").catch(function () { return get("GUIDE.md"); }))
-      .then(function (md) { if (state.lang === lang) parse(md); })
+      .then(function (md) {
+        var more = roomParts().map(function (r) {     // HERESY 2292: a module's own part, in the page's language else the English, none when unread
+          return (lang === "en" ? get(r.guide + ".md") : get(r.guide + "." + lang + ".md").catch(function () { return get(r.guide + ".md"); }))
+            .then(function (t) { return { md: t, after: r.guideAfter }; }, function () { return null; });
+        });
+        return Promise.all(more).then(function (xs) {
+          if (state.lang !== lang) return;
+          parse(md);
+          xs.forEach(function (x) { if (x) addPart(x.md, x.after); });
+        });
+      })
       .catch(function (e) { state.loading = null; throw e; });   // HERESY 1670: a failed read is not kept: the next open reads again
     return state.loading;
   }
@@ -178,7 +201,8 @@
       if (!state.el) build();
       state.el.hidden = false;
       requestAnimationFrame(function () { state.el.classList.add("is-on"); });
-      show(id || ROOM_TAB[document.body.dataset.tab] || recall(LAST) || "start", stop);
+      var room = (window.RuachRooms || {})[document.body.dataset.tab];   // HERESY 2292: a module's room names its own tab
+      show(id || ROOM_TAB[document.body.dataset.tab] || (room && room.guideTab) || recall(LAST) || "start", stop);
     }).catch(function (e) { console.warn("the guide could not be read:", e.message); });
   }
   function close() { if (!state.el) return; state.el.classList.remove("is-on"); state.el.hidden = true; }
@@ -205,6 +229,6 @@
     // a browser that has never seen the Studio: the guide comes by itself, once, a minute after the start
     if (!recall(SEEN)) setTimeout(function () { if (!recall(SEEN)) open("start"); }, 60000);
   }
-  window.HeresyGuide = { open: open, close: close };
+  window.HeresyGuide = { open: open, close: close, render: render };   // HERESY 2281: its Markdown for Before and after's page too
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 })();

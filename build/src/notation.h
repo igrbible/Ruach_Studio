@@ -2,9 +2,9 @@
 // notation.h: the decoded events of SheetSage2 become an ABC score
 //
 // The mirror of the reference export: notes and beats fall out of the
-// events, the beats extend to the end of the song at the last tempo, the
-// measures are inferred from the downbeats, a four subbeat grid spans every
-// beat, the notes, keys, chords and structure labels are quantized on that
+// events, the beats extend to the end of the song at the last tempo (and,
+// HERESY 2228, back to its start at the first tempo), the measures are
+// inferred from the downbeats, a four subbeat grid spans every beat, the notes, keys, chords and structure labels are quantized on that
 // grid, and the score is serialized voice by voice in groups of four
 // measures with the same conventions (key relative spelling, bar state
 // accidentals, ties across measures, rests compressed to Z). melody_only
@@ -368,6 +368,22 @@ static int not_key_count(const std::string & key) {
     for (auto & e : table) {
         if (key == e.name) {
             return e.count;
+        }
+    }
+    // HERESY 2328: SheetSage2-Refined's keys with a mode (Ddor, G#mix, Bbloc): the tonic's major signature moved by the mode
+    static const char * const modes[]  = { "", "m", "dor", "phr", "lyd", "mix", "loc" };
+    static const int          shifts[] = { 0, -3, -2, -4, 1, -1, -5 };
+    static const int          base[7]  = { 0, 2, 4, -1, 1, 3, 5 };  // C D E F G A B
+    if (!key.empty() && strchr("ABCDEFG", key[0])) {
+        size_t i     = 1;
+        int    count = base[strchr("CDEFGAB", key[0]) - "CDEFGAB"];
+        for (; i < key.size() && (key[i] == '#' || key[i] == 'b'); i++) {
+            count += key[i] == '#' ? 7 : -7;
+        }
+        for (size_t m = 0; m < sizeof(modes) / sizeof(modes[0]); m++) {
+            if (key.substr(i) == modes[m] && count + shifts[m] >= -7 && count + shifts[m] <= 7) {
+                return count + shifts[m];
+            }
         }
     }
     fprintf(stderr, "[Notation] FATAL: unsupported ABC key signature %s\n", key.c_str());
@@ -801,6 +817,31 @@ static bool notation_abc(const std::vector<NotEvent> & events,
         const NotBeat & prev = beats.back();
         beats.push_back({ prev.time + period, prev.beat_id % prev.num + 1, prev.num, prev.den });
     }
+
+    // HERESY 2228: the score's first bar is where the recording begins. The reference began the score at the first beat
+    // the tracker decoded; when that beat came a bar in (5 of 16 takes of HERESY 1145, on the transcriber of then: 2.2 s
+    // on a take whose bar is 2.4 s), every bar of the score stood one bar early against the take, and the notes before
+    // that beat were pressed onto its first step and dropped. The first tempo is carried back, the beat numbers counted
+    // down, until the grid is within half a beat of the recording's start; a first beat already that close changes nothing
+    double first_beat = beats.front().time, first_note = notes.empty() ? -1.0 : notes.front().start;
+    int    first_id   = beats.front().beat_id;
+    std::vector<double> head_diffs;
+    for (size_t i = 0; i + 1 < beats.size() && i < 8; i++) {
+        head_diffs.push_back(beats[i + 1].time - beats[i].time);
+    }
+    double head_period = not_median(head_diffs);
+    int    added       = 0;
+    if (head_period > 0) {
+        while (beats.front().time > 0.5 * head_period) {
+            NotBeat next = beats.front();
+            int     id   = next.beat_id > 1 ? next.beat_id - 1 : next.num;
+            beats.insert(beats.begin(), NotBeat{ next.time - head_period, id, next.num, next.den });
+            added++;
+        }
+    }
+    fprintf(stderr, "[SheetSage] the first beat heard at %.2f s (beat %d), the first note at %.2f s; %d beat(s) of the "
+                    "first tempo set before it, the score begins at %.2f s of the recording\n",
+            first_beat, first_id, first_note, added, beats.front().time);
 
     // Intervals clipped to the beat domain, the key in ABC spelling
     std::vector<NotInterval> fields[3];

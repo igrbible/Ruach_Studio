@@ -21,6 +21,7 @@ Test helpers that the real server does not have:
   POST /lab/mock-k98     {"path", "times", "ms" | "status", "error"} the next writes to path held back ms (or answered status, its {"error"} the words
                          given, HERESY 2123), each sending kept (HERESY 2099)
   POST /mock/batch       {"status", "id", "items"} the Refiner's batch as GET /lab/chain/batch answers it from now on; {} forgets it (HERESY 2118)
+  POST /lab/art/remove   {name} as the lab takes a cover off (HERESY 2175): kept in /mock/requests with its ?inst=; a name with «noart» a 409
 Engine settings (/settings, /unload, /hardware) follow the server's rules: every
 stage loads its module and, unless keep_loaded is on, drops it when done.
   /fakechat-loaded/...   a stand-in local chat server with a loaded model
@@ -33,6 +34,7 @@ makes that run take three times as long.
 """
 
 import argparse
+import sys as _sys
 from array import array
 import email.parser
 import email.policy
@@ -40,6 +42,15 @@ import io
 import json
 import math
 import os
+try:                                    # HERESY 2330: the engine's files where the Studio keeps them (lab/paths.py), as the real /props names them
+    _sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lab"))
+    import paths as _paths
+
+    def _gguf(name):
+        return os.path.relpath(_paths.engine_gguf(name), _paths.ROOT)
+except ImportError:
+    def _gguf(name):
+        return name
 import queue
 import random
 import re
@@ -152,6 +163,9 @@ VAES = [
     {"name": "standard", "label": "Standard", "repo": "m-a-p/YuE2-Vae"},
     {"name": "legacy", "label": "Legacy", "repo": "m-a-p/YuE2-Vae-legacy"},
     {"name": "blend", "label": "Blend", "repo": "Mothersuperior/YuE2-Vae-merge-0.666"},
+    # HERESY 2304: ours, YuE2-VAE-RS x3 (not in the default --vaes: the checks count three decoders)
+    {"name": "rs-x3-v1", "label": "RS x3 v1", "repo": "Ruach Studio/YuE2-VAE-RS-x3_v1"},
+    {"name": "rs-x3-v2", "label": "RS x3 v2", "repo": "Ruach Studio/YuE2-VAE-RS-x3_v2"},
 ]
 
 # the real server's /props loras for the four files in loras/ (same fields as loras.py and lora.h)
@@ -946,6 +960,10 @@ def make_handler(mock):
                 return self.send(200, f.read_bytes(), "application/json" if f.suffix == ".json" else "audio/mpeg")
             if path == "/lab/chain/batch" and LABMODS.get("batch"):   # HERESY 2118: the checks' batch (POST /mock/batch), as the lab answers it
                 return self.send(200, LABMODS["batch"])
+            if path == "/lab/art/remove":   # HERESY 2175: as the lab answers a GET there now: it changes nothing
+                return self.error(405, "taking a cover off is a POST /art/remove {name} now: a GET changes nothing")
+            if path == "/lab/models/migration":   # HERESY 2330: the models' move, as the lab says it; POST /mock/migration sets its last sums
+                return self.send(200, {"sums": LABMODS.get("migration"), "held": False, "waiting": [], "log": "user/migration-2.0.7.log"})
             if path == "/lab/lease":   # HERESY 2081: who holds the lease, as the lab says it
                 m = self.labmod("lease")
                 return self.send(200, m.state(q.get("scope", ""), q.get("id", ""))) if m else self.error(404, "no lab/lease.py beside the mock")
@@ -992,8 +1010,8 @@ def make_handler(mock):
                 return self.send(200, {"status": "ok"})
             if path == "/props":
                 return self.send(200, {
-                    "version": mock.version, "model": "models/YuE2-3B-%s.gguf" % mock.settings["model"],
-                    "vae": "models/YuE2-Vae-F32.gguf", "sample_rate": 48000, "frame_rate": 25, "context": 24576,
+                    "version": mock.version, "model": _gguf("YuE2-3B-%s.gguf" % mock.settings["model"]),
+                    "vae": _gguf("YuE2-Vae-F32.gguf"), "sample_rate": 48000, "frame_rate": 25, "context": 24576,
                     "vaes": mock.vaes, "default_vae": mock.vaes[0]["name"],
                     "sliders": [{"id": s[0], "label": s[1], "description": s[2]} for s in mock.sliders],
                     "loras": LORAS, "sources": SOURCES,
@@ -1130,6 +1148,10 @@ def make_handler(mock):
                 ms = int(_json.loads(self.body() or b"{}").get("ms", 0) or 0)
                 LABMODS["stall_until"] = _time.time() + ms / 1000.0 if ms > 0 else 0
                 return self.send(200, {"ms": ms})
+            if path == "/mock/migration":   # HERESY 2330: the checks' own hook: the last sums of the models' move ({} forgets them)
+                import json as _json
+                LABMODS["migration"] = _json.loads(self.body() or b"{}") or None
+                return self.send(200, {"migration": LABMODS["migration"]})
             if path == "/mock/batch":   # HERESY 2118: the checks' own hook: the Refiner's batch as the lab would answer it ({} forgets it)
                 import json as _json
                 LABMODS["batch"] = _json.loads(self.body() or b"{}") or None
@@ -1166,6 +1188,13 @@ def make_handler(mock):
                     self.body()
                     mock.requests.append({"path": path, "refused": True, "inst": q.get("inst", "")})
                     return self.send(409, no)
+            if path == "/lab/art/remove":   # HERESY 2175: a cover taken off, a POST under the lease as the lab takes it; a name with «noart» answered as a take
+                import json as _json      # without one (409, the lab's words), each sending kept with the page it names
+                name = str(_json.loads(self.body() or b"{}").get("name") or "")
+                mock.requests.append({"path": path, "name": name, "inst": q.get("inst", "")})
+                if "noart" in name:
+                    return self.send(409, {"error": "this take has no artwork"})
+                return self.send(200, {"removed": name, "kept": "artwork-removed/20261106-120000.jpg"})
             k98 = LABMODS.get("k98")
             if k98 and path == k98.get("path"):   # HERESY 2099: each sending kept with its write id; held back or failed as the checks asked; a write id
                 import time as _time              # done once answered with its first answer (as lab/write_once.py answers it)
@@ -1381,7 +1410,7 @@ def make_handler(mock):
                 old = mock.settings
                 nxt = dict(old, **change)
                 if nxt["model"] != old["model"]:
-                    mock.log("[Server] Backbone now %s (models/YuE2-3B-%s.gguf)" % (nxt["model"], nxt["model"]))
+                    mock.log("[Server] Backbone now %s (%s)" % (nxt["model"], _gguf("YuE2-3B-%s.gguf" % nxt["model"])))
                     mock.unload_idle()
                 if not nxt["keep_loaded"]:
                     mock.unload_idle()

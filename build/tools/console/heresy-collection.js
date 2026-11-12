@@ -12,6 +12,126 @@
   var KINDS = { generated: "raw", imported: "imported", regenerated: "regenerated", rerendered: "re-rendered" };
   var DERIVED = { stems: "stems", debuzz: "debuzz", remaster: "remaster", upscale: "upscale", daw: "DAW mix", gate: "Digital Gateway", plugin: "plugin" };   // 1802: every kind
   var VIEW_KEY = "yue2.collView", SORT_KEY = "yue2.collSort", WS_KEY = "yue2.workspace";
+  // HERESY 2294 (Viktor 09.11.2026: «для Чтеца будет та же Библиотека, но со своими пространствами, древами и т.п. Кнопка на баре в полосе, где
+  // пространство пишется, и где поле поиска. Она переключает библиотекаря между Творец, ОБА, Чтец. Каждый трек принадлежит своему оригиналу Творца
+  // или Чтеца, не перемещается из рэлма, но может линковаться. Огранщик также привязывается к оригинальному корню»): two realms in one Library.
+  // A take's realm is its root's (the lab says it, r.realm); a workspace's is its top's (d.ws_realm). The switch on the head's bar shows one realm
+  // or both, remembered; each realm keeps its own workspace in hand; a take of the other realm in a workspace is a link, and says so
+  var REALM_KEY = "yue2.libRealm";
+  // the realms are on where the Reader is (its module, or a workspace of its realm): a Studio without it has one Library, as before, and no switch
+  function realmsOn() { return !!((window.RuachRooms && window.RuachRooms.read) || (state.wsRealm && Object.keys(state.wsRealm).length)); }
+  function realmNow() { if (!realmsOn()) return "off"; var v = recall(REALM_KEY); return v === "reader" || v === "both" ? v : "creator"; }
+  function wsRealm(w) { return (state.wsRealm || {})[String(w || "").split(" / ")[0]] === "reader" ? "reader" : "creator"; }
+  function rowRealm(r) { return r && r.realm === "reader" ? "reader" : "creator"; }
+  function realmWs(w) { var m = realmNow(); return m === "both" || m === "off" || wsRealm(w) === m; }
+  function inRealm(r) { var m = realmNow(); return m === "both" || m === "off" || rowRealm(r) === m; }
+  function isLink(r) { return realmsOn() && !!state.place && state.place.charAt(0) !== "_" && rowRealm(r) !== wsRealm(state.place); }
+  function currentIn(realm) {                    // the realm's own workspace in hand: the one in hand when it is the realm's, else the last it had
+    var w = current();
+    if (w && wsRealm(w) === realm) return w;
+    var k = workable(recall(WS_KEY + "." + realm) || "");
+    return k && state.ws.indexOf(k) >= 0 && wsRealm(k) === realm ? k : "";
+  }
+  function realmBadge(r) {
+    if (isLink(r)) return badge(rowRealm(r) === "reader" ? "Linked from the Narrator" : "Linked from the Musician", "k-link");
+    return realmNow() === "both" ? badge(rowRealm(r) === "reader" ? "Narrator" : "Musician", "k-realm k-realm-" + rowRealm(r)) : "";
+  }
+  // HERESY 2298 (Viktor 09.11.2026): one small slider of three positions, as an equalizer's «+6 dB | Bypass | +12 dB»: Creator left, Both middle,
+  // Reader right; a click on a position, the knob dragged, or ← →; and each realm comes back to the workspace last open in it
+  var REALM_POS = ["creator", "both", "reader"], REALM_NAME = { creator: "Musician", both: "Both", reader: "Narrator" }, PLACE_KEY = "yue2.libPlace", REALM_STEP = 30;
+  function paintRealm() {
+    var box = document.getElementById("collRealm"), m = realmNow();
+    if (!box) return;
+    box.hidden = m === "off";
+    var i = Math.max(0, REALM_POS.indexOf(m)), k = box.querySelector(".rs-knob");
+    box.dataset.pos = REALM_POS[i];
+    box.setAttribute("aria-valuenow", String(i));
+    box.setAttribute("aria-valuetext", tr(REALM_NAME[REALM_POS[i]]));
+    if (k && !box.classList.contains("is-drag")) k.style.transform = "translateX(" + i * REALM_STEP + "px)";
+  }
+  function setRealm(m) {
+    var old = realmNow();
+    if (REALM_POS.indexOf(m) < 0 || m === old) { paintRealm(); return; }
+    if (old !== "off") store(PLACE_KEY + "." + old, state.place || "");   // the workspace open in the realm left, to come back to
+    store(REALM_KEY, m);
+    var p = state.place || "";
+    var fits = function (w) { return !!w && (w.charAt(0) === "_" || (state.ws.indexOf(w) >= 0 && (m === "both" || wsRealm(w) === m))); };
+    // one open that the realm shows stays (Both shows every one; a system place every realm); else the realm's own last, else its own in hand
+    if (!(p && (p.charAt(0) === "_" || m === "both" || wsRealm(p) === m))) {
+      var back = recall(PLACE_KEY + "." + m) || "";
+      state.place = fits(back) ? back : m === "both" ? "" : currentIn(m);
+    }
+    state.sel = {};
+    paintRealm(); paint();
+  }
+  function realmBar() {
+    var tools = document.getElementById("collHeadTools"), q = document.getElementById("collSearch");
+    if (!tools || document.getElementById("collRealm")) return;
+    var box = document.createElement("span");
+    box.id = "collRealm"; box.className = "coll-realm"; box.tabIndex = 0;
+    box.setAttribute("role", "slider"); box.setAttribute("aria-label", tr("Realm")); box.setAttribute("aria-valuemin", "0"); box.setAttribute("aria-valuemax", "2");
+    box.dataset.tip = "The Library's realm: Musician on the left, Both in the middle, Narrator on the right (click a position, drag the knob, or press \u2190 \u2192). A take stays in its root's realm; what the Refiner makes with a Narrator's take in it is the Narrator's; Add to workspace links a take into the other realm's workspace, a move never takes it there";
+    // HERESY 2298: the track, a dot at each position, the knob with the realm's sign (a note, both, a word said); three hit zones over the thirds
+    box.innerHTML = '<svg class="rs-svg" viewBox="0 0 88 22" width="88" height="22" aria-hidden="true" focusable="false">' +
+      '<rect class="rs-track" x="1" y="3" width="86" height="16" rx="8"/><circle class="rs-dot" cx="14" cy="11" r="1.7"/><circle class="rs-dot" cx="44" cy="11" r="1.7"/>' +
+      '<circle class="rs-dot" cx="74" cy="11" r="1.7"/><g class="rs-knob"><circle class="rs-ball" cx="14" cy="11" r="7.5"/>' +
+      '<path class="rs-i rs-i-creator" d="M15 6.6v5.7a1.6 1.6 0 1 1-1-1.5V6.6zM15 6.6l2.2 1.1v1.3L15 7.9z"/>' +
+      '<path class="rs-i rs-i-both" d="M10.6 9h6.8M10.6 13h6.8"/>' +
+      '<path class="rs-i rs-i-reader" d="M10.4 7.6h7.2a.9.9 0 0 1 .9.9v3.4a.9.9 0 0 1-.9.9h-3.9l-2 1.6v-1.6h-1.3a.9.9 0 0 1-.9-.9V8.5a.9.9 0 0 1 .9-.9z"/></g></svg>' +
+      REALM_POS.map(function (k, i) { return '<span class="rs-hit" data-realm="' + k + '" style="left:' + (i * 100 / 3) + '%"></span>'; }).join("");
+    var drag = null, dragged = false;
+    box.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-realm]");
+      if (dragged) { dragged = false; return; }                  // a drag ends where the knob was let go, not where the click landed
+      if (b) setRealm(b.dataset.realm);
+    });
+    box.addEventListener("keydown", function (e) {
+      var i = REALM_POS.indexOf(realmNow()), to = e.key === "ArrowLeft" ? i - 1 : e.key === "ArrowRight" ? i + 1 : e.key === "Home" ? 0 : e.key === "End" ? 2 : -9;
+      if (to === -9) return;
+      e.preventDefault();
+      setRealm(REALM_POS[Math.max(0, Math.min(2, to))]);
+    });
+    box.addEventListener("pointerdown", function (e) {
+      if (e.button !== 0) return;
+      var r = box.getBoundingClientRect();
+      drag = { x0: e.clientX, left: r.left, id: e.pointerId, on: false };
+    });
+    box.addEventListener("pointermove", function (e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      if (!drag.on && Math.abs(e.clientX - drag.x0) < 4) return;
+      if (!drag.on) { drag.on = true; box.classList.add("is-drag"); try { box.setPointerCapture(e.pointerId); } catch (x) { /* gone */ } }
+      var k = box.querySelector(".rs-knob"), x = Math.max(0, Math.min(2 * REALM_STEP, e.clientX - drag.left - 14));
+      if (k) k.style.transform = "translateX(" + x + "px)";
+      drag.at = x;
+    });
+    function dragEnd(e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      var was = drag;
+      drag = null;
+      box.classList.remove("is-drag");
+      if (!was.on) return;
+      dragged = true;
+      setTimeout(function () { dragged = false; }, 0);
+      setRealm(REALM_POS[Math.round((was.at || 0) / REALM_STEP)]);
+      paintRealm();
+    }
+    box.addEventListener("pointerup", dragEnd);
+    box.addEventListener("pointercancel", dragEnd);
+    tools.insertBefore(box, q && q.parentNode === tools ? q : tools.firstChild);
+    var st = document.createElement("style");
+    st.textContent = ".coll-realm { position: relative; display: inline-block; flex: none; width: 88px; height: 22px; cursor: pointer; touch-action: none; border-radius: 11px; vertical-align: middle; }" +
+      " .coll-realm:focus-visible { outline: 2px solid var(--amber, currentColor); outline-offset: 2px; } .coll-realm .rs-svg { display: block; overflow: visible; }" +
+      " .coll-realm .rs-track { fill: var(--sunk, rgba(0,0,0,.08)); stroke: var(--line-strong, currentColor); stroke-width: 1; }" +
+      " .coll-realm .rs-dot { fill: var(--muted, currentColor); opacity: .7; } .coll-realm .rs-knob { transition: transform .2s cubic-bezier(.3,.7,.3,1.2); }" +
+      " .coll-realm.is-drag .rs-knob { transition: none; } .coll-realm .rs-ball { fill: var(--amber, #a01e32); stroke: var(--amber-edge, transparent); stroke-width: 1; }" +
+      " .coll-realm:hover .rs-ball { fill: var(--amber-hi, var(--amber, #a01e32)); } .coll-realm .rs-i { display: none; fill: var(--on-amber, #fff); stroke: none; }" +
+      " .coll-realm .rs-i-both { fill: none; stroke: var(--on-amber, #fff); stroke-width: 1.6; stroke-linecap: round; }" +
+      " .coll-realm[data-pos=creator] .rs-i-creator, .coll-realm[data-pos=both] .rs-i-both, .coll-realm[data-pos=reader] .rs-i-reader { display: inline; }" +
+      " .coll-realm .rs-hit { position: absolute; top: 0; bottom: 0; width: 33.34%; }" +
+      " .coll-badge.k-link::before { content: \"\\1F517  \"; } .coll-badge.k-realm-reader { border-style: dashed; }";
+    document.head.appendChild(st);
+    paintRealm();
+  }
   // HERESY 1685 (Viktor 21.10.2026: «прикрути ручку для сворачивания подкатегорий»): the workspaces whose sections are folded out of the column
   var SECFOLD_KEY = "yue2.collSecFold";
   function secFolded() { try { var v = JSON.parse(recall(SECFOLD_KEY) || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
@@ -36,15 +156,33 @@
   function ask(text, opts) { return window.HeresyDialog.confirm(text, opts); }
   // HERESY 1167 (Viktor: «Укорачиваю до… 32 символа макс. Исправь лимиты везде»): 32 characters on each level of a
   // workspace's path (the lab says the same, and takes a name already there as it is)
-  var WS_PART = 32;
+  var WS_PART = 56;   // 09.11.2026: 56 by his word (was 32)
   function askName(text, value, opts) {
     opts = Object.assign({ max: WS_PART }, opts || {});
     return window.HeresyDialog.prompt(text, value, opts).then(function (v) { return (v || "").trim(); });
   }
   function toast(t, bad) { state.hooks && state.hooks.toast(t, bad ? "bad" : ""); }
+  // HERESY 2181 (the cache stage's «For Viktor»): /lab/catalog was asked twice at every load, here and by the instruments' sheet, at the same moment:
+  // one ask shared while it is on its way, never kept after it answers (a load after a move must read the lab anew); its failure is each caller's own
+  // (the integration's suite: an ask that never answers, a stalled link, held every load after it for good: the Librarian stopped reading the lab
+  // until the page was reloaded; a shared ask older than 3 s, longer than the page load that shares it (about 1.2 s), is no longer waited on, and the next load asks anew)
+  // HERESY 2219 (the integration's suite: «not held: a lock on another workspace» read the lock of the ask before): an ask on its way when the lab changed
+  // (a take landed, ruach-catalog, or a write of the page's own) answers what was there before the change; a load after it asks anew, never shares the older one
+  var catalogAsked = null, catalogAt = 0, catalogGen = 0, catalogAskedGen = -1;
+  function catalog() {
+    var now = Date.now();
+    if (!catalogAsked || now - catalogAt > 3000 || catalogAskedGen !== catalogGen) {
+      var asked = catalogAsked = api("/catalog"), done = function () { if (catalogAsked === asked) catalogAsked = null; };
+      catalogAt = now; catalogAskedGen = catalogGen;
+      asked.then(done, done);
+    }
+    return catalogAsked;
+  }
+  window.ruachCatalog = catalog;
   function api(path, body, keep) {   // keep (HERESY 2158): sent with keepalive, so a page going hidden or away still sends it
     var opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
     if (keep && body !== undefined) opt.keepalive = true;
+    if (body !== undefined) catalogGen++;          // HERESY 2219: a write: the catalog ask on its way is from before it
     return fetch("/lab" + path, opt).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) { var e = new Error(b.error || r.status); e.status = r.status; e.lease = !!(b && b.lease); throw e; } return b; }); })   // HERESY 2158: e.lease, the lease's refusal
       .then(function (b) {
         // HERESY 1168 (Viktor 06.10.2026: «Когда трек "Move to Trash"… и если проигрывается в данный момент, сразу снимай его
@@ -176,21 +314,28 @@
     // HERESY 2130 (the audit of 06.11.2026): a read that fails otherwise keeps the marks read before and says so once: «every take heard to its end» was
     // what a lab in trouble said, the END NOT SUNG chips gone exactly when they matter
     var marks = function (path) { return api(path).catch(function (e) { return e && e.status === 404 ? { marks: {} } : { failed: e }; }); };
-    return Promise.all([api("/catalog"), marks("/sung/marks"), marks("/tail/marks")]).then(function (both) {   // HERESY 2056: and what the tail guard heard
+    // HERESY 2166 (Viktor 06.11.2026: «Абсолютно все мелочи закрываем»; creator-NOTES open 5): a Studio whose lab has no Librarian (404) was asked all three
+    // again at every finished run (landed); once it has said 404, the catalog is asked alone first and the marks only when it answers (2181: the one shared ask)
+    var asking = state.loadStatus === 404
+      ? catalog().then(function (d) { return Promise.all([d, marks("/sung/marks"), marks("/tail/marks")]); })
+      : Promise.all([catalog(), marks("/sung/marks"), marks("/tail/marks")]);
+    return asking.then(function (both) {   // HERESY 2056: and what the tail guard heard
       var d = both[0], bad = [both[1], both[2]].filter(function (x) { return x && x.failed; });
       state.sung = both[1] && both[1].failed ? state.sung || {} : (both[1] && both[1].marks) || {};
       state.tail = both[2] && both[2].failed ? state.tail || {} : (both[2] && both[2].marks) || {};
       if (bad.length && !state.marksBad) toast("The sung marks could not be read: " + ((bad[0].failed && bad[0].failed.message) || bad[0].failed) + ". The cards keep the ones read before", true);
       state.marksBad = bad.length > 0;
       if (window.ruachPaintUnsung) window.ruachPaintUnsung();   // HERESY 1854
-      state.rows = fresh(d.takes || [], asked); state.ws = d.workspaces || []; state.trashDays = d.trash_days || 0; state.loaded = true; state.locks = d.locks || {}; state.pins = d.pins || {};
+      state.rows = fresh(d.takes || [], asked); state.ws = d.workspaces || []; state.wsRealm = d.ws_realm || {}; /* HERESY 2294 */ state.trashDays = d.trash_days || 0; state.loaded = true; state.locks = d.locks || {}; state.pins = d.pins || {};
       state.loadStatus = 200;                      // HERESY 1434
+      state.loadError = "";                        // HERESY 2169
       state.frozen = d.frozen || [];               // HERESY 1166
       state.archived = d.archived || [];           // HERESY 2049
       state.albums = d.albums || [];               // HERESY 2050
       state.blind = d.blind || [];                 // HERESY 1874
       state.playlist = d.playlist || [];   // HERESY 1731; 2019 (D1): its crossfade gone, as from the player in 1990
       state.wsNotes = d.ws_notes || {};            // HERESY 1802
+      state.clips = d.clips || {};                 // HERESY 2327: each take's finished clips, a card beside its song
       // HERESY 2130 (the audit of 06.11.2026: «Библиотекарь открывает пространство, которого нет»): the place kept from before (yue2.workspace, which other
       // windows and devices share) gone, renamed or deleted elsewhere: All Workspaces opens and says why, instead of «Nothing here» under the old name
       // HERESY 2154 (the audit's review of 2130): yue2.workspace keeps the gone name, and it is the key every window and device shares, so no window clears
@@ -215,6 +360,7 @@
       if (state.hooks.libraryChanged) state.hooks.libraryChanged();
     }).catch(function (e) {
       state.loadStatus = (e && e.status) || 0;     // HERESY 1434: 404, no Librarian in this Studio; else one that does not answer
+      state.loadError = String((e && e.message) || e || "?");   // HERESY 2169: kept for F5's toast, which said «read again» over it
       $("collGrid").innerHTML = '<p class="row-hint">The Librarian lives in Forge\'s lab, which does not answer: ' + esc(e.message) + "</p>";
     });
   }
@@ -334,6 +480,7 @@
     var rows = state.rows.filter(function (r) {
       if (idq) return m([r.title, r.name, r.note || ""].concat(r.workspaces));   // HERESY 2058: an ID: every take, wherever it lives
       if (!iceHere(r)) return false;               // HERESY 1166
+      if ((!state.place || state.place.charAt(0) === "_") && !inRealm(r)) return false;   // HERESY 2294: the realm's own; a workspace shows its links too
       if (state.place === "__fav" && !r.favorite) return false;
       if (state.place === "__pinned" && !pinnedAll()[r.name]) return false;   // HERESY 1105
       if (state.place === "__none" && r.workspaces.length) return false;   // HERESY 1058
@@ -357,32 +504,22 @@
   }
 
   function paintSide() {
-    var counts = { "": 0, __fav: 0, __hidden: 0, __none: 0 }, perWs = {}, perHid = {};   // HERESY 2046: a workspace's hidden apart, «189/208»
-    var tally = function (map, r) {
-      var once = {};                                 // HERESY 1161: a take counted once in a parent, from any of its sections
-      r.workspaces.forEach(function (w) {
-        var parts = wsParts(w), from = wsLeaf(w) === SOURCED ? parts.length : 1;   // 1162: the replaced count in their section only
-        for (var i = from; i <= parts.length; i++) { var a = parts.slice(0, i).join(SEP); if (!once[a]) { once[a] = 1; map[a] = (map[a] || 0) + 1; } }
-      });
-    };
+    // HERESY 2163: the per-workspace tallies of 2046 (perWs, perHid) went with 2089, which counts every place in tallyN below; they were written and never read
+    var counts = { "": 0, __fav: 0, __hidden: 0, __none: 0 };
     var hidSys = { "": 0, __none: 0 };               // HERESY 2058: the hidden of All Workspaces and of Not in a workspace, for their ⋯
     // HERESY 2058b (Viktor 03.11.2026: «На счётчике … если есть скрытые … дробное отображение типа `189/208`»; the re-audit of 04.11.2026: ⓘ counts a disliked
     // take the Engine keeps out as hidden, the tree did not): the tree counts the same way, out of a place's shown number and into its hidden part
     var disOut = function (r) { return !r.hidden && r.rating < 0 && !showDis(); };
     state.rows.forEach(function (r) {
+      if (!inRealm(r)) return;                       // HERESY 2294: the system places count the realm's own takes
       // HERESY 2074 (Viktor 05.11.2026: «Давай, быстрецом гоним всё до и для среза 2.0.6»): Hidden's own number counts what its list shows (no archived or frozen take,
       // no disliked one the list leaves out), as its ⋯ does: the row, the list and the menu agree (the rule of 03.11.2026, «…дробное отображение типа `189/208`»)
-      if (r.hidden) { if (iceAt(r, "__hidden") && !disOutOfList(r)) counts.__hidden++; tally(perHid, r); if (!r.frozen && !r.archived) hidSys[""]++; if (!r.workspaces.length) hidSys.__none++; return; }
-      if (disOut(r)) { tally(perHid, r); return; }   // HERESY 2058b: disliked, out of the lists: hidden in its workspaces, shown nowhere
+      if (r.hidden) { if (iceAt(r, "__hidden") && !disOutOfList(r)) counts.__hidden++; if (!r.frozen && !r.archived) hidSys[""]++; if (!r.workspaces.length) hidSys.__none++; return; }
+      if (disOut(r)) return;                         // HERESY 2058b: disliked, out of the lists: hidden in its workspaces, shown nowhere
       if (!r.frozen && !r.archived) { counts[""]++; if (r.favorite) counts.__fav++; }   // HERESY 1166: a frozen take only in its own; 2049: an archived one too
       if (!r.workspaces.length) counts.__none++;
-      var once = {};                                 // HERESY 1161: a take counted once in a parent, from any of its sections
-      r.workspaces.forEach(function (w) {
-        var parts = wsParts(w), from = wsLeaf(w) === SOURCED ? parts.length : 1;   // 1162: the replaced count in their section only
-        for (var i = from; i <= parts.length; i++) { var a = parts.slice(0, i).join(SEP); if (!once[a]) { once[a] = 1; perWs[a] = (perWs[a] || 0) + 1; } }
-      });
     });
-    // HERESY 2089 (Viktor 05.11.2026: «…Чтобы не раздувать по ширине колонку и не обрезать имена пространств, предлагаю при наведении мышки на число треков
+    // HERESY 2089 (Viktor 05.11.2026: «…Чтобы не раздувать по ширине колонку и не обрезать имена пространств, предлагая при наведении мышки на число треков
     // поднимать тултип с подсчётами, а ту косую так и оставить»): every place counted in one pass as ⓘ counts it since 2078b (the list's own test, iceAt):
     // shown, hidden by hand, disliked kept out while the Engine hides them, and apart what only a frozen workspace or the archive shows. A place holding
     // hidden takes shows «/» and the whole (ⓘ's number), so the names keep the column's width (the fraction ran under the ⋯); the counts in the number's tip,
@@ -395,7 +532,7 @@
         var c = tallyN[a] || (tallyN[a] = { shown: 0, hand: 0, dis: 0, ice: 0, arch: 0 });
         if (!iceAt(r, a)) { if (r.archived) c.arch++; else c.ice++; } else if (r.hidden) c.hand++; else if (disOut(r)) c.dis++; else c.shown++;
       };
-      if (r.archived) at("__archived");
+      if (r.archived && inRealm(r)) at("__archived");   // HERESY 2294
       r.workspaces.forEach(function (w) {
         var parts = wsParts(w), from = wsLeaf(w) === SOURCED ? parts.length : 1;
         for (var i = from; i <= parts.length; i++) at(parts.slice(0, i).join(SEP));
@@ -429,9 +566,8 @@
       return '<span class="coll-sec-fold" data-sec-fold="' + esc(w) + '" role="button" aria-expanded="' + open + '" title="' + (open ? "Fold its sections" : "Unfold its sections") + '"></span>';
     };
     // HERESY 2049: Archived, and under it each archived workspace whole (its ⋯: back, or to the trash)
-    var arch = treeOrder(state.ws.filter(function (w) { return archivedWs(w); })), archN = state.rows.filter(function (r) { return r.archived && !r.hidden && !disOut(r); }).length;   /* HERESY 2058b */
-    // HERESY 2058 (Viktor 03.11.2026: «На счётчике … если есть скрытые … дробное отображение типа `189/208`»): Archived and its workspaces too
-    var archHid = state.rows.filter(function (r) { return r.archived && (r.hidden || disOut(r)); }).length, frac = function (n, h) { return h ? n + "/" + (n + h) : n; };   // HERESY 2058b: the disliked out too
+    // (HERESY 2163: 2058's archN, archHid and frac went too: Archived and its workspaces count by tallyN since 2089)
+    var arch = treeOrder(state.ws.filter(function (w) { return archivedWs(w) && realmWs(w); }));   // HERESY 2294: the realm's
     var archivedHtml = arch.length ? item("__archived", "Archived", nText("__archived"), false, "archive").replace('<span class="coll-n">', nSpan("__archived")) + arch.map(function (w) {
       var dp = wsParts(w).length;
       return item(w, dp > 1 ? wsLeaf(w) : w, nText(w), true).replace('class="coll-place', 'class="coll-place is-sub d' + (dp + 1) + " is-archived")
@@ -448,7 +584,7 @@
       item("", "All Workspaces", counts[""], false, "horn").replace('<span class="coll-n">', sysMore("", hidSys[""])) + item("__fav", "Favourites", counts.__fav, false, "star") +
       item("__pinned", "Pinned", pinN, false, "pin") +
       item("__none", "Not in a workspace", counts.__none, false, "folder-minus").replace('<span class="coll-n">', sysMore("__none", hidSys.__none)) +
-      '<div class="coll-cap">Workspaces</div>' + treeOrder(state.ws.filter(function (w) { return !archivedWs(w); })).map(function (w) {   // HERESY 2049: the archived under Archived
+      '<div class="coll-cap">Workspaces</div>' + treeOrder(state.ws.filter(function (w) { return !archivedWs(w) && realmWs(w); })).map(function (w) {   // HERESY 2049: the archived under Archived
         var ice = (frozenWs(w) ? '<span class="coll-ice" title="Frozen: its takes are heard, never changed">\u2744</span>' : "") +   // HERESY 1166
           ((state.blind || []).indexOf(w) >= 0 ? '<span class="coll-blind" data-tip="Blind: what made its takes is hidden">' + ico("blind") + "</span>" : "");   // HERESY 1874
         var lk = (state.locks || {})[w] || {}, lock = ice + (lk.workspace || lk.tracks ?   // HERESY 1070
@@ -464,7 +600,8 @@
       '<div class="coll-cap">Out of sight</div>' + archivedHtml + item("__hidden", "Hidden", counts.__hidden, false, "eye-off").replace('<span class="coll-n">', sysMore("__hidden", counts.__hidden)) +
       (state.trashErr ? item("__trash", "Trash", "?", false, "trash").replace('<button type="button" ', '<button type="button" data-tip="' + esc("The trash could not be read: " + state.trashErr) + '" ')   // HERESY 2130
         : item("__trash", "Trash", state.trash.length || undefined, false, "trash")) +
-      item("__trash_art", "Trash (Art)", artCount() || undefined, false, "trash");   // HERESY 1337; 1998: their outlines
+      (state.artBinErr ? item("__trash_art", "Trash (Art)", "?", false, "trash").replace('<button type="button" ', '<button type="button" data-tip="' + esc("The art's trash could not be read: " + state.artBinErr) + '" ')   // HERESY 2339: «?» and why, as the Trash (2130)
+        : item("__trash_art", "Trash (Art)", artCount() || undefined, false, "trash"));   // HERESY 1337; 1998: their outlines
     fitSide();
   }
 
@@ -803,7 +940,7 @@
         '<button type="button" class="coll-ren" data-ren="' + esc(r.name) + '" title="Rename" aria-label="Rename">✎</button></div>' +
         // HERESY 1165: each piece its own text, so the words among the numbers translate (heresy-i18n.js matches whole texts)
         '<div class="coll-meta">' + (state.hooks.when ? state.hooks.when(r.created, r.name) : "<span>" + esc(r.created ? ago(r.created) : "") + "</span>") + (r.seconds ? " · <span>" + clock(r.seconds) + "</span>" : "") /* HERESY 1720 */ + (r.cot ? " · <span>" + esc(cotWord(r.cot)) + "</span>" : "") + "</div>" +
-        '<div class="coll-badges">' + badge(KINDS[r.kind] || r.kind, "k-" + r.kind) + r.derived.map(dbadge).join("") +
+        '<div class="coll-badges">' + badge(KINDS[r.kind] || r.kind, "k-" + r.kind) + realmBadge(r) /* HERESY 2294 */ + (r.no_train ? badge("never for training", "k-notrain") : "") /* HERESY 2333: the Reader's takes, never for training */ + r.derived.map(dbadge).join("") +
         r.workspaces.map(function (w) { return wsBadge(w); }).join("") +
         // HERESY 1162: what it was made again from, on its card
         (r.regen_of ? '<span class="coll-badge rg" data-tip="Regenerated with a new seed from ' + esc(r.regen_of) + '">regen</span>' : "") + unsungBadge(r.name) + tailBadge(r.name) + "</div>" +
@@ -822,8 +959,64 @@
         (family(r) ? '<button type="button" class="coll-act coll-tree" data-ctree="1" aria-label="Family tree" data-tip="Its family tree: where it came from and what came of it">' + TREE_ICO + "</button>" : "") +   // HERESY 1988
         noteBtn(r, 'data-cnote="' + esc(r.name) + '"') +
         // HERESY 1900 («уведи вправо троеточие… иконку заметки поставь перед троеточием с небольшим отступом»): ⋯ last, at the strip's right end
-        '<button type="button" class="coll-act coll-more-btn" data-cmenu="1" title="More (or right-click the card)" aria-label="More">\u22ef</button>' + "</div></article>";
+        '<button type="button" class="coll-act coll-more-btn" data-cmenu="1" title="More (or right-click the card)" aria-label="More">\u22ef</button>' + "</div></article>" +
+        clipCards(r);                              // HERESY 2327
     }
+  }
+  // HERESY 2327 (Viktor 10.11.2026: the clip of «Буратино» had no card in the Library beside its song): a take's finished clips (each shape its own),
+  // each a card right after the take's, so it stands in the song's realm and workspace; ▶ plays it over the page, 🎥 opens the take in the Videographer
+  function clipCards(r) {
+    var cs = (state.clips || {})[r.name];
+    if (!cs || !cs.length || inTrash()) return "";
+    clipWire();
+    var clock = state.hooks.clock;
+    return cs.map(function (c) {
+      var key = r.name + "|" + c.shape, go = tr("Open in the Videographer");
+      return '<article class="coll-card coll-clip" data-clipof="' + esc(r.name) + '">' +
+        '<button type="button" class="coll-play" data-cclip="' + esc(key) + '" aria-label="' + esc(tr("Play the clip")) + '">' + ico("play") + "</button>" +
+        '<div class="coll-body"><div class="coll-title"><span class="coll-title-text" data-cclip="' + esc(key) + '">\ud83c\udfac ' + esc(c.title || r.title) + "</span></div>" +
+        '<div class="coll-meta"><span>' + esc(tr("Video clip")) + '</span> · <span translate="no">' + esc(c.shape) + "</span>" + (c.seconds ? " · <span>" + clock(c.seconds) + "</span>" : "") +
+        " · <span>" + Math.max(1, Math.round((c.bytes || 0) / 1048576)) + " MB</span></div>" +
+        '<div class="coll-badges">' + realmBadge(r) + "</div></div>" +
+        '<div class="coll-acts"><button type="button" class="coll-act" data-cclipgo="' + esc(r.name) + '" data-tip="' + esc(go) + '" aria-label="' + esc(go) + '">\ud83c\udfa5</button></div></article>';
+    }).join("");
+  }
+  function clipWire() {
+    if (clipWire.done || !$("collGrid")) return;
+    clipWire.done = true;
+    $("collGrid").addEventListener("click", function (e) {      // before the grid's own (a clip's card is no take's: no data-name)
+      var p = e.target.closest && e.target.closest("[data-cclip]"), g = e.target.closest && e.target.closest("[data-cclipgo]");
+      if (!p && !g) return;
+      e.preventDefault(); e.stopPropagation();
+      if (g) return clipGo(g.dataset.cclipgo);
+      clipPlay(p.dataset.cclip);
+    }, true);
+  }
+  function clipGo(name) {
+    if (state.hooks.openTake) state.hooks.openTake(name, "create");
+    var tab = document.querySelector('.topbar [data-tab="video"]');
+    if (tab) tab.click();
+  }
+  function clipPlay(key) {
+    var k = String(key).split("|"), name = k[0], shape = k[1] || "16:9";
+    var src = "/lab/video/clip.mp4?name=" + encodeURIComponent(name) + (shape !== "16:9" ? "&shape=" + encodeURIComponent(shape) : "");
+    Array.prototype.forEach.call(document.querySelectorAll("audio, video"), function (m) { if (!m.paused) m.pause(); });   // one sound at a time (1860)
+    var o = document.createElement("div");
+    o.className = "coll-clip-over";
+    o.setAttribute("role", "dialog");
+    o.style.cssText = "position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px";
+    o.innerHTML = '<video controls autoplay playsinline preload="auto" style="max-width:100%;max-height:calc(100vh - 90px);background:#000;border-radius:6px" src="' + esc(src) + '"></video>' +
+      '<div style="display:flex;gap:8px"><button type="button" class="btn ghost small" data-x="go">\ud83c\udfa5 ' + esc(tr("Open in the Videographer")) + "</button>" +
+      '<button type="button" class="btn ghost small" data-x="close">' + esc(tr("Close")) + "</button></div>";
+    var close = function () { var v = o.querySelector("video"); if (v) { v.pause(); v.removeAttribute("src"); v.load(); } o.remove(); document.removeEventListener("keydown", esc_); };
+    var esc_ = function (e) { if (e.key === "Escape") close(); };
+    o.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-x]");
+      if (b && b.dataset.x === "go") { close(); return clipGo(name); }
+      if (b || e.target === o) close();
+    });
+    document.addEventListener("keydown", esc_);
+    document.body.appendChild(o);
   }
   // HERESY 2046 (Viktor: «Если по фильтру ничего не найдено… очень мелкая. Увеличить, в две строки, отцентрировать»): what is empty and why
   function emptyHtml() {
@@ -959,6 +1152,7 @@
     new ResizeObserver(function () { cancelAnimationFrame(headFit); headFit = requestAnimationFrame(fitHead); }).observe($("collWhere").parentNode.parentNode);
   }
   function paintHead(rows) {
+    paintRealm();                                    // HERESY 2294: the switch, shown where the realms are on
     if (idQuery(state.q)) {                          // HERESY 2058: a search by ID is the whole library's, and the heading says so
       $("collWhere").innerHTML = " \u203a <span>Search by ID: the whole library</span>";
       if ($("collWhere").parentNode) $("collWhere").parentNode.removeAttribute("data-tip");
@@ -1071,6 +1265,7 @@
     var n = Object.keys(state.sel).length;
     $("collBulk").hidden = !n;
     $("collPins").hidden = !!n;
+    $("collSlot").classList.toggle("is-bulk", n > 0);   // HERESY 2218: the bar of the checked half the slot's height
     $("collSlot").classList.toggle("is-sticky", n > 0 || pinsHere().length > 0);   // HERESY 2046: held under the head while it has pins or the checked
     // HERESY 2058 (Viktor 03.11.2026: «Только если нет пинов и нет селекции — не показываем»): no pin and nothing checked: no strip at all
     $("collSlot").hidden = !n && !pinsHere().length;
@@ -1416,6 +1611,7 @@
   }
   function setCurrent(w, quiet) {
     store(WS_KEY, w || "");
+    if (w) store(WS_KEY + "." + wsRealm(w), w);   // HERESY 2294: the realm's own in hand
     if (!quiet && w) toast("Workspace \u201c" + w + "\u201d in hand: the list shows it, new takes land in it");
     state.place = w || ""; state.sel = {};
     paint(); paintCurrent();
@@ -1456,6 +1652,11 @@
     return (state.loaded ? Promise.resolve() : load()).then(function () {
       if (!state.loaded) {                               // the Librarian does not answer (404: none in this Studio, nothing to file into)
         var meant = ws || workable(recall(WS_KEY) || "");
+        // HERESY 2166: none in this Studio is no failure to toast, but it is said once a page in the debug journal (it was said nowhere)
+        if (state.loadStatus === 404 && !state.absentNoted && window.HeresyDebug && window.HeresyDebug.note) {
+          state.absentNoted = true;
+          window.HeresyDebug.note({ k: "librarian", to: "absent", why: "404: no Librarian in this Studio, so the finished runs are filed into no workspace" });
+        }
         return state.loadStatus === 404 || !meant ? false : fail(meant, takeNames.slice(), "the Librarian does not answer");
       }
       var cur = ws && state.ws.indexOf(ws) >= 0 && !closedWs(ws) ? ws : landable();   // HERESY 1434: never into a 💎 set or a frozen workspace
@@ -1552,10 +1753,12 @@
     };
   }
   function act(body, done, quiet) {
+    if (/^ws-(create|add|move|merge)$/.test(body.op || "") && realmNow() === "reader" && !body.realm) body.realm = "reader";   // HERESY 2294
     var undo = quiet ? null : undoFor(body), asked = rateSeq;   // what was, read before the change
     return api("/collection", body).then(function (d) {
       actsDone++;
       state.rows = d.takes ? fresh(d.takes, asked) : state.rows; state.ws = d.workspaces || state.ws; state.trashDays = d.trash_days || 0; state.locks = d.locks || state.locks || {};
+      if (d.ws_realm) state.wsRealm = d.ws_realm;   // HERESY 2294
       state.pins = d.pins || state.pins || {};
       state.frozen = d.frozen || state.frozen || [];   // HERESY 1166
       state.blind = d.blind || state.blind || [];   // HERESY 1874
@@ -1699,6 +1902,7 @@
     watchSide();
     if (!$("view-collection")) return;
     state.hooks = hooks;
+    realmBar();                                      // HERESY 2294
     $("collSearch").addEventListener("input", function () { state.q = this.value; paint(); });
     // HERESY 2046: the empty view's reset, the eye, ⓘ, and the pins' strip held right under the column's own sticky head
     $("collGrid").addEventListener("click", function (e) {
@@ -1739,7 +1943,7 @@
     });
     // HERESY 1167: the disliked shown or not: the rooms' takes column's ⋯ («The disliked ones too»), one setting with this
     window.addEventListener("ruach-disliked", function () { paint(); });
-    window.addEventListener("ruach-catalog", function () { if (state.loaded) load(); });   // HERESY 1425: a take landed from the lab
+    window.addEventListener("ruach-catalog", function () { catalogGen++; if (state.loaded) load(); });   // HERESY 1425: a take landed from the lab; 2219: asked anew
     // HERESY 1169 · 1241: the filters' window, from the button at the end of the search row
     state.logic = recall(LOGIC_KEY) || "and";
     $("collFilterBtn").addEventListener("click", function () { openFilter(); });
@@ -2055,6 +2259,42 @@
       else if (e.key === "Escape" && names().length) { state.sel = {}; paint(); }
       else if (e.key === "Delete" && names().length && !inTrash()) { e.preventDefault(); $("collTrash").click(); }
     });
+    // HERESY 2288 (Viktor 09.11.2026: «когда выделены треки в списке/тайлинге, появляется бар с кнопками по массовым действиям. Предлагаю к ним прикрутить
+    // шорткаты одной кнопкой, на всех языках Студии с ремаппингом, если не английская раскладка и Shift»): the bar of the checked by one key each, as
+    // mainstream players and file managers have them; a Latin layout by its own letter (AZERTY, QWERTZ, Dvorak), any other by the key's place, a keyboard
+    // that sends no place by the letter its layout types there; Shift too. No key for the workspaces («от беды подальше») nor for delete (Delete above
+    // keeps asking first); none for the protection (a second press takes it off every checked take) nor for the lyrics check (Whisper on the processor)
+    var BULK_KEYS = { C: "collCompare", H: "collHide", L: "collLike", D: "collDislike", F: "collFav", P: "collPlBtn", E: "collDlBtn" };
+    var BULK_TYPED = { C: "сψב", H: "рηי", L: "дλך", D: "вδג", F: "аφכ", P: "зπפ", E: "уεק" };   // ЙЦУКЕН (ru, uk, be), Greek, Hebrew
+    function bulkKeyOf(e) {
+      var k = e.key || "", m = /^Key([A-Z])$/.exec(e.code || "");
+      if (/^[a-z]$/i.test(k)) return k.toUpperCase();
+      if (m) return m[1];
+      k = k.toLowerCase();
+      for (var K in BULK_TYPED) if (k.length === 1 && BULK_TYPED[K].indexOf(k) >= 0) return K;
+      return "";
+    }
+    Object.keys(BULK_KEYS).forEach(function (K) {
+      var b = $(BULK_KEYS[K]);
+      if (!b) return;
+      b.dataset.key = K;                                    // its cap on the button, from app.css
+      b.setAttribute("aria-keyshortcuts", K);
+      b.tipMore = function () { return tr("Key: {0} (in any keyboard layout)").replace("{0}", K); };
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      if (document.body.dataset.tab !== "collection" || $("collBulk").hidden || !names().length) return;
+      var t = e.target, ve = $("view-engine");
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      if (document.querySelector(".hd-back, .ds-back, .cmp-back, .hg-back:not([hidden]), .hm-pop:not([hidden]), .menu-pop:not(.is-hidden)") || !$("collDialog").hidden || !$("collSheet").hidden) return;
+      if (ve && !ve.classList.contains("is-hidden")) return;
+      var K = bulkKeyOf(e), b = BULK_KEYS[K] ? $(BULK_KEYS[K]) : null;
+      if (!b || b.disabled || b.hidden || !b.offsetParent) return;
+      var pop = document.querySelector(".coll-pl-pop:not([hidden]), .coll-dl-pop:not([hidden])");
+      if (pop && !b.parentNode.contains(pop)) return;      // one overlay at a time: its own key closes it, Esc too
+      e.preventDefault();
+      b.click();
+    });
     // HERESY 1162 (Viktor: «на столбик воркспейсов возможность перетягивать, менять ширину, и схлопывать эту колонку. Можно при
     // схлопнутой добавлять ещё одну колонку в тайл карточек»): its edge dragged (the width kept), « folds it away and the tiles
     // take one column more, » brings it back; a double click on the edge, or Enter on it, folds too; ← → from the keyboard
@@ -2244,7 +2484,7 @@
     state.place = recall(WS_KEY) || "";
     load();
     // HERESY 2158: what the last page sent as it went, held to the lab's own list a few seconds on (a beacon still on its way when this page asked first)
-    if (recall(LEFT_KEY)) setTimeout(function () { api("/catalog").then(function (d) { notesLeftCheck(d.takes || []); }, function () { /* asked again at the next load */ }); }, 4000);
+    if (recall(LEFT_KEY)) setTimeout(function () { catalog().then(function (d) { notesLeftCheck(d.takes || []); }, function () { /* asked again at the next load */ }); }, 4000);
     api("/trash").then(function (d) { state.trash = d.items || []; state.trashErr = ""; paintSide(); })
       .catch(function (e) { state.trashErr = (e && e.message) || String(e); paintSide(); });   // HERESY 2130: «?» and why, never a 0 that was not read
     loadArtBin(true);                                    // HERESY 1337: its number in the column
@@ -2360,9 +2600,11 @@
   // HERESY 1473 (Viktor 15.10.2026: «Сторожа на все удаления, перемещения и т.п. По максимуму. Лучше семь раз спросить, чем за один
   // всё проебать»): where a mass action reaches, said before it goes; a second question when it reaches past the place you stand in
   function tl(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
-  function reach(list, own) {
-    var byWs = {}, none = 0, gems = 0, seen = {};
-    shown().forEach(function (r) { seen[r.name] = 1; });
+  // HERESY 2165: at = { place, shown } when another view asks (the Creator's Takes column: its workspace, "" for every one, and the names it shows),
+  // so «You stand in …» and «not shown» speak of that view and not of the Librarian's place; without it, the Librarian's place as before
+  function reach(list, own, at) {
+    var byWs = {}, none = 0, gems = 0, seen = {}, place = at ? String(at.place || "") : state.place;
+    if (at) (at.shown || []).forEach(function (n) { seen[n] = 1; }); else shown().forEach(function (r) { seen[r.name] = 1; });
     list.forEach(function (name) {
       var r = rowOf(name), tops = {};
       if (!r) return;
@@ -2371,15 +2613,15 @@
       Object.keys(tops).forEach(function (w) { byWs[w] = (byWs[w] || 0) + 1; });
       if (Object.keys(tops).some(function (w) { return w.indexOf("\ud83d\udc8e") === 0; })) gems++;
     });
-    var here = state.place && state.place.charAt(0) !== "_" ? state.place.split(SEP)[0] : "";
+    var here = place && place.charAt(0) !== "_" ? place.split(SEP)[0] : "";
     var wss = Object.keys(byWs).sort(function (a, b) { return byWs[b] - byWs[a]; });
     var unseen = list.filter(function (x) { return !seen[x]; }).length, foreign = own ? [] : wss.filter(function (w) { return w !== here; });
-    return { n: list.length, byWs: byWs, wss: wss, none: none, gems: gems, here: here, unseen: unseen, foreign: foreign,
+    return { n: list.length, byWs: byWs, wss: wss, none: none, gems: gems, here: here, unseen: unseen, foreign: foreign, place: place, column: !!at,
              risky: !here || foreign.length > 0 || gems > 0 || list.length > 50 || unseen > 0 };
   }
   function reachText(R) {
-    var L = [!state.place ? tl("You stand in All Workspaces: this reaches every workspace.")
-      : R.here ? tl("You stand in \u201c" + state.place + "\u201d.") : tl("You stand in a view across workspaces.")];
+    var L = [!R.place ? tl("You stand in All Workspaces: this reaches every workspace.")
+      : R.here ? tl("You stand in \u201c" + R.place + "\u201d.") : tl("You stand in a view across workspaces.")];
     if (R.wss.length) {
       L.push(tl("They are in:"));
       R.wss.slice(0, 8).forEach(function (w) { L.push("\u00b7 " + w + ": " + R.byWs[w]); });
@@ -2387,11 +2629,12 @@
     }
     if (R.none) L.push(tl("\u00b7 in no workspace: " + R.none));
     if (R.gems) L.push(tl(R.gems + " of them sit in published \ud83d\udc8e sets."));
-    if (R.unseen) L.push(tl(R.unseen + " of them are not shown here: picked in another view."));
+    if (R.unseen) L.push(R.column ? tl(R.unseen + " of them are not shown in the column: its search or filters leave them out.")
+                                  : tl(R.unseen + " of them are not shown here: picked in another view."));
     return L.join("\n");
   }
-  function guarded(first, ok, list, own) {          // own: the action touches only the place you stand in (a take-out)
-    var R = reach(list, own);
+  function guarded(first, ok, list, own, at) {      // own: the action touches only the place you stand in (a take-out); at: another view's place (2165)
+    var R = reach(list, own, at);
     return ask(first + "\n\n" + reachText(R), { ok: ok, danger: true }).then(function (yes) {
       if (!yes || !R.risky) return yes;
       return ask(tl("Once more: " + R.n + " takes, from " + Math.max(1, R.wss.length) + " workspaces. Sure?") + "\n\n" +
@@ -2483,7 +2726,7 @@
       '<div><div class="peek-cap">Lyrics</div><pre class="sheet-text sheet-lyrics">' + esc(req.lyrics || "") + "</pre></div></div>" +
       '<label class="field"><span class="label">Note <em id="sheetNoteState"></em></span><textarea id="sheetNote" rows="3" maxlength="600"' +
         (r.frozen ? ' readonly aria-readonly="true" data-tip="' + esc(NOTE_ICE) + '"' : "") + ">" + esc(r.note || "") + "</textarea></label>" +   // HERESY 2128
-      '<div class="dv-actions sheet-acts"><button type="button" class="btn ghost small" data-sheet-go="create">Open in the Creator</button>' +
+      '<div class="dv-actions sheet-acts"><button type="button" class="btn ghost small" data-sheet-go="create">Open in the Musician</button>' +
       '<button type="button" class="btn ghost small" data-sheet-go="post">Open in the Refiner</button><span class="spacer"></span>' +
       '<button type="button" class="btn ghost small" data-sheet-close="1">Close</button></div>';
     var p = notePend[r.name];
@@ -2748,11 +2991,25 @@
       var n = state.rows.filter(function (r) { return inTree(r, x); }).length;
       return { value: x, label: wsParts(x).length > 1 ? wsLeaf(x) : x, depth: wsParts(x).length - 1, path: wsParts(x).slice(0, -1).join(" \u203a "), note: String(n) };   // 1853: path
     });
+    // HERESY 2363 (Viktor 11.11.2026: «Нечаянно переместил в пространство как подпространство VLA. А вот вернуть или в корень его обратно — никак»): a
+    // section is offered the top level first (a workspace of its own again, its sections and takes along, its name kept); the workspace it stands in
+    // takes only its takes (as a section it is there already)
+    var TOP = "\u0000top", home = wsParts(w).slice(0, -1).join(SEP);
+    if (home) items.unshift({ value: TOP, label: "The top level", words: true, depth: 0, note: "" });
     window.HeresyDialog.choose("Move “" + w + "” into", items, { cancel: "Cancel", filter: "Filter the workspaces" }).then(function (to) {
       if (!to) return;
-      var fits = wsParts(to).length + 1 + height <= DEPTH, asSec = to + SEP + wsLeaf(w);
+      if (to === TOP) {
+        var top = wsLeaf(w);
+        if (state.ws.indexOf(top) >= 0) return toast("There is a workspace “" + top + "” already", true);
+        return window.HeresyDialog.confirm("Move “" + top + "” to the top level\n\nIt becomes a workspace of its own, with its sections and its takes, its name kept.", { ok: "Move it", cancel: "Cancel" }).then(function (yes) {
+          if (!yes) return;
+          return act({ op: "ws-rename", workspace: w, to: top }, "“" + top + "” is a workspace of its own now", true)
+            .then(function (ok) { if (ok) { followRename(w, top); paint(); paintCurrent(); } });
+        });
+      }
+      var fits = wsParts(to).length + 1 + height <= DEPTH && to !== home, asSec = to + SEP + wsLeaf(w);
       return window.HeresyDialog.confirm("Move “" + w + "” into “" + to + "”\n\n" +
-          (fits ? "As a section: it goes inside it, with its sections and its takes, its name kept." : "As a section: it would be more than two levels of sections deep, so not here.") +
+          (fits ? "As a section: it goes inside it, with its sections and its takes, its name kept." : to === home ? "It is a section of it already." : "As a section: it would be more than two levels of sections deep, so not here.") +
           "\nOnly its takes: they go in, and the workspace itself goes, empty (its sections too).",
           { ok: fits ? "As a section" : "Only its takes", alt: fits ? "Only its takes" : null, cancel: "Cancel" }).then(function (how) {
         if (!how) return;
@@ -2870,7 +3127,7 @@
         '<div class="coll-meta"><span>' + esc(h.ago(t.created)) + "</span>" + (t.seconds ? " \u00b7 <span>" + h.clock(t.seconds) + "</span>" : "") + (t.render_seconds ? " \u00b7 <span>made in " + h.clock(t.render_seconds) + "</span>" : "") +
         (t.model ? " \u00b7 <span translate=\"no\">" + esc(t.model) + "</span>" : "") + (t.truncated ? " \u00b7 <span>hit the token cap</span>" : "") + (q.parent ? " \u00b7 <span>from " + esc(q.parent) + "</span>" : "") + "</div></div>" +
         '<span class="spacer"></span><button type="button" class="btn ghost small" data-ds="json">Copy request JSON</button>' +
-        '<button type="button" class="btn ghost small" data-ds="create">Open in the Creator</button><button type="button" class="btn ghost small" data-ds="close">Close</button></div>' +
+        '<button type="button" class="btn ghost small" data-ds="create">Open in the Musician</button><button type="button" class="btn ghost small" data-ds="close">Close</button></div>' +
         '<div class="ds-cols"><div class="ds-texts"><div class="peek-cap">Style <em>' + (q.style || "").length + ' chars</em></div><pre class="sheet-text">' + esc(q.style || "") + "</pre>" +
         '<div class="peek-cap">Lyrics</div><pre class="sheet-text ds-lyrics">' + esc(q.lyrics || "") + "</pre>" +
         (String(q.lyrics || "").trim() ? '<div class="ds-sung"></div>' : "") +   // HERESY 1842: sung to the end?
@@ -2927,16 +3184,25 @@
         drawScore(abc);
       }
       if (q.abc) drawScore(q.abc);
-      else fetch("/lab/score?name=" + encodeURIComponent(name)).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      // HERESY 2339 (the neutral-value pass): a 404 is «no score from the sound yet»; any other refusal is said in the sheet, never left as «A Direct take writes no score»
+      else fetch("/lab/score?name=" + encodeURIComponent(name)).then(function (r) {
+        if (r.status === 404) return null;
+        return r.json().then(function (b) { if (!r.ok) throw new Error((b && b.error) || "HTTP " + r.status); return b; }, function () { throw new Error("HTTP " + r.status); });
+      }).then(function (d) {
         if (d && d.abc) showScore(d.abc, "written from its sound by " + (d.by || "the transcriber") + (d.made ? ", " + d.made : ""));
-      }).catch(function () {});
+      }).catch(function (e) {
+        var none = back.querySelector(".ds-noscore");
+        if (none) none.insertAdjacentHTML("afterbegin", '<span class="ds-score-fail">' + esc(tr("The score from its sound could not be read: {0}").replace("{0}", (e && e.message) || String(e))) + "</span> ");
+      });
       // a Direct take's score from its sound: the engine's transcriber on the take's own audio. The page never adopts this
       // job (the cover form in the Creator is not touched): the sheet watches it itself, and the lab keeps the score.
       function scoreFromSound(btn) {
         var run = back.querySelector(".ds-score-run"), t0 = Date.now(), tick;
         btn.disabled = true;
         var said = function (text) { if (run) run.textContent = text; };
-        fetch("/transcribe?take=" + encodeURIComponent(name), { method: "POST" }).then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); })
+        // HERESY 2377: with the transcriber's mode chosen in the Musician (app.js keeps it), as a take's own page asks
+        var how = window.RuachTranscriber ? window.RuachTranscriber.query() : "";
+        fetch("/transcribe?take=" + encodeURIComponent(name) + how, { method: "POST" }).then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); })
           .then(function (job) {
             tick = setInterval(function () { said("the transcriber is writing it… " + Math.round((Date.now() - t0) / 1000) + " s"); }, 1000);
             var ask = function () {
@@ -2950,8 +3216,8 @@
           }).then(function (res) {
             var abc = res && res.abc;
             if (!abc) throw new Error("the transcriber wrote nothing");
-            return fetch("/lab/score?name=" + encodeURIComponent(name), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ abc: abc }) })
-              .then(function () { showScore(abc, "written from its sound by the transcriber (SheetSage2), now"); });
+            return fetch("/lab/score?name=" + encodeURIComponent(name), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ abc: abc, transcriber: res.transcriber || "" }) })
+              .then(function () { showScore(abc, "written from its sound by the transcriber (" + (window.RuachTranscriber ? window.RuachTranscriber.name(res.transcriber || "") : "SheetSage2") + "), now"); });
           }).catch(function (e) { said("not written: " + (e.message || e)); btn.disabled = false; })
           .then(function () { clearInterval(tick); });
       }
@@ -3038,7 +3304,8 @@
       var covWrap = back.querySelector(".ds-covers-wrap"), covBox = back.querySelector(".ds-covers");
       function covLoad() {
         if (!covBox) return;
-        fetch("/lab/art/versions?name=" + encodeURIComponent(name)).then(function (r) { return r.ok ? r.json() : null; }).then(function (cv) {
+        // HERESY 2339: a 404 (an older lab) has none; any other refusal is said where the earlier covers stand, never hidden as none
+        fetch("/lab/art/versions?name=" + encodeURIComponent(name)).then(function (r) { if (r.status === 404) return null; if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }).then(function (cv) {
           var vs = (cv && cv.versions) || [], now = window.HeresyArt ? window.HeresyArt.url(name) : "";
           covWrap.hidden = !cv || (!cv.current && !vs.length);
           if (covWrap.hidden) return;
@@ -3049,7 +3316,12 @@
                 esc((v.painter ? v.painter + " · " : "") + (v.prompt || "")) + '" /><figcaption>' + esc(h.ago(v.when)) +
                 (cv.frozen ? "" : ' <button type="button" class="btn ghost small" data-ds="cov-back" data-stamp="' + esc(v.stamp) + '">' + esc(tr("Put it back")) + "</button>") + "</figcaption></figure>";
             }).join("");
-        }).catch(function () { if (covWrap) covWrap.hidden = true; });
+        }).catch(function (e) {
+          if (!covWrap) return;
+          covWrap.hidden = false;
+          back.querySelector(".ds-cov-say").textContent = tr("The earlier covers could not be read: {0}").replace("{0}", (e && e.message) || String(e));
+          covBox.innerHTML = "";
+        });
       }
       covLoad();
       back.querySelector(".ds-box").addEventListener("click", function (e) {
@@ -3099,6 +3371,8 @@
   // ---- HERESY 1059: "Open in Collection": the Librarian with the take in sight, flashed
   function reveal(name) {
     var here = function () { return shown().some(function (r) { return r.name === name; }); };
+    var rr = rowOf(name);                             // HERESY 2294: a take of the other realm: its realm is shown first
+    if (rr && !inRealm(rr)) { store(REALM_KEY, rowRealm(rr)); paintRealm(); }
     if (!here()) {                                    // out of the current view: no search, no filter, and its own workspace
       state.q = ""; state.kinds = {}; state.derived = {};
       $("collSearch").value = "";
@@ -3661,7 +3935,7 @@
   }
 
   window.HeresyCollection = { init: init, reload: load, hubOpen: hubOpen, repaint: paint, paintArts: paintArts, isHidden: isHidden, isFresh: isFresh, markPlayed: markPlayed, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
-                              current: current, landable: landable, closedWs: closedWs, firstWs: firstWs, absent: function () { return state.loadStatus === 404; }, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, rateMany: rateMany, favMany: favMany, exportChecked: exportZip, exportHow: exportHow, note: note, setNote: setNote, editNote: editNote, playlist: function () { return (state.playlist || []).slice(); }, playlistOrder: plPlayOrder, playlistOnly: function () { return state.plOnly; }, playlistAdd: plAdd, openPlaylist: plOpen, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
+                              current: function () { return currentIn("creator"); }, currentIn: currentIn, realm: realmNow, /* HERESY 2294: the Creator's own in hand */ landable: landable, closedWs: closedWs, firstWs: firstWs, absent: function () { return state.loadStatus === 404; }, readFailed: function () { return state.loadStatus === 404 ? "" : state.loadError || ""; }, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, rateMany: rateMany, favMany: favMany, exportChecked: exportZip, exportHow: exportHow, note: note, setNote: setNote, editNote: editNote, playlist: function () { return (state.playlist || []).slice(); }, playlistOrder: plPlayOrder, playlistOnly: function () { return state.plOnly; }, playlistAdd: plAdd, openPlaylist: plOpen, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
                               order: function () { return state.place === "__trash" ? [] : state.place === "__playlist" ? plList() : shown().map(function (r) { return r.name; }); },
                               deal: function (names) { if (!names) { DEAL = {}; return []; } return names.slice().sort(function (x, y) { return dealt(x) - dealt(y); }); },   // HERESY 1863: for the checks
                               notesLeft: notesLeftCheck, noteHash: noteHash,   // HERESY 2158: for the checks

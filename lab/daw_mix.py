@@ -212,14 +212,10 @@ def parse(value: Any, names: list[str], rate: int) -> dict:
             fall, rise = ((_num(r[2], where + " muted fall", 0, MAX_FADE), _num(r[3], where + " muted rise", 0, MAX_FADE)) if len(r) == 4
                           else (EDGE_SECONDS, EDGE_SECONDS))   # HERESY 1542
             muted.append((a, b, fall, rise))
-        auto = {}                                    # HERESY 1535: the lane's volume over time, [[t, dB], …]
-        raw_auto = s.get("auto", []) or []
+        raw_auto = s.get("auto", []) or []             # HERESY 1535: the lane's volume over time, [[t, dB], …]; 2318: [t, dB, shape] too
         if not isinstance(raw_auto, list) or len(raw_auto) > MAX_AUTO:
             raise PlenioUserError(f"{where}: auto is a list of at most {MAX_AUTO} [t, dB] points.")
-        for pt in raw_auto:
-            if not isinstance(pt, (list, tuple)) or len(pt) != 2:
-                raise PlenioUserError(f"{where}: auto is a list of [t, dB] points.")
-            auto[_num(pt[0], where + " auto time", 0, 86400)] = _num(pt[1], where + " auto dB", -60, 12)
+        auto = _points(raw_auto, where + ": auto", -60, 12, "dB")
         autos = {}                                   # HERESY 1559: pan, width and the sends over time, [[t, value], …]
         raw_autos = s.get("autos") or {}
         if not isinstance(raw_autos, dict):
@@ -229,13 +225,9 @@ def parse(value: Any, names: list[str], rate: int) -> dict:
                 raise PlenioUserError(f"{where}: autos draws {', '.join(AUTOS)}, not {k!r}.")
             if not isinstance(pts, list) or len(pts) > MAX_AUTO:
                 raise PlenioUserError(f"{where}: autos.{k} is a list of at most {MAX_AUTO} [t, value] points.")
-            got = {}
-            for pt in pts:
-                if not isinstance(pt, (list, tuple)) or len(pt) != 2:
-                    raise PlenioUserError(f"{where}: autos.{k} is a list of [t, value] points.")
-                got[_num(pt[0], f"{where} autos.{k} time", 0, 86400)] = _num(pt[1], f"{where} autos.{k}", *AUTOS[k])
+            got = _points(pts, f"{where}: autos.{k}", *AUTOS[k], "value")
             if got:
-                autos[k] = sorted(got.items())
+                autos[k] = got
         edits = []                                   # HERESY 1564: a stretch copied or moved along the lane
         raw_edits = s.get("edits") or []
         if not isinstance(raw_edits, list) or len(raw_edits) > MAX_EDITS:
@@ -250,7 +242,7 @@ def parse(value: Any, names: list[str], rate: int) -> dict:
                 raise PlenioUserError(f"{ew}: b comes after a.")
             edits.append((ed["op"], ea, eb, eto))
         strips[name] = {"gain_db": _num(s.get("gain_db", 0), where + " gain_db", -60, 12), "mute": _flag(s.get("mute", False), where + " mute"),
-                        "auto": sorted(auto.items()), "autos": autos, "edits": edits,
+                        "auto": auto, "autos": autos, "edits": edits,   # HERESY 2318: laid out already (expand)
                         "solo": _flag(s.get("solo", False), where + " solo"), "muted": muted,
                         "trim_db": _num(s.get("trim_db", 0), where + " trim_db", -24, 24), "invert": _flag(s.get("invert", False), where + " invert"),
                         "eq": eq_of(s.get("eq"), where, rate), "comp": comp_of(s.get("comp"), where), "gate": gate_of(s.get("gate"), where),   # 1760
@@ -478,6 +470,63 @@ def cut_envelope(frames: int, rate: int, ranges) -> np.ndarray:
         if rn:
             env[end - rn:end] = (0.5 + 0.5 * np.cos(np.pi * (np.arange(rn) + 0.5) / rn))[::-1]
     return env
+
+
+# HERESY 2318 (Viktor's plan of 08.11.2026, §2.4: «Формы автоматизации: кривизна, „держать“, „размах“, LFO»): a point of a line may say how the
+# line goes on to the next one: a bend (−1 … 1, 0 straight; above 0 the change comes late, below 0 early, e^(5·bend·u) as a fader's
+# curve), "hold" (it stays, and steps to the next one 1 ms before it) or "s" (an S, half a cosine: an LFO's sine is a row of them). A shaped
+# segment is laid out as the points a straight line goes through, one every 20 ms (2 to 24 a segment); the page lays the same points out
+# the same way (heresy-mixer.js expandPts), so the line heard is the line rendered.
+SHAPES = ("hold", "s")
+BEND_K = 5.0
+HOLD_EDGE = 0.001
+SUB_S, SUB_MAX = 0.02, 24
+
+
+def shape_of(v: Any, where: str):
+    """A point's shape checked: None (straight), a bend from −1 to 1 (a bend under 0.001 is straight), "hold" or "s"."""
+    if v is None:
+        return None
+    if isinstance(v, str):
+        if v not in SHAPES:
+            raise PlenioUserError(f'{where}: a shape is a bend from -1 to 1, "hold" or "s", got {v!r}.')
+        return v
+    b = _num(v, where, -1, 1)
+    return b if abs(b) >= 1e-3 else None
+
+
+def expand(points) -> list:
+    """[(t, value, shape)] in time order as [(t, value)]: the points a straight line goes through, each shaped segment laid out."""
+    out = []
+    for i, (t0, v0, sh) in enumerate(points):
+        out.append((t0, v0))
+        if sh is None or i + 1 >= len(points):
+            continue
+        t1, v1 = points[i + 1][0], points[i + 1][1]
+        span = t1 - t0
+        if span <= 0:
+            continue
+        if sh == "hold":
+            if span > 2 * HOLD_EDGE:
+                out.append((t1 - HOLD_EDGE, v0))
+            continue
+        n = max(2, min(SUB_MAX, int(math.floor(span / SUB_S + 0.5))))   # half up, as the page's Math.floor(x + 0.5)
+        a = BEND_K * sh if sh != "s" else 0.0
+        for j in range(1, n):
+            u = j / n
+            f = (0.5 - 0.5 * math.cos(math.pi * u)) if sh == "s" else (math.exp(a * u) - 1) / (math.exp(a) - 1)
+            out.append((t0 + span * u, v0 + (v1 - v0) * f))
+    return out
+
+
+def _points(raw: Any, where: str, lo: float, hi: float, unit: str) -> list:
+    """HERESY 2318: a line's points checked, [t, value] or [t, value, shape], one a time (the last said wins), laid out by expand()."""
+    got = {}
+    for pt in raw:
+        if not isinstance(pt, (list, tuple)) or len(pt) not in (2, 3):
+            raise PlenioUserError(f"{where} is a list of [t, {unit}] or [t, {unit}, shape] points.")
+        got[_num(pt[0], where + " time", 0, 86400)] = (_num(pt[1], f"{where} {unit}", lo, hi), shape_of(pt[2] if len(pt) == 3 else None, where + " shape"))
+    return expand([(t, v, sh) for t, (v, sh) in sorted(got.items())])
 
 
 def curve(pts, frames: int, rate: int) -> np.ndarray:
@@ -717,3 +766,79 @@ def render(rate: int, signals: list[tuple[str, np.ndarray]], value: Any, *, keep
     return out, {"schema": SCHEMA, "rate": rate, "neutral": neutral, "strips": report, "buses": report_buses, "returns": sorted(returns),
                  "master": master, "printed_at": "the master's input" if master else "the mix",
                  "peak_db": round(20 * math.log10(pk), 2) if pk > 0 else None, "lowered_db": lowered, "notes": v["notes"]}, printed
+
+
+def bounce(rate: int, signals: list[tuple[str, np.ndarray]], value: Any, members: list[str], dry: bool = False):
+    """HERESY 2316 (Viktor's plan of 08.11.2026, §2.4: «Bounce in place: шина или группа полос в новую полосу одним действием»): what the strips
+    `members` put into the master as the mix stands, as one stretch: each one's strip as it is heard (its mute and solo and its VCAs as the
+    mix has them), through its bus when its whole bus is among them, with their share of the room and the delay (the returns are linear: what
+    these strips send makes this much of them). Laid at 0 dB in a lane of its own with the members muted, the master hears the same sum, its
+    chain and the song's fade after it as before. A bus that holds strips left out is refused: its compressor hears all of them.
+    HERESY 2366 (Viktor 11.11.2026, «сухой баунс — сделать вариантом»): dry, the stretch without their share of the room and the delay (the same as
+    with both returns muted); the report says it.
+    Returns (stretch, report)."""
+    names = [n for n, _x in signals]
+    v = parse(value, names, rate)
+    dry_print = bool(dry)                             # HERESY 2366: `dry` is the strips' own sum below
+    want = [m for m in dict.fromkeys(members or []) if m in names]
+    if not want:
+        raise PlenioUserError("bounce: name strips of this set.")
+    for b in v["buses"]:
+        inside = [n for n in b["members"] if n in want]
+        if inside and len(inside) != len(b["members"]):
+            left = ", ".join(n for n in b["members"] if n not in want)
+            raise PlenioUserError(f"bounce: the bus {b['name']!r} holds {left} too: bounce the whole bus, or take {inside[0]!r} out of it.")
+    shape = signals[0][1].shape
+    gr = v["groups"]
+    vca = {n: sum(g["gain_db"] for g in gr if n in g["members"]) for n in names}
+    gmute = {n: any(g["mute"] for g in gr if n in g["members"]) for n in names}
+    gsolo = {n: any(g["solo"] for g in gr if n in g["members"]) for n in names}
+    soloing = any(v["strips"].get(n, NEUTRAL)["solo"] or gsolo[n] for n in names)
+    dry, sends = np.zeros(shape), {"reverb": np.zeros(shape), "delay": np.zeros(shape)}
+    route = {n: b["id"] for b in v["buses"] for n in b["members"]}
+    subs = {b["id"]: np.zeros(shape) for b in v["buses"]}
+    report = []
+    keys = {st["comp"]["key"] for st in v["strips"].values() if st["comp"] and st["comp"]["on"] and st["comp"]["key"]}
+    pres = {n: pre(x, rate, v["strips"].get(n, NEUTRAL), {}) for n, x in signals if n in keys}
+    for n, x in signals:
+        if n not in want:
+            continue
+        s = v["strips"].get(n, NEUTRAL)
+        audible = (s["solo"] or gsolo[n]) if soloing else not (s["mute"] or gmute[n])
+        item = {"name": n, "audible": audible}
+        report.append(item)
+        if not audible:
+            continue
+        if vca[n]:
+            s = dict(s, gain_db=s["gain_db"] + vca[n])
+        k = s["comp"] and s["comp"]["on"] and s["comp"]["key"]
+        y = strip(x, rate, s, item, key=pres.get(k) if k else None)
+        if n in route:
+            subs[route[n]] += y
+        else:
+            dry += y
+        for bus in ("reverb", "delay"):
+            amt = curve(s["autos"][bus], y.shape[1], rate) if (s.get("autos") or {}).get(bus) else s[bus]
+            if np.any(amt):
+                sends[bus] += y * amt
+    for b in v["buses"]:
+        if b["mute"] or not b["members"] or not all(n in want for n in b["members"]):
+            continue
+        dry += strip(subs[b["id"]], rate, dict(NEUTRAL, eq=b["eq"], comp=b["comp"], gain_db=b["gain_db"], width=b["width"], pan=b["pan"]), {"bus": b["id"]})
+    out = dry
+    returns = []
+    wet = not dry_print                               # HERESY 2366
+    if wet and np.any(sends["reverb"]) and not v["reverb"]["mute"]:
+        src, k = sends["reverb"], round(v["reverb"]["predelay_ms"] * rate / 1000)
+        if k:
+            src = np.pad(src, ((0, 0), (k, 0)))[:, : src.shape[1]]
+        out = out + _tail_fade(return_cuts(preverb(v["reverb"]["preset"])(src, rate), rate, v["reverb"]), rate) * db(v["reverb"]["return_db"])
+        returns.append("room")
+    if wet and np.any(sends["delay"]) and not v["delay"]["mute"]:
+        d = v["delay"]
+        wet = pdelay(time_ms=round(d["time_ms"] * rate / 1000) * 1000 / rate, feedback=d["feedback"], lowpass_hz=d["lowpass_hz"])(sends["delay"], rate)
+        out = out + _tail_fade(return_cuts(wet, rate, d), rate) * db(d["return_db"])
+        returns.append("delay")
+    pk = float(np.max(np.abs(out))) if out.size else 0.0
+    return out, {"schema": SCHEMA, "rate": rate, "members": want, "strips": report, "returns": returns, "dry": dry_print,
+                 "peak_db": round(20 * math.log10(pk), 2) if pk > 0 else None, "notes": v["notes"]}

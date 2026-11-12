@@ -10,6 +10,8 @@
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function clock(t) { var m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ":" + (s < 10 ? "0" : "") + s; }
+  // HERESY 2296: a flag's time to the millisecond, «0:11.347» (clock() floored it: a flag set at 11.8 s stood at 11.0, before the click)
+  function clockMs(t) { var q = Math.max(0, Math.round((+t || 0) * 1000)), m = Math.floor(q / 60000), s = Math.floor(q % 60000 / 1000), r = q % 1000; return m + ":" + (s < 10 ? "0" : "") + s + "." + (r < 10 ? "00" : r < 100 ? "0" : "") + r; }
   // HERESY 1061: from the engine itself (native Range); the lab proxy failed on big files and on seeks
   // HERESY 1484: a step's report (read, not played)
   function isText(f) { return f.kind === "text" || /\.(txt|json|md|csv)$/i.test(f.file || f.path || ""); }
@@ -18,7 +20,7 @@
   // HERESY 1489: a download signed on the way when Content Credentials are on (app.js holds the switch)
   function signed(url, fmt, take, path) { return window.HeresyC2pa ? window.HeresyC2pa.url(url, fmt, take, path) : url; }
   function fileUrl(name, path) { return "/library/file?name=" + encodeURIComponent(name) + "&path=" + encodeURIComponent(path); }
-  var KIND = { stems: "Stems", remaster: "Remaster", upscale: "Upscale", debuzz: "Debuzz", daw: "DAW mix", gate: "Digital Gateway", midi: "Sound to MIDI" };   // HERESY 1471; 1547; 1834
+  var KIND = { stems: "Stems", remaster: "Remaster", upscale: "Upscale", debuzz: "Debuzz", daw: "DAW mix", gate: "Digital Gateway", midi: "Sound to MIDI", bounce: "Bounce in place" };   // HERESY 2316   // HERESY 1471; 1547; 1834
   // HERESY 1834: a MIDI set in a line: its size, its notes, its instruments by how many notes each played
   function midiSummary(m) {
     var size = tt(m.size === "large" ? "Large" : m.size === "medium" ? "Medium" : "Small");
@@ -99,8 +101,8 @@
 
   // HERESY 1487 (Viktor 15.10.2026: the tree's players as the compare window's: our own wave, its top half, the lower half on
   // hover): a play button, the wave (the played part lit, a click seeks); the row's own <audio>, hidden, sounds it (1476 hands over)
-  function player(url, peaksUrl) {
-    return '<span class="dv-player" data-dv-peaks="' + esc(peaksUrl) + '"><button type="button" class="dv-play" aria-label="Play"></button>' +
+  function player(url, peaksUrl, secsOf) {             // HERESY 2232: secsOf, the take whose sections its wave shows (the original's row)
+    return '<span class="dv-player" data-dv-peaks="' + esc(peaksUrl) + '"' + (secsOf ? ' data-dv-secs="' + esc(secsOf) + '"' : "") + '><button type="button" class="dv-play" aria-label="Play"></button>' +
       '<canvas class="dv-wave" role="slider" aria-label="Position"></canvas><audio preload="none" src="' + esc(url) + '"></audio></span>';
   }
   var PEAKS = {};
@@ -137,15 +139,41 @@
       a.addEventListener("timeupdate", draw);
       a.addEventListener("loadedmetadata", draw);
       el.addEventListener("mouseenter", function () { el.classList.add("is-hover"); draw(); });
-      el.addEventListener("mouseleave", function () { el.classList.remove("is-hover"); draw(); });
+      el.addEventListener("mouseleave", function () { el.classList.remove("is-hover"); el._hover = null; draw(); });
+      // HERESY 2260: where the pointer is on the wave, for its time and the whole name of its section (a name cut short on the wave reads whole here)
+      cv.addEventListener("mousemove", function (ev) { var r = cv.getBoundingClientRect(); el._hover = Math.max(0, Math.min(1, (ev.clientX - r.left) / (r.width || 1))); draw(); });
       cv.addEventListener("click", function (ev) {
         var r = cv.getBoundingClientRect(), f = Math.max(0, Math.min(1, (ev.clientX - r.left) / (r.width || 1)));
-        var go = function () { if (isFinite(a.duration) && a.duration > 0) { a.currentTime = f * a.duration; draw(); } };
+        var go = function () {
+          if (!(isFinite(a.duration) && a.duration > 0)) return;
+          var t = f * a.duration, near = el._secList && state.hooks.sectionNear ? state.hooks.sectionNear(el._secList, t, a.duration, r.width) : null;   // HERESY 2232: by a line, its start
+          a.currentTime = near ? near.t : t; draw();
+        };
         if (isFinite(a.duration) && a.duration > 0) go(); else { a.preload = "metadata"; a.addEventListener("loadedmetadata", go, { once: true }); a.load(); }
       });
       if (io) io.observe(el); else loadPeaks(el);
+      if (el.dataset.dvSecs) loadSections(el);
     });
   }
+  // HERESY 2232 (TODO.md, from SUNO v6: «The same over the take's own waveform in the room»): the take's sections over the original's wave in the
+  // Refiner, from app.js (the player's placing, its painter, its click by a line); asked once a take, again when the player places them anew or its ear is turned
+  var SECS = {};
+  function loadSections(el) {
+    var name = el.dataset.dvSecs, h = state.hooks, cv = el.querySelector(".dv-wave");
+    if (!h.sections || !h.paintSections) return;
+    var put = function (list) { el._secList = list; drawPlayer(el); };
+    if (Array.isArray(SECS[name])) return put(SECS[name]);
+    (SECS[name] = SECS[name] || h.sections(name).then(function (list) { SECS[name] = list || []; return SECS[name]; }, function (e) { delete SECS[name]; throw e; }))
+      .then(function (list) { if (el.isConnected) { cv.removeAttribute("data-tip"); put(list); } }, function (e) {
+        // said on the wave itself: a wave without lines because they could not be read is not a take without sections
+        if (el.isConnected) cv.setAttribute("data-tip", tt("The take's sections could not be read for this wave: {0}").replace("{0}", tt((e && e.message) || String(e))));
+      });
+  }
+  window.addEventListener("heresy-sections", function (e) {
+    var name = e.detail && e.detail.name;
+    if (name) delete SECS[name]; else SECS = {};
+    Array.prototype.forEach.call(document.querySelectorAll(".dv-player[data-dv-secs]"), function (el) { if (!name || el.dataset.dvSecs === name) loadSections(el); });   // the tree and a node window's Output
+  });
   function loadPeaks(el) {
     var u = el.dataset.dvPeaks;
     if (!u) return;
@@ -154,6 +182,15 @@
       if (!p || !p.peaks || !p.peaks.length) return;
       PEAKS[u] = p; el._peaks = p.peaks; el._secs = p.seconds; drawPlayer(el);
     }).catch(function () { /* no wave: the line stays */ });
+  }
+  // HERESY 2260 (Viktor 08.11.2026: «ДА, по возможности»): the names on a 38 px wave, larger (10.5 px against 9) in one row, nearly opaque on a
+  // firmer ground; a name with no room is cut with «…» as before, and the pointer says it whole with its time
+  function ROOM_MARKS(el) { return { size: 10.5, rows: 1, ink: 0.94, back: 0.9, at: el._hover }; }
+  // HERESY 2260: a stem's or a remaster's wave carries the take's sections when it keeps the take's own time (its length the take's, within half a
+  // second or a hundredth), the lines and names where the original's wave has them; a file of another length, or of no known length, stays bare
+  function secsFor(m, f, take) {
+    var a = +f.seconds || 0, b = +take.seconds || 0;
+    return (m.kind === "stems" || m.kind === "remaster") && a > 0 && b > 0 && Math.abs(a - b) <= Math.max(0.5, b * 0.01) ? take.name : "";
   }
   function drawPlayer(el) {
     var cv = el.querySelector(".dv-wave"), a = el.querySelector("audio");
@@ -174,6 +211,7 @@
       ctx.fillStyle = (k + 0.5) / p.length <= at ? lit : dim;
       ctx.fillRect(x, base - v, Math.max(1, bw - 0.5), 2 * v);
     }
+    if (el._secList && el._secList.length && d && state.hooks.paintSections) state.hooks.paintSections(ctx, el._secList, d, w, h, ROOM_MARKS(el));   // HERESY 2232: the player's painter; 2260: at the room's measure
   }
 
   // HERESY 1486 (Viktor 15.10.2026: «"Сделано из этого семпла" хаотично»): the branches in the chain's order, each under the branch
@@ -197,7 +235,7 @@
     var orig = "/library/listen?name=" + encodeURIComponent(take.name);
     return '<div class="dv-node dv-root dv-orig"><span class="dv-name"><span translate="no">' + esc(take.label || take.name) + '</span> <em class="dv-orig-tag">the original</em></span>' +
       '<span class="dv-meta mono">' + (take.seconds ? clock(take.seconds) : "") + "</span>" +
-      player(orig, "/library/peaks?name=" + encodeURIComponent(take.name)) +   // HERESY 1487
+      player(orig, "/library/peaks?name=" + encodeURIComponent(take.name), take.name) +   // HERESY 1487; 2232: its sections over it
       '<span class="dv-acts"><button type="button" class="btn small primary dv-compare" data-dv-compare="0" data-tip="Every version of this take in one player: switch between them at the same second (1–9, Space)">Compare all</button>' +
       '<button type="button" class="btn ghost small dv-mon" data-dv-mon="' + esc("") + '" aria-pressed="false" data-tip="Play it through Forge\'s monitor (Audio I/O), from where its player stands; again to stop. The browser plays as before">On Forge</button>' +   // HERESY 1548
       '<a class="btn ghost small" href="' + esc(signed("/library/flac?name=" + encodeURIComponent(take.name), "flac", take)) + '" download="' + esc((take.label || take.name) + ".flac") + '">FLAC</a></span></div>';   // HERESY 1489; 1513: its buttons one column
@@ -240,7 +278,7 @@
         return;
       }
       h += '<div class="dv-node">' + nm + '<span class="dv-meta mono">' + (f.seconds ? clock(f.seconds) : "") + "</span>" +
-        player(url, "/lab/peaks?name=" + encodeURIComponent(take.name) + "&path=" + encodeURIComponent(f.path) + "&n=400") +   // HERESY 1487
+        player(url, "/lab/peaks?name=" + encodeURIComponent(take.name) + "&path=" + encodeURIComponent(f.path) + "&n=400", secsFor(m, f, take)) +   // HERESY 1487; 2260: the take's sections
         '<span class="dv-acts"><button type="button" class="btn ghost small" data-dv-compare-path="' + esc(f.path) + '" data-tip="Compare it with the original and every other version, at the same second">Compare</button>' +
         '<button type="button" class="btn ghost small" data-dv-spectrum="' + esc(f.path) + '" data-tip="Lay this file over the take in the spectrum">Spectrum</button>' +
         (window.HeresyPost && window.HeresyPost.has && window.HeresyPost.has("pl-ruach-reportPanel") ?   // HERESY 1557
@@ -300,6 +338,8 @@
       return { pct: Math.max(3, Math.round(j.progress * 100)), say: tt("{0} % · {1} notes").replace("{0}", Math.round(j.progress * 100)).replace("{1}", j.notes || 0) };
     var len = state.take && state.take.seconds || 0, rate = RATE[j.kind] * (j.kind === "stems" && j.mode === "four" ? 1.8 : j.kind === "stems" && j.mode === "six" ? 1.1 : j.kind === "stems" && j.mode === "eight" ? 2.1 : 1);   // 1462: six measured 0.75 s a second
     var clockS = function (s) { return s >= 60 ? Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2) : s + " s"; };
+    if (j.status === "queued" && j.lamp)               // HERESY 2301: the analog gateway's line, one stream on the machine: the place and the time ahead
+      return { pct: 3, say: tt("the lamp's queue: number {0}, about {1}").replace("{0}", j.lamp.position).replace("{1}", clockS(Math.max(0, Math.round(j.lamp.eta || 0)))) };
     if (j.status === "queued") return { pct: 3, say: "waiting for Forge\u2026 " + clockS(el) };
     if (!len || !rate) return { pct: 50, say: "running\u2026 " + clockS(el) };
     var est = Math.max(5, len * rate), pct = Math.min(95, Math.round(100 * el / est));
@@ -399,6 +439,7 @@
   }
 
   function tt(x) { return window.RuachI18n && window.RuachI18n.t ? window.RuachI18n.t(x) : x; }   // HERESY 1527
+  var LANDED_SEEN = {};                             // HERESY 2298: each branch that landed with a Reader's take said once
   function refresh() {
     if (!state.take) { paint(); return Promise.resolve(); }
     var token = state.token, name = state.take.name;
@@ -412,6 +453,12 @@
         MARKS[name] = d.marks || {};                    // HERESY 1504
         state.running = d.running || [];
         state.trash = d.trash || [];                    // HERESY 1527
+        // HERESY 2298: made here with a Reader's take in it, it is the Reader's and landed with that take: said, or it would seem lost
+        (d.landed || []).forEach(function (l) {
+          if (!l || LANDED_SEEN[l.id]) return;
+          LANDED_SEEN[l.id] = 1;
+          (window.HeresyToast || say)(tt("Made with the Narrator's take, so it is the Narrator's: it landed with \u201c{0}\u201d").replace("{0}", l.title || l.take));
+        });
         paint();
         paintSources();
         paintUpSources();
@@ -831,11 +878,22 @@
   function cmpSeek(t, step, dir, d) { var x = dir > 0 ? (Math.floor(t / step + 1e-6) + 1) * step : Math.floor((t - 0.5) / step) * step; return Math.max(0, d > 0 ? Math.min(x, Math.max(0, d - 0.05)) : x); }
   // the ruler's ticks: a minute the tallest, then 30 s and 15 s, the seconds the lowest, thinned on a long take (every 2, 3 or 5 s, or none)
   // HERESY 2000: the marks a take's note holds, «1:23 — a word» each on a line: [seconds, its word]
-  function cmpMarks(note) {
-    var out = [], re = /^(\d+):(\d\d)\s+\u2014\s*(.*)$/gm, m;
-    while ((m = re.exec(String(note || "")))) out.push([+m[1] * 60 + +m[2], m[3]]);
+  // HERESY 2296 (Viktor 09.11.2026: «Добавь миллисекунды сюда в волну… И можно тоже с флажком выделять и флаговать целый сегмент»): «0:11.347 — a word»
+  // to the millisecond (the old «1:23 — a word» read as before), and a stretch «0:11.347–0:12.120 — a word»: [start, word] or [start, word, end]
+  var MARK_RE = /^(\d+):(\d\d)(?:\.(\d{1,3}))?(?:\s*[\u2013-]\s*(\d+):(\d\d)(?:\.(\d{1,3}))?)?\s+\u2014\s*(.*)$/;
+  function cmpSec(m, s, ms) { return +m * 60 + +s + (ms ? +("0." + ms) : 0); }
+  function cmpMarkLines(note) {
+    var out = [];
+    String(note || "").split("\n").forEach(function (ln, i) {
+      var m = MARK_RE.exec(ln.replace(/\r$/, ""));
+      if (!m) return;
+      var t = cmpSec(m[1], m[2], m[3]), e = m[4] != null ? cmpSec(m[4], m[5], m[6]) : null;
+      if (e != null && e < t) { var x = t; t = e; e = x; }
+      out.push({ line: i, t: t, e: e != null && e > t ? e : null, word: m[7] });
+    });
     return out;
   }
+  function cmpMarks(note) { return cmpMarkLines(note).map(function (k) { return k.e != null ? [k.t, k.word, k.e] : [k.t, k.word]; }); }
   // a second of one version as the same music's second in another, each placed by its sound against the first (off: its lag, seconds)
   function cmpShift(t, offFrom, offTo) { return Math.max(0, t - offFrom + offTo); }
   function cmpTicks(d, w) {
@@ -919,8 +977,13 @@
     var DIS_TIP = "The disliked versions: lit, they are in the list; grey, they are hidden. Remembered";
     var CMP_ALIGN = "yue2.cmpAlign", ALIGN_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">' +
       '<path d="M2 8h3l2-3 2 6 2-3h4M9 16h3l2-3 2 6 2-3h4M5 3v18"/></svg>';
+    // HERESY 2281 · 2286: a version picked for First and second on its row (its order in the square, 1 to 4: the others measured against 1), and the strip's button that runs it
+    var PICK_HTML = '<button type="button" class="coll-act cmp-pick" data-cmp-pick="1" aria-pressed="false" aria-label="Pick for First and second" data-tip="Pick it for First and second, up to four: numbered 1 to 4 as picked, 1 the one the others are measured against; a fifth takes the place of the oldest">' +
+      '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span class="cmp-pick-n mono" aria-hidden="true"></span></button>';
+    var AB_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 19V10M6.5 19V6M10 19v-5M12 3v18M14 19v-8M17.5 19V8M21 19v-4"/></svg>';
+    var AB_TIP = "First and second of the versions picked on their rows, two to four, measured against 1: the measures side by side, the spectrograms of each, the difference of a chosen pair, a verdict";
     var ALIGN_TIP = "Lit: each version placed by its own sound against the first (a print through gear comes back late), so a switch keeps the music. Grey: by the clock";
-    var MARK_TIP = "Mark this moment (M): a word at this second goes into the take's note, and a flag stands on the wave";
+    var MARK_TIP = "Mark this moment (M): a word at this moment goes into the take's note to the millisecond, and a flag stands on the wave. Shift+drag on the wave flags a stretch; a double click on a flag or a stretch changes its word";   // HERESY 2296
     var BLIND_TIP = "Blind: the versions shuffled and named A, B, C…, all that tells them apart hidden; off, their names come back";
     var LOUD_WAVE = '<svg class="loud-wave" viewBox="0 0 44 18" preserveAspectRatio="none" aria-hidden="true"><path class="loud-body" d="M0 18 L0 13 L2 10 L4 12 L6 8 L8 11 L10 6 L12 10 L14 3 L16 9 L18 7 L20 11 L22 5 L24 9 L26 8 L28 12 L30 2 L32 8 L34 6 L36 10 L38 4 L40 9 L42 7 L44 12 L44 18Z"/><path class="loud-tips" d="M13.43 5 L14 3 L14.67 5Z M29.4 5 L30 2 L31 5Z M37.67 5 L38 4 L38.4 5Z"/></svg>';   // HERESY 2044b: the top of a wave, its tips red
     var TALL_WAVE = '<svg class="loud-wave" viewBox="0 0 44 18" preserveAspectRatio="none" aria-hidden="true"><path class="loud-body" d="M0 9 L0 7 L2 5.5 L4 6.5 L6 4.5 L8 6 L10 3 L12 5 L14 1.5 L16 4 L18 2.5 L20 5.5 L22 3.5 L24 4.5 L26 2 L28 5 L30 1 L32 4 L34 3 L36 6 L38 4.5 L40 6.5 L42 5.5 L44 7.5 L44 9 L44 10.5 L42 12.5 L40 11.5 L38 13.5 L36 12 L34 15 L32 14 L30 17 L28 13 L26 16 L24 13.5 L22 14.5 L20 12.5 L18 15.5 L16 14 L14 16.5 L12 13 L10 15 L8 12 L6 13.5 L4 11.5 L2 12.5 L0 11 Z"/></svg>';   // HERESY 2045: the whole wave, mirrored
@@ -948,7 +1011,9 @@
       '<button type="button" class="cmp-loud mono" data-cmp="loud" aria-pressed="' + (cmpGet("yue2.oldLoud") === "1") + '" aria-label="As loud as before the cut" data-tip="' + LOUD_TIP + '">' +   // HERESY 2044b: in the head, its wave under it
       LOUD_WAVE + '<span class="loud-t">+dB</span></button></span>' +
       '<button type="button" class="btn ghost small" data-cmp="close">Close</button></span></div>' +
-      '<div class="cmp-wavebox"><canvas class="cmp-wave" role="slider" aria-label="Position" tabindex="-1"></canvas><span class="cmp-hover mono" hidden></span><span class="cmp-db mono" aria-hidden="true" translate="no"></span></div>' +   // HERESY 1995: the second under the pointer
+      '<div class="cmp-wavebox"><canvas class="cmp-wave" role="slider" aria-label="Position" tabindex="-1"></canvas><span class="cmp-hover mono" hidden></span><span class="cmp-db mono" aria-hidden="true" translate="no"></span>' +
+        '<span class="cmp-grip" data-grip="a" role="slider" tabindex="0" hidden aria-label="Loop start" data-tip="The loop\'s start: drag it, or ← → while it has the focus (0.1 s, with Shift 1 s)"></span>' +
+        '<span class="cmp-grip" data-grip="b" role="slider" tabindex="0" hidden aria-label="Loop end" data-tip="The loop\'s end: drag it, or ← → while it has the focus (0.1 s, with Shift 1 s)"></span></div>' +   // HERESY 2289: the loop's grips   // HERESY 1995: the second under the pointer
       '<canvas class="cmp-ruler" aria-hidden="true"></canvas>' +   // HERESY 1995: a minute, 30 s, 15 s, a second
       '<div class="cmp-transport"><button type="button" class="cmp-play" data-cmp="play" aria-label="Play"></button>' +
       '<button type="button" class="cmp-skip" data-cmp="rew" aria-label="Back" data-tip="Back to the last mark, by the player\'s own step (Engine → Defaults)">' + ico("rewind") + "</button>" +
@@ -964,6 +1029,7 @@
       '<button type="button" class="cmp-skip" data-cmp="mark" aria-label="Mark this moment" data-tip="' + MARK_TIP + '">' + ico("flag") + "</button>" +
       '<button type="button" class="cmp-dis cmp-blind" data-cmp="blind" aria-pressed="' + (cmpGet(CMP_BLIND) === "1") + '" aria-label="Blind" data-tip="' + BLIND_TIP + '">' + ico("blind") + "</button>" +   // HERESY 2000; 2043: 🫣, by the flag
       '<button type="button" class="cmp-keep cmp-mode" data-cmp="spec" aria-pressed="' + (cmpGet(CMP_SPEC) === "1") + '" aria-label="Colours of the bands" data-tip-head="Colours of the bands" data-tip="' + SPEC_TIP + '">' + ico("spectrum") + "</button>" +   // HERESY 2044
+      '<button type="button" class="cmp-skip cmp-ab" data-cmp="ab" aria-disabled="true" aria-label="First and second" data-tip="' + AB_TIP + '">' + AB_SVG + "</button>" +   // HERESY 2281
       '<span class="cmp-fill"></span>' +
       (rated ? '<button type="button" class="cmp-dis" data-cmp="dis" aria-pressed="' + !hideDis + '" aria-label="Disliked" data-tip="' + DIS_TIP + '">' + ico("dislike") + "</button>" : "") +   // HERESY 1995
       '<span class="cmp-cache cmp-mem" data-tip="Each version fetched whole into memory as the window opens: a switch plays from memory, not the network">' +   // HERESY 1621; 2044: a graph, its words in the tip
@@ -971,7 +1037,7 @@
       "</div>" +
       '<ol class="cmp-list">' + versions.map(function (v, i) {
         return '<li class="cmp-li" data-cmp-li="' + i + '"><button type="button" class="cmp-row" data-cmp-i="' + i + '"><span class="cmp-n mono">' + (i < 9 ? i + 1 : "") + '</span><span class="cmp-name">' + esc(v.label) + '<span class="cmp-off mono" data-cmp-off="' + i + '" hidden></span></span>' +   // HERESY 2000: its lag
-          '<span class="cmp-group">' + esc(v.group || "as YuE2 made it") + '</span><span class="cmp-lufs mono" data-cmp-lufs="' + i + '">\u2026</span><span class="cmp-dur mono">' + (v.seconds ? clock(v.seconds) : "") + "</span></button>" + rateHtml(v) + "</li>";   // 1550
+          '<span class="cmp-group">' + esc(v.group || "as YuE2 made it") + '</span><span class="cmp-lufs mono" data-cmp-lufs="' + i + '">\u2026</span><span class="cmp-dur mono">' + (v.seconds ? clock(v.seconds) : "") + "</span></button>" + PICK_HTML + rateHtml(v) + "</li>";   // 1550
       }).join("") + "</ol></div>";
     document.body.appendChild(back);
     var box = back.querySelector(".cmp-box"), wave = box.querySelector(".cmp-wave"), playBtn = box.querySelector(".cmp-play"), dragging = false;
@@ -1023,6 +1089,33 @@
     })();
     // HERESY 2000: an A–B loop dragged on the ruler (kept in the first version's clock, so it follows the music), a click there takes it off
     var loopA = null, loopB = null, rDrag = null;
+    // HERESY 2281 (Viktor 09.11.2026: «…чекбоксами или SVG иконкой выбираешь два семпла в сравнении, и получаешь тот же анализ и графы, что в ноде
+    // Огранщика»): two versions picked on their rows, the first before and the second after (a third takes the oldest one's place), the strip's
+    // button runs 1991's analyzer on them; each named as its row names it now, so Blind's letters while Blind is on
+    var abPick = [];
+    function abPaint() {
+      Array.prototype.forEach.call(box.querySelectorAll("[data-cmp-pick]"), function (p) {
+        var at = abPick.indexOf(+p.closest("[data-cmp-li]").dataset.cmpLi);
+        p.setAttribute("aria-pressed", String(at >= 0));
+        p.querySelector(".cmp-pick-n").textContent = at >= 0 ? String(at + 1) : "";
+      });
+      var abBtn = box.querySelector('[data-cmp="ab"]');
+      if (abBtn) abBtn.setAttribute("aria-disabled", String(abPick.length < 2));
+    }
+    function abToggle(i) {
+      var at = abPick.indexOf(i);
+      if (at >= 0) abPick.splice(at, 1); else { abPick.push(i); if (abPick.length > 4) abPick.shift(); }   // HERESY 2286: up to four
+      abPaint();
+    }
+    function abSide(i) {
+      var v = versions[i], nm = box.querySelector('[data-cmp-li="' + i + '"] .cmp-name'), c = nm ? nm.cloneNode(true) : null;
+      if (c) Array.prototype.forEach.call(c.querySelectorAll(".cmp-off"), function (x) { x.remove(); });
+      return { name: v.take || (state.take && state.take.name) || "", path: v.take ? "" : v.path || "", label: (c ? c.textContent : "").trim() || v.label };
+    }
+    function abRun() {
+      if (abPick.length < 2) return (window.HeresyToast || say)(tt("Pick two to four versions on their rows first"));
+      abOpen(abPick.map(abSide));
+    }
     // HERESY 2000: blind: the shown order of the versions (a digit and ↑ ↓ follow it)
     var order = versions.map(function (v, i) { return i; });
     var peaks = [];
@@ -1243,6 +1336,7 @@
       return marks;
     }
     function drawWave() {
+      gripPaint();                                       // HERESY 2289
       var w = wave.clientWidth, h = wave.clientHeight, dpr = window.devicePixelRatio || 1;
       if (!w || !h) return;
       if (wave.width !== Math.round(w * dpr) || wave.height !== Math.round(h * dpr)) { wave.width = Math.round(w * dpr); wave.height = Math.round(h * dpr); }
@@ -1286,11 +1380,30 @@
         var la = (loopA + off(active)) / d, lb = (loopB + off(active)) / d;
         ctx.globalAlpha = 0.16; ctx.fillStyle = lit; ctx.fillRect(Math.round(w * la), 0, Math.max(2, Math.round(w * (lb - la))), h); ctx.globalAlpha = 1;
       }
-      if (d) cmpMarks(noteOf(versions[active])).forEach(function (mk) {   // HERESY 2000: its marked moments
-        var mx = Math.round(w * Math.min(1, mk[0] / d));
-        ctx.fillStyle = lit; ctx.fillRect(mx, 0, 1, h);
-        ctx.beginPath(); ctx.moveTo(mx, 0); ctx.lineTo(mx + 7, 3.5); ctx.lineTo(mx, 7); ctx.closePath(); ctx.fill();
-      });
+      if (d) {                                           // HERESY 2000: its marked moments; 2296: each with its time to the millisecond, a stretch a band
+        var band = css.getPropertyValue("--patina").trim() || "#6fb3a8", lastX = -1e9;
+        var bandDraw = function (a, b, alpha) {
+          var x0 = Math.round(w * Math.min(1, a / d)), bw = Math.max(2, Math.round(w * Math.min(1, b / d)) - x0);
+          ctx.fillStyle = band; ctx.globalAlpha = alpha; ctx.fillRect(x0, 0, bw, h);
+          ctx.globalAlpha = 0.85; ctx.fillRect(x0, 0, bw, 3); ctx.globalAlpha = 1; ctx.fillRect(x0, 0, 1, h); ctx.fillRect(x0 + bw - 1, 0, 1, h);
+          return x0;
+        };
+        ctx.font = "10px " + (css.getPropertyValue("--mono").trim() || "monospace"); ctx.textBaseline = "top";
+        marksNow().sort(function (p, q) { return p.t - q.t; }).forEach(function (k) {
+          var lx, label;
+          if (k.e != null) { lx = bandDraw(k.t, k.e, 0.14) + 3; label = clockMs(k.t) + "\u2013" + clockMs(k.e); ctx.fillStyle = band; }
+          else {
+            var mx = Math.round(w * Math.min(1, k.t / d));
+            ctx.fillStyle = lit; ctx.fillRect(mx, 0, 1, h);
+            ctx.beginPath(); ctx.moveTo(mx, 0); ctx.lineTo(mx + 7, 3.5); ctx.lineTo(mx, 7); ctx.closePath(); ctx.fill();
+            lx = mx + 9; label = clockMs(k.t);
+          }
+          var tw = ctx.measureText(label).width;
+          if (lx > lastX + 4 && lx + tw <= w) { ctx.fillText(label, lx, k.e != null ? 5 : 0); lastX = lx + tw; }
+        });
+        var sel = segDrag || segPend;
+        if (sel) bandDraw(Math.min(sel.a, sel.b), Math.max(sel.a, sel.b), 0.26);
+      }
       ctx.fillStyle = lit; ctx.fillRect(Math.round(w * at) - 1, 0, 2, h);
       drawRuler();
     }
@@ -1329,6 +1442,15 @@
         for (var k = 1; k < versions.length; k++) { var j = (active + k) % versions.length; if (shown(j)) { pick(j); break; } }
       }
     }
+    // HERESY 2362 (Viktor 11.11.2026: «Синхронизация сравнителя с мегаплеером… принял твоё решение. Так и сделай»): the footer's player under the veil
+    // follows this window's clock without playing: the version in hand (a take; not Blind, its name would say which) loaded there paused, its wave,
+    // playhead and time moving with this window's, the live spectrum hearing this window (2357); closed, the player goes on from this second in the same
+    // moment, or stands paused there when this window was paused. One sound: this window's, then the player's
+    function followMain() {
+      if (!hk.follow || !back.isConnected) return;
+      var v = versions[active], a = cur();
+      hk.follow(v && v.take && !box.classList.contains("is-blind") ? v.take : "", a.readyState >= 1 ? (a.currentTime || 0) : lastT, !a.paused && !a.ended);
+    }
     function paint() {
       var a = cur(), d = dur();
       if (a.readyState >= 1) lastT = a.currentTime || 0;
@@ -1336,6 +1458,7 @@
       playBtn.setAttribute("aria-label", a.paused ? "Play" : "Pause");
       box.querySelector(".cmp-time").textContent = clock(a.currentTime || 0) + " / " + (d ? clock(d) : "0:00");   // HERESY 1724
       wave.setAttribute("aria-valuenow", String(Math.round(a.currentTime || 0)));
+      box.dataset.t = (a.currentTime || 0).toFixed(2);   // HERESY 2285: the playhead to the hundredth, for the checks
       var nowEl = box.querySelector(".cmp-now"), nowName = box.querySelector('[data-cmp-li="' + active + '"] .cmp-name');   // HERESY 2043: the head names it
       if (nowEl) nowEl.textContent = nowName ? " \u00b7 " + nowName.textContent : "";
       Array.prototype.forEach.call(box.querySelectorAll(".cmp-row"), function (r) {   // HERESY 2033: by the version a row holds, not its place (blind shuffles)
@@ -1347,6 +1470,7 @@
       if (cmpGet(CMP_SPEC) === "1") wantBands(active);  // HERESY 2044
       drawWave();
       ldPaint();                                         // HERESY 2037
+      followMain();                                      // HERESY 2362
     }
     // HERESY 1872: a take's sheet beside the window: its style (five lines, scrolling) over its lyrics, the window a fifth narrower to its left,
     // the pair centred; its corner makes it wider and taller (kept), its text − + ⟲ (kept); it follows the version playing
@@ -1443,8 +1567,19 @@
       if (i < 0 || i >= audios.length || i === active) return;
       if (sheet && versions[i].take) sheetFill(i);       // HERESY 1872: the sheet follows the version playing
       var from = cur(), to = audios[i], t = from.readyState >= 1 ? (from.currentTime || 0) : lastT, playing = !from.paused;
+      var tFrom = t;
       t = cmpStartAt(t, isFinite(from.duration) ? from.duration : 0, from.ended, cmpKeep());   // HERESY 1995
       if (t > 0) t = cmpShift(t, off(active), off(i));   // HERESY 2000: the same music's second, not the clock's
+      // HERESY 2285 (Viktor 09.11.2026: «Когда в сравнителе выключена синхронизация по времени, риска выскакивает из сегмента выделения и становится на ноль в
+      // другом треке. Это закон — держать риску в сегменте по всем переключениям и режимам синхронизации», and then: «При отключенном синхроне в сегменте …
+      // должна спрыгивать в таком режиме без синхронизации по таймстемпам на начало сегмента, вровень повторяя общую задумку, а когда синхронизация включена,
+      // двигаться при перемещении по трекам как задумано, синхронизируясь»): a loop on, a switch (a click, a digit, ↑ ↓, Blind or not) lands in it: with Keep
+      // the second off at its start, as a switch without a loop starts from the start; with it on at the same second of the music (Sync by sound's lag
+      // when that is on), and at the loop's start when that second is out of the loop
+      if (loopA != null) {
+        var LA = loopA + off(i), LB = loopB + off(i), tm = cmpShift(tFrom, off(active), off(i));
+        t = cmpKeep() && tm >= LA && tm < LB - 0.05 ? tm : LA;
+      }
       lastT = t;
       var place = function () { try { to.currentTime = Math.min(t, isFinite(to.duration) ? Math.max(0, to.duration - 0.05) : t); } catch (e) { /* not seekable yet */ } };
       active = i;
@@ -1480,17 +1615,21 @@
     }
     function toggle() { var a = cur(); if (a.paused) playNow(a); else { wantPlay = false; a.pause(); } paint(); }
     function close() {
-      var v0 = versions[active], a0 = cur(),             // HERESY 2044: a take playing goes on in the player (not blind: its name would say which)
-          handBack = v0 && v0.take && hk.takeOver && !a0.paused && !a0.ended && !box.classList.contains("is-blind") ? { name: v0.take, at: a0.currentTime || 0 } : null;
+      var v0 = versions[active], a0 = cur(), on0 = !a0.paused && !a0.ended,   // HERESY 2044: a take playing goes on in the player (not blind: its name would say which)
+          handBack = v0 && v0.take && hk.takeOver && !box.classList.contains("is-blind") && (on0 || hk.follow) ? { name: v0.take, at: a0.readyState >= 1 ? (a0.currentTime || 0) : lastT, play: on0 } : null;   // HERESY 2362: a paused one too, paused there
+      clearInterval(tick);                               // HERESY 2362: the hand-over first: this window silent and the player on in the same moment
+      audios.forEach(function (a) { a.pause(); });
+      if (handBack) hk.takeOver(handBack.name, handBack.at, handBack.play); else if (hk.follow) hk.follow("", 0, false);
       if (sheet && sheet.ro) sheet.ro.disconnect();     // HERESY 1872
       sheet = null;
-      audios.forEach(function (a) { a.pause(); a.removeAttribute("src"); a.load(); });
-      cached.forEach(function (u) { if (u) URL.revokeObjectURL(u); });   // HERESY 1621: the memory given back
+      setTimeout(function () {                           // HERESY 2362: after the hand-over's task, so the player's start waits for none of it
+        audios.forEach(function (a) { a.pause(); a.removeAttribute("src"); a.load(); });
+        cached.forEach(function (u) { if (u) URL.revokeObjectURL(u); });   // HERESY 1621: the memory given back
+      }, 0);
       document.removeEventListener("keydown", key, true);
       window.removeEventListener("resize", drawWave);
       clearInterval(tick);
       back.remove();
-      if (handBack) hk.takeOver(handBack.name, handBack.at);
     }
     function key(e) {
       ldTouch();                                         // HERESY 2037
@@ -1499,8 +1638,9 @@
       if (document.querySelector(".ds-back") || (shOver && !shOver.hidden)) return;
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); if (loopA != null) { loopA = loopB = null; return drawWave(); } return sheet ? sheetClose() : close(); }   // HERESY 1872: the sheet first; 2000: the loop before it
       if (e.target && box.contains(e.target) && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && e.target.type !== "checkbox") return;
+      if (e.target && e.target.dataset && e.target.dataset.grip && loopA != null && gripKey(e)) return;   // HERESY 2289: a grip in focus moves its edge
       if (e.key === " ") { e.preventDefault(); return toggle(); }
-      if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); var a = cur(); a.currentTime = Math.max(0, (a.currentTime || 0) + (e.key === "ArrowRight" ? 5 : -5)); return paint(); }
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); var a = cur(), t5 = a.currentTime || 0; a.currentTime = inLoop(t5, Math.max(0, t5 + (e.key === "ArrowRight" ? 5 : -5))); return paint(); }   // HERESY 2279: inside the loop
       if (/^[1-9]$/.test(e.key)) { e.preventDefault(); var vi = order[+e.key - 1]; if (vi != null && shown(vi)) pick(vi); }   // HERESY 2000: by the shown order
       if (e.key === "m" || e.key === "M") { e.preventDefault(); return markMoment(); }
       if (e.key === "ArrowUp" || e.key === "ArrowDown") {   // HERESY 1982 (Viktor 01.11.2026): the next or the previous version, as its digit picks it
@@ -1515,22 +1655,100 @@
       cur().currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * d;
       paint();
     };
-    wave.addEventListener("pointerdown", function (e) { dragging = true; try { wave.setPointerCapture(e.pointerId); } catch (x) { /* none */ } seekAt(e); });
-    wave.addEventListener("pointermove", function (e) { if (dragging) seekAt(e); });
-    wave.addEventListener("pointerup", function () { dragging = false; });
+    // HERESY 2296: a stretch flagged by Shift+drag on the wave (a plain drag seeks), its band's top (12 px) plays it once, or loops it with Ring on; a double
+    // click on a flag or in a band asks its word again (empty takes it away); the time read where the pointer is, to the millisecond
+    var segDrag = null, segPend = null, bandStop = null;
+    function marksNow() { return cmpMarkLines(noteOf(versions[active])); }
+    function waveT(e) { var r = wave.getBoundingClientRect(), d = dur(); return d && r.width ? Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * d : 0; }
+    function flagAt(e) {
+      var r = wave.getBoundingClientRect(), d = dur(), near = null;
+      if (d && r.width) marksNow().forEach(function (k) { if (k.e == null && Math.abs(k.t / d * r.width - (e.clientX - r.left)) <= 5) near = k; });
+      return near;
+    }
+    function bandAt(e, capOnly) {
+      var r = wave.getBoundingClientRect(), d = dur(), hit = null;
+      if (!d || !r.width || (capOnly && e.clientY - r.top > 12)) return null;
+      var t = waveT(e), pad = 3 / r.width * d;
+      marksNow().forEach(function (k) { if (k.e != null && t >= k.t - pad && t <= k.e + pad) hit = k; });
+      return hit;
+    }
+    function spanOf(k) { return k.e != null ? clockMs(k.t) + "\u2013" + clockMs(k.e) : clockMs(k.t); }
+    function playBand(k) {
+      var a = cur(), o = off(active);
+      if (modeOn(CMP_RING)) { loopA = Math.max(0, k.t - o); loopB = Math.max(loopA + 0.05, k.e - o); bandStop = null; }
+      else { loopA = loopB = null; bandStop = { i: active, e: k.e }; }
+      try { a.currentTime = k.t; } catch (x) { /* not seekable yet */ }
+      if (a.paused) playNow(a);
+      paintLoop(); paint();
+    }
+    function addMarkLine(v, line) {
+      var note = noteOf(v), p = hk.setNote(v.take, note ? note.replace(/\s+$/, "") + "\n" + line : line);
+      var done = function () { paintRates(); drawWave(); box.focus(); };
+      if (p && p.then) p.then(done, done); else done();
+    }
+    function flagStretch(a, b) {
+      var v = versions[active];
+      if (!v.take || !hk.setNote) { (window.HeresyToast || say)(tt("A moment is marked in a take's note: this version is a file of a tree")); return; }
+      var span = clockMs(a) + "\u2013" + clockMs(b);
+      segPend = { a: a, b: b }; drawWave();
+      window.HeresyDialog.prompt(tt("Flag this stretch {0}").replace("{0}", span) + "\n\n" + tt("A word or two: it goes into the take's note as a line with the stretch's start and end, and a shaded band stands on the wave; a click on the band's top plays it."), "",
+        { ok: tt("Flag it"), max: 200 }).then(function (word) {
+          segPend = null;
+          if (word === null) { drawWave(); return box.focus(); }
+          addMarkLine(v, span + " \u2014 " + (String(word).trim() || "\u2605"));
+        });
+    }
+    function editFlag(k) {
+      var v = versions[active];
+      if (!v.take || !hk.setNote) return;
+      window.HeresyDialog.prompt(tt("Change the flag at {0}").replace("{0}", spanOf(k)) + "\n\n" + tt("Its word, or empty to take the flag away."), k.word,
+        { ok: tt("Keep it"), max: 200 }).then(function (word) {
+          if (word === null) return box.focus();
+          var lines = noteOf(v).split("\n"), ln = lines[k.line] || "", w = String(word).trim();
+          if (!MARK_RE.test(ln.replace(/\r$/, ""))) return box.focus();   // the note changed meanwhile: its line is not there
+          if (w) lines[k.line] = ln.replace(/\s+\u2014[\s\S]*$/, "") + " \u2014 " + w; else lines.splice(k.line, 1);
+          var p = hk.setNote(v.take, lines.join("\n")), done = function () { paintRates(); drawWave(); box.focus(); };
+          if (p && p.then) p.then(done, done); else done();
+        });
+    }
+    function segUp() {
+      var sd = segDrag; segDrag = null; drawWave();
+      if (!sd) return;
+      var a = Math.min(sd.a, sd.b), b = Math.max(sd.a, sd.b);
+      if (b - a >= 0.05) flagStretch(a, b);
+    }
+    wave.addEventListener("pointerdown", function (e) {
+      bandStop = null;
+      if (e.button === 0 && e.shiftKey) { var t0 = waveT(e); segDrag = { a: t0, b: t0 }; try { wave.setPointerCapture(e.pointerId); } catch (x) { /* none */ } return drawWave(); }
+      var bd = e.button === 0 ? bandAt(e, true) : null;
+      if (bd) return playBand(bd);
+      dragging = true; try { wave.setPointerCapture(e.pointerId); } catch (x) { /* none */ } seekAt(e);
+    });
+    wave.addEventListener("pointermove", function (e) { if (segDrag) { segDrag.b = waveT(e); return drawWave(); } if (dragging) seekAt(e); });
+    wave.addEventListener("pointerup", function () { dragging = false; if (segDrag) segUp(); });
+    wave.addEventListener("dblclick", function (e) { var k = flagAt(e) || bandAt(e, false); if (k) { e.preventDefault(); editFlag(k); } });
     var hov = box.querySelector(".cmp-hover");          // HERESY 1995: the second under the pointer
     wave.addEventListener("pointermove", function (e) {
       var r = wave.getBoundingClientRect(), d = dur();
       if (!d || !r.width) return;
-      var fr = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), near = null;
-      cmpMarks(noteOf(versions[active])).forEach(function (mk) { if (Math.abs(mk[0] / d * r.width - fr * r.width) <= 5) near = mk; });   // HERESY 2000: a mark's word
-      hov.textContent = near ? clock(near[0]) + " \u2014 " + near[1] : clock(fr * d); hov.hidden = false; hov.style.left = Math.round(fr * r.width) + "px";
+      var fr = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), near = flagAt(e) || bandAt(e, false);   // HERESY 2000: a mark's word; 2296: a stretch's too
+      hov.textContent = segDrag ? clockMs(Math.min(segDrag.a, segDrag.b)) + "\u2013" + clockMs(Math.max(segDrag.a, segDrag.b)) : near ? spanOf(near) + " \u2014 " + near.word : clock(fr * d);
+      hov.hidden = false; hov.style.left = Math.round(fr * r.width) + "px";
     });
     // HERESY 2000: the A–B loop on the ruler: dragged, it loops the stretch (in the first version's clock, so a switch keeps it on the music)
     var ruler = box.querySelector(".cmp-ruler");
     ruler.dataset.tip = tt("Drag here for an A–B loop; a click here or Esc takes it off");
     function rulerT(e) { var r = ruler.getBoundingClientRect(), d = dur(); return d && r.width ? Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * d : 0; }
     function paintLoop() { box.dataset.loop = loopA == null ? "" : loopA.toFixed(2) + "-" + loopB.toFixed(2); drawWave(); }
+    // HERESY 2279 (Viktor 09.11.2026: «как только выделил сегмент, риска сразу в него, и кнопками влево/вправо пять секунд перемотку, и ни в коем случае, чтобы
+    // клавиши не выгоняли риску из сегмента»): a step of the arrows or of ⏪ ⏩ while a loop is on stays in it: past its end it goes round to its start, before
+    // its start it stops there, and from outside the loop (a click on the wave out of it) it comes to the start; without a loop the step as it was
+    function inLoop(t, to) {
+      if (loopA == null) return to;
+      var A = loopA + off(active), B = loopB + off(active);
+      if (t < A - 0.05 || t > B + 0.05) return A;
+      return to >= B - 0.05 ? A : Math.max(A, to);
+    }
     ruler.addEventListener("pointerdown", function (e) { rDrag = { a: rulerT(e), moved: false }; try { ruler.setPointerCapture(e.pointerId); } catch (x) { /* none */ } });
     ruler.addEventListener("pointermove", function (e) {
       if (!rDrag) return;
@@ -1540,15 +1758,62 @@
       loopA = Math.min(rDrag.a, tq) - off(active); loopB = Math.max(rDrag.a, tq) - off(active);
       paintLoop();
     });
-    ruler.addEventListener("pointerup", function () {
-      if (rDrag && !rDrag.moved) { loopA = loopB = null; }
-      else if (loopA != null) { var a = cur(), A = loopA + off(active), B = loopB + off(active); if (a.currentTime < A || a.currentTime > B) a.currentTime = A; }
+    // HERESY 2279: a loop made (either way, to the very end too) takes the playhead to its start at once, playing on if it played (before, only a playhead
+    // out of it moved: one at the end, where a loop dragged to the end also ends, stayed there); a lost capture ends the drag as the release does
+    function rulerUp() {
+      if (!rDrag) return;
+      if (!rDrag.moved) { loopA = loopB = null; }
+      else if (loopA != null) { try { cur().currentTime = loopA + off(active); } catch (x) { /* not seekable yet */ } paint(); }
       rDrag = null;
       paintLoop();
+    }
+    ruler.addEventListener("pointerup", rulerUp);
+    ruler.addEventListener("lostpointercapture", rulerUp);
+    // HERESY 2289 (Viktor 09.11.2026: «На края (левый и правый) сегмента выделения прикрути шторки для сдвига краёв вправо/влево»): a grip on each edge of
+    // the loop, dragged to move that edge (a quarter of a second from the other at least), or ← → while it has the focus (0.1 s, Shift 1 s); the playhead
+    // kept in the loop as its edges move (2285's law): one an edge passes is put at the nearest second inside
+    function gripPaint() {
+      var d = dur();
+      Array.prototype.forEach.call(box.querySelectorAll(".cmp-grip"), function (g) {
+        var on = loopA != null && d > 0;
+        g.hidden = !on;
+        if (on) { var t = (g.dataset.grip === "a" ? loopA : loopB) + off(active); g.style.left = (Math.max(0, Math.min(1, t / d)) * 100) + "%"; g.setAttribute("aria-valuenow", t.toFixed(1)); }
+      });
+    }
+    function gripTo(which, t) {                         // t in the playing version's clock
+      var d = dur(), o = off(active);
+      if (which === "a") loopA = Math.max(0, Math.min(t - o, loopB - 0.25));
+      else loopB = Math.min(Math.max(t - o, loopA + 0.25), Math.max(loopA + 0.25, d - o));
+      var a = cur(), A = loopA + o, B = loopB + o, at = a.currentTime || 0;
+      try { if (at < A) a.currentTime = A; else if (at > B) a.currentTime = Math.max(A, B - 0.05); } catch (x) { /* not seekable yet */ }
+      paintLoop(); paint();
+    }
+    var gDrag = null;
+    Array.prototype.forEach.call(box.querySelectorAll(".cmp-grip"), function (g) {
+      g.addEventListener("pointerdown", function (e) { e.preventDefault(); e.stopPropagation(); gDrag = g.dataset.grip; try { g.setPointerCapture(e.pointerId); } catch (x) { /* none */ } g.focus(); });
+      g.addEventListener("pointermove", function (e) {
+        if (gDrag !== g.dataset.grip) return;
+        var r = wave.getBoundingClientRect(), d = dur();
+        if (d && r.width) gripTo(gDrag, Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * d);
+      });
+      var up = function () { gDrag = null; };
+      g.addEventListener("pointerup", up); g.addEventListener("lostpointercapture", up);
     });
+    function gripKey(e) {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return false;
+      e.preventDefault();
+      var which = e.target.dataset.grip;
+      gripTo(which, (which === "a" ? loopA : loopB) + off(active) + (e.key === "ArrowRight" ? 1 : -1) * (e.shiftKey ? 1 : 0.1));
+      return true;
+    }
     (function keepLoop() {
       if (!back.isConnected) return;
       if (loopA != null) { var a = cur(), B = loopB + off(active); if (!a.paused && a.currentTime >= B) a.currentTime = loopA + off(active); }
+      if (bandStop) {                                    // HERESY 2296: a stretch played once ends at its end
+        var ab = cur();
+        if (bandStop.i !== active || loopA != null) bandStop = null;
+        else if (!ab.paused && ab.currentTime >= bandStop.e) { bandStop = null; wantPlay = false; ab.pause(); try { ab.currentTime = ab.currentTime; } catch (x) { /* none */ } paint(); }
+      }
       requestAnimationFrame(keepLoop);
     })();
     // HERESY 2000: blind: shuffled, named A, B, C…, what tells them apart hidden (the CSS); off, the names and the order back
@@ -1578,13 +1843,10 @@
     function markMoment() {
       var v = versions[active], a = cur(), at = a.currentTime || 0;
       if (!v.take || !hk.setNote) { (window.HeresyToast || say)(tt("A moment is marked in a take's note: this version is a file of a tree")); return; }
-      window.HeresyDialog.prompt(tt("Mark this moment at {0}").replace("{0}", clock(at)) + "\n\n" + tt("A word or two: it goes into the take's note as a line with its second, and a flag stands on the wave."), "",
+      window.HeresyDialog.prompt(tt("Mark this moment at {0}").replace("{0}", clockMs(at)) + "\n\n" + tt("A word or two: it goes into the take's note as a line with its second, and a flag stands on the wave."), "",
         { ok: tt("Mark it"), max: 200 }).then(function (word) {
           if (word === null) return box.focus();
-          var note = noteOf(v), line = clock(at) + " \u2014 " + (String(word).trim() || "\u2605");
-          var p = hk.setNote(v.take, note ? note.replace(/\s+$/, "") + "\n" + line : line);
-          var done = function () { paintRates(); drawWave(); box.focus(); };
-          if (p && p.then) p.then(done, done); else done();
+          addMarkLine(v, clockMs(at) + " \u2014 " + (String(word).trim() || "\u2605"));   // HERESY 2296: to the millisecond
         });
     }
     wave.addEventListener("pointerleave", function () { hov.hidden = true; });
@@ -1596,7 +1858,7 @@
       hk.menu(v.take, e.clientX, e.clientY);
       [400, 1200, 2500].forEach(function (ms) { setTimeout(function () { if (back.isConnected && document.body.dataset.tab !== tab) close(); }, ms); });
     });
-    wave.addEventListener("pointercancel", function () { dragging = false; });
+    wave.addEventListener("pointercancel", function () { dragging = false; if (segDrag) { segDrag = null; drawWave(); } });
     window.addEventListener("resize", drawWave);
     document.addEventListener("keydown", key, true);
     back.addEventListener("mousedown", function (e) { if (e.target === back) close(); });
@@ -1610,6 +1872,8 @@
         return;
       }
       var rb = e.target.closest("[data-cmp-rate]"), fb = e.target.closest("[data-cmp-fav]"), nb = e.target.closest("[data-cmp-note]"), sb = e.target.closest("[data-cmp-sheet]");
+      var pk = e.target.closest("[data-cmp-pick]");   // HERESY 2281
+      if (pk) return abToggle(+pk.closest("[data-cmp-li]").dataset.cmpLi);
       if (sb) return sheetOpen(+sb.closest("[data-cmp-li]").dataset.cmpLi);   // HERESY 1872
       if (nb) {                                          // HERESY 1724: the take's note, as its card's menu writes it
         var vn = versions[+nb.closest("[data-cmp-li]").dataset.cmpLi];
@@ -1644,10 +1908,11 @@
       }
       if (b && b.dataset.cmp === "close") return close();
       if (b && b.dataset.cmp === "play") return toggle();
-      if (b && (b.dataset.cmp === "rew" || b.dataset.cmp === "fwd")) { var sa = cur(); sa.currentTime = cmpSeek(sa.currentTime || 0, cmpStep(), b.dataset.cmp === "fwd" ? 1 : -1, dur()); return paint(); }   // HERESY 1995
+      if (b && (b.dataset.cmp === "rew" || b.dataset.cmp === "fwd")) { var sa = cur(); sa.currentTime = inLoop(sa.currentTime || 0, cmpSeek(sa.currentTime || 0, cmpStep(), b.dataset.cmp === "fwd" ? 1 : -1, dur())); return paint(); }   // HERESY 1995; 2279: inside the loop
       if (b && b.dataset.cmp === "keep") { cmpPut(CMP_KEEP, cmpKeep() ? "0" : null); b.setAttribute("aria-pressed", String(cmpKeep())); return; }
       if (b && b.dataset.cmp === "align") { cmpPut(CMP_ALIGN, cmpGet(CMP_ALIGN) !== "0" ? "0" : null); b.setAttribute("aria-pressed", String(cmpGet(CMP_ALIGN) !== "0")); return drawWave(); }   // HERESY 2000
       if (b && b.dataset.cmp === "mark") return markMoment();
+      if (b && b.dataset.cmp === "ab") return abRun();   // HERESY 2281
       if (b && b.dataset.cmp === "sheet") { if (sheet) return sheetClose(); return versions[active].take ? sheetOpen(active) : (window.HeresyToast || say)(tt("This version is a file of a tree: it has no style and lyrics of its own")); }   // HERESY 2043
       if (b && b.dataset.cmp === "blind") { var bl = b.getAttribute("aria-pressed") !== "true"; b.setAttribute("aria-pressed", String(bl)); cmpPut(CMP_BLIND, bl ? "1" : null); return setBlind(bl); }   // 2009: kept
       if (b && (b.dataset.cmp === "playon" || b.dataset.cmp === "ring" || b.dataset.cmp === "shuffle")) return modeFlip(b.dataset.cmp);   // HERESY 2044
@@ -1659,6 +1924,9 @@
     audios.forEach(function (a, i) {
       a.addEventListener("ended", function () {
         if (i !== active) return;
+        if (loopA != null) {                             // 09.11.2026: a loop dragged to the very end: the audio ends before keepLoop sees B
+          a.currentTime = loopA + off(active); a.play().catch(function () {}); return paint();
+        }
         if (modeOn(CMP_ON) && loopA == null) {           // HERESY 2044: on to the next one, from its start
           var nx = nextUp();
           if (nx === active) { a.currentTime = 0; a.play().catch(function () {}); return paint(); }
@@ -1725,7 +1993,137 @@
 
   // HERESY 1169: the de-esser as set, for the chain when it splits stems (remasterSettings says it for this step's own source)
   function chainDeess() { return !!($("rmDeess") && $("rmDeess").checked); }
-  window.HeresyDerived = { cmp: { startAt: cmpStartAt, seek: cmpSeek, ticks: cmpTicks, keep: cmpKeep, hide: cmpHide, marks: cmpMarks, shift: cmpShift, isOrig: cmpIsOrig },   // HERESY 1995 · 2000: for the checks; 2063: isOrig
+  // HERESY 2281 · 2286 (Viktor 09.11.2026: «Для пользователя в сравнителе название "До и После" — это вообще непонятная фигня… заменить название на "Первый и
+  // второй"… Нет переводов в этой ноде и её выхлопах… замеры оформить структурированно с колонками… можно ли дописать сравнение более чем двух? Скажем, до
+  // четырёх?»): First and second, 1991's analyzer (the Refiner's node keeps its Before and after) on two to four versions ({name, path, label} each, a take
+  // or a file of a take's tree), each measured against the first. The measures open it, a column a version (a row a measure, its unit in its name, the
+  // difference where two); past two, the spectrograms of all side by side; then for the pair chosen (1 ↔ 2 first) the verdict, the tone by zone, the
+  // spectrograms of both and their difference, the measures' picture. Every word in the page's language: the lab's templates said here, the pictures
+  // drawn in the words the page gives; its files to download (the page and the numbers made here, in that language)
+  var AB_ROWS = [["lufs", "Integrated loudness, LUFS"], ["true_peak_dbtp", "True peak, dBTP"], ["peak_dbfs", "Sample peak, dBFS"], ["plr_db", "Peak over loudness, dB"],
+    ["lra_lu", "Loudness range, LU"], ["crest_db", "Crest, dB"], ["width_db", "Width (side over mid), dB"], ["correlation", "Correlation"], ["balance_db", "Left over right, dB"],
+    ["quiet_dbfs", "The quietest moments, dBFS"], ["clipped_runs", "Clipped runs"]];
+  var AB_REL = [["lag_ms", "Later than 1, ms"], ["likeness", "Likeness to 1"], ["level_db", "Loudness against 1, LU"]];
+  var AB_ZONES = { sub: "sub-bass", low: "bass", mid: "mids", "hi-mid": "upper mids", high: "highs", air: "air" };
+  var AB_PIC = { eq: "{0} (at equal loudness)", diff: "{1} − {0}: red where it is louder, blue where it is quieter (±6 dB)", time: "time, s",
+    spec: "Average spectrum at equal loudness", tone: "What changed in the tone (grey: ±1 dB) · blue: what no filter makes", nolin: "no filter makes it, dB under the music",
+    dynx: "the level of {0} in 50 ms windows, dBFS", dyny: "{1} − {0}, dB", dyn: "Dynamics: glue {0} dB, peaks {1} dB", st: "Short-term loudness" };
+  function abNum(v, k, signed) {
+    if (v == null || v === "" || !isFinite(+v)) return "—";
+    var x = +v, s = k === "clipped_runs" ? String(Math.round(x)) : x.toFixed(k === "correlation" || k === "likeness" ? 3 : 2);
+    return (signed && x >= 0 ? "+" : "") + s.replace("-", "−");
+  }
+  function abSay(s) {   // a sentence of the verdict: its template in the page's language, a zone's name too
+    var args = s[1] || [];
+    return tt(s[0]).replace(/\{(\d+)\}/g, function (m, i) {
+      var a = args[+i];
+      if (a == null) return m;
+      if (a.zones) return a.zones.map(function (z) { return tt(AB_ZONES[z[0]] || z[0]) + " " + String(z[1]).replace("-", "−") + " dB"; }).join(", ");
+      return String(a).replace(/^-(?=\d)/, "−");
+    });
+  }
+  function abOpen(sides) {
+    sides = (sides || []).slice(0, 4);
+    if (sides.length < 2) return;
+    var was = document.activeElement, stop = false, timer = 0, enc = encodeURIComponent, blobs = [], R = null, at = 0;
+    var names = sides.map(function (s, i) { return (i + 1) + " · " + (s.label || s.name); }), words = {};
+    Object.keys(AB_PIC).forEach(function (k) { var w = tt(AB_PIC[k]); if (w !== AB_PIC[k]) words[k] = w; });
+    var back = document.createElement("div");
+    back.className = "hd-back ab-back";
+    back.innerHTML = '<div class="hd-box hd-ab" role="dialog" aria-modal="true" aria-label="First and second"><div class="hd-title">First and second</div>' +
+      '<div class="ab-body" translate="no"><p class="ab-wait">' + esc(tt("Measuring them against the first…")) + "</p></div>" +
+      '<div class="hd-acts"><span class="ab-files" translate="no"></span><span class="hd-spacer"></span><button type="button" class="btn small primary hd-yes">Close</button></div></div>';
+    document.body.appendChild(back);
+    var body = back.querySelector(".ab-body");
+    function unblob() { blobs.forEach(function (u) { URL.revokeObjectURL(u); }); blobs = []; }
+    function shut() {
+      stop = true; clearTimeout(timer); unblob();
+      document.removeEventListener("keydown", key, true);
+      back.classList.remove("is-on"); back.classList.add("is-leaving");
+      setTimeout(function () { back.remove(); }, 120);
+      if (was && was.focus && was.isConnected) was.focus();
+    }
+    function key(e) { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); shut(); } }
+    document.addEventListener("keydown", key, true);
+    back.addEventListener("mousedown", function (e) { if (e.target === back) shut(); });
+    back.querySelector(".hd-yes").addEventListener("click", shut);
+    body.addEventListener("click", function (e) {
+      var pb = e.target.closest("[data-ab-pair]");
+      if (!pb || !R) return;
+      at = +pb.dataset.abPair;
+      body.querySelector(".ab-pair").innerHTML = pairHtml();
+      files();
+    });
+    requestAnimationFrame(function () { back.classList.add("is-on"); back.querySelector(".hd-yes").focus(); });
+    var q = "/lab/abcompare?s=" + enc(JSON.stringify(sides.map(function (s) { return [s.name, s.path || ""]; }))) + "&names=" + enc(JSON.stringify(names)) +
+      (Object.keys(words).length ? "&words=" + enc(JSON.stringify(words)) : "");
+    function url(f) { return "/lab/abcompare/file?key=" + R.key + "&f=" + f; }
+    function col(i, k) { var p = R.pairs[Math.max(0, i - 1)]; return p ? (i ? p.after : p.before)[k] : null; }
+    function cells() {                                   // the measures: [head, [a value a version…], the difference or null]
+      var two = R.n === 2, rows = AB_ROWS.map(function (r) {
+        var v = names.map(function (n, i) { return abNum(col(i, r[0]), r[0]); }), a = col(0, r[0]), b = col(1, r[0]);
+        return [tt(r[1]), v, two ? (a == null || b == null ? "—" : abNum(b - a, r[0], true)) : null];
+      });
+      return rows.concat(AB_REL.map(function (r) {
+        return [tt(r[1]), ["—"].concat(R.pairs.map(function (p) { return abNum(p[r[0]], r[0], r[0] !== "likeness") + (r[0] === "lag_ms" && p.polarity === "inverted" ? " ⇅" : ""); })), two ? "" : null];
+      }));
+    }
+    function table() {
+      var two = R.n === 2;
+      return '<table class="ab-tbl"><tr><th></th>' + names.map(function (n) { return '<th title="' + esc(n) + '">' + esc(n) + "</th>"; }).join("") + (two ? "<th>Δ</th>" : "") + "</tr>" +
+        cells().map(function (c, i) { return "<tr" + (i >= AB_ROWS.length ? ' class="ab-rel"' : "") + "><th>" + esc(c[0]) + "</th>" + c[1].map(function (v) { return "<td>" + esc(v) + "</td>"; }).join("") + (c[2] == null ? "" : "<td>" + esc(c[2]) + "</td>") + "</tr>"; }).join("") + "</table>";
+    }
+    function pic(f) { return '<a class="ab-pic" href="' + esc(url(f)) + '" target="_blank" rel="noopener"><img src="' + esc(url(f)) + '" alt="" /></a>'; }
+    function zones(p) { var z = p.zones_db || {}; return Object.keys(z).map(function (k) { return [tt(AB_ZONES[k] || k), abNum(z[k], k, true)]; }); }
+    function pairHtml() {
+      var p = R.pairs[at], z = zones(p);
+      return (R.n > 2 ? '<div class="ab-pairs" role="group">' + R.pairs.map(function (q2, i) {
+        return '<button type="button" class="btn ghost small" data-ab-pair="' + i + '" aria-pressed="' + (i === at) + '">' + q2.nums[0] + " ↔ " + q2.nums[1] + "</button>";
+      }).join("") + "</div>" : "") +
+        '<h3 class="ab-h">' + esc(tt("Verdict")) + " · " + p.nums[0] + " ↔ " + p.nums[1] + '</h3><ul class="ab-verdict">' +
+        (p.verdict12 || []).map(function (s) { return "<li>" + esc(abSay(s)) + "</li>"; }).join("") + "</ul>" +
+        '<table class="ab-tbl ab-zones"><tr><th>' + esc(tt("The tone by zone at equal loudness, dB against 1")) + "</th>" + z.map(function (c) { return "<th>" + esc(c[0]) + "</th>"; }).join("") + "</tr>" +
+        "<tr><th>" + p.nums[1] + " − " + p.nums[0] + "</th>" + z.map(function (c) { return "<td>" + esc(c[1]) + "</td>"; }).join("") + "</tr></table>" +
+        pic("pair" + (at + 1) + "/spectrograms.jpg") + pic("pair" + (at + 1) + "/measures.png");
+    }
+    function md() {
+      var two = R.n === 2, row = function (c) { return "| " + c.join(" | ") + " |"; };
+      var dash = function (n) { var a = []; while (a.length < n) a.push("---"); return row(a); };
+      var L = ["# " + tt("First and second"), "", row([""].concat(names, two ? ["\u0394"] : [])), dash(1 + names.length + (two ? 1 : 0))];
+      cells().forEach(function (c) { L.push(row([c[0]].concat(c[1], c[2] == null ? [] : [c[2]]))); });
+      R.pairs.forEach(function (p) {
+        var z = zones(p);
+        L.push("", "## " + tt("Verdict") + " · " + p.nums[0] + " ↔ " + p.nums[1], "");
+        (p.verdict12 || []).forEach(function (s) { L.push("- " + abSay(s)); });
+        L.push("", row([tt("The tone by zone at equal loudness, dB against 1")].concat(z.map(function (c) { return c[0]; }))), dash(1 + z.length),
+          row([p.nums[1] + " − " + p.nums[0]].concat(z.map(function (c) { return c[1]; }))));
+      });
+      return L.join("\n") + "\n";
+    }
+    function files() {
+      unblob();
+      var stem = (tt("First and second") + " - " + sides.map(function (s) { return s.label || s.name; }).join(" - ")).replace(/[\\/:*?"<>|]+/g, " ").slice(0, 180);
+      var blob = function (text, type) { var u = URL.createObjectURL(new Blob([text], { type: type })); blobs.push(u); return u; };
+      var link = function (href, ext, label) { return '<a class="btn ghost small" href="' + esc(href) + '" download="' + esc(stem + "." + ext) + '">' + esc(label) + "</a>"; };
+      var p = "pair" + (at + 1) + "/";
+      back.querySelector(".ab-files").innerHTML = link(blob(md(), "text/markdown"), "md", "MD") + link(blob(JSON.stringify(R, null, 1), "application/json"), "json", "JSON") +
+        link(url(p + "spectrograms.jpg"), "jpg", "JPG") + link(url(p + "measures.png"), "png", "PNG") + (R.grid ? link(url("grid.jpg"), "jpg", "JPG ▦") : "");
+    }
+    (function poll() {
+      fetch(q).then(function (r) { return r.json().then(function (j) { return { s: r.status, j: j }; }, function () { return { s: r.status, j: null }; }); })
+        .then(function (o) {
+          if (stop) return;
+          if (o.s === 202) { timer = setTimeout(poll, 1500); return; }
+          if (o.s !== 200 || !o.j || !o.j.key || !(o.j.pairs || []).length) throw new Error((o.j && o.j.error) || "HTTP " + o.s);
+          R = o.j;
+          body.innerHTML = table() + (R.grid ? pic("grid.jpg") : "") + '<div class="ab-pair">' + pairHtml() + "</div>";
+          files();
+        })
+        .catch(function (e) { if (!stop) body.innerHTML = '<p class="ab-err">' + esc(tt("First and second did not run: {0}").replace("{0}", e.message)) + "</p>"; });
+    })();
+  }
+  window.HeresyAB = { open: abOpen };
+  window.HeresyDerived = { cmp: { startAt: cmpStartAt, seek: cmpSeek, ticks: cmpTicks, keep: cmpKeep, hide: cmpHide, marks: cmpMarks, clockMs: clockMs, shift: cmpShift, isOrig: cmpIsOrig },   // HERESY 1995 · 2000: for the checks; 2063: isOrig
     init: init, setTake: setTake, files: files, refresh: refresh, mdSizes: paintMdSizes, remasterSettings: remasterSettings, chainDeess: chainDeess, compareList: openCompare,
                            list: function () { return state.list.slice(); }, renderInto: renderInto,   // HERESY 1964   // 1506: the branches as the lab names them (kind, source), for the Refiner's canvas
                            marks: function (name) { return Object.assign({}, MARKS[name] || {}); } };   // 1415; 1504

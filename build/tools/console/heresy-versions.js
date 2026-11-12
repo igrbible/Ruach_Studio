@@ -40,7 +40,7 @@
     keeping = sent.catch(function () { return null; });
     return sent
       .then(function (b) { if (st.book && st.book.id === b.id) { st.book = b; paint(); } return b; },
-        function (e) { say(tr("The Creator's version was not kept: {0}").replace("{0}", e.message), true); return null; });
+        function (e) { say(tr("The Musician's version was not kept: {0}").replace("{0}", e.message), true); return null; });
   }
 
   // ---- the diff: the longest common subsequence of lines (or words), kept short where nothing changed
@@ -143,7 +143,7 @@
       document.body.classList.add("vr-open");
       paint();
       return b;
-    }, function (e) { say(tr("The Creator's versions did not come: {0}").replace("{0}", e.message), true); return null; });
+    }, function (e) { say(tr("The Musician's versions did not come: {0}").replace("{0}", e.message), true); return null; });
   }
   function close() {
     var back = $("vrBack");
@@ -194,7 +194,7 @@
     }).join("");
     var i = st.book.versions.indexOf(v);
     return '<div class="vr-acts"><strong class="mono" translate="no">' + esc(branchName(v)) + " · #" + v.n + "</strong>" + '<span class="row-hint mono">' + esc(when(v.at)) + (v.mode ? " · " + esc(v.mode) : "") + "</span>" +
-      '<button type="button" class="btn primary small" data-vr="form" data-tip="Its title, style, lyrics and score into the Creator\'s form">Into the form</button>' +
+      '<button type="button" class="btn primary small" data-vr="form" data-tip="Its title, style, lyrics and score into the Musician\'s form">Into the form</button>' +
       '<button type="button" class="btn ghost small" data-vr="star" aria-pressed="' + !!v.star + '">' + (v.star ? "★ Starred" : "☆ Star") + "</button>" +
       '<button type="button" class="btn ghost small" data-vr="label">Label…</button>' +
       '<button type="button" class="btn ghost small" data-vr="lock" aria-pressed="' + !!v.lock + '" data-tip="A locked version cannot be deleted">' + (v.lock ? "Unlock" : "Lock") + "</button>" +
@@ -253,7 +253,7 @@
     var f = formWords(), same = f.title === (v.title === "Untitled" ? "" : v.title) && (f.version || "") === (v.version || "") && f.style === v.style && f.lyrics === v.lyrics && f.abc === (v.abc || "");
     var empty = !f.style.trim() && !f.lyrics.trim() && !f.abc.trim();
     var go = same || empty || !window.HeresyDialog ? Promise.resolve(true)
-      : window.HeresyDialog.confirm(tr("Put version #{0} into the Creator's form?").replace("{0}", v.n) + "\n\n" + tr("The title, style, lyrics and score there now are replaced. What was generated from them is kept here already."),
+      : window.HeresyDialog.confirm(tr("Put version #{0} into the Musician's form?").replace("{0}", v.n) + "\n\n" + tr("The title, style, lyrics and score there now are replaced. What was generated from them is kept here already."),
         { ok: tr("Into the form"), cancel: tr("Cancel") });
     go.then(function (yes) {
       if (yes !== true || !st.hooks || !st.hooks.load) return;
@@ -271,7 +271,7 @@
     var branches = {};
     (b.versions || []).forEach(function (v) { branches[v.version || ""] = 1; });
     var go = window.HeresyDialog ? window.HeresyDialog.confirm(tr("Delete the whole tree of “{0}”?").replace("{0}", b.title) + "\n\n" +
-      tr("{0} versions in {1} branches go into the versions' trash; the Writer's «The Creator's versions» brings the tree back.").replace("{0}", (b.versions || []).length).replace("{1}", Object.keys(branches).length),
+      tr("{0} versions in {1} branches go into the versions' trash; the Writer's «The Musician's versions» brings the tree back.").replace("{0}", (b.versions || []).length).replace("{1}", Object.keys(branches).length),
       { ok: tr("Delete the tree"), cancel: tr("Cancel"), danger: true }) : Promise.resolve(true);
     go.then(function (yes) {
       if (yes !== true) return;
@@ -299,11 +299,11 @@
       var t = d.titles || [], gone = d.dropped || [];
       if (!t.length && gone.length) return pickDropped(gone);       // HERESY 1614
       if (!t.length) { say(tr("No version is kept yet: every Generate keeps its words here")); return null; }
-      return window.HeresyDialog.choose(tr("The Creator's versions") + "\n\n" + tr("Every Generate keeps its title's words here, apart from the takes: a take deleted never takes them along."),
+      return window.HeresyDialog.choose(tr("The Musician's versions") + "\n\n" + tr("Every Generate keeps its title's words here, apart from the takes: a take deleted never takes them along."),
         t.map(function (x) { return { value: x.id, label: x.title, note: tr("versions: {0}").replace("{0}", x.versions) + (x.branches > 1 ? " · " + tr("branches: {0}").replace("{0}", x.branches) : "") +
           (x.stars ? " · ★ " + x.stars : "") + " · " + when(x.updated) }; }).concat(gone.length ? [{ value: "__dropped", label: tr("Deleted trees ({0})…").replace("{0}", gone.length) }] : []),
         { filter: t.length > 8 }).then(function (id) { return id === "__dropped" ? pickDropped(gone) : id ? open({ id: id }) : null; });
-    }, function (e) { say(tr("The Creator's versions did not come: {0}").replace("{0}", e.message), true); return null; });
+    }, function (e) { say(tr("The Musician's versions did not come: {0}").replace("{0}", e.message), true); return null; });
   }
 
   function init(hooks) {

@@ -59,7 +59,7 @@ check("before the chorus: red", before[0] > 200 and before[2] < 50, before)
 check("a quarter second into the chorus: red and blue both", 70 < mid[0] < 190 and 70 < mid[2] < 190, mid)
 check("after the dissolve: blue", after[2] > 200 and after[0] < 50, after)
 check("with a cut, blue at once", cut_mid[2] > 200 and cut_mid[0] < 50, cut_mid)
-check("both clips the song's length to the frame (225)", n_melt == 225 and n_cut == 225, (n_melt, n_cut))
+check(f"both clips the song's length to the frame ({round(9 * V.FPS)} at {V.FPS} fps, 2356)", n_melt == round(9 * V.FPS) and n_cut == round(9 * V.FPS), (n_melt, n_cut))
 try:
     V.clip(kit, name, audio, None, shape="1:1", between="melt")
     check("an unknown way between refused", False)

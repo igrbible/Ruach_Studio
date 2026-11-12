@@ -63,14 +63,16 @@ static void log_latent(const char * verb, const char * path, const char * kind, 
 }
 
 static bool write_latent_f32(const char * path, const float * data, int T_latent) {
-    FILE * f = fopen(path, "wb");
+    AtomicFile af(path);   // HERESY 2371: whole or not at all
+    FILE *     f = af.f;
     if (!f) {
         fprintf(stderr, "[VAE] FATAL: cannot write %s\n", path);
         return false;
     }
     size_t count = (size_t) T_latent * LATENT_CH;
     bool   ok    = fwrite(data, sizeof(float), count, f) == count;
-    fclose(f);
+    af.ok        = ok;
+    ok           = af.close();
     if (ok) {
         log_latent("Wrote", path, "F32", T_latent, count * sizeof(float));
     }
@@ -78,7 +80,8 @@ static bool write_latent_f32(const char * path, const float * data, int T_latent
 }
 
 static bool write_latent_q8(const char * path, const float * data, int T_latent) {
-    FILE * f = fopen(path, "wb");
+    AtomicFile af(path);   // HERESY 2371: whole or not at all
+    FILE *     f = af.f;
     if (!f) {
         fprintf(stderr, "[VAE] FATAL: cannot write %s\n", path);
         return false;
@@ -109,14 +112,18 @@ static bool write_latent_q8(const char * path, const float * data, int T_latent)
         }
         fwrite(q, 1, LATENT_CH, f);
     }
-    fclose(f);
+    if (!af.close()) {
+        fprintf(stderr, "[VAE] FATAL: cannot write %s\n", path);
+        return false;
+    }
     log_latent("Wrote", path, "Q8", T_latent, NAC8_HEADER + (size_t) T_latent * NAC8_FRAME);
     return true;
 }
 
 // two signed nibbles per byte: (low & 0x0F) | (high << 4)
 static bool write_latent_q4(const char * path, const float * data, int T_latent) {
-    FILE * f = fopen(path, "wb");
+    AtomicFile af(path);   // HERESY 2371: whole or not at all
+    FILE *     f = af.f;
     if (!f) {
         fprintf(stderr, "[VAE] FATAL: cannot write %s\n", path);
         return false;
@@ -151,7 +158,10 @@ static bool write_latent_q4(const char * path, const float * data, int T_latent)
         }
         fwrite(packed, 1, LATENT_CH / 2, f);
     }
-    fclose(f);
+    if (!af.close()) {
+        fprintf(stderr, "[VAE] FATAL: cannot write %s\n", path);
+        return false;
+    }
     log_latent("Wrote", path, "Q4", T_latent, NAC4_HEADER + (size_t) T_latent * NAC4_FRAME);
     return true;
 }

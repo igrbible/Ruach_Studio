@@ -1,0 +1,217 @@
+if (NOT EXISTS $ENV{ROCM_PATH})
+    if (NOT EXISTS /opt/rocm)
+        set(ROCM_PATH /usr)
+    else()
+        set(ROCM_PATH /opt/rocm)
+    endif()
+else()
+    set(ROCM_PATH $ENV{ROCM_PATH})
+endif()
+
+list(APPEND CMAKE_PREFIX_PATH  ${ROCM_PATH})
+list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}/lib64/cmake")
+
+if (NOT DEFINED CMAKE_HIP_FLAGS_DEBUG)
+    set(CMAKE_HIP_FLAGS_DEBUG "-g -O2")
+endif()
+
+# CMake on Windows doesn't support the HIP language yet
+if (WIN32)
+    set(CXX_IS_HIPCC TRUE)
+else()
+    string(REGEX MATCH "hipcc(\.bat)?$" CXX_IS_HIPCC "${CMAKE_CXX_COMPILER}")
+endif()
+
+if (CXX_IS_HIPCC)
+    if (LINUX)
+        if (NOT ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
+            message(WARNING "Only LLVM is supported for HIP, hint: CXX=/opt/rocm/llvm/bin/clang++")
+        endif()
+
+        message(WARNING "Setting hipcc as the C++ compiler is legacy behavior."
+                " Prefer setting the HIP compiler directly. See README for details.")
+    endif()
+else()
+    # Forward (AMD)GPU_TARGETS to CMAKE_HIP_ARCHITECTURES.
+    if(AMDGPU_TARGETS AND NOT GPU_TARGETS)
+        set(GPU_TARGETS "${AMDGPU_TARGETS}" CACHE STRING "GPU targets to compile for")
+    endif()
+    if(GPU_TARGETS AND NOT CMAKE_HIP_ARCHITECTURES)
+        set(CMAKE_HIP_ARCHITECTURES "${GPU_TARGETS}" CACHE STRING "HIP architectures")
+    endif()
+    cmake_minimum_required(VERSION 3.21)
+    enable_language(HIP)
+endif()
+
+find_package(hip     REQUIRED)
+find_package(hipblas REQUIRED)
+find_package(rocblas REQUIRED)
+
+# hipcub provides the radix sort the HIP argsort path uses and rocprim its
+# primitives; without both headers that path cannot compile.
+set(GGML_HIP_EXTRA_INCLUDE_DIRS "")
+find_package(hipcub  QUIET)
+find_package(rocprim QUIET)
+if (hipcub_FOUND AND rocprim_FOUND)
+    list(APPEND GGML_HIP_EXTRA_INCLUDE_DIRS ${hipcub_INCLUDE_DIRS} ${rocprim_INCLUDE_DIRS})
+    message(STATUS "HIP: using hipcub ${hipcub_VERSION} for argsort")
+else()
+    # Some packagers ship the headers without a CMake config package.
+    find_path(GGML_HIPCUB_INCLUDE_DIR  hipcub/hipcub.hpp               HINTS ${CMAKE_INCLUDE_PATH} ${ROCM_PATH}/include)
+    find_path(GGML_ROCPRIM_INCLUDE_DIR rocprim/device/config_types.hpp HINTS ${CMAKE_INCLUDE_PATH} ${ROCM_PATH}/include)
+    if (GGML_HIPCUB_INCLUDE_DIR AND GGML_ROCPRIM_INCLUDE_DIR)
+        list(APPEND GGML_HIP_EXTRA_INCLUDE_DIRS ${GGML_HIPCUB_INCLUDE_DIR} ${GGML_ROCPRIM_INCLUDE_DIR})
+        message(STATUS "HIP: using hipcub headers from ${GGML_HIPCUB_INCLUDE_DIR} for argsort")
+    else()
+        message(WARNING "hipcub/rocprim not found: the HIP argsort path needs them for rows wider than 1024")
+    endif()
+endif()
+
+option(GGML_HIP_HIPBLASLT "ggml: use hipBLASLt instead of hipBLAS (rocBLAS) for GEMM" ON)
+
+if (GGML_HIP_HIPBLASLT)
+    find_package(hipblaslt)
+    if (hipblaslt_FOUND)
+        set(GGML_HIP_USE_HIPBLASLT ON)
+        message(STATUS "HIP: using hipBLASLt for GEMM")
+    else()
+        message(WARNING "GGML_HIP_HIPBLASLT is ON but hipblaslt was not found; falling back to hipBLAS (rocBLAS)")
+    endif()
+endif()
+
+if (GGML_HIP_RCCL)
+    find_package(rccl REQUIRED)
+endif()
+
+if (${hip_VERSION} VERSION_LESS 6.1)
+    message(FATAL_ERROR "At least ROCM/HIP V6.1 is required")
+endif()
+
+message(STATUS "HIP and hipBLAS found")
+
+file(GLOB   GGML_HEADERS_ROCM "../ggml-cuda/*.cuh")
+list(APPEND GGML_HEADERS_ROCM "../../include/ggml-cuda.h")
+
+file(GLOB   GGML_SOURCES_ROCM "../ggml-cuda/*.cu")
+list(FILTER GGML_SOURCES_ROCM EXCLUDE REGEX "/sage-attn2\\.cu$")
+file(GLOB   SRCS "../ggml-cuda/template-instances/fattn-tile*.cu")
+list(APPEND GGML_SOURCES_ROCM ${SRCS})
+file(GLOB   SRCS "../ggml-cuda/template-instances/fattn-mma*.cu")
+list(APPEND GGML_SOURCES_ROCM ${SRCS})
+file(GLOB   SRCS "../ggml-cuda/template-instances/mmq*.cu")
+list(APPEND GGML_SOURCES_ROCM ${SRCS})
+file(GLOB   SRCS "../ggml-cuda/template-instances/mmf*.cu")
+list(APPEND GGML_SOURCES_ROCM ${SRCS})
+
+if (GGML_CUDA_FA_ALL_QUANTS)
+    file(GLOB   SRCS "../ggml-cuda/template-instances/fattn-vec*.cu")
+    list(APPEND GGML_SOURCES_ROCM ${SRCS})
+    add_compile_definitions(GGML_CUDA_FA_ALL_QUANTS)
+else()
+    list(APPEND GGML_SOURCES_ROCM
+        ../ggml-cuda/template-instances/fattn-vec-instance-f16-f16.cu
+        ../ggml-cuda/template-instances/fattn-vec-instance-q4_0-q4_0.cu
+        ../ggml-cuda/template-instances/fattn-vec-instance-q8_0-q8_0.cu
+        ../ggml-cuda/template-instances/fattn-vec-instance-bf16-bf16.cu)
+endif()
+
+list(APPEND GGML_SOURCES_ROCM gfx1151_v1/sgemm.cu gfx1151_v1/matmul.cu gfx1151_v1/im2col.cu gfx1151_v1/cpy.cu)
+
+if (CXX_IS_HIPCC)
+    set_source_files_properties(${GGML_SOURCES_ROCM} PROPERTIES LANGUAGE CXX)
+else()
+    set_source_files_properties(${GGML_SOURCES_ROCM} PROPERTIES LANGUAGE HIP)
+endif()
+
+ggml_add_backend_library(ggml-hip
+                         ${GGML_HEADERS_ROCM}
+                         ${GGML_SOURCES_ROCM}
+                        )
+
+if (GGML_HIP_EXTRA_INCLUDE_DIRS)
+    target_include_directories(ggml-hip PRIVATE ${GGML_HIP_EXTRA_INCLUDE_DIRS})
+endif()
+
+# TODO: do not use CUDA definitions for HIP
+if (NOT GGML_BACKEND_DL)
+    target_compile_definitions(ggml PUBLIC GGML_USE_CUDA)
+endif()
+
+add_compile_definitions(GGML_USE_HIP)
+
+if (GGML_CUDA_FORCE_MMQ)
+    add_compile_definitions(GGML_CUDA_FORCE_MMQ)
+endif()
+
+if (GGML_CUDA_FORCE_CUBLAS)
+    add_compile_definitions(GGML_CUDA_FORCE_CUBLAS)
+endif()
+
+if (GGML_CUDA_NO_PEER_COPY)
+    add_compile_definitions(GGML_CUDA_NO_PEER_COPY)
+endif()
+
+if (GGML_HIP_GRAPHS)
+    add_compile_definitions(GGML_HIP_GRAPHS)
+endif()
+
+if (GGML_HIP_NO_VMM)
+    add_compile_definitions(GGML_HIP_NO_VMM)
+endif()
+
+if (GGML_HIP_USE_HIPBLASLT)
+    add_compile_definitions(GGML_HIP_USE_HIPBLASLT)
+endif()
+
+if (GGML_HIP_ROCWMMA_FATTN)
+    add_compile_definitions(GGML_HIP_ROCWMMA_FATTN)
+endif()
+
+if (NOT GGML_HIP_MMQ_MFMA)
+    add_compile_definitions(GGML_HIP_NO_MMQ_MFMA)
+endif()
+
+if (GGML_HIP_RCCL)
+    add_compile_definitions(GGML_USE_NCCL) # RCCL has the same interface as NCCL.
+endif()
+
+if (GGML_HIP_EXPORT_METRICS)
+    set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS} -Rpass-analysis=kernel-resource-usage --save-temps")
+endif()
+
+if (NOT GGML_CUDA_FA)
+    add_compile_definitions(GGML_CUDA_NO_FA)
+endif()
+
+if (CXX_IS_HIPCC)
+    if (WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+        # CMake on Windows doesn't support the HIP language yet.
+        # Therefore we workaround debug build's failure on HIP backend this way.
+        set_source_files_properties(${GGML_SOURCES_ROCM} PROPERTIES COMPILE_FLAGS "-O2 -g")
+    endif()
+    target_link_libraries(ggml-hip PRIVATE hip::device)
+    # Workaround for https://github.com/ROCm/ROCm/issues/5826
+    # The AMDGPU backend can emit illegal DPP instructions for GFX10+ at -O0.
+    target_compile_options(ggml-hip PRIVATE -O2)
+else()
+    if (CMAKE_HIP_COMPILER MATCHES "clang" OR CMAKE_HIP_COMPILER_ID MATCHES "Clang")
+        target_compile_options(ggml-hip PRIVATE $<$<COMPILE_LANGUAGE:HIP>:-xhip>)
+        # Workaround for https://github.com/ROCm/ROCm/issues/5826
+        # The AMDGPU backend can emit illegal DPP instructions for GFX10+ at -O0.
+        target_compile_options(ggml-hip PRIVATE $<$<COMPILE_LANGUAGE:HIP>:-O2>)
+    endif()
+endif()
+
+if (GGML_STATIC)
+    message(FATAL_ERROR "Static linking not supported for HIP/ROCm")
+endif()
+
+if (GGML_HIP_RCCL)
+    target_link_libraries(ggml-hip PRIVATE ggml-base roc::rccl)
+endif()
+
+target_link_libraries(ggml-hip PRIVATE ggml-base hip::host roc::rocblas roc::hipblas)
+
+if (GGML_HIP_USE_HIPBLASLT)
+    target_link_libraries(ggml-hip PRIVATE roc::hipblaslt)
+endif()

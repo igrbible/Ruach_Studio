@@ -16,7 +16,7 @@
   /* HERESY 2066 (Viktor 05.11.2026: «…для иврита… DavidCLM… для греков… GFS Didot, и в Движке в выборе шрифтов добавить именно выбор ИВРИТ и ГРЕЧЕСКИЙ, и под капотом матчить греков и семитов на эти шрифты»): the Hebrew and the
      Greek letters' own fonts, first in every role's stack below (vendor/fonts.css gives them those letters only; the Fonts card changes them:
      index.html's ruachScriptFonts sets this on the page itself) */
-  --scripts: "David CLM", "GFS Didot";
+  --scripts: "David CLM", "Ruach Greek Noto";   /* HERESY 2186: Noto Sans's Greek by default, GFS Didot to be chosen */
   --sans: var(--scripts), "Raleway", "Noto Sans", "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --mono: var(--scripts), "Liberation Mono", "Noto Sans Mono", "IBM Plex Mono", "Cascadia Mono", ui-monospace, monospace;
   --display: "Bodoni Moda", "Didot", "Times New Roman", serif;   /* the logo and the (i) glyph only */
@@ -2345,6 +2345,14 @@ body[data-tab="collection"] .library, body[data-tab="collection"] #gripRight { d
 .coll-slot { height: 76px; flex: none; position: sticky; top: 0; z-index: 2; background: var(--ground); }
 @media (max-width: 1750px) { .coll-slot { height: 96px; } }
 .coll-slot[hidden] { display: none; }
+/* HERESY 2218 (Viktor 06.11.2026: «Раз уж у нас бар с массовыми действиями появляется из ниоткуда, то он вообще не нужен такой высокий. Уменьши высоту его
+   в два раза, но не зацепи высоту бара с запиненными треками»): the bar of the checked half the slot's height, its groups and buttons tighter, the icons as
+   they were; the pinned takes' strip keeps 76 px (96 px under 1750); where the bar wraps to two rows (1400 px and under) it keeps the full height */
+.coll-slot.is-bulk { height: 38px; }
+.coll-slot.is-bulk .coll-bulk { padding: 2px 10px; }
+.coll-slot.is-bulk .coll-group { padding: 1px 3px; }
+.coll-slot.is-bulk .coll-group .icon-btn { padding-top: 3px; padding-bottom: 3px; }
+@media (max-width: 1400px) { .coll-slot.is-bulk { height: 76px; } }
 .coll-bulk { height: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 8px; align-content: center; align-items: center; padding: 8px 10px;
   border: 1px solid var(--amber); border-radius: var(--r-md); background: var(--panel); overflow: hidden; }
 .coll-bulk select { max-width: 210px; }
@@ -3145,6 +3153,21 @@ tr.is-no .hi-tag { color: var(--bad); }
 .tr-pills .ps-say { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tr-pane { display: none; flex-direction: column; gap: 12px; padding: 14px 16px; border: 1px solid var(--line-a); border-radius: var(--r-md); background: var(--panel); }
 .tr-pane.is-on { display: flex; }
+/* HERESY 2340: the stereo guard's form and table; amber past the first line, red past the second */
+.tr-sg-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.tr-sg-form .field { min-width: 220px; }
+#trSgSay.is-bad { color: var(--bad); }
+.tr-sg-table { overflow-x: auto; }
+table.tr-sg { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.tr-sg th, table.tr-sg td { padding: 5px 8px; border-bottom: 1px solid var(--line-a); text-align: right; white-space: nowrap; }
+table.tr-sg th:first-child, table.tr-sg td:first-child { text-align: left; white-space: normal; }
+table.tr-sg th:last-child, table.tr-sg td:last-child { text-align: left; white-space: normal; }
+table.tr-sg th { color: var(--dim); font-weight: 600; }
+table.tr-sg tr.is-base td { color: var(--dim); }
+table.tr-sg td.is-note { color: var(--amber); }
+table.tr-sg td.is-alarm { color: var(--bad); font-weight: 600; }
+table.tr-sg tr.is-alarm td:last-child { color: var(--bad); }
+table.tr-sg tr.is-note td:last-child { color: var(--amber); }
 .tr-phead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .tr-phead b { font-size: 15px; }
 .tr-sets { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; }
@@ -3796,6 +3819,31 @@ body[data-tab="post"] .lib-refined { display: inline-flex; }
 .cmp-li[hidden] { display: none; }
 .cmp-li > .cmp-row { flex: 1 1 auto; min-width: 0; }
 .cmp-rate { display: flex; gap: 2px; flex: none; }
+/* HERESY 2281: a version picked for Before and after (its order in the square: 1 before, 2 after); the strip's button grey until two are picked; the report */
+.cmp-pick { position: relative; flex: none; }
+.cmp-pick .cmp-pick-n { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700; pointer-events: none; }
+.cmp-pick[aria-pressed="true"] { color: var(--amber); }
+.cmp-pick[aria-pressed="true"] rect { fill: currentColor; fill-opacity: .16; }
+.cmp-ab[aria-disabled="true"] { opacity: .45; }
+.hd-box.hd-ab { width: min(1200px, 100%); max-height: calc(100vh - 32px); }
+.hd-ab .ab-body { flex: 1 1 auto; min-height: 120px; overflow: auto; display: flex; flex-direction: column; }
+/* HERESY 2286: First and second: the measures a compact table (a column a version, the units in the rows' names), the pairs' buttons, the verdict close */
+.hd-ab .ab-body { gap: 8px; font-size: 13px; line-height: 1.4; }
+.hd-ab .ab-tbl { border-collapse: collapse; width: max-content; max-width: 100%; font-size: 12.5px; }
+.hd-ab .ab-tbl th, .hd-ab .ab-tbl td { padding: 2px 10px 2px 0; border-bottom: 1px solid var(--line-soft, var(--line)); white-space: nowrap; text-align: right; }
+.hd-ab .ab-tbl th:first-child { text-align: left; font-weight: 500; color: var(--muted); }
+.hd-ab .ab-tbl tr:first-child th { color: var(--dim); font-weight: 500; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.hd-ab .ab-tbl td { font-variant-numeric: tabular-nums; }
+.hd-ab .ab-tbl tr.ab-rel th, .hd-ab .ab-tbl tr.ab-rel td { color: var(--muted); }
+.hd-ab .ab-pairs { display: flex; gap: 6px; flex-wrap: wrap; }
+.hd-ab .ab-pairs [aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
+.hd-ab .ab-h { margin: 4px 0 0; font-size: 13.5px; }
+.hd-ab .ab-verdict { margin: 0; padding-left: 18px; }
+.hd-ab .ab-pair { display: flex; flex-direction: column; gap: 8px; }
+.hd-ab .ab-pic img { display: block; width: 100%; height: auto; border-radius: 6px; }
+.hd-ab .ab-wait { color: var(--muted); }
+.hd-ab .ab-err { color: var(--bad); }
+.hd-ab .ab-files { display: flex; gap: 6px; flex-wrap: wrap; }
 /* HERESY 1872: the take's sheet beside the compare window: the window a fifth narrower, the pair centred; the sheet min(95 % of the screen,
    1000 px) high, its corner dragged wider and taller (the pair centred again), its texts − + ⟲ */
 .cmp-back.has-sheet { gap: 16px; }
@@ -4153,8 +4201,10 @@ body { transition: --bar-h .22s ease; }
 /* · the line between the Creator's two frames (from 1400 px); the takes wide (40 / 60): the form in one column */
 .k-vsplit { display: none; }
 @media (min-width: 1400px) {
-  body[data-tab="create"] .workspace { grid-template-columns: minmax(0, var(--k-l, 2fr)) minmax(0, var(--k-r, 1fr)); }
-  body[data-tab="create"] .workspace.lib-folded { grid-template-columns: minmax(0, var(--k-l, 2fr)) minmax(0, var(--k-r, 1fr)) 40px !important; }
+  /* HERESY 2264 (Viktor 09.11.2026: «правый фрейм тоже немного шире по умолчанию сделай 60px шире»): by default the take has its third
+     and 60 px more (a third of what the folded takes' strip leaves); a width dragged is the two shares as before */
+  body[data-tab="create"] .workspace { grid-template-columns: minmax(0, var(--k-l, 1fr)) minmax(0, var(--k-r, calc(100% / 3 + 60px))); }
+  body[data-tab="create"] .workspace.lib-folded { grid-template-columns: minmax(0, var(--k-l, 1fr)) minmax(0, var(--k-r, calc((100% - 40px) / 3 + 60px))) 40px !important; }
   body[data-tab="create"] .k-vsplit {
     display: block; grid-column: 2; grid-row: 1 / 3; justify-self: start; align-self: stretch; position: relative;
     width: 12px; margin-left: -6px; z-index: 8; cursor: col-resize; touch-action: none; outline: none;
@@ -4167,6 +4217,61 @@ body { transition: --bar-h .22s ease; }
   body[data-tab="create"] .k-vsplit.is-dragging::after { background: var(--amber); }
   body[data-tab="create"] .workspace.k-wide .compose { grid-template-columns: minmax(0, 1fr); }
 }
+/* HERESY 2264 (Viktor 09.11.2026: «в левом фрейме с двумя колонками… держать их одинаковой шириной как сейчас, но позволить прокручивать
+   вертикально каждую независимо и не тянуть одну за другой»): from 1400 px the form's two columns, equal, each scroll on their own (each
+   keeps its gutter, so a bar in one never narrows it against the other); the frame holds still, its head on top, Generate's bar at its foot.
+   The takes made wide (k-wide) keep the form one column in a frame that scrolls, as before */
+@media (min-width: 1400px) {
+  body[data-tab="create"] .workspace:not(.k-wide) #view-compose { overflow: hidden; padding-bottom: 0; }
+  body[data-tab="create"] .workspace:not(.k-wide) .compose { flex: 1 1 0; min-height: 0; grid-template-rows: minmax(0, 1fr) auto; align-items: stretch; }
+  body[data-tab="create"] .workspace:not(.k-wide) .compose > .k-col {
+    min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable;
+    margin: -4px -6px 0; padding: 4px 6px 18px;   /* the cards' shadows inside the column's own edges */
+  }
+  body[data-tab="create"] .workspace:not(.k-wide) .compose > .submit-bar { position: relative; bottom: auto; margin: 0; }
+  body[data-tab="create"] .workspace.k-wide .compose { display: flex; flex-direction: column; align-items: stretch; }
+  body[data-tab="create"] .workspace.k-wide .compose > .k-col { display: contents; }
+  body[data-tab="create"] .workspace.k-wide .compose > .submit-bar { margin-top: auto; }
+}
+/* HERESY 2264: one column (under 1400 px, a phone, or beside the takes made wide) keeps the order the cards always had there: the song, the
+   style, the lyrics, the plan, the sound, the adapters, the rest; side by side the same order puts each card in its own column */
+@media (max-width: 1399.98px) { .compose > .k-col { display: contents; } }
+.compose .k-song { order: 1; }
+.compose .k-style { order: 2; }
+.compose .k-lyrics { order: 3; }
+.compose .k-plan { order: 4; }
+.compose .k-sound { order: 5; }
+.compose .k-loras { order: 6; }
+.compose .k-more { order: 7; }
+.compose > .submit-bar { order: 8; }
+/* HERESY 2264 (Viktor 09.11.2026: «Подсказки из кнопок с выбором режима унести в тултип с (i) SVG иконкой, и сами эти кнопочки сделать
+   такими же выразительными…»): the three planning modes as buttons that say themselves, in the theme's own
+   colours so day and night both read: an icon and a bold name in an accent frame of 1 px and 8 px corners, 38 px high, a hover that warms
+   it; the one chosen filled, its frame doubled, a tick in a disc on its corner (out of the name's way). Their words are the (i)'s beside
+   Planning mode; a phone keeps them under the names */
+#modes { gap: 8px; }
+#modes .mode-body {
+  position: relative; display: flex; align-items: center; gap: 9px; height: 100%; min-height: 38px; padding: 4px 10px;
+  border: 1px solid color-mix(in srgb, var(--amber) 55%, var(--line-a)); border-radius: 8px;
+  background: color-mix(in srgb, var(--amber) 6%, var(--field)); color: var(--ink);
+  transition: background .13s ease, border-color .13s ease, box-shadow .13s ease;
+}
+#modes .mode-ico, #modes .mode-tick { flex: none; display: inline-grid; place-items: center; color: var(--amber); }
+#modes .mode-ico .ui-ico { width: 20px; height: 20px; }
+#modes .mode-words { display: flex; flex-direction: column; gap: 2px; min-width: 0; line-height: 1.2; }
+#modes .mode-body strong { margin: 0; font-size: calc(13.5px + var(--fs, 0px)); font-weight: 700; color: inherit; }
+#modes .mode-body small { display: none; }
+#modes .mode-tick { position: absolute; top: -7px; right: -7px; width: 18px; height: 18px; border-radius: 50%; visibility: hidden;
+  background: var(--amber); color: var(--ground); box-shadow: 0 0 0 2px color-mix(in srgb, var(--panel) 55%, var(--ground)); }
+#modes .mode-tick .ui-ico { width: 12px; height: 12px; stroke-width: 3.2; }
+#modes .mode:hover .mode-body { border-color: var(--amber); background: color-mix(in srgb, var(--amber) 14%, var(--field)); }
+#modes .mode input:checked + .mode-body {
+  border-color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber);
+  background: color-mix(in srgb, var(--amber) 20%, var(--field));
+}
+#modes .mode input:checked + .mode-body strong { color: var(--ink); }
+#modes .mode input:checked + .mode-body .mode-tick { visibility: visible; }
+@media (max-width: 760px) { #modes .mode-body small { display: block; font-size: 11px; line-height: 1.35; color: var(--muted); } }
 
 /* HERESY 1167 (Viktor: «прятать весь сырой рендер DOM, оверлеем `Loading the Sound Heresy`, логотип Студии крупно»): the veil
    over the page while it boots (index.html: on before the first paint, lifted by the script under the top bar). While the
@@ -4351,6 +4456,8 @@ body:not([data-tab="train"]) .tr-logdock { display: none; }
 /* the rooms say what they are in two lines beside their names (as the Writer) */
 .col-note.col-note-two { white-space: normal; line-height: 1.35; align-self: center; flex: 0 1 36%; min-width: min(520px, 100%); }   /* HERESY 1945: a column of its own, two lines, not the leftover of its row */
 .col-head .col-note-two + .post-take { margin-left: auto; }   /* HERESY 1945: the take in hand at the head's right end, where the leftover pushed it */   /* the leftover of its row, the title whole */
+/* HERESY 2267: the two lines balanced, so no word stands alone on the second (at 2560 «painted by Qwen-» / «Image», the Writer's last two words) */
+.col-note.col-note-two { text-wrap: balance; }
 .post-head { flex-wrap: wrap; row-gap: 4px; }
 .post-head .post-take { font: 500 16px/1.4 var(--heading); color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 46%; }
 .post-head .post-take:empty { display: none; }
@@ -4755,6 +4862,21 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
 .tr-voice-opts { display: inline-flex; gap: 4px; }
 .tr-voice .tr-chip { padding: 2px 9px; }
 .tr-voice .tr-chip.is-on { border-color: var(--amber); color: var(--amber); }
+/* HERESY 2351: the dataset doctor under the picked folder: a dot a finding (the theme's good, the meter's amber, bad), the names it is about under it */
+.tr-doctor { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px; border: 1px solid var(--line-a); border-radius: var(--r-md); font-size: 13px; }
+.tr-doctor[hidden] { display: none; }
+.tr-doc-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tr-doc-head .btn { margin-inline-start: auto; }
+.tr-doc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.tr-doc-list > li { position: relative; padding-inline-start: 16px; }
+.tr-doc-list > li::before { content: ""; position: absolute; inset-inline-start: 2px; top: .5em; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.tr-doc-list > li.tr-doc-ok::before { background: var(--good); }
+.tr-doc-list > li.tr-doc-warn::before { background: #d9a441; }
+.tr-doc-list > li.tr-doc-bad::before { background: var(--bad); }
+.tr-doc-note { display: block; color: var(--muted); font-size: 12px; }
+.tr-doc-names { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 2px; font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.tr-doc-stale { color: #d9a441; }
+.tr-doc-foot { margin: 0; }
 /* HERESY 1322: the upscale's row under the stage's buttons */
 .ar-up-row { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; padding-top: 4px; }   /* HERESY 1353: «Выставь эту строку в центральную позицию» */
 .ar-up-row select { max-width: 22em; }
@@ -4816,6 +4938,25 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
 .ar-samp-row .field[hidden] { display: none; }   /* HERESY 1328: .field's own display beat [hidden]: Guidance stood beside Lightning on */
 .ar-samp-row2 { padding-top: 0; }                         /* HERESY 1369: Lightning, Guidance and Reset under the steps */
 .ar-samp-row2 #arSampReset { margin-left: auto; }
+/* HERESY 2332: ComfyUI's way and the samplers grid in the Artist's form; a grid's run on its board (samplers down, schedules across) */
+.ar-comfy textarea, .ar-grid textarea { width: 100%; resize: vertical; min-height: 2.6em; }
+.ar-comfy .field, .ar-grid .field { margin: 0; }
+.ar-comfy > .field, .ar-grid > .field { padding: 4px 0; }
+.ar-comfy .ar-reg-foot { padding: 6px 0 2px; flex-wrap: wrap; }
+.ar-comfy .field[hidden] { display: none; }
+.ar-grid-axis { display: flex; flex-direction: column; gap: 4px; padding: 6px 0 2px; }
+.ar-grid-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.ar-grid-chip { gap: 4px; }
+.ar-grid-chip input { margin: 0; }
+.ar-pics > .ar-board { flex: 1 1 100%; min-width: 0; }
+.ar-board { display: flex; flex-direction: column; gap: 6px; padding: 4px 0 8px; }
+.ar-board-head { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.ar-board-grid { display: grid; grid-template-columns: max-content repeat(var(--cols, 3), minmax(0, 1fr)); gap: 6px 8px; align-items: center; }
+.ar-board-col { font-size: 12px; color: var(--muted); text-align: center; }
+.ar-board-row { font-size: 12px; color: var(--muted); writing-mode: horizontal-tb; white-space: nowrap; }
+.ar-board-grid .ar-pic { width: 100%; }
+.ar-board-grid .ar-pic .ar-thumb, .ar-board-grid .ar-pic .ar-thumb img { width: 100%; height: auto; }
+.ar-board-wait { display: flex; align-items: center; justify-content: center; min-height: 64px; border: 1px dashed var(--line-a); border-radius: var(--r-sm); color: var(--dim); }
 .ar-light-row { display: flex; align-items: center; gap: 6px; }
 .ar-light-row input[type="checkbox"] { width: auto; margin: 0; }
 .ar-light-row input[type="number"]:disabled { opacity: .45; }
@@ -4926,6 +5067,8 @@ body[data-frame] :is(#view-compose, #view-take) { scrollbar-gutter: stable; }
 .lyr-num.is-mark::before { content: ""; position: absolute; left: 4px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: var(--amber); }
 .lyr-tagsl > .lyr-tag { position: absolute; border-radius: var(--r-xs); background: color-mix(in srgb, var(--amber) 15%, transparent); }
 .lyr-tagsl > .lyr-band { position: absolute; left: 0; right: 0; background: color-mix(in srgb, var(--amber) 7%, transparent); box-shadow: inset 2px 0 0 var(--amber); }
+/* HERESY 2350: a worn word: a dotted line under it, the colour of the meter's «to look at» */
+.lyr-tagsl > .lyr-worn { position: absolute; box-sizing: border-box; border-bottom: 2px dotted #d9a441; }
 .lyr-tog.lyr-marks { color: var(--amber); }
 /* HERESY 1169 (Viktor 08.10.2026: «Снова ловлю тебя на хардкорных переносах строк… НИКОГДА НЕ ЛОМАТЬ СТРОКУ… вернуть ломанные
    строки в их текущие autowrap параграфы»): no measure on a paragraph any more (the hints' 62 and 68ch, the guide's 78 and 80ch,
@@ -5018,6 +5161,9 @@ body:not([data-frame]) .frame-fs { display: none; }
 .coll-group { display: inline-flex; align-items: center; gap: 4px; padding: 3px; border: 1px solid var(--line-a); border-radius: var(--r-md); flex: none; }
 .coll-group select { max-width: 200px; }
 .coll-bulk .icon-btn .ui-ico { width: 17px; height: 17px; }
+/* HERESY 2288: each bar key on its button, a cap as the Undo pill's kbd */
+.coll-bulk .icon-btn[data-key] { display: inline-flex; align-items: center; }
+.coll-bulk .icon-btn[data-key]::after { content: attr(data-key); margin-left: 4px; font: 500 10px/1 var(--mono); padding: 1px 3px; border-radius: var(--r-xs); border: 1px solid var(--line-a); color: var(--dim); }
 .icon-check { position: relative; display: inline-grid; place-items: center; width: 32px; height: 30px; border: 1px solid transparent; border-radius: var(--r-xs); cursor: pointer; color: var(--muted); }
 .icon-check input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
 .icon-check .ui-ico { width: 17px; height: 17px; }
@@ -5225,6 +5371,13 @@ body.ar-cmp-picking #arRuns .ar-thumb, body.ar-cmp-picking #arRuns .ar-gpic butt
 .ar-mask-ring { position: absolute; border: 1.5px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px #000; pointer-events: none; transform: translate(-50%, -50%); }
 .ar-knobs { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; }
 .ar-shapes { display: flex; gap: 6px; flex-wrap: wrap; }
+/* HERESY 2278: the Advanced size of one's own; the shapes greyed while it is on */
+.ar-shapes.is-off { opacity: .45; pointer-events: none; }
+.ar-adv { display: flex; gap: 8px 14px; align-items: flex-end; flex-wrap: wrap; margin-top: 6px; }
+.ar-adv-size { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.ar-adv-size input { width: 7.5em; }
+.ar-adv-say { font-size: 12px; opacity: .85; }
+.ar-adv-say.is-warn { color: var(--amber); opacity: 1; }
 .ar-shape { display: inline-flex; align-items: center; gap: 6px; user-select: none; white-space: nowrap; }
 .ar-shape input { margin: 0; accent-color: var(--amber); }
 /* HERESY 1321: the shapes and the star drawn; the picked pictures; the pictures put aside */
@@ -5436,6 +5589,8 @@ body.ar-cmp-picking #arRuns .ar-thumb, body.ar-cmp-picking #arRuns .ar-gpic butt
 .seed-mode { flex: none; width: auto; min-width: 0; max-width: 9.5em; font-size: 12px; padding-right: 22px; }
 .seedfield .seed-mode { display: block; margin-top: 6px; width: 100%; max-width: none; }
 .ar-seed-row input { flex: 1 1 auto; min-width: 5em; }
+/* HERESY 2267: the seed's mode as wide as its longest word (9.5em cut «Random (−1)» and «Случайный (−1)» in the Artist's row); the field gives way */
+#view-artist .ar-seed-row .seed-mode { max-width: none; }
 /* HERESY 1332: Draw's word centred in capitals; the painter's and the fine-tune's choices the row wide, never narrower than their names;
    the column's fields stretch with it; the run's progress under Draw */
 #arDraw { justify-content: center; text-align: center; text-transform: uppercase; letter-spacing: .06em; }
@@ -5584,6 +5739,7 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
    Trainer's knobs, five a row on a wide pane (the run · how long and how wide · the music half), four or three on narrower ones; a label
    on one line, cut with … rather than folded; the units inside their fields; the guide's links a small «?» */
 .tr-knobs { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px 14px; align-items: end; }
+.tr-knobs[hidden], .tr-knobs > [hidden] { display: none; }   /* HERESY 2391: .field's and .check's own display beat [hidden] (as in 1328): the Base with no plugin's, the Transcriber under Direct and the adapter's knobs beside a plugin's trainer stood shown */
 @media (max-width: 1500px) { .tr-knobs { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (max-width: 1100px) { .tr-knobs { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .tr-knobs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -5786,6 +5942,14 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
 .lib-row .style-ico { width: 34px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; flex: none; }
 .lib-row .style-ico .ui-ico { width: 16px; height: 16px; }
 .lib-row .style-ico.danger:not(:disabled):hover { color: var(--bad); border-color: var(--bad-line); }
+/* HERESY 2348: the planned Vocal line's octaves at the row's end: the shift in figures, lit when the song moves it, dim where a Generate would not use it */
+.lib-row .vocal-oct { height: 32px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; flex: none; margin-inline-start: auto; font-variant-numeric: tabular-nums; }
+.lib-row .vocal-oct .vocal-oct-ico { display: inline-flex; }
+.lib-row .vocal-oct .ui-ico { width: 16px; height: 16px; }
+.lib-row .vocal-oct .vocal-oct-val { min-width: 1.4em; text-align: center; font-weight: 600; }
+.lib-row .vocal-oct.is-on { color: var(--amber); border-color: var(--amber); }
+.lib-row .vocal-oct.is-idle { opacity: .55; }
+.lib-row .vocal-oct.is-idle:hover { opacity: .85; }
 /* the takes' ⋯ menu: its words on one line, every item on the same indent as the ticked ones */
 #libMenu { min-width: 0; width: max-content; max-width: min(380px, calc(100vw - 24px)); padding: 6px; }
 #libMenu button { white-space: nowrap; padding: 7px 14px 7px 10px; font-size: 13px; line-height: 1.35; }
@@ -5820,6 +5984,8 @@ html.booting .boot-veil > :is(.boot-logo, .boot-osem, .boot-words, .boot-ver) { 
 html.booting.veil-lang .boot-veil > :is(.boot-words, .boot-ver) { opacity: 1; animation: boot-in .9s ease both; }
 html.booting.veil-logo .boot-veil > .boot-logo { opacity: 1; animation: boot-in 1.2s ease both; }
 html.booting.veil-logo .boot-veil > .boot-osem { opacity: 1; animation: boot-in 1.2s .2s ease both; }
+/* HERESY 2283: a logo already in the page's language (or English, the page's own) shows through the translation's wait too */
+html.i18n-wait.veil-logo-own .boot-veil > :is(.boot-logo, .boot-osem) { visibility: visible; }
 html.i18n-wait .boot-veil > .boot-line { visibility: visible; }
 .boot-line i { animation-duration: 10s; }
 /* HERESY 1436: letters other than Latin in the Style, said under it */
@@ -6982,6 +7148,26 @@ body:not([data-frame="take"]) #view-take > .col-head > #takeEyebrow { order: 20;
 body:not([data-frame="take"]) #view-take > .col-head > #playHere.is-hidden ~ #takeEyebrow { margin-left: 0; }
 /* HERESY 1628: the row breaks before Play/Pause even where the first row has room for it (a line of nothing, the head's own row gap taken back) */
 body:not([data-frame="take"]) #view-take > .col-head::after { content: ""; order: 8; flex: 0 0 100%; height: 0; margin-top: -8px; }
+/* HERESY 2264 (Viktor 09.11.2026: «В Творце во фрейме музыканта первая строка с кнопками так и съезжает на вторую при 100-110% зуме»): the
+   take's first row never breaks. Its buttons give way first, from 37 px down to 25 each (the icon stays whole in the middle), and only a
+   phone's width folds them inside their own group, so ⋯ and ⤡ keep to the first row's right end at any zoom, in any language */
+body:not([data-frame="take"]) #view-take > .col-head > #takeActions { flex: 1 1 0px; min-width: 0; max-width: max-content; flex-wrap: wrap; row-gap: 6px; }
+body:not([data-frame="take"]) #view-take > .col-head > #takeActions > .btn { flex: 1 1 25px; min-width: 25px; max-width: max-content; }
+/* HERESY 2353 (Viktor 10.11.2026, on a take's page while a run went on: «Ты глянь на кнопку НАЗАД, куда она встряла и как сдвинула все иконки.
+   Её нужно отдельной строкой, выше всех иконок»): «Back to …» and its ✕ a row of their own at the head's top, in the room and over the room, the
+   chip across the row with its words cut by … when long; the take's buttons with ⋯ and ⇆ ⤡ keep their own row under it, the bin in its place */
+body:not([data-frame="take"]) #view-take > .col-head > :is(#backToRun, #cancelAway),
+body[data-frame="take"] #view-take > .col-head > :is(#backToRun, #cancelAway) { order: -2; }
+#view-take > .col-head > #backToRun { flex: 0 1 auto; min-width: 0; }   /* HERESY 2364: as wide as its words, cut by … only where the row ends */
+/* HERESY 2364 (Viktor 11.11.2026, «Пока что делай как советуешь там», on the lead's two questions: ⛶ in the very top corner as he asked in 1168, the
+   chip as wide as its words): while the way back to a run shows, ⇆ ⤡ (or ⛶) close its row, the head's top corner; without the chip the head is as it was */
+#view-take > .col-head:has(> #backToRun:not(.is-hidden)) > .frame-tools { order: -2; margin-inline-start: auto; }
+#view-take > .col-head > #backToRun > .run-dot { flex: none; }
+#view-take > .col-head > #backToRun > #backToRunLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* HERESY 2353: the row ends after the ✕ (a line of nothing between the head's two row gaps, 16 px as from the buttons to the title), only while the chip shows */
+#view-take > .col-head:has(> #backToRun:not(.is-hidden))::before { content: ""; order: -1; flex: 0 0 100%; height: 0; }
+/* HERESY 2264: the form 60 px narrower by default, the bar's note (a run in progress…) keeps to Generate's row in its two lines (1169) from 200 px */
+@media (min-width: 1400px) { body[data-tab="create"] .compose > .submit-bar > .submit-note { flex-basis: 200px; } }
 /* HERESY 1629: Past the limits at the end of the budget's row, amber while it holds; the budget's two asleep under it; an adapter out of the score tagged */
 .lora-free { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; font-size: calc(12px + var(--fs, 0px)); color: var(--dim); cursor: pointer; }
 .lora-free input { margin: 0; }
@@ -7284,7 +7470,7 @@ body.vshift-ok .lora-vshift { display: inline-flex; }
 
 /* HERESY 1724: «Equal loudness» right after the time (the flex gap and 10 px: 20 px), the note lit when the take has one */
 .cmp-transport .cmp-eq { margin-left: 10px; }
-.cmp-time { min-width: 0; white-space: nowrap; }
+.cmp-time { min-width: 0; white-space: nowrap; direction: ltr; unicode-bidi: isolate; }   /* HERESY 2362: «now / length» in that order in a Hebrew page too (it read 0:40 / 0:04) */
 .cmp-rate .cmp-note[aria-pressed="true"] { color: var(--amber); }
 
 /* HERESY 1729: the take's own wave over an edit dialog, its stretches marked */
@@ -7385,7 +7571,6 @@ body.vshift-ok .lora-vshift { display: inline-flex; }
 #playbar .pb-names strong { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.2; overflow-wrap: anywhere; }
 
 /* HERESY 1743: the Creator Heresy card, one field wide */
-#view-engine .engine-grid > .card.eg-creator { flex: 0 1 720px; }
 
 /* HERESY 1745: past twenty seconds and the page not all in, the veil's line runs instead of standing full (still loading, not stuck) */
 html.booting.veil-wait .boot-veil .boot-line i { width: 28%; animation: boot-sweep 1.6s ease-in-out infinite; }
@@ -7801,7 +7986,7 @@ body[data-tab="train"] .workspace { height: calc(100vh - var(--bar-h) - var(--pl
 .sm-say.is-bad, .sm-say .is-bad { color: var(--bad); }
 
 /* HERESY 1844: a shot's move in the clip, in its head */
-.vd-move { font-size: 12px; padding-top: 3px; padding-bottom: 3px; max-width: 210px; align-self: center; }
+.vd-move, .vd-into { font-size: 12px; padding-top: 3px; padding-bottom: 3px; max-width: 210px; align-self: center; }
 
 /* HERESY 1846: a take whose end was not sung */
 .coll-badge.unsung { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--sunk)); }
@@ -7946,6 +8131,7 @@ html.booting.veil-wait .boot-veil .boot-line i { width: 100%; transform: none; a
 .vd-tile.is-pic { display: flex; flex-direction: column; gap: 4px; }
 .vd-tile.is-pic img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--r-sm); background: var(--sunk); display: block; }
 .vd-side-none { padding: 10px 8px; }
+.vd-side-list.is-tiles .vd-side-none { grid-column: 1 / -1; }   /* HERESY 2221: the failure's line over the kept tiles spans the grid, as the empty line does */
 .vd-unfold { display: none; }
 .vd-layout.is-folded .vd-side > :not(.vd-unfold) { display: none !important; }
 .vd-layout.is-folded .vd-unfold { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; padding: 14px 0; border: 0;
@@ -8018,6 +8204,11 @@ body[data-tab="train"] .log-dock-chipbtn { display: none; }
 .tl-cut { position: absolute; top: 0; bottom: 0; width: 10px; margin-left: -5px; cursor: ew-resize; z-index: 2; }
 .tl-cut::after { content: ""; position: absolute; left: 4px; top: 3px; bottom: 3px; width: 2px; background: transparent; border-radius: 1px; }
 .tl-cut:hover::after, .tl-cut.is-sel::after { background: var(--amber); }
+/* HERESY 2262: the beats and the bars the lab heard on the ruler; a cut on a bar line or a beat lit, more for the bar */
+.tl-beat { position: absolute; bottom: 0; width: 1px; height: 5px; background: color-mix(in srgb, var(--muted) 70%, transparent); pointer-events: none; }
+.tl-barln { position: absolute; top: 0; bottom: 0; width: 1px; background: color-mix(in srgb, var(--amber) 45%, transparent); pointer-events: none; }
+.tl-cut.on-bar:not(:hover):not(.is-sel)::after { background: color-mix(in srgb, var(--amber) 80%, transparent); }
+.tl-cut.on-beat:not(:hover):not(.is-sel)::after { background: color-mix(in srgb, var(--amber) 40%, transparent); }
 .tl-word { position: absolute; top: 3px; bottom: 3px; padding: 0 4px; border-radius: 3px; font-size: 10.5px; line-height: 18px; color: var(--ink); white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis; background: color-mix(in srgb, var(--patina, #6a9a8a) 28%, transparent); }
 .tl-a1 { color: color-mix(in srgb, var(--amber) 70%, var(--ink)); }
@@ -8217,7 +8408,9 @@ body.daw-full #dawPanel.has-dock .mx-lanes { --mx-lanes-max: calc(100vh - 150px 
   max-height: 72vh; overflow: auto; z-index: 70; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel);
   box-shadow: 0 18px 46px rgba(0, 0, 0, .38); resize: both; }
 #dawPanel[data-dock="float"] #mxDock .mc-tabs { cursor: move; }
-body.daw-full #dawPanel.has-dock[data-dock] .mx-lanes { --mx-lanes-max: calc(100vh - 150px); }
+/* HERESY 2203: the lanes take the whole height only where the console is not under them (beside them, or floating); with no room beside, the
+   console stands under the lanes as before 1967, and the has-dock rule leaves it its measured height */
+body.daw-full #dawPanel.has-dock[data-dock-room]:is([data-dock="pin"], [data-dock="hover"]) .mx-lanes, body.daw-full #dawPanel.has-dock[data-dock="float"] .mx-lanes { --mx-lanes-max: calc(100vh - 150px); }
 .mc-dockmode { display: inline-flex; gap: 4px; margin-left: auto; }
 #dawPanel[data-dock] #mxDock .mc-tabs { flex-wrap: wrap; row-gap: 4px; }
 #dawPanel[data-dock] #mxDock .mc-how { order: 9; flex: 1 1 100%; margin-left: 0; }   /* a docked console is narrow: the hint under its tabs */
@@ -8402,6 +8595,7 @@ body.mx-pop .mc-tabs { flex-wrap: wrap; row-gap: 4px; }
 .ln-tw { color: var(--dim); }
 .ln-when { font-size: 12px; color: var(--dim); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .ln-here { color: var(--amber); }
+.ln-vae { opacity: 0.75; }   /* HERESY 2304 */
 .ln-rate { justify-content: flex-end; }
 .ln-lib { padding: 3px; }
 .ln-dvrow { padding: 3px 10px; font-size: 12.5px; cursor: pointer; border-style: dashed; background: color-mix(in oklab, var(--panel) 94%, var(--ground)); }
@@ -8415,6 +8609,14 @@ body.mx-pop .mc-tabs { flex-wrap: wrap; row-gap: 4px; }
 
 /* HERESY 1995: the compare window's second under the pointer, its ruler, ⏪ ⏩, the switch that keeps the second, 👎 for the disliked, its strip 2 px larger */
 .cmp-wavebox { position: relative; }
+/* HERESY 2289: the loop's grips, a line and a tab turned into the loop on each edge, dragged or moved by ← → in focus */
+.cmp-grip { position: absolute; top: 0; bottom: 0; width: 14px; margin-left: -7px; cursor: ew-resize; z-index: 3; touch-action: none; outline: none; }
+.cmp-grip[hidden] { display: none; }
+.cmp-grip::before { content: ""; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: var(--amber); }
+.cmp-grip::after { content: ""; position: absolute; top: 0; width: 9px; height: 16px; background: var(--amber); }
+.cmp-grip[data-grip="a"]::after { left: 8px; border-radius: 0 4px 4px 0; }
+.cmp-grip[data-grip="b"]::after { left: -3px; border-radius: 4px 0 0 4px; }
+.cmp-grip:focus-visible::after, .cmp-grip:hover::after { box-shadow: 0 0 0 2px var(--text); }
 .cmp-hover { position: absolute; top: -2px; transform: translate(-50%, -100%); padding: 1px 6px; border-radius: var(--r-sm); background: var(--ink); color: var(--panel);
   font-size: 12px; pointer-events: none; white-space: nowrap; }
 .cmp-hover[hidden] { display: none; }
@@ -8913,7 +9115,7 @@ html.by-pointer .mode input:focus-visible + .mode-body { outline: none; }
 .link-badge { color: var(--amber); border-color: currentColor; padding: 0 6px; }
 .net-say[data-q="stuck"] { color: var(--amber); }
 
-/* HERESY 2107 (Viktor 06.11.2026, his PWA at 110 % on 1920 × 1080: the shuffle on the ☆ after 👎, an icon over the time's first digit, the red «END NOT SUNG»
+/* HERESY 2107 (Viktor 05.11.2026 evening, his PWA at 110 % on 1920 × 1080: the shuffle on the ☆ after 👎, an icon over the time's first digit, the red «END NOT SUNG»
    taking the room): the player never covers itself. The take's group is as wide as what it holds and only its title gives way; fitPlayer (app.js) then takes
    its steps (data-fit on #playbar) while anything would still cover another, leave the bar or fall to a second line */
 /* the marks: their drawn icon before the words (the ⚠ and ∿ glyphs gone); a step turns one to its icon alone, its words kept unseen for a screen reader and
@@ -8978,9 +9180,123 @@ body[data-tab="train"] .log-dock { bottom: calc(var(--playbar-h, 60px) + 10px); 
 body[data-tab="train"] .log-dock.is-tall .log-dock-body { height: calc(100vh - var(--bar-h) - var(--playbar-h, 60px) - 74px); }
 body[data-tab="train"] .tr-logdock { bottom: calc(var(--playbar-h, 60px) + 10px); }   /* the Trainer's own log on the server log's baseline (1298), over the player too */
 
-/* HERESY 2108 (Viktor 06.11.2026: the folded Runs («Прогоны 50», «Развернуть прогоны») and Takes columns lit only their upper part): a folded list column is lit
+/* HERESY 2108 (Viktor 05.11.2026 evening: the folded Runs («Прогоны 50», «Развернуть прогоны») and Takes columns lit only their upper part): a folded list column is lit
    whole, under the pointer, pressed or reached by the keyboard, by day and by night: its strip's button grows with the strip (the Runs' stopped at 200 px, as the
    Clips' did before 1939) and its light is the same in the three */
 .library.is-folded:not(.is-peek) > .lib-unfold, .tr-layout.is-folded .tr-unfold, .vd-layout.is-folded .vd-unfold { flex: 1 1 auto; align-self: stretch; box-sizing: border-box; }
 .library.is-folded .lib-unfold:is(:hover, :active, :focus-visible), .tr-layout.is-folded .tr-unfold:is(:hover, :active, :focus-visible),
 .vd-layout.is-folded .vd-unfold:is(:hover, :active, :focus-visible) { color: var(--amber); background: var(--hover); }
+
+/* HERESY 2271 (Viktor 09.11.2026: the page full width up to 2560 px, a centred block of 2560 px on wider screens): the body is the block;
+   what is fixed to the window edges (the player, the toasts, the jobs, the docks, Up next, the Engine) keeps to the block's edges by
+   --page-x, the gutter on each side (0 up to 2560 px). Its % is the window's own width without the scrollbar where it is used (a fixed
+   box's containing block), so the bar and the body meet to the pixel. Veils and full-window views stay full window. */
+:root { --page-max: 2560px; --page-x: max(0px, (100% - var(--page-max)) / 2); }
+body { max-width: var(--page-max); margin-left: auto; margin-right: auto; }
+.playbar, #view-engine.engine-panel { left: var(--page-x); right: var(--page-x); }
+.toasts, .post-jobs { right: calc(var(--page-x) + 18px); }
+.log-dock { right: calc(var(--page-x) + 16px); }
+.log-dock.is-left { right: auto; left: calc(var(--page-x) + 16px); }
+.tr-logdock { left: calc(var(--page-x) + 16px); }
+.tr-logdock.is-right { left: auto; right: calc(var(--page-x) + 16px); }
+.up-next { left: calc(var(--page-x) + 18px); }
+#dawPanel[data-dock="float"] #mxBody > .mx-dock { left: var(--mx-fx, calc(100vw - var(--page-x) - var(--mx-dock-w) - 40px)); }
+
+/* HERESY 2299 (Viktor 09.11.2026: «минипанель под хедером студии с реальными метриками по утилизации CPU/GPU/RAM/VRAM/NVMe/HDD, и туда же в неё
+   прогресс-бары… При наведении мышкой на каждую позицию — тултипом вывод метрик и графов»): the system bar under the header (heresy-sysbar.js).
+   Shown, it is part of the bar's height: --bar-h grows by --sysbar-h, so every room, sticky band and fixed panel that stands under the bar stands
+   under both, and the header itself keeps its own height (--top-h); nothing moves while it is shown, only when a room shows or hides it. */
+:root { --top-h: 52px; --sysbar-h: 24px; }
+body.has-sysbar { --bar-h: calc(var(--top-h) + var(--sysbar-h)); }
+body.has-sysbar .topbar, body.has-sysbar .topbar .brand { height: var(--top-h); }
+.sysbar { position: sticky; top: var(--top-h); z-index: 19; height: calc(var(--bar-h) - var(--top-h)); box-sizing: border-box; display: flex; align-items: center; gap: 14px;
+  padding: 0 20px; background: var(--panel); border-bottom: 1px solid var(--line-a, var(--line)); font-size: 11.5px; line-height: 1; color: var(--muted);
+  overflow: hidden; white-space: nowrap; }
+.sysbar[hidden] { display: none; }
+.sb-items { display: flex; align-items: center; gap: 6px; flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.sb-item, .sb-job { display: inline-flex; align-items: center; gap: 6px; height: 20px; padding: 0 7px; border-radius: var(--r-sm, 4px); flex: none; cursor: default; outline: none; }
+.sb-item:hover, .sb-item:focus-visible, .sb-item.is-on, .sb-job:hover, .sb-job:focus-visible, .sb-job.is-on { background: var(--hover); color: var(--ink); }
+.sb-item:focus-visible, .sb-job:focus-visible { box-shadow: 0 0 0 1px var(--amber-edge, var(--amber)) inset; }
+.sb-name { font-weight: 600; color: var(--ink); letter-spacing: .02em; }
+.sb-sub { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+.sb-val { font-variant-numeric: tabular-nums; }
+.sb-item[data-sb="cpu"] .sb-val { min-width: 2.6em; }
+.sb-item[data-sb="ram"] .sb-val { min-width: 6.5em; }
+.sb-item[data-sb^="gpu:"] .sb-val { min-width: 12.5em; }
+.sysbar:not([data-tight="0"]) .sb-item[data-sb^="gpu:"] .sb-val { min-width: 9.5em; }
+.sysbar:not([data-tight="0"]) .sb-sub, .sysbar[data-tight="2"] .sb-item[data-sb^="disk:"] .sb-val { display: none; }
+.sb-item[data-sb^="disk:"] .sb-val { min-width: 7.5em; }
+.sb-meter { display: inline-flex; flex-direction: column; justify-content: center; gap: 2px; width: 44px; height: 12px; }
+.sb-meter > b { display: block; height: 8px; border-radius: 2px; overflow: hidden; background: color-mix(in oklab, var(--ink) 11%, transparent); }
+.sb-meter.is-two > b { height: 4px; }
+.sb-meter > b > i { display: block; height: 100%; width: 0; background: var(--good); transition: width .35s ease; }
+.sb-meter > b.lv-mid > i { background: var(--star-gold, var(--amber)); }
+.sb-meter > b.lv-hot > i { background: var(--bad); }
+.sysbar.is-quiet .sb-val { opacity: .6; }
+.sb-note { flex: none; color: var(--muted); font-style: italic; overflow: hidden; text-overflow: ellipsis; }
+.sb-jobs { display: flex; align-items: center; gap: 6px; flex: none; margin-left: auto; }
+.sb-jobs[hidden] { display: none; }
+.sb-jname { max-width: 180px; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
+.sb-jbar { display: block; width: 90px; height: 6px; border-radius: 3px; overflow: hidden; background: color-mix(in oklab, var(--ink) 11%, transparent); }
+.sb-jbar > i { display: block; height: 100%; background: var(--amber); transition: width .9s linear; }
+.sb-job.is-open .sb-jbar > i { opacity: .45; background: repeating-linear-gradient(90deg, var(--amber) 0 8px, transparent 8px 14px); animation: sb-run 1.2s linear infinite; }
+@keyframes sb-run { from { background-position: 0 0; } to { background-position: 14px 0; } }
+.sb-jpct { min-width: 2.6em; font-variant-numeric: tabular-nums; }
+.sb-more { color: var(--muted); }
+.sb-pop { position: fixed; z-index: 95; width: 410px; box-sizing: border-box; padding: 10px 12px 12px; background: var(--panel); color: var(--ink);
+  border: 1px solid var(--line-strong, var(--line)); border-radius: var(--r-md, 8px); box-shadow: var(--shadow-lg); font-size: 12px; line-height: 1.45; pointer-events: none; }
+.sb-pop[hidden] { display: none; }
+/* HERESY 2302 (Viktor 09.11.2026: «если кому нужны те пиксели, что бар съел, то тоже можно сворачивать плашкой вправо вверху в его вертикальной
+   позиции»): the tab at the bar's right end folds it to a strip of a few pixels, the tab hanging from the strip's right end where it stood. The bar's
+   height follows --bar-h, the animated value (1167), so the bar and the rooms under it move as one, shown, hidden, folded or unfolded */
+body.sysbar-folded { --sysbar-h: 4px; }
+.sb-fold { flex: none; align-self: stretch; display: inline-grid; place-items: center; width: 24px; margin: 0 -16px 0 0; padding: 0; border: 0;
+  border-left: 1px solid var(--line-a, var(--line)); border-radius: 0; background: none; color: var(--muted); cursor: pointer; }
+.sb-fold:hover, .sb-fold:focus-visible { background: var(--hover); color: var(--ink); outline: none; }
+.sb-fold svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+body.sysbar-folded .sysbar { overflow: visible; }
+body.sysbar-folded .sysbar > :not(.sb-fold) { display: none; }
+body.sysbar-folded .sb-fold { position: absolute; top: 0; right: 14px; width: 30px; height: 14px; margin: 0; border: 1px solid var(--line-a, var(--line));
+  border-top: 0; border-radius: 0 0 var(--r-sm, 4px) var(--r-sm, 4px); background: var(--panel); }
+body.sysbar-folded .sb-fold svg { transform: rotate(180deg); }
+/* HERESY 2302: a key on its button, a cap as the Library bar's (2288), last in its row; Engine → Defaults → Hints takes the caps off (the tips keep
+   the key). The cap's letter is drawn, not written, so the button's own text stays its own */
+.key-cap { order: 9; flex: none; margin-left: 5px; font: 500 10px/1 var(--mono); padding: 1px 3px; border-radius: var(--r-xs, 3px);
+  border: 1px solid var(--line-a); background: none; color: var(--dim); pointer-events: none; }
+.key-cap::before { content: attr(data-k); }
+html.no-keycaps .key-cap, html.no-keycaps .coll-bulk .icon-btn[data-key]::after { display: none; }
+.sb-pop h5 { margin: 0 0 6px; font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-pop .sb-grid { display: grid; grid-template-columns: auto 1fr; gap: 1px 12px; }
+.sb-pop .sb-grid > span:nth-child(odd) { color: var(--muted); }
+.sb-pop .sb-grid > span:nth-child(even) { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.sb-pop .sb-cap { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; color: var(--muted); font-size: 11px; }
+.sb-pop .sb-keys { display: inline-flex; gap: 10px; }
+.sb-pop .sb-keys i { display: inline-block; width: 10px; height: 3px; margin-right: 4px; vertical-align: middle; border-radius: 2px; }
+.sb-pop canvas { display: block; width: 100%; height: 54px; margin-top: 3px; border-radius: 3px; }
+html[data-motion="reduced"] .sb-meter > b > i, html[data-motion="reduced"] .sb-jbar > i { transition: none; }
+html[data-motion="reduced"] .sb-job.is-open .sb-jbar > i { animation: none; }
+
+/* HERESY 2313–2318: the DAW's bar grid and chord lane, the reference from anywhere, the audition, the lines' shapes */
+.mx-ms.mx-grid { display: inline-grid; place-items: center; }
+.mx-ms.mx-grid svg { display: block; }
+.mx-ms.mx-grid.is-wait { opacity: .55; }
+.mx-ms.mx-grid.is-bad { border-style: dashed; }
+.mx-ruler-row.has-grid .mx-wave.mx-ruler:not(.mx-chordlane), body.daw-full #dawPanel .mx-ruler-row.has-grid .mx-wave.mx-ruler:not(.mx-chordlane) { height: 32px; }
+.mx-ruler-row.has-grid.has-secs .mx-wave.mx-ruler:not(.mx-chordlane), body.daw-full #dawPanel .mx-ruler-row.has-grid.has-secs .mx-wave.mx-ruler:not(.mx-chordlane) { height: 46px; }
+.mx-ruler-row.has-chords { row-gap: 2px; }
+#dawPanel .mx-ruler-row .mx-wave.mx-ruler.mx-chordlane, body.daw-full #dawPanel .mx-ruler-row .mx-wave.mx-ruler.mx-chordlane { height: 20px; cursor: pointer; }
+.mx-ruler-row .mx-chord-ctl[hidden], .mx-ruler-row .mx-chordlane[hidden] { display: none; }
+.mx-chord-ctl { gap: 8px; font-size: 11px; color: var(--muted); }
+.mx-chord-key { font-weight: 600; color: var(--ink); }
+.mx-ms.mx-ref.is-other { box-shadow: inset 0 -2px 0 var(--amber); }
+.mx-lane.is-audition { outline: 2px solid var(--amber); outline-offset: -2px; }
+.mx-fadebox.mx-shapebox, .mx-fadebox { z-index: 80; }   /* over a floating console (70), under the menus (90) */
+.mx-shapebox { width: 430px; }
+.mx-lfo-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 4px 0; }
+.mx-lfo-chips { display: inline-flex; flex-wrap: wrap; gap: 3px; }
+.mx-ms.mx-lfo-ico { display: inline-grid; place-items: center; }
+.mx-ms.mx-lfo-ico svg { display: block; }
+.mx-ms.mx-lfo-word { width: auto; padding: 0 7px; font-family: inherit; font-weight: 600; font-size: 11px; line-height: 1; white-space: nowrap; }
+.mx-shapebox .mxl-acts { justify-content: flex-end; margin-top: 8px; }
+.mx-refpick-box { width: min(640px, 100%); height: min(560px, 100%); }
+.mx-refpick-list { flex: 1 1 auto; min-height: 0; border-right: 0; }

@@ -22,10 +22,11 @@
 /checkpoints/
 # the downloader's own notes beside files it puts in place (heresy/fetch-heresy.sh: models/, sliders/)
 /.cache/
-/whisper/*
-!/whisper/.gitkeep
-/separation/*
-!/separation/.gitkeep
+# HERESY 2330: every weight under models/<room>/ (lab/paths.py); 2.0.6's own places, kept ignored for what lab/migrate_models.py could not move
+/whisper/
+/separation/
+/artwork/
+/universr/
 /hf_cache/*
 !/hf_cache/.gitkeep
 /sliders/*.gguf
@@ -39,6 +40,7 @@
 /upstream/
 /kit/
 /build/build/
+/build/audio.cpp/build/
 /build/tools/public/index.html
 /build/tools/public/manifest.webmanifest
 /vendor/*
@@ -92,8 +94,6 @@
 !/datasets/raw/.gitkeep
 
 # ---- what the studio makes on the machine beside the shipped folders
-/artwork/*
-!/artwork/.gitkeep
 /datasets/*
 !/datasets/.gitkeep
 /training/*

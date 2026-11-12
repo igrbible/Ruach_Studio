@@ -423,6 +423,22 @@
       b.style.fontSize = ""; b.style.lineHeight = ""; b.classList.add("is-two");
     });
   }
+  // HERESY 2203 (1797's finding, 25.10.2026): painted with the DAW's drawer shut the console measured 0 px, and over the whole window the lanes
+  // kept their height while the console stood under the window's edge. Its height is written only when it has one, and written again whenever
+  // it changes (its drawer opened, the whole window, a tab of another height), by a watch on the console the mixer painted last
+  var dockHWatch = null, dockHEl = null;
+  function dockHSet(dock) {
+    var panel = $("dawPanel"), h = dock.offsetHeight;
+    if (!panel || POPW || !h || dock !== document.getElementById("mxDock")) return;
+    if (panel.style.getPropertyValue("--mx-dock-h") !== h + "px") panel.style.setProperty("--mx-dock-h", h + "px");
+  }
+  function dockH(dock) {
+    dockHSet(dock);
+    if (!window.ResizeObserver || POPW || dockHEl === dock) return;
+    if (!dockHWatch) dockHWatch = new ResizeObserver(function () { if (dockHEl) dockHSet(dockHEl); });
+    if (dockHEl) dockHWatch.unobserve(dockHEl);
+    dockHEl = dock; dockHWatch.observe(dock);
+  }
   function paint() {
     if (POPW) { var inPage = document.getElementById("mxDock"); if (inPage && inPage.hidden) popClose(); }   // HERESY 1983: the console turned off: its window goes
     var dock = dockEl(), M = K();
@@ -456,7 +472,7 @@
         '<span class="mc-gap"></span>' + returnHtml("reverb") + returnHtml("delay") + masterHtml() + "</div>";
     dock.innerHTML = tabs + body;
     fitNames(dock);                                   // HERESY 1764
-    if (panel) panel.style.setProperty("--mx-dock-h", dock.offsetHeight + "px");   // full screen: the lanes share what is left above it
+    dockH(dock);                                      // full screen: the lanes share what is left above it (2203: measured when it has a height)
     ns.forEach(eqMini); eqMini("*");                   // HERESY 1544
     M.subs().forEach(function (x) { eqMini("%" + x.id); });   // HERESY 1563
     if (C.tab === "devices" && C.sel) { drawEq(); drawComp(); }

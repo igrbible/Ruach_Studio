@@ -33,8 +33,8 @@ rows = [{"start": 0.5, "end": 3.5, "text": "Строка одна"}, {"start": 4
 tl = V.edit_timeline(kit, name, audio, "Ночная гостья", rows)
 v1 = tl["otio"]["tracks"]["children"][0]["children"]
 kinds = [(x["OTIO_SCHEMA"].split(".")[0], int(x["source_range"]["duration"]["value"])) for x in v1]
-check("V1: the video 2 s (50), its picture to the shot's end (50), the second shot's picture (100), the third a gap (100)",
-      kinds == [("Clip", 50), ("Clip", 50), ("Clip", 100), ("Gap", 100)], kinds)
+check("V1 at the clip's 24 fps (HERESY 2361): the video 2 s (48), its picture to the shot's end (48), the second shot's picture (96), the third a gap (96)",
+      kinds == [("Clip", 48), ("Clip", 48), ("Clip", 96), ("Gap", 96)], kinds)
 check("the media: the video, the pictures under their shots' numbers, the take's sound",
       sorted(tl["media"]) == ["media/shot-001.jpg", "media/shot-001.mp4", "media/shot-002.jpg", "media/Ночная_гостья.wav"], sorted(tl["media"]))
 edl = tl["edl"].splitlines()

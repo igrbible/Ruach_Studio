@@ -12,19 +12,19 @@ them in plain visual words (art_looks.json, from the instruments cheat-sheet).
 
     .venv/bin/python lab/art_job.py TAKE_DIR OUT.jpg [SEED]
 
-    prompter  artwork/Qwen3-4B-Instruct-2507   (Apache 2.0; absent: the prompt is built from the style)
-    painter   artwork/Qwen-Image-2512, -2.1    Qwen-Image (HERESY 1338; the only painter since 1428)
-    critic    checkpoints/Qwen2.5-Omni-7B-GGUF (llama.cpp's llama-mtmd-cli; absent: the first picture is kept, unseen)
+    prompter  models/artist/Qwen3-4B-Instruct-2507   (Apache 2.0; absent: the prompt is built from the style)
+    painter   models/artist/Qwen-Image-2512, -2.1    Qwen-Image (HERESY 1338; the only painter since 1428)
+    critic    models/listener/Qwen2.5-Omni-7B-GGUF (llama.cpp's llama-mtmd-cli; absent: the first picture is kept, unseen)
 
 HERESY 1167 · 1405 · 1428: the painters before Qwen-Image, an SDXL fine-tune and then Krea 2 Muse by Stable Yogi, left the Studio (SDXL in
 1405, Krea 2 in 1428; HERESY 1800 took what was said of them out of here, HERESY.md keeps their story). What came with them stays: the
 painter runs in its own environment (.venv-art), a card too small for it whole streams its blocks from RAM (ART_STREAM=1), ART_PAINTER
 says which (the lab sets it), and every picture passes the content filter before it is kept (Falconsai/nsfw_image_detection in
-artwork/nsfw-filter): flagged, it is dropped and the next seed tries.
+models/artist/nsfw-filter): flagged, it is dropped and the next seed tries.
 
 HERESY 1338 (Viktor 10.10.2026: «в Engine не забудь прописать выборы всех генеративных art моделей»; the plan he took: «Автообложки
 дублей с Lightning»): Qwen-Image paints a take's artwork as well, through the Artist room's loader (artist_qwen.build): 2512 from the
-GGUF Q4 or Q6 with Lightning at 1.0 and 8 steps, an fp8 fine-tune (ART_MODEL, a file in artwork/Qwen-Image-2512/checkpoints/) with
+GGUF Q4 or Q6 with Lightning at 1.0 and 8 steps, an fp8 fine-tune (ART_MODEL, a file in models/artist/Qwen-Image-2512/checkpoints/) with
 Lightning at 0.55 and 12 steps, or 2.1 (Qwen's research licence: the page says what that means for a song that is sold), drawn at
 1328 px and kept at 1024, through the same content filter.
 
@@ -36,12 +36,14 @@ Prints one JSON line: the prompt, the seed, the models, each picture the critic 
 import json, os, random, re, subprocess, sys, time
 from pathlib import Path
 
+import paths                        # HERESY 2330: where the weights live
+
 KIT = Path(__file__).resolve().parent.parent
 KEPT = {}                  # HERESY 1370: what a serving Artist process keeps between runs (artist_job.serve), one dict for its modules
-PROMPTER = KIT / "artwork" / "Qwen3-4B-Instruct-2507"
+PROMPTER = paths.at(paths.ARTIST, KIT) / "Qwen3-4B-Instruct-2507"
 LOOKS = Path(__file__).resolve().parent / "art_looks.json"
 CLI = KIT / "vendor" / "llama.cpp" / "build" / "bin" / "llama-mtmd-cli"
-OMNI = KIT / "checkpoints" / "Qwen2.5-Omni-7B-GGUF"
+OMNI = paths.at(paths.LISTENER, KIT) / "Qwen2.5-Omni-7B-GGUF"
 # the listener's ladder (training.py LISTENERS), its llama.cpp rungs: the first on disk looks (Q8_0 with the Q8_0
 # projector: 5.7 s a picture, 10.5 GB, measured 03.10.2026; the projector reads pictures as well as sound)
 CRITICS = [("Qwen2.5-Omni-7B-Q8_0.gguf", "mradermacher/Qwen2.5-Omni-7B.mmproj-Q8_0.gguf"),
@@ -51,7 +53,7 @@ CRITICS = [("Qwen2.5-Omni-7B-Q8_0.gguf", "mradermacher/Qwen2.5-Omni-7B.mmproj-Q8
            ("Qwen2.5-Omni-7B-Q4_K_M.gguf", "mmproj-Qwen2.5-Omni-7B-f16.gguf")]
 # HERESY 1166 (Viktor 04.10.2026: «1024x1024, если сейчас так генерится, то оставляй в этом размере»): kept as drawn
 SIZE, KEEP, STEPS, CFG = 1024, 1024, 28, 5.5
-FILTER = KIT / "artwork" / "nsfw-filter"
+FILTER = paths.at(paths.ARTIST, KIT) / "nsfw-filter"
 FEW_STEPS = 8                       # a few-step painter's own (Lightning's 8)
 PAINTERS = ("qwen2512-q4", "qwen2512-q6", "qwen2512-fp8", "qwen21")   # HERESY 1338: the Qwen painters; 1405: SDXL gone; 1428: Krea 2 gone
 

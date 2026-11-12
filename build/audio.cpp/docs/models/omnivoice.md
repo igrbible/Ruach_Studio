@@ -1,0 +1,263 @@
+# OmniVoice
+
+OmniVoice supports multilingual TTS, voice cloning, voice design, non-verbal tag tokens, long-form chunking, and chunked pseudo-streaming output.
+
+| Route | Task | Mode | Inputs |
+|---|---|---|---|
+| Auto voice | `tts` | `offline`, `streaming` | `--text` |
+| Voice clone | `tts`, `clon` | `offline`, `streaming` | `--text`, `--voice-ref`, optional `--reference-text` |
+| Voice design | `tts`, `vdes` | `offline`, `streaming` | `--text`, `--instruct` |
+
+## Model Layout
+
+Use a local OmniVoice model package:
+
+```text
+models/OmniVoice/
+```
+
+The package should contain the OmniVoice model weights and the audio-tokenizer files expected by `model_specs/omnivoice.json`. GGUF packages can also be used when they embed the package spec.
+
+## Offline CLI
+
+Voice clone:
+
+```bash
+audiocpp_cli --task tts --family omnivoice --model /path/to/OmniVoice --backend cuda --text "Hello from OmniVoice." --voice-ref assets/resources/b.wav --reference-text "Some call me nature. Others call me Mother Nature. I've been here for over 4.5 billion years. 22,500 times longer than you." --out out.wav
+```
+
+Voice design:
+
+```bash
+audiocpp_cli --task tts --family omnivoice --model /path/to/OmniVoice --backend cuda --text "Hello from OmniVoice." --instruct "female, young adult, moderate pitch" --out out.wav
+```
+
+Auto voice:
+
+```bash
+audiocpp_cli --task tts --family omnivoice --model /path/to/OmniVoice --backend cuda --text "Hello from OmniVoice." --out out.wav
+```
+
+`clon` and `vdes` are aliases to the same synthesis implementation. Route
+selection does not add or remove input requirements.
+
+## Streaming CLI
+
+OmniVoice upstream Python does not expose model-native streaming. audio.cpp exposes chunked pseudo streaming: the session emits one audio event per generated text chunk, then returns a merged final WAV.
+
+```bash
+audiocpp_cli --task tts --mode streaming --family omnivoice --model /path/to/OmniVoice --backend cuda --text "Hello from OmniVoice. This text can be split into chunk events." --voice-ref assets/resources/b.wav --reference-text "Some call me nature. Others call me Mother Nature. I've been here for over 4.5 billion years. 22,500 times longer than you." --text-chunk-size 160 --out stream.wav --out-dir stream_chunks
+```
+
+`--out` writes the final merged WAV. `--out-dir` writes emitted chunk WAVs such as `chunk_0.wav`, `chunk_1.wav`, and so on.
+
+## Server Streaming
+
+Configure OmniVoice with `mode: "streaming"`:
+
+```json
+{
+  "host": "127.0.0.1",
+  "port": 8080,
+  "backend": "cuda",
+  "device": 0,
+  "threads": 8,
+  "models": [
+    {
+      "id": "omnivoice-stream",
+      "family": "omnivoice",
+      "path": "/path/to/OmniVoice",
+      "task": "tts",
+      "mode": "streaming"
+    }
+  ]
+}
+```
+
+SSE request:
+
+```bash
+curl -N http://127.0.0.1:8080/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -d '{
+    "model": "omnivoice-stream",
+    "input": "Hello from OmniVoice streaming.",
+    "response_format": "pcm",
+    "stream_format": "sse",
+    "voice": "assets/resources/b.wav",
+    "reference_text": "Some call me nature. Others call me Mother Nature. I have been here for over four billion years.",
+    "options": {
+      "text_chunk_size": 160,
+      "text_chunk_mode": "tag_aware"
+    }
+  }'
+```
+
+The SSE stream emits `speech.audio.delta` events followed by `speech.audio.done`.
+
+## Common Options (use directly)
+
+| Option | Values | Default | Meaning |
+|---|---|---:|---|
+| `--voice-ref` | WAV path | not set | Reference speaker audio for voice cloning. |
+| `--reference-text` | text | empty string | Transcript for the reference audio. |
+| `--instruct` | text | empty string | Voice-design instruction. |
+| `--language` | language hint | auto | Optional language hint. |
+| `--text-chunk-size` | integer chars | disabled | Enables framework text chunking and controls pseudo-streaming chunk size. |
+| `--text-chunk-mode` | `default`, `tag_aware`, `japanese`, `endline` | `tag_aware` | Framework text chunking mode when `--text-chunk-size` is set. |
+| `--num-inference-steps` | integer | `32` | Decoder diffusion steps. |
+| `--guidance-scale` | float | `2.0` | Decoder CFG strength. |
+| `--seed` | unsigned 32-bit integer | random session RNG | Generation seed; omitted requests continue the session RNG state. |
+
+The corresponding request-option names are `reference_text`, `instruct`,
+`language`, `text_chunk_size`, `text_chunk_mode`, `num_inference_steps`,
+`guidance_scale`, and `seed`.
+
+## Request Options (use with `--request-option`)
+
+| Option | Values | Default | Meaning |
+|---|---|---:|---|
+| `speed` | float | `1.0` | Speech speed multiplier. |
+| `duration_sec` | seconds | estimated | Optional target output duration. |
+| `shift` | float | `0.1` | Diffusion timestep schedule shift. |
+| `denoise` | bool | `true` | Add the denoise control token when reference audio is present. |
+| `preprocess_prompt` | bool | `true` | Preprocess reference audio before tokenization. |
+| `postprocess_output` | bool | `true` | Apply output postprocessing and trimming. |
+| `layer_penalty_factor` | float | `5.0` | Layer-order penalty for masked audio-codebook position selection. |
+| `position_temperature` | float | `5.0` | Gumbel temperature for masked-position selection. |
+| `class_temperature` | nonnegative float | `0.0` | Audio-token class sampling temperature; `0` selects classes greedily. |
+| `audio_chunk_duration_sec` | seconds | `15.0` | Model-side automatic chunk duration when framework chunking is not explicitly enabled. |
+| `audio_chunk_threshold_sec` | seconds | `30.0` | Estimated audio length threshold before model-side chunking is used. |
+
+Legacy request names `duration`, `t_shift`, `audio_chunk_duration`, and
+`audio_chunk_threshold` remain accepted, respectively. Use one spelling per
+option. Both spellings work with existing GGUFs; no reconversion is required.
+
+## Session Options (use with `--session-option`)
+
+Arena and weight-context sizes are in MiB.
+
+| Option | Values | Default | Meaning |
+|---|---|---:|---|
+| `omnivoice.mem_saver` | bool | `false` | Release staged runtime graphs after request phases; default false. Cannot be combined with perf_mode=flash_attention. |
+| `omnivoice.perf_mode` | `off`, `flash_attention` | `off` | Generator performance mode; default off keeps the exact-safe attention path. flash_attention requires mem_saver=false. |
+| `omnivoice.packed_cfg` | bool | `true` | Give every guidance (unconditional) sequence only its target frames instead of the full prompt length, and pack batched requests without padding. `false` restores the padded layout. Ignored with `mem_saver=true`, whose layerwise graph always uses the padded layout. |
+| `omnivoice.device_scoring` | bool | `true` | For greedy class decoding (`class_temperature=0`), pick each step's best tokens on the backend and read back only those instead of the full logits. Ignored with `mem_saver=true` and for sampled class decoding. |
+| `omnivoice.packed_projections` | bool | `true` | Load the q/k/v projections and the gate/up projections as one packed weight each, so every layer runs one GEMM per group (its shared input is converted to f16 once instead of three and two times) and one fused SwiGLU kernel. `false` keeps separate projections. |
+| `omnivoice.weight_type` | `native`, `f32`, `f16`, `bf16`, `q8_0` | `native` | Generator weight storage fallback. |
+| `omnivoice.generator_weight_type` | `native`, `f32`, `f16`, `bf16`, `q8_0` | inherits `weight_type` | Explicit generator weight storage override. |
+| `omnivoice.audio_tokenizer_weight_type` | `native`, `f32`, `f16`, `bf16`, `q8_0` | `native` | Runtime storage type for audio tokenizer weights. |
+| `omnivoice.audio_tokenizer_codebook_weight_type` | `native`, `f32`, `f16`, `bf16` | `f32` | Storage type for the audio tokenizer codebooks, codebook score matrix, semantic feature projection, and `fc2`. These ignore `audio_tokenizer_weight_type`. `native` keeps the packaged type and is rejected when that type is quantized, as in the Q8_0 GGUF. |
+| `omnivoice.audio_tokenizer_graph_arena_mb` | positive integer | `128` | Audio tokenizer graph arena. |
+| `omnivoice.generator_prefill_graph_arena_mb` | positive integer | `256` | Generator prefill graph arena. |
+| `omnivoice.generator_decode_graph_arena_mb` | positive integer | `256` | Generator decode graph arena. |
+| `omnivoice.audio_tokenizer_weight_context_mb` | positive integer | `128` | Audio tokenizer weight tensor context. |
+| `omnivoice.generator_weight_context_mb` | positive integer | `256` | Generator weight tensor context. |
+
+`omnivoice.perf_mode=flash_attention` is only available on the normal graph path and cannot be combined with `omnivoice.mem_saver=true`.
+
+`omnivoice.packed_cfg`, `omnivoice.device_scoring` and
+`omnivoice.packed_projections` change only floating-point rounding:
+
+- With f32 generator weights the first-step logits of the packed layout match
+  the padded one to within 0.002 (mean).
+- Device scoring picks the same tokens as host scoring.
+- Packed projections are bit-identical with f32 generator weights on the
+  standard path; with f16 weights the larger GEMMs can round differently.
+
+To reproduce the output of earlier versions exactly, set all three to
+`false`. With `mem_saver=true`, `packed_cfg` and `device_scoring` are ignored,
+so only `packed_projections=false` is needed there.
+
+`perf_mode=flash_attention` passes the 8 K/V heads to the kernel as they are
+(grouped-query attention) instead of repeating them to 16 heads.
+
+## Native Batching
+
+Offline OmniVoice sessions implement native batching
+(`IBatchedOfflineVoiceTaskSession::run_batch`), so the server's
+[`/v1/tasks/batch`](../../app/server/api.md#post-v1tasksbatch) runs several
+requests in one generator pass per decoding step instead of one after
+another. The model must be configured with `mode=offline`.
+
+- Requests may differ in text, length, reference voice, guidance scale and
+  step count. They are packed without padding and ordered by length
+  internally; results keep the request order.
+- Each request has its own seeded RNG: with `seed` set, a request in a batch
+  follows the same sampling path as `run()` with that seed. Batched kernels
+  can still round differently, so audio is identical to `run()` only when
+  the kernels happen to match (most requests with f32 weights, many with
+  f16).
+- Requests above `audio_chunk_threshold_sec` are split into chunks as in
+  `run()`; chunk *k* of every request is batched together.
+- Audio decoding and post-processing still run per request.
+
+RTX 4090, `generator_weight_type=f16`, `audio_tokenizer_weight_type=f16`, 16
+steps, voice clone (`tests/omnivoice/omnivoice_batch_test`):
+
+| Workload | Before (`packed_cfg=false`, `device_scoring=false`) | Default | `perf_mode=flash_attention` |
+|---|---:|---:|---:|
+| 1 request, 9 words | 0.281 s | 0.147 s | 0.138 s |
+| 8 x `run()`, 9 words | 2.228 s | 1.180 s | 1.096 s |
+| `run_batch()` of 8, 9 words | 1.995 s | 0.995 s | 0.824 s |
+| 8 x `run()`, 5-20 words | 2.822 s | 1.569 s | 1.362 s |
+| `run_batch()` of 8, 5-20 words | 4.327 s | 1.442 s | 1.226 s |
+
+Tesla T4, same settings, total GPU kernel time (nsys) before -> after the
+un-repeated flash K/V heads and `packed_projections`:
+
+| Workload | Before | After |
+|---|---:|---:|
+| 1 request, 20 words, `perf_mode=flash_attention` | 2.02 s | 1.77 s |
+| `run_batch()` of 8, 5-20 words, standard attention | 12.73 s | 12.17 s |
+
+The T4 is already saturated by one request, so `run_batch()` is not faster
+than sequential `run()` there.
+
+The two `weight_type` options quantize SafeTensors weights at load time, which is not the same as loading a prebuilt Q8 GGUF package. On CUDA, `omnivoice.generator_weight_type=f16` measured 1.26x faster than `native`, while runtime `omnivoice.audio_tokenizer_weight_type=q8_0` produced unusable audio without being faster. See the [OmniVoice weight-type benchmark](../reports/omnivoice_weight_type_benchmark.md).
+
+## VoiceTut-TTS (Egyptian Arabic)
+
+[VoiceTut-TTS](https://huggingface.co/mohammedaly22/VoiceTut-TTS) is an
+OmniVoice fine-tune for Egyptian Arabic and Arabic-English code-switching. It
+has the same architecture and tensor layout as OmniVoice and reuses the
+OmniVoice audio tokenizer unchanged, so it runs through the `omnivoice` family
+with every route and option above. It was trained with the `arz` (Egyptian
+Arabic) language id, so pass `--language arz`. Model and integration by
+[@Mohammedaly22](https://github.com/Mohammedaly22).
+
+| Package | Format | Notes |
+|---|---|---|
+| `voicetut_tts_q8_0` | GGUF Q8_0 | Standalone GGUF with the audio tokenizer embedded. |
+| `voicetut_tts_f16` | GGUF F16 | Closest to the original weights. |
+
+Voice clone with Egyptian Arabic and English code-switching:
+
+```bash
+audiocpp_model_manager install voicetut_tts_q8_0 --models-dir models
+audiocpp_cli --task tts --family omnivoice --model models/VoiceTut-TTS-GGUF --backend cuda --language arz --text "عندي meeting بكرة الصبح، فهحاول أخلص الشغل بدري النهارده." --voice-ref speaker.wav --reference-text "<transcript of speaker.wav>" --out out.wav
+```
+
+The upstream repository ships 17 reference speakers in `reference_speakers/`
+with transcripts in `references.json`. Copy them into a server `voice_dir`
+(one `<Name>.wav` per speaker plus a `prompt_text` file with
+`<Name>|<transcript>` lines) to use them as named voices, for example
+`"voice": "Mohamed"`. See the server [voice library](../../app/server/README.md#voice-library-voice_dir).
+
+To build the GGUF packages, place the VoiceTut weights and the OmniVoice
+`audio_tokenizer/` directory in one model root, then convert:
+
+```bash
+audiocpp_gguf --input weights=models/VoiceTut-TTS/model.safetensors   --input audio_tokenizer_weights=models/VoiceTut-TTS/audio_tokenizer/model.safetensors   --root models/VoiceTut-TTS --output models/VoiceTut-TTS-GGUF/voicetut-tts-q8_0.gguf   --family omnivoice --type q8_0 --overwrite
+```
+
+## Tags
+
+Non-verbal tags are written directly in `--text`. Supported spellings include:
+
+```text
+[laughter] [sigh] [confirmation-en] [question-en] [question-ah] [question-oh]
+[question-ei] [question-yi] [surprise-ah] [surprise-oh] [surprise-wa]
+[surprise-yo] [dissatisfaction-hnn]
+```

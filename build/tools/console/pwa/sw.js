@@ -29,9 +29,20 @@ function offline() {
     "setInterval(function(){fetch(\"/health\",{cache:\"no-store\"}).then(function(r){if(r.ok)location.reload();},function(){});},5000);</script></body></html>";
 }
 self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
+// HERESY 2297 (a test through an https proxy on 09.11.2026: the Studio's own 403 on the first page, a hard reload got through): a page
+// this worker asked for itself with fetch(e.request) goes out as Sec-Fetch-Mode navigate but Sec-Fetch-Dest empty, the document's destination lost,
+// and from a link on another site Sec-Fetch-Site cross-site; the engine lets another site open the Studio as a document only, so the link in a
+// messenger, a mail or a bookmark page met «does not take requests a page of another site makes». The browser's own request for the page
+// (navigation preload) carries its true Dest, Site and frame, so the engine's gate judges it as it judges a page with no worker; fetch(e.request)
+// stays for a browser without preload
+self.addEventListener("activate", (e) => e.waitUntil(Promise.all([self.clients.claim(),
+  self.registration.navigationPreload ? self.registration.navigationPreload.enable().catch(() => {}) : null])));
 self.addEventListener("fetch", (e) => {
   if (e.request.mode !== "navigate") return;                  // the API, the takes, the pictures: the browser's own way, untouched
   const down = () => new Response(offline(), { status: 503, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
-  e.respondWith(fetch(e.request).then((r) => (r.status === 502 || r.status === 504 ? down() : r), down));
+  // HERESY 2214: the engine's own JSON 502 for /lab or /api («heresy-lab is not running on this machine») is the truth and goes as it is: the
+  // Studio answers, only its lab is down. The page that says the Studio is not running stays for no network, the door's text 502 and the rest
+  const engine = (r) => /^\/(lab|api)\//.test(new URL(e.request.url).pathname) && /application\/json/i.test(r.headers.get("Content-Type") || "");
+  e.respondWith(Promise.resolve(e.preloadResponse).then((p) => p || fetch(e.request))
+    .then((r) => ((r.status === 502 || r.status === 504) && !engine(r) ? down() : r), down));
 });

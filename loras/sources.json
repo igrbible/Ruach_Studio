@@ -3,17 +3,7 @@
     "standard": {
       "official": true,
       "url": "https://huggingface.co/m-a-p/YuE2-Vae",
-      "about": "The current official decoder, and the default. The cleanest, best-sounding one: start here."
-    },
-    "legacy": {
-      "official": true,
-      "url": "https://huggingface.co/m-a-p/YuE2-Vae-legacy",
-      "about": "The older official decoder. The published benchmark scores were made with it. Less clean than Standard; some hear it as more musical. Same encoder, only the decoder differs."
-    },
-    "blend": {
-      "official": false,
-      "url": "https://huggingface.co/Mothersuperior/YuE2-Vae-merge-0.666",
-      "about": "A community weight mix of the two official decoders: 2/3 Standard + 1/3 Legacy. Not newly trained. It sits between the clean Standard and the more musical Legacy; the real-audio LoRA's authors suggest it."
+      "about": "m-a-p's decoder, the one released with YuE2. Covers and uploads are encoded with it too."
     }
   },
   "sliders": {

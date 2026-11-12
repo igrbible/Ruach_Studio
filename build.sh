@@ -102,7 +102,22 @@ def keyed(url, where=None):
     return url + "?v=" + asset_keys[url]
 
 
+# HERESY 2182: a url() of the Studio's own that the pattern above does not take (a name with a space or a %, a folder it does not know) or that has
+# a query already (?v=old) went unkeyed with nothing said; each is said below, as the missing files are
+asset_unkeyed = []
+OWN_URL = r"url\(\s*(['\"]?)(/(?!/).*?)\1\s*\)"
+
+
+def unkeyed_said(url):
+    if "?" in url:
+        asset_unkeyed.append((url, "it has a query already"))
+    elif not re.fullmatch(ASSET_URL, url):
+        asset_unkeyed.append((url, "the keying pattern does not take it"))
+
+
 def keyed_css(text):
+    for m in re.finditer(OWN_URL, text):
+        unkeyed_said(m.group(2))
     return re.sub(r"url\(\s*(['\"]?)(" + ASSET_URL + r")\1\s*\)", lambda m: "url(" + m.group(1) + keyed(m.group(2), "css") + m.group(1) + ")", text)
 
 
@@ -113,6 +128,9 @@ if manifest_src.is_file():   # beside the page, its icons keyed: the engine serv
     (page.parent / "manifest.webmanifest.part").write_text(mtext, encoding="utf-8")
     os.replace(page.parent / "manifest.webmanifest.part", built_manifest)
     asset_keys["/manifest.webmanifest"] = hashlib.sha256(built_manifest.read_bytes()).hexdigest()[:10]
+for m in re.finditer(r'\b(?:href|src)="(/(?:lab/fonts|lab/sounds|pwa|manifest\.webmanifest)[^"]*)"', html):   # HERESY 2182: the links the pattern misses
+    if not re.fullmatch(ASSET_URL + r"|/manifest\.webmanifest", m.group(1)):
+        unkeyed_said(m.group(1))
 html = re.sub(r'(\b(?:href|src)=")(' + ASSET_URL + r'|/manifest\.webmanifest)(")', lambda m: m.group(1) + keyed(m.group(2), "links") + m.group(3), html)
 # the piano roll's sounds by name (heresy-roll.js asks window.RuachAsset): the names the lab's /sounds/ serves
 for f in sorted((LAB / "sounds").glob("*.mp3")) if (LAB / "sounds").is_dir() else []:
@@ -159,7 +177,7 @@ prompts = []
 ours = pathlib.Path(sys.argv[1]).resolve().parents[2] / "heresy" / "examples"   # build/tools/console -> Kit root
 for path in (sorted(examples.glob("*.json")) if examples.is_dir() else []) + (sorted(ours.glob("*.json")) if ours.is_dir() else []):
     data = json.loads(path.read_text(encoding="utf-8"))
-    prompts.append({k: data[k] for k in ("title", "style", "lyrics", "cot", "abc", "seed", "group")
+    prompts.append({k: data[k] for k in ("title", "style", "lyrics", "cot", "abc", "seed", "group", "lang", "instrumental")   # HERESY 2349: its language; 2136's instrumental
                     if k in data and data[k] not in (None, "")})
 # "</" inside a JSON string is written "<\/" so it can never close the script.
 examples_js = ("window.YUE2_EXAMPLES = " +
@@ -185,6 +203,10 @@ swaps = [
 # HERESY: our own modules (heresy-*.js) are inlined wherever index.html names them,
 # so a new one needs no edit here. The same checks as the kit's files apply.
 for name in re.findall(r'<script src="(heresy-[a-z0-9-]+\.js)"></script>', html):
+    if not (src / name).is_file():   # HERESY 2241: a room kept home until it is turnkey (the Reader) is not in a release: its tag goes, said
+        print(f"  {name}: not in this tree, left out of the page", file=sys.stderr)
+        swaps.append((f'<script src="{name}"></script>', ""))
+        continue
     text = (src / name).read_text(encoding="utf-8")
     if "</script" in text.lower():
         sys.exit(f"{name} contains '</script>', which would end its inlined block")
@@ -236,6 +258,8 @@ print(f"  keys: {asset_count['css']} url() in the stylesheets, {asset_count['lin
       f" {len(runtime) if had_slot else 0} files the scripts ask for by name; release {release or '?'}", file=sys.stderr)
 for u in missing:
     print(f"  \u26a0 not keyed, no such file here: {u} (asked for as it is: no-cache, never kept a year)", file=sys.stderr)
+for u, why in sorted(set(asset_unkeyed)):   # HERESY 2182
+    print(f"  \u26a0 not keyed, {why}: {u} (asked for as it is: no-cache, never kept a year)", file=sys.stderr)
 if "</body>" in result:
     at_end = result.rindex("</body>")
     result = result[:at_end] + "<script>window.RUACH_BUILD_MAP=" + json.dumps(bmap, separators=(",", ":")) + ";</script>" + result[at_end:]
@@ -276,8 +300,9 @@ echo -e "  ${PAGE#"$ROOT"/} · $(( s_page / 1024 )) KB · $((1 + n_css + n_js)) 
 #    head with MERT-v2-FullSong beside it; an install whose transcriber is the older one-file kind, or a head with no MERT beside it, fetches
 #    the pair once, here, as the updater runs this script after its checkout. Only an install that had a transcriber; a failed fetch is
 #    said, and the build goes on (start.sh then leaves covers off and says what to run)
-SS2="$ROOT/models/SheetSage2-Q8_0.gguf"; [ -f "$SS2" ] || SS2="$ROOT/models/SheetSage2-F32.gguf"
-if [ -f "$SS2" ] && { [ ! -f "$ROOT/models/MERT-v2-FullSong-${SS2##*-}" ] || [ "$(wc -c < "$SS2" | tr -d ' ')" -ge 500000000 ]; }; then
+source "$ROOT/launcher/paths.sh"   # HERESY 2330: every weight's place
+SS2="$RS_MISC/SheetSage2-Q8_0.gguf"; [ -f "$SS2" ] || SS2="$RS_MISC/SheetSage2-F32.gguf"
+if [ -f "$SS2" ] && { [ ! -f "$RS_MISC/MERT-v2-FullSong-${SS2##*-}" ] || [ "$(wc -c < "$SS2" | tr -d ' ')" -ge 500000000 ]; }; then
     step "the transcriber"
     echo -e "  ${SS2#"$ROOT"/} is the older kind: fetching SheetSage2's head with MERT-v2-FullSong beside it (Q8_0, 1.0 GB)"
     if [ -x "$ROOT/download-models.sh" ] && NO_COLOR=1 "$ROOT/download-models.sh" --transcriber-only 2>&1 | sed 's/^/  /'; then
@@ -322,7 +347,7 @@ done
 #    where there is no CUDA engine. Measured 21.10.2026 on an Arc Pro B50 (16 GB): a song of 30 s in 43-60 s, adapters at run time, Full,
 #    going on from kept music. icpx takes the newest GCC; when that one has no libstdc++ headers (GCC 14 on Ubuntu 24.04), the newest that has.
 #    HERESY 1661: an install with a SYCL engine and no CUDA one goes this way by itself (the updater runs ./build.sh after its checkout); one
-#    with both rebuilds the SYCL engine beside the CUDA one, so a studio on the Arc restarts on fresh code too
+#    with both rebuilds the SYCL engine beside the CUDA one, so a Studio on the Arc restarts on fresh code too
 sycl_build() {
     step "${1:-③} the engine for Intel Arc (beta, SYCL)"
     [ -f /opt/intel/oneapi/setvars.sh ] || { echo -e "${R}⛔ Intel's oneAPI Base Toolkit is not at /opt/intel/oneapi: install it first (icpx and the SYCL runtime)${X}"; exit 1; }

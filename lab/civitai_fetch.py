@@ -1,6 +1,6 @@
 """HERESY 1169 · 1360 (Viktor 11.10.2026: «ПО CivitAI согласен»: an adapter whose author does not let it be shared is not in our models
 repository; the user fetches it from Civitai with their own key, by a button in the room): an adapter from Civitai into
-artwork/loras/FAMILY/, on the user's word, one at a time.
+models/artist/loras/FAMILY/, on the user's word, one at a time.
 
     look(kit, ref, key, cache)     what a link names: a model's page (its newest version), its ?modelVersionId=, a version's number,
                                    a download link, an AIR (urn:air:…:civitai:MODEL@VERSION); the model's name and type, the

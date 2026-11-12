@@ -1,0 +1,25 @@
+# Windows command scripts should use CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary, media, model, and archive files.
+*.7z binary
+*.bin binary
+*.bmp binary
+*.dll binary
+*.dylib binary
+*.exe binary
+*.flac binary
+*.gguf binary
+*.gif binary
+*.ico binary
+*.jpeg binary
+*.jpg binary
+*.mp3 binary
+*.onnx binary
+*.png binary
+*.safetensors binary
+*.so binary
+*.wav binary
+*.webp binary
+*.zip binary

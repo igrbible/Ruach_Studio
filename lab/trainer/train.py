@@ -98,6 +98,7 @@ DEFAULTS = {"steps": 1500, "rank": 32, "rank_ar": 0, "rank_nar": 0, "lr": 1e-4, 
             "ar_lr_multiplier": 0.5, "train_window_frames": 1500, "seed": 42, "max_grad_norm": 1.0, "chunk": 512,
             "ar_max_tokens": 0,          # 0: the AR's loss over the whole song (AI-Toolkit's default); N: its first N tokens
             "cot": "off", "abc_dropout": 0.5,   # HERESY 1420: score mode, "full" or "melody"; a sheet dropped half the steps
+            "transcriber": "sheetsage2",        # HERESY 2328: the sheets by SheetSage2 or SheetSage2-Refined, each its own files
             "do_separation": False, "separation_vocals_weight": 0.5, "separation_music_weight": 1.0,   # HERESY 1422
             # HERESY 1497 (Viktor 16.10.2026: «у Тренера… есть ранняя остановка обучения при стабильном оверфите в NAR половинке по последним
             # 2-3 эпохам? И если такой сторож у нас будет идеальным, то можно и 100 эпох выставлять»): a share of the tracks held out of the
@@ -116,8 +117,37 @@ DEFAULTS = {"steps": 1500, "rank": 32, "rank_ar": 0, "rank_nar": 0, "lr": 1e-4, 
             "lazy_cache": "auto", "steps_per_epoch": 0,
             # HERESY 1815: the meter (each card's peak per step, and at each save the highest with its track), the guard (an AR input over
             # ar_cap_tokens trains Direct, still over: its song part cut) and the step's longest tracks off the first card; off until measured
-            "vram_meter": False, "ar_cap_tokens": 0, "long_off_card0": False}
+            "vram_meter": False, "ar_cap_tokens": 0, "long_off_card0": False,
+            # HERESY 2084 (Viktor 05.11.2026: «Обязательно»; heresy/MISC/claude-tc/finetune/t12-spikes/REPORT.md §6): the spike guard. A window
+            # whose latent mean square passes latent_ms_max (2.25: an RMS of 1.5; no whole track of our large set outside five broken FMA mp3s
+            # passed 1.23) is left out before the forward; a loss that is not finite, or a flow above flow_max, gets no backward. The track
+            # leaves the step as an OOM does (zeros from its card, so every card sends the same), the step's means are taken over the tracks
+            # that learned, and it is said in the log. 0 turns either off. The gradient norm before the clip goes into the step log (grad/norm).
+            "latent_ms_max": 2.25, "flow_max": 5.0}
 LAZY_OVER = 4000
+
+
+def spike_why(cfg, ms=None, loss=None, flow=None):
+    """HERESY 2084: why a track leaves the step ("" when it stays): its window's latent mean square before the forward, its loss and flow after."""
+    if ms is not None and cfg.get("latent_ms_max") and not ms <= cfg["latent_ms_max"]:
+        return f"latent mean square {ms:.2f} over {cfg['latent_ms_max']:g}"
+    if loss is not None and not math.isfinite(loss):
+        return f"loss {loss}"
+    if flow is not None and (not math.isfinite(flow) or (cfg.get("flow_max") and flow > cfg["flow_max"])):
+        return f"flow {flow:.3f} over {cfg.get('flow_max'):g}"
+    return ""
+
+
+def mean_over_learned(params, batch, n):
+    """HERESY 2084: gradients summed as 1/batch each over the step's tracks, made the mean over the n that learned; none: no update for them."""
+    if n >= batch:
+        return
+    for p in params:
+        if p.grad is not None:
+            if n:
+                p.grad.mul_(batch / n)
+            else:
+                p.grad = None
 
 
 class StepLog:
@@ -307,10 +337,10 @@ def main():
         lack = latent_cache.missing(cfg["dataset"])
         if lack:
             latent_cache.build(cfg["dataset"], cfg["checkpoint"], KIT, dev, lack)
-        if cot != "off" and latent_cache.missing_sheets(cfg["dataset"], cot):
-            latent_cache.sheets(cfg["dataset"], cot, KIT)
-        if sep and latent_cache.missing_stems(cfg["dataset"], cot):     # HERESY 1422: the stems after the mix's cache (cut to its length)
-            latent_cache.stems(cfg["dataset"], KIT, cot, dev)
+        if cot != "off" and latent_cache.missing_sheets(cfg["dataset"], cot, cfg["transcriber"]):
+            latent_cache.sheets(cfg["dataset"], cot, KIT, transcriber=cfg["transcriber"])
+        if sep and latent_cache.missing_stems(cfg["dataset"], cot, cfg["transcriber"]):     # HERESY 1422: the stems after the mix's cache (cut to its length)
+            latent_cache.stems(cfg["dataset"], KIT, cot, dev, transcriber=cfg["transcriber"])
     if dist:
         dist.barrier()                                    # the other cards wait for the first one's cache
     items = load_set(cfg["dataset"], cfg["lazy_cache"])   # HERESY 1662: a big set's latents read when taken
@@ -342,7 +372,7 @@ def main():
     if cot != "off":
         for it in items:                                  # HERESY 1662: the name and caption alone (a lazy track's latents stay on disk)
             name, cap = it[0], it[1]
-            text = latent_cache.read_sheet(cfg["dataset"], name, cot)
+            text = latent_cache.read_sheet(cfg["dataset"], name, cot, cfg["transcriber"])
             if text is None:
                 continue
             ids = tok.encode(text)
@@ -398,7 +428,7 @@ def main():
             for v in SEP_W:
                 style, lyrics = ("", p["lyrics"]) if v == "vocals" else (p["style"], "")
                 stem_heads[v][name] = torch.tensor(tok.prefix_head_ids(style, lyrics, cot="off"), dtype=torch.long)
-                text = latent_cache.read_stem_sheet(cfg["dataset"], name, v, cot) if cot != "off" else None
+                text = latent_cache.read_stem_sheet(cfg["dataset"], name, v, cot, cfg["transcriber"]) if cot != "off" else None
                 if text is not None:
                     ids = tok.encode(text)
                     if any(not 0 <= t < EOD for t in ids):
@@ -407,7 +437,7 @@ def main():
                     stem_heads_cot[v][name] = torch.tensor(tok.prefix_head_ids(style, lyrics, cot=cot), dtype=torch.long)
         say(f"separation: {len(stem_tok)} tracks split, the AR's lesson (mix + {SEP_W['vocals']}·vocals + {SEP_W['music']}·music) / "
             f"{1 + sum(SEP_W.values())}" + (f"; stem sheets {len(stem_sheets['vocals'])} / {len(stem_sheets['music'])}" if cot != "off" else ""))
-    model = load_model(cfg["checkpoint"], dev)
+    model = load_model(cfg["checkpoint"], dev, overlay=cfg.get("overlay") or None)   # HERESY 2321: a base of any depth, a save laid over it
     # HERESY 1631: checkpointing "auto" starts without (the card's room buys speed) and turns on at the first step out of memory
     ck = str(cfg["checkpointing"]).lower()
     ckpt_on = ck not in ("auto", "false", "off", "0")
@@ -537,7 +567,7 @@ def main():
     def save(at):
         path = os.path.join(out, f"{run}_{at:09d}.safetensors")
         meta = {"name": run, "studio": "Ruach Studio", "trainer": "ruach", "step": str(at), "rank": str(max(ranks.values())), "rank_ar": str(ranks["ar"]), "rank_nar": str(ranks["nar"]), "format": "pt",
-                "base_model": os.path.basename(cfg["checkpoint"])}   # HERESY 1960: the weights it was trained on
+                "base_model": os.path.basename(cfg["checkpoint"]), **({"base_overlay": cfg["overlay"]} if cfg.get("overlay") else {})}   # HERESY 1960: the weights it was trained on; 2321: and the save laid over them
         if ema is not None:
             save_file(state_dict(loras), rpath, metadata=dict(meta, raw="1"))
             swap()
@@ -681,6 +711,9 @@ def main():
         start = 0 if w <= 0 or total <= w else random.randint(0, total - w)
         end = total if w <= 0 or total <= w else start + w
         x = latent[start:end][None].to(dev, torch.bfloat16)
+        why = spike_why(cfg, ms=float(x.float().pow(2).mean())) if cfg["latent_ms_max"] else ""   # HERESY 2084 ②: before the forward
+        if why:
+            return {"skip": why, "name": name}
         noise = torch.randn_like(x)
         t = torch.sigmoid(torch.randn(1, device=dev))             # logit-normal, AI-Toolkit's "sigmoid"
         noisy = (1 - t) * x + t * noise
@@ -721,8 +754,12 @@ def main():
             loss = loss + cfg["ar_loss_weight"] * share * ce
         if kl is not None:
             loss = loss + cfg["ar_kl_weight"] * kl_share * kl
+        lv, fv = loss.item(), flow.item()
+        why = spike_why(cfg, loss=lv, flow=fv)            # HERESY 2084 ③: no backward for it
+        if why:
+            return {"skip": why, "name": name}
         (loss / accum).backward()
-        total_loss, stem_ce, stem_kl = loss.item(), {}, []
+        total_loss, stem_ce, stem_kl = lv, {}, []
         if split:
             for v in SEP_W:
                 s_sheet = stem_sheets[v].get(name) if stem_sheets[v] and random.random() >= cfg["abc_dropout"] else None
@@ -739,7 +776,7 @@ def main():
                 total_loss += part.item()
                 stem_ce[v] = s_ce.item()
                 del s_embeds, s_ids, s_ce, s_kl, part
-        values = {"loss/loss": total_loss, "loss/flow": flow.item()}    # loss/loss is the whole sum, as AI-Toolkit logs it
+        values = {"loss/loss": total_loss, "loss/flow": fv}    # loss/loss is the whole sum, as AI-Toolkit logs it
         if abcs:
             values["score/sheet"] = 1.0 if sheet is not None else 0.0        # HERESY 1420: which prompt the step had
         if ce is not None:
@@ -784,6 +821,10 @@ def main():
                 opt.zero_grad(set_to_none=True)
                 torch.cuda.empty_cache()
                 print(f"[card {rank_id}] out of memory without gradient checkpointing at step {step}: on from now, the step again", flush=True)
+            left = [v for v in got if "skip" in v]          # HERESY 2084: the spike guard's tracks, said; the step goes on without them
+            got = [v for v in got if "skip" not in v]
+            for v in left:
+                print(f"[card {rank_id}] step {step}: track {v['name']} left out of the step: {v['skip']}", flush=True)
             if vmeter:                                    # HERESY 1815: this card's peak this step, and its highest since the last save
                 vpeak_gb = torch.cuda.max_memory_allocated() / 2**30
                 if vpeak_gb > vpeak_top[0]:
@@ -795,11 +836,15 @@ def main():
                 for k, x in v.items():
                     sums[k], counts[k] = sums.get(k, 0.0) + x, counts.get(k, 0) + 1
             n_ar = sum(1 for v in got if "loss/ar_ce" in v)
+            n_nar, n_left = len(got), len(left)               # HERESY 2084: the tracks that learned the sound half, and those the guard left out
             if dist:                                          # the cards' gradients and measures averaged
                 if train_ar:                                  # a card with no AR lesson this step sends zeros, so every card sends the same
                     for p in ar_p:
                         if p.grad is None:
                             p.grad = torch.zeros_like(p)
+                for p in nar_p:                               # HERESY 2084: and a card whose every track the guard left out
+                    if p.grad is None:
+                        p.grad = torch.zeros_like(p)
                 grads = [p.grad for p in ar_p + nar_p if p.grad is not None]
                 for wk in [dist.all_reduce(g, async_op=True) for g in grads]:
                     wk.wait()
@@ -807,7 +852,7 @@ def main():
                     g.div_(world)
                 keys = MEASURES                               # every measure a track can give (micro); the same list on every card
                 vpeaks = [vpeak_gb if r == rank_id else 0.0 for r in range(world)] if vmeter else []   # HERESY 1815: each card its own slot
-                both = torch.tensor([sums.get(k, 0.0) for k in keys] + [float(counts.get(k, 0)) for k in keys] + [float(n_ar)] + vpeaks,
+                both = torch.tensor([sums.get(k, 0.0) for k in keys] + [float(counts.get(k, 0)) for k in keys] + [float(n_ar), float(n_nar), float(n_left)] + vpeaks,
                                     device=dev, dtype=torch.float64)
                 dist.all_reduce(both)
                 both = both.tolist()
@@ -815,7 +860,7 @@ def main():
                     vpeaks, both = both[len(both) - world:], both[:len(both) - world]
                 sums = {k: both[i] for i, k in enumerate(keys)}
                 counts = {k: both[len(keys) + i] for i, k in enumerate(keys)}
-                n_ar = int(round(both[-1]))
+                n_ar, n_nar, n_left = int(round(both[-3])), int(round(both[-2])), int(round(both[-1]))
             values = {k: sums[k] / counts[k] for k in sums if counts.get(k)}
             if vmeter:                                    # HERESY 1815: the cards' peaks into the step log
                 values.update({f"vram/peak_gb_card{r}": g for r, g in enumerate(vpeaks)} if dist else {"vram/peak_gb_card0": vpeak_gb})
@@ -826,7 +871,12 @@ def main():
                             p.grad.mul_(batch / n_ar)
                         else:
                             p.grad = None
-            torch.nn.utils.clip_grad_norm_(ar_p + nar_p, cfg["max_grad_norm"])
+            mean_over_learned(nar_p, batch, n_nar)            # HERESY 2084: the sound half's mean over the tracks that learned it (as the AR's above)
+            if n_left:
+                values["guard/left_out"] = float(n_left)
+            gnorm = torch.nn.utils.clip_grad_norm_(ar_p + nar_p, cfg["max_grad_norm"])
+            if gnorm is not None and math.isfinite(float(gnorm)):
+                values["grad/norm"] = float(gnorm)            # HERESY 2084 ④: the norm before the clip, in the step log
             # HERESY 1752: the rate from the config at every step (a run gone on from a save used to keep optimizer.pt's), with its tail
             lr_now = tail_lr(lr, step, cfg["steps"], tail_start(cfg), min(1.0, max(0.0, float(cfg.get("lr_tail_floor") or 0.0))))
             opt.param_groups[0]["lr"] = lr_now
@@ -880,7 +930,7 @@ def main():
         final = os.path.join(out, f"{run}.safetensors")
         if ema is not None:
             swap()
-        save_file(state_dict(loras), final, metadata=dict({"name": run, "studio": "Ruach Studio", "trainer": "ruach", "base_model": os.path.basename(cfg["checkpoint"])},   # HERESY 1960
+        save_file(state_dict(loras), final, metadata=dict({"name": run, "studio": "Ruach Studio", "trainer": "ruach", "base_model": os.path.basename(cfg["checkpoint"]), **({"base_overlay": cfg["overlay"]} if cfg.get("overlay") else {})},   # HERESY 1960, 2321
                                                           **({"ema": f"{ema_decay:.5f}"} if ema is not None else {})))
         if ema is not None:
             swap()

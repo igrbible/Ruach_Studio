@@ -33,7 +33,7 @@ git clone https://github.com/igrbible/Ruach_Studio.git Ruach_Studio && cd Ruach_
 systemctl --user enable --now heresy-lab ruach-studio
 ```
 
-**The Studio's port is 7777.** Open **http://127.0.0.1:7777** (on the same machine), or **http://THE-MACHINE'S-ADDRESS:7777** from another one on your network: `start.sh` prints it. The Studio answers this machine and private networks only (10.x, 172.16–31.x, 192.168.x, Tailscale's 100.64.x), never the internet; its first start asks who may open it (this computer only, private networks, or the networks you list), and Engine → Security changes it.
+**The Studio's port is 7777.** Open **http://127.0.0.1:7777** (on the same machine), or **http://THE-MACHINE'S-ADDRESS:7777** from another one on your network: `start.sh` prints it. The Studio answers this machine and private networks only (10.x, 172.16–31.x, 192.168.x, Tailscale's 100.64.x), never the internet (opened by a Tailscale address, it wants that address named: `RUACH_HOSTS=100.101.102.103`); its first start asks who may open it (this computer only, private networks, or the networks you list), and Engine → Security changes it.
 
 To have it running after a reboot without logging in: `sudo loginctl enable-linger $USER` (once).
 
@@ -104,7 +104,7 @@ Measured on the machine it was made on: 6 passed (the page part 14), 470 passed 
 | `build.sh` stops at cmake | no CUDA toolkit, or `nvcc` not found | install CUDA 12.8; `export PATH=/usr/local/cuda-12.8/bin:$PATH` |
 | the page: *Forge is not answering* or a red lamp | the engine is not running | `systemctl --user status ruach-studio`; `journalctl --user -u ruach-studio -n 50` |
 | *no card can take this now* | another program holds the card, or the job does not fit | the message names the program and the card; Engine → GPUs says which card does what |
-| 403 «does not answer this name» | the Studio was opened by a name a site on the internet could point at your machine (a name of your own DNS) | open it by its address, by a name of one label or a .local/.lan one, or name it in the Studio's environment: `RUACH_HOSTS=studio.example.org` |
+| 403 «does not answer this name» | the Studio was opened by a name, not by an address: whoever answers for a name on a network (a site on the internet, the router's own names) can point it at any machine; or by a Tailscale address (100.64–127.x), the carrier-grade NAT's shared space | open it by its address on your network (or http://localhost:7777 on the Studio's own machine), or name it in the Studio's environment: `RUACH_HOSTS=studio.example.org` (a Tailscale address the same way: `RUACH_HOSTS=100.101.102.103`) |
 | the Studio blank inside another page (Pinokio on another port, a page of your own) | the Studio lets only its own pages and Pinokio's (`http://localhost:42000`) put it in a frame | name that page in the Studio's environment: `RUACH_FRAME_ANCESTORS=http://host:port` (commas or spaces between several) |
 | 403 from another machine | it is not on a private network, or Engine → Security keeps the Studio to its own computer or to the networks listed | open it from your home network, or change Engine → Security on the Studio's computer (deleting `user/access.json` goes back to private networks); or put your own proxy and guard in front (`RUACH_ALLOW_PUBLIC=1`) |
 | the Writer says *no chat server* | none is set | Engine → Chat server (vLLM, LM Studio, Ollama on your machine), or OpenRouter with your key in the Writer |

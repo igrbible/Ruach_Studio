@@ -2,9 +2,9 @@
 хорошо заиметь библиотеку с Luts'ами для применения цветовых эффектов»): the looks of the Videographer's clip, a 3D LUT over the whole picture as a
 colourist lays one in Resolve, its strength from a breath to all of it, the lyrics and titles over it untouched.
 
-  the Studio's own   sixteen looks made here (models/luts/ruach/*.cube, 33³), drawn by this file's own curves: CC0, ours, they ship as code;
+  the Studio's own   sixteen looks made here (models/videographer/luts/ruach/*.cube, 33³), drawn by this file's own curves: CC0, ours, they ship as code;
   film               the RawTherapee Film Simulation Collection (Pat David, Pavlov Dmitry, Michael Ezra; CC BY-SA 4.0), HaldCLUT PNGs of film
-                     stocks, fetched on asking (422 MB) into models/luts/rawtherapee/ and turned into a .cube of 33³ the first time one is used;
+                     stocks, fetched on asking (422 MB) into models/videographer/luts/rawtherapee/ and turned into a .cube of 33³ the first time one is used;
   yours              any .cube or HaldCLUT .png laid in user/luts/ (a folder a pack).
 
 A look's id is pack:relative/path. shelf() lists them, preview() draws a picture through one (cached), cube() gives the .cube ffmpeg reads,
@@ -22,6 +22,8 @@ import zipfile
 from pathlib import Path
 
 import numpy as np
+
+import paths                       # HERESY 2330: where the weights live
 
 N = 33                                              # a .cube's size: 33³ points, the size film LUTs ship at
 FILM_URL = "https://rawtherapee.com/shared/HaldCLUT.zip"
@@ -106,8 +108,8 @@ def write_cube(path, table, title):
 
 
 def make_ruach(kit, force=False):
-    """The Studio's own looks into models/luts/ruach/ (made once; their curves are this file's)."""
-    d = Path(kit) / "models/luts/ruach"
+    """The Studio's own looks into models/videographer/luts/ruach/ (made once; their curves are this file's)."""
+    d = paths.at(paths.VIDEO_LUTS, kit) / "ruach"
     g = _grid()
     for key, fn in LOOKS.items():
         p = d / f"{key}.cube"
@@ -183,7 +185,7 @@ def shelf(kit):
     out = []
     for key in LOOKS:
         out.append({"id": f"ruach:{key}.cube", "name": NAMES[key], "pack": "ruach", "group": "", "kind": "cube"})
-    film = kit / "models/luts/rawtherapee"
+    film = paths.at(paths.VIDEO_LUTS, kit) / "rawtherapee"
     if film.is_dir():
         for p in sorted(film.rglob("*.png")):
             rel = p.relative_to(film).as_posix()
@@ -202,7 +204,7 @@ def shelf(kit):
 def _where(kit, lid):
     kit = Path(kit)
     pack, _, rel = str(lid).partition(":")
-    base = {"ruach": kit / "models/luts/ruach", "rawtherapee": kit / "models/luts/rawtherapee", "user": kit / "user/luts"}.get(pack)
+    base = {"ruach": paths.at(paths.VIDEO_LUTS, kit) / "ruach", "rawtherapee": paths.at(paths.VIDEO_LUTS, kit) / "rawtherapee", "user": kit / "user/luts"}.get(pack)
     if not base or not rel or ".." in Path(rel).parts or rel.startswith("/"):
         raise ValueError(f"no look {lid!r}")
     p = (base / rel).resolve()
@@ -279,17 +281,48 @@ def preview(kit, lid, src=None, strength=1.0, width=320):
     return buf.getvalue()
 
 
-def film_vf(grain=0.0, vignette=0.0):
+def film_vf(grain=0.0, vignette=0.0, halation=0.0, jitter=0.0, w=1920, h=1080):
     """HERESY 2017 (from Resolve: the film over the picture): a vignette (ffmpeg's vignette, its lens angle 0.2–0.9 rad; ffmpeg's own is π/5) and a grain
-    that moves (ffmpeg's noise on the luma, a new pattern each frame, up to 28), each from 0 to 1, laid after the look. None when both are 0."""
+    that moves (ffmpeg's noise on the luma, a new pattern each frame, up to 28), each from 0 to 1, laid after the look. None when all are 0.
+    HERESY 2242 (the note of 02.11.2026, §2 item 4): halation, the red glow film lays round its brightest lights (the highlights above 72 % lifted
+    out, blurred by 0.6–1.8 % of the frame's height, turned red-orange and screened back over at 25–85 %), and jitter, the gate's gentle weave
+    (the frame drifting up to 0.45 % of its height on two slow sines a side with a breath of tremor, cropped and scaled back to w × h). The order:
+    the weave, the glow, the lens, the grain."""
     g = max(0.0, min(1.0, float(grain or 0)))
     v = max(0.0, min(1.0, float(vignette or 0)))
+    hl = max(0.0, min(1.0, float(halation or 0)))
+    j = max(0.0, min(1.0, float(jitter or 0)))
     out = []
+    if j > 0.001:
+        a = max(1, round(h * 0.0045 * j))
+        out.append(f"crop=iw-{2 * a}:ih-{2 * a}:{a}+{a}*(0.5*sin(2*PI*t*0.7)+0.3*sin(2*PI*t*2.3+1.3)+0.2*(2*random(1)-1))"
+                   f":{a}+{a}*(0.5*sin(2*PI*t*0.53+2)+0.3*sin(2*PI*t*1.9)+0.2*(2*random(2)-1)),scale={w}:{h}")
+    if hl > 0.001:
+        sigma = max(2.0, h * (0.006 + 0.012 * hl))
+        out.append(f"format=gbrp,split[hl0][hl1];[hl1]colorlevels=rimin=0.72:gimin=0.72:bimin=0.72,gblur=sigma={sigma:.1f},"
+                   f"colorchannelmixer=rr=1:gg=0.32:bb=0.12[hl2];[hl0][hl2]blend=all_mode=screen:all_opacity={0.25 + 0.6 * hl:.3f},format=yuv420p")
     if v > 0.001:
         out.append(f"vignette=angle={0.2 + 0.7 * v:.3f}")
     if g > 0.001:
         out.append(f"noise=c0s={max(1, round(28 * g))}:c0f=t+u")
     return ",".join(out) or None
+
+
+def primary_vf(lift=0.0, gamma=0.0, gain=0.0, contrast=0.0, saturation=0.0):
+    """HERESY 2250 (the note of 02.11.2026, §2 item 3; Resolve's primaries): the picture's own correction before the look, each −1…1 and 0 as it is:
+    lift raises or lowers the blacks (±0.15), gamma bends the middle (×2 or ½), gain the whites (×1.5 or ⅔), the blacks held; contrast round the
+    middle grey (×1.6 or ⅝), saturation from grey (0) to twice. ffmpeg's lutrgb and eq; None when all are 0."""
+    v = [max(-1.0, min(1.0, float(x or 0))) for x in (lift, gamma, gain, contrast, saturation)]
+    if all(abs(x) < 0.005 for x in v):
+        return None
+    lo, gm, gn = 0.15 * v[0], 2.0 ** v[1], 1.5 ** v[2]
+    out = []
+    if abs(v[0]) >= 0.005 or abs(v[1]) >= 0.005 or abs(v[2]) >= 0.005:
+        e = f"clip(255*pow(clip(val/255*({gn:.4f}-({lo:.4f}))+({lo:.4f}),0,1),{1 / gm:.4f}),0,255)"
+        out.append("lutrgb=" + ":".join(f"{c}='{e}'" for c in "rgb"))
+    if abs(v[3]) >= 0.005 or abs(v[4]) >= 0.005:
+        out.append(f"eq=contrast={1.6 ** v[3]:.4f}:saturation={1 + v[4]:.4f}")
+    return ",".join(out)
 
 
 def vf(kit, lid, strength, workdir):
@@ -308,7 +341,7 @@ def vf(kit, lid, strength, workdir):
 
 # ---- the film pack, fetched on asking
 def fetch(kit, url=FILM_URL):
-    """The RawTherapee Film Simulation Collection into models/luts/rawtherapee/ (a job: fetch_state())."""
+    """The RawTherapee Film Simulation Collection into models/videographer/luts/rawtherapee/ (a job: fetch_state())."""
     with _lock:
         if _fetch["state"] == "running":
             return dict(_fetch)
@@ -316,8 +349,8 @@ def fetch(kit, url=FILM_URL):
     kit = Path(kit)
 
     def work():
-        part = kit / "models/luts/rawtherapee.zip.part"
-        dest = kit / "models/luts/rawtherapee"
+        part = paths.at(paths.VIDEO_LUTS, kit) / "rawtherapee.zip.part"
+        dest = paths.at(paths.VIDEO_LUTS, kit) / "rawtherapee"
         try:
             part.parent.mkdir(parents=True, exist_ok=True)
             p = subprocess.Popen(["curl", "-fL", "--retry", "3", "-s", "-o", str(part), url])

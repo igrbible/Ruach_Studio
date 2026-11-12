@@ -449,20 +449,63 @@ static struct ggml_tensor * mert_build_ffn(struct ggml_context * ctx,
     return mert_linear(ctx, w2, b2, h);
 }
 
+// HERESY 2328: the rotary turn by given tables, cos and sin [D, 1, T] (NEOX halves: x cos + rotate_half(x) sin), for
+// SheetSage2, whose angles were rounded to bfloat16 when it learnt (mert_rope_bf16_tables)
+static struct ggml_tensor * mert_rope_tables(struct ggml_context * ctx, struct ggml_tensor * x, struct ggml_tensor * cs, struct ggml_tensor * sn) {
+    int64_t              h  = x->ne[0] / 2;
+    struct ggml_tensor * x1 = ggml_view_3d(ctx, x, h, x->ne[1], x->ne[2], x->nb[1], x->nb[2], 0);
+    struct ggml_tensor * x2 = ggml_view_3d(ctx, x, h, x->ne[1], x->ne[2], x->nb[1], x->nb[2], (size_t) h * x->nb[0]);
+    struct ggml_tensor * rh = ggml_concat(ctx, ggml_neg(ctx, ggml_cont(ctx, x2)), ggml_cont(ctx, x1), 0);
+    return ggml_add(ctx, ggml_mul(ctx, x, cs), ggml_mul(ctx, rh, sn));
+}
+
+// HERESY 2328: SheetSage2's rotary angles as it learnt them (anime-song's SheetSage2-Refined, encoder.py rotary_tables): the
+// positions, the frequencies and their products rounded to bfloat16, then cos and sin rounded again; exact angles break it
+// (beat F 0.985 -> 0.447 in the reference's measure). cos and sin [T, D] row major, D the head width.
+static float mert_bf16(float v) {
+    uint32_t b;
+    memcpy(&b, &v, 4);
+    b += 0x7FFFu + ((b >> 16) & 1u);
+    b &= 0xFFFF0000u;
+    memcpy(&v, &b, 4);
+    return v;
+}
+
+static void mert_rope_bf16_tables(int T, int D, float base, std::vector<float> * cs, std::vector<float> * sn) {
+    cs->resize((size_t) T * D);
+    sn->resize((size_t) T * D);
+    for (int t = 0; t < T; t++) {
+        for (int i = 0; i < D / 2; i++) {
+            float inv   = 1.0f / powf(base, (float) (2 * i) / (float) D);
+            float angle = mert_bf16(mert_bf16((float) t) * mert_bf16(inv));
+            float c = mert_bf16(cosf(angle)), s = mert_bf16(sinf(angle));
+            (*cs)[(size_t) t * D + i] = (*cs)[(size_t) t * D + i + D / 2] = c;
+            (*sn)[(size_t) t * D + i] = (*sn)[(size_t) t * D + i + D / 2] = s;
+        }
+    }
+}
+
 static struct ggml_tensor * mert_build_attn(struct ggml_context * ctx,
                                             const MertConfig &    c,
                                             const MertLayer *     l,
                                             struct ggml_tensor *  x,
                                             struct ggml_tensor *  positions,
-                                            bool                  flash) {
+                                            bool                  flash,
+                                            struct ggml_tensor *  rope_cos = NULL,
+                                            struct ggml_tensor *  rope_sin = NULL) {
     int                  D = c.hidden / c.n_heads;
     int64_t              T = x->ne[1];
     struct ggml_tensor * h = mert_layer_norm(ctx, x, l->attn_ln_w, l->attn_ln_b, c.eps);
     struct ggml_tensor * q = ggml_reshape_3d(ctx, mert_linear(ctx, l->q_w, l->q_b, h), D, c.n_heads, T);
     struct ggml_tensor * k = ggml_reshape_3d(ctx, mert_linear(ctx, l->k_w, l->k_b, h), D, c.n_heads, T);
     struct ggml_tensor * v = ggml_reshape_3d(ctx, mert_linear(ctx, l->v_w, l->v_b, h), D, c.n_heads, T);
-    q = ggml_rope_ext(ctx, q, positions, NULL, D, GGML_ROPE_TYPE_NEOX, 0, c.rope_base, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f);
-    k = ggml_rope_ext(ctx, k, positions, NULL, D, GGML_ROPE_TYPE_NEOX, 0, c.rope_base, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f);
+    if (rope_cos) {  // HERESY 2328: SheetSage2's bfloat16 angles
+        q = mert_rope_tables(ctx, q, rope_cos, rope_sin);
+        k = mert_rope_tables(ctx, k, rope_cos, rope_sin);
+    } else {
+        q = ggml_rope_ext(ctx, q, positions, NULL, D, GGML_ROPE_TYPE_NEOX, 0, c.rope_base, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f);
+        k = ggml_rope_ext(ctx, k, positions, NULL, D, GGML_ROPE_TYPE_NEOX, 0, c.rope_base, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f);
+    }
     q = ggml_cont(ctx, ggml_permute(ctx, q, 0, 2, 1, 3));  // [D, T, H]
     k = ggml_cont(ctx, ggml_permute(ctx, k, 0, 2, 1, 3));
     v = ggml_cont(ctx, ggml_permute(ctx, v, 0, 2, 1, 3));
@@ -503,13 +546,15 @@ static struct ggml_tensor * mert_build_conformer(struct ggml_context * ctx,
                                                  const MertLayer *     l,
                                                  struct ggml_tensor *  x,
                                                  struct ggml_tensor *  positions,
-                                                 bool                  flash) {
+                                                 bool                  flash,
+                                                 struct ggml_tensor *  rope_cos = NULL,
+                                                 struct ggml_tensor *  rope_sin = NULL) {
     x = ggml_add(ctx, x,
                  ggml_scale(ctx,
                             mert_build_ffn(ctx, x, l->ffn1_ln_w, l->ffn1_ln_b, l->ffn1_w1, l->ffn1_b1, l->ffn1_w2,
                                            l->ffn1_b2, c.eps),
                             0.5f));
-    x = ggml_add(ctx, x, mert_build_attn(ctx, c, l, x, positions, flash));
+    x = ggml_add(ctx, x, mert_build_attn(ctx, c, l, x, positions, flash, rope_cos, rope_sin));
     x = ggml_add(ctx, x, mert_build_conv_module(ctx, c, l, x));
     x = ggml_add(ctx, x,
                  ggml_scale(ctx,
@@ -528,7 +573,9 @@ static void mert_build(struct ggml_context *               ctx,
                        struct ggml_tensor *                positions,
                        int                                 n_layers,
                        bool                                flash,
-                       std::vector<struct ggml_tensor *> * states) {
+                       std::vector<struct ggml_tensor *> * states,
+                       struct ggml_tensor *                rope_cos = NULL,    // HERESY 2328: [D, 1, T] tables in place
+                       struct ggml_tensor *                rope_sin = NULL) {  // of the exact rotary angles
     const MertConfig &   c = m->cfg;
     struct ggml_tensor * x = mel;
     for (int i = 0; i < MERT_MAX_SUB; i++) {
@@ -541,7 +588,7 @@ static void mert_build(struct ggml_context *               ctx,
     }
     states->assign(1, x);
     for (int l = 0; l < n_layers; l++) {
-        x = mert_build_conformer(ctx, c, &m->layers[l], x, positions, flash);
+        x = mert_build_conformer(ctx, c, &m->layers[l], x, positions, flash, rope_cos, rope_sin);
         states->push_back(x);
     }
 }

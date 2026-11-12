@@ -11,7 +11,10 @@ HERESY 1134: as full as the REAPER project (1104): the score as note tracks, one
 ABC, as REAPER gets it), the sections ([Verse], [Chorus] …) as markers once Whisper has timed the take, and the
 lyrics with the style in the metadata's comment (DAWproject has no text on the timeline). Waveform 14 imports it
 (File > Import Other > Import a DAWproject file), as Bitwig, Studio One and Cubase do. The schema followed is the
-format's own Project.xsd: Notes inside a Clip, Markers after the Lanes in the Arrangement."""
+format's own Project.xsd: Notes inside a Clip, Markers after the Lanes in the Arrangement.
+
+HERESY 2201: the markers of your own (K in the DAW) go in beside the sections, red as their flags on the Studio's
+ruler, their names exactly as typed."""
 import json, re, subprocess, time, uuid, zipfile
 from pathlib import Path
 from xml.sax.saxutils import escape, quoteattr
@@ -64,7 +67,7 @@ def _seconds(p):
     return float(out or 0)
 
 
-def build(kit, outputs, name, midi=None, cache=None):
+def build(kit, outputs, name, midi=None, cache=None, marks=None):
     """The take NAME as derived/dawproject/TITLE.dawproject inside the take (one, made again on each ask):
     the engine serves derived/ files itself (/library/file), whole and seekable, where the lab's proxy
     fails on files this big. Returns its path and what went in."""
@@ -171,17 +174,23 @@ def build(kit, outputs, name, midi=None, cache=None):
         said.append(f"the score: {len(voices)} voice{'s' if len(voices) != 1 else ''} as notes")
     else:
         said.append("no score (the take has none, or the page sent none)")
-    markers = ""
+    markers, pins = "", []                               # pins: (seconds, name, colour), the sections' and your own, in time order
     if rows:                                             # the sections, where Whisper heard them begin
         from rpp import sections
         secs_ = sections(req.get("lyrics") or "", rows)
-        if secs_:
-            markers = (f'        <Markers id="{nid()}">\n' +
-                       "".join(f'            <Marker time="{a * bpm / 60.0:.6f}" name={quoteattr(sec)} color="#9e9e9e"/>\n' for sec, a, b in secs_) +
-                       '        </Markers>\n')
+        pins += [(a, sec, "#9e9e9e") for sec, a, b in secs_]
         said.append(f"sections: {len(secs_)} markers")
     else:
         said.append("no sections (the take is not timed yet: Refiner → Lyrics check)")
+    from rpp import user_marks, marks_said               # HERESY 2201: the markers of your own, red as on the ruler
+    mine, refused = user_marks(marks)
+    pins += [(t, n, "#e05d5d") for t, n in mine]
+    if marks_said(mine, refused):
+        said.append(marks_said(mine, refused))
+    if pins:
+        markers = (f'        <Markers id="{nid()}">\n' +
+                   "".join(f'            <Marker time="{a * bpm / 60.0:.6f}" name={quoteattr(n)} color="{c}"/>\n' for a, n, c in sorted(pins, key=lambda p: p[0])) +
+                   '        </Markers>\n')
     project = (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Project version="1.0">\n'
         '    <Application name="Ruach Studio" version="2.0"/>\n    <Transport>\n'
@@ -211,4 +220,4 @@ def build(kit, outputs, name, midi=None, cache=None):
     for f in files:
         f.unlink()
     work.rmdir()
-    return target, {"tracks": [s[0] for s in sources], "bpm": round(bpm, 2), "meter": f"{num}/{den}", "said": said}
+    return target, {"tracks": [s[0] for s in sources], "bpm": round(bpm, 2), "meter": f"{num}/{den}", "said": said, "marks": len(mine)}

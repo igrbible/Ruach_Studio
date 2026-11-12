@@ -3,14 +3,14 @@ on its licence: «мы предупреждаем пользователя по 
 24GB VRAM… А её я люблю»; «как альтернативу для менее мощных карт бери смело … Q6_K + Lightning … Для 16 ГБ — Q4_K_M»).
 
     qwen2512-q4, qwen2512-q6   Qwen-Image 2512 (Apache-2.0): the transformer from unsloth's GGUF, the rest from Qwen/Qwen-Image-2512
-    qwen2512-fp8               a ComfyUI fp8 file in artwork/Qwen-Image-2512/checkpoints/ (ask «model»): its keys under
+    qwen2512-fp8               a ComfyUI fp8 file in models/artist/Qwen-Image-2512/checkpoints/ (ask «model»): its keys under
                                model.diffusion_model., e4m3fn or e5m2; read in bf16, kept on the card in its own fp8, each layer in
                                bf16 while it computes; the adapters loaded before that, their own layers left in bf16 (PEFT makes
                                them in the base weight's type, and an fp8 adapter layer has nothing to compute with)
     qwen21                     Qwen-Image 2.1 (the Qwen Research Licence: research and evaluation only), its own folder; a
                                reference is a picture it edits by the prompt's words
 
-Lightning (artwork/Qwen-Image-2512/lightning/, Apache-2.0) paints 2512 in a few steps with its own schedule (shift log 3): at 1.0
+Lightning (models/artist/Qwen-Image-2512/lightning/, Apache-2.0) paints 2512 in a few steps with its own schedule (shift log 3): at 1.0
 and 8 steps by its README for the base, at 0.55 and 12 steps for a fine-tune as Viktor runs it in ComfyUI. Measured on an RTX 3090,
 10.10.2026, 1328²: Q6_K 32 s a picture, 17.6 GB at the peak; Q4_K_M 30 s, 14.3 GB; the JibMix v6 fp8 fine-tune at 0.55 and 12 steps
 37 s, 21.0 GB. The text encoder (Qwen2.5-VL-7B, 16.6 GB in bf16) reads the prompt on the card when it holds it, else on the CPU, and
@@ -23,13 +23,14 @@ sys.path.insert(0, str(HERE))
 ONLY = {int(x) for x in os.environ.get("ART_ONLY", "").split(",") if x.strip().isdigit()}   # HERESY 1354: this card's pictures of the run
 import art_job  # noqa: E402
 import artist_loras  # noqa: E402
+import paths  # noqa: E402   HERESY 2330: where the weights live
 
 KIT = art_job.KIT
 KEPT = art_job.KEPT                                  # HERESY 1370: what a serving process keeps (artist_job.serve), one dict with artist_job's
 SERVE = os.environ.get("ART_SERVE") == "1"
 OWN = {}                                             # HERESY 1370: the scheduler build() gave the last pipeline, before a run's sampler
-Q2512 = KIT / "artwork" / "Qwen-Image-2512"
-Q21 = KIT / "artwork" / "Qwen-Image-2.1"
+Q2512 = paths.at(paths.ARTIST, KIT) / "Qwen-Image-2512"
+Q21 = paths.at(paths.ARTIST, KIT) / "Qwen-Image-2.1"
 GGUF = {"qwen2512-q4": "qwen-image-2512-Q4_K_M.gguf", "qwen2512-q6": "qwen-image-2512-Q6_K.gguf"}
 LIGHTNING = "Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors"
 SHAPES = {"1:1": ((1328, 1328), (1280, 1280)), "16:9": ((1664, 928), (1920, 1080)), "9:16": ((928, 1664), (1080, 1920))}
@@ -147,7 +148,7 @@ def is21(painter):
 
 
 def checkpoint21(model):
-    """HERESY 1442: a fine-tune of Qwen-Image 2.1 in artwork/Qwen-Image-2.1/checkpoints/."""
+    """HERESY 1442: a fine-tune of Qwen-Image 2.1 in models/artist/Qwen-Image-2.1/checkpoints/."""
     p = Q21 / "checkpoints" / Path(str(model or "")).name
     if not p.is_file():
         raise RuntimeError("no such fine-tune of Qwen-Image 2.1: " + str(model))
@@ -155,8 +156,8 @@ def checkpoint21(model):
 
 
 def turbo21():
-    """HERESY 1442: «Turbo 4step», 2.1's speed-up, wherever it lies under artwork/loras/qwen-image-2.1/."""
-    d = KIT / "artwork" / "loras" / "qwen-image-2.1"
+    """HERESY 1442: «Turbo 4step», 2.1's speed-up, wherever it lies under models/artist/loras/qwen-image-2.1/."""
+    d = paths.at(paths.ARTIST_LORAS, KIT) / "qwen-image-2.1"
     hits = sorted(p for p in d.rglob("*.safetensors") if re.search(r"turbo.*4.?step|4.?step.*turbo", p.name, re.I)) if d.is_dir() else []
     return hits[0] if hits else None
 
@@ -165,8 +166,8 @@ OUTPAINT_ASK = "Outpaint the image: replace the solid gray areas with a seamless
 
 
 def outpaint21():
-    """HERESY 1443: «Outpaint v2» (AusBoss's) wherever it lies under artwork/loras/qwen-image-2.1/."""
-    d = KIT / "artwork" / "loras" / "qwen-image-2.1"
+    """HERESY 1443: «Outpaint v2» (AusBoss's) wherever it lies under models/artist/loras/qwen-image-2.1/."""
+    d = paths.at(paths.ARTIST_LORAS, KIT) / "qwen-image-2.1"
     hits = sorted((p for p in d.rglob("*.safetensors") if re.search(r"outpaint", p.name, re.I)), key=lambda p: p.name, reverse=True) if d.is_dir() else []
     return hits[0] if hits else None
 
@@ -220,7 +221,7 @@ def checkpoints():
 def checkpoint(model):
     name = Path(str(model or "")).name
     if name not in checkpoints():
-        raise RuntimeError(f"no such fine-tune in artwork/Qwen-Image-2512/checkpoints/: {model}")
+        raise RuntimeError(f"no such fine-tune in {paths.ARTIST}/Qwen-Image-2512/checkpoints/: {model}")
     return Q2512 / "checkpoints" / name
 
 
@@ -436,7 +437,120 @@ def cover(img, w, h):
     return im.crop((x, y, x + w, y + h))
 
 
+def batch(run, ask, painter):
+    """HERESY 2322 (Viktor 10.11.2026: «держать художника загруженным… максимальная оптимизация ресурсов, а не просто на одной карте все херачить
+    и перезагружать модели»): a run of pictures each with its own words, seed and reference (ask «batch»: [{n, prompt, seed, ref}], the
+    Videographer's key frames), 16:9 each, the painter loaded once on this card (or kept from the run before) for this card's share of them
+    (ART_ONLY, the lab dealing the run over its cards). Qwen-Image 2.1 paints from its reference by its style (ref_as «style») or edits it by the
+    words; 2512 paints from its reference at «strength» (the hero's picture gone over), from the words alone where an item has none, the prompts
+    read once before the painter comes. Its lines as main()'s: one a picture, then {"done"}."""
+    import torch
+    from PIL import Image
+    import artist_job
+    t0 = time.time()
+    speed = ask.get("sampling") or ask.get("speed") or {}
+    loras = ask.get("loras") or []
+    items = [x for x in ask["batch"] if not ONLY or int(x["n"]) in ONLY]
+    key = None if is21(painter) else ("qwen", painter, str(ask.get("model") or ""), tuple(l["id"] for l in loras), tune(painter, speed)[0] > 0)
+    if key is not None and KEPT.get("key") == key:   # HERESY 1370: kept from the run before: no loading
+        pipe, said, steps, cfg = rekept(painter, speed, loras)
+        print(json.dumps({"kept": True}), flush=True)
+    else:
+        artist_job.drop()
+        pipe, said, steps, cfg = build(painter, ask.get("model"), loras, speed)
+        if SERVE and key is not None:
+            KEPT.update(key=key, pipe=pipe, own=OWN.get("sched"), said=said)
+    if said:
+        print(json.dumps({"loras": said}), flush=True)
+    (gw, gh), (w, h) = SHAPES["16:9"]
+    strength = float(ask.get("strength") or 0.6)
+    refs = {}
+
+    def ref_of(x):
+        if not x.get("ref"):
+            return None
+        if x["ref"] not in refs:
+            refs[x["ref"]] = Image.open(run / x["ref"]).convert("RGB")
+        return refs[x["ref"]]
+    embeds, neg = {}, (None, None)
+    if is21(painter):
+        streamed = place21(pipe)
+        if streamed:
+            print(json.dumps(streamed), flush=True)
+            KEPT["streamed"] = True
+    else:
+        dev = torch.device("cuda" if torch.cuda.mem_get_info()[0] >= ENC_ROOM else "cpu")
+        pipe.text_encoder.to(dev)
+        with torch.inference_mode():                 # every prompt of this card's share read now, the encoder gone before the painter comes
+            for x in items:
+                e, m = pipe.encode_prompt(str(x["prompt"]), device=dev)
+                embeds[int(x["n"])] = (e.to("cpu"), m.to("cpu") if m is not None else None)
+            if cfg > 1:
+                ne, nm = pipe.encode_prompt(NEGATIVE, device=dev)
+                neg = (ne.to("cuda"), nm.to("cuda") if nm is not None else None)
+        pipe.text_encoder.to("cpu")
+        gc.collect()
+        torch.cuda.empty_cache()
+        streamed = place(pipe, painter)
+        if streamed:
+            print(json.dumps(streamed), flush=True)
+            KEPT["streamed"] = True
+        pipe.vae.to("cuda")
+        pipe.vae.enable_tiling()
+        artist_job.regions_set(pipe.transformer)    # HERESY 1387: no regions here (a kept painter's last run may have had some)
+    torch.cuda.reset_peak_memory_stats()
+    (run / "thumbs").mkdir(exist_ok=True)
+    for x in items:
+        n, sk, ref = int(x["n"]), int(x["seed"]), ref_of(x)
+        t1 = time.time()
+        g = torch.Generator("cuda").manual_seed(sk)
+        if hasattr(pipe.scheduler, "heresy"):         # HERESY 1333: our samplers noise by the picture's seed
+            pipe.scheduler.heresy = dict(pipe.scheduler.heresy, seed=sk)
+        if is21(painter):
+            prompt = str(x["prompt"])
+            kw = {"prompt": STYLE_ASK.format(prompt=prompt.rstrip(" .")) if ask.get("ref_as") == "style" and ref is not None else prompt,
+                  "width": gw, "height": gh, "num_inference_steps": steps, "generator": g}
+            if ref is not None:
+                kw["image"] = cover(ref, gw, gh)
+            img = pipe(**kw).images[0]
+        else:
+            e, m = embeds[n]
+            kw = {"prompt_embeds": e.to("cuda"), "prompt_embeds_mask": m.to("cuda") if m is not None else None, "width": gw, "height": gh,
+                  "num_inference_steps": steps, "true_cfg_scale": cfg, "generator": g}
+            if cfg > 1:
+                kw.update(negative_prompt_embeds=neg[0], negative_prompt_embeds_mask=neg[1])
+            if ref is not None:                      # HERESY 1320's way: the reference noised to the strength's sigma, the tail from there
+                x0 = artist_job.ref_latents(pipe, ref, gw, gh)
+                sig, s0 = artist_job.ref_sigmas(pipe, strength, steps, mu_of(pipe, gw, gh))
+                noise = torch.randn(x0.shape, generator=g, device="cuda", dtype=x0.dtype)
+                kw.update(latents=(1 - s0) * x0 + s0 * noise, sigmas=sig, num_inference_steps=len(sig))
+            img = pipe(**kw).images[0]
+        img = img.convert("RGB")
+        if (img.width, img.height) != (w, h):
+            img = cover(img, w, h)
+        score = flagged(img)
+        row = {"n": n, "shape": "16:9", "seed": sk, "w": w, "h": h, "nsfw": score, "took": round(time.time() - t1, 1)}
+        if ref is not None:
+            row["ref"] = strength if not is21(painter) else 1.0
+        if score is not None and score >= 0.5:
+            row["kept"] = False
+        else:
+            name = f"{n:02d}-16x9-s{sk}"
+            img.save(run / (name + ".png"))
+            small = img.copy()
+            small.thumbnail((THUMB, THUMB), resample=3)
+            small.save(run / "thumbs" / (name + ".jpg"), "JPEG", quality=85, optimize=True)
+            row.update(kept=True, file=name + ".png", thumb="thumbs/" + name + ".jpg")
+        print(json.dumps(row), flush=True)
+        if x is not items[-1]:
+            step_aside(run)                          # HERESY 2368: a reading has the lab's turn: wait here, the weights on the card
+    print(json.dumps({"done": True, "painter": painter, "took": round(time.time() - t0, 1), "steps": steps, "cfg": cfg, "pictures": len(items),
+                      "peak_gb": round(torch.cuda.max_memory_reserved() / 2 ** 30, 1)}), flush=True)
+
+
 def main(run, ask, painter):
+    if ask.get("batch"):                             # HERESY 2322: the Videographer's key frames, each its own words, seed and reference
+        return batch(run, ask, painter)
     import torch
     from PIL import Image
     t0 = time.time()
@@ -628,3 +742,20 @@ def main(run, ask, painter):
         print(json.dumps(row), flush=True)
     print(json.dumps({"done": True, "painter": painter, "took": round(time.time() - t0, 1), "steps": steps, "cfg": cfg,
                       "peak_gb": round(torch.cuda.max_memory_reserved() / 2 ** 30, 1)}), flush=True)   # HERESY 1342: the card's peak, said
+
+
+def step_aside(d):
+    """HERESY 2368: between two pictures of a batch, while the lab asks it (the file «aside» in the run's folder: a reading has the lab's heavy
+    turn), the painter waits with its weights on its card, saying so ({"aside": true}, again every 30 s for the lab's watchdog of quiet painters),
+    and goes on when the file is gone ({"aside": false})."""
+    f = Path(d) / "aside"
+    if not f.exists():
+        return
+    print(json.dumps({"aside": True}), flush=True)
+    said = time.time()
+    while f.exists():
+        time.sleep(0.5)
+        if time.time() - said > 30:
+            print(json.dumps({"aside": True}), flush=True)
+            said = time.time()
+    print(json.dumps({"aside": False}), flush=True)

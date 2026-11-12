@@ -63,6 +63,7 @@ struct GpuEntry {
     int    refcount;
     void (*deleter)(void *);
     const char * label;
+    bool         leave_after = false;   // HERESY 2304: unloaded as soon as it is idle, kept-loaded or not
 };
 
 // Reverse lookup: handle pointer -> key, so store_release can find the
@@ -326,6 +327,31 @@ VAEGGML * store_require_vae(ModelStore * s, const ModelKey & k) {
     vae_ggml_load(m, k.path.c_str());
     install_entry(s, k, m, bytes_of_vae(m), "VAE", del_vae);
     fprintf(stderr, "[Store] Load VAE: %.0f ms\n", t.ms());
+    // HERESY 2304: a VAE-RS decoder (F32 weights, 0.8 GB, and a working buffer of about 4 GB for 512-frame tiles with
+    // its 60-frame halo) with the models kept loaded: when the card has not that room free, the idle modules of the
+    // other groups (the LM) leave first; on a card under 20 GB the decoder itself leaves after its song
+    ggml_backend_dev_t dev = m->f32 && s->policy != EVICT_STRICT ? ggml_backend_get_device(m->backend) : nullptr;
+    if (dev && ggml_backend_dev_type(dev) != GGML_BACKEND_DEVICE_TYPE_CPU) {
+        size_t       free_b = 0, total_b = 0;
+        const size_t need   = (size_t) 4608 << 20;
+        ggml_backend_dev_memory(dev, &free_b, &total_b);
+        if (free_b < need) {
+            for (auto it = s->gpu.begin(); it != s->gpu.end();) {
+                if (group_of(it->first.kind) != group_of(k.kind) && it->second.refcount == 0) {
+                    fprintf(stderr, "[Store] Room for VAE-RS (%.1f GB free): evict %s (%.1f MB)\n", free_b / 1073741824.0,
+                            it->second.label, (float) it->second.bytes / (1024.0f * 1024.0f));
+                    s->handle_to_key.erase(it->second.ptr);
+                    it->second.deleter(it->second.ptr);
+                    it = s->gpu.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+        }
+        if (total_b < ((size_t) 20 << 30)) {
+            s->gpu[k].leave_after = true;
+        }
+    }
     return m;
 }
 
@@ -398,7 +424,7 @@ void store_release(ModelStore * s, void * handle) {
     GpuEntry & e = gpu_it->second;
     assert(e.refcount > 0);
     e.refcount--;
-    if (e.refcount == 0 && s->policy == EVICT_STRICT) {
+    if (e.refcount == 0 && (s->policy == EVICT_STRICT || e.leave_after)) {
         fprintf(stderr, "[Store] Unload %s (%.1f MB)\n", e.label, (float) e.bytes / (1024.0f * 1024.0f));
         e.deleter(e.ptr);
         s->handle_to_key.erase(hit);

@@ -10,6 +10,9 @@ first file of a branch made from that stem, of the same length (a cleaned voice�
 """
 import io
 import json
+import os
+import re
+import time
 from pathlib import Path
 
 import numpy as np
@@ -203,3 +206,152 @@ def peaks(d, info, strip, path, n=1200):
         for f, _k in handles:
             f.close()
     return [round(float(v), 3) for v in np.clip(out, 0, 1)]
+
+
+# HERESY 2315 (Viktor's plan of 08.11.2026, §2.4: «Эталон из любого дубля или чужой песни на равной громкости»): the reference from anywhere: a
+# sound of this take's tree, another take, a song of your own (kept in user/references/ as FLAC, 48 kHz, two sides, by the first twelve hex
+# of its bytes' SHA-256, its name and length beside it). Measured block by block as the source is (source_loudness), streamed in stretches
+# at its own rate (the page's audio resamples), from the same second as the mix.
+REF_ID = re.compile(r"[0-9a-f]{12}")
+REF_EXT = (".wav", ".flac", ".mp3", ".m4a", ".ogg", ".aiff", ".aif", ".opus")
+REF_MAX_S = 1200
+
+
+def file_loudness(path):
+    """source_loudness() for any sound file: the K-weighted power of each 100 ms block, both sides summed (a mono file on both), and its
+    integrated loudness; its length."""
+    from plenio_core.audio import loudness as pl
+    x, rate = sf.read(str(path), dtype="float64", always_2d=True)
+    x = x.T if x.shape[1] > 1 else np.repeat(x.T, 2, axis=0)
+    p = pl._weighted_power(x[:2], rate, pl.no_cancel)
+    k = round(0.1 * rate)
+    z = p[: len(p) // k * k].reshape(-1, k).mean(axis=1)
+    whole = pl.integrated_from_blocks(pl._block_powers(p, rate, pl.BLOCK_S, pl.STEP_S))
+    return {"block": 0.1, "rate": rate, "seconds": round(x.shape[1] / rate, 3), "z": [float(f"{v:.5g}") for v in z],
+            "integrated": round(whole, 2) if whole is not None else None}
+
+
+def file_chunk(path, start, seconds):
+    """A stretch [start, start+seconds) of any sound file as 16-bit FLAC at its own rate, two sides (a mono file on both); silence past its end."""
+    seconds = max(0.05, min(MAX_CHUNK, float(seconds)))
+    with sf.SoundFile(str(path)) as f:
+        rate = f.samplerate
+        a, n = max(0, int(round(float(start) * rate))), int(round(seconds * rate))
+        if a < f.frames:
+            f.seek(a)
+            x = f.read(n, dtype="float32", always_2d=True)
+        else:
+            x = np.zeros((0, max(1, f.channels)), dtype="float32")
+    x = np.repeat(x[:, :1], 2, axis=1) if x.shape[1] == 1 else x[:, :2]
+    x = np.pad(x, ((0, n - len(x)), (0, 0)))
+    buf = io.BytesIO()
+    sf.write(buf, np.clip(x, -1.0, 1.0), rate, format="FLAC", subtype="PCM_16")
+    return buf.getvalue()
+
+
+def ref_path(outputs, refs_dir, spec):
+    """The file a reference names: "take:NAME" (that take's own sound), "take:NAME:derived/…" (a file of its tree) or "own:ID" (a song of
+    your own); never a file outside a take's folder or the references."""
+    spec = str(spec or "")
+    if spec.startswith("own:"):
+        rid = spec[4:]
+        if not REF_ID.fullmatch(rid):
+            raise ValueError("own:ID, twelve hex digits")
+        p = Path(refs_dir) / f"{rid}.flac"
+        if not p.is_file():
+            raise FileNotFoundError("no such reference of yours")
+        return p
+    if not spec.startswith("take:"):
+        raise ValueError("a reference is take:NAME, take:NAME:PATH or own:ID")
+    name, _, rel = spec[5:].partition(":")
+    if not name or "/" in name or name.startswith("."):
+        raise ValueError("bad take name")
+    d = Path(outputs) / name
+    if not (d / "meta.json").is_file():
+        raise FileNotFoundError(f"no take {name}")
+    if not rel:
+        p = next((d / f for f in ("audio.wav", "audio.flac", "audio.mp3") if (d / f).is_file()), None)
+        if p is None:
+            raise FileNotFoundError(f"{name} has no sound of its own")
+        return p
+    p = _inside(d, rel)
+    if not p.is_file() or p.suffix.lower() not in REF_EXT:
+        raise ValueError(f"{rel} is not a sound of {name}")
+    return p
+
+
+def refs_list(refs_dir):
+    """Your references, the newest first: [{id, title, seconds, added, spec}]."""
+    out = []
+    for m in sorted(Path(refs_dir).glob("*.json")):
+        try:
+            j = json.loads(m.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if REF_ID.fullmatch(str(j.get("id", ""))) and (Path(refs_dir) / f"{j['id']}.flac").is_file():
+            out.append({"id": j["id"], "title": str(j.get("title") or j["id"])[:200], "seconds": j.get("seconds"), "added": j.get("added", ""),
+                        "spec": "own:" + j["id"]})
+    return sorted(out, key=lambda r: r["added"], reverse=True)
+
+
+def refs_add(refs_dir, filename, body, title=""):
+    """A song of your own kept as a reference: FLAC, 48 kHz, two sides; the same bytes twice are one reference. Its entry."""
+    import hashlib
+    import subprocess
+    ext = Path(str(filename or "")).suffix.lower()
+    if ext not in REF_EXT:
+        raise ValueError("WAV, FLAC, MP3, M4A, OGG, OPUS or AIFF")
+    if not body:
+        raise ValueError("no file in the body")
+    rid = hashlib.sha256(body).hexdigest()[:12]
+    rd = Path(refs_dir)
+    rd.mkdir(parents=True, exist_ok=True)
+    out, meta = rd / f"{rid}.flac", rd / f"{rid}.json"
+    if out.is_file() and meta.is_file():
+        return next((r for r in refs_list(rd) if r["id"] == rid), {"id": rid, "spec": "own:" + rid})
+    src = rd / f".{rid}{ext}.part"
+    src.write_bytes(body)
+    part = rd / f".{rid}.part.flac"
+    try:
+        p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-t", str(REF_MAX_S), "-ac", "2", "-ar", "48000", "-c:a", "flac",
+                            "-sample_fmt", "s32", "-bits_per_raw_sample", "24", str(part)], capture_output=True, text=True, timeout=600)
+        if p.returncode != 0:
+            raise ValueError("ffmpeg could not read it: " + ((p.stderr or "").strip().splitlines() or ["?"])[-1][-200:])
+        secs = sf.info(str(part)).duration
+        os.replace(part, out)
+    finally:
+        src.unlink(missing_ok=True)
+        part.unlink(missing_ok=True)
+    entry = {"id": rid, "title": (str(title or "").strip() or Path(str(filename)).stem)[:200], "file": Path(str(filename)).name[:200],
+             "seconds": round(secs, 3), "added": time.strftime("%Y-%m-%d %H:%M:%S")}
+    meta.write_text(json.dumps(entry, ensure_ascii=False), encoding="utf-8")
+    return dict(entry, spec="own:" + rid)
+
+
+def refs_delete(refs_dir, rid):
+    """A reference of yours gone (its sound and its entry); the list after it."""
+    if not REF_ID.fullmatch(str(rid or "")):
+        raise ValueError("an id of twelve hex digits")
+    for f in (Path(refs_dir) / f"{rid}.flac", Path(refs_dir) / f"{rid}.json"):
+        f.unlink(missing_ok=True)
+    return refs_list(refs_dir)
+
+
+def take_sounds(name, d, derived):
+    """The sounds of a take a reference may be: the take as it came, then each file of its branches (not a set of stems), the newest first."""
+    out = []
+    own = next((f for f in ("audio.wav", "audio.flac", "audio.mp3") if (Path(d) / f).is_file()), None)
+    if own:
+        out.append({"spec": f"take:{name}", "label": "the take as it came", "kind": "take", "created": ""})
+    for m in sorted(derived, key=lambda m: m.get("created", ""), reverse=True):
+        if m.get("kind") == "stems":
+            continue
+        for f in m.get("files") or []:
+            path = f.get("path") or f"derived/{m.get('id')}/{f.get('file')}"
+            if Path(str(path)).suffix.lower() not in REF_EXT or f.get("track"):
+                continue
+            out.append({"spec": f"take:{name}:{path}", "label": str(m.get("label") or m.get("kind") or m.get("id"))[:80] + " · " + str(f.get("name") or f.get("file"))[:80],
+                        "kind": m.get("kind", ""), "created": m.get("created", ""), "seconds": f.get("seconds")})
+            if len(out) >= 60:
+                return out
+    return out

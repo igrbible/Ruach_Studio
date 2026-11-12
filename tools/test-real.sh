@@ -3,7 +3,8 @@
 # Works on a fresh install (no songs yet): it writes one clearly labelled SYNTHETIC fixture take (a
 # 1-second tone, not model output) into tmp/test-real/library, starts its own yue-server on a free port
 # with --outputs and --settings inside tmp/test-real, runs tools/cdp-real.mjs (page checks + a real
-# 1-second song through the form), then stops exactly the server and browser it started.
+# 1-second song through the form), asks the engine itself about its queue's ✕ and a decode's library
+# answer (HERESY 2196), then stops exactly the server and browser it started.
 # The user's outputs/ and settings.json are never read or written; the script checks that too.
 #
 #   tools/test-real.sh          ~1-4 min on a quarter of the CPU cores
@@ -16,6 +17,7 @@
 # Metal shaders being compiled at start even for a CPU run (why the server gets up to 3 minutes to start).
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT/launcher/paths.sh"   # HERESY 2330: every weight's place
 G=$'\e[32m' Y=$'\e[33m' R=$'\e[31m' D=$'\e[2m' B=$'\e[1m' X=$'\e[0m'
 # plain text when NO_COLOR is set or the output is not a terminal (a log file, a pipe)
 if [ -n "${NO_COLOR:-}" ] || [ ! -t 1 ]; then G="" Y="" R="" D="" B="" X=""; fi
@@ -48,9 +50,9 @@ export YUE2_CHROME="$CHROME"
 PAGE="$ROOT/build/tools/public/index.html"
 [ -f "$PAGE" ] || stop "build/tools/public/index.html is missing: run ./build.sh"
 [ -z "$(find "$ROOT/build/tools/console" -type f -newer "$PAGE" | head -1)" ] || stop "build/tools/public/index.html is older than its sources: run ./build.sh"
-MODEL=""; for q in Q5_K_M Q8_0 Q6_K BF16; do [ -f "$ROOT/models/YuE2-3B-$q.gguf" ] && { MODEL="$q"; break; }; done
-[ -n "$MODEL" ] || stop "no models/YuE2-3B-*.gguf: convert the models first"
-for f in YuE2-Vae-F32.gguf YuE2-Vae-legacy-F32.gguf YuE2-Vae-blend-F32.gguf; do [ -f "$ROOT/models/$f" ] || stop "models/$f is missing"; done
+MODEL=""; for q in Q5_K_M Q8_0 Q6_K BF16; do [ -f "$RS_ENGINE_YUE2/YuE2-3B-$q.gguf" ] && { MODEL="$q"; break; }; done
+[ -n "$MODEL" ] || stop "no ${RS_ENGINE_YUE2#"$ROOT"/}/YuE2-3B-*.gguf: convert the models first"
+for f in YuE2-Vae-F32.gguf YuE2-Vae-legacy-F32.gguf YuE2-Vae-blend-F32.gguf; do [ -f "$RS_ENGINE_VAE/$f" ] || stop "${RS_ENGINE_VAE#"$ROOT"/}/$f is missing"; done
 # HERESY 1566: no sliders since 1449 (start.sh passes none): the test neither asks for them nor gives them to its server
 
 # fingerprints of the user's own library and settings, to prove the test left them alone (portable: Python)
@@ -85,6 +87,7 @@ cleanup() {
   # only the browser this test's page check started (its own profile folder)
   pkill -9 -f -- "--user-data-dir=$PROFILE" 2>/dev/null || true
   [ -n "${LPID:-}" ] && kill "$LPID" 2>/dev/null; LPID=""   # HERESY 1567: the test's stand-in lab
+  [ "${RO:-0}" = 1 ] && chmod u+w "$T/library" 2>/dev/null; RO=0   # HERESY 2196: the library made read-only for one decode, writable again
 }
 trap cleanup EXIT INT TERM
 
@@ -133,7 +136,7 @@ class H(http.server.BaseHTTPRequestHandler):
 http.server.HTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_forever()' "$LAB_PORT" &
 LPID=$!
 ${HIDE[@]+"${HIDE[@]}"} nice -n 15 ${PIN[@]+"${PIN[@]}"} "$BIN" --host 127.0.0.1 --port "$PORT" \
-  --model "$MODEL=models/YuE2-3B-$MODEL.gguf" --vae "standard=models/YuE2-Vae-F32.gguf" --vae "legacy=models/YuE2-Vae-legacy-F32.gguf" --vae "blend=models/YuE2-Vae-blend-F32.gguf" \
+  --model "$MODEL=$RS_ENGINE_YUE2/YuE2-3B-$MODEL.gguf" --vae "standard=$RS_ENGINE_VAE/YuE2-Vae-F32.gguf" --vae "legacy=$RS_ENGINE_VAE/YuE2-Vae-legacy-F32.gguf" --vae "blend=$RS_ENGINE_VAE/YuE2-Vae-blend-F32.gguf" \
   --loras loras --outputs "$T/library" --settings "$T/settings.json" > "$T/server.log" 2>&1 &
 SPID=$!
 # up to 3 minutes: on a Mac the Metal shaders are compiled at start, even for a CPU run
@@ -152,6 +155,51 @@ ${TO[@]+"${TO[@]}"} "$NODE" "$ROOT/tools/cdp-real.mjs" "http://127.0.0.1:$PORT/"
 r=${PIPESTATUS[0]}
 counts=$(command grep -o '[0-9]* passed, [0-9]* failed' "$T/cdp-real.txt" | tail -1)
 [ "$r" = 0 ]; check "cdp-real: ${counts:-no result}" $? "exit $r"
+
+# --- HERESY 2196: the engine's own side of 2132 (a done job says how many tracks it made, and why the library kept fewer) and of 2137 (&queued=1:
+# the queue's ✕ takes off only a job that waits), against this real server; the page suite sees them only through the mock
+API="http://127.0.0.1:$PORT"
+jpy() { python3 -c "import json, sys
+try: d = json.load(sys.stdin)
+except Exception: print('unreadable'); sys.exit(0)
+print($1)"; }
+post() { curl -s -X POST -H "Content-Type: application/json" --data "$2" "$API$1"; }
+status_of() { curl -s "$API/job?id=$1" | jpy 'd.get("status", "none")'; }
+wait_status() { local s=""; for _ in $(seq 1 $(( $2 * 2 ))); do s=$(status_of "$1"); [[ "$s" =~ ^($3)$ ]] && break; sleep 0.5; done; echo "$s"; }
+SONG='{"title":"Queue check","style":"English, male vocal, heavy metal","lyrics":"[verse]\nHello from the queue\n","cot":"off","duration":1,"steps":2,"vae":"legacy"}'
+QA=$(post /synth "$SONG" | jpy 'd.get("id", "")'); QB=$(post /synth "$SONG" | jpy 'd.get("id", "")')
+qa=$([ -n "$QA" ] && wait_status "$QA" 180 'running|done|failed|cancelled')
+qb=$([ -n "$QB" ] && status_of "$QB")
+[ "$qa" = running ] && [ "$qb" = queued ]; check "2137: two songs asked, the first under way, the second waiting behind it" $? "first ${QA:-not taken}: ${qa:-none}, second ${QB:-not taken}: ${qb:-none}"
+ra=$([ -n "$QA" ] && curl -s -X POST "$API/job?id=$QA&cancel=1&queued=1" | jpy '"%s %s" % (d.get("started"), d.get("cancel"))')
+[ "$ra" = "True False" ]; check "2137: the queue's ✕ (&queued=1) on the song under way leaves it running and says so (started, cancel false)" $? "${ra:-no answer}"
+sa=$([ -n "$QA" ] && status_of "$QA")
+[ "$sa" = running ]; check "2137: that song runs on after the ✕" $? "${sa:-none}"
+rb=$([ -n "$QB" ] && curl -s -X POST "$API/job?id=$QB&cancel=1&queued=1" | jpy '"%s %s" % (d.get("started"), d.get("cancel"))')
+[ "$rb" = "False True" ]; check "2137: the same ✕ on the waiting song takes it off (not started, cancel true)" $? "${rb:-no answer}"
+rc=$([ -n "$QA" ] && curl -s -X POST "$API/job?id=$QA&cancel=1" | jpy 'd.get("cancel")')
+[ "$rc" = True ]; check "2137: a plain cancel (no queued) still stops the song under way" $? "${rc:-no answer}"
+ea=$([ -n "$QA" ] && wait_status "$QA" 120 'done|failed|cancelled'); eb=$([ -n "$QB" ] && wait_status "$QB" 120 'done|failed|cancelled')
+[ "$ea" = cancelled ] && [ "$eb" = cancelled ]; check "2137: both end cancelled, none left running" $? "first ${ea:-none}, second ${eb:-none}"
+
+# 2132: the song cdp-real made, decoded again (its kept latents through the Standard VAE: seconds on the CPU), once into the library as it is and
+# once with the library read-only: done both times, made 1; the first kept (one take, no library_error), the second not kept and saying why
+TAKE=$(curl -s "$API/library" | jpy 'next((t["name"] for t in d.get("takes", []) if str(t.get("title", "")).startswith("Page check ")), "")')
+if [ -z "$TAKE" ] || [ ! -f "$T/library/$TAKE/latents.f32" ]; then
+  check "2132: a song of cdp-real's with its latents to decode again" 1 "none in $T/library: cdp-real made no song, so made and library_error went unchecked"
+else
+  AGAIN="{\"title\":\"Library check\",\"decode_from\":\"$TAKE\",\"vae\":\"standard\"}"
+  DA=$(post /synth "$AGAIN" | jpy 'd.get("id", "")')
+  da=$([ -n "$DA" ] && wait_status "$DA" 180 'done|failed|cancelled')
+  ka=$([ -n "$DA" ] && curl -s "$API/job?id=$DA" | jpy '"%s %s %s" % (d.get("made"), len(d.get("takes", [])), "library_error" in d)')
+  [ "$da" = done ] && [ "$ka" = "1 1 False" ]; check "2132: a decode into a writable library: done, made 1, one take kept, no library_error" $? "${DA:-not taken}: ${da:-none}, made/takes/error: ${ka:-none}"
+  chmod a-w "$T/library"; RO=1
+  DB=$(post /synth "${AGAIN/Library check/Library refused}" | jpy 'd.get("id", "")')
+  db=$([ -n "$DB" ] && wait_status "$DB" 180 'done|failed|cancelled')
+  kb=$([ -n "$DB" ] && curl -s "$API/job?id=$DB" | jpy '"%s %s %s" % (d.get("made"), len(d.get("takes", [])), d.get("library_error", "")[:200])')
+  chmod u+w "$T/library"; RO=0
+  [ "$db" = done ] && [[ "$kb" =~ ^"1 0 cannot create " ]]; check "2132: the same into a read-only library: still done, made 1, no take, library_error says it could not create the folder" $? "${DB:-not taken}: ${db:-none}, made/takes/error: ${kb:-none}"
+fi
 
 cleanup; SPID=""
 pgrep -f -- "--user-data-dir=$PROFILE" >/dev/null; [ $? != 0 ]; check "the test's server and browser are stopped" $?

@@ -19,6 +19,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 EXP="${YUE2_EXPECTED:-$ROOT/tools/expected-install.json}"
 QUICK=0; [ "${1:-}" = "--quick" ] && QUICK=1
 GC="$ROOT/tools/gguf_check.py"
+# HERESY 2330 (2.0.7): the weights in one tree; an engine GGUF is found where launcher/paths.sh (from lab/paths.py) says, a 2.0.6 name kept as the key
+. "$ROOT/launcher/paths.sh"
+engine_ggufs() { find "$RS_ENGINE" -name "*.gguf" -printf "%f\n" 2>/dev/null | sort -u; }
 # his SHA-256 / structure digest for a file, "" when the kit has none
 exp_of() { [ -f "$EXP" ] && python3 -c "import json,sys; d = json.load(open(sys.argv[1])); k = sys.argv[3]
 v = d.get(sys.argv[2], {}).get(k); print(v['digest'] if isinstance(v, dict) else (v or ''))" "$EXP" "$1" "$2"; }
@@ -80,15 +83,16 @@ else bad "build/build/yue-server is not built"; fi
 
 echo "${B}models${X}"
 models_ok=0
-wanted=$(exp models); [ -n "$wanted" ] || wanted=$(cd "$ROOT/models" 2>/dev/null && ls *.gguf 2>/dev/null | tr '\n' ' ')
+wanted=$(exp models); [ -n "$wanted" ] || wanted=$(engine_ggufs | tr '\n' ' ')
 for m in $wanted; do
-  if is_gguf "$ROOT/models/$m"; then compare "$ROOT/models/$m" "models/$m" "$m" && models_ok=$((models_ok + 1))
+  f=$(rs_engine_gguf "$m")
+  if is_gguf "$f"; then compare "$f" "models/$m" "$m" && models_ok=$((models_ok + 1))   # the kit's key, 2.0.6's name for the file: paths: 2.0.6
   else bad "$m" "missing, empty or not a GGUF file"; fi
 done
-for m in $(cd "$ROOT/models" 2>/dev/null && ls *.gguf 2>/dev/null); do
+for m in $(engine_ggufs); do
   case " $wanted " in *" $m "*) ;; *) note "$m" "(extra: not in the original install)" ;; esac
 done
-[ -n "$wanted" ] || bad "no models/*.gguf"
+[ -n "$wanted" ] || bad "no engine GGUF under ${RS_ENGINE#"$ROOT"/}/"
 
 echo "${B}sliders${X}"
 if [ -f "$ROOT/sliders/catalog.json" ]; then

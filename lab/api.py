@@ -114,7 +114,12 @@ def _file_in_workspace(job, ws, ctx, remember=True):
                 continue
             if st.get("status") == "done":
                 if st.get("takes"):
-                    ctx["collection"].collection_post(ctx["config_dir"](), ctx["outputs"], {"op": "ws-add", "workspace": ws, "names": st["takes"]})
+                    # HERESY 2284: a name the collection refuses (a level past PART_MAX characters, filed before the check below) is said in the lab's
+                    # log; it never takes the watch down with the job left pending for ever
+                    try:
+                        ctx["collection"].collection_post(ctx["config_dir"](), ctx["outputs"], {"op": "ws-add", "workspace": ws, "names": st["takes"]})
+                    except ValueError as e:
+                        print(f"api · job {job} · its takes are in the library, not in “{ws}”: {e}", flush=True)
                 _pending(ctx, done=job)
                 return
             if st.get("status") in ("failed", "cancelled"):
@@ -256,6 +261,13 @@ def handle(method, path, query, body, headers, ctx):
         for k in ("abc", "loras", "vae", "steps", "solver", "cfg_scale"):
             if data.get(k) is not None:
                 req[k] = data[k]
+        if data.get("workspace"):                        # HERESY 2284: a workspace the takes could not go into is refused before the job, not after it
+            try:
+                col = ctx["collection"]
+                ws = col.ws_name(data["workspace"])
+                col.fresh_parts(col.load(ctx["config_dir"]()), ws)
+            except ValueError as e:
+                return 400, {"error": f"workspace: {e}"}
         job = _engine("/synth", req)
         jid = job.get("id")
         if data.get("workspace") and jid is not None:

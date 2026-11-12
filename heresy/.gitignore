@@ -24,3 +24,8 @@ MISC/**/*.mp4
 MISC/**/*.log
 MISC/**/__pycache__/
 MISC/claude-tc/yue-server.*
+root/**/__pycache__/
+# 08.11.2026 · клоны и черновики, перенесённые в кухню по слову Виктора: не для git
+MISC/audio.cpp/
+MISC/SeedVR2_ref/
+MISC/Fosforida_Novel_Transcription/

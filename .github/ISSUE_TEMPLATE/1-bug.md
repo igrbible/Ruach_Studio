@@ -1,6 +1,6 @@
 ---
 name: Something broke
-about: The studio did what it should not, or did not do what it should
+about: The Studio did what it should not, or did not do what it should
 title: "Bug: "
 labels: bug
 ---
@@ -13,4 +13,4 @@ labels: bug
 
 **The server log** (the log above the player → Copy) or the lab's lines, from around the moment.
 
-**The studio**: its version (☰ → About, or the VERSION file), how it was installed (Pinokio or by hand), the system, the card and its memory.
+**The Studio**: its version (☰ → About, or the VERSION file), how it was installed (Pinokio or by hand), the system, the card and its memory.

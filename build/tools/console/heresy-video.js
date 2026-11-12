@@ -13,7 +13,10 @@
   var state = { take: null, plan: null, busy: false, dirty: false };
   function api(path, body) {
     var opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
-    return fetch("/lab" + path, opt).then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); b.__status = r.status; return b; }); });
+    return fetch("/lab" + path, opt).then(function (r) {
+      return r.json().catch(function () { var x = new Error(tr("The lab does not answer: {0}").replace("{0}", "HTTP " + r.status)); x.status = r.status; throw x; })   // HERESY 2265: a door's 502 page is no JSON
+        .then(function (b) { if (!r.ok && r.status !== 202) { var e = new Error(b.error || r.status); e.status = r.status; throw e; } b.__status = r.status; return b; });   // 2346: its status kept, a 404 is «not here»
+    });
   }
   function say(t, bad) { var el = $("vdStatus"); if (el) { el.textContent = t || ""; el.classList.toggle("bad", !!bad); } }
 
@@ -24,11 +27,11 @@
     $("vdWrite").disabled = !p || !p.exists || state.busy;
     $("vdSave").disabled = !p || !p.exists || state.busy || !state.dirty;
     $("vdExport").disabled = !p || !p.exists;
-    if ($("vdBeats")) {                                   // HERESY 1947: on the beats, or back as sung
-      var onb = !!(p && p.exists && p.shots.some(function (s) { return s.as_sung; }));
-      $("vdBeats").disabled = !p || !p.exists || state.busy || state.beating;
-      $("vdBeats").textContent = tr(onb ? "Cuts as sung" : "Cuts on the beat");
-      $("vdBeats").setAttribute("aria-pressed", onb ? "true" : "false");
+    if ($("vdCutsOn")) {                                  // HERESY 1947: on the beats, or back as sung; 2262: how strictly, as the lab cut them
+      var co = $("vdCutsOn");
+      co.disabled = !p || !p.exists || state.busy || state.beating;
+      if (!state.beating) co.value = cutsLevel(p);        // while the lab works, his pick stays in sight
+      co.classList.toggle("is-on", co.value !== "off");
     }
     if ($("vdEditZip")) $("vdEditZip").disabled = !p || !p.exists || state.editing;   // HERESY 1946
     if ($("vdAnimatic")) $("vdAnimatic").disabled = !p || !p.exists || state.busy || state.anim === "running";   // HERESY 1837
@@ -41,9 +44,12 @@
     $("vdBody").hidden = !has;
     if (!has) { $("vdStrip").innerHTML = ""; $("vdShots").innerHTML = ""; if ($("vdEdit")) $("vdEdit").hidden = true; return; }   // HERESY 1864
     LOOK.forEach(function (k) { var el = $("vdLook-" + k); if (el && document.activeElement !== el) el.value = (p.look || {})[k] || ""; });
+    if ($("vdPlaces") && !state.dirty) $("vdPlaces").value = p.places === "one" ? "one" : "slices";   // HERESY 2356: slices unless one place was chosen
+    if ($("vdSplitLong")) $("vdSplitLong").disabled = state.busy || !p.shots.some(function (s) { return s.t1 - s.t0 > LONG_S; });   // HERESY 2356
     if ($("vdBrief") && document.activeElement !== $("vdBrief")) $("vdBrief").value = p.brief || "";   // HERESY 1913
     if ($("vdClipTitle") && document.activeElement !== $("vdClipTitle")) { $("vdClipTitle").value = p.clip_title || ""; $("vdClipTitle").placeholder = p.title || ""; }   // HERESY 1948
     if ($("vdCredits") && document.activeElement !== $("vdCredits")) $("vdCredits").value = p.credits || "";
+    ["author", "verse"].forEach(function (k) { var el = $(k === "author" ? "vdAuthor" : "vdVerse"); if (el && document.activeElement !== el) el.value = p[k] || ""; });   // HERESY 2246
     heroPaint(); framesPaint();
     var total = p.seconds || (p.shots.length ? p.shots[p.shots.length - 1].t1 : 1);
     $("vdStrip").innerHTML = p.shots.map(function (s, i) {
@@ -55,7 +61,7 @@
       var sc = s.scene || {};
       return '<article class="vd-shot" id="vdShot' + i + '"><header><b class="mono">' + (i + 1) + "</b><span class=\"mono\">" + clock(s.t0) + "–" + clock(s.t1) + " · " + (s.t1 - s.t0).toFixed(1) + " s</span>" +
         '<span class="tag">' + esc(s.section || "") + "</span>" + (s.words ? '<span class="vd-words" translate="no">' + esc(s.words) + "</span>" : '<span class="vd-words is-bare">' + esc(tr("no words: the music alone")) + "</span>") +
-        moveSelect(s, i) +                                // HERESY 1844
+        moveSelect(s, i) + intoSelect(s, i) +             // HERESY 1844; 2243: the pass into it
         '<span class="vd-acts">' + heroToggle(i) + '<button type="button" class="btn ghost small" data-vdplay="' + i + '" data-tip="' + esc(tr("Play from this shot")) + '" aria-label="' + esc(tr("Play from this shot")) + '">▶</button>' +
         (window.HeresyArtist && window.HeresyArtist.form ? '<button type="button" class="btn ghost small" data-vdart="' + i + '" data-tip="' + esc(tr("Draw this shot's picture in the Artist: its prompt into the form, wide")) + '" aria-label="' + esc(tr("Draw this shot's picture in the Artist: its prompt into the form, wide")) + '">🎨</button>' : "") +   // HERESY 1839
         '<button type="button" class="btn ghost small vd-shoot' + (s.video ? " has-video" : "") + '" data-vdshoot="' + i + '" data-tip="' + esc(tr("Shoot this shot with MiniMax H3: a draft (8 steps) or the final (28 steps); its picture, when it has one, is its first frame")) + '" aria-label="' + esc(tr("Shoot this shot with MiniMax H3: a draft (8 steps) or the final (28 steps); its picture, when it has one, is its first frame")) + '">\ud83c\udfac</button><span class="vd-h3" data-vdh3="' + i + '"></span>' +   // HERESY 1868
@@ -109,14 +115,24 @@
     }).join("") + "</select>";
   }
 
+  // HERESY 2243: the pass into a shot (none for the first): the clip's own (as «Between sections» and «Where the passes fall» say) or its own
+  var INTOS = [["cut", "a cut"], ["black", "through black"], ["flash", "a flash"], ["dissolve", "a dissolve"], ["white", "through white"], ["push", "a push"], ["zoom", "a zoom"]];
+  function intoSelect(s, i) {
+    if (!i) return "";
+    var say = tr("The pass into this shot");
+    return '<select class="vd-into" data-vdinto="' + i + '" aria-label="' + esc(say) + '" data-tip="' + esc(say) + '"><option value="">' + esc(tr("Pass: the clip's")) + "</option>" +
+      INTOS.map(function (m) { return '<option value="' + m[0] + '"' + (s.into === m[0] ? " selected" : "") + ">" + esc(tr(m[1])) + "</option>"; }).join("") + "</select>";
+  }
+
   function load() {
     var t = state.take;
     state.plan = null; state.dirty = false; state.cur = 0;   // HERESY 1940: a new take from its first shot
+    state.readErr = "";                               // HERESY 2346: what of this take could not be read, kept over the shots' count
     lookPaint();                                      // HERESY 2010: the take's own look on its button
     if (!t || t.session) { paint(); return; }
     animLoad();                                       // HERESY 1837: its animatic, if it has one
     clipLoad();                                       // HERESY 1838: its clip
-    api("/video/plan?name=" + encodeURIComponent(t.name)).then(function (p) { if (state.take === t) { state.plan = p; paint(); h3Load(); srLoad(); framesLoad(); say(p.exists ? tr("{0} shots").replace("{0}", p.shots.length) : ""); } })
+    api("/video/plan?name=" + encodeURIComponent(t.name)).then(function (p) { if (state.take === t) { state.plan = p; paint(); h3Load(); srLoad(); framesLoad(); say(state.readErr || (p.exists ? tr("{0} shots").replace("{0}", p.shots.length) : ""), !!state.readErr); } })
       .catch(function (e) { say(e.message, true); });
   }
   function make() {
@@ -139,54 +155,106 @@
     var brief = $("vdBrief") ? $("vdBrief").value : (p.brief || "");   // HERESY 1913: the clip's idea; whether the hero is in each shot (null: the page's own choice)
     var heroes = p.shots.map(function (s) { return typeof s.hero === "boolean" ? s.hero : null; });
     var clipTitle = $("vdClipTitle") ? $("vdClipTitle").value : (p.clip_title || ""), credits = $("vdCredits") ? $("vdCredits").value : (p.credits || "");   // HERESY 1948
-    return { look: look, scenes: scenes, moves: moves, brief: brief, heroes: heroes, clip_title: clipTitle, credits: credits };
+    var intos = p.shots.map(function (s, i) { var el = document.querySelector('#vdShots [data-vdinto="' + i + '"]'); return el ? el.value : (s.into || ""); });   // HERESY 2243
+    var author = $("vdAuthor") ? $("vdAuthor").value : (p.author || ""), verse = $("vdVerse") ? $("vdVerse").value : (p.verse || "");   // HERESY 2246
+    var hw = $("vdHeroWords") ? $("vdHeroWords").value : ((p.hero && p.hero.words) || "");   // HERESY 2356: the hero's words, his skin, the places
+    var hh = state.heroHuman !== undefined ? state.heroHuman : (p.hero && typeof p.hero.human === "boolean" ? p.hero.human : null);
+    var hl = state.heroLast !== undefined ? state.heroLast : !!(p.hero && p.hero.last);   // HERESY 2361: the hero's picture as his shots' last frame
+    return { look: look, scenes: scenes, moves: moves, brief: brief, heroes: heroes, clip_title: clipTitle, credits: credits, intos: intos, author: author, verse: verse,
+             places: placesOf(p), hero_words: String(hw || "").replace(/\s+/g, " ").trim(), hero_human: hh, hero_last: hl };
   }
   function save() {
     var p = state.plan;
     if (!p || !p.exists) return Promise.resolve();
     var c = collect();
-    return api("/video/save", { name: p.name, look: c.look, scenes: c.scenes, moves: c.moves, brief: c.brief, heroes: c.heroes, clip_title: c.clip_title, credits: c.credits }).then(function (q) { state.plan = q; state.dirty = false; paint(); say(tr("kept")); })
+    var body = { name: p.name, look: c.look, scenes: c.scenes, moves: c.moves, brief: c.brief, heroes: c.heroes, clip_title: c.clip_title, credits: c.credits, intos: c.intos, author: c.author, verse: c.verse, places: c.places };
+    if (p.hero) { body.hero_words = c.hero_words; body.hero_human = c.hero_human; body.hero_last = c.hero_last; }   // HERESY 2356; 2361
+    return api("/video/save", body).then(function (q) { state.plan = q; state.dirty = false; state.heroHuman = undefined; state.heroLast = undefined; paint(); say(tr("kept")); })
       .catch(function (e) { say(e.message, true); });
   }
 
   // the Writer, a dozen shots a question: the look first (when it is empty), then the scenes, each answer kept as it comes
-  var SYSTEM = [
+  // HERESY 2356 (Viktor 10.11.2026 on «Буратино»: «Писатель очень классно сделал весь сюжет. Очень классно идёт вот, по два, по три разных как бы слайса
+  // на картинке… красиво»): the places a look choice, «slices» his taste and the default (the Writer free to lay several places, as before 2325),
+  // «one» 2325's (one place in the look, one scene a shot)
+  var SYSTEM_HEAD = [
     "You direct a music video. You are given a song (title, style) and its shots: each with its time, its section and the words sung in it.",
     "When a brief is given, it is the maker's idea of the clip: the look and every scene serve it.",
+    "When a hero is given, the words are his as his own picture was drawn from them: write him with exactly those words in the look's characters.",
     "Answer with JSON only: {\"look\": {\"characters\": \"…\", \"setting\": \"…\", \"palette\": \"…\", \"notes\": \"…\"}, \"scenes\": [{\"i\": 1, \"shot\": \"…\", \"camera\": \"…\", \"motion\": \"…\", \"light\": \"…\"}]}",
-    "look: who is in the clip (each person as they look, the same in every shot), where it happens, its colours, and how it moves through the song. Keep the look you are given; write one only when it is empty.",
-    "scenes: one for every shot you are given, by its number i. shot: what is seen, concrete and visual, in one or two sentences. camera: the framing and lens (wide, close-up, low angle…). motion: how the camera or the people move within the shot. light: light and colour.",
+    "look: who is in the clip (each person as they look, the same in every shot), where it happens, its colours, and how it moves through the song. Keep the look you are given; write one only when it is empty."
+  ];
+  var SYSTEM_TAIL = [
     "Follow the words of each shot without illustrating them word for word; let the clip have a line from shot to shot. A shot without words is music alone: show the place, the hands on the instruments, the light.",
     "Write in English, whatever the song's language: the video model reads English best. No commentary, no markdown fences."
-  ].join("\n");
+  ];
+  var SYSTEM_PLACES = {
+    slices: ["scenes: one for every shot you are given, by its number i. shot: what is seen, concrete and visual, in one or two sentences. camera: the framing and lens (wide, close-up, low angle…). motion: how the camera or the people move within the shot. light: light and colour."],
+    // HERESY 2325 (10.11.2026: a setting of three places one after another, and 2512 painted the shots as split screens of them): one place in the look
+    one: ["setting: ONE place, the clip's main location, in one phrase. Never a list of places or a journey (no «then», no «finally»): where a shot happens somewhere else, its own shot says where.",
+      "scenes: one for every shot you are given, by its number i. shot: what is seen, concrete and visual, in one or two sentences: one moment in one place, never two scenes, a split screen or a before and after in one shot. camera: the framing and lens (wide, close-up, low angle…). motion: how the camera or the people move within the shot. light: light and colour."]
+  };
+  function placesOf(p) { var el = $("vdPlaces"); return el && el.value ? el.value : (p && p.places === "one" ? "one" : "slices"); }
+  function systemOf(places) { return SYSTEM_HEAD.concat(SYSTEM_PLACES[places === "one" ? "one" : "slices"], SYSTEM_TAIL).join("\n"); }
   function loose(text) {
     var s = String(text || "").replace(/^```[a-z]*\s*|\s*```$/g, ""), a = s.indexOf("{"), b = s.lastIndexOf("}");
     if (a < 0 || b <= a) return null;
     try { return JSON.parse(s.slice(a, b + 1)); } catch (e) { return null; }
   }
+  // HERESY 2207 (the audit of 06.11.2026, item 15): what he changed and had not kept is kept first (settled()); each part keeps what he typed while the
+  // Writer wrote (settled() again, then the plan as the lab has it) and fills only its own shots, and only what is still empty in them and in the look;
+  // the lab merges the part (videographer.save: a shot sent as null, a field left out, stays as it was); another take opened meanwhile ends it
+  function written(sc) { return SCENE.some(function (k) { return (sc || {})[k]; }); }
   function write() {
-    var p = state.plan, chat = window.ruachChat;
-    if (!p || !p.exists || !chat) return;
-    var c = collect(), look = c.look, scenes = c.scenes, todo = [];
-    p.shots.forEach(function (s, i) { if (!SCENE.some(function (k) { return scenes[i][k]; })) todo.push(i); });
+    var p0 = state.plan, chat = window.ruachChat, t = state.take;
+    if (!p0 || !p0.exists || !chat || state.busy) return;
+    var c0 = collect(), todo = [];
+    p0.shots.forEach(function (s, i) { if (!written(c0.scenes[i])) todo.push(i); });
     if (!todo.length) { say(tr("every shot has its scene: empty one to have it written again")); return; }
-    state.busy = true; paint();
     var started = Date.now(), done = 0;
-    chat.refresh().then(function (st) {
+    var mine = function () { return state.take === t && state.plan && state.plan.exists && state.plan.name === p0.name; };
+    settled().then(function () {
+      if (state.dirty) throw new Error(tr("what you changed could not be kept, so the Writer did not start"));
+      state.busy = true; paint();
+      return chat.refresh();
+    }).then(function (st) {
       if (!st.configured || !st.available || !st.use) throw new Error(tr("The Writer's chat server is not ready: Engine → Writer and Artwork"));
       var model = st.use;
       var next = function () {
         if (!todo.length) return Promise.resolve();
-        var part = todo.splice(0, BATCH);
+        if (!mine()) throw new Error(tr("another take was opened: the Writer stopped"));
+        var p = state.plan, c = collect();               // as the page stands now: what he typed meanwhile is the Writer's look too
+        var part = todo.splice(0, BATCH).filter(function (i) { return !written(c.scenes[i]); });   // a shot he wrote meanwhile is his
+        if (!part.length) return next();
         say(tr("writing the scenes: {0} of {1}").replace("{0}", done).replace("{1}", done + part.length + todo.length) + " · " + Math.round((Date.now() - started) / 1000) + " s");
-        var msg = { title: p.title, style: p.style, brief: c.brief || "", look: look, shots: part.map(function (i) { var s = p.shots[i]; return { i: i + 1, time: clock(s.t0) + "–" + clock(s.t1), section: s.section, words: s.words || "(music alone)" }; }) };
-        return chat.complete([{ role: "system", content: SYSTEM }, { role: "user", content: JSON.stringify(msg) }], model, 4096, null, 0.8).then(function (r) {
+        var msg = { title: p.title, style: p.style, brief: c.brief || "", look: c.look, shots: part.map(function (i) { var s = p.shots[i]; return { i: i + 1, time: clock(s.t0) + "–" + clock(s.t1), section: s.section, words: s.words || "(music alone)" }; }) };
+        if (c.hero_words) msg.hero = c.hero_words;          // HERESY 2356: the hero in his picture's own words
+        return chat.complete([{ role: "system", content: systemOf(c.places) }, { role: "user", content: JSON.stringify(msg) }], model, 4096, null, 0.8).then(function (r) {
           var got = loose((((r.choices || [])[0] || {}).message || {}).content);
           if (!got) throw new Error(tr("The Writer did not answer in JSON. Try again, or load another model."));
-          if (got.look) LOOK.forEach(function (k) { if (!look[k] && got.look[k]) look[k] = String(got.look[k]); });
-          (got.scenes || []).forEach(function (sc) { var i = (+sc.i || 0) - 1; if (part.indexOf(i) >= 0) SCENE.forEach(function (k) { if (sc[k]) scenes[i][k] = String(sc[k]); }); });
-          done += part.length;
-          return api("/video/save", { name: p.name, look: look, scenes: scenes }).then(function (q) { state.plan = q; state.dirty = false; paint(); }).then(next);
+          if (!mine()) throw new Error(tr("another take was opened: the Writer stopped"));
+          return settled().then(function () {             // what he typed while the Writer wrote, kept before the part comes in
+            if (state.dirty) throw new Error(tr("what you changed could not be kept, so the Writer stopped"));
+            var now = state.plan, look = {}, scenes = now.shots.map(function () { return null; }), n = 0;
+            if (got.look) LOOK.forEach(function (k) { if (!(now.look || {})[k] && got.look[k]) look[k] = String(got.look[k]); });
+            (got.scenes || []).forEach(function (sc) {
+              var i = (+sc.i || 0) - 1;
+              if (part.indexOf(i) < 0 || !now.shots[i] || written(now.shots[i].scene) || scenes[i]) return;
+              var one = {};
+              SCENE.forEach(function (k) { one[k] = sc[k] ? String(sc[k]) : ""; });
+              if (written(one)) { scenes[i] = one; n++; }
+            });
+            done += part.length;
+            if (!n && !Object.keys(look).length) return next();
+            return api("/video/save", { name: now.name, look: look, scenes: scenes }).then(function (q) {
+              if (!mine()) return;
+              state.plan = q;
+              if (!state.dirty) return paint();
+              // typed while the part was kept: the part's fields patched in place (a repaint would drop what he types), the next settled() keeps his
+              scenes.forEach(function (sc, i) { if (sc) SCENE.forEach(function (k) { var el = document.querySelector('#vdShots textarea[data-vdi="' + i + '"][data-vdk="' + k + '"]'); if (el && !el.value) el.value = sc[k]; }); });   // a field he began is his
+              Object.keys(look).forEach(function (k) { var el = $("vdLook-" + k); if (el && !el.value) el.value = look[k]; });
+            }).then(next);
+          });
         });
       };
       return next();
@@ -208,19 +276,37 @@
       document.body.appendChild(a); a.click(); a.remove();
     }).catch(function (e) { state.editing = false; paint(); say(e.message, true); });
   }
-  // HERESY 1947: the cuts between shots on the take's beats, or back where they were sung
-  function beatCuts() {
+  // HERESY 1947: the cuts between shots on the take's beats, or back where they were sung. HERESY 2262: how strictly, picked: as sung; on the
+  // sections (each change of section where the take's music itself changes, on its bar or beat, else on the bar); on the beat (the sections so,
+  // then every other cut on its beat). The lab cuts each from the times as sung and keeps the beats and bars it heard for the ruler
+  function cutsLevel(p) {
+    if (!p || !p.exists) return "off";
+    var how = p.beats && p.beats.how, sh = p.shots || [];
+    if (how === "sections" || how === "beats") return how;
+    if (!sh.some(function (s) { return s.as_sung; })) return "off";
+    return sh.some(function (s, i) {                      // a plan cut before 2262: a cut moved inside a section is the beats'
+      var n = sh[i + 1];
+      return n && s.as_sung && Math.abs(s.t1 - s.as_sung[1]) > 0.005 && (s.section || "") === (n.section || "");
+    }) ? "beats" : "sections";
+  }
+  function cutsOn(how) {
     var t = state.take, p = state.plan;
     if (!t || !p || !p.exists || state.beating) return;
-    var undo = p.shots.some(function (s) { return s.as_sung; });
-    state.beating = true; paint(); if (!undo) say(tr("hearing the take's beats…"));
-    settled().then(function () { return api("/video/beats", { name: t.name, undo: undo }); }).then(function (b) {
+    if (how === cutsLevel(p)) return paint();
+    state.beating = true; paint(); if (how !== "off") say(tr("hearing the take's beats…"));
+    settled().then(function () { return api("/video/beats", { name: t.name, how: how, undo: how === "off" }); }).then(function (b) {   // undo: a lab before 2262 takes it back too
       state.beating = false;
       if (state.take !== t) return paint();
       if (b.plan) { state.plan = b.plan; state.dirty = false; }
       paint();
-      say(undo ? tr("{0} cuts back where they were sung").replace("{0}", b.undone)
-               : tr("{0} of {1} cuts on the beat ({2} bpm), moved {3} ms on average").replace("{0}", b.moved).replace("{1}", b.cuts).replace("{2}", b.tempo).replace("{3}", b.mean_ms));
+      if (how === "off") return say(tr("{0} cuts back where they were sung").replace("{0}", b.undone));
+      var grid = b.grid === "daw" ? tr("the DAW's grid") : tr("bars heard in the take"), parts = [];
+      if (how === "beats") parts.push(tr("{0} of {1} cuts on the beat ({2} bpm), moved {3} ms on average").replace("{0}", b.moved).replace("{1}", b.cuts).replace("{2}", b.tempo).replace("{3}", b.mean_ms));
+      if (how === "sections" || b.sections) parts.push(b.by_change   // HERESY 2247; 2262: where the music itself changes first
+        ? tr("{0} of {1} section changes where the music itself changes, {2} more on the bar ({3})").replace("{0}", b.by_change).replace("{1}", b.sections).replace("{2}", b.on_bar).replace("{3}", grid)
+        : tr("{0} of {1} section changes on the bar ({2})").replace("{0}", b.on_bar).replace("{1}", b.sections).replace("{2}", grid));
+      if (b.changes_error) parts.push(tr("the music's own changes could not be heard: {0}").replace("{0}", b.changes_error));   // never «none heard»
+      say(parts.join("; "), !!b.changes_error);
     }).catch(function (e) { state.beating = false; paint(); say(e.message, true); });
   }
   function storyboard() {
@@ -250,7 +336,7 @@
   try { FIND.ws = localStorage.getItem("yue2.vdFindWs") || ""; } catch (e) { /* private window */ }
   function wsOf(name) { var Cn = window.HeresyCollection, r = Cn && Cn.row ? Cn.row(name) : null; return r && r.workspaces ? r.workspaces : []; }
   function find(q) {
-    var box = $("vdFound"), takes = window.ruachTakes ? window.ruachTakes() : [], words = String(q || "").toLowerCase().split(/\s+/).filter(Boolean), ws = FIND.ws, seen = {};
+    var box = $("vdFound"), takes = window.ruachTakes ? window.ruachTakes() : [], words = String(q || "").toLowerCase().split(/\s+/).filter(Boolean), ws = wsKnown() ? FIND.ws : "", seen = {};
     var all = window.ruachFindTakeFull || null, hits = takes.filter(function (t) {
       if (seen[t.name]) return false;
       seen[t.name] = 1;
@@ -264,18 +350,23 @@
     }).join("") : '<div class="vd-none">' + esc(tr("no take found")) + "</div>";
     box.hidden = false;
   }
+  // HERESY 2265 (the neutral-value pass): the workspaces unread (the lab away) are said so under «All takes», and a workspace kept from before
+  // filters nothing then: before, every take fell out of it and the list read «no take found»
+  function wsKnown() { var Cn = window.HeresyCollection; return !(Cn && Cn.loaded && !Cn.loaded()); }
   function findWs() {
     var Cn = window.HeresyCollection, list = Cn && Cn.workspaces ? Cn.workspaces() : [], order = window.ruachTreeOrder ? window.ruachTreeOrder(list) : list.slice().sort();
     if (FIND.ws && list.length && list.indexOf(FIND.ws) < 0) FIND.ws = "";
-    $("vdFindWs").innerHTML = '<button type="button" class="vd-ws' + (FIND.ws ? "" : " is-on") + '" data-vdws="">' + esc(tr("All takes")) + "</button>" + order.map(function (w) {
+    var on = wsKnown() ? FIND.ws : "";
+    $("vdFindWs").innerHTML = '<button type="button" class="vd-ws' + (on ? "" : " is-on") + '" data-vdws="">' + esc(tr("All takes")) + "</button>" + order.map(function (w) {
       var p = w.split(" / ");
-      return '<button type="button" class="vd-ws d' + p.length + (FIND.ws === w ? " is-on" : "") + '" data-vdws="' + esc(w) + '" translate="no">' + esc(p.length > 1 ? "\u21b3 " + p[p.length - 1] : w) + "</button>";
-    }).join("");
+      return '<button type="button" class="vd-ws d' + p.length + (on === w ? " is-on" : "") + '" data-vdws="' + esc(w) + '" translate="no">' + esc(p.length > 1 ? "\u21b3 " + p[p.length - 1] : w) + "</button>";
+    }).join("") + (FIND.err && !wsKnown() ? '<p class="row-hint vd-side-none vd-findfail">' + esc(tr("The workspaces could not be read: {0}").replace("{0}", FIND.err)) + "</p>" : "");
   }
   function findOpen() {
     var Cn = window.HeresyCollection, win = $("vdFindWin");
     win.hidden = false; findWs(); find($("vdFind").value);
-    if (Cn && Cn.loaded && !Cn.loaded() && Cn.reload) Cn.reload().then(function () { if (!win.hidden) { findWs(); find($("vdFind").value); } }).catch(function () { /* the lab away: All takes still */ });
+    if (Cn && Cn.loaded && !Cn.loaded() && Cn.reload) Cn.reload().then(function () { FIND.err = ""; if (!win.hidden) { findWs(); find($("vdFind").value); } })
+      .catch(function (e) { FIND.err = (e && e.message) || "?"; if (!win.hidden) { findWs(); find($("vdFind").value); } });   // HERESY 2265: said, All takes still
     setTimeout(function () { $("vdFind").focus(); $("vdFind").select(); }, 0);
   }
   function findClose() { $("vdFindWin").hidden = true; }
@@ -317,10 +408,11 @@
       }
       var was = state.anim; state.anim = ""; animShow(b); paint();
       if (was === "running" && b.exists) say(tr("the animatic: {0} %").replace("{0}", 100));
-    }).catch(function (e) {                            // said only when one was being drawn: a lab without it says nothing
+    }).catch(function (e) {                            // said only when one was being drawn: a lab without it (404) says nothing
       if (state.take !== t) return;
       var was = state.anim; state.anim = ""; animShow(null); paint();
       if (was === "running") say(e.message, true);
+      else if (e.status !== 404) say(state.readErr = tr("The animatic could not be read: {0}").replace("{0}", e.message), true);   // HERESY 2346: never «no animatic» unsaid
     });
   }
   function animMake() {
@@ -415,25 +507,39 @@
     if (t) inp.click();
   }
   function clipShape() { var s = $("vdClipShape"); return s && s.value ? s.value : "16:9"; }   // HERESY 1917
+  function clipVal(id, dflt) { var s = $(id); return s && s.value ? s.value : dflt; }   // HERESY 2243–2246: the clip's pickers
+  function clipQuery(sh) { return (sh === "16:9" ? "" : "&shape=" + encodeURIComponent(sh)) + (state.clipDraft ? "&draft=1" : ""); }   // HERESY 2245: the draft its own file
   function clipShow(info) {
     var box = $("vdClipBox"), v = $("vdClipVideo"), get = $("vdClipGet"), t = state.take;
     if (!box) return;
     box.hidden = !(info && info.exists && t);
     if (box.hidden) return;
     var sh = clipShape(), tag = sh === "16:9" ? "" : sh.replace(":", "x");   // HERESY 1917: the shape's own clip, standing as it is
-    var src = "/lab/video/clip.mp4?name=" + encodeURIComponent(t.name) + (tag ? "&shape=" + encodeURIComponent(sh) : "") + "&t=" + Math.round(info.made || 0);
+    var src = "/lab/video/clip.mp4?name=" + encodeURIComponent(t.name) + clipQuery(sh) + "&t=" + Math.round(info.made || 0);
     if (v.getAttribute("src") !== src) v.setAttribute("src", src);
     v.className = tag ? "is-" + tag : "";
-    get.href = src; get.download = (t.title || t.name) + " · clip" + (tag ? " " + tag : "") + ".mp4";
+    get.href = src; get.download = (t.title || t.name) + " · clip" + (tag ? " " + tag : "") + (state.clipDraft ? " · draft" : "") + ".mp4";
+  }
+  // HERESY 2326 (Viktor 10.11.2026: the render showed no progress): «the clip: 63 % · 12 of 40» while the shots are cut, «· the final pass 2:31 / 5:37»
+  // while the last pass writes the song's length, and the time left once a few percent are done
+  function clipSay(b) {
+    var mss = function (t) { t = Math.max(0, Math.round(+t || 0)); return Math.floor(t / 60) + ":" + ("0" + t % 60).slice(-2); };
+    var p = +b.progress || 0, msg = tr("the clip: {0} %").replace("{0}", Math.round(p * 100));
+    if (b.stage === "shots" && b.of) msg += " · " + tr("{0} of {1}").replace("{0}", b.at || 0).replace("{1}", b.of);
+    else if (b.stage === "melt") msg += " · " + tr("the dissolves");
+    else if (b.stage === "final" && b.of) msg += " · " + tr("the final pass") + " " + mss(b.at) + " / " + mss(b.of);
+    var el = +b.elapsed || 0;
+    if (p >= 0.03 && p < 1 && el >= 15) msg = tr("{0} · about {1} left").replace("{0}", msg).replace("{1}", mss(el * (1 - p) / p));
+    return msg;
   }
   function clipLoad() {
     var t = state.take;
     if (!t || t.session) return clipShow(null);
     var sh = clipShape();                              // HERESY 1917: the clip of the shape chosen
-    api("/video/clip?name=" + encodeURIComponent(t.name) + (sh === "16:9" ? "" : "&shape=" + encodeURIComponent(sh))).then(function (b) {
+    api("/video/clip?name=" + encodeURIComponent(t.name) + clipQuery(sh)).then(function (b) {
       if (state.take !== t || clipShape() !== sh) return;
       if (b.__status === 202) {
-        state.clip = "running"; paint(); say(tr("the clip: {0} %").replace("{0}", Math.round((b.progress || 0) * 100)));
+        state.clip = "running"; paint(); say(clipSay(b));   // HERESY 2326: where the render is, and the time left
         return setTimeout(clipLoad, 2000);
       }
       var was = state.clip; state.clip = ""; clipShow(b); paint();
@@ -441,10 +547,11 @@
         var shots = (state.plan && state.plan.shots) || [];
         say(tr("the clip: {0} of {1} shots with their own picture").replace("{0}", shots.filter(function (s) { return s.frame; }).length).replace("{1}", shots.length));
       }
-    }).catch(function (e) {                            // said only when one was being cut: a lab without it says nothing
+    }).catch(function (e) {                            // said only when one was being cut: a lab without it (404) says nothing
       if (state.take !== t || clipShape() !== sh) return;
       var was = state.clip; state.clip = ""; clipShow(null); paint();
       if (was === "running") say(e.message, true);
+      else if (e.status !== 404) say(state.readErr = tr("The clip could not be read: {0}").replace("{0}", e.message), true);   // HERESY 2346: never «no clip» unsaid (a render is 18 minutes)
     });
   }
 
@@ -459,17 +566,33 @@
   // the look and under the words; a take keeps its own in this browser, beside its look (a film needs no look); sent with the clip only when there
   var FILM_KEY = "yue2.vdClipFilm";
   function filmAll() { try { return JSON.parse(localStorage.getItem(FILM_KEY) || "{}") || {}; } catch (e) { return {}; } }
-  function filmOf(name) { var f = filmAll()[name] || {}; return { grain: +f.g || 0, vignette: +f.v || 0 }; }
-  function filmSet(name, g, v) {
+  function filmOf(name) { var f = filmAll()[name] || {}; return { grain: +f.g || 0, vignette: +f.v || 0, halation: +f.h || 0, jitter: Math.min(JITTER_MAX, +f.j || 0) }; }   // 2242: halation, jitter; 2356: the weave at most 0.3
+  var JITTER_MAX = 0.3;                              // HERESY 2356: at 1.0 «Буратино» swayed ±5 px and shook the faces
+  function filmSet(name, g, v, h, j) {
     var all = filmAll();
-    if (g > 0 || v > 0) all[name] = { g: g, v: v }; else delete all[name];
+    h = +h || 0; j = +j || 0;
+    if (g > 0 || v > 0 || h > 0 || j > 0) { all[name] = { g: g, v: v }; if (h > 0) all[name].h = h; if (j > 0) all[name].j = j; } else delete all[name];
     sideKeep(FILM_KEY, Object.keys(all).length ? JSON.stringify(all) : "");
     lookPaint();
   }
+  // HERESY 2250 (the note of 02.11.2026, §2 item 3): the primaries before the look, lift, gamma, gain, contrast and saturation, each −100…100
+  var PRIM_KEY = "yue2.vdClipPrimary", PRIM = ["lift", "gamma", "gain", "contrast", "saturation"];
+  function primAll() { try { return JSON.parse(localStorage.getItem(PRIM_KEY) || "{}") || {}; } catch (e) { return {}; } }
+  function primOf(name) { var p = primAll()[name] || {}, o = {}; PRIM.forEach(function (k) { o[k] = +p[k] || 0; }); return o; }
+  function primOn(p) { return PRIM.some(function (k) { return p[k]; }); }
+  function primSet(name, p) {
+    var all = primAll();
+    if (primOn(p)) all[name] = p; else delete all[name];
+    sideKeep(PRIM_KEY, Object.keys(all).length ? JSON.stringify(all) : "");
+    lookPaint();
+  }
   function lookSent(name) {                          // the look as the clip takes it: its film only when there is one
-    var l = lookOf(name), f = filmOf(name);
+    var l = lookOf(name), f = filmOf(name), pr = primOf(name);
+    if (primOn(pr)) l.primary = pr;                       // HERESY 2250
     if (f.grain > 0) l.grain = f.grain;
     if (f.vignette > 0) l.vignette = f.vignette;
+    if (f.halation > 0) l.halation = f.halation;          // HERESY 2242
+    if (f.jitter > 0) l.jitter = f.jitter;
     return l;
   }
   function lookSet(name, id, label, s) {
@@ -481,9 +604,10 @@
   function lookPaint() {
     var b = $("vdClipLook");
     if (!b) return;
-    var l = state.take ? looksAll()[state.take.name] : null, f = state.take ? filmOf(state.take.name) : { grain: 0, vignette: 0 }, fm = f.grain > 0 || f.vignette > 0;
-    b.textContent = (l && l.id ? tr("Look: {0}").replace("{0}", (l.name || l.id) + (l.s < 0.999 ? " · " + Math.round(l.s * 100) + " %" : "")) : tr("Look")) + (fm ? " + " + tr("film") : "");   // 2017
-    b.setAttribute("aria-pressed", (l && l.id) || fm ? "true" : "false");
+    var l = state.take ? looksAll()[state.take.name] : null, f = state.take ? filmOf(state.take.name) : { grain: 0, vignette: 0 }, fm = f.grain > 0 || f.vignette > 0 || f.halation > 0 || f.jitter > 0;
+    var pm = state.take ? primOn(primOf(state.take.name)) : false;   // HERESY 2250
+    b.textContent = (l && l.id ? tr("Look: {0}").replace("{0}", (l.name || l.id) + (l.s < 0.999 ? " · " + Math.round(l.s * 100) + " %" : "")) : tr("Look")) + (fm ? " + " + tr("film") : "") + (pm ? " + " + tr("correction") : "");   // 2017
+    b.setAttribute("aria-pressed", (l && l.id) || fm || pm ? "true" : "false");
   }
   function looksClose() { var b = $("vdLooks"); if (b) b.remove(); document.removeEventListener("keydown", looksKey, true); }
   function looksKey(e) { if (e.key === "Escape" && $("vdLooks")) { e.preventDefault(); e.stopPropagation(); looksClose(); } }
@@ -498,9 +622,19 @@
       '<span class="vdl-packs" role="group"></span>' +
       '<label class="vdl-s" data-tip="' + esc(tr("How much of the look: a breath of it at the left, all of it at the right")) + '"><span>' + esc(tr("Strength")) + '</span><input type="range" min="0" max="100" step="5" class="vdl-range" value="' + Math.round(cur.strength * 100) + '" /><b class="vdl-sv mono">' + Math.round(cur.strength * 100) + " %</b></label>" +
       [["g", "Grain", "A film's grain over the whole clip, a new pattern each frame: none at the left, heavy at the right", fm0.grain],   // HERESY 2017
-       ["v", "Vignette", "The corners darkened, as an old lens darkens them: none at the left, deep at the right", fm0.vignette]].map(function (x) {
-        return '<label class="vdl-s" data-tip="' + esc(tr(x[2])) + '"><span>' + esc(tr(x[1])) + '</span><input type="range" min="0" max="100" step="5" class="vdl-film" data-film="' + x[0] +
+       ["v", "Vignette", "The corners darkened, as an old lens darkens them: none at the left, deep at the right", fm0.vignette],
+       ["h", "Halation", "A red glow round the brightest lights, as film lays it: none at the left, strong at the right", fm0.halation],   // HERESY 2242
+       ["j", "Jitter", "The frame's gentle weave in the gate, as a film projector's: none at the left, a clear sway at the right", fm0.jitter]].map(function (x) {
+        return '<label class="vdl-s" data-tip="' + esc(tr(x[2])) + '"><span>' + esc(tr(x[1])) + '</span><input type="range" min="0" max="' + (x[0] === "j" ? Math.round(JITTER_MAX * 100) : 100) + '" step="5" class="vdl-film" data-film="' + x[0] +
           '" value="' + Math.round(x[3] * 100) + '" /><b class="vdl-fv mono">' + Math.round(x[3] * 100) + " %</b></label>"; }).join("") +
+      [["lift", "Lift", "The blacks: deeper at the left, lifted at the right, before the look"],   // HERESY 2250: the primaries
+       ["gamma", "Gamma", "The middle tones: darker at the left, brighter at the right, before the look"],
+       ["gain", "Gain", "The whites: dimmer at the left, brighter at the right, before the look"],
+       ["contrast", "Contrast", "Contrast round the middle grey: flatter at the left, harder at the right, before the look"],
+       ["saturation", "Saturation", "The colours: towards grey at the left, richer at the right, before the look"]].map(function (x) {
+        var v = primOf(state.take.name)[x[0]] || 0;
+        return '<label class="vdl-s" data-tip="' + esc(tr(x[2])) + '"><span>' + esc(tr(x[1])) + '</span><input type="range" min="-100" max="100" step="5" class="vdl-prim" data-prim="' + x[0] +
+          '" value="' + Math.round(v * 100) + '" /><b class="vdl-fv mono">' + Math.round(v * 100) + "</b></label>"; }).join("") +
       '<button type="button" class="btn ghost small vdl-x" data-vdl="close" aria-label="' + esc(tr("Close")) + '" data-tip="' + esc(tr("Close")) + '">×</button></div>' +
       '<div class="vdl-grid" role="listbox"><p class="vdl-wait">' + esc(tr("Reading the looks…")) + "</p></div>" +
       '<div class="vdl-foot"><span class="vdl-about row-hint"></span><span class="vdl-fetch"></span></div></div>';
@@ -529,7 +663,16 @@
     Array.prototype.forEach.call(back.querySelectorAll(".vdl-film"), function (r) {   // HERESY 2017: the film, kept as the hand moves
       r.addEventListener("input", function () {
         this.nextElementSibling.textContent = this.value + " %";
-        filmSet(state.take.name, +back.querySelector('.vdl-film[data-film="g"]').value / 100, +back.querySelector('.vdl-film[data-film="v"]').value / 100);
+        var fv = function (k) { return +back.querySelector('.vdl-film[data-film="' + k + '"]').value / 100; };
+        filmSet(state.take.name, fv("g"), fv("v"), fv("h"), fv("j"));
+      });
+    });
+    Array.prototype.forEach.call(back.querySelectorAll(".vdl-prim"), function (r) {   // HERESY 2250: the primaries, kept as the hand moves
+      r.addEventListener("input", function () {
+        this.nextElementSibling.textContent = this.value;
+        var p = {};
+        PRIM.forEach(function (k) { p[k] = +back.querySelector('.vdl-prim[data-prim="' + k + '"]').value / 100; });
+        primSet(state.take.name, p);
       });
     });
     document.addEventListener("keydown", looksKey, true);
@@ -579,8 +722,30 @@
     SCENE.forEach(function (k) { labels[k] = tr(LABEL[k]); });   // a shot with nothing to show, in a take with no cover, shows its scene
     state.clip = "running"; paint(); say(tr("the clip: {0} %").replace("{0}", 0));
     var lyr = !!state.clipLyrics, btw = $("vdClipBetween") ? $("vdClipBetween").value : "cut";   // HERESY 1916
-    settled().then(function () { return api("/video/clip", { name: t.name, labels: labels, lyrics: lyr, between: btw, shape: clipShape(), titles: !!state.clipTitles, look: lookSent(t.name) }); }).then(function () { setTimeout(clipLoad, 1200); })
+    var more = { every: clipVal("vdClipEvery", "sections") === "every", reframe: clipVal("vdClipReframe", "hand"), draft: !!state.clipDraft, title_style: clipVal("vdClipTitleStyle", "centre"),   // HERESY 2243–2246
+                 words: clipVal("vdClipWords", "lines") === "words", match: clipVal("vdClipMatch", "none") === "cur" ? (state.cur || 0) : null,   // HERESY 2248, 2249
+                 upscale: clipVal("vdClipUp", "lanczos") };   // HERESY 2356: Lanczos unless SeedVR2 is chosen
+    settled().then(function () { return api("/video/clip", Object.assign({ name: t.name, labels: labels, lyrics: lyr, between: btw, shape: clipShape(), titles: !!state.clipTitles, look: lookSent(t.name) }, more)); }).then(function () { setTimeout(clipLoad, 1200); })
       .catch(function (e) { state.clip = ""; paint(); say(e.message, true); });
+  }
+  // HERESY 2325: the look's setting as a shot's prompt carries it: one place, as written; several one after another («…, then …, and finally …», or
+  // parts split by «;»): left out, the shot's own words saying where (a look written before 2325 made 2512 paint diptychs of its three places)
+  function settingLine(s, places) {
+    s = String(s || "").trim();
+    if (!s) return "";
+    if (places !== "one") return "Setting: " + s;         // HERESY 2356: slices: the places as written, several in a frame as he likes them
+    return /;|\b(?:and then|then|later|finally|afterwards|followed by)\b/i.test(s) ? "" : "Setting: " + s;
+  }
+  // HERESY 2356 (the diagnosis of «Буратино», 10.11.2026: the plan's line said «sharp wooden nose… puppet», the hero's picture «a long sharp wooden
+  // nose… boy»; «long» was in none of H3's forty prompts and its nose went button): the hero picture's own words, one fixed line in every prompt
+  // (2.1's, 2512's and H3's): the part of the look's characters that names him replaced by them, else set before them
+  function charLine(c) {
+    var chars = String((c.look || {}).characters || "").trim(), words = String(c.hero_words || "").trim();
+    if (!words || !(state.plan && state.plan.hero)) return chars;
+    var first = words.split(",")[0].trim(), name = first.split(/\s+/).length <= 4 ? first.toLowerCase() : "";
+    var parts = chars.split(";").map(function (x) { return x.trim(); }).filter(Boolean);
+    for (var k = 0; name && k < parts.length; k++) if (parts[k].toLowerCase().indexOf(name) >= 0) { parts[k] = words; return parts.join("; "); }
+    return [words].concat(parts).join("; ");
   }
   // HERESY 1830: a shot as a video model reads it: its scene, then the clip's look, then its length (the fields as they stand, saved or not)
   function promptOf(i) {
@@ -589,8 +754,9 @@
     if (sc.camera) out.push("Camera: " + sc.camera);
     if (sc.motion) out.push("Motion: " + sc.motion);
     if (sc.light) out.push("Light and colour: " + sc.light);
-    if (L.characters) out.push("Characters: " + L.characters);
-    if (L.setting) out.push("Setting: " + L.setting);
+    var who = charLine(c), where = settingLine(L.setting, c.places);   // HERESY 2356: the hero's own words; 2325, 2356: the places
+    if (who) out.push("Characters: " + who);
+    if (where) out.push(where);
     if (L.palette) out.push("Palette: " + L.palette);
     if (L.notes) out.push("Notes: " + L.notes);
     out.push("Length: " + (s.t1 - s.t0).toFixed(1) + " s");
@@ -599,13 +765,14 @@
   // HERESY 1839: a shot as a picture model reads it: what is seen, who and where, the framing, the light and colours (no motion, no length)
   function picturePromptOf(i) {
     var c = collect(), sc = c.scenes[i] || {}, L = c.look, out = [];
+    var who = charLine(c), where = settingLine(L.setting, c.places);   // HERESY 2356
     if (sc.shot) out.push(sc.shot);
-    if (L.characters) out.push(L.characters);
-    if (L.setting) out.push("Setting: " + L.setting);
+    if (who) out.push(who);
+    if (where) out.push(where);
     if (sc.camera) out.push("Framing: " + sc.camera);
     if (sc.light) out.push("Light and colour: " + sc.light);
     if (L.palette) out.push("Palette: " + L.palette);
-    out.push("A still frame of a music video, no text.");
+    out.push(c.places === "one" ? "One single still frame of a music video: one scene, one place, no text." : "A still frame of a music video, no text.");   // HERESY 2325; 2356: slices as before it
     return out.join("\n");
   }
   function toArtist(i) {
@@ -807,7 +974,9 @@
     SIDE.folded = !on; sidePaint();
     if (on) sideLoad();
   }
-  function sideLoad() { api("/video/plans").then(function (b) { SIDE.plans = b.plans || []; sidePaint(); }).catch(function () { SIDE.plans = []; sidePaint(); }); }
+  // HERESY 2208 (the audit of 06.11.2026, item 16): a list the lab could not give is said so, never «No plans yet»; the plans shown before stay
+  // (2221: under a line that says the read failed, so a kept list never passes for a fresh one)
+  function sideLoad() { api("/video/plans").then(function (b) { SIDE.plans = b.plans || []; SIDE.err = ""; sidePaint(); }).catch(function (e) { SIDE.err = e.message || String(e); sidePaint(); }); }
   function sideSoon() { clearTimeout(SIDE.timer); SIDE.timer = setTimeout(function () { if (document.body.dataset.tab === "video") sideLoad(); }, 800); }
   function frameUrl(name, f) { return "/lab/video/frame?name=" + encodeURIComponent(name) + "&f=" + encodeURIComponent(f); }
   // HERESY 2139: a take's cover by its key, as the Librarian's (app.js HeresyArt.url: kept a year under it); a take /arts does not list yet, as it was
@@ -822,19 +991,22 @@
     var words = SIDE.q.toLowerCase().split(/\s+/).filter(Boolean), cur = state.take && state.take.name;
     var plans = SIDE.plans.filter(function (p) { var hay = String(p.title || p.name).toLowerCase(); return words.every(function (w) { return hay.indexOf(w) >= 0; }); });
     if (SIDE.filter === "clips") plans = plans.filter(function (p) { return (p.clip && p.clip.exists) || (p.animatic && p.animatic.exists); });
-    $("vdSideCount").textContent = String(plans.length); $("vdUnfoldCount").textContent = String(SIDE.plans.length);
+    var unknown = SIDE.err && !SIDE.plans.length;          // HERESY 2208: not 0 when the list could not be read
+    // HERESY 2221: the plans kept from before a failed read stand under the failure's own line
+    var stale = SIDE.err && SIDE.plans.length ? '<p class="row-hint vd-side-none">' + esc(tr("The plans could not be read: {0}").replace("{0}", SIDE.err)) + "</p>" : "";
+    $("vdSideCount").textContent = unknown ? "\u2014" : String(plans.length); $("vdUnfoldCount").textContent = unknown ? "\u2014" : String(SIDE.plans.length);
     list.classList.toggle("is-tiles", SIDE.wide || SIDE.filter === "pics");
     if (SIDE.filter === "pics") {
       var pics = [];
       plans.forEach(function (p) { (p.frames || []).forEach(function (fr) { pics.push({ p: p, fr: fr }); }); });
-      list.innerHTML = pics.length ? pics.map(function (x) {
+      list.innerHTML = stale + (pics.length ? pics.map(function (x) {
         return '<button type="button" class="vd-tile is-pic" data-vdside-take="' + esc(x.p.name) + '" data-vdside-shot="' + x.fr.i + '" data-pic="' + esc(frameUrl(x.p.name, x.fr.f)) + '">' +
           '<img src="' + esc(frameUrl(x.p.name, x.fr.f)) + '" alt="" loading="lazy"><span class="vd-tile-name" translate="no">' + esc(x.p.title || x.p.name) + "</span>" +
           '<span class="vd-tile-sub mono">' + esc(tr("shot {0}").replace("{0}", x.fr.i + 1)) + "</span></button>";
-      }).join("") : '<p class="row-hint vd-side-none">' + esc(tr("No shot has a picture of its own yet")) + "</p>";
+      }).join("") : '<p class="row-hint vd-side-none">' + esc(unknown ? tr("The plans could not be read: {0}").replace("{0}", SIDE.err) : tr("No shot has a picture of its own yet")) + "</p>");
       return;
     }
-    list.innerHTML = plans.length ? plans.map(function (p) {
+    list.innerHTML = stale + (plans.length ? plans.map(function (p) {
       var fr = (p.frames || [])[0], img = fr ? frameUrl(p.name, fr.f) : artOf(p.name);
       var films = (p.clip && p.clip.exists ? '<button type="button" class="vd-film-btn" data-vdside-play="clip" data-tip="' + esc(tr("Play the clip")) + '">▶ ' + esc(tr("Clip")) + "</button>" : "") +
         (p.animatic && p.animatic.exists ? '<button type="button" class="vd-film-btn" data-vdside-play="animatic" data-tip="' + esc(tr("Play the animatic")) + '">▶ ' + esc(tr("Animatic")) + "</button>" : "");
@@ -843,7 +1015,7 @@
         '<span class="vd-tile-name" translate="no">' + esc(p.title || p.name) + "</span>" +
         '<span class="vd-tile-sub mono">' + esc(tr("{0} shots · {1} written · {2} pictures").replace("{0}", p.shots || 0).replace("{1}", p.written || 0).replace("{2}", (p.frames || []).length)) + "</span>" +
         (films ? '<span class="vd-tile-films">' + films + "</span>" : "") + "</div>";
-    }).join("") : '<p class="row-hint vd-side-none">' + esc(tr(SIDE.plans.length ? "Nothing here for these words" : "No plans yet: find a take above and make its plan")) + "</p>";
+    }).join("") : '<p class="row-hint vd-side-none">' + esc(unknown ? tr("The plans could not be read: {0}").replace("{0}", SIDE.err) : tr(SIDE.plans.length ? "Nothing here for these words" : "No plans yet: find a take above and make its plan")) + "</p>");
   }
   function sideOpen(name, then) {
     if (!window.ruachOpenTake || !window.ruachFindTakeFull || !window.ruachFindTakeFull(name)) return say(tr("This take is not in the Studio's list"), true);
@@ -913,6 +1085,9 @@
     if (TL.fit && $("tlZoom")) $("tlZoom").value = (Math.log(pps) / Math.LN2).toFixed(1);
     var step = [1, 2, 5, 10, 15, 30, 60, 120].filter(function (s) { return s * pps >= 64; })[0] || 120, ticks = "";
     for (var t = 0; t <= end + 1e-6; t += step) ticks += '<span class="tl-tick mono" style="left:' + px(t) + '">' + tlShort(t) + "</span>";
+    var rh = state.plan.rhythm, bt = rh && rh.beats ? rh.beats : [], bl = rh && rh.bars ? rh.bars : [];   // HERESY 2262: the beats and bars heard
+    if (bt.length > 1 && (bt[bt.length - 1] - bt[0]) / (bt.length - 1) * pps >= 5) bt.forEach(function (b) { ticks += '<i class="tl-beat" style="left:' + px(b) + '"></i>'; });
+    if (bl.length > 1 && (bl[1] - bl[0]) * pps >= 4) bl.forEach(function (b) { if (b <= end) ticks += '<i class="tl-barln" style="left:' + px(b) + '"></i>'; });
     $("tlRuler").innerHTML = ticks;
     var runs = [];
     sh.forEach(function (s) { var r = runs[runs.length - 1]; if (r && r.sec === (s.section || "")) r.t1 = s.t1; else runs.push({ sec: s.section || "", t0: s.t0, t1: s.t1 }); });
@@ -923,11 +1098,14 @@
       var pic = s.video ? shotThumb(s.video) : s.frame ? picUrl(s.frame) : "";   // HERESY 1868: its video's first frame first
       return '<div class="tl-clip' + (i === TL.sel ? " is-sel" : "") + (s.sung ? " is-sung" : "") + (pic ? " has-pic" : "") + (s.video ? " has-video" : "") + '" data-tl="' + i + '" style="left:' + px(s.t0) +
         ";width:" + Math.max(2, (s.t1 - s.t0) * pps - 1).toFixed(1) + "px" + (pic ? ";background-image:url(" + esc(pic) + ")" : "") + '"><b class="mono">' + (i + 1) + "</b></div>";
-    }).join("") + sh.slice(0, -1).map(function (s, i) { return '<i class="tl-cut' + (i === TL.cut ? " is-sel" : "") + '" data-tlcut="' + i + '" style="left:' + px(s.t1) + '"></i>'; }).join("");
+    }).join("") + sh.slice(0, -1).map(function (s, i) {
+      var on = tlOn(s.t1), tip = on ? ' data-tip="' + esc(tr(on === "bar" ? "On a bar line" : "On a beat")) + '"' : "";   // HERESY 2262: a cut on one, lit
+      return '<i class="tl-cut' + (i === TL.cut ? " is-sel" : "") + (on ? " on-" + on : "") + '" data-tlcut="' + i + '"' + tip + ' style="left:' + px(s.t1) + '"></i>';
+    }).join("");
     $("tlL1").innerHTML = sh.map(function (s) {
       return s.words ? '<div class="tl-word" style="left:' + px(s.t0) + ";width:" + Math.max(2, (s.t1 - s.t0) * pps - 1).toFixed(1) + 'px" translate="no">' + esc(s.words) + "</div>" : "";
     }).join("");
-    tlWave(W); tlHead(); tlInspect();
+    tlWave(W); tlHead(); tlInspect(); histPaint();
   }
   function tlWave(W) {
     var cv = $("tlWave"), take = state.take;
@@ -984,15 +1162,50 @@
       SCENE.map(function (k) { return sc[k] ? '<p class="tl-iscene"><span class="label">' + esc(tr(LABEL[k])) + '</span> <span translate="no">' + esc(sc[k]) + "</span></p>" : ""; }).join("") +
       '<button type="button" class="btn ghost small" data-tlcard="' + TL.sel + '">' + esc(tr("Its card in Shots")) + "</button>";   // HERESY 1961: the room beside, not below
   }
+  function tlOn(t) {                                     // HERESY 2262: «bar» or «beat» for a cut on one the lab heard, «» on neither
+    var rh = state.plan && state.plan.rhythm, near = function (xs) { return (xs || []).some(function (x) { return Math.abs(x - t) < 0.02; }); };
+    return !rh ? "" : near(rh.bars) ? "bar" : near(rh.beats) ? "beat" : "";
+  }
   function tlCuts() { return tlShots().map(function (s) { return [s.t0, s.t1]; }); }
   function tlParents() { return tlShots().map(function (s, i) { return i; }); }
-  function tlPost(cuts, parents, said) {
+  function tlPost(cuts, parents, said, redo) {
     var t = state.take;
     if (!t || state.busy) return;
     state.busy = true; paint();
-    settled().then(function () { return api("/video/cuts", cuts ? { name: t.name, cuts: cuts, parents: parents } : { name: t.name, undo: true }); })
-      .then(function (p) { state.busy = false; if (state.take !== t) return; state.plan = p; state.dirty = false; paint(); if (said) say(said); })
+    settled().then(function () { return api("/video/cuts", cuts ? { name: t.name, cuts: cuts, parents: parents } : redo ? { name: t.name, redo: true } : { name: t.name, undo: true }); })
+      .then(function (p) {
+        state.busy = false; if (state.take !== t) return; state.plan = p; state.dirty = false; paint();
+        var st = p.step || {}, w = st.undone || st.redone;   // HERESY 2268: the step named
+        if (w) say(tr(st.redone ? "Redone: {0}" : "Undone: {0}").replace("{0}", stepName(w))); else if (said) say(said);
+      })
       .catch(function (e) { state.busy = false; paint(); say(e.message, true); });
+  }
+  // HERESY 2268: the plan's history (kept by the lab with the plan: a reload, a restart or another browser keep it): every edit of the plan a step,
+  // named; Undo and Redo on the timeline's bar, Ctrl+Z and Ctrl+Shift+Z (Ctrl+Y) on the timeline and anywhere in the room but a field
+  var STEPS = { split: "a shot cut in two", join: "two shots joined", move: "a cut moved", "cuts:off": "the cuts back as sung", "cuts:sections": "the cuts on the sections",
+    "cuts:beats": "the cuts on the beat", edit: "the scenes, the look and the titles", remake: "the plan cut again", timeline: "an edit of the timeline" };
+  function stepName(w) {
+    var m = /^(picture|picture-off):(\d+)$/.exec(String(w || ""));
+    if (m) return tr(m[1] === "picture" ? "the picture of shot {0}" : "the picture of shot {0} taken off").replace("{0}", +m[2] + 1);
+    return tr(STEPS[w] || STEPS.timeline);
+  }
+  function histPaint() {
+    var p = state.plan, un = (p && p.undo) || [], re = (p && p.redo) || [];
+    var last = function (a) { var x = a[a.length - 1]; return stepName(x && !Array.isArray(x) ? x.what : "timeline"); };
+    Array.prototype.forEach.call(document.querySelectorAll('#vdEdit [data-tlact="undo"], #vdEdit [data-tlact="redo"]'), function (b) {
+      var redo = b.dataset.tlact === "redo", list = redo ? re : un;
+      b.disabled = !list.length || state.busy;
+      b.dataset.tip = list.length ? tr(redo ? "Redo: {0}" : "Undo: {0}").replace("{0}", last(list)) + (redo ? " (Ctrl+Shift+Z)" : " (Ctrl+Z)") : tr(redo ? "Nothing to redo" : "Nothing to undo");
+    });
+  }
+  function histKey(e) {                                   // the room's own Ctrl+Z, outside its fields and its timeline (which has its keys)
+    if (document.body.dataset.tab !== "video" || e.defaultPrevented || !(e.ctrlKey || e.metaKey) || e.altKey) return;
+    var k = e.key, redo = ((k === "z" || k === "Z") && e.shiftKey) || k === "y" || k === "Y";
+    if (!redo && !(k === "z" || k === "Z")) return;
+    if (e.target.closest && e.target.closest("input, textarea, select, [contenteditable], #tl, .hd-win, [role=dialog]")) return;
+    if (!state.plan || !state.plan.exists || $("vdBody").hidden) return;
+    e.preventDefault();
+    tlPost(null, null, "", redo);
   }
   function tlSplit(t) {
     var i = tlAt(t), s = tlShots()[i];
@@ -1062,6 +1275,7 @@
     if (e.target.closest && e.target.closest("input, textarea, select")) return;
     var k = e.key, t = tlNow(), sh = tlShots(), mod = e.ctrlKey || e.metaKey, done = true;
     if (mod && (k === "b" || k === "B")) tlSplit(t);
+    else if (mod && (((k === "z" || k === "Z") && e.shiftKey) || k === "y" || k === "Y")) tlPost(null, null, "", true);   // HERESY 2268
     else if (mod && (k === "z" || k === "Z")) tlPost(null, null, tr("The last edit undone"));
     else if (mod || e.altKey) done = false;
     else if (k === " " || k === "k" || k === "K") tlPlay(k === " " ? null : false);
@@ -1121,6 +1335,7 @@
         else if (k === "split") tlSplit(tlNow());
         else if (k === "join") tlJoin(TL.cut);
         else if (k === "undo") tlPost(null, null, tr("The last edit undone"));
+        else if (k === "redo") tlPost(null, null, "", true);   // HERESY 2268
         else if (k === "fit") { TL.fit = true; tlPaint(); }
         else if (k === "screen") tlScreen();
         return;
@@ -1156,7 +1371,7 @@
       h3Paint();
       if (fewer) api("/video/plan?name=" + encodeURIComponent(t.name)).then(function (p) { if (state.take === t && !state.dirty) { state.plan = p; paint(); } });   // a shot came
       if (active) state.h3timer = setTimeout(h3Load, 5000);
-    }).catch(function () { /* a lab without H3: no chips */ });
+    }).catch(function () { if (state.take === t && state.h3 && state.h3.active) state.h3timer = setTimeout(h3Load, 10000); });   // a lab without H3: no chips; HERESY 2265: away while shots go, asked again
   }
   function h3Paint() {
     var by = {};
@@ -1185,11 +1400,14 @@
     var s = state.plan && state.plan.shots[i], r = anchor.getBoundingClientRect();
     if (!s || !window.HeresyMenu) return shoot([i], "draft");
     window.HeresyMenu.open(r.left, r.bottom + 4, [
-      { label: "Draft · 8 steps", icon: "🎬", action: function () { shoot([i], "draft"); } },
-      { label: "Final · 28 steps", icon: "🎞", action: function () { shoot([i], "final"); } }
+      { label: "Draft · 8 steps, 1280 × 704", icon: "🎬", action: function () { shoot([i], "draft"); } },   // HERESY 2356: 704p, the faces' own cells
+      { label: "Fast · 8 steps, 832 × 480", icon: "🎬", action: function () { shoot([i], "fast"); } },
+      { label: "Final · 28 steps, 1280 × 704", icon: "🎞", action: function () { shoot([i], "final"); } }   // HERESY 2361: the draft's size, 28 steps
     ].concat(s.video ? [{ sep: true },
       { label: "Upscale · 7B sharp, 1080p", icon: "\u21ee", action: function () { upscale([i], "7b", 1080); } },   // HERESY 1876b
       { label: "Upscale · 7B sharp, 1440p", icon: "\u21ee", action: function () { upscale([i], "7b", 1440); } },
+      { label: "Upscale · 7B sharp fp8, 1080p (faster)", icon: "\u21ee", action: function () { upscale([i], "7b-fp8", 1080); } },   // HERESY 2324
+      { label: "Upscale · 7B sharp fp8, 720p (twice as fast)", icon: "\u21ee", action: function () { upscale([i], "7b-fp8", 720); } },
       { label: "Upscale · 3B, 1080p (quick)", icon: "\u21ee", action: function () { upscale([i], "3b", 1080); } },
       { sep: true }, { label: "Take its video off", icon: "✕", action: function () {
       api("/video/shot-off", { name: state.take.name, i: i }).then(function (p) { state.plan = p; paint(); }).catch(function (e) { say(e.message, true); });
@@ -1202,8 +1420,9 @@
     if (!t || !list.length) return;
     settled().then(function () { return api("/video/upscale", { name: t.name, shots: list, model: model, res: res }); })
       .then(function (b) {
-        var n = (b.jobs || []).reduce(function (k, j) { return k + j.shots.length; }, 0);
-        say(tr("{0} shot(s) to SeedVR2 on {1} card(s)").replace("{0}", n).replace("{1}", (b.jobs || []).length)); srLoad();
+        var n = (b.jobs || []).reduce(function (k, j) { return k + j.shots.length; }, 0), up = $("vdClipUp");
+        if (up && up.value !== "seedvr2") { up.value = "seedvr2"; sideKeep("yue2.vdClipUp", "seedvr2"); }   // HERESY 2356: asked for, so the clip takes them
+        say(tr("{0} shot(s) to SeedVR2 on {1} card(s)").replace("{0}", n).replace("{1}", (b.jobs || []).length) + " · " + tr("the clip takes SeedVR2's upscales")); srLoad();
       }).catch(function (e) { say(e.message, true); });
   }
   function upscaleAll() {
@@ -1211,8 +1430,21 @@
     if (!p || !p.exists) return;
     var list = p.shots.map(function (s, i) { return s.video && !s.video_up ? i : -1; }).filter(function (i) { return i >= 0; });
     if (!list.length) return say(tr("No shot with a video still to upscale"), true);
-    window.HeresyDialog.confirm(tr(ASK_UP).replace("{0}", list.length), { ok: "Upscale all" }).then(function (ok) { if (ok) upscale(list, "7b", 1080); });
+    // HERESY 2324 (Viktor 10.11.2026: «Вопрос, на скольких шагах ты его херачишь»): which SeedVR2, picked from a menu at the button; 7B sharp first
+    var go = function (model, name, res) {
+      window.HeresyDialog.confirm(tr(res === 720 ? ASK_UP720 : ASK_UP2).replace("{0}", list.length).replace("{1}", name), { ok: "Upscale all" }).then(function (ok) { if (ok) upscale(list, model, res || 1080); });
+    };
+    var b = $("vdUpAll"), r = b ? b.getBoundingClientRect() : null;
+    if (!r || !window.HeresyMenu) return go("7b", "SeedVR2 7B sharp");
+    window.HeresyMenu.open(r.left, r.bottom + 4, [
+      { label: "Upscale · 7B sharp, 1080p", icon: "\u21ee", action: function () { go("7b", "SeedVR2 7B sharp"); } },
+      { label: "Upscale · 7B sharp fp8, 1080p (faster)", icon: "\u21ee", action: function () { go("7b-fp8", "SeedVR2 7B sharp fp8"); } },
+      { label: "Upscale · 7B sharp fp8, 720p (twice as fast)", icon: "\u21ee", action: function () { go("7b-fp8", "SeedVR2 7B sharp fp8", 720); } },
+      { label: "Upscale · 3B, 1080p (quick)", icon: "\u21ee", action: function () { go("3b", "SeedVR2 3B"); } }
+    ]);
   }
+  var ASK_UP720 = "Upscale all {0} shots that have a video with {1} to 720p? The clip scales them to its size.\n\nOn every free card at once, each card loading it once for its share; the clip takes each one as it comes.";
+  var ASK_UP2 = "Upscale all {0} shots that have a video with {1} to 1080p?\n\nOn every free card at once, each card loading it once for its share; the clip takes each one as it comes.";
   var ASK_UP = "Upscale all {0} shots that have a video with SeedVR2 7B sharp to 1080p?\n\nOn the free cards, about four minutes for a shot of four seconds; the clip takes each one as it comes. A shot's 🎬 menu has 1440p and the quick 3B.";
   function srLoad() {
     var t = state.take;
@@ -1225,7 +1457,7 @@
       srPaint();
       if (fewer) api("/video/plan?name=" + encodeURIComponent(t.name)).then(function (p) { if (state.take === t && !state.dirty) { state.plan = p; paint(); } });   // an upscale came
       if (active) state.srtimer = setTimeout(srLoad, 8000);
-    }).catch(function () { /* a lab without the upscaler: no chips */ });
+    }).catch(function () { if (state.take === t && state.sr && state.sr.active) state.srtimer = setTimeout(srLoad, 10000); });   // a lab without the upscaler: no chips; HERESY 2265: asked again
   }
   function srPaint() {
     var by = {};
@@ -1241,7 +1473,13 @@
   // two at a time: a shot with the hero from the hero's picture (Qwen-Image 2.1, then 2512 over it at 0.35), the others by 2512 from their scene
   var HERO_PICK = 9999;
   var HERO_TIP = "Is the hero in this shot? Pressed: drawn from the hero's picture; not pressed: from the scene's words alone";
-  function heroIn(i) { var s = state.plan && state.plan.shots[i]; return !!s && (typeof s.hero === "boolean" ? s.hero : !!s.sung); }
+  // HERESY 2356: a shot whose scene names the hero (the first words of his own, «Buratino») is his by default too, sung or not: drawn from words,
+  // 2512 gave «Буратино» in the doorway a button nose (likeness 0.69 against 0.84 for the shots drawn from his picture)
+  function namesHero(s) {
+    var h = state.plan && state.plan.hero, w = h && h.words ? String(h.words).split(",")[0].trim().toLowerCase() : "";
+    return !!w && w.split(/\s+/).length <= 4 && String((s.scene || {}).shot || "").toLowerCase().indexOf(w) >= 0;
+  }
+  function heroIn(i) { var s = state.plan && state.plan.shots[i]; return !!s && (typeof s.hero === "boolean" ? s.hero : !!s.sung || namesHero(s)); }
   function heroToggle(i) {
     return '<button type="button" class="btn ghost small vd-herotg" data-vdherotg="' + i + '" aria-pressed="' + (heroIn(i) ? "true" : "false") + '" data-tip="' + esc(tr(HERO_TIP)) + '" aria-label="' + esc(tr(HERO_TIP)) + '">\ud83d\udc64</button>';
   }
@@ -1251,8 +1489,25 @@
     s.hero = !heroIn(i); state.dirty = true; $("vdSave").disabled = state.busy;
     btn.setAttribute("aria-pressed", s.hero ? "true" : "false");
   }
+  // HERESY 2356: the hero's own words (his picture's prompt up to where the place begins, as the lab read it; his to change) and whether he has a
+  // person's skin (2512's Skin Detailer only then): «Буратино»'s wood got pores and a man's lines from it
+  var NOT_SKIN = /\b(?:wood(?:en)?|carved|puppet|marionette|doll|robot|android|cyborg|statue|sculpture|clay|plasticine|metal(?:lic)?|toy|plush|cartoon|animated|anime|creature|animal|dog|cat|fox|wolf|bear|bird|skeleton|mannequin|porcelain|figurine|stone|golem|alien|monster|lego|dragon)\b/i;
+  function heroWordsPaint(h) {
+    var box = $("vdHeroWordsBox"), ta = $("vdHeroWords"), sk = $("vdHeroSkin");
+    if (!box || !ta) return;
+    box.hidden = !h;
+    if (!h) return;
+    var key = h.run + "/" + h.file;
+    if (document.activeElement !== ta && !(state.dirty && box.dataset.hero === key)) ta.value = h.words || "";
+    box.dataset.hero = key;
+    var human = state.heroHuman !== undefined ? state.heroHuman : (typeof h.human === "boolean" ? h.human : !NOT_SKIN.test(ta.value));
+    if (sk) sk.setAttribute("aria-pressed", human ? "true" : "false");
+    var hl = $("vdHeroLast");                             // HERESY 2361
+    if (hl) hl.setAttribute("aria-pressed", (state.heroLast !== undefined ? state.heroLast : !!h.last) ? "true" : "false");
+  }
   function heroPaint() {
     var el = $("vdHero"), h = state.plan && state.plan.hero;
+    heroWordsPaint(h);                                    // HERESY 2356
     if (!el) return;
     el.innerHTML = (h ? '<img class="vd-hero-pic" src="/lab/artist/file?id=' + encodeURIComponent(h.run) + "&file=" + encodeURIComponent("thumbs/" + String(h.file).replace(/\.png$/, ".jpg")) + '" alt="" />'
       : '<span class="vd-none">' + esc(tr("No hero yet: every shot is drawn from its words")) + "</span>") +
@@ -1264,6 +1519,18 @@
     if (!t) return;
     settled().then(function () { return api("/video/hero", { name: t.name, off: true }); })
       .then(function (q) { if (state.take !== t) return; state.plan = q; paint(); say(tr("the hero is taken off")); }).catch(function (e) { say(e.message, true); });
+  }
+  // HERESY 2356: a plan cut before 2356 (shots of up to 12 s) made ready for H3 at 1280 × 704: each shot longer than one pass (5.17 s, stretched by at
+  // most 12 %) cut in pieces of one pass; the first keeps its picture and video, the others get their own pictures from «Draw the shots»
+  var LONG_S = 124 / 24 * 1.12;
+  function splitLong() {
+    var t = state.take, p = state.plan;
+    if (!t || !p || !p.exists) return;
+    settled().then(function () { return api("/video/split-long", { name: t.name }); }).then(function (q) {
+      if (state.take !== t) return;
+      state.plan = q; state.dirty = false; paint();
+      say(q.split ? tr("{0} long shot(s) cut into pieces of one H3 pass: draw their pictures with 🎨").replace("{0}", q.split) : tr("No shot is longer than one H3 pass"));
+    }).catch(function (e) { say(e.message, true); });
   }
   function drawAll() {
     var p = state.plan, t = state.take;
@@ -1286,7 +1553,8 @@
         .catch(function (e) { say(e.message, true); });
     });
   }
-  var ASK_DRAW = "The Artist draws the {0} shots that have no picture yet?\n\n{1} of them with the hero: Qwen-Image 2.1 from the hero's picture, then 2512 over it; the others by 2512 from their scene. Two at a time on the free cards, about a minute a shot; each picture goes into its shot as it comes.";
+  // HERESY 2322: on every free card at once, each card's painter loaded once for its share
+  var ASK_DRAW = "The Artist draws the {0} shots that have no picture yet?\n\n{1} of them with the hero: Qwen-Image 2.1 from the hero's picture, then 2512 over it; the others by 2512 from their scene. On every free card at once, each card loading its painter once for all its shots; each picture goes into its shot as it comes.";
   var ASK_REDRAW = "Every shot has its picture. Draw all {0} again? The pictures they have are put aside, not deleted.";
   function framesLoad() {
     var t = state.take;
@@ -1298,14 +1566,15 @@
       state.frames = b; framesPaint();
       if (more || ended) api("/video/plan?name=" + encodeURIComponent(t.name)).then(function (p) { if (state.take === t && !state.dirty) { state.plan = p; paint(); } });   // a picture came
       if (b.state === "running") state.frtimer = setTimeout(framesLoad, 5000);
-    }).catch(function () { /* a lab without the Artist's drawing */ });
+    }).catch(function () { if (state.take === t && state.frames && state.frames.state === "running") state.frtimer = setTimeout(framesLoad, 10000); });   // HERESY 2265: asked again
   }
   function framesPaint() {
     var b = state.frames || {}, btn = $("vdDrawAll"), el = $("vdFrames");
     if (btn) btn.textContent = tr(b.state === "running" ? "Stop drawing" : "\ud83c\udfa8 Draw the shots");
     if (!el) return;
     var errs = b.errors || [];
-    el.textContent = b.state === "running" ? tr("the Artist: {0} of {1}").replace("{0}", b.done || 0).replace("{1}", b.total || 0)
+    el.textContent = b.state === "running" ? tr("the Artist: {0} of {1}").replace("{0}", b.done || 0).replace("{1}", b.total || 0) +
+        (b.step && b.of ? " · " + (b.step === "hero" ? "Qwen-Image 2.1" : "Qwen-Image 2512") + " " + (b.painted || 0) + "/" + b.of + ((b.cards || []).length ? " · GPU " + b.cards.join(", ") : "") : "")   // HERESY 2322
       : b.state ? tr("the Artist drew {0} of {1}").replace("{0}", b.done || 0).replace("{1}", b.total || 0) + (errs.length ? " · " + tr("{0} failed").replace("{0}", errs.length) : "") : "";
     el.title = errs.map(function (x) { return (x.i + 1) + ": " + x.error; }).join("\n");
   }
@@ -1313,14 +1582,17 @@
     var p = state.plan;
     if (!p || !p.exists) return;
     var list = p.shots.map(function (s, i) { return i; });
-    window.HeresyDialog.confirm(tr(ASK_ALL).replace("{0}", list.length), { ok: "Shoot all" }).then(function (ok) { if (ok) shoot(list, "draft"); });
+    var long = p.shots.filter(function (s) { return s.t1 - s.t0 > LONG_S; }).length;   // HERESY 2356: a seam every 5 s unless cut first
+    window.HeresyDialog.confirm(tr(ASK_ALL).replace("{0}", list.length) + (long ? "\n\n" + tr(ASK_LONG).replace("{0}", long) : ""), { ok: "Shoot all" }).then(function (ok) { if (ok) shoot(list, "draft"); });
   }
   var ASK_ALL = "Shoot all {0} shots with MiniMax H3 as drafts?\n\nOn the free cards, a few minutes a shot; the clip takes each shot's video as it comes.";
+  var ASK_LONG = "{0} of them are longer than one pass of H3 at 1280 × 704 (about 5 s): each would get a seam every 5 s. «✂ Cut the long shots» first cuts them cleanly.";
   function wire() {
     if (!$("view-video") || wire.done) return;
     wire.done = true;
     vpAttach($("vdAnimVideo")); vpAttach($("vdClipVideo"));   // HERESY 1860
     tlWire();                                             // HERESY 1864
+    document.addEventListener("keydown", histKey);        // HERESY 2268: the plan's history from anywhere in the room
     $("vdSideList").addEventListener("click", function (e) {   // HERESY 1861: the mini library
       var p = e.target.closest("[data-vdside-play]"), t = e.target.closest("[data-vdside-take]");
       if (!t) return;
@@ -1401,13 +1673,14 @@
     $("vdWrite").addEventListener("click", write);
     $("vdSave").addEventListener("click", save);
     $("vdExport").addEventListener("click", storyboard);
-    if ($("vdBeats")) $("vdBeats").addEventListener("click", beatCuts);   // HERESY 1947
+    if ($("vdCutsOn")) $("vdCutsOn").addEventListener("change", function () { cutsOn(this.value); });   // HERESY 1947; 2262: how strictly
     if ($("vdEditZip")) $("vdEditZip").addEventListener("click", editExport);   // HERESY 1946
     if ($("vdAnimatic")) $("vdAnimatic").addEventListener("click", animMake);   // HERESY 1837
     if ($("vdClip")) $("vdClip").addEventListener("click", clipMake);   // HERESY 1838
     if ($("vdShootAll")) $("vdShootAll").addEventListener("click", shootAll);   // HERESY 1868
     if ($("vdUpAll")) $("vdUpAll").addEventListener("click", upscaleAll);   // HERESY 1876b
     if ($("vdDrawAll")) $("vdDrawAll").addEventListener("click", drawAll);   // HERESY 1913
+    if ($("vdSplitLong")) $("vdSplitLong").addEventListener("click", splitLong);   // HERESY 2356
     try { state.clipLyrics = localStorage.getItem("yue2.vdClipLyrics") === "1"; if ($("vdClipBetween")) $("vdClipBetween").value = localStorage.getItem("yue2.vdClipBetween") || "cut"; } catch (e) { /* private window */ }   // HERESY 1916
     try { state.clipTitles = localStorage.getItem("yue2.vdClipTitles") === "1"; } catch (e) { /* private window */ }   // HERESY 1948
     if ($("vdClipTitles")) {
@@ -1421,12 +1694,23 @@
     if ($("vdClipBetween")) $("vdClipBetween").addEventListener("change", function () { sideKeep("yue2.vdClipBetween", this.value === "cut" ? "" : this.value); });
     try { if ($("vdClipShape")) $("vdClipShape").value = localStorage.getItem("yue2.vdClipShape") || "16:9"; } catch (e) { /* private window */ }   // HERESY 1917
     if ($("vdClipShape")) $("vdClipShape").addEventListener("change", function () { sideKeep("yue2.vdClipShape", this.value === "16:9" ? "" : this.value); clipLoad(); });
+    [["vdClipEvery", "yue2.vdClipEvery", "sections"], ["vdClipReframe", "yue2.vdClipReframe", "hand"], ["vdClipTitleStyle", "yue2.vdClipTitleStyle", "centre"], ["vdClipWords", "yue2.vdClipWords", "lines"], ["vdClipMatch", "yue2.vdClipMatch", "none"], ["vdClipUp", "yue2.vdClipUp", "lanczos"]].forEach(function (x) {   // HERESY 2356: the upscale   // HERESY 2243, 2244, 2246; 2248, 2249
+      var el = $(x[0]);
+      if (!el) return;
+      try { el.value = localStorage.getItem(x[1]) || x[2]; if (!el.value) el.value = x[2]; } catch (e) { /* private window */ }
+      el.addEventListener("change", function () { sideKeep(x[1], this.value === x[2] ? "" : this.value); });
+    });
+    try { state.clipDraft = localStorage.getItem("yue2.vdClipDraft") === "1"; } catch (e) { /* private window */ }   // HERESY 2245
+    if ($("vdClipDraft")) {
+      $("vdClipDraft").setAttribute("aria-pressed", state.clipDraft ? "true" : "false");
+      $("vdClipDraft").addEventListener("click", function () { state.clipDraft = !state.clipDraft; this.setAttribute("aria-pressed", state.clipDraft ? "true" : "false"); sideKeep("yue2.vdClipDraft", state.clipDraft ? "1" : ""); clipLoad(); });
+    }
     if ($("vdClipLook")) $("vdClipLook").addEventListener("click", looksOpen);   // HERESY 2010
     lookPaint();
     document.addEventListener("keydown", function (e) { if (e.key === "Escape" && pickAt >= 0) pickClose(); });
     document.addEventListener("mousedown", function (e) { if (pickAt >= 0 && !e.target.closest("#vdPick, [data-vdpic], [data-vdheropick]")) pickClose(); });
     window.addEventListener("scroll", function (e) { if (pickAt >= 0 && !(e.target.closest && e.target.closest("#vdPick"))) pickClose(); }, true);
-    $("view-video").addEventListener("input", function (e) { if (e.target.matches("textarea, select.vd-move, #vdClipTitle")) { state.dirty = true; $("vdSave").disabled = state.busy; } });   // HERESY 1844: a move chosen too
+    $("view-video").addEventListener("input", function (e) { if (e.target.matches("textarea, select.vd-move, select.vd-into, #vdClipTitle, #vdAuthor, #vdVerse, #vdPlaces")) { state.dirty = true; $("vdSave").disabled = state.busy; } });   // HERESY 1844: a move chosen too; 2356: the places
     $("view-video").addEventListener("click", function (e) {
       var pc = e.target.closest("[data-vdpic]"), pr = e.target.closest("[data-vdrun]");   // HERESY 1838: a shot's picture
       if (pc) { if (pickAt === +pc.dataset.vdpic) pickClose(); else pickOpen(+pc.dataset.vdpic, pc); return; }
@@ -1439,6 +1723,10 @@
       var hp = e.target.closest("[data-vdheropick]"), ho = e.target.closest("[data-vdherooff]"), ht = e.target.closest("[data-vdherotg]");   // HERESY 1913
       if (hp) { if (pickAt === HERO_PICK) pickClose(); else pickOpen(HERO_PICK, hp); return; }
       if (ho) { heroOff(); return; }
+      var hs = e.target.closest("[data-vdheroskin]");      // HERESY 2356: the hero's skin, his to say
+      if (hs) { state.heroHuman = hs.getAttribute("aria-pressed") !== "true"; hs.setAttribute("aria-pressed", state.heroHuman ? "true" : "false"); state.dirty = true; $("vdSave").disabled = state.busy; return; }
+      var hlb = e.target.closest("[data-vdherolast]");     // HERESY 2361: the hero's picture as his shots' last frame
+      if (hlb) { state.heroLast = hlb.getAttribute("aria-pressed") !== "true"; hlb.setAttribute("aria-pressed", state.heroLast ? "true" : "false"); state.dirty = true; $("vdSave").disabled = state.busy; return; }
       if (ht) { heroFlip(+ht.dataset.vdherotg, ht); return; }
       var shb = e.target.closest("[data-vdshoot]");          // HERESY 1868
       if (shb) { shootMenu(+shb.dataset.vdshoot, shb); return; }
@@ -1461,7 +1749,9 @@
     prompt: function (i) { return promptOf(i); }, follow: function (t) { follow(t); },   // HERESY 1830: for the checks
     picture: function (i) { return picturePromptOf(i); },   // HERESY 1839: for the checks
     frames: function () { return state.frames || null; },   // HERESY 1913: for the checks
-    clipOpts: function () { return { lyrics: !!state.clipLyrics, between: $("vdClipBetween") ? $("vdClipBetween").value : "", shape: clipShape(), titles: !!state.clipTitles, look: state.take ? lookSent(state.take.name) : null }; },   // 2010: the look   // HERESY 1916, 1917, 1948: for the checks
+    clipOpts: function () { return { lyrics: !!state.clipLyrics, between: $("vdClipBetween") ? $("vdClipBetween").value : "", shape: clipShape(), titles: !!state.clipTitles, look: state.take ? lookSent(state.take.name) : null,
+      every: clipVal("vdClipEvery", "sections") === "every", reframe: clipVal("vdClipReframe", "hand"), draft: !!state.clipDraft, title_style: clipVal("vdClipTitleStyle", "centre"),
+      words: clipVal("vdClipWords", "lines") === "words", match: clipVal("vdClipMatch", "none") === "cur" ? (state.cur || 0) : null, upscale: clipVal("vdClipUp", "lanczos") }; },   // HERESY 2356   // HERESY 2248, 2249   // HERESY 2243–2246   // 2010: the look   // HERESY 1916, 1917, 1948: for the checks
     shot: function (i) { if (i !== undefined) shotCur(i); return state.cur || 0; }, pane: function (k) { if (k) paneShow(k); return state.pane || "edit"; },   // HERESY 1940: for the checks
     full: function (on) { if (on !== undefined) vdSetFull(on); return vdIsFull(); }, findOpen: function () { findOpen(); }, findClose: function () { findClose(); },
     side: function (on) { if (on !== undefined) sideShow(on); return !SIDE.folded; },

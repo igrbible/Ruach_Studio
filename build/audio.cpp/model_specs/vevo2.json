@@ -1,0 +1,430 @@
+{
+  "family": "vevo2",
+  "display_name": "Vevo2",
+  "description": "Unified controllable framework for English and Chinese speech and singing voice generation, voice conversion, and editing, with tokenizers that disentangle content, prosody, melody, style, and timbre.",
+  "category": "voice_conversion",
+  "status": "supported",
+  "tasks": [
+    "tts",
+    "music",
+    "vc",
+    "edit",
+    "svc",
+    "s2s"
+  ],
+  "modes": [
+    "offline"
+  ],
+  "languages": [
+    "en",
+    "zh"
+  ],
+  "capabilities": {
+    "music": [
+      "lyrics"
+    ],
+    "vc": [
+      "speaker_reference"
+    ],
+    "svc": [
+      "speaker_reference",
+      "singing"
+    ],
+    "s2s": [
+      "speaker_reference"
+    ],
+    "edit": [
+      "prompt_editing"
+    ]
+  },
+  "runtime": {
+    "tags": [
+      "gguf"
+    ]
+  },
+  "options": {
+    "request": [
+      {
+        "name": "route",
+        "type": "enum",
+        "description": "Generation route; omitted selects the task default.",
+        "required": false,
+        "values": [
+          "zero_shot_tts",
+          "text_to_singing",
+          "svs",
+          "style_preserved_vc",
+          "style_preserved_svc",
+          "style_converted_vc",
+          "style_converted_svc",
+          "editing",
+          "singing_style_conversion",
+          "humming_to_singing",
+          "instrument_to_singing"
+        ]
+      },
+      {
+        "name": "source_audio",
+        "type": "audio_path",
+        "description": "Source audio file for conversion or editing.",
+        "required": false
+      },
+      {
+        "name": "target_voice",
+        "type": "audio_path",
+        "description": "Target voice audio file; overrides structured speaker audio.",
+        "required": false
+      },
+      {
+        "name": "prosody_ref",
+        "type": "audio_path",
+        "description": "Prosody or melody reference audio file.",
+        "required": false
+      },
+      {
+        "name": "style_ref",
+        "type": "audio_path",
+        "description": "Style reference audio file.",
+        "required": false
+      },
+      {
+        "name": "target_text",
+        "type": "string",
+        "description": "Text or lyrics; overrides structured text input.",
+        "required": false
+      },
+      {
+        "name": "style_ref_text",
+        "type": "string",
+        "description": "Style-reference transcript; reference_text is also accepted.",
+        "required": false
+      },
+      {
+        "name": "use_prosody_code",
+        "type": "bool",
+        "description": "Use prosody codes; default depends on route and requires prosody audio when enabled.",
+        "required": false
+      },
+      {
+        "name": "use_pitch_shift",
+        "type": "bool",
+        "description": "Align reference pitch to the target voice; default depends on route.",
+        "required": false
+      },
+      {
+        "name": "source_shift_steps",
+        "type": "int",
+        "description": "Manual source reference pitch shift in semitones.",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "prosody_shift_steps",
+        "type": "int",
+        "description": "Manual prosody reference pitch shift in semitones.",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "style_shift_steps",
+        "type": "int",
+        "description": "Manual style reference pitch shift in semitones.",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "duration_sec",
+        "type": "float",
+        "description": "Rescale prosody-code conditioning to this duration; not a general output-length limit. Legacy target_duration_seconds is accepted.",
+        "required": false
+      },
+      {
+        "name": "reference_duration_sec",
+        "type": "float",
+        "description": "Trim target voice reference before conditioning. Legacy reference_duration_seconds is accepted.",
+        "required": false,
+        "min": 0
+      },
+      {
+        "name": "temperature",
+        "type": "float",
+        "description": "Positive AR sampling temperature; default comes from the checkpoint.",
+        "required": false
+      },
+      {
+        "name": "top_k",
+        "type": "int",
+        "description": "AR top-k sampling; default comes from the checkpoint.",
+        "required": false
+      },
+      {
+        "name": "top_p",
+        "type": "float",
+        "description": "AR nucleus sampling; default comes from the checkpoint.",
+        "required": false
+      },
+      {
+        "name": "repetition_penalty",
+        "type": "float",
+        "description": "Positive AR repetition penalty; default comes from the checkpoint.",
+        "required": false
+      },
+      {
+        "name": "max_tokens",
+        "type": "int",
+        "description": "Maximum generated AR tokens.",
+        "required": false,
+        "min": 1,
+        "default": 500
+      },
+      {
+        "name": "num_inference_steps",
+        "type": "int",
+        "description": "Flow-matching denoising steps.",
+        "required": false,
+        "min": 1,
+        "default": 32
+      },
+      {
+        "name": "seed",
+        "type": "int",
+        "description": "Sampling seed; random when omitted.",
+        "required": false,
+        "min": 0,
+        "max": 4294967295
+      },
+      {
+        "name": "text_chunk_size",
+        "type": "int",
+        "description": "Character budget per text chunk.",
+        "required": false,
+        "min": 1,
+        "default": 128
+      },
+      {
+        "name": "audio_chunk_mode",
+        "type": "enum",
+        "description": "Source-audio chunking for style_preserved_vc/svc requires audio_chunk_duration_sec. Auto uses fixed chunks; none disables chunking.",
+        "required": false,
+        "values": [
+          "auto",
+          "fixed",
+          "none"
+        ],
+        "default": "auto"
+      },
+      {
+        "name": "audio_chunk_duration_sec",
+        "type": "float",
+        "description": "Source-audio chunk duration for style_preserved_vc/svc; zero or omitted keeps one-shot processing.",
+        "required": false,
+        "min": 0
+      },
+      {
+        "name": "cross_fade_duration_sec",
+        "type": "float",
+        "description": "Source chunk overlap and output crossfade; must be smaller than chunk duration.",
+        "required": false,
+        "default": 1
+      }
+    ],
+    "session": [
+      {
+        "name": "weight_type",
+        "type": "enum",
+        "description": "Shared matmul storage override; omitted preserves component defaults.",
+        "required": false,
+        "values": [
+          "native",
+          "f32",
+          "f16",
+          "bf16",
+          "q8_0"
+        ]
+      },
+      {
+        "name": "conv_weight_type",
+        "type": "enum",
+        "description": "Shared convolution storage override; omitted preserves native storage.",
+        "required": false,
+        "values": [
+          "native",
+          "f32",
+          "f16"
+        ]
+      }
+    ],
+    "load": [
+      {
+        "name": "whisper_model_path",
+        "type": "path",
+        "description": "External Whisper model directory for feature extraction when not bundled.",
+        "required": false
+      }
+    ]
+  },
+  "ui": {
+    "recommended_package": "vevo2_q8_0",
+    "tags": [
+      "TTS",
+      "Music",
+      "VC",
+      "Edit",
+      "GGUF"
+    ],
+    "docs": [
+      "docs/models/vevo2.md",
+      "docs/tts.md",
+      "docs/gguf.md"
+    ]
+  },
+  "package_defaults": {
+    "download": {
+      "kind": "huggingface_snapshot",
+      "repo": "audio-cpp/audio.cpp-gguf",
+      "revision": "main",
+      "gated": false
+    }
+  },
+  "packages": [
+    {
+      "id": "vevo2_q8_0",
+      "display_name": "Vevo2 Q8_0 GGUF",
+      "default": true,
+      "format": "gguf",
+      "precision": "q8_0",
+      "target_directory": "Vevo2-GGUF",
+      "files": [
+        "Vevo2-GGUF/vevo2-q8_0.gguf"
+      ],
+      "strip_prefix": "Vevo2-GGUF"
+    },
+    {
+      "id": "vevo2_f16",
+      "display_name": "Vevo2 F16 GGUF",
+      "format": "gguf",
+      "precision": "f16",
+      "target_directory": "Vevo2-GGUF",
+      "files": [
+        "Vevo2-GGUF/vevo2-f16.gguf"
+      ],
+      "strip_prefix": "Vevo2-GGUF"
+    },
+    {
+      "id": "vevo2_orig",
+      "display_name": "Vevo2 Original-Dtype GGUF",
+      "format": "gguf",
+      "precision": "orig",
+      "target_directory": "Vevo2-GGUF",
+      "files": [
+        "Vevo2-GGUF/vevo2-orig.gguf"
+      ],
+      "strip_prefix": "Vevo2-GGUF"
+    }
+  ],
+  "sources": [
+    {
+      "format": "gguf",
+      "roots": {
+        "model": ".",
+        "weights": "$gguf"
+      },
+      "files": {
+        "ar_config": "model:contentstyle_modeling/posttrained/config.json",
+        "ar_amphion_config": "model:contentstyle_modeling/posttrained/amphion_config.json",
+        "ar_generation_config": "model:contentstyle_modeling/posttrained/generation_config.json",
+        "ar_tokenizer_config": "model:contentstyle_modeling/posttrained/tokenizer_config.json",
+        "ar_tokenizer_json": "model:contentstyle_modeling/posttrained/tokenizer.json",
+        "ar_vocab": "model:contentstyle_modeling/posttrained/vocab.json",
+        "ar_merges": "model:contentstyle_modeling/posttrained/merges.txt",
+        "ar_added_tokens": "model:contentstyle_modeling/posttrained/added_tokens.json",
+        "ar_special_tokens": "model:contentstyle_modeling/posttrained/special_tokens_map.json",
+        "fm_config": "model:acoustic_modeling/fm_emilia101k_singnet7k_repa/config.json",
+        "fm_text_config": "model:acoustic_modeling/fm_emilia101k_singnet7k_repa_text/config.json",
+        "vocoder_config": "model:vocoder/config.json",
+        "whisper_config": "model:whisper-medium/config.json"
+      },
+      "tensors": {
+        "content_style_tokenizer_weights": {
+          "source": "weights:",
+          "prefix": "content_style_tokenizer_weights"
+        },
+        "prosody_tokenizer_weights": {
+          "source": "weights:",
+          "prefix": "prosody_tokenizer_weights"
+        },
+        "ar_weights": {
+          "source": "weights:",
+          "prefix": "ar_weights"
+        },
+        "fm_weights": {
+          "source": "weights:",
+          "prefix": "fm_weights"
+        },
+        "fm_whisper_stats": {
+          "source": "weights:",
+          "prefix": "fm_whisper_stats"
+        },
+        "fm_text_weights": {
+          "source": "weights:",
+          "prefix": "fm_text_weights"
+        },
+        "fm_text_whisper_stats": {
+          "source": "weights:",
+          "prefix": "fm_text_whisper_stats"
+        },
+        "vocoder_weights_0": {
+          "source": "weights:",
+          "prefix": "vocoder_weights_0"
+        },
+        "vocoder_weights_1": {
+          "source": "weights:",
+          "prefix": "vocoder_weights_1"
+        },
+        "vocoder_weights_2": {
+          "source": "weights:",
+          "prefix": "vocoder_weights_2"
+        },
+        "whisper_weights": {
+          "source": "weights:",
+          "prefix": "whisper_weights"
+        }
+      }
+    },
+    {
+      "format": "safetensors",
+      "roots": {
+        "model": ".",
+        "whisper": "../whisper-medium"
+      },
+      "files": {
+        "ar_config": "model:contentstyle_modeling/posttrained/config.json",
+        "ar_amphion_config": "model:contentstyle_modeling/posttrained/amphion_config.json",
+        "ar_generation_config": "model:contentstyle_modeling/posttrained/generation_config.json",
+        "ar_tokenizer_config": "model:contentstyle_modeling/posttrained/tokenizer_config.json",
+        "ar_tokenizer_json": "model:contentstyle_modeling/posttrained/tokenizer.json",
+        "ar_vocab": "model:contentstyle_modeling/posttrained/vocab.json",
+        "ar_merges": "model:contentstyle_modeling/posttrained/merges.txt",
+        "ar_added_tokens": "model:contentstyle_modeling/posttrained/added_tokens.json",
+        "ar_special_tokens": "model:contentstyle_modeling/posttrained/special_tokens_map.json",
+        "fm_config": "model:acoustic_modeling/fm_emilia101k_singnet7k_repa/config.json",
+        "fm_text_config": "model:acoustic_modeling/fm_emilia101k_singnet7k_repa_text/config.json",
+        "vocoder_config": "model:vocoder/config.json",
+        "whisper_config": "whisper:config.json"
+      },
+      "tensors": {
+        "content_style_tokenizer_weights": "model:tokenizer/contentstyle_fvq16384_12.5hz/model.safetensors",
+        "prosody_tokenizer_weights": "model:tokenizer/prosody_fvq512_6.25hz/model.safetensors",
+        "ar_weights": "model:contentstyle_modeling/posttrained/model.safetensors",
+        "fm_weights": "model:acoustic_modeling/fm_emilia101k_singnet7k_repa/model.safetensors",
+        "fm_whisper_stats": "model:acoustic_modeling/fm_emilia101k_singnet7k_repa/whisper_stats.safetensors",
+        "fm_text_weights": "model:acoustic_modeling/fm_emilia101k_singnet7k_repa_text/model.safetensors",
+        "fm_text_whisper_stats": "model:acoustic_modeling/fm_emilia101k_singnet7k_repa_text/whisper_stats.safetensors",
+        "vocoder_weights_0": "model:vocoder/model.safetensors",
+        "vocoder_weights_1": "model:vocoder/model_1.safetensors",
+        "vocoder_weights_2": "model:vocoder/model_2.safetensors",
+        "whisper_weights": "whisper:model.safetensors"
+      }
+    }
+  ]
+}

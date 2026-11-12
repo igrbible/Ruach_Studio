@@ -1,4 +1,6 @@
 #pragma once
+
+#include "atomic-write.h"   // HERESY 2371
 // audio-io.h: unified audio read/write for WAV and MP3.
 // Reads any WAV (PCM16/float32, mono/stereo, any rate) or MP3.
 // Normalizes by percentile peak clip, encodes WAV (16/24-bit PCM, float32)
@@ -492,13 +494,10 @@ static bool audio_write_wav(const char * path, const float * audio, int T_audio,
         return false;
     }
 
-    FILE * fp = fopen(path, "wb");
-    if (!fp) {
-        fprintf(stderr, "[Audio] Cannot open %s for writing\n", path);
+    if (!atomic_write_file(path, wav)) {   // HERESY 2371: whole or not at all
+        fprintf(stderr, "[Audio] Cannot write %s\n", path);
         return false;
     }
-    fwrite(wav.data(), 1, wav.size(), fp);
-    fclose(fp);
 
     fprintf(stderr, "[WAV] Wrote %s: %d samples, %d Hz, stereo\n", path, T_audio, sr);
     return true;
@@ -713,13 +712,10 @@ static bool audio_write_mp3(const char * path, const float * audio, int T_audio,
         return false;
     }
 
-    FILE * fp = fopen(path, "wb");
-    if (!fp) {
-        fprintf(stderr, "[Audio] Cannot open %s for writing\n", path);
+    if (!atomic_write_file(path, mp3)) {   // HERESY 2371: whole or not at all
+        fprintf(stderr, "[Audio] Cannot write %s\n", path);
         return false;
     }
-    fwrite(mp3.data(), 1, mp3.size(), fp);
-    fclose(fp);
 
     fprintf(stderr, "[MP3] Wrote %s\n", path);
     return true;

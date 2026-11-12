@@ -34,6 +34,8 @@ import time
 import urllib.request
 from pathlib import Path
 
+import paths                       # HERESY 2330: where the weights live
+
 HERE = Path(__file__).resolve().parent
 BANK = "Ruach Studio"
 # HERESY 2036: the Modartt product this instance drives; lab/modartt.py loads this file once more for Organteq and for Airteq and sets them
@@ -48,7 +50,7 @@ SILENT = "Default ALSA Output"                     # JUCE's name for ALSA's «de
 
 
 def _step_module():
-    """The step's own finder (one place says where Pianoteq is: user/pianoteq.json, models/instruments/, ~, the PATH)."""
+    """The step's own finder (one place says where Pianoteq is: user/pianoteq.json, models/refiner/instruments/, ~, the PATH)."""
     spec = importlib.util.spec_from_file_location("ruach_pianoteq_step", HERE / "builtin_steps" / "ruach" / "pianoteq.py")
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
@@ -135,7 +137,7 @@ class Server:
             return
         binary = find(self.kit)
         if binary is None:
-            raise FileNotFoundError(f"no {NAME} here: unpack the one you bought (or its trial) from modartt.com into models/instruments/{SLUG}/ and "
+            raise FileNotFoundError(f"no {NAME} here: unpack the one you bought (or its trial) from modartt.com into {paths.REFINER_INSTRUMENTS}/{SLUG}/ and "
                                     f"activate it, or name its program in user/{SLUG}.json {{\"path\": …}} (the guide: {NAME})")
         self.stop()
         d, prefs = _prefs_copy(self.kit)

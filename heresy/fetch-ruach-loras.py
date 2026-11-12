@@ -91,7 +91,23 @@ def by_content():
     return find
 
 
+def guard():
+    """HERESY 2380 (Viktor 11.11.2026: «Тройного сторожа на … скачиваниях моделей из наших репозиториев»): the third check of tools/hf_guard.py,
+    a file's SHA-256 against our manifest at the pin, before it is moved into loras/; None when the guard is not in this tree (said)."""
+    try:
+        sys.path.insert(0, os.path.join(ROOT, "tools"))
+        import hf_guard
+        return hf_guard
+    except ImportError:
+        return None
+
+
 def main():
+    g = guard()
+    if g is None:
+        say("failed", "loras/ (the studio's own)", "(no tools/hf_guard.py: nothing is fetched without its checks)")
+        return
+    man = g.load_manifest()
     try:
         from huggingface_hub import HfApi, hf_hub_download
     except ImportError:
@@ -134,12 +150,23 @@ def main():
         if CHECK:
             say("missing", "loras/" + rel, f"{tag}, {s.size / 2**20:.0f} MB")
             continue
+        want = man.get((REPO, rev, s.rfilename))           # HERESY 2380: the pin, the size, our manifest's SHA-256
+        if not g.PIN.fullmatch(rev) or want is None or want[0] != s.size or (s.lfs and s.lfs.sha256 != want[1]):
+            say("failed", "loras/" + rel, f"{tag}: " + ("not a pinned commit" if not g.PIN.fullmatch(rev) else
+                "no line in our manifest at this pin" if want is None else "the pinned list disagrees with our manifest") + "; nothing fetched")
+            continue
         why = ""
         for attempt in (1, 2):
             try:
                 got = hf_hub_download(REPO, s.rfilename, revision=rev, local_dir=stage)
-                if os.path.getsize(got) != s.size:
-                    raise OSError(f"{os.path.getsize(got)} bytes, the pinned file has {s.size}")
+                n = os.path.getsize(got)
+                if n != s.size:
+                    os.unlink(got)
+                    raise OSError(f"{n} bytes, the pinned file has {s.size}; the download removed")
+                h = g.sha256(got)
+                if h != want[1]:
+                    os.unlink(got)
+                    raise OSError(f"SHA-256 {h[:16]}…, our manifest says {want[1][:16]}…; the download removed")
                 os.makedirs(os.path.dirname(dest), exist_ok=True)
                 shutil.move(got, dest)                       # a rename on the same disk; a copy when loras/ lives on another
                 why = ""

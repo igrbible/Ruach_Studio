@@ -37,3 +37,4 @@ yt-dlp[default]              # audio of long recordings for instrument sets (HER
 mutagen                      # the artwork's tests read the MP3's tags; audio-separator brings it too
 c2pa-python==0.38.0          # Content Credentials on the downloads (HERESY 1489, c2pa_sign.py; MIT/Apache-2.0)
 cryptography                 # the install's own signing certificate, made at first use (HERESY 1489)
+h2==4.4.1                    # HTTP/2 in the https door (HERESY 2238, tls_door.py; MIT): its unit runs .venv/bin/python

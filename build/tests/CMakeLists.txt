@@ -44,3 +44,7 @@ link_ggml_backends(test-sheetsage)
 add_executable(test-tokenizer test-tokenizer.cpp)
 target_link_libraries(test-tokenizer PRIVATE yyjson)
 link_ggml_backends(test-tokenizer)
+
+# Local addition: test-notation, the score's first bar against the recording's start (HERESY 2228), pure CPU, no model.
+add_executable(test-notation test-notation.cpp)
+target_include_directories(test-notation PRIVATE ${CMAKE_SOURCE_DIR}/src)

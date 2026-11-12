@@ -38,7 +38,7 @@ check("addresses: lan# for this network, wan# beyond it, this machine as it is, 
       ":7443/x" in a and "192.168" not in a and "8.8.8.8" not in a, a)
 check("the same address the same mark, another journal another", t(f"{LAN}.2.5") == t(f"{LAN}.2.5") and db.Scrub("othersalt").text(f"{LAN}.2.5") != t(f"{LAN}.2.5"))
 check("a time is no IPv6 address", t("at 23:41:46 and 2026-11-05T23:41:46-06:00") == "at 23:41:46 and 2026-11-05T23:41:46-06:00", t("at 23:41:46"))
-h = t("fetch https://openrouter.ai/api/v1/models and https://huggingface.co/m-a-p/YuE2-3B and http://golem.local:7443/ and http://localhost:7777/")
+h = t("fetch https://openrouter.ai/api/v1/models and https://huggingface.co/m-a-p/YuE2-3B and http://studio-box.local:7443/ and http://localhost:7777/")
 check("another host: «external»; a name of the local network a lan# mark; localhost as it is", h.count("https://external/") == 2 and "openrouter" not in h and
       "huggingface" not in h and "http://lan#" in h and "http://localhost:7777/" in h, h)
 p = t('{"k":"net","m":"GET","p":"openrouter.ai/api/v1/models","s":200}')
@@ -82,10 +82,20 @@ kit = Path(tempfile.mkdtemp(prefix="ruach-t2104-"))
 (kit / "user").mkdir()
 outputs = kit / "outputs"
 outputs.mkdir()
-db.journal = lambda unit, since: ("2026-11-05T21:24:55-06:00 Golem start.sh[1]: [Server] Job 0761cd5ba028f0de: {\n"
+db.journal = lambda unit, since: ("2026-11-05T21:24:55-06:00 studio-box start.sh[1]: [Server] Job 0761cd5ba028f0de: {\n"
                                   '  "seed": 992475142,\n'
                                   f"21:37:15 [Server] Refused POST /lab/collection from {LAN}.2.77 (Host x)\n"
                                   f'23:41:46 [lab] "GET /vocab/My%20Words.json HTTP/1.1" 200 812 B · came 23:41:46.100 · 3 ms · peer {LAN}.2.5\n')
+# HERESY 2171 (C09): a library's dotted version is no address, for the guard and the scrubber alike; an address beside such a word still is one
+VER = "cuDNN 9.1.0.70 · cudnn_version=9.1.0.70 · nvidia-cudnn-cu12==9.1.0.70 · CUDA: 12.4.1.3 · v9.1.0.70"
+check("a library's version (cuDNN 9.1.0.70, a pin, v…): the guard names no address", db.guard_addresses(VER) == [], db.guard_addresses(VER))
+check("  and the scrubber leaves it as it is", t(VER) == VER, t(VER))
+check("  an address after another word is still one", db.guard_addresses("devices 10.0.0.7 and served 8.8.8.8") == ["10.0.0.7", "8.8.8.8"])
+# HERESY 2172 (H18): what the guard's wider pattern finds, the scrubber marks too: no address left for the guard to name
+for x in LEFT + ["host_10.0.0.9", f"peer/{LAN}.2.5:7443"]:
+    check(f"the scrubber marks what the guard would name: {x.replace(LAN, 'LAN')}", not db.guard_addresses(t(x)) and "lan#" in t(x), t(x))
+check("  leading zeros: the same mark as the address without them", t(f"{LAN}.002.005") == t(f"{LAN}.2.5"), (t(f"{LAN}.002.005"), t(f"{LAN}.2.5")))
+check("  a browser's version and this machine still as they are", t(UA + " 127.0.0.1:41870") == UA + " 127.0.0.1:41870", t(UA))
 data = {"events": ev + [{"k": "net", "m": "GET", "p": "openrouter.ai/api/v1/models", "s": 200, "ms": 9300, "t": 1}], "salt": "5a175a17", "ua": UA,
         "screen": "2560x1440@1.25", "lang": "ru", "since": 3600}
 r = db.bundle(kit, outputs, data)
@@ -101,5 +111,20 @@ check("the bundle: the lab's log with its marks (job, seed, lan, vocab), nothing
 check("the bundle: openrouter.ai written «external»", "openrouter" not in page and "external/api/v1/models" in page, page[:300])
 kinds = {f["kind"] for f in r["findings"]}
 check("the guard finds no address in a browser's version nor a mail in the screen", "address" not in kinds and "mail" not in kinds, r["findings"])
+# HERESY 2173 (C11): the bundle's id not its time alone, and path() takes it (and an id of before, by its shape)
+check("the bundle's id: its time and eight random hex", re.fullmatch(r"\d{8}-\d{6}-[0-9a-f]{8}", r["id"]) is not None, r["id"])
+try:
+    db.path(kit, "20261104-200000"); said = "found"
+except FileNotFoundError:
+    said = "gone"
+except ValueError as e:
+    said = str(e)
+check("  an id of before is still read by its shape (gone here)", said == "gone", said)
+for wrong in ("20261104-200000-XYZ", "../x", "20261104-200000-0123456789"):
+    try:
+        db.path(kit, wrong); said = ""
+    except (ValueError, FileNotFoundError) as e:
+        said = type(e).__name__
+    check(f"  a wrong id refused: {wrong}", said == "ValueError", said)
 print("all passed" if not bad else f"{len(bad)} FAILED")
 sys.exit(1 if bad else 0)

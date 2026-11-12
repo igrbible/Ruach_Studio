@@ -36,7 +36,7 @@
   var SAY = "Not saved: this window is read-only, the Studio works in another one.";
   var SAY_ACT = "Not saved ({0}): this window is read-only, the Studio works in another one.";
   var PHRASE = { "/lab/collection": "a change in the Librarian", "/lab/settings": "the settings", "/lab/presets": "the presets", "/lab/writer": "the Writer's document",
-    "/lab/writer/versions": "the Creator's version", "/lab/refiner/profiles": "the Refiner's profile", "/lab/playback": "where the player stopped" };
+    "/lab/writer/versions": "the Musician's version", "/lab/refiner/profiles": "the Refiner's profile", "/lab/playback": "where the player stopped" };
   var C = { wait: 20000, stall: 8000, pauses: [2000, 6000], tries: 3, show: 1500, far: null, grace: 400 };   // far: null as HeresyNet measures it (the checks set it)
   var S = { seq: 0, open: {}, flight: {}, last: Date.now(), stuck: false, held: {}, act: null, said: {}, badge: null, link: null, timer: 0, saying: [] };
 

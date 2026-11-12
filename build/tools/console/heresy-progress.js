@@ -121,5 +121,4 @@
     }
     if (thin !== el.classList.contains("is-thin")) el.classList.toggle("is-thin", thin);
   }, { passive: true });
-  window.HeresyProgress = { paint: paint, rows: function () { return P.rows.slice(); } };
 })();

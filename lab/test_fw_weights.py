@@ -6,6 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import weights  # noqa: E402
+import paths  # noqa: E402   HERESY 2330: where the weights live
 
 fails = 0
 
@@ -19,7 +20,7 @@ def check(what, ok, said=""):
 fw = next((e for e in weights.EXTRAS if e and e["name"] == "fw"), None)
 ids = [v["id"] for v in fw["variants"]] if fw else []
 check("the extra «fw»: seven merges at BF16, Q8_0 and Q6_K, each its own file", len(ids) == 21 and "2.4x0.75-Q8_0" in ids and
-      all(v["files"] == [f"models/YuE2-3B-RS-FW-{v['id']}.gguf"] for v in fw["variants"]), ids)
+      all(v["files"] == [str(paths.engine_gguf(f"YuE2-3B-RS-FW-{v['id']}.gguf", ".")).removeprefix("./")] for v in fw["variants"]), ids)
 check("  none of them said the Studio's default any more (HERESY 2074: RS-TW 2.0x0.75 is)", not [v["id"] for v in fw["variants"] if v.get("note")], fw)
 check("  a variant fetched as an extra", weights._args({"fw": "3.4x0.7-Q6_K"}) == (["--only", "none", "--fw", "3.4x0.7-Q6_K", "--yes"], "the RS-FW merge 3.4x0.7-Q6_K"),
       weights._args({"fw": "3.4x0.7-Q6_K"}))
@@ -30,17 +31,22 @@ except ValueError:
 check("  a merge that is not one refused (2.9 failed, never merged)", bad)
 check("  the part, by its name", weights._args({"part": "fw"}) == (["--only", "fw"], "Ruach Studio's own fine-tune"), weights._args({"part": "fw"}))
 with tempfile.TemporaryDirectory() as d:
-    k = Path(d); (k / "models").mkdir()
+    k = Path(d)
+    def put(name, data=b""):                      # HERESY 2330: an engine's GGUF where the Studio keeps it
+        f = paths.engine_gguf(name, k)
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_bytes(data)
+        return f
     check("no backbone here: no fine-tune part", "fw" not in weights.parts_of(k) and weights.fw_quant(k) == "", weights.parts_of(k))
-    (k / "models" / "YuE2-3B-Q5_K_M.gguf").write_bytes(b"")
+    put("YuE2-3B-Q5_K_M.gguf")
     check("  a Q5_K_M install: none (there is no Q5_K_M of it)", "fw" not in weights.parts_of(k), weights.parts_of(k))
-    (k / "models" / "YuE2-3B-Q8_0.gguf").write_bytes(b"")
+    put("YuE2-3B-Q8_0.gguf")
     check("  a Q8_0 backbone: the default at Q8_0, 3.8 GB, said and expected", weights.parts_of(k).get("fw") == "3.8 GB" and weights.fw_quant(k) == "Q8_0" and
           weights._which({"part": "fw"}, k) == ({"part": "fw"}, 3800000000), weights.parts_of(k))
-    (k / "models" / "YuE2-3B-BF16.gguf").write_bytes(b"")
+    put("YuE2-3B-BF16.gguf")
     check("  BF16 beside it: the fullest, 7.2 GB", weights.parts_of(k).get("fw") == "7.2 GB" and weights.listing(k)["parts"].get("fw") == "7.2 GB", weights.parts_of(k))
-    (k / "models" / "YuE2-3B-RS-FW-2.4x0.75-BF16.gguf").write_bytes(b"x")
-    (k / "tmp").mkdir(); (k / "tmp" / "fetch-heresy.list").write_text("##\tfw\tRuach Studio's own fine-tune\nhere\tmodels/x\t(y)\n", encoding="utf-8")
+    put("YuE2-3B-RS-FW-2.4x0.75-BF16.gguf", b"x")
+    (k / "tmp").mkdir(); (k / "tmp" / "fetch-heresy.list").write_text("##\tfw\tRuach Studio's own fine-tune\nhere\t" + paths.ENGINE_FINETUNES + "/x\t(y)\n", encoding="utf-8")
     last = weights.listing(k)["last"]   # 25.10: _last_run keeps a list named «parts»: a function of that name was a list there (/weights said «not callable»)
     check("  the last run's part «fw» said with its size", last and last["parts"][0]["part"] == "fw" and last["parts"][0]["size"] == "7.2 GB", last)
     ex = next(e for e in weights._extras(k) if e["name"] == "fw")
@@ -50,7 +56,7 @@ with tempfile.TemporaryDirectory() as d:
 tw = next((e for e in weights.EXTRAS if e and e["name"] == "tw"), None)
 tids = [v["id"] for v in tw["variants"]] if tw else []
 check("the extra «tw» (2074): 2.0x0.75 and 2.0x0.9 at BF16, Q8_0 and Q6_K, each its own file, a restart asked", len(tids) == 6 and tw["label"] == "RS-TW merge" and
-      tw["restart"] is True and all(v["files"] == [f"models/YuE2-3B-RS-TW-{v['id']}.gguf"] for v in tw["variants"]), tids)
+      tw["restart"] is True and all(v["files"] == [str(paths.engine_gguf(f"YuE2-3B-RS-TW-{v['id']}.gguf", ".")).removeprefix("./")] for v in tw["variants"]), tids)
 check("  the default's three said so, no other", [v["id"] for v in tw["variants"] if v.get("note")] == ["2.0x0.75-BF16", "2.0x0.75-Q8_0", "2.0x0.75-Q6_K"] and
       all(v["note"] == "the Studio's default" for v in tw["variants"] if v.get("note")), tw)
 got = weights._args({"tw": "2.0x0.75-Q8_0"}), weights._which({"tw": "2.0x0.9-Q6_K"})

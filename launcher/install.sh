@@ -57,7 +57,10 @@ case "${Q:-BF16}" in BF16) GBS=23.7 ;; Q8_0) GBS=17.0 ;; Q6_K) GBS=15.2 ;; *) GB
 echo "  about $GBS GB in all: the backbone and Ruach Studio's own fine-tune, three decoders, the transcriber, the LoRAs, Whisper, the stems' models, UniverSR and Apollo-vocal"
 case "$Q" in Q6_K|Q5_K_M) echo "${Y}  under 7 GB: short songs only (a context of 8 192 rows); the Studio is made for 12 GB and more${X}" ;; esac   # HERESY 1304
 # HERESY 1285: what did not come is named above with its reason; the Studio starts without it, and Install again goes on from there
-bash fetch-models.sh ${Q:+--quant "$Q"} || stop "a download did not complete (the lines marked failed above say which and why): the Studio starts without it; Install again goes on from there"
+# 08.11.2026: the least a song needs, said file by file with the free disk, then asked; the rest from Engine -> Models when wanted
+bash fetch-models.sh ${Q:+--quant "$Q"}; r=$?
+[ $r = 5 ] && stop "the models were not downloaded: the Studio needs them for a song; Install again asks again"
+[ $r = 0 ] || stop "a download did not complete (the lines marked failed above say which and why): Install again goes on from there"
 
 rm -f tmp/update-unfinished                             # HERESY 1352: a whole install sets this version up, as an update does
 echo

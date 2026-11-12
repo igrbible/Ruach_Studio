@@ -2,6 +2,7 @@
 # for what a browser gives only to a secure page (Web MIDI from another computer). Who may come in is Engine → Security's choice (user/access.json).
 # A template: systemd/install-units.sh writes it into ~/.config/systemd/user/. It starts only when asked:
 #   systemctl --user enable --now ruach-tls-door     then https://<this machine>:7443 (the studio's own certificate: the browser asks once)
+# HERESY 2238: run by the Studio's .venv, which has the h2 package: HTTP/2 to a browser that offers it (a Python without h2 serves http/1.1 alone).
 [Unit]
 Description=Ruach Studio https door (HERESY 1805)
 After=ruach-studio.service
@@ -11,7 +12,7 @@ StartLimitIntervalSec=0
 Type=simple
 WorkingDirectory=@ROOT@
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/usr/bin/python3 @ROOT@/lab/tls_door.py
+ExecStart=@ROOT@/.venv/bin/python @ROOT@/lab/tls_door.py
 Restart=always
 RestartSec=5
 

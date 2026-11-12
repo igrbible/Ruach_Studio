@@ -99,12 +99,10 @@ int main(int argc, char ** argv) {
     for (size_t i = 0; i < codes.size(); i++) {
         csv += (i ? "," : "") + std::to_string(codes[i]);
     }
-    FILE * f = fopen(out_path, "wb");
-    if (!f || fwrite(csv.data(), 1, csv.size(), f) != csv.size()) {
+    if (!atomic_write_file(out_path, csv)) {   // HERESY 2371: whole or not at all
         fprintf(stderr, "[Tokenize] FATAL: cannot write %s\n", out_path);
         return 1;
     }
-    fclose(f);
     fprintf(stderr, "[Tokenize] Done: %s -> %s\n", audio_path, out_path);
     return 0;
 }

@@ -40,6 +40,13 @@ import gguf
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CHECKPOINT_DIR = os.path.join(SCRIPT_DIR, "checkpoints")
 OUTPUT_DIR = os.path.join(SCRIPT_DIR, "models")
+# HERESY 2330: inside Ruach Studio (lab/paths.py beside this folder) the checkpoints and the GGUFs live in models/<room>/, by lab/paths.py's
+# map from where 2.0.6 kept them; alone, as upstream lays it out, in checkpoints/ and models/ here
+try:
+    sys.path.insert(0, os.path.join(os.path.dirname(SCRIPT_DIR), "lab"))
+    import paths as studio_paths
+except ImportError:
+    studio_paths = None
 
 COMPONENTS = {
     "backbone":    "YuE2-3B",
@@ -224,9 +231,9 @@ def add_tiktoken_bpe(w, model_dir, tag):
 
 def convert_backbone():
     """YuE2-3B/ -> YuE2-3B-BF16.gguf, native BF16, config json and BPE embedded."""
-    model_dir = os.path.join(CHECKPOINT_DIR, COMPONENTS["backbone"])
+    model_dir = comp_dir("backbone")
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    out_path = os.path.join(OUTPUT_DIR, "YuE2-3B-BF16.gguf")
+    out_path = out_file("YuE2-3B-BF16.gguf")
 
     with open(os.path.join(model_dir, "config.json"), "r", encoding="utf-8") as f:
         cfg = json.load(f)
@@ -246,9 +253,9 @@ def convert_backbone():
 
 def convert_vae():
     """YuE2-Vae/ -> YuE2-Vae-F32.gguf, native F32, stage names, weight norm raw."""
-    model_dir = os.path.join(CHECKPOINT_DIR, COMPONENTS["vae"])
+    model_dir = comp_dir("vae")
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    out_path = os.path.join(OUTPUT_DIR, "YuE2-Vae-F32.gguf")
+    out_path = out_file("YuE2-Vae-F32.gguf")
 
     w = gguf.GGUFWriter(out_path, arch="yue2-vae")
     w.add_name("YuE2 Oobleck VAE")
@@ -305,8 +312,8 @@ def transcriber_tokenizer_json(model_dir, cfg):
 
 def convert_mert():
     """MERT-v2-FullSong/ -> MERT-v2-FullSong-F32.gguf"""
-    model_dir = os.path.join(CHECKPOINT_DIR, COMPONENTS["mert"])
-    out_path = os.path.join(OUTPUT_DIR, "MERT-v2-FullSong-F32.gguf")
+    model_dir = comp_dir("mert")
+    out_path = out_file("MERT-v2-FullSong-F32.gguf")
     with open(os.path.join(model_dir, "config.json"), "r", encoding="utf-8") as f:
         cfg = json.load(f)
 
@@ -323,8 +330,8 @@ def convert_mert():
 
 def convert_transcriber():
     """SheetSage2/ -> SheetSage2-F32.gguf"""
-    model_dir = os.path.join(CHECKPOINT_DIR, COMPONENTS["transcriber"])
-    out_path = os.path.join(OUTPUT_DIR, "SheetSage2-F32.gguf")
+    model_dir = comp_dir("transcriber")
+    out_path = out_file("SheetSage2-F32.gguf")
     with open(os.path.join(model_dir, "config.json"), "r", encoding="utf-8") as f:
         cfg = json.load(f)
 
@@ -346,8 +353,8 @@ def convert_transcriber():
 
 def convert_tokenizer():
     """yue2-mothersuperior-realaudio-tokenizer-v4/ -> yue2-mothersuperior-realaudio-tokenizer-v4-F32.gguf"""
-    head = os.path.join(CHECKPOINT_DIR, COMPONENTS["tokenizer"], TOKENIZER_HEAD)
-    out_path = os.path.join(OUTPUT_DIR, "yue2-mothersuperior-realaudio-tokenizer-v4-F32.gguf")
+    head = os.path.join(comp_dir("tokenizer"), TOKENIZER_HEAD)
+    out_path = out_file("yue2-mothersuperior-realaudio-tokenizer-v4-F32.gguf")
 
     w = gguf.GGUFWriter(out_path, arch="yue2-tokenizer")
     w.add_name("YuE2 audio tokenizer, the v9 head of Mothersuperior, on MERT-v2-FullSong")
@@ -386,8 +393,25 @@ def convert(component):
     if component == "tokenizer":
         convert_tokenizer()
 
+def comp_dir(comp):
+    """a component's checkpoint folder: its room's in the Studio, upstream's own checkpoints folder alone"""
+    name = COMPONENTS[comp]
+    new = studio_paths.new_of("checkpoints/%s/x" % name) if studio_paths else None   # paths: 2.0.6 (the map's own question)
+    return os.path.join(str(studio_paths.ROOT), new[:-2]) if new else os.path.join(CHECKPOINT_DIR, name)
+
+
+def out_file(name):
+    """a GGUF this script makes: in its room in the Studio (the folder made), models/<name> alone"""
+    new = studio_paths.new_of("models/" + name) if studio_paths else None   # paths: 2.0.6 (the map's own question)
+    if not new:
+        return os.path.join(OUTPUT_DIR, name)
+    p = os.path.join(str(studio_paths.ROOT), new)
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    return p
+
+
 def main():
-    if not os.path.isdir(CHECKPOINT_DIR):
+    if not studio_paths and not os.path.isdir(CHECKPOINT_DIR):
         log("GGUF", "checkpoints/ not found")
         return 1
 
@@ -396,9 +420,9 @@ def main():
     native = {"backbone": "BF16", "vae": "F32", "mert": "F32", "transcriber": "F32", "tokenizer": "F32"}
     converted = 0
     for comp in COMPONENTS:
-        output_path = os.path.join(OUTPUT_DIR, "%s-%s.gguf" % (COMPONENTS[comp], native[comp]))
+        output_path = out_file("%s-%s.gguf" % (COMPONENTS[comp], native[comp]))
         # HERESY 1610: the audio tokenizer only serves /tokenize; an install without its checkpoint converts the rest, and says so
-        if comp == "tokenizer" and not os.path.isdir(os.path.join(CHECKPOINT_DIR, COMPONENTS[comp])):
+        if comp == "tokenizer" and not os.path.isdir(comp_dir(comp)):
             log("GGUF", "skip tokenizer: no checkpoints/%s (only /tokenize reads it)" % COMPONENTS[comp])
             continue
         if os.path.exists(output_path):

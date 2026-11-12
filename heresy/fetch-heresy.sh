@@ -5,7 +5,7 @@
 #   heresy/fetch-heresy.sh             fetch what is missing; what is here stays as it is
 #   heresy/fetch-heresy.sh --replace   also fetch the pinned copy over one that is here but differs
 #   heresy/fetch-heresy.sh --writer quality|compact [--yes]
-#                                      also the studio's writer (Qwopus3.5-9B-v3 as GGUF, HERESY 1811), asked first with its size;
+#                                      also the Studio's writer (Qwopus3.5-9B-v3 as GGUF, HERESY 1811), asked first with its size;
 #                                      it runs through llama.cpp's llama-server (vendor/llama.cpp, cloned here, built by launcher/extras.sh)
 #   heresy/fetch-heresy.sh --listener Q8_0|Q5_K_M|Q4_K_M|bf16 [--yes]
 #                                      also the style listener (Qwen2.5-Omni-7B), asked first with its size;
@@ -26,7 +26,7 @@
 #   heresy/fetch-heresy.sh --art-loras all [--yes]
 #                                      HERESY 1347: also the Artist's adapters whose authors let them be shared (ten, 7.5 GB)
 #   heresy/fetch-heresy.sh --trainer bf16|int8 [--yes]
-#                                      also the base for the studio's own LoRA trainer (lab/trainer), asked first
+#                                      also the base for the Studio's own LoRA trainer (lab/trainer), asked first
 #                                      with its size; bf16 trains on unquantized weights, int8 on a smaller card
 #   heresy/fetch-heresy.sh --backbone BF16|Q8_0|Q6_K|Q5_K_M [--yes]
 #                                      also another YuE2 backbone beside the one the install took for the card, asked
@@ -43,27 +43,27 @@
 #   heresy/fetch-heresy.sh --tw 2.0x0.75-BF16|Q8_0|Q6_K [--yes]   (and 2.0x0.9)
 #                                      HERESY 2071: also a merge of RS-TW, the Tsunami Wave, trained on RS-FW 2.4x0.75 and folded back into
 #                                      it at epoch 2.0: x0.75 the safe balance, x0.9 the boldest; from the same repo, asked first with its size
-#   heresy/fetch-heresy.sh --only extras,whisper,stems,upscale,loras
+#   heresy/fetch-heresy.sh --only extras,whisper,transcriber,stems,upscale,loras,fw
 #                                      HERESY 1289: those parts of what the install brings, the others left alone; with
 #                                      none, only what the options above ask for (the Engine's Models card fetches so)
 #
-# The LoRAs come too: the Kit's library (tools/download-loras.sh, 11 adapters from 8 repos) and the studio's own
+# The LoRAs come too: the Kit's library (tools/download-loras.sh, 11 adapters from 8 repos) and the Studio's own
 # (heresy/fetch-ruach-loras.py: six voices, the duduk and the shofar), under the names the 💎 sets' takes use.
 #
 # Hugging Face repos come at the revisions in heresy/hf-revisions.txt (the Kit's tools/hf-revisions.txt
 # for those it pins too), through the Kit's own pinned downloader (tools/hf-env.sh, in .venv), and
 # count as here only when every file has the pinned revision's size (tools/hf_expect.py): a downloader
 # that says "done" is not proof, and neither is one file being there.
-# The legacy and blend decoders and the sliders come converted, from goldhub/Ruach_Studio_Models_v2 (HERESY 1290): no checkpoints.
+# The extra decoders are ours, YuE2-VAE-RS x3 v1 and v2, from goldhub/YuE2-RS-Finetunes, VAE-RS/ (HERESY 2329; Legacy and Blend no more, 2307; public since 11.11.2026).
 # HERESY 1445 (Viktor 14.10.2026: «Лучше всё тянуть Студии из одного репо, чем бегать по всему инету»): every weight v2 holds comes
 # from v2 at its pin, the same files byte for byte as their authors publish them (checked against each author's repo at its pin):
-# Whisper, UniverSR, the listener's GGUFs, the Artist's helpers and painters, the Trainer's base, the studio's own adapters. From
+# Whisper, UniverSR, the listener's GGUFs, the Artist's helpers and painters, the Trainer's base, the Studio's own adapters. From
 # their authors still: the stems' models (audio-separator reads its own list beside them), the Kit's library of adapters (its own
 # downloader; three of them carry no licence to copy), Qwen2.5-Omni-7B whole (the listener at bf16), and the code cloned from git.
 # Needs: python3, git, the lab venv for audio-separator (lab/install-venv.sh), ~8 GB of disk.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""; QFINE=""; ARTLORAS=""; IRA=""; IRAE=""; FW=""; TW=""; WRITER=""; MUSC=""; H3=""; UPSCALER=""; FLASHSR=""   # HERESY 1794: FW; 2071: TW; 1811: WRITER; 1834; 1867: H3: MUSC; 1876a: UPSCALER; 1984: FLASHSR
+MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""; QFINE=""; ARTLORAS=""; IRA=""; IRAE=""; FW=""; TW=""; WRITER=""; MUSC=""; H3=""; UPSCALER=""; FLASHSR=""; NARRATOR=""; REFINED=""   # HERESY 1794: FW; 2071: TW; 1811: WRITER; 1834; 1867: H3: MUSC; 1876a: UPSCALER; 1984: FLASHSR; 2374: NARRATOR; 2388: REFINED
 while [ $# -gt 0 ]; do
   case "$1" in
     --check) MODE=check ;; --replace) MODE=replace ;; --yes) YES=1 ;;
@@ -79,13 +79,15 @@ while [ $# -gt 0 ]; do
     --h3) H3="${2:-int8}"; shift ;;                 # HERESY 1867
     --upscaler) UPSCALER="${2:-7b}"; shift ;;       # HERESY 1876a
     --flashsr) FLASHSR="${2:-all}"; shift ;;        # HERESY 1984
+    --narrator) NARRATOR="${2:-Q4_K}"; shift ;;     # HERESY 2374
+    --refined) REFINED="${2:-F16}"; shift ;;        # HERESY 2388
     --only) ONLY=",${2:-},"; shift ;;
     --artwork) ARTWORK=1 ;;
     --artwork-q8) ARTWORK=1; ARTQ8=1 ;;
     --qwen) QWEN="${2:-}"; shift ;;
     --qwen-fine) QFINE="${2:-}"; shift ;;           # HERESY 1347
     --art-loras) ARTLORAS="${2:-all}"; shift ;;
-    *) echo "--check, --replace, --h3 int8|all|bf16, --upscaler 3b|7b|all, --muscriptor small|medium|large, --flashsr all, --writer quality|compact, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --ira BF16|Q8_0|Q6_K, --irae IRAE|IRAEv2|IRAEv3-BF16|Q8_0|Q6_K, --fw 2.4x0.75-BF16|Q8_0|Q6_K (and 0.7x0.75, 1.5x0.75, 3.4x0.7, 3.4x0.75, 4.0x0.65, 4.0x0.7), --tw 2.0x0.75-BF16|Q8_0|Q6_K (and 2.0x0.9), --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --qwen-fine jibmix-v6|intorealism-v1|real-v2|base-fp8, --art-loras all, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
+    *) echo "--check, --replace, --h3 int8|all|bf16, --upscaler 3b|7b|all, --muscriptor small|medium|large, --flashsr all, --narrator Q4_K|Q6_K|Q8_0, --refined F16, --writer quality|compact, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --ira BF16|Q8_0|Q6_K, --irae IRAE|IRAEv2|IRAEv3-BF16|Q8_0|Q6_K, --fw 2.4x0.75-BF16|Q8_0|Q6_K (and 0.7x0.75, 1.5x0.75, 3.4x0.7, 3.4x0.75, 4.0x0.65, 4.0x0.7), --tw 2.0x0.75-BF16|Q8_0|Q6_K (and 2.0x0.9), --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --qwen-fine jibmix-v6|intorealism-v1|real-v2|base-fp8, --art-loras all, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
   esac
   shift
 done
@@ -128,7 +130,10 @@ again() {   # again CMD…: run into $LOG; once more after 30 s when it fails
 # --check downloads no weights; it may cache a pinned revision's file list in tmp/hf/expect (a few KB)
 # shellcheck source=../tools/hf-env.sh
 source "$ROOT/tools/hf-env.sh"
+# shellcheck source=../root/launcher/paths.sh
+source "$ROOT/launcher/paths.sh"   # HERESY 2330: every weight's place (lab/paths.py's twin)
 pin() {   # ours first, then the Kit's; "main" when neither pins it (said aloud below)
+  [ -n "${PIN_AS:-}" ] && { echo "$PIN_AS"; return; }   # HERESY 2374: a part pinned on its own line (REPO#part), the repo's other files at theirs
   local r=""; [ -f "$PINS" ] && r=$(awk -v k="$1" '$1 == k {print $2; exit}' "$PINS")
   [ -n "$r" ] && { echo "$r"; return; }
   hf_rev "$1"
@@ -161,17 +166,49 @@ hf_repo() {
     mkdir -p "$ROOT/tmp/replaced" && mv "$dir" "$aside" && echo "${D}          the old copy → ${aside#"$ROOT"/} (delete it when the new one works)${X}"
   fi
   mkdir -p "$dir"
-  again "$HF" download --quiet "$repo" --revision "$rev" --local-dir "$dir" "$@"
+  again hf_guarded download --quiet "$repo" --revision "$rev" --local-dir "$dir" "$@"   # HERESY 2380: the triple guard (tools/hf_guard.py)
   if hf_complete "$repo" "$rev" "$dir" "$@" >/dev/null 2>&1; then say_got "$dir" "$tag"; else say_fail "$dir" "$tag: $(why)"; fi
 }
 
-# --- files of a repo laid out as the studio's own folders, straight into place:  hf_into WHAT REPO INCLUDE…
+# --- files of a repo laid out as the Studio's own folders, straight into place:  hf_into WHAT REPO INCLUDE…
 # HERESY 1290: what is missing comes (the downloader keeps a file that matches the pin, by its SHA-256); a file here that differs
 # from the pin is kept, as hf_repo keeps a folder (--replace sets it aside into tmp/replaced/ and fetches the pinned one)
+# HERESY 2330 (Viktor 10.11.2026: «упаковать под основную папку Models со своими поддиректориями»): the models repo keeps 2.0.6's layout
+# (the artwork, checkpoints and flat models folders: paths: 2.0.6); its files land in models/<room>/ by lab/paths.py's map (launcher/paths.sh). The check reads
+# them where they land (hf_expect.py --strip: the repo's prefix off, the room's folder as the dir), the download goes into models/.incoming/
+# (the downloader's own records stay there, so a cut-short file goes on) and each file whole is put in its place by a rename.
+# The patterns of one call land in one folder (hf_place); a pattern the map does not know is a failure said, never a guess.
+hf_place() {   # hf_place INCLUDE…: "STRIP<TAB>DIR" of the first; status 1 when one of them lands elsewhere or nowhere
+  local p first; first=$(rs_hf_place "$1") || return 1
+  for p in "$@"; do [ "$(rs_hf_place "$p")" = "$first" ] || { echo "$p lands elsewhere than $1" >&2; return 1; }; done
+  printf '%s\n' "$first"
+}
+hf_here() {    # hf_here REPO INCLUDE…: hf_complete where the map puts them (quiet; its status)
+  local repo=$1 place; shift; place=$(hf_place "$@") || return 2
+  hf_complete "$repo" "$(pin "$repo")" "$ROOT/${place#*$'\t'}" --strip "${place%%$'\t'*}" --include "$@" >/dev/null 2>&1
+}
+settle() {     # settle INCLUDE…: every whole file models/.incoming/ holds that an include names, renamed into its room
+  local f rel p new
+  while IFS= read -r -d '' f; do
+    rel=${f#"$RS_INCOMING"/}
+    for p in "$@"; do
+      # shellcheck disable=SC2053
+      if [[ $rel == $p ]]; then
+        new=$(rs_new_of "$rel") || continue
+        mkdir -p "$(dirname "$ROOT/$new")" && mv -f "$f" "$ROOT/$new"
+        break
+      fi
+    done
+  done < <(find "$RS_INCOMING" \( -path "$RS_INCOMING/.cache" -o -path "$RS_INCOMING/.ruach-part" \) -prune -o -type f -print0 2>/dev/null)   # 2380: never the guard's part
+  find "$RS_INCOMING" -mindepth 1 -type d -empty -not -path "$RS_INCOMING/.cache*" -delete 2>/dev/null   # its folders, emptied
+  return 0
+}
 hf_into() {
-  local what=$1 repo=$2 rev out rc wrong; shift 2; rev=$(pin "$repo")   # wrong, not odd: say_odd counts in the global odd
+  local what=$1 repo=$2 rev out rc wrong place strip dir; shift 2; rev=$(pin "$repo")   # wrong, not odd: say_odd counts in the global odd
   local tag="($repo @ ${rev:0:7})"; [ "$rev" = main ] && tag="($repo @ main: not pinned)"
-  out=$(hf_complete "$repo" "$rev" "$ROOT" --include "$@" 2>&1); rc=$?
+  place=$(hf_place "$@" 2>&1) || { say_fail "$what" "$tag: lab/paths.py's map: ${place:-no place for $1}"; return; }
+  strip=${place%%$'\t'*}; dir="$ROOT/${place#*$'\t'}"
+  out=$(hf_complete "$repo" "$rev" "$dir" --strip "$strip" --include "$@" 2>&1); rc=$?
   case $rc in
     0) say_here "$what" "$tag"; return ;;
     2) say_unknown "$what" "$tag — the pinned file list could not be read (offline?)"; return ;;
@@ -184,19 +221,24 @@ hf_into() {
   fi
   if [ -n "$wrong" ]; then
     local aside="$ROOT/tmp/replaced/$(date +%Y%m%d-%H%M%S)" f
-    while IFS= read -r f; do mkdir -p "$aside/$(dirname "$f")" && mv "$ROOT/$f" "$aside/$f"; done <<< "$wrong"
+    while IFS= read -r f; do mkdir -p "$aside/$(dirname "$f")" && mv "$dir/$f" "$aside/$f"; done <<< "$wrong"
     echo "${D}          the old copies → ${aside#"$ROOT"/} (delete them when the new ones work)${X}"
   fi
   hf_ready >/dev/null || { say_fail "$what" "(the pinned downloader would not install: tools/hf-env.sh)"; return; }
   # HERESY 1445 (Viktor 14.10.2026: «пользователь волен переименовать скачанное»): only what the check named missing or wrong is
   # fetched, by its own path: one adapter missing no longer brings again the nine here under names or in folders of the user's own
-  # (found by their content). A check that names more than it shows («… and N more») fetches the whole pattern, as before
+  # (found by their content). A check that names more than it shows («… and N more») fetches the whole pattern, as before.
+  # HERESY 2330: the check names them without the repo's prefix: it goes back on for the download
   local need inc=("$@")
-  need=$( { printf '%s\n' "$out" | sed -n 's/^[[:space:]]*\(.*\): missing$/\1/p'; printf '%s\n' "$wrong"; } | sed '/^$/d')
+  need=$( { printf '%s\n' "$out" | sed -n 's/^[[:space:]]*\(.*\): missing$/\1/p'; printf '%s\n' "$wrong"; } | sed '/^$/d' | sed "s|^|$strip|")
   printf '%s\n' "$out" | grep -q '\.\.\. and [0-9]* more' && need=""
   [ -n "$need" ] && mapfile -t inc <<< "$need"
-  again "$HF" download --quiet "$repo" --revision "$rev" --local-dir "$ROOT" --include "${inc[@]}"
-  if hf_complete "$repo" "$rev" "$ROOT" --include "$@" >/dev/null 2>&1; then say_got "$what" "$tag"; else say_fail "$what" "$tag: $(why)"; fi
+  mkdir -p "$RS_INCOMING"
+  # HERESY 2380 (Viktor 11.11.2026: «Тройного сторожа на выгрузках и скачиваниях моделей»): each file into .incoming only at the pin, of the pinned size
+  # and with our manifest's SHA-256; settle moves what this call asked for, so nothing older lying in .incoming replaces a file of a room
+  again hf_guarded download --quiet "$repo" --revision "$rev" --local-dir "$RS_INCOMING" --include "${inc[@]}"
+  settle "${inc[@]}"
+  if hf_complete "$repo" "$rev" "$dir" --strip "$strip" --include "$@" >/dev/null 2>&1; then say_got "$what" "$tag"; else say_fail "$what" "$tag: $(why)"; fi
 }
 
 # --- files of a repo into a folder that may hold others (a second quant beside the first):  hf_into_at WHAT REPO DIR INCLUDE…
@@ -222,7 +264,7 @@ hf_into_at() {
   fi
   hf_ready >/dev/null || { say_fail "$what" "(the pinned downloader would not install: tools/hf-env.sh)"; return; }
   mkdir -p "$dir"
-  again "$HF" download --quiet "$repo" --revision "$rev" --local-dir "$dir" --include "$@"
+  again hf_guarded download --quiet "$repo" --revision "$rev" --local-dir "$dir" --include "$@"   # HERESY 2380: the triple guard
   if hf_complete "$repo" "$rev" "$dir" --include "$@" >/dev/null 2>&1; then say_got "$what" "$tag"; else say_fail "$what" "$tag: $(why)"; fi
 }
 
@@ -233,7 +275,9 @@ sep_model() {
   local f ok=1; for f in "$@"; do [ -s "$dir/$f" ] || ok=0; done
   if [ $ok = 1 ]; then say_here "$dir" "(audio-separator: $model)"; return; fi
   if [ $MODE = check ]; then say_miss "$dir" "(audio-separator: $model)"; return; fi
-  [ -x "$SEP" ] || { say_fail "$model" "(no audio-separator: lab/install-venv.sh)"; return; }
+  # 08.11.2026 (Viktor's AppImage ended «failed 2» for stems he never chose): no audio-separator is no failure but a step not taken:
+  # the stems need the full lab (its torch), which an AppImage or a WSL Studio does not carry
+  [ -x "$SEP" ] || { say_miss "$dir" "(needs audio-separator, which comes with the full lab: bash lab/install-venv.sh)"; return; }
   mkdir -p "$dir"
   again "$SEP" --download_model_only -m "$model" --model_file_dir "$dir"
   ok=1; for f in "$@"; do [ -s "$dir/$f" ] || ok=0; done
@@ -258,40 +302,67 @@ WORK=(--include "*.safetensors" "*.bin" "*.json" "*.yaml" "*.py" "*.txt")
 # the legacy and blend decoders and the 16 sliders come converted, from our models repo v2 at its pin, straight into models/ and
 # sliders/ where the engine reads them (1.3 GB, converted once: byte for byte what convert-extras.py makes from the pinned
 # checkpoints, which no install fetches any more; convert-models.sh stays for whoever wants to make them on their own machine)
+# HERESY 2329 (Viktor 10.11.2026: «Из Студии к хуям выбрасываем Legacy и 0.666 микс. В HF репо пусть остаются»): the part is our decoders
+# now, YuE2-VAE-RS x3 v1 (the Studio's default, 2306; fetch-models.sh brings it with every install) and v2, float32, from goldhub/YuE2-VAE-RS;
+# HERESY 2330 (11.11.2026): public now, in goldhub/YuE2-RS-Finetunes under VAE-RS/ (the private goldhub/YuE2-VAE-RS no more)
 if want extras; then
   # HERESY 1449: the sliders no more (Viktor 15.10.2026: «Нахер убирай это слайдерное говно из нашей Студии»)
-  part extras "The extra decoders, converted once (goldhub/Ruach_Studio_Models_v2)"
-  hf_into "legacy and blend decoders (models/)" goldhub/Ruach_Studio_Models_v2 \
-          "models/YuE2-Vae-legacy-F32.gguf" "models/YuE2-Vae-blend-F32.gguf"
+  part extras "Our decoders: YuE2-VAE-RS x3 v1, the Studio's default, and v2 (goldhub/YuE2-RS-Finetunes, VAE-RS/)"
+  hf_into "${RS_ENGINE_VAE#"$ROOT"/}/YuE2-VAE-RS-x3_v1-F32.gguf and _v2 (our decoders)" goldhub/YuE2-RS-Finetunes \
+          "VAE-RS/YuE2-VAE-RS-x3_v1-F32.gguf" "VAE-RS/YuE2-VAE-RS-x3_v2-F32.gguf"
+fi
+
+# 08.11.2026: the transcriber (covers from a recording) is a part of its own, no longer fetched with every install: SheetSage2's head
+# with MERT-v2-FullSong beside it (HERESY 1610), from v2 at its pin
+if want transcriber; then
+  part transcriber "The transcriber: covers from a recording (SheetSage2 with MERT-v2-FullSong, Q8_0)"
+  hf_into "${RS_MISC#"$ROOT"/}/SheetSage2-Q8_0.gguf and MERT-v2-FullSong-Q8_0.gguf" goldhub/Ruach_Studio_Models_v2 \
+          "models/SheetSage2-Q8_0.gguf" "models/MERT-v2-FullSong-Q8_0.gguf"   # paths: repo
+fi
+
+# HERESY 2388 (Viktor 11.11.2026: «И оформи Refined веса в наш Models_v2 репо также»): the transcriber's Refined mode, anime-song's SheetSage2-Refined
+# (CC BY-NC 4.0; our F16 GGUF, 2379), asked for alone (Engine → Models): an overlay start.sh hands the engine only beside SheetSage2 and MERT, so the
+# transcriber comes first where it is not here; the overlay with its LICENSE and NOTICE from v2 at its own pin (the repo's other files keep theirs). The
+# words start with models/misc/SheetSage: the lab asks for the engine's restart after them (the engine lists the overlay when it starts)
+if [ -n "$REFINED" ]; then
+  [ "$REFINED" = F16 ] || { echo "${R}--refined takes F16${X}"; exit 2; }
+  asked refined "The transcriber's Refined mode: anime-song's SheetSage2-Refined (F16, CC BY-NC 4.0), on SheetSage2 with MERT-v2-FullSong"
+  want transcriber || hf_into "${RS_MISC#"$ROOT"/}/SheetSage2-Q8_0.gguf and MERT-v2-FullSong-Q8_0.gguf" goldhub/Ruach_Studio_Models_v2 \
+          "models/SheetSage2-Q8_0.gguf" "models/MERT-v2-FullSong-Q8_0.gguf"   # paths: repo
+  RREV=$(awk -v k="goldhub/Ruach_Studio_Models_v2#refined" '$1 == k {print $2; exit}' "$PINS" 2>/dev/null)   # its own pin
+  if [ -z "$RREV" ]; then say_fail "SheetSage2-Refined" "(heresy/hf-revisions.txt pins no goldhub/Ruach_Studio_Models_v2#refined)"
+  else PIN_AS="$RREV" hf_into "${RS_MISC#"$ROOT"/}/SheetSage2-Refined-F16.gguf with its LICENSE and NOTICE (anime-song's SheetSage2-Refined)" goldhub/Ruach_Studio_Models_v2 \
+          "models/SheetSage2-Refined-F16.gguf" "models/SheetSage2-Refined/LICENSE" "models/SheetSage2-Refined/NOTICE.md"   # paths: repo
+  fi
 fi
 
 if want whisper; then
   part whisper "Whisper large-v3 (CTranslate2, float16): lyrics check, karaoke timing, trim to the text"
-  hf_into "whisper/whisper-large-v3-ct2-float16" goldhub/Ruach_Studio_Models_v2 "whisper/whisper-large-v3-ct2-float16/*"   # HERESY 1445: Systran's
+  hf_into "${RS_WHISPER#"$ROOT"/}/whisper-large-v3-ct2-float16" goldhub/Ruach_Studio_Models_v2 "whisper/whisper-large-v3-ct2-float16/*"   # HERESY 1445: Systran's · paths: repo
 fi
 
 if want stems; then
   part stems "Stems"
-  sep_model model_bs_roformer_ep_317_sdr_12.9755.ckpt "$ROOT/separation/roformer" \
+  sep_model model_bs_roformer_ep_317_sdr_12.9755.ckpt "$RS_REFINER_SEPARATION/roformer" \
             model_bs_roformer_ep_317_sdr_12.9755.ckpt model_bs_roformer_ep_317_sdr_12.9755.yaml
-  sep_model htdemucs_ft.yaml "$ROOT/separation/demucs" htdemucs_ft.yaml \
+  sep_model htdemucs_ft.yaml "$RS_REFINER_SEPARATION/demucs" htdemucs_ft.yaml \
             f7e0c4bc-ba3fe64a.th d12395a8-e57c48e6.th 92cfc3b6-ef3bcb9c.th 04573f0d-f3cf25b2.th
 fi
 
 if want upscale; then
   part upscale "Upscale: UniverSR"
-  # HERESY 1445: from v2 into universr/, where lab/upscale_job.py reads it; 1799 (Viktor 26.10.2026: «удаление .cache и hf_cache никогда не
+  # HERESY 1445: from v2 into models/refiner/upscale/universr/, where lab/upscale_job.py reads it; 1799 (Viktor 26.10.2026: «удаление .cache и hf_cache никогда не
   # должно сломать ни одного из пайплайнов Студии»): an older install's woongzip1's in hf_cache/ (the same bytes as v2's) is copied into
-  # universr/, then checked by the pin like any download; nothing reads it where it lies
+  # models/refiner/upscale/universr/, then checked by the pin like any download; nothing reads it where it lies
   snap="$ROOT/hf_cache/hub/models--woongzip1--universr-audio/snapshots/$(pin woongzip1/universr-audio)"
-  if [ $MODE != check ] && [ ! -s "$ROOT/universr/pytorch_model.bin" ] && [ -s "$snap/pytorch_model.bin" ] && [ -s "$snap/config.yaml" ]; then
-    mkdir -p "$ROOT/universr" && cp -L "$snap/config.yaml" "$snap/pytorch_model.bin" "$ROOT/universr/"
+  if [ $MODE != check ] && [ ! -s "$RS_REFINER_UNIVERSR/pytorch_model.bin" ] && [ -s "$snap/pytorch_model.bin" ] && [ -s "$snap/config.yaml" ]; then
+    mkdir -p "$RS_REFINER_UNIVERSR" && cp -L "$snap/config.yaml" "$snap/pytorch_model.bin" "$RS_REFINER_UNIVERSR/"
   fi
-  hf_into "universr (woongzip1/universr-audio)" goldhub/Ruach_Studio_Models_v2 "universr/*"
+  hf_into "${RS_REFINER_UNIVERSR#"$ROOT"/} (woongzip1/universr-audio)" goldhub/Ruach_Studio_Models_v2 "universr/*"   # paths: repo
   clone https://github.com/woongzip1/UniverSR.git "$ROOT/vendor/UniverSR"
-  # HERESY 1583: the Voice upscale's bundle: Apollo-vocal (baicai1145, CC BY-NC-SA 4.0) and its model code, from v2 into models/upbundle/apollo/
+  # HERESY 1583: the Voice upscale's bundle: Apollo-vocal (baicai1145, CC BY-NC-SA 4.0) and its model code, from v2 into models/refiner/upscale/upbundle/apollo/
   # where lab/upbundle_job.py reads them; FlashSR comes on first use (1611: its weights from our copy in v2, Apache-2.0 as its author stated on 20.10.2026; its code from him)
-  hf_into "Apollo-vocal (baicai1145/Apollo-vocal-msst)" goldhub/Ruach_Studio_Models_v2 "models/upbundle/apollo/*"
+  hf_into "Apollo-vocal (baicai1145/Apollo-vocal-msst)" goldhub/Ruach_Studio_Models_v2 "models/upbundle/apollo/*"   # paths: repo
 fi
 
 # HERESY 1079: the style listener, only when asked for, and asked again with its size: a download of 7 to 22 GB
@@ -300,19 +371,19 @@ if [ -n "$LISTENER" ]; then
   asked listener "The style listener: Qwen2.5-Omni-7B ($LISTENER)"
   # HERESY 1077b: every GGUF with mradermacher's Q8_0 audio projector (1.5 GB): the ladder measured 02.10.2026
   # heard the same tags from Q8_0 down to Q4_K_M with it as with the f16 one (2.6 GB), a GB less and twice as fast
-  OMNI="$ROOT/checkpoints/Qwen2.5-Omni-7B-GGUF"      # (not G: that one is the green of the output)
+  OMNI="$RS_LISTENER/Qwen2.5-Omni-7B-GGUF"      # (not G: that one is the green of the output)
   # HERESY 1445: the GGUFs from v2, laid out as before (ggml-org's at the top, unsloth/, mradermacher/); bf16 from Qwen
-  V2=goldhub/Ruach_Studio_Models_v2; O="checkpoints/Qwen2.5-Omni-7B-GGUF"
-  P_REPO=$V2; P_DIR="$ROOT"; P_INC=(--include "$O/mradermacher/Qwen2.5-Omni-7B.mmproj-Q8_0.gguf")
+  V2=goldhub/Ruach_Studio_Models_v2; O="checkpoints/Qwen2.5-Omni-7B-GGUF"   # paths: repo (2330: they land in models/listener/, hf_into)
+  P_REPO=$V2; P_DIR="$RS_LISTENER"; P_INC=(--strip checkpoints/ --include "$O/mradermacher/Qwen2.5-Omni-7B.mmproj-Q8_0.gguf")
   case "$LISTENER" in
     Q8_0)   SIZE="9.6 GB (Q8_0 8.1 + its audio projector Q8_0 1.5)"; PEAK="10.3 GB of VRAM"
-            L_REPO=$V2; L_DIR="$ROOT"; L_INC=(--include "$O/Qwen2.5-Omni-7B-Q8_0.gguf") ;;
+            L_REPO=$V2; L_DIR="$RS_LISTENER"; L_INC=(--strip checkpoints/ --include "$O/Qwen2.5-Omni-7B-Q8_0.gguf") ;;
     Q5_K_M) SIZE="6.9 GB (Q5_K_M 5.4 + its audio projector Q8_0 1.5)"; PEAK="8.0 GB of VRAM"
-            L_REPO=$V2; L_DIR="$ROOT"; L_INC=(--include "$O/unsloth/Qwen2.5-Omni-7B-Q5_K_M.gguf") ;;
+            L_REPO=$V2; L_DIR="$RS_LISTENER"; L_INC=(--strip checkpoints/ --include "$O/unsloth/Qwen2.5-Omni-7B-Q5_K_M.gguf") ;;
     Q4_K_M) SIZE="6.2 GB (Q4_K_M 4.7 + its audio projector Q8_0 1.5)"; PEAK="7.3 GB of VRAM"
-            L_REPO=$V2; L_DIR="$ROOT"; L_INC=(--include "$O/Qwen2.5-Omni-7B-Q4_K_M.gguf") ;;
-    bf16)   SIZE="22 GB (the whole model; the studio loads its thinker only)"; PEAK="18.3 GB of VRAM: a 24 GB card"
-            L_REPO=Qwen/Qwen2.5-Omni-7B; L_DIR="$ROOT/checkpoints/Qwen2.5-Omni-7B"; L_INC=("${WORK[@]}"); P_REPO="" ;;
+            L_REPO=$V2; L_DIR="$RS_LISTENER"; L_INC=(--strip checkpoints/ --include "$O/Qwen2.5-Omni-7B-Q4_K_M.gguf") ;;
+    bf16)   SIZE="22 GB (the whole model; the Studio loads its thinker only)"; PEAK="18.3 GB of VRAM: a 24 GB card"
+            L_REPO=Qwen/Qwen2.5-Omni-7B; L_DIR="$RS_LISTENER/Qwen2.5-Omni-7B"; L_INC=("${WORK[@]}"); P_REPO="" ;;
     *) echo "${R}--listener takes Q8_0, Q5_K_M, Q4_K_M or bf16${X}"; exit 2 ;;
   esac
   have_all() {
@@ -325,7 +396,7 @@ if [ -n "$LISTENER" ]; then
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
   if [ $go = 1 ]; then
-    if [ "$L_REPO" = "$V2" ]; then hf_into "$O ($LISTENER and its audio projector)" "$V2" "${L_INC[@]:1}" "${P_INC[@]:1}"
+    if [ "$L_REPO" = "$V2" ]; then hf_into "${OMNI#"$ROOT"/} ($LISTENER and its audio projector)" "$V2" "${L_INC[@]:3}" "${P_INC[@]:3}"
     else hf_repo "$L_REPO" "$L_DIR" "${L_INC[@]}"; fi
   fi
   if [ "$LISTENER" != bf16 ]; then
@@ -335,30 +406,54 @@ if [ -n "$LISTENER" ]; then
   fi
 fi
 
-# HERESY 1811 (Viktor 28.10.2026: «прикручивай как Local Studio LLM… пусть это будет опция по умолчанию для установок, где VRAM позволяет»): the studio's
+# HERESY 1811 (Viktor 28.10.2026: «прикручивай как Local Studio LLM… пусть это будет опция по умолчанию для установок, где VRAM позволяет»): the Studio's
 # own writer, Qwopus3.5-9B-v3 as AutoRound moved into GGUF, from our models repo v2 at its pin; asked first with its size; it runs through llama-server
 if [ -n "$WRITER" ]; then
-  asked writer "The studio's writer: Qwopus3.5-9B-v3 ($WRITER)"
-  V2=goldhub/Ruach_Studio_Models_v2; O="checkpoints/Qwopus3.5-9B-GGUF"
+  asked writer "The Studio's writer: Qwopus3.5-9B-v3 ($WRITER)"
+  V2=goldhub/Ruach_Studio_Models_v2; O="checkpoints/Qwopus3.5-9B-GGUF"   # paths: repo (2330: it lands in models/writer/, hf_into)
   case "$WRITER" in
     quality) SIZE="6.7 GB"; PEAK="about 7.5 GB of VRAM"; W_FILE="$O/Qwopus3.5-9B-v3-AR-Q4_0.gguf" ;;
     compact) SIZE="5.5 GB"; PEAK="about 6.5 GB of VRAM"; W_FILE="$O/Qwopus3.5-9B-v3-AR-compact.gguf" ;;
     *) echo "${R}--writer takes quality or compact${X}"; exit 2 ;;
   esac
   go=1
-  if [ $MODE != check ] && [ $YES = 0 ] && ! hf_complete "$V2" "$(pin "$V2")" "$ROOT" --include "$W_FILE" >/dev/null 2>&1; then
+  if [ $MODE != check ] && [ $YES = 0 ] && ! hf_here "$V2" "$W_FILE"; then
     printf "%s" "Download $SIZE? It needs $PEAK when it writes. [y/N] "
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
-  [ $go = 1 ] && hf_into "$O ($WRITER and its licence)" "$V2" "$W_FILE" "$O/LICENSE"
+  [ $go = 1 ] && hf_into "${RS_WRITER#"$ROOT"/}/Qwopus3.5-9B-GGUF ($WRITER and its licence)" "$V2" "$W_FILE" "$O/LICENSE"
   clone https://github.com/ggml-org/llama.cpp.git "$ROOT/vendor/llama.cpp"
   if [ -x "$ROOT/vendor/llama.cpp/build/bin/llama-server" ]; then say_here "llama-server" "(vendor/llama.cpp/build)"
   else say_miss "llama-server" "→ bash launcher/extras.sh builds it (or: cd vendor/llama.cpp && cmake -B build -DGGML_CUDA=ON && cmake --build build -j --target llama-server)"; fi
 fi
 
+# HERESY 2374 (Viktor 11.11.2026: the Narrator public in 2.0.7, turnkey): Fish Audio Drama 3 as our GGUF with its LICENSE, NOTICE and card (the
+# engine refuses to load without them), and the Ukrainian stresses (lang-uk, MIT, its NOTICE), from our models repo v2 at its pin; then audio.cpp's
+# server, vendored in build/audio.cpp at its pin and built here once (tools/narrator-setup.sh: the CUDA toolkit for a card, else the processor)
+if [ -n "$NARRATOR" ]; then
+  asked narrator "The Narrator: Fish Audio Drama 3 ($NARRATOR), Built with Fish Audio"
+  V2=goldhub/Ruach_Studio_Models_v2; O="models/reader/drama-3-gguf"   # paths: repo (it lands in models/narrator/drama-3-gguf: lab/paths.py)
+  NREV=$(awk -v k="$V2#narrator" '$1 == k {print $2; exit}' "$PINS" 2>/dev/null)   # its own pin: the repo's other files keep theirs
+  case "$NARRATOR" in
+    Q4_K) N_FILE="$O/drama-3-experts-Q4_K-backbone-Q8_0.gguf" ;;
+    Q6_K) N_FILE="$O/drama-3-experts-Q6_K-backbone-Q8_0.gguf" ;;
+    Q8_0) N_FILE="$O/drama-3-Q8_0.gguf" ;;
+    *) echo "${R}--narrator takes Q4_K, Q6_K or Q8_0${X}"; exit 2 ;;
+  esac
+  # the words start with the room, not with the models folder: the lab asks for an engine restart after a fetched line that does (the engine reads none of these)
+  PIN_AS="$NREV" hf_into "the Narrator's Drama 3: narrator/drama-3-gguf ($NARRATOR, its LICENSE, NOTICE and card: the Fish Audio Community License 1.0)" "$V2" "$N_FILE" "$O/LICENSE" "$O/NOTICE" "$O/README.md"
+  UKD="models/reader/dicts/uk"   # paths: repo (it lands in models/narrator/dicts/uk)
+  PIN_AS="$NREV" hf_into "the Narrator's Ukrainian stresses: narrator/dicts/uk (lang-uk, from ULIF's Dictionaries of Ukraine, MIT)" "$V2" \
+          "$UKD/forms.sqlite" "$UKD/NOTICE"
+  if bash "$ROOT/tools/narrator-setup.sh" --check >/dev/null 2>&1; then say_here "audio.cpp's server" "($(bash "$ROOT/tools/narrator-setup.sh" --where 2>/dev/null))"
+  elif [ $MODE = check ]; then say_miss "audio.cpp's server" "→ bash tools/narrator-setup.sh builds it from build/audio.cpp"
+  elif again bash "$ROOT/tools/narrator-setup.sh" --build; then say_got "audio.cpp's server" "($(bash "$ROOT/tools/narrator-setup.sh" --where 2>/dev/null))"
+  else say_fail "audio.cpp's server" "(tools/narrator-setup.sh: $(why))"; fi
+fi
+
 # HERESY 1834 (Viktor 28.10.2026: «забирай large модель muscriptor, и пропишешь все три размера в Engine»): the weights of the sound-to-MIDI
 # transcriber, MuScriptor (Mirelo and Kyutai; CC BY-NC 4.0: non-commercial use only) as DamRsn converted it to GGUF, from his repo at its pin, into
-# models/muscriptor with its notice and licence; asked first with its size. The program that reads it, build.sh builds (build/build-muscriptor)
+# models/refiner/midi/muscriptor with its notice and licence; asked first with its size. The program that reads it, build.sh builds (build/build-muscriptor)
 if [ -n "$MUSC" ]; then
   asked muscriptor "Sound to MIDI: MuScriptor $MUSC (Mirelo and Kyutai, CC BY-NC 4.0: non-commercial use only)"
   case "$MUSC" in
@@ -366,11 +461,11 @@ if [ -n "$MUSC" ]; then
     *) echo "${R}--muscriptor takes small, medium or large${X}"; exit 2 ;;
   esac
   M_REPO=DamRsn/muscriptor-gguf; go=1
-  if [ $MODE != check ] && [ $YES = 0 ] && ! hf_complete "$M_REPO" "$(pin "$M_REPO")" "$ROOT/models/muscriptor" --include "v1/muscriptor-$MUSC-f16.gguf" >/dev/null 2>&1; then
+  if [ $MODE != check ] && [ $YES = 0 ] && ! hf_complete "$M_REPO" "$(pin "$M_REPO")" "$RS_REFINER_MIDI/muscriptor" --include "v1/muscriptor-$MUSC-f16.gguf" >/dev/null 2>&1; then
     printf "%s" "Download $SIZE? [y/N] "
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
-  [ $go = 1 ] && hf_into_at "models/muscriptor ($MUSC, its notice and licence)" "$M_REPO" "$ROOT/models/muscriptor" "v1/muscriptor-$MUSC-f16.gguf" "NOTICE.md" "LICENSE"
+  [ $go = 1 ] && hf_into_at "${RS_REFINER_MIDI#"$ROOT"/}/muscriptor ($MUSC, its notice and licence)" "$M_REPO" "$RS_REFINER_MIDI/muscriptor" "v1/muscriptor-$MUSC-f16.gguf" "NOTICE.md" "LICENSE"
   if [ -x "$ROOT/build/build-muscriptor/ruach-muscriptor" ]; then say_here "ruach-muscriptor" "(build/build-muscriptor)"
   else say_miss "ruach-muscriptor" "→ ./build.sh builds it"; fi
 fi
@@ -378,10 +473,10 @@ fi
 # HERESY 1867 (Viktor 29.10.2026: «BF16 веса H3 просчитай по затратам и их тоже пропиши в загрузчик, но мы не насилуем наше железо, достаточно int8
 # с головой»): the Videographer's moving pictures, MiniMax H3 (MiniMax H3 Community License: not to be run in the US, the EU, the UK or South Korea
 # without MiniMax's own leave; commercial use past its threshold needs a licence of MiniMax) as Comfy-Org packs it, and with «all» FastH3 (FastVideo),
-# into models/minimax-h3 in its Comfy layout, at their pins; the original's tokenizer, processor and encoder config (64 MB) beside them. HERESY 1869:
+# into models/videographer/minimax-h3 in its Comfy layout, at their pins; the original's tokenizer, processor and encoder config (64 MB) beside them. HERESY 1869:
 # the drafts are H3 itself at 8 steps (measured 29.10: FastH3 is past 24 GB at 768p and knows no first frame), so int8 goes without FastH3
 if [ -n "$H3" ]; then
-  asked h3 "The Videographer's moving pictures: MiniMax H3 ($H3). Its licence (MiniMax H3 Community License) forbids running it in the US, the EU, the UK and South Korea without MiniMax's leave, and commercial use past its threshold needs MiniMax's licence: read it first (models/minimax-h3/original/LICENSE)"
+  asked h3 "The Videographer's moving pictures: MiniMax H3 ($H3). Its licence (MiniMax H3 Community License) forbids running it in the US, the EU, the UK and South Korea without MiniMax's leave, and commercial use past its threshold needs MiniMax's licence: read it first (${RS_VIDEO_H3#"$ROOT"/}/original/LICENSE)"
   C_REPO=Comfy-Org/MiniMax-H3; F_REPO=FastVideo/FastVideo-FastH3-Comfy; O_REPO=MiniMaxAI/MiniMax-H3
   H3_INT8=(diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors
            text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors vae/minimax_h3_video_vae_fp16.safetensors vae/minimax_h3_audio_vae_fp32.safetensors
@@ -411,9 +506,9 @@ if [ -n "$H3" ]; then
                                 embeddings/minimaxh3_dark_magic.safetensors embeddings/minimaxh3_fire_breath.safetensors embeddings/minimaxh3_four_seasons.safetensors
                                 embeddings/minimaxh3_kiss_camera.safetensors embeddings/minimaxh3_spiral_ascent.safetensors embeddings/minimaxh3_storm_magic.safetensors
                                 embeddings/minimaxh3_truman_show.safetensors)
-    hf_into_at "models/minimax-h3 (MiniMax H3, $H3)" "$C_REPO" "$ROOT/models/minimax-h3" "${FILES[@]}" "README.md"
-    [ $FAST = 1 ] && hf_into_at "models/minimax-h3 (FastH3, 8 steps)" "$F_REPO" "$ROOT/models/minimax-h3" "diffusion_models/fastvideo_fasth3_8step_v2_pruned_int8_convrot.safetensors"
-    hf_into_at "models/minimax-h3/original (its tokenizer, processor and encoder config, its licence)" "$O_REPO" "$ROOT/models/minimax-h3/original" \
+    hf_into_at "${RS_VIDEO_H3#"$ROOT"/} (MiniMax H3, $H3)" "$C_REPO" "$RS_VIDEO_H3" "${FILES[@]}" "README.md"
+    [ $FAST = 1 ] && hf_into_at "${RS_VIDEO_H3#"$ROOT"/} (FastH3, 8 steps)" "$F_REPO" "$RS_VIDEO_H3" "diffusion_models/fastvideo_fasth3_8step_v2_pruned_int8_convrot.safetensors"
+    hf_into_at "${RS_VIDEO_H3#"$ROOT"/}/original (its tokenizer, processor and encoder config, its licence)" "$O_REPO" "$RS_VIDEO_H3/original" \
       FL2VA/tokenizer/merges.txt FL2VA/tokenizer/tokenizer.json FL2VA/tokenizer/tokenizer_config.json FL2VA/tokenizer/vocab.json \
       FL2VA/processor/chat_template.json FL2VA/processor/merges.txt FL2VA/processor/preprocessor_config.json FL2VA/processor/tokenizer.json \
       FL2VA/processor/tokenizer_config.json FL2VA/processor/video_preprocessor_config.json FL2VA/processor/vocab.json FL2VA/text_encoder/config.json \
@@ -424,14 +519,14 @@ if [ -n "$H3" ]; then
 fi
 
 # HERESY 1876a (Viktor 29.10.2026: «SeedVR2 обе 3B и 7B просчитай по ресурсам и прогони 7B на предмет на OOM под 24GB VRAM… Прикручиваем в загрузчик оба
-# веса»): the Videographer's upscaler, SeedVR2 (ByteDance, Apache-2.0) as numz packs it, into models/seedvr2 at its pin. Measured 29.10 on a 3090, 107 frames
+# веса»): the Videographer's upscaler, SeedVR2 (ByteDance, Apache-2.0) as numz packs it, into models/misc/seedvr2 at its pin. Measured 29.10 on a 3090, 107 frames
 # of 768p: 3B to 1080p 284 s, 18.6 GB of the card at its peak; 7B sharp to 1080p 367 s, 19.7 GB with 16 of its blocks in RAM (22.4 GB without: 1.2 GB to
 # spare, which Comfy's own takes); 7B sharp to 1440p 592 s, 20.9 GB
 if [ -n "$UPSCALER" ]; then
   S_REPO=numz/SeedVR2_comfyUI
   case "$UPSCALER" in
     3b) FILES=(seedvr2_ema_3b_fp16.safetensors); SIZE="7.3 GB: SeedVR2 3B, the quick one (18.6 GB of a card at 1080p)" ;;
-    7b) FILES=(seedvr2_ema_7b_sharp_fp16.safetensors); SIZE="17 GB: SeedVR2 7B sharp, the studio's own (20 GB of a card at 1080p, 16 of its blocks in RAM)" ;;
+    7b) FILES=(seedvr2_ema_7b_sharp_fp16.safetensors); SIZE="17 GB: SeedVR2 7B sharp, the Studio's own (20 GB of a card at 1080p, 16 of its blocks in RAM)" ;;
     all) FILES=(seedvr2_ema_3b_fp16.safetensors seedvr2_ema_7b_sharp_fp16.safetensors seedvr2_ema_7b_fp16.safetensors); SIZE="40 GB: 3B, 7B sharp and 7B" ;;
     *) echo "${R}--upscaler takes 3b, 7b or all${X}"; exit 2 ;;
   esac
@@ -440,20 +535,20 @@ if [ -n "$UPSCALER" ]; then
     printf "%s" "Download up to $SIZE? [y/N] "
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
-  [ $go = 1 ] && hf_into_at "models/seedvr2 (SeedVR2, $UPSCALER)" "$S_REPO" "$ROOT/models/seedvr2" "${FILES[@]}" ema_vae_fp16.safetensors
+  [ $go = 1 ] && hf_into_at "${RS_SEEDVR2#"$ROOT"/} (SeedVR2, $UPSCALER)" "$S_REPO" "$RS_SEEDVR2" "${FILES[@]}" ema_vae_fp16.safetensors
 fi
 
 # HERESY 1984: the Voice upscale's FlashSR (its weights Apache-2.0, as its author stated on 20.10.2026), which lab/upbundle_job.py fetches on its first
-# use (HERESY 1611), beforehand: from v2 at its pin into models/upbundle/flashsr/, where upbundle_job.py reads them; asked first with its size
+# use (HERESY 1611), beforehand: from v2 at its pin into models/refiner/upscale/upbundle/flashsr/, where upbundle_job.py reads them; asked first with its size
 if [ -n "$FLASHSR" ]; then
   [ "$FLASHSR" = all ] || { echo "${R}--flashsr takes all${X}"; exit 2; }
   asked flashsr "The Voice upscale's FlashSR (its three weights, Apache-2.0: goldhub/Ruach_Studio_Models_v2)"
   go=1
-  if [ $MODE != check ] && [ $YES = 0 ] && ! [ -s "$ROOT/models/upbundle/flashsr/weights/vae.pth" ]; then
+  if [ $MODE != check ] && [ $YES = 0 ] && ! [ -s "$RS_REFINER_UPBUNDLE/flashsr/weights/vae.pth" ]; then
     printf "%s" "Download 3.3 GB? The Voice upscale fetches it on its first use otherwise. [y/N] "
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
-  [ $go = 1 ] && hf_into "models/upbundle/flashsr (FlashSR's weights)" goldhub/Ruach_Studio_Models_v2 "models/upbundle/flashsr/weights/*"
+  [ $go = 1 ] && hf_into "${RS_REFINER_UPBUNDLE#"$ROOT"/}/flashsr (FlashSR's weights)" goldhub/Ruach_Studio_Models_v2 "models/upbundle/flashsr/weights/*"   # paths: repo
 fi
 
 # HERESY 1120: artwork for takes, only when asked for, and asked again with its size (HERESY 1291: from our models repo v2, at its pin). The painter is CyberRealistic
@@ -464,19 +559,19 @@ fi
 # text encoder, VAE and configs, all from our models repo (Krea 2 Community License: its LICENSE and NOTICE come along),
 # and the content filter the licence asks for (Falconsai/nsfw_image_detection, Apache-2.0); SDXL below, as before.
 # HERESY 1405 (Viktor 12.10.2026: «Да, удаляй лишний обвес SDXL. Лучше Krea 2 Q4, чем SDXL Q8»): Krea 2 Muse for any card: whole where one
-# has 16 GB, its blocks streamed from RAM below (the lab says so to the painter); SDXL gone from the studio
+# has 16 GB, its blocks streamed from RAM below (the lab says so to the painter); SDXL gone from the Studio
 # HERESY 1428 (Viktor 14.10.2026: «Krea вырезаем, однозначно»): Krea 2 Muse gone; --artwork brings what came with it and every painter uses:
 # the prompt writer and the content filter (the painters are --qwen's); --artwork-q8 is taken as --artwork
 if [ $ARTWORK = 1 ]; then
   asked artwork "Artwork: the covers' helpers, the prompt writer (Qwen3-4B-Instruct-2507) and the content filter (the painters are Qwen-Image's: --qwen)"
   go=1
-  if [ $MODE != check ] && [ $YES = 0 ] && ! { [ -s "$ROOT/artwork/Qwen3-4B-Instruct-2507/config.json" ] && [ -s "$ROOT/artwork/nsfw-filter/model.safetensors" ]; }; then
+  if [ $MODE != check ] && [ $YES = 0 ] && ! { [ -s "$RS_ARTIST/Qwen3-4B-Instruct-2507/config.json" ] && [ -s "$RS_ARTIST/nsfw-filter/model.safetensors" ]; }; then
     printf "%s" "Download 8.4 GB (the prompt writer 8.1, the filter 0.3)? [y/N] "
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
   if [ $go = 1 ]; then
-    hf_into "artwork/nsfw-filter (Falconsai/nsfw_image_detection)" goldhub/Ruach_Studio_Models_v2 "artwork/nsfw-filter/*"                         # HERESY 1445: from v2
-    hf_into "artwork/Qwen3-4B-Instruct-2507" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen3-4B-Instruct-2507/*"
+    hf_into "${RS_ARTIST#"$ROOT"/}/nsfw-filter (Falconsai/nsfw_image_detection)" goldhub/Ruach_Studio_Models_v2 "artwork/nsfw-filter/*"                         # HERESY 1445: from v2 · paths: repo
+    hf_into "${RS_ARTIST#"$ROOT"/}/Qwen3-4B-Instruct-2507" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen3-4B-Instruct-2507/*"   # paths: repo
     [ -x "$ROOT/.venv-art/bin/python" ] || say_miss "$ROOT/.venv-art" "(the Artist paints in its own environment: lab/install-venv.sh --art)"
   fi
 fi
@@ -487,7 +582,7 @@ fi
 # unsloth/Qwen-Image-2512-GGUF and Lightning's 8 steps from lightx2v (Apache-2.0 both). Qwen-Image-2.1 whole, from Qwen: its licence
 # is Qwen's research licence, not for commercial use (a cover for a song that is sold is commercial use), and the question says so.
 if [ -n "$QWEN" ]; then
-  Q_DIR="$ROOT/artwork/Qwen-Image-2512"
+  Q_DIR="$RS_ARTIST/Qwen-Image-2512"
   for q in ${QWEN//,/ }; do
     case "$q" in
       2512-q4|2512-q6)
@@ -499,19 +594,19 @@ if [ -n "$QWEN" ]; then
           read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
         fi
         if [ $go = 1 ]; then
-          hf_into "artwork/Qwen-Image-2512 (its parts)" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/model_index.json" "artwork/Qwen-Image-2512/README.md" "artwork/Qwen-Image-2512/scheduler/*" "artwork/Qwen-Image-2512/tokenizer/*" "artwork/Qwen-Image-2512/text_encoder/*" "artwork/Qwen-Image-2512/vae/*" "artwork/Qwen-Image-2512/transformer/config.json"
-          hf_into "artwork/Qwen-Image-2512/gguf ($quant)" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/gguf/qwen-image-2512-$quant.gguf"   # HERESY 1445: from v2
-          hf_into "artwork/Qwen-Image-2512/lightning" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/lightning/Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors"
+          hf_into "${RS_ARTIST#"$ROOT"/}/Qwen-Image-2512 (its parts)" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/model_index.json" "artwork/Qwen-Image-2512/README.md" "artwork/Qwen-Image-2512/scheduler/*" "artwork/Qwen-Image-2512/tokenizer/*" "artwork/Qwen-Image-2512/text_encoder/*" "artwork/Qwen-Image-2512/vae/*" "artwork/Qwen-Image-2512/transformer/config.json"   # paths: repo
+          hf_into "${RS_ARTIST#"$ROOT"/}/Qwen-Image-2512/gguf ($quant)" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/gguf/qwen-image-2512-$quant.gguf"   # HERESY 1445: from v2 · paths: repo
+          hf_into "${RS_ARTIST#"$ROOT"/}/Qwen-Image-2512/lightning" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/lightning/Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors"   # paths: repo
           [ -x "$ROOT/.venv-art/bin/python" ] || say_miss "$ROOT/.venv-art" "(the painters paint in their own environment: lab/install-venv.sh --art)"
         fi ;;
       2.1)
         asked qwen "Artwork: Qwen-Image-2.1 (Qwen's research licence: not for commercial use)"
         go=1
-        if [ $MODE != check ] && [ $YES = 0 ] && ! [ -s "$ROOT/artwork/Qwen-Image-2.1/model_index.json" ]; then
+        if [ $MODE != check ] && [ $YES = 0 ] && ! [ -s "$RS_ARTIST/Qwen-Image-2.1/model_index.json" ]; then
           printf "%s" "Download 33 GB? Qwen-Image-2.1 is under Qwen's research licence: research and evaluation only, not for commercial use (a cover for a song that is sold is commercial use). It paints on a card of 24 GB. [y/N] "
           read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
         fi
-        [ $go = 1 ] && hf_into "artwork/Qwen-Image-2.1" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2.1/model_index.json" "artwork/Qwen-Image-2.1/scheduler/*" "artwork/Qwen-Image-2.1/tokenizer/*" "artwork/Qwen-Image-2.1/processor/*" "artwork/Qwen-Image-2.1/text_encoder/*" "artwork/Qwen-Image-2.1/vae/*" "artwork/Qwen-Image-2.1/transformer/*" "artwork/Qwen-Image-2.1/LICENSE*" "artwork/Qwen-Image-2.1/NOTICE" ;;
+        [ $go = 1 ] && hf_into "${RS_ARTIST#"$ROOT"/}/Qwen-Image-2.1" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2.1/model_index.json" "artwork/Qwen-Image-2.1/scheduler/*" "artwork/Qwen-Image-2.1/tokenizer/*" "artwork/Qwen-Image-2.1/processor/*" "artwork/Qwen-Image-2.1/text_encoder/*" "artwork/Qwen-Image-2.1/vae/*" "artwork/Qwen-Image-2.1/transformer/*" "artwork/Qwen-Image-2.1/LICENSE*" "artwork/Qwen-Image-2.1/NOTICE" ;;   # paths: repo
       *) echo "--qwen takes 2512-q4, 2512-q6, 2.1 (several with commas)"; exit 2 ;;
     esac
   done
@@ -523,7 +618,7 @@ fi
 # authors let them be shared (Civitai: share and sell), the others are fetched by the user from Civitai itself. The same for the
 # Artist's adapters.
 if [ -n "$QFINE" ]; then
-  Q_DIR="$ROOT/artwork/Qwen-Image-2512"
+  Q_DIR="$RS_ARTIST/Qwen-Image-2512"
   for q in ${QFINE//,/ }; do
     case "$q" in
       jibmix-v6) f="JibMix QW2512 v6 fp8.safetensors"; who="Jib Mix Qwen v6 by J1B" ;;
@@ -539,9 +634,9 @@ if [ -n "$QFINE" ]; then
       read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
     fi
     if [ $go = 1 ]; then
-      hf_into "artwork/Qwen-Image-2512 (its parts)" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/model_index.json" "artwork/Qwen-Image-2512/README.md" "artwork/Qwen-Image-2512/scheduler/*" "artwork/Qwen-Image-2512/tokenizer/*" "artwork/Qwen-Image-2512/text_encoder/*" "artwork/Qwen-Image-2512/vae/*" "artwork/Qwen-Image-2512/transformer/config.json"
-      hf_into "artwork/Qwen-Image-2512/lightning" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/lightning/Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors"
-      hf_into "artwork/Qwen-Image-2512/checkpoints/$f" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/checkpoints/$f"
+      hf_into "${RS_ARTIST#"$ROOT"/}/Qwen-Image-2512 (its parts)" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/model_index.json" "artwork/Qwen-Image-2512/README.md" "artwork/Qwen-Image-2512/scheduler/*" "artwork/Qwen-Image-2512/tokenizer/*" "artwork/Qwen-Image-2512/text_encoder/*" "artwork/Qwen-Image-2512/vae/*" "artwork/Qwen-Image-2512/transformer/config.json"   # paths: repo
+      hf_into "${RS_ARTIST#"$ROOT"/}/Qwen-Image-2512/lightning" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/lightning/Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors"   # paths: repo
+      hf_into "${RS_ARTIST#"$ROOT"/}/Qwen-Image-2512/checkpoints/$f" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/checkpoints/$f"   # paths: repo
       [ -x "$ROOT/.venv-art/bin/python" ] || say_miss "$ROOT/.venv-art" "(the painters paint in their own environment: lab/install-venv.sh --art)"
     fi
   done
@@ -550,10 +645,10 @@ if [ -n "$ARTLORAS" ]; then
   asked art-loras "Artwork: the Artist's adapters shared by their authors (ten, 7.5 GB: Qwen-Image 2.1 and 2512)"
   # HERESY 1441: each known by its content (v2's MANIFEST.tsv): renamed, or moved into a folder of the user's own, it is not fetched again
   HF_EXPECT_EXTRA="--by-content --manifest goldhub/Ruach_Studio_Models_v2@$(pin goldhub/Ruach_Studio_Models_v2)" \
-    hf_into "artwork/loras (shared by their authors)" goldhub/Ruach_Studio_Models_v2 "artwork/loras/*"
+    hf_into "${RS_ARTIST#"$ROOT"/}/loras (shared by their authors)" goldhub/Ruach_Studio_Models_v2 "artwork/loras/*"   # paths: repo
 fi
 
-# HERESY 1086: the studio's own LoRA trainer (lab/trainer), only when asked for, and asked again with its size.
+# HERESY 1086: the Studio's own LoRA trainer (lab/trainer), only when asked for, and asked again with its size.
 # Comfy-Org's YuE2 file carries the network, the VAE and the text tokenizer at once; the latent cache needs
 # MERT-v2-FullSong and Mothersuperior's realaudio tokenizer head. HERESY 1445 (Viktor 14.10.2026: «MERT, realaudio и Comfy YuE2
 # клади в v2»): all three from v2, unchanged, their authors named (CC BY-NC 4.0 lets them be shared, not for gain, with credit;
@@ -562,20 +657,20 @@ fi
 if [ -n "$TRAINER" ]; then
   asked trainer "The LoRA trainer's base: Comfy-Org/YuE2 ($TRAINER)"
   case "$TRAINER" in
-    bf16) T_FILE=checkpoints/yue2_3b_bf16.safetensors; SIZE="7.8 GB" ;;
-    int8) T_FILE=checkpoints/yue2_3b_int8_convrot.safetensors; SIZE="4.0 GB" ;;
+    bf16) T_FILE=checkpoints/yue2_3b_bf16.safetensors; SIZE="7.8 GB" ;;   # paths: repo
+    int8) T_FILE=checkpoints/yue2_3b_int8_convrot.safetensors; SIZE="4.0 GB" ;;   # paths: repo
     *) echo "${R}--trainer takes bf16 or int8${X}"; exit 2 ;;
   esac
   go=1
-  MERT_DIR="$ROOT/checkpoints/MERT-v2-FullSong"
+  MERT_DIR="$RS_MISC/MERT-v2-FullSong"
   MERT_SAY=""; [ -s "$MERT_DIR/model.safetensors" ] || MERT_SAY=", and MERT-v2-FullSong 2.5 GB"     # HERESY 1303
-  if [ $MODE != check ] && [ $YES = 0 ] && { [ -n "$MERT_SAY" ] || ! hf_complete goldhub/Ruach_Studio_Models_v2 "$(pin goldhub/Ruach_Studio_Models_v2)" "$ROOT" --include "checkpoints/comfy/$T_FILE" >/dev/null 2>&1; }; then
+  if [ $MODE != check ] && [ $YES = 0 ] && { [ -n "$MERT_SAY" ] || ! hf_here goldhub/Ruach_Studio_Models_v2 "checkpoints/comfy/$T_FILE"; }; then   # paths: repo
     printf "%s" "Download $SIZE$MERT_SAY? [y/N] "
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
-  [ $go = 1 ] && hf_into "checkpoints/comfy/$T_FILE (Comfy-Org/YuE2)" goldhub/Ruach_Studio_Models_v2 "checkpoints/comfy/$T_FILE"
-  hf_into "checkpoints/yue2-mothersuperior-realaudio-tokenizer-v4 (its head)" goldhub/Ruach_Studio_Models_v2 "checkpoints/yue2-mothersuperior-realaudio-tokenizer-v4/*"
-  if [ $go = 1 ] || [ $MODE = check ]; then hf_into "checkpoints/MERT-v2-FullSong (m-a-p)" goldhub/Ruach_Studio_Models_v2 "checkpoints/MERT-v2-FullSong/*"      # HERESY 1303: here, fetched, or said
+  [ $go = 1 ] && hf_into "${RS_COMFY#"$ROOT"/}/$T_FILE (Comfy-Org/YuE2)" goldhub/Ruach_Studio_Models_v2 "checkpoints/comfy/$T_FILE"   # paths: repo
+  hf_into "${RS_ENGINE_TOKENIZERS#"$ROOT"/}/yue2-mothersuperior-realaudio-tokenizer-v4 (its head)" goldhub/Ruach_Studio_Models_v2 "checkpoints/yue2-mothersuperior-realaudio-tokenizer-v4/*"   # paths: repo
+  if [ $go = 1 ] || [ $MODE = check ]; then hf_into "${RS_MISC#"$ROOT"/}/MERT-v2-FullSong (m-a-p)" goldhub/Ruach_Studio_Models_v2 "checkpoints/MERT-v2-FullSong/*"      # HERESY 1303: here, fetched, or said · paths: repo
   elif [ -s "$MERT_DIR/model.safetensors" ]; then say_here "$MERT_DIR" "(m-a-p/MERT-v2-FullSong)"
   else say_miss "$MERT_DIR" "(2.5 GB: --trainer fetches it with the base)"; fi
 fi
@@ -586,7 +681,7 @@ fi
 if [ -n "$BACKBONE" ]; then
   case "$BACKBONE" in BF16) B_SIZE="7.2 GB" ;; Q8_0) B_SIZE="3.8 GB" ;; Q6_K) B_SIZE="2.9 GB" ;; Q5_K_M) B_SIZE="2.6 GB" ;;
     *) echo "${R}--backbone takes BF16, Q8_0, Q6_K or Q5_K_M${X}"; exit 2 ;; esac
-  B_FILE="$ROOT/models/YuE2-3B-$BACKBONE.gguf"
+  B_FILE="$(rs_engine_gguf "YuE2-3B-$BACKBONE.gguf")"
   asked backbone "The backbone YuE2-3B $BACKBONE (m-a-p's YuE2 as GGUF: Serveurperso/YuE2-GGUF)"
   if [ -s "$B_FILE" ]; then say_here "$B_FILE" "(download-models.sh)"
   elif [ $MODE = check ]; then say_miss "$B_FILE" "($B_SIZE: --backbone $BACKBONE fetches it)"
@@ -595,7 +690,7 @@ if [ -n "$BACKBONE" ]; then
     if [ $YES = 0 ]; then
       CAP=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | sort -n | tail -1)
       [ "$BACKBONE" = BF16 ] && [ "${CAP%%.*}" -lt 8 ] 2>/dev/null && echo "${Y}          this card (compute $CAP) has no BF16 tensor cores: BF16 runs, slower than Q8_0${X}"
-      printf "%s" "Download $B_SIZE? The studio's Engine (Compute) chooses between the backbones after its next start. [y/N] "
+      printf "%s" "Download $B_SIZE? The Studio's Engine (Compute) chooses between the backbones after its next start. [y/N] "
       read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
     fi
     if [ $go = 1 ]; then
@@ -612,11 +707,11 @@ if [ -n "$IRA" ]; then
     *) echo "${R}--ira takes BF16, Q8_0 or Q6_K${X}"; exit 2 ;; esac
   asked ira "The IRA merge $IRA (YuE2-3B with Mothersuperior's Instrumental and Real Audio folded in: goldhub/YuE2-3B-Ruach_Studio-IRA-Merge)"
   go=1
-  if [ $MODE = fetch ] && [ $YES = 0 ] && [ ! -s "$ROOT/models/YuE2-3B-IRA-$IRA.gguf" ]; then
-    printf "%s" "Download $I_SIZE? The studio's Engine (Compute) chooses it beside m-a-p's backbones after its next start. [y/N] "
+  if [ $MODE = fetch ] && [ $YES = 0 ] && [ ! -s "$(rs_engine_gguf "YuE2-3B-IRA-$IRA.gguf")" ]; then
+    printf "%s" "Download $I_SIZE? The Studio's Engine (Compute) chooses it beside m-a-p's backbones after its next start. [y/N] "
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
-  [ $go = 1 ] && hf_into_at "models/YuE2-3B-IRA-$IRA.gguf (Ruach Studio's IRA merge)" goldhub/YuE2-3B-Ruach_Studio-IRA-Merge "$ROOT/models" "YuE2-3B-IRA-$IRA.gguf"
+  [ $go = 1 ] && hf_into_at "${RS_ENGINE_LEGACY#"$ROOT"/}/YuE2-3B-IRA-$IRA.gguf (Ruach Studio's IRA merge)" goldhub/YuE2-3B-Ruach_Studio-IRA-Merge "$RS_ENGINE_LEGACY" "YuE2-3B-IRA-$IRA.gguf"
 fi
 
 # HERESY 1689 (Viktor 21.10.2026: «Собирай IRAE* мёрджи, пушай их в IRA репо и прикручивай к загрузчику»): an IRAE merge, IRA with monsterovich's
@@ -628,11 +723,11 @@ if [ -n "$IRAE" ]; then
     *) echo "${R}--irae takes IRAE, IRAEv2, IRAEv3, IRAE-IR or IRAE-IRv2 with -BF16, -Q8_0 or -Q6_K (IRAEv2-Q8_0)${X}"; exit 2 ;; esac
   asked irae "The $IRAE merge (IRA with monsterovich's Epic Trailer adapter folded in on top: goldhub/YuE2-3B-Ruach_Studio-IRA-Merge)"
   go=1
-  if [ $MODE = fetch ] && [ $YES = 0 ] && [ ! -s "$ROOT/models/YuE2-3B-$IRAE.gguf" ]; then
-    printf "%s" "Download $E_SIZE? The studio's Engine (Compute) chooses it beside m-a-p's backbones after its next start. [y/N] "
+  if [ $MODE = fetch ] && [ $YES = 0 ] && [ ! -s "$(rs_engine_gguf "YuE2-3B-$IRAE.gguf")" ]; then
+    printf "%s" "Download $E_SIZE? The Studio's Engine (Compute) chooses it beside m-a-p's backbones after its next start. [y/N] "
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
-  [ $go = 1 ] && hf_into_at "models/YuE2-3B-$IRAE.gguf (Ruach Studio's $IRAE merge)" goldhub/YuE2-3B-Ruach_Studio-IRA-Merge "$ROOT/models" "YuE2-3B-$IRAE.gguf"
+  [ $go = 1 ] && hf_into_at "${RS_ENGINE_LEGACY#"$ROOT"/}/YuE2-3B-$IRAE.gguf (Ruach Studio's $IRAE merge)" goldhub/YuE2-3B-Ruach_Studio-IRA-Merge "$RS_ENGINE_LEGACY" "YuE2-3B-$IRAE.gguf"
 fi
 
 # HERESY 1794 (Viktor 25.10.2026: «2.4 ep - самый безопасный, и пусть он будет базовой моделью»; «Привязывай все эти варианты в Студию и в
@@ -646,10 +741,12 @@ FW_REPO=goldhub/YuE2-RS-Finetunes
 # at that quant when it is here already or the repo has it at its pin; RS-FW 2.4x0.75, as before, where the pinned repo has no RS-TW yet (said aloud).
 # Offline (the pinned file list unread) it is RS-TW, as on any other day: the row then says «unknown», as RS-FW's would
 if want fw; then
-  FWQ=""; for q in BF16 Q8_0 Q6_K; do [ -s "$ROOT/models/YuE2-3B-$q.gguf" ] && { FWQ=$q; break; }; done
+  FWQ=""; for q in BF16 Q8_0 Q6_K; do [ -s "$(rs_engine_gguf "YuE2-3B-$q.gguf")" ] && { FWQ=$q; break; }; done
+  # 08.11.2026: an install of 2.0.7 brings the default merge alone, without m-a-p's backbone beside it: its quant then
+  [ -z "$FWQ" ] && for q in BF16 Q8_0 Q6_K; do for m in RS-TW-2.0x0.75 RS-FW-2.4x0.75; do [ -s "$(rs_engine_gguf "YuE2-3B-$m-$q.gguf")" ] && { FWQ=$q; break 2; }; done; done
   FWM=RS-TW-2.0x0.75
-  if [ -n "$FWQ" ] && [ ! -s "$ROOT/models/YuE2-3B-$FWM-$FWQ.gguf" ]; then
-    case "$(hf_complete $FW_REPO "$(pin $FW_REPO)" "$ROOT/models" --include "YuE2-3B-$FWM-$FWQ.gguf" 2>&1)" in *"no files matched"*) FWM=RS-FW-2.4x0.75 ;; esac
+  if [ -n "$FWQ" ] && [ ! -s "$(rs_engine_gguf "YuE2-3B-$FWM-$FWQ.gguf")" ]; then
+    case "$(hf_complete $FW_REPO "$(pin $FW_REPO)" "$RS_ENGINE_FINETUNES/$FWM" --include "YuE2-3B-$FWM-$FWQ.gguf" 2>&1)" in *"no files matched"*) FWM=RS-FW-2.4x0.75 ;; esac
   fi
   if [ $FWM = RS-TW-2.0x0.75 ]; then part fw "Ruach Studio's own fine-tune: RS-TW 2.0x0.75, the Studio's default"
   else
@@ -657,7 +754,7 @@ if want fw; then
     echo "${D}          RS-TW 2.0x0.75 is not in $FW_REPO at its pin yet: RS-FW 2.4x0.75, as before${X}"
   fi
   if [ -z "$FWQ" ]; then echo "${D}          no BF16, Q8_0 or Q6_K backbone here: m-a-p's alone (there is no Q5_K_M of the fine-tune)${X}"
-  else hf_into_at "models/YuE2-3B-$FWM-$FWQ.gguf (Ruach Studio's own fine-tune, the default)" $FW_REPO "$ROOT/models" "YuE2-3B-$FWM-$FWQ.gguf"; fi
+  else hf_into_at "${RS_ENGINE_FINETUNES#"$ROOT"/}/$FWM/YuE2-3B-$FWM-$FWQ.gguf (Ruach Studio's own fine-tune, the default)" $FW_REPO "$RS_ENGINE_FINETUNES/$FWM" "YuE2-3B-$FWM-$FWQ.gguf"; fi
 fi
 if [ -n "$FW" ]; then
   case "$FW" in 0.7x0.75-*|1.5x0.75-*|2.4x0.75-*|3.4x0.7-*|3.4x0.75-*|4.0x0.65-*|4.0x0.7-*) ;; *) FW=none ;; esac
@@ -665,11 +762,11 @@ if [ -n "$FW" ]; then
     *) echo "${R}--fw takes 0.7x0.75, 1.5x0.75, 2.4x0.75, 3.4x0.7, 3.4x0.75, 4.0x0.65 or 4.0x0.7 with -BF16, -Q8_0 or -Q6_K (2.4x0.75-Q8_0)${X}"; exit 2 ;; esac
   asked fw "The RS-FW merge $FW (Ruach Studio's own fine-tune folded into YuE2-3B: $FW_REPO)"
   go=1
-  if [ $MODE = fetch ] && [ $YES = 0 ] && [ ! -s "$ROOT/models/YuE2-3B-RS-FW-$FW.gguf" ]; then
-    printf "%s" "Download $F_SIZE? The studio's Engine (Compute) chooses it beside m-a-p's backbones after its next start. [y/N] "
+  if [ $MODE = fetch ] && [ $YES = 0 ] && [ ! -s "$(rs_engine_gguf "YuE2-3B-RS-FW-$FW.gguf")" ]; then
+    printf "%s" "Download $F_SIZE? The Studio's Engine (Compute) chooses it beside m-a-p's backbones after its next start. [y/N] "
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
-  [ $go = 1 ] && hf_into_at "models/YuE2-3B-RS-FW-$FW.gguf (Ruach Studio's RS-FW $FW merge)" $FW_REPO "$ROOT/models" "YuE2-3B-RS-FW-$FW.gguf"
+  [ $go = 1 ] && hf_into_at "${RS_ENGINE_FINETUNES#"$ROOT"/}/RS-FW-${FW%-*}/YuE2-3B-RS-FW-$FW.gguf (Ruach Studio's RS-FW $FW merge)" $FW_REPO "$RS_ENGINE_FINETUNES/RS-FW-${FW%-*}" "YuE2-3B-RS-FW-$FW.gguf"
 fi
 # HERESY 2071 (Viktor 04.11.2026: «Push both to HF YuE2-RS-Finetunes as full sets … Write them into the downloader»): RS-TW, the Tsunami Wave,
 # trained on the merged weights of RS-FW 2.4x0.75 and folded back into them at epoch 2.0, two strengths: 2.0x0.75 the safe balance, 2.0x0.9
@@ -680,15 +777,15 @@ if [ -n "$TW" ]; then
     *) echo "${R}--tw takes 2.0x0.75 or 2.0x0.9 with -BF16, -Q8_0 or -Q6_K (2.0x0.75-Q8_0)${X}"; exit 2 ;; esac
   asked tw "The RS-TW merge $TW (Ruach Studio's Tsunami Wave folded into RS-FW 2.4x0.75: $FW_REPO)"   # HERESY 2125: the wave by its name
   go=1
-  if [ $MODE = fetch ] && [ $YES = 0 ] && [ ! -s "$ROOT/models/YuE2-3B-RS-TW-$TW.gguf" ]; then
-    printf "%s" "Download $T_SIZE? The studio's Engine (Compute) chooses it beside m-a-p's backbones after its next start. [y/N] "
+  if [ $MODE = fetch ] && [ $YES = 0 ] && [ ! -s "$(rs_engine_gguf "YuE2-3B-RS-TW-$TW.gguf")" ]; then
+    printf "%s" "Download $T_SIZE? The Studio's Engine (Compute) chooses it beside m-a-p's backbones after its next start. [y/N] "
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
-  [ $go = 1 ] && hf_into_at "models/YuE2-3B-RS-TW-$TW.gguf (Ruach Studio's RS-TW $TW merge)" $FW_REPO "$ROOT/models" "YuE2-3B-RS-TW-$TW.gguf"
+  [ $go = 1 ] && hf_into_at "${RS_ENGINE_FINETUNES#"$ROOT"/}/RS-TW-${TW%-*}/YuE2-3B-RS-TW-$TW.gguf (Ruach Studio's RS-TW $TW merge)" $FW_REPO "$RS_ENGINE_FINETUNES/RS-TW-${TW%-*}" "YuE2-3B-RS-TW-$TW.gguf"
 fi
 
 # HERESY 1285 (Viktor 09.10.2026: «LoRA пока что не скачались. Только Standard VAE»): the LoRAs the 💎 sets were made with come
-# with the install, each under the name their takes use: the Kit's library (11 adapters from 8 repos, 1.3 GB) and the studio's
+# with the install, each under the name their takes use: the Kit's library (11 adapters from 8 repos, 1.3 GB) and the Studio's
 # own (six voices, the duduk and the shofar, 0.8 GB; HERESY 1445: from goldhub/Ruach_Studio_Models_v2, as goldhub/Ruach_Studio_LoRAs has them)
 if want loras; then
   part loras "LoRAs: the Kit's library and Ruach Studio's own"
@@ -713,7 +810,7 @@ if want loras; then
     n() { local v; v=$(echo "$c" | grep -o "$1=[0-9]*" | cut -d= -f2); echo "${v:-0}"; }
     have=$((have + $(n here))); got=$((got + $(n fetched))); miss=$((miss + $(n missing))); failed=$((failed + $(n failed))); odd=$((odd + $(n differs)))   # HERESY 1296
   else
-    say_fail "loras/ (the studio's own)" "(heresy/fetch-ruach-loras.py said nothing to count)"
+    say_fail "loras/ (the Studio's own)" "(heresy/fetch-ruach-loras.py said nothing to count)"
   fi
 fi
 

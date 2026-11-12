@@ -6,10 +6,19 @@ of the Studio over https.
 · What the page needs to know: whether the door answers, on which port, whether its certificate is signed by the Studio's own authority (and that
   authority's certificate to download and trust once), their fingerprints.
 · A page moving from http to https hands its settings over: its localStorage, once, by a token that lives ten minutes (two origins never share it).
-    status(kit) · start(kit) · handoff_put(data) → token · handoff_take(token) → data"""
+    status(kit) · start(kit) · handoff_put(data, peer) → token · handoff_take(token, peer) → data
+
+HERESY 2177 (H05; the audit of 06.11.2026, 2.5 and section 7 item 17: any computer of the network could make a hand-over with curl and send the link
+https://studio:7443/#handoff=TOKEN, and the https page wrote what it carried into its storage; a hand-over gone stale stayed in memory until the next
+one was made): a hand-over is taken only by the computer that made it (its peer, as the Studio names its visitor in X-Remote-Addr; this computer's
+own addresses are one), it carries only the page's own settings (keys of the families yue2., ruach., heresy.), never a paid service's key nor a
+setting that points the page at another address (a key named for a URL, a host, an endpoint or an origin), each name left out said in the answer
+of both sides ("dropped"), and the stale ones go at every put and every take."""
 import hashlib
+import ipaddress
 import json
 import os
+import re
 import secrets
 import socket
 import ssl
@@ -24,6 +33,9 @@ LOCK = threading.Lock()
 HANDOFF = {}
 TTL = 600
 MAX = 2_000_000
+FAMILY = re.compile(r"(?:yue2|ruach|heresy)[._-][A-Za-z0-9_.:-]{1,96}")   # HERESY 2177: the page's own settings
+SECRETS = frozenset(("yue2.orKey", "yue2.civitaiKey"))                    # the page keeps them back (HeresySettings.secrets); the lab as well
+POINTS = re.compile(r"(?i)url|host|endpoint|origin")                     # a setting that sends the page elsewhere (yue2.chatUrl)
 
 
 def tls_dir(kit):
@@ -81,25 +93,57 @@ def ca_file(kit):
     return f
 
 
-def handoff_put(data):
+def peer_of(addr):
+    """HERESY 2177: the visitor as one computer: this computer's own addresses (and a request the engine did not name, which only this computer
+    can make: the lab listens on 127.0.0.1) are one, «this computer»; an IPv4 address as IPv6 (::ffff:) is itself"""
+    a = str(addr or "").strip().split("%")[0]
+    if a.lower().startswith("::ffff:"):
+        a = a[7:]
+    if not a or a.lower() == "localhost":
+        return "this computer"
+    try:
+        return "this computer" if ipaddress.ip_address(a).is_loopback else str(ipaddress.ip_address(a))
+    except ValueError:
+        return a
+
+
+def _sweep(now):
+    for t in [t for t, rec in HANDOFF.items() if now - rec[0] > TTL]:
+        del HANDOFF[t]
+
+
+def handoff_put(data, peer=""):
     raw = json.dumps(data, ensure_ascii=False)
     if len(raw) > MAX:
         raise ValueError("too much to hand over")
     if not isinstance(data, dict) or not isinstance(data.get("storage"), dict):
         raise ValueError("say {storage: {key: value}}")
-    store = {str(k): str(v) for k, v in data["storage"].items() if isinstance(k, str) and isinstance(v, str)}
+    store, dropped = {}, []
+    for k, v in data["storage"].items():
+        if not (isinstance(k, str) and isinstance(v, str)):
+            continue
+        if FAMILY.fullmatch(k) and k not in SECRETS and not POINTS.search(k):
+            store[k] = v
+        else:
+            dropped.append(k[:96])
     token = secrets.token_urlsafe(24)
     now = time.time()
     with LOCK:
-        for t in [t for t, (at, _) in HANDOFF.items() if now - at > TTL]:
-            del HANDOFF[t]
-        HANDOFF[token] = (now, store)
-    return {"token": token, "keys": len(store)}
+        _sweep(now)
+        HANDOFF[token] = (now, store, peer_of(peer), dropped)
+    if dropped:
+        print(f"[lab] https hand-over: {len(store)} settings kept, {len(dropped)} left out: {', '.join(dropped[:12])}", file=sys.stderr, flush=True)
+    return {"token": token, "keys": len(store), "dropped": dropped}
 
 
-def handoff_take(token):
+def handoff_take(token, peer=""):
+    now = time.time()
     with LOCK:
+        _sweep(now)
         got = HANDOFF.pop(str(token or ""), None)
-    if not got or time.time() - got[0] > TTL:
+    if not got:
         raise FileNotFoundError("no such hand-over, or too old: open the Studio over https and choose again")
-    return {"storage": got[1]}
+    if got[2] != peer_of(peer):                      # taken once all the same: a link sent from another computer is spent, not left to try again
+        print(f"[lab] https hand-over refused: made by {got[2]}, asked by {peer_of(peer)}", file=sys.stderr, flush=True)
+        raise ValueError("this hand-over was made on another computer: the settings come over only to the computer that moved them")
+    return {"storage": got[1], "dropped": got[3]}

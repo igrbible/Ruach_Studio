@@ -1,7 +1,7 @@
 ---
-name: Creator
+name: Musician
 about: The song form, planning, the score, the sliders, the takes
-title: "Creator: "
+title: "Musician: "
 labels: creator
 ---
 
@@ -9,4 +9,4 @@ labels: creator
 
 **What you heard or saw**: where in the take (the minute), what was wrong.
 
-**The studio**: its version (☰ → About, or the VERSION file), how it was installed (Pinokio or by hand), the system, the card and its memory.
+**The Studio**: its version (☰ → About, or the VERSION file), how it was installed (Pinokio or by hand), the system, the card and its memory.

@@ -14,8 +14,9 @@
     { "src": "/pwa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ],
   "shortcuts": [
-    { "name": "New song", "short_name": "New song", "description": "A new song in the Creator (it asks first when the form holds words)", "url": "/?room=create&song=new", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
-    { "name": "Creator", "short_name": "Creator", "description": "The Creator: the song form, the take, the player", "url": "/?room=create", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "New song", "short_name": "New song", "description": "A new song in the Musician (it asks first when the form holds words)", "url": "/?room=create&song=new", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Musician", "short_name": "Musician", "description": "The Musician: the song form, the take, the player", "url": "/?room=create", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Narrator", "short_name": "Narrator", "description": "The Narrator: a text read aloud, a book in chapters", "url": "/?room=read", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
     { "name": "Writer", "short_name": "Writer", "description": "The Writer: songs as documents", "url": "/?room=write", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
     { "name": "Refiner", "short_name": "Refiner", "description": "The Refiner: steps after the render", "url": "/?room=post", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
     { "name": "Artist", "short_name": "Artist", "description": "The Artist: pictures for the songs", "url": "/?room=artist", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },

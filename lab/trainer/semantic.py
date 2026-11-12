@@ -5,7 +5,7 @@ The official YuE2 audio encoder is unreleased; training conditions on the commun
 track, through an 8-layer transformer classifier over 512-frame windows. Ported from Ostris' AI-Toolkit
 (MIT; LICENSE-AITK beside this file): extensions_built_in/audio_models/yue2/src/tokenizer.py,
 SemanticTokenizer, TokenizerHead, _rebuild_rotary, load_head_state_dict — unchanged in what they compute;
-MERT is read from the studio's own checkpoints/MERT-v2-FullSong."""
+MERT is read from the studio's own models/misc/MERT-v2-FullSong."""
 import torch
 import torch.nn.functional as F
 from torch import nn

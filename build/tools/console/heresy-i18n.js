@@ -1,8 +1,10 @@
 // HERESY 1148: the page in the user's language (Viktor, 01.10 and 03.10.2026). English is the page's own text and the
-// default; Russian, Ukrainian, Belarusian, Greek, Spanish, Italian, French, Portuguese, German, Japanese and Chinese come from catalogs keyed by that English
+// default; Russian, Ukrainian, Belarusian, Greek, Spanish, Italian, French, Portuguese, German, Japanese, Chinese and Hebrew come from catalogs keyed by that English
 // (heresy-i18n-LANG.js), so no module has to change to be translated: the text people read (text nodes, and the title,
 // placeholder, aria-label, data-tip and alt attributes) is looked up as it appears, and again when the language changes.
-// No RTL: Hebrew is left out (Viktor: «не будем мучить интерфейс с перекладкой в RTL. Получится уродство»); Chinese was
+// Hebrew, left out in October (Viktor: «не будем мучить интерфейс с перекладкой в RTL. Получится уродство»), came for 2.0.7 (HERESY 2331; Viktor
+// 06.11.2026: «По Студии ивритом сам занимешься после среза 2.0.6»): right to left, its LANGS entry says dir: rtl and apply() sets <html dir>
+// beside <html lang>; heresy-rtl.js mirrors the stylesheets' sides while it reads so, and keeps left to right what runs in time. Chinese was
 // made and called off (Viktor, 03.10.2026: «Отмена по китайской») and came back on 11.10 with French, Portuguese, German and
 // Japanese for 2.0.0 (HERESY 1379). Japanese and Chinese have no font of the page's own: html lang (ja, zh-CN) lets the browser
 // take the system's CJK font for the glyphs the page's fonts lack, each language's own forms.
@@ -34,7 +36,8 @@
     { code: "pt", name: "Português", html: "pt-BR" },
     { code: "de", name: "Deutsch", html: "de" },
     { code: "ja", name: "日本語", html: "ja" },
-    { code: "zh", name: "中文", html: "zh-CN" }
+    { code: "zh", name: "中文", html: "zh-CN" },
+    { code: "he", name: "עברית", html: "he", dir: "rtl" }   // HERESY 2331: right to left (heresy-rtl.js)
   ];
   var KEY = "yue2.lang", ATTRS = ["title", "placeholder", "aria-label", "data-tip", "alt", "data-tip-head"];   // 1168: a tip's first line
   var SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, CODE: 1, PRE: 1, NOSCRIPT: 1, TEMPLATE: 1 };
@@ -48,6 +51,12 @@
   // a number as the page writes it: 24576, 24,576, 24.576, 24 576. HERESY 1166: numbers follow the page's language, and the
   // no-break space of 24 576 is a plain one once norm() has run, so a plain space may part groups of three
   var NUM = "[-+]?\\d[\\d.,  ]*(?: \\d{3}(?!\\d)[\\d.,  ]*)*", NUM_RE = new RegExp("^" + NUM + "$");
+  // HERESY 2372 (Viktor 22.10.2026: «Ни на один язык не переводим служебные теги, что у нас в промпте лирики идут в `[...]`»; 11.11.2026:
+  // «`[Verse...` вырежь из словарей»): a section tag is a word of the model's prompt, never of the interface. Whole, bracketed or bare
+  // ([Verse 2], [Chorus – Both voices], Pre-Chorus 2, Outro), it is never looked up, so no catalog key can turn it into another language
+  // wherever the page shows it, a pattern's part included. Bare, only the words that are nothing but a tag: Instrumental, Solo and Fade
+  // are the interface's own words too, and the places that show them as a section say translate="no"
+  var TAG = /^(?:\[[^\[\]]+\]|(?:intro|verse|pre-?chorus|chorus|post-?chorus|final chorus|bridge|outro|interlude|hook|refrain|breakdown)(?: ?\d+)?(?: ?[\u2013\u2014:-] .*)?)$/i;
   var MISS = null, CUR = "";  // HERESY 1165: what the catalog lacks while RuachI18n.collect(true) is on, and where (a translator's tool)
   function where(el, attr) {   // the element as a short path: tag.class#id < its parent < its grandparent
     var out = [];
@@ -76,17 +85,31 @@
   }
 
   // ---- the catalogs
+  // a key's pattern: each place a named group (p0…p9), {#N} a number only (HERESY 1165). HERESY 2291: a place the key names
+  // again («{1} − {0}: red where {1} is louder») is the same text there, a backreference to its first group; {#N} and {N}
+  // of one index share that group too (the first one written decides what it takes). Two groups of one name threw
+  // «Duplicate capture group name» and took the rest of the catalog with it.
+  function keyPattern(en) {
+    var seen = {};
+    return new RegExp("^" + en.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\\\{(#?)(\d)\\\}/g, function (_, num, n) {
+      if (seen[n]) return "\\k<p" + n + ">";
+      seen[n] = 1;
+      return "(?<p" + n + ">" + (num ? NUM : "[\\s\\S]+?") + ")";
+    }) + "$");
+  }
   function add(code, table) {
     var cat = CAT[code] || (CAT[code] = Object.create(null)), pat = PAT[code] || (PAT[code] = []);
     Object.keys(table).forEach(function (raw) {
       var en = norm(raw);
       if (/\{#?\d\}/.test(en)) {
-        var re = "^" + en.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-          .replace(/\\\{#(\d)\\\}/g, "(?<p$1>" + NUM + ")")      // HERESY 1165: a number only
-          .replace(/\\\{(\d)\\\}/g, "(?<p$1>[\\s\\S]+?)") + "$";
+        var re;
+        try { re = keyPattern(en); } catch (e) {   // HERESY 2291: one key that will not compile costs only itself, and says so
+          if (window.console) console.error("RuachI18n: " + code + " key left out, its pattern does not compile: " + JSON.stringify(raw) + " (" + e.message + ")");
+          return;
+        }
         // the longest fixed piece of the key: a text without it cannot match, so most texts skip the expression
         var lit = en.split(/\{#?\d\}/).sort(function (a, b) { return b.length - a.length; })[0];
-        pat.push({ re: new RegExp(re), lit: lit, fixed: en.replace(/\{#?\d\}/g, "").length, out: table[raw], lines: /\n/.test(raw) });   // 1359
+        pat.push({ re: re, lit: lit, fixed: en.replace(/\{#?\d\}/g, "").length, out: table[raw], lines: /\n/.test(raw) });   // 1359
       } else {
         cat[en] = typeof table[raw] === "string" ? table[raw] : (table[raw] || {}).other || "";   // forms need a number
       }
@@ -115,6 +138,7 @@
     var c = code || lang, cat = CAT[c];
     if (!cat || !en) return null;
     en = norm(en);
+    if (TAG.test(en)) return null;   // HERESY 2372: a section tag stays as the lyrics wrote it
     if (cat[en] !== undefined) return cat[en];
     var pats = PAT[c] || [];
     for (var i = 0; i < pats.length; i++) {
@@ -154,7 +178,7 @@
       var signed = look("\u26a0 " + m[2]);
       if (signed !== null) tr = signed.replace(/^\u26a0\ufe0f?[ \u00a0]?/, "");
     }
-    if (tr === null && MISS && /[A-Za-z]{2}/.test(m[2])) { var k = norm(m[2]); if (!MISS.has(k)) MISS.set(k, CUR); }
+    if (tr === null && MISS && /[A-Za-z]{2}/.test(m[2]) && !TAG.test(norm(m[2]))) { var k = norm(m[2]); if (!MISS.has(k)) MISS.set(k, CUR); }
     return tr === null ? en : m[1] + tr + m[3];
   }
   function t(en) { return lang === "en" ? en : render(String(en)); }
@@ -317,6 +341,7 @@
     lang = known(code) && (code === "en" || CAT[code]) ? code : "en";
     var html = document.documentElement, info = LANGS.filter(function (l) { return l.code === lang; })[0];
     html.lang = info.html;
+    html.dir = info.dir || "ltr";           // HERESY 2331: Hebrew right to left, every other language left to right again
     watch(false);
     walk(document.body);                     // every node back to its English, then into the language
     if (lang !== "en") watch(true);          // English needs no watching: what the page writes is already it

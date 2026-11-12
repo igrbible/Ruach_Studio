@@ -7,6 +7,12 @@
 // Weight norm fused at load: w = g*v/||v||
 // Upsample: 6x5x4x4x2x2 = 1920x. Odd strides shorten the signal by one frame
 // each, so the exact output length is T_audio = 1920 * T_latent - 64.
+//
+// HERESY 2304: YuE2-VAE-RS x3 (Ruach Studio's fat decoder) in the same graph: up to three residual units at the
+// latent rate after conv1 (decoder.pre.<i>.*, 2048 wide, dilations 1, 3, 9) and up to six units a block
+// (res_unit4..6 the new ones, dilations 1, 3, 9 again). The GGUF says how many (yue2-vae.decoder_pre_units,
+// .decoder_extra_units), the tile context it needs (.halo_frames, 60) and that its weights stay F32
+// (.weights_f32: the release is float32 only); a file without those keys is Standard and loads as before.
 
 #pragma once
 #include "backend.h"
@@ -33,11 +39,16 @@ struct VAEBlock {
     struct ggml_tensor *sa, *sb;    // snake exp(a/b) [1, in_ch]
     struct ggml_tensor *ctw, *ctb;  // conv_transpose F16 [IC, K*OC] pre-permuted, bias [out_ch]
     int                 in_ch, out_ch, stride, kernel;
-    VAEResUnit          ru[3];
+    VAEResUnit          ru[6];
+    int                 n_ru;           // 3 Standard, 6 VAE-RS x3
 };
 
 struct VAEGGML {
     struct ggml_tensor * c1w, *c1b;  // conv1 [7, 64, 2048], bias [2048]
+    VAEResUnit           pre[3];     // HERESY 2304: VAE-RS units at the latent rate
+    int                  n_pre;
+    int                  halo;       // tile context the decoder needs (0: the caller's)
+    bool                 f32;        // weights kept F32 (VAE-RS); Standard's convs run F16 weights
     VAEBlock             blk[6];
     struct ggml_tensor * sa, *sb;    // final snake [1, 64]
     struct ggml_tensor * c2w;        // conv2 [7, 64, 2] (no bias)
@@ -178,14 +189,44 @@ static void vae_ggml_load(VAEGGML * m, const char * path) {
     static const int out_ch[]    = { 1024, 512, 256, 128, 64, 64 };
     static const int dilations[] = { 1, 3, 9 };
 
+    // HERESY 2304: the decoder's shape from the file (Standard when the keys are absent)
+    auto key_u32 = [&](const char * key, uint32_t def) -> uint32_t {
+        int64_t idx = gguf_find_key(gf.gguf, key);
+        return idx < 0 ? def : gguf_get_val_u32(gf.gguf, idx);
+    };
+    int64_t f32_idx = gguf_find_key(gf.gguf, "yue2-vae.weights_f32");
+    m->n_pre        = (int) key_u32("yue2-vae.decoder_pre_units", 0);
+    int n_extra     = (int) key_u32("yue2-vae.decoder_extra_units", 0);
+    m->halo         = (int) key_u32("yue2-vae.halo_frames", 0);
+    m->f32          = f32_idx >= 0 && gguf_get_val_bool(gf.gguf, f32_idx);
+    if (m->n_pre < 0 || m->n_pre > 3 || n_extra < 0 || n_extra > 3) {
+        fprintf(stderr, "[VAE] FATAL: %s: %d pre units, %d extra units a block (at most 3 and 3)\n", path, m->n_pre, n_extra);
+        exit(1);
+    }
+    const enum ggml_type wt = m->f32 ? GGML_TYPE_F32 : GGML_TYPE_F16;
+
     // Phase 1: create tensor metadata (no_alloc context)
-    size_t                  ctx_size = ggml_tensor_overhead() * 256;
+    size_t                  ctx_size = ggml_tensor_overhead() * 640;
     struct ggml_init_params p        = { ctx_size, NULL, true };
     m->weight_ctx                    = ggml_init(p);
     struct ggml_context * ctx        = m->weight_ctx;
 
-    m->c1w = ggml_new_tensor_3d(ctx, GGML_TYPE_F16, 7, 64, 2048);
+    m->c1w = ggml_new_tensor_3d(ctx, wt, 7, 64, 2048);
     m->c1b = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, 2048);
+    auto new_unit = [&](VAEResUnit & ru, int C, int dil) {
+        ru.dilation = dil;
+        ru.s1a      = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, 1, C);
+        ru.s1b      = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, 1, C);
+        ru.c1w      = ggml_new_tensor_3d(ctx, wt, 7, C, C);
+        ru.c1b      = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, C);
+        ru.s2a      = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, 1, C);
+        ru.s2b      = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, 1, C);
+        ru.c2w      = ggml_new_tensor_3d(ctx, wt, 1, C, C);
+        ru.c2b      = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, C);
+    };
+    for (int r = 0; r < m->n_pre; r++) {
+        new_unit(m->pre[r], 2048, dilations[r]);
+    }
 
     for (int i = 0; i < 6; i++) {
         VAEBlock & b = m->blk[i];
@@ -196,24 +237,16 @@ static void vae_ggml_load(VAEGGML * m, const char * path) {
         int C        = out_ch[i];
         b.sa         = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, 1, in_ch[i]);
         b.sb         = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, 1, in_ch[i]);
-        b.ctw        = ggml_new_tensor_2d(ctx, GGML_TYPE_F16, in_ch[i], b.kernel * out_ch[i]);
+        b.ctw        = ggml_new_tensor_2d(ctx, wt, in_ch[i], b.kernel * out_ch[i]);
         b.ctb        = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, out_ch[i]);
-        for (int r = 0; r < 3; r++) {
-            VAEResUnit & ru = b.ru[r];
-            ru.dilation     = dilations[r];
-            ru.s1a          = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, 1, C);
-            ru.s1b          = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, 1, C);
-            ru.c1w          = ggml_new_tensor_3d(ctx, GGML_TYPE_F16, 7, C, C);
-            ru.c1b          = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, C);
-            ru.s2a          = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, 1, C);
-            ru.s2b          = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, 1, C);
-            ru.c2w          = ggml_new_tensor_3d(ctx, GGML_TYPE_F16, 1, C, C);
-            ru.c2b          = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, C);
+        b.n_ru       = 3 + n_extra;
+        for (int r = 0; r < b.n_ru; r++) {
+            new_unit(b.ru[r], C, dilations[r % 3]);
         }
     }
     m->sa  = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, 1, 64);
     m->sb  = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, 1, 64);
-    m->c2w = ggml_new_tensor_3d(ctx, GGML_TYPE_F16, 7, 64, 2);
+    m->c2w = ggml_new_tensor_3d(ctx, wt, 7, 64, 2);
 
     // Phase 2: allocate backend buffer
     BackendPair bp = backend_init("VAE");
@@ -231,6 +264,19 @@ static void vae_ggml_load(VAEGGML * m, const char * path) {
     // Phase 3: load & fuse weights
     vae_fuse_wn(m->c1w, gf, "decoder.conv1");
     vae_load_bias(m->c1b, gf, "decoder.conv1.bias");
+    auto load_unit = [&](VAEResUnit & ru, const std::string & rp) {
+        vae_load_snake(ru.s1a, gf, rp + ".snake1.alpha");
+        vae_load_snake_inv(ru.s1b, gf, rp + ".snake1.beta");
+        vae_fuse_wn(ru.c1w, gf, rp + ".conv1");
+        vae_load_bias(ru.c1b, gf, rp + ".conv1.bias");
+        vae_load_snake(ru.s2a, gf, rp + ".snake2.alpha");
+        vae_load_snake_inv(ru.s2b, gf, rp + ".snake2.beta");
+        vae_fuse_wn(ru.c2w, gf, rp + ".conv2");
+        vae_load_bias(ru.c2b, gf, rp + ".conv2.bias");
+    };
+    for (int r = 0; r < m->n_pre; r++) {
+        load_unit(m->pre[r], "decoder.pre." + std::to_string(r));
+    }
 
     for (int i = 0; i < 6; i++) {
         VAEBlock &  b       = m->blk[i];
@@ -239,24 +285,20 @@ static void vae_ggml_load(VAEGGML * m, const char * path) {
         vae_load_snake_inv(b.sb, gf, blk_pfx + ".snake1.beta");
         vae_fuse_wn_ct(b.ctw, gf, blk_pfx + ".conv_t1");
         vae_load_bias(b.ctb, gf, blk_pfx + ".conv_t1.bias");
-        for (int r = 0; r < 3; r++) {
-            VAEResUnit & ru = b.ru[r];
-            std::string  rp = blk_pfx + ".res_unit" + std::to_string(r + 1);
-            vae_load_snake(ru.s1a, gf, rp + ".snake1.alpha");
-            vae_load_snake_inv(ru.s1b, gf, rp + ".snake1.beta");
-            vae_fuse_wn(ru.c1w, gf, rp + ".conv1");
-            vae_load_bias(ru.c1b, gf, rp + ".conv1.bias");
-            vae_load_snake(ru.s2a, gf, rp + ".snake2.alpha");
-            vae_load_snake_inv(ru.s2b, gf, rp + ".snake2.beta");
-            vae_fuse_wn(ru.c2w, gf, rp + ".conv2");
-            vae_load_bias(ru.c2b, gf, rp + ".conv2.bias");
+        for (int r = 0; r < b.n_ru; r++) {
+            load_unit(b.ru[r], blk_pfx + ".res_unit" + std::to_string(r + 1));
         }
     }
     vae_load_snake(m->sa, gf, "decoder.snake1.alpha");
     vae_load_snake_inv(m->sb, gf, "decoder.snake1.beta");
     vae_fuse_wn(m->c2w, gf, "decoder.conv2");
 
-    fprintf(stderr, "[VAE] Loaded: 6 blocks, upsample=1920x, F32 activations\n");
+    if (m->n_pre || n_extra) {
+        fprintf(stderr, "[VAE] Loaded: VAE-RS, %d units at the latent rate, %d units a block, %s weights, halo %d\n", m->n_pre,
+                3 + n_extra, m->f32 ? "F32" : "F16", m->halo);
+    } else {
+        fprintf(stderr, "[VAE] Loaded: 6 blocks, upsample=1920x, F32 activations\n");
+    }
     gf_close(&gf);
 }
 
@@ -285,7 +327,20 @@ static struct ggml_tensor * vae_conv1d(struct ggml_context * ctx,
                                        int                   stride,
                                        int                   padding,
                                        int                   dilation) {
-    struct ggml_tensor * y = ggml_conv_1d(ctx, w, x, stride, padding, dilation);
+    struct ggml_tensor * y;
+    if (w->type == GGML_TYPE_F32) {
+        // HERESY 2304: ggml_conv_1d unfolds the input into F16 whatever the kernel, and the GEMM then runs in F16 (tiled and
+        // whole decodes of VAE-RS differed by -55 dB, the fp16 error the release forbids). The same steps with an F32 unfold.
+        struct ggml_tensor * col = ggml_im2col(ctx, w, x, stride, 0, padding, 0, dilation, 0, false, GGML_TYPE_F32);
+        y = ggml_mul_mat(ctx, ggml_reshape_2d(ctx, col, col->ne[0], col->ne[2] * col->ne[1]),
+                         ggml_reshape_2d(ctx, w, w->ne[0] * w->ne[1], w->ne[2]));
+        // HERESY 2329: true float32 on CUDA too, where cuBLAS runs F32 in TF32 by default (-70 dB from the reference)
+        ggml_prec_set_src(y, GGML_PREC_F32, 1);
+        y = ggml_reshape_3d(ctx, y, col->ne[1], col->ne[2], w->ne[2]);
+        y = ggml_cont(ctx, ggml_permute(ctx, y, 0, 2, 1, 3));
+    } else {
+        y = ggml_conv_1d(ctx, w, x, stride, padding, dilation);
+    }
     // ggml_conv_1d returns [OL, OC, N=1], squeeze to 2d
     y                      = ggml_reshape_2d(ctx, y, y->ne[0], y->ne[1]);
     if (b) {
@@ -313,6 +368,9 @@ static struct ggml_tensor * vae_conv_t1d(struct ggml_context * ctx,
     // Step 2: GEMM: contracts over IC (ne[0] of both)
     // w: [IC, K*OC]  xt: [IC, T_in]  ->  col: [K*OC, T_in]
     struct ggml_tensor * col = ggml_mul_mat(ctx, w, xt);
+    if (w->type == GGML_TYPE_F32) {
+        ggml_prec_set_src(col, GGML_PREC_F32, 1);   // HERESY 2329: the F32 decoder (VAE-RS) without TF32 on CUDA
+    }
 
     // Step 3: col2im_1d scatter-add (F32 path, no BF16 casts)
     struct ggml_tensor * y = ggml_col2im_1d(ctx, col, stride, oc, padding);
@@ -349,6 +407,9 @@ static struct ggml_tensor * vae_ggml_build_graph(struct ggml_context * ctx,
 
     // conv1: [T, 64] -> [T, 2048]
     struct ggml_tensor * x = vae_conv1d(ctx, m->c1w, m->c1b, latent, 1, 3, 1);
+    for (int r = 0; r < m->n_pre; r++) {   // HERESY 2304: VAE-RS units at the latent rate
+        x = vae_res_unit(ctx, &m->pre[r], x);
+    }
 
     // 6 decoder blocks
     for (int i = 0; i < 6; i++) {
@@ -357,8 +418,8 @@ static struct ggml_tensor * vae_ggml_build_graph(struct ggml_context * ctx,
         x            = vae_snake(ctx, x, b.sa, b.sb);
         int pad      = (b.stride + 1) / 2;
         x            = vae_conv_t1d(ctx, b.ctw, b.ctb, x, b.stride, pad, b.out_ch);
-        // 3 res units
-        for (int r = 0; r < 3; r++) {
+        // 3 res units (6 in VAE-RS x3)
+        for (int r = 0; r < b.n_ru; r++) {
             x = vae_res_unit(ctx, &b.ru[r], x);
         }
     }
@@ -407,7 +468,7 @@ static int vae_ggml_compute(VAEGGML *     m,
         }
 
         // Graph context (generous fixed allocation)
-        size_t ctx_size = ggml_tensor_overhead() * 1024 + ggml_graph_overhead_custom(8192, false);
+        size_t ctx_size = ggml_tensor_overhead() * 4096 + ggml_graph_overhead_custom(8192, false);   // 2304: VAE-RS ~2.3x the nodes
         m->graph_buf    = (uint8_t *) malloc(ctx_size);
         if (!m->graph_buf) {
             fprintf(stderr, "[VAE] FATAL: OOM allocating graph context (%zu bytes) for T=%d\n", ctx_size, T_latent);
@@ -441,7 +502,8 @@ static int vae_ggml_compute(VAEGGML *     m,
 
         m->graph_ctx = ctx;
         m->graph_T   = T_latent;
-        fprintf(stderr, "[VAE] Graph: %d nodes, T_latent=%d\n", ggml_graph_n_nodes(m->graph), T_latent);
+        fprintf(stderr, "[VAE] Graph: %d nodes, T_latent=%d, working buffer %.1f MB\n", ggml_graph_n_nodes(m->graph), T_latent,
+                ggml_backend_sched_get_buffer_size(m->sched, m->backend) / 1048576.0);   // HERESY 2304: what a tile costs
     }
 
     // Extract window + transpose: [T, 64] time-major -> ggml [T, 64] channel-major
@@ -501,6 +563,12 @@ static int vae_ggml_decode_tiled(VAEGGML *     m,
     if (total > max_T_audio) {
         fprintf(stderr, "[VAE] T_audio %d exceeds max %d\n", total, max_T_audio);
         return -1;
+    }
+
+    // HERESY 2304: never less context than the decoder needs (VAE-RS x3: 60 frames; with 16 its tiles differ by up to
+    // 0.16 near a seam)
+    if (halo_frames < m->halo) {
+        halo_frames = m->halo;
     }
 
     // Short sequence: decode directly

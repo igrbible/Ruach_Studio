@@ -1,8 +1,8 @@
 """HERESY 1870: MiniMax H3 held in one card for the Videographer's shots, in place of AI-Toolkit's MinimaxH3Model and its BaseModel: the
-files of models/minimax-h3 loaded as they ship (the DiT in int8 ConvRot, most of its blocks streamed from RAM; the Qwen3-VL encoder in nvfp4,
+files of models/videographer/minimax-h3 loaded as they ship (the DiT in int8 ConvRot, most of its blocks streamed from RAM; the Qwen3-VL encoder in nvfp4,
 streamed layer by layer; the VAEs on the card), a shot sampled the way AI-Toolkit samples it (the same seed gives the same draw: the CPU
 generator, the shot's picture shown to the encoder and laid in as the first frame) and written as an .mp4 by ffmpeg.
-    h3 = H3(Path("models/minimax-h3"), device="cuda:0"); h3.load()
+    h3 = H3(Path("models/videographer/minimax-h3"), device="cuda:0"); h3.load()
     h3.shoot("a prompt", "out.mp4", width=832, height=480, frames=107, steps=8, seed=1, first="shot.png")"""
 import subprocess
 import tempfile
@@ -137,16 +137,19 @@ class H3:
 
     # ---- the prompt: AI-Toolkit's get_prompt_embeds for one prompt and its picture ----
     @torch.no_grad()
-    def prompt_embeds(self, prompt, picture=None):
-        """The picture is shown to the encoder as AI-Toolkit shows it: the file as it is, through a bfloat16 tensor on the card and back."""
+    def prompt_embeds(self, prompt, picture=None, last=None):
+        """The picture is shown to the encoder as AI-Toolkit shows it: the file as it is, through a bfloat16 tensor on the card and back.
+        HERESY 2361: last, the last frame's picture (on the canvas), shown after it as «<Picture 2>» (or alone, «<Picture 1>»)."""
         if self.text_encoder.device == torch.device("cpu"):
             self.text_encoder.to(self.device_torch)
         keyframes = None
-        if picture is not None:
-            img = picture.convert("RGB") if isinstance(picture, Image.Image) else Image.open(picture).convert("RGB")   # HERESY 1879b: a chunk's picture
+        for pic in (picture, last):
+            if pic is None:
+                continue
+            img = pic.convert("RGB") if isinstance(pic, Image.Image) else Image.open(pic).convert("RGB")   # HERESY 1879b: a chunk's picture
             t = torch.from_numpy(np.asarray(img)).permute(2, 0, 1).float().div(255.0).to(self.device_torch, dtype=self.torch_dtype)
             arr = (t.float().clamp(0, 1) * 255).round().to(torch.uint8)
-            keyframes = [Image.fromarray(arr.permute(1, 2, 0).cpu().numpy())]
+            keyframes = (keyframes or []) + [Image.fromarray(arr.permute(1, 2, 0).cpu().numpy())]
         embeds, tags = encode_minimax_h3_prompt(self.text_encoder, self.tokenizer, self.processor, str(prompt).strip(), keyframes=keyframes,
                                                 device=self.device_torch, dtype=self.torch_dtype, max_length=self.max_text_length)
         return PromptEmbeds([embeds], [tags])
@@ -179,28 +182,35 @@ class H3:
 
     # ---- a shot ----
     @torch.no_grad()
-    def shoot(self, prompt, out, width=1344, height=768, frames=121, steps=28, seed=1, first=None):
+    def shoot(self, prompt, out, width=1344, height=768, frames=121, steps=28, seed=1, first=None, last=None):
         """One shot into out (.mp4, its sound with it); returns what it took. first: a picture for the first frame (FL2VA; FastH3 takes
-        text alone). The draw is AI-Toolkit's: torch's global CPU generator seeded, then the prompt, then the sampler."""
+        text alone). HERESY 2361: last, a picture for the last frame (FL2VA's other keyframe, cover-cropped to the canvas as a follower is;
+        the Videographer gives the hero's own picture, so his likeness holds through the motion); a shot in chunks has it on its last. The
+        draw is AI-Toolkit's: torch's global CPU generator seeded, then the prompt, then the sampler; a shot without a last frame draws as
+        before it."""
         t0 = time.time()
         if self.fast:
-            first = None
+            first = last = None
         torch.manual_seed(int(seed))
         torch.cuda.manual_seed(int(seed))
         generator = torch.manual_seed(int(seed))
-        embeds = self.prompt_embeds(prompt, first)
         sc = 32                                         # 16× VAE compression × 2×2 patch
         width = max(sc, int(width) // sc * sc)
         height = max(sc, int(height) // sc * sc)
+        tail = None
+        if last is not None and int(frames) > 1:
+            tail = packing.prepare_keyframe_image(Image.open(last).convert("RGB"), height, width, stretch=False)
         frames = packing.align_num_frames_down(int(frames)) if int(frames) > 1 else 1
+        per = chunk_latents(width, height)
+        chunks = frames > 1 and packing.video_latent_num_frames(frames) > per
+        embeds = self.prompt_embeds(prompt, first, None if chunks else tail)   # HERESY 2361: in chunks the first shows the first frame alone
         ctrl = None
         if first is not None:
             ctrl = packing.prepare_keyframe_image(Image.open(first).convert("RGB"), height, width, stretch=True)
-        per = chunk_latents(width, height)
-        if frames > 1 and packing.video_latent_num_frames(frames) > per:   # HERESY 1879: past one card, in chunks, decoded as one
-            return self._shoot_chunks(prompt, out, embeds, ctrl, width, height, frames, int(steps), int(seed), per, t0)
+        if chunks:                                      # HERESY 1879: past one card, in chunks, decoded as one
+            return self._shoot_chunks(prompt, out, embeds, ctrl, width, height, frames, int(steps), int(seed), per, t0, tail)
         result = self.pipeline(conditional_embeds=embeds, height=height, width=width, num_frames=frames, num_inference_steps=int(steps),
-                               generator=generator, ctrl_img=ctrl, with_audio=self.sample_audio and frames > 1)
+                               generator=generator, ctrl_img=ctrl, with_audio=self.sample_audio and frames > 1, last_img=tail)
         if frames == 1:
             result[0].save(out)
         else:
@@ -221,7 +231,7 @@ class H3:
         flush()
         return packing.prepare_keyframe_image(Image.fromarray(f), height, width, stretch=True)
 
-    def _shoot_chunks(self, prompt, out, embeds, ctrl, width, height, frames, steps, seed, per, t0):
+    def _shoot_chunks(self, prompt, out, embeds, ctrl, width, height, frames, steps, seed, per, t0, tail=None):
         keep = per - 2
         grid = packing._temporal_position_grid(per, 0.0)
         total = packing.video_latent_num_frames(frames)
@@ -242,19 +252,22 @@ class H3:
                 self.sample_step_hook = lambda i, n, c=c: hook(c * n + i, n * len(plan))
             kw = dict(height=height, width=width, num_frames=n_frames, num_inference_steps=steps, generator=torch.manual_seed(seed + c),
                       with_audio=False, decode=False)
+            if last and tail is not None:               # HERESY 2361: the last frame is the last chunk's
+                kw["last_img"] = tail
             if c == 0:
-                r = self.pipeline(conditional_embeds=embeds, ctrl_img=ctrl, **kw)
+                r = self.pipeline(conditional_embeds=embeds, ctrl_img=ctrl, **kw)   # never the last chunk: its words without the last frame
             else:
                 ctx = kept[-1][:, :, -CONTEXT:]
                 offs = [float(grid[keep - CONTEXT + j] - grid[keep]) for j in range(CONTEXT)]
                 if SEAM:                                # HERESY 1879b: the chunk before's last frame, this chunk's picture
                     pic = self._seam_picture(kept[-1], width, height)
                     cuts.append(17 * sum(k.shape[2] for k in kept) // 5)
-                    r = self.pipeline(conditional_embeds=self.prompt_embeds(prompt, pic), ctrl_img=pic, context_latents=ctx, context_offsets=offs,
+                    r = self.pipeline(conditional_embeds=self.prompt_embeds(prompt, pic, tail if last else None), ctrl_img=pic, context_latents=ctx, context_offsets=offs,
                                       ctrl_time=None if SEAM == "first" else -packing._ROPE_FRAME_RESCALE, **kw)
                 else:
                     plain = plain or self.prompt_embeds(prompt, None)
-                    r = self.pipeline(conditional_embeds=plain, context_latents=ctx, context_offsets=offs, **kw)
+                    r = self.pipeline(conditional_embeds=self.prompt_embeds(prompt, None, tail) if (last and tail is not None) else plain,
+                                      context_latents=ctx, context_offsets=offs, **kw)
             lat = r["latents"]
             kept.append(lat if last else lat[:, :, :keep])
             flush()

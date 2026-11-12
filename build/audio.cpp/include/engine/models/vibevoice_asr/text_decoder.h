@@ -1,0 +1,193 @@
+#pragma once
+
+#include "engine/framework/assets/tensor_source.h"
+#include "engine/framework/core/backend.h"
+#include "engine/framework/core/module.h"
+#include "engine/framework/modules/attention/types.h"
+#include "engine/framework/modules/linear_module.h"
+#include "engine/framework/runtime/kv_cache.h"
+#include "engine/models/vibevoice_asr/assets.h"
+
+#include <ggml-backend.h>
+
+#include <cstddef>
+#include <memory>
+#include <optional>
+#include <vector>
+
+namespace engine::core {
+class BackendWeightStore;
+}
+
+namespace engine::core {
+class ConstantTensorCache;
+}
+
+namespace engine::models::vibevoice_asr {
+
+class VibeVoiceQwen2PrefillGraph;
+class VibeVoiceQwen2CachedStepGraph;
+class VibeVoiceQwen2CachedSuffixGraph;
+class VibeVoiceQwen2EmbeddingGraph;
+class VibeVoiceQwen2KVCache;
+
+class VibeVoiceQwen2CachedState final {
+public:
+    VibeVoiceQwen2CachedState();
+    ~VibeVoiceQwen2CachedState();
+
+    VibeVoiceQwen2CachedState(const VibeVoiceQwen2CachedState &) = delete;
+    VibeVoiceQwen2CachedState & operator=(const VibeVoiceQwen2CachedState &) = delete;
+    VibeVoiceQwen2CachedState(VibeVoiceQwen2CachedState &&) noexcept;
+    VibeVoiceQwen2CachedState & operator=(VibeVoiceQwen2CachedState &&) noexcept;
+
+private:
+    friend class VibeVoiceQwen2WeightsRuntime;
+
+    std::unique_ptr<VibeVoiceQwen2CachedStepGraph> graph_;
+    std::unique_ptr<VibeVoiceQwen2CachedSuffixGraph> suffix_graph_;
+    std::unique_ptr<VibeVoiceQwen2KVCache> cache_;
+    runtime::TransformerKVState pending_state_;
+    bool cache_has_state_ = false;
+};
+
+struct VibeVoiceDecoderLogits {
+    std::vector<float> values;
+    int64_t vocab_size = 0;
+};
+
+struct VibeVoiceTokenEmbeddings {
+    std::vector<float> values;
+    int64_t steps = 0;
+    int64_t hidden_size = 0;
+};
+
+struct VibeVoiceDecoderHidden {
+    std::vector<float> values;
+    int64_t dims = 0;
+};
+
+struct VibeVoiceDecoderResult {
+    VibeVoiceDecoderLogits logits;
+    VibeVoiceDecoderHidden last_hidden;
+};
+
+struct VibeVoiceDecoderPrefillOutput {
+    VibeVoiceDecoderResult result;
+    runtime::TransformerKVState state;
+};
+
+struct VibeVoiceQwen2MLPWeights {
+    modules::LinearWeights gate_proj;
+    modules::LinearWeights up_proj;
+    modules::LinearWeights down_proj;
+};
+
+struct VibeVoiceQwen2LayerWeights {
+    assets::TensorDataF32 input_norm;
+    modules::AttentionWeights self_attention;
+    assets::TensorDataF32 post_norm;
+    VibeVoiceQwen2MLPWeights mlp;
+};
+
+struct VibeVoiceQwen2Weights {
+    std::shared_ptr<core::BackendWeightStore> store;
+    core::TensorValue token_embedding;
+    core::TensorValue lm_head;
+    std::vector<VibeVoiceQwen2LayerWeights> layers;
+    assets::TensorDataF32 norm;
+};
+
+struct VibeVoiceDecoderLayerOutputs {
+    core::TensorValue output;
+    core::TensorValue key;
+    core::TensorValue value;
+};
+
+class VibeVoiceQwen2WeightsRuntime final {
+public:
+    VibeVoiceQwen2WeightsRuntime(
+        std::shared_ptr<const VibeVoiceASRAssets> assets,
+        core::BackendType backend_type,
+        int device,
+        int threads,
+        size_t weight_context_bytes = 256ull * 1024ull * 1024ull,
+        size_t constant_context_bytes = 128ull * 1024ull * 1024ull,
+        assets::TensorStorageType weight_storage_type = assets::TensorStorageType::Native,
+        int64_t max_history_steps = 0);
+
+    ~VibeVoiceQwen2WeightsRuntime();
+
+    VibeVoiceQwen2WeightsRuntime(const VibeVoiceQwen2WeightsRuntime &) = delete;
+    VibeVoiceQwen2WeightsRuntime & operator=(const VibeVoiceQwen2WeightsRuntime &) = delete;
+
+    const VibeVoiceASRAssets & assets() const noexcept;
+    const VibeVoiceQwen2Weights & weights() const noexcept;
+    ggml_backend_t backend() const noexcept;
+    core::ConstantTensorCache & constants() const noexcept;
+    int threads() const noexcept;
+    int64_t max_history_steps() const noexcept;
+    int64_t pinned_prefix_steps() const noexcept;
+    void set_pinned_prefix_steps(int64_t steps);
+
+    VibeVoiceTokenEmbeddings embed_tokens(const std::vector<int32_t> & input_ids) const;
+    VibeVoiceDecoderPrefillOutput prefill_prompt(
+        const std::vector<int32_t> & input_ids,
+        const std::vector<float> & speech_features,
+        const std::vector<int32_t> & speech_positions) const;
+    VibeVoiceDecoderPrefillOutput prefill_embeddings(const std::vector<float> & embeddings, int64_t steps) const;
+    void reset_cached_state(VibeVoiceQwen2CachedState & state, runtime::TransformerKVState prefill_state) const;
+    void prepare_cached_state(VibeVoiceQwen2CachedState & state, int64_t cache_capacity) const;
+    runtime::TransformerKVState export_cached_state(VibeVoiceQwen2CachedState & state) const;
+    void clone_cached_state(
+        const VibeVoiceQwen2CachedState & source,
+        VibeVoiceQwen2CachedState & target,
+        int64_t cache_capacity) const;
+    VibeVoiceDecoderResult cached_step(
+        const std::vector<float> & embedding,
+        VibeVoiceQwen2CachedState & state,
+        int64_t cache_capacity) const;
+    void append_cached_step(
+        const std::vector<float> & embedding,
+        VibeVoiceQwen2CachedState & state,
+        int64_t cache_capacity) const;
+    VibeVoiceDecoderResult cached_suffix(
+        const std::vector<float> & embeddings,
+        int64_t steps,
+        VibeVoiceQwen2CachedState & state,
+        int64_t cache_capacity) const;
+
+private:
+    std::shared_ptr<const VibeVoiceASRAssets> assets_;
+    std::shared_ptr<const VibeVoiceQwen2Weights> weights_;
+    std::unique_ptr<core::ConstantTensorCache> constants_;
+    mutable std::unique_ptr<VibeVoiceQwen2EmbeddingGraph> embedding_graph_;
+    mutable std::unique_ptr<VibeVoiceQwen2PrefillGraph> prefill_graph_;
+    int64_t apply_history_window(int64_t unbounded_required) const;
+    static int64_t cached_state_end_plus(const VibeVoiceQwen2CachedState & state, int64_t incoming_steps);
+
+    ggml_backend_t backend_ = nullptr;
+    int threads_ = 1;
+    int64_t max_history_steps_ = 0;
+    int64_t pinned_prefix_steps_ = 0;
+};
+
+VibeVoiceQwen2Weights load_vibevoice_decoder_weights(
+    const VibeVoiceASRAssets & assets,
+    ggml_backend_t backend,
+    core::BackendType backend_type,
+    size_t weight_context_bytes,
+    assets::TensorStorageType weight_storage_type);
+
+VibeVoiceDecoderLayerOutputs build_vibevoice_decoder_layer(
+    core::ModuleBuildContext & ctx,
+    const core::TensorValue & input,
+    const core::TensorValue & positions,
+    const VibeVoiceQwen2LayerWeights & weights,
+    const VibeVoiceQwen2Config & config,
+    core::ConstantTensorCache & constants,
+    const std::optional<core::TensorValue> & prefix_key = std::nullopt,
+    const std::optional<core::TensorValue> & prefix_value = std::nullopt,
+    const std::optional<core::TensorValue> & attention_mask = std::nullopt);
+
+}  // namespace engine::models::vibevoice_asr

@@ -64,6 +64,7 @@ struct Yue2Pipeline {
     std::string        model_path;        // the backbone GGUF, both halves and the tokenizer
     std::string        vae_path;
     std::string        transcriber_path;  // the SheetSage2 GGUF, empty without one
+    std::string        transcriber_refined_path;  // HERESY 2328: SheetSage2-Refined's overlay, empty without one
     std::string        tokenizer_path;    // upstream: the audio tokenizer GGUF, empty without one
     Yue2PipelineParams params;
     std::vector<AdapterEntry> adapters;   // upstream: the adapter directory, scanned at configure
@@ -303,8 +304,8 @@ static VAEGGML * require_vae(Yue2Pipeline * p, const std::string & path) {
 
 // Local addition: the decoder path of a request, "" meaning the default
 static bool pipeline_vae_path(const Yue2Pipeline * p, const std::string & name, std::string * path) {
-    if (name.empty()) {
-        *path = p->vae_path;
+    if (name.empty()) {                     // HERESY 2306: the default decoder is the first one named (vae_path is the encoder's file)
+        *path = p->vaes.empty() ? p->vae_path : p->vaes[0].second;
         return true;
     }
     for (const auto & v : p->vaes) {
@@ -533,8 +534,8 @@ static AudioTokenizer * require_atok(Yue2Pipeline * p) {
     return m;
 }
 
-static SheetSage2 * require_ss2(Yue2Pipeline * p) {
-    ModelKey     k = { MODEL_SS2, p->transcriber_path, {} };
+static SheetSage2 * require_ss2(Yue2Pipeline * p, bool refined = false) {
+    ModelKey     k = { MODEL_SS2, refined ? p->transcriber_refined_path : p->transcriber_path, {} };
     SheetSage2 * m = store_require_ss2(p->store, k);
     if (m) {
         m->use_flash_attn = m->use_flash_attn && !p->params.no_fa;
@@ -550,14 +551,28 @@ static bool pipeline_transcribe(Yue2Pipeline * p,
                                 int            n_samples,
                                 bool           melody_only,
                                 std::string *  abc,
-                                std::string *  error) {
-    SheetSage2 * m = require_ss2(p);
+                                std::string *  error,
+                                bool           refined  = false,    // HERESY 2328: SheetSage2-Refined instead of SheetSage2
+                                bool           key_mode = false,    // its keys with modes
+                                int            rope     = -1) {     // HERESY 2359: SheetSage2's angles, 1 bf16, 0 exact, -1 as loaded
+    if (refined && p->transcriber_refined_path.empty()) {
+        *error = "SheetSage2-Refined is not installed (models/SheetSage2-Refined-F16.gguf)";
+        return false;
+    }
+    SheetSage2 * m = require_ss2(p, refined);
     if (!m) {
         *error = "transcriber unavailable";
         return false;
     }
     ModelHandle hold(p->store, m);
-    return ss2_transcribe(m, audio, n_samples, melody_only, abc, error, &p->dumper);
+    // HERESY 2359: one loaded SheetSage2 writes with either angles, chosen per call and given back after (Refined has bf16 always)
+    bool loaded_rope = m->rope_bf16;
+    if (!refined && rope >= 0) {
+        m->rope_bf16 = rope == 1;
+    }
+    bool ok      = ss2_transcribe(m, audio, n_samples, melody_only, abc, error, &p->dumper, key_mode);
+    m->rope_bf16 = loaded_rope;
+    return ok;
 }
 
 // A recording to its semantic codes, the stream a replay renders. The
@@ -865,6 +880,32 @@ static std::string yue2_score_broken(const std::string & abc) {
 // HERESY 1768: the decode ladder: pieces of about 20 s (25 frames a second), each hearing 2 s past its edges
 static const int YUE2_LADDER_PIECE  = 500;
 static const int YUE2_LADDER_MARGIN = 50;
+
+// HERESY 2352: the seam of a song longer than one window of the sound half. The window holds the prefix, the piece's codes and its latent block
+// (chunk_sizes below), so a song past it (about 340-410 s, by the prefix) was solved in two pieces butted together, the first one's window
+// closed by the end token right at the edge and the second one's opened at it with no music before: measured 07.11.2026 on 25 such takes of 21
+// days, the loudness fell by 3.4 dB (median) in the quarter second after the edge and stayed 2-3.5 dB down for the next seconds, with a 1 dB
+// fade before it; the same profile at random points of the same songs: 0 dB. Now the pieces are even and each one's window hears
+// YUE2_SEAM_MARGIN frames past an inner edge, so neither end of a window falls near the edge; the neighbours meet in complementary
+// half-cosines YUE2_SEAM_XFADE frames either side of it, in their latents, solved from the same noise (the ladder's join, one edge).
+static const int YUE2_SEAM_MARGIN = 150;   // 6 s
+static const int YUE2_SEAM_XFADE  = 50;    // 2 s either side of the edge
+
+#ifdef YUE2_SEAM_TEST
+static int seam_env(const char * name, int dflt) {   // the kitchen's knobs (heresy/MISC/claude-arc/nar-seam): never in the Studio's build
+    const char * v = getenv(name);
+    return v && *v ? atoi(v) : dflt;
+}
+#else
+static int seam_env(const char *, int dflt) {
+    return dflt;
+}
+#endif
+// YUE2_NAR_SEAM=0 in the engine's environment: the butt join of before, for an A/B by ear (the seam is on otherwise)
+static bool seam_on() {
+    const char * v = getenv("YUE2_NAR_SEAM");
+    return !(v && v[0] == '0');
+}
 
 static bool pipeline_generate(Yue2Pipeline *          p,
                               const Yue2Request &     r,
@@ -1236,6 +1277,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
     yue2_phase_rows(YUE2_PHASE_SEMANTIC, &row0, &rows);
     std::vector<float> probe((size_t) rows);
     std::vector<int>   chunk_sizes(B);
+    std::vector<int>   seam_margin(B, 0);   // HERESY 2352: what a song's windows hear past an inner edge (0: one window, or the ladder)
 
     songs->assign((size_t) B * M, {});
     for (int i = 0; i < B; i++) {
@@ -1245,10 +1287,25 @@ static bool pipeline_generate(Yue2Pipeline *          p,
             return false;
         }
         chunk_sizes[i] = (context - (int) prefixes[i].size() - 3) / 2;
+#ifdef YUE2_SEAM_TEST
+        if (seam_env("YUE2_T_CHUNK", 0) > 0 && seam_env("YUE2_T_CHUNK", 0) < chunk_sizes[i]) {
+            chunk_sizes[i] = seam_env("YUE2_T_CHUNK", 0);   // the test's window, smaller than the context's
+        }
+#endif
         if (r.nar_ladder) {                           // HERESY 1768: even pieces of about 20 s, room for their windows' 2 s either side
             const int n = (T_lat + YUE2_LADDER_PIECE - 1) / YUE2_LADDER_PIECE, even = (T_lat + n - 1) / n;
             if (n > 1 && even + 2 * YUE2_LADDER_MARGIN <= chunk_sizes[i]) {
                 chunk_sizes[i] = even;
+            }
+        } else if (T_lat > chunk_sizes[i] && seam_on() && seam_env("YUE2_T_SEAM", 1)) {   // HERESY 2352: even pieces whose windows hear the margin past an inner edge
+            const int window = chunk_sizes[i], margin = seam_env("YUE2_T_MARGIN", YUE2_SEAM_MARGIN);
+            for (int n = 2; margin > 0 && 4 * margin < window; n++) {
+                const int even = (T_lat + n - 1) / n;
+                if (even + (n > 2 ? 2 : 1) * margin <= window) {
+                    chunk_sizes[i] = n == 2 && !seam_env("YUE2_T_EVEN", 1) ? window - margin : even;
+                    seam_margin[i] = margin;
+                    break;
+                }
             }
         }
         if (chunk_sizes[i] < 1) {
@@ -1279,7 +1336,9 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         for (int i = 0; i < B; i++) {
             if ((int) codes[i].tokens.size() > chunk_sizes[i]) {
                 int end = YUE2_MUSIC_END;
-                qw3lm_kv_trim(&p->kv, i, (int) prefixes[i].size() + chunk_sizes[i]);
+                // HERESY 2352: the first window closes past its piece by the margin
+                const int first = std::min((int) codes[i].tokens.size(), chunk_sizes[i] + seam_margin[i]);
+                qw3lm_kv_trim(&p->kv, i, (int) prefixes[i].size() + first);
                 if (!qw3lm_forward(lm, &p->kv, &end, 1, i, probe.data(), row0, rows)) {   // HERESY 2090
                     return false;
                 }
@@ -1310,10 +1369,18 @@ static bool pipeline_generate(Yue2Pipeline *          p,
                 M > 1 ? "s" : "");
         // HERESY 1768: the ladder: a piece's window hears YUE2_LADDER_MARGIN codes past its end and before its start; neighbours meet in a
         // crossfade of their latents half a margin either side of their common edge. The noise stays in the latents until every piece is solved.
-        const bool lad   = r.nar_ladder && chunks > 1;
-        const int  lad_m = lad ? YUE2_LADDER_MARGIN : 0, lad_x = YUE2_LADDER_MARGIN / 2;
+        // HERESY 2352: a song past one window joins its pieces the same way, with the seam's margin and crossfade; its first window is sealed
+        const bool seam  = !r.nar_ladder && seam_margin[i] > 0 && chunks > 1;
+        const bool lad   = (r.nar_ladder || seam) && chunks > 1;
+        const int  lad_m = !lad ? 0 : (seam ? seam_margin[i] : YUE2_LADDER_MARGIN);
+        const int  lad_x = !seam ? YUE2_LADDER_MARGIN / 2 : std::max(1, std::min(lad_m, seam_env("YUE2_T_XFADE", YUE2_SEAM_XFADE)));
         std::vector<std::vector<float>> lad_acc(lad ? M : 0, std::vector<float>(lad ? (size_t) T_lat * YUE2_LATENT_DIM : 0, 0.0f));
-        if (lad) {
+        std::vector<std::vector<float>> seam_prev(seam ? M : 0);   // HERESY 2352: the window before, where it overlaps the next one, to say how they agree
+        int                             seam_prev_at = 0;
+        if (seam) {
+            fprintf(stderr, "[NAR] seam: %d pieces of %d frames, each window hearing %d past an inner edge, joined over %d\n", chunks, chunk_size,
+                    lad_m, 2 * lad_x);
+        } else if (lad) {
             fprintf(stderr, "[NAR] ladder: %d pieces of %d frames, each hearing %d past its edges, joined over %d\n", chunks, chunk_size, lad_m, 2 * lad_x);
         }
         for (int start = 0; start < T_lat; start += chunk_size) {
@@ -1333,7 +1400,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
             sequence.push_back(YUE2_MUSIC_END);
             // With sliders the cache the AR decode left carries their steer, so
             // the first chunk re-prefills the whole sequence without them
-            const int kept = start > 0 ? prefix_len : ((replay || sliders_used || lad) ? 0 : ar_len);   // 1768: a ladder reads its first window again
+            const int kept = start > 0 ? prefix_len : ((replay || sliders_used || (lad && !seam)) ? 0 : ar_len);   // 1768: a ladder reads its first window again (2352: a seam's is sealed)
             if (kept < ar_len) {
                 nar_hold.reset();
                 nar                = nullptr;
@@ -1415,6 +1482,40 @@ static bool pipeline_generate(Yue2Pipeline *          p,
                         return false;
                     }
                 }
+            }
+#ifdef YUE2_SEAM_TEST
+            if (getenv("YUE2_T_DUMP") && *getenv("YUE2_T_DUMP")) {   // the test's look at every window as solved, the first variation
+                char path[1024];
+                snprintf(path, sizeof(path), "%s/song%d_window%d_%d_%d.f32", getenv("YUE2_T_DUMP"), i, start / chunk_size, ws, frames);
+                if (FILE * f = fopen(path, "wb")) {
+                    fwrite(block.data(), sizeof(float), span, f);
+                    fclose(f);
+                }
+            }
+#endif
+            if (seam) {   // HERESY 2352: how the two windows agree where they overlap: the cosine of their latents and the ratio of their sizes
+                const int ov0 = start - lad_m, ov1 = std::min(T_lat, start + lad_m);
+                for (int j = 0; start > 0 && j < M; j++) {
+                    double dot = 0.0, aa = 0.0, bb = 0.0;
+                    for (int t = ov0; t < ov1; t++) {
+                        const float * a = seam_prev[j].data() + (size_t) (t - seam_prev_at) * YUE2_LATENT_DIM;
+                        const float * b = block.data() + span * j + (size_t) (t - ws) * YUE2_LATENT_DIM;
+                        for (int d = 0; d < YUE2_LATENT_DIM; d++) {
+                            dot += (double) a[d] * b[d];
+                            aa += (double) a[d] * a[d];
+                            bb += (double) b[d] * b[d];
+                        }
+                    }
+                    fprintf(stderr, "[NAR] Song %d variation %d: the seam at frame %d (%.1f s): its windows agree at cos %.3f over %d frames, sizes %+.2f dB\n",
+                            i, j, start, (float) start / (float) YUE2_FRAME_RATE, dot / std::sqrt(aa * bb + 1e-30), ov1 - ov0,
+                            10.0 * std::log10((bb + 1e-30) / (aa + 1e-30)));
+                }
+                const int nx0 = start + nf - lad_m, nx1 = std::min(T_lat, start + nf + lad_m);
+                for (int j = 0; nx1 > nx0 && start + nf < T_lat && j < M; j++) {
+                    seam_prev[j].assign(block.data() + span * j + (size_t) (nx0 - ws) * YUE2_LATENT_DIM,
+                                        block.data() + span * j + (size_t) (nx1 - ws) * YUE2_LATENT_DIM);
+                }
+                seam_prev_at = nx0;
             }
             for (int j = 0; j < M; j++) {
                 if (!lad) {

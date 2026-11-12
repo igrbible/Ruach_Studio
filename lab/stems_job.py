@@ -1,13 +1,13 @@
 """Split one take into stems on Forge (HERESY 1021). Runs in the Studio's .venv (torch + audio-separator).
 
-  vocals   BS-Roformer ep317 (SDR 12.97 on vocals; separation/roformer):
+  vocals   BS-Roformer ep317 (SDR 12.97 on vocals; models/refiner/separation/roformer):
            vocals.flac + instrumental.flac
-  four     the same, then htdemucs_ft (separation/demucs) on the instrumental:
+  four     the same, then htdemucs_ft (models/refiner/separation/demucs) on the instrumental:
            + drums.flac, bass.flac, other.flac
-  six      HERESY 1462: the same voice, then BS-Roformer-SW (jarredou, separation/roformer) on the instrumental:
+  six      HERESY 1462: the same voice, then BS-Roformer-SW (jarredou, models/refiner/separation/roformer) on the instrumental:
            + drums.flac, bass.flac, guitar.flac, piano.flac, other.flac
   eight    HERESY 1463: six, with the voice in two by becruily's karaoke Mel-Roformer (lead_vocal.flac, backing_vocals.flac; 1477:
-           vocals.flac stays beside them, the whole voice) and the winds out of the rest by UVR's 17_HP-Wind_Inst (separation/vr): + winds.flac
+           vocals.flac stays beside them, the whole voice) and the winds out of the rest by UVR's 17_HP-Wind_Inst (models/refiner/separation/vr): + winds.flac
   Each stem keeps a plain file name and carries a proper title (Lead Vocal, Backing Vocals, Drums…) for the tree and the DAW.
 
 FLAC 24-bit at the take's own 48 kHz, into OUTDIR. The weights are used where they lie;
@@ -20,14 +20,16 @@ from pathlib import Path
 
 audio, outdir, mode = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
 KIT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(KIT / "lab"))
+import paths  # noqa: E402   HERESY 2330: where the weights live
 # the weights live in the Kit (hard links to Maestro Studio's and UVR's copies, no download)
-ROFORMER_DIR = os.environ.get("LAB_ROFORMER_DIR", str(KIT / "separation/roformer"))
+ROFORMER_DIR = os.environ.get("LAB_ROFORMER_DIR", str(paths.at(paths.REFINER_SEPARATION, KIT) / "roformer"))
 ROFORMER = "model_bs_roformer_ep_317_sdr_12.9755.ckpt"
-DEMUCS_DIR = os.environ.get("LAB_DEMUCS_DIR", str(KIT / "separation/demucs"))
+DEMUCS_DIR = os.environ.get("LAB_DEMUCS_DIR", str(paths.at(paths.REFINER_SEPARATION, KIT) / "demucs"))
 DEMUCS = "htdemucs_ft.yaml"
 SIX = "BS-Roformer-SW.ckpt"                         # HERESY 1462: bass, drums, other, vocals, guitar, piano (its voice unused)
 KARAOKE = "mel_band_roformer_karaoke_becruily.ckpt"   # HERESY 1463: Vocals (the lead) and Instrumental (on a vocal stem: the backing)
-VR_DIR = os.environ.get("LAB_VR_DIR", str(KIT / "separation/vr"))
+VR_DIR = os.environ.get("LAB_VR_DIR", str(paths.at(paths.REFINER_SEPARATION, KIT) / "vr"))
 WIND = "17_HP-Wind_Inst-UVR.pth"                    # HERESY 1463: Woodwinds and No Woodwinds
 TITLES = {"vocals": "Vocals", "instrumental": "Instrumental", "drums": "Drums", "bass": "Bass", "other": "Other", "guitar": "Guitar",
           "piano": "Piano", "lead_vocal": "Lead Vocal", "backing_vocals": "Backing Vocals", "winds": "Winds"}

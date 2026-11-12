@@ -35,6 +35,9 @@
   function ping() {
     var t0 = performance.now(), url = "/health?_=" + Date.now();
     return fetch(url, { cache: "no-store" }).then(function (r) {
+      // HERESY 2180: the build the engine has on disk now (X-Ruach-Build); app.js says when it is not the one this tab was built from
+      var built = r.headers.get("X-Ruach-Build");
+      if (built) { try { document.dispatchEvent(new CustomEvent("ruach-build", { detail: built })); } catch (e) { /* an old browser: no line, the ping as before */ } }
       return r.text().then(function () {
         S.samples.push(lineTime(url, t0));
         if (S.samples.length > 5) S.samples.shift();

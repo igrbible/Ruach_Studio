@@ -14,6 +14,18 @@ Who signs:
   yours    a certificate chain and its key of one's own (PEM files), e.g. from a CA on the C2PA trust list, named as verified
 
 Settings: user/c2pa.json {"on": true, "author": "", "contact": "", "cert": "", "key": ""} (cert and key: paths, both or neither).
+
+HERESY 2174 (H03; the network map's item 7: POST /c2pa took any path on the disk, and its «no such file» against «not a PEM file» told a page whether a file
+existed anywhere the lab may read): the certificate and its key are read from the Studio's user/ folder alone (user/c2pa/ is their place); a path
+is taken from user/ when it is relative, and one that leads out of it (a link too) is refused before anything is looked at.
+
+HERESY 2333 (the unified plan of 08.11.2026, the Reader: «Библиотека: метка «не учить» и C2PA»; §5: «экспорт и C2PA: свой профиль на мир»): a take
+of the Reader is speech, not music, and says so: created by AI, its engine named (from its request), in the Reader of Ruach Studio, the engine's
+credit beside it («Built with Fish Audio», which the Fish Audio Community License asks on every use); a Refiner's file of it says the same, the
+take being its root. A take marked never for training (no_train.py: every take of the Reader, an engine whose terms forbid training on what it
+makes) carries the training and data mining assertion of the creator assertions working group, cawg.training-mining: generative training,
+training and data mining not allowed, the take's own reason as the constraint. Until now a Reader's download said «The music was made by AI
+(YuE2)», which was untrue twice.
 """
 import datetime
 import io
@@ -44,6 +56,20 @@ def load(cfg):
     return {k: d.get(k, v) for k, v in DEFAULTS.items()}
 
 
+OUTSIDE = ("the certificate and its key are read from the Studio's user/ folder only: put both files there (user/c2pa/ is their place) and name them "
+           "by their path, or relative to user/ (c2pa/mine.pem)")
+
+
+def _inside(cfg, p):
+    """HERESY 2174: the file p names, inside cfg (user/), else ValueError(OUTSIDE), asked before the file is looked at"""
+    root = Path(cfg).expanduser().resolve()
+    q = Path(str(p)).expanduser()
+    q = (q if q.is_absolute() else root / q).resolve()
+    if root not in q.parents:
+        raise ValueError(OUTSIDE)
+    return q
+
+
 def save(cfg, data):
     s = load(cfg)
     if "on" in data:
@@ -55,9 +81,9 @@ def save(cfg, data):
         raise ValueError("a certificate needs its key: give both files, or neither (the Studio then signs with its own)")
     if s["cert"]:
         for k in ("cert", "key"):
-            if not Path(s[k]).expanduser().is_file():
+            if not _inside(cfg, s[k]).is_file():          # HERESY 2174: user/ first, then whether it is there
                 raise ValueError(f"no such file: {s[k]}")
-        _read_yours(s)                                   # refused here, not at the first download
+        _read_yours(cfg, s)                              # refused here, not at the first download
     Path(cfg).mkdir(parents=True, exist_ok=True)
     p, tmp = Path(cfg) / "c2pa.json", Path(cfg) / "c2pa.json.part"   # HERESY 2083: it was written in place; now beside it whole, on the disk, then in its place
     with open(tmp, "w", encoding="utf-8") as fh:
@@ -111,9 +137,9 @@ def _own(cfg):
     return chain_b, key_b
 
 
-def _read_yours(s):
-    chain = Path(s["cert"]).expanduser().read_bytes()
-    key = Path(s["key"]).expanduser().read_bytes()
+def _read_yours(cfg, s):
+    chain = _inside(cfg, s["cert"]).read_bytes()        # HERESY 2174: a setting written before it, out of user/, is refused here as well
+    key = _inside(cfg, s["key"]).read_bytes()
     if b"BEGIN CERTIFICATE" not in chain or b"PRIVATE KEY" not in key:
         raise ValueError("the certificate and the key are PEM files: -----BEGIN CERTIFICATE----- and -----BEGIN … PRIVATE KEY-----")
     return chain, key
@@ -137,7 +163,7 @@ def who(cfg):
     """Whose signature: own or yours, with the certificate's subject and issuer, for Engine."""
     from cryptography import x509
     s = load(cfg)
-    chain, _ = _read_yours(s) if s["cert"] else _own(cfg)
+    chain, _ = _read_yours(cfg, s) if s["cert"] else _own(cfg)
     c = x509.load_pem_x509_certificate(chain)
     return {"signer": "yours" if s["cert"] else "own", "subject": c.subject.rfc4514_string(), "issuer": c.issuer.rfc4514_string(),
             "until": c.not_valid_after_utc.strftime("%Y-%m-%d")}
@@ -154,15 +180,43 @@ def status(cfg):
     return out
 
 
-def manifest(title, version, author="", contact="", edits=None):
-    actions = [{"action": "c2pa.created", "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia",
-                "softwareAgent": {"name": f"YuE2 (m-a-p/YuE2-3B) in Ruach Studio {version}"},
-                "description": "The music was made by AI (YuE2) in Ruach Studio."}]
+TRAINING = ("cawg.ai_generative_training", "cawg.ai_training", "cawg.data_mining")   # HERESY 2333: what a take marked never for training forbids
+
+
+def made_of(req, meta=None):
+    """HERESY 2333: what made a take, from its request.json (and meta.json): {"speech": the Reader's (its "reader" block), "engine": its label,
+    "credit": the engine's credit line, "no_train": marked never for training in either, "why": the mark's reason}. Words only, read from the
+    take: nothing here knows an engine."""
+    req = req if isinstance(req, dict) else {}
+    meta = meta if isinstance(meta, dict) else {}
+    r = req.get("reader") if isinstance(req.get("reader"), dict) else None
+    prov = meta.get("provenance") if isinstance(meta.get("provenance"), dict) else {}
+    out = {"speech": r is not None, "no_train": bool(req.get("no_train") or meta.get("no_train")), "why": str(prov.get("why") or "")[:200]}
+    if r is not None:
+        out["engine"] = " ".join(str(r.get("engine_label") or r.get("engine") or "").split())[:80]
+        out["credit"] = " ".join(str(r.get("credit") or "").split())[:80]
+    return out
+
+
+def manifest(title, version, author="", contact="", edits=None, made=None):
+    made = made or {}
+    if made.get("speech"):                       # HERESY 2333: the Reader's speech, its engine named, its credit beside it
+        eng = made.get("engine") or "a speech engine"
+        actions = [{"action": "c2pa.created", "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia",
+                    "softwareAgent": {"name": f"{eng} in the Narrator of Ruach Studio {version}"},
+                    "description": f"The speech was made by AI ({eng}) in the Narrator of Ruach Studio." + (f" {made['credit']}." if made.get("credit") else "")}]
+    else:
+        actions = [{"action": "c2pa.created", "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia",
+                    "softwareAgent": {"name": f"YuE2 (m-a-p/YuE2-3B) in Ruach Studio {version}"},
+                    "description": "The music was made by AI (YuE2) in Ruach Studio."}]
     if edits:
         actions.append({"action": "c2pa.edited", "softwareAgent": {"name": f"Ruach Studio {version} Refiner"},
                         "description": "Refined by a person in Ruach Studio: " + " → ".join(edits) + "."})
     m = {"claim_generator_info": [{"name": "Ruach Studio", "version": version}], "title": title or "Ruach Studio take",
          "assertions": [{"label": "c2pa.actions", "data": {"actions": actions}}]}
+    if made.get("no_train"):                     # HERESY 2333: never for training, said where every C2PA reader looks
+        why = "Never for training" + (f": {made['why']}" if made.get("why") else "") + "."
+        m["assertions"].append({"label": "cawg.training-mining", "data": {"entries": {k: {"use": "notAllowed", "constraint_info": why} for k in TRAINING}}})
     if author or contact:
         person = {"@type": "Person", "name": author or contact}
         if contact:
@@ -190,27 +244,31 @@ def edits_of(take_dir, rel):
     return [e for e in reversed(out) if e]
 
 
-def sign(cfg, data, fmt, title, version, edits=None):
-    """The bytes with a manifest signed in; ValueError with the reason when they cannot be."""
+def sign(cfg, data, fmt, title, version, edits=None, made=None):
+    """The bytes with a manifest signed in; ValueError with the reason when they cannot be. made: made_of(request, meta) of the take (2333)."""
     import c2pa
     if fmt not in MIME:
         raise ValueError(f"no C2PA for .{fmt} here (wav, flac, mp3)")
     s = load(cfg)
-    chain, key = _read_yours(s) if s["cert"] else _own(cfg)
+    chain, key = _read_yours(cfg, s) if s["cert"] else _own(cfg)
     signer = c2pa.Signer.from_info(c2pa.C2paSignerInfo(_alg(chain), chain, key, None))
     src, dst = io.BytesIO(data), io.BytesIO()
-    with c2pa.Builder(manifest(title, version, s["author"], s["contact"], edits)) as b:
+    with c2pa.Builder(manifest(title, version, s["author"], s["contact"], edits, made)) as b:
         b.sign(signer, MIME[fmt], src, dst)
     return dst.getvalue()
 
 
 def read(data, fmt):
-    """What a reader sees in the bytes: the active manifest's actions and author, and the validation state."""
+    """What a reader sees in the bytes: the active manifest's actions and author, the validation state, and (2333) what it says of training
+    ({entry: use}) and the description of its making."""
     import c2pa
     with c2pa.Reader(MIME[fmt], io.BytesIO(data)) as r:
         m = json.loads(r.json())
         act = m["manifests"][m["active_manifest"]]
+        acts = [a for x in act["assertions"] if x["label"].startswith("c2pa.actions") for a in x["data"]["actions"]]
         return {"state": str(r.get_validation_state()), "failures": [f.get("code") for f in ((r.get_validation_results() or {}).get("activeManifest") or {}).get("failure", [])],
-                "actions": [a["action"] for x in act["assertions"] if x["label"].startswith("c2pa.actions") for a in x["data"]["actions"]],
+                "actions": [a["action"] for a in acts],
+                "made": next((a.get("description", "") for a in acts if a["action"] == "c2pa.created"), ""),
+                "training": {k: v.get("use") for x in act["assertions"] if x["label"].endswith("training-mining") for k, v in (x["data"].get("entries") or {}).items()},
                 "author": [a for x in act["assertions"] if x["label"] == "stds.schema-org.CreativeWork" for a in x["data"].get("author", [])],
                 "signer": (act.get("signature_info") or {}).get("issuer", "")}

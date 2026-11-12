@@ -1,0 +1,1129 @@
+#include "args.h"
+#include "batch.h"
+#include "partial_render.h"
+#include "request.h"
+#include "../common/build_info.h"
+#include "../streaming/pcm_source.h"
+#include "../streaming/streaming.h"
+#include "../workflow/execution.h"
+#include "../workflow/file_sink.h"
+#include "../workflow/pipeline.h"
+#include "../workflow/workflow.h"
+#include "../recipe/cli_recipe.h"
+#include "../recipe/recipe.h"
+
+#include "engine/framework/audio/chunking.h"
+#include "engine/framework/audio/conversion.h"
+#include "engine/framework/audio/resampling.h"
+#include "engine/framework/core/load_progress.h"
+#include "engine/framework/debug/trace.h"
+#include "engine/framework/io/json.h"
+#include "engine/framework/runtime/registry.h"
+#include "engine/framework/runtime/session.h"
+
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <cstddef>
+#include <cstdio>
+#include <fstream>
+#include <filesystem>
+#include <iostream>
+#include <optional>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
+
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <io.h>
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+namespace {
+
+void print_task_list_help() {
+    std::cout
+        << "audiocpp_cli --task <task> --family <family> --model <path> --backend <backend> [options]\n"
+        << "  Global:\n"
+        << "    --version  Print build version, commit, compiler, platform, and enabled backends\n"
+        << "    --task vad|asr|diar|sep|gen|tts|clon|vc|s2s|align|vdes|spk|svc|midi|wake|cls\n"
+        << "    --family <name>\n"
+        << "    --model <path>\n"
+        << "    --backend cpu|cuda|hip|rocm|vulkan|metal|webgpu|best  (rocm is an alias for hip)\n"
+        << "    --mode offline|streaming  default offline\n"
+        << "    --device <n>\n"
+        << "    --backend-impl <name>             optional backend implementation; default preserves existing dispatch\n"
+        << "    --list-devices  List available backend devices and exit; --json adds PCI ids and memory\n"
+        << "    --threads <n>  Backend and OpenMP worker threads, default 4\n"
+        << "    --registry-config <path>\n"
+        << "    --model-spec-override <json-or-directory|embedded>  Select a spec file/directory or the GGUF's embedded spec\n"
+        << "    --config <id>\n"
+        << "    --weight <id>\n"
+        << "    --log  Stream framework progress and timing logs to stdout\n"
+        << "    --log-file <path>  Stream framework progress and timing logs to a file\n"
+        << "    --load-progress 0|1  with --log/--log-file, emit model-load progress keys\n"
+        << "                (runtime.load.phase, <store>.weights.upload_progress); default 0\n"
+        << "    --resample-kernel-cache-mb <mb>  Resampling kernel cache in MiB, default 32; 0 disables it\n"
+        << "                (a kernel larger than this is rebuilt on every call)\n"
+        << "    --metrics  Print compact wall time, audio duration, and RTF summary after offline generation\n"
+        << "    --load-option key=value\n"
+        << "    --session-option key=value\n"
+        << "    --request-option key=value\n"
+        << "  Batch:\n"
+        << "    --request-sequence <json>  Run JSON requests in one offline session\n"
+        << "    --batch-text-file <txt>  Run one offline request per non-empty line\n"
+        << "    --batch-text-dir <dir>  Run one offline request per .txt, .md, or .json file\n"
+        << "    --batch-audio-dir <dir>  Run one offline request per .wav file\n"
+        << "    --batch-audio-role audio|voice_ref|source_audio|target_voice|prosody_ref|style_ref\n"
+        << "    --batch-merge-audio none|concat\n"
+        << "    --batch-manifest-out <json>\n"
+        << "    Shared CLI inputs and options are defaults for --batch-text-file, --batch-text-dir, and --batch-audio-dir\n"
+        << "  Pipelines:\n"
+        << "    --pipeline <json>  Run a JSON app workflow instead of a raw task\n"
+        << "    --list-pipelines\n"
+        << "    --workflow-input key=value  Override a top-level workflow input\n"
+        << "    --audio-converter <cmd>  Converter executable for workflow media import, default ffmpeg\n"
+        << "  Recipes:\n"
+        << "    --recipe <name>  Run a built-in multi-model recipe\n"
+        << "    --list-recipes\n"
+        << "    --recipe-model role=path  Select a model file or directory for a recipe role\n"
+        << "    --recipe-family role=family  Select the model family for a recipe role\n"
+        << "    Prefix --load-option and --session-option keys with role., e.g. tts.weight_type=q8_0\n"
+        << "  Task routing and media roles:\n"
+        << "    --task-route <name>  User-facing route, e.g. text2music, zero_shot_tts, style_preserved_vc\n"
+        << "    --source-audio <wav>  Source audio path for models that take path-based source refs\n"
+        << "    --target-voice <wav>  Target/timbre voice path for path-based voice conversion\n"
+        << "    --prosody-ref <wav>\n"
+        << "    --style-ref <wav>\n"
+        << "    --target-text <text>\n"
+        << "    --style-ref-text <text>\n"
+        << "    --use-prosody-code true|false\n"
+        << "    --predict-target-prosody true|false\n"
+        << "    --use-pitch-shift true|false\n"
+        << "    --source-shift-steps <n>\n"
+        << "    --prosody-shift-steps <n>\n"
+        << "    --style-shift-steps <n>\n"
+        << "    --target-duration-seconds <float>\n"
+        << "    --reference-duration-seconds <float>\n"
+        << "    --lyrics <text>\n"
+        << "    --track-name <name>\n"
+        << "    --speaker <name>\n"
+        << "    --duration-seconds <float>\n"
+        << "    --repaint-start <float>\n"
+        << "    --repaint-end <float>\n"
+        << "    --repaint-mode <name>\n"
+        << "    --repaint-strength <float>\n"
+        << "  Common generation:\n"
+        << "    --seed <n>\n"
+        << "    --max-tokens <n>\n"
+        << "    --max-steps <n>\n"
+        << "    --temperature <float>\n"
+        << "    --top-k <n>\n"
+        << "    --top-p <float>\n"
+        << "    --repetition-penalty <float>\n"
+        << "    --do-sample true|false\n"
+        << "    --num-beams <n>\n"
+        << "    --guidance-scale <float>\n"
+        << "    --num-inference-steps <n>\n"
+        << "    --text-chunk-size <chars>\n"
+        << "    --text-chunk-mode default|tag_aware|japanese|endline\n"
+        << "  Inputs:\n"
+        << "    --audio <wav>  Use - to stream raw PCM from stdin (requires --mode streaming)\n"
+        << "    --input-format s16le|f32le  Raw PCM sample format for --audio -, default s16le\n"
+        << "    --input-rate <hz>  Raw PCM sample rate for --audio -, default 16000\n"
+        << "    --input-channels <n>  Raw PCM channel count for --audio -, default 1\n"
+        << "    --text <text>\n"
+        << "    --max-text-length <chars>  Maximum input text length for models that enforce it\n"
+        << "    --language <code>\n"
+        << "    --voice-id <id>\n"
+        << "    --voice-ref <wav>\n"
+        << "    --reference-text <text>  Reference transcript for voice-clone models such as Qwen3 TTS\n"
+        << "    --instruct <text>  Voice-design instruction for models such as Qwen3 TTS\n"
+        << "    --style-language <code>\n"
+        << "    --emotion <name>\n"
+        << "    --speaking-rate <float>\n"
+        << "    --pitch-shift <float>\n"
+        << "    --energy-scale <float>\n"
+        << "    --style-tag key=value\n"
+        << "  Outputs:\n"
+        << "    --out <file>\n"
+        << "    --out-dir <dir>  Write named multi-audio outputs or batch request outputs\n"
+        << "    --out-format pcm16|pcm24|float32  WAV sample format for --out/--out-dir audio, default pcm16\n"
+        << "    --text-out <txt>\n"
+        << "    --segments-out <json>\n"
+        << "    --vad-chunks-out <json>  Write offline VAD-based chunk windows\n"
+        << "    --vad-chunk-max-seconds <float>  Maximum VAD chunk length, default 45\n"
+        << "    --vad-chunk-merge-gap-seconds <float>  Merge nearby VAD spans, default 0.5\n"
+        << "    --vad-chunk-padding-seconds <float>  Pad each VAD span before chunking, default 0.25\n"
+        << "    --turns-out <json>\n"
+        << "    --words-out <json>\n"
+        << "    --voice-state-out <safetensors>  Export a prepared voice state when supported by the model\n"
+        << "  Streaming:\n"
+        << "    --mode streaming uses the selected model's default streaming policy\n"
+        << "  Utility:\n"
+        << "    --inspect\n"
+        << "    --list-loaders [--json]\n"
+        << "\n"
+        << "  Tasks:\n"
+        << "    vad    voice activity detection\n"
+        << "    asr    automatic speech recognition\n"
+        << "    diar   speaker diarization\n"
+        << "    sep    source separation\n"
+        << "    gen    text/audio conditioned music or sound generation\n"
+        << "    tts    text to speech\n"
+        << "    clon   voice cloning\n"
+        << "    vc     voice conversion\n"
+        << "    s2s    speech to speech\n"
+        << "    align  forced alignment\n"
+        << "    vdes   voice design\n"
+        << "    spk    speaker embedding/recognition\n"
+        << "    svc    singing voice conversion\n"
+        << "    midi   audio-to-symbolic MIDI/event transcription\n"
+        << "    wake   wake-word detection\n"
+        << "    cls    audio classification\n";
+}
+
+void print_option_group(const char * title, const std::vector<engine::runtime::CliOptionInfo> & options) {
+    if (options.empty()) {
+        return;
+    }
+    std::cout << "  " << title << ":\n";
+    for (const auto & option : options) {
+        std::cout << "    " << option.name;
+        if (!option.value_name.empty()) {
+            std::cout << " <" << option.value_name << ">";
+        }
+        if (!option.description.empty()) {
+            std::cout << "  " << option.description;
+        }
+        std::cout << "\n";
+    }
+}
+
+bool model_supports_task(const engine::runtime::ModelInspection & inspection, engine::runtime::VoiceTaskKind task) {
+    return std::any_of(
+        inspection.capabilities.supported_tasks.begin(),
+        inspection.capabilities.supported_tasks.end(),
+        [&](const engine::runtime::TaskCapability & capability) {
+            return capability.task == task;
+        });
+}
+
+void print_model_common_options(const engine::runtime::ModelInspection & inspection) {
+    std::cout << "  Common input options (not all options apply to every model; see the model-specific documentation):\n";
+    if (model_supports_task(inspection, engine::runtime::VoiceTaskKind::AudioGeneration)) {
+        std::cout
+            << "    --text <text>\n"
+            << "    --audio <wav>\n"
+            << "    --batch-text-file <txt>\n"
+            << "    --batch-text-dir <dir>\n"
+            << "    --language <code>\n"
+            << "    --duration-seconds <float>\n"
+            << "    --guidance-scale <float>\n"
+            << "    --num-inference-steps <n>\n"
+            << "    --seed <n>\n"
+            << "    --max-tokens <n>\n"
+            << "    --temperature <float>\n"
+            << "    --top-k <n>\n"
+            << "    --top-p <float>\n"
+            << "    --do-sample true|false\n";
+    }
+    if (model_supports_task(inspection, engine::runtime::VoiceTaskKind::Tts) ||
+        model_supports_task(inspection, engine::runtime::VoiceTaskKind::VoiceDesign) ||
+        model_supports_task(inspection, engine::runtime::VoiceTaskKind::VoiceCloning)) {
+        std::cout
+            << "    --text <text>\n"
+            << "    --batch-text-file <txt>\n"
+            << "    --batch-text-dir <dir>\n"
+            << "    --language <code>\n"
+            << "    --voice-ref <wav>\n"
+            << "    --voice-id <id>\n"
+            << "    --reference-text <text>\n"
+            << "    --instruct <text>\n"
+            << "    --speaker <name>\n"
+            << "    --seed <n>\n"
+            << "    --max-tokens <n>\n"
+            << "    --temperature <float>\n"
+            << "    --top-k <n>\n"
+            << "    --top-p <float>\n"
+            << "    --repetition-penalty <float>\n"
+            << "    --do-sample true|false\n";
+    }
+    if (model_supports_task(inspection, engine::runtime::VoiceTaskKind::VoiceConversion) ||
+        model_supports_task(inspection, engine::runtime::VoiceTaskKind::SpeechToSpeech) ||
+        model_supports_task(inspection, engine::runtime::VoiceTaskKind::Svc)) {
+        std::cout
+            << "    --audio <wav>\n"
+            << "    --batch-audio-dir <dir>\n"
+            << "    --voice-ref <wav>\n"
+            << "    --task-route <name>\n"
+            << "    --source-audio <wav>\n"
+            << "    --target-voice <wav>\n"
+            << "    --prosody-ref <wav>\n"
+            << "    --style-ref <wav>\n"
+            << "    --target-text <text>\n"
+            << "    --style-ref-text <text>\n"
+            << "    --use-prosody-code true|false\n"
+            << "    --predict-target-prosody true|false\n"
+            << "    --use-pitch-shift true|false\n"
+            << "    --source-shift-steps <n>\n"
+            << "    --prosody-shift-steps <n>\n"
+            << "    --style-shift-steps <n>\n"
+            << "    --target-duration-seconds <float>\n"
+            << "    --reference-duration-seconds <float>\n"
+            << "    --num-inference-steps <n>\n"
+            << "    --text-chunk-size <chars>\n"
+            << "    --text-chunk-mode default|tag_aware|japanese|endline\n"
+            << "    --seed <n>\n";
+    }
+    if (model_supports_task(inspection, engine::runtime::VoiceTaskKind::Asr) ||
+        model_supports_task(inspection, engine::runtime::VoiceTaskKind::Vad) ||
+        model_supports_task(inspection, engine::runtime::VoiceTaskKind::WakeWord) ||
+        model_supports_task(inspection, engine::runtime::VoiceTaskKind::AudioClassification) ||
+        model_supports_task(inspection, engine::runtime::VoiceTaskKind::Diarization) ||
+        model_supports_task(inspection, engine::runtime::VoiceTaskKind::SourceSeparation) ||
+        model_supports_task(inspection, engine::runtime::VoiceTaskKind::Midi) ||
+        model_supports_task(inspection, engine::runtime::VoiceTaskKind::SpeakerRecognition)) {
+        std::cout
+            << "    --audio <wav>\n"
+            << "    --batch-audio-dir <dir>\n";
+    }
+    if (model_supports_task(inspection, engine::runtime::VoiceTaskKind::Asr)) {
+        std::cout
+            << "    --audio-chunk-seconds <float>\n"
+            << "    --audio-chunk-mode auto|fixed|vad|none\n";
+    }
+    if (model_supports_task(inspection, engine::runtime::VoiceTaskKind::Alignment)) {
+        std::cout
+            << "    --audio <wav>\n"
+            << "    --batch-audio-dir <dir>\n"
+            << "    --text <text>\n"
+            << "    --language <code>\n"
+            << "    --text-chunk-size <chars>\n"
+            << "    --audio-chunk-seconds <float>\n"
+            << "    --audio-chunk-mode auto|fixed|none\n";
+    }
+}
+
+void print_model_help(const engine::runtime::ModelInspection & inspection) {
+    std::cout
+        << "family=" << inspection.metadata.family << "\n"
+        << "variant=" << inspection.metadata.variant << "\n"
+        << "model_root=" << inspection.model_root.string() << "\n"
+        << "description=" << inspection.metadata.description << "\n"
+        << "  Supported tasks:\n";
+    for (const auto & capability : inspection.capabilities.supported_tasks) {
+        std::cout << "    --task " << engine::runtime::to_string(capability.task) << " --mode ";
+        for (size_t i = 0; i < capability.modes.size(); ++i) {
+            if (i != 0) {
+                std::cout << "|";
+            }
+            std::cout << engine::runtime::to_string(capability.modes[i]);
+        }
+        std::cout << "\n";
+    }
+    print_model_common_options(inspection);
+    print_option_group("Model request options", inspection.cli.request_options);
+    print_option_group("Model session options", inspection.cli.session_options);
+    print_option_group("Model load options", inspection.cli.load_options);
+    std::cout << "  Common output options:\n"
+              << "    --out <file>\n"
+              << "    --out-dir <dir>\n"
+              << "    --text-out <txt>\n"
+              << "    --segments-out <json>\n"
+              << "    --vad-chunks-out <json>\n"
+              << "    --vad-chunk-max-seconds <float>\n"
+              << "    --vad-chunk-merge-gap-seconds <float>\n"
+              << "    --vad-chunk-padding-seconds <float>\n"
+              << "    --turns-out <json>\n"
+              << "    --words-out <json>\n";
+}
+
+void write_text_output(
+    const engine::runtime::TaskResult & result,
+    const std::filesystem::path & path,
+    const std::string & label) {
+    if (!result.text_output.has_value()) {
+        throw std::runtime_error("--text-out was requested but the task result has no text output");
+    }
+    if (!path.parent_path().empty()) {
+        std::filesystem::create_directories(path.parent_path());
+    }
+    std::ofstream output(path);
+    if (!output) {
+        throw std::runtime_error("failed to open text output: " + path.string());
+    }
+    output << result.text_output->text << "\n";
+    std::cout << label << "=" << path.string() << "\n";
+}
+
+void print_task_help(const engine::runtime::ModelRegistry & registry, const std::string & task_name) {
+    const auto task = engine::runtime::parse_voice_task_kind(task_name);
+    std::cout
+        << "task=" << engine::runtime::to_string(task) << "\n"
+        << "  Select a model to see model-owned options:\n"
+        << "    audiocpp_cli --task " << engine::runtime::to_string(task)
+            << " --family <family> --model <path> --backend <backend> --help\n"
+        << "  Registered families:\n";
+    for (const auto & family : registry.families()) {
+        std::cout << "    " << family << "\n";
+    }
+}
+
+void print_inspection(const engine::runtime::ModelInspection & inspection) {
+    std::cout << "family=" << inspection.metadata.family << "\n";
+    std::cout << "variant=" << inspection.metadata.variant << "\n";
+    std::cout << "model_root=" << inspection.model_root.string() << "\n";
+    std::cout << "supported_tasks=" << inspection.capabilities.supported_tasks.size() << "\n";
+    for (const auto & capability : inspection.capabilities.supported_tasks) {
+        std::cout << "task=" << engine::runtime::to_string(capability.task) << " modes=";
+        for (size_t i = 0; i < capability.modes.size(); ++i) {
+            if (i != 0) {
+                std::cout << ",";
+            }
+            std::cout << engine::runtime::to_string(capability.modes[i]);
+        }
+        std::cout << "\n";
+    }
+    std::cout << "supports_speaker_reference=" << (inspection.capabilities.supports_speaker_reference ? "true" : "false") << "\n";
+    std::cout << "supports_style_condition=" << (inspection.capabilities.supports_style_condition ? "true" : "false") << "\n";
+    std::cout << "supports_timestamps=" << (inspection.capabilities.supports_timestamps ? "true" : "false") << "\n";
+    std::cout << "languages=";
+    for (size_t i = 0; i < inspection.capabilities.languages.size(); ++i) {
+        if (i != 0) {
+            std::cout << ",";
+        }
+        std::cout << inspection.capabilities.languages[i];
+    }
+    std::cout << "\n";
+    std::cout << "configs=" << inspection.discovered_configs.size() << "\n";
+    for (const auto & config : inspection.discovered_configs) {
+        std::cout << "config=" << config.id << ":" << config.path.string() << "\n";
+    }
+    std::cout << "weights=" << inspection.discovered_weights.size() << "\n";
+    for (const auto & weight : inspection.discovered_weights) {
+        std::cout << "weight=" << weight.id << ":" << weight.path.string() << "\n";
+    }
+}
+
+bool has_vad_chunk_option(int argc, char ** argv) {
+    // Every option is looked up before the ors are taken. Short-circuiting would leave the later
+    // ones unread, and an option the CLI never asked for is what require_known_args rejects.
+    const bool chunks_out = minitts::cli::optional_path_arg(argc, argv, "--vad-chunks-out").has_value();
+    const bool max_seconds = minitts::cli::find_arg(argc, argv, "--vad-chunk-max-seconds").has_value();
+    const bool merge_gap = minitts::cli::find_arg(argc, argv, "--vad-chunk-merge-gap-seconds").has_value();
+    const bool padding = minitts::cli::find_arg(argc, argv, "--vad-chunk-padding-seconds").has_value();
+    return chunks_out || max_seconds || merge_gap || padding;
+}
+
+int64_t seconds_to_samples(float seconds, int sample_rate, const std::string & name) {
+    if (seconds < 0.0F) {
+        throw std::runtime_error(name + " must be non-negative");
+    }
+    return static_cast<int64_t>(std::llround(static_cast<double>(seconds) * sample_rate));
+}
+
+engine::audio::VadAudioChunkOptions vad_chunk_options_from_cli(
+    int argc,
+    char ** argv,
+    int sample_rate) {
+    if (sample_rate <= 0) {
+        throw std::runtime_error("VAD chunk planning requires a positive audio sample rate");
+    }
+    const float max_seconds = minitts::cli::parse_optional_float_arg(argc, argv, "--vad-chunk-max-seconds").value_or(45.0F);
+    const float merge_gap_seconds = minitts::cli::parse_optional_float_arg(argc, argv, "--vad-chunk-merge-gap-seconds").value_or(0.5F);
+    const float padding_seconds = minitts::cli::parse_optional_float_arg(argc, argv, "--vad-chunk-padding-seconds").value_or(0.25F);
+    auto options = engine::audio::VadAudioChunkOptions{
+        seconds_to_samples(max_seconds, sample_rate, "--vad-chunk-max-seconds"),
+        seconds_to_samples(merge_gap_seconds, sample_rate, "--vad-chunk-merge-gap-seconds"),
+        seconds_to_samples(padding_seconds, sample_rate, "--vad-chunk-padding-seconds"),
+    };
+    if (options.max_chunk_samples <= 0) {
+        throw std::runtime_error("--vad-chunk-max-seconds must be positive");
+    }
+    return options;
+}
+
+std::string vad_chunks_to_json(const std::vector<engine::runtime::TimeSpan> & chunks) {
+    std::ostringstream out;
+    out << "[";
+    for (size_t i = 0; i < chunks.size(); ++i) {
+        if (i != 0) {
+            out << ",";
+        }
+        out << "{\"index\":" << i
+            << ",\"start_sample\":" << chunks[i].start_sample
+            << ",\"end_sample\":" << chunks[i].end_sample
+            << "}";
+    }
+    out << "]";
+    return out.str();
+}
+
+void write_vad_chunks_output(
+    const engine::runtime::TaskResult & result,
+    const engine::runtime::AudioBuffer & audio,
+    const std::filesystem::path & path,
+    const engine::audio::VadAudioChunkOptions & options) {
+    if (audio.channels <= 0) {
+        throw std::runtime_error("VAD chunk planning requires positive audio channels");
+    }
+    if (audio.samples.size() % static_cast<size_t>(audio.channels) != 0) {
+        throw std::runtime_error("VAD chunk planning requires audio samples divisible by channel count");
+    }
+    const int64_t audio_frames = static_cast<int64_t>(audio.samples.size() / static_cast<size_t>(audio.channels));
+    const auto chunks = engine::audio::plan_vad_audio_chunks(result.speech_segments, audio_frames, options);
+    if (!path.parent_path().empty()) {
+        std::filesystem::create_directories(path.parent_path());
+    }
+    std::ofstream(path) << vad_chunks_to_json(chunks);
+    std::cout << "vad_chunks_out=" << path.string() << "\n";
+}
+
+bool stream_audio_from_stdin(int argc, char ** argv) {
+    const auto audio = minitts::cli::find_arg(argc, argv, "--audio");
+    return audio.has_value() && minitts::cli::is_stdin_audio_source(*audio);
+}
+
+// Only a terminal can take partials as running text; a redirected stream has to keep the
+// line-per-update format so pipes and logs stay parseable.
+bool stdout_is_terminal() {
+#ifdef _WIN32
+    return _isatty(_fileno(stdout)) != 0;
+#else
+    return isatty(fileno(stdout)) != 0;
+#endif
+}
+
+double duration_ms(std::chrono::steady_clock::duration duration) {
+    return std::chrono::duration<double, std::milli>(duration).count();
+}
+
+std::optional<minitts::app::AudioMetricsInfo> audio_metrics_info(
+    const engine::runtime::TaskRequest & request) {
+    if (!request.audio_input.has_value()) {
+        return std::nullopt;
+    }
+    const auto & audio = *request.audio_input;
+    return minitts::app::AudioMetricsInfo{
+        audio.sample_rate,
+        audio.channels,
+        audio.samples.size(),
+    };
+}
+
+// Feeds raw PCM from stdin into the session chunk by chunk, so nothing has to be buffered up
+// front and transcription tracks the input as it arrives.
+engine::runtime::TaskResult run_streaming_from_stdin(
+    const std::string & input_format,
+    engine::runtime::IStreamingVoiceTaskSession & streaming,
+    const engine::runtime::TaskRequest & request,
+    const minitts::app::StreamEventSink & sink) {
+    // build_request_from_cli fills audio_input with the declared format and no samples, which is
+    // also what prepare() consumes as its audio contract.
+    if (!request.audio_input.has_value()) {
+        throw std::runtime_error("streaming from stdin requires an audio format contract");
+    }
+    const auto sample_format = minitts::app::parse_pcm_sample_format(input_format);
+    const minitts::app::AudioStreamFormat format{
+        request.audio_input->sample_rate,
+        request.audio_input->channels,
+    };
+    // A headerless stream cannot be checked against a header, so report how it was interpreted.
+    std::cout << "audio_input=stdin format=" << minitts::app::to_string(sample_format)
+              << " rate=" << format.sample_rate
+              << " channels=" << format.channels << "\n"
+              << std::flush;
+    const auto stream = minitts::app::make_stdin_pcm_stream(format, sample_format);
+    return minitts::app::run_streaming_task(streaming, request, sink, stream);
+}
+
+void run_streaming(
+    int argc,
+    char ** argv,
+    engine::runtime::IStreamingVoiceTaskSession & streaming,
+    engine::runtime::IVoiceTaskSession & session,
+    engine::runtime::TaskRequest & request,
+    const minitts::app::FileOutputPolicy & outputs,
+    const std::string & input_format,
+    const std::optional<std::filesystem::path> & text_out) {
+    const auto & out_dir = outputs.output_dir;
+    minitts::cli::PartialTextRenderer partial_renderer(stdout_is_terminal());
+    const minitts::app::StreamEventSink sink =
+        [&](const engine::runtime::StreamEvent & event) {
+            if (event.partial_text_snapshot.has_value()) {
+                std::cout << partial_renderer.render_snapshot(event.partial_text_snapshot->text) << std::flush;
+            }
+            if (event.partial_text.has_value()) {
+                // Flushed so a live source's partials appear as they are produced rather than
+                // when the stdio buffer happens to fill.
+                std::cout << partial_renderer.render(event.partial_text->text) << std::flush;
+            }
+            engine::runtime::TaskResult event_result;
+            event_result.audio_output = event.audio_output;
+            event_result.named_audio_outputs = event.named_audio_outputs;
+            event_result.speaker_turns = event.speaker_turns;
+            event_result.word_timestamps = event.word_timestamps;
+            event_result.output_artifacts = event.output_artifacts;
+            minitts::app::emit_task_result(
+                event_result,
+                std::nullopt,
+                out_dir,
+                out_dir,
+                std::nullopt,
+                std::nullopt,
+                std::nullopt,
+                outputs.wav_options);
+            for (const auto & activity : event.voice_activity) {
+                std::cout << "event=";
+                switch (activity.kind) {
+                case engine::runtime::VoiceActivityEvent::Kind::SpeechStart:
+                    std::cout << "speech_start";
+                    break;
+                case engine::runtime::VoiceActivityEvent::Kind::SpeechEnd:
+                    std::cout << "speech_end";
+                    break;
+                case engine::runtime::VoiceActivityEvent::Kind::SpeechSegment:
+                    std::cout << "speech_segment";
+                    break;
+                }
+                std::cout << " sample=" << activity.sample << " probability=" << activity.probability << "\n";
+            }
+        };
+
+    const auto result = stream_audio_from_stdin(argc, argv)
+        ? run_streaming_from_stdin(input_format, streaming, request, sink)
+        : minitts::app::run_streaming_task(streaming, request, sink);
+    // Close the transcript line so the summary below starts on a fresh row.
+    std::cout << partial_renderer.finish();
+    std::cout << "family=" << session.family() << "\n";
+    std::cout << "task=" << engine::runtime::to_string(session.task_kind()) << "\n";
+    std::cout << "mode=" << engine::runtime::to_string(session.run_mode()) << "\n";
+    minitts::app::emit_task_result(
+        result,
+        outputs.audio_out,
+        std::nullopt,
+        outputs.output_dir,
+        outputs.segments_base,
+        outputs.turns_base,
+        outputs.words_base,
+        outputs.wav_options);
+    if (text_out.has_value()) {
+        write_text_output(result, *text_out, "text_out");
+    }
+}
+
+}  // namespace
+
+#ifdef _WIN32
+namespace {
+
+std::string wide_arg_to_utf8(const wchar_t * arg) {
+    const int size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, arg, -1, nullptr, 0, nullptr, nullptr);
+    if (size <= 0) {
+        throw std::runtime_error("failed to convert Windows command-line argument to UTF-8");
+    }
+    std::vector<char> buffer(static_cast<size_t>(size), '\0');
+    const int written = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, arg, -1, buffer.data(), size, nullptr, nullptr);
+    if (written != size) {
+        throw std::runtime_error("failed to convert Windows command-line argument to UTF-8");
+    }
+    return std::string(buffer.data());
+}
+
+std::vector<std::string> wide_args_to_utf8(int argc, wchar_t ** wargv) {
+    std::vector<std::string> args;
+    args.reserve(static_cast<size_t>(argc));
+    for (int i = 0; i < argc; ++i) {
+        args.push_back(wide_arg_to_utf8(wargv[i]));
+    }
+    return args;
+}
+
+}  // namespace
+#endif
+
+int audiocpp_cli_main(int argc, char ** argv) {
+    try {
+        using namespace minitts::cli;
+
+        const auto log_file = find_arg(argc, argv, "--log-file");
+        engine::debug::configure_logging(engine::debug::LoggingConfig{
+            has_arg(argc, argv, "--log") || log_file.has_value(),
+            log_file,
+        });
+        // Opt-in model-load progress reporting (runtime.load.phase,
+        // <store>.weights.upload_progress). Default off so the log for
+        // existing downstream pipelines is unchanged.
+        if (const auto load_progress = find_arg(argc, argv, "--load-progress")) {
+            if (*load_progress != "0" && *load_progress != "1") {
+                throw std::runtime_error("--load-progress expects 0 or 1");
+            }
+            engine::core::set_load_progress_enabled(*load_progress == "1");
+        }
+        if (const auto cache_mb = find_arg(argc, argv, "--resample-kernel-cache-mb")) {
+            const int mb = parse_non_negative_int(*cache_mb, "--resample-kernel-cache-mb");
+            engine::audio::set_resample_kernel_cache_budget_bytes(static_cast<size_t>(mb) * 1024ull * 1024ull);
+        }
+        const bool metrics_requested = has_arg(argc, argv, "--metrics");
+        if (has_arg(argc, argv, "--version")) {
+            minitts::app::print_build_info(std::cout);
+            return 0;
+        }
+
+        const auto registry_config = find_arg(argc, argv, "--registry-config");
+        auto registry = engine::runtime::make_default_registry(
+            registry_config ? std::optional<std::filesystem::path>(std::filesystem::path(*registry_config)) : std::nullopt);
+        auto pipeline_registry = minitts::app::make_default_pipeline_registry();
+        auto recipe_registry = minitts::app::make_recipe_registry();
+        const bool help_requested = has_arg(argc, argv, "--help");
+        // Read before the command branches below. An option that no lookup ever runs for cannot
+        // be told apart from a misspelling, which is what require_known_args rejects.
+        const bool json_output = has_arg(argc, argv, "--json");
+        const auto task_name = find_arg(argc, argv, "--task");
+        const auto mode_name = find_arg(argc, argv, "--mode").value_or("offline");
+        if (has_arg(argc, argv, "--list-pipelines")) {
+            const auto ids = pipeline_registry.ids();
+            std::cout << "registered_pipelines=" << ids.size() << "\n";
+            for (const auto & id : ids) {
+                std::cout << id << "\n";
+            }
+            return 0;
+        }
+        if (has_arg(argc, argv, "--list-recipes")) {
+            const auto ids = recipe_registry.ids();
+            std::cout << "registered_recipes=" << ids.size() << "\n";
+            for (const auto & id : ids) {
+                const auto & recipe = recipe_registry.require(id);
+                std::cout << id << "\t" << recipe.description() << "\n";
+            }
+            return 0;
+        }
+        if (has_arg(argc, argv, "--list-devices")) {
+            if (json_output) {
+                engine::core::print_backend_devices_json(std::cout);
+            } else {
+                engine::core::print_backend_devices(std::cout);
+            }
+            return 0;
+        }
+        if (has_arg(argc, argv, "--list-loaders")) {
+            const auto advertisements = registry.advertise_loaders();
+            if (json_output) {
+                engine::io::json::Value::Object loaders_object;
+                for (const auto & row : advertisements) {
+                    engine::io::json::Value::Object tasks_object;
+                    for (const auto & task_cap : row.capabilities.supported_tasks) {
+                        engine::io::json::Value::Array modes;
+                        for (const auto mode : task_cap.modes) {
+                            modes.push_back(engine::io::json::Value::make_string(engine::runtime::to_string(mode)));
+                        }
+                        tasks_object.emplace(
+                            engine::runtime::to_string(task_cap.task),
+                            engine::io::json::Value::make_array(std::move(modes)));
+                    }
+                    engine::io::json::Value::Array endpoints;
+                    for (const auto & endpoint : row.api_endpoints) {
+                        endpoints.push_back(engine::io::json::Value::make_string(endpoint));
+                    }
+                    engine::io::json::Value::Object loader_object;
+                    loader_object.emplace("tasks", engine::io::json::Value::make_object(std::move(tasks_object)));
+                    loader_object.emplace(
+                        "instructions_policy",
+                        engine::io::json::Value::make_string(row.instructions_policy));
+                    loader_object.emplace(
+                        "api_endpoints",
+                        engine::io::json::Value::make_array(std::move(endpoints)));
+                    loaders_object.emplace(
+                        row.family,
+                        engine::io::json::Value::make_object(std::move(loader_object)));
+                }
+                engine::io::json::Value::Object root;
+                root.emplace("schema_version", engine::io::json::Value::make_number(1));
+                root.emplace("loaders", engine::io::json::Value::make_object(std::move(loaders_object)));
+                std::cout << engine::io::json::stringify(engine::io::json::Value::make_object(std::move(root)))
+                          << "\n";
+            } else {
+                std::cout << "registered_loaders=" << advertisements.size() << "\n";
+                for (const auto & row : advertisements) {
+                    std::cout << row.family;
+                    if (!row.capabilities.supported_tasks.empty()) {
+                        std::cout << ":";
+                        for (size_t i = 0; i < row.capabilities.supported_tasks.size(); ++i) {
+                            const auto & task_cap = row.capabilities.supported_tasks[i];
+                            if (i > 0) {
+                                std::cout << ",";
+                            }
+                            std::cout << " " << engine::runtime::to_string(task_cap.task);
+                            if (!task_cap.modes.empty()) {
+                                std::cout << " (";
+                                for (size_t m = 0; m < task_cap.modes.size(); ++m) {
+                                    if (m > 0) {
+                                        std::cout << "|";
+                                    }
+                                    std::cout << engine::runtime::to_string(task_cap.modes[m]);
+                                }
+                                std::cout << ")";
+                            }
+                        }
+                    }
+                    std::cout << "\n";
+                }
+            }
+            return 0;
+        }
+
+        const auto model_arg = find_arg(argc, argv, "--model");
+        const auto pipeline_arg = find_arg(argc, argv, "--pipeline");
+        const auto recipe_arg = find_arg(argc, argv, "--recipe");
+        // Read up front for the same reason as the options above.
+        const auto workflow_inputs = collect_key_value_args(argc, argv, "--workflow-input");
+        const auto audio_converter = find_arg(argc, argv, "--audio-converter").value_or("ffmpeg");
+        const auto batch_merge_audio = find_arg(argc, argv, "--batch-merge-audio").value_or("none");
+        const auto batch_audio_role = find_arg(argc, argv, "--batch-audio-role").value_or("audio");
+        if (pipeline_arg.has_value()) {
+            const int threads = parse_int_arg(argc, argv, "--threads", 4);
+            if (threads <= 0) {
+                throw std::runtime_error("--threads must be positive");
+            }
+#ifdef _OPENMP
+            omp_set_num_threads(threads);
+#endif
+            engine::core::BackendConfig backend;
+            backend.type = parse_backend(find_arg(argc, argv, "--backend").value_or("cpu"));
+            backend.impl = find_arg(argc, argv, "--backend-impl").value_or("");
+            backend.device = parse_int_arg(argc, argv, "--device", 0);
+            backend.threads = threads;
+            minitts::app::run_json_workflow(
+                registry,
+                minitts::app::WorkflowRunOptions{
+                    std::filesystem::path(*pipeline_arg),
+                    optional_path_arg(argc, argv, "--out-dir").value_or(std::filesystem::path("workflow_outputs")),
+                    backend,
+                    optional_path_arg(argc, argv, "--out"),
+                    collect_key_value_args(argc, argv, "--load-option"),
+                    collect_key_value_args(argc, argv, "--session-option"),
+                    workflow_inputs,
+                    optional_path_arg(argc, argv, "--model-spec-override"),
+                    audio_converter,
+                });
+            return 0;
+        }
+        if (recipe_arg.has_value()) {
+            const int threads = parse_int_arg(argc, argv, "--threads", 4);
+            if (threads <= 0) {
+                throw std::runtime_error("--threads must be positive");
+            }
+#ifdef _OPENMP
+            omp_set_num_threads(threads);
+#endif
+            minitts::app::CliRecipeOptions recipe_options;
+            for (const auto & [role, path] : collect_key_value_args(argc, argv, "--recipe-model")) {
+                recipe_options.model_paths.emplace(role, std::filesystem::path(path));
+            }
+            recipe_options.model_families = collect_key_value_args(argc, argv, "--recipe-family");
+            recipe_options.load_options = collect_key_value_args(argc, argv, "--load-option");
+            recipe_options.session_options = collect_key_value_args(argc, argv, "--session-option");
+            recipe_options.model_spec_override = optional_path_arg(argc, argv, "--model-spec-override");
+            recipe_options.backend.type = parse_backend(find_arg(argc, argv, "--backend").value_or("cpu"));
+            recipe_options.backend.impl = find_arg(argc, argv, "--backend-impl").value_or("");
+            recipe_options.backend.device = parse_int_arg(argc, argv, "--device", 0);
+            recipe_options.backend.threads = threads;
+
+            auto request = build_request_from_cli(argc, argv);
+            const auto wav_options = wav_write_options_from_cli(argc, argv);
+            const auto audio_out = optional_path_arg(argc, argv, "--out");
+            const auto output_dir = optional_path_arg(argc, argv, "--out-dir");
+            const auto text_out = optional_path_arg(argc, argv, "--text-out");
+            require_known_args(argc, argv);
+
+            minitts::app::CliRecipeModelExecutor executor(registry, std::move(recipe_options));
+            const auto started = std::chrono::steady_clock::now();
+            auto result = recipe_registry.require(*recipe_arg).run(executor, request);
+            const double wall_ms = duration_ms(std::chrono::steady_clock::now() - started);
+            engine::debug::timing_log_scalar("session.wall_ms", wall_ms);
+            std::cout << "recipe=" << *recipe_arg << "\n";
+            minitts::app::emit_task_result(
+                result,
+                audio_out,
+                output_dir,
+                output_dir,
+                std::nullopt,
+                std::nullopt,
+                std::nullopt,
+                wav_options);
+            if (text_out.has_value()) {
+                write_text_output(result, *text_out, "text_out");
+            }
+            if (metrics_requested) {
+                minitts::app::emit_task_metrics(result, audio_metrics_info(request), wall_ms);
+            }
+            return 0;
+        }
+        if (help_requested && !model_arg.has_value()) {
+            if (task_name.has_value()) {
+                print_task_help(registry, *task_name);
+            } else {
+                print_task_list_help();
+            }
+            return 0;
+        }
+        if (!model_arg) {
+            if (argc == 1) {
+                minitts::app::print_build_info_summary(std::cerr);
+                std::cerr << "Run audiocpp_cli --help for usage.\n";
+            }
+            throw std::runtime_error("missing required --model argument");
+        }
+
+        engine::runtime::ModelLoadRequest load_request;
+        load_request.model_path = std::filesystem::path(*model_arg);
+        load_request.model_spec_override = optional_path_arg(argc, argv, "--model-spec-override");
+        if (const auto family = find_arg(argc, argv, "--family")) {
+            load_request.family_hint = *family;
+        }
+        if (const auto config = find_arg(argc, argv, "--config")) {
+            load_request.config_id = *config;
+        }
+        if (const auto weight = find_arg(argc, argv, "--weight")) {
+            load_request.weight_id = *weight;
+        }
+        load_request.options = collect_key_value_args(argc, argv, "--load-option");
+
+        if (help_requested) {
+            print_model_help(registry.inspect(load_request));
+            return 0;
+        }
+
+        if (has_arg(argc, argv, "--inspect")) {
+            print_inspection(registry.inspect(load_request));
+            return 0;
+        }
+
+        if (!task_name.has_value()) {
+            throw std::runtime_error("missing required --task argument");
+        }
+        const engine::runtime::TaskSpec task_spec{
+            engine::runtime::parse_voice_task_kind(*task_name),
+            engine::runtime::parse_run_mode(mode_name),
+        };
+        if (stream_audio_from_stdin(argc, argv) && task_spec.mode != engine::runtime::RunMode::Streaming) {
+            throw std::runtime_error("--audio - reads live PCM and requires --mode streaming");
+        }
+        if (metrics_requested && task_spec.mode != engine::runtime::RunMode::Offline) {
+            throw std::runtime_error("--metrics currently supports offline mode only");
+        }
+
+        engine::runtime::SessionOptions session_options;
+        session_options.backend.type = parse_backend(find_arg(argc, argv, "--backend").value_or("cpu"));
+        session_options.backend.impl = find_arg(argc, argv, "--backend-impl").value_or("");
+        session_options.backend.device = parse_int_arg(argc, argv, "--device", 0);
+        const int threads = parse_int_arg(argc, argv, "--threads", 4);
+        if (threads <= 0) {
+            throw std::runtime_error("--threads must be positive");
+        }
+        session_options.backend.threads = threads;
+#ifdef _OPENMP
+        omp_set_num_threads(threads);
+#endif
+        session_options.options = collect_key_value_args(argc, argv, "--session-option");
+        // Parsed before the model loads so a bad value fails fast.
+        const auto wav_options = wav_write_options_from_cli(argc, argv);
+        auto model = registry.load(load_request);
+        auto session = model->create_task_session(task_spec, session_options);
+        // The weight stores uploaded during session construction: close the
+        // load-progress bracket opened by registry.load (see finish_model_load_trace).
+        engine::runtime::finish_model_load_trace();
+        const auto voice_state_out = optional_path_arg(argc, argv, "--voice-state-out");
+        const auto text_out = optional_path_arg(argc, argv, "--text-out");
+        const auto words_out = optional_path_arg(argc, argv, "--words-out");
+        const auto vad_chunks_out = optional_path_arg(argc, argv, "--vad-chunks-out");
+        const minitts::app::FileOutputPolicy outputs{
+            optional_path_arg(argc, argv, "--out"),
+            optional_path_arg(argc, argv, "--out-dir"),
+            optional_path_arg(argc, argv, "--segments-out"),
+            optional_path_arg(argc, argv, "--turns-out"),
+            words_out,
+            optional_path_arg(argc, argv, "--batch-manifest-out"),
+            wav_options,
+        };
+        const auto input_format = find_arg(argc, argv, "--input-format").value_or("s16le");
+
+        if (has_batch_input(argc, argv)) {
+            if (task_spec.mode != engine::runtime::RunMode::Offline) {
+                throw std::runtime_error("batch inputs require offline mode");
+            }
+            if (voice_state_out.has_value()) {
+                throw std::runtime_error("--voice-state-out is not supported with batch inputs");
+            }
+            if (has_vad_chunk_option(argc, argv)) {
+                throw std::runtime_error("VAD chunk output options are not supported with batch inputs");
+            }
+            const auto merge_mode = minitts::app::parse_audio_merge_mode(batch_merge_audio);
+            if (outputs.audio_out.has_value() &&
+                merge_mode == minitts::app::AudioMergeMode::None) {
+                throw std::runtime_error("batch --out requires --batch-merge-audio concat");
+            }
+            auto * offline = dynamic_cast<engine::runtime::IOfflineVoiceTaskSession *>(session.get());
+            if (offline == nullptr) {
+                throw std::runtime_error("selected task session does not support offline execution");
+            }
+            engine::runtime::TaskRequest base_request =
+                optional_path_arg(argc, argv, "--request-sequence").has_value()
+                    ? engine::runtime::TaskRequest{}
+                    : build_request_from_cli(argc, argv);
+            if (words_out.has_value()) {
+                base_request.options["return_timestamps"] = "true";
+            }
+            auto batch_request = build_batch_request_from_cli(argc, argv, base_request, batch_audio_role);
+            if (words_out.has_value()) {
+                for (auto & item : batch_request.requests) {
+                    item.request.options["return_timestamps"] = "true";
+                }
+            }
+            require_known_args(argc, argv);
+            std::cout << "family=" << session->family() << "\n";
+            std::cout << "task=" << engine::runtime::to_string(session->task_kind()) << "\n";
+            std::cout << "mode=" << engine::runtime::to_string(session->run_mode()) << "\n";
+            const auto batch_result = minitts::app::run_offline_batch(
+                *session,
+                *offline,
+                batch_request,
+                merge_mode,
+                [&](size_t index, const minitts::app::AppRequestResult & item) {
+                    minitts::app::emit_batch_item_result(index, item, outputs);
+                    if (metrics_requested) {
+                        minitts::app::emit_task_metrics(
+                            item.result,
+                            audio_metrics_info(batch_request.requests[index].request),
+                            item.wall_ms,
+                            "metrics[" + minitts::app::safe_output_name(item.id) + "]");
+                    }
+                    if (text_out.has_value()) {
+                        const auto request_id = minitts::app::safe_output_name(item.id);
+                        const auto path = text_out->parent_path() /
+                                          (text_out->stem().string() + "_" + request_id + text_out->extension().string());
+                        write_text_output(item.result, path, "text_out[" + request_id + "]");
+                    }
+                });
+            minitts::app::emit_batch_summary(batch_result, outputs);
+            return 0;
+        }
+
+        auto request = build_request_from_cli(argc, argv);
+        if (has_vad_chunk_option(argc, argv)) {
+            if (task_spec.mode != engine::runtime::RunMode::Offline ||
+                task_spec.task != engine::runtime::VoiceTaskKind::Vad) {
+                throw std::runtime_error("VAD chunk output options require offline --task vad");
+            }
+            if (!vad_chunks_out.has_value()) {
+                throw std::runtime_error("VAD chunk options require --vad-chunks-out");
+            }
+            if (!request.audio_input.has_value()) {
+                throw std::runtime_error("VAD chunk output requires --audio");
+            }
+        }
+        if (words_out.has_value()) {
+            request.options["return_timestamps"] = "true";
+        }
+        if (voice_state_out.has_value()) {
+            request.options["export_voice_state_file"] = voice_state_out->string();
+        }
+        require_known_args(argc, argv);
+        const auto session_start = std::chrono::steady_clock::now();
+        session->prepare(engine::runtime::build_preparation_request(request));
+        if (voice_state_out.has_value()) {
+            engine::debug::timing_log_scalar(
+                "session.wall_ms", duration_ms(std::chrono::steady_clock::now() - session_start));
+            std::cout << "family=" << session->family() << "\n";
+            std::cout << "voice_state_out=" << voice_state_out->string() << "\n";
+            return 0;
+        }
+
+        if (task_spec.mode == engine::runtime::RunMode::Offline) {
+            auto * offline = dynamic_cast<engine::runtime::IOfflineVoiceTaskSession *>(session.get());
+            if (offline == nullptr) {
+                throw std::runtime_error("selected task session does not support offline execution");
+            }
+            const auto result = offline->run(request);
+            const double wall_ms = duration_ms(std::chrono::steady_clock::now() - session_start);
+            std::cout << "family=" << session->family() << "\n";
+            std::cout << "task=" << engine::runtime::to_string(session->task_kind()) << "\n";
+            std::cout << "mode=" << engine::runtime::to_string(session->run_mode()) << "\n";
+            minitts::app::emit_task_result(
+                result,
+                outputs.audio_out,
+                outputs.output_dir,
+                outputs.output_dir,
+                outputs.segments_base,
+                outputs.turns_base,
+                words_out,
+                outputs.wav_options);
+            if (vad_chunks_out.has_value()) {
+                write_vad_chunks_output(
+                    result,
+                    *request.audio_input,
+                    *vad_chunks_out,
+                    vad_chunk_options_from_cli(argc, argv, request.audio_input->sample_rate));
+            }
+            if (text_out.has_value()) {
+                write_text_output(result, *text_out, "text_out");
+            }
+            if (metrics_requested) {
+                minitts::app::emit_task_metrics(result, audio_metrics_info(request), wall_ms);
+            }
+            return 0;
+        }
+
+        auto * streaming = dynamic_cast<engine::runtime::IStreamingVoiceTaskSession *>(session.get());
+        if (streaming == nullptr) {
+            throw std::runtime_error("selected task session does not support streaming execution");
+        }
+        run_streaming(argc, argv, *streaming, *session, request, outputs, input_format, text_out);
+        return 0;
+    } catch (const std::exception & ex) {
+        std::cerr << "audiocpp_cli failed: " << ex.what() << "\n";
+        return 1;
+    }
+}
+
+#ifdef _WIN32
+int wmain(int argc, wchar_t ** wargv) {
+    try {
+        auto utf8_args = wide_args_to_utf8(argc, wargv);
+        std::vector<char *> argv;
+        argv.reserve(utf8_args.size() + 1);
+        for (auto & arg : utf8_args) {
+            argv.push_back(arg.data());
+        }
+        argv.push_back(nullptr);
+        const int status = audiocpp_cli_main(argc, argv.data());
+        if (status == 0 && !minitts::cli::has_arg(argc, argv.data(), "--version")) {
+            minitts::cli::warn_ignored_args(argc, argv.data());
+        }
+        return status;
+    } catch (const std::exception & ex) {
+        std::cerr << "audiocpp_cli failed: " << ex.what() << "\n";
+        return 1;
+    }
+}
+#else
+int main(int argc, char ** argv) {
+    const int status = audiocpp_cli_main(argc, argv);
+    if (status == 0 && !minitts::cli::has_arg(argc, argv, "--version")) {
+        minitts::cli::warn_ignored_args(argc, argv);
+    }
+    return status;
+}
+#endif

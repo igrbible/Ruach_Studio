@@ -102,8 +102,9 @@ def _when(v, f):
     return int(f.stat().st_mtime)
 
 
-def _derived(kit, name):
-    """What the Refiner made inside a take: its derived/ manifests, oldest first (a broken one left out, as the Refiner leaves it)."""
+def _derived(kit, name, info=None):
+    """What the Refiner made inside a take: its derived/ manifests, oldest first (a broken one left out, as the Refiner leaves it). HERESY 2298: with the
+    realm written on it when made, and the other takes it took in (a Reader's mix of voice and music: the music's take, a link) as `links`."""
     root = Path(kit) / "outputs" / name / "derived"
     out = []
     for m in sorted(root.glob("*/manifest.json")) if root.is_dir() else []:
@@ -112,7 +113,10 @@ def _derived(kit, name):
         except (OSError, ValueError):
             continue
         out.append({"id": str(j.get("id") or m.parent.name), "kind": str(j.get("kind") or ""), "label": str(j.get("label") or ""),
-                    "source": str(j.get("source") or ""), "when": _when(j.get("when") or j.get("created"), m)})
+                    "source": str(j.get("source") or ""), "when": _when(j.get("when") or j.get("created"), m),
+                    "realm": str(j.get("realm") or ""),
+                    "links": [{"take": str(i.get("take")), "realm": str(i.get("realm") or ""), "title": str((info or {}).get(i.get("take"), {}).get("title") or i.get("take"))}
+                              for i in (j.get("inputs") if isinstance(j.get("inputs"), list) else []) if isinstance(i, dict) and i.get("take") and i.get("take") != name]})
     out.sort(key=lambda x: (x["when"] or 0, x["id"]))
     return out
 
@@ -147,7 +151,7 @@ def tree(kit, name, regen=None):
         kid = [k for k in kids.get(n, []) if k != n]
         what = "made again with a new seed" if n in again else _what(n, parent.get(n, ""), i)
         return {"name": n, "title": i["title"], "created": i["created"], "here": here, "what": what,
-                "derived": _derived(kit, n) if here else [],
+                "derived": _derived(kit, n, info) if here else [],
                 "children": [node(k, depth + 1) for k in kid] if depth < 40 and count[0] < 400 else []}
 
     top = parent.get(root, "")

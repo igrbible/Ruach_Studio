@@ -24,17 +24,22 @@
 <script>
   // HERESY 2066 (Viktor 05.11.2026: «…для иврита… DavidCLM… для греков… GFS Didot, и в Движке в выборе шрифтов добавить именно выбор ИВРИТ и ГРЕЧЕСКИЙ, и под капотом матчить греков и семитов на эти шрифты»): the Hebrew and the
   // Greek letters' own fonts over every font role (--scripts, first in each role's stack: app.css), here before the first paint and at each
-  // change of the Fonts card (app.js applyFonts). David CLM and GFS Didot by default (vendor/fonts.css gives them those letters only); a font of
+  // change of the Fonts card (app.js applyFonts). David CLM and (2186) Noto Sans's Greek by default (vendor/fonts.css gives them those letters only); a font of
   // this computer through faces of the Studio's own name («Ruach Hebrew», «Ruach Greek»: local(), the same letters only); «Same as the text» ("")
   // leaves those letters to each role's font. A script of its own, so it stands where the next one's localStorage throws
   window.ruachScriptFonts = function (f) {
-    var S = { hebrew: ["David CLM", "Ruach Hebrew", "U+0590-05FF, U+FB1D-FB4F"], greek: ["GFS Didot", "Ruach Greek", "U+0370-03FF, U+1F00-1FFF"] };
+    var S = { hebrew: ["David CLM", "Ruach Hebrew", "U+0590-05FF, U+FB1D-FB4F"], greek: ["Noto Sans", "Ruach Greek", "U+0370-03FF, U+1F00-1FFF"] };
+    // HERESY 2186 (Viktor 06.11.2026, the 2.0.7 plan: «основным греческим Noto Sans, Didot в списке»): the page's own for each script, by the name its stack takes (vendor/fonts.css): Noto Sans's Greek as «Ruach Greek Noto»
+    // (Noto Sans itself would take every letter), GFS Didot as itself
+    var OWN = { hebrew: { "David CLM": "David CLM", "Noto Sans Hebrew": "Noto Sans Hebrew" }, greek: { "Noto Sans": "Ruach Greek Noto", "GFS Didot": "GFS Didot" } };
+    // HERESY 2331: the page in Hebrew draws its Hebrew in Noto Sans Hebrew, the visiting card's face (vendor/fonts.css, OFL), unless a Hebrew font is chosen
+    var heUI = document.documentElement.lang === "he";
     var names = [], css = "", k, want, el;
     var local = function (list) { return list.map(function (x) { return "local(" + JSON.stringify(x) + ")"; }).join(", "); };
     for (k in S) {
-      want = f && typeof f[k] === "string" ? f[k] : S[k][0];
+      want = f && typeof f[k] === "string" ? f[k] : k === "hebrew" && heUI ? "Noto Sans Hebrew" : S[k][0];
       if (!want) continue;                                                       // «Same as the text»
-      if (want === S[k][0]) { names.push(JSON.stringify(want)); continue; }     // the Studio's own
+      if (OWN[k][want]) { names.push(JSON.stringify(OWN[k][want])); continue; }     // the Studio's own (2186: and GFS Didot)
       names.push(JSON.stringify(S[k][1]));
       css += "@font-face { font-family: " + JSON.stringify(S[k][1]) + "; font-weight: 100 550; src: " + local([want, want + " Regular", want.replace(/ /g, "") + "-Regular"]) +
         "; unicode-range: " + S[k][2] + "; }\n@font-face { font-family: " + JSON.stringify(S[k][1]) + "; font-weight: 551 900; src: " +
@@ -66,6 +71,21 @@
   var lang = localStorage.getItem("yue2.lang");                 // HERESY 1148: no English flash before the translation
   if (lang && lang !== "en") { document.documentElement.classList.add("i18n-wait");
     setTimeout(function () { document.documentElement.classList.remove("i18n-wait"); }, 2500); } } catch (e) {}
+  // HERESY 2283 (Viktor 09.11.2026: «на медленном соединении… в загрузчике Студии сначала грузится англоязычное Лого Студии, а затем через секунд 5-7…
+  // переключается на русское»): the page's language before the first paint, decided as heresy-i18n.js start() will (the kept yue2.lang, an unknown
+  // one English; nothing kept: the browser's first language the page has, else English; the html codes of its LANGS): html lang now, and
+  // data-boot-lang for the veil, whose logo wears that language's words at once (heresy-logo-words.js, inlined just before the veil's script)
+  try { (function () {
+    var H = { en: "en", ru: "ru", uk: "uk", be: "be", el: "el", es: "es", it: "it", fr: "fr", pt: "pt-BR", de: "de", ja: "ja", zh: "zh-CN", he: "he" }, k = "", w, i, c;
+    try { k = localStorage.getItem("yue2.lang") || ""; } catch (e) {}
+    if (k && !H[k]) k = "en";
+    if (!k) { k = "en"; w = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || "en"];
+      for (i = 0; i < w.length; i++) { c = String(w[i] || "").toLowerCase().split("-")[0]; if (H[c]) { k = c; break; } } }
+    document.documentElement.lang = H[k]; document.documentElement.setAttribute("data-boot-lang", k);
+    // HERESY 2331: Hebrew right to left before the first paint, and its letters in the interface's own Hebrew face (ruachScriptFonts reads <html lang>)
+    document.documentElement.dir = k === "he" ? "rtl" : "ltr";
+    if (k === "he" && window.ruachScriptFonts) try { window.ruachScriptFonts(JSON.parse(localStorage.getItem("yue2.fonts") || "{}")); } catch (e) {}
+  })(); } catch (e) {}
   // HERESY 1167: the page builds under the veil (below, at the top of the body); never for a test browser or a probe
   // (?veil brings it to one: its own check)
   if (/[?&]veil\b/.test(location.search) || (!navigator.webdriver && !/[?&](scope=claude|noveil)\b/.test(location.search)))
@@ -169,7 +189,7 @@
        room comes (named by the page's language in app.js: the catalogs' "Artist" is the Trainer's performer); the Trainer, a
        room of another kind, a pill of its own right of the logo -->
   <nav class="tabs" id="tabs" aria-label="Workspace">
-    <button type="button" data-tab="create" class="is-active">Creator</button>
+    <button type="button" data-tab="create" class="is-active">Musician</button>
     <button type="button" data-tab="write">Writer</button>
     <button type="button" data-tab="post">Refiner</button>
     <!-- HERESY 1255 (Viktor 08.10.2026: «RC3 завтра или послезавтра с Artist Early Preview»): the Artist's room opens -->
@@ -222,13 +242,14 @@ Q6_K · 2.9 GB, Q5_K_M · 2.6 GB · smaller, less VRAM"></select></label>
         <!-- HERESY 1168 (Viktor 07.10.2026: «Может к хуям убираем из Композера VAE блок… Выбор VAE переносим в бар в спадающее меню
              прямо под выбор модели»): the decoder is the machine's, as the model is -->
         <label class="head-more-row"><span>VAE</span><select id="vaePick" class="theme-pick" aria-label="VAE" data-tip="The sound decoder for the songs to come. A take already made decodes again with another one from its card, in seconds.
-Standard · the cleanest sound, the newer model, the default
-Legacy · the older official decoder, the benchmarks were made with it
-Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
+RS x3 v1 · ours: Standard grown three times and trained on music, the default
+RS x3 v2 · its second branch, trained with a gentler weight on the highs
+Standard · m-a-p's decoder, released with YuE2
+Ours run in float32 only, slower than Standard"></select></label>
         <div class="head-more-items">
           <!-- HERESY 2064 (Viktor 04.11.2026: «Строку "Экспорт в DAW" к хуям. Эта команда дублируется у нас в контекстном меню… Три строки Движок,
                Тема, Руководство в одну строку тремя равномерными колонками. Слово Руководство замени на Гайд»): Export to DAW out of ☰ (a take's menu
-               and the Refiner have it, Ctrl+Alt+8 opens it); the Engine, the theme and the guide in one row of three equal columns; the text size last -->
+               and the Refiner have it; 2365: no key of its own); the Engine, the theme and the guide in one row of three equal columns; the text size last -->
           <div class="hm-three">
             <button class="btn ghost small" id="engineToggle" data-icon="engine" data-tip="Engine: model, memory, chat server, log, look">Engine</button>
             <button type="button" class="btn ghost small theme-button" id="themeButton">Theme</button>
@@ -243,6 +264,11 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     </div>
   </div>
 </header>
+<div class="sysbar" id="sysBar" hidden role="group" aria-label="The Studio's machine: processor, memory, cards, disks and jobs"><div class="sb-items" id="sbItems"></div><span class="sb-note" id="sbNote" hidden></span><div class="sb-jobs" id="sbJobs" hidden></div><button type="button" class="sb-fold" id="sbFold" aria-expanded="true" aria-label="Fold the system bar to a small tab (this browser keeps it so)" data-tip="Fold the system bar to a small tab (this browser keeps it so)"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 6.5 5 3.5 8 6.5" /></svg></button></div>   <!-- HERESY 2299: the system bar under the header (heresy-sysbar.js); 2302: its fold tab -->
+<script>/* HERESY 2302: the bar shown (every room is the Studio's own) and folded or not before the first paint, so no room slides under it as the page comes */
+try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia && matchMedia("(max-width: 760px)").matches)) { document.body.classList.add("has-sysbar"); document.getElementById("sysBar").hidden = false; } if (f === "1") document.body.classList.add("sysbar-folded"); })(localStorage.getItem("yue2.sysbar"), localStorage.getItem("ruach.sysbarFold")); } catch (e) { /* no storage: heresy-sysbar.js decides */ }</script>
+<script src="heresy-logo-words.js"></script>   <!-- HERESY 2283: here, before the veil's logo, not after the 17 MB of the scripts -->
+<script src="heresy-logo-he.js"></script>   <!-- HERESY 2331: the Hebrew words «נפחות רוח» and the favicon ר, before the veil's logo too -->
 <script>/* HERESY 1167: the bar's logo into the veil at once (its ids renamed, as the About card's copy), and the veil's lifting */
 (function () {
   var html = document.documentElement;
@@ -267,7 +293,21 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           if (a.value.indexOf("#rl") >= 0) el.setAttribute(a.name, a.value.replace(/#(rl[A-Za-z]+)/g, "#$1-boot"));
         });
       });
+      // HERESY 2283: the copy in the page's language at once (the head script's data-boot-lang), its tab icon too; heresy-i18n.js puts the same
+      // over it once the translation is in. English is the bar's own drawing. Either way the logo needs no translation to wait for (veil-logo-own)
+      var code = html.getAttribute("data-boot-lang") || "en", L = (window.RUACH_LOGO_WORDS || {})[code];
+      var word = c.querySelector(".rl-word path"), box = c.querySelector(".rl-box"), studio = c.querySelector(".rl-studio path");
+      if (L && word && box && studio) {
+        c.setAttribute("viewBox", L.viewBox);
+        word.setAttribute("d", L.word.d); word.setAttribute("transform", L.word.transform);
+        box.setAttribute("x", L.box.x); box.setAttribute("width", L.box.width);
+        studio.setAttribute("d", L.studio.d); studio.setAttribute("transform", L.studio.transform);
+        if (L.name) spot.setAttribute("aria-label", L.name);
+        var fav = document.getElementById("favicon"), favs = window.RUACH_FAVICONS || {};
+        if (fav && L.letter && favs[L.letter]) fav.setAttribute("href", favs[L.letter]);
+      }
       spot.appendChild(c);
+      if (code === "en" || (L && word && box && studio)) html.classList.add("veil-logo-own");
     }
   } catch (e) { /* the veil without its logo */ }
   try { window.RuachVeilVersions(); } catch (e) { /* the veil without its versions */ }
@@ -303,7 +343,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
   (function tick() {
     var age = performance.now();
     if (age >= LANG_LATEST) html.classList.add("veil-lang");   // a translation that never came: the words as they are
-    if (age >= LOGO_AT && html.classList.contains("veil-lang")) html.classList.add("veil-logo");
+    if (age >= LOGO_AT && (html.classList.contains("veil-lang") || html.classList.contains("veil-logo-own"))) html.classList.add("veil-logo");   // 2283
     if (age >= WAIT) html.classList.add("veil-wait");     // HERESY 1745: still coming, said by the line
     if (age >= MAX || (age >= MIN && ready())) lift(); else setTimeout(tick, 100);
   })();
@@ -333,7 +373,6 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     <button type="button" role="tab" class="engine-tab" data-etab="machine" aria-selected="false" tabindex="-1">Hardware</button>
     <button type="button" role="tab" class="engine-tab" data-etab="perf" aria-selected="false" tabindex="-1">Studio performance</button>   <!-- HERESY 1821 -->
     <button type="button" role="tab" class="engine-tab" data-etab="models" aria-selected="false" tabindex="-1">Models and LoRAs</button>
-    <button type="button" role="tab" class="engine-tab" data-etab="creator" aria-selected="false" tabindex="-1">Creator Heresy</button>   <!-- HERESY 1743 -->
     <button type="button" role="tab" class="engine-tab" data-etab="rooms" aria-selected="false" tabindex="-1">Writer and Artwork</button>
     <button type="button" role="tab" class="engine-tab" data-etab="refiner" aria-selected="false" tabindex="-1">Refiner Room</button>
     <button type="button" role="tab" class="engine-tab" data-etab="pianoteq" aria-selected="false" tabindex="-1">Pianoteq</button>   <!-- HERESY 1986 -->
@@ -476,7 +515,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <label class="field"><span class="label">Hebrew</span>
           <select id="fontHebrew" data-font="hebrew" data-tip="The font of every Hebrew letter in the Studio, whatever font the rest of the line is in; David CLM by default"></select></label>
         <label class="field"><span class="label">Greek</span>
-          <select id="fontGreek" data-font="greek" data-tip="The font of every Greek letter in the Studio, whatever font the rest of the line is in; GFS Didot by default"></select></label>
+          <select id="fontGreek" data-font="greek" data-tip="The font of every Greek letter in the Studio, whatever font the rest of the line is in; Noto Sans by default"></select></label>
         <p class="row-hint" id="fontsHint"></p>
       </section>
       </div>
@@ -526,12 +565,22 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <!-- HERESY 1820: how solid the player's buttons and texts stand at rest -->
         <label class="field pb-rest-field"><span class="label">The player's buttons and texts at rest <output class="mono" id="pbRestSay"></output></span>
           <input type="range" min="30" max="100" step="5" data-def="yue2.pbRest" data-def-is="60" data-tip="How solid the player's buttons, marks and times stand while the pointer is not on them; under the pointer they are always whole. The Studio's own: 60 %" /></label>
+        <!-- HERESY 2299: the system bar under the header: in every room (2302: the Studio's own), in the three rooms, nowhere -->
+        <label class="field"><span class="label">The system bar under the header</span>
+          <select data-def="yue2.sysbar" data-def-is="all" data-tip="A thin bar under the header: the processor, the memory, each card and each disk of the Studio's machine, and the room's running jobs; the pointer on an item shows its numbers and its last minute and ten minutes drawn"><option value="all">in every room</option><option value="rooms">in the Artist, the Refiner and the Videographer</option><option value="off">nowhere</option></select></label>
+        <!-- HERESY 2319: how long a song or a reading may wait behind long work before the Studio asks -->
+        <label class="field"><span class="label">Ask before music or speech waits longer than</span>
+          <select data-def="yue2.waitAsk" data-def-is="10" data-tip="When a song or a reading would wait behind long work (the Videographer, the Artist, a training, an upscale) longer than this, the Studio asks first: wait, and the music and speech asked after it wait behind it, or take it off the queue. The wait is reckoned from the running jobs' own progress; when it cannot be, the question says so"><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="0">never ask</option></select></label>
+        <!-- HERESY 2307: the decoders the Studio offers, at most three, ours by default -->
+        <div class="field"><span class="label">Decoders offered (up to three)</span>
+          <div class="look-checks" id="vaeActive" data-tip="Which VAE decoders the Studio offers wherever a VAE is chosen: up to three, at least one. Ours by default, RS x3 v1 and v2; Standard (m-a-p) can be added"></div></div>
         <div class="look-checks">
           <label class="check"><input type="checkbox" data-def-check="yue2.clickPlay" data-def-off="off" /> <span>A click on a take plays it</span></label>
           <label class="check"><input type="checkbox" data-def-check="yue2.playNew" data-def-off="off" /> <span>New takes play when they are done</span></label>
           <label class="check"><input type="checkbox" data-def-check="yue2.tailGuard" data-def-on="on" /> <span>New takes have their end checked (tail guards)</span></label>   <!-- HERESY 2056 -->
           <label class="check"><input type="checkbox" data-def-check="yue2.dblPlay" data-def-off="off" /> <span>A double-click on a card plays or stops it</span></label>
           <label class="check"><input type="checkbox" data-def-check="yue2.reactMark" data-def-on="on" /> <span>A take's reaction faint in its card's background</span></label>   <!-- HERESY 1877 -->
+          <label class="check" data-tip="A live spectrum of what plays, faint behind the player's buttons: the lows on the left (25 Hz), the highs on the right (20 kHz), rising from the player's foot; it rests when nothing plays"><input type="checkbox" data-def-check="yue2.liveSpectrum" data-def-off="off" /> <span>Live spectrum behind the player</span></label>   <!-- HERESY 2354 -->
         </div>
       </section>
       <section class="look-part">
@@ -548,6 +597,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <label class="check"><input type="checkbox" data-def-check="yue2.tips" data-def-off="off" /> <span>Tips over buttons and fields, on the pointer</span></label>
           <label class="check"><input type="checkbox" data-def-check="yue2.hintLines" data-def-off="off" /> <span>Hint lines under fields and in cards</span></label>
           <label class="check"><input type="checkbox" data-def-check="yue2.infoDots" data-def-off="off" /> <span class="info-mark" aria-hidden="true"></span><span>Info marks beside labels</span></label>   <!-- HERESY 2097b: the page's own drawn i, no ⓘ written -->
+          <label class="check" data-tip="A small key cap on the buttons a key presses too (Space, L, F1…); a button's tip says its key either way"><input type="checkbox" data-def-check="yue2.keyHints" data-def-off="off" /> <span>Show key hints on buttons</span></label>   <!-- HERESY 2302 -->
         </div>
         <p class="row-hint">Each is the Studio's own until you change it here; the player's and the lists' own switches set the same.</p>
       </section>
@@ -660,14 +710,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       <p class="hint">A plugin may bring a script for its own controller: plugin.json, "midi" (PLUGINS.md, «MIDI scripts»).</p>
     </div>
 
-    <!-- HERESY 1743 (Viktor 22.10.2026: «автоматом в FULL режиме херачить октавой ниже? И в `Engine > Creator Heresy` дадим настройку по октавам?»):
-         how the Creator sings what the model plans itself; the engine moves the planned Vocal line (request vocal_octave) -->
-    <div class="card eg-creator" id="creatorCard">
-      <h3>Creator Heresy</h3>
-      <p class="hint">How the Creator sings what the model writes itself. A score supplied, edited or kept in the form is sung as written.</p>
-      <label class="field"><span class="label">Full: the Vocal line of a score the model plans</span>
-        <select id="setFullOctave" data-tip="In Full with no score in the form, the model plans the score, then sings it. Here its Vocal line moves by whole octaves before it is sung; each version moves its own. The model sings where the line goes: measured 21.10.2026, an octave down sang 9–10 semitones lower. The ▼ ▲ by a voice adapter move a score that is already in the form."><option value="-2">Two octaves down</option><option value="-1">An octave down</option><option value="0">As the model wrote it</option><option value="1">An octave up</option><option value="2">Two octaves up</option></select></label>
-    </div>
+    <!-- HERESY 1743's card (the planned Vocal line's octaves) left the Engine in 2348: the song's own now, beside the Style (#vocalOct) -->
 
     <!-- HERESY 1523 (Viktor 17.10.2026: «Холст не делай дефолтным пока что, но в настройках Engine предусмотри эту опцию… отдельной вкладкой
          Refiner Room»): how the Refiner opens; the List / Canvas button in the room's head still switches at any time -->
@@ -707,12 +750,12 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       <div class="ptq-guide">
         <details open><summary>What it is</summary><p>Pianoteq, by Modartt, is a physically modelled instrument: it keeps no recordings of notes but computes the strings, the hammers, the soundboard and the room as you play, so a piano can be changed down to its hammers and its unisons. The Studio does not ship it: you buy it at modartt.com, and the Refiner's Pianoteq step plays a stem of a take again with it, from the stem's MIDI.</p></details>
         <details><summary>Editions and packs</summary><p>It comes in editions, Stage, Standard and Pro, which differ in how deep you may change an instrument: Stage keeps its physics, Pro opens all of it. Instruments come in packs, each bought on its own, and Pianoteq brings free collections of historical instruments besides. The Studio's own Pianoteq, for example: Stage with four packs, Steinway D (its New York and Hamburg models), Bösendorfer 280VC, C. Bechstein DG and the Classical Guitar, and the free collections (KIViR's historical instruments, Champagne, the bells and more): 194 of its 889 presets play in full, the rest as demos with some keys silent.</p></details>
-        <details><summary>How to install</summary><p>Download the Linux build of your edition from your Modartt user area and unpack it into the Studio's models/instruments/pianoteq/ folder, or name its program in user/pianoteq.json as {"path": "…"}. Start it once on the Studio's machine and close it: it makes its preferences, where its activation lives.</p></details>
+        <details><summary>How to install</summary><p>Download the Linux build of your edition from your Modartt user area and unpack it into the Studio's models/refiner/instruments/pianoteq/ folder, or name its program in user/pianoteq.json as {"path": "…"}. Start it once on the Studio's machine and close it: it makes its preferences, where its activation lives.</p></details>
         <details><summary>How to activate</summary><p>Paste the serial from your user area above, or use Pianoteq's own window. A licence activates three computers. After you buy a pack, activate again with the same serial: the pack joins what plays in full.</p></details>
         <details><summary>How to update</summary><p>Download the newer build from your user area and unpack it over the old folder, or beside it with user/pianoteq.json pointing to it. Its activation and your own presets stay where Pianoteq keeps them in your home folder; the Studio sees the new version and reads its presets again.</p></details>
         <details><summary>How to deactivate</summary><p>Pianoteq has no command for it, so the Studio has no button. It is done in your Modartt user area, under Manage activations. Modartt's FAQ warns that a computer deactivated there cannot be activated again with that serial, and that reinstalling the system on the same computer needs no deactivation: ask Modartt first.</p></details>
         <details><summary>Its licence</summary><p>What you play with it may go out in your music, not as a library of its sounds. Its licence does not let it teach a neural network, so the Studio keeps Pianoteq's renders out of every training set.</p></details>
-        <details><summary>Organteq and Airteq</summary><p>Modartt's pipe organs (Organteq) and air-driven instruments (Airteq: flutes, reeds, horns, bowed and blown pads, drones) go the same way, each with a Refiner step of its own and the same window. Their free trials play in the Studio as Modartt lets them: download one at modartt.com and unpack it into models/instruments/organteq/ or models/instruments/airteq/. Choose it above to see what is here.</p></details>   <!-- HERESY 2036 -->
+        <details><summary>Organteq and Airteq</summary><p>Modartt's pipe organs (Organteq) and air-driven instruments (Airteq: flutes, reeds, horns, bowed and blown pads, drones) go the same way, each with a Refiner step of its own and the same window. Their free trials play in the Studio as Modartt lets them: download one at modartt.com and unpack it into models/refiner/instruments/organteq/ or models/refiner/instruments/airteq/. Choose it above to see what is here.</p></details>   <!-- HERESY 2036 -->
       </div>
     </div>
 
@@ -828,7 +871,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <label class="check" data-tip="Once a day while the Studio runs, a snapshot of the same files and of each take's card too (its title, ♥ and time)"><input type="checkbox" id="bkDaily" /> <span>Every day</span></label>
         <label class="field field-inline bk-keep" data-tip="How many daily snapshots stay, 1 to 1000 (30 at first): once a new one is written and reads back whole, the oldest past that number go"><span class="label">keep the last</span><input type="number" id="bkKeepDaily" min="1" max="1000" step="1" /></label>
       </div>
-      <p class="hint" id="bkWhat">Kept: your settings, styles and profiles, the Librarian (workspaces, notes, marks, the playlist, albums), the Writer's documents and the Creator's versions, the Videographer's plans, your vocabularies and your own plugins; once a day each take's card too (its title, ♥ and time).</p>
+      <p class="hint" id="bkWhat">Kept: your settings, styles and profiles, the Librarian (workspaces, notes, marks, the playlist, albums), the Writer's documents and the Musician's versions, the Videographer's plans, your vocabularies and your own plugins; once a day each take's card too (its title, ♥ and time).</p>
       <p class="hint" id="bkWhere"></p>
       <div class="card-actions"><button type="button" class="btn primary small" id="bkNow">Back up now</button></div>
     </div>
@@ -841,8 +884,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       <div class="c2pa-form">
         <label class="field" data-tip="Your name as the record gives it; empty: no name in it"><span class="label">Author</span><input type="text" id="c2paAuthor" maxlength="300" placeholder="your name, as readers should see it" /></label>
         <label class="field" data-tip="A site (https://…) or an e-mail beside the name"><span class="label">Site or contact</span><input type="text" id="c2paContact" maxlength="300" placeholder="https://… or an e-mail" /></label>
-        <label class="field" data-tip="A certificate chain of your own (PEM), e.g. from an authority on the C2PA trust list; empty: the Studio's own, made on this computer"><span class="label">Your certificate (PEM)</span><input type="text" id="c2paCert" maxlength="300" placeholder="a file's path; empty: the Studio's own" /></label>
-        <label class="field" data-tip="The private key of that certificate (PEM): read by the lab on this computer only, never sent anywhere"><span class="label">Its key (PEM)</span><input type="text" id="c2paKey" maxlength="300" placeholder="the key file's path" /></label>
+        <label class="field" data-tip="A certificate chain of your own (PEM), e.g. from an authority on the C2PA trust list; empty: the Studio's own, made on this computer"><span class="label">Your certificate (PEM)</span><input type="text" id="c2paCert" maxlength="300" placeholder="a file in user/ (user/c2pa/); empty: the Studio's own" /></label>
+        <label class="field" data-tip="The private key of that certificate (PEM): read by the lab on this computer only, never sent anywhere"><span class="label">Its key (PEM)</span><input type="text" id="c2paKey" maxlength="300" placeholder="the key file in user/ (user/c2pa/)" /></label>
       </div>
       <p class="hint" id="c2paSay">Asking the lab…</p>
       <div class="card-actions"><button type="button" class="btn primary small" id="c2paSave">Keep it</button></div>
@@ -915,6 +958,14 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
             <li><a href="https://github.com/ggml-org/ggml" target="_blank" rel="noopener noreferrer">Code</a><span class="about-where" translate="no">github · ggml-org/ggml</span></li>
             <li><a href="https://github.com/ServeurpersoCom/ggml" target="_blank" rel="noopener noreferrer">The fork yue2.cpp uses</a><span class="about-where" translate="no">github · ServeurpersoCom/ggml</span></li>
           </ul></section>
+          <!-- HERESY 2377: the Refined transcriber's authors -->
+          <section class="about-project"><h4 translate="no">SheetSage2-Refined</h4><p class="about-what">anime-song's community fine-tune of m-a-p's SheetSage2, the Refined transcriber: not ours (CC BY-NC 4.0)</p><ul class="about-links">
+            <li><a href="https://huggingface.co/anime-song/SheetSage2-Refined" target="_blank" rel="noopener noreferrer">Model weights</a><span class="about-where" translate="no">hugging face · anime-song/SheetSage2-Refined</span></li>
+            <li><a href="https://github.com/anime-song/SheetSage2-Refined" target="_blank" rel="noopener noreferrer">Code</a><span class="about-where" translate="no">github · anime-song/SheetSage2-Refined</span></li>
+          </ul></section>
+          <section class="about-project"><h4 translate="no">HOT-Step CPP</h4><p class="about-what">Refined's frame heads, grammar and rescoring, ported into our engine (MIT)</p><ul class="about-links">
+            <li><a href="https://github.com/scragnog/HOT-Step-CPP" target="_blank" rel="noopener noreferrer">Code</a><span class="about-where" translate="no">github · scragnog/HOT-Step-CPP</span></li>
+          </ul></section>
         </div>
         <div class="about-addons" id="aboutAddons"></div>
       </div>
@@ -948,7 +999,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         </div>
         </div>
         <div class="menu-wrap">
-        <button class="btn ghost small" id="loadExample" data-icon="example" data-tip="Load an example: a random official demo, or one of ours by name (Readings…)" aria-haspopup="true" aria-expanded="false">Load example</button>
+        <button class="btn ghost small" id="loadExample" data-icon="example" data-tip="Load an example: a random demo in the page's language and in English, or one of ours by name (Readings…)" aria-haspopup="true" aria-expanded="false">Load example</button>
         <div class="menu-pop is-hidden" id="exampleMenu" role="menu"></div>
         </div>
         <button class="btn ghost small" id="clearForm" data-icon="clear" data-tip="Clear the words: title, style, lyrics, score, seeds and loaded codes. The mode, knobs and LoRAs stay (New song resets them too, all but Sound and output)">Clear</button>
@@ -977,8 +1028,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <label class="field">
             <span class="label">Structure</span>
             <select id="structure">
-              <option value="simple">Verse · Chorus</option>
-              <option value="bridge" selected>Verse · Chorus · Bridge</option>
+              <option value="simple" translate="no">Verse · Chorus</option>
+              <option value="bridge" selected translate="no">Verse · Chorus · Bridge</option>
               <option value="prechorus">With a pre-chorus</option>
               <option value="full">Full arc — intro, pre-chorus, bridge, outro</option>
             </select>
@@ -1002,9 +1053,12 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     </details>
 
     <form id="composeForm" class="compose" novalidate>
-      <!-- HERESY 1167: two columns of cards. The words: what is sung. The machine: how it is made. Each part a card
-           of its own; from 1600 px the two stand side by side (2/3 of the room), under them one another. -->
-      <div class="k-col k-words">
+      <!-- HERESY 1167: two columns of cards, each part a card of its own; from 1400 px the two stand side by side, under them one another.
+           HERESY 2264 (Viktor 09.11.2026: «В левой сверху как есть стиль и т.п., а в правую сдвинуть всё по промпту с лирикой. Так у нас
+           всё базовое по песне будет сразу на виду без прокрутки. LoRA адаптеры перенести в левую колонку под блок со стилями»): the left
+           column is the song (its name, style and adapters), the right one its lyrics and then how it is made; each scrolls on its own.
+           One column (under 1400 px, or beside the takes made wide) keeps the old order by the cards' CSS order. -->
+      <div class="k-col k-left">
         <section class="k-card k-song">
           <!-- HERESY 1047: the Writer's document in hand; what is made now is linked to it -->
           <div class="wr-hand" id="wrHandBox">
@@ -1029,7 +1083,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
               <input type="text" id="title" placeholder="Song title" autocomplete="off" maxlength="80" />
             </label>
             <!-- HERESY 1614: the version beside the title -->
-            <label class="field versionfield" data-tip="The song's version beside its name, digits and dots only (4.2.3). A take is called «Title v4.2.3», as your tracks are, and the Creator's versions keep one tree per title, a branch per version. A title typed with its version («Song v1.2») splits into the two">
+            <label class="field versionfield" data-tip="The song's version beside its name, digits and dots only (4.2.3). A take is called «Title v4.2.3», as your tracks are, and the Musician's versions keep one tree per title, a branch per version. A title typed with its version («Song v1.2») splits into the two">
               <span class="label">Version</span>
               <input type="text" id="titleVersion" placeholder="1.0" autocomplete="off" maxlength="24" inputmode="decimal" spellcheck="false" translate="no" />
             </label>
@@ -1060,8 +1114,19 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
             <!-- HERESY 1432 (Viktor 14.10.2026: «"Сохранить стиль" и "Удалить" — svg иконками») -->
             <button type="button" class="btn ghost small icon-btn style-ico" id="styleSave" data-ui="floppy" aria-label="Save style…" data-tip="Keep this style under a name, on Forge: every browser sees it"></button>
             <button type="button" class="btn ghost small icon-btn style-ico danger" id="styleDel" data-ui="trash" aria-label="Delete" data-tip="Delete the saved style picked" disabled></button>
+            <!-- HERESY 2348 (Viktor 08.11.2026: «прикрути в Творце к окну стиля переключатель с оверлей окном, где человек сможет настроить сдвиги вокальных октав. И тогда… в Движке не нужна опция по сдвигу октавы вокала»):
+                 the planned Vocal line's octaves, the song's own, 0 by default: the shift in figures, a click opens the choice (app.js) -->
+            <button type="button" class="btn ghost small vocal-oct" id="vocalOct" aria-haspopup="dialog" aria-label="Full: the Vocal line of a score the model plans" data-tip="The planned Vocal line: As the model wrote it"><span class="vocal-oct-ico" data-ui="music" aria-hidden="true"></span><span class="vocal-oct-val" translate="no">0</span></button>
           </div>
         </section>
+        <section class="k-card k-loras">
+          <fieldset class="field sound" data-fold="loras">
+            <span class="label">LoRAs <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="-1" role="img" aria-label="About LoRAs" data-tip-ref="tip-loras" data-tip-head="a strength for the music half and for the sound half"></span></span>
+            <div id="loraPicker"></div>
+          </fieldset>
+        </section>
+      </div>
+      <div class="k-col k-right">
         <section class="k-card k-lyrics">
           <label class="field" data-fold="lyrics">
             <span class="label" data-head="section tags on their own line">Lyrics <button type="button" class="btn ghost small icon-btn lyr-big" id="lyricsBig" data-ui="maximize" aria-pressed="false" aria-label="The lyrics over everything" data-tip="The lyrics over everything, a tenth larger: Esc or this button puts them back"></button><!-- HERESY 1277 (Viktor 09.10.2026: «Кнопку экспорта/импорта содержимого редактора в голый txt формат, авто имя файла по Title трека») --><button type="button" class="btn ghost small icon-btn lyr-big lyr-txt" id="lyricsTxtOut" data-ui="file-down" aria-label="Save the lyrics as a .txt" data-tip="Save the lyrics as a plain .txt, named by the Title"></button><button type="button" class="btn ghost small icon-btn lyr-big lyr-txt" id="lyricsTxtIn" data-ui="file-up" aria-label="Open a .txt into the lyrics" data-tip="Put a plain .txt (UTF-8) in place of the lyrics: asked first when the box has words; Ctrl+Z in the box brings them back"></button><!-- HERESY 1357 (from SUNO v6) --><button type="button" class="btn ghost small lyr-tighten" id="lyricsTighten" data-tip="Tighten these lyrics: the Writer's model cuts filler and weak lines, keeps the meaning, the language, the rhymes and every section tag; you see both side by side before anything changes (Ctrl+Z in the box brings the old ones back)">✦ Tighten</button></span>
@@ -1079,8 +1144,6 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
             <span class="row-hint mono" id="tpNote"></span>
           </div>
         </section>
-      </div>
-      <div class="k-col k-machine">
         <section class="k-card k-plan">
           <!-- HERESY 1032: profiles: every knob but the texts. Music 8:00 and Speech 15:00 are built in -->
           <div class="lib-row" id="setupLibRow">
@@ -1093,29 +1156,38 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <fieldset class="field plan-field">
             <!-- HERESY 1169 (Viktor 08.10.2026: «Instrumental… перенести в ту же строку, что и Planning Mode заголовок с подсказкой, -
                  выключка вправо… Planning Mode строку и само название секции - красиво в общем стиле с паддингами»): its words in its tip -->
-            <div class="plan-head"><span class="label">Planning mode</span>
+            <div class="plan-head"><span class="label">Planning mode<span class="info" tabindex="-1" role="img" aria-label="About Planning mode" data-tip-ref="tip-modes"></span></span>
               <label class="check instrumental-check"><input type="checkbox" id="instrumental" /> <span><strong>Instrumental</strong></span>
                 <span class="info" tabindex="-1" role="img" aria-label="About instrumental songs" data-tip-ref="tip-instrumental"></span></label></div>
-            <div class="modes" id="modes">
+            <!-- HERESY 2264 (Viktor 09.11.2026: «Подсказки из кнопок с выбором режима унести в тултип с (i) SVG иконкой, и сами эти кнопочки
+                 сделать такими же выразительными…»): an icon, the name and a tick on the one chosen; the words go to
+                 the (i) beside Planning mode (tip-modes), which a mode reached by the keyboard shows too; a phone keeps them under the names -->
+            <div class="modes" id="modes" role="radiogroup" aria-label="Planning mode">
               <label class="mode">
-                <input type="radio" name="cot" value="full" checked />   <!-- HERESY 1169 · 1253: Full by default (Viktor 08.10.2026) -->
+                <input type="radio" name="cot" value="full" checked data-tip-ref="tip-modes" />   <!-- HERESY 1169 · 1253: Full by default (Viktor 08.10.2026) -->
                 <span class="mode-body">
-                  <strong>Full plan</strong>
-                  <small>Melody and chords written first, then rendered. Best for new songs.</small>
+                  <span class="mode-ico" data-ui="layers" aria-hidden="true"></span>
+                  <span class="mode-words"><strong>Full plan</strong>
+                  <small>Melody and chords written first, then rendered. Best for new songs.</small></span>
+                  <span class="mode-tick" data-ui="check" aria-hidden="true"></span>
                 </span>
               </label>
               <label class="mode">
-                <input type="radio" name="cot" value="melody" />
+                <input type="radio" name="cot" value="melody" data-tip-ref="tip-modes" />
                 <span class="mode-body">
-                  <strong>Melody only</strong>
-                  <small>Melody plan, free accompaniment. Recommended for covers.</small>
+                  <span class="mode-ico" data-ui="music" aria-hidden="true"></span>
+                  <span class="mode-words"><strong>Melody only</strong>
+                  <small>Melody plan, free accompaniment. Recommended for covers.</small></span>
+                  <span class="mode-tick" data-ui="check" aria-hidden="true"></span>
                 </span>
               </label>
               <label class="mode">
-                <input type="radio" name="cot" value="off" />   <!-- HERESY 1167 had Direct by default; 1253 gives it back to Full -->
+                <input type="radio" name="cot" value="off" data-tip-ref="tip-modes" />   <!-- HERESY 1167 had Direct by default; 1253 gives it back to Full -->
                 <span class="mode-body">
-                  <strong>Direct</strong>
-                  <small>Straight from lyrics and style, no editable score.</small>
+                  <span class="mode-ico" data-ui="forward" aria-hidden="true"></span>
+                  <span class="mode-words"><strong>Direct</strong>
+                  <small>Straight from lyrics and style, no editable score.</small></span>
+                  <span class="mode-tick" data-ui="check" aria-hidden="true"></span>
                 </span>
               </label>
             </div>
@@ -1143,12 +1215,6 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
             <div class="toggles" id="decoders"></div>
           </fieldset>
         </section>
-        <section class="k-card k-loras">
-          <fieldset class="field sound" data-fold="loras">
-            <span class="label">LoRAs <span class="kind-badge is-addon" data-tip="Add-on: made by a third party, not the model&#39;s publisher">add-on</span> <span class="info" tabindex="-1" role="img" aria-label="About LoRAs" data-tip-ref="tip-loras" data-tip-head="a strength for the music half and for the sound half"></span></span>
-            <div id="loraPicker"></div>
-          </fieldset>
-        </section>
         <section class="k-card k-more">
           <details class="drawer" id="coverDrawer">
             <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Cover or Remix</span><span class="sum-say">Reuse a melody and change the style.</span></span></summary>
@@ -1164,6 +1230,17 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
                     <option value="melody-vocal">Vocal melody only</option>
                     <option value="full">Melody and chords</option>
                   </select></label>
+                <!-- HERESY 2328: SheetSage2 or anime-song's SheetSage2-Refined writes the score, chosen like a VAE; HERESY 2359: SheetSage2 by its angles;
+                     HERESY 2377 (Viktor 11.11.2026: «убирай Standard режим и оставляй наш Tweaked как Heretical, а Refined, стабильный из
+                     двух вариантов как `Refined`»): two modes by these names, never translated, Heretical the default; each tip says what it
+                     is, whose it is and what it risks. Standard (exact angles) left the page; Refined with exact angles broke on our Ring -->
+                <div class="field"><span class="label">Transcriber</span>
+                  <div class="toggles" id="transcribers">
+                    <label class="toggle" data-tip="SheetSage2 by m-a-p with its rotary angles rounded to bfloat16, as it was trained: the base and the default. MERT, the ear SheetSage2 listens with, places every moment of the song by these angles; computed exactly, they are not the ones it learnt, and its bars and meters drift (on twenty of our songs: 82 false meter changes with exact angles, 8 with these, where the songs have 9). Its risk: a rare false meter change can still slip in."><input type="radio" name="transcriber" value="sheetsage2-bf16" checked /><span translate="no">Heretical</span></label>
+                    <label class="toggle" data-tip="Not our fine-tune: SheetSage2-Refined is anime-song's community fine-tune of m-a-p's SheetSage2 (CC BY-NC 4.0), run with bfloat16 angles as its author's reference runs it. On twenty of our songs it wrote every score: the bar count right on 9 (Heretical 8), odd meters and a drill's half time heard, slash and tension chords. Its risk: a wider chord vocabulary than the song model learnt from SheetSage2, so its rarer chords are new words to it; in a song where it hears no chords, it writes none."><input type="radio" name="transcriber" value="sheetsage2-refined" /><span translate="no">Refined</span></label>
+                  </div></div>
+                <label class="check" id="transcriberModesRow" hidden data-tip="Refined alone: each key written with its mode (dorian, phrygian, lydian, mixolydian, locrian), as K:Ddor in the score; off, a key is major or minor, as SheetSage2 writes it. Its risk: the song model learnt its keys from SheetSage2's scores, so a mode is a word new to it"><input type="checkbox" id="transcriberModes" />
+                  <span>Keys with their modes (dorian, mixolydian…)</span></label>
                 <div class="cover-act">
                   <button type="button" class="btn ghost" id="coverListen" aria-pressed="false" disabled
                           data-tip="Listen to the chosen recording here; the player at the bottom pauses while it plays">▶ Listen</button>
@@ -1370,7 +1447,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
                   <!-- HERESY 1768 (Viktor 24.10.2026: «Делай это опцией Sampling блоке Творца… А этот в тултипе подсказки пометь как экспериментальный и
                        отличающийся выхлопом»): the decode ladder, the Creator's own; after Peak clip, so the rows above stay as they were -->
                   <label class="field"><span class="label" data-head="sound half">Sound decode</span>
-                    <select id="narDecode" data-tip="Experimental: what comes out differs from the standard decode. How the sound half turns the music codes into sound. Whole song, the standard (and the only way everywhere else in the Studio): one solve over the whole song, stable and predictable. Ladder: the song in even pieces of about 20 s, each solved hearing 2 s of the music past both its edges, the neighbours crossfaded over the 2 s round each joint (the best of the probes by Viktor's ear, 24.10.2026). On the same codes and seeds it comes out close to the whole-song decode, not the same, and further from it on a fine-tuned checkpoint; for now it takes the same time. A song under 20 s is one piece. Only the Creator's runs and their «Also render with» go this way; a section or a window sung anew, a new sound, a trim, an end or a fade-in in the player decode the standard way.">
+                    <select id="narDecode" data-tip="Experimental: what comes out differs from the standard decode. How the sound half turns the music codes into sound. Whole song, the standard (and the only way everywhere else in the Studio): one solve over the whole song, stable and predictable. Ladder: the song in even pieces of about 20 s, each solved hearing 2 s of the music past both its edges, the neighbours crossfaded over the 2 s round each joint (the best of the probes by Viktor's ear, 24.10.2026). On the same codes and seeds it comes out close to the whole-song decode, not the same, and further from it on a fine-tuned checkpoint; for now it takes the same time. A song under 20 s is one piece. Only the Musician's runs and their «Also render with» go this way; a section or a window sung anew, a new sound, a trim, an end or a fade-in in the player decode the standard way.">
                       <option value="standard" selected>Whole song · standard</option>
                       <option value="ladder">Ladder · experimental</option>
                     </select></label>
@@ -1565,17 +1642,17 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 
   <!-- HERESY 1014: the Write tab — the writing room with the song in the form beside it -->
   <section class="col write-col is-hidden" id="view-write">
-    <div class="col-head"><h2>Writer</h2><span class="col-note col-note-two">the notebook keeps songs and readings in the making; the writing room below works on the song in the Creator</span></div>
+    <div class="col-head"><h2>Writer</h2><span class="col-note col-note-two">the notebook keeps songs and readings in the making; the writing room below works on the song in the Musician</span></div>
     <!-- HERESY 1047: the notebook -->
     <div class="wr-book">
       <aside class="wr-side">
         <div class="wr-side-bar">
           <button type="button" class="btn primary small" id="wrNew">＋ New</button>
-          <button type="button" class="btn ghost small" id="wrFromCreate" title="A new document from the song in the Creator, with every knob">＋ From the Creator</button>
-          <button type="button" class="btn ghost small" id="wrCreatorVersions" data-tip="Every Generate's words, kept under their title apart from the takes: a take deleted never takes them along">Creator's versions</button>
+          <button type="button" class="btn ghost small" id="wrFromCreate" title="A new document from the song in the Musician, with every knob">＋ From the Musician</button>
+          <button type="button" class="btn ghost small" id="wrCreatorVersions" data-tip="Every Generate's words, kept under their title apart from the takes: a take deleted never takes them along">Musician's versions</button>
           <!-- HERESY 1168 (Viktor 07.10.2026: «В комнате Писателя добавить глобальный экспорт/импорт всех данных скопом для бекапа») -->
-          <span class="wr-io"><button type="button" class="btn ghost small" id="wrExport" data-icon="save" aria-label="Export all" data-tip="Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Creator's versions of every title, in one file (a backup)">Export all</button>
-          <button type="button" class="btn ghost small" id="wrImport" data-icon="open" aria-label="Import a backup" data-tip="Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Creator's versions here gains the versions it lacks. Nothing here is written over">Import</button></span>
+          <span class="wr-io"><button type="button" class="btn ghost small" id="wrExport" data-icon="save" aria-label="Export all" data-tip="Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Musician's versions of every title, in one file (a backup)">Export all</button>
+          <button type="button" class="btn ghost small" id="wrImport" data-icon="open" aria-label="Import a backup" data-tip="Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Musician's versions here gains the versions it lacks. Nothing here is written over">Import</button></span>
           <input type="file" id="wrImportFile" accept=".json,application/json" aria-label="A Writer backup to import" hidden />
           <span class="coll-n" id="wrCount"></span>
         </div>
@@ -1592,7 +1669,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <div class="wr-head">
             <input type="text" id="wrTitle" class="wr-title" maxlength="120" placeholder="Untitled" aria-label="Title" />
             <span class="wr-state" id="wrState"></span>
-            <button type="button" class="btn primary small" id="wrHandBtn">Load into the Creator</button>
+            <button type="button" class="btn primary small" id="wrHandBtn">Load into the Musician</button>
             <button type="button" class="btn ghost small" id="wrKeep" title="Keep the document as it stands, under a label">Keep this version</button>
             <button type="button" class="btn ghost small danger" id="wrDelete">Delete</button>
           </div>
@@ -1609,7 +1686,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
               <textarea id="wrNotes" rows="8" placeholder="What the song is for, what to try next, what the last take got wrong…"></textarea>
               <div class="wr-md" id="wrNotesView" hidden></div></div>
             <div class="field wr-part"><span class="label">PARAMS <em>every knob of the Create form</em>
-                <button type="button" class="btn ghost small" id="wrParamsTake">From the Creator</button>
+                <button type="button" class="btn ghost small" id="wrParamsTake">From the Musician</button>
                 <button type="button" class="btn ghost small" id="wrParamsShow">All</button></span>
               <div class="wr-params" id="wrParams"></div><pre class="mono wr-params-json" id="wrParamsJson" hidden></pre></div>
           </div>
@@ -1623,7 +1700,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     <div class="write-grid">
       <section class="panel write-current">
         <div class="panel-head"><h3>The Song Now</h3><div class="spacer"></div>
-          <button type="button" class="btn ghost small" data-goto-tab="create">Edit in the Creator</button></div>
+          <button type="button" class="btn ghost small" data-goto-tab="create">Edit in the Musician</button></div>
         <div class="write-cur"><span class="label">Title</span><p id="curTitle"></p></div>
         <div class="write-cur"><span class="label">Style <em id="curStyleSize"></em></span><pre id="curStyle"></pre></div>
         <div class="write-cur"><span class="label">Score <em>the key, meter and tempo the style must agree with</em></span><p class="mono" id="curScore"></p></div>
@@ -1668,8 +1745,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <label class="field grow"><span class="label">Structure</span>
             <select id="assistStructure">
               <option value="">Keep mine — as the lyrics have it</option>
-              <option value="simple">Verse · Chorus</option>
-              <option value="bridge">Verse · Chorus · Bridge</option>
+              <option value="simple" translate="no">Verse · Chorus</option>
+              <option value="bridge" translate="no">Verse · Chorus · Bridge</option>
               <option value="prechorus">With a pre-chorus</option>
               <option value="full">Full arc — intro, pre-chorus, bridge, outro</option>
             </select></label>
@@ -2057,12 +2134,14 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       <div class="ar-knobs">
         <button type="button" class="btn ghost small" id="arFromTake" data-tip="The prompt the take's artwork was drawn from, or one from its title and style, to start from">From the take</button>
         <div class="ar-shapes" id="arShapes" role="group" aria-label="Shapes"></div>
+        <!-- HERESY 2278 (Viktor 09.11.2026: the Artist's «Advanced» mode, bigger sizes behind a switch): a size of one's own instead of the shapes -->
+        <div class="ar-adv" id="arAdv"><label class="check" data-tip="Paint one picture of a size of your own instead of the shapes: its sides in multiples of 64, from 256 up to what the painter and your card can take"><input type="checkbox" id="arAdvOn" /> <span>Advanced: a size of my own</span></label><span class="ar-adv-size" id="arAdvSize" hidden><label class="field"><span class="label">Width</span><input type="number" id="arAdvW" min="256" max="3072" step="64" value="2048" data-tip="The picture's width in pixels: a multiple of 64 (another number goes to the nearest), from 256 to the painter's longest side; beside it, how much of a card this size needs" /></label><label class="field"><span class="label">Height</span><input type="number" id="arAdvH" min="256" max="3072" step="64" value="1152" data-tip="The picture's height in pixels: a multiple of 64 (another number goes to the nearest), from 256 to the painter's longest side; beside it, how much of a card this size needs" /></label><em class="ar-adv-say" id="arAdvSay" aria-live="polite"></em></span></div>
         <div class="ar-seedcount">   <!-- HERESY 1345 (Viktor: «ВАРИАЦИИ ужми, а СИД лучше растянуть»): one row, the seed stretched -->
         <label class="field ar-seed"><span class="label">Seed <span class="info" tabindex="-1" role="img" aria-label="About the seed" data-tip="The seed decides the picture: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed)"></span></span><span class="ar-seed-row"><input type="text" id="arSeed" inputmode="numeric" autocomplete="off" placeholder="new" data-tip="The seed decides the picture: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed)" /><button type="button" class="btn ghost small" id="arSeedNew" data-tip="A new seed each time" aria-label="A new seed each time">⟲</button></span></label>
         <label class="field ar-count" data-tip="How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked"><span class="label">Batch</span><select id="arCount"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
         </div>
         <!-- HERESY 1428 (Viktor 14.10.2026: «объединить в один спадающий дроплаун… обзови как "КИСТИ ХУДОЖНИКА"»): every brush in one list -->
-        <label class="field ar-painter"><span class="label">The Artist's brushes <span class="info ar-pnote" id="arPainterNote" tabindex="-1" role="img" aria-label="About the painter" hidden></span></span><select id="arBrush" translate="no" data-tip="Every brush the Artist has here, in one list: Qwen-Image 2512 from a 4- or 6-bit GGUF; each fp8 file in artwork/Qwen-Image-2512/checkpoints/, 2512's own BASE and the fine-tunes (a file put there shows here when the room reads the list again); Qwen-Image 2.1. ⚡ Lightning: it paints in 8 steps by default; a fine-tune paints its finished realism without it unless Sampling asks"><option value="qwen2512-q4">Q4 · ⚡ Lightning</option></select><select id="arPainter" hidden aria-hidden="true" tabindex="-1"><option value="qwen2512-q4">Qwen-Image 2512 · Q4</option></select><select id="arModel" hidden aria-hidden="true" tabindex="-1" translate="no"></select></label>
+        <label class="field ar-painter"><span class="label">The Artist's brushes <span class="info ar-pnote" id="arPainterNote" tabindex="-1" role="img" aria-label="About the painter" hidden></span></span><select id="arBrush" translate="no" data-tip="Every brush the Artist has here, in one list: Qwen-Image 2512 from a 4- or 6-bit GGUF; each fp8 file in models/artist/Qwen-Image-2512/checkpoints/, 2512's own BASE and the fine-tunes (a file put there shows here when the room reads the list again); Qwen-Image 2.1. ⚡ Lightning: it paints in 8 steps by default; a fine-tune paints its finished realism without it unless Sampling asks"><option value="qwen2512-q4">Q4 · ⚡ Lightning</option></select><select id="arPainter" hidden aria-hidden="true" tabindex="-1"><option value="qwen2512-q4">Qwen-Image 2512 · Q4</option></select><select id="arModel" hidden aria-hidden="true" tabindex="-1" translate="no"></select></label>
         <!-- HERESY 1318: the fp8 fine-tune of Qwen-Image 2512; 1432 (Viktor: «селектор ФАЙНТЮН — он нафиг нам больше не нужен»): its
              field gone, the file kept in the hidden #arModel beside #arPainter, picked in The Artist's brushes -->
         <div class="ar-get-row"><button type="button" class="btn ghost small" id="arGet" data-tip="The painters, the Qwen fine-tunes and the adapters the Studio can fetch for the Artist, each with its size, here or not: from the Studio's models repository and from their makers">Get painters and adapters…</button></div>   <!-- HERESY 1347 -->
@@ -2097,10 +2176,66 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           </div>
           <div class="ar-reg-foot"><button type="button" class="btn ghost small" id="arLetClear">Clear</button><span class="row-hint" id="arLetNote" hidden></span></div>
         </details>
+        <!-- HERESY 2332 (Viktor 09.11.2026: «выход из ComfyUI… перенести мои два воркфлоу»): his AIO QWEN IMAGE 2512 HERESY Draft #4, ComfyUI's way -->
+        <details class="ar-sampling ar-comfy" id="arComfy"><summary><span class="label">ComfyUI's way</span> <em id="arComfySay"></em><span class="info" tabindex="-1" role="img" aria-label="About ComfyUI's way" data-tip="Painted as ComfyUI paints it, so the same seed gives the same picture as there: its noise, its schedules, its guidance, his AIO QWEN IMAGE 2512 HERESY Draft #4's nodes (Skimmed CFG, the negative as nothing, words concatenated, the seed variance, a character adapter hooked by keyframes, his text encoder and VAE). Qwen-Image 2512. The two buttons fill the form as his first and second pass"></span></summary>
+          <div class="ar-reg-foot"><button type="button" class="btn ghost small" id="arCfP1" data-tip="His AIO #4 first pass: Hyphoria in fp8, 16:9, 12 steps of ER-SDE on Bong tangent, Lightning 0.55 with CFG 4.5 and Skimmed CFG 2.5, the negative as nothing, the seed variance, the character adapter hooked by his keyframes, his encoder and VAE">AIO #4 · first pass</button><button type="button" class="btn ghost small" id="arCfP2" data-tip="His AIO #4 second pass: 60 steps from step 20, no Lightning, Detailz 0.6 and Qwen Enhancer 0.7, the extra noise 1.0 (as his QWEN2_00075 was made; the saved graph has 0.6), the colours put back to the picture's; then on a picture Second pass… ×2">AIO #4 · second pass</button></div>
+          <label class="check" data-tip="On: the run is painted ComfyUI's way with the settings below; off: the Artist's own way"><input type="checkbox" id="arCfOn" /> <span>Paint ComfyUI's way</span></label>
+          <div class="ar-samp-row">
+            <label class="field"><span class="label">ComfyUI seed</span><input type="text" id="arCfSeed" inputmode="numeric" maxlength="20" spellcheck="false" placeholder="the seed above" data-tip="A seed as ComfyUI has them (up to 20 digits): his picture's seed paints his picture again; empty: the seed above" /></label>
+            <label class="field"><span class="label">Text encoder</span><select id="arCfEnc" data-tip="Qwen's own Qwen2.5-VL, or his abliterated one (models/artist/Qwen-Image-2512/encoders/)"><option value="qwen">Qwen's own</option></select></label>
+            <label class="field"><span class="label">VAE</span><select id="arCfVae" data-tip="Qwen's own VAE, or his Clear VAE (models/artist/Qwen-Image-2512/vaes/)"><option value="qwen">Qwen's own</option></select></label>
+          </div>
+          <div class="ar-samp-row">
+            <label class="field ar-samp-num"><span class="label">CFG</span><input type="number" id="arCfCfg" min="1" max="10" step="0.1" data-tip="ComfyUI's guidance, beside Lightning too: 1 one pass a step; above 1 the negative's passes as well (his AIO #4: 4.5)" /></label>
+            <label class="field ar-samp-num"><span class="label">Skimmed CFG</span><input type="number" id="arCfSkim" min="0" max="7" step="0.5" data-tip="Skimmed CFG (linear interpolation): where full guidance would burn, it pushes only this much; 0 off (his AIO #4: 2.5)" /></label>
+            <label class="field"><span class="label">Model sampling</span><select id="arCfMs" data-tip="Qwen-Image's own (shift 1.15), or ModelSamplingFlux with max shift 3 and base shift 0.5 by the picture's size, as his AIO #4 sets it: it moves where the shares of the steps fall (the variance, the hooked adapter's keyframes)"><option value="flow">Qwen's own · shift 1.15</option><option value="flux">Flux · max 3 · base 0.5</option></select></label>
+            <label class="check" data-tip="The negative as nothing (ConditioningZeroOut), as his AIO #4; off: the negative words below"><input type="checkbox" id="arCfZero" /> <span>Negative as nothing</span></label>
+          </div>
+          <label class="field" id="arCfNegBox"><span class="label">Negative words</span><textarea id="arCfNeg" rows="2" maxlength="4000" spellcheck="false" data-tip="What the picture should not be, guided against when CFG is above 1"></textarea></label>
+          <label class="field"><span class="label">Second words</span><textarea id="arCfAlso" rows="2" maxlength="2000" spellcheck="false" data-tip="Words read apart and joined after the prompt's (ConditioningConcat), as his AIO #4's «#1.2 Prompt Encode»: a face, a look"></textarea></label>
+          <div class="ar-samp-row">
+            <label class="check" data-tip="SeedVarianceEnhancer: noise on half of the prompt's values for the first share of the steps, so seeds differ more"><input type="checkbox" id="arCfVarOn" /> <span>Seed variance</span></label>
+            <label class="field ar-samp-num"><span class="label">Strength</span><input type="number" id="arCfVarStr" min="0" max="100" step="1" data-tip="How strong its noise is (his AIO #4: 12)" /></label>
+            <label class="field ar-samp-num"><span class="label">Until %</span><input type="number" id="arCfVarSw" min="1" max="99" step="1" data-tip="The share of the steps it acts in (his AIO #4: 25)" /></label>
+          </div>
+          <div class="ar-samp-row">
+            <label class="field"><span class="label">Hooked adapter</span><select id="arCfHook" translate="no" data-tip="A character adapter hooked to the prompt alone, its strength by his keyframes (none for the first steps, then up to full, easing to 0.8), as his «QW Character LoRA Hooks»; its trigger word read beside the prompt"><option value="">none</option></select></label>
+            <label class="field ar-samp-num"><span class="label">Strength</span><input type="number" id="arCfHookW" min="0" max="2" step="0.05" data-tip="The hooked adapter's strength before its keyframes (his: 0.8)" /></label>
+            <label class="field"><span class="label">Trigger</span><input type="text" id="arCfHookTrig" maxlength="200" spellcheck="false" data-tip="The adapter's trigger word, read as an entry of its own beside the prompt" /></label>
+          </div>
+          <div class="ar-samp-row">   <!-- HERESY 2360: his MAIN CONTROL, an envelope multiplied into the hooked adapter's keyframes -->
+            <label class="check" data-tip="His AIO #4's MAIN CONTROL: a second envelope on the hooked adapter, multiplied into its keyframes at every step (his: 0 → 1, ease_in, from 30 % to 100 % of the steps). In ComfyUI it does nothing (two hooks of one LoRA node, the first kept); here it works as named. Off: the run is ComfyUI's to the bit"><input type="checkbox" id="arCfMain" /> <span translate="no">MAIN CONTROL</span></label>
+            <label class="field ar-samp-num"><span class="label">Strength at start</span><input type="number" id="arCfMainFrom" min="0" max="2" step="0.05" data-tip="MAIN CONTROL's strength where its envelope starts, multiplied into the hooked adapter's keyframes; it holds from the first step until then (his: 0)" /></label>
+            <label class="field ar-samp-num"><span class="label">Strength at end</span><input type="number" id="arCfMainTo" min="0" max="2" step="0.05" data-tip="MAIN CONTROL's strength where its envelope ends, multiplied into the hooked adapter's keyframes (his: 1)" /></label>
+            <label class="field ar-samp-num"><span class="label">Starts at %</span><input type="number" id="arCfMainP0" min="0" max="99" step="1" data-tip="The share of the steps where MAIN CONTROL's envelope starts to move (his: 30 %)" /></label>
+            <label class="field ar-samp-num"><span class="label">Ends at %</span><input type="number" id="arCfMainP1" min="1" max="100" step="1" data-tip="The share of the steps where MAIN CONTROL's envelope reaches its end strength (his: 100 %)" /></label>
+            <label class="field"><span class="label">Curve</span><select id="arCfMainHow" translate="no" data-tip="How MAIN CONTROL's strength goes from start to end: linear, ease_in (slow at first), ease_out (slow at the end) or ease_in_out (slow at both ends) (his: ease_in)"><option value="linear">linear</option><option value="ease_in">ease_in</option><option value="ease_out">ease_out</option><option value="ease_in_out">ease_in_out</option></select></label>
+          </div>
+          <div class="ar-samp-row">
+            <label class="field ar-samp-num"><span class="label">Second pass from step</span><input type="number" id="arCfStart" min="0" max="99" step="1" data-tip="A second pass starts from this step of the schedule (his AIO #4: 20 of 60); 0: from the strength" /></label>
+            <label class="check" data-tip="After a second pass, its colours put back to the picture's (ColorMatch, hm-mvgd-hm)"><input type="checkbox" id="arCfMatch" /> <span>Colours as the picture's</span></label>
+          </div>
+        </details>
+        <!-- HERESY 2332: his Ultimate Samplers Testing (JasonHoku's grid), one run on a board -->
+        <details class="ar-sampling ar-grid" id="arGrid"><summary><span class="label">Samplers grid</span> <em id="arGridSay"></em><span class="info" tabindex="-1" role="img" aria-label="About the samplers grid" data-tip="His Ultimate Samplers Testing: every sampler ticked × every schedule ticked × the steps × the CFG × the stepped adapter's strengths × the prompts, painted ComfyUI's way in one run (the painter loaded once, each prompt read once), laid out on a board: samplers down, schedules across. 64 pictures at most. The adapters on in the form stay on in every picture"></span></summary>
+          <div class="ar-grid-axis"><span class="label">Samplers</span><div class="ar-grid-chips" id="arGridSamplers"></div></div>
+          <div class="ar-grid-axis"><span class="label">Schedules</span><div class="ar-grid-chips" id="arGridSchedules"></div></div>
+          <div class="ar-samp-row">
+            <label class="field ar-samp-num"><span class="label">Steps</span><input type="text" id="arGridSteps" value="16" spellcheck="false" data-tip="One to four, by commas: 12, 16" /></label>
+            <label class="field ar-samp-num"><span class="label">CFG</span><input type="text" id="arGridCfgs" value="1.2" spellcheck="false" data-tip="One to four, by commas: 1, 1.2" /></label>
+            <label class="field ar-samp-num"><span class="label">Seeds</span><input type="number" id="arGridSeeds" min="1" max="4" step="1" value="1" data-tip="One to four: the seed above, then the next ones" /></label>
+          </div>
+          <div class="ar-samp-row">
+            <label class="field"><span class="label">Stepped adapter</span><select id="arGridAdapter" translate="no" data-tip="One adapter painted at each strength below, the others of the form as they are"><option value="">none</option></select></label>
+            <label class="field"><span class="label">Its strengths</span><input type="text" id="arGridWeights" value="0.6, 0.8, 1.0" spellcheck="false" data-tip="One to eight, by commas" /></label>
+          </div>
+          <label class="field"><span class="label">Prompts</span><textarea id="arGridPrompts" rows="3" maxlength="32000" spellcheck="false" placeholder="one a line; empty: the prompt above" data-tip="Up to eight prompts, one a line; empty: the prompt above"></textarea></label>
+          <div class="ar-reg-foot"><button type="button" class="btn small primary" id="arGridDraw">Draw the grid</button><button type="button" class="btn ghost small" id="arGridHis" data-tip="His grid «LoRA Weight #6»: Exp Heun 2 x0 SDE, ER-SDE and RES 3s × Beta 57, KL optimal and Bong tangent, 16 steps, CFG 1.2, Lightning 0.8 and the stepped adapter at 0.9">His grid</button><span class="row-hint" id="arGridCount"></span></div>
+        </details>
         <!-- HERESY 1316: the adapters of the painter's family, each at its strength -->
         <div class="ar-loras" id="arLoras">
           <div class="ar-loras-head"><span class="label">LoRA <em id="arLoraSay"></em></span>
-            <button type="button" class="btn ghost small" id="arLoraAdd" data-tip="The adapters for this painter in artwork/loras/ (its family's folder, any folders below it): pick up to four">Add…</button></div>
+            <button type="button" class="btn ghost small" id="arLoraAdd" data-tip="The adapters for this painter in models/artist/loras/ (its family's folder, any folders below it): pick up to four">Add…</button></div>
           <div class="ar-lora-list" id="arLoraList"></div>
         </div>
         <!-- HERESY 1257 (Viktor 08.10.2026: «живую проявку с латентного шума до готовой картинки… В InvokeAI можно либо выключить, либо включить») -->
@@ -2150,6 +2285,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <button type="button" role="tab" class="ps-step" data-pane="train"><span class="ps-mark">3</span><span class="ps-text"><span class="ps-name">Train</span><span class="ps-say" id="trSayTrain">a kind, the knobs, a card</span></span></button>
           <span class="ps-arrow" aria-hidden="true">›</span>
           <button type="button" role="tab" class="ps-step" data-pane="run"><span class="ps-mark">4</span><span class="ps-text"><span class="ps-name">Telemetry</span><span class="ps-say" id="trSayRun">a run: its curves and epochs</span></span></button>
+          <span class="ps-arrow" aria-hidden="true">›</span>
+          <!-- HERESY 2340: the stereo guard: a workspace of probes against the base model on the same cards -->
+          <button type="button" role="tab" class="ps-step" data-pane="stereo"><span class="ps-mark">5</span><span class="ps-text"><span class="ps-name">Stereo</span><span class="ps-say">probes against the base</span></span></button>
         </nav>
 
         <section class="tr-pane" data-pane="raw">
@@ -2180,10 +2318,11 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <div class="tr-sets" id="trSets"></div>
           <div class="tr-bar"><span class="label">Kind</span><span id="trKinds"></span><span class="row-hint" id="trKindSay"></span></div>
           <div class="tr-knobs" id="trKnobs">
-            <label class="field tr-wide tr-k-name" data-tip="The run's name: its adapters land in loras/NAME/ as NAME-eNNN, ready in the Creator. A run of the same name goes on from its last checkpoint."><span class="label">Run name</span><input type="text" id="trRunName" placeholder="fosforida-style-v1" /></label>
+            <label class="field tr-wide tr-k-name" data-tip="The run's name: its adapters land in loras/NAME/ as NAME-eNNN, ready in the Musician. A run of the same name goes on from its last checkpoint."><span class="label">Run name</span><input type="text" id="trRunName" placeholder="fosforida-style-v1" /></label>
             <label class="field" data-tip="Ruach Studio: the Studio's own trainer, on the full bf16 weights: Direct or with a score, on the songs as they are or split into voice and music. Ported from Ostris' AI-Toolkit (MIT), which left the Studio once all it trained was here."><span class="label">Trainer</span><select id="tr_engine"><option value="ruach">Ruach Studio</option></select></label>
             <label class="field" data-tip="The base model's weights while training: bf16, the full ones (a 24 GB card), or int8 for smaller cards, a little less exact."><span class="label">Base weights</span><select id="tr_quant"><option value="bf16">bf16</option><option value="int8">int8</option></select></label>
             <label class="field" data-tip="Direct: no score, for songs made in Direct mode. Full (score) and Melody: the music half also learns to write a score first, transcribed from every song by the engine before the run, for songs made in those modes; half the steps go without it, so Direct is not forgotten."><span class="label">Mode</span><select id="tr_cot"><option value="off">Direct</option><option value="full">Full (score)</option><option value="melody">Melody</option></select></label>
+            <label class="field" data-tip="Who writes the sheets of Full and Melody: Heretical (SheetSage2 with the bf16 angles it was trained with; a new set's default) or Refined (SheetSage2-Refined, anime-song's community fine-tune, not ours: odd meters, slash and tension chords, wider than what the song model knows; a run of its own, never mixed). A set keeps the transcriber its sheets were written by: a set made before 2.0.7 shows Standard (SheetSage2 with exact angles) and keeps it. Each keeps its own sheets beside the set."><span class="label">Transcriber</span><select id="tr_transcriber"><option value="sheetsage2-bf16" translate="no" selected>Heretical</option><option value="refined" translate="no">Refined</option><option value="sheetsage2" translate="no" hidden>Standard</option></select></label>   <!-- HERESY 2328, 2359, 2377: Standard only as an old set's own, read-only -->
             <label class="field" data-tip="How many epochs: every track of the set once an epoch, one track a step; the run's steps are the set's tracks times this. A small set is learnt by heart fast: the green epochs in the Telemetry are the ones to hear first, often before the last."><span class="label">Epochs</span><span class="tr-unit-in"><input type="number" id="tr_epochs" min="1" max="1000" step="1" value="30" /><span class="tr-unit" id="trStepsSay"></span></span></label>
             <label class="field" data-tip="An adapter is saved every this many epochs, down to a tenth of one (0.1: ten saves an epoch), each to be heard and compared."><span class="label">Save every</span><span class="tr-unit-in"><input type="number" id="tr_save_epochs" min="0.1" max="100" step="0.1" value="1" /><span class="tr-unit">epochs</span></span></label>
             <label class="field"><span class="label">Rank <button type="button" class="tr-howto tr-q" id="trRankHow" aria-label="How to choose" data-tip="Which rank, how many steps, the other knobs: the guide">?</button></span><input type="number" id="tr_rank" min="4" max="512" step="4" data-tip="The sound half's rank; the music half takes half of it (1:2). How wide the adapter's change is: 16 for one voice or instrument, 32 for a style, 64 for many voices, more for a large set." /></label>
@@ -2209,6 +2348,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         </section>
 
         <section class="tr-pane" data-pane="run" id="trRunPane"></section>
+        <section class="tr-pane" data-pane="stereo" id="trStereoPane"></section>
       </div>
 
       <aside class="tr-side" id="trSide">
@@ -2314,7 +2454,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
     <div class="vd-bar"><span class="vd-take" id="vdTake" translate="no"></span>
       <button type="button" class="btn small" id="vdMake">Make the plan</button>
       <button type="button" class="btn small" id="vdWrite">Write the scenes</button>
-      <button type="button" class="btn ghost small" id="vdBeats" data-tip="Every cut between shots moved to the take's nearest beat (within 0.3 s, no shot under 1.5 s), the times as sung kept beside them; the button again, or Ctrl+Z on the timeline, takes them back">Cuts on the beat</button>   <!-- HERESY 1947 -->
+      <select id="vdCutsOn" class="vd-move vd-cutson" aria-label="Cuts" data-tip="How the cuts between shots meet the music: as sung, where the words fall; on the sections, each change of section where the take's music itself changes (on its bar line or beat when one is that near), else on the nearest bar; on the beat, the sections so, then every other cut on the nearest beat within 0.3 s. No shot under 1.5 s, the times as sung kept beside them; Ctrl+Z on the timeline takes a change back. The beats and the bars heard stay on the timeline's ruler, a cut on one lit"><option value="off">Cuts as sung</option><option value="sections">Cuts on the sections</option><option value="beats">Cuts on the beat</option></select>   <!-- HERESY 1947; 2262: how strictly -->
       <button type="button" class="btn ghost small" id="vdSave">Save</button>
       <button type="button" class="btn ghost small" id="vdExport">Storyboard (.md)</button>
       <button type="button" class="btn ghost small" id="vdEditZip" data-tip="The plan as an editor's project in one zip: an OpenTimelineIO timeline and an EDL for DaVinci Resolve or Kdenlive, the sung lines as subtitles, every shot's video or picture and the take's sound">Editor (.zip)</button>   <!-- HERESY 1946 -->
@@ -2334,7 +2474,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <span class="tl-tools" role="group" aria-label="Tools"><button type="button" class="btn ghost small" data-tlact="select" aria-pressed="true" data-tip="Select (A): a click chooses a shot and puts the playhead there; an edit point dragged moves the cut">Select</button><button type="button" class="btn ghost small" data-tlact="blade" aria-pressed="false" data-tip="Blade (B): a click on a shot cuts it there">Blade</button></span>
           <button type="button" class="btn ghost small" data-tlact="split" data-tip="Cut the shot under the playhead (Ctrl+B)">Cut</button>
           <button type="button" class="btn ghost small" data-tlact="join" data-tip="Join the two shots of the edit point chosen (Delete)">Join</button>
-          <button type="button" class="btn ghost small" data-tlact="undo" data-tip="Undo the last edit of the timeline (Ctrl+Z), twenty steps back">Undo</button>
+          <button type="button" class="btn ghost small" data-tlact="undo" data-tip="Undo the last edit of the timeline (Ctrl+Z), twenty steps back">Undo</button><button type="button" class="btn ghost small" data-tlact="redo" data-tip="Redo what was undone (Ctrl+Shift+Z)">Redo</button>
           <span class="tl-gap"></span>
           <input type="range" id="tlZoom" min="1" max="9" step="0.1" value="3" aria-label="Zoom" data-tip="The zoom: Ctrl and the wheel over the timeline, + and −" />
           <button type="button" class="btn ghost small" data-tlact="fit" data-tip="The whole song in the timeline (Shift+Z)">Fit</button>
@@ -2347,6 +2487,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       </section>
       <section class="vd-pane" data-vdpane="shots" role="tabpanel">
         <div class="vd-shotnav"><button type="button" class="btn ghost small" id="vdPrev" aria-label="The shot before" data-tip="The shot before (Alt+←)">‹</button><span class="mono vd-shotat" id="vdShotAt"></span><button type="button" class="btn ghost small" id="vdNext" aria-label="The shot after" data-tip="The shot after (Alt+→)">›</button><span class="row-hint">the strip: a click a shot, a double click plays from it</span><span class="vd-panetools">
+        <button type="button" class="btn ghost small" id="vdSplitLong" data-tip="Every shot longer than one pass of MiniMax H3 at 1280 × 704 (about 5 s) cut into pieces of one pass, so no seam of two passes falls inside a shot: the first piece keeps its picture and video, the others get pictures of their own from the same scene">✂ Cut the long shots</button>   <!-- HERESY 2356 -->
         <button type="button" class="btn ghost small" id="vdDrawAll" data-tip="The Artist draws every shot that has no picture yet, two at a time on the free cards: the hero's shots from the hero's picture (Qwen-Image 2.1, then 2512 over it), the others by 2512 from their scene; each picture goes into its shot as it comes">🎨 Draw the shots</button>   <!-- HERESY 1913 -->
         <button type="button" class="btn ghost small" id="vdShootAll" data-tip="Every shot with MiniMax H3 as a draft (8 steps), shot by shot on the free cards; a shot's picture, when it has one, is its first frame">🎬 Shoot all</button>   <!-- HERESY 1868 -->
         <button type="button" class="btn ghost small" id="vdUpAll" data-tip="SeedVR2 7B sharp to 1080p for every shot that has a video and no upscale yet, dealt among the free cards; the clip takes each one as it comes">⇮ Upscale all</button>   <!-- HERESY 1876b -->
@@ -2357,7 +2498,9 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       <section class="vd-pane" data-vdpane="look" role="tabpanel">
         <label class="field vd-brief"><span class="label">The idea of the clip</span><textarea id="vdBrief" rows="2" translate="no" data-tip="The clip's idea in a line or a few: what it is about, its mood, its story. The Writer writes the look and the scenes from it"></textarea></label>   <!-- HERESY 1913 -->
         <div class="vd-titles"><label class="field"><span class="label">The title shown</span><input type="text" id="vdClipTitle" maxlength="200" translate="no" autocomplete="off" data-tip="The title over the clip's first seconds; empty: the take's own" /></label>
-          <label class="field"><span class="label">Credits</span><textarea id="vdCredits" rows="2" maxlength="1000" translate="no" data-tip="The closing lines over the clip's last seconds, one a line: who sang, wrote, painted, shot"></textarea></label></div>   <!-- HERESY 1948 -->
+          <label class="field"><span class="label">Credits</span><textarea id="vdCredits" rows="2" maxlength="1000" translate="no" data-tip="The closing lines over the clip's last seconds, one a line: who sang, wrote, painted, shot"></textarea></label>
+          <label class="field"><span class="label">Author</span><input type="text" id="vdAuthor" maxlength="200" translate="no" autocomplete="off" data-tip="Who wrote the song, in a smaller line under the title" /></label>
+          <label class="field"><span class="label">The verse</span><input type="text" id="vdVerse" maxlength="200" translate="no" autocomplete="off" data-tip="The verse's address under the title, as John 1:5" /></label></div>   <!-- HERESY 1948; 2246: the author and the verse -->
         <h4 class="mini">The look of the clip</h4>
         <div class="vd-look">
           <label class="field"><span class="label">Who is in it</span><textarea id="vdLook-characters" rows="2" translate="no" data-tip="Who is in the clip: each person as they look, the same in every shot"></textarea></label>
@@ -2366,6 +2509,12 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
           <label class="field"><span class="label">Through the song</span><textarea id="vdLook-notes" rows="2" translate="no" data-tip="How the clip moves through the song: its line from the first shot to the last"></textarea></label>
         </div>
         <div class="vd-hero-row"><span class="label">The hero</span><div class="vd-hero" id="vdHero"></div></div>   <!-- HERESY 1913: the same face through the clip -->
+        <div class="vd-look">   <!-- HERESY 2356: the places in a frame; the hero in his own words, and his skin -->
+          <label class="field"><span class="label">Places in a frame</span><select id="vdPlaces" aria-label="Places in a frame" data-tip="How the pictures hold the clip's places: several in one frame, as slices side by side, or one place in each frame (the Writer is asked for one place then)"><option value="slices">Several places in a frame (slices)</option><option value="one">One place per frame</option></select></label>
+          <div class="field" id="vdHeroWordsBox" hidden><span class="label">The hero in words</span><textarea id="vdHeroWords" rows="2" translate="no" data-tip="The hero picture's own words: the one line about him in every prompt, Qwen-Image 2.1's, 2512's and MiniMax H3's"></textarea>
+            <button type="button" class="btn ghost small" id="vdHeroSkin" data-vdheroskin="1" aria-pressed="true" data-tip="Pressed: the hero has a person's skin, and 2512 lays its Skin Detailer over him; not pressed: wood, clay, a puppet or a creature, no Skin Detailer">Human skin</button>
+            <button type="button" class="btn ghost small" id="vdHeroLast" data-vdherolast="1" aria-pressed="false" data-tip="Pressed: in the hero's shots MiniMax H3 gets the hero's own picture as the last frame too (FL2VA), so his likeness holds through the motion; such a shot ends on that picture. Not pressed: the shot's picture as its first frame alone">Hero as the last frame</button></div>   <!-- HERESY 2361 -->
+        </div>
       </section>
       <section class="vd-pane" data-vdpane="films" role="tabpanel">
         <div class="vd-panebar">
@@ -2373,8 +2522,15 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
         <button type="button" class="btn ghost small" id="vdClip" data-tip="The clip cut from the shots' pictures in the song's time, each with a slow camera move as its scene's camera says; a shot without a picture of its own shows the take's cover, or its words and scene when the take has none. Made on the processor, no video model.">Clip</button>
         <button type="button" class="btn ghost small" id="vdClipTitles" aria-pressed="false" data-tip="The song's title over the clip's first seconds and the credits over its last ones, both as written in «The idea and the look»">Titles on the clip</button>   <!-- HERESY 1948 -->
         <button type="button" class="btn ghost small" id="vdClipLyrics" aria-pressed="false" data-tip="The sung lines burnt into the clip, each in its own time from the take's timing, at the foot of the picture">Lyrics on the clip</button>   <!-- HERESY 1916 -->
-        <select id="vdClipBetween" class="vd-move" aria-label="Between sections" data-tip="How the clip passes from one section of the song to the next: a plain cut, through black, a flash of white, or a dissolve (the next section fading in over the last one's last half second); within a section the shots cut"><option value="cut">a cut</option><option value="black">through black</option><option value="flash">a flash</option><option value="dissolve">a dissolve</option></select>   <!-- HERESY 1949 -->
-        <select id="vdClipShape" class="vd-move" aria-label="The clip's shape" data-tip="The clip's shape: wide 16:9 (1920 × 1080) for a screen, tall 9:16 (1080 × 1920) for a phone's stories and shorts, square 1:1 (1080 × 1080); each shape is a clip of its own, the pictures cropped to it"><option value="16:9">16:9 wide</option><option value="9:16">9:16 tall</option><option value="1:1">1:1 square</option></select>   <!-- HERESY 1917 --></div>
+        <select id="vdClipWords" class="vd-move" aria-label="How the lyrics show" data-tip="How the sung lines show: a whole line at a time, or word by word, each word lit warm gold as it is sung (Whisper's own time for each word it heard, the rest shared between them)"><option value="lines">lyrics: whole lines</option><option value="words">lyrics: word by word</option></select>   <!-- HERESY 2248 -->
+        <select id="vdClipTitleStyle" class="vd-move" aria-label="The titles' template" data-tip="Where the title stands: in the middle of the picture, as a lower third on a dark band at the left of the foot, or small in the top corner; the author and the verse go in a smaller line under it"><option value="centre">titles in the middle</option><option value="lower">a lower third</option><option value="corner">titles in the corner</option></select>   <!-- HERESY 2246 -->
+        <select id="vdClipBetween" class="vd-move" aria-label="Between sections" data-tip="How the clip passes between shots: a plain cut, through black, a flash of white, a dissolve, through white, a push (the next shot sliding the last one out) or a zoom; where, the next picker says, and a shot can choose its own on its card"><option value="cut">a cut</option><option value="black">through black</option><option value="flash">a flash</option><option value="dissolve">a dissolve</option><option value="white">through white</option><option value="push">a push</option><option value="zoom">a zoom</option></select>   <!-- HERESY 1949; 2243 -->
+        <select id="vdClipEvery" class="vd-move" aria-label="Where the passes fall" data-tip="Where the passes fall: only where a section of the song changes, or at every cut"><option value="sections">at the sections</option><option value="every">at every cut</option></select>   <!-- HERESY 2243 -->
+        <select id="vdClipShape" class="vd-move" aria-label="The clip's shape" data-tip="The clip's shape and where it goes: wide 16:9 (1920 × 1080) for a screen, tall 9:16 (1080 × 1920) for Shorts, Reels and stories, square 1:1 (1080 × 1080), YouTube 4K (3840 × 2160), Telegram (1280 × 720, a lighter file); each is a clip of its own, the pictures cropped to it"><option value="16:9">16:9 wide</option><option value="9:16">9:16 tall</option><option value="1:1">1:1 square</option><option value="4k">YouTube 4K</option><option value="tg">Telegram 720p</option></select>   <!-- HERESY 1917; 2244 -->
+        <select id="vdClipReframe" class="vd-move" aria-label="The crop" data-tip="How a picture is cropped to a narrower shape: where each shot's own focus says, in the middle, or around its subject (found in the picture where no focus was set by hand)"><option value="hand">crop: as set</option><option value="centre">crop: the middle</option><option value="subject">crop: the subject</option></select>
+        <select id="vdClipMatch" class="vd-move" aria-label="The colour match" data-tip="Every picture's colours moved towards the picture of the shot in hand (its mean and spread in each colour), so pictures painted apart become one film; the shot in hand when the clip is made is the one followed"><option value="none">colours as painted</option><option value="cur">colours as the shot in hand</option></select>   <!-- HERESY 2249 -->   <!-- HERESY 2244 -->
+        <select id="vdClipUp" class="vd-move" aria-label="The upscale" data-tip="How a shot's video comes to the clip's size: by Lanczos, as MiniMax H3 drew it (nothing invented), or SeedVR2's upscale where a shot has one (sharper, and its own faces)"><option value="lanczos">upscale: Lanczos, as H3 drew it</option><option value="seedvr2">upscale: SeedVR2 where made</option></select>   <!-- HERESY 2356 -->
+        <button type="button" class="btn ghost small" id="vdClipDraft" aria-pressed="false" data-tip="The clip at a third of its size, quickly encoded, to see the cut, the passes and the titles in a moment before the full one; a file of its own beside the clip">Quick draft</button>   <!-- HERESY 2245 --></div>
         <button type="button" class="btn ghost small" id="vdClipLook" data-tip="The clip's colour: a look over every picture, a 3D LUT as a colourist lays one, from a breath of it to all of it; the lyrics and the titles stay as they are">Look</button>   <!-- HERESY 2010 -->
         <p class="row-hint vd-films-none">No animatic or clip yet: «Animatic» and «Clip» make them.</p>
         <!-- HERESY 1837: the animatic, the plan in the song's time -->
@@ -2639,7 +2795,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
       <span class="log-dock-views" id="logDockViews" role="tablist" aria-label="Which log">
         <button type="button" role="tab" class="log-view is-on" data-view="server" aria-selected="true" data-tip="The server's log: the engine and the lab">Server</button>
         <!-- HERESY 1630 (Viktor 20.10.2026: «добавь ещё вкладку с фильтрацией по Creator, Trainer, Refiner»): the same lines, each room's own (app.js logSrc) -->
-        <button type="button" role="tab" class="log-view" data-view="creator" aria-selected="false" data-tip="The Creator's lines of the server's log: the engine's own, the page's and the lab's for songs">Creator</button>
+        <button type="button" role="tab" class="log-view" data-view="creator" aria-selected="false" data-tip="The Musician's lines of the server's log: the engine's own, the page's and the lab's for songs">Musician</button>
         <button type="button" role="tab" class="log-view" data-view="writer" aria-selected="false" data-tip="The Writer's lines of the server's log: its own model starting, answering and leaving its card">Writer</button>   <!-- HERESY 1990: the rooms' order, and the Writer -->
         <button type="button" role="tab" class="log-view" data-view="refiner" aria-selected="false" data-tip="The Refiner's lines of the server's log: stems, remaster, upscale, the gateway, the DAW's mixes">Refiner</button>
         <button type="button" role="tab" class="log-view" data-view="artist" id="logViewArtist" translate="no" aria-selected="false" data-tip="The Artist's own log: what was asked, what the lab answered, each run's way to its end; kept in this browser">Artist</button>
@@ -2683,6 +2839,14 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
   With a score already under <i>Supply your own score</i> (planned, pasted or transcribed from a recording), that score is converted instead.
   Your style and lyrics fields stay as you wrote them.
 </template>
+<!-- HERESY 2264: the planning modes' words, once under each name, behind the (i) beside Planning mode -->
+<template id="tip-modes">
+  <dl>
+    <dt>Full plan</dt><dd>Melody and chords written first, then rendered. Best for new songs.</dd>
+    <dt>Melody only</dt><dd>Melody plan, free accompaniment. Recommended for covers.</dd>
+    <dt>Direct</dt><dd>Straight from lyrics and style, no editable score.</dd>
+  </dl>
+</template>
 <template id="tip-loras">
   <span class="tip-kind">LoRA &middot; add-on, not stock</span>
   <p>A LoRA is a small file of weight changes someone trained on a style, a genre or an artist.
@@ -2702,9 +2866,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
   <p>The last step of every song. The model writes the song as a compact description, and the VAE
     turns it into audio. It changes the tone and clarity, not the notes. One per song.</p>
   <dl data-fill="vaes">
-    <dt>Standard</dt><dd><code>m-a-p/YuE2-Vae</code><br />current official, best sound</dd>
-    <dt>Legacy</dt><dd><code>m-a-p/YuE2-Vae-legacy</code><br />older official, used for the published scores</dd>
-    <dt>Blend</dt><dd><code>Mothersuperior/YuE2-Vae-merge-0.666</code><br />community mix, &#8532; Standard + &#8531; Legacy</dd>
+    <dt>Standard</dt><dd><code>m-a-p/YuE2-Vae</code><br />m-a-p's decoder, released with YuE2</dd>
   </dl>
   <p>A finished song can get another VAE version from its page, in seconds.</p>
 </template>
@@ -2736,6 +2898,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
   <dl>
     <dt>MERT</dt><dd><code>m-a-p/MERT-v2-FullSong</code><br />listens to the recording</dd>
     <dt>SheetSage</dt><dd><code>m-a-p/SheetSage2</code><br />writes what it hears as a score</dd>
+    <dt>Refined</dt><dd><code>anime-song/SheetSage2-Refined</code><br />the same ear, a retrained writer: odd meters, slash and tension chords, keys with modes</dd>
   </dl>
   <p>Both run inside the server from one converted file, in its queue like a song. The score loads
     into "Supply your own score" and the song model follows it. WAV and MP3 go up as they are;
@@ -2783,7 +2946,6 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 <script src="heresy-gpulive.js"></script>
 <script src="heresy-settings.js"></script>
 <script src="heresy-i18n.js"></script>
-<script src="heresy-logo-words.js"></script>
 <script src="heresy-i18n-ru.js"></script>
 <script src="heresy-i18n-uk.js"></script>
 <script src="heresy-i18n-be.js"></script>
@@ -2795,6 +2957,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 <script src="heresy-i18n-de.js"></script>
 <script src="heresy-i18n-ja.js"></script>
 <script src="heresy-i18n-zh.js"></script>
+<script src="heresy-i18n-he.js"></script>   <!-- HERESY 2331: Hebrew, the page right to left -->
+<script src="heresy-rtl.js"></script>   <!-- HERESY 2331: the page mirrored while it reads right to left, and what stays left to right (time, sliders, code) -->
 <script>RuachI18n.start();</script>
 <script src="examples.js"></script>
 <script src="instrumental.js"></script>
@@ -2810,6 +2974,7 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 <script src="heresy-collection.js"></script>
 <script src="heresy-textprep.js"></script>
 <script src="heresy-lyrics.js"></script>
+<script src="heresy-worn.js"></script>   <!-- HERESY 2350: the worn words of each language (Timon's cherry ⑥) -->
 <script src="heresy-recite.js"></script>
 <script src="heresy-find.js"></script>
 <script src="heresy-complete.js"></script>
@@ -2817,8 +2982,10 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 <script src="heresy-writer.js"></script>
 <script src="heresy-versions.js"></script>
 <script src="heresy-train.js"></script>
+<script src="heresy-traindoc.js"></script>   <!-- HERESY 2351: the dataset doctor under the picked folder (Timon's cherry ③) -->
 <script src="heresy-bankbuilder.js"></script>
 <script src="heresy-gpus.js"></script>
+<script src="heresy-waitguard.js"></script>   <!-- HERESY 2319: the wait guard before a song or a reading -->
 <script src="heresy-topology.js"></script>   <!-- HERESY 2085: Engine → Hardware → Topology -->
 <script src="heresy-perf.js"></script>   <!-- HERESY 1821 -->
 <script src="heresy-video.js"></script>   <!-- HERESY 1824 -->
@@ -2837,6 +3004,8 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 <script src="heresy-https.js"></script>   <!-- HERESY 1985: the Studio over https -->   <!-- HERESY 1988: a take's family tree -->   <!-- HERESY 1977: the Pianoteq step's own panel -->
 <script src="heresy-gate.js"></script>   <!-- HERESY 1547: the Digital Gateway's panel -->
 <script src="heresy-progress.js"></script>   <!-- HERESY 1549: the lab's work, a bar each above the player -->
+<script src="heresy-sysbar.js"></script>   <!-- HERESY 2299: the system bar under the header -->
+<script src="heresy-bars.js"></script>   <!-- HERESY 2313: a take's bar grid (the DAW's, the Videographer's) -->
 <script src="heresy-mixdsp.js"></script>   <!-- HERESY 1531: the mixer's compressor and meters (worklet or script processor) -->
 <script src="heresy-mixer.js"></script>   <!-- HERESY 1471: the Refiner's DAW -->
 <script src="heresy-console.js"></script>   <!-- HERESY 1531: the DAW's console and devices -->
@@ -2845,9 +3014,12 @@ Blend · an add-on: two thirds Standard, one third Legacy"></select></label>
 <script src="heresy-zoom.js"></script>
 <script src="heresy-spectrum.js"></script>
 <script src="heresy-wavescope.js"></script>
+<script src="heresy-livespec.js"></script>   <!-- HERESY 2354: the live spectrum behind the player -->
 <script src="heresy-midi.js"></script>
 <script src="heresy-iconbtn.js"></script>   <!-- HERESY 1593: the common acts' buttons as icons -->   <!-- HERESY 1589: the Studio's MIDI -->
 <script src="heresy-roll.js"></script>   <!-- HERESY 1578: the Creator's piano roll -->   <!-- HERESY 1374: the wave's scope -->
+<script src="heresy-reader-i18n.js"></script>   <!-- HERESY 2241: the Reader's words by stable ids, thirteen languages (kept home with the room) -->
+<script src="heresy-reader.js"></script>   <!-- HERESY 2241: the Reader, its tab, view and log view its own, before app.js binds the bar (kept home until turnkey) -->
 <script src="themes.js"></script>
 <script src="app.js"></script>
 </body>

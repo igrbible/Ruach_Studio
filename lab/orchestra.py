@@ -7,7 +7,7 @@ a take's stems into MIDI parts with their own dynamics, and the parts back into 
     fundamental and two harmonics; a drum by its kit piece's band) over the 50 ms from its onset, the part's loud end (its 98th percentile)
     at 127 and the rest by the General MIDI curve (the level in dB is 40·log10 of the velocity's share of 127);
   · write_mid(): notes.json's notes with those velocities into a MIDI file, a track an instrument, the drums on channel 10;
-  · library(): the sets under models/instruments/<set>/: SFZ instruments (sfizz) and SF2 banks with their presets (FluidSynth; SF3 needs
+  · library(): the sets under models/refiner/instruments/<set>/: SFZ instruments (sfizz) and SF2 banks with their presets (FluidSynth; SF3 needs
     libsndfile, which our FluidSynth is built without);
   · render(): a part through an SFZ (sfizz_render) or an SF2 preset (fluidsynth -F, raw PCM wrapped by ffmpeg) into a 48 kHz WAV, faster than
     the song. The renderers are built by heresy/MISC/claude-tc/midi/build-renderers.sh into build/build-sfizz and build/build-fluidsynth."""
@@ -17,6 +17,8 @@ import struct
 import subprocess
 import tempfile
 from pathlib import Path
+
+import paths                       # HERESY 2330: where the weights live
 
 GROUPS = ("acoustic_piano", "electric_piano", "chromatic_percussion", "organ", "acoustic_guitar", "clean_electric_guitar",
           "distorted_electric_guitar", "acoustic_bass", "electric_bass", "violin", "viola", "cello", "contrabass", "orchestral_harp", "timpani",
@@ -189,10 +191,10 @@ _LIB = {}
 
 
 def library(kit, fresh=False):
-    """The instrument sets: [{set, kind: sfz|sf2, file (under models/instruments), name, presets (sf2)}], archives left out; kept a minute
+    """The instrument sets: [{set, kind: sfz|sf2, file (under models/refiner/instruments), name, presets (sf2)}], archives left out; kept a minute
     (HERESY 1884: the page asks often, the sets are thousands of files)."""
     import time as _t
-    root = Path(kit) / "models" / "instruments"
+    root = paths.at(paths.REFINER_INSTRUMENTS, kit)
     hit = _LIB.get(str(root))
     if hit and not fresh and _t.time() - hit[0] < 60:
         return hit[1]
@@ -293,8 +295,8 @@ def _render_kit(kit, mid, inst, out, rate):
 
 def render(kit, mid, inst, out, rate=48000):
     """A MIDI file through one instrument into a WAV at rate: inst {kind: sfz, file} (every channel to it) or {kind: sf2, file[, bank,
-    preset]} (the file's own program changes, or every part to bank:preset). file is under models/instruments. Returns out."""
-    root = Path(kit) / "models" / "instruments"
+    preset]} (the file's own program changes, or every part to bank:preset). file is under models/refiner/instruments. Returns out."""
+    root = paths.at(paths.REFINER_INSTRUMENTS, kit)
     f = root / inst["file"]
     if not f.is_file():
         raise FileNotFoundError(f"no instrument {inst['file']}")
@@ -387,7 +389,7 @@ GM_BANKS = ("generaluser-gs/GeneralUser-GS.sf2", "musescore-general/MuseScore_Ge
 
 
 def gm_bank(kit):
-    root = Path(kit) / "models" / "instruments"
+    root = paths.at(paths.REFINER_INSTRUMENTS, kit)
     return next((b for b in GM_BANKS if (root / b).is_file()), None)
 
 
@@ -418,7 +420,7 @@ def set_map(kit, group, inst, d=None):
         if inst.get("kind") not in ("sfz", "sf2", "split"):
             raise ValueError("an instrument is sfz, sf2 or split")
         for f in ([inst] if inst["kind"] != "split" else [x[2] for x in inst.get("ranges", [])]):
-            if not (Path(kit) / "models" / "instruments" / f.get("file", "")).is_file():
+            if not (paths.at(paths.REFINER_INSTRUMENTS, kit) / f.get("file", "")).is_file():
                 raise FileNotFoundError(f"no instrument {f.get('file')}")
     f = map_file(kit, d)
     try:
@@ -516,7 +518,7 @@ def make_version(kit, d, source, inst=None, mode="instead", shift=12, size="", j
             g = "drums" if prog == 128 else next((i.get("label") for i in _inst if int(i.get("program", -1)) == prog), None)
             use = cmap.get(g) or ({"kind": "sf2", "file": gm} if gm else None)
             if use is None:
-                raise FileNotFoundError("no instrument for it: no GM bank here (models/instruments)")
+                raise FileNotFoundError("no instrument for it: no GM bank here (" + paths.REFINER_INSTRUMENTS + ")")
         part_wav = tmp / f"part-{prog}.wav"
         if use["kind"] == "split":
             render_split(kit, ns, vs, [(lo, hi, x) for lo, hi, x in use["ranges"]], part_wav, rate)
@@ -602,10 +604,10 @@ SILENT_DB = -50.0
 
 def sounds(kit, inst, stem):
     """The peak in dB of six notes of a stem's range played by inst (through its keymap, a split one by sections), heard once and kept
-    in models/instruments/_keymaps/_sounds.json; an instrument that fails to render is silent (and not kept, so it is heard again)."""
+    in models/refiner/instruments/_keymaps/_sounds.json; an instrument that fails to render is silent (and not kept, so it is heard again)."""
     import numpy as np
     import soundfile as sf
-    store = Path(kit) / "models" / "instruments" / KEYMAPS / SOUNDS
+    store = paths.at(paths.REFINER_INSTRUMENTS, kit) / KEYMAPS / SOUNDS
     seen = json.load(open(store, encoding="utf-8")) if store.is_file() else {}
     files = [r[2]["file"] for r in inst["ranges"]] if inst["kind"] == "split" else [inst["file"]]
     tag = "|".join(files + [stem, inst.get("keymap", ""), str(inst.get("preset", ""))])
@@ -638,7 +640,7 @@ def suggest(kit, stem, most=12):
     words, nots = WORDS.get(stem, ()), NOT.get(stem, ())
     if not words:
         return out
-    root = Path(kit) / "models" / "instruments"
+    root = paths.at(paths.REFINER_INSTRUMENTS, kit)
     out += [{"label": lb, "instrument": {"kind": "sf2", "file": f, "label": lb}} for lb, f in GM_LIKED if (root / f).is_file()
             and sounds(kit, {"kind": "sf2", "file": f}, stem) > SILENT_DB]
     lib = library(kit)
@@ -687,7 +689,7 @@ def suggest(kit, stem, most=12):
 # Every key played once through it, each one's sound, pitch (pyin) and band measured; a pitched instrument's offset between the key and what
 # it sounds (Karoryfer's basses sound an octave under the key, as a bass's part is written) and the keys that sound with a pitch (a key that
 # sounds without one is a noise or a switch: never played); a note moved by that offset, and by octaves into the range when outside it.
-# Probed once an instrument, kept under models/instruments/_keymaps/.
+# Probed once an instrument, kept under models/refiner/instruments/_keymaps/.
 KEYMAPS = "_keymaps"
 
 
@@ -719,7 +721,7 @@ def probe(kit, inst, gap=0.7, length=0.45):
 
 def keymap(kit, inst, fresh=False):
     """{offset, low, high, keys} of a pitched SFZ, heard (probe) and kept: what to play for a pitch is pitch − offset, inside [low, high]."""
-    root = Path(kit) / "models" / "instruments"
+    root = paths.at(paths.REFINER_INSTRUMENTS, kit)
     cache = root / KEYMAPS / (inst["file"].replace("/", "__") + ".json")
     if cache.is_file() and not fresh:
         km = json.load(open(cache, encoding="utf-8"))

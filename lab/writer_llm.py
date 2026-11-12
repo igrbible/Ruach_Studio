@@ -25,8 +25,9 @@ from pathlib import Path
 
 import gpu_guard
 import gpu_roles
+import paths                       # HERESY 2330: where the weights live
 
-DIR = "checkpoints/Qwopus3.5-9B-GGUF/"
+DIR = paths.WRITER + "/Qwopus3.5-9B-GGUF/"
 VARIANTS = {
     "quality": {"file": DIR + "Qwopus3.5-9B-v3-AR-Q4_0.gguf", "need_mb": 7600, "label": "quality"},     # 6.7 GB, the embeddings stay in RAM
     "compact": {"file": DIR + "Qwopus3.5-9B-v3-AR-compact.gguf", "need_mb": 6600, "label": "compact"},   # 5.5 GB
@@ -242,14 +243,28 @@ def _card(kit, need):
 
 # HERESY 1990: what the Writer's model does, said in the Studio's log (the lab sets it to its act_say; the Writer's view of the log shows these lines)
 SAY = None
+# HERESY 2206: what was said before the lab gave its log: the takeover at the lab's start happens in the idle thread this module starts as it is imported,
+# before lab.py reaches speak(); kept here (the last 20) and said when it does
+EARLY = []
+
+
+def speak(say):
+    """HERESY 2206: the Studio's log for the Writer's lines, and what was said before it was given, said into it now (in the order it came)."""
+    global SAY
+    SAY = say
+    while EARLY:
+        _say(EARLY.pop(0))
 
 
 def _say(text):
-    if SAY:
-        try:
-            SAY("the Writer · " + text)
-        except Exception:  # noqa: BLE001 — the log is a courtesy, never a reason to fail an answer
-            pass
+    if not SAY:
+        EARLY.append(text)
+        del EARLY[:-20]
+        return
+    try:
+        SAY("the Writer · " + text)
+    except Exception:  # noqa: BLE001 — the log is a courtesy, never a reason to fail an answer
+        pass
 
 
 def ensure(kit):

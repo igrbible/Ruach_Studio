@@ -50,18 +50,18 @@ with tempfile.TemporaryDirectory() as t:
     safetensors(L / "kohya/sv.safetensors", {"ss_base_model_version": "yue2"})
     safetensors(L / "bare.safetensors", {})
     safetensors(L / "YuE2-RS-FW/YuE2-RS-FW-e002.4.safetensors", {}); run(kit, "YuE2-RS-FW", "")
-    gguf(kit / "models/YuE2-3B-BF16.gguf", None)
-    gguf(kit / "models/YuE2-3B-IRA-BF16.gguf", "loras/hf/style.safetensors@0.75,0; heresy/MISC/x/nar.safetensors@0,0.5")
-    gguf(kit / "models/YuE2-3B-RS-FW-2.4x0.75-BF16.gguf", "loras/YuE2-RS-FW/YuE2-RS-FW-e002.4.safetensors@0.75,0.75")
-    gguf(kit / "models/YuE2-3B-RS-FW-2.4-voice-BF16.gguf", "loras/voice-a/voice-a-e010.safetensors@0.5,0.5")
-    gguf(kit / "models/Other-7B.gguf", None)
+    gguf(B.paths.engine_gguf("YuE2-3B-BF16.gguf", kit), None)
+    gguf(B.paths.engine_gguf("YuE2-3B-IRA-BF16.gguf", kit), "loras/hf/style.safetensors@0.75,0; heresy/MISC/x/nar.safetensors@0,0.5")
+    gguf(B.paths.engine_gguf("YuE2-3B-RS-FW-2.4x0.75-BF16.gguf", kit), "loras/YuE2-RS-FW/YuE2-RS-FW-e002.4.safetensors@0.75,0.75")
+    gguf(B.paths.engine_gguf("YuE2-3B-RS-FW-2.4-voice-BF16.gguf", kit), "loras/voice-a/voice-a-e010.safetensors@0.5,0.5")
+    gguf(B.paths.engine_gguf("Other-7B.gguf", kit), None)
     # HERESY 2111: the Tsunami Wave, RS-TW 2.0 folded over RS-FW 2.4 (its merges' header lists both), a run on its trainer base, a model told by name only
     safetensors(L / "tw-voice/tw-voice-e004.safetensors", {"studio": "ruach"}); run(kit, "tw-voice", "yue2_3b_RS-TW-2.0x0.75_bf16.safetensors")
     safetensors(L / "YuE2-RS-TW/YuE2-RS-TW-e002.0.safetensors", {}); run(kit, "YuE2-RS-TW", "yue2_3b_RS-FW-e002.4-m0.75-s0.75_bf16.safetensors")
     TW_SAID = "loras/YuE2-RS-FW/YuE2-RS-FW-e002.4.safetensors@0.75,0.75; loras/YuE2-RS-TW/YuE2-RS-TW-e002.0.safetensors@{0},{0}"
-    gguf(kit / "models/YuE2-3B-RS-TW-2.0x0.75-BF16.gguf", TW_SAID.format("0.75"))
-    gguf(kit / "models/YuE2-3B-RS-TW-2.0x0.9-Q8_0.gguf", TW_SAID.format("0.9"))
-    gguf(kit / "models/YuE2-3B-RS-TW-2.0x0.75-Q6_K.gguf", None)
+    gguf(B.paths.engine_gguf("YuE2-3B-RS-TW-2.0x0.75-BF16.gguf", kit), TW_SAID.format("0.75"))
+    gguf(B.paths.engine_gguf("YuE2-3B-RS-TW-2.0x0.9-Q8_0.gguf", kit), TW_SAID.format("0.9"))
+    gguf(B.paths.engine_gguf("YuE2-3B-RS-TW-2.0x0.75-Q6_K.gguf", kit), None)
 
     check("names: an RS-FW epoch from a checkpoint, a model, a LoRA file", B.line_of("yue2_3b_RS-FW-e003.4-m0.75-s0.75_bf16.safetensors") == ("fw", "3.4")
           and B.line_of("YuE2-3B-RS-FW-2.4x0.75-BF16.gguf") == ("fw", "2.4") and B.line_of("YuE2-RS-FW-e004.safetensors") == ("fw", "4.0"))
@@ -117,5 +117,35 @@ with tempfile.TemporaryDirectory() as t:
     check("fit by families: tw/tw same at its epoch, tw/fw near either way, tw/yue2 other either way", B.fit(("tw", "2.0"), ("tw", "2.0")) == "same"
           and B.fit(("tw", "2.0"), ("fw", "2.4")) == "near" and B.fit(("fw", "2.4"), ("tw", "2.0")) == "near" and B.fit(("tw", "2.0"), ("yue2", "")) == "other"
           and B.fit(("yue2", ""), ("tw", "2.0")) == "other" and B.fit(("fw", "2.4"), ("yue2", "")) == "other" and B.fit(("fw", "2.4"), ("fw", "3.4")) == "near")
+
+# HERESY 2216: the Tsunami Wave's adapter under its run's own folder, not at the path the merge's header names: inside by its step
+with tempfile.TemporaryDirectory() as t:
+    kit = Path(t)
+    L = kit / "loras"
+    FW24 = "yue2_3b_RS-FW-e002.4-m0.75-s0.75_bf16.safetensors"
+    safetensors(L / "YuE2-RS-FW/YuE2-RS-FW-e002.4.safetensors", {}); run(kit, "YuE2-RS-FW", "")
+    safetensors(L / "a-run/a-run-e002.safetensors", {"studio": "Ruach Studio", "step": "231948", "base_model": FW24})
+    safetensors(L / "a-run/a-run-e001.safetensors", {"studio": "Ruach Studio", "step": "115974", "base_model": FW24})
+    safetensors(L / "other/other-e002.safetensors", {"step": "231948", "base_model": "yue2_3b_bf16.safetensors"})
+    SAID = "loras/YuE2-RS-FW/YuE2-RS-FW-e002.4.safetensors@0.75,0.75; loras/YuE2-RS-TW/YuE2-RS-TW-e002.0.safetensors@0.75,0.75"
+    gguf(B.paths.engine_gguf("YuE2-3B-RS-TW-2.0x0.75-BF16.gguf", kit), SAID)
+    gguf(B.paths.engine_gguf("YuE2-3B-RS-TW-2.0x0.9-BF16.gguf", kit), SAID)
+    rec = B.paths.at(B.paths.ENGINE_FINETUNES, kit) / "RS-TW-2.0x0.75"   # HERESY 2330: the merge's record beside its GGUFs, in its own folder
+    rec.mkdir(parents=True, exist_ok=True)
+    (rec / "YuE2-3B-RS-TW-2.0x0.75.json").write_text(json.dumps({"merge": "YuE2-3B-RS-TW-2.0x0.75", "files": {"YuE2-3B-RS-TW-2.0x0.75-BF16.gguf": {"bytes": 1}}}))
+    (rec / "comfy-made.json").write_text(json.dumps({"merge": "RS-TW-2.0x0.75", "tw_step": "231948"}))
+    (B.paths.at(B.paths.ENGINE_FINETUNES, kit) / "notes").mkdir(parents=True)
+    (B.paths.at(B.paths.ENGINE_FINETUNES, kit) / "notes" / "broken.json").write_text("{not json")
+    r = B.report(kit, "YuE2-3B-RS-TW-2.0x0.75-BF16.gguf", [])["loras"]
+    check("2216: the TW adapter under its run's folder is inside by its step; its other epoch and a YuE2 adapter of the same step are not",
+          r["a-run/a-run-e002.safetensors"]["inside"] and not r["a-run/a-run-e001.safetensors"]["inside"] and not r["other/other-e002.safetensors"]["inside"]
+          and r["YuE2-RS-FW/YuE2-RS-FW-e002.4.safetensors"]["inside"], r)
+    n = B.report(kit, "YuE2-3B-RS-TW-2.0x0.9-BF16.gguf", ["a-run/a-run-e002.safetensors"])["loras"]
+    check("2216: a model no merge record names says nothing by step (inside stays as its header says)", not n["a-run/a-run-e002.safetensors"]["inside"]
+          and B.merge_step(kit, "YuE2-3B-RS-TW-2.0x0.9-BF16.gguf") == "" and B.merge_step(kit, "YuE2-3B-RS-TW-2.0x0.75-BF16.gguf") == "231948", n)
+    safetensors(L / "YuE2-RS-TW/YuE2-RS-TW-e002.0.safetensors", {})
+    p = B.report(kit, "YuE2-3B-RS-TW-2.0x0.75-BF16.gguf", ["a-run/a-run-e002.safetensors", "YuE2-RS-TW/YuE2-RS-TW-e002.0.safetensors"])["loras"]
+    check("2216: with the named file in place, the header alone says inside", p["YuE2-RS-TW/YuE2-RS-TW-e002.0.safetensors"]["inside"]
+          and not p["a-run/a-run-e002.safetensors"]["inside"], p)
 
 sys.exit(1 if FAILS else 0)

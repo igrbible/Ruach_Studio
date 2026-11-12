@@ -64,6 +64,7 @@ def load(config_dir):
     d.setdefault("albums", [])                 # HERESY 2050: the playlist's albums, [{name, items}] in their order
     d.setdefault("ws_notes", {})
     d.setdefault("lora_notes", {})
+    d.setdefault("ws_realm", {})               # HERESY 2294: {top workspace: "reader"}; a workspace not named here is the Creator's
     with_parents(d)                              # HERESY 1935: an orphan section of before gets its parents back
     if "fresh_since" not in d:                   # from the day this came: the takes before it are not all fresh at once
         d["fresh_since"] = int(time.time())
@@ -81,7 +82,7 @@ DEPTH = 3
 # чтобы не распухла от гордости»): a workspace's whole name, its sections' path with it
 # 06.10.2026: «Укорачиваю до… 32 символа макс. Исправь лимиты везде»: each level of the path 32 characters at most; a name
 # already there is taken as it is (refused only when made or renamed), said aloud, never trimmed silently
-PART_MAX = 32
+PART_MAX = 56                                       # 09.11.2026, Viktor: «Увеличь лимит имён пространств до 56 знаков»
 
 
 def ws_name(raw):
@@ -136,6 +137,16 @@ def family(d, ws):
     return [w for w in d["workspaces"] if w == ws or w.startswith(ws + SEP)]
 
 
+SOURCED = "Sourced for Regeneration"
+
+
+def view_tree(d, ws):
+    """HERESY 2168 (Viktor 06.11.2026: «Абсолютно все мелочи закрываем»; library-NOTES review): the workspace and the sections its view shows, as the
+    page's inTree has it: a «Sourced for Regeneration» section below it is not shown in its parent (1162), so a Move or a Take out from the parent's view
+    leaves that section's takes where they are, frozen or thawed; from the section's own view (ws is it) it is the place itself."""
+    return [w for w in family(d, ws) if w == ws or w.split(SEP)[-1] != SOURCED]
+
+
 def forget_ws(d, gone, to=""):
     """HERESY 2129 (the audit of 06.11.2026: «Удалённое пространство оставляет метки, и новое под тем же именем их наследует»): workspaces gone
     (deleted, poured or merged away) take their marks with them, so one made or renamed into such a name later is born clean: not archived,
@@ -146,7 +157,7 @@ def forget_ws(d, gone, to=""):
         return
     for key in ("archived", "blind", "frozen"):
         d[key] = [w for w in d.get(key, []) if w not in gone]
-    for key in ("locks", "pins", "ws_notes"):
+    for key in ("locks", "pins", "ws_notes", "ws_realm"):   # HERESY 2294: and a top's realm
         for w in gone:
             d.get(key, {}).pop(w, None)
 
@@ -308,11 +319,102 @@ def save(config_dir, d):
     os.replace(tmp, p)
 
 
+REALMS = ("creator", "reader")
+
+
+def realm_ws(d, ws):
+    """HERESY 2294 (Viktor 09.11.2026: «для Чтеца будет та же Библиотека, но со своими пространствами, древами»): the realm a workspace lives in,
+    its top's: the Reader's when marked so at its making, else the Creator's."""
+    return "reader" if (d.get("ws_realm") or {}).get(str(ws or "").split(SEP)[0]) == "reader" else "creator"
+
+
+def own_realm(meta, req):
+    """HERESY 2294: a take's own realm, by what made it: the Reader's speech (its request's reader block, its model, or the Reader's never-for-training
+    provenance on an import of its takes), else the Creator's."""
+    prov = meta.get("provenance") if isinstance(meta.get("provenance"), dict) else {}
+    if meta.get("realm") in REALMS:
+        return meta["realm"]
+    return "reader" if req.get("reader") or meta.get("model") == "reader" or str(prov.get("by") or "").startswith("the Reader") else "creator"
+
+
+def root_realms(rows):
+    """HERESY 2294 («Каждый трек принадлежит своему оригиналу Творца или Чтеца, не перемещается из рэлма… Огранщик также привязывается к оригинальному
+    корню»): each take's realm is its root's: the parent chain walked up to the first take with no parent here; a cycle stops where it closes."""
+    by = {r["name"]: r for r in rows}
+    out = {}
+    for r in rows:
+        seen, x = set(), r
+        # HERESY 2298: a realm written on a take (an imported TTS root, a derivative frozen when it was made) anchors its line: the walk stops there
+        while not x.get("fixed_realm") and x.get("parent") and x["parent"] in by and x["name"] not in seen:
+            seen.add(x["name"])
+            x = by[x["parent"]]
+        out[r["name"]] = x.get("own_realm", "creator")
+    return out
+
+
+def take_realms(outputs, names):
+    """HERESY 2294: the realm of these takes for a move's check: each read from its folder, the parent chain walked as root_realms does."""
+    out = {}
+    for n in names:
+        seen, cur, realm = set(), n, "creator"
+        while cur and cur not in seen and len(seen) < 64:
+            seen.add(cur)
+            try:
+                meta = json.load(open(outputs / cur / "meta.json", encoding="utf-8"))
+            except (OSError, ValueError):
+                break
+            try:
+                req = json.load(open(outputs / cur / "request.json", encoding="utf-8"))
+            except (OSError, ValueError):
+                req = {}
+            realm = own_realm(meta, req if isinstance(req, dict) else {})
+            if meta.get("realm") in REALMS:            # HERESY 2298: written on the take, it anchors its line
+                break
+            cur = (req.get("parent") if isinstance(req, dict) else "") or ""
+            if "/" in cur or cur.startswith("."):
+                break
+        out[n] = realm
+    return out
+
+
+def mixed_realm(outputs, host, inputs=()):
+    """HERESY 2298 (Viktor 09.11.2026: «Огранщик и Видеограф, соответственно, должны иметь доступ к обоим мирам. Если только музыка обрабатывается,
+    все деривативы в мире Творца, а вот если Чтец, но даже с музыкой, оригинально деривативы у Чтеца, а музыка, если линкуем в нодах и DAW
+    саунд-треки, она остаётся у себя в Творце, но также линкуется в Чтеца»): the realm of what is made on `host` from it and the other takes it
+    takes in (a node's sound input, a DAW track): the Reader's when any of them is the Reader's, else the Creator's. Worked out once, when it is made,
+    and written on it (a manifest's or a take's «realm»), never worked out again.
+    → {"realm", "home": the take it belongs with (the host when the host is of that realm, else the first take of it), "inputs": [{"take", "realm"}]}"""
+    names = [host] + [n for n in dict.fromkeys(inputs or ()) if isinstance(n, str) and n and n != host]
+    rl = take_realms(outputs, names)
+    realm = "reader" if "reader" in rl.values() else "creator"
+    home = host if rl.get(host) == realm else next(n for n in names if rl[n] == realm)
+    return {"realm": realm, "home": home, "inputs": [{"take": n, "realm": rl[n]} for n in names]}
+
+
+def link_sources(config_dir, outputs, mixed):
+    """HERESY 2298: a Reader derivative's Creator sources stay in the Creator's realm and are linked (Add to workspace, never moved) into the Reader's
+    workspaces where it lands, those its home take stands in. → the workspaces they were linked into; [] when it is the Creator's, when none of its
+    sources is the Creator's, or when its home stands in no Reader workspace (said by the caller, not taken for a link made)."""
+    if mixed.get("realm") != "reader":
+        return []
+    creators = [i["take"] for i in mixed.get("inputs") or [] if i.get("realm") == "creator"]
+    if not creators:
+        return []
+    with LOCK:
+        d = load(config_dir)
+        homes = sorted(w for w, ns in d["workspaces"].items() if mixed["home"] in ns and realm_ws(d, w) == "reader" and not frozen_ws(d, w))
+    for w in homes:
+        collection_post(config_dir, outputs, {"op": "ws-add", "workspace": w, "names": creators})
+    return homes
+
+
 def take_kind(name, meta, req):
     """generated · imported · regenerated (kept up to a moment, written anew after) · rerendered (the
     sound made again from a take's own codes: a new sound seed, another decoder, a trim)"""
     if "-import-" in name:
         return "imported"
+    if req.get("reader"):                         # HERESY 2241: the Reader's speech
+        return "narrated"
     if req.get("semantic_keep"):
         return "regenerated"
     if req.get("parent") and req.get("semantic_tokens"):
@@ -362,6 +464,7 @@ def catalog(outputs, config_dir):
             try:
                 r = json.load(open(rp, encoding="utf-8"))
                 req = {k: r.get(k) for k in ("cot", "parent", "plan_only") if k in r}
+                req["reader"] = bool(r.get("reader"))   # HERESY 2294: the Reader's speech (take_kind's «narrated» never came: the block was not read)
                 req["semantic_keep"] = bool(r.get("semantic_keep"))
                 req["semantic_tokens"] = bool(r.get("semantic_tokens"))
                 req["lyrics_len"] = len(r.get("lyrics") or "")
@@ -369,6 +472,10 @@ def catalog(outputs, config_dir):
                 # switch writes it so) or its lyrics hold no word to sing (only [section] tags, or nothing); a request without lyrics at all says nothing
                 req["instrumental"] = bool(re.match(r"\s*instrumental\b", str(r.get("style") or ""), re.I)) or (
                     "lyrics" in r and not re.sub(r"\[[^\]]*\]", "", str(r.get("lyrics") or "")).strip())
+                # HERESY 2170 (D06, Viktor's yes of 06.11.2026): a take that keeps the Creator's Instrumental box (the engine writes it since 2.0.6) says it
+                # as the box was; a take from before, without the field, by 2058's rule above
+                if isinstance(r.get("instrumental"), bool):
+                    req["instrumental"] = r["instrumental"]
                 # HERESY 1156 (Viktor: «В шпаргалке указываем seed на каждый A/B»): the music and sound seeds, as text:
                 # 64-bit seeds are past what a page's numbers hold exact (2^53), and a seed rounded is another seed
                 if r.get("lm_seed") is not None or r.get("seed") is not None:
@@ -392,11 +499,19 @@ def catalog(outputs, config_dir):
                      "regen_of": marks["regen_of"].get(d.name, ""), "frozen": d.name in ice, "protected": d.name in shield,
                      "parent": req.get("parent") or "",           # HERESY 1988: what it was made from, for its card's family tree
                      "fire": d.name in fire, "gem": d.name in gems,   # HERESY 1802
+                     "no_train": bool(meta.get("no_train")),   # HERESY 2241: never for training (lab/no_train.py)
                      "react": react_of(reacts.get(d.name, "")),   # HERESY 1873
                      "blind": d.name in blind, "archived": d.name in arch,   # HERESY 1874; 2049
-                     "instrumental": bool(req.get("instrumental"))})   # HERESY 2058
+                     "instrumental": bool(req.get("instrumental")),   # HERESY 2058
+                     "own_realm": own_realm(meta, req),   # HERESY 2294
+                     "fixed_realm": meta.get("realm") in REALMS})   # HERESY 2298: written on it, it anchors its line
     here = {r["name"] for r in rows}
-    return {"takes": rows, "workspaces": sorted(marks["workspaces"]), "trash_days": marks["trash_days"], "locks": marks["locks"],
+    roots = root_realms(rows)                    # HERESY 2294: a take's realm is its root's, the Refiner's and every derived take with it
+    for r in rows:
+        r["realm"] = roots[r["name"]]
+        r.pop("own_realm", None)
+        r.pop("fixed_realm", None)
+    return {"takes": rows, "ws_realm": {w: "reader" for w in marks["workspaces"] if SEP not in w and realm_ws(marks, w) == "reader"}, "workspaces": sorted(marks["workspaces"]), "trash_days": marks["trash_days"], "locks": marks["locks"],
             "pins": {p: [n for n in ns if n in here] for p, ns in marks["pins"].items() if any(n in here for n in ns)},   # HERESY 2129: the takes here only
             "frozen": marks["frozen"], "archived": [a for a in marks["archived"] if a in marks["workspaces"]],   # HERESY 2049
             "blind": [b for b in marks["blind"] if b in marks["workspaces"]],   # HERESY 1874; 2057: out of 2049's comment again
@@ -449,6 +564,9 @@ def collection_post(config_dir, outputs, data):
     with LOCK:
         d = load(config_dir)
         _frozen_guard(d, op, ws, names, data)      # HERESY 1166: nothing reaches a frozen workspace but its thaw
+        # HERESY 2294: a top that an add, a move, a merge or a making brings into being from the Readers realm is the Readers (marked once it is there)
+        made = (ws_name(data.get("to")) if op == "ws-merge" else ws if op in ("ws-create", "ws-add", "ws-move") else "") or ""
+        made = made.split(SEP)[0] if made and data.get("realm") == "reader" and made.split(SEP)[0] not in d["workspaces"] else ""
         if op == "freeze":                         # HERESY 1166: on = true | false; thawing a workspace thaws its sections
             if ws not in d["workspaces"]:
                 raise ValueError("freeze an existing workspace")
@@ -458,6 +576,18 @@ def collection_post(config_dir, outputs, data):
             else:
                 fz -= {f for f in fz if f == ws or f.startswith(ws + SEP)}
             d["frozen"] = sorted(fz)
+        elif op == "ws-realm":                     # HERESY 2294: a top workspace given to a realm, when none of its takes belongs to the other
+            top, realm = ws.split(SEP)[0] if ws else "", data.get("realm")
+            if not top or top not in d["workspaces"] or realm not in REALMS:
+                raise ValueError("give an existing workspace to a realm: creator or reader")
+            held = sorted({n for w in family(d, top) for n in d["workspaces"][w]})
+            other = [n for n, rl in take_realms(outputs, held).items() if rl != realm]
+            if other:
+                raise ValueError(f"\u201c{top}\u201d holds {len(other)} takes of the other realm: they would stand there as links")
+            if realm == "reader":
+                d["ws_realm"][top] = "reader"
+            else:
+                d["ws_realm"].pop(top, None)
         elif op == "hide":
             d["hidden"] = sorted(set(d["hidden"]) | set(names))
         elif op == "show":
@@ -475,12 +605,15 @@ def collection_post(config_dir, outputs, data):
             if not ws or not new or ws not in d["workspaces"] or new in d["workspaces"]:
                 raise ValueError("rename from an existing workspace to a new name")
             fresh_parts(d, new)                        # HERESY 1167: the new name, 32 characters a level
+            if SEP in new and new.split(SEP)[0] in d["workspaces"] and realm_ws(d, new) != realm_ws(d, ws):
+                raise ValueError("a workspace stays in its realm (Musician or Narrator): link its takes into the other one instead")   # HERESY 2294
             moves = [(w, new + w[len(ws):]) for w in family(d, ws)]          # its sections go with it (1161)
             for old, to in moves:
                 if len(to.split(SEP)) > DEPTH:
                     raise ValueError(f"“{to}” would be more than two levels of sections deep")
                 if old != ws and to in d["workspaces"]:
                     raise ValueError(f"“{to}” is there already")
+            realm = realm_ws(d, ws)                    # HERESY 2294: read before the names move
             for _old, to in moves:                     # HERESY 2129: the new names take nothing a workspace of theirs gone left behind
                 born(d, to)
             for old, to in moves:
@@ -495,6 +628,10 @@ def collection_post(config_dir, outputs, data):
                     d["blind"] = sorted((set(d["blind"]) - {old}) | {to})
                 if old in d["archived"]:           # HERESY 2049: and the archive
                     d["archived"] = sorted((set(d["archived"]) - {old}) | {to})
+                if SEP not in old:                     # HERESY 2294: a top's realm goes with its name
+                    d["ws_realm"].pop(old, None)
+                if SEP not in to and realm == "reader":
+                    d["ws_realm"][to] = "reader"
                 d["playlist"] = [PL_WS + to if n == PL_WS + old else n for n in d["playlist"]]   # HERESY 2042: and its place in the playlist
                 for al in d["albums"]:                 # HERESY 2058: and in the albums
                     al["items"] = [PL_WS + to if n == PL_WS + old else n for n in al["items"]]
@@ -525,6 +662,9 @@ def collection_post(config_dir, outputs, data):
         elif op in ("ws-delete", "ws-merge", "ws-pour") and any(locked(d, w, "workspace") for w in family(d, ws)):
             w = next(w for w in family(d, ws) if locked(d, w, "workspace"))
             raise ValueError(f"\u201c{w}\u201d is locked against deletion: unlock it first (right-click on its name)")
+        elif op in ("ws-pour", "ws-merge") and ws in d["workspaces"] and ws_name(data.get("to")) and (
+                ws_name(data.get("to")) in d["workspaces"] or ws_name(data.get("to")).split(SEP)[0] in d["workspaces"]) and realm_ws(d, ws) != realm_ws(d, ws_name(data.get("to"))):
+            raise ValueError("workspaces of two realms are not merged: link the takes into the other one instead (Add to workspace)")   # HERESY 2294
         elif op == "ws-pour":                      # HERESY 1808: its takes and its sections' into another, then it goes with its sections
             to, fam = ws_name(data.get("to")), family(d, ws)
             if not ws or ws not in d["workspaces"] or not to or to not in d["workspaces"] or to in fam:
@@ -550,6 +690,9 @@ def collection_post(config_dir, outputs, data):
         elif op == "ws-add":
             if not ws:
                 raise ValueError("which workspace?")
+            # HERESY 2284: a name it makes keeps ws-create's PART_MAX characters a level (a decode script's add made a 36-character workspace
+            # that ws-create had refused, under the limit of 32 then); one already there takes its takes whatever its length
+            fresh_parts(d, ws)
             born(d, ws)                                # HERESY 2129: one made by adding to it is born clean too
             d["workspaces"][ws] = sorted(set(d["workspaces"].get(ws, [])) | set(names))
         elif op == "ws-move":                      # HERESY 1050: into one workspace, out of the one it came from
@@ -558,12 +701,21 @@ def collection_post(config_dir, outputs, data):
             src = ws_name(data.get("from")) if data.get("from") else ""
             # HERESY 2129 (the audit of 06.11.2026): tree = out of the named one and its sections, as its view shows them (a take of a section
             # moved from its parent's view stayed where it was, and the toast said «out of» the parent); a frozen section keeps its own (1166)
-            froms = (family(d, src) if data.get("tree") else [src]) if src else list(d["workspaces"])   # from nowhere named: out of every other
+            froms = (view_tree(d, src) if data.get("tree") else [src]) if src else list(d["workspaces"])   # from nowhere named: out of every other
             # HERESY 2129: a named one under a lock lets nothing out, as ws-remove (1473); a move went round it. A move inside the lock's own tree (a
             # locked 💎 set's takes into its section) leaves them under every lock they were under, so it goes on as before
             for w in froms if src else []:
                 if w != ws and w in d["workspaces"] and not frozen_ws(d, w) and ws_locked(d, w) and not locks_on(d, w) <= locks_on(d, ws) and set(d["workspaces"][w]) & set(names):
                     raise ValueError(f"\u201c{w}\u201d is locked: unlock it first to take takes out of it (right-click on its name)")
+            fresh_parts(d, ws)                         # HERESY 2284: as ws-add, for a name it makes
+            # HERESY 2294: a take stays in its realm; moved into the other realm's workspace only when it came from there (a link moved), else
+            # it is linked (Add to workspace), never moved
+            to_realm = "reader" if made and ws.split(SEP)[0] == made else realm_ws(d, ws)
+            if not src or realm_ws(d, src) != to_realm:
+                away = [n for n, rl in take_realms(outputs, names).items() if rl != to_realm]
+                if away:
+                    who = "the Narrator" if to_realm == "creator" else "the Musician"
+                    raise ValueError(f"{len(away)} of these takes belong to {who} and stay in its realm: link them into \u201c{ws}\u201d instead (Add to workspace)")
             born(d, ws)
             for w in froms:
                 if w != ws and w in d["workspaces"] and not frozen_ws(d, w) and (src or not ws_locked(d, w)):   # a frozen one keeps its takes (1166); a locked one too, unless named (1473)
@@ -573,6 +725,7 @@ def collection_post(config_dir, outputs, data):
             to = ws_name(data.get("to"))
             if not ws or ws not in d["workspaces"] or not to or to == ws:
                 raise ValueError("merge an existing workspace into another")
+            fresh_parts(d, to)                         # HERESY 2284: as ws-add, for a name it makes
             born(d, to)                                # HERESY 2129: a new one to merge into is born clean
             d["workspaces"][to] = sorted(set(d["workspaces"].get(to, [])) | set(d["workspaces"].pop(ws)))
             if ws in d["ws_notes"]:                # HERESY 1802: its note goes to the other when that one has none
@@ -581,7 +734,7 @@ def collection_post(config_dir, outputs, data):
         elif op == "ws-remove":
             wss = [ws]
             if data.get("tree") and ws in d["workspaces"]:   # HERESY 2129: out of its sections too, as its view shows them; a frozen one keeps its own (1166)
-                wss = [w for w in family(d, ws) if w == ws or (not frozen_ws(d, w) and set(d["workspaces"][w]) & set(names))]
+                wss = [w for w in view_tree(d, ws) if w == ws or (not frozen_ws(d, w) and set(d["workspaces"][w]) & set(names))]   # 2168: as its view shows them
             for w in wss:
                 if w in d["workspaces"] and ws_locked(d, w):          # HERESY 1473
                     raise ValueError(f"\u201c{w}\u201d is locked: unlock it first to take takes out of it (right-click on its name)")
@@ -740,6 +893,8 @@ def collection_post(config_dir, outputs, data):
             d["trash_days"] = days
         else:
             raise ValueError("unknown op")
+        if made and made in d["workspaces"]:
+            d["ws_realm"][made] = "reader"
         prune_pins(d)                              # HERESY 1166: no pin left where its take is not
         save(config_dir, d)
     return catalog(outputs, config_dir)

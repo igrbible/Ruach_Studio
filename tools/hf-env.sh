@@ -60,6 +60,14 @@ hf_ready() {
   [ "$got" = "$want" ] || { echo "the downloader is huggingface_hub $got, not the pinned $want"; return 1; }
 }
 
+# HERESY 2380 (Viktor 11.11.2026: «Тройного сторожа на выгрузках и скачиваниях моделей из наших репозиториев»): the guarded twin of
+# «$HF download», the same arguments: each file into a part folder first, into its place only at a pinned commit, of the pinned size
+# and with our manifest's SHA-256 (tools/hf_guard.py); a file that fails keeps what was there and says which check failed
+hf_guarded() {
+  [ "${1:-}" = download ] && shift
+  "$HPY" "$ROOT/tools/hf_guard.py" download "$@"
+}
+
 # Check a local copy against the pinned revision's file list: hf_complete REPO REV DIR [hf_expect.py options]
 hf_complete() {
   local repo="$1" rev="$2" dir="$3"; shift 3

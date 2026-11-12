@@ -18,6 +18,7 @@
 #include "graph-arena.h"
 #include "mert.h"
 #include "notation.h"
+#include "sheetsage-refined.h"
 #include "timer.h"
 #include "weight-ctx.h"
 #include "yyjson.h"
@@ -46,6 +47,8 @@ struct SS2Tokenizer {
     int n_tokens, pad, sos, eos, out;
     int prompt0, prompt1, shift0, shift1, time0, time1, meter0, meter1, eighth0, eighth1, structure0, structure1, key0,
         key1, majmin0, majmin1, chord0, chord1, pitch0, pitch1, duration0, duration1;
+    // HERESY 2328: the blocks SheetSage2-Refined appends (a chord's bass, root x quality, keys with modes), -1 without
+    int bass0 = -1, detail0 = -1, keymode0 = -1;
     std::vector<std::string> prompts, structures, majmin_chords, chords, chords_abc, keys, keys_abc;
     std::vector<int>         meter_num, meter_den, duration_templates;
     std::vector<float>       duration_boundaries;
@@ -77,6 +80,12 @@ struct SheetSage2 {
     ggml_backend_sched_t sched;
     bool                 use_flash_attn;
     GraphArena           arena;
+
+    // HERESY 2328: SheetSage2-Refined, its decoder from the overlay in place of SheetSage2's, its frame heads on the CPU
+    bool      refined = false;
+    bool      rope_bf16 = false;  // MERT's rotary angles rounded to bfloat16 as SheetSage2 learnt them (Refined always)
+    SS2RHeads rh;
+    SS2RVocab rv;
 };
 
 // json helpers on a parsed document
@@ -243,6 +252,113 @@ static void ss2_load_dec_layer(WeightCtx * w, const GGUFModel & gf, SS2DecLayer 
     l->final_ln_b = gf_load_tensor(w, gf, p + ".final_layer_norm.bias");
 }
 
+// HERESY 2328: a decoder layer of SheetSage2-Refined's overlay, the same BART layer under the converter's names
+static void ss2r_load_dec_layer(WeightCtx * w, const GGUFModel & gf, SS2DecLayer * l, const std::string & p) {
+    l->sa_q_w     = gf_load_tensor(w, gf, p + ".self_attn_q.weight");
+    l->sa_q_b     = gf_load_tensor(w, gf, p + ".self_attn_q.bias");
+    l->sa_k_w     = gf_load_tensor(w, gf, p + ".self_attn_k.weight");
+    l->sa_k_b     = gf_load_tensor(w, gf, p + ".self_attn_k.bias");
+    l->sa_v_w     = gf_load_tensor(w, gf, p + ".self_attn_v.weight");
+    l->sa_v_b     = gf_load_tensor(w, gf, p + ".self_attn_v.bias");
+    l->sa_o_w     = gf_load_tensor(w, gf, p + ".self_attn_output.weight");
+    l->sa_o_b     = gf_load_tensor(w, gf, p + ".self_attn_output.bias");
+    l->sa_ln_w    = gf_load_tensor(w, gf, p + ".self_attn_norm.weight");
+    l->sa_ln_b    = gf_load_tensor(w, gf, p + ".self_attn_norm.bias");
+    l->ca_q_w     = gf_load_tensor(w, gf, p + ".cross_attn_q.weight");
+    l->ca_q_b     = gf_load_tensor(w, gf, p + ".cross_attn_q.bias");
+    l->ca_k_w     = gf_load_tensor(w, gf, p + ".cross_attn_k.weight");
+    l->ca_k_b     = gf_load_tensor(w, gf, p + ".cross_attn_k.bias");
+    l->ca_v_w     = gf_load_tensor(w, gf, p + ".cross_attn_v.weight");
+    l->ca_v_b     = gf_load_tensor(w, gf, p + ".cross_attn_v.bias");
+    l->ca_o_w     = gf_load_tensor(w, gf, p + ".cross_attn_output.weight");
+    l->ca_o_b     = gf_load_tensor(w, gf, p + ".cross_attn_output.bias");
+    l->ca_ln_w    = gf_load_tensor(w, gf, p + ".cross_attn_norm.weight");
+    l->ca_ln_b    = gf_load_tensor(w, gf, p + ".cross_attn_norm.bias");
+    l->fc1_w      = gf_load_tensor(w, gf, p + ".ffn_up.weight");
+    l->fc1_b      = gf_load_tensor(w, gf, p + ".ffn_up.bias");
+    l->fc2_w      = gf_load_tensor(w, gf, p + ".ffn_down.weight");
+    l->fc2_b      = gf_load_tensor(w, gf, p + ".ffn_down.bias");
+    l->final_ln_w = gf_load_tensor(w, gf, p + ".final_norm.weight");
+    l->final_ln_b = gf_load_tensor(w, gf, p + ".final_norm.bias");
+}
+
+// HERESY 2328: the SheetSage2 GGUF an overlay sits on, beside it: YUE2_SS2R_BASE names one, else F32 first (the heads
+// learnt on the encoder in float32), then Q8_0
+static std::string ss2r_base_beside(const char * overlay) {
+    const char * env = getenv("YUE2_SS2R_BASE");
+    if (env && *env) {
+        return env;
+    }
+    std::string path(overlay);
+    size_t      slash = path.find_last_of("/\\");
+    std::string dir   = slash == std::string::npos ? "" : path.substr(0, slash + 1);
+    for (const char * name : { "SheetSage2-F32.gguf", "SheetSage2-Q8_0.gguf" }) {
+        FILE * f = fopen((dir + name).c_str(), "rb");
+        if (f) {
+            fclose(f);
+            return dir + name;
+        }
+    }
+    return "";
+}
+
+// HERESY 2328: the refined vocabulary on top of SheetSage2's: its blocks, the two prompts, the chord and key labels with
+// their ABC, and the ranges the grammar and the rescoring read
+static bool ss2r_setup(SheetSage2 * m, const GGUFModel & ov) {
+    SS2Tokenizer & t = m->tok;
+    auto           u = [&](const char * key) {
+        int64_t id = gguf_find_key(ov.gguf, key);
+        return id < 0 ? -1 : (int) gguf_get_val_u32(ov.gguf, id);
+    };
+    if (u("sheetsage2r.base.vocab_size") != t.n_tokens || std::string(gf_get_str(ov, "sheetsage2r.base.vocab_fingerprint")) != "5ba3325af0344c7f") {
+        fprintf(stderr, "[SheetSage] FATAL: the refined overlay was made for another SheetSage2 vocabulary\n");
+        return false;
+    }
+    t.bass0    = u("sheetsage2r.vocab.block.chord_bass.start");
+    t.detail0  = u("sheetsage2r.vocab.block.chord_detail.start");
+    t.keymode0 = u("sheetsage2r.vocab.block.key_mode.start");
+    int n      = u("sheetsage2r.vocab_size");
+    if (t.bass0 != t.n_tokens || u("sheetsage2r.vocab.block.chord_bass.count") != 12 || t.detail0 != t.bass0 + 12 ||
+        u("sheetsage2r.vocab.block.chord_detail.count") != SS2R_NO_CHORD + 1 || t.keymode0 != t.detail0 + SS2R_NO_CHORD + 1 ||
+        u("sheetsage2r.vocab.block.key_mode.count") != SS2R_NO_KEY + 1 || n <= t.keymode0 + SS2R_NO_KEY) {
+        fprintf(stderr, "[SheetSage] FATAL: the refined overlay's vocabulary blocks are not the ones this engine reads\n");
+        return false;
+    }
+    for (size_t i = 0; i < t.meter_num.size(); i++) {  // the rescoring reads a meter's beats and unit from its index
+        if (t.meter_num[i] != std::min((int) i / 6 + 1, 32) || t.meter_den[i] != 1 << (i % 6)) {
+            fprintf(stderr, "[SheetSage] FATAL: the meter table is not in the order the refined rescoring reads\n");
+            return false;
+        }
+    }
+    if (!ss2r_heads_load(ov, &m->rh)) {
+        return false;
+    }
+    m->cfg.vocab = n;
+    t.n_tokens   = n;
+    t.prompts.resize(8);
+    t.prompts.push_back("chord_detail");  // the prompts 8 and 9 of the refined vocabulary
+    t.prompts.push_back("key_mode");
+    for (int bass = 0; bass < 12; bass++) {
+        for (int root = 0; root < 12; root++) {
+            for (int q = 0; q < SS2R_QUALITIES; q++) {
+                t.tables.chord_abc[ss2r_chord_label(bass, root, q)] = ss2r_chord_abc(m->rh, bass, root, q);
+            }
+        }
+    }
+    for (int tonic = 0; tonic < 12; tonic++) {
+        for (int mode = 0; mode < SS2R_MODES; mode++) {
+            t.tables.key_abc[ss2r_key_label(tonic, mode)] = ss2r_key_abc(tonic, mode);
+        }
+    }
+    SS2RVocab & v = m->rv;
+    v             = { t.sos,   t.eos,     t.out,     t.prompt0,    t.shift0,     t.shift1,  t.time0,     t.time1,
+                      t.meter0, t.meter1,  t.eighth0, t.eighth1,    t.structure0, t.structure1, t.key0,   t.key1,
+                      t.pitch0, t.pitch1,  t.duration0, t.duration1, t.bass0,      t.detail0, t.keymode0, n,
+                      m->cfg.time_hz };
+    m->refined = true;
+    return true;
+}
+
 // The LoRA terms of the MERT attention projections: every adapter.<module>
 // .lora_A.weight and its lora_B partner land on <module>.weight
 static AdapterTerms ss2_lora_terms(const GGUFModel & gf, float scale) {
@@ -280,9 +396,35 @@ static bool ss2_load(SheetSage2 * m, const char * gguf_path) {
         fprintf(stderr, "[SheetSage] FATAL: cannot load %s\n", gguf_path);
         return false;
     }
+    // HERESY 2328: SheetSage2-Refined's overlay holds its decoder and frame heads alone; SheetSage2's own GGUF beside it
+    // gives the encoder, the layer mix and the projection
+    GGUFModel   ov        = {};
+    bool        refined   = std::string(gf_get_str(gf, "general.architecture")) == "sheetsage2r";
+    std::string head_path = gguf_path;  // the SheetSage2 GGUF MERT sits beside
+    if (refined) {
+        ov               = gf;
+        gf               = {};
+        std::string base = ss2r_base_beside(gguf_path);
+        if (base.empty() || !gf_load(&gf, base.c_str())) {
+            fprintf(stderr, "[SheetSage] FATAL: %s is SheetSage2-Refined's overlay and wants SheetSage2's GGUF beside it\n", gguf_path);
+            gf_close(&ov);
+            return false;
+        }
+        fprintf(stderr, "[SheetSage] SheetSage2-Refined on %s\n", base.c_str());
+        head_path = base;
+    }
     std::string base_model;
     ss2_load_config(m, gf_get_str(gf, "sheetsage2.config_json"), &base_model);
     ss2_load_tokenizer(m, gf_get_str(gf, "sheetsage2.tokenizer_json"));
+    // HERESY 2328: Refined's encoder runs with the bfloat16 rotary angles its reference uses; SheetSage2 itself only when
+    // YUE2_SS2_ROPE_BF16=1 asks (its sheets so far were written with the exact ones)
+    const char * rope_env = getenv("YUE2_SS2_ROPE_BF16");
+    m->rope_bf16          = refined || (rope_env && *rope_env && strcmp(rope_env, "0") != 0);
+    if (refined && !ss2r_setup(m, ov)) {
+        gf_close(&gf);
+        gf_close(&ov);
+        return false;
+    }
     const SS2Config & c = m->cfg;
 
     BackendPair bp    = backend_init("SheetSage");
@@ -291,10 +433,13 @@ static bool ss2_load(SheetSage2 * m, const char * gguf_path) {
     m->sched          = backend_sched_new(bp, SS2_GRAPH_NODES);
     m->use_flash_attn = bp.has_gpu;
 
-    std::string mert_path = mert_beside(gguf_path, base_model);
+    std::string mert_path = mert_beside(head_path, base_model);
     if (!mert_load(&m->mert, mert_path, m->backend, ss2_lora_terms(gf, c.lora_scale))) {
-        fprintf(stderr, "[SheetSage] FATAL: %s expects %s beside it\n", gguf_path, mert_path.c_str());
+        fprintf(stderr, "[SheetSage] FATAL: %s expects %s beside it\n", head_path.c_str(), mert_path.c_str());
         gf_close(&gf);
+        if (refined) {
+            gf_close(&ov);
+        }
         return false;
     }
 
@@ -302,20 +447,37 @@ static bool ss2_load(SheetSage2 * m, const char * gguf_path) {
     m->layer_weight = gf_load_tensor(&m->wctx, gf, "layer_weight");
     m->proj_w       = gf_load_tensor(&m->wctx, gf, "encoder_projection.weight");
     m->proj_b       = gf_load_tensor(&m->wctx, gf, "encoder_projection.bias");
-    m->embed        = gf_load_tensor(&m->wctx, gf, "token_embedding.weight");
-    m->positions    = gf_load_tensor(&m->wctx, gf, "decoder.embed_positions.weight");
-    m->emb_ln_w     = gf_load_tensor(&m->wctx, gf, "decoder.layernorm_embedding.weight");
-    m->emb_ln_b     = gf_load_tensor(&m->wctx, gf, "decoder.layernorm_embedding.bias");
-    for (int l = 0; l < c.n_dec; l++) {
-        ss2_load_dec_layer(&m->wctx, gf, &m->dec[l], "decoder.layers." + std::to_string(l));
+    if (refined) {  // HERESY 2328: the fine-tuned decoder, its embedding the output projection too
+        m->embed     = gf_load_tensor(&m->wctx, ov, "dec.tok_embd");
+        m->positions = gf_load_tensor(&m->wctx, ov, "dec.pos_embd");
+        m->emb_ln_w  = gf_load_tensor(&m->wctx, ov, "dec.norm_embd.weight");
+        m->emb_ln_b  = gf_load_tensor(&m->wctx, ov, "dec.norm_embd.bias");
+        for (int l = 0; l < c.n_dec; l++) {
+            ss2r_load_dec_layer(&m->wctx, ov, &m->dec[l], "dec.blk." + std::to_string(l));
+        }
+        if (m->embed->ne[1] != c.vocab || m->positions->ne[1] < c.max_out + 2) {
+            fprintf(stderr, "[SheetSage] FATAL: the refined decoder's tables are not the size of its vocabulary\n");
+            exit(1);
+        }
+    } else {
+        m->embed     = gf_load_tensor(&m->wctx, gf, "token_embedding.weight");
+        m->positions = gf_load_tensor(&m->wctx, gf, "decoder.embed_positions.weight");
+        m->emb_ln_w  = gf_load_tensor(&m->wctx, gf, "decoder.layernorm_embedding.weight");
+        m->emb_ln_b  = gf_load_tensor(&m->wctx, gf, "decoder.layernorm_embedding.bias");
+        for (int l = 0; l < c.n_dec; l++) {
+            ss2_load_dec_layer(&m->wctx, gf, &m->dec[l], "decoder.layers." + std::to_string(l));
+        }
     }
     bool ok = wctx_alloc(&m->wctx, m->backend);
     gf_close(&gf);
+    if (refined) {
+        gf_close(&ov);
+    }
     if (!ok || !graph_arena_init(&m->arena, SS2_GRAPH_NODES)) {
         return false;
     }
-    fprintf(stderr, "[SheetSage] Loaded: %d decoder layers, vocab %d, window %.0f s\n", c.n_dec, c.vocab,
-            (double) c.window_seconds);
+    fprintf(stderr, "[SheetSage] Loaded%s: %d decoder layers, vocab %d, window %.0f s\n", m->refined ? " SheetSage2-Refined" : "",
+            c.n_dec, c.vocab, (double) c.window_seconds);
     return true;
 }
 
@@ -332,8 +494,9 @@ static void ss2_free(SheetSage2 * m) {
 // Encoder: mel [n_mels, T_mel] -> memory [d_model, T] with T = T_mel / 4, and
 // the probes the harness reads (subsampled input, backbone output, mix)
 struct SS2Encoded {
-    std::vector<float> memory;  // [T, d_model] time major
-    int                T;
+    std::vector<float>              memory;  // [T, d_model] time major
+    int                             T;
+    std::vector<std::vector<float>> mixes;  // HERESY 2328: the refined heads' layer mixes, [T, 1024] each
 };
 
 static bool ss2_encode(SheetSage2 *               m,
@@ -357,7 +520,16 @@ static bool ss2_encode(SheetSage2 *               m,
     ggml_set_input(in_pos);
 
     std::vector<struct ggml_tensor *> states;
-    mert_build(ctx, e, in_mel, in_pos, e->cfg.n_layers, m->use_flash_attn, &states);
+    // HERESY 2328: the rotary angles SheetSage2 learnt with, rounded to bfloat16 (exact ones are what MERT alone wants)
+    int                  head_dim = e->cfg.hidden / e->cfg.n_heads;
+    struct ggml_tensor * rope_cos = NULL, *rope_sin = NULL;
+    if (m->rope_bf16) {
+        rope_cos = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, head_dim, 1, T);
+        rope_sin = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, head_dim, 1, T);
+        ggml_set_input(rope_cos);
+        ggml_set_input(rope_sin);
+    }
+    mert_build(ctx, e, in_mel, in_pos, e->cfg.n_layers, m->use_flash_attn, &states, rope_cos, rope_sin);
     ggml_set_name(states.front(), "subsampled");
     ggml_set_output(states.front());
     ggml_set_name(states.back(), "backbone");
@@ -377,6 +549,23 @@ static bool ss2_encode(SheetSage2 *               m,
     ggml_set_output(memory);
     ggml_build_forward_expand(gf, memory);
 
+    // HERESY 2328: the refined heads read their own softmax mixes of the 25 states, computed beside the decoder's
+    std::vector<std::vector<float>>   head_w = m->refined ? ss2r_mix_weights(m->rh) : std::vector<std::vector<float>>();
+    std::vector<struct ggml_tensor *> head_in, head_out;
+    for (size_t j = 0; j < head_w.size(); j++) {
+        struct ggml_tensor * w = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, (int64_t) states.size());
+        ggml_set_input(w);
+        struct ggml_tensor * mix = NULL;
+        for (size_t l = 0; l < states.size(); l++) {
+            struct ggml_tensor * term = ggml_mul(ctx, states[l], ggml_view_1d(ctx, w, 1, l * w->nb[0]));
+            mix                       = mix ? ggml_add(ctx, mix, term) : term;
+        }
+        ggml_set_output(mix);
+        ggml_build_forward_expand(gf, mix);
+        head_in.push_back(w);
+        head_out.push_back(mix);
+    }
+
     if (!ggml_backend_sched_alloc_graph(m->sched, gf)) {
         fprintf(stderr, "[SheetSage] FATAL: encoder graph alloc failed\n");
         return false;
@@ -386,12 +575,32 @@ static bool ss2_encode(SheetSage2 *               m,
     for (int i = 0; i < T; i++) {
         pos[i] = i;
     }
-    ggml_backend_tensor_set(in_pos, pos.data(), 0, pos.size() * sizeof(int32_t));
+    if (!rope_cos) {  // with the bfloat16 tables the positions are in them, and the graph has no use for these
+        ggml_backend_tensor_set(in_pos, pos.data(), 0, pos.size() * sizeof(int32_t));
+    }
+    if (rope_cos) {
+        std::vector<float> cs, sn;
+        mert_rope_bf16_tables(T, head_dim, e->cfg.rope_base, &cs, &sn);
+        ggml_backend_tensor_set(rope_cos, cs.data(), 0, cs.size() * sizeof(float));
+        ggml_backend_tensor_set(rope_sin, sn.data(), 0, sn.size() * sizeof(float));
+    }
+    for (size_t j = 0; j < head_in.size(); j++) {
+        if (head_w[j].size() != states.size()) {
+            fprintf(stderr, "[SheetSage] FATAL: a refined head mixes %zu states, the encoder gives %zu\n", head_w[j].size(), states.size());
+            return false;
+        }
+        ggml_backend_tensor_set(head_in[j], head_w[j].data(), 0, head_w[j].size() * sizeof(float));
+    }
     ggml_backend_sched_graph_compute(m->sched, gf);
 
     out->T = T;
     out->memory.resize((size_t) T * c.d_model);
     ggml_backend_tensor_get(memory, out->memory.data(), 0, out->memory.size() * sizeof(float));
+    out->mixes.assign(head_out.size(), std::vector<float>());
+    for (size_t j = 0; j < head_out.size(); j++) {
+        out->mixes[j].resize((size_t) ggml_nelements(head_out[j]));
+        ggml_backend_tensor_get(head_out[j], out->mixes[j].data(), 0, out->mixes[j].size() * sizeof(float));
+    }
     if (dbg->enabled) {
         const char * names[] = { "subsampled", "backbone", "mixed", "memory" };
         for (const char * name : names) {
@@ -587,6 +796,9 @@ enum SS2Kind {
     SS2_KIND_CHORD,
     SS2_KIND_PITCH,
     SS2_KIND_DURATION,
+    SS2_KIND_BASS,     // HERESY 2328: the refined vocabulary's chord bass,
+    SS2_KIND_DETAIL,   // its root x quality (and N),
+    SS2_KIND_KEYMODE,  // its keys with modes
 };
 
 static SS2Kind ss2_kind(const SS2Tokenizer & t, int token) {
@@ -622,6 +834,15 @@ static SS2Kind ss2_kind(const SS2Tokenizer & t, int token) {
     }
     if (token >= t.duration0 && token < t.duration1) {
         return SS2_KIND_DURATION;
+    }
+    if (t.bass0 >= 0 && token >= t.bass0 && token < t.bass0 + 12) {
+        return SS2_KIND_BASS;
+    }
+    if (t.detail0 >= 0 && token >= t.detail0 && token <= t.detail0 + SS2R_NO_CHORD) {
+        return SS2_KIND_DETAIL;
+    }
+    if (t.keymode0 >= 0 && token >= t.keymode0 && token <= t.keymode0 + SS2R_NO_KEY) {
+        return SS2_KIND_KEYMODE;
     }
     return SS2_KIND_SPECIAL;
 }
@@ -816,6 +1037,79 @@ static bool ss2_generate(SheetSage2 *             m,
     return true;
 }
 
+// HERESY 2328: SheetSage2-Refined's greedy generation of one window: the same decoder steps, the logits moved by the mode
+// bias and the frame heads' rescoring (engine.py _forward), then masked by the prompt-aware grammar (grammar.py). Stops
+// like ss2_generate; *full says the window filled the decoder's context.
+static bool ss2r_generate(SheetSage2 *             m,
+                          SS2Decoder *             d,
+                          const std::vector<int> & prefix,
+                          double                   stop_time,
+                          const SS2RTables &       tab,
+                          bool                     key_mode,
+                          std::vector<int> *       tokens,
+                          bool *                   full) {
+    const SS2Config &  c = m->cfg;
+    const SS2RVocab &  v = m->rv;
+    Timer              timer;
+    std::vector<float> logits((size_t) c.vocab);
+    *tokens = prefix;
+    *full   = false;
+    for (size_t i = 0; i + 1 < prefix.size(); i++) {
+        if (!ss2_decode_step(m, d, prefix[i], logits.data())) {
+            return false;
+        }
+    }
+    SS2RGrammar  gr(v, key_mode);
+    SS2RRescorer rs(m->rh, tab, v, key_mode, (int64_t) lround(c.window_seconds * 25.0));
+    gr.prime(v, prefix);
+    rs.prime(prefix);
+    bool allow[SS2RGrammar::OTHER + 1];
+    int  token = prefix.back();
+    for (int step = 0;; step++) {
+        if ((int) tokens->size() >= c.max_out) {
+            *full = true;
+            break;
+        }
+        if (!ss2_decode_step(m, d, token, logits.data())) {
+            return false;
+        }
+        rs.apply(logits.data(), gr.incomplete == SS2RGrammar::AFTER_METER);
+        gr.allowed_classes(allow);
+        int   best  = -1;
+        float score = -INFINITY;
+        for (int i = 0; i < c.vocab; i++) {
+            if (allow[gr.cls[(size_t) i]] && logits[(size_t) i] > score) {
+                score = logits[(size_t) i];
+                best  = i;
+            }
+        }
+        if (best < 0) {
+            fprintf(stderr, "[SheetSage] Refined: the grammar left no token to draw\n");
+            return false;
+        }
+        gr.update(best);
+        rs.update(best);
+        tokens->push_back(best);
+        token = best;
+        if (best == v.eos) {
+            break;
+        }
+        if (best >= v.time0 && best < v.time1 && (double) (best - v.time0) / c.time_hz >= stop_time) {
+            break;
+        }
+        if ((step % 100) == 0) {
+            fprintf(stderr, "[SheetSage] Decoding %d/%d\n", step, c.max_out);
+        }
+    }
+    if (tokens->back() != v.eos) {
+        tokens->push_back(v.eos);
+    }
+    *full = *full || (int) tokens->size() >= c.max_out - 64;
+    fprintf(stderr, "[SheetSage] Decoded: %zu tokens, %.1f s (%.1f ms/token)%s\n", tokens->size(), timer.ms() / 1000.0,
+            timer.ms() / (double) tokens->size(), *full ? ", the context full" : "");
+    return true;
+}
+
 // The token stream of a window becomes timed events: subbeat shifts
 // accumulate the step, the fields of an event follow in the order the
 // grammar imposes, the timestamps anchor a step to seconds map that places
@@ -856,6 +1150,7 @@ static bool ss2_decode_events(const SS2Config &        c,
         e.subbeat      = step;
         double stamp   = 0.0;
         bool   payload = false;
+        int    bass    = -1;  // HERESY 2328: a refined chord's bass, its root x quality follows
         while (position < tokens.size()) {
             int     token = tokens[position];
             SS2Kind kind  = ss2_kind(t, token);
@@ -895,6 +1190,26 @@ static bool ss2_decode_events(const SS2Config &        c,
                     e.chord = t.chords[(size_t) (token - t.chord0)];
                     e.field_tokens[SS2_F_CHORD].push_back(token);
                     break;
+                case SS2_KIND_BASS:
+                    bass = token - t.bass0;
+                    e.field_tokens[SS2_F_CHORD].push_back(token);
+                    break;
+                case SS2_KIND_DETAIL:
+                    {
+                        int id  = token - t.detail0;
+                        e.chord = id == SS2R_NO_CHORD ? "N" : ss2r_chord_label(bass >= 0 ? bass : id % 12, id % 12, id / 12);
+                        e.field_tokens[SS2_F_CHORD].push_back(token);
+                        break;
+                    }
+                case SS2_KIND_KEYMODE:
+                    {
+                        int id = token - t.keymode0;
+                        if (id < SS2R_NO_KEY) {  // the N key leaves the key in force
+                            e.key = ss2r_key_label(id % 12, id / 12);
+                        }
+                        e.field_tokens[SS2_F_KEY].push_back(token);
+                        break;
+                    }
                 case SS2_KIND_PITCH:
                     {
                         int pitch_id = token - t.pitch0;
@@ -1084,7 +1399,8 @@ static bool ss2_transcribe(SheetSage2 *        m,
                            bool                melody_only,
                            std::string *       abc,
                            std::string *       error,
-                           const DebugDumper * dbg) {
+                           const DebugDumper * dbg,
+                           bool                key_mode = false) {  // HERESY 2328: Refined writes keys with their modes
     const SS2Config & c         = m->cfg;
     const double      length    = c.window_seconds;
     const double      overlap   = 200.0;
@@ -1097,7 +1413,12 @@ static bool ss2_transcribe(SheetSage2 *        m,
     Timer total;
 
     std::vector<int> task_prefix = { m->tok.sos };
-    for (const char * name : { "timestamp", "downbeat_meter", "structure", "key", "chord_full", "melody_full" }) {
+    // HERESY 2328: Refined's prompts are its own: chord_detail for the chords, key_mode for keys with modes
+    std::vector<const char *> prompts = { "timestamp", "downbeat_meter", "structure", "key", "chord_full", "melody_full" };
+    if (m->refined) {
+        prompts = { "timestamp", "downbeat_meter", "structure", key_mode ? "key_mode" : "key", "chord_detail", "melody_full" };
+    }
+    for (const char * name : prompts) {
         for (size_t i = 0; i < m->tok.prompts.size(); i++) {
             if (m->tok.prompts[i] == name) {
                 task_prefix.push_back(m->tok.prompt0 + (int) i);
@@ -1105,6 +1426,9 @@ static bool ss2_transcribe(SheetSage2 *        m,
         }
     }
     task_prefix.push_back(m->tok.out);
+    if (task_prefix.size() != prompts.size() + 2) {
+        return not_fail(error, "The transcriber lacks a prompt it needs");
+    }
 
     std::vector<NotEvent> stitched;
     double                start = 0.0, accepted = 0.0;
@@ -1115,7 +1439,7 @@ static bool ss2_transcribe(SheetSage2 *        m,
         fprintf(stderr, "[SheetSage] Window %d: %.1f s to %.1f s, accepting to %.1f s\n", index, start,
                 std::min(duration, start + length), accept_end);
 
-        // The segment padded with silence to the window
+        // The segment padded with silence to the window; Refined reads the window as long as the song gives it
         std::vector<float> segment((size_t) window, 0.0f);
         int                offset = (int) lround(start * MERT_SAMPLE_RATE);
         int                avail  = std::min(window, n_samples - offset);
@@ -1123,10 +1447,26 @@ static bool ss2_transcribe(SheetSage2 *        m,
 
         std::vector<float> mel;
         int                T_mel = 0;
-        mert_mel(&m->mert, segment.data(), window, &mel, &T_mel);
+        mert_mel(&m->mert, segment.data(), m->refined ? std::max(avail, 1025) : window, &mel, &T_mel);
         SS2Encoded enc;
         if (!ss2_encode(m, mel, T_mel, &enc, dbg)) {
             return false;
+        }
+        // HERESY 2328: Refined's frame heads on the encoder's mixes, their bar facts added to the memory, their tables
+        // for the rescoring
+        SS2RTables tab;
+        if (m->refined) {
+            Timer                      heads_timer;
+            std::vector<const float *> mixes;
+            for (const std::vector<float> & mix : enc.mixes) {
+                mixes.push_back(mix.data());
+            }
+            SS2RHeadOutputs ho;
+            ss2r_run_heads(m->rh, mixes, enc.T, &ho);
+            ss2r_add_bar_features(m->rh, ho.bar_facts, ho.T, enc.memory.data(), enc.T);
+            ss2r_tables(m->rh, ho, &tab);
+            enc.mixes.clear();
+            fprintf(stderr, "[SheetSage] Refined heads: %d frames, %.1f s\n", enc.T, heads_timer.ms() / 1000.0);
         }
         SS2Decoder dec;
         if (!ss2_decoder_alloc(m, &dec, enc.T) || !ss2_decoder_prepare(m, &dec, enc.memory)) {
@@ -1147,8 +1487,12 @@ static bool ss2_transcribe(SheetSage2 *        m,
             }
         }
         std::vector<int> tokens;
-        bool             ok = ss2_generate(m, &dec, prefix, stop_time, &tokens, dbg);
+        bool             full = false;
+        bool ok = m->refined ? ss2r_generate(m, &dec, prefix, stop_time, tab, key_mode, &tokens, &full) : ss2_generate(m, &dec, prefix, stop_time, &tokens, dbg);
         ss2_decoder_free(&dec);
+        if (ok && full) {
+            fprintf(stderr, "[SheetSage] Window %d filled the decoder's context: the score past %.1f s may thin out\n", index, start);
+        }
         if (!ok) {
             return false;
         }
@@ -1171,6 +1515,26 @@ static bool ss2_transcribe(SheetSage2 *        m,
         }
         accepted = accept_end;
         start    = std::min(start + (length - overlap), duration - length);
+    }
+    // HERESY 2328: a beat written again at the time of the one before (the decoder slipped on a near tie, seen on the Arc with
+    // SheetSage2 and Refined alike) is left out, the first kept, instead of the whole score refused
+    {
+        double last = -1.0;
+        int    dropped = 0;
+        for (NotEvent & e : stitched) {
+            if (e.eighth < 0) {
+                continue;
+            }
+            if (e.time <= last + 1e-6) {
+                e.eighth = -1;
+                dropped++;
+            } else {
+                last = e.time;
+            }
+        }
+        if (dropped) {
+            fprintf(stderr, "[SheetSage] %d beat(s) written again at the time of the one before left out\n", dropped);
+        }
     }
     bool ok = notation_abc(stitched, duration, m->tok.tables, melody_only, abc, error);
     fprintf(stderr, "[SheetSage] Transcribed: %.1f s of audio, %zu events, %.1f s%s\n", duration, stitched.size(),

@@ -1263,3 +1263,35 @@
   src: url(/lab/fonts/GFSDidot-Bold.ttf) format('truetype');
   unicode-range: U+0370-03FF, U+1F00-1FFF;
 }
+/* HERESY 2186 (Viktor 06.11.2026, the 2.0.7 plan: «основным греческим Noto Sans, Didot в списке»): Noto Sans's Greek (the card's), given the Greek letters only, so it stands first in every role's stack (app.css --scripts)
+   and the role's font keeps the rest: the page's own Noto files (the variable regular to semibold, the bold), under a name of the Studio's own */
+@font-face {
+  font-family: 'Ruach Greek Noto';
+  font-style: normal;
+  font-weight: 100 650;
+  font-display: swap;
+  src: url(/lab/fonts/o-0bIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjc5a3du2ui.woff2) format('woff2');
+  unicode-range: U+0370-03FF;
+}
+@font-face {
+  font-family: 'Ruach Greek Noto';
+  font-style: normal;
+  font-weight: 100 650;
+  font-display: swap;
+  src: url(/lab/fonts/o-0bIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjc5aLdu2ui.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+@font-face {
+  font-family: 'Ruach Greek Noto';
+  font-style: normal;
+  font-weight: 651 900;
+  font-display: swap;
+  src: url(/lab/fonts/NotoSans-Bold.ttf) format('truetype');
+  unicode-range: U+0370-03FF, U+1F00-1FFF;
+}
+/* HERESY 2331 (the page in Hebrew, 2.0.7): Noto Sans Hebrew, the visiting card's Hebrew face (lab/fonts/, OFL 1.1: NotoSansHebrew-OFL.txt), given the
+   Hebrew letters and the sheqel only; the page in Hebrew draws them in it (index.html ruachScriptFonts), every other language keeps David CLM there */
+@font-face { font-family: 'Noto Sans Hebrew'; font-style: normal; font-weight: 100 450; font-display: swap; src: url(/lab/fonts/noto-sans-hebrew-400.woff2) format('woff2'); unicode-range: U+0590-05FF, U+20AA, U+FB1D-FB4F; }
+@font-face { font-family: 'Noto Sans Hebrew'; font-style: normal; font-weight: 451 550; font-display: swap; src: url(/lab/fonts/noto-sans-hebrew-500.woff2) format('woff2'); unicode-range: U+0590-05FF, U+20AA, U+FB1D-FB4F; }
+@font-face { font-family: 'Noto Sans Hebrew'; font-style: normal; font-weight: 551 650; font-display: swap; src: url(/lab/fonts/noto-sans-hebrew-600.woff2) format('woff2'); unicode-range: U+0590-05FF, U+20AA, U+FB1D-FB4F; }
+@font-face { font-family: 'Noto Sans Hebrew'; font-style: normal; font-weight: 651 900; font-display: swap; src: url(/lab/fonts/noto-sans-hebrew-700.woff2) format('woff2'); unicode-range: U+0590-05FF, U+20AA, U+FB1D-FB4F; }

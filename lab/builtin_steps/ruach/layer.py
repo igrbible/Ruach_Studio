@@ -2,7 +2,7 @@
 Новая дорожка для наложения эффектов. Брать как нотный референс один из стемов, задавать значения выше/ниже… либо подсовывать готовый
 стемированный MIDI»): a bank from the shelf (lab/banks.py) laid under the song as a strip of its own in the DAW (1929's way).
 
-  an ambience bank (models/ambient): its field recordings as a bed, looped without a seam (lab/ambient.py), as the Ambient step lays them;
+  an ambience bank (models/refiner/ambient): its field recordings as a bed, looped without a seam (lab/ambient.py), as the Ambient step lays them;
   an SFZ bank (an instrument, an effect, a drone, a voice): played by sfizz from
     bed    one note held through the song, struck again before it dies (an effect's or a pad's own sound),
     drone  the song's key, its root and fifth low, held the same way (the key found from the song, or the note asked),
@@ -26,6 +26,7 @@ KIT = Path(os.environ.get("RUACH_KIT") or LAB.parent)   # a kit of its own for t
 sys.path.insert(0, str(LAB))
 import banks as B  # noqa: E402
 import orchestra as O  # noqa: E402
+import paths  # noqa: E402   HERESY 2330: where the weights live
 
 NAMES = "C C# D D# E F F# G G# A A# B".split()
 
@@ -205,7 +206,7 @@ def main():
     else:
         base = KIT / card["where"]
         sfz = str(p.get("sfz") or "").strip() or card["sfz"][0]
-        f = (KIT / "models" / "instruments" / sfz) if card["id"].startswith("inst:") else (base / sfz)
+        f = (paths.at(paths.REFINER_INSTRUMENTS, KIT) / sfz) if card["id"].startswith("inst:") else (base / sfz)
         if not f.is_file():
             raise SystemExit(f"{card['name']} has no {sfz}")
         shift = int(float(p.get("transpose", 0) or 0))

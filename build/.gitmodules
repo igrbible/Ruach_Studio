@@ -1,3 +1,6 @@
 [submodule "ggml"]
 	path = ggml
 	url = https://github.com/ServeurpersoCom/ggml.git
+[submodule "audio.cpp"]
+	path = audio.cpp
+	url = https://github.com/0xShug0/audio.cpp.git

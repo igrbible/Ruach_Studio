@@ -40,7 +40,13 @@ idle() {   # пусто ли сейчас: да — 0
         # не прочёл (её семпл удалён), лежит в jobs как failed и раньше держала перезапуск вечно (14.10.2026)
         local h
         h=$(curl -s -m 5 "http://127.0.0.1:$PORT/health") || return 1
-        printf '%s' "$h" | grep -q '"busy": false' && ! printf '%s' "$h" | grep -Eq '"(queued|running)"'
+        printf '%s' "$h" | grep -q '"busy": false' && ! printf '%s' "$h" | grep -Eq '"(queued|running)"' || return 1
+        # HERESY 2320: /health lists the Videographer's workers (MiniMax H3, SeedVR2), a plan's keyframes and the Artist's kept painters
+        # ("workers"); a lab from before it does not, and its restart killed three H3 workers mid-shot (10.11.2026): their processes asked here
+        if ! printf '%s' "$h" | grep -q '"workers"'; then
+            ! pgrep -u "$(id -u)" -f 'lab/(h3_worker|upscale_job|artist_job)\.py' >/dev/null || return 1
+        fi
+        return 0
     fi
 }
 

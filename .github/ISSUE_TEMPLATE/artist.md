@@ -9,4 +9,4 @@ labels: artist
 
 **What you saw**: in the picture, or the room's message as it was (the Artist's log → Copy).
 
-**The studio**: its version (☰ → About, or the VERSION file), how it was installed (Pinokio or by hand), the system, the card and its memory.
+**The Studio**: its version (☰ → About, or the VERSION file), how it was installed (Pinokio or by hand), the system, the card and its memory.

@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If Ruach Studio helped your work, please cite it as below."
+title: "Ruach Studio"
+abstract: "Open music generation that runs on your own hardware: the model, the score, the adapters and every take stay yours, and nothing is rented by the token. A whole studio around the open YuE2 model, with its own C++ engine and rooms to write, refine, paint, train and mix."
+type: software
+authors:
+  - given-names: Viktor
+    family-names: Zhuromskyy
+repository-code: "https://github.com/igrbible/Ruach_Studio"
+url: "https://ruachstudio.art"
+license: AGPL-3.0-or-later
+keywords:
+  - music generation
+  - lyrics to song
+  - YuE2
+  - ggml
+  - local AI
+  - open source

@@ -16,6 +16,10 @@ Environment=PYTHONUNBUFFERED=1
 ExecStart=@ROOT@/.venv/bin/python @ROOT@/lab/lab.py
 Restart=always
 RestartSec=5
+# HERESY 2367 (Viktor 11.11.2026, the mega report's advice «KillMode=process для юнита лабы»): a stop or a restart ends the lab alone;
+# the lab ends what it started itself (lab/survivors.py) but the Videographer's MiniMax H3 workers and SeedVR2 upscales, which a new lab
+# takes up from their folders
+KillMode=process
 # HERESY 1167 (Viktor: «Может и reload для сисюнитов докрутишь?»): systemctl --user reload restarts it when it is
 # empty (a restart under a running take drops the engine's queue); the waiting is a unit of its own
 ExecReload=@ROOT@/systemd/reload-when-idle.sh lab

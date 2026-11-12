@@ -455,7 +455,7 @@
     if (!secs.length) return '<p class="row-hint lora-secs-none">No sections yet: tag the lyrics, [Verse], [Chorus]…</p>';
     var seen = {}, many = {};
     secs.forEach(function (s) { many[s.name] = (many[s.name] || 0) + 1; });
-    return '<div class="lora-secs" role="group">' + secs.map(function (s, i) {
+    return '<div class="lora-secs" role="group" translate="no">' + secs.map(function (s, i) {   // HERESY 2372: the sections as the lyrics tag them
       var lit = on.indexOf(i) >= 0, n = seen[s.name] = (seen[s.name] || 0) + 1;   // a name sung again numbered: Verse 1, Verse 2
       return '<button type="button" class="lora-sec' + (lit ? " is-on" : "") + '" data-sec="' + i + '" aria-pressed="' + lit + '">' + escape(s.name + (many[s.name] > 1 ? " " + n : "")) + "</button>";
     }).join("") + "</div>" + '<p class="row-hint">The adapter sounds in the ticked sections and rests in the others, with a short ramp at each border.</p>' +
@@ -1688,5 +1688,4 @@
     who.value = "Vocal"; how.value = b.dataset.vshift; go.click();
     paint();
   }, true);
-  window.ruachVshiftOk = ok;   // for the checks
 })();

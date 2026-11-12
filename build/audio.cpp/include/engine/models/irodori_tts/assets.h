@@ -1,0 +1,122 @@
+#pragma once
+
+#include "engine/framework/assets/resource_bundle.h"
+#include "engine/framework/assets/tensor_source.h"
+
+#include <cstdint>
+#include <filesystem>
+#include <memory>
+#include <string>
+#include <vector>
+
+namespace engine::models::irodori_tts {
+
+struct IrodoriModelConfig {
+    std::string flow_parameterization = "rf_velocity";
+    int64_t latent_dim = 32;
+    int64_t latent_patch_size = 1;
+    int64_t model_dim = 1280;
+    int64_t num_layers = 12;
+    int64_t num_heads = 20;
+    // MLP widths are int(dim * ratio) in Python, a double product. In float,
+    // 1280 * 2.6 (v4 Large's speaker encoder) truncates to 3327, not 3328.
+    double mlp_ratio = 2.875;
+    double text_mlp_ratio = 2.6;
+    double speaker_mlp_ratio = 2.6;
+    float dropout = 0.0F;
+    int64_t text_vocab_size = 99574;
+    std::string text_encoder_type = "scratch";
+    bool text_add_bos = true;
+    int64_t text_dim = 512;
+    int64_t text_layers = 10;
+    int64_t text_heads = 8;
+    int64_t pretrained_text_dim = 0;
+    int64_t pretrained_text_layers = 0;
+    int64_t pretrained_text_heads = 0;
+    int64_t pretrained_text_intermediate_dim = 0;
+    int64_t pretrained_text_sliding_window = 0;
+    float pretrained_text_full_rope_theta = 160000.0F;
+    float pretrained_text_sliding_rope_theta = 10000.0F;
+    std::vector<std::string> pretrained_text_layer_types;
+    // "modernbert" (v4 Small) or "t5gemma2" (v4 Large, the encoder half of
+    // google/t5gemma-2-1b-1b). The fields below are read for t5gemma2 only.
+    std::string pretrained_text_model_type = "modernbert";
+    int64_t pretrained_text_kv_heads = 0;
+    int64_t pretrained_text_head_dim = 0;
+    float pretrained_text_rms_norm_eps = 1.0e-6F;
+    float pretrained_text_query_pre_attn_scalar = 0.0F;
+    float pretrained_text_attn_logit_softcap = 0.0F;
+    float pretrained_text_full_rope_freq_scale = 1.0F;
+    float pretrained_text_sliding_rope_freq_scale = 1.0F;
+    std::string pretrained_projector_type = "linear";
+    float pretrained_projector_hidden_ratio = 2.0F;
+    bool use_caption_condition = false;
+    bool use_speaker_condition = true;
+    int64_t caption_vocab_size = 0;
+    int64_t caption_dim = 0;
+    int64_t caption_layers = 0;
+    int64_t caption_heads = 0;
+    double caption_mlp_ratio = 0.0;
+    int64_t speaker_dim = 768;
+    int64_t speaker_layers = 8;
+    int64_t speaker_heads = 12;
+    int64_t speaker_patch_size = 1;
+    int64_t timestep_embed_dim = 512;
+    int64_t adaln_rank = 192;
+    float norm_eps = 1.0e-5F;
+    // Python's ModelConfig default. Checkpoints with a duration predictor set it
+    // explicitly; older ones (500M v2) omit it and carry no duration weights.
+    bool use_duration_predictor = false;
+    int64_t duration_aux_dim = 14;
+    int64_t duration_hidden_dim = 1024;
+    int64_t duration_layers = 3;
+    float duration_dropout = 0.1F;
+    int64_t duration_attention_heads = 8;
+    std::string duration_architecture = "token_sum_adarn_zero_no_aux";
+    float duration_token_init_frames = 9.0F;
+    std::string duration_speaker_fusion = "adarn_zero";
+    std::string duration_caption_fusion = "adarn_zero";
+    std::string duration_caption_pooling = "masked_mean";
+    int64_t max_text_len = 256;
+    int64_t max_caption_len = 256;
+    // Default reference length cap in seconds (the checkpoint's
+    // ref_max_seconds; 30 when it has none, as in Python Irodori-TTS).
+    float ref_max_seconds = 30.0F;
+
+    int64_t patched_latent_dim() const noexcept;
+    int64_t speaker_patched_latent_dim() const noexcept;
+    bool use_pretrained_text_encoder() const noexcept;
+    bool use_t5gemma2_text_encoder() const noexcept;
+    int64_t caption_vocab_size_resolved() const noexcept;
+    int64_t caption_dim_resolved() const noexcept;
+    int64_t caption_layers_resolved() const noexcept;
+    int64_t caption_heads_resolved() const noexcept;
+    double caption_mlp_ratio_resolved() const noexcept;
+};
+
+struct IrodoriCodecConfig {
+    int64_t encoder_dim = 64;
+    int64_t latent_dim = 1024;
+    int64_t decoder_dim = 1536;
+    int64_t n_codebooks = 16;
+    int64_t codebook_size = 1024;
+    int64_t codebook_dim = 32;
+    int sample_rate = 48000;
+    int64_t hop_length = 1920;
+};
+
+struct IrodoriTTSAssets {
+    // The model directory as given (or the directory of the given file). Unlike
+    // resources.model_root(), it is not replaced by the extracted sidecars of a
+    // standalone GGUF, so it is where user files such as embeddings/ live.
+    std::filesystem::path model_dir;
+    assets::ResourceBundle resources;
+    IrodoriModelConfig config;
+    IrodoriCodecConfig codec;
+    std::shared_ptr<const assets::TensorSource> model_weights;
+    std::shared_ptr<const assets::TensorSource> codec_weights;
+};
+
+std::shared_ptr<const IrodoriTTSAssets> load_irodori_tts_assets(const std::filesystem::path & model_path);
+
+}  // namespace engine::models::irodori_tts

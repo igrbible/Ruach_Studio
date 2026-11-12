@@ -1,5 +1,5 @@
 """HERESY 1876b (Viktor 29.10.2026: «если апскейлер на финал прикрутишь, то с ним сможем вытянуть клип и в 2-4K»; «SeedVR2 обе 3B и 7B просчитай по ресурсам
-и прогони 7B на предмет на OOM под 24GB VRAM»): the Videographer's shots made larger by SeedVR2 (lab/seedvr2rt, models/seedvr2). The shots asked for are
+и прогони 7B на предмет на OOM под 24GB VRAM»): the Videographer's shots made larger by SeedVR2 (lab/seedvr2rt, models/misc/seedvr2). The shots asked for are
 dealt among the free cards (by their frames), one job a card: lab/upscale_job.py runs SeedVR2 once over the card's shots (the model loaded once, kept for
 all of them) in the Artist's environment and leaves done.json; collect() sets each into its shot (NAME.shots/STEM-upRES.mp4, the shot's «video_up»), a
 shot whose video changed meanwhile keeps it aside. 7B sharp with 16 of its blocks in RAM (20 GB of a card at 1080p, 21 at 1440p) or 3B (18.6 GB)."""
@@ -12,15 +12,33 @@ import threading
 import time
 from pathlib import Path
 
+import paths                       # HERESY 2330: where the weights live
 import videographer as vg
 
 HERE = Path(__file__).resolve().parent
 RT = HERE / "seedvr2rt"
 JOB = HERE / "upscale_job.py"
-MODELS = {"7b": {"dit": "seedvr2_ema_7b_sharp_fp16.safetensors", "swap": 16, "label": "SeedVR2 7B sharp"},
-          "3b": {"dit": "seedvr2_ema_3b_fp16.safetensors", "swap": 0, "label": "SeedVR2 3B"}}
-RES = (1080, 1440)
+# HERESY 2356 (the diagnosis of «Буратино», 10.11.2026: in batches of 21 frames with no overlap SeedVR2 drew each face anew at every batch's seam,
+# 1.2–2.9 times the change inside a batch): batches of 45 with 4 frames of overlap, blended (7B sharp then with 32 of its blocks in RAM: 24.1 GB at
+# the peak, measured 10.11); 7B sharp fp8, not measured at 45, stays at 21, with the overlap too. SeedVR2 is a choice now: the clip takes a shot's
+# video by Lanczos unless SeedVR2 is asked for (videographer.UPSCALE)
+OVERLAP = 4
+MODELS = {"7b": {"dit": "seedvr2_ema_7b_sharp_fp16.safetensors", "swap": 32, "batch": 45, "label": "SeedVR2 7B sharp"},
+          # HERESY 2324 (Viktor 10.11.2026: «на скольких шагах ты его херачишь. Может быть, это too much»): SeedVR2 paints in one step; what a shot
+          # costs is the VAE (its decode in tiles about half) and the 7B's blocks streamed from RAM. 7B sharp in fp8 (block 35 kept in fp16, AInVFX)
+          # fits the card whole: no streaming. The default stays 7B sharp fp16; the choice is the room's (night-2026-11-10/videographer, measures)
+          "7b-fp8": {"dit": "seedvr2_ema_7b_sharp_fp8_e4m3fn_mixed_block35_fp16.safetensors", "swap": 0, "batch": 21, "label": "SeedVR2 7B sharp fp8"},
+          "3b": {"dit": "seedvr2_ema_3b_fp16.safetensors", "swap": 0, "batch": 45, "label": "SeedVR2 3B"}}
+RES = (720, 1080, 1440)                           # HERESY 2324: 720p, the clip scaling it to its size (measured 10.11: 7B sharp fp8 twice as fast, 16.3 GB)
 NEED_MB = 21500                                   # measured 29.10: 7B sharp 19.7 GB at 1080p, 20.9 at 1440p, with room
+
+
+def need_mb(res=1080, model=None):
+    """HERESY 2324: what a card must have free for an upscale at this resolution (720p peaked at 16.3 GB on 10.11, the VAE's tiles the largest).
+    HERESY 2356: a batch of 45 asks for the whole card (24.1 GB at its peak on 10.11)."""
+    if model and (MODELS.get(model) or {}).get("batch", 21) > 21:
+        return 23800
+    return 17500 if int(res or 1080) <= 720 else NEED_MB
 LOCK = threading.Lock()
 
 
@@ -31,7 +49,7 @@ def _py(kit):
 def ready(kit, model="7b"):
     """Whether shots can be upscaled here with this model: its weights (fetch-heresy.sh --upscaler), the runtime and the Artist's environment."""
     m = MODELS.get(model) or MODELS["7b"]
-    need = [Path(kit) / "models/seedvr2" / m["dit"], Path(kit) / "models/seedvr2/ema_vae_fp16.safetensors", RT / "inference_cli.py"]
+    need = [paths.at(paths.SEEDVR2, kit) / m["dit"], paths.at(paths.SEEDVR2, kit) / "ema_vae_fp16.safetensors", RT / "inference_cli.py"]
     missing = [str(p.relative_to(kit)) if str(p).startswith(str(kit)) else str(p) for p in need if not p.is_file()]
     if not _py(kit).is_file():
         missing.append(str(_py(kit)))
@@ -63,7 +81,7 @@ def _alive(jd):
 def start(kit, name, shots, model="7b", res=1080, free_cards=()):
     """The shots asked for (their indices; those without a video left out), dealt among the free cards by their frames; a job a card."""
     if model not in MODELS or int(res) not in RES:
-        raise ValueError("7b or 3b, 1080 or 1440")
+        raise ValueError(", ".join(MODELS) + "; 720, 1080 or 1440")
     r = ready(kit, model)
     if not r["ready"]:
         raise FileNotFoundError("SeedVR2 is not here: " + ", ".join(r["missing"]) + " (heresy/fetch-heresy.sh --upscaler 7b)")
@@ -97,7 +115,8 @@ def start(kit, name, shots, model="7b", res=1080, free_cards=()):
                 link = jd / "in" / f"{it['i']:03d}.mp4"
                 if not link.exists():
                     link.symlink_to(it["src"])
-            job = {"name": name, "model": model, "res": int(res), "gpu": c, "items": its, "queued": time.time(), "pid": 0}
+            job = {"name": name, "model": model, "res": int(res), "gpu": c, "items": its, "queued": time.time(), "pid": 0,
+                   "batch": MODELS[model]["batch"], "swap": MODELS[model]["swap"]}   # HERESY 2356: its batches (45 overlapping by 4) and blocks in RAM
             (jd / "job.json").write_text(json.dumps(job, ensure_ascii=False), encoding="utf-8")
             log = open(jd / "log", "ab")
             p = subprocess.Popen(["nice", "-n", "5", str(_py(kit)), "-u", str(JOB), str(jd)], cwd=str(kit), stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
@@ -107,7 +126,19 @@ def start(kit, name, shots, model="7b", res=1080, free_cards=()):
     return {"jobs": jobs}
 
 
+COLLECTING = threading.Lock()   # HERESY 2308
+
+
 def collect(kit):
+    if not COLLECTING.acquire(blocking=False):      # HERESY 2308: another collect is at it: it sets them
+        return []
+    try:
+        return _collect(kit)
+    finally:
+        COLLECTING.release()
+
+
+def _collect(kit):
     """Finished jobs' videos set into their shots (STEM-upRES.mp4 beside the shot's video); a shot whose video changed keeps it aside."""
     done = []
     for jd in sorted(_root(kit).glob("*--*")) if _root(kit).is_dir() else []:

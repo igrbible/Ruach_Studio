@@ -154,7 +154,13 @@ for i in sorted(on_disk):
 
 # models: every GGUF is made by the kit's steps (convert, or a quantize line generated here)
 converted = {"YuE2-3B-BF16.gguf", "YuE2-Vae-F32.gguf", "YuE2-Vae-legacy-F32.gguf", "YuE2-Vae-blend-F32.gguf", "SheetSage2-F32.gguf"}
-models = sorted(os.path.basename(p) for p in glob.glob(os.path.join(root, "models", "*.gguf")))
+# HERESY 2330: the Kit's GGUFs where the Studio keeps them (lab/paths.py: models/engine/…, models/misc/), each named by its file
+sys.path.insert(0, os.path.join(root, "lab"))
+import paths as studio_paths
+def where(m):
+    return studio_paths.new_of("models/" + m) or os.path.join(studio_paths.MODELS, m)   # paths: 2.0.6 (the map's own question)
+models = sorted({os.path.basename(p) for d in (studio_paths.ENGINE_YUE2, studio_paths.ENGINE_VAE, studio_paths.ENGINE_TOKENIZERS, studio_paths.MISC)
+                 for p in glob.glob(os.path.join(root, d, "*.gguf"))})
 quantize = []
 for m in models:
     if m in converted:
@@ -163,11 +169,11 @@ for m in models:
     if q:
         src_model = "YuE2-3B-BF16.gguf" if q.group(1) == "YuE2-3B" else "SheetSage2-F32.gguf"
         # written as .partial and renamed when done: an interrupted run never leaves a finished-looking file
-        quantize.append(f"nice -n 15 build/build/quantize models/{src_model} models/{m}.partial {q.group(2)} && mv models/{m}.partial models/{m}")
+        quantize.append(f"nice -n 15 build/build/quantize {where(src_model)} {where(m)}.partial {q.group(2)} && mv {where(m)}.partial {where(m)}")
     else:
-        problems.append(f"models/{m}: the kit has no step that makes it")
+        problems.append(f"{where(m)}: the kit has no step that makes it")
 for m in sorted(converted - set(models)):
-    notes.append(f"models/{m} is not in this install, but convert-models.sh makes it anyway")
+    notes.append(f"{where(m)} is not in this install, but convert-models.sh makes it anyway")
 sliders = len(glob.glob(os.path.join(root, "sliders", "*.gguf")))
 vaes = ["standard"] + [v for v in ("legacy", "blend") if f"YuE2-Vae-{v}-F32.gguf" in models]
 for v in vaes:
@@ -209,7 +215,7 @@ for folder, repo, sub, files in lora_entries:
 # the downloader keeps its records (models/.cache; no walking up: that folder may be in a shared library)
 with open(os.path.join(root, "download-models.sh"), encoding="utf-8") as f:
     gguf_repo = re.search(r'^REPO="([^"]+)"', f.read(), re.M).group(1)
-repos.setdefault(gguf_repo, [os.path.join(root, "models")])
+repos.setdefault(gguf_repo, [os.path.join(root, studio_paths.INCOMING)])   # HERESY 2330: the downloader's records stay in models/.incoming/
 levels = {gguf_repo: 1}
 pins, table = [], []
 for repo, dirs in repos.items():
@@ -245,11 +251,11 @@ def cached_sha(path):
     return cache[key]
 exact, struct_ = {}, {}
 for m in models:
-    full = os.path.join(root, "models", m)
+    full = os.path.join(root, where(m))
     if m in converted and m not in by_structure:
-        exact["models/" + m] = cached_sha(full)
+        exact[where(m)] = cached_sha(full)
     else:
-        struct_["models/" + m] = gguf_check.structure(full)
+        struct_[where(m)] = gguf_check.structure(full)
 for g in sorted(glob.glob(os.path.join(root, "sliders", "*.gguf"))):
     exact["sliders/" + os.path.basename(g)] = cached_sha(g)
 json.dump(cache, open(cache_path, "w"))

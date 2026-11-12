@@ -1,6 +1,6 @@
 ---
 name: Engine and install
-about: Installing, updating, Pinokio, the cards (GPUs), the models, starting the studio
+about: Installing, updating, Pinokio, the cards (GPUs), the models, starting the Studio
 title: "Install: "
 labels: install
 ---
@@ -11,4 +11,4 @@ labels: install
 
 **The cards**: Engine → GPUs (which card does what), and nvidia-smi if you can.
 
-**The studio**: its version (☰ → About, or the VERSION file), how it was installed (Pinokio or by hand), the system, the card and its memory.
+**The Studio**: its version (☰ → About, or the VERSION file), how it was installed (Pinokio or by hand), the system, the card and its memory.

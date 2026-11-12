@@ -19,13 +19,14 @@ LISTENER=Q8_0; [ "$V" -lt 12000 ] && LISTENER=Q4_K_M
 WRITER=quality; [ "$V" -lt 11500 ] && WRITER=compact; [ "$V" -lt 7500 ] && WRITER=""
 W=(); [ -n "$WRITER" ] && W=(--writer "$WRITER")
 TRAINER=bf16; [ "$V" -lt 23000 ] && TRAINER=int8
-BB=(); [ -s "$ROOT/models/YuE2-3B-BF16.gguf" ] || BB=(--backbone BF16)
+source "$ROOT/launcher/paths.sh"   # HERESY 2330: every weight's place
+BB=(); [ -s "$RS_ENGINE_YUE2/YuE2-3B-BF16.gguf" ] || BB=(--backbone BF16)
 echo "a card of $V MiB: the painter ${ART[*]}, the listener $LISTENER, the writer ${WRITER:-none (a card under 8 GB)}, the trainer's base $TRAINER$([ ${#BB[@]} -gt 0 ] && echo ", the BF16 backbone")"
 bash heresy/fetch-heresy.sh "${ART[@]}" --listener "$LISTENER" --trainer "$TRAINER" "${W[@]}" "${BB[@]}" || stop "a download did not complete (the lines marked failed above say which and why): run it again to go on"
 
 # the listener's GGUF runs through llama.cpp's llama-mtmd-cli (fetch-heresy.sh clones it): built here, with the Studio's toolchain
 L="$ROOT/vendor/llama.cpp"
-if ls "$ROOT"/checkpoints/Qwen2.5-Omni-7B-GGUF/*.gguf >/dev/null 2>&1 && [ -d "$L" ] && [ ! -x "$L/build/bin/llama-mtmd-cli" ]; then
+if ls "$RS_LISTENER"/Qwen2.5-Omni-7B-GGUF/*.gguf >/dev/null 2>&1 && [ -d "$L" ] && [ ! -x "$L/build/bin/llama-mtmd-cli" ]; then
     echo; echo "── llama-mtmd-cli for the listener (a few minutes)"
     [ -n "$RUACH_CUDA_HOME" ] || stop "no CUDA toolkit 12.8 to build llama-mtmd-cli with"
     ruach_tools || stop "cmake and ninja could not be put into .venv"
@@ -34,7 +35,7 @@ if ls "$ROOT"/checkpoints/Qwen2.5-Omni-7B-GGUF/*.gguf >/dev/null 2>&1 && [ -d "$
     nice -n 10 cmake --build "$L/build" -j "$(nproc)" --target llama-mtmd-cli || stop "llama-mtmd-cli did not build"
 fi
 # HERESY 1811: the Studio's writer runs through llama.cpp's llama-server: built here too, with the same toolchain
-if ls "$ROOT"/checkpoints/Qwopus3.5-9B-GGUF/*.gguf >/dev/null 2>&1 && [ -d "$L" ] && [ ! -x "$L/build/bin/llama-server" ]; then
+if ls "$RS_WRITER"/Qwopus3.5-9B-GGUF/*.gguf >/dev/null 2>&1 && [ -d "$L" ] && [ ! -x "$L/build/bin/llama-server" ]; then
     echo; echo "── llama-server for the Studio's writer (a few minutes)"
     [ -n "$RUACH_CUDA_HOME" ] || stop "no CUDA toolkit 12.8 to build llama-server with"
     ruach_tools || stop "cmake and ninja could not be put into .venv"

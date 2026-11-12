@@ -7,6 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import banks  # noqa: E402
+import paths  # noqa: E402   HERESY 2330: where the weights live
 
 bad = []
 
@@ -30,19 +31,19 @@ with tempfile.TemporaryDirectory() as k:
     (u / "fire.flac").write_bytes(b"0" * 2000)
     (u / "bank.json").write_text(json.dumps({"name": "Fire and Rain", "kind": "ambience", "author": "Viktor", "licence": "CC0", "may_ship": True,
                                              "description": "his fireplace and his window"}))
-    a = k / "models" / "ambient" / "rain"
+    a = paths.at(paths.REFINER_AMBIENT, k) / "rain"
     a.mkdir(parents=True)
     (a / "rain-bed0.flac").write_bytes(b"0" * 1000)
     (a / "bank.json").write_text(json.dumps({"items": [{"source": "aporee_1", "title": "Rain in a wood", "licence": "http://creativecommons.org/publicdomain/mark/1.0/",
                                                          "recordist": "Someone", "public": True, "file": "rain-bed0.flac"},
                                                         {"source": "aporee_2", "title": "refused", "licence": "x", "public": True, "refused": True}]}))
-    i = k / "models" / "instruments" / "harp-set"
+    i = paths.at(paths.REFINER_INSTRUMENTS, k) / "harp-set"
     (i / "sub").mkdir(parents=True)
     (i / "sub" / "harp.sfz").write_text("<region> sample=a.wav\n")
     (i / "sub" / "a.wav").write_bytes(b"0" * 3000)
     (i / "LICENSE").write_text("Creative Commons Attribution 4.0")
     (i / "README.md").write_text("# Harp\n\nA concert harp sampled in a small hall, every string at three dynamics.\n")
-    j = k / "models" / "instruments" / "mystery"
+    j = paths.at(paths.REFINER_INSTRUMENTS, k) / "mystery"
     j.mkdir(parents=True)
     (j / "x.sfz").write_text("<region> sample=x.wav\n")
     s = banks.shelf(k, fresh=True)
@@ -53,7 +54,7 @@ with tempfile.TemporaryDirectory() as k:
     c = banks.card(k, "ambient:rain")
     check("an ambient layer: its pieces (the refused left out), its licence read, may ship when all are public", c["licence"] == "Public domain" and c["may_ship"] and "1 pieces" in c["description"] and c["author"] == "Someone", c)
     c = banks.card(k, "inst:harp-set")
-    check("an instrument set: its .sfz under models/instruments, its licence and its README's first paragraph", c["sfz"] == ["harp-set/sub/harp.sfz"] and c["licence"] == "CC BY" and c["may_ship"] and c["description"].startswith("A concert harp"), c)
+    check(f"an instrument set: its .sfz under {paths.REFINER_INSTRUMENTS}, its licence and its README's first paragraph", c["sfz"] == ["harp-set/sub/harp.sfz"] and c["licence"] == "CC BY" and c["may_ship"] and c["description"].startswith("A concert harp"), c)
     c = banks.card(k, "inst:mystery")
     check("a set with no papers: unknown, not to ship", c["licence"] == "unknown" and not c["may_ship"], c)
     try:

@@ -29,7 +29,7 @@
   }
   function iconize(b) {
     if (!b || b.tagName !== "BUTTON" || b.closest("[data-no-icon]")) return;
-    // HERESY 2106 (Viktor 06.11.2026 on the journal's «Sent. Your ticket»: «OK вылетело из кнопки»): a dialog's answer keeps its word inside, as every
+    // HERESY 2106 (Viktor 05.11.2026 evening on the journal's «Sent. Your ticket»: «OK вылетело из кнопки»): a dialog's answer keeps its word inside, as every
     // other answer of the Studio's dialogs does («Send it», «Download it»); its ✓ or bin with the word in a tip floated that word over the dialog's
     // text when the dialog gave it the focus. The dialog's Cancel stays ✕ (1593)
     if (b.matches(".hd-yes, .hd-alt, .hd-guard-keep")) return;
@@ -60,5 +60,4 @@
     }).observe(document.body, { childList: true, subtree: true });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
-  window.HeresyIconBtn = { scan: scan, map: function () { return Object.assign({}, MAP); } };
 })();

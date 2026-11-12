@@ -8,6 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import merges  # noqa: E402
+import paths  # noqa: E402   HERESY 2330: where the weights live
 
 fails = 0
 
@@ -32,7 +33,8 @@ def gguf(path, kv):
 
 with tempfile.TemporaryDirectory() as d:
     kit = Path(d)
-    (kit / "models").mkdir()
+    paths.at(paths.ENGINE_YUE2, kit).mkdir(parents=True)          # HERESY 2330: m-a-p's here, a merge in its folder under finetunes/
+    paths.at(paths.ENGINE_LEGACY, kit).mkdir(parents=True)
     (kit / "loras").mkdir()
     json.dump({"loras": {"YuE2-instrumental-cot-full-loras/": {"title": "Instrumental"},
                          "yue2-mothersuperior-realaudio-tokenizer-v4/nar_lora_joint_v9": {"title": "Real audio v9"},
@@ -43,10 +45,11 @@ with tempfile.TemporaryDirectory() as d:
             "loras/someone-else/thing.safetensors@0,0.5")
     tokens = struct.pack("<IQ", 8, 3) + s("a") + s("bb") + s("ccc")                 # an array of strings before the key
     ints = struct.pack("<IQ", 5, 4) + struct.pack("<4i", 1, 2, 3, 4)                 # and one of a fixed size
-    gguf(kit / "models" / "YuE2-3B-IRA-Q8_0.gguf", [("general.architecture", 8, s("yue2")), ("tokenizer.tokens", 9, tokens),
+    gguf(paths.engine_gguf("YuE2-3B-IRA-Q8_0.gguf", kit), [("general.architecture", 8, s("yue2")), ("tokenizer.tokens", 9, tokens),
                                                     ("x.ints", 9, ints), ("x.f", 6, struct.pack("<f", 1.5)), (merges.KEY, 8, s(said))])
-    gguf(kit / "models" / "YuE2-3B-BF16.gguf", [("general.architecture", 8, s("yue2"))])
-    (kit / "models" / "YuE2-3B-Broken-BF16.gguf").write_bytes(b"NOPE")
+    gguf(paths.engine_gguf("YuE2-3B-BF16.gguf", kit), [("general.architecture", 8, s("yue2"))])
+    paths.at(paths.ENGINE_OWN, kit).mkdir(parents=True)
+    paths.engine_gguf("YuE2-3B-Broken-BF16.gguf", kit).write_bytes(b"NOPE")   # a merge of the user's own
     r = merges.merges(kit)
     got = r["merges"].get("IRA-Q8_0") or []
     check("a merge's adapters read from the header past string and number arrays, at their strengths",

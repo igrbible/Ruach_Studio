@@ -1,4 +1,4 @@
-"""HERESY 1870: the files of models/minimax-h3 the runtime reads, without torch: the lab asks it whether shots can be made here."""
+"""HERESY 1870: the files of models/videographer/minimax-h3 the runtime reads, without torch: the lab asks it whether shots can be made here."""
 from pathlib import Path
 
 FILES = {

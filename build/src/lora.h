@@ -734,7 +734,7 @@ static bool lora_prepare(LoraSet * set, const std::string & name, int64_t rows, 
 }
 
 // The hot loop: out[r] += sum_k b[r][k] * a[k], for rows r0..r1 (AVX2/FMA build with a fallback)
-#if defined(__GNUC__) && (defined(__x86_64__) || defined(__i386__)) && !defined(__clang__)
+#if defined(__GNUC__) && __GNUC__ >= 12 && (defined(__x86_64__) || defined(__i386__)) && !defined(__clang__)   // gcc 11: «no dispatcher found» for arch= clones
 __attribute__((target_clones("arch=x86-64-v3", "default")))
 #endif
 static void lora_rows_update(float * w, int64_t r0, int64_t r1, int64_t cols, const float * b, int64_t rank,

@@ -41,6 +41,24 @@ for bad in ({"cert": "/no/such.pem", "key": ""}, {"cert": "/no/such.pem", "key":
     except ValueError:
         pass
 n += 1
+# HERESY 2174 (H03): the certificate and its key from user/ alone: a path out of it refused before it is looked at (the same words for a file that is
+# there and one that is not: no oracle), a link out of it too; one in user/, absolute or relative to it, read
+for outside in ("/etc/hostname", "/no/such.pem", "../outside.pem", str(td / "outside.pem")):
+    try:
+        C.save(cfg, {"cert": outside, "key": outside}); raise SystemExit("took " + outside)
+    except ValueError as e:
+        assert str(e) == C.OUTSIDE, (outside, str(e))
+(td / "outside.pem").write_text("-----BEGIN CERTIFICATE-----\n")
+(cfg / "c2pa").mkdir(parents=True, exist_ok=True)
+(cfg / "c2pa" / "link.pem").symlink_to(td / "outside.pem")
+try:
+    C.save(cfg, {"cert": "c2pa/link.pem", "key": "c2pa/link.pem"}); raise SystemExit("took a link out of user/")
+except ValueError as e:
+    assert str(e) == C.OUTSIDE, str(e)
+mine = C.save(cfg, {"cert": str(cfg / "c2pa" / "own-chain.pem"), "key": "c2pa/own-key.pem"})
+assert C.status(cfg)["signer"] == "yours" and mine["key"] == "c2pa/own-key.pem", C.status(cfg)
+C.save(cfg, {"cert": "", "key": ""})
+n += 1
 # the steps a file came through, from the take on
 take = td / "out" / "t1"
 for bid, kind, src, label in (("debuzz-1", "debuzz", "the take", ""), ("stems-1", "stems", "derived/debuzz-1/d.flac", ""),
@@ -70,4 +88,21 @@ assert j["status"] == "done" and j.get("signed") == 2 and said == [("wav", ""), 
 with zipfile.ZipFile(collection.export_path(td, job["id"])) as z:
     names = sorted(z.namelist())
     assert C.read(z.read([a for a in names if a.endswith(".flac")][0]), "flac")["actions"] == ["c2pa.created", "c2pa.edited"]; n += 1
+# HERESY 2333: a take of the Reader is speech, its engine and its credit named; never for training said by cawg.training-mining; a song says neither
+C.save(cfg, {"author": "", "contact": ""})
+req = {"no_train": True, "reader": {"engine": "drama3", "engine_label": "Fish Audio Drama 3", "credit": "Built with Fish Audio"}}
+meta = {"no_train": True, "provenance": {"no_train": True, "why": "speech of an engine whose terms forbid training on what it makes"}}
+made = C.made_of(req, meta)
+assert made == {"speech": True, "no_train": True, "why": meta["provenance"]["why"], "engine": "Fish Audio Drama 3", "credit": "Built with Fish Audio"}, made
+for fmt in ("wav", "flac"):
+    r = C.read(C.sign(cfg, enc(fmt), fmt, "Глава первая", "2", ["Speech EQ"], made), fmt)
+    assert r["state"] == "Valid" and r["actions"] == ["c2pa.created", "c2pa.edited"], r
+    assert "speech" in r["made"] and "Fish Audio Drama 3" in r["made"] and "Built with Fish Audio" in r["made"] and "music" not in r["made"], r
+    assert r["training"] == {k: "notAllowed" for k in C.TRAINING}, r["training"]
+n += 1
+song = C.read(C.sign(cfg, enc("wav"), "wav", "A song", "2", None, C.made_of({"style": "rock"}, {"title": "A song"})), "wav")
+assert "music" in song["made"] and song["training"] == {}, song
+assert C.made_of({"style": "rock"}, {})["speech"] is False and C.made_of({}, {"no_train": True})["no_train"] is True
+assert C.read(C.sign(cfg, enc("wav"), "wav", "t", "2"), "wav")["training"] == {}                        # an old caller: as before
+n += 1
 print(f"c2pa: {n} checks passed")

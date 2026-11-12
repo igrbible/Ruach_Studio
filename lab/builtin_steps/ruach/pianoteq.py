@@ -8,7 +8,7 @@ them all, the sustain pedal is held through each phrase; then Pianoteq plays the
 (where a bought one keeps its activation; the user's file never written), and the render stands at the stem's level, of its length.
 
 Plug-N-Play: the Studio ships nothing of Pianoteq. It drives the copy the user installed and activated: user/pianoteq.json {"path": …}
-first, then models/instruments/pianoteq*/ (the tarball unpacked there), then ~/pianoteq*/, then a `pianoteq` on the PATH. Without one the
+first, then models/refiner/instruments/pianoteq*/ (the tarball unpacked there), then ~/pianoteq*/, then a `pianoteq` on the PATH. Without one the
 step says where to put it. Modartt's licence (§1.2 f): Pianoteq's sound may not train a neural network; the branch says so in its measure.
 
     python pianoteq.py SET_DIR OUTDIR PARAMS.json
@@ -26,6 +26,7 @@ HERE = Path(__file__).resolve().parent
 LAB = HERE.parents[1]
 KIT = LAB.parent
 sys.path.insert(0, str(LAB))
+import paths  # noqa: E402   HERESY 2330: where the weights live
 
 # HERESY 2036: one script for Modartt's three; organteq.py and airteq.py set PRODUCT and call main(). Each its program's name, the stems it
 # plays first, its keyboard (notes beyond it moved by octaves) and whether a sustain pedal means anything to it
@@ -52,7 +53,7 @@ def find_pianoteq(kit):
 
 
 def find_modartt(kit, slug):
-    """HERESY 2036: the program of this Modartt product installed here (user/<slug>.json, models/instruments/<slug>*/, ~, the PATH), or None."""
+    """HERESY 2036: the program of this Modartt product installed here (user/<slug>.json, models/refiner/instruments/<slug>*/, ~, the PATH), or None."""
     k = KINDS[slug]
     cfg = Path(kit) / "user" / f"{slug}.json"
     if cfg.is_file():
@@ -62,7 +63,7 @@ def find_modartt(kit, slug):
                 return p
         except (OSError, ValueError):
             pass
-    roots = sorted((Path(kit) / "models" / "instruments").glob(f"{slug}*")) + sorted(Path.home().glob(f"{slug}*")) + sorted(Path.home().glob(f"{k['name']}*"))
+    roots = sorted(paths.at(paths.REFINER_INSTRUMENTS, kit).glob(f"{slug}*")) + sorted(Path.home().glob(f"{slug}*")) + sorted(Path.home().glob(f"{k['name']}*"))
     for root in roots:
         for arch in ("x86-64bit", "arm-64bit"):
             for b in sorted(root.glob(f"**/{arch}/{k['exe']}"), reverse=True):   # the newest version first; its .lv2 and .vst3 are folders, its .so a plugin
@@ -124,7 +125,7 @@ def main(set_dir, outdir, params_file):
     N = K["name"]
     binary = find_modartt(KIT, PRODUCT)
     if binary is None:
-        raise SystemExit(f"no {N} here: unpack the one you bought (or its trial) from modartt.com into models/instruments/{PRODUCT}/, activate it there, "
+        raise SystemExit(f"no {N} here: unpack the one you bought (or its trial) from modartt.com into {paths.REFINER_INSTRUMENTS}/{PRODUCT}/, activate it there, "
                          f"or name its program in user/{PRODUCT}.json {{\"path\": …}} (the guide: {N})")
     stem, name = stem_file(set_dir, str(p.get("stem") or K["first"][0]))
     source = f"derived/{set_dir.name}/{stem.name}"

@@ -64,6 +64,11 @@ def can_run(root):
     # pull on a detached head, and the Studio there is Pinokio's to start (launcher/lab.sh says it runs there)
     if os.environ.get("RUACH_LAUNCHER") == "pinokio":
         return False, "this Studio runs under Pinokio: update it there, by Update in Pinokio's menu"
+    # packaged (Claude, 07.11.2026, the WSL2 and AppImage trials): the Studio is not a clone there; its launcher brings the next version
+    if os.environ.get("RUACH_LAUNCHER") == "appimage":
+        return False, "this Studio is an AppImage: download the new RuachStudio AppImage and start it in place of this one (models, songs and settings stay in " + str(Path(root)) + ")"
+    if os.environ.get("RUACH_LAUNCHER") == "wsl":
+        return False, "this Studio runs in WSL from RuachStudio.exe: the tray menu's Check for updates brings the new version"
     if not shutil.which("systemd-run"):
         return False, "this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)"
     if not (root / ".git").exists():
@@ -129,7 +134,9 @@ def run(root, config_dir, tag, busy):
     ref = st["latest"]["tag"]
     log = root / "tmp" / "update.log"
     log.parent.mkdir(parents=True, exist_ok=True)
-    restart = "systemctl --user restart ruach-studio heresy-lab"
+    # HERESY 2320: the lab through its reload (it restarts when /health says it is empty, the Videographer's workers included: the build
+    # took minutes, and a shot or an upscale may have begun meanwhile); started when it was not running
+    restart = "systemctl --user restart ruach-studio; systemctl --user reload-or-restart heresy-lab"
     script = ("set -e; cd " + _q(root) + "; echo \"── $(date '+%F %T') · " + ref + "\"; git fetch --tags --force origin; "
               "git checkout -q " + _q(ref) + "; NO_COLOR=1 ./build.sh --no-restart; "
               "if systemctl --user is-enabled --quiet ruach-studio 2>/dev/null; then echo '── restarting the Studio'; " + restart + "; "

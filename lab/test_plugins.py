@@ -115,3 +115,33 @@ with tempfile.TemporaryDirectory() as t:
     plugs, errors = k.load(root)
     assert [e["plugin"] for e in errors] == ["empty"], errors
 print("plugins: MIDI scripts ok")
+
+# HERESY 2261: a plugin made of a page module and the script that answers it alone; nothing of its paths reaches the page
+with tempfile.TemporaryDirectory() as t:
+    root = Path(t)
+    pg = root / "panel"; pg.mkdir()
+    (pg / "page.js").write_text("window.__panel = 1;\n")
+    (pg / "calls.py").write_text("import base64, json, sys\nr = json.load(sys.stdin)\n"
+                                 "if r['path'] == '/pic':\n    print(json.dumps({'status': 200, 'type': 'image/png', 'body64': base64.b64encode(b'PNG').decode()}))\n"
+                                 "elif r['path'] == '/quiet':\n    pass\n"
+                                 "else:\n    print('a word first')\n    print(json.dumps({'status': 201, 'json': {'got': r['path'], 'q': r['query'], 'body': base64.b64decode(r['body64']).decode(), 't': r['type']}}))\n")
+    json.dump({"id": "panel", "name": "A panel", "page": "page.js", "calls": "calls.py"}, open(pg / "plugin.json", "w"))
+    far = root / "far"; far.mkdir()
+    json.dump({"id": "far", "page": "../panel/page.js", "calls": "../panel/calls.py"}, open(far / "plugin.json", "w"))
+    big = root / "big"; big.mkdir()
+    (big / "page.js").write_bytes(b"x" * (k.PAGE_MAX + 1))
+    json.dump({"id": "big", "page": "page.js"}, open(big / "plugin.json", "w"))
+    plugs, errors = k.load(root)
+    assert [p["id"] for p in plugs] == ["panel"] and sorted(e["plugin"] for e in errors) == ["big", "far"], (plugs, errors)
+    pub = k.public(plugs)[0]
+    assert pub["page"] is True and "calls" not in pub and str(root) not in json.dumps(pub), pub
+    code, ctype, data = k.call(plugs[0], {"method": "POST", "path": "/x", "query": {"a": "1"}, "type": "text/plain", "body64": "aGk="}, sys.executable)
+    assert (code, ctype) == (201, "application/json; charset=utf-8") and json.loads(data) == {"got": "/x", "q": {"a": "1"}, "body": "hi", "t": "text/plain"}, data
+    assert k.call(plugs[0], {"method": "GET", "path": "/pic", "query": {}, "type": "", "body64": ""}, sys.executable) == (200, "image/png", b"PNG")
+    try:
+        k.call(plugs[0], {"method": "GET", "path": "/quiet", "query": {}, "type": "", "body64": ""}, sys.executable); raise SystemExit("a silent call passed")
+    except RuntimeError:
+        pass
+    old = [p for p in k.public(k.load(root)[0])]
+    assert all("page" in p for p in old)
+print("plugins: page modules and their calls ok")

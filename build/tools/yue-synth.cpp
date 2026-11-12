@@ -22,12 +22,10 @@ static std::string indexed(const std::string & path, int song, int variation) {
 }
 
 static bool write_file(const std::string & path, const void * data, size_t bytes) {
-    FILE * f = fopen(path.c_str(), "wb");
-    if (!f || fwrite(data, 1, bytes, f) != bytes) {
+    if (!atomic_write_file(path, data, bytes)) {   // HERESY 2371: whole or not at all
         fprintf(stderr, "[Synth] FATAL: cannot write %s\n", path.c_str());
         return false;
     }
-    fclose(f);
     return true;
 }
 

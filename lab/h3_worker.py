@@ -1,10 +1,11 @@
 """HERESY 1868 · 1870 (Viktor 29.10.2026: «мне нужна реальная DDiT генерация живого видеоклипа, а не просто слайдшоу»; «Наша Студия
 абсолютно автономная и эргономная»): the Videographer's H3 worker. One process a card, run in the Artist's environment (.venv-art) on the
-studio's own runtime (lab/h3rt), MiniMax H3 loaded once from models/minimax-h3 and kept while shots come: the lab drops a job as JSON into
+studio's own runtime (lab/h3rt), MiniMax H3 loaded once from models/videographer/minimax-h3 and kept while shots come: the lab drops a job as JSON into
 the card's spool folder, the worker takes it (renamed .run), makes it the take's shot video and leaves .done (or .failed) beside it with its
 times. Its state (loading, ready, busy with the step it is at, gone) is in the spool's worker.json. It leaves the card when no job has come
 for a while (--idle), so the card is free for the other rooms.
-A job: {"prompt", "seconds", "width", "height", "steps", "seed", "first" (a picture for the first frame, FL2VA), "out" (an .mp4)}.
+A job: {"prompt", "seconds", "width", "height", "steps", "seed", "first" (a picture for the first frame, FL2VA), "last" (HERESY 2361: one for the
+last frame, the hero's own), "out" (an .mp4)}.
     .venv-art/bin/python lab/h3_worker.py --gpu 1 --spool user/videos/.h3/gpu1-h3 [--partition fl2va_pruned] [--offload 0.7] [--idle 600] [--fast]"""
 import argparse
 import json
@@ -16,7 +17,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 KIT = HERE.parent
-H3 = KIT / "models/minimax-h3"
+sys.path.insert(0, str(HERE))
+import paths  # noqa: E402   HERESY 2330: where the weights live
+H3 = paths.at(paths.VIDEO_H3, KIT)
 FPS = 24
 
 ap = argparse.ArgumentParser()
@@ -58,11 +61,42 @@ except Exception as e:  # noqa: BLE001
     say(status="failed", error=f"{type(e).__name__}: {e}"[:600])
     raise
 
+KIND = spool.name.split("-", 1)[1] if "-" in spool.name else "h3"
+
+
+def _mtime(p):
+    try:
+        return p.stat().st_mtime
+    except OSError:
+        return 0.0
+
+
+def steal():
+    """HERESY 2323 (Viktor 10.11.2026: «нужно выдавать видеографу все ресурсы в реальности»): a worker with nothing of its own takes the oldest
+    waiting shot of the longest line among the other cards' queues of its kind, so no card stands idle while another has shots waiting (Buratino's
+    forty were dealt to the cards when asked for, and the cards ended from 13 to 30 minutes apart). Moved into its own queue by a rename: the
+    owner's worker either took it first or never sees it."""
+    best = []
+    for sp in spool.parent.glob(f"gpu*-{KIND}"):
+        if sp.resolve() == spool.resolve():
+            continue
+        q = [j for j in sp.glob("*.json") if j.name != "worker.json"]
+        if len(q) > len(best):
+            best = q
+    for j in sorted(best, key=_mtime):
+        try:
+            j.replace(spool / j.name)
+        except OSError:
+            continue
+        return [spool / j.name]
+    return []
+
+
 say(status="ready", load_s=load_s)
 last = time.time()
 while True:
     jobs = sorted(spool.glob("*.json"), key=lambda p: p.stat().st_mtime)
-    jobs = [j for j in jobs if j.name != "worker.json"]
+    jobs = [j for j in jobs if j.name != "worker.json"] or steal()
     if not jobs:
         if time.time() - last > a.idle:
             say(status="gone", why="idle")
@@ -76,18 +110,24 @@ while True:
     except OSError:
         continue                                            # taken by another
     spec = json.loads(run.read_text(encoding="utf-8"))
+    if spec.get("gpu") != a.gpu:                            # HERESY 2323: taken from another card's queue: its card is this one now
+        spec["gpu"] = a.gpu
+        run.write_text(json.dumps(spec, ensure_ascii=False), encoding="utf-8")
     say(status="busy", job=run.stem, load_s=load_s)
     h3.sample_step_hook = lambda i, n, stem=run.stem: say(status="busy", job=stem, step=i, steps=n, load_s=load_s)
     t1 = time.time()
     try:
         secs = max(4.0, min(15.0, float(spec.get("seconds") or 4)))
         frames = 17 * max(1, -(-(int(round(secs * FPS)) - 5) // 17)) + 5   # H3's grid of 17n+5 frames, at least the shot's length (cut to it later)
+        if spec.get("frames"):                              # HERESY 2356: the lab asked for one pass (the clip stretches it to the shot)
+            frames = 17 * max(1, (int(spec["frames"]) - 5) // 17) + 5
         out = Path(spec["out"])
         out.parent.mkdir(parents=True, exist_ok=True)
         part = out.with_suffix(".part.mp4")
         torch.cuda.reset_peak_memory_stats(dev)
         h3.shoot(str(spec["prompt"]), part, width=int(spec.get("width") or 1344), height=int(spec.get("height") or 768), frames=frames,
-                 steps=int(spec.get("steps") or 28), seed=int(spec.get("seed") or 1), first=None if a.fast else (spec.get("first") or None))
+                 steps=int(spec.get("steps") or 28), seed=int(spec.get("seed") or 1), first=None if a.fast else (spec.get("first") or None),
+                 last=None if a.fast else (spec.get("last") or None))   # HERESY 2361
         part.replace(out)
         done = dict(spec, status="done", seconds_made=round((frames - 1) / FPS, 3), took_s=round(time.time() - t1, 1),
                     peak_gb=round(torch.cuda.max_memory_allocated(dev) / 2**30, 2), gpu=a.gpu)

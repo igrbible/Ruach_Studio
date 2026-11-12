@@ -1,9 +1,9 @@
 """HERESY 1169 · 1316: the Artist's LoRAs (Viktor 10.10.2026: «LoRA сам скачаешь для тестов или мне самому подтянуть»; «Положил в
-artwork/loras/<семейство>/»; «предусмотри скан поддиректорий»; «Если возле адаптера лежит его картинка, её тоже возьми в
+models/artist/loras/<семейство>/»; «предусмотри скан поддиректорий»; «Если возле адаптера лежит его картинка, её тоже возьми в
 представление. И прикрути сканирование Civitai по хешу с подтяжкой инфы по адаптеру, если он там есть. Такое в LoRA Manager в
 ComfyUI заточено»; «Адаптеры пользователи пусть себе тянут по твоему Гайду прямо в комнате»).
 
-KIT/artwork/loras/FAMILY/… holds the adapters, each family a painter's: qwen-image-2.1, qwen-image-2512 (1405: sdxl gone; 1428: krea2);
+KIT/models/artist/loras/FAMILY/… holds the adapters, each family a painter's: qwen-image-2.1, qwen-image-2512 (1405: sdxl gone; 1428: krea2);
 any depth of folders below it, a folder a group. Beside an adapter: its picture (NAME.preview.png, .jpg…, or NAME.png, .jpeg…),
 and what other tools wrote of it: NAME.metadata.json (ComfyUI's LoRA Manager), NAME.civitai.info (Civitai Helper),
 NAME.cm-info.json (Stability Matrix). A look-up on Civitai sends the file's SHA-256 alone and keeps the answer as
@@ -15,6 +15,8 @@ kohya_to_comfy() turns a kohya adapter (lora_unet_blocks_0_attn_gate…) into th
 reaches none of its layers (measured: 2 of Viktor's 9 Krea 2 adapters)."""
 import hashlib, json, os, re, shutil, struct, time, urllib.error, urllib.request
 from pathlib import Path
+
+import paths                                       # HERESY 2330: where the weights live
 
 FAMILIES = {"qwen-image-2.1": ("qwen21", "qwen21-fp8"),   # HERESY 1442   # HERESY 1428: Krea 2 gone   # HERESY 1405: SDXL gone
             "qwen-image-2512": ("qwen2512-q4", "qwen2512-q6", "qwen2512-fp8")}
@@ -34,11 +36,11 @@ def family_of(painter):
 
 
 def root(kit):
-    return Path(kit) / "artwork" / "loras"
+    return paths.at(paths.ARTIST_LORAS, kit)
 
 
 def _safe_id(lid):
-    """An adapter's id is its path under artwork/loras/, never out of it."""
+    """An adapter's id is its path under models/artist/loras/, never out of it."""
     lid = str(lid or "").replace("\\", "/").strip("/")
     if not lid or ".." in lid.split("/") or not lid.endswith(".safetensors") or lid.split("/")[0] not in FAMILIES:
         raise ValueError(f"no such adapter: {lid}")
@@ -236,7 +238,7 @@ def scan(kit, family=None, cache=None):
                         except OSError:
                             pass
         out[fam] = rows
-    return {"root": "artwork/loras", "families": out, "titles": TITLES, "arch": ARCH}   # HERESY 1353: the models' names
+    return {"root": paths.ARTIST_LORAS, "families": out, "titles": TITLES, "arch": ARCH}   # HERESY 1353: the models' names
 
 
 def sha256(p, cache, rel):
@@ -411,7 +413,7 @@ def details(kit, lid, cache=None):
     meta = {k: str(md[k])[:400] for k in META_KEYS if md.get(k) not in (None, "", "None")}
     c = (cache or {}).get(lid) or {}
     return dict(e, arch=arch, arch_title=ARCH.get(arch, ""), how=how, meta=meta, beside=[q.name for q in sidecars(p)],
-                sha256=c.get("sha256") or e["info"].get("sha256") or "", path="artwork/loras/" + lid, modified=int(p.stat().st_mtime))
+                sha256=c.get("sha256") or e["info"].get("sha256") or "", path=paths.ARTIST_LORAS + "/" + lid, modified=int(p.stat().st_mtime))
 
 
 def bin_root(kit):
@@ -469,7 +471,7 @@ def restore(kit, stamp):
     home = root(kit) / Path(lid).parent
     for name in note.get("files") or []:
         if (home / name).exists():
-            raise ValueError(f"{name} is in artwork/loras/ again: move it aside first")
+            raise ValueError(f"{name} is in {paths.ARTIST_LORAS}/ again: move it aside first")
     home.mkdir(parents=True, exist_ok=True)
     for name in note.get("files") or []:
         f = d / Path(lid).parent / name

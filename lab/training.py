@@ -12,13 +12,15 @@ starts, watches and collects:
   training/RUN/             config.json, train.log, the trainer's output (checkpoints, loss_log.db)
   loras/RUN/                the finished LoRA, where the engine finds it
 
-The weights it trains on are Comfy-Org's repack of YuE2 (the tokenizer embedded), in checkpoints/comfy/
+The weights it trains on are Comfy-Org's repack of YuE2 (the tokenizer embedded), in models/comfy/
 (heresy/fetch-heresy.sh --trainer); the semantic head is the realaudio tokenizer in
-checkpoints/yue2-mothersuperior-realaudio-tokenizer-v4/. A run takes a GPU of its own for hours, so
+models/engine/tokenizers/yue2-mothersuperior-realaudio-tokenizer-v4/. A run takes a GPU of its own for hours, so
 it does not hold the lab's heavy lock (Whisper and the stems go on beside it).
 """
 import json, math, os, re, shutil, signal, sqlite3, subprocess, sys, threading, time
 from pathlib import Path
+
+import paths as studio_paths       # HERESY 2330: where the weights live (not «paths»: paths(kit) below is this file's own)
 
 AUDIO = {".wav", ".flac", ".mp3", ".ogg", ".m4a"}
 RUNS = {}            # run name -> what its watcher knows: status, step, steps, loss, log tail, VRAM peak
@@ -28,9 +30,9 @@ NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 
 def paths(kit):
     return {"raw": kit / "datasets" / "raw", "prepared": kit / "datasets" / "prepared", "runs": kit / "training",
-            "loras": kit / "loras", "models": kit / "checkpoints" / "comfy",
-            "head": kit / "checkpoints" / "yue2-mothersuperior-realaudio-tokenizer-v4",
-            "merges": kit / "models"}                       # HERESY 2112: a merge's own folder, its trainer file beside its GGUFs
+            "loras": kit / "loras", "models": studio_paths.at(studio_paths.COMFY, kit),
+            "head": studio_paths.at(studio_paths.ENGINE_TOKENIZERS, kit) / "yue2-mothersuperior-realaudio-tokenizer-v4",
+            "merges": studio_paths.at(studio_paths.ENGINE_FINETUNES, kit)}                       # HERESY 2112: a merge's own folder, its trainer file beside its GGUFs
 
 
 def _seconds(p):
@@ -122,13 +124,141 @@ def datasets(kit):
         if man.is_file():
             m = json.load(open(man, encoding="utf-8"))
             prepared.append({"name": d.name, "tracks": len(m.get("tracks", [])), "from": m.get("from"), "made": m.get("made"),
-                             "seconds": round(sum(t.get("seconds") or 0 for t in m.get("tracks", [])))})
+                             "seconds": round(sum(t.get("seconds") or 0 for t in m.get("tracks", []))),
+                             "sheets_by": set_transcriber(d)})   # HERESY 2359: the transcriber whose sheets the set holds, "" for none yet
     # HERESY 1086: what the Studio's own trainer needs, each said by name (heresy/fetch-heresy.sh --trainer fetches it)
     own = {q: (P["models"] / "checkpoints" / f).is_file() for q, f in OWN_CKPT.items()}
-    own.update(mert=(kit / "checkpoints" / "MERT-v2-FullSong" / "model.safetensors").is_file(),
+    own.update(mert=(studio_paths.at(studio_paths.MISC, kit) / "MERT-v2-FullSong" / "model.safetensors").is_file(),
                head=(P["head"] / "tokenizer_head_joint_v4.pt").is_file())
     return {"raw": raw, "prepared": prepared, "own": own,
-            "head": P["head"].is_dir(), "runs": runs(kit)["runs"], "gpus": gpus()}
+            "head": P["head"].is_dir(), "runs": runs(kit)["runs"], "gpus": gpus(), "engines": plugin_engines(kit)}   # HERESY 2321
+
+
+# ---- HERESY 2359 (Viktor 11.11.2026: «Захерачим три режима SheetSage2 для FULL и Instrumental?»; the lead's advice he took: a set keeps the
+# transcriber its sheets were written by, a new set gets SheetSage2 with bf16 angles): who wrote a set's sheets, read from their names
+# (lab/trainer/cache.py: NNN_ruach[.VARIANT].COT[.bf16|.refined].abc), the most files deciding; a directory read once until it changes
+TRANSCRIBERS = ("sheetsage2", "sheetsage2-bf16", "refined")
+NEW_SET_TRANSCRIBER = "sheetsage2-bf16"
+_SHEETS_BY = {}
+
+
+def set_transcriber(set_dir):
+    cache = Path(set_dir) / "_ruach_cache"
+    try:
+        stamp = cache.stat().st_mtime_ns
+    except OSError:
+        return ""
+    if _SHEETS_BY.get(str(cache), (None,))[0] == stamp:
+        return _SHEETS_BY[str(cache)][1]
+    n = {t: 0 for t in TRANSCRIBERS}
+    try:
+        with os.scandir(cache) as it:
+            for e in it:
+                name = e.name
+                if not name.endswith(".abc") or "_ruach." not in name:
+                    continue
+                if name.endswith((".full.refined.abc", ".melody.refined.abc")):
+                    n["refined"] += 1
+                elif name.endswith((".full.bf16.abc", ".melody.bf16.abc")):
+                    n["sheetsage2-bf16"] += 1
+                elif name.endswith((".full.abc", ".melody.abc")):
+                    n["sheetsage2"] += 1
+    except OSError:
+        return ""
+    best = max(TRANSCRIBERS, key=lambda t: n[t]) if any(n.values()) else ""
+    _SHEETS_BY[str(cache)] = (stamp, best)
+    return best
+
+
+# ---- HERESY 2321 (Viktor 10.11.2026: «Тренер должен уметь прямо из Студии работать с этими весами, и все LoRA адаптеры»): a trainer from a plugin.
+# A plugin (user/plugins/NAME/plugin.json, plugins.py) may bring trainers of its own: "trainers": [{"id", "script"}]. The script answers three
+# words, a JSON object on its stdin and one line of JSON as the last it prints ({"error": why} refuses):
+#   describe {kit}                    → {label, say, fields: [plugins.py's params], cards, bases: [{id, label, path, overlay?}], confirm?}
+#   plan {kit, run, dir, dataset, spec} → {cmd: [argv], env: {}, cards, need_mb, steps, per_epoch, epochs, save_every, step, options: {its fields},
+#                                         facts: [[what, said]], stop_file?, stop_grace_s?, kind?}
+# The lab starts cmd in the run's own unit (ruach-train-RUN, as its own runs), on the cards it picks among those given to training, and watches
+# what the trainer writes where the room reads its own runs: train.log, output/RUN/loss_log.db, output/RUN/val.json and the saves numbered
+# output/RUN/RUN_<step>.safetensors. Pause and Stop put stop_file in the run's folder (when said; else SIGINT) and wait stop_grace_s before a
+# hard stop. A plugin's run makes weights of its own, not adapters: nothing of it goes into loras/. Its bases are offered to the Studio's own
+# trainer too (a LoRA on them): "plugin:TRAINER:BASE". Without the folder there is none, and the Trainer offers the Studio's own trainer alone.
+PLUGIN_ID = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
+DESCRIBED = {}                                        # trainer id -> (the script's mtime, its answer, when asked)
+
+
+def plugin_trainers(kit):
+    """{id: {id, plugin, folder, script, python}} of the user's plugins' trainers; a broken plugin.json is passed over."""
+    out = {}
+    root = kit / "user" / "plugins"
+    for spec in sorted(root.glob("*/plugin.json")) if root.is_dir() else []:
+        try:
+            raw = json.load(open(spec, encoding="utf-8"))
+            folder = spec.parent.resolve()
+            py = str(raw.get("python") or "")
+            py = (folder / py) if py and not Path(py).is_absolute() else Path(py) if py else kit / ".venv" / "bin" / "python"
+            for t in raw.get("trainers") or []:
+                tid = str((t or {}).get("id") or "")
+                script = (folder / str(t.get("script") or "")).resolve()
+                if PLUGIN_ID.match(tid) and tid != "ruach" and tid not in out and script.is_file() and folder in script.parents:
+                    out[tid] = {"id": tid, "plugin": str(raw.get("id") or folder.name), "folder": str(folder), "script": str(script), "python": str(py)}
+        except (OSError, ValueError, TypeError, AttributeError):
+            continue
+    return out
+
+
+def _plugin_call(t, verb, payload, timeout=60):
+    """One word to a plugin's trainer; its last line of JSON. Its refusal ({"error"}) a ValueError, its failure a RuntimeError, each said."""
+    try:
+        r = subprocess.run([t["python"], t["script"], verb], input=json.dumps(payload), capture_output=True, text=True, timeout=timeout, cwd=t["folder"])
+    except (OSError, subprocess.SubprocessError) as e:
+        raise RuntimeError(f"the trainer {t['id']} could not be asked to {verb}: {e}")
+    lines = [l for l in r.stdout.splitlines() if l.strip()]
+    try:
+        out = json.loads(lines[-1]) if lines else None
+    except ValueError:
+        out = None
+    if not isinstance(out, dict):
+        why = (r.stderr.strip().splitlines() or ["it printed nothing"])[-1]
+        raise RuntimeError(f"the trainer {t['id']} failed to {verb} (exit {r.returncode}): {why[:400]}")
+    if out.get("error"):
+        raise ValueError(str(out["error"])[:600])
+    return out
+
+
+def plugin_engines(kit):
+    """What the Trainer offers of each plugin trainer (a minute's cache: its bases grow as its runs save); one that cannot say is listed with why."""
+    out = []
+    for tid, t in plugin_trainers(kit).items():
+        try:
+            stamp = os.stat(t["script"]).st_mtime_ns
+        except OSError:
+            continue
+        hit = DESCRIBED.get(tid)
+        if hit and hit[0] == stamp and time.time() - hit[2] < 60:
+            d = hit[1]
+        else:
+            try:
+                d = _plugin_call(t, "describe", {"kit": str(kit)})
+            except (RuntimeError, ValueError) as e:
+                d = {"error": str(e)}
+            DESCRIBED[tid] = (stamp, d, time.time())
+        out.append({"id": tid, "label": str(d.get("label") or tid), **{k: d.get(k) for k in ("say", "fields", "cards", "bases", "confirm", "error")}})
+    return out
+
+
+def plugin_base(kit, ref):
+    """A base a plugin's trainer offers ("plugin:TRAINER:BASE"): {id, label, path, overlay?}; refused aloud when it is not offered now."""
+    parts = str(ref).split(":", 2)
+    if len(parts) != 3 or parts[0] != "plugin":
+        raise ValueError(f"not a plugin's base: {ref}")
+    for e in plugin_engines(kit):
+        if e["id"] == parts[1]:
+            for b in e.get("bases") or []:
+                if str(b.get("id")) == parts[2] and Path(str(b.get("path") or "")).is_file():
+                    if b.get("overlay") and not Path(str(b["overlay"])).is_file():
+                        raise FileNotFoundError(f"{ref}: the save laid over it is gone ({b['overlay']})")
+                    return b
+            raise FileNotFoundError(f"the trainer {parts[1]} does not offer the base {parts[2]} now")
+    raise FileNotFoundError(f"no trainer {parts[1]} among the plugins")
 
 
 def gpus():
@@ -210,7 +340,7 @@ def scan(kit, name):
     for f in sorted(x for x in d.rglob("*") if x.suffix.lower() in AUDIO):
         t = _lyrics_for(f, texts)
         lyrics, hints = clean_lyrics(t.read_text(encoding="utf-8", errors="replace")) if t else ("", [])
-        own = f.with_suffix(".style.txt")              # HERESY 1073: a track's own style beside it (GTSinger's labels)
+        own = f.with_suffix(".style.txt")              # HERESY 1073: a track's own style beside it (its own labels)
         rows.append({"file": str(f.relative_to(d)), "seconds": _seconds(f), "bytes": f.stat().st_size,
                      "lyrics": lyrics[:12000], "lyrics_from": str(t.relative_to(d)) if t else "", "hints": hints[:12],
                      "style": " ".join(own.read_text(encoding="utf-8").split()) if own.is_file() else ""})
@@ -251,6 +381,10 @@ def prepare(kit, spec):
 
     def work():
         try:
+            import no_train                           # HERESY 2241: a file marked never for training (an engine's terms: the Reader's speech), refused by name
+            marked = [t["file"] for t in tracks if not _parquet_ref(t["file"]) and no_train.of_file(src / t["file"])]
+            if marked:
+                raise ValueError(f"{len(marked)} of its tracks are marked never for training: " + ", ".join(marked[:5]) + (" …" if len(marked) > 5 else ""))
             out = P["prepared"] / name
             tmp = P["prepared"] / (name + ".part")
             shutil.rmtree(tmp, ignore_errors=True)
@@ -321,7 +455,7 @@ def prepare_status(name):
 
 
 # ---- the run
-DEFAULTS = {"steps": 1500, "rank": 32, "rank_ar": 0, "rank_nar": 0, "lr": 1e-4, "save_epochs": 1.0, "cot": "off", "ar_loss_weight": 0.5,
+DEFAULTS = {"steps": 1500, "rank": 32, "rank_ar": 0, "rank_nar": 0, "lr": 1e-4, "save_epochs": 1.0, "cot": "off", "transcriber": "sheetsage2", "ar_loss_weight": 0.5,
             "ar_kl_weight": 0.2, "ar_lr_multiplier": 0.5, "train_window_frames": 1500, "do_separation": False,
             "quant": "bf16", "engine": "ruach",
             "val_fraction": 0.0, "patience": 0,              # HERESY 1497: held-out tracks and the early stop (train.py)
@@ -343,26 +477,29 @@ FOLDED_RE = re.compile(r"^yue2_3b_(RS-(?:FW|TW)-\d+(?:\.\d+)?x\d+(?:\.\d+)?)_bf1
 
 
 def base_checkpoint(P, spec):
-    """HERESY 1792: the weights a run trains on, (path, quant, base): «base», a file of checkpoints/comfy/checkpoints/ named by itself (a merge
+    """HERESY 1792: the weights a run trains on, (path, quant, base): «base», a file of models/comfy/checkpoints/ named by itself (a merge
     folded into the trainer's own layout: heresy/MISC/claude-tc/finetune/fold_base.py), bf16; else the Studio's own by its quant, as before.
     HERESY 2112: or a merge by its name (RS-TW-2.0x0.75), or its trainer file where the fold left it, models/<merge>/; the base said is the file's name"""
     base = str(spec.get("base") or "").strip()
+    if base.startswith("plugin:"):                     # HERESY 2321: a base a plugin's trainer offers (its file; train() lays its overlay over it)
+        b = plugin_base(P["runs"].parent, base)
+        return Path(b["path"]), "bf16", base
     if base:
         if MERGE_RE.match(base):
             base = f"yue2_3b_{base}_bf16.safetensors"
         if not BASE_RE.match(base) or ".." in base:
-            raise ValueError("base: a .safetensors file name of checkpoints/comfy/checkpoints/ or a merge's name (RS-TW-2.0x0.75), no folders")
+            raise ValueError("base: a .safetensors file name of " + studio_paths.COMFY + "/checkpoints/ or a merge's name (RS-TW-2.0x0.75), no folders")
         ckpt = P["models"] / "checkpoints" / base
         folded = FOLDED_RE.match(base)
         if not ckpt.is_file() and folded and P.get("merges"):
             ckpt = P["merges"] / folded.group(1) / base
         if not ckpt.is_file():
-            raise FileNotFoundError(f"{base} is not in checkpoints/comfy/checkpoints/" + (f" nor in models/{folded.group(1)}/" if folded else ""))
+            raise FileNotFoundError(f"{base} is not in {studio_paths.COMFY}/checkpoints/" + (f" nor in {studio_paths.ENGINE_FINETUNES}/{folded.group(1)}/" if folded else ""))
         return ckpt, "bf16", base
     quant = str(spec.get("quant") or "bf16")
     ckpt = P["models"] / "checkpoints" / OWN_CKPT.get(quant, OWN_CKPT["bf16"])
     if not ckpt.is_file():
-        raise FileNotFoundError(f"{ckpt.name} is not in checkpoints/comfy/checkpoints/")
+        raise FileNotFoundError(f"{ckpt.name} is not in {studio_paths.COMFY}/checkpoints/")
     return ckpt, (quant if quant in OWN_CKPT else "bf16"), ""
 
 
@@ -520,6 +657,8 @@ def publish(kit, run, file):
     second copy on disk), a copy where links cannot be made."""
     P = paths(kit)
     d = _safe_dir(P["runs"], run)
+    if (d / "run.json").is_file() and _meta(d).get("no_adapter"):   # HERESY 2321: a plugin's run makes weights of its own, never an adapter
+        raise ValueError(f"{run} saves weights of its own, not adapters: nothing of it goes into loras/")
     for c in checkpoints(kit, run, d):
         if c["file"] == file:
             if not c["epoch"]:
@@ -779,7 +918,9 @@ def runs(kit):
             r["checkpoints"] = checkpoints(kit, d.name, d)
             r["gone"] = gone(kit, d.name, d, r["checkpoints"])   # HERESY 1816
             r["protected"] = protected(d)                         # HERESY 1817
-            if live and live.get("tail"):                 # HERESY 1090: the time it has run and has left, from tqdm's line
+            if live and r.get("plugin"):                  # HERESY 2321: a plugin's run, from its own step log
+                r.update({k: live.get(k) for k in ("elapsed_s", "eta_s", "sec_per_step")})
+            elif live and live.get("tail"):               # HERESY 1090: the time it has run and has left, from tqdm's line
                 m = ETA_RE.search(live["tail"][-1])
                 if m:
                     r["elapsed_s"], r["eta_s"] = _hms(m.group(1)), _hms(m.group(2))
@@ -844,13 +985,38 @@ def _save_meta(d, meta):
     tmp.replace(d / "run.json")
 
 
+def log_tail(kit, run, lines=400):
+    """HERESY 2208 (the audit of 06.11.2026, item 16: «The log» fetched the whole train.log every 3 s, 5.6 MB, about 110 MB a minute through the door):
+    the last lines of a run's train.log, read from its last 512 KiB (tqdm redraws with \\r: each redraw is a line). FileNotFoundError when the run has
+    no log yet, said so by the lab, never an empty text."""
+    f = _safe_dir(paths(kit)["runs"], run) / "train.log"
+    with open(f, "rb") as fh:
+        fh.seek(0, 2)
+        size = fh.tell()
+        fh.seek(max(0, size - 524288))
+        text = fh.read().decode("utf-8", "replace")
+    rows = [l for l in re.split(r"[\r\n]+", text) if l.strip()]
+    if size > 524288 and rows:
+        rows = rows[1:]                                   # the first, cut where the read began
+    return "\n".join(rows[-max(1, min(int(lines), 5000)):])
+
+
+def _last_save(d, run):
+    """HERESY 2209: the step of the run's last numbered save (RUN_NNNNNNNNN.safetensors under output/), the one its trainer goes on from; 0 when none."""
+    steps = [int(m.group(1)) for m in (CKPT_RE.search(f.name) for f in (d / "output").rglob(run + "_*.safetensors")) if m] if (d / "output").is_dir() else []
+    return max(steps or [0])
+
+
 def _watch(kit, run):
     """While the unit runs: step, loss and the log tail from train.log, the GPU's peak; when it ends:
     its outcome, and the last checkpoint into loras/RUN/ where the engine looks."""
     P = paths(kit)
     d = P["runs"] / run
     meta = _meta(d)
-    job = RUNS.setdefault(run, {"status": "running", "step": 0, "steps": meta.get("steps"), "loss": None, "ar_ce": None, "tail": []})
+    if meta.get("plugin"):                              # HERESY 2321: a plugin's run, watched by its own step log
+        return _watch_plugin(kit, run)
+    # HERESY 2209: watched again at the lab's start, from the step run.json knows (a resumed run's last save at the least), not from 0
+    job = RUNS.setdefault(run, {"status": "running", "step": int(meta.get("step") or 0), "steps": meta.get("steps"), "loss": None, "ar_ce": None, "tail": []})
     job["vram_peak_mb"] = max(job.get("vram_peak_mb") or 0, meta.get("vram_peak_mb") or 0)
     gpu, total = meta.get("gpu"), meta.get("steps")
     while True:
@@ -936,6 +1102,9 @@ def train(kit, spec, gpu_picker, more_cards=None):
     P = paths(kit)
     dataset = str(spec.get("dataset", ""))
     _safe_dir(P["prepared"], dataset)
+    t = plugin_trainers(kit).get(str(spec.get("engine") or "ruach"))
+    if t:                                               # HERESY 2321: a plugin's trainer
+        return _train_plugin(kit, spec, t, gpu_picker, more_cards)
     if str(spec.get("engine") or "ruach") != "ruach":       # HERESY 1422: said, not run
         raise ValueError("AI-Toolkit left the Studio (13.10.2026): its own trainer trains every mode now, Direct, with a score, separated")
     own = True
@@ -946,6 +1115,8 @@ def train(kit, spec, gpu_picker, more_cards=None):
     for k, v in spec.items():
         if k in DEFAULTS:
             o[k] = type(DEFAULTS[k])(v) if not isinstance(DEFAULTS[k], bool) else bool(v)
+    if not spec.get("transcriber"):                    # HERESY 2359: unsaid, the set's own (its sheets' transcriber); a set without sheets, bf16
+        o["transcriber"] = set_transcriber(P["prepared"] / dataset) or NEW_SET_TRANSCRIBER
     # HERESY 1668: a new run given its rank alone, the halves 1:2 (the music half at half, the sound half at the rank)
     if not (P["runs"] / run / "run.json").is_file() and not o["rank_ar"] and not o["rank_nar"]:
         o["rank_ar"], o["rank_nar"] = max(4, int(o["rank"]) // 2), int(o["rank"])
@@ -996,27 +1167,49 @@ def train(kit, spec, gpu_picker, more_cards=None):
         o["engine"] = "ruach"
         if o["cot"] not in ("off", "full", "melody"):
             raise ValueError("mode: off, full or melody")
-        if o["cot"] != "off" and not ((kit / "build" / "build" / "yue-transcribe").is_file() and list((kit / "models").glob("SheetSage2-*.gguf"))):
-            raise FileNotFoundError("score mode needs the engine's transcriber (build/build/yue-transcribe and models/SheetSage2-*.gguf)")   # HERESY 1420
-        if o["do_separation"] and not (kit / "separation" / "roformer" / "model_bs_roformer_ep_317_sdr_12.9755.ckpt").is_file():
-            raise FileNotFoundError("the separation needs the Studio's separator (separation/roformer/model_bs_roformer_ep_317_sdr_12.9755.ckpt)")   # HERESY 1422
+        if o["cot"] != "off" and not ((kit / "build" / "build" / "yue-transcribe").is_file() and list(studio_paths.at(studio_paths.MISC, kit).glob("SheetSage2-*.gguf"))):
+            raise FileNotFoundError(f"score mode needs the engine's transcriber (build/build/yue-transcribe and {studio_paths.MISC}/SheetSage2-*.gguf)")   # HERESY 1420
+        if o["transcriber"] not in TRANSCRIBERS:  # HERESY 2328: the sheets by SheetSage2 or SheetSage2-Refined; 2359: SheetSage2 by its angles
+            raise ValueError("transcriber: sheetsage2-bf16 (Heretical), refined (Refined) or sheetsage2 (Standard, the sheets before 2.0.7)")   # HERESY 2377
+        if o["cot"] != "off" and o["transcriber"] == "refined" and not (studio_paths.at(studio_paths.MISC, kit) / "SheetSage2-Refined-F16.gguf").is_file():
+            raise FileNotFoundError(f"SheetSage2-Refined is not installed: {studio_paths.MISC}/SheetSage2-Refined-F16.gguf")
+        if o["do_separation"] and not (studio_paths.at(studio_paths.REFINER_SEPARATION, kit) / "roformer" / "model_bs_roformer_ep_317_sdr_12.9755.ckpt").is_file():
+            raise FileNotFoundError(f"the separation needs the Studio's separator ({studio_paths.REFINER_SEPARATION}/roformer/model_bs_roformer_ep_317_sdr_12.9755.ckpt)")   # HERESY 1422
         ckpt, o["quant"], base = base_checkpoint(P, spec)   # HERESY 1792: a base the run names (a merge), else the Studio's own
         if base:
             o["base"] = base
+        if base.startswith("plugin:"):                 # HERESY 2321: a plugin's base may be a save laid over a file, both said
+            ov = plugin_base(kit, base).get("overlay")
+            o["overlay"] = str(ov) if ov else ""
         # the set's latent cache: train.py makes what is missing (lab/trainer/cache.py) before it loads the model
         cfg = {"name": run, "out": str(d), "dataset": str(P["prepared"] / dataset), "checkpoint": str(ckpt),
-               **{k: o[k] for k in ("steps", "save_every", "rank", "rank_ar", "rank_nar", "lr", "ar_loss_weight", "ar_kl_weight", "ar_lr_multiplier", "train_window_frames", "cot",
+               **{k: o[k] for k in ("steps", "save_every", "rank", "rank_ar", "rank_nar", "lr", "ar_loss_weight", "ar_kl_weight", "ar_lr_multiplier", "train_window_frames", "cot", "transcriber",
                                     "val_fraction", "patience", "nar_phase_epochs", "steps_per_epoch", "ema_epochs", "ar_max_tokens",
                                     "lr_tail_epochs", "lr_tail_floor", "vram_meter", "ar_cap_tokens", "long_off_card0",
                                     "val_groups", "stop_ce_groups", "stop_ce_rises", "stop_kl_max")}}   # HERESY 1944   # HERESY 1497, 1622, 1662, 1752, 1832
+        if o.get("overlay"):
+            cfg["overlay"] = o["overlay"]               # HERESY 2321: load.py lays it over the checkpoint
         if o["cot"] != "off":                         # HERESY 1420: score mode, AI-Toolkit's abc_dropout
             cfg["abc_dropout"] = 0.5
         if o["do_separation"]:                        # HERESY 1422: the separation, AI-Toolkit's weights
             cfg.update(do_separation=True, separation_vocals_weight=0.5, separation_music_weight=1.0)
         (d / "config.json").write_text(json.dumps(cfg, indent=1, ensure_ascii=False), encoding="utf-8")
-    meta = {"name": run, "dataset": dataset, "options": o, "gpu": gpu, "gpus": cards, "started": time.time(), "status": "running",
+    # HERESY 2209 (the audit of 06.11.2026: a resumed run that failed in its first minute read «step 0 of 107 310, took 0 min», its saves half an epoch
+    # on): a run of this name goes on from its last save, so it starts at that save's step; its first start and the time of its earlier sittings carried
+    try:
+        old = _meta(d) if (d / "run.json").is_file() else {}
+    except (OSError, ValueError):
+        old = {}
+    went_on = _last_save(d, run)
+    now = time.time()
+    meta = {"name": run, "dataset": dataset, "options": o, "gpu": gpu, "gpus": cards, "started": now, "status": "running",
             "steps": o["steps"], "tracks": tracks, "epochs": round(o["steps"] / tracks, 1), "kind": str(spec.get("kind") or ""),
-            "note": str(spec.get("note") or "")[:500], "unit": _unit(run)}
+            "note": str(spec.get("note") or "")[:500], "unit": _unit(run), "step": went_on}
+    if old.get("started"):
+        sat = max(0.0, float(old.get("ended") or old["started"]) - float(old["started"]))   # a sitting the lab never saw end adds nothing
+        meta.update(first_started=old.get("first_started") or old["started"], took_before=round(float(old.get("took_before") or 0) + sat, 1))
+    if went_on:
+        meta["went_on_from"] = went_on
     _save_meta(d, meta)
     _systemctl("reset-failed", _unit(run) + ".service")     # a failed unit of the same name would block the name
     env = {"CUDA_VISIBLE_DEVICES": ",".join(str(c) for c in cards), "CUDA_DEVICE_ORDER": "PCI_BUS_ID", "MODELS_PATH": str(P["models"]),
@@ -1035,9 +1228,148 @@ def train(kit, spec, gpu_picker, more_cards=None):
         meta.update(status="failed", error="systemd-run: " + (r.stderr.strip() or r.stdout.strip()))
         _save_meta(d, meta)
         raise RuntimeError(meta["error"])
-    RUNS[run] = {"status": "running", "step": 0, "steps": o["steps"], "loss": None, "ar_ce": None, "tail": [], "vram_peak_mb": 0}
+    RUNS[run] = {"status": "running", "step": went_on, "steps": o["steps"], "loss": None, "ar_ce": None, "tail": [], "vram_peak_mb": 0}
     threading.Thread(target=_watch, args=(kit, run), daemon=True).start()
-    return dict(meta, step=0)
+    return dict(meta)
+
+
+def _train_plugin(kit, spec, t, gpu_picker, more_cards):
+    """HERESY 2321: a run of a plugin's trainer: its plan asked, its cards picked as training's (each with the room it says), its run.json written
+    the way the room reads a run, its command in the run's own unit; then watched (_watch_plugin)."""
+    P = paths(kit)
+    dataset = str(spec.get("dataset", ""))
+    run = str(spec.get("name") or f"{dataset}-{time.strftime('%Y%m%d-%H%M')}")
+    if not NAME_RE.match(run):
+        raise ValueError("a run name of letters, digits, _ . - (no spaces), up to 64")
+    with LOCK:
+        if _unit_state(run) == "active":
+            raise ValueError(f"{run} is already running")
+    d = P["runs"] / run
+    plan = _plugin_call(t, "plan", {"kit": str(kit), "run": run, "dir": str(d), "dataset": str(_safe_dir(P["prepared"], dataset)), "spec": spec}, 300)
+    if not isinstance(plan.get("cmd"), list) or not plan["cmd"]:
+        raise RuntimeError(f"the trainer {t['id']} gave no command")
+    want, need = max(1, min(8, int(plan.get("cards") or 1))), int(plan.get("need_mb") or 20000)
+    gpu, _ = gpu_picker(need, "train")
+    cards = [gpu]
+    if want > 1:
+        extra = more_cards(need, exclude=cards, most=want - 1, role="train") if more_cards else []
+        if len(extra) < want - 1:
+            raise RuntimeError(f"{want} cards asked: {1 + len(extra)} of the cards given to training have room now (Engine \u2192 GPUs says which card does what)")
+        cards += [int(c) for c in extra]
+    cards = sorted(int(c) for c in cards)              # in their own order: a rank keeps its card from sitting to sitting
+    for r, j in RUNS.items():
+        if j["status"] == "running" and r != run:
+            both = sorted(set(run_cards(_meta(P["runs"] / r) if (P["runs"] / r / "run.json").is_file() else {})) & set(cards))
+            if both:
+                raise ValueError(f"{r} is training on GPU{both[0]}: one run a card")
+    d.mkdir(parents=True, exist_ok=True)
+    try:
+        old = _meta(d) if (d / "run.json").is_file() else {}
+    except (OSError, ValueError):
+        old = {}
+    stop_file = str(plan.get("stop_file") or "")
+    if stop_file and not NAME_RE.match(stop_file):
+        raise ValueError(f"the trainer {t['id']} named a stop file that is not a plain name: {stop_file}")
+    o = dict(plan.get("options") or {}, engine=t["id"], save_every=int(plan.get("save_every") or 0), steps_per_epoch=int(plan.get("per_epoch") or 0))
+    now = time.time()
+    meta = {"name": run, "dataset": dataset, "options": o, "gpu": cards[0], "gpus": cards, "started": now, "status": "running",
+            "steps": int(plan.get("steps") or 0), "tracks": int(plan.get("per_epoch") or 0), "epochs": plan.get("epochs"),
+            "kind": str(spec.get("kind") or plan.get("kind") or ""), "note": str(spec.get("note") or "")[:500], "unit": _unit(run),
+            "step": int(plan.get("step") or 0), "plugin": t["plugin"], "engine_label": next((e["label"] for e in plugin_engines(kit) if e["id"] == t["id"]), t["id"]),
+            "facts": [[str(a)[:40], str(b)[:300]] for a, b in (plan.get("facts") or [])][:24], "no_adapter": True,
+            "stop_file": stop_file, "stop_grace_s": max(30, min(int(plan.get("stop_grace_s") or 60), 3600))}
+    if old.get("started"):
+        sat = max(0.0, float(old.get("ended") or old["started"]) - float(old["started"]))
+        meta.update(first_started=old.get("first_started") or old["started"], took_before=round(float(old.get("took_before") or 0) + sat, 1))
+    if meta["step"]:
+        meta["went_on_from"] = meta["step"]
+    _save_meta(d, meta)
+    _systemctl("reset-failed", _unit(run) + ".service")
+    env = {"CUDA_VISIBLE_DEVICES": ",".join(str(c) for c in cards), "CUDA_DEVICE_ORDER": "PCI_BUS_ID", "PYTHONUNBUFFERED": "1",
+           **{str(k): str(v) for k, v in (plan.get("env") or {}).items()}}
+    log = d / "train.log"
+    cmd = ["systemd-run", "--user", "--unit=" + _unit(run), "--working-directory=" + str(kit),
+           "-p", f"StandardOutput=append:{log}", "-p", f"StandardError=append:{log}"]
+    cmd += ["--setenv=" + k + "=" + v for k, v in env.items()]
+    cmd += [str(x) for x in plan["cmd"]]
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    if r.returncode != 0:
+        meta.update(status="failed", error="systemd-run: " + (r.stderr.strip() or r.stdout.strip()))
+        _save_meta(d, meta)
+        raise RuntimeError(meta["error"])
+    RUNS[run] = {"status": "running", "step": meta["step"], "steps": meta["steps"], "loss": None, "ar_ce": None, "tail": [], "vram_peak_mb": 0}
+    threading.Thread(target=_watch, args=(kit, run), daemon=True).start()
+    return dict(meta)
+
+
+def _plugin_progress(db):
+    """HERESY 2321: a plugin's run as its step log says it: (step, loss, ar_ce, seconds a step over its last steps), or None"""
+    if not db.is_file():
+        return None
+    try:
+        con = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=5)
+        rows = con.execute("SELECT step, wall_time FROM steps ORDER BY step DESC LIMIT 41").fetchall()
+        if not rows:
+            con.close()
+            return None
+        last = rows[0][0]
+        got = dict(con.execute("SELECT key, AVG(value_real) FROM metrics WHERE step > ? AND key IN ('loss/loss', 'loss/ar_ce') GROUP BY key", (last - 25,)).fetchall())
+        con.close()
+    except sqlite3.Error:
+        return None
+    gaps = sorted((a[1] - b[1]) / (a[0] - b[0]) for a, b in zip(rows, rows[1:]) if a[0] > b[0] and a[1] > b[1])
+    return last, got.get("loss/loss"), got.get("loss/ar_ce"), (gaps[len(gaps) // 2] if gaps else None)   # the median: a pause in the window says nothing
+
+
+def _watch_plugin(kit, run):
+    """HERESY 2321: _watch for a plugin's run: its step, loss and time left from its own step log, every card's peak; at its end the outcome, no
+    adapter (its saves are weights of their own)."""
+    P = paths(kit)
+    d = P["runs"] / run
+    meta = _meta(d)
+    job = RUNS.setdefault(run, {"status": "running", "step": int(meta.get("step") or 0), "steps": meta.get("steps"), "loss": None, "ar_ce": None, "tail": []})
+    job["vram_peak_mb"] = max(job.get("vram_peak_mb") or 0, meta.get("vram_peak_mb") or 0)
+    cards, total, db = run_cards(meta), int(meta.get("steps") or 0), d / "output" / run / "loss_log.db"
+    while True:
+        state = _unit_state(run)
+        job["tail"] = _tail(d)
+        got = _plugin_progress(db)
+        if got:
+            job["step"] = max(int(meta.get("step") or 0), got[0])
+            job["loss"], job["ar_ce"] = got[1], got[2]
+            job["sec_per_step"] = got[3]
+            job["eta_s"] = round(max(0, total - job["step"]) * got[3]) if got[3] and total else None
+        job["elapsed_s"] = round(time.time() - float(meta.get("started") or time.time()))
+        if state != "active":
+            break
+        for g in cards:
+            try:
+                out = subprocess.run(["nvidia-smi", "-i", str(g), "--query-gpu=memory.used", "--format=csv,noheader,nounits"],
+                                     capture_output=True, text=True, timeout=10).stdout.strip()
+                job["vram_peak_mb"] = max(job["vram_peak_mb"], int(out.split()[0]))
+            except (ValueError, IndexError, OSError, subprocess.SubprocessError):
+                pass
+        if int(time.time()) % 60 < 10:
+            m = _meta(d)
+            m.update(step=job["step"], loss=job["loss"], vram_peak_mb=job["vram_peak_mb"])
+            _save_meta(d, m)
+        time.sleep(10)
+    meta = _meta(d)
+    said = next((DONE_RE.match(l) for l in reversed(job["tail"]) if DONE_RE.match(l)), None)
+    if meta.get("pausing"):
+        job["status"] = "paused"
+    elif meta.get("stopping"):
+        job["status"] = "stopped"
+    elif state == "failed" or (not said and any("Traceback" in l for l in job["tail"])):
+        job.update(status="failed", error=f"{meta.get('engine_label') or 'The trainer'} ended badly: " + (job["tail"][-1] if job["tail"] else "no output"))
+        _systemctl("reset-failed", _unit(run) + ".service")
+    else:
+        if said:
+            job["step"] = int(said.group(1))
+        job["status"] = "done" if said or job["step"] >= total else "stopped"
+    job["eta_s"] = None
+    meta.update({k: job.get(k) for k in ("status", "step", "loss", "error", "vram_peak_mb")}, ended=time.time())
+    _save_meta(d, meta)
 
 
 def run_status(kit, run):
@@ -1069,10 +1401,15 @@ def stop(kit, run, pause=False):
     # HERESY 1973 (31.10.2026: a pause at 12:02:45 and a resume at 12:03:15 under the same unit name; the minute's stop came at 12:03:45 and
     # ended the resumed run): the late stop is for the start that was paused, known by its unit's InvocationID, never for a later one
     inv = _systemctl("show", "-p", "InvocationID", "--value", _unit(run) + ".service").stdout.strip()
-    _systemctl("kill", "--signal=SIGINT", _unit(run) + ".service")
+    grace = 60
+    if meta.get("stop_file") and NAME_RE.match(str(meta["stop_file"])):   # HERESY 2321: a plugin's run asked by its file, saves at its step's end
+        (d / meta["stop_file"]).write_text(("pause" if pause else "stop") + "\n", encoding="utf-8")
+        grace = int(meta.get("stop_grace_s") or 60)
+    else:
+        _systemctl("kill", "--signal=SIGINT", _unit(run) + ".service")
 
     def later():
-        time.sleep(60)
+        time.sleep(grace)
         now = _systemctl("show", "-p", "InvocationID", "--value", _unit(run) + ".service").stdout.strip()
         if _unit_state(run) == "active" and (not inv or now == inv):
             _systemctl("stop", _unit(run) + ".service")
@@ -1117,7 +1454,8 @@ def listeners(kit, cards=None):
     big = max((c["total_mb"] for c in cards), default=0) if isinstance(cards, list) else 0
     out = []
     for what, rel, proj, peak, need in LISTENERS:
-        present = (kit / "checkpoints" / rel).exists() and (proj is None or (kit / "checkpoints" / proj).is_file())
+        lis = studio_paths.at(studio_paths.LISTENER, kit)
+        present = (lis / rel).exists() and (proj is None or (lis / proj).is_file())
         out.append({"what": what, "path": rel, "mmproj": proj, "peak_mb": peak, "needs_mb": need, "present": present, "fits": big >= need})
     return out
 
@@ -1144,9 +1482,9 @@ def listen(kit, spec, gpu_picker):
 
     def work():
         cmd = [str(kit / ".venv" / "bin" / "python"), str(Path(__file__).resolve().parent / "listener.py"),
-               name, "--gpu", str(gpu), "--model", str(kit / "checkpoints" / pick["path"])]
+               name, "--gpu", str(gpu), "--model", str(studio_paths.at(studio_paths.LISTENER, kit) / pick["path"])]
         if pick.get("mmproj"):
-            cmd += ["--mmproj", str(kit / "checkpoints" / pick["mmproj"])]
+            cmd += ["--mmproj", str(studio_paths.at(studio_paths.LISTENER, kit) / pick["mmproj"])]
         try:
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
             for line in p.stdout:

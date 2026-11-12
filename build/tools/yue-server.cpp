@@ -586,6 +586,7 @@ static bool         g_keep_loaded = false;
 static std::string  g_model_path;
 static std::string  g_vae_path;
 static std::string  g_transcriber_path;
+static std::string  g_transcriber_refined_path;  // HERESY 2328: SheetSage2-Refined's overlay
 static std::string  g_tokenizer_path;
 
 // Local additions: named decoders, the slider catalog and the song library
@@ -657,6 +658,12 @@ static const char * vae_label(const std::string & name) {
     if (name == "blend") {
         return "Blend";
     }
+    if (name == "rs-x3-v1") {   // HERESY 2304: our fat decoders (YuE2-VAE-RS x3), float32 only
+        return "RS x3 v1";
+    }
+    if (name == "rs-x3-v2") {
+        return "RS x3 v2";
+    }
     return name.c_str();
 }
 
@@ -670,6 +677,12 @@ static const char * vae_repo(const std::string & name) {
     if (name == "blend") {
         return "Mothersuperior/YuE2-Vae-merge-0.666";
     }
+    if (name == "rs-x3-v1") {
+        return "Ruach Studio/YuE2-VAE-RS-x3_v1";
+    }
+    if (name == "rs-x3-v2") {
+        return "Ruach Studio/YuE2-VAE-RS-x3_v2";
+    }
     return "";
 }
 
@@ -680,20 +693,10 @@ static std::string read_file(const std::string & path) {
     return ss.str();
 }
 
+// HERESY 2371: the part file is this write's own (atomic-write.h): two requests filling one cache (the same take's MP3 asked
+// twice at once) wrote into one shared «.part» and could rename each other's half; a failed write leaves no part file behind
 static bool write_file(const std::string & path, const std::string & data) {
-    std::string   tmp = path + ".part";
-    std::ofstream f(tmp, std::ios::binary);
-    if (!f) {
-        return false;
-    }
-    f.write(data.data(), (std::streamsize) data.size());
-    f.close();
-    if (!f) {
-        return false;
-    }
-    std::error_code ec;
-    std::filesystem::rename(tmp, path, ec);
-    return !ec;
+    return atomic_write_file(path, data);
 }
 
 // HERESY 2083b (Viktor 05.11.2026: «полностью закрой по автобекапу пользовательских json данных. Не нужно оставлять на 2.0.7»): the
@@ -720,7 +723,7 @@ static int fd_sync(int fd) {
 #endif
 
 static bool write_file_synced(const std::string & path, const std::string & data) {
-    std::string tmp = path + ".part";
+    std::string tmp = atomic_part_name(path);   // HERESY 2371: this write's own part file
     int         fd  = fd_create(tmp.c_str());
     if (fd < 0) {
         return false;
@@ -734,19 +737,17 @@ static bool write_file_synced(const std::string & path, const std::string & data
         }
         if (n <= 0) {
             fd_close(fd);
-            return false;
+            return atomic_commit(tmp, path, false);   // HERESY 2371: the part file goes, the old file stays
         }
         at += n;
         left -= (size_t) n;
     }
     if (fd_sync(fd) != 0) {
         fd_close(fd);
-        return false;
+        return atomic_commit(tmp, path, false);
     }
     fd_close(fd);
-    std::error_code ec;
-    std::filesystem::rename(tmp, path, ec);
-    if (ec) {
+    if (!atomic_commit(tmp, path, true)) {
         return false;
     }
 #ifndef _WIN32
@@ -1593,6 +1594,11 @@ static bool is_loopback_addr(const std::string & addr) {
 // origin. The Studio answers the names it can trust: an address written as one, localhost, a name of one label (no site on the internet has one),
 // a name of a private suffix (.local, .lan, .home.arpa, .internal…, a Tailscale .ts.net), this machine's own name, and the names in RUACH_HOSTS
 // (commas or spaces between them; ".example.org" takes its subdomains as well). RUACH_ALLOW_PUBLIC=1 answers any name.
+// HERESY 2258 (Viktor 08.11.2026, asked whether the names that look private stay trusted: «НЕТ. Только по IP локальных сетей»): a name is no longer
+// answered for how it looks (one label, .local, .lan, .home.arpa, .internal, a Tailscale .ts.net, this machine's own name): whoever answers for such a
+// name on the network can point it anywhere. Answered now: an address of a local network written as one (is_private_addr, as the callers themselves
+// are judged), the name localhost (this machine by definition, never asked of the network), and what RUACH_HOSTS names: a name, ".example.org" with its
+// subdomains, or an address beyond the local networks. lab/origin_gate.py answers the same on the lab's own port
 static std::string lower_ascii(std::string s) {
     for (auto & c : s) {
         c = (char) tolower((unsigned char) c);
@@ -1620,23 +1626,40 @@ static bool name_ends_with(const std::string & h, const std::string & suffix) {
     return h.size() > suffix.size() && h.compare(h.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
+// HERESY 2258: an address written as one, as inet_ntop writes it (::ffff:7f00:1 → ::ffff:127.0.0.1, 0:0:0:0:0:0:0:1 → ::1), so is_private_addr
+// reads every spelling a browser sends; "" when it is not an address at all
+static std::string addr_literal(const std::string & h) {
+    std::string   a = h.substr(0, h.find('%'));                         // fe80::1%25eth0: the zone is not the address
+    unsigned char ip[16];
+    char          out[INET6_ADDRSTRLEN] = { 0 };
+    if (inet_pton(AF_INET, a.c_str(), ip) == 1) {
+        return inet_ntop(AF_INET, ip, out, sizeof(out)) ? std::string(out) : a;
+    }
+    if (inet_pton(AF_INET6, a.c_str(), ip) == 1) {
+        return inet_ntop(AF_INET6, ip, out, sizeof(out)) ? std::string(out) : a;
+    }
+    return "";
+}
+
+// HERESY 2337 (Viktor 09.11.2026: «Да, убирай 100.64., а localhost оставляй»): a Host of 100.64/10, the shared space of carrier-grade NAT where
+// Tailscale lives, is not answered for being private: that space is the carrier's network as much as the home's. RUACH_HOSTS names such an address
+// when it is wanted; callers from it are still admitted by Engine → Security as before (is_private_addr, 1114). lab/origin_gate.py says the same
+static bool is_shared_addr(const std::string & addr) {
+    std::string a = addr;
+    if (a.rfind("::ffff:", 0) == 0) {
+        a = a.substr(7);
+    }
+    unsigned b[4];
+    char     rest;
+    return sscanf(a.c_str(), "%u.%u.%u.%u%c", &b[0], &b[1], &b[2], &b[3], &rest) == 4 && b[0] == 100 && b[1] >= 64 && b[1] <= 127;
+}
+
 static bool host_trusted(const std::string & host_header) {
     if (host_header.empty()) {
         return true;                                                     // HTTP/1.0 without a Host: no browser sends that
     }
-    std::string   h = host_name_of(host_header);
-    unsigned char ip[16];
-    if (inet_pton(AF_INET, h.c_str(), ip) == 1 || inet_pton(AF_INET6, h.c_str(), ip) == 1 || h.find('.') == std::string::npos) {
-        return true;
-    }
-    for (const char * s : { ".localhost", ".local", ".lan", ".home", ".home.arpa", ".internal", ".intranet", ".localdomain", ".corp", ".private",
-                            ".test", ".ts.net" }) {
-        if (name_ends_with(h, s)) {
-            return true;
-        }
-    }
-    char me[256] = { 0 };
-    if (gethostname(me, sizeof(me) - 1) == 0 && h == lower_ascii(me)) {
+    std::string h = host_name_of(host_header), a = addr_literal(h);   // HERESY 2258: an address of a local network, or localhost; no name for its look
+    if (a.empty() ? h == "localhost" : is_private_addr(a) && !is_shared_addr(a)) {   // HERESY 2337: 100.64/10 only when named
         return true;
     }
     const char * extra = getenv("RUACH_HOSTS");
@@ -2098,6 +2121,37 @@ static std::string json_string(const char * key, const std::string & value) {
     return out;
 }
 
+// HERESY 2358 (Viktor 11.11.2026: «Для Сторожа Arc дай мне команду для добавления в sudo.»): while a watchdog resets the
+// Studio's Intel Arc, or waits for a reset by hand, it keeps tmp/arc-reset.json fresh (touched every half minute); new work is
+// refused then, in the page's own words, instead of hanging on a lost card. Only an engine on SYCL refuses; a note older than
+// ten minutes is not trusted (its watchdog gone). RUACH_ARC_FLAG names another file.
+static bool arc_being_reset() {
+    const char *          env = getenv("RUACH_ARC_FLAG");
+    std::filesystem::path flag(env && *env ? env : "tmp/arc-reset.json");
+    std::error_code       ec;
+    auto                  mtime = std::filesystem::last_write_time(flag, ec);
+    if (ec || std::filesystem::file_time_type::clock::now() - mtime > std::chrono::minutes(10)) {
+        return false;
+    }
+    for (size_t i = 0; i < ggml_backend_dev_count(); i++) {
+        ggml_backend_dev_t dev = ggml_backend_dev_get(i);
+        if (ggml_backend_dev_type(dev) == GGML_BACKEND_DEVICE_TYPE_GPU && strncmp(ggml_backend_dev_name(dev), "SYCL", 4) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool arc_refuse(httplib::Response & res, const char * route) {
+    if (!arc_being_reset()) {
+        return false;
+    }
+    res.status = 503;
+    res.set_content(json_string("error", "The Arc is being reset: nothing new is taken until it is back"), "application/json");
+    fprintf(stderr, "[Server] Refused %s: the Arc is being reset (tmp/arc-reset.json)\n", route);
+    return true;
+}
+
 static void handle_props(const httplib::Request &, httplib::Response & res) {
     Yue2Request d;
     request_init(&d);
@@ -2145,6 +2199,7 @@ static void handle_props(const httplib::Request &, httplib::Response & res) {
     yyjson_doc_free(sources);
     yyjson_mut_obj_add_int(doc, root, "max_batch", g_pipeline.params.max_batch);
     yyjson_mut_obj_add_bool(doc, root, "transcriber", !g_transcriber_path.empty());
+    yyjson_mut_obj_add_bool(doc, root, "transcriber_refined", !g_transcriber_path.empty() && !g_transcriber_refined_path.empty());
     yyjson_mut_obj_add_bool(doc, root, "outputs", !g_outputs_dir.empty());
     // The adapter directory, each entry with the halves it changes
     yyjson_mut_val * adapters = yyjson_mut_arr(doc);
@@ -2325,20 +2380,48 @@ static bool validate(const std::string & json, httplib::Response & res, Yue2Requ
 
 // Transcribe worker: the uploaded recording becomes an ABC score, the chord
 // symbols dropped when only the melody is wanted.
-static void run_transcribe(std::shared_ptr<Job> job, std::vector<float> audio, bool melody_only) {
+// HERESY 2359: SheetSage2's rotary angles for a request that does not say: bf16 when YUE2_SS2_ROPE_BF16 asks, else exact (its sheets so far)
+static bool ss2_rope_bf16_default() {
+    const char * env = getenv("YUE2_SS2_ROPE_BF16");
+    return env && *env && strcmp(env, "0") != 0;
+}
+
+// HERESY 2359: the transcriber's name as the page and the lab say it: sheetsage2-refined, sheetsage2-bf16, sheetsage2 (exact angles)
+static const char * transcriber_name(bool refined, int rope) {
+    if (refined) {
+        return "sheetsage2-refined";
+    }
+    return (rope < 0 ? ss2_rope_bf16_default() : rope == 1) ? "sheetsage2-bf16" : "sheetsage2";
+}
+
+// HERESY 2377 (Viktor 11.11.2026: «убирай Standard режим и оставляй наш Tweaked как Heretical, а Refined, стабильный из двух вариантов как
+// Refined»): the mode's name for the log. The page offers Heretical and Refined; Standard (exact angles) is still answered for older callers
+// and the sets whose sheets it wrote. Refined with exact angles broke on the Ring (a card with no score, one with no chords) and is not offered.
+static const char * transcriber_mode(bool refined, int rope) {
+    return refined ? "Refined (anime-song's SheetSage2-Refined, bf16 angles)" :
+           !strcmp(transcriber_name(false, rope), "sheetsage2-bf16") ? "Heretical (SheetSage2, bf16 angles)" :
+                                                                       "Standard (SheetSage2, exact angles: the sheets before 2.0.7)";
+}
+
+static void run_transcribe(std::shared_ptr<Job> job, std::vector<float> audio, bool melody_only, bool refined, bool key_mode, int rope) {
     job->started.store(true);
     active_job_set(job);
-    fprintf(stderr, "[Server] Transcribe job %s: %.1f s of audio, %s\n", job->id.c_str(),
-            (double) audio.size() / MERT_SAMPLE_RATE, melody_only ? "melody only" : "full score");
+    fprintf(stderr, "[Server] Transcribe job %s: %.1f s of audio, %s, %s%s\n", job->id.c_str(),
+            (double) audio.size() / MERT_SAMPLE_RATE, melody_only ? "melody only" : "full score",
+            transcriber_mode(refined, rope),
+            refined && key_mode ? " with modes" : "");
     std::string abc, error;
-    bool        ok = pipeline_transcribe(&g_pipeline, audio.data(), (int) audio.size(), melody_only, &abc, &error);
+    bool ok = pipeline_transcribe(&g_pipeline, audio.data(), (int) audio.size(), melody_only, &abc, &error, refined, key_mode, rope);
     active_job_set(nullptr);
     if (!ok) {
         fprintf(stderr, "[Server] Transcribe job %s failed: %s\n", job->id.c_str(), error.c_str());
         job->status.store(job->cancel.load() ? JobStatus::CANCELLED : JobStatus::FAILED);
         return;
     }
-    job->result_body = json_string("abc", abc);
+    // HERESY 2328: the answer says which transcriber wrote the score; HERESY 2359: and with which angles SheetSage2 wrote it
+    std::string body = json_string("abc", abc);
+    body.insert(body.size() - 1, std::string(",\"transcriber\":\"") + transcriber_name(refined, rope) + "\"");
+    job->result_body = body;
     job->result_mime = "application/json";
     job->status.store(JobStatus::DONE);
 }
@@ -2480,7 +2563,12 @@ static void run_vae_encode(std::shared_ptr<Job> job, std::vector<float> planar, 
 static void run_vae_decode(std::shared_ptr<Job> job, Yue2Request request, std::vector<float> latents, int T_lat) {
     active_job_set(job);
     fprintf(stderr, "[Server] VAE decode job %s: %d latent frames\n", job->id.c_str(), T_lat);
-    VAEGGML *   vae = require_vae(&g_pipeline);
+    // HERESY 2306: the decoder the request names (or the default, the first named), never the encoder's file; an unknown name fails
+    std::string vae_path;
+    if (!pipeline_vae_path(&g_pipeline, request.vae, &vae_path)) {
+        fprintf(stderr, "[Server] VAE decode job %s: no decoder named %s\n", job->id.c_str(), request.vae.c_str());
+    }
+    VAEGGML *   vae = vae_path.empty() ? nullptr : require_vae(&g_pipeline, vae_path);
     bool        ok  = vae != nullptr;
     std::string audio_part;
     if (ok) {
@@ -2647,6 +2735,10 @@ static void print_usage(const char * prog) {
             "  --device <name>        Compute device: CUDA0, Vulkan0, MTL0, CPU...\n"
             "                         (default: best available)\n"
             "  --transcriber <gguf>   SheetSage2 GGUF, MERT beside it, enables /transcribe\n"
+            "  --transcriber-refined <gguf>  SheetSage2-Refined's overlay, SheetSage2's GGUF beside it:\n"
+            "                         /transcribe?transcriber=refined\n"
+            "                         (transcriber=heretical or sheetsage2-bf16: SheetSage2 with bf16 angles, the page's\n"
+            "                         default; sheetsage2-exact: the exact angles of the sheets before 2.0.7)\n"
             "  --tokenizer <gguf>     Audio tokenizer GGUF, MERT beside it, enables /tokenize\n"
             "  --adapters <dir>       Directory of LoRA adapters a request can stack\n"
             "  --vae <name>=<gguf>    Another named decoder, selectable per request (repeatable)\n"
@@ -2714,7 +2806,9 @@ int main(int argc, char ** argv) {
                 path = arg;
             }
             g_vaes.push_back({ name, path });
-            if (g_vae_path.empty()) {
+            // HERESY 2306: the first --vae is the default decoder, but the encoder is Standard's file whatever stands first
+            // (our RS decoders are decoder-only GGUFs): a later «standard» takes the encoder's place
+            if (g_vae_path.empty() || name == "standard") {
                 g_vae_path = path;
             }
         } else if (!strcmp(argv[i], "--sliders") && !last) {
@@ -2734,6 +2828,8 @@ int main(int argc, char ** argv) {
             device = argv[++i];
         } else if (!strcmp(argv[i], "--transcriber") && !last) {
             g_transcriber_path = argv[++i];
+        } else if (!strcmp(argv[i], "--transcriber-refined") && !last) {
+            g_transcriber_refined_path = argv[++i];
         } else if (!strcmp(argv[i], "--tokenizer") && !last) {
             g_tokenizer_path = argv[++i];
         } else if (!strcmp(argv[i], "--adapters") && !last) {
@@ -2824,6 +2920,7 @@ int main(int argc, char ** argv) {
     // with --keep-loaded (everything accumulates)
     g_pipeline.store            = store_create(g_keep_loaded ? EVICT_NEVER : EVICT_STRICT);
     g_pipeline.transcriber_path = g_transcriber_path;
+    g_pipeline.transcriber_refined_path = g_transcriber_refined_path;
     g_pipeline.vaes             = g_vaes;
     for (const auto & v : g_vaes) {
         fprintf(stderr, "[Server] Decoder %s: %s\n", v.first.c_str(), v.second.c_str());
@@ -2858,16 +2955,22 @@ int main(int argc, char ** argv) {
         // HERESY 2011 (the audit of 02.11.2026, S3): through the https door every visitor came from this computer, which the engine trusts:
         // the API's token was never asked, and the lockout guard saw no one. The door names its visitor in X-Ruach-Peer (one the visitor sent
         // is dropped there), taken from a loopback caller alone: this computer may only ever make itself less trusted by it.
+        // HERESY 2179: a name there that does not parse is refused, not passed over: passed over, it left the caller this computer, trusted.
+        bool peer_bad = false;
         if (is_loopback_addr(req.remote_addr) && req.has_header("X-Ruach-Peer")) {
             std::string   peer = req.get_header_value("X-Ruach-Peer");
             unsigned char ip[16];
             if (inet_pton(AF_INET, peer.c_str(), ip) == 1 || inet_pton(AF_INET6, peer.c_str(), ip) == 1) {
                 const_cast<httplib::Request &>(req).remote_addr = peer;
+            } else {
+                peer_bad = true;
             }
         }
         // HERESY 2011 (S1): a name the Studio cannot trust, or a page of another site, is refused (said once in ten seconds in the log)
         const char * refused = nullptr;
-        if (!allow_public && !host_trusted(req.get_header_value("Host"))) {
+        if (peer_bad) {
+            refused = "The https door named a visitor whose address does not parse: the request is refused rather than taken as this computer's";
+        } else if (!allow_public && !host_trusted(req.get_header_value("Host"))) {
             refused = "Ruach Studio does not answer this name: a site on the internet could point it at this machine (RUACH_HOSTS=name opens it)";
         } else if (request_foreign(req)) {
             refused = "Ruach Studio does not take requests a page of another site makes";
@@ -3077,6 +3180,9 @@ int main(int argc, char ** argv) {
     svr.Get("/logs", handle_logs);
 
     svr.Post("/synth", [](const httplib::Request & req, httplib::Response & res) {
+        if (arc_refuse(res, "/synth")) {   // HERESY 2358
+            return;
+        }
         Yue2Request request;
         if (!validate(req.body, res, &request)) {
             return;
@@ -3093,6 +3199,9 @@ int main(int argc, char ** argv) {
     // route is served when a transcriber is given.
     if (!g_transcriber_path.empty()) {
         svr.Post("/transcribe", [](const httplib::Request & req, httplib::Response & res) {
+            if (arc_refuse(res, "/transcribe")) {   // HERESY 2358
+                return;
+            }
             // HERESY 1036: ?take=NAME transcribes a take of the library from its own audio.wav, so
             // the page need not send a song the server already holds (120 MB for seven minutes)
             std::string from_take;
@@ -3125,8 +3234,30 @@ int main(int argc, char ** argv) {
                 res.set_content(json_string("error", "cannot decode audio"), "application/json");
                 return;
             }
+            // HERESY 2328: transcriber=refined (query or form field) writes it with SheetSage2-Refined, modes=1 with keys
+            // with their modes
+            auto field = [&](const char * name) {
+                if (req.has_param(name)) {
+                    return req.get_param_value(name);
+                }
+                return req.is_multipart_form_data() && req.form.has_field(name) ? req.form.get_field(name) : std::string();
+            };
+            std::string which    = field("transcriber");
+            bool        refined  = which == "refined" || which == "sheetsage2-refined";
+            bool        key_mode = field("modes") == "1" || field("modes") == "true";
+            // HERESY 2359: transcriber=sheetsage2-bf16 (SheetSage2 with the bfloat16 angles it learnt with) or sheetsage2-exact (the
+            // exact ones its sheets were written with so far); plain sheetsage2 or none: as the server was started (YUE2_SS2_ROPE_BF16)
+            // HERESY 2377: «heretical» is the page's name for SheetSage2 with bf16 angles
+            int rope = which == "sheetsage2-bf16" || which == "bf16" || which == "heretical" ? 1
+                       : which == "sheetsage2-exact" || which == "exact"                     ? 0
+                                                                                             : -1;
+            if (refined && g_transcriber_refined_path.empty()) {
+                res.status = 400;
+                res.set_content(json_string("error", "SheetSage2-Refined is not installed"), "application/json");
+                return;
+            }
             auto job = job_create();
-            work_push([job, audio, melody_only] { run_transcribe(job, audio, melody_only); });
+            work_push([job, audio, melody_only, refined, key_mode, rope] { run_transcribe(job, audio, melody_only, refined, key_mode, rope); });
             res.set_content(json_string("id", job->id), "application/json");
         });
     }
@@ -3161,6 +3292,9 @@ int main(int argc, char ** argv) {
     // output format, peak clip and bitrate drive the decode. The result
     // carries the other side alone, the client holds the one it sent.
     svr.Post("/vae", [](const httplib::Request & req, httplib::Response & res) {
+        if (arc_refuse(res, "/vae")) {   // HERESY 2358
+            return;
+        }
         bool has_audio   = req.is_multipart_form_data() && req.form.has_file("audio");
         bool has_latents = req.is_multipart_form_data() && req.form.has_file("src_latents");
         if (has_audio == has_latents) {
@@ -3364,9 +3498,22 @@ int main(int argc, char ** argv) {
 
     // Local addition: the song library on disk (--outputs)
     if (!g_outputs_dir.empty()) {
-        svr.Get("/library", [](const httplib::Request &, httplib::Response & res) {
-            std::lock_guard<std::mutex> lock(mtx_library);
-            res.set_content(library_list_json(), "application/json");
+        // HERESY 2181 (the cache stage's «For Viktor»): the list (820 KB on Viktor's library) went whole at every ask, no validator; now with the
+        // key of its very bytes as a weak ETag and «private, no-cache», so an unchanged list is a 304 of a few bytes (the disk still read each time)
+        svr.Get("/library", [](const httplib::Request & req, httplib::Response & res) {
+            std::string body;
+            {
+                std::lock_guard<std::mutex> lock(mtx_library);
+                body = library_list_json();
+            }
+            std::string tag = asset_cache::etag(asset_cache::key_of(body));
+            res.set_header("ETag", tag);
+            res.set_header("Cache-Control", "private, no-cache");
+            if (asset_cache::none_match(req.get_header_value("If-None-Match"), tag)) {
+                res.status = 304;
+                return;
+            }
+            res.set_content(body, "application/json");
         });
         svr.Get("/library/audio", [](const httplib::Request & req, httplib::Response & res) {
             std::string name = req.get_param_value("name");
@@ -3657,6 +3804,54 @@ int main(int argc, char ** argv) {
             res.set_header("ETag", tag);
         }
         res.set_content(page, "text/html; charset=utf-8");
+    });
+    // HERESY 2180 (the cache stage's «For Viktor» 5): the page's build (build.sh's id in its <meta name="ruach-build">) said in X-Ruach-Build on the
+    // page and on /health, so a tab opened before a new build learns from its pings that a reload would take the new one. Read from the page's
+    // head (its first 64 KB) only when the page's size or time changed; no page, or no id in it, and the header is not sent: never an id made up
+    static auto page_build = []() -> std::string {
+        static std::mutex  mtx_build;
+        static std::string seen_tag, seen_id;
+        std::error_code    ec, ec2;
+        uintmax_t          size  = std::filesystem::file_size(page_path, ec);
+        auto               mtime = std::filesystem::last_write_time(page_path, ec2);
+        if (ec || ec2) {
+            return "";
+        }
+        std::string                 tag = asset_cache::page_tag(size, mtime);
+        std::lock_guard<std::mutex> lock(mtx_build);
+        if (tag == seen_tag) {
+            return seen_id;
+        }
+        std::ifstream f(page_path, std::ios::binary);
+        std::string   head(65536, '\0');
+        f.read(&head[0], (std::streamsize) head.size());
+        head.resize((size_t) std::max<std::streamsize>(0, f.gcount()));
+        static const std::string mark = "<meta name=\"ruach-build\" content=\"";
+        std::string              id;
+        size_t                   at = head.find(mark);
+        if (at != std::string::npos) {
+            size_t from = at + mark.size(), end = head.find('"', from);
+            if (end != std::string::npos && end - from <= 64) {
+                id = head.substr(from, end - from);
+                for (char c : id) {
+                    if (!isalnum((unsigned char) c) && c != '-' && c != '_' && c != '.') {
+                        id.clear();   // a header carries plain letters only: anything else is not a build's id
+                        break;
+                    }
+                }
+            }
+        }
+        seen_tag = tag;
+        seen_id  = id;
+        return id;
+    };
+    svr.set_post_routing_handler([](const httplib::Request & req, httplib::Response & res) {
+        if (req.path == "/" || req.path == "/health") {
+            std::string id = page_build();
+            if (!id.empty()) {
+                res.set_header("X-Ruach-Build", id);
+            }
+        }
     });
     // HERESY 2024 (Viktor 02.11.2026: «Десктоп делаем с добрым PWA»): the Studio installable as an app: its manifest, its icons and a worker
     // that keeps nothing (tools/console/pwa/, beside the page's folder), from the root, so the worker's scope is the whole Studio

@@ -22,6 +22,8 @@ from pathlib import Path
 
 import numpy as np
 
+import paths                       # HERESY 2330: where the weights live
+
 HERE = Path(__file__).resolve().parent
 KIT = HERE.parent
 CACHE = HERE / "cache" / "lora-alchemy"
@@ -275,7 +277,7 @@ _base_state = {"running": False}
 
 def _model_path():
     for name in ("YuE2-3B-BF16.gguf", "YuE2-3B-Q8_0.gguf", "YuE2-3B-Q6_K.gguf", "YuE2-3B-Q5_K_M.gguf"):
-        p = KIT / "models" / name
+        p = paths.engine_gguf(name, KIT)
         if p.is_file():
             return p
     return None

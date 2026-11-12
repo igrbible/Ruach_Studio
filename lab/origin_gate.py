@@ -9,11 +9,18 @@ of another site, is refused; scripts, DAWs, curl and the engine send neither Ori
     refusal(method, path, headers) → None, or the reason to answer with 403"""
 import ipaddress
 import os
-import socket
 
-# the engine's host_trusted (yue-server.cpp), repeated: one label, an address, a private suffix, this machine's name, RUACH_HOSTS
-OWN_SUFFIXES = (".localhost", ".local", ".lan", ".home", ".home.arpa", ".internal", ".intranet", ".localdomain", ".corp", ".private", ".test",
-                ".ts.net")
+# HERESY 2258 (Viktor 08.11.2026, asked whether names that look private stay trusted: «НЕТ. Только по IP локальных сетей»): the engine's
+# host_trusted (yue-server.cpp), repeated. A name is no longer answered for how it looks (one label, .local, .lan, .home.arpa, .internal, a
+# Tailscale .ts.net, this machine's own name): whoever answers for such a name on the network can point it anywhere. Answered: an address of a
+# local network written as one (the engine's is_private_addr less 100.64/10: 127/8, 10/8, 172.16/12, 192.168/16, 169.254/16, ::1, fc00::/7,
+# fe80::/10, IPv4 in IPv6 dress), the name localhost (this machine by definition, never asked of the network), and what RUACH_HOSTS names
+# (a name, ".example.org" with its subdomains, or an address)
+# HERESY 2337 (Viktor 09.11.2026: «Да, убирай 100.64., а localhost оставляй»): 100.64/10, the shared space of carrier-grade NAT where Tailscale
+# lives, is no longer answered as a Host for being private: it is the carrier's network as much as the home's. A Tailscale address is answered when
+# RUACH_HOSTS names it; the engine still admits callers from it by Engine → Security, as before (is_private_addr, 1114)
+LOCAL_NETS = tuple(ipaddress.ip_network(n) for n in ("127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16",
+                                                     "::1/128", "fc00::/7", "fe80::/10"))
 
 
 def host_name_of(host):
@@ -25,24 +32,31 @@ def host_name_of(host):
     return h[:-1] if h.endswith(".") else h
 
 
-def host_trusted(host):
-    if not host:
-        return True
-    h = host_name_of(host)
+def local_address(h):
+    """HERESY 2258: True for an address of a local network, False for any other address, None when h is no address at all."""
     try:
-        ipaddress.ip_address(h)
-        return True
+        a = ipaddress.ip_address(h.split("%", 1)[0])   # fe80::1%eth0: the zone is not the address
     except ValueError:
-        pass
-    if "." not in h or any(h.endswith(s) and len(h) > len(s) for s in OWN_SUFFIXES):
-        return True
-    if h == socket.gethostname().lower():
-        return True
+        return None
+    if a.version == 6 and a.ipv4_mapped:
+        a = a.ipv4_mapped
+    return any(a in n for n in LOCAL_NETS)
+
+
+def listed(h):
+    """RUACH_HOSTS (commas or spaces between): the name itself, ".example.org" for its subdomains, or an address as the browser writes it."""
     for n in (os.environ.get("RUACH_HOSTS") or "").replace(",", " ").lower().split():
         n = host_name_of(n)
         if n and (h == n or (n.startswith(".") and h.endswith(n) and len(h) > len(n))):
             return True
     return False
+
+
+def host_trusted(host):
+    if not host:
+        return True                                    # HTTP/1.0 without a Host: no browser sends that
+    h = host_name_of(host)
+    return local_address(h) is True or h == "localhost" or listed(h)   # HERESY 2258
 
 
 def foreign(method, path, headers):

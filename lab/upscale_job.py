@@ -12,17 +12,19 @@ HERE = Path(__file__).resolve().parent
 KIT = HERE.parent
 sys.path.insert(0, str(HERE))
 import upscale_shots as us  # noqa: E402
+import paths  # noqa: E402   HERESY 2330: where the weights live
 
 jd = Path(sys.argv[1])
 job = json.loads((jd / "job.json").read_text(encoding="utf-8"))
 m = us.MODELS[job["model"]]
-cmd = [sys.executable, "-u", "inference_cli.py", str(jd / "in"), "--output", str(jd / "out"), "--model_dir", str(KIT / "models/seedvr2"),
-       "--dit_model", m["dit"], "--resolution", str(job["res"]), "--batch_size", "21", "--video_backend", "ffmpeg", "--color_correction", "lab",
-       "--vae_decode_tiled", "--cache_dit", "--cache_vae"]
+cmd = [sys.executable, "-u", "inference_cli.py", str(jd / "in"), "--output", str(jd / "out"), "--model_dir", str(paths.at(paths.SEEDVR2, KIT)),
+       "--dit_model", m["dit"], "--resolution", str(job["res"]), "--batch_size", str(int(job.get("batch") or 21)), "--video_backend", "ffmpeg",
+       "--color_correction", "lab", "--vae_decode_tiled", "--cache_dit", "--cache_vae", "--temporal_overlap", str(us.OVERLAP)]   # HERESY 2356: overlapping, blended
 if job["res"] > 1080:
     cmd += ["--vae_encode_tiled"]
-if m["swap"]:
-    cmd += ["--blocks_to_swap", str(m["swap"]), "--dit_offload_device", "cpu"]
+swap = int(job["swap"]) if "swap" in job else {"7b": 16}.get(job["model"], m["swap"])   # HERESY 2356: as the lab that started it asked (a job of before: 21, 16)
+if swap:
+    cmd += ["--blocks_to_swap", str(swap), "--dit_offload_device", "cpu"]
 env = dict(os.environ, CUDA_DEVICE_ORDER="PCI_BUS_ID", CUDA_VISIBLE_DEVICES=str(job["gpu"]), HF_HUB_OFFLINE="1", PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True")
 t0 = time.time()
 p = subprocess.run(cmd, cwd=str(us.RT), env=env)

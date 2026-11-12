@@ -223,8 +223,8 @@ request JSON, the same schema the server and the WebUI speak.
 
 ```bash
 ./build/yue-synth \
-    --model models/YuE2-3B-Q8_0.gguf \
-    --vae models/YuE2-Vae-F32.gguf \
+    --model models/engine/yue2/YuE2-3B-Q8_0.gguf \
+    --vae models/engine/vae/YuE2-Vae-F32.gguf \
     --request request.json \
     --out song.mp3
 ```
@@ -240,7 +240,7 @@ ABC score the model intends to play. The score is the white box interface:
 read it, edit it, put it back in the request as `abc`.
 
 ```bash
-./build/yue-plan --model models/YuE2-3B-Q8_0.gguf --request request.json --out score.abc
+./build/yue-plan --model models/engine/yue2/YuE2-3B-Q8_0.gguf --request request.json --out score.abc
 ```
 
 The `yue-transcribe` tool runs the SheetSage2 transcriber on a recording
@@ -249,7 +249,7 @@ full score carries the chord symbols, `--melody-only` keeps the vocal and
 instrumental voices alone, which is what `cot` `melody` expects.
 
 ```bash
-./build/yue-transcribe --model models/SheetSage2-Q8_0.gguf --audio song.mp3 --out score.abc
+./build/yue-transcribe --model models/misc/SheetSage2-Q8_0.gguf --audio song.mp3 --out score.abc
 ```
 
 The `yue-tokenize` tool runs the audio tokenizer on a recording and writes
@@ -258,7 +258,7 @@ a request: the song renders again through the NAR half and the VAE, best
 with the realaudio NAR adapter the tokenizer was trained with.
 
 ```bash
-./build/yue-tokenize --model models/yue2-mothersuperior-realaudio-tokenizer-v4-Q8_0.gguf --audio song.mp3 --out codes.csv
+./build/yue-tokenize --model models/engine/tokenizers/yue2-mothersuperior-realaudio-tokenizer-v4-Q8_0.gguf --audio song.mp3 --out codes.csv
 ```
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full JSON

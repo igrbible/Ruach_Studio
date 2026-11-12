@@ -114,7 +114,7 @@ for st in ("piano", "bass", "drums", "other"):          # HERESY 1884: what the 
     for x in sg[1:]:
         i = x["instrument"]
         files = [r[2]["file"] for r in i["ranges"]] if i["kind"] == "split" else [i["file"]]
-        check(f"suggest {st}: {x['label']} is here", all((KIT / "models" / "instruments" / f).is_file() for f in files), files)
+        check(f"suggest {st}: {x['label']} is here", all((O.paths.at(O.paths.REFINER_INSTRUMENTS, KIT) / f).is_file() for f in files), files)
 
 sq = O.squeeze([8, 20, 64, 100, 127, 127], 60, 112)          # HERESY 1887: his ear's narrower range, the order kept
 check("squeeze: into its range, the order kept", min(sq) >= 60 and max(sq) <= 112 and sq == sorted(sq), sq)

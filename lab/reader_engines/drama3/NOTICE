@@ -1,0 +1,5 @@
+These Fish Audio Materials are licensed under the Fish Audio Community License, Version 1.0. Copyright © 39 AI, INC. All Rights Reserved.
+
+Built with Fish Audio.
+
+The Narrator of Ruach Studio reads with Fish Audio Drama 3 (https://huggingface.co/fishaudio/drama-3) through audio.cpp (Apache-2.0, its fish_drama3 family), from GGUF quants of the original weights that lie in models/narrator/drama-3-gguf with their own LICENSE and NOTICE (what was changed, and by whom). The Studio does not carry the model's weights or any of Fish Audio's code: this folder holds only the code that starts the audio.cpp server and sends it text. The weights are used under the Fish Audio Community License: free for research and non-commercial use, and for commercial use while the user's annual revenue stays under USD 500,000; no hosted TTS or voice-cloning service for others without a separate licence from Fish Audio; no voice of a real person cloned without that person's consent; its watermark not removed; nothing the model makes used to train, distill or improve another model (the Studio marks every take of the Narrator never for training, and no take of Drama 3 enters any dataset).

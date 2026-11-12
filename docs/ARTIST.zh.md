@@ -36,7 +36,7 @@
 
 ## 2. 六步做出第一张封面
 
-1. 在工作室右边选一条录音（创作室或资料馆的列表）：你设为封面的图就归它。
+1. 在工作室右边选一条录音（音乐人或资料馆的列表）：你设为封面的图就归它。
 2. 在画室里按 **来自录音** 得到一个起点提示词，或者自己写（第 3 节）。
 3. **画幅** 留在 **1:1**，**变体** 设为 4，画笔用工作室选的那支（大多数显卡上是带 ⚡ Lightning 的 Qwen-Image 2512 Q4）。
 4. 按 **绘制**（Ctrl+Enter）。看图在舞台上一张张显现；在 3090 上每张约半分钟。
@@ -61,9 +61,9 @@ Qwen-Image 把提示词当描述来读，而不是标签列表：请写句子。
 | **Qwen-Image 2512 fp8 BASE** | Apache-2.0 | 22.5 GB | 与 GGUF 一样开 Lightning 8 步 | fp8 的 2512 本身 |
 | **Qwen-Image 2.1** | Qwen Research Licence | 21 GB（更少时流式加载） | 约两分钟 | 用文字修图、风格参考 |
 
-**画室画笔** 是这里每个模型和文件的一个列表，按组排列：GGUF 的 Qwen-Image 2512（Q4、Q6）、`artwork/Qwen-Image-2512/checkpoints/` 中的每个 fp8 文件（2512 自己的 BASE 和各个微调）以及 Qwen-Image 2.1。**⚡ Lightning** 标出默认用它作画的画笔；微调会标明是微调。放进 `checkpoints/` 的文件，在本室重新读取列表时（下载之后或重新加载页面时）成为一支独立的画笔。Krea 2 Muse 已于 2026 年 10 月离开工作室：Qwen-Image 2512 更贴合文字，也能把标题写对。
+**画室画笔** 是这里每个模型和文件的一个列表，按组排列：GGUF 的 Qwen-Image 2512（Q4、Q6）、`models/artist/Qwen-Image-2512/checkpoints/` 中的每个 fp8 文件（2512 自己的 BASE 和各个微调）以及 Qwen-Image 2.1。**⚡ Lightning** 标出默认用它作画的画笔；微调会标明是微调。放进 `checkpoints/` 的文件，在本室重新读取列表时（下载之后或重新加载页面时）成为一支独立的画笔。Krea 2 Muse 已于 2026 年十月离开工作室：Qwen-Image 2512 更贴合文字，也能把标题写对。
 
-**Qwen-Image 2512** 是更大的画师：写实更细，长提示词读得好，你要字时能把字写对。它以 GGUF 的 Q4 或 Q6 提供，或者作为 **fp8 微调**：ComfyUI 的单文件放进 `artwork/Qwen-Image-2512/checkpoints/`，每个都是一支独立的画笔（Jib Mix Qwen、IntoRealism Qwen、Real-Qwen-Image 以及 2512 本身可以从 **获取画师和适配器…** 下载，每个 20.4 GB）。2512 自己的 BASE 像 GGUF 一样用 Lightning 作画，微调则除非你打开，否则不用它。fp8 文件以 bf16 读取，在显卡上保持它自己的 fp8，每一层运行时用 bf16 计算；挂在它上面的适配器各自的层保持 bf16。
+**Qwen-Image 2512** 是更大的画师：写实更细，长提示词读得好，你要字时能把字写对。它以 GGUF 的 Q4 或 Q6 提供，或者作为 **fp8 微调**：ComfyUI 的单文件放进 `models/artist/Qwen-Image-2512/checkpoints/`，每个都是一支独立的画笔（Jib Mix Qwen、IntoRealism Qwen、Real-Qwen-Image 以及 2512 本身可以从 **获取画师和适配器…** 下载，每个 20.4 GB）。2512 自己的 BASE 像 GGUF 一样用 Lightning 作画，微调则除非你打开，否则不用它。fp8 文件以 bf16 读取，在显卡上保持它自己的 fp8，每一层运行时用 bf16 计算；挂在它上面的适配器各自的层保持 bf16。
 
 **Qwen-Image 2.1** 既读文字也读图（它的文本编码器是 Qwen3-VL）：按提示词的话修改一张图，或者用一张图的风格画出提示词里的场景（第 11 节）。它采用 Qwen Research Licence：仅限研究和评估，不能用于你要卖的封面；房间会在画师下面用警告色写明这一点。
 
@@ -93,7 +93,7 @@ Qwen-Image 2512 的 **文本编码器**（Qwen2.5-VL-7B，约 15.5 GB）在显�
 
 ## 6. Lightning
 
-**它是什么**：一个适配器（lightx2v，Apache-2.0），教 Qwen-Image 2512 在没有引导的情况下用很少的步数作画：把模型自己那条带引导的长路蒸馏成 8 步。它的文件在 `artwork/Qwen-Image-2512/lightning/`，随 Qwen 画师一起下载。
+**它是什么**：一个适配器（lightx2v，Apache-2.0），教 Qwen-Image 2512 在没有引导的情况下用很少的步数作画：把模型自己那条带引导的长路蒸馏成 8 步。它的文件在 `models/artist/Qwen-Image-2512/lightning/`，随 Qwen 画师一起下载。
 
 **工作室怎么放它**：开启 Lightning 时，画师把它作为你的适配器之下的又一个适配器加载，GGUF 的 Q4、Q6 以及 2512 自己的 fp8 BASE 用 **1.0**（它蒸馏所用的底模，8 步），12 步的 fp8 微调用 **0.55**（微调已经离开了底模，满强度的 Lightning 会把它拉回去）。调度变成 Lightning 自己的（任何尺寸都是 log 3 的偏移），引导关闭：每步模型只跑一遍。
 
@@ -129,13 +129,13 @@ Qwen-Image 2512 的 **文本编码器**（Qwen2.5-VL-7B，约 15.5 GB）在显�
 
 ## 8. 适配器（LoRA）
 
-**放在哪里**：`artwork/loras/<家族>/`，家族就是画师的家族：`qwen-image-2512`、`qwen-image-2.1`。里面的文件夹在库里成为分组；和文件同名放在旁边的图（`NAME.jpg`、`NAME.png`、`NAME.preview.png`）会显示在它的卡片上；ComfyUI 的 LoRA Manager（`NAME.metadata.json`）或 Stability Matrix（`NAME.cm-info.json`）写在文件旁边的东西也会被读取。
+**放在哪里**：`models/artist/loras/<family>/`，家族就是画师的家族：`qwen-image-2512`、`qwen-image-2.1`。里面的文件夹在库里成为分组；和文件同名放在旁边的图（`NAME.jpg`、`NAME.png`、`NAME.preview.png`）会显示在它的卡片上；ComfyUI 的 LoRA Manager（`NAME.metadata.json`）或 Stability Matrix（`NAME.cm-info.json`）写在文件旁边的东西也会被读取。
 
 **列表与运行**：画师下面的列表最多八个适配器，一次运行最多四个生效；每个用自己的强度（滑块 0 到 1.5）；右键 **静音** 一个（它留在列表里，退出运行），强度为零的适配器也不加载。它的触发词显示在下面，点一个就放进提示词（运行也会自己加上生效适配器的触发词）。
 
 **Civitai**：**在 Civitai 上查询** 只发送每个文件的 SHA-256，别的什么都不发，并把回答存在旁边（`NAME.civitai.info`：它的名字、底模和触发词，以及没有自己的图时它第一张被评为安全的图）。**从 Civitai…** 用你自己的密钥，直接从 Civitai 下载作者不允许转发的适配器：读入链接、版本 id 或 AIR，说出适合它底模的家族，只接受 `.safetensors` 格式的 LORA、LoCon 或 DoRA，并在成为文件之前把它的 SHA-256 与 Civitai 的核对。你的密钥只发往 Civitai。作者允许转发的适配器从 **获取画师和适配器…** 下载。
 
-**合计**：两个以上适配器时，它们下面的进度条按创作室同样的道路显示强度之和：1.2 以内绿色，1.8 以内琥珀色，再往上红色。叠加的适配器是相加的，超过约 1.8 时图会烧焦（颜色和边缘过头），不论每个多么克制。拖动这条进度条可以把它们一起移动，各按比例。
+**合计**：两个以上适配器时，它们下面的进度条按音乐人同样的道路显示强度之和：1.2 以内绿色，1.8 以内琥珀色，再往上红色。叠加的适配器是相加的，超过约 1.8 时图会烧焦（颜色和边缘过头），不论每个多么克制。拖动这条进度条可以把它们一起移动，各按比例。
 
 **按步数的强度**（适配器旁的 ⏱）：像 ComfyUI 的 LoRA 钩子那样的关键帧，一个步数比例和一个倍数：`0%:1, 50%:1, 60%:0` 让适配器在前一半步数里完整生效，到 60 % 时放开。最多八个关键帧，倍数 0 到 2，中间直线连接。一个在早期塑造构图的适配器，和一个只应触及收尾的风格适配器，就是两种用法。
 
@@ -234,11 +234,13 @@ Qwen-Image 2512 的 **文本编码器**（Qwen2.5-VL-7B，约 15.5 GB）在显�
 
 **代价和收获**：1920 × 1080 的 16:9 出来是 3840 × 2160。在 3090 上，Qwen-Image 2512 fp8 微调到 3840 × 2160，用 12 步加 Lightning 220 秒（22.9 GB，块流式加载）。在 0.6 时保住了场景，只把局部挪动了一点；在 0.5 时构图稳住了。不适用于 Qwen-Image 2.1；它不能配遮罩和画布。在第二遍上按 **再来**，会按它的尺寸再画一遍。
 
+**ComfyUI 的方式**：开启时（表单中同名的部分），「第二遍…」使用表单而不是本次运行的适配器和采样，从 **第二遍从第几步开始** 设定的步开始（他的：60 步中的 20），而不是按强度，并在勾选 **颜色与图片一致** 时还原颜色；同一个种子此时给出 ComfyUI 自己的图片。
+
 ## 13. 超分
 
-舞台上的 **超分…** 用 `artwork/upscalers/` 里的超分模型（`.pth` 或 `.safetensors`，可以有文件夹）把图变成 **2K** 或 **4K**（长边 2560 或 3840）：ESRGAN、DAT、HAT、ATD、SPAN、OmniSR 及其同类，由 spandrel 仅凭文件读取。图按 512 的图块、32 的重叠通过，每块只取中间（没有接缝）；要求的倍数小于 4 时，4× 模型先按 4× 画再用 Lanczos 缩回，比 2× 模型更细。长边最多 10 240 px。选项旁边的 **i** 说明所选超分模型适合什么（照片、人脸、绘画）、作者、许可和测得的用时；点一下会打开全部模型的说明，按组排列，快的在前，非商用的有标记。
+舞台上的 **超分…** 用 `models/artist/upscalers/` 里的超分模型（`.pth` 或 `.safetensors`，可以有文件夹）把图变成 **2K** 或 **4K**（长边 2560 或 3840）：ESRGAN、DAT、HAT、ATD、SPAN、OmniSR 及其同类，由 spandrel 仅凭文件读取。图按 512 的图块、32 的重叠通过，每块只取中间（没有接缝）；要求的倍数更小时，4× 模型先按 4× 画再用 Lanczos 缩回，比 2× 模型更细。长边最多 10 240 px。选项旁边的 **i** 说明所选超分模型适合什么（照片、人脸、绘画）、作者、许可和测得的用时；点一下会打开全部模型的说明，按组排列，快的在前，非商用的有标记。
 
-**分遍…** 像 Viktor 的 ComfyUI 堆栈那样分几遍超分：最多四行，每行一个模型和一个倍数，每行都在当前的图上跑一遍，并放到原尺寸乘以该遍的倍数，最后取要求的长边，并把颜色对齐原图（hm-mvgd-hm：直方图、均值与协方差、直方图）。模型齐全时，他的链条一键可用：span otf strong ×2，然后 Nomos8kDAT ×4、Remacri ×1.5、UltraMix Balanced ×2：一张 1920 × 1080 的图 246 秒到 7680 × 4320，没有接缝，颜色保持。
+**分遍…** 像 Viktor 的 ComfyUI 堆栈那样分几遍超分：最多四行，每行一个模型和一个倍数，每行都在当前的图上跑一遍，并放到原尺寸乘以该遍的倍数，最后取要求的长边，并把颜色对齐原图（hm-mvgd-hm：直方图、均值与协方差、直方图）。模型齐全时，他的链条一键可用：span otf strong ×2，然后 Nomos8kDAT ×4、Remacri ×1.5、UltraMix Balanced ×2：一张 1920 × 1080 的图 246 秒到 7680 × 4320，没有接缝，颜色保持。 分遍之后,**随后画师再画一遍** 用这次运行自己的画师把放大后的图再画一遍,强度默认 0.67(越低越贴近超分结果,越高重画越多):代价是在更大尺寸上再跑一次画师。开启画师这一遍时，链条停在最后一个倍数：画师在那里作画，长边和原图的颜色在它之后单独跑一次。
 
 超分模型旁边的 **TTA**：每块按八个方向（四种旋转，各自镜像）过模型再取平均：边缘和质感更稳，最多八倍用时。选中图片的工具栏（Ctrl+点击）上的 **超分…** 一次最多处理 64 张，分到实验室的各张显卡上。
 
@@ -272,7 +274,9 @@ Qwen-Image 2512 的 **文本编码器**（Qwen2.5-VL-7B，约 15.5 GB）在显�
 
 **成品级写实。** Qwen-Image 2512 配 fp8 微调，关掉 Lightning，30 到 40 步，引导 4，ER-SDE 或 RES 2s 配 Beta。然后第二遍 ×2，强度 0.45，附加噪声 0.6（表单的采样会带进去），再超分 4K 或分遍。
 
-**Viktor 的 ComfyUI 第一遍和第二遍。** fp8 微调，ER-SDE 和 Bong tangent，12 步；第二遍 ×2，附加噪声 0.6，不开 Lightning 用很多步，强度在 0.5 到 0.65 之间。
+**Viktor 的 ComfyUI 第一遍和第二遍。** 在 **ComfyUI 的方式** 中，**AIO #4 · 第一遍** 按他保存的图运行时的样子填好表单：fp8 的 Hyphoria，16:9，在 Bong tangent 上的 ER-SDE，12 步，Lightning 0.55 配 CFG 4.5 和 Skimmed CFG 2.5，空的负面，种子扰动，在这里时用他的编码器和 VAE；在 **挂上的适配器** 中选你的角色适配器，然后点「绘制」。在图片上：**AIO #4 · 第二遍**，然后「第二遍…」×2（从第 20 步起共 60 步，Detailz 0.6 和 Qwen Enhancer 0.7，颜色还原）。然后用「分遍…」做他的 8K 链。
+
+**他的采样器网格。** 在 **采样器网格** 中：勾选采样器和调度，写好步数和 CFG，选一个适配器和它的强度，最多八个提示词；**绘制网格** 一次运行画完全部（画师只加载一次），并在运行里排成一块板：采样器竖排，调度横排。**他的网格** 填入他的「LoRA Weight #6」：3 个采样器 × 3 个调度，16 步，CFG 1.2，Lightning 0.8，分级适配器 0.9。
 
 **从封面得到一帧视频画面。** 封面作为参考，向外扩画，画幅 16:9（短视频用 9:16）：边缘用封面的颜色和光画出，封面完整地在中间。若它不该在正中，先在画布上逐个框移动或缩放封面。
 
@@ -328,6 +332,7 @@ Qwen-Image 2512 的 **文本编码器**（Qwen2.5-VL-7B，约 15.5 GB）在显�
 实验室在工作室的机器上响应（经由页面上的 `/lab/…`）；工作室的 API（`/api/v1`，OpenAPI 3.1）和它的 MCP 服务器就在旁边。画室自己的端点：
 
 - `POST /artist/draw`：一次运行。请求体：`prompt`；`shapes`（`1:1`、`16:9`、`9:16`）；`count`（1 到 4）；`seed`；`painter`（`qwen2512-q4`、`qwen2512-q6`、`qwen2512-fp8`、`qwen21`）；`model`（fp8 微调的文件）；`sampling`（`steps`、`sampler`、`schedule`、`lightning`、`cfg`）；`loras`（`[{id, weight, keys}]`）；`ref`（data URL，或之前某次运行的图 `{id, file}`）配 `strength`（0.2 到 1）和 `ref_as`（`edit`、`style`）；`mask` 配 `mask_opts`（`grow`、`edge`、`soft`、`grain`）；`fit`（向外扩画）；`place`（画布：`{shape: {x, y, s}}`）；`inject`（0 到 2）；`scale`（1.5 或 2，第二遍）；`regions`（`[{prompt, box: [x, y, w, h]}]`，最多三个）；`letters`（`{title, sub, look, where, way}`：`where` 为 `top`、`middle` 或 `bottom`，`way` 为 `paint` 或 `letter`；用 `letter` 时画师是带 `ref` 的 `qwen21`，`prompt` 可以为空）；`preview`；`take`。题字的运行带有 `letters_prompt`（画师读到的句子），它的每张图带有 `letters`：`{read, exact, near, tries}`，聆听者读不出时为 `{unread}`。
+- `POST /artist/draw` + `comfy` 按 ComfyUI 的方式绘画: `{cfg, skim, zero_neg, negative, also, variance, hook, encoder, vae, sampling, seed, start, inject_seed, match, keep_size}` (`encoder` `qwen` 或 `abliterated`, `vae` `qwen` 或 `clear`, `sampling` `{kind: flux, max_shift, base_shift}` 或 `{kind: flow, shift}`, `seed` 最多 20 位, `start` 从某一步开始的第二遍); `grid` 代替图片绘制网格: `{samplers, schedules, steps, cfgs, adapter: {id, weights}, fixed, models, prompts, seeds}`, 最多 64 张，每张图片的行带有它的 `cell`. `GET /artist/painters` 说明这里有哪些编码器和 VAE (`comfy`).
 - `GET /artist/runs`、`GET /artist/file`、`POST /artist/stop`、`POST /artist/cover`、`POST /artist/star`、`POST /artist/note`（`{id, file, note}`）、`POST /artist/protect`、`POST /artist/trash`、`POST /artist/restore`、`POST /artist/aside`。
 - `GET /artist/painters`（这里有的画师、它们的显卡和微调），`POST /artist/unload`（放下留住的画师）。
 - `GET /artist/upscalers`、`POST /artist/upscale`（`{id, file, model, target}` 配 `2k` 或 `4k`；或 `passes`、`resample`、`long`、`match`；`tta`；多张用 `items`）。

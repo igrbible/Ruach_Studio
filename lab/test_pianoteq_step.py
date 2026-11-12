@@ -22,12 +22,12 @@ with tempfile.TemporaryDirectory() as t:
     kit = Path(t) / "kit"
     found = P.find_pianoteq(kit)
     check("an empty kit: nothing of its own found (only what lives outside it, the home or the PATH)", found is None or not str(found).startswith(str(kit)), found)
-    prog = kit / "models" / "instruments" / "pianoteq" / "Pianoteq 9" / "x86-64bit" / "Pianoteq 9"
+    prog = P.paths.at(P.paths.REFINER_INSTRUMENTS, kit) / "pianoteq" / "Pianoteq 9" / "x86-64bit" / "Pianoteq 9"
     prog.parent.mkdir(parents=True)
     prog.write_text("#!/bin/sh\n")
     os.chmod(prog, 0o755)
     (prog.parent / "Pianoteq 9.lv2").mkdir()
-    check("the tarball unpacked under models/instruments/pianoteq: its program, not its .lv2 folder", P.find_pianoteq(kit) == prog, P.find_pianoteq(kit))
+    check(f"the tarball unpacked under {P.paths.REFINER_INSTRUMENTS}/pianoteq: its program, not its .lv2 folder", P.find_pianoteq(kit) == prog, P.find_pianoteq(kit))
     own = Path(t) / "elsewhere" / "Pianoteq 9"
     own.parent.mkdir()
     own.write_text("#!/bin/sh\n")

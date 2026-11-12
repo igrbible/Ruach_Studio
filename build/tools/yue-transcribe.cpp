@@ -20,7 +20,8 @@ static void print_usage(const char * prog) {
             "Usage: %s --model <gguf> --audio <file> [options]\n"
             "\n"
             "Required:\n"
-            "  --model <gguf>         Transcriber GGUF, MERT beside it\n"
+            "  --model <gguf>         Transcriber GGUF, MERT beside it; SheetSage2-Refined's overlay with\n"
+            "                         SheetSage2's GGUF beside it\n"
             "  --audio <file>         Recording to transcribe (WAV or MP3)\n"
             "\n"
             "Optional:\n"
@@ -28,6 +29,7 @@ static void print_usage(const char * prog) {
             "                         (default: best available)\n"
             "  --out <path>           Output score (default: score.abc)\n"
             "  --melody-only          Omit the chord symbols from the score\n"
+            "  --modes                SheetSage2-Refined: keys with their modes (dorian, mixolydian...)\n"
             "\n"
             "Debug:\n"
             "  --no-fa                Disable flash attention\n"
@@ -47,6 +49,7 @@ int main(int argc, char ** argv) {
     const char * dump_dir    = nullptr;
     bool         melody_only = false;
     bool         no_fa       = false;
+    bool         key_mode    = false;
     for (int i = 1; i < argc; i++) {
         bool last = i + 1 >= argc;
         if (!strcmp(argv[i], "--model") && !last) {
@@ -59,6 +62,8 @@ int main(int argc, char ** argv) {
             out_path = argv[++i];
         } else if (!strcmp(argv[i], "--melody-only")) {
             melody_only = true;
+        } else if (!strcmp(argv[i], "--modes")) {
+            key_mode = true;
         } else if (!strcmp(argv[i], "--no-fa")) {
             no_fa = true;
         } else if (!strcmp(argv[i], "--dump") && !last) {
@@ -93,18 +98,16 @@ int main(int argc, char ** argv) {
     debug_init(&dbg, dump_dir);
 
     std::string abc, error;
-    bool        ok = ss2_transcribe(&m, audio.data(), (int) audio.size(), melody_only, &abc, &error, &dbg);
+    bool        ok = ss2_transcribe(&m, audio.data(), (int) audio.size(), melody_only, &abc, &error, &dbg, key_mode);
     ss2_free(&m);
     if (!ok) {
         fprintf(stderr, "[Transcribe] FATAL: %s\n", error.empty() ? "transcription failed" : error.c_str());
         return 1;
     }
-    FILE * f = fopen(out_path, "wb");
-    if (!f || fwrite(abc.data(), 1, abc.size(), f) != abc.size()) {
+    if (!atomic_write_file(out_path, abc)) {   // HERESY 2371: whole or not at all
         fprintf(stderr, "[Transcribe] FATAL: cannot write %s\n", out_path);
         return 1;
     }
-    fclose(f);
     fprintf(stderr, "[Transcribe] Done: %s -> %s\n", audio_path, out_path);
     return 0;
 }

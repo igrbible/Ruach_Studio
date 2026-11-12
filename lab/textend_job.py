@@ -13,6 +13,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 K = HERE.parent
+sys.path.insert(0, str(HERE))
+import paths  # noqa: E402   HERESY 2330: where the weights live
 TAIL, FPS = 1.5, 25
 
 
@@ -69,7 +71,7 @@ def end_of_text(model, take, lyrics):
 
 if __name__ == "__main__":
     take, device = Path(sys.argv[1]), sys.argv[2]
-    model = WhisperModel(str(K / "whisper" / "whisper-large-v3-ct2-float16"), device=device,
+    model = WhisperModel(str(paths.at(paths.WHISPER, K) / "whisper-large-v3-ct2-float16"), device=device,
                          compute_type="float16" if device == "cuda" else "int8", cpu_threads=10)
     req = json.load(open(take / "request.json", encoding="utf-8"))
     toks = [t for t in (req.get("semantic_tokens") or "").split(",") if t.strip()]

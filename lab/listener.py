@@ -5,7 +5,7 @@ prompt (SUNO follows its prompt loosely: the prompt is not a description of its 
 Only Omni's thinker is loaded (the talker speaks; we need text). The lyrics are not asked for: the sets
 carry the exact texts already. Runs as its own process on a GPU of its own and leaves nothing behind:
 
-    .venv/bin/python lab/listener.py fosforida-v2 --gpu 2 [--model checkpoints/Qwen2.5-Omni-7B] [--seconds 120]
+    .venv/bin/python lab/listener.py fosforida-v2 --gpu 2 [--model models/listener/Qwen2.5-Omni-7B] [--seconds 120]
 
 writes datasets/prepared/NAME/styles.json: {stem: tags}, with the model, the excerpt and the VRAM peak
 (the figure the trainer's calculator and the listener's gate are built on).
@@ -15,11 +15,13 @@ a track. Measured 02.10.2026 on one 120 s excerpt, peak VRAM: transformers bf16 
 11.3 GiB · Q4_K_M + mmproj-f16 8.4 GiB, about 5 s a track; the three hear the same, and all three are drafts
 (Fosforida's harp and low strings came out as piano or synthesizer).
 
-    .venv/bin/python lab/listener.py SET --gpu 1 --model checkpoints/Qwen2.5-Omni-7B-GGUF/Qwen2.5-Omni-7B-Q8_0.gguf"""
+    .venv/bin/python lab/listener.py SET --gpu 1 --model models/listener/Qwen2.5-Omni-7B-GGUF/Qwen2.5-Omni-7B-Q8_0.gguf"""
 import argparse, json, os, subprocess, sys, time
 from pathlib import Path
 
 KIT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(KIT / "lab"))
+import paths  # noqa: E402   HERESY 2330: where the weights live
 PROMPT = ("Listen to this music and describe it as one line of comma-separated style tags, in this order where "
           "they apply: genre and sub-genre, mood, vocal type (male vocal, female vocal, duet, choir, instrumental), "
           "vocal delivery (breathy, belted, whispered, operatic, raw), every instrument you can hear, production "
@@ -80,7 +82,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("dataset")
     ap.add_argument("--gpu", default="0")
-    ap.add_argument("--model", default=str(KIT / "checkpoints" / "Qwen2.5-Omni-7B"))
+    ap.add_argument("--model", default=str(paths.at(paths.LISTENER, KIT) / "Qwen2.5-Omni-7B"))
     ap.add_argument("--seconds", type=float, default=120.0)
     ap.add_argument("--only", default="", help="comma-separated stems, for a quick look")
     ap.add_argument("--mmproj", default="", help="a GGUF model's audio projector (default: mmproj-*.gguf beside it)")

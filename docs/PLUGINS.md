@@ -119,7 +119,7 @@ A plugin may bring scripts for MIDI controllers, and may be made of them alone (
  "midi": [{"id": "daw", "name": "My keyboard's DAW port", "script": "midi/daw.js", "ports": "My Keyboard.*DAW", "tip": "transport and faders"}]}
 ```
 
-`ports` is a pattern (JavaScript, case-insensitive) matched against the browser's names of the input ports; `script` is a `.js` file inside the plugin's folder, 256 KB at most. The page asks the lab for its text (`GET /lab/plugins/midi?plugin=ID&id=ID`) and runs it in a worker of its own: it has no page, and no `fetch`, `XMLHttpRequest`, `WebSocket` or `importScripts`. That is a fence for the page, not against the plugin's author: a plugin runs with the rights its folder was given, as its Python steps do, so install only what you trust.
+`ports` is a pattern (JavaScript, case-insensitive) matched against the browser's names of the input ports; `script` is a `.js` file inside the plugin's folder, 256 KB at most. The page asks the lab for its text (`GET /lab/plugins/midi?plugin=ID&id=ID`) and runs it in a worker of its own, made from a `data:` address: it has no page and no origin of the Studio's, so whatever it would ask of the Studio is a stranger's request, which the Studio and its lab refuse and whose answer the browser does not let it read. `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource` and `importScripts` are taken from it as well, from the worker and from every prototype above it. It can still load a module from a site on the internet that answers anyone (`import()`), so this is a fence for the page, not against the plugin's author: a plugin runs with the rights its folder was given, as its Python steps do, so install only what you trust.
 
 The script's world, **ruach.midi/1**:
 
@@ -137,6 +137,20 @@ The actions: `play`, `stop`, `record`, `rewind`, `forward`, `loop`, `trackLeft`,
 
 A keyboard's keys are not a script's: the ports no script claims and no name marks as a control port are keys, and play the piano roll (channel 10, a controller's pads, is not taken for keys).
 
+## A panel of your own
+
+A plugin may bring a panel for the page and a script that answers it, and may be made of them alone (no steps, no MIDI scripts):
+
+```json
+{"id": "my-panel", "name": "My panel", "page": "page.js", "calls": "calls.py"}
+```
+
+`page` is a `.js` file inside the plugin's folder, 512 KB at most. While own plugins are on (☰ → Own plugins), the page asks the lab for its text (`GET /lab/plugins/page?plugin=ID`) and runs it as one of its own scripts: it may add a row to ☰, a card to the Engine, a window of its own. Unchecked, the page loads no panel at all, as a public studio would; whatever a panel's script talks to keeps running as it was.
+
+`calls` is a Python script inside the folder that answers the panel. `GET` or `POST /lab/plugins/call?plugin=ID&path=/anything&…` runs it in the plugin's folder (with the plugin's `python`, else the lab's), the request as JSON on its standard input, `{"method", "path", "query", "type", "body64"}` (a POST's body in base64 with its type), and the last line it prints is the answer: `{"status": 200, "json": …}`, or `{"status": 200, "type": "image/png", "body64": "…"}` for bytes. A minute at most. Bytes go back with `X-Content-Type-Options: nosniff` and a sandbox, so nothing a script returns runs as a page of the Studio.
+
+A panel runs with the page's rights, as the plugin's Python runs with its folder's: install only what you trust.
+
 ## Plugins made by others
 
 - **Basic Pitch** by Steven Altsman ([manchuwook](https://github.com/manchuwook)), given to the Studio and shipped with it in `extras/plugins/basic-pitch/` (MIT; its home is [null-angel/ruach-basic-pitch-plugin](https://github.com/null-angel/ruach-basic-pitch-plugin)): Spotify's [Basic Pitch](https://github.com/spotify/basic-pitch) (Apache-2.0) on a set of stems, one `.mid` per stem that has notes, pitch bends kept, and a `report.csv` of the notes each stem gave. Best on one voice or instrument at a time (a lead vocal, a bass, winds); a drum stem gives few notes or none. On the CPU, in an environment of its own: an eight-stem set of a 2:25 song took 30 s here. Install it with `extras/plugins/install.sh basic-pitch` (on Python 3.12 and newer it takes Basic Pitch's ONNX Runtime way, as its README says), then reload the page.
@@ -149,5 +163,7 @@ A plugin of yours can join this list and ship with the Studio: say it in the rep
 
     GET  /lab/plugins
     GET  /lab/plugins/midi?plugin=ID&id=ID          a MIDI script's text (HERESY 1589)
+    GET  /lab/plugins/page?plugin=ID                a panel's text (HERESY 2261)
+    GET|POST /lab/plugins/call?plugin=ID&path=…     what the panel asks its plugin's script (HERESY 2261)
     POST /lab/plugin/run  {"name": TAKE, "source": "" | "derived/…", "plugin": ID, "step": ID, "params": {…}}
     GET  /lab/derived?name=TAKE

@@ -128,7 +128,7 @@ try:
         v.clip(kit, "t", audio, None, {}, {}, between="wipe")
     except ValueError as e:
         bad = str(e)
-    check("an unknown transition refused, said so", bad and "between the sections" in bad, bad)
+    check("an unknown transition refused, said so", bad and "between the shots" in bad, bad)
     print("the clip's look (2010)")
 
     def chroma(f, t=4.5):                                # the frame at t, its mean spread between the channels (0 grey … 255)

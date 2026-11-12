@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """A slice of a training set (Ruach Studio extras): one singer, plain
-singing first (GTSinger's Control groups), then the rest, taken round the songs so that every song is heard,
+singing first (the groups named Control_Group), then the rest, taken round the songs so that every song is heard,
 until the size is reached. Copies each track's WAV with its .txt (lyrics) and .style.txt, and the set's *.md.
 
     python3 extras/set-slice.py SRC DST [--prefix RU-Alto-1] [--mb 100]
 
-Works on any folder of datasets/raw/ whose files are named PREFIX_SONG_…_GROUP.wav (as lab/gtsinger.py writes
-them); for other sets, --prefix "" takes every track and "song" is the name up to the last three parts."""
+Works on any folder of datasets/raw/ whose files are named PREFIX_SONG_…_GROUP.wav; for other sets, --prefix "" takes every track and "song" is the name up to the last three parts."""
 import argparse, collections, shutil, sys
 from pathlib import Path
 

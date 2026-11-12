@@ -25,6 +25,9 @@ import collections, json, os, queue, random, re, shutil, subprocess, threading, 
 from pathlib import Path
 
 import artist_loras                                   # HERESY 1316: the adapters a run asks for
+import paths                                          # HERESY 2330: where the weights live
+import artist_recipes                                 # HERESY 2332: his two ComfyUI workflows, the lab's side
+import seedvr2_grain                                  # HERESY 2276: SeedVR2 as a pass of the upscale
 
 HERE = Path(__file__).resolve().parent
 H = {}                     # the lab's own parts (setup): kit, jobs, lock, wait_card, turn, free_gpu, say, take_dir, pair, copy, painter, py; 1337: outputs, frozen
@@ -50,14 +53,21 @@ NEED.update({k: v[1] for k, v in QWEN.items()})
 NEED["upscale"] = 4000                                # HERESY 1322: a DAT 4x model peaked at 2.1 GB in tiles of 512 (RTX 3090)
 QWEN21_STREAM_MB = 9500                              # HERESY 1386: Qwen-Image 2.1 streamed, encoder and transformer both: 4.1 GB at the peak from words, 7.9 editing (3090)
 # HERESY 1342: the card a run needs when its painter's blocks stream from RAM (artist_qwen.place), asked when no card here takes it whole
+# HERESY 2278 (Viktor 09.11.2026: the Artist's «Advanced» mode, bigger sizes behind a switch): a size of one's own instead of the shapes, its
+# sides in multiples of SIZE_STEP from SIZE_FLOOR, the ceiling the model's (its long side and pixels: Qwen-Image paints up to about 3 MP before
+# it repeats what it paints) and the card's (the painter's need at 1328² and an estimate of MB_PER_MPX for each megapixel beyond, the VAE in
+# tiles); a run that runs out of the card's memory anyway says so and offers a smaller size (smaller()).
+SIZE_FLOOR, SIZE_STEP, SIZE_LONG, SIZE_PX = 256, 64, 3072, 3072 * 1728
+BASE_PX = 1328 * 1328
+MB_PER_MPX = 2600
 STREAM_NEED = {"qwen2512-fp8": 6000, "qwen2512-q4": 5000, "qwen2512-q6": 5500, "qwen21": QWEN21_STREAM_MB, "qwen21-fp8": QWEN21_STREAM_MB}   # measured 10.10.2026: 2.3 GB at the peak with every block streamed (1328², Lightning, four adapters)
 QWEN_NOTE = {"qwen21": "Qwen-Image 2.1 is under the Qwen Research Licence: research and evaluation only, not for commercial use "
              "(a cover for a song you sell is commercial use); a reference is a picture it edits by the prompt's words",
-             "qwen21-fp8": "A fine-tune of Qwen-Image 2.1 in fp8 from artwork/Qwen-Image-2.1/checkpoints/ (ComfyUI's single files): under the "
+             "qwen21-fp8": "A fine-tune of Qwen-Image 2.1 in fp8 from " + paths.ARTIST + "/Qwen-Image-2.1/checkpoints/ (ComfyUI's single files): under the "
                            "Qwen Research Licence as 2.1 is (research and evaluation only); a reference is a picture it edits by the prompt's words",
              "qwen2512-q4": "Qwen-Image 2512 (Apache-2.0) from a 4-bit GGUF: for a card of 16 GB",
              "qwen2512-q6": "Qwen-Image 2512 (Apache-2.0) from a 6-bit GGUF",
-             "qwen2512-fp8": "Qwen-Image 2512 in fp8 from artwork/Qwen-Image-2512/checkpoints/ (ComfyUI's single files): 2512's own BASE file "
+             "qwen2512-fp8": "Qwen-Image 2512 in fp8 from " + paths.ARTIST + "/Qwen-Image-2512/checkpoints/ (ComfyUI's single files): 2512's own BASE file "
                              "paints with Lightning, a fine-tune its finished realism without it unless asked; a card of 24 GB"}
 KEEP = 1024                # a take's artwork, as art_job.py writes it
 PROMPT_MAX = 4000
@@ -118,11 +128,11 @@ def runs():
 
 
 def _art(*parts):
-    return Path(H["kit"]).joinpath("artwork", *parts)
+    return Path(H["kit"]).joinpath(paths.ARTIST, *parts)
 
 
 def qwen_models():
-    """HERESY 1318: the fp8 fine-tunes of Qwen-Image 2512 here (artwork/Qwen-Image-2512/checkpoints/*.safetensors)."""
+    """HERESY 1318: the fp8 fine-tunes of Qwen-Image 2512 here (models/artist/Qwen-Image-2512/checkpoints/*.safetensors)."""
     d = _art("Qwen-Image-2512", "checkpoints")
     return sorted(p.name for p in d.glob("*.safetensors") if p.is_file()) if d.is_dir() else []
 
@@ -133,20 +143,20 @@ def is_base(model):
 
 
 def qwen21_models():
-    """HERESY 1442: the fp8 fine-tunes of Qwen-Image 2.1 here (artwork/Qwen-Image-2.1/checkpoints/*.safetensors)."""
+    """HERESY 1442: the fp8 fine-tunes of Qwen-Image 2.1 here (models/artist/Qwen-Image-2.1/checkpoints/*.safetensors)."""
     d = _art("Qwen-Image-2.1", "checkpoints")
     return sorted(p.name for p in d.glob("*.safetensors") if p.is_file()) if d.is_dir() else []
 
 
 def turbo21():
-    """HERESY 1442: Qwen-Image 2.1's speed-up, «Turbo 4step», wherever it lies under artwork/loras/qwen-image-2.1/ (by its name)."""
+    """HERESY 1442: Qwen-Image 2.1's speed-up, «Turbo 4step», wherever it lies under models/artist/loras/qwen-image-2.1/ (by its name)."""
     d = _art("loras", "qwen-image-2.1")
     hits = sorted(p for p in d.rglob("*.safetensors") if re.search(r"turbo.*4.?step|4.?step.*turbo", p.name, re.I)) if d.is_dir() else []
     return hits[0] if hits else None
 
 
 def outpaint21():
-    """HERESY 1443: Qwen-Image 2.1's outpaint adapter («Outpaint v2», AusBoss's), wherever it lies under artwork/loras/qwen-image-2.1/."""
+    """HERESY 1443: Qwen-Image 2.1's outpaint adapter («Outpaint v2», AusBoss's), wherever it lies under models/artist/loras/qwen-image-2.1/."""
     d = _art("loras", "qwen-image-2.1")
     hits = sorted((p for p in d.rglob("*.safetensors") if re.search(r"outpaint", p.name, re.I)), key=lambda p: p.name, reverse=True) if d.is_dir() else []
     return hits[0] if hits else None
@@ -186,7 +196,7 @@ def painters():
     cards = H["job_cards"]() if H.get("job_cards") else []   # HERESY 1354: the lab's cards, each one's room
     for e in out:
         e["cards"] = sum(1 for room in cards if room >= e["need_mb"]) or 1
-    return {"painters": out}
+    return {"painters": out, "comfy": artist_recipes.parts(H["kit"])}   # HERESY 2332: his encoders and VAEs here, for ComfyUI's way
 
 
 SAMPLERS = ("euler", "euler-sde", "er_sde", "res_2s", "res_2s_ode", "res_3s", "res_3s_ode", "heunpp2", "exp_heun_2_x0", "exp_heun_2_x0_sde")   # HERESY 1333
@@ -207,14 +217,14 @@ def sampling(painter, s, model=""):
         if not 0 <= light <= 1.5:
             raise ValueError("Lightning's strength: 0 (off) to 1.5")
         if light > 0 and not _art("Qwen-Image-2512", "lightning", "Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors").exists():
-            raise ValueError("Lightning is not on this machine: its file goes into artwork/Qwen-Image-2512/lightning/ (Engine → Models and LoRAs → Qwen painters)")
+            raise ValueError("Lightning is not on this machine: its file goes into " + paths.ARTIST + "/Qwen-Image-2512/lightning/ (Engine → Models and LoRAs → Qwen painters)")
         out["lightning"] = round(light, 2)
     if is21(painter) and s.get("lightning") is not None:   # HERESY 1442: 2.1's Turbo
         light = float(s["lightning"])
         if not 0 <= light <= 1.5:
             raise ValueError("Turbo's strength: 0 (off) to 1.5")
         if light > 0 and turbo21() is None:
-            raise ValueError("Qwen-Image 2.1's Turbo is not on this machine: «Turbo 4step» goes into artwork/loras/qwen-image-2.1/")
+            raise ValueError("Qwen-Image 2.1's Turbo is not on this machine: «Turbo 4step» goes into " + paths.ARTIST_LORAS + "/qwen-image-2.1/")
         out["lightning"] = round(light, 2)
     # HERESY 1328: not asked, a fine-tune paints without Lightning and a GGUF painter with it (artist_qwen.py's OFF_BY_DEFAULT)
     fine = painter == "qwen2512-fp8" and not is_base(model)
@@ -245,8 +255,103 @@ QUIET_LOAD, QUIET_PAINT = 600, 300   # HERESY 1340: a painter silent this long (
 RUNS_MAX = 2       # HERESY 1340 (Viktor 10.10.2026: «разреши батчинг/очередь до двух батчей»): Artist runs waiting or drawing at a time
 
 
+BATCH_RUN_MAX = 64                                   # HERESY 2322: the pictures one batch run paints at most
+
+
+def draw_batch(body):
+    """HERESY 2322 (Viktor 10.11.2026: «держать художника загруженным… максимальная оптимизация ресурсов»): a run of pictures each with its own
+    words, seed and reference picture ({batch: [{prompt, seed, ref: {id, file} or none}], painter, strength, ref_as, loras, take}), 16:9 each: the
+    Videographer's key frames. It waits and draws as a run does, its pictures dealt over the lab's cards with room (1354), each card's painter
+    loaded once for its share (or kept, 1370), so a plan's forty shots are not forty loadings on one card. Qwen-Image only; a reference by its
+    style is 2.1's."""
+    with H["lock"]:
+        going = [k for k in H["jobs"] if k.startswith("artist:")]
+    if len(going) >= RUNS_MAX:
+        raise ValueError(f"two runs at a time: the next one when one of them ends ({len(going)} going)")
+    items = body.get("batch")
+    if not isinstance(items, list) or not 1 <= len(items) <= BATCH_RUN_MAX:
+        raise ValueError(f"a batch is one to {BATCH_RUN_MAX} pictures")
+    painter = str(body.get("painter") or "").strip().lower()
+    if painter not in QWEN:
+        raise ValueError("a batch is painted by one of Qwen-Image's brushes")
+    if not qwen_ready(painter):
+        raise ValueError(QWEN[painter][0] + " is not on this machine (heresy/fetch-heresy.sh)")
+    model = ""
+    if painter in ("qwen2512-fp8", "qwen21-fp8"):
+        model = Path(str(body.get("model") or "")).name
+        if model not in (qwen_models() if painter == "qwen2512-fp8" else qwen21_models()):
+            raise ValueError("pick the fine-tune: one of its checkpoints/")
+    ref_as = str(body.get("ref_as") or "")
+    if ref_as not in ("", "edit", "style") or (ref_as and not is21(painter)):
+        raise ValueError("a reference by its style or edited by words is Qwen-Image 2.1's")
+    try:
+        strength = round(float(body.get("strength") if body.get("strength") is not None else 0.6), 2)
+    except (TypeError, ValueError):
+        raise ValueError("the strength is a number from 0.2 to 1.0")
+    if not 0.2 <= strength <= 1.0:
+        raise ValueError("the strength is a number from 0.2 to 1.0")
+    loras = artist_loras.chosen(H["kit"], painter, body.get("loras"))
+    need = dict(NEED, **{painter: NEED[painter] + sum(x["mb"] for x in loras)})
+    why = H["refusal"](painter, need, "choose it as the painter here") if H.get("refusal") else ""
+    if why:
+        raise ValueError(why)
+    pics, refs = [], {}
+    for k, x in enumerate(items):
+        prompt = str((x or {}).get("prompt") or "").strip()
+        if not prompt:
+            raise ValueError(f"picture {k + 1} of the batch has no words")
+        if len(prompt) > PROMPT_MAX:
+            raise ValueError(f"picture {k + 1}'s words are too long: {PROMPT_MAX} characters at most")
+        seed = str(x.get("seed") if x.get("seed") is not None else "").strip()
+        seed = min(int(seed), 2 ** 31 - 2) if re.fullmatch(r"\d{1,10}", seed) else random.randint(1000, 999999999)
+        one = {"n": k + 1, "prompt": prompt, "seed": seed}
+        r = x.get("ref")
+        if r:
+            src = f"{r.get('id')}/{r.get('file')}" if isinstance(r, dict) else ""
+            if src not in refs:
+                p, _ = picture(str(r.get("id") or ""), str(r.get("file") or "")) if isinstance(r, dict) else (None, None)
+                if p is None:
+                    raise ValueError(f"picture {k + 1}'s reference is a picture of a run: {{id, file}}")
+                refs[src] = (f"ref-{len(refs) + 1:02d}" + p.suffix.lower(), p)
+            one["ref"] = refs[src][0]
+            one["ref_from"] = src
+        pics.append(one)
+    take = str(body.get("take") or "").strip() or None
+    if take:
+        try:
+            H["take_dir"](take)
+        except (FileNotFoundError, ValueError):
+            take = None
+    rid = time.strftime("%Y%m%d-%H%M%S-") + os.urandom(2).hex()
+    d = home() / rid
+    d.mkdir(parents=True)
+    for name, p in refs.values():
+        shutil.copyfile(p, d / name)
+    ask = {"prompt": pics[0]["prompt"], "shapes": ["16:9"], "seed": pics[0]["seed"], "count": len(pics), "preview": False,
+           "batch": [{k: v for k, v in x.items() if k != "ref_from"} for x in pics], "strength": strength}
+    if ref_as:
+        ask["ref_as"] = ref_as
+    if loras:
+        ask["loras"] = loras
+    if model:
+        ask["model"] = model
+    with open(d / "ask.json", "w", encoding="utf-8") as f:
+        json.dump(ask, f, ensure_ascii=False, indent=1)
+    run = dict(ask, id=rid, painter=painter, take=take, created=time.time(), status="queued", of=len(pics), pictures=[], by=str(body.get("by") or "batch"))
+    write(d, run)
+    job = {"status": "queued", "started": time.time(), "kind": "artist"}
+    with H["lock"]:
+        H["jobs"]["artist:" + rid] = job
+    threading.Thread(target=work, args=(d, run, job), daemon=True).start()
+    return run
+
+
 def draw(body):
     """A run, asked for and queued; its thread waits for a card and draws it."""
+    if body.get("batch") is not None:                # HERESY 2322: pictures each with its own words, seed and reference
+        return draw_batch(body)
+    if body.get("grid") is not None:                 # HERESY 2332: his Ultimate Samplers Testing, one run of cells
+        return draw_grid(body)
     with H["lock"]:
         going = [k for k in H["jobs"] if k.startswith("artist:")]
     if len(going) >= RUNS_MAX:
@@ -259,6 +364,8 @@ def draw(body):
     if len(prompt) > PROMPT_MAX:
         raise ValueError(f"the prompt is too long: {PROMPT_MAX} characters at most")
     shapes = [s for s in SHAPES if s in (body.get("shapes") or [])]
+    if body.get("size"):                             # HERESY 2278: a size of one's own is one shape, by its aspect
+        shapes = ["1:1"]
     if not shapes:
         raise ValueError("pick a shape: 1:1, 16:9 or 9:16")
     try:
@@ -273,20 +380,20 @@ def draw(body):
     asked = str(body.get("painter") or "").strip().lower()
     painter = asked if asked in QWEN else H["painter"](body.get("painter"))   # HERESY 1318: a Qwen painter by its own name
     if painter in QWEN and not qwen_ready(painter):
-        raise ValueError(QWEN[painter][0] + " is not on this machine: its files go into artwork/" + ("Qwen-Image-2.1" if is21(painter) else "Qwen-Image-2512") + "/" + ("checkpoints/" if painter == "qwen21-fp8" else "") + " (heresy/fetch-heresy.sh)")
+        raise ValueError(QWEN[painter][0] + " is not on this machine: its files go into " + paths.ARTIST + "/" + ("Qwen-Image-2.1" if is21(painter) else "Qwen-Image-2512") + "/" + ("checkpoints/" if painter == "qwen21-fp8" else "") + " (heresy/fetch-heresy.sh)")
     model = ""
     if painter == "qwen2512-fp8":                       # HERESY 1318: which fine-tune
         model = Path(str(body.get("model") or "")).name
         if model not in qwen_models():
-            raise ValueError("pick the fine-tune: one of artwork/Qwen-Image-2512/checkpoints/")
+            raise ValueError("pick the fine-tune: one of " + paths.ARTIST + "/Qwen-Image-2512/checkpoints/")
     if outpaint and (not is21(painter) or not body.get("ref")):   # HERESY 1443
         raise ValueError("outpainting is Qwen-Image 2.1's: choose it (or a fine-tune of it) as the painter, the picture as its reference")
     if outpaint and outpaint21() is None:
-        raise ValueError("the outpaint adapter is not on this machine: «Outpaint v2» goes into artwork/loras/qwen-image-2.1/")
+        raise ValueError("the outpaint adapter is not on this machine: «Outpaint v2» goes into " + paths.ARTIST_LORAS + "/qwen-image-2.1/")
     if painter == "qwen21-fp8":                         # HERESY 1442: which fine-tune of 2.1
         model = Path(str(body.get("model") or "")).name
         if model not in qwen21_models():
-            raise ValueError("pick the fine-tune: one of artwork/Qwen-Image-2.1/checkpoints/")
+            raise ValueError("pick the fine-tune: one of " + paths.ARTIST + "/Qwen-Image-2.1/checkpoints/")
     ref_as = str(body.get("ref_as") or "")            # HERESY 1388: the picture edited by words, or its style alone (Qwen-Image 2.1)
     if ref_as not in ("", "edit", "style"):
         raise ValueError("a reference is used to paint from, to edit by words («edit») or for its style («style»)")
@@ -303,14 +410,19 @@ def draw(body):
     if painter not in NEED:
         raise ValueError("the Artist paints with Qwen-Image's brushes (Krea 2 left the Studio, HERESY 1428): Engine → Models and LoRAs → Qwen painters")
     loras = artist_loras.chosen(H["kit"], painter, body.get("loras"))   # HERESY 1316: checked now, their size asked of the card too
-    need = dict(NEED, **{painter: NEED[painter] + sum(x["mb"] for x in loras)})
+    comfy = artist_recipes.comfy(body, painter, H["kit"])   # HERESY 2332: his ComfyUI workflows' way, checked; None when not asked
+    size = _own_size(body, painter)                   # HERESY 2278: the Advanced size, or None
+    if size:
+        shapes = [shape_of(*size)]
+    need = dict(NEED, **{painter: (size_need_mb(painter, *size) if size else NEED[painter]) + sum(x["mb"] for x in loras) + ((comfy or {}).get("hook") or {}).get("mb", 0)})
     why = H["refusal"](painter, need, "choose it as the painter here") if H.get("refusal") else ""   # HERESY 1297: said now
-    if why and painter in STREAM_NEED and not H["refusal"](painter, dict(need, **{painter: STREAM_NEED[painter]}), ""):
+    if why and painter in STREAM_NEED and not H["refusal"](painter, dict(need, **{painter: STREAM_NEED[painter] + (size_need_mb(painter, *size) - NEED[painter] if size else 0)}), ""):
         why = ""                                     # HERESY 1342: too big for a card whole, it will stream its blocks from RAM
     if why:
         raise ValueError(why)
     ref, ref_from, strength = _reference(body)          # HERESY 1305: a picture to paint from, or None
     scale = _scale(body, painter, ref)               # HERESY 1384: a second pass over it at 1.5 or 2 times, or None
+    then = _then(body, scale)                        # HERESY 2259: the long side and the colours after a painter's pass, or None
     regions = _regions(body, painter)                # HERESY 1387: checked before the run's folder is made
     mask = _mask(body) if ref else None              # HERESY 1306: and what of it to repaint, or None
     if body.get("mask") and not ref:
@@ -348,11 +460,15 @@ def draw(body):
         if not (-64 <= mo["grow"] <= 128 and 0 <= mo["edge"] <= 96 and 0 <= mo["grain"] <= 0.6):
             raise ValueError("the mask's options: grow -64 to 128 px, edge 0 to 96 px, grain 0 to 0.6")
         ask["mask_opts"] = mo
+    if size:
+        ask["size"] = size                           # HERESY 2278
     if scale:                                        # HERESY 1384: the second pass, the picture brought up by nearest as his workflow does
         ask.update(scale=scale, ref_resample="nearest")
     smp = sampling(painter, body.get("sampling"), model)   # HERESY 1428: by the fp8 file too
     if smp:
         ask["sampling"] = smp                            # HERESY 1319
+    if comfy:
+        ask["comfy"] = comfy                         # HERESY 2332: artist_comfy.py paints it, ComfyUI's way
     if ref:                                          # HERESY 1305: kept beside the run, read by artist_job.py
         name = "ref" + ref[0]
         (d / name).write_bytes(ref[1])
@@ -376,6 +492,68 @@ def draw(body):
             run["masked"] = True                     # HERESY 1306
         if body.get("fit"):
             run["fit"] = True                        # HERESY 1307: painted around
+    if then:
+        run["then"] = then                           # HERESY 2259: asked when the pass is done (_finish_after)
+    write(d, run)
+    job = {"status": "queued", "started": time.time(), "kind": "artist"}
+    with H["lock"]:
+        H["jobs"]["artist:" + rid] = job
+    threading.Thread(target=work, args=(d, run, job), daemon=True).start()
+    return run
+
+
+def draw_grid(body):
+    """HERESY 2332 (his ComfyUI workflow «Ultimate Samplers Testing», JasonHoku's grid nodes over ComfyUI's samplers): one run of cells, each
+    its sampler, schedule, steps, guidance, adapters' strengths, fine-tune, prompt and seed (artist_recipes.grid lays them out), painted in
+    ComfyUI's way (artist_comfy.grid: the painter loaded once a fine-tune, every prompt read once, only the strengths changed between
+    cells), one shape or a size of one's own; the board on the page reads the cells back from the pictures."""
+    with H["lock"]:
+        going = [k for k in H["jobs"] if k.startswith("artist:")]
+    if len(going) >= RUNS_MAX:
+        raise ValueError(f"two runs at a time: the next one when one of them ends ({len(going)} going)")
+    painter = str(body.get("painter") or "").strip().lower()
+    if painter not in artist_recipes.PAINTERS:
+        raise ValueError("the grid paints with Qwen-Image 2512: choose one of its brushes")
+    if not qwen_ready(painter):
+        raise ValueError(QWEN[painter][0] + " is not on this machine (heresy/fetch-heresy.sh)")
+    model = ""
+    if painter == "qwen2512-fp8":
+        model = Path(str(body.get("model") or "")).name
+        if model not in qwen_models():
+            raise ValueError("pick the fine-tune: one of " + paths.ARTIST + "/Qwen-Image-2512/checkpoints/")
+    shapes = [s for s in SHAPES if s in (body.get("shapes") or [])][:1]
+    size = _own_size(dict(body, scale=None, place=None, fit=None), painter) if body.get("size") else None
+    if size:
+        shapes = [shape_of(*size)]
+    if not shapes:
+        raise ValueError("pick a shape: 1:1, 16:9 or 9:16")
+    cells, axes = artist_recipes.grid(body, painter, H["kit"], model, qwen_models())
+    comfy = artist_recipes.comfy(dict(body, comfy=dict(body.get("comfy") or {}, zero_neg=(body.get("comfy") or {}).get("zero_neg", False)), ref=None), painter, H["kit"]) or {}
+    loras = artist_recipes.grid_mb(H["kit"], cells)
+    biggest = (size_need_mb(painter, *size) if size else NEED[painter]) + sum(x["mb"] for x in loras)
+    why = H["refusal"](painter, dict(NEED, **{painter: biggest}), "choose it as the painter here") if H.get("refusal") else ""
+    if why and painter in STREAM_NEED and not H["refusal"](painter, dict(NEED, **{painter: STREAM_NEED[painter] + sum(x["mb"] for x in loras)}), ""):
+        why = ""
+    if why:
+        raise ValueError(why)
+    take = str(body.get("take") or "").strip() or None
+    if take:
+        try:
+            H["take_dir"](take)
+        except (FileNotFoundError, ValueError):
+            take = None
+    rid = time.strftime("%Y%m%d-%H%M%S-") + os.urandom(2).hex()
+    d = home() / rid
+    d.mkdir(parents=True)
+    ask = {"prompt": cells[0]["prompt"], "shapes": shapes, "seed": min(cells[0]["seed"], 2 ** 31 - 2), "count": 1, "preview": body.get("preview") is not False,
+           "grid": {"cells": cells, "axes": axes}, "comfy": comfy, "sampling": {"lightning": 0}}
+    if model:
+        ask["model"] = model
+    if size:
+        ask["size"] = size
+    with open(d / "ask.json", "w", encoding="utf-8") as f:
+        json.dump(ask, f, ensure_ascii=False, indent=1)
+    run = dict(ask, id=rid, painter=painter, take=take, created=time.time(), status="queued", of=len(cells), pictures=[], loras=loras)
     write(d, run)
     job = {"status": "queued", "started": time.time(), "kind": "artist"}
     with H["lock"]:
@@ -392,6 +570,51 @@ def second_pass_mb(run):
     """HERESY 1384: the MiB a second pass asks beyond its painter's own (its picture 1.5 or 2 times larger), 0 for a run of its own size."""
     s = float(run.get("scale") or 1)
     return 0 if s == 1 else int(SCALE_MB.get(run["painter"], 6000) * (s * s - 1) / 3)
+
+
+def size_need_mb(painter, w, h, need=None):
+    """HERESY 2278: the card a painter needs for a picture of w×h, an estimate (MiB): its measured need at 1328² and MB_PER_MPX beyond."""
+    base = (need or NEED).get(painter, 22500)
+    return base + max(0, int(round((w * h - BASE_PX) / 1e6 * MB_PER_MPX)))
+
+
+def size_limits(cards_mb=()):
+    """HERESY 2278: what the page's Advanced sizes need: the floor, the step, the model's ceiling, each painter's need at 1328² and the estimate's
+    slope, and the largest card here (MiB), so the page shows the estimate as the sides change."""
+    return {"floor": SIZE_FLOOR, "step": SIZE_STEP, "long": SIZE_LONG, "px": SIZE_PX, "base_px": BASE_PX, "mb_per_mpx": MB_PER_MPX,
+            "need": {k: v for k, v in NEED.items()}, "card_mb": max([int(c) for c in cards_mb if c] or [0])}
+
+
+def shape_of(w, h):
+    """HERESY 2278: the shape a size of one's own is filed under (the pictures' names and the board): by its aspect."""
+    r = w / h
+    return "16:9" if r > 1.2 else "9:16" if r < 1 / 1.2 else "1:1"
+
+
+def smaller(w, h, by=0.7):
+    """HERESY 2278: a size of the same aspect with about «by» of the pixels, its sides in multiples of SIZE_STEP, none below SIZE_FLOOR."""
+    k = by ** 0.5
+    return [max(SIZE_FLOOR, int(w * k) // SIZE_STEP * SIZE_STEP), max(SIZE_FLOOR, int(h * k) // SIZE_STEP * SIZE_STEP)]
+
+
+def _own_size(body, painter):
+    """HERESY 2278: the Advanced size asked, checked: [w, h], or None (the shapes then)."""
+    s = body.get("size")
+    if not s:
+        return None
+    try:
+        w, h = (int(x) for x in s)
+    except (TypeError, ValueError):
+        raise ValueError("a size of your own: width and height in pixels")
+    if w % SIZE_STEP or h % SIZE_STEP:
+        raise ValueError(f"a size of your own: width and height in multiples of {SIZE_STEP}")
+    if min(w, h) < SIZE_FLOOR:
+        raise ValueError(f"a size of your own: {SIZE_FLOOR} px at least on each side")
+    if max(w, h) > SIZE_LONG or w * h > SIZE_PX:
+        raise ValueError(f"too large for the painter: {SIZE_LONG} px on the long side and {SIZE_PX / 1e6:.1f} megapixels at most")
+    if body.get("scale") not in (None, "", 1, 1.0, "1") or body.get("place") or body.get("fit"):
+        raise ValueError("a size of your own paints one picture of that size: no second pass, no canvas")
+    return [w, h]
 
 
 def _scale(body, painter, ref):
@@ -565,7 +788,11 @@ def _mask(body):
 def work(d, run, job):
     key, need, gpu = "artist:" + run["id"], NEED[run["painter"]] + sum(x.get("mb", 0) for x in run.get("loras") or []), None   # HERESY 1316
     more = second_pass_mb(run)                       # HERESY 1384: a second pass's larger picture
+    if run.get("size"):                              # HERESY 2278: the Advanced size's own need beyond the painter's at 1328²
+        more += max(0, size_need_mb(run["painter"], *run["size"]) - NEED[run["painter"]])
     need += more
+    if any((x or {}).get("model") == seedvr2_grain.NAME for x in run.get("passes") or []):   # HERESY 2276: the least grain of SeedVR2 here
+        need = max(need, seedvr2_grain.least_mb(H["kit"]))
     try:
         _settle(run)                                 # HERESY 1370c: a kept painter putting its weights away, waited for
         while True:                                  # in the queue for a card, then for its turn (as the artwork waits)
@@ -602,8 +829,7 @@ def work(d, run, job):
                     th = threading.Thread(target=_part_any, args=(d, run, job, g, only, lock, lives, o), daemon=True)   # HERESY 1370
                     th.start()
                     threads.append(th)
-                for th in threads:
-                    th.join()
+                _join_aside(d, run, job, threads, lock)   # HERESY 2368: a batch steps aside for a reading between two pictures
                 if job.get("stop"):                  # HERESY 1270: ended on purpose; what it finished is kept
                     raise Stopped()
                 bad = [o for o in outs if o.get("code") != 0]
@@ -633,11 +859,60 @@ def work(d, run, job):
             H["say"](f"the Artist · {run['id']} · stopped: {len(kept)} of {run['of']} picture(s) kept")
             return
         run.update(status="failed", error=str(e), ended=time.time())
+        if run.get("size") and re.search(r"out of memory|OutOfMemoryError|CUDA error: out of memory", str(e), re.I):   # HERESY 2278
+            w, h = run["size"]
+            run["smaller"] = smaller(w, h)
+            run["error"] = f"out of the card's memory at {w}×{h}: try {run['smaller'][0]}×{run['smaller'][1]} (Advanced)"
         write(d, run)
         H["say"](f"the Artist · {run['id']} · failed: {e}")
     finally:
         with H["lock"]:
             H["jobs"].pop(key, None)
+    if run.get("paint") and run.get("status") == "done":   # HERESY 2230: its own slot free now, the painter's pass asked
+        _paint_after(d, run)
+    if run.get("then") and run.get("status") == "done":    # HERESY 2259: a painter's pass done, the long side and the colours asked
+        _finish_after(d, run)
+
+
+ASIDE_WAIT_S = 900         # HERESY 2368: how long a batch's painters may take to reach the end of the picture they are on
+
+
+def _join_aside(d, run, job, threads, lock):
+    """HERESY 2368 (Viktor 11.11.2026, «Пока что делай как советуешь там» on «короткие задачи… раньше длинной пачки Художника… ждать одну
+    картинку, а не всю пачку»): the run's painters waited for; a batch (the Videographer's key frames, a run of pictures each with its own words)
+    while a reading waits for the lab's heavy turn asks its painters to wait after the picture they are on (the file «aside» in the run's
+    folder, artist_qwen.step_aside), and when each has said so it gives the turn to the reading and takes it back before any other job; then
+    they go on, their weights still on their cards. A painter that does not answer in ASIDE_WAIT_S keeps the turn, as before."""
+    batch = isinstance(run.get("batch"), list) and hasattr(H.get("turn"), "step_aside")
+    f = d / "aside"
+    try:
+        while any(th.is_alive() for th in threads):
+            if batch and not job.get("stop") and H["turn"].short_waiting():
+                f.touch()
+                t0 = time.time()
+                while not job.get("stop") and time.time() - t0 < ASIDE_WAIT_S:
+                    live = sum(th.is_alive() for th in threads)
+                    with lock:
+                        said = sum(1 for v in (run.get("asides") or {}).values() if v)
+                    if not live or said >= live:
+                        break
+                    time.sleep(0.5)
+                live = sum(th.is_alive() for th in threads)
+                with lock:
+                    said = sum(1 for v in (run.get("asides") or {}).values() if v)
+                if live and said >= live and not job.get("stop"):
+                    H["say"](f"the Artist · {run['id']} · a reading waits for the lab's turn: the batch steps aside after its picture, then goes on")
+                    job["status"] = "aside"
+                    H["turn"].step_aside(job)
+                    job["status"] = "running"
+                f.unlink(missing_ok=True)
+                while any(th.is_alive() for th in threads) and any((run.get("asides") or {}).values()):
+                    time.sleep(0.2)              # each painter back at work before the next look
+            for th in threads:
+                th.join(timeout=1)
+    finally:
+        f.unlink(missing_ok=True)
+        run.pop("asides", None)
 
 
 CARDS_MAX = 4              # HERESY 1354: the cards a run's pictures are spread over, at most
@@ -765,6 +1040,8 @@ def _row(d, run, gpu, only, lives, row):
     elif "loras" in row:             # HERESY 1316: the adapters on, each with the layers it reached
         run["loras_on"] = row["loras"]
         write(d, run)
+    elif "aside" in row:             # HERESY 2368: a batch's painter waits between two pictures while a reading has the lab's turn
+        run.setdefault("asides", {})[str(gpu)] = bool(row["aside"])
     elif "live" in row:              # HERESY 1257: the step being painted, its picture an eighth the size
         lives[gpu] = dict(row, t=time.time())
         _live(run, lives)
@@ -1244,7 +1521,7 @@ UP_INFO = None
 
 
 def upscalers():
-    """HERESY 1322: the upscalers in artwork/upscalers/ (a face restorer is not one), each with its scale by its name and its size; 1355: and
+    """HERESY 1322: the upscalers in models/artist/upscalers/ (a face restorer is not one), each with its scale by its name and its size; 1355: and
     its notes from lab/upscalers.json where it is a known one (what it is for, its author, licence and page, its time measured here)."""
     global UP_INFO
     if UP_INFO is None:
@@ -1265,6 +1542,15 @@ def upscalers():
                     e["info"] = known[p.name]
                     e["scale"] = int(known[p.name].get("scale") or e["scale"])
                 out.append(e)
+    # HERESY 2276: SeedVR2 beside them, for the passes alone: the grains here (models/misc/seedvr2), the quant picked by the card's free memory
+    grains = seedvr2_grain.present(H["kit"])
+    if grains:
+        out.append({"name": seedvr2_grain.NAME, "kind": "seedvr2", "scale": 0, "mb": grains[0]["mb"], "need_mb": min(g["need_mb"] for g in grains),
+                    "grains": [{"label": g["label"], "need_mb": g["need_mb"], "mb": g["mb"]} for g in grains],
+                    "info": {"title": "SeedVR2", "author": "ByteDance Seed · quants by numz, AInVFX, cmeka", "license": "Apache-2.0", "group": "photo",
+                             "source": "https://github.com/ByteDance-Seed/SeedVR", "arch": "DiT",
+                             "for": "A diffusion upscaler, the Videographer's own: it makes the details anew rather than sharpening them, any factor in one step; 7B sharp in the precision the card's free memory takes, 3B where no 7B fits",
+                             "s_1024": 40, "estimated": True}})
     return {"upscalers": out, "measured": UP_INFO.get("measured") or ""}
 
 
@@ -1282,8 +1568,10 @@ def upscale(body):
     if body.get("passes"):                               # HERESY 1355: in passes, as Viktor's ComfyUI stack
         return _upscale_chain(body, rid, name, src, pic, w0, h0)
     model = str(body.get("model") or "")
+    if model == seedvr2_grain.NAME:                      # HERESY 2276
+        raise ValueError("SeedVR2 upscales as a pass: Passes…")
     if model not in [u["name"] for u in upscalers()["upscalers"]]:
-        raise ValueError("pick an upscaler: one of artwork/upscalers/ (ESRGAN, DAT, HAT, SPAN… as .pth or .safetensors)")
+        raise ValueError("pick an upscaler: one of " + paths.ARTIST_UPSCALERS + "/ (ESRGAN, DAT, HAT, SPAN… as .pth or .safetensors)")
     target, size = str(body.get("target") or "").lower(), None
     if target in TARGETS:                                # HERESY 1332: 2K or 4K by the long side, the size exact
         long = max(w0, h0)
@@ -1323,7 +1611,7 @@ PASSES_MAX = 4
 
 
 def _upscale_chain(body, rid, name, src, pic, w0, h0):
-    """HERESY 1355: an upscale in passes (1 to 4, each a model of artwork/upscalers/ and a factor of the picture's size from 0.25 to 8), how
+    """HERESY 1355: an upscale in passes (1 to 4, each a model of models/artist/upscalers/ and a factor of the picture's size from 0.25 to 8), how
     each lands (bilinear, lanczos, bicubic), the long side after them (none, or 512 to UPSCALE_MAX) and the colours matched or not; a run
     of its own, as one model's upscale is."""
     names = [u["name"] for u in upscalers()["upscalers"]]
@@ -1334,7 +1622,7 @@ def _upscale_chain(body, rid, name, src, pic, w0, h0):
     for ps in passes:
         model = str((ps or {}).get("model") or "")
         if model not in names:
-            raise ValueError("each pass: one of the upscalers in artwork/upscalers/")
+            raise ValueError("each pass: one of the upscalers in " + paths.ARTIST_UPSCALERS + "/")
         try:
             f = round(float((ps or {}).get("factor")), 3)
         except (TypeError, ValueError):
@@ -1353,10 +1641,15 @@ def _upscale_chain(body, rid, name, src, pic, w0, h0):
     side = long or round(max(w0, h0) * out[-1]["factor"])
     if side > UPSCALE_MAX:
         raise ValueError(f"too large: {side} px on the long side, {UPSCALE_MAX} is the most")
+    paint = _paint_pass(body, src, out, long)          # HERESY 2230: the painter's pass after them, or None
+    match = bool(body.get("match"))
+    if paint and (long or match):                    # HERESY 2259: the passes land at their last factor, the painter paints there, then these
+        paint["then"] = dict({"long": long} if long else {}, **({"match": {"id": rid, "file": name}} if match else {}))
+        long, match = 0, False
     nid = time.strftime("%Y%m%d-%H%M%S-") + os.urandom(2).hex()
     d = home() / nid
     d.mkdir(parents=True)
-    ask = {"source": {"id": rid, "file": name}, "passes": out, "resample": resample, "long": long or None, "match": bool(body.get("match")),
+    ask = {"source": {"id": rid, "file": name}, "passes": out, "resample": resample, "long": long or None, "match": match,
            "shape": pic.get("shape") or "1:1", "seed": pic.get("seed") or 0, "tta": bool(body.get("tta"))}   # HERESY 1364: tta
     with open(d / "ask.json", "w", encoding="utf-8") as f:
         json.dump(ask, f, ensure_ascii=False, indent=1)
@@ -1364,6 +1657,146 @@ def _upscale_chain(body, rid, name, src, pic, w0, h0):
            "factor": out[-1]["factor"], "target": "", "long": long or None, "match": ask["match"], "resample": resample, "tta": ask["tta"],
            "shapes": [ask["shape"]], "seed": ask["seed"], "count": 1, "take": src.get("take"), "created": time.time(), "status": "queued", "of": 1,
            "pictures": [], "upscaled_from": {"id": rid, "file": name, "painter": src.get("painter")}}
+    if paint:
+        run["paint"] = paint                         # HERESY 2230: asked of the painter when the passes end (_paint_after)
+    write(d, run)
+    job = {"status": "queued", "started": time.time(), "kind": "artist"}
+    with H["lock"]:
+        H["jobs"]["artist:" + nid] = job
+    threading.Thread(target=work, args=(d, run, job), daemon=True).start()
+    return run
+
+
+PAINT_SCALES = (1.5, 2.0)                               # HERESY 2230: the sizes a second pass paints at (as _scale's)
+
+
+def _paint_pass(body, src, passes, long):
+    """HERESY 2230 (TODO.md, the Artist: his ComfyUI workflow's second KSampler over the 2× upscaled picture, noise 0.6, from step 20 of 60):
+    the painter's pass at the end of an upscale in passes, checked now: the source run's own painter (Qwen-Image 2512), fine-tune, adapters,
+    sampling, prompt and seed paint the chain's picture over at the size it lands at (1.5 or 2 times the picture), a run of its own asked
+    when the upscale ends. {strength 0.2 to 0.9, inject 0 to 2}; none asked, None."""
+    p = body.get("paint")
+    if not p:
+        return None
+    if not isinstance(p, dict):
+        raise ValueError("the painter's pass: {strength, inject}")
+    painter = str(src.get("painter") or "")
+    if src.get("kind") == "upscale" or not str(src.get("prompt") or "").strip() or painter not in QWEN or is21(painter):
+        raise ValueError("the painter's pass wants a picture painted by Qwen-Image 2512, with its prompt")
+    if not qwen_ready(painter):
+        raise ValueError(QWEN[painter][0] + " is not on this machine: the painter's pass paints with it")
+    scale = float(passes[-1]["factor"])
+    if scale not in PAINT_SCALES:                    # HERESY 2259: a long side is no reason any more: it comes after the pass
+        raise ValueError("the painter's pass paints at 1.5 or 2 times the picture: end the passes at ×1.5 or ×2")
+    try:
+        strength = round(float(p.get("strength") if p.get("strength") is not None else 0.6), 2)
+    except (TypeError, ValueError):
+        raise ValueError("the painter's pass: how much it may change, from 0.2 to 0.9")
+    if not 0.2 <= strength <= 0.9:
+        raise ValueError("the painter's pass: how much it may change, from 0.2 to 0.9")
+    out = {"strength": strength, "scale": scale, "painter": painter}
+    inject = _inject({"inject": p.get("inject")})     # his InjectLatentNoise+, as a second pass has it
+    if inject:
+        out["inject"] = inject
+    if src.get("model"):
+        out["model"] = src["model"]
+    loras = [{k: x[k] for k in ("id", "weight", "keys") if k in x} for x in src.get("loras") or [] if not x.get("muted") and float(x.get("weight") or 0)]
+    if loras:
+        out["loras"] = loras
+    if src.get("sampling"):
+        out["sampling"] = src["sampling"]
+    return out
+
+
+def _paint_after(d, run):
+    """HERESY 2230: the painter's pass asked when its upscale is done: draw() over the chain's picture, as Second pass asks it (the
+    run's prompt and seed, scale 1.5 or 2, the picture already at that size). Its run's id kept as «painted»; a refusal (two runs
+    going, the painter gone meanwhile) kept as «paint_error» and said in the log, never taken for a pass that ran."""
+    pp = run.get("paint") or {}
+    pic = next((x for x in run.get("pictures") or [] if x.get("kept") and x.get("file")), None)
+    try:
+        if pic is None:
+            raise RuntimeError("the upscale kept no picture to paint over")
+        body = {"prompt": run.get("prompt") or "", "shapes": [pic.get("shape") or (run.get("shapes") or ["1:1"])[0]], "count": 1,
+                "seed": pic.get("seed", run.get("seed")), "painter": pp.get("painter"), "ref": {"id": run["id"], "file": pic["file"]},
+                "strength": pp.get("strength", 0.6), "scale": pp.get("scale"), "preview": True}
+        for k in ("model", "loras", "sampling", "inject", "then"):   # HERESY 2259: then, the long side and the colours after it
+            if pp.get(k):
+                body[k] = pp[k]
+        if run.get("take"):
+            body["take"] = run["take"]
+        nr = draw(body)
+        run["painted"] = {"id": nr["id"]}
+        run.pop("paint_error", None)
+        H["say"](f"the Artist · {run['id']} · the painter's pass asked: run {nr['id']} (×{pp.get('scale')}, {pp.get('strength')})")
+    except Exception as e:
+        run["paint_error"] = str(e)
+        H["say"](f"the Artist · {run['id']} · the painter's pass did not start: {e}")
+    write(d, run)
+
+
+def _then(body, scale):
+    """HERESY 2259 (Viktor's 8K chain, ×2 ×4 ×1.5 ×2 then 7680 on the long side, with the painter's pass): what comes after a painter's pass over
+    an upscaled picture, the chain's own long side and colours moved after it so that the painter paints at the 1.5 or 2 times it takes, as his
+    ComfyUI workflow paints its second pass before the long side and ColorMatch. {long: 512 to UPSCALE_MAX, match: {id, file} of the picture
+    whose colours to put back}; none asked, None. Only a second pass carries one."""
+    t = body.get("then")
+    if not t:
+        return None
+    if not isinstance(t, dict) or not scale:
+        raise ValueError("the long side and the colours after a painter's pass go with a second pass over an upscaled picture")
+    try:
+        long = int(t.get("long") or 0)
+    except (TypeError, ValueError):
+        long = -1
+    if long and not 512 <= long <= UPSCALE_MAX:
+        raise ValueError(f"the long side after the painter's pass: 512 to {UPSCALE_MAX} px")
+    out = {"long": long} if long else {}
+    m = t.get("match")
+    if m:
+        if not isinstance(m, dict):
+            raise ValueError("the colours after the painter's pass: the picture whose colours to put back, {id, file}")
+        picture(str(m.get("id") or ""), str(m.get("file") or ""))   # FileNotFoundError when it is no picture here
+        out["match"] = {"id": str(m["id"]), "file": str(m["file"])}
+    return out or None
+
+
+def _finish_after(d, run):
+    """HERESY 2259: a painter's pass that carries «then», done: its picture brought to the long side and its colours put back to the picture the
+    passes began from, in a run of its own as the upscale and the pass are. Its id kept as «finished»; a refusal kept as «finish_error» and said
+    in the log, never taken for a finish that ran."""
+    then = run.get("then") or {}
+    pic = next((x for x in run.get("pictures") or [] if x.get("kept") and x.get("file")), None)
+    try:
+        if pic is None:
+            raise RuntimeError("the painter's pass kept no picture to finish")
+        nr = _upscale_finish(run, pic, then)
+        run["finished"] = {"id": nr["id"]}
+        run.pop("finish_error", None)
+        H["say"](f"the Artist · {run['id']} · the long side and the colours asked: run {nr['id']}" + (f" (long side {then['long']})" if then.get("long") else ""))
+    except Exception as e:
+        run["finish_error"] = str(e)
+        H["say"](f"the Artist · {run['id']} · the long side and the colours did not start: {e}")
+    write(d, run)
+
+
+def _upscale_finish(src, pic, then):
+    """HERESY 2259: the run that finishes a painter's pass: no model, the picture to its long side (Lanczos) and its colours put back
+    (artist_upscale.py's finish), queued as an upscale is."""
+    long = int(then.get("long") or 0)
+    if long and not 512 <= long <= UPSCALE_MAX:
+        raise ValueError(f"the long side: 512 to {UPSCALE_MAX} px")
+    nid = time.strftime("%Y%m%d-%H%M%S-") + os.urandom(2).hex()
+    d = home() / nid
+    d.mkdir(parents=True)
+    ask = {"source": {"id": src["id"], "file": pic["file"]}, "finish": True, "long": long or None, "match": then.get("match") or None,
+           "shape": pic.get("shape") or "1:1", "seed": pic.get("seed") or 0}
+    with open(d / "ask.json", "w", encoding="utf-8") as f:
+        json.dump(ask, f, ensure_ascii=False, indent=1)
+    run = {"id": nid, "kind": "upscale", "prompt": src.get("prompt", ""), "painter": "upscale", "model": "", "passes": [], "finish": True,
+           "factor": 1, "target": "", "long": long or None, "match": bool(then.get("match")), "resample": "lanczos", "tta": False,
+           "shapes": [ask["shape"]], "seed": ask["seed"], "count": 1, "take": src.get("take"), "created": time.time(), "status": "queued", "of": 1,
+           "pictures": [], "upscaled_from": {"id": src["id"], "file": pic["file"], "painter": src.get("painter")}}
     write(d, run)
     job = {"status": "queued", "started": time.time(), "kind": "artist"}
     with H["lock"]:
@@ -1396,6 +1829,8 @@ def _upscale_batch(body):
         srcs.append({"id": rid, "file": name, "shape": pic.get("shape") or "1:1", "seed": pic.get("seed") or 0, "w": w0, "h": h0})
         first = first or (src, rid, name)
     names = [u["name"] for u in upscalers()["upscalers"]]
+    if body.get("paint"):                                # HERESY 2230: it asks for one run of its own after one picture's passes
+        raise ValueError("the painter's pass goes with one picture's passes, not with the pictures picked")
     ask = {"sources": srcs, "tta": bool(body.get("tta"))}
     if body.get("passes"):                               # the passes, as _upscale_chain checks them
         passes = body.get("passes")
@@ -1405,7 +1840,7 @@ def _upscale_batch(body):
         for ps in passes:
             model = str((ps or {}).get("model") or "")
             if model not in names:
-                raise ValueError("each pass: one of the upscalers in artwork/upscalers/")
+                raise ValueError("each pass: one of the upscalers in " + paths.ARTIST_UPSCALERS + "/")
             try:
                 f = round(float((ps or {}).get("factor")), 3)
             except (TypeError, ValueError):
@@ -1427,8 +1862,10 @@ def _upscale_batch(body):
         say = {"model": out[0]["model"], "passes": out, "factor": out[-1]["factor"], "target": "", "long": long or None, "match": ask["match"], "resample": resample}
     else:                                                # one model, as upscale() checks it
         model = str(body.get("model") or "")
+        if model == seedvr2_grain.NAME:                  # HERESY 2276
+            raise ValueError("SeedVR2 upscales as a pass: Passes…")
         if model not in names:
-            raise ValueError("pick an upscaler: one of artwork/upscalers/ (ESRGAN, DAT, HAT, SPAN… as .pth or .safetensors)")
+            raise ValueError("pick an upscaler: one of " + paths.ARTIST_UPSCALERS + "/ (ESRGAN, DAT, HAT, SPAN… as .pth or .safetensors)")
         target = str(body.get("target") or "").lower()
         if target in TARGETS:
             for s in srcs:
@@ -1801,7 +2238,7 @@ def bin_act(body):
                 if take in frozen:
                     raise ValueError("its workspace is frozen: its takes are never changed")
                 (_cover_back if op == "restore" else _cover_gone)(take, stamp)
-            elif kind == "lora":                     # HERESY 1353: an adapter back in artwork/loras/, or deleted for good
+            elif kind == "lora":                     # HERESY 1353: an adapter back in models/artist/loras/, or deleted for good
                 (artist_loras.restore if op == "restore" else artist_loras.gone)(H["kit"], str(it.get("stamp") or ""))
             else:
                 raise ValueError("kind: run, picture, cover or lora")

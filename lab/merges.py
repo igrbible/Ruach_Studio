@@ -10,6 +10,8 @@ import json
 import struct
 from pathlib import PurePosixPath
 
+import paths                       # HERESY 2330: where the weights live
+
 KEY = "heresy.merged_loras"
 FIXED = {0: 1, 1: 1, 2: 2, 3: 2, 4: 4, 5: 4, 6: 4, 7: 1, 10: 8, 11: 8, 12: 8}   # GGUF value types of a fixed size
 STRING, ARRAY = 8, 9
@@ -96,10 +98,10 @@ def parse(said, sources):
 
 
 def merges(kit):
-    """{"merges": {model name: [{name, source, ar, nar}, …]}, "errors": {model name: why}} for models/YuE2-3B-<name>.gguf.
+    """{"merges": {model name: [{name, source, ar, nar}, …]}, "errors": {model name: why}} for every YuE2-3B-<name>.gguf under models/engine/ (lab/paths.py backbones()).
     A file without the key is m-a-p's own (or a merge from elsewhere): it is not listed; one that cannot be read is said."""
     sources, out, errors = _sources(kit), {}, {}
-    for f in sorted((kit / "models").glob("YuE2-3B-*.gguf")):
+    for f in paths.backbones(kit):
         name = f.name[len("YuE2-3B-"):-len(".gguf")]
         try:
             st = f.stat()

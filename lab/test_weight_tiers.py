@@ -29,12 +29,15 @@ def card(mb):
 muscriptor.suggest = lambda kit: "large"
 with tempfile.TemporaryDirectory() as d:
     k = Path(d)
-    (k / "models").mkdir()
-    (k / "models" / "YuE2-3B-BF16.gguf").write_bytes(b"x")
+    P = weights.paths                                   # HERESY 2330: where the weights live
+    P.at(P.ENGINE_YUE2, k).mkdir(parents=True)
+    (P.at(P.ENGINE_YUE2, k) / "YuE2-3B-BF16.gguf").write_bytes(b"x")
     card(24576)
     t = {x["id"]: x for x in weights.tiers(k)}
     picks = {i: [(x["extra"], x["variant"]) for x in t[i]["items"]] for i in t}
-    check("six tiers, in the rooms' order", list(t) == ["writer", "refiner", "artist", "videographer", "trainer", "merges"], list(t))
+    check("seven tiers, in the rooms' order (2374: the Narrator's, the second room, first)",
+          list(t) == ["narrator", "writer", "refiner", "artist", "videographer", "trainer", "merges"], list(t))
+    check("the Narrator: Drama 3 at Q4_K on any card", picks["narrator"] == [("narrator", "Q4_K")], picks["narrator"])
     check("a 24 GB card: the writer's quality, the Qwen painter at Q6, H3 int8 and SeedVR2 7B, the trainer's bf16 and the listener's Q8_0",
           picks["writer"] == [("writer", "quality")] and picks["artist"] == [("artwork", "all"), ("qwen", "2512-q6")] and
           picks["videographer"] == [("h3", "int8"), ("upscaler", "7b")] and picks["trainer"] == [("trainer", "bf16"), ("listener", "Q8_0")], picks)
@@ -44,8 +47,8 @@ with tempfile.TemporaryDirectory() as d:
           ("fw", "2.4x0.75-BF16") in picks["merges"] and ("tw", "2.0x0.9-BF16") in picks["merges"] and ("tw", "2.0x0.75-BF16") not in picks["merges"] and ("irae", "IRAE-IRv2-BF16") in picks["merges"] and all(v.endswith("BF16") for _, v in picks["merges"]), picks["merges"])
     check("  the Artist's sizes: 8.4 + 34.5 GB, nothing here", near(t["artist"]["need"], 42.9e9) and near(t["artist"]["total"], 42.9e9), t["artist"])
     check("  the Videographer's: 69 + 17 GB", near(t["videographer"]["total"], 86e9), t["videographer"]["total"])
-    (k / "models" / "muscriptor" / "v1").mkdir(parents=True)
-    (k / "models" / "muscriptor" / "v1" / "muscriptor-large-f16.gguf").write_bytes(b"x")
+    (P.at(P.REFINER_MIDI, k) / "muscriptor" / "v1").mkdir(parents=True)
+    (P.at(P.REFINER_MIDI, k) / "muscriptor" / "v1" / "muscriptor-large-f16.gguf").write_bytes(b"x")
     r = next(x for x in weights.tiers(k) if x["id"] == "refiner")
     check("an item here counts nothing: the Refiner needs FlashSR alone", near(r["need"], 3.3e9) and near(r["total"], 6.0e9) and [i["here"] for i in r["items"]] == [True, False], r)
     card(12288)
@@ -59,8 +62,8 @@ with tempfile.TemporaryDirectory() as d:
     card(6144)
     t = {x["id"]: x for x in weights.tiers(k)}
     check("a 6 GB card: no writer, said why", t["writer"]["items"] == [] and "8 GB" in t["writer"]["why"], t["writer"])
-    (k / "models" / "YuE2-3B-BF16.gguf").unlink()
-    (k / "models" / "YuE2-3B-Q5_K_M.gguf").write_bytes(b"x")
+    (P.at(P.ENGINE_YUE2, k) / "YuE2-3B-BF16.gguf").unlink()
+    (P.at(P.ENGINE_YUE2, k) / "YuE2-3B-Q5_K_M.gguf").write_bytes(b"x")
     m = next(x for x in weights.tiers(k) if x["id"] == "merges")
     check("a Q5_K_M install: the merges at Q6_K (none at Q5_K_M)", all(i["variant"].endswith("Q6_K") for i in m["items"]), m["items"][:2])
 
@@ -82,9 +85,9 @@ with tempfile.TemporaryDirectory() as d:
           got and got[-1][0] == [["--only", "none", "--flashsr", "all", "--yes"]] and got[-1][2] == {"tier": "refiner"} and near(got[-1][3], 3.3e9), got)
     weights.fetch(k, {"tier": "artist"})
     check("  the Artist: the helpers and the painter, a run each", got[-1][0] == [["--only", "none", "--artwork", "--yes"], ["--only", "none", "--qwen", "2512-q6", "--yes"]], got[-1][0])
-    (k / "models" / "upbundle" / "flashsr" / "weights").mkdir(parents=True)
+    (P.at(P.REFINER_UPBUNDLE, k) / "flashsr" / "weights").mkdir(parents=True)
     for n in ("student_ldm.pth", "sr_vocoder.pth", "vae.pth"):
-        (k / "models" / "upbundle" / "flashsr" / "weights" / n).write_bytes(b"x")
+        (P.at(P.REFINER_UPBUNDLE, k) / "flashsr" / "weights" / n).write_bytes(b"x")
     try:
         weights.fetch(k, {"tier": "refiner"}); said = ""
     except ValueError as e:
@@ -118,6 +121,6 @@ weights._run(Path("."), [["a"], ["b"]], False)
 check("a tier's runs: their counts summed, failed if one failed, «1 of 2» and «2 of 2» said",
       weights.JOB["counts"] == {"here": 1, "unknown": 0, "differs": 0, "fetched": 3, "missing": 0, "failed": 1} and weights.JOB["status"] == "failed" and
       [x.strip() for x in weights.JOB["lines"]] == ["— 1 of 2 —", "— 2 of 2 —"], weights.JOB)
-check("the parts' sizes measured anew: the decoders 1.1 GB, UniverSR with Apollo 0.4 GB", weights.PARTS["extras"] == "1.1 GB" and weights.PARTS["upscale"] == "0.4 GB", weights.PARTS)
+check("the parts' sizes measured anew: our two decoders 1.6 GB (2329), UniverSR with Apollo 0.4 GB", weights.PARTS["extras"] == "1.6 GB" and weights.PARTS["upscale"] == "0.4 GB", weights.PARTS)
 print(("FAILED " if fails else "all passed ") + str(fails))
 sys.exit(1 if fails else 0)

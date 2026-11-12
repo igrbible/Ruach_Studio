@@ -44,6 +44,12 @@
     if (p[0] === "derived" && p.length === 2) return tr("from the set");          // a whole set (the stems' folder), not one of its files
     return tr("from {0}").replace("{0}", p.pop());
   }
+  // HERESY 2298: what a version was made from, and the other takes it took in as links (a Reader's mix: its music stays the Creator's, linked)
+  function dvFrom(m) {
+    var s = /^take:/.test(String(m.source || "")) ? "" : source(m.source);
+    var lk = (m.links || []).map(function (l) { return "\ud83d\udd17 " + l.title + " (" + tr(l.realm === "reader" ? "Narrator" : "Musician") + ")"; }).join(", ");
+    return lk ? (s ? s + " \u00b7 " : "") + tr("with {0}").replace("{0}", lk) : s;
+  }
   // the family as rows, the takes in the tree's order, each take's Refiner versions under it as its tree draws them
   function flatten(d) {
     var rows = [];
@@ -85,17 +91,18 @@
       return '<li class="cmp-li ln-li is-dv" data-ln-i="' + i + '" style="--d:' + r.depth + '"><button type="button" class="cmp-row ln-row ln-dvrow" data-ln-take="' + esc(r.take) + '" data-ln-dv="' + esc(m.id) +
         '" data-tip="' + esc(where === "refiner" ? tr("Find it in the Refiner's tree of its take") : tr("Made in the Refiner: it opens there, its take's tree open and this version lit (asks first)")) + '">' +
         '<span></span><span class="cmp-name ln-kind"><span class="ln-tw" aria-hidden="true">\u21b3\u00a0</span><span class="ln-badge">' + esc(tr("Refiner")) + "</span>" +
-        esc(tr(m.label || KIND[m.kind] || m.kind)) + '</span><span class="cmp-group">' + esc(source(m.source)) + '</span><span class="ln-when mono">' + esc(when(m.when)) +
+        esc(tr(m.label || KIND[m.kind] || m.kind)) + '</span><span class="cmp-group">' + esc(dvFrom(m)) + '</span><span class="ln-when mono">' + esc(when(m.when)) +
         '</span><span class="cmp-dur mono"></span><span></span><span></span></button></li>';
     }
     var n = r.node, t = S.hooks.find ? S.hooks.find(n.name) : null, here = n.here && t;
+    var vae = here && S.hooks.vae ? S.hooks.vae(n.name) : "";   // HERESY 2304: the VAE that made it
     return '<li class="cmp-li ln-li" data-ln-i="' + i + '" data-name="' + esc(n.name) + '" style="--d:' + r.depth + '"><div class="cmp-row ln-row' + (n.name === focus ? " is-focus" : "") + (n.name === S.shown ? " is-on" : "") +
       (here ? "" : " is-gone") + '">' +
       (here ? '<button type="button" class="ln-play" data-ln-play="' + esc(n.name) + '" aria-label="' + esc(tr("Play")) + '">' + ico("play") + "</button>" : '<span class="ln-play"></span>') +
       '<button type="button" class="cmp-name ln-title" data-ln-open="' + esc(n.name) + '"' + (here ? "" : " disabled") + ' translate="no" data-tip="' +
       esc(!here ? tr("No longer in the library") : where === "library" ? tr("Show it in the Librarian; this window stays") : tr("Open it; this window stays")) + '">' +
       (r.depth ? '<span class="ln-tw" aria-hidden="true">\u21b3\u00a0</span>' : "") + esc(n.title) + "</button>" +
-      '<span class="cmp-group">' + esc(n.what ? tr(n.what) : "") + (n.name === focus ? ' <span class="ln-here">' + esc(tr("this take")) + "</span>" : "") + "</span>" +
+      '<span class="cmp-group">' + esc(n.what ? tr(n.what) : "") + (vae ? ' <span class="ln-vae" translate="no">' + esc(vae + " VAE") + "</span>" : "") + (n.name === focus ? ' <span class="ln-here">' + esc(tr("this take")) + "</span>" : "") + "</span>" +
       '<span class="ln-when mono">' + esc(when(n.created)) + '</span><span class="cmp-dur mono">' + esc(clock(t && t.seconds)) + "</span>" +
       (here ? rateHtml(n.name) : "<span></span>") +
       (here && where !== "library" && S.hooks.library ? '<button type="button" class="coll-act ln-lib" data-ln-lib="' + esc(n.name) + '" aria-label="' + esc(tr("Show in the Librarian")) + '" data-tip="' +

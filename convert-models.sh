@@ -39,9 +39,14 @@ real() { "$HPY" -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$1"; 
 free_gb() { "$HPY" -c 'import shutil, sys; print(shutil.disk_usage(sys.argv[1]).free // 2**30)' "$1"; }
 ram_gb() { "$HPY" -c 'import os; print(os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") // 2**30)'; }
 
+# HERESY 2330: the checkpoints and the GGUFs in models/<room>/ (launcher/paths.sh); convert.py reads and writes them there, convert-extras.py
+# writes into build/models (2.0.6's flat models/), and lab/migrate_models.py files what it made into its room at the end
+source "$ROOT/launcher/paths.sh"
+room() { local n; n=$(rs_new_of "$1") || n="$1"; printf '%s\n' "$n"; }   # where a 2.0.6 path lies now
 for need in YuE2-3B YuE2-Vae SheetSage2 MERT-v2-FullSong; do
-    if [ ! -d "$ROOT/build/checkpoints/$need" ]; then
-        echo "${R}missing${X} checkpoint $need in $(real "$ROOT/build/checkpoints")"
+    d=$(room "checkpoints/$need/x"); d="$ROOT/${d%/x}"   # paths: 2.0.6 (the map's own question)
+    if [ ! -d "$d" ]; then
+        echo "${R}missing${X} checkpoint $need in $(real "$(dirname "$d")")"
         exit 1
     fi
 done
@@ -109,7 +114,7 @@ list_outputs
 partials=0 rejected=0
 REJ="$ROOT/tmp/rejected"
 for rel in "${OUTPUTS[@]}"; do
-    f="$ROOT/$rel"
+    f="$ROOT/$(room "models/${rel#build/models/}")"   # paths: 2.0.6 (the map's own question)
     [ -e "$f.partial" ] && { rm -f "$f.partial"; partials=$((partials + 1)); }
     [ -e "$f" ] || continue
     # HERESY 1610: an older install's SheetSage2-F32 held MERT too (2.7 GB); the engine now reads the head with MERT beside it
@@ -134,21 +139,23 @@ cd "$ROOT/build"
 nice -n 15 "$PY" "$ROOT/tools/gguf_atomic.py" ${LOWARG[@]+"${LOWARG[@]}"} convert.py
 # Legacy + Blend VAEs and the 16 sliders
 nice -n 15 "$PY" "$ROOT/tools/gguf_atomic.py" ${LOWARG[@]+"${LOWARG[@]}"} "$ROOT/convert-extras.py"
+"$HPY" "$ROOT/lab/migrate_models.py" --apply >/dev/null || true   # HERESY 2330: what convert-extras.py left in models/ into its room
 secs=$(( $(date +%s) - start ))
 free_after=$(free_gb "$ROOT/build/models/")
 
 # every output must now be there and a complete GGUF
 bad=0
 for rel in "${OUTPUTS[@]}"; do
-    f="$ROOT/$rel"
+    rel=$(room "models/${rel#build/models/}"); f="$ROOT/$rel"   # paths: 2.0.6 (the map's own question)
     if [ ! -f "$f" ]; then echo "${R}missing${X} $rel"; bad=$((bad + 1)); continue; fi
     "$HPY" "$ROOT/tools/gguf_check.py" complete "$f" >/dev/null 2>&1 || { echo "${R}incomplete${X} $rel"; bad=$((bad + 1)); }
 done
 
 echo
-echo "${B}converted${X} in ${secs}s into $(real "$ROOT/build/models")$([ "$LOW" = 1 ] && echo " ${D}(low-memory mode)${X}")"
-for f in "$ROOT"/build/models/*.gguf; do
-    [ -f "$f" ] && echo "  ${G}$(basename "$f")${X}  ${D}$(du -h "$f" | cut -f1)${X}"
+echo "${B}converted${X} in ${secs}s into $(real "$RS_MODELS")/<room>$([ "$LOW" = 1 ] && echo " ${D}(low-memory mode)${X}")"
+for rel in "${OUTPUTS[@]}"; do
+    f="$ROOT/$(room "models/${rel#build/models/}")"   # paths: 2.0.6 (the map's own question)
+    [ -f "$f" ] && echo "  ${G}${f#"$ROOT"/}${X}  ${D}$(du -h "$f" | cut -f1)${X}"
 done
 [ -f "$ROOT/sliders/catalog.json" ] && echo "  sliders: $(ls "$ROOT"/sliders/*.gguf 2>/dev/null | wc -l | tr -d ' ') GGUF files, catalog present"   # HERESY 1566: none since 1449, nothing to say
 echo "  outputs checked: ${#OUTPUTS[@]}; from an interrupted run: $partials .partial removed, $rejected incomplete moved to tmp/rejected/$([ "$rejected" -gt 0 ] && echo " ${D}(delete them once this run is done)${X}"); incomplete or missing now: $([ $bad = 0 ] && echo "${G}0${X}" || echo "${R}$bad${X}")"

@@ -8,10 +8,12 @@ past its end from the second sequence on: «illegal memory access», or wrong li
 
 build.sh puts every patch here on build/ggml before the server is built, once.
 
+diff --git a/src/ggml-cuda/fattn-common.cuh b/src/ggml-cuda/fattn-common.cuh
+index beb87794..6d32872c 100644
 --- a/src/ggml-cuda/fattn-common.cuh
 +++ b/src/ggml-cuda/fattn-common.cuh
-@@ -1117,7 +1117,9 @@
-     const bool scan_mask = !use_sparse && mask && K->ne[1] % FATTN_KQ_STRIDE == 0 && (Q->ne[1] >= 1024 || Q->ne[3] > 1);
+@@ -1123,7 +1123,9 @@ void launch_fattn(
+     const bool scan_mask = !use_sparse && mask && n_kv_cols % FATTN_KQ_STRIDE == 0 && (Q->ne[1] >= 1024 || Q->ne[3] > 1 || kv_rows);
      if (scan_mask) {
          const int64_t s31 = mask->nb[1] / sizeof(half2);
 -        const int64_t s33 = mask->nb[3] / sizeof(half2);

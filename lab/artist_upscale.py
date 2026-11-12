@@ -1,6 +1,6 @@
 """HERESY 1169 · 1322: the Artist's upscale (Viktor 10.10.2026: «В ~/Documents/AI/DIFFUSION_MODELS_etc у меня дохерища всего, что я
 скачивал за многие годы для ComfyUI. И модели апскейлеров… 637GB золота»; his ComfyUI workflow's upscale stack: 4x_Nomos8kDAT,
-Remacri, UltraMix): a picture of a run made 2 or 4 times as large by one of the models in artwork/upscalers/ (ESRGAN, DAT, ATD, HAT,
+Remacri, UltraMix): a picture of a run made 2 or 4 times as large by one of the models in models/artist/upscalers/ (ESRGAN, DAT, ATD, HAT,
 SPAN, OmniSR…, read by spandrel, MIT, whose loader unpickles only what a model is made of), in tiles of 512 with 32 of overlap, each
 tile's middle kept; a 4x model asked for 2x paints at 4x and is brought down (Lanczos), finer than a 2x model. Its run is a new one
 whose one picture is the large one.
@@ -23,9 +23,11 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import art_job  # noqa: E402
+import seedvr2_grain  # noqa: E402   HERESY 2276: SeedVR2 as a pass
+import paths  # noqa: E402   HERESY 2330: where the weights live
 
 KIT = art_job.KIT
-UPSCALERS = KIT / "artwork" / "upscalers"
+UPSCALERS = paths.at(paths.ARTIST_UPSCALERS, KIT)
 TILE, OVERLAP, THUMB = 512, 32, 512
 CAP_PX = 600 * 10 ** 6                                  # HERESY 1355: the most a pass's model may make (1.8 GB as 8-bit RGB)
 RESAMPLE = {"bilinear": 2, "lanczos": 1, "bicubic": 3}  # PIL's filters by name
@@ -57,7 +59,7 @@ def model_path(name):
     name = str(name or "").replace("\\", "/").strip("/")
     p = UPSCALERS / name
     if not name or ".." in name.split("/") or not p.is_file():
-        raise RuntimeError(f"no such upscaler in artwork/upscalers/: {name}")
+        raise RuntimeError(f"no such upscaler in {paths.ARTIST_UPSCALERS}/: {name}")
     return p
 
 
@@ -147,7 +149,53 @@ def _through(md, img, s, dtype, device, tta=False):
     return Image.fromarray(out)
 
 
-def chain(img, passes, resample="bilinear", device="cuda", say=None, tta=False):
+def seedvr2(img, size, seed=42, work=None):
+    """HERESY 2276: the picture through SeedVR2 to size (W, H), at the best grain the card's free memory takes (lab/seedvr2_grain.py),
+    the next grain after one that runs out of memory. Above seedvr2_grain.CAP_PX it makes the cap and the pass's resample does the rest.
+    Returns (the picture, the grain, a note or "")."""
+    import shutil
+    import tempfile
+    from PIL import Image
+    if not seedvr2_grain.present(KIT):
+        raise RuntimeError("SeedVR2 is not here: its weights go into " + paths.SEEDVR2 + " (heresy/fetch-heresy.sh --upscaler)")
+    free = seedvr2_grain.free_mb()
+    g = seedvr2_grain.pick(free, KIT)
+    if g is None:
+        raise RuntimeError(f"SeedVR2 has no grain for this card: {free} MB free, the least of those here needs {seedvr2_grain.least_mb(KIT)} MB")
+    W, H = size
+    k, note = 1.0, ""
+    if W * H > seedvr2_grain.CAP_PX:
+        k = math.sqrt(seedvr2_grain.CAP_PX / (W * H))
+        note = f"SeedVR2 made {int(W * k)}×{int(H * k)} ({seedvr2_grain.CAP_PX // 10 ** 6} MP at most), the rest by its resample"
+    tw, th = max(16, int(W * k)), max(16, int(H * k))
+    base = KIT / "tmp" if (KIT / "tmp").is_dir() else None
+    td = Path(work or tempfile.mkdtemp(prefix="seedvr2-", dir=base))
+    tried = []
+    try:
+        td.mkdir(parents=True, exist_ok=True)
+        src, out = td / "in.png", td / "out"
+        img.convert("RGB").save(src)
+        while g is not None:
+            print(f"upscale · SeedVR2 {g['label']} · {img.width}×{img.height} → {tw}×{th} · {free} MB free", file=sys.stderr, flush=True)
+            rc, tail = seedvr2_grain.run_still(src, out, g, min(tw, th), max(tw, th), seed, KIT)
+            if rc == 0 and (out / "in.png").is_file():
+                big = Image.open(out / "in.png").convert("RGB")
+                big.load()
+                if tried:
+                    note = (note + "; " if note else "") + "out of memory in " + ", ".join(tried)
+                return big, g, note
+            if "out of memory" not in tail.lower():
+                last = [x for x in tail.strip().splitlines() if x.strip()][-1:] or [""]
+                raise RuntimeError(f"SeedVR2 stopped ({rc}) in {g['label']}: {last[0][-300:]}")
+            tried.append(g["label"])
+            g = seedvr2_grain.pick(free, KIT, below=g)
+        raise RuntimeError("SeedVR2 ran out of memory in every grain this card takes: " + ", ".join(tried))
+    finally:
+        if not work:
+            shutil.rmtree(td, ignore_errors=True)
+
+
+def chain(img, passes, resample="bilinear", device="cuda", say=None, tta=False, seed=42):
     """HERESY 1355: the picture through its passes, CR Apply Multi Upscale's way: each pass's model over the picture as it stands, its
     result brought to the source's size × the pass's factor. Returns (the picture, [what each pass did]). HERESY 1364: tta in each pass."""
     import gc
@@ -156,6 +204,17 @@ def chain(img, passes, resample="bilinear", device="cuda", say=None, tta=False):
     W, H = img.size
     cur, done = img.convert("RGB"), []
     for k, ps in enumerate(passes):
+        if ps["model"] == seedvr2_grain.NAME:            # HERESY 2276: SeedVR2's pass, any factor in one step
+            factor, t0 = float(ps["factor"]), time.time()
+            size = (max(1, int(W * factor)), max(1, int(H * factor)))
+            big, g, note = seedvr2(cur, size, seed)
+            s = round(big.width / cur.width, 2)
+            cur = big if big.size == size else big.resize(size, RESAMPLE.get(resample, 2))
+            done.append({"model": seedvr2_grain.NAME, "factor": factor, "scale": s, "arch": "SeedVR2", "grain": g["label"], "took": round(time.time() - t0, 1),
+                         **({"note": note} if note else {})})
+            if say:
+                say(k + 1, len(passes), done[-1])
+            continue
         path, factor = model_path(ps["model"]), float(ps["factor"])
         md, dtype = load(path, device)
         s, note = md.scale, ""
@@ -237,6 +296,8 @@ def main(run, ask):
     (run / "thumbs").mkdir(exist_ok=True)
     t1 = time.time()
     shape = str(ask.get("shape") or "1:1")
+    if ask.get("finish"):                            # HERESY 2259: a painter's pass finished: the long side and the colours alone
+        return _main_finish(run, ask, img, src, shape, t0, t1)
     if ask.get("passes"):                            # HERESY 1355: in passes, as Viktor's ComfyUI stack
         return _main_chain(run, ask, img, src, shape, t0, t1)
     factor = 4 if int(ask.get("factor") or 2) >= 4 else 2
@@ -260,7 +321,7 @@ def _main_chain(run, ask, img, src, shape, t0, t1):
 
     def say(k, of, d):
         print(json.dumps({"chain": {"k": k, "of": of, "model": d["model"], "factor": d["factor"], "took": d["took"]}}), flush=True)
-    big, done = chain(img, ask["passes"], ask.get("resample") or "bilinear", say=say, tta=bool(ask.get("tta")))
+    big, done = chain(img, ask["passes"], ask.get("resample") or "bilinear", say=say, tta=bool(ask.get("tta")), seed=int(ask.get("seed") or 42))
     long = int(ask.get("long") or 0)
     if long and max(big.size) != long:                # his DF_Image_scale_to_side: the long side, Lanczos
         k = long / max(big.size)
@@ -275,6 +336,32 @@ def _main_chain(run, ask, img, src, shape, t0, t1):
     print(json.dumps({"n": 1, "shape": shape, "seed": int(ask.get("seed") or 0), "w": big.width, "h": big.height, "nsfw": None, "took": round(time.time() - t1, 1),
                       "kept": True, "file": name + ".png", "thumb": "thumbs/" + name + ".jpg",
                       "upscaled": {"from": src, "passes": done, "resample": ask.get("resample") or "bilinear", "long": long or None, "match": bool(ask.get("match"))}}), flush=True)
+    print(json.dumps({"done": True, "painter": "upscale", "took": round(time.time() - t0, 1)}), flush=True)
+
+
+def _main_finish(run, ask, img, src, shape, t0, t1):
+    """HERESY 2259: a painter's pass over an upscale in passes finished as the passes would have finished before it: the long side (his
+    DF_Image_scale_to_side, Lanczos), then the colours put back to the picture the passes began from (his ColorMatch, hm-mvgd-hm). No model:
+    nothing here asks the card."""
+    from PIL import Image
+    big, long = img, int(ask.get("long") or 0)
+    if long and max(big.size) != long:
+        k = long / max(big.size)
+        big = big.resize((max(1, round(big.width * k)), max(1, round(big.height * k))), Image.LANCZOS)
+    m = ask.get("match") or {}
+    if m:
+        p = KIT / "artist" / str(m.get("id") or "") / str(m.get("file") or "")
+        if not p.is_file():
+            raise RuntimeError("the picture whose colours to put back is not here any more")
+        big = match(big, Image.open(p).convert("RGB"))
+    name = f"01-{shape.replace(':', 'x')}-s{int(ask.get('seed') or 0)}-fin" + (str(max(big.size)) if long else "c")
+    big.save(run / (name + ".png"))
+    small = big.copy()
+    small.thumbnail((THUMB, THUMB), resample=3)
+    small.save(run / "thumbs" / (name + ".jpg"), "JPEG", quality=85, optimize=True)
+    print(json.dumps({"n": 1, "shape": shape, "seed": int(ask.get("seed") or 0), "w": big.width, "h": big.height, "nsfw": None, "took": round(time.time() - t1, 1),
+                      "kept": True, "file": name + ".png", "thumb": "thumbs/" + name + ".jpg",
+                      "upscaled": {"from": src, "finish": True, "long": long or None, "match": bool(m)}}), flush=True)
     print(json.dumps({"done": True, "painter": "upscale", "took": round(time.time() - t0, 1)}), flush=True)
 
 
@@ -300,7 +387,7 @@ def _main_batch(run, ask, t0):
             continue
         img = Image.open(p).convert("RGB")
         if ask.get("passes"):
-            big, done = chain(img, ask["passes"], ask.get("resample") or "bilinear", tta=tta)
+            big, done = chain(img, ask["passes"], ask.get("resample") or "bilinear", tta=tta, seed=seed or 42)
             long = int(ask.get("long") or 0)
             if long and max(big.size) != long:
                 f = long / max(big.size)

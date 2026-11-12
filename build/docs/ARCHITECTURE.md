@@ -871,8 +871,8 @@ request, which is the source of truth for the WebUI placeholders:
 ```json
 {
   "version": "...",
-  "model": "models/YuE2-3B-Q8_0.gguf",
-  "vae": "models/YuE2-Vae-F32.gguf",
+  "model": "models/engine/yue2/YuE2-3B-Q8_0.gguf",
+  "vae": "models/engine/vae/YuE2-Vae-F32.gguf",
   "sample_rate": 48000,
   "frame_rate": 25,
   "context": 24576,
@@ -988,11 +988,11 @@ int8, 13.2 kbit/s) and `NAC4` (per frame F16 scale plus 32 packed bytes,
 
 ```bash
 # encode a track to the Q8 reduced-bitrate format, decode auto-detects it
-./neural-codec --vae models/YuE2-Vae-F32.gguf --encode -i track.wav --q8
-./neural-codec --vae models/YuE2-Vae-F32.gguf --decode -i track.nac8 --format wav24
+./neural-codec --vae models/engine/vae/YuE2-Vae-F32.gguf --encode -i track.wav --q8
+./neural-codec --vae models/engine/vae/YuE2-Vae-F32.gguf --decode -i track.nac8 --format wav24
 
 # decode the latents a run dumped with yue-synth --latent
-./neural-codec --vae models/YuE2-Vae-F32.gguf --decode -i song.vae -o song.mp3 --format mp3
+./neural-codec --vae models/engine/vae/YuE2-Vae-F32.gguf --decode -i song.vae -o song.mp3 --format mp3
 ```
 
 ## mp3-codec reference

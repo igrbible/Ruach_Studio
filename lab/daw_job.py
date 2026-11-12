@@ -58,6 +58,25 @@ for s in info["strips"]:
     used[s["name"]] = path
 files = [{"name": "mix", "file": "mix.flac", "seconds": round(frames / info["rate"], 2)}]
 out.mkdir(parents=True, exist_ok=True)
+if spec.get("bounce"):                                 # HERESY 2316: what the members put into the master, a lane of its own
+    b = spec["bounce"]
+    y, report = daw_mix.bounce(info["rate"], [(n, x.astype(np.float64)) for n, x in zip(names, signals)] + [(daw.REST, residual)], spec["mix"], b["members"],
+                               dry=bool(b.get("dry")))   # HERESY 2366
+    pk = float(np.max(np.abs(y))) if y.size else 0.0
+    gain_db, fname = 0.0, "bounce.flac"
+    if pk > 0.999:                                    # above full scale: written lower, the lane raised by as much (its fader, a linear gain)
+        gain_db = round(20 * np.log10(pk / 0.999), 3)
+        if gain_db <= 12:
+            y = y / (10 ** (gain_db / 20))
+        else:                                         # more than the fader gives back: kept as it is, in floating point
+            gain_db, fname = 0.0, "bounce.wav"
+    if fname.endswith(".wav"):
+        sf.write(str(out / fname), y.T.astype(np.float32), info["rate"], subtype="FLOAT")
+    else:
+        sf.write(str(out / fname), np.clip(y.T, -1.0, 1.0).astype(np.float32), info["rate"], subtype="PCM_24")
+    files = [{"name": b["title"], "title": b["title"], "file": fname, "track": b["track"], "seconds": round(frames / info["rate"], 2)}]
+    print(json.dumps({"files": files, "report": report, "versions": used, "gain_db": gain_db, "took": round(time.time() - t0, 1)}, ensure_ascii=False, default=str))
+    sys.exit(0)
 if (spec.get("mix") or {}).get("schema") == daw_mix.SCHEMA:     # HERESY 1531: the Refiner's mixer
     mixed, report, printed = daw_mix.render(info["rate"], [(n, x.astype(np.float64)) for n, x in zip(names, signals)] + [(daw.REST, residual)],
                                            spec["mix"], keep=bool(spec.get("print")))

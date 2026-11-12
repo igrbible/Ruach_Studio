@@ -3,7 +3,7 @@
 ни камина, ни грома, ни воды, ни дождя, ни птиц»): ambient layers under a song.
 
 A layer is a bed (fire, rain, forest, waterfall, river, tropical birds), strikes (thunder) or a song (canary). Its sound comes from the banks
-(models/ambient/LAYER/: the steadiest stretches of field recordings, each with its source, licence and whether it may ship, bank.json) or
+(models/refiner/ambient/LAYER/: the steadiest stretches of field recordings, each with its source, licence and whether it may ship, bank.json) or
 from synthesis (fire after the fork's procedural_fire, rain, falling and running water, thunder's crack near and roll far, a canary's tours).
 A bed is looped from its stretches with crossfades and random starts, so it does not repeat to the ear. Then its shape: its level under the
 song, a fade in and out, swells and peaks, and if asked it breathes with the song (louder where the song is, within a few dB); thunder may
@@ -12,12 +12,14 @@ strike on the song's own peaks.
 import json
 from pathlib import Path
 
+import paths                       # HERESY 2330: where the weights live
+
 import numpy as np
 
 SR = 48000
 LAYERS = {"fire": "bed", "rain": "bed", "thunder": "strikes", "forest": "bed", "waterfall": "bed", "river": "bed", "birds": "bed", "canary": "song"}
 SYNTH = {"rain": ["synth"], "thunder": ["synth"]}   # 1934, 1936: only what his ear let pass (light rain, thunder); the rest out, its code kept
-BANK = ("models", "ambient")
+BANK = (paths.REFINER_AMBIENT,)
 
 
 # ---- the banks

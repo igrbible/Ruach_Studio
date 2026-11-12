@@ -1,0 +1,50 @@
+{
+ "id": "drama3",
+ "label": "Fish Audio Drama 3",
+ "module": "engine.py",
+ "python": {"cuda": ".venv/bin/python", "cpu": ".venv/bin/python"},
+ "need_mb": 7400,
+ "sample_rate": 44100,
+ "max_chars": 300,
+ "seed": true,
+ "top_k": false,
+ "stress": "acute",
+ "langs": ["ru", "uk", "he", "el", "en", "es", "it", "fr", "pt", "de", "ja", "zh"],
+ "tag_re": "\\[[^\\[\\]\\n]{1,80}\\]",
+ "tags": {
+  "open": "[", "close": "]", "form": "bare",
+  "groups": [
+   {"id": "emotion", "cat": "emotion", "place": "sentence", "items": ["calm", "tender", "sad", "angry", "scared", "surprised", "contemplative", "in awe", "determined", "amused", "bitter", "longing", "proud", "relieved", "enthusiastic"]},
+   {"id": "prosody", "cat": "prosody", "place": "sentence", "items": ["slowly", "fast", "very expressive", "low voice"]},
+   {"id": "pause", "cat": "prosody", "place": "inline", "items": ["pause", "long pause"]},
+   {"id": "style", "cat": "style", "place": "sentence", "items": ["whispering", "shouting"]},
+   {"id": "sfx", "cat": "sfx", "place": "inline", "items": ["sighs", "laughs", "crying", "humming"]}
+  ]
+ },
+ "style": {"kind": "bracket", "max": 160, "ph": "calm, warm, unhurried narration"},
+ "license": {"name": "Fish Audio Community License v1.0", "url": "https://huggingface.co/fishaudio/drama-3",
+  "terms": "Free for research and non-commercial use, and for commercial use while the annual revenue stays under USD 500,000; no hosted TTS or voice-cloning service for others; no voice of a real person cloned without consent; its watermark kept; nothing it makes used to train or distill another model.",
+  "credit": "Built with Fish Audio"},
+ "tiers": [
+  {"id": "speed", "quant": "Q4_K", "model": "drama-3-gguf/drama-3-experts-Q4_K-backbone-Q8_0.gguf", "device": "cuda", "grade": "green", "need_mb": 22528, "ram_gb": 6, "cel": 4, "threads": 16, "rtf": 0.62, "load_s": 60},
+  {"id": "quality", "quant": "Q6_K", "model": "drama-3-gguf/drama-3-experts-Q6_K-backbone-Q8_0.gguf", "device": "cuda", "grade": "green", "need_mb": 22528, "ram_gb": 14, "cel": 16, "threads": 16, "rtf": 1.16, "load_s": 75},
+  {"id": "mid-q4", "quant": "Q4_K", "model": "drama-3-gguf/drama-3-experts-Q4_K-backbone-Q8_0.gguf", "device": "cuda", "grade": "green", "need_mb": 16400, "ram_gb": 13, "cel": 20, "threads": 16, "rtf": 0.89, "load_s": 60, "named": false},
+  {"id": "mid-q6", "quant": "Q6_K", "model": "drama-3-gguf/drama-3-experts-Q6_K-backbone-Q8_0.gguf", "device": "cuda", "grade": "green", "need_mb": 15400, "ram_gb": 22, "cel": 28, "threads": 16, "rtf": 1.21, "load_s": 75, "named": false},
+  {"id": "ram-q4", "quant": "Q4_K", "model": "drama-3-gguf/drama-3-experts-Q4_K-backbone-Q8_0.gguf", "device": "cuda", "grade": "green", "need_mb": 7900, "ram_gb": 22, "cel": 40, "threads": 16, "rtf": 1.46, "load_s": 60, "opts": {"fish_drama3.perf_mode": "cuda_perf"}, "named": false},
+  {"id": "ram-q6", "quant": "Q6_K", "model": "drama-3-gguf/drama-3-experts-Q6_K-backbone-Q8_0.gguf", "device": "cuda", "grade": "green", "need_mb": 7900, "ram_gb": 30, "cel": 40, "threads": 16, "rtf": 1.52, "load_s": 75, "opts": {"fish_drama3.perf_mode": "cuda_perf"}, "named": false},
+  {"id": "ram", "quant": "Q8_0", "model": "drama-3-gguf/drama-3-Q8_0.gguf", "device": "cuda", "grade": "green", "need_mb": 7400, "ram_gb": 40, "cel": 40, "threads": 16, "rtf": 2.43, "load_s": 90},
+  {"id": "q8", "quant": "Q8_0", "model": "drama-3-gguf/drama-3-Q8_0.gguf", "device": "cuda", "grade": "green", "need_mb": 23600, "ram_gb": 20, "cel": 20, "threads": 16, "rtf": 1.37, "load_s": 90, "fallback": ["ram", "cpu"]},
+  {"id": "cpu", "quant": "Q8_0", "model": "drama-3-gguf/drama-3-Q8_0.gguf", "device": "cpu", "ram_gb": 44, "threads": 32, "rtf": 7.0, "load_s": 90},
+  {"id": "cpu-q6", "quant": "Q6_K", "model": "drama-3-gguf/drama-3-experts-Q6_K-backbone-Q8_0.gguf", "device": "cpu", "ram_gb": 36, "threads": 32, "rtf": 7.3, "load_s": 75},
+  {"id": "cpu-q4", "quant": "Q4_K", "model": "drama-3-gguf/drama-3-experts-Q4_K-backbone-Q8_0.gguf", "device": "cpu", "grade": "green", "ram_gb": 28, "threads": 32, "rtf": 7.8, "load_s": 60}
+ ],
+ "auto": {"auto-speed": ["speed", "quality", "mid-q4", "mid-q6", "ram-q4", "ram-q6", "ram"], "auto-quality": ["quality", "mid-q6", "ram-q6", "ram", "speed", "mid-q4", "ram-q4"]},
+ "needs": [{"id": "server", "any": ["build/audio.cpp/build/linux-cuda-release/bin/audiocpp_server", "build/audio.cpp/build/linux-cpu-release/bin/audiocpp_server",
+                                  "heresy/MISC/audio.cpp/build/linux-cuda-release/bin/audiocpp_server", "heresy/MISC/audio.cpp/build/linux-cpu-release/bin/audiocpp_server"],
+            "say": "audio.cpp's server is not built yet"},
+           {"id": "licence", "all": ["models/narrator/drama-3-gguf/LICENSE", "models/narrator/drama-3-gguf/NOTICE"],
+            "say": "the Fish Audio Community License files are not beside the model"}],
+ "setup": {"tier": "narrator", "command": "bash tools/narrator-setup.sh", "size": "24.8 GB"},
+ "first_run": "With 22 GB free on a card Q4_K reads a second of speech in about 0.6 s and Q6_K in about 1.2 s; with 15 to 16 GB free, more of their experts in the machine's memory, in about 0.9 to 1.2 s; with 8 GB free, all of them there (22 GB of memory for Q4_K, 30 for Q6_K, 40 for Q8_0), in about 1.5 s for Q4_K and Q6_K and 2.4 s for Q8_0; the processor alone reads about seven times slower than real time. The model loads at the first reading and stays loaded between runs on a card.",
+ "note": "Fish Audio Drama 3 (35B MoE, 3B active) through audio.cpp (Apache-2.0) from GGUF quants in models/narrator/drama-3-gguf, its LICENSE and NOTICE beside them. Built with Fish Audio."
+}

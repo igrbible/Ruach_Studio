@@ -12,6 +12,10 @@ The model's line, from its GGUF: the adapters merge-loras folded into it (heresy
 among them making it RS-FW of that epoch, an RS-TW epoch folded over it making it RS-TW of that one (HERESY 2111: the Tsunami
 Wave's merges list RS-FW 2.4 and then RS-TW 2.0, and read as RS-TW 2.0); else its file name (RS-TW-2.0…, RS-FW-2.4…); else, a
 YuE2 file or a merge of YuE2 with adapters (IRA, IRAE), YuE2. A model told by none of these is unknown, and then nothing is flagged.
+HERESY 2216: a folded adapter is known by its path under loras/ as the header names it; an RS-TW entry with no file at that path (the
+Tsunami Wave's adapter lives under its run's own folder) is known by its training step instead: the merge's record (models/<merge>/*.json
+lists the model's file, comfy-made.json beside it says tw_step) against the adapter's own metadata (step), its base the RS-FW epoch the
+header folded under it.
 
 The fit: «same» (the same line: YuE2 and its merges, RS-FW of the same epoch at any strength, RS-TW of the same epoch at any
 strength), «near» (RS-FW of another epoch: the same run, a little further on or back; HERESY 2111: RS-TW against RS-FW, either
@@ -25,6 +29,7 @@ import struct
 from pathlib import Path
 
 import merges
+import paths                       # HERESY 2330: where the weights live
 
 TW_RE = re.compile(r"RS-TW-e?0*(\d+(?:\.\d+)?)", re.I)          # HERESY 2111: YuE2-RS-TW-e002.0.safetensors, RS-TW-2.0x0.75, yue2_3b_RS-TW-2.0x0.75_bf16
 FW_RE = re.compile(r"RS-FW-e?0*(\d+(?:\.\d+)?)", re.I)          # YuE2-RS-FW-e002.4.safetensors, RS-FW-2.4x0.75, RS-FW-e003.4-m0.75
@@ -108,19 +113,21 @@ def adapter_line(kit, rel):
 
 def model_line(kit, name):
     """{line, label, inside}: the model in use, and the adapters folded into it (their ids under loras/)."""
-    p = Path(kit) / "models" / name
+    p = paths.engine_gguf(name, kit)
     if not ROOT_RE.match(name) or ".." in name or not p.is_file():
-        return {"line": None, "label": "unknown", "inside": []}
+        return {"line": None, "label": "unknown", "inside": [], "under": None, "gone": []}
     try:
         said = merges.header_value(p, merges.KEY) or ""
     except (OSError, ValueError):
         said = ""
-    inside, fw, tw = [], None, None
+    inside, fw, tw, gone = [], None, None, []
     for part in [x.strip() for x in said.split(";") if x.strip()]:
         file = part.split("@", 1)[0].strip()
+        got = line_of(Path(file).name)
         if file.startswith("loras/"):
             inside.append(file[len("loras/"):])
-        got = line_of(Path(file).name)
+            if not (Path(kit) / file).is_file():         # HERESY 2216: named, but not there: known by its step (report)
+                gone.append(got)
         if got and got[0] == "fw":                    # an RS-FW epoch folded in makes the model RS-FW of that epoch
             fw = got
         elif got and got[0] == "tw":                  # HERESY 2111: and an RS-TW epoch folded over it, RS-TW of that one
@@ -129,7 +136,26 @@ def model_line(kit, name):
     if not line:
         got = line_of(name)
         line = got if got and got[0] in ("fw", "tw") else ("yue2", "") if (said or (got and got[0] == "yue2")) else None
-    return {"line": line, "label": label(line), "inside": inside}
+    return {"line": line, "label": label(line), "inside": inside, "under": fw, "gone": gone}
+
+
+def merge_step(kit, name):
+    """HERESY 2216: the training step of the Tsunami Wave adapter the model <name> was folded from, as its merge's own record says it: a
+    models/<merge>/*.json whose files list the model, comfy-made.json beside it, tw_step. "" when no record names the model or says it."""
+    root = paths.at(paths.ENGINE_FINETUNES, kit)
+    for rec in sorted(root.glob("*/*.json")) if root.is_dir() else []:
+        if rec.name == "comfy-made.json":
+            continue
+        try:
+            files = json.loads(rec.read_text(encoding="utf-8")).get("files")
+        except (OSError, ValueError, AttributeError):
+            continue
+        if isinstance(files, dict) and name in files:
+            try:
+                return str(json.loads((rec.parent / "comfy-made.json").read_text(encoding="utf-8")).get("tw_step") or "")
+            except (OSError, ValueError, AttributeError):
+                return ""
+    return ""
 
 
 def fit(model, adapter):
@@ -149,11 +175,15 @@ def report(kit, model, ids):
     root = kit / "loras"
     if not ids:
         ids = sorted(str(f.relative_to(root)) for f in root.rglob("*.safetensors")) if root.is_dir() else []
+    step = merge_step(kit, str(model)) if any(g and g[0] == "tw" for g in m["gone"]) else ""   # HERESY 2216
     out = {}
     for rel in ids:
         rel = str(rel).strip()
         if not rel or rel.startswith("/") or ".." in rel.split("/"):
             continue
         line, how = adapter_line(kit, rel)
-        out[rel] = {"base": label(line), "how": how, "fit": fit(m["line"], line), "inside": rel in m["inside"]}
+        inside = rel in m["inside"]
+        if not inside and step and (root / rel).is_file():   # the Tsunami Wave's adapter under its run's folder: its step, over the epoch folded under it
+            inside = str(_meta(root / rel).get("step") or "") == step and (not m["under"] or line == m["under"])
+        out[rel] = {"base": label(line), "how": how, "fit": fit(m["line"], line), "inside": inside}
     return {"model": {"name": model, "label": m["label"], "known": m["line"] is not None}, "loras": out}

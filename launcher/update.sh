@@ -40,13 +40,17 @@ step "③ the page, and the engine when its code changed"
 ruach_tools || stop "cmake and ninja could not be put into .venv"
 bash build.sh --no-restart || stop "the build failed (build.sh says why above)"
 step "④ the models this release pins"
-Q=$(ruach_quant)
-bash fetch-models.sh ${Q:+--quant "$Q"} || stop "a download did not complete (fetch-models.sh says which above): Update again goes on from there"
+# 08.11.2026 (Viktor: «ничего лишнего не скачивалось … при апдейте версии Студии»): only what changed among the files here, said and asked
+# HERESY 2330: an install of 2.0.6 moved into models/<room>/ first (the Studio's start does it too, whichever comes first), so the update
+# finds every file where this version reads it
+.venv/bin/python lab/migrate_models.py --auto 2>/dev/null || python3 lab/migrate_models.py --auto || true
+bash fetch-models.sh --update; r=$?
+[ $r = 0 ] || [ $r = 5 ] || stop "a download did not complete (fetch-models.sh says which above): Update again goes on from there"
 rm -f tmp/update-unfinished
 # HERESY 1567: an older version's weights of models the Studio no longer reads (SDXL since 1405, Krea 2 since 1428, the sliders since
 # 1449) stay where it put them: said with their size and how to free the space, never removed here
 old=()
-for d in artwork/SDXL-Artwork-Model artwork/Krea-2-Muse artwork/Krea-2-Turbo; do [ -d "$d" ] && old+=("$d"); done
+for d in artwork/SDXL-Artwork-Model artwork/Krea-2-Muse artwork/Krea-2-Turbo models/artist/SDXL-Artwork-Model models/artist/Krea-2-Muse models/artist/Krea-2-Turbo; do [ -d "$d" ] && old+=("$d"); done   # paths: 2.0.6 (and where 2330's move put them)
 ls sliders/*.gguf >/dev/null 2>&1 && old+=("sliders/*.gguf")
 if [ ${#old[@]} -gt 0 ]; then
   echo

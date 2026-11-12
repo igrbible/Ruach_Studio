@@ -36,7 +36,7 @@ beats, tempo = V.beat_times(audio)
 check("a click every 0.5 s heard at about 120 bpm", 110 <= tempo <= 130 and len(beats) >= 30, (tempo, len(beats)))
 name = "20261030-180000-test"
 (kit / "user" / "videos").mkdir(parents=True)
-rows = [{"start": 0.0, "end": 4.13, "text": "a"}, {"start": 6.2, "end": 10.13, "text": "b"}, {"start": 12.2, "end": 16.62, "text": "c"}]
+rows = [{"start": 0.0, "end": 3.0, "text": "a"}, {"start": 3.13, "end": 6.0, "text": "b"}, {"start": 6.2, "end": 9.13, "text": "c"}, {"start": 9.3, "end": 12.0, "text": "d"}]   # HERESY 2356: shots of at most 5 s, three cuts inside one section
 p0 = V.make(kit, name, {"title": "t", "seconds": 20}, {"lyrics": ""}, rows)
 V.save(kit, name, {"scenes": [{"shot": f"s{i}"} for i in range(len(p0["shots"]))]})
 was = [(x["t0"], x["t1"]) for x in V.get(kit, name)["shots"]]
@@ -44,7 +44,7 @@ r = V.on_beat(kit, name, audio)
 p = V.get(kit, name)
 moved = [x for x in p["shots"] if x.get("as_sung")]
 check("on_beat: cuts moved onto the beats (each within 30 ms of a beat)", r["moved"] >= 2 and all(min(abs(x["t1"] - b) for b in beats) < 0.03 or min(abs(x["t0"] - b) for b in beats) < 0.03 for x in moved), (r, [(x["t0"], x["t1"]) for x in p["shots"]]))
-check("the edit on the timeline's undo", len(p.get("undo") or []) == 1 and [(x["t0"], x["t1"]) for x in p["undo"][0]] == was, p.get("undo"))
+check("the edit on the plan's history (2268: a step named by its strictness, the save before it a step of its own)", [(x["t0"], x["t1"]) for x in p["undo"][-1]["shots"]] == was and p["undo"][-1]["what"] == "cuts:beats", p.get("undo"))
 check("the plan says its tempo and what moved", p.get("beats", {}).get("moved") == r["moved"], p.get("beats"))
 cut = V.make(kit, name, {"title": "t", "seconds": 20}, {"lyrics": ""}, rows)
 check("«Cut it again» finds every moved shot's scene by its times as sung", [(x.get("scene") or {}).get("shot") for x in cut["shots"]] == [f"s{i}" for i in range(len(was))], [(x.get("scene") or {}).get("shot") for x in cut["shots"]])

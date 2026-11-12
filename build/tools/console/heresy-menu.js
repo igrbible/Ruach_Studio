@@ -209,7 +209,8 @@
       } else {
         var row = sel.dataset.hcRow === "1" || opts.every(function (o) { return text(o).length <= 16; });   // HERESY 1553: or as its own asks
         html = '<div class="hc-list' + (row ? " is-row" : "") + '" role="radiogroup">' + opts.map(function (o, i) {
-          return '<button type="button" role="radio" class="hc-opt" data-i="' + i + '" aria-checked="' + (i === cur) + '"' + (sel.disabled || o.disabled ? " disabled" : "") +
+          // HERESY 2300: an option's own class (the Reader's quant grade colours) and its title (the grade's word) go with its row
+          return '<button type="button" role="radio" class="hc-opt' + (o.className ? " " + esc(o.className) : "") + '" data-i="' + i + '" aria-checked="' + (i === cur) + '"' + (sel.disabled || o.disabled ? " disabled" : "") + (o.title ? ' title="' + esc(o.title) + '"' : "") +
             (own(o) ? ' translate="no"' : "") + '><i class="hc-dot" aria-hidden="true"></i><span>' + esc(text(o)) + "</span></button>";
         }).join("") + "</div>";
       }

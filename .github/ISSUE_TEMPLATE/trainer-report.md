@@ -17,4 +17,4 @@ The LoRA Trainer is tested on our own songs and voices and held at 90 %: your se
 
 **Anything the Trainer said** (its log, a refusal, an error), as it said it.
 
-**The studio**: its version (☰ → About, or the VERSION file), how it was installed (Pinokio or by hand), the system, the card and its memory.
+**The Studio**: its version (☰ → About, or the VERSION file), how it was installed (Pinokio or by hand), the system, the card and its memory.

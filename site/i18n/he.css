@@ -10,9 +10,9 @@
     src: url("/assets/fonts/noto-sans-hebrew/noto-sans-hebrew-600.woff2") format("woff2"); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
   @font-face { font-family: "Noto Sans Hebrew"; font-style: normal; font-weight: 700; font-display: swap;
     src: url("/assets/fonts/noto-sans-hebrew/noto-sans-hebrew-700.woff2") format("woff2"); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
-  [dir="rtl"] body, [dir="rtl"] .langs summary { font-family: "Noto Sans", "Noto Sans Hebrew", system-ui, sans-serif; }
+  [dir="rtl"] body, [dir="rtl"] .langs summary { font-family: "GFS Didot", "David CLM", "Noto Sans", "Noto Sans Hebrew", system-ui, sans-serif; }   /* 11.11.2026: the Hebrew letters in David CLM (the template's @font-face), Noto Sans Hebrew behind it */
   [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] .nums b, [dir="rtl"] .ghs b, [dir="rtl"] .ring-table thead tr:first-child th:first-child,
-  [dir="rtl"] .stereo-table thead tr:first-child th:first-child { font-family: "Tektur", "Noto Sans Hebrew", "Noto Sans", system-ui, sans-serif; }
+  [dir="rtl"] .stereo-table thead tr:first-child th:first-child { font-family: "Tektur", "GFS Didot", "David CLM", "Noto Sans Hebrew", "Noto Sans", system-ui, sans-serif; }
   [dir="rtl"] code { direction: ltr; unicode-bidi: isolate; }
 
   /* the logo «נפחות רוח» (MISC/claude-i18n/he/logo, final 06.11.2026): taller than the Latin line, so the hero's and the bar's are held to the

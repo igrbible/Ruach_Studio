@@ -77,7 +77,7 @@
 
   // ---- PARAMS in a line of chips
   function paramChips(p) {
-    if (!p || !Object.keys(p).length) return '<span class="row-hint">none yet — “From the Creator” takes them as the form has them now</span>';
+    if (!p || !Object.keys(p).length) return '<span class="row-hint">none yet — “From the Musician” takes them as the form has them now</span>';
     var chips = [];
     function chip(k, v) { chips.push('<span class="wr-chip"><b>' + esc(k) + "</b> " + esc(v) + "</span>"); }
     if (p.cot) chip("mode", p.cot);
@@ -107,11 +107,11 @@
     $("wrList").innerHTML = rows.length ? rows.map(function (d) {
       var on = state.doc && state.doc.id === d.id;
       return '<button type="button" class="wr-item' + (on ? " is-on" : "") + '" data-doc="' + esc(d.id) + '">' +
-        '<span class="wr-item-title">' + (d.id === hand ? '<span class="wr-hand-dot" title="In hand in the Creator">✎</span> ' : "") + esc(d.title) + "</span>" +
+        '<span class="wr-item-title">' + (d.id === hand ? '<span class="wr-hand-dot" title="In hand in the Musician">✎</span> ' : "") + esc(d.title) + "</span>" +
         '<span class="wr-item-ex" translate="no">' + esc(d.excerpt || d.style || "") + "</span>" +
         '<span class="wr-item-meta"><span>' + esc(when(d.updated)) + "</span>" + (d.takes ? " · <span>" + d.takes + " take" + (d.takes > 1 ? "s" : "") + "</span>" : "") +   // HERESY 1166
         (d.versions ? " · <span>" + d.versions + " v</span>" : "") + "</span></button>";
-    }).join("") : '<p class="row-hint wr-empty">' + (state.docs.length ? "Nothing for “" + esc(state.q) + "”." : "No documents yet. ＋ New, or “Save to Writer” in the Creator.") + "</p>";
+    }).join("") : '<p class="row-hint wr-empty">' + (state.docs.length ? "Nothing for “" + esc(state.q) + "”." : "No documents yet. ＋ New, or “Save to Writer” in the Musician.") + "</p>";
     paintRecent();                                       // HERESY 1858
   }
   // HERESY 1858 (Viktor 29.10.2026, UIX #2: «сделай»): with no document open, the room's right side shows the latest documents as cards; a click opens one
@@ -123,7 +123,7 @@
     box.hidden = !!state.doc || !docs.length;
     box.innerHTML = !docs.length ? "" : '<h3 class="wr-cap">' + esc(tr("Recent documents")) + '</h3><div class="wr-cards">' + docs.map(function (d) {
       return '<button type="button" class="wr-card" data-doc="' + esc(d.id) + '">' +
-        '<span class="wr-card-title" translate="no">' + (d.id === hand ? '<span class="wr-hand-dot" title="In hand in the Creator">✎</span> ' : "") + esc(d.title) + "</span>" +
+        '<span class="wr-card-title" translate="no">' + (d.id === hand ? '<span class="wr-hand-dot" title="In hand in the Musician">✎</span> ' : "") + esc(d.title) + "</span>" +
         '<span class="wr-card-ex" translate="no">' + esc(d.excerpt || d.style || "") + "</span>" +
         '<span class="wr-item-meta"><span>' + esc(when(d.updated)) + "</span>" + (d.takes ? " · <span>" + d.takes + " take" + (d.takes > 1 ? "s" : "") + "</span>" : "") +
         (d.versions ? " · <span>" + d.versions + " v</span>" : "") + "</span></button>";
@@ -152,7 +152,7 @@
     if (v) $("wrVersionSay").textContent = "Version of " + when(v.at) + (v.label ? " — " + v.label : "") + ". Read only.";
     $("wrParams").innerHTML = paramChips(src.params);
     paintNotes(); paintSizes(); paintTakes(); paintVersions(); paintState();
-    $("wrHandBtn").textContent = recall(HAND_KEY) === doc.id ? "In hand in the Creator ✎" : "Load into the Creator";
+    $("wrHandBtn").textContent = recall(HAND_KEY) === doc.id ? "In hand in the Musician ✎" : "Load into the Musician";
   }
   function paintSizes() {
     var lyr = $("wrLyrics").value, sty = $("wrStyle").value;
@@ -172,8 +172,8 @@
       return '<div class="wr-take' + (k ? "" : " is-gone") + '" data-take="' + esc(t.name) + '">' +
         (k ? '<button type="button" class="coll-play" data-wr-play="' + esc(t.name) + '" aria-label="Play">' + (window.HeresyIcons ? window.HeresyIcons.ui("play") : "▶") + '</button>' : '<span class="coll-play is-off">·</span>') +
         '<span class="wr-take-title">' + esc(k ? h.title(k) : t.name) + '</span><span class="dim">' + (k ? esc(h.clock(k.seconds) + " · " + h.ago(k.created)) : "not in the library") + "</span>" +
-        (k ? '<button type="button" class="btn ghost small" data-wr-go="create">Creator</button><button type="button" class="btn ghost small" data-wr-go="post">Refiner</button>' : "") + "</div>";
-    }).join("") : '<p class="row-hint">None yet. Load this document into the Creator: whatever is made while it is in hand lands here.</p>';
+        (k ? '<button type="button" class="btn ghost small" data-wr-go="create">Musician</button><button type="button" class="btn ghost small" data-wr-go="post">Refiner</button>' : "") + "</div>";
+    }).join("") : '<p class="row-hint">None yet. Load this document into the Musician: whatever is made while it is in hand lands here.</p>';
   }
   function paintVersions() {
     var vs = state.doc.versions || [];
@@ -243,14 +243,14 @@
   function intoCreate(doc) {   // HERESY 1167: true when the document went into the Creator
     var f = state.hooks.form(), hand = recall(HAND_KEY);
     var busy = (f.lyrics || "").trim() && f.lyrics !== doc.lyrics && hand !== doc.id;
-    (busy ? window.HeresyDialog.confirm("Put “" + doc.title + "” into the Creator?\n\nThe title, style and lyrics there now are replaced" +
-        (hand ? " (they belong to another document in the Writer, which keeps them)." : ". They are in no document: “Save to Writer” first, if they matter."), { ok: "Put it in the Creator" }) : Promise.resolve(true)).then(function (ok) {
+    (busy ? window.HeresyDialog.confirm("Put “" + doc.title + "” into the Musician?\n\nThe title, style and lyrics there now are replaced" +
+        (hand ? " (they belong to another document in the Writer, which keeps them)." : ". They are in no document: “Save to Writer” first, if they matter."), { ok: "Put it in the Musician" }) : Promise.resolve(true)).then(function (ok) {
       if (!ok) return false;
       state.hooks.load(doc);
       store(HAND_KEY, doc.id);
       paintList(); paintHand();
-      if (state.doc && state.doc.id === doc.id) $("wrHandBtn").textContent = "In hand in the Creator ✎";
-      toast("“" + doc.title + "” is in the Creator; what is made from it is linked to it");
+      if (state.doc && state.doc.id === doc.id) $("wrHandBtn").textContent = "In hand in the Musician ✎";
+      toast("“" + doc.title + "” is in the Musician; what is made from it is linked to it");
       return true;
     });
   }
@@ -341,7 +341,7 @@
         a.remove();
         setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
         var cv = b.creator_versions || [];                  // HERESY 1522: the Creator's versions in the same file
-        toast(cv.length ? tr("Writer backup: {0} documents and {1} in the trash, the Creator's versions of {2} titles, into {3}").replace("{0}", (b.docs || []).length)
+        toast(cv.length ? tr("Writer backup: {0} documents and {1} in the trash, the Musician's versions of {2} titles, into {3}").replace("{0}", (b.docs || []).length)
           .replace("{1}", (b.trash || []).length).replace("{2}", cv.length).replace("{3}", name)
           : tr("Writer backup: {0} documents and {1} in the trash, into {2}").replace("{0}", (b.docs || []).length)
           .replace("{1}", (b.trash || []).length).replace("{2}", name));
@@ -363,7 +363,7 @@
         var cv = n.creator_versions;                         // HERESY 1522: and the Creator's versions it brought
         toast(tr("Writer backup {0}: {1} new, {2} already here, {3} beside their namesakes as copies, {4} into the trash")
           .replace("{0}", f.name).replace("{1}", n.added || 0).replace("{2}", n.same || 0).replace("{3}", n.copies || 0).replace("{4}", n.trashed || 0) +
-          (cv ? " \u00b7 " + tr("the Creator's versions: {0} new, {1} titles new").replace("{0}", cv.versions || 0).replace("{1}", cv.titles || 0) : ""));
+          (cv ? " \u00b7 " + tr("the Musician's versions: {0} new, {1} titles new").replace("{0}", cv.versions || 0).replace("{1}", cv.titles || 0) : ""));
       }).catch(function (e) { toast(tr("Not imported: {0}").replace("{0}", e.message), true); });
     });
     ["wrTitle", "wrStyle", "wrLyrics", "wrNotes"].forEach(function (id) { $(id).addEventListener("input", changed); });
@@ -376,7 +376,7 @@
       if (!state.doc) return;
       var p = state.hooks.form().params;
       flush().then(function () { return api({ op: "put", id: state.doc.id, params: p }); })
-        .then(function (doc) { state.doc = doc; paintDoc(); toast("PARAMS taken from the Creator (the version before is kept)"); }).catch(function (e) { toast(e.message, true); });
+        .then(function (doc) { state.doc = doc; paintDoc(); toast("PARAMS taken from the Musician (the version before is kept)"); }).catch(function (e) { toast(e.message, true); });
     });
     $("wrParamsShow").addEventListener("click", function () {
       var pre = $("wrParamsJson");

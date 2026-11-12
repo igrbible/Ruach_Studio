@@ -11,6 +11,8 @@ import torch.nn.functional as F
 from safetensors.torch import load_file
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # lab/, for paths
+import paths  # noqa: E402   HERESY 2330: where the weights live
 
 
 def logmel(w, sr=48000):
@@ -23,7 +25,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("ours"); ap.add_argument("ref"); ap.add_argument("wav", nargs="?")
     ap.add_argument("--device", default="cuda"); ap.add_argument("--seconds", type=float, default=30)
-    ap.add_argument("--checkpoint", default="checkpoints/comfy/checkpoints/yue2_3b_bf16.safetensors")
+    ap.add_argument("--checkpoint", default=paths.COMFY + "/checkpoints/yue2_3b_bf16.safetensors")
     a = ap.parse_args()
     ours, ref = load_file(a.ours), load_file(a.ref)
     x, y = ours["latent"].float(), ref["latent"].float()

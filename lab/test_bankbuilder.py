@@ -121,6 +121,28 @@ with tempfile.TemporaryDirectory() as tmp:
     except ImportError as e:
         print("skip sfizz:", e)
 
+    # HERESY 2215: a note still swelling where its body starts is looped further on (one start at the body's head matched no end within
+    # 1.5 dB of it), a loop never spans a gap inside the note, and a key with a note long enough to loop takes no shorter one
+    R48 = 48000
+    sw = tone(57, 3.0, vib_ct=0, rate=R48).astype(np.float64)
+    t = np.arange(len(sw)) / R48
+    sw *= np.clip(0.33 + 0.67 * t / 1.2, 0, 1)                      # 9.6 dB of swell over its first 1.2 s, then steady
+    lp = B.find_loop(sw.copy(), R48, int(0.35 * R48), int(2.75 * R48))
+    check(lp is not None and lp[1] - lp[0] >= int(0.3 * R48), f"loop: a swelling note looped at {None if not lp else (round(lp[0] / R48, 2), round(lp[1] / R48, 2))} s")
+    gp = tone(57, 3.0, vib_ct=0, rate=R48).astype(np.float64)
+    gp[int(1.2 * R48):int(1.5 * R48)] *= 0.01                      # a gap of 0.3 s inside the note
+    lg = B.find_loop(gp.copy(), R48, int(0.35 * R48), int(2.75 * R48))
+    check(lg is None or lg[1] <= int(1.2 * R48) or lg[0] >= int(1.5 * R48), f"loop: none across a gap, {None if not lg else (round(lg[0] / R48, 2), round(lg[1] / R48, 2))} s")
+    y2 = np.concatenate([gap, tone(57, 2.2), gap, tone(57, 0.7), gap, tone(60, 0.7), gap])
+    fake_bank(kit, "dk2", "chromatic", y2)
+    B.notes(kit, "dk2")
+    short = [n for n in B.key_notes(kit, "dk2", 57) if n["ok"] and n["dur"] < B.LOOP_MIN_S]
+    m2 = B.build(kit, "dk2", "Made-up duduk two", round_robins=3, layers=1)
+    a3 = [x for x in m2["samples"] if x["key"] == 57]
+    c4 = [x for x in m2["samples"] if x["key"] == 60]
+    check(bool(short) and len(a3) == 1 and a3[0]["dur"] >= B.LOOP_MIN_S, f"build: A3 takes its {[x['dur'] for x in a3]} s note, not the {[n['dur'] for n in short]} s one")
+    check(len(c4) == 1 and c4[0]["dur"] < B.LOOP_MIN_S, f"build: C4 has only a short note, and keeps it ({[x['dur'] for x in c4]} s)")
+
     # blasts: a tekiah, a shevarim, a teruah, a tekiah gedolah, a long silence between the calls
     sil = np.zeros(int(1.5 * RATE), np.float32)
     short = np.zeros(int(0.15 * RATE), np.float32)

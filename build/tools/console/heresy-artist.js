@@ -21,9 +21,11 @@
   function alog(text, kind) { if (window.RuachArtistLog) window.RuachArtistLog.add(text, kind); }
   function painterLabel(r) {                            // HERESY 1322: an upscaler's run says so, with its factor; 1355: its passes
     if (r.kind === "upscale" && r.passes && r.passes.length) return tr("Upscale") + " · " + tr(r.passes.length + " passes");
+    if (r.kind === "upscale" && r.finish) return tr("Upscale") + " · " + (r.long ? tr("long side " + r.long) : tr("colours as the picture's"));   // HERESY 2259: a painter's pass finished
     return r.kind === "upscale" ? tr("Upscale") + " " + (r.target ? String(r.target).toUpperCase() : "\u00d7" + r.factor) : PAINTERS[r.painter] || PAST[r.painter] || r.painter || "";
   }
   function upShort(name) { return String(name).replace(/\.(pth|safetensors)$/, ""); }
+  function fileUps(list) { return (list || []).filter(function (u) { return u.kind !== "seedvr2"; }); }   // HERESY 2276: SeedVR2 is a pass's choice alone
   var KEY = { prompt: "yue2.arPrompt", shapes: "yue2.arShapes", count: "yue2.arCount", seed: "yue2.arSeed", painter: "yue2.arPainter",
     live: "yue2.arLive", look: "yue2.arLook", filter: "yue2.arFilter", size: "yue2.arSize" };
   // HERESY 1257 (Viktor 08.10.2026: «Ты предусмотрел галерею сгенерированного арта? Изучи интерфейс и функционал InvokeAI»):
@@ -54,7 +56,10 @@
   function api(path, body) {
     var opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
     return fetch("/lab" + path, opt).then(function (r) {
-      return r.json().catch(function () { return {}; }).then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || ("HTTP " + r.status)); return b; });
+      return r.json().catch(function () { return {}; }).then(function (b) {
+        if (!r.ok && r.status !== 202) { var e = new Error(b.error || ("HTTP " + r.status)); e.status = r.status; throw e; }   // its status kept, for a 404 that means «not here»
+        return b;
+      });
     });
   }
   // HERESY 1430 (the audit): a link from what the internet wrote, only when it is a web page's
@@ -77,6 +82,31 @@
   function shapesPicked() {
     return Array.prototype.filter.call(document.querySelectorAll("#arShapes input"), function (i) { return i.checked; })
       .map(function (i) { return i.value; });
+  }
+  // HERESY 2278 (Viktor 09.11.2026: the Artist's «Advanced» mode): one picture of a size of one's own instead of the shapes, its sides in
+  // multiples of 64 from 256 to the painter's ceiling, the card's need estimated as the sides change (/artist/sizes: the painter's need at
+  // 1328² and a slope for each megapixel beyond, the largest card here); a run out of memory at such a size offers a smaller one.
+  function advOn() { return !!($("arAdvOn") && $("arAdvOn").checked); }
+  function advSize() {
+    var L = state.sizes || { floor: 256, step: 64, long: 3072 };
+    var snap = function (v) { return Math.max(L.floor, Math.min(L.long, Math.round((+v || 0) / L.step) * L.step)); };
+    return [snap($("arAdvW").value), snap($("arAdvH").value)];
+  }
+  function advSay() {
+    if (!$("arAdvOn")) return;
+    var on = advOn(), L = state.sizes, el = $("arAdvSay");
+    $("arAdvSize").hidden = !on;
+    $("arShapes").classList.toggle("is-off", on);
+    if (!on || !L) {                                       // HERESY 2339: the limits unread are said, not left blank
+      el.textContent = on && state.sizesFailed ? tr("The size limits could not be read: {0}").replace("{0}", state.sizesFailed) : "";
+      el.classList.toggle("is-warn", !!(on && state.sizesFailed));
+      return;
+    }
+    var s = advSize(), px = s[0] * s[1], need = (L.need[$("arPainter").value] || 22500) + Math.max(0, Math.round((px - L.base_px) / 1e6 * L.mb_per_mpx));
+    var gb = function (mb) { return (mb / 1024).toFixed(1); }, big = px > L.px, over = L.card_mb && need > L.card_mb;
+    el.textContent = s[0] + "×" + s[1] + " · " + tr("about {gb} GB of a card").replace("{gb}", gb(need)) +
+      (big ? " · " + tr("too large for the painter") : over ? " · " + tr("more than your largest card ({gb} GB): it will stream from RAM, slowly, or run out of memory").replace("{gb}", gb(L.card_mb)) : "");
+    el.classList.toggle("is-warn", !!(big || over));
   }
   function seedAsked() { var v = $("arSeed").value.trim(); return /^\d{1,10}$/.test(v) ? +v : null; }
   function paintForm() {
@@ -246,8 +276,12 @@
     }
     sel.dispatchEvent(new Event("change"));             // the painter's own listeners: the note, the adapters' family, the sampling, kept
   }
+  // HERESY 2339 (the neutral-value pass): a refusal of the lab left the page's own list of painters standing without a word, and nothing asked again
+  // till F5; now it is said under the choice and asked again every 10 s for two minutes
   function loadPainters() {
+    clearTimeout(state.paintersTimer);
     return api("/artist/painters").then(function (d) {
+      state.paintersFailed = ""; state.paintersTries = 0;
       var sel = $("arPainter"), was = recall(KEY.painter) || sel.value || "qwen2512-q4", list = (d.painters || []).filter(function (p) { return p.ready; });
       // HERESY 1323: the painters not here yet (an fp8 fine-tune is the user's own file, not a fetch), said under the choice
       state.notHere = (d.painters || []).filter(function (p) { return !p.ready && !isFp8(p.key); }).map(function (p) { return p.label; });
@@ -262,7 +296,11 @@
       state.painted = true;                              // HERESY 1375: the choice is the lab's list now: kept from here on
       paintPainter();
       paintStage();                                      // HERESY 1443b: Letter it and Outpaint… on a stage drawn before the painters came
-    }).catch(function () { paintPainter(); });
+    }).catch(function (e) {                              // HERESY 2339: said, and asked again
+      state.paintersFailed = e.message || String(e);
+      if ((state.paintersTries = (state.paintersTries || 0) + 1) <= 12) state.paintersTimer = setTimeout(loadPainters, 10000);
+      paintPainter();
+    });
   }
   function paintPainter() {
     var p = PAINTER_INFO[$("arPainter").value] || {}, note = $("arPainterNote");
@@ -276,10 +314,11 @@
     }
     if (note) {
       var more = (state.notHere || []).length ? tr("More painters come from Engine → Models and LoRAs: " + state.notHere.join(", ")) : "";   // HERESY 1323; 1339: one sentence
-      note.hidden = !p.note && !more;
-      note.textContent = p.note ? tr(p.note) : more;
+      var unread = state.paintersFailed ? tr("The painters could not be read: {0}").replace("{0}", state.paintersFailed) : "";   // HERESY 2339
+      note.hidden = !p.note && !more && !unread;
+      note.textContent = unread || (p.note ? tr(p.note) : more);
       note.dataset.tip = note.textContent;              // HERESY 1345: an i, its words in its tip
-      note.classList.toggle("is-warn", p.key === "qwen21");
+      note.classList.toggle("is-warn", !!unread || p.key === "qwen21");
     }
     if (typeof paintRefAs === "function" && $("arRefAs")) paintRefAs();   // HERESY 1388: Qwen-Image 2.1 here or not
     paintLoras();
@@ -310,6 +349,7 @@
     if (PAINTERS[run.painter]) { var sa = sampAll(), sk = sampKey(run.painter); if (run.sampling) { sa[sk] = Object.assign(sampDefaults(run.painter), run.sampling); if (run.sampling.lightning != null) { sa[sk].lightOn = +run.sampling.lightning > 0; if (!(+run.sampling.lightning > 0)) delete sa[sk].lightning; } } else delete sa[sk]; keep(KEY.sampling, JSON.stringify(sa)); paintSampling(); }   // HERESY 1319; 1428: by the brush
     if (run.loras) setLoras(run.loras.map(function (l) { return { id: l.id, weight: l.weight }; }), FAMILY[run.painter]);   // HERESY 1316
     else paintLoras();
+    if (run.comfy && !run.grid) cfFromRun(run.comfy);   // HERESY 2332: its ComfyUI settings too
     if (run.id && run.kind !== "upscale") { lettersLoad(run.letters || {}); lettersKeep(); paintLetters(); }   // HERESY 1394: a whole run's
     keepForm();
     paintForm();
@@ -625,8 +665,262 @@
     });
     state.maskEditor = { canvas: cm, paint: function (x, y, rad) { var s0 = size.value; size.value = String(rad * 2); last = null; dab({ x: x, y: y }); last = null; size.value = s0; }, done: done, close: close };
   }
+  // HERESY 2332 (Viktor 09.11.2026: «выход из ComfyUI… перенести мои два воркфлоу»): his two ComfyUI workflows in the Artist. «ComfyUI's
+  // way» paints as ComfyUI does (lab/artist_comfy.py: the same seed, the same picture), with what his AIO QWEN IMAGE 2512 HERESY Draft #4
+  // asks besides the Sampling above: CFG beside Lightning, Skimmed CFG, the negative as nothing, words concatenated to the prompt, the seed
+  // variance on its first steps, a character adapter hooked to the prompt by keyframes, his text encoder and VAE, ModelSamplingFlux, a second
+  // pass from a step of its schedule; two buttons fill the form as his first and second pass. «Samplers grid» is his Ultimate Samplers
+  // Testing: one run of samplers × schedules × an adapter's strengths × fine-tunes × prompts, laid out on a board in its run.
+  KEY.comfy = "yue2.arComfy";
+  var CF_SAMPLERS = [["euler", "Euler"], ["er_sde", "ER-SDE"], ["res_2s", "RES 2s"], ["res_2s_ode", "RES 2s ODE"], ["res_3s", "RES 3s"], ["res_3s_ode", "RES 3s ODE"],
+    ["heunpp2", "Heun++ 2"], ["exp_heun_2_x0", "Exp Heun 2 x0"], ["exp_heun_2_x0_sde", "Exp Heun 2 x0 SDE"]];
+  var CF_SCHEDULES = [["simple", "Simple"], ["normal", "Normal"], ["sgm_uniform", "SGM uniform"], ["beta", "Beta"], ["beta57", "Beta 57"], ["kl_optimal", "KL optimal"],
+    ["karras", "Karras"], ["exponential", "Exponential"], ["bong_tangent", "Bong tangent"]];
+  var CF_HIS = { model: "Hyphoria", detail: "qwen-image-2512/PUBLIC/Detailz v1.safetensors",   // his public parts; his own adapters stay his pick (never named here)
+    enhancer: "qwen-image-2512/PUBLIC/Qwen Enhancer v1.safetensors", lightning: "qwen-image-2512/PUBLIC/QWEN-2512-Lightning-8steps-V1.0-bf16.safetensors" };
+  function cfKept() { try { var o = JSON.parse(recall(KEY.comfy) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } }
+  function cfOn() { return !!($("arCfOn") && $("arCfOn").checked); }
+  function cfRead() {                                   // the section as it stands
+    return { on: cfOn(), seed: $("arCfSeed").value.trim(), encoder: $("arCfEnc").value, vae: $("arCfVae").value, cfg: +$("arCfCfg").value || 1,
+      skim: +$("arCfSkim").value || 0, ms: $("arCfMs").value, zero: $("arCfZero").checked, neg: $("arCfNeg").value, also: $("arCfAlso").value,
+      varOn: $("arCfVarOn").checked, varStr: +$("arCfVarStr").value || 0, varSw: +$("arCfVarSw").value || 25, hook: $("arCfHook").value,
+      hookW: +$("arCfHookW").value || 0.8, hookTrig: $("arCfHookTrig").value.trim(), start: +$("arCfStart").value || 0, match: $("arCfMatch").checked,
+      main: $("arCfMain").checked, mainFrom: cfNum("arCfMainFrom", 0), mainTo: cfNum("arCfMainTo", 1), mainP0: cfNum("arCfMainP0", 30), mainP1: cfNum("arCfMainP1", 100),
+      mainHow: $("arCfMainHow").value || "ease_in" };   // HERESY 2360: his MAIN CONTROL
+  }
+  function cfNum(id, dflt) { var v = $(id).value; return v === "" || !isFinite(+v) ? dflt : +v; }
+  function cfMainPut(o) {                               // HERESY 2360: MAIN CONTROL's fields (his values where none were kept)
+    $("arCfMain").checked = !!o.main; $("arCfMainFrom").value = String(o.mainFrom != null ? o.mainFrom : 0); $("arCfMainTo").value = String(o.mainTo != null ? o.mainTo : 1);
+    $("arCfMainP0").value = String(o.mainP0 != null ? o.mainP0 : 30); $("arCfMainP1").value = String(o.mainP1 != null ? o.mainP1 : 100);
+    $("arCfMainHow").value = ["linear", "ease_in", "ease_out", "ease_in_out"].indexOf(o.mainHow) >= 0 ? o.mainHow : "ease_in";
+  }
+  function cfKeep() { keep(KEY.comfy, JSON.stringify(cfRead())); cfSay(); }
+  function cfPut(o) {                                   // the section from what was kept or a preset
+    $("arCfOn").checked = !!o.on; $("arCfSeed").value = o.seed || ""; $("arCfCfg").value = String(o.cfg || 4.5); $("arCfSkim").value = String(o.skim != null ? o.skim : 2.5);
+    $("arCfMs").value = o.ms === "flux" ? "flux" : "flow"; $("arCfZero").checked = o.zero !== false; $("arCfNeg").value = o.neg || ""; $("arCfAlso").value = o.also || "";
+    $("arCfVarOn").checked = !!o.varOn; $("arCfVarStr").value = String(o.varStr || 12); $("arCfVarSw").value = String(o.varSw || 25);
+    $("arCfHookW").value = String(o.hookW || 0.8); $("arCfHookTrig").value = o.hookTrig || ""; $("arCfStart").value = String(o.start || 0); $("arCfMatch").checked = !!o.match;
+    cfMainPut(o);
+    cfParts(o.encoder, o.vae);
+    cfHooks(o.hook || "");
+    cfSay();
+  }
+  function cfParts(enc, vae) {                          // his encoder and VAE offered when their files are here (/artist/painters «comfy»)
+    var p = state.cfParts || { encoders: ["qwen"], vaes: ["qwen"] }, name = { qwen: "Qwen's own", abliterated: "Qwen2.5-VL abliterated (his)", clear: "Clear VAE (his)" };
+    $("arCfEnc").innerHTML = p.encoders.map(function (k) { return '<option value="' + esc(k) + '">' + esc(tr(name[k] || k)) + "</option>"; }).join("");
+    $("arCfVae").innerHTML = p.vaes.map(function (k) { return '<option value="' + esc(k) + '">' + esc(tr(name[k] || k)) + "</option>"; }).join("");
+    $("arCfEnc").value = p.encoders.indexOf(enc) >= 0 ? enc : "qwen";
+    $("arCfVae").value = p.vaes.indexOf(vae) >= 0 ? vae : "qwen";
+  }
+  function cfHooks(pick) {                              // the adapters of Qwen-Image 2512 the library has, for the hooked one
+    var rows = loraRows("qwen-image-2512"), sel = $("arCfHook"), was = pick != null ? pick : sel.value;
+    sel.innerHTML = '<option value="">' + esc(tr("none")) + "</option>" + rows.map(function (r) {
+      return '<option value="' + esc(r.id) + '" translate="no">' + esc(loraName(r, r.id)) + "</option>";
+    }).join("") + (was && !rows.some(function (r) { return r.id === was; }) ? '<option value="' + esc(was) + '" translate="no">' + esc(String(was).split("/").pop().replace(/\.safetensors$/, "")) + "</option>" : "");
+    sel.value = was || "";
+  }
+  function cfSay() {
+    var o = cfRead();
+    if (state.cfOld) { $("arComfySay").textContent = tr("This lab has no ComfyUI's way yet: a restart of the lab brings it"); return; }
+    $("arComfySay").textContent = !o.on ? tr("the Artist's own way") : "CFG " + o.cfg + (o.skim ? " · skim " + o.skim : "") + (o.hook ? " · " + tr("hooked adapter") : "") +
+      (o.hook && o.main ? " · MAIN CONTROL" : "") + (o.encoder !== "qwen" ? " · " + o.encoder : "") + (o.vae !== "qwen" ? " · " + o.vae : "") + (o.start ? " · " + tr("from step " + o.start) : "");
+  }
+  function cfBody(again) {                              // the run's «comfy», or null when off
+    var o = cfRead();
+    if (!o.on) return null;
+    var c = { cfg: o.cfg, skim: o.skim, zero_neg: o.zero, encoder: o.encoder, vae: o.vae, sampling: o.ms === "flux" ? { kind: "flux", max_shift: 3, base_shift: 0.5 } : { kind: "flow", shift: 1.15 } };
+    if (o.neg.trim()) c.negative = o.neg.trim();     // made nothing too: its length shapes the empty negative, as in ComfyUI
+    if (o.also.trim()) c.also = o.also.trim();
+    if (o.seed && /^\d{1,20}$/.test(o.seed) && !again) c.seed = o.seed;
+    if (o.varOn) c.variance = { pct: 50, strength: o.varStr, switch: o.varSw };
+    if (o.hook) c.hook = { id: o.hook, weight: o.hookW, trigger: o.hookTrig, count: 12 };
+    if (o.hook && o.main) c.hook.main = { from: o.mainFrom, to: o.mainTo, how: o.mainHow, start: Math.min(o.mainP0, 99) / 100, end: Math.max(o.mainP1, Math.min(o.mainP0, 99) + 1) / 100 };   // HERESY 2360
+    return c;
+  }
+  function cfFromRun(c) {                               // a run's «comfy» back into the section (To the form)
+    var ms = c.sampling || {};
+    cfPut({ on: true, seed: c.seed != null ? String(c.seed) : "", encoder: c.encoder || "qwen", vae: c.vae || "qwen", cfg: c.cfg || 1, skim: c.skim || 0,
+      ms: ms.kind === "flux" ? "flux" : "flow", zero: c.zero_neg !== false, neg: c.negative || "", also: c.also || "", varOn: !!c.variance,
+      varStr: (c.variance || {}).strength || 12, varSw: (c.variance || {}).switch || 25, hook: (c.hook || {}).id || "", hookW: (c.hook || {}).weight || 0.8,
+      hookTrig: (c.hook || {}).trigger || "", start: c.start || 0, match: !!c.match, main: !!(c.hook || {}).main,   // HERESY 2360: its MAIN CONTROL too
+      mainFrom: ((c.hook || {}).main || {}).from, mainTo: ((c.hook || {}).main || {}).to, mainHow: ((c.hook || {}).main || {}).how,
+      mainP0: ((c.hook || {}).main || {}).start != null ? Math.round(c.hook.main.start * 100) : null, mainP1: ((c.hook || {}).main || {}).end != null ? Math.round(c.hook.main.end * 100) : null });
+    cfKeep();
+  }
+  function cfPassBody() {                               // a second pass's «comfy»: from its step, its colours matched as asked
+    var c = cfBody();
+    if (!c) return null;
+    var o = cfRead();
+    if (o.start > 0) c.start = o.start;
+    if (o.match) c.match = true;
+    delete c.seed;
+    return c;
+  }
+  function cfBrush(model) {                             // his painter: Qwen-Image 2512 in fp8, the fine-tune named (Hyphoria in AIO #4)
+    var opt = [].filter.call($("arBrush").options, function (o) { return o.value.indexOf("qwen2512-fp8|") === 0 && o.value.toLowerCase().indexOf(model.toLowerCase()) >= 0; })[0];
+    if (opt) { $("arBrush").value = opt.value; pickBrush(); }
+    return !!opt;
+  }
+  function cfSampling(s) { var key = $("arPainter").value, all = sampAll(); all[sampKey(key)] = Object.assign(sampDefaults(key), s); keep(KEY.sampling, JSON.stringify(all)); paintSampling(); }
+  function cfPreset(which) {                            // his AIO #4, as its saved graph runs it
+    if (!cfBrush(CF_HIS.model)) toast(tr("His fine-tune Hyphoria is not among the brushes here: the brush stays"), "bad");
+    var o = Object.assign(cfRead(), { on: true, cfg: 4.5, skim: 2.5, ms: "flux", zero: true, varOn: true, varStr: 12, varSw: 25, encoder: "abliterated", vae: "clear",
+      main: true, mainFrom: 0, mainTo: 1, mainHow: "ease_in", mainP0: 30, mainP1: 100 });   // HERESY 2360: his MAIN CONTROL as he set it, working
+    if (o.hook) o.hookW = 0.8;                         // the hooked adapter and its trigger: the one picked here, kept
+    if (which === 1) {
+      Array.prototype.forEach.call(document.querySelectorAll("#arShapes input"), function (i) { i.checked = i.value === "16:9"; });
+      if ($("arAdvOn").checked) { $("arAdvOn").checked = false; keep("yue2.arAdv", null); advSay(); }
+      cfSampling({ steps: 12, sampler: "er_sde", schedule: "bong_tangent", lightOn: true, lightning: 0.55, cfg: 4 });
+      setLoras([]);
+      o.start = 0; o.match = false;
+    } else {
+      cfSampling({ steps: 60, sampler: "er_sde", schedule: "bong_tangent", lightOn: false, cfg: 4 });
+      setLoras([{ id: CF_HIS.detail, weight: 0.6 }, { id: CF_HIS.enhancer, weight: 0.7 }]);
+      keep("yue2.arSpNoise", "1.0");                    // his InjectLatentNoise+ as his QWEN2_00075 was made (HERESY 2360; the saved graph has 0.6)
+      o.start = 20; o.match = true;
+    }
+    cfPut(o); cfKeep(); keepForm(); paintForm();
+    $("arComfy").open = true;
+    toast(tr(which === 1 ? "His AIO #4 first pass in the form: write the prompt and Draw; the second pass from the picture's Second pass… ×2"
+      : "His AIO #4 second pass in the form: on a picture, Second pass… ×2; then Passes… for his 8K chain"));
+  }
+  // ---- the grid
+  function gridChecks(id, list, on) {
+    $(id).innerHTML = list.map(function (x) { return '<label class="chip ar-grid-chip"><input type="checkbox" value="' + esc(x[0]) + '"' + (on.indexOf(x[0]) >= 0 ? " checked" : "") + ' /> <span translate="no">' + esc(x[1]) + "</span></label>"; }).join("");
+  }
+  function gridPicked(id) { return [].filter.call(document.querySelectorAll("#" + id + " input"), function (i) { return i.checked; }).map(function (i) { return i.value; }); }
+  function gridNums(id, lo, hi) { return $(id).value.split(/[,;\s]+/).filter(Boolean).map(Number).filter(function (v) { return isFinite(v) && v >= lo && v <= hi; }); }
+  function gridBody() {
+    var g = { samplers: gridPicked("arGridSamplers"), schedules: gridPicked("arGridSchedules"), steps: gridNums("arGridSteps", 1, 100).slice(0, 4), cfgs: gridNums("arGridCfgs", 1, 10).slice(0, 4),
+      prompts: $("arGridPrompts").value.split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 8), seeds: +$("arGridSeeds").value || 1 };
+    if (!g.prompts.length && $("arPrompt").value.trim()) g.prompts = [$("arPrompt").value.trim()];
+    var ad = $("arGridAdapter").value, ws = gridNums("arGridWeights", -2, 2).slice(0, 8);
+    if (ad && ws.length) g.adapter = { id: ad, weights: ws };
+    g.fixed = lorasNow().filter(function (l) { return !l.muted && +l.weight !== 0 && l.id !== ad; }).slice(0, 4).map(function (l) { return { id: l.id, weight: +l.weight }; });
+    if (fp8Now()) g.models = [$("arModel").value];
+    return g;
+  }
+  function gridCount() {
+    var g = gridBody();
+    return Math.max(1, g.samplers.length) * Math.max(1, g.schedules.length) * Math.max(1, g.steps.length) * Math.max(1, g.cfgs.length) * Math.max(1, g.prompts.length) *
+      Math.max(1, g.seeds) * Math.max(1, g.adapter ? g.adapter.weights.length : 1);
+  }
+  function gridSay() {
+    var n = gridCount();
+    $("arGridCount").textContent = tr(countOf(n, "picture", "pictures")) + (n > 64 ? " · " + tr("64 at most") : "");
+    $("arGridSay").textContent = gridPicked("arGridSamplers").length + " × " + gridPicked("arGridSchedules").length;
+    $("arGridDraw").disabled = !!state.cfOld || n > 64 || !/^qwen2512/.test($("arPainter").value);
+    keep("yue2.arGrid", JSON.stringify({ samplers: gridPicked("arGridSamplers"), schedules: gridPicked("arGridSchedules"), steps: $("arGridSteps").value, cfgs: $("arGridCfgs").value,
+      adapter: $("arGridAdapter").value, weights: $("arGridWeights").value, prompts: $("arGridPrompts").value, seeds: $("arGridSeeds").value }));
+  }
+  function gridAdapters(pick) {
+    var rows = loraRows("qwen-image-2512"), sel = $("arGridAdapter"), was = pick != null ? pick : sel.value;
+    sel.innerHTML = '<option value="">' + esc(tr("none")) + "</option>" + rows.map(function (r) { return '<option value="' + esc(r.id) + '" translate="no">' + esc(loraName(r, r.id)) + "</option>"; }).join("");
+    sel.value = rows.some(function (r) { return r.id === was; }) ? was : "";
+  }
+  function gridHis() {                                  // his grid «LoRA Weight #6»: three samplers × three schedules, 16 steps, CFG 1.2
+    gridChecks("arGridSamplers", CF_SAMPLERS, ["exp_heun_2_x0_sde", "er_sde", "res_3s"]);
+    gridChecks("arGridSchedules", CF_SCHEDULES, ["beta57", "kl_optimal", "bong_tangent"]);
+    $("arGridSteps").value = "16"; $("arGridCfgs").value = "1.2"; $("arGridSeeds").value = "1";
+    if ($("arGridAdapter").value) $("arGridWeights").value = "0.9";   // the stepped adapter: the one picked here
+    if (loraFind(CF_HIS.lightning)) setLoras([{ id: CF_HIS.lightning, weight: 0.8 }]);
+    gridSay();
+    toast(tr("His Ultimate Samplers Testing grid in the form: the fine-tune is the brush's; prompts one a line (empty: the prompt above)"));
+  }
+  function drawGrid() {
+    if (runsFull()) return toast(tr("Two runs at a time: the next one can be asked when one of them ends"), "bad");
+    var g = gridBody();
+    if (!g.prompts.length) return toast(tr("Write what to paint first"), "bad");
+    if (!g.samplers.length || !g.schedules.length) return toast(tr("Pick a sampler and a schedule at least"), "bad");
+    var body = { painter: $("arPainter").value, shapes: shapesPicked().slice(0, 1), seed: seedAsked(), grid: g, preview: $("arLive").checked,
+      comfy: { zero_neg: $("arCfZero").checked, negative: $("arCfNeg").value.trim(), encoder: $("arCfEnc").value, vae: $("arCfVae").value } };
+    if (fp8Now()) body.model = $("arModel").value;
+    if (advOn()) { body.size = advSize(); body.shapes = []; }
+    if (!body.shapes.length && !body.size) return toast(tr("Pick a shape: 1:1, 16:9 or 9:16"), "bad");
+    if (state.take) body.take = state.take.name;
+    alog(tr("Grid asked:") + " " + g.samplers.join(", ") + " × " + g.schedules.join(", ") + " · " + tr(countOf(gridCount(), "picture", "pictures")));
+    return api("/artist/draw", body).then(function (run) {
+      state.pinSel = false;
+      state.runs.unshift(run);
+      paintRuns();
+      toast(tr("The grid: " + countOf(run.of, "picture", "pictures") + " in one run, the painter loaded once; it waits for a card with room"));
+      schedule(1500);
+    }).catch(function (e) { toast(tr("No grid: " + e.message), "bad"); alog(tr("No grid:") + " " + e.message, "bad"); });
+  }
+  function gridAgain(r) {                              // a grid once more: its own axes, adapters and fine-tunes, from a new seed
+    var ax = (r.grid && r.grid.axes) || {}, cells = (r.grid && r.grid.cells) || [], prompts = [];
+    cells.forEach(function (c) { if (prompts.indexOf(c.prompt) < 0) prompts.push(c.prompt); });
+    var fixed = Object.keys((cells[0] || {}).loras || {}).filter(function (id) { return id !== ax.adapter; }).map(function (id) { return { id: id, weight: cells[0].loras[id] }; });
+    var g = { samplers: ax.samplers, schedules: ax.schedules, steps: ax.steps, cfgs: ax.cfgs, prompts: prompts, seeds: (ax.seeds || [1]).length, fixed: fixed };
+    if (ax.adapter) g.adapter = { id: ax.adapter, weights: ax.stepped };
+    if (ax.models && ax.models[0]) g.models = ax.models;
+    var body = { painter: r.painter, shapes: r.shapes, seed: null, grid: g, comfy: r.comfy || {}, preview: $("arLive").checked };
+    if (r.model) body.model = r.model;
+    if (r.size) { body.size = r.size; body.shapes = []; }
+    return api("/artist/draw", body).then(function (run) { state.runs.unshift(run); paintRuns(); schedule(1500); toast(tr("The grid once more, from a new seed")); })
+      .catch(function (e) { toast(tr("No grid: " + e.message), "bad"); });
+  }
+  function boardHtml(r) {                               // a grid's pictures as his dashboard lays them: samplers down, schedules across, a table a group
+    var ax = (r.grid && r.grid.axes) || {}, cells = (r.grid && r.grid.cells) || [], byN = {};
+    (r.pictures || []).forEach(function (p, i) { byN[p.n] = { p: p, i: i }; });
+    var groups = [], seen = {};
+    cells.forEach(function (c, k) {
+      var key = [c.model, c.prompt_i, c.seed, c.steps, c.cfg, JSON.stringify(c.loras)].join("|");
+      if (!seen[key]) { seen[key] = { c: c, at: {} }; groups.push(seen[key]); }
+      seen[key].at[c.sampler + "|" + c.schedule] = k + 1;
+    });
+    var nm = function (list, v) { var x = list.filter(function (y) { return y[0] === v; })[0]; return x ? x[1] : v; };
+    return groups.map(function (gr) {
+      var c = gr.c, head = [c.model ? String(c.model).replace(/\.safetensors$/, "") : "", tr("prompt " + (c.prompt_i + 1)), tr("seed") + " " + c.seed, tr(c.steps + " steps"), "CFG " + c.cfg]
+        .concat(Object.keys(c.loras || {}).map(function (id) { return id.split("/").pop().replace(/\.safetensors$/, "") + " " + c.loras[id]; })).filter(Boolean).join(" · ");
+      return '<div class="ar-board"><div class="ar-board-head" translate="no">' + esc(head) + '</div><div class="ar-board-grid" style="--cols:' + (ax.schedules || []).length + '">' +
+        '<span class="ar-board-corner"></span>' + (ax.schedules || []).map(function (s) { return '<span class="ar-board-col" translate="no">' + esc(nm(CF_SCHEDULES, s)) + "</span>"; }).join("") +
+        (ax.samplers || []).map(function (sm) {
+          return '<span class="ar-board-row" translate="no">' + esc(nm(CF_SAMPLERS, sm)) + "</span>" + (ax.schedules || []).map(function (sc) {
+            var n = gr.at[sm + "|" + sc], got = n && byN[n];
+            return got ? picHtml(r, got.p, got.i) : '<span class="ar-board-wait">' + esc(n ? (live(r) ? "…" : "✕") : "") + "</span>";
+          }).join("");
+        }).join("") + "</div></div>";
+    }).join("");
+  }
+  function cfInit() {
+    gridChecks("arGridSamplers", CF_SAMPLERS, []);
+    gridChecks("arGridSchedules", CF_SCHEDULES, []);
+    var g = {};
+    try { g = JSON.parse(recall("yue2.arGrid") || "{}") || {}; } catch (e) { g = {}; }
+    gridChecks("arGridSamplers", CF_SAMPLERS, g.samplers || ["er_sde"]);
+    gridChecks("arGridSchedules", CF_SCHEDULES, g.schedules || ["simple", "beta57", "bong_tangent"]);
+    if (g.steps) $("arGridSteps").value = g.steps;
+    if (g.cfgs) $("arGridCfgs").value = g.cfgs;
+    if (g.weights) $("arGridWeights").value = g.weights;
+    if (g.prompts) $("arGridPrompts").value = g.prompts;
+    if (g.seeds) $("arGridSeeds").value = g.seeds;
+    gridAdapters(g.adapter || "");
+    cfPut(cfKept());
+    // a lab of before this (its painters say nothing of «comfy») would paint the Artist's own way and say nothing: the section waits for its restart
+    api("/artist/painters").then(function (d) {
+      state.cfOld = !(d && d.comfy);
+      if (!state.cfOld) { state.cfParts = d.comfy; var o = cfKept(); cfParts(o.encoder, o.vae); }
+      $("arCfOn").disabled = state.cfOld; $("arGridDraw").disabled = state.cfOld || $("arGridDraw").disabled;
+      if (state.cfOld) $("arCfOn").checked = false;
+      cfSay();
+    }).catch(function () { /* the painters said nothing: kept as it is */ });
+    $("arComfy").addEventListener("change", cfKeep);
+    $("arComfy").addEventListener("input", function (e) { if (e.target.tagName === "TEXTAREA" || e.target.type === "text") cfKeep(); });
+    $("arComfy").addEventListener("toggle", function () { if (this.open) cfHooks(); });
+    $("arCfP1").addEventListener("click", function () { cfPreset(1); });
+    $("arCfP2").addEventListener("click", function () { cfPreset(2); });
+    $("arGrid").addEventListener("change", gridSay);
+    $("arGrid").addEventListener("input", gridSay);
+    $("arGrid").addEventListener("toggle", function () { if (this.open) { gridAdapters(); gridSay(); } });
+    $("arGridDraw").addEventListener("click", drawGrid);
+    $("arGridHis").addEventListener("click", gridHis);
+    $("arPainter").addEventListener("change", gridSay);
+    gridSay();
+  }
   function draw(again) {
     if (runsFull()) return toast(tr("Two runs at a time: the next one can be asked when one of them ends"), "bad");   // HERESY 1340
+    if (again && again.grid) return gridAgain(again);   // HERESY 2332: a grid once more, its own axes, a new seed
     var body = again ? { prompt: again.prompt, shapes: again.shapes, count: again.count, seed: null, painter: again.painter }
       : (function () { if (state.seedMode) state.seedMode.before(); return { prompt: $("arPrompt").value.trim(), shapes: shapesPicked(), count: +$("arCount").value || 1, seed: seedAsked(), painter: $("arPainter").value }; })();   // HERESY 1330: the seed as its mode wants it
     if (again && again.model) body.model = again.model;                 // HERESY 1318: the fp8 fine-tune
@@ -635,6 +929,9 @@
     // lines above, and the form's fine-tune hung on «no sampling of its own»: with his 16 steps, Euler SDE and Beta it was never sent
     var smp = again ? again.sampling : samplingBody();                  // HERESY 1319
     if (smp && Object.keys(smp).length) body.sampling = smp;
+    var cfb = again ? (again.comfy ? JSON.parse(JSON.stringify(again.comfy)) : null) : cfBody();   // HERESY 2332: ComfyUI's way, the run's own for Again
+    if (cfb && again) { delete cfb.seed; if (cfb.hook) delete cfb.hook.mb; }   // Again: from a new seed
+    if (cfb) body.comfy = cfb;
     if (again && again.ref) { body.ref = { id: again.id, file: again.ref }; body.strength = again.strength; if (again.fit) body.fit = true; }   // HERESY 1305: its own; 1307
     else if (!again && state.ref) { body.ref = state.ref.data || { id: state.ref.id, file: state.ref.file }; body.strength = +$("arRefStr").value; }
     if (again && again.ref && again.inject) body.inject = again.inject;   // HERESY 1385: the extra noise, the run's own or the form's
@@ -677,7 +974,8 @@
     if (body.qwen21Only) { ls = []; delete body.qwen21Only; }      // HERESY 1388: the form's adapters are its painter's family, not 2.1's
     if (ls.length) body.loras = ls.map(function (l) { return l.keys ? { id: l.id, weight: +l.weight, keys: l.keys } : { id: l.id, weight: +l.weight }; });   // HERESY 1365
     if (!body.prompt && !(body.letters && body.letters.way === "letter")) return toast(tr("Write what to paint first"), "bad");
-    if (!body.shapes.length) return toast(tr("Pick a shape: 1:1, 16:9 or 9:16"), "bad");
+    if (advOn()) { body.size = advSize(); body.shapes = []; }   // HERESY 2278: a size of one's own instead of the shapes
+    if (!body.shapes.length && !body.size) return toast(tr("Pick a shape: 1:1, 16:9 or 9:16"), "bad");
     state.sending = true;
     paintForm();
     alog(tr("Draw asked:") + " " + (PAINTERS[body.painter] || body.painter) + (body.model ? " · " + String(body.model).replace(/\.safetensors$/, "") : "") + " · " + body.shapes.join(", ") +
@@ -787,6 +1085,8 @@
       paintForm();                                       // HERESY 1270: Stop back to Draw when the run ends
       schedule();
     }).catch(function (e) {
+      // HERESY 2274 (Viktor 09.11.2026): a 404 is an answer: a lab of an older Studio, without the Artist's room
+      if (e.status === 404) { $("arRuns").innerHTML = '<p class="ar-empty">' + esc(tr("This lab has no Artist room (an older Studio): update it")) + "</p>"; return; }
       $("arRuns").innerHTML = '<p class="ar-empty">' + esc(tr("The lab does not answer:")) + " " + esc(e.message) + "</p>";
     });
   }
@@ -800,7 +1100,8 @@
       (r.waiting ? ' <span class="ar-why">' + esc(r.waiting) + "</span>" : "") +
       ' <button type="button" class="btn ghost small" data-act="cancel">' + esc(tr("Off the queue")) + "</button>";
     if (r.status === "running") return '<span class="ar-state is-run">' + esc(tr("drawing " + (r.pictures || []).length + " of " + r.of + (r.gpu != null ? " · GPU " + r.gpu : ""))) + "</span>";
-    if (r.status === "failed") return '<span class="ar-state is-bad">' + esc(tr("failed")) + "</span> " + '<span class="ar-why" translate="no">' + esc(r.error || "") + "</span>";
+    if (r.status === "failed") return '<span class="ar-state is-bad">' + esc(tr("failed")) + "</span> " + '<span class="ar-why" translate="no">' + esc(r.error || "") + "</span>" +
+      (r.smaller ? ' <button type="button" class="btn ghost small" data-act="smaller">' + esc(tr("Try {size}").replace("{size}", r.smaller[0] + "×" + r.smaller[1])) + "</button>" : "");   // HERESY 2278
     if (r.status === "stopped") {                       // HERESY 1270
       var k0 = (r.pictures || []).filter(function (p) { return p.kept; }).length;
       return '<span class="ar-state is-bad">' + esc(tr("stopped")) + "</span> " + '<span class="ar-why">' + esc(tr(k0 + " of " + r.of + " kept")) + "</span>";
@@ -911,8 +1212,8 @@
   function paintTrash() {
     var box = $("arRuns");
     if (!state.trashed) box.innerHTML = '<p class="ar-empty">' + esc(tr("Reading the trash…")) + "</p>";   // once: a refresh keeps the list
-    Promise.all([api("/artist/trashed"), api("/artist/asides").catch(function () { return { pictures: [] }; })]).then(function (x) {   // HERESY 1321
-      var d = x[0], pics = x[1].pictures || [];
+    Promise.all([api("/artist/trashed"), api("/artist/asides").catch(function (e) { return e && e.status === 404 ? { pictures: [] } : { pictures: state.asidePics || [], failed: e.message || String(e) }; })]).then(function (x) {   // HERESY 1321
+      var d = x[0], pics = x[1].pictures || [], asideFailed = x[1].failed;   // HERESY 2212: a failed read keeps the last list and says so, not «empty» (a lab without asides, 404, has none)
       if (state.look !== "trash") return;
       var runs = d.runs || [];
       state.trashed = runs;
@@ -926,7 +1227,7 @@
           '<div class="ar-trun-pics">' + pics.slice(0, 6).map(function (p) {
             return '<img alt="" loading="lazy" draggable="false" src="' + esc(fileUrl(r.id, p.thumb || p.file) + "&trash=1") + '" />';
           }).join("") + "</div></div>";
-      }).join("") : (pics.length ? "" : '<p class="ar-empty">' + esc(tr("The trash is empty.")) + "</p>");
+      }).join("") : (pics.length || asideFailed ? "" : '<p class="ar-empty">' + esc(tr("The trash is empty.")) + "</p>");
       if (pics.length) {                                  // HERESY 1321: the pictures put aside, each with Restore
         box.insertAdjacentHTML("afterbegin", '<div class="ar-aside-box"><div class="ar-aside-head"><b>' + esc(tr("Pictures put aside")) + "</b> <span>" + pics.length + "</span>" +
           '<button type="button" class="btn ghost small" data-back-all="1">' + esc(tr("Restore all")) + "</button></div>" +
@@ -935,11 +1236,12 @@
               '<button type="button" class="btn ghost small" data-back="' + i + '">' + esc(tr("Restore")) + "</button>" +
               '<button type="button" class="pb-btn ar-aside-x" data-purge-pic="' + i + '" aria-label="' + esc(tr("Delete for good")) + '" data-tip="' + esc(tr("Delete for good: asks first")) + '">\u2715</button></figure>';   // HERESY 1337
           }).join("") + "</div></div>");
-        state.asidePics = pics;
       }
+      state.asidePics = pics;                              // HERESY 2212: an emptied list too, so Wipe out does not take the gone ones
       if (runs.length || pics.length) box.insertAdjacentHTML("afterbegin", '<div class="ar-trash-head"><span class="row-hint">' +   // HERESY 1337
         esc(tr("The covers taken off the takes wait in the library's Trash (Art), with these.")) + "</span>" +
         '<button type="button" class="btn ghost small danger" data-wipe="1" data-tip="' + esc(tr("Every run and picture here deleted for good: asks first")) + '">' + esc(tr("Wipe out")) + "</button></div>");
+      if (asideFailed) box.insertAdjacentHTML("afterbegin", '<p class="ar-empty">' + esc(tr("The pictures put aside could not be read:") + " " + asideFailed) + "</p>");   // HERESY 2212
       $("arTotal").textContent = (pics.length ? tr(countOf(pics.length, "picture", "pictures")) + " · " : "") + tr(countOf(runs.length, "run", "runs") + " in the trash");
     }).catch(function (e) { box.innerHTML = '<p class="ar-empty">' + esc(tr("The trash could not be read:") + " " + e.message) + "</p>"; });
   }
@@ -959,7 +1261,7 @@
       return;
     }
     box.innerHTML = state.runs.map(function (r) {
-      var pics = (r.pictures || []).map(function (p, i) { return picHtml(r, p, i); }).join("") + (live(r) ? waitHtml(r) : "");
+      var pics = r.grid ? boardHtml(r) : (r.pictures || []).map(function (p, i) { return picHtml(r, p, i); }).join("") + (live(r) ? waitHtml(r) : "");   // HERESY 2332: a grid on its board
       var open = !!state.open[r.id];
       return '<article class="ar-run' + (live(r) ? " is-live" : "") + '" data-id="' + esc(r.id) + '">' +
         '<header class="ar-run-head"><span class="ar-when">' + esc(when(r.created)) + "</span>" +
@@ -996,9 +1298,12 @@
   // HERESY 1322 (Viktor 10.10.2026: «модели апскейлеров… 637GB золота»): the upscalers, the row under the stage's buttons, the run
   function loadUpscalers() {
     if (state.upscalers) return Promise.resolve(state.upscalers);
-    return api("/artist/upscalers").then(function (d) { state.upscalers = d.upscalers || []; state.stageKey = ""; paintStage(); return state.upscalers; })
-      .catch(function (e) { toast(e.message, "bad"); state.upscalers = []; });
+    // HERESY 2339 (the neutral-value pass): a refusal was kept as an empty list, and the row said «No upscaler here: put … into artwork/upscalers/»
+    // over a folder full of them; now the list stays unknown, the row says the lab's words, and the next look asks again
+    return api("/artist/upscalers").then(function (d) { state.upFailed = ""; state.upscalers = d.upscalers || []; state.stageKey = ""; paintStage(); return state.upscalers; })
+      .catch(function (e) { state.upFailed = e.message || String(e); state.upscalers = null; state.stageKey = ""; paintStage(); toast(upFailWord(), "bad"); return null; });
   }
+  function upFailWord() { return tr("The upscalers could not be read: {0}").replace("{0}", state.upFailed || ""); }   // HERESY 2339
   // HERESY 1332 (Viktor: «2K и 4K максимум. Нехер ручные значения вводить»): the long side to 2560 or 3840
   var UP_TARGETS = { "2k": 2560, "4k": 3840 };
   // HERESY 1364 (from Upscayl's TTA): each tile through the upscaler in its eight orientations, averaged; kept, for one picture, the passes
@@ -1007,8 +1312,8 @@
   var TTA_TIP = "TTA: each tile through the upscaler in its eight orientations (four turns, each mirrored), averaged: steadier edges and textures, up to eight times the time (Upscayl's way)";
   function upSize(p, t) { var w = +p.w || 0, h = +p.h || 0, long = Math.max(w, h); return long ? [Math.round(w * UP_TARGETS[t] / long), Math.round(h * UP_TARGETS[t] / long)] : null; }
   function upRow(p) {
-    var list = state.upscalers || [];
-    if (!list.length) return '<div class="ar-up-row"><span class="row-hint">' + esc(state.upscalers ? tr("No upscaler here: put .pth or .safetensors models (4x_… from OpenModelDB or Civitai) into artwork/upscalers/") : tr("Reading the upscalers…")) + "</span></div>";
+    var list = fileUps(state.upscalers);
+    if (!list.length) return '<div class="ar-up-row"><span class="row-hint">' + esc(state.upscalers ? tr("No upscaler here: put .pth or .safetensors models (4x_… from OpenModelDB or Civitai) into models/artist/upscalers/") : state.upFailed ? upFailWord() : tr("Reading the upscalers…")) + "</span></div>";
     var names = list.map(function (u) { return u.name; }), want = recall("yue2.arUpModel");
     var pick = names.indexOf(want) >= 0 ? want : names.indexOf("4x_Nomos8kDAT.pth") >= 0 ? "4x_Nomos8kDAT.pth" : names[0];
     var cur = list.filter(function (u) { return u.name === pick; })[0];
@@ -1025,12 +1330,13 @@
       }).join("") +
       '<label class="check ar-up-tta" data-tip="' + esc(tr(TTA_TIP)) + '"><input type="checkbox" data-up-tta' + (ttaOn() ? " checked" : "") + ' /> <span translate="no">TTA</span></label>' +   // HERESY 1364
       '<button type="button" class="btn ghost small' + (state.upChainOpen ? " is-on" : "") + '" data-up-chain data-tip="' + esc(tr("An upscale in passes, as Viktor's ComfyUI stack: each pass a model and a size of the picture's own")) + '">' + esc(tr("Passes\u2026")) + "</button>" +
-      "</div>" + (state.upChainOpen ? chainPanel(p, list) : "");
+      "</div>" + (state.upChainOpen ? chainPanel(p, state.upscalers || []) : "");
   }
   // HERESY 1355: an upscaler's notes in one line for its tip (lab/upscalers.json: what it is for, its time measured on an RTX 3090)
   function upTip(u) {
     if (!u) return tr("What each upscaler is for: a click");
     var i = u.info;
+    if (u.kind === "seedvr2") return "SeedVR2 · DiT · " + tr(i.for) + " · " + (u.grains || []).map(function (g) { return g.label; }).join(" / ") + " · Apache-2.0";   // HERESY 2276
     if (!i) return upShort(u.name) + " · " + u.mb + " MB · " + tr("no notes on this one: the window (a click) lists those that have them");
     return i.title + " · " + (i.arch ? i.arch + " " : "") + "\u00d7" + (i.scale || u.scale) + " · " + tr(i.for) + (i.s_1024 ? " · " + tr("about " + i.s_1024 + " s for a 1024² picture") : "") +
       (i.license ? " · " + i.license : "");
@@ -1053,8 +1359,8 @@
           var i = u.info || {}, nc = /NC/.test(i.license || "");
           return '<li class="ar-ug-v' + (u.name === pick ? " is-on" : "") + '" data-ug-pick="' + esc(u.name) + '" tabindex="0">' +
             '<b translate="no">' + esc(i.title || upShort(u.name)) + '<small translate="no">' + esc(u.name) + "</small></b>" +
-            '<span class="mono" translate="no">' + esc("\u00d7" + (i.scale || u.scale) + (i.arch ? " · " + i.arch : "")) + "</span>" +
-            '<span class="mono">' + esc(i.s_1024 ? i.s_1024 + " s" : "") + (i.peak_gb ? '<small>' + esc(i.peak_gb + " GB") + "</small>" : "") + "</span>" +
+            '<span class="mono" translate="no">' + esc(u.kind === "seedvr2" ? "DiT" : "\u00d7" + (i.scale || u.scale) + (i.arch ? " · " + i.arch : "")) + "</span>" +
+            '<span class="mono">' + esc(i.s_1024 ? (i.estimated ? "\u2248" : "") + i.s_1024 + " s" : "") + (i.peak_gb ? '<small>' + esc(i.peak_gb + " GB") + "</small>" : "") + "</span>" +
             "<span>" + esc(i.for ? tr(i.for) : u.mb + " MB") + (i.author ? '<small translate="no">' + esc(i.author) + "</small>" : "") + "</span>" +
             '<span class="ar-ug-lic' + (nc ? " is-nc" : "") + '" translate="no">' + esc(i.license || "") + (nc ? '<small>' + esc(tr("non-commercial")) + "</small>" : "") + "</span>" +
             (webUrl(i.source) ? '<a href="' + esc(webUrl(i.source)) + '" target="_blank" rel="noopener" data-tip="' + esc(i.source) + '">' + esc(tr("its page")) + "</a>" : "<span></span>") + "</li>";
@@ -1090,9 +1396,29 @@
       c = has ? JSON.parse(JSON.stringify(VIKTOR_CHAIN)) : { passes: [{ model: upModel(list) || "", factor: 2 }], resample: "bilinear", long: 0, match: false };
     }
     c.passes = c.passes.slice(0, 4).map(function (x) { return { model: names.indexOf(x.model) >= 0 ? x.model : upModel(list) || "", factor: +x.factor || 2 }; });
+    c.paint = !!c.paint;                                  // HERESY 2230: the painter's pass after them, and how much it may change
+    c.paintStr = +c.paintStr >= 0.2 && +c.paintStr <= 0.9 ? +c.paintStr : PAINT_STR;
     return c;
   }
-  function chainKeep(c) { keep("yue2.arUpChain", JSON.stringify({ passes: c.passes, resample: c.resample, long: c.long, match: c.match })); }
+  function chainKeep(c) { keep("yue2.arUpChain", JSON.stringify({ passes: c.passes, resample: c.resample, long: c.long, match: c.match, paint: !!c.paint, paintStr: c.paintStr })); }
+  // HERESY 2230 (TODO.md, the Artist: his ComfyUI workflow's second KSampler over the 2x upscaled picture, noise 0.6, from step 20 of 60): the
+  // painter's pass at the end of the passes, the picture's own run's painter, adapters, prompt and seed painting the chain's picture over at
+  // the size it lands at; the lab asks it as a run of its own when the upscale ends. Its noise is Second pass's (0.6 by default)
+  var PAINT_STR = 0.67;                                  // from step 20 of 60
+  function paintWhy(r, c) {                              // "" when the chain can take the painter's pass, else why not
+    var last = c.passes[c.passes.length - 1];
+    if (!spOk(r)) return tr("The painter's pass paints over a picture Qwen-Image 2512 painted, with its prompt");
+    if (+last.factor !== 1.5 && +last.factor !== 2) return tr("The painter's pass paints at 1.5 or 2 times the picture: end the passes at \u00d71.5 or \u00d72");   // HERESY 2259: a long side comes after it now
+    return "";
+  }
+  function paintRow(r, c) {
+    var why = paintWhy(r, c), on = c.paint && !why;
+    return '<div class="ar-uc-opts ar-uc-paint"><label class="check" data-tip="' + esc(tr("After the passes, the picture's own painter paints the upscaled picture over with its adapters, prompt and seed, as Viktor's ComfyUI workflow does its 2\u00d7 latent pass; the extra noise is Second pass's; a run of its own when the upscale ends")) + '">' +
+      '<input type="checkbox" data-uc-paint' + (c.paint ? " checked" : "") + (why ? " disabled" : "") + " /> " + esc(tr("Then the painter's pass")) + "</label>" +
+      (why ? '<span class="row-hint" data-uc-paint-why>' + esc(why) + "</span>" : on ? '<label class="ar-sp-str" data-tip="' + esc(tr("How much the second pass may change the picture: 0.3 keeps its drawing and adds detail, 0.5 sharpens its matter, 0.7 repaints its forms")) + '"><span>' +
+        esc(tr("How much it may change")) + '</span> <input type="range" data-uc-paint-str min="0.2" max="0.9" step="0.01" value="' + c.paintStr + '" /> <output data-uc-paint-out translate="no">' + c.paintStr.toFixed(2) + "</output></label>" : "") +
+      (on && (+c.long || c.match) ? '<span class="row-hint" data-uc-paint-then>' + esc(tr("The long side and the colours come after the painter's pass, in a run of their own")) + "</span>" : "") + "</div>";   // HERESY 2259
+  }
   function chainSays(p, c, list) {                       // the size it lands at and about how long (each pass by its measured time)
     var w = +p.w || 0, h = +p.h || 0, last = c.passes[c.passes.length - 1], fw = Math.round(w * last.factor), fh = Math.round(h * last.factor);
     if (+c.long) { var k = +c.long / Math.max(fw, fh); fw = Math.round(fw * k); fh = Math.round(fh * k); }
@@ -1120,6 +1446,7 @@
       '<div class="ar-uc-opts"><label>' + esc(tr("Lands")) + ' <select data-uc-resample>' + ["bilinear", "lanczos", "bicubic"].map(function (r) { return '<option value="' + r + '"' + (c.resample === r ? " selected" : "") + ">" + esc(tr(r)) + "</option>"; }).join("") + "</select></label>" +
         '<label>' + esc(tr("Long side")) + ' <select data-uc-long>' + [[0, "as it lands"], [2560, "2K · 2560"], [3840, "4K · 3840"], [7680, "8K · 7680"]].map(function (o) { return '<option value="' + o[0] + '"' + (+c.long === o[0] ? " selected" : "") + ">" + esc(tr(o[1])) + "</option>"; }).join("") + "</select></label>" +
         '<label class="ar-uc-match"><input type="checkbox" data-uc-match' + (c.match ? " checked" : "") + " /> " + esc(tr("Colours as the picture's")) + "</label></div>" +
+      paintRow((selected() || {}).r, c) +   // HERESY 2230
       '<div class="ar-uc-go"><span class="row-hint" data-uc-say>' + esc((p.w || "?") + "\u00d7" + (p.h || "?") + " \u2192 " + say.w + "\u00d7" + say.h + " · " + tr(minutes(say.secs) + " on a card")) + "</span>" +
         '<button type="button" class="btn small primary" data-uc="go"' + (Math.max(say.w, say.h) > 10240 ? " disabled" : "") + ">" + esc(tr("Upscale in passes")) + "</button></div></div>";
   }
@@ -1130,16 +1457,22 @@
     Array.prototype.forEach.call(box.querySelectorAll("[data-uc-k]"), function (row) {
       c.passes.push({ model: row.querySelector("[data-uc-model]").value, factor: Math.min(8, Math.max(0.25, +row.querySelector("[data-uc-factor]").value || 2)) });
     });
+    var pb = box.querySelector("[data-uc-paint]"), ps = box.querySelector("[data-uc-paint-str]");   // HERESY 2230: kept as chosen; sent only where it can run
+    c.paint = !!(pb && pb.checked);
+    c.paintStr = ps ? +ps.value : chainNow(state.upscalers).paintStr;
+    c.paintGo = c.paint && !paintWhy((selected() || {}).r, c);
     chainKeep(c);
     return c;
   }
   function chainGo(src, c) {
-    return api("/artist/upscale", { id: src.id, file: src.file, passes: c.passes, resample: c.resample, long: c.long || 0, match: !!c.match, tta: ttaOn() }).then(function (run) {
+    var body = { id: src.id, file: src.file, passes: c.passes, resample: c.resample, long: c.long || 0, match: !!c.match, tta: ttaOn() };
+    if (c.paintGo) body.paint = { strength: c.paintStr, inject: spNoise() };   // HERESY 2230
+    return api("/artist/upscale", body).then(function (run) {
       state.upOpen = false; state.upChainOpen = false;
       state.pinSel = false;
       state.runs.unshift(run);
       paintRuns();
-      toast(tr("Upscaling in " + c.passes.length + " passes: " + c.passes.map(function (x) { return upShort(x.model) + " \u00d7" + x.factor; }).join(" \u2192 ")));
+      toast(tr("Upscaling in " + c.passes.length + " passes: " + c.passes.map(function (x) { return upShort(x.model) + " \u00d7" + x.factor; }).join(" \u2192 ")) + (body.paint ? " \u2192 " + tr("then the painter's pass") + (body.long || body.match ? " \u2192 " + tr("then the long side and the colours") : "") : ""));   // HERESY 2259
       schedule(1500);
     }).catch(function (e) { toast(tr("Not upscaled: " + e.message), "bad"); alog(tr("Not upscaled:") + " " + e.message, "bad"); });
   }
@@ -1288,6 +1621,14 @@
     var ls = (r.loras || []).filter(function (l) { return !l.muted && +l.weight > 0; });
     if (ls.length) body.loras = ls.map(function (l) { return l.keys ? { id: l.id, weight: +l.weight, keys: l.keys } : { id: l.id, weight: +l.weight }; });
     if (state.take) body.take = state.take.name;
+    var cfp = cfPassBody();                           // HERESY 2332: ComfyUI's way: the form's pass (his #2 adapters, from its step), not the run's
+    if (cfp) {
+      body.comfy = cfp;
+      var fs = samplingBody();
+      if (fs && Object.keys(fs).length) body.sampling = fs; else delete body.sampling;
+      var fl = lorasNow().filter(function (l) { return !l.muted && +l.weight > 0; });
+      if (fl.length) body.loras = fl.map(function (l) { return { id: l.id, weight: +l.weight }; }); else delete body.loras;
+    }
     alog(tr("Second pass asked:") + " \u00d7" + k + " · " + (PAINTERS[r.painter] || r.painter) + " · " + body.strength.toFixed(2) + " · " + r.id + "/" + p.file);
     return api("/artist/draw", body).then(function (run) {
       state.spOpen = false;
@@ -1372,7 +1713,7 @@
       var takes = [];
       (d.covers || []).forEach(function (x) { (x.takes || []).forEach(function (t) { var n = t.title || t.name; if (takes.indexOf(n) < 0) takes.push(n); }); });
       return takes;
-    }, function () { return []; });                    // the lab could not say: as before, the covers stay
+    }, function () { var none = []; none.failed = true; return none; });   // the lab could not say: as before, the covers stay (HERESY 2339: and it is said)
   }
   function coverAsk(takes) {
     return takes.length === 1 ? tr("“" + takes[0] + "” has this picture as its cover: take it off the take too, or leave it? The take keeps a copy of its own.")
@@ -1389,21 +1730,24 @@
     if (state.hooks.refreshArts) state.hooks.refreshArts().then(paintHead);
   }
   function asidePics(items, back) {
+    var unchecked = false;                             // HERESY 2339: the covers could not be checked: the toast says they stay
     return (back ? Promise.resolve([]) : coverTakes({ items: items })).then(function (takes) {
+      unchecked = !!takes.failed;
       return takes.length ? coverHow(takes) : "keep";
     }).then(function (how) {
       if (!how) return;
-      return asideGo(items, back, how);
+      return asideGo(items, back, how, unchecked);
     });
   }
-  function asideGo(items, back, how) {
+  function asideGo(items, back, how, unchecked) {
     return api("/artist/aside", { items: items, aside: !back, covers: how }).then(function (d) {
       coversSaid(d);                                   // HERESY 1372
       var n = (d.done || []).length, kept = (d.kept || []).length;   // HERESY 1367: the protected stay
       if (!back && kept) toast(tr(countOf(kept, "protected picture", "protected pictures") + " stayed in the room: take the protection off first"), n ? "" : "bad");
       if (!back && !n && kept) { clearPicked(); return; }
       toast(back ? tr("Back in the room: " + countOf(n, "picture", "pictures"))   // HERESY 1339: one sentence
-        : tr(countOf(n, "picture", "pictures") + " in the trash: the library's Trash brings them back" + ((d.trashed || []).length ? " · a run with nothing left went with them" : "")));
+        : tr(countOf(n, "picture", "pictures") + " in the trash: the library's Trash brings them back" + ((d.trashed || []).length ? " · a run with nothing left went with them" : ""))
+          + (unchecked ? " · " + tr("the covers could not be checked: any cover stays on its take") : ""));   // HERESY 2339
       clearPicked();
       return load().then(function () { if (state.look === "trash") paintTrash(); });
     }).catch(function (e) { toast(e.message, "bad"); });
@@ -1412,9 +1756,9 @@
   // would be: 2K or 4K by the upscaler chosen in the row (kept), or the passes kept; TTA as its box says, toggled here too
   function upPickedMenu(btn) {
     loadUpscalers().then(function (list) {
-      list = list || [];
-      if (!list.length || !window.HeresyMenu) return toast(tr("No upscaler here: put .pth or .safetensors models (4x_… from OpenModelDB or Civitai) into artwork/upscalers/"), "bad");
-      var names = list.map(function (u) { return u.name; }), want = recall("yue2.arUpModel");
+      if (!list) return;                                  // HERESY 2339: the lab's refusal is said already, never «No upscaler here»
+      if (!list.length || !window.HeresyMenu) return toast(tr("No upscaler here: put .pth or .safetensors models (4x_… from OpenModelDB or Civitai) into models/artist/upscalers/"), "bad");
+      var names = fileUps(list).map(function (u) { return u.name; }), want = recall("yue2.arUpModel");   // HERESY 2276: SeedVR2 only in the passes
       var model = names.indexOf(want) >= 0 ? want : names.indexOf("4x_Nomos8kDAT.pth") >= 0 ? "4x_Nomos8kDAT.pth" : names[0];
       var c = chainNow(list), r = btn.getBoundingClientRect();
       window.HeresyMenu.open(r.left, r.bottom + 4, [
@@ -1441,7 +1785,6 @@
   window.HeresyArtistUp = { picked: upPicked, menu: upPickedMenu, tta: ttaOn,   // for the checks
     pick: function (list) { state.picked = {}; (list || []).forEach(function (x) { state.picked[x.id + "|" + x.file] = true; }); paintPicked(); } };
   window.HeresyArtistKeys = { parse: keysParse, text: keysText };   // HERESY 1365: for the checks
-  window.HeresyArtistProtect = { pics: protectPics, picked: protectPicked };   // HERESY 1367: for the checks
   function starPicked() {
     var all = pickedList(), go = function (i) {
       if (i >= all.length) { clearPicked(); return load(); }
@@ -1559,7 +1902,14 @@
     if (r.passes && r.passes.length) {                   // HERESY 1355: each pass, how they landed, the long side, the colours
       meta.push(r.passes.map(function (x) { return upShort(x.model) + " \u00d7" + x.factor; }).join(" \u2192 "));
       meta.push(tr("lands") + " " + tr(r.resample || "bilinear") + (r.long ? " · " + tr("long side " + r.long) : "") + (r.match ? " · " + tr("colours as the picture's") : ""));
+      if (r.paint) meta.push(tr("then the painter's pass") + " · " + (+r.paint.strength).toFixed(2) + (r.painted ? " · " + tr("its run") + " " + r.painted.id : "") +
+        (r.paint.then ? " · " + tr("then the long side and the colours") : ""));   // HERESY 2230; 2259: what comes after it
+      if (r.paint_error) meta.push(tr("The painter's pass did not start:") + " " + r.paint_error);
     }
+    // HERESY 2259: a finish run says what it did; a painter's pass that asks one says so, and the run it asked or why not
+    if (r.finish) meta.push((r.long ? tr("long side " + r.long) : "") + (r.long && r.match ? " · " : "") + (r.match ? tr("colours as the picture's") : ""));
+    if (r.then) meta.push(tr("then the long side and the colours") + (r.finished ? " · " + tr("its run") + " " + r.finished.id : ""));
+    if (r.finish_error) meta.push(tr("The long side and the colours did not start:") + " " + r.finish_error);
     if (r.took) meta.push(Math.round(r.took) + " s");
     if (r.sampling && Object.keys(r.sampling).length) {   // HERESY 1319; 1328: a run's lightning > 0 was Lightning on, 0 off
       var rs = Object.assign(sampDefaults(r.painter, r.model || ""), r.sampling);
@@ -1600,7 +1950,7 @@
         (square ? ib("cover", "disc", "Set as cover", take ? tr("This picture becomes the cover of") + " “" + (take.label || take.name) + "”" : tr("Pick a take on the right to give it this cover"),
           { cls: "ar-cover", disabled: !take }) : "") +
         (spOk(r) ? ib("second", "sparkles", "Second pass\u2026", tr("A second pass, as Viktor's ComfyUI workflow makes it: the picture brought up 1.5 or 2 times and painted over by its own painter, adapters, prompt and seed, with the form's steps and sampler; a run of its own"), { on: state.spOpen }) : "") +   // HERESY 1384
-        ib("upscale", "scaling", "Upscale\u2026", tr("Make it 2K or 4K (its long side 2560 or 3840) with an upscaler from artwork/upscalers/ (ESRGAN, DAT, HAT, SPAN…): a run of its own"), { on: state.upOpen });   // HERESY 1322
+        ib("upscale", "scaling", "Upscale\u2026", tr("Make it 2K or 4K (its long side 2560 or 3840) with an upscaler from models/artist/upscalers/ (ESRGAN, DAT, HAT, SPAN…): a run of its own"), { on: state.upOpen });   // HERESY 1322
       var keep = ib("view", "maximize", "Over the page", tr("Over the whole page: ← → walk the pictures, Esc closes")) +
         ib("compare", "cols-2", "Compare\u2026", tr("Compare it with another: pick that one in the library, then a divider between them")) +   // HERESY 1308
         ib("note", "note", "Note\u2026", p.note ? tr("Its note") + ": " + p.note : tr("A note of your own on this picture: what it was made for, the words that lettered it, what to try next"), { cls: "ar-vnote", on: !!p.note }) +   // HERESY 1428
@@ -1744,7 +2094,7 @@
     navigator.clipboard.writeText(String(text)).then(function () { toast(said); }, function () { toast(tr("The browser refused clipboard access"), "bad"); });
   }
   function upModel(list) {                               // the upscaler the row under the stage would take: the one picked there last
-    var names = (list || []).map(function (u) { return u.name; }), want = recall("yue2.arUpModel");
+    var names = fileUps(list).map(function (u) { return u.name; }), want = recall("yue2.arUpModel");
     return names.indexOf(want) >= 0 ? want : names.indexOf("4x_Nomos8kDAT.pth") >= 0 ? "4x_Nomos8kDAT.pth" : names[0];
   }
   function picMenu(it, x, y, vw) {
@@ -1757,8 +2107,9 @@
         hint: done ? tr("It is as large already") : m ? tr("With " + m.replace(/\.(pth|safetensors)$/, "") + ": the upscaler picked under the stage") : tr("With the upscaler picked under the stage"),
         action: function () {
           loadUpscalers().then(function (list) {
+            if (!list) return;                               // HERESY 2339: the lab's refusal is said already
             var mm = upModel(list);
-            if (!mm) return toast(tr("No upscaler here: put .pth or .safetensors models (4x_… from OpenModelDB or Civitai) into artwork/upscalers/"), "bad");
+            if (!mm) return toast(tr("No upscaler here: put .pth or .safetensors models (4x_… from OpenModelDB or Civitai) into models/artist/upscalers/"), "bad");
             upscaleIt({ id: r.id, file: p.file }, mm, t);
           });
         } };
@@ -1871,6 +2222,11 @@
       var i = document.querySelector("#arStage .ar-up-info"), u = (state.upscalers || []).filter(function (v) { return v.name === e.target.value; })[0];
       if (i) i.dataset.tip = upTip(u);
     }
+  });
+  document.addEventListener("input", function (e) {      // HERESY 2230: the painter's pass's strength said as it moves (kept on release)
+    if (!e.target.matches || !e.target.matches("#arStage [data-uc-paint-str]")) return;
+    var o = e.target.parentNode.querySelector("[data-uc-paint-out]");
+    if (o) o.textContent = (+e.target.value).toFixed(2);
   });
   document.addEventListener("keydown", function (e) {    // the i opens its window from the keys too
     if ((e.key === "Enter" || e.key === " ") && e.target.closest && e.target.closest("#arStage [data-up-guide]")) { e.preventDefault(); openUpGuide(); }
@@ -2055,7 +2411,9 @@
   function loraRows(fam) { return (state.loraLib && state.loraLib.families && state.loraLib.families[fam]) || []; }
   function loraFind(id) { return loraRows(String(id).split("/")[0]).filter(function (r) { return r.id === id; })[0] || null; }
   function loraName(e, id) { var info = (e && e.info) || {}; return info.title || (e ? e.name : String(id).split("/").pop().replace(/\.safetensors$/, "")); }
-  function loadLoras() { return api("/artist/loras").then(function (d) { state.loraLib = d; paintLoras(); return d; }).catch(function () { paintLoras(); }); }
+  // HERESY 2339 (the neutral-value pass): a refusal left the library unread, and its window said «No adapters for … here yet. Put .safetensors files…»
+  // over a folder full of them; now the refusal is kept and said there and on the run's adapters line, and the next look asks again
+  function loadLoras() { return api("/artist/loras").then(function (d) { state.loraLib = d; state.loraFailed = ""; paintLoras(); return d; }).catch(function (e) { state.loraFailed = e.message || String(e); paintLoras(); }); }
   function loraOn(list) { return (list || []).filter(function (l) { return !l.muted; }).length; }
   function archTitle(e) { var a = (state.loraLib && state.loraLib.arch) || {}; return (e && a[e.made_for]) || (e && e.made_for) || ""; }
   // HERESY 1353 (Viktor 11.10.2026: «Автодобавление триггерных слов в промпт»): an adapter brought into the run puts its trigger words
@@ -2115,7 +2473,7 @@
     var box = $("arLoraList"), list = lorasNow(), fam = familyNow();
     if (!box) return;
     var titles = (state.loraLib && state.loraLib.titles) || {}, have = state.loraLib ? loraRows(fam).length : null;
-    $("arLoraSay").textContent = list.length ? tr(loraOn(list) + " on · " + list.length + " / " + LORA_MAX) : have === 0 ? tr("none here for " + (titles[fam] || fam)) : have ? tr(have + " here") : "";   // HERESY 1353
+    $("arLoraSay").textContent = list.length ? tr(loraOn(list) + " on · " + list.length + " / " + LORA_MAX) : have === 0 ? tr("none here for " + (titles[fam] || fam)) : have ? tr(have + " here") : state.loraFailed ? tr("the adapters could not be read") : "";   // HERESY 1353; 2339
     $("arLoraAdd").disabled = !fam;
     box.innerHTML = list.map(function (l, i) {
       var e = loraFind(l.id), words = ((e && e.info && e.info.words) || []).slice(0, 4);
@@ -2129,7 +2487,7 @@
         '<span class="ar-lora-wv mono">' + (+l.weight).toFixed(2) + "</span></span>" +
         (words.length ? '<span class="ar-lora-words">' + words.map(function (w) {
           return '<button type="button" class="ar-lora-word" data-word="' + esc(w) + '" data-tip="' + esc(tr("Into the prompt:") + " " + w) + '" translate="no">' + esc(w) + "</button>"; }).join("") + "</span>" : "") +
-        (state.loraLib && !e ? '<span class="ar-lora-gone">' + esc(tr("not in artwork/loras/ any more")) + "</span>" : "") +
+        (state.loraLib && !e ? '<span class="ar-lora-gone">' + esc(tr("not in models/artist/loras/ any more")) + "</span>" : "") +
         (l.keys || l.keysOpen ? '<span class="ar-lora-keys"><input type="text" class="ar-lora-k mono" spellcheck="false" autocomplete="off" value="' + esc(keysText(l.keys)) +   // HERESY 1365
           '" placeholder="0%:1, 50%:1, 60%:0" aria-label="' + esc(tr("Its keyframes")) + '" data-tip="' + esc(tr(KEYS_TIP)) + '" /></span>' : "") + "</div>";
     }).join("") + loraTotalBar(list);                     // HERESY 1335
@@ -2457,9 +2815,11 @@
           return '<button type="button" class="ar-lib-f' + (folder === f ? " is-on" : "") + '" data-folder="' + esc(f) + '" translate="no">' + esc(f || tr("(the family's own folder)")) + " <em>" + folders[f] + "</em></button>";
         }).join("");
       var list = shown();
-      if (!rows.length) {
+      if (!rows.length && !state.loraLib && state.loraFailed) {   // HERESY 2339: the lab's refusal, never «none here yet»
+        grid.innerHTML = '<div class="ar-lib-empty"><p>' + esc(tr("The adapters could not be read: {0}").replace("{0}", state.loraFailed)) + "</p></div>";
+      } else if (!rows.length) {
         grid.innerHTML = '<div class="ar-lib-empty"><p>' + esc(tr("No adapters for " + (titles[fam] || fam) + " here yet.")) + "</p><p>" +   // HERESY 1339: one sentence each
-          esc(tr("Put .safetensors files into the Studio's artwork/loras/" + fam + "/ folder: any folders inside it become groups here; a picture beside a file with its name (NAME.jpg, NAME.png, NAME.preview.png) shows on its card.")) + "</p><p>" +
+          esc(tr("Put .safetensors files into the Studio's models/artist/loras/" + fam + "/ folder: any folders inside it become groups here; a picture beside a file with its name (NAME.jpg, NAME.png, NAME.preview.png) shows on its card.")) + "</p><p>" +
           esc(tr("On Civitai, pick adapters by their base model (" + ({ "qwen-image-2.1": "Qwen 2.1", "qwen-image-2512": "Qwen" }[fam] || fam) + "), " +
             "download the .safetensors and put it there; Look up on Civitai then fills in its name and its trigger words.")) + "</p><p>" +
           esc(tr("Or From Civitai\u2026 above: its link, and your own API key when it asks for one; the lab fetches it here.")) + "</p></div>";   // HERESY 1360
@@ -2534,6 +2894,16 @@
     ["arPrompt", "arSeed"].forEach(function (id) { $(id).addEventListener("input", function () { keepForm(); paintForm(); }); });
     ["arCount", "arPainter"].forEach(function (id) { $(id).addEventListener("change", function () { keepForm(); paintForm(); }); });
     $("arShapes").addEventListener("change", function () { keepForm(); paintForm(); });
+    if (recall("yue2.arAdv") === "1") $("arAdvOn").checked = true;   // HERESY 2278: the Advanced size, kept between visits
+    var advKept = (recall("yue2.arAdvSize") || "").split("x");
+    if (advKept.length === 2 && +advKept[0] && +advKept[1]) { $("arAdvW").value = +advKept[0]; $("arAdvH").value = +advKept[1]; }
+    $("arAdvOn").addEventListener("change", function () { keep("yue2.arAdv", advOn() ? "1" : null); advSay(); paintForm(); });
+    ["arAdvW", "arAdvH"].forEach(function (id) {
+      $(id).addEventListener("input", advSay);
+      $(id).addEventListener("change", function () { var s = advSize(); $("arAdvW").value = s[0]; $("arAdvH").value = s[1]; keep("yue2.arAdvSize", s[0] + "x" + s[1]); advSay(); });
+    });
+    $("arPainter").addEventListener("change", advSay);
+    api("/artist/sizes").then(function (d) { state.sizes = d; state.sizesFailed = ""; advSay(); }).catch(function (e) { state.sizesFailed = e.message || String(e); advSay(); });   // HERESY 2339
     $("arSeedNew").addEventListener("click", function () { $("arSeed").value = ""; if (state.seedMode) state.seedMode.set("random"); keepForm(); paintForm(); $("arSeed").focus(); });
     // HERESY 1330 (Viktor 10.10.2026: «Для SEED сделай рандом -1, рандом fixed, fixed, next, prev»): the seed's mode beside ⟲
     state.seedMode = window.HeresySeedMode ? window.HeresySeedMode.attach($("arSeed"), "yue2.arSeedMode", { after: $("arSeedNew") }) : null;
@@ -2552,6 +2922,7 @@
     $("arSampReset").addEventListener("click", function () { var sa = sampAll(); delete sa[sampKey($("arPainter").value)]; delete sa[$("arPainter").value]; keep(KEY.sampling, JSON.stringify(sa)); paintSampling(); paintForm(); });
     paintSampling();
     loadPainters();
+    cfInit();                                          // HERESY 2332: ComfyUI's way and the samplers grid
     $("arLoraList").addEventListener("input", function (e) {
       var tw = e.target.closest(".ar-lora-tw");          // HERESY 1335: together: each in proportion to where it stood when the drag began
       if (tw) {
@@ -2727,7 +3098,11 @@
       else if (act === "view") pick({ r: r, p: r.pictures[+fig.dataset.i] }, true);   // HERESY 1271: to the stage; 1340: again, back to the run
       else if (act === "cover" && p) cover(r, p);
       else if (act === "form") { fillForm(r, true); $("arPrompt").focus(); toast(tr("In the form: its prompt, shapes, variations and seed")); }
-      else if (act === "again" && r.kind === "upscale" && r.upscaled_from && r.passes) chainGo(r.upscaled_from, { passes: r.passes, resample: r.resample, long: r.long, match: r.match });   // HERESY 1355
+      else if (act === "smaller" && r.smaller) {        // HERESY 2278: out of memory at a size of one's own: the smaller one in the form
+        $("arAdvOn").checked = true; $("arAdvW").value = r.smaller[0]; $("arAdvH").value = r.smaller[1];
+        keep("yue2.arAdv", "1"); advSay(); paintForm(); $("arPrompt").focus(); toast(tr("In the form: a smaller size, Advanced on"));
+      }
+      else if (act === "again" && r.kind === "upscale" && r.upscaled_from && r.passes) chainGo(r.upscaled_from, { passes: r.passes, resample: r.resample, long: r.long, match: r.match, paintGo: !!r.paint, paintStr: r.paint ? +r.paint.strength : 0 });   // HERESY 1355; 2230: its painter's pass again
       else if (act === "again" && r.kind === "upscale" && r.upscaled_from) upscaleIt(r.upscaled_from, r.model, r.target || r.factor);   // HERESY 1322, 1332
       else if (act === "again") draw(r);
       else if (act === "trash") trashRun(r);

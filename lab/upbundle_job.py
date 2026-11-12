@@ -8,8 +8,8 @@ Voice upscale's bundle, on one voice file, on the card the lab gave:
                    jakeoneijk/FlashSR_Inference issue 1); 48 kHz, its fixed 5.12-second pieces
 
 Neither is shipped with the Studio's code. Apollo-vocal and its model code come with the Studio's models (goldhub/Ruach_Studio_Models_v2,
-models/upbundle/apollo/, as its licence lets them be shared), or from their authors when an install lacks them. FlashSR comes on first
-use: its weights from the Studio's own copy (the same repository at its pin, models/upbundle/flashsr/weights/; HERESY 1611), else from
+models/refiner/upscale/upbundle/apollo/, as its licence lets them be shared), or from their authors when an install lacks them. FlashSR comes on first
+use: its weights from the Studio's own copy (the same repository at its pin, models/refiner/upscale/upbundle/flashsr/weights/; HERESY 1611), else from
 him, and its code from him at a pinned revision (it carries third-party parts under their own terms, so it is not copied). Each piece joins the next by an equal-power crossfade of a second (half a second for
 FlashSR). Both come back at 48 kHz, whole, as they drew it: the Voice upscale keeps the original below its cut and blends the top.
 
@@ -31,7 +31,9 @@ import torch
 from scipy.signal import resample_poly
 
 STUDIO = Path(__file__).resolve().parent.parent
-HOME = STUDIO / "models" / "upbundle"
+sys.path.insert(0, str(STUDIO / "lab"))
+import paths  # noqa: E402   HERESY 2330: where the weights live
+HOME = paths.at(paths.REFINER_UPBUNDLE, STUDIO)
 MSST_SHA = "6fdad13686bb7e84d029ec66f9dbe76e65c93ebf"            # ZFTurbo/Music-Source-Separation-Training: the Apollo model code
 FLASH_SHA = "2292814a7ef74f61a5479c8d96e653d2f90f369d"           # jakeoneijk/FlashSR_Inference
 APOLLO_REPO, APOLLO_REV = "baicai1145/Apollo-vocal-msst", "b4646cdc4081d90f0df3839838c198c33b95b620"
@@ -60,19 +62,38 @@ def apollo_code():
     return d.parent
 
 
+def unpack(raw, d):
+    """HERESY 2223 (the audit of 06.11.2026, §2.5): an archive's files and folders into d, its top folder dropped and its Assets/ left out. Only a
+    plain file or folder whose path stays inside d comes out: a symbolic or hard link, a device, an absolute path, a «..» or a path that a folder
+    already made would lead out of d is left out, by tarfile's own «data» filter as well. The archive is pinned by its revision and comes over https;
+    this is the fence should either ever fail. What was left out is returned by name, never dropped unsaid."""
+    root = Path(d).resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    left = []
+    with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as t:
+        for m in t.getmembers():
+            parts = m.name.split("/", 1)
+            if len(parts) < 2 or not parts[1] or parts[1].startswith("Assets/"):
+                continue
+            name = parts[1]
+            where = (root / name).resolve()
+            if not (m.isfile() or m.isdir()) or name.startswith("/") or ".." in Path(name).parts or not where.is_relative_to(root) or where == root:
+                left.append(name[:120])
+                continue
+            m.name = name
+            t.extract(m, root, filter="data")
+    return left
+
+
 def flash_code():
     d = HOME / "flashsr"
     if (d / "FlashSR" / "FlashSR.py").is_file():
         return d
     raw = fetch(f"https://codeload.github.com/jakeoneijk/FlashSR_Inference/tar.gz/{FLASH_SHA}", timeout=600)
-    d.mkdir(parents=True, exist_ok=True)
-    with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as t:
-        for m in t.getmembers():
-            parts = m.name.split("/", 1)
-            if len(parts) < 2 or not parts[1] or parts[1].startswith("Assets/") or ".." in parts[1]:
-                continue
-            m.name = parts[1]
-            t.extract(m, d)
+    left = unpack(raw, d)
+    if left:
+        print(f"FlashSR: {len(left)} members of its archive left out (a link, a device, a path outside the folder): {', '.join(left[:8])}",
+              file=sys.stderr)
     (d / "SOURCE.txt").write_text(f"FlashSR inference code by Jaekwon Im, jakeoneijk/FlashSR_Inference revision {FLASH_SHA}: his code MIT, "
                                   "the parts from Diffusers, AudioSR and BigVGAN under their own licences (as he stated on 20.10.2026, "
                                   "issue 1); fetched from its author\n", encoding="utf-8")
@@ -91,8 +112,25 @@ def own_pin(repo):
     return "main"
 
 
+def guard_check(repo, rev, path, got):
+    """HERESY 2380 (Viktor 11.11.2026: «Тройного сторожа на … скачиваниях моделей из наших репозиториев»): tools/hf_guard.py's checks on a file
+    of ours before it is moved into place: a pinned commit, the size and the SHA-256 our manifest holds; else the download is removed and the
+    reason raised, for the caller to say."""
+    sys.path.insert(0, str(STUDIO / "tools"))
+    import hf_guard
+    want = hf_guard.load_manifest().get((repo, rev, path))
+    bad = ("not a pinned commit" if not hf_guard.PIN.fullmatch(rev) else "no line in our manifest at this pin" if want is None
+           else hf_guard.check_file(got, {"size": want[0], "sha": want[1], "by": "our manifest"}))
+    if bad:
+        try:
+            os.unlink(got)
+        except OSError:
+            pass
+        raise OSError(f"{path}: {bad}; the download removed")
+
+
 def flash_weights():
-    """HERESY 1611: the folder FlashSR's three weights are in: the Studio's own copy (fetched into models/upbundle/flashsr/weights/
+    """HERESY 1611: the folder FlashSR's three weights are in: the Studio's own copy (fetched into models/refiner/upscale/upbundle/flashsr/weights/
     at the pin on first use), else its author's dataset at its pinned revision; why the first did not come is said. HERESY 1799
     (Viktor 26.10.2026: «удаление .cache и hf_cache никогда не должно сломать ни одного из пайплайнов Студии»): the author's copy
     comes into the same folder, never into a cache."""
@@ -102,7 +140,10 @@ def flash_weights():
     from huggingface_hub import hf_hub_download
     try:
         for n in FLASH_FILES:
-            hf_hub_download(OWN_REPO, "models/upbundle/flashsr/weights/" + n, revision=own_pin(OWN_REPO), local_dir=str(STUDIO))
+            got = hf_hub_download(OWN_REPO, "models/upbundle/flashsr/weights/" + n, revision=own_pin(OWN_REPO), local_dir=str(paths.at(paths.INCOMING, STUDIO)))  # paths: repo
+            guard_check(OWN_REPO, own_pin(OWN_REPO), "models/upbundle/flashsr/weights/" + n, got)   # HERESY 2380 · paths: repo
+            own.mkdir(parents=True, exist_ok=True)
+            os.replace(got, own / n)                    # HERESY 2330: the repo keeps 2.0.6's layout; the file goes where the Studio reads it
     except Exception as e:  # noqa: BLE001 - offline, a pin before 1611: the author's copy is the same bytes
         print(f"FlashSR: the Studio's copy of the weights did not come ({type(e).__name__}: {e}); from its author", file=sys.stderr)
         for n in FLASH_FILES:

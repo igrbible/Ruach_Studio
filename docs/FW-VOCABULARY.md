@@ -41,7 +41,7 @@ Each track's line follows YuE2's own order: **language or Instrumental → genre
 
 ## The data at a glance
 
-32,633 tracks, about 1,800 hours; 8,849 sing words. 9,722 distinct words in the style lines; 4,326 of them met in two tracks or more are listed in the JSON.
+32,633 tracks, about 1,800 hours; 8,849 sing words. 9,722 distinct words in the style lines; 4,310 of them met in two tracks or more are listed in the JSON.
 
 An FMA line is its genres and three tags its users wrote, and those tags name artists, labels, radio stations, people and places as often as a style. So only FMA's own genre names are counted from them: 490 words only FMA's users wrote are left out. 12 more were taken out by hand: names, titles and fragments of lines.
 
@@ -59,18 +59,18 @@ An FMA line is its genres and three tags its users wrote, and those tags name ar
 |---|---:|---|
 | Instrumental | 1 | Instrumental |
 | Genres and styles | 940 | Electronic, pop, soundtrack, Folk, classical, rock |
-| Instruments | 900 | piano, bass, drums, guitar, electric guitar, synthesizer |
+| Instruments | 899 | piano, bass, drums, guitar, electric guitar, synthesizer |
 | Voice | 374 | dry studio vocal, audiobook narration, calm clear reading, Russian spoken word, no vocals, female alto vocal |
 | Emotion words | 40 | playful, numb, low energy, menacing, restrained, harsh |
 | Mood | 309 | happy, sad, emotional, energetic, relaxing, deep |
 | Use and theme | 27 | love, advertising, corporate, summer, adventure, background |
-| Sound and space | 306 | no instruments, no music, close-mic, dry studio, nothing else playing, close-miked and in front |
+| Sound and space | 305 | no instruments, no music, close-mic, dry studio, nothing else playing, close-miked and in front |
 | Form and pace | 34 | melodic, fast pace, slow pace, slow, moderate pace, fast |
 | Key and harmony | 60 | C major, A minor, G major, C minor, D major, E minor |
 | Tempo (BPM) | 144 | 120 BPM, 90 BPM, 100 BPM, 119 BPM, 80 BPM, 130 BPM |
 | Language | 28 | English, Spanish, Portuguese, French, latin, russian |
 | Leading words of our own loops | 2 | duduk, shofar |
-| Free descriptions | 1,161 | electro, glissando, rhythmic, abstract, bassline, modern |
+| Free descriptions | 1,147 | electro, glissando, rhythmic, abstract, bassline, modern |
 
 ## Emotion words
 
@@ -288,7 +288,7 @@ What kind of music: MTG-Jamendo's and FMA's own genre tags, and the styles the S
 
 ## Instruments
 
-What plays: MTG-Jamendo's instrument tags (up to four a track) and the instruments the free style lines name. 900 distinct words; the 160 most met:
+What plays: MTG-Jamendo's instrument tags (up to four a track) and the instruments the free style lines name. 899 distinct words; the 160 most met:
 
 | word | tracks | | from | met with |
 |---|---:|---|---|---|
@@ -696,7 +696,7 @@ What the music is for: MTG-Jamendo's themes (film, corporate, advertising…). 2
 
 ## Sound and space
 
-The recording's space, its texture and its production. 306 distinct words; the 70 most met:
+The recording's space, its texture and its production. 305 distinct words; the 70 most met:
 
 | word | tracks | | from | met with |
 |---|---:|---|---|---|
@@ -949,7 +949,7 @@ The duduk and shofar loops of the guard open their lines with the instrument's n
 
 ## Free descriptions
 
-Words from the free style lines that fit no list above. 1,161 distinct words; the 120 most met:
+Words from the free style lines that fit no list above. 1,147 distinct words; the 120 most met:
 
 | word | tracks | | from | met with |
 |---|---:|---|---|---|

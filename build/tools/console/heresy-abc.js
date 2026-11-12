@@ -14,6 +14,8 @@
   var VOICES = ["Vocal", "Ins"];
   var DURATIONS = { 1: 1, 2: 1, 3: 1, 4: 1, 6: 1, 8: 1, 12: 1, 16: 1, 24: 1, 32: 1, 48: 1 };
   var QUALITIES = ["", "m", "dim", "aug", "7", "maj7", "m7", "dim7", "m7b5", "sus4", "sus2", "6", "m6", "7sus4", "m(maj7)"];
+  // HERESY 2328: SheetSage2-Refined's chords besides (power chords, added and altered tones, tensions in parentheses), spelled as the engine writes them
+  QUALITIES = QUALITIES.concat(["5", "(b5)", "7b5", "aug7", "aug(maj7)", "add9", "m(add9)", "6(9)", "7(9)", "7(13)", "7(b9)", "7(#9)", "7(#11)", "7(b13)", "7b5(b13)", "maj7(9)", "maj7(b9)", "maj7(13)", "maj7(#11)", "m6(9)", "m7(9)", "m7(11)", "m7(13)", "m7(b9)", "m(maj7)(9)", "m(maj7)(13)", "aug7(9)", "aug(maj7)(#9)", "add9(#11)", "m7b5(b9)", "7(9,13)", "7(9,b13)", "7(9,#11)", "7(b9,#9)", "7(b9,13)", "7(b9,b13)", "7(b9,#11)", "7(#9,13)", "7(#9,b13)", "7(#11,13)", "m7(9,11)", "m7(9,13)", "maj7(9,13)", "maj7(9,#11)", "7(9,#11,13)", "7(9,#11,b13)", "maj7(9,#11,13)"]);
   var PITCH_NAME = "[A-G](?:bb|##|b|#)?";
   var CHORD = new RegExp("^" + PITCH_NAME + "(?:" + QUALITIES.map(function (q) { return q.replace(/[()]/g, "\\$&"); }).join("|") + ")(?:/" + PITCH_NAME + ")?$");
   var TOKEN = /"([^"\n]*)"|\[K:([^\]\n]+)\]|(\^\^|__|\^|_|=)?([A-Ga-gz])([,']*)([0-9]*)(-?)/y;
@@ -21,6 +23,14 @@
   var KEYS = {};
   ["Cb", "Gb", "Db", "Ab", "Eb", "Bb", "F", "C", "G", "D", "A", "E", "B", "F#", "C#"].forEach(function (k, i) { KEYS[k] = i - 7; });
   ["Abm", "Ebm", "Bbm", "Fm", "Cm", "Gm", "Dm", "Am", "Em", "Bm", "F#m", "C#m", "G#m", "D#m", "A#m"].forEach(function (k, i) { KEYS[k] = i - 7; });
+  // HERESY 2328: keys with a mode as ABC writes them (Ddor, G#mix, Bbloc), Refined's: the tonic's major signature moved by the mode
+  ["Cb", "Gb", "Db", "Ab", "Eb", "Bb", "F", "C", "G", "D", "A", "E", "B", "F#", "C#", "G#", "D#", "A#", "Fb"].forEach(function (t) {
+    var major = { Fb: -8, "G#": 8, "D#": 9, "A#": 10 }[t] !== undefined ? { Fb: -8, "G#": 8, "D#": 9, "A#": 10 }[t] : KEYS[t];
+    [["dor", -2], ["phr", -4], ["lyd", 1], ["mix", -1], ["loc", -5]].forEach(function (m) {
+      var n = major + m[1];
+      if (n >= -7 && n <= 7) KEYS[t + m[0]] = n;
+    });
+  });
 
   // exact fractions: [numerator, denominator], always reduced
   function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { var t = a % b; a = b; b = t; } return a || 1; }

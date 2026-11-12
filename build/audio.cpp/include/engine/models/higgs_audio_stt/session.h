@@ -1,0 +1,81 @@
+#pragma once
+
+#include "engine/framework/model_spec/metadata.h"
+#include "engine/framework/runtime/model.h"
+#include "engine/framework/assets/tensor_source.h"
+#include "engine/framework/runtime/session_base.h"
+#include "engine/framework/runtime/streaming_asr_session.h"
+#include "engine/models/higgs_audio_stt/assets.h"
+#include "engine/models/higgs_audio_stt/audio_encoder.h"
+#include "engine/models/higgs_audio_stt/frontend_whisper.h"
+#include "engine/models/higgs_audio_stt/postprocess.h"
+#include "engine/models/higgs_audio_stt/prompt_asr.h"
+#include "engine/models/higgs_audio_stt/text_decoder.h"
+#include "engine/models/higgs_audio_stt/tokenizer_text.h"
+
+#include <cstddef>
+#include <filesystem>
+#include <memory>
+#include <string>
+#include <vector>
+
+namespace engine::models::higgs_audio_stt {
+
+std::shared_ptr<runtime::IVoiceModelLoader> make_higgs_audio_stt_loader();
+
+class HiggsAudioSTTSession final
+    : public runtime::RuntimeSessionBase
+    , public runtime::IOfflineVoiceTaskSession
+    , public runtime::StreamingAsrSessionBase {
+public:
+    HiggsAudioSTTSession(
+        runtime::TaskSpec task,
+        runtime::SessionOptions options,
+        std::shared_ptr<const HiggsAudioSTTAssets> assets,
+        std::shared_ptr<const engine::model_spec::ModelContract> contract);
+    ~HiggsAudioSTTSession() override;
+
+    std::string family() const override;
+    runtime::VoiceTaskKind task_kind() const override;
+    runtime::RunMode run_mode() const override;
+    void prepare(const runtime::SessionPreparationRequest & request) override;
+    runtime::TaskResult run(const runtime::TaskRequest & request) override;
+    runtime::StreamingPolicy streaming_policy() const override;
+
+private:
+    void begin_stream(const runtime::TaskRequest & request) override;
+    void reset_stream_state() override;
+    void consume_audio(const runtime::AudioChunk & chunk) override;
+    void complete_stream(runtime::TaskResult & result) override;
+    struct AudioChunkPlan {
+        runtime::TimeSpan source_span;
+    };
+
+    HiggsAudioSTTRequest make_request(const runtime::TaskRequest & request) const;
+    std::vector<AudioChunkPlan> audio_chunk_plan(const runtime::TaskRequest & request) const;
+    runtime::TaskResult run_single(const HiggsAudioSTTRequest & request);
+
+    runtime::TaskSpec task_;
+    std::shared_ptr<const HiggsAudioSTTAssets> assets_;
+    std::shared_ptr<const engine::model_spec::ModelContract> contract_;
+    size_t audio_encoder_graph_arena_bytes_ = 512ull * 1024ull * 1024ull;
+    size_t text_decoder_prefill_graph_arena_bytes_ = 512ull * 1024ull * 1024ull;
+    size_t text_decoder_decode_graph_arena_bytes_ = 256ull * 1024ull * 1024ull;
+#if defined(INTPTR_MAX) && (INTPTR_MAX == INT32_MAX)
+    size_t text_decoder_weight_context_bytes_ = 1024ull * 1024ull * 1024ull;
+#else
+    size_t text_decoder_weight_context_bytes_ = 4096ull * 1024ull * 1024ull;
+#endif
+    engine::assets::TensorStorageType audio_encoder_weight_storage_type_ = engine::assets::TensorStorageType::Native;
+    engine::assets::TensorStorageType text_decoder_weight_storage_type_ = engine::assets::TensorStorageType::Native;
+    HiggsAudioSTTTextTokenizer tokenizer_;
+    HiggsAudioSTTWhisperFrontend frontend_;
+    HiggsAudioSTTWhisperEncoderRuntime audio_encoder_;
+    HiggsAudioSTTQwen3DecoderRuntime text_decoder_;
+    HiggsAudioSTTPromptBuilder prompt_builder_;
+    HiggsAudioSTTPostprocessor postprocessor_;
+    runtime::TaskRequest streaming_request_;
+    int64_t streaming_chunks_processed_ = 0;
+};
+
+}  // namespace engine::models::higgs_audio_stt

@@ -87,7 +87,7 @@ second line
 | separation | off | on: vocals and music are split, and the AR learns (lyrics → vocals) and (tags → music) too |
 | base weights | int8 | bf16 on a 24 GB card for a little more precision |
 
-A run takes a GPU of its own for hours; Whisper, stems and the rest of the lab go on beside it. The first run fetches Comfy-Org's repack of YuE2 into `checkpoints/comfy/`.
+A run takes a GPU of its own for hours; Whisper, stems and the rest of the lab go on beside it. The first run fetches Comfy-Org's repack of YuE2 into `models/comfy/`.
 
 ## 4 · Watching it (Telemetry)
 
@@ -103,16 +103,6 @@ The runs that are training stand on top of the room with their progress, time le
 ## 5 · Trying it
 
 In Create, pick the LoRA and set the two strengths (music half, sound half) apart. Render the same song with the same seeds with and without it: the difference is the adapter. A style LoRA usually wants the sound half near 1 and the music half lower.
-
-## 6 · GTSinger
-
-[GTSinger](https://github.com/AaronZ345/GTSinger) ([dataset](https://huggingface.co/datasets/GTSinger/GTSinger), **CC BY-NC-SA 4.0**: an adapter trained on it is non-commercial and shared under the same terms) is dry studio singing with word timing, notes and technique labels. Fetch it yourself (using it accepts its terms), then:
-
-```bash
-.venv/bin/python lab/gtsinger.py /path/to/GTSinger/Russian
-```
-
-Every phrase becomes a WAV, its lyrics (`[Verse]`, a line at every pause) and its own style (`russian, pop, female alto vocal, breathy, slow pace, happy, a cappella, dry studio vocal`) in `datasets/raw/GTSinger-RU/`. Measured: the Russian part is **one alto, six songs, 195 phrases** (about 0.2 GB): a diction sample of one voice, not a language adapter of many.
 
 ---
 

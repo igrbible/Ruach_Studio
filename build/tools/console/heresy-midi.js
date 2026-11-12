@@ -13,7 +13,7 @@
 //   a plugin runs with the rights its folder was given, as its Python steps do.
 (function () {
   "use strict";
-  var M = { access: null, wait: null, listen: [], acts: [], scripts: [], roles: {}, workers: {}, plugins: null, light: {} };
+  var M = { access: null, wait: null, listen: [], acts: [], scripts: [], roles: {}, workers: {}, plugins: null, pluginsFailed: "", light: {} };
   var ACTIONS = ["play", "stop", "record", "rewind", "forward", "loop", "trackLeft", "trackRight", "bankLeft", "bankRight",
                  "fader", "pan", "mute", "solo", "select", "arm", "octave"];
   var IDLE = /\b(DAW|MIDIIN[2-9]|Mackie|MCU|HUI)\b|MIDI [2-9]$/i;     // a control port no script claims is left alone, never taken for keys
@@ -148,13 +148,25 @@
     lights: function (L, A) { A.send([0x90, 0x5e, L.playing ? 0x7f : 0]); A.send([0x90, 0x5f, L.recording ? 0x7f : 0]); } });
 
   // ---- a plugin's script in a worker of its own: no page, no network; messages in, actions out
-  var PRE = "'use strict';[\"fetch\",\"XMLHttpRequest\",\"WebSocket\",\"EventSource\",\"importScripts\",\"indexedDB\",\"caches\",\"Worker\"].forEach(function(k){try{self[k]=undefined;}catch(e){}});" +
+  // HERESY 2224 (the audit of 06.11.2026, §2.5): «self.fetch = undefined» hid only the worker's own property, and the one on its prototype
+  // (WorkerGlobalScope.prototype.fetch) still asked the Studio as the page. Now each name is taken from every object of the chain, and the worker
+  // is made from a data: address, so it runs at no origin of the Studio's: whatever it would ask is a stranger's request, which the Studio and its
+  // lab refuse and whose answer the browser does not let it read
+  var PRE = "'use strict';[\"fetch\",\"XMLHttpRequest\",\"WebSocket\",\"EventSource\",\"importScripts\",\"indexedDB\",\"caches\",\"Worker\",\"SharedWorker\",\"BroadcastChannel\",\"WebTransport\"].forEach(function(k){" +
+    "for(var o=self;o;o=Object.getPrototypeOf(o)){try{if(Object.prototype.hasOwnProperty.call(o,k))Object.defineProperty(o,k,{value:undefined,writable:false,configurable:false});}catch(e){try{delete o[k];}catch(x){}}}" +
+    "try{self[k]=undefined;}catch(e){}});" +
     "var __h=null;function onMidi(f){__h=f;}" +
     "var studio={api:'ruach.midi/1',act:function(n){postMessage({act:String(n),args:[].slice.call(arguments,1)});},say:function(t){postMessage({say:String(t)});},send:function(b){postMessage({send:[].slice.call(b)});}};" +
     "self.onmessage=function(e){var m=e.data||{};if(m.midi&&__h){try{__h(m.midi,m.port);}catch(x){postMessage({error:String(x&&x.message||x)});}}};\n";
   function plugins() {
     if (M.plugins) return Promise.resolve();
-    return fetch("/lab/plugins").then(function (r) { return r.ok ? r.json() : { plugins: [] }; }).catch(function () { return { plugins: [] }; }).then(function (d) {
+    // HERESY 2213: a failed read is not «no plugins»: nothing is kept, the next listen asks again, and the ports say why they are left alone
+    return fetch("/lab/plugins").then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }).then(function (d) { M.pluginsFailed = ""; return d; }, function (e) {
+      M.pluginsFailed = (e && e.message) || String(e);
+      emit("say", { text: tr("The plugins' MIDI scripts could not be read: the lab does not answer") + " (" + M.pluginsFailed + ")", bad: true });
+      return null;
+    }).then(function (d) {
+      if (!d) return;                                     // M.plugins stays unset: read anew on the next listen
       M.plugins = [];
       (d.plugins || []).filter(function (p) { return !window.HeresyPro || window.HeresyPro.keep(p); }).forEach(function (p) { (p.midi || []).forEach(function (m) { M.plugins.push({ plugin: p.id, pname: p.name, id: m.id, name: m.name, ports: m.ports }); }); });
       return Promise.all(M.plugins.map(function (m) {
@@ -165,7 +177,7 @@
             handle: function (dd, A, portName) {
               var w = M.workers[key];
               if (!w) {
-                w = M.workers[key] = new Worker(URL.createObjectURL(new Blob([PRE + code], { type: "text/javascript" })));
+                w = M.workers[key] = new Worker("data:text/javascript;charset=utf-8," + encodeURIComponent(PRE + code));   // HERESY 2224: no origin of the Studio's
                 w.onmessage = function (e) { var x = e.data || {}; if (x.act) w.A.act.apply(null, [x.act].concat(x.args || [])); else if (x.send) w.A.send(x.send); else if (x.say) w.A.say(x.say); else if (x.error) emit("say", { text: m.name + ": " + x.error, bad: true }); };
               }
               w.A = A;
@@ -187,7 +199,8 @@
       btn.setAttribute("aria-pressed", st.on ? "true" : "false");
       if (say) { say.textContent = st.on ? "" : st.why; say.classList.toggle("is-bad", !st.on && !!st.why); }
       list.innerHTML = !st.on ? "" : !st.ports.length ? '<div class="row-hint">' + esc(tr("No MIDI port")) + "</div>" : st.ports.map(function (p) {
-        var what = p.role === "keys" ? tr("keys: they play the piano roll") : p.role === "control" ? tr("control: {0}").replace("{0}", p.scriptName) : tr("left alone: no script speaks its language");
+        var what = p.role === "keys" ? tr("keys: they play the piano roll") : p.role === "control" ? tr("control: {0}").replace("{0}", p.scriptName)
+          : M.pluginsFailed ? tr("left alone: the plugins' MIDI scripts could not be read") : tr("left alone: no script speaks its language");   // HERESY 2213
         return '<div class="midi-port is-' + p.role + '"><span class="midi-name">' + esc(p.name) + '</span><span class="midi-role">' + esc(what) + "</span></div>";
       }).join("");
     };

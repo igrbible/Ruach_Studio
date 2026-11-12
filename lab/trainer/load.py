@@ -16,7 +16,7 @@ from typing import Dict
 import torch
 from safetensors import safe_open
 
-from model import YuE2Model
+from model import YuE2Config, YuE2Model
 
 _HADAMARD: Dict[tuple, torch.Tensor] = {}
 
@@ -71,9 +71,27 @@ def read_checkpoint(path: str, device="cpu", dtype=torch.bfloat16):
     return out, unpacked
 
 
-def load_model(path: str, device="cuda", dtype=torch.bfloat16) -> YuE2Model:
+def depth_of(sd) -> int:
+    """HERESY 2321: the layer count a checkpoint holds (the music half's layers), so a deeper network than YuE2's 28 loads as it is; 0 when none"""
+    n = [int(k.split(".")[3]) for k in sd if k.startswith("text_encoders.model.layers.") and k.split(".")[3].isdigit()]
+    return 1 + max(n) if n else 0
+
+
+def load_model(path: str, device="cuda", dtype=torch.bfloat16, overlay: str = None) -> YuE2Model:
+    """HERESY 2321: `overlay`, a file of some of the same weights (a save that holds a few layers alone) laid over the checkpoint's before it loads;
+    a key the checkpoint lacks is an error. The network takes the checkpoint's own depth."""
     sd, unpacked = read_checkpoint(path, "cpu", dtype)
-    model = YuE2Model()
+    if overlay:
+        top, _ = read_checkpoint(overlay, "cpu", dtype)
+        stray = [k for k in top if k not in sd]
+        if stray:
+            raise ValueError(f"the overlay {overlay} has weights the checkpoint lacks: {stray[:3]} (+{max(0, len(stray) - 3)})")
+        sd.update(top)
+        del top
+    cfg = YuE2Config()
+    if depth_of(sd):
+        cfg.num_hidden_layers = depth_of(sd)
+    model = YuE2Model(cfg)
     nar = {k[len("model.diffusion_model."):]: v for k, v in sd.items() if k.startswith("model.diffusion_model.")}
     ar = {k[len("text_encoders."):]: v for k, v in sd.items() if k.startswith("text_encoders.")}
     for name, module, part in (("NAR", model.nar, nar), ("AR", model.ar, ar)):

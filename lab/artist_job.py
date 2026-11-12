@@ -60,6 +60,9 @@ def live(run, n, gw, gh, w, h):
 
 def sized(shapes, shape, ask):
     """HERESY 1384: a shape's (drawn, kept) sizes, both times the run's scale (a second pass: 1.5 or 2), the drawn at multiples of 16."""
+    if ask.get("size"):                              # HERESY 2278: the Advanced size, drawn and kept as asked
+        w, h = (int(x) for x in ask["size"])
+        return (w, h), (w, h)
     (gw, gh), (w, h) = shapes[shape]
     s = float(ask.get("scale") or 1)
     if s == 1:
@@ -424,6 +427,9 @@ def main(run=None):
     prompt, seed, count = str(ask["prompt"]), int(ask["seed"]), max(1, min(4, int(ask.get("count") or 1)))
     preview = bool(ask.get("preview"))
     shapes = [s for s in ask.get("shapes") or ["1:1"] if s in SHAPES]
+    if asked.startswith("qwen") and (ask.get("comfy") or ask.get("grid")):   # HERESY 2332: his ComfyUI workflows' way, and his grid
+        import artist_comfy
+        return artist_comfy.main(run, ask, asked)
     if asked.startswith("qwen"):                     # HERESY 1318: Qwen-Image 2512 and 2.1 paint in artist_qwen.py
         import artist_qwen
         return artist_qwen.main(run, ask, asked)

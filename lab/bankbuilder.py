@@ -39,6 +39,8 @@ import urllib.request
 import wave
 from pathlib import Path
 
+import paths                       # HERESY 2330: where the weights live
+
 import numpy as np
 
 AUDIO_EXT = (".flac", ".wav", ".mp3", ".m4a", ".ogg", ".opus", ".webm", ".aif", ".aiff")
@@ -202,7 +204,8 @@ class Seps:
 
     def run(self, which, src, out):
         from audio_separator.separator import Separator
-        d, m = (self.kit / "separation/vr", WIND) if which == "wind" else (self.kit / "separation/roformer", VOICE)
+        sep = paths.at(paths.REFINER_SEPARATION, self.kit)
+        d, m = (sep / "vr", WIND) if which == "wind" else (sep / "roformer", VOICE)
         if which not in self.s:
             sep = Separator(model_file_dir=str(d), output_dir=str(out), output_format="FLAC", sample_rate=44100, log_level=30)
             sep.load_model(model_filename=m)
@@ -309,11 +312,11 @@ class Listener:
         self.kit, self.instrument, self.proc, self.url = Path(kit), instrument, None, None
 
     def start(self):
-        m = self.kit / "checkpoints" / "Qwen2.5-Omni-7B-GGUF"
+        m = paths.at(paths.LISTENER, self.kit) / "Qwen2.5-Omni-7B-GGUF"
         model, proj = m / "Qwen2.5-Omni-7B-Q8_0.gguf", m / "mmproj-Qwen2.5-Omni-7B-f16.gguf"
         srv = self.kit / "vendor" / "llama.cpp" / "build" / "bin" / "llama-server"
         if not (model.is_file() and proj.is_file() and srv.is_file()):
-            raise FileNotFoundError("the Listener needs checkpoints/Qwen2.5-Omni-7B-GGUF (Q8_0 and its mmproj) and vendor/llama.cpp's llama-server")
+            raise FileNotFoundError("the Listener needs " + paths.LISTENER + "/Qwen2.5-Omni-7B-GGUF (Q8_0 and its mmproj) and vendor/llama.cpp's llama-server")
         with socket.socket() as s:
             s.bind(("127.0.0.1", 0))
             port = s.getsockname()[1]
@@ -725,6 +728,7 @@ def score(g):
     return min(g["dur"], 4.0) * 2 - room + min(max(g.get("onset_db", 0), 0), 30) * 0.05 - g.get("steady", 0) * 0.02
 
 
+LOOP_MIN_S = 0.9                    # a chromatic note shorter than this is cut without a loop (HERESY 2215: and taken only where its key has no longer one)
 SEAM_S = 0.04                       # HERESY 2061: a loop's seam crossfaded in the sample itself, as long as the .sfz's loop_crossfade
 
 
@@ -829,27 +833,37 @@ def find_loop(y, sr, a, b):
             return got
     if b - a < int(0.4 * sr):                         # 02.11: 0.8 s left a 1.2 s C4 without a loop, and a drone on it died after a breath
         return None
+    # HERESY 2215: the start is sought through the first half of the body, not only its first 0.1 s. A note still swelling there (a duduk's
+    # breath grows for a second) matched no end within 1.5 dB of that early level: 2.97 s of A#3 and a dozen long notes went without a loop
+    # though their waves matched at 0.98 and more further on
     win = int(0.02 * sr)
     zc = np.where((m[:-1] <= 0) & (m[1:] > 0))[0]
-    starts = zc[(zc >= a) & (zc < a + int(0.1 * sr))]
-    ends = zc[(zc > a + int(0.3 * sr)) & (zc < b - win)]
-    if not len(starts) or not len(ends):
+    starts = zc[(zc >= max(a, win)) & (zc < a + max(int(0.1 * sr), (b - a) // 2 - int(0.3 * sr)))]
+    if not len(starts):
         return None
+    hop = int(0.05 * sr)                              # and a loop never spans a dip: a breath or a gap inside it would pulse every turn
+    lvl = np.array([db(m[i:i + hop]) for i in range(0, len(m) - hop + 1, hop)] or [0.0])
     best = None
-    s = int(starts[0])
-    ref = m[s:s + win]
-    ref = (ref - ref.mean()) / (ref.std() + 1e-9)
-    for e in ends[::max(1, len(ends) // 400)]:
-        e = int(e)
-        seg = m[e:e + win]
-        if len(seg) < win:
+    for s in starts[:: max(1, len(starts) // 12)]:
+        s = int(s)
+        ends = zc[(zc > s + int(0.3 * sr)) & (zc < b - win)]
+        if not len(ends):
             continue
-        c = float(np.dot(ref, (seg - seg.mean()) / (seg.std() + 1e-9)) / win)
-        lv = abs(db(m[e - win:e]) - db(m[s - win:s])) if s >= win else 0.0
-        if lv > 1.5:
-            continue
-        if not best or c > best[0]:
-            best = (c, s, e)
+        ref = m[s:s + win]
+        ref = (ref - ref.mean()) / (ref.std() + 1e-9)
+        lv0 = db(m[s - win:s])
+        for e in ends[::max(1, len(ends) // 400)]:
+            e = int(e)
+            seg = m[e:e + win]
+            if len(seg) < win:
+                continue
+            c = float(np.dot(ref, (seg - seg.mean()) / (seg.std() + 1e-9)) / win)
+            if abs(db(m[e - win:e]) - lv0) > 1.5:
+                continue
+            if lvl[s // hop:max(s // hop + 1, e // hop)].min() < lv0 - 6:
+                continue
+            if not best or c > best[0]:
+                best = (c, s, e)
     return (best[1], best[2]) if best and best[0] >= 0.9 else None
 
 
@@ -879,7 +893,7 @@ def cut_sample(kit, w, plan, g, out, rate=48000):
     gain = 10 ** (-1 / 20) / peak
     y *= gain
     loop = None
-    if plan["mode"] == "chromatic" and g["dur"] >= 0.9:
+    if plan["mode"] == "chromatic" and g["dur"] >= LOOP_MIN_S:
         body_a = int((max(pre, 0.0) + 0.35) * rate)
         body_b = int((max(pre, 0.0) + g["dur"] - 0.25 - max(0.0, -pre)) * rate)
         loop = find_loop(y, rate, body_a, body_b)
@@ -919,6 +933,8 @@ def build(kit, bank, name=None, round_robins=3, layers=3, picks=None):
             ids = set(picks[str(key)])
             gs = [g for g, i in zip(gs, want) if i in ids]
         else:
+            if mode == "chromatic" and any(g["dur"] >= LOOP_MIN_S for g in gs):   # HERESY 2215: a note too short to loop dies under a held key:
+                gs = [g for g in gs if g["dur"] >= LOOP_MIN_S]                    # fewer round robins rather than one that stops (the Trainer's picks stay his)
             gs = sorted(gs, key=score, reverse=True)[: round_robins * layers]
         if gs:
             chosen[key] = gs

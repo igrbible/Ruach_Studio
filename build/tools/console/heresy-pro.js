@@ -3,6 +3,7 @@
 // ☰, shown only when a plugin that is not the Studio's own is in user/plugins/. Off, the page reads the plugins as a public studio would: no
 // step, pipeline, DAW insert or MIDI script of such a plugin (the lab keeps them; nothing is deleted); the page reloads to read them anew.
 // Kept in this browser
+// HERESY 2261: a plugin's own panel (plugins.py "page") is run by the page while own plugins are on; off, the page loads none, as a public studio
 (function () {
   "use strict";
   var KEY = "yue2.proOff";
@@ -32,7 +33,16 @@
       r.hidden = !own.length;
       r.querySelector("input").checked = !off();
       document.documentElement.classList.toggle("pro-off", off() && own.length > 0);
+      if (!off()) own.filter(function (p) { return p.page; }).forEach(panel);   // HERESY 2261
     }).catch(function () { /* no lab: nothing to switch */ });
+  }
+  function panel(p) {                                  // HERESY 2261: the plugin's panel, its text from the lab, run as one of the page's own scripts
+    fetch("/lab/plugins/page?plugin=" + encodeURIComponent(p.id), { cache: "no-store" }).then(function (x) { return x.ok ? x.text() : ""; }).then(function (code) {
+      if (!code) return;
+      var s = document.createElement("script");
+      s.textContent = code + "\n//# sourceURL=plugin-" + p.id + ".js";
+      document.head.appendChild(s);
+    }).catch(function () { /* a panel that does not load stays away */ });
   }
   window.HeresyPro = { off: off, keep: keep };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();

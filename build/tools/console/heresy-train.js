@@ -18,7 +18,7 @@
     language: { label: "Language", say: "diction of a language; exact lyrics, many voices", o: { rank: 32, epochs: 20, ar_loss_weight: 1.0, ar_kl_weight: 0.1, ar_lr_multiplier: 1.0 } },
     artist:   { label: "Artist", say: "all of it; a large, varied catalogue", o: { rank: 32, epochs: 20, ar_loss_weight: 0.7, ar_kl_weight: 0.2, ar_lr_multiplier: 0.7 } }
   };
-  var PANES = ["raw", "set", "train", "run"];
+  var PANES = ["raw", "set", "train", "run", "stereo"];   // HERESY 2340: the stereo guard, a step of its own
   var state = {
     hooks: null, data: null, trash: [], raw: null, rows: [], kind: "style",
     set: recall("yue2.trSet") || "", pane: recall("yue2.trPane") || "", sel: recall("yue2.trRun") || "", epoch: "", cmp: "",
@@ -52,13 +52,38 @@
   function runOf(name) { return runs().filter(function (r) { return r.name === name; })[0] || null; }
   function isLive(r) { return r && (r.status === "running" || r.status === "stopping" || r.status === "pausing"); }   // HERESY 1659: pausing too
   function stateOf(r) { return isLive(r) ? "running" : r.status; }
-  function engineOf(r) { return ((r && r.options) || {}).engine === "ruach" ? "ruach" : "ai-toolkit"; }
+  function engineOf(r) { var e = ((r && r.options) || {}).engine; return e === "ruach" ? "ruach" : r && r.plugin ? String(e) : "ai-toolkit"; }   // HERESY 2321: a plugin's trainer by its id
   function epochs(r) { return r.tracks ? (r.steps || 0) / r.tracks : 0; }
+  // HERESY 2209 (the audit of 06.11.2026: a resumed run that ended in its first minute read «step 0 / 107310, epoch 0.0», its saves half an epoch on): a run stands
+  // at least at its last numbered save, the one its trainer goes on from (run.json written before 2.0.7 said 0 after such a resume)
+  function stepOf(r) {
+    var saved = (r.checkpoints || []).reduce(function (m, c) { return /_\d{6,}\.safetensors$/.test(c.file || "") && c.step > m ? c.step : m; }, 0);
+    return Math.max(r.step || 0, saved) || loggedStep(r);   // HERESY 2347: nothing on disk says it: the trainer's own log does
+  }
+  // HERESY 2347 (the audit of 06.11.2026 §7 item 15, checked again 10.11 on a run of ours of before 2209): a run whose run.json said step 0 (written before 2209) and
+  // whose saves were deleted since read «0.0 % · step 0 / 107310 · e0/2» though it trained to step 27174, half an epoch, as its own step log says:
+  // the last step of its curves (or of a save deleted in the room) is where it stood when nothing else is left to say it
+  function loggedStep(r) {
+    var ser = r.series || {}, last = 0;
+    ["loss", "flow", "ar_ce"].forEach(function (k) { (((ser[k] || {}).curve) || []).forEach(function (p) { if (p && p[0] > last) last = p[0]; }); });
+    (r.gone || []).forEach(function (g) { if (g.step > last) last = g.step; });
+    return last;
+  }
+  function tookOf(r, live) { return (r.took_before || 0) + Math.max(0, (r.ended || (live ? Date.now() / 1000 : r.started)) - r.started); }   // HERESY 2209: every sitting
+  // HERESY 2347: a run of before 2209 kept only its last sitting's time (56 s for one run after hours of training): its logged steps at its measured speed
+  // say about how long it trained, shown with ≈ and said so in the tile's tip; nothing is guessed for a run that recorded its sittings
+  function tookEst(r, live) {
+    var sps = (r.series || {}).sec_per_step, n = stepOf(r), had = tookOf(r, live);
+    if (live || r.took_before || r.first_started || !sps || !n) return 0;
+    var est = n * sps;
+    return est > had * 1.5 && est - had > 600 ? est : 0;
+  }
 
   // ------------------------------------------------------------------ loading
   function load() {
-    return Promise.all([api("/train/datasets"), api("/train/trash").catch(function () { return { trash: [] }; })]).then(function (d) {
-      state.data = d[0]; state.trash = d[1].trash || [];
+    // HERESY 2208: a trash the lab could not list is said so, never «The trash is empty»
+    return Promise.all([api("/train/datasets"), api("/train/trash").catch(function (e) { return { trash: [], error: e.message || String(e) }; })]).then(function (d) {
+      state.data = d[0]; state.trash = d[1].trash || []; state.trashErr = d[1].error || "";
       if (state.first) {                       // the first look: a training run comes to the front
         state.first = false;
         var live = runs().filter(isLive)[0];
@@ -68,6 +93,7 @@
       if (state.sel && !runOf(state.sel)) state.sel = "";
       paint();
     }).catch(function (e) {
+      state.loadFailed = true;                         // HERESY 2339: the room is painted whole once the lab answers (a tick only refreshed its lists)
       $("trWarn").innerHTML = '<p class="tr-warn">The lab does not answer: ' + esc(e.message) + "</p>";
     }).then(schedule);
   }
@@ -78,23 +104,30 @@
     state.timer = setTimeout(function () {
       if (document.hidden || document.body.dataset.tab !== "train") return schedule();
       var wasLive = runs().filter(isLive).map(function (r) { return r.name; });   // HERESY 1275: a run that ends while the room looks on
-      Promise.all([api("/train/datasets"), api("/train/trash").catch(function () { return { trash: state.trash }; })]).then(function (d) {
-        state.data = d[0]; state.trash = d[1].trash || [];
+      Promise.all([api("/train/datasets"), api("/train/trash").catch(function (e) { return { trash: state.trash, error: e.message || String(e) }; })]).then(function (d) {
+        state.data = d[0]; state.trash = d[1].trash || []; state.trashErr = d[1].error || "";
         wasLive.forEach(function (name) {
           var r = runOf(name);
           if (!r || isLive(r) || (r.status !== "done" && r.status !== "failed")) return;   // stopped by hand: nothing to say
           toast(r.status === "done" ? "Training " + name + " is done" : "Training " + name + " failed" + (r.error ? ": " + r.error : ""), r.status !== "done");
           if (window.RuachChime) window.RuachChime.ring(r.status === "done");
         });
-        paintLive(); paintList(); paintPills(); gate();
+        paintEngines(); paintLive(); paintList(); paintPills(); gate();
         if (state.pane === "run") paintRun();
-      }).catch(function () { /* the next tick tries again */ }).then(schedule);
+        // HERESY 2339 (the neutral-value pass): the room read again after a refusal: painted whole (the sets and the trainer's warnings too), and the
+        // line saying the numbers were old goes
+        if (state.loadFailed || state.staleSince) { state.loadFailed = false; state.staleSince = 0; paint(); }
+      }).catch(function () {                         // the next tick tries again; HERESY 2339: meanwhile the room says its numbers stopped
+        if (state.staleSince || !$("trWarn")) return;
+        state.staleSince = Date.now();
+        $("trWarn").insertAdjacentHTML("afterbegin", '<p class="tr-warn tr-stale">' + esc(tr("The lab does not answer since {0}: what you see is from then").replace("{0}", new Date(state.staleSince).toTimeString().slice(0, 5))) + "</p>");
+      }).then(schedule);
     }, runs().some(isLive) ? 5000 : 30000);
   }
 
   window.addEventListener("ruach-lang", function () { if (state.data) paint(); });   // HERESY 1165: its tips in the new language
   function paint() {
-    warn(); paintRaw(); paintSets(); paintLive(); paintList(); paintPills(); gate(); listenPanel();
+    paintEngines(); warn(); paintRaw(); paintSets(); paintLive(); paintList(); paintPills(); gate(); listenPanel();
     showPane(state.pane || "raw", true);
   }
 
@@ -106,6 +139,7 @@
     Array.prototype.forEach.call(document.querySelectorAll("#view-train .tr-pane"), function (el) { el.classList.toggle("is-on", el.dataset.pane === p); });
     paintPills();
     if (p === "run") paintRun();
+    if (p === "stereo") sgPaint();                    // HERESY 2340
     if (!quiet) { var el = document.querySelector('#view-train .tr-pane[data-pane="' + p + '"]'); if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
   }
   // HERESY 1101: what a rank costs, measured on YuE2's shapes (224 matrices, 2048 wide; 1.41 B weights a half);
@@ -130,9 +164,10 @@
     // HERESY 1166: the names as typed, the words translated piece by piece
     $("trSayRaw").textContent = state.raw ? state.raw + (state.rows.length ? " · " + tr(included + " of " + state.rows.length) : "") : tr("a folder of datasets/raw/");
     $("trSaySet").textContent = set ? set.name + " · " + tr(set.tracks + " tracks") : tr("a caption for every track");
-    $("trSayTrain").textContent = tr(KINDS[state.kind].label.toLowerCase()) + " · " + tr("rank " + (parseInt($("tr_rank").value, 10) ? Math.max(4, Math.floor(parseInt($("tr_rank").value, 10) / 2)) + " · " + $("tr_rank").value : "?"))   /* HERESY 1668: music · sound, 1:2 */ + " · " + $("tr_quant").value +
+    var extSay = extOf($("tr_engine").value);
+    $("trSayTrain").textContent = extSay ? extSay.label : tr(KINDS[state.kind].label.toLowerCase()) + " · " + tr("rank " + (parseInt($("tr_rank").value, 10) ? Math.max(4, Math.floor(parseInt($("tr_rank").value, 10) / 2)) + " · " + $("tr_rank").value : "?"))   /* HERESY 1668: music · sound, 1:2 */ + " · " + $("tr_quant").value +
       ($("tr_engine").value === "ruach" ? "" : " · AI-Toolkit");
-    $("trSayRun").textContent = r ? r.name + (isLive(r) && r.steps ? " · " + Math.floor(100 * (r.step || 0) / r.steps) + " %" : " · " + tr(r.status)) : tr("a run: its curves and epochs");
+    $("trSayRun").textContent = r ? r.name + (isLive(r) && r.steps ? " · " + Math.floor(100 * stepOf(r) / r.steps) + " %" : " · " + tr(r.status)) : tr("a run: its curves and epochs");
     var done = { raw: !!state.raw, set: !!set, train: runs().some(function (x) { return x.dataset === state.set; }), run: !!(r && r.status === "done") };
     Array.prototype.forEach.call(document.querySelectorAll("#trPills .ps-step"), function (b) {
       b.classList.toggle("is-active", b.dataset.pane === state.pane);
@@ -144,6 +179,7 @@
   // HERESY 1086: what the chosen trainer lacks, said by name; the Studio's own needs no AI-Toolkit
   function warn() {
     var d = state.data || {}, own = d.own || {}, q = $("tr_quant").value, html = "";
+    if (extOf($("tr_engine").value)) { $("trWarn").innerHTML = ""; return; }   // HERESY 2321: a plugin's trainer, not the Studio's
     var lack = [];                                       // HERESY 1422: the Studio's own trainer, the only one
     if (!own[q]) lack.push("Comfy-Org's YuE2 " + q + " weights");
     if (!own.mert) lack.push("MERT-v2-FullSong");
@@ -159,12 +195,12 @@
     var live = runs().filter(isLive), el = $("trLive");
     el.hidden = !live.length;
     el.innerHTML = live.map(function (r) {
-      var pct = r.steps ? 100 * (r.step || 0) / r.steps : 0, ser = r.series || {};
+      var pct = r.steps ? 100 * stepOf(r) / r.steps : 0, ser = r.series || {};
       var loss = ser.flow ? ser.flow.last : r.loss, ar = ser.ar_ce ? ser.ar_ce.last : r.ar_ce;
       return '<button type="button" class="tr-liverow' + (r.name === state.sel && state.pane === "run" ? " is-on" : "") + '" data-open="' + esc(r.name) + '" data-tip="Its telemetry">' +
         '<span class="tr-lname"><i class="tr-pulse"></i><b translate="no">' + esc(r.name) + "</b><em>" + esc(r.kind || "") + " · " + (engineOf(r) === "ruach" ? "Ruach" : "AI-Toolkit") + " · GPU" + esc(r.gpus && r.gpus.length > 1 ? r.gpus.join("+") : r.gpu) + "</em></span>" +
-        '<span class="tr-lnums mono">' + pct.toFixed(0) + " % · " + (r.step || 0) + "/" + (r.steps || "?") +
-          (r.tracks ? " · e" + ((r.step || 0) / r.tracks).toFixed(1) + "/" + Math.round(epochs(r)) : "") +
+        '<span class="tr-lnums mono">' + pct.toFixed(0) + " % · " + stepOf(r) + "/" + (r.steps || "?") +
+          (r.tracks ? " · e" + (stepOf(r) / r.tracks).toFixed(1) + "/" + Math.round(epochs(r)) : "") +
           (r.eta_s != null ? " · " + tr("{0} left").replace("{0}", tr(span(r.eta_s))) : "") + (ser.sec_per_step ? " · " + ser.sec_per_step + " s/step" : "") +
           (loss != null ? " · flow " + Number(loss).toFixed(3) : "") + (ar != null ? " · ar_ce " + Number(ar).toFixed(2) : "") + "</span>" +
         (function (m) { return '<span class="tr-lprog"><span class="tr-lbar"><i style="width:' + pct.toFixed(1) + '%"></i>' + m.over + "</span>" + m.under + "</span>"; })(liveMarks(r, ser)) +   // HERESY 1819
@@ -174,7 +210,7 @@
   // HERESY 1819 (Viktor 28.10.2026: «…прогресс с пометками… ожидаемые/готовые сохранения чекпоинтов, и дубляж зелёных»): the saves along the progress:
   // on disk (amber in loras/), to come (hollow, each with when it is due at this speed), deleted (a red ring), worth hearing first green, on the bar too
   function liveMarks(r, ser) {
-    var total = r.steps || 0, now = r.step || 0, every = +((r.options || {}).save_every) || 0, per = r.tracks || 0;
+    var total = r.steps || 0, now = stepOf(r), every = +((r.options || {}).save_every) || 0, per = r.tracks || 0;
     if (!total) return { under: "", over: "" };
     var cand = candidates(r), marks = [], at = function (s) { return Math.min(100, 100 * s / total).toFixed(2) + "%"; };
     var sps = +ser.sec_per_step || (r.eta_s && total > now ? r.eta_s / (total - now) : 0);
@@ -233,7 +269,7 @@
           "</div>" + '<div class="take-foot"><span>' + gb(x.bytes) + "</span><span>deleted " + esc(ago(x.trashed)) + "</span>" + (x.loras.length ? "<span>" + x.loras.length + " adapters with it</span>" : "") + "</div>" +
           '<div class="tr-racts"><button type="button" class="btn ghost small" data-restore="' + esc(x.id) + '">Restore</button>' +
           '<button type="button" class="btn ghost small danger" data-purge="' + esc(x.id) + '" data-size="' + x.bytes + '" data-name="' + esc(x.name) + '">Delete for good</button></div></article>';
-      }).join("") : '<p class="row-hint tr-empty">The trash is empty.</p>';
+      }).join("") : '<p class="row-hint tr-empty">' + (state.trashErr ? esc(tr("The trash could not be read: {0}").replace("{0}", state.trashErr)) : "The trash is empty.") + "</p>";
     } else {
       var list = runs().filter(inFilter).filter(function (r) { return !q || (r.name + " " + (r.dataset || "") + " " + (r.kind || "") + " " + (r.note || "")).toLowerCase().indexOf(q) >= 0; });
       html = list.length ? list.map(card).join("") : '<p class="row-hint tr-empty">' + (state.filter === "active" ? "Nothing trains now." : state.filter === "archived" ? "Nothing archived." : "No runs yet: steps 1 to 3.") + "</p>";
@@ -249,16 +285,16 @@
     return p.map(function (x, i) { return x ? "<span" + (i === 1 ? ' translate="no"' : "") + ">" + esc(x) + "</span>" : ""; }).filter(Boolean).join(" · ");
   }
   function card(r) {
-    var pct = r.steps ? 100 * (r.step || 0) / r.steps : 0, live = isLive(r);
-    var ep = r.tracks ? "e" + epochSaid(Math.floor(10 * (r.step || 0) / r.tracks) / 10) + "/" + Math.round(epochs(r)) : (r.step || 0) + "/" + (r.steps || "?");   // HERESY 1736: its tenths
+    var pct = r.steps ? 100 * stepOf(r) / r.steps : 0, live = isLive(r);
+    var ep = r.tracks ? "e" + epochSaid(Math.floor(10 * stepOf(r) / r.tracks) / 10) + "/" + Math.round(epochs(r)) : stepOf(r) + "/" + (r.steps || "?");   // HERESY 1736: its tenths
     return '<article class="tr-rcard' + (live ? " is-running" : "") + (r.name === state.sel ? " is-selected" : "") + (r.archived ? " is-archived" : "") + '" data-open="' + esc(r.name) + '" tabindex="0">' +
       '<div class="tr-rtitle" translate="no">' + esc(r.name) + "</div>" +
       '<div class="tr-rsub">' + rsub([r.kind, r.dataset, r.tracks ? r.tracks + " tracks" : ""]) + "</div>" +
       spark(r) +
       (live || (r.status !== "done" && pct > 0) ? '<div class="tr-rbar"><i style="width:' + pct.toFixed(1) + '%"></i></div>' : "") +
       '<div class="take-foot"><span class="tag tr-st is-' + esc(r.status) + '">' + esc(r.status) + "</span>" +
-        '<span class="tag">' + (engineOf(r) === "ruach" ? "Ruach" : "AITK") + "</span>" +
-        "<span>" + ep + "</span>" + (r.loras && r.loras.length ? '<span data-tip="In loras/, ready in the Creator">' + r.loras.length + " in loras/</span>" : "") +
+        '<span class="tag">' + (engineOf(r) === "ruach" ? "Ruach" : r.plugin ? esc(r.engine_label || r.plugin) : "AITK") + "</span>" +
+        "<span>" + ep + "</span>" + (r.loras && r.loras.length ? '<span data-tip="In loras/, ready in the Musician">' + r.loras.length + " in loras/</span>" : "") +
         "<span>" + esc(ago(r.started)) + "</span>" + (r.protected ? '<span class="tag tr-lock" data-tip="' + esc(tr(LOCK_TIP)) + '">🔒</span>' : "") + "</div>" +   // HERESY 1817
       '<button type="button" class="tr-rmenu" data-menu="' + esc(r.name) + '" aria-label="Run actions">⋯</button></article>';
   }
@@ -311,6 +347,9 @@
     }
     logDock.hidden = false;
     placeLog();
+    if (logDock.dataset.run !== name) {   // (the integration's suite, 2208) another run's lines never stand under this one's name: its failed read says why
+      var was = logDock.querySelector(".tr-logdock-body"); was.textContent = ""; delete was.dataset.failed;
+    }
     logDock.dataset.run = name;
     logDock.querySelector(".tr-logdock-name").textContent = name;
     logDock.querySelector(".tr-logdock-dl").href = "/lab/train/log?name=" + encodeURIComponent(name);
@@ -323,11 +362,12 @@
   // less than 360 px there (a narrow window) it takes the width as before
   function placeLog() {
     if (!logDock || logDock.hidden) return;
-    var dock = document.getElementById("logDock"), vw = document.documentElement.clientWidth, room = vw - 32, right = false;
+    // HERESY 2271: the page is a block of 2560 px at most, centred; px is its gutter on each side
+    var dock = document.getElementById("logDock"), vw = document.documentElement.clientWidth, px = Math.max(0, (vw - 2560) / 2), room = vw - 2 * px - 32, right = false;
     if (dock && getComputedStyle(dock).display !== "none") {
       var r = dock.getBoundingClientRect();
       if (r.width) {
-        var dockLeft = r.left + r.width / 2 < vw / 2, beside = dockLeft ? vw - 16 - (r.right + 12) : r.left - 12 - 16;
+        var dockLeft = r.left + r.width / 2 < vw / 2, beside = dockLeft ? vw - px - 16 - (r.right + 12) : r.left - px - 12 - 16;
         if (beside >= 360) { room = Math.floor(beside); right = dockLeft; }
       }
     }
@@ -338,14 +378,22 @@
     if (!logDock || logDock.hidden) return;
     var name = logDock.dataset.run, body = logDock.querySelector(".tr-logdock-body");
     clearTimeout(logDock.timer);
-    fetch("/lab/train/log?name=" + encodeURIComponent(name)).then(function (r) { return r.ok ? r.text() : ""; }).then(function (text) {
+    // HERESY 2208 (the audit of 06.11.2026, item 16): the last 400 lines, cut by the lab (the whole train.log was 5.6 MB every 3 s); a log the lab could
+    // not give is said with its HTTP code, never «(the log is empty)»
+    fetch("/lab/train/log?tail=400&name=" + encodeURIComponent(name)).then(function (r) {
+      return r.text().then(function (text) { if (!r.ok) throw new Error(tr("the log could not be read: HTTP {0}").replace("{0}", r.status)); return text; });
+    }).then(function (text) {
       if (!logDock || logDock.dataset.run !== name) return;
       var lines = text.split(/\r?\n|\r/).filter(function (l) { return l.trim(); }), atEnd = body.scrollTop + body.clientHeight >= body.scrollHeight - 8;
-      body.textContent = lines.slice(-400).join("\n") || "(the log is empty)";
+      body.textContent = lines.slice(-400).join("\n") || "(the log is empty)"; delete body.dataset.failed;
       if (atEnd) body.scrollTop = body.scrollHeight;
       var r = runs().filter(function (x) { return x.name === name; })[0];
       if (r && isLive(r)) logDock.timer = setTimeout(pullLog, 3000);
-    }).catch(function () { logDock.timer = setTimeout(pullLog, 6000); });
+    }).catch(function (e) {
+      if (!logDock || logDock.dataset.run !== name) return;
+      if (!body.textContent.trim() || body.dataset.failed) { body.textContent = e.message || String(e); body.dataset.failed = "1"; }   // what it showed stays; a log never shown says why
+      logDock.timer = setTimeout(pullLog, 6000);
+    });
   }
   // HERESY 1300 (Viktor 10.10.2026: «можно ли на завершённом тренинге продолжить по большему количеству эпох?»): a run of the Studio's
   // own trainer that has ended with a save goes on to more epochs: the lab's run of the same name takes its last save and its
@@ -400,7 +448,7 @@
       .then(function (ok) {
         if (!ok) return null;
         if (!pub.length) return { loras: false };
-        return confirmBox(tr("{0} of them are in loras/, in the Creator's LoRAs. Take them out too (the space comes back), or keep them usable?").replace("{0}", pub.length),
+        return confirmBox(tr("{0} of them are in loras/, in the Musician's LoRAs. Take them out too (the space comes back), or keep them usable?").replace("{0}", pub.length),
           { ok: "Take them out", cancel: "Keep them" }).then(function (out) { return { loras: !!out }; });
       })
       .then(function (how) {
@@ -423,7 +471,7 @@
       .then(function (ok) {
         if (!ok) return;
         if (!own.length) return false;
-        return confirmBox("And its " + own.length + " adapter" + (own.length > 1 ? "s" : "") + " in loras/?\n\n" + own.join(", ") + "\n\nThey are in the Creator’s LoRAs now. Take them out with the run (into the trash beside it), or keep them usable in the Creator.",
+        return confirmBox("And its " + own.length + " adapter" + (own.length > 1 ? "s" : "") + " in loras/?\n\n" + own.join(", ") + "\n\nThey are in the Musician’s LoRAs now. Take them out with the run (into the trash beside it), or keep them usable in the Musician.",
           { ok: "Take them out", cancel: "Keep them" }).then(function (takeOut) {
           return api("/train/delete", { name: name, loras: !!takeOut }).then(function (d) { return d; });
         });
@@ -567,14 +615,14 @@
     var cks = (r.checkpoints || []).slice().sort(function (a, b) {        // by step; the run's final file after its last numbered one
       return (a.step || 0) - (b.step || 0) || (/_\d{6,}\.safetensors$/.test(b.file) ? 1 : 0) - (/_\d{6,}\.safetensors$/.test(a.file) ? 1 : 0);
     });
-    var pct = r.steps ? 100 * (r.step || 0) / r.steps : 0, took = (r.ended || (live ? Date.now() / 1000 : r.started)) - r.started;
+    var pct = r.steps ? 100 * stepOf(r) / r.steps : 0, took = tookOf(r, live);
     var ar = ser.ar_ce ? ser.ar_ce.last : r.ar_ce, memo = ar != null && ar < 0.3;
     var bytes = cks.reduce(function (s, c) { return s + (c.bytes || 0); }, 0);
     var tile = function (k, v, hint, wide) { return '<div class="tr-tile' + (wide ? " tr-tile-wide" : "") + '"' + (hint ? ' data-tip="' + esc(hint) + '"' : "") + "><span>" + k + "</span><b>" + v + "</b></div>"; };
     var pick = cks.filter(function (c) { return c.file === state.epoch; })[0], cand = candidates(r);
     el.innerHTML =
       '<div class="tr-rhead"><div class="tr-rname"><b translate="no">' + esc(r.name) + '</b><span class="tag tr-st is-' + esc(r.status) + '">' + esc(r.status) + "</span>" +
-        (r.kind ? '<span class="tag">' + esc(r.kind) + "</span>" : "") + '<span class="tag">' + (engineOf(r) === "ruach" ? "Ruach trainer" : "AI-Toolkit") + "</span>" +
+        (r.kind ? '<span class="tag">' + esc(r.kind) + "</span>" : "") + '<span class="tag">' + (engineOf(r) === "ruach" ? "Ruach trainer" : r.plugin ? esc(r.engine_label || r.plugin) : "AI-Toolkit") + "</span>" +
         (r.archived ? '<span class="tag">archived</span>' : "") + "</div>" +
         '<div class="tr-racts"><select class="tr-cmp" id="trCmp" aria-label="Compare with another run" data-tip="Another run\u2019s curves, dashed, on the same steps">' +
           '<option value="">Compare with\u2026</option>' + runs().filter(function (x) { return x.name !== r.name && x.series && x.series.flow; })
@@ -592,10 +640,11 @@
           '<button type="button" class="btn ghost small" data-menu="' + esc(r.name) + '" aria-label="More">⋯</button></div></div>' +
       (r.note ? '<p class="row-hint tr-note" translate="no">' + esc(r.note) + "</p>" : "") +
       '<div class="tr-prog' + (live ? " is-live" : "") + '"><div class="tr-pbar"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
-        '<span class="mono">' + pct.toFixed(1) + " % · step " + (r.step || 0) + " / " + (r.steps || "?") + (r.tracks ? " · epoch " + ((r.step || 0) / r.tracks).toFixed(1) + " / " + Math.round(epochs(r)) : "") + "</span></div>" +
+        '<span class="mono">' + pct.toFixed(1) + " % · step " + stepOf(r) + " / " + (r.steps || "?") + (r.tracks ? " · epoch " + (stepOf(r) / r.tracks).toFixed(1) + " / " + Math.round(epochs(r)) : "") + "</span></div>" +
       '<div class="tr-tiles">' +
         tile("speed", ser.sec_per_step ? ser.sec_per_step + " s/step" : "—") +
-        tile(live ? "running" : "took", span(r.elapsed_s != null && live ? r.elapsed_s : took)) +
+        (tookEst(r, live) ? tile("took", "≈ " + span(tookEst(r, live)), tr("About: its logged steps at its measured speed; the time of its earlier sittings was not recorded (a run of before 2.0.7)"))   // HERESY 2347
+          : tile(live ? "running" : "took", span(r.elapsed_s != null && live ? r.elapsed_s : took))) +
         tile("left", live && r.eta_s != null ? span(r.eta_s) : "—") +
         tile("flow now", ser.flow ? ser.flow.last.toFixed(3) : "—", "the sound half's loss, averaged over the last 25 steps") +
         tile("ar_ce now", ar != null ? Number(ar).toFixed(3) : "—", "the music half's loss, averaged over the last 25 steps") +
@@ -623,7 +672,7 @@
               return '<span class="tr-pickbar"><button type="button" class="btn small danger" data-pickgo' + (ch.length ? "" : " disabled") + ">" + esc(tr("Delete {0} chosen · {1}").replace("{0}", ch.length).replace("{1}", gb(bb))) + "</button>" +
                 '<button type="button" class="btn ghost small" data-pickoff>Cancel</button></span>';
             })() : '<button type="button" class="btn ghost small tr-pickon" data-pickon>Choose saves to delete…</button>') +
-          '<span class="row-hint">a click: into the Creator’s LoRAs or out of them; a right-click: its file \u00b7 <span class="tr-key-cand"></span>' + (heldOutBest(r) ? " worth hearing first, by the held-out tracks (the ear decides) \u00b7 \u2713 in loras/" : " worth hearing first, read off the curves (a guess: the ear decides) \u00b7 \u2713 in loras/") + "</span></div>" +   // HERESY 1736
+          (r.no_adapter ? '<span class="row-hint">' + esc(tr("Its saves are weights of their own, not adapters: a click says what one is, a right-click gives its file")) + ' \u00b7 <span class="tr-key-cand"></span> ' + esc(tr("the held-out best")) : '<span class="row-hint">a click: into the Musician’s LoRAs or out of them; a right-click: its file \u00b7 <span class="tr-key-cand"></span>' + (heldOutBest(r) ? " worth hearing first, by the held-out tracks (the ear decides) \u00b7 \u2713 in loras/" : " worth hearing first, read off the curves (a guess: the ear decides) \u00b7 \u2713 in loras/")) + "</span></div>" +   // HERESY 1736
         // HERESY 1816: the saves no longer on disk, struck through in the same row, by step
         '<div class="tr-echips">' + cks.concat((r.gone || []).map(function (g) { return { gone: true, step: g.step, epoch: g.epoch }; })).sort(function (a, b) {
           return (a.step || 0) - (b.step || 0) || (a.gone ? -1 : 0) - (b.gone ? -1 : 0);
@@ -634,18 +683,20 @@
         }).join("") + "</div>" +
         "</div>" : "") +
       '<div class="tr-facts"><div class="tr-facts-head">What it was given</div><div class="tr-fgrid">' +   // HERESY 1833: open always
+        (r.facts ? factsOf(r) :                         // HERESY 2321: a plugin's run says its own
         "<span><em>set</em> <span translate=\"no\">" + esc(r.dataset) + "</span>" + (r.tracks ? " · <span>" + r.tracks + " tracks</span>" : "") + "</span>" +   // HERESY 1166
         "<span><em>rank</em> " + esc(o.rank) + " · lr " + esc(o.lr) + "</span>" +
         (+o.lr_tail_epochs > 0 ? "<span><em>fade</em> " + esc(tr("the last {0} epochs to {1} %").replace("{0}", o.lr_tail_epochs).replace("{1}", Math.round((+o.lr_tail_floor || 0) * 100))) + "</span>" : "") +   // HERESY 1752
         "<span><em>music half</em> AR " + esc(o.ar_loss_weight) + " · KL " + esc(o.ar_kl_weight) + " · <span>speed ×" + esc(o.ar_lr_multiplier) + "</span></span>" +
         "<span><em>mode</em> <span>" + esc(o.cot) + "</span> · " + esc(o.quant) + (o.do_separation ? " · <span>separated</span>" : "") + "</span>" +
         "<span><em>window</em> " + Math.round((o.train_window_frames || 0) / 25) + " s</span>" +
-        (guardSaid(o) ? "<span><em>guard</em> " + esc(guardSaid(o)) + "</span>" : "") +   // HERESY 1832
+        (guardSaid(o) ? "<span><em>guard</em> " + esc(guardSaid(o)) + "</span>" : "")) +   // HERESY 1832
         (ser.vram_cards ? "<span><em>VRAM peaks</em> " + Object.keys(ser.vram_cards).map(function (k) {
           var c = ser.vram_cards[k], card = (r.gpus || [])[+k];
           return "GPU" + (card != null ? card : k) + " " + esc(tr("{0} GB at step {1}").replace("{0}", c.gb).replace("{1}", c.step));
         }).join(" · ") + "</span>" : "") +
-        "<span><em>started</em> " + esc(when(r.started)) + "</span>" +
+        "<span><em>started</em> " + esc(when(r.first_started || r.started)) + "</span>" +
+        (r.first_started && r.first_started !== r.started ? "<span><em>resumed</em> " + esc(when(r.started)) + "</span>" : "") +   // HERESY 2209
       "</div></div>";
   }
   // the reading under the cursor: the step, its epoch and both values there
@@ -670,7 +721,7 @@
   }
   function publish(file) {
     var r = runOf(state.sel);
-    api("/train/publish", { name: r.name, file: file }).then(function (d) { toast("In loras/: " + d.lora + " — ready in the Creator"); load(); }).catch(function (e) { toast(e.message, true); });
+    api("/train/publish", { name: r.name, file: file }).then(function (d) { toast("In loras/: " + d.lora + " — ready in the Musician"); load(); }).catch(function (e) { toast(e.message, true); });
   }
   function unpublish(lora) {                        // HERESY 1496: OUT in the epoch's question is the word; no second one
     var r = runOf(state.sel);
@@ -682,10 +733,13 @@
   function epochAsk(file) {
     var r = runOf(state.sel), c = epochOf(file);
     if (!r || !c) return;
+    if (r.no_adapter) return window.HeresyDialog.confirm((c.epoch != null ? tr("Epoch " + epochSaid(c.epoch)) : tr("The final file")) + " \u00b7 " + r.name + "\n\n" +   // HERESY 2321
+      [tr("step " + c.step), when(c.saved), gb(c.bytes)].filter(Boolean).join(" \u00b7 ") + "\n" + "training/" + r.name + "/" + c.file + "\n\n" +
+      tr("Weights of their own, not an adapter: a LoRA on them is the Studio's trainer with this save as its Base.") + (candidates(r)[file] ? "\n" + tr("worth hearing first: " + candidates(r)[file]) : ""), { ok: tr("Close") });
     var why = candidates(r)[file], as = c.lora ? c.lora.split("/").pop().replace(/\.safetensors$/, "") : "";
     window.HeresyDialog.confirm((c.epoch != null ? tr("Epoch " + epochSaid(c.epoch)) : tr("The final file")) + " \u00b7 " + r.name + "\n\n" +
       [tr("step " + c.step), when(c.saved), gb(c.bytes)].filter(Boolean).join(" \u00b7 ") + "\n" +
-      (c.lora ? tr("In loras/ now, in the Creator as " + as + ".") : tr("Not in loras/ now.")) + (why ? "\n" + tr("worth hearing first: " + why) : ""),
+      (c.lora ? tr("In loras/ now, in the Musician as " + as + ".") : tr("Not in loras/ now.")) + (why ? "\n" + tr("worth hearing first: " + why) : ""),
       { ok: tr("IN: into loras/"), alt: tr("OUT: out of loras/"), cancel: tr("Cancel") }).then(function (a) {
       if (a === true) {
         if (c.lora) return toast(tr("Already in loras/ as " + as));
@@ -842,6 +896,16 @@
         "<span>" + p.tracks + " tracks</span> · <span>" + clock(p.seconds) + "</span> · <span>from</span> <span translate=\"no\">" + esc(p.from) + "</span> · <span>" + esc(p.made) + "</span>" +
         (voiceShort((rawOf(p.from) || {}).voice) ? ' · <span translate="no">' + sexIcon(rawOf(p.from).voice) + esc(voiceShort(rawOf(p.from).voice)) + "</span>" : "") + "</span></label>";   // HERESY 1169, 1314
     }).join("") : '<p class="row-hint">No set made yet: step 2.</p>';
+    // HERESY 2359: a set keeps the transcriber its sheets were written by; a set with none yet gets SheetSage2 with bf16 angles (picked
+    // once a set, so a choice made after stays until another set is picked)
+    var picked = (d.prepared || []).filter(function (p) { return p.name === state.set; })[0];
+    if (picked && state.transcriberFor !== picked.name && $("tr_transcriber")) {
+      state.transcriberFor = picked.name;
+      var own = picked.sheets_by || "sheetsage2-bf16";
+      if ($("tr_transcriber").querySelector('option[value="' + own + '"]')) $("tr_transcriber").value = own;
+      // HERESY 2377: Standard (exact angles) left the page; a set whose sheets it wrote shows it, read-only, and keeps it
+      $("tr_transcriber").disabled = own === "sheetsage2";
+    }
   }
   function setKind(k) {
     state.kind = k;
@@ -855,6 +919,12 @@
   function gate() {
     var d = state.data;
     if (!d) return;
+    var ext = extOf($("tr_engine").value);
+    if (ext) {                                          // HERESY 2321: a plugin's trainer says for itself what it needs
+      $("trRun").disabled = !!ext.error;
+      $("trRunSay").innerHTML = ext.error ? '<span class="tr-err">' + esc(ext.error) + "</span>" : esc(tr(ext.say || ""));
+      return;
+    }
     var quant = $("tr_quant").value, engine = $("tr_engine").value, gbm = function (mb) { return (mb / 1024).toFixed(1) + " GB"; };
     var measured = (d.runs || []).filter(function (r) { return r.vram_peak_mb > 0 && r.options; });
     var same = measured.filter(function (r) { return r.options.quant === quant && engineOf(r) === engine; });
@@ -874,6 +944,87 @@
     // HERESY 1420 (Viktor: «Режим можно выбрать только с AI-Toolkit. Это твоя недоработка в коде?»): Mode is the Studio's own trainer's
     // too (Direct, Full, Melody); HERESY 1422: and Separate (AI-Toolkit left the Studio: the Studio's own is the only trainer)
     $("tr_cot").disabled = false; $("tr_sep").disabled = false;
+    // HERESY 2321: a plugin's trainer shows its own knobs in place of the adapter's; the Base only when a plugin offers one
+    var ext = extOf($("tr_engine").value), knobs = $("trKnobs"), bases = $("tr_base") ? $("tr_base").options.length : 0;
+    Array.prototype.forEach.call(knobs.children, function (el) {
+      if (el.querySelector("#trRunName, #tr_engine")) return;
+      el.hidden = !!ext || (el.id === "trBaseField" && bases < 2) || (el.contains($("tr_transcriber")) && $("tr_cot").value === "off");   // HERESY 2359: Direct writes no sheets
+    });
+    if ($("trKinds")) $("trKinds").parentNode.hidden = !!ext;
+    var box = $("trExtKnobs");
+    if (!box) { box = document.createElement("div"); box.id = "trExtKnobs"; box.className = "tr-knobs"; knobs.insertAdjacentElement("afterend", box); }
+    box.hidden = !ext;
+    var sig = ext ? ext.id + JSON.stringify(ext.fields || []) : "";
+    if (ext && box.dataset.sig !== sig) {
+      var was = {};                                       // what was typed stays when the fields come again (a new save in Start from)
+      Array.prototype.forEach.call(box.querySelectorAll("[data-ext]"), function (el) { was[el.dataset.ext] = el.type === "checkbox" ? el.checked : el.value; });
+      box.innerHTML = (ext.fields || []).map(extField).join("");
+      box.dataset.sig = sig;
+      Array.prototype.forEach.call(box.querySelectorAll("[data-ext]"), function (el) {
+        var v = was[el.dataset.ext];
+        if (v === undefined) return;
+        if (el.type === "checkbox") el.checked = !!v;
+        else if (el.tagName !== "SELECT" || el.querySelector('option[value="' + CSS.escape(String(v)) + '"]')) el.value = v;
+      });
+    }
+  }
+  // HERESY 2321 (Viktor 10.11.2026: «Тренер должен уметь прямо из Студии работать с этими весами, и все LoRA адаптеры»): the trainers a plugin brings
+  // (lab/training.py: plugin_trainers), beside the Studio's own; their knobs from their own fields, their bases offered for a LoRA
+  function engines() { return (state.data && state.data.engines) || []; }
+  function extOf(id) { return id && id !== "ruach" ? engines().filter(function (e) { return e.id === id; })[0] || null : null; }
+  function extField(f) {
+    var id = "trx_" + f.key, tip = f.tip ? ' data-tip="' + esc(tr(f.tip)) + '"' : "", lab = '<span class="label">' + esc(tr(f.label || f.key)) + "</span>";
+    if (f.type === "select") return '<label class="field' + (f.key === "init" ? " tr-wide" : "") + '"' + tip + ">" + lab + '<select id="' + esc(id) + '" data-ext="' + esc(f.key) + '">' +
+      (f.options || []).map(function (o) { return '<option value="' + esc(o[0]) + '"' + (String(o[0]) === String(f.default) ? " selected" : "") + ">" + esc(tr(o[1])) + "</option>"; }).join("") + "</select></label>";
+    if (f.type === "check") return '<label class="check"' + tip + '><input type="checkbox" id="' + esc(id) + '" data-ext="' + esc(f.key) + '"' + (f.default ? " checked" : "") + " /> <span>" + esc(tr(f.label || f.key)) + "</span></label>";
+    return '<label class="field"' + tip + ">" + lab + '<input type="' + (f.type === "number" ? "number" : "text") + '" id="' + esc(id) + '" data-ext="' + esc(f.key) + '"' +
+      ["min", "max", "step"].map(function (k) { return f[k] != null ? " " + k + '="' + esc(f[k]) + '"' : ""; }).join("") + ' value="' + esc(f.default == null ? "" : f.default) + '" /></label>';
+  }
+  function paintEngines() {
+    var sel = $("tr_engine"), want = sel.value || recall("yue2.trEngine") || "ruach";
+    var opts = [["ruach", "Ruach Studio"]].concat(engines().map(function (e) { return [e.id, e.label + (e.error ? " (" + tr("unavailable") + ")" : "")]; }));
+    if (sel.dataset.sig !== JSON.stringify(opts)) {
+      sel.innerHTML = opts.map(function (o) { return '<option value="' + esc(o[0]) + '">' + esc(o[1]) + "</option>"; }).join("");
+      sel.dataset.sig = JSON.stringify(opts);
+      sel.value = opts.some(function (o) { return o[0] === want; }) ? want : "ruach";
+    }
+    var bases = [];
+    engines().forEach(function (e) { (e.bases || []).forEach(function (b) { bases.push(["plugin:" + e.id + ":" + b.id, b.label]); }); });
+    if (!$("trBaseField")) {
+      $("tr_engine").closest("label").insertAdjacentHTML("afterend", '<label class="field tr-wide" id="trBaseField" data-tip="' + esc(tr("The weights the adapter learns on: YuE2 3B, the Studio's own (Base weights says which file), or a model a plugin's trainer made. An adapter is used on the weights it learnt on.")) + '"><span class="label">' + esc(tr("Base")) + '</span><select id="tr_base"></select></label>');
+      $("tr_base").addEventListener("change", function () { keep("yue2.trBase", this.value); if (state.data) gate(); });
+    }
+    var bs = $("tr_base");
+    if (bs.dataset.sig !== JSON.stringify(bases)) {
+      var b0 = bs.value || recall("yue2.trBase") || "";
+      bs.innerHTML = '<option value="">' + esc(tr("YuE2 3B, the Studio's own")) + "</option>" + bases.map(function (b) { return '<option value="' + esc(b[0]) + '">' + esc(b[1]) + "</option>"; }).join("");
+      bs.dataset.sig = JSON.stringify(bases);
+      bs.value = bases.some(function (b) { return b[0] === b0; }) ? b0 : "";
+    }
+    engineKnobs();
+  }
+  function factsOf(r) {
+    return (r.facts || []).map(function (f) { return "<span><em>" + esc(tr(f[0])) + "</em> " + esc(f[1]) + "</span>"; }).join("");
+  }
+  function startExt(set, ext) {
+    var spec = { dataset: set, name: slug($("trRunName").value || set + "-" + ext.id), engine: ext.id };
+    Array.prototype.forEach.call(document.querySelectorAll("#trExtKnobs [data-ext]"), function (el) {
+      spec[el.dataset.ext] = el.type === "checkbox" ? el.checked : el.type === "number" ? parseFloat(el.value) : el.value;
+    });
+    var again = runOf(spec.name);
+    if (again && isLive(again)) return toast(tr("{0} is running now").replace("{0}", spec.name), true);
+    if (again && engineOf(again) !== ext.id) return toast("A run named " + spec.name + " is there already: give this one its own name", true);
+    var said = (ext.fields || []).map(function (f) {
+      var v = spec[f.key];
+      if (f.type === "select") { var o = (f.options || []).filter(function (x) { return String(x[0]) === String(v); })[0]; v = o ? tr(o[1]) : v; }
+      return tr(f.label || f.key) + ": " + (v === "" || v == null ? "\u2014" : v);
+    }).join("\n");
+    return confirmBox(tr("Train " + spec.name + "?") + "\n\n" + ext.label + " \u00b7 " + set + (again ? "\n" + tr("A run of this name goes on from its last save, with these knobs.") : "") + "\n\n" + said + (ext.confirm ? "\n\n" + tr(ext.confirm) : ""), { ok: "Start training" })
+      .then(function (ok) {
+        if (!ok) return;
+        keep("yue2.trEngine", ext.id);
+        return api("/train/run", spec).then(function () { toast("Training " + spec.name); state.sel = spec.name; keep("yue2.trRun", spec.name); return load().then(function () { showPane("run"); }); });
+      }).catch(function (e) { toast(e.message, true); });
   }
   // HERESY 1631: the cards asked last time, kept in this browser
   (function () { var c = $("tr_cards"), v = recall("yue2.trCards"); if (c && v && c.querySelector('option[value="' + v + '"]')) c.value = v; })();
@@ -888,12 +1039,17 @@
   function startRun() {
     var set = state.set;
     if (!set) return toast("Pick a set (made in step 2)", true);
+    var ext = extOf($("tr_engine").value);
+    if (ext) return startExt(set, ext);                 // HERESY 2321
     var spec = { dataset: set, name: slug($("trRunName").value || set + "-" + state.kind), kind: state.kind, engine: $("tr_engine").value };
     ["save_epochs", "rank", "lr", "ar_loss_weight", "ar_kl_weight", "ar_lr_multiplier"].forEach(function (k) { spec[k] = parseFloat($("tr_" + k).value); });
     // HERESY 1752: the rate's fade over the run's last epochs, down to a per cent of itself (the lab and the trainer take it as a share)
     spec.lr_tail_epochs = Math.max(0, parseFloat($("tr_lr_tail_epochs") && $("tr_lr_tail_epochs").value) || 0);
     spec.lr_tail_floor = Math.max(0, Math.min(100, parseFloat($("tr_lr_tail_floor") && $("tr_lr_tail_floor").value) || 0)) / 100;
     spec.cot = $("tr_cot").value; spec.quant = $("tr_quant").value; spec.do_separation = $("tr_sep").checked;
+    spec.transcriber = $("tr_transcriber") ? $("tr_transcriber").value : "";   // HERESY 2328: the sheets' transcriber (2359: none said, the set's own)
+    var baseSel = $("tr_base"), baseSaid = "";            // HERESY 2321: a plugin's base, bf16 always
+    if (baseSel && baseSel.value) { spec.base = baseSel.value; spec.quant = "bf16"; baseSaid = baseSel.options[baseSel.selectedIndex].textContent; }
     spec.cards = Math.max(1, parseInt($("tr_cards") && $("tr_cards").value, 10) || 1);   // HERESY 1631
     spec.vram_meter = !!($("tr_vram_meter") && $("tr_vram_meter").checked);   // HERESY 1832: 1815's meter and guard
     spec.long_off_card0 = !!($("tr_long_off_card0") && $("tr_long_off_card0").checked);
@@ -906,16 +1062,18 @@
     var ep = Math.max(1, parseInt($("tr_epochs").value, 10) || 1);   // HERESY 1410: epochs asked, the steps the set's tracks times them
     spec.steps = ep * tracks;
     // HERESY 1091: said when the run may take the Studio's own card (synthesis then waits while it trains)
-    api("/gpus").catch(function () { return null; }).then(function (g) {
+    api("/gpus").catch(function (e) { return { failed: e.message || String(e) }; }).then(function (g) {   // HERESY 2339: unread is not «not shared»
       var shared = g && g.roles && g.roles.train.indexOf(g.roles.studio) >= 0;
       // HERESY 1166: its sentences translated each where they are made
       return confirmBox(tr("Train " + spec.name + "?") + "\n\n" + tr(ep * tracks + " steps (" + ep + " epochs of " + tracks + " tracks) on " + set + ", rank " + spec.rank + ", AR weight " + spec.ar_loss_weight + ", " + spec.quant + " weights, " +
         (spec.engine === "ruach" ? "the Studio’s trainer" : "AI-Toolkit") + "; a checkpoint every " + (spec.save_epochs > 1 ? spec.save_epochs + " epochs" : "epoch") + ", all kept.") + " " +
         tr("It takes a GPU of its own for hours" + (spec.engine === "ruach" ? "; a set without its latent cache gets one first (a second or two a track)." : "; the first run also fetches Comfy-Org’s YuE2 weights.")) +
+        (g && g.failed ? "\n\n" + tr("The cards' roles could not be read ({0}): whether training may take the Studio's own card is not known").replace("{0}", g.failed) : "") +   // HERESY 2339
         (shared ? "\n\n" + tr("Training may take GPU" + g.roles.studio + ", the Studio’s own card: if it does, synthesis waits until the run ends (Engine → GPUs gives training another card).") : "") +
         (spec.cards > 1 ? "\n\n" + tr("On {0} cards at once: each learns its own songs, their lessons averaged every step.").replace("{0}", spec.cards) : "") +
         (spec.lr_tail_epochs > 0 ? "\n\n" + tr("The learning rate fades over the last {0} epochs to {1} % of itself.").replace("{0}", spec.lr_tail_epochs).replace("{1}", Math.round(spec.lr_tail_floor * 100)) : "") +
-        (guard ? "\n\n" + tr("The meter and the guard: {0}.").replace("{0}", guard) : ""), { ok: "Start training" });   // HERESY 1752   // HERESY 1631   // 1166: "Train" is the step's name
+        (guard ? "\n\n" + tr("The meter and the guard: {0}.").replace("{0}", guard) : "") +
+        (baseSaid ? "\n\n" + tr("On the base {0}.").replace("{0}", baseSaid) : ""), { ok: "Start training" });   // HERESY 2321   // HERESY 1752   // HERESY 1631   // 1166: "Train" is the step's name
     }).then(function (ok) {
       if (!ok) return;
       return api("/train/run", spec).then(function () { toast("Training " + spec.name); state.sel = spec.name; keep("yue2.trRun", spec.name); return load().then(function () { showPane("run"); }); });
@@ -958,6 +1116,118 @@
     confirmBox("Write " + Object.keys(tags).length + " styles into the captions of " + set + "?\n\nEach first line becomes: " + (trigger ? trigger + ", " : "") + "the track’s tags" + (shared ? ". " + shared.slice(0, 80) + (shared.length > 80 ? "…" : "") : "") + "\nThe lyrics stay.", { ok: "Write" })
       .then(function (ok) { if (ok) return api("/train/styles", { dataset: set, trigger: trigger, shared: shared, tags: tags }).then(function (d) { toast(d.captions + " captions written"); listenPanel(); }); })
       .catch(function (e) { toast(e.message, true); });
+  }
+
+  // ------------------------------------------------------------------ HERESY 2340: the stereo guard
+  // (Viktor 05.11.2026: «Нам нужно убедиться, что мы не убили стерео нашими тренировками… если так, Тренера придётся фиксить и дописывать»): a workspace
+  // of probes measured against the base model on the same cards (lab/stereo_guard.py, the measure of 05.11.2026 number for number): each fine-tune,
+  // adapter or merge by the side against the middle in four bands and by the panorama's spread; past the first line «narrower», past the second «too
+  // narrow». Asked only on Measure (it measures for minutes the first time, then keeps each take's numbers); the lines are a proposal for his ear
+  var SG = { res: null, err: "", timer: 0, list: [], ws: "" };
+  var SG_KEY = "yue2.trStereoWs", SG_BASE = "yue2.trStereoBase";
+  function sgAsk(url) {
+    return fetch(url, { priority: "low" }).then(function (r) {
+      if (r.status === 404) { var no = new Error(tr("This lab has no stereo guard yet (it was started before the guard came): restart the lab")); no.noGuard = true; throw no; }
+      return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error((b && b.error) || "HTTP " + r.status); b.__status = r.status; return b; },
+        function () { throw new Error(tr("The lab does not answer: {0}").replace("{0}", "HTTP " + r.status)); });
+    });
+  }
+  function sgSay(t, bad) { var el = $("trSgSay"); if (el) { el.textContent = t || ""; el.classList.toggle("is-bad", !!bad); } }
+  function sgMake() {
+    var box = $("trStereoPane");
+    if (!box || box.dataset.made) return box;
+    box.dataset.made = "1";
+    box.innerHTML = '<p class="row-hint">' + esc(tr("The stereo of a workspace's probes against the base model on the same cards: a fine-tune, an adapter or a merge that narrows the bass, the air or the panorama shows here.")) + "</p>" +
+      '<div class="tr-sg-form"><label class="field" data-tip="' + esc(tr("Its sections too: the probes, sung by each model on the same cards (the Ring's twenty, a probe set)")) + '"><span class="label">' + esc(tr("Workspace")) + '</span><select id="trSgWs"></select></label>' +
+      '<label class="field" data-tip="' + esc(tr("What the others are held against: a stock YuE2 on the same cards, in this workspace or anywhere in the library, the same seed first")) + '"><span class="label">' + esc(tr("Base")) + '</span><select id="trSgBase"><option value="">' + esc(tr("auto: a stock YuE2")) + "</option></select></label>" +
+      '<button type="button" class="btn primary small" id="trSgRun" data-tip="' + esc(tr("Each take measured once (its numbers kept), the takes that came since measured too")) + '">' + esc(tr("Measure")) + "</button>" +
+      '<span class="row-hint mono" id="trSgSay" role="status"></span></div><div class="tr-sg-table" id="trSgTable"></div>';
+    $("trSgRun").addEventListener("click", function () { sgRun(true); });
+    $("trSgWs").addEventListener("change", function () { keep(SG_KEY, this.value); SG.res = null; SG.err = ""; sgPeek(); });
+    $("trSgBase").addEventListener("change", function () { keep(SG_BASE, this.value); SG.res = null; SG.err = ""; sgPeek(); });
+    return box;
+  }
+  function sgPaint() {
+    if (!sgMake()) return;
+    if (!$("trSgWs").options.length) sgSay(tr("Reading the workspaces…"));   // the list on its way, said
+    var ask = window.ruachCatalog ? window.ruachCatalog() : Promise.reject(new Error(tr("The Librarian is not here")));
+    ask.then(function (d) {
+      SG.list = (d.workspaces || []).slice();
+      var sel = $("trSgWs"), was = sel.value || recall(SG_KEY) || "", probe = SG.list.filter(function (w) { return /Ринг|Ring|🧪/.test(w) && w.indexOf(" / ") < 0; })[0] || "";
+      sel.innerHTML = SG.list.map(function (w) { return '<option value="' + esc(w) + '" translate="no">' + esc(w) + "</option>"; }).join("");
+      sel.value = SG.list.indexOf(was) >= 0 ? was : probe || SG.list[0] || "";
+      sgSay("");                                       // the list came: «Reading…» goes
+      sgPeek();
+    }, function (e) { sgSay(tr("The workspaces could not be read: {0}").replace("{0}", e.message || String(e)), true); });   // never an empty choice without a word
+  }
+  function sgQuery(extra) {
+    var b = $("trSgBase").value;
+    return "/lab/stereo/guard?ws=" + encodeURIComponent($("trSgWs").value) + (b ? "&base=" + encodeURIComponent(b) : "") + (extra || "");
+  }
+  function sgPeek() {                                // a guard measured already (or measuring) shows as the pane opens; nothing is started here
+    if (!$("trSgWs").value) return sgTable();
+    sgAsk(sgQuery("&peek=1")).then(sgGot, function (e) { SG.err = e.message || String(e); SG.noGuard = !!e.noGuard; SG.res = null; sgTable(); });
+  }
+  function sgRun(again) {
+    if (!$("trSgWs").value) return;
+    clearTimeout(SG.timer);
+    $("trSgRun").disabled = true;
+    sgAsk(sgQuery(again ? "&again=1" : "")).then(sgGot, function (e) { $("trSgRun").disabled = false; SG.err = e.message || String(e); SG.noGuard = !!e.noGuard; SG.res = null; sgTable(); });
+  }
+  function sgGot(b) {
+    clearTimeout(SG.timer);
+    if (b.status === "none") { $("trSgRun").disabled = false; SG.res = null; SG.err = ""; sgSay(""); return sgTable(); }
+    if (b.__status === 202 || b.status === "running") {
+      $("trSgRun").disabled = true;
+      sgSay(tr("Measuring: {0} of {1} takes").replace("{0}", b.done || 0).replace("{1}", b.of || "…"));
+      if (document.body.dataset.tab === "train" && state.pane === "stereo") SG.timer = setTimeout(function () { sgRun(false); }, 2000);
+      return;
+    }
+    $("trSgRun").disabled = false;
+    if (b.status === "failed") { SG.err = b.error || "failed"; SG.res = null; return sgTable(); }
+    SG.err = ""; SG.res = b.result || null;
+    var r = SG.res || {};
+    sgSay(r.asked != null ? tr("{0} takes, {1} of {2} measured").replace("{0}", r.takes).replace("{1}", r.measured).replace("{2}", r.asked) : "");
+    var bs = $("trSgBase"), cur = bs.value || recall(SG_BASE) || "";
+    bs.innerHTML = '<option value="">' + esc(tr("auto: a stock YuE2")) + "</option>" + (r.groups || []).map(function (g) {
+      return '<option value="' + esc(g.subject) + '" translate="no">' + esc(g.subject) + "</option>"; }).join("");
+    bs.value = (r.groups || []).some(function (g) { return g.subject === cur; }) ? cur : "";
+    sgTable();
+  }
+  function sgCell(g, k, line) {
+    var v = (g.delta || {})[k];
+    if (v == null) return '<td class="mono tr-sg-none">—</td>';
+    var cls = v <= line[k].alarm ? " is-alarm" : v <= line[k].note ? " is-note" : "";
+    var shown = Math.abs(v).toFixed(k === "pan" ? 0 : 1), zero = +shown === 0;   // a −0.0 is a 0.0
+    return '<td class="mono' + cls + '">' + (zero ? "" : v > 0 ? "+" : "−") + shown + (k === "pan" ? " %" : " dB") + "</td>";
+  }
+  function sgTable() {
+    var t = $("trSgTable"), r = SG.res;
+    if (!t) return;
+    if (SG.err) { t.innerHTML = '<p class="tr-warn">' + esc(SG.noGuard ? SG.err : tr("The stereo guard failed: {0}").replace("{0}", SG.err)) + "</p>"; return; }
+    if (!r) { t.innerHTML = '<p class="row-hint">' + esc(tr("Measure says how each model here sings the stereo against the base.")) + "</p>"; return; }
+    var L = r.lines || {}, head = ["What sang it", "Takes", "Pairs", "Bass", "Middle", "High", "Air", "Panorama", ""];
+    var failed = [];
+    var rows = (r.groups || []).slice().sort(function (a, b) { return (b.is_base ? 1 : 0) - (a.is_base ? 1 : 0); }).map(function (g) {
+      (g.failed || []).forEach(function (f) { failed.push(f); });
+      if (g.is_base) {
+        var a = g.abs || {}, ab = function (k) { return a[k] == null ? "—" : String(a[k].toFixed(1)).replace("-", "−") + " dB"; };
+        return '<tr class="is-base"><td translate="no">' + esc(g.subject) + "</td><td class=\"mono\">" + g.takes + '</td><td class="mono">—</td>' +
+          ["sm_low", "sm_mid", "sm_high", "sm_air"].map(function (k) { return '<td class="mono tr-sg-abs" data-tip="' + esc(tr("Its own side against its middle")) + '">' + ab(k) + "</td>"; }).join("") +
+          '<td class="mono tr-sg-abs">' + (a.ild_spread == null ? "—" : a.ild_spread.toFixed(1) + " dB") + "</td><td>" + esc(tr("the base")) + "</td></tr>";
+      }
+      var word = tr(g.word || ""), few = g.few ? " · " + tr("few pairs: a hint, not a measure") : "",
+        other = g.vae_other ? " · " + tr("decoded by another VAE than the base: the decoder's own stereo is in these numbers") : "";
+      return '<tr class="' + (g.word === "too narrow" ? "is-alarm" : g.word === "narrower" ? "is-note" : "") + '"><td translate="no">' + esc(g.subject) + '</td><td class="mono">' + g.takes + "</td>" +
+        '<td class="mono" data-tip="' + esc(tr("{0} by the same seed, {1} by the card alone").replace("{0}", g.pairs_seed || 0).replace("{1}", g.pairs_card || 0)) + '">' + (g.pairs || 0) + "</td>" +
+        ["low", "mid", "high", "air", "pan"].map(function (k) { return sgCell(g, k, L); }).join("") + "<td>" + esc(word + few + other) + "</td></tr>";
+    }).join("");
+    var lines = function (w) { return tr("bass {0}, middle {1}, high {2}, air {3} dB, panorama {4} %").replace("{0}", L.low[w]).replace("{1}", L.mid[w]).replace("{2}", L.high[w]).replace("{3}", L.air[w]).replace("{4}", L.pan[w]).replace(/-/g, "−"); };
+    t.innerHTML = (r.said ? '<p class="tr-warn">' + esc(tr(r.said)) + "</p>" : "") +
+      '<table class="tr-sg"><thead><tr>' + head.map(function (h) { return "<th>" + esc(h ? tr(h) : "") + "</th>"; }).join("") + "</tr></thead><tbody>" + rows + "</tbody></table>" +
+      (failed.length ? '<p class="tr-warn">' + esc(tr("{0} takes could not be measured: {1}").replace("{0}", failed.length).replace("{1}", failed[0].error)) + "</p>" : "") +
+      '<p class="row-hint">' + esc(tr("The side against the middle, each take against the base on its card (the same seed first); the panorama in % of the base's spread. Below zero is narrower.")) + " " +
+      esc(tr("Narrower past {0}; too narrow past {1}. user/stereo-guard.json moves the lines.").replace("{0}", lines("note")).replace("{1}", lines("alarm"))) + "</p>";
   }
 
   // ------------------------------------------------------------------ wiring
@@ -1071,8 +1341,10 @@
     $("trKinds").innerHTML = Object.keys(KINDS).map(function (k) { return '<button type="button" class="coll-chip" data-kind="' + k + '">' + KINDS[k].label + "</button>"; }).join("");
     $("trKinds").addEventListener("click", function (e) { var b = e.target.closest("[data-kind]"); if (b) setKind(b.dataset.kind); });
     $("tr_quant").addEventListener("change", function () { if (state.data) { warn(); gate(); paintPills(); } });
+    $("tr_cot").addEventListener("change", engineKnobs);   // HERESY 2359: the transcriber only where sheets are written
     $("tr_engine").addEventListener("change", function () {
-      $("tr_quant").value = this.value === "ruach" ? "bf16" : "int8";   // Viktor: nothing quantized in our trainer
+      $("tr_quant").value = "bf16";                       // Viktor: nothing quantized in our trainer; HERESY 2321: a plugin's trainer says its own
+      keep("yue2.trEngine", this.value);
       engineKnobs(); if (state.data) { warn(); gate(); paintPills(); }
     });
     $("tr_rank").addEventListener("input", paintPills);

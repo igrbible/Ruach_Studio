@@ -1,0 +1,282 @@
+{
+  "family": "moss_tts_local",
+  "display_name": "MOSS-TTS-Local",
+  "description": "Flagship MOSS-TTS model for high-fidelity 31-language and code-switched speech, zero-shot voice cloning, long-form generation, and fine-grained Pinyin, phoneme, and duration control.",
+  "category": "tts",
+  "status": "supported",
+  "tasks": [
+    "tts",
+    "clone"
+  ],
+  "modes": [
+    "offline"
+  ],
+  "languages": [
+    "ar",
+    "cs",
+    "da",
+    "de",
+    "el",
+    "en",
+    "es",
+    "fa",
+    "fi",
+    "fr",
+    "he",
+    "hi",
+    "hu",
+    "it",
+    "ja",
+    "ko",
+    "mk",
+    "ms",
+    "nl",
+    "pl",
+    "pt",
+    "ro",
+    "ru",
+    "sv",
+    "sw",
+    "th",
+    "tl",
+    "tr",
+    "vi",
+    "yue",
+    "zh"
+  ],
+  "options": {
+    "request": [
+      {
+        "name": "max_tokens",
+        "type": "int",
+        "description": "Maximum generated audio frames.",
+        "required": false,
+        "min": 1,
+        "default": 4096
+      },
+      {
+        "name": "do_sample",
+        "type": "bool",
+        "description": "Enable sampling.",
+        "required": false,
+        "default": true
+      },
+      {
+        "name": "temperature",
+        "type": "float",
+        "description": "Audio sampling temperature. Must be finite and positive when sampling.",
+        "required": false,
+        "default": 1.7
+      },
+      {
+        "name": "top_p",
+        "type": "float",
+        "description": "Audio nucleus sampling probability.",
+        "required": false,
+        "default": 0.8
+      },
+      {
+        "name": "top_k",
+        "type": "int",
+        "description": "Audio top-k sampling limit.",
+        "required": false,
+        "default": 25
+      },
+      {
+        "name": "repetition_penalty",
+        "type": "float",
+        "description": "Audio repetition penalty. Must be finite and positive when token history is nonempty.",
+        "required": false,
+        "default": 1
+      },
+      {
+        "name": "text_temperature",
+        "type": "float",
+        "description": "Text sampling temperature. Must be finite and positive when sampling.",
+        "required": false,
+        "default": 1
+      },
+      {
+        "name": "text_top_p",
+        "type": "float",
+        "description": "Text nucleus sampling probability.",
+        "required": false,
+        "default": 1
+      },
+      {
+        "name": "text_top_k",
+        "type": "int",
+        "description": "Text top-k sampling limit.",
+        "required": false,
+        "default": 50
+      },
+      {
+        "name": "seed",
+        "type": "int",
+        "description": "Sampling seed; omitted chooses a random seed.",
+        "required": false,
+        "min": 0,
+        "max": 4294967295
+      },
+      {
+        "name": "text_chunk_size",
+        "type": "int",
+        "description": "Framework long-form text chunk size.",
+        "required": false,
+        "default": 2048,
+        "min": 1
+      },
+      {
+        "name": "text_chunk_mode",
+        "type": "enum",
+        "description": "Framework text chunking mode.",
+        "required": false,
+        "values": [
+          "default",
+          "tag_aware",
+          "japanese",
+          "endline"
+        ],
+        "default": "default"
+      }
+    ],
+    "session": [
+      {
+        "name": "weight_type",
+        "type": "enum",
+        "description": "Backbone weight storage; auto uses F32 on CPU, BF16 on CUDA, native on other backends.",
+        "required": false,
+        "values": [
+          "auto",
+          "native",
+          "f32",
+          "f16",
+          "bf16",
+          "q4_0",
+          "q4_1",
+          "q5_0",
+          "q5_1",
+          "q2_k",
+          "q3_k",
+          "q4_k",
+          "q5_k",
+          "q6_k",
+          "q8_0",
+          "nvfp4"
+        ],
+        "default": "auto"
+      },
+      {
+        "name": "reference_cache_slots",
+        "type": "int",
+        "description": "Encoded reference cache slots; zero disables reuse.",
+        "required": false,
+        "min": 0,
+        "default": 1
+      }
+    ],
+    "load": []
+  },
+  "capabilities": {
+    "clone": [
+      "speaker_reference"
+    ]
+  },
+  "runtime": {
+    "tags": [
+      "gguf"
+    ]
+  },
+  "ui": {
+    "recommended_package": "moss_tts_local_v1_5_q8_0",
+    "tags": [
+      "TTS",
+      "Clone",
+      "GGUF"
+    ],
+    "docs": [
+      "docs/models/moss_tts_local.md",
+      "docs/tts.md",
+      "docs/gguf.md"
+    ]
+  },
+  "package_defaults": {
+    "download": {
+      "kind": "huggingface_snapshot",
+      "repo": "audio-cpp/audio.cpp-gguf",
+      "revision": "main",
+      "gated": false
+    }
+  },
+  "packages": [
+    {
+      "id": "moss_tts_local_v1_5_q8_0",
+      "display_name": "MOSS-TTS-Local v1.5 Q8_0 GGUF",
+      "default": true,
+      "format": "gguf",
+      "precision": "q8_0",
+      "target_directory": "MOSS-TTS-Local-v1.5-GGUF",
+      "files": [
+        "MOSS-TTS-Local-v1.5-GGUF/moss-tts-local-v1.5-q8_0.gguf"
+      ],
+      "strip_prefix": "MOSS-TTS-Local-v1.5-GGUF"
+    },
+    {
+      "id": "moss_tts_local_v1_5_bf16",
+      "display_name": "MOSS-TTS-Local v1.5 BF16 GGUF",
+      "format": "gguf",
+      "precision": "bf16",
+      "target_directory": "MOSS-TTS-Local-v1.5-GGUF",
+      "files": [
+        "MOSS-TTS-Local-v1.5-GGUF/moss-tts-local-v1.5-bf16.gguf"
+      ],
+      "strip_prefix": "MOSS-TTS-Local-v1.5-GGUF"
+    }
+  ],
+  "sources": [
+    {
+      "format": "gguf",
+      "roots": {
+        "model": ".",
+        "weights": "$gguf"
+      },
+      "files": {
+        "config": "model:config.json",
+        "tokenizer_json": "model:tokenizer.json",
+        "tokenizer_config": "model:tokenizer_config.json",
+        "tokenizer_vocab": "model:vocab.json",
+        "tokenizer_merges": "model:merges.txt",
+        "audio_tokenizer_config": "model:audio_tokenizer/config.json"
+      },
+      "tensors": {
+        "model_weights": {
+          "source": "weights:",
+          "prefix": "model_weights"
+        },
+        "audio_tokenizer_weights": {
+          "source": "weights:",
+          "prefix": "audio_tokenizer_weights"
+        }
+      }
+    },
+    {
+      "format": "safetensors",
+      "roots": {
+        "model": ".",
+        "audio_tokenizer": "audio_tokenizer"
+      },
+      "files": {
+        "config": "model:config.json",
+        "tokenizer_json": "model:tokenizer.json",
+        "tokenizer_config": "model:tokenizer_config.json",
+        "tokenizer_vocab": "model:vocab.json",
+        "tokenizer_merges": "model:merges.txt",
+        "audio_tokenizer_config": "audio_tokenizer:config.json"
+      },
+      "tensors": {
+        "model_weights": "model:model.safetensors",
+        "audio_tokenizer_weights": "audio_tokenizer:model.safetensors.index.json"
+      }
+    }
+  ]
+}

@@ -15,7 +15,7 @@
 (function (root) {
   "use strict";
 
-  var NOTES = { standard: "best sound", legacy: "benchmark", blend: "⅔ standard, ⅓ legacy" };
+  var NOTES = { standard: "m-a-p's decoder", "rs-x3-v1": "ours, the default", "rs-x3-v2": "ours, its second branch" };   // HERESY 2304; 2378: what each is, no verdicts, Legacy and Blend out
   var PUBLISHER = "m-a-p/";   // the model's own releases; anything else is an add-on
   var KIND_TIPS = {
     "stock": "Stock: released with the model by its own publisher",

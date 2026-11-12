@@ -56,6 +56,9 @@ IPV6 = re.compile(r"(?<![\w:.])(?:[0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}(?![\w:
 # a browser's version (Chrome/142.0.0.0: one of the browsers' own names and a slash before it) and this machine (127.*, 0.0.0.0) are let by
 GUARD_IPV4 = re.compile(r"(?<![\d.])\d{1,3}(?:\.\d{1,3}){3}(?!\d|\.\w)")
 UA_VERSION = re.compile(r"(?:Chrome|Chromium|HeadlessChrome|CriOS|Version|Safari|AppleWebKit|Edg|EdgA|EdgiOS|OPR|Firefox|FxiOS|SamsungBrowser|YaBrowser|Vivaldi|Electron)/$")
+# HERESY 2171 (C09: the guard named «cuDNN 9.1.0.70», a library's dotted version, as an address): four dotted numbers right after a version's word (v, ver,
+# version), a GPU library's name (cuDNN, CUDA, cuBLAS, NCCL, TensorRT, a wheel's cuNN) or a pin (==) are a version, for the guard and the scrubber alike
+VERSION_BEFORE = re.compile(r"(?i)(?:(?<![\w.])(?:v|ver|trt)|version|cudnn|cuda|cublas|nccl|tensorrt|vbios|firmware|cu\d{2,3})[\s:=/_@-]{0,3}$|==\s*$")
 UUID = re.compile(r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b")
 HEXID = re.compile(r"\b(?=[0-9a-f]*[a-f])(?=[0-9a-f]*\d)[0-9a-f]{12,64}\b")   # the engine's job ids (16), a page's (24), a write's, a hash
 SEED = re.compile(r'(?i)(\b(?:lm_|sound_|art_|music_)?seeds?"?\s*[:=]\s*"?)(-?\d{1,20})\b')
@@ -138,8 +141,12 @@ class Scrub:
         s = URLHOST.sub(lambda m: m.group(1) + "://" + self.host(m.group(2)), s)          # HERESY 2104: another host, its class
         s = BAREHOST.sub(lambda m: m.group(1) + self.host(m.group(2)), s)
         s = UUID.sub(lambda m: self.mark("uuid", m.group(0).lower()), s)
-        s = IPV4.sub(lambda m: self.address(m.group(0)), s)
+        s = IPV4.sub(lambda m: m.group(0) if VERSION_BEFORE.search(m.string[max(0, m.start() - 24):m.start()]) else self.address(m.group(0)), s)   # 2171
         s = IPV6.sub(lambda m: self.address(m.group(0)), s)
+        # HERESY 2172 (H18: the scrubber left an address with «peer/» before it, glued to a letter or an underscore, or with leading zeros, and only the
+        # guard named it): what the guard's wider pattern still finds is marked as well, its leading zeros dropped for the mark («10.0.0.007» is
+        # 10.0.0.7, the same mark); so what the guard can name, the scrubber has already hidden
+        s = GUARD_IPV4.sub(lambda m: self.address(".".join(str(int(x)) for x in m.group(0).split("."))) if is_address(m.string, m) else m.group(0), s)
         s = TAKE.sub(lambda m: self.mark("take", m.group(0)), s)
         s = OWNPATH.sub(lambda m: m.group(1) + self.mark("set" if "datasets" in m.group(1).lower() else "vocab", m.group(2)), s)
         s = SEED.sub(lambda m: m.group(1) + self.mark("seed", m.group(2)), s)
@@ -149,17 +156,19 @@ class Scrub:
         return QUERY.sub(lambda m: m.group(1) + "=" + ("" if not m.group(2) else "…"), s)
 
 
+def is_address(text, m):
+    """HERESY 2119, 2171: a GUARD_IPV4 match in text an address: each octet 0-255, not this machine, not a browser's version (Chrome/142.0.0.0)
+    nor a library's (cuDNN 9.1.0.70)"""
+    a = m.group(0)
+    if any(int(x) > 255 for x in a.split(".")) or a in KEEP_IP or a.startswith("127."):
+        return False
+    before = text[max(0, m.start() - 24):m.start()]
+    return not (UA_VERSION.search(before) or VERSION_BEFORE.search(before))
+
+
 def guard_addresses(text):
     """HERESY 2119: the addresses still there by the guard's own pattern (GUARD_IPV4), each octet 0-255, a browser's version and this machine let by"""
-    out = []
-    for m in GUARD_IPV4.finditer(text):
-        a = m.group(0)
-        if any(int(x) > 255 for x in a.split(".")) or a in KEEP_IP or a.startswith("127."):
-            continue
-        if UA_VERSION.search(text[max(0, m.start() - 20):m.start()]):
-            continue
-        out.append(a)
-    return out
+    return [m.group(0) for m in GUARD_IPV4.finditer(text) if is_address(text, m)]
 
 
 def guard(sc, files):
@@ -254,14 +263,14 @@ def bundle(kit, outputs, data, workspaces=(), machine=None):
     d.mkdir(parents=True, exist_ok=True)
     for old in d.glob("journal-*.zip"):                # one bundle kept at a time
         old.unlink()
-    bid = time.strftime("%Y%m%d-%H%M%S")
+    bid = time.strftime("%Y%m%d-%H%M%S") + "-" + os.urandom(4).hex()   # HERESY 2173 (C11): not its time alone, which anyone can guess
     (d / f"journal-{bid}.zip").write_bytes(buf.getvalue())
     return {"id": bid, "bytes": len(buf.getvalue()), "hours": system["hours"], "events": len(events),
             "files": {n: len(t.encode("utf-8")) for n, t in files.items()}, "findings": findings}
 
 
 def path(kit, bid):
-    if not re.fullmatch(r"\d{8}-\d{6}", str(bid or "")):
+    if not re.fullmatch(r"\d{8}-\d{6}(?:-[0-9a-f]{8})?", str(bid or "")):   # HERESY 2173: with its random part (one made before it, without)
         raise ValueError("which journal?")
     p = Path(kit) / "user" / "debug" / f"journal-{bid}.zip"
     if not p.is_file():

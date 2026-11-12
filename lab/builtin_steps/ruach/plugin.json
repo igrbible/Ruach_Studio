@@ -1252,6 +1252,359 @@
    ]
   },
   {
+   "id": "tts_upscale",
+   "label": "TTS Voice Upscaler",
+   "say": "a spoken voice cleaned and its top drawn",
+   "tip": "For the Narrator's takes only: one speaking voice, never a song. Resemble Enhance (MIT, by Resemble AI) under the hood, in full precision. Clean takes out noise and music under the speech and leaves the voice as it is; Upscale draws the top a speech model leaves empty (Drama 3 has little above 12 kHz) and polishes the voice; Restore does both, for a noisy recording; Draft is Upscale in half the steps, for a quick listen to a long chapter. Only the top keeps the take sample for sample below the cut, so the words and stresses stay the engine's own. The result comes back at the take's own rate and length, a branch of the take.",
+   "script": "tts_upscale.py",
+   "python": "../../../.venv-read/bin/python",
+   "input": "file",
+   "gpu": true,
+   "need_mb": 4500,
+   "rate": 0.15,
+   "group": "mend",
+   "realm": "reader",
+   "params": [
+    {
+     "key": "mode",
+     "label": "Mode",
+     "type": "select",
+     "default": "upscale",
+     "options": [
+      [
+       "clean",
+       "Clean: noise out"
+      ],
+      [
+       "upscale",
+       "Upscale: a clean take"
+      ],
+      [
+       "restore",
+       "Restore: a noisy source"
+      ],
+      [
+       "draft",
+       "Draft: quick"
+      ]
+     ],
+     "tip": "Clean: the denoiser alone, nothing drawn. Upscale: the top drawn on a clean take. Restore: noise out and the top drawn, for a recording with noise or music under it. Draft: Upscale in half the steps"
+    },
+    {
+     "key": "keep",
+     "label": "What changes",
+     "type": "select",
+     "default": "top",
+     "options": [
+      [
+       "top",
+       "only the top"
+      ],
+      [
+       "whole",
+       "the whole voice"
+      ]
+     ],
+     "tip": "Only the top: below the cut the take stays as the engine read it, sample for sample, and only the drawn band is added above it. The whole voice: the enhancer's result as it is (it redraws the voice too). Upscale and Draft only; Clean and Restore always work on the whole"
+    },
+    {
+     "key": "cut",
+     "label": "Cut",
+     "type": "select",
+     "default": "12",
+     "options": [
+      [
+       "8",
+       "8 kHz"
+      ],
+      [
+       "10",
+       "10 kHz"
+      ],
+      [
+       "12",
+       "12 kHz"
+      ],
+      [
+       "14",
+       "14 kHz"
+      ]
+     ],
+     "tip": "Where the drawn top begins when only the top changes"
+    },
+    {
+     "key": "mix",
+     "label": "Mix",
+     "type": "number",
+     "min": 0,
+     "max": 100,
+     "step": 5,
+     "default": 100,
+     "tip": "How much of the result against the take, in %"
+    },
+    {
+     "key": "steps",
+     "label": "Steps",
+     "type": "select",
+     "default": "preset",
+     "options": [
+      [
+       "preset",
+       "as the mode says"
+      ],
+      [
+       "16",
+       "16"
+      ],
+      [
+       "32",
+       "32"
+      ],
+      [
+       "64",
+       "64"
+      ],
+      [
+       "128",
+       "128"
+      ]
+     ],
+     "tip": "For the expert: how many times the enhancer's flow is evaluated; more is cleaner and slower"
+    },
+    {
+     "key": "solver",
+     "label": "Solver",
+     "type": "select",
+     "default": "preset",
+     "options": [
+      [
+       "preset",
+       "as the mode says"
+      ],
+      [
+       "midpoint",
+       "midpoint"
+      ],
+      [
+       "rk4",
+       "RK4"
+      ],
+      [
+       "euler",
+       "Euler"
+      ]
+     ],
+     "tip": "For the expert: the method that solves the flow; midpoint is the recommended one"
+    },
+    {
+     "key": "tau",
+     "label": "Temperature",
+     "type": "select",
+     "default": "preset",
+     "options": [
+      [
+       "preset",
+       "as the mode says (0.5)"
+      ],
+      [
+       "0.3",
+       "0.3: steadier"
+      ],
+      [
+       "0.5",
+       "0.5"
+      ],
+      [
+       "0.7",
+       "0.7: richer"
+      ]
+     ],
+     "tip": "For the expert: how much noise the prior starts from; higher is richer and less steady"
+    }
+   ]
+  },
+  {
+   "id": "speech_denoise",
+   "label": "Speech denoise",
+   "say": "the noise between and under the words brought down",
+   "tip": "For the Narrator's takes only (a spoken voice, never a song). ffmpeg's FFT denoiser with the noise floor measured on the take's quietest stretches and followed as it moves: the hiss, the hum and the room between and under the words come down by the amount set, the voice left as it is. A reading the engine made is clean already (a few dB at most); a recording of one's own voice or a lecture gains the most. Comes back as a branch of the take.",
+   "script": "speech_denoise.py",
+   "input": "file",
+   "rate": 0.1,
+   "group": "mend",
+   "realm": "reader",
+   "after": "pl-ruach-tts_upscalePanel",
+   "params": [
+    {
+     "key": "amount",
+     "label": "Reduction, dB",
+     "type": "number",
+     "min": 3,
+     "max": 30,
+     "step": 1,
+     "default": 10,
+     "tip": "How far the noise comes down: 6 to 12 for a clean room, 20 and more for a noisy recording (more may thin the voice's breath)"
+    }
+   ]
+  },
+  {
+   "id": "speech_deess",
+   "label": "Speech de-esser",
+   "say": "the hiss of s and sh lowered",
+   "tip": "For the Narrator's takes only. Where the hiss of an s, a sh or a ts rises over the voice's body (150 Hz to 4 kHz) past the threshold, only its band (from the frequency set up to 11 kHz) comes down, four to one, its depth at most, at once and let go in 60 ms; the voice below the band passes as it was. The summary says how often it took and how deep. Comes back as a branch of the take.",
+   "script": "speech_deess.py",
+   "input": "file",
+   "rate": 0.05,
+   "group": "mend",
+   "realm": "reader",
+   "after": "pl-ruach-speech_denoisePanel",
+   "params": [
+    {
+     "key": "threshold",
+     "label": "Threshold, dB",
+     "type": "number",
+     "min": -12,
+     "max": 12,
+     "step": 1,
+     "default": 0,
+     "tip": "How far the hiss may rise over the voice's body before it is lowered: lower takes more, higher only the sharpest"
+    },
+    {
+     "key": "depth",
+     "label": "Depth, dB",
+     "type": "number",
+     "min": 2,
+     "max": 12,
+     "step": 1,
+     "default": 6,
+     "tip": "The most the hiss band comes down"
+    },
+    {
+     "key": "from",
+     "label": "From",
+     "type": "select",
+     "default": "5000",
+     "options": [
+      [
+       "4000",
+       "4 kHz"
+      ],
+      [
+       "5000",
+       "5 kHz"
+      ],
+      [
+       "6000",
+       "6 kHz"
+      ]
+     ],
+     "tip": "Where the hiss band begins: 4 kHz for a low voice, 6 kHz for a high one"
+    }
+   ]
+  },
+  {
+   "id": "speech_eq",
+   "label": "Speech EQ",
+   "say": "the voice's colour set by a preset",
+   "tip": "For the Narrator's takes only. Clear: the rumble under 80 Hz out, the mud at 250 Hz down 2 dB, the presence at 3.5 kHz up 2 dB, air above 10 kHz up 1.5 dB. Warm: a fuller low end and a softer presence. Broadcast: the radio voice, its mud out and its presence forward. Rumble: only the rumble out. Amount scales every band but the rumble filter. Put Speech loudness after it: the EQ moves the level. Comes back as a branch of the take.",
+   "script": "speech_eq.py",
+   "input": "file",
+   "rate": 0.03,
+   "group": "mend",
+   "realm": "reader",
+   "after": "pl-ruach-speech_deessPanel",
+   "params": [
+    {
+     "key": "preset",
+     "label": "Preset",
+     "type": "select",
+     "default": "clear",
+     "options": [
+      [
+       "clear",
+       "Clear voice"
+      ],
+      [
+       "warm",
+       "Warm voice"
+      ],
+      [
+       "broadcast",
+       "Broadcast voice"
+      ],
+      [
+       "rumble",
+       "Rumble only"
+      ]
+     ],
+     "tip": "The colour of the voice: clear for most readings, warm for a low or a tender one, broadcast for a voice that must cut through"
+    },
+    {
+     "key": "amount",
+     "label": "Amount",
+     "type": "number",
+     "min": 0,
+     "max": 1.5,
+     "step": 0.1,
+     "default": 1,
+     "tip": "Every band of the preset scaled by this, the rumble filter always whole: 0.5 is half of it"
+    }
+   ]
+  },
+  {
+   "id": "speech_loud",
+   "label": "Speech loudness",
+   "say": "the reading to a speech loudness, its peaks under the ceiling",
+   "tip": "For the Narrator's takes only. The take brought to a speech loudness: −16 LUFS as podcasts by default, −18 or −19 for a quieter listening, −14 for video platforms, −23 for broadcast (EBU R128); its true peak held under the ceiling by a limiter and checked by an independent meter. A reading of the Narrator is joined to −16 LUFS already: this is the last step after the others moved its level. Comes back as a branch of the take.",
+   "script": "speech_loud.py",
+   "input": "file",
+   "rate": 0.2,
+   "group": "finish",
+   "realm": "reader",
+   "after": "pl-ruach-speech_eqPanel",
+   "params": [
+    {
+     "key": "loudness",
+     "label": "Loudness",
+     "type": "select",
+     "default": "-16",
+     "options": [
+      [
+       "-16",
+       "−16 LUFS (podcasts)"
+      ],
+      [
+       "-18",
+       "−18 LUFS"
+      ],
+      [
+       "-19",
+       "−19 LUFS"
+      ],
+      [
+       "-14",
+       "−14 LUFS (video)"
+      ],
+      [
+       "-23",
+       "−23 LUFS (broadcast)"
+      ]
+     ],
+     "tip": "The integrated loudness the reading is brought to"
+    },
+    {
+     "key": "ceiling",
+     "label": "Ceiling, dBTP",
+     "type": "number",
+     "min": -3,
+     "max": -0.5,
+     "step": 0.1,
+     "default": -1,
+     "tip": "No true peak passes this"
+    }
+   ]
+  },
+  {
    "id": "report",
    "label": "Before and after",
    "say": "any two sounds measured against each other",
@@ -1532,6 +1885,57 @@
       ]
      ],
      "tip": "The file's own loudness, or a target to drive to"
+    }
+   ]
+  }
+ ],
+ "pipelines": [
+  {
+   "id": "speech-chain",
+   "name": "Narration: the speech chain",
+   "say": "denoised, de-essed, the voice's colour, −16 LUFS",
+   "tip": "For the Narrator's takes only: the noise between the words down 10 dB, the hiss of s and sh lowered, the clear speech EQ, the reading brought to −16 LUFS under −1 dBTP, then before and after side by side.",
+   "pipeline": [
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "speech_denoise",
+     "params": {
+      "amount": 10
+     }
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "speech_deess",
+     "params": {
+      "threshold": 0,
+      "depth": 6,
+      "from": "5000"
+     }
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "speech_eq",
+     "params": {
+      "preset": "clear",
+      "amount": 1
+     }
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "speech_loud",
+     "params": {
+      "loudness": "-16",
+      "ceiling": -1
+     }
+    },
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "report"
     }
    ]
   }

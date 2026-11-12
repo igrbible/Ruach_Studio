@@ -1,6 +1,6 @@
 """HERESY 1717 (lab/vocal_rest.py): where the voice sings in a stretch of a take, for the cuts of «Sing it once more» and «Insert an interlude»
 (section.py), on the processor (the cards may all be a training's): the stretch's vocal stem by the vocal model alone of htdemucs_ft
-(separation/demucs, the stems' own weights, nothing downloaded; one model of its four, a quarter of the time: ~0.9 s a second of sound), its
+(models/refiner/separation/demucs, the stems' own weights, nothing downloaded; one model of its four, a quarter of the time: ~0.9 s a second of sound), its
 loudness in 40 ms frames smoothed over 0.12 s; the voice is over max(−45 dB, its peak − 30 dB); a gap under 0.2 s does not part it, a sound
 under 0.15 s is not it. Run in a process of its own, so torch never sits in the lab's.
 Prints one line of JSON {"from": A, "to": B, "voice": [[start, end], …]} (seconds in the take), or {"error": words}.
@@ -19,7 +19,9 @@ import numpy as np
 import soundfile as sf
 
 KIT = Path(__file__).resolve().parent.parent
-DEMUCS_DIR = os.environ.get("LAB_DEMUCS_DIR", str(KIT / "separation/demucs"))   # as stems_job.py's
+sys.path.insert(0, str(KIT / "lab"))
+import paths  # noqa: E402   HERESY 2330: where the weights live
+DEMUCS_DIR = os.environ.get("LAB_DEMUCS_DIR", str(paths.at(paths.REFINER_SEPARATION, KIT) / "demucs"))   # as stems_job.py's
 
 
 def vocals(wav, a, b):

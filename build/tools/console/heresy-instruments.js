@@ -17,7 +17,11 @@
   function fold(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
 
   function load() {
-    return fetch("/lab/catalog").then(function (r) { return r.json(); }).then(function (d) {
+    // HERESY 2181: the Librarian's ask when it is on its way (heresy-collection.js), so a load asks the lab once; a lab that answers an error is
+    // no catalog: not loaded (it was read as an empty one, «no probes»)
+    var asked = window.ruachCatalog ? window.ruachCatalog()
+      : fetch("/lab/catalog").then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error((b && b.error) || r.status); return b; }); });
+    return asked.then(function (d) {
       state.rows = d.takes || []; state.ws = d.workspaces || []; state.loaded = true;
     }).catch(function () { state.loaded = false; });
   }

@@ -3,8 +3,8 @@
 
 Three places, one shelf:
   banks/<name>/            the user's own banks (made by the Bank Builder, or put there by hand): an .sfz or more, its samples, bank.json
-  models/ambient/<layer>/  the ambient layers' banks (HERESY 1927–1928): field recordings, each with its source, recordist and licence
-  models/instruments/…     the instrument sets the MIDI orchestra plays (VCSL, VSCO 2, Sonatina, sfzinstruments' collections…), read only
+  models/refiner/ambient/<layer>/  the ambient layers' banks (HERESY 1927–1928): field recordings, each with its source, recordist and licence
+  models/refiner/instruments/…     the instrument sets the MIDI orchestra plays (VCSL, VSCO 2, Sonatina, sfzinstruments' collections…), read only
 A bank's card: id, name, kind (instrument · ambience · effect · drone · voice), where, its .sfz files, author, licence, whether it may ship, its
 source, a description, how many samples and how large. A user bank says these in its bank.json; the others are read from what they hold (a
 LICENSE or README, the ambient bank.json). A licence not found is said as unknown, never guessed as free.
@@ -13,6 +13,8 @@ import json
 import re
 import time
 from pathlib import Path
+
+import paths                       # HERESY 2330: where the weights live
 
 KINDS = ("instrument", "ambience", "effect", "drone", "voice")
 AUDIO = {".wav", ".flac", ".ogg", ".aif", ".aiff"}
@@ -97,7 +99,7 @@ def _user(kit):
 
 
 def _ambient(kit):
-    root = Path(kit) / "models" / "ambient"
+    root = paths.at(paths.REFINER_AMBIENT, kit)
     out = []
     for d in sorted(p for p in root.iterdir() if p.is_dir()) if root.is_dir() else []:
         f = d / "bank.json"
@@ -111,7 +113,7 @@ def _ambient(kit):
         public = [i for i in items if i.get("public")]
         lics = sorted({i.get("licence", "") for i in items if i.get("licence")})
         n, mb = _size(d)
-        out.append({"id": "ambient:" + d.name, "name": d.name.capitalize(), "kind": "ambience", "where": "models/ambient/" + d.name, "sfz": [],
+        out.append({"id": "ambient:" + d.name, "name": d.name.capitalize(), "kind": "ambience", "where": paths.REFINER_AMBIENT + "/" + d.name, "sfz": [],
                     "author": ", ".join(sorted({i.get("recordist", "") for i in items if i.get("recordist")}))[:200],
                     "licence": "; ".join(sorted({licence_of(x)[0] for x in lics})) or "unknown", "may_ship": bool(items) and len(public) == len(items),
                     "source": "radio aporee on the Internet Archive" if any("aporee" in i.get("source", "") for i in items) else "",
@@ -121,7 +123,7 @@ def _ambient(kit):
 
 
 def _instruments(kit):
-    root = Path(kit) / "models" / "instruments"
+    root = paths.at(paths.REFINER_INSTRUMENTS, kit)
     out = []
     for s in sorted(p for p in root.iterdir() if p.is_dir() and not p.name.startswith("_")) if root.is_dir() else []:
         # a collection of collections (sfzinstruments): each its own bank, with its own licence
@@ -136,7 +138,7 @@ def _instruments(kit):
             readme = next((p for p in papers if p.name.lower().startswith("readme")), None)
             n, mb = _size(d)
             out.append({"id": "inst:" + str(d.relative_to(root)), "name": d.name.replace("-", " ").replace("_", " "), "kind": "instrument",
-                        "where": "models/instruments/" + str(d.relative_to(root)), "sfz": sfz[:400], "sfz_count": len(sfz), "author": "",
+                        "where": paths.REFINER_INSTRUMENTS + "/" + str(d.relative_to(root)), "sfz": sfz[:400], "sfz_count": len(sfz), "author": "",
                         "licence": lic, "may_ship": ships, "source": "", "description": _describe(_read(readme)) if readme else "",
                         "samples": n, "mb": mb, "own": False})
     return out

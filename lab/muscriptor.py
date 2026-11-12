@@ -2,7 +2,7 @@
 пропишешь все три размера в Engine. Автоматом предлагаем large для нормальной видеокарты»): a take, a stem or any sound of a take's tree into
 multi-instrument MIDI with MuScriptor (Mirelo and Kyutai; its weights CC BY-NC 4.0, non-commercial use only) through
 build/build-muscriptor/ruach-muscriptor (muscriptor.cpp, MIT, on ggml; build.sh builds it). The weights are fetched by Engine → Models
-(fetch-heresy.sh --muscriptor SIZE) into models/muscriptor/v1/.
+(fetch-heresy.sh --muscriptor SIZE) into models/refiner/midi/muscriptor/v1/.
 
 One transcription at a time: the program's threads wait on each other between operations, and two runs at once slow both several times. The
 sound goes in as 16 kHz mono float32 (ffmpeg); the program's lines give the progress; the lab keeps the set under the take's derived/, as the
@@ -17,6 +17,8 @@ import subprocess
 import threading
 from pathlib import Path
 
+import paths                       # HERESY 2330: where the weights live
+
 SIZES = ("small", "medium", "large")
 BYTES = {"small": 209425152, "medium": 618442496, "large": 2739142176}
 _DEV = {}
@@ -28,7 +30,7 @@ def binary(kit):
 
 
 def weights(kit, size):
-    return Path(kit) / "models" / "muscriptor" / "v1" / f"muscriptor-{size}-f16.gguf"
+    return paths.at(paths.REFINER_MIDI, kit) / "muscriptor" / "v1" / f"muscriptor-{size}-f16.gguf"
 
 
 def here(kit):

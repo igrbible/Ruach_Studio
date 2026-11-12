@@ -51,8 +51,8 @@ check("the fireplace: Dartington first, Lithuania second, no synthesis offered",
       order[:2] == ["aporee_27776_32009", "aporee_19997_23285"] and not any(v.startswith("synth") for v, _l, _p in A.variants(KIT, "fire")), order[:3])
 import json  # noqa: E402
 check("synthesis only where his ear let it pass: light rain and thunder", sorted(A.SYNTH) == ["rain", "thunder"], sorted(A.SYNTH))   # HERESY 1936
-refused = [i["source"] for layer in A.LAYERS for i in json.load(open(KIT / "models/ambient" / layer / "bank.json", encoding="utf-8"))["items"]
-           if i.get("refused")] if (KIT / "models/ambient/birds/bank.json").is_file() else []
+refused = [i["source"] for layer in A.LAYERS for i in json.load(open(A.paths.at(A.paths.REFINER_AMBIENT, KIT) / layer / "bank.json", encoding="utf-8"))["items"]
+           if i.get("refused")] if (A.paths.at(A.paths.REFINER_AMBIENT, KIT) / "birds" / "bank.json").is_file() else []
 check("a recording his ear refused is never played", all(not any(v == s for v, _l, _p in A.variants(KIT, "birds")) for s in refused), refused)
 rng = np.random.default_rng(5)                       # HERESY 1941: one crack 11 dB over a quiet bed dips alone
 bed = rng.standard_normal((2, 20 * A.SR)) * 0.01

@@ -22,7 +22,8 @@ const moveOld = () => {
 module.exports = {
   version: "4.0",
   title: "Ruach Studio",
-  description: "Songs on your own NVIDIA card: YuE2 through yue2.cpp, with a Creator, a Writer, a Refiner, a Librarian, an Artist and a Trainer. Linux, a card of 12 GB or more, about 34 GB of disk.",
+  // HERESY 2382 (Viktor 11.11.2026: «в пинокио файле точный текст из About гитхаб репо»): the GitHub repository's About, word for word
+  description: "Ruach Studio: The Ultimate YuE2 Studio for local AI music generation. YuE2 Songs Creator, Drama 3 Narrator, AI Writer, Refiner (30+ nodes, Piano Roll, DAW), Cover Artist, MiniMax H3 Videographer, LoRA Trainer, Librarian. SUNO AI alternative.",
   icon: "src/brand/ruach-icon-512.png",
   menu: async (kernel, info) => {
     // where a script of ours runs from: launcher/, or pinokio/ while an Update the old scripts began goes on
@@ -34,7 +35,7 @@ module.exports = {
     if ((p = running("reset.js"))) return [{ default: true, icon: "fa-solid fa-broom", text: "Resetting", href: p }]
     const started = running("start.js")
     if (!started) moveOld()
-    const installed = info.exists(".venv/bin/python") && info.exists("build/build/yue-server") && info.exists("models/YuE2-Vae-F32.gguf")
+    const installed = info.exists(".venv/bin/python") && info.exists("build/build/yue-server") && (info.exists("models/engine/vae/YuE2-Vae-F32.gguf") || info.exists("models/YuE2-Vae-F32.gguf"))   // HERESY 2330: models/<room>/ (lab/paths.py), or 2.0.6's place until its first start moves it · paths: 2.0.6
     if (!installed) return [{ default: true, icon: "fa-solid fa-plug", text: "Install", href: "launcher/install.js" }]
     if (started) {
       const url = info.local(started).url

@@ -85,14 +85,12 @@ for entry in "${LORAS[@]}"; do
     if hf_complete "$repo" "$rev" "$ROOT/loras/$folder" --files "$path" ${strip[@]+"${strip[@]}"} >/dev/null; then
       printf '  %shave%s    %s\n' "$G" "$X" "$f"; have=$((have + 1)); continue
     fi
+    # HERESY 2380 (Viktor 11.11.2026: «Тройного сторожа на выгрузках и скачиваниях моделей»): tools/hf_guard.py puts it into loras/<folder>/
+    # only at the pin, of the pinned size, with our manifest's SHA-256 (another's repo: its pinned commit's own); a folder inside the repo comes off by --strip
     if [ -z "$sub" ]; then
-      "$HF" download --quiet "$repo" "$path" --revision "$rev" --local-dir "$ROOT/loras/$folder" >/dev/null || true
+      hf_guarded download --quiet "$repo" "$path" --revision "$rev" --local-dir "$ROOT/loras/$folder" || true
     else
-      # a folder inside the repo: fetch into tmp/, then move the file up into loras/<folder>/
-      stage="$ROOT/tmp/lora-download/$folder"
-      if "$HF" download --quiet "$repo" "$path" --revision "$rev" --local-dir "$stage" >/dev/null && [ -f "$stage/$path" ]; then
-        mkdir -p "$(dirname "$ROOT/loras/$folder/$f")" && mv "$stage/$path" "$ROOT/loras/$folder/$f"
-      fi
+      hf_guarded download --quiet "$repo" "$path" --revision "$rev" --local-dir "$ROOT/loras/$folder" --strip "$sub/" || true
     fi
     # the downloader's exit status is not proof: check the file itself
     if hf_complete "$repo" "$rev" "$ROOT/loras/$folder" --files "$path" ${strip[@]+"${strip[@]}"} >/dev/null; then

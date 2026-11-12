@@ -248,8 +248,10 @@ def dynamics(a, b, sr=SR):
     return {"curve": curve, "glue_db": round(glue, 2), "peak_shave_db": round(shave, 2)}
 
 
-def compare(before, after, names=("before", "after"), out=None, sr=SR):
-    """Everything above for two files; with out, the pictures and the page land there. The result as a dict."""
+def compare(before, after, names=("before", "after"), out=None, sr=SR, words=None, nums=None):
+    """Everything above for two files; with out, the pictures and the page land there. The result as a dict.
+    HERESY 2286: nums (the two sides' numbers, «1» and «3») for First and second, the compare window's and the Library's: the verdict also as
+    templates the page says in its language (verdict12), the pictures in the words given (pic_words); without them the node's own, as it was."""
     t0 = time.time()
     A0, B0 = read(before, sr), read(after, sr)
     lag, sign, like = align(A0, B0, sr)
@@ -273,10 +275,13 @@ def compare(before, after, names=("before", "after"), out=None, sr=SR):
          "tone": {"centres": [round(float(c), 1) for c in ca[:n]], "db": [round(float(v), 2) for v in tone]}, "zones_db": zones,
          "dynamics": dyn, "nonlinear": {"centres": [round(float(c), 1) for c in cen], "db": [round(float(v), 1) for v in incoh], "whole_db": round(whole, 1)}}
     R["verdict"] = verdict(R)
+    if nums:
+        R["nums"] = [str(nums[0]), str(nums[1])]
+        R["verdict12"] = verdict12(R, *R["nums"])
     if out:
         out = Path(out)
         out.mkdir(parents=True, exist_ok=True)
-        pictures(A, Bm, sr, R, ca[:n], da[:n], db_[:n], sa, sb - gain, cen, incoh, out)
+        pictures(A, Bm, sr, R, ca[:n], da[:n], db_[:n], sa, sb - gain, cen, incoh, out, pic_words(words, nums))
         (out / "compare.json").write_text(json.dumps(R, ensure_ascii=False, indent=1), encoding="utf-8")
         (out / "compare.md").write_text(page(R), encoding="utf-8")
     R["took"] = round(time.time() - t0, 1)
@@ -344,6 +349,141 @@ def verdict(R):
     return say
 
 
+# HERESY 2286 (Viktor 09.11.2026: «Для пользователя в сравнителе название "До и После" — это вообще непонятная фигня… заменить название на "Первый и
+# второй"… Нет переводов…»): First and second's own words. The sides go by their numbers («1», «3»), so a sentence needs no case of a word; the page
+# says each template in its language (its catalogs), a zone as {"w": id}, the tone's zones as {"zones": [[id, "+0.30"], …]}
+def verdict12(R, a, b):
+    A, B, say = R["before"], R["after"], []
+    if R["likeness"] < 0.5:
+        say.append(["The two are not one music (likeness {0}): what follows compares two different sounds.", [nu(R["likeness"])]])
+    if abs(R["lag_ms"]) >= 1:
+        say.append(["{1} comes {0} ms later than {2}; compared from where they meet.", [nu(R["lag_ms"]), b, a]])
+    if R["polarity"] == "inverted":
+        say.append(["The polarity of {0} is inverted against {1}.", [b, a]])
+    if abs(R["level_db"]) >= 0.2:
+        say.append(["{0} is {1} LU quieter than {2}; everything below compares them at equal loudness." if R["level_db"] < 0 else
+                    "{0} is {1} LU louder than {2}; everything below compares them at equal loudness.", [b, nu(abs(R["level_db"])), a]])
+    t = R["tone"]
+    big = sorted(range(len(t["db"])), key=lambda i: -abs(t["db"][i]))
+    if t["db"] and abs(t["db"][big[0]]) < 0.5:
+        say.append(["The tone stayed: no sixth-octave band moved by half a dB.", []])
+    else:
+        moved = [[k, sg(v)] for k, v in sorted(R["zones_db"].items(), key=lambda kv: -abs(kv[1])) if abs(v) >= 0.3]
+        if moved:
+            say.append(["The tone of {0} against {1}: {2}.", [b, a, {"zones": moved}]])
+        if t["db"]:
+            say.append(["The most at {0} Hz: {1} dB.", [str(round(t["centres"][big[0]])), sg(t["db"][big[0]])]])
+    d = R["dynamics"]
+    if d["glue_db"] <= -0.3:
+        say.append(["The loud moments lost {0} dB against the middle ones: compression, a glue.", [nu(abs(d["glue_db"]))]])
+    elif d["glue_db"] >= 0.3:
+        say.append(["The loud moments gained {0} dB against the middle ones: the dynamics opened.", [nu(d["glue_db"])]])
+    else:
+        say.append(["The dynamics stayed: the loud and the middle moments moved alike.", []])
+    if d["peak_shave_db"] <= -0.3:
+        say.append(["The sharpest 10 ms peaks came down {0} dB at equal loudness: they are shaved.", [nu(abs(d["peak_shave_db"]))]])
+    elif d["peak_shave_db"] >= 0.3:
+        say.append(["The sharpest 10 ms peaks stand {0} dB higher at equal loudness: they are not shaved; a turned phase can raise them.", [nu(d["peak_shave_db"])]])
+    else:
+        say.append(["The sharpest peaks stayed where they were against the loudness.", []])
+    if A.get("plr_db") is not None and B.get("plr_db") is not None and abs(B["plr_db"] - A["plr_db"]) >= 0.3:
+        say.append(["Peak over loudness {0} → {1} dB.", [nu(A["plr_db"]), nu(B["plr_db"])]])
+    if A.get("lra_lu") is not None and B.get("lra_lu") is not None and abs(B["lra_lu"] - A["lra_lu"]) >= 0.3:
+        say.append(["Loudness range {0} → {1} LU.", [nu(A["lra_lu"]), nu(B["lra_lu"])]])
+    if abs(B["correlation"] - A["correlation"]) >= 0.01 or abs(B["width_db"] - A["width_db"]) >= 0.3:
+        say.append(["The stereo: correlation {0} → {1}, width {2} → {3} dB.", [f"{A['correlation']:.3f}", f"{B['correlation']:.3f}", nu(A["width_db"]), nu(B["width_db"])]])
+    if abs(B["balance_db"] - A["balance_db"]) >= 0.3:
+        say.append(["Left against right {0} → {1} dB: one side lost or gained.", [sg(A["balance_db"]), sg(B["balance_db"])]])
+    if B["clipped_runs"] > A["clipped_runs"]:
+        say.append(["{0} clipped runs in {1} ({2} had {3}).", [str(B["clipped_runs"]), b, a, str(A["clipped_runs"])]])
+    nl = R["nonlinear"]
+    say.append(["What no filter makes of {1} from {2}: {0} dB under the music (distortion, noise, pumping); an EQ or a delay alone leaves it near −40.", [f"{nl['whole_db']:.1f}", b, a]])
+    worst = [cv for cv in sorted(zip(nl["centres"], nl["db"]), key=lambda cv: -cv[1]) if 30 <= cv[0] <= 16000][:2]
+    if len(worst) == 2:
+        say.append(["Most of it at {0} Hz ({1} dB) and {2} Hz ({3} dB).", [str(round(worst[0][0])), f"{worst[0][1]:.1f}", str(round(worst[1][0])), f"{worst[1][1]:.1f}"]])
+    elif worst:
+        say.append(["Most of it at {0} Hz ({1} dB).", [str(round(worst[0][0])), f"{worst[0][1]:.1f}"]])
+    return say
+
+
+# HERESY 2286: the pictures' words: the node's as they were; First and second's, in the page's language when it gives them (a translation that does
+# not take its places is left in English)
+PIC_BA = {"eq": "{0} (at equal loudness)", "diff": "after − before (red: louder after, blue: quieter after; ±6 dB)", "time": "seconds",
+          "spec": "Average spectrum at equal loudness", "tone": "What changed in the tone (grey: ±1 dB) · blue: what no filter makes",
+          "nolin": "no filter makes it, dB under the music", "dynx": "the before's 50 ms level, dBFS", "dyny": "after − before, dB",
+          "dyn": "Dynamics: glue {0} dB, peaks {1} dB", "st": "Short-term loudness"}
+PIC_12 = dict(PIC_BA, diff="{1} − {0}: red where it is louder, blue where it is quieter (±6 dB)", time="time, s",
+              dynx="the level of {0} in 50 ms windows, dBFS", dyny="{1} − {0}, dB")
+
+
+def pic_words(words, nums):
+    W = dict(PIC_12 if nums else PIC_BA)
+    for k, v in (words or {}).items():
+        if k in W and isinstance(v, str) and v.strip():
+            try:
+                v.format("1", "2")
+                W[k] = v
+            except (IndexError, KeyError, ValueError):
+                pass
+    return W
+
+
+def grid(files, names, out, sr=SR, words=None):
+    """HERESY 2286: three or four sounds: each placed against the first and turned to its loudness as compare does, their spectrograms side by
+    side on the first's scale (grid.jpg)"""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    W = pic_words(words, ("1", "2"))
+    plt.rcParams.update({"font.size": 10, "axes.spines.top": False, "axes.spines.right": False,
+                         "font.family": ["DejaVu Sans", "WenQuanYi Zen Hei", "Droid Sans Fallback"]})
+    X0 = read(files[0], sr)
+    l0 = ld.measure(X0.T, sr).integrated_lufs
+    S, top = [], None
+    for k, f in enumerate(files):
+        x = X0
+        if k:
+            y = read(f, sr)
+            lag, sign, _ = align(X0, y, sr)
+            _a, x = overlap(X0, y * sign, lag)
+            lk = ld.measure(x.T, sr).integrated_lufs
+            if l0 is not None and lk is not None:
+                x = x * 10 ** ((l0 - lk) / 20)
+        s, t, fr = logspec(x, sr)
+        if top is None:
+            top = float(np.percentile(s, 99.9))
+        S.append((s, t, fr))
+    rows = (len(files) + 1) // 2
+    fig, ax = plt.subplots(rows, 2, figsize=(16, 4.4 * rows), dpi=110, squeeze=False)
+    yt = (31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000)
+    yl = ["31", "63", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"]
+    for k, (s, t, fr) in enumerate(S):
+        a_ = ax[k // 2, k % 2]
+        im = a_.imshow(s, origin="lower", aspect="auto", extent=[t[0], t[-1], 0, len(fr)], cmap="magma", vmin=top - 90, vmax=top, interpolation="nearest")
+        a_.set_title(names[k] if not k else W["eq"].format(names[k]))
+        a_.set_yticks([float(np.interp(math.log(f), np.log(fr), np.arange(len(fr)))) for f in yt])
+        a_.set_yticklabels(yl)
+        a_.set_ylabel("Hz")
+        a_.set_xlabel(W["time"])
+        fig.colorbar(im, ax=a_, pad=0.01, label="dB")
+    for k in range(len(S), rows * 2):
+        ax[k // 2, k % 2].axis("off")
+    fig.tight_layout()
+    fig.savefig(str(Path(out) / "grid.jpg"), dpi=170, pil_kwargs={"quality": 90})
+    plt.close(fig)
+
+
+def many(files, names, out, words=None):
+    """HERESY 2286: two to four sounds, each against the first: a folder a pair (pair1…pair3, compare's own, its sides numbered), and with more
+    than two the spectrograms of all side by side"""
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    for k in range(1, len(files)):
+        compare(files[0], files[k], (names[0], names[k]), out / f"pair{k}", words=words, nums=("1", str(k + 1)))
+    if len(files) > 2:
+        grid(files, names, out, words=words)
+
+
 def said(s):
     text, args = s
     return text.format(*args)
@@ -371,12 +511,16 @@ def page(R):
     return "\n".join(L) + "\n"
 
 
-def pictures(A, Bm, sr, R, cen, da, db_, sa, sb, ncen, incoh, out):
+def pictures(A, Bm, sr, R, cen, da, db_, sa, sb, ncen, incoh, out, W=None):
+    W = W or pic_words(None, None)
+    sides = R.get("nums") or ["", ""]
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from matplotlib.colors import TwoSlopeNorm
     plt.rcParams.update({"font.size": 10, "axes.spines.top": False, "axes.spines.right": False})
+    if R.get("nums"):                                  # HERESY 2286: the page's language, Chinese and Japanese too where a font has them
+        plt.rcParams.update({"font.family": ["DejaVu Sans", "WenQuanYi Zen Hei", "Droid Sans Fallback"]})
     SA, t, fr = logspec(A, sr)
     SB, _, _ = logspec(Bm, sr)
     k = min(SA.shape[1], SB.shape[1])
@@ -392,18 +536,18 @@ def pictures(A, Bm, sr, R, cen, da, db_, sa, sb, ncen, incoh, out):
     yl = ["31", "63", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"]
     nb, na = R["names"]
     fig, ax = plt.subplots(3, 1, figsize=(14, 11), dpi=110, sharex=True)
-    for i, (S, name) in enumerate(((SA, nb), (SB, na + " (at equal loudness)"))):
+    for i, (S, name) in enumerate(((SA, nb), (SB, W["eq"].format(na)))):
         im = ax[i].imshow(S, origin="lower", aspect="auto", extent=ext, cmap="magma", vmin=top - 90, vmax=top, interpolation="nearest")
         ax[i].set_title(name)
         fig.colorbar(im, ax=ax[i], pad=0.01, label="dB")
     im = ax[2].imshow(D, origin="lower", aspect="auto", extent=ext, cmap="RdBu_r", norm=TwoSlopeNorm(0, -6, 6), interpolation="nearest")
-    ax[2].set_title("after − before (red: louder after, blue: quieter after; ±6 dB)")
+    ax[2].set_title(W["diff"].format(*sides))
     fig.colorbar(im, ax=ax[2], pad=0.01, label="dB")
     for a_ in ax:
         a_.set_yticks(yi)
         a_.set_yticklabels(yl)
         a_.set_ylabel("Hz")
-    ax[2].set_xlabel("seconds")
+    ax[2].set_xlabel(W["time"])
     fig.tight_layout()
     fig.savefig(str(out / "spectrograms.jpg"), dpi=200, pil_kwargs={"quality": 92})   # 1991: a good resolution to download
     plt.close(fig)
@@ -413,7 +557,7 @@ def pictures(A, Bm, sr, R, cen, da, db_, sa, sb, ncen, incoh, out):
     ax[0, 0].semilogx(cen, da - R["before"]["lufs"], color="#6b7280", lw=1.4, label=nb)
     ax[0, 0].semilogx(cen, db_ - R["before"]["lufs"], color="#b5163a", lw=1.4, label=na)
     ax[0, 0].set_xlim(25, 20000)
-    ax[0, 0].set_title("Average spectrum at equal loudness")
+    ax[0, 0].set_title(W["spec"])
     ax[0, 0].legend(loc="lower left")
     tone = np.array(R["tone"]["db"])
     ax[0, 1].semilogx(cen, tone, color="#b5163a", lw=1.6)
@@ -425,22 +569,22 @@ def pictures(A, Bm, sr, R, cen, da, db_, sa, sb, ncen, incoh, out):
     ax2 = ax[0, 1].twinx()
     ax2.semilogx(ncen, incoh, color="#1f6feb", lw=1.0, alpha=0.7)
     ax2.set_ylim(-60, 0)
-    ax2.set_ylabel("no filter makes it, dB under the music", color="#1f6feb")
+    ax2.set_ylabel(W["nolin"], color="#1f6feb")
     ax2.grid(False)
-    ax[0, 1].set_title("What changed in the tone (grey: ±1 dB) · blue: what no filter makes")
+    ax[0, 1].set_title(W["tone"])
     c = np.array(R["dynamics"]["curve"]) if R["dynamics"]["curve"] else np.zeros((0, 3))
     if len(c):
         ax[1, 0].plot(c[:, 0], c[:, 1], "o-", color="#b5163a", ms=3)
     ax[1, 0].axhline(0, color="#111", lw=0.8)
-    ax[1, 0].set_xlabel("the before's 50 ms level, dBFS")
-    ax[1, 0].set_ylabel("after − before, dB")
-    ax[1, 0].set_title(f"Dynamics: glue {R['dynamics']['glue_db']:+.2f} dB, peaks {R['dynamics']['peak_shave_db']:+.2f} dB")
+    ax[1, 0].set_xlabel(W["dynx"].format(*sides))
+    ax[1, 0].set_ylabel(W["dyny"].format(*sides))
+    ax[1, 0].set_title(W["dyn"].format(f"{R['dynamics']['glue_db']:+.2f}", f"{R['dynamics']['peak_shave_db']:+.2f}"))
     ax[1, 1].plot(np.arange(len(sa)), sa, color="#6b7280", lw=1.0, label=nb)
-    ax[1, 1].plot(np.arange(len(sb)), sb, color="#b5163a", lw=1.0, label=na + " (at equal loudness)")
+    ax[1, 1].plot(np.arange(len(sb)), sb, color="#b5163a", lw=1.0, label=W["eq"].format(na))
     ax[1, 1].set_ylim(max(-50, float(np.percentile(sa, 2)) - 6), float(np.max(sa)) + 3)
-    ax[1, 1].set_xlabel("seconds")
+    ax[1, 1].set_xlabel(W["time"])
     ax[1, 1].set_ylabel("LUFS (3 s)")
-    ax[1, 1].set_title("Short-term loudness")
+    ax[1, 1].set_title(W["st"])
     ax[1, 1].legend(loc="lower left")
     fig.tight_layout()
     fig.savefig(str(out / "measures.png"), dpi=200)

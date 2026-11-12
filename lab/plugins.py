@@ -33,9 +33,22 @@ the lab gives its text at /plugins/midi?plugin=ID&id=ID, never its path. A scrip
 
 HERESY 1464: a step may say "input": "stems" (a set of stems of the take, not one file: AUDIO is then the set's folder with its
 manifest.json) and a "python" of its own (relative to the folder), which wins over the plugin's.
+
+HERESY 2261: a plugin may bring a panel of its own for the page, and a script that answers it, and may be made of them alone:
+
+    "page": "page.js",        JavaScript the page runs while own plugins are on (☰ → Own plugins), 512 KB at most; the lab gives its
+                              text at /plugins/page?plugin=ID, never its path
+    "calls": "calls.py"       what the panel asks: GET or POST /plugins/call?plugin=ID&path=/x&… runs `PYTHON calls.py` in the plugin's folder
+                              with the request as JSON on its stdin ({method, path, query, type, body64}); the last line it prints is the answer:
+                              {"status": 200, "json": …} or {"status": 200, "type": "image/png", "body64": "…"}; a minute at most
+
+Off (☰ → Own plugins unchecked), the page loads no panel of any plugin, as a public studio would; whatever a plugin's script talks to keeps
+running as it was.
 """
+import base64
 import json
 import re
+import subprocess
 from pathlib import Path
 
 ID = re.compile(r"^[a-z0-9][a-z0-9_-]{0,47}$")
@@ -43,6 +56,9 @@ TEXT = (".txt", ".json", ".md", ".csv")          # HERESY 1484: a step's report
 IMAGE = (".png", ".jpg", ".jpeg", ".svg", ".webp")  # HERESY 1553: a step's picture
 MIDI = (".mid", ".midi")                          # HERESY 1978: a step's notes (Basic Pitch, a plugin of manchuwook's): downloaded, not played
 GROUPS = ("look", "mend", "finish")
+REALMS = ("reader", "creator")                     # HERESY 2312: a step may be bound to one realm of the Library (collection.take_realms)
+PAGE_MAX = 512 * 1024                             # HERESY 2261: a plugin's page module
+CALL_OUT_MAX = 48 * 1024 * 1024                   # HERESY 2261: what a call's script may print
 TYPES = ("select", "number", "check", "file", "text")    # HERESY 1557: file: a file of the take's tree or another take, the lab gives its path
 # HERESY 1977: text: a step's own state as the page's panel of it keeps it (the Pianoteq's settings), a string of up to 20 000 characters
 
@@ -93,7 +109,8 @@ def _step(raw, folder):
             "hardware": bool(raw.get("hardware", False)),   # HERESY 1572: it waits on gear outside the machine, not on the CPU
             "final": bool(raw.get("final", False)),     # HERESY 1997: it ends a way (MIDI, a render kept): the canvas's last column
             "canvas": raw.get("canvas", True) is not False,   # HERESY 2006: a step another room runs (the DAW's Layer), not a node
-            "stem": str(raw.get("stem")) if ID.match(str(raw.get("stem") or "")) else ""}   # HERESY 1572: the one stem it mends
+            "stem": str(raw.get("stem")) if ID.match(str(raw.get("stem") or "")) else "",   # HERESY 1572: the one stem it mends
+            "realm": raw.get("realm") if raw.get("realm") in REALMS else ""}   # HERESY 2312: a step for one realm's takes (the Reader's), "" for all
 
 
 def _midi(raw, folder):
@@ -111,6 +128,16 @@ def _midi(raw, folder):
     if not ports:
         return None
     return {"id": raw["id"], "name": str(raw.get("name") or raw["id"])[:80], "ports": ports, "tip": str(raw.get("tip") or "")[:300], "script": str(script)}
+
+
+def _own(raw, folder, suffix, cap=None):
+    """HERESY 2261: a file the plugin names inside its own folder, of this suffix and at most cap bytes, as a path; None otherwise."""
+    if not raw or not isinstance(raw, str):
+        return None
+    f = (folder / raw).resolve()
+    if folder.resolve() not in f.parents or not f.is_file() or f.suffix != suffix or (cap and f.stat().st_size > cap):
+        return None
+    return str(f)
 
 
 def _rate(v):
@@ -159,10 +186,11 @@ def load(root, builtin=False):
                     raise ValueError(f"its python is not there: {py}")
             steps = [s for s in (_step(r, folder) for r in raw.get("steps") or []) if s]
             midi = [m for m in (_midi(r, folder) for r in raw.get("midi") or []) if m][:16]   # HERESY 1589
-            if not steps and not midi:
-                raise ValueError("no step and no MIDI script inside its folder")
+            page, calls = _own(raw.get("page"), folder, ".js", PAGE_MAX), _own(raw.get("calls"), folder, ".py")   # HERESY 2261
+            if not steps and not midi and not page and not raw.get("trainers"):   # HERESY 2321: or trainers alone (training.plugin_trainers)
+                raise ValueError("no step, no MIDI script, no page module and no trainer inside its folder")
             out.append({"id": raw["id"], "name": str(raw.get("name") or raw["id"]), "folder": str(folder.resolve()),
-                        "python": str(py), "steps": steps, "builtin": bool(builtin), "midi": midi,
+                        "python": str(py), "steps": steps, "builtin": bool(builtin), "midi": midi, "page": page, "calls": calls,
                         "pipelines": [x for x in raw.get("pipelines") or [] if isinstance(x, dict)][:24]})   # HERESY 1553: its own profiles
         except (OSError, ValueError, TypeError, AttributeError) as e:
             errors.append({"plugin": folder.name, "error": str(e)})
@@ -172,9 +200,36 @@ def load(root, builtin=False):
 def public(plugins):
     """What the page sees: names, words and fields, not the paths."""
     return [{"id": p["id"], "name": p["name"], "builtin": p.get("builtin", False),
-             "steps": [{k: s[k] for k in ("id", "label", "say", "tip", "gpu", "params", "input", "prefer", "group", "after", "hardware", "stem")} for s in p["steps"]],
-             "midi": [{k: m[k] for k in ("id", "name", "ports", "tip")} for m in p.get("midi") or []]}   # HERESY 1589
+             "steps": [{k: s[k] for k in ("id", "label", "say", "tip", "gpu", "params", "input", "prefer", "group", "after", "hardware", "stem", "realm")} for s in p["steps"]],   # 2312: realm
+             "midi": [{k: m[k] for k in ("id", "name", "ports", "tip")} for m in p.get("midi") or []],   # HERESY 1589
+             "page": bool(p.get("page"))}                                                        # HERESY 2261
             for p in plugins]
+
+
+def call(plugin, request, lab_py, timeout=60):
+    """HERESY 2261: one call of a plugin's panel to the plugin's own script: (status, content type, bytes). A script that says nothing, says
+    something that is not JSON or prints too much: RuntimeError with why; longer than timeout: subprocess.TimeoutExpired."""
+    if not plugin.get("calls"):
+        raise ValueError(f"the plugin {plugin['id']} answers no calls")
+    p = subprocess.run([plugin.get("python") or str(lab_py), plugin["calls"]], cwd=plugin["folder"], input=json.dumps(request).encode("utf-8"),
+                       capture_output=True, timeout=timeout)
+    if len(p.stdout) > CALL_OUT_MAX:
+        raise RuntimeError(f"its answer is over {CALL_OUT_MAX // (1024 * 1024)} MB")
+    lines = [l for l in p.stdout.decode("utf-8", "replace").splitlines() if l.strip()]
+    if not lines:
+        tail = p.stderr.decode("utf-8", "replace").strip().splitlines()[-1:]
+        raise RuntimeError(f"it said nothing (exit {p.returncode})" + (f": {tail[0][:300]}" if tail else ""))
+    try:
+        r = json.loads(lines[-1])
+        status = int(r.get("status") or 200)
+    except (ValueError, TypeError, AttributeError):
+        raise RuntimeError("its last line is not the answer's JSON")
+    status = status if 100 <= status <= 599 else 502
+    if r.get("body64") is not None:
+        ctype = str(r.get("type") or "")
+        ctype = ctype if re.fullmatch(r"[a-z]+/[a-z0-9.+-]{1,60}", ctype) else "application/octet-stream"
+        return status, ctype, base64.b64decode(str(r["body64"]))
+    return status, "application/json; charset=utf-8", json.dumps(r.get("json"), ensure_ascii=False).encode("utf-8")
 
 
 def find(plugins, pid, sid):
