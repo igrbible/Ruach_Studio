@@ -23,7 +23,7 @@ module.exports = {
   version: "4.0",
   title: "Ruach Studio",
   // HERESY 2382 (Viktor 11.11.2026: «в пинокио файле точный текст из About гитхаб репо»): the GitHub repository's About, word for word
-  description: "Ruach Studio: The Ultimate YuE2 Studio for local AI music generation. YuE2 Songs Creator, Drama 3 Narrator, AI Writer, Refiner (30+ nodes, Piano Roll, DAW), Cover Artist, MiniMax H3 Videographer, LoRA Trainer, Librarian. SUNO AI alternative.",
+  description: "Ruach Studio: The Ultimate YuE2 Studio for local AI music generation. YuE2 Musician, Drama 3 Narrator, QWEN Writer, Refiner (30+ nodes, Piano Roll, DAW), QWEN IMAGE Cover Artist, MiniMax H3 Videographer, LoRA Trainer, Librarian. SUNO AI alternative.",
   icon: "src/brand/ruach-icon-512.png",
   menu: async (kernel, info) => {
     // where a script of ours runs from: launcher/, or pinokio/ while an Update the old scripts began goes on
