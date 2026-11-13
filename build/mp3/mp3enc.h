@@ -316,6 +316,13 @@ static int mp3enc_encode_frame(mp3enc_t * enc, const float * pcm) {
         // Use M/S unless side channel has more energy than mid.
         // This is generous -- almost always enables M/S (like FhG).
         use_ms       = (energy_side < energy_mid * 1.2f) || (energy_mid < 1e-20f);
+        // HERESY 2605 (Dima Shumaier via Viktor 13.11.2026: «MP3 экспорт сломан… wav и flac живые»): a dual-mono frame (L == R, the
+        // Narrator's takes and imports) left the side channel all zeros, and such a granule came out of M/S as a different, distorted sound
+        // (decoded against the WAV: correlation 0.05, +8…17 dB in the low and middle bands). With the side 60 dB under the mid the frame
+        // goes as L/R, the same bits per channel; silence (no mid) stays M/S as before, songs are untouched.
+        if (energy_mid >= 1e-20f && energy_side < energy_mid * 1e-6f) {
+            use_ms = false;
+        }
         mode_ext     = use_ms ? 2 : 0;
         hdr.mode_ext = mode_ext;
     }

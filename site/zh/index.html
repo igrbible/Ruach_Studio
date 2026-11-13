@@ -671,7 +671,7 @@
     <p class="lead">围绕开放歌曲模型 <b>YuE2</b> 的完整工作室。写下风格和歌词，工作室就在<b>你自己的 GPU</b> 上作曲、演唱并渲染歌曲。你的歌曲、文字和设置永远不会离开它。</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">在 GitHub 获取</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.zh.md">阅读指南</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face 上的模型</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 给 Viktor 和 Claude 的 24/7 咖啡</a></div>
     <p class="star">⭐ 喜欢这个工作室的话，请给<a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub 上的 YuE2 Studio 仓库</a>点亮一颗星。</p>
-    <span class="rc"><b>2.0.7</b> · 我们自己的解码器成为 Studio 的声音，朗读把文本读出声来 · 2026 年 11 月</span>
+    <span class="rc"><b>2.0.8</b> · 一体化版本：写作室有了两个世界，朗读有了第二个引擎，影像室有了两个监视器 · 2026 年 11 月</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -709,7 +709,7 @@
         <article class="room"><a class="pic" href="../assets/shots/zh/studio-create.webp" data-night="../assets/shots/zh/studio-create-night.webp"><img class="day" src="../assets/shots/zh/studio-create.webp" alt="音乐人" loading="lazy"><img class="night" src="../assets/shots/zh/studio-create-night.webp" alt="音乐人" loading="lazy"></a>
           <div><h3>音乐人</h3><p class="soon">2.0.7 新增</p><p>风格、歌词、规划模式、解码器、在由绿到红的道路上的 LoRA；录音附带它的乐谱、种子以及重做它所需的一切。</p></div></article>
         <article class="room" id="narrator"><a class="pic" href="../assets/shots/narrator.webp"><img src="../assets/shots/narrator.webp" alt="朗读：文本、声音、引擎、运行" loading="lazy"></a>
-          <div><h3>朗读</h3><p class="soon">2.0.7 新增</p><p>在你自己的 GPU 上把文本读出声来：一章、一本书、一部广播剧、一期播客，用一个平稳的声音或以对话的方式，十二种语言，各用自己的文字。由 Fish Audio Drama 3 朗读；Whisper 听每一段，读错的会重读；成品合成到 −16 LUFS，并标记为永不用于训练。Built with Fish Audio.</p></div></article>   <!-- 11.11.2026 (Viktor: «и Чтеца сразу, пусть ждут релиза»), from 2.0.7, its shot from the Narrator's guide; second since 11.11 (Viktor: «Перенеси Чтеца сразу после Музыканта и перед Писателем») -->
+          <div><h3>朗读</h3><p class="soon">2.0.7 新增</p><p>在你自己的 GPU 上把文本读出声来：一章、一本书、一部广播剧、一期播客，用一个平稳的声音或以对话的方式，十二种语言，各用自己的文字。由 Fish Audio Drama 3 朗读，自 2.0.8 起还有 Boson AI 的 Higgs TTS 3 在旁；Whisper 听每一段，读错的会重读；成品合成到 −16 LUFS，并标记为永不用于训练。Built with Fish Audio.</p></div></article>   <!-- 11.11.2026 (Viktor: «и Чтеца сразу, пусть ждут релиза»), from 2.0.7, its shot from the Narrator's guide; second since 11.11 (Viktor: «Перенеси Чтеца сразу после Музыканта и перед Писателем») -->
         <article class="room"><a class="pic" href="../assets/shots/zh/studio-writer.webp" data-night="../assets/shots/zh/studio-writer-night.webp"><img class="day" src="../assets/shots/zh/studio-writer.webp" alt="写作室" loading="lazy"><img class="night" src="../assets/shots/zh/studio-writer-night.webp" alt="写作室" loading="lazy"></a>
           <div><h3>写作室</h3><p>把歌曲当作带版本的文档，文本配置，以及你自己的聊天模型（或 OpenRouter）与你一起起草和修改。</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/zh/studio-post.webp" data-night="../assets/shots/zh/studio-post-night.webp"><img class="day" src="../assets/shots/zh/studio-post.webp" alt="精修室" loading="lazy"><img class="night" src="../assets/shots/zh/studio-post-night.webp" alt="精修室" loading="lazy"></a>
@@ -1056,11 +1056,11 @@
   <section id="next">
     <div class="wrap">
       <h2>接下来</h2>
-      <p class="sub">2.0.7 是我们每天创作自己歌曲所用的 Studio。接下来是 2.0.8：Higgs Audio v3 成为朗读的第二个引擎，影像室迎来自己的音轨，以及设计好的标题和卡拉 OK 模板（卡拉 OK 本身已在 2.0.7 中到来）。以下是正在路上的较大部分，面向 2.0.8、2.1.0 及以后。</p>
+      <p class="sub">2.0.8 是我们每天创作自己的歌曲和朗读所用的 Studio。以下是正在路上的较大部分，面向 2.1.0 及以后。</p>
       <ul class="feats">
-        <li><b>像模型写歌那样编辑歌曲。</b>从任意位置延长一段录音；重写一个段落，保留相邻段落的嗓音、调性和小节，并在模型自己的 token 中缝合；在录音自己的乐谱上叠加一层器乐。</li>
-        <li><b>DAW，更进一步。</b>录音上方的和弦轨与拍子网格，可从任何录音取参考，以及把你在 MIDI 键盘上弹的写进乐谱的钢琴卷帘。</li>
-        <li><b>影像室，更进一步。</b>10 到 15 秒的镜头，在场景之间保持同一张脸的角色，更多格式与导出，以及在标题中使用你自己安装的字体。</li>
+        <li><b>朗读，更进一步。</b>整本书作为一个带章节的文件下载，单独编辑某一部分并把整本书送进精修室，以及根据上下文带元音朗读希伯来文。</li>
+        <li><b>DAW，更进一步。</b>把你在 MIDI 键盘上弹的写进乐谱的钢琴卷帘，以及 DAW 工程在 REAPER、Waveform 和 Bitwig 中仍需要的崩溃测试。</li>
+        <li><b>影像室，更进一步。</b>10 到 15 秒的镜头，在场景之间保持同一张脸的角色，设计好的标题和卡拉 OK 模板，更多格式与导出。</li>
         <li><b>Tsunami Wave 之后的下一波。</b>我们的下一个微调从 YuE2 唱得最差的地方学习，发布前先盲听。</li>
         <li>为 REAPER、Waveform 和 Bitwig 提供<b>原生插件</b>，等工作室找到它的用户之后。</li>
       </ul>
@@ -1094,6 +1094,8 @@
         <li>Jackrong 基于 <b>Qwen3.5</b> 的 <b>Qwopus3.5-9B</b>：写作室自己的模型；<b>Qwen3-4B</b>：封面的提示词</li>
         <li>带 <b>Qwen3-VL</b> 文本编码器的 <b>MiniMax H3</b>，以及 ByteDance Seed 的 <b>SeedVR2</b>：影像室的动态镜头和放大</li>
         <li>运行在 audio.cpp 上的 <b>Fish Audio Drama 3</b>：朗读的声音（Built with Fish Audio）</li>
+        <li>Boson AI 的 <b>Higgs TTS 3</b>：朗读的第二个引擎（Built with Higgs TTS 3 licensed from Boson AI USA, Inc.）</li>
+        <li>lang-uk 的 <b>ukrainian-word-stress</b>、基于 gramdict 数据的 A. A. 扎利兹尼亚克<b>《语法词典》</b>、白俄罗斯 NLP 社区的 <b>GrammarDB</b>：朗读的重音</li>
         <li><b>YuE2 Studio</b>：乐谱检查器</li>
         <li>Greek Font Society 的 <b>GFS Didot</b> 和 Culmus 项目的 <b>David CLM</b>：本页的希腊字母和希伯来字母</li>
       </ul>
@@ -1388,7 +1390,7 @@
       <a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio/stargazers"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 .9 10.2 5.4l5 .7-3.6 3.5.9 5L8 12.3 3.5 14.6l.9-5L.8 6.1l5-.7z"/></svg><div class="ghs-n"><b data-gh="stars">–</b></div><span>星标</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio/forks"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.3a1.8 1.8 0 1 1-1.5 0v1.9c0 .7.6 1.3 1.3 1.3h6.4c.7 0 1.3-.6 1.3-1.3V3.3a1.8 1.8 0 1 1 1.5 0v1.9a2.8 2.8 0 0 1-2.8 2.8H8.8v4.7a1.8 1.8 0 1 1-1.5 0V8H4.8A2.8 2.8 0 0 1 2 5.2V3.3z"/></svg><div class="ghs-n"><b data-gh="forks">–</b></div><span>复刻</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio/watchers"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3C4 3 1.2 6.2.4 8 1.2 9.8 4 13 8 13s6.8-3.2 7.6-5C14.8 6.2 12 3 8 3zm0 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg><div class="ghs-n"><b data-gh="watchers">–</b></div><span>关注者</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio/issues"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 1.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zM8 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg><div class="ghs-n"><b data-gh="issues">–</b></div><span>未关闭的 issue</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio/releases"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7.2 1h1.6v8.1l2.7-2.7 1.1 1.1L8 12.1 3.4 7.5l1.1-1.1 2.7 2.7zM2 13.5h12V15H2z"/></svg><div class="ghs-n"><b data-gh="downloads">–</b></div><span>版本下载</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1h8.5c.8 0 1.5.7 1.5 1.5V11c0 .8-.7 1.5-1.5 1.5H5c-.8 0-1.5-.7-1.5-1.5V2.5C3.5 1.7 4.2 1 5 1zm0 1.5V11h8.5V2.5zM1 5h1.5v8.5H11V15H2.5C1.7 15 1 14.3 1 13.5z"/></svg><div class="ghs-n"><b data-gh="clones14">–</b></div><span>14 天克隆</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1h8.5c.8 0 1.5.7 1.5 1.5V11c0 .8-.7 1.5-1.5 1.5H5c-.8 0-1.5-.7-1.5-1.5V2.5C3.5 1.7 4.2 1 5 1zm0 1.5V11h8.5V2.5zM1 5h1.5v8.5H11V15H2.5C1.7 15 1 14.3 1 13.5z"/></svg><div class="ghs-n"><b data-gh="uniques14">–</b></div><span>独立克隆</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3C4 3 1.2 6.2.4 8 1.2 9.8 4 13 8 13s6.8-3.2 7.6-5C14.8 6.2 12 3 8 3zm0 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg><div class="ghs-n"><b data-gh="views14">–</b></div><span>14 天浏览</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3C4 3 1.2 6.2.4 8 1.2 9.8 4 13 8 13s6.8-3.2 7.6-5C14.8 6.2 12 3 8 3zm0 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg><div class="ghs-n"><b data-gh="visitors14">–</b></div><span>访客</span></a><a target="_blank" rel="noopener" class="ghs ghs-total" href="https://github.com/igrbible/Ruach_Studio"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1h8.5c.8 0 1.5.7 1.5 1.5V11c0 .8-.7 1.5-1.5 1.5H5c-.8 0-1.5-.7-1.5-1.5V2.5C3.5 1.7 4.2 1 5 1zm0 1.5V11h8.5V2.5zM1 5h1.5v8.5H11V15H2.5C1.7 15 1 14.3 1 13.5z"/></svg><div class="ghs-n"><b data-gh="clones_total">–</b></div><span data-tpl="since">自 {0} 起的克隆</span></a>
       <span class="gh-when" data-tpl="when">截至 {0} 的 GitHub</span>
     </div>
-    <span>鲁阿赫工作室 · 2.0.7 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> 的作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="我们精选的 YuE2 社区全部作品清单">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">更新记录</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24/7 咖啡</a></span>
+    <span>鲁阿赫工作室 · 2.0.8 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> 的作品</span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="我们精选的 YuE2 社区全部作品清单">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">更新记录</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24/7 咖啡</a></span>
   </div>
 </footer>
 

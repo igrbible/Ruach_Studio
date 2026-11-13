@@ -3672,7 +3672,9 @@ int main(int argc, char ** argv) {
             std::string source = audio_file_of(dir);
             std::string cache  = source;   // a take made as MP3 is served as it is
             if (source.size() < 4 || source.substr(source.size() - 4) != ".mp3") {
-                cache = dir + "/audio-" + std::to_string(kbps) + "k.mp3";
+                // HERESY 2605: an MP3 made before the dual-mono fix of mp3enc.h is not trusted: the copies have a new name (the lab's
+                // «audio-*k.mp3» still finds them), and the old copy goes when the new one is made
+                cache = dir + "/audio-2605-" + std::to_string(kbps) + "k.mp3";
                 std::lock_guard<std::mutex> lock(mtx_library);
                 std::error_code ec;
                 std::string art = dir + "/artwork.jpg";     // HERESY 1120: a newer artwork makes the MP3 again
@@ -3701,6 +3703,7 @@ int main(int argc, char ** argv) {
                     take_title_lyrics(dir, name, title, lyrics);
                     write_file(cache, id3_tag(title, lyrics, std::filesystem::is_regular_file(art) ? read_file(art) : std::string()) + mp3);
                     fprintf(stderr, "[Library] MP3 %d kbps for %s\n", kbps, name.c_str());
+                    std::filesystem::remove(dir + "/audio-" + std::to_string(kbps) + "k.mp3", ec);   // HERESY 2605: the copy from before the fix
                 }
             }
             res.set_header("Content-Disposition",
