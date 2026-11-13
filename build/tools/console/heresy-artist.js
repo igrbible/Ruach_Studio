@@ -257,7 +257,7 @@
       groups[g] = groups[g].concat(rows);
     });
     return order.map(function (g) {
-      return '<optgroup label="' + esc(g) + '">' + groups[g].map(function (r) { return '<option value="' + esc(r[0]) + '">' + esc(r[1]) + "</option>"; }).join("") + "</optgroup>";
+      return '<optgroup label="' + esc(g) + '">' + groups[g].map(function (r) { return '<option value="' + esc(r[0]) + '" translate="no">' + esc(r[1]) + "</option>"; }).join("") + "</optgroup>";   // HERESY 2585: the list's own words kept as made, its tip translated
     }).join("");
   }
   function syncBrush() {                                 // the list shows the painter and its file the hidden state holds
@@ -874,7 +874,7 @@
       var c = gr.c, head = [c.model ? String(c.model).replace(/\.safetensors$/, "") : "", tr("prompt " + (c.prompt_i + 1)), tr("seed") + " " + c.seed, tr(c.steps + " steps"), "CFG " + c.cfg]
         .concat(Object.keys(c.loras || {}).map(function (id) { return id.split("/").pop().replace(/\.safetensors$/, "") + " " + c.loras[id]; })).filter(Boolean).join(" · ");
       return '<div class="ar-board"><div class="ar-board-head" translate="no">' + esc(head) + '</div><div class="ar-board-grid" style="--cols:' + (ax.schedules || []).length + '">' +
-        '<span class="ar-board-corner"></span>' + (ax.schedules || []).map(function (s) { return '<span class="ar-board-col" translate="no">' + esc(nm(CF_SCHEDULES, s)) + "</span>"; }).join("") +
+        '<span class="ar-board-corner"></span>' + (ax.schedules || []).map(function (s) { return '<span class="ar-board-col" translate="no" data-tip="' + esc(nm(CF_SCHEDULES, s)) + '">' + esc(nm(CF_SCHEDULES, s)) + "</span>"; }).join("") +
         (ax.samplers || []).map(function (sm) {
           return '<span class="ar-board-row" translate="no">' + esc(nm(CF_SAMPLERS, sm)) + "</span>" + (ax.schedules || []).map(function (sc) {
             var n = gr.at[sm + "|" + sc], got = n && byN[n];
@@ -1039,7 +1039,12 @@
     paintRefTake();                                  // HERESY 1309: the take may have a cover now, or none
     var t = state.take;
     $("arTake").textContent = t ? t.label || t.name : "";
-    $("arTakeNote").textContent = t ? (hasArt(t.name) ? tr("its cover can be one of these") : tr("no cover yet: give it one of these")) : tr("pick a take on the right to give it a cover");
+    // HERESY 2584 (UIX audit №70: «ОБЛОЖКИ ЕЩЁ НЕТ: ДАЙ ЕМУ ОДНУ ИЗ ЭТИХ» in capitals on the head's right): a take without a cover says so by an icon
+    // beside its name, its words in the tip; one with a cover says nothing more; only no take at all keeps its words
+    var note = $("arTakeNote"), bare = !!t && !hasArt(t.name), nico = window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui("image-off") : "";
+    note.classList.toggle("ar-nocover", bare && !!nico);
+    if (bare && nico) { note.innerHTML = nico; note.setAttribute("role", "img"); note.setAttribute("aria-label", tr("no cover yet: give it one of these")); note.dataset.tip = tr("no cover yet: give it one of these"); }
+    else { note.removeAttribute("role"); note.removeAttribute("aria-label"); delete note.dataset.tip; note.textContent = t ? "" : tr("pick a take on the right to give it a cover"); }
     $("arFromTake").disabled = !t;
   }
 
@@ -1100,7 +1105,8 @@
       (r.waiting ? ' <span class="ar-why">' + esc(r.waiting) + "</span>" : "") +
       ' <button type="button" class="btn ghost small" data-act="cancel">' + esc(tr("Off the queue")) + "</button>";
     if (r.status === "running") return '<span class="ar-state is-run">' + esc(tr("drawing " + (r.pictures || []).length + " of " + r.of + (r.gpu != null ? " · GPU " + r.gpu : ""))) + "</span>";
-    if (r.status === "failed") return '<span class="ar-state is-bad">' + esc(tr("failed")) + "</span> " + '<span class="ar-why" translate="no">' + esc(r.error || "") + "</span>" +
+    // HERESY 2583 (UIX audit №73: CUDA's own paragraph open in the run's card): a failure's raw words one line, cut with …, whole in its tip
+    if (r.status === "failed") return '<span class="ar-state is-bad">' + esc(tr("failed")) + "</span> " + '<span class="ar-why is-raw" translate="no" data-tip="' + esc(r.error || "") + '">' + esc(r.error || "") + "</span>" +
       (r.smaller ? ' <button type="button" class="btn ghost small" data-act="smaller">' + esc(tr("Try {size}").replace("{size}", r.smaller[0] + "×" + r.smaller[1])) + "</button>" : "");   // HERESY 2278
     if (r.status === "stopped") {                       // HERESY 1270
       var k0 = (r.pictures || []).filter(function (p) { return p.kept; }).length;
@@ -1109,6 +1115,8 @@
     var kept = (r.pictures || []).filter(function (p) { return p.kept; }).length;
     return '<span class="ar-state">' + esc(tr((kept === 1 ? "1 picture" : kept + " pictures") + (r.took ? " · " + Math.round(r.took) + " s" : ""))) + "</span>";
   }
+  // HERESY 2582 (UIX audit №68): a run's acts as icons, the Narrator's runs' way; the word itself where the page has no icons
+  function runIco(n, word) { var g = window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(n) : ""; return g || esc(tr(word)); }
   function capOf(r, p) { return p.shape + (r.count > 1 ? " · v" + (p.letters && p.n && r.shapes && r.shapes.length ? Math.floor((p.n - 1) / r.shapes.length) + 1 : p.seed - r.seed + 1) : ""); }
   function picHtml(r, p, i) {
     var sh = shapeOf(p.shape);
@@ -1120,11 +1128,14 @@
     return '<figure class="ar-pic" style="--ar:' + sh.w + "/" + sh.h + '" data-i="' + i + '">' +
       '<button type="button" class="ar-thumb" data-act="view" aria-label="' + esc(tr("Look at it")) + '" data-tip="' + esc(p.w + "×" + p.h + " · " + tr("seed") + " " + p.seed) +
       '"><img alt="" loading="lazy" draggable="false" src="' + esc(fileUrl(r.id, p.thumb || p.file)) + '" /></button>' +
-      '<figcaption><span class="ar-cap">' + esc(capOf(r, p)) + "</span>" + letMark(p) +   // HERESY 1394
-      '<a class="ar-dl" data-tip="' + esc(tr("Download the picture (PNG, full size)")) + '" aria-label="' + esc(tr("Download")) + '" href="' + esc(fileUrl(r.id, p.file)) +
+      // HERESY 2581 (UIX audit №67: «Сделать обложкой», 142 px under a 78 px cell of the grid's board, lay over its neighbours and the download): the
+      // download and the cover two icons over the picture's top right corner, in sight while the pointer or the focus is on it (app.css); the caption
+      // its shape alone. The cover's icon is the stage's own (disc)
+      '<span class="ar-pic-acts"><a class="ar-dl" data-tip="' + esc(tr("Download the picture (PNG, full size)")) + '" aria-label="' + esc(tr("Download")) + '" href="' + esc(fileUrl(r.id, p.file)) +
       '" download="' + esc("ruach-artist-" + r.id + "-" + p.file) + '">' + (window.HeresyIcons ? window.HeresyIcons.ui("download") : "⤓") + "</a>" +
-      (square ? '<button type="button" class="btn ghost small ar-cover" data-act="cover"' + (take ? "" : " disabled") + ' data-tip="' + esc(coverTip) + '">' +
-      esc(tr("Set as cover")) + "</button>" : "") + "</figcaption></figure>";
+      (square ? '<button type="button" class="ar-dl ar-cover" data-act="cover"' + (take ? "" : " disabled") + ' aria-label="' + esc(tr("Set as cover")) + '" data-tip="' + esc(coverTip) + '">' +
+      runIco("disc", "Set as cover") + "</button>" : "") + "</span>" +
+      '<figcaption><span class="ar-cap">' + esc(capOf(r, p)) + "</span>" + letMark(p) + "</figcaption></figure>";   // HERESY 1394
   }
   function waitHtml(r) {
     var have = (r.pictures || []).length, out = "", n = 0;
@@ -1267,9 +1278,10 @@
         '<header class="ar-run-head"><span class="ar-when">' + esc(when(r.created)) + "</span>" +
         '<span class="ar-meta" translate="no">' + esc(painterLabel(r)) + " · " + esc(tr("seed")) + " " + esc(r.seed) +
         (r.count > 1 ? "…" + esc(r.seed + r.count - 1) : "") + "</span>" + runState(r) +
-        '<span class="ar-acts"><button type="button" class="btn ghost small" data-act="form" data-tip="' + esc(tr("Its prompt, shapes, variations and seed back in the form above")) + '">' + esc(tr("To the form")) + "</button>" +
-        '<button type="button" class="btn ghost small" data-act="again" data-tip="' + esc(tr(r.kind === "upscale" ? "The same picture upscaled once more" : "The same prompt and shapes once more, from a new seed")) + '"' + (live(r) ? " disabled" : "") + ">" + esc(tr("Again")) + "</button>" +
-        '<button type="button" class="btn ghost small danger" data-act="trash" data-tip="' + esc(tr("The run and its pictures to the trash (the Studio's trash/artist/)")) + '"' + (live(r) ? " disabled" : "") + ">" + esc(tr("Trash")) + "</button></span></header>" +
+        // HERESY 2582 (UIX audit №68: «В форму», «Ещё раз», «Корзина» in words on every run): icons, the stage's pencil for the form, each named in its label
+        '<span class="ar-acts"><button type="button" class="btn ghost small icon-only" data-act="form" aria-label="' + esc(tr("To the form")) + '" data-tip="' + esc(tr("Its prompt, shapes, variations and seed back in the form above")) + '">' + runIco("pencil", "To the form") + "</button>" +
+        '<button type="button" class="btn ghost small icon-only" data-act="again" aria-label="' + esc(tr("Again")) + '" data-tip="' + esc(tr(r.kind === "upscale" ? "The same picture upscaled once more" : "The same prompt and shapes once more, from a new seed")) + '"' + (live(r) ? " disabled" : "") + ">" + runIco("refresh", "Again") + "</button>" +
+        '<button type="button" class="btn ghost small icon-only danger" data-act="trash" aria-label="' + esc(tr("Trash")) + '" data-tip="' + esc(tr("The run and its pictures to the trash (the Studio's trash/artist/)")) + '"' + (live(r) ? " disabled" : "") + ">" + runIco("trash", "Trash") + "</button></span></header>" +
         '<p class="ar-prompt' + (open ? " is-open" : "") + '" data-act="fold" translate="no">' + esc(r.prompt) + "</p>" +
         '<div class="ar-pics">' + pics + "</div></article>";
     }).join("");
@@ -2170,7 +2182,7 @@
   function noteIt(r, p) {
     if (!window.HeresyDialog) return;
     window.HeresyDialog.prompt(tr("A note on the picture") + "\n\n" + tr("Kept with the picture in its run: what it was made for, the words that lettered it, what to try next. Ctrl+Enter keeps it; an empty note takes it off."),
-      p.note || "", { area: true, max: 600, ok: tr("Keep"), placeholder: tr("Your note") }).then(function (v) {
+      p.note || "", { area: true, max: 6000, ok: tr("Keep"), placeholder: tr("Your note") }).then(function (v) {   // HERESY 2404: 1200, as every note; 2438: 6000
       if (v === null) return;
       v = String(v).replace(/\s+$/, "");
       if (v === (p.note || "")) return;
@@ -2481,8 +2493,8 @@
         (e && e.picture ? '<img class="ar-lora-pic" alt="" loading="lazy" draggable="false" src="' + esc(loraPic(l.id, 96)) + '" />' : '<span class="ar-lora-pic"></span>') +
         '<span class="ar-lora-name" translate="no" title="' + esc(l.id) + '">' + esc(loraName(e, l.id)) +
         (l.muted ? '<span class="lora-muted-tag" data-tip="' + esc(tr("Right-click: back in the run")) + '">' + esc(tr("muted")) + "</span>" : "") + "</span>" +   // HERESY 1341
-        '<button type="button" class="pb-btn ar-lora-x" data-lx="' + i + '" aria-label="' + esc(tr("Take it off")) + '">\u2715</button>' +
-        '<button type="button" class="pb-btn ar-lora-kb' + (l.keys ? " is-on" : "") + '" data-lk="' + i + '" aria-label="' + esc(tr("Its strength over the steps")) + '" data-tip="' + esc(tr(KEYS_TIP)) + '">\u23f1</button>' +   // HERESY 1365
+        '<button type="button" class="pb-btn ar-lora-x" data-lx="' + i + '" aria-label="' + esc(tr("Take it off")) + '" data-tip="' + esc(tr("Take it off")) + '">' + runIco("x", "Take it off") + "</button>" +   // HERESY 2586: no glyphs on buttons
+        '<button type="button" class="pb-btn ar-lora-kb' + (l.keys ? " is-on" : "") + '" data-lk="' + i + '" aria-label="' + esc(tr("Its strength over the steps")) + '" data-tip="' + esc(tr(KEYS_TIP)) + '">' + runIco("timer", "Its strength over the steps") + "</button>" +   // HERESY 1365
         '<span class="ar-lora-slide"><input type="range" class="ar-lora-w" min="0" max="1.5" step="0.05" value="' + (+l.weight).toFixed(2) + '" aria-label="' + esc(tr("Its strength")) + '" />' +
         '<span class="ar-lora-wv mono">' + (+l.weight).toFixed(2) + "</span></span>" +
         (words.length ? '<span class="ar-lora-words">' + words.map(function (w) {
@@ -2915,6 +2927,12 @@
     $("arPainter").addEventListener("change", function () { state.painted = true; keepForm(); }, true);   // HERESY 1375: picked by the user: kept
     $("arModel").addEventListener("change", keepForm);
     $("arBrush").addEventListener("change", pickBrush);   // HERESY 1428: The Artist's brushes
+    // HERESY 2585 (UIX audit №72, №97: the system's own list under the room's lists): the Studio's overlay picker (heresy-menu.js HeresyChoices), the
+    // select kept as what the code reads and writes, a button standing for it; the shared seed widget's list (seed-mode) and the stage's upscaler stay theirs
+    if (window.HeresyChoices) ["arCount", "arBrush", "arSampler", "arSchedule", "arLetWhere", "arLetWay", "arCfEnc", "arCfVae", "arCfMs", "arCfHook", "arCfMainHow", "arGridAdapter", "arRefAs"].forEach(function (id) {
+      var s = $(id);
+      if (s) { s.dataset.hcPick = "1"; window.HeresyChoices.enhance(s); }
+    });
     ["arSteps", "arSampler", "arSchedule", "arLightOn", "arLight", "arCfg"].forEach(function (id) { $(id).addEventListener("change", keepSampling); });   // HERESY 1319, 1328
     // HERESY 1345 (Viktor: «Фолдинг СЕМПЛИНГА запоминаем при F5 также»)
     if (recall("yue2.arSampOpen")) $("arSampling").open = recall("yue2.arSampOpen") === "1";

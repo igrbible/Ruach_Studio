@@ -1,0 +1,5 @@
+The Narrator's stock voices
+
+Twelve made-up voices, one for each of the Narrator's languages, made on 11.11.2026 by Fish Audio Drama 3 itself with no voice given (each steered by a bracket such as [a deep low male voice, calm narration] and drawn by its seed), read through audio.cpp (Apache-2.0) from GGUF quants of the original weights. No person's voice was cloned for them.
+
+Built with Fish Audio. They are output of a model under the Fish Audio Community License v1.0 (https://huggingface.co/fishaudio/drama-3): they are never to be used to train or distill any model, and the Studio marks each as never for training (the FLAC's comment tag, and the voice's own record). The words each one reads are the Studio's own.

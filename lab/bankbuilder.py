@@ -910,6 +910,9 @@ def build(kit, bank, name=None, round_robins=3, layers=3, picks=None):
     w = work_dir(kit, bank)
     plan = json.loads((w / "plan.json").read_text(encoding="utf-8"))
     mode = plan["mode"]
+    if name:
+        import name_rule                           # HERESY 2462: the bank's own name keeps the names' rule (its folder is its slug)
+        name_rule.check(name, 60, file=True)
     name = name or bank
     out = kit / "banks" / slug(name)
     smp = out / "samples"

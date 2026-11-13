@@ -18,7 +18,7 @@ The Narrator reads with Fish Audio Drama 3 (35B MoE, 3B active) through audio.cp
 
 ![The Quant select and the line under it](guide/reader-tier.png "Quant: what reads, where, and how long this text will take")
 
-**Quant** says which quant reads and where. **Auto · speed first** (the default) and **Auto · quality first** choose by the memory free when the run starts; a quant named in the list keeps to it. The line under it says what would read now and on which card, a second of speech in how many seconds, and how long this text would take with the model's load.
+**Quant** says which quant reads and where. **Auto · quality first** (the default) takes Q8_0 wherever it fits: 20 expert banks in RAM on a card with 23.6 GB free, else all 40 banks in the machine's memory on a card with 7.4 GB free and 40 GB of memory free; then Q6_K; Q4_K only where neither fits (a small card, little memory) and on an Intel card. **Auto · speed first** takes Q4_K first. Both choose by the memory free when the run starts; a quant named in the list keeps to it. Q8_0 is the default because it came out cleanest to the ear: in the raw test of 09.11.2026 no take of Q8_0 was marked wrong in 20, of Q6_K one in 20, of Q4_K seven in 50, every mark at one joint of one sentence. The setup fetches Q8_0 (41.1 GB) when the machine's biggest card has 24 GB or more, else Q4_K (24.9 GB); on a smaller card `bash tools/narrator-setup.sh --quant Q8_0` fetches Q8_0 beside it. Without it Auto reads in the quant that is here. The line under it says what would read now and on which card, a second of speech in how many seconds, and how long this text would take with the model's load.
 
 Measured on one RTX 3090 on 09.11.2026 with a Russian piece of 27 s. RTF is the seconds it takes to read a second of speech; Whisper heard every letter right unless the row says otherwise:
 
@@ -35,6 +35,25 @@ Measured on one RTX 3090 on 09.11.2026 with a Russian piece of 27 s. RTF is the 
 | Q8_0 | the processor alone | — | 44 GB | 7.0 | the processor |
 
 The rows beside a dataset job are pessimistic: the card's compute and the processor were shared with it, and a card of its own reads them faster. **Q8_0 · 20 expert banks in RAM, 40 on a shared card** keeps to Q8_0: 20 banks in RAM on a card with 23.6 GB free; when the card is shared, all 40 in the machine's memory; with **Auto** as the card, the processor last. The first reading loads the model; on a card it stays loaded between runs.
+
+### On an Intel Arc or Another Vulkan Card
+
+Drama 3 reads on an Intel card (Arc) through audio.cpp's Vulkan build, in a tier of its own: Q4_K with 28 of its 40 expert banks in the machine's memory, about 11 GB on the card and 16 GB of memory free. Measured on an Arc Pro B50 (16 GB) on 12.11.2026: a second of speech in 3.3 s, the model's load 53 s. When the card's memory runs short, the engine moves four banks more into the machine's memory and reads on. On an Intel card Auto takes this tier alone, and a quant meant for another card is refused there by name; Drama 3 never reads on the processor in the card's name: when the card cannot take it, the run says so. The Vulkan loader is shown Mesa's Intel driver alone, so the processor's software renderer is never taken for the card. For now the Narrator sends Drama 3 to the Vulkan build only on an Intel card; audio.cpp's Vulkan build runs on other Vulkan cards too, but the Narrator does not route them yet.
+
+The system's packages, once (the Vulkan headers, the shader compiler glslc, the SPIR-V headers, Mesa's Vulkan drivers and vulkaninfo):
+
+```
+# Debian, Ubuntu
+sudo apt install libvulkan-dev glslc spirv-headers mesa-vulkan-drivers vulkan-tools
+# Fedora
+sudo dnf install vulkan-loader-devel glslc spirv-headers-devel mesa-vulkan-drivers vulkan-tools
+# Arch
+sudo pacman -S --needed vulkan-icd-loader vulkan-headers shaderc spirv-headers vulkan-intel vulkan-tools
+```
+
+Check that the driver sees the card: `vulkaninfo --summary` lists it under Devices with Mesa's driver, as `deviceName = Intel(R) Arc(tm) Pro B50 Graphics (BMG G21)` and `driverName = Intel open-source Mesa driver`. A list with `llvmpipe` alone means the driver is not there. `bash tools/narrator-setup.sh --vulkan-check` says what is here and names the packages missing for your system.
+
+Then the build: `bash tools/narrator-setup.sh` makes the Vulkan build by itself on a machine with an Intel card, beside the other one; `bash tools/narrator-setup.sh --build --vulkan` makes it alone, into `build/audio.cpp/build/linux-vulkan-release/`. It needs cmake and a C++ compiler, as the other builds do; the setup never installs a system package, it names it. Measured on Ubuntu 24.04 with Mesa 25.2 and Linux 7.0; the details are in `docs/NARRATOR-VULKAN.md`.
 
 ### Grades of the Quants
 
@@ -59,7 +78,7 @@ Emotions and sounds go in square brackets, as Drama 3 reads them: `[calm]`, `[sa
 
 ### Stresses and the Acute
 
-**Put the stresses in** marks the stressed vowels before the engine reads: your own marks stay as written (the acute, U+0301, as in `звени́т`), then your **Stress dictionary**, then the language's big dictionary where one is here: Ukrainian's comes with the Studio (lang-uk's, from ULIF's «Словники України»), and for Russian or any other language you plug in your own (`docs/NARRATOR-DICTIONARIES.md`); a word stressed two ways is left to its context. **Check stresses** shows the text as the engine will read it. A word misread in a take: **Fix** on its run, pick its piece, put the stress in, **Remember the stress in the dictionary**, and **Read this piece again**.
+**Put the stresses in** marks the stressed vowels before the engine reads: your own marks stay as written (the acute, U+0301, as in `звени́т`), then your **Stress dictionary**, then the language's big dictionary where one is here: Ukrainian's and Russian's come with the Studio (Ukrainian's from lang-uk, after ULIF's «Словники України»; Russian's A. A. Zaliznyak's Grammatical Dictionary, unfolded from gramdict's data, CC BY-NC 4.0: free for non-commercial use), and for any other language you plug in your own (`docs/NARRATOR-DICTIONARIES.md`); a word stressed two ways is left to its context. **Check stresses** shows the text as the engine will read it. A word misread in a take: **Fix** on its run, pick its piece, put the stress in, **Remember the stress in the dictionary**, and **Read this piece again**.
 
 ### The LCV Glyph Map
 
@@ -67,7 +86,7 @@ Emotions and sounds go in square brackets, as Drama 3 reads them: `[calm]`, `[sa
 
 ### The Ear and the Loudness
 
-**Hear each piece (Whisper)**, on by default: Whisper large-v3 on the processor hears each piece while the engine reads the next one. A piece where it hears a word inserted, dropped or swapped, or 12 % or more of its letters off its text (a repeat, a skip, a mumble), is read again with another seed, up to three readings, and the closest to the text is kept. The run’s card says which pieces were read again and why, a word with its time in the take. The take is joined to −16 LUFS, as podcasts are, its peaks never past −1 dBFS. An ear that could not load is said in the run and in the take's note, never taken for a clean reading.
+**Hear each piece (Whisper)**, on by default: Whisper large-v3 on the processor hears each piece while the engine reads the next one. A piece where it hears a word inserted, dropped or swapped, or 12 % or more of its letters off its text (a repeat, a skip, a mumble), is read again with another seed, up to three readings, and the closest to the text is kept. The run’s card says which pieces were read again and why, a word with its time in the take. The take is joined to −16 LUFS, as podcasts are, its peaks never past −1 dBFS. An ear that could not load is said in the run and in the take's note, never taken for a clean reading. Off, the engine reads without hearing: no piece is read again for its words, no letters are scored, and the run's card and the take's note say «Whisper off», never a clean reading. **Check with Whisper** on a finished run, or in a Narrator's take menu in the Library, hears a take afterwards: the take as it sounds is cut where each piece sits and heard against the words the engine was asked to read; the letters off and each word flagged, with its time in the take, go into the take's note and into `whisper-check.json` beside it. Its audio is not touched.
 
 ### From a Recording
 

@@ -37,7 +37,7 @@ with tempfile.TemporaryDirectory() as d:
     picks = {i: [(x["extra"], x["variant"]) for x in t[i]["items"]] for i in t}
     check("seven tiers, in the rooms' order (2374: the Narrator's, the second room, first)",
           list(t) == ["narrator", "writer", "refiner", "artist", "videographer", "trainer", "merges"], list(t))
-    check("the Narrator: Drama 3 at Q4_K on any card", picks["narrator"] == [("narrator", "Q4_K")], picks["narrator"])
+    check("the Narrator on a 24 GB card: Drama 3 at Q8_0 (2441)", picks["narrator"] == [("narrator", "Q8_0")], picks["narrator"])   # 2441 (12.11.2026): Q8_0 on a card of 24 GB, Q4_K below; the release-tree lane 13.11 set the check to it
     check("a 24 GB card: the writer's quality, the Qwen painter at Q6, H3 int8 and SeedVR2 7B, the trainer's bf16 and the listener's Q8_0",
           picks["writer"] == [("writer", "quality")] and picks["artist"] == [("artwork", "all"), ("qwen", "2512-q6")] and
           picks["videographer"] == [("h3", "int8"), ("upscaler", "7b")] and picks["trainer"] == [("trainer", "bf16"), ("listener", "Q8_0")], picks)
@@ -56,6 +56,7 @@ with tempfile.TemporaryDirectory() as d:
     check("a 12 GB card: the writer's quality, the painter at Q4, the trainer's int8 with the listener's Q8_0, no Videographer and why",
           [(i["variant"]) for i in t["writer"]["items"]] == ["quality"] and t["artist"]["items"][1]["variant"] == "2512-q4" and
           [i["variant"] for i in t["trainer"]["items"]] == ["int8", "Q8_0"] and t["videographer"]["items"] == [] and "24 GB" in t["videographer"]["why"], t)
+    check("the Narrator on a 12 GB card: Drama 3 at Q4_K (2441)", [(i["extra"], i["variant"]) for i in t["narrator"]["items"]] == [("narrator", "Q4_K")], t["narrator"]["items"])
     card(8192)
     t = {x["id"]: x for x in weights.tiers(k)}
     check("an 8 GB card: the compact writer, the listener's Q4_K_M", t["writer"]["items"][0]["variant"] == "compact" and t["trainer"]["items"][1]["variant"] == "Q4_K_M", t)
@@ -72,7 +73,7 @@ with tempfile.TemporaryDirectory() as d:
     (k / "heresy").mkdir()
     (k / "heresy" / "fetch-heresy.sh").write_text("#!/bin/bash\n")
     got = []
-    weights._start = lambda kit, args, what, kind, then_check, which=None, expect=None: got.append((args, what, which, expect)) or {}
+    weights._start = lambda kit, args, what, kind, then_check, which=None, expect=None, token=None: got.append((args, what, which, expect)) or {}
     weights._free = lambda kit: 40e9
     try:
         weights.fetch(k, {"tier": "artist"}); said = ""
@@ -108,7 +109,7 @@ with tempfile.TemporaryDirectory() as d:
 seq = iter([{"here": 1, "unknown": 0, "differs": 0, "fetched": 2, "missing": 0, "failed": 0}, {"here": 0, "unknown": 0, "differs": 0, "fetched": 1, "missing": 0, "failed": 1}])
 
 
-def say(kit, args):
+def say(kit, args, token=None):
     with weights.LOCK:
         weights.JOB["counts"] = next(seq)
     return 0 if args[-1] == "a" else 1

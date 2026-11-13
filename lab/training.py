@@ -17,7 +17,7 @@ The weights it trains on are Comfy-Org's repack of YuE2 (the tokenizer embedded)
 models/engine/tokenizers/yue2-mothersuperior-realaudio-tokenizer-v4/. A run takes a GPU of its own for hours, so
 it does not hold the lab's heavy lock (Whisper and the stems go on beside it).
 """
-import json, math, os, re, shutil, signal, sqlite3, subprocess, sys, threading, time
+import array, json, math, os, re, shutil, signal, sqlite3, subprocess, sys, threading, time
 from pathlib import Path
 
 import paths as studio_paths       # HERESY 2330: where the weights live (not «paths»: paths(kit) below is this file's own)
@@ -513,12 +513,133 @@ class _Restarting(Exception):
     """HERESY 1823: the step log's copy in short steps gave up on a writer faster than its steps."""
 
 
+# ---- HERESY 2442 (Viktor 12.11.2026: «сделай восемь графиков стандартным набором для Тренера, для всех ранов»): the eight curves of every run,
+# from whatever it logged: the step log (loss, flow, ar_ce, ar_kl, grad/norm, each card's memory, the wall time of each step), a plugin's own
+# step lines (log.jsonl: lr, grad_norm, s, peak_gb) and the trainer's progress lines in train.log (the rate each step used, «lr: 1.0e-04»,
+# printed by AI-Toolkit and by the Studio's trainer alike). A curve a run never logged is absent, never a line of zeros
+def _curve(pts, keep, how="mean"):
+    """at most `keep` points of (step, value) pairs, each the mean (or the max, or the median) of its stretch; with the last 25 steps' own
+    (mean, max or median), the least, the most and the first"""
+    pts = [(st, v) for st, v in pts if v is not None and math.isfinite(v)]
+    if not pts:
+        return None
+    size, curve = max(1, math.ceil(len(pts) / keep)), []
+    for i in range(0, len(pts), size):
+        vs = [v for _, v in pts[i:i + size]]
+        y = max(vs) if how == "max" else sorted(vs)[len(vs) // 2] if how == "median" else sum(vs) / len(vs)
+        curve.append([pts[min(i + size, len(pts)) - 1][0], round(y, 7)])
+    tail = [v for _, v in pts[-min(len(pts), 25):]]
+    last = max(tail) if how == "max" else sorted(tail)[len(tail) // 2] if how == "median" else sum(tail) / len(tail)
+    return {"curve": curve, "last": round(last, 7), "min": round(min(v for _, v in pts), 7),
+            "max": round(max(v for _, v in pts), 7), "first": round(pts[0][1], 7)}
+
+
+TAILS = {}                                            # HERESY 2442: a growing log, read on from where the last read stopped
+
+
+def _tail_points(path, parse_line):
+    """the (step, value) pairs of a text log by key, kept compact (array) and read on from the last read's end; a log
+    written anew (another inode, or shorter) is read from its start"""
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    t = TAILS.get(str(path))
+    if not t or t["ino"] != st.st_ino or st.st_size < t["pos"]:
+        t = {"ino": st.st_ino, "pos": 0, "rest": b"", "pts": {}, "made": None}
+        TAILS[str(path)] = t
+        if len(TAILS) > 160:
+            TAILS.pop(next(iter(TAILS)))
+    while st.st_size > t["pos"]:
+        with open(path, "rb") as f:
+            f.seek(t["pos"])
+            chunk = f.read(min(st.st_size - t["pos"], 16 << 20))
+        if not chunk:
+            break
+        t["pos"] += len(chunk)
+        parts = (t["rest"] + chunk).replace(b"\r", b"\n").split(b"\n")
+        t["rest"] = parts.pop()
+        for ln in parts:
+            for key, step, v in parse_line(ln):
+                a = t["pts"].get(key)
+                if a is None:
+                    a = t["pts"][key] = (array.array("q"), array.array("d"))
+                a[0].append(step)
+                a[1].append(v)
+    return t
+
+
+TQDM_LR = re.compile(rb"(\d+)/\d+ \[[^\]]*?lr: ([0-9.]+(?:e[+-]?\d+)?)")
+
+
+def _tqdm_lr(ln):
+    m = TQDM_LR.search(ln)
+    return [("lr", int(m.group(1)), float(m.group(2)))] if m else []
+
+
+def _jsonl_step(ln):
+    if b'"step"' not in ln:
+        return []
+    try:
+        r = json.loads(ln)
+    except ValueError:
+        return []
+    if r.get("kind") != "step" or not isinstance(r.get("step"), int):
+        return []
+    out, st = [], r["step"]
+    for k in ("lr", "grad_norm", "s"):
+        v = r.get(k)
+        if isinstance(v, (int, float)):
+            out.append((k, st, float(v)))
+    for i, g in enumerate(r.get("peak_gb") or []):
+        if isinstance(g, (int, float)):
+            out.append(("vram%d" % i, st, float(g)))
+    return out
+
+
+def _series_extra(d, out, keep):
+    """the curves the step log does not hold, from the run's other logs; what the step log has is kept"""
+    res = dict(out)
+    for name, parse in (("log.jsonl", _jsonl_step), ("train.log", _tqdm_lr)):
+        t = _tail_points(d / name, parse)
+        if not t or not t["pts"]:
+            continue
+        stamp = (t["ino"], t["pos"])
+        if t["made"] is None or t["made"][0] != stamp:
+            made = {}
+            for key, (steps, vals) in t["pts"].items():
+                c = _curve(list(zip(steps, vals)), keep, "max" if key.startswith("vram") else "median" if key == "s" else "mean")
+                if c:
+                    made[key] = c
+            t["made"] = (stamp, made)
+        made = t["made"][1]
+        for key, c in made.items():
+            if key.startswith("vram"):
+                res.setdefault("vram", {}).setdefault(key[4:], c)
+            elif key == "s":
+                res["step_s"] = c                         # the trainer's own seconds a step, over the wall time's
+            else:
+                res.setdefault(key, c)
+    return res
+
+
+SERIES_LOCK = threading.Lock()                        # HERESY 2442: one reader of the logs at a time (see _series)
+
+
 def _series(d, keep=400):
+    """HERESY 2442: _series_locked under one lock: pages asking at once after a restart waited for one reading of the logs instead of
+    each reading them all beside the others (the arrays filled twice, answers of minutes); after the first, a call costs milliseconds"""
+    with SERIES_LOCK:
+        return _series_locked(d, keep)
+
+
+def _series_locked(d, keep=400):
     """HERESY 1067: a run's step log (AI-Toolkit's loss_log.db) as curves for its card: flow loss, ar_ce,
-    ar_kl, each averaged into at most `keep` points; with the wall time, the seconds a step."""
+    ar_kl, each averaged into at most `keep` points; with the wall time, the seconds a step. HERESY 2442: and its other
+    curves (_series_extra)."""
     dbs = sorted((d / "output").rglob("loss_log.db")) if (d / "output").is_dir() else []
     if not dbs:
-        return {}
+        return _series_extra(d, {}, keep)
     # HERESY 1507: a run died of this read (16.10, his voice at step 35189: the trainer's commit waited 5 s on a lock the whole
     # log's query held). The log is copied into memory in short steps (the lock held milliseconds between them) and read
     # there; a log not changed since is not read again
@@ -534,7 +655,7 @@ def _series(d, keep=400):
         return {"error": f"the step log could not be read: {e}"}
     hit = SERIES.get(str(dbs[0]))
     if hit and hit[0] == stamp:
-        return hit[1]
+        return _series_extra(d, hit[1], keep)
     try:
         src = sqlite3.connect(f"file:{dbs[0]}?mode=ro", uri=True, timeout=5)
         con = sqlite3.connect(":memory:")
@@ -551,10 +672,12 @@ def _series(d, keep=400):
             src.backup(con)
         src.close()
         rows = con.execute("SELECT step, key, value_real FROM metrics WHERE value_real IS NOT NULL AND key IN "
-                           "('loss/loss', 'loss/ar_ce', 'loss/ar_kl', 'loss/flow') ORDER BY step").fetchall()
+                           "('loss/loss', 'loss/ar_ce', 'loss/ar_kl', 'loss/flow', 'grad/norm') ORDER BY step").fetchall()   # HERESY 2442: grad/norm (2084)
         wall = con.execute("SELECT MIN(step), MAX(step), MIN(wall_time), MAX(wall_time) FROM steps").fetchone()
-        vram = (con.execute("SELECT key, step, value_real FROM metrics WHERE key LIKE 'vram/peak_gb_card%' AND value_real IS NOT NULL").fetchall()
-                if (_meta(d).get("options") or {}).get("vram_meter") else [])   # HERESY 1832: only a run with the meter on
+        walls = con.execute("SELECT step, wall_time FROM steps WHERE wall_time IS NOT NULL ORDER BY step").fetchall()   # HERESY 2442
+        meta = _meta(d)
+        vram = (con.execute("SELECT key, step, value_real FROM metrics WHERE key LIKE 'vram/peak_gb_card%' AND value_real IS NOT NULL ORDER BY step").fetchall()
+                if (meta.get("options") or {}).get("vram_meter") or meta.get("plugin") else [])   # HERESY 1832: only a run with the meter on; 2442: or a plugin's
         con.close()
     except sqlite3.Error as e:
         return {"error": f"the step log could not be read: {e}"}      # said aloud: not "no steps"
@@ -581,6 +704,15 @@ def _series(d, keep=400):
         tail = [v for _, v in pts[-min(len(pts), 25):]]
         out[key.split("/")[1]] = {"curve": curve, "last": round(sum(tail) / len(tail), 4),
                                   "min": round(min(v for _, v in pts), 4), "first": round(pts[0][1], 4)}
+    gn = _curve([(st, v) for st, k, v in rows if k == "grad/norm"], keep)   # HERESY 2442
+    if gn:
+        out["grad_norm"] = gn
+    # HERESY 2442: the seconds a step along the run, from the wall time of each logged step (a stretch's median, so a pause between two sittings
+    # is not a step of hours)
+    per = [(b[0], (b[1] - a[1]) / (b[0] - a[0])) for a, b in zip(walls, walls[1:]) if b[0] > a[0] and b[1] >= a[1]]
+    ss = _curve(per, keep, "median")
+    if ss:
+        out["step_s"] = ss
     if wall and wall[1] and wall[1] > wall[0]:
         out["sec_per_step"] = round((wall[3] - wall[2]) / (wall[1] - wall[0]), 2)
     peaks = {}
@@ -590,10 +722,15 @@ def _series(d, keep=400):
             peaks[r] = (round(v, 2), st)
     if peaks:
         out["vram_cards"] = {r: {"gb": g, "step": st} for r, (g, st) in sorted(peaks.items(), key=lambda x: int(x[0]))}
+        out["vram"] = {}                                   # HERESY 2442: each card's memory along the run (by its rank in the run)
+        for r in sorted(peaks, key=int):
+            c = _curve([(st, v) for k, st, v in vram if k == "vram/peak_gb_card" + r], keep, "max")
+            if c:
+                out["vram"][r] = c
     SERIES[str(dbs[0])] = (stamp, out)
     if len(SERIES) > 64:
         SERIES.pop(next(iter(SERIES)))
-    return out
+    return _series_extra(d, out, keep)
 
 
 def epoch_tag(epoch):

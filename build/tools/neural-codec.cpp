@@ -410,6 +410,11 @@ int main(int argc, char ** argv) {
         }
         free(planar);
 
+        std::string missing;   // HERESY 2484: a decoder-only VAE (VAE-RS) has no encoder: say so, never read a missing tensor
+        if (!vae_gguf_has_encoder(vae_path, &missing)) {
+            fprintf(stderr, "[VAE-Enc] %s carries no VAE encoder (%s): encode with the Standard VAE GGUF\n", vae_path, missing.c_str());
+            return 1;
+        }
         VAEEncoder enc = {};
         vae_enc_load(&enc, vae_path);
 

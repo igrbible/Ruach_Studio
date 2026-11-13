@@ -5,7 +5,10 @@ key carries the tier.
 HERESY 2287: the tier table measured on 09.11 beside a dataset worker, in the order the manifest gives: with 16 GB free on a card Q4_K with 20
 banks in RAM, with 15 GB Q6_K with 28 and cuda_perf, with 8 GB either with all 40 (cuda_perf), Q8_0 too when the memory holds it; the four
 middle ones are Auto's only (not in the room's select); a tier's session options reach the server's config, fish_drama3's only, the banks and
-the context left the engine's."""
+the context left the engine's.
+HERESY 2426: the Intel card (card 100 and up) reads in its own xpu tier (Drama 3 through audio.cpp's Vulkan build): picked with no CUDA card
+free, a CUDA or processor tier by name refused there, no tier or too little memory said, never the processor in the card's name; its readiness
+on xpu wants the Vulkan build and a ready xpu tier; the server's config, its Intel driver alone and the device checked by name."""
 import json
 import sys
 import tempfile
@@ -16,11 +19,12 @@ import reader as r
 
 HERE = Path(__file__).resolve().parent
 man = json.load(open(HERE / "reader_engines/drama3/engine.json"))
-assert man["seed"] is True and man["top_k"] is False and len(man["tiers"]) == 11, man
-assert [t["id"] for t in man["tiers"]] == ["speed", "quality", "mid-q4", "mid-q6", "ram-q4", "ram-q6", "ram", "q8", "cpu", "cpu-q6", "cpu-q4"]
-# HERESY 2375 (the advice took on his word of 11.11): Q6_K with all 40 banks in RAM (RTF 1.52) before Q8_0 there (2.43), both ways
+assert man["seed"] is True and man["top_k"] is False and len(man["tiers"]) == 12, man
+assert [t["id"] for t in man["tiers"]] == ["speed", "quality", "mid-q4", "mid-q6", "ram-q4", "ram-q6", "ram", "q8", "arc-q4", "cpu", "cpu-q6", "cpu-q4"]
+# HERESY 2435 (Viktor 12.11.2026: «По квантам Драмы согласен. Q8_0 — дефолт», his ear on the raw quants: Q8_0 20/20, Q6_K 19/20, Q4_K 43/50):
+# quality first, the room's default, takes Q8_0 wherever it fits (20 banks in RAM, then all 40), Q6_K after it, Q4_K only where nothing else fits
 assert man["auto"] == {"auto-speed": ["speed", "quality", "mid-q4", "mid-q6", "ram-q4", "ram-q6", "ram"],
-                       "auto-quality": ["quality", "mid-q6", "ram-q6", "ram", "speed", "mid-q4", "ram-q4"]}, man["auto"]
+                       "auto-quality": ["q8", "ram", "quality", "mid-q6", "ram-q6", "mid-q4", "speed", "ram-q4"]}, man["auto"]
 perf = sorted(t["id"] for t in man["tiers"] if (t.get("opts") or {}).get("fish_drama3.perf_mode") == "cuda_perf")
 assert perf == ["ram-q4", "ram-q6"], perf                               # cuda_perf only where it measured faster; 2375: not mid-q6 (his 👎 of 09.11)
 spec = __import__("importlib.util").util.spec_from_file_location("drama3", HERE / "reader_engines/drama3/engine.py")
@@ -59,18 +63,18 @@ with tempfile.TemporaryDirectory() as tmp:
         return p["tier"]["id"], p["card"], p["reason"]
 
     named = {t["id"]: t["named"] for t in eng["tiers"]}
-    assert [i for i, n in named.items() if not n] == ["mid-q4", "mid-q6", "ram-q4", "ram-q6"] and eng["tier_auto"] == man["auto"], named
+    assert [i for i, n in named.items() if not n] == ["mid-q4", "mid-q6", "ram-q4", "ram-q6", "arc-q4"] and eng["tier_auto"] == man["auto"], named
     assert eng["tiers"][4]["opts"] == {"fish_drama3.perf_mode": "cuda_perf"} and eng["tiers"][3]["opts"] == {}, eng["tiers"][3:5]
     assert pick() == ("speed", 0, "fits")                                   # a card with 24 GB free: Q4_K, speed first
-    assert pick("auto-quality") == ("quality", 0, "fits")
+    assert pick("auto-quality") == ("q8", 0, "fits")                        # HERESY 2435: Q8_0 with 20 banks in RAM on the free card
     assert pick(card=1) == ("mid-q4", 1, "fits")                            # 16.7 GB free on GPU 1: Q4_K with 20 banks in RAM
-    assert pick("auto-quality", card=1) == ("mid-q6", 1, "fits")            # Q6_K with 28
+    assert pick("auto-quality", card=1) == ("ram", 1, "fits")               # HERESY 2435: Q8_0 with all 40 in RAM
     rooms["cards"] = {0: 16700, 1: 16700, 2: 16700}                         # today: the dataset holds 7.8 GB of each card
-    assert pick()[0::2] == ("mid-q4", "fits") and pick("auto-quality")[0] == "mid-q6"
+    assert pick()[0::2] == ("mid-q4", "fits") and pick("auto-quality")[0] == "ram"
     rooms["cards"] = {0: 15500}                                             # 15.5 GB: Q6_K with 28 banks either way (it peaks at 15.2 GB, HERESY 2311)
-    assert pick() == ("mid-q6", 0, "fits") and pick("auto-quality") == ("mid-q6", 0, "fits")
+    assert pick() == ("mid-q6", 0, "fits") and pick("auto-quality") == ("ram", 0, "fits")
     rooms["cards"] = {0: 10000}                                             # 10 GB: all 40 banks in RAM
-    assert pick() == ("ram-q4", 0, "fits") and pick("auto-quality") == ("ram-q6", 0, "fits")   # 2375: Q6_K's before Q8_0's
+    assert pick() == ("ram-q4", 0, "fits") and pick("auto-quality") == ("ram", 0, "fits")   # HERESY 2435: Q8_0's first (2375 had Q6_K's)
     ram["gb"] = 35.0                                                        # Q8_0's experts want 40 GB: quality first takes Q6_K's anyway
     assert pick("auto-quality") == ("ram-q6", 0, "fits")
     ram["gb"] = 26.0                                                        # Q6_K's want 30 GB: Q4_K's
@@ -131,4 +135,73 @@ with tempfile.TemporaryDirectory() as tmp:
     assert pv["tier"]["id"] == "quality" and pv["card"] == 0 and pv["speech_s"] == 100.0, pv
     assert pv["expect_s"] == round(75 + 100 * 1.16) and not pv["kept"], pv
     assert r.tier_preview({"engine": "x", "card": "cpu", "chars": "14"})["tier"]["device"] == "cpu"
+    assert r.tier_preview({"engine": "drama3", "card": "auto", "chars": "1400"})["tier"]["id"] == "q8"   # HERESY 2435: no ask is quality first
+
+    # HERESY 2426: the Intel card (card 100 and up) reads in its own tier (Drama 3 through Vulkan), never the processor behind its back
+    r.paths.narrator_file(man["tiers"][0]["model"], kit).write_bytes(b"gguf")
+    eng["tiers"] = r._tiers_of(man["tiers"])
+    arc = [t for t in eng["tiers"] if t["device"] == "xpu"]
+    assert [t["id"] for t in arc] == ["arc-q4"] and arc[0]["ready"] and not arc[0]["named"], arc
+    assert "arc-q4" not in eng["tier_auto"]["auto-speed"] and "arc-q4" not in r._auto_of(man["auto"], eng["tiers"])["auto-quality"]
+    rooms["cards"] = {}                                                     # no CUDA card free at all: the Arc still takes its own tier
+    ram["gb"] = 200.0
+    assert pick(card=100) == ("arc-q4", 100, "fits") and pick("auto-quality", 100) == ("arc-q4", 100, "fits")
+    assert r._place({"card": 100, "id": "t"}, {}, eng, arc[0]) == ("xpu", 100)
+    for ask in ("speed", "cpu"):                                            # a CUDA or processor tier by name on the Intel card: said
+        try:
+            pick(ask, 100)
+            raise AssertionError(f"{ask} taken on the Intel card")
+        except ValueError as e:
+            assert "not a tier for the Intel card" in str(e) and "arc-q4" in str(e), e
+    ram["gb"] = 10.0                                                        # its banks want 16 GB: said, not the processor
+    try:
+        pick(card=100)
+        raise AssertionError("an Arc tier without the memory for its banks")
+    except ValueError as e:
+        assert "Intel card" in str(e) and "16 GB" in str(e) and "10 GB" in str(e), e
+    ram["gb"] = 200.0
+    r.paths.narrator_file(arc[0]["model"], kit).unlink()                   # Q4_K's file gone: no tier for the Intel card, never the processor
+    eng["tiers"] = r._tiers_of(man["tiers"])
+    try:
+        pick(card=100)
+        raise AssertionError("no Arc tier, yet a pick")
+    except ValueError as e:
+        assert "no tier for the Intel card" in str(e) and "processor" in str(e), e
+    # its readiness on the Intel card: its Python, the Vulkan build (a need for xpu alone), a ready xpu tier
+    py = kit / ".venv/bin/python"
+    py.parent.mkdir(parents=True, exist_ok=True)
+    py.write_text("")
+    vk = kit / "heresy/MISC/audio.cpp/build/linux-vulkan-release/bin/audiocpp_server"
+    assert r._dev_ready(man, "cuda", eng["tiers"]) and not r._dev_ready(man, "xpu", eng["tiers"])          # no Vulkan build, no Q4_K
+    vk.parent.mkdir(parents=True, exist_ok=True)
+    vk.write_text("")
+    assert not r._dev_ready(man, "xpu", eng["tiers"])                                                     # the build, still no Q4_K
+    r.paths.narrator_file(arc[0]["model"], kit).write_bytes(b"gguf")
+    eng["tiers"] = r._tiers_of(man["tiers"])
+    assert r._dev_ready(man, "xpu", eng["tiers"])
+    assert [m["id"] for m in r._missing(man["needs"], eng["tiers"])] == ["server", "licence"]               # the Vulkan need is the card's alone
+    # the engine's side: Vulkan's config, the Intel driver alone, the device checked by name
+    h = {"device": "xpu", "threads": 16, "model": Path("/m.gguf"), "cel": 28, "opts": {}, "vk": 0}
+    c = d3.config(h, 9000)
+    assert c["backend"] == "vulkan" and c["device"] == 0 and c["models"][0]["session_options"]["fish_drama3.cpu_expert_layers"] == 28, c
+    assert d3.config(dict(h, device="cuda"), 9000)["backend"] == "cuda" and d3.config(dict(h, device="cpu"), 9000)["backend"] == "cpu"
+    # HERESY 2516: the Intel card in audio.cpp's streaming session (the codec decoded in windows: a long piece no longer needs a
+    # decode graph as large as itself); CUDA and the processor stay offline until measured
+    assert c["models"][0]["mode"] == "streaming", c
+    assert d3.config(dict(h, device="cuda"), 9000)["models"][0]["mode"] == "offline" == d3.config(dict(h, device="cpu"), 9000)["models"][0]["mode"]
+    e = d3.vk_env({"GGML_VK_VISIBLE_DEVICES": "1", "CUDA_VISIBLE_DEVICES": "0"}) if Path(d3.INTEL_ICD).is_file() else None
+    if e is not None:
+        assert e["VK_ICD_FILENAMES"] == d3.INTEL_ICD and e["CUDA_VISIBLE_DEVICES"] == "" and "GGML_VK_VISIBLE_DEVICES" not in e, e
+    log = "ggml_vulkan: Found 1 Vulkan devices:\nggml_vulkan: 0 = Intel(R) Graphics (BMG G21) (Intel open-source Mesa driver) | uma: 0 | fp16: 1\n"
+    assert d3.vk_device_of(log) == "Intel(R) Graphics (BMG G21) (Intel open-source Mesa driver)" and d3.vk_device_of(log, 1) is None
+    assert d3.vk_device_of("ggml_vulkan: 0 = llvmpipe (LLVM 19.1.1, 256 bits) (llvmpipe) | uma: 1") == "llvmpipe (LLVM 19.1.1, 256 bits) (llvmpipe)"
+    import os
+    os.environ["ONEAPI_DEVICE_SELECTOR"] = "level_zero:1"
+    assert d3.vk_index() == 1
+    os.environ.pop("ONEAPI_DEVICE_SELECTOR")
+    assert d3.vk_index() == 0
+    for msg in ("ggml_vulkan: Device memory allocation of size 123 failed.", "vk::Device::allocateMemory: ErrorOutOfDeviceMemory"):
+        assert d3._more_banks(dict(h, retries=0, log=Path("/nonexistent")), RuntimeError(msg)) and True, msg
+    hh = dict(h, retries=0, log=Path("/nonexistent"), cel=40)
+    assert not d3._more_banks(hh, RuntimeError("ErrorOutOfDeviceMemory"))                                # all 40 in RAM already
 print("test_reader_tiers: ok")

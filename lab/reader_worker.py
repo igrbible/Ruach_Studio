@@ -8,6 +8,8 @@ The engine module gives three functions:
     load(device, kit)                  -> handle         the model on its device
     reference(handle, wav, sr, text)   -> ref            a voice to read in, from a clip of it and the clip's words (cached here by key)
     say(handle, text, ref, opts)       -> (wav, sr)      one piece read, a mono float32 array; opts: temperature, top_k, seed…
+An engine whose handle is a dict may leave handle["last_codes"] after say(): {"codes": [[…]] (codebooks × frames or frames × codebooks), "codec",
+"sample_rate", …}; the worker keeps it beside the piece as piece-NNN.codes.npz (HERESY 2419: a decoder of tomorrow reads them again).
 
 JSON lines in on stdin, one answer a line out on stdout; whatever the engine or its libraries print goes to stderr (the lab keeps the tail).
     {"op": "say", "id": N, "text": …, "ref": {"key": …, "wav": PATH, "text": …} | {"key": …} | null, "opts": {…}, "out": PATH,
@@ -100,9 +102,20 @@ def main():
             wav, sr = eng.say(h, str(req.get("text") or ""), ref, dict(req.get("opts") or {}))
             wav = np.asarray(wav, dtype=np.float32).reshape(-1)
             sf.write(req["out"], wav, int(sr), subtype="FLOAT")
+            codes = h.pop("last_codes", None) if isinstance(h, dict) else None
+            if codes is not None:                        # HERESY 2419: the codec codes of the piece, beside it (piece-NNN.codes.npz)
+                try:
+                    from pathlib import Path
+                    np.savez_compressed(str(Path(req["out"]).with_suffix(".codes.npz")), codes=np.asarray(codes["codes"], dtype=np.int16),
+                                        meta=np.array(json.dumps({k: v for k, v in codes.items() if k != "codes"}, ensure_ascii=False)))
+                except (OSError, ValueError, TypeError) as e:
+                    print(f"codes: {e!r}", file=sys.stderr)
             if req.get("keep") and len(wav):
                 refs[str(req["keep"])] = eng.reference(h, wav, int(sr), str(req.get("plain") or req.get("text") or ""))
             got = {"id": req.get("id"), "ok": True, "seconds": round(len(wav) / float(sr), 3), "gen_s": round(time.time() - t1, 2), "sr": int(sr)}
+            full = int((np.abs(wav) >= 32766.5 / 32767).sum())   # HERESY 2420: samples at full scale (an engine's 16-bit clamp), said
+            if full:
+                got["clipped"] = full
             if req.get("pitch") and len(wav) > int(sr) // 2:
                 try:
                     got["f0"] = pitch(wav, int(sr))

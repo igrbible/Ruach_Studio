@@ -359,6 +359,11 @@ VAEEncoder * store_require_vae_enc(ModelStore * s, const ModelKey & k) {
     if (auto * hit = cache_hit<VAEEncoder>(s, k)) {
         return hit;
     }
+    std::string missing;   // HERESY 2484: a decoder-only VAE (VAE-RS) has no encoder: refuse, never read a missing tensor
+    if (!vae_gguf_has_encoder(k.path.c_str(), &missing)) {
+        fprintf(stderr, "[Store] VAE-ENC refused: %s carries no VAE encoder (%s)\n", k.path.c_str(), missing.c_str());
+        return nullptr;
+    }
     if (s->policy == EVICT_STRICT) {
         evict_conflicts(s, k);
     }

@@ -828,6 +828,15 @@ def bounce(rate: int, signals: list[tuple[str, np.ndarray]], value: Any, members
     out = dry
     returns = []
     wet = not dry_print                               # HERESY 2366
+    # HERESY 2407 (Viktor 11.11.2026, A6: «Принимаю совет. Делай так»: a dry bounce copies the sends onto the new lane instead of losing the room and the
+    # delay): what the members sent, as one send level for the new lane, the least-squares fit of the sends to the stretch (exact when the members send
+    # alike, as one lane always does; their mean, weighted by what each puts in, when they differ); the page sets it on the new lane, the returns live
+    fit = {}
+    if dry_print:
+        dd = float(np.sum(out * out))
+        for bus in ("reverb", "delay"):
+            if dd > 0 and np.any(sends[bus]) and not v[bus]["mute"]:
+                fit[bus] = round(min(1.0, max(0.0, float(np.sum(sends[bus] * out)) / dd)), 4)
     if wet and np.any(sends["reverb"]) and not v["reverb"]["mute"]:
         src, k = sends["reverb"], round(v["reverb"]["predelay_ms"] * rate / 1000)
         if k:
@@ -840,5 +849,5 @@ def bounce(rate: int, signals: list[tuple[str, np.ndarray]], value: Any, members
         out = out + _tail_fade(return_cuts(wet, rate, d), rate) * db(d["return_db"])
         returns.append("delay")
     pk = float(np.max(np.abs(out))) if out.size else 0.0
-    return out, {"schema": SCHEMA, "rate": rate, "members": want, "strips": report, "returns": returns, "dry": dry_print,
+    return out, {"schema": SCHEMA, "rate": rate, "members": want, "strips": report, "returns": returns, "dry": dry_print, "sends": fit,   # HERESY 2407
                  "peak_db": round(20 * math.log10(pk), 2) if pk > 0 else None, "notes": v["notes"]}

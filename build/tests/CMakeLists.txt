@@ -48,3 +48,7 @@ link_ggml_backends(test-tokenizer)
 # Local addition: test-notation, the score's first bar against the recording's start (HERESY 2228), pure CPU, no model.
 add_executable(test-notation test-notation.cpp)
 target_include_directories(test-notation PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+# Local addition: test-score-guard, the score guard (HERESY 1087) and its key-line warning (HERESY 2433), pure CPU, no model.
+add_executable(test-score-guard test-score-guard.cpp)
+target_include_directories(test-score-guard PRIVATE ${CMAKE_SOURCE_DIR}/src)

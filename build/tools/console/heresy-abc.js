@@ -142,6 +142,10 @@
     fail(!tm && lines[4] !== "Q:", "Expected integer quarter-note tempo Q:1/4=<BPM>");
     fail(lines[5] !== 'V: Vocal clef=treble name="Vocal Melody" snm="Vocal"' ||
          lines[6] !== 'V: Ins clef=treble name="Ins Melody" snm="Inst."', "Preserve native Vocal and Ins voice definitions");
+    // HERESY 2444 (Viktor 12.11.2026: «Смягчи»): a score without its key line is read as written, with no key signature, as the engine sings it
+    // since 2433, and never refused; the score says so (keyMissing), and inferKey() offers the line
+    var keyMissing = lines[7].indexOf("K:") !== 0 && (lines[7].indexOf("% ") === 0 || lines[7] === "V: Vocal");
+    if (keyMissing) lines.splice(7, 0, "K:C");
     fail(lines[7].indexOf("K:") !== 0, "Missing header K:");
     var key = lines[7].slice(2);
     keyAccidentals(key);
@@ -192,7 +196,7 @@
     fail(grid(voices.Vocal) !== grid(voices.Ins), "Voice meter/time grids differ");
     var keyline = function (v) { return v.keys.map(function (k) { return str(k[0]) + ":" + k[1]; }).join(","); };
     fail(keyline(voices.Vocal) !== keyline(voices.Ins), "Voice key-change timelines differ");
-    return { text: text, unit: unit, bpm: tm ? +tm[1] : 120, free: !tm, key: key, meter: meter, voices: voices, sections: sections };
+    return { text: text, unit: unit, bpm: tm ? +tm[1] : 120, free: !tm, key: keyMissing ? "" : key, keyMissing: keyMissing, meter: meter, voices: voices, sections: sections };
   }
 
   // ---- the numbers a person wants: per voice, and the ratio
@@ -244,7 +248,8 @@
       lastMeter = m;
       conductor.push([tick(b[0]), [0xff, 0x58, 4, b[2][0], Math.round(Math.log2(b[2][1])), 24, 8], seq++]);
     });
-    score.voices.Vocal.keys.forEach(function (k) {
+    score.voices.Vocal.keys.forEach(function (k, i) {
+      if (score.keyMissing && !i) return;           // HERESY 2444: no key line, no key said
       var minor = /m$/.test(k[1]);
       conductor.push([tick(k[0]), [0xff, 0x59, 2, (KEYS[k[1]] + 256) & 255, minor ? 1 : 0], seq++]);
     });
@@ -420,9 +425,9 @@
   // their distance from the scale. Only that voice's music lines change, chord symbols stay.
   function shiftVoice(text, voiceName, steps) {
     var score = parse(text);                                       // fail closed before touching it
-    var lines = String(text).replace(/\r/g, "").split("\n"), current = null, key = score.key, moved = 0, lowest = 127, highest = 0;
+    var lines = String(text).replace(/\r/g, "").split("\n"), current = null, key = score.key || "C", moved = 0, lowest = 127, highest = 0;   // HERESY 2444
     var LET = "CDEFGAB";
-    for (var li = 8; li < lines.length; li++) {
+    for (var li = headerAt(lines) >= 0 ? 8 : 7; li < lines.length; li++) {
       var ln = lines[li];
       if (/^V: /.test(ln)) { current = ln.slice(3).trim(); continue; }
       if (/^K:/.test(ln)) { key = ln.slice(2); continue; }
@@ -469,6 +474,7 @@
   function groupsOf(text) {
     var lines = String(text).replace(/\r/g, "").replace(/\n+$/, "").split("\n"), out = [], cursor = 8, bar = 0;
     if (lines[4] && lines[4].indexOf("Q:") !== 0) cursor = 7;                // a score without Q: (parse puts it back)
+    if (headerAt(lines) < 0) cursor--;                                          // HERESY 2444: nor its key line
     while (cursor < lines.length) {
       while (cursor < lines.length && lines[cursor].indexOf("% ") === 0) cursor++;
       if (cursor >= lines.length) break;
@@ -753,7 +759,98 @@
     return { abc: abc, bars: total, progressions: prog, key: key };
   }
 
+  // ---- HERESY 2444 (Viktor 12.11.2026: «Смягчи и если можно, чтобы высчитать по расположению базового нотного ряда, предложить один или два
+  // варианта для K:»): a score without its key line, its key read off its own notes. Each key is tried on the notes twice: as written (no key
+  // signature, as the engine sings such a score since 2433) and as that key's line would make them (a planner that forgot the line still writes
+  // in its key; that reading pays for each note the line would move). The chord symbols, which name their notes whole, weigh 0.85 against the
+  // notes' 0.15. The pitch classes, weighted by how long they sound, are held against Albrecht and Shanahan's key profiles (2013, drawn from
+  // popular music); how sure: a softmax of the correlations at 0.10 (0.20 with no chord symbols). Measured on 497 SheetSage2 scores and 800 made
+  // in known keys: heresy/MISC/claude-arc/day-2026-11-12/ui-lane/keytest.mjs
+  var AS = { maj: [0.238, 0.006, 0.111, 0.006, 0.137, 0.094, 0.016, 0.214, 0.009, 0.080, 0.008, 0.081],
+             min: [0.220, 0.006, 0.104, 0.123, 0.019, 0.103, 0.012, 0.214, 0.062, 0.022, 0.061, 0.052] };
+  var ALTER = { "": 0, b: -1, bb: -2, "#": 1, "##": 2 };
+  function pcOf(name) { var m = /^([A-G])(bb|##|b|#)?/.exec(name); return m ? (NATURAL[m[1]] + ALTER[m[2] || ""] + 12) % 12 : -1; }
+  function pearson(a, b) {
+    var ma = 0, mb = 0, i, sab = 0, saa = 0, sbb = 0;
+    for (i = 0; i < 12; i++) { ma += a[i] / 12; mb += b[i] / 12; }
+    for (i = 0; i < 12; i++) { sab += (a[i] - ma) * (b[i] - mb); saa += (a[i] - ma) * (a[i] - ma); sbb += (b[i] - mb) * (b[i] - mb); }
+    return saa && sbb ? sab / Math.sqrt(saa * sbb) : 0;
+  }
+  function chordPcs(name) {                          // a chord symbol's root, third and fifth (a power chord: root and fifth)
+    var m = /^([A-G](?:bb|##|b|#)?)([^/]*)/.exec(name);
+    if (!m) return [];
+    var root = pcOf(m[1]), q = m[2];
+    var third = /^5$/.test(q) ? null : /^sus2/.test(q) ? 2 : /^(sus4|7sus4)/.test(q) ? 5 : /^(m(?!aj)|dim)/.test(q) ? 3 : 4;
+    var fifth = /dim|b5/.test(q) ? 6 : /aug/.test(q) ? 8 : 7, out = [root, (root + fifth) % 12];
+    if (third !== null) out.push((root + third) % 12);
+    return out;
+  }
+  function headerAt(lines) { for (var i = 0; i < Math.min(lines.length, 9); i++) if (/^K:/.test(lines[i])) return i; return -1; }
+  function keySlot(lines) { for (var i = 0; i < Math.min(lines.length, 9); i++) if (/^V: Ins clef=/.test(lines[i])) return i + 1; return Math.min(7, lines.length); }
+  // the evidence: the notes' pitch classes under each signature (-7…7), the chords' own, and how many notes each signature moves
+  function keyEvidence(text) {
+    var base = String(text).replace(/\r/g, "").replace(/\n+$/, "").split("\n"), at = headerAt(base);
+    var ev = { notes: {}, moved: {}, chords: null, nNotes: 0, nChords: 0, sharps: 0, flats: 0 }, plain = null;
+    for (var sf = -7; sf <= 7; sf++) {
+      var lines = base.slice();
+      if (at >= 0) lines[at] = "K:" + MAJOR_BY_SF[sf]; else lines.splice(keySlot(lines), 0, "K:" + MAJOR_BY_SF[sf]);
+      var s;
+      try { s = parse(lines.join("\n")); } catch (e) { continue; }
+      var h = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], all = [];
+      VOICES.forEach(function (v) { s.voices[v].notes.forEach(function (x) { h[x[1] % 12] += num(x[2]); all.push(x[1]); }); });
+      ev.notes[sf] = h;
+      if (sf === 0) plain = all;
+      ev.moved[sf] = all;
+      if (!ev.chords) {
+        var c = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], ch = s.voices.Vocal.chords, end = num(s.voices.Vocal.time);
+        ch.forEach(function (x, j) {
+          var d = Math.max(0, (j + 1 < ch.length ? num(ch[j + 1][0]) : end) - num(x[0]));
+          chordPcs(x[1]).forEach(function (p) { c[p] += d; });
+          if (/^[A-G]#/.test(x[1])) ev.sharps++; else if (/^[A-G]b/.test(x[1])) ev.flats++;
+        });
+        ev.chords = c; ev.nChords = ch.length; ev.nNotes = all.length;
+      }
+    }
+    if (!plain) return null;
+    for (var k in ev.moved) ev.moved[k] = ev.moved[k].length === plain.length ? ev.moved[k].filter(function (p, i) { return p !== plain[i]; }).length : null;
+    ev.sharps += (String(text).match(/\^[A-Ga-g]/g) || []).length;
+    ev.flats += (String(text).match(/_[A-Ga-g]/g) || []).length;
+    return ev;
+  }
+  function inferKey(text, o) {
+    o = o || {};
+    var ev = keyEvidence(text);
+    if (!ev || (!ev.nNotes && !ev.nChords)) return [];
+    var unit = function (h) { var t = h.reduce(function (s, x) { return s + x; }, 0); return t ? h.map(function (x) { return x / t; }) : h; };
+    var cw = ev.nChords ? 0.85 : 0, C = unit(ev.chords), out = [], seen = {};
+    var mix = function (h) { return unit(h).map(function (x, i) { return (1 - cw) * x + cw * C[i]; }); };
+    [0, 1].forEach(function (minor) {
+      for (var sf = -7; sf <= 7; sf++) {
+        var name = (minor ? MINOR_BY_SF : MAJOR_BY_SF)[sf], pc = pcOf(name), prof = [];
+        for (var i = 0; i < 12; i++) prof.push(AS[minor ? "min" : "maj"][(i - pc + 12) % 12]);
+        var moved = ev.nNotes ? (ev.moved[sf] || 0) / ev.nNotes : 0;
+        var r0 = ev.notes[0] ? pearson(prof, mix(ev.notes[0])) : -1, r1 = ev.notes[sf] ? pearson(prof, mix(ev.notes[sf])) - moved : -1;
+        out.push({ key: name, id: pc + (minor ? "m" : ""), r: Math.max(r0, r1), moves: ev.moved[sf] || 0 });
+      }
+    });
+    out.sort(function (a, b) { return b.r - a.r; });
+    out = out.filter(function (x) { if (seen[x.id]) return false; seen[x.id] = 1; return true; });   // F# or Gb, D#m or Ebm: the better reading
+    var T = ev.nChords ? 0.10 : 0.20, top = out[0].r, sum = out.reduce(function (s, x) { return s + Math.exp((x.r - top) / T); }, 0);
+    out.forEach(function (x) { x.confidence = Math.exp((x.r - top) / T) / sum; });
+    return out.slice(0, 2).filter(function (x, i) { return !i || x.confidence >= 0.15; }).map(function (x) {
+      return { key: x.key, confidence: Math.round(x.confidence * 100) / 100, moves: x.moves, chords: ev.nChords };
+    });
+  }
+  // the key line put into the header (or put in place of the one there), the rest byte for byte
+  function insertKey(text, key) {
+    fail(!(key in KEYS), "Unsupported key " + JSON.stringify(key));
+    var t = String(text), nl = /\r\n/.test(t) ? "\r\n" : "\n", lines = t.split(/\r?\n/), at = headerAt(lines);
+    if (at >= 0) lines[at] = "K:" + key; else lines.splice(keySlot(lines), 0, "K:" + key);
+    return lines.join(nl);
+  }
+
   window.HeresyAbc = { dress: dress, parse: parse, report: report, markers: markers, toMidi: toMidi, fromMidi: fromMidi, chordBed: chordBed,   // HERESY 1704
                        shiftVoice: shiftVoice, noteName: noteName, grid: grid, rewrite: rewrite, groups: groupsOf,   // HERESY 1578: grid, rewrite; 1587: groups
-                       mend: mend, withWords: withWords };   // HERESY 1600
+                       mend: mend, withWords: withWords,   // HERESY 1600
+                       inferKey: inferKey, insertKey: insertKey, keyEvidence: keyEvidence };   // HERESY 2444
 })();

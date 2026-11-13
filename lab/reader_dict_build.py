@@ -57,13 +57,14 @@ def build(lang, src, out, source="", licence=""):
         if not f or not rs.WORD.fullmatch(f):
             bad += 1
             continue
-        if rs.ACUTE not in f:
+        if rs.ACUTE not in f and "ё" not in f:            # HERESY 2399: ё is a stress of its own (берёшь), as the paradigm writes it
             bare += 1
             continue
         k = rs.key(f).translate(APOS)
-        forms.setdefault(k, set()).add(f)
-        if name:
+        if name:                                         # HERESY 2399: a name only where a capital says so (То́го the country never hides того́)
             cap.setdefault(k, set()).add(f)
+        else:
+            forms.setdefault(k, set()).add(f)
     out.parent.mkdir(parents=True, exist_ok=True)
     part = out.with_suffix(".part")
     part.unlink(missing_ok=True)

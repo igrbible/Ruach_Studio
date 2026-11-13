@@ -81,6 +81,12 @@
 
   // ------------------------------------------------------------------ loading
   function load() {
+    // HERESY 2573 (the UIX audit, item 85): the first look says the runs are being read (the lab's list takes 3 to 4 s), never an empty room
+    if (!state.data) {
+      var lw = '<p class="row-hint tr-empty">' + esc(tr("Reading the runs…")) + "</p>";
+      if ($("trRunList")) $("trRunList").innerHTML = lw;
+      if ($("trRunPane") && state.pane === "run") { $("trRunPane").innerHTML = lw; var rp = $("trRunPane").closest(".tr-pane"); if (rp) rp.classList.add("is-on"); }
+    }
     // HERESY 2208: a trash the lab could not list is said so, never «The trash is empty»
     return Promise.all([api("/train/datasets"), api("/train/trash").catch(function (e) { return { trash: [], error: e.message || String(e) }; })]).then(function (d) {
       state.data = d[0]; state.trash = d[1].trash || []; state.trashErr = d[1].error || "";
@@ -296,7 +302,7 @@
         '<span class="tag">' + (engineOf(r) === "ruach" ? "Ruach" : r.plugin ? esc(r.engine_label || r.plugin) : "AITK") + "</span>" +
         "<span>" + ep + "</span>" + (r.loras && r.loras.length ? '<span data-tip="In loras/, ready in the Musician">' + r.loras.length + " in loras/</span>" : "") +
         "<span>" + esc(ago(r.started)) + "</span>" + (r.protected ? '<span class="tag tr-lock" data-tip="' + esc(tr(LOCK_TIP)) + '">🔒</span>' : "") + "</div>" +   // HERESY 1817
-      '<button type="button" class="tr-rmenu" data-menu="' + esc(r.name) + '" aria-label="Run actions">⋯</button></article>';
+      '<button type="button" class="tr-rmenu" data-menu="' + esc(r.name) + '" aria-label="Run actions" data-tip="Run actions">' + ZI("ellipsis", "\u22ef") + "</button></article>";   // HERESY 2572
   }
   function menu(btn) {
     closeMenu();
@@ -569,27 +575,66 @@
     state.zoom = a <= 0 && b >= last ? null : { run: state.sel, a: a, b: b };
     paintRun();
   }
+  function ZI(n, g) { return window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(n) : g; }   // HERESY 2572: a glyph drawn, the glyph where the set is missing
   function zoomBar(z, last) {
     var on = z[0] > 0 || z[1] < last;
     return '<span class="tr-zoom">' + (on ? '<span class="mono tr-zspan">' + esc(tr("steps {0}–{1}").replace("{0}", Math.round(z[0])).replace("{1}", Math.round(z[1]))) + "</span>" : "") +
-      '<button type="button" class="btn ghost small tr-zbtn" data-zoom="out"' + (on ? "" : " disabled") + ' aria-label="' + esc(tr("Zoom out")) + '" data-tip="' + esc(tr("Zoom out: twice the steps")) + '">\u2212</button>' +
-      '<button type="button" class="btn ghost small tr-zbtn" data-zoom="in" aria-label="' + esc(tr("Zoom in")) + '" data-tip="' + esc(tr("Zoom in on the steps: half of them, around the middle. Or drag across a curve; Ctrl and the wheel zoom where the pointer is")) + '">+</button>' +
-      '<button type="button" class="btn ghost small tr-zbtn" data-zoom="reset"' + (on ? "" : " disabled") + ' aria-label="' + esc(tr("The whole run")) + '" data-tip="' + esc(tr("The whole run again (a double-click on a curve does it too)")) + '">\u27f2</button></span>';
+      '<button type="button" class="btn ghost small tr-zbtn" data-zoom="out"' + (on ? "" : " disabled") + ' aria-label="' + esc(tr("Zoom out")) + '" data-tip="' + esc(tr("Zoom out: twice the steps")) + '">' + ZI("zoom-out", "\u2212") + "</button>" +
+      '<button type="button" class="btn ghost small tr-zbtn" data-zoom="in" aria-label="' + esc(tr("Zoom in")) + '" data-tip="' + esc(tr("Zoom in on the steps: half of them, around the middle. Or drag across a curve; Ctrl and the wheel zoom where the pointer is")) + '">' + ZI("zoom-in", "+") + "</button>" +
+      '<button type="button" class="btn ghost small tr-zbtn" data-zoom="reset"' + (on ? "" : " disabled") + ' aria-label="' + esc(tr("The whole run")) + '" data-tip="' + esc(tr("The whole run again (a double-click on a curve does it too)")) + '">' + ZI("text-reset", "\u27f2") + "</button></span>";
+  }
+  // HERESY 2442 (Viktor 12.11.2026: «сделай восемь графиков стандартным набором для Тренера, для всех ранов»): every run's card draws the same
+  // eight, from whatever the run logged (lab/training.py: _series): the whole loss, the sound half's flow, the music half's ar_ce and its KL to
+  // the base, the learning rate, the gradient's norm, the seconds a step, and each card's memory by its name. A curve a run did not log is an
+  // empty chart that says so, never a line at zero
+  var CHARTS = [
+    ["loss", "All together · loss", "The whole loss the trainer lowers: the sound half's and the music half's, weighted as the run was told. Lower is better."],
+    ["flow", "Sound half · flow loss (NAR)", "How well the sound half predicts the noise it has to take away. Lower is better. It jumps from step to step with the random noise level of each step: read the bold line, the running average."],
+    ["ar_ce", "Music half · ar_ce (AR)", "How well the music half predicts the song’s own tokens. Lower is better; close to 0 it knows the songs by heart, and an earlier epoch is then the better adapter."],
+    ["ar_kl", "Music half · KL to the base (ar_kl)", "How far the music half's predictions have moved from the base model's. Lower stays closer to the base."],
+    ["lr", "Learning rate", "The rate each step used, as the run logged it: its warmup, its plateau and its fade."],
+    ["grad_norm", "Gradient norm", "The size of each step's gradient, before the clip. A spike is a hard batch; a norm that keeps rising is a run going unstable."],
+    ["step_s", "Seconds a step", "How long a step took along the run, each stretch's median: a pause between sittings is not a step."],
+    ["vram", "Memory per card · peak GB", "Each card's highest memory along the run, by its name, as the run's meter logged it."]
+  ];
+  var PLAIN = { lr: 1, vram: 1 };                          // drawn as they are: no running average over a schedule or a peak
+  function fmtV(v) { var a = Math.abs(v); return a && a < 0.01 ? v.toExponential(1) : v.toFixed(a < 10 ? 3 : 2); }
+  function cardName(r, rank) {                             // a card by its index on the machine and its model
+    var idx = (r.gpus || [])[+rank];
+    if (idx == null && +rank === 0 && r.gpu != null) idx = r.gpu;
+    var g = (((state.data || {}).gpus) || []).filter(function (x) { return x && x.index === idx; })[0];
+    return (idx != null ? "GPU" + idx : tr("card {0}").replace("{0}", rank)) + (g && g.name ? " · " + String(g.name).replace(/^NVIDIA (GeForce )?/, "") : "");
+  }
+  function curvesOf(ser, key) {
+    if (key !== "vram") return ser[key] && ser[key].curve && ser[key].curve.length ? [{ k: "", s: ser[key] }] : [];
+    return Object.keys(ser.vram || {}).sort(function (a, b) { return a - b; }).map(function (k) { return { k: k, s: ser.vram[k] }; })
+      .filter(function (x) { return x.s && x.s.curve && x.s.curve.length; });
+  }
+  function emptyChart(key, ser, r, title, say, lines) {
+    var why = ser.error ? "The step log could not be read (said above): nothing to draw"
+      : lines.length ? tr("One step logged so far: {0}").replace("{0}", fmtV(lines[0].s.curve[0][1]))
+      : key === "vram" && !(r.options || {}).vram_meter && !r.plugin ? "Not logged: the run's VRAM meter was off (step 3, “Measure each card's VRAM”)"
+      : "Not in this run's logs: its trainer did not record it. An empty chart, not a zero";
+    return '<figure class="tr-chart is-empty" data-key="' + key + '"><figcaption><b>' + esc(tr(title)) + "</b></figcaption>" +
+      '<p class="tr-none">' + esc(tr(why)) + '</p><p class="tr-say">' + esc(tr(say)) + "</p></figure>";
   }
   function chart(key, ser, r, title, say) {
-    var s = ser[key];
-    if (!s || !s.curve || s.curve.length < 2) return "";
-    var other = runOf(state.cmp), oc = other && other !== r ? (((other.series || {})[key] || {}).curve || []) : [];
-    var c = s.curve, W = 600, H = 150, L = 0, lo = Infinity, hi = -Infinity, last = Math.max(r.steps || 0, c[c.length - 1][0], other ? other.steps || 0 : 0) || 1;
+    var lines = curvesOf(ser, key), multi = key === "vram", plain = !!PLAIN[key];
+    if (lines.reduce(function (m, l) { return Math.max(m, l.s.curve.length); }, 0) < 2) return emptyChart(key, ser, r, title, say, lines);
+    var other = multi ? null : runOf(state.cmp), oc = other && other !== r ? (((other.series || {})[key] || {}).curve || []) : [];
+    var W = 600, H = 150, L = 0, lo = Infinity, hi = -Infinity;
+    var last = Math.max(r.steps || 0, other ? other.steps || 0 : 0, lines.reduce(function (m, l) { var c = l.s.curve; return Math.max(m, c[c.length - 1][0]); }, 0)) || 1;
     var z = zoomOf(r, last), x0 = z[0], x1 = z[1];        // HERESY 1855: the steps in view
     var clip = function (pts) {                            // the points in view, and one on each side for the line to run out of it
       var i0 = 0, i1 = pts.length - 1;
       for (var i = 0; i < pts.length; i++) { if (pts[i][0] <= x0) i0 = i; if (pts[i][0] >= x1) { i1 = i; break; } }
       return pts.slice(i0, i1 + 1);
     };
-    c.concat(oc.length > 1 ? ema(oc, 0.08) : []).forEach(function (p) { if (p[0] >= x0 && p[0] <= x1) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); } });
-    if (!isFinite(lo)) clip(c).forEach(function (p) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); });
-    var pad = (hi - lo) * 0.06 || 0.05; lo -= pad; hi += pad;
+    var cmpAvg = oc.length > 1 ? (plain ? oc : ema(oc, 0.08)) : [];
+    lines.forEach(function (l) { l.s.curve.concat(cmpAvg).forEach(function (p) { if (p[0] >= x0 && p[0] <= x1) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); } }); });
+    if (!isFinite(lo)) lines.forEach(function (l) { clip(l.s.curve).forEach(function (p) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); }); });
+    if (multi || key === "lr" || key === "step_s") lo = Math.min(lo, 0);   // memory, a rate and a time read from zero
+    var pad = (hi - lo) * 0.06 || Math.abs(hi) * 0.05 || 0.05; hi += pad; if (lo !== 0) lo -= pad;
     var x = function (st) { return L + (W - L) * (st - x0) / (x1 - x0); }, y = function (v) { return H - 6 - (H - 14) * (v - lo) / (hi - lo); };
     var path = function (pts) { return clip(pts).map(function (p, i) { return (i ? "L" : "M") + x(p[0]).toFixed(1) + " " + y(p[1]).toFixed(1); }).join(" "); };
     var grid = [0, 0.5, 1].map(function (f) { var v = lo + (hi - lo) * (1 - f), yy = y(v); return '<line class="g" x1="0" x2="' + W + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '"/>'; }).join("");
@@ -598,15 +643,19 @@
       var xx = x(k.step).toFixed(1);
       return '<line class="t' + (k.lora ? " on" : "") + (cand[k.file] ? " cand" : "") + (k.file === state.epoch ? " sel" : "") + '" x1="' + xx + '" x2="' + xx + '" y1="' + (k.file === state.epoch ? 0 : cand[k.file] ? H - 18 : H - 6) + '" y2="' + H + '"/>';
     }).join("");
-    var labels = [hi, (hi + lo) / 2, lo].map(function (v, i) { return '<span style="top:' + [2, 46, 90][i] + '%">' + v.toFixed(v < 10 ? 3 : 2) + "</span>"; }).join("");
+    var labels = [hi, (hi + lo) / 2, lo].map(function (v, i) { return '<span style="top:' + [2, 46, 90][i] + '%">' + fmtV(v) + "</span>"; }).join("");
+    var s = lines[0].s, said = multi ? lines.map(function (l, i) { return '<span class="tr-ck k' + (i % 4) + '"><i></i>' + esc(cardName(r, l.k)) + " " + fmtV(l.s.last) + " GB</span>"; }).join("")
+      : '<span class="mono">' + fmtV(s.first) + " → " + fmtV(s.last) + " · min " + fmtV(s.min) + (key === "grad_norm" || key === "step_s" ? " · max " + fmtV(s.max) : "") + "</span>";
+    var paths = multi ? lines.map(function (l, i) { return '<path class="card k' + (i % 4) + '" d="' + path(l.s.curve) + '"/>'; }).join("")
+      : plain ? '<path class="avg" d="' + path(s.curve) + '"/>' : '<path class="raw" d="' + path(s.curve) + '"/>';
     return '<figure class="tr-chart" data-key="' + key + '" data-last="' + last + '" data-x0="' + x0 + '" data-x1="' + x1 + '" data-lo="' + lo + '" data-hi="' + hi + '">' +
-      '<figcaption><b>' + title + '</b>' + zoomBar(z, last) + '<span class="mono">' + s.first.toFixed(3) + " → " + s.last.toFixed(3) + " · min " + s.min.toFixed(3) + '</span><span class="tr-read mono is-hint">over the curve: the step, its epoch, the value there</span></figcaption>' +
+      '<figcaption><b>' + esc(tr(title)) + '</b>' + zoomBar(z, last) + said + '<span class="tr-read mono is-hint">over the curve: the step, its epoch, the value there</span></figcaption>' +
       '<div class="tr-plot"><div class="tr-ylab mono">' + labels + "</div>" +
-      '<svg viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none">' + grid + ticks +
-        '<path class="raw" d="' + path(c) + '"/>' + (oc.length > 1 ? '<path class="cmp" d="' + path(ema(oc, 0.08)) + '"/>' : "") +
-        '<path class="avg" d="' + path(ema(c, 0.08)) + '"/><line class="cur" x1="-10" x2="-10" y1="0" y2="' + H + '"/></svg></div>' +
-      (oc.length > 1 ? '<div class="tr-cmpkey"><span class="k-this"></span>' + esc(r.name) + '<span class="k-cmp"></span>' + esc(other.name) + " (its average, dashed)</div>" : "") +
-      '<p class="tr-say">' + say + "</p></figure>";
+      '<svg viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none">' + grid + ticks + paths +
+        (cmpAvg.length ? '<path class="cmp" d="' + path(cmpAvg) + '"/>' : "") +
+        (multi || plain ? "" : '<path class="avg" d="' + path(ema(s.curve, 0.08)) + '"/>') + '<line class="cur" x1="-10" x2="-10" y1="0" y2="' + H + '"/></svg></div>' +
+      (cmpAvg.length ? '<div class="tr-cmpkey"><span class="k-this"></span>' + esc(r.name) + '<span class="k-cmp"></span>' + esc(other.name) + " (its average, dashed)</div>" : "") +
+      '<p class="tr-say">' + esc(tr(say)) + "</p></figure>";
   }
   function paintRun() {
     var el = $("trRunPane"), r = runOf(state.sel);
@@ -624,20 +673,20 @@
       '<div class="tr-rhead"><div class="tr-rname"><b translate="no">' + esc(r.name) + '</b><span class="tag tr-st is-' + esc(r.status) + '">' + esc(r.status) + "</span>" +
         (r.kind ? '<span class="tag">' + esc(r.kind) + "</span>" : "") + '<span class="tag">' + (engineOf(r) === "ruach" ? "Ruach trainer" : r.plugin ? esc(r.engine_label || r.plugin) : "AI-Toolkit") + "</span>" +
         (r.archived ? '<span class="tag">archived</span>' : "") + "</div>" +
-        '<div class="tr-racts"><select class="tr-cmp" id="trCmp" aria-label="Compare with another run" data-tip="Another run\u2019s curves, dashed, on the same steps">' +
+        '<div class="tr-racts"><select class="tr-cmp" id="trCmp" data-hc-pick="1" aria-label="Compare with another run" data-tip="Another run\u2019s curves, dashed, on the same steps">' +
           '<option value="">Compare with\u2026</option>' + runs().filter(function (x) { return x.name !== r.name && x.series && x.series.flow; })
             .sort(function (x, y) { return (y.dataset === r.dataset) - (x.dataset === r.dataset); })
             .map(function (x) { return '<option value="' + esc(x.name) + '"' + (x.name === state.cmp ? " selected" : "") + ">" + esc(x.name) + (x.dataset === r.dataset ? " \u00b7 same set" : "") + "</option>"; }).join("") + "</select>" +
           (r.status === "running" ? '<button type="button" class="btn ghost small" data-act="pause" data-run="' + esc(r.name) + '" data-tip="' + esc(tr("Pause: the run saves what it has learned and waits; Resume goes on from that save, with the same set, knobs and cards.")) + '">' + esc(tr("Pause")) + "</button>" : "") +   // HERESY 1659
           (r.status === "paused" ? '<button type="button" class="btn ghost small" data-act="resume" data-run="' + esc(r.name) + '" data-tip="' + esc(tr("Resume: the run goes on from its last save, with the same set, knobs and cards.")) + '">' + esc(tr("Resume")) + "</button>" : "") +
           (live ? '<button type="button" class="btn ghost small danger" data-act="stop" data-run="' + esc(r.name) + '">Stop</button>' : "") +
-          '<button type="button" class="btn ghost small" data-act="log" data-run="' + esc(r.name) + '">The log</button>' +   // HERESY 1167
+          '<button type="button" class="btn ghost small tr-hico" data-act="log" data-run="' + esc(r.name) + '" aria-label="The log" data-tip="The log">' + ZI("scroll-text", "The log") + "</button>" +   // HERESY 2572   // HERESY 1167
           // HERESY 1299 (Viktor: «выстраивать в одну колонку оба блока живого графа»): the face shows what a click makes
           '<button type="button" class="btn ghost small tr-stack" data-stack aria-pressed="' + state.stacked + '" data-tip="' +
             esc(tr(state.stacked ? "The curves side by side" : "The curves one under the other, each the whole width")) + '" aria-label="' +
             esc(tr(state.stacked ? "The curves side by side" : "The curves one under the other, each the whole width")) + '">' +
             (window.HeresyIcons ? window.HeresyIcons.ui(state.stacked ? "cols-2" : "rows-2") : "") + "</button>" +
-          '<button type="button" class="btn ghost small" data-menu="' + esc(r.name) + '" aria-label="More">⋯</button></div></div>' +
+          '<button type="button" class="btn ghost small tr-hico" data-menu="' + esc(r.name) + '" aria-label="More" data-tip="More">' + ZI("ellipsis", "\u22ef") + "</button></div></div>" +
       (r.note ? '<p class="row-hint tr-note" translate="no">' + esc(r.note) + "</p>" : "") +
       '<div class="tr-prog' + (live ? " is-live" : "") + '"><div class="tr-pbar"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
         '<span class="mono">' + pct.toFixed(1) + " % · step " + stepOf(r) + " / " + (r.steps || "?") + (r.tracks ? " · epoch " + (stepOf(r) / r.tracks).toFixed(1) + " / " + Math.round(epochs(r)) : "") + "</span></div>" +
@@ -658,10 +707,7 @@
       (memo ? '<p class="tr-err">ar_ce ' + Number(ar).toFixed(3) + ": the music half is learning the songs by heart; an earlier epoch may be the better adapter.</p>" : "") +
       (ser.error ? '<p class="tr-err">' + esc(ser.error) + "</p>" : "") + (r.error ? '<p class="tr-err">' + esc(r.error) + "</p>" : "") +
       '<div class="tr-charts' + (state.stacked ? " is-stacked" : "") + '">' +
-        chart(ser.flow ? "flow" : "loss", ser, r, ser.flow ? "Sound half · flow loss (NAR)" : "All together · loss",
-          "How well the sound half predicts the noise it has to take away. Lower is better. It jumps from step to step with the random noise level of each step: read the bold line, the running average.") +
-        chart("ar_ce", ser, r, "Music half · ar_ce (AR)",
-          "How well the music half predicts the song’s own tokens. Lower is better; close to 0 it knows the songs by heart, and an earlier epoch is then the better adapter.") +
+        CHARTS.map(function (c) { return chart(c[0], ser, r, c[1], c[2]); }).join("") +   // HERESY 2442: the eight, for every run
       "</div>" +
       (cks.length || (r.gone || []).length ? '<div class="tr-epochs"><div class="tr-ehead"><span class="label">Epochs · ' + cks.length + " saved · " + gb(bytes) + "</span>" +
           ((r.gone || []).length ? '<span class="tr-gone-n">' + r.gone.length + " deleted from disk</span>" : "") +   // HERESY 1816
@@ -698,26 +744,36 @@
         "<span><em>started</em> " + esc(when(r.first_started || r.started)) + "</span>" +
         (r.first_started && r.first_started !== r.started ? "<span><em>resumed</em> " + esc(when(r.started)) + "</span>" : "") +   // HERESY 2209
       "</div></div>";
+    // HERESY 2572 (the UIX audit, item 88): the run to compare with in the Studio's picker (51 runs: its Find); a choice made in a list opened before the
+    // card was drawn again still counts (the select it came from is no longer in the room, so its change is taken here)
+    var cmp = $("trCmp");
+    if (cmp && window.HeresyChoices) {
+      window.HeresyChoices.enhance(cmp);
+      cmp.addEventListener("change", function () { if (!cmp.isConnected) { state.cmp = cmp.value; paintRun(); } });
+    }
   }
-  // the reading under the cursor: the step, its epoch and both values there
+  // the reading under the cursor: the step, its epoch and each chart's value there (HERESY 2442: each card's on the memory chart; an empty
+  // chart says nothing)
   function readout(e) {
     var fig = e.target.closest(".tr-chart"), r = runOf(state.sel);
-    if (!fig || !r) return;
-    var svg = fig.querySelector("svg"), box = svg.getBoundingClientRect(), last = +fig.dataset.last;
+    if (!fig || !r || fig.classList.contains("is-empty")) return;
+    var svg = fig.querySelector("svg"), box = svg.getBoundingClientRect();
     var f = Math.max(0, Math.min(1, (e.clientX - box.left) / box.width)), step = +fig.dataset.x0 + f * (+fig.dataset.x1 - +fig.dataset.x0);   // HERESY 1855: in view
-    var c = ((r.series || {})[fig.dataset.key] || {}).curve || [];
-    if (!c.length) return;
-    var best = c.reduce(function (b, p) { return Math.abs(p[0] - step) < Math.abs(b[0] - step) ? p : b; }, c[0]);
-    var sm = ema(c, 0.08).filter(function (p) { return p[0] === best[0]; })[0];
-    Array.prototype.forEach.call(document.querySelectorAll("#trRunPane .tr-chart"), function (g) {
-      var cc = ((r.series || {})[g.dataset.key] || {}).curve || [], pt = cc.reduce(function (b, p) { return Math.abs(p[0] - best[0]) < Math.abs(b[0] - best[0]) ? p : b; }, cc[0] || [0, 0]);
-      var x = (600 * (best[0] - +g.dataset.x0) / (+g.dataset.x1 - +g.dataset.x0)).toFixed(1), line = g.querySelector("line.cur");   // HERESY 1855
-      line.setAttribute("x1", x); line.setAttribute("x2", x);
-      var avg = ema(cc, 0.08).filter(function (p) { return p[0] === pt[0]; })[0];
-      g.querySelector(".tr-read").classList.remove("is-hint");
-      g.querySelector(".tr-read").textContent = "step " + pt[0] + (r.tracks ? " · e" + (pt[0] / r.tracks).toFixed(1) : "") + " · " + pt[1].toFixed(3) + (avg ? " (avg " + avg[1].toFixed(3) + ")" : "");
+    var near = function (cc) { return cc.reduce(function (b, p) { return Math.abs(p[0] - step) < Math.abs(b[0] - step) ? p : b; }, cc[0]); };
+    Array.prototype.forEach.call(document.querySelectorAll("#trRunPane .tr-chart:not(.is-empty)"), function (g) {
+      var ls = curvesOf(r.series || {}, g.dataset.key);
+      if (!ls.length) return;
+      var pt = near(ls[0].s.curve), line = g.querySelector("line.cur");
+      var xx = (600 * (pt[0] - +g.dataset.x0) / (+g.dataset.x1 - +g.dataset.x0)).toFixed(1);   // HERESY 1855
+      line.setAttribute("x1", xx); line.setAttribute("x2", xx);
+      var val;
+      if (ls.length > 1 || g.dataset.key === "vram") val = ls.map(function (l) { return cardName(r, l.k) + " " + fmtV(near(l.s.curve)[1]); }).join(" · ");
+      else if (PLAIN[g.dataset.key]) val = fmtV(pt[1]);
+      else { var avg = ema(ls[0].s.curve, 0.08).filter(function (p) { return p[0] === pt[0]; })[0]; val = fmtV(pt[1]) + (avg ? " (avg " + fmtV(avg[1]) + ")" : ""); }
+      var rd = g.querySelector(".tr-read");
+      rd.classList.remove("is-hint");
+      rd.textContent = "step " + pt[0] + (r.tracks ? " · e" + (pt[0] / r.tracks).toFixed(1) : "") + " · " + val;
     });
-    return sm;
   }
   function publish(file) {
     var r = runOf(state.sel);
@@ -1235,6 +1291,7 @@
     if (!$("view-train")) return;
     state.hooks = hooks;
     $("trReload").addEventListener("click", load);
+    if ($("trGuide")) $("trGuide").addEventListener("click", function () { if (window.HeresyGuide) window.HeresyGuide.open("lora"); });   // HERESY 2571: the guide's own part for the Trainer (F1 opens the same)
     $("trPills").addEventListener("click", function (e) { var b = e.target.closest("[data-pane]"); if (b) showPane(b.dataset.pane); });
     $("view-train").addEventListener("click", function (e) {
       var t = e.target, b;

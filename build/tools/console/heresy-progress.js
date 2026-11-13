@@ -42,7 +42,12 @@
     var chipped = !!(dock && dock.classList.contains("is-chip")), cp = $("logDockChipPct"), t0 = list[0], tp = t0 && t0.steps ? Math.min(1, (t0.step || 0) / t0.steps) : null;
     if (dock) { dock.classList.toggle("has-train", !!list.length); dock.style.setProperty("--chip-train", tp != null ? (tp * 100).toFixed(1) + "%" : "0%"); }
     if (cp) { cp.hidden = !chipped || tp == null; cp.textContent = tp != null ? Math.round(tp * 100) + "%" : ""; }
-    if (chipped) { el.hidden = true; roomFor(null); return; }
+    // HERESY 2522 (the UIX audit 13.11.2026, №2: the training's card over the rooms' fields): the log folded (a chip or not) is the player's button;
+    // the training is the system bar's job and that button's percent then, and its card stands only over the log unfolded
+    var pb = $("pbLog"), pp = $("pbLogPct"), shut = chipped || !!(dock && dock.classList.contains("is-folded"));
+    if (pb) { pb.classList.toggle("has-train", !!list.length && tp != null); pb.style.setProperty("--pb-train", tp != null ? (tp * 100).toFixed(1) + "%" : "0%"); }
+    if (pp) { pp.hidden = tp == null; pp.textContent = tp != null ? Math.round(tp * 100) + "%" : ""; }
+    if (shut) { el.hidden = true; roomFor(null); return; }
     if (!list.length) { el.hidden = true; el.innerHTML = ""; roomFor(null); return; }
     // HERESY 1630 (Viktor 20.10.2026: «При открытом Engine прогресс бары Тренера поверх идут и не скрываются»): Engine has the log and the cards of its own
     if (eng && !eng.classList.contains("is-hidden")) { el.hidden = true; roomFor(null); return; }

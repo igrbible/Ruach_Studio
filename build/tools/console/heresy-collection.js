@@ -158,7 +158,7 @@
   // workspace's path (the lab says the same, and takes a name already there as it is)
   var WS_PART = 56;   // 09.11.2026: 56 by his word (was 32)
   function askName(text, value, opts) {
-    opts = Object.assign({ max: WS_PART }, opts || {});
+    opts = Object.assign({ max: WS_PART, name: true }, opts || {});   // HERESY 2462: every name asked here keeps the names' rule, said in the dialog
     return window.HeresyDialog.prompt(text, value, opts).then(function (v) { return (v || "").trim(); });
   }
   function toast(t, bad) { state.hooks && state.hooks.toast(t, bad ? "bad" : ""); }
@@ -553,7 +553,8 @@
     // HERESY 1165: a workspace's name is the user's, kept as typed in every language; the Studio's own places translate
     var UIc = function (nm) { return window.HeresyIcons && window.HeresyIcons.ui ? '<span class="coll-ico" aria-hidden="true">' + window.HeresyIcons.ui(nm) + "</span>" : ""; };   // HERESY 1998
     var item = function (key, label, n, own, ico) {
-      return '<button type="button" class="coll-place' + (state.place === key ? " is-on" : "") + (ico ? " has-ico" : "") + '" data-place="' + esc(key) + '">' + (ico ? UIc(ico) : "") + "<span" + (own ? ' translate="no"' : "") + ">" + esc(label) +
+      // HERESY 2550 (the UIX audit of 13.11.2026, №94): the whole name its tip (the row keeps its two lines, 1831)
+      return '<button type="button" class="coll-place' + (state.place === key ? " is-on" : "") + (ico ? " has-ico" : "") + '" data-place="' + esc(key) + '" data-tip="' + esc(label) + '">' + (ico ? UIc(ico) : "") + '<span class="coll-pname"' + (own ? ' translate="no"' : "") + ">" + esc(label) +
         '</span><span class="coll-n">' + (n === undefined ? "" : n) + "</span></button>";
     };
     // HERESY 1685: which workspaces have sections (a handle on their row), which are folded, and the rows a folded parent keeps out of sight
@@ -568,17 +569,24 @@
     // HERESY 2049: Archived, and under it each archived workspace whole (its ⋯: back, or to the trash)
     // (HERESY 2163: 2058's archN, archHid and frac went too: Archived and its workspaces count by tallyN since 2089)
     var arch = treeOrder(state.ws.filter(function (w) { return archivedWs(w) && realmWs(w); }));   // HERESY 2294: the realm's
-    var archivedHtml = arch.length ? item("__archived", "Archived", nText("__archived"), false, "archive").replace('<span class="coll-n">', nSpan("__archived")) + arch.map(function (w) {
+    // HERESY 2445 (Viktor 12.11.2026: «В Библиотеке пространство "В архиве" нужно уметь сворачивать»): Archived folds its workspaces away as a
+    // workspace folds its sections (1685), with the same handle, kept per viewer in the same list (yue2.collSecFold, the key __archived); folded,
+    // the row says so when the place in hand is inside it
+    var archShut = secShut.indexOf("__archived") >= 0;
+    var archHandle = '<span class="coll-sec-fold" data-sec-fold="__archived" role="button" aria-expanded="' + !archShut + '" title="' + (archShut ? "Unfold the archive" : "Fold the archive") + '"></span>';
+    var archivedHtml = arch.length ? item("__archived", "Archived", nText("__archived"), false, "archive")
+      .replace('class="coll-place', 'class="coll-place' + (archShut && archivedWs(state.place) ? " has-on-inside" : ""))
+      .replace('<span class="coll-n">', archHandle + nSpan("__archived")) + arch.map(function (w) {
       var dp = wsParts(w).length;
-      return item(w, dp > 1 ? wsLeaf(w) : w, nText(w), true).replace('class="coll-place', 'class="coll-place is-sub d' + (dp + 1) + " is-archived")
-        .replace('<span class="coll-n">', '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Bring it back, or send it to the trash" role="button">\u22ef</span><span class="coll-n">').replace('<span class="coll-n">', nSpan(w));
+      return item(w, dp > 1 ? wsLeaf(w) : w, nText(w), true).replace('class="coll-place', 'class="coll-place is-sub d' + (dp + 1) + " is-archived" + (archShut ? " is-sec-away" : ""))
+        .replace('<span class="coll-n">', '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Bring it back, or send it to the trash" role="button">' + ico("ellipsis") + '</span><span class="coll-n">').replace('<span class="coll-n">', nSpan(w));
     }).join("") : "";
     // HERESY 2078b (Viktor 05.11.2026, to the proposal «277 · ещё 1 в замороженном»: «Да, делай как предложил»): Pinned counts by its list's own test (iceAt), as ⓘ
     // does: an archived pinned take, which Pinned's list never shows, is out too
     var pinAll = pinnedAll(), pinN = state.rows.filter(function (r) { return pinAll[r.name] && !r.hidden && iceAt(r, "__pinned") && !disOut(r); }).length;   /* HERESY 2058b */
     // HERESY 1731: the playlist at the very top, never renamed or deleted (a place of the Studio's own, as Favourites)
     // HERESY 2058 (Viktor 03.11.2026: «Нужна команда "Отобразить все скрытые"»): All Workspaces, Not in a workspace and Hidden have a ⋯ while they hold hidden takes
-    var sysMore = function (key, n) { return (n ? '<span class="coll-ws-more" data-sys-menu="' + key + '" title="Show the hidden again" role="button">\u22ef</span>' : "") + '<span class="coll-n">'; };
+    var sysMore = function (key, n) { return (n ? '<span class="coll-ws-more" data-sys-menu="' + key + '" title="Show the hidden again" role="button">' + ico("ellipsis") + '</span>' : "") + '<span class="coll-n">'; };
     // HERESY 2058 (Viktor: «Корень Плейлиста видит все треки, даже те что в альбомах»): Playlist counts the root's whole list, whatever album or tag is open
     $("collSide").innerHTML = item("__playlist", "Playlist", plRootCount(), false, "playlist") +   // HERESY 1998: the Studio's own outlines
       item("", "All Workspaces", counts[""], false, "horn").replace('<span class="coll-n">', sysMore("", hidSys[""])) + item("__fav", "Favourites", counts.__fav, false, "star") +
@@ -593,7 +601,7 @@
         return item(w, depth > 1 ? wsLeaf(w) : w, nText(w), depth < 2 || !STUDIO_SECTIONS[wsLeaf(w)]).replace('class="coll-place', 'class="coll-place' + (depth > 1 ? " is-sub d" + depth : "") + (frozenWs(w) ? " is-frozen" : "") +
             (secAway(w) ? " is-sec-away" : "") + (secShut.indexOf(w) >= 0 && String(state.place || "").indexOf(w + SEP) === 0 ? " has-on-inside" : ""))
           .replace('<button type="button" ', '<button type="button" ' + wsTip(w))   // HERESY 1802: its note under the pointer
-          .replace('<span class="coll-n">', lock + secHandle(w) + '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Rename, delete, lock, a section…" role="button">\u22ef</span><span class="coll-n">').replace('<span class="coll-n">', nSpan(w));
+          .replace('<span class="coll-n">', lock + secHandle(w) + '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Rename, delete, lock, a section…" role="button">' + ico("ellipsis") + '</span><span class="coll-n">').replace('<span class="coll-n">', nSpan(w));
       }).join("") +
       '<button type="button" class="coll-place coll-new" data-ws-new="1">+ New workspace</button>' +
       '<button type="button" class="coll-place coll-new coll-hub" data-ws-hub="1">\ud83d\udc8e From Hugging Face\u2026</button>' +   // HERESY 1166
@@ -877,12 +885,13 @@
     var per = perRow(), sig = viewSig();
     if (sig !== LAZY.sig) { LAZY.sig = sig; LAZY.shown = batch(); }
     LAZY.shown = Math.max(batch(), Math.ceil(LAZY.shown / per) * per);
-    LAZY.rows = rows;
-    $("collGrid").innerHTML = rows.length ? rows.slice(0, LAZY.shown).map(cardHtml).join("")
+    LAZY.rows = books(rows);                       // HERESY 2402: a Narrator's book one card, its parts in its overlay
+    $("collGrid").innerHTML = LAZY.rows.length ? LAZY.rows.slice(0, LAZY.shown).map(cardOf).join("")
       : emptyHtml();                                 // HERESY 2046
     moreWatch();
     iceCards();                                    // HERESY 1166: a frozen card's controls off
     paintHead(rows);
+    bookRepaint();                                 // HERESY 2402: an open book follows its parts' marks
   }
   // the next whole rows, as the end of the list nears (the sentinel under the grid in sight, or nearly)
   var LAZY = { shown: 0, sig: "", rows: [], io: null };
@@ -914,7 +923,7 @@
     if (!s || s.hidden || inTrash() || LAZY.shown >= LAZY.rows.length) return;
     var from = LAZY.shown;
     LAZY.shown = Math.min(LAZY.rows.length, from + batch());
-    $("collGrid").insertAdjacentHTML("beforeend", LAZY.rows.slice(from, LAZY.shown).map(cardHtml).join(""));
+    $("collGrid").insertAdjacentHTML("beforeend", LAZY.rows.slice(from, LAZY.shown).map(cardOf).join(""));   // HERESY 2402
     iceCards();
     s.hidden = LAZY.shown >= LAZY.rows.length;
     requestAnimationFrame(function () {           // still in sight (a short batch, a tall window): the next one too
@@ -959,7 +968,7 @@
         (family(r) ? '<button type="button" class="coll-act coll-tree" data-ctree="1" aria-label="Family tree" data-tip="Its family tree: where it came from and what came of it">' + TREE_ICO + "</button>" : "") +   // HERESY 1988
         noteBtn(r, 'data-cnote="' + esc(r.name) + '"') +
         // HERESY 1900 («уведи вправо троеточие… иконку заметки поставь перед троеточием с небольшим отступом»): ⋯ last, at the strip's right end
-        '<button type="button" class="coll-act coll-more-btn" data-cmenu="1" title="More (or right-click the card)" aria-label="More">\u22ef</button>' + "</div></article>" +
+        '<button type="button" class="coll-act coll-more-btn" data-cmenu="1" title="More (or right-click the card)" aria-label="More">' + ico("ellipsis") + "</button>" + "</div></article>" +   // HERESY 2550: drawn
         clipCards(r);                              // HERESY 2327
     }
   }
@@ -1122,8 +1131,8 @@
     });
     return window.HeresyDialog.pick("Filter the takes\n\nTick what to look for. A take is shown when it has all of the ticked (AND), any of them (OR) or none of them (NOR); the numbers count the takes of this place.", groups, {
       logic: state.logic || "and", ok: "Show", count: countWith,
-      logics: [{ value: "and", label: "All · AND", tip: "A take shows when it has every ticked thing" }, { value: "or", label: "Any · OR", tip: "A take shows when it has at least one ticked thing" },
-               { value: "nor", label: "None · NOR", tip: "A take shows when it has none of the ticked things" }]
+      logics: [{ value: "and", label: "All of them", tip: "A take shows when it has every ticked thing" }, { value: "or", label: "Any of them", tip: "A take shows when it has at least one ticked thing" },
+               { value: "nor", label: "None of them", tip: "A take shows when it has none of the ticked things" }]
     }).then(function (r) {
       if (!r) return;
       state.kinds = {}; state.derived = {};
@@ -1595,7 +1604,7 @@
         var parent = v === "__section" ? cur : "";
         return askName(parent ? "A new section of \u201c" + parent + "\u201d\n\nIt is in hand at once: new takes land in it."
                               : "A new workspace\n\nIt is in hand at once: new takes land in it.", "", { ok: "Make it", placeholder: "its name" }).then(function (name) {
-          name = String(name || "").replace(/\s*\/\s*/g, " ").trim();
+          name = String(name || "").trim();   // HERESY 2462: a / is refused in the dialog, never taken out quietly
           if (!name) return why ? chooseCurrent(why) : "";
           var w = parent ? parent + SEP + name : name;
           return act({ op: "ws-create", workspace: w }, (parent ? "Section" : "Workspace") + " \u201c" + name + "\u201d made and in hand: new takes land in it").then(function (ok) {
@@ -2094,7 +2103,7 @@
         });
       });
     });
-    $("collGrid").addEventListener("click", function (e) {
+    $("collGrid").addEventListener("click", state.gridClick = function (e) {   // HERESY 2402: kept, the book's overlay hands its cards' clicks here
       var play = e.target.closest("[data-play]"), open = e.target.closest("[data-open]"), cb = e.target.closest("[data-sel]"), tcb = e.target.closest("[data-tsel]");
       if (tcb) { if (tcb.checked) state.tsel[tcb.dataset.tsel] = 1; else delete state.tsel[tcb.dataset.tsel]; return paint(); }
       var acb = e.target.closest("[data-asel]");         // HERESY 1337: the art's trash
@@ -2307,7 +2316,7 @@
       function fold(on) {
         lay.classList.toggle("is-folded", on);
         store(F_KEY, on ? "1" : "0");
-        fb.textContent = on ? "\u00bb" : "\u00ab";
+        fb.innerHTML = ico(on ? "chevrons-right" : "chevrons-left");   // HERESY 2550 (the UIX audit of 13.11.2026, №92): drawn, not » «
         fb.dataset.tip = on ? "Show the workspaces" : "Fold the workspaces away: the cards grow wider";
         fb.setAttribute("aria-label", fb.dataset.tip);
         rz.setAttribute("aria-valuenow", on ? "0" : String(Math.round($("collSide").getBoundingClientRect().width)));
@@ -2355,7 +2364,7 @@
         .then(function (v) {
           if (v !== "__new") return v || "";
           return askName("A new workspace for the selected", "", { ok: "Make it", placeholder: "its name" }).then(function (n) {
-            n = String(n || "").replace(/\s*\/\s*/g, " ").trim();
+            n = String(n || "").trim();   // HERESY 2462: a / is refused in the dialog, never taken out quietly
             return n ? act({ op: "ws-create", workspace: n }, null, true).then(function (ok) { return ok ? n : ""; }) : "";
           });
         });
@@ -2724,7 +2733,7 @@
     body.innerHTML = sheetHead(r, req) + sheetBadges(r) +
       '<div class="sheet-cols"><div><div class="peek-cap">Style</div><pre class="sheet-text">' + esc(req.style || "") + "</pre></div>" +
       '<div><div class="peek-cap">Lyrics</div><pre class="sheet-text sheet-lyrics">' + esc(req.lyrics || "") + "</pre></div></div>" +
-      '<label class="field"><span class="label">Note <em id="sheetNoteState"></em></span><textarea id="sheetNote" rows="3" maxlength="600"' +
+      '<label class="field"><span class="label">Note <em id="sheetNoteState"></em></span><textarea id="sheetNote" rows="3" maxlength="6000"' +
         (r.frozen ? ' readonly aria-readonly="true" data-tip="' + esc(NOTE_ICE) + '"' : "") + ">" + esc(r.note || "") + "</textarea></label>" +   // HERESY 2128
       '<div class="dv-actions sheet-acts"><button type="button" class="btn ghost small" data-sheet-go="create">Open in the Musician</button>' +
       '<button type="button" class="btn ghost small" data-sheet-go="post">Open in the Refiner</button><span class="spacer"></span>' +
@@ -2769,11 +2778,13 @@
 
   // HERESY 1802 (Viktor 27.10.2026: «Давай в воркспейсы и их подкатегории прикрутим Notes, и будем выводить их как тултипы. Больше места для
   // заметок»): a workspace's or a section's note, the tip of its name in the column (its name underlined with dots); 600 characters, empty takes it off
-  var NOTE_MAX = 600;
+  // HERESY 2404 (Viktor 11.11.2026: «Не жалко»): 1200 characters, every note of the Studio's alike (lab/collection.py NOTE_MAX); 2438 (12.11.2026:
+  // «Скрипты свидетельств обрезаны в заметках. Поднимай лимит до 6000 знаков»): 6000, a take's own note too (TAKE_NOTE_MAX)
+  var NOTE_MAX = 6000;
   function wsNote(w) {
     if (!window.HeresyDialog) return;
     var had = (state.wsNotes || {})[w] || "";
-    window.HeresyDialog.prompt("A note on “" + w + "”\n\nShown when the pointer rests on its name; 600 characters at most.\nEmpty removes it.", had,
+    window.HeresyDialog.prompt("A note on “" + w + "”\n\nShown when the pointer rests on its name; 6000 characters at most.\nEmpty removes it.", had,
       { area: true, rows: 6, max: NOTE_MAX, ok: "Keep" }).then(function (t) {
       if (t == null) return;
       t = String(t).trim();
@@ -2894,7 +2905,7 @@
       // HERESY 1161: a section inside it, two levels below a workspace at most
       wsParts(w).length < DEPTH ? { icon: "+", label: "New section\u2026", hint: "inside \u201c" + wsLeaf(w) + "\u201d", action: function () {
         askName("A new section of \u201c" + w + "\u201d", "", { ok: "Make it", placeholder: "its name", max: WS_PART }).then(function (name) {
-          name = String(name || "").replace(/\s*\/\s*/g, " ").trim();
+          name = String(name || "").trim();   // HERESY 2462: a / is refused in the dialog, never taken out quietly
           if (name) act({ op: "ws-create", workspace: w + SEP + name }, "Section \u201c" + name + "\u201d made in \u201c" + w + "\u201d");
         });
       } } : null,
@@ -2974,7 +2985,7 @@
     var parent = wsParts(w).slice(0, -1).join(SEP);                       // HERESY 1161: a section keeps its parent
     askName((parent ? "Rename the section \u201c" + wsLeaf(w) + "\u201d of \u201c" + parent + "\u201d" : "Rename the workspace \u201c" + w + "\u201d"),
             parent ? wsLeaf(w) : w, { ok: "Rename", max: WS_PART, guard: true }).then(function (to) {   // HERESY 2039: a slip of the hand asks first
-      if (to && parent) to = parent + SEP + String(to).replace(/\s*\/\s*/g, " ").trim();
+      if (to && parent) to = parent + SEP + String(to).trim();   // HERESY 2462: a / is refused in the dialog, never taken out quietly
       if (!to || to === w) return;
       if (state.ws.indexOf(to) >= 0) return toast("There is a workspace \u201c" + to + "\u201d already", true);
       act({ op: "ws-rename", workspace: w, to: to }, "Workspace renamed").then(function (ok) { if (ok) { followRename(w, to); paint(); paintCurrent(); } });
@@ -3083,7 +3094,8 @@
   }
 
   // ---- HERESY 1059: the datasheet: everything a take was made with, as Create shows it, without going there
-  var MODES = { off: "Direct", plan: "Plan", full: "Full" };
+  // HERESY 2551 (the UIX audit of 13.11.2026, №96): the modes by the form's own names (the catalogs know them), not «Full»
+  var MODES = { off: "Direct", plan: "Plan", melody: "Melody only", full: "Full plan" };
   function kv(k, v) { return v === undefined || v === null || v === "" ? "" : '<div class="ds-kv"><span>' + esc(k) + "</span><b>" + esc(v) + "</b></div>"; }
   // HERESY 1128: a long name (a LoRA's path) wraps under its value instead of pushing it out; the whole id on hover
   // HERESY 1502 (Viktor 16.10.2026: «В паспорте семпла не указана модель и её разрядность. Добавь прямо над VAE»): the backbone a take
@@ -3118,6 +3130,8 @@
     document.addEventListener("keydown", key, true);
     back.addEventListener("mousedown", function (e) { if (e.target === back) close(); });
     h.getRequest(t).then(function (q) {
+      // HERESY 2512: a reading's passport speaks of a reading (its voice, engine, seed, ear), drawn by the Narrator (heresy-reader.js), never a song's
+      if (q && q.reader && typeof q.reader === "object" && window.RuachReaderMirror) return window.RuachReaderMirror.passport(name, back, close, q, t);
       var r = rowOf(name) || {}, codes = String(q.semantic_tokens || "").split(",").filter(Boolean).length, keep = String(q.semantic_keep || "").split(",").filter(Boolean).length;
       var known = { style: 1, lyrics: 1, abc: 1, cot: 1, duration: 1, lm_seed: 1, seed: 1, solver: 1, steps: 1, abc_sampling: 1, semantic_sampling: 1, semantic_tokens: 1, semantic_keep: 1,
                     cfg_scale: 1, output_format: 1, title: 1, vae: 1, sliders: 1, loras: 1, parent: 1, plan_only: 1, mp3_bitrate: 1, peak_clip: 1, lm_batch_size: 1, synth_batch_size: 1 };
@@ -3126,8 +3140,11 @@
         '<div class="ds-head"><div><div class="sheet-title" translate="no">' + esc(r.title || t.title || name) + '</div><div class="coll-meta mono" translate="no">' + esc(name) + "</div>" +
         '<div class="coll-meta"><span>' + esc(h.ago(t.created)) + "</span>" + (t.seconds ? " \u00b7 <span>" + h.clock(t.seconds) + "</span>" : "") + (t.render_seconds ? " \u00b7 <span>made in " + h.clock(t.render_seconds) + "</span>" : "") +
         (t.model ? " \u00b7 <span translate=\"no\">" + esc(t.model) + "</span>" : "") + (t.truncated ? " \u00b7 <span>hit the token cap</span>" : "") + (q.parent ? " \u00b7 <span>from " + esc(q.parent) + "</span>" : "") + "</div></div>" +
-        '<span class="spacer"></span><button type="button" class="btn ghost small" data-ds="json">Copy request JSON</button>' +
-        '<button type="button" class="btn ghost small" data-ds="create">Open in the Musician</button><button type="button" class="btn ghost small" data-ds="close">Close</button></div>' +
+        // HERESY 2565 (the UIX audit, item 53): the song's passport's acts as icons, as the reading's; their words in the label and the tip
+        '<span class="spacer"></span><button type="button" class="btn ghost small icon-btn ds-hico" data-ds="json" aria-label="Copy request JSON" data-tip="Copy request JSON">' +
+        (window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui("copy") : "Copy request JSON") + "</button>" +
+        '<button type="button" class="btn ghost small icon-btn ds-hico" data-ds="create" aria-label="Open in the Musician" data-tip="Open in the Musician">' +
+        (window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui("external-link") : "Open in the Musician") + '</button><button type="button" class="btn ghost small" data-ds="close">Close</button></div>' +
         '<div class="ds-cols"><div class="ds-texts"><div class="peek-cap">Style <em>' + (q.style || "").length + ' chars</em></div><pre class="sheet-text">' + esc(q.style || "") + "</pre>" +
         '<div class="peek-cap">Lyrics</div><pre class="sheet-text ds-lyrics">' + esc(q.lyrics || "") + "</pre>" +
         (String(q.lyrics || "").trim() ? '<div class="ds-sung"></div>' : "") +   // HERESY 1842: sung to the end?
@@ -3140,7 +3157,7 @@
         '<div class="ds-covers-wrap" hidden><div class="peek-cap">Covers <em class="ds-cov-say"></em></div><div class="ds-covers"></div></div>' +   // HERESY 1848
         "</div>" +
         '<div class="ds-knobs"><div class="ds-group"><div class="peek-cap">Song</div>' + kv("mode", MODES[q.cot] || q.cot) + kv("length asked", q.duration ? h.clock(q.duration) : "") +
-        kv("format", q.output_format + (q.output_format === "mp3" ? " " + q.mp3_bitrate : "")) + modelRow(t.model || r.model) + kv("VAE", q.vae) + kv("peak clip", q.peak_clip) +
+        kv("format", q.output_format + (q.output_format === "mp3" ? " " + q.mp3_bitrate : "")) + modelRow(t.model || r.model) + kv("VAE", q.vae === "standard" ? "Standard" : q.vae) + kv("peak clip", q.peak_clip) +   // HERESY 2551: the stock one by its word
         kv("music codes", codes ? codes + " (" + h.clock(codes / 25) + ")" : "") + kv("kept from the parent", keep ? keep + " codes (" + h.clock(keep / 25) + ")" : "") + "</div>" +
         '<div class="ds-group"><div class="peek-cap">Sound</div>' + kv("guidance", q.cfg_scale) + kv("steps", q.steps) + kv("solver", q.solver) +
         kv("batch", (q.lm_batch_size || 1) + " \u00d7 " + (q.synth_batch_size || 1)) + "</div>" +
@@ -3516,7 +3533,7 @@
       return '<button type="button" class="pl-album' + (on ? " is-on" : "") + '" data-pl-album="' + esc(key) + '"' + (own ? ' data-pl-album-own="1"' : "") + ">" +
         '<span class="pl-album-cover">' + plCovers(names, al && al.cover) + "</span><span class=\"pl-album-name\"" + (own ? ' translate="no"' : "") + ">" + esc(label) + '</span><span class="pl-album-n mono">' + names.length + "</span>" +
         // HERESY 2058 (the audit: renaming and deleting only by a right click): an album's ⋯ in sight on its tile
-        (own ? '<span class="pl-album-more" data-pl-album-menu="' + esc(key) + '" role="button" aria-label="More" data-tip="Rename, its cover, delete">\u22ef</span>' : "") + "</button>";
+        (own ? '<span class="pl-album-more" data-pl-album-menu="' + esc(key) + '" role="button" aria-label="More" data-tip="Rename, its cover, delete">' + ico("ellipsis") + '</span>' : "") + "</button>";
     };
     var keep = state.plAlbum; state.plAlbum = ""; var all = plList(); state.plAlbum = keep;
     return '<div class="pl-albums">' + tile("", tr("Everything"), all, false) + (state.albums || []).map(function (a) { return tile(a.name, a.name, plExpand(a.items), true); }).join("") +
@@ -3804,7 +3821,7 @@
     var had = note(name), h = state.hooks || {}, t = h.findTake ? h.findTake(name) : null, r = rowOf(name);
     if (r && r.frozen) { toast(NOTE_ICE, true); return Promise.resolve(); }
     return window.HeresyDialog.prompt("A note on “" + (title || (t && (t.title || t.name)) || name) + "”\n\nEmpty removes it.", typed !== undefined ? typed : had,
-      { ok: "Keep the note", max: 600, area: true, rows: 6, cls: "hd-note" }).then(function (v) {
+      { ok: "Keep the note", max: 6000, area: true, rows: 6, cls: "hd-note" }).then(function (v) {
       if (v === null || v === had) return;
       return setNote(name, v).catch(function (e) {
         toast("Not saved: " + ((e && e.message) || String(e)), true);
@@ -3934,9 +3951,199 @@
     api("/collection", { op: "played", names: [name] }).catch(function () { r.fresh = true; });
   }
 
+  // ---------------------------------------------------------------- HERESY 2402: a Narrator's book, one card
+  // (Viktor 11.11.2026 on the mockup narrator-book-mockup.png: «Одобрил твой макет. Огонь»): a book read with [split] lands part by part, each part a
+  // take of its own and the child of the part before it (HERESY 2344); the Library shows the book as one card and keeps its parts off the grid. A
+  // click opens it over the page: its cover, its name, its parts' reactions summed, a strip of its parts by their length (a click plays that part),
+  // Play the book through, and its parts as the Library's own cards in two columns (the first half down the left, the rest down the right), each
+  // with its reactions, note and marks, every button of a card doing what it does on the grid. Esc or a click beside it closes it; the player plays on.
+  var BOOK = { open: "", through: "", bound: false, back: null };
+  function bookOf(r) { return r && r.book && r.book.run ? r.book : null; }
+  function bookParts(run) {
+    return state.rows.filter(function (r) { var b = bookOf(r); return b && b.run === run; })
+      .sort(function (a, b) { return (a.book.k || 0) - (b.book.k || 0) || (a.created || 0) - (b.created || 0); });
+  }
+  function books(rows) {
+    var seen = {};
+    return rows.reduce(function (out, r) {
+      var b = bookOf(r);
+      if (!b) out.push(r);
+      else if (!seen[b.run]) { seen[b.run] = 1; out.push({ bookCard: true, name: "book:" + b.run, run: b.run, title: b.title || r.title, first: r }); }
+      return out;
+    }, []);
+  }
+  function cardOf(r) { bookBind(); return r.bookCard ? bookCardHtml(r) : cardHtml(r); }
+  function bookSum(parts) {
+    var s = { secs: 0, like: 0, fav: 0, dis: 0, none: 0 };
+    parts.forEach(function (r) {
+      s.secs += r.seconds || 0;
+      if (r.rating > 0) s.like++;
+      if (r.rating < 0) s.dis++;
+      if (r.favorite) s.fav++;
+      if (!r.rating && !r.favorite && !reactOf(r.name)) s.none++;
+    });
+    return s;
+  }
+  // a phrase with a number in it, from the Narrator's own table in the page's language (the catalogs' pattern for «of {#0}» took half of it)
+  var BOOKW = { "a book of {#0} parts": "reader.book.parts", "from part {#0}": "reader.book.from", "unmarked {#0}": "reader.book.unmarked" };
+  function bookT(en, n) {
+    var W = window.RuachReaderWords, lang = String(document.documentElement.lang || "en").slice(0, 2), s = tr(en);
+    if (W && BOOKW[en] && W.langs) { var row = W.table(BOOKW[en]), i = W.langs.indexOf(lang); s = i > 0 && row[i] ? row[i] : en; }
+    return s.split("{#0}").join(String(n));
+  }
+  function bookNow(parts) {
+    var now = state.hooks.playing ? state.hooks.playing() : {}, k = -1;
+    parts.forEach(function (r, i) { if (r.name === now.name) k = i; });
+    return { k: k, playing: k >= 0 && !!now.playing };
+  }
+  function bookClock(t) { return state.hooks.clock ? state.hooks.clock(t) : Math.round(t) + " s"; }
+  function bookCardHtml(x) {
+    var parts = bookParts(x.run), s = bookSum(parts), h = state.hooks, n = bookNow(parts);
+    var art = window.HeresyArt ? window.HeresyArt.url(x.first.name) : "";
+    return '<article class="coll-card coll-book' + (n.playing ? " is-current" : "") + '" data-book="' + esc(x.run) + '">' +
+      '<button type="button" class="coll-play' + (n.playing ? " is-playing" : "") + '" data-book-play="' + esc(x.run) + '" aria-label="' + esc(n.playing ? tr("Pause") : tr("Play the book through")) + '">' + ico(n.playing ? "pause" : "play") + "</button>" +
+      '<div class="coll-body"><div class="coll-title"><span class="coll-title-text" data-book-open="' + esc(x.run) + '" translate="no">📖 ' + esc(x.title) + "</span></div>" +
+      '<div class="coll-meta">' + (h.when ? h.when(x.first.created, x.first.name) : "") + " · <span>" + esc(bookClock(s.secs)) + "</span> · " + '<span translate="no">' + esc(bookT("a book of {#0} parts", parts.length)) + "</span></div>" +
+      '<div class="coll-badges">' + badge(tr("book"), "k-book") + realmBadge(x.first) + (x.first.no_train ? badge("never for training", "k-notrain") : "") +
+      x.first.workspaces.map(function (w) { return wsBadge(w); }).join("") + "</div></div>" +
+      (art ? '<button type="button" class="coll-art" data-book-open="' + esc(x.run) + '" style="background-image:url(&quot;' + esc(art) + '&quot;)" aria-label="' + esc(tr("The Narrator's book")) + '"></button>' : "") +
+      '<div class="coll-acts cb-acts"><span class="cb-sum" translate="no">' + (s.like ? "👍 " + s.like + " " : "") + (s.fav ? "⭐ " + s.fav + " " : "") + (s.dis ? "👎 " + s.dis : "") + "</span>" +
+      '<button type="button" class="btn ghost small" data-book-open="' + esc(x.run) + '" translate="no">' + esc(bookT("a book of {#0} parts", parts.length)) + " ↗</button></div></article>";
+  }
+  function bookHtml(run) {
+    var parts = bookParts(run);
+    if (!parts.length) return "";
+    var first = parts[0], s = bookSum(parts), h = state.hooks, n = bookNow(parts), art = window.HeresyArt ? window.HeresyArt.url(first.name) : "";
+    var title = (first.book && first.book.title) || first.title, rows = Math.ceil(parts.length / 2), at = 0;
+    var segs = parts.map(function (r, i) {
+      var t0 = at; at += r.seconds || 0;
+      var label = (r.book.k || i + 1) + " · " + String(r.title || "").split(" · ").slice(-1)[0] + " · " + bookClock(r.seconds || 0);
+      return '<button type="button" class="cb-seg' + (i === n.k ? " is-now" : "") + (r.rating > 0 ? " is-liked" : r.rating < 0 ? " is-dis" : "") + '" data-book-part="' + esc(r.name) + '" style="flex:' +
+        Math.max(1, Math.round(r.seconds || 1)) + ' 1 0" title="' + esc(label) + '" aria-label="' + esc(label) + '"><i>' + (r.book.k || i + 1) + "</i></button>";
+    }).join("");
+    return '<div class="ds-box coll-bookbox" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
+      '<div class="cb-head"><div class="cb-cover"' + (art ? ' style="background-image:url(&quot;' + esc(art) + '&quot;)"' : "") + ">" + (art ? "" : "📖") + "</div>" +
+      '<div class="cb-what"><div class="sheet-title" translate="no">' + esc(title) + "</div>" +
+      '<div class="coll-meta"><span>' + esc(tr("The Narrator's book")) + "</span> · " + '<span translate="no">' + esc(bookT("a book of {#0} parts", parts.length)) + "</span> · <span>" + esc(bookClock(s.secs)) + "</span> · " +
+      (h.when ? h.when(first.created, first.name) : "") + "</div>" +
+      '<div class="coll-badges"><span class="coll-badge cb-tot" translate="no">👍 ' + s.like + "</span><span class=\"coll-badge cb-tot\" translate=\"no\">⭐ " + s.fav + "</span>" +
+      (s.dis ? '<span class="coll-badge cb-tot" translate="no">👎 ' + s.dis + "</span>" : "") + '<span class="coll-badge cb-none" translate="no">' + esc(bookT("unmarked {#0}", s.none)) + "</span>" +
+      (first.no_train ? badge("never for training", "k-notrain") : "") + "</div></div>" +
+      '<span class="spacer"></span><button type="button" class="btn ghost small" data-book-close="1">' + esc(tr("Close")) + "</button></div>" +
+      '<div class="cb-bar"><button type="button" class="btn primary small" data-book-through="1">' + ico(n.playing ? "pause" : "play") + " <span>" + esc(n.playing ? tr("Pause") : tr("Play the book through")) + "</span></button>" +
+      (n.k > 0 ? '<button type="button" class="btn ghost small" data-book-from="' + n.k + '">▶ <span translate="no">' + esc(bookT("from part {#0}", n.k + 1)) + "</span></button>" : "") +
+      '<div class="cb-strip">' + segs + '</div><span class="cb-total mono" translate="no">' + esc(bookClock(s.secs)) + "</span></div>" +
+      '<div class="cb-parts" style="grid-template-rows:repeat(' + rows + ', auto)">' + parts.map(function (r, i) {
+        return '<div class="cb-part' + (i === n.k ? " is-now" : "") + '"><span class="cb-n" translate="no">' + (r.book.k || i + 1) + "</span>" + cardHtml(r) + "</div>";
+      }).join("") + "</div>" +
+      '<div class="cb-foot coll-meta">' + esc(tr("Esc or a click beside it closes the book; the player plays on. Each part is a take of its own, the child of the part before it")) + "</div></div>";
+  }
+  function bookOpen(run) {
+    bookBind();
+    bookClose();
+    if (!bookParts(run).length) return;
+    var back = document.createElement("div");
+    back.className = "ds-back coll-bookback";
+    back.dataset.bookback = run;
+    BOOK.open = run; BOOK.back = back;
+    back.innerHTML = bookHtml(run);
+    document.body.appendChild(back);
+    iceCards();
+    back.addEventListener("mousedown", function (e) { if (e.target === back) bookClose(); });
+    back.addEventListener("click", bookClick);
+    back.addEventListener("click", function (e) { if (!e.target.closest("[data-book-through], [data-book-from], [data-book-part], [data-book-close]") && state.gridClick) state.gridClick(e); });
+    var f = back.querySelector("[data-book-through]");
+    if (f) f.focus();
+  }
+  function bookClose() {
+    if (BOOK.back) BOOK.back.remove();
+    BOOK.back = null; BOOK.open = "";
+  }
+  function bookRepaint() {
+    if (!BOOK.back || !BOOK.open) return;
+    var box = BOOK.back.querySelector(".coll-bookbox"), top = box ? box.scrollTop : 0, html = bookHtml(BOOK.open);
+    if (!html) return bookClose();
+    BOOK.back.innerHTML = html;
+    var nb = BOOK.back.querySelector(".coll-bookbox");
+    if (nb) nb.scrollTop = top;
+    iceCards();
+  }
+  function bookPlay(run, k) {
+    var parts = bookParts(run), h = state.hooks;
+    if (!parts.length || !h.findTake) return;
+    var n = bookNow(parts);
+    if (k == null && n.k >= 0) { if (h.togglePlay) h.togglePlay(); return; }   // the book playing (or paused) in one of its parts: on and off
+    var t = h.findTake(parts[Math.max(0, Math.min(parts.length - 1, k || 0))].name);
+    if (!t) return;
+    BOOK.through = run;
+    h.playNow(t);
+  }
+  function bookOrder() {   // while a part plays from its book, the player's next is the book's next part
+    if (!BOOK.through) return null;
+    var parts = bookParts(BOOK.through).map(function (r) { return r.name; }), now = state.hooks.playing ? state.hooks.playing() : {};
+    if (!parts.length || parts.indexOf(now.name) < 0) { BOOK.through = ""; return null; }
+    return parts;
+  }
+  function bookClick(e) {
+    var o = e.target.closest("[data-book-open]"), pl = e.target.closest("[data-book-play]"), th = e.target.closest("[data-book-through]"),
+      fr = e.target.closest("[data-book-from]"), pt = e.target.closest("[data-book-part]"), cl = e.target.closest("[data-book-close]");
+    var card = e.target.closest(".coll-book[data-book]");
+    if (!(o || pl || th || fr || pt || cl || card)) return;
+    e.stopPropagation(); e.preventDefault();
+    if (cl) return bookClose();
+    if (pl) return bookPlay(pl.dataset.bookPlay);
+    if (th) return bookPlay(BOOK.open);
+    if (fr) return bookPlay(BOOK.open, +fr.dataset.bookFrom);
+    if (pt) { var ps = bookParts(BOOK.open).map(function (r) { return r.name; }); return bookPlay(BOOK.open, ps.indexOf(pt.dataset.bookPart)); }
+    bookOpen((o || card).dataset.bookOpen || card.dataset.book);
+  }
+  function bookBind() {
+    if (BOOK.bound || !$("collGrid")) return;
+    BOOK.bound = true;
+    $("collGrid").addEventListener("click", bookClick, true);   // before the grid's own: a book's card has no take's name
+    ["play", "pause", "ended"].forEach(function (k) {             // the open book marks the part sounding now (media events reach a capture)
+      document.addEventListener(k, function () { if (BOOK.back) setTimeout(bookRepaint, 60); }, true);
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && BOOK.back && !document.querySelector(".hd-back, .coll-sheet:not([hidden])")) { e.preventDefault(); bookClose(); }
+    }, true);
+    var st = document.createElement("style");
+    st.id = "collBookStyle";
+    st.textContent = [
+      ".coll-book .coll-title-text { cursor: pointer; }",
+      ".coll-book { border-inline-start: 3px solid color-mix(in srgb, var(--amber) 60%, transparent); }",
+      ".cb-acts { display: flex; gap: 8px; align-items: center; }",
+      ".cb-sum { font-size: 12px; color: var(--muted); white-space: nowrap; }",
+      ".coll-bookback { bottom: var(--playbar-h, 124px); z-index: 55; }",
+      ".coll-bookbox { width: min(1500px, 100%); max-height: calc(100vh - var(--playbar-h, 124px) - 32px); }",
+      ".cb-head { display: flex; gap: 16px; align-items: flex-start; }",
+      ".cb-cover { flex: none; width: 92px; height: 92px; border-radius: var(--r-md); display: grid; place-items: center; font-size: 40px; background: color-mix(in srgb, var(--amber) 30%, var(--panel)) center / cover no-repeat; }",
+      ".cb-what { display: flex; flex-direction: column; gap: 6px; min-width: 0; }",
+      ".cb-what .sheet-title { font: 600 20px/1.3 var(--heading); }",
+      ".cb-bar { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-block: 1px solid var(--line-a); }",
+      ".cb-bar .btn svg, .cb-bar .btn .ui-ico { width: 14px; height: 14px; vertical-align: -2px; }",
+      ".cb-strip { flex: 1 1 auto; display: flex; gap: 2px; height: 30px; min-width: 120px; direction: ltr; }",   // time runs left to right, as the player's wave does in Hebrew too
+      ".cb-seg { min-width: 6px; padding: 0; border: 0; border-radius: 3px; cursor: pointer; position: relative; background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--amber) 38%, transparent) 0 2px, transparent 2px 4px); }",
+      ".cb-seg:hover { background-color: color-mix(in srgb, var(--amber) 16%, transparent); }",
+      ".cb-seg.is-now { background-color: color-mix(in srgb, var(--amber) 32%, transparent); outline: 1px solid var(--amber); }",
+      ".cb-seg.is-liked i { color: var(--good, #3fae5a); }", ".cb-seg.is-dis i { color: var(--bad-ink); }",
+      ".cb-seg i { position: absolute; inset-inline-start: 4px; top: 50%; transform: translateY(-50%); font: 600 10px/1 var(--mono); font-style: normal; color: var(--muted); pointer-events: none; }",
+      ".cb-total { font-size: 12px; color: var(--muted); white-space: nowrap; }",
+      ".cb-parts { display: grid; grid-auto-flow: column; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; }",
+      "@media (max-width: 900px) { .cb-parts { grid-auto-flow: row; grid-template-columns: 1fr; grid-template-rows: none !important; } }",
+      ".cb-part { display: flex; gap: 8px; align-items: stretch; min-width: 0; }",
+      ".cb-part > .coll-card { flex: 1 1 auto; min-width: 0; }",
+      ".cb-n { flex: none; width: 28px; height: 28px; margin-top: 10px; border-radius: 50%; display: grid; place-items: center; font: 600 12px/1 var(--mono); color: var(--muted); border: 1px solid var(--line-a); }",
+      ".cb-part.is-now .cb-n { background: var(--amber); color: var(--ground); border-color: var(--amber); }",
+      ".cb-foot { font-size: 12px; }"
+    ].join("\n");
+    document.head.appendChild(st);
+  }
+
   window.HeresyCollection = { init: init, reload: load, hubOpen: hubOpen, repaint: paint, paintArts: paintArts, isHidden: isHidden, isFresh: isFresh, markPlayed: markPlayed, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
                               current: function () { return currentIn("creator"); }, currentIn: currentIn, realm: realmNow, /* HERESY 2294: the Creator's own in hand */ landable: landable, closedWs: closedWs, firstWs: firstWs, absent: function () { return state.loadStatus === 404; }, readFailed: function () { return state.loadStatus === 404 ? "" : state.loadError || ""; }, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, rateMany: rateMany, favMany: favMany, exportChecked: exportZip, exportHow: exportHow, note: note, setNote: setNote, editNote: editNote, playlist: function () { return (state.playlist || []).slice(); }, playlistOrder: plPlayOrder, playlistOnly: function () { return state.plOnly; }, playlistAdd: plAdd, openPlaylist: plOpen, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
-                              order: function () { return state.place === "__trash" ? [] : state.place === "__playlist" ? plList() : shown().map(function (r) { return r.name; }); },
+                              order: function () { var b = bookOrder(); if (b) return b; return state.place === "__trash" ? [] : state.place === "__playlist" ? plList() : shown().map(function (r) { return r.name; }); },   // HERESY 2402: a book plays through its parts
+                              bookOpen: bookOpen, bookParts: function (run) { return bookParts(run).map(function (r) { return r.name; }); }, books: function () { return books(state.rows).filter(function (x) { return x.bookCard; }).map(function (x) { return x.run; }); },
                               deal: function (names) { if (!names) { DEAL = {}; return []; } return names.slice().sort(function (x, y) { return dealt(x) - dealt(y); }); },   // HERESY 1863: for the checks
                               notesLeft: notesLeftCheck, noteHash: noteHash,   // HERESY 2158: for the checks
                               datasheet: openDatasheet, sung: sungMany, sungOf: function (n) { return (state.sung || {})[n]; }, sungMark: sungMark, tailOf: function (n) { return (state.tail || {})[n] || null; }, tailMark: tailMark, modelLine: modelLine, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },

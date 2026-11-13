@@ -64,7 +64,16 @@ static ggml_backend_t cpu_backend_new(int n_threads) {
 static void yue2_ggml_log(enum ggml_log_level level, const char * text, void * user_data) {
     (void) user_data;
     // Debug chatter (CUDA graph reuse and friends) stays silent
+    // HERESY 2450: unless YUE2_GGML_DEBUG=1, so GGML_SCHED_DEBUG=1 can show the scheduler's splits: an op the backend lacks lands on
+    // the CPU without a word otherwise (found bringing the engine to Vulkan, 12.11.2026). Its fragments go out as they come, not deduped
+    static const bool debug_on = [] {
+        const char * e = std::getenv("YUE2_GGML_DEBUG");
+        return e && *e && strcmp(e, "0") != 0;
+    }();
     if (level == GGML_LOG_LEVEL_DEBUG) {
+        if (debug_on) {
+            fputs(text, stderr);
+        }
         return;
     }
     static char last[256] = { 0 };

@@ -169,7 +169,24 @@ document.addEventListener("keydown", function (e) {
   }
 
   function worn() { return window.HeresyWorn ? window.HeresyWorn.prompt() : ""; }   // HERESY 2350: the worn words of the song's language, left out
+  // HERESY 2497 (Viktor 12.11.2026: «Я бы хотел, чтобы у Писателя было также два мира — Музыканта и Чтеца, со своими промптами, темплейтами, SOUL.md»;
+  // «Добро, два мира Писателя строим вечером»): the room's world. The Musician's is this file's own, as before; the Narrator's comes from the lab
+  // (lab/writer_worlds.py, op «world»: its charter with the SOUL, its tasks, chips, templates and the draft's shape)
+  var WORLD = { realm: "creator", data: null };
+  function setWorld(realm, data) { WORLD = { realm: realm === "reader" && data ? "reader" : "creator", data: realm === "reader" ? data || null : null }; }
+  function reading() { return WORLD.realm === "reader" && !!WORLD.data; }
+  function tasks() { return reading() ? (WORLD.data.tasks || []).map(function (t) { return [t.id, t.label]; }) : TASKS; }
+  function chips() { return reading() ? (WORLD.data.chips || []).map(function (c) { return [c.label, c.brief]; }) : CHIPS; }
+  function lyricTasks() { return reading() ? (WORLD.data.lyric_tasks || []) : null; }
+  function templates() { return reading() ? (WORLD.data.templates || []) : null; }
+  function templateRequest(id) {
+    if (!reading() || !id) return null;
+    var t = (WORLD.data.templates || []).filter(function (x) { return x.id === id; })[0];
+    return t && t.request ? "\n\n" + t.request : "";
+  }
+  function schema() { return reading() ? WORLD.data.schema || null : null; }
   function system(preferences) {
+    if (reading()) return WORLD.data.system || WORLD.data.charter || "";   // HERESY 2497: the lab's charter with the world's SOUL
     var text = SONGWRITER.replace(/\s+$/, "") + "\n" + HERESY_ADDENDUM + heard() + unheard() + adapters() + styles() + voices() + fwWords() + worn();   // 1822   // 2350
     var own = String(preferences || "").trim();
     return own ? text + "\n\nUSER WRITING PREFERENCES\n" + own : text;
@@ -178,6 +195,7 @@ document.addEventListener("keydown", function (e) {
   // The same user turn as Studio's assist(): a JSON object with the task, the brief and
   // the current song. The score's header travels beside it so the key is not missed.
   function user(task, brief, song) {
+    if (reading()) return JSON.stringify({ task: task, brief: brief, current_reading: { title: song.title || "", voice: song.style || "", text: song.lyrics || "" } });   // HERESY 2497
     var current = { title: song.title || "", style: song.style || "", lyrics: song.lyrics || "", abc: song.abc || "" };
     var payload = { task: task, brief: brief, current_song: current };
     var h = abcHeader(current.abc);
@@ -192,6 +210,13 @@ document.addEventListener("keydown", function (e) {
     if (start > 0 && end > start) raw = raw.slice(start, end + 1);   // a word or two around the object
     try {
       var draft = JSON.parse(raw);
+      if (reading()) {                                   // HERESY 2497: a reading's draft (title, text, voice, notes, cast) in the room's own four fields
+        var okr = draft && typeof draft === "object" && ["title", "text", "voice", "notes"].every(function (k) { return typeof draft[k] === "string"; });
+        if (!okr) return null;
+        var cast = Array.isArray(draft.cast) ? draft.cast.filter(function (c) { return c && c.name; }) : [];
+        return { title: draft.title, style: draft.voice, lyrics: draft.text, styleTags: "",
+                 notes: draft.notes + (cast.length ? "\n\nCast: " + cast.map(function (c) { return c.name + (c.voice_hint ? " — " + c.voice_hint : ""); }).join("; ") : "") };
+      }
       var ok = draft && typeof draft === "object" && ["title", "style", "lyrics", "notes"].every(function (k) { return typeof draft[k] === "string"; });
       // HERESY 1167: the style as tags beside it, when the model gave it (an older answer has none)
       return ok ? { title: draft.title, style: draft.style, lyrics: draft.lyrics, notes: draft.notes,
@@ -210,5 +235,7 @@ document.addEventListener("keydown", function (e) {
   function fwWords() { return "\n\nTHE WORDS THE TSUNAMI WAVE LEARNED (the Studio's default model)\n" + TW_WORDS + "\n\nTHE WORDS THE FIRST WAVE LEARNED (its base)\n" + FW_WORDS; }
   function knowledge() { return HERESY_ADDENDUM + heard() + unheard() + adapters() + styles() + voices() + fwWords() + worn(); }   // HERESY 2350
   window.HeresyAssist = { SONGWRITER: SONGWRITER, TASKS: TASKS, CHIPS: CHIPS, system: system, user: user, parse: parse, abcHeader: abcHeader,
+                          setWorld: setWorld, reading: reading, tasks: tasks, chips: chips, lyricTasks: lyricTasks, templates: templates,   // HERESY 2497
+                          templateRequest: templateRequest, schema: schema,
                           knowledge: knowledge };
 })();

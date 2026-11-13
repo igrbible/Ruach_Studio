@@ -36,6 +36,7 @@ void request_init(Yue2Request * r) {
     r->cfg_lyrics       = -1.0f;   // HERESY 1397
     r->free_tempo       = false;   // HERESY 1416
     r->nar_ladder       = false;   // HERESY 1768
+    r->nar_pieces       = false;   // HERESY 2509
     r->vocal_octave     = 0;       // HERESY 1743
     r->score_planned    = false;   // HERESY 1618
     r->instrumental     = -1;      // HERESY 2153: not said
@@ -334,6 +335,9 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
     if ((v = yyjson_obj_get(obj, "nar_ladder")) && yyjson_is_bool(v)) {   // HERESY 1768
         r->nar_ladder = yyjson_get_bool(v);
     }
+    if ((v = yyjson_obj_get(obj, "nar_pieces")) && yyjson_is_bool(v)) {   // HERESY 2509
+        r->nar_pieces = yyjson_get_bool(v);
+    }
     if ((v = yyjson_obj_get(obj, "vocal_octave")) && yyjson_is_num(v)) {   // HERESY 1743: whole octaves, three at most either way
         int o           = (int) yyjson_get_num(v);
         r->vocal_octave = o < -3 ? -3 : o > 3 ? 3 : o;
@@ -558,6 +562,9 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
     }
     if (r->nar_ladder) {   // HERESY 1768: written only when used
         yyjson_mut_obj_add_bool(doc, root, "nar_ladder", true);
+    }
+    if (r->nar_pieces) {   // HERESY 2509: written only when used
+        yyjson_mut_obj_add_bool(doc, root, "nar_pieces", true);
     }
     if (r->vocal_octave != 0) {   // HERESY 1743: written only when used
         yyjson_mut_obj_add_int(doc, root, "vocal_octave", r->vocal_octave);

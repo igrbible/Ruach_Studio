@@ -731,7 +731,7 @@
       { label: "Go to the marker", icon: "\u2192", action: function () { if (S.playing) play(mk.t); else { S.at = mk.t; paintPlayhead(); } } },
       { label: "Rename the marker", icon: "\u270e", action: function () {
         if (!window.HeresyDialog) return;
-        window.HeresyDialog.prompt(tr("The marker at {0}: its name").replace("{0}", clock(mk.t)), mk.name, { max: 40, ok: tr("Rename") }).then(function (v) {
+        window.HeresyDialog.prompt(tr("The marker at {0}: its name").replace("{0}", clock(mk.t)), mk.name, { max: 40, ok: tr("Rename"), name: true })   /* HERESY 2462 */.then(function (v) {
           v = v == null ? "" : String(v).replace(/\s+/g, " ").trim().slice(0, 40);
           if (!v) return;
           mk.name = v; keep(); drawRuler();
@@ -2520,7 +2520,7 @@
   function presetOf(n) { var s = S.strips[n] || {}, out = {}; PRESET_FIELDS.forEach(function (k) { if (s[k] != null) out[k] = JSON.parse(JSON.stringify(s[k])); }); return out; }
   function presetSave(n) {
     if (!window.HeresyDialog) return Promise.resolve(false);
-    return window.HeresyDialog.prompt(tr("A name for this lane's sound (its EQ, gate, compressor, width, pan and sends)"), n.replace(/_/g, " "), { max: 40, ok: tr("Save") }).then(function (v) {
+    return window.HeresyDialog.prompt(tr("A name for this lane's sound (its EQ, gate, compressor, width, pan and sends)"), n.replace(/_/g, " "), { max: 40, ok: tr("Save"), name: true })   /* HERESY 2462 */.then(function (v) {
       v = v == null ? "" : String(v).replace(/\s+/g, " ").trim().slice(0, 40);
       if (!v) return false;
       var all = presetsAll();
@@ -2932,11 +2932,11 @@
       if (S.set !== set) return;
       reread().then(function () {
         if (names().indexOf(track) < 0) { say(tr("Bounced, but its lane is not in the set: {0}").replace("{0}", track), true); return; }
-        bounceLand(members, track, +made.gain_db || 0, title);
+        bounceLand(members, track, +made.gain_db || 0, title, (made.report || {}).sends);   // HERESY 2407: a dry one's sends
       });
     }).catch(function () { S.watch = setTimeout(function () { bounceWatch(name, set, id, members, track, title); }, 4000); });
   }
-  function bounceLand(members, track, gainDb, title) {   // its members muted (their solo given to it), it at 0 dB; the undo before it the inverse
+  function bounceLand(members, track, gainDb, title, sends) {   // its members muted (their solo given to it), it at 0 dB; the undo before it the inverse
     var solo = soloing(), soloed = members.some(function (n) { return S.strips[n] && S.strips[n].solo; });
     var before = JSON.parse(snap());
     before.strips[track] = { mute: true };               // undone: the members as they were, the new lane silent
@@ -2945,10 +2945,15 @@
     var t = S.strips[track] || (S.strips[track] = {});
     t.mute = false; if (gainDb) t.gain_db = Math.round(gainDb * 100) / 100;
     if (solo && soloed) t.solo = true;
+    // HERESY 2407 (A6): a dry bounce brings its lanes' room and delay along as the new lane's own sends (the lab's fit of what they sent), so the
+    // mix keeps them and they stay live; Ctrl+Z puts the lanes back as they were
+    var carried = !!(sends && (sends.reverb != null || sends.delay != null));
+    if (sends && sends.reverb != null) t.reverb = +sends.reverb;
+    if (sends && sends.delay != null) t.delay = +sends.delay;
     restored(false); paintUndo();
     var ask = S.bounceAsk || {}; S.bounceAsk = null;   // HERESY 2366: said as it was made, a lab that did not hear «dry» said so
     if (ask.dry && !ask.heard) say(tr("Bounced {0} with the room and the delay: this lab was started before the dry bounce came; restart the lab for a dry one").replace("{0}", title), true);
-    else say(tr(ask.dry ? "Bounced {0} dry into a lane of its own: its lanes muted, without their room and delay (Ctrl+Z puts them back)" : "Bounced {0} into a lane of its own: its lanes muted, the mix as it was (Ctrl+Z puts them back)").replace("{0}", title));
+    else say(tr(ask.dry ? (carried ? "Bounced {0} dry into a lane of its own: its lanes muted, their room and delay carried onto its sends (Ctrl+Z puts them back)" : "Bounced {0} dry into a lane of its own: its lanes muted, without their room and delay (Ctrl+Z puts them back)") : "Bounced {0} into a lane of its own: its lanes muted, the mix as it was (Ctrl+Z puts them back)").replace("{0}", title));   // HERESY 2407
   }
   function bounceItems(n) {
     var bus = subOfStrip(n), gs = groupsOf(n), busy = !!S.busy, out = [];
@@ -2965,7 +2970,7 @@
     // the delay, a switch kept in this browser; with its lanes muted the mix then has less of both (the new lane's own sends bring them back)
     var dry = bounceDry();
     out.push({ sep: true });
-    out.push({ label: tr("Dry: without the room and the delay"), raw: true, checked: dry, hint: "The new lane without its lanes' share of the room and the delay; with them muted the mix has less of both, the new lane's own sends bring them back",
+    out.push({ label: tr("Dry: without the room and the delay"), raw: true, checked: dry, hint: "The new lane without its lanes' share of the room and the delay baked in: their sends are copied onto it, so the mix keeps both and they stay live",   // HERESY 2407
                action: function () { keepFlag("yue2.mixer.bounceDry", !dry); say(tr(!dry ? "The next bounce is dry: without the room and the delay" : "The next bounce keeps the room and the delay: the mix as it was")); } });
     return out;
   }

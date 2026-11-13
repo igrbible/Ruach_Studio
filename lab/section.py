@@ -151,6 +151,7 @@ def _run(jid, name, req, codes, parts, lyrics, state):
                 gen = {k: y for k, y in req.items() if k not in ("semantic_tokens", "semantic_keep", "parent", "end_at", "fade_in", "fade_out")}
                 gen.update(lyrics=lyrics, semantic_keep=",".join(map(str, joined[:ka])), duration=round(x["b"] + TAIL, 1),
                            lm_seed=seed + i, title=title + " · " + x["section"] + " · draft " + v, plan_only=False)
+                gen["nar_pieces"] = True                   # HERESY 2509: a draft sings to its cut even past one window (a long take was made so)
                 drafts.append(_wait(P["engine"]("/synth", gen).get("id"), ver))
                 _, new = _codes(drafts[-1])
                 if new[:ka] != joined[:ka]:
@@ -392,6 +393,7 @@ def _repeat_run(jid, name, req, codes, a, b, section, lyrics, abc, state, gap=0.
             ss.update(max_tokens=int(round(total * FPS)), min_tokens=int(kb + L0))   # it does go on past the copy's end, as Extend's
             gen.update(cot="off", lyrics=lyrics, semantic_keep=",".join(map(str, codes[:kb])), duration=round(total, 1), semantic_sampling=ss,
                        lm_seed=seed, lm_batch_size=1, synth_batch_size=1, title=title + " · " + said + " · draft " + v)
+            gen["nar_pieces"] = True                       # HERESY 2509: a draft sings to its cut even past one window (a long take was made so)
             drafts.append(_wait(P["engine"]("/synth", gen).get("id"), ver))
             _, new = _codes(drafts[-1])
             if new[:kb] != codes[:kb]:
@@ -569,6 +571,7 @@ def _window_run(jid, name, req, codes, own, win, a, b, A, B, lyrics, state):
             gen = {k: y for k, y in req.items() if k not in ("semantic_tokens", "semantic_keep", "parent", "end_at", "fade_in", "fade_out")}
             gen.update(lyrics=lyrics, semantic_keep=",".join(map(str, codes[:kA])), duration=dur, lm_seed=seed, plan_only=False,
                        title=title + " · " + said + " · draft " + v, loras=window_curves(own, win, A, a, b, B, span_d))
+            gen["nar_pieces"] = True                       # HERESY 2509: a draft sings to its cut even past one window (a long take was made so)
             drafts.append(_wait(P["engine"]("/synth", gen).get("id"), ver))
             _, new = _codes(drafts[-1])
             if new[:kA] != codes[:kA]:

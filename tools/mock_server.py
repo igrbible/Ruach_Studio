@@ -704,6 +704,8 @@ def parse_request(body, mock):
             req[key] = value
     if raw.get("nar_ladder") is True:                  # HERESY 1768: the decode ladder, kept as yue-server keeps it (only when on)
         req["nar_ladder"] = True
+    if raw.get("nar_pieces") is True:                  # HERESY 2509: past one window in pieces, kept the same way
+        req["nar_pieces"] = True
     if isinstance(raw.get("instrumental"), bool):      # HERESY 2153: the Creator's box, kept as yue-server keeps it (only when the request says it)
         req["instrumental"] = raw["instrumental"]
     if req["cot"] not in ("full", "melody", "off"):

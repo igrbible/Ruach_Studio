@@ -43,6 +43,8 @@
   var pop = null, list = null, about = null, foot = null, box = null, items = [], at = -1, from = -1, shut = -1, query = null, mirror = null, queued = false;
 
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
+  // HERESY 2409 (Viktor 11.11.2026, A9): the column of our words about a tag names sections in the page's language; its tip says the tags never are
+  var SECTION_WORDS_TIP = "Section tags and model commands are always written in correct English, in square brackets, sometimes round: [Verse], [Chorus], [Interlude], (whisper). In the Studio's own sentences a section is named in your language, as speech; what goes into the lyrics and to the model stays English.";
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function visible() { return !!(pop && !pop.hidden); }
 
@@ -149,7 +151,7 @@
     pop.id = "tcPop";
     pop.hidden = true;
     pop.innerHTML = '<div class="tc-cols"><div class="tc-list" role="listbox" id="tcList" aria-label="Section tags"></div>' +
-      '<div class="tc-about" aria-live="polite"></div></div><div class="tc-foot"></div>';
+      '<div class="tc-about" aria-live="polite" data-tip="' + SECTION_WORDS_TIP + '"></div></div><div class="tc-foot"></div>';   // HERESY 2409
     document.body.appendChild(pop);
     list = pop.querySelector(".tc-list");
     about = pop.querySelector(".tc-about");

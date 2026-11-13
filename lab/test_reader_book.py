@@ -33,6 +33,7 @@ with tempfile.TemporaryDirectory() as tmp:
         "    return np.concatenate([np.zeros(2400, np.float32), y, np.zeros(2400, np.float32)]), 24000\n")
     j = json.load(open(HERE / "reader_engines/drama3/engine.json"))
     j.update(id="fake", label="Fake · test", python={"cpu": sys.executable}, need_mb=100, sample_rate=24000)
+    j.pop("stress_lang", None)                            # HERESY 2454 gave Drama 3 the capitals for Russian; this fake tests the acute path
     j.pop("tiers", None)
     json.dump(j, open(eng / "engine.json", "w"))
     said, jobs, lock = [], {}, threading.Lock()

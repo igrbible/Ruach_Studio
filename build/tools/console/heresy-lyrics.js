@@ -637,7 +637,7 @@
     mirror.setAttribute("aria-hidden", "true");
     wrap.appendChild(mirror);
     var last = null, queued = false;
-    var ax = aids(area, function () { if (meter) paintMeter(last || measure(area.value, latinOf(area.value, styleBox ? styleBox.value : ""))); });   // HERESY 1169
+    var ax = aids(area, function () { if (meter) paintMeter(last || measure(area.value, latinOf(area.value, styleBox ? styleBox.value : ""))); }, opts.tipAt);   // HERESY 1169; 2478: a label that says the keys
     // HERESY 1453 (Viktor 15.10.2026: «По F5… Нули, пока не развернул свёрнутый блок»): the text the page itself puts into the
     // box (the form back after a reload, a take, a document) sends no input event, and a folded box sends no resize either, so the
     // counts kept the empty box's zeros until it unfolded: the value setter (1269's, which brings the marks back) counts again too
@@ -854,8 +854,8 @@
         b.type = "button";
         b.className = "btn ghost small icon-btn lyr-head-tog";
         b.dataset.lyr = d[0];
-        b.setAttribute("aria-label", tr(d[2]));
-        b.dataset.tip = tr(d[2]) + ": " + tr(d[3]);
+        b.setAttribute("aria-label", d[2]);
+        b.dataset.tipHead = d[2]; b.dataset.tip = d[3];   // HERESY 2552 (№37): two keys the page translates as they show (a glued tip stayed English after a change of language)
         b.innerHTML = window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(d[1]) : d[2];
         head.appendChild(b);
       });

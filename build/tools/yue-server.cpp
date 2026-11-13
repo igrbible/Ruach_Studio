@@ -207,6 +207,8 @@ struct Job {
     std::string              error;
     std::atomic<bool>        started{ false };  // false while it waits in the queue
     int                      made         = 0;      // HERESY 2011 (P2): the tracks it made, beside takes (those of them in the library)
+    std::string              score_warning;         // HERESY 2433: a song of it sung by a score without a key line (said, not refused)
+    double                   window_held  = 0.0;    // HERESY 2509: a song of it held whole to one window of the sound half (its seconds)
     std::string              library_error;         // HERESY 2132: the first track the library could not keep, and why (the job is done all the same)
     bool                     result_freed = false;  // its result_body let go, its takes in the library (under mtx_results)
     int64_t                  lm_seed = -1;      // resolved seeds of a synth job
@@ -1111,6 +1113,12 @@ static std::string library_save(const Yue2Request & replay,
     yyjson_mut_obj_add_strncpy(doc, root, "format", replay.output_format.c_str(), replay.output_format.size());
     yyjson_mut_obj_add_bool(doc, root, "favorite", false);
     yyjson_mut_obj_add_bool(doc, root, "truncated", song.truncated);
+    if (!song.score_warning.empty()) {   // HERESY 2433: the Library's card says it
+        yyjson_mut_obj_add_strncpy(doc, root, "score_warning", song.score_warning.c_str(), song.score_warning.size());
+    }
+    if (song.window_held > 0.0) {   // HERESY 2509: the take's card says the window ended it
+        yyjson_mut_obj_add_real(doc, root, "window_held", std::round(song.window_held * 10.0) / 10.0);
+    }
     yyjson_mut_obj_add_real(doc, root, "render_seconds", render_seconds);
     yyjson_mut_obj_add_int(doc, root, "song", song_index);
     yyjson_mut_obj_add_int(doc, root, "variation", variation);
@@ -1534,6 +1542,12 @@ static std::string job_status_json(const Job & job) {
         }
         if (!job.library_error.empty()) {
             yyjson_mut_obj_add_strncpy(doc, root, "library_error", job.library_error.c_str(), job.library_error.size());
+        }
+        if (!job.score_warning.empty()) {   // HERESY 2433
+            yyjson_mut_obj_add_strncpy(doc, root, "score_warning", job.score_warning.c_str(), job.score_warning.size());
+        }
+        if (job.window_held > 0.0) {   // HERESY 2509
+            yyjson_mut_obj_add_real(doc, root, "window_held", std::round(job.window_held * 10.0) / 10.0);
         }
     }
     if (status == JobStatus::FAILED && !job.error.empty()) {
@@ -2162,6 +2176,7 @@ static void handle_props(const httplib::Request &, httplib::Response & res) {
     yyjson_mut_obj_add_str(doc, root, "version", YUE2_VERSION);
     yyjson_mut_obj_add_strncpy(doc, root, "model", g_model_path.c_str(), g_model_path.size());
     yyjson_mut_obj_add_strncpy(doc, root, "vae", g_vae_path.c_str(), g_vae_path.size());
+    yyjson_mut_obj_add_bool(doc, root, "vae_encoder", g_pipeline.vae_has_encoder);   // HERESY 2484
     yyjson_mut_obj_add_int(doc, root, "sample_rate", YUE2_SAMPLE_RATE);
     yyjson_mut_obj_add_int(doc, root, "frame_rate", YUE2_FRAME_RATE);
     yyjson_mut_obj_add_int(doc, root, "context", YUE2_CONTEXT);
@@ -2547,7 +2562,7 @@ static void run_vae_encode(std::shared_ptr<Job> job, std::vector<float> planar, 
     fprintf(stderr, "[Server] VAE encode job %s: %.1f s of audio\n", job->id.c_str(), (double) T / sr);
     std::vector<float> latents;
     int                T_lat = 0;
-    bool               ok    = pipeline_encode(&g_pipeline, planar.data(), T, sr, &latents, &T_lat);
+    bool               ok    = pipeline_encode(&g_pipeline, planar.data(), T, sr, &latents, &T_lat, &job->error);   // HERESY 2484
     active_job_set(nullptr);
     if (!ok) {
         job->status.store(job->cancel.load() ? JobStatus::CANCELLED : JobStatus::FAILED);
@@ -2646,6 +2661,14 @@ static void run_job(std::shared_ptr<Job> job, Yue2Request request) {
     double render_seconds =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
 
+    for (const Yue2Song & song : songs) {   // HERESY 2433: written before status, as the other result fields
+        if (ok && !song.score_warning.empty() && job->score_warning.empty()) {
+            job->score_warning = song.score_warning;
+        }
+        if (ok && song.window_held > 0.0 && job->window_held == 0.0) {   // HERESY 2509
+            job->window_held = song.window_held;
+        }
+    }
     if (!ok) {
         active_job_set(nullptr);
         job->error = g_pipeline.last_error.empty() ? "generation failed; the server log has the reason" : g_pipeline.last_error;
@@ -2759,6 +2782,7 @@ static void print_usage(const char * prog) {
             "  --vae-core <N>         VAE tile core frames (default: 512)\n"
             "  --vae-halo <N>         VAE tile halo frames (default: 16)\n"
             "  --no-fa                Disable flash attention\n"
+            "  --no-fa-nar            Flash attention off in the sound half (NAR) only (ggml Vulkan on an Intel Arc)\n"
             "  --clamp-fp16           Clamp hidden states to FP16 range\n",
             prog);
 }
@@ -2853,6 +2877,8 @@ int main(int argc, char ** argv) {
             params.vae_halo = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "--no-fa")) {
             params.no_fa = true;
+        } else if (!strcmp(argv[i], "--no-fa-nar")) {   // HERESY 2450
+            params.no_fa_nar = true;
         } else if (!strcmp(argv[i], "--clamp-fp16")) {
             params.clamp_fp16 = true;
         } else if (!strcmp(argv[i], "--fp16-matmul")) {  // Local addition
@@ -3301,6 +3327,11 @@ int main(int argc, char ** argv) {
             res.status = 400;
             res.set_content(json_string("error", "provide exactly one of audio (encode) or src_latents (decode)"),
                             "application/json");
+            return;
+        }
+        if (has_audio && !g_pipeline.vae_has_encoder) {   // HERESY 2484: started with decoders alone, no encoder to load
+            res.status = 503;
+            res.set_content(json_string("error", pipeline_no_encoder_reason(&g_pipeline)), "application/json");
             return;
         }
         Yue2Request request;

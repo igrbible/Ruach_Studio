@@ -18,7 +18,7 @@ O Leitor lê com o Fish Audio Drama 3 (35B MoE, 3B ativos) através do audio.cpp
 
 ![A escolha da quantização e a linha por baixo](guide/reader-tier.png "Quantização: o que lê, onde, e quanto vai demorar este texto")
 
-**Quantização** diz qual quantização lê e onde. **Auto · velocidade primeiro** (o padrão) e **Auto · qualidade primeiro** escolhem pela memória livre quando a leitura começa; uma quantização nomeada na lista fica nela. A linha por baixo diz o que leria agora e em que placa, um segundo de fala em quantos segundos, e quanto demorará este texto com o carregamento do modelo.
+**Quantização** diz qual quantização lê e onde. **Auto · qualidade primeiro** (o padrão) pega o Q8_0 onde ele couber: 20 bancos de especialistas na RAM numa placa com 23.6 GB livres; senão os 40 bancos na memória da máquina numa placa com 7.4 GB livres e 40 GB de memória livre; depois o Q6_K; o Q4_K só onde nenhum dos dois cabe (uma placa pequena, pouca memória) e numa placa Intel. **Auto · velocidade primeiro** pega o Q4_K primeiro. Os dois escolhem pela memória livre no início; uma quantização nomeada na lista fica nela. O Q8_0 é o padrão porque ao ouvido saiu o mais limpo: no teste bruto de 09.11.2026 nenhum take do Q8_0 foi marcado como errado em 20, do Q6_K um em 20, do Q4_K sete em 50, todas as marcas na mesma junção de uma frase. A instalação baixa o Q8_0 (41.1 GB) quando a maior placa da máquina tem 24 GB ou mais, senão o Q4_K (24.9 GB); numa placa menor o Q8_0 se baixa ao lado: `bash tools/narrator-setup.sh --quant Q8_0`. Sem ele o Auto lê com a quantização que houver. A linha abaixo diz o que leria agora e em qual placa, um segundo de fala em quantos segundos e quanto este texto levaria com o carregamento do modelo.
 
 Medido numa RTX 3090 em 09.11.2026 com um pedaço russo de 27 s. RTF são os segundos para ler um segundo de fala; o Whisper ouviu certa cada letra, salvo onde a linha diz outra coisa:
 
@@ -35,6 +35,25 @@ Medido numa RTX 3090 em 09.11.2026 com um pedaço russo de 27 s. RTF são os seg
 | Q8_0 | só o processador | — | 44 GB | 7.0 | o processador |
 
 As linhas ao lado de um trabalho de dataset são pessimistas: o cálculo da placa e o processador eram partilhados com ele, e uma placa só sua lê-as mais depressa. **Q8_0 · 20 bancos de especialistas na RAM, 40 numa placa partilhada** fica no Q8_0: 20 bancos na RAM numa placa com 23.6 GB livres; quando a placa está partilhada, os 40 na memória da máquina; com **Auto** como placa, o processador por último. A primeira leitura carrega o modelo; numa placa ele fica carregado entre leituras.
+
+### Numa Intel Arc ou noutra placa com Vulkan <!-- #on-an-intel-arc-or-another-vulkan-card -->
+
+O Drama 3 lê numa placa Intel (Arc) pela compilação Vulkan do audio.cpp, num nível próprio: Q4_K com 28 dos seus 40 bancos de especialistas na memória da máquina, cerca de 11 GB na placa e 16 GB de memória livre. Medido numa Arc Pro B50 (16 GB) em 12.11.2026: um segundo de fala em 3.3 s, o carregamento do modelo 53 s. Quando falta memória à placa, o motor passa mais quatro bancos para a memória da máquina e continua a ler. Numa placa Intel o Auto pega só este nível, e uma quantização feita para outra placa é recusada ali pelo nome; o Drama 3 nunca lê no processador em nome da placa: quando a placa não aguenta, a leitura diz isso. O carregador do Vulkan só vê o driver Intel da Mesa, de modo que o renderizador por software do processador nunca passa pela placa. Por enquanto o Leitor manda o Drama 3 para a compilação Vulkan só numa placa Intel; a compilação Vulkan do audio.cpp também roda noutras placas com Vulkan, mas o Leitor ainda não as encaminha.
+
+Os pacotes do sistema, uma vez (os cabeçalhos do Vulkan, o compilador de shaders glslc, os cabeçalhos SPIR-V, os drivers Vulkan da Mesa e o vulkaninfo):
+
+```
+# Debian, Ubuntu
+sudo apt install libvulkan-dev glslc spirv-headers mesa-vulkan-drivers vulkan-tools
+# Fedora
+sudo dnf install vulkan-loader-devel glslc spirv-headers-devel mesa-vulkan-drivers vulkan-tools
+# Arch
+sudo pacman -S --needed vulkan-icd-loader vulkan-headers shaderc spirv-headers vulkan-intel vulkan-tools
+```
+
+Confere que o driver vê a placa: `vulkaninfo --summary` lista-a em Devices com o driver da Mesa, como `deviceName = Intel(R) Arc(tm) Pro B50 Graphics (BMG G21)` e `driverName = Intel open-source Mesa driver`. Uma lista só com `llvmpipe` quer dizer que o driver não está lá. `bash tools/narrator-setup.sh --vulkan-check` diz o que há aqui e nomeia os pacotes que faltam no teu sistema.
+
+Depois a compilação: `bash tools/narrator-setup.sh` faz sozinho a compilação Vulkan numa máquina com placa Intel, ao lado da outra; `bash tools/narrator-setup.sh --build --vulkan` faz só ela, em `build/audio.cpp/build/linux-vulkan-release/`. Precisa de cmake e de um compilador C++, como as outras; a instalação nunca instala um pacote do sistema, nomeia-o. Medido no Ubuntu 24.04 com Mesa 25.2 e Linux 7.0; os detalhes estão em `docs/NARRATOR-VULKAN.md`.
 
 ### Notas das quantizações <!-- #grades-of-the-quants -->
 
@@ -59,7 +78,7 @@ As emoções e os sons vão entre parênteses retos, como o Drama 3 os lê: `[ca
 
 ### Tónicas e o agudo <!-- #stresses-and-the-acute -->
 
-**Pôr as tónicas** marca as vogais tónicas antes de o motor ler: as suas próprias marcas ficam como escritas (o agudo, U+0301, como em `звени́т`), depois o seu **Dicionário de tónicas**, depois o grande dicionário da língua, onde existe: o do ucraniano vem com o Studio (o de lang-uk, dos «Словники України» do ULIF), e para o russo ou qualquer outra língua pode ligar o seu (`docs/NARRATOR-DICTIONARIES.md`); uma palavra com duas tónicas fica entregue ao contexto. **Verificar tónicas** mostra o texto como o motor o vai ler. Uma palavra mal lida numa gravação: **Corrigir** na sua leitura, escolha o pedaço, ponha a tónica, **Lembrar a tónica no dicionário** e **Ler o pedaço de novo**.
+**Pôr as tónicas** marca as vogais tónicas antes de o motor ler: as suas próprias marcas ficam como escritas (o agudo, U+0301, como em `звени́т`), depois o seu **Dicionário de tónicas**, depois o grande dicionário da língua, onde existe: os do ucraniano e do russo vêm com o Studio (o do ucraniano, de lang-uk, dos «Словники України» do ULIF; o do russo, o Dicionário gramatical de A. A. Zaliznyak, desdobrado a partir dos dados do gramdict, CC BY-NC 4.0: livre para uso não comercial), e para qualquer outra língua pode ligar o seu (`docs/NARRATOR-DICTIONARIES.md`); uma palavra com duas tónicas fica entregue ao contexto. **Verificar tónicas** mostra o texto como o motor o vai ler. Uma palavra mal lida numa gravação: **Corrigir** na sua leitura, escolha o pedaço, ponha a tónica, **Lembrar a tónica no dicionário** e **Ler o pedaço de novo**.
 
 ### O mapa de glifos do LCV <!-- #the-lcv-glyph-map -->
 
@@ -67,7 +86,7 @@ As emoções e os sons vão entre parênteses retos, como o Drama 3 os lê: `[ca
 
 ### O ouvido e a loudness <!-- #the-ear-and-the-loudness -->
 
-**Ouvir cada pedaço (Whisper)**, ligado por padrão: o Whisper large-v3 no processador ouve cada pedaço enquanto o motor lê o seguinte. Um pedaço em que ouve uma palavra acrescentada, omitida ou trocada, ou cujas letras se afastam do texto 12 % ou mais (uma repetição, um salto, um murmúrio), é lido de novo com outra semente, até três leituras, e fica a mais próxima do texto. O cartão da leitura diz que pedaços foram relidos e porquê, a palavra com o seu momento na gravação. A gravação é unida a −16 LUFS, como os podcasts, com os picos nunca acima de −1 dBFS. Um ouvido que não conseguiu carregar é dito na leitura e na nota da gravação, nunca tomado por uma leitura limpa.
+**Ouvir cada pedaço (Whisper)**, ligado por padrão: o Whisper large-v3 no processador ouve cada pedaço enquanto o motor lê o seguinte. Um pedaço em que ouve uma palavra acrescentada, omitida ou trocada, ou cujas letras se afastam do texto 12 % ou mais (uma repetição, um salto, um murmúrio), é lido de novo com outra semente, até três leituras, e fica a mais próxima do texto. O cartão da leitura diz que pedaços foram relidos e porquê, a palavra com o seu momento na gravação. A gravação é unida a −16 LUFS, como os podcasts, com os picos nunca acima de −1 dBFS. Um ouvido que não conseguiu carregar é dito na leitura e na nota da gravação, nunca tomado por uma leitura limpa. Desligado, o motor lê sem ouvir: nenhum pedaço é lido de novo pelas suas palavras, nenhuma letra é contada, e o cartão da leitura e a nota do take dizem «Whisper desligado», nunca uma leitura limpa. **Verificar com Whisper** numa leitura terminada, ou no menu de um take do Leitor na Biblioteca, ouve um take depois: o take como soa é cortado onde está cada pedaço e ouvido contra as palavras que o motor devia ler; as letras erradas e cada palavra marcada, com o seu tempo no take, vão para a nota do take e para `whisper-check.json` ao lado dele. O seu áudio não é tocado.
 
 ### De uma gravação <!-- #from-a-recording -->
 

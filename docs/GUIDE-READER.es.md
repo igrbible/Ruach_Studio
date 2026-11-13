@@ -18,7 +18,7 @@ El Lector lee con Fish Audio Drama 3 (35B MoE, 3B activos) a través de audio.cp
 
 ![El selector de cuantización y la línea de debajo](guide/reader-tier.png "Cuantización: qué lee, dónde y cuánto tardará este texto")
 
-**Cuantización** dice qué cuantización lee y dónde. **Auto · primero la velocidad** (la predeterminada) y **Auto · primero la calidad** eligen por la memoria libre cuando empieza la lectura; una cuantización nombrada en la lista se queda en ella. La línea de debajo dice qué leería ahora y en qué tarjeta, un segundo de voz en cuántos segundos, y cuánto tardará este texto con la carga del modelo.
+**Cuantización** dice qué cuantización lee y dónde. **Auto · primero la calidad** (por defecto) toma Q8_0 donde quepa: 20 bancos de expertos en RAM en una tarjeta con 23.6 GB libres; si no, los 40 bancos en la memoria de la máquina en una tarjeta con 7.4 GB libres y 40 GB de memoria libre; después Q6_K; Q4_K solo donde no cabe ninguno (una tarjeta pequeña, poca memoria) y en una tarjeta Intel. **Auto · primero la velocidad** toma primero Q4_K. Ambos eligen según la memoria libre al empezar; una cuantización nombrada en la lista se mantiene. Q8_0 va por defecto porque al oído salió la más limpia: en la prueba en crudo del 09.11.2026 ninguna toma de Q8_0 se marcó como errónea de 20, de Q6_K una de 20, de Q4_K siete de 50, todas las marcas en una misma juntura de una frase. La instalación descarga Q8_0 (41.1 GB) cuando la tarjeta más grande de la máquina tiene 24 GB o más, si no Q4_K (24.9 GB); en una tarjeta menor, Q8_0 se descarga al lado: `bash tools/narrator-setup.sh --quant Q8_0`. Sin ella Auto lee con la cuantización que haya. La línea de abajo dice qué leería ahora y en qué tarjeta, un segundo de voz en cuántos segundos y cuánto tardaría este texto con la carga del modelo.
 
 Medido en una RTX 3090 el 09.11.2026 con un trozo ruso de 27 s. RTF son los segundos que lleva leer un segundo de voz; Whisper oyó bien cada letra salvo que la fila diga otra cosa:
 
@@ -35,6 +35,25 @@ Medido en una RTX 3090 el 09.11.2026 con un trozo ruso de 27 s. RTF son los segu
 | Q8_0 | el procesador solo | — | 44 GB | 7.0 | el procesador |
 
 Las filas junto a un trabajo de dataset son pesimistas: el cálculo de la tarjeta y el procesador se compartían con él, y una tarjeta propia las lee más rápido. **Q8_0 · 20 bancos de expertos en RAM, 40 en una tarjeta compartida** se queda en Q8_0: 20 bancos en RAM en una tarjeta con 23.6 GB libres; cuando la tarjeta está compartida, los 40 en la memoria de la máquina; con **Auto** como tarjeta, el procesador al final. La primera lectura carga el modelo; en una tarjeta queda cargado entre lecturas.
+
+### En una Intel Arc u otra tarjeta con Vulkan <!-- #on-an-intel-arc-or-another-vulkan-card -->
+
+Drama 3 lee en una tarjeta Intel (Arc) con la compilación Vulkan de audio.cpp, en un nivel propio: Q4_K con 28 de sus 40 bancos de expertos en la memoria de la máquina, unos 11 GB en la tarjeta y 16 GB de memoria libre. Medido en una Arc Pro B50 (16 GB) el 12.11.2026: un segundo de voz en 3.3 s, la carga del modelo 53 s. Cuando a la tarjeta le falta memoria, el motor pasa cuatro bancos más a la memoria de la máquina y sigue leyendo. En una tarjeta Intel, Auto toma solo este nivel, y una cuantización pensada para otra tarjeta se rechaza allí por su nombre; Drama 3 nunca lee en el procesador en nombre de la tarjeta: si la tarjeta no puede, la lectura lo dice. Al cargador de Vulkan solo se le muestra el controlador Intel de Mesa, así que el renderizador por software del procesador nunca pasa por la tarjeta. Por ahora el Lector envía Drama 3 a la compilación Vulkan solo en una tarjeta Intel; la compilación Vulkan de audio.cpp funciona también en otras tarjetas con Vulkan, pero el Lector aún no las encamina.
+
+Los paquetes del sistema, una vez (las cabeceras de Vulkan, el compilador de shaders glslc, las cabeceras SPIR-V, los controladores Vulkan de Mesa y vulkaninfo):
+
+```
+# Debian, Ubuntu
+sudo apt install libvulkan-dev glslc spirv-headers mesa-vulkan-drivers vulkan-tools
+# Fedora
+sudo dnf install vulkan-loader-devel glslc spirv-headers-devel mesa-vulkan-drivers vulkan-tools
+# Arch
+sudo pacman -S --needed vulkan-icd-loader vulkan-headers shaderc spirv-headers vulkan-intel vulkan-tools
+```
+
+Comprueba que el controlador ve la tarjeta: `vulkaninfo --summary` la lista en Devices con el controlador de Mesa, como `deviceName = Intel(R) Arc(tm) Pro B50 Graphics (BMG G21)` y `driverName = Intel open-source Mesa driver`. Una lista con `llvmpipe` solo significa que el controlador no está. `bash tools/narrator-setup.sh --vulkan-check` dice qué hay aquí y nombra los paquetes que faltan en tu sistema.
+
+Después la compilación: `bash tools/narrator-setup.sh` hace por sí mismo la compilación Vulkan en una máquina con tarjeta Intel, junto a la otra; `bash tools/narrator-setup.sh --build --vulkan` hace solo esa, en `build/audio.cpp/build/linux-vulkan-release/`. Necesita cmake y un compilador de C++, como las otras; la instalación nunca instala un paquete del sistema, lo nombra. Medido en Ubuntu 24.04 con Mesa 25.2 y Linux 7.0; los detalles están en `docs/NARRATOR-VULKAN.md`.
 
 ### Notas de las cuantizaciones <!-- #grades-of-the-quants -->
 
@@ -59,7 +78,7 @@ Las emociones y los sonidos van entre corchetes, como los lee Drama 3: `[calm]`,
 
 ### Acentos y la tilde aguda <!-- #stresses-and-the-acute -->
 
-**Poner los acentos** marca las vocales tónicas antes de que el motor lea: tus propias marcas quedan como están escritas (la tilde aguda, U+0301, como en `звени́т`), luego tu **Diccionario de acentos**, luego el gran diccionario del idioma, donde lo hay: el del ucraniano viene con el Studio (el de lang-uk, de los «Словники України» del ULIF), y para el ruso o cualquier otro idioma conectas el tuyo (`docs/NARRATOR-DICTIONARIES.md`); una palabra con dos acentos se deja al contexto. **Revisar acentos** muestra el texto como lo leerá el motor. Una palabra mal leída en una toma: **Corregir** en su lectura, elige su trozo, pon el acento, **Recordar el acento en el diccionario** y **Volver a leer el trozo**.
+**Poner los acentos** marca las vocales tónicas antes de que el motor lea: tus propias marcas quedan como están escritas (la tilde aguda, U+0301, como en `звени́т`), luego tu **Diccionario de acentos**, luego el gran diccionario del idioma, donde lo hay: los del ucraniano y del ruso vienen con el Studio (el del ucraniano, de lang-uk, de los «Словники України» del ULIF; el del ruso, el Diccionario gramatical de A. A. Zaliznyak, desplegado de los datos de gramdict, CC BY-NC 4.0: libre para uso no comercial), y para cualquier otro idioma conectas el tuyo (`docs/NARRATOR-DICTIONARIES.md`); una palabra con dos acentos se deja al contexto. **Revisar acentos** muestra el texto como lo leerá el motor. Una palabra mal leída en una toma: **Corregir** en su lectura, elige su trozo, pon el acento, **Recordar el acento en el diccionario** y **Volver a leer el trozo**.
 
 ### El mapa de glifos de LCV <!-- #the-lcv-glyph-map -->
 
@@ -67,7 +86,7 @@ Las emociones y los sonidos van entre corchetes, como los lee Drama 3: `[calm]`,
 
 ### El oído y la sonoridad <!-- #the-ear-and-the-loudness -->
 
-**Escuchar cada trozo (Whisper)**, activado por defecto: Whisper large-v3 en el procesador escucha cada trozo mientras el motor lee el siguiente. Un trozo en el que oye una palabra añadida, omitida o cambiada, o cuyas letras se alejan del texto un 12 % o más (una repetición, un salto, un balbuceo), se vuelve a leer con otra semilla, hasta tres lecturas, y se queda la más cercana al texto. La tarjeta de la lectura dice qué trozos se releyeron y por qué, la palabra con su momento en la toma. La toma se une a −16 LUFS, como los podcasts, con los picos nunca por encima de −1 dBFS. Un oído que no pudo cargar se dice en la lectura y en la nota de la toma, nunca se toma por una lectura limpia.
+**Escuchar cada trozo (Whisper)**, activado por defecto: Whisper large-v3 en el procesador escucha cada trozo mientras el motor lee el siguiente. Un trozo en el que oye una palabra añadida, omitida o cambiada, o cuyas letras se alejan del texto un 12 % o más (una repetición, un salto, un balbuceo), se vuelve a leer con otra semilla, hasta tres lecturas, y se queda la más cercana al texto. La tarjeta de la lectura dice qué trozos se releyeron y por qué, la palabra con su momento en la toma. La toma se une a −16 LUFS, como los podcasts, con los picos nunca por encima de −1 dBFS. Un oído que no pudo cargar se dice en la lectura y en la nota de la toma, nunca se toma por una lectura limpia. Apagado, el motor lee sin escuchar: ningún trozo se vuelve a leer por sus palabras, no se cuentan letras, y la tarjeta de la lectura y la nota de la toma dicen «Whisper apagado», nunca una lectura limpia. **Comprobar con Whisper** en una lectura terminada, o en el menú de una toma del Lector en la Biblioteca, escucha una toma después: la toma tal como suena se corta donde está cada trozo y se escucha frente a las palabras que se pidió leer al motor; las letras erradas y cada palabra marcada, con su tiempo en la toma, van a la nota de la toma y a `whisper-check.json` a su lado. Su audio no se toca.
 
 ### Desde una grabación <!-- #from-a-recording -->
 

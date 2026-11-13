@@ -4,11 +4,11 @@
 
 <p align="center"><b>OSEM</b> <i>(say it: awesome)</i> · Open Source, Engaged &amp; Musical</p>
 
-<p align="center"><a href="https://ruachstudio.art">Website</a> · <a href="https://github.com/igrbible/Ruach_Studio">GitHub</a> · <a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Models on Hugging Face</a> · <a href="docs/GUIDE.md">The guide</a> · <a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02"><b>☕ 24/7 coffee for Viktor and Claude</b></a></p>
+<p align="center"><a href="https://ruachstudio.art">Website</a> · <a href="https://github.com/igrbible/Ruach_Studio">GitHub</a> · <a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Models on Hugging Face</a> · <a href="https://github.com/igrbible/Awesome-YUE2">Awesome YUE2</a> · <a href="docs/GUIDE.md">The guide</a> · <a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02"><b>☕ 24/7 coffee for Viktor and Claude</b></a></p>
 
 > Ruach Studio is open music generation that runs on your own hardware: the model, the score, the adapters and every take stay yours, and nothing is rented by the token. Open models are now good enough to stand on their own, and what was missing is the Studio around them: that is what we build, in the open. Music should be free to make and to share: whoever has no voice, no instrument and no studio still has the right to lay their thoughts and feelings onto sound.
 
-> **⚠ Not on free cloud GPUs.** Ruach Studio does not run on Google Colab, Kaggle or any free notebook GPU, so don't spend an evening on it there: it is a whole studio, not a notebook. It builds its C++/CUDA engine on the machine it lives on, keeps a server and a lab of Python services running beside it, and takes about 34–41 GB of disk (74–84 GB with the Artist). A free session's card, memory, wiped disk and hours-long limit cannot hold that. It wants your own Linux computer, or a server you rent and keep, with an NVIDIA card: 24 GB for everything, 16 GB with the smaller model copies.
+> **⚠ Not on free cloud GPUs.** Ruach Studio does not run on Google Colab, Kaggle or any free notebook GPU, so don't spend an evening on it there: it is a whole studio, not a notebook. It builds its C++/CUDA engine on the machine it lives on, keeps a server and a lab of Python services running beside it, and takes about 23–26 GB of disk (62–69 GB with the Artist). A free session's card, memory, wiped disk and hours-long limit cannot hold that. It wants your own Linux computer, or a server you rent and keep, with an NVIDIA card: 24 GB for everything, 16 GB with the smaller model copies.
 
 > **⚠ The screen.** The Studio's design adapts to the window, but everything has its limit. It is made for a browser window of **1920×1080 at 100 % zoom**; the ideal monitor is **2K (2560×1440), 22″ or larger, 16:9 or wider**.
 
@@ -26,14 +26,14 @@ If you came looking for a **YuE2 WebUI** or a **YuE studio**: this is one, grown
 > - **The Refiner**: thirty-some nodes on a canvas like ComfyUI's: stems (BS-Roformer, htdemucs), debuzz, a remaster to a loudness target, upscales (UniverSR, Apollo-vocal), sound to MIDI (MuScriptor, Basic Pitch), a MIDI orchestra on the take's own score (SFZ, and Pianoteq if you own it), nature laid under the song, a lyrics check by Whisper; and a DAW with lanes, EQ, gate, compressor, sends, automation and an audio editor's cuts and fades.
 > - **Your own instruments**: the Bank Builder turns recordings of one instrument (a duduk, a shofar) into a tuned, looped SFZ bank for the DAW.
 > - **The Artist and the Videographer**: the cover, the 16:9 and the 9:16 from your words (Qwen-Image 2512 with Lightning, SeedVR2 to upscale); a music video planned, its key frames painted around one hero, moving shots (MiniMax H3), cut on the beat, with a look of its own (3D LUTs, grain, vignette).
-> - **The Narrator** (new in 2.0.7): your text read aloud by Fish Audio's Drama 3 on audio.cpp, in twelve languages, in the engine's own voice or a voice of your own from a short clip (cloned only with its owner's consent), as narration or as a dialog with a voice for each speaker, with emotion tags and a stress dictionary of your own; the Ukrainian stresses come with it (lang-uk's dictionary), and a big dictionary of your own plugs in for Russian or any other language; Whisper reads every piece back and marks a word lost or added; the quant is chosen by your card's free memory, and it reads on the processor too. Built with Fish Audio.
-> - **The Narrator's second engine** (coming in 2.0.8): Higgs Audio v3 (Boson AI) beside Drama 3. Its weights come from Boson's own source under Boson's licence, fetched by your own hand; we never mirror them.
+> - **The Narrator** (new in 2.0.7): your text read aloud by Fish Audio's Drama 3 on audio.cpp or, from 2.0.8, by Boson AI's Higgs TTS 3 beside it, in twelve languages, in the engine's own voice, one of twelve stock voices, a voice built from a description or a voice of your own from a short clip (cloned only with its owner's consent), as narration or as a dialog with a voice for each speaker, with emotion tags and a stress dictionary of your own; the stresses of Ukrainian (lang-uk's dictionary), Russian (A. A. Zaliznyak's) and Belarusian (GrammarDB) come with it, figures are said in words in the case the sentence asks, and a big dictionary of your own plugs in for any other language; Whisper reads every piece back and marks a word lost or added; the quant is chosen by your card's free memory, and it reads on an Intel Arc or the processor too. Built with Fish Audio.
+> - **The Narrator's second engine** (new in 2.0.8): [Higgs TTS 3](https://huggingface.co/bosonai/higgs-tts-3-4b) by Boson AI (also called Higgs Audio v3) beside Drama 3. Its weights come from Boson's own repositories under Boson's licence, fetched by your own hand; we never mirror them ([docs/NARRATOR-HIGGS.md](docs/NARRATOR-HIGGS.md)).
 > - **LoRA training on your own songs**, in the Studio, unquantized (bf16), on several cards, with telemetry that tells you which epochs to hear first. Adapters stack on measured roads, under a measured ceiling, each with its own wave through the song.
 > - **A librarian for every take**: workspaces, sixteen reactions, notes, locks and a trash that gives back; a family tree for every take; blind sets for honest listening; up to twelve versions in one compare window, synced by their own sound; Content Credentials (C2PA) signed into every download.
 > - **A guard against garbage**: a broken score is caught in seconds and the run stopped, before a minute of GPU is wasted on it; a failure is said as a failure, never left to look done.
 > - **Into your DAW** (experimental): a REAPER project or a DAWproject with the stems, the score as MIDI, the tempo, the sections and your markers as regions, and the lyrics on the timeline.
 > - **Scripts and agents**: an API (OpenAPI 3.1) and an MCP server, on your machine and your network.
-> - **Your language**: the page whole in English, Russian, Ukrainian, Belarusian, Greek, Spanish, Italian, French, Portuguese, German, Japanese and Chinese, at a click in the bar, the logo's words with it.
+> - **Your language**: the page whole in English, Russian, Ukrainian, Belarusian, Greek, Spanish, Italian, French, Portuguese, German, Japanese, Chinese and Hebrew (right to left), at a click in the bar, the logo's words with it.
 > - **Several GPUs, several jobs**: synthesis on one card, training or narration on the others; the Studio installs as an app, over https, and plays on a phone.
 >
 > ### **WHY RUACH STUDIO'S YuE2 BEATS SUNO, AND WHERE IT DOES NOT (YET)**
@@ -51,7 +51,7 @@ If you came looking for a **YuE2 WebUI** or a **YuE studio**: this is one, grown
 > | into a DAW | a REAPER project with the score, sections and lyrics (experimental) | audio stems |
 > | the code | open, every change documented | closed |
 > | **polish out of the box** | **less**: a mix can buzz (Debuzz helps), lyrics can drift (the lyrics check finds where), some instruments YuE2 plays thinly or not at all (a LoRA teaches them) | **more** |
-> | **what you need** | **an NVIDIA GPU (24 GB for everything at full precision), Linux, 34 to 41 GB of disk for the install, 99 to 204 GB with every room ([what it downloads](#what-it-downloads))** | a browser |
+> | **what you need** | **an NVIDIA GPU (24 GB for everything at full precision), Linux, 22.5 to 25.9 GB of disk for the install, 122 to 240 GB with every room ([what it downloads](#what-it-downloads))** | a browser |
 > | **the licence of the songs** | the YuE2 weights are CC BY-NC 4.0 with an individual creator permission (M-A-P, 16.09.2026): a musician, a creator or a personal user acting on their own may publish, sell and license the songs, free of charge; a company needs the authors' licence ([MODEL_LICENSE](https://github.com/multimodal-art-projection/YuE/blob/main/MODEL_LICENSE)) | SUNO's terms per plan |
 >
 > Every week a video says some model *KILLS* SUNO. This is not a model: it is a workstation around one, open to the bone.
@@ -66,27 +66,27 @@ Around the model there is a whole studio of eight rooms: the **Musician** makes 
 
 ## What It Downloads
 
-Measured file by file against the pinned lists of the Studio's Hugging Face repositories, and on a fresh install's disk (01.11.2026, our decoders 10.11.2026; 1 GB = 10⁹ bytes). A model takes on the disk exactly what it downloads. The install brings the Musician, the Librarian and the Refiner's chain; every other room comes only when you ask for it, from **Engine → Models and LoRAs → By room** (it measures the free disk first and fetches nothing that would not fit with 2 GB to spare) or from `launcher/extras.sh` in a terminal. The card decides the sizes, as the install does.
+Measured file by file against the pinned lists of the Studio's Hugging Face repositories (12.11.2026), the program and its Pythons on a fresh install's disk (01.11.2026; 1 GB = 10⁹ bytes). A model takes on the disk exactly what it downloads. Since 2.0.7 the install brings only what a song needs: the program, its Pythons, our fine-tune at the card's quant and two decoders. Everything else comes only when you ask for it: the Musician's other parts from **Engine → Models and LoRAs**, each with its size, and every other room from **Engine → Models and LoRAs → By room** (it measures the free disk first and fetches nothing that would not fit with 2 GB to spare) or from `launcher/extras.sh` in a terminal. The card decides the sizes, as the install does.
 
 | | what it is | 24 GB card | 12–16 GB card | 8 GB card |
 |---|---|---:|---:|---:|
 | the program | the Studio's code (0.2 GB downloaded) and its engine, built here | 0.9 GB | 0.9 GB | 0.9 GB |
 | its two Pythons | `.venv` and `.venv-art`, PyTorch for CUDA 12.8 in each (8.7 GB downloaded) | 16.5 GB | 16.5 GB | 16.5 GB |
-| YuE2 | m-a-p's YuE2-3B as GGUF and its decoder | 7.7 GB (BF16) | 4.3 GB (Q8_0) | 4.3 GB (Q8_0) |
-| our fine-tune | YuE2-RS-TW 2.0 ×0.75, the Studio's default, at the backbone's quant | 7.2 GB | 3.8 GB | 3.8 GB |
-| our decoder | YuE2-VAE-RS x3 v1, the Studio's default decoder (float32) | 0.8 GB | 0.8 GB | 0.8 GB |
-| the rest | our second decoder (YuE2-VAE-RS x3 v2), the transcriber for covers, Whisper, the stems' models, UniverSR and Apollo-vocal, the LoRAs | 8.5 GB | 8.5 GB | 8.5 GB |
-| **the install** | | **41.6 GB** | **34.9 GB** | **34.9 GB** |
+| our fine-tune | YuE2-RS-TW 2.0 ×0.75, the Studio's default backbone: m-a-p's YuE2-3B with our fine-tune folded in, at the card's quant | 7.2 GB (BF16) | 3.8 GB (Q8_0) | 3.8 GB (Q8_0) |
+| the decoders | m-a-p's Standard, which also encodes a recording, and ours, YuE2-VAE-RS x3 v1, the Studio's default decoder (float32) | 1.3 GB | 1.3 GB | 1.3 GB |
+| **the install** | | **25.9 GB** | **22.5 GB** | **22.5 GB** |
+| + the Musician's parts | our second decoder (YuE2-VAE-RS x3 v2), the transcriber for covers, Whisper, the stems' models, UniverSR and Apollo-vocal, the LoRAs | 8.8 GB | 8.8 GB | 8.8 GB |
 | + Writer | Qwopus3.5-9B through llama.cpp, built here (0.75 GB) | 7.4 GB | 7.4 GB | 6.2 GB (compact) |
 | + Refiner | MuScriptor large (sound to MIDI), FlashSR (the Voice upscale's; else it comes on its first use) | 6.1 GB | 6.1 GB | 6.1 GB |
+| + Narrator | Fish Audio Drama 3, the stresses for Ukrainian, Russian and Belarusian, audio.cpp built here (1.0 GB) | 42.1 GB (Q8_0) | 26.0 GB (Q4_K) | 26.0 GB (Q4_K, partly from RAM) |
 | + Artist | the covers' helpers, Qwen-Image 2512 with Lightning | 42.9 GB (Q6) | 39.3 GB (Q4) | 39.3 GB (Q4, from RAM) |
 | + Videographer | MiniMax H3 int8, SeedVR2 7B sharp | 86.3 GB | needs 24 GB | needs 24 GB |
 | + LoRA Trainer | its base with MERT-v2-FullSong, the style listener | 20.2 GB | 16.3 GB | 12.9 GB |
-| **every room** | | **204.5 GB** | **104.0 GB** | **99.4 GB** |
+| **every room** | | **239.7 GB** | **126.5 GB** | **121.8 GB** |
 
-A card under 7 GB takes Q6_K (the install's models 15.7 GB) or, under 4.5 GB, Q5_K_M without the fine-tune (12.5 GB): short songs only.
+A card under 7 GB takes Q6_K (the install's models 4.3 GB) or, under 4.5 GB, m-a-p's own backbone at Q5_K_M, there being no fine-tune at it (4.0 GB): short songs only.
 
-**Only when you ask for it by name:** another backbone beside yours (BF16 7.2, Q8_0 3.8, Q6_K 2.9, Q5_K_M 2.6 GB); every other sound engine: the IRA, five IRAE, the seven RS-FW merges (RS-FW 2.4 ×0.75 among them, the default before 2.0.6) and RS-TW 2.0 ×0.9 (By room → Sound engines: 100.8 GB at BF16, 53.2 at Q8_0, 40.6 at Q6_K; each also on its own in Engine → Models and LoRAs, 7.2, 3.8 or 2.9 GB); the Artist's ten shared adapters (7.5 GB), each fp8 fine-tune of Qwen-Image 2512 (20.4 GB), Qwen-Image 2.1 under Qwen's research licence (33.1 GB); MiniMax H3's every int8 tier (201 GB) or its BF16 (478 GB), SeedVR2 3B (7.3 GB) or all three (40.2 GB); the style listener in bf16 (22 GB); MuScriptor small or medium (0.2 or 0.6 GB); the 💎 workspaces from the Librarian (5.6 GB, all seven).
+**Only when you ask for it by name:** another backbone beside yours (BF16 7.2, Q8_0 3.8, Q6_K 2.9, Q5_K_M 2.6 GB); every other sound engine: the IRA, five IRAE, the seven RS-FW merges (RS-FW 2.4 ×0.75 among them, the default before 2.0.6) and RS-TW 2.0 ×0.9 (By room → Sound engines: 100.3 GB at BF16, 53.3 at Q8_0, 41.2 at Q6_K; each also on its own in Engine → Models and LoRAs, 7.2, 3.8 or 2.9 GB); the Artist's ten shared adapters (7.5 GB), each fp8 fine-tune of Qwen-Image 2512 (20.4 GB), Qwen-Image 2.1 under Qwen's research licence (33.1 GB); MiniMax H3's every int8 tier (201 GB) or its BF16 (478 GB), SeedVR2 3B (7.3 GB) or all three (40.2 GB); the style listener in bf16 (22 GB); MuScriptor small or medium (0.2 or 0.6 GB); the 💎 workspaces from the Librarian (5.6 GB, all seven).
 
 **Not counted:** the NVIDIA driver and the CUDA toolkit 12.8 (the system's, or Pinokio's own), Pianoteq, Organteq and Airteq (Modartt's, yours to buy or to try, if you want them), and your takes. pip keeps no copy of the wheels it fetched (since 2.0.5; before, `~/.cache/pip` kept 8.7 GB more).
 
@@ -215,7 +215,7 @@ What it needs:
 
 - Linux, an NVIDIA GPU with CUDA. 24 GB runs everything (synthesis in BF16, training in bf16); smaller cards use smaller model copies (Q8_0 3.8 GB, Q6_K, Q5_K_M) and int8 training.
 - An Intel Arc card runs the engine as a beta (oneAPI, `./build.sh --sycl`), chosen as the Studio's card in Engine → GPUs: songs in every mode, adapters, Extend; training, the Artist and the Refiner's GPU steps stay on NVIDIA ([INSTALL.md › Intel Arc (beta)](INSTALL.md#intel-arc-beta)).
-- About 35 GB of disk for the install on a 12–16 GB card and 42 GB on a 24 GB card, measured file by file (01.11.2026; our decoders 10.11.2026): the program 0.9 GB, its two Pythons 16.5 GB, the models 17.5 or 24.2 GB with Ruach Studio's own fine-tune and decoders among them; every other room only when you take it, 99 to 205 GB with all of them: [What It Downloads](#what-it-downloads) says each part. More for your takes.
+- About 22.5 GB of disk for the install on a card of 16 GB or less and 25.9 GB on a 24 GB card, measured file by file (12.11.2026): the program 0.9 GB, its two Pythons 16.5 GB, the models 5.1 or 8.5 GB with Ruach Studio's own fine-tune and decoder among them; every other room only when you take it, 122 to 240 GB with all of them: [What It Downloads](#what-it-downloads) says each part. More for your takes.
 - The CUDA toolkit 12.8, `git`, `cmake`, `gcc`/`g++`, `python3.12`, `ffmpeg`, `curl`. FLAC needs nothing more: the engine encodes it itself, the Refiner and the exports through ffmpeg.
 - Only for the tests: `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test, which checks the engine's encoder against the reference; Node.js 22+ and Chrome or Chromium for the page tests.
 
@@ -225,19 +225,19 @@ What it needs:
 
 One file and nothing to build: the Studio with its engine, its Python, ffmpeg and its own C library inside, for Linux on x86-64. Since 2.0.7 it runs whatever glibc the system has: it carries its own (measured on Debian 10 and CentOS 7, offline, as well as on Ubuntu 22.04 and 24.04, Debian 12 and Fedora 41).
 
-Download `RuachStudio-2.0.7-core-x86_64.AppImage` (1.2 GB) and its `.sha256` from the [v2.0.7 release](https://github.com/igrbible/Ruach_Studio/releases/tag/v2.0.7), then:
+Download `RuachStudio-2.0.8-core-x86_64.AppImage` (1.3 GB) and its `.sha256` from the [v2.0.8 release](https://github.com/igrbible/Ruach_Studio/releases/tag/v2.0.8), then:
 
 ```bash
-sha256sum -c RuachStudio-2.0.7-core-x86_64.AppImage.sha256
-chmod +x RuachStudio-2.0.7-core-x86_64.AppImage
-./RuachStudio-2.0.7-core-x86_64.AppImage
+sha256sum -c RuachStudio-2.0.8-core-x86_64.AppImage.sha256
+chmod +x RuachStudio-2.0.8-core-x86_64.AppImage
+./RuachStudio-2.0.8-core-x86_64.AppImage
 ```
 
 **A window of its own comes up first**, offline too: it says what the Studio is doing, what is missing and whether there is a network, opens the page when the Studio answers (*Open the Studio*), and stops the Studio when you close it. Without a desktop, or with `RUACH_NO_WINDOW=1`, the AppImage speaks in the terminal as before.
 
 **The first start** names each model it needs with its size, the total and the free disk, and downloads nothing until you say so: *Fetch the models* in the window (it wakes only when there is a network), `[Y/n]` in a terminal. It brings only what a song needs: the Studio's default backbone, RS-TW 2.0 ×0.75, at your card's quant, m-a-p's decoder (0.53 GB, which also encodes covers and uploads) and ours, YuE2-VAE-RS x3 v1 (0.8 GB). That is 8.5 GB on a 24 GB card (BF16), 5.1 GB on 7 to 16 GB (Q8_0), 4.3 GB below (Q6_K), and 4.0 GB on the processor or a card under 4.5 GB (m-a-p's YuE2-3B Q5_K_M). Everything else comes from **Engine → Models** when you want it: Whisper for the lyrics check, the transcriber for covers from a recording, our second decoder, upscale, the LoRAs. The stems need the full Python with PyTorch (`lab/install-venv.sh`), which the AppImage does not carry. The page opens at http://127.0.0.1:7777; the Studio keeps its things in `~/.local/share/ruach-studio` (`RUACH_HOME=/another/disk` puts them elsewhere).
 
-**The GPU** is NVIDIA's, with the driver 570 or newer: the RTX 20xx, 30xx, 40xx and 50xx, the GTX 16xx, Quadro RTX and the RTX A and Ada cards, the A100 and the other Ampere cards, the H100 and H200, the B200 and B300. Pascal and Volta run as an experiment (the GTX 10xx, Quadro P, Tesla P4 and P40, Titan V, V100). On any other card, or with none, the Studio computes on the processor, slowly; `CUDA_VISIBLE_DEVICES= ./RuachStudio-2.0.7-core-x86_64.AppImage` makes it do so on any card.
+**The GPU** is NVIDIA's, with the driver 570 or newer: the RTX 20xx, 30xx, 40xx and 50xx, the GTX 16xx, Quadro RTX and the RTX A and Ada cards, the A100 and the other Ampere cards, the H100 and H200, the B200 and B300. Pascal and Volta run as an experiment (the GTX 10xx, Quadro P, Tesla P4 and P40, Titan V, V100). On any other card, or with none, the Studio computes on the processor, slowly; `CUDA_VISIBLE_DEVICES= ./RuachStudio-2.0.8-core-x86_64.AppImage` makes it do so on any card.
 
 **An update** is the next AppImage started in place of this one: your models, songs and settings stay where they are, and its first start asks only for what changed among the models you have. `--fetch-models --only whisper,transcriber` (or `--help` after `--fetch-models`) fetches the packs from a terminal.
 
@@ -272,7 +272,9 @@ Everything the Studio uses, and what for. The engine comes with the repository; 
 
 **The Artist's Python** (`lab/requirements-art.txt`, its own `.venv-art` by `lab/install-venv.sh --art`): torch 2.11 with torchvision; transformers 5 (Qwen-Image's text encoder, the prompt writer, the content filter); diffusers 0.41 (Qwen-Image 2512 and 2.1) with gguf (the quantized transformers) and peft (the LoRAs); scipy (the Beta schedule); [spandrel](https://github.com/chaiNNer-org/spandrel) 0.4 (the upscalers, MIT); omegaconf, rotary-embedding-torch and OpenCV, headless (the Videographer's SeedVR2).
 
-**Models** (`fetch-models.sh`, and `heresy/fetch-heresy.sh` for the extras), all from [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2) at its pin, each file byte for byte as its author publishes it (SheetSage2 F32 converted once by the Studio), but the stems' models, the Kit's three adapters without a licence and Qwen2.5-Omni-7B whole, which come from their authors, and Ruach Studio's own merges and decoders, which come from their own repositories at their pins; sizes, sources and licences in that repo's card and its `MANIFEST.tsv`:
+**The Narrator's Python for Higgs** (`.venv-read`, made by `tools/narrator-higgs-setup.sh`, only when you want Higgs): torch 2.11 (CUDA 12.8 wheels beside an NVIDIA driver, else the processor's) and transformers 5. Drama 3 needs none: it reads through [audio.cpp](https://github.com/0xShug0/audio.cpp), which `tools/narrator-setup.sh` builds here (for an NVIDIA card or the processor, and through Vulkan for an Intel Arc).
+
+**Models** (`fetch-models.sh`, and `heresy/fetch-heresy.sh` for the extras), all from [goldhub/Ruach_Studio_Models_v2](https://huggingface.co/goldhub/Ruach_Studio_Models_v2) at its pin, each file byte for byte as its author publishes it (SheetSage2 F32 converted once by the Studio), but the stems' models, the Kit's three adapters without a licence, Qwen2.5-Omni-7B whole and Higgs TTS 3, which come from their authors, and Ruach Studio's own merges and decoders, which come from their own repositories at their pins; sizes, sources and licences in that repo's card and its `MANIFEST.tsv`:
 
 | | what for | licence |
 |---|---|---|
@@ -299,6 +301,9 @@ Everything the Studio uses, and what for. The engine comes with the repository; 
 | the upscalers you put into `models/artist/upscalers/` (ESRGAN, DAT, HAT, SPAN…) | the Artist's upscale | each its own |
 | Fish Audio Drama 3 (35B MoE, 3B active), as our GGUF quants Q4_K, Q6_K and Q8_0 with its LICENSE and NOTICE, at the Narrator's own pin · extra | the Narrator's voice | Fish Audio Community License 1.0: free for research and non-commercial use, and for commercial use while you and your affiliates take less than USD 500,000 a year from all sources (past that, notify Fish Audio and move to a licence of theirs); never a hosted speech or voice-cloning service for others, at any revenue; never an identifiable person's voice without their consent; never a model created, trained, distilled or improved on what it makes; its watermark kept; «Built with Fish Audio» on what uses it |
 | the Ukrainian stress index, Ruach Studio's, of lang-uk's ukrainian-word-stress 2.1.0 (2.9 million word forms, from ULIF's «Словники України»), with its NOTICE, at the Narrator's pin · extra | the Narrator's Ukrainian stresses | MIT (lang-uk) |
+| the Russian stress index, Ruach Studio's, every form of A. A. Zaliznyak's Grammatical Dictionary (6th ed. 2010, from gramdict's data: 2.2 million word forms), with its NOTICE and LICENSE, at its own pin · extra (from 2.0.8) | the Narrator's Russian stresses | CC BY-NC 4.0: non-commercial use only; commercial use needs gramdict's licence (human@gramdict.ru) |
+| the Belarusian stress index, Ruach Studio's, of GrammarDB RELEASE-202601 of the Belarusian NLP community (1.26 million word forms), with its NOTICE and LICENSE, at its own pin · extra (from 2.0.8) | the Narrator's Belarusian stresses | CC BY-SA 4.0 |
+| [Higgs TTS 3](https://huggingface.co/bosonai/higgs-tts-3-4b) (Boson AI's 4B on Qwen3, also called Higgs Audio v3) and its audio tokenizer, from Boson's own repositories at their pins with their LICENSE files, never from ours; the loader's three small files from multimodalart's port, whose weights are Boson's byte for byte · extra, fetched by your own hand (from 2.0.8, 10.2 GB) | the Narrator's second engine | the Boson Higgs TTS 3 Research and Non-Commercial License (the tokenizer: the Boson Higgs Audio 2 Community License, on Meta's Llama 3 Community License): research and non-commercial use; your own published work with Boson's acknowledgment beside it; hosting it for others, a product for third parties, redistribution or any other commercial use needs Boson's written licence; never a model trained on what it makes; no real person's voice without their explicit consent ([docs/NARRATOR-HIGGS.md](docs/NARRATOR-HIGGS.md)) |
 | YuE2-3B for training (bf16 or int8) · extra | the LoRA trainer | CC BY-NC 4.0 |
 
 **In the page** (one file, made by `build.sh`): the icons (Font Awesome Free, CC BY 4.0; Lucide, ISC), the logo's words (Montserrat, SIL OFL, as paths) and [abcjs](https://www.abcjs.net/) 6.7 (MIT), which draws the staff, are inside it; YuE2 Studio's score checker (Apache-2.0) is ported into it, and the lab carries the original (`lab/abc_tools.py`). **The fonts** (Raleway, Michroma and Liberation Mono by default; Noto Sans and Noto Sans Mono, IBM Plex Sans and Mono, Bodoni Moda, Space Grotesk, Roboto, Lato, Unbounded, Tektur and Jura to choose from; SIL OFL), and the Hebrew and Greek letters' own (David CLM, GPL-2.0 with the font exception; GFS Didot, SIL OFL), are served by the lab from `lab/fonts/`. **The piano roll's instruments** (the Salamander Grand Piano by Alexander Holm; the choir «aah» and the voice «ooh» of FluidR3 GM by Frank Wen; CC BY 3.0, shortened and made mono) are served by the lab from `lab/sounds/`. The page loads no script, stylesheet or font from the internet.
@@ -513,12 +518,28 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
+### Done › 2.0.8 (November 2026)
+
+- **The Writer in two worlds and in order**: a song for the Musician or a reading for the Narrator, the Library's realm knob in its bar, each world with its own tasks, templates, charter and preferences; the document, the Writing room and the LLM assistant's output as three steps of one accordion, a start canvas of cards, the notebook's acts as icons; a song's versions under one name in the list, any version compared with any other, the trash brought back.
+- **A Writing room you can trust**: it writes into the open document (or the Musician's song in hand) and says which, never changes your lyrics unasked, says an empty answer as empty, keeps every answer with its brief and model, counts the question before it is sent and stops when you say so; the Studio's own writer reads 32,768 tokens and runs on an Intel Arc too.
+- **Higgs TTS 3 by Boson AI**, the Narrator's second engine beside Drama 3: fetched from Boson's own repositories by your own hand once you accept its licences, never mirrored by us; a model behind a licence or a gate asks once ([docs/NARRATOR-HIGGS.md](docs/NARRATOR-HIGGS.md)).
+- **The Narrator grown**: figures said in words in the case the sentence asks (Russian, Ukrainian, Greek); the stresses of Russian (A. A. Zaliznyak's Grammatical Dictionary, from gramdict's data) and Belarusian (GrammarDB) come with it beside Ukrainian's, clitic groups and homographs read as the language says them ([NARRATOR-DICTIONARIES.md](docs/NARRATOR-DICTIONARIES.md)); polytonic Greek read as monotonic; Japanese and Chinese cut at their own stops; a seam guard and the Speech de-clicker take out the knock where pieces meet; Whisper's ear off, or a take heard afterwards.
+- **Voices**: a voice builder that makes candidates from a description and keeps the one you choose; twelve stock voices, one for each of the Narrator's languages, made by Drama 3 itself from words alone, and Drama 3's own set. Built with Fish Audio.
+- **The Narrator as the Musician's mirror**: its room in the Musician's cards and icons; a reading read again or reused four ways, with a passport and a menu of its own; a book as one card in the Library; Drama 3 on an Intel Arc through Vulkan, and Q8_0 by default on NVIDIA cards.
+- **The Videographer's two viewers**, as an editor's: the animatic or the clip on the left, the edit's program on the right, one sound in the room; the edit's own tracks for the shots, the titles, the karaoke, the look and the song; your own fonts in the titles; a light copy of a clip for a slow link.
+- **Every model kept at home by its content**, and every pin asked on Hugging Face before each release, so a model deleted or changed upstream is found before a release, not after it.
+- **Long songs whole by default**, held to one window of the model's context; the pieces an experimental choice.
+- **Around the rooms**: a score without its key line sung and its key offered; one rule for every name the Studio gives; the Trainer's eight charts for every run; «aa» and «AA» for the case of a text; notes of 6000 characters; abbreviations kept as themselves in every language; the engine measured on Vulkan beside SYCL (the Arc stays on SYCL).
+
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
 ### To Do › After 2.0.0
 
 2.0.0 is the Studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
 
-- **Right-to-left languages** (Arabic, Hebrew, Urdu), once the page itself runs right to left.
+- **Right-to-left languages beyond Hebrew** (Arabic, Urdu): the page runs right to left since 2.0.7.
 - **The Videographer** (2.1.0): several takes a shot with the best kept, and a shot's last frame carried into the next.
+- **The Narrator, further**: a book downloaded as one file with its chapters, a part edited and the whole book sent into the Refiner; Hebrew read with its vowels from the context.
 - **Windows 11 through WSL2, by Pinokio**: the launcher's steps run inside WSL2 (Ubuntu 24.04), which Pinokio is to set up where it is missing, the path of INSTALL_WINDOWS.md (asked for in [#1](https://github.com/igrbible/Ruach_Studio/issues/1)). A native Windows build is not our initiative: it comes in only as a fork or a pull request made whole, turnkey. In Viktor's words (01.11.2026): «Нейро-ересь вселенская изначально под UNIX/BSD/Linux, и портирование под Виндоуз — это сломанный костыль и имитация жизни» (the universal neuro-heresy was born for UNIX, BSD and Linux, and a port to Windows is a broken crutch and an imitation of life).
 - **Native plugins** for REAPER, Waveform and Bitwig, once the Studio has found its people.
 
@@ -538,8 +559,12 @@ Issues and pull requests are welcome: they are read and answered.
 - **Qwen-Image 2512** by Qwen and its **Lightning** by lightx2v (the artwork's painter) and **Qwen3-4B** (its prompts); **[YuE2 Studio](https://github.com/vrgamegirl19/Yue2_Studio)** (Apache-2.0): the score checker the page and the lab use.
 - **MiniMax H3** with its Qwen3-VL text encoder, the Videographer's moving shots, and **SeedVR2** by ByteDance Seed, the upscale of its shots and of the Artist's pictures.
 - **[Fish Audio Drama 3](https://huggingface.co/fishaudio/drama-3)** (Built with Fish Audio), the Narrator's voice, on **[audio.cpp](https://github.com/0xShug0/audio.cpp)** by ShugoAI.
+- **[Higgs TTS 3](https://huggingface.co/bosonai/higgs-tts-3-4b)** by **Boson AI** (also called Higgs Audio v3), the Narrator's second engine (from 2.0.8), with its **[audio tokenizer](https://huggingface.co/bosonai/higgs-audio-v2-tokenizer)**; the Studio carries only the code that loads them (`lab/reader_engines/higgs`, its loader's three files from multimodalart's port). Boson Higgs TTS 3 is licensed under the Boson Higgs TTS 3 Research and Non-Commercial License, Copyright (c) Boson AI USA, Inc. All Rights Reserved. Built with Higgs TTS 3 licensed from Boson AI USA, Inc. Built with Higgs Materials licensed from Boson AI USA, Inc., Copyright Boson AI USA, Inc., All Rights Reserved and Meta Llama 3 licensed under the Meta Llama 3 Community License, Copyright Meta Platforms, Inc., All Rights Reserved.
 - **[ukrainian-word-stress](https://github.com/lang-uk/ukrainian-word-stress)** by **[lang-uk](https://lang.org.ua)** (MIT; its dictionary generated by Oleksiy Syvokon), from the stresses of **[«Словники України»](https://lcorp.ulif.org.ua/dictua/)** (Dictionaries of Ukraine) of the Ukrainian Lingua-Information Fund of the National Academy of Sciences of Ukraine (ULIF): the Narrator's Ukrainian stresses.
+- **«Грамматический словарь русского языка»** by **Andrey A. Zaliznyak** (6th edition, 2010; the rights: **Anna A. Zaliznyak**), published as data by **[gramdict](https://github.com/gramdict/zalizniak-2010)** (CC BY-NC 4.0; the proofs prepared by Elena A. Grishina): the Narrator's Russian stresses, every form unfolded from its indices (from 2.0.8).
+- **GrammarDB**, the Grammar Database of the Belarusian Language of the **[Belarusian NLP community](https://github.com/Belarus/GrammarDB)** (CC BY-SA 4.0), built from the major dictionaries of Belarusian: the Narrator's Belarusian stresses (from 2.0.8).
 - **David CLM** of the Culmus project (Maxim Iorsh) and **GFS Didot** of the Greek Font Society: the Hebrew and Greek letters.
+- **[Awesome YUE2](https://github.com/igrbible/Awesome-YUE2)**: our curated list of everything the YuE2 community has made (CC0), kept by us.
 
 Every project is linked from the Studio's own Engine → About.
 

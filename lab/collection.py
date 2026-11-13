@@ -13,6 +13,8 @@ The marks live in the Studio's user/ folder (user/collection.json), as the setti
 import json, os, random, re, shutil, subprocess, threading, time, uuid, zipfile
 from pathlib import Path
 
+import name_rule                                    # HERESY 2462: one rule for every name
+
 LOCK = threading.Lock()
 
 
@@ -98,11 +100,20 @@ def ws_name(raw):
 
 
 def fresh_parts(d, ws):
-    """HERESY 1167: the levels of a name being made or given are PART_MAX characters at most (the ones already there pass)."""
+    """HERESY 1167: the levels of a name being made or given are PART_MAX characters at most (the ones already there pass).
+    HERESY 2462 (Viktor 12.11.2026: «сторожа, чтобы не пропускал спец символы в названия пространств»): and each new level keeps the names' rule
+    (name_rule: no / \\ * ~ ? : " < > |, no control character, no dot first), so no level holds a / of its own. « / » between levels stays the
+    Library's section mark, its parents made with it (1161, 1935): a script's «… Drama 3 / Higgs» meant as one name is a section by that contract
+    (2437); the page never lets a typed name hold a /."""
     parts = ws.split(SEP)
     for i, p in enumerate(parts):
-        if SEP.join(parts[:i + 1]) not in d["workspaces"] and len(p) > PART_MAX:
+        if SEP.join(parts[:i + 1]) in d["workspaces"]:
+            continue
+        if len(p) > PART_MAX:
             raise ValueError(f"a workspace's name is {PART_MAX} characters at most on each level (“{p}” has {len(p)})")
+        why = name_rule.refusal(p, 0)
+        if why:
+            raise ValueError(why)
 
 
 def with_parents(d):
@@ -468,6 +479,10 @@ def catalog(outputs, config_dir):
                 req["semantic_keep"] = bool(r.get("semantic_keep"))
                 req["semantic_tokens"] = bool(r.get("semantic_tokens"))
                 req["lyrics_len"] = len(r.get("lyrics") or "")
+                # HERESY 2402: a Narrator's book's part (reader.py writes {run, title, k, of}): the Library shows the book as one card
+                bk = r.get("book")
+                if isinstance(bk, dict) and isinstance(bk.get("run"), str) and isinstance(bk.get("k"), int):
+                    req["book"] = {"run": bk["run"], "title": str(bk.get("title") or "")[:120], "k": bk["k"], "of": int(bk.get("of") or 0)}
                 # HERESY 2058 (Viktor 03.11.2026: «План (Full/Direct/Instrumental)»): an instrumental: its style begins with «Instrumental» (the Creator's
                 # switch writes it so) or its lyrics hold no word to sing (only [section] tags, or nothing); a request without lyrics at all says nothing
                 req["instrumental"] = bool(re.match(r"\s*instrumental\b", str(r.get("style") or ""), re.I)) or (
@@ -503,6 +518,7 @@ def catalog(outputs, config_dir):
                      "react": react_of(reacts.get(d.name, "")),   # HERESY 1873
                      "blind": d.name in blind, "archived": d.name in arch,   # HERESY 1874; 2049
                      "instrumental": bool(req.get("instrumental")),   # HERESY 2058
+                     "book": req.get("book"),   # HERESY 2402: a part of a Narrator's book, or None
                      "own_realm": own_realm(meta, req),   # HERESY 2294
                      "fixed_realm": meta.get("realm") in REALMS})   # HERESY 2298: written on it, it anchors its line
     here = {r["name"] for r in rows}
@@ -554,7 +570,9 @@ def covered(d, items):
     return out
 
 
-NOTE_MAX = 600   # HERESY 1802: a workspace's or an adapter's note (Viktor: «500-600 знаков, чтобы тултипы не разлулись»)
+NOTE_MAX = 6000  # HERESY 1802: a workspace's or an adapter's note (Viktor: «500-600 знаков, чтобы тултипы не разлулись»); 2404 (11.11.2026): 1200, «Не жалко»;
+#                  2438 (12.11.2026: «Скрипты свидетельств обрезаны в заметках. Поднимай лимит до 6000 знаков»): 6000
+TAKE_NOTE_MAX = 6000  # HERESY 2438: a take's own note (4000 before), every note of the Studio's alike
 
 
 def collection_post(config_dir, outputs, data):
@@ -588,6 +606,23 @@ def collection_post(config_dir, outputs, data):
                 d["ws_realm"][top] = "reader"
             else:
                 d["ws_realm"].pop(top, None)
+        elif op == "take-realm":                   # HERESY 2437: an imported take of the Narrator's (a TTS file brought in before /import said its realm)
+            realm = data.get("realm")              # given to its realm, written on it as 2298 wrote the first 117: only an import, only its own root
+            if realm not in REALMS or not names:
+                raise ValueError("take-realm: names and a realm, creator or reader")
+            for n in names:
+                mp, rp = Path(outputs) / n / "meta.json", Path(outputs) / n / "request.json"
+                meta = json.loads(mp.read_text(encoding="utf-8"))
+                req = json.loads(rp.read_text(encoding="utf-8")) if rp.is_file() else {}
+                if meta.get("model") != "import" or req.get("parent"):
+                    raise ValueError(f"{n}: only an imported take of its own (not a version of another) is given a realm")
+            for n in names:
+                mp = Path(outputs) / n / "meta.json"
+                meta = json.loads(mp.read_text(encoding="utf-8"))
+                meta["realm"] = realm
+                tmp = mp.with_suffix(".json.part")
+                tmp.write_text(json.dumps(meta, ensure_ascii=False, indent=4), encoding="utf-8")
+                tmp.replace(mp)
         elif op == "hide":
             d["hidden"] = sorted(set(d["hidden"]) | set(names))
         elif op == "show":
@@ -751,7 +786,9 @@ def collection_post(config_dir, outputs, data):
                 else:
                     d["ratings"].pop(n, None)
         elif op == "note":                         # HERESY 1044: a note on a take, Viktor's own words
-            text = str(data.get("text") or "").strip()[:4000]
+            text = str(data.get("text") or "").strip()
+            if len(text) > TAKE_NOTE_MAX:          # HERESY 2438: cut where it is cut, and said so with «…» (it went silently at 4000)
+                text = text[:TAKE_NOTE_MAX - 2].rstrip() + " \u2026"
             for n in names:
                 if text:
                     d["notes"][n] = text
@@ -850,6 +887,7 @@ def collection_post(config_dir, outputs, data):
             al_ok = lambda n: pl_ws(n) in d["workspaces"] if pl_ws(n) else (outputs / n).is_dir()   # noqa: E731
             al = next((a for a in d["albums"] if a["name"] == name), None)
             if op == "album-create":
+                name_rule.check(data.get("album"), 60)    # HERESY 2462: a new album's name keeps the names' rule, said, never cut quietly
                 if not name:
                     raise ValueError("an album's name")
                 if al:
@@ -858,6 +896,7 @@ def collection_post(config_dir, outputs, data):
             elif not al:
                 raise ValueError("no such album")
             elif op == "album-rename":
+                name_rule.check(data.get("to"), 60)       # HERESY 2462
                 to = album_name(data.get("to"))
                 if not to or any(a["name"] == to for a in d["albums"]):
                     raise ValueError("a new name, not one taken")

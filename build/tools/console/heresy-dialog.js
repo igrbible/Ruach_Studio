@@ -2,7 +2,9 @@
 // HeresyDialog.confirm(text, {ok, cancel, alt, danger, must}) -> Promise<boolean|"alt">; alt: a third button between the two
 // (HERESY 1169), its answer "alt"; must: one of the buttons and nothing else
 // answers (Esc and a click beside the box do not), for a choice the page cannot make for you (HERESY 1166)
-// HeresyDialog.prompt(text, value, {ok, placeholder, max}) -> Promise<string|null>
+// HeresyDialog.prompt(text, value, {ok, placeholder, max, name}) -> Promise<string|null>; name (HERESY 2462): true (its length left to max, the field's own, as before) or {max, file}: the field is a name,
+// held to HeresyNames' rule: a name it refuses is said under the field, with the cleaned one to take, and the dialog stays open
+// HeresyNames.refusal(name, {max, file}) -> "" or what is wrong · cleaned(name, {max, file}) · ask(name, {max, file}) -> Promise<name|null> (HERESY 2462)
 // HeresyDialog.choose(text, items, {cancel, more, filter}) -> Promise<value|null> (HERESY 1167): a list to pick from, one
 // click picks; items [{value, label, depth, current, note}]; more [{label, value}]: buttons under the list; a filter
 // field above the list when it is long
@@ -47,6 +49,45 @@
   }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
 
+  // HERESY 2462 (Viktor 12.11.2026: «нужно прикрутить сторожа, чтобы не пропускал спец символы в названия пространств и треков как в Библиотеке,
+  // так и везде, где присваивается имя или есть возможность переименования. /\*~ и другие»; « / » in a workspace's name had made it a section and
+  // hidden 15 takes, 2437): one rule for every name the page gives, the lab's lab/name_rule.py letter for letter (test_names_2462.py runs both).
+  // A name never holds / \ * ~ ? : " < > | nor an invisible control character, never begins with a dot, keeps to its length; a name that becomes a
+  // file (file: true) never ends with a dot. Spaces at its edges are trimmed, as every field always did. Refused aloud with the cleaned name offered,
+  // never changed quietly. A name already there is not judged: only what is made or renamed.
+  var NAME_FORBIDDEN = '/\\*~?:"<>|';
+  var NAME_CONTROL = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069\ufeff]/;
+  var NAME_CONTROL_ALL = new RegExp(NAME_CONTROL.source, "g");
+  function nameMax(opts) { return opts && opts.max !== undefined ? +opts.max || 0 : 80; }
+  function nameTrim(s) { return String(s == null ? "" : s).replace(/^ +| +$/g, ""); }
+  function nameRefusal(name, opts) {
+    var s = nameTrim(name), max = nameMax(opts), n = Array.from(s).length;
+    var bad = NAME_FORBIDDEN.split("").filter(function (c) { return s.indexOf(c) >= 0; });
+    if (bad.length) return "“" + s + "”: a name cannot hold " + bad.join(" ");
+    if (NAME_CONTROL.test(s)) return "“" + s.replace(NAME_CONTROL_ALL, "") + "”: a name cannot hold invisible control characters";
+    if (s.charAt(0) === ".") return "“" + s + "”: a name cannot begin with a dot";
+    if (opts && opts.file && s.slice(-1) === ".") return "“" + s + "”: the name of a file cannot end with a dot";
+    if (max && n > max) return "“" + s + "”: a name is " + max + " characters at most (it has " + n + ")";
+    return "";
+  }
+  function nameCleaned(name, opts) {
+    var max = nameMax(opts), s = String(name == null ? "" : name).replace(NAME_CONTROL_ALL, "");
+    s = s.replace(/\s*[\/\\|]\s*/g, "-").replace(/\s*:\s*/g, " · ").replace(/[*~?"<>]/g, "").replace(/\s+/g, " ");
+    s = nameTrim(s).replace(/^[. ]+/, "");
+    if (max) s = nameTrim(Array.from(s).slice(0, max).join(""));
+    if (opts && opts.file) s = s.replace(/[. ]+$/, "");
+    return s;
+  }
+  var NAME_SAID = 'Names never hold / \\ * ~ ? : " < > | nor invisible characters.';
+  // a field of the page's own (not this dialog's): its name as it is when the rule takes it, else the question with the cleaned one, null when not taken
+  function nameAsk(name, opts) {
+    var why = nameRefusal(name, opts);
+    if (!why) return Promise.resolve(nameTrim(name));
+    var clean = nameCleaned(name, opts);
+    if (!clean || nameRefusal(clean, opts)) return queued("alert", why + "\n\n" + NAME_SAID, null, {}).then(function () { return null; });
+    return queued("confirm", why + "\n\n" + NAME_SAID, null, { ok: "Use “" + clean + "”" }).then(function (yes) { return yes ? clean : null; });
+  }
+
   function show(kind, text, value, opts) {
     opts = opts || {};
     var parts = String(text || "").split(/\n\s*\n/), title = parts.shift(), body = parts.join("\n\n");
@@ -56,13 +97,33 @@
       back.innerHTML = '<div class="hd-box' + (opts.cls ? " " + esc(opts.cls) : "") + '" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +   // HERESY 1825: a class of its own
         '<div class="hd-title">' + esc(title) + "</div>" + (body ? '<div class="hd-body">' + esc(body) + "</div>" : "") + waveHtml(opts) +
         (kind === "prompt" && opts.area ? '<textarea class="hd-input hd-area" rows="' + (opts.rows || 8) + '" maxlength="' + (opts.max || 4000) + '" placeholder="' + esc(opts.placeholder || "") + '"></textarea>' + (opts.max && opts.max <= 1000 ? '<div class="hd-count" aria-live="polite"></div>' : "")   // HERESY 1428: lines, Ctrl+Enter keeps; 1802: a short one counts
-          : kind === "prompt" ? '<input type="text" class="hd-input" maxlength="' + (opts.max || 200) + '" placeholder="' + esc(opts.placeholder || "") + '" />' : "") +
+          : kind === "prompt" ? '<input type="text" class="hd-input" maxlength="' + (opts.max || 200) + '" placeholder="' + esc(opts.placeholder || "") + '" />' +
+            (opts.name ? '<div class="hd-name-bad" role="alert" hidden><span class="hd-name-say"></span><span class="hd-name-rule">' + esc(NAME_SAID) + '</span>' +
+              '<button type="button" class="btn ghost small hd-name-use"></button></div>' : "") : "") +   // HERESY 2462
         '<div class="hd-acts">' + (kind === "alert" ? "" : '<button type="button" class="btn ghost small hd-no">' + esc(opts.cancel || "Cancel") + "</button>") +
         (opts.alt && kind === "confirm" ? '<button type="button" class="btn ghost small hd-alt">' + esc(opts.alt) + "</button>" : "") +
         '<button type="button" class="btn small ' + (opts.danger ? "danger-fill" : "primary") + ' hd-yes">' + esc(opts.ok || (kind === "prompt" ? "OK" : opts.danger ? "Delete" : "OK")) + "</button></div></div>";
       document.body.appendChild(back);
       var input = back.querySelector(".hd-input");
       if (input) { input.value = value == null ? "" : String(value); }
+      // HERESY 2462: a name's field says at once what the rule refuses, and offers the cleaned name; OK keeps the dialog open until it is fixed
+      var nameOpts = kind === "prompt" && opts.name ? (opts.name === true ? { max: 0 } : opts.name) : null, nameBox = back.querySelector(".hd-name-bad");
+      function nameCheck() {
+        if (!nameOpts || !nameBox) return "";
+        var why = nameRefusal(input.value, nameOpts), use = nameBox.querySelector(".hd-name-use"), clean = why ? nameCleaned(input.value, nameOpts) : "";
+        nameBox.hidden = !why;
+        nameBox.querySelector(".hd-name-say").textContent = why;
+        use.hidden = !clean || !!nameRefusal(clean, nameOpts);
+        use.textContent = clean ? "Use \u201c" + clean + "\u201d" : "";
+        use.dataset.clean = clean;
+        input.setAttribute("aria-invalid", why ? "true" : "false");
+        return why;
+      }
+      if (nameBox) {
+        input.addEventListener("input", nameCheck);
+        nameBox.querySelector(".hd-name-use").addEventListener("click", function () { input.value = this.dataset.clean || ""; nameCheck(); input.focus(); });
+        nameCheck();
+      }
       var count = back.querySelector(".hd-count");       // HERESY 1802: how much of the note's room is taken
       if (count && input) {
         var said = function () { count.textContent = input.value.length + " / " + opts.max; count.classList.toggle("is-full", input.value.length >= opts.max); };
@@ -97,6 +158,7 @@
         if (input) input.focus();
       }
       function done(yes) {
+        if (yes === true && nameOpts && input && nameCheck()) { input.focus(); return; }   // HERESY 2462: never a refused name, never a quiet change
         document.removeEventListener("keydown", key, true);
         back.classList.add("is-leaving");
         setTimeout(function () { back.remove(); }, 120);
@@ -114,6 +176,7 @@
           buttons[to].focus();
         }
         else if (e.key === "Enter" && opts.area && document.activeElement === input && !(e.ctrlKey || e.metaKey)) { /* a new line */ }
+        else if (e.key === "Enter" && document.activeElement && document.activeElement.classList.contains("hd-name-use")) { e.preventDefault(); e.stopPropagation(); document.activeElement.click(); }   // HERESY 2462
         else if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault(); e.stopPropagation();
           if (at >= 0 && !buttons[at].classList.contains("hd-yes")) buttons[at].click(); else done(true);
@@ -264,4 +327,5 @@
     pick: function (text, groups, opts) { return queued("pick", text, groups || [], opts); },   // HERESY 1169 · 1241   // HERESY 1167
     waveDraw: waveDraw                                    // HERESY 1729: for the checks
   };
+  window.HeresyNames = { FORBIDDEN: NAME_FORBIDDEN, refusal: nameRefusal, cleaned: nameCleaned, ask: nameAsk, said: NAME_SAID };   // HERESY 2462
 })();

@@ -189,16 +189,16 @@
        room comes (named by the page's language in app.js: the catalogs' "Artist" is the Trainer's performer); the Trainer, a
        room of another kind, a pill of its own right of the logo -->
   <nav class="tabs" id="tabs" aria-label="Workspace">
-    <button type="button" data-tab="create" class="is-active">Musician</button>
-    <button type="button" data-tab="write">Writer</button>
-    <button type="button" data-tab="post">Refiner</button>
+    <button type="button" data-tab="create" class="is-active" data-tip="The Musician: a song from words and knobs, its style, lyrics, score and sound">Musician</button>
+    <button type="button" data-tab="write" data-tip="The Writer: lyrics and documents, with a language model beside you to write them">Writer</button>
+    <button type="button" data-tab="post" data-tip="The Refiner: a take on a canvas of nodes: stems, remaster, upscale, MIDI and the mix">Refiner</button>
     <!-- HERESY 1255 (Viktor 08.10.2026: «RC3 завтра или послезавтра с Artist Early Preview»): the Artist's room opens -->
     <button type="button" data-tab="artist" id="tabArtist" translate="no" data-tip="The Artist: pictures for your songs from a prompt of your own, square, wide and tall from one seed (an early preview)">Artist</button>
     <button type="button" data-tab="video" id="tabVideo" data-tip="The Videographer (beta): a take cut into shots at its sung lines, the look and every shot's scene written with the Writer; the moving pictures come with MiniMax H3">Videographer</button>   <!-- HERESY 1824 -->
-    <button type="button" data-tab="train">Trainer</button>   <!-- HERESY 1167 (Viktor: «Просто "Trainer"»); 1849: last of the rooms, after the Videographer -->
+    <button type="button" data-tab="train" data-tip="The Trainer: a LoRA for YuE2 from your own songs">Trainer</button>   <!-- HERESY 1167 (Viktor: «Просто "Trainer"»); 1849: last of the rooms, after the Videographer -->
   </nav>
   <nav class="tabs tabs-side" id="tabsSide" aria-label="Library">
-    <button type="button" data-tab="collection">Librarian</button>   <!-- HERESY 1849 (Viktor 29.10.2026: «Библиотекаря после ЛОГО на место Тренера») -->
+    <button type="button" data-tab="collection" data-tip="The Librarian: every take and reading, its workspaces, marks and passports">Librarian</button>   <!-- HERESY 1849 (Viktor 29.10.2026: «Библиотекаря после ЛОГО на место Тренера») -->
   </nav>
 
   <div class="spacer"></div>
@@ -232,7 +232,7 @@
     <input type="file" id="openFile" accept=".json,.yaml,.yml" hidden />
     <button class="btn ghost small" id="unloadModel" data-icon="unload" data-tip="Unload model: drop every idle model from GPU memory now (tinted red while a model is loaded)" disabled>Unload model</button>
     <div class="menu-wrap head-more">
-      <button type="button" class="btn ghost small head-more-btn" id="headMore" aria-haspopup="true" aria-expanded="false" aria-label="More" data-tip="More: the card and its memory, the model, themes, prompts, examples, the engine">&#9776;</button>
+      <button type="button" class="btn ghost small head-more-btn" id="headMore" aria-haspopup="true" aria-expanded="false" aria-label="More" data-tip="More: the card and its memory, the model, themes, prompts, examples, the engine" data-ui="menu">&#9776;</button>
       <div class="head-more-pop is-hidden" id="headMorePop" role="menu" aria-label="More">
         <dl class="hw-strip" id="hwStats"></dl>
         <label class="head-more-row"><span>Model</span><select id="modelPick" class="theme-pick" aria-label="Model" data-tip="The copy of the model the engine loads (from the next song).
@@ -481,7 +481,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
       <section class="look-part">
         <h4 class="mini">Theme <em>the top bar's swatches choose it too</em></h4>
         <label class="field"><span class="label">Theme</span>
-          <select id="lookTheme"></select></label>
+          <select data-hc-pick="1" id="lookTheme"></select></label>
         <label class="field"><span class="label">Corners</span>
           <select id="lookCorners"><option value="">Rounded</option><option value="soft">Softer</option><option value="square">Square</option></select></label>
         <!-- HERESY 1720 (Viktor 22.10.2026: «опцию для дефолта… Дефолт пусть будет как есть сейчас - как давно») -->
@@ -496,26 +496,26 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
       <section class="look-part">
         <h4 class="mini">Fonts</h4>
         <label class="field"><span class="label" data-head="labels, fields and paragraphs">Text</span>
-          <select id="fontSans" data-font="sans"></select></label>
+          <select data-hc-pick="1" id="fontSans" data-font="sans"></select></label>
         <label class="field"><span class="label">Headings</span>
-          <span class="font-row"><select id="fontHeading" data-font="heading"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="heading"><button type="button" class="btn ghost small icon-btn" data-fstep="heading-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="heading">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="heading+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
+          <span class="font-row"><select data-hc-pick="1" id="fontHeading" data-font="heading"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="heading"><button type="button" class="btn ghost small icon-btn" data-fstep="heading-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="heading">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="heading+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
         <!-- HERESY 1428 (Viktor 14.10.2026: «в настройки шрифтов отдельную позицию для названий комнат в Бар») -->
         <label class="field"><span class="label" data-head="the rooms' names in the bar">Rooms</span>
-          <span class="font-row"><select id="fontRooms" data-font="rooms"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="rooms"><button type="button" class="btn ghost small icon-btn" data-fstep="rooms-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="rooms">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="rooms+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
+          <span class="font-row"><select data-hc-pick="1" id="fontRooms" data-font="rooms"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="rooms"><button type="button" class="btn ghost small icon-btn" data-fstep="rooms-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="rooms">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="rooms+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
         <!-- HERESY 1437 (Viktor 14.10.2026: «Разметку секций в плеере над волной — отдельным шрифтом… Отдельный шрифт для всех текстовых
              кнопок… ± масштаб относительно основного шрифта: 2pt по 1pt шага») -->
         <label class="field"><span class="label" data-head="the sections' names on the wave">Section marks</span>
-          <span class="font-row"><select id="fontMarks" data-font="marks" data-tip="The font of the sections' names drawn on the wave and on its scope; Raleway by default"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="marks"><button type="button" class="btn ghost small icon-btn" data-fstep="marks-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="marks">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="marks+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
+          <span class="font-row"><select data-hc-pick="1" id="fontMarks" data-font="marks" data-tip="The font of the sections' names drawn on the wave and on its scope; Raleway by default"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="marks"><button type="button" class="btn ghost small icon-btn" data-fstep="marks-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="marks">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="marks+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
         <label class="field"><span class="label" data-head="every button with words, the toggles, the menus' items">Buttons</span>
-          <span class="font-row"><select id="fontButtons" data-font="buttons" data-tip="The font of every button with words, the toggles and the menus' items; Jura by default"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="buttons"><button type="button" class="btn ghost small icon-btn" data-fstep="buttons-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="buttons">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="buttons+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
+          <span class="font-row"><select data-hc-pick="1" id="fontButtons" data-font="buttons" data-tip="The font of every button with words, the toggles and the menus' items; Jura by default"></select><span class="fs-btns font-step" role="group" aria-label="Its size against the text" data-step="buttons"><button type="button" class="btn ghost small icon-btn" data-fstep="buttons-" data-ui="text-smaller" aria-label="Smaller"></button><output class="hm-fs-val mono" data-fstep-say="buttons">0 pt</output><button type="button" class="btn ghost small icon-btn" data-fstep="buttons+" data-ui="text-larger" aria-label="Larger"></button></span></span></label>
         <label class="field"><span class="label" data-head="seeds, scores, the log">Numbers and code</span>
-          <select id="fontMono" data-font="mono"></select></label>
+          <select data-hc-pick="1" id="fontMono" data-font="mono"></select></label>
         <!-- HERESY 2066 (Viktor 05.11.2026: «…для иврита… DavidCLM… для греков… GFS Didot, и в Движке в выборе шрифтов добавить именно выбор ИВРИТ и ГРЕЧЕСКИЙ, и под капотом матчить греков и семитов на эти шрифты»):
              the Hebrew and the Greek letters' own fonts, over every font above; each with its tip, as Section marks and Buttons have theirs -->
         <label class="field"><span class="label">Hebrew</span>
-          <select id="fontHebrew" data-font="hebrew" data-tip="The font of every Hebrew letter in the Studio, whatever font the rest of the line is in; David CLM by default"></select></label>
+          <select data-hc-pick="1" id="fontHebrew" data-font="hebrew" data-tip="The font of every Hebrew letter in the Studio, whatever font the rest of the line is in; David CLM by default"></select></label>
         <label class="field"><span class="label">Greek</span>
-          <select id="fontGreek" data-font="greek" data-tip="The font of every Greek letter in the Studio, whatever font the rest of the line is in; Noto Sans by default"></select></label>
+          <select data-hc-pick="1" id="fontGreek" data-font="greek" data-tip="The font of every Greek letter in the Studio, whatever font the rest of the line is in; Noto Sans by default"></select></label>
         <p class="row-hint" id="fontsHint"></p>
       </section>
       </div>
@@ -558,7 +558,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
           <select data-def="yue2.seekKeyShift" data-def-is="30" aria-label="Shift + ← →"><option value="10">10 s</option><option value="15">15 s</option><option value="30">30 s</option><option value="60">60 s</option></select></label>
         </div>
         <label class="field"><span class="label">Start playing</span>
-          <select data-def="yue2.holdStart" data-def-is="minute" data-tip="On a slow line (a studio far away), a take can start before all of it has come: once its first minute is in and the rest will come before the playing reaches it; where it changes to the whole, it does so at a quiet moment. At home the whole comes within seconds, and it waits for it either way."><option value="minute">when its first minute is in and the rest will come in time</option><option value="whole">when the whole take is in</option></select></label>
+          <select data-def="yue2.holdStart" data-def-is="minute" data-tip="On a slow line (the Studio far away), a take can start before all of it has come: once its first minute is in and the rest will come before the playing reaches it; where it changes to the whole, it does so at a quiet moment. At home the whole comes within seconds, and it waits for it either way."><option value="minute">when its first minute is in and the rest will come in time</option><option value="whole">when the whole take is in</option></select></label>
         <!-- HERESY 1851: the player's stream: FLAC, or Opus 128 for a slow line -->
         <label class="field"><span class="label">The player's stream</span>
           <select data-def="yue2.listenCodec" data-def-is="flac" data-tip="What the player in the rooms' footer and the window comparing takes stream: FLAC is the take itself, lossless (about 30 MB for a song of four minutes); Opus at 128 kbit/s is about 4 MB, made on the Studio's machine the first time a take plays, for a slow line (a phone, a VPN). Everywhere else the Studio hears and measures the lossless FLAC, and downloads stay WAV and FLAC."><option value="flac">FLAC (lossless)</option><option value="opus">Opus 128 kbit/s (a slow line)</option></select></label>
@@ -621,7 +621,14 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
           <span class="pill" id="ownState" data-s="missing">not here</span>
         </div>
         <label class="field"><span class="label">Quant</span>
-          <select id="ownVariant" data-tip="Which quant the Studio's writer runs: quality keeps the AutoRound 4 bits as they are (about 7.5 GB of VRAM), compact keeps those and lowers the rest (about 6.5 GB). Only those here can be chosen"><option value="quality">Quality: the AutoRound 4 bits as they are (a 12 GB card)</option><option value="compact">Compact: for an 8 GB card</option></select></label>
+          <select id="ownVariant" data-tip="Which quant the Studio's writer runs: quality keeps the AutoRound 4 bits as they are (about 8.4 GB of VRAM with its 32K window), compact keeps those and lowers the rest (about 7.4 GB). Only those here can be chosen"><option value="quality">Quality: the AutoRound 4 bits as they are (a 12 GB card)</option><option value="compact">Compact: for an 8 GB card</option></select></label>
+        <!-- HERESY 2463 (Viktor 12.11.2026: «Писатель на Arc у нас на вечер, железно»): where it runs, and the Arc's backend -->
+        <div class="field-row wrap own-place">
+          <label class="field grow"><span class="label">Runs on</span>
+            <select id="ownDevice" data-tip="Where the Studio's writer runs. Auto: a CUDA card with room, else the Intel Arc when nothing else is on it, else the processor. The Intel Arc: it waits for its turn there, and leaves the card the moment a song or the Narrator needs it. The next question starts it where you chose."><option value="auto">Auto</option><option value="cuda">A CUDA card</option><option value="arc">The Intel Arc</option><option value="cpu">The processor</option></select></label>
+          <label class="field grow" id="ownBackendField"><span class="label">Arc backend</span>
+            <select id="ownBackend" data-tip="How llama.cpp drives the Intel Arc. SYCL (oneAPI): on the Arc Pro B50 it writes about 29 tokens a second. Vulkan (Mesa): it reads the question about twice as fast, and writes half as fast. Only the builds here can be chosen"><option value="sycl" translate="no">SYCL</option><option value="vulkan" translate="no">Vulkan</option></select></label>
+        </div>
         <div class="llm-acts">
           <button type="button" class="btn ghost small" id="ownUse" data-tip="Ticks it, and the Writer and its helpers write with it">Use this writer</button>
           <button type="button" class="btn ghost small" id="ownStop" data-tip="Free its card now; the next question starts it again">Unload</button>
@@ -670,8 +677,10 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
           <h4 class="mini"><label class="llm-on" data-tip="Ticked: the Studio may write with it and asks it, its list of models too. Not ticked: never asked"><input type="checkbox" id="orOn" /><span>OpenRouter</span></label></h4>
           <span class="pill" id="orState" data-s="missing">inactive</span>
         </div>
-        <label class="field" data-tip="Your OpenRouter key. Kept by the Studio in its settings on this machine (user/secrets.json), never in a browser and never shown again: the Studio adds it to its own calls to openrouter.ai"><span class="label">API key</span>
+        <label class="field" data-tip="Your OpenRouter key, never shown again: the Studio adds it to its own calls to openrouter.ai. Saved by the Studio in its user settings on this machine (user/secrets.json, readable by you alone), or, with the box below ticked, held by this browser tab until it closes"><span class="label">API key</span>
           <input type="password" id="orKeyNew" autocomplete="off" spellcheck="false" placeholder="sk-or-…" /></label>
+        <!-- HERESY 2473 (Viktor 12.11.2026: «можно галочкой выбирать, либо в кеше сессии браузера, либо в файл, кто как захочет») -->
+        <label class="check" data-tip="Ticked: the key stays in this browser tab's session only, never written to a file, gone when the tab closes; each question to OpenRouter carries it to the Studio. Not ticked: the Studio saves it in user/secrets.json"><input type="checkbox" id="orKeySession" /> <span>Only for this browser session, not saved to a file</span></label>
         <div class="llm-acts">
           <button type="button" class="btn ghost small" id="orKeySave">Keep the key</button>
           <button type="button" class="btn ghost small danger" id="orKeyForget" disabled>Forget the key</button>
@@ -897,8 +906,8 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
         <!-- HERESY 1959 (Viktor 30.10.2026: «на наш репо на гитхабе… в первую строку "О программе"… наш github репо, моё авторство и общая благодарность
              всем деривативам несколькими словами, и громко нашу AGPL 3.0 лицензию»): the Kit is a derivative, linked in the first column -->
         <p class="about-credit"><a class="about-repo" href="https://github.com/igrbible/Ruach_Studio" target="_blank" rel="noopener noreferrer"
-          data-tip="Ruach Studio's own repository: its code, its releases, its issues" translate="no">github.com/igrbible/Ruach_Studio</a> by <strong translate="no">Viktor Zhuromskyy</strong>
-          <a class="about-agpl" href="https://github.com/igrbible/Ruach_Studio/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" data-tip="GNU Affero General Public License, version 3: free to use, study, change and share; a changed studio offered over a network gives its users its source too" translate="no">AGPL-3.0</a>
+          data-tip="Ruach Studio's own repository: its code, its releases, its issues"><span translate="no">github.com/igrbible/Ruach_Studio</span></a> by <strong translate="no">Viktor Zhuromskyy</strong>
+          <a class="about-agpl" href="https://github.com/igrbible/Ruach_Studio/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" data-tip="GNU Affero General Public License, version 3: free to use, study, change and share; a changed studio offered over a network gives its users its source too"><span translate="no">AGPL-3.0</span></a>
           <span class="about-thanks">with thanks to every project it grew from, each in the columns below</span></p>
         <!-- HERESY 1980 (Viktor 01.11.2026: «Да, с 2.0.5 ужесточаем условия форков»): the Appropriate Legal Notices the AGPL asks of an interactive
              interface (section 5(d)), so a fork's interface must show them as well: the copyright, the licence with its additional terms of section 7, no warranty -->
@@ -913,7 +922,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
            (traced from M-A-P's logo, the one on map-yue2.github.io; the word takes the page's ink); the add-ons -->
       <div class="about-grid">
         <div class="about-col">
-          <span class="about-logo"><span class="about-mark-holder" id="aboutLogo" role="img" aria-label="Ruach Studio"></span><small class="about-tagline" translate="no">a local studio for YuE2 · HERETICAL TANDEM</small></span>
+          <span class="about-logo"><span class="about-mark-holder" id="aboutLogo" role="img" aria-label="Ruach Studio"></span><small class="about-tagline"><span>a local Studio for YuE2</span> · <span translate="no">HERETICAL TANDEM</span></small></span>
           <!-- HERESY 1026: the links the header used to carry live here, with what YuE2 OS adds -->
           <!-- HERESY 1959 (Viktor: «Сначала идёт всё наше, а затем модели, что мы используем в Студии, и по мере важности сами репозитории заимствованного и пропатченного нами кода») -->
           <section class="about-project"><h4>Ruach Studio <span class="about-version" id="studioVersion"></span><span class="about-build" id="studioBuild" translate="no" data-tip="The page's build: when build.sh made it and the start of its hash. A reload after a new build shows the new one"></span></h4><p class="about-what">the heresy patches 1001+ over the collection below, and the lab beside it (once "YuE2 OS")</p><ul class="about-links about-ours">
@@ -1071,8 +1080,9 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
             <span class="spacer"></span>
             <span class="wr-hand-acts">
               <select id="wrHandPick" aria-label="Load a document from the Writer" data-tip="A song from the Writer into this form: its title, style and lyrics. It stays in hand, so the takes made from it are linked to it in the Writer."></select>
-              <button type="button" class="btn ghost small" id="wrHandSave">Save to Writer…</button>
-              <button type="button" class="btn ghost small" id="crVersions" data-tip="Every Generate keeps this title's style, lyrics and score apart from the takes: its versions, a diff of two, one back into the form">Versions</button>
+              <!-- HERESY 2542 (the UIX audit of 13.11.2026, №25): the Writer's card in icons, their words their labels and tips -->
+              <button type="button" class="btn ghost small icon-btn mu-ico" id="wrHandSave" data-ui="book-plus" aria-label="Save to Writer…" data-tip="Keep the song as it is now (title, style, lyrics and every knob) as a document in the Writer"></button>
+              <button type="button" class="btn ghost small icon-btn mu-ico" id="crVersions" data-ui="history" aria-label="Versions" data-tip="Every Generate keeps this title's style, lyrics and score apart from the takes: its versions, a diff of two, one back into the form"></button>
             </span>
           </div>
           <!-- HERESY 1006: the title on its own line at full width, the two seeds side by side below it -->
@@ -1103,7 +1113,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
             <textarea id="style" rows="3" data-max-rows="8" placeholder="Language, genre, voice, instruments, tempo"></textarea>
             <span class="row-hint size-meter" id="styleMeter"></span>
             <!-- HERESY 1357 (from SUNO v6: the ✦ and ↻ under its Styles): tags the Writer's model suggests for this song; a click puts one in -->
-            <span class="style-sug" id="styleSug"><button type="button" class="btn ghost small" id="styleSugGo" data-tip="Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)">✦ Suggest</button><span class="style-sug-chips" id="styleSugChips"></span><button type="button" class="btn ghost small icon-btn" id="styleSugMore" hidden aria-label="Other suggestions" data-tip="Other suggestions">&#x21bb;</button></span>
+            <span class="style-sug" id="styleSug"><button type="button" class="btn ghost small icon-btn mu-ico" id="styleSugGo" data-ui="sparkles" aria-label="Suggest" data-tip="Style suggestions: the Writer's model reads the Style, the Title and the lyrics whole and offers short tags this song has not got yet; a click on one puts it in (before the BPM at its end)"></button><span class="style-sug-chips" id="styleSugChips"></span><button type="button" class="btn ghost small icon-btn mu-ico" id="styleSugMore" hidden data-ui="refresh-cw" aria-label="Other suggestions" data-tip="Other suggestions"></button></span>
             <span class="key-check is-hidden" id="keyCheck"><span id="keyCheckText"></span>
               <button type="button" class="btn ghost small" id="keyToScore"></button>
               <button type="button" class="btn ghost small" id="keyToStyle"></button></span>
@@ -1129,7 +1139,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
       <div class="k-col k-right">
         <section class="k-card k-lyrics">
           <label class="field" data-fold="lyrics">
-            <span class="label" data-head="section tags on their own line">Lyrics <button type="button" class="btn ghost small icon-btn lyr-big" id="lyricsBig" data-ui="maximize" aria-pressed="false" aria-label="The lyrics over everything" data-tip="The lyrics over everything, a tenth larger: Esc or this button puts them back"></button><!-- HERESY 1277 (Viktor 09.10.2026: «Кнопку экспорта/импорта содержимого редактора в голый txt формат, авто имя файла по Title трека») --><button type="button" class="btn ghost small icon-btn lyr-big lyr-txt" id="lyricsTxtOut" data-ui="file-down" aria-label="Save the lyrics as a .txt" data-tip="Save the lyrics as a plain .txt, named by the Title"></button><button type="button" class="btn ghost small icon-btn lyr-big lyr-txt" id="lyricsTxtIn" data-ui="file-up" aria-label="Open a .txt into the lyrics" data-tip="Put a plain .txt (UTF-8) in place of the lyrics: asked first when the box has words; Ctrl+Z in the box brings them back"></button><!-- HERESY 1357 (from SUNO v6) --><button type="button" class="btn ghost small lyr-tighten" id="lyricsTighten" data-tip="Tighten these lyrics: the Writer's model cuts filler and weak lines, keeps the meaning, the language, the rhymes and every section tag; you see both side by side before anything changes (Ctrl+Z in the box brings the old ones back)">✦ Tighten</button></span>
+            <span class="label" data-head="section tags on their own line">Lyrics <button type="button" class="btn ghost small icon-btn lyr-big" id="lyricsBig" data-ui="maximize" aria-pressed="false" aria-label="The lyrics over everything" data-tip="The lyrics over everything, a tenth larger: Esc or this button puts them back"></button><!-- HERESY 1277 (Viktor 09.10.2026: «Кнопку экспорта/импорта содержимого редактора в голый txt формат, авто имя файла по Title трека») --><button type="button" class="btn ghost small icon-btn lyr-big lyr-txt" id="lyricsTxtOut" data-ui="file-down" aria-label="Save the lyrics as a .txt" data-tip="Save the lyrics as a plain .txt, named by the Title"></button><button type="button" class="btn ghost small icon-btn lyr-big lyr-txt" id="lyricsTxtIn" data-ui="file-up" aria-label="Open a .txt into the lyrics" data-tip="Put a plain .txt (UTF-8) in place of the lyrics: asked first when the box has words; Ctrl+Z in the box brings them back"></button><!-- HERESY 1357 (from SUNO v6) --><button type="button" class="btn ghost small icon-btn lyr-big lyr-txt" id="lyricsTighten" data-ui="wand-sparkles" aria-label="Tighten" data-tip="Tighten these lyrics: the Writer's model cuts filler and weak lines, keeps the meaning, the language, the rhymes and every section tag; you see both side by side before anything changes (Ctrl+Z in the box brings the old ones back)"></button><!-- HERESY 2453: lower and upper case, by a click only (heresy-case.js) --><span class="case-slot" data-case-slot="lyrics"></span></span>
             <!-- HERESY 1168 (Viktor: «теперь, когда у нас две отдельные колонки в левом фрейме, поле лирики можно увеличить на десять
                  строк»): 16 rows to 26; the lyrics' meter (heresy-lyrics.js) draws beside it and counts under it -->
             <textarea id="lyrics" rows="16" data-max-rows="26" spellcheck="true" maxlength="10000" placeholder="[Verse]&#10;&#10;[Chorus]"></textarea>
@@ -1140,7 +1150,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
             <span class="label">Text profile</span>
             <select id="tpPick" aria-label="Text profile" data-tip="Paste a whole text into Lyrics, pick a profile, Apply: its rules (cleanup, phonetics) and its shape ([Intro], [Verse] at blank lines, [Interlude] after long paragraphs) make it ready to read. Profiles are edited in the Write tab."></select>
             <button type="button" class="btn ghost small" id="tpApply">Apply</button>
-            <button type="button" class="btn ghost small" id="tpUndo" disabled>Undo</button>
+            <button type="button" class="btn ghost small icon-btn mu-ico" id="tpUndo" data-ui="undo-2" aria-label="Undo" data-tip="Undo" disabled></button>   <!-- HERESY 2543: an icon, as Apply beside it -->
             <span class="row-hint mono" id="tpNote"></span>
           </div>
         </section>
@@ -1243,7 +1253,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
                   <span>Keys with their modes (dorian, mixolydian…)</span></label>
                 <div class="cover-act">
                   <button type="button" class="btn ghost" id="coverListen" aria-pressed="false" disabled
-                          data-tip="Listen to the chosen recording here; the player at the bottom pauses while it plays">▶ Listen</button>
+                          data-tip="Listen to the chosen recording here; the player at the bottom pauses while it plays"><span class="cl-ico" data-ui="play" aria-hidden="true"></span><span>Listen</span></button>
                   <button type="button" class="btn ghost" id="coverFromAudio">Transcribe</button>
                   <button type="button" class="btn ghost" id="coverMatch" data-tip="Match sections: Whisper hears where each block of your lyrics begins in this recording, and each block takes the tag of the score section it is sung in (the score transcribed from this recording, its sections named). Words never change; you see the proposal before it goes into the form. After timoncool's YuE2-Studio and HOT-Step's Cover Studio">Match sections</button>
                   <p class="cover-status" id="coverAudioStatus"></p>
@@ -1253,7 +1263,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
                 <h4 class="mini">From One of Your Takes <span class="info" tabindex="-1" role="img" aria-label="About covers from a take"
                     data-tip="Take the melody from a song you already made and render it somewhere else entirely: a ballad as a techno track, a German song in English. The run switches to Melody only." data-tip-head="its melody, in a new style"></span></h4>
                 <label class="field"><span class="label">Melody from</span>
-                  <select id="coverTake"></select></label>
+                  <select data-hc-pick="1" id="coverTake"></select></label>
                 <label class="check"><input type="checkbox" id="coverMelodyOnly" checked />
                   <span>Drop the chord symbols, so the new style can rebuild the harmony</span></label>
                 <div class="cover-act">
@@ -1277,8 +1287,8 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
               <!-- HERESY 1704: a chord bed (after timoncool's YuE2-Studio, MIT, and gary4juce's yuey scaffold) -->
               <div class="transpose-row bed-row" id="bedRow">
                 <span class="label">Chord bed</span>
-                <select id="bedKey" aria-label="Key" data-tip="The key the bed's chords are in; taken from the style when it names one («Bb major», «F#m»)" translate="no"><option value="C">C</option><option value="Db">Db</option><option value="D">D</option><option value="Eb">Eb</option><option value="E">E</option><option value="F">F</option><option value="F#">F#</option><option value="G">G</option><option value="Ab">Ab</option><option value="A">A</option><option value="Bb">Bb</option><option value="B">B</option><option value="Cm">Cm</option><option value="C#m">C#m</option><option value="Dm">Dm</option><option value="Ebm">Ebm</option><option value="Em">Em</option><option value="Fm">Fm</option><option value="F#m">F#m</option><option value="Gm">Gm</option><option value="G#m">G#m</option><option value="Am">Am</option><option value="Bbm">Bbm</option><option value="Bm">Bm</option></select>
-                <select id="bedMeter" aria-label="Meter" data-tip="The meter of the bed's bars: 4/4, 3/4, 6/8 or 2/4" translate="no"><option value="4/4">4/4</option><option value="3/4">3/4</option><option value="6/8">6/8</option><option value="2/4">2/4</option></select>
+                <select id="bedKey" aria-label="Key" data-tip="The key the bed's chords are in; taken from the style when it names one («Bb major», «F#m»)"><option translate="no" value="C">C</option><option translate="no" value="Db">Db</option><option translate="no" value="D">D</option><option translate="no" value="Eb">Eb</option><option translate="no" value="E">E</option><option translate="no" value="F">F</option><option translate="no" value="F#">F#</option><option translate="no" value="G">G</option><option translate="no" value="Ab">Ab</option><option translate="no" value="A">A</option><option translate="no" value="Bb">Bb</option><option translate="no" value="B">B</option><option translate="no" value="Cm">Cm</option><option translate="no" value="C#m">C#m</option><option translate="no" value="Dm">Dm</option><option translate="no" value="Ebm">Ebm</option><option translate="no" value="Em">Em</option><option translate="no" value="Fm">Fm</option><option translate="no" value="F#m">F#m</option><option translate="no" value="Gm">Gm</option><option translate="no" value="G#m">G#m</option><option translate="no" value="Am">Am</option><option translate="no" value="Bbm">Bbm</option><option translate="no" value="Bm">Bm</option></select>
+                <select id="bedMeter" aria-label="Meter" data-tip="The meter of the bed's bars: 4/4, 3/4, 6/8 or 2/4"><option translate="no" value="4/4">4/4</option><option translate="no" value="3/4">3/4</option><option translate="no" value="6/8">6/8</option><option translate="no" value="2/4">2/4</option></select>
                 <input type="number" id="bedBpm" class="mono bed-bpm" min="40" max="240" step="1" value="96" aria-label="Tempo (BPM)" data-tip="The bed's tempo, 40 to 240 BPM; taken from the style when it names one («96 BPM»)" />   <!-- HERESY 1704b: the three tips -->
                 <button type="button" class="btn ghost small" id="bedWrite" data-tip="A chord bed: a score written at once from the key, the meter and the tempo here, a few bars of chords for every section of the lyrics, the Vocal voice resting and the instruments empty. In Full the model writes the melody and the arrangement over that harmony. Each press draws other progressions (one for the verses, one for the choruses, one for a bridge). After timoncool's YuE2-Studio (MIT) and gary4juce's yuey scaffold">Write a bed</button>
                 <span class="row-hint" id="bedNote"></span>
@@ -1451,6 +1461,12 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
                       <option value="standard" selected>Whole song · standard</option>
                       <option value="ladder">Ladder · experimental</option>
                     </select></label>
+                  <!-- HERESY 2509 (Viktor 12.11.2026: «И кусковая генерация песен по рецепту из репо Тимона, я бы её сделал опцией для реально длинных песен, и то, экспериментальной, а не дефолтной как сейчас»): whole by default, held to one window of the sound half; 2352's pieces a choice -->
+                  <label class="field"><span class="label" data-head="past one window">Long songs</span>
+                    <select id="narLong" data-tip="Whole, the default: the sound half hears a song through one window of 24,576 rows (the style, the lyrics and the score first, then two rows for every frame of music), so the song is held to what that window holds and is never joined. With the whole context that is about 6 to 7¾ minutes, by the length of the lyrics and the score; fewer Context rows in the Engine's settings (a card with less memory) make it shorter, and Max length is the other cap. Pieces, experimental, for really long songs: the music goes on past the window, and the sound half solves it in two or more windows that hear 6 s past each joint and crossfade over 4 s there; a joint can still be heard, about 1 dB quieter for a few seconds (measured 07.11.2026). The Ladder above solves in pieces of its own. A take already longer than one window goes on in pieces when sung anew from a moment, as it was made.">
+                      <option value="whole" selected>Whole · up to one window</option>
+                      <option value="pieces">Pieces · experimental</option>
+                    </select></label>
                 </div>
                 <div class="field-row">
                   <p class="row-hint grow" id="outHint"></p>
@@ -1478,10 +1494,11 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
             <span>Variations <span class="info" tabindex="-1" role="img" aria-label="About variations" data-tip-ref="tip-variations"></span></span>
             <input type="range" id="variations" min="1" max="9" step="1" value="1" /><output class="cs-val" id="variationsOut" for="variations">1</output></label>
           <span class="cs-total" aria-live="polite">= <span id="takesTotal">1 take</span></span>
-          <button type="button" class="btn ghost" id="planBtn"
-            title="Write only the score (seconds, no audio). Check its sections, then Generate renders exactly that score.">Create ABC Score</button>
-          <button type="submit" class="btn primary" id="generateBtn">
-            <span class="btn-glyph" aria-hidden="true">▸</span> Generate song
+          <!-- HERESY 2543 (the UIX audit of 13.11.2026, №31): the score an icon beside the room's one action in words; that one says what it does in its tip, its ▸ drawn -->
+          <button type="button" class="btn ghost icon-btn mu-ico plan-ico" id="planBtn" data-ui="music-4" aria-label="Create ABC Score"
+            data-tip="Write only the score (seconds, no audio). Check its sections, then Generate renders exactly that score."></button>
+          <button type="submit" class="btn primary" id="generateBtn" data-tip="Make the song from this form; what it makes lands in Takes">
+            <span class="btn-glyph" data-ui="play" aria-hidden="true"></span> Generate song
           </button>
         </div>
         <p class="submit-note" id="submitNote"></p>
@@ -1494,7 +1511,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
     <div class="col-head">
       <h2 id="takeTitle">Smithery Is Idle</h2>
       <!-- HERESY 1488: the take's menu from the card (its rows of buttons live there) -->
-      <button type="button" class="btn ghost small take-more is-hidden" id="takeMore" aria-label="Everything for this take" data-tip="Everything for this take: its menu, as a right-click on it opens">⋯</button>
+      <button type="button" class="btn ghost small take-more is-hidden" id="takeMore" aria-label="Everything for this take" data-ui="ellipsis" data-tip="Everything for this take: its menu, as a right-click on it opens"></button>
       <!-- HERESY 1432 (Viktor 14.10.2026: «Кнопку "Play this song"… в строку с svg кнопками, оставить её крашеной, шириной в две
            иконки, заменить текст на плеерную svg иконку PLAY») -->
       <button type="button" class="btn primary small is-hidden" id="playHere" data-ui="play" aria-label="Play this song" data-tip="Play this song now (the player keeps what it was playing until you do). Double-clicking a song in the list plays it too."></button>
@@ -1577,7 +1594,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
 
       <!-- HERESY 1044: a note of your own on this take -->
       <label class="field take-note"><span class="label">Note <em id="takeNoteState"></em></span>
-        <textarea id="takeNote" rows="2" maxlength="600" data-tip="Your note on this take, kept with it: saved as you type, and the same note in the Librarian." placeholder="A note on this take: what works, what to fix, where it goes…"></textarea></label>
+        <textarea id="takeNote" rows="2" data-max-rows="4" maxlength="6000" data-tip="Your note on this take, kept with it: saved as you type, and the same note in the Librarian." placeholder="A note on this take: what works, what to fix, where it goes…"></textarea></label>
       <div class="meta-card" id="metaGrid"></div>
       <div class="decode-switch" id="decodeSwitch"></div>
       <div class="decode-switch" id="soundSwitch"></div>
@@ -1597,9 +1614,10 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
           <div class="panel-head">
             <h3>Lyrics</h3>
             <div class="spacer"></div>
-            <button class="btn ghost small" id="copyLyrics">Copy</button>
-            <button class="btn ghost small" id="lyricsTxt" title="Download the lyrics as a text file">TXT</button>
-            <button class="btn ghost small" id="lyricsJson" title="Title, style, lyrics and ordered sections for video tools">JSON</button>
+            <!-- HERESY 2543 (the UIX audit of 13.11.2026, №40): icons, their words their tips -->
+            <button class="btn ghost small icon-btn" id="copyLyrics" data-ui="copy" aria-label="Copy" data-tip="Copy the lyrics"></button>
+            <button class="btn ghost small icon-btn" id="lyricsTxt" data-ui="file-text" aria-label="TXT" data-tip="Download the lyrics as a text file"></button>
+            <button class="btn ghost small icon-btn" id="lyricsJson" data-ui="braces" aria-label="JSON" data-tip="Title, style, lyrics and ordered sections for video tools"></button>
           </div>
           <pre class="lyric-text" id="metaLyrics"></pre>
         </section>
@@ -1622,7 +1640,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
               <button type="button" class="btn ghost small icon-btn sheet-side" id="staffPortrait" aria-pressed="true" aria-label="Portrait" data-tip="Portrait: the sheet upright"></button>
               <button type="button" class="btn ghost small icon-btn sheet-side" id="staffLandscape" aria-pressed="false" aria-label="Landscape" data-tip="Landscape: the sheet on its side"></button>
             </span>
-            <button type="button" class="btn ghost small" id="takeMidi" data-tip="The score as a MIDI file: tempo, meter, key, a track per voice and the sections as markers, for a DAW">MIDI</button>
+            <button type="button" class="btn ghost small icon-btn" id="takeMidi" data-ui="file-music" aria-label="MIDI" data-tip="The score as a MIDI file: tempo, meter, key, a track per voice and the sections as markers, for a DAW"></button>
             <button type="button" class="btn ghost small icon-btn" id="takeMarkers" aria-label="Markers" data-tip="The sections (% verse …) as a marker list in seconds (CSV, as Reaper imports it)"></button>
             <button class="btn ghost small icon-btn" id="reuseScore" aria-label="Edit and re-render" data-tip="Edit and re-render: the score into the form, to change it and render it again"></button>
             <button type="button" class="btn ghost small icon-btn" id="staffFull" aria-label="Full screen" data-tip="The staff over the whole screen: zoom and scroll (or double-click the staff)"></button>
@@ -1642,21 +1660,39 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
 
   <!-- HERESY 1014: the Write tab — the writing room with the song in the form beside it -->
   <section class="col write-col is-hidden" id="view-write">
-    <div class="col-head"><h2>Writer</h2><span class="col-note col-note-two">the notebook keeps songs and readings in the making; the writing room below works on the song in the Musician</span></div>
+    <!-- HERESY 2490 (Viktor 12.11.2026: «В верхней полосе-баре ПИСАТЕЛЬ оформи переключатель миров… для глобальных действий… всё SVG иконками»): the Writer's
+         bar: the worlds' knob (the Library's own), the world's name, the notebook's acts as icons -->
+    <div class="col-head wr-bar"><h2>Writer</h2>
+      <span class="coll-realm wr-worlds" id="wrWorlds" tabindex="0" role="slider" aria-label="The Writer's world" aria-valuemin="0" aria-valuemax="2" data-pos="both" data-tip="The Writer's world: the Musician's songs on the left, both in the middle, the Narrator's readings on the right (click a position or press ← →). A new document is born in the world shown."><svg class="rs-svg" viewBox="0 0 88 22" width="88" height="22" aria-hidden="true" focusable="false"><rect class="rs-track" x="1" y="3" width="86" height="16" rx="8"/><circle class="rs-dot" cx="14" cy="11" r="1.7"/><circle class="rs-dot" cx="44" cy="11" r="1.7"/><circle class="rs-dot" cx="74" cy="11" r="1.7"/><g class="rs-knob"><circle class="rs-ball" cx="14" cy="11" r="7.5"/><path class="rs-i rs-i-creator" d="M15 6.6v5.7a1.6 1.6 0 1 1-1-1.5V6.6zM15 6.6l2.2 1.1v1.3L15 7.9z"/><path class="rs-i rs-i-both" d="M10.6 9h6.8M10.6 13h6.8"/><path class="rs-i rs-i-reader" d="M10.4 7.6h7.2a.9.9 0 0 1 .9.9v3.4a.9.9 0 0 1-.9.9h-3.9l-2 1.6v-1.6h-1.3a.9.9 0 0 1-.9-.9V8.5a.9.9 0 0 1 .9-.9z"/></g></svg><span class="rs-hit" data-realm="creator" style="left:0%"></span><span class="rs-hit" data-realm="both" style="left:33.333%"></span><span class="rs-hit" data-realm="reader" style="left:66.667%"></span></span>
+      <span class="wr-world-name" id="wrWorldName" aria-hidden="true"></span>
+      <input type="search" id="wrSearch" class="wr-bar-find" placeholder="Search all four parts · * and ?" autocomplete="off" />   <!-- HERESY 2568 (item 56): the search in the bar, as the Librarian's -->
+      <span class="spacer"></span>
+      <span class="wr-bar-acts">
+        <button type="button" class="btn ghost small icon-btn wr-bar-ico" id="wrHome" data-ui="layout-grid" aria-label="The notebook's start" data-tip="Close the document and go back to the notebook's start: what you can do here and how it works" hidden></button>
+        <button type="button" class="btn primary small icon-btn wr-bar-ico" id="wrNew" data-ui="folder-plus" aria-label="＋ New" data-tip="A new document in the world shown: a song for the Musician, or a reading for the Narrator"></button>
+        <button type="button" class="btn ghost small icon-btn wr-bar-ico" id="wrFromCreate" data-ui="music" aria-label="＋ From the Musician" data-tip="A new document from the song in the Musician, with every knob"></button>
+        <button type="button" class="btn ghost small icon-btn wr-bar-ico" id="wrCreatorVersions" data-ui="list" aria-label="Musician's versions" data-tip="Every Generate's words, kept under their title apart from the takes: a take deleted never takes them along"></button>
+        <span class="wr-bar-sep" aria-hidden="true"></span>
+        <!-- HERESY 2568 (the UIX audit of 13.11.2026, item 55): the order and the filter in the bar as the Librarian's, their choices in a menu; the selects stay, hidden, the ones the Writer reads -->
+        <button type="button" class="btn ghost small icon-btn wr-bar-ico" id="wrSortBtn" data-ui="arrow-down-up" aria-haspopup="menu" aria-label="Sort the documents" data-tip="The order of the documents"></button>
+        <button type="button" class="btn ghost small icon-btn wr-bar-ico" id="wrFilterBtn" data-ui="filter" aria-haspopup="menu" aria-label="Which documents" data-tip="Which documents the list shows"></button>
+        <button type="button" class="btn ghost small is-on icon-btn wr-bar-ico" id="wrGroupBtn" data-ui="layers" aria-label="Versions together" data-tip="A song's versions under one name: the title without its version (v4.3.0.1), the highest on top, the rest folded under it" aria-pressed="true"></button>
+        <button type="button" class="btn ghost small icon-btn wr-bar-ico" id="wrTrashBtn" data-ui="trash" aria-label="Trash" data-tip="Documents deleted from the notebook, to bring back" aria-pressed="false"></button>
+        <span class="wr-bar-sep" aria-hidden="true"></span>
+        <button type="button" class="btn ghost small icon-btn wr-bar-ico" id="wrExport" data-ui="file-down" aria-label="Export all" data-tip="Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Musician's versions of every title, in one file (a backup)"></button>
+        <button type="button" class="btn ghost small icon-btn wr-bar-ico" id="wrImport" data-ui="file-up" aria-label="Import a backup" data-tip="Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Musician's versions here gains the versions it lacks. Nothing here is written over"></button>
+        <input type="file" id="wrImportFile" accept=".json,application/json" aria-label="A Writer backup to import" hidden />
+      </span>
+      <span class="coll-n" id="wrCount"></span>
+    </div>
     <!-- HERESY 1047: the notebook -->
     <div class="wr-book">
       <aside class="wr-side">
-        <div class="wr-side-bar">
-          <button type="button" class="btn primary small" id="wrNew">＋ New</button>
-          <button type="button" class="btn ghost small" id="wrFromCreate" title="A new document from the song in the Musician, with every knob">＋ From the Musician</button>
-          <button type="button" class="btn ghost small" id="wrCreatorVersions" data-tip="Every Generate's words, kept under their title apart from the takes: a take deleted never takes them along">Musician's versions</button>
-          <!-- HERESY 1168 (Viktor 07.10.2026: «В комнате Писателя добавить глобальный экспорт/импорт всех данных скопом для бекапа») -->
-          <span class="wr-io"><button type="button" class="btn ghost small" id="wrExport" data-icon="save" aria-label="Export all" data-tip="Export all: every document of the Writer, with its versions, the takes made from it and its trash, and the Musician's versions of every title, in one file (a backup)">Export all</button>
-          <button type="button" class="btn ghost small" id="wrImport" data-icon="open" aria-label="Import a backup" data-tip="Import a Writer backup: what is missing here comes in; the same is left alone; a document that differs from its namesake here comes in beside it as a copy; a title of the Musician's versions here gains the versions it lacks. Nothing here is written over">Import</button></span>
-          <input type="file" id="wrImportFile" accept=".json,application/json" aria-label="A Writer backup to import" hidden />
-          <span class="coll-n" id="wrCount"></span>
+        <!-- HERESY 2479 (the writer audit of 12.11.2026, item 15): sorted, filtered, a song's versions under one name, the trash -->
+        <div class="wr-tools" id="wrTools" hidden>
+          <select id="wrSort" aria-label="Sort the documents" data-tip="The order of the documents"><option value="changed">Date changed</option><option value="created">Date created</option><option value="title">Title A–Z</option></select>
+          <select id="wrFilter" aria-label="Which documents" data-tip="Which documents the list shows"><option value="all">All documents</option><option value="creator">Songs · Musician</option><option value="reader">Readings · Narrator</option><option value="takes">With takes</option></select>
         </div>
-        <input type="search" id="wrSearch" placeholder="Search all four parts · * and ?" autocomplete="off" />
         <div class="wr-list" id="wrList"></div>
       </aside>
       <!-- HERESY 1268 (Viktor 09.10.2026: «В комнате Писателя дай возможность регулировать ширину левой колонки со списком документов») -->
@@ -1664,13 +1700,40 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
            aria-label="The documents column: drag to widen; ← → from the keyboard; Home or a double click for its own width"></div>
       <div class="wr-main">
         <p class="row-hint wr-none" id="wrEmpty">Pick a document, or start one. A document is a title, STYLE, LYRICS, NOTES and PARAMS; it remembers its versions and the takes made from it.</p>
-        <div class="wr-recent" id="wrRecent" hidden></div>
+        <!-- HERESY 2479 (Viktor 11.11.2026: a short guide instead of the documents the list already shows) -->
+        <div class="wr-recent wr-guide" id="wrRecent" hidden>
+          <!-- HERESY 2490 (Viktor 12.11.2026: «Там набор красивых кнопок-карточек по действиям»): what can be done here, as cards -->
+          <div class="wr-acts" id="wrActs">
+            <button type="button" class="wr-act" data-wr-act="new-song"><span class="wr-act-ico" data-ui="folder-plus"></span><span class="wr-act-name">New song</span><span class="wr-act-say">A song for the Musician: its style, its lyrics and the knobs</span></button>
+            <button type="button" class="wr-act" data-wr-act="new-reading"><span class="wr-act-ico" data-ui="type"></span><span class="wr-act-name">New reading</span><span class="wr-act-say">A text for the Narrator to read, with no length limit</span></button>
+            <button type="button" class="wr-act" data-wr-act="from"><span class="wr-act-ico" data-ui="music"></span><span class="wr-act-name">From the Musician</span><span class="wr-act-say">The song in the Musician now, with every knob, as a new document</span></button>
+            <button type="button" class="wr-act" data-wr-act="vers"><span class="wr-act-ico" data-ui="list"></span><span class="wr-act-name">Musician's versions</span><span class="wr-act-say">Every Generate's words, kept under their title apart from the takes</span></button>
+            <button type="button" class="wr-act" data-wr-act="trash"><span class="wr-act-ico" data-ui="trash"></span><span class="wr-act-name">Trash</span><span class="wr-act-say">Documents deleted from the notebook, to bring back</span></button>
+            <button type="button" class="wr-act" data-wr-act="import"><span class="wr-act-ico" data-ui="file-up"></span><span class="wr-act-name">Import a backup</span><span class="wr-act-say">A Writer backup: what is missing here comes in, nothing is written over</span></button>
+            <button type="button" class="wr-act" data-wr-act="export"><span class="wr-act-ico" data-ui="file-down"></span><span class="wr-act-name">Export all</span><span class="wr-act-say">Every document with its versions and takes, in one file</span></button>
+          </div>
+          <h3 class="wr-cap">How the notebook works</h3>
+          <ul>
+            <li>A document is a song for the Musician or a reading for the Narrator: a title, its style, its text, notes and the Musician's knobs. Typing saves itself; Ctrl+S saves at once.</li>
+            <li>A song's versions named in their titles (v4.2.1, v4.3.0.1) stand under one name in the list; above it, the order, the filter and the trash.</li>
+            <li>Every save after a pause keeps a version; Keep this version keeps one under a label; Compare shows what changed against a version or another document.</li>
+            <li>Load into the Musician makes it the song in hand there, and the takes made from it are linked to it; Read in the Narrator sends a reading.</li>
+            <li>The Writing room below writes into the open document (or the Musician's song) and keeps every draft it gets, with its brief, model and time.</li>
+            <li>In the text: Alt+K marks a line, Alt+J jumps between the marks, F4 finds and replaces, [ offers the section tags.</li>
+          </ul>
+          <p class="wr-guide-last" id="wrGuideLast" hidden><span>Where you left off:</span> <button type="button" class="btn ghost small" id="wrGuideLastBtn" data-doc="" translate="no"></button></p>
+        </div>
+        <!-- HERESY 2490: step 1, the document -->
+        <details class="drawer wr-step" id="wrStepDoc" data-step="1" open hidden><summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name"><b class="wr-step-n" aria-hidden="true">1</b>Document</span><span class="sum-say" id="wrStepDocSay" translate="no"></span></span></summary>
         <div class="wr-doc" id="wrDoc" hidden>
           <div class="wr-head">
             <input type="text" id="wrTitle" class="wr-title" maxlength="120" placeholder="Untitled" aria-label="Title" />
             <span class="wr-state" id="wrState"></span>
+            <!-- HERESY 2480: whose document it is, as a Library take's realm; a song's lyrics hold 10 000 characters, a reading has no limit -->
+            <span class="wr-realm" id="wrRealm" role="group" aria-label="Whose document" data-tip="Whose document: a song for the Musician (its lyrics hold 10 000 characters, as the Musician's) or a reading for the Narrator (no limit)"><button type="button" class="wr-realm-btn" data-realm="creator">Musician</button><button type="button" class="wr-realm-btn" data-realm="reader">Narrator</button></span>
             <button type="button" class="btn primary small" id="wrHandBtn">Load into the Musician</button>
-            <button type="button" class="btn ghost small" id="wrKeep" title="Keep the document as it stands, under a label">Keep this version</button>
+            <button type="button" class="btn ghost small icon-btn wr-head-ico" id="wrKeep" data-ui="flag" aria-label="Keep this version" data-tip="Keep the document as it stands, under a label"></button>   <!-- HERESY 2494: the document's own acts as icons -->
+            <button type="button" class="btn ghost small icon-btn wr-head-ico" id="wrCompareBtn" data-ui="cols-2" aria-label="Compare…" data-tip="What is shown against any of its versions, another version of the same song, or another document: the style and the lyrics line by line"></button>   <!-- HERESY 2482 -->
             <button type="button" class="btn ghost small danger" id="wrDelete">Delete</button>
           </div>
           <div class="wr-version-bar" id="wrVersionBar" hidden>
@@ -1679,15 +1742,27 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
             <button type="button" class="btn ghost small" id="wrVersionCopy">As a new document</button>
             <button type="button" class="btn ghost small" id="wrVersionBack">Back to now</button>
           </div>
+          <!-- HERESY 2477 (the writer audit of 12.11.2026, item 13): what this version has that now has not, line by line -->
+          <details class="draft-diff wr-version-diff" id="wrVersionDiff" hidden open><summary id="wrVersionDiffSay"></summary><div class="draft-diff-body mono" id="wrVersionDiffBody" translate="no"></div></details>
+          <!-- HERESY 2482 (the writer audit of 12.11.2026, item 13): what is shown against a version, the same song's other version, another document -->
+          <div class="wr-compare" id="wrCompare" hidden>
+            <div class="wr-compare-bar"><span class="label">Compare with</span><select id="wrCompareWith" aria-label="Compare with" data-tip="What this document is compared with: now, one of its versions, another version of the same song or another document; the differences show below, line by line"></select>
+              <span class="wr-compare-name" id="wrCompareName" translate="no"></span><span class="row-hint" id="wrCompareSay"></span><span class="spacer"></span>
+              <button type="button" class="btn ghost small" id="wrCompareClose">Close</button></div>
+            <div class="draft-diff-body mono" id="wrCompareBody" translate="no"></div>
+          </div>
           <div class="wr-parts">
-            <label class="field wr-part"><span class="label">STYLE <em id="wrStyleSize"></em></span><textarea id="wrStyle" rows="4" spellcheck="false"></textarea></label>
-            <label class="field wr-part"><span class="label">LYRICS <em id="wrLyricsSize"></em></span><textarea id="wrLyrics" rows="16" spellcheck="false" maxlength="10000"></textarea></label>
-            <div class="field wr-part"><span class="label">NOTES <em>Markdown</em> <button type="button" class="btn ghost small" id="wrNotesMode">Preview</button></span>
+            <label class="field wr-part"><span class="label">STYLE <em id="wrStyleSize"></em></span><textarea id="wrStyle" rows="4" spellcheck="false"></textarea><span class="lib-row wr-style-lib">   <!-- HERESY 2498: the saved styles, as under the Musician's Style --><select id="wrStyleLib" aria-label="Saved styles" data-tip="Your saved styles, kept on Forge: picking one puts it in the Style box (it asks before replacing what is there)."><option value="">Saved styles…</option></select><button type="button" class="btn ghost small icon-btn style-ico" id="wrStyleSave" data-ui="floppy" aria-label="Save style…" data-tip="Keep this style under a name, on Forge: every browser sees it"></button><button type="button" class="btn ghost small icon-btn style-ico danger" id="wrStyleDel" data-ui="trash" aria-label="Delete" data-tip="Delete the saved style picked" disabled></button></span></label>
+            <div class="wr-lyr-col">   <!-- HERESY 2490 (Viktor 12.11.2026: «Статистику по редактору лирики… вниз, точь-в-точь как в Музыканте») -->
+              <label class="field wr-part"><span class="label">LYRICS <em id="wrLyricsSize"></em> <em class="wr-limit" id="wrLyricsLimit"></em> <span class="case-slot" data-case-slot="wrLyrics"></span></span><textarea id="wrLyrics" rows="16" spellcheck="false" maxlength="10000"></textarea></label>
+              <div class="lyr-meter wr-meter" id="wrLyricsMeter"></div>   <!-- HERESY 2478 -->
+            </div>
+            <div class="field wr-part"><span class="label">NOTES <em>Markdown</em> <button type="button" class="btn ghost small icon-btn" id="wrNotesMode" data-ui="eye" aria-label="Preview" data-tip="Preview"></button></span>
               <textarea id="wrNotes" rows="8" placeholder="What the song is for, what to try next, what the last take got wrong…"></textarea>
               <div class="wr-md" id="wrNotesView" hidden></div></div>
             <div class="field wr-part"><span class="label">PARAMS <em>every knob of the Create form</em>
-                <button type="button" class="btn ghost small" id="wrParamsTake">From the Musician</button>
-                <button type="button" class="btn ghost small" id="wrParamsShow">All</button></span>
+                <button type="button" class="btn ghost small icon-btn" id="wrParamsTake" data-ui="import" aria-label="From the Musician" data-tip="From the Musician"></button>
+                <button type="button" class="btn ghost small icon-btn" id="wrParamsShow" data-ui="braces" aria-label="All" data-tip="Every knob as JSON"></button></span>
               <div class="wr-params" id="wrParams"></div><pre class="mono wr-params-json" id="wrParamsJson" hidden></pre></div>
           </div>
           <div class="wr-lower">
@@ -1695,87 +1770,107 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
             <section><h3 class="wr-cap">Versions <span class="dim" id="wrVersionsN"></span></h3><div class="wr-versions" id="wrVersions"></div></section>
           </div>
         </div>
-      </div>
-    </div>
-    <div class="write-grid">
-      <section class="panel write-current">
-        <div class="panel-head"><h3>The Song Now</h3><div class="spacer"></div>
-          <button type="button" class="btn ghost small" data-goto-tab="create">Edit in the Musician</button></div>
-        <div class="write-cur"><span class="label">Title</span><p id="curTitle"></p></div>
-        <div class="write-cur"><span class="label">Style <em id="curStyleSize"></em></span><pre id="curStyle"></pre></div>
-        <div class="write-cur"><span class="label">Score <em>the key, meter and tempo the style must agree with</em></span><p class="mono" id="curScore"></p></div>
-        <div class="write-cur"><span class="label">Lyrics <em id="curLyricsSize"></em></span><pre id="curLyrics"></pre></div>
-      </section>
-      <div class="write-room">
-    <!-- HERESY 1010: YuE2 Studio's songwriting assistant (heresy-assist.js), with the current song as context -->
-    <details class="drawer" id="assistDrawer" open>
-      <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Writing Room</span><span class="sum-say">The chat model reads your style, lyrics and score, then drafts or revises them. You review before anything changes.</span></span></summary>
-      <div class="drawer-body assist">
-        <p class="assist-line" id="assistLine" data-s="">Asking the chat server…</p>   <!-- HERESY 1110 -->
-        <label class="field">
-          <span class="label">What's the song about? <em>or what to change</em></span>
-          <textarea id="assistBrief" rows="4" placeholder="Build an arc for every section from the style and the lyrics; keep my words."></textarea>
-        </label>
-        <div class="assist-chips" id="assistChips"></div>
-        <!-- HERESY 1167 (Viktor: «давай тоже добавим опцию сохранять/удалять промпты, чтобы каждый раз не переписывать заново») -->
-        <div class="lib-row assist-brief-lib">
-          <select id="assistBriefLib" aria-label="Saved briefs"><option value="">Saved briefs…</option></select>
-          <button type="button" class="btn ghost small" id="assistBriefSave">Save brief…</button>
-          <button type="button" class="btn ghost small danger" id="assistBriefDel" disabled>Delete</button>
-        </div>
-        <!-- HERESY 1012: the writer is the page's chat server, or OpenRouter with the user's key. HERESY 2097: one of the hosts ticked under Engine →
-             Writer and Artwork that answers now, with its model; no address and no key here -->
-        <div class="field-row wrap assist-provider hc-on">
-          <label class="field" data-tip="Who drafts: the writers ticked under Engine → Writer and Artwork that answer now. The Studio's own, vLLM, LM Studio and Ollama run on your machine or network: nothing leaves it. OpenRouter is a service on the internet: the brief and the song go to openrouter.ai, through the Studio, which adds your key."><span class="label">Writer</span>
-            <select id="assistProvider" data-hc-row="1"></select></label>
-          <label class="field grow local-only is-hidden" data-tip="The model the writer has loaded now; with several loaded, the one to write with. The Studio never loads, switches or unloads one there."><span class="label">Model</span>
-            <select id="assistLocalModel"></select></label>
-          <label class="field grow or-only" data-tip="Any model of openrouter.ai/models, written provider/model; the field offers the whole list as you type, each with its price per million tokens in and out. The quick picks fill it in."><span class="label">Model</span>
-            <input type="text" id="orModel" list="orModels" placeholder="provider/model" autocomplete="off" spellcheck="false" /><datalist id="orModels"></datalist></label>
-          <div class="or-only or-picks" aria-label="Quick picks"><span class="label">Quick picks</span>
-            <button type="button" class="btn ghost small" data-or-model="deepseek/deepseek-v4-pro" title="Strong and the cheapest per word: the default">DeepSeek V4 Pro</button>
-            <button type="button" class="btn ghost small" data-or-model="deepseek/deepseek-v4.1-flash">DeepSeek V4.1 Flash</button>
-            <button type="button" class="btn ghost small" data-or-model="qwen/qwen3.8-max-0902">Qwen3.8 Max</button>
-            <button type="button" class="btn ghost small" data-or-model="qwen/qwen3.8-flash">Qwen3.8 Flash</button></div>
-          <!-- HERESY 1169: the chosen model's price per million tokens and its context, from OpenRouter's own list -->
-          <p class="row-hint or-only or-price" id="orPrice" aria-live="polite"></p>
-        </div>
-        <div class="field-row wrap">
-          <label class="field grow"><span class="label">Help me with</span><select id="assistTask"></select></label>
-          <label class="field grow"><span class="label">Structure</span>
-            <select id="assistStructure">
-              <option value="">Keep mine — as the lyrics have it</option>
-              <option value="simple" translate="no">Verse · Chorus</option>
-              <option value="bridge" translate="no">Verse · Chorus · Bridge</option>
-              <option value="prechorus">With a pre-chorus</option>
-              <option value="full">Full arc — intro, pre-chorus, bridge, outro</option>
-            </select></label>
-          <label class="field assist-num" data-tip="How free the drafts are: lower keeps close to the brief and repeats itself more, higher invents more and wanders. Blank: the server's or the model's own default."><span class="label">Temperature</span><input type="number" id="assistTemp" min="0" max="2" step="0.1" placeholder="auto" /></label>
-          <label class="field assist-num" data-tip="The longest answer the model may give, in tokens. Too few cut a song off in the middle; a thinking model spends part of them on its thinking first."><span class="label">Max tokens</span><input type="number" id="assistMax" min="256" max="131072" step="256" value="32768" /></label>   <!-- HERESY 1390 -->
-        </div>
-        <details class="assist-prefs">
-          <summary>Your writing preferences <span class="dim" id="assistPrefsSize"></span></summary>
-          <textarea id="assistPrefs" rows="5" placeholder="Standing instructions added to every draft: language, phonetics, spelling, names, what to keep…"></textarea>
-          <p class="row-hint">Added to the built-in YuE2 songwriting instructions for every draft. Kept in this browser.</p>
-          <details class="assist-system"><summary>Read the complete songwriting instructions</summary><pre class="mono" id="assistSystem"></pre></details>
         </details>
-        <div class="assist-go">
-          <!-- HERESY 1167 (Viktor: «ей нужен бекграунд… как призыв к действию. Лучше сместить её вправо и переименовать как
-               Send the request to LLM»; «слева от кнопки статистика, лог того, что происходит»): filled, on the right; Ctrl+Enter in the brief -->
-          <button type="button" class="btn primary" id="assistBtn" data-tip="Ctrl+Enter in the brief does the same"><span aria-hidden="true">✦</span> <span id="assistLabel">Send the request to LLM</span></button>
-          <span class="row-hint" id="assistStatus"></span>
-        </div>
-        <p class="row-hint">Your brief and the current song go to the writer picked above.</p>
+        <details class="drawer wr-step" id="assistDrawer" data-step="2">
+          <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name"><b class="wr-step-n" aria-hidden="true">2</b>Writing Room</span><span class="sum-say">The chat model reads your style, lyrics and score, then drafts or revises them. You review before anything changes.</span></span></summary>
+          <div class="drawer-body assist">
+            <section class="panel write-current is-hidden" id="wrSongNow">
+              <div class="panel-head"><h3>The Musician's song</h3><div class="spacer"></div>
+                <button type="button" class="btn ghost small" data-goto-tab="create">Edit in the Musician</button></div>
+              <div class="write-cur"><span class="label">Title</span><p id="curTitle"></p></div>
+              <div class="write-cur"><span class="label">Style <em id="curStyleSize"></em></span><pre id="curStyle"></pre></div>
+              <div class="write-cur"><span class="label">Score <em>the key, meter and tempo the style must agree with</em></span><p class="mono" id="curScore"></p></div>
+              <div class="write-cur"><span class="label">Lyrics <em id="curLyricsSize"></em></span><pre id="curLyrics"></pre></div>
+            </section>
+
+            <p class="assist-line" id="assistLine" data-s="">Asking the chat server…</p>   <!-- HERESY 1110 -->
+            <label class="field">
+              <span class="label">What's the song about? <em>or what to change</em></span>
+              <textarea id="assistBrief" rows="4" placeholder="Build an arc for every section from the style and the lyrics; keep my words."></textarea>
+            </label>
+            <div class="assist-chips" id="assistChips"></div>
+            <!-- HERESY 1167 (Viktor: «давай тоже добавим опцию сохранять/удалять промпты, чтобы каждый раз не переписывать заново») -->
+            <div class="lib-row assist-brief-lib">
+              <select id="assistBriefLib" aria-label="Saved briefs"><option value="">Saved briefs…</option></select>
+              <button type="button" class="btn ghost small icon-btn" id="assistBriefSave" data-ui="floppy" aria-label="Save brief…" data-tip="Save brief…"></button>
+              <button type="button" class="btn ghost small danger icon-btn" id="assistBriefDel" data-ui="trash" aria-label="Delete" data-tip="Delete" disabled></button>
+            </div>
+            <!-- HERESY 1012: the writer is the page's chat server, or OpenRouter with the user's key. HERESY 2097: one of the hosts ticked under Engine →
+                 Writer and Artwork that answers now, with its model; no address and no key here -->
+            <div class="field-row wrap">
+              <label class="field grow"><span class="label">Help me with</span><select id="assistTask"></select></label>
+              <label class="field grow"><span class="label">Structure</span>
+                <select id="assistStructure">
+                  <option value="">Keep mine — as the lyrics have it</option>
+                  <option value="simple" translate="no">Verse · Chorus</option>
+                  <option value="bridge" translate="no">Verse · Chorus · Bridge</option>
+                  <option value="prechorus">With a pre-chorus</option>
+                  <option value="full">Full arc — intro, pre-chorus, bridge, outro</option>
+                </select></label>
+   <!-- HERESY 1390 -->
+            </div>
+            <!-- HERESY 2495: who writes, with which model, how freely and how long: one line that says them, open on a click -->
+            <details class="assist-model" id="assistModelBox"><summary><span class="label">Writer and model</span> <span class="dim" id="assistModelSay" translate="no"></span></summary>
+            <div class="field-row wrap assist-provider hc-on">
+              <label class="field" data-tip="Who drafts: the writers ticked under Engine → Writer and Artwork that answer now. The Studio's own, vLLM, LM Studio and Ollama run on your machine or network: nothing leaves it. OpenRouter is a service on the internet: the brief and the song go to openrouter.ai, through the Studio, which adds your key."><span class="label">Writer</span>
+                <select id="assistProvider" data-hc-row="1"></select></label>
+              <label class="field grow local-only is-hidden" data-tip="The model the writer has loaded now; with several loaded, the one to write with. The Studio never loads, switches or unloads one there."><span class="label">Model</span>
+                <select id="assistLocalModel"></select></label>
+              <label class="field grow or-only" data-tip="Any model of openrouter.ai/models, written provider/model; the field offers the whole list as you type, each with its price per million tokens in and out. The quick picks fill it in."><span class="label">Model</span>
+                <input type="text" id="orModel" list="orModels" placeholder="provider/model" autocomplete="off" spellcheck="false" /><datalist id="orModels"></datalist></label>
+              <div class="or-only or-picks" aria-label="Quick picks"><span class="label">Quick picks</span>
+                <button type="button" class="btn ghost small" data-or-model="deepseek/deepseek-v4-pro" title="Strong and the cheapest per word: the default">DeepSeek V4 Pro</button>
+                <button type="button" class="btn ghost small" data-or-model="deepseek/deepseek-v4.1-flash">DeepSeek V4.1 Flash</button>
+                <button type="button" class="btn ghost small" data-or-model="qwen/qwen3.8-max-0902">Qwen3.8 Max</button>
+                <button type="button" class="btn ghost small" data-or-model="qwen/qwen3.8-flash">Qwen3.8 Flash</button></div>
+              <!-- HERESY 1169: the chosen model's price per million tokens and its context, from OpenRouter's own list -->
+              <p class="row-hint or-only or-price" id="orPrice" aria-live="polite"></p>
+            </div>
+            <div class="field-row wrap assist-nums">
+              <label class="field assist-num" data-tip="How free the drafts are: lower keeps close to the brief and repeats itself more, higher invents more and wanders. Blank: the server's or the model's own default."><span class="label">Temperature</span><input type="number" id="assistTemp" min="0" max="2" step="0.1" placeholder="auto" /></label>
+              <label class="field assist-num" data-tip="The longest answer the model may give, in tokens. Too few cut a song off in the middle; a thinking model spends part of them on its thinking first."><span class="label">Max tokens</span><input type="number" id="assistMax" min="256" max="131072" step="256" value="32768" /></label>            </div>
+            </details>
+            <details class="assist-prefs">
+              <summary>Your writing preferences <span class="dim" id="assistPrefsSize"></span></summary>
+              <textarea id="assistPrefs" rows="5" placeholder="Standing instructions added to every draft: language, phonetics, spelling, names, what to keep…"></textarea>
+              <p class="row-hint">Added to the built-in YuE2 songwriting instructions for every draft. Kept with your settings in the Studio, so every browser of yours has them.</p>
+              <details class="assist-system"><summary>Read the complete songwriting instructions</summary><pre class="mono" id="assistSystem"></pre></details>
+            </details>
+            <div class="assist-go">
+              <!-- HERESY 1167 (Viktor: «ей нужен бекграунд… как призыв к действию. Лучше сместить её вправо и переименовать как
+                   Send the request to LLM»; «слева от кнопки статистика, лог того, что происходит»): filled, on the right; Ctrl+Enter in the brief -->
+              <button type="button" class="btn primary" id="assistBtn" data-tip="Ctrl+Enter in the brief does the same"><span class="assist-ico" aria-hidden="true" data-ui="sparkles"></span> <span id="assistLabel">Send the request to LLM</span></button>
+              <!-- HERESY 2469: the request being written stopped (Esc does the same) -->
+              <button type="button" class="btn danger small is-hidden" id="assistStop" data-tip="Esc does the same: the answer being written is cut off, nothing changes in your song">Stop</button>
+              <span class="row-hint" id="assistStatus"></span>
+            </div>
+            <!-- HERESY 2471 (Viktor 12.11.2026: «Документ, если не взято из песни Музыканта»): where the draft goes, and one click to turn it -->
+            <p class="row-hint assist-target" id="assistTarget"><span id="assistTargetSay"></span> <button type="button" class="btn ghost small is-hidden" id="assistTargetSwap"></button></p>
+            <!-- HERESY 2464: the question's size before it goes; 2467: the structure template, said when it goes with the brief -->
+            <p class="row-hint assist-budget" id="assistBudget" aria-live="polite"></p>
+            <p class="row-hint assist-struct-note" id="assistStructNote"></p>
+            <p class="row-hint">Your brief and the current song go to the writer picked above.</p>
+            <!-- HERESY 2481 (the writer audit of 12.11.2026, item 14): every answer kept, per document or for the Musician's song; any reopened -->
+          </div>
+        </details>
+        <!-- HERESY 2490 (Viktor 12.11.2026: «ВЫХЛОП LLM ПОМОЩНИКА»): step 3, what the model answered; a draft written for another document waits in its history -->
+        <details class="drawer wr-step" id="wrStepOut" data-step="3"><summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name"><b class="wr-step-n" aria-hidden="true">3</b>LLM assistant output</span><span class="sum-say" id="wrStepOutSay"></span></span></summary>
+        <div class="drawer-body assist wr-out">
+        <p class="row-hint wr-out-none" id="wrOutNone">No draft yet: write your brief in the Writing room and send the request.</p>
+        <p class="row-hint wr-out-else is-hidden" id="wrOutElse"></p>
         <section class="assist-draft is-hidden" id="assistDraft">
           <div class="assist-draft-head"><strong>Your draft</strong><span class="dim mono" id="assistModel"></span></div>
           <label class="field"><span class="label">Title</span><input type="text" id="draftTitle" /></label>
-          <label class="field"><span class="label">Style <em id="draftStyleSize"></em></span><textarea id="draftStyle" rows="4"></textarea></label>
+          <label class="field"><span class="label">Style <em id="draftStyleSize"></em> <em class="draft-same is-hidden" id="draftStyleSame">unchanged: your current style</em></span><textarea id="draftStyle" rows="4"></textarea></label>
           <!-- HERESY 1167 (Viktor: «Промптинг как в SD/SDXL… Но как опцию. Пусть LLM выдаёт полный читабельный и тегированный») -->
           <label class="field"><span class="label" data-head="the most important first">Style as tags</span><textarea id="draftStyleTags" rows="2"></textarea></label>
           <div class="field-row draft-style-form"><span class="label">Into the form</span>
             <label class="check"><input type="radio" name="draftStyleForm" value="tags" checked /> <span>the tags</span></label>
             <label class="check"><input type="radio" name="draftStyleForm" value="readable" /> <span>the readable style</span></label></div>
-          <label class="field"><span class="label">Lyrics</span><textarea id="draftLyrics" rows="12" spellcheck="false"></textarea></label>
+          <label class="field"><span class="label">Lyrics <em class="draft-same is-hidden" id="draftLyricsSame">unchanged: your current lyrics</em> <span class="case-slot" data-case-slot="draftLyrics"></span></span><textarea id="draftLyrics" rows="12" spellcheck="false"></textarea></label>
+          <div class="lyr-meter" id="draftLyricsMeter"></div>   <!-- HERESY 2478 -->
+          <!-- HERESY 2466: the lines the draft changes in your lyrics, before anything is applied -->
+          <details class="draft-diff is-hidden" id="draftDiff" open><summary id="draftDiffSay"></summary><div class="draft-diff-body mono" id="draftDiffBody" translate="no"></div></details>
           <details class="assist-notes" open><summary>Writing notes</summary><p id="draftNotes" translate="no"></p></details>
           <div class="assist-apply">
             <button type="button" class="btn primary small" id="applyDraft">Apply draft</button>
@@ -1785,29 +1880,29 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
           </div>
         </section>
         <details class="assist-raw is-hidden" id="assistRaw"><summary>Raw response</summary><pre class="mono" id="assistRawText"></pre></details>
-      </div>
-    </details>
-      <!-- HERESY 1043: text profiles — rules and shape, with a live preview -->
-      <details class="drawer tp-editor" id="tpEditor">
-        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Text Profiles</span><span class="sum-say">How a pasted text is made ready to read: replacement rules in order (literal or regular expression), then the shape — [Intro], [Verse] at blank lines, [Interlude] after long paragraphs. Applied from the Lyrics field.</span></span></summary>
-        <div class="drawer-body">
-          <div class="lib-row">
-            <select id="tpEdPick" aria-label="Profile to edit"></select>
-            <input type="text" id="tpEdName" placeholder="Save as…" />
-            <button type="button" class="btn ghost small" id="tpEdSave">Save</button>
-            <button type="button" class="btn ghost small danger" id="tpEdDel">Delete</button>
-          </div>
-          <div class="tp-shape" id="tpShape"></div>
-          <div class="tp-rules-wrap"><table class="tp-rules" id="tpRules"></table></div>
-          <button type="button" class="btn ghost small" id="tpAddRule">+ Rule</button>
-          <div class="tp-test">
-            <label class="field"><span class="label">Try it <button type="button" class="btn ghost small" id="tpFromLyrics">from Lyrics</button></span>
-              <textarea id="tpTestIn" rows="6" spellcheck="false" placeholder="Paste a piece of text"></textarea></label>
-            <div class="field"><span class="label">Comes out</span><pre class="tp-out" id="tpTestOut"></pre><pre class="tp-log mono" id="tpTestLog"></pre></div>
-          </div>
+        <details class="assist-history" id="assistHistory"><summary><span id="assistHistorySay">Drafts kept for the Musician's song</span> <span class="dim" id="assistHistoryN"></span></summary>
+          <div class="ah-list" id="assistHistoryList"></div></details>
         </div>
-      </details>
-
+        </details>
+        <details class="drawer tp-editor" id="tpEditor">
+          <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Text Profiles</span><span class="sum-say">How a pasted text is made ready to read: replacement rules in order (literal or regular expression), then the shape — [Intro], [Verse] at blank lines, [Interlude] after long paragraphs. Applied from the Lyrics field.</span></span></summary>
+          <div class="drawer-body">
+            <div class="lib-row">
+              <select id="tpEdPick" data-hc-pick="1" aria-label="Profile to edit"></select>
+              <input type="text" id="tpEdName" placeholder="Save as…" />
+              <button type="button" class="btn ghost small" id="tpEdSave">Save</button>
+              <button type="button" class="btn ghost small danger" id="tpEdDel">Delete</button>
+            </div>
+            <div class="tp-shape" id="tpShape"></div>
+            <div class="tp-rules-wrap"><table class="tp-rules" id="tpRules"></table></div>
+            <button type="button" class="btn ghost small icon-btn" id="tpAddRule" data-ui="plus" aria-label="+ Rule" data-tip="A new rule at the end"></button>
+            <div class="tp-test">
+              <label class="field"><span class="label">Try it <button type="button" class="btn ghost small" id="tpFromLyrics">from Lyrics</button></span>
+                <textarea id="tpTestIn" rows="6" spellcheck="false" placeholder="Paste a piece of text"></textarea></label>
+              <div class="field"><span class="label">Comes out</span><pre class="tp-out" id="tpTestOut"></pre><pre class="tp-log mono" id="tpTestLog"></pre></div>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   </section>
@@ -2092,8 +2187,8 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
        own, in the shapes its pictures take, all from one seed, painted by Qwen-Image (1428: Krea 2 gone); a square one becomes the cover of the
        take in hand -->
   <section class="col artist-col is-hidden" id="view-artist">
-    <div class="col-head post-head artist-head"><h2 id="arRoomName" translate="no">Artist</h2><span class="ar-badge" data-tip="An early preview: what is here works; a canvas with layers and the title written on the cover come in the releases after">Early preview</span>
-      <span class="col-note col-note-two">pictures for your songs from a prompt of your own: square, wide and tall from one seed, painted by Qwen-Image</span>
+    <!-- HERESY 2584 (UIX audit №70): the room's words in its (i), the head one line -->
+    <div class="col-head post-head artist-head"><h2 id="arRoomName" translate="no">Artist</h2><span class="info ar-about" tabindex="-1" role="img" aria-label="pictures for your songs from a prompt of your own: square, wide and tall from one seed, painted by Qwen-Image" data-tip="pictures for your songs from a prompt of your own: square, wide and tall from one seed, painted by Qwen-Image"></span><span class="ar-badge" data-tip="An early preview: what is here works; a canvas with layers and the title written on the cover come in the releases after">Early preview</span>
       <span class="post-take" id="arTake" translate="no"></span><span class="col-note" id="arTakeNote">pick a take on the right to give it a cover</span></div>
     <!-- HERESY 1271 (Viktor 09.10.2026: «Канвас комнаты Художника можно разделить на три колонки, каждая регулируется по ширине. В левой
          промптинг с параметрами. В средней проявка изображения и активное выбранное как в InvokeAI, и ниже данные по прогону самого
@@ -2107,7 +2202,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
       <div class="ar-ref" id="arRef" tabindex="-1">
         <div class="ar-ref-empty" id="arRefEmpty"><span class="label">Reference picture <span class="info" tabindex="-1" role="img" aria-label="About the reference picture" data-tip="Paint from it, as image to image: drop a picture here, paste one (Ctrl+V), or take the stage's with «As reference»"></span></span>
           <button type="button" class="btn ghost small" id="arRefTake" hidden data-tip="The cover of the take picked on the right as the reference: with «Paint around it» it becomes a 16:9 for the video or a 9:16 for a short">The take's cover</button>   <!-- HERESY 1309 -->
-          <label class="btn ghost small ar-ref-pick">Choose…<input type="file" id="arRefFile" accept="image/png,image/jpeg,image/webp" hidden data-tip="A PNG, JPEG or WebP picture of your own to paint from" /></label></div>
+          <label class="btn ghost small icon-only ar-ref-pick" aria-label="Choose…" data-tip="A PNG, JPEG or WebP picture of your own to paint from"><span data-ui="image-up"></span><input type="file" id="arRefFile" accept="image/png,image/jpeg,image/webp" hidden /></label>   <!-- HERESY 2586 (UIX audit №69): the form's words on buttons as icons --></div>
         <div class="ar-ref-on" id="arRefOn" hidden>
           <span class="ar-ref-pic"><img id="arRefImg" alt="" draggable="false" translate="no" /><canvas id="arRefMask" hidden aria-hidden="true"></canvas></span>
           <div class="ar-ref-mid">   <!-- HERESY 1307: the strength and «Paint around it» in one column -->
@@ -2118,10 +2213,10 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
             <label class="field ar-ref-str ar-ref-noise"><span class="label">Extra noise <em id="arRefNoiseSay">0.00</em></span>   <!-- HERESY 1385 -->
             <input type="range" id="arRefNoise" min="0" max="1.5" step="0.05" value="0" data-tip="Fresh noise added to the picture before it is painted from, as Viktor's ComfyUI workflow does (InjectLatentNoise): 0 none, 0.3 new grain and detail, 0.6 his second pass, above 1 the picture's forms begin to break" /></label>
             <!-- HERESY 1307: outpaint, a sibling of the strength --><span class="ar-ref-fit"><label class="check" data-tip="Each shape holds the whole picture in its middle and paints the edges it leaves anew, in the picture's colours and light: a square cover into a 16:9 for a video or a 9:16 for a short. The middle stays as it is"><input type="checkbox" id="arRefFit" /> <span>Paint around it</span></label></span>
-            <span class="ar-cv-say" id="arCanvasSay" hidden><em></em><button type="button" class="pb-btn" id="arCanvasX" aria-label="Off the canvas: each shape as the form paints it" data-tip="Off the canvas: each shape as the form paints it">✕</button></span>   <!-- HERESY 1346 -->
+            <span class="ar-cv-say" id="arCanvasSay" hidden><em></em><button type="button" class="pb-btn" id="arCanvasX" aria-label="Off the canvas: each shape as the form paints it" data-tip="Off the canvas: each shape as the form paints it" data-ui="x"></button></span>   <!-- HERESY 1346 -->
           </div>
           <span class="ar-ref-btns"><button type="button" class="btn ghost small" id="arCanvasOpen" data-tip="The canvas, as InvokeAI's: the picture in each shape's frame, moved and scaled by hand; what the frame leaves bare is painted around it; the mask painted over it">Canvas…</button><button type="button" class="btn ghost small" id="arMaskOpen" data-tip="Paint what of the picture to repaint (white repaints, the rest stays as it is): as inpainting">Mask…</button>
-          <button type="button" class="pb-btn ar-ref-x" id="arRefX" aria-label="No reference picture" data-tip="No reference: paint from the noise">✕</button></span>
+          <button type="button" class="pb-btn ar-ref-x" id="arRefX" aria-label="No reference picture" data-tip="No reference: paint from the noise" data-ui="x"></button></span>
           <!-- HERESY 1320: the mask's options -->
           <div class="ar-mask-opts" id="arMaskOpts" hidden>
             <label class="field"><span class="label">Grow</span><input type="number" id="arMkGrow" min="-64" max="128" step="4" value="0" data-tip="The mask grown by so many pixels (negative: shrunk), as ComfyUI's GrowMask: room for the new paint to meet the old" /></label>
@@ -2132,19 +2227,19 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
         </div>
       </div>
       <div class="ar-knobs">
-        <button type="button" class="btn ghost small" id="arFromTake" data-tip="The prompt the take's artwork was drawn from, or one from its title and style, to start from">From the take</button>
+        <button type="button" class="btn ghost small icon-only" id="arFromTake" aria-label="From the take" data-tip="The prompt the take's artwork was drawn from, or one from its title and style, to start from" data-ui="music"></button>
         <div class="ar-shapes" id="arShapes" role="group" aria-label="Shapes"></div>
         <!-- HERESY 2278 (Viktor 09.11.2026: the Artist's «Advanced» mode, bigger sizes behind a switch): a size of one's own instead of the shapes -->
         <div class="ar-adv" id="arAdv"><label class="check" data-tip="Paint one picture of a size of your own instead of the shapes: its sides in multiples of 64, from 256 up to what the painter and your card can take"><input type="checkbox" id="arAdvOn" /> <span>Advanced: a size of my own</span></label><span class="ar-adv-size" id="arAdvSize" hidden><label class="field"><span class="label">Width</span><input type="number" id="arAdvW" min="256" max="3072" step="64" value="2048" data-tip="The picture's width in pixels: a multiple of 64 (another number goes to the nearest), from 256 to the painter's longest side; beside it, how much of a card this size needs" /></label><label class="field"><span class="label">Height</span><input type="number" id="arAdvH" min="256" max="3072" step="64" value="1152" data-tip="The picture's height in pixels: a multiple of 64 (another number goes to the nearest), from 256 to the painter's longest side; beside it, how much of a card this size needs" /></label><em class="ar-adv-say" id="arAdvSay" aria-live="polite"></em></span></div>
         <div class="ar-seedcount">   <!-- HERESY 1345 (Viktor: «ВАРИАЦИИ ужми, а СИД лучше растянуть»): one row, the seed stretched -->
-        <label class="field ar-seed"><span class="label">Seed <span class="info" tabindex="-1" role="img" aria-label="About the seed" data-tip="The seed decides the picture: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed)"></span></span><span class="ar-seed-row"><input type="text" id="arSeed" inputmode="numeric" autocomplete="off" placeholder="new" data-tip="The seed decides the picture: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed)" /><button type="button" class="btn ghost small" id="arSeedNew" data-tip="A new seed each time" aria-label="A new seed each time">⟲</button></span></label>
+        <label class="field ar-seed"><span class="label">Seed <span class="info" tabindex="-1" role="img" aria-label="About the seed" data-tip="The seed decides the picture: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed)"></span></span><span class="ar-seed-row"><input type="text" id="arSeed" inputmode="numeric" autocomplete="off" placeholder="new" data-tip="The seed decides the picture: empty for a new one each time; the seed of a picture you liked draws it again (each run shows its seed)" /><button type="button" class="btn ghost small icon-only" id="arSeedNew" data-tip="A new seed each time" aria-label="A new seed each time" data-ui="dices"></button></span></label>
         <label class="field ar-count" data-tip="How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked"><span class="label">Batch</span><select id="arCount"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
         </div>
         <!-- HERESY 1428 (Viktor 14.10.2026: «объединить в один спадающий дроплаун… обзови как "КИСТИ ХУДОЖНИКА"»): every brush in one list -->
-        <label class="field ar-painter"><span class="label">The Artist's brushes <span class="info ar-pnote" id="arPainterNote" tabindex="-1" role="img" aria-label="About the painter" hidden></span></span><select id="arBrush" translate="no" data-tip="Every brush the Artist has here, in one list: Qwen-Image 2512 from a 4- or 6-bit GGUF; each fp8 file in models/artist/Qwen-Image-2512/checkpoints/, 2512's own BASE and the fine-tunes (a file put there shows here when the room reads the list again); Qwen-Image 2.1. ⚡ Lightning: it paints in 8 steps by default; a fine-tune paints its finished realism without it unless Sampling asks"><option value="qwen2512-q4">Q4 · ⚡ Lightning</option></select><select id="arPainter" hidden aria-hidden="true" tabindex="-1"><option value="qwen2512-q4">Qwen-Image 2512 · Q4</option></select><select id="arModel" hidden aria-hidden="true" tabindex="-1" translate="no"></select></label>
+        <label class="field ar-painter"><span class="label">The Artist's brushes <span class="info ar-pnote" id="arPainterNote" tabindex="-1" role="img" aria-label="About the painter" hidden></span></span><select id="arBrush" data-tip="Every brush the Artist has here, in one list: Qwen-Image 2512 from a 4- or 6-bit GGUF; each fp8 file in models/artist/Qwen-Image-2512/checkpoints/, 2512's own BASE and the fine-tunes (a file put there shows here when the room reads the list again); Qwen-Image 2.1. ⚡ Lightning: it paints in 8 steps by default; a fine-tune paints its finished realism without it unless Sampling asks"><option value="qwen2512-q4" translate="no">Q4 · ⚡ Lightning</option></select><select id="arPainter" hidden aria-hidden="true" tabindex="-1"><option value="qwen2512-q4">Qwen-Image 2512 · Q4</option></select><select id="arModel" hidden aria-hidden="true" tabindex="-1" translate="no"></select></label>
         <!-- HERESY 1318: the fp8 fine-tune of Qwen-Image 2512; 1432 (Viktor: «селектор ФАЙНТЮН — он нафиг нам больше не нужен»): its
              field gone, the file kept in the hidden #arModel beside #arPainter, picked in The Artist's brushes -->
-        <div class="ar-get-row"><button type="button" class="btn ghost small" id="arGet" data-tip="The painters, the Qwen fine-tunes and the adapters the Studio can fetch for the Artist, each with its size, here or not: from the Studio's models repository and from their makers">Get painters and adapters…</button></div>   <!-- HERESY 1347 -->
+        <div class="ar-get-row"><button type="button" class="btn ghost small icon-only" id="arGet" aria-label="Get painters and adapters…" data-ui="cloud-download" data-tip="The painters, the Qwen fine-tunes and the adapters the Studio can fetch for the Artist, each with its size, here or not: from the Studio's models repository and from their makers"></button></div>   <!-- HERESY 1347 -->
         <!-- HERESY 1319: the sampling: steps, sampler, schedule; 2512's Lightning and guidance -->
         <details class="ar-sampling" id="arSampling"><summary><span class="label">Sampling</span> <em id="arSampSay"></em><span class="info is-warn" id="arSampWarn" tabindex="-1" role="img" aria-label="A warning on the sampling" hidden></span></summary>
           <div class="ar-samp-row">
@@ -2162,12 +2257,12 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
         <!-- HERESY 1387: regional prompts, as InvokeAI's regional guidance -->
         <details class="ar-sampling ar-regions" id="arRegions"><summary><span class="label">Regions</span> <em id="arRegSay"></em><span class="info" tabindex="-1" role="img" aria-label="About the regions" data-tip="Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Qwen-Image 2512"></span></summary>
           <div class="ar-reg-list" id="arRegList"></div>
-          <div class="ar-reg-foot"><button type="button" class="btn ghost small" id="arRegAdd">Add a region</button><span class="row-hint" id="arRegNote" hidden>Not with Qwen-Image 2.1: it edits by words</span></div>
+          <div class="ar-reg-foot"><button type="button" class="btn ghost small icon-only" id="arRegAdd" aria-label="Add a region" data-tip="Add a region" data-ui="plus"></button><span class="row-hint" id="arRegNote" hidden>Not with Qwen-Image 2.1: it edits by words</span></div>
         </details>
         <!-- HERESY 1394 (Viktor 12.10.2026: «A & B - лучшие. B - реально круто. Впиливай всю эту ересь!»; «По надписи всё правильно»): the lettering, its words apart from the prompt -->
         <details class="ar-sampling ar-letters" id="arLetters"><summary><span class="label">Lettering</span> <em id="arLetSay" translate="no"></em><span class="info" tabindex="-1" role="img" aria-label="About the lettering" data-tip="A title, and a second line under it, lettered as part of the painting, not laid over it: Qwen-Image paints them with the picture, or Qwen-Image 2.1 letters a finished one, the reference. Each picture is read back by the listener (Qwen2.5-Omni) and one misspelled is painted again with another seed, up to three times; one still misspelled is said so, with what it reads"></span></summary>
           <div class="ar-let-row"><label class="field ar-let-title"><span class="label">Title</span><input type="text" id="arLetTitle" maxlength="60" spellcheck="false" data-tip="The words to letter, exactly as they are to be spelled" /></label>
-            <button type="button" class="btn ghost small" id="arLetTake" disabled data-tip="The title of the take picked on the right">The take's title</button></div>
+            <button type="button" class="btn ghost small icon-only" id="arLetTake" disabled aria-label="The take's title" data-tip="The title of the take picked on the right" data-ui="type"></button></div>
           <label class="field"><span class="label">Second line</span><input type="text" id="arLetSub" maxlength="80" spellcheck="false" data-tip="Smaller, under the title: the artist, the album; empty for none" /></label>
           <label class="field"><span class="label">The letters</span><input type="text" id="arLetLook" maxlength="400" spellcheck="false" placeholder="large elegant classical serif capitals in warm gold, with even letter spacing" data-tip="What the letters look like, in words: the kind of letters, their colour, how they sit; empty: classical serif capitals in warm gold" /></label>
           <div class="ar-samp-row">
@@ -2199,7 +2294,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
             <label class="field ar-samp-num"><span class="label">Until %</span><input type="number" id="arCfVarSw" min="1" max="99" step="1" data-tip="The share of the steps it acts in (his AIO #4: 25)" /></label>
           </div>
           <div class="ar-samp-row">
-            <label class="field"><span class="label">Hooked adapter</span><select id="arCfHook" translate="no" data-tip="A character adapter hooked to the prompt alone, its strength by his keyframes (none for the first steps, then up to full, easing to 0.8), as his «QW Character LoRA Hooks»; its trigger word read beside the prompt"><option value="">none</option></select></label>
+            <label class="field"><span class="label">Hooked adapter</span><select id="arCfHook" data-tip="A character adapter hooked to the prompt alone, its strength by his keyframes (none for the first steps, then up to full, easing to 0.8), as his «QW Character LoRA Hooks»; its trigger word read beside the prompt"><option value="">none</option></select></label>
             <label class="field ar-samp-num"><span class="label">Strength</span><input type="number" id="arCfHookW" min="0" max="2" step="0.05" data-tip="The hooked adapter's strength before its keyframes (his: 0.8)" /></label>
             <label class="field"><span class="label">Trigger</span><input type="text" id="arCfHookTrig" maxlength="200" spellcheck="false" data-tip="The adapter's trigger word, read as an entry of its own beside the prompt" /></label>
           </div>
@@ -2209,7 +2304,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
             <label class="field ar-samp-num"><span class="label">Strength at end</span><input type="number" id="arCfMainTo" min="0" max="2" step="0.05" data-tip="MAIN CONTROL's strength where its envelope ends, multiplied into the hooked adapter's keyframes (his: 1)" /></label>
             <label class="field ar-samp-num"><span class="label">Starts at %</span><input type="number" id="arCfMainP0" min="0" max="99" step="1" data-tip="The share of the steps where MAIN CONTROL's envelope starts to move (his: 30 %)" /></label>
             <label class="field ar-samp-num"><span class="label">Ends at %</span><input type="number" id="arCfMainP1" min="1" max="100" step="1" data-tip="The share of the steps where MAIN CONTROL's envelope reaches its end strength (his: 100 %)" /></label>
-            <label class="field"><span class="label">Curve</span><select id="arCfMainHow" translate="no" data-tip="How MAIN CONTROL's strength goes from start to end: linear, ease_in (slow at first), ease_out (slow at the end) or ease_in_out (slow at both ends) (his: ease_in)"><option value="linear">linear</option><option value="ease_in">ease_in</option><option value="ease_out">ease_out</option><option value="ease_in_out">ease_in_out</option></select></label>
+            <label class="field"><span class="label">Curve</span><select id="arCfMainHow" data-tip="How MAIN CONTROL's strength goes from start to end: linear, ease_in (slow at first), ease_out (slow at the end) or ease_in_out (slow at both ends) (his: ease_in)"><option value="linear" translate="no">linear</option><option value="ease_in" translate="no">ease_in</option><option value="ease_out" translate="no">ease_out</option><option value="ease_in_out" translate="no">ease_in_out</option></select></label>
           </div>
           <div class="ar-samp-row">
             <label class="field ar-samp-num"><span class="label">Second pass from step</span><input type="number" id="arCfStart" min="0" max="99" step="1" data-tip="A second pass starts from this step of the schedule (his AIO #4: 20 of 60); 0: from the strength" /></label>
@@ -2226,7 +2321,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
             <label class="field ar-samp-num"><span class="label">Seeds</span><input type="number" id="arGridSeeds" min="1" max="4" step="1" value="1" data-tip="One to four: the seed above, then the next ones" /></label>
           </div>
           <div class="ar-samp-row">
-            <label class="field"><span class="label">Stepped adapter</span><select id="arGridAdapter" translate="no" data-tip="One adapter painted at each strength below, the others of the form as they are"><option value="">none</option></select></label>
+            <label class="field"><span class="label">Stepped adapter</span><select id="arGridAdapter" data-tip="One adapter painted at each strength below, the others of the form as they are"><option value="">none</option></select></label>
             <label class="field"><span class="label">Its strengths</span><input type="text" id="arGridWeights" value="0.6, 0.8, 1.0" spellcheck="false" data-tip="One to eight, by commas" /></label>
           </div>
           <label class="field"><span class="label">Prompts</span><textarea id="arGridPrompts" rows="3" maxlength="32000" spellcheck="false" placeholder="one a line; empty: the prompt above" data-tip="Up to eight prompts, one a line; empty: the prompt above"></textarea></label>
@@ -2269,25 +2364,24 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
        02.10.2026: the runs that are training stand on top with their progress; the steps sit in a row as in the Refiner,
        one open at a time; the telemetry of a run right under them; every run a card in the column on the right -->
   <section class="col train-col is-hidden" id="view-train">
-    <div class="col-head"><h2>LoRA Trainer</h2><span class="col-note col-note-two">a LoRA for YuE2 from your own songs · the guide: LORA-TRAINING.md</span>
-      <span class="col-note col-note-two bb-note" hidden>an SFZ bank from recordings of one instrument: the instrument alone, its notes, the bank for the DAW</span>
+    <div class="col-head"><h2>LoRA Trainer<span class="col-note info" tabindex="-1" role="img" aria-label="About the Trainer" data-tip="a LoRA for YuE2 from your own songs · the guide: LORA-TRAINING.md"></span><span class="col-note info bb-note" tabindex="-1" role="img" aria-label="About the Trainer" data-tip="an SFZ bank from recordings of one instrument: the instrument alone, its notes, the bank for the DAW" hidden></span></h2><button type="button" class="btn ghost small icon-btn tr-head-ico" id="trGuide" data-ui="book-open" aria-label="The guide: LORA-TRAINING.md" data-tip="The guide: LORA-TRAINING.md"></button><!-- HERESY 2571 (the UIX audit of 13.11.2026, item 89): the room's words in the (i) by its name (the Bank Builder's in its own, heresy-bankbuilder.js shows one), the guide an icon -->
       <span class="tr-modes" role="tablist" aria-label="What the Trainer makes"><!-- HERESY 2031: a LoRA, or an SFZ bank from recordings --><button type="button" role="tab" class="tr-mode is-on" data-trmode="lora" aria-selected="true" data-tip="A LoRA for YuE2 from your own songs">LoRA</button><button type="button" role="tab" class="tr-mode" data-trmode="banks" aria-selected="false" data-tip="An SFZ bank from recordings of one instrument, for the DAW's Layer and the orchestra">SFZ banks</button></span>
-      <span class="spacer"></span><button type="button" class="btn ghost small" id="trReload">Reload</button></div>
+      <span class="spacer"></span><button type="button" class="btn ghost small icon-btn tr-head-ico" id="trReload" data-ui="refresh" aria-label="Reload" data-tip="Reload"></button></div>
     <div class="tr-layout" id="trLayout">
       <div class="tr-main" id="trBody">
         <div id="trWarn"></div>
         <div class="tr-live" id="trLive" hidden></div>
         <nav class="post-steps tr-pills" id="trPills" role="tablist" aria-label="Train steps">
-          <button type="button" role="tab" class="ps-step" data-pane="raw"><span class="ps-mark">1</span><span class="ps-text"><span class="ps-name">Material</span><span class="ps-say" id="trSayRaw">a folder of datasets/raw/</span></span></button>
+          <button type="button" role="tab" class="ps-step" data-pane="raw" data-tip="Step 1: your songs, a folder of datasets/raw/; pick it, choose the tracks, give each its lyrics"><span class="ps-mark">1</span><span class="ps-text"><span class="ps-name">Material</span><span class="ps-say" id="trSayRaw">a folder of datasets/raw/</span></span></button>
           <span class="ps-arrow" aria-hidden="true">›</span>
-          <button type="button" role="tab" class="ps-step" data-pane="set"><span class="ps-mark">2</span><span class="ps-text"><span class="ps-name">The set</span><span class="ps-say" id="trSaySet">a caption for every track</span></span></button>
+          <button type="button" role="tab" class="ps-step" data-pane="set" data-tip="Step 2: the set, a caption for every track (the style line, then the lyrics), made into datasets/prepared/"><span class="ps-mark">2</span><span class="ps-text"><span class="ps-name">The set</span><span class="ps-say" id="trSaySet">a caption for every track</span></span></button>
           <span class="ps-arrow" aria-hidden="true">›</span>
-          <button type="button" role="tab" class="ps-step" data-pane="train"><span class="ps-mark">3</span><span class="ps-text"><span class="ps-name">Train</span><span class="ps-say" id="trSayTrain">a kind, the knobs, a card</span></span></button>
+          <button type="button" role="tab" class="ps-step" data-pane="train" data-tip="Step 3: a set, a kind of adapter and the knobs; the run takes a card of its own"><span class="ps-mark">3</span><span class="ps-text"><span class="ps-name">Train</span><span class="ps-say" id="trSayTrain">a kind, the knobs, a card</span></span></button>
           <span class="ps-arrow" aria-hidden="true">›</span>
-          <button type="button" role="tab" class="ps-step" data-pane="run"><span class="ps-mark">4</span><span class="ps-text"><span class="ps-name">Telemetry</span><span class="ps-say" id="trSayRun">a run: its curves and epochs</span></span></button>
+          <button type="button" role="tab" class="ps-step" data-pane="run" data-tip="Step 4: a run's telemetry, its curves, its saves and its epochs"><span class="ps-mark">4</span><span class="ps-text"><span class="ps-name">Telemetry</span><span class="ps-say" id="trSayRun">a run: its curves and epochs</span></span></button>
           <span class="ps-arrow" aria-hidden="true">›</span>
           <!-- HERESY 2340: the stereo guard: a workspace of probes against the base model on the same cards -->
-          <button type="button" role="tab" class="ps-step" data-pane="stereo"><span class="ps-mark">5</span><span class="ps-text"><span class="ps-name">Stereo</span><span class="ps-say">probes against the base</span></span></button>
+          <button type="button" role="tab" class="ps-step" data-pane="stereo" data-tip="Step 5: the stereo guard, probes of a run's saves against the base model on the same cards"><span class="ps-mark">5</span><span class="ps-text"><span class="ps-name">Stereo</span><span class="ps-say">probes against the base</span></span></button>
         </nav>
 
         <section class="tr-pane" data-pane="raw">
@@ -2444,63 +2538,89 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
   <section class="col video-col is-hidden" id="view-video">
     <!-- HERESY 1940 (Viktor 30.10.2026: «Поиск трека перенеси в единую строку заголовка Видеографа… Оформи поиск модалкой, с навигацией по воркспейсам. Сабтайтл видеографа тоже в колонку после названия»): the head in one row as the other rooms': the name, the note, a take found in a window, the whole screen -->
     <div class="col-head vd-head"><h2>Videographer <span class="tag">beta</span></h2><span class="col-note col-note-two">the take's song cut into shots at its sung lines: the look and the scenes with the Writer, the pictures by the Artist, the moving shots by MiniMax H3, the clip</span>
-      <div class="vd-headtools"><label class="vd-findhead"><span class="vd-findglass" aria-hidden="true">🔍</span><input type="search" id="vdFindOpen" readonly aria-haspopup="dialog" autocomplete="off" placeholder="Find a take: words of its title or style" aria-label="Find a take: words of its title or style" data-tip="Find a take by the words of its title or style, or among a workspace's takes (Ctrl+K in this room)" /></label>   <!-- HERESY 1945 -->
-        <button type="button" class="btn ghost small icon-act vd-fullbtn" id="vdFull" aria-pressed="false" aria-label="Full screen" data-tip="This room over the whole screen; F11 in it does the same. Esc, F11 or this button back">⛶</button></div></div>
+      <div class="vd-headtools"><label class="vd-findhead"><span class="vd-findglass" aria-hidden="true" data-ui="search"></span><input type="search" id="vdFindOpen" readonly aria-haspopup="dialog" autocomplete="off" placeholder="Find a take: words of its title or style" aria-label="Find a take: words of its title or style" data-tip="Find a take by the words of its title or style, or among a workspace's takes (Ctrl+K in this room)" /></label>   <!-- HERESY 1945 -->
+        <button type="button" class="btn ghost small icon-act vd-fullbtn" id="vdFull" aria-pressed="false" aria-label="Full screen" data-tip="This room over the whole screen; F11 in it does the same. Esc, F11 or this button back" data-ui="maximize"></button></div></div>
     <div class="vd-layout" id="vdLayout"><div class="vd-main">
     <div class="vd-findwin" id="vdFindWin" hidden><div class="vd-findbox" role="dialog" aria-modal="true" aria-label="Find a take">
       <aside class="vd-findws" id="vdFindWs" aria-label="Workspaces"></aside>
       <div class="vd-findmain"><div class="vd-find"><input type="search" id="vdFind" autocomplete="off" data-tip="Words of a take's title or its style; a take picked opens its plan here" placeholder="Find a take: words of its title or style" aria-label="Find a take: words of its title or style" /></div>
         <div class="vd-found" id="vdFound"></div></div></div></div>
     <div class="vd-bar"><span class="vd-take" id="vdTake" translate="no"></span>
-      <button type="button" class="btn small" id="vdMake">Make the plan</button>
-      <button type="button" class="btn small" id="vdWrite">Write the scenes</button>
+      <button type="button" class="btn small icon-only" id="vdMake" aria-label="Make the plan" data-tip="Make the plan" data-ui="wand-sparkles"></button>   <!-- HERESY 2589 (UIX audit №79): the bar's words as icons -->
+      <button type="button" class="btn small icon-only" id="vdWrite" aria-label="Write the scenes" data-tip="Write the scenes" data-ui="pen-line"></button>
       <select id="vdCutsOn" class="vd-move vd-cutson" aria-label="Cuts" data-tip="How the cuts between shots meet the music: as sung, where the words fall; on the sections, each change of section where the take's music itself changes (on its bar line or beat when one is that near), else on the nearest bar; on the beat, the sections so, then every other cut on the nearest beat within 0.3 s. No shot under 1.5 s, the times as sung kept beside them; Ctrl+Z on the timeline takes a change back. The beats and the bars heard stay on the timeline's ruler, a cut on one lit"><option value="off">Cuts as sung</option><option value="sections">Cuts on the sections</option><option value="beats">Cuts on the beat</option></select>   <!-- HERESY 1947; 2262: how strictly -->
       <button type="button" class="btn ghost small" id="vdSave">Save</button>
-      <button type="button" class="btn ghost small" id="vdExport">Storyboard (.md)</button>
-      <button type="button" class="btn ghost small" id="vdEditZip" data-tip="The plan as an editor's project in one zip: an OpenTimelineIO timeline and an EDL for DaVinci Resolve or Kdenlive, the sung lines as subtitles, every shot's video or picture and the take's sound">Editor (.zip)</button>   <!-- HERESY 1946 -->
+      <button type="button" class="btn ghost small icon-only" id="vdExport" data-ui="file-text" aria-label="Storyboard (.md)"></button>
+      <button type="button" class="btn ghost small icon-only" id="vdEditZip" data-tip="The plan as an editor's project in one zip: an OpenTimelineIO timeline and an EDL for DaVinci Resolve or Kdenlive, the sung lines as subtitles, every shot's video or picture and the take's sound" data-ui="file-archive" aria-label="Editor (.zip)"></button>   <!-- HERESY 1946 -->
       <span class="vd-status mono" id="vdStatus"></span></div>
+    <!-- HERESY 2590 (UIX audit №82): no take or no plan said in the middle, with its one next step -->
+    <div class="vd-empty" id="vdEmpty" hidden><p class="vd-empty-say" id="vdEmptySay"></p><button type="button" class="btn primary" id="vdEmptyGo"></button></div>
     <div id="vdBody" hidden>
       <!-- HERESY 1940 («Всё полотенце ниже канваса давай оформим как-то секционно… "кадры"… под блоком КАДРЫ в режим Tabs»): three sections, one in sight -->
       <!-- HERESY 1961 (Viktor 30.10.2026: «настаиваю на внутренних комнатах/вкладках в Видеографе, чтобы всё было на одном едином канвасе в 1080p»): four inner rooms, the edit page the first -->
+      <!-- HERESY 2392 (Viktor 11.11.2026: «Плеер монтажа всегда единый в правой половине, а аниматик с клипом — слева с переключением»): two viewers as
+           DaVinci Resolve's over the inner rooms: the source on the left, the animatic or the clip with a switch, the edit's program always on the right;
+           under 1600 px one of them, a switch in each head; one sound in the room -->
+      <div class="vd-monitors" id="vdMonitors" data-one="src">
+        <section class="vd-mon" id="vdMonSrc" aria-label="Animatic and clip">
+          <div class="vd-mon-head"><span class="vd-seg" role="tablist" aria-label="The left viewer"><button type="button" role="tab" class="vd-segb" data-vdsrc="animatic" aria-selected="false" data-tip="The animatic in this viewer">Animatic</button><button type="button" role="tab" class="vd-segb" data-vdsrc="clip" aria-selected="true" data-tip="The clip in this viewer">Clip</button></span><span class="vd-gap"></span>
+            <button type="button" class="btn ghost small vd-light" id="vdLight" aria-pressed="false" hidden data-tip="The clip's light copy (720 p, under 3 Mbit/s) for a slow link, as over a VPN; pressed again, the full clip. Made by itself after a heavy clip, or here on asking; the download stays the full clip">Light copy</button>
+            <a class="btn ghost small icon-only vd-get" id="vdAnimGet" download hidden aria-label="The animatic as an MP4" data-tip="The animatic as an MP4" data-ui="download"></a><a class="btn ghost small icon-only vd-get" id="vdClipGet" download hidden aria-label="The clip as an MP4, the full one" data-tip="The clip as an MP4, the full one" data-ui="download"></a>
+            <span class="vd-one" role="group" aria-label="One viewer"><button type="button" class="btn ghost small" data-vdone="src" aria-pressed="true" data-tip="The left viewer: the animatic or the clip (on a screen under 1600 px one viewer at a time)">Animatic · clip</button><button type="button" class="btn ghost small" data-vdone="prog" aria-pressed="false" data-tip="The edit's program viewer (on a screen under 1600 px one viewer at a time)">Editing</button></span></div>
+          <div class="vd-mon-body" id="vdSrcBody">
+            <!-- HERESY 1837: the animatic, the plan in the song's time; 1838: the clip, cut from the shots' pictures -->
+            <div class="vd-anim" id="vdAnim" hidden><video id="vdAnimVideo" controls preload="metadata" playsinline></video></div>
+            <div class="vd-anim" id="vdClipBox" hidden><video id="vdClipVideo" controls preload="metadata" playsinline></video></div>
+            <p class="vd-mon-none" id="vdSrcNone" hidden></p>
+          </div>
+        </section>
+        <section class="vd-mon" id="vdMonProg" aria-label="Editing">
+          <div class="vd-mon-head"><span class="vd-mon-name">Editing</span><span class="vd-gap"></span>
+            <span class="vd-one" role="group" aria-label="One viewer"><button type="button" class="btn ghost small" data-vdone="src" aria-pressed="true" data-tip="The left viewer: the animatic or the clip (on a screen under 1600 px one viewer at a time)">Animatic · clip</button><button type="button" class="btn ghost small" data-vdone="prog" aria-pressed="false" data-tip="The edit's program viewer (on a screen under 1600 px one viewer at a time)">Editing</button></span></div>
+          <div class="vd-mon-body">
+            <div class="tl-program" id="tlProgram"><div class="tl-pic" id="tlPic"></div><video id="tlVid" muted playsinline preload="auto" hidden></video><div class="tl-ptitle" id="tlPTitle" translate="no"></div><div class="tl-pwords" id="tlPWords" translate="no"></div><span class="tl-ptc mono" id="tlPTc"></span></div>
+          </div>
+        </section>
+      </div>
       <div class="vd-tabs" id="vdTabs" role="tablist" aria-label="The Videographer's rooms"><button type="button" role="tab" class="btn ghost small vd-tab" data-vdtab="edit" aria-selected="true">Editing</button><button type="button" role="tab" class="btn ghost small vd-tab" data-vdtab="shots" aria-selected="false">Shots</button><button type="button" role="tab" class="btn ghost small vd-tab" data-vdtab="look" aria-selected="false">The idea and the look</button><button type="button" role="tab" class="btn ghost small vd-tab" data-vdtab="films" aria-selected="false">Animatic and clip</button></div>
       <!-- HERESY 1864: the edit page in the manner of DaVinci Resolve: the program monitor, the shot chosen, the timeline -->
       <section class="vd-edit vd-pane" id="vdEdit" data-vdpane="edit" role="tabpanel" hidden>
-        <div class="tl-top">
-          <div class="tl-program" id="tlProgram"><div class="tl-pic" id="tlPic"></div><video id="tlVid" muted playsinline preload="auto" hidden></video><div class="tl-pwords" id="tlPWords" translate="no"></div><span class="tl-ptc mono" id="tlPTc"></span></div>
-          <div class="tl-inspect" id="tlInspect"></div>
-        </div>
         <div class="tl-bar">
-          <span class="tl-tc mono" id="tlTc">00:00:00:00</span>
-          <span class="tl-tools" role="group" aria-label="Tools"><button type="button" class="btn ghost small" data-tlact="select" aria-pressed="true" data-tip="Select (A): a click chooses a shot and puts the playhead there; an edit point dragged moves the cut">Select</button><button type="button" class="btn ghost small" data-tlact="blade" aria-pressed="false" data-tip="Blade (B): a click on a shot cuts it there">Blade</button></span>
-          <button type="button" class="btn ghost small" data-tlact="split" data-tip="Cut the shot under the playhead (Ctrl+B)">Cut</button>
-          <button type="button" class="btn ghost small" data-tlact="join" data-tip="Join the two shots of the edit point chosen (Delete)">Join</button>
-          <button type="button" class="btn ghost small" data-tlact="undo" data-tip="Undo the last edit of the timeline (Ctrl+Z), twenty steps back">Undo</button><button type="button" class="btn ghost small" data-tlact="redo" data-tip="Redo what was undone (Ctrl+Shift+Z)">Redo</button>
+          <span class="tl-tc mono" id="tlTc">00:00:00:00</span>   <!-- HERESY 2595 (UIX audit №74): the edit's eight words as icons, each named in its label, its key in its tip -->
+          <span class="tl-tools" role="group" aria-label="Tools"><button type="button" class="btn ghost small icon-only" data-tlact="select" aria-pressed="true" data-tip="Select (A): a click chooses a shot and puts the playhead there; an edit point dragged moves the cut" data-ui="mouse-pointer-2" aria-label="Select"></button><button type="button" class="btn ghost small icon-only" data-tlact="blade" aria-pressed="false" data-tip="Blade (B): a click on a shot cuts it there" data-ui="slice" aria-label="Blade"></button></span>
+          <button type="button" class="btn ghost small icon-only" data-tlact="split" data-tip="Cut the shot under the playhead (Ctrl+B)" data-ui="scissors" aria-label="Cut"></button>
+          <button type="button" class="btn ghost small icon-only" data-tlact="join" data-tip="Join the two shots of the edit point chosen (Delete)" data-ui="merge" aria-label="Join"></button>
+          <button type="button" class="btn ghost small icon-only" data-tlact="undo" data-tip="Undo the last edit of the timeline (Ctrl+Z), twenty steps back" data-ui="undo-2" aria-label="Undo"></button><button type="button" class="btn ghost small icon-only" data-tlact="redo" data-tip="Redo what was undone (Ctrl+Shift+Z)" data-ui="redo-2" aria-label="Redo"></button>
           <span class="tl-gap"></span>
           <input type="range" id="tlZoom" min="1" max="9" step="0.1" value="3" aria-label="Zoom" data-tip="The zoom: Ctrl and the wheel over the timeline, + and −" />
-          <button type="button" class="btn ghost small" data-tlact="fit" data-tip="The whole song in the timeline (Shift+Z)">Fit</button>
-          <button type="button" class="btn ghost small" data-tlact="screen" data-tip="The program monitor in a window of its own, on the other screen where the browser can place it; a double click there for the full screen">Program on another screen</button>
+          <button type="button" class="btn ghost small icon-only" data-tlact="fit" data-tip="The whole song in the timeline (Shift+Z)" data-ui="scan" aria-label="Fit"></button>
+          <button type="button" class="btn ghost small icon-only" data-tlact="screen" data-tip="The program monitor in a window of its own, on the other screen where the browser can place it; a double click there for the full screen" data-ui="monitor-up" aria-label="Program on another screen"></button>
         </div>
+        <!-- HERESY 2392: the program monitor went up to the right viewer; the inspector beside the timeline. 2393: the tracks each its own -->
+        <div class="tl-split">
         <div class="tl" id="tl" tabindex="0" aria-label="The timeline" data-tip="Space plays, J K L, ← → a frame (Shift: a second), ↑ ↓ the edit points, A select, B blade, Ctrl+B cut, Delete joins, Ctrl+Z undoes">
-          <div class="tl-heads"><span></span><span></span><span data-tip="The shots">V1</span><span data-tip="The words">L1</span><span data-tip="The song">A1</span></div>
-          <div class="tl-scroll" id="tlScroll"><div class="tl-inner" id="tlInner"><div class="tl-ruler" id="tlRuler"></div><div class="tl-marks" id="tlMarks"></div><div class="tl-track tl-v1" id="tlV1"></div><div class="tl-track tl-l1" id="tlL1"></div><div class="tl-track tl-a1"><canvas id="tlWave"></canvas></div><i class="tl-head" id="tlHead"></i></div></div>
+          <div class="tl-heads"><span></span><span></span><span data-tip="The shots">V1</span><button type="button" class="tl-hbtn" data-tltrack="titles" aria-pressed="false" data-tip="ST1, the titles: the title with its template, the author and the verse, the credits at the end. Pressed: burnt into the clip (as «Titles on the clip»)">ST1</button><button type="button" class="tl-hbtn" data-tltrack="lyrics" aria-pressed="false" data-tip="K1, the karaoke: each sung line in its own time, its words as Whisper heard them. Pressed: burnt into the clip (as «Lyrics on the clip»)">K1</button><span data-tip="O1, the overlays: the look, the film and the correction over every shot">O1</span><span data-tip="The song">A1</span></div>
+          <div class="tl-scroll" id="tlScroll"><div class="tl-inner" id="tlInner"><div class="tl-ruler" id="tlRuler"></div><div class="tl-marks" id="tlMarks"></div><div class="tl-track tl-v1" id="tlV1"></div><div class="tl-track tl-t1" id="tlT1"></div><div class="tl-track tl-l1 tl-k1" id="tlL1"></div><div class="tl-track tl-o1" id="tlO1"></div><div class="tl-track tl-a1"><canvas id="tlWave"></canvas></div><i class="tl-head" id="tlHead"></i></div></div>
+        </div>
+        <div class="tl-inspect" id="tlInspect"></div>
         </div>
       </section>
       <section class="vd-pane" data-vdpane="shots" role="tabpanel">
-        <div class="vd-shotnav"><button type="button" class="btn ghost small" id="vdPrev" aria-label="The shot before" data-tip="The shot before (Alt+←)">‹</button><span class="mono vd-shotat" id="vdShotAt"></span><button type="button" class="btn ghost small" id="vdNext" aria-label="The shot after" data-tip="The shot after (Alt+→)">›</button><span class="row-hint">the strip: a click a shot, a double click plays from it</span><span class="vd-panetools">
-        <button type="button" class="btn ghost small" id="vdSplitLong" data-tip="Every shot longer than one pass of MiniMax H3 at 1280 × 704 (about 5 s) cut into pieces of one pass, so no seam of two passes falls inside a shot: the first piece keeps its picture and video, the others get pictures of their own from the same scene">✂ Cut the long shots</button>   <!-- HERESY 2356 -->
-        <button type="button" class="btn ghost small" id="vdDrawAll" data-tip="The Artist draws every shot that has no picture yet, two at a time on the free cards: the hero's shots from the hero's picture (Qwen-Image 2.1, then 2512 over it), the others by 2512 from their scene; each picture goes into its shot as it comes">🎨 Draw the shots</button>   <!-- HERESY 1913 -->
-        <button type="button" class="btn ghost small" id="vdShootAll" data-tip="Every shot with MiniMax H3 as a draft (8 steps), shot by shot on the free cards; a shot's picture, when it has one, is its first frame">🎬 Shoot all</button>   <!-- HERESY 1868 -->
-        <button type="button" class="btn ghost small" id="vdUpAll" data-tip="SeedVR2 7B sharp to 1080p for every shot that has a video and no upscale yet, dealt among the free cards; the clip takes each one as it comes">⇮ Upscale all</button>   <!-- HERESY 1876b -->
+        <div class="vd-shotnav"><button type="button" class="btn ghost small icon-only" id="vdPrev" aria-label="The shot before" data-tip="The shot before (Alt+←)" data-ui="chevron-left"></button><span class="mono vd-shotat" id="vdShotAt"></span><button type="button" class="btn ghost small icon-only" id="vdNext" aria-label="The shot after" data-tip="The shot after (Alt+→)" data-ui="chevron-right"></button><span class="row-hint">the strip: a click a shot, a double click plays from it</span><span class="vd-panetools">
+        <button type="button" class="btn ghost small icon-only" id="vdSplitLong" data-tip="Every shot longer than one pass of MiniMax H3 at 1280 × 704 (about 5 s) cut into pieces of one pass, so no seam of two passes falls inside a shot: the first piece keeps its picture and video, the others get pictures of their own from the same scene" data-ui="scissors" aria-label="Cut the long shots"></button>   <!-- HERESY 2356 -->
+        <button type="button" class="btn ghost small icon-only" id="vdDrawAll" data-tip="The Artist draws every shot that has no picture yet, two at a time on the free cards: the hero's shots from the hero's picture (Qwen-Image 2.1, then 2512 over it), the others by 2512 from their scene; each picture goes into its shot as it comes" data-ui="palette" aria-label="Draw the shots"></button>   <!-- HERESY 1913 -->
+        <button type="button" class="btn ghost small icon-only" id="vdShootAll" data-tip="Every shot with MiniMax H3 as a draft (8 steps), shot by shot on the free cards; a shot's picture, when it has one, is its first frame" data-ui="clapperboard" aria-label="Shoot all"></button>   <!-- HERESY 1868 -->
+        <button type="button" class="btn ghost small icon-only" id="vdUpAll" data-tip="SeedVR2 7B sharp to 1080p for every shot that has a video and no upscale yet, dealt among the free cards; the clip takes each one as it comes" data-ui="arrow-up-from-line" aria-label="Upscale all"></button>   <!-- HERESY 1876b -->
         <span class="vd-status mono" id="vdFrames"></span>   <!-- HERESY 1913 --></span></div>
         <div class="vd-strip" id="vdStrip"></div>
         <div class="vd-shots is-tabs" id="vdShots"></div>
       </section>
       <section class="vd-pane" data-vdpane="look" role="tabpanel">
         <label class="field vd-brief"><span class="label">The idea of the clip</span><textarea id="vdBrief" rows="2" translate="no" data-tip="The clip's idea in a line or a few: what it is about, its mood, its story. The Writer writes the look and the scenes from it"></textarea></label>   <!-- HERESY 1913 -->
-        <div class="vd-titles"><label class="field"><span class="label">The title shown</span><input type="text" id="vdClipTitle" maxlength="200" translate="no" autocomplete="off" data-tip="The title over the clip's first seconds; empty: the take's own" /></label>
+        <div class="vd-titles"><label class="field" data-tip="The title over the clip's first seconds; empty: the take's own"><span class="label">The title shown</span><input type="text" id="vdClipTitle" maxlength="200" translate="no" autocomplete="off" /></label>
           <label class="field"><span class="label">Credits</span><textarea id="vdCredits" rows="2" maxlength="1000" translate="no" data-tip="The closing lines over the clip's last seconds, one a line: who sang, wrote, painted, shot"></textarea></label>
-          <label class="field"><span class="label">Author</span><input type="text" id="vdAuthor" maxlength="200" translate="no" autocomplete="off" data-tip="Who wrote the song, in a smaller line under the title" /></label>
-          <label class="field"><span class="label">The verse</span><input type="text" id="vdVerse" maxlength="200" translate="no" autocomplete="off" data-tip="The verse's address under the title, as John 1:5" /></label></div>   <!-- HERESY 1948; 2246: the author and the verse -->
+          <label class="field" data-tip="Who wrote the song, in a smaller line under the title"><span class="label">Author</span><input type="text" id="vdAuthor" maxlength="200" translate="no" autocomplete="off" /></label>
+          <label class="field" data-tip="The verse's address under the title, as John 1:5"><span class="label">Bible verse</span><input type="text" id="vdVerse" maxlength="200" translate="no" autocomplete="off" /></label></div>   <!-- HERESY 1948; 2246: the author and the verse -->
         <h4 class="mini">The look of the clip</h4>
         <div class="vd-look">
           <label class="field"><span class="label">Who is in it</span><textarea id="vdLook-characters" rows="2" translate="no" data-tip="Who is in the clip: each person as they look, the same in every shot"></textarea></label>
@@ -2520,8 +2640,8 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
         <div class="vd-panebar">
         <button type="button" class="btn ghost small" id="vdAnimatic" data-tip="The plan seen in the song's time: a frame a shot (its words and scene) over the shot's own picture, else the take's cover, with its sound, as an MP4. Made on the processor, no picture model.">Animatic</button>
         <button type="button" class="btn ghost small" id="vdClip" data-tip="The clip cut from the shots' pictures in the song's time, each with a slow camera move as its scene's camera says; a shot without a picture of its own shows the take's cover, or its words and scene when the take has none. Made on the processor, no video model.">Clip</button>
-        <button type="button" class="btn ghost small" id="vdClipTitles" aria-pressed="false" data-tip="The song's title over the clip's first seconds and the credits over its last ones, both as written in «The idea and the look»">Titles on the clip</button>   <!-- HERESY 1948 -->
-        <button type="button" class="btn ghost small" id="vdClipLyrics" aria-pressed="false" data-tip="The sung lines burnt into the clip, each in its own time from the take's timing, at the foot of the picture">Lyrics on the clip</button>   <!-- HERESY 1916 -->
+        <button type="button" class="btn ghost small icon-only" id="vdClipTitles" aria-pressed="false" data-tip="The song's title over the clip's first seconds and the credits over its last ones, both as written in «The idea and the look»" data-ui="captions" aria-label="Titles on the clip"></button>   <!-- HERESY 1948 -->
+        <button type="button" class="btn ghost small icon-only" id="vdClipLyrics" aria-pressed="false" data-tip="The sung lines burnt into the clip, each in its own time from the take's timing, at the foot of the picture" data-ui="mic-vocal" aria-label="Lyrics on the clip"></button>   <!-- HERESY 1916 -->
         <select id="vdClipWords" class="vd-move" aria-label="How the lyrics show" data-tip="How the sung lines show: a whole line at a time, or word by word, each word lit warm gold as it is sung (Whisper's own time for each word it heard, the rest shared between them)"><option value="lines">lyrics: whole lines</option><option value="words">lyrics: word by word</option></select>   <!-- HERESY 2248 -->
         <select id="vdClipTitleStyle" class="vd-move" aria-label="The titles' template" data-tip="Where the title stands: in the middle of the picture, as a lower third on a dark band at the left of the foot, or small in the top corner; the author and the verse go in a smaller line under it"><option value="centre">titles in the middle</option><option value="lower">a lower third</option><option value="corner">titles in the corner</option></select>   <!-- HERESY 2246 -->
         <select id="vdClipBetween" class="vd-move" aria-label="Between sections" data-tip="How the clip passes between shots: a plain cut, through black, a flash of white, a dissolve, through white, a push (the next shot sliding the last one out) or a zoom; where, the next picker says, and a shot can choose its own on its card"><option value="cut">a cut</option><option value="black">through black</option><option value="flash">a flash</option><option value="dissolve">a dissolve</option><option value="white">through white</option><option value="push">a push</option><option value="zoom">a zoom</option></select>   <!-- HERESY 1949; 2243 -->
@@ -2530,15 +2650,10 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
         <select id="vdClipReframe" class="vd-move" aria-label="The crop" data-tip="How a picture is cropped to a narrower shape: where each shot's own focus says, in the middle, or around its subject (found in the picture where no focus was set by hand)"><option value="hand">crop: as set</option><option value="centre">crop: the middle</option><option value="subject">crop: the subject</option></select>
         <select id="vdClipMatch" class="vd-move" aria-label="The colour match" data-tip="Every picture's colours moved towards the picture of the shot in hand (its mean and spread in each colour), so pictures painted apart become one film; the shot in hand when the clip is made is the one followed"><option value="none">colours as painted</option><option value="cur">colours as the shot in hand</option></select>   <!-- HERESY 2249 -->   <!-- HERESY 2244 -->
         <select id="vdClipUp" class="vd-move" aria-label="The upscale" data-tip="How a shot's video comes to the clip's size: by Lanczos, as MiniMax H3 drew it (nothing invented), or SeedVR2's upscale where a shot has one (sharper, and its own faces)"><option value="lanczos">upscale: Lanczos, as H3 drew it</option><option value="seedvr2">upscale: SeedVR2 where made</option></select>   <!-- HERESY 2356 -->
-        <button type="button" class="btn ghost small" id="vdClipDraft" aria-pressed="false" data-tip="The clip at a third of its size, quickly encoded, to see the cut, the passes and the titles in a moment before the full one; a file of its own beside the clip">Quick draft</button>   <!-- HERESY 2245 --></div>
-        <button type="button" class="btn ghost small" id="vdClipLook" data-tip="The clip's colour: a look over every picture, a 3D LUT as a colourist lays one, from a breath of it to all of it; the lyrics and the titles stay as they are">Look</button>   <!-- HERESY 2010 -->
+        <button type="button" class="btn ghost small icon-only" id="vdClipDraft" aria-pressed="false" data-tip="The clip at a third of its size, quickly encoded, to see the cut, the passes and the titles in a moment before the full one; a file of its own beside the clip" data-ui="zap" aria-label="Quick draft"></button>   <!-- HERESY 2245 -->
+        <button type="button" class="btn ghost small" id="vdClipLook" data-tip="The clip's colour: a look over every picture, a 3D LUT as a colourist lays one, from a breath of it to all of it; the lyrics and the titles stay as they are">LUT</button>   <!-- HERESY 2010; 2443: LUT in every language -->   <!-- HERESY 2592: LUT in the bar's row too (it stood under it, alone) --></div>
         <p class="row-hint vd-films-none">No animatic or clip yet: «Animatic» and «Clip» make them.</p>
-        <!-- HERESY 1837: the animatic, the plan in the song's time -->
-        <div class="vd-films">
-        <div class="vd-anim" id="vdAnim" hidden><video id="vdAnimVideo" controls preload="metadata" playsinline></video><div class="vd-film-side"><span class="label">Animatic</span><a class="btn ghost small" id="vdAnimGet" translate="no" download>MP4</a></div></div>
-        <!-- HERESY 1838: the clip, cut from the shots' pictures -->
-        <div class="vd-anim" id="vdClipBox" hidden><video id="vdClipVideo" controls preload="metadata" playsinline></video><div class="vd-film-side"><span class="label">Clip</span><a class="btn ghost small" id="vdClipGet" translate="no" download>MP4</a></div></div>
-        </div>
+        <!-- HERESY 2392: the animatic and the clip play in the left viewer above -->
       </section>
     </div>
     </div>
@@ -2770,6 +2885,8 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
       <button type="button" class="vol-loud mono" id="loudBtn" aria-pressed="false" aria-label="As loud as before the cut" data-tip="As loud as before the cut came out: each take raised by its own measure (the level the old Peak clip raised to full scale, about 2 dB), a limiter holding the few peaks over it; the file stays as it is"><svg class="loud-wave" viewBox="0 0 44 18" preserveAspectRatio="none" aria-hidden="true"><path class="loud-body" d="M0 18 L0 13 L2 10 L4 12 L6 8 L8 11 L10 6 L12 10 L14 3 L16 9 L18 7 L20 11 L22 5 L24 9 L26 8 L28 12 L30 2 L32 8 L34 6 L36 10 L38 4 L40 9 L42 7 L44 12 L44 18Z"/><path class="loud-tips" d="M13.43 5 L14 3 L14.67 5Z M29.4 5 L30 2 L31 5Z M37.67 5 L38 4 L38.4 5Z"/></svg><span class="loud-t">+dB</span></button>   <!-- HERESY 2037; 2044b: its wave under it -->
     </div>
     <button type="button" class="status-pill" id="statusPill" data-s="idle" data-tip="Nothing is being made or played"><span class="status-dot" aria-hidden="true"></span><span id="statusText" aria-live="polite">Idle</span></button>
+    <!-- HERESY 2522 (the UIX audit 13.11.2026, №2): the server log folded lives here, not over a room; its lamp, its training percent -->
+    <button type="button" class="pb-log" id="pbLog" aria-expanded="false" aria-label="Server log" data-tip="The server log, in every room: click to unfold or fold"><span class="lamp" id="pbLogLamp"></span><span data-ui="scroll-text"></span><span class="pb-log-pct mono" id="pbLogPct" hidden></span></button>
   </div>
   </div>
   <!-- HERESY 1731: the playlist's strip under the player, while a take of it plays: the take before, its place, the take after -->
@@ -2980,6 +3097,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
 <script src="heresy-complete.js"></script>
 <script src="heresy-menu.js"></script>
 <script src="heresy-writer.js"></script>
+<script src="heresy-wrshell.js"></script>   <!-- HERESY 2490: the Writer's shell: the worlds' knob, the start canvas, the three steps -->
 <script src="heresy-versions.js"></script>
 <script src="heresy-train.js"></script>
 <script src="heresy-traindoc.js"></script>   <!-- HERESY 2351: the dataset doctor under the picked folder (Timon's cherry ③) -->
@@ -3018,6 +3136,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
 <script src="heresy-midi.js"></script>
 <script src="heresy-iconbtn.js"></script>   <!-- HERESY 1593: the common acts' buttons as icons -->   <!-- HERESY 1589: the Studio's MIDI -->
 <script src="heresy-roll.js"></script>   <!-- HERESY 1578: the Creator's piano roll -->   <!-- HERESY 1374: the wave's scope -->
+<script src="heresy-case.js"></script>   <!-- HERESY 2453: the case buttons of the Narrator's, the Writer's and the Musician's text, before the Narrator writes its room -->
 <script src="heresy-reader-i18n.js"></script>   <!-- HERESY 2241: the Reader's words by stable ids, thirteen languages (kept home with the room) -->
 <script src="heresy-reader.js"></script>   <!-- HERESY 2241: the Reader, its tab, view and log view its own, before app.js binds the bar (kept home until turnkey) -->
 <script src="themes.js"></script>

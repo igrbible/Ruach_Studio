@@ -1,4 +1,4 @@
-"""HERESY 1768: the decode ladder is the Creator's own choice; a section redone, a window sung anew and the rest of section.py replay a ladder
+"""HERESY 1768 (and 2509: drafts past one window in pieces): the decode ladder is the Creator's own choice; a section redone, a window sung anew and the rest of section.py replay a ladder
 take on the standard decode (Viktor 24.10.2026: «Везде в остальных местах Студии пусть остаётся оригинальный стабильный предсказуемый декод»).
 Against a fake engine: no draft or replay carries nar_ladder, the take's own request.json keeps it.
 python3 lab/test_section_ladder.py"""
@@ -86,6 +86,10 @@ for what, r in (("a section redone", lambda: section.start(take, 10, 20, "[verse
     mine = sent[before:]
     check(what + ": a draft and a replay made", st["status"] == "done" and len(mine) == 2, st)
     check("  neither asks the engine for the ladder", all("nar_ladder" not in b for b in mine), [sorted(b) for b in mine])
+    # HERESY 2509: the draft sings to its cut even past one window (a long take was made in pieces); the replay is the take's own codes,
+    # solved as they come, and says nothing of its own
+    check("  the draft asks for pieces past one window, the replay does not", len(mine) == 2 and mine[0].get("nar_pieces") is True and
+          "nar_pieces" not in mine[1], [(b.get("nar_pieces"), "semantic_tokens" in b) for b in mine])
 check("the take's own request.json keeps nar_ladder (a redo does not rewrite it)", json.load(open(out / take / "request.json"))["nar_ladder"] is True)
 
 print("all good" if not bad else f"{len(bad)} FAILED")

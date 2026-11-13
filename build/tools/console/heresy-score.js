@@ -8,6 +8,7 @@
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function clock(t) { var m = Math.floor(t / 60), s = Math.round(t % 60); if (s === 60) { m++; s = 0; } return m + ":" + (s < 10 ? "0" : "") + s; }
   function pct(x) { return Math.round(x * 100) + "%"; }
+  function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
   function fileName(title, ext) { return (String(title || "score").replace(/[\\/:*?"<>|]+/g, " ").trim() || "score") + ext; }
   function save(bytes, name, type) {
     var url = URL.createObjectURL(new Blob([bytes], { type: type }));
@@ -33,13 +34,30 @@
       return "<tr><td>" + name + '</td><td class="mono">' + x.notes + '</td><td class="mono">' + Math.round(x.perMinute) + '</td><td class="mono">' +
         esc(x.low) + "–" + esc(x.high) + '</td><td class="mono">' + pct(x.sounding) + "</td>" + (name === "Vocal" ? '<td class="mono">' + x.chords + "</td>" : "<td></td>") + "</tr>";
     };
-    host.innerHTML = '<p class="sc-ok">✓ Native YuE2 score · ' + esc(r.key) + " · " + (r.free ? "free tempo" : r.bpm + " BPM") + " · " + r.meter + " · " + r.bars +   // HERESY 1416
+    host.innerHTML = '<p class="sc-ok">✓ Native YuE2 score · ' + esc(r.key || "K:?") + " · " + (r.free ? "free tempo" : r.bpm + " BPM") + " · " + r.meter + " · " + r.bars +   // HERESY 1416
       " bars · \u2248 " + clock(r.seconds) + " long · " + r.sections + " sections</p>" +   // HERESY 1716: the length said as one
       '<table class="sc-table"><tr><th></th><th>notes</th><th>a minute</th><th>range</th><th>sounding</th><th>chords</th></tr>' +
       row("Vocal", v) + row("Ins", i) + "</table>" +
       '<p class="sc-ratio">Ins : Vocal = <strong class="mono">' + esc(r.ratioText) + "</strong>" +
-      (r.ratio !== null ? ' = <strong class="mono">' + r.ratio.toFixed(2) + "</strong>" : "") + " · " + lead + "</p>";
+      (r.ratio !== null ? ' = <strong class="mono">' + r.ratio.toFixed(2) + "</strong>" : "") + " · " + lead + "</p>" + keyLine(host, abc, s);
     return s;
+  }
+  // HERESY 2444 (Viktor 12.11.2026: «ДА… Смягчи и если можно, чтобы высчитать по расположению базового нотного ряда, предложить один или два
+  // варианта для K:»): a score without its key line is read and sung as written (2433), never refused; the line says so, and offers the key
+  // (or two) its notes and chords read as, how sure; on the form's score a click puts the line into the header (heresy-abc.js: inferKey)
+  function keyLine(host, abc, s) {
+    if (!s.keyMissing) return "";
+    var cands = [];
+    try { cands = A.inferKey ? A.inferKey(abc) : []; } catch (e) { cands = []; }
+    var form = host.id === "formScoreCheck";
+    return '<p class="sc-warn">⚠ ' + esc(tr("No key line (K:): the engine sings it as written, with no key signature")) + "</p>" +
+      (cands.length ? '<p class="sc-keys"><span>' + esc(tr(cands[0].chords ? "By its notes and chords:" : "By its melody alone (no chord symbols, less sure):")) + "</span>" + cands.map(function (c) {
+        var said = "K:" + c.key + " · " + Math.round(c.confidence * 100) + " %";
+        var tip = (c.moves ? tr("Puts the line K:{0} into the score's header. Under it {#1} written notes sound a semitone apart from now: the key's own sharps and flats").replace("{#1}", c.moves)
+                           : tr("Puts the line K:{0} into the score's header; no written note sounds otherwise under it")).replace("{0}", c.key);
+        return form ? '<button type="button" class="btn ghost small mono sc-key" data-sc-key="' + esc(c.key) + '" data-tip="' + esc(tip) + '">' + esc(said) + "</button>"
+                    : '<span class="mono sc-key">' + esc(said) + "</span>";
+      }).join("") + "</p>" : "");
   }
 
   function midiOut(abc, title) {
@@ -104,6 +122,13 @@
         get: function () { return d.get.call(this); }, set: function (v) { d.set.call(this, v); form(); } });
     })();
     $("formMidi").addEventListener("click", function () { midiOut($("abc").value, hooks.title()); });
+    // HERESY 2444: a key the check offers, put into the form's score at a click
+    $("formScoreCheck").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-sc-key]");
+      if (!b) return;
+      try { set(A.insertKey($("abc").value, b.dataset.scKey)); toast(tr("K:{0} is in the score's header").replace("{0}", b.dataset.scKey)); }
+      catch (error) { toast(error.message, true); }
+    });
     $("formMarkers").addEventListener("click", function () { markersOut($("abc").value, hooks.title()); });
     // HERESY 1704: the chord bed's row: the key and the tempo from the style when it names them, a new draw at each press
     if ($("bedWrite")) {

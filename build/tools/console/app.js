@@ -178,6 +178,7 @@
     el.className = "toast" + (kind ? " " + kind : "");
     el.textContent = message;
     // HERESY 2135: act { label, fn }: a toast that offers its way out (a take not filed: «File them again»), the button under the words
+    if (act && act.tip) el.dataset.tip = act.tip;      // HERESY 2409: act { tip }: a word on the toast under the pointer
     if (act && act.label && typeof act.fn === "function") {
       var row = document.createElement("div"), b = document.createElement("button");
       row.className = "toast-acts";
@@ -191,13 +192,16 @@
       el.style.transition = "opacity .3s ease";
       el.style.opacity = "0";
       setTimeout(function () { el.remove(); }, 320);
-    }, act ? 20000 : kind === "bad" ? 13000 : 9200);   // HERESY 1026: five seconds more to read; 2135: longer with a button to reach
+    }, act && act.label ? 20000 : kind === "bad" ? 13000 : 9200);   // HERESY 1026: five seconds more to read; 2135: longer with a button to reach
   }
   window.HeresyToast = toast;                       // HERESY 1960: loras.js speaks through it (its notes since 1802 had no one to show them)
 
   // HERESY 1166: a text the code glues from words, names and numbers is translated piece by piece where it is made (the
   // page's translator matches whole texts); what is drawn so is drawn again when the language changes (below)
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
+  // HERESY 2409 (Viktor 11.11.2026, A9: «Мы не спускаемся до уровня идиотов»): a section's word inside the interface's sentences is translated as
+  // speech (a toast «Interlude asked…» reads «Проигрыш заказан…» in Russian); where such words appear, a tip says that the tags themselves are never so
+  var SECTION_WORDS_TIP = "Section tags and model commands are always written in correct English, in square brackets, sometimes round: [Verse], [Chorus], [Interlude], (whisper). In the Studio's own sentences a section is named in your language, as speech; what goes into the lyrics and to the model stays English.";
 
   // HERESY 1168 (Viktor 06.10.2026: «Кнопка копирования в буфер не копирует стиль и карты трека… И из Prompt тоже»): the
   // studio is opened by the machine's address (http://192.168.…), which is no secure context, and there the browser gives
@@ -570,9 +574,10 @@
   // in the tip]; a tip that names its key already (the DAW's Loop (L), Fit (0), Ref, full screen) is not told twice
   function roomKey(n) { return function () { return (window.ruachInstalledApp && window.ruachInstalledApp() ? "Ctrl+" : "Ctrl+Alt+") + n; }; }   // HERESY 2082
   var KEY_HINTS = [
-    ['#tabs [data-tab="create"]', roomKey(1), 0, 1], ['#tabs [data-tab="write"]', roomKey(2), 0, 1], ['#tabs [data-tab="post"]', roomKey(3), 0, 1],
-    ['#tabs [data-tab="artist"]', roomKey(4), 0, 1], ['#tabs [data-tab="video"]', roomKey(5), 0, 1], ['#tabs [data-tab="train"]', roomKey(6), 0, 1],
-    ['#tabsSide [data-tab="collection"]', roomKey(7), 0, 1], ["#engineToggle", roomKey(9), 0, 1], ["#guideOpenMenu", "F1", 1, 1],
+    // HERESY 2405: the rooms as the keys open them since 2365 (the tips still said 1169's old order: the Writer 2, the Librarian 7), the Engine on 9
+    ['.topbar [data-tab="create"]', roomKey(1), 0, 1], ['.topbar [data-tab="read"]', roomKey(2), 0, 1], ['.topbar [data-tab="write"]', roomKey(3), 0, 1],
+    ['.topbar [data-tab="post"]', roomKey(4), 0, 1], ['.topbar [data-tab="artist"]', roomKey(5), 0, 1], ['.topbar [data-tab="video"]', roomKey(6), 0, 1],
+    ['.topbar [data-tab="train"]', roomKey(7), 0, 1], ['.topbar [data-tab="collection"]', roomKey(8), 0, 1], ["#engineToggle", roomKey(9), 0, 1], ["#guideOpenMenu", "F1", 1, 1],
     ["#playBtn", "Space", 0, 1], ["#muteBtn", "M", 0, 1], ["#lyricsBig", "Alt+E", 1, 1],
     ["#mxPlay", "Space", 1, 1], ["#mxRef", "R", 1, 0], ["#mxFull", "F11", 1, 0], ["#mxLoop", "L", 0, 0], ["#mxFit", "0", 0, 0]   // the ruler column is as wide as the lanes: no cap there
   ];
@@ -1371,7 +1376,8 @@
     var notes = [];
     // HERESY 1167: the music's ceiling is Max length itself now; the window is the other cap (1169: said in Max length's own tip)
     if (format === "wav32") notes.push("WAV 32 is raw float: peak clip is ignored.");
-    $("outHint").textContent = notes.map(tr).join(" ");
+    var longOne = longNote();                         // HERESY 2509: said with its numbers, already in the page's language
+    $("outHint").textContent = notes.map(tr).concat(longOne ? [longOne] : []).join(" ");
     syncMusicCeiling();                               // HERESY 1167: the music's Max length follows
     if (window.YueLoras && YueLoras.relayout) YueLoras.relayout();   // HERESY 1458: the waves' time grid follows it too
   }
@@ -1383,6 +1389,22 @@
   $("outFormat").addEventListener("change", function () { saveOutputChoice(); paintOutput(); });
   $("mp3Bitrate").addEventListener("change", function () { saveOutputChoice(); paintOutput(); });
   ["odeSteps", "maxLength"].forEach(function (id) { $(id).addEventListener("input", paintOutput); });
+  ["narLong", "narDecode"].forEach(function (id) { $(id).addEventListener("change", paintOutput); });   // HERESY 2509: the window's note follows
+  // HERESY 2509: one window of the sound half on this engine's context, for a long prompt and a short one (6000 and 1000 rows: about the
+  // 95th and 5th percentiles of the prefixes of 407 songs of 30 days); the pipeline's own count, (context - prefix - 3) / 2 frames
+  function wholeWindow() {
+    var ctx = STATE.settings && +STATE.settings.max_seq ? +STATE.settings.max_seq : fullContext();
+    var at = function (prefix) { return Math.max(0, Math.floor((ctx - prefix - 3) / 2) / FRAME_RATE); };
+    return [at(6000), at(1000)];
+  }
+  // said when Max length is well past what one window holds (30 s past its short-prompt end), whole and not on the ladder
+  function longNote() {
+    if ($("narLong").value !== "whole" || $("narDecode").value === "ladder") return "";
+    var length = parseFloat($("maxLength").value), win = wholeWindow();
+    if (!isFinite(length) || length <= win[1] + 30) return "";
+    return tr("Max length {0} is past one window here (about {1}–{2}, by the lyrics and the score): the song stops where the window ends. Longer: Long songs · Pieces (experimental).")
+      .replace("{0}", clock(length)).replace("{1}", clock(win[0])).replace("{2}", clock(win[1]));
+  }
   // HERESY 1169: Songs × Sounds beside Generate, and how many takes that makes
   function paintCounts() {
     // HERESY 2137 (the audit of 06.11.2026): loaded codes render one song whatever Probes says (queueVersions), so the count says one and the slider
@@ -1409,7 +1431,8 @@
     var off = function (id, key) { var v = parseFloat($(id).value); return isFinite(v) && v !== round(outDefault(key), 3); };
     return off("odeSteps", "steps") || off("maxLength", "duration") ||
       $("odeSolver").value !== "multistep" || $("outFormat").value !== "wav24" ||   // HERESY 1710: AB2 the default
-      $("narDecode").value !== "standard";                                         // HERESY 1768: the whole-song decode the default
+      $("narDecode").value !== "standard" ||                                       // HERESY 1768: the whole-song decode the default
+      $("narLong").value !== "whole";                                              // HERESY 2509: whole, held to one window, the default
   }
   $("resetOutput").addEventListener("click", function () {
     askReset(outputChanged(), "Reset the output to the defaults?\n\nWAV 24-bit, " + outDefault("steps") + " denoising steps, the AB2 solver, the songs up to " +
@@ -1422,6 +1445,7 @@
     $("odeSolver").value = "multistep";                 // HERESY 1710: AB2 the default now (Midpoint before)
     $("odeSolver").dispatchEvent(new Event("change", { bubbles: true }));
     $("narDecode").value = "standard";                  // HERESY 1768: the whole-song decode
+    $("narLong").value = "whole";                       // HERESY 2509: held to one window, never joined
     paintOutput();
     toast("Output reset: WAV 24-bit, " + outDefault("steps") + " denoising steps, the AB2 solver, the songs up to " + clock(outDefault("duration")));
   }
@@ -1674,7 +1698,13 @@
   // spelling check; the box drawn by hand keeps its height (heresy-lyrics.js)
   var lyricsMeter = window.HeresyLyrics ? window.HeresyLyrics.attach($("lyrics"), { meter: $("lyricsMeter"), style: $("style"), fit: function (area) { fitText(area); },
     head: $("lyrics").closest(".field").querySelector(".label") }) : null;   // HERESY 1427: the line numbers and spelling by the title
-  if (window.HeresyLyrics) window.HeresyLyrics.aids($("wrLyrics"), null, $("wrLyrics").closest(".field").querySelector(".label"));   // HERESY 1169: the Writer's lyrics numbered, marked, their tags lit; its label says the keys
+  // HERESY 1169: the Writer's lyrics numbered, marked, their tags lit; its label says the keys. HERESY 2478 (the writer audit of 12.11.2026, item 10: «Счётчик
+  // долей есть только у Музыканта»): the notebook's LYRICS and the Writing room's draft get the Musician's whole meter (beats by time, the group rulers,
+  // the consonant beats, the stress marks checked), so a draft's lines are weighed against the bar before it is applied (2472: the draft numbered too)
+  if (window.HeresyLyrics) window.HeresyLyrics.attach($("wrLyrics"), { meter: $("wrLyricsMeter"), style: $("wrStyle"), head: $("wrLyrics").closest(".field").querySelector(".label"),
+    tipAt: $("wrLyrics").closest(".field").querySelector(".label") });   // its label says the keys, as before 2478
+  if (window.HeresyLyrics && $("draftLyrics")) window.HeresyLyrics.attach($("draftLyrics"), { meter: $("draftLyricsMeter"), style: $("draftStyle"), head: $("draftLyrics").closest(".field").querySelector(".label"),
+    tipAt: $("draftLyrics").closest(".field").querySelector(".label") });
 
   // Each dice toggles: an empty box (random each run) gets a seed to keep or edit; a seed is cleared
   var DICE = [["lmSeed", "rollLmSeed", "music seed"], ["soundSeed", "rollSoundSeed", "sound seed"]];
@@ -1921,6 +1951,16 @@
     var p = splitTitle(this.value);
     if (p.version && !titleVersion()) { setTitleParts(p.name, p.version); $("title").dispatchEvent(new Event("input", { bubbles: true })); }
   });
+  // HERESY 2462: a title typed is a take's name: the names' rule when the field is left, the cleaned one offered (Generate refuses it till then)
+  $("title").addEventListener("change", function () {
+    var field = this, typed = field.value;
+    if (!window.HeresyNames || !window.HeresyNames.refusal(typed, { max: TITLE_MAX })) return;
+    window.HeresyNames.ask(typed, { max: TITLE_MAX }).then(function (v) {
+      if (!v || field.value !== typed) return;
+      field.value = v;
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  });
   $("title").addEventListener("input", function () {
     var c = cleanTitle(this.value);
     if (c.removed) {
@@ -1937,9 +1977,10 @@
     if (title) return title;
     var sung = $("lyrics").value.split(/\r?\n/).map(function (l) { return l.trim(); })
       .filter(function (l) { return l && l.charAt(0) !== "[" && l.charAt(0) !== "("; })[0];
-    if (sung) return sung.replace(/[,.!?;:]+$/, "").slice(0, 48);
+    var N = window.HeresyNames;   // HERESY 2462: untitled, the Studio names it from the hook line or the style, kept to the names' rule
+    if (sung) return N ? N.cleaned(sung.replace(/[,.!?;:]+$/, ""), { max: 48 }) || "Untitled" : sung.replace(/[,.!?;:]+$/, "").slice(0, 48);
     var style = $("style").value.trim().split(/[,\n]/)[0];
-    return style ? style.slice(0, 48) : "Untitled";
+    return style ? (N ? N.cleaned(style, { max: 48 }) || "Untitled" : style.slice(0, 48)) : "Untitled";
   }
 
   // HERESY 1421 (Viktor 13.10.2026: «Музыкальный стиль скармливаем движку одной строкой, если в поле стиля многострочие - всё
@@ -1960,6 +2001,9 @@
     if (abc && cot === "off" && !instrumental && !loose) throw new Error("Direct mode ignores a supplied score — pick full or melody");
     var style = styleOneLine($("style").value), lyrics = $("lyrics").value;   // HERESY 1421
     if (!style && !lyrics.trim() && !STATE.codes && !loose) throw new Error("Write a style prompt or lyrics first");
+    // HERESY 2462: a title typed that the names' rule refuses is said, and nothing is sent (its field offers the cleaned one when left)
+    var typedTitle = cleanTitle(fullTitle()).text, titleWhy = !loose && typedTitle && window.HeresyNames ? window.HeresyNames.refusal(typedTitle, { max: TITLE_MAX }) : "";
+    if (titleWhy) throw new Error(titleWhy);
     var body = { title: songTitle(), style: style, lyrics: lyrics, cot: cot };
     if (abc) body.abc = abc;
     var lm = readSeed("lmSeed", "Music seed"), sound = readSeed("soundSeed", "Sound seed");
@@ -1988,6 +2032,7 @@
     body.vae = selectedVae();
     if ($("odeSolver").value !== "midpoint") body.solver = $("odeSolver").value;  // HERESY 1004
     if ($("narDecode").value === "ladder") body.nar_ladder = true;   // HERESY 1768: the decode ladder, experimental, the Creator's own
+    if ($("narLong").value === "pieces") body.nar_pieces = true;     // HERESY 2509: past one window in pieces, experimental; whole otherwise
     if (STATE.sliderChoice.length) {
       body.sliders = slidersBody();             // HERESY 1166: with each one's curve, where it is not flat
     }
@@ -2041,7 +2086,14 @@
   // HERESY 1618: a plan the page asked for is read before it is sung; a broken one is planned again once (a random music seed) or stopped
   function planBroken(abc) {
     if (!window.HeresyAbc || !window.HeresyAbc.parse) return "";
-    try { window.HeresyAbc.parse(String(abc || "")); return ""; } catch (e) { return String(e.message || e); }
+    try {
+      var s = window.HeresyAbc.parse(String(abc || ""));
+      if (s.keyMissing) {                                 // HERESY 2444: sung as written (2433), and said with the key its notes read as
+        var k = window.HeresyAbc.inferKey ? window.HeresyAbc.inferKey(String(abc || "")) : [];
+        addLogLine("[Plan] the planned score has no key line: sung as written" + (k.length ? "; by its notes " + k.map(function (c) { return "K:" + c.key + " (" + Math.round(c.confidence * 100) + " %)"; }).join(" or ") : ""), true);
+      }
+      return "";
+    } catch (e) { return String(e.message || e); }
   }
   window.ruachPlanBroken = planBroken;   // HERESY 1618: for the checks
   // HERESY 1625: the plan's own count, carried to the song it planned (its step 1 says it instead of «Supplied score»)
@@ -2662,6 +2714,7 @@
     else { $("odeSteps").value = String(engineSteps()); syncStepsRange(); }   // HERESY 1710: a request without steps was made at the engine's
     $("odeSolver").value = ["midpoint", "multistep", "heun", "euler"].indexOf(req.solver) >= 0 ? req.solver : "midpoint";
     $("narDecode").value = req.nar_ladder === true ? "ladder" : "standard";   // HERESY 1768: a take's own, the draft's, a profile's
+    $("narLong").value = req.nar_pieces === true ? "pieces" : "whole";         // HERESY 2509: the same
     if (typeof req.duration === "number") $("maxLength").value = round(req.duration, 3);
     $("variations").value = typeof req.synth_batch_size === "number" ? Math.max(1, Math.min(9, req.synth_batch_size)) : 1;
     if (FORMAT_LABELS[req.output_format]) $("outFormat").value = req.output_format;
@@ -2693,7 +2746,7 @@
   // mode or an adapter on the way lies; each such place says what was there and what the form holds instead.
   // HERESY 1607, 1609: harmony and abc_continue among a prompt file's keys
   var PROMPT_KEYS = ["title", "style", "lyrics", "cot", "abc", "abc_continue", "lm_seed", "seed", "cfg_scale", "cfg_lyrics", "free_tempo", "vocal_octave", "harmony", "abc_sampling", "semantic_sampling",
-    "vae", "solver", "nar_ladder", "sliders", "loras", "lora_groups", "plan_only", "semantic_tokens", "semantic_keep", "parent", "duration", "steps",
+    "vae", "solver", "nar_ladder", "nar_pieces", "sliders", "loras", "lora_groups", "plan_only", "semantic_tokens", "semantic_keep", "parent", "duration", "steps",
     "lm_batch_size", "synth_batch_size", "output_format", "mp3_bitrate", "peak_clip", "score_guard", "seconds", "instrumental"];
   var GROUP_NAMES = { abc: "Score planner", semantic: "Music tokens" };
   function openNotes(req) {
@@ -3125,7 +3178,10 @@
       var sent = Object.assign({}, body);
       if (sent.lm_seed === undefined || sent.lm_seed === null || sent.lm_seed === "") sent.lm_seed = shortSeed();
       if (sent.seed === undefined || sent.seed === null || sent.seed === "") sent.seed = shortSeed();
-      return post("/synth", sent);
+      // HERESY 2463: one process on the Intel Arc at a time: the Studio's own writer leaves it before the song (the lab says when it did)
+      return fetch("/lab/llm/yield" + (LLM_SCOPE ? "?scope=" + encodeURIComponent(LLM_SCOPE) : ""), { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })   // the lab takes no POST without a body
+        .catch(function () { return null; })
+        .then(function () { return post("/synth", sent); });
     }).then(function (data) {
       var job = registerJob(data.id, meta, body);
       paintAllRuns();
@@ -3372,7 +3428,7 @@
       // workspace it was sent into: it lay in no workspace, out of the Takes column; only the toast, the jump and the play wait on seenRunning
       var mine = job.kind !== "external";
       if (window.HeresyCollection && mine) window.HeresyCollection.landed(filed, job.ws);   // HERESY 1041: into the workspace in hand
-      if (window.HeresyWriter && mine) window.HeresyWriter.landed(takes);           // HERESY 1047: to the document in hand
+      if (window.HeresyWriter && mine) window.HeresyWriter.landed(takes, job.request && job.request.title);   // HERESY 1047: to the document in hand (2493: the same song only)
       if (window.HeresyVersions && mine && job.kind === "song" && job.words) window.HeresyVersions.keep(job.words, takes, job.request && job.request.cot, "generate", (function () { var r = Object.assign({}, job.request || {}); ["title", "style", "lyrics", "abc", "semantic_tokens", "parent"].forEach(function (k) { delete r[k]; }); return r; })());   // HERESY 1519 · 1596
       return refreshLibrary().catch(function () {}).then(function () { return nameVersions(job); });
     }).then(function () {
@@ -3385,6 +3441,10 @@
       var watching = STATE.job === job && !STATE.take && count, playing = isPlaying();
       if (!job.lost) toastOnce(job.id, "Song complete — " + job.title + (count > 1 ? " (" + count + " takes)" : "") +
                 (watching && playing ? ". What you are playing keeps playing; ▶ Play this song when you are ready." : ""), "good");
+      // HERESY 2433 (Viktor 12.11.2026: «K: не будем браковать сразу, а предупреждать»): a score without its key line is sung as written, and said
+      if (data.score_warning && !job.lost) toastOnce(job.id + ":nokey", "No key line in the score: sung as written", "warn");
+      // HERESY 2509: a song the window ended, not the song itself: said, with the way past it
+      if (data.window_held && !job.lost) toastOnce(job.id + ":window", tr("Held whole at {0}: one window of the sound half ends there. Longer: Long songs · Pieces (experimental)").replace("{0}", clock(data.window_held)), "warn");
       // Only jump to the new song if the run is what you were looking at;
       // opening it never cuts off a song that is playing.
       if (watching) openTake(job.takes[0]);
@@ -4229,6 +4289,22 @@
     new MutationObserver(chipPaint).observe(document.body, { attributes: true, attributeFilter: ["data-tab"] });
     $("logDockChip").addEventListener("click", function () { chip(true, true); });
     window.ruachLogChip = function (on) { if (on !== undefined) chip(on, true); return dock.classList.contains("is-chip"); };   // for the checks
+    // HERESY 2522 (the UIX audit 13.11.2026, №2: the folded log over the rooms' fields): folded or a chip, the dock is the player's button (app.css
+    // hides it); a click unfolds it as the tab did, a click again folds it; its lamp is the dock's
+    (function () {
+      var b = $("pbLog"), lamp = $("logDockLamp"), mine = $("pbLogLamp");
+      if (!b) return;
+      var open = function () { return !dock.classList.contains("is-folded") && !dock.classList.contains("is-chip"); };
+      var paint = function () { b.setAttribute("aria-expanded", open() ? "true" : "false"); if (lamp && mine) { mine.dataset.s = lamp.dataset.s || ""; } };
+      b.addEventListener("click", function () {
+        var t = $("logDockTab");
+        if (dock.classList.contains("is-chip")) { t.click(); if (dock.classList.contains("is-folded")) t.click(); } else t.click();
+        paint();
+      });
+      new MutationObserver(paint).observe(dock, { attributes: true, attributeFilter: ["class"] });
+      if (lamp) new MutationObserver(paint).observe(lamp, { attributes: true, attributeFilter: ["data-s"] });
+      paint();
+    })();
     // HERESY 1866 (Viktor 29.10.2026: «добавь функционал отключения text wrapping + горизонтальная прокрутка в таком режиме»): the log's lines
     // wrapped, or each on one line and the log scrolling sideways (the dock, Engine's log, the log's window); kept
     function wrapPaint() {
@@ -5063,7 +5139,9 @@
   }
 
   function paintSettings(settings, force) {
+    var newContext = !STATE.settings || STATE.settings.max_seq !== settings.max_seq;   // HERESY 2509: the window's note follows it
     STATE.settings = settings;
+    if (newContext) setTimeout(paintOutput, 0);
     paintModelPick(settings);
     // A background refresh must not wipe fields you are still editing; Save repaints them.
     if (STATE.settingsDirty && !force) {
@@ -5475,6 +5553,7 @@
       });
     });
   }
+  window.addEventListener("ruach-lang", function () { if (ACCESS.a) paintAccess(ACCESS.a); });   // HERESY 2525 (audit №14): said again in the new language
   function paintAccess(a) {
     var card = $("accessCard");
     if (!card) return;
@@ -5485,7 +5564,10 @@
       $("accForm").innerHTML = ""; $("accSave").disabled = true; why.hidden = true;
       return;
     }
-    $("accYou").textContent = accessYou(a) + (a.acknowledged ? " · " + tr("decided {0}").replace("{0}", String(a.acknowledged).replace("T", " ").slice(0, 16)) : "");
+    // HERESY 2525 (audit №14): the day it was decided in the page's own way of writing dates, not ISO in a Russian line
+    var dec = a.acknowledged ? new Date(String(a.acknowledged).replace(" ", "T")) : null, decTxt = !dec ? "" : isNaN(dec) ? String(a.acknowledged).replace("T", " ").slice(0, 16)
+      : dec.toLocaleDateString(document.documentElement.lang || "en", { day: "2-digit", month: "2-digit", year: "numeric" }) + " " + dec.toLocaleTimeString(document.documentElement.lang || "en", { hour: "2-digit", minute: "2-digit" });
+    $("accYou").textContent = accessYou(a) + (a.acknowledged ? " · " + tr("decided {0}").replace("{0}", decTxt) : "");
     $("accForm").innerHTML = accessFormHtml(a, "accMode");
     var notes = [];
     if (a.public) notes.push(tr("RUACH_ALLOW_PUBLIC=1 is set: the Studio answers anyone, whatever is chosen here."));
@@ -6003,8 +6085,9 @@
       var dots = "";
       for (var i = 0; i < 5; i++) dots += "<i" + (i === info.pos ? ' class="on"' : "") + "></i>";
       var shown = info.pos >= 0 ? SHAPE_LABELS[info.pos] : info.text.replace(/:.*$/, "");
-      return field(label, '<span class="dots' + (info.pos < 0 ? " custom" : "") + '" aria-hidden="true">' + dots + "</span>" + escape(shown),
-        info.text, key, "", info.note);
+      // HERESY 2546 (the UIX audit of 13.11.2026, №39): the word in a span of its own, which a narrow card leaves out (the dots say the rank; the word is the tip)
+      return field(label, '<span class="dots' + (info.pos < 0 ? " custom" : "") + '" aria-hidden="true">' + dots + '</span><span class="shape-word">' + escape(shown) + "</span>",
+        info.text, key, info.pos >= 0 ? "is-ranked" : "", info.note || shown);
     };
     var addonList = function (key, text, items) {   // items: [name, amount html]
       var rows = items.length ? items.map(function (it) {
@@ -6015,12 +6098,15 @@
     var seed = function (label, key, value) {
       return '<div data-field="' + key + '" data-value="' + escape(value || "—") + '"><dt>' + label + '</dt><dd class="num">' + escape(value || "—") +
         '</dd><dd class="copy-cell">' + (value ? '<button type="button" class="seed-copy" data-copy="' + escape(value) + '" data-what="' +
-        label.toLowerCase() + ' seed" aria-label="Copy the ' + label.toLowerCase() + ' seed" data-tip="Copy the ' + label.toLowerCase() + ' seed">⧉</button>' : "") +
+        label.toLowerCase() + ' seed" aria-label="Copy the ' + label.toLowerCase() + ' seed" data-tip="Copy the ' + label.toLowerCase() + ' seed">' +
+          (window.HeresyIcons ? window.HeresyIcons.ui("copy") : "\u29c9") + "</button>" : "") +   // HERESY 2543 (№40): drawn, not ⧉
         "</dd></div>";
     };
 
     var song = plain("Mode", MODES[take.cot] || take.cot || "—") + plain("Format", FORMAT_LABELS[take.format] || take.format || "—");
-    if (take.truncated) song += plain("Limit", "hit token cap", "warn");
+    if (take.window_held) song += plain("Limit", tr("held whole at {0} (one window)").replace("{0}", clock(take.window_held)), "warn");   // HERESY 2509
+    else if (take.truncated) song += plain("Limit", "hit token cap", "warn");
+    if (take.score_warning) song += plain("Score", "no key line in the score", "warn");   // HERESY 2433: sung as written, said
     // HERESY 1618: planned by the page first (a key, an instrumental): the flag, or before it the Chords, which only a plan is sent
     var plannedFirst = !!(req && (req.score_planned || (take.provided_score && req.harmony)));
     if (plannedFirst) song += plain("Score", "planned first");
@@ -6062,7 +6148,8 @@
   // 2.0.0 on (meta "stages"); an older take shows what its request says and a dash where nothing was kept
   function medcard(take, req, field, column) {
     var st = take.stages || null, rq = req || {}, music = st && st.music, score = st && st.score, sound = st && st.sound;
-    var cell = function (label, key, text, cls) { text = String(text); return field(label, escape(text), text, key, cls === undefined ? "num" : cls); };
+    // HERESY 2545 (the UIX audit of 13.11.2026, №38): a word cell keeps one line, cut with an ellipsis (app.css), its whole words its tip
+    var cell = function (label, key, text, cls) { text = String(text); var c = cls === undefined ? "num" : cls; return field(label, escape(text), text, key, c, c === "num" || text.length < 10 ? "" : text); };
     var n = function (v) { return v === undefined || v === null || v === "" ? "\u2014" : String(v); };
     var secs = function (v) { return typeof v === "number" ? v.toFixed(1) + " s" : "\u2014"; };
     var smp = function (o, of) {
@@ -6091,6 +6178,7 @@
       cell("Score guard", "Score guard", tr(rq.score_guard === false ? "off" : "on"), "") +
       cell("Free tempo", "Free tempo", rq.free_tempo === true ? tr("on") : "\u2014", "") +   // HERESY 1416 («off» is Direct's name in the catalogs)
       cell("Sound decode", "Sound decode", rq.nar_ladder === true ? tr("Ladder · experimental") : "\u2014", "") +   // HERESY 1768
+      cell("Long songs", "Long songs", rq.nar_pieces === true ? tr("Pieces · experimental") : "\u2014", "") +   // HERESY 2509
       cell("Chords", "Chords", rq.harmony ? tr(HARMONY_NAMES[harmonyLevelOf(rq.harmony)] || "custom") : "\u2014", "");   // HERESY 1607
     return '<div class="meta-row trio medcard">' + column("Score Planner", '<dl class="meta-rows">' + plan + "</dl>") +
       column("Music Tokens", '<dl class="meta-rows">' + mus + "</dl>") + column("The run", '<dl class="meta-rows">' + run + "</dl>") + "</div>";
@@ -7052,8 +7140,11 @@
       input.remove();
       heading.classList.remove("is-hidden");
       if (!save || !value || value === displayTitle(take)) return;
-      updateTake(take, { title: value }).then(function () { toast("Renamed to " + value); })
-        .catch(function (error) { toast(error.message, "bad"); });
+      // HERESY 2462: the names' rule; a title it refuses is asked about (its cleaned form offered), never kept or changed quietly
+      (window.HeresyNames ? window.HeresyNames.ask(value, { max: TITLE_MAX }) : Promise.resolve(value)).then(function (v) {
+        if (!v || v === displayTitle(take)) return;
+        return updateTake(take, { title: v }).then(function () { toast("Renamed to " + v); });
+      }).catch(function (error) { toast(error.message, "bad"); });
     }
     input.addEventListener("keydown", function (event) {
       if (event.key === "Enter") { event.preventDefault(); finish(true); }
@@ -7303,15 +7394,18 @@
     fetch("/lab/playback", { method: "POST", headers: { "Content-Type": "application/json" }, body: body }).catch(function () { /* kept for the session */ });
   }
   function ppLeave(take, at) { if (PP.name === take.name && PP.live) ppKeep(take, at); }
+  // HERESY 2406 (Viktor 11.11.2026, A17: «Уже условились. С начала»): a take the playlist plays starts from its beginning, its mark kept for the
+  // player outside the playlist (where it is left in the playlist still marks it)
   function ppArm(take) {
     PP.name = take.name; PP.live = false;
-    var m = PP.marks[take.name];
+    var fromTop = STATE.playZone === "playlist";
+    var m = fromTop ? null : PP.marks[take.name];
     if (m) $("timeNow").textContent = clock(m.at);
     audio.addEventListener("loadedmetadata", function back() {
       audio.removeEventListener("loadedmetadata", back);
       if (PP.name !== take.name || STATE.playerTake !== take) return;
       PP.live = true;
-      var m2 = PP.marks[take.name];
+      var m2 = fromTop ? null : PP.marks[take.name];   // HERESY 2406
       if (m2 && audio.currentTime < 1) { try { audio.currentTime = m2.at; } catch (e) { /* not seekable yet */ } }
     });
   }
@@ -7836,6 +7930,9 @@
   (function () {
     var b = window.RUACH_BUILD || {};
     if ($("studioBuild")) $("studioBuild").textContent = b.id || "";
+    // HERESY 2525 (audit №15): the build's tip in the page's language (the span is translate="no" for its id)
+    var buildTip = function () { if ($("studioBuild")) $("studioBuild").dataset.tip = tr("The page's build: when build.sh made it and the start of its hash. A reload after a new build shows the new one"); };
+    buildTip(); window.addEventListener("ruach-lang", buildTip);
     if ($("studioVersion") && !$("studioVersion").textContent && b.release && b.release !== "dev") $("studioVersion").textContent = b.release;
   })();
   setTimeout(refreshArts, 1200);
@@ -7966,6 +8063,7 @@
   ["playing", "pause", "emptied"].forEach(function (ev) { audio.addEventListener(ev, function () { clearTimeout(stall.timer); }); });
   window.ruachPlayerChecks = { stall: stall, marks: PP, pp: { keep: ppKeep, arm: ppArm, leave: ppLeave }, audioUrl: function (t) { return playerAudioUrl(t); }, flacUrl: function (t) { return takeAudioUrl(t); }, opusOff: function (v) { if (v !== undefined) STATE.opusOff = !!v; return !!STATE.opusOff; },   // 1852, 1851
     listenOff: function (v) { if (v !== undefined) STATE.listenOff = !!v; return !!STATE.listenOff; } };   // for the checks (1852: the marks)
+  window.ruachPlayerChecks.zone = function (v) { if (v !== undefined) STATE.playZone = v; return STATE.playZone; };   // HERESY 2406: for the checks
   audio.addEventListener("ended", function () {
     if (EARLY.part && audio.currentSrc === EARLY.part.src) return void earlyRanOut();   // HERESY 1803: what had come ran out, not the take
     if (STATE.playerTake && PP.name === STATE.playerTake.name) ppKeep(STATE.playerTake, Infinity);   // HERESY 1852: played to its end, it starts anew
@@ -9417,7 +9515,7 @@
             body: JSON.stringify({ name: take.name, a: cut.a, b: cut.b, section: sec.name, lyrics: lyrics2, versions: versions, abc: got[0],
                                    gap: gap, kind: inter ? "interlude" : "repeat", bar: got[2] || null }) });
         }).then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || "HTTP " + r.status); return d; }); })
-          .then(function (d) { toast(inter ? "Interlude asked: its versions come as takes of their own, children of this one" : "Sung once more: its versions come as takes of their own, children of this one"); pollJobs(); if (d && d.id) followSection(d.id); },
+          .then(function (d) { toast(inter ? "Interlude asked: its versions come as takes of their own, children of this one" : "Sung once more: its versions come as takes of their own, children of this one", "", { tip: SECTION_WORDS_TIP }); pollJobs(); if (d && d.id) followSection(d.id); },
                 function (e) { toast(e.message, "bad"); });
       });
     });
@@ -10260,7 +10358,9 @@
     var button = $("coverListen"), on = !preview.paused;
     button.disabled = !previewUrl;
     button.setAttribute("aria-pressed", on ? "true" : "false");
-    button.textContent = on ? "❚❚ " + clock(preview.currentTime) + " / " + clock(isFinite(preview.duration) ? preview.duration : 0) : "▶ Listen";
+    // HERESY 2543 (the UIX audit of 13.11.2026, №29): play and pause drawn, not glyphs; the word, or the time, beside them as before
+    var HI = window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons : null;
+    button.innerHTML = (HI ? HI.ui(on ? "pause" : "play") : "") + "<span>" + (on ? clock(preview.currentTime) + " / " + clock(isFinite(preview.duration) ? preview.duration : 0) : "Listen") + "</span>";
   }
   $("coverFile").addEventListener("change", function () {
     preview.pause();
@@ -10747,7 +10847,7 @@
   var LLM = { ids: ["own", "vllm", "lmstudio", "ollama", "openrouter"], hosts: null, key: { set: false, tail: "" }, exists: false, lab: false,
               ready: null, loadedAt: 0, st: {}, at: {}, asking: {}, gen: {}, want: "", models: {}, pick: "", orList: "", orListed: false, orListing: null, orErr: "" };
   var LLM_NAME = { own: "The Studio's own writer", vllm: "vLLM", lmstudio: "LM Studio", ollama: "Ollama", openrouter: "OpenRouter" };
-  var LLM_SHORT = { own: "The Studio's own", vllm: "vLLM", lmstudio: "LM Studio", ollama: "Ollama", openrouter: "OpenRouter" };
+  var LLM_SHORT = { own: "The Studio's own writer", vllm: "vLLM", lmstudio: "LM Studio", ollama: "Ollama", openrouter: "OpenRouter" };   // HERESY 2470: never a lone «Студии»
   var LLM_DEFAULT = { vllm: "http://127.0.0.1:8000/v1", lmstudio: "http://127.0.0.1:1234/v1", ollama: "http://127.0.0.1:11434/v1" };
   var LLM_ON = { own: "ownOn", vllm: "vllmOn", lmstudio: "lmstudioOn", ollama: "ollamaOn", openrouter: "orOn" };
   var LLM_TEST = { own: "ownTest", vllm: "vllmTest", lmstudio: "lmstudioTest", ollama: "ollamaTest", openrouter: "orTest" };
@@ -10792,11 +10892,14 @@
     return normBase((LLM.hosts && LLM.hosts[id] && LLM.hosts[id].url) || LLM_DEFAULT[id]);
   }
 
-  function chatCall(url, payload, timeoutMs) {
+  function chatCall(url, payload, timeoutMs, stop) {
     // HERESY 2005: a page over https may not ask an http chat server (mixed content, blocked): the lab relays one on this machine or the local network
     if (location.protocol === "https:" && /^http:\/\//i.test(url)) url = "/lab/relay?to=" + encodeURIComponent(url);
-    var controller = new AbortController();
-    var timer = setTimeout(function () { controller.abort(); }, timeoutMs || 900000);
+    // HERESY 2469 (the audit of 12.11.2026, 3.5): the wait's end is a timeout, said as one («no answer in 15 minutes»), never an unreachable server
+    // (CORS); stop, the Writing room's Stop, ends it as a stop
+    var controller = new AbortController(), wait = timeoutMs || 900000, timedOut = false;
+    var timer = setTimeout(function () { timedOut = true; controller.abort(); }, wait);
+    if (stop) { if (stop.aborted) controller.abort(); else stop.addEventListener("abort", function () { controller.abort(); }); }
     var options = { signal: controller.signal };
     if (payload !== undefined) {
       options.method = "POST";
@@ -10812,11 +10915,19 @@
           var failure = new Error("HTTP " + r.status + (said ? ": " + said.slice(0, 200) : text ? ": " + text.slice(0, 200) : ""));
           failure.status = r.status;
           failure.text = text;                         // HERESY 2097: OpenRouter's own words, read whole
+          try { failure.body = text ? JSON.parse(text) : null; } catch (e) { failure.body = null; }   // HERESY 2469: the lab's stopped / yielded / timeout
+          if (failure.body && failure.body.stopped) failure.stopped = true;
+          if (failure.body && failure.body.timeout) failure.timeout = true;
           throw failure;
         }
         return text ? JSON.parse(text) : {};
       });
-    }).then(function (data) { clearTimeout(timer); return data; }, function (error) { clearTimeout(timer); throw error; });
+    }).then(function (data) { clearTimeout(timer); return data; }, function (error) {
+      clearTimeout(timer);
+      if (timedOut) { var late = new Error("No answer in " + Math.round(wait / 60000) + " minutes"); late.timeout = true; throw late; }
+      if (stop && stop.aborted) { var cut = new Error("Stopped"); cut.stopped = true; throw cut; }
+      throw error;
+    });
   }
   window.ruachChatCall = chatCall;                   // HERESY 2123: for the checks
 
@@ -10909,12 +11020,18 @@
     return fetch(llmUrl("hosts")).then(llmJson).then(function (d) { LLM.lab = true; takeHosts(d); return migrate(d); })
       .catch(function () { if (!LLM.lab) takeHosts(null); });
   }
+  // HERESY 2473 (Viktor 12.11.2026: «можно галочкой выбирать, либо в кеше сессии браузера, либо в файл, кто как захочет»): a key held by this tab's
+  // session only (sessionStorage, never a file); the Studio's own file wins when it keeps one
+  var OR_SESSION = "ruach.orKeySession";
+  function sessionKey() { try { return (sessionStorage.getItem(OR_SESSION) || "").trim(); } catch (e) { return ""; } }
+  function holdSessionKey(k) { try { if (k) sessionStorage.setItem(OR_SESSION, k); else sessionStorage.removeItem(OR_SESSION); } catch (e) { /* no session store here */ } }
   function takeHosts(d) {
     var h = d && d.hosts;
     if (!h) { h = {}; LLM.ids.forEach(function (id) { h[id] = { active: false }; }); }
     LLM.hosts = h;
     LLM.exists = !!(d && d.exists);
     LLM.key = { set: !!(d && d.openrouter && d.openrouter.key_set), tail: (d && d.openrouter && d.openrouter.key_tail) || "" };
+    if (!LLM.key.set && sessionKey()) LLM.key = { set: true, tail: sessionKey().slice(-4), session: true };   // HERESY 2473
     if (d && d.default_model) LLM_MODEL = d.default_model;
     if (d && d.own) paintOwn(d.own);
     LLM.ids.forEach(function (id) { if (!llmOn(id)) forget(id); });
@@ -11025,7 +11142,9 @@
     return "No model is loaded in the chat server; load one there (this page never loads one)";
   }
   function refreshWriter(force) {
-    return refreshHosts(force).then(function () { var s = writerState(); paintWriter(s); return s; });
+    // HERESY 2470: the Studio's own writer's place (the Arc, a card, asleep) read with the hosts, for the room's line
+    var own = llmOn("own") ? ownStatus() : Promise.resolve();
+    return Promise.all([refreshHosts(force), own]).then(function () { var s = writerState(); paintWriter(s); return s; });
   }
   function viaOf(conn, model) { return conn === "openrouter" ? model + " on OpenRouter" : conn === "own" ? model : model + " on " + LLM_NAME[conn]; }
 
@@ -11068,7 +11187,9 @@
       }
       paintHost(id);
     });
-    if ($("orKeySay")) $("orKeySay").textContent = LLM.key.set
+    if ($("orKeySay")) $("orKeySay").textContent = LLM.key.set && LLM.key.session   // HERESY 2473: a key this tab holds, said as one
+      ? "A key is held by this browser tab: …" + LLM.key.tail + ". It is not saved to a file and goes when the tab closes; each question to OpenRouter carries it to the Studio."
+      : LLM.key.set
       ? "A key is kept: …" + LLM.key.tail + ". It lives in the Studio's settings on this machine, never in a browser; the Studio adds it to each call to OpenRouter."
       : "No key is kept yet: openrouter.ai gives one under Settings → Keys.";
     if ($("orKeyForget")) $("orKeyForget").disabled = !LLM.key.set || !LLM.lab;
@@ -11098,6 +11219,7 @@
     var line = document.createElement("span");
     el.appendChild(line);
     if (st.use && st.conn === "openrouter") line.textContent = "Writer: " + st.use + " on OpenRouter, asked through the Studio, which adds your key; the brief and the song go to openrouter.ai.";
+    else if (st.use && st.conn === "own") line.textContent = ownLine();   // HERESY 2470
     else if (st.use) line.textContent = "Writer: " + st.use + " at " + st.base + ", ready.";
     else if (!st.configured) line.textContent = "Writer: no writer is ticked under Engine → Writer and Artwork.";
     else if (st.available && !st.nokey) line.textContent = "Writer: the chat server at " + st.base + " answers, but has no model loaded: load one there.";
@@ -11125,6 +11247,18 @@
       el.appendChild(ob);
     }
   }
+  // HERESY 2470 (the audit of 12.11.2026, 3.14: «Qwopus3.5-9B (the Studio's own) at http://127.0.0.1:7777/lab/llm/v1»): the Studio's own writer by its
+  // name and where it runs (2463), each a sentence of its own for the page's languages
+  function ownLine() {
+    var back = String(OWN.backend || OWN.arc_backend || "").toUpperCase();
+    if (OWN.waiting) return "Writer: the Studio's own Qwopus3.5-9B waits for the Intel Arc.";
+    if (OWN.running && OWN.where === "arc") return "Writer: the Studio's own Qwopus3.5-9B on the Intel Arc ({0}), ready.".replace("{0}", back);
+    if (OWN.running && OWN.where === "cuda") return "Writer: the Studio's own Qwopus3.5-9B on GPU {0}, ready.".replace("{0}", OWN.gpu);
+    if (OWN.running) return "Writer: the Studio's own Qwopus3.5-9B on the processor, ready.";
+    if (OWN.device === "arc") return "Writer: the Studio's own Qwopus3.5-9B, asleep: it starts at the first question, on the Intel Arc ({0}).".replace("{0}", back);
+    if (OWN.device === "cpu") return "Writer: the Studio's own Qwopus3.5-9B, asleep: it starts at the first question, on the processor.";
+    return "Writer: the Studio's own Qwopus3.5-9B, asleep: it starts at the first question.";
+  }
   function paintPicker(st) {
     var sel = $("assistProvider");
     if (!sel) return;
@@ -11137,7 +11271,8 @@
     var lm = $("assistLocalModel");
     if (lm && pick && pick !== "openrouter") {
       var s = LLM.st[pick] || {}, list = s.loaded ? s.loaded : (s.use ? [s.use] : []);
-      var o2 = list.map(function (m) { return '<option value="' + escape(m) + '" translate="no">' + escape(m) + "</option>"; }).join("");
+      // HERESY 2470: the Studio's own model by its name, without the lab's inner «(the Studio's own)»
+      var o2 = list.map(function (m) { return '<option value="' + escape(m) + '" translate="no">' + escape(String(m).replace(/ \(the Studio's own\)$/, "")) + "</option>"; }).join("");
       if (lm.dataset.opts !== o2) { lm.innerHTML = o2; lm.dataset.opts = o2; }
       if (lm.value !== st.use) lm.value = st.use;
     }
@@ -11177,14 +11312,16 @@
   // HERESY 1010: temperature is optional — left out it stays 0.9 (the idea writer), null lets
   // the server choose, as Studio's "Automatic"; top_p goes with the page's own temperature only.
   // HERESY 2097: on the host given, else the Writer's pick; OpenRouter through the lab, which adds the key: one shape, as 1012 asked it
-  function chatComplete(messages, model, maxTokens, schema, temperature, conn) {
+  function chatComplete(messages, model, maxTokens, schema, temperature, conn, stop) {
     conn = conn || LLM.pick || writerPick();
     if (!conn) return Promise.reject(new Error(writerWhy(writerState())));
     var payload = { model: model, messages: messages, max_tokens: maxTokens, stream: false };
     if (temperature === undefined) { payload.temperature = 0.9; payload.top_p = 0.95; }
     else if (temperature !== null) payload.temperature = temperature;
     if (conn === "openrouter") {
-      return chatCall(llmUrl("openrouter/chat/completions"), payload).catch(function (error) {
+      if (LLM.key.session) payload = Object.assign({}, payload, { ruach_key: sessionKey() });   // HERESY 2473: the lab adds it, and never keeps it
+      return chatCall(llmUrl("openrouter/chat/completions"), payload, null, stop).catch(function (error) {
+        if (error.stopped || error.timeout) throw error;   // HERESY 2469
         var d = null;
         try { d = JSON.parse(error.text || "null"); } catch (e) { d = null; }
         var e2 = new Error(!error.status ? "The Studio did not answer: " + error.message : d && d.setup ? errText(d) : "OpenRouter: " + (errText(d) || error.message));
@@ -11204,9 +11341,12 @@
     function next(lastError) {
       if (n >= attempts.length) return Promise.reject(lastError);
       var attempt = attempts[n++];
-      return chatCall(base + "/chat/completions", attempt).catch(function (error) {
+      return chatCall(base + "/chat/completions", attempt, null, stop).catch(function (error) {
+        if (error.stopped || error.timeout) throw error;   // HERESY 2469: a stop or a timeout is no reason for another shape, nor «CORS»
+        // HERESY 2464: the Studio's own writer takes the plain shape; what its lab refuses (too big a question, the Arc given to a song) is final
+        if (conn === "own" && !(schema && n === 1)) throw error;
         if (error.status && error.status >= 400 && error.status < 500) return next(error);
-        if (!error.status) throw new Error(unreachable(base));
+        if (!error.status) throw new Error(conn === "own" ? "The Studio's lab did not answer: the Studio's own writer lives in it" : unreachable(base));
         throw error;
       });
     }
@@ -11236,6 +11376,15 @@
   };
   window.ruachCurrentTake = function () { return STATE.take; };
   window.ruachOpenTake = function (name) { openTake(name); };   // HERESY 1827: the Videographer opens a take it found
+  // HERESY 2511: the Narrator's run cards play a take and open its whole menu, as a card of the Library does
+  window.ruachPlayNamed = function (name) {
+    var t = findTake(name);
+    if (!t) return;
+    if (STATE.playerTake && STATE.playerTake.name === name) return togglePlay();
+    STATE.playZone = document.body.dataset.tab === "collection" ? "collection" : "list";
+    playNow(t);
+  };
+  window.ruachTakeMenu = function (name, x, y) { takeMenu(name, x, y); };
   window.ruachFindTakeFull = function (name) { return findTake(name); };
   // HERESY 1811 (Viktor 28.10.2026: «прикручивай как Local Studio LLM… и пусть это будет опция по умолчанию для установок, где VRAM позволяет. Так не
   // нужно будет юзеру коннектиться на внешние сервисы»): the Studio's own writer behind the lab's /llm/v1; since 2097 a host of its own, ticked by
@@ -11244,8 +11393,20 @@
   function paintOwn(st) {
     OWN = st || {};
     var here = OWN.here || [], ready = here.length > 0 && !!OWN.server;
-    $("ownState").textContent = !here.length ? "not here" : (!OWN.server ? "llama-server not built" : (!OWN.running ? "asleep"
+    $("ownState").textContent = !here.length ? "not here" : (!OWN.server ? "llama-server not built" : OWN.waiting ? "waits for the Intel Arc" : (!OWN.running ? "asleep"
+      : OWN.where === "arc" ? "on the Intel Arc (" + String(OWN.backend || "").toUpperCase() + ")"   // HERESY 2463
       : (OWN.gpu === null || OWN.gpu === undefined ? "on the processor" : (OWN.fit ? "on GPU " + OWN.gpu + " and the processor" : "on GPU " + OWN.gpu))));
+    if ($("ownDevice")) {                               // HERESY 2463: the device and the Arc's backend as the lab keeps them
+      var builds = OWN.arc_builds || {};
+      Array.prototype.forEach.call($("ownDevice").options, function (o) {
+        o.disabled = o.value === "arc" ? !(OWN.arc && (builds.sycl || builds.vulkan)) : o.value === "cuda" ? !OWN.cuda_server : false;
+      });
+      if (OWN.device) $("ownDevice").value = OWN.device;
+      Array.prototype.forEach.call($("ownBackend").options, function (o) { o.disabled = !builds[o.value]; });
+      if (OWN.arc_backend) $("ownBackend").value = OWN.arc_backend;
+      $("ownBackendField").classList.toggle("is-hidden", !OWN.arc);
+      $("ownDevice").disabled = $("ownBackend").disabled = !ready;
+    }
     $("ownState").dataset.s = ready ? "ready" : "missing";
     Array.prototype.forEach.call($("ownVariant").options, function (o) { o.disabled = here.indexOf(o.value) < 0; });
     if (OWN.variant) $("ownVariant").value = OWN.variant;
@@ -11263,7 +11424,10 @@
     else delete $("ownState").dataset.tip;
     $("ownHint").textContent = !here.length ? "Not here yet: Engine → Models and LoRAs → Studio writer fetches it (6.7 GB; compact 5.5 GB)."
       : (!OWN.server ? "Its weights are here; llama.cpp's llama-server is not built yet: launcher/extras.sh builds it."
-        : "Qwopus3.5-9B-v3 (Jackrong's, on Qwen3.5-9B, Apache-2.0), quantized with AutoRound, through llama.cpp on this machine: nothing leaves it. It starts at the first question and leaves the card after 10 minutes without one.");
+        : "Qwopus3.5-9B-v3 (Jackrong's, on Qwen3.5-9B, Apache-2.0), quantized with AutoRound, through llama.cpp on this machine: nothing leaves it. It reads 32 768 tokens at once. It starts at the first question and leaves the card after 10 minutes without one (the Intel Arc after 5, and at once when a song or the Narrator needs it).");
+    if (OWN.yielded && OWN.yielded.why && !OWN.running) $("ownHint").textContent = "It gave the Intel Arc to {0}; the next question starts it again.".replace("{0}", OWN.yielded.why);
+    if (OWN.waiting) $("ownHint").textContent = OWN.waiting.replace(/^waits for the Intel Arc: /, "Waits for the Intel Arc: ");
+    paintAssistLine();                                 // HERESY 2470: the Writing room's line says where it runs
   }
   function ownStatus() {
     return fetch("/lab/llm/status").then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }).then(function (st) { paintOwn(st); return st; });
@@ -11279,6 +11443,8 @@
   });
   $("ownStop").addEventListener("click", function () { ownPost("stop"); });
   $("ownVariant").addEventListener("change", function () { ownPost("variant", { variant: this.value }); });
+  $("ownDevice").addEventListener("change", function () { ownPost("device", { device: this.value }); });     // HERESY 2463
+  $("ownBackend").addEventListener("change", function () { ownPost("device", { backend: this.value }); });
 
   // ---- the hosts' own controls
   function testHost(id, button) {
@@ -11323,9 +11489,14 @@
     if (!k) { $("orKeyNew").focus(); return toast("Paste the OpenRouter key first", "bad"); }
     var first = !LLM.key.set;
     $("orKeySave").disabled = true;
-    postKey(k).then(function () {
+    var session = $("orKeySession") && $("orKeySession").checked;   // HERESY 2473
+    (session ? Promise.resolve().then(function () {
+      if (!/^[\x21-\x7e]{8,256}$/.test(k)) throw new Error("An OpenRouter key is one word of 8 to 256 characters, without spaces");
+      holdSessionKey(k);
+      LLM.key = { set: true, tail: k.slice(-4), session: true };
+    }) : postKey(k).then(function (r) { holdSessionKey(""); return r; })).then(function () {
       $("orKeyNew").value = "";
-      toast("The OpenRouter key is kept by the Studio", "good");
+      toast(session ? "The OpenRouter key is held by this browser tab until it closes" : "The OpenRouter key is saved by the Studio in user/secrets.json", "good");
       forget("openrouter");
       if (first && !llmOn("openrouter")) return saveHosts({ openrouter: { active: true } });
     }).then(function () { return refreshWriter(true); })
@@ -11338,6 +11509,7 @@
       { ok: "Forget the key", cancel: "Keep it" }).then(function (yes) {
       if (!yes) return;
       forget("openrouter");
+      holdSessionKey("");                              // HERESY 2473: the session's key too
       return postKey("").then(function () { return saveHosts({ openrouter: { active: false } }); }).then(function () { return refreshWriter(true); })
         .then(function () { toast("The OpenRouter key is forgotten", "good"); });
     }).catch(function (e) { toast(e.message, "bad"); });
@@ -11993,6 +12165,7 @@
       instrumental: $("instrumental").checked,                                                       // HERESY 2136: kept over an F5
       steps: parseInt($("odeSteps").value, 10), duration: parseFloat($("maxLength").value),
       solver: $("odeSolver").value, nar_ladder: $("narDecode").value === "ladder",                   // HERESY 1768
+      nar_pieces: $("narLong").value === "pieces",                                                   // HERESY 2509
       synth_batch_size: parseInt($("variations").value, 10), lm_batch_size: parseInt($("versions").value, 10),
       output_format: $("outFormat").value, mp3_bitrate: parseInt($("mp3Bitrate").value, 10),
       vae: selectedVae(), sliders: STATE.sliderChoice || [], loras: YueLoras.kept ? YueLoras.kept() : YueLoras.value(),   // HERESY 1167: the muted kept
@@ -12050,7 +12223,7 @@
   // A knob off its default is marked. The default is the value attribute: the page
   // already writes each knob's default there as its step base, so no second table
   // is kept. Only numbers, ranges and the solver: text and seeds have no default.
-  var MARKED = 'input[type="number"], input[type="range"], select#odeSolver, select#narDecode';   // HERESY 1768: the decode too
+  var MARKED = 'input[type="number"], input[type="range"], select#odeSolver, select#narDecode, select#narLong';   // HERESY 1768: the decode too; 2509: Long songs
   function isChanged(el) {
     if (el.tagName === "SELECT") {
       var base = 0;
@@ -12220,7 +12393,7 @@
   /* ---------------------------------------------- HERESY 1032: saved styles and profiles */
   // A profile is every knob but the texts and seeds, written out in full (defaults too), so it
   // means the same on a server whose defaults moved. Applying one keeps the texts, seeds and codes.
-  var SETUP_KEYS = ["cot", "duration", "cfg_scale", "cfg_lyrics", "steps", "solver", "nar_ladder", "vae", "sliders", "loras", "output_format",
+  var SETUP_KEYS = ["cot", "duration", "cfg_scale", "cfg_lyrics", "steps", "solver", "nar_ladder", "nar_pieces", "vae", "sliders", "loras", "output_format",
                     "mp3_bitrate", "synth_batch_size", "lm_batch_size"];   // HERESY 1768: nar_ladder; 2007: no peak_clip
   function captureSetup() {
     var b = buildRequest(false, false, true), out = {};
@@ -12238,6 +12411,7 @@
     if (out.steps === undefined) out.steps = engineSteps();   // HERESY 1710: a request without steps runs at the engine's
     if (out.solver === undefined) out.solver = "midpoint";
     if (out.nar_ladder === undefined) out.nar_ladder = false;   // HERESY 1768: written in full, the whole-song decode said too
+    if (out.nar_pieces === undefined) out.nar_pieces = false;   // HERESY 2509: whole said too
     if (out.synth_batch_size === undefined) out.synth_batch_size = 1;
     out.sliders = out.sliders || [];
     out.loras = out.loras || [];
@@ -12255,6 +12429,10 @@
     style: function () { return $("style").value; },
     setStyle: function (text) { $("style").value = text; $("style").dispatchEvent(new Event("input", { bubbles: true })); }
   });
+  // HERESY 2498: the Writer's STYLE gets the saved styles too
+  if (window.HeresyPresets && window.HeresyPresets.styleRow && $("wrStyleLib"))
+    window.HeresyPresets.styleRow({ lib: "wrStyleLib", save: "wrStyleSave", del: "wrStyleDel" }, function () { return $("wrStyle").value; },
+      function (text) { $("wrStyle").value = text; $("wrStyle").dispatchEvent(new Event("input", { bubbles: true })); });
 
   /* ---------------------------------------------- HERESY 1042: like, dislike, favourite in the player */
   function paintRate() {
@@ -12351,6 +12529,7 @@
   });
 
   if (window.HeresyTrain) window.HeresyTrain.init({ toast: toast });   // HERESY 1063
+  if (window.HeresyCase) window.HeresyCase.init({ toast: toast });     // HERESY 2453: the case buttons say what they did
   if (window.HeresyGpus) window.HeresyGpus.init({ toast: toast,     // HERESY 1091
     // HERESY 1294: a card's VRAM limit saved: Auto's knobs follow the Studio card's at once; rc4's «auto:N» becomes its limit, once
     limits: function () {
@@ -12516,6 +12695,9 @@
   if (window.HeresyInstruments) window.HeresyInstruments.init({        // HERESY 1069: the ♪ cheat-sheet
     toast: toast, findTake: findTake, playNow: function (t) { STATE.playZone = "collection"; playNow(t); }
   });
+  // HERESY 2491 (Viktor 12.11.2026: «в редактор стилей нужно подтянуть и теги инструментов»): the Writer's STYLE gets the Musician's chips and sheet
+  if (window.HeresyInstruments && window.HeresyInstruments.attachStyle && $("wrStyle"))
+    window.HeresyInstruments.attachStyle("wrStyle", "wrHiChips", null, $("wrStyle").closest(".field").querySelector(".label"));
 
   // HERESY 1160: the lab makes them again (its own queue in the engine) and swaps each new take in when it lands, even
   // with this page closed; the activity log says each swap
@@ -12530,6 +12712,9 @@
     var n = list.length, first = findTake(list[0]), what = n > 1 ? n + " takes" : "\u201c" + (first ? displayTitle(first) : list[0]) + "\u201d";
     return post("/lab/regen", { names: list }).then(function (d) {
       var bad = (d && d.regen || []).filter(function (r) { return r.error; });
+      var rd = (d && d.regen || []).filter(function (r) { return r.reader; });   // HERESY 2510: a reading is read again in the Narrator, beside the old one
+      if (rd.length && window.HeresyReader) window.HeresyReader.poll(true);
+      if (rd.length && rd.length === n && window.RuachReaderWords) return toast(window.RuachReaderWords.en("reader.regen.many").replace("{0}", n), bad.length ? "bad" : "good");
       toast("Regenerating " + what + " with new seeds: the new " + (n > 1 ? "ones take" : "one takes") + " the old one's places, the old kept in \u201c" +
         ((d && d.workspace) || "Sourced for Regeneration") + "\u201d" + (bad.length ? " · not " + bad.length + ": " + bad[0].error : ""), bad.length ? "bad" : "");
       setTimeout(pollJobs, 400);
@@ -12592,7 +12777,7 @@
     // HERESY 1166 (Viktor: «Замораживаются все треки в этом представлении, никаких действий по ним»): a take frozen with its
     // workspace is heard and read, nothing else
     if (HC && HC.isFrozen && HC.isFrozen(name)) {
-      return window.HeresyMenu.open(x, y, [
+      return window.HeresyMenu.open(x, y, takeIcons([
         { icon: now ? "\u275a\u275a" : "\u25b6", label: now ? "Pause" : "Play", action: function () {
           if (now) return togglePlay();
           STATE.playZone = document.body.dataset.tab === "collection" ? "collection" : "list";
@@ -12601,7 +12786,7 @@
         HC.datasheet ? { icon: "\u2630", label: "Datasheet", hint: "all it was made with", action: function () { HC.datasheet(name); } } : null,   // HERESY 2020
         { sep: true },
         { icon: "\u2744", label: "Frozen with its workspace", hint: "unfreeze it to act on the take", disabled: true }
-      ].filter(Boolean));
+      ].filter(Boolean)));   // HERESY 2540: drawn
     }
     var ws = HC && HC.workspaces ? HC.workspaces() : [], inWs = row ? row.workspaces : [], hand = recall("yue2.writerDoc");
     var here = document.body.dataset.tab || "create";
@@ -12619,12 +12804,15 @@
     // HERESY 1169 · 1235 (Viktor 08.10.2026: «всё, что может быть применено массово, оформи на tracks selection… И то, что реально сможет убить ресурсы GPU и время, всё в попап диалоги»): on a checked card in the Librarian with others checked, the marks, the artwork, the workspaces, hiding and a ZIP act on every checked take; what costs a card's minutes asks first
     var bulkSel = here === "collection" && HC && HC.selected ? HC.selected() : [], bulk = bulkSel.length > 1 && bulkSel.indexOf(name) >= 0 ? bulkSel : null;
     var bulkRows = bulk ? bulk.map(function (n) { return HC.row(n); }).filter(Boolean) : [], bulkArt = bulk ? bulk.filter(function (n) { return !!artUrl(n); }) : [];
+    // HERESY 2513 (the Narrator as the Musician's mirror): a reading's take offers a reading's acts (heresy-reader.js RuachReaderMirror), never a song's
+    // (Refine, the sections by ear, the tail guards, Edit, the music's Regenerate, the score, the MIDI)
+    var RDT = !take.session && !!row && row.realm === "reader" && !!row.no_train, RD = RDT && !bulk && window.RuachReaderMirror ? window.RuachReaderMirror.menu(name) : null;
     var items = [
       bulk ? { head: bulk.length + " checked: a line with a number acts on all of them" } : null,
       // HERESY 2020 (Viktor 02.11.2026: «Уведи Лист и Паспорт в корень вверху как Листовка и Паспорт»): the take's two readings head its menu
       HC && HC.openSheet && here === "collection" ? { icon: "\u25a4", label: "Sheet", action: function () { HC.openSheet(name); } } : null,
       HC && HC.datasheet ? { icon: "\u2630", label: "Datasheet", hint: "all it was made with", action: function () { HC.datasheet(name); } } : null,
-      here !== "post" && !take.session ? { icon: "✨", label: "Refine", action: go("post") } : null,   // HERESY 1877: the card's button, at the head
+      here !== "post" && !take.session && !RDT ? { icon: "✨", label: "Refine", action: go("post") } : null,   // HERESY 1877: the card's button, at the head
       { icon: now ? "❚❚" : "▶", label: now ? "Pause" : "Play", action: function () {
         if (now) return togglePlay();
         STATE.playZone = document.body.dataset.tab === "collection" ? "collection" : "list";
@@ -12632,12 +12820,12 @@
       } },
       // HERESY 1059 (Viktor): the other rooms only, never the one you are in
       // HERESY 2020 («`Открыть в ...` > Творец, Огранщик, Видеограф»): a room by its name in «Open in… ›»
-      here !== "create" ? { icon: "✎", label: "Open in the Musician", room: "Musician", action: function () { openInCreator(name); } } : null,
-      here !== "post" && !take.session ? { icon: "\u2697", label: "Open in the Refiner", room: "Refiner", action: go("post") } : null,   // HERESY 1906: in «Open ›» too, where he looks for it
+      RD ? RD.open : here !== "create" && !RDT ? { icon: "✎", label: "Open in the Musician", room: "Musician", action: function () { openInCreator(name); } } : null,
+      here !== "post" && !take.session && !RDT ? { icon: "\u2697", label: "Open in the Refiner", room: "Refiner", action: go("post") } : null,   // HERESY 1906: in «Open ›» too, where he looks for it
       HC && HC.reveal && here !== "collection" ? { icon: "▦", label: "Open in the Librarian", room: "Librarian", action: function () { setTab("collection"); HC.reveal(name); } } : null,
       !take.session && !bulk && window.HeresyLineage ? { icon: "\ud83c\udf33", label: "Family tree…", hint: "where it came from and what came of it", action: function () { window.HeresyLineage.open(name); } } : null,   // HERESY 1988
       // HERESY 1315: the lyrics' sections placed on the wave by Whisper's hearing (once; the lab keeps it)
-      !take.session && !bulk && taggedParts(take.lyrics) >= 2 ? { icon: "\u00a7", label: sectionsTimed[name] ? "Find the sections by ear again" : "Find the sections by ear",
+      !take.session && !bulk && !RDT && taggedParts(take.lyrics) >= 2 ? { icon: "\u00a7", label: sectionsTimed[name] ? "Find the sections by ear again" : "Find the sections by ear",
         hint: sectionsAsked[name] === "running" ? "being heard now" : "Whisper hears the words; about half a minute on a card", disabled: sectionsAsked[name] === "running", action: function () {
           toast("Hearing the words of " + displayTitle(take) + "\u2026");
           timeSections(name, !!sectionsTimed[name]).then(function (d) { toast("The sections found by ear (" + Math.round((d.heard || 0) * 100) + " % of the lines heard)"); },
@@ -12645,10 +12833,14 @@
         } } : null,
       // HERESY 2056 (Viktor 04.11.2026: «в контекстном меню трека выставь дефолт off с выбором, опция и иконка»): this take's end checked now (the tail guard,
       // and Sung to the end? when it has lyrics), and the option, off unless chosen, that checks every new take's as it lands
-      !take.session ? { icon: "\u223f", label: "Tail guards", items: [
+      !take.session && !RDT ? { icon: "\u223f", label: "Tail guards", items: [
         bulk ? null : { icon: "\u223f", label: "Check its end now", hint: "where its sound comes back after a silence; sung to the end? (Whisper)", action: function () { guardTails([name], true); } },
         { label: "On every new take", hint: "off unless chosen; Whisper only while a card has room", checked: tailGuard(), action: function () { setTailGuard(!tailGuard()); } }
       ].filter(Boolean) } : null,
+      // HERESY 2434 (Viktor 12.11.2026: «Виспер нужно опцией в Чтеце… или постпроцессингом того же трека»): a Narrator's take heard by Whisper
+      // afterwards (heresy-reader.js, lab/reader.py check): the letters off and the words flagged into its note and beside it, its audio untouched
+      !take.session && !bulk && row && row.realm === "reader" && row.no_train && window.RuachReaderCheck && window.RuachReaderWords
+        ? { icon: "\ud83c\udfa7", label: window.RuachReaderWords.en("reader.wcheck"), hint: window.RuachReaderWords.en("reader.wcheck.hint"), action: function () { window.RuachReaderCheck(name); } } : null,
       // HERESY 1415: its namesakes in one player, two to four of them
       bulk && bulk.length > 1 ? { icon: "\u2261", label: "Compare the selected\u2026", hint: "two to twelve of the checked", action: function () { compareTakes(bulk.slice(0, 12)); } } : null,   // HERESY 1716; 1724: twelve
       // HERESY 2281 · 2286: two to four checked: First and second on them (1991's analyzer), each against the first checked
@@ -12674,7 +12866,7 @@
       { sep: true },
       // HERESY 1727 (Viktor 22.10.2026: «Это же реально правка трека, а не перегенерация… "Сделать ещё раз" переименовать в "Перегенерить", спустить под
       // "Править", оба перенести выше блока Библиотека»): what changes this take (a new take; this one stays), then what makes it anew
-      take.session || bulk ? null : { icon: "\u2702", label: "Edit", items: [
+      take.session || bulk || RDT ? null : { icon: "\u2702", label: "Edit", items: [
         cardItem(name, "#cropTake", "Crop…", "create"), cardItem(name, "#cutSection", "Remove a section…", "create"),
         Object.assign(cardItem(name, "#repeatSection", "Repeat a section…", "create"), { hint: "a copy, on the bar lines" }),
         Object.assign(cardItem(name, "#insertPart", "Insert a part…", "create"), { hint: "a copy of a section" }),   // HERESY 1714
@@ -12682,7 +12874,7 @@
         cardItem(name, "#extendTake", "Extend…", "create"), cardItem(name, "#endAt", "End at…", "create"), cardItem(name, "#fadeIn", "Fade in…", "create"),
         cardItem(name, "#trimToText", "Trim to the text", "create")
       ] },
-      take.session || bulk ? null : { icon: "\u27f3", label: "Regenerate", items: [
+      take.session || bulk ? null : RD ? RD.regen : RDT ? null : { icon: "\u27f3", label: "Regenerate", items: [
         { icon: "\u27f3", label: "Regenerate with a new seed", hint: "replaces it; the old one kept", action: function () { regenAsk([name]); } },
         { sep: true },
         cardItem(name, "#retakeTake", "Retake", "create"), cardItem(name, "#reuseTake", "Reuse", "create"),
@@ -12707,7 +12899,7 @@
         (HC.editNote ? HC.editNote(name, displayTitle(take)) : Promise.resolve()).then(function () { paintNote(); paintLibrary(); });   // HERESY 1825: one window for the menu and the card
       } } : null,
       { icon: "Aa", label: "Rename…", action: function () {
-        window.HeresyDialog.prompt("Rename the take\n\nUp to " + TITLE_MAX + " characters; invisible controls are taken out.", displayTitle(take), { ok: "Rename", max: TITLE_MAX })
+        window.HeresyDialog.prompt("Rename the take\n\nUp to " + TITLE_MAX + " characters; invisible controls are taken out.", displayTitle(take), { ok: "Rename", max: TITLE_MAX, name: true })   // HERESY 2462: the names' rule, said in the dialog
           .then(function (t) { if (t !== null) return renameTake(name, t).then(function (ok) { if (ok && HC) HC.reload(); }); })
           .catch(function (e) { toast(e.message, "bad"); });
       } },
@@ -12748,7 +12940,7 @@
         } });
       }).concat([{ sep: true }, { icon: "+", label: "New workspace…", action: function () {
         var whom = bulk || [name];
-        window.HeresyDialog.prompt(bulk ? "A new workspace for the " + bulk.length + " checked takes" : "A new workspace for “" + displayTitle(take) + "”", "", { ok: "Make it", placeholder: "its name" }).then(function (w) {
+        window.HeresyDialog.prompt(bulk ? "A new workspace for the " + bulk.length + " checked takes" : "A new workspace for “" + displayTitle(take) + "”", "", { ok: "Make it", placeholder: "its name", name: { max: 56 } }).then(function (w) {   // HERESY 2462
           w = (w || "").trim();
           if (w) HC.act({ op: "ws-add", workspace: w, names: whom }, "Added to “" + w + "”");
         });
@@ -12762,7 +12954,7 @@
         return { icon: "⇥", label: "Move" + many + " to", hint: inLib && place && place.charAt(0) !== "_" ? "out of “" + place + "”" : "out of every other", items: ws.filter(function (w) { return !(inLib && w === place); }).map(function (w, i, to) {
           return wsTreeItem(w, to, { action: function () { HC.moveTo(w, list, inLib); } });   // HERESY 2040
         }).concat([{ sep: true }, { icon: "+", label: "New workspace…", action: function () {
-          window.HeresyDialog.prompt("A new workspace for " + (list.length > 1 ? "the " + list.length + " checked takes" : "“" + displayTitle(take) + "”"), "", { ok: "Move there", placeholder: "its name" }).then(function (w) {
+          window.HeresyDialog.prompt("A new workspace for " + (list.length > 1 ? "the " + list.length + " checked takes" : "“" + displayTitle(take) + "”"), "", { ok: "Move there", placeholder: "its name", name: { max: 56 } }).then(function (w) {   // HERESY 2462
             w = (w || "").trim();
             if (w) HC.moveTo(w, list, inLib);
           });
@@ -12859,10 +13051,10 @@
       take.session || bulk ? null : { icon: "\u2697", label: "Refiner", items: [
         cardItem(name, '[data-post-open="spectrumPanel"]', "Spectrum"), cardItem(name, '[data-post-open="glossPanel"]', "Lyrics check"),
         { label: "Into the Refiner's bucket", hint: "ten takes at most", disabled: !(window.HeresyPost && window.HeresyPost.bucketAdd), action: function () { window.HeresyPost.bucketAdd([name]); } },   // HERESY 1955
-        cardItem(name, "#transcribeTake", "Write it from the sound", "create")   // HERESY 1727: «Transcribe this take», the datasheet's name
-      ] },
+        RDT ? null : cardItem(name, "#transcribeTake", "Write it from the sound", "create")   // HERESY 1727: «Transcribe this take», the datasheet's name
+      ].filter(Boolean) },
       HW ? { icon: "✒", label: "Writer", items: [
-        { label: "New document from this take", action: function () {
+        RD ? RD.writer : { label: "New document from this take", action: function () {   // HERESY 2513: a reading's text, as the Narrator brings it
           getRequest(take).then(function (req) {
             return HW.saveTake({ title: displayTitle(take), style: req.style || "", lyrics: req.lyrics || "", params: setupFromRequest(req) })
               .then(function (doc) { return HW.link(doc.id, [name]).then(function () { toast("In the Writer: “" + doc.title + "”"); HW.open(doc.id); }); });
@@ -12902,10 +13094,10 @@
         !bulk && artUrl(name) ? { label: "Artwork · JPEG", action: save(artUrl(name), fileTitle(take) + ".jpg") } : null,
         bulk || take.session ? null : { sep: true },
         bulk || take.session ? null : cardItem(name, "#dlRequest", "Request"),
-        bulk || take.session ? null : cardItem(name, "#dlScore", "Score"),
-        bulk || take.session ? null : cardItem(name, "#takeMidi", "MIDI"),
-        bulk || take.session ? null : cardItem(name, "#takeMarkers", "Markers"),
-        bulk || take.session ? null : cardItem(name, "#loopTake", "Loop…", "create")
+        bulk || take.session || RDT ? null : cardItem(name, "#dlScore", "Score"),
+        bulk || take.session || RDT ? null : cardItem(name, "#takeMidi", "MIDI"),
+        bulk || take.session || RDT ? null : cardItem(name, "#takeMarkers", "Markers"),
+        bulk || take.session || RDT ? null : cardItem(name, "#loopTake", "Loop…", "create")
       ].filter(Boolean) },
       // HERESY 1148 (Viktor, 03.10.2026): out to a DAW from any take, refined or not (a DAW is a refiner too); what goes
       // over says itself: the stems once the Refiner has split them; the user's own DAW (the DAW window's pick) first
@@ -12956,11 +13148,47 @@
       items.push({ sep: true }, { icon: "\u25a4", label: "The card's buttons", checked: on, hint: on ? "shown on the card" : "in this menu only",
                                   action: function () { store(CARD_TOOLS, on ? null : "on"); paintCardTools(); } });
     }
-    window.HeresyMenu.open(x, y, groupMenu(items, !bulk));   // HERESY 2001: one take's marks stand on its card
+    window.HeresyMenu.open(x, y, takeIcons(groupMenu(items, !bulk)));   // HERESY 2001: one take's marks stand on its card; 2540: drawn
   }
   // HERESY 1483: one of the take card's buttons as a menu item: the take into the card (and the Creator, for what works on the card),
   // then that button pressed, so it acts, asks and refuses as on the card; one the card holds off for this take says so instead. Off
   // is read from the card when the take is the one in hand (a button hidden or disabled there; the room's own hiding does not count)
+  // HERESY 2540 (Viktor 12.11.2026: «Максимум компактности, минимум текстового кнопочного клаттера. Это закон UIX нашей студии»; the UIX audit of
+  // 13.11.2026, №41): the take's menu (in the rooms and in the Library) drawn in the Studio's Lucide icons, not glyphs and colour emoji: each row
+  // its drawing by what it does, its English label first, its old glyph after (the glyph stays the row's key: groupMenu sorts by it); a row that
+  // brings a drawing of its own keeps it, a row that had no icon gets none; the names are the Studio's one table (picker-recipe №99: the passport
+  // file-text, again refresh-cw, the trash trash-2, open in a room external-link)
+  var TAKE_UI = [
+    [/^Sheet$/, "sheet-portrait"], [/^Datasheet$/, "file-text"], [/^Refine$/, "gem"], [/^Play$/, "play"], [/^Pause$/, "pause"], [/^Open in\u2026$/, "external-link"],
+    [/^room:Musician$/, "music"], [/^room:Refiner$/, "sparkles"], [/^room:Librarian$/, "library"], [/^room:Videographer$/, "film"],
+    [/^Family tree/, "tree"], [/^Find the sections by ear/, "ear"], [/^(Tail guards|Check its end now)$/, "tailguard"], [/^Compare/, "git-compare"],
+    [/^Replace this section/, "refresh-cw"], [/^Re-sing this line/, "mic"], [/^Sing it once more/, "repeat"], [/^Insert an interlude/, "music"], [/^Sing a window/, "waveform"],
+    [/^Edit$/, "scissors"], [/^Regenerate/, "refresh-cw"], [/^Into the Refiner's bucket/, "layers"], [/^Marks$/, "like"], [/^Like\b/, "like"], [/^Dislike\b/, "dislike"],
+    [/^Favourite\b/, "star"], [/^(Protect|Take its protection off)/, "shield"], [/^Note\u2026$/, "note"], [/^Rename\u2026$/, "pencil"], [/^Redraw artwork$/, "refresh-cw"],
+    [/^Remove (current )?artwork\b/, "x"], [/^Copy the cover/, "copy"], [/^Add to (the )?playlist/, "list-plus"], [/^Library$/, "library"],
+    [/^Workspaces\b/, "folder"], [/^Move\b.* to$/, "folder-input"], [/^(Take \d+ out of|Out of the other workspaces)/, "folder-minus"], [/^New workspace/, "folder-plus"],
+    [/^(Pin|Unpin)\b/, "pin"], [/^Sung to the end\?/, "ear"], [/^Hide\b/, "eye-off"], [/^Show\b/, "eye"], [/^Refiner$/, "sparkles"], [/^Writer$/, "notebook-pen"],
+    [/^Open in the Videographer$/, "film"], [/^Copy$/, "copy"], [/^Download$/, "download"], [/^Export to DAW$/, "sliders-horizontal"], [/artwork|Artwork/, "image"], [/trash/, "trash-2"],
+    [/^The card's buttons$/, "layout-grid"], [/^Frozen with its workspace$/, "snowflake"]
+  ];
+  var TAKE_GLYPH = { "\u25b6": "play", "\u275a\u275a": "pause", "\u2728": "gem", "\u2197": "external-link", "\ud83c\udf33": "tree", "\u00a7": "ear", "\u223f": "tailguard",
+    "\ud83c\udfa7": "ear", "\u2261": "git-compare", "\u25e7": "git-compare", "\u21bb": "refresh-cw", "\u270e": "pencil", "\u21c9": "repeat", "\u266b": "music", "\u25a3": "image",
+    "\u2702": "scissors", "\u27f3": "refresh-cw", "\u26d3": "layers", "\ud83d\udc4d": "like", "\ud83d\udc4e": "dislike", "\u2606": "star", "\ud83d\udee1": "shield", "\u270d": "note",
+    "Aa": "pencil", "\u2715": "x", "\u29c9": "copy", "\u25a6": "folder", "\u21e5": "folder-input", "\ud83d\udccc": "pin", "\ud83c\udfa4": "ear", "\u25cc": "eye-off",
+    "\u2697": "sparkles", "\u2712": "notebook-pen", "\ud83c\udf9e": "film", "\u2398": "copy", "\u2913": "download", "\ud83c\udf9a": "sliders-horizontal", "\ud83d\uddd1": "trash-2",
+    "+": "plus", "\u25a4": "layout-grid", "\u2630": "list-plus", "\u2744": "snowflake" };
+  function takeIcons(items) {
+    (items || []).forEach(function (it) {
+      if (!it || it.sep || it.head) return;
+      if (!it.ui && it.icon) {
+        var lab = it.room ? "room:" + it.room : String(it.label || "");
+        for (var i = 0; i < TAKE_UI.length && !it.ui; i++) if (TAKE_UI[i][0].test(lab)) it.ui = TAKE_UI[i][1];
+        if (!it.ui && TAKE_GLYPH[it.icon]) it.ui = TAKE_GLYPH[it.icon];
+      }
+      if (it.items) takeIcons(it.items);
+    });
+    return items;
+  }
   function cardOff(el) {
     if (!el || el.disabled || el.getAttribute("aria-disabled") === "true" || el.classList.contains("is-disabled")) return true;
     for (var p = el; p && p.id !== "takeBody"; p = p.parentElement) if (p.hidden || p.classList.contains("is-hidden")) return true;
@@ -13022,6 +13250,7 @@
     if (!take || !HC) return;
     if (noteFor !== take.name || document.activeElement !== $("takeNote")) $("takeNote").value = HC.note(take.name);
     noteFor = take.name;
+    fitText($("takeNote"));   // HERESY 2546 (the UIX audit of 13.11.2026, №39): the note as high as its words, up to four lines, then it scrolls
     $("takeNoteState").textContent = "";
   }
   $("takeNote").addEventListener("input", function () {
@@ -13341,14 +13570,16 @@
   // HERESY 1438 (Viktor 14.10.2026: «ПИСАТЕЛЬ и ПРОФИЛЬ — попап оверлеями, как выбор пространства. Максимум, где есть массивные селекторы,
   // переводим их в модальные попап оверлеи»): a long list chosen in the Studio's own dialog. The select stays, hidden, the state its code
   // reads and writes (its value set by code repaints the button too); the button shows the choice and opens the dialog
-  function popPick(sel, title) {
+  function popPick(sel, title, icon) {   // HERESY 2542: icon, a drawing of the set: the button is that icon alone (an act, its choice not shown)
     if (!sel || sel.dataset.pick) return null;
     sel.dataset.pick = "1";
     var btn = document.createElement("button");
-    btn.type = "button"; btn.className = "pick-btn"; btn.id = sel.id + "Btn"; btn.setAttribute("aria-haspopup", "dialog");
+    btn.type = "button"; btn.className = icon ? "btn ghost small icon-btn mu-ico pick-ico" : "pick-btn"; btn.id = sel.id + "Btn"; btn.setAttribute("aria-haspopup", "dialog");
     if (sel.getAttribute("aria-label")) btn.setAttribute("aria-label", sel.getAttribute("aria-label"));
     if (sel.dataset.tip) btn.dataset.tip = sel.dataset.tip;
-    btn.innerHTML = '<span class="pick-name" translate="no"></span><span class="pick-caret" aria-hidden="true">\u25be</span>';
+    // HERESY 2542 (the UIX audit of 13.11.2026, №26): the caret drawn (chevron-down), not the glyph \u25be; an icon button keeps its choice's name unseen
+    var HI = window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons : null;
+    btn.innerHTML = (icon && HI ? HI.ui(icon) : "") + '<span class="pick-name" translate="no"></span>' + (icon ? "" : '<span class="pick-caret" aria-hidden="true">' + (HI ? HI.ui("chevron-down") : "\u25be") + "</span>");
     sel.parentNode.insertBefore(btn, sel);
     sel.classList.add("pick-native"); sel.setAttribute("tabindex", "-1"); sel.setAttribute("aria-hidden", "true");
     var paint = function () {
@@ -13380,10 +13611,20 @@
     paint();
     return btn;
   }
-  popPick($("wrHandPick"), "A song from the Writer\n\nIts title, style and lyrics into this form; it stays in hand, so the takes made from it are linked to it.");
+  popPick($("wrHandPick"), "A song from the Writer\n\nIts title, style and lyrics into this form; it stays in hand, so the takes made from it are linked to it.", "import");   // HERESY 2542: an icon
   popPick($("setupLib"), "A profile\n\nIt sets every knob but the texts and the seeds; Apply puts it in the form.");
   popPick($("styleLib"), "A saved style\n\nIt goes into the Style box (asked first when something is there).");
   popPick($("tpPick"), "A text profile\n\nIts rules and its shape make a pasted text ready to be sung or read; Apply puts them to the lyrics.");
+  // HERESY 2544 (the UIX audit of 13.11.2026, №32): the room's long native lists in the Studio's overlay picker (HeresyChoices, a Find above a long
+  // list), as the Narrator's voices: the melody's take (every take with a score), the song's key and the imported MIDI's key; the select stays the
+  // state its code reads and writes, its box shown in its place (hc-on on its parent)
+  if (window.HeresyChoices) ["coverTake", "songKey", "midiInKey"].forEach(function (id) {
+    var s = $(id);
+    if (!s || !s.parentNode) return;
+    s.dataset.hcPick = "1";
+    s.parentNode.classList.add("hc-on", "mu-hc");
+    window.HeresyChoices.enhance(s);
+  });
 
   /* ---------------------------------------------- HERESY 1014: three workspaces */
   // Create (the form and the take, as the Kit has it), Write (the writing room with the
@@ -13405,16 +13646,17 @@
     var style = $("style").value.trim(), lyrics = $("lyrics").value.trim(), abc = $("abc").value.trim() || STATE.abcRendered || "";
     $("curTitle").textContent = fullTitle() || "untitled";   // HERESY 1614
     $("curTitle").setAttribute("translate", $("title").value.trim() ? "no" : "yes");   // HERESY 1166: the user's own words
-    $("curStyle").textContent = style || "no style yet";
+    $("curStyle").textContent = style || tr("no style yet");   // HERESY 2470
     $("curStyle").setAttribute("translate", style ? "no" : "yes");
     $("curStyleSize").textContent = style ? style.length + " characters" : "";
-    $("curLyrics").textContent = lyrics || "no lyrics yet";
+    $("curLyrics").textContent = lyrics || tr("no lyrics yet");
     $("curLyrics").setAttribute("translate", lyrics ? "no" : "yes");
     $("curLyricsSize").textContent = lyrics ? lyrics.split(/\r?\n/).filter(function (l) { return l.trim(); }).length + " lines" : "";
     var h = window.HeresyAssist ? window.HeresyAssist.abcHeader(abc) : {};
     $("curScore").textContent = h.K || h.M || h.Q ? "K:" + (h.K || "?") + "  M:" + (h.M || "?") + "  Q:" + (h.Q || "?")
       : "no score in the form: in Full mode the model writes one";
   }
+  window.addEventListener("ruach-lang", function () { try { paintCurrentSong(); } catch (e) { /* a half-built page */ } });   // HERESY 2470
   function paintPost() {
     var take = STATE.take;
     $("postTitle").textContent = take ? displayTitle(take) : "";   // HERESY 1167: the room's name stands before it now
@@ -13467,6 +13709,8 @@
   function paintArtistTab() {   // HERESY 1332 (Viktor: «Artist не переводи как Артист на русский. Только как Художник»): the room's header too
     var name = artistRoom();
     if ($("tabArtist")) $("tabArtist").textContent = name;
+    // HERESY 2521 (audit №3): its tip in the page's language too (the tab is translate="no" for its name, so the page's translator leaves it)
+    if ($("tabArtist")) $("tabArtist").dataset.tip = tr("The Artist: pictures for your songs from a prompt of your own, square, wide and tall from one seed (an early preview)");
     if ($("arRoomName")) $("arRoomName").textContent = name;
     if ($("logViewArtist")) $("logViewArtist").textContent = name;   // HERESY 1381: the log's view of the room
   }
@@ -13482,7 +13726,12 @@
     var title = $("impTitle").value.trim() || file.name.replace(/\.[^.]+$/, ""), lyrics = $("impLyrics").value.trim();
     button.disabled = true;
     // HERESY 1434: an import is a new take too: a workspace that takes it, first; it lands there
-    wsGuard().then(function () { importNow(file, title, lyrics, button); }, function (e) { button.disabled = false; toast(e.message, "bad"); });
+    // HERESY 2462: its title (typed, or the file's name) keeps the names' rule: asked about, the cleaned one offered
+    (window.HeresyNames ? window.HeresyNames.ask(title, { max: 200 }) : Promise.resolve(title)).then(function (t) {
+      if (!t) { button.disabled = false; return; }
+      if ($("impTitle").value.trim()) $("impTitle").value = t;
+      wsGuard().then(function () { importNow(file, t, lyrics, button); }, function (e) { button.disabled = false; toast(e.message, "bad"); });
+    });
   });
   function importNow(file, title, lyrics, button) {
     var xhr = new XMLHttpRequest(), started = Date.now();
@@ -13531,13 +13780,20 @@
   /* ---------------------------------------- HERESY 1010: the writing room */
   var A = window.HeresyAssist, assistBefore = null;
   if (A) {
-    A.TASKS.forEach(function (t) { var o = document.createElement("option"); o.value = t[0]; o.textContent = t[1]; $("assistTask").appendChild(o); });
-    A.CHIPS.forEach(function (c) {
-      var b = document.createElement("button");
-      b.type = "button"; b.className = "chip"; b.textContent = c[0]; b.dataset.tip = c[1];
-      b.addEventListener("click", function () { $("assistBrief").value = c[1]; if (c[0] === "Style for YuE2") $("assistTask").value = "style"; saveAssist(); });
-      $("assistChips").appendChild(b);
-    });
+    // HERESY 2497: the tasks and the chips of the room's world (the Musician's as before; the Narrator's from the lab)
+    var paintAssistLists = function () {
+      var tl = A.tasks ? A.tasks() : A.TASKS, cl = A.chips ? A.chips() : A.CHIPS;
+      $("assistTask").innerHTML = "";
+      tl.forEach(function (t) { var o = document.createElement("option"); o.value = t[0]; o.textContent = tr(t[1]); $("assistTask").appendChild(o); });
+      $("assistChips").innerHTML = "";
+      cl.forEach(function (c) {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "chip"; b.textContent = tr(c[0]); b.dataset.tip = c[1];
+        b.addEventListener("click", function () { $("assistBrief").value = c[1]; if (c[0] === "Style for YuE2") $("assistTask").value = "style"; saveAssist(); });
+        $("assistChips").appendChild(b);
+      });
+    };
+    paintAssistLists();
     $("assistSystem").textContent = A.system("");
     var ASSIST_KEY = "yue2.assist";
     var saved = {};
@@ -13549,16 +13805,68 @@
     if (saved.temp !== undefined) $("assistTemp").value = saved.temp;
     if (saved.max && +saved.max !== 8192) $("assistMax").value = saved.max;   // HERESY 1390: the old default (8192) gives way to 32K
     var saveAssist = function () {
-      store(ASSIST_KEY, JSON.stringify({ brief: $("assistBrief").value, prefs: $("assistPrefs").value, task: $("assistTask").value,
+      // HERESY 2497: in the Narrator's world the SOUL lives in the lab (below); the song's preferences, task and structure stay as they were
+      var keep = {}, rd = roomRealm === "reader";
+      if (rd) { try { keep = JSON.parse(recall(ASSIST_KEY) || "{}") || {}; } catch (error) { keep = {}; } }
+      store(ASSIST_KEY, JSON.stringify({ brief: $("assistBrief").value, prefs: rd ? (creatorPrefs !== null ? creatorPrefs : keep.prefs || "") : $("assistPrefs").value,
+                                         task: rd ? keep.task || "song" : $("assistTask").value,
                                          temp: $("assistTemp").value, max: $("assistMax").value,
                                          provider: LLM.want, models: LLM.models, orModel: $("orModel").value,   // HERESY 2097: the Writer's own pick, not the one standing in
-                                         structure: $("assistStructure").value }));
+                                         structure: rd ? keep.structure || "" : $("assistStructure").value }));
       $("assistPrefsSize").textContent = $("assistPrefs").value.trim() ? "· " + $("assistPrefs").value.trim().length + " characters" : "";
     };
     ["assistBrief", "assistPrefs", "assistTask", "assistTemp", "assistMax", "assistStructure"].forEach(function (id) { $(id).addEventListener("input", saveAssist); $(id).addEventListener("change", saveAssist); });
     // HERESY 1167 (Viktor: «В Писателе выбор LLM инстанса Writer не запоминается»): saved here, before the writer and the
     // model were put back, the defaults went into the store and the next load found them; the size alone is painted now
     $("assistPrefsSize").textContent = $("assistPrefs").value.trim() ? "· " + $("assistPrefs").value.trim().length + " characters" : "";
+
+    // HERESY 2497: the room's world. A reading open in the notebook turns the room to the Narrator's world (the lab's charter with its SOUL, its tasks,
+    // chips, templates and the draft's shape); anything else is the Musician's world as it always was. «Your writing preferences» is the world's
+    // SOUL there, kept by the lab with its versions
+    var roomRealm = "creator", creatorPrefs = null, structHtml = $("assistStructure").innerHTML, soulTimer = 0;
+    var SCOPE_Q = (function () { var m = /[?&]scope=([^&]+)/.exec(location.search); return m ? "?scope=" + m[1] : ""; })();
+    var writerPost = function (body) {
+      return fetch("/lab/writer" + SCOPE_Q, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+        .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); });
+    };
+    var escA = function (x) { return String(x).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
+    var briefLabel = function (realm) {
+      var lab = $("assistBrief").closest("label"), head = lab && lab.querySelector(".label"), n = head && head.firstChild;
+      if (n && n.nodeType === 3) n.nodeValue = tr(realm === "reader" ? "What's the reading about?" : "What's the song about?") + " ";
+    };
+    window.ruachAssistWorld = function (realm) {
+      realm = realm === "reader" ? "reader" : "creator";
+      if (realm === roomRealm) return Promise.resolve(roomRealm);
+      return (realm === "reader" ? writerPost({ op: "world", realm: "reader" }) : Promise.resolve(null)).then(function (data) {
+        if (realm === "reader" && !(data && data.realm === "reader")) throw new Error("the lab answered no Narrator world");
+        if (roomRealm === "creator") creatorPrefs = $("assistPrefs").value;
+        roomRealm = realm;
+        A.setWorld(realm, data);
+        paintAssistLists();
+        var kept = {}; try { kept = JSON.parse(recall(ASSIST_KEY) || "{}") || {}; } catch (error) { kept = {}; }
+        $("assistStructure").innerHTML = realm === "reader"
+          ? '<option value="">' + escA(tr("Keep mine — as the text has it")) + "</option>" + (data.templates || []).map(function (t) { return '<option value="' + escA(t.id) + '">' + escA(tr(t.label)) + "</option>"; }).join("")
+          : structHtml;
+        $("assistStructure").value = realm === "reader" ? "" : kept.structure || "";
+        $("assistTask").value = realm === "reader" ? ((data.tasks || [])[0] || {}).id || "" : kept.task || "song";
+        $("assistPrefs").value = realm === "reader" ? (data.soul && data.soul.text) || "" : creatorPrefs || kept.prefs || "";
+        $("assistPrefsSize").textContent = $("assistPrefs").value.trim() ? "· " + $("assistPrefs").value.trim().length + " characters" : "";
+        $("assistSystem").textContent = A.system($("assistPrefs").value);
+        briefLabel(realm);
+        $("assistTask").dispatchEvent(new Event("change", { bubbles: true }));
+        return realm;
+      }).catch(function (e) { toast(tr("The Narrator's world did not come") + ": " + e.message, "bad"); return roomRealm; });
+    };
+    $("assistPrefs").addEventListener("input", function () {   // the Narrator's SOUL saved in the lab after a pause (its text before kept as a version)
+      if (roomRealm !== "reader") return;
+      clearTimeout(soulTimer);
+      var text = $("assistPrefs").value;
+      soulTimer = setTimeout(function () {
+        writerPost({ op: "soul", realm: "reader", text: text }).then(function () {
+          if (A.reading()) { writerPost({ op: "world", realm: "reader" }).then(function (d) { A.setWorld("reader", d); $("assistSystem").textContent = A.system(""); }).catch(function () {}); }
+        }).catch(function (e) { toast(tr("The Narrator's SOUL was not saved") + ": " + e.message, "bad"); });
+      }, 1500);
+    });
 
     var paintDraftSize = function () {
       var n = $("draftStyle").value.trim().length;
@@ -13649,50 +13957,219 @@
       });
     };
 
+    // HERESY 2467 (the audit of 12.11.2026, 3.4: «Полная дуга» rewrote the lyrics of a brief that said «ни одного символа»): the structure template
+    // goes only with a task that writes lyrics, and says so beside the button; with the style only and the review it is off (his choice kept)
+    var LYRIC_TASKS = { song: 1, lyrics: 1, adapt: 1 };
+    var lyricTask = function (t) { var L = A.lyricTasks ? A.lyricTasks() : null; return L ? L.indexOf(t) >= 0 : !!LYRIC_TASKS[t]; };   // HERESY 2497: the world's own
+    var STRUCT_NAMES = { simple: "Verse · Chorus", bridge: "Verse · Chorus · Bridge", prechorus: "With a pre-chorus", full: "Full arc — intro, pre-chorus, bridge, outro" };
+    var paintStructure = function () {
+      var task = $("assistTask").value, st = $("assistStructure"), on = lyricTask(task);
+      st.disabled = !on;
+      // English as the page writes it: the translator finds the sentence and the structure's own name in it
+      $("assistStructNote").textContent = !st.value ? "" : on
+        ? "The structure goes with the brief: {0}. The model writes the lyrics to it.".replace("{0}", STRUCT_NAMES[st.value] || st.value)
+        : "The structure is not sent with this task: the lyrics stay as they are.";
+    };
+    $("assistTask").addEventListener("change", paintStructure);
+    $("assistStructure").addEventListener("change", paintStructure);
+    paintStructure();
+    // HERESY 2466: the lines a draft changes in the lyrics (a line diff; inside a changed line the part that differs marked), counted and shown
+    // before anything is applied
+    var lyricLines = function (t) { return String(t || "").replace(/\r\n?/g, "\n").replace(/\s+$/, "").split("\n").map(function (l) { return l.replace(/\s+$/, ""); }); };
+    var lyricDiff = function (a, b) {
+      a = lyricLines(a); b = lyricLines(b);
+      var n = a.length, m = b.length, i, j;
+      if (n * m > 4e6) return null;                    // a book, not a song: no diff (said)
+      var L = [];
+      for (i = 0; i <= n; i++) { L.push(new Uint16Array(m + 1)); }
+      for (i = n - 1; i >= 0; i--) for (j = m - 1; j >= 0; j--) L[i][j] = a[i] === b[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+      var ops = [];
+      i = 0; j = 0;
+      while (i < n || j < m) {
+        if (i < n && j < m && a[i] === b[j]) { ops.push({ k: "=", a: i, b: j }); i++; j++; }
+        else if (i < n && (j >= m || L[i + 1][j] >= L[i][j + 1])) { ops.push({ k: "-", a: i }); i++; }   // the old line first, its new one after: a pair
+        else { ops.push({ k: "+", b: j }); j++; }
+      }
+      var changed = 0, run = { del: 0, add: 0 };
+      ops.forEach(function (o) {
+        if (o.k === "=") { changed += Math.max(run.del, run.add); run = { del: 0, add: 0 }; }
+        else if (o.k === "-") run.del++; else run.add++;
+      });
+      changed += Math.max(run.del, run.add);
+      return { a: a, b: b, ops: ops, changed: changed, lines: n };
+    };
+    var marked = function (s, o) {                     // s with the part that differs from o marked (a common head and tail kept plain)
+      var h = 0, t = 0;
+      while (h < s.length && h < o.length && s[h] === o[h]) h++;
+      while (t < s.length - h && t < o.length - h && s[s.length - 1 - t] === o[o.length - 1 - t]) t++;
+      var mid = s.slice(h, s.length - t);
+      return escape(s.slice(0, h)) + (mid ? "<mark>" + escape(mid) + "</mark>" : "") + escape(s.slice(s.length - t));
+    };
+    var paintDiff = function () {
+      var base = assistTarget.kind === "doc" ? ((window.HeresyWriter.docFields() || {}).lyrics || "") : $("lyrics").value;   // HERESY 2471
+      var box = $("draftDiff"), d = $("draftLyrics").dataset.unchanged === "1" ? null : lyricDiff(base, $("draftLyrics").value);
+      box.classList.toggle("is-hidden", !d && $("draftLyrics").dataset.unchanged === "1");
+      if (!d) {
+        $("draftDiffSay").textContent = $("draftLyrics").dataset.unchanged === "1" ? "" : "The lyrics are too long to compare line by line";
+        $("draftDiffBody").innerHTML = "";
+        box.dataset.changed = "";
+        return;
+      }
+      box.dataset.changed = String(d.changed);
+      box.classList.toggle("is-calm", !d.changed);
+      $("draftDiffSay").textContent = d.changed ? "{0} lines of your lyrics changed, of {1}".replace("{0}", d.changed).replace("{1}", d.lines)
+        : "Your lyrics as they are: not one character changed";
+      var rows = [], k, o, last = -9;
+      for (k = 0; k < d.ops.length; k++) {
+        o = d.ops[k];
+        if (o.k === "=") continue;
+        if (k - last > 1 && rows.length) rows.push('<div class="dl-gap">…</div>');
+        var prev = d.ops[k - 1], nxt = d.ops[k + 1];
+        if (o.k === "-") {
+          var pair = nxt && nxt.k === "+" ? d.b[nxt.b] : null;
+          rows.push('<div class="dl dl-del"><span class="dl-n">' + (o.a + 1) + " −</span>" + (pair !== null ? marked(d.a[o.a], pair) : escape(d.a[o.a]) || " ") + "</div>");
+        } else {
+          var was = prev && prev.k === "-" ? d.a[prev.a] : null;
+          rows.push('<div class="dl dl-add"><span class="dl-n">' + (o.b + 1) + " +</span>" + (was !== null ? marked(d.b[o.b], was) : escape(d.b[o.b]) || " ") + "</div>");
+        }
+        last = k;
+      }
+      $("draftDiffBody").innerHTML = rows.join("");
+    };
+    $("draftLyrics").addEventListener("input", function () { this.dataset.unchanged = ""; $("draftLyricsSame").classList.add("is-hidden"); paintDiff(); });
+    $("draftStyle").addEventListener("input", function () { this.dataset.unchanged = ""; $("draftStyleSame").classList.add("is-hidden"); });
+    // HERESY 2469: Stop (and Esc) for the request being written; the lab told too, so the Studio's own writer stops writing and leaves a wait for the Arc
+    var assistStop = null;
+    var stopAssist = function () {
+      if (!assistStop) return;
+      assistStop.abort();
+      fetch("/lab/llm/cancel", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).catch(function () { /* the page's own stop holds */ });
+    };
+    $("assistStop").addEventListener("click", stopAssist);
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && assistStop && !document.querySelector(".hd-back") && currentTab() === "write") { e.preventDefault(); stopAssist(); }
+    });
+    var assistTask = "song";                           // HERESY 2466: the task the draft on the page was asked with
+    // HERESY 2476 (the audit of 12.11.2026, item 9): the Studio's own writer keeps the draft's shape by llama-server's grammar: the five strings the
+    // charter asks for and nothing else, so a 9B in a narrow window never answers half an object (any other host as before)
+    var DRAFT_SCHEMA = { type: "object", additionalProperties: false, required: ["title", "style", "style_tags", "lyrics", "notes"],
+                         properties: { title: { type: "string" }, style: { type: "string" }, style_tags: { type: "string" }, lyrics: { type: "string" }, notes: { type: "string" } } };
+    // HERESY 2471 (Viktor 12.11.2026, on the audit's open question: «Документ, если не взято из песни Музыканта»): the room writes into the document open
+    // in the notebook, unless none is open or that document is the Musician's song (in hand there): then into the Musician's song, as before. The line
+    // above the button says which; one click turns it the other way (kept until clicked back, or the document closes)
+    var targetTurn = null, assistTarget = { kind: "song" };
+    var writeTarget = function () {
+      var W = window.HeresyWriter, doc = W && W.openDoc ? W.openDoc() : null, f = doc && W.docFields ? W.docFields() : null;
+      var rule = doc && f && W.inHand() !== doc.id ? "doc" : "song";
+      var kind = targetTurn === "doc" && f ? "doc" : targetTurn === "song" ? "song" : rule;
+      return { kind: kind, id: kind === "doc" ? doc.id : "", title: kind === "doc" ? (f.title || doc.title || "Untitled") : "", fields: kind === "doc" ? f : null, can: !!f };
+    };
+    var paintTarget = function () {
+      var t = writeTarget();
+      var say = t.kind === "doc" ? "The draft goes into the document “{0}”; Apply keeps the version before.".replace("{0}", t.title)
+        : "The draft goes into the Musician's song “{0}”.".replace("{0}", fullTitle() || "untitled");
+      var swap = t.kind === "doc" ? "Into the Musician's song instead" : "Into the open document instead";
+      if ($("assistTargetSay").dataset.en !== say) { $("assistTargetSay").dataset.en = say; $("assistTargetSay").textContent = say; }
+      if ($("assistTargetSwap").dataset.en !== swap) { $("assistTargetSwap").dataset.en = swap; $("assistTargetSwap").textContent = swap; }
+      $("assistTargetSwap").classList.toggle("is-hidden", !t.can && t.kind === "song");
+    };
+    $("assistTargetSwap").addEventListener("click", function () { targetTurn = writeTarget().kind === "doc" ? "song" : "doc"; paintTarget(); });
+    setInterval(function () { if (currentTab() === "write") paintTarget(); }, 1500);
+    paintTarget();
+    // HERESY 2481 (the writer audit of 12.11.2026, item 14): where the room writes, for the notebook's kept drafts (heresy-writer.js), and a kept draft
+    // put back on the page as it came: its fields as then, an empty one shown as the target's text now (1012), its task's guard as then (2466)
+    window.ruachWriteTarget = function () { var t = writeTarget(); return { kind: t.kind, id: t.id, title: t.title }; };
+    // HERESY 2490: what the draft on the page was written for (the Writer's shell sets a draft for another document aside, not away)
+    window.ruachDraftFor = function () { return assistTarget ? { kind: assistTarget.kind, id: assistTarget.id, title: assistTarget.title } : null; };
+    window.ruachReopenDraft = function (rec) {
+      var target = writeTarget(), d = rec && rec.draft, has = function (k) { return !!String((d && d[k]) || "").trim(); };
+      var cur = target.kind === "doc" ? target.fields : { title: fullTitle(), style: $("style").value, lyrics: $("lyrics").value };
+      $("assistRawText").textContent = (rec && rec.raw) || "";
+      $("assistRaw").classList.remove("is-hidden");
+      if (!d || rec.blank) { $("assistDraft").classList.add("is-hidden"); $("assistRaw").open = true; return false; }
+      assistTask = rec.task || "song"; assistTarget = target;
+      $("draftTitle").value = has("title") ? d.title.trim() : cur.title;
+      $("draftStyle").value = has("style") ? d.style.trim() : cur.style;
+      $("draftStyleTags").value = String(d.style_tags || "").trim();
+      $("draftLyrics").value = has("lyrics") ? d.lyrics.trim() : cur.lyrics;
+      $("draftLyrics").dataset.unchanged = has("lyrics") ? "" : "1";
+      $("draftStyle").dataset.unchanged = has("style") ? "" : "1";
+      $("draftLyricsSame").classList.toggle("is-hidden", has("lyrics"));
+      $("draftStyleSame").classList.toggle("is-hidden", has("style"));
+      $("draftNotes").textContent = d.notes || "";
+      $("assistModel").textContent = (rec.model || "") + (rec.seconds ? " · " + Math.round(rec.seconds * 10) / 10 + "s" : "");
+      paintDraftSize();
+      paintDiff();
+      $("applyLyrics").disabled = assistTask === "style";
+      $("assistDraft").classList.remove("is-hidden");
+      $("assistStatus").textContent = "A kept draft, reopened: review it, then apply what you like.";
+      requestAnimationFrame(function () { $("assistDraft").scrollIntoView({ block: "start", behavior: "smooth" }); });
+      return true;
+    };
+
     $("assistBtn").addEventListener("click", function () {
       var brief = $("assistBrief").value.trim(), button = this, started = Date.now(), model = null;
       if (!brief) { $("assistBrief").focus(); return toast("Describe the song or the changes you want", "bad"); }
-      // HERESY 1167 (Viktor: «Я подал Фосфориду, а на выходе буратино. Там явный баг»): the room works on the Creator's song;
-      // a different document open in the notebook is asked about before anything is sent
-      var W = window.HeresyWriter, doc = W && W.openDoc ? W.openDoc() : null;
-      if (doc && W.inHand() !== doc.id && !button.dataset.goOn) {
-        window.HeresyDialog.confirm("The writing room works on the song in the Musician: “" + ($("title").value.trim() || "untitled") + "”.\n\n" +
-          "The notebook has “" + doc.title + "” open. Put it into the Musician and send the request on it?",
-          { ok: "Put it in and send", cancel: "Send on the Musician's song", must: true }).then(function (yes) {
-          var go = function () { button.dataset.goOn = "1"; button.click(); delete button.dataset.goOn; };
-          if (!yes) return go();
-          W.putInCreator(doc).then(function (ok) { if (ok) { paintCurrentSong(); go(); } });
-        });
-        return;
-      }
+      // HERESY 1167 (Viktor: «Я подал Фосфориду, а на выходе буратино. Там явный баг»): the room asked which song when a document was open.
+      // HERESY 2471: the target is said above the button now (the open document, unless it is the Musician's song), so nothing is asked
+      var target = writeTarget();
+      paintTarget();
       var task = $("assistTask").value, temp = $("assistTemp").value.trim();
       var max = Math.max(256, parseInt($("assistMax").value, 10) || 32768);   // HERESY 1390
       button.disabled = true;
       $("assistLabel").textContent = "Writing…";
+      assistStop = new AbortController();               // HERESY 2469
+      var stop = assistStop;
+      $("assistStop").classList.remove("is-hidden");
+      $("assistBudget").textContent = "";
+      $("assistBudget").classList.remove("is-bad");
       // HERESY 1167 (Viktor: «OpenRouter активность не отображается в системном логе»): the page asks the writer itself, so
       // the server never sees it: the page writes the request and its answer into the log (2097: the lab carries OpenRouter's, the key added there)
       var conn = "";
       model = writerState().use;
-      var ticker = setInterval(function () { $("assistStatus").textContent = "writing with " + (model || "the chat server") + "… " + Math.round((Date.now() - started) / 1000) + "s"; }, 1000);
+      var ticker = setInterval(function () {
+        // HERESY 2463: the Studio's own writer waiting for the Intel Arc says why, not only the seconds
+        if (conn === "own" && OWN.waiting) $("assistStatus").textContent = OWN.waiting.replace(/^waits for the Intel Arc: /, "Waits for the Intel Arc: ");
+        else $("assistStatus").textContent = "writing with " + (model || "the chat server") + "… " + Math.round((Date.now() - started) / 1000) + "s";
+      }, 1000);
+      var looks = setInterval(function () { if (conn === "own") ownStatus(); }, 3000);
       var song = { title: fullTitle(), style: $("style").value, lyrics: $("lyrics").value, abc: $("abc").value.trim() || STATE.abcRendered || "" };   // HERESY 1614
+      if (target.kind === "doc") song = { title: target.fields.title, style: target.fields.style, lyrics: target.fields.lyrics, abc: "" };   // HERESY 2471: no other song's score
       // HERESY 1016: the idea writer's section templates, when a structure is picked
-      var structure = $("assistStructure").value, fullBrief = structure ? brief + structureRequest(structure) : brief;
+      var structure = lyricTask(task) ? $("assistStructure").value : "", tpl = A.templateRequest ? A.templateRequest(structure) : null;   // HERESY 2497: a reading's template
+      var fullBrief = structure ? brief + (tpl !== null ? tpl : structureRequest(structure)) : brief;   // HERESY 2467
       var messages = [{ role: "system", content: A.system($("assistPrefs").value) }, { role: "user", content: A.user(task, fullBrief, song) }];
       var temperature = temp === "" ? null : parseFloat(temp);
       var ask = refreshWriter(false).then(function (status) {   // HERESY 2097: the room's pick among the hosts ticked that answer
         if (!status.use) throw new Error(writerWhy(status));
         model = status.use; conn = status.conn;
+        if (conn !== "own") return null;
+        // HERESY 2464: the Studio's own writer counts the question first (its own template and tokenizer) and says what is left for the answer
+        $("assistStatus").textContent = OWN.running ? "Counting the question…" : "Starting the Studio's own writer…";
+        return fetch("/lab/llm/count", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: messages }), signal: stop.signal })
+          .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || "HTTP " + r.status); return b; }); })
+          .then(function (c) {
+            if (c.in) {
+              $("assistBudget").textContent = "Input {0} tokens, {1} left for the answer".replace("{0}", c.in).replace("{1}", c.left);
+              $("assistBudget").classList.toggle("is-bad", !!c.error || c.left < 2000);
+            }
+            if (c.error) throw new Error(c.error);
+            if (c.left && c.left < max) max = c.left;
+            return null;
+          }, function (e) { if (stop.signal.aborted) { var s = new Error("Stopped"); s.stopped = true; throw s; } throw e; });
+      }).then(function () {
         addLogLine("[Writer] \u2192 " + viaOf(conn, model) + ": a brief of " + brief.length + " characters, up to " + max + " tokens", false);
-        return chatComplete(messages, model, max, null, temperature, conn);
+        return chatComplete(messages, model, max, conn === "own" ? ((A.schema && A.schema()) || DRAFT_SCHEMA) : null, temperature, conn, stop.signal);   // HERESY 2476; 2497: the world's draft
       });
       // HERESY 1167: a model that thinks before it answers (Qwen on vLLM, DeepSeek on OpenRouter) can spend the whole
       // output on its thinking and give no draft: once, the same request with twice the room (up to 32768)
       ask = ask.then(function (response) {
         var choice = (response.choices || [])[0] || {};
         if (choice.finish_reason !== "length" || A.parse(stripThinking(((choice.message || {}).content) || "")) || max >= 32768) return response;
+        if (conn === "own") return response;           // HERESY 2464: its limit was the whole window left: twice of it is no more room
         max = Math.min(32768, max * 2);
         addLogLine("[Writer] " + model + " spent its answer on thinking: asked again with " + max + " tokens", false);
-        return chatComplete(messages, model, max, null, temperature, conn);
+        return chatComplete(messages, model, max, null, temperature, conn, stop.signal);
       });
       ask.then(function (response) {
         var choice = (response.choices || [])[0] || {};
@@ -13703,26 +14180,48 @@
           (draft ? " \u00b7 a draft" : " \u00b7 no complete draft") + (cut ? " \u00b7 cut at the output limit" : ""), false);
         $("assistRawText").textContent = text;
         $("assistRaw").classList.remove("is-hidden");
+        // HERESY 2481: every answer kept in the notebook with its brief, task, model and time, whatever came of it (heresy-writer.js)
+        if (window.HeresyWriter && window.HeresyWriter.draftAnswered) window.HeresyWriter.draftAnswered({ at: Date.now() / 1000, target: target.kind, doc: target.id,
+          song: song.title, brief: brief, task: task, structure: structure, model: model, via: conn, seconds: (Date.now() - started) / 1000,
+          tokens_in: use.prompt_tokens || 0, tokens_out: use.completion_tokens || 0, cut: cut, raw: text,
+          blank: !!draft && !draft.title.trim() && !draft.style.trim() && !(draft.styleTags || "").trim() && !draft.lyrics.trim() && !draft.notes.trim(),
+          draft: draft ? { title: draft.title, style: draft.style, style_tags: draft.styleTags || "", lyrics: draft.lyrics, notes: draft.notes } : null });
+        // HERESY 2465 (the audit of 12.11.2026, 3.3): a draft whose every field is blank is no draft: the model said nothing, and «unchanged» (1012)
+        // would have shown your own text as its answer. An alarm, as an empty answer (1390b), and no draft
+        var blank = draft && !draft.title.trim() && !draft.style.trim() && !(draft.styleTags || "").trim() && !draft.lyrics.trim() && !draft.notes.trim();
+        if (blank) draft = null;
         if (draft) {
           // HERESY 1012: an empty field is "unchanged", shown as the current text, never applied as a blank
-          $("draftTitle").value = draft.title.trim() || fullTitle();   // HERESY 1614
-          $("draftStyle").value = draft.style.trim() || $("style").value;
+          assistTask = task;                             // HERESY 2466
+          assistTarget = target;                         // HERESY 2471
+          $("draftTitle").value = draft.title.trim() || song.title;   // HERESY 1614; 2471: the target's own
+          $("draftStyle").value = draft.style.trim() || song.style;
           $("draftStyleTags").value = (draft.styleTags || "").trim();   // HERESY 1167: its twin as tags
-          $("draftLyrics").value = draft.lyrics.trim() || $("lyrics").value;
+          $("draftLyrics").value = draft.lyrics.trim() || song.lyrics;
           $("draftLyrics").dataset.unchanged = draft.lyrics.trim() ? "" : "1";
           $("draftStyle").dataset.unchanged = draft.style.trim() ? "" : "1";
+          $("draftLyricsSame").classList.toggle("is-hidden", !!draft.lyrics.trim());   // HERESY 2465: said beside the field, not only dashed
+          $("draftStyleSame").classList.toggle("is-hidden", !!draft.style.trim());
           $("draftNotes").textContent = draft.notes;
           $("assistModel").textContent = model + " · " + Math.round((Date.now() - started) / 100) / 10 + "s";
           paintDraftSize();
+          paintDiff();
+          $("applyLyrics").disabled = task === "style";  // HERESY 2466: a style-only draft brings no lyrics into the form
           $("assistDraft").classList.remove("is-hidden");
         } else {
           $("assistDraft").classList.add("is-hidden");
           $("assistRaw").open = true;
         }
+        var same = draft && !draft.style.trim() && !draft.lyrics.trim();
         $("assistStatus").textContent = cut ? "The answer reached the output limit: review it carefully, or raise Max tokens."
+          : same ? "The model changed neither the style nor the lyrics; its notes say why."
           : draft ? "Your draft is ready. Review and edit it, then apply what you like."
           : "The model did not return a complete draft; its raw answer is below.";
-        if (!text.trim()) {                              // HERESY 1390b: nothing came back: said over the page, not only in the log
+        if (blank) {                                     // HERESY 2465
+          $("assistStatus").textContent = "";
+          window.HeresyDialog.alert("The draft came back empty: every field of it blank.\n\n" + model + " said nothing about your song, so nothing was put into the draft and nothing changes. " +
+            "Send it again, change the brief, or pick another model; its raw answer is under the button.");
+        } else if (!text.trim()) {                       // HERESY 1390b: nothing came back: said over the page, not only in the log
           $("assistStatus").textContent = "";
           window.HeresyDialog.alert("The model gave an empty answer: nothing came back from " + model + ".\n\n" +
             "It may have spent the whole answer on its thinking, or stopped at once. Send it again, raise Max tokens, or pick another model.");
@@ -13732,25 +14231,72 @@
         }
       }).catch(function (error) {
         $("assistStatus").textContent = "";
+        var yielded = error.body && error.body.yielded;
+        if (error.stopped) {                             // HERESY 2469: a stop is the user's, said in the room, no window over the page
+          addLogLine("[Writer] " + (model || "the writer") + ": stopped by you", false);
+          $("assistStatus").textContent = "Stopped: nothing changed in your song.";
+          return;
+        }
         addLogLine("[Writer] " + (model || "the writer") + " failed: " + (error.message || String(error)), false);
-        window.HeresyDialog.alert("The writer failed: " + (error.message || String(error)));   // HERESY 1390b: over the page
-      }).then(function () { clearInterval(ticker); button.disabled = false; $("assistLabel").textContent = "Send the request to LLM"; });   // HERESY 1167
+        if (error.timeout) {                             // HERESY 2469: «no answer in 15 minutes», never «CORS»
+          window.HeresyDialog.alert("No answer from {0} in {#1} minutes.\n\nThe question was cut off; send it again, ask for less, or pick another model."
+            .replace("{0}", model || "the writer").replace("{#1}", "15"));
+        } else if (yielded) {                            // HERESY 2463: the Arc given to a song or the Narrator
+          window.HeresyDialog.alert("The Studio's own writer gave the Intel Arc to {0}.\n\nSend the question again when it is done.".replace("{0}", yielded));
+        } else window.HeresyDialog.alert("The writer failed: " + (error.message || String(error)));   // HERESY 1390b: over the page
+      }).then(function () {
+        clearInterval(ticker); clearInterval(looks); button.disabled = false; $("assistLabel").textContent = "Send the request to LLM";   // HERESY 1167
+        assistStop = null; $("assistStop").classList.add("is-hidden");   // HERESY 2469
+        if (conn === "own") ownStatus();
+      });
     });
 
     // Apply into the form; one step back is kept.
-    var apply = function (what) {
+    // HERESY 2466 (the audit of 12.11.2026, 3.4; his brief: «Саму лирику не трогай вообще, - ни одного символа»): a draft asked for the style only
+    // never brings lyrics in, whatever the model wrote; any other draft whose lyrics differ from yours says how many lines before it applies them
+    // HERESY 2471: a draft for the open document goes into it (the notebook keeps the version before); Undo puts the fields back the same way
+    var applyDoc = function (what, styleOnly) {
+      var W = window.HeresyWriter, cur = W.docFields() || {}, f = {};
+      var form = (document.querySelector('input[name="draftStyleForm"]:checked') || {}).value || "tags";
+      var styleNow = form === "tags" && $("draftStyleTags").value.trim() ? $("draftStyleTags").value.trim() : $("draftStyle").value.trim();
+      if ((what === "all" || what === "style+title") && $("draftTitle").value.trim()) f.title = $("draftTitle").value.trim();
+      if ((what === "all" || what === "style" || what === "style+title") && styleNow) f.style = styleNow;
+      if ((what === "all" || what === "lyrics") && $("draftLyrics").value.trim()) f.lyrics = $("draftLyrics").value.replace(/\s+$/, "");
+      var before = { doc: assistTarget.id, title: cur.title, style: cur.style, lyrics: cur.lyrics };
+      return W.applyDraft(f, assistTarget.id).then(function () {
+        assistBefore = before;
+        $("undoApply").classList.remove("is-hidden");
+        paintDiff();
+        toast((what === "all" ? "Draft applied" : what === "style+title" ? (styleOnly ? "The style applied; the lyrics stay yours (the task was the style only)" : "The style applied; the lyrics stay yours")
+          : what === "style" ? "Style applied" : "Lyrics applied").replace(/^.*$/, function (x) { return tr(x); }) + " · " + tr("into the document; the version before is kept in its Versions"));
+      }, function (e) { toast(e.message, "bad"); });
+    };
+    var applyGuarded = function (what) {
+      var d = $("draftDiff"), n = parseInt(d.dataset.changed || "0", 10) || 0, lyr = $("draftLyrics").dataset.unchanged !== "1" && n > 0;
+      if (what === "all" && assistTask === "style") return apply("style+title", true);
+      if (what === "all" && lyr) {
+        return window.HeresyDialog.confirm("The draft changes {0} lines of your lyrics (the list is under its lyrics). Apply them too?".replace("{0}", n),
+          { ok: "Apply with the lyrics", alt: "Without the lyrics", cancel: "Cancel" }).then(function (yes) {
+          if (yes === "alt") apply("style+title"); else if (yes) apply("all");
+        });
+      }
+      apply(what);
+    };
+    var apply = function (what, styleOnly) {
+      if (assistTarget.kind === "doc") return applyDoc(what, styleOnly);   // HERESY 2471
       keepForm("before");                              // HERESY 1596
       assistBefore = { title: fullTitle(), style: $("style").value, lyrics: $("lyrics").value };   // HERESY 1614: the title with its version
-      if (what === "all" && $("draftTitle").value.trim()) setTitle($("draftTitle").value.trim());
+      if ((what === "all" || what === "style+title") && $("draftTitle").value.trim()) setTitle($("draftTitle").value.trim());
       // HERESY 1167: the tags or the readable style, as chosen (the readable one when the model gave no tags)
       var form = (document.querySelector('input[name="draftStyleForm"]:checked') || {}).value || "tags";
       var styleNow = form === "tags" && $("draftStyleTags").value.trim() ? $("draftStyleTags").value.trim() : $("draftStyle").value.trim();
-      if ((what === "all" || what === "style") && styleNow) $("style").value = styleNow;
+      if ((what === "all" || what === "style" || what === "style+title") && styleNow) $("style").value = styleNow;
       if ((what === "all" || what === "lyrics") && $("draftLyrics").value.trim()) $("lyrics").value = $("draftLyrics").value.replace(/\s+$/, "");
       ["title", "style", "lyrics"].forEach(function (id) { $(id).dispatchEvent(new Event("input", { bubbles: true })); });
       growLyrics();
       $("undoApply").classList.remove("is-hidden");
-      toast(what === "all" ? "Draft applied" : what === "style" ? "Style applied" : "Lyrics applied");
+      toast(what === "all" ? "Draft applied" : what === "style+title" ? (styleOnly ? "The style applied; the lyrics stay yours (the task was the style only)" : "The style applied; the lyrics stay yours")
+        : what === "style" ? "Style applied" : "Lyrics applied");
       paintCurrentSong();
     };
     // HERESY 1167 (Viktor: «сохранять/удалять промпты, чтобы каждый раз не переписывать заново»): briefs by name in the lab's
@@ -13781,7 +14327,7 @@
       $("assistBriefSave").addEventListener("click", function () {
         var text = $("assistBrief").value.trim();
         if (!text) { $("assistBrief").focus(); return toast("Write the brief first", "bad"); }
-        window.HeresyDialog.prompt("Save the brief\n\nA name to find it by under the brief.", $("assistBriefLib").value || "", { ok: "Save", placeholder: "its name" }).then(function (name) {
+        window.HeresyDialog.prompt("Save the brief\n\nA name to find it by under the brief.", $("assistBriefLib").value || "", { ok: "Save", placeholder: "its name", name: { max: 120 } }).then(function (name) {   // HERESY 2462
           name = (name || "").trim();
           if (!name) return;
           send({ op: "put", kind: "brief", name: name, data: text }).then(function () { return loadBriefs(); }).then(function () {
@@ -13806,11 +14352,17 @@
       if (kept) all('input[name="draftStyleForm"]').forEach(function (r) { r.checked = r.value === kept; });
       all('input[name="draftStyleForm"]').forEach(function (r) { r.addEventListener("change", function () { store("yue2.draftStyleForm", r.value); }); });
     })();
-    $("applyDraft").addEventListener("click", function () { apply("all"); });
+    $("applyDraft").addEventListener("click", function () { applyGuarded("all"); });   // HERESY 2466
     $("applyStyle").addEventListener("click", function () { apply("style"); });
     $("applyLyrics").addEventListener("click", function () { apply("lyrics"); });
     $("undoApply").addEventListener("click", function () {
       if (!assistBefore) return;
+      if (assistBefore.doc) {                          // HERESY 2471: the document's fields back (one more version kept), not the Musician's
+        var back = assistBefore, btn = this;
+        return window.HeresyWriter.applyDraft({ title: back.title, style: back.style, lyrics: back.lyrics }, back.doc).then(function () {
+          assistBefore = null; btn.classList.add("is-hidden"); paintDiff(); toast("Back to what you had");
+        }, function (e) { toast(e.message, "bad"); });
+      }
       setTitle(assistBefore.title);   // HERESY 1614
       ["title", "style", "lyrics"].forEach(function (id) { if (id !== "title") $(id).value = assistBefore[id]; $(id).dispatchEvent(new Event("input", { bubbles: true })); });
       growLyrics();
@@ -14432,8 +14984,7 @@
     var area = $("lyrics"), now = area.value.replace(/\s+$/, ""), button = $("lyricsTighten");
     if (!now.trim()) return toast("The lyrics are empty: nothing to tighten", "bad");
     button.disabled = true;
-    var label = button.textContent;
-    button.textContent = tr("✦ Tightening…");
+    button.classList.add("is-busy");   // HERESY 2543: an icon now; it shows it is at work by its look, its words stay its label
     var ask = function () {
       return writerAsk([{ role: "system", content: TIGHTEN }, { role: "user", content: now }], Math.max(1024, Math.min(16384, now.length * 2)), "tighten the lyrics")
         .then(function (r) { return tightenWindow(now, cleanAnswer(r.text)); })
@@ -14452,7 +15003,7 @@
       area.scrollTop = 0;
       toast("The lyrics tightened: Ctrl+Z in the box brings the old ones back", "good");
     }).catch(function (e) { toast(e.message || String(e), "bad"); })
-      .then(function () { button.disabled = false; button.textContent = label; });
+      .then(function () { button.disabled = false; button.classList.remove("is-busy"); });
   }
   $("lyricsTighten").addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); tighten(); });
   var styleSugShown = [];
@@ -14737,6 +15288,8 @@
   // HERESY 2365 (Viktor 08.11.2026, approved again 11.11: «Творец, Чтец, Писатель, Огранщик, Художник, Видеограф, Тренер, Библиотекарь; Движок 0; 9 свободна;
   // Ctrl+Alt+8 снять с экспорта в DAW»): the rooms 1 to 8 as the bar has them, the Narrator second; 0 the Engine; 9 free; the DAW from a take's menu and the
   // Refiner only. In the installed app Ctrl+0 stays the window's own (its zoom back to 100 %): the Engine there is Ctrl+Alt+0
+  // HERESY 2405 (Viktor 11.11.2026, A5: «Не перехватываем Ctrl+0… А Движок прикручиваем к свободной Ctrl+(Alt+)9. Больше комнат у нас не ожидается»):
+  // the Engine on 9, Ctrl+Alt+9 everywhere and Ctrl+9 in the installed app; 0 is never taken, with Alt or without
   // HERESY 2082 (Viktor 05.11.2026, after a day in the PWA: Ctrl+Alt+digit, F1 and Ctrl+N work there; Chrome's own Ctrl+digit for the rooms is missed): in the installed app
   // (display-mode standalone, window-controls-overlay or minimal-ui: a window without the browser's tabs) Ctrl+1…9 do what Ctrl+Alt+1…9 do, as 1169
   // planned («Ctrl+digit comes with the desktop app»); a browser's tab keeps Ctrl+1…9 for its tabs. window.ruachTestDisplayMode stands in for the
@@ -14750,11 +15303,11 @@
   window.addEventListener("keydown", function (event) {
     if (!event.ctrlKey || event.shiftKey || event.metaKey || (!event.altKey && !installedApp())) return;   // HERESY 2082: Ctrl alone in the app
     var m = /^(?:Digit|Numpad)([0-9])$/.exec(event.code || "");
-    if (!m || m[1] === "9" || (m[1] === "0" && !event.altKey) || document.querySelector(".hd-back:not(.is-leaving)")) return;   // HERESY 2365: 9 free; Ctrl+0 the app's zoom
+    if (!m || m[1] === "0" || document.querySelector(".hd-back:not(.is-leaving)")) return;   // HERESY 2405: 0 never ours (the window's zoom); 9 the Engine
     event.preventDefault();
     var n = +m[1], tab = ROOM_KEYS[n], btn = tab && document.querySelector('.topbar [data-tab="' + tab + '"]');
     if (btn) btn.click();
-    else if (n === 0) $("engineToggle").click();      // HERESY 2365 (2064's Ctrl+Alt+8 to the DAW window gone: the take's menu and the Refiner open it)
+    else if (n === 9) $("engineToggle").click();      // HERESY 2405: 9 (2365 had 0; 2064's Ctrl+Alt+8 to the DAW window gone: the take's menu and the Refiner open it)
   }, true);
   // HERESY 1169 (Viktor 07.10.2026: «Давай шорткат Shift+Tab блокируем для обратного хождения по полям, а именно для
   // переключения между композером и Исполнителем. И когда фрейм опущен, из обычной страницы… эта комбинация подымает оверлей во

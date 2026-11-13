@@ -6,6 +6,8 @@ import json
 import os
 import re
 import tempfile
+
+import name_rule                   # HERESY 2462
 import threading
 import time
 from pathlib import Path
@@ -66,6 +68,8 @@ def save_as(set_dir, name, state):
     name = str(name or "").strip()
     if not NAME_RE.fullmatch(name):
         raise ValueError("a mix's name: 1 to 80 characters, no slashes")
+    if not any(m["name"] == name for m in load(set_dir)["named"]):
+        name_rule.check(name, 80)                  # HERESY 2462: a new mix's name keeps the names' rule; one already there is saved again
     with _lock:
         d = load(set_dir)
         d["named"] = [m for m in d["named"] if m["name"] != name] + [{"name": name, "state": _state(state), "saved": time.time()}]

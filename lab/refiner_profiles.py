@@ -7,6 +7,8 @@ import re
 import time
 from pathlib import Path
 
+import name_rule                   # HERESY 2462
+
 NAME = "refiner_profiles.json"
 MAX_BYTES = 64 * 1024
 
@@ -38,8 +40,20 @@ def _name(name):
     return name
 
 
-def save(user_dir, name, setup):
+def _new_name(user_dir, name):
+    """HERESY 2462: a profile made or saved under a new name keeps the names' rule; one already there is saved again as it is."""
     name = _name(name)
+    try:
+        had = any(p.get("name") == name for p in load(user_dir).get("profiles", []))
+    except Exception:
+        had = False
+    if not had:
+        name_rule.check(name, 60)
+    return name
+
+
+def save(user_dir, name, setup):
+    name = _new_name(user_dir, name)
     if not isinstance(setup, dict) or not isinstance(setup.get("fields", {}), dict):
         raise ValueError("a setup is its fields and its canvas")
     if len(json.dumps(setup)) > MAX_BYTES:

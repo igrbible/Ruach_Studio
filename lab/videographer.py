@@ -11,6 +11,7 @@ import json
 import re
 import subprocess
 import threading                                  # HERESY 2308
+import video_fonts                                # HERESY 2394
 import time
 import zipfile                                     # HERESY 1946
 from pathlib import Path
@@ -214,6 +215,15 @@ def save(kit, name, data):
     for k, most in (("clip_title", 200), ("credits", 1000), ("author", 200), ("verse", 200)):   # HERESY 1948: the clip's titles, his to write; 2246
         if k in data:
             plan[k] = str(data.get(k) or "")[:most]
+    for k in ("font_titles", "font_lyrics"):            # HERESY 2394: the user's own font for the titles and for the karaoke («» the Studio's)
+        if k in data:
+            fid = str(data.get(k) or "")
+            if fid and not video_fonts.ID_RE.fullmatch(fid):
+                raise ValueError("no such font")
+            if fid:
+                plan[k] = fid
+            else:
+                plan.pop(k, None)
     heroes = data.get("heroes")                          # HERESY 1913: whether the hero is in each shot (null: as the page decides, the sung ones)
     if isinstance(heroes, list):
         for i, s in enumerate(plan["shots"]):
@@ -606,12 +616,61 @@ def settings_path(clip_file):
     return Path(clip_file).with_suffix(".settings")
 
 
+def view_path(clip_file):
+    """HERESY 2395: a clip's light copy beside it (NAME.clip.view.mp4; the clips' listing never takes it for a clip)."""
+    clip_file = Path(clip_file)
+    return clip_file.with_name(clip_file.name[:-len(".mp4")] + ".view.mp4")
+
+
+def rate_of(f):
+    """The file's mean rate in bits a second, from its size and its length (ffprobe); 0 when it cannot be read."""
+    try:
+        p = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(f)], capture_output=True, text=True, timeout=30)
+        d = float(p.stdout.strip() or 0)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return 0
+    return round(Path(f).stat().st_size * 8 / d) if d > 0 else 0
+
+
+# HERESY 2395 (Viktor 11.11.2026: «клип застрял на 0:22, хотя прогружен»; the lab's log: his laptop over the VPN asked the 867 MB
+# Буратино clip again and again from 12:32 to 12:38, sixteen pieces): the clip is a master at about 20 Mbit/s (CRF 20 with the film's grain), more
+# than a VPN over a mobile link carries. Beside each finished clip heavier than VIEW_OVER a light copy for watching: 720 p (the short side), H.264
+# CRF 23 held under 3 Mbit/s, the sound as it was mixed at 160 kb/s, its index first. The master stays the file downloaded and published.
+VIEW_OVER, VIEW_MAX = 6_000_000, "3M"
+
+
+def make_view(clip_file, force=False):
+    """The light copy of a finished clip: its path, or None when the clip is light enough to watch as it is (and force is not given)."""
+    clip_file = Path(clip_file)
+    if not clip_file.is_file():
+        raise FileNotFoundError("no clip for this take yet")
+    if not force and rate_of(clip_file) <= VIEW_OVER:
+        return None
+    out = view_path(clip_file)
+    part = out.with_name(out.name[:-len(".mp4")] + ".part.mp4")
+    nice = ["nice", "-n", "19"] if shutil.which("nice") else []
+    scale = "scale='if(gte(iw,ih),-2,min(720,iw))':'if(gte(iw,ih),min(720,ih),-2)':flags=lanczos"   # the short side 720, the shape kept
+    p = subprocess.run(nice + ["ffmpeg", "-v", "error", "-y", "-i", str(clip_file), "-map", "0:v:0", "-map", "0:a:0?", "-vf", scale,
+                               "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-maxrate", VIEW_MAX, "-bufsize", "6M", "-g", "48",
+                               "-pix_fmt", "yuv420p", "-threads", "4", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", str(part)],
+                       capture_output=True, text=True, timeout=3600)
+    if p.returncode != 0 or not part.is_file():
+        part.unlink(missing_ok=True)
+        raise RuntimeError("ffmpeg, the light copy: " + (p.stderr.strip()[-300:] or "no output"))
+    part.replace(out)
+    return out
+
+
 def clip_info(kit, name, shape="16:9", draft=False):
     f = clip_path(kit, name, shape, draft)
     if not f.is_file():
         return {"name": name, "exists": False, "shape": shape, "draft": bool(draft)}
     st = f.stat()
     out = {"name": name, "exists": True, "made": st.st_mtime, "bytes": st.st_size, "shape": shape, "draft": bool(draft)}
+    v = view_path(f)                                     # HERESY 2395: the light copy, when there is one of this very clip
+    if v.is_file() and v.stat().st_mtime >= st.st_mtime:
+        out["view"] = {"exists": True, "bytes": v.stat().st_size, "made": v.stat().st_mtime}
+    out["heavy"] = rate_of(f) > VIEW_OVER
     try:                                                 # HERESY 2356: what it was made with, when that was kept
         out["settings"] = json.loads(settings_path(f).read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -1115,21 +1174,23 @@ def _karaoke(r, a, b):
     return "".join(out), heard
 
 
-def lyrics_ass(rows, out, end, w=CW, h=CH, words=False):
+def lyrics_ass(rows, out, end, w=CW, h=CH, words=False, font="DejaVu Sans"):
     """HERESY 1916: the sung lines as an ASS file, each in its own time (from a little before to a little after, never into the next), white with a
     dark edge at the foot of the picture, fading in and out; DejaVu Sans writes Latin, Cyrillic, Greek and Hebrew. The lines written, or 0.
-    HERESY 2248: words, karaoke: the line shown whole and each word lit warm gold as it is sung; (lines, words with Whisper's own time)."""
+    HERESY 2248: words, karaoke: the line shown whole and each word lit warm gold as it is sung; (lines, words with Whisper's own time).
+    HERESY 2394: font, the family its style names (the user's own font laid in the render's fontsdir; DejaVu Sans the Studio's)."""
+    font = _ass_font(font)
     rows = sorted((r for r in rows or [] if r.get("start") is not None and r.get("end") is not None and str(r.get("text") or "").strip()),
                   key=lambda r: float(r["start"]))
     side, foot = round(w * 0.06), round(h * (0.16 if h > w else 0.08))   # HERESY 1917: upright, above the phone's own buttons
     head = ["[Script Info]", "ScriptType: v4.00+", f"PlayResX: {w}", f"PlayResY: {h}", "WrapStyle: 0", "ScaledBorderAndShadow: yes", "",
             "[V4+ Styles]", "Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, "
-            "Alignment, MarginL, MarginR, MarginV", f"Style: Line,DejaVu Sans,{round(min(w, h) * 0.05)},&H00FFFFFF,&H00101010,&H80000000,0,0,1,3,1,2,{side},{side},"
+            "Alignment, MarginL, MarginR, MarginV", f"Style: Line,{font},{round(min(w, h) * 0.05)},&H00FFFFFF,&H00101010,&H80000000,0,0,1,3,1,2,{side},{side},"
             f"{foot}", "", "[Events]", "Format: Layer, Start, End, Style, Text"]
     if words:                                            # HERESY 2248: the lit colour first, the colour still to sing second
         head[8] = ("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, BorderStyle, Outline, "
                    "Shadow, Alignment, MarginL, MarginR, MarginV")
-        head[9] = f"Style: Line,DejaVu Sans,{round(min(w, h) * 0.05)},&H0066D9FF,&H00FFFFFF,&H00101010,&H80000000,0,0,1,3,1,2,{side},{side},{foot}"
+        head[9] = f"Style: Line,{font},{round(min(w, h) * 0.05)},&H0066D9FF,&H00FFFFFF,&H00101010,&H80000000,0,0,1,3,1,2,{side},{side},{foot}"
     lines, heard = [], 0
     for i, r in enumerate(rows):
         a = float(r["start"]) - 0.1
@@ -1148,21 +1209,29 @@ def lyrics_ass(rows, out, end, w=CW, h=CH, words=False):
     return (len(lines), heard) if words else len(lines)
 
 
-def titles_ass(out, end, w=CW, h=CH, title="", credits="", author="", verse="", style="centre"):
+def _ass_font(font):
+    """HERESY 2394: a family name as an ASS style field holds it (no comma, which ends the field; DejaVu Sans for none)."""
+    font = " ".join(str(font or "").replace(",", " ").split())[:120]
+    return font or "DejaVu Sans"
+
+
+def titles_ass(out, end, w=CW, h=CH, title="", credits="", author="", verse="", style="centre", font="DejaVu Sans"):
     """HERESY 1948: the clip's title over its first seconds (from 0.4 s to 5 s, or half a short clip; large, in the picture's middle) and the credits
     over its last 7 s (a line each, smaller), white with a dark edge, faded in and out; DejaVu Sans. The lines written: 0, 1 or 2.
     HERESY 2246: the author and the verse's address in a smaller line under the title; style, the title's template: «centre» (as it was), «lower»
-    (a lower third: on a dark band at the left of the foot, from 1 s to 8 s), «corner» (small at the top left over the first 6 s)."""
+    (a lower third: on a dark band at the left of the foot, from 1 s to 8 s), «corner» (small at the top left over the first 6 s).
+    HERESY 2394: font, the family every style of it names."""
+    font = _ass_font(font)
     title, credits = " ".join(str(title or "").split()), str(credits or "").strip()
     sub_line = " · ".join(x for x in (" ".join(str(author or "").split()), " ".join(str(verse or "").split())) if x)
     side, big, small = round(w * 0.08), round(min(w, h) * 0.075), round(min(w, h) * 0.04)
     head = ["[Script Info]", "ScriptType: v4.00+", f"PlayResX: {w}", f"PlayResY: {h}", "WrapStyle: 0", "ScaledBorderAndShadow: yes", "",
             "[V4+ Styles]", "Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, "
-            "Alignment, MarginL, MarginR, MarginV", f"Style: Title,DejaVu Sans,{big},&H00FFFFFF,&H00101010,&H80000000,1,0,1,3,2,5,{side},{side},0",
-            f"Style: Credits,DejaVu Sans,{small},&H00FFFFFF,&H00101010,&H80000000,0,0,1,2,1,5,{side},{side},0",
-            f"Style: Lower,DejaVu Sans,{round(min(w, h) * 0.05)},&H00FFFFFF,&H64000000,&H00000000,1,0,3,{max(6, round(min(w, h) * 0.014))},0,1,"
+            "Alignment, MarginL, MarginR, MarginV", f"Style: Title,{font},{big},&H00FFFFFF,&H00101010,&H80000000,1,0,1,3,2,5,{side},{side},0",
+            f"Style: Credits,{font},{small},&H00FFFFFF,&H00101010,&H80000000,0,0,1,2,1,5,{side},{side},0",
+            f"Style: Lower,{font},{round(min(w, h) * 0.05)},&H00FFFFFF,&H64000000,&H00000000,1,0,3,{max(6, round(min(w, h) * 0.014))},0,1,"
             f"{round(w * 0.05)},{side},{round(h * (0.16 if h > w else 0.1))}",
-            f"Style: Corner,DejaVu Sans,{round(min(w, h) * 0.04)},&H00FFFFFF,&H00101010,&H80000000,1,0,1,2,1,7,{round(w * 0.04)},{side},{round(h * 0.05)}", "", "[Events]",
+            f"Style: Corner,{font},{round(min(w, h) * 0.04)},&H00FFFFFF,&H00101010,&H80000000,1,0,1,2,1,7,{round(w * 0.04)},{side},{round(h * 0.05)}", "", "[Events]",
             "Format: Layer, Start, End, Style, Text"]
     clean = lambda t: t.replace("\\", "/").replace("{", "(").replace("}", ")")   # noqa: E731
     lines, title_end = [], min(5.0, max(1.5, end * 0.5))
@@ -1453,10 +1522,13 @@ def clip(kit, name, audio, cover=None, job=None, labels=None, rows=None, lyrics=
         _tick(job, share, stage="melt")                     # HERESY 2326
         parts = _melt(tmp, parts, lens, melts, xd, nice, threads, enc)
     (tmp / "list.txt").write_text("\n".join(parts) + "\n", encoding="utf-8")
-    sung, heard = lyrics_ass(rows, tmp / "lyrics.ass", end, OW, OH, True) if lyrics and words else (lyrics_ass(rows, tmp / "lyrics.ass", end, OW, OH) if lyrics else 0, 0)   # HERESY 1916; 1917: in the clip's shape; 2248
+    fam = video_fonts.lay(kit, [plan.get("font_lyrics") if lyrics else "", plan.get("font_titles") if titles else ""], tmp / "fonts")   # HERESY 2394: a font gone raises
+    f_lyr, f_tit = fam.get(plan.get("font_lyrics") or "", video_fonts.STUDIO), fam.get(plan.get("font_titles") or "", video_fonts.STUDIO)
+    sung, heard = lyrics_ass(rows, tmp / "lyrics.ass", end, OW, OH, True, font=f_lyr) if lyrics and words else (lyrics_ass(rows, tmp / "lyrics.ass", end, OW, OH, font=f_lyr) if lyrics else 0, 0)   # HERESY 1916; 1917: in the clip's shape; 2248
     shown = titles_ass(tmp / "titles.ass", end, OW, OH, plan.get("clip_title") or plan.get("title") or "", plan.get("credits") or "",
-                       plan.get("author") or "", plan.get("verse") or "", title_style) if titles else 0   # HERESY 1948; 2246: the template, the author, the verse
-    subs = ",".join(x for x in ("subtitles=lyrics.ass" if sung else "", "subtitles=titles.ass" if shown else "") if x)
+                       plan.get("author") or "", plan.get("verse") or "", title_style, font=f_tit) if titles else 0   # HERESY 1948; 2246: the template, the author, the verse
+    fd = ":fontsdir=fonts" if fam else ""                # HERESY 2394: libass finds the user's fonts there, the system's as before
+    subs = ",".join(x for x in ("subtitles=lyrics.ass" + fd if sung else "", "subtitles=titles.ass" + fd if shown else "") if x)
     import luts                                          # HERESY 2010: the look, under the words
     graded = luts.vf(kit, look, look_strength, tmp) if look and look != "none" else None
     film = luts.film_vf(grain, vignette, halation, jitter, W, H)   # HERESY 2017: the grain and the vignette, after the look, under the words; 2242: halation, jitter
@@ -1471,6 +1543,7 @@ def clip(kit, name, audio, cover=None, job=None, labels=None, rows=None, lyrics=
                      "jitter": round(jitter, 3)},
             "primary": primary if prim else None, "lyrics": bool(sung), "words": bool(lyrics and words), "titles": bool(shown), "title_style": title_style,
             "match": int(match) if ref is not None else None, "match_strength": round(float(match_strength), 3) if ref is not None else None,
+            "fonts": {"titles": f_tit if shown else None, "lyrics": f_lyr if sung else None},   # HERESY 2394
             "shots": len(shots), "own": own, "live": live, "videos": used}
     meta = ["-metadata", "comment=" + json.dumps(kept, ensure_ascii=False, separators=(",", ":"))]
     rc, err = _watched(nice + ["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", "list.txt", "-i", str(audio), "-map", "0:v", "-map", "1:a",
@@ -1482,6 +1555,14 @@ def clip(kit, name, audio, cover=None, job=None, labels=None, rows=None, lyrics=
     part.write_text(json.dumps(kept, ensure_ascii=False, indent=1), encoding="utf-8")
     part.replace(settings_path(out))
     shutil.rmtree(tmp, ignore_errors=True)
+    view_path(out).unlink(missing_ok=True)               # HERESY 2395: the old clip's light copy never stands for the new one
+    if not draft:
+        _tick(job, 0.99, stage="view")
+        try:
+            make_view(out)
+        except (OSError, RuntimeError, subprocess.SubprocessError) as e:   # the clip stands; its light copy is said missing, made again on asking
+            if job is not None:
+                job["view_error"] = str(e)[-300:]
     _tick(job, 1.0, stage="done")
     return {"file": out.name, "shots": len(shots), "own": own, "live": live, "seconds": round(end, 2), "lines": sung, "between": between, "shape": shape,
             "titles": shown, "look": look if graded else "none", "film": {"grain": grain, "vignette": vignette, "halation": halation, "jitter": jitter} if film else None,
@@ -1633,7 +1714,7 @@ def split_long(kit, name, rows=None, lyrics=""):
 # as a step, named, with the plan (so it outlives a reload, a restart, another browser): Undo goes a step back, Redo forward again, a new edit
 # drops the steps undone. What the machines made since (a shot's video and its upscale, a picture the Artist drew for a shot) is never taken back
 # by an undo of something else: it is carried into the state brought back by the shot's times. The clip's hero stays as chosen
-HIST = ("shots", "look", "brief", "clip_title", "credits", "author", "verse", "beats", "places")   # HERESY 2356: the places
+HIST = ("shots", "look", "brief", "clip_title", "credits", "author", "verse", "beats", "places", "font_titles", "font_lyrics")   # HERESY 2356: the places; 2394: the fonts
 MADE = ("video", "video_from", "video_up", "video_up_from")
 
 

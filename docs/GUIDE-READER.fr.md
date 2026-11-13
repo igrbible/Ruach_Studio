@@ -18,7 +18,7 @@ Le Lecteur lit avec Fish Audio Drama 3 (35B MoE, 3B actifs) via audio.cpp, à pa
 
 ![Le choix de la quantification et la ligne en dessous](guide/reader-tier.png "Quantification : ce qui lit, où, et combien de temps prendra ce texte")
 
-**Quantification** dit quelle quantification lit et où. **Auto · la vitesse d'abord** (par défaut) et **Auto · la qualité d'abord** choisissent selon la mémoire libre au départ de la lecture ; une quantification nommée dans la liste s'y tient. La ligne en dessous dit ce qui lirait maintenant et sur quelle carte, une seconde de parole en combien de secondes, et combien de temps prendra ce texte avec le chargement du modèle.
+**Quantification** dit quelle quantification lit et où. **Auto · la qualité d'abord** (par défaut) prend Q8_0 partout où il tient : 20 banques d’experts en RAM sur une carte avec 23.6 Go libres, sinon les 40 banques dans la mémoire de la machine sur une carte avec 7.4 Go libres et 40 Go de mémoire libre ; puis Q6_K ; Q4_K seulement là où aucun des deux ne tient (une petite carte, peu de mémoire) et sur une carte Intel. **Auto · la vitesse d'abord** prend Q4_K en premier. Les deux choisissent selon la mémoire libre au lancement ; une quantification nommée dans la liste s’y tient. Q8_0 est le défaut parce qu’à l’oreille il est sorti le plus propre : au test brut du 09.11.2026 aucune prise de Q8_0 n’a été marquée fausse sur 20, une sur 20 pour Q6_K, sept sur 50 pour Q4_K, toutes les marques au même joint d’une phrase. L'installation télécharge Q8_0 (41.1 Go) quand la plus grande carte de la machine a 24 Go ou plus, sinon Q4_K (24.9 Go) ; sur une carte plus petite, Q8_0 se télécharge à côté : `bash tools/narrator-setup.sh --quant Q8_0`. Sans lui, Auto lit avec la quantification présente. La ligne en dessous dit ce qui lirait maintenant et sur quelle carte, une seconde de parole en combien de secondes, et combien de temps prendrait ce texte avec le chargement du modèle.
 
 Mesuré sur une RTX 3090 le 09.11.2026 avec un morceau russe de 27 s. Le RTF est le nombre de secondes pour lire une seconde de parole ; Whisper a bien entendu chaque lettre sauf si la ligne dit autre chose :
 
@@ -35,6 +35,25 @@ Mesuré sur une RTX 3090 le 09.11.2026 avec un morceau russe de 27 s. Le RTF est
 | Q8_0 | le processeur seul | — | 44 GB | 7.0 | le processeur |
 
 Les lignes à côté d'un travail de dataset sont pessimistes : le calcul de la carte et le processeur étaient partagés avec lui, et une carte à soi les lit plus vite. **Q8_0 · 20 bancs d'experts en RAM, 40 sur une carte partagée** s'en tient à Q8_0 : 20 bancs en RAM sur une carte avec 23.6 GB libres ; quand la carte est partagée, les 40 dans la mémoire de la machine ; avec **Auto** comme carte, le processeur en dernier. La première lecture charge le modèle ; sur une carte il reste chargé entre les lectures.
+
+### Sur une Intel Arc ou une autre carte Vulkan <!-- #on-an-intel-arc-or-another-vulkan-card -->
+
+Drama 3 lit sur une carte Intel (Arc) grâce à la compilation Vulkan d’audio.cpp, dans un palier à lui : Q4_K avec 28 de ses 40 banques d’experts dans la mémoire de la machine, environ 11 Go sur la carte et 16 Go de mémoire libre. Mesuré sur une Arc Pro B50 (16 Go) le 12.11.2026 : une seconde de parole en 3.3 s, le chargement du modèle 53 s. Quand la mémoire de la carte manque, le moteur passe quatre banques de plus dans la mémoire de la machine et continue de lire. Sur une carte Intel, Auto ne prend que ce palier, et une quantification prévue pour une autre carte y est refusée par son nom ; Drama 3 ne lit jamais sur le processeur au nom de la carte : quand la carte ne peut pas, la lecture le dit. Le chargeur Vulkan ne voit que le pilote Intel de Mesa, si bien que le rendu logiciel du processeur ne passe jamais pour la carte. Pour l’instant le Lecteur n’envoie Drama 3 à la compilation Vulkan que sur une carte Intel ; la compilation Vulkan d’audio.cpp tourne aussi sur d’autres cartes Vulkan, mais le Lecteur ne les dirige pas encore.
+
+Les paquets du système, une fois (les en-têtes Vulkan, le compilateur de shaders glslc, les en-têtes SPIR-V, les pilotes Vulkan de Mesa et vulkaninfo) :
+
+```
+# Debian, Ubuntu
+sudo apt install libvulkan-dev glslc spirv-headers mesa-vulkan-drivers vulkan-tools
+# Fedora
+sudo dnf install vulkan-loader-devel glslc spirv-headers-devel mesa-vulkan-drivers vulkan-tools
+# Arch
+sudo pacman -S --needed vulkan-icd-loader vulkan-headers shaderc spirv-headers vulkan-intel vulkan-tools
+```
+
+Vérifie que le pilote voit la carte : `vulkaninfo --summary` la liste sous Devices avec le pilote de Mesa, comme `deviceName = Intel(R) Arc(tm) Pro B50 Graphics (BMG G21)` et `driverName = Intel open-source Mesa driver`. Une liste avec `llvmpipe` seul veut dire que le pilote manque. `bash tools/narrator-setup.sh --vulkan-check` dit ce qui est là et nomme les paquets qui manquent sur ton système.
+
+Ensuite la compilation : `bash tools/narrator-setup.sh` fait de lui-même la compilation Vulkan sur une machine avec une carte Intel, à côté de l’autre ; `bash tools/narrator-setup.sh --build --vulkan` ne fait qu’elle, dans `build/audio.cpp/build/linux-vulkan-release/`. Il lui faut cmake et un compilateur C++, comme aux autres ; l’installation n’installe jamais un paquet du système, elle le nomme. Mesuré sur Ubuntu 24.04 avec Mesa 25.2 et Linux 7.0 ; les détails sont dans `docs/NARRATOR-VULKAN.md`.
 
 ### Notes des quantifications <!-- #grades-of-the-quants -->
 
@@ -59,7 +78,7 @@ Les émotions et les sons vont entre crochets, comme Drama 3 les lit : `[calm]`,
 
 ### Accents toniques et l'aigu <!-- #stresses-and-the-acute -->
 
-**Placer les accents** marque les voyelles accentuées avant que le moteur ne lise : tes propres marques restent comme écrites (l'aigu, U+0301, comme dans `звени́т`), puis ton **Dictionnaire des accents**, puis le grand dictionnaire de la langue, là où il y en a un : celui de l'ukrainien vient avec le Studio (celui de lang-uk, tiré des « Словники України » de l'ULIF), et pour le russe ou toute autre langue tu branches le tien (`docs/NARRATOR-DICTIONARIES.md`) ; un mot à deux accents est laissé à son contexte. **Vérifier les accents** montre le texte tel que le moteur le lira. Un mot mal lu dans une prise : **Corriger** sur sa lecture, choisis son morceau, place l'accent, **Retenir l'accent dans le dictionnaire** et **Relire le morceau**.
+**Placer les accents** marque les voyelles accentuées avant que le moteur ne lise : tes propres marques restent comme écrites (l'aigu, U+0301, comme dans `звени́т`), puis ton **Dictionnaire des accents**, puis le grand dictionnaire de la langue, là où il y en a un : ceux de l'ukrainien et du russe viennent avec le Studio (pour l'ukrainien celui de lang-uk, tiré des « Словники України » de l'ULIF ; pour le russe le Dictionnaire grammatical d'A. A. Zaliznyak, déplié à partir des données de gramdict, CC BY-NC 4.0 : libre pour un usage non commercial), et pour toute autre langue tu branches le tien (`docs/NARRATOR-DICTIONARIES.md`) ; un mot à deux accents est laissé à son contexte. **Vérifier les accents** montre le texte tel que le moteur le lira. Un mot mal lu dans une prise : **Corriger** sur sa lecture, choisis son morceau, place l'accent, **Retenir l'accent dans le dictionnaire** et **Relire le morceau**.
 
 ### La carte des glyphes LCV <!-- #the-lcv-glyph-map -->
 
@@ -67,7 +86,7 @@ Les émotions et les sons vont entre crochets, comme Drama 3 les lit : `[calm]`,
 
 ### L'oreille et le volume <!-- #the-ear-and-the-loudness -->
 
-**Écouter chaque morceau (Whisper)**, activé par défaut : Whisper large-v3 sur le processeur écoute chaque morceau pendant que le moteur lit le suivant. Un morceau où il entend un mot ajouté, omis ou remplacé, ou dont les lettres s’écartent du texte de 12 % ou plus (une répétition, un saut, un marmonnement), est relu avec une autre graine, jusqu’à trois lectures, et la plus proche du texte est gardée. La carte de la lecture dit quels morceaux ont été relus et pourquoi, le mot avec son instant dans la prise. La prise est assemblée à −16 LUFS, comme les podcasts, ses crêtes jamais au-delà de −1 dBFS. Une oreille qui n'a pas pu se charger est dite dans la lecture et dans la note de la prise, jamais prise pour une lecture propre.
+**Écouter chaque morceau (Whisper)**, activé par défaut : Whisper large-v3 sur le processeur écoute chaque morceau pendant que le moteur lit le suivant. Un morceau où il entend un mot ajouté, omis ou remplacé, ou dont les lettres s’écartent du texte de 12 % ou plus (une répétition, un saut, un marmonnement), est relu avec une autre graine, jusqu’à trois lectures, et la plus proche du texte est gardée. La carte de la lecture dit quels morceaux ont été relus et pourquoi, le mot avec son instant dans la prise. La prise est assemblée à −16 LUFS, comme les podcasts, ses crêtes jamais au-delà de −1 dBFS. Une oreille qui n'a pas pu se charger est dite dans la lecture et dans la note de la prise, jamais prise pour une lecture propre. Éteint, le moteur lit sans écouter : aucun morceau n’est relu pour ses mots, aucune lettre n’est comptée, et la carte de la lecture comme la note de la prise disent « Whisper éteint », jamais une lecture propre. **Vérifier avec Whisper** sur une lecture finie, ou dans le menu d’une prise du Lecteur dans la Bibliothèque, écoute une prise après coup : la prise telle qu’elle sonne est coupée là où se trouve chaque morceau et écoutée face aux mots que le moteur devait lire ; les lettres fausses et chaque mot signalé, avec son temps dans la prise, vont dans la note de la prise et dans `whisper-check.json` à côté d’elle. Son audio n’est pas touché.
 
 ### Depuis un enregistrement <!-- #from-a-recording -->
 

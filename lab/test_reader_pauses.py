@@ -111,7 +111,9 @@ with tempfile.TemporaryDirectory() as tmp:
     take0, sr = sf.read(str(d / "take.wav"), dtype="float32")
     lead, sil = silences(take0, sr)
     assert abs(lead - 1.5) <= 0.02 and abs(sil[0] - 0.6) <= 0.02 and abs(sil[1] - 6.0) <= 0.02, (lead, sil)   # each pause as heard
-    assert abs(sil[2] - (0.9 + 0.08)) <= 0.02, sil               # a pause the text did not ask: the paragraph's gap and the quiet kept, as before
+    # a pause the text did not ask: the paragraph's gap and the quiet kept, as before; since HERESY 2420 the joined take's guard (its lows under
+    # 20 Hz out, zero phase) spreads the made-up engine's hard-edged tone one 10 ms frame into the quiet on each side (speech has no such edge)
+    assert abs(sil[2] - (0.9 + 0.08 - 2 * 0.01)) <= 0.02, sil
     rd = r.run_detail(res["id"])
     assert [x.get("pause") for x in rd["pieces"]] == [0.6, 6.0, None, None] and abs(rd["pieces"][0]["after"] - 0.6) <= 0.01, rd["pieces"]
     lib = outputs / run["take"]

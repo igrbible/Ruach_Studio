@@ -121,7 +121,8 @@
       '<label class="pc-check" data-tip="Then the spectrum of the final file, ready in the Spectrum step."><input type="checkbox" id="pcSpectrum"' + (p.spectrum ? " checked" : "") + " /> Spectrum</label>" +
       '<label class="pc-check" data-tip="Whisper on the take: are the words the lyrics"><input type="checkbox" id="pcGloss"' + (p.gloss ? " checked" : "") + " /> Lyrics</label>" +
       '</span><span class="pc-pipe" id="pcPipe"></span>' +   // HERESY 1553: a pipeline's steps
-      '<span class="spacer"></span><button type="button" class="btn ghost small" id="pcBatch" data-tip="The bucket: up to ten takes the way runs on, one after another on Forge. Tune the way on one take first, then put the takes in">Bucket <b class="pc-bk-n mono" id="pcBucketN">0</b></button>' +   // HERESY 1562; 1955 (Viktor 30.10.2026: «Никому не нужно это «Прогнать на пространстве»»): the bucket
+      '<span class="spacer"></span><button type="button" class="btn ghost small pc-bucket" id="pcBatch" aria-label="Bucket" data-tip="The bucket: up to ten takes the way runs on, one after another on Forge. Tune the way on one take first, then put the takes in">' +
+        (window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui("layers") : "Bucket") + '<b class="pc-bk-n mono" id="pcBucketN">0</b></button>' +   // HERESY 2570 (the UIX audit, item 61): an icon with its count   // HERESY 1562; 1955 (Viktor 30.10.2026: «Никому не нужно это «Прогнать на пространстве»»): the bucket
       '<button type="button" class="btn primary small" id="pcRun" data-tip="Run the way in hand on this take, up to the target \u25ce when one is set">Run the chain</button></div>' +
       '<div class="pc-prof-say row-hint" id="pcProfSay"></div>' +
       '<div class="pc-batch row-hint" id="pcBatchSay" hidden></div>' +
@@ -463,6 +464,11 @@
     if ($("postChain") && $("postChain").classList.contains("is-folded") && $("pcFoldSay")) $("pcFoldSay").textContent = chainSay();   // 1569
     if (typeof cvPaint === "function") cvPaint();
   }
+  // HERESY 2570 (the UIX audit, item 64): a plugin's pipeline under its plugin's name, unless its own name says whose it is (a plugin's name is not repeated before its own pipeline's name)
+  function pipeLabel(p) {
+    var pn = p.plugin_name || "", nm = String(p.name || ""), head = nm.split(/\s*\u00b7\s*/)[0];
+    return pn && nm.indexOf(pn) !== 0 && head !== pn.split(/\s+/).pop() ? pn + " \u00b7 " + nm : nm;
+  }
   function pipeFill() {
     var sel = $("pcProfile");
     if (!sel) return;
@@ -472,7 +478,7 @@
       theirs = PIPE.list.filter(function (p) { return p.group !== "public" && p.group !== "builtin" && p.id !== "own" && fits(p); });
     sel.innerHTML = (CV.on ? "" : '<option value="">Classic chain</option>') + (PIPE.own ? '<option value="own">My way</option>' : "") + ours.map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.name) + "</option>"; }).join("") +
       theirs.map(function (p) {
-        return '<option value="' + esc(p.id) + '" translate="no">' + esc((p.plugin_name ? p.plugin_name + " \u00b7 " : "") + p.name) + "</option>"; }).join("") +
+        return '<option value="' + esc(p.id) + '" translate="no">' + esc(pipeLabel(p)) + "</option>"; }).join("") +
       (!PIPE.loaded && wayPending() ? '<option value="' + esc(PIPE.on) + '" disabled>' + esc(waitWord()) + "</option>" : "") +   // HERESY 2127: the one in hand, still coming (once the list is here it is decided below, nothing left saying it loads)
       // HERESY 2199 (the neutral-value pass): the lab's list refused while the way in hand is the classic chain or My way: the list says the
       // pipelines did not load and why, in the list's row and in the canvas's pick alike (the say line under the row is hidden outside is-pipe)
@@ -980,7 +986,7 @@
     if (!nd || !window.HeresyDialog) return Promise.resolve(false);
     var own = nd.ownName || nd.name, ownSaid = nd.step && nd.step.plugin && !nd.step.builtin || nd.clone ? own : tr(own);
     return window.HeresyDialog.prompt(tr("Rename the node\n\nIts own name: {0}. Up to {1} characters; an empty name gives its own back.").replace("{0}", ownSaid).replace("{1}", NAME_MAX),
-                                      nd.ownName ? nd.name : "", { max: NAME_MAX, ok: tr("Rename"), placeholder: ownSaid }).then(function (v) {
+                                      nd.ownName ? nd.name : "", { max: NAME_MAX, ok: tr("Rename"), placeholder: ownSaid, name: true }   /* HERESY 2462 */).then(function (v) {
       if (v === null) return false;
       v = String(v).replace(/\s+/g, " ").trim().slice(0, NAME_MAX);
       nameSet(id, v === own || v === ownSaid ? "" : v);
@@ -1515,6 +1521,7 @@
     w.style.transform = "translate(" + Math.round(CV.px) + "px, " + Math.round(CV.py) + "px) scale(" + CV.z + ")";
     box.style.backgroundSize = 10 * CV.z + "px " + 10 * CV.z + "px";   // the grid goes with it
     box.style.backgroundPosition = Math.round(CV.px) + "px " + Math.round(CV.py) + "px";
+    box.classList.toggle("is-small", CV.z < 0.75);   // HERESY 2570 (the UIX audit, item 66): under 75 % the values' arrows hide (8 px high); a click on the value still opens its list
     var b = $("pcvZoom100");
     if (b) b.textContent = Math.round(CV.z * 100) + " %";
   }
@@ -1727,13 +1734,14 @@
     try { localStorage.setItem("yue2.refinerDirty", PF.dirty ? "1" : "0"); } catch (e) { /* private mode */ }
     var b = $("pcvProfBtn");
     if (!b) return;
-    if (b.dataset.tipBase == null) b.dataset.tipBase = b.dataset.tip || "";
+    if (b.dataset.tipBase == null) b.dataset.tipBase = (window.RuachI18n && window.RuachI18n.enAttr ? window.RuachI18n.enAttr(b, "data-tip") : "") || b.dataset.tip || "";   // HERESY 2570: its English, so a language changed later says it anew
     b.classList.toggle("is-dirty", PF.dirty);
     b.dataset.tip = tr(b.dataset.tipBase) + "\n" + (PF.cur ? tr("In hand: «{0}»").replace("{0}", PF.cur) : tr("No profile in hand")) +
       (PF.dirty ? " \u00b7 " + tr("changed, not kept: Ctrl+S keeps it") : "");
   }
   function pfCur(name) { PF.cur = name || ""; try { localStorage.setItem("yue2.refinerProfileCur", PF.cur); } catch (e) { /* private mode */ } pfMark(false); }
   function pfDirty() { if (!PF.dirty) pfMark(true); }
+  window.addEventListener("ruach-lang", function () { if ($("pcvProfBtn")) pfMark(PF.dirty); });   // HERESY 2570 (the UIX audit, item 65): its two lines in the new language
   function pfKeepAsk() {                              // Ctrl+S: the profile in hand overwritten, or the way kept under a new name
     if (!PF.cur || !window.HeresyDialog || !window.HeresyDialog.choose) { pfSaveAs(); return; }
     window.HeresyDialog.choose(tr("Keep the way as it is now?") + "\n\n" + tr("The way, its steps' settings, where the nodes stand and the clones, in the Studio's files."), [
@@ -1901,7 +1909,7 @@
   }
   function pfSaveAs(then) {
     if (!window.HeresyDialog || pfHeld()) return;     // HERESY 2200
-    window.HeresyDialog.prompt(tr("A name for this setup"), PF.cur || "", { ok: tr("Keep it"), cancel: tr("Cancel"), max: 60 }).then(function (name) {
+    window.HeresyDialog.prompt(tr("A name for this setup"), PF.cur || "", { ok: tr("Keep it"), cancel: tr("Cancel"), max: 60, name: true }).then(function (name) {   // HERESY 2462
       name = String(name || "").trim();
       if (!name) return;
       var there = PF.list.some(function (x) { return x.name === name; });   // HERESY 1957: a name kept already, overwritten only when asked

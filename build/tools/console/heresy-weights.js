@@ -101,6 +101,8 @@
     if (seen() && running()) S.timer = setTimeout(load, 1500);
   }
 
+  // HERESY 2528: an icon of the Studio's set, its word inside unseen (a reader says it; the checks and the catalogs read it)
+  function wtIco(name, word) { return (window.HeresyIcons ? window.HeresyIcons.ui(name, "ib-svg") : "") + '<span class="ib-label">' + esc(word) + "</span>"; }
   function paint() {
     var d = S.data;
     if (!d || !$("wtParts")) return;
@@ -114,7 +116,8 @@
       var now = going({ part: p.part });             // HERESY 1302: its fetch under way, here
       return '<div class="wt-part' + (ok ? " is-whole" : "") + (now ? " is-going" : "") + '" data-part="' + esc(p.part) + '">' +
         '<div class="wt-head"><b>' + esc(tr(p.label)) + '</b><span class="wt-size">' + esc(p.size) + '</span><span class="wt-sum">' + esc(sum) + "</span>" +
-        (ok && !now ? "" : '<button type="button" class="btn ghost small" data-wt-part="' + esc(p.part) + '"' + (busy ? " disabled" : "") + ">" + esc(tr(now ? "Fetching…" : "Fetch")) + "</button>") + "</div>" +
+        (ok && !now ? "" : '<button type="button" class="btn ghost small' + (now ? "" : " btn-icon") + '" data-wt-part="' + esc(p.part) + '"' + (busy ? " disabled" : "") + (now ? "" : ' data-tip="' + esc(tr("Fetch") + " · " + p.size) + '"') + ">" +
+          (now ? esc(tr("Fetching…")) : wtIco("download", tr("Fetch"))) + "</button>") + "</div>" +   // HERESY 2528: an icon, its word kept for a reader
         (now ? progress() : "") +
         (bad.length ? '<ul class="wt-rows">' + bad.map(function (r) {
           return '<li class="wt-row"><span class="wt-st is-' + esc(r.state) + '">' + esc(tr(r.state)) + '</span><code translate="no">' + esc(r.text) + "</code></li>";
@@ -131,11 +134,13 @@
       var pick = S.pick[e.name] || (going({ extra: e.name }) && job().which.variant) || e.suggest || (e.variants.filter(function (v) { return !v.here; })[0] || e.variants[0]).id;   // HERESY 1834: the suggested size first
       var v = e.variants.filter(function (x) { return x.id === pick; })[0] || e.variants[0];
       return '<div class="wt-extra" data-extra="' + esc(e.name) + '"><div class="wt-x-name"><b>' + esc(tr(e.label)) + "</b><span>" + esc(tr(e.what)) + "</span></div>" +
-        '<select data-wt-pick="' + esc(e.name) + '" aria-label="' + esc(tr(e.label)) + '">' + e.variants.map(function (x) {
+        '<select data-hc-pick="1" data-wt-pick="' + esc(e.name) + '" aria-label="' + esc(tr(e.label)) + '">' + e.variants.map(function (x) {
           return '<option value="' + esc(x.id) + '"' + (x.id === v.id ? " selected" : "") + ">" + esc((x.label || x.id) + " · " + x.size + (x.here ? " · " + tr("here") : "")) + "</option>";
         }).join("") + "</select>" +
-        '<button type="button" class="btn ghost small" data-wt-extra="' + esc(e.name) + '"' + (busy || v.here || !d.script ? " disabled" : "") + ">" +
-          esc(tr(going({ extra: e.name, variant: v.id }) ? "Fetching…" : v.here ? "Here" : "Fetch")) + "</button>" +
+        // HERESY 2528 (the UIX audit 13.11.2026, №12: «Есть» and «Скачать» as buttons in every row): here a check, else a download, the size in the tip
+        (going({ extra: e.name, variant: v.id }) ? '<button type="button" class="btn ghost small" data-wt-extra="' + esc(e.name) + '" disabled>' + esc(tr("Fetching…")) + "</button>" :
+          '<button type="button" class="btn ghost small btn-icon' + (v.here ? " is-here" : "") + '" data-wt-extra="' + esc(e.name) + '"' + (busy || v.here || !d.script ? " disabled" : "") +
+          ' data-tip="' + esc(v.here ? tr("here") + " · " + v.size : tr("Fetch") + " · " + (v.label || v.id) + " · " + v.size) + '">' + wtIco(v.here ? "check" : "download", tr(v.here ? "Here" : "Fetch")) + "</button>") +
         (going({ extra: e.name }) ? progress() : "") + "</div>";      // HERESY 1302
     }).join("");
     paintTiers(d, busy);                             // HERESY 1984
@@ -160,8 +165,9 @@
       var can = t.items.length && t.need > 0;
       return '<div class="wt-tier' + (now ? " is-going" : "") + (short ? " is-short" : "") + (t.items.length && !t.need ? " is-whole" : "") + '" data-tier="' + esc(t.id) + '">' +
         '<div class="wt-head"><b>' + esc(tr(t.label)) + '</b><span class="wt-size wt-sum">' + esc(size) + "</span>" +
-        (can ? '<button type="button" class="btn ghost small" data-wt-tier="' + esc(t.id) + '"' + (busy || short || !d.script ? " disabled" : "") + ">" +
-          esc(tr(now ? "Fetching…" : short ? "Not enough room" : "Fetch the tier")) + "</button>" : "") + "</div>" +
+        (can ? '<button type="button" class="btn ghost small' + (now ? "" : " btn-icon") + '" data-wt-tier="' + esc(t.id) + '"' + (busy || short || !d.script ? " disabled" : "") +
+          (now ? "" : ' data-tip="' + esc(tr(short ? "Not enough room" : "Fetch the tier") + " · " + size) + '"') + ">" +
+          (now ? esc(tr("Fetching…")) : wtIco(short ? "triangle-alert" : "download", tr(short ? "Not enough room" : "Fetch the tier"))) + "</button>" : "") + "</div>" +   // HERESY 2528
         '<div class="wt-t-what">' + esc(tr(t.what)) + "</div>" +
         (items ? '<ul class="wt-t-items">' + items + "</ul>" : "") +
         (short ? '<div class="wt-t-short">' + esc(tr("Not enough room on this disk: up to {0} and 2 GB to spare, {1} free; {2} short.")
@@ -208,6 +214,85 @@
       return lab("/weights/fetch", body).then(function (d) { take(d); schedule(); });
     }).catch(function (e) { toast(tr("Not fetched:") + " " + e.message, "bad"); });
   }
+  // night 11→12.11.2026 (Viktor 11.11: «предлагаем им кнопку скачать, ввести их HF токен без сохранения как одноразовый ввод в поле, и если модель
+  // потребует гейта, объясняем, что нужно идти по этой-то ссылке, согласиться с условиями и подождать… Стрессуем, что наша Руах Студия не нарушает ни
+  // одного лицензионного ограничения… есть неудобства, и они однократные. Не перегружаем страницу и оверлеи»): a licence-bound or gated extra's repos
+  // are asked at their pins first (POST /lab/weights/access: nothing fetched); its licence goes into the Fetch's question, whose button then says
+  // «Accept and fetch»; a gate asks the user's token once, in a password field nothing keeps: it goes with this one fetch, and the field is emptied
+  var ACCEPT = "Fetching it means you accept its licence. Ruach Studio breaks none of its terms: it fetches from the authors' own repository, mirrors nothing and keeps no token. Any inconvenience is once only.";
+  function licenceNote(e) {
+    var l = e && e.licence;
+    if (!l) return "";
+    return "\n\n" + tr("Licence: {0}").replace("{0}", l.name + " · " + l.url) +
+      (l.also ? "\n" + tr("Licence: {0}").replace("{0}", l.also.name + " · " + l.also.url) : "") + "\n\n" + tr(ACCEPT);
+  }
+  function gate(e) {                                 // → a promise of {token} to go on with, or null (cancelled, or said why not)
+    if (!e || !e.access || !e.access.length) return Promise.resolve({ token: null });
+    return lab("/weights/access", { extra: e.name }).then(function (r) {
+      var gone = r.repos.filter(function (x) { return x.state === "gone" || x.state === "error"; });
+      if (gone.length) {
+        window.HeresyDialog.alert(tr("{0} is no longer on Hugging Face at the commit this release pins (deleted, made private or moved). Nothing was fetched.").replace("{0}", gone.map(function (x) { return x.repo; }).join(", ")));
+        return null;
+      }
+      if (r.repos.some(function (x) { return x.state === "offline"; })) {
+        window.HeresyDialog.alert(tr("Hugging Face did not answer: try again when the network is back."));
+        return null;
+      }
+      return r.ready ? { token: null } : askToken(e, r);
+    });
+  }
+  function askToken(e, r) {
+    return new Promise(function (resolve) {
+      var gated = r.repos.filter(function (x) { return x.state === "login" || x.state === "wait"; });
+      var link = function (href, text) { return '<a href="' + esc(href) + '" target="_blank" rel="noopener noreferrer" translate="no">' + esc(text) + "</a>"; };
+      var back = document.createElement("div"), before = document.activeElement;
+      back.className = "hd-back";
+      back.innerHTML = '<div class="hd-box wt-gate" role="dialog" aria-modal="true">' +
+        '<div class="hd-title">' + esc(tr("{0} is gated on Hugging Face").replace("{0}", tr(e.label))) + "</div>" +
+        '<ol class="wt-gate-steps"><li>' + esc(tr("Once only: open its page, sign in and accept its conditions:")) + " " +
+          gated.map(function (x) { return link(x.link, x.repo) + (x.gated === "manual" ? ' <span class="wt-gate-manual">(' + esc(tr("its authors approve each request by hand: wait for their e-mail")) + ")</span>" : ""); }).join(" · ") +
+        "</li><li>" + esc(tr("Then paste a Hugging Face access token (read). It goes with this one download and is saved nowhere:")) + " " +
+          link("https://huggingface.co/settings/tokens", "huggingface.co/settings/tokens") + "</li></ol>" +
+        '<form class="wt-gate-form" autocomplete="off"><input type="password" class="hd-input" name="hf-once" autocomplete="off" spellcheck="false" ' +
+          'placeholder="hf_…" aria-label="' + esc(tr("Hugging Face token")) + '" /></form>' +
+        '<div class="wt-gate-said" aria-live="polite"></div>' +
+        '<div class="hd-acts"><button type="button" class="btn ghost small hd-no">' + esc(tr("Cancel")) + "</button>" +
+        '<button type="button" class="btn small primary hd-yes">' + esc(tr("Check and fetch")) + "</button></div></div>";
+      document.body.appendChild(back);
+      var input = back.querySelector(".hd-input"), yes = back.querySelector(".hd-yes"), said = back.querySelector(".wt-gate-said");
+      function close(token) {
+        input.value = "";                            // the field forgets it the moment the dialog goes
+        back.remove();
+        document.removeEventListener("keydown", key, true);
+        if (before && before.focus) before.focus();
+        resolve(token ? { token: token } : null);
+      }
+      function key(ev) {
+        if (ev.key === "Escape") { ev.preventDefault(); close(null); }
+        else if (ev.key === "Enter" && document.activeElement === input) { ev.preventDefault(); go(); }
+      }
+      function go() {
+        var t = input.value.trim();
+        if (!/^hf_[A-Za-z0-9]{20,}$/.test(t)) { said.textContent = tr("That is not a Hugging Face token (it begins with hf_)."); return; }
+        yes.disabled = true;
+        said.textContent = "";
+        lab("/weights/access", { extra: e.name, hf_token: t }).then(function (v) {
+          yes.disabled = false;
+          if (v.token && v.token.ok === false) { said.textContent = tr("Hugging Face does not know this token."); return; }
+          if (v.repos.some(function (x) { return x.state === "login" || x.state === "wait"; })) {
+            said.textContent = tr("Your account is not let in yet: accept the conditions on the model's page, or wait for its authors' yes."); return;
+          }
+          if (!v.ready) { said.textContent = tr("Hugging Face did not answer: try again when the network is back."); return; }
+          close(t);
+        }, function (err) { yes.disabled = false; said.textContent = err.message; });
+      }
+      back.querySelector(".hd-no").addEventListener("click", function () { close(null); });
+      back.querySelector(".wt-gate-form").addEventListener("submit", function (ev) { ev.preventDefault(); go(); });
+      yes.addEventListener("click", go);
+      document.addEventListener("keydown", key, true);
+      requestAnimationFrame(function () { back.classList.add("is-on"); input.focus(); });   // as HeresyDialog shows its own
+    });
+  }
   var HOW = "Each file comes at the revision the release pins and is checked against its size; a download cut short goes on where it stopped.";
   function fetchPart(name) {
     var p = parts().filter(function (x) { return x.part === name; })[0];
@@ -234,8 +319,14 @@
     if (!v || v.here) return;
     var body = {};
     body[name] = v.id;
-    start(body, tr("Fetch {0}: {1} ({2})?").replace("{0}", tr(e.label)).replace("{1}", v.label || v.id).replace("{2}", v.size) +
-      (v.note ? "\n\n" + tr(v.note.charAt(0).toUpperCase() + v.note.slice(1)) + "." : "") + "\n\n" + tr(AFTER[name] || "") + " " + tr(HOW) + last(room(bytes(v.size))));   // HERESY 1984
+    if (running()) return;
+    return gate(e).then(function (g) {               // night 11→12.11.2026: its licence and its gates first, the token once
+      if (!g) return;
+      if (g.token) body.hf_token = g.token;
+      return start(body, tr("Fetch {0}: {1} ({2})?").replace("{0}", tr(e.label)).replace("{1}", v.label || v.id).replace("{2}", v.size) +
+        (v.note ? "\n\n" + tr(v.note.charAt(0).toUpperCase() + v.note.slice(1)) + "." : "") + "\n\n" + tr(AFTER[name] || "") + " " + tr(HOW) + licenceNote(e) + last(room(bytes(v.size))),   // HERESY 1984
+        e.licence ? tr("Accept and fetch") : null);
+    }).then(function () { delete body.hf_token; }, function (err) { delete body.hf_token; toast(tr("Not fetched:") + " " + err.message, "bad"); });
   }
   // HERESY 1984: a tier: what it brings, each with what it is (its licence among it), its size and the disk's free room; the lab fetches it item by item
   function fetchTier(id) {
@@ -254,8 +345,28 @@
         .replace("{0}", dgb(t.need)).replace("{1}", dgb(d.free)).replace("{2}", dgb(t.need + (d.spare || 0) - d.free)));
       return;
     }
-    start({ tier: id }, tr("Fetch the {0} tier?").replace("{0}", tr(t.label)) + "\n\n" + list + "\n\n" +
-      tr("Up to {0}; {1} free on this disk.").replace("{0}", dgb(t.need)).replace("{1}", d.free == null ? "?" : dgb(d.free)) + "\n\n" + what + "\n\n" + tr(HOW), tr("Fetch the tier"));
+    // night 11→12.11.2026: a tier with a licence-bound extra asks its gates first; a gated one is fetched from its own row, where the token is asked
+    var bound = todo.map(function (i) { return (d.extras || []).filter(function (x) { return x.name === i.extra; })[0]; })
+      .filter(function (x, n, all) { return x && x.access && all.indexOf(x) === n; });
+    var notes = bound.map(licenceNote).join("");
+    return bound.reduce(function (p, x) {
+      return p.then(function (ok) {
+        if (!ok) return false;
+        return lab("/weights/access", { extra: x.name }).then(function (r) {
+          if (r.ready) return true;
+          window.HeresyDialog.alert(r.repos.some(function (y) { return y.state === "login" || y.state === "wait"; })
+            ? tr("{0} is gated on Hugging Face: fetch it from its own row first, where your token is asked once.").replace("{0}", tr(x.label))
+            : r.repos.some(function (y) { return y.state === "offline"; }) ? tr("Hugging Face did not answer: try again when the network is back.")
+            : tr("{0} is no longer on Hugging Face at the commit this release pins (deleted, made private or moved). Nothing was fetched.").replace("{0}", x.label));
+          return false;
+        });
+      });
+    }, Promise.resolve(true)).then(function (ok) {
+      if (!ok) return;
+      return start({ tier: id }, tr("Fetch the {0} tier?").replace("{0}", tr(t.label)) + "\n\n" + list + "\n\n" +
+        tr("Up to {0}; {1} free on this disk.").replace("{0}", dgb(t.need)).replace("{1}", d.free == null ? "?" : dgb(d.free)) + "\n\n" + what + "\n\n" + tr(HOW) + notes,
+        bound.some(function (x) { return x.licence; }) ? tr("Accept and fetch") : tr("Fetch the tier"));
+    }).catch(function (err) { toast(tr("Not fetched:") + " " + err.message, "bad"); });
   }
   function check() {
     if (running()) return;

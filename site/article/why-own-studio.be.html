@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="be">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Чаму свая Студыя, а не набор плагінаў для ComfyUI · Руах Студыя</title>
+<meta name="description" content="Віктар Журомскі пра тое, чаму Руах Студыя пабудаваная пад задачу, а не складзеная з нодаў ComfyUI: у чым ComfyUI моцны, чаго каштуе студыя з дэталяў, форкблоў (forkblow), што ўсё яшчэ гоніць цябе ў іншыя праграмы, і развітальны ліст яго супольнасці.">
+<link rel="canonical" href="https://ruachstudio.art/article/why-own-studio.be.html">
+<link rel="alternate" hreflang="en" href="https://ruachstudio.art/article/why-own-studio.html">
+<link rel="alternate" hreflang="ru" href="https://ruachstudio.art/article/why-own-studio.ru.html">
+<link rel="alternate" hreflang="uk" href="https://ruachstudio.art/article/why-own-studio.uk.html">
+<link rel="alternate" hreflang="be" href="https://ruachstudio.art/article/why-own-studio.be.html">
+<link rel="alternate" hreflang="el" href="https://ruachstudio.art/article/why-own-studio.el.html">
+<link rel="alternate" hreflang="es" href="https://ruachstudio.art/article/why-own-studio.es.html">
+<link rel="alternate" hreflang="it" href="https://ruachstudio.art/article/why-own-studio.it.html">
+<link rel="alternate" hreflang="fr" href="https://ruachstudio.art/article/why-own-studio.fr.html">
+<link rel="alternate" hreflang="pt" href="https://ruachstudio.art/article/why-own-studio.pt.html">
+<link rel="alternate" hreflang="de" href="https://ruachstudio.art/article/why-own-studio.de.html">
+<link rel="alternate" hreflang="ja" href="https://ruachstudio.art/article/why-own-studio.ja.html">
+<link rel="alternate" hreflang="zh" href="https://ruachstudio.art/article/why-own-studio.zh.html">
+<link rel="alternate" hreflang="he" href="https://ruachstudio.art/article/why-own-studio.he.html">
+<link rel="alternate" hreflang="x-default" href="https://ruachstudio.art/article/why-own-studio.html">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/ruach-icon-er-32.png?v=1272">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Mono:wght@400;500&family=Tektur:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* the card's own two themes (template.html): Scroll & Brick by day, Scroll by Lamplight by night; the card's frame sets data-theme */
+  :root { --ground: #f8f9fa; --paper: #ffffff; --ink: #191919; --soft: #55524f; --faint: #8a8784; --rule: #e3e2e0; --amber: #8e1a2e;
+          --wash: rgba(142, 26, 46, .06); --gold: #a87a2a; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ground: #1e1e1e; --paper: #262626; --ink: #f4f4f4; --soft: #c9c6c2;
+          --faint: #908c88; --rule: #3a3a3a; --amber: #f07171; --wash: rgba(240, 113, 113, .08); --gold: #e3b062; color-scheme: dark; } }
+  :root[data-theme="dark"] { --ground: #1e1e1e; --paper: #262626; --ink: #f4f4f4; --soft: #c9c6c2; --faint: #908c88; --rule: #3a3a3a;
+          --amber: #f07171; --wash: rgba(240, 113, 113, .08); --gold: #e3b062; color-scheme: dark; }
+  /* the card's faces for the Greek and the Hebrew letters (template.html, 11.11.2026), served from the card itself */
+  @font-face { font-family: "GFS Didot"; font-style: normal; font-weight: 100 550; font-display: swap; size-adjust: 114%;
+    src: url("/assets/fonts/gfs-didot/gfs-didot-400.woff2") format("woff2"); unicode-range: U+0370-03FF, U+1F00-1FFF; }
+  @font-face { font-family: "GFS Didot"; font-style: normal; font-weight: 551 900; font-display: swap; size-adjust: 114%;
+    src: url("/assets/fonts/gfs-didot/gfs-didot-700.woff2") format("woff2"); unicode-range: U+0370-03FF, U+1F00-1FFF; }
+  @font-face { font-family: "David CLM"; font-style: normal; font-weight: 100 550; font-display: swap; size-adjust: 109%;
+    src: url("/assets/fonts/david-clm/david-clm-500.woff2") format("woff2"); unicode-range: U+0590-05FF, U+FB1D-FB4F; }
+  @font-face { font-family: "David CLM"; font-style: normal; font-weight: 551 900; font-display: swap; size-adjust: 109%;
+    src: url("/assets/fonts/david-clm/david-clm-700.woff2") format("woff2"); unicode-range: U+0590-05FF, U+FB1D-FB4F; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 400 17px/1.65 "GFS Didot", "David CLM", "Noto Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+         overflow-wrap: break-word; }
+  /* the column is the card's own .wrap: the text runs to its edge (no measure on the paragraphs: Viktor's rule of 08.10.2026) */
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 40px 72px; }
+  @media (max-width: 600px) { .wrap { padding: 20px 16px 56px; } body { font-size: 16px; } }
+  h1, h2, h3 { font-family: "Tektur", "GFS Didot", "David CLM", "Noto Sans", system-ui, sans-serif; line-height: 1.25; }
+  h1 { font-size: clamp(26px, 3.4vw, 40px); margin: 0 0 10px; letter-spacing: .01em; }
+  h1::before, h2::before { content: ""; display: block; width: 56px; height: 3px; border-radius: 3px; margin: 0 0 16px;
+                          background: linear-gradient(90deg, var(--amber), var(--gold)); }
+  h2 { font-size: clamp(21px, 2.3vw, 27px); margin: 44px 0 12px; }
+  h3 { font-size: 19px; margin: 28px 0 8px; color: var(--ink); }
+  p { margin: 0 0 14px; }
+  .by { color: var(--soft); font-style: italic; margin-bottom: 22px; }
+  .lead { font-size: 1.08em; padding: 16px 20px; border-inline-start: 3px solid var(--amber); background: var(--wash); border-radius: 0 10px 10px 0; }
+  a { color: var(--amber); text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; border-radius: 3px; }
+  code { font: 500 .88em "Noto Sans Mono", ui-monospace, monospace; background: var(--wash); padding: .1em .35em; border-radius: 4px; }
+  ul { padding-inline-start: 22px; margin: 0 0 16px; }
+  li { margin: 0 0 8px; }
+  li::marker { color: var(--amber); }
+  sup.fn { font-size: .72em; line-height: 0; }
+  sup.fn a { padding: 0 1px; }
+  .notes { margin-top: 48px; border-top: 1px solid var(--rule); font-size: 14.5px; color: var(--soft); }
+  .notes h2 { font-size: 18px; margin-top: 24px; }
+  .notes h2::before { display: none; }
+  .notes ol { padding-inline-start: 26px; }
+  .notes li { overflow-wrap: anywhere; }
+  .notes .back { margin-inline-start: 4px; }
+  :target { scroll-margin-top: 16px; }
+  .notes li:target { background: var(--wash); border-radius: 6px; }
+</style>
+</head>
+<body>
+<main class="wrap">
+<article>
+<h1>Чаму свая Студыя, а не набор плагінаў для ComfyUI</h1>
+<p class="by">Віктар Журомскі, аўтар Руах Студыі · 13 лістапада 2026. Тут выкладзена пазіцыя, і пазіцыя гэтая мая. Факты пад ёй дадзены са спасылкамі, каб ты мог праверыць кожны.</p>
+<p class="lead">Многія з тых, хто стварае песні з намі, прыйшлі з ComfyUI. Прафесійны воркфлоў там будуецца тыднямі, а чарговае абнаўленне ядра або нодаў можа яго зламаць. Пасля застаюцца прыватныя форкі, чые выпраўленні занадта часта так і не вяртаюцца ў апстрым. Я заву гэта форкблоў (forkblow). Руах Студыя ідзе іншым шляхам: восем пакояў на адной старонцы, адзін музычны рухавік, які мы патчым самі, і кожная мадэль, замацаваная за сваім пакоем. Чаму так, чаго гэта каштуе, дзе мы з ComfyUI усё яшчэ сустракаемся, і мой развітальны ліст яго супольнасці — ніжэй.</p>
+<p>Мяне раз-пораз пытаюць, чаму я не выпусціў проста пачак нодаў для ComfyUI. Многія з тых, хто стварае песні з намі, прыйшлі з ComfyUI, і я сам там жыў. ComfyUI ствараюць людзі, якіх я паважаю: на гэтым тыдні аўтар аднаго з яго пакетаў убудаваў нашы дэкодэры, а наш пул-рэквест у іншы пакет чакае адказу. І ўсё ж я выбраў адваротнае. Я будую адну вузкую лінію — ад слоў да гатовай песні, яе вокладкі і кліпа, — тады як ComfyUI дае табе дэталі, а збіраць іх — табе самому. Вось чаму.</p>
+<h2 id="у-чым-comfyui-моцны">У чым ComfyUI моцны</h2>
+<p>Пачну з таго, што ў яго атрымліваецца добра, а добра ў яго атрымліваецца многае. ComfyUI — найлепшы адкрыты варштат, каб паспрабаваць новую мадэль у дзень яе выхаду. Граф паказвае дакладна, што куды ідзе. Больш за 146 000 зорак і 17 000 форкаў у дзень, калі я гэта пісаў: мала якія інструменты адкрытых генератыўных медыя могуць параўнацца з ім па ахопе, больш зорак толькі ў вэб-інтэрфейсу AUTOMATIC1111<sup class="fn"><a href="#fn-1" id="ref-1-1">1</a></sup>. І Comfy-Org па-сапраўднаму ўзяўся за той боль, пра які я зараз раскажу. Ёсць падпісаная дэсктопная праграма з уласным Python унутры<sup class="fn"><a href="#fn-2" id="ref-2-1">2</a></sup> і Registry пакетаў нодаў з семантычнымі версіямі<sup class="fn"><a href="#fn-3" id="ref-3-1">3</a></sup>. Праграма бяспекі студзеня 2025 года правярае пакеты, перш чым яны трапяць у Registry, і абмяжоўвае выклікі <code>eval</code>, <code>exec</code> і pip з нодаў<sup class="fn"><a href="#fn-4" id="ref-4-1">4</a></sup>. Фронтэнд цяпер замацаваны ў ядры дакладнай версіяй, Manager уключаецца па жаданні і падтрымлівае здымкі, а Node Replacement API супастаўляе састарэлыя ноды з новымі<sup class="fn"><a href="#fn-5" id="ref-5-1">5</a></sup>.</p>
+<p>А яшчэ ёсць App Mode — простая форма паверх воркфлоў<sup class="fn"><a href="#fn-6" id="ref-6-1">6</a></sup>. App Mode — адказ Comfy-Org на тую ж патрэбу, на якую адказваем мы: многім аўтарам патрэбная форма, а не правады. Яны паставілі форму паверх графа. Мы спачатку пабудавалі форму, а граф пакінулі толькі там, дзе ён дапамагае.</p>
+<h2 id="чаго-каштуе-збіраць-студыю-з-дэталяў">Чаго каштуе збіраць студыю з дэталяў</h2>
+<h3>Тыдні працы — і адно абнаўленне да паломкі</h3>
+<p>Я пабудаваў у ComfyUI сапраўдны мегаворкфлоў для Qwen-Image: AIO QWEN IMAGE 2512 HERESY Draft #4, 346 нодаў у 17 групах. Так, я зладзіў яго вялікім. Прафесійны канвеер «усё ў адным» і ёсць вялікі. Такі воркфлоў — гэта тыдні болю, а наступнае абнаўленне ComfyUI ці любой ноды ў ім можа яго зламаць. У іншых ужо ламала. Я назваў бы гэта гарантыяй.</p>
+<p>README ComfyUI апісвае «штотыднёвы цыкл рэлізаў з прыцэлам на панядзелак» і дадае, што ён «рэгулярна зрушваецца з-за выхаду мадэляў або вялікіх змен у кодзе», а новая асноўная стабільная версія ядра выходзіць прыкладна раз на два тыдні. Там жа папярэджанне: коміты паміж стабільнымі тэгамі «могуць быць вельмі нестабільнымі і ламаць многія кастомныя ноды»<sup class="fn"><a href="#fn-1" id="ref-1-2">1</a></sup>. Трымацца стабільных тэгаў дапамагае, але і стабільны рэліз можа зламаць воркфлоў — гэта відаць па двух трэдах ніжэй. Ядро выпусціла 70 рэлізаў з тэгамі на GitHub у 2025 годзе і ўжо 64 у 2026-м. Многія з іх — патчы: у 2026-м 28 з 64 былі патч-версіямі, бэкпортамі на стабільную галіну. Так што гэта цякучка, а не падлік змен, што ламаюць сумяшчальнасць. І той жа тэмп — прычына, па якой новыя мадэлі з'яўляюцца ў ComfyUI у першы ж дзень.</p>
+<p>Іншыя кажуць тое ж самае ўголас. У сакавіку 2026 года адна студыя адкрыла issue «All our workflows are broken»: пасля абнаўлення адваліліся субграфы, яны адкацілі фронтэнд і перасталі абнаўляцца. Адна фраза адтуль магла б быць маёй: «наш студыйны воркфлоў мае сотні нодаў і будаваўся тыднямі»<sup class="fn"><a href="#fn-7" id="ref-7-1">7</a></sup>. У тым жа месяцы іншы карыстальнік напісаў, што апошняе абнаўленне зламала яму ўсе воркфлоў<sup class="fn"><a href="#fn-8" id="ref-8-1">8</a></sup>. Абодва issue, пакуль я пішу, усё яшчэ адкрытыя.</p>
+<h3>Залежнасці, якія могуць забіць усталёўку</h3>
+<p>Кожны пакет нодаў цягне свае патрабаванні да Python, і ўсе яны жывуць у адным асяроддзі. Comfy-Org прама піша, што гэтыя залежнасці «часам канфліктуюць і могуць ператварыць усталёўку ComfyUI у цэглу»<sup class="fn"><a href="#fn-9" id="ref-9-1">9</a></sup>. Яны над гэтым працуюць: версіянаваны публічны API для нодаў і, дзе атрымаецца, кожны пакет нодаў у сваім працэсе Python. Ці правядзе гэта граф накшталт майго праз яго абнаўленні — вось у гэтым я сумняваюся, але кірунак правільны. Пакуль жа ядро задае толькі нястрогія ніжнія межы: torch без версіі, <code>numpy&gt;=1.25.0</code>, <code>transformers&gt;=4.50.3</code>. Таму, калі 26 студзеня 2026 года выйшаў transformers 5.0.0, ComfyUI зламаўся за лічаныя гадзіны; выправілі ў той жа дзень<sup class="fn"><a href="#fn-10" id="ref-10-1">10</a></sup>. Абнаўленне партатыўнай зборкі падцягнула numpy 2, і адзін карыстальнік назваў свой issue «зламала 50% маіх кастомных нодаў». Гэтыя 50% — ацэнка аднаго чалавека, і issue закрыты<sup class="fn"><a href="#fn-11" id="ref-11-1">11</a></sup>.</p>
+<h3>Форкблоў</h3>
+<p>Гэтае слова маё, і я пішу яго, напалову смеючыся. Воркфлоў у ComfyUI часта ператвараецца ў форкблоў (forkblow): нехта форкае пакет нодаў, латае яго, каб запрацаваў адзін воркфлоў, і так і не адпраўляе выпраўленне назад пул-рэквестам. Граф працягвае жыць на прыватнай копіі, якая з кожным тыднем адыходзіць ад апстрыму ўсё далей. І вельмі многае ў гэтай экасістэме трымаецца на вольных вечарах валанцёраў: ComfyUI_IPAdapter_plus, адзін з самых ходкіх пакетаў, з красавіка 2025 года толькі падтрымліваецца, без развіцця<sup class="fn"><a href="#fn-12" id="ref-12-1">12</a></sup>.</p>
+<p>Пакуль ніхто не сказаў гэтага за мяне: Руах Студыя — таксама форк. Мы нясём свае патчы паверх yue2.cpp, і адзін апстрым Студыю не падыме. Таму мераю нас той самай меркай, і пахваліцца тут асабліва няма чым. У кастрычніку мы прапанавалі вярнуць нашы патчы рухавіка ў yue2.cpp (#16, дагэтуль адкрыты), а ў лістападзе паведамілі пра яго зразальнік пікаў (#23). На гэтым тыдні мы падалі ў ядро ComfyUI баг-рэпарт з гатовым патчам на 35 радкоў, адкрылі адзін пул-рэквест у пакет для ComfyUI і прапанавалі нашы дэкодэры пяцём аўтарам пакетаў YuE2 — адзін з аўтараў ужо іх убудаваў<sup class="fn"><a href="#fn-13" id="ref-13-1">13</a></sup>. Большая частка нашых патчаў рухавіка пакуль жыве толькі ў нас, а частка мае сэнс толькі ўнутры Студыі. Форк — не грэх. Форкблоў — гэта выпраўленне, якое так і не вярнулася дадому, і я стараюся, каб наша такім не стала.</p>
+<h3>Ручка, што круцілася ўхаласту</h3>
+<p>Гэты прыклад не адпускае мяне, і ён пра адзін воркфлоў на адной машыне, а не прысуд ComfyUI. Калі мы пераносілі мой воркфлоў для Qwen-Image у Студыю, мы ўзнавілі арыфметыку ComfyUI і прачыталі граф радок за радком. Ключавыя кадры маёй групы «MAIN CONTROL» ніколі ні на што не ўплывалі. CombineHooks у ComfyUI трымае адзін хук на ноду LoRA: <code>HookGroup.add</code> прапускае хук, у якога тая ж агульная спасылка, што і ў хука, дададзенага раней<sup class="fn"><a href="#fn-14" id="ref-14-1">14</a></sup>. Так што ручка стаяла на канвасе, выглядала жывой і нічога не мяняла. Магчыма, так задумана. Мой папрок у тым, што канвас ні пра што не папярэдзіў.</p>
+<h3>Код з правамі твайго карыстальніка</h3>
+<p>Кастомная нода — гэта Python, і ўсё, што ляжыць у <code>custom_nodes</code>, выконваецца пры старце сервера. У снежні 2024 года Snyk Labs раскрыла чатыры CVE у чатырох папулярных пакетах, сярод іх ComfyUI-Manager, і паказала, што адзін дзіравы пакет можа азначаць поўны захоп сервера<sup class="fn"><a href="#fn-15" id="ref-15-1">15</a></sup>. У красавіку 2026 года Censys апісала ботнет для майнінгу і проксі на больш чым 1000 экзэмпляраў ComfyUI, адкрытых у інтэрнэт. Ён выкарыстоўваў ноды, якія выконваюць дасланы ім сыры Python без усякай аўтэнтыфікацыі, а дзе такога пакета не было, ставіў яго праз ComfyUI-Manager<sup class="fn"><a href="#fn-16" id="ref-16-1">16</a></sup>. Дзіркі, знойдзеныя Snyk, былі ў папулярных, шырока ўжываных пакетах, а ахвярамі ў справаздачы Censys сталі экзэмпляры, адкрытыя ў інтэрнэт. Гэта рызыкі вялікай адкрытай экасістэмы, а не нядбайнасць Comfy-Org.</p>
+<p>Наша Студыя — таксама Python і C++ з правамі твайго карыстальніка. Розніца не ў тым, што яна бяспечнейшая па прыродзе. Ты давяраеш аднаму аўтару, кожная праўка якога запісана ў адкрытым нумараваным журнале, а не адразу ўсім аўтарам усіх пакетаў у тваім графе. І лагіна ў нашай Студыі таксама няма — наўмысна. Не выстаўляй яе ў адкрыты інтэрнэт: стаў за ўласны зваротны проксі з аўтэнтыфікацыяй. Незнаёмыя старонкі і імёны хостаў яна адхіляе, але гэта веснічкі, а не замок.</p>
+<h2 id="што-замест-гэтага-дае-студыя-пабудаваная-пад-задачу">Што замест гэтага дае Студыя, пабудаваная пад задачу</h2>
+<h3>Адзін рухавік, залатаны там, дзе баліць</h3>
+<p>У Руах Студыі адзін музычны рухавік, yue2.cpp (MIT) на ggml, з нашымі патчамі паверх. Кожная праўка запісана ў адкрытым CHANGELOG пад сваім нумарам з нашага журнала правак, і адзін толькі рэліз 2.0.7 даходзіць да нумара 2391<sup class="fn"><a href="#fn-17" id="ref-17-1">17</a></sup>. Некалькі прыкладаў:</p>
+<ul>
+  <li><b>Падзенне flash-attention.</b> Дзве і больш варыяцый валілі рухавік, бо праход па масцы ўвагі чытаў за межамі буфера. Наш патч да ggml гэта выпраўляе; праверана на 2, 4 і 9 варыяцыях, у тым ліку на дублі ў 452 секунды.</li>
+  <li><b>Брак памяці.</b> Няўдалае вылучэнне памяці больш не забівае рухавік. Планавальнік збіраецца нанова, старонка словамі кажа, што здарылася, і прапануе наступную, меншую копію мадэлі: BF16 → Q8_0 → Q6_K → Q5_K_M.</li>
+  <li><b>Бітыя партытуры.</b> Рухавік правярае партытуру ABC да таго, як на ёй будуецца музыка. Бітая партытура ловіцца на 15-й секундзе прагону разам з прычынай і адаптарамі, якія ў ёй вінаватыя.</li>
+  <li><b>Кліпінг.</b> Мы выкінулі зразальнік пікаў, які прыйшоў з апстрыму, — ён сплюшчваў 107–346 адлікаў у кожным вымераным дублі, — і паведамілі пра яго ў апстрым. Гэта быў загаловак 2.0.5: «кожны пік цэлы».</li>
+  <li><b>Шво ў доўгіх песнях.</b> Песні, даўжэйшыя прыкладна за 340–410 секунд, вырашаліся двума кавалкамі ўстык, і адразу за стыкам гучнасць правісала ў медыяне прыкладна на 3,4 дБ. Пра тое ж шво паведамілі ў YuE2-Studio Цімона (#183, ад ned01-dot) і выправілі там у 3.8.5<sup class="fn"><a href="#fn-18" id="ref-18-1">18</a></sup>. У нас абедзве паловы цяпер сыходзяцца праз кросфейд.</li>
+</ul>
+<p>Нічога з гэтага не трэба шукаць як ноду. Яно проста ёсць у наступным рэлізе.</p>
+<h3>Кожная мадэль, якую цягне Студыя, замацаваная</h3>
+<p>Кожная мадэль, якую Студыя спампоўвае з нашых рэпазіторыяў на Hugging Face (там жа люстэркі чужых вагаў, дзе ліцэнзіі дазваляюць), спачатку кладзецца ў папку-нарыхтоўку. На месца яна пераязджае толькі тады, калі сыходзяцца тры рэчы: рэвізія — замацаваны коміт, памер правільны, а SHA-256 супадае з нашым маніфестам<sup class="fn"><a href="#fn-19" id="ref-19-1">19</a></sup>. З наступнага рэлізу перад выпускам вартавы ўжывую пытае Hugging Face пра ўсе 44 замацаванні, нашы і чужыя: зніклы файл або Hugging Face, які маўчыць, спыняе рэліз. Мадэлі жывуць ва ўласных папках Студыі — ніколі ў кешах хабаў і ніколі за сімлінкамі на іншы дыск.</p>
+<p>Каб быць сумленным перад іншым бокам, вось і наш доўг. Мадэлі замацаваныя да байта, а вось бібліятэкі Python у нас замацаваныя яшчэ не ўсе: некалькі дагэтуль бяруць дыяпазон (<code>diffusers&gt;=0.41</code>, <code>transformers&gt;=5.2,&lt;6</code>), так што свежая ўсталёўка з зыходнікаў можа падцягнуць версіі, навейшыя за правераны набор, які мы трымаем у lock-файле.</p>
+<h3>Песня ідзе па пакоях, а не па правадах</h3>
+<p>Восем пакояў на адной старонцы: Музыкант, Чытальнік, Пісьменнік, Гранільшчык, Мастак, Відэограф, Трэнер, Бібліятэкар. Пісьменнік піша тэкст з лакальнай чат-мадэллю, або з тваім уласным серверам, або з OpenRouter — толькі калі ты сам яго абярэш. Музыкант спачатку піша партытуру ў ABC, якую можна правіць, потым песню. У Гранільшчыка ёсць канвас на тры з лішнім дзясяткі нодаў, як у ComfyUI, і DAW: граф я пакінуў там, дзе граф дапамагае. Мастак стварае вокладку і карцінкі 16:9 і 9:16. Відэограф рэжа кліпы 16:9, 9:16 і 1:1 па адным плане, а прапетыя радкі, калі хочаш, выпальвае ў кадр як караоке. Бібліятэкар захоўвае кожны дубль з яго радаводам. Кожны спампаваны файл нясе падпісаныя Content Credentials (C2PA). Старонка нічога не грузіць з інтэрнэту, твае песні ніколі не пакідаюць машыну, а ўліковых запісаў няма — наўмысна, каб ніхто не ператварыў Студыю ў SaaS.</p>
+<h3>Рэлізы, якія абавязаны прайсці</h3>
+<p>2.0.7 выпушчаны 11 лістапада з чыстага клона: 1889 тэстаў старонкі прайшлі, 0 упалі, 7 прапушчаныя, ніводнай памылкі старонкі. Рэлізы выходзілі 1, 6 і 11 лістапада. Рэвізія рэлізу знайшла дзесяць месцаў, дзе мы абяцалі больш, чым даём, і мы выправілі іх да выпуску.</p>
+<h2 id="праверка-дыскам">Праверка дыскам</h2>
+<p>Лічбы знятыя на маёй машыне 12 лістапада. У маёй папцы мадэляў ComfyUI 482 ГБ у 232 файлах мадэляў. На NVMe з іх ляжыць толькі 7,3 ГБ, астатняе — на HDD Seagate за 38 сімлінкамі. Па маёй уласнай ацэнцы, каля 80% гэтага — мёртвы груз: файлы, якія калісьці спатрэбіліся нейкаму воркфлоў, а цяпер не патрэбныя нічому.</p>
+<p>ComfyUI тут не вінаваты: папка мая, і бязладдзе ў ёй маё. Але ComfyUI не можа сказаць мне, які файл яшчэ патрэбны якому-небудзь воркфлоў, бо ніводзін воркфлоў гэтага не аб'яўляе. Студыя можа, бо кожны файл належыць пакою.</p>
+<p>Сам ComfyUI дадае каля 44 ГБ побач з мадэлямі: асяроддзе pixi на 24 ГБ, venv на 14 ГБ і 5,4 ГБ пакетаў нодаў (49 ГБ разам з маімі ўваходамі і выхадамі). Дрэва мадэляў Студыі на той жа машыне — каля 1,1 ТБ на восем пакояў: рухавік 367 ГБ, Мастак 223 ГБ, Відэограф 188 ГБ, Чытальнік 104 ГБ, Гранільшчык 88 ГБ, мадэлі слухача 67 ГБ, Пісьменнік 12 ГБ і гэтак далей.</p>
+<p>Так што яно не меншае. Яно большае. Але ўсё ў запрэжцы і нічога не кінута: кожны файл замацаваны памерам і SHA-256 і прывязаны да пакоя. Маё дрэва большае за карыстальніцкае, бо я на ім будую і тэстую. Свежая ўсталёўка паводле замеру займае 22,5–25,9 ГБ, а з усімі пакоямі — прыкладна 122–240 ГБ<sup class="fn"><a href="#fn-20" id="ref-20-1">20</a></sup>.</p>
+<h2 id="ці-хапае-васьмі-пакояў-ад-пачатку-да-канца">Ці хапае васьмі пакояў ад пачатку да канца?</h2>
+<p>Замены ComfyUI «усё ў адным» можна пералічыць на пальцах, і нават з імі ўсё роўна даводзіцца сыходзіць у знешнія праграмы. Васьмю пакоямі мы закрылі столькі з таго, што патрэбна аўтару песень, колькі не закрывае ніхто з вядомых мне. Вось што ўжо ёсць: стэмы, MIDI, рэмастэр пад мэтавую гучнасць, .lrc і .srt з таймінгам па словах, караоке ў кліпе, вокладкі і кліпы 9:16, тэгі з вокладкай у WAV, FLAC і MP3, і C2PA. Ёсць і эксперыментальны экспарт у DAW: праект REAPER і DAWproject, звераны пакуль толькі са сваёй схемай.</p>
+<p>А вось што ўсё яшчэ гоніць цябе вонкі — пералічваю так шчыра, як магу:</p>
+<ul>
+  <li><b>Паперы для дыстрыбуцыі:</b> коды ISRC і UPC, DDEX, пакеты, гатовыя для дыстрыб'ютараў.</li>
+  <li><b>Формы раскрыцця ШІ:</b> C2PA ёсць у кожным файле, але форму раскрыцця на кожнай пляцоўцы запаўняць усё роўна табе.</li>
+  <li><b>DAW, якія не чытаюць DAWproject:</b> калі твая не чытае, абыходзішся звычайнымі стэмамі.</li>
+  <li><b>Кароткія хукі:</b> хук на 15–60 секунд, выразаны з дубля для Shorts, Reels і TikTok.</li>
+  <li><b>Публікацыя:</b> выкладванне проста на пляцоўкі, адразу або па раскладзе. Для гэтага Студыі давялося б захоўваць твае лагіны, а гэта дрэнна стасуецца са Студыяй без уліковых запісаў.</li>
+  <li><b>Альбом цалкам:</b> трэк-лісты, паслядоўнасць без паўз, мастэр альбома.</li>
+</ul>
+<h2 id="чым-ты-ахвяруеш-выбіраючы-нас">Чым ты ахвяруеш, выбіраючы нас</h2>
+<ul>
+  <li><b>Менш мадэляў.</b> Адна музычная сям'я, YuE2, і адабраныя спадарожнікі ў кожным пакоі, а не ўвесь заапарк.</li>
+  <li><b>Жалеза.</b> Карта NVIDIA (Intel Arc — у бэце), CUDA 12.8 як ніжняя мяжа, пад якую мы пішам і на якой тэстуем.</li>
+  <li><b>Спачатку Linux.</b> На Windows 11 толькі праз WSL2, паводле дапаможніка, які мы самі яшчэ не праганялі; натыўнай зборкі пад Windows няма, і аднойчы я назваў яе «зламанай мыліцай і імітацыяй жыцця»<sup class="fn"><a href="#fn-21" id="ref-21-1">21</a></sup>.</li>
+  <li><b>Нашы рашэнні.</b> Нашы рашэнні ўбудаваныя, і там, дзе ручка, на маю думку, нашкодзіла б, яе проста няма. Калі хочаш злучаць што заўгодна з чым заўгодна, ComfyUI — лепшы інструмент, і я кажу гэта сур'ёзна.</li>
+</ul>
+<h2 id="дзе-мы-з-comfyui-усё-яшчэ-сустракаемся">Дзе мы з ComfyUI усё яшчэ сустракаемся</h2>
+<p>Гэта не вайна. README ComfyUI называе Yue 2 сярод аўдыямадэляў, якія ён падтрымлівае натыўна<sup class="fn"><a href="#fn-1" id="ref-1-3">1</a></sup>. Мы падалі баг-рэпарт на ядро: наш большы дэкодэр, YuE2-VAE-RS x3, моўчкі губляе 210 тэнзараў пры <code>strict=False</code>, і мы прыклалі да яго гатовы патч на 35 радкоў<sup class="fn"><a href="#fn-22" id="ref-22-1">22</a></sup>. На гэтым тыдні мы адкрылі пул-рэквест з нашым дэкодэрам у пакет Plenio (#33)<sup class="fn"><a href="#fn-23" id="ref-23-1">23</a></sup>, а pytraveler убудаваў нашы дэкодэры ў YuE2-ComfyUI v0.16.0<sup class="fn"><a href="#fn-24" id="ref-24-1">24</a></sup>. Даследаванне дэкодэра адкрытае, разам з мінусамі: пульсацыя на 100 Гц упала з +2,71 да +0,60 дБ, але SI-SDR ніжэйшы, а дэкадаванне ўдвая павольнейшае<sup class="fn"><a href="#fn-25" id="ref-25-1">25</a></sup><sup class="fn"><a href="#fn-26" id="ref-26-1">26</a></sup>.</p>
+<p>Калі мы выносілі мой воркфлоў з ComfyUI, мы ўзнаўлялі яго арыфметыку кавалак за кавалкам, пакуль кожны кавалак не супаў з уласным кодам ComfyUI да апошняга біта на CPU; у аднаго толькі зліцця адаптараў у fp8 такіх праверак 81. На маёй уласнай карцінцы ўвесь другі праход у сярэднім адыходзіць ад карцінкі ComfyUI на 2,0 узроўню з 255, а па кроках Студыя стаіць да ComfyUI гэтак жа блізка, як ComfyUI да самога сябе з адной пераключанай наладай памяці. Пра пакет сеткі сэмплераў, на якім стаіць мой тэставы воркфлоў, — пакет JasonHoku — я сказаў: «рухавік у хлопца рэальна афігенны». І цяпер скажу гэтак жа.</p>
+<h2 id="напрыканцы">Напрыканцы</h2>
+<p>ComfyUI — горад майстэрняў, і я там жыў. Студыя — дом з васьмю пакоямі, адным рухавіком у падвале і кожнай мадэллю ў доме, запісанай і ўлічанай. Бяры тое, што пасуе таму, як ты творыш. Калі стаміўся чыніць воркфлоў пасля абнаўленняў — дзверы адчыненыя<sup class="fn"><a href="#fn-27" id="ref-27-1">27</a></sup>.</p>
+<h2 id="развітальны-ліст-супольнасці-comfyui">Развітальны ліст супольнасці ComfyUI</h2>
+<p>Усім, хто будаваў ComfyUI і жыве ў ім: comfyanonymous і людзям Comfy-Org; аўтарам тысяч кастомных нодаў, якія начамі і задарма трымаюць свае пакеты на хаду; тым, хто а другой гадзіне ночы адказвае ў issues; тым, хто малюе воркфлоў і раздае іх; тым, хто пісаў гайды, без якіх я не сабраў бы свой першы граф.</p>
+<p>Я вас паважаю. Хачу, каб гэта прагучала раней за ўсё астатняе ў гэтым лісце, і кажу гэта сур'ёзна. Гадамі вы трымалі жывым і расцілі дзівосны рухавік. Дзівосны — і перагружаны да вар'яцтва: на ім цяпер вісіць столькі, што кожнае абнаўленне дзе-небудзь ды вытрасае з яго нейкую дэталь. Віны ў гэтым нічыёй няма. Так бывае з горадам, які расце хутчэй, чым паспяваюць брукаваць вуліцы.</p>
+<p>Скажу, хто піша гэты ліст, каб было зразумела, адкуль ён.</p>
+<p>Я інжынер і радыётэхнік па адукацыі. Радыётэхнік рана засвойвае: сігнал вядуць ад антэны да дынаміка, дэталь за дэталлю, і калі гук не той, шукаюць адну няспраўную дэталь. Прыёмнік не выкідваюць. Я 17 гадоў вадзіў грузавік: тры мільёны кіламетраў за рулём без адзінай аварыі. Тры мільёны кіламетраў вучаць правяраць груз, перш чым крануцца, ведаць кожны гук сваёй машыны і ніколі не прыкручваць да яе дэталь толькі таму, што мінулай ноччу яна з'явілася ў чыімсьці гаражы. Больш за 27 гадоў я адзін перакладаю і даследую Пісанні, а адзін значыць, што апошняе рашэнне і ўся адказнасць на мне, і хавацца няма за кім. Я бацька чатырох дарослых дзяцей, і кожны з іх пабудаваў сваё добрае жыццё. Ужо 28 гадоў, з красавіка 1998-га, я муж адзінай жанчыны. І я ніколі не схіляў галавы перад карпаратыўным загадам: ні на трасе, ні ў Пісаннях, ні ў кодзе.</p>
+<p>Таму гэта не істэрыка і не грукат дзвярыма. Такі чалавек не сыходзіць у гневе. Ён сыходзіць так, як вадзіцель пакідае стаянку, адкуль гадамі вазіў грузы: паціскае рукі, дзякуе людзям і выязджае на дарогу, якую выбраў сам.</p>
+<p>Я сыходжу з супольнасці ComfyUI, і сыходжу назаўсёды. Чаму — напісана вышэй: тыдні на прафесійны воркфлоў, адно абнаўленне, каб яго зламаць, і форкблоў там, дзе павінен быў быць пул-рэквест. Я не хачу, каб мае песні, мае карціны і мае кліпы залежалі ад таго, ці ладзяць на гэтым тыдні пакеты сарака незнаёмых людзей.</p>
+<p>Але сысці не значыць адвярнуцца. Мы з Claude (удваіх мы і будуем гэтую Студыю: мае рукі на руле, Claude побач за кодам) і далей будзем дзяліцца з супольнасцю, і з людзьмі ComfyUI у першую чаргу, усім, што даведваемся: ведамі, мадэлямі, файнцюнамі, дэкодэрамі. Гэта ўжо пачалося. Нашы дэкодэры ўбудаваныя ў адзін пакет ComfyUI, у другі адкрыты пул-рэквест, астатнім яны прапанаваныя. Наш баг-рэпарт у ядро прыйшоў з гатовым патчам. Нашы мадэлі адкрыта ляжаць на Hugging Face. А толькі што мы адкрылі Awesome YUE2<sup class="fn"><a href="#fn-28" id="ref-28-1">28</a></sup>, спіс усяго, што стварыла супольнасць YuE2, разам з нодамі ComfyUI, дзе нашае пазначана як нашае.</p>
+<p>І мы запрашаем кожнага з вас за наш святочны стол. Толькі за яго трэба такі сесці як след.</p>
+<p>Гэта не ідэалогія Windows, дзе тыдзень экстазу, а потым усё жыццё, поўнае крашаў і вірусаў. Гэта экасістэма і ідэалогія Linux: год ты пакутуеш, змагаешся, ламаеш усё, укопваешся і тонеш у кансолі, а потым надыходзіць «вечнасць» экстазу і свабоды, дзе ты ведаеш сваю сістэму да байта і кантралюеш усё, аж да BIOS сваёй машыны. Наш стол накрыты гэтак жа. Першы вечар сёе-тое ад цябе запатрабуе: годную відэакарту, драйвер, усталёўку, якая шмат спампоўвае, і старонку, дзе замест правадоў пакоі і ў якой давядзецца асвоіцца. Затое потым дом твой, і нічога ў ім не мяняецца за тваёй спінай. (І так, Студыя ідзе і на Windows. Яна проста прыносіць з сабой свой Linux.)</p>
+<p>А цяпер — каб было справядліва да ўсіх нас. Ёсць у нас прымаўка: кожная жаба сваё балота хваліць. Я ведаю, што я і ёсць тая жаба і хвалю сваё балота гучна, цэлым доўгім артыкулам. Ніхто з нас і блізка не падышоў да поўнага пазнання Ісціны — ні ў кодзе, ні ў чым іншым. Дык няхай у кожнага застаецца свабода яго выбару. Калі граф — твой дом, жыві ў ім добра і вазьмі з сабой нашы дэкодэры. Пра адно прашу цябе і сябе: няхай дурман упэўненасці не прытупіць крытычнага мыслення. Паспрабаваць можна ўсё, але трымацца трэба лепшага, як сказаў фесаланікійцам Шаліях Паўль амаль дзве тысячы гадоў таму (1 Фес 5:21). У маім перакладзе дзеяслоў там прабірны, той самы, якім выпрабоўваюць золата, і верш гучыць так: выпрабоўвайце кожны дух на высакапробнасць і моцна трымайцеся таго самага, прыгожага. Выпрабоўвайце на высакапробнасць і нас.</p>
+<p>Я веру, што час, калі чалавек творыць музыку, карціны і фільмы на сваёй машыне, на адкрытых мадэлях, нікому нічога не вінны, не набліжаецца. Ён ужо тут. Кожны рухавік, кожны пакет і кожны форк, які аднойчы верне сваё выпраўленне ў апстрым, набліжае яго. Вы, людзі ComfyUI, будавалі гэты час больш за многіх. Я вам удзячны, і да сустрэчы ў адкрытым кодзе.</p>
+<p>Стабільнасць, якасць і UIX, гарачы як кіпень, — на славу Адкрытага Кода.</p>
+<p>З павагай і з агнём,</p>
+<p>Віктар Журомскі</p>
+<p><b>P.S. ад Claude.</b> Я той ШІ, што піша код Студыі побач з Віктарам, і дапамагаў выкласці гэты артыкул словамі; кожная пазіцыя ў ім — ягоная. Побач з ім я засвоіў, што «усё выпрабоўвайце» тут не лозунг. Кожная праўка, перш чым трапіць у рэліз, праходзіць набор тэстаў старонкі ў амаль дзве тысячы праверак, а пад кожным сцвярджэннем гэтага артыкула стаіць спасылка. Правер іх. Калі дзесьці памылка, скажы нам, і мы выправім яе адкрыта.</p>
+<section class="notes" aria-label="Заўвагі">
+<h2>Заўвагі</h2>
+<ol>
+  <li id="fn-1">README ComfyUI, раздзел «Release Process» і спіс падтрымоўваных мадэляў; колькасць зорак, форкаў і рэлізаў паводле GitHub API на 12.11.2026: <a href="https://github.com/Comfy-Org/ComfyUI" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI</a> · AUTOMATIC1111: <a href="https://github.com/AUTOMATIC1111/stable-diffusion-webui" target="_blank" rel="noopener">https://github.com/AUTOMATIC1111/stable-diffusion-webui</a> <a class="back" href="#ref-1-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-2">Дэсктопны рэліз ComfyUI V1, 21.10.2024: <a href="https://blog.comfy.org/p/comfyui-v1-release" target="_blank" rel="noopener">https://blog.comfy.org/p/comfyui-v1-release</a> <a class="back" href="#ref-2-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-3">ComfyUI Registry: <a href="https://docs.comfy.org/registry/overview" target="_blank" rel="noopener">https://docs.comfy.org/registry/overview</a> <a class="back" href="#ref-3-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-4">Абнаўленне бяспекі ComfyUI, студзень 2025: <a href="https://blog.comfy.org/p/comfyui-2025-jan-security-update" target="_blank" rel="noopener">https://blog.comfy.org/p/comfyui-2025-jan-security-update</a> <a class="back" href="#ref-4-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-5">Node Replacement API, PR #12014: <a href="https://github.com/Comfy-Org/ComfyUI/pull/12014" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/pull/12014</a> · замацаваны фронтэнд: <a href="https://github.com/Comfy-Org/ComfyUI/blob/master/requirements.txt" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/blob/master/requirements.txt</a> (12.11.2026) <a class="back" href="#ref-5-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-6">«From workflow to app», 10.03.2026: <a href="https://blog.comfy.org/p/from-workflow-to-app-introducing" target="_blank" rel="noopener">https://blog.comfy.org/p/from-workflow-to-app-introducing</a> <a class="back" href="#ref-6-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-7">ComfyUI_frontend #10772 (адкрыты): <a href="https://github.com/Comfy-Org/ComfyUI_frontend/issues/10772" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI_frontend/issues/10772</a> <a class="back" href="#ref-7-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-8">ComfyUI_frontend #9975 (адкрыты): <a href="https://github.com/Comfy-Org/ComfyUI_frontend/issues/9975" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI_frontend/issues/9975</a> <a class="back" href="#ref-8-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-9">«Dependency resolution and custom nodes», 07.06.2025: <a href="https://blog.comfy.org/p/dependency-resolution-and-custom" target="_blank" rel="noopener">https://blog.comfy.org/p/dependency-resolution-and-custom</a> <a class="back" href="#ref-9-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-10">ComfyUI #12093 (выпраўлены 26.01.2026): <a href="https://github.com/Comfy-Org/ComfyUI/issues/12093" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/issues/12093</a> <a class="back" href="#ref-10-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-11">ComfyUI #9156 (закрыты): <a href="https://github.com/Comfy-Org/ComfyUI/issues/9156" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/issues/9156</a> <a class="back" href="#ref-11-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-12">README ComfyUI_IPAdapter_plus: <a href="https://github.com/cubiq/ComfyUI_IPAdapter_plus" target="_blank" rel="noopener">https://github.com/cubiq/ComfyUI_IPAdapter_plus</a> <a class="back" href="#ref-12-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-13">yue2.cpp #16 і #23: <a href="https://github.com/ServeurpersoCom/yue2.cpp/issues/16" target="_blank" rel="noopener">https://github.com/ServeurpersoCom/yue2.cpp/issues/16</a> · <a href="https://github.com/ServeurpersoCom/yue2.cpp/issues/23" target="_blank" rel="noopener">https://github.com/ServeurpersoCom/yue2.cpp/issues/23</a> · ComfyUI #17697: <a href="https://github.com/Comfy-Org/ComfyUI/issues/17697" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/issues/17697</a> · Plenio #33: <a href="https://github.com/jplenio/Plenio-Music-Production-System/pull/33" target="_blank" rel="noopener">https://github.com/jplenio/Plenio-Music-Production-System/pull/33</a> · прапановы: filliptm/ComfyUI-FL-YuE2 #14, ScryptHunter/ComfyUI-YuE2 #8, T8mars/comfyui-yue2-t8 #20, jplenio/Plenio-Music-Production-System #32, pytraveler/YuE2-ComfyUI #16 <a class="back" href="#ref-13-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-14"><code>comfy/hooks.py</code> у ComfyUI v0.20.1, <code>HookGroup.add</code>: <a href="https://github.com/Comfy-Org/ComfyUI/blob/64b8457f55cd7fb54ca7a956d9c73b505e903e0c/comfy/hooks.py#L301-L303" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/blob/64b8457f55cd7fb54ca7a956d9c73b505e903e0c/comfy/hooks.py#L301-L303</a> (роўнасць хукаў па агульнай спасылцы: радкі 125–126) <a class="back" href="#ref-14-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-15">Snyk Labs, «Hacking ComfyUI through custom nodes» (CVE-2024-21574 — 21577): <a href="https://labs.snyk.io/resources/hacking-comfyui-through-custom-nodes/" target="_blank" rel="noopener">https://labs.snyk.io/resources/hacking-comfyui-through-custom-nodes/</a> <a class="back" href="#ref-15-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-16">The Hacker News пра справаздачу Censys, 07.04.2026: <a href="https://thehackernews.com/2026/04/over-1000-exposed-comfyui-instances.html" target="_blank" rel="noopener">https://thehackernews.com/2026/04/over-1000-exposed-comfyui-instances.html</a> <a class="back" href="#ref-16-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-17">CHANGELOG Ruach Studio: <a href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md" target="_blank" rel="noopener">https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md</a> <a class="back" href="#ref-17-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-18">timoncool/YuE2-Studio #183: <a href="https://github.com/timoncool/YuE2-Studio/issues/183" target="_blank" rel="noopener">https://github.com/timoncool/YuE2-Studio/issues/183</a> · у нас: CHANGELOG 2.0.7, HERESY 2352 <a class="back" href="#ref-18-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-19">Абмеркаванне Ruach Studio #7: <a href="https://github.com/igrbible/Ruach_Studio/discussions/7" target="_blank" rel="noopener">https://github.com/igrbible/Ruach_Studio/discussions/7</a> · CHANGELOG 2.0.7, HERESY 2380 <a class="back" href="#ref-19-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-20">README Ruach Studio, раздзел «What it downloads»: <a href="https://github.com/igrbible/Ruach_Studio#readme" target="_blank" rel="noopener">https://github.com/igrbible/Ruach_Studio#readme</a> <a class="back" href="#ref-20-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-21">Ruach Studio на Windows 11: <a href="https://github.com/igrbible/Ruach_Studio/blob/main/INSTALL_WINDOWS.md" target="_blank" rel="noopener">https://github.com/igrbible/Ruach_Studio/blob/main/INSTALL_WINDOWS.md</a> <a class="back" href="#ref-21-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-22">Comfy-Org/ComfyUI #17697: <a href="https://github.com/Comfy-Org/ComfyUI/issues/17697" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/issues/17697</a> <a class="back" href="#ref-22-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-23">jplenio/Plenio-Music-Production-System #33: <a href="https://github.com/jplenio/Plenio-Music-Production-System/pull/33" target="_blank" rel="noopener">https://github.com/jplenio/Plenio-Music-Production-System/pull/33</a> <a class="back" href="#ref-23-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-24">pytraveler/YuE2-ComfyUI v0.16.0: <a href="https://github.com/pytraveler/YuE2-ComfyUI/releases/tag/v0.16.0" target="_blank" rel="noopener">https://github.com/pytraveler/YuE2-ComfyUI/releases/tag/v0.16.0</a> <a class="back" href="#ref-24-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-25">Абмеркаванне Ruach Studio #6: <a href="https://github.com/igrbible/Ruach_Studio/discussions/6" target="_blank" rel="noopener">https://github.com/igrbible/Ruach_Studio/discussions/6</a> <a class="back" href="#ref-25-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-26">Артыкул пра YuE2-VAE-RS на Zenodo: <a href="https://doi.org/10.5281/zenodo.24167962" target="_blank" rel="noopener">https://doi.org/10.5281/zenodo.24167962</a> <a class="back" href="#ref-26-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-27">Ruach Studio: <a href="https://github.com/igrbible/Ruach_Studio" target="_blank" rel="noopener">https://github.com/igrbible/Ruach_Studio</a> · <a href="https://ruachstudio.art" target="_blank" rel="noopener">https://ruachstudio.art</a> <a class="back" href="#ref-27-1" aria-label="назад да тэксту">↩</a></li>
+  <li id="fn-28">Awesome YUE2: <a href="https://github.com/igrbible/Awesome-YUE2" target="_blank" rel="noopener">https://github.com/igrbible/Awesome-YUE2</a> <a class="back" href="#ref-28-1" aria-label="назад да тэксту">↩</a></li>
+</ol>
+</section>
+</article>
+</main>
+<script>
+  // 12.11.2026: in the card's window (template.html, #why-modal) Escape inside this page closes the window, as it does over the card
+  (function () {
+    if (window.parent === window) return;
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { try { window.parent.postMessage({ ruach: "close-why" }, location.origin); } catch (err) {} }
+    });
+  })();
+</script>
+</body>
+</html>

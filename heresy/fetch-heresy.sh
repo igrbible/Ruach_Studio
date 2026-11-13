@@ -63,7 +63,7 @@
 # Needs: python3, git, the lab venv for audio-separator (lab/install-venv.sh), ~8 GB of disk.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""; QFINE=""; ARTLORAS=""; IRA=""; IRAE=""; FW=""; TW=""; WRITER=""; MUSC=""; H3=""; UPSCALER=""; FLASHSR=""; NARRATOR=""; REFINED=""   # HERESY 1794: FW; 2071: TW; 1811: WRITER; 1834; 1867: H3: MUSC; 1876a: UPSCALER; 1984: FLASHSR; 2374: NARRATOR; 2388: REFINED
+MODE=fetch; LISTENER=""; TRAINER=""; ARTWORK=0; ARTQ8=0; YES=0; BACKBONE=""; ONLY=""; QWEN=""; QFINE=""; ARTLORAS=""; IRA=""; IRAE=""; FW=""; TW=""; WRITER=""; MUSC=""; H3=""; UPSCALER=""; FLASHSR=""; NARRATOR=""; HIGGS=""; REFINED=""   # HERESY 1794: FW; 2071: TW; 1811: WRITER; 1834; 1867: H3: MUSC; 1876a: UPSCALER; 1984: FLASHSR; 2374: NARRATOR; 2388: REFINED
 while [ $# -gt 0 ]; do
   case "$1" in
     --check) MODE=check ;; --replace) MODE=replace ;; --yes) YES=1 ;;
@@ -80,6 +80,7 @@ while [ $# -gt 0 ]; do
     --upscaler) UPSCALER="${2:-7b}"; shift ;;       # HERESY 1876a
     --flashsr) FLASHSR="${2:-all}"; shift ;;        # HERESY 1984
     --narrator) NARRATOR="${2:-Q4_K}"; shift ;;     # HERESY 2374
+    --higgs) HIGGS="${2:-bf16}"; shift ;;          # night 11→12.11.2026: the Narrator's second engine, from Boson's own repos
     --refined) REFINED="${2:-F16}"; shift ;;        # HERESY 2388
     --only) ONLY=",${2:-},"; shift ;;
     --artwork) ARTWORK=1 ;;
@@ -87,7 +88,7 @@ while [ $# -gt 0 ]; do
     --qwen) QWEN="${2:-}"; shift ;;
     --qwen-fine) QFINE="${2:-}"; shift ;;           # HERESY 1347
     --art-loras) ARTLORAS="${2:-all}"; shift ;;
-    *) echo "--check, --replace, --h3 int8|all|bf16, --upscaler 3b|7b|all, --muscriptor small|medium|large, --flashsr all, --narrator Q4_K|Q6_K|Q8_0, --refined F16, --writer quality|compact, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --ira BF16|Q8_0|Q6_K, --irae IRAE|IRAEv2|IRAEv3-BF16|Q8_0|Q6_K, --fw 2.4x0.75-BF16|Q8_0|Q6_K (and 0.7x0.75, 1.5x0.75, 3.4x0.7, 3.4x0.75, 4.0x0.65, 4.0x0.7), --tw 2.0x0.75-BF16|Q8_0|Q6_K (and 2.0x0.9), --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --qwen-fine jibmix-v6|intorealism-v1|real-v2|base-fp8, --art-loras all, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
+    *) echo "--check, --replace, --h3 int8|all|bf16, --upscaler 3b|7b|all, --muscriptor small|medium|large, --flashsr all, --narrator Q4_K|Q6_K|Q8_0, --higgs bf16, --refined F16, --writer quality|compact, --listener Q8_0|Q5_K_M|Q4_K_M|bf16, --trainer bf16|int8, --backbone BF16|Q8_0|Q6_K|Q5_K_M, --ira BF16|Q8_0|Q6_K, --irae IRAE|IRAEv2|IRAEv3-BF16|Q8_0|Q6_K, --fw 2.4x0.75-BF16|Q8_0|Q6_K (and 0.7x0.75, 1.5x0.75, 3.4x0.7, 3.4x0.75, 4.0x0.65, 4.0x0.7), --tw 2.0x0.75-BF16|Q8_0|Q6_K (and 2.0x0.9), --artwork, --artwork-q8, --qwen 2512-q4|2512-q6|2.1, --qwen-fine jibmix-v6|intorealism-v1|real-v2|base-fp8, --art-loras all, --only extras,whisper,stems,upscale,loras|none, --yes"; exit 2 ;;
   esac
   shift
 done
@@ -445,10 +446,36 @@ if [ -n "$NARRATOR" ]; then
   UKD="models/reader/dicts/uk"   # paths: repo (it lands in models/narrator/dicts/uk)
   PIN_AS="$NREV" hf_into "the Narrator's Ukrainian stresses: narrator/dicts/uk (lang-uk, from ULIF's Dictionaries of Ukraine, MIT)" "$V2" \
           "$UKD/forms.sqlite" "$UKD/NOTICE"
+  # HERESY 2399 (Viktor 11.11.2026: «бери Зализняка по лицензии CC BY-NC… Строй из их репо»): the Russian stresses, every form of Zaliznyak's
+  # Grammatical Dictionary unfolded from gramdict/zalizniak-2010, at their own pin (the Narrator's other files keep theirs)
+  RUD="models/reader/dicts/ru"   # paths: repo (it lands in models/narrator/dicts/ru)
+  RUREV=$(awk -v k="$V2#narrator-ru" '$1 == k {print $2; exit}' "$PINS" 2>/dev/null)
+  PIN_AS="$RUREV" hf_into "the Narrator's Russian stresses: narrator/dicts/ru (A. A. Zaliznyak's Grammatical Dictionary, gramdict, CC BY-NC 4.0)" "$V2" \
+          "$RUD/forms.sqlite" "$RUD/NOTICE" "$RUD/LICENSE"
+  # HERESY 2459 (Viktor 12.11.2026: «И по белорусскому... глянь в сети, может что-то наподобие наших двух словарей есть»): the Belarusian stresses,
+  # every word form of GrammarDB (the Belarusian NLP community's grammar database, CC BY-SA 4.0), at their own pin
+  BED="models/reader/dicts/be"   # paths: repo (it lands in models/narrator/dicts/be)
+  BEREV=$(awk -v k="$V2#narrator-be" '$1 == k {print $2; exit}' "$PINS" 2>/dev/null)
+  PIN_AS="$BEREV" hf_into "the Narrator's Belarusian stresses: narrator/dicts/be (GrammarDB of the Belarusian NLP community, CC BY-SA 4.0)" "$V2" \
+          "$BED/forms.sqlite" "$BED/NOTICE" "$BED/LICENSE"
   if bash "$ROOT/tools/narrator-setup.sh" --check >/dev/null 2>&1; then say_here "audio.cpp's server" "($(bash "$ROOT/tools/narrator-setup.sh" --where 2>/dev/null))"
   elif [ $MODE = check ]; then say_miss "audio.cpp's server" "→ bash tools/narrator-setup.sh builds it from build/audio.cpp"
   elif again bash "$ROOT/tools/narrator-setup.sh" --build; then say_got "audio.cpp's server" "($(bash "$ROOT/tools/narrator-setup.sh" --where 2>/dev/null))"
   else say_fail "audio.cpp's server" "(tools/narrator-setup.sh: $(why))"; fi
+fi
+
+# night 11→12.11.2026 (Viktor 11.11.2026: «оба движка дал бы в паблик… дальше ответственность и пальцедвижения пользователя»; Higgs v3 in the 2.0.8 cut):
+# the Narrator's second engine, Boson AI's Higgs TTS 3 (Higgs Audio v3), fetched by the user's own hand from Boson's own repos at their pins, never from
+# ours (we mirror none of it); the transformers loader's three small files (config with its auto_map, configuration and modeling) from multimodalart's
+# port, whose weights are Boson's byte for byte (model.safetensors 2f796526…). A gated repo needs the user's token: Engine → Models asks it once
+# (HF_TOKEN in this run's environment alone, never kept). Its licences and where each file goes: docs/NARRATOR-HIGGS.md; its Python: tools/narrator-higgs-setup.sh
+if [ -n "$HIGGS" ]; then
+  asked higgs "The Narrator's second engine: Boson AI's Higgs TTS 3 ($HIGGS) from Boson's own repos, under the Boson Higgs TTS 3 Research and Non-Commercial License (your own published works carry «This audio was created with Boson AI's Higgs Audio»)"
+  [ "$HIGGS" = bf16 ] || { echo "${R}--higgs takes bf16${X}"; exit 2; }
+  HD="$RS_NARRATOR/higgs-tts-3-4b"; TD="$RS_NARRATOR/higgs-audio-v2-tokenizer"
+  hf_into_at "narrator/higgs-tts-3-4b (Boson AI's Higgs TTS 3 and its LICENSE)" bosonai/higgs-tts-3-4b "$HD"              model.safetensors model.safetensors.index.json tokenizer.json tokenizer_config.json chat_template.jinja LICENSE README.md PROMPTING.md
+  hf_into_at "narrator/higgs-tts-3-4b (its transformers loader, from multimodalart's port)" multimodalart/higgs-audio-v3-tts-4b-transformers "$HD"              config.json configuration_higgs_multimodal_qwen3.py modeling_higgs_multimodal_qwen3.py
+  hf_into_at "narrator/higgs-audio-v2-tokenizer (Boson AI's audio tokenizer and its LICENSE)" bosonai/higgs-audio-v2-tokenizer "$TD"              config.json model.safetensors preprocessor_config.json LICENSE README.md
 fi
 
 # HERESY 1834 (Viktor 28.10.2026: «забирай large модель muscriptor, и пропишешь все три размера в Engine»): the weights of the sound-to-MIDI

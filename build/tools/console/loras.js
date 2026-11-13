@@ -23,6 +23,7 @@
   // HERESY 1165: a text glued from names and numbers is translated here, whole, from the English it is made as (the
   // page's translator matches whole texts; its catalog holds the patterns); drawn again when the language changes
   function tr(s) { return root.RuachI18n ? root.RuachI18n.t(s) : s; }
+  function foreignIco() { return root.HeresyIcons && root.HeresyIcons.ui ? root.HeresyIcons.ui("triangle-alert") : "\u26a0"; }   // HERESY 2547 (the UIX audit of 13.11.2026, №35): «another model's» drawn, its words its label
   root.addEventListener("ruach-lang", function () { paint(); });
 
   function escape(text) {
@@ -224,7 +225,7 @@
   }
   // HERESY 1802 (Viktor 27.10.2026: «в Творце можно и к LoRA адаптерам заметки пользовательские, выводить их в тултипе адаптеров, но под чертой»):
   // one note an adapter whatever its precision (its bf16 and its q8 share it), kept by the Librarian's lab in user/collection.json; 600 characters
-  var NOTE_MAX = 600;
+  var NOTE_MAX = 6000;   // HERESY 2404: as every note of the Studio's; 2438: 6000
   function noteKey(id) { return String(id || "").replace(/(\.(bf16|fp16|f16|fp32|f32|q8_0|q5_k_m|int8))?\.safetensors$/i, ""); }
   function userNote(e) { var n = e && S.userNotes[noteKey(e.id)]; return n ? (n.length > NOTE_MAX ? n.slice(0, NOTE_MAX - 1) + "…" : n) : ""; }
   function loadNotes() {
@@ -237,7 +238,7 @@
   function editNote(e) {
     if (!root.HeresyDialog || !e) return;
     var key = noteKey(e.id), had = S.userNotes[key] || "", name = nameOf(e.id);
-    root.HeresyDialog.prompt("Your note on “" + name + "”\n\nShown in its tooltip, under a line; 600 characters at most.\nEmpty removes it.", had,
+    root.HeresyDialog.prompt("Your note on “" + name + "”\n\nShown in its tooltip, under a line; 6000 characters at most.\nEmpty removes it.", had,
       { area: true, rows: 6, max: NOTE_MAX, ok: "Keep" }).then(function (t) {
       if (t == null) return;
       t = String(t).trim();
@@ -982,8 +983,8 @@
       var key = ids.join("|"), name = nameOf(c.id);   // HERESY 1447: its wave; dragged in order
       return '<div class="lora-row' + (e ? "" : " is-missing") + (muted ? " is-muted" : "") + (S.budget === "order" ? " is-ordered" : "") + '" data-ids="' + escape(key) +
         '"><span class="lora-who"' + (S.budget === "order" ? ' draggable="true"' : "") + '><span class="lora-name" translate="no" data-tip="' + escape(e ? aboutTip(e) + (p ? "\n\n" + aboutTip(p) : "") : tr("Not in loras/ any more")) + '">' +
-        escape(nameOf(c.id)) + "</span>" + (muted ? (c.offModel ? '<span class="lora-muted-tag lora-foreign-tag" data-tip="' + escape(fitTip(e) + "\n" + tr("Muted when the model changed. Right-click: back in the run anyway")) + '">' + escape(tr("another model's")) + "</span>"   // HERESY 1960
-          : '<span class="lora-muted-tag" data-tip="Right-click: back in the run">muted</span>') : pairFit(e) === "other" ? '<span class="lora-muted-tag lora-foreign-tag is-live" data-tip="' + escape(fitTip(e)) + '">' + escape(tr("another model's")) + "</span>" : "") +
+        escape(nameOf(c.id)) + "</span>" + (muted ? (c.offModel ? '<span class="lora-muted-tag lora-foreign-tag is-ico" data-tip="' + escape(fitTip(e) + "\n" + tr("Muted when the model changed. Right-click: back in the run anyway")) + '" role="img" aria-label="' + escape(tr("another model's")) + '">' + foreignIco() + "</span>"   // HERESY 1960
+          : '<span class="lora-muted-tag" data-tip="Right-click: back in the run">muted</span>') : pairFit(e) === "other" ? '<span class="lora-muted-tag lora-foreign-tag is-live is-ico" data-tip="' + escape(fitTip(e)) + '" role="img" aria-label="' + escape(tr("another model's")) + '">' + foreignIco() + "</span>" : "") +
         (!muted && S.choice.some(function (x) { return ids.indexOf(x.id) >= 0 && x.noscore && has(entry(x.id), "ar"); })   // HERESY 1629
           ? '<span class="lora-muted-tag lora-noscore-tag" data-tip="Out of the score: its music half sings the score, the plan is written without it. Right-click: back in the score">sung only</span>' : "") +
         // HERESY 1167 (Viktor: «суффиксом приклинивай все триггеры… кнопка не нужна»): the run puts the word at the style's end
@@ -991,7 +992,7 @@
                          : '<span class="lora-trigger is-auto" data-tip="Its trigger word goes at the style\u2019s end by itself when the song is made">' + escape(trig) + "</span>") : "") +
         (e && /^(voice|vocal)$/.test(kindOf(e)) ? vshiftButtons() : "") +   // HERESY 1703
         '</span><span class="lora-halves">' + arPart + narPart + "</span>" + (e ? waveButton(key, c, name) : "") +
-        '<button type="button" class="icon-btn" data-remove-lora="' + escape(ids.join("|")) + '" aria-label="' + escape(tr("Remove " + nameOf(c.id))) + '">✕</button></div>' +
+        '<button type="button" class="icon-btn" data-remove-lora="' + escape(ids.join("|")) + '" aria-label="' + escape(tr("Remove " + nameOf(c.id))) + '" data-tip="' + escape(tr("Remove " + nameOf(c.id))) + '">' + (window.HeresyIcons ? window.HeresyIcons.ui("x") : "\u2715") + "</button></div>" +   // HERESY 2547: drawn
         (e && waveOpen[key] && !muted ? waveEditor(key, c, name) : "");   // HERESY 1494: a skipped one's wave stays shut
     }).join("") + totalBar() + budgetBar();
     // one even grid of buttons: the name, which half it steers, and a few words on what it does

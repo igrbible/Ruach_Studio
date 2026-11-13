@@ -231,12 +231,17 @@ def chat(folder, scope, body):
     on, key = _active(folder, scope)
     if not on:
         return 400, _json({"error": OFF, "setup": True})
-    if not key:
-        return 400, _json({"error": NO_KEY, "setup": True})
     try:
         data = json.loads(body.decode("utf-8"))
     except (ValueError, UnicodeDecodeError):
         return 400, _json({"error": "a chat completion is JSON"})
+    # HERESY 2473 (Viktor 12.11.2026: «можно галочкой выбирать, либо в кеше сессии браузера, либо в файл, кто как захочет»): a key the browser holds for
+    # its session only comes with the question (ruach_key); used for this one call while no key is saved here, never written, logged or sent on
+    sk = data.pop("ruach_key", None) if isinstance(data, dict) else None
+    if not key and isinstance(sk, str) and _KEY.fullmatch(sk.strip()):
+        key = sk.strip()
+    if not key:
+        return 400, _json({"error": NO_KEY, "setup": True})
     if not isinstance(data, dict) or not isinstance(data.get("model"), str) or not data["model"].strip() or not isinstance(data.get("messages"), list):
         return 400, _json({"error": "a chat completion names its model and its messages"})
     data["stream"] = False

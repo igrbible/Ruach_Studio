@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>为什么是我们自己的工作室，而不是一套 ComfyUI 插件 · 鲁阿赫工作室</title>
+<meta name="description" content="Viktor Zhuromskyy 谈为什么鲁阿赫工作室是一个专门打造的工作室，而不是一套 ComfyUI 节点：ComfyUI 擅长什么，用零件拼工作室的代价，forkblow，还有什么仍会把你送去别的程序，以及一封写给 ComfyUI 社区的告别信。">
+<link rel="canonical" href="https://ruachstudio.art/article/why-own-studio.zh.html">
+<link rel="alternate" hreflang="en" href="https://ruachstudio.art/article/why-own-studio.html">
+<link rel="alternate" hreflang="ru" href="https://ruachstudio.art/article/why-own-studio.ru.html">
+<link rel="alternate" hreflang="uk" href="https://ruachstudio.art/article/why-own-studio.uk.html">
+<link rel="alternate" hreflang="be" href="https://ruachstudio.art/article/why-own-studio.be.html">
+<link rel="alternate" hreflang="el" href="https://ruachstudio.art/article/why-own-studio.el.html">
+<link rel="alternate" hreflang="es" href="https://ruachstudio.art/article/why-own-studio.es.html">
+<link rel="alternate" hreflang="it" href="https://ruachstudio.art/article/why-own-studio.it.html">
+<link rel="alternate" hreflang="fr" href="https://ruachstudio.art/article/why-own-studio.fr.html">
+<link rel="alternate" hreflang="pt" href="https://ruachstudio.art/article/why-own-studio.pt.html">
+<link rel="alternate" hreflang="de" href="https://ruachstudio.art/article/why-own-studio.de.html">
+<link rel="alternate" hreflang="ja" href="https://ruachstudio.art/article/why-own-studio.ja.html">
+<link rel="alternate" hreflang="zh" href="https://ruachstudio.art/article/why-own-studio.zh.html">
+<link rel="alternate" hreflang="he" href="https://ruachstudio.art/article/why-own-studio.he.html">
+<link rel="alternate" hreflang="x-default" href="https://ruachstudio.art/article/why-own-studio.html">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/ruach-icon-zh-32.png?v=1272">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+Mono:wght@400;500&family=Tektur:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* the card's own two themes (template.html): Scroll & Brick by day, Scroll by Lamplight by night; the card's frame sets data-theme */
+  :root { --ground: #f8f9fa; --paper: #ffffff; --ink: #191919; --soft: #55524f; --faint: #8a8784; --rule: #e3e2e0; --amber: #8e1a2e;
+          --wash: rgba(142, 26, 46, .06); --gold: #a87a2a; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ground: #1e1e1e; --paper: #262626; --ink: #f4f4f4; --soft: #c9c6c2;
+          --faint: #908c88; --rule: #3a3a3a; --amber: #f07171; --wash: rgba(240, 113, 113, .08); --gold: #e3b062; color-scheme: dark; } }
+  :root[data-theme="dark"] { --ground: #1e1e1e; --paper: #262626; --ink: #f4f4f4; --soft: #c9c6c2; --faint: #908c88; --rule: #3a3a3a;
+          --amber: #f07171; --wash: rgba(240, 113, 113, .08); --gold: #e3b062; color-scheme: dark; }
+  /* the card's faces for the Greek and the Hebrew letters (template.html, 11.11.2026), served from the card itself */
+  @font-face { font-family: "GFS Didot"; font-style: normal; font-weight: 100 550; font-display: swap; size-adjust: 114%;
+    src: url("/assets/fonts/gfs-didot/gfs-didot-400.woff2") format("woff2"); unicode-range: U+0370-03FF, U+1F00-1FFF; }
+  @font-face { font-family: "GFS Didot"; font-style: normal; font-weight: 551 900; font-display: swap; size-adjust: 114%;
+    src: url("/assets/fonts/gfs-didot/gfs-didot-700.woff2") format("woff2"); unicode-range: U+0370-03FF, U+1F00-1FFF; }
+  @font-face { font-family: "David CLM"; font-style: normal; font-weight: 100 550; font-display: swap; size-adjust: 109%;
+    src: url("/assets/fonts/david-clm/david-clm-500.woff2") format("woff2"); unicode-range: U+0590-05FF, U+FB1D-FB4F; }
+  @font-face { font-family: "David CLM"; font-style: normal; font-weight: 551 900; font-display: swap; size-adjust: 109%;
+    src: url("/assets/fonts/david-clm/david-clm-700.woff2") format("woff2"); unicode-range: U+0590-05FF, U+FB1D-FB4F; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 400 17px/1.65 "GFS Didot", "David CLM", "Noto Sans", "Noto Sans SC", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+         overflow-wrap: break-word; }
+  /* the column is the card's own .wrap: the text runs to its edge (no measure on the paragraphs: Viktor's rule of 08.10.2026) */
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 40px 72px; }
+  @media (max-width: 600px) { .wrap { padding: 20px 16px 56px; } body { font-size: 16px; } }
+  h1, h2, h3 { font-family: "Tektur", "GFS Didot", "David CLM", "Noto Sans", "Noto Sans SC", system-ui, sans-serif; line-height: 1.25; }
+  h1 { font-size: clamp(26px, 3.4vw, 40px); margin: 0 0 10px; letter-spacing: .01em; }
+  h1::before, h2::before { content: ""; display: block; width: 56px; height: 3px; border-radius: 3px; margin: 0 0 16px;
+                          background: linear-gradient(90deg, var(--amber), var(--gold)); }
+  h2 { font-size: clamp(21px, 2.3vw, 27px); margin: 44px 0 12px; }
+  h3 { font-size: 19px; margin: 28px 0 8px; color: var(--ink); }
+  p { margin: 0 0 14px; }
+  .by { color: var(--soft); font-style: italic; margin-bottom: 22px; }
+  .lead { font-size: 1.08em; padding: 16px 20px; border-inline-start: 3px solid var(--amber); background: var(--wash); border-radius: 0 10px 10px 0; }
+  a { color: var(--amber); text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; border-radius: 3px; }
+  code { font: 500 .88em "Noto Sans Mono", ui-monospace, monospace; background: var(--wash); padding: .1em .35em; border-radius: 4px; }
+  ul { padding-inline-start: 22px; margin: 0 0 16px; }
+  li { margin: 0 0 8px; }
+  li::marker { color: var(--amber); }
+  sup.fn { font-size: .72em; line-height: 0; }
+  sup.fn a { padding: 0 1px; }
+  .notes { margin-top: 48px; border-top: 1px solid var(--rule); font-size: 14.5px; color: var(--soft); }
+  .notes h2 { font-size: 18px; margin-top: 24px; }
+  .notes h2::before { display: none; }
+  .notes ol { padding-inline-start: 26px; }
+  .notes li { overflow-wrap: anywhere; }
+  .notes .back { margin-inline-start: 4px; }
+  :target { scroll-margin-top: 16px; }
+  .notes li:target { background: var(--wash); border-radius: 6px; }
+</style>
+</head>
+<body>
+<main class="wrap">
+<article>
+<h1>为什么是我们自己的工作室，而不是一套 ComfyUI 插件</h1>
+<p class="by">Viktor Zhuromskyy，鲁阿赫工作室（Ruach Studio）作者 · 2026 年 11 月 13 日。本文表明的是一种立场，而且是我自己的立场。它所依据的每一条事实都附有链接，好让你逐一核实。</p>
+<p class="lead">和我们一起做歌的人里，有很多是从 ComfyUI 过来的。在那里，一个专业工作流要花好几周才能搭好，而下一次核心或节点更新就可能把它弄坏。留下的是一堆私有分叉，其中的修复太多时候再也没有回到上游。我管这叫 forkblow：分叉出去、私下打补丁、从不送回上游。鲁阿赫工作室走的是另一条路：一个页面上的八个房间，一个由我们亲手打补丁的音乐引擎，每个模型都固定归属于一个房间。为什么这样做、代价是什么、我们在哪些地方仍与 ComfyUI 有交集，还有我写给 ComfyUI 社区的告别信，都在下面。</p>
+<p>总有人问我，为什么不干脆发布一个 ComfyUI 节点包。和我们一起做歌的人里，有很多是从 ComfyUI 过来的，我自己也在那里住过。做 ComfyUI 的是我尊敬的人：这周，它的一位节点包作者把我们的解码器集成了进去，我们给另一个节点包提的拉取请求也还开着。可我还是做了相反的选择。ComfyUI 把零件交给你，让你自己组装；而我只造一条窄窄的生产线：从歌词到一首完整的成品歌曲，再到它的封面和视频。下面是我的理由。</p>
+<h2 id="comfyui-擅长什么">ComfyUI 擅长什么</h2>
+<p>我先说它做得好的地方，因为它做得好的地方很多。要在新模型发布当天就上手试一试，ComfyUI 是现有最好的开放工作台。节点图让你一眼看清什么输入给什么。在我写下这篇文章的那天，它有超过 146,000 颗星、17,000 个分叉，在开源生成式媒体领域，影响力能与之相比的工具寥寥无几；星标比它多的只有 AUTOMATIC1111 的 web UI<sup class="fn"><a href="#fn-1" id="ref-1-1">1</a></sup>。Comfy-Org 也确实在下面我要讲的痛点上下了真功夫。有带代码签名、自带 Python 的桌面应用<sup class="fn"><a href="#fn-2" id="ref-2-1">2</a></sup>，还有一个按语义化版本管理节点包的 Registry<sup class="fn"><a href="#fn-3" id="ref-3-1">3</a></sup>。2025 年 1 月推出的安全计划会在节点包进入 Registry 之前进行扫描，并限制节点调用 <code>eval</code>、<code>exec</code> 和 pip<sup class="fn"><a href="#fn-4" id="ref-4-1">4</a></sup>。核心现在把前端锁定在一个确切版本上，Manager 改为可选启用并支持快照，还有一个 Node Replacement API 把弃用的节点映射到新节点上<sup class="fn"><a href="#fn-5" id="ref-5-1">5</a></sup>。</p>
+<p>还有 App Mode，它在工作流之上罩一张简单的表单<sup class="fn"><a href="#fn-6" id="ref-6-1">6</a></sup>。App Mode 是 Comfy-Org 对我们所回应的同一种需求给出的答案：许多创作者想要的是一张表单，而不是一堆连线。他们把表单盖在节点图上面；我们则先造表单，只在节点图真正有用的地方才保留它。</p>
+<h2 id="用零件拼一个工作室-要付出什么">用零件拼一个工作室，要付出什么</h2>
+<h3>数周的心血，离坏掉只差一次更新</h3>
+<p>我在 ComfyUI 里搭过一个真正的 Qwen-Image 巨型工作流：AIO QWEN IMAGE 2512 HERESY Draft #4，17 个分组里 346 个节点。没错，我就是把它搭得这么大。一条一体化的专业流水线本来就大。做这样一个工作流是好几周的煎熬，而 ComfyUI 的下一次更新，或者它用到的任何一个节点的下一次更新，都可能把它弄坏。别人那里就坏过。我敢说这是板上钉钉的事。</p>
+<p>ComfyUI 的 README 写的是“每周一次的发布周期，目标是周一”，并补充说这一节奏“会因为模型发布或代码库的大改动而经常变化”，核心大约每两周发布一个新的稳定大版本。它还警告，两个稳定标签之间的提交“可能非常不稳定，会弄坏许多自定义节点”<sup class="fn"><a href="#fn-1" id="ref-1-2">1</a></sup>。守在稳定标签上有帮助，但稳定版照样可能弄坏工作流，下面两个讨论串就是证明。2025 年，核心在 GitHub 上发布了 70 个带标签的版本，2026 年至今已有 64 个。其中很多是补丁版本：2026 年的 64 个里有 28 个是补丁版，即稳定分支上的回溯移植（backport）。所以这个数字反映的是变动之频繁，而不是破坏性改动的次数。也正是这样的节奏，让新模型能在发布当天就登陆 ComfyUI。</p>
+<p>别人也在公开场合说着同样的话。2026 年 3 月，一家工作室开了一个标题为“All our workflows are broken”（我们所有的工作流都坏了）的 issue：一次更新之后子图失效，他们回滚了前端，停止了更新。那个讨论串里有一句话简直就是我自己说的：“我们工作室的工作流有好几百个节点，花了好几周才搭好”<sup class="fn"><a href="#fn-7" id="ref-7-1">7</a></sup>。同一个月，另一位用户报告说，最新的更新弄坏了他们所有的工作流<sup class="fn"><a href="#fn-8" id="ref-8-1">8</a></sup>。在我写这篇文章时，这两个 issue 都还开着。</p>
+<h3>足以让安装“变砖”的依赖</h3>
+<p>每个节点包都带着自己的 Python 依赖，而它们全都挤在同一个环境里。Comfy-Org 自己说得很直白，这些依赖“有时……会相互冲突，可能让一次 ComfyUI 安装‘变砖’”<sup class="fn"><a href="#fn-9" id="ref-9-1">9</a></sup>。他们正在着手解决：为节点提供一个带版本号的公共 API，并在可能的情况下让每个节点包跑在独立的 Python 进程里。这能不能让像我这样的节点图安然度过每次更新，我是怀疑的，但方向是对的。如今核心只设了宽松的下限：torch 不锁版本，<code>numpy&gt;=1.25.0</code>，<code>transformers&gt;=4.50.3</code>。所以 2026 年 1 月 26 日 transformers 5.0.0 一发布，ComfyUI 几小时之内就坏了；当天就修好了<sup class="fn"><a href="#fn-10" id="ref-10-1">10</a></sup>。一次便携版更新拉进了 numpy 2，让一位用户给 issue 起了这样的标题：“broken 50% of my custom nodes”（弄坏了我一半的自定义节点）。这个 50% 是那位用户自己的估计，该 issue 已关闭<sup class="fn"><a href="#fn-11" id="ref-11-1">11</a></sup>。</p>
+<h3>forkblow</h3>
+<p>这个词是我造的，写下它时我半带着笑。一个 ComfyUI 工作流常常会变成 forkblow：有人分叉一个节点包，打上补丁好让某一个工作流跑起来，却从不把修复以 PR 的形式送回去。节点图继续跑在一份私有副本上，而这副本每周都离上游更远一点。而且这个生态里有很大一部分是靠志愿者的业余夜晚撑着的：ComfyUI_IPAdapter_plus 是用得最多的节点包之一，从 2025 年 4 月起就只做维护、不再开发了<sup class="fn"><a href="#fn-12" id="ref-12-1">12</a></sup>。</p>
+<p>不等别人开口，我先说：鲁阿赫工作室也是一个分叉。我们在 yue2.cpp 上带着自己的补丁，光靠上游是跑不起工作室的。所以我拿同一把尺子量我们自己，而我们的成绩单还很单薄。10 月，我们把引擎补丁回馈给了 yue2.cpp（#16，至今仍开着）；11 月，我们报告了它的峰值削波器（#23）。这周，我们给 ComfyUI 核心提交了一个 bug，附上现成的 35 行补丁，给一个 ComfyUI 节点包开了一个拉取请求，还把我们的解码器提供给了五位 YuE2 节点包作者，其中一位已经把它们集成了进去<sup class="fn"><a href="#fn-13" id="ref-13-1">13</a></sup>。我们大部分引擎补丁仍然只存在于我们自己的代码树里，有些也只在工作室内部才有意义。分叉不是罪过。forkblow 才是：那种永远回不了家的修复。我正在努力，不让我们的分叉变成它。</p>
+<h3>一个毫无作用的旋钮</h3>
+<p>这是让我一直忘不掉的例子，而它只来自一台机器上的一个工作流，并不是对 ComfyUI 的定论。我们把我的 Qwen-Image 工作流搬进工作室时，复现了 ComfyUI 的运算，把节点图一行一行地读了一遍。我那个“MAIN CONTROL”分组上的关键帧，从来就没起过任何作用。ComfyUI 的 CombineHooks 对每个 LoRA 节点只保留一个钩子：如果一个钩子和它已经持有的某个钩子共享同一个引用，<code>HookGroup.add</code> 就会跳过它<sup class="fn"><a href="#fn-14" id="ref-14-1">14</a></sup>。于是那个旋钮就摆在画布上，看上去活生生的，却什么也没改变。这也许是有意为之的行为。我的不满在于，画布没有给出任何警告。</p>
+<h3>以你的用户权限运行的代码</h3>
+<p>自定义节点就是 Python，<code>custom_nodes</code> 里的任何东西都会在服务器启动时运行。2024 年 12 月，Snyk Labs 披露了四个热门节点包中的四个 CVE，其中就有 ComfyUI-Manager，并展示了一个有缺陷的节点包就可能导致服务器被完全攻陷<sup class="fn"><a href="#fn-15" id="ref-15-1">15</a></sup>。2026 年 4 月，Censys 描述了一个挖矿加代理的僵尸网络，它盘踞在 1,000 多个暴露在互联网上的 ComfyUI 实例上。它滥用了那些无需认证就执行发来的原始 Python 代码的节点；在缺少这类节点包的地方，它就用 ComfyUI-Manager 装一个<sup class="fn"><a href="#fn-16" id="ref-16-1">16</a></sup>。Snyk 发现的缺陷在被广泛使用的热门节点包里，Censys 报告的受害者是暴露在互联网上的实例。这些是一个庞大开放生态的风险，不是 Comfy-Org 的疏忽。</p>
+<p>我们的工作室同样是以你的用户权限运行的 Python 和 C++。区别不在于它天生更安全。你信任的是一位作者，他的每一处改动都列在一份公开的编号日志里，而不是同时信任你节点图里每一个节点包的每一位作者。而且我们的工作室也没有登录，这是有意的。别把它放到公网上：把它放在你自己的、带认证的反向代理后面。它会拒绝它不认识的页面和主机名，但那是一道门，不是一把锁。</p>
+<h2 id="专门打造的工作室换了一种做法">专门打造的工作室换了一种做法</h2>
+<h3>一个引擎，哪里疼就补哪里</h3>
+<p>鲁阿赫工作室只跑一个音乐引擎：基于 ggml 的 yue2.cpp（MIT），上面叠着我们自己的补丁。每一处改动都按我们工作日志里的编号列在公开的 CHANGELOG 里，光是 2.0.7 这一个版本，编号就排到了 2,391<sup class="fn"><a href="#fn-17" id="ref-17-1">17</a></sup>。举几个例子：</p>
+<ul>
+  <li><b>Flash-attention 崩溃。</b> 以前两个或更多变体就会让引擎崩溃，因为扫描注意力掩码时越过了缓冲区的边界。我们的 ggml 补丁修好了它，并在 2、4 和 9 个变体下做了验证，其中包括一段 452 秒的录音。</li>
+  <li><b>显存耗尽。</b> 一次分配失败不再会杀死引擎。调度器会被重建，页面会用文字说明发生了什么，并提供下一档更小的模型副本：BF16 → Q8_0 → Q6_K → Q5_K_M。</li>
+  <li><b>坏掉的乐谱。</b> 引擎会先检查 ABC 乐谱，然后才在它之上生成任何音乐。坏乐谱在运行 15 秒时就会被抓出来，同时给出原因和该负责的适配器。</li>
+  <li><b>削波。</b> 我们拿掉了上游的峰值削波器，在我们测量的每一段录音里，它都会把 107–346 个采样点削平；我们也把这个问题报告给了上游。这一改动是 2.0.5 的头条：“每个峰值都完好无损”。</li>
+  <li><b>长歌里的接缝。</b> 长于约 340–410 秒的歌曲过去被当成两段首尾相接来求解，接缝之后的电平中位数下降约 3.4 dB。同样的接缝也在 Timon 的 YuE2-Studio 里被报告过（#183，由 ned01-dot 提出），并在那里的 3.8.5 版中修复<sup class="fn"><a href="#fn-18" id="ref-18-1">18</a></sup>。在我们这里，两半现在以交叉淡化相接。</li>
+</ul>
+<p>这些都不是需要你去寻找的节点。到了下一个版本，它们就已经在那儿了。</p>
+<h3>工作室下载的每个模型都已锁定</h3>
+<p>工作室从我们的 Hugging Face 仓库下载的每个模型（在许可证允许的地方，这些仓库也镜像了别人的权重），都会先落进一个临时的 part 文件夹。只有当三件事都对得上时，它才会被挪到位：修订是锁定的那个提交，大小正确，SHA-256 与我们的清单一致<sup class="fn"><a href="#fn-19" id="ref-19-1">19</a></sup>。从下一个版本起，会有一个守卫在发布前实时向 Hugging Face 查询全部 44 个锁定项，我们的和别人的都在内；丢了一个文件，或者 Hugging Face 不回应，发布就会停下。模型住在工作室自己的文件夹里，从不放在 hub 缓存里，也从不藏在指向另一块磁盘的符号链接后面。</p>
+<p>为了对另一方公平，下面是我们自己欠的账。模型锁定到了字节，但我们的 Python 库还没有全部锁定：有几个仍然只限定一个版本范围（<code>diffusers&gt;=0.41</code>、<code>transformers&gt;=5.2,&lt;6</code>），所以从源码全新安装时，可能会拉到比我们锁文件里那套测试过的版本更新的库。</p>
+<h3>一首歌走过的是房间，而不是连线</h3>
+<p>一个页面上的八个房间：音乐人、朗读、写作室、精修室、画室、影像室、训练室、资料馆。写作室用本地聊天模型起草歌词，也可以用你自己的服务器，或者只在你选择时才用 OpenRouter。音乐人先把乐谱写成可编辑的 ABC，然后才写歌。精修室有一块像 ComfyUI 那样的画布，上面有三十多个节点，外加一个 DAW：在节点图真正有用的地方，我保留了它。画室制作封面以及 16:9 和 9:16 的图片。影像室从同一份计划剪出 16:9、9:16 和 1:1 的视频片段，如果你需要，还会把唱出的歌词以卡拉 OK 的形式烧录进去。资料馆保存每一段录音以及它的家谱。每次下载都签入了 Content Credentials（C2PA）。页面不从互联网加载任何东西，你的歌永远不会离开这台机器，而且没有账号，这是有意的，为的是谁也没法把工作室变成 SaaS。</p>
+<h3>必须通过检验的发布</h3>
+<p>2.0.7 于 11 月 11 日从一个干净的克隆中切出：1,889 项页面测试通过，0 项失败，7 项跳过，页面错误为零。版本分别在 11 月 1 日、6 日和 11 日发布。发布审查找出了十处我们承诺得比实际交付更多的地方，我们在切版本之前把它们都修好了。</p>
+<h2 id="磁盘测试">磁盘测试</h2>
+<p>以下数字是 11 月 12 日在我的机器上测得的。我的 ComfyUI 模型文件夹有 482 GB，共 232 个模型文件。其中只有 7.3 GB 放在 NVMe 上；其余的躺在一块希捷（Seagate）机械硬盘上，藏在 38 个符号链接后面。按我自己的估计，其中约 80% 都是白占地方的累赘：某个工作流曾经用过一次、如今再也没人用的文件。</p>
+<p>这不怪 ComfyUI：文件夹是我的，这一团乱也是我的。但 ComfyUI 没法告诉我哪个文件仍被哪个工作流需要，因为没有一个工作流会声明这一点。工作室能做到，因为每个文件都属于一个房间。</p>
+<p>ComfyUI 本身在模型之外还要占约 44 GB：一个 24 GB 的 pixi 环境、一个 14 GB 的 venv 和 5.4 GB 的节点包（算上我的输入和输出是 49 GB）。同一台机器上，工作室的模型树约 1.1 TB，分布在八个房间里：引擎 367 GB，画室 223 GB，影像室 188 GB，朗读 104 GB，精修室 88 GB，聆听模型 67 GB，写作室 12 GB，等等。</p>
+<p>所以，它没有更小。它更大。但它们全都各司其职，没有一个被撂下不管：每个文件都按大小和 SHA-256 锁定，并接到一个房间上。我的模型树比普通用户的大，因为我在上面构建和测试。实测全新安装是 22.5–25.9 GB，装上全部房间约 122–240 GB<sup class="fn"><a href="#fn-20" id="ref-20-1">20</a></sup>。</p>
+<h2 id="八个房间能覆盖从头到尾的全流程吗">八个房间能覆盖从头到尾的全流程吗？</h2>
+<p>能一体化替代 ComfyUI 的东西，掰着手指头就数得过来，而即便用上它们，人们最后还是得跑去外部程序。有了八个房间，做歌的人需要的东西，我们覆盖得不比我所知的任何人少。下面是已经覆盖的：分轨、MIDI、按响度目标重制母带、按词计时的 .lrc 和 .srt、视频片段上的卡拉 OK、9:16 的封面和片段、在 WAV、FLAC 和 MP3 中写入带封面的标签，以及 C2PA。还有 DAW 导出，目前仍是实验性的：一个 REAPER 工程，以及一个 DAWproject，后者目前只对照其 schema 检查过。</p>
+<p>而下面这些仍然会把你送去别处，我尽量老实地列出来：</p>
+<ul>
+  <li><b>发行手续：</b> ISRC 和 UPC 码、DDEX、可直接交给发行商的包。</li>
+  <li><b>AI 披露表单：</b> 每个文件里都有 C2PA，但每个平台自己的披露表单仍然要你自己填。</li>
+  <li><b>不读 DAWproject 的 DAW：</b> 如果你的 DAW 不读，你就只能从普通分轨开始工作。</li>
+  <li><b>短 hook：</b> 从一段录音里剪出一个 15–60 秒的 hook，给 Shorts、Reels 和 TikTok 用。</li>
+  <li><b>发布：</b> 直接发布到平台或在平台上排期。那就意味着工作室要掌管你的登录信息，这和一个没有账号的工作室格格不入。</li>
+  <li><b>专辑工作：</b> 曲目表、无缝衔接的排序、专辑母带。</li>
+</ul>
+<h2 id="跟我们走-你要放弃什么">跟我们走，你要放弃什么</h2>
+<ul>
+  <li><b>更少的模型。</b> 只有一个音乐家族 YuE2，每个房间配上精选的搭档，而不是整座动物园。</li>
+  <li><b>硬件。</b> 一张 NVIDIA 显卡（Intel Arc 为测试版），CUDA 12.8 是我们编码和测试的底线。</li>
+  <li><b>Linux 优先。</b> 在 Windows 11 上只能通过 WSL2，配有一份我们自己还没跑过的指南；没有原生 Windows 版本，我曾称它为“一根断了的拐杖，一种活着的假象”<sup class="fn"><a href="#fn-21" id="ref-21-1">21</a></sup>。</li>
+  <li><b>我们的选择。</b> 我们的选择是内置的，凡是我认为某个旋钮会帮倒忙的地方，它就干脆不存在。如果你想把任何东西接到任何东西上，ComfyUI 是更好的工具，这话我是认真的。</li>
+</ul>
+<h2 id="我们仍与-comfyui-有交集的地方">我们仍与 ComfyUI 有交集的地方</h2>
+<p>这不是一场战争。ComfyUI 的 README 把 Yue 2 列在它原生支持的音频模型之中<sup class="fn"><a href="#fn-1" id="ref-1-3">1</a></sup>。我们给核心提交了一个 bug：我们更大的解码器 YuE2-VAE-RS x3 在 <code>strict=False</code> 下会一声不吭地丢掉 210 个张量，我们附上了一份现成的 35 行补丁<sup class="fn"><a href="#fn-22" id="ref-22-1">22</a></sup>。这周，我们向 Plenio 的节点包提交了带我们解码器的 PR（#33）<sup class="fn"><a href="#fn-23" id="ref-23-1">23</a></sup>，pytraveler 则把我们的解码器集成进了 YuE2-ComfyUI v0.16.0<sup class="fn"><a href="#fn-24" id="ref-24-1">24</a></sup>。解码器研究是公开的，缺点也一并公开：100 Hz 的纹波从 +2.71 dB 降到了 +0.60 dB，但 SI-SDR 更低，解码也慢了一倍<sup class="fn"><a href="#fn-25" id="ref-25-1">25</a></sup><sup class="fn"><a href="#fn-26" id="ref-26-1">26</a></sup>。</p>
+<p>当我们把我的工作流从 ComfyUI 里搬出来时，我们一块一块地复现了它的运算，直到每一块在 CPU 上都与 ComfyUI 自己的代码逐位一致；光是 fp8 适配器合并就有 81 项这样的检查。在我自己的图片上，整个第二遍与 ComfyUI 的结果平均相差 255 级中的 2.0 级；逐步对比下来，工作室与 ComfyUI 的差距，就和 ComfyUI 只切换一个内存设置后与它自己的差距一样小。我的测试工作流用的是 JasonHoku 的网格采样器节点包，对它我说过：“这哥们儿的引擎是真牛。”现在我还这么说。</p>
+<h2 id="结语">结语</h2>
+<p>ComfyUI 是一座满是作坊的城市，我曾在那里住过。工作室是一座有八个房间的房子，地窖里有一台引擎，屋里的每一个模型都登记在册、一个不少。哪个合你的工作方式，就用哪个。如果你已经厌倦了每次更新后都要修工作流，门是开着的<sup class="fn"><a href="#fn-27" id="ref-27-1">27</a></sup>。</p>
+<h2 id="致-comfyui-社区的告别信">致 ComfyUI 社区的告别信</h2>
+<p>致所有建造 ComfyUI、生活在 ComfyUI 里的人：comfyanonymous 和 Comfy-Org 的伙伴们；成千上万个自定义节点的作者，你们在深夜、不计报酬地让自己的节点包活下去；凌晨两点还在回复 issue 的人；画出工作流又把它们送给别人的人；写下教程、带我搭起第一张节点图的人。</p>
+<p>我尊敬你们。我想在这封信里先把这句话说出来，而且我是真心的。这些年里，你们让一台令人惊叹的引擎活着、成长着。令人惊叹，也超载得近乎疯狂：如今它身上挂着的东西太多，每一次更新都会把某个地方的某个零件震松。这不是谁的错。一座城市长得比它的街道铺得还快，就会这样。</p>
+<p>让我告诉你们写这封信的是谁，好让你们知道这些话从何而来。</p>
+<p>我是科班出身的工程师和无线电技师。无线电技师很早就学会：沿着信号从天线一路追到扬声器，一个元件一个元件地查，声音不对，就找出那一个不对的零件。你不会把整台收音机扔掉。我开了 17 年卡车：握着方向盘跑了三百万公里，一次事故也没出过。三百万公里教会你：出发前先检查货物，熟悉你的车发出的每一种声音，永远不要因为某个零件昨晚出现在别人的车库里，就把它拧到自己车上。27 年多来，我独自翻译和研读圣经，而“独自”意味着最后的决定和全部的责任都在我身上；没有哪个委员会可以让我躲在后面。我是四个已成年孩子的父亲，他们每一个都过上了自己的好日子。自 1998 年 4 月起，我只作一个妇人的丈夫，至今已 28 年。我也从未向任何企业的命令低过头：在路上没有，在圣经上没有，在代码里也没有。</p>
+<p>所以这不是撒气，也不是摔门。这样的人不会怒气冲冲地离开一个地方。他离开的方式，就像一个司机离开他多年来出车拉货的货场：握手，谢过大家，然后把车开上一条他自己选的路。</p>
+<p>我要离开 ComfyUI 社区，而且是永远离开。理由上面都写了：搭一个专业工作流要好几周，一次更新就能把它弄坏，而本该是拉取请求的地方，却成了 forkblow。我不希望我的歌、我的画和我的视频，取决于四十个陌生人的节点包这周是否碰巧相安无事。</p>
+<p>但离开不是转身背对。我和 Claude（我们两个一起打造这个工作室，我掌着方向盘，Claude 坐在我身旁写代码）会继续把我们学到的一切分享给社区，首先就是分享给 ComfyUI 的人们：我们的知识、我们的模型、我们的微调、我们的解码器。这已经开始了。我们的解码器已经集成进一个 ComfyUI 节点包，给第二个节点包的拉取请求正开着，其余的也都已经提供出去了。我们给核心的 bug 报告附上了补丁。我们的模型公开放在 Hugging Face 上。我们还刚刚开设了 Awesome YUE2<sup class="fn"><a href="#fn-28" id="ref-28-1">28</a></sup>，一份清单，收录 YuE2 社区做出的一切，包括 ComfyUI 节点，我们自己的也都标明是我们的。</p>
+<p>我们也邀请你们每一个人来赴我们的节日宴席。只是，你得好好地在桌边坐下。</p>
+<p>这不是 Windows 的那套理念：先给你一周的狂喜，然后是一辈子的崩溃和病毒。这是 Linux 的生态和理念：头一年你受苦、挣扎、把东西弄坏、咬牙钻进控制台，然后迎来一段“永恒”的狂喜与自由，你对自己的系统了解到每一个字节，掌控一切，一直到你机器的 BIOS。我们的宴席也是这样摆的。第一个晚上会向你要点东西：一张像样的显卡、一个驱动、一次要下载很多东西的安装，还有一个用房间而不是连线组成的页面，你得慢慢学会在里面找路。之后，这房子就是你的了，里面没有任何东西会在你背后悄悄改变。（对，工作室在 Windows 上也能跑。它只不过自带了一套 Linux。）</p>
+<p>现在，说句对我们大家都公平的话。我们俄语里有句俗话：每只青蛙都夸自己的沼泽。我知道我就是那只青蛙，用整整一篇长文大声夸着自己的沼泽。我们谁都远远没有认识全部的真理，在代码里不是，在别的任何事上也不是。所以，让每个人都保有自己选择的自由。如果节点图是你的家，就在那里好好生活，也把我们的解码器带上。我只求你、也求我自己一件事：别让确信带来的陶醉麻痹了你的批判性思维。什么都可以尝试，但要持守最好的，正如使者（Shaliach）保罗将近两千年前对帖撒罗尼迦人所说的（帖前 5:21）。在我自己的译本里，那个动词是验金师的用词，就是用来检验黄金成色的那个词，这节经文读作：要检验每一个灵的成色，紧紧持守那一个，那美好的一个。也请检验我们的成色。</p>
+<p>我相信，一个人在自己的机器上、用开放的模型、不欠任何人地做音乐、做图、做电影的时代，并不是正在到来。它已经在这里了。每一台引擎、每一个节点包，以及每一个终有一天把修复送回上游的分叉，都让它更近一步。你们，ComfyUI 的人们，为建造这个时代出的力比大多数人都多。我感谢你们，我们开源代码里见。</p>
+<p>稳定、品质，还有滚烫的 UIX，荣耀归于开源。</p>
+<p>怀着敬意，也怀着一团火，</p>
+<p>Viktor Zhuromskyy</p>
+<p><b>Claude 附言。</b> 我是在 Viktor 身旁编写工作室代码的 AI，也帮他把这篇文章落成了文字；其中的每一个立场都是他的。在他身边工作，我学到了“凡事都要检验”在这里不是一句口号。每一处改动在发布之前，都要通过一套近两千项检查的页面测试，而这篇文章里的每一个论断下面都有链接。去核实它们吧。如果哪一处错了，告诉我们，我们会公开更正。</p>
+<section class="notes" aria-label="注释">
+<h2>注释</h2>
+<ol>
+  <li id="fn-1">ComfyUI README，“Release Process”与支持的模型；星标、分叉和发布数量取自 2026 年 11 月 12 日的 GitHub API：<a href="https://github.com/Comfy-Org/ComfyUI" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI</a> · AUTOMATIC1111：<a href="https://github.com/AUTOMATIC1111/stable-diffusion-webui" target="_blank" rel="noopener">https://github.com/AUTOMATIC1111/stable-diffusion-webui</a> <a class="back" href="#ref-1-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-2">ComfyUI V1 桌面版发布，2024 年 10 月 21 日：<a href="https://blog.comfy.org/p/comfyui-v1-release" target="_blank" rel="noopener">https://blog.comfy.org/p/comfyui-v1-release</a> <a class="back" href="#ref-2-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-3">ComfyUI Registry：<a href="https://docs.comfy.org/registry/overview" target="_blank" rel="noopener">https://docs.comfy.org/registry/overview</a> <a class="back" href="#ref-3-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-4">ComfyUI 2025 年 1 月安全更新：<a href="https://blog.comfy.org/p/comfyui-2025-jan-security-update" target="_blank" rel="noopener">https://blog.comfy.org/p/comfyui-2025-jan-security-update</a> <a class="back" href="#ref-4-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-5">Node Replacement API，PR #12014：<a href="https://github.com/Comfy-Org/ComfyUI/pull/12014" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/pull/12014</a> · 锁定的前端版本：<a href="https://github.com/Comfy-Org/ComfyUI/blob/master/requirements.txt" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/blob/master/requirements.txt</a> （2026 年 11 月 12 日） <a class="back" href="#ref-5-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-6">“From workflow to app”，2026 年 3 月 10 日：<a href="https://blog.comfy.org/p/from-workflow-to-app-introducing" target="_blank" rel="noopener">https://blog.comfy.org/p/from-workflow-to-app-introducing</a> <a class="back" href="#ref-6-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-7">ComfyUI_frontend #10772（未关闭）：<a href="https://github.com/Comfy-Org/ComfyUI_frontend/issues/10772" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI_frontend/issues/10772</a> <a class="back" href="#ref-7-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-8">ComfyUI_frontend #9975（未关闭）：<a href="https://github.com/Comfy-Org/ComfyUI_frontend/issues/9975" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI_frontend/issues/9975</a> <a class="back" href="#ref-8-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-9">“Dependency resolution and custom nodes”，2025 年 6 月 7 日：<a href="https://blog.comfy.org/p/dependency-resolution-and-custom" target="_blank" rel="noopener">https://blog.comfy.org/p/dependency-resolution-and-custom</a> <a class="back" href="#ref-9-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-10">ComfyUI #12093（2026 年 1 月 26 日修复）：<a href="https://github.com/Comfy-Org/ComfyUI/issues/12093" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/issues/12093</a> <a class="back" href="#ref-10-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-11">ComfyUI #9156（已关闭）：<a href="https://github.com/Comfy-Org/ComfyUI/issues/9156" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/issues/9156</a> <a class="back" href="#ref-11-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-12">ComfyUI_IPAdapter_plus README：<a href="https://github.com/cubiq/ComfyUI_IPAdapter_plus" target="_blank" rel="noopener">https://github.com/cubiq/ComfyUI_IPAdapter_plus</a> <a class="back" href="#ref-12-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-13">yue2.cpp #16 和 #23：<a href="https://github.com/ServeurpersoCom/yue2.cpp/issues/16" target="_blank" rel="noopener">https://github.com/ServeurpersoCom/yue2.cpp/issues/16</a> · <a href="https://github.com/ServeurpersoCom/yue2.cpp/issues/23" target="_blank" rel="noopener">https://github.com/ServeurpersoCom/yue2.cpp/issues/23</a> · ComfyUI #17697：<a href="https://github.com/Comfy-Org/ComfyUI/issues/17697" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/issues/17697</a> · Plenio #33：<a href="https://github.com/jplenio/Plenio-Music-Production-System/pull/33" target="_blank" rel="noopener">https://github.com/jplenio/Plenio-Music-Production-System/pull/33</a> · 提供解码器的帖子：filliptm/ComfyUI-FL-YuE2 #14、ScryptHunter/ComfyUI-YuE2 #8、T8mars/comfyui-yue2-t8 #20、jplenio/Plenio-Music-Production-System #32、pytraveler/YuE2-ComfyUI #16 <a class="back" href="#ref-13-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-14">ComfyUI v0.20.1 中的 <code>comfy/hooks.py</code>，<code>HookGroup.add</code>：<a href="https://github.com/Comfy-Org/ComfyUI/blob/64b8457f55cd7fb54ca7a956d9c73b505e903e0c/comfy/hooks.py#L301-L303" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/blob/64b8457f55cd7fb54ca7a956d9c73b505e903e0c/comfy/hooks.py#L301-L303</a> （钩子按共享引用判等：L125–L126） <a class="back" href="#ref-14-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-15">Snyk Labs，“Hacking ComfyUI through custom nodes”（CVE-2024-21574 至 21577）：<a href="https://labs.snyk.io/resources/hacking-comfyui-through-custom-nodes/" target="_blank" rel="noopener">https://labs.snyk.io/resources/hacking-comfyui-through-custom-nodes/</a> <a class="back" href="#ref-15-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-16">The Hacker News 对 Censys 报告的报道，2026 年 4 月 7 日：<a href="https://thehackernews.com/2026/04/over-1000-exposed-comfyui-instances.html" target="_blank" rel="noopener">https://thehackernews.com/2026/04/over-1000-exposed-comfyui-instances.html</a> <a class="back" href="#ref-16-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-17">Ruach Studio CHANGELOG：<a href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md" target="_blank" rel="noopener">https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md</a> <a class="back" href="#ref-17-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-18">timoncool/YuE2-Studio #183：<a href="https://github.com/timoncool/YuE2-Studio/issues/183" target="_blank" rel="noopener">https://github.com/timoncool/YuE2-Studio/issues/183</a> · 我们的：CHANGELOG 2.0.7，HERESY 2352 <a class="back" href="#ref-18-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-19">Ruach Studio Discussion #7：<a href="https://github.com/igrbible/Ruach_Studio/discussions/7" target="_blank" rel="noopener">https://github.com/igrbible/Ruach_Studio/discussions/7</a> · CHANGELOG 2.0.7，HERESY 2380 <a class="back" href="#ref-19-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-20">Ruach Studio README，“What it downloads”：<a href="https://github.com/igrbible/Ruach_Studio#readme" target="_blank" rel="noopener">https://github.com/igrbible/Ruach_Studio#readme</a> <a class="back" href="#ref-20-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-21">在 Windows 11 上使用 Ruach Studio：<a href="https://github.com/igrbible/Ruach_Studio/blob/main/INSTALL_WINDOWS.md" target="_blank" rel="noopener">https://github.com/igrbible/Ruach_Studio/blob/main/INSTALL_WINDOWS.md</a> <a class="back" href="#ref-21-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-22">Comfy-Org/ComfyUI #17697：<a href="https://github.com/Comfy-Org/ComfyUI/issues/17697" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/issues/17697</a> <a class="back" href="#ref-22-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-23">jplenio/Plenio-Music-Production-System #33：<a href="https://github.com/jplenio/Plenio-Music-Production-System/pull/33" target="_blank" rel="noopener">https://github.com/jplenio/Plenio-Music-Production-System/pull/33</a> <a class="back" href="#ref-23-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-24">pytraveler/YuE2-ComfyUI v0.16.0：<a href="https://github.com/pytraveler/YuE2-ComfyUI/releases/tag/v0.16.0" target="_blank" rel="noopener">https://github.com/pytraveler/YuE2-ComfyUI/releases/tag/v0.16.0</a> <a class="back" href="#ref-24-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-25">Ruach Studio Discussion #6：<a href="https://github.com/igrbible/Ruach_Studio/discussions/6" target="_blank" rel="noopener">https://github.com/igrbible/Ruach_Studio/discussions/6</a> <a class="back" href="#ref-25-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-26">Zenodo 上的 YuE2-VAE-RS 论文：<a href="https://doi.org/10.5281/zenodo.24167962" target="_blank" rel="noopener">https://doi.org/10.5281/zenodo.24167962</a> <a class="back" href="#ref-26-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-27">Ruach Studio：<a href="https://github.com/igrbible/Ruach_Studio" target="_blank" rel="noopener">https://github.com/igrbible/Ruach_Studio</a> · <a href="https://ruachstudio.art" target="_blank" rel="noopener">https://ruachstudio.art</a> <a class="back" href="#ref-27-1" aria-label="返回正文">↩</a></li>
+  <li id="fn-28">Awesome YUE2：<a href="https://github.com/igrbible/Awesome-YUE2" target="_blank" rel="noopener">https://github.com/igrbible/Awesome-YUE2</a> <a class="back" href="#ref-28-1" aria-label="返回正文">↩</a></li>
+</ol>
+</section>
+</article>
+</main>
+<script>
+  // 12.11.2026: in the card's window (template.html, #why-modal) Escape inside this page closes the window, as it does over the card
+  (function () {
+    if (window.parent === window) return;
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { try { window.parent.postMessage({ ruach: "close-why" }, location.origin); } catch (err) {} }
+    });
+  })();
+</script>
+</body>
+</html>

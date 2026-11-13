@@ -23,9 +23,11 @@
     ".coll-realm",                                                  // the realms' switch (Musician on the left, Narrator on the right: its tip says so)
     ".lyr-big", ".lyr-txt", ".lyr-mirror", ".lyr-tagsl", ".tc-mirror", "#lyrics", "#lyricsMeter", ".lyr-meter",   // the lyrics' box and its mirrors
     "#logBody", "#logDockBody", ".log-dock-body", "#logDockLast", ".log-dock-last", "#wtLog", "#tpTestLog",       // the logs
-    ".knobs", ".tr-knobs", ".ar-knobs", ".gt-knobs", "#trKnobs"                                                     // the knobs
+    ".knobs", ".tr-knobs", ".ar-knobs", ".gt-knobs", "#trKnobs",                                                    // the knobs
+    ".cmp-transport", ".cmp-wavebox", ".cmp-ruler"   // HERESY 2408 (Viktor 11.11.2026, A8): the compare window's transport, wave and ruler, as the player's
   ];
-  var KEEP_MARK = /\.playbar|#wave|\.wave-wrap|\.loud-wave|\.boot-|\.pcv|#postCanvas|\.post-canvas|\.mxl?-|\.vp\b|\.vp-|#tl[A-Z]|\.tl-|\.roll|#roll|#scoreStaff|#scoreAbc|\.abcjs|#spectrumPanel|\.spec-|\.coll-realm|\.rs-|\.lyr-|\.tc-mirror|#lyrics|#logBody|#logDockBody|#logDockLast|\.log-dock-body|\.log-dock-last|#wtLog|#tpTestLog|knobs|input\[type=.?range/;
+  var KEEP_MARK = /\.playbar|#wave|\.wave-wrap|\.loud-wave|\.boot-|\.pcv|#postCanvas|\.post-canvas|\.mxl?-|\.vp\b|\.vp-|#tl[A-Z]|\.tl-|\.roll|#roll|#scoreStaff|#scoreAbc|\.abcjs|#spectrumPanel|\.spec-|\.coll-realm|\.rs-|\.lyr-|\.tc-mirror|#lyrics|#logBody|#logDockBody|#logDockLast|\.log-dock-body|\.log-dock-last|#wtLog|#tpTestLog|knobs|input\[type=.?range|\.cmp-transport|\.cmp-wavebox|\.cmp-ruler|\.hg-/;   // HERESY 2408; 2413: the guide (.hg-) is English until docs/GUIDE.he.md comes (Viktor 11.11.2026, 27): its rules
+  // never mirrored, its box says lang en and ltr (heresy-guide.js); with a Hebrew guide, take «|\.hg-» out of here and the box reads right to left by itself
   // what the user wrote, or the machine said, shown as it is: its own direction from its first letters (heresy-i18n.js keeps the same untranslated)
   var OWN_TEXT = [".take-title", ".take-style", ".coll-title-text", ".peek-title", ".peek-style", ".peek-note", ".pb-sub", ".coll-badge.w",
     ".wr-item-title", ".wr-take-title", ".hi-tag", ".hi-prompt", "textarea", "input[type=text]", "input[type=search]", "input:not([type])",

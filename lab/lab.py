@@ -177,6 +177,7 @@ NEED_MB = 5000                     # large-v3 float16 with room for a 7-minute s
 sys.path.insert(0, str(HERE))
 import gloss_core  # noqa: E402
 import collection  # noqa: E402   HERESY 1041
+import name_rule  # noqa: E402   HERESY 2462: one rule for every name
 import writer  # noqa: E402   HERESY 1047
 import timing  # noqa: E402   HERESY 1056
 import training  # noqa: E402   HERESY 1063
@@ -237,6 +238,7 @@ import takeloop  # noqa: E402   HERESY 1325: a loop from a take
 import perf  # noqa: E402   HERESY 1821: the Studio over time (Engine → Performance)
 import videographer  # noqa: E402   HERESY 1824: the Videographer's plan of a take
 import luts  # noqa: E402   HERESY 2010: the clip's looks (3D LUTs)
+import video_fonts  # noqa: E402   HERESY 2394: the Videographer's own fonts
 import muscriptor  # noqa: E402   HERESY 1834: a take, a stem or any sound into multi-instrument MIDI (MuScriptor)
 import orchestra  # noqa: E402   HERESY 1881–1884: the MIDI orchestra: a stem's MIDI with its dynamics, played by sampled instruments
 import byte_ranges  # noqa: E402   HERESY 2088: the lab's files sent as a file server sends them
@@ -491,6 +493,13 @@ def engine_unload(why):
         act_say(f"the engine's models left its card for {why} ({freed} MB): they load again with the next song")
         time.sleep(1.5)                                  # the driver hands the memory back
     return freed
+
+
+def engine_unload_for_arc(why):
+    """HERESY 2463: a lab job going to the Intel Arc (the Narrator's Drama): the Studio's writer leaves the card first (one process on the Arc at a
+    time), then the engine's idle models, as engine_unload."""
+    writer_llm.yield_arc(why)
+    return engine_unload(why)
 
 
 # HERESY 1370b: a lab for tests keeps to its own cards (no fallback to any card the guard passes)
@@ -1319,7 +1328,7 @@ def bounce_async(name, rel, mix, versions, members, title="", dry=False):
     while f"bounce_{k}" in taken:
         k += 1
     track = f"bounce_{k}"
-    title = (title or "").strip()[:60] or f"Bounce {k}"
+    title = name_rule.check(title or "", 60) or f"Bounce {k}"   # HERESY 2462: the bounce's name keeps the names' rule
     did = "bounce-" + time.strftime("%Y%m%d-%H%M%S")
     key = f"daw:{name}:{did}"
     dry = bool(dry)                                   # HERESY 2366: without the room and the delay
@@ -1568,6 +1577,30 @@ def clip_async(name, labels=None, lyrics=False, between="cut", shape="16:9", tit
         except Exception as e:
             job.update(status="failed", error=str(e))
     _spawn(work)                                        # HERESY 1962: owned as its starter
+    return dict(job, name=name)
+
+
+def clip_view_async(name, shape="16:9"):
+    """HERESY 2395: a finished clip's light copy as a job (videographer.make_view, forced: asked for, it is made), one at a time a clip."""
+    f = videographer.clip_path(KIT, name, shape)
+    if not f.is_file():
+        raise FileNotFoundError("no clip for this take yet")
+    key = f"video:{name}:view:{shape}"
+    with jobs_lock:
+        job = jobs.get(key)
+        if job and job["status"] in ("queued", "running"):
+            return dict(job, name=name)
+        job = {"status": "running", "started": time.time(), "kind": "video", "progress": 0.0}
+        jobs[key] = job
+
+    def work():
+        try:
+            videographer.make_view(f, force=True)
+            with jobs_lock:
+                jobs.pop(key, None)
+        except Exception as e:
+            job.update(status="failed", error=str(e))
+    _spawn(work)
     return dict(job, name=name)
 
 
@@ -1837,11 +1870,20 @@ def slug(text):
 IMPORTED = "\U0001f6a8 IMPORTED"                     # HERESY 1481: where every import lands
 
 
-def import_track(filename, title, body, parent="", what=""):   # HERESY 1988: and what it is a version of, for the take's family tree
+def import_track(filename, title, body, parent="", what="", realm="", workspace=""):   # HERESY 1988: and what it is a version of, for the take's family tree
+    # HERESY 2437 (Viktor 12.11.2026: «Эти пространства TTS ты по ошибке импортнул в мир Музыканта»): realm=reader for speech brought in (a TTS
+    # file, a probe's take): its realm written on it when made (the root rule sees it as the Narrator's, as 2298 marked the first 117), and it lands
+    # in the workspace named (made in the Narrator's realm when new), not in the Musician's 🚨 IMPORTED
+    if realm and realm not in collection.REALMS:
+        raise ValueError("realm is creator or reader")
     ext = Path(filename).suffix.lower()
     if ext not in (".wav", ".flac", ".mp3", ".m4a", ".ogg", ".aiff", ".aif"):
         raise ValueError("WAV, FLAC, MP3, M4A, OGG or AIFF")
-    title = (title or Path(filename).stem).strip()[:200]
+    # HERESY 2462: a title given keeps the names' rule (refused aloud, before anything is made); one taken from the file's name is the Studio's
+    # naming, kept to the rule (a SUNO file «Где Ты?.mp3» is the take «Где Ты»); the workspace it lands in is checked before it is made, as api.py does (2284)
+    title = name_rule.check(title, 200) if (title or "").strip() else name_rule.cleaned(Path(filename).stem, 200) or "import"
+    if workspace:
+        collection.fresh_parts(collection.load(config_dir()), collection.ws_name(workspace))
     stamp, k = time.strftime("%Y%m%d-%H%M%S"), 1
     while True:                                       # HERESY 2011 (C7): two imports of one title in the same second, -01-, -02-…
         name = f"{stamp}-{k:02d}-import-" + slug(title)
@@ -1878,13 +1920,19 @@ def import_track(filename, title, body, parent="", what=""):   # HERESY 1988: an
             print(f"[lab] {name}: its realm not written, it follows its parent's: {e}", file=sys.stderr, flush=True)
         if what:
             req["what"] = str(what)[:80]
+    elif realm == "reader":                              # HERESY 2437: speech of its own, the Narrator's, its line anchored here
+        m = json.load(open(d / "meta.json", encoding="utf-8"))
+        m["realm"] = "reader"
+        json.dump(m, open(d / "meta.json", "w", encoding="utf-8"), ensure_ascii=False, indent=4)
     json.dump(req, open(d / "request.json", "w", encoding="utf-8"), ensure_ascii=False)
     out = {"name": name, "title": title, "seconds": round(secs, 2)}
+    land = str(workspace or "").strip()[:200] if realm == "reader" else ""
     try:                                                 # HERESY 1481: every import lands in 🚨 IMPORTED; said only when it did
-        collection.collection_post(config_dir(), OUTPUTS, {"op": "ws-add", "workspace": IMPORTED, "names": [name]})
-        out["workspace"] = IMPORTED
+        collection.collection_post(config_dir(), OUTPUTS, {"op": "ws-add", "workspace": land or IMPORTED, "names": [name],
+                                                           "realm": "reader" if land else ""})   # HERESY 2437: a Narrator's import where it was asked to land
+        out["workspace"] = land or IMPORTED
     except (OSError, ValueError) as e:
-        print(f"[lab] {name} imported, not put in {IMPORTED}: {e}", file=sys.stderr, flush=True)
+        print(f"[lab] {name} imported, not put in {land or IMPORTED}: {e}", file=sys.stderr, flush=True)
     return out
 
 
@@ -1972,6 +2020,8 @@ def presets_put(body, scope=""):
     kind, name, op = data.get("kind"), str(data.get("name") or "").strip(), data.get("op", "put")
     if kind not in ("style", "setup", "textprofile", "brief") or not name or len(name) > 120:   # HERESY 1043; 1167: briefs
         raise ValueError("expected {op: put|delete, kind: style|setup|brief, name, data}")
+    if op == "put" and not any(x.get("name") == name for x in presets_get(scope).get(kind + "s", [])):
+        name_rule.check(name, 120)                  # HERESY 2462: a new preset's name keeps the names' rule; one already there is kept again as it is
     key = kind + "s"
     d = config_dir()
     d.mkdir(parents=True, exist_ok=True)
@@ -1981,6 +2031,8 @@ def presets_put(body, scope=""):
         items = [x for x in cur[key] if x.get("name") != name]
         if op == "put":
             item = {"name": name, "saved": time.strftime("%Y-%m-%d %H:%M")}
+            if kind == "textprofile" and data.get("realm") in ("creator", "reader"):   # HERESY 2486: a text profile of one world (none: both)
+                item["realm"] = data["realm"]
             if kind in ("style", "brief"):
                 text = data.get("data")
                 if not isinstance(text, str) or not text.strip():
@@ -3332,7 +3384,9 @@ def act_now():
         if run.get("status") in ("running", "stopping"):
             held = training.run_cards(training._meta(training.paths(KIT)["runs"] / name))   # HERESY 1631: "1+2" for a run on two
             gpu = "+".join(str(c) for c in held) if len(held) > 1 else (held[0] if held else None)
-            r = {"key": "train:" + name, "what": ACT_SAY["train"], "name": name, "status": "running", "gpu": gpu,
+            opts = (training._meta(training.paths(KIT)["runs"] / name).get("options") or {})   # HERESY 2425: a run that teaches no adapter
+            what = "Training" if str(opts.get("learn") or "lora") not in ("lora", "") else ACT_SAY["train"]   # is «Training», not «LoRA training»
+            r = {"key": "train:" + name, "what": what, "name": name, "status": "running", "gpu": gpu,
                  "step": run.get("step"), "steps": run.get("steps")}
             m = training.ETA_RE.search((run.get("tail") or [""])[-1])   # HERESY 1617: the time it has run and has left, off the trainer's line
             if m:
@@ -3576,6 +3630,16 @@ def regen(names, same_seeds=False):
         except (OSError, ValueError, FileNotFoundError):
             out.append({"name": name, "error": "no request kept: an imported take cannot be made again"})
             continue
+        if isinstance(req.get("reader"), dict):              # HERESY 2510: a Narrator take is read again in the Narrator, never sung by YuE2
+            try:
+                if not reader:
+                    raise ValueError("the Narrator is not on this machine")
+                got = reader.again(name, same_seeds)
+                act_say(f"regenerate · {name} · read again in the Narrator" + (" with its own seed" if same_seeds else " with a new seed"))
+                out.append({"name": name, "reader": got.get("id")})
+            except (ValueError, FileNotFoundError) as e:
+                out.append({"name": name, "error": str(e)})
+            continue
         try:
             meta = json.load(open(d / "meta.json", encoding="utf-8"))
         except (OSError, ValueError):
@@ -3626,7 +3690,7 @@ section.setup(kit=KIT, outputs=OUTPUTS, engine=api._engine, say=act_say, config_
 if reader:
     reader.setup(kit=KIT, jobs=jobs, lock=jobs_lock, wait_card=wait_card, turn=turn, free_gpu=free_gpu, say=act_say, outputs=OUTPUTS,
                  config_dir=config_dir, collection=collection, slug=slug, gpus_state=gpus_state, studio_now=gpu_roles.studio_now,
-                 engine_url=ENGINE_URL, unload_engine=engine_unload, cancelled=Cancelled,
+                 engine_url=ENGINE_URL, unload_engine=engine_unload_for_arc, cancelled=Cancelled,
                  whisper_turn=whisper_turn, whisper_env=whisper_env, whisper_py=WHISPER_PY, whisper_dir=WHISPER_DIR)   # HERESY 2269: its transcriptions
 
 
@@ -3857,6 +3921,11 @@ class Handler(BaseHTTPRequestHandler):
                 f = videographer.clip_path(KIT, q.get("name", ""), q.get("shape") or "16:9", q.get("draft") == "1")   # HERESY 1917; 2245
                 if not f.is_file():
                     return self.send(404, {"error": "no clip for this take yet"})
+                if q.get("view") == "1":                    # HERESY 2395: its light copy, for a slow link
+                    v = videographer.view_path(f)
+                    if not v.is_file() or v.stat().st_mtime < f.stat().st_mtime:
+                        return self.send(404, {"error": "no light copy of this clip yet"})
+                    f = v
                 return self.send_file(f, "video/mp4")
             if url.path == "/video/upscale":                # HERESY 1876b: a take's upscales on their way
                 return self.send(200, upscale_shots.status(KIT, q.get("name", "")))
@@ -3867,6 +3936,17 @@ class Handler(BaseHTTPRequestHandler):
             if url.path in ("/video/shot.mp4", "/video/shot.jpg"):   # HERESY 1868: a shot's own video (Range), its first frame
                 f = videographer.shot_video_path(KIT, q.get("name", ""), q.get("f", ""), thumb=url.path.endswith(".jpg"))
                 return self.send_file(f, "video/mp4" if f.suffix == ".mp4" else "image/jpeg", cache="private, max-age=600")
+            if url.path == "/video/fonts":                  # HERESY 2394: the fonts the user gave the Videographer
+                return self.send(200, video_fonts.listing(KIT))
+            if url.path == "/video/font":                   # HERESY 2394: one of them, for the page's own preview (FontFace)
+                f = video_fonts.path(KIT, q.get("id", ""))
+                return self.send_file(f, "font/otf" if f.suffix == ".otf" else "font/ttf", cache="private, max-age=86400")
+            if url.path == "/video/clip-view":              # HERESY 2395: a light copy on its way, else whether the clip has one
+                with jobs_lock:
+                    job = jobs.get(f"video:{q.get('name', '')}:view:{q.get('shape') or '16:9'}")
+                if job:
+                    return self.send(202 if job["status"] == "running" else 200, dict(job))
+                return self.send(200, videographer.clip_info(KIT, q.get("name", ""), q.get("shape") or "16:9"))
             if url.path == "/video/frame":                  # HERESY 1838: a shot's own picture
                 return self.send_file(videographer.frame_path(KIT, q.get("name", ""), q.get("f", "")), "image/jpeg", cache="private, max-age=600")
             if url.path == "/sys/live":                     # HERESY 2299: the processor, the memory and the disks second by second
@@ -4017,8 +4097,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_file(reader.file(q.get("id", ""), q.get("f", "")), "audio/wav", cache="no-cache")
                 if url.path == "/reader/voice-file":
                     return self.send_file(reader.voice_file(q.get("id", "")), "audio/wav", cache="no-cache")
-                if url.path == "/reader/run":             # HERESY 2257: a take for its editor
-                    return self.send(200, reader.run_detail(q.get("id", "")))
+                if url.path == "/reader/run":             # HERESY 2257: a take for its editor; 2510: or by the take's name (?take=)
+                    return self.send(200, reader.run_detail(q.get("id", "") or reader.run_of_take(q.get("take", ""))))
                 if url.path == "/reader/dict":            # HERESY 2256: the user's stress dictionary of a language
                     return self.send(200, reader.rs.dict_get(q.get("lang", "ru")))
                 if url.path == "/reader/tier":            # HERESY 2263: the quant a run would take now, where, and how long
@@ -4522,6 +4602,15 @@ class Handler(BaseHTTPRequestHandler):
                 if not q.get("scope"):
                     writer_llm.stop("asked")
                 return self.send(200, writer_llm.status(KIT))
+            if url.path == "/llm/device":                   # HERESY 2463: where it runs (auto, cuda, arc, cpu) and the Arc's backend; a test page changes nothing
+                d = json.loads(body.decode("utf-8") or "{}")
+                return self.send(200, writer_llm.status(KIT) if q.get("scope") else writer_llm.place(KIT, d.get("device"), d.get("backend")))
+            if url.path == "/llm/count":                    # HERESY 2464: a question's tokens and the room left for its answer, before it is asked
+                return self.send(200, writer_llm.count(KIT, body))
+            if url.path == "/llm/cancel":                   # HERESY 2469: Stop in the Writing room: the answer in flight, or the wait for the Arc
+                return self.send(200, writer_llm.cancel())
+            if url.path == "/llm/yield":                    # HERESY 2463: the page's Generate: the writer leaves the Intel Arc first; a test page changes nothing
+                return self.send(200, {"yielded": False if q.get("scope") else writer_llm.yield_arc("the Studio's song")})
             if url.path == "/llm/hosts":                    # HERESY 2097: a host's switch, address or model; or, once, what a browser held before
                 return self.send(200, llm_hosts.put(config_dir(), q.get("scope", ""), json.loads(body.decode("utf-8")), writer_llm.status(KIT)))
             if url.path == "/llm/key":                      # HERESY 2097: the OpenRouter key kept (or forgotten); the answer says only that one is kept
@@ -4557,6 +4646,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, modartt.live(d.get("product") or q.get("product")).keep(KIT, d.get("state") or {}, str(d.get("name") or "")))   # HERESY 2036
             if url.path == "/weights/fetch":                # HERESY 1289: on the user's word; a test page fetches nothing
                 return self.send(202, weights.fetch(KIT, json.loads(body.decode("utf-8")), q.get("scope", "")))
+            if url.path == "/weights/access":               # night 11→12.11.2026: a licence-bound or gated extra's repos asked at their pins; nothing fetched, no token kept
+                return self.send(200, weights.access(KIT, json.loads(body.decode("utf-8") or "{}")))
             if url.path in ("/places/move", "/places/relink"):   # HERESY 1261
                 data = json.loads(body.decode("utf-8"))
                 fn = places.move if url.path == "/places/move" else places.relink
@@ -4565,8 +4656,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(202, reader.transcribe(body, q))
             if reader and url.path.startswith("/reader/"):   # HERESY 2241: the Reader room, each write under the lease as every other
                 data = json.loads(body.decode("utf-8"))
-                if url.path == "/reader/say":
-                    return self.send(202, reader.say(data))
+                if url.path == "/reader/say":             # HERESY 2487: the scope it was asked from, for the Writer's document its takes link to
+                    return self.send(202, reader.say(dict(data, doc_scope=q.get("scope", ""))))
                 if url.path == "/reader/stop":
                     return self.send(200, reader.stop(data))
                 if url.path == "/reader/voice":
@@ -4855,6 +4946,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(200, videographer.frame_off(KIT, name, i))
                 run, file = str(data.get("run", "")), str(data.get("file", ""))
                 return self.send(200, videographer.frame_set(KIT, name, i, artist.picture(run, file)[0], {"run": run, "file": file}))
+            if url.path == "/video/font-upload":            # HERESY 2394: a font from the system's (Local Font Access) or a file, its bytes the body
+                return self.send(200, video_fonts.save(KIT, body, q.get("hint", "")))
+            if url.path == "/video/clip-view":              # HERESY 2395: make the light copy of a clip made before it was made by itself
+                data = json.loads(body.decode("utf-8") or "{}")
+                return self.send(202, clip_view_async(str(data.get("name", "")), str(data.get("shape") or "16:9")))
             if url.path == "/video/frame-upload":           # HERESY 1838: a shot's picture from the user's disk, its bytes the body (?name=&i=)
                 i = q.get("i", "")
                 return self.send(200, videographer.frame_set(KIT, q.get("name", ""), int(i) if i.isdigit() else -1, body, "disk"))
@@ -5105,7 +5201,8 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/writer/versions":               # HERESY 1519: {op: keep|mark|delete|undelete, …}
                 return self.send(200, creator_versions.post(KIT, json.loads(body.decode("utf-8")), q.get("scope", "")))
             if url.path == "/import":
-                return self.send(200, import_track(q.get("file", "track.wav"), q.get("title", ""), body, q.get("parent", ""), q.get("what", "")))
+                return self.send(200, import_track(q.get("file", "track.wav"), q.get("title", ""), body, q.get("parent", ""), q.get("what", ""),
+                                                   q.get("realm", ""), q.get("workspace", "")))   # HERESY 2437
             if url.path in ("/backups", "/backups/now", "/backups/seen"):   # HERESY 2083 (Viktor 05.11.2026: «в Движок умолчанием пропиши ежесуточный/ежечасовой бекап json данных пользователя, с предвыбранной ротацией gz бекапов…»):
                 data = json.loads(body.decode("utf-8") or "{}")         # the switches and the counts, Back up now, the notices said; a test page changes nothing
                 if q.get("scope"):

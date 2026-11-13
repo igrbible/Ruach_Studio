@@ -1,0 +1,249 @@
+{
+ "version": "2026-11-11",
+ "made_by": "Fish Audio Drama 3 (Q4_K, through audio.cpp, on the processor), no voice given",
+ "license": "Fish Audio Community License v1.0: Built with Fish Audio; never used to train or distill a model",
+ "voices": [
+  {
+   "id": "stock-ru",
+   "file": "stock-ru.flac",
+   "name": "Stock · ru · low",
+   "lang": "ru",
+   "gender": "male",
+   "register": "low",
+   "f0": 98.6,
+   "bright": 1174,
+   "seconds": 14.18,
+   "text": "Вечер опускается на город медленно, как занавес в старом театре. Я открываю книгу, и тишина становится голосом, который хочется слушать.",
+   "seed": 7,
+   "asked": {
+    "gender": "male",
+    "register": "low",
+    "steer": "a deep low male voice, calm, warm, unhurried narration"
+   },
+   "cer": 0.0,
+   "met": true
+  },
+  {
+   "id": "stock-uk",
+   "file": "stock-uk.flac",
+   "name": "Stock · uk · middle",
+   "lang": "uk",
+   "gender": "female",
+   "register": "middle",
+   "f0": 210.1,
+   "bright": 1008,
+   "seconds": 12.36,
+   "text": "Ранок пахне свіжим хлібом і дощем. Я читаю тобі повільно, слово за словом, щоб кожна думка встигла знайти свій дім.",
+   "seed": 7,
+   "asked": {
+    "gender": "female",
+    "register": "middle",
+    "steer": "a warm female voice, clear, gentle narration"
+   },
+   "cer": 0.0,
+   "met": true
+  },
+  {
+   "id": "stock-he",
+   "file": "stock-he.flac",
+   "name": "Stock · he · low",
+   "lang": "he",
+   "gender": "male",
+   "register": "low",
+   "f0": 89.9,
+   "bright": 1257,
+   "seconds": 10.04,
+   "text": "הערב יורד לאט על העיר, והאור האחרון נוגע בגגות. אני פותח את הספר וקורא לך בשקט, מילה אחר מילה.",
+   "seed": 20261111,
+   "asked": {
+    "gender": "male",
+    "register": "middle",
+    "steer": "a calm male voice, warm, steady narration"
+   },
+   "cer": 0.0,
+   "met": false
+  },
+  {
+   "id": "stock-el",
+   "file": "stock-el.flac",
+   "name": "Stock · el · low",
+   "lang": "el",
+   "gender": "female",
+   "register": "low",
+   "f0": 171.7,
+   "bright": 1243,
+   "seconds": 12.08,
+   "text": "Το βράδυ πέφτει αργά πάνω στη θάλασσα. Ανοίγω το βιβλίο και διαβάζω δυνατά, λέξη προς λέξη, για να μείνει η σιωπή ζεστή.",
+   "seed": 20261111,
+   "asked": {
+    "gender": "female",
+    "register": "low",
+    "steer": "a low, deep female voice, calm, velvety narration"
+   },
+   "cer": 0.0,
+   "met": true
+  },
+  {
+   "id": "stock-en",
+   "file": "stock-en.flac",
+   "name": "Stock · en · middle",
+   "lang": "en",
+   "gender": "male",
+   "register": "middle",
+   "f0": 108.5,
+   "bright": 1198,
+   "seconds": 11.22,
+   "text": "The evening settles slowly over the harbour. I open the book and read to you aloud, word by word, so every thought has time to land.",
+   "seed": 31337,
+   "asked": {
+    "gender": "male",
+    "register": "middle",
+    "steer": "a warm baritone male voice, calm, unhurried narration"
+   },
+   "cer": 0.01,
+   "met": true
+  },
+  {
+   "id": "stock-es",
+   "file": "stock-es.flac",
+   "name": "Stock · es · high",
+   "lang": "es",
+   "gender": "female",
+   "register": "high",
+   "f0": 233.2,
+   "bright": 1333,
+   "seconds": 11.64,
+   "text": "La tarde cae despacio sobre la plaza. Abro el libro y te leo en voz alta, palabra por palabra, para que cada idea encuentre su lugar.",
+   "seed": 20261111,
+   "asked": {
+    "gender": "female",
+    "register": "high",
+    "steer": "a bright, light female voice, lively, friendly narration"
+   },
+   "cer": 0.0,
+   "met": true
+  },
+  {
+   "id": "stock-it",
+   "file": "stock-it.flac",
+   "name": "Stock · it · high",
+   "lang": "it",
+   "gender": "male",
+   "register": "high",
+   "f0": 139.4,
+   "bright": 1041,
+   "seconds": 10.9,
+   "text": "La sera scende piano sulle colline. Apro il libro e ti leggo ad alta voce, parola dopo parola, perché ogni pensiero trovi la sua casa.",
+   "seed": 31337,
+   "asked": {
+    "gender": "male",
+    "register": "high",
+    "steer": "a light tenor male voice, bright, friendly narration"
+   },
+   "cer": 0.0,
+   "met": true
+  },
+  {
+   "id": "stock-fr",
+   "file": "stock-fr.flac",
+   "name": "Stock · fr · middle",
+   "lang": "fr",
+   "gender": "female",
+   "register": "middle",
+   "f0": 201.8,
+   "bright": 1156,
+   "seconds": 10.5,
+   "text": "Le soir tombe doucement sur la ville. J’ouvre le livre et je te lis à voix haute, mot après mot, pour que chaque pensée trouve sa place.",
+   "seed": 20261111,
+   "asked": {
+    "gender": "female",
+    "register": "middle",
+    "steer": "a soft female voice, calm, intimate narration"
+   },
+   "cer": 0.0,
+   "met": true
+  },
+  {
+   "id": "stock-pt",
+   "file": "stock-pt.flac",
+   "name": "Stock · pt · low",
+   "lang": "pt",
+   "gender": "female",
+   "register": "low",
+   "f0": 184.0,
+   "bright": 1373,
+   "seconds": 11.04,
+   "text": "A noite cai devagar sobre o rio. Abro o livro e leio para ti em voz alta, palavra por palavra, para que cada ideia encontre o seu lugar.",
+   "seed": 7,
+   "asked": {
+    "gender": "female",
+    "register": "low",
+    "steer": "a low, warm female voice, calm, mature narration"
+   },
+   "cer": 0.0,
+   "met": true
+  },
+  {
+   "id": "stock-de",
+   "file": "stock-de.flac",
+   "name": "Stock · de · low",
+   "lang": "de",
+   "gender": "male",
+   "register": "low",
+   "f0": 78.3,
+   "bright": 990,
+   "seconds": 13.74,
+   "text": "Der Abend senkt sich langsam über das Tal. Ich öffne das Buch und lese dir laut vor, Wort für Wort, damit jeder Gedanke ankommen kann.",
+   "seed": 20261111,
+   "asked": {
+    "gender": "male",
+    "register": "low",
+    "steer": "a deep low male voice, calm, grave narration"
+   },
+   "cer": 0.0,
+   "met": true
+  },
+  {
+   "id": "stock-ja",
+   "file": "stock-ja.flac",
+   "name": "Stock · ja · middle",
+   "lang": "ja",
+   "gender": "female",
+   "register": "middle",
+   "f0": 218.8,
+   "bright": 1448,
+   "seconds": 8.98,
+   "text": "夕暮れが静かに町を包んでいきます。本を開いて、一つひとつの言葉をゆっくりと読み上げます。",
+   "seed": 4242,
+   "asked": {
+    "gender": "female",
+    "register": "middle",
+    "steer": "a calm adult woman's voice, low-middle register, warm and soft, unhurried, quiet narration"
+   },
+   "cer": 0.0732,
+   "met": true,
+   "remade": "12.11.2026 (HERESY 2449): calmer and lower; the first, «a bright young female voice» at 250 Hz, was the brightest of the twelve",
+   "made_by": "Fish Audio Drama 3 (Q4_K, through audio.cpp's Vulkan build, on the Intel card), no voice given"
+  },
+  {
+   "id": "stock-zh",
+   "file": "stock-zh.flac",
+   "name": "Stock · zh · low",
+   "lang": "zh",
+   "gender": "male",
+   "register": "low",
+   "f0": 92.0,
+   "bright": 1008,
+   "seconds": 10.32,
+   "text": "傍晚慢慢降临在小城上空。我打开书，一字一句地为你朗读，让每一个想法都有时间落地。",
+   "seed": 20261111,
+   "asked": {
+    "gender": "male",
+    "register": "high",
+    "steer": "a light male tenor voice, clear, calm narration"
+   },
+   "cer": 0.0,
+   "met": false
+  }
+ ]
+}

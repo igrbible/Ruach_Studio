@@ -42,13 +42,16 @@
     var el = document.createElement("div");
     el.className = "hm-menu";
     el.setAttribute("role", "menu");
+    // HERESY 2540 (the UIX fix pass of 13.11.2026): a row may bring a drawing of the Studio's set (ui: its name, HeresyIcons.ui) in place of its glyph;
+    // a menu that has drawings ticks with the drawn check too. A menu of glyphs alone is drawn as before
+    var HI = window.HeresyIcons, drawn = !!(HI && HI.ui) && items.some(function (x) { return x && x.ui; });
     el.innerHTML = items.map(function (it, i) {
       if (it.sep) return '<div class="hm-sep" role="separator"></div>';
       if (it.head) return '<div class="hm-head">' + esc(it.head) + "</div>";
       return '<button type="button" class="hm-item' + (it.danger ? " is-danger" : "") + (it.muted ? " is-muted" : "") + '" role="menuitem" data-i="' + i + '"' +
         (it.disabled ? " disabled" : "") + (it.muted ? ' aria-disabled="true"' : "") +   /* HERESY 1734: muted, greyed and saying why (a disabled one cannot) */ (it.checked !== undefined ? ' aria-checked="' + !!it.checked + '"' : "") + (it.depth ? ' style="--hm-depth:' + (+it.depth) + '"' : "") + ">" +   // HERESY 2040: a tree's level
         // HERESY 1474: in the page's language before it is measured (a menu laid out in English grew past the window in Russian)
-        '<span class="hm-icon">' + (it.checked ? "✓" : esc(it.icon || "")) + '</span><span class="hm-label" translate="no">' + esc(it.raw || !window.RuachI18n ? it.label : window.RuachI18n.t(it.label)) + "</span>" +
+        '<span class="hm-icon">' + (it.checked ? (drawn ? HI.ui("check") : "✓") : drawn && it.ui ? HI.ui(it.ui) : esc(it.icon || "")) + '</span><span class="hm-label" translate="no">' + esc(it.raw || !window.RuachI18n ? it.label : window.RuachI18n.t(it.label)) + "</span>" +
         (it.items ? '<span class="hm-more">›</span>' : "") + "</button>";   // HERESY 1169 · 1248: the hint beside the menu (hintShow), not in the row
     }).join("");
     document.body.appendChild(el);
@@ -169,6 +172,9 @@
   var MAX = 8, SKIP = ".mx-ver, .mx-bus select, [data-hc='off']", pop = null;
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function text(o) { return (o.textContent || "").trim(); }
+  // HERESY 2527 (the UIX audit 13.11.2026, №97/№64/№66): the picker's own words in the page's language, its icons the Studio's set
+  function trw(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
+  function ico(n, c) { return window.HeresyIcons ? window.HeresyIcons.ui(n, c) : ""; }
   function own(o) { return o.getAttribute("translate") === "no" || (o.parentNode && o.parentNode.getAttribute && o.parentNode.getAttribute("translate") === "no"); }
   function fire(sel) { sel.dispatchEvent(new Event("input", { bubbles: true })); sel.dispatchEvent(new Event("change", { bubbles: true })); }
   function choose(sel, i) { if (sel.selectedIndex !== i) { sel.selectedIndex = i; fire(sel); } }
@@ -198,10 +204,10 @@
       if (sel.closest(".pcv-face")) {
         var on = cur >= 0 ? opts[cur] : null, lab = sel.closest(".field") ? "" : sel.getAttribute("aria-label") || "";
         html = (lab ? '<span class="hc-lab">' + esc(lab) + "</span>" : "") +
-          '<button type="button" class="hc-step" data-d="-1" tabindex="-1" aria-hidden="true"' + (sel.disabled || near(-1) < 0 ? " disabled" : "") + ">\u25c0</button>" +
+          '<button type="button" class="hc-step" data-d="-1" tabindex="-1" aria-hidden="true"' + (sel.disabled || near(-1) < 0 ? " disabled" : "") + ">" + (ico("chevron-left", "hc-step-ico") || "\u25c0") + "</button>" +
           '<button type="button" class="hc-pick"' + (sel.disabled ? " disabled" : "") + ' aria-haspopup="listbox"><span class="hc-pick-now"' + (on && own(on) ? ' translate="no"' : "") + ">" +
           esc(on ? text(on) : "\u2014") + "</span></button>" +
-          '<button type="button" class="hc-step" data-d="1" tabindex="-1" aria-hidden="true"' + (sel.disabled || near(1) < 0 ? " disabled" : "") + ">\u25b6</button>";
+          '<button type="button" class="hc-step" data-d="1" tabindex="-1" aria-hidden="true"' + (sel.disabled || near(1) < 0 ? " disabled" : "") + ">" + (ico("chevron-right", "hc-step-ico") || "\u25b6") + "</button>";
       } else if (opts.length > MAX || sel.dataset.hcPick === "1") {   // HERESY 1598: or a button as its own asks (a head has no room for rows)
         var now = cur >= 0 ? opts[cur] : null;
         html = '<button type="button" class="hc-pick"' + (sel.disabled ? " disabled" : "") + ' aria-haspopup="listbox"><span class="hc-pick-now"' + (now && own(now) ? ' translate="no"' : "") + ">" +
@@ -259,7 +265,7 @@
     var modal = opts.length > 10, veil = null;          // HERESY 1951: a list long enough for a Find opens as the Studio's other finds do, in the middle
     el.className = "hc-pop" + (modal ? " is-modal" : "");
     el.setAttribute("role", "listbox");
-    el.innerHTML = (opts.length > 10 ? '<input type="search" class="hc-find" placeholder="Find" autocomplete="off" spellcheck="false">' : "") +
+    el.innerHTML = (opts.length > 10 ? '<input type="search" class="hc-find" placeholder="' + esc(trw("Find")) + '" autocomplete="off" spellcheck="false">' : "") +   // HERESY 2527
       '<div class="hc-rows">' + opts.map(function (o, i) {
         return '<button type="button" class="hc-row' + (i === sel.selectedIndex ? " is-cur" : "") + '" role="option" data-i="' + i + '" aria-selected="' + (i === sel.selectedIndex) + '"' +
           (o.disabled ? " disabled" : "") + (own(o) ? ' translate="no"' : "") + ">" + esc(text(o)) + "</button>";
@@ -326,7 +332,32 @@
     }).observe(root, { childList: true, subtree: true });
   }
   function rooms() { ROOMS.forEach(function (id) { scope(document.getElementById(id)); }); }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", rooms); else rooms();
-  window.HeresyChoices = { within: within, enhance: enhance, close: close, open: function () { return !!pop; }, scope: scope, rooms: function () { return ROOMS.slice(); } };
+  // HERESY 2527 (the UIX audit 13.11.2026, №97: four kinds of dropdown across the Studio): one way in for every room, without scoping a room whole
+  // (which turns its short lists into radio rows): a select marked data-hc-pick="1" in the markup or by the script that draws it is the Studio's
+  // button and list wherever it stands, the select hidden and still what everything reads and writes (app.css). pick(el) marks and enhances a
+  // select or every select inside el. The marked ones are found as the page starts and as they come
+  var PICK = 'select[data-hc-pick="1"]';
+  function pick(el) {
+    if (!el) return;
+    var list = el.tagName === "SELECT" ? [el] : Array.prototype.slice.call(el.querySelectorAll("select"));
+    list.forEach(function (s) { s.dataset.hcPick = "1"; enhance(s); });
+  }
+  function marked() {
+    Array.prototype.forEach.call(document.querySelectorAll(PICK), enhance);
+    if (!window.MutationObserver) return;
+    new MutationObserver(function (ms) {
+      for (var i = 0; i < ms.length; i++) {
+        var a = ms[i].addedNodes;
+        for (var j = 0; j < a.length; j++) {
+          var n = a[j];
+          if (n.nodeType !== 1 || !n.firstElementChild && n.tagName !== "SELECT") continue;
+          if (n.tagName === "SELECT") { if (n.dataset.hcPick === "1") enhance(n); } else Array.prototype.forEach.call(n.querySelectorAll(PICK), enhance);
+        }
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+  function start() { rooms(); marked(); }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+  window.HeresyChoices = { within: within, enhance: enhance, close: close, open: function () { return !!pop; }, scope: scope, rooms: function () { return ROOMS.slice(); }, pick: pick };
 })();
 

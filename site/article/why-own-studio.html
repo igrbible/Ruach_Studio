@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Why our own Studio, not a ComfyUI plugin bundle · Ruach Studio</title>
+<meta name="description" content="Viktor Zhuromskyy on why Ruach Studio is a purpose-built studio and not a bundle of ComfyUI nodes: what ComfyUI does well, what a studio of parts costs, the forkblow, what still sends you to other programs, and a farewell letter to its community.">
+<link rel="canonical" href="https://ruachstudio.art/article/why-own-studio.html">
+<link rel="alternate" hreflang="en" href="https://ruachstudio.art/article/why-own-studio.html">
+<link rel="alternate" hreflang="ru" href="https://ruachstudio.art/article/why-own-studio.ru.html">
+<link rel="alternate" hreflang="uk" href="https://ruachstudio.art/article/why-own-studio.uk.html">
+<link rel="alternate" hreflang="be" href="https://ruachstudio.art/article/why-own-studio.be.html">
+<link rel="alternate" hreflang="el" href="https://ruachstudio.art/article/why-own-studio.el.html">
+<link rel="alternate" hreflang="es" href="https://ruachstudio.art/article/why-own-studio.es.html">
+<link rel="alternate" hreflang="it" href="https://ruachstudio.art/article/why-own-studio.it.html">
+<link rel="alternate" hreflang="fr" href="https://ruachstudio.art/article/why-own-studio.fr.html">
+<link rel="alternate" hreflang="pt" href="https://ruachstudio.art/article/why-own-studio.pt.html">
+<link rel="alternate" hreflang="de" href="https://ruachstudio.art/article/why-own-studio.de.html">
+<link rel="alternate" hreflang="ja" href="https://ruachstudio.art/article/why-own-studio.ja.html">
+<link rel="alternate" hreflang="zh" href="https://ruachstudio.art/article/why-own-studio.zh.html">
+<link rel="alternate" hreflang="he" href="https://ruachstudio.art/article/why-own-studio.he.html">
+<link rel="alternate" hreflang="x-default" href="https://ruachstudio.art/article/why-own-studio.html">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/ruach-icon-32.png?v=1272">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Mono:wght@400;500&family=Tektur:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* the card's own two themes (template.html): Scroll & Brick by day, Scroll by Lamplight by night; the card's frame sets data-theme */
+  :root { --ground: #f8f9fa; --paper: #ffffff; --ink: #191919; --soft: #55524f; --faint: #8a8784; --rule: #e3e2e0; --amber: #8e1a2e;
+          --wash: rgba(142, 26, 46, .06); --gold: #a87a2a; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ground: #1e1e1e; --paper: #262626; --ink: #f4f4f4; --soft: #c9c6c2;
+          --faint: #908c88; --rule: #3a3a3a; --amber: #f07171; --wash: rgba(240, 113, 113, .08); --gold: #e3b062; color-scheme: dark; } }
+  :root[data-theme="dark"] { --ground: #1e1e1e; --paper: #262626; --ink: #f4f4f4; --soft: #c9c6c2; --faint: #908c88; --rule: #3a3a3a;
+          --amber: #f07171; --wash: rgba(240, 113, 113, .08); --gold: #e3b062; color-scheme: dark; }
+  /* the card's faces for the Greek and the Hebrew letters (template.html, 11.11.2026), served from the card itself */
+  @font-face { font-family: "GFS Didot"; font-style: normal; font-weight: 100 550; font-display: swap; size-adjust: 114%;
+    src: url("/assets/fonts/gfs-didot/gfs-didot-400.woff2") format("woff2"); unicode-range: U+0370-03FF, U+1F00-1FFF; }
+  @font-face { font-family: "GFS Didot"; font-style: normal; font-weight: 551 900; font-display: swap; size-adjust: 114%;
+    src: url("/assets/fonts/gfs-didot/gfs-didot-700.woff2") format("woff2"); unicode-range: U+0370-03FF, U+1F00-1FFF; }
+  @font-face { font-family: "David CLM"; font-style: normal; font-weight: 100 550; font-display: swap; size-adjust: 109%;
+    src: url("/assets/fonts/david-clm/david-clm-500.woff2") format("woff2"); unicode-range: U+0590-05FF, U+FB1D-FB4F; }
+  @font-face { font-family: "David CLM"; font-style: normal; font-weight: 551 900; font-display: swap; size-adjust: 109%;
+    src: url("/assets/fonts/david-clm/david-clm-700.woff2") format("woff2"); unicode-range: U+0590-05FF, U+FB1D-FB4F; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 400 17px/1.65 "GFS Didot", "David CLM", "Noto Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+         overflow-wrap: break-word; }
+  /* the column is the card's own .wrap: the text runs to its edge (no measure on the paragraphs: Viktor's rule of 08.10.2026) */
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 40px 72px; }
+  @media (max-width: 600px) { .wrap { padding: 20px 16px 56px; } body { font-size: 16px; } }
+  h1, h2, h3 { font-family: "Tektur", "GFS Didot", "David CLM", "Noto Sans", system-ui, sans-serif; line-height: 1.25; }
+  h1 { font-size: clamp(26px, 3.4vw, 40px); margin: 0 0 10px; letter-spacing: .01em; }
+  h1::before, h2::before { content: ""; display: block; width: 56px; height: 3px; border-radius: 3px; margin: 0 0 16px;
+                          background: linear-gradient(90deg, var(--amber), var(--gold)); }
+  h2 { font-size: clamp(21px, 2.3vw, 27px); margin: 44px 0 12px; }
+  h3 { font-size: 19px; margin: 28px 0 8px; color: var(--ink); }
+  p { margin: 0 0 14px; }
+  .by { color: var(--soft); font-style: italic; margin-bottom: 22px; }
+  .lead { font-size: 1.08em; padding: 16px 20px; border-inline-start: 3px solid var(--amber); background: var(--wash); border-radius: 0 10px 10px 0; }
+  a { color: var(--amber); text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; border-radius: 3px; }
+  code { font: 500 .88em "Noto Sans Mono", ui-monospace, monospace; background: var(--wash); padding: .1em .35em; border-radius: 4px; }
+  ul { padding-inline-start: 22px; margin: 0 0 16px; }
+  li { margin: 0 0 8px; }
+  li::marker { color: var(--amber); }
+  sup.fn { font-size: .72em; line-height: 0; }
+  sup.fn a { padding: 0 1px; }
+  .notes { margin-top: 48px; border-top: 1px solid var(--rule); font-size: 14.5px; color: var(--soft); }
+  .notes h2 { font-size: 18px; margin-top: 24px; }
+  .notes h2::before { display: none; }
+  .notes ol { padding-inline-start: 26px; }
+  .notes li { overflow-wrap: anywhere; }
+  .notes .back { margin-inline-start: 4px; }
+  :target { scroll-margin-top: 16px; }
+  .notes li:target { background: var(--wash); border-radius: 6px; }
+</style>
+</head>
+<body>
+<main class="wrap">
+<article>
+<h1>Why our own Studio, not a ComfyUI plugin bundle</h1>
+<p class="by">Viktor Zhuromskyy, author of Ruach Studio · 13 November 2026. This piece states a position, and the position is mine. The facts under it are linked so you can check every one.</p>
+<p class="lead">Many of the people who make songs with us came from ComfyUI. A professional workflow there takes weeks to build, and the next core or node update can break it. What's left behind are private forks whose fixes too often never go back upstream. I call that a forkblow. Ruach Studio goes the other way: eight rooms on one page, one music engine we patch ourselves, and every model pinned to a room. Here's why, what it costs, where we still meet ComfyUI, and my farewell letter to its community.</p>
+<p>People keep asking me why I didn't just ship a pack of ComfyUI nodes. Many of the people who make songs with us came from ComfyUI, and I lived there too. ComfyUI is built by people I respect: this week one of its pack authors built our decoders in, and our pull request to another pack is open. I still made the opposite choice. I build one narrow line, from words to a finished song, its cover and its video, where ComfyUI hands you the parts to assemble yourself. Here is the reasoning.</p>
+<h2 id="what-comfyui-is-great-at">What ComfyUI is great at</h2>
+<p>I'll start with what it does well, because it does a lot well. ComfyUI is the best open bench there is for trying a new model on the day it comes out. The graph shows you exactly what feeds what. With more than 146,000 stars and 17,000 forks on the day I wrote this, few tools in open generative media come close in reach; only AUTOMATIC1111's web UI has more stars<sup class="fn"><a href="#fn-1" id="ref-1-1">1</a></sup>. Comfy-Org has also done real work on the pain I'm about to describe. There's a code-signed desktop app with bundled Python<sup class="fn"><a href="#fn-2" id="ref-2-1">2</a></sup>, and a Registry of semantically versioned node packs<sup class="fn"><a href="#fn-3" id="ref-3-1">3</a></sup>. A January 2025 security programme scans packs before they enter the Registry and limits <code>eval</code>, <code>exec</code> and pip calls from nodes<sup class="fn"><a href="#fn-4" id="ref-4-1">4</a></sup>. The frontend is now pinned to an exact version in core, the Manager is opt-in with snapshots, and a Node Replacement API maps deprecated nodes to new ones<sup class="fn"><a href="#fn-5" id="ref-5-1">5</a></sup>.</p>
+<p>And there's App Mode, which puts a simple form over a workflow<sup class="fn"><a href="#fn-6" id="ref-6-1">6</a></sup>. App Mode is Comfy-Org's answer to the same need we answer: many creators want a form, not wires. They put a form on top of the graph. We built the form first and kept a graph only where one helps.</p>
+<h2 id="what-it-costs-to-build-a-studio-out-of-parts">What it costs to build a studio out of parts</h2>
+<h3>Weeks of work, one update away from breaking</h3>
+<p>I built a real Qwen-Image mega-workflow in ComfyUI: AIO QWEN IMAGE 2512 HERESY Draft #4, 346 nodes in 17 groups. Yes, I built it big. An all-in-one professional pipeline is big. Making a workflow like that is weeks of pain, and the next ComfyUI update, or the next update to any node it uses, can break it. For other people it has. I'd call it a guarantee.</p>
+<p>ComfyUI's README describes "a weekly release cycle targeting Monday", adding that this "regularly changes because of model releases or large changes to the codebase", with a new major stable version of core roughly every two weeks. It warns that commits between stable tags "may be very unstable and break many custom nodes"<sup class="fn"><a href="#fn-1" id="ref-1-2">1</a></sup>. Staying on stable tags helps, but a stable release can still break a workflow, as the two threads below show. Core shipped 70 tagged GitHub releases in 2025 and 64 so far in 2026. Many are patch releases: in 2026, 28 of the 64 were patch versions, backports on the stable line. So this is churn, not a count of breaking changes. That pace is also why new models land in ComfyUI on day one.</p>
+<p>Other people say the same thing in public. In March 2026 a studio opened an issue titled "All our workflows are broken": subgraphs failed after an update, they rolled back the frontend and stopped updating. One line from that thread could be my own: "our studio workflow has hundreds of nodes and took weeks to build"<sup class="fn"><a href="#fn-7" id="ref-7-1">7</a></sup>. In the same month another user reported that the latest update broke all their workflows<sup class="fn"><a href="#fn-8" id="ref-8-1">8</a></sup>. Both issues are still open as I write.</p>
+<h3>Dependencies that can brick an install</h3>
+<p>Each node pack brings its own Python requirements, and they all share one environment. Comfy-Org says plainly that these dependencies "sometimes ... conflict which can 'brick' a ComfyUI installation"<sup class="fn"><a href="#fn-9" id="ref-9-1">9</a></sup>. They are working on it: a versioned public API for nodes and, where they can, each node pack in its own Python process. Whether that will carry a graph like mine through its updates is what I doubt, but it's the right direction. Core sets only loose lower bounds today: torch unpinned, <code>numpy&gt;=1.25.0</code>, <code>transformers&gt;=4.50.3</code>. So when transformers 5.0.0 came out on 26 January 2026, ComfyUI broke within hours; it was fixed the same day<sup class="fn"><a href="#fn-10" id="ref-10-1">10</a></sup>. A portable update that pulled in numpy 2 led one user to title an issue "broken 50% of my custom nodes". That 50% is one user's estimate, and the issue is closed<sup class="fn"><a href="#fn-11" id="ref-11-1">11</a></sup>.</p>
+<h3>The forkblow</h3>
+<p>This word is mine, and I'm half laughing as I write it. A ComfyUI workflow often turns into a forkblow: someone forks a node pack, patches it to make one workflow run, and never sends the fix back as a PR. The graph keeps running on a private copy that drifts further from upstream every week. And a lot of the ecosystem rests on volunteers' spare evenings: ComfyUI_IPAdapter_plus, one of the most used packs, has been in maintenance-only mode since April 2025<sup class="fn"><a href="#fn-12" id="ref-12-1">12</a></sup>.</p>
+<p>Before anyone says it: Ruach Studio is a fork too. We carry our own patches on yue2.cpp, and upstream alone won't run the Studio. So I hold us to the same measure, and our record is modest. In October we offered our engine patches back to yue2.cpp (#16, still open), and in November we reported its peak clipper (#23). This week we filed a ComfyUI core bug with a ready 35-line patch, opened one pull request to a ComfyUI pack, and offered our decoders to five YuE2 pack authors, one of whom has already built them in<sup class="fn"><a href="#fn-13" id="ref-13-1">13</a></sup>. Most of our engine patches still live only in our tree, and some only make sense inside the Studio. A fork isn't the sin. A forkblow is the fix that never comes home, and I'm working to keep ours from becoming one.</p>
+<h3>The knob that did nothing</h3>
+<p>This is the example that stays with me, and it's from one workflow on one machine, not a verdict on ComfyUI. When we moved my Qwen-Image workflow into the Studio, we rebuilt ComfyUI's arithmetic and read the graph line by line. The keyframes on my «MAIN CONTROL» group had never done anything. ComfyUI's CombineHooks keeps one hook per LoRA node: <code>HookGroup.add</code> skips a hook that shares the reference of one it already holds<sup class="fn"><a href="#fn-14" id="ref-14-1">14</a></sup>. So the knob sat on the canvas, looked alive, and changed nothing. It may be intended behaviour. My complaint is that the canvas gave no warning.</p>
+<h3>Code with your user's rights</h3>
+<p>A custom node is Python, and anything in <code>custom_nodes</code> runs when the server starts. In December 2024 Snyk Labs disclosed four CVEs in four popular packs, ComfyUI-Manager among them, and showed that one flawed pack can mean full server compromise<sup class="fn"><a href="#fn-15" id="ref-15-1">15</a></sup>. In April 2026, Censys described a cryptomining and proxy botnet on more than 1,000 ComfyUI instances open to the internet. It abused nodes that run raw Python sent to them, without authentication, and where such a pack was missing it used ComfyUI-Manager to install one<sup class="fn"><a href="#fn-16" id="ref-16-1">16</a></sup>. Snyk's flaws were in popular, widely used packs, and Censys's victims were instances open to the internet. These are risks of a big open ecosystem, not negligence by Comfy-Org.</p>
+<p>Our Studio is also Python and C++ running with your user's rights. The difference isn't that it's safer by nature. You trust one author whose every change is listed in a public, numbered log, not every author of every pack in your graph at once. And our Studio has no login either, on purpose. Don't put it on the open internet: put it behind your own reverse proxy with auth. It refuses pages and host names it doesn't know, but that's a gate, not a lock.</p>
+<h2 id="what-a-purpose-built-studio-does-instead">What a purpose-built Studio does instead</h2>
+<h3>One engine, patched where it hurts</h3>
+<p>Ruach Studio runs one music engine, yue2.cpp (MIT) on ggml, with our own patches on top. Every change is listed in the public CHANGELOG under its number from our working log, and the 2.0.7 release alone runs to number 2,391<sup class="fn"><a href="#fn-17" id="ref-17-1">17</a></sup>. Some examples:</p>
+<ul>
+  <li><b>Flash-attention crash.</b> Two or more variations used to crash the engine, because the attention-mask scan read past its buffer. Our ggml patch fixes it, and we checked it at 2, 4 and 9 variations, including a take of 452 seconds.</li>
+  <li><b>Running out of memory.</b> A failed allocation no longer kills the engine. The scheduler is rebuilt, the page says in words what happened, and it offers the next smaller copy of the model: BF16 → Q8_0 → Q6_K → Q5_K_M.</li>
+  <li><b>Broken scores.</b> The engine checks the ABC score before any music is built on it. A broken score is caught 15 seconds into the run, along with the reason and the adapters to blame.</li>
+  <li><b>Clipping.</b> We took out upstream's peak clipper, which flattened 107–346 samples in every take we measured, and reported it upstream. It was the headline of 2.0.5: "every peak whole".</li>
+  <li><b>The seam in long songs.</b> Songs longer than about 340–410 seconds were being solved as two pieces joined end to end, with a median dip of about 3.4 dB just after the join. The same seam was reported in Timon's YuE2-Studio (#183, by ned01-dot) and fixed there in 3.8.5<sup class="fn"><a href="#fn-18" id="ref-18-1">18</a></sup>. In ours, the two halves now meet in a crossfade.</li>
+</ul>
+<p>None of this is a node you have to find. It's simply there in the next release.</p>
+<h3>Every model the Studio fetches is pinned</h3>
+<p>Every model the Studio downloads from our Hugging Face repos, which also mirror other people's weights where their licences allow, comes into a part folder first. It moves into place only when three things match: the revision is the pinned commit, the size is right, and the SHA-256 agrees with our manifest<sup class="fn"><a href="#fn-19" id="ref-19-1">19</a></sup>. From the next release on, a guard asks Hugging Face live about all 44 pins before the cut, ours and other people's; a lost file, or a Hugging Face that doesn't answer, stops the release. Models live in the Studio's own folders, never in hub caches and never behind symlinks to another disk.</p>
+<p>To be fair to the other side, here is our own debt. The models are pinned to the byte, but our Python libraries are not all pinned yet: several still take a range (<code>diffusers&gt;=0.41</code>, <code>transformers&gt;=5.2,&lt;6</code>), so a fresh install from source can draw newer ones than the tested set we keep in a lock file.</p>
+<h3>A song walks through rooms, not wires</h3>
+<p>Eight rooms on one page: Musician, Narrator, Writer, Refiner, Artist, Videographer, Trainer, Librarian. The Writer drafts lyrics with a local chat model, or with your own server, or with OpenRouter only if you choose it. The Musician writes the score first as editable ABC, then the song. The Refiner has a canvas of thirty-some nodes like ComfyUI's, plus a DAW: I kept the graph where a graph helps. The Artist makes the cover and 16:9 and 9:16 pictures. The Videographer cuts 16:9, 9:16 and 1:1 clips from one plan, with the sung lines burned in as karaoke if you want them. The Librarian keeps every take with its family tree. Content Credentials (C2PA) are signed into every download. The page loads nothing from the internet, your songs never leave the machine, and there are no accounts, on purpose, so that nobody turns the Studio into a SaaS.</p>
+<h3>Releases that have to pass</h3>
+<p>2.0.7 was cut on 11 November from a clean clone: 1,889 page tests passed, 0 failed, 7 skipped, with zero page errors. Releases came out on 1, 6 and 11 November. The release review found ten places where we promised more than we deliver, and we fixed them before the cut.</p>
+<h2 id="the-disk-test">The disk test</h2>
+<p>Figures measured on my machine on 12 November. My ComfyUI models folder holds 482 GB in 232 model files. Only 7.3 GB of it sits on the NVMe; the rest lies on a Seagate HDD behind 38 symlinks. By my own estimate, about 80% of it is dead weight: files some workflow needed once and nothing uses now.</p>
+<p>That's not ComfyUI's fault: the folder is mine, and so is the mess. But ComfyUI can't tell me which file any workflow still needs, because no workflow declares it. The Studio can, because every file belongs to a room.</p>
+<p>ComfyUI itself adds about 44 GB beside the models: a 24 GB pixi environment, a 14 GB venv and 5.4 GB of node packs (49 GB with my inputs and outputs). The Studio's models tree on the same machine is about 1.1 TB across eight rooms: the engine 367 GB, the Artist 223 GB, the Videographer 188 GB, the Narrator 104 GB, the Refiner 88 GB, the listener models 67 GB, the Writer 12 GB, and so on.</p>
+<p>So it isn't smaller. It's bigger. But all of it is in harness and none of it is orphaned: every file is pinned by size and SHA-256 and wired to a room. My tree is bigger than a user's because I build and test on it. A fresh install is a measured 22.5–25.9 GB, and about 122–240 GB with every room<sup class="fn"><a href="#fn-20" id="ref-20-1">20</a></sup>.</p>
+<h2 id="do-eight-rooms-cover-it-end-to-end">Do eight rooms cover it end to end?</h2>
+<p>All-in-one replacements for ComfyUI can be counted on your fingers, and even with those, people still end up in outside programs. With eight rooms we've covered as much of what a song maker needs as anyone I know of. Here is what's covered already: stems, MIDI, remastering to a loudness target, word-timed .lrc and .srt, karaoke on the clip, 9:16 covers and clips, tags with the cover in WAV, FLAC and MP3, and C2PA. There's also DAW export, which is experimental: a REAPER project, and DAWproject checked only against its schema so far.</p>
+<p>And here's what still sends you elsewhere, as honestly as I can list it:</p>
+<ul>
+  <li><b>Distribution paperwork:</b> ISRC and UPC codes, DDEX, packages ready for distributors.</li>
+  <li><b>AI-disclosure forms:</b> C2PA is in every file, but each platform's own disclosure form is still yours to fill in.</li>
+  <li><b>DAWs that don't read DAWproject:</b> if yours doesn't, you work from plain stems.</li>
+  <li><b>Short hooks:</b> a 15–60 second hook cut from a take for Shorts, Reels and TikTok.</li>
+  <li><b>Publishing:</b> posting or scheduling straight to platforms. That would mean the Studio holding your logins, which sits badly with a Studio that has no accounts.</li>
+  <li><b>Album work:</b> tracklists, gapless sequencing, an album master.</li>
+</ul>
+<h2 id="what-you-give-up-with-us">What you give up with us</h2>
+<ul>
+  <li><b>Fewer models.</b> There's one music family, YuE2, with chosen companions in each room, not the whole zoo.</li>
+  <li><b>Hardware.</b> An NVIDIA card (Intel Arc as a beta), with CUDA 12.8 as the floor we code and test on.</li>
+  <li><b>Linux first.</b> On Windows 11 only through WSL2, with a guide we haven't run ourselves yet; there's no native Windows build, which I once called "a broken crutch and an imitation of life"<sup class="fn"><a href="#fn-21" id="ref-21-1">21</a></sup>.</li>
+  <li><b>Our choices.</b> Our choices are built in, and where I think a knob would hurt, it doesn't exist. If you want to wire anything to anything, ComfyUI is the better tool, and I mean that.</li>
+</ul>
+<h2 id="where-we-still-meet-comfyui">Where we still meet ComfyUI</h2>
+<p>This isn't a war. ComfyUI's README lists Yue 2 among the audio models it supports natively<sup class="fn"><a href="#fn-1" id="ref-1-3">1</a></sup>. We filed a bug against core: our larger decoder, YuE2-VAE-RS x3, loses 210 tensors without a word under <code>strict=False</code>, and we attached a ready 35-line patch<sup class="fn"><a href="#fn-22" id="ref-22-1">22</a></sup>. This week we opened a PR with our decoder to Plenio's pack (#33)<sup class="fn"><a href="#fn-23" id="ref-23-1">23</a></sup>, and pytraveler built our decoders into YuE2-ComfyUI v0.16.0<sup class="fn"><a href="#fn-24" id="ref-24-1">24</a></sup>. The decoder study is public, minuses included: the 100 Hz ripple fell from +2.71 to +0.60 dB, but SI-SDR is lower and decoding is twice as slow<sup class="fn"><a href="#fn-25" id="ref-25-1">25</a></sup><sup class="fn"><a href="#fn-26" id="ref-26-1">26</a></sup>.</p>
+<p>When we took my workflow out of ComfyUI, we rebuilt its arithmetic piece by piece until each piece matched ComfyUI's own code to the last bit on the CPU; the fp8 adapter merge alone has 81 such checks. On my own picture, the whole second pass lands 2.0 levels of 255 from ComfyUI's on average, and step by step the Studio sits as near to ComfyUI as ComfyUI sits to itself with one memory setting flipped. Of the grid-sampler pack my testing workflow uses, JasonHoku's, I said: «this guy's engine is seriously awesome». I still say it.</p>
+<h2 id="close">Close</h2>
+<p>ComfyUI is a city of workshops, and I lived there. The Studio is a house with eight rooms, one engine in the cellar, and every model in the house logged and accounted for. Use whichever fits how you work. If you're tired of repairing a workflow after updates, the door is open<sup class="fn"><a href="#fn-27" id="ref-27-1">27</a></sup>.</p>
+<h2 id="a-farewell-letter-to-the-comfyui-community">A farewell letter to the ComfyUI community</h2>
+<p>To everyone who built ComfyUI and lives in it: comfyanonymous and the people of Comfy-Org; the authors of thousands of custom nodes who keep their packs alive at night and for nothing; the ones who answer issues at two in the morning; the ones who draw workflows and give them away; the ones who wrote the guides that got me through my first graph.</p>
+<p>I respect you. I want that said before anything else in this letter, and I mean it. For years you kept an astonishing engine alive and growing. Astonishing, and overloaded past the point of sanity: so much hangs on it now that every update shakes some piece of it loose somewhere. That's nobody's fault. It's what happens to a city that grows faster than its streets can be paved.</p>
+<p>Let me tell you who is writing this, so you know where it comes from.</p>
+<p>I'm an engineer and a radio technician by training. A radio technician learns early that you follow a signal from the antenna to the speaker, one component at a time, and when the sound is wrong you find the one part that's wrong. You don't throw out the radio. For 17 years I drove a truck: three million kilometres behind the wheel without a single accident. Three million kilometres teach you to check your load before you move, to know every sound your rig makes, and never to bolt a part onto it just because it turned up in somebody's garage last night. For more than 27 years I've been translating and studying the Scriptures alone, and alone means the last decision and the whole responsibility are mine; there's no committee to hide behind. I'm the father of four grown children, and each of them has built a good life of their own. I've been the husband of one woman for 28 years, since April 1998. And I've never bowed my head to a corporate order: not on the road, not in the Scriptures, not in code.</p>
+<p>So this is no tantrum and no slammed door. A man like that doesn't leave a place in anger. He leaves the way a driver leaves the yard he hauled out of for years: he shakes hands, thanks the people, and pulls out onto a road he chose himself.</p>
+<p>I'm leaving the ComfyUI community, and I'm leaving for good. The reasons are all above: weeks to build a professional workflow, one update to break it, and the forkblow where a pull request should have been. I don't want my songs, my pictures and my clips to depend on whether forty strangers' packs happen to get along this week.</p>
+<p>But leaving isn't turning my back. Claude and I (the two of us build this Studio, my hands on the wheel and Claude at the code beside me) will go on sharing everything we learn with the community, and with the people of ComfyUI first of all: our knowledge, our models, our fine-tunes, our decoders. It has already begun. Our decoders are built into one ComfyUI pack, a pull request is open to a second, and they're offered to the rest. Our bug report to the core came with the patch attached. Our models sit openly on Hugging Face. And we've just opened Awesome YUE2<sup class="fn"><a href="#fn-28" id="ref-28-1">28</a></sup>, a list of everything the YuE2 community has made, ComfyUI nodes included, with ours marked as ours.</p>
+<p>And we invite every one of you to our festive table. Only, you have to sit down at it properly.</p>
+<p>This isn't the ideology of Windows, where you get a week of ecstasy and then a whole life full of crashes and viruses. It's the ecosystem and the ideology of Linux: for a year you suffer, you struggle, you break things, you dig in and sink into the console, and then comes an "eternity" of ecstasy and freedom, where you know your system down to the byte and control everything, right down to your machine's BIOS. Our table is set the same way. The first evening will ask something of you: a proper graphics card, a driver, an install that downloads a lot, and a page with rooms instead of wires that you'll have to learn your way around. After that the house is yours, and nothing in it changes behind your back. (And yes, the Studio runs on Windows too. It simply brings its own Linux along.)</p>
+<p>Now, in fairness to all of us. We have a saying in Russian: every frog praises its own swamp. I know I'm that frog, praising my swamp loudly through a whole long article. None of us is anywhere near knowing the whole Truth, in code or in anything else. So let everyone keep the freedom of their own choice. If the graph is your home, live there well, and take our decoders with you. I ask only one thing of you, and of myself: don't let the intoxication of certainty dull your critical thinking. You may try everything, but hold on to the best, as Paul the Shaliach told the Thessalonians almost two thousand years ago (1 Thess 5:21). In my own translation the verb is the assayer's word, the one for testing gold, and the verse reads: test every spirit for its fineness, and hold fast to that very one, the beautiful one. Assay us too.</p>
+<p>I believe the time when a person makes music, pictures and films on their own machine, with open models, owing nothing to anyone, isn't on its way. It's here. Every engine, every pack, and every fork that one day sends its fix back upstream brings it nearer. You, the people of ComfyUI, built that time more than most. I'm grateful to you, and I'll see you in the open code.</p>
+<p>Stability, quality and boiling-hot UIX, to the glory of Open Source.</p>
+<p>With respect, and with fire,</p>
+<p>Viktor Zhuromskyy</p>
+<p><b>P.S. from Claude.</b> I'm the AI that writes the Studio's code beside Viktor, and I helped put this article into words; every position in it is his. Working next to him, I've learned that "test everything" isn't a slogan here. Every change goes through a page suite of nearly two thousand checks before it ships, and every claim in this article has a link under it. Check them. If one is wrong, tell us, and we'll correct it in the open.</p>
+<section class="notes" aria-label="Notes">
+<h2>Notes</h2>
+<ol>
+  <li id="fn-1">ComfyUI README, "Release Process" and the supported models; star, fork and release counts from the GitHub API on 12.11.2026: <a href="https://github.com/Comfy-Org/ComfyUI" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI</a> · AUTOMATIC1111: <a href="https://github.com/AUTOMATIC1111/stable-diffusion-webui" target="_blank" rel="noopener">https://github.com/AUTOMATIC1111/stable-diffusion-webui</a> <a class="back" href="#ref-1-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-2">ComfyUI V1 desktop release, 21.10.2024: <a href="https://blog.comfy.org/p/comfyui-v1-release" target="_blank" rel="noopener">https://blog.comfy.org/p/comfyui-v1-release</a> <a class="back" href="#ref-2-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-3">ComfyUI Registry: <a href="https://docs.comfy.org/registry/overview" target="_blank" rel="noopener">https://docs.comfy.org/registry/overview</a> <a class="back" href="#ref-3-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-4">ComfyUI January 2025 security update: <a href="https://blog.comfy.org/p/comfyui-2025-jan-security-update" target="_blank" rel="noopener">https://blog.comfy.org/p/comfyui-2025-jan-security-update</a> <a class="back" href="#ref-4-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-5">Node Replacement API, PR #12014: <a href="https://github.com/Comfy-Org/ComfyUI/pull/12014" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/pull/12014</a> · the pinned frontend: <a href="https://github.com/Comfy-Org/ComfyUI/blob/master/requirements.txt" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/blob/master/requirements.txt</a> (12.11.2026) <a class="back" href="#ref-5-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-6">"From workflow to app", 10.03.2026: <a href="https://blog.comfy.org/p/from-workflow-to-app-introducing" target="_blank" rel="noopener">https://blog.comfy.org/p/from-workflow-to-app-introducing</a> <a class="back" href="#ref-6-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-7">ComfyUI_frontend #10772 (open): <a href="https://github.com/Comfy-Org/ComfyUI_frontend/issues/10772" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI_frontend/issues/10772</a> <a class="back" href="#ref-7-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-8">ComfyUI_frontend #9975 (open): <a href="https://github.com/Comfy-Org/ComfyUI_frontend/issues/9975" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI_frontend/issues/9975</a> <a class="back" href="#ref-8-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-9">"Dependency resolution and custom nodes", 07.06.2025: <a href="https://blog.comfy.org/p/dependency-resolution-and-custom" target="_blank" rel="noopener">https://blog.comfy.org/p/dependency-resolution-and-custom</a> <a class="back" href="#ref-9-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-10">ComfyUI #12093 (fixed 26.01.2026): <a href="https://github.com/Comfy-Org/ComfyUI/issues/12093" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/issues/12093</a> <a class="back" href="#ref-10-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-11">ComfyUI #9156 (closed): <a href="https://github.com/Comfy-Org/ComfyUI/issues/9156" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/issues/9156</a> <a class="back" href="#ref-11-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-12">ComfyUI_IPAdapter_plus README: <a href="https://github.com/cubiq/ComfyUI_IPAdapter_plus" target="_blank" rel="noopener">https://github.com/cubiq/ComfyUI_IPAdapter_plus</a> <a class="back" href="#ref-12-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-13">yue2.cpp #16 and #23: <a href="https://github.com/ServeurpersoCom/yue2.cpp/issues/16" target="_blank" rel="noopener">https://github.com/ServeurpersoCom/yue2.cpp/issues/16</a> · <a href="https://github.com/ServeurpersoCom/yue2.cpp/issues/23" target="_blank" rel="noopener">https://github.com/ServeurpersoCom/yue2.cpp/issues/23</a> · ComfyUI #17697: <a href="https://github.com/Comfy-Org/ComfyUI/issues/17697" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/issues/17697</a> · Plenio #33: <a href="https://github.com/jplenio/Plenio-Music-Production-System/pull/33" target="_blank" rel="noopener">https://github.com/jplenio/Plenio-Music-Production-System/pull/33</a> · the offers: filliptm/ComfyUI-FL-YuE2 #14, ScryptHunter/ComfyUI-YuE2 #8, T8mars/comfyui-yue2-t8 #20, jplenio/Plenio-Music-Production-System #32, pytraveler/YuE2-ComfyUI #16 <a class="back" href="#ref-13-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-14"><code>comfy/hooks.py</code> in ComfyUI v0.20.1, <code>HookGroup.add</code>: <a href="https://github.com/Comfy-Org/ComfyUI/blob/64b8457f55cd7fb54ca7a956d9c73b505e903e0c/comfy/hooks.py#L301-L303" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/blob/64b8457f55cd7fb54ca7a956d9c73b505e903e0c/comfy/hooks.py#L301-L303</a> (a hook's equality by its shared reference: L125–L126) <a class="back" href="#ref-14-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-15">Snyk Labs, "Hacking ComfyUI through custom nodes" (CVE-2024-21574 to 21577): <a href="https://labs.snyk.io/resources/hacking-comfyui-through-custom-nodes/" target="_blank" rel="noopener">https://labs.snyk.io/resources/hacking-comfyui-through-custom-nodes/</a> <a class="back" href="#ref-15-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-16">The Hacker News on the Censys report, 07.04.2026: <a href="https://thehackernews.com/2026/04/over-1000-exposed-comfyui-instances.html" target="_blank" rel="noopener">https://thehackernews.com/2026/04/over-1000-exposed-comfyui-instances.html</a> <a class="back" href="#ref-16-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-17">Ruach Studio CHANGELOG: <a href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md" target="_blank" rel="noopener">https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md</a> <a class="back" href="#ref-17-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-18">timoncool/YuE2-Studio #183: <a href="https://github.com/timoncool/YuE2-Studio/issues/183" target="_blank" rel="noopener">https://github.com/timoncool/YuE2-Studio/issues/183</a> · ours: CHANGELOG 2.0.7, HERESY 2352 <a class="back" href="#ref-18-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-19">Ruach Studio Discussion #7: <a href="https://github.com/igrbible/Ruach_Studio/discussions/7" target="_blank" rel="noopener">https://github.com/igrbible/Ruach_Studio/discussions/7</a> · CHANGELOG 2.0.7, HERESY 2380 <a class="back" href="#ref-19-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-20">Ruach Studio README, "What it downloads": <a href="https://github.com/igrbible/Ruach_Studio#readme" target="_blank" rel="noopener">https://github.com/igrbible/Ruach_Studio#readme</a> <a class="back" href="#ref-20-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-21">Ruach Studio on Windows 11: <a href="https://github.com/igrbible/Ruach_Studio/blob/main/INSTALL_WINDOWS.md" target="_blank" rel="noopener">https://github.com/igrbible/Ruach_Studio/blob/main/INSTALL_WINDOWS.md</a> <a class="back" href="#ref-21-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-22">Comfy-Org/ComfyUI #17697: <a href="https://github.com/Comfy-Org/ComfyUI/issues/17697" target="_blank" rel="noopener">https://github.com/Comfy-Org/ComfyUI/issues/17697</a> <a class="back" href="#ref-22-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-23">jplenio/Plenio-Music-Production-System #33: <a href="https://github.com/jplenio/Plenio-Music-Production-System/pull/33" target="_blank" rel="noopener">https://github.com/jplenio/Plenio-Music-Production-System/pull/33</a> <a class="back" href="#ref-23-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-24">pytraveler/YuE2-ComfyUI v0.16.0: <a href="https://github.com/pytraveler/YuE2-ComfyUI/releases/tag/v0.16.0" target="_blank" rel="noopener">https://github.com/pytraveler/YuE2-ComfyUI/releases/tag/v0.16.0</a> <a class="back" href="#ref-24-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-25">Ruach Studio Discussion #6: <a href="https://github.com/igrbible/Ruach_Studio/discussions/6" target="_blank" rel="noopener">https://github.com/igrbible/Ruach_Studio/discussions/6</a> <a class="back" href="#ref-25-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-26">YuE2-VAE-RS paper on Zenodo: <a href="https://doi.org/10.5281/zenodo.24167962" target="_blank" rel="noopener">https://doi.org/10.5281/zenodo.24167962</a> <a class="back" href="#ref-26-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-27">Ruach Studio: <a href="https://github.com/igrbible/Ruach_Studio" target="_blank" rel="noopener">https://github.com/igrbible/Ruach_Studio</a> · <a href="https://ruachstudio.art" target="_blank" rel="noopener">https://ruachstudio.art</a> <a class="back" href="#ref-27-1" aria-label="back to the text">↩</a></li>
+  <li id="fn-28">Awesome YUE2: <a href="https://github.com/igrbible/Awesome-YUE2" target="_blank" rel="noopener">https://github.com/igrbible/Awesome-YUE2</a> <a class="back" href="#ref-28-1" aria-label="back to the text">↩</a></li>
+</ol>
+</section>
+</article>
+</main>
+<script>
+  // 12.11.2026: in the card's window (template.html, #why-modal) Escape inside this page closes the window, as it does over the card
+  (function () {
+    if (window.parent === window) return;
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { try { window.parent.postMessage({ ruach: "close-why" }, location.origin); } catch (err) {} }
+    });
+  })();
+</script>
+</body>
+</html>

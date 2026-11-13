@@ -11,6 +11,13 @@ download cut short going on from where it stopped, a second try after half a min
                                 HERESY 1984: or a tier, {"tier": "artist"}: a room's models at the variants this machine's card takes,
                                 fetched item by item, and only when the disk has room for what is not here and 2 GB to spare
 
+    POST /weights/access {extra, hf_token?}   night 11→12.11.2026 (Viktor: «кнопку скачать, ввести их HF токен без сохранения как
+                                одноразовый ввод в поле, и если модель потребует гейта, объясняем…»): before a licence-bound or gated
+                                extra is fetched, each of its repos asked once at its pin (lab/hf_access.py): open, gated (the link and
+                                the steps), gone; with a token, whether Hugging Face knows it. A fetch may carry {"hf_token": "hf_…"}:
+                                it goes into that one run's environment as HF_TOKEN and nowhere else (never the run's record, a file or
+                                a log; any hf_… in the run's words is scrubbed)
+
 A test page (?scope=…) checks but fetches nothing: the lab refuses. New LoRAs reach the engine at once; new backbones,
 decoders and sliders at its next start (it reads them when it starts), which the card says."""
 import json
@@ -21,11 +28,12 @@ import threading
 import time
 from pathlib import Path
 
+import hf_access                   # the one-time token and the gates (night 11→12.11.2026)
 import paths                       # HERESY 2330: where the weights live
 
 # what the install brings, part by part (fetch-heresy.sh --only NAME): what a fetch of the whole part takes, measured on the
 # Forge 10.10.2026 (HERESY 1290: the extras come converted, from goldhub/Ruach_Studio_Models_v2: nothing is made here any more)
-PARTS = {"extras": "1.6 GB", "whisper": "3.1 GB", "stems": "1.0 GB", "upscale": "0.4 GB", "loras": "2.3 GB"}   # HERESY 1292: du -sb, decimal
+PARTS = {"extras": "1.6 GB", "whisper": "3.1 GB", "stems": "1.0 GB", "upscale": "0.4 GB", "loras": "2.5 GB"}   # HERESY 1292: du -sb, decimal; 12.11.2026: the LoRAs by the pinned lists, 2.53 GB
 # 08.11.2026 (Viktor: «Пересмотри, чтобы ничего лишнего не скачивалось при первой установке»): the transcriber, SheetSage2 with MERT-v2-FullSong
 # beside it (1.0 GB), no longer comes with every install; a part of its own, for covers from a recording
 PARTS["transcriber"] = "1.0 GB"
@@ -169,6 +177,9 @@ EXTRAS = [
     # HERESY 1869 (Viktor 29.10.2026: «То предупреждение по ограничению использования весов H3 в некоторых странах перенеси в Движок к месту загрузки
     # компонентов H3»): the Videographer's moving pictures, its licence said here, where it is fetched (fetch-heresy.sh --h3)
     {"name": "h3", "label": "Videographer · MiniMax H3",
+     "licence": {"name": "MiniMax H3 Community License", "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/42ed227ee7df40d41602854ae760620d6eb651fe/LICENSE",
+                 "terms": "not on machines in the United States, the European Union, the United Kingdom or South Korea; commercial use above its threshold needs MiniMax's own licence"},
+     "access": [["Comfy-Org/MiniMax-H3", "README.md"], ["FastVideo/FastVideo-FastH3-Comfy", "README.md"], ["MiniMaxAI/MiniMax-H3", "LICENSE"]],
      "what": "MiniMax H3 (MiniMax) as Comfy-Org packs it: the Videographer's moving pictures, a shot at a time on a card of 24 GB, the shot's picture its first frame. Its licence (the MiniMax H3 Community License) does not allow running it on your own machines in the United States, the European Union, the United Kingdom or South Korea, and commercial use beyond the threshold it names needs MiniMax's own licence. Where you run it and what you make with it is yours to answer for: read the licence before you fetch it",
      "variants": [
          {"id": "int8", "label": "int8", "size": "69 GB", "note": "the Studio's own: a card of 24 GB and 64 GB of RAM", "files": [paths.VIDEO_H3 + '/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors', paths.VIDEO_H3 + '/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors', paths.VIDEO_H3 + '/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors', paths.VIDEO_H3 + '/vae/minimax_h3_video_vae_fp16.safetensors', paths.VIDEO_H3 + '/vae/minimax_h3_audio_vae_fp32.safetensors', paths.VIDEO_H3 + '/original/FL2VA/text_encoder/config.json']},
@@ -216,20 +227,38 @@ EXTRAS = [
     {"name": "art-loras", "label": "Artist's adapters",
      "what": "adapters for the Artist's painters, from goldhub/Ruach_Studio_Models_v2, shared there by their authors' leave (Civitai: share and sell; Sketch Smudge and Lightning Apache-2.0): Fantasy ArtStyle, Frank Frazetta, GPT-Image-2 Anime and Lenovo UltraReal for Qwen-Image 2.1; Film Photography, Photostyle by Sean Archer, Sketch Smudge and Lightning in 4 and 8 steps for 2512",
      "variants": [{"id": "all", "label": "ten adapters", "size": "7.5 GB", "files": ART_LORAS}]},
+    # 12.11.2026: the sizes with the Russian and Belarusian stresses (0.35 GB with the Ukrainian), by the pinned lists
     # HERESY 2374 (Viktor 11.11.2026: the Narrator public in 2.0.7, «под ключ»): Drama 3 as our GGUF with its licence files, and the Ukrainian
     # stresses; audio.cpp's server is built by tools/narrator-setup.sh, which fetch-heresy.sh --narrator runs when it is not here
     {"name": "narrator", "label": "Narrator · Fish Audio Drama 3",
-     "what": "Fish Audio Drama 3 (35B MoE, 3B active) as Ruach Studio's GGUF quants for audio.cpp, from goldhub/Ruach_Studio_Models_v2 with its LICENSE and NOTICE (Fish Audio Community License 1.0: free under USD 500,000 of yearly revenue, no hosted TTS or voice-cloning service for others, no voice of a real person cloned without consent, nothing it makes used to train another model; Built with Fish Audio), and the Ukrainian stresses (lang-uk, from ULIF's Dictionaries of Ukraine, MIT). audio.cpp's server (Apache-2.0, vendored in build/audio.cpp) is built once after the download: the CUDA toolkit for a card, else the processor",
+     "what": "Fish Audio Drama 3 (35B MoE, 3B active) as Ruach Studio's GGUF quants for audio.cpp, from goldhub/Ruach_Studio_Models_v2 with its LICENSE and NOTICE (Fish Audio Community License 1.0: free under USD 500,000 of yearly revenue, no hosted TTS or voice-cloning service for others, no voice of a real person cloned without consent, nothing it makes used to train another model; Built with Fish Audio), the Ukrainian stresses (lang-uk, from ULIF's Dictionaries of Ukraine, MIT) the Russian ones (every form of A. A. Zaliznyak's Grammatical Dictionary, from gramdict, CC BY-NC 4.0: non-commercial use only) and the Belarusian ones (GrammarDB of the Belarusian NLP community, CC BY-SA 4.0). audio.cpp's server (Apache-2.0, vendored in build/audio.cpp) is built once after the download: the CUDA toolkit for a card, else the processor",
      "variants": [
-         {"id": "Q4_K", "label": "Q4_K", "size": "24.8 GB", "note": "the quickest: a card of 24 GB alone, or 16 GB with 13 GB of RAM, or 8 GB with 22 GB of RAM",
+         {"id": "Q4_K", "label": "Q4_K", "size": "24.9 GB", "note": "the quickest: a card of 24 GB alone, or 16 GB with 13 GB of RAM, or 8 GB with 22 GB of RAM",
           "files": [paths.NARRATOR + "/drama-3-gguf/drama-3-experts-Q4_K-backbone-Q8_0.gguf", paths.NARRATOR + "/drama-3-gguf/LICENSE",
-                    paths.NARRATOR + "/drama-3-gguf/NOTICE", paths.NARRATOR + "/dicts/uk/forms.sqlite"]},
-         {"id": "Q6_K", "label": "Q6_K", "size": "33.1 GB", "note": "a 24 GB card with 14 GB of RAM, or 8 GB with 30 GB of RAM",
+                    paths.NARRATOR + "/drama-3-gguf/NOTICE", paths.NARRATOR + "/dicts/uk/forms.sqlite",
+                    paths.NARRATOR + "/dicts/ru/forms.sqlite", paths.NARRATOR + "/dicts/be/forms.sqlite"]},
+         {"id": "Q6_K", "label": "Q6_K", "size": "33.3 GB", "note": "a 24 GB card with 14 GB of RAM, or 8 GB with 30 GB of RAM",
           "files": [paths.NARRATOR + "/drama-3-gguf/drama-3-experts-Q6_K-backbone-Q8_0.gguf", paths.NARRATOR + "/drama-3-gguf/LICENSE",
-                    paths.NARRATOR + "/drama-3-gguf/NOTICE", paths.NARRATOR + "/dicts/uk/forms.sqlite"]},
-         {"id": "Q8_0", "label": "Q8_0", "size": "40.9 GB", "note": "the fullest: a card of 8 GB with 40 GB of RAM, or the processor with 44 GB",
+                    paths.NARRATOR + "/drama-3-gguf/NOTICE", paths.NARRATOR + "/dicts/uk/forms.sqlite",
+                    paths.NARRATOR + "/dicts/ru/forms.sqlite", paths.NARRATOR + "/dicts/be/forms.sqlite"]},
+         {"id": "Q8_0", "label": "Q8_0", "size": "41.1 GB", "note": "the fullest: a card of 8 GB with 40 GB of RAM, or the processor with 44 GB",
           "files": [paths.NARRATOR + "/drama-3-gguf/drama-3-Q8_0.gguf", paths.NARRATOR + "/drama-3-gguf/LICENSE",
-                    paths.NARRATOR + "/drama-3-gguf/NOTICE", paths.NARRATOR + "/dicts/uk/forms.sqlite"]}]},
+                    paths.NARRATOR + "/drama-3-gguf/NOTICE", paths.NARRATOR + "/dicts/uk/forms.sqlite",
+                    paths.NARRATOR + "/dicts/ru/forms.sqlite", paths.NARRATOR + "/dicts/be/forms.sqlite"]}]},
+    # night 11→12.11.2026 (Viktor 11.11: «оба движка дал бы в паблик… дальше ответственность и пальцедвижения пользователя»; Higgs v3 in the 2.0.8
+    # cut): the Narrator's second engine, Boson AI's Higgs TTS 3 (Higgs Audio v3), fetched by the user's own hand from Boson's own repos at their pins,
+    # never mirrored by us; the transformers loader's three small files from multimodalart's port (the weights there are Boson's, byte for byte)
+    {"name": "higgs", "label": "Narrator · Higgs TTS 3 (Boson AI)",
+     "what": "Boson AI's Higgs TTS 3 (Higgs Audio v3, 4B on Qwen3) and its audio tokenizer, from Boson's own repos on Hugging Face (bosonai/higgs-tts-3-4b, bosonai/higgs-audio-v2-tokenizer), never from ours: we do not mirror it. Its licence is research and non-commercial: your own creative work may be published and even monetized on your own channels with «This audio was created with Boson AI's Higgs Audio» beside it; hosting it for others, a paid product, or training any model on what it makes needs Boson's written licence; no real person's voice without their explicit, verifiable consent",
+     "licence": {"name": "Boson Higgs TTS 3 Research and Non-Commercial License", "url": "https://huggingface.co/bosonai/higgs-tts-3-4b/blob/239f63fb7b02b1aa085f98d9efae5e35cc5523e8/LICENSE",
+                 "terms": "research and non-commercial; your own published works with Boson's acknowledgment; no hosting for others, no training on its output",
+                 "also": {"name": "Boson Higgs Audio 2 Community License (the tokenizer)", "url": "https://huggingface.co/bosonai/higgs-audio-v2-tokenizer/blob/815a03f1b57dcb5ae918db415f22cd0c8a6f0f54/LICENSE"}},
+     "access": [["bosonai/higgs-tts-3-4b", "LICENSE"], ["bosonai/higgs-audio-v2-tokenizer", "LICENSE"], ["multimodalart/higgs-audio-v3-tts-4b-transformers", "config.json"]],
+     "variants": [
+         {"id": "bf16", "label": "BF16", "size": "10.2 GB", "note": "as Boson made it: about 11 GB of a card; its tokenizer in FP32",
+          "files": [paths.NARRATOR + "/higgs-tts-3-4b/model.safetensors", paths.NARRATOR + "/higgs-tts-3-4b/tokenizer.json", paths.NARRATOR + "/higgs-tts-3-4b/LICENSE",
+                    paths.NARRATOR + "/higgs-tts-3-4b/modeling_higgs_multimodal_qwen3.py", paths.NARRATOR + "/higgs-audio-v2-tokenizer/model.safetensors",
+                    paths.NARRATOR + "/higgs-audio-v2-tokenizer/LICENSE"]}]},
     # HERESY 1303: MERT-v2-FullSong comes with the base (2.5 GB): the set's latent cache needs it; 1445: all three from v2, unchanged
     {"name": "trainer", "label": "LoRA trainer's base",
      "what": "Comfy-Org's YuE2 for the Trainer, with Mothersuperior's tokenizer head and m-a-p's MERT-v2-FullSong (the set's latent cache hears with it), from goldhub/Ruach_Studio_Models_v2 (CC BY-NC 4.0)",
@@ -391,7 +420,7 @@ def running():
 SPARE = 2e9
 IRAE_SETS = ["IRAE", "IRAEv2", "IRAEv3", "IRAE-IR", "IRAE-IRv2"]
 TIERS = [
-    {"id": "narrator", "label": "Narrator", "what": "Fish Audio Drama 3 at Q4_K with its licence files and the Ukrainian stresses; audio.cpp's server built after it"},   # HERESY 2374
+    {"id": "narrator", "label": "Narrator", "what": "Fish Audio Drama 3 at Q8_0 on a card of 24 GB or more, else Q4_K, with its licence files and the stresses; audio.cpp's server built after it"},   # HERESY 2374; 2441
     {"id": "writer", "label": "Writer", "what": "the Writer's own language model on this machine, through llama.cpp's llama-server (launcher/extras.sh builds it)"},
     {"id": "refiner", "label": "Refiner", "what": "sound to MIDI (MuScriptor) and the Voice upscale's FlashSR, which else comes on its first use"},
     {"id": "artist", "label": "Artist", "what": "the covers' helpers and the Qwen-Image 2512 painter with Lightning's 8 steps"},
@@ -420,7 +449,10 @@ def _picks(kit, tid):
     if tid == "trainer":
         return [("trainer", "bf16" if v >= 23000 else "int8"), ("listener", "Q8_0" if v >= 12000 else "Q4_K_M")], ""
     if tid == "narrator":                            # HERESY 2374: the quickest quant on any card (more of it in RAM where the card is smaller)
-        return [("narrator", "Q4_K")], ""
+        # HERESY 2441 (Viktor 12.11.2026: «Да, Драму по умолчанию Q8_0 скачиваем, если тем более 24GB VRAM есть на машине»): Q8_0, the room's default
+        # (2435), on a card of 24 GB (a 3090 says 24576 MiB, so 23000 as the other tiers judge it); a smaller card, an Intel card (its tier reads
+        # Q4_K only, and nvidia-smi does not see it) or none: Q4_K
+        return [("narrator", "Q8_0" if v >= 23000 else "Q4_K")], ""
     q = fw_quant(kit) or "Q6_K"                      # merges: none at Q5_K_M, the nearest above it
     # HERESY 2074 (Viktor 05.11.2026: «Давай, быстрецом гоним всё до и для среза 2.0.6»): the install brings RS-TW 2.0x0.75 now (2065), not RS-FW 2.4x0.75:
     # the room takes all seven RS-FW and RS-TW's other merge, 2.0x0.9
@@ -443,7 +475,7 @@ def tiers(kit):
     return out
 
 
-def _fetch_tier(kit, tid):
+def _fetch_tier(kit, tid, token=None):
     t = next((x for x in tiers(kit) if x["id"] == tid), None)
     if t is None:
         raise ValueError("a tier is " + ", ".join(x["id"] for x in TIERS))
@@ -457,7 +489,7 @@ def _fetch_tier(kit, tid):
         raise ValueError(f"not enough room on this disk: the {t['label']} tier takes up to {t['need'] / 1e9:.1f} GB and 2 GB to spare, "
                          f"{free / 1e9:.1f} GB are free")
     runs = [_args({i["extra"]: i["variant"]})[0] for i in todo]
-    return _start(kit, runs, f"the {t['label']} tier", "fetch", False, {"tier": tid}, t["need"])
+    return _start(kit, runs, f"the {t['label']} tier", "fetch", False, {"tier": tid}, t["need"], token)
 
 
 NAMES = {"extras": "our decoders", "whisper": "Whisper", "stems": "the stems' models", "upscale": "UniverSR",
@@ -486,7 +518,7 @@ def _args(body):
         if name == "artwork":
             return ["--only", "none", "--artwork-q8" if v == "q8" else "--artwork", "--yes"], what
         return ["--only", "none", "--" + name, v, "--yes"], what
-    raise ValueError("say what to fetch: a part (missing, " + ", ".join(list(PARTS) + ["fw"]) + "), an extra (backbone, ira, irae, fw, tw, writer, muscriptor, refined, flashsr, listener, artwork, qwen, qwen-fine, art-loras, trainer, h3, upscaler) or a tier (" + ", ".join(x["id"] for x in TIERS) + ")")
+    raise ValueError("say what to fetch: a part (missing, " + ", ".join(list(PARTS) + ["fw"]) + "), an extra (backbone, ira, irae, fw, tw, writer, muscriptor, refined, flashsr, listener, artwork, qwen, qwen-fine, art-loras, trainer, h3, upscaler, narrator, higgs) or a tier (" + ", ".join(x["id"] for x in TIERS) + ")")
 
 
 def _bytes(size):
@@ -511,7 +543,7 @@ def _which(body, kit=None):
     return {}, None
 
 
-def _start(kit, args, what, kind, then_check, which=None, expect=None):
+def _start(kit, args, what, kind, then_check, which=None, expect=None, token=None):
     with LOCK:
         if JOB.get("status") == "running":
             raise ValueError(f"a run is under way ({JOB.get('what')}): one at a time")
@@ -519,7 +551,7 @@ def _start(kit, args, what, kind, then_check, which=None, expect=None):
         JOB.update(kind=kind, what=what, args=args, status="running", started=time.time(), ended=None, rc=None, lines=[],
                    counts=None, restart=False, free0=_free(kit) if kind == "fetch" else None,
                    which=which or {}, expect=expect)   # HERESY 1302
-    threading.Thread(target=_run, args=(kit, args, then_check), daemon=True).start()
+    threading.Thread(target=_run, args=(kit, args, then_check, token), daemon=True).start()   # the token in the thread's arguments, not in JOB
     return listing(kit)
 
 
@@ -534,22 +566,53 @@ def fetch(kit, body, scope=""):
         raise ValueError("a test page fetches nothing: open the Studio without ?scope= to fetch")
     if not (kit / "heresy" / "fetch-heresy.sh").is_file():
         raise FileNotFoundError("no heresy/fetch-heresy.sh in this tree")
-    body = body if isinstance(body, dict) else {}
+    body = dict(body) if isinstance(body, dict) else {}
+    token = hf_access.clean(body.pop("hf_token", None))   # night 11→12.11.2026: the one-time token, this run's alone
     if body.get("tier") is not None:                # HERESY 1984: a room's models at once
-        return _fetch_tier(kit, str(body["tier"]))
+        return _fetch_tier(kit, str(body["tier"]), token)
     args, what = _args(body)
     which, expect = _which(body, kit)               # HERESY 1302: the page's progress at the row pressed (1794: the kit, for the fine-tune's size)
     # a part fetched alone leaves the whole list as it was: a check after it says where everything stands
-    return _start(kit, args, what, "fetch", bool(args and args[0] == "--only" and args[1] != "none"), which, expect)
+    return _start(kit, args, what, "fetch", bool(args and args[0] == "--only" and args[1] != "none"), which, expect, token)
 
 
-def _say(kit, args):
-    """One run of fetch-heresy.sh into JOB["lines"]; its exit status (0: nothing failed)."""
+def access(kit, body):
+    """POST /weights/access {extra, hf_token?}: each repo the extra pulls, asked once at its pin (lab/hf_access.py); its licence beside it.
+    Nothing is downloaded and the token is kept nowhere."""
+    body = body if isinstance(body, dict) else {}
+    name = str(body.get("extra") or "")
+    e = next((x for x in EXTRAS if x and x["name"] == name), None)
+    if e is None:
+        raise ValueError("say which extra: " + ", ".join(x["name"] for x in EXTRAS if x and x.get("access")))
+    token = hf_access.clean(body.get("hf_token"))
+    items = [(repo, _pin(kit, repo), path) for repo, path in e.get("access", [])]
+    out = hf_access.access(items, token) if items else {"repos": [], "token": None, "ready": True}
+    out.update(extra=name, licence=e.get("licence"))
+    return out
+
+
+def _pin(kit, repo):
+    """The pinned commit of a repo (heresy/hf-revisions.txt first, then the Kit's), "main" when neither pins it."""
+    for f in (kit / "heresy" / "hf-revisions.txt", kit / "tools" / "hf-revisions.txt"):
+        try:
+            for line in f.read_text(encoding="utf-8").splitlines():
+                c = [] if line.lstrip().startswith("#") else line.split()
+                if len(c) >= 2 and c[0] == repo:
+                    return c[1]
+        except OSError:
+            continue
+    return "main"
+
+
+def _say(kit, args, token=None):
+    """One run of fetch-heresy.sh into JOB["lines"]; its exit status (0: nothing failed). A token goes into its environment alone."""
     env = dict(os.environ, NO_COLOR="1", HF_HUB_DISABLE_TELEMETRY="1")
+    if token:                                       # else whatever the user's own environment holds, as before
+        env["HF_TOKEN"] = token
     p = subprocess.Popen(["bash", str(kit / "heresy" / "fetch-heresy.sh")] + args, cwd=str(kit), env=env, stdin=subprocess.DEVNULL,
                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
     for line in p.stdout:
-        line = _strip(kit, line.rstrip("\n"))
+        line = hf_access.scrub(_strip(kit, line.rstrip("\n")))
         with LOCK:
             JOB["lines"].append(line)
             del JOB["lines"][:-1000]
@@ -563,7 +626,7 @@ def _say(kit, args):
     return p.wait()
 
 
-def _run(kit, args, then_check):
+def _run(kit, args, then_check, token=None):
     try:
         runs = args if args and isinstance(args[0], list) else [args]   # HERESY 1984: a tier is a run an item, their counts summed
         rc, total = 0, {}
@@ -572,7 +635,7 @@ def _run(kit, args, then_check):
                 with LOCK:
                     JOB["lines"].append(("\n" if n else "") + f"— {n + 1} of {len(runs)} —")
                     JOB["counts"] = None
-            rc = _say(kit, a) or rc
+            rc = _say(kit, a, token) or rc
             with LOCK:
                 for k, c in (JOB["counts"] or {}).items():
                     total[k] = total.get(k, 0) + c
@@ -586,7 +649,7 @@ def _run(kit, args, then_check):
                 JOB["lines"].append("— the check, after it —")
                 JOB["checking"] = True
                 counts = JOB["counts"]
-            _say(kit, ["--check"])
+            _say(kit, ["--check"], token)
             with LOCK:
                 JOB["checking"] = False
                 JOB["after"] = JOB["counts"]
@@ -598,5 +661,6 @@ def _run(kit, args, then_check):
             JOB["lines"].append(f"failed: {e}")
             JOB["status"] = "failed"
     finally:
+        token = None                                # its last reference here: gone with the run
         with LOCK:
             JOB["ended"] = time.time()

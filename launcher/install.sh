@@ -51,10 +51,10 @@ bash build.sh --server --no-restart || stop "the engine did not build (build.sh 
 step "⑥ the models: pinned, checked, each with its size"
 Q=$(ruach_quant)
 echo "  the backbone for a card of $(ruach_vram) MiB: ${Q:-BF16}"
-# HERESY 1292: what this step brings, measured on fresh installs (10.10.2026); 1984: by the pinned lists anew (01.11.2026), 9.3 GB beside the backbone
-# and the fine-tune at its quant (none at Q5_K_M)
-case "${Q:-BF16}" in BF16) GBS=23.7 ;; Q8_0) GBS=17.0 ;; Q6_K) GBS=15.2 ;; *) GBS=12.0 ;; esac
-echo "  about $GBS GB in all: the backbone and Ruach Studio's own fine-tune, three decoders, the transcriber, the LoRAs, Whisper, the stems' models, UniverSR and Apollo-vocal"
+# HERESY 1292: what this step brings, measured on fresh installs (10.10.2026); 1984: by the pinned lists anew (01.11.2026); 12.11.2026: since 2.0.7
+# (fetch-models.sh, 08.11.2026) the least a song needs: Ruach Studio's own fine-tune at the card's quant (m-a-p's own at Q5_K_M) and two decoders, 1.3 GB
+case "${Q:-BF16}" in BF16) GBS=8.5 ;; Q8_0) GBS=5.1 ;; Q6_K) GBS=4.3 ;; *) GBS=4.0 ;; esac
+echo "  about $GBS GB in all: Ruach Studio's own fine-tune and two decoders, m-a-p's Standard and our YuE2-VAE-RS x3 v1"
 case "$Q" in Q6_K|Q5_K_M) echo "${Y}  under 7 GB: short songs only (a context of 8 192 rows); the Studio is made for 12 GB and more${X}" ;; esac   # HERESY 1304
 # HERESY 1285: what did not come is named above with its reason; the Studio starts without it, and Install again goes on from there
 # 08.11.2026: the least a song needs, said file by file with the free disk, then asked; the rest from Engine -> Models when wanted
@@ -66,4 +66,4 @@ rm -f tmp/update-unfinished                             # HERESY 1352: a whole i
 echo
 echo "${G}Ruach Studio is installed.${X} Start it from Pinokio's menu (by hand: ./lab/start-lab.sh, then ./start.sh)."
 echo "${D}$(du -sb --exclude=outputs "$ROOT" 2>/dev/null | awk '{printf "%.1f", $1/1e9}') GB on this disk now (your songs not counted).${X}"   # HERESY 1292
-echo "${D}More models when you want them, each asked first with its size: «More models» in the menu, or Engine → Models and LoRAs → By room (the Writer's 5.5 or 6.7 GB, the Artist's 39 to 43 GB, the Videographer's 86 GB, the trainer's base 6.7 or 10.5 GB and the style listener 6 to 22 GB, the BF16 backbone 7.2 GB beside a Q8_0 one).${X}"
+echo "${D}More models when you want them, each asked first with its size: «More models» in the menu, or Engine → Models and LoRAs → By room (the Musician's other parts 8.8 GB, the Writer's 5.5 or 6.7 GB, the Narrator's 26 to 42 GB, the Artist's 39 to 43 GB, the Videographer's 86 GB, the trainer's base 6.7 or 10.5 GB and the style listener 6 to 22 GB, the BF16 backbone 7.2 GB beside a Q8_0 one).${X}"

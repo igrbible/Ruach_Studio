@@ -293,6 +293,10 @@
     $("bbClean").addEventListener("click", function () {
       var name = $("bbName").value.trim(), folder = $("bbFolder").value;
       if (!name) { toast(tr("The bank needs a name"), true); $("bbName").focus(); return; }
+      if (window.HeresyNames && window.HeresyNames.refusal(name, { max: 60, file: true })) {   // HERESY 2462: a bank's name keeps the names' rule
+        window.HeresyNames.ask(name, { max: 60, file: true }).then(function (v) { if (v) { $("bbName").value = v; $("bbClean").click(); } });
+        return;
+      }
       if (!folder) { toast(tr("Pick a folder of datasets/raw/"), true); return; }
       start({ step: "clean", bank: name, folder: folder, instrument: $("bbInst").value.trim(), mode: $("bbMode").value, device: $("bbWhere").value, listen: $("bbListen").checked }, $("bbWhere").value);
     });
@@ -305,7 +309,11 @@
     $("bbBuild").addEventListener("click", function () {
       var w = state.work;
       if (!w) return;
-      var picks = Object.keys(state.picks).length ? state.picks : null;
+      var picks = Object.keys(state.picks).length ? state.picks : null, bn = $("bbBankName").value.trim();
+      if (bn && window.HeresyNames && window.HeresyNames.refusal(bn, { max: 60, file: true })) {   // HERESY 2462
+        window.HeresyNames.ask(bn, { max: 60, file: true }).then(function (v) { if (v) { $("bbBankName").value = v; $("bbBuild").click(); } });
+        return;
+      }
       start({ step: "build", bank: w.plan.bank, name: $("bbBankName").value.trim(), round_robins: +$("bbRR").value || 3, layers: +$("bbLayers").value || 3, picks: picks });
     });
     $("bbSrc").addEventListener("change", function () { state.src = this.value; });

@@ -101,7 +101,10 @@
     if (state.tabs && state.lang === lang) return Promise.resolve();
     if (state.lang !== lang) { state.tabs = null; state.loading = null; state.lang = lang; }
     var get = function (file) { return fetch("/lab/guide/" + file).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); }); };
-    if (!state.loading) state.loading = (lang === "en" ? get("GUIDE.md") : get("GUIDE." + lang + ".md").catch(function () { return get("GUIDE.md"); }))
+    // HERESY 2413 (Viktor 11.11.2026, 27: «Пока что пусть F1 для иврита будет на английском»): a language with no guide of its own reads the English
+    // one, and the guide then says it is English (lang, and left to right in a page that reads right to left)
+    if (!state.loading) state.loading = (lang === "en" ? get("GUIDE.md").then(function (t) { state.mdLang = "en"; return t; })
+        : get("GUIDE." + lang + ".md").then(function (t) { state.mdLang = lang; return t; }, function () { state.mdLang = "en"; return get("GUIDE.md"); }))
       .then(function (md) {
         var more = roomParts().map(function (r) {     // HERESY 2292: a module's own part, in the page's language else the English, none when unread
           return (lang === "en" ? get(r.guide + ".md") : get(r.guide + "." + lang + ".md").catch(function () { return get(r.guide + ".md"); }))
@@ -180,6 +183,9 @@
     var tab = state.tabs.filter(function (t) { return t.id === id; })[0] || state.tabs[0];
     keep(LAST, tab.id);
     var el = state.el;
+    var box = el.querySelector(".hg-box"), ml = state.mdLang || "en";   // HERESY 2413: the guide's own language and direction, whatever the page's
+    var mdDir = ((window.RuachI18n && window.RuachI18n.langs || []).filter(function (l) { return l.code === ml; })[0] || {}).dir || "ltr";
+    box.setAttribute("lang", ml); box.setAttribute("dir", mdDir); box.dataset.guideLang = ml;
     el.querySelector(".hg-title").textContent = state.title;
     el.querySelector(".hg-lead").textContent = state.lead.replace(/[*_`]/g, "").split("\n")[0];
     el.querySelector(".hg-tabs").innerHTML = state.tabs.map(function (t) {

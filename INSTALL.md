@@ -10,7 +10,7 @@ One Linux machine with an NVIDIA card. The Studio runs there; you use it from a 
 | GPU | NVIDIA, **24 GB** runs everything at full precision; **8 to 16 GB** run songs with the Q8_0 model (measured: 5.1 GB with a context of 12 288 rows, 7.7 GB with the whole); **6 GB** Q8_0 with shorter songs, less Q6_K; int8 training under 24 GB. |
 | CUDA | the **CUDA toolkit 12.8** (`nvcc`), in `/usr/local/cuda-12.8` or on the `PATH`; a driver that supports it |
 | tools | `git`, `cmake` 3.24 or newer, `ninja` (optional, faster), `gcc`/`g++` 13, `python3.12` with `python3.12-venv`, `ffmpeg`, `curl` |
-| disk | **34 GB** for the install on a 12–16 GB card, **41 GB** on a 24 GB card, measured file by file (01.11.2026): the program 0.9 GB, its two Pythons 16.5 GB (8.7 GB downloaded), the models 17.0 or 23.7 GB with Ruach Studio's own fine-tune among them; each other room only when you take it (the Writer's 6 to 7 GB, the Refiner's 6 GB, the Artist's 39 to 43 GB, the Videographer's 86 GB, the Trainer's 13 to 20 GB): [README › What It Downloads](README.md#what-it-downloads); and room for your songs |
+| disk | **22.5 GB** for the install on a 12–16 GB or 8 GB card, **25.9 GB** on a 24 GB card, measured file by file (the models by the pinned lists 12.11.2026, the program and its Pythons on a fresh install 01.11.2026): the program 0.9 GB, its two Pythons 16.5 GB (8.7 GB downloaded), the models 5.1 or 8.5 GB (Ruach Studio's own fine-tune at the card's quant and two decoders); the Musician's other parts (8.8 GB) and each other room only when you take it (the Writer's 6 to 7 GB, the Refiner's 6 GB, the Narrator's 26 to 42 GB, the Artist's 39 to 43 GB, the Videographer's 86 GB, the Trainer's 13 to 20 GB): [README › What It Downloads](README.md#what-it-downloads); and room for your songs |
 | tests only | `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test; Node.js 22+ and Chrome or Chromium for the page tests. The Studio itself needs none of them: FLAC is made by the engine and by ffmpeg |
 
 On Ubuntu 24.04, everything but CUDA in one line:
@@ -26,7 +26,7 @@ CUDA 12.8: NVIDIA's own repository for Ubuntu 24.04 (developer.nvidia.com → CU
 ```bash
 git clone https://github.com/igrbible/Ruach_Studio.git Ruach_Studio && cd Ruach_Studio
 
-./lab/install-venv.sh      # Python: torch for CUDA 12.8 and the Studio's packages, in .venv (8.5 GB) and the Artist's .venv-art (7.4 GB), a few minutes
+./lab/install-venv.sh      # Python: torch for CUDA 12.8 and the Studio's packages, in .venv and the Artist's .venv-art (16.5 GB together, 8.7 GB of it downloaded), a few minutes
 ./fetch-models.sh          # every model the Studio uses, pinned and checked (asks before the big ones)
 ./build.sh --server        # the page and the engine (the first build of the engine: a few minutes)
 ./systemd/install-units.sh # the two services
@@ -45,7 +45,7 @@ Without systemd: `./lab/start-lab.sh` and then `./start.sh` (it stays in the ter
 heresy/fetch-heresy.sh --listener Q8_0   # the style listener (Qwen2.5-Omni) for training sets, 9.6 GB
 heresy/fetch-heresy.sh --artwork         # the covers' helpers: the prompt writer and the content filter, 8.4 GB (the painters come with --qwen)
 heresy/fetch-heresy.sh --qwen 2512-q4    # the Artist's Qwen-Image 2512 at Q4 with Lightning (Apache-2.0), 31 GB, a 16 GB card (2512-q6: 34.5 GB, 24 GB; 2.1: 33 GB, research licence)
-heresy/fetch-heresy.sh --trainer bf16    # the base the LoRA trainer trains on, 7.8 GB (int8: 4.0 GB)
+heresy/fetch-heresy.sh --trainer bf16    # the base the LoRA trainer trains on, with MERT-v2-FullSong and the tokenizer head, 10.5 GB (int8: 6.7 GB)
 heresy/fetch-heresy.sh --backbone BF16   # the full backbone beside a Q8_0 one, 7.2 GB
 heresy/fetch-heresy.sh --fw 3.4x0.75-Q8_0   # another merge of Ruach Studio's own fine-tune (seven, each at BF16, Q8_0 and Q6_K); the Studio's default, RS-TW 2.0x0.75, comes with the install
 ./fetch-models.sh --check                # what is here, what is missing; downloads nothing

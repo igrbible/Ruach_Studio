@@ -13,7 +13,7 @@ Ruach Studio is a Linux program: its engine, its lab (Python), its scripts and i
 | Windows | **Windows 11** (22H2 or newer), virtualization on in the BIOS/UEFI (it usually is) |
 | GPU | NVIDIA, as on Linux: **24 GB** for everything at full precision, **16 GB** with the Q8_0 model, **12 GB** with Q6_K or Q5_K_M |
 | driver | the current NVIDIA driver **for Windows** (Game Ready or Studio). It carries CUDA into WSL2: **never install a Linux NVIDIA driver inside WSL** |
-| disk | on the Windows drive that holds WSL: **34 to 41 GB** for the program, its two Pythons and the models (74 to 84 GB with the Artist's; [README › What It Downloads](README.md#what-it-downloads) says each part), and room for your songs |
+| disk | on the Windows drive that holds WSL: **22.5 to 25.9 GB** for the program, its two Pythons and the models (62 to 69 GB with the Artist's; [README › What It Downloads](README.md#what-it-downloads) says each part), and room for your songs |
 
 ## 1 · WSL2 and Ubuntu 24.04
 

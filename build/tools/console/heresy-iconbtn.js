@@ -27,8 +27,34 @@
     Object.keys(MAP).forEach(function (k) { rev[k] = k; var t = tr(k); if (t) rev[t] = k; });
     return rev;
   }
+  // HERESY 2529 (the UIX audit 13.11.2026, №20: «Копировать», «Очистить вид», «Проверить связь» ×5, «Переместить…» ×4 … as words in Engine's cards):
+  // these buttons by their place, each the icon of its act in the Studio's set (one act, one icon: Unload is the bar's own mark), its words in its
+  // tip and inside it unseen; a script that writes new words into one (Listen to MIDI, Stop listening) has it drawn again
+  var BY = [["#logCopy", "copy"], ["#logClear", "eraser"], ["#resetPageSettings", "rotate-ccw"], ["#unloadNow", "@unload"], ["#scanMachine", "scan-search"],
+            ["#midiOnBtn", "piano"], ["#perfMeasure", "ruler"], ["#ownTest, #vllmTest, #lmstudioTest, #ollamaTest, #orTest", "plug-zap"], ["[data-pl-move]", "folder-input"]];
+  function byPlace(b) {
+    for (var i = 0; i < BY.length; i++) if (b.matches(BY[i][0])) return BY[i][1];
+    return "";
+  }
+  function drawn(name) {
+    var I = window.HeresyIcons;
+    if (!I) return "";
+    return name.charAt(0) === "@" ? I.svg(name.slice(1), "ib-svg") : I.ui(name, "ib-svg");
+  }
+  function iconPlace(b, name) {
+    if (b.querySelector(".ib-svg") || b.children.length) return;
+    var words = (b.textContent || "").trim(), svg = drawn(name);
+    if (!words || !svg) return;
+    b.dataset.iconized = name;
+    b.innerHTML = svg + '<span class="ib-label">' + esc(words) + "</span>";
+    if (!b.hasAttribute("data-tip")) b.setAttribute("data-tip", words);
+    if (!b.getAttribute("aria-label")) b.setAttribute("aria-label", words);
+    b.classList.add("btn-icon");
+  }
   function iconize(b) {
     if (!b || b.tagName !== "BUTTON" || b.closest("[data-no-icon]")) return;
+    var place = b.closest("#view-engine") ? byPlace(b) : "";   // HERESY 2529
+    if (place) { if (b.dataset.iconized && !b.querySelector(".ib-svg")) { delete b.dataset.iconized; b.classList.remove("btn-icon"); } iconPlace(b, place); return; }
     // HERESY 2106 (Viktor 05.11.2026 evening on the journal's «Sent. Your ticket»: «OK вылетело из кнопки»): a dialog's answer keeps its word inside, as every
     // other answer of the Studio's dialogs does («Send it», «Download it»); its ✓ or bin with the word in a tip floated that word over the dialog's
     // text when the dialog gave it the focus. The dialog's Cancel stays ✕ (1593)

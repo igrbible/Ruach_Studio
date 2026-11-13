@@ -59,6 +59,12 @@ def denoise(src, dst, amount_db, floor):
     """ffmpeg afftdn: nr the reduction, nf the measured floor (within afftdn's -80..-20), tn on (the noise followed as it moves)."""
     nf = max(-80.0, min(-20.0, floor))
     af = f"afftdn=nr={max(0.01, min(97.0, float(amount_db))):.2f}:nf={nf:.1f}:tn=1"
+    # HERESY 2418: afftdn gives its output 25 ms late (half its 50 ms window: measured at 24, 44.1 and 48 kHz, 600, 1102 and 1200 samples), the
+    # take's last 25 ms dropped; the chain's take was a beat behind its pieces' times. The tail padded by as much and the head taken off, so the
+    # result lies sample for sample where the take was, its length the take's
+    import soundfile as sf
+    lat = int(round(0.025 * sf.info(str(src)).samplerate))
+    af = f"apad=pad_len={lat},{af},atrim=start_sample={lat},asetpts=PTS-STARTPTS"
     p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-af", af, "-c:a", "flac", "-sample_fmt", "s32", str(dst)],
                        capture_output=True, text=True, timeout=3600)
     if p.returncode != 0:
@@ -75,13 +81,14 @@ def _frames(y, n, hop):
     return np.lib.stride_tricks.sliding_window_view(pad, n)[::hop], len(pad)
 
 
-def deess(x, sr, threshold_db=0.0, depth_db=6.0, lo_hz=5000.0, ratio=4.0):
-    """x: (channels, n) float. Returns (y, measure). The detector reads the mid; every channel takes the same gain."""
+def deess(x, sr, threshold_db=0.0, depth_db=6.0, lo_hz=5000.0, ratio=4.0, hi_hz=11000.0):
+    """x: (channels, n) float. Returns (y, measure). The detector reads the mid; every channel takes the same gain. hi_hz: the band's top
+    (HERESY 2417: the TTS Voice Upscaler's voice profiles ask 4 to 8 kHz for a man's voice, 6 to 11 kHz for a woman's)."""
     n = 1024 if sr <= 48000 else 2048
     hop = n // 4
     win = np.hanning(n + 1)[:-1].astype(np.float32)
     freqs = np.fft.rfftfreq(n, 1.0 / sr)
-    hi_hz = min(11000.0, sr / 2 - 500)
+    hi_hz = min(float(hi_hz), sr / 2 - 500)
     sib = (freqs >= lo_hz) & (freqs <= hi_hz)
     body = (freqs >= 150) & (freqs <= 4000)
     F, total = _frames(x.mean(0), n, hop)

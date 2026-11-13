@@ -123,7 +123,9 @@
     return '<span class="sb-meter' + (lanes > 1 ? " is-two" : "") + '">' + new Array(lanes + 1).join("<b><i></i></b>") + "</span>";
   }
   function item(key, name, sub, lanes) {
-    return '<div class="sb-item" data-sb="' + esc(key) + '" tabindex="0" role="button" aria-haspopup="true"><span class="sb-name" translate="no">' + esc(name) + "</span>" +
+    return '<div class="sb-item" data-sb="' + esc(key) + '" tabindex="0" role="button" aria-haspopup="true">' +
+      (key.indexOf("disk:") === 0 && window.HeresyIcons ? '<span class="sb-dico" aria-hidden="true">' + window.HeresyIcons.ui("hard-drive") + "</span>" : "") +   // HERESY 2523
+      '<span class="sb-name" translate="no">' + esc(name) + "</span>" +
       (sub ? '<span class="sb-sub mono" translate="no">' + esc(sub) + "</span>" : "") + meter(lanes) + '<span class="sb-val mono"></span></div>';
   }
   function setMeter(el, fracs) {
@@ -155,7 +157,7 @@
     var sig = S.keys + "|" + document.documentElement.clientWidth + "|" + $("sbJobs").childElementCount + "|" + !!S.error;
     if (S.fitSig !== sig) {
       S.fitSig = sig;
-      for (var t = 0; t <= 2; t++) { S.tight = t; el.dataset.tight = t; texts(host); if (host.scrollWidth <= host.clientWidth + 1) break; }
+      for (var t = 0; t <= 4; t++) { S.tight = t; el.dataset.tight = t; texts(host); if (host.scrollWidth <= host.clientWidth + 1) break; }   // HERESY 2523: 3, the disks' marks; 4, the cards' percent alone
     } else texts(host);
     var note = $("sbNote");
     if (note) { note.hidden = !S.error; note.textContent = S.error; }
@@ -171,7 +173,7 @@
       var it = host.querySelector('[data-sb="gpu:' + i + '"]'), g = gLast(i);
       if (!it) return;
       setMeter(it, [g ? (g[1] || 0) / 100 : null, g && g[3] ? (g[2] || 0) / g[3] : null]);
-      it.querySelector(".sb-val").textContent = g ? pct(g[1]) + " · " + gb(g[2]) + "/" + gb(g[3], 0) + " GB" + (g[4] != null && !S.tight ? " · " + Math.round(g[4]) + "°" : "") : "—";
+      it.querySelector(".sb-val").textContent = g ? pct(g[1]) + (S.tight >= 4 ? "" : " · " + gb(g[2]) + "/" + gb(g[3], 0) + " GB") + (g[4] != null && !S.tight ? " · " + Math.round(g[4]) + "°" : "") : "—";
     });
     S.disks.forEach(function (d) {
       var it = host.querySelector('[data-sb="disk:' + d.id + '"]'), r = s && s[8] ? s[8][d.id] : null;
@@ -209,8 +211,10 @@
     host.hidden = !rows.length;
     var html = shown.map(function (r, k) {
       var st = jobState(r);
-      return '<div class="sb-job' + (st[0] == null ? " is-open" : "") + '" data-sb="job:' + k + '" tabindex="0" role="button" aria-haspopup="true">' +
-        '<span class="sb-jname">' + esc(jobWhat(r)) + (r.name ? ' · <span translate="no">' + esc(title(r.name)) + "</span>" : "") + "</span>" +
+      // HERESY 2523 (the UIX audit 13.11.2026, №6): its kind and its percent; the run's or take's name is its tooltip's (it cut the disks short)
+      var trn = String(r.key || "").indexOf("train:") === 0;
+      return '<div class="sb-job' + (st[0] == null ? " is-open" : "") + (trn ? " is-train" : "") + '" data-sb="job:' + k + '" tabindex="0" role="button" aria-haspopup="true">' +
+        '<span class="sb-jname">' + esc(jobWhat(r)) + "</span>" +
         '<span class="sb-jbar"><i style="width:' + (st[0] == null ? 100 : Math.round(st[0] * 100)) + '%"></i></span>' +
         '<span class="sb-jpct mono">' + (st[0] == null ? "" : Math.round(st[0] * 100) + "%") + "</span></div>";
     }).join("") + (rows.length > 3 ? '<span class="sb-more mono">' + esc(fmt("and {0} more", rows.length - 3)) + "</span>" : "");
@@ -380,9 +384,14 @@
       if (!r) return null;
       var st = jobState(r);
       return ["<h5>" + esc(jobWhat(r)) + "</h5>" + grid([
-        r.name ? [tr("Take"), title(r.name)] : null, r.label ? [tr("What"), r.label] : null,
+        // HERESY 2425 (Viktor 11.11.2026, a screenshot of the bar: «тренировка LoRA … Семпл … Карта GPUNaN»): a training run is named as a
+        // run, not a take, and a run on several cards (the lab's "0+1+2", HERESY 1631) shows each card instead of NaN
+        r.name ? [tr(String(r.key || "").indexOf("train:") === 0 ? "Run" : "Take"), title(r.name)] : null, r.label ? [tr("What"), r.label] : null,
         [tr("Progress"), st[1] + (st[0] != null ? " · " + Math.round(st[0] * 100) + "%" : "")],
-        r.gpu != null ? [tr("Card"), r.gpu === "cpu" ? "CPU" : gpuName(+r.gpu)] : null]), null];
+        r.gpu != null ? (function () {
+          var g = String(r.gpu).split("+").filter(Boolean);
+          return [tr(g.length > 1 ? "Cards" : "Card"), r.gpu === "cpu" ? "CPU" : g.map(function (c) { return gpuName(+c); }).join(" · ")];
+        })() : null]), null];
     }
     return null;
   }
@@ -413,6 +422,13 @@
     el.addEventListener("focusin", function (e) { var it = e.target.closest("[data-sb]"); if (it) showPop(it.dataset.sb); });
     el.addEventListener("focusout", function () { hidePop(false); });
     el.addEventListener("keydown", function (e) { if (e.key === "Escape") hidePop(true); });
+    // HERESY 2522 (audit №2): a training run's bar is the way to its room, as its card above the log was
+    var toTrain = function (e) {
+      var it = e.target.closest && e.target.closest(".sb-job.is-train");
+      if (!it || (e.type === "keydown" && e.key !== "Enter")) return;
+      var t = document.querySelector('.topbar [data-tab="train"]'); if (t) t.click();
+    };
+    el.addEventListener("click", toTrain); el.addEventListener("keydown", toTrain);
     window.addEventListener("scroll", function () { if (S.hover) paintPop(); }, { passive: true });
     if (window.MutationObserver) new MutationObserver(function () { if (apply()) tick(); }).observe(document.body, { attributes: true, attributeFilter: ["data-tab"] });
     var dc = $("defaultsCard");

@@ -324,7 +324,7 @@
   // копирование»): the click did put a name into the Style prompt, but its words showed under the sheet (the toasts stand over
   // it now) and the prompt is under the sheet too: a name the prompt holds is marked in the sheet itself, at once on a click
   function markIn() {
-    var st = $("style"), v = st ? fold(st.value) : "";
+    var st = stBox(), v = st ? fold(st.value) : "";
     Array.prototype.forEach.call(document.querySelectorAll("#hiTable [data-hi-tag]"), function (b) {
       var f = fold(b.dataset.hiTag);
       b.classList.toggle("is-in", !!v && !!f && v.indexOf(f) >= 0);
@@ -348,13 +348,13 @@
     return Promise.resolve().then(function () { return put(text); }).then(function () { return true; }, function () { return false; });
   }
   function copyName(name, style) {
-    var st = $("style"), held = style && st && fold(st.value).indexOf(fold(name)) >= 0;
+    var st = stBox(), held = style && st && fold(st.value).indexOf(fold(name)) >= 0;
     toClip(name).then(function (ok) {
       state.hooks.toast(ok ? (held ? "\u201c" + name + "\u201d is in the style already \u00b7 copied" : "Copied: " + name) : "The clipboard did not take it", ok ? "" : "bad");
     });
   }
   function chooseInto(tag) {
-    var st = $("style");
+    var st = stBox();
     if (!st || !tag) return;
     var copied = toClip(tag), v = st.value.replace(/\s+$/, "");
     function finish(words) {
@@ -372,6 +372,8 @@
       });
   }
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
+  // HERESY 2552: a state with a verdict after « · » (the verdict is the ear's own words): its known head translated, the verdict as written
+  function said(t) { var x = tr(t), i = t.indexOf(" \u00b7 "); return x !== t || i < 0 ? x : tr(t.slice(0, i)) + t.slice(i); }
   // HERESY 1339: a description's second line in the page's language: the built-in Russian in English and Russian, the catalog's
   // own in the others (keyed by the English), the Russian where a catalog has none yet
   function second(en, ru) {
@@ -497,7 +499,7 @@
   }
   // what a click did, in words (said() says them once the clipboard has answered)
   function addTag(tag) {
-    var st = $("style");
+    var st = stBox();
     if (!st || !tag) return "";
     var v = st.value.replace(/\s+$/, "");
     if (fold(v).indexOf(fold(tag)) >= 0) return ("“" + tag + "” is in the style already");
@@ -506,7 +508,8 @@
     markIn();
     return "Into the style: " + tag;
   }
-  function open(q, tab) {
+  function open(q, tab, target) {
+    TARGET = target && $(target) ? target : "style";   // HERESY 2491
     if (!$("hiBack")) build();
     $("hiBack").hidden = false;
     if (typeof q === "string") { state.q = q; $("hiSearch").value = q; }
@@ -542,7 +545,10 @@
   // инструментов»): under the Style prompt, the instruments and styles it names, each with its picture and the sheet's
   // verdict in its colour; the pointer on one shows its card (the picture, its home, how it sounds, ▶ A and ▶ B with their
   // seeds); a click shows the picture whole; Alt+I opens the sheet from anywhere
-  var KEYS = null, chipList = [], cardTimer = 0, cardFor = -1;
+  var KEYS = null, chipList = [], cardList = null, cardTimer = 0, cardFor = -1;
+  // HERESY 2491: the Style box the sheet writes into (the Musician's, or the Writer's when opened from there); each chips box keeps its own list
+  var TARGET = "style", PAIRS = [{ box: "hiChips", st: "style" }];
+  function stBox() { return $(TARGET) || $("style"); }
 
   // HERESY 2051 (Viktor 03.11.2026: «подключил этот словарь и тот (мёржд с RS-TW словарём), прямо к этому блоку… после каждого в скобках выводить
   // частотность, с которой мы увидели их в датасетах»): the fine-tunes' vocabularies under the Style prompt too. The First Wave's (the guide's own)
@@ -668,7 +674,7 @@
     ["Bass", ["male bass", "bass vocal", "bass voice"], ["bass"]], ["Basso profundo", ["basso profundo", "oktavist"], ["basso-profundo"]],
     ["Male choir", ["male choir"], ["male-choir"]], ["Female choir", ["female choir"], ["female-choir"]],
     ["Mixed choir", ["mixed choir", "satb"], ["mixed-choir"]], ["Choir", ["choir"], ["mixed-choir", "male-choir", "female-choir"]],
-    ["Boy treble", ["boy treble", "choirboy"], ["boy-treble"]], ["Whisper", ["whisper", "whispered"], ["whisper-male", "whisper-female"]],
+    ["Boy treble", ["boy treble", "choirboy"], ["boy-treble"]], ["Whispered voice", ["whisper", "whispered"], ["whisper-male", "whisper-female"]],   // HERESY 2430: «Whisper» alone is the model's name, never translated
     ["Old voice", ["elderly", "old man", "old woman"], ["old-man", "old-woman"]], ["Child's voice", ["child"], ["child"]]
   ];
   var VOICE_ITEMS = null;
@@ -766,15 +772,18 @@
     if (f.kind === "v") return voiceState(f.item);              // HERESY 1167
     return styleState(f.item);
   }
-  function paintChips() {
-    var box = $("hiChips"), st = $("style");
+  function paintChips() { PAIRS.forEach(paintChipsOf); }   // HERESY 2491: each Style box its own chips
+  function paintChipsOf(pair) {
+    var box = $(pair.box), st = $(pair.st);
     if (!box || !st) return;
-    chipList = withVocab(named(st.value || ""), st.value || "");     // HERESY 2051: and the vocabularies' words
+    var list = withVocab(named(st.value || ""), st.value || "");     // HERESY 2051: and the vocabularies' words
+    box._chips = list;
+    if (pair.st === "style") chipList = list;
     if (!VOC && !vocP && (st.value || "").trim()) setTimeout(vocabs, 0);
     var A = window.HeresyArt;
-    box.innerHTML = chipList.map(function (f, n) {
+    box.innerHTML = list.map(function (f, n) {
       var art = f.kind === "w" || f.kind === "u" ? null : artOf(probes(f.item.slug)), c = chipState(f);
-      return '<button type="button" class="hi-chip ' + c.cls + '" translate="no" data-chip="' + n + '" aria-label="' + esc(chipName(f) + ": " + c.text) + '">' +
+      return '<button type="button" class="hi-chip ' + c.cls + '" translate="no" data-chip="' + n + '" aria-label="' + esc(chipName(f) + ": " + said(c.text)) + '">' +   // HERESY 2552 (the UIX audit of 13.11.2026, №37): its state in the page's language
         (art ? '<i style="background-image:url(&quot;' + esc(A.url(art)) + '&quot;)"></i>' : "") + esc(chipName(f)) + vocabNums(f.per || []) + "</button>";
     }).join("");
   }
@@ -790,7 +799,7 @@
       '<div class="hc-plays">' + playsHtml(p) + "</div></div>";
   }
   function showCard(n, anchor) {
-    var f = chipList[n], card = $("hiCard");
+    var f = (cardList || chipList)[n], card = $("hiCard");
     if (!f || !card) return;
     cardFor = n;
     card.innerHTML = cardHtml(f);
@@ -812,13 +821,18 @@
     card.className = "hi-card"; card.id = "hiCard"; card.hidden = true;
     document.body.appendChild(card);
     st.addEventListener("input", chipsSoon);
+    box.dataset.target = "style";
+    wireChips(box, card);
+  }
+  function wireChips(box, card) {   // HERESY 2491: a chips box's own hover and click
     box.addEventListener("mouseover", function (e) {
       var b = e.target.closest("[data-chip]");
       if (!b || +b.dataset.chip === cardFor) return;
+      var own = b.closest(".hi-chips"); cardList = (own && own._chips) || chipList;   // HERESY 2491
       clearTimeout(cardTimer);
       cardTimer = setTimeout(function () { showCard(+b.dataset.chip, b); }, 600);   // HERESY 1167 (Viktor: «Там 600ms задержки»)
     });
-    [box, card].forEach(function (el) {
+    [box].concat(card._wired ? [] : [card]).forEach(function (el) {
       el.addEventListener("mouseleave", function () { clearTimeout(cardTimer); cardTimer = setTimeout(hideCard, 320); });
       el.addEventListener("mouseenter", function () { if (cardFor >= 0) clearTimeout(cardTimer); });
     });
@@ -826,16 +840,20 @@
       var b = e.target.closest("[data-chip]");
       if (!b) return;
       e.preventDefault(); e.stopPropagation();                   // inside the Style label: no focus jump into the field
-      var f = chipList[+b.dataset.chip];
+      var own = b.closest(".hi-chips"), lst = (own && own._chips) || chipList;   // HERESY 2491
+      cardList = lst; TARGET = own && own.dataset.target && $(own.dataset.target) ? own.dataset.target : "style";
+      var f = lst[+b.dataset.chip];
       if (f && f.kind === "w") { hideCard(); open(f.item.name, waveOf(f.per || [])); return; }   // HERESY 2051: the word in the vocabulary (2109: its wave's)
       if (f && f.kind === "u") { clearTimeout(cardTimer); showCard(+b.dataset.chip, b); return; }
       var art = f && artOf(probes(f.item.slug));
       if (f && f.kind === "v") { clearTimeout(cardTimer); showCard(+b.dataset.chip, b); return; }   // HERESY 1167: its card, its plays
       if (art && window.HeresyArt) {
         hideCard();
-        window.HeresyArt.show(art, chipList.map(function (g) { return artOf(probes(g.item.slug)); }).filter(Boolean));
+        window.HeresyArt.show(art, lst.map(function (g) { return artOf(probes(g.item.slug)); }).filter(Boolean));
       } else if (f) { hideCard(); open(chipName(f), f.kind === "s" ? "styles" : "instruments"); }
     });
+    if (card._wired) return;
+    card._wired = true;
     card.addEventListener("click", function (e) {
       var a = e.target.closest("[data-hi-art]"), pl = e.target.closest("[data-hi-play]"), vq = e.target.closest("[data-hi-vocab]");
       if (vq) { hideCard(); open(vq.dataset.hiVocab, vq.dataset.hiWave === "tw" ? "tw" : "fw"); return; }   // HERESY 2051, 2109
@@ -853,7 +871,29 @@
   function paintArts() { if ($("hiBack") && !$("hiBack").hidden) paint(); paintChips(); }
   window.addEventListener("ruach-lang", function () { if (DATA && DATA.instruments) paintArts(); });   // HERESY 1339: the second line follows the language
   // HERESY 1672: the sheet's notes (.hi-st) are the probes' own words, kept as written (translate="no")
-  window.HeresyInstruments = { init: init, open: open, heardTags: heardTags, notHeardTags: notHeardTags, paintArts: paintArts, data: function () { return DATA; },
+  // HERESY 2491: another Style box served as the Musician's: its chips under it (or under `after`), the sheet's button in its heading
+  function attachStyle(stId, boxId, after, head) {
+    var st = $(stId), card = $("hiCard");
+    if (!st || $(boxId) || !card) return;
+    var box = document.createElement("div");
+    box.className = "hi-chips"; box.id = boxId; box.dataset.target = stId;
+    var at = after || st;
+    at.parentNode.insertBefore(box, at.nextSibling);
+    PAIRS.push({ box: boxId, st: stId });
+    st.addEventListener("input", chipsSoon);
+    wireChips(box, card);
+    if (head && !head.querySelector(".hi-open")) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "hi-open";
+      b.innerHTML = $("hiOpen") ? $("hiOpen").innerHTML : "?";
+      b.setAttribute("data-tip", "Instruments and styles: the cheat-sheet, with the probes to hear (Alt+I)");
+      b.setAttribute("aria-label", "Instruments cheat-sheet");
+      head.appendChild(b);
+      b.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); open(undefined, undefined, stId); });
+    }
+    setTimeout(paintChips, 300);
+  }
+  window.HeresyInstruments = { init: init, open: open, attachStyle: attachStyle, heardTags: heardTags, notHeardTags: notHeardTags, paintArts: paintArts, data: function () { return DATA; },
     styleLines: styleLines, styleProbed: styleProbed, voices: voices, adapters: adapters,   // HERESY 1166: the Writer's charter
     lyricTags: function () { return LYRIC_TAGS; },     // HERESY 1168: the tags offered under a «[» in the lyrics (heresy-complete.js)
     vocabs: function (again) { if (again) { VOC = null; vocP = null; } return vocabs(); } };   // HERESY 2109: the vocabularies, loaded again when asked

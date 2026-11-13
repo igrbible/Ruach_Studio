@@ -158,7 +158,9 @@
       '<td><input type="text" class="mono" data-f="find" value="' + esc(r.find) + '" /></td>' +
       '<td><input type="text" class="mono" data-f="repl" value="' + esc(r.repl) + '" /></td>' +
       '<td><input type="text" data-f="note" value="' + esc(r.note) + '" /></td>' +
-      '<td class="tp-ops"><button type="button" data-op="up" title="Up">↑</button><button type="button" data-op="down" title="Down">↓</button><button type="button" data-op="del" title="Remove">✕</button></td></tr>';
+      '<td class="tp-ops">' + [["up", "arrow-up", "Up", "\u2191"], ["down", "arrow-down", "Down", "\u2193"], ["del", "x", "Remove", "\u2715"]].map(function (o) {   // HERESY 2569: the arrows and the cross drawn
+        return '<button type="button" data-op="' + o[0] + '" aria-label="' + o[2] + '" data-tip="' + o[2] + '">' + (window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(o[1]) : o[3]) + "</button>";
+      }).join("") + "</td></tr>";
   }
   function paintEditor() {
     if (!$("tpRules") || !editing) return;
@@ -207,6 +209,7 @@
     }
     if ($("tpRules")) {
       $("tpEdPick").addEventListener("change", function () { openEditor(this.value); });
+      if (window.HeresyChoices) window.HeresyChoices.enhance($("tpEdPick"));   // HERESY 2569 (the UIX audit, item 58): the profile to edit in the Studio's picker
       $("tpShape").addEventListener("input", preview);
       $("tpRules").addEventListener("input", preview);
       $("tpRules").addEventListener("change", preview);
@@ -226,6 +229,8 @@
         var name = ($("tpEdName").value || "").trim();
         if (!name) return toast("Give the profile a name", true);
         if (BUILT_IN.some(function (p) { return p.name === name; })) return toast("That name is a built-in profile: choose another", true);
+        var why = window.HeresyNames && name !== editing.name ? window.HeresyNames.refusal(name, { max: 120 }) : "";   // HERESY 2462: a new name keeps the rule
+        if (why) return window.HeresyNames.ask(name, { max: 120 }).then(function (v) { if (v) { $("tpEdName").value = v; $("tpEdSave").click(); } });
         send({ op: "put", kind: "textprofile", name: name, data: { shape: editing.shape, rules: editing.rules } })
           .then(function () { editing.name = name; editing.builtin = false; toast("Text profile “" + name + "” saved on Forge"); return load(); })
           .then(function () { $("tpEdPick").value = name; if ($("tpPick")) $("tpPick").value = name; })

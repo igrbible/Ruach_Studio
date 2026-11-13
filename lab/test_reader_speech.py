@@ -75,7 +75,10 @@ pl, errs = plugins.load_all(HERE.parent / "user" / "plugins-none", HERE / "built
 r = [p for p in pl if p["id"] == "ruach"][0]
 ids = [s["id"] for s in r["steps"]]
 sp = [s for s in r["steps"] if s["id"].startswith("speech_")]
-assert [s["id"] for s in sp] == ["speech_denoise", "speech_deess", "speech_eq", "speech_loud"] and all(s["realm"] == "reader" and s["input"] == "file" for s in sp), sp
-assert ids.index("speech_denoise") == ids.index("tts_upscale") + 1 if "tts_upscale" in ids else True
+# HERESY 2421: the de-clicker first, then the four
+assert [s["id"] for s in sp] == ["speech_declick", "speech_denoise", "speech_deess", "speech_eq", "speech_loud"] and all(s["realm"] == "reader" and s["input"] == "file" for s in sp), sp
+assert ids.index("speech_declick") == ids.index("tts_upscale") + 1 if "tts_upscale" in ids else True
+chain = [p for p in r["pipelines"] if p["id"] == "speech-chain"][0]["pipeline"]
+assert [s.get("sid") for s in chain][:2] == ["speech_declick", "speech_denoise"] and chain[0]["params"]["reel"] is False, chain
 assert "speech-chain" in [p["id"] for p in refiner_profiles.pipelines(HERE, pl)]
 print("test_reader_speech: ok")

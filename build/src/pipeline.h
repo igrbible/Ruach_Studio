@@ -23,12 +23,14 @@
 #include "model-store.h"
 #include "nar.h"
 #include "request.h"
+#include "score-guard.h"
 #include "sliders.h"
 #include "timer.h"
 #include "torch-cpu-rng.h"
 #include "vae-enc.h"
 #include "vae.h"
 
+#include <climits>   // HERESY 2509: INT_MAX
 #include <cstdlib>
 #include <regex>
 #include <cstring>
@@ -50,6 +52,7 @@ struct Yue2PipelineParams {
     int  max_batch  = 1;              // song batch limit, one KV set per song, two under guidance
     bool no_fa      = false;          // disable flash attention
     bool no_fa_lm   = false;          // HERESY 1008: flash attention off in the music half (AR) only
+    bool no_fa_nar  = false;          // HERESY 2450: flash attention off in the sound half (NAR) only: ggml Vulkan's on an Intel Arc is 2.4x slower there
     bool clamp_fp16 = false;          // clamp hidden states on sub-Ampere CUDA
     bool fp16_matmul = false;         // Local addition: batched BF16 matmuls on FP16 tensor cores (qwen3-enc.h)
     int  vae_core   = 512;            // VAE tile core frames
@@ -63,6 +66,8 @@ struct Yue2Pipeline {
     ModelStore *       store = nullptr;   // borrowed, owned by the tool
     std::string        model_path;        // the backbone GGUF, both halves and the tokenizer
     std::string        vae_path;
+    bool               vae_has_encoder = false;   // HERESY 2484: vae_path carries the encoder (Standard does, VAE-RS does not)
+    std::string        vae_encoder_missing;       // and if not, the first tensor missing
     std::string        transcriber_path;  // the SheetSage2 GGUF, empty without one
     std::string        transcriber_refined_path;  // HERESY 2328: SheetSage2-Refined's overlay, empty without one
     std::string        tokenizer_path;    // upstream: the audio tokenizer GGUF, empty without one
@@ -102,6 +107,8 @@ struct Yue2Song {
     int                T_audio;    // samples per channel
     int                T_lat;      // semantic frames
     bool               truncated;  // a stage hit its budget before its end token
+    std::string        score_warning;  // HERESY 2433: sung by its score as written with this to say (no key line), "" when whole
+    double             window_held = 0.0;   // HERESY 2509: the seconds one window of the sound half held the song to (0: it ended by itself)
     // HERESY 1399: the take's medcard, stage by stage (seconds of the whole batch's stage; tokens of this song)
     int    score_tokens    = 0;      // the plan written here (0: supplied, or no score)
     double score_seconds   = 0.0;
@@ -157,12 +164,20 @@ static bool pipeline_configure(Yue2Pipeline *             p,
     p->model_path = model_path;
     p->vae_path   = vae_path;
     p->params     = params;
+    p->vae_has_encoder = vae_gguf_has_encoder(vae_path, &p->vae_encoder_missing);   // HERESY 2484
+    if (!p->vae_has_encoder) {
+        fprintf(stderr, "[Pipeline] WARNING: %s carries no VAE encoder (%s): every encode (POST /vae with audio) will be refused; "
+                        "start with the Standard VAE too (--vae standard=<YuE2 VAE GGUF>)\n", vae_path, p->vae_encoder_missing.c_str());
+    }
     debug_init(&p->dumper, params.dump_dir);
     if (params.no_fa) {
         fprintf(stderr, "[Pipeline] Flash attention disabled\n");
     }
     if (params.no_fa_lm) {   // HERESY 1008
         fprintf(stderr, "[Pipeline] Flash attention disabled in the music half (AR) only\n");
+    }
+    if (params.no_fa_nar) {   // HERESY 2450
+        fprintf(stderr, "[Pipeline] Flash attention disabled in the sound half (NAR) only\n");
     }
     if (params.clamp_fp16) {
         fprintf(stderr, "[Pipeline] FP16 clamp enabled\n");
@@ -285,7 +300,7 @@ static Yue2NAR * require_nar(Yue2Pipeline * p, const std::vector<AdapterUse> & a
         p->last_error = "LoRA: " + g_gf_lora_error;
     }
     if (m) {
-        m->use_flash_attn = m->use_flash_attn && !p->params.no_fa;
+        m->use_flash_attn = m->use_flash_attn && !p->params.no_fa && !p->params.no_fa_nar;   // HERESY 2450
         m->clamp_fp16     = p->params.clamp_fp16;
         // HERESY 1447: as the music half's (the graph is built at every evaluation and reads it then)
         if (!pipeline_lora_rt(p, 1, m, m->backend, m->cfg.n_layers, m->wctx.buffer)) {
@@ -482,14 +497,30 @@ static bool pipeline_decode(Yue2Pipeline *       p,
     return true;
 }
 
+// HERESY 2484: why this engine cannot encode, in one line for the page and the log
+static std::string pipeline_no_encoder_reason(const Yue2Pipeline * p) {
+    return "this engine has no VAE encoder: " + p->vae_path + " is a decoder-only VAE (" + p->vae_encoder_missing +
+           "); start it with the Standard VAE too (--vae standard=<YuE2 VAE GGUF>), the encoder is always Standard's";
+}
+
 // A recording to its latents: planar stereo at any rate, each channel
-// resampled to 48 kHz, through the VAE encoder; [T_lat, 64] time major
+// resampled to 48 kHz, through the VAE encoder; [T_lat, 64] time major.
+// HERESY 2484: refused with the reason in *error (when given) if the VAE file carries no encoder
 static bool pipeline_encode(Yue2Pipeline *       p,
                             const float *        planar,
                             int                  T,
                             int                  sr,
                             std::vector<float> * latents,
-                            int *                T_lat) {
+                            int *                T_lat,
+                            std::string *        error = nullptr) {
+    if (!p->vae_has_encoder) {
+        std::string why = pipeline_no_encoder_reason(p);
+        fprintf(stderr, "[Pipeline] Encode refused: %s\n", why.c_str());
+        if (error) {
+            *error = why;
+        }
+        return false;
+    }
     int                T_audio = T;
     std::vector<float> channels[2];
     for (int c = 0; c < 2; c++) {
@@ -511,6 +542,9 @@ static bool pipeline_encode(Yue2Pipeline *       p,
     }
     VAEEncoder * enc = require_vae_enc(p);
     if (!enc) {
+        if (error) {
+            *error = "the VAE encoder did not load from " + p->vae_path;
+        }
         return false;
     }
     ModelHandle hold(p->store, enc);
@@ -618,6 +652,8 @@ static bool pipeline_continue_codes(Yue2Pipeline *           p,
                                     const std::vector<int> & prompt,
                                     const std::vector<int> * negative,
                                     float                    guidance,
+                                    int                      whole_cap,      // HERESY 2509: one window of the sound half, 0 when pieces may go past it
+                                    bool *                   window_bound,   // set when that window set the budget
                                     Yue2Generation *         codes,
                                     bool (*cancelled)(void *),
                                     void * cancel_data) {
@@ -639,6 +675,23 @@ static bool pipeline_continue_codes(Yue2Pipeline *           p,
     int          budget   = sampling.max_tokens - (b - a);
     if (r.duration > 0.0f) {
         budget = std::min(budget, (int) (r.duration * (float) YUE2_FRAME_RATE) - (b - a));
+    }
+    if (whole_cap > 0 && T_src > whole_cap) {   // HERESY 2509: a take already past one window goes on in pieces, as it was made
+        fprintf(stderr, "[Continue] The source's %d frames are past one window of the sound half (%d): gone on in pieces, as it was made\n", T_src,
+                whole_cap);
+        whole_cap = 0;
+    }
+    if (whole_cap > 0 && whole_cap - (b - a) < budget) {   // HERESY 2509: whole, the song held to one window of the sound half
+        if (whole_cap - (b - a) < 1) {
+            p->last_error = "the section (" + std::to_string((b - a) / YUE2_FRAME_RATE) + " s) already fills one window of the sound half here (" +
+                            std::to_string(whole_cap / YUE2_FRAME_RATE) + " s): a whole song cannot go on from it; Long songs: Pieces (experimental) can";
+            fprintf(stderr, "[Continue] FATAL: %s\n", p->last_error.c_str());
+            return false;
+        }
+        budget        = whole_cap - (b - a);
+        *window_bound = true;
+        fprintf(stderr, "[Continue] Budget held to %d: one window of the sound half holds the song whole (%.1f s)\n", budget,
+                (double) whole_cap / YUE2_FRAME_RATE);
     }
     if (budget < 1) {
         fprintf(stderr, "[Continue] FATAL: nothing left to write after the %d frames of the section\n", b - a);
@@ -809,73 +862,8 @@ static std::string yue2_score_vocal_octave(const std::string & abc, int octaves,
     return out;
 }
 
-// HERESY 1087: why a score the AR wrote is not a score, or "" when it is one. Calibrated on the studio's own
-// takes (02.10.2026): every good score has M:, L: and K: with clean values (M:2/4, L:1/16, Q:1/4=71, K:Dm)
-// and never two colons in a row; the broken ones have no K: line, garbage for Q:, colons in runs of 3 to 13.
-// Three colons in a row are the cheapest sure sign (Viktor): a written score never has them.
-static std::string yue2_score_broken(const std::string & abc) {
-    std::string M, L, Q, K;
-    bool        hasM = false, hasL = false, hasQ = false, hasK = false;
-    size_t      pos = 0;
-    for (int n = 0; pos < abc.size() && n < 40 && !hasK; n++) {
-        size_t e = abc.find('\n', pos);
-        if (e == std::string::npos) {
-            e = abc.size();
-        }
-        std::string line = abc.substr(pos, e - pos);
-        pos              = e + 1;
-        while (!line.empty() && (line.back() == '\r' || line.back() == ' ' || line.back() == '\t')) {
-            line.pop_back();
-        }
-        if (line.size() < 2 || line[1] != ':') {
-            continue;
-        }
-        std::string v = line.substr(2);
-        while (!v.empty() && v[0] == ' ') {
-            v.erase(0, 1);
-        }
-        switch (line[0]) {
-            case 'M': if (!hasM) { hasM = true; M = v; } break;
-            case 'L': if (!hasL) { hasL = true; L = v; } break;
-            case 'Q': if (!hasQ) { hasQ = true; Q = v; } break;
-            case 'K': hasK = true; K = v; break;
-            default: break;
-        }
-    }
-    auto shown = [](const std::string & v) { return v.size() > 24 ? v.substr(0, 24) + "..." : v; };
-    std::vector<std::string> why;
-    if (!hasK) {
-        why.push_back("no key line (K:)");
-    } else if (!std::regex_match(K, std::regex(R"(^[A-G](#|b)?(m|min|maj|dor|phr|lyd|mix|aeo|loc|ion)?$)", std::regex::icase))) {
-        why.push_back("the key line is not a key (K:" + shown(K) + ")");
-    }
-    if (!hasM) {
-        why.push_back("no meter (M:)");
-    } else if (!std::regex_match(M, std::regex(R"(^(\d{1,2}/\d{1,2}|C\|?)$)"))) {
-        why.push_back("the meter is not a meter (M:" + shown(M) + ")");
-    }
-    if (!hasL) {
-        why.push_back("no note length (L:)");
-    } else if (!std::regex_match(L, std::regex(R"(^1/\d{1,3}$)"))) {
-        why.push_back("the note length is not one (L:" + shown(L) + ")");
-    }
-    if (hasQ && !std::regex_match(Q, std::regex(R"(^(\d{1,2}/\d{1,2}=)?\d{2,3}$)"))) {
-        why.push_back("the tempo is not a tempo (Q:" + shown(Q) + ")");
-    }
-    size_t run = 0, longest = 0;
-    for (char c : abc) {
-        run     = c == ':' ? run + 1 : 0;
-        longest = run > longest ? run : longest;
-    }
-    if (longest >= 3) {
-        why.push_back("colons in a run of " + std::to_string(longest));
-    }
-    std::string out;
-    for (size_t i = 0; i < why.size(); i++) {
-        out += (i ? "; " : "") + why[i];
-    }
-    return out;
-}
+// HERESY 1087, 2433: yue2_score_broken lives in score-guard.h
+
 
 // HERESY 1768: the decode ladder: pieces of about 20 s (25 frames a second), each hearing 2 s past its edges
 static const int YUE2_LADDER_PIECE  = 500;
@@ -905,6 +893,20 @@ static int seam_env(const char *, int dflt) {
 static bool seam_on() {
     const char * v = getenv("YUE2_NAR_SEAM");
     return !(v && v[0] == '0');
+}
+
+// HERESY 2509: one window of the sound half for a song of this prompt: the context holds the prefix, the codes and their latent block
+// (two rows a frame). The model's own context is 24576 rows (about 6 to 7.8 minutes by the prefix); an Engine context set smaller for a
+// card's memory makes it shorter. A song past it can only be solved in pieces (2352's seam), so whole is the default and holds the music
+// half's budget to it; nar_pieces lets a longer song go on (experimental).
+static int nar_window(int context, size_t prefix) {
+    int window = (context - (int) prefix - 3) / 2;
+#ifdef YUE2_SEAM_TEST
+    if (seam_env("YUE2_T_CHUNK", 0) > 0 && seam_env("YUE2_T_CHUNK", 0) < window) {
+        window = seam_env("YUE2_T_CHUNK", 0);   // the test's window, smaller than the context's
+    }
+#endif
+    return window;
 }
 
 static bool pipeline_generate(Yue2Pipeline *          p,
@@ -1030,6 +1032,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
     std::vector<std::vector<int>> abc_ids(B);
     std::vector<std::string>      scores(B);
     std::vector<bool>             truncated(B, false);
+    std::vector<std::string>      score_warn(B);   // HERESY 2433
     bool                          has_score = cot != YUE2_COT_OFF;
     bool                          planned   = has_score && (r.abc.empty() || r.abc_continue);   // HERESY 1608: an opening is planned on from
 
@@ -1091,9 +1094,13 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         score_seconds = score_timer.ms() / 1000.0;
         // HERESY 1087 (Viktor, 02.10.2026): adapters pushed past their limits make the AR write garbage for a
         // score (no key, no meter, colons in runs). The music would be built on it; the run stops here instead.
-        for (int i = 0; r.score_guard && i < B; i++) {
-            std::string why = yue2_score_broken(scores[i]);
-            if (!why.empty()) {
+        // HERESY 2433: a missing key line alone is a warning, said in the log, the take's meta and the job's status, guard on or off
+        for (int i = 0; i < B; i++) {
+            std::string why = yue2_score_broken(scores[i], &score_warn[i]);
+            if (!score_warn[i].empty()) {
+                fprintf(stderr, "[Pipeline] WARNING: the score of song %d has no key line (K:): sung as written\n", i);
+            }
+            if (r.score_guard && !why.empty()) {
                 fprintf(stderr, "[Pipeline] FATAL: the score of song %d is broken: %s\n", i, why.c_str());
                 p->broken_score = scores[i];
                 p->last_error   = "Broken score: " + why;
@@ -1127,6 +1134,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         for (int i = 0; i < B; i++) {
             (*songs)[(size_t) i].score     = scores[i];
             (*songs)[(size_t) i].truncated = truncated[i];
+            (*songs)[(size_t) i].score_warning = score_warn[i];   // HERESY 2433
             (*songs)[(size_t) i].T_audio   = 0;
             (*songs)[(size_t) i].T_lat     = 0;
         }
@@ -1163,6 +1171,18 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         }
     }
 
+    // HERESY 2509: whole by default: the music half's budget held to the shortest window of the batch, so no song needs pieces; the
+    // ladder (1768) and nar_pieces solve any length in pieces, and supplied codes are solved as they come
+    int whole_cap = 0;
+    if (!replay && !r.nar_ladder && !r.nar_pieces) {
+        whole_cap = INT_MAX;
+        for (int i = 0; i < B; i++) {
+            whole_cap = std::min(whole_cap, nar_window(p->kv.cfg.max_seq_len, prefixes[i].size()));
+        }
+        whole_cap = std::max(whole_cap, 1);
+    }
+    bool window_bound = false;   // the window, not the requested length or the stage's cap, set the budget
+
     std::vector<Yue2Generation> codes(B);
     SliderSet                   sliders;
     bool                        sliders_used = false;
@@ -1179,7 +1199,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         codes[0].truncated = false;
         fprintf(stderr, "[Pipeline] Replay: %zu frames supplied\n", codes[0].tokens.size());
     } else if (continued) {
-        if (!pipeline_continue_codes(p, lm, r, prefixes[0], negatives.empty() ? nullptr : &negatives[0], guidance,
+        if (!pipeline_continue_codes(p, lm, r, prefixes[0], negatives.empty() ? nullptr : &negatives[0], guidance, whole_cap, &window_bound,
                                      &codes[0], cancelled, cancel_data)) {
             return false;
         }
@@ -1191,6 +1211,16 @@ static bool pipeline_generate(Yue2Pipeline *          p,
             fprintf(stderr, "[AR] Frame budget clamped to %d by the requested duration (%.1f s)\n", budget,
                     (double) r.duration);
             semantic.max_tokens = budget;
+            if (semantic.min_tokens > semantic.max_tokens) {
+                semantic.min_tokens = semantic.max_tokens;
+            }
+        }
+        int held_from = semantic.max_tokens;
+        if (whole_cap > 0 && whole_cap < semantic.max_tokens) {   // HERESY 2509: whole, the song held to one window of the sound half
+            fprintf(stderr, "[AR] Frame budget held to %d (%.1f s): one window of the sound half holds the song whole (nar_pieces goes past it)\n",
+                    whole_cap, (double) whole_cap / YUE2_FRAME_RATE);
+            semantic.max_tokens = whole_cap;
+            window_bound        = true;
             if (semantic.min_tokens > semantic.max_tokens) {
                 semantic.min_tokens = semantic.max_tokens;
             }
@@ -1224,6 +1254,12 @@ static bool pipeline_generate(Yue2Pipeline *          p,
             }
             for (int & t : keep) {
                 t += YUE2_CODEC_OFFSET;
+            }
+            if (window_bound && (int) keep.size() + 1 >= semantic.max_tokens) {   // HERESY 2509: a take already past one window goes on in pieces, as it was made
+                fprintf(stderr, "[AR] The %zu frames kept fill one window of the sound half (%d): gone on in pieces, as the take was made\n", keep.size(),
+                        whole_cap);
+                semantic.max_tokens = held_from;
+                window_bound        = false;
             }
             if ((int) keep.size() + 1 >= semantic.max_tokens) {
                 fprintf(stderr, "[AR] FATAL: %zu kept frames leave no budget of %d\n", keep.size(), semantic.max_tokens);
@@ -1286,12 +1322,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
             fprintf(stderr, "[Pipeline] FATAL: empty semantic stream\n");
             return false;
         }
-        chunk_sizes[i] = (context - (int) prefixes[i].size() - 3) / 2;
-#ifdef YUE2_SEAM_TEST
-        if (seam_env("YUE2_T_CHUNK", 0) > 0 && seam_env("YUE2_T_CHUNK", 0) < chunk_sizes[i]) {
-            chunk_sizes[i] = seam_env("YUE2_T_CHUNK", 0);   // the test's window, smaller than the context's
-        }
-#endif
+        chunk_sizes[i] = nar_window(context, prefixes[i].size());   // HERESY 2509: said once, the budget reads it too
         if (r.nar_ladder) {                           // HERESY 1768: even pieces of about 20 s, room for their windows' 2 s either side
             const int n = (T_lat + YUE2_LADDER_PIECE - 1) / YUE2_LADDER_PIECE, even = (T_lat + n - 1) / n;
             if (n > 1 && even + 2 * YUE2_LADDER_MARGIN <= chunk_sizes[i]) {
@@ -1316,7 +1347,11 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         for (int j = 0; j < M; j++) {
             Yue2Song & song = (*songs)[(size_t) i * M + j];
             song.score      = scores[i];
+            song.score_warning = score_warn[i];   // HERESY 2433
             song.T_lat      = T_lat;
+            if (window_bound && codes[i].truncated) {   // HERESY 2509: the window, not the song, ended it
+                song.window_held = (double) T_lat / YUE2_FRAME_RATE;
+            }
             song.truncated  = truncated[i] || codes[i].truncated;
             song.tokens.reserve(codes[i].tokens.size());
             for (size_t k = 0; k < codes[i].tokens.size(); k++) {

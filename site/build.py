@@ -156,6 +156,7 @@ def page_for(code, template, units, catalog):
     page = (page.replace('<html lang="en">', '<html lang="%s"%s>' % (code, ' dir="rtl"' if code in RTL else ""))
             .replace("{{LANG}}", code.upper()).replace("{{LANGS}}", links).replace("{{ALTERNATES}}", alternates)
             .replace("{{VAE_STUDY}}", "/vae/study.%s.html" % code if code != "en" and (here / "vae" / ("study.%s.html" % code)).is_file() else "/vae/study.html")   # 11.11.2026: the study in the page's language once translated
+            .replace("{{WHY_ARTICLE}}", "/article/why-own-studio.%s.html" % code if code != "en" and (here / "article" / ("why-own-studio.%s.html" % code)).is_file() else "/article/why-own-studio.html")   # 12–13.11.2026: the article «Why our own Studio…» in the page's language, the English where none is
             .replace("{{FIRST_VISIT}}", FIRST_VISIT.replace("{{HAVE}}", json.dumps([c for c, _ in LANGS])) if code == "en" else ""))
     page = page.replace('content="assets/og.jpg"', 'content="%s/assets/og.jpg"' % SITE)
     # HERESY 1393 (Viktor 12.10.2026: «девиз OSEM как есть, но `Simply` можно на другие языки. И `AWESOME` всё заглавными»): the
@@ -183,7 +184,7 @@ def page_for(code, template, units, catalog):
     # Viktor 06.10.2026: «внешние ссылки сделай с таргетом _blank»: a link out of the site opens a new tab
     page = re.sub(r'<a (?![^>]*target=)([^>]*href="https?://)', r'<a target="_blank" rel="noopener" \1', page)
     if deep:
-        page = re.sub(r'((?:src|href)=")assets/', r"\1../assets/", page)
+        page = re.sub(r'((?:src|href|data-night)=")assets/', r"\1../assets/", page)   # 12.11.2026: data-night too (the lightbox's night picture was /<lang>/assets/…, a 404, on every page but the English)
     cjk = {"ja": "Noto Sans JP", "zh": "Noto Sans SC"}.get(code)   # HERESY 1383: a CJK face of the same family, after Noto Sans
     if cjk:
         page = page.replace("&family=Noto+Sans+Mono:", "&family=" + cjk.replace(" ", "+") + ":wght@400;500;700&family=Noto+Sans+Mono:", 1)
@@ -332,6 +333,11 @@ if __name__ == "__main__":
         letter = {"ru": "er", "uk": "er", "be": "er", "el": "er", "ja": "ja", "zh": "zh", "he": "he"}.get(code)   # HERESY 1454: Ροῦαχ's Ρ, drawn as Р   # 1273: ル, 鲁 for the languages planned next
         if letter:
             page = re.sub(r"assets/ruach-icon-(32|180|192)\.png", lambda m: "assets/ruach-icon-" + letter + "-" + m.group(1) + ".png", page)
+        # 12.11.2026 (Viktor: «переснять на нескольких языках»): the Studio's pictures in the page's language where they were taken in it
+        # (assets/shots/<lang>/), the English ones where not
+        shots = here / "assets" / "shots" / code
+        if code != "en" and shots.is_dir():
+            page = re.sub(r"assets/shots/([\w.-]+\.webp)", lambda m: "assets/shots/%s/%s" % (code, m.group(1)) if (shots / m.group(1)).is_file() else m.group(0), page)
         page = typeset(page, code)
         if code in RTL:
             page = isolate_numbers(page)
@@ -347,6 +353,13 @@ if __name__ == "__main__":
     alt = "".join('\n    <xhtml:link rel="alternate" hreflang="%s" href="%s"/>' % (c, u) for c, u in pages)
     alt += '\n    <xhtml:link rel="alternate" hreflang="x-default" href="%s/"/>' % SITE
     urls = ["  <url>\n    <loc>%s</loc>%s\n  </url>\n" % (u, alt) for c, u in pages]
+    # 12–13.11.2026: the article «Why our own Studio…» in each of its languages, each naming all the others
+    art = lambda c: "why-own-studio.html" if c == "en" else "why-own-studio.%s.html" % c
+    arts = [(c, SITE + "/article/" + art(c)) for c, _ in built if (here / "article" / art(c)).is_file()]
+    if arts:
+        art_alt = "".join('\n    <xhtml:link rel="alternate" hreflang="%s" href="%s"/>' % (c, u) for c, u in arts)
+        art_alt += '\n    <xhtml:link rel="alternate" hreflang="x-default" href="%s/article/%s"/>' % (SITE, art("en"))
+        urls += ["  <url>\n    <loc>%s</loc>%s\n  </url>\n" % (u, art_alt) for c, u in arts]
     if (here / "vocabulary" / "index.html").is_file():
         urls.append("  <url>\n    <loc>%s/vocabulary/</loc>\n  </url>\n" % SITE)
     (here / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '

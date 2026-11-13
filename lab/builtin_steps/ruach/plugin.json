@@ -1255,7 +1255,7 @@
    "id": "tts_upscale",
    "label": "TTS Voice Upscaler",
    "say": "a spoken voice cleaned and its top drawn",
-   "tip": "For the Narrator's takes only: one speaking voice, never a song. Resemble Enhance (MIT, by Resemble AI) under the hood, in full precision. Clean takes out noise and music under the speech and leaves the voice as it is; Upscale draws the top a speech model leaves empty (Drama 3 has little above 12 kHz) and polishes the voice; Restore does both, for a noisy recording; Draft is Upscale in half the steps, for a quick listen to a long chapter. Only the top keeps the take sample for sample below the cut, so the words and stresses stay the engine's own. The result comes back at the take's own rate and length, a branch of the take.",
+   "tip": "For the Narrator's takes only: one speaking voice, never a song. Resemble Enhance (MIT, by Resemble AI) under the hood, in full precision. Clean takes out noise and music under the speech and leaves the voice as it is; Upscale draws the top a speech model leaves empty (Drama 3 has little above 12 kHz) and polishes the voice; Restore does both, for a noisy recording; Draft is Upscale in half the steps, for a quick listen to a long chapter. Only the top keeps the take sample for sample below the cut, so the words and stresses stay the engine's own. The voice's profile (Male, Female, Mixed Male/Female Voices, by its measured pitch unless you pick it) sets where the top begins, the de-esser's band and the lows. The result comes back at the take's own rate and length, a branch of the take.",
    "script": "tts_upscale.py",
    "python": "../../../.venv-read/bin/python",
    "input": "file",
@@ -1291,6 +1291,35 @@
      "tip": "Clean: the denoiser alone, nothing drawn. Upscale: the top drawn on a clean take. Restore: noise out and the top drawn, for a recording with noise or music under it. Draft: Upscale in half the steps"
     },
     {
+     "key": "voice",
+     "label": "Voice",
+     "type": "select",
+     "default": "auto",
+     "options": [
+      [
+       "auto",
+       "Auto: by its pitch"
+      ],
+      [
+       "male",
+       "Male"
+      ],
+      [
+       "female",
+       "Female"
+      ],
+      [
+       "mixed",
+       "Mixed Male/Female Voices"
+      ],
+      [
+       "off",
+       "Off: no profile"
+      ]
+     ],
+     "tip": "The voice's profile. Male: the top drawn from 6.5 kHz, the hiss lowered between 4 and 8 kHz, the lows kept from 60 Hz. Female: the top from 9 kHz, the hiss between 6 and 11 kHz, the lows cleaned below 90 Hz, a gentler denoise. Mixed Male/Female Voices: each phrase by its own speaker, joined in the pauses. Auto measures the pitch of every phrase and picks one of the three (the summary says what it found). Off: as before, no profile"
+    },
+    {
      "key": "keep",
      "label": "What changes",
      "type": "select",
@@ -1311,8 +1340,12 @@
      "key": "cut",
      "label": "Cut",
      "type": "select",
-     "default": "12",
+     "default": "voice",
      "options": [
+      [
+       "voice",
+       "by the voice"
+      ],
       [
        "8",
        "8 kHz"
@@ -1330,7 +1363,7 @@
        "14 kHz"
       ]
      ],
-     "tip": "Where the drawn top begins when only the top changes"
+     "tip": "Where the drawn top begins when only the top changes: by the voice (6.5 kHz for Male, 9 kHz for Female, each phrase its own for Mixed), or a cut by hand"
     },
     {
      "key": "mix",
@@ -1420,6 +1453,36 @@
       ]
      ],
      "tip": "For the expert: how much noise the prior starts from; higher is richer and less steady"
+    }
+   ]
+  },
+  {
+   "id": "speech_declick",
+   "label": "Speech de-clicker",
+   "say": "the codec's knocks between the sentences mended",
+   "tip": "For the Narrator's takes only. Finds the short low knock a speech engine's codec leaves where one of its generations ends (a breath or the room's noise dropped to silence at one sample, often with one low cycle just before it) and mends each: its last 90 ms above 100 Hz, faded to the floor; the voice and every sample outside the spots stay the take's own. In a Narrator take it looks in the pieces as the engine read them and finds the spots exactly; in any other spoken take it listens to the take itself. Comes back as a branch of the take, with a reel that plays each spot before and after and a list of where they were.",
+   "script": "speech_declick.py",
+   "input": "file",
+   "rate": 0.03,
+   "group": "mend",
+   "realm": "reader",
+   "params": [
+    {
+     "key": "fade",
+     "label": "Fade, ms",
+     "type": "number",
+     "min": 20,
+     "max": 80,
+     "step": 5,
+     "default": 45,
+     "tip": "How long each knock's place fades to the floor: longer is softer"
+    },
+    {
+     "key": "reel",
+     "label": "Before and after",
+     "type": "check",
+     "default": true,
+     "tip": "A reel that plays each spot as it was and then as mended"
     }
    ]
   },
@@ -1893,9 +1956,18 @@
   {
    "id": "speech-chain",
    "name": "Narration: the speech chain",
-   "say": "denoised, de-essed, the voice's colour, −16 LUFS",
-   "tip": "For the Narrator's takes only: the noise between the words down 10 dB, the hiss of s and sh lowered, the clear speech EQ, the reading brought to −16 LUFS under −1 dBTP, then before and after side by side.",
+   "say": "de-clicked, denoised, de-essed, the voice's colour, −16 LUFS",
+   "tip": "For the Narrator's takes only: the codec's knocks between the sentences mended, the noise between the words down 10 dB, the hiss of s and sh lowered, the clear speech EQ, the reading brought to −16 LUFS under −1 dBTP, then before and after side by side.",
    "pipeline": [
+    {
+     "step": "plugin",
+     "plugin": "ruach",
+     "sid": "speech_declick",
+     "params": {
+      "fade": 45,
+      "reel": false
+     }
+    },
     {
      "step": "plugin",
      "plugin": "ruach",

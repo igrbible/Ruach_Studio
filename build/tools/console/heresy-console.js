@@ -985,7 +985,10 @@
     if (act === "msave") {                            // HERESY 1533
       var inp = D().querySelector("#mxDock .mm-name"), nm = inp ? inp.value.trim() : "";
       if (!nm) { if (inp) inp.focus(); return; }
-      M.mixes.saveAs(nm).then(function () { paint(); }, function (e) { var k = M.mixes.lab(); k.err = e.message || String(e); paint(); });
+      (window.HeresyNames ? window.HeresyNames.ask(nm, { max: 80 }) : Promise.resolve(nm)).then(function (v) {   // HERESY 2462: the names' rule, asked about
+        if (!v) { if (inp) inp.focus(); return; }
+        M.mixes.saveAs(v).then(function () { paint(); }, function (e) { var k = M.mixes.lab(); k.err = e.message || String(e); paint(); });
+      });
       return;
     }
     if (act === "mload") { M.mixes.load(v); C.tab = "mixes"; paint(); return; }
@@ -1250,12 +1253,20 @@
       var inp = e.target.closest && e.target.closest("#mxDock .dv-busname"), bx = inp && subOf2(C.sel);
       if (!bx) return;
       var nm = inp.value.trim().slice(0, 40);
+      if (nm && nm !== bx.name && window.HeresyNames && window.HeresyNames.refusal(nm, { max: 40 })) {   // HERESY 2462: asked about, else its name as it was
+        window.HeresyNames.ask(nm, { max: 40 }).then(function (v) { if (v && v !== bx.name) { K().mark(); K().subSet(bx.id, "name", v); } paint(); });
+        return;
+      }
       if (nm && nm !== bx.name) { K().mark(); K().subSet(bx.id, "name", nm); paint(); }
     });
     body.addEventListener("change", function (e) {   // HERESY 1543: a VCA's name, kept as it is left
       var inp = e.target.closest && e.target.closest("#mxDock .dv-vcaname"), gx = inp && grp(C.sel);
       if (!gx) return;
       var nm = inp.value.trim().slice(0, 40);
+      if (nm && nm !== gx.name && window.HeresyNames && window.HeresyNames.refusal(nm, { max: 40 })) {   // HERESY 2462
+        window.HeresyNames.ask(nm, { max: 40 }).then(function (v) { if (v && v !== gx.name) { K().mark(); K().groupSet(gx.id, "name", v); } paint(); });
+        return;
+      }
       if (nm && nm !== gx.name) { K().mark(); K().groupSet(gx.id, "name", nm); paint(); }
     });
     body.addEventListener("keydown", function (e) {   // HERESY 1533: Enter in the name saves

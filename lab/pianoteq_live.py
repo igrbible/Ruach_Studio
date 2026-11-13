@@ -658,9 +658,11 @@ def fxp(kit, state, dest):
 
 def keep(kit, state, name):
     """The state as the user's own Pianoteq preset, in the bank «Ruach Studio» (asked for by the user)."""
-    name = " ".join(str(name or "").split())[:60]
+    name = " ".join(str(name or "").split())
     if not name:
         raise ValueError("a name for the preset")
+    import name_rule                               # HERESY 2462: Pianoteq keeps it as a file of that name
+    name_rule.check(name, 60, file=True)
     srv = Server(kit)
     with _LOCK:
         _load(srv, state)

@@ -80,7 +80,7 @@ with tempfile.TemporaryDirectory() as tmp:
     con.execute("CREATE TABLE forms (k TEXT PRIMARY KEY, f TEXT) WITHOUT ROWID")
     con.execute("CREATE TABLE cap (k TEXT PRIMARY KEY, f TEXT) WITHOUT ROWID")
     con.executemany("INSERT INTO forms VALUES (?, ?)", [("стукають", "сту́кають"), ("замок", "за́мок|замо́к"), ("київ", "ки́їв|киї́в"), ("м'ясо", "м'я́со"),
-                                                         ("голова", "голова́"), ("двері", "две́рі")])
+                                                         ("голова", "голова́"), ("двері", "две́рі"), ("помилка", "по́ми́лка")])
     con.executemany("INSERT INTO cap VALUES (?, ?)", [("київ", "ки́їв"), ("замок", "за́мок")])
     con.commit()
     con.close()
@@ -89,6 +89,9 @@ with tempfile.TemporaryDirectory() as tmp:
     assert "сту́кають" in out and "две́рі" in out and "голова́" in out and "м’я́со" in out, out          # the word's own apostrophe kept
     assert "в Ки́їв" in out and "Київ далеко" in out and out.split(".")[1].strip().startswith("Замок"), out   # a name inside a sentence; at the start, never
     assert {"word": "замок", "forms": ["за́мок", "замо́к"]} in rep["homographs"] and {"word": "київ", "forms": ["ки́їв", "киї́в"]} in rep["homographs"], rep
+    out, rep = rs.stress("Це помилка.", "uk")                  # HERESY 2452: two stresses in one form (по́ми́лка), never forced, named
+    assert out == "Це помилка." and {"word": "помилка", "forms": sorted(["по́милка", "поми́лка"])} in rep["homographs"], (out, rep)
+    out, rep = rs.stress("Це помилка, замок.", "uk")
     assert rep["dict"] == "lang-uk" and rs.uk_state() == "ready" and rs.dict_get("uk")["lang_uk"] == "ready", rep
     assert rs.uk_forms("наспівував") == [] and "насп+івував" in rs.stress("Він наспівував.", "uk", "plus")[0]    # the user's word still over the dictionary
     rs.UK["con"].close()

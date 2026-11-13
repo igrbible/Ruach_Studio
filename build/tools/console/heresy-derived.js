@@ -591,7 +591,8 @@
     return fetch("/lab/midi/status").then(function (r) { return r.json(); }).then(function (st) {
       var keep = sel.value, here = st.here || [];
       sel.innerHTML = here.map(function (s) {
-        return '<option value="' + s + '">' + esc(tt(s === "large" ? "Large" : s === "medium" ? "Medium" : "Small")) + (s === st.suggest ? " · " + esc(tt("suggested")) : "") + "</option>";
+        // HERESY 2570 (the UIX audit, item 65): English here, the catalog's «Small · suggested» where it shows, so a language changed later changes it too
+        return '<option value="' + s + '">' + esc((s === "large" ? "Large" : s === "medium" ? "Medium" : "Small") + (s === st.suggest ? " \u00b7 suggested" : "")) + "</option>";
       }).join("");
       sel.value = here.indexOf(keep) >= 0 ? keep : here.indexOf(st.suggest) >= 0 ? st.suggest : (here[0] || "");
       $("mdRun").disabled = !st.built || !here.length;
@@ -1436,7 +1437,7 @@
         var f = li.querySelector("[data-cmp-fav]");
         if (f) f.setAttribute("aria-pressed", String(fOf(v)));
         var nb = li.querySelector("[data-cmp-note]");
-        if (nb) { var nt = noteOf(v); nb.setAttribute("aria-pressed", String(!!nt)); nb.dataset.tip = nt ? (nt.length > 600 ? nt.slice(0, 600) + "\n\u2026" : nt) : "A note on this take"; }   // HERESY 2043: 600, not 160
+        if (nb) { var nt = noteOf(v); nb.setAttribute("aria-pressed", String(!!nt)); nb.dataset.tip = nt ? (nt.length > 1200 ? nt.slice(0, 1200) + "\n\u2026" : nt) : "A note on this take"; }   // HERESY 2043: 600, not 160; 2404: 1200
       });
       if (!shown(active)) {                                 // the one playing disliked and hidden: the next shown one goes on from its second
         for (var k = 1; k < versions.length; k++) { var j = (active + k) % versions.length; if (shown(j)) { pick(j); break; } }
@@ -1877,7 +1878,7 @@
       if (sb) return sheetOpen(+sb.closest("[data-cmp-li]").dataset.cmpLi);   // HERESY 1872
       if (nb) {                                          // HERESY 1724: the take's note, as its card's menu writes it
         var vn = versions[+nb.closest("[data-cmp-li]").dataset.cmpLi];
-        window.HeresyDialog.prompt("A note on “" + vn.label + "”\n\nEmpty removes it.", noteOf(vn), { ok: "Keep the note", max: 600, area: true, rows: 6, cls: "hd-note" })
+        window.HeresyDialog.prompt("A note on “" + vn.label + "”\n\nEmpty removes it.", noteOf(vn), { ok: "Keep the note", max: 6000, area: true, rows: 6, cls: "hd-note" })
           .then(function (t) { if (t !== null) { var p = hk.setNote(vn.take, t); if (p && p.then) p.then(paintRates, paintRates); else paintRates(); } box.focus(); });
         return;
       }

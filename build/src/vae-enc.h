@@ -8,6 +8,61 @@
 #pragma once
 #include "vae.h"
 
+#include <string>
+#include <vector>
+
+// Local addition (HERESY 2484): does this VAE GGUF carry the encoder? Every tensor vae_enc_load reads,
+// named the same way, checked from the GGUF's header alone (nothing is mapped). Our VAE-RS decoders are
+// decoder-only files: loading the encoder from one read a missing tensor and crashed the engine
+// (vae_fuse_wn on a null). false names the first missing tensor, or why the file could not be read.
+static bool vae_gguf_has_encoder(const char * path, std::string * missing = nullptr) {
+    struct gguf_init_params ip = { true, nullptr };
+    struct gguf_context *   g  = (path && *path) ? gguf_init_from_file(path, ip) : nullptr;
+    if (!g) {
+        if (missing) {
+            *missing = "the file cannot be read as a GGUF";
+        }
+        return false;
+    }
+    std::vector<std::string> names;
+    auto wn = [&](const std::string & pfx) {
+        names.push_back(pfx + ".weight_g");
+        names.push_back(pfx + ".weight_v");
+        names.push_back(pfx + ".bias");
+    };
+    auto snake = [&](const std::string & pfx) {
+        names.push_back(pfx + ".alpha");
+        names.push_back(pfx + ".beta");
+    };
+    wn("encoder.conv1");
+    for (int i = 0; i < 6; i++) {
+        std::string blk = "encoder.block." + std::to_string(i);
+        for (int r = 1; r <= 3; r++) {
+            std::string rp = blk + ".res_unit" + std::to_string(r);
+            snake(rp + ".snake1");
+            wn(rp + ".conv1");
+            snake(rp + ".snake2");
+            wn(rp + ".conv2");
+        }
+        snake(blk + ".snake1");
+        wn(blk + ".conv1");
+    }
+    snake("encoder.snake1");
+    wn("encoder.conv2");
+    bool ok = true;
+    for (const std::string & n : names) {
+        if (gguf_find_tensor(g, n.c_str()) < 0) {
+            if (missing) {
+                *missing = "no tensor " + n;
+            }
+            ok = false;
+            break;
+        }
+    }
+    gguf_free(g);
+    return ok;
+}
+
 // Encoder block: 3xResUnit(in_ch) -> snake(in_ch) -> strided Conv1d(in_ch -> out_ch)
 // Decoder block is the mirror: snake(in_ch) -> ConvT(in_ch -> out_ch) -> 3xResUnit(out_ch)
 struct VAEEncBlock {

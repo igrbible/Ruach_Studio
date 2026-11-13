@@ -1,0 +1,172 @@
+{
+ "id": "higgs",
+ "label": "Boson AI Higgs TTS 3",
+ "module": "engine.py",
+ "python": {
+  "cuda": ".venv-read/bin/python",
+  "cpu": ".venv-read/bin/python"
+ },
+ "need_mb": 11000,
+ "sample_rate": 24000,
+ "max_chars": 400,
+ "seed": true,
+ "stress": "acute",
+ "style": {
+  "kind": "tags",
+  "max": 200,
+  "ph": "<|emotion:contemplation|><|prosody:speed_slow|>"
+ },
+ "langs": [
+  "ru",
+  "uk",
+  "be",
+  "el",
+  "he",
+  "en",
+  "es",
+  "it",
+  "fr",
+  "pt",
+  "de",
+  "ja",
+  "zh"
+ ],
+ "tag_re": "<\\|[a-z]+:[a-z_]+\\|>",
+ "tags": {
+  "open": "<|",
+  "close": "|>",
+  "groups": [
+   {
+    "id": "emotion",
+    "cat": "emotion",
+    "place": "sentence",
+    "items": [
+     "affection",
+     "amusement",
+     "anger",
+     "arousal",
+     "awe",
+     "bitterness",
+     "confusion",
+     "contemplation",
+     "contentment",
+     "determination",
+     "disgust",
+     "elation",
+     "enthusiasm",
+     "fear",
+     "helplessness",
+     "longing",
+     "pride",
+     "relief",
+     "sadness",
+     "shame",
+     "surprise"
+    ]
+   },
+   {
+    "id": "prosody",
+    "cat": "prosody",
+    "place": "sentence",
+    "items": [
+     "speed_very_slow",
+     "speed_slow",
+     "speed_fast",
+     "speed_very_fast",
+     "pitch_low",
+     "pitch_high",
+     "expressive_high",
+     "expressive_low"
+    ]
+   },
+   {
+    "id": "pause",
+    "cat": "prosody",
+    "place": "inline",
+    "items": [
+     "pause",
+     "long_pause"
+    ]
+   },
+   {
+    "id": "style",
+    "cat": "style",
+    "place": "sentence",
+    "items": [
+     "singing",
+     "shouting",
+     "whispering"
+    ]
+   },
+   {
+    "id": "sfx",
+    "cat": "sfx",
+    "place": "inline",
+    "items": [
+     "cough",
+     "laughter",
+     "crying",
+     "screaming",
+     "burping",
+     "humming",
+     "sigh",
+     "sniff",
+     "sneeze"
+    ],
+    "say": {
+     "cough": "Ahem",
+     "laughter": "Haha",
+     "crying": "Huhuhu",
+     "screaming": "Aaah",
+     "burping": "Burp",
+     "humming": "Mmm",
+     "sigh": "Haah",
+     "sniff": "Sniff",
+     "sneeze": "Achoo"
+    }
+   }
+  ]
+ },
+ "license": {
+  "name": "Boson Higgs TTS 3 Research and Non-Commercial License",
+  "url": "https://huggingface.co/bosonai/higgs-tts-3-4b/blob/239f63fb7b02b1aa085f98d9efae5e35cc5523e8/LICENSE",
+  "terms": "Research and non-commercial use; your own published creative work, monetized too, with Boson AI's Higgs Audio acknowledged in the audio or prominently beside it; no hosting or serving it for others, no product or service for third parties and no other commercial use without Boson's written licence; nothing it makes used to train any speech, audio or language model; no real person's voice without their explicit, verifiable consent.",
+  "credit": "This audio was created with Boson AI's Higgs Audio — https://www.boson.ai/higgs-audio"
+ },
+ "needs": [
+  {
+   "id": "model",
+   "all": [
+    "models/narrator/higgs-tts-3-4b/model.safetensors",
+    "models/narrator/higgs-tts-3-4b/tokenizer.json",
+    "models/narrator/higgs-tts-3-4b/config.json",
+    "models/narrator/higgs-tts-3-4b/modeling_higgs_multimodal_qwen3.py",
+    "models/narrator/higgs-tts-3-4b/configuration_higgs_multimodal_qwen3.py",
+    "models/narrator/higgs-audio-v2-tokenizer/model.safetensors"
+   ],
+   "say": "Higgs TTS 3 is not here: Engine → Models → Narrator · Higgs TTS 3 (Boson AI) fetches it from Boson's own repos"
+  },
+  {
+   "id": "licence",
+   "all": [
+    "models/narrator/higgs-tts-3-4b/LICENSE",
+    "models/narrator/higgs-audio-v2-tokenizer/LICENSE"
+   ],
+   "say": "Boson's licence files are not beside the model and its tokenizer"
+  },
+  {
+   "id": "python",
+   "all": [
+    ".venv-read/bin/python"
+   ],
+   "say": "its Python with transformers 5 is not set up yet (bash tools/narrator-higgs-setup.sh)"
+  }
+ ],
+ "setup": {
+  "tier": "",
+  "command": "bash tools/narrator-higgs-setup.sh",
+  "size": "10.2 GB"
+ },
+ "first_run": "BF16 on a card takes about 11 GB of its memory; on the processor it reads several times slower than real time. The model loads at the first reading and stays loaded between runs on a card.",
+ "note": "Boson AI's Higgs TTS 3 (Higgs Audio v3, 4B on Qwen3) through 🤗 transformers, from Boson's own repos (never mirrored by Ruach Studio) in models/narrator/higgs-tts-3-4b and models/narrator/higgs-audio-v2-tokenizer, each with its licence. Built with Higgs TTS 3 licensed from Boson AI USA, Inc."
+}

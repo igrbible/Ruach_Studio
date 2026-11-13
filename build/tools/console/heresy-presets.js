@@ -28,6 +28,9 @@
       semantic_sampling: Object.assign({ max_tokens: 15000 }, SEM, { temperature: 0.85, top_p: 0.93, top_k: 80 }) } }
   ];
   var state = { styles: [], setups: [], hooks: null };
+  // HERESY 2498 (Viktor 12.11.2026: «в редактор стилей нужно подтянуть и теги инструментов, и остальное»): the saved styles serve any Style box:
+  // each row is its select, its save and delete buttons, and how to read and write its box (the Musician's first, the Writer's beside its STYLE)
+  var ROWS = [];
   // HERESY 1401: a built-in profile as it is now: an editable one's saved values when they are on Forge
   function builtIn(i) {
     var p = BUILT_IN[i], own = p && p.editable ? state.setups.filter(function (s) { return s.name === p.name; })[0] : null;
@@ -54,12 +57,16 @@
     paint();
   }
 
-  function paint() {
-    var keepS = $("styleLib").value, keepP = $("setupLib").value;
-    $("styleLib").innerHTML = '<option value="">' + (state.styles.length ? "Saved styles…" : "No saved styles yet") + "</option>" +
+  function paintRow(r) {
+    var lib = $(r.lib), keepS = lib.value;
+    lib.innerHTML = '<option value="">' + (state.styles.length ? "Saved styles…" : "No saved styles yet") + "</option>" +
       state.styles.map(function (s) { return '<option value="' + esc(s.name) + '">' + esc(s.name) + "</option>"; }).join("");
-    $("styleLib").value = state.styles.some(function (s) { return s.name === keepS; }) ? keepS : "";
-    $("styleDel").disabled = !$("styleLib").value;
+    lib.value = state.styles.some(function (s) { return s.name === keepS; }) ? keepS : "";
+    $(r.del).disabled = !lib.value;
+  }
+  function paint() {
+    var keepP = $("setupLib").value;
+    ROWS.forEach(paintRow);
     $("setupLib").innerHTML = '<optgroup label="built in">' + BUILT_IN.map(function (p, i) { return '<option value="b' + i + '"' + (p.editable ? ' translate="no"' : "") + ">" + esc(p.name) + (builtIn(i).own ? " \u270e" : "") + "</option>"; }).join("") +
       "</optgroup>" + (saved().length ? '<optgroup label="saved">' + saved().map(function (p) {
         return '<option value="s:' + esc(p.name) + '">' + esc(p.name) + "</option>"; }).join("") + "</optgroup>" : "");
@@ -103,37 +110,7 @@
   function init(hooks) {
     if (!$("styleLib")) return;
     state.hooks = hooks;
-    $("styleLib").addEventListener("change", function () {
-      var s = state.styles.filter(function (x) { return x.name === this.value; }, this)[0];
-      $("styleDel").disabled = !s;
-      if (!s) return;
-      var now = hooks.style().trim(), sel = this;
-      (now && now !== s.text.trim() ? window.HeresyDialog.confirm("Replace the style in the form with “" + s.name + "”?", { ok: "Replace" }) : Promise.resolve(true)).then(function (ok) {
-        if (!ok) { sel.value = ""; $("styleDel").disabled = true; return; }
-        hooks.setStyle(s.text);
-        toast("Style “" + s.name + "” in the form");
-      });
-    });
-    $("styleSave").addEventListener("click", function () {
-      var text = hooks.style().trim();
-      if (!text) return toast("The style field is empty", true);
-      var name;
-      window.HeresyDialog.prompt("Save the style\n\nA name to find it by under the style field.", $("styleLib").value || "", { ok: "Save", placeholder: "its name" }).then(function (v) {
-        name = (v || "").trim();
-        if (!name) return false;
-        return state.styles.some(function (s) { return s.name === name; }) ? window.HeresyDialog.confirm("“" + name + "” exists. Replace it?", { ok: "Replace" }) : true;
-      }).then(function (ok) {
-        if (!ok) return;
-        return send({ op: "put", kind: "style", name: name, data: text }).then(function (d) { take(d); $("styleLib").value = name; $("styleDel").disabled = false; toast("Style “" + name + "” saved on Forge"); });
-      }).catch(function (e) { toast("Not saved: " + e.message, true); });
-    });
-    $("styleDel").addEventListener("click", function () {
-      var name = $("styleLib").value;
-      if (!name) return;
-      window.HeresyDialog.confirm("Delete the saved style “" + name + "”?", { danger: true }).then(function (ok) {
-        if (ok) return send({ op: "delete", kind: "style", name: name }).then(function (d) { take(d); toast("Style “" + name + "” deleted"); });
-      }).catch(function (e) { toast("Not deleted: " + e.message, true); });
-    });
+    styleRow({ lib: "styleLib", save: "styleSave", del: "styleDel" }, hooks.style, hooks.setStyle);   // HERESY 2498: the Musician's row
     $("setupLib").addEventListener("change", function () { syncDel(); syncTextRow(); });
     $("setupApply").addEventListener("click", function () {
       var p = chosenSetup();
@@ -145,7 +122,7 @@
       var data;
       try { data = hooks.capture(); } catch (e) { return toast("The form does not read: " + e.message, true); }
       var name, cur = chosenSetup(), ear = cur && cur.editable;   // HERESY 1401: his own profile, saved over by its name
-      window.HeresyDialog.prompt("Save the profile\n\nEvery knob of the form but the texts and seeds.", ear ? cur.name : "", { ok: "Save", placeholder: "its name" }).then(function (v) {
+      window.HeresyDialog.prompt("Save the profile\n\nEvery knob of the form but the texts and seeds.", ear ? cur.name : "", { ok: "Save", placeholder: "its name", name: { max: 120 } }).then(function (v) {   // HERESY 2462
         name = (v || "").trim();
         if (!name) return false;
         if (BUILT_IN.some(function (b) { return !b.editable && b.name === name; })) { toast("“" + name + "” is built in: save it under another name", true); return false; }
@@ -175,5 +152,43 @@
     load();
   }
 
-  window.HeresyPresets = { init: init, reload: load };
+  // HERESY 2498: one row of saved styles, wired to its own Style box (read by get, written by set)
+  function styleRow(r, get, set) {
+    if (!$(r.lib) || $(r.lib).dataset.wired) return;
+    $(r.lib).dataset.wired = "1";
+    ROWS.push(r);
+    $(r.lib).addEventListener("change", function () {
+      var s = state.styles.filter(function (x) { return x.name === this.value; }, this)[0];
+      $(r.del).disabled = !s;
+      if (!s) return;
+      var now = get().trim(), sel = this;
+      (now && now !== s.text.trim() ? window.HeresyDialog.confirm("Replace the style in the form with “" + s.name + "”?", { ok: "Replace" }) : Promise.resolve(true)).then(function (ok) {
+        if (!ok) { sel.value = ""; $(r.del).disabled = true; return; }
+        set(s.text);
+        toast("Style “" + s.name + "” in the form");
+      });
+    });
+    $(r.save).addEventListener("click", function () {
+      var text = get().trim();
+      if (!text) return toast("The style field is empty", true);
+      var name;
+      window.HeresyDialog.prompt("Save the style\n\nA name to find it by under the style field.", $(r.lib).value || "", { ok: "Save", placeholder: "its name", name: { max: 120 } }).then(function (v) {
+        name = (v || "").trim();
+        if (!name) return false;
+        return state.styles.some(function (s) { return s.name === name; }) ? window.HeresyDialog.confirm("“" + name + "” exists. Replace it?", { ok: "Replace" }) : true;
+      }).then(function (ok) {
+        if (!ok) return;
+        return send({ op: "put", kind: "style", name: name, data: text }).then(function (d) { take(d); $(r.lib).value = name; $(r.del).disabled = false; toast("Style “" + name + "” saved on Forge"); });
+      }).catch(function (e) { toast("Not saved: " + e.message, true); });
+    });
+    $(r.del).addEventListener("click", function () {
+      var name = $(r.lib).value;
+      if (!name) return;
+      window.HeresyDialog.confirm("Delete the saved style “" + name + "”?", { danger: true }).then(function (ok) {
+        if (ok) return send({ op: "delete", kind: "style", name: name }).then(function (d) { take(d); toast("Style “" + name + "” deleted"); });
+      }).catch(function (e) { toast("Not deleted: " + e.message, true); });
+    });
+    if (state.styles.length) paintRow(r);
+  }
+  window.HeresyPresets = { init: init, reload: load, styleRow: styleRow };
 })();

@@ -98,23 +98,51 @@ await sleep(150);
 check("back to English from Hebrew: <html dir> ltr, nothing swapped, every rule of the stylesheets as it was",
   (await ev(`document.documentElement.dir`)) === "ltr" && (await ev(`RuachRtl.swapped()`)) === 0 && (await ev(cssOf)) === cssEn);
 // HERESY 1518 (Viktor's rule: the root «раб/роб» stays out of the studio's words): every catalog the page is served with, read as the page
-// reads it; no word of the root in the Ukrainian and Belarusian translations, nor «δουλ» in the Greek, by the guide checker's own rule
-// (heresy/MISC/claude-i18n/guide/check_guide.py): the letters of проба, дроб, хвороба, Афробіт, перабор… are not the root
+// reads it; no word of the root in the Russian, Ukrainian and Belarusian translations, nor «δουλ» in the Greek, by the guide checker's own rule
+// (heresy/MISC/claude-i18n/guide/check_guide.py): the letters of проба, дроб, хвороба, Афробіт, перабор, коробка… are not the root.
+// HERESY 2488 (Viktor 12.11.2026: «давай внесём исключения для запретных корней РАБ/РОБ. То, что действительно работает, пашет как угорелый,
+// пропускаем. Карты работают, а вот LLM творит, и всё остальное творит, созидает, поэтизирует, делает, образовывает, продвигает и т.п. ОК?»):
+// Russian is checked too, with one way through: a form of «работать» in the third person, the infinitive, the past or the participle
+// («карта работает», «сервер не работает», «заработала», «сработало»), and only in a clause with no creative agent (the LLM, the Studio,
+// a room: they create, write, compose). «работаю», «работаешь» and every other word of the root («работа», «рабочий», «обработка») never
+// pass: a person does not «работать», and a noun cannot tell a card from an author. Ukrainian and Belarusian need no way through: a machine
+// there «працює»/«працуе», not the root. Twin of check_guide.py's roots_kept_out: change both.
 {
   const vm = await import("node:vm"), page = await (await fetch(BASE)).text(), cats = {};
   for (const m of page.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)) {
     if (!/RuachI18n\.add\(/.test(m[1]) || /window\.RuachI18n\s*=/.test(m[1])) continue;
     vm.runInNewContext(m[1], { RuachI18n: { add: (l, o) => { cats[l] = Object.assign(cats[l] || {}, o); } }, window: {} });
   }
-  const ROOTS = { uk: /(роб|раб)/i, be: /(роб|раб)/i, el: /(δουλ|δούλ)/i }, OUT = /проб|праб|дроб|драб|траб|ерабуд|ерабор|ерабір|ерабра|бараб|^араб|храб|граб|фроб|фраб|ктроб|вороб|вароб/g;
-  const kept = [];
-  for (const [lang, root] of Object.entries(ROOTS)) {
+  const ROOTS = { ru: /(роб|раб)/i, uk: /(роб|раб)/i, be: /(роб|раб)/i, el: /(δουλ|δούλ)/i },
+    OUT = /проб|праб|дроб|драб|траб|ерабуд|ерабор|ерабір|ерабра|бараб|^араб|храб|граб|фроб|фраб|ктроб|вороб|вароб|короб|кароб|^робк|гроб|утроб|кроб|роберт|робин|скараб/g,
+    MACHINE = { ru: /^(?:(?:за|с)?работа(?:ет|ют|ть|л|ла|ло|ли|ющ[а-яё]{1,3})|срабатыва(?:ет|ют|ть|л|ла|ло|ли))$/ },
+    CREATIVE = { ru: /llm|ллм|qwen|qwopus|gemma|llama|mistral|gpt|deepseek|claude|языков[\p{L}]* модел|нейросет|(?<![\p{L}])ии(?![\p{L}])|студи[яиюейё]|писател|комнат[\p{L}]* письма|музыкант|творец|творц|художник|чтец|огранщик|видеограф|библиотекар/u },
+    CLAUSE = /[.;:!?()«»\n—|]|,\s+(?:но|а|и|или|пока|когда|если|хотя)\s/u;
+  const keptOut = (lang, texts) => {   // the words of the kept-out root in texts, a machine form let through only outside a creative clause
     const words = new Set();
-    for (const v of Object.values(cats[lang] || {})) for (const w of JSON.stringify(v).match(/[\p{L}\p{M}]+/gu) || []) if (root.test(w.toLowerCase().replace(OUT, ""))) words.add(w);
-    if (words.size) kept.push(lang + ": " + [...words].slice(0, 12).join(", "));
+    for (const v of texts) for (const clause of (typeof v === "string" ? v : JSON.stringify(v)).split(CLAUSE)) {
+      const creative = CREATIVE[lang] && clause.toLowerCase().match(CREATIVE[lang]);
+      for (const w of clause.match(/[\p{L}\p{M}]+/gu) || []) {
+        if (!ROOTS[lang].test(w.toLowerCase().replace(OUT, ""))) continue;
+        if (MACHINE[lang] && MACHINE[lang].test(w.toLowerCase())) { if (creative) words.add(w + " (beside «" + creative[0] + "»)"); }
+        else words.add(w);
+      }
+    }
+    return [...words];
+  };
+  // the rule itself (2488): the machines pass, the authors and every other word of the root do not; uk «обробка» is the root, «робкий» is not
+  const pass = ["Карта работает.", "Сервер не работает, перезапусти его.", "Декодер работает тайлами.", "Всё в нём работает и проверено.", "Фильтр сработал."],
+    fail = ["LLM работает над текстом.", "Писатель работает над песней.", "Студия работает в другом окне.", "Qwopus работает над куплетом.", "Я работаю.", "Обработка стемов.", "Рабочая папка."];
+  check("the rule of the roots itself (2488): a card, a server, a decoder, a filter that works pass; the LLM, the Writer, the Studio, Qwopus at work, «работаю», «обработка», «рабочая» fail; uk «обробка» fails, «робкий» passes",
+    pass.every((t) => !keptOut("ru", [t]).length) && fail.every((t) => keptOut("ru", [t]).length) && keptOut("uk", ["Обробка стемів."]).length > 0 && !keptOut("uk", ["Робкий голос."]).length,
+    JSON.stringify({ pass: pass.map((t) => keptOut("ru", [t])), fail: fail.map((t) => keptOut("ru", [t])) }));
+  const kept = [];
+  for (const lang of Object.keys(ROOTS)) {
+    const words = keptOut(lang, Object.values(cats[lang] || {}));
+    if (words.length) kept.push(lang + ": " + words.slice(0, 12).join(", "));
   }
-  check("no word of the root «раб/роб» in the uk and be catalogs, nor «δουλ» in the el one (" + ["uk", "be", "el"].map(l => l + " " + Object.keys(cats[l] || {}).length).join(", ") + " entries)",
-    !kept.length && ["uk", "be", "el"].every(l => Object.keys(cats[l] || {}).length > 1000), kept.join(" · "));
+  check("no word of the root «раб/роб» in the ru, uk and be catalogs but a machine that works (2488), nor «δουλ» in the el one (" + ["ru", "uk", "be", "el"].map(l => l + " " + Object.keys(cats[l] || {}).length).join(", ") + " entries)",
+    !kept.length && ["ru", "uk", "be", "el"].every(l => Object.keys(cats[l] || {}).length > 1000), kept.join(" · "));
 }
 {
   const vm = await import("node:vm"), page = await (await fetch(BASE)).text(), he = {};
@@ -123,7 +151,41 @@ check("back to English from Hebrew: <html dir> ltr, nothing swapped, every rule 
     vm.runInNewContext(m[1], { RuachI18n: { add: (l, o) => { if (l === "he") Object.assign(he, o); } }, window: {} });
   }
   const vals = Object.values(he).map((v) => JSON.stringify(v)).join("\n");
+  // HERESY 2428: niqqud and cantillation are the block's combining marks (U+0591–05BD, 05BF, 05C1, 05C2, 05C4, 05C5, 05C7); the maqaf (־ U+05BE,
+  // Hebrew's hyphen), paseq (׀ 05C0), sof pasuq (׃ 05C3) and nun hafukha (׆ 05C6) between them are punctuation, and a maqaf is good Hebrew
+  // (ב־Hugging Face): the night of 11.11 counted it as niqqud and three lanes went red on it
+  const NIQQUD = /[\u0591-\u05bd\u05bf\u05c1\u05c2\u05c4\u05c5\u05c7]/;
+  const marked = Object.entries(he).filter(([, v]) => NIQQUD.test(JSON.stringify(v))).map(([k]) => k);
+  check("the Hebrew rule itself: a maqaf, paseq and sof pasuq pass; a niqqud point, a shin dot, a qamats qatan and a cantillation mark fail",
+    !NIQQUD.test("ב־Hugging Face · ׀ · ׃ · ׆") && ["בְּרֵאשִׁית", "שׁ", "חׇכְמָה", "בְּרֵאשִׁ֖ית", "תֹּ֣הוּ"].every((s) => NIQQUD.test(s)) && ["\u05bf", "\u05c4", "\u05c7"].every((c) => NIQQUD.test(c)));
   check("the Hebrew catalog (" + Object.keys(he).length + " entries): no niqqud or cantillation, the brand נפחות רוח, the rooms מוזיקאי and קריין",
-    Object.keys(he).length > 8000 && !/[\u0591-\u05c7]/.test(vals) && he["Musician"] === "מוזיקאי" && /נפחות רוח/.test(vals) && he["Narrator"] === "קריין");
+    Object.keys(he).length > 8000 && !marked.length && he["Musician"] === "מוזיקאי" && /נפחות רוח/.test(vals) && he["Narrator"] === "קריין", marked.slice(0, 6).join(" · "));
+}
+// HERESY 2430: two keys that read one way where the page means another. «Whisper» is the model that listens (Engine → Models, the lab's runs,
+// the bar), a name never translated, so no catalog holds it as a key: the voice type is «Whispered voice». HERESY 2443 (Viktor 12.11.2026:
+// «Кнопка LUT оставь на английском везде… законная аббревиатура»; «Тот же "LoRA"»): the Videographer's button reads LUT, so «Look» is the
+// Artist's «look it up» again; and an abbreviation or a product's, format's or model's name in a catalog's English stays itself, in Latin letters,
+// in every language (units, dB and Hz, keep each language's own symbols).
+{
+  const vm = await import("node:vm"), page = await (await fetch(BASE)).text(), cats = {};
+  for (const m of page.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)) {
+    if (!/RuachI18n\.add\(/.test(m[1]) || /window\.RuachI18n\s*=/.test(m[1])) continue;
+    vm.runInNewContext(m[1], { RuachI18n: { add: (l, o) => { cats[l] = Object.assign(cats[l] || {}, o); } }, window: {} });
+  }
+  const langs = Object.keys(cats).filter((l) => Object.keys(cats[l]).length > 1000);
+  const whisper = langs.filter((l) => "Whisper" in cats[l]), voice = langs.filter((l) => !cats[l]["Whispered voice"]);
+  check("«Whisper», a model's name, is no catalog's key; the voice type «Whispered voice» in every language (" + langs.length + " catalogs)",
+    langs.length >= 12 && !whisper.length && !voice.length, "Whisper in " + whisper.join(", ") + "; no Whispered voice in " + voice.join(", "));
+  const lut = langs.filter((l) => "Look: {0}" in cats[l] || ("LUT: {0}" in cats[l] && !/^LUT\s?[:：]/.test(cats[l]["LUT: {0}"])) || cats[l]["Look"] === "Лук");
+  check("the LUT button reads LUT in every language, «Look» no longer its key (ru «Look» = «" + (cats.ru || {})["Look"] + "»)", langs.length >= 12 && !lut.length, lut.join(", "));
+  const KEEP = ["LUT", "LoRA", "VAE", "DAW", "MIDI", "BPM", "LUFS", "GPU", "CPU", "VRAM", "RAM", "ABC", "SFZ", "FX", "EQ", "NAR", "AR", "YuE2", "SheetSage2",
+    "Higgs", "Pianoteq", "ComfyUI", "SeedVR2", "MiniMax", "Qwen", "FLAC", "MP3", "WAV", "ZIP", "Civitai", "Hugging Face"];
+  const word = (t) => new RegExp("(^|[^A-Za-z0-9_])" + t.replace(/ /g, " ") + "(?![A-Za-z0-9_])");
+  const lost = [];
+  for (const l of langs) for (const [k, v] of Object.entries(cats[l])) for (const t of KEEP) {
+    if (typeof v === "string" && word(t).test(k) && !new RegExp("(^|[^A-Za-z0-9_])" + t).test(v)) lost.push(l + " " + t + " «" + v.slice(0, 48) + "»");
+  }
+  check("abbreviations and names stay themselves in Latin letters in every catalog (" + KEEP.length + " of them: LUT, LoRA, VAE, GPU, VRAM, EQ…)", langs.length >= 12 && !lost.length,
+    lost.length + ": " + lost.slice(0, 6).join(" · "));
 }
 await finish(failed ? 1 : 0);

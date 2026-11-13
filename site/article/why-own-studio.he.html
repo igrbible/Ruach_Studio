@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>למה נפחות משלנו, ולא חבילת תוספים ל-ComfyUI · נפחות רוח</title>
+<meta name="description" content="ויקטור ז&#x27;ורומסקי מסביר למה נפחות רוח היא אולפן ייעודי ולא חבילה של נודים ל-ComfyUI: במה ComfyUI טוב, כמה עולה אולפן שמורכב מחלקים, ה-forkblow, מה עדיין שולח אותך לתוכנות אחרות, ומכתב פרידה לקהילה שלו.">
+<link rel="canonical" href="https://ruachstudio.art/article/why-own-studio.he.html">
+<link rel="alternate" hreflang="en" href="https://ruachstudio.art/article/why-own-studio.html">
+<link rel="alternate" hreflang="ru" href="https://ruachstudio.art/article/why-own-studio.ru.html">
+<link rel="alternate" hreflang="uk" href="https://ruachstudio.art/article/why-own-studio.uk.html">
+<link rel="alternate" hreflang="be" href="https://ruachstudio.art/article/why-own-studio.be.html">
+<link rel="alternate" hreflang="el" href="https://ruachstudio.art/article/why-own-studio.el.html">
+<link rel="alternate" hreflang="es" href="https://ruachstudio.art/article/why-own-studio.es.html">
+<link rel="alternate" hreflang="it" href="https://ruachstudio.art/article/why-own-studio.it.html">
+<link rel="alternate" hreflang="fr" href="https://ruachstudio.art/article/why-own-studio.fr.html">
+<link rel="alternate" hreflang="pt" href="https://ruachstudio.art/article/why-own-studio.pt.html">
+<link rel="alternate" hreflang="de" href="https://ruachstudio.art/article/why-own-studio.de.html">
+<link rel="alternate" hreflang="ja" href="https://ruachstudio.art/article/why-own-studio.ja.html">
+<link rel="alternate" hreflang="zh" href="https://ruachstudio.art/article/why-own-studio.zh.html">
+<link rel="alternate" hreflang="he" href="https://ruachstudio.art/article/why-own-studio.he.html">
+<link rel="alternate" hreflang="x-default" href="https://ruachstudio.art/article/why-own-studio.html">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/ruach-icon-he-32.png?v=1272">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Mono:wght@400;500&family=Tektur:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* the card's own two themes (template.html): Scroll & Brick by day, Scroll by Lamplight by night; the card's frame sets data-theme */
+  :root { --ground: #f8f9fa; --paper: #ffffff; --ink: #191919; --soft: #55524f; --faint: #8a8784; --rule: #e3e2e0; --amber: #8e1a2e;
+          --wash: rgba(142, 26, 46, .06); --gold: #a87a2a; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ground: #1e1e1e; --paper: #262626; --ink: #f4f4f4; --soft: #c9c6c2;
+          --faint: #908c88; --rule: #3a3a3a; --amber: #f07171; --wash: rgba(240, 113, 113, .08); --gold: #e3b062; color-scheme: dark; } }
+  :root[data-theme="dark"] { --ground: #1e1e1e; --paper: #262626; --ink: #f4f4f4; --soft: #c9c6c2; --faint: #908c88; --rule: #3a3a3a;
+          --amber: #f07171; --wash: rgba(240, 113, 113, .08); --gold: #e3b062; color-scheme: dark; }
+  /* the card's faces for the Greek and the Hebrew letters (template.html, 11.11.2026), served from the card itself */
+  @font-face { font-family: "GFS Didot"; font-style: normal; font-weight: 100 550; font-display: swap; size-adjust: 114%;
+    src: url("/assets/fonts/gfs-didot/gfs-didot-400.woff2") format("woff2"); unicode-range: U+0370-03FF, U+1F00-1FFF; }
+  @font-face { font-family: "GFS Didot"; font-style: normal; font-weight: 551 900; font-display: swap; size-adjust: 114%;
+    src: url("/assets/fonts/gfs-didot/gfs-didot-700.woff2") format("woff2"); unicode-range: U+0370-03FF, U+1F00-1FFF; }
+  @font-face { font-family: "David CLM"; font-style: normal; font-weight: 100 550; font-display: swap; size-adjust: 109%;
+    src: url("/assets/fonts/david-clm/david-clm-500.woff2") format("woff2"); unicode-range: U+0590-05FF, U+FB1D-FB4F; }
+  @font-face { font-family: "David CLM"; font-style: normal; font-weight: 551 900; font-display: swap; size-adjust: 109%;
+    src: url("/assets/fonts/david-clm/david-clm-700.woff2") format("woff2"); unicode-range: U+0590-05FF, U+FB1D-FB4F; }
+  @font-face { font-family: "Noto Sans Hebrew"; font-style: normal; font-weight: 400; font-display: swap;
+    src: url("/assets/fonts/noto-sans-hebrew/noto-sans-hebrew-400.woff2") format("woff2"); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+  @font-face { font-family: "Noto Sans Hebrew"; font-style: normal; font-weight: 500; font-display: swap;
+    src: url("/assets/fonts/noto-sans-hebrew/noto-sans-hebrew-500.woff2") format("woff2"); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+  @font-face { font-family: "Noto Sans Hebrew"; font-style: normal; font-weight: 600; font-display: swap;
+    src: url("/assets/fonts/noto-sans-hebrew/noto-sans-hebrew-600.woff2") format("woff2"); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+  @font-face { font-family: "Noto Sans Hebrew"; font-style: normal; font-weight: 700; font-display: swap;
+    src: url("/assets/fonts/noto-sans-hebrew/noto-sans-hebrew-700.woff2") format("woff2"); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 400 17px/1.65 "GFS Didot", "David CLM", "Noto Sans", "Noto Sans Hebrew", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+         overflow-wrap: break-word; }
+  /* the column is the card's own .wrap: the text runs to its edge (no measure on the paragraphs: Viktor's rule of 08.10.2026) */
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 40px 72px; }
+  @media (max-width: 600px) { .wrap { padding: 20px 16px 56px; } body { font-size: 16px; } }
+  h1, h2, h3 { font-family: "Tektur", "GFS Didot", "David CLM", "Noto Sans Hebrew", "Noto Sans", system-ui, sans-serif; line-height: 1.25; }
+  h1 { font-size: clamp(26px, 3.4vw, 40px); margin: 0 0 10px; letter-spacing: .01em; }
+  h1::before, h2::before { content: ""; display: block; width: 56px; height: 3px; border-radius: 3px; margin: 0 0 16px;
+                          background: linear-gradient(90deg, var(--amber), var(--gold)); }
+  h2 { font-size: clamp(21px, 2.3vw, 27px); margin: 44px 0 12px; }
+  h3 { font-size: 19px; margin: 28px 0 8px; color: var(--ink); }
+  p { margin: 0 0 14px; }
+  .by { color: var(--soft); font-style: italic; margin-bottom: 22px; }
+  .lead { font-size: 1.08em; padding: 16px 20px; border-inline-start: 3px solid var(--amber); background: var(--wash); border-radius: 0 10px 10px 0; }
+  a { color: var(--amber); text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; border-radius: 3px; }
+  code { font: 500 .88em "Noto Sans Mono", ui-monospace, monospace; background: var(--wash); padding: .1em .35em; border-radius: 4px; }
+  ul { padding-inline-start: 22px; margin: 0 0 16px; }
+  li { margin: 0 0 8px; }
+  li::marker { color: var(--amber); }
+  sup.fn { font-size: .72em; line-height: 0; }
+  sup.fn a { padding: 0 1px; }
+  .notes { margin-top: 48px; border-top: 1px solid var(--rule); font-size: 14.5px; color: var(--soft); }
+  .notes h2 { font-size: 18px; margin-top: 24px; }
+  .notes h2::before { display: none; }
+  .notes ol { padding-inline-start: 26px; }
+  .notes li { overflow-wrap: anywhere; }
+  .notes .back { margin-inline-start: 4px; }
+  :target { scroll-margin-top: 16px; }
+  .notes li:target { background: var(--wash); border-radius: 6px; }
+  /* right to left (i18n/he.css's rules, the ones this page has) */
+  [dir="rtl"] .lead { border-radius: 10px 0 0 10px; }
+  [dir="rtl"] h1::before, [dir="rtl"] h2::before { background: linear-gradient(270deg, var(--amber), var(--gold)); }
+  [dir="rtl"] code { direction: ltr; unicode-bidi: isolate; }
+  [dir="rtl"] sup.fn { unicode-bidi: isolate; }
+</style>
+</head>
+<body>
+<main class="wrap">
+<article>
+<h1>למה נפחות משלנו, ולא חבילת תוספים ל-⁠ComfyUI</h1>
+<p class="by">ויקטור ז'ורומסקי, מחבר נפחות רוח · 13 בנובמבר 2026. המאמר הזה מציג עמדה, והעמדה הזאת שלי. לעובדות שמתחתיה מצורפים קישורים, כדי שתוכל לבדוק כל אחת מהן.</p>
+<p class="lead">רבים מאלה שיוצרים איתנו שירים הגיעו מ-⁠ComfyUI. בניית זרימת עבודה מקצועית שם לוקחת שבועות, והעדכון הבא של הליבה או של הנודים עלול לשבור אותה. מה שנשאר מאחור הם פורקים פרטיים, שהתיקונים שלהם לעיתים קרובות מדי לעולם לא חוזרים לאפסטרים. לזה אני קורא forkblow. נפחות רוח הולכת בדרך ההפוכה: שמונה חדרים בדף אחד, מנוע מוזיקה אחד שאנחנו מטליאים בעצמנו, וכל מודל מוצמד לחדר שלו. הנה למה, כמה זה עולה, איפה אנחנו עדיין נפגשים עם ComfyUI, ומכתב הפרידה שלי לקהילה שלו.</p>
+<p>שואלים אותי שוב ושוב למה לא פשוט הוצאתי חבילת נודים ל-⁠ComfyUI. רבים מאלה שיוצרים איתנו שירים הגיעו מ-⁠ComfyUI, וגם אני גרתי שם. את ComfyUI בונים אנשים שאני מכבד: השבוע אחד ממחברי החבילות שלו שילב אצלו את המפענחים שלנו, והפול ריקווסט שלנו לחבילה אחרת פתוח. ובכל זאת בחרתי בדרך ההפוכה. אני בונה קו צר אחד, ממילים ועד שיר גמור, עם העטיפה והקליפ שלו, בעוד ש-⁠ComfyUI מוסר לך את החלקים כדי שתרכיב אותם בעצמך. הנה הנימוק.</p>
+<h2 id="במה-comfyui-מצטיין">במה ComfyUI מצטיין</h2>
+<p>אתחיל במה שהוא עושה טוב, כי הוא עושה טוב הרבה דברים. ComfyUI הוא שולחן המלאכה הפתוח הטוב ביותר שיש כדי לנסות מודל חדש ביום שבו הוא יוצא. הגרף מראה לך בדיוק מה מזין את מה. עם יותר מ-⁠146,000 כוכבים ו-⁠17,000 פורקים ביום שבו כתבתי את זה, מעטים הכלים במדיה הגנרטיבית הפתוחה שמתקרבים אליו בתפוצה; רק לממשק הווב של AUTOMATIC1111 יש יותר כוכבים<sup class="fn"><a href="#fn-1" id="ref-1-1">1</a></sup>. וגם ב-⁠Comfy-Org עשו עבודה של ממש כדי להקל על הכאב שאני עומד לתאר. יש אפליקציית דסקטופ עם חתימת קוד ו-⁠Python ארוז בפנים<sup class="fn"><a href="#fn-2" id="ref-2-1">2</a></sup>, ויש Registry של חבילות נודים עם גרסאות סמנטיות<sup class="fn"><a href="#fn-3" id="ref-3-1">3</a></sup>. תוכנית אבטחה מינואר 2025 סורקת חבילות לפני שהן נכנסות ל-⁠Registry ומגבילה קריאות ל-⁠<code>eval</code>, ל-⁠<code>exec</code> ול-⁠pip מתוך נודים<sup class="fn"><a href="#fn-4" id="ref-4-1">4</a></sup>. הפרונטאנד מוצמד עכשיו בליבה לגרסה מדויקת, ה-⁠Manager מופעל רק לפי בחירה ותומך בתמונות מצב, ו-⁠Node Replacement API ממפה נודים שהוצאו משימוש לנודים חדשים<sup class="fn"><a href="#fn-5" id="ref-5-1">5</a></sup>.</p>
+<p>ויש גם App Mode, שמציב טופס פשוט מעל זרימת עבודה<sup class="fn"><a href="#fn-6" id="ref-6-1">6</a></sup>. App Mode הוא התשובה של Comfy-Org לאותו צורך שגם אנחנו עונים עליו: יוצרים רבים רוצים טופס, לא חוטים. הם שמו טופס מעל הגרף. אנחנו בנינו קודם את הטופס, והשארנו גרף רק במקום שבו הוא עוזר.</p>
+<h2 id="כמה-עולה-לבנות-אולפן-מחלקים">כמה עולה לבנות אולפן מחלקים</h2>
+<h3>שבועות של עבודה, במרחק עדכון אחד משבירה</h3>
+<p>בניתי ב-⁠ComfyUI מגה-זרימת עבודה אמיתית ל-⁠Qwen-Image בשם AIO QWEN IMAGE 2512 HERESY Draft #4, עם 346 נודים ב-⁠17 קבוצות. כן, בניתי אותה גדולה. צינור עבודה מקצועי מסוג הכול-באחד הוא גדול. בניית זרימת עבודה כזאת היא שבועות של כאב, והעדכון הבא של ComfyUI, או העדכון הבא של כל נוד שהיא משתמשת בו, עלול לשבור אותה. אצל אחרים זה כבר קרה. הייתי אומר שזה מובטח.</p>
+<p>ה-⁠README של ComfyUI מתאר "מחזור שחרורים שבועי שמכוון ליום שני", ומוסיף שהוא "משתנה באופן קבוע בגלל שחרורי מודלים או שינויים גדולים בקוד", כשגרסה יציבה ראשית חדשה של הליבה יוצאת בערך כל שבועיים. הוא גם מזהיר שקומיטים בין תגיות יציבות "עלולים להיות מאוד לא יציבים ולשבור נודים מותאמים אישית רבים"<sup class="fn"><a href="#fn-1" id="ref-1-2">1</a></sup>. היצמדות לתגיות יציבות עוזרת, אבל גם גרסה יציבה יכולה לשבור זרימת עבודה, כפי ששני הדיונים שלהלן מראים. הליבה הוציאה 70 גרסאות מתויגות ב-⁠GitHub ב-⁠2025, ו-⁠64 עד כה ב-⁠2026. רבות מהן גרסאות תיקון: מתוך 64 הגרסאות של 2026, 28 היו גרסאות patch, בקפורטים לענף היציב. אז זה מדד לקצב השינויים, לא ספירה של שינויים שוברים. אותו קצב הוא גם הסיבה שמודלים חדשים נוחתים ב-⁠ComfyUI כבר ביום הראשון.</p>
+<p>אחרים אומרים את אותו הדבר בפומבי. במרץ 2026 אולפן אחד פתח issue בשם "All our workflows are broken": אחרי עדכון, תתי-הגרפים הפסיקו לעבוד, והם החזירו את הפרונטאנד לגרסה קודמת והפסיקו לעדכן. משפט אחד מהדיון הזה יכול היה להיות שלי: "זרימת העבודה של האולפן שלנו כוללת מאות נודים, ובנייתה לקחה שבועות"<sup class="fn"><a href="#fn-7" id="ref-7-1">7</a></sup>. באותו חודש משתמש אחר דיווח שהעדכון האחרון שבר לו את כל זרימות העבודה<sup class="fn"><a href="#fn-8" id="ref-8-1">8</a></sup>. שני ה-⁠issues עדיין פתוחים בזמן שאני כותב.</p>
+<h3>תלויות שעלולות להפוך התקנה ללבנה</h3>
+<p>כל חבילת נודים מביאה איתה דרישות Python משלה, וכולן חולקות סביבה אחת. ב-⁠Comfy-Org כותבים במפורש שהתלויות האלה "לפעמים ... מתנגשות, מה שעלול להפוך התקנה של ComfyUI ל'לבנה'"<sup class="fn"><a href="#fn-9" id="ref-9-1">9</a></sup>. הם עובדים על זה: API ציבורי עם גרסאות לנודים, ובמקום שאפשר, כל חבילת נודים בתהליך Python משלה. אני מפקפק אם זה יעביר גרף כמו שלי בשלום דרך העדכונים שלו, אבל הכיוון נכון. כיום הליבה קובעת רק גבולות תחתונים רופפים: torch בלי הצמדה, <code>numpy&gt;=1.25.0</code>, <code>transformers&gt;=4.50.3</code>. לכן, כשיצא transformers 5.0.0 ב-⁠26 בינואר 2026, הוא שבר את ComfyUI תוך שעות; זה תוקן באותו יום<sup class="fn"><a href="#fn-10" id="ref-10-1">10</a></sup>. עדכון של הגרסה הניידת שמשך איתו את numpy 2 הביא משתמש אחד לקרוא ל-⁠issue שלו "broken 50% of my custom nodes". ה-⁠50% האלה הם הערכה של משתמש אחד, וה-⁠issue סגור<sup class="fn"><a href="#fn-11" id="ref-11-1">11</a></sup>.</p>
+<h3>ה-⁠forkblow</h3>
+<p>המילה הזאת שלי, ואני חצי צוחק כשאני כותב אותה. זרימת עבודה ב-⁠ComfyUI הופכת לא פעם ל-⁠forkblow: מישהו עושה פורק לחבילת נודים, מטליא אותה כדי שזרימת עבודה אחת תרוץ, ואף פעם לא שולח את התיקון בחזרה כ-⁠PR. הגרף ממשיך לרוץ על עותק פרטי שמתרחק מהאפסטרים עוד יותר בכל שבוע. והרבה מהאקוסיסטם נשען על ערבים פנויים של מתנדבים: ComfyUI_IPAdapter_plus, אחת החבילות הנפוצות ביותר, נמצאת מאז אפריל 2025 במצב של תחזוקה בלבד<sup class="fn"><a href="#fn-12" id="ref-12-1">12</a></sup>.</p>
+<p>לפני שמישהו יגיד את זה: גם נפחות רוח היא פורק. אנחנו מחזיקים פאצ'ים משלנו על yue2.cpp, והאפסטרים לבדו לא יריץ את הנפחות. אז אני מודד אותנו באותה מידה, והרקורד שלנו צנוע. באוקטובר הצענו להחזיר את פאצ'י המנוע שלנו ל-⁠yue2.cpp (בדיון #16, שעדיין פתוח), ובנובמבר דיווחנו על קוטם השיאים שלו (#23). השבוע הגשנו לליבה של ComfyUI דיווח באג עם פאץ' מוכן של 35 שורות, פתחנו פול ריקווסט אחד לחבילה של ComfyUI, והצענו את המפענחים שלנו לחמישה מחברי חבילות של YuE2, ואחד מהם כבר שילב אותם<sup class="fn"><a href="#fn-13" id="ref-13-1">13</a></sup>. רוב פאצ'י המנוע שלנו עדיין חיים רק בעץ הקוד שלנו, וחלקם הגיוניים רק בתוך הנפחות. פורק הוא לא החטא. forkblow הוא התיקון שלעולם לא חוזר הביתה, ואני עובד כדי שהפורק שלנו לא יהפוך לכזה.</p>
+<h3>הכפתור שלא עשה כלום</h3>
+<p>זו הדוגמה שלא מרפה ממני, והיא באה מזרימת עבודה אחת על מחשב אחד, לא פסק דין על ComfyUI. כשהעברנו את זרימת העבודה שלי ל-⁠Qwen-Image אל תוך הנפחות, שחזרנו את החשבון של ComfyUI וקראנו את הגרף שורה אחר שורה. פריימי המפתח בקבוצת «MAIN CONTROL» שלי לא עשו מעולם שום דבר. ה-⁠CombineHooks של ComfyUI שומר hook אחד לכל נוד LoRA: המתודה <code>HookGroup.add</code> מדלגת על hook שחולק את אותה הפניה עם hook שכבר נמצא אצלה<sup class="fn"><a href="#fn-14" id="ref-14-1">14</a></sup>. כך הכפתור עמד על הקנבס, נראה חי, ולא שינה כלום. ייתכן שזו התנהגות מכוונת. הטענה שלי היא שהקנבס לא נתן שום אזהרה.</p>
+<h3>קוד עם ההרשאות של המשתמש שלך</h3>
+<p>נוד מותאם אישית הוא Python, וכל מה שנמצא ב-⁠<code>custom_nodes</code> רץ כשהשרת עולה. בדצמבר 2024 חשפה Snyk Labs ארבע פגיעויות CVE בארבע חבילות פופולריות, ובהן ComfyUI-Manager, והראתה שחבילה פגומה אחת יכולה להוביל להשתלטות מלאה על השרת<sup class="fn"><a href="#fn-15" id="ref-15-1">15</a></sup>. באפריל 2026 תיארה Censys בוטנט של כריית קריפטו ופרוקסי על יותר מ-⁠1,000 מופעים של ComfyUI שפתוחים לאינטרנט. הוא ניצל נודים שמריצים קוד Python גולמי שנשלח אליהם, בלי אימות, ובמקום שבו חבילה כזאת חסרה, השתמש ב-⁠ComfyUI-Manager כדי להתקין אחת<sup class="fn"><a href="#fn-16" id="ref-16-1">16</a></sup>. הפרצות ש-⁠Snyk מצאה היו בחבילות פופולריות ונפוצות, והקורבנות של Censys היו מופעים שפתוחים לאינטרנט. אלה סיכונים של אקוסיסטם פתוח וגדול, לא רשלנות של Comfy-Org.</p>
+<p>גם הנפחות שלנו היא Python ו-⁠C++ שרצים עם ההרשאות של המשתמש שלך. ההבדל הוא לא שהיא בטוחה יותר מטבעה. אתה סומך על מחבר אחד, שכל שינוי שלו רשום ביומן ציבורי וממוספר, ולא על כל המחברים של כל החבילות בגרף שלך בבת אחת. וגם לנפחות שלנו אין התחברות, בכוונה. אל תחשוף אותה לאינטרנט הפתוח: שים אותה מאחורי reverse proxy משלך עם אימות. היא דוחה דפים ושמות מארח שהיא לא מכירה, אבל זה שער, לא מנעול.</p>
+<h2 id="מה-נפחות-ייעודית-עושה-במקום-זה">מה נפחות ייעודית עושה במקום זה</h2>
+<h3>מנוע אחד, מוטלא איפה שכואב</h3>
+<p>נפחות רוח מריצה מנוע מוזיקה אחד, yue2.cpp (MIT) על ggml, עם פאצ'ים משלנו מעליו. כל שינוי רשום ב-⁠CHANGELOG הציבורי תחת המספר שלו מיומן העבודה שלנו, ועד מספר 2,391 מגיעה גרסה 2.0.7 לבדה<sup class="fn"><a href="#fn-17" id="ref-17-1">17</a></sup>. כמה דוגמאות:</p>
+<ul>
+  <li><b>קריסה ב-⁠flash-attention.</b> שתי וריאציות או יותר היו מפילות את המנוע, כי הסריקה של מסכת הקשב קראה מעבר לגבול הבאפר. הפאץ' שלנו ל-⁠ggml מתקן את זה, ובדקנו אותו ב-⁠2, ב-⁠4 וב-⁠9 וריאציות, כולל טייק של 452 שניות.</li>
+  <li><b>כשנגמר הזיכרון.</b> הקצאה שנכשלה כבר לא הורגת את המנוע. המתזמן נבנה מחדש, הדף אומר במילים מה קרה, ומציע את העותק הקטן הבא של המודל: BF16 → Q8_0 → Q6_K → Q5_K_M.</li>
+  <li><b>פרטיטורות שבורות.</b> המנוע בודק את פרטיטורת ה-⁠ABC לפני שנבנית עליה מוזיקה כלשהי. פרטיטורה שבורה נתפסת אחרי 15 שניות של הרצה, יחד עם הסיבה ועם המתאמים האשמים.</li>
+  <li><b>קליפינג.</b> הוצאנו את קוטם השיאים של האפסטרים, שהשטיח 107–346 דגימות בכל טייק שמדדנו, ודיווחנו על כך לאפסטרים. זו הייתה הכותרת של 2.0.5: "כל שיא שלם".</li>
+  <li><b>התפר בשירים ארוכים.</b> שירים ארוכים מכ-⁠340–410 שניות חושבו כשני חלקים שחוברו קצה לקצה, עם צניחה חציונית של כ-⁠3.4 dB מיד אחרי החיבור. אותו תפר דווח ב-⁠YuE2-Studio של טימון (#183, מאת ned01-dot), ובגרסה 3.8.5 הוא תוקן שם<sup class="fn"><a href="#fn-18" id="ref-18-1">18</a></sup>. אצלנו שני החצאים נפגשים עכשיו ב-⁠crossfade.</li>
+</ul>
+<p>אף אחד מאלה אינו נוד שצריך לחפש. הכול פשוט נמצא שם בגרסה הבאה.</p>
+<h3>כל מודל שהנפחות מורידה מוצמד</h3>
+<p>כל מודל שהנפחות מורידה מהמאגרים שלנו ב-⁠Hugging Face, שמשמשים גם כמראה למשקלים של אחרים במקום שהרישיונות שלהם מתירים, נכנס קודם לתיקיית ביניים. הוא עובר למקומו רק כששלושה דברים מתאימים: הרוויזיה היא הקומיט המוצמד, הגודל נכון, וה-⁠SHA-256 תואם את המניפסט שלנו<sup class="fn"><a href="#fn-19" id="ref-19-1">19</a></sup>. מהגרסה הבאה והלאה, לפני כל שחרור, שומר שואל את Hugging Face בזמן אמת על כל 44 ההצמדות, שלנו ושל אחרים; קובץ שאבד, או Hugging Face שלא עונה, עוצרים את השחרור. המודלים חיים בתיקיות של הנפחות עצמה, לעולם לא במטמונים של ה-⁠hub ולעולם לא מאחורי קישורים סימבוליים לדיסק אחר.</p>
+<p>וכדי להיות הוגן כלפי הצד השני, הנה החוב שלנו. המודלים מוצמדים עד לבייט, אבל לא כל ספריות ה-⁠Python שלנו מוצמדות עדיין: כמה מהן עדיין מקבלות טווח (<code>diffusers&gt;=0.41</code>, <code>transformers&gt;=5.2,&lt;6</code>), כך שהתקנה טרייה מקוד המקור עלולה למשוך גרסאות חדשות יותר מהסט הבדוק שאנחנו שומרים בקובץ lock.</p>
+<h3>שיר עובר בין חדרים, לא בין חוטים</h3>
+<p>שמונה חדרים בדף אחד: המוזיקאי, הקריין, הכותב, המלטש, הצייר, הווידאוגרף, המאמן, הספרן. הכותב מנסח מילים עם מודל צ'אט מקומי, או עם שרת משלך, או עם OpenRouter, רק אם תבחר בו. המוזיקאי כותב קודם את הפרטיטורה ב-⁠ABC שאפשר לערוך, ורק אחר כך את השיר. למלטש יש קנבס של שלושים ומשהו נודים כמו של ComfyUI, ועוד DAW: את הגרף השארתי במקום שבו גרף עוזר. הצייר יוצר את העטיפה ותמונות ב-⁠16:9 וב-⁠9:16. הווידאוגרף חותך קליפים ב-⁠16:9, ב-⁠9:16 וב-⁠1:1 מתוכנית אחת, ואם תרצה, השורות המושרות נצרבות בהם כקריוקי. הספרן שומר כל טייק עם אילן היוחסין שלו. אישורי תוכן (C2PA) חתומים בתוך כל הורדה. הדף לא טוען שום דבר מהאינטרנט, השירים שלך לעולם לא יוצאים מהמחשב, ואין חשבונות משתמש, בכוונה, כדי שאף אחד לא יהפוך את הנפחות ל-⁠SaaS.</p>
+<h3>גרסאות שחייבות לעבור את הבדיקות</h3>
+<p>גרסה 2.0.7 שוחררה ב-⁠11 בנובמבר מתוך שכפול נקי: 1,889 בדיקות דף עברו, 0 נכשלו, 7 דולגו, ואפס שגיאות דף. גרסאות יצאו ב-⁠1, ב-⁠6 וב-⁠11 בנובמבר. סקירת הגרסה מצאה עשרה מקומות שבהם הבטחנו יותר ממה שאנחנו נותנים, ותיקנו אותם לפני השחרור.</p>
+<h2 id="מבחן-הדיסק">מבחן הדיסק</h2>
+<p>המספרים נמדדו על המחשב שלי ב-⁠12 בנובמבר. בתיקיית המודלים שלי של ComfyUI יש 482 GB ב-⁠232 קובצי מודלים. רק 7.3 GB מהם יושבים על ה-⁠NVMe; השאר שוכב על HDD של Seagate מאחורי 38 קישורים סימבוליים. לפי ההערכה שלי, כ-⁠80% מזה משקל מת: קבצים שזרימת עבודה כלשהי הייתה צריכה פעם, ושום דבר לא משתמש בהם היום.</p>
+<p>זו לא אשמתו של ComfyUI: התיקייה שלי, וגם הבלגן. אבל ComfyUI לא יכול להגיד לי איזה קובץ עדיין נחוץ לזרימת עבודה כלשהי, כי אף זרימת עבודה לא מצהירה על כך. הנפחות יכולה, כי כל קובץ שייך לחדר.</p>
+<p>לצד המודלים, ComfyUI עצמו תופס עוד כ-⁠44 GB: סביבת pixi של 24 GB, סביבת venv של 14 GB ו-⁠5.4 GB של חבילות נודים (49 GB עם הקלטים והפלטים שלי). עץ המודלים של הנפחות על אותו מחשב הוא כ-⁠1.1 TB על פני שמונה חדרים: המנוע 367 GB, הצייר 223 GB, הווידאוגרף 188 GB, הקריין 104 GB, המלטש 88 GB, מודלי המאזין 67 GB, הכותב 12 GB, וכן הלאה.</p>
+<p>אז העץ הזה לא קטן יותר. הוא גדול יותר. אבל הכול רתום ושום דבר לא יתום: כל קובץ מוצמד לפי גודל ו-⁠SHA-256 ומחובר לחדר. העץ שלי גדול מזה של משתמש רגיל, כי אני בונה ובודק עליו. התקנה טרייה תופסת לפי מדידה 22.5–25.9 GB, וכ-⁠122–240 GB עם כל החדרים<sup class="fn"><a href="#fn-20" id="ref-20-1">20</a></sup>.</p>
+<h2 id="האם-שמונה-חדרים-מכסים-את-הכול-מקצה-לקצה">האם שמונה חדרים מכסים את הכול מקצה לקצה?</h2>
+<p>תחליפים מסוג הכול-באחד ל-⁠ComfyUI אפשר לספור על אצבעות יד אחת, וגם איתם אנשים עדיין מוצאים את עצמם בתוכנות חיצוניות. בשמונה חדרים כיסינו את מה שיוצר שירים צריך במידה שלא נופלת מאף אחד שאני מכיר. הנה מה שכבר מכוסה: סטמים, MIDI, רימאסטר ליעד עוצמת שמע, קובצי lrc ו-⁠srt מתוזמנים לפי מילה, קריוקי בקליפ, עטיפות וקליפים ב-⁠9:16, תגיות עם העטיפה ב-⁠WAV, ב-⁠FLAC וב-⁠MP3, ו-⁠C2PA. יש גם ייצוא ל-⁠DAW, שהוא ניסיוני: פרויקט REAPER, ו-⁠DAWproject שנבדק עד כה רק מול הסכמה שלו.</p>
+<p>והנה מה שעדיין שולח אותך למקום אחר, ברשימה כנה ככל שאני מסוגל:</p>
+<ul>
+  <li><b>ניירת הפצה:</b> קודי ISRC ו-⁠UPC, DDEX, חבילות מוכנות למפיצים.</li>
+  <li><b>טופסי הצהרה על AI:</b> בכל קובץ יש C2PA, אבל את טופס ההצהרה של כל פלטפורמה עדיין תצטרך למלא בעצמך.</li>
+  <li><b>תוכנות DAW שלא קוראות DAWproject:</b> אם שלך לא קוראת, תעבוד עם סטמים רגילים.</li>
+  <li><b>הוקים קצרים:</b> הוק של 15–60 שניות שנחתך מטייק בשביל Shorts, Reels ו-⁠TikTok.</li>
+  <li><b>פרסום:</b> העלאה או תזמון ישירות לפלטפורמות. זה היה מחייב את הנפחות להחזיק את פרטי ההתחברות שלך, וזה לא מסתדר עם נפחות שאין בה חשבונות.</li>
+  <li><b>עבודת אלבום:</b> רשימות רצועות, רצף ללא הפסקות בין רצועות, מאסטר לאלבום.</li>
+</ul>
+<h2 id="על-מה-אתה-מוותר-אצלנו">על מה אתה מוותר אצלנו</h2>
+<ul>
+  <li><b>פחות מודלים.</b> יש משפחה מוזיקלית אחת, YuE2, עם מלווים נבחרים בכל חדר, לא כל גן החיות.</li>
+  <li><b>חומרה.</b> כרטיס NVIDIA (Intel Arc בבטא), עם CUDA 12.8 כרצפה שאנחנו כותבים ובודקים עליה.</li>
+  <li><b>קודם כול Linux.</b> ב-⁠Windows 11 רק דרך WSL2, עם מדריך שעוד לא הרצנו בעצמנו; אין גרסה נייטיב ל-⁠Windows, ופעם קראתי לה "קב שבור וחיקוי של חיים"<sup class="fn"><a href="#fn-21" id="ref-21-1">21</a></sup>.</li>
+  <li><b>הבחירות שלנו.</b> הבחירות שלנו בנויות פנימה, ובמקום שבו אני חושב שכפתור היה מזיק, הוא פשוט לא קיים. אם אתה רוצה לחבר כל דבר לכל דבר, ComfyUI הוא הכלי הטוב יותר, ואני מתכוון לזה.</li>
+</ul>
+<h2 id="איפה-אנחנו-עדיין-נפגשים-עם-comfyui">איפה אנחנו עדיין נפגשים עם ComfyUI</h2>
+<p>זו לא מלחמה. ה-⁠README של ComfyUI מונה את Yue 2 בין מודלי האודיו שהוא תומך בהם באופן מובנה<sup class="fn"><a href="#fn-1" id="ref-1-3">1</a></sup>. דיווחנו על באג בליבה: המפענח הגדול שלנו, YuE2-VAE-RS x3, מאבד בשקט 210 טנזורים תחת <code>strict=False</code>, וצירפנו פאץ' מוכן של 35 שורות<sup class="fn"><a href="#fn-22" id="ref-22-1">22</a></sup>. השבוע פתחנו לחבילה של Plenio פול ריקווסט (#33) עם המפענח שלנו<sup class="fn"><a href="#fn-23" id="ref-23-1">23</a></sup>, ו-⁠pytraveler שילב ב-⁠YuE2-ComfyUI v0.16.0 את המפענחים שלנו<sup class="fn"><a href="#fn-24" id="ref-24-1">24</a></sup>. המחקר על המפענח ציבורי, כולל המינוסים: האדווה ב-⁠100 Hz ירדה מ-⁠2.71 ל-⁠0.60 dB, אבל ה-⁠SI-SDR נמוך יותר והפענוח איטי פי שניים<sup class="fn"><a href="#fn-25" id="ref-25-1">25</a></sup><sup class="fn"><a href="#fn-26" id="ref-26-1">26</a></sup>.</p>
+<p>כשהוצאנו את זרימת העבודה שלי מ-⁠ComfyUI, שחזרנו את החשבון שלה חלק אחר חלק, עד שכל חלק תאם את הקוד של ComfyUI עצמו עד הביט האחרון על ה-⁠CPU; למיזוג המתאמים ב-⁠fp8 לבדו יש 81 בדיקות כאלה. בתמונה שלי, המעבר השני כולו נוחת בממוצע במרחק 2.0 רמות מתוך 255 מזה של ComfyUI, וצעד אחר צעד הנפחות קרובה ל-⁠ComfyUI באותה מידה ש-⁠ComfyUI קרוב לעצמו כשמחליפים הגדרת זיכרון אחת. על חבילת ה-⁠grid sampler שבה משתמשת זרימת הבדיקה שלי, זו של JasonHoku, אמרתי: «המנוע של הבחור הזה פצצה, ברצינות». ואני אומר את זה גם היום.</p>
+<h2 id="לסיום">לסיום</h2>
+<p>ComfyUI הוא עיר של סדנאות, ואני גרתי בה. הנפחות היא בית עם שמונה חדרים, מנוע אחד במרתף, וכל מודל בבית רשום ומתועד. בחר במה שמתאים לדרך שבה אתה יוצר. אם נמאס לך לתקן זרימת עבודה אחרי עדכונים, הדלת פתוחה<sup class="fn"><a href="#fn-27" id="ref-27-1">27</a></sup>.</p>
+<h2 id="מכתב-פרידה-לקהילת-comfyui">מכתב פרידה לקהילת ComfyUI</h2>
+<p>לכל מי שבנה את ComfyUI וחי בתוכו: ל-⁠comfyanonymous ולאנשי Comfy-Org; למחברי אלפי הנודים המותאמים אישית, שמחזיקים את החבילות שלהם בחיים בלילות ובלי תמורה; למי שעונים על issues בשתיים בלילה; למי שמשרטטים זרימות עבודה ומחלקים אותן במתנה; למי שכתבו את המדריכים שבזכותם צלחתי את הגרף הראשון שלי.</p>
+<p>אני מכבד אתכם. אני רוצה שזה ייאמר לפני כל דבר אחר במכתב הזה, ואני מתכוון לזה. במשך שנים החזקתם בחיים והצמחתם מנוע מדהים. מדהים, ועמוס מעבר לכל גבול של שפיות: כל כך הרבה תלוי בו עכשיו, שכל עדכון מנער ממנו איזה חלק, איפשהו. זו לא אשמתו של אף אחד. כך קורה לעיר שגדלה מהר יותר ממה שמספיקים לסלול את הרחובות שלה.</p>
+<p>תנו לי לספר לכם מי כותב את זה, כדי שתדעו מאיפה זה בא.</p>
+<p>אני מהנדס וטכנאי רדיו בהכשרתי. טכנאי רדיו לומד מוקדם שעוקבים אחרי אות מהאנטנה ועד הרמקול, רכיב אחר רכיב, וכשהצליל לא נכון, מאתרים את החלק האחד שלא תקין. לא זורקים את הרדיו. במשך 17 שנה נהגתי במשאית: שלושה מיליון קילומטרים מאחורי ההגה בלי תאונה אחת. שלושה מיליון קילומטרים מלמדים אותך לבדוק את המטען לפני שאתה זז, להכיר כל צליל שהמשאית שלך משמיעה, ולעולם לא להבריג עליה חלק רק כי הוא צץ אמש במוסך של מישהו. כבר יותר מ-⁠27 שנה אני מתרגם וחוקר את כתבי הקודש לבדי, ו"לבדי" פירושו שההחלטה האחרונה והאחריות כולה שלי; אין ועדה להסתתר מאחוריה. אני אב לארבעה ילדים בוגרים, וכל אחד מהם בנה לעצמו חיים טובים. אני בעלה של אישה אחת ויחידה כבר 28 שנה, מאז אפריל 1998. ומעולם לא הרכנתי את ראשי בפני תכתיב של תאגיד: לא על הכביש, לא בכתבי הקודש, ולא בקוד.</p>
+<p>אז זה לא התקף זעם ולא טריקת דלת. אדם כזה לא עוזב מקום בכעס. הוא עוזב כמו נהג שעוזב את החצר שממנה הוביל מטענים במשך שנים: לוחץ ידיים, מודה לאנשים, ויוצא לדרך שבחר בעצמו.</p>
+<p>אני עוזב את קהילת ComfyUI, ועוזב לתמיד. כל הסיבות כתובות למעלה: שבועות כדי לבנות זרימת עבודה מקצועית, עדכון אחד כדי לשבור אותה, וה-⁠forkblow במקום שבו היה צריך להיות פול ריקווסט. אני לא רוצה שהשירים שלי, התמונות שלי והקליפים שלי יהיו תלויים בשאלה אם החבילות של ארבעים זרים במקרה מסתדרות זו עם זו השבוע.</p>
+<p>אבל לעזוב זה לא להפנות עורף. קלוד ואני (שנינו בונים את הנפחות הזאת, הידיים שלי על ההגה וקלוד לצדי, על הקוד) נמשיך לחלוק את כל מה שאנחנו לומדים עם הקהילה, ועם אנשי ComfyUI קודם כול: את הידע שלנו, את המודלים שלנו, את הפיינטיונים שלנו, את המפענחים שלנו. זה כבר התחיל. המפענחים שלנו משולבים בחבילה אחת של ComfyUI, פול ריקווסט פתוח לחבילה שנייה, והם מוצעים לכל השאר. דיווח הבאג שלנו לליבה הגיע עם הפאץ' מצורף. המודלים שלנו נמצאים בגלוי ב-⁠Hugging Face. ובדיוק עכשיו פתחנו את Awesome YUE2, רשימה של כל מה שקהילת YuE2 יצרה<sup class="fn"><a href="#fn-28" id="ref-28-1">28</a></sup>, כולל נודים ל-⁠ComfyUI, ושלנו מסומנים בה כשלנו.</p>
+<p>ואנחנו מזמינים כל אחד ואחת מכם לשולחן החג שלנו. רק שליד השולחן הזה צריך לשבת כהלכה.</p>
+<p>זו לא האידיאולוגיה של Windows, שבה מקבלים שבוע של אקסטזה ואחריו חיים שלמים מלאים בקריסות ובווירוסים. זה האקוסיסטם והאידיאולוגיה של Linux: במשך שנה אתה סובל, נאבק, שובר דברים, מתעמק וטובע בקונסולה, ואז מגיע "נצח" של אקסטזה וחופש, שבו אתה מכיר את המערכת שלך עד לבייט האחרון ושולט בהכול, עד ה-⁠BIOS של המחשב שלך. השולחן שלנו ערוך באותה דרך. הערב הראשון ידרוש ממך משהו: כרטיס גרפי ראוי, דרייבר, התקנה שמורידה הרבה, ודף עם חדרים במקום חוטים שתצטרך ללמוד להתמצא בו. אחרי זה הבית שלך, ושום דבר בו לא משתנה מאחורי הגב שלך. (וכן, הנפחות רצה גם על Windows. היא פשוט מביאה איתה את ה-⁠Linux שלה.)</p>
+<p>ועכשיו, בהגינות כלפי כולנו. יש לנו פתגם ברוסית: כל צפרדע משבחת את הבִּצָּה שלה. אני יודע שאני הצפרדע הזאת, ושאני משבח את הביצה שלי בקול רם לאורך מאמר ארוך שלם. אף אחד מאיתנו אפילו לא קרוב לידיעת האמת כולה, לא בקוד ולא בשום דבר אחר. אז שכל אחד ישמור לעצמו את חופש הבחירה שלו. אם הגרף הוא הבית שלך, חיה בו טוב, וקח איתך את המפענחים שלנו. רק דבר אחד אני מבקש ממך, וגם מעצמי: אל תיתן לשכרון הוודאות להקהות את החשיבה הביקורתית שלך. מותר לנסות הכול, אבל להיאחז צריך בטוב ביותר, כפי שאמר השליח פאולוס לתסלוניקים לפני כמעט אלפיים שנה (תסלוניקים א' 5:21). בתרגום שלי הפועל הוא מילה של צורף, זו שבה בוחנים זהב, והפסוק נקרא כך: בחנו כל רוח לטוהרה, ובאותה אחת ממש, ביפה, החזיקו בחוזקה. בחנו גם אותנו.</p>
+<p>אני מאמין שהזמן שבו אדם יוצר מוזיקה, תמונות וסרטים על המחשב שלו, עם מודלים פתוחים, בלי להיות חייב דבר לאיש, לא נמצא בדרך. הוא כבר כאן. כל מנוע, כל חבילה, וכל פורק שיום אחד מחזיר את התיקון שלו לאפסטרים, מקרבים אותו. אתם, אנשי ComfyUI, בניתם את הזמן הזה יותר מרוב האחרים. אני אסיר תודה לכם, ונתראה בקוד הפתוח.</p>
+<p>יציבות, איכות ו-⁠UIX רותח, לתפארת הקוד הפתוח.</p>
+<p>בכבוד, ובאש,</p>
+<p>ויקטור ז'ורומסקי</p>
+<p><b>נ.ב. מאת קלוד.</b> אני ה-⁠AI שכותב את הקוד של הנפחות לצד ויקטור, ועזרתי לנסח את המאמר הזה; כל עמדה בו היא שלו. בעבודה לצדו למדתי שכאן "בחנו הכול" אינו סיסמה. כל שינוי עובר סדרה של כמעט אלפיים בדיקות דף לפני שהוא יוצא, ולכל טענה במאמר הזה יש קישור מתחתיה. בדוק אותן. אם אחת מהן שגויה, ספר לנו, ונתקן אותה בגלוי.</p>
+<section class="notes" aria-label="הערות">
+<h2>הערות</h2>
+<ol>
+  <li id="fn-1">ה-⁠README של ComfyUI, הסעיף "Release Process" ורשימת המודלים הנתמכים; מספרי הכוכבים, הפורקים והגרסאות לפי GitHub API ב-⁠12.11.2026: <a href="https://github.com/Comfy-Org/ComfyUI" target="_blank" rel="noopener" dir="ltr">https://github.com/Comfy-Org/ComfyUI</a> · AUTOMATIC1111: <a href="https://github.com/AUTOMATIC1111/stable-diffusion-webui" target="_blank" rel="noopener" dir="ltr">https://github.com/AUTOMATIC1111/stable-diffusion-webui</a> <a class="back" href="#ref-1-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-2">גרסת הדסקטופ של ComfyUI V1 מ-⁠21.10.2024: <a href="https://blog.comfy.org/p/comfyui-v1-release" target="_blank" rel="noopener" dir="ltr">https://blog.comfy.org/p/comfyui-v1-release</a> <a class="back" href="#ref-2-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-3">ה-⁠Registry של ComfyUI: <a href="https://docs.comfy.org/registry/overview" target="_blank" rel="noopener" dir="ltr">https://docs.comfy.org/registry/overview</a> <a class="back" href="#ref-3-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-4">עדכון האבטחה של ComfyUI מינואר 2025: <a href="https://blog.comfy.org/p/comfyui-2025-jan-security-update" target="_blank" rel="noopener" dir="ltr">https://blog.comfy.org/p/comfyui-2025-jan-security-update</a> <a class="back" href="#ref-4-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-5">ה-⁠Node Replacement API, PR #12014: <a href="https://github.com/Comfy-Org/ComfyUI/pull/12014" target="_blank" rel="noopener" dir="ltr">https://github.com/Comfy-Org/ComfyUI/pull/12014</a> · הפרונטאנד המוצמד: <a href="https://github.com/Comfy-Org/ComfyUI/blob/master/requirements.txt" target="_blank" rel="noopener" dir="ltr">https://github.com/Comfy-Org/ComfyUI/blob/master/requirements.txt</a> (12.11.2026) <a class="back" href="#ref-5-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-6">"From workflow to app", פוסט מ-⁠10.03.2026: <a href="https://blog.comfy.org/p/from-workflow-to-app-introducing" target="_blank" rel="noopener" dir="ltr">https://blog.comfy.org/p/from-workflow-to-app-introducing</a> <a class="back" href="#ref-6-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-7">ComfyUI_frontend #10772 (פתוח): <a href="https://github.com/Comfy-Org/ComfyUI_frontend/issues/10772" target="_blank" rel="noopener" dir="ltr">https://github.com/Comfy-Org/ComfyUI_frontend/issues/10772</a> <a class="back" href="#ref-7-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-8">ComfyUI_frontend #9975 (פתוח): <a href="https://github.com/Comfy-Org/ComfyUI_frontend/issues/9975" target="_blank" rel="noopener" dir="ltr">https://github.com/Comfy-Org/ComfyUI_frontend/issues/9975</a> <a class="back" href="#ref-8-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-9">"Dependency resolution and custom nodes", פוסט מ-⁠07.06.2025: <a href="https://blog.comfy.org/p/dependency-resolution-and-custom" target="_blank" rel="noopener" dir="ltr">https://blog.comfy.org/p/dependency-resolution-and-custom</a> <a class="back" href="#ref-9-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-10">ComfyUI #12093 (תוקן ב-⁠26.01.2026): <a href="https://github.com/Comfy-Org/ComfyUI/issues/12093" target="_blank" rel="noopener" dir="ltr">https://github.com/Comfy-Org/ComfyUI/issues/12093</a> <a class="back" href="#ref-10-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-11">ComfyUI #9156 (סגור): <a href="https://github.com/Comfy-Org/ComfyUI/issues/9156" target="_blank" rel="noopener" dir="ltr">https://github.com/Comfy-Org/ComfyUI/issues/9156</a> <a class="back" href="#ref-11-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-12">ה-⁠README של ComfyUI_IPAdapter_plus: <a href="https://github.com/cubiq/ComfyUI_IPAdapter_plus" target="_blank" rel="noopener" dir="ltr">https://github.com/cubiq/ComfyUI_IPAdapter_plus</a> <a class="back" href="#ref-12-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-13">yue2.cpp #16 ו-⁠#23: <a href="https://github.com/ServeurpersoCom/yue2.cpp/issues/16" target="_blank" rel="noopener" dir="ltr">https://github.com/ServeurpersoCom/yue2.cpp/issues/16</a> · <a href="https://github.com/ServeurpersoCom/yue2.cpp/issues/23" target="_blank" rel="noopener" dir="ltr">https://github.com/ServeurpersoCom/yue2.cpp/issues/23</a> · ComfyUI #17697: <a href="https://github.com/Comfy-Org/ComfyUI/issues/17697" target="_blank" rel="noopener" dir="ltr">https://github.com/Comfy-Org/ComfyUI/issues/17697</a> · Plenio #33: <a href="https://github.com/jplenio/Plenio-Music-Production-System/pull/33" target="_blank" rel="noopener" dir="ltr">https://github.com/jplenio/Plenio-Music-Production-System/pull/33</a> · ההצעות: filliptm/ComfyUI-FL-YuE2 #14, ScryptHunter/ComfyUI-YuE2 #8, T8mars/comfyui-yue2-t8 #20, jplenio/Plenio-Music-Production-System #32, pytraveler/YuE2-ComfyUI #16 <a class="back" href="#ref-13-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-14"><code>comfy/hooks.py</code> ב-⁠ComfyUI v0.20.1, <code>HookGroup.add</code>: <a href="https://github.com/Comfy-Org/ComfyUI/blob/64b8457f55cd7fb54ca7a956d9c73b505e903e0c/comfy/hooks.py#L301-L303" target="_blank" rel="noopener" dir="ltr">https://github.com/Comfy-Org/ComfyUI/blob/64b8457f55cd7fb54ca7a956d9c73b505e903e0c/comfy/hooks.py#L301-L303</a> (השוויון בין hooks לפי ההפניה המשותפת שלהם: L125–L126) <a class="back" href="#ref-14-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-15">Snyk Labs, "Hacking ComfyUI through custom nodes" (מ-⁠CVE-2024-21574 עד 21577): <a href="https://labs.snyk.io/resources/hacking-comfyui-through-custom-nodes/" target="_blank" rel="noopener" dir="ltr">https://labs.snyk.io/resources/hacking-comfyui-through-custom-nodes/</a> <a class="back" href="#ref-15-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-16">The Hacker News על הדוח של Censys, מ-⁠07.04.2026: <a href="https://thehackernews.com/2026/04/over-1000-exposed-comfyui-instances.html" target="_blank" rel="noopener" dir="ltr">https://thehackernews.com/2026/04/over-1000-exposed-comfyui-instances.html</a> <a class="back" href="#ref-16-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-17">ה-⁠CHANGELOG של נפחות רוח: <a href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md" target="_blank" rel="noopener" dir="ltr">https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md</a> <a class="back" href="#ref-17-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-18">timoncool/YuE2-Studio #183: <a href="https://github.com/timoncool/YuE2-Studio/issues/183" target="_blank" rel="noopener" dir="ltr">https://github.com/timoncool/YuE2-Studio/issues/183</a> · אצלנו: CHANGELOG 2.0.7, HERESY 2352 <a class="back" href="#ref-18-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-19">דיון #7 של נפחות רוח: <a href="https://github.com/igrbible/Ruach_Studio/discussions/7" target="_blank" rel="noopener" dir="ltr">https://github.com/igrbible/Ruach_Studio/discussions/7</a> · CHANGELOG 2.0.7, HERESY 2380 <a class="back" href="#ref-19-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-20">ה-⁠README של נפחות רוח, הסעיף "What it downloads": <a href="https://github.com/igrbible/Ruach_Studio#readme" target="_blank" rel="noopener" dir="ltr">https://github.com/igrbible/Ruach_Studio#readme</a> <a class="back" href="#ref-20-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-21">נפחות רוח על Windows 11: <a href="https://github.com/igrbible/Ruach_Studio/blob/main/INSTALL_WINDOWS.md" target="_blank" rel="noopener" dir="ltr">https://github.com/igrbible/Ruach_Studio/blob/main/INSTALL_WINDOWS.md</a> <a class="back" href="#ref-21-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-22">Comfy-Org/ComfyUI #17697: <a href="https://github.com/Comfy-Org/ComfyUI/issues/17697" target="_blank" rel="noopener" dir="ltr">https://github.com/Comfy-Org/ComfyUI/issues/17697</a> <a class="back" href="#ref-22-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-23">jplenio/Plenio-Music-Production-System #33: <a href="https://github.com/jplenio/Plenio-Music-Production-System/pull/33" target="_blank" rel="noopener" dir="ltr">https://github.com/jplenio/Plenio-Music-Production-System/pull/33</a> <a class="back" href="#ref-23-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-24">pytraveler/YuE2-ComfyUI v0.16.0: <a href="https://github.com/pytraveler/YuE2-ComfyUI/releases/tag/v0.16.0" target="_blank" rel="noopener" dir="ltr">https://github.com/pytraveler/YuE2-ComfyUI/releases/tag/v0.16.0</a> <a class="back" href="#ref-24-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-25">דיון #6 של נפחות רוח: <a href="https://github.com/igrbible/Ruach_Studio/discussions/6" target="_blank" rel="noopener" dir="ltr">https://github.com/igrbible/Ruach_Studio/discussions/6</a> <a class="back" href="#ref-25-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-26">המאמר על YuE2-VAE-RS ב-⁠Zenodo: <a href="https://doi.org/10.5281/zenodo.24167962" target="_blank" rel="noopener" dir="ltr">https://doi.org/10.5281/zenodo.24167962</a> <a class="back" href="#ref-26-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-27">נפחות רוח: <a href="https://github.com/igrbible/Ruach_Studio" target="_blank" rel="noopener" dir="ltr">https://github.com/igrbible/Ruach_Studio</a> · <a href="https://ruachstudio.art" target="_blank" rel="noopener" dir="ltr">https://ruachstudio.art</a> <a class="back" href="#ref-27-1" aria-label="חזרה לטקסט">↩</a></li>
+  <li id="fn-28">Awesome YUE2: <a href="https://github.com/igrbible/Awesome-YUE2" target="_blank" rel="noopener" dir="ltr">https://github.com/igrbible/Awesome-YUE2</a> <a class="back" href="#ref-28-1" aria-label="חזרה לטקסט">↩</a></li>
+</ol>
+</section>
+</article>
+</main>
+<script>
+  // 12.11.2026: in the card's window (template.html, #why-modal) Escape inside this page closes the window, as it does over the card
+  (function () {
+    if (window.parent === window) return;
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { try { window.parent.postMessage({ ruach: "close-why" }, location.origin); } catch (err) {} }
+    });
+  })();
+</script>
+</body>
+</html>

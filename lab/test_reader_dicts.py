@@ -17,7 +17,8 @@ with tempfile.TemporaryDirectory() as tmp:
     src = kit / "be.tsv"
     src.write_text("# a test list\nмалако́\nза́мак\nзама́к\nВі́льня\tname\nвільня́\nхата\nп+оле\n", encoding="utf-8")
     r = b.build("be", src, rs.own_dir("be") / "forms.sqlite", "a test", "CC0")
-    assert r["keys"] == 4 and r["homographs"] == 2 and r["names"] == 1 and r["no_stress"] == 1, r
+    # HERESY 2399: a name lives in the names' table alone, so the common forms hold one homograph (за́мак/зама́к), not two
+    assert r["keys"] == 4 and r["homographs"] == 1 and r["names"] == 1 and r["no_stress"] == 1, r
     con = sqlite3.connect(str(rs.own_dir("be") / "forms.sqlite"))
     assert dict(con.execute("SELECT k, v FROM about").fetchall())["licence"] == "CC0"
     assert con.execute("SELECT f FROM forms WHERE k = 'поле'").fetchone()[0] == "по" + A + "ле"

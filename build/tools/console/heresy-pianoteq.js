@@ -344,7 +344,7 @@
     }
     function keepIt() {
       var D = window.HeresyDialog;
-      var ask = D ? D.prompt(tr("A name for this preset in your Pianoteq (bank «Ruach Studio»)"), (S.st.preset || "Ruach") + " · Ruach") : Promise.resolve(window.prompt("Name", S.st.preset));
+      var ask = D ? D.prompt(tr("A name for this preset in your Pianoteq (bank «Ruach Studio»)"), (S.st.preset || "Ruach") + " · Ruach", { name: { max: 60, file: true } })   /* HERESY 2462: a file in Pianoteq */ : Promise.resolve(window.prompt("Name", S.st.preset));
       ask.then(function (name) {
         if (!name) return;
         return fetch("/lab/pianoteq/keep" + scope(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state: full(), name: name, product: P }) })

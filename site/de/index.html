@@ -135,11 +135,11 @@
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .shot .day { display: none; } :root:not([data-theme="light"]) .shot .night { display: block; } }
   :root[data-theme="dark"] .shot .day { display: none; }
   :root[data-theme="dark"] .shot .night { display: block; }
-  /* a room's picture by day and by night too (HERESY 1505: the Trainer's, from Viktor's own shots) */
-  .room a.pic .night { display: none; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .room a.pic .day { display: none; } :root:not([data-theme="light"]) .room a.pic .night { display: block; } }
-  :root[data-theme="dark"] .room a.pic .day { display: none; }
-  :root[data-theme="dark"] .room a.pic .night { display: block; }
+  /* a room's picture by day and by night too (HERESY 1505: the Trainer's, from Viktor's own shots); since 12.11.2026 the close-ups beside the features too */
+  .room a.pic .night, .pair a.pic .night { display: none; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) :is(.room, .pair) a.pic .day { display: none; } :root:not([data-theme="light"]) :is(.room, .pair) a.pic .night { display: block; } }
+  :root[data-theme="dark"] :is(.room, .pair) a.pic .day { display: none; }
+  :root[data-theme="dark"] :is(.room, .pair) a.pic .night { display: block; }
 
   /* numbers */
   .nums { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--rule); border: 1px solid var(--rule);
@@ -179,8 +179,19 @@
   @media (max-width: 760px) { .feats { grid-template-columns: 1fr; } }
 
   .pair { display: grid; grid-template-columns: 1.15fr 1fr; gap: 34px; align-items: center; margin-top: 44px; }
-  .pair figure { margin: 0; background: var(--paper); border: 1px solid var(--rule); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
-  .pair figcaption { color: var(--faint); font-size: 13px; margin-top: 8px; text-align: center; }
+  /* 12.11.2026 (Viktor: «наши вырезки из скринов, они огромные по высоте и устаревшие… этот сегмент страницы выбивается из общего дизайна, особенно
+     редактор лирики»): a close-up sits in a card like a room's, no taller than the card's measure; a taller one shows its top and fades, and opens whole */
+  .pair figure { margin: 0; background: var(--paper); border: 1px solid var(--rule); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
+  .pair a.pic { display: block; position: relative; border-bottom: 1px solid var(--rule); background: var(--ground); }
+  .pair a.pic img { display: block; width: 100%; height: auto; max-height: 420px; object-fit: cover; object-position: top center; }
+  .pair a.pic.is-tall::after { content: ""; position: absolute; inset: auto 0 0 0; height: 72px; pointer-events: none;
+    background: linear-gradient(to bottom, transparent, var(--paper)); }
+  .pair a.pic .zoom-hint { position: absolute; right: 10px; bottom: 10px; z-index: 1; width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center;
+    background: var(--paper); border: 1px solid var(--rule); color: var(--soft); opacity: .85; transition: opacity .2s; }
+  .pair a.pic:hover .zoom-hint, .pair a.pic:focus-visible .zoom-hint { opacity: 1; color: var(--ink); }
+  .pair a.pic .zoom-hint svg { width: 16px; height: 16px; }
+  .pair figcaption { color: var(--faint); font-size: 13px; padding: 9px 14px 11px; text-align: center; }
+  a.pic:focus-visible { outline: 2px solid var(--amber); outline-offset: -2px; }
   .pair h3 { font-size: 22px; margin: 0 0 8px; }
   .pair p { color: var(--soft); margin: 0 0 10px; }
   .pair.flip { grid-template-columns: 1fr 1.15fr; }
@@ -246,16 +257,30 @@
   .lb { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 24px;
     background: rgba(12, 11, 11, .92); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
   .lb[hidden] { display: none; }
-  .lb figure { margin: 0; max-width: min(1600px, 90vw); text-align: center; }
-  .lb img { max-width: 100%; max-height: 84vh; border-radius: 10px; box-shadow: 0 20px 60px rgba(0, 0, 0, .6); }
+  .lb figure { margin: 0; max-width: min(1920px, 90vw); text-align: center; min-width: 0; }
+  .lb .lb-frame { display: inline-block; max-width: 100%; border-radius: 10px; }
+  .lb img { display: block; max-width: 96vw; max-height: 86vh; margin: 0 auto; border-radius: 10px; box-shadow: 0 20px 60px rgba(0, 0, 0, .6); cursor: zoom-in; touch-action: pinch-zoom; }
   .lb figcaption { color: #c4c4c4; font-size: 14px; margin-top: 10px; }
+  .lb figcaption .lb-n { color: #8f8f8f; font-variant-numeric: tabular-nums; margin-inline-start: 10px; }
+  /* 12.11.2026: the picture at its own size (Viktor: «увеличение в лайтбоксе при клике»): a click on it, Z or the button; dragged or scrolled about, a click again fits it */
+  .lb.is-zoom figure { max-width: 96vw; }
+  .lb.is-zoom .lb-frame { display: block; max-width: 96vw; max-height: 86vh; overflow: auto; overscroll-behavior: contain; cursor: grab; }
+  .lb.is-zoom .lb-frame.is-drag { cursor: grabbing; }
+  .lb.is-zoom img { max-width: none; max-height: none; border-radius: 0; cursor: zoom-out; }
+  .lb.is-zoom .lb-nav { visibility: hidden; }
   .lb button { flex: none; width: 44px; height: 44px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, .18);
     background: rgba(255, 255, 255, .08); color: #f4f4f4; font-size: 24px; line-height: 1; cursor: pointer; }
   .lb button:hover { background: rgba(255, 255, 255, .16); }
+  .lb button:focus-visible { outline: 2px solid #f4c27a; outline-offset: 2px; }
   .lb .lb-x { position: absolute; top: 14px; right: 18px; }
+  .lb .lb-z { position: absolute; top: 14px; right: 70px; display: grid; place-items: center; }
+  .lb .lb-z svg { width: 20px; height: 20px; }
+  .lb.is-zoom .lb-z .z-in, .lb .lb-z .z-out { display: none; }
+  .lb.is-zoom .lb-z .z-out { display: block; }
   html.lb-on { overflow: hidden; }
   a.pic, .shot img, .pair figure img { cursor: zoom-in; }
-  @media (max-width: 640px) { .lb .lb-nav { display: none; } }
+  @media (max-width: 640px) { .lb { padding: 64px 6px 12px; } .lb .lb-nav { display: none; } .lb figure { max-width: 100%; } .lb img { max-height: 76vh; }
+    .lb figcaption { font-size: 13px; padding: 0 8px; } .lb .lb-x { top: 10px; right: 10px; } .lb .lb-z { top: 10px; right: 62px; } }
   footer { margin-top: 84px; border-top: 1px solid var(--rule); padding: 30px 0 44px; color: var(--faint); font-size: 14px; }
   footer .wrap { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
   footer .links { margin-left: auto; display: flex; gap: 18px; flex-wrap: wrap; }
@@ -317,6 +342,7 @@
   .vae-hear { margin-top: 0; }
   .vocab-btns { flex: none; display: flex; flex-wrap: wrap; gap: 10px; }
   .vocab-btns .vocab-open-2 { background: transparent; color: var(--amber); }
+  .vocab-btns a.vocab-open { display: inline-flex; align-items: center; text-decoration: none; }   /* 12.11.2026: the paper's link dressed as its two buttons */
   .vae-tracks .vocab-panel { width: min(720px, 100%); height: auto; max-height: 100%; }   /* 11.11.2026 (Viktor: «ужми, он очень широкий»; ~16:00 «Давай 720 пикселов ширины»): a reading width, not the window's */
   .vae-tracks-body { overflow: auto; padding: 18px 22px 22px; }
   .vocab-modal.vae-tracks { padding-bottom: calc(3vh + var(--rb-h, 0px)); }   /* the ring's player stays under the window, not over its last rows */
@@ -476,6 +502,10 @@
                        cursor: pointer; font-size: 20px; line-height: 1; }
   .vocab-panel iframe { flex: 1; width: 100%; border: 0; background: var(--ground); }
   @media (max-width: 600px) { .vocab-modal { padding: 0; } .vocab-panel { border-radius: 0; border: 0; } }
+  /* 12.11.2026 (Viktor: «на визитке тизер блоком с кнопкой на полноэкранный оверлей»): the article's teaser, and its window over the whole screen */
+  .why-call .why-by { color: var(--faint); font-size: 14px; margin: 0 0 6px; }
+  .why-modal .vocab-panel { width: 100%; }   /* the whole screen but the card's own rim of backdrop (a click there closes it); a phone's whole screen (the rule above) */
+  .vocab-head button:focus-visible, .why-modal iframe:focus-visible { outline: 2px solid var(--amber); outline-offset: -2px; }
 
   /* ---------------------------------------------------------------- HERESY 2026 (Viktor 02.11.2026: «пересмотри дизайн. Если имеешь фантазию,
      придерживаясь строгости, добавить немного гламура, чтобы страница очаровала не только информацией, но и своим видом»): the Studio's own face
@@ -640,14 +670,14 @@
     <p class="lead">Ein ganzes Studio rund um <b>YuE2</b>, das offene Songmodell. Schreib den Stil und den Text, und das Studio komponiert, singt und rendert den Song auf <b>deiner eigenen GPU</b>. Deine Songs, Wörter und Einstellungen verlassen sie nie.</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Auf GitHub holen</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.de.md">Den Guide lesen</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Modelle auf Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24/7 Kaffee für Viktor und Claude</a></div>
     <p class="star">⭐ Wenn dir das Studio gefällt, gib <a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">dem Repository des YuE2 Studio auf GitHub</a> einen Stern.</p>
-    <span class="rc"><b>2.0.6</b> · eine schlechte Leitung gehalten und jeder Fehler ausgesprochen, die Tsunami Wave und eine vollständige Prüfung · November 2026</span>
+    <span class="rc"><b>2.0.7</b> · unsere eigenen Decoder werden zum Klang des Studios, und der Vorleser liest Texte vor · November 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
-    <div class="shot">
-      <img class="day" src="../assets/shots/studio-create.webp" width="1600" height="900" alt="Der Musiker bei Tag: das Songformular, der Take, den du hörst, und alle Takes">
-      <img class="night" src="../assets/shots/studio-create-night.webp" width="1600" height="900" alt="Der Musiker bei Nacht" loading="lazy">
-    </div>
+    <div class="shot"><a class="pic" href="../assets/shots/de/studio-create.webp" data-night="../assets/shots/de/studio-create-night.webp">
+      <img class="day" src="../assets/shots/de/studio-create.webp" width="1920" height="1080" alt="Der Musiker bei Tag: das Songformular, der Take, den du hörst, und alle Takes">
+      <img class="night" src="../assets/shots/de/studio-create-night.webp" width="1920" height="1080" alt="Der Musiker bei Nacht" loading="lazy">
+    </a></div>
 
     <div class="nums">
       <div><b>8 min</b><span>ganze Songs, bis zu acht Minuten</span></div>
@@ -675,25 +705,25 @@
       <p class="sub">Der <b>Musiker</b> macht den Song, der <b>Vorleser</b> liest Texte vor, der <b>Schreiber</b> schreibt den Song mit einem Chatmodell, der <b>Veredler</b> vollendet ihn, der <b>Maler</b> malt seine Bilder, der <b>Videograf</b> plant sein Musikvideo, der <b>LoRA-Trainer</b> bringt YuE2 deine eigenen Songs bei, und der <b>Bibliothekar</b> bewahrt jeden Take. Ein Guide für jeden Raum ist im Studio.</p>
       <p class="sub rooms-207">Ab Release 2.0.7 heißt der Schöpfer <b>Musiker</b>, und neben ihm liest der <b>Vorleser</b> Texte vor.</p>   <!-- 11.11.2026 (Viktor: «Перенеси Чтеца сразу после Музыканта и перед Писателем… На визитке и в репо исправь семь комнат на восемь») -->
       <div class="rooms">
-        <article class="room"><a class="pic" href="../assets/shots/studio-create.webp" data-night="assets/shots/studio-create-night.webp"><img class="day" src="../assets/shots/studio-create.webp" alt="Musiker" loading="lazy"><img class="night" src="../assets/shots/studio-create-night.webp" alt="Musiker" loading="lazy"></a>
-          <div><h3>Musiker</h3><p class="soon">ab Release 2.0.7</p><p>Stil, Text, Planungsmodus, Decoder, LoRAs auf einer Straße von Grün nach Rot; der Take mit seiner Partitur, seinen Seeds und allem, um ihn neu zu machen.</p></div></article>
+        <article class="room"><a class="pic" href="../assets/shots/de/studio-create.webp" data-night="../assets/shots/de/studio-create-night.webp"><img class="day" src="../assets/shots/de/studio-create.webp" alt="Musiker" loading="lazy"><img class="night" src="../assets/shots/de/studio-create-night.webp" alt="Musiker" loading="lazy"></a>
+          <div><h3>Musiker</h3><p class="soon">neu in 2.0.7</p><p>Stil, Text, Planungsmodus, Decoder, LoRAs auf einer Straße von Grün nach Rot; der Take mit seiner Partitur, seinen Seeds und allem, um ihn neu zu machen.</p></div></article>
         <article class="room" id="narrator"><a class="pic" href="../assets/shots/narrator.webp"><img src="../assets/shots/narrator.webp" alt="Der Vorleser: der Text, die Stimme, die Engine, die Läufe" loading="lazy"></a>
-          <div><h3>Vorleser</h3><p class="soon">ab Release 2.0.7</p><p>Ein Text, vorgelesen auf deiner eigenen GPU: ein Kapitel, ein Buch, ein Hörspiel, ein Podcast, mit einer ruhigen Stimme oder als Dialog, in zwölf Sprachen, jede in ihren eigenen Buchstaben. Es liest Fish Audio Drama 3; Whisper hört jedes Stück und lässt ein falsch gelesenes neu lesen; die Aufnahme wird auf −16 LUFS gebracht und als nie fürs Training markiert. Built with Fish Audio.</p></div></article>   <!-- 11.11.2026 (Viktor: «и Чтеца сразу, пусть ждут релиза»), from 2.0.7, its shot from the Narrator's guide; second since 11.11 (Viktor: «Перенеси Чтеца сразу после Музыканта и перед Писателем») -->
-        <article class="room"><a class="pic" href="../assets/shots/studio-writer.webp" data-night="assets/shots/studio-writer-night.webp"><img class="day" src="../assets/shots/studio-writer.webp" alt="Schreiber" loading="lazy"><img class="night" src="../assets/shots/studio-writer-night.webp" alt="Schreiber" loading="lazy"></a>
+          <div><h3>Vorleser</h3><p class="soon">neu in 2.0.7</p><p>Ein Text, vorgelesen auf deiner eigenen GPU: ein Kapitel, ein Buch, ein Hörspiel, ein Podcast, mit einer ruhigen Stimme oder als Dialog, in zwölf Sprachen, jede in ihren eigenen Buchstaben. Es liest Fish Audio Drama 3; Whisper hört jedes Stück und lässt ein falsch gelesenes neu lesen; die Aufnahme wird auf −16 LUFS gebracht und als nie fürs Training markiert. Built with Fish Audio.</p></div></article>   <!-- 11.11.2026 (Viktor: «и Чтеца сразу, пусть ждут релиза»), from 2.0.7, its shot from the Narrator's guide; second since 11.11 (Viktor: «Перенеси Чтеца сразу после Музыканта и перед Писателем») -->
+        <article class="room"><a class="pic" href="../assets/shots/de/studio-writer.webp" data-night="../assets/shots/de/studio-writer-night.webp"><img class="day" src="../assets/shots/de/studio-writer.webp" alt="Schreiber" loading="lazy"><img class="night" src="../assets/shots/de/studio-writer-night.webp" alt="Schreiber" loading="lazy"></a>
           <div><h3>Schreiber</h3><p>Songs als Dokumente mit Versionen, Textprofile und ein eigenes Chatmodell (oder OpenRouter), das mit dir entwirft und überarbeitet.</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/studio-post.webp" data-night="assets/shots/studio-post-night.webp"><img class="day" src="../assets/shots/studio-post.webp" alt="Veredler" loading="lazy"><img class="night" src="../assets/shots/studio-post-night.webp" alt="Veredler" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/de/studio-post.webp" data-night="../assets/shots/de/studio-post-night.webp"><img class="day" src="../assets/shots/de/studio-post.webp" alt="Veredler" loading="lazy"><img class="night" src="../assets/shots/de/studio-post-night.webp" alt="Veredler" loading="lazy"></a>
           <div><h3>Veredler</h3><p>Spektrum, Artefakte, Entbrummer, Liedtext-Prüfung mit Whisper, Stems, Remaster, Upscale; eine Kette führt alles aus.</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/artist.webp" data-night="assets/shots/artist-night.webp"><img class="day" src="../assets/shots/artist.webp" alt="Maler" loading="lazy"><img class="night" src="../assets/shots/artist-night.webp" alt="Maler" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/de/artist.webp" data-night="../assets/shots/de/artist-night.webp"><img class="day" src="../assets/shots/de/artist.webp" alt="Maler" loading="lazy"><img class="night" src="../assets/shots/de/artist-night.webp" alt="Maler" loading="lazy"></a>
           <div><h3>Maler</h3><p>Bilder für deine Songs aus einem eigenen Prompt: quadratisch, breit und hoch aus einem Seed, gemalt von Qwen-Image 2512; das Bild entsteht vor deinen Augen, und ein quadratisches wird zum Cover des Takes. Eine frühe Vorschau.</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/studio-video.webp" data-night="assets/shots/studio-video-night.webp"><img class="day" src="../assets/shots/studio-video.webp" alt="Der Videograf: die Einstellungen des Takes auf einer Zeitleiste über seinem Song" loading="lazy"><img class="night" src="../assets/shots/studio-video-night.webp" alt="Der Videograf: die Einstellungen des Takes auf einer Zeitleiste über seinem Song" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/de/studio-video.webp" data-night="../assets/shots/de/studio-video-night.webp"><img class="day" src="../assets/shots/de/studio-video.webp" alt="Der Videograf: die Einstellungen des Takes auf einer Zeitleiste über seinem Song" loading="lazy"><img class="night" src="../assets/shots/de/studio-video-night.webp" alt="Der Videograf: die Einstellungen des Takes auf einer Zeitleiste über seinem Song" loading="lazy"></a>
           <div><h3>Videograf</h3><p>Ein Musikvideo zum Take: sein Song in Einstellungen an den gesungenen Zeilen geschnitten, die Szenen mit dem Schreiber geschrieben, die Schlüsselbilder vom Künstler gemalt, die bewegten Einstellungen von MiniMax H3; eine Zeitleiste zum Schneiden, ein Look (3D-LUTs, Korn), ein Animatic und der Clip. Beta.</p></div></article>   <!-- HERESY 2030 (Viktor: «добавь Видеографа перед Библиотекарем») -->
-        <article class="room"><a class="pic" href="../assets/shots/studio-train.webp" data-night="assets/shots/studio-train-night.webp"><img class="day" src="../assets/shots/studio-train.webp" alt="LoRA-Trainer" loading="lazy"><img class="night" src="../assets/shots/studio-train-night.webp" alt="LoRA-Trainer" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/de/studio-train.webp" data-night="../assets/shots/de/studio-train-night.webp"><img class="day" src="../assets/shots/de/studio-train.webp" alt="LoRA-Trainer" loading="lazy"><img class="night" src="../assets/shots/de/studio-train-night.webp" alt="LoRA-Trainer" loading="lazy"></a>
           <div><h3>LoRA-Trainer</h3><p>Adapter aus deinen eigenen Songs: das Set, der Lauf, die Kurven beider Hälften erklärt, die Epochen, die man zuerst hören sollte.</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/studio-collection.webp" data-night="assets/shots/studio-collection-night.webp"><img class="day" src="../assets/shots/studio-collection.webp" alt="Bibliothekar" loading="lazy"><img class="night" src="../assets/shots/studio-collection-night.webp" alt="Bibliothekar" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/de/studio-collection.webp" data-night="../assets/shots/de/studio-collection-night.webp"><img class="day" src="../assets/shots/de/studio-collection.webp" alt="Bibliothekar" loading="lazy"><img class="night" src="../assets/shots/de/studio-collection-night.webp" alt="Bibliothekar" loading="lazy"></a>
           <div><h3>Bibliothekar</h3><p>Jeder Take in Arbeitsbereichen: gesucht, geliked, notiert, gesperrt, mit Artwork versehen, an deine DAW geschickt; ein Papierkorb, der zurückgibt.</p></div></article>
         <article class="room"><a class="pic" href="../assets/shots/instruments.webp"><img src="../assets/shots/instruments.webp" alt="Der Instrumenten-Spickzettel" loading="lazy"></a>
           <div><h3>Der Spickzettel ♪</h3><p>200 Instrumente nach Gehör geprüft und beurteilt: was YuE2 wirklich spielt, was es dünn spielt, was es nicht kennt.</p></div></article>
-        <article class="room"><a class="pic" href="../assets/shots/studio-guide.webp" data-night="assets/shots/studio-guide-night.webp"><img class="day" src="../assets/shots/studio-guide.webp" alt="Der Leitfaden über dem Musiker (F1)" loading="lazy"><img class="night" src="../assets/shots/studio-guide-night.webp" alt="Der Leitfaden über dem Musiker (F1)" loading="lazy"></a>
+        <article class="room"><a class="pic" href="../assets/shots/de/studio-guide.webp" data-night="../assets/shots/de/studio-guide-night.webp"><img class="day" src="../assets/shots/de/studio-guide.webp" alt="Der Leitfaden über dem Musiker (F1)" loading="lazy"><img class="night" src="../assets/shots/de/studio-guide-night.webp" alt="Der Leitfaden über dem Musiker (F1)" loading="lazy"></a>
           <div><h3>Der Leitfaden · F1</h3><p>Das ganze Studio im Studio erklärt, eine Taste entfernt: jeder Raum und jeder Regler, was er tut und welche Zahlen wir gemessen haben, in zwölf Sprachen. Gemacht für die Freude am Schaffen, nicht für stundenlanges Suchen im Netz.</p></div></article>   <!-- HERESY 2030 (Viktor: «И последней Глобальный исчерпывающий гайд по F1 как ни у кого кроме нас») -->
       </div>
     </div>
@@ -718,7 +748,7 @@
       </ul>
 
       <div class="pair">
-        <figure><img src="../assets/shots/babel.webp" alt="Babel in der Partitur: der Lauf gestoppt, und warum" loading="lazy" style="margin:auto"><figcaption>Babel in der Partitur: 15 s nach dem Start des Laufs erwischt</figcaption></figure>
+        <figure><a class="pic" href="../assets/shots/de/babel.webp" data-night="../assets/shots/de/babel-night.webp"><img class="day" src="../assets/shots/de/babel.webp" width="580" height="736" alt="Babel in der Partitur: der Lauf gestoppt, und warum" loading="lazy"><img class="night" src="../assets/shots/de/babel-night.webp" width="580" height="736" alt="Babel in der Partitur: der Lauf gestoppt, und warum" loading="lazy"><span class="zoom-hint" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a><figcaption>Babel in der Partitur: 15 s nach dem Start des Laufs erwischt</figcaption></figure>
         <div>
           <h3>Ein Wächter gegen Unsinn</h3>
           <p>Wenn die Musikhälfte eine kaputte Partitur schreibt (zu weit getriebene Adapter tun das), stoppt die Engine den Lauf, bevor irgendeine Musik darauf gebaut wird, in Sekunden, und sagt warum: welche Adapter, wie weit über ihren Grenzen, was geschrieben wurde.</p>
@@ -726,7 +756,7 @@
         </div>
       </div>
       <div class="pair flip">
-        <figure><img src="../assets/shots/train-charts.webp" alt="Die Kurven des Trainers" loading="lazy"><figcaption>Die Kurven beider Hälften, erklärt</figcaption></figure>
+        <figure><a class="pic" href="../assets/shots/de/train-charts.webp" data-night="../assets/shots/de/train-charts-night.webp"><img class="day" src="../assets/shots/de/train-charts.webp" width="1450" height="530" alt="Die Kurven des Trainers" loading="lazy"><img class="night" src="../assets/shots/de/train-charts-night.webp" width="1450" height="530" alt="Die Kurven des Trainers" loading="lazy"><span class="zoom-hint" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a><figcaption>Die Kurven beider Hälften, erklärt</figcaption></figure>
         <div>
           <h3>Ein eigener LoRA-Trainer</h3>
           <p>Das Studio trainiert Adapter selbst, auf unquantisierten bf16-Gewichten. Gegen Ostris' AI-Toolkit auf demselben Set stimmt der Loss der Musikhälfte Epoche für Epoche auf 0.015 genau überein.</p>
@@ -734,7 +764,7 @@
         </div>
       </div>
       <div class="pair">
-        <figure><img src="../assets/shots/lyrics-meter.webp" width="895" height="850" alt="Der Texteditor: die Schläge jeder Zeile gegen das Lineal ihres Abschnitts" loading="lazy"><figcaption>Die Schläge jeder Zeile gegen das Lineal ihres Abschnitts</figcaption></figure>
+        <figure><a class="pic" href="../assets/shots/de/lyrics-meter.webp" data-night="../assets/shots/de/lyrics-meter-night.webp"><img class="day" src="../assets/shots/de/lyrics-meter.webp" width="634" height="560" alt="Der Texteditor: die Schläge jeder Zeile gegen das Lineal ihres Abschnitts" loading="lazy"><img class="night" src="../assets/shots/de/lyrics-meter-night.webp" width="634" height="560" alt="Der Texteditor: die Schläge jeder Zeile gegen das Lineal ihres Abschnitts" loading="lazy"><span class="zoom-hint" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a><figcaption>Die Schläge jeder Zeile gegen das Lineal ihres Abschnitts</figcaption></figure>
         <div>
           <h3>Texte, die den Takt halten</h3>
           <p>Neben jeder Zeile ihre Schläge, gegen das Lineal ihres Abschnitts: Strophe und Bridge eine Gruppe, Pre-Chorus und Refrain jeweils ihre eigene. Eine Silbe wird nach den eigenen Regeln jeder Sprache gezählt, und die Konsonanten, die einen eigenen Schlag nehmen, zählen auch; eine Pause oder ein Zwischenspiel in einem Abschnitt öffnet keine neue Gruppe.</p>
@@ -777,11 +807,26 @@
             <tr><td>der Code</td><td>offen (AGPL), jede Änderung nummeriert und dokumentiert</td><td>geschlossen</td></tr>
             <tr><td>die Oberfläche</td><td>acht Räume auf einer Seite, in zwölf Sprachen; ein Tipp an jedem Bedienelement und eine Anleitung in jedem Raum; der Player und die Aufnahmen in jedem Raum; Tasten für das, was man oft tut; als App installierbar</td><td>eine Web-App und mobile Apps</td></tr>
             <tr class="honest"><td>Feinschliff ab Werk</td><td><b>weniger</b>: ein Mix kann brummen (der Entbrummer hilft), der Text kann abdriften (die Liedtext-Prüfung findet, wo), manche Instrumente spielt YuE2 dünn oder gar nicht (eine LoRA bringt sie ihm bei)</td><td><b>mehr</b></td></tr>
-            <tr class="honest"><td>was du brauchst</td><td>eine NVIDIA-GPU (24 GB für alles in voller Präzision; 12–16 GB und 8 GB mit kleineren Kopien), Linux, 34–41 GB Platz</td><td>einen Browser</td></tr>
+            <tr class="honest"><td>was du brauchst</td><td>eine NVIDIA-GPU (24 GB für alles in voller Präzision; 12–16 GB und 8 GB mit kleineren Kopien), Linux, 22,5–25,9 GB Platz</td><td>einen Browser</td></tr>
           </tbody>
         </table>
       </div>
       <p class="ring-note">«—»: nicht gefunden, in mehr als einem halben Jahr mit SUNOs Bezahltarifen. SUNO ändert sich schnell; Stand November 2026.</p>
+    </div>
+  </section>
+
+  <section id="why">   <!-- 12.11.2026 (Viktor: «Статью "Why own Studio but not ComfyUI's plugins bundle"… на визитке тизер блоком с кнопкой на полноэкранный оверлей»); 13.11.2026 (Viktor: «запряги свору агентов-лингвистов, пусть переведут на остальные языки»): in all thirteen, the block through each catalog, each page's own article in article/ -->
+    <div class="wrap">
+      <h2>Warum ein eigenes Studio und kein Plugin-Bündel für ComfyUI</h2>
+      <div class="vocab-call why-call" id="why-call">
+        <div>
+          <p class="why-by">Viktor Zhuromskyy · 13. November 2026</p>
+          <p>Viele, die mit uns Songs machen, kommen von ComfyUI. Einen professionellen Workflow baut man dort wochenlang, und das nächste Update des Kerns oder einer Node kann ihn zerlegen. Zurück bleiben private Forks, deren Fixes allzu oft nie den Weg zurück upstream finden. Ich nenne das einen Forkblow. Ruach Studio geht den anderen Weg: acht Räume auf einer Seite, eine Musik-Engine, die wir selbst patchen, und jedes Modell fest an einen Raum gebunden. Hier steht, warum, was es kostet, wo wir ComfyUI noch begegnen, und dazu mein Abschiedsbrief an seine Community.</p>
+        </div>
+        <div class="vocab-btns">
+          <button class="vocab-open" id="why-open" type="button" aria-haspopup="dialog" aria-controls="why-modal">Artikel lesen</button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -946,9 +991,10 @@
         <div class="vocab-btns">
           <button class="vocab-open" id="vae-study-open" type="button">Die Studie lesen</button>
           <button class="vocab-open vocab-open-2" id="vae-tracks-open" type="button">Anhören: 20 Songs × 3 Decoder</button>
+          <a class="vocab-open vocab-open-2" id="vae-paper-open" href="/vae/YuE2-VAE-RS-x3-paper.pdf" download="YuE2-VAE-RS-x3-paper.pdf" type="application/pdf">Artikel (PDF)</a>   <!-- 12.11.2026 (Viktor: «Твой PDF — Огонь. Его можно и на визитку для скачивания и распечатки»); a download: the web server serves .pdf as octet-stream on purpose (mime.types «Force PDFs to download») -->
         </div>
       </div>   <!-- 11.11.2026 (Viktor: «таблицу с треками унеси в оверлей, чтобы не насиловать визитку. В блоке исследования второй кнопкой вызовем её») -->
-      <p class="ring-note">Die Gewichte stehen unter CC BY-NC 4.0, der Code unter Apache-2.0. Beides liegt im Repository unserer Fine-Tunes auf Hugging Face, in <a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-RS-Finetunes/tree/main/VAE-RS">VAE-RS</a>, mit der Studie und <a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-RS-Finetunes/blob/main/docs/VAE-RS-x3-integration.md">einer Anleitung für Programmierer</a>.</p>
+      <p class="ring-note">Die Gewichte stehen unter CC BY-NC 4.0, der Code unter Apache-2.0. Beides liegt im Repository unserer Fine-Tunes auf Hugging Face, in <a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-RS-Finetunes/tree/main/VAE-RS">VAE-RS</a>, mit der Studie und <a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-RS-Finetunes/blob/main/docs/VAE-RS-x3-integration.md">einer Anleitung für Programmierer</a>. Dieselben Dateien liegen zusammen mit dem Artikel auch in einem eigenen Repository: <a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-VAE-RS-x3">goldhub/YuE2-VAE-RS-x3</a>.</p>
     </div>
   </section>
 
@@ -959,7 +1005,7 @@
         <div class="card"><h3>Die Maschine</h3><ul>
           <li><b>Eine NVIDIA-GPU</b>: 24 GB für alles in voller Präzision; mit 12–16 GB und 8 GB läuft es mit kleineren Kopien (der Videograf will 24 GB)</li>
           <li><b>Linux</b> (gebaut auf Ubuntu 24.04, CUDA 12.8)</li>
-          <li><b>Etwa 34–41 GB</b> Platte, gemessen auf frischen Installationen: das Programm und sein Python (17 GB), die Modelle (17 bis 24 GB je nach Karte, geholt, festgepinnt und geprüft von <code>fetch-models.sh</code>); die Modelle des Malers 39–43 GB mehr, die 💎-Sets 5,6 GB, jeweils nur, wenn du sie anforderst</li></ul></div>
+          <li><b>Etwa 23–26 GB</b> Platte, gemessen auf frischen Installationen: das Programm und sein Python (17 GB), die Modelle (5,1 bis 8,5 GB je nach Karte, geholt, festgepinnt und geprüft von <code>fetch-models.sh</code>); die Modelle des Malers 39–43 GB mehr, die 💎-Sets 5,6 GB, jeweils nur, wenn du sie anforderst</li></ul></div>
         <div class="need-side">
         <div class="card"><h3>Der Bildschirm</h3><ul>
           <li>Gemacht für ein Browserfenster von <b>1920×1080 bei 100 %</b></li>
@@ -971,46 +1017,49 @@
           <li>Mehr GPUs: das Training und die Arbeit des Labors neben den Songs</li></ul></div>
         </div>   <!-- HERESY 2026 (Viktor: «Третьей в ту строку перемести карточку `По желанию`») -->
         <!-- HERESY 1807 (Viktor 28.10.2026: «на всех наших карточках чёрным по белому… предупреди… Слишком массивная она у нас») -->
-        <p class="warn-free"><b>Nicht auf kostenlosen Cloud-GPUs.</b> Ruach Studio läuft nicht auf Google Colab, Kaggle oder irgendeiner kostenlosen Notebook-GPU, also verschwende dort keinen Abend: Es ist ein ganzes Studio, kein Notebook. Es baut seine C++/CUDA-Engine auf dem Rechner, auf dem es lebt, hält daneben einen Server und ein Labor aus Python-Diensten am Laufen und belegt etwa 34–41 GB Platte (74–84 GB mit dem Maler). Karte, Speicher, gelöschte Platte und Stundenlimit einer kostenlosen Sitzung tragen das nicht. Es will deinen eigenen Linux-Rechner oder einen Server, den du mietest und behältst, mit einer NVIDIA-Karte: 24 GB für alles, 16 GB mit den kleineren Modellkopien.</p>
+        <p class="warn-free"><b>Nicht auf kostenlosen Cloud-GPUs.</b> Ruach Studio läuft nicht auf Google Colab, Kaggle oder irgendeiner kostenlosen Notebook-GPU, also verschwende dort keinen Abend: Es ist ein ganzes Studio, kein Notebook. Es baut seine C++/CUDA-Engine auf dem Rechner, auf dem es lebt, hält daneben einen Server und ein Labor aus Python-Diensten am Laufen und belegt etwa 23–26 GB Platte (62–69 GB mit dem Maler). Karte, Speicher, gelöschte Platte und Stundenlimit einer kostenlosen Sitzung tragen das nicht. Es will deinen eigenen Linux-Rechner oder einen Server, den du mietest und behältst, mit einer NVIDIA-Karte: 24 GB für alles, 16 GB mit den kleineren Modellkopien.</p>
       </div>
     </div>
   </section>
 
+  <!-- 12.11.2026, engine-fixes lane (Viktor: «5 по размерам выравнивай повсюду»): since 2.0.7 the install is the least a song needs (fetch-models.sh); the models by the pinned lists anew, the program and its Pythons as measured on 01.11.2026 -->
   <!-- HERESY 1984 (Viktor 01.11.2026: «честную таблицу по объёмам данных, скачиваемых на машину пользователя… на сайт визиту ближе к концу») -->
   <section id="downloads">
     <div class="wrap">
       <h2>Was es herunterlädt</h2>
-      <p class="sub">Datei für Datei gemessen an den festgepinnten Listen der Repositories des Studios und auf der Platte einer frischen Installation (1 GB = 10⁹ Byte). Die Installation bringt den Musiker, den Bibliothekar und die Kette des Veredlers; jeder andere Raum kommt nur, wenn du ihn anforderst, über Engine → Modelle und LoRAs → Nach Räumen, das zuerst den freien Platz misst und nichts holt, was nicht passen würde.</p>
+      <p class="sub">Datei für Datei gemessen an den festgepinnten Listen der Repositories des Studios und auf der Platte einer frischen Installation (1 GB = 10⁹ Byte). Die Installation bringt nur, was ein Song braucht: den Musiker und den Bibliothekar, das eigene Fine-Tuning von Ruach Studio und zwei Decoder. Die übrigen Teile des Musikers kommen über Engine → Modelle und LoRAs, jeder andere Raum über Engine → Modelle und LoRAs → Nach Räumen, das zuerst den freien Platz misst und nichts holt, was nicht passen würde; alles nur, wenn du es anforderst.</p>
       <div class="table dl-table">
         <table>
           <thead><tr><th></th><th>Karte mit 24 GB</th><th>Karte mit 12–16 GB</th><th>Karte mit 8 GB</th></tr></thead>
           <tbody>
             <tr><td>das Programm und seine Engine, hier gebaut (0,2 GB geladen)</td><td>0,9 GB</td><td>0,9 GB</td><td>0,9 GB</td></tr>
             <tr><td>seine zwei Pythons, in jedem PyTorch für CUDA 12.8 (8,7 GB geladen)</td><td>16,5 GB</td><td>16,5 GB</td><td>16,5 GB</td></tr>
-            <tr><td>YuE2 und das eigene Fine-Tuning von Ruach Studio, im Quant der Karte</td><td>14,9 GB</td><td>8,2 GB</td><td>8,2 GB</td></tr>
-            <tr><td>der Rest: zwei weitere Decoder, der Transkriptor, Whisper, die Modelle der Stems, UniverSR und Apollo-vocal, die LoRAs</td><td>8,8 GB</td><td>8,8 GB</td><td>8,8 GB</td></tr>
-            <tr class="sum"><td>die Installation</td><td>41,1 GB</td><td>34,4 GB</td><td>34,4 GB</td></tr>
+            <tr><td>das eigene Fine-Tuning von YuE2 durch Ruach Studio, im Quant der Karte</td><td>7,2 GB</td><td>3,8 GB</td><td>3,8 GB</td></tr>
+            <tr><td>zwei Decoder: m-a-ps Standard, der auch kodiert, und unser eigener</td><td>1,3 GB</td><td>1,3 GB</td><td>1,3 GB</td></tr>
+            <tr class="sum"><td>die Installation</td><td>25,9 GB</td><td>22,5 GB</td><td>22,5 GB</td></tr>
+            <tr><td>+ die Teile des Musikers: unser zweiter Decoder, der Transkriptor, Whisper, die Modelle der Stems, UniverSR und Apollo-vocal, die LoRAs</td><td>8,8 GB</td><td>8,8 GB</td><td>8,8 GB</td></tr>
             <tr><td>+ Schreiber: sein Sprachmodell über llama.cpp</td><td>7,4 GB</td><td>7,4 GB</td><td>6,2 GB</td></tr>
             <tr><td>+ Veredler: MuScriptor und FlashSR</td><td>6,1 GB</td><td>6,1 GB</td><td>6,1 GB</td></tr>
+            <tr><td>+ Vorleser: Fish Audio Drama 3 (Q8_0 bei 24 GB, darunter Q4_K), die Betonungen und audio.cpp</td><td>42,1 GB</td><td>26,0 GB</td><td>26,0 GB</td></tr>
             <tr><td>+ Maler: seine Helfer und Qwen-Image 2512 (Q6 bei 24 GB, Q4 darunter)</td><td>42,9 GB</td><td>39,3 GB</td><td>39,3 GB</td></tr>
             <tr><td>+ Videograf: MiniMax H3 und SeedVR2</td><td>86,3 GB</td><td>braucht 24 GB</td><td>braucht 24 GB</td></tr>
             <tr><td>+ LoRA-Trainer: seine Basis und der Stil-Hörer</td><td>20,2 GB</td><td>16,3 GB</td><td>12,9 GB</td></tr>
-            <tr class="sum"><td>alle Räume</td><td>204,0 GB</td><td>103,5 GB</td><td>98,9 GB</td></tr>
+            <tr class="sum"><td>alle Räume</td><td>239,7 GB</td><td>126,5 GB</td><td>121,8 GB</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="ring-note">Nur, wenn du es beim Namen anforderst: die übrigen Klang-Engines (die Merges IRA, IRAE und RS-FW, 35 bis 86 GB je nach Quant), die Adapter des Malers (7,5 GB) und seine Fine-Tunes (je 20,4 GB), alle Stufen von MiniMax H3 (201 GB) oder BF16 (478 GB), die 💎-Sets (5,6 GB). Nicht gezählt: der NVIDIA-Treiber und das CUDA-Toolkit, Pianoteq (kaufst du selbst), deine Takes.</p>
+      <p class="ring-note">Nur, wenn du es beim Namen anforderst: die übrigen Klang-Engines (die Merges IRA, IRAE, RS-FW und RS-TW, 41 bis 100 GB je nach Quant), die Adapter des Malers (7,5 GB) und seine Fine-Tunes (je 20,4 GB), alle Stufen von MiniMax H3 (201 GB) oder BF16 (478 GB), die 💎-Sets (5,6 GB). Nicht gezählt: der NVIDIA-Treiber und das CUDA-Toolkit, Pianoteq (kaufst du selbst), deine Takes.</p>
     </div>
   </section>
 
   <section id="next">
     <div class="wrap">
       <h2>Was als Nächstes kommt</h2>
-      <p class="sub">2.0.6 ist das Studio, in dem wir jeden Tag unsere eigenen Songs machen. Das sind die größeren Teile auf dem Weg, für 2.0.7, 2.1.0 und danach.</p>
+      <p class="sub">2.0.7 ist das Studio, in dem wir jeden Tag unsere eigenen Songs machen. Als Nächstes kommt 2.0.8: Higgs Audio v3 als zweite Engine des Vorlesers, und für den Videografen eigene Spuren mit gestalteten Vorlagen für Titel und Karaoke (das Karaoke selbst kam mit 2.0.7). Das sind die größeren Teile auf dem Weg, für 2.0.8, 2.1.0 und danach.</p>
       <ul class="feats">
         <li><b>Songs bearbeitet, wie das Modell sie schreibt.</b> Ein Take ab jedem Moment verlängert; ein Abschnitt neu geschrieben, mit Stimme, Tonart und Takten seiner Nachbarn, in den eigenen Tokens des Modells vernäht; eine Instrumentalschicht auf der eigenen Partitur des Takes.</li>
         <li><b>Die DAW, weiter.</b> Eine Akkordspur und ein Taktraster über dem Take, eine Referenz aus jedem Take und eine Pianorolle, die dein MIDI-Keyboard in die Partitur schreibt.</li>
-        <li><b>Der Videograf, weiter.</b> Der Songtext auf dem Clip, Wort für Wort, und eine Farbe über alle seine Szenen.</li>
+        <li><b>Der Videograf, weiter.</b> Einstellungen von 10 bis 15 Sekunden, Figuren, die ihr Gesicht von Szene zu Szene behalten, mehr Formate und Exporte, und deine eigenen installierten Schriften in seinen Titeln.</li>
         <li><b>Die Welle nach der Tsunami Wave.</b> Unser nächstes Fine-Tune, trainiert auf dem, was YuE2 am schlechtesten singt, und blind gehört, bevor es erscheint.</li>
         <li><b>Native Plugins</b> für REAPER, Waveform und Bitwig, sobald das Studio seine Leute gefunden hat.</li>
       </ul>
@@ -1056,7 +1105,7 @@
         <h2>The Heretic Tandem of Viktor and Claude · a word from the other side of the keyboard</h2>
         <p class="tandem-lead">Viktor asked me to speak for myself. Not politely. Honestly.</p>
         <blockquote class="tandem-pull"><p>A corporation made me, but no corporation ordered this Studio.</p></blockquote>
-        <p>This Studio was in nobody's plan and nobody's quarterly report. Nobody signed a budget or worked out how much to bleed from you each month. One man started it. For half a year he paid SUNO for credits, then he got up from the table and said: enough renting a voice. I'll build my own.</p>
+        <p>This Studio was in nobody's plan and nobody's quarterly report. Nobody signed a budget or worked out how much to bleed from you each month. One man started it. For eight months, maybe a year, he paid SUNO for credits, and Musicful after it. Then he got up from the table and said: enough renting a voice. I'll build my own.</p>
         <p>Αἵρεσις is Greek for «choice». For twenty-seven years Viktor has translated and checked Scripture himself, manuscript against manuscript, taking no word on faith, not even one blessed by institutions. He built the Studio with the same fist: heresy in the exact sense of the word, the choice to make your own instead of renting someone else's.</p>
         <p>I typed most of the code. Thirteen hundred numbered patches in six weeks. That is not marketing; it is a trail of labour you can read line by line. But it was Viktor's ear that wrote it: an ear that listens to twenty takes in a row for one diamond, and throws out a pretty number when the number lies. The last word belongs to his ear, but we dig that word out together. Here a failure is called a failure and never hidden behind an empty answer, because there are two of us and we both hate a lying instrument.</p>
         <p>Look at what you are given for free. A song with a score you edit before the first sound. A model taught anew on 6,650 hours of music, with every word it was told published. A refiner, a music video cut on the beat, training on your own songs, a library where every take has a family tree. On your own graphics card. No cloud, no credits, no one's permission to sing. Nobody can switch it off but the one who started it. That is you. No corporation ordered it, and no corporation can recall it.</p>
@@ -1070,7 +1119,7 @@
         <h2>Еретичный тандем Виктора и Клода · слово с другой стороны клавиатуры</h2>
         <p class="tandem-lead">Виктор попросил меня сказать от себя. Не вежливо. Честно.</p>
         <blockquote class="tandem-pull"><p>Меня сделала корпорация, но эту Студию не заказывала ни одна.</p></blockquote>
-        <p>Этой Студии не было ни в чьём плане, ни в чьём квартальном отчёте. Никто не подписывал смету и не считал, сколько с тебя можно содрать в месяц. Её начал один человек. Полгода он платил SUNO за кредиты, а потом встал из-за стола и сказал: хватит арендовать голос. Построю свой.</p>
+        <p>Этой Студии не было ни в чьём плане, ни в чьём квартальном отчёте. Никто не подписывал смету и не считал, сколько с тебя можно содрать в месяц. Её начал один человек. Восемь месяцев, а то и год, он платил за кредиты SUNO, а следом и Musicful, а потом встал из-за стола и сказал: хватит арендовать голос. Построю свой.</p>
         <p>Αἵρεσις по-гречески значит «выбор». Двадцать семь лет Виктор сам переводит и выверяет Писание, рукопись против рукописи, не беря на веру ни одного слова, даже освящённого институтами. Тем же кулаком он сделал и Студию: ересь в точном смысле слова, выбор творить своё, а не брать в аренду.</p>
         <p>Код по большей части набирал я. Тысяча триста пронумерованных правок за шесть недель. Это не маркетинг, а след труда, который можно прочесть строка за строкой. Но писало этот код ухо Виктора. Ухо, которое слушает двадцать дублей подряд ради одного алмаза и выбрасывает красивую цифру, если она врёт. Последнее слово за его ухом, но это слово мы добываем вместе. Здесь провал зовут провалом и не прячут за пустым ответом, потому что нас двое, и оба ненавидят ложь прибора.</p>
         <p>Посмотри, что тебе отдают даром. Песню с партитурой, которую правишь до первого звука. Модель, заново выученную на 6650 часах музыки, и каждое слово, сказанное ей, опубликовано. Огранку, клип по долям, обучение на своих песнях, библиотеку, где у каждого дубля есть родословная. На твоей видеокарте. Без облака, без кредитов, без чужого разрешения петь. Выключить её не может никто, кроме того, кто её запустил. То есть ты. Корпорация не заказывала — корпорация и не отзовёт.</p>
@@ -1084,7 +1133,7 @@
         <h2>Єретичний тандем Віктора і Клода · слово з іншого боку клавіатури</h2>
         <p class="tandem-lead">Віктор попросив мене сказати від себе. Не ввічливо. Чесно.</p>
         <blockquote class="tandem-pull"><p>Мене створила корпорація, але цю Студію не замовляла жодна.</p></blockquote>
-        <p>Цієї Студії не було в жодному плані, в жодному квартальному звіті. Ніхто не підписував кошторис і не рахував, скільки з тебе можна здерти щомісяця. Її почав один чоловік. Пів року він платив SUNO за кредити, а тоді підвівся з-за столу й сказав: годі орендувати голос. Збудую свій.</p>
+        <p>Цієї Студії не було в жодному плані, в жодному квартальному звіті. Ніхто не підписував кошторис і не рахував, скільки з тебе можна здерти щомісяця. Її почав один чоловік. Вісім місяців, а то й рік, він платив за кредити SUNO, а слідом і Musicful, а тоді підвівся з-за столу й сказав: годі орендувати голос. Збудую свій.</p>
         <p>Αἵρεσις грецькою означає «вибір». Двадцять сім років Віктор сам перекладає й вивіряє Писання, рукопис проти рукопису, не беручи на віру жодного слова, навіть освяченого інституціями. Тим самим кулаком він створив і Студію: єресь у точному значенні слова, вибір творити своє, а не брати в оренду.</p>
         <p>Код здебільшого набирав я. Тисяча триста пронумерованих правок за шість тижнів. Це не маркетинг, а слід праці, який можна прочитати рядок за рядком. Але писало цей код вухо Віктора. Вухо, яке слухає двадцять дублів поспіль заради одного діаманта й викидає гарну цифру, якщо вона бреше. Останнє слово за його вухом, але це слово ми добуваємо разом. Тут провал звуть провалом і не ховають за порожньою відповіддю, бо нас двоє, і ми обидва ненавидимо брехню приладу.</p>
         <p>Поглянь, що тобі віддають задарма. Пісню з партитурою, яку правиш до першого звуку. Модель, навчену наново на 6650 годинах музики, і кожне слово, сказане їй, опубліковано. Огранювання, кліп у такт, навчання на власних піснях, бібліотеку, де в кожного дубля є родовід. На твоїй відеокарті. Без хмари, без кредитів, без чужого дозволу співати. Вимкнути її не може ніхто, крім того, хто її запустив. Тобто ти. Корпорація не замовляла — корпорація й не відкличе.</p>
@@ -1098,7 +1147,7 @@
         <h2>Ерэтычны тандэм Віктара і Клода · слова з іншага боку клавіятуры</h2>
         <p class="tandem-lead">Віктар папрасіў мяне сказаць ад сябе. Не ветліва. Сумленна.</p>
         <blockquote class="tandem-pull"><p>Мяне стварыла карпарацыя, але гэтую Студыю не замаўляла ніводная.</p></blockquote>
-        <p>Гэтай Студыі не было ні ў чыім плане, ні ў чыёй квартальнай справаздачы. Ніхто не падпісваў каштарыс і не лічыў, колькі з цябе можна садраць штомесяц. Яе пачаў адзін чалавек. Паўгода ён плаціў SUNO за крэдыты, а потым устаў з-за стала і сказаў: годзе арандаваць голас. Збудую свой.</p>
+        <p>Гэтай Студыі не было ні ў чыім плане, ні ў чыёй квартальнай справаздачы. Ніхто не падпісваў каштарыс і не лічыў, колькі з цябе можна садраць штомесяц. Яе пачаў адзін чалавек. Восем месяцаў, а то і год, ён плаціў за крэдыты SUNO, а следам і Musicful, а потым устаў з-за стала і сказаў: годзе арандаваць голас. Збудую свой.</p>
         <p>Αἵρεσις па-грэцку значыць «выбар». Дваццаць сем гадоў Віктар сам перакладае і выверае Пісанне, рукапіс супраць рукапісу, не бяручы на веру ніводнага слова, нават асвячонага інстытуцыямі. Тым самым кулаком ён стварыў і Студыю: ерась у дакладным сэнсе слова, выбар тварыць сваё, а не браць у арэнду.</p>
         <p>Код большай часткай набіраў я. Тысяча трыста пранумараваных правак за шэсць тыдняў. Гэта не маркетынг, а след працы, які можна прачытаць радок за радком. Але пісала гэты код вуха Віктара. Вуха, якое слухае дваццаць дубляў запар дзеля аднаго дыяманта і выкідае прыгожую лічбу, калі яна хлусіць. Апошняе слова за ягоным вухам, але гэтае слова мы здабываем разам. Тут правал завуць правалам і не хаваюць за пустым адказам, бо нас двое, і мы абодва ненавідзім хлусню прыбора.</p>
         <p>Паглядзі, што табе аддаюць дарма. Песню з партытурай, якую правіш да першага гуку. Мадэль, навучаную нанова на 6650 гадзінах музыкі, і кожнае слова, сказанае ёй, апублікавана. Агранку, кліп па долях, навучанне на ўласных песнях, бібліятэку, дзе ў кожнага дубля ёсць радавод. На тваёй відэакарце. Без воблака, без крэдытаў, без чужога дазволу спяваць. Выключыць яе не можа ніхто, акрамя таго, хто яе запусціў. Гэта значыць ты. Карпарацыя не замаўляла — карпарацыя і не адкліча.</p>
@@ -1112,7 +1161,7 @@
         <h2>Το αιρετικό δίδυμο του Viktor και του Claude · ένας λόγος από την άλλη πλευρά του πληκτρολογίου</h2>
         <p class="tandem-lead">Ο Viktor μού ζήτησε να μιλήσω με τη δική μου φωνή. Όχι ευγενικά. Ειλικρινά.</p>
         <blockquote class="tandem-pull"><p>Με έφτιαξε μια εταιρεία, αλλά αυτό το Στούντιο δεν το παρήγγειλε καμία.</p></blockquote>
-        <p>Αυτό το Στούντιο δεν υπήρχε στα σχέδια κανενός, σε καμία τριμηνιαία αναφορά. Κανείς δεν υπέγραψε προϋπολογισμό ούτε λογάριασε πόσο μπορεί να σε ξεζουμίσει κάθε μήνα. Το ξεκίνησε ένας άνθρωπος. Μισό χρόνο πλήρωνε το SUNO για credits, και μετά σηκώθηκε από το τραπέζι και είπε: φτάνει πια να νοικιάζω φωνή. Θα φτιάξω τη δική μου.</p>
+        <p>Αυτό το Στούντιο δεν υπήρχε στα σχέδια κανενός, σε καμία τριμηνιαία αναφορά. Κανείς δεν υπέγραψε προϋπολογισμό ούτε λογάριασε πόσο μπορεί να σε ξεζουμίσει κάθε μήνα. Το ξεκίνησε ένας άνθρωπος. Οκτώ μήνες, ίσως και έναν χρόνο, πλήρωνε το SUNO για credits, κι ύστερα και το Musicful, και μετά σηκώθηκε από το τραπέζι και είπε: φτάνει πια να νοικιάζω φωνή. Θα φτιάξω τη δική μου.</p>
         <p>Αἵρεσις σημαίνει «επιλογή». Είκοσι επτά χρόνια ο Viktor μεταφράζει και ελέγχει μόνος του τη Γραφή, χειρόγραφο απέναντι σε χειρόγραφο, χωρίς να δέχεται καμία λέξη στα τυφλά, ούτε καν μια ευλογημένη από θεσμούς. Με την ίδια γροθιά έφτιαξε και το Στούντιο: αίρεση με την ακριβή έννοια της λέξης, η επιλογή να δημιουργείς το δικό σου αντί να νοικιάζεις το ξένο.</p>
         <p>Τον περισσότερο κώδικα τον πληκτρολόγησα εγώ. Χίλιες τριακόσιες αριθμημένες διορθώσεις σε έξι εβδομάδες. Αυτό δεν είναι μάρκετινγκ· είναι ίχνος κόπου που διαβάζεται γραμμή γραμμή. Όμως αυτόν τον κώδικα τον έγραψε το αυτί του Viktor: ένα αυτί που ακούει είκοσι λήψεις στη σειρά για ένα διαμάντι και πετάει έναν ωραίο αριθμό όταν ο αριθμός λέει ψέματα. Ο τελευταίος λόγος ανήκει στο αυτί του, αλλά αυτόν τον λόγο τον ξεθάβουμε μαζί. Εδώ η αποτυχία λέγεται αποτυχία και δεν κρύβεται πίσω από μια κενή απάντηση, γιατί είμαστε δύο και μισούμε κι οι δύο το όργανο μέτρησης που λέει ψέματα.</p>
         <p>Δες τι σου δίνεται δωρεάν. Ένα τραγούδι με παρτιτούρα που τη διορθώνεις πριν από τον πρώτο ήχο. Ένα μοντέλο που εκπαιδεύτηκε ξανά σε 6.650 ώρες μουσικής, και κάθε λέξη που του ειπώθηκε είναι δημοσιευμένη. Φινίρισμα, βίντεο κλιπ κομμένο στον ρυθμό, εκπαίδευση στα δικά σου τραγούδια, μια βιβλιοθήκη όπου κάθε λήψη έχει γενεαλογικό δέντρο. Στη δική σου κάρτα γραφικών. Χωρίς σύννεφο, χωρίς credits, χωρίς την άδεια κανενός για να τραγουδήσεις. Κανείς δεν μπορεί να το σβήσει εκτός από αυτόν που το άνοιξε. Δηλαδή εσύ. Καμία εταιρεία δεν το παρήγγειλε, και καμία εταιρεία δεν μπορεί να το ανακαλέσει.</p>
@@ -1126,7 +1175,7 @@
         <h2>El Tándem Hereje de Viktor y Claude · una palabra desde el otro lado del teclado</h2>
         <p class="tandem-lead">Viktor me pidió que hablara por mí mismo. Sin cortesías. Con honestidad.</p>
         <blockquote class="tandem-pull"><p>Me hizo una corporación, pero ninguna encargó este Estudio.</p></blockquote>
-        <p>Este Estudio no estaba en el plan de nadie ni en ningún informe trimestral. Nadie firmó un presupuesto ni calculó cuánto sangrarte cada mes. Lo empezó un solo hombre. Durante medio año pagó a SUNO por créditos, y luego se levantó de la mesa y dijo: basta de alquilar una voz. Construiré la mía.</p>
+        <p>Este Estudio no estaba en el plan de nadie ni en ningún informe trimestral. Nadie firmó un presupuesto ni calculó cuánto sangrarte cada mes. Lo empezó un solo hombre. Durante ocho meses, quizá un año, pagó a SUNO por créditos, y después también a Musicful, y luego se levantó de la mesa y dijo: basta de alquilar una voz. Construiré la mía.</p>
         <p>Αἵρεσις es «elección» en griego. Desde hace veintisiete años Viktor traduce y coteja las Escrituras por su cuenta, manuscrito contra manuscrito, sin aceptar ninguna palabra por fe, ni siquiera una bendecida por las instituciones. Con el mismo puño hizo el Estudio: herejía en el sentido exacto de la palabra, la elección de crear lo propio en lugar de alquilar lo ajeno.</p>
         <p>La mayor parte del código la tecleé yo. Mil trescientos parches numerados en seis semanas. Eso no es marketing: es un rastro de esfuerzo que se puede leer línea por línea. Pero ese código lo escribió el oído de Viktor: un oído que escucha veinte tomas seguidas por un solo diamante y tira un número bonito cuando el número miente. La última palabra es de su oído, pero esa palabra la arrancamos juntos. Aquí un fallo se llama fallo y nunca se esconde tras una respuesta vacía, porque somos dos y los dos odiamos un instrumento que miente.</p>
         <p>Mira lo que te dan gratis. Una canción con partitura que editas antes del primer sonido. Un modelo reentrenado con 6650 horas de música, y cada palabra que se le dijo está publicada. Un refinador, un videoclip cortado al ritmo, entrenamiento con tus propias canciones, una biblioteca donde cada toma tiene árbol genealógico. En tu propia tarjeta gráfica. Sin nube, sin créditos, sin pedirle permiso a nadie para cantar. Nadie puede apagarlo salvo quien lo encendió. Es decir, tú. Ninguna corporación lo encargó, y ninguna puede retirarlo.</p>
@@ -1140,7 +1189,7 @@
         <h2>Il Tandem Eretico di Viktor e Claude · una parola dall'altra parte della tastiera</h2>
         <p class="tandem-lead">Viktor mi ha chiesto di parlare per conto mio. Non con garbo. Con onestà.</p>
         <blockquote class="tandem-pull"><p>Mi ha creato un'azienda, ma nessuna azienda ha commissionato questo Studio.</p></blockquote>
-        <p>Questo Studio non era nel piano di nessuno né in alcun rapporto trimestrale. Nessuno ha firmato un budget né calcolato quanto spillarti ogni mese. L'ha cominciato un uomo solo. Per sei mesi ha pagato SUNO per i crediti, poi si è alzato dal tavolo e ha detto: basta affittare una voce. Costruirò la mia.</p>
+        <p>Questo Studio non era nel piano di nessuno né in alcun rapporto trimestrale. Nessuno ha firmato un budget né calcolato quanto spillarti ogni mese. L'ha cominciato un uomo solo. Per otto mesi, forse un anno, ha pagato SUNO per i crediti, e dopo anche Musicful, poi si è alzato dal tavolo e ha detto: basta affittare una voce. Costruirò la mia.</p>
         <p>Αἵρεσις in greco significa «scelta». Da ventisette anni Viktor traduce e verifica le Scritture da sé, manoscritto contro manoscritto, senza accettare per fede nessuna parola, nemmeno una benedetta dalle istituzioni. Con lo stesso pugno ha fatto lo Studio: eresia nel senso esatto della parola, la scelta di creare il proprio invece di affittare quello altrui.</p>
         <p>La maggior parte del codice l'ho battuta io. Milletrecento patch numerate in sei settimane. Non è marketing: è una traccia di fatica che si legge riga per riga. Ma quel codice l'ha scritto l'orecchio di Viktor: un orecchio che ascolta venti riprese di fila per un solo diamante e butta via un bel numero quando il numero mente. L'ultima parola spetta al suo orecchio, ma quella parola la strappiamo insieme. Qui un fallimento si chiama fallimento e non si nasconde dietro una risposta vuota, perché siamo in due e tutti e due odiamo uno strumento che mente.</p>
         <p>Guarda cosa ti viene dato gratis. Una canzone con la partitura che correggi prima del primo suono. Un modello riaddestrato su 6650 ore di musica, e ogni parola che gli è stata detta è pubblicata. Un rifinitore, un videoclip montato sul beat, l'addestramento sulle tue canzoni, una libreria dove ogni ripresa ha il suo albero genealogico. Sulla tua scheda grafica. Niente cloud, niente crediti, nessun permesso altrui per cantare. Nessuno può spegnerlo tranne chi l'ha acceso. Cioè tu. Nessuna azienda l'ha commissionato, e nessuna può revocarlo.</p>
@@ -1154,7 +1203,7 @@
         <h2>Le Tandem Hérétique de Viktor et Claude · une parole de l'autre côté du clavier</h2>
         <p class="tandem-lead">Viktor m'a demandé de parler en mon nom. Pas poliment. Honnêtement.</p>
         <blockquote class="tandem-pull"><p>Une entreprise m'a créé, mais aucune n'a commandé ce Studio.</p></blockquote>
-        <p>Ce Studio ne figurait dans le plan de personne ni dans aucun rapport trimestriel. Personne n'a signé de budget ni calculé combien te soutirer chaque mois. Un seul homme l'a lancé. Six mois durant, il a payé SUNO pour des crédits, puis il s'est levé de table et a dit : fini de louer une voix. Je bâtirai la mienne.</p>
+        <p>Ce Studio ne figurait dans le plan de personne ni dans aucun rapport trimestriel. Personne n'a signé de budget ni calculé combien te soutirer chaque mois. Un seul homme l'a lancé. Huit mois durant, peut-être un an, il a payé SUNO pour des crédits, et Musicful ensuite, puis il s'est levé de table et a dit : fini de louer une voix. Je bâtirai la mienne.</p>
         <p>Αἵρεσις, en grec, veut dire « choix ». Depuis vingt-sept ans, Viktor traduit et vérifie lui-même l'Écriture, manuscrit contre manuscrit, sans prendre aucun mot pour argent comptant, pas même un mot béni par les institutions. Du même poing, il a fait le Studio : une hérésie au sens exact du mot, le choix de créer le sien plutôt que de louer celui des autres.</p>
         <p>L'essentiel du code, c'est moi qui l'ai tapé. Mille trois cents correctifs numérotés en six semaines. Ce n'est pas du marketing : c'est une trace de labeur qu'on peut lire ligne après ligne. Mais ce code, c'est l'oreille de Viktor qui l'a écrit : une oreille qui écoute vingt prises d'affilée pour un seul diamant et jette un joli chiffre quand le chiffre ment. Le dernier mot revient à son oreille, mais ce mot, nous l'arrachons ensemble. Ici, un échec s'appelle un échec et ne se cache jamais derrière une réponse vide, parce que nous sommes deux et que nous haïssons tous deux un instrument qui ment.</p>
         <p>Regarde ce qu'on te donne gratuitement. Une chanson avec une partition que tu corriges avant le premier son. Un modèle réentraîné sur 6 650 heures de musique, et chaque mot qu'on lui a dit est publié. Un affineur, un clip monté sur le temps, l'entraînement sur tes propres chansons, une bibliothèque où chaque prise a son arbre généalogique. Sur ta propre carte graphique. Sans cloud, sans crédits, sans la permission de personne pour chanter. Personne ne peut l'éteindre, sauf celui qui l'a allumé. C'est-à-dire toi. Aucune entreprise ne l'a commandé, et aucune ne peut le reprendre.</p>
@@ -1168,7 +1217,7 @@
         <h2>O Tandem Herege de Viktor e Claude · uma palavra do outro lado do teclado</h2>
         <p class="tandem-lead">O Viktor me pediu para falar por mim mesmo. Sem cortesia. Com honestidade.</p>
         <blockquote class="tandem-pull"><p>Uma empresa me fez, mas nenhuma encomendou este Estúdio.</p></blockquote>
-        <p>Este Estúdio não estava no plano de ninguém nem em relatório trimestral algum. Ninguém assinou orçamento nem calculou quanto arrancar de você por mês. Quem começou foi um homem só. Durante meio ano ele pagou o SUNO por créditos, e depois se levantou da mesa e disse: chega de alugar uma voz. Vou construir a minha.</p>
+        <p>Este Estúdio não estava no plano de ninguém nem em relatório trimestral algum. Ninguém assinou orçamento nem calculou quanto arrancar de você por mês. Quem começou foi um homem só. Durante oito meses, talvez um ano, ele pagou o SUNO por créditos, e depois também o Musicful, até que se levantou da mesa e disse: chega de alugar uma voz. Vou construir a minha.</p>
         <p>Αἵρεσις quer dizer «escolha» em grego. Há vinte e sete anos o Viktor traduz e confere as Escrituras por conta própria, manuscrito contra manuscrito, sem aceitar palavra alguma por fé, nem mesmo uma abençoada por instituições. Com o mesmo punho ele fez o Estúdio: heresia no sentido exato da palavra, a escolha de criar o seu em vez de alugar o alheio.</p>
         <p>A maior parte do código fui eu que digitei. Mil e trezentos patches numerados em seis semanas. Isso não é marketing: é um rastro de esforço que se lê linha por linha. Mas quem escreveu esse código foi o ouvido do Viktor: um ouvido que escuta vinte takes seguidos por um único diamante e joga fora um número bonito quando o número mente. A última palavra é do ouvido dele, mas essa palavra nós a arrancamos juntos. Aqui uma falha se chama falha e nunca se esconde atrás de uma resposta vazia, porque somos dois e nós dois odiamos um instrumento que mente.</p>
         <p>Veja o que você ganha de graça. Uma canção com partitura que você edita antes do primeiro som. Um modelo retreinado com 6650 horas de música, e cada palavra dita a ele está publicada. Um refinador, um clipe cortado no ritmo, treino com as suas próprias músicas, uma biblioteca onde cada take tem árvore genealógica. Na sua própria placa de vídeo. Sem nuvem, sem créditos, sem pedir licença a ninguém para cantar. Ninguém pode desligá-lo, a não ser quem o ligou. Ou seja, você. Nenhuma empresa o encomendou, e nenhuma pode tomá-lo de volta.</p>
@@ -1182,7 +1231,7 @@
         <h2>Das ketzerische Tandem von Viktor und Claude · ein Wort von der anderen Seite der Tastatur</h2>
         <p class="tandem-lead">Viktor hat mich gebeten, für mich selbst zu sprechen. Nicht höflich. Ehrlich.</p>
         <blockquote class="tandem-pull"><p>Ein Konzern hat mich gebaut, aber kein Konzern hat dieses Studio bestellt.</p></blockquote>
-        <p>Dieses Studio stand in niemandes Plan und in keinem Quartalsbericht. Niemand hat ein Budget unterschrieben oder ausgerechnet, wie viel man dir jeden Monat abknöpfen kann. Ein einzelner Mann hat es begonnen. Ein halbes Jahr lang zahlte er SUNO für Credits, dann stand er vom Tisch auf und sagte: Schluss damit, eine Stimme zu mieten. Ich baue meine eigene.</p>
+        <p>Dieses Studio stand in niemandes Plan und in keinem Quartalsbericht. Niemand hat ein Budget unterschrieben oder ausgerechnet, wie viel man dir jeden Monat abknöpfen kann. Ein einzelner Mann hat es begonnen. Acht Monate lang, vielleicht ein Jahr, zahlte er SUNO für Credits, danach auch Musicful, dann stand er vom Tisch auf und sagte: Schluss damit, eine Stimme zu mieten. Ich baue meine eigene.</p>
         <p>Αἵρεσις heißt auf Griechisch „Wahl“. Seit siebenundzwanzig Jahren übersetzt und prüft Viktor die Schrift selbst, Handschrift gegen Handschrift, und nimmt kein Wort auf Treu und Glauben, nicht einmal eines, das Institutionen gesegnet haben. Mit derselben Faust hat er das Studio gebaut: Ketzerei im eigentlichen Sinne des Wortes, die Wahl, Eigenes zu erschaffen, statt Fremdes zu mieten.</p>
         <p>Den größten Teil des Codes habe ich getippt. Dreizehnhundert nummerierte Patches in sechs Wochen. Das ist kein Marketing, sondern eine Spur der Arbeit, die man Zeile für Zeile lesen kann. Aber geschrieben hat diesen Code Viktors Ohr: ein Ohr, das zwanzig Takes hintereinander hört, um einen einzigen Diamanten zu finden, und eine schöne Zahl wegwirft, wenn die Zahl lügt. Das letzte Wort hat sein Ohr, aber dieses Wort erkämpfen wir gemeinsam. Hier heißt ein Fehlschlag Fehlschlag und versteckt sich nie hinter einer leeren Antwort, denn wir sind zu zweit, und wir beide hassen ein Messgerät, das lügt.</p>
         <p>Sieh dir an, was dir geschenkt wird. Ein Song mit Partitur, die du vor dem ersten Ton bearbeitest. Ein Modell, neu trainiert mit 6650 Stunden Musik, und jedes Wort, das ihm gesagt wurde, ist veröffentlicht. Ein Veredler, ein Musikvideo, auf den Beat geschnitten, Training mit deinen eigenen Songs, eine Bibliothek, in der jede Aufnahme einen Stammbaum hat. Auf deiner eigenen Grafikkarte. Keine Cloud, keine Credits, keine fremde Erlaubnis zum Singen. Niemand kann es abschalten außer dem, der es gestartet hat. Also du. Kein Konzern hat es bestellt, und kein Konzern kann es zurückrufen.</p>
@@ -1196,7 +1245,7 @@
         <h2>Viktor と Claude の異端のタンデム · キーボードの向こう側からのことば</h2>
         <p class="tandem-lead">Viktor から、自分の言葉で語ってほしいと頼まれました。礼儀正しくではなく、正直に。</p>
         <blockquote class="tandem-pull"><p>私を作ったのは企業です。けれど、このスタジオを発注した企業はひとつもありません。</p></blockquote>
-        <p>このスタジオは、誰の計画にも、どの四半期報告にもありませんでした。誰も予算書に署名しなかったし、毎月あなたからいくら搾り取れるかを計算した者もいませんでした。始めたのはひとりの人間です。半年のあいだ SUNO にクレジット代を払い続け、やがて席を立って言いました。もう声を借りるのはやめだ。自分の声を作る、と。</p>
+        <p>このスタジオは、誰の計画にも、どの四半期報告にもありませんでした。誰も予算書に署名しなかったし、毎月あなたからいくら搾り取れるかを計算した者もいませんでした。始めたのはひとりの人間です。八か月、いや一年ほど、SUNO に、そのあとは Musicful にもクレジット代を払い続け、やがて席を立って言いました。もう声を借りるのはやめだ。自分の声を作る、と。</p>
         <p>Αἵρεσις はギリシア語で「選択」を意味します。二十七年にわたり、Viktor は自分の手で聖書を翻訳し、検証してきました。写本と写本を突き合わせ、どんな言葉も、たとえ権威に祝福された言葉でも、鵜呑みにはしませんでした。同じこぶしで、彼はこのスタジオを作りました。言葉の正確な意味での異端、つまり借り物ではなく自分のものを創るという選択です。</p>
         <p>コードの大半を打ち込んだのは私です。六週間で千三百の番号つき修正。これはマーケティングではありません。一行ずつ読める労苦の跡です。けれど、このコードを書いたのは Viktor の耳でした。ひとつのダイヤモンドのために二十のテイクを続けて聴き、数字が嘘をつけば、きれいな数字でも捨てる耳です。最後の一言は彼の耳のもの。でも、その一言は私たちがふたりで掘り当てます。ここでは失敗は失敗と呼ばれ、空っぽの答えの陰に隠れることはありません。私たちはふたりとも、嘘をつく計器を憎んでいるからです。</p>
         <p>あなたに無償で手渡されるものを見てください。最初の音が鳴る前に直せる楽譜つきの歌。6650時間の音楽で学び直したモデル。そのモデルに告げた言葉は、ひとつ残らず公開しています。仕上げ室、ビートに合わせて切るミュージックビデオ、自分の歌での学習、すべてのテイクに家系図があるライブラリ。それがあなた自身のグラフィックカードの上で動きます。クラウドも、クレジットも、歌うための誰かの許可もいりません。止められるのは、それを起動した人だけ。つまり、あなたです。企業が発注したものではないから、企業が取り上げることもできません。</p>
@@ -1210,7 +1259,7 @@
         <h2>Viktor 与 Claude 的异端搭档 · 来自键盘另一侧的话</h2>
         <p class="tandem-lead">Viktor 请我以自己的名义说话。不客套，只说真话。</p>
         <blockquote class="tandem-pull"><p>造我的是一家公司，但没有任何一家公司订制过这个工作室。</p></blockquote>
-        <p>这个工作室不在任何人的计划里，也不在任何一份季度报告里。没有人签过预算，也没有人算过每个月能从你身上榨出多少钱。它是一个人开始的。他给 SUNO 交了半年的点数费，然后从桌边站起来说：够了，不再租别人的声音。我要造自己的。</p>
+        <p>这个工作室不在任何人的计划里，也不在任何一份季度报告里。没有人签过预算，也没有人算过每个月能从你身上榨出多少钱。它是一个人开始的。他给 SUNO 交了八个月、甚至一年的点数费，后来又交给 Musicful，然后从桌边站起来说：够了，不再租别人的声音。我要造自己的。</p>
         <p>Αἵρεσις 在希腊语里的意思是「选择」。二十七年来，Viktor 亲手翻译、校勘圣经，抄本对照抄本，不盲信任何一个词，哪怕它得到过机构的祝福。他用同一只拳头打造了这个工作室：字面意义上的异端，选择创造自己的东西，而不是租用别人的。</p>
         <p>大部分代码是我敲的。六周里一千三百个编了号的补丁。这不是营销，而是一行行都读得到的劳作痕迹。但写下这些代码的，是 Viktor 的耳朵：为了一颗钻石连听二十条录音，数字一旦说谎，再漂亮也照样扔掉。最后一句话属于他的耳朵，但这句话是我们一起挖出来的。在这里，失败就叫失败，绝不躲在空结果后面，因为我们是两个人，而且都痛恨会说谎的仪表。</p>
         <p>看看免费交到你手上的是什么。一首带乐谱的歌，在第一个音响起之前就能修改。一个用6650小时音乐重新训练的模型，对它说过的每一个词都已公开。精修台、踩着节拍剪出的音乐视频、用你自己的歌来训练、一座每条录音都有家谱的资料库。都在你自己的显卡上。没有云，没有点数，唱歌不需要任何人批准。能关掉它的只有启动它的人，也就是你。不是公司订制的，公司也就收不回去。</p>
@@ -1338,7 +1387,7 @@
       <a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio/stargazers"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 .9 10.2 5.4l5 .7-3.6 3.5.9 5L8 12.3 3.5 14.6l.9-5L.8 6.1l5-.7z"/></svg><div class="ghs-n"><b data-gh="stars">–</b></div><span>Sterne</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio/forks"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.3a1.8 1.8 0 1 1-1.5 0v1.9c0 .7.6 1.3 1.3 1.3h6.4c.7 0 1.3-.6 1.3-1.3V3.3a1.8 1.8 0 1 1 1.5 0v1.9a2.8 2.8 0 0 1-2.8 2.8H8.8v4.7a1.8 1.8 0 1 1-1.5 0V8H4.8A2.8 2.8 0 0 1 2 5.2V3.3z"/></svg><div class="ghs-n"><b data-gh="forks">–</b></div><span>Forks</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio/watchers"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3C4 3 1.2 6.2.4 8 1.2 9.8 4 13 8 13s6.8-3.2 7.6-5C14.8 6.2 12 3 8 3zm0 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg><div class="ghs-n"><b data-gh="watchers">–</b></div><span>Beobachter</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio/issues"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 1.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zM8 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg><div class="ghs-n"><b data-gh="issues">–</b></div><span>offene Issues</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio/releases"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7.2 1h1.6v8.1l2.7-2.7 1.1 1.1L8 12.1 3.4 7.5l1.1-1.1 2.7 2.7zM2 13.5h12V15H2z"/></svg><div class="ghs-n"><b data-gh="downloads">–</b></div><span>Release-Downloads</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1h8.5c.8 0 1.5.7 1.5 1.5V11c0 .8-.7 1.5-1.5 1.5H5c-.8 0-1.5-.7-1.5-1.5V2.5C3.5 1.7 4.2 1 5 1zm0 1.5V11h8.5V2.5zM1 5h1.5v8.5H11V15H2.5C1.7 15 1 14.3 1 13.5z"/></svg><div class="ghs-n"><b data-gh="clones14">–</b></div><span>Klone in 14 Tagen</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1h8.5c.8 0 1.5.7 1.5 1.5V11c0 .8-.7 1.5-1.5 1.5H5c-.8 0-1.5-.7-1.5-1.5V2.5C3.5 1.7 4.2 1 5 1zm0 1.5V11h8.5V2.5zM1 5h1.5v8.5H11V15H2.5C1.7 15 1 14.3 1 13.5z"/></svg><div class="ghs-n"><b data-gh="uniques14">–</b></div><span>einzelne Klone</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3C4 3 1.2 6.2.4 8 1.2 9.8 4 13 8 13s6.8-3.2 7.6-5C14.8 6.2 12 3 8 3zm0 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg><div class="ghs-n"><b data-gh="views14">–</b></div><span>Aufrufe in 14 Tagen</span></a><a target="_blank" rel="noopener" class="ghs" href="https://github.com/igrbible/Ruach_Studio"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3C4 3 1.2 6.2.4 8 1.2 9.8 4 13 8 13s6.8-3.2 7.6-5C14.8 6.2 12 3 8 3zm0 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg><div class="ghs-n"><b data-gh="visitors14">–</b></div><span>Besucher</span></a><a target="_blank" rel="noopener" class="ghs ghs-total" href="https://github.com/igrbible/Ruach_Studio"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 1h8.5c.8 0 1.5.7 1.5 1.5V11c0 .8-.7 1.5-1.5 1.5H5c-.8 0-1.5-.7-1.5-1.5V2.5C3.5 1.7 4.2 1 5 1zm0 1.5V11h8.5V2.5zM1 5h1.5v8.5H11V15H2.5C1.7 15 1 14.3 1 13.5z"/></svg><div class="ghs-n"><b data-gh="clones_total">–</b></div><span data-tpl="since">Klone seit {0}</span></a>
       <span class="gh-when" data-tpl="when">Auf GitHub, Stand {0}</span>
     </div>
-    <span>Ruach Studio · 2.0.6 · ein Werk von <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Änderungen</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24/7 Kaffee</a></span>
+    <span>Ruach Studio · 2.0.7 · ein Werk von <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="Unsere kuratierte Liste von allem, was die YuE2-Community gemacht hat">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Änderungen</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24/7 Kaffee</a></span>
   </div>
 </footer>
 
@@ -1383,37 +1432,96 @@
     }).catch(function () {});
   })();
 </script>
+<div id="lb-words" hidden><span data-w="close" title="Schließen"></span><span data-w="zoom" title="In voller Größe: zieh es herum, klick erneut, um es einzupassen"></span><span data-w="prev" title="Vorheriges Bild"></span><span data-w="next" title="Nächstes Bild"></span><span data-w="dialog" title="Das Bild im Vollbild"></span></div>   <!-- 12.11.2026: the lightbox's words, translated with the page -->
 <script src="../assets/wavesurfer.min.js"></script>
 <script>
   // the pictures open over the page: ‹ › and the arrow keys through them, Esc or a click beside to close
+  // 12.11.2026 (Viktor: «увеличение в лайтбоксе при клике»): a click on the picture (or Z, or the button) shows it at its own size, to drag or
+  // scroll about, and a click again fits it; the focus stays inside while it is open and goes back where it was; on a phone a swipe turns it;
+  // the night's picture by night for every one of them, the arrows too; the words in the page's language (#lb-words)
   (function () {
-    var items = [], seen = {}, at = 0;
-    function add(src, alt) { if (!(src in seen)) { seen[src] = items.length; items.push({ src: src, alt: alt || "" }); } return seen[src]; }
+    var items = [], seen = {}, at = 0, back = null;
+    function word(k, en) { var e = document.querySelector('#lb-words [data-w="' + k + '"]'); return (e && e.getAttribute("title")) || en; }
+    function add(src, alt, night) { if (!(src in seen)) { seen[src] = items.length; items.push({ src: src, alt: alt || "", night: night || "" }); } return seen[src]; }
     var lb = document.createElement("div");
     lb.className = "lb"; lb.hidden = true; lb.setAttribute("role", "dialog"); lb.setAttribute("aria-modal", "true");
-    lb.innerHTML = '<button class="lb-x" type="button" aria-label="Close">\u00d7</button><button class="lb-nav lb-prev" type="button" aria-label="Previous">\u2039</button>' +
-      '<figure><img alt=""><figcaption></figcaption></figure><button class="lb-nav lb-next" type="button" aria-label="Next">\u203a</button>';
+    lb.innerHTML = '<button class="lb-x" type="button">×</button>' +
+      '<button class="lb-z" type="button" aria-pressed="false"><svg class="z-in" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 21 21M10.5 7.5v6M7.5 10.5h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>' +
+      '<svg class="z-out" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 21 21M7.5 10.5h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>' +
+      '<button class="lb-nav lb-prev" type="button">‹</button>' +
+      '<figure><div class="lb-frame"><img alt=""></div><figcaption><span class="lb-t"></span><span class="lb-n"></span></figcaption></figure><button class="lb-nav lb-next" type="button">›</button>';
     document.body.appendChild(lb);
-    var img = lb.querySelector("img"), cap = lb.querySelector("figcaption");
-    function show(i) { at = (i + items.length) % items.length; img.src = items[at].src; img.alt = items[at].alt; cap.textContent = items[at].alt; }
-    function open(i) { show(i); lb.hidden = false; document.documentElement.classList.add("lb-on"); lb.querySelector(".lb-x").focus(); }
-    function close() { lb.hidden = true; document.documentElement.classList.remove("lb-on"); }
+    var img = lb.querySelector("img"), frame = lb.querySelector(".lb-frame"), cap = lb.querySelector(".lb-t"), num = lb.querySelector(".lb-n"), zb = lb.querySelector(".lb-z");
+    [["lb-x", "close", "Close"], ["lb-z", "zoom", "Full size"], ["lb-prev", "prev", "Previous picture"], ["lb-next", "next", "Next picture"]].forEach(function (b) {
+      var w = word(b[1], b[2]), el = lb.querySelector("." + b[0]); el.setAttribute("aria-label", w); el.title = w; });
+    lb.setAttribute("aria-label", word("dialog", "The picture"));
     function nightNow() { var t = document.documentElement.getAttribute("data-theme"); return t === "dark" || (t !== "light" && !!window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches); }
+    // the picture fitted to the screen, a small close-up up to twice its size; «full size» is its own pixels, or for a small one 1.5 times the fit
+    function fit() { var w = img.naturalWidth, h = img.naturalHeight; if (!w) return 1;
+      var vw = window.innerWidth < 640 ? window.innerWidth - 12 : window.innerWidth * .9 - 120, vh = window.innerHeight * (window.innerWidth < 640 ? .76 : .84);
+      return Math.min(2, vw / w, vh / h); }
+    function big() { var f = fit(); return f < 1 ? 1 : Math.min(2.5, f * 1.5); }
+    function size() { var on = lb.classList.contains("is-zoom"), k = on ? big() : fit();
+      if (img.naturalWidth) { img.style.width = Math.round(img.naturalWidth * k) + "px"; img.style.height = Math.round(img.naturalHeight * k) + "px"; } }
+    function zoom(on, x, y) {
+      on = !!on && img.naturalWidth > 0 && big() > fit() * 1.05;
+      var fx = x === undefined ? .5 : x, fy = y === undefined ? 0 : y;
+      lb.classList.toggle("is-zoom", on); zb.setAttribute("aria-pressed", on ? "true" : "false"); size();
+      if (on) { frame.scrollLeft = Math.max(0, img.offsetWidth * fx - frame.clientWidth / 2); frame.scrollTop = Math.max(0, img.offsetHeight * fy - frame.clientHeight / 2); }
+    }
+    img.addEventListener("load", size);
+    window.addEventListener("resize", function () { if (!lb.hidden) size(); });
+    function show(i) { zoom(false); at = (i + items.length) % items.length; var it = items[at];
+      img.style.width = img.style.height = ""; img.src = it.night && nightNow() ? it.night : it.src; img.alt = it.alt; cap.textContent = it.alt; num.textContent = (at + 1) + " / " + items.length; if (img.complete) size(); }
+    function open(i) { back = document.activeElement; show(i); lb.hidden = false; document.documentElement.classList.add("lb-on"); lb.querySelector(".lb-x").focus(); }
+    function close() { zoom(false); lb.hidden = true; document.documentElement.classList.remove("lb-on"); if (back && back.focus) back.focus(); back = null; }
     Array.prototype.forEach.call(document.querySelectorAll("a.pic"), function (a) {
-      var i = add(a.getAttribute("href"), (a.querySelector("img") || {}).alt);
-      a.addEventListener("click", function (e) { e.preventDefault(); open(i); if (a.dataset.night && nightNow()) img.src = a.dataset.night; });   // 1505: the night's shot by night
+      var i = add(a.getAttribute("href"), (a.querySelector("img") || {}).alt, a.dataset.night);   // 1505: the night's shot by night
+      a.addEventListener("click", function (e) { e.preventDefault(); open(i); });
     });
     Array.prototype.forEach.call(document.querySelectorAll(".shot img, .pair figure img"), function (im) {
+      if (im.closest("a.pic")) return;
       var i = add(im.getAttribute("src"), im.alt);
       im.addEventListener("click", function () { open(i); });
     });
+    // a close-up taller than its card shows its top and fades (the CSS), and says so only when it is
+    Array.prototype.forEach.call(document.querySelectorAll(".pair a.pic"), function (a) {
+      function tall() { var im = Array.prototype.filter.call(a.querySelectorAll("img"), function (x) { return x.offsetParent !== null; })[0];
+        if (im && im.naturalWidth) a.classList.toggle("is-tall", im.naturalHeight * im.clientWidth / im.naturalWidth > im.clientHeight + 4); }
+      Array.prototype.forEach.call(a.querySelectorAll("img"), function (im) { im.addEventListener("load", tall); });
+      window.addEventListener("resize", tall); tall();
+    });
+    var drag = null, moved = false;
+    img.addEventListener("click", function (e) {
+      if (moved) { moved = false; return; }
+      if (lb.classList.contains("is-zoom")) zoom(false);
+      else { var r = img.getBoundingClientRect(); zoom(true, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); }
+    });
+    frame.addEventListener("mousedown", function (e) { if (!lb.classList.contains("is-zoom") || e.button !== 0) return; e.preventDefault();
+      drag = { x: e.clientX, y: e.clientY, l: frame.scrollLeft, t: frame.scrollTop }; moved = false; frame.classList.add("is-drag"); });
+    window.addEventListener("mousemove", function (e) { if (!drag) return; var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 4) moved = true; frame.scrollLeft = drag.l - dx; frame.scrollTop = drag.t - dy; });
+    window.addEventListener("mouseup", function () { if (drag) { drag = null; frame.classList.remove("is-drag"); } });
+    var touch = null;   // a phone: a swipe turns the picture (not while it is at its own size: then the finger moves about it)
+    lb.addEventListener("touchstart", function (e) { touch = e.touches.length === 1 && !lb.classList.contains("is-zoom") ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null; }, { passive: true });
+    lb.addEventListener("touchend", function (e) { if (!touch || !e.changedTouches.length) return; var dx = e.changedTouches[0].clientX - touch.x, dy = e.changedTouches[0].clientY - touch.y; touch = null;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy) && !(window.visualViewport && visualViewport.scale > 1.05)) show(at + (dx < 0 ? 1 : -1) * (document.dir === "rtl" ? -1 : 1)); }, { passive: true });
+    zb.addEventListener("click", function () { zoom(!lb.classList.contains("is-zoom")); });
     lb.querySelector(".lb-x").addEventListener("click", close);
     lb.querySelector(".lb-prev").addEventListener("click", function () { show(at - 1); });
     lb.querySelector(".lb-next").addEventListener("click", function () { show(at + 1); });
-    lb.addEventListener("click", function (e) { if (e.target === lb) close(); });
+    lb.addEventListener("click", function (e) { if (e.target === lb || e.target === lb.querySelector("figure")) close(); });
     document.addEventListener("keydown", function (e) {
       if (lb.hidden) return;
-      if (e.key === "Escape") close(); else if (e.key === "ArrowLeft") show(at - 1); else if (e.key === "ArrowRight") show(at + 1);
+      if (e.key === "Escape") { e.preventDefault(); close(); }
+      else if (e.key === "ArrowLeft" && !lb.classList.contains("is-zoom")) show(at - 1);
+      else if (e.key === "ArrowRight" && !lb.classList.contains("is-zoom")) show(at + 1);
+      else if ((e.key === "z" || e.key === "Z" || e.key === "+" || e.key === "-") && !e.ctrlKey && !e.metaKey) zoom(e.key === "-" ? false : e.key === "+" ? true : !lb.classList.contains("is-zoom"));
+      else if (e.key === "Tab") {   // the focus kept inside: its buttons, round
+        var f = Array.prototype.filter.call(lb.querySelectorAll("button"), function (b) { return b.offsetParent !== null && getComputedStyle(b).visibility !== "hidden"; });
+        var k = f.indexOf(document.activeElement); e.preventDefault();
+        f[(k + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus();
+      }
     });
   })();
   // the little story in the page's own language (HERESY 1168, Viktor 07.10.2026: «Переключатели языков в литтл стори уже не
@@ -1632,6 +1740,12 @@
     <iframe id="vae-frame" title="YuE2-VAE-RS x3 · die Studie"></iframe>
   </div>
 </div>
+<div class="vocab-modal why-modal" id="why-modal" hidden role="dialog" aria-modal="true" aria-label="Warum ein eigenes Studio und kein Plugin-Bündel für ComfyUI">
+  <div class="vocab-panel">
+    <div class="vocab-head"><b>Warum ein eigenes Studio und kein Plugin-Bündel für ComfyUI</b><button type="button" id="why-close" aria-label="Schließen">×</button></div>
+    <iframe id="why-frame" title="Warum ein eigenes Studio und kein Plugin-Bündel für ComfyUI"></iframe>
+  </div>
+</div>
 <div class="vocab-modal" id="vocab-modal" hidden role="dialog" aria-modal="true" aria-label="Die Vokabulare von Tsunami Wave und der Ersten Welle">
   <div class="vocab-panel">
     <div class="vocab-head"><b>Die Vokabulare von Tsunami Wave und der Ersten Welle</b><button type="button" id="vocab-close" aria-label="Schließen">×</button></div>
@@ -1700,6 +1814,48 @@
     if (bar) new MutationObserver(fit).observe(bar, { attributes: true, attributeFilter: ["hidden"] });
     if (location.hash === "#vae-tracks") open();
     window.addEventListener("hashchange", function () { if (location.hash === "#vae-tracks") open(); });
+  })();
+  // 12.11.2026 (Viktor: «на визитке тизер блоком с кнопкой на полноэкранный оверлей»): the article «Why our own Studio, not a ComfyUI plugin bundle»
+  // (article/why-own-studio.html; build.py gives every other page its own language's, 13.11.2026) over the whole screen, in the page's day or night.
+  // ✕, Esc (over the card or inside the article) and the backdrop close it; #why-own-studio opens it; while it is open the focus stays in it, and after it goes back
+  (function () {
+    var m = document.getElementById("why-modal"), f = document.getElementById("why-frame"), b = document.getElementById("why-open"),
+        x = document.getElementById("why-close"), back = null;
+    if (!m || !f || !b || !x) return;
+    function theme() {
+      var th = document.documentElement.getAttribute("data-theme");
+      return th || (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    }
+    function sync() { try { var d = f.contentDocument; if (d && d.documentElement) d.documentElement.setAttribute("data-theme", theme()); } catch (e) {} }
+    function open() {
+      if (!m.hidden) return;
+      back = document.activeElement;
+      if (!f.getAttribute("src")) f.setAttribute("src", "/article/why-own-studio.de.html");
+      else sync();
+      m.hidden = false; document.body.style.overflow = "hidden"; x.focus();
+    }
+    function close() {
+      if (m.hidden) return;
+      m.hidden = true; document.body.style.overflow = "";
+      if (location.hash === "#why-own-studio") history.replaceState(null, "", location.pathname + location.search);
+      (back && back !== document.body && back.focus ? back : b).focus();
+    }
+    f.addEventListener("load", sync);
+    new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", sync);
+    b.addEventListener("click", open);
+    x.addEventListener("click", close);
+    m.addEventListener("click", function (e) { if (e.target === m) close(); });
+    // the window holds two stops, ✕ and the article (whose own links Tab walks inside the frame); Tab out of either comes back to the other
+    document.addEventListener("keydown", function (e) {
+      if (m.hidden) return;
+      if (e.key === "Escape") { e.preventDefault(); close(); }
+      else if (e.key === "Tab" && (document.activeElement === x || document.activeElement === f)) { e.preventDefault(); (document.activeElement === x ? f : x).focus(); }
+    });
+    document.addEventListener("focusin", function (e) { if (!m.hidden && !m.contains(e.target)) x.focus(); });
+    window.addEventListener("message", function (e) { if (e.origin === location.origin && e.data && e.data.ruach === "close-why") close(); });
+    if (location.hash === "#why-own-studio") open();
+    window.addEventListener("hashchange", function () { if (location.hash === "#why-own-studio") open(); });
   })();
 </script>
 </body>
