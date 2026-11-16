@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
   push:
     branches: [win-native]
-    paths: ["build/**", ".github/workflows/windows.yml"]
+    paths: ["build/**", "lab/**", ".github/workflows/windows.yml"]
 
 # no shared concurrency: a push for the lab must not cancel the CUDA build an hour into its kernels
 
