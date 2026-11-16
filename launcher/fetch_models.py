@@ -50,6 +50,12 @@ def card_quant():
 def env():
     e = dict(os.environ, HF_HOME=str(ROOT / "tmp" / "hf"), HF_HUB_CACHE=str(ROOT / "tmp" / "hf" / "hub"),
              HUGGINGFACE_HUB_CACHE=str(ROOT / "tmp" / "hf" / "hub"), HF_HUB_DISABLE_TELEMETRY="1", PYTHONUTF8="1")
+    if NT and not e.get("SSL_CERT_FILE"):                # 2649: uv's Python on a fresh Windows trusts no root yet: certifi's bundle
+        try:
+            import certifi
+            e["SSL_CERT_FILE"] = certifi.where()
+        except ImportError:
+            pass
     scripts = Path(sys.executable).parent
     hf = scripts / ("hf.exe" if NT else "hf")
     if hf.is_file():

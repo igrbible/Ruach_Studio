@@ -6,6 +6,8 @@ setlocal
 cd /d "%~dp0"
 set PYTHONUTF8=1
 set PYTHONUNBUFFERED=1
+rem HERESY 2649: uv's Python on a fresh Windows trusts no root yet: certifi's bundle for every Python of the Studio
+if exist "%~dp0.venv\Lib\site-packages\certifi\cacert.pem" set "SSL_CERT_FILE=%~dp0.venv\Lib\site-packages\certifi\cacert.pem"
 if not exist ".venv\Scripts\python.exe" (
   powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0launcher\install.ps1" %*
   if errorlevel 1 (
