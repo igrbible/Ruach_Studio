@@ -737,14 +737,20 @@ static bool lora_prepare(LoraSet * set, const std::string & name, int64_t rows, 
 #if defined(__GNUC__) && __GNUC__ >= 12 && (defined(__x86_64__) || defined(__i386__)) && !defined(__clang__)   // gcc 11: «no dispatcher found» for arch= clones
 __attribute__((target_clones("arch=x86-64-v3", "default")))
 #endif
+// HERESY 2649: MSVC spells it __restrict, GCC and Clang __restrict__
+#if defined(_MSC_VER)
+#    define LORA_RESTRICT __restrict
+#else
+#    define LORA_RESTRICT __restrict__
+#endif
 static void lora_rows_update(float * w, int64_t r0, int64_t r1, int64_t cols, const float * b, int64_t rank,
                              const float * a) {
     for (int64_t r = r0; r < r1; r++) {
-        float * __restrict__       out = w + r * cols;
-        const float * __restrict__ br  = b + r * rank;
+        float * LORA_RESTRICT       out = w + r * cols;
+        const float * LORA_RESTRICT br  = b + r * rank;
         for (int64_t k = 0; k < rank; k++) {
             const float                coef = br[k];
-            const float * __restrict__ ar   = a + k * cols;
+            const float * LORA_RESTRICT ar   = a + k * cols;
             for (int64_t i = 0; i < cols; i++) {
                 out[i] += coef * ar[i];
             }

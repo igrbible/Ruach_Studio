@@ -56,8 +56,7 @@ jobs:
         uses: Jimver/cuda-toolkit@v0.2.30
         with:
           cuda: "12.8.1"
-          method: network
-          sub-packages: '["nvcc", "cudart", "cublas", "cublas_dev", "visual_studio_integration", "crt", "nvrtc", "nvrtc_dev", "nvtx"]'
+          method: local          # the whole toolkit: a network install with picked sub-packages failed (exit 3772776473) on windows-2022
       - name: Configure and build (CUDA)
         shell: pwsh
         run: |
@@ -84,3 +83,34 @@ jobs:
           name: ruach-engine-windows-x64-cuda12
           path: ruach-engine-windows-x64-cuda12.zip
           retention-days: 14
+
+  lab:
+    name: Lab · windows-x64 · starts and answers
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Every lab file compiles
+        run: python -m compileall -q lab
+      - name: The lab starts on Windows and answers /health (its own standard library only)
+        shell: pwsh
+        run: |
+          $env:PYTHONUTF8 = "1"
+          $p = Start-Process python -ArgumentList "lab/lab.py" -PassThru -NoNewWindow -RedirectStandardOutput lab-out.txt -RedirectStandardError lab-err.txt
+          $ok = $false
+          foreach ($i in 1..30) {
+            Start-Sleep 2
+            try { $r = Invoke-WebRequest http://127.0.0.1:41870/health -UseBasicParsing -TimeoutSec 5; "health: " + $r.Content.Substring(0, [Math]::Min(400, $r.Content.Length)); $ok = $true; break } catch { if ($p.HasExited) { break } }
+          }
+          if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+          "---- the lab's log (last 60 lines)"
+          Get-Content lab-err.txt -Tail 60
+          if (-not $ok) { throw "the lab did not answer on Windows" }
+      - name: The standard-library tests
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $env:PYTHONUTF8 = "1"
+          foreach ($t in "test_places.py", "test_paths.py") { "== $t"; python lab/$t 2>&1 | Select-Object -Last 15 }

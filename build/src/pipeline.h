@@ -624,9 +624,9 @@ static AudioTokenizer * require_atok(Yue2Pipeline * p) {
     return m;
 }
 
-static SheetSage2 * require_ss2(Yue2Pipeline * p, bool refined = false, bool small = false) {
+static SheetSage2 * require_ss2(Yue2Pipeline * p, bool refined = false, bool q8 = false) {   // HERESY 2649: not «small» (Windows defines it as char)
     ModelKey     k = { MODEL_SS2, refined ? p->transcriber_refined_path
-                                          : small && !p->transcriber_small_path.empty() ? p->transcriber_small_path : p->transcriber_path, {} };
+                                          : q8 && !p->transcriber_small_path.empty() ? p->transcriber_small_path : p->transcriber_path, {} };
     SheetSage2 * m = store_require_ss2(p->store, k);
     if (m) {
         m->use_flash_attn = m->use_flash_attn && !p->params.no_fa;
@@ -646,12 +646,12 @@ static bool pipeline_transcribe(Yue2Pipeline * p,
                                 bool           refined  = false,    // HERESY 2328: SheetSage2-Refined instead of SheetSage2
                                 bool           key_mode = false,    // its keys with modes
                                 int            rope     = -1,       // HERESY 2359: SheetSage2's angles, 1 bf16, 0 exact, -1 as loaded
-                                bool           small    = false) {  // HERESY 2625: the Q8_0 pair instead of the F32 one
+                                bool           q8       = false) {  // HERESY 2625: the Q8_0 pair instead of the F32 one (2649: not «small»)
     if (refined && p->transcriber_refined_path.empty()) {
         *error = "SheetSage2-Refined is not installed (models/SheetSage2-Refined-F16.gguf)";
         return false;
     }
-    SheetSage2 * m = require_ss2(p, refined, small);
+    SheetSage2 * m = require_ss2(p, refined, q8);
     if (!m) {
         *error = "transcriber unavailable";
         return false;

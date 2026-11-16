@@ -2456,15 +2456,15 @@ static const char * transcriber_mode(bool refined, int rope) {
 }
 
 static void run_transcribe(std::shared_ptr<Job> job, std::vector<float> audio, bool melody_only, bool refined, bool key_mode, int rope,
-                           bool small) {
+                           bool q8) {   // HERESY 2649: not «small» (Windows defines it as char)
     job->started.store(true);
     active_job_set(job);
     fprintf(stderr, "[Server] Transcribe job %s: %.1f s of audio, %s, %s%s, %s\n", job->id.c_str(),
             (double) audio.size() / MERT_SAMPLE_RATE, melody_only ? "melody only" : "full score",
             transcriber_mode(refined, rope),
-            refined && key_mode ? " with modes" : "", small ? "Q8_0" : "F32 (or as started)");
+            refined && key_mode ? " with modes" : "", q8 ? "Q8_0" : "F32 (or as started)");
     std::string abc, error;
-    bool ok = pipeline_transcribe(&g_pipeline, audio.data(), (int) audio.size(), melody_only, &abc, &error, refined, key_mode, rope, small);
+    bool ok = pipeline_transcribe(&g_pipeline, audio.data(), (int) audio.size(), melody_only, &abc, &error, refined, key_mode, rope, q8);
     active_job_set(nullptr);
     if (!ok) {
         fprintf(stderr, "[Server] Transcribe job %s failed: %s\n", job->id.c_str(), error.c_str());
@@ -2474,7 +2474,7 @@ static void run_transcribe(std::shared_ptr<Job> job, std::vector<float> audio, b
     // HERESY 2328: the answer says which transcriber wrote the score; HERESY 2359: and with which angles SheetSage2 wrote it
     std::string body = json_string("abc", abc);
     body.insert(body.size() - 1, std::string(",\"transcriber\":\"") + transcriber_name(refined, rope) + "\"");
-    body.insert(body.size() - 1, std::string(",\"precision\":\"") + (small ? "Q8_0" : "F32") + "\"");   // HERESY 2625
+    body.insert(body.size() - 1, std::string(",\"precision\":\"") + (q8 ? "Q8_0" : "F32") + "\"");   // HERESY 2625
     job->result_body = body;
     job->result_mime = "application/json";
     job->status.store(JobStatus::DONE);
@@ -3333,8 +3333,8 @@ int main(int argc, char ** argv) {
             auto job = job_create();
             // HERESY 2625: precision=q8 (or small) asks SheetSage2 with MERT in Q8_0, where the server was given them; F32 otherwise
             std::string prec  = field("precision");
-            bool        small = !refined && (prec == "q8" || prec == "Q8_0" || prec == "small") && !g_transcriber_small_path.empty();
-            work_push([job, audio, melody_only, refined, key_mode, rope, small] { run_transcribe(job, audio, melody_only, refined, key_mode, rope, small); });
+            bool        q8    = !refined && (prec == "q8" || prec == "Q8_0" || prec == "small") && !g_transcriber_small_path.empty();
+            work_push([job, audio, melody_only, refined, key_mode, rope, q8] { run_transcribe(job, audio, melody_only, refined, key_mode, rope, q8); });
             res.set_content(json_string("id", job->id), "application/json");
         });
     }
