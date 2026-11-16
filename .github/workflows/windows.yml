@@ -37,6 +37,13 @@ jobs:
         run: |
           New-Item -ItemType Directory -Path dist | Out-Null
           Get-ChildItem build-cpu -Recurse -Include *.exe, *.dll | Where-Object { $_.FullName -match '\\Release\\' } | Copy-Item -Destination dist
+          # HERESY 2649 (found on a clean Windows 11 in VirtualBox, 16.11.2026: STATUS_DLL_NOT_FOUND): the MSVC runtime and its OpenMP beside the
+          # exe, app-local as Microsoft lets them be redistributed; a fresh Windows has neither vcruntime140, msvcp140 nor vcomp140
+          $vs = Get-ChildItem "C:\Program Files\Microsoft Visual Studio\2022\*\VC\Redist\MSVC\*\x64" -Directory | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $vs) { throw "no Visual C++ redistributable folder on the runner" }
+          Copy-Item (Join-Path $vs.FullName "Microsoft.VC143.CRT\*.dll") dist
+          Copy-Item (Join-Path $vs.FullName "Microsoft.VC143.OpenMP\*.dll") dist
+          Get-ChildItem dist -Filter *.dll | Select-Object Name, Length | Format-Table -AutoSize | Out-String
           Compress-Archive -Path dist\* -DestinationPath ruach-engine-windows-x64-cpu.zip
       - uses: actions/upload-artifact@v4
         with:
@@ -74,6 +81,13 @@ jobs:
         run: |
           New-Item -ItemType Directory -Path dist | Out-Null
           Get-ChildItem build-cuda -Recurse -Include *.exe, *.dll | Where-Object { $_.FullName -match '\\Release\\' } | Copy-Item -Destination dist
+          # HERESY 2649 (found on a clean Windows 11 in VirtualBox, 16.11.2026: STATUS_DLL_NOT_FOUND): the MSVC runtime and its OpenMP beside the
+          # exe, app-local as Microsoft lets them be redistributed; a fresh Windows has neither vcruntime140, msvcp140 nor vcomp140
+          $vs = Get-ChildItem "C:\Program Files\Microsoft Visual Studio\2022\*\VC\Redist\MSVC\*\x64" -Directory | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $vs) { throw "no Visual C++ redistributable folder on the runner" }
+          Copy-Item (Join-Path $vs.FullName "Microsoft.VC143.CRT\*.dll") dist
+          Copy-Item (Join-Path $vs.FullName "Microsoft.VC143.OpenMP\*.dll") dist
+          Get-ChildItem dist -Filter *.dll | Select-Object Name, Length | Format-Table -AutoSize | Out-String
           foreach ($n in "cudart64_12.dll", "cublas64_12.dll", "cublasLt64_12.dll") { Copy-Item (Join-Path $env:CUDA_PATH "bin\$n") dist -ErrorAction SilentlyContinue }
           Compress-Archive -Path dist\* -DestinationPath ruach-engine-windows-x64-cuda12.zip
       - uses: actions/upload-artifact@v4
