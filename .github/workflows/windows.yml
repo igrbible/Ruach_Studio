@@ -1,0 +1,85 @@
+# The Studio's engine for Windows, native (no WSL): yue-server.exe and its tools under MSVC, CPU and CUDA.
+# HERESY 2649 (Viktor 16.11.2026: «Поставь в приоритет сборку Студии как нативное приложение Windows… добей этот Викноуз порт»).
+# The recipe follows timoncool/yue2.cpp's release workflow (MIT): Jimver's CUDA toolkit on windows-latest. No card is needed to build;
+# the CUDA kernels are compiled for Pascal (sm_61) to Blackwell (sm_120), PTX for what comes after; linked whole, as on Linux (no backend DLLs). Nothing here is signed (his word, 08.11).
+name: Windows engine
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [win-native]
+    paths: ["build/**", ".github/workflows/windows.yml"]
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cpu:
+    name: Engine · windows-x64 · CPU
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure and build (CPU)
+        shell: pwsh
+        run: |
+          cmake -S build -B build-cpu -G "Visual Studio 17 2022" -A x64 -DGGML_CUDA=OFF -DGGML_NATIVE=OFF -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON
+          cmake --build build-cpu --config Release -j $env:NUMBER_OF_PROCESSORS --target yue-server yue-synth yue-plan quantize neural-codec mp3-codec -- /v:minimal
+      - name: Smoke test
+        shell: pwsh
+        run: |
+          Get-ChildItem build-cpu\bin\Release, build-cpu\Release -Filter *.exe -ErrorAction SilentlyContinue | Select-Object Name, Length
+          $exe = Get-ChildItem build-cpu -Recurse -Filter yue-server.exe | Select-Object -First 1
+          if (-not $exe) { throw "no yue-server.exe" }
+          & $exe.FullName --help 2>&1 | Select-Object -First 15   # its usage, exit 1: it ran
+          $global:LASTEXITCODE = 0
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist | Out-Null
+          Get-ChildItem build-cpu -Recurse -Include *.exe, *.dll | Where-Object { $_.FullName -match '\\Release\\' } | Copy-Item -Destination dist
+          Compress-Archive -Path dist\* -DestinationPath ruach-engine-windows-x64-cpu.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ruach-engine-windows-x64-cpu
+          path: ruach-engine-windows-x64-cpu.zip
+          retention-days: 14
+
+  cuda:
+    name: Engine · windows-x64 · CUDA 12.8
+    runs-on: windows-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - name: CUDA toolkit
+        uses: Jimver/cuda-toolkit@v0.2.30
+        with:
+          cuda: "12.8.1"
+          method: network
+          sub-packages: '["nvcc", "cudart", "cublas", "cublas_dev", "visual_studio_integration", "crt", "nvrtc", "nvrtc_dev", "nvtx"]'
+      - name: Configure and build (CUDA)
+        shell: pwsh
+        run: |
+          cmake -S build -B build-cuda -G "Visual Studio 17 2022" -A x64 -T cuda="$env:CUDA_PATH" -DGGML_CUDA=ON -DGGML_CUDA_FA=ON -DGGML_NATIVE=OFF `
+            -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON "-DCMAKE_CUDA_ARCHITECTURES=61-real;70-real;75-real;80-real;86-real;89-real;120"
+          cmake --build build-cuda --config Release -j $env:NUMBER_OF_PROCESSORS --target yue-server yue-synth quantize -- /v:minimal
+      - name: Smoke test
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem build-cuda -Recurse -Filter yue-server.exe | Select-Object -First 1
+          if (-not $exe) { throw "no yue-server.exe" }
+          Get-ChildItem $exe.DirectoryName -Include *.exe, *.dll -Recurse | Select-Object Name, Length
+          & $exe.FullName --help 2>&1 | Select-Object -First 15   # its usage, exit 1: it ran (no card: the CUDA backend is not touched before)
+          $global:LASTEXITCODE = 0
+      - name: Package (the CUDA runtime DLLs beside)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist | Out-Null
+          Get-ChildItem build-cuda -Recurse -Include *.exe, *.dll | Where-Object { $_.FullName -match '\\Release\\' } | Copy-Item -Destination dist
+          foreach ($n in "cudart64_12.dll", "cublas64_12.dll", "cublasLt64_12.dll") { Copy-Item (Join-Path $env:CUDA_PATH "bin\$n") dist -ErrorAction SilentlyContinue }
+          Compress-Archive -Path dist\* -DestinationPath ruach-engine-windows-x64-cuda12.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ruach-engine-windows-x64-cuda12
+          path: ruach-engine-windows-x64-cuda12.zip
+          retention-days: 14
