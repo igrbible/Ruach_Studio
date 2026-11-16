@@ -93,7 +93,7 @@ jobs:
       - name: Every lab file compiles
         run: python -m compileall -q lab
       - name: What the lab imports at its start (numpy and soundfile; the jobs bring their own with the installer)
-        run: python -m pip install -q numpy soundfile
+        run: python -m pip install -q numpy soundfile psutil
       - name: The lab starts on Windows and answers /health (its own standard library only)
         shell: pwsh
         run: |
