@@ -99,13 +99,16 @@ script = (f'ROOT={str(KIT)!r}; source {str(SH)!r}; while IFS= read -r l; do rs_n
           'for n in YuE2-3B-Q8_0.gguf YuE2-3B-RS-TW-2.0x0.75-BF16.gguf YuE2-Vae-F32.gguf other.gguf; do rs_engine_gguf "$n"; done; '
           'for i in "artwork/Qwen-Image-2512/scheduler/*" models/YuE2-Vae-legacy-F32.gguf "whisper/whisper-large-v3-ct2-float16/*" '
           '"checkpoints/comfy/checkpoints/yue2_3b_bf16.safetensors" "models/upbundle/apollo/*"; do rs_hf_place "$i"; done')
-out = subprocess.run(["bash", "-c", script], input="\n".join(CORPUS) + "\n", capture_output=True, text=True).stdout.splitlines()
+# HERESY 2649: the shell twin is the Linux launcher's; on Windows «bash» is WSL's bash.exe, no shell of the Studio's
+out = (subprocess.run(["bash", "-c", script], input="\n".join(CORPUS) + "\n", capture_output=True, text=True).stdout.splitlines()
+       if os.name != "nt" else None)
 py = [paths.new_of(c) or "" for c in CORPUS]
 py += [str(paths.engine_gguf(n, KIT)) for n in ("YuE2-3B-Q8_0.gguf", "YuE2-3B-RS-TW-2.0x0.75-BF16.gguf", "YuE2-Vae-F32.gguf", "other.gguf")]
 py += ["\t".join(paths.hf_place(i)) for i in ("artwork/Qwen-Image-2512/scheduler/*", "models/YuE2-Vae-legacy-F32.gguf",
                                              "whisper/whisper-large-v3-ct2-float16/*", "checkpoints/comfy/checkpoints/yue2_3b_bf16.safetensors",
                                              "models/upbundle/apollo/*")]
-check(f"the shell's map is Python's ({len(CORPUS)} paths, engine_gguf, hf_place)", out == py,
+check(f"the shell's map is Python's ({len(CORPUS)} paths, engine_gguf, hf_place)" + (" (Windows: no shell twin, passed by)" if out is None else ""),
+      out is None or out == py,
       [(a, b) for a, b in zip(out, py) if a != b][:4] or (len(out), len(py)))
 
 print("the map")
