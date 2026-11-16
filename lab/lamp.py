@@ -9,7 +9,7 @@ waits stands in a queue (QUEUE, under its own short lock), first come first serv
 owner_first (a guest's run waits behind his); a waiting job says its place and the time ahead of it (job["lamp"], job["waiting"]), and only the head of the queue reaches for
 the lamp, so nobody slips past the line. An entry whose process is gone, or older than STALE_S, is dropped by the next reader.
 """
-import fcntl
+from winx import fcntl   # HERESY 2649: the fcntl module on Linux, its flock over msvcrt on Windows
 import json
 import os
 import threading

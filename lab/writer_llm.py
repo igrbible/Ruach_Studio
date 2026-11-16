@@ -38,7 +38,8 @@ answer's limit is the window minus that input, never more; a question that leave
 
 HERESY 2469: a question in flight can be stopped (cancel(): the connection to llama-server closed, which stops its generation), and a wait for the Arc
 with it."""
-import atexit, fcntl, http.client, json, os, signal, socket, subprocess, sys, threading, time, urllib.error, urllib.request
+import atexit, http.client, json, os, signal, socket, subprocess, sys, threading, time, urllib.error, urllib.request
+from winx import fcntl   # HERESY 2649: the fcntl module on Linux, its flock over msvcrt on Windows
 from pathlib import Path
 
 import gpu_guard

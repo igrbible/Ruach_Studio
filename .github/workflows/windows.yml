@@ -11,9 +11,7 @@ on:
     branches: [win-native]
     paths: ["build/**", ".github/workflows/windows.yml"]
 
-concurrency:
-  group: windows-${{ github.ref }}
-  cancel-in-progress: true
+# no shared concurrency: a push for the lab must not cancel the CUDA build an hour into its kernels
 
 jobs:
   cpu:
