@@ -53,6 +53,17 @@ int main() {
     why = yue2_score_broken(no_meter, &warn);
     check(why == "no meter (M:)", "a missing meter still stops it", "why «" + why + "»");
 
+    // HERESY 2631: score_fill's header
+    std::string w2;
+    std::string probe = "X:1\nT:\nM:4\nQ:1/4=110\n" + std::string(BODY);
+    std::string filled = yue2_score_fill_header(probe);
+    check(yue2_score_broken(filled, &w2).empty() && w2.empty(), "a header with M:4, no L:, no K: is filled and passes", filled.substr(0, 80));
+    check(filled.find("M:4\n") == std::string::npos && filled.find("M:4/4") != std::string::npos, "the malformed meter replaced in place, one meter", filled.substr(0, 80));
+    check(filled.compare(0, 4, "X:1\n") == 0, "X: stays first", filled.substr(0, 20));
+    check(yue2_score_fill_header(whole) == whole, "a whole score is left as it is", "");
+    std::string colons2 = "X:1\nT:\n" + std::string(BODY) + "|:::|\n";
+    check(!yue2_score_broken(yue2_score_fill_header(colons2)).empty(), "colons in a run are not rescued", "");
+    check(!yue2_score_broken(yue2_score_fill_header(bad_key)).empty(), "a key line that is not a key is not rescued", "");
     printf("%s\n", g_failed ? "FAILED" : "all cases hold");
     return g_failed ? 1 : 0;
 }

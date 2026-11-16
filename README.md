@@ -4,7 +4,8 @@
 
 <p align="center"><b>OSEM</b> <i>(say it: awesome)</i> · Open Source, Engaged &amp; Musical</p>
 
-<p align="center"><a href="https://ruachstudio.art">Website</a> · <a href="https://github.com/igrbible/Ruach_Studio">GitHub</a> · <a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Models on Hugging Face</a> · <a href="https://github.com/igrbible/Awesome-YUE2">Awesome YUE2</a> · <a href="docs/GUIDE.md">The guide</a> · <a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02"><b>☕ 24/7 coffee for Viktor and Claude</b></a></p>
+<p align="center"><a href="https://ruachstudio.art">Website</a> · <a href="https://github.com/igrbible/Ruach_Studio">GitHub</a> · <a href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Models on Hugging Face</a> · <a href="https://github.com/igrbible/Awesome-YUE2">Awesome YUE2</a> · <a href="docs/GUIDE.md">The guide</a></p>
+<p align="center"><a href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02"><b>☕ 24/7 coffee for Viktor and Claude</b></a></p>
 
 > Ruach Studio is open music generation that runs on your own hardware: the model, the score, the adapters and every take stay yours, and nothing is rented by the token. Open models are now good enough to stand on their own, and what was missing is the Studio around them: that is what we build, in the open. Music should be free to make and to share: whoever has no voice, no instrument and no studio still has the right to lay their thoughts and feelings onto sound.
 

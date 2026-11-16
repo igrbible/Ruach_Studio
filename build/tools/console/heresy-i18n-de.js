@@ -253,6 +253,29 @@ RuachI18n.add("de", {
 "Load an example: a random official demo, or one of ours by name (Readings…)": "Ein Beispiel laden: eine zufällige offizielle Demo oder eine von unseren beim Namen (Lesungen…)",
 "A random official demo": "Eine zufällige offizielle Demo",
 "Readings": "Lesungen",
+"All the curves in one chart, each in its own scale": "Alle Kurven in einem Diagramm, jede in ihrem eigenen Maßstab",
+"The curves together": "Die Kurven zusammen",
+"Each curve is drawn in its own scale, so their shapes lie one over another: the chips say each one's value now and hide it or show it again; under the cursor, every curve's value at that step.": "Jede Kurve ist in ihrem eigenen Maßstab gezeichnet, so liegen ihre Formen übereinander: Die Chips nennen den aktuellen Wert jeder Kurve und blenden sie aus oder wieder ein; unter dem Zeiger die Werte aller an diesem Schritt.",
+"the dots: the held-out tracks at each save": "Punkte: die zurückgehaltenen Tracks bei jeder Sicherung",
+"The ring": "Der Ring",
+"Rock ballad": "Rockballade",
+"Synth-pop": "Synthpop",
+"Folk-pop with a bandura": "Folk-Pop mit Bandura",
+"Gospel": "Gospel",
+"Britpop, a British accent": "Britpop, britischer Akzent",
+"Liquid drum and bass": "Liquid Drum and Bass",
+"Chicago drill": "Chicago Drill",
+"Chicago blues": "Chicago Blues",
+"Chanson, a waltz": "Chanson, ein Walzer",
+"Pop opera, a tenor": "Popoper, ein Tenor",
+"Rebetiko, a bouzouki": "Rebetiko, eine Bouzouki",
+"J-pop, an anime opening": "J-Pop, ein Anime-Opening",
+"City pop": "City Pop",
+"Mandarin ballad": "Mandarin-Ballade",
+"Chinese folk fusion": "Chinesischer Folk-Fusion",
+"Samba": "Samba",
+"Duduk, our own field": "Duduk, unser eigenes Feld",
+"Industrial metal": "Industrial Metal",
 "Engine": "Engine",
 "Engine: model, memory, chat server, log, look": "Engine: Modell, Speicher, Chat-Server, Protokoll, Aussehen",
 "The guide: every room, what each thing does": "Die Anleitung: jeder Raum, was jedes Ding tut",
@@ -8781,7 +8804,7 @@ RuachI18n.add("de", {
 "writing": "Schreiben",
 "Writing now": "Schreibt jetzt",
 "The system bar under the header": "Die Systemleiste unter der Kopfzeile",
-"in the Artist, the Refiner and the Videographer": "im Künstler, im Veredler und im Videografen",
+"in the Artist, the Refiner, the Videographer and the Trainer": "im Maler, im Veredler, im Videografen und im Trainer",
 "in every room": "in jedem Raum",
 "nowhere": "nirgends",
 "A thin bar under the header: the processor, the memory, each card and each disk of the Studio's machine, and the room's running jobs; the pointer on an item shows its numbers and its last minute and ten minutes drawn": "Eine schmale Leiste unter der Kopfzeile: der Prozessor, der Speicher, jede Karte und jede Platte der Maschine des Studio und die laufenden Aufgaben des Raums; der Zeiger auf einem Eintrag zeigt seine Zahlen und seine Graphen der letzten Minute und der zehn Minuten",
@@ -9267,4 +9290,67 @@ RuachI18n.add("de", {
 // UIX frame lane 13.11.2026 (HERESY 2532): Engine Hardware, the VAE default tip whole
 RuachI18n.add("de", {
 "The VAE a song is decoded with when its request names none (saved prompts, other clients). The VAE buttons in the form choose per song, and a finished song can get another from its page.": "Das VAE, mit dem ein Song dekodiert wird, wenn seine Anfrage keins nennt (gespeicherte Prompts, andere Clients). Die VAE-Knöpfe im Formular wählen es pro Song, und ein fertiger Song kann auf seiner Seite ein anderes bekommen."
+});
+
+// HERESY 2625: the transcriber's precision (the ☰ menu under the VAE, Engine → Compute)
+RuachI18n.add("de", {
+"SheetSage2 and MERT, the ear that writes a score from a recording (covers, the Library's sheet, the Trainer's set): F32 as m-a-p made them, the default; Q8_0 is 1.6 GB lighter on the card, its notes 95 % alike on our Ring of twenty, the tempo a beat apart at times. Refined always reads on F32": "SheetSage2 und MERT, das Ohr, das aus einer Aufnahme eine Partitur schreibt (Covers, das Notenblatt der Bibliothek, das Set des Trainers): F32, wie m-a-p sie gemacht hat, die Voreinstellung; Q8_0 ist auf der Karte 1,6 GB leichter, seine Noten stimmen auf unserem Ring aus zwanzig zu 95 % überein, das Tempo weicht mitunter um einen Schlag ab. Refined liest immer in F32",
+"Q8_0 · lighter": "Q8_0 · leichter",
+"The transcriber reads in Q8_0, lighter on the card": "Der Transkribierer liest in Q8_0, leichter für die Karte",
+"The transcriber reads in F32": "Der Transkribierer liest in F32",
+"Transcriber precision": "Genauigkeit des Transkribierers",
+"the ☰ menu's own: the transcriber's precision": "derselbe wie im Menü ☰: die Genauigkeit des Transkribierers"
+});
+
+// HERESY 2627: the compare window takes 24
+RuachI18n.add("de", {
+"2 to 24 of the checked": "2 bis 24 der markierten",
+"Tick 2 at least, 24 at most": "Mindestens 2 anhaken, höchstens 24",
+"24 at most: the first 24": "Höchstens 24: die ersten 24",
+"24 at most to compare: uncheck {0}": "Höchstens 24 zum Vergleichen: {0} abwählen",
+"Compare the checked ones, 2 to 24, in one player from the same second": "Die angehakten vergleichen, 2 bis 24, in einem Player ab derselben Sekunde",
+"Waiting for the whole version": "Warte auf die ganze Version"
+});
+
+// HERESY 2629: the compare sheet's empty difference
+RuachI18n.add("de", {
+"No difference: under ±0.1 dB everywhere": "Kein Unterschied: überall unter ±0,1 dB"
+});
+
+// HERESY 2632: the datasheet's track ID
+RuachI18n.add("de", {
+"Copy the track ID": "Track-ID kopieren",
+"Track ID copied": "Track-ID kopiert",
+"Not copied": "Nicht kopiert"
+});
+
+// HERESY 2637: the stress dictionaries in the lyrics
+RuachI18n.add("de", {
+"Stress dictionaries": "Betonungswörterbücher",
+"Set the dictionaries' stresses now": "Betonungen der Wörterbücher jetzt setzen",
+"Before every song in the Musician": "Vor jedem Song im Musiker",
+"off by default": "standardmäßig aus",
+"Stresses from the dictionaries ({0}): {1} set": "Betonungen aus den Wörterbüchern ({0}): {1} gesetzt",
+"Nothing to set: every word the dictionaries know already has its stress": "Nichts zu setzen: jedes Wort, das die Wörterbücher kennen, ist schon betont",
+"Homographs left to you: {0}": "Homographen für dich: {0}",
+"The stress dictionaries are Russian, Ukrainian and Belarusian; these lyrics read as {0}": "Die Betonungswörterbücher sind Russisch, Ukrainisch und Belarussisch; dieser Text liest sich als {0}",
+"The dictionaries did not answer (the lab is away): the lyrics go as they are": "Die Wörterbücher antworteten nicht (das Labor fehlt): der Text geht, wie er ist",
+"The stress dictionaries (ru, uk, be) in the lyrics: their acutes set where a word has none, now or before every song (off by default); the base dictionaries alone, the Narrator's own word list stays the Narrator's": "Die Betonungswörterbücher (ru, uk, be) im Liedtext: ihre Akzente, wo ein Wort keinen hat, jetzt oder vor jedem Song (standardmäßig aus); nur die Grundwörterbücher, die eigene Liste des Erzählers bleibt beim Erzähler"
+});
+
+// HERESY 2638: the More menu's precision row
+RuachI18n.add("de", {
+"Ear": "Gehör"
+});
+
+// HERESY 2640: the comparison sheet's wait
+RuachI18n.add("de", {
+"Building the comparison sheet": "Vergleichsblatt wird erstellt",
+"Each version is measured against the first at equal loudness: loudness and peaks, the tone zone by zone, the stereo width and the dynamics; then their spectrograms and difference curves are drawn.": "Jede Version wird bei gleicher Lautheit an der ersten gemessen: Lautheit und Spitzen, der Klang je Zone, die Stereobreite und die Dynamik; dann werden Spektrogramme und Differenzkurven gezeichnet.",
+"Two to four versions take 10 to 60 seconds. The sheet fills this window when its charts are ready; Close leaves it unmade.": "Zwei bis vier Versionen brauchen 10 bis 60 Sekunden. Das Blatt füllt dieses Fenster, sobald die Diagramme fertig sind; Schließen lässt es unfertig."
+});
+
+// HERESY 2641: the in-page picture
+RuachI18n.add("de", {
+"The picture could not be read: {0}": "Das Bild ließ sich nicht lesen: {0}"
 });

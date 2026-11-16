@@ -36,7 +36,7 @@
 
     var scroller = view.querySelector(".hz-scroll");
     scroller.addEventListener("wheel", function (event) {
-      if (!event.ctrlKey) return;               // plain wheel scrolls, as everywhere
+      if (!event.ctrlKey && !(cur && cur.wheelZoom)) return;   // plain wheel scrolls, as everywhere; a picture's way (2641): the wheel zooms
       event.preventDefault();
       var box = scroller.getBoundingClientRect();
       zoomAt(cur.scale * Math.pow(1.0015, -event.deltaY), event.clientX - box.left, event.clientY - box.top);
@@ -69,7 +69,7 @@
     });
     document.addEventListener("keydown", function (event) {
       if (view.hidden) return;
-      if (event.key === "Escape") { close(); event.preventDefault(); }
+      if (event.key === "Escape") { close(); event.preventDefault(); event.stopPropagation(); }
       else if (event.key === "+" || event.key === "=") zoomAt(cur.scale * 1.25);
       else if (event.key === "-") zoomAt(cur.scale / 1.25);
       else if (event.key === "0") zoomAt(1);
@@ -126,7 +126,9 @@
   function open(opts) {
     if (!view) build();
     cur = { title: opts.title, render: opts.render, aspect: opts.aspect || 0.5, fill: !!opts.fill,
-            vector: !!opts.vector, maxPixels: opts.maxPixels || 0, maxWidth: opts.maxWidth || 0, onClick: opts.onClick || null, scale: 1 };
+            vector: !!opts.vector, maxPixels: opts.maxPixels || 0, maxWidth: opts.maxWidth || 0, onClick: opts.onClick || null, scale: 1,
+            wheelZoom: !!opts.wheelZoom };
+    view.classList.toggle("hz-boxed", !!opts.boxed);   // HERESY 2641: 97 % × 98 % of the tab, the page around it
     view.querySelector(".hz-title").textContent = opts.title || "";
     view.hidden = false;
     document.documentElement.classList.add("hz-open");
@@ -147,5 +149,16 @@
 
   function isOpen() { return !!(view && !view.hidden); }
 
-  window.HeresyZoom = { open: open, close: close, isOpen: isOpen };
+  // HERESY 2641: a picture by its address, its own way: the wheel zooms, a drag moves it, Esc back
+  function picture(url, title) {
+    var img = new Image();
+    img.onload = function () {
+      open({ title: title || "", boxed: true, wheelZoom: true, aspect: img.naturalHeight / Math.max(1, img.naturalWidth), maxWidth: img.naturalWidth * 4,
+             render: function (w, h) { var el = new Image(); el.src = url; el.alt = ""; el.draggable = false; el.style.width = w + "px"; el.style.height = h + "px"; return el; } });
+    };
+    img.onerror = function () { if (window.HeresyToast) window.HeresyToast((window.RuachI18n ? window.RuachI18n.t("The picture could not be read: {0}") : "The picture could not be read: {0}").replace("{0}", String(url).slice(-60)), "bad"); };
+    img.src = url;
+  }
+
+  window.HeresyZoom = { open: open, close: close, isOpen: isOpen, picture: picture };
 })();

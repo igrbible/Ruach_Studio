@@ -1291,11 +1291,11 @@
     hb.dataset.tip = hid ? "Show again: back in the lists" : "Out of the lists, not deleted: Hidden on the left shows them again";
     $("collWsOut").hidden = !state.place || state.place.charAt(0) === "_";
     // HERESY 1415: two to four; 1621: to six; 2043 (Viktor: «обещали до 12 треков»): to twelve, and over twelve it says why (a disabled button shows no tip)
-    var cb = $("collCompare"), over = n > 12;
+    var cb = $("collCompare"), over = n > 24;   // HERESY 2627: 24
     cb.disabled = n < 2;
     cb.classList.toggle("is-over", over);
     cb.setAttribute("aria-disabled", String(over));
-    cb.dataset.tip = over ? tr("Twelve at most to compare: uncheck {0}").replace("{0}", n - 12) : "Compare the checked ones, two to twelve, in one player from the same second";
+    cb.dataset.tip = over ? tr("24 at most to compare: uncheck {0}").replace("{0}", n - 24) : "Compare the checked ones, 2 to 24, in one player from the same second";
   }
 
   // HERESY 1843 (TODO 2.0.x from RC3's report of 08.10.2026: «Проверка лирики пачкой на отмеченных дублях из меню Библиотекаря»): sung to the end,
@@ -2080,7 +2080,7 @@
     });
     $("collCompare").addEventListener("click", function () {   // HERESY 1415; 2043: over twelve, a word instead
       var n = names();
-      if (n.length > 12) return toast(tr("Twelve at most to compare: uncheck {0}").replace("{0}", n.length - 12), true);
+      if (n.length > 24) return toast(tr("24 at most to compare: uncheck {0}").replace("{0}", n.length - 24), true);
       if (window.HeresyCompare) window.HeresyCompare.takes(n);
     });
     if ($("collSung")) $("collSung").addEventListener("click", function () {   // HERESY 1843: past ten, asked first
@@ -3137,7 +3137,9 @@
                     cfg_scale: 1, output_format: 1, title: 1, vae: 1, sliders: 1, loras: 1, parent: 1, plan_only: 1, mp3_bitrate: 1, peak_clip: 1, lm_batch_size: 1, synth_batch_size: 1 };
       var rest = Object.keys(q).filter(function (k) { return !known[k] && (typeof q[k] !== "object" || q[k] === null); });
       back.querySelector(".ds-box").innerHTML =
-        '<div class="ds-head"><div><div class="sheet-title" translate="no">' + esc(r.title || t.title || name) + '</div><div class="coll-meta mono" translate="no">' + esc(name) + "</div>" +
+        '<div class="ds-head"><div><div class="sheet-title" translate="no">' + esc(r.title || t.title || name) + '</div><div class="coll-meta mono ds-idrow" translate="no"><span class="ds-idv">' + esc(name) + "</span>" +   // HERESY 2632: the ID and its copy
+        '<button type="button" class="btn ghost small icon-btn ds-hico ds-idcopy" data-ds="id" aria-label="Copy the track ID" data-tip="Copy the track ID">' +
+        (window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui("copy") : "Copy the track ID") + "</button></div>" +
         '<div class="coll-meta"><span>' + esc(h.ago(t.created)) + "</span>" + (t.seconds ? " \u00b7 <span>" + h.clock(t.seconds) + "</span>" : "") + (t.render_seconds ? " \u00b7 <span>made in " + h.clock(t.render_seconds) + "</span>" : "") +
         (t.model ? " \u00b7 <span translate=\"no\">" + esc(t.model) + "</span>" : "") + (t.truncated ? " \u00b7 <span>hit the token cap</span>" : "") + (q.parent ? " \u00b7 <span>from " + esc(q.parent) + "</span>" : "") + "</div></div>" +
         // HERESY 2565 (the UIX audit, item 53): the song's passport's acts as icons, as the reading's; their words in the label and the tip
@@ -3375,6 +3377,20 @@
         }
         if (b.dataset.ds === "midi-engine") { close(); var et = document.getElementById("engineToggle"); if (et) et.click(); if (window.ruachEngineTab) window.ruachEngineTab("models"); return; }
         if (b.dataset.ds === "create") { close(); h.openTake(name, "create"); return; }
+        if (b.dataset.ds === "id") {                       // HERESY 2632
+          var said = function () { toast(tr("Track ID copied") + ": " + name); };
+          var byField = function () {
+            var ta = document.createElement("textarea");
+            ta.value = name; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+            document.body.appendChild(ta); ta.select();
+            var ok = false;
+            try { ok = document.execCommand("copy"); } catch (x) { ok = false; }
+            ta.remove();
+            if (ok) said(); else toast(tr("Not copied") + ": " + name, true);
+          };
+          if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(name).then(said, byField); else byField();
+          return;
+        }
         if (b.dataset.ds === "json") {
           var copy = Object.assign({}, q);
           if (copy.semantic_tokens) copy.semantic_tokens = "(" + codes + " codes, left out)";

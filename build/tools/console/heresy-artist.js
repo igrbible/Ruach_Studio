@@ -2149,7 +2149,7 @@
       { label: tr("Copy the seed") + " · " + p.seed, raw: true, action: function () { copyText(p.seed, tr("The seed copied: " + p.seed)); } },
       { label: tr("Download") + " · PNG" + (p.w && p.h ? " " + p.w + "×" + p.h : ""), raw: true, action: function () {
         var a = document.createElement("a"); a.href = fileUrl(r.id, p.file); a.download = "ruach-artist-" + r.id + "-" + p.file; document.body.appendChild(a); a.click(); a.remove(); } },
-      { label: tr("The file in a new tab"), action: function () { window.open(fileUrl(r.id, p.file), "_blank", "noopener"); } },
+      { label: tr("Full screen"), action: function () { if (window.HeresyZoom) window.HeresyZoom.picture(fileUrl(r.id, p.file), r.prompt ? String(r.prompt).slice(0, 80) : ""); } },   // HERESY 2641: in the tab
       { label: tr("Its run"), hint: tr("The run it came from, in the Runs look"), action: room(function () {
         if (state.look !== "runs") { var b = document.querySelector('#arBar [data-look="runs"]'); if (b) b.click(); }
         setTimeout(function () {

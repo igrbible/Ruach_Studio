@@ -76,7 +76,7 @@ out = {"lab": os.getpid(), "said": said}
 if gen == 1:
     sp = os.path.join(kit, "user/videos/.h3/gpu9-h3")
     out["h3"] = subprocess.Popen(["nice", "-n", "5", py, "-u", os.path.join(bin_, "h3_worker.py"), "--gpu", "9", "--spool", sp], start_new_session=True).pid
-    out["up"] = subprocess.Popen([py, "-u", os.path.join(bin_, "upscale_job.py"), os.path.join(kit, "upjob")], start_new_session=True).pid
+    out["up"] = subprocess.Popen([py, "-u", os.path.join(bin_, "shot_upscale_job.py"), os.path.join(kit, "upjob")], start_new_session=True).pid
     out["tool"] = subprocess.Popen(["sleep", "300"], start_new_session=True).pid
     g = subprocess.Popen(["bash", "-c", "sleep 301 & echo $! > " + os.path.join(kit, "grandchild") + "; wait"])
     out["group"] = g.pid
@@ -96,7 +96,7 @@ try:
     bin_ = kit / "bin"
     bin_.mkdir()
     (bin_ / "h3_worker.py").write_text(FAKE_H3)
-    (bin_ / "upscale_job.py").write_text(FAKE_UP)
+    (bin_ / "shot_upscale_job.py").write_text(FAKE_UP)
     (kit / "fake_lab.py").write_text(FAKE_LAB)
     (kit / "upjob").mkdir()
     sp = kit / "user/videos/.h3/gpu9-h3"

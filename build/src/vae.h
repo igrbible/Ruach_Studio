@@ -436,6 +436,27 @@ static struct ggml_tensor * vae_ggml_build_graph(struct ggml_context * ctx,
 // HERESY 1169: why the decoder stopped, in words for the job (pipeline_generate and the decode of kept latents put it in
 // last_error); after a failed allocation the scheduler is renewed, as the NAR's is: the next request asserted in the old one
 inline std::string g_vae_error;
+// HERESY 2626 (after timoncool/yue2.cpp 915fac4 and a34b0e4, MIT): a decode that is no sound (a sample not finite, or nothing but zeros) fails
+// with its place, never passes as silence
+static bool vae_no_sound(const float * a, size_t n, const char * where) {
+    size_t bad = 0, nonzero = 0;
+    for (size_t i = 0; i < n; i++) {
+        if (!std::isfinite(a[i])) {
+            bad++;
+        } else if (a[i] != 0.0f) {
+            nonzero++;
+        }
+    }
+    if (!bad && nonzero) {
+        return false;
+    }
+    char msg[320];
+    snprintf(msg, sizeof msg, "The sound decoder made no sound at %s: %zu of %zu samples not finite, %zu not zero. The card may have failed it; "
+             "make the song again.", where, bad, n, nonzero);
+    g_vae_error = msg;
+    fprintf(stderr, "[VAE] FATAL: %s\n", msg);
+    return true;
+}
 static void vae_out_of_memory(VAEGGML * m, int T_latent) {
     size_t             free_b = 0, total_b = 0;
     ggml_backend_dev_t dev    = ggml_backend_get_device(m->backend);
@@ -518,7 +539,14 @@ static int vae_ggml_compute(VAEGGML *     m,
     }
     ggml_backend_tensor_set(m->graph_input, m->scratch_in.data(), 0, in_size * sizeof(float));
 
-    ggml_backend_sched_graph_compute(m->sched, m->graph);
+    const enum ggml_status status = ggml_backend_sched_graph_compute(m->sched, m->graph);   // HERESY 2626
+    if (status != GGML_STATUS_SUCCESS) {
+        char msg[200];
+        snprintf(msg, sizeof msg, "The sound decoder failed on the card (status %d) for a tile of %d frames at %d.", (int) status, T_latent, win_start);
+        g_vae_error = msg;
+        fprintf(stderr, "[VAE] FATAL: %s\n", msg);
+        return -1;
+    }
 
     return (int) m->graph_output->ne[0];
 }
@@ -539,6 +567,9 @@ static int vae_ggml_decode(VAEGGML * m, const float * latent, int T_latent, floa
     }
 
     ggml_backend_tensor_get(m->graph_output, audio_out, 0, T_out * 2 * sizeof(float));
+    if (vae_no_sound(audio_out, (size_t) T_out * 2, "the whole song")) {   // HERESY 2626
+        return -1;
+    }
 
     fprintf(stderr, "[VAE] Decoded: T_latent=%d -> T_audio=%d (%.2fs @ 48kHz), %.0f ms\n", T_latent, T_out,
             (float) T_out / 48000.0f, decode_timer.ms());
@@ -611,6 +642,11 @@ static int vae_ggml_decode_tiled(VAEGGML *     m,
         ggml_backend_tensor_get(m->graph_output, audio_out + out_start, crop * sizeof(float), core_len * sizeof(float));
         ggml_backend_tensor_get(m->graph_output, audio_out + max_T_audio + out_start, (tile_T + crop) * sizeof(float),
                                 core_len * sizeof(float));
+        char where[64];   // HERESY 2626: each tile's core, both channels
+        snprintf(where, sizeof where, "tile %d of %d", i + 1, num_tiles);
+        if (vae_no_sound(audio_out + out_start, (size_t) core_len, where) || vae_no_sound(audio_out + max_T_audio + out_start, (size_t) core_len, where)) {
+            return -1;
+        }
     }
 
     // Compact ch1 from offset max_T_audio to offset total

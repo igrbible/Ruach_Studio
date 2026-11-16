@@ -13,8 +13,8 @@
 // hanging from it, kept in this browser (ruach.sysbarFold: not a yue2.* key, which the settings carry to every browser); folded, it asks the lab nothing.
 (function () {
   "use strict";
-  var KEY = "yue2.sysbar", FOLD = "ruach.sysbarFold";   // empty (or "all"): every room; "rooms": the Artist, the Refiner and the Videographer; "off": nowhere
-  var ROOMS = { artist: 1, post: 1, video: 1 };
+  var KEY = "yue2.sysbar", FOLD = "ruach.sysbarFold";   // empty (or "all"): every room; "rooms": the Artist, the Refiner, the Videographer and the Trainer; "off": nowhere
+  var ROOMS = { artist: 1, post: 1, video: 1, train: 1 };   // HERESY 2610 (Viktor 13.11.2026: «добавить туда к трём комнатам «в Тренере»»)
   var KINDS = { artist: /^(art|artist)$/, post: /^(stems|midi|remaster|upscale|debuzz|gate|timing|textend|spectrum|inspect)$/, video: /^video$/ };
   var KEEP = 600, GKEEP = 300, CORE_KEEP = 60;      // ten minutes of the machine (a second each), of the cards (two seconds each); the cores' minute
   var S = { since: 0, ring: [], cores: [], disks: [], cpu: null, load: [], skew: 0, busy: false, gone: false, missing: 0, error: "",

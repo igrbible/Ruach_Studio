@@ -431,5 +431,17 @@
  "Why our own Studio, not a ComfyUI plugin bundle": "ComfyUI のプラグイン詰め合わせではなく、なぜ自前の Studio なのか",
  "Viktor Zhuromskyy · 13 November 2026": "Viktor Zhuromskyy · 2026 年 11 月 13 日",
  "Many of the people who make songs with us came from ComfyUI. A professional workflow there takes weeks to build, and the next core or node update can break it. What's left behind are private forks whose fixes too often never go back upstream. I call that a forkblow. Ruach Studio goes the other way: eight rooms on one page, one music engine we patch ourselves, and every model pinned to a room. Here's why, what it costs, where we still meet ComfyUI, and my farewell letter to its community.": "私たちと一緒に歌を作っている人の多くは、ComfyUI から来ました。そこでプロ向けのワークフローを組むには何週間もかかり、コアやノードの次のアップデートひとつで壊れることがあります。後に残るのは手元だけのフォークで、その修正が本家に戻らないことがあまりに多いのです。私はこれを forkblow（workflow をもじった私の造語）と呼んでいます。ルアハ・スタジオは逆の道を行きます。1 ページに 8 つの部屋、私たちが自らパッチを当てるひとつの音楽エンジン、そしてどれかの部屋に固定されたすべてのモデル。なぜそうするのか、その代償は何か、今も ComfyUI とどこで接しているのか、そしてそのコミュニティへの私の別れの手紙を、ここに書きます。",
- "Read the article": "記事を読む"
+ "Read the article": "記事を読む",
+ "Read as PDF": "PDF で読む",
+ "Download PDF": "PDF をダウンロード",
+ "Previous page": "前のページ",
+ "Next page": "次のページ",
+ "Page number": "ページ番号",
+ "of": "/",
+ "Page": "ページ",
+ "Smaller": "縮小",
+ "Larger": "拡大",
+ "Opening the PDF…": "PDF を開いています…",
+ "The PDF reader did not start": "PDF リーダーを起動できませんでした",
+ "A page of the article": "記事のページ"
 }

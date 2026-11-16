@@ -154,6 +154,7 @@ struct Yue2Request {
     std::vector<Yue2LoraGroup>    lora_groups;  // HERESY 1447: the budgets the loras' groups name
     bool                          plan_only;  // false; stop after the score
     bool                          score_guard;  // true; a broken score stops the run before the music (HERESY 1087)
+    bool                          score_fill;   // false; HERESY 2631: a score whose fault is its header gets M:4/4, L:1/16, K:C and is sung
     std::string                   parent;     // "" or the library take this re-renders
     std::string                   decode_from;  // "" or a take whose kept latents another decoder makes again (HERESY 1168)
 

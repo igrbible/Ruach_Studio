@@ -261,7 +261,7 @@
       var url = fileUrl(take.name, f.path);
       var nm = m.builtin ? '<span class="dv-name">↳ <span>' + esc(title(f)) + "</span></span>" : '<span class="dv-name" translate="no">↳ ' + esc(title(f)) + "</span>";   // HERESY 1557: the Studio's own in the page's words
       if (isImage(f)) {                               // HERESY 1557: a step's picture, looked at here, or its file
-        h += '<div class="dv-node is-image">' + nm + '<a class="dv-pic" href="' + esc(url) + '" target="_blank" rel="noopener"><img src="' + esc(url) + '" alt="" loading="lazy" /></a>' +
+        h += '<div class="dv-node is-image">' + nm + '<button type="button" class="dv-pic" data-zoom-pic="' + esc(url) + '" data-zoom-title="' + esc(title(f)) + '"><img src="' + esc(url) + '" alt="" loading="lazy" /></button>' +
           '<a class="btn ghost small" translate="no" href="' + esc(url) + '" download="' + esc((take.label || take.name) + " - " + (f.file || title(f))) + '">' +
           esc(String(f.file || f.path).split(".").pop().toUpperCase()) + "</a></div>";
         return;
@@ -1037,7 +1037,7 @@
       '<svg class="cmp-mem-g" viewBox="0 0 60 20" aria-hidden="true"></svg><span class="cmp-mem-t"></span></span>' +
       "</div>" +
       '<ol class="cmp-list">' + versions.map(function (v, i) {
-        return '<li class="cmp-li" data-cmp-li="' + i + '"><button type="button" class="cmp-row" data-cmp-i="' + i + '"><span class="cmp-n mono">' + (i < 9 ? i + 1 : "") + '</span><span class="cmp-name">' + esc(v.label) + '<span class="cmp-off mono" data-cmp-off="' + i + '" hidden></span></span>' +   // HERESY 2000: its lag
+        return '<li class="cmp-li" data-cmp-li="' + i + '"><button type="button" class="cmp-row" data-cmp-i="' + i + '"><span class="cmp-n mono">' + (i + 1) + '</span><span class="cmp-name">' + esc(v.label) + '<span class="cmp-off mono" data-cmp-off="' + i + '" hidden></span></span>' +   // HERESY 2000: its lag
           '<span class="cmp-group">' + esc(v.group || "as YuE2 made it") + '</span><span class="cmp-lufs mono" data-cmp-lufs="' + i + '">\u2026</span><span class="cmp-dur mono">' + (v.seconds ? clock(v.seconds) : "") + "</span></button>" + PICK_HTML + rateHtml(v) + "</li>";   // 1550
       }).join("") + "</ol></div>";
     document.body.appendChild(back);
@@ -1172,6 +1172,9 @@
     function settle() { audios.forEach(function (a, i) { if (a !== cur()) { a.pause(); useCached(i); } }); paint(); }
     // HERESY 1621: every version whole in memory, the chosen one first; a version takes its copy unless it is the one playing
     var cached = versions.map(function () { return null; });
+    // HERESY 2627 (Viktor 15.11.2026, on a bad road: «Рвёт звук, сука, даже в сравнителе»): a version plays from its whole copy, never from the
+    // network: Play (or a switch while playing) waits until the copy is in, the button pulsing; a copy that cannot come streams as before
+    var noWhole = versions.map(function () { return false; }), waitFor = -1;
     function useCached(i) {
       var a = audios[i], u = cached[i];
       if (!u || a.dataset.cached === "1" || (a === cur() && !a.paused)) return;
@@ -1235,7 +1238,8 @@
         while (running < 3 && k < order.length && back.isConnected) {
           (function (i) {
             running++;
-            fetchWhole(i).then(function (b) { if (!back.isConnected) return; cached[i] = URL.createObjectURL(b); useCached(i); wantPeaks(i); }, function () { /* this one streams as before */ })
+            fetchWhole(i).then(function (b) { if (!back.isConnected) return; cached[i] = URL.createObjectURL(b); useCached(i); wantPeaks(i); wholeIn(i); },
+              function () { noWhole[i] = true; wholeIn(i); })   // this one streams as before
               .then(function () { running--; paintCached(); paintLoad(); go(); });
           })(order[k++]);
         }
@@ -1455,8 +1459,10 @@
     function paint() {
       var a = cur(), d = dur();
       if (a.readyState >= 1) lastT = a.currentTime || 0;
-      playBtn.innerHTML = ico(a.paused ? "play" : "pause");
-      playBtn.setAttribute("aria-label", a.paused ? "Play" : "Pause");
+      var waiting = waitFor >= 0;                      // HERESY 2627: Play waits for the version's whole copy
+      playBtn.innerHTML = ico(a.paused && !waiting ? "play" : "pause");
+      playBtn.setAttribute("aria-label", waiting ? "Waiting for the whole version" : a.paused ? "Play" : "Pause");
+      playBtn.classList.toggle("is-wait", waiting);
       box.querySelector(".cmp-time").textContent = clock(a.currentTime || 0) + " / " + (d ? clock(d) : "0:00");   // HERESY 1724
       wave.setAttribute("aria-valuenow", String(Math.round(a.currentTime || 0)));
       box.dataset.t = (a.currentTime || 0).toFixed(2);   // HERESY 2285: the playhead to the hundredth, for the checks
@@ -1585,7 +1591,9 @@
       var place = function () { try { to.currentTime = Math.min(t, isFinite(to.duration) ? Math.max(0, to.duration - 0.05) : t); } catch (e) { /* not seekable yet */ } };
       active = i;
       if (to.readyState >= 1) place(); else to.addEventListener("loadedmetadata", place, { once: true });
-      if (playing) {
+      if (playing && !cached[i] && !noWhole[i]) {      // HERESY 2627: the switch waits for the copy, the one it leaves silent meanwhile
+        from.pause(); wantPlay = true; waitFor = i;
+      } else if (playing) {
         to.play().then(settle, settle);
       } else { from.pause(); }
       paint();
@@ -1596,9 +1604,15 @@
     // memory as it stopped kept it there, so a click played nothing and only the second began again); a play a load cut short (AbortError: the swap
     // under it) goes again once the version can play, while the window still means to play (Pause means it no longer does)
     var wantPlay = false;
+    function wholeIn(i) {                            // HERESY 2627: the copy a Play waited for is in (or will not come): play it now
+      if (waitFor !== i) return;
+      waitFor = -1;
+      if (wantPlay && audios[i] === cur()) playNow(audios[i]); else paint();
+    }
     function playNow(a) {
       wantPlay = true;
       var i = audios.indexOf(a);
+      if (i >= 0 && !cached[i] && !noWhole[i]) { waitFor = i; paint(); return; }   // HERESY 2627: from memory only
       if (a.error || a.networkState === 3) {
         if (i >= 0 && cached[i] && a.getAttribute("src") !== cached[i]) {
           var t0 = lastT;
@@ -1614,7 +1628,7 @@
         a.addEventListener("canplay", function () { if (wantPlay && a === cur() && a.paused) a.play().catch(function () {}); }, { once: true });
       });
     }
-    function toggle() { var a = cur(); if (a.paused) playNow(a); else { wantPlay = false; a.pause(); } paint(); }
+    function toggle() { var a = cur(); if (waitFor >= 0) { waitFor = -1; wantPlay = false; } else if (a.paused) playNow(a); else { wantPlay = false; a.pause(); } paint(); }
     function close() {
       var v0 = versions[active], a0 = cur(), on0 = !a0.paused && !a0.ended,   // HERESY 2044: a take playing goes on in the player (not blind: its name would say which)
           handBack = v0 && v0.take && hk.takeOver && !box.classList.contains("is-blind") && (on0 || hk.follow) ? { name: v0.take, at: a0.readyState >= 1 ? (a0.currentTime || 0) : lastT, play: on0 } : null;   // HERESY 2362: a paused one too, paused there
@@ -1831,7 +1845,7 @@
         var li = list.querySelector('[data-cmp-li="' + vi + '"]'), nm = li.querySelector(".cmp-name"), orig = origs.indexOf(vi) >= 0;
         list.appendChild(li);
         li.classList.toggle("is-orig", orig);
-        li.querySelector(".cmp-n").textContent = pos < 9 ? pos + 1 : "";
+        li.querySelector(".cmp-n").textContent = pos + 1;   // HERESY 2627: every row; the digits pick 1 to 9
         if (nm.dataset.real == null) nm.dataset.real = nm.innerHTML;
         nm.innerHTML = on && !orig ? esc(tt("Version {0}").replace("{0}", String.fromCharCode(65 + (pos - origs.length) % 26))) : nm.dataset.real;
       });
@@ -2008,7 +2022,8 @@
   var AB_ZONES = { sub: "sub-bass", low: "bass", mid: "mids", "hi-mid": "upper mids", high: "highs", air: "air" };
   var AB_PIC = { eq: "{0} (at equal loudness)", diff: "{1} − {0}: red where it is louder, blue where it is quieter (±6 dB)", time: "time, s",
     spec: "Average spectrum at equal loudness", tone: "What changed in the tone (grey: ±1 dB) · blue: what no filter makes", nolin: "no filter makes it, dB under the music",
-    dynx: "the level of {0} in 50 ms windows, dBFS", dyny: "{1} − {0}, dB", dyn: "Dynamics: glue {0} dB, peaks {1} dB", st: "Short-term loudness" };
+    dynx: "the level of {0} in 50 ms windows, dBFS", dyny: "{1} − {0}, dB", dyn: "Dynamics: glue {0} dB, peaks {1} dB", st: "Short-term loudness",
+    same: "No difference: under ±0.1 dB everywhere" };   // HERESY 2629: the difference picture when there is none
   function abNum(v, k, signed) {
     if (v == null || v === "" || !isFinite(+v)) return "—";
     var x = +v, s = k === "clipped_runs" ? String(Math.round(x)) : x.toFixed(k === "correlation" || k === "likeness" ? 3 : 2);
@@ -2023,6 +2038,16 @@
       return String(a).replace(/^-(?=\d)/, "−");
     });
   }
+  // HERESY 2640 (Viktor 15.11.2026: «Многие не поймут, что за пустое окно с кнопкой»): the comparison's wait, said
+  function abWait(names) {
+    var bars = "";                                       // the Studio's own sound wave (the boot veil's bars), a smooth swell travelling along
+    for (var i = 0; i < 28; i++) bars += '<b style="--h:' + (0.28 + 0.72 * Math.pow(Math.sin(Math.PI * (i + 0.5) / 28), 1.4)).toFixed(3) + ";--d:" + (-i * 0.07).toFixed(2) + 's"></b>';
+    return '<div class="ab-wait" role="status" aria-live="polite"><div class="ab-wait-head"><span class="ab-wave" aria-hidden="true">' + bars + "</span><b>" +
+      esc(tt("Building the comparison sheet")) + '</b><span class="ab-wait-t mono">0:00</span></div>' +
+      "<p>" + esc(tt("Each version is measured against the first at equal loudness: loudness and peaks, the tone zone by zone, the stereo width and the dynamics; then their spectrograms and difference curves are drawn.")) + "</p>" +
+      "<p>" + esc(tt("Two to four versions take 10 to 60 seconds. The sheet fills this window when its charts are ready; Close leaves it unmade.")) + "</p>" +
+      '<ol class="ab-wait-list">' + names.map(function (n) { return "<li>" + esc(n.replace(/^\d+ · /, "")) + "</li>"; }).join("") + "</ol></div>";
+  }
   function abOpen(sides) {
     sides = (sides || []).slice(0, 4);
     if (sides.length < 2) return;
@@ -2032,7 +2057,7 @@
     var back = document.createElement("div");
     back.className = "hd-back ab-back";
     back.innerHTML = '<div class="hd-box hd-ab" role="dialog" aria-modal="true" aria-label="First and second"><div class="hd-title">First and second</div>' +
-      '<div class="ab-body" translate="no"><p class="ab-wait">' + esc(tt("Measuring them against the first…")) + "</p></div>" +
+      '<div class="ab-body" translate="no">' + abWait(names) + "</div>" +   // HERESY 2640: the wait says what it does
       '<div class="hd-acts"><span class="ab-files" translate="no"></span><span class="hd-spacer"></span><button type="button" class="btn small primary hd-yes">Close</button></div></div>';
     document.body.appendChild(back);
     var body = back.querySelector(".ab-body");
@@ -2044,11 +2069,13 @@
       setTimeout(function () { back.remove(); }, 120);
       if (was && was.focus && was.isConnected) was.focus();
     }
-    function key(e) { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); shut(); } }
+    function key(e) { if (e.key === "Escape" && !(window.HeresyZoom && window.HeresyZoom.isOpen())) { e.preventDefault(); e.stopPropagation(); shut(); } }   // 2641: a picture open over it takes its own Esc
     document.addEventListener("keydown", key, true);
     back.addEventListener("mousedown", function (e) { if (e.target === back) shut(); });
     back.querySelector(".hd-yes").addEventListener("click", shut);
     body.addEventListener("click", function (e) {
+      var zp = e.target.closest("[data-zoom-pic]");      // HERESY 2641: a chart full screen in the tab
+      if (zp && window.HeresyZoom) { window.HeresyZoom.picture(zp.dataset.zoomPic, tt("First and second")); return; }
       var pb = e.target.closest("[data-ab-pair]");
       if (!pb || !R) return;
       at = +pb.dataset.abPair;
@@ -2056,6 +2083,12 @@
       files();
     });
     requestAnimationFrame(function () { back.classList.add("is-on"); back.querySelector(".hd-yes").focus(); });
+    var waitT0 = Date.now(), waitTick = setInterval(function () {   // HERESY 2640: the seconds gone, till the sheet takes the window
+      var t = back.isConnected && !stop && body.querySelector(".ab-wait-t");
+      if (!t) { clearInterval(waitTick); return; }
+      var s = Math.round((Date.now() - waitT0) / 1000);
+      t.textContent = Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
+    }, 1000);
     var q = "/lab/abcompare?s=" + enc(JSON.stringify(sides.map(function (s) { return [s.name, s.path || ""]; }))) + "&names=" + enc(JSON.stringify(names)) +
       (Object.keys(words).length ? "&words=" + enc(JSON.stringify(words)) : "");
     function url(f) { return "/lab/abcompare/file?key=" + R.key + "&f=" + f; }
@@ -2074,7 +2107,7 @@
       return '<table class="ab-tbl"><tr><th></th>' + names.map(function (n) { return '<th title="' + esc(n) + '">' + esc(n) + "</th>"; }).join("") + (two ? "<th>Δ</th>" : "") + "</tr>" +
         cells().map(function (c, i) { return "<tr" + (i >= AB_ROWS.length ? ' class="ab-rel"' : "") + "><th>" + esc(c[0]) + "</th>" + c[1].map(function (v) { return "<td>" + esc(v) + "</td>"; }).join("") + (c[2] == null ? "" : "<td>" + esc(c[2]) + "</td>") + "</tr>"; }).join("") + "</table>";
     }
-    function pic(f) { return '<a class="ab-pic" href="' + esc(url(f)) + '" target="_blank" rel="noopener"><img src="' + esc(url(f)) + '" alt="" /></a>'; }
+    function pic(f) { return '<button type="button" class="ab-pic" data-zoom-pic="' + esc(url(f)) + '"><img src="' + esc(url(f)) + '" alt="" /></button>'; }   // HERESY 2641: in the page
     function zones(p) { var z = p.zones_db || {}; return Object.keys(z).map(function (k) { return [tt(AB_ZONES[k] || k), abNum(z[k], k, true)]; }); }
     function pairHtml() {
       var p = R.pairs[at], z = zones(p);
@@ -2129,3 +2162,9 @@
                            list: function () { return state.list.slice(); }, renderInto: renderInto,   // HERESY 1964   // 1506: the branches as the lab names them (kind, source), for the Refiner's canvas
                            marks: function (name) { return Object.assign({}, MARKS[name] || {}); } };   // 1415; 1504
 })();
+
+// HERESY 2641: a lineage step's picture full screen in the tab, not in a window of its own
+document.addEventListener("click", function (e) {
+  var zp = e.target.closest && e.target.closest(".dv-pic[data-zoom-pic]");
+  if (zp && window.HeresyZoom) { e.preventDefault(); window.HeresyZoom.picture(zp.dataset.zoomPic, zp.dataset.zoomTitle || ""); }
+});

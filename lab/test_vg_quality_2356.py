@@ -193,7 +193,7 @@ try:
     import upscale_shots as us
     check("7B sharp and 3B in batches of 45, fp8 of 21; 4 frames of overlap; a batch of 45 asks for the whole card", us.MODELS["7b"]["batch"] == 45
           and us.MODELS["3b"]["batch"] == 45 and us.MODELS["7b-fp8"]["batch"] == 21 and us.OVERLAP == 4 and us.need_mb(1080, "7b") > us.need_mb(1080, "7b-fp8"))
-    src = (Path(__file__).resolve().parent / "upscale_job.py").read_text(encoding="utf-8")
+    src = (Path(__file__).resolve().parent / "shot_upscale_job.py").read_text(encoding="utf-8")
     check("the job runs SeedVR2 with its batch and the overlap (a job of before: 21, 16 blocks)", '"--temporal_overlap"' in src and 'job.get("batch") or 21' in src)
 finally:
     shutil.rmtree(kit, ignore_errors=True)

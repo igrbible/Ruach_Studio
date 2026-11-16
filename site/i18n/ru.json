@@ -437,5 +437,17 @@
  "Why our own Studio, not a ComfyUI plugin bundle": "Почему своя Студия, а не набор плагинов для ComfyUI",
  "Viktor Zhuromskyy · 13 November 2026": "Виктор Журомский · 13 ноября 2026",
  "Many of the people who make songs with us came from ComfyUI. A professional workflow there takes weeks to build, and the next core or node update can break it. What's left behind are private forks whose fixes too often never go back upstream. I call that a forkblow. Ruach Studio goes the other way: eight rooms on one page, one music engine we patch ourselves, and every model pinned to a room. Here's why, what it costs, where we still meet ComfyUI, and my farewell letter to its community.": "Многие из тех, кто делает песни с нами, пришли из ComfyUI. Профессиональный воркфлоу там строится неделями, а очередное обновление ядра или нод может его сломать. После остаются частные форки, чьи исправления слишком часто так и не возвращаются в апстрим. Я зову это форкблоу. Ruach Studio идёт другим путём: восемь комнат на одной странице, один музыкальный движок, который мы патчим сами, и каждая модель закреплена за своей комнатой. Почему так, чего это стоит, где мы с ComfyUI всё ещё встречаемся, и моё прощальное письмо его сообществу — в статье.",
- "Read the article": "Читать статью"
+ "Read the article": "Читать статью",
+ "Read as PDF": "Читать как PDF",
+ "Download PDF": "Скачать PDF",
+ "Previous page": "Предыдущая страница",
+ "Next page": "Следующая страница",
+ "Page number": "Номер страницы",
+ "of": "из",
+ "Page": "Страница",
+ "Smaller": "Мельче",
+ "Larger": "Крупнее",
+ "Opening the PDF…": "Открываем PDF…",
+ "The PDF reader did not start": "Читалка PDF не запустилась",
+ "A page of the article": "Страница статьи"
 }

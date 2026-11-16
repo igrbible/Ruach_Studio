@@ -2133,7 +2133,8 @@ def stress_preview(body):
         text, glyphs = _glyphs(text)
     text, moved = furtive(text)                          # HERESY 2375: Check shows the furtive patach where it is said
     text, nrep = rn.expand(text, lang, skip, _known(lang))   # HERESY 2397: Check shows the numbers as they will be said
-    out, rep = rs.stress(text, lang, "acute", skip)
+    # HERESY 2637b: the Musician's lyrics ask "user": false: the base dictionaries alone, never the Narrator's own word list
+    out, rep = rs.stress(text, lang, "acute", skip, user={} if body.get("user") is False else None)
     return dict(rep, text=out, glyphs=glyphs, furtive=moved, numbers=nrep["numbers"], numbers_said=nrep["said"])
 
 

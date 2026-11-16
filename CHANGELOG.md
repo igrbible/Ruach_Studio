@@ -7,6 +7,24 @@ Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): 
 After 2.0.8 (patches 2605 and up).
 
 - **An MP3 of a spoken take sounds as its WAV again** (HERESY 2605): the MP3 encoder turned a take whose two channels are one (every Narrator reading, every imported take) into a distorted sound; such frames are now coded left and right, and the MP3 copies made before are made again on the next download. Songs were never touched.
+- **The Writer's bar as the Librarian's and its start cards by world** (HERESY 2608): the worlds' knob and the search on the right before the icons; a row of cards for each world, with From the Narrator and Narrator's versions new; the Trash last.
+- With Opus chosen the player waits for the whole take, so a slow line no longer clicks at early swaps (2606); on a card of 12,288 rows or less the long songs go in pieces by default (2607); the trash is «мусорка» in Russian, «смітник» in Ukrainian, «сметнік» in Belarusian, so the Refiner's bucket keeps «корзина» (2611).
+- The system bar's middle choice stands in the Painter's room (never «Артист»), the Refiner, the Videographer and now the Trainer (2610); the Writer's last row keeps the cards' width with the Trash narrower (2612).
+- The Narrator's reading settings in two clean columns and its go bar in one row (2613); the Musician's column grip no longer stands across the Narrator (2614).
+- A training's progress lines show in the Trainer's log room, no longer in the Musician's (2615).
+- The AppImage's own window is light unless the desktop is set to dark (2616).
+- In the day themes the Narrator's warning marks and the Musician's worn-words counter are dark enough to read (2617).
+- The Musician's demos hold the twenty cards of the visiting card's Ring, in their own group (2618).
+- The Narrator's voice and card pickers are as high as its fields (2619); the lyrics' worn-words list and keys are icons (2620).
+- The Trainer's curves side by side stand two to a row instead of five (2621).
+- The Trainer's curves show the held-out tracks as dots, and their numbers follow the bold line (2622).
+- The Trainer's curves have a third view, all six together, a chip each to hide or show; the tiles and the run's buttons no longer wrap (2623).
+- **Your own voice in the Narrator is cut on its wave** (HERESY 2624): the window opens over the room instead of under the form; drop a clip, see its wave, choose up to 30 seconds of it by dragging, hear the whole clip or the piece, and only the piece is kept. The Voice builder opens as a window too.
+- **The transcriber reads in F32** (HERESY 2625): SheetSage2 and MERT as m-a-p made them by default; Q8_0, 1.6 GB lighter, is a choice under the VAE in the ☰ menu and in Engine → Compute.
+- **A failed computation stops the song instead of making silence** (HERESY 2626, after Timon's yue2.cpp): a velocity that is not a number is computed again, and a decode that is no sound says where.
+- **The compare window plays each version from memory, numbers every row and takes 24 at once** (HERESY 2627); its sheet says when two sounds do not differ (2629).
+- **From Timon's yue2.cpp, with thanks (MIT):** `--kv-q8`, the music cache in Q8_0 at about half the memory, off by default, used only where the device itself says it runs every op of it (HERESY 2633); tinyBLAS on by default, the CPU matrix kernel (2634: the transcriber on the processor 108 → 85 s, its score the same); a self-test of the GPU at start, which falls back to the processor and says why instead of failing the first song (2635).
+- **Every sampling field shows its bounds** under its name, and its arrows stop at the top; the engine sends what it refuses past on `/props` (HERESY 2636).
 
 ## 2.0.8 · 2026-11-13
 

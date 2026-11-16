@@ -57,6 +57,7 @@ static void print_usage(const char * prog) {
             "  --vae-core <N>         VAE tile core frames (default: 512)\n"
             "  --vae-halo <N>         VAE tile halo frames (default: 16)\n"
             "  --no-fa                Disable flash attention\n"
+            "  --kv-q8                The music cache in Q8_0, about half the memory (a GPU with flash attention; HERESY 2633)\n"
             "  --no-fa-lm             Disable flash attention in the music half (AR) only\n"
             "  --clamp-fp16           Clamp hidden states to FP16 range\n"
             "  --fp16-matmul          BF16 prefills and flow matching on FP16 tensor cores (RTX 20, Volta)\n"
@@ -125,6 +126,8 @@ int main(int argc, char ** argv) {
             params.no_fa_lm = true;
         } else if (!strcmp(argv[i], "--no-fa")) {
             params.no_fa = true;
+        } else if (!strcmp(argv[i], "--kv-q8")) {   // HERESY 2633
+            params.kv_q8 = true;
         } else if (!strcmp(argv[i], "--clamp-fp16")) {
             params.clamp_fp16 = true;
         } else if (!strcmp(argv[i], "--fp16-matmul")) {  // Local addition

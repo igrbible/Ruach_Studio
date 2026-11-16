@@ -62,6 +62,7 @@ void request_init(Yue2Request * r) {
     r->plan_only = false;
     r->parent    = "";
     r->score_guard = true;
+    r->score_fill  = false;   // HERESY 2631
     r->decode_from = "";
     r->adapters.clear();
     r->source_tokens = "";
@@ -364,6 +365,9 @@ static void request_parse_obj(yyjson_val * obj, Yue2Request * r) {
     if ((v = yyjson_obj_get(obj, "plan_only")) && yyjson_is_bool(v)) {
         r->plan_only = yyjson_get_bool(v);
     }
+    if ((v = yyjson_obj_get(obj, "score_fill")) && yyjson_is_bool(v)) {   // HERESY 2631
+        r->score_fill = yyjson_get_bool(v);
+    }
     if ((v = yyjson_obj_get(obj, "score_guard")) && yyjson_is_bool(v)) {
         r->score_guard = yyjson_get_bool(v);
     }
@@ -624,6 +628,9 @@ std::string request_to_json(const Yue2Request * r, bool sparse) {
     }
     if (!sparse || r->plan_only != d.plan_only) {
         yyjson_mut_obj_add_bool(doc, root, "plan_only", r->plan_only);
+    }
+    if (!sparse || r->score_fill != d.score_fill) {   // HERESY 2631
+        yyjson_mut_obj_add_bool(doc, root, "score_fill", r->score_fill);
     }
     if (!sparse || r->score_guard != d.score_guard) {
         yyjson_mut_obj_add_bool(doc, root, "score_guard", r->score_guard);

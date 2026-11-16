@@ -52,6 +52,7 @@ struct Yue2PipelineParams {
     int  max_batch  = 1;              // song batch limit, one KV set per song, two under guidance
     bool no_fa      = false;          // disable flash attention
     bool no_fa_lm   = false;          // HERESY 1008: flash attention off in the music half (AR) only
+    bool kv_q8      = false;          // HERESY 2633 (after timoncool/yue2.cpp 6ee292c, MIT): the music cache in Q8_0, about half the F16 one
     bool no_fa_nar  = false;          // HERESY 2450: flash attention off in the sound half (NAR) only: ggml Vulkan's on an Intel Arc is 2.4x slower there
     bool clamp_fp16 = false;          // clamp hidden states on sub-Ampere CUDA
     bool fp16_matmul = false;         // Local addition: batched BF16 matmuls on FP16 tensor cores (qwen3-enc.h)
@@ -70,6 +71,7 @@ struct Yue2Pipeline {
     std::string        vae_encoder_missing;       // and if not, the first tensor missing
     std::string        transcriber_path;  // the SheetSage2 GGUF, empty without one
     std::string        transcriber_refined_path;  // HERESY 2328: SheetSage2-Refined's overlay, empty without one
+    std::string        transcriber_small_path;    // HERESY 2625: SheetSage2 with MERT in Q8_0, the lighter choice (F32 the default)
     std::string        tokenizer_path;    // upstream: the audio tokenizer GGUF, empty without one
     Yue2PipelineParams params;
     std::vector<AdapterEntry> adapters;   // upstream: the adapter directory, scanned at configure
@@ -157,6 +159,59 @@ static std::string pipeline_format_tokens(const std::vector<int> & tokens) {
 // Record the paths and the knobs, load the tokenizer, read the backbone
 // config the cache is sized from. No GPU module loads here, the first
 // generate requires them and allocates the cache.
+// HERESY 2633: does the KV backend itself run a Q8_0 cache on the shapes the engine builds? Flash attention over a batched [D, S, Nkv, 2]
+// Q8_0 cache, one query row (decode) and 64 (prefill), and a Q8_0 prefix view read back as f32 (the sound half). Nothing is allocated:
+// supports_op reads the types and the shapes. A backend that would hand any of them to the processor keeps the cache F16.
+static const char * pipeline_kv_q8_refusal(ggml_backend_t be, const Qwen3LMConfig & c) {
+    const int               D = c.head_dim, Nkv = c.n_kv_heads > 0 ? c.n_kv_heads : 1, Nh = c.n_heads > 0 ? c.n_heads : Nkv, S = 512;
+    struct ggml_init_params gp = { 24 * ggml_tensor_overhead() + 1024, NULL, true };
+    struct ggml_context *   cx = ggml_init(gp);
+    const char *            why = nullptr;
+    struct ggml_tensor *    k  = ggml_new_tensor_4d(cx, GGML_TYPE_Q8_0, D, S, Nkv, 2);
+    struct ggml_tensor *    v  = ggml_new_tensor_4d(cx, GGML_TYPE_Q8_0, D, S, Nkv, 2);
+    for (int rows : { 1, 64 }) {
+        struct ggml_tensor * q  = ggml_new_tensor_4d(cx, GGML_TYPE_F32, D, rows, Nh, 2);
+        struct ggml_tensor * m  = ggml_new_tensor_4d(cx, GGML_TYPE_F16, S, rows, 1, 2);
+        struct ggml_tensor * fa = ggml_flash_attn_ext(cx, q, k, v, m, 1.0f / sqrtf((float) D), 0.0f, 0.0f);
+        ggml_prec_set_acc(fa, GGML_PREC_F32);
+        if (!ggml_backend_supports_op(be, fa)) {
+            why = rows == 1 ? "its flash attention does not read a Q8_0 cache (decode)" : "its flash attention does not read a Q8_0 cache (prefill)";
+        }
+    }
+    struct ggml_tensor * view = ggml_view_3d(cx, k, D, 48, Nkv, k->nb[1], k->nb[2], 0);
+    if (!why && !ggml_backend_supports_op(be, ggml_cast(cx, view, GGML_TYPE_F32))) {
+        why = "it does not read a Q8_0 prefix back as f32 (the sound half)";
+    }
+    ggml_free(cx);
+    return why;
+}
+
+// HERESY 2633b: the cache's type, asked at boot (--kv-q8) or by the Engine (settings.json "kv_q8"). The cache must be free (none allocated):
+// the next run allocates it in this type. Q8_0 only where every reader takes it; otherwise F16, and the log says why.
+static void pipeline_kv_q8_set(Yue2Pipeline * p, bool want) {
+    const Qwen3LMConfig & cfg = p->kv.cfg;
+    p->kv.type                = GGML_TYPE_F16;
+    if (!want) {
+        return;
+    }
+    const char * why = nullptr;
+    if (!p->kv_backend.has_gpu) {
+        why = "the cache is on the processor";
+    } else if (p->params.no_fa || p->params.no_fa_lm) {
+        why = "flash attention is off in the music half";
+    } else if (cfg.head_dim % (int) ggml_blck_size(GGML_TYPE_Q8_0) != 0) {
+        why = "the head size is not whole Q8_0 blocks";
+    } else {
+        why = pipeline_kv_q8_refusal(p->kv_backend.backend, cfg);
+    }
+    if (why) {
+        fprintf(stderr, "[Pipeline] --kv-q8 asked, the music cache stays F16: %s\n", why);
+    } else {
+        p->kv.type = GGML_TYPE_Q8_0;
+        fprintf(stderr, "[Pipeline] the music cache in Q8_0 (--kv-q8), about half the F16 one\n");
+    }
+}
+
 static bool pipeline_configure(Yue2Pipeline *             p,
                                const char *               model_path,
                                const char *               vae_path,
@@ -202,6 +257,7 @@ static bool pipeline_configure(Yue2Pipeline *             p,
     }
     p->kv_backend = backend_init("KV");
     qw3lm_kv_init(&p->kv, cfg, p->kv_backend.backend);
+    pipeline_kv_q8_set(p, params.kv_q8);   // HERESY 2633
     p->configured = true;
     return true;
 }
@@ -568,8 +624,9 @@ static AudioTokenizer * require_atok(Yue2Pipeline * p) {
     return m;
 }
 
-static SheetSage2 * require_ss2(Yue2Pipeline * p, bool refined = false) {
-    ModelKey     k = { MODEL_SS2, refined ? p->transcriber_refined_path : p->transcriber_path, {} };
+static SheetSage2 * require_ss2(Yue2Pipeline * p, bool refined = false, bool small = false) {
+    ModelKey     k = { MODEL_SS2, refined ? p->transcriber_refined_path
+                                          : small && !p->transcriber_small_path.empty() ? p->transcriber_small_path : p->transcriber_path, {} };
     SheetSage2 * m = store_require_ss2(p->store, k);
     if (m) {
         m->use_flash_attn = m->use_flash_attn && !p->params.no_fa;
@@ -588,12 +645,13 @@ static bool pipeline_transcribe(Yue2Pipeline * p,
                                 std::string *  error,
                                 bool           refined  = false,    // HERESY 2328: SheetSage2-Refined instead of SheetSage2
                                 bool           key_mode = false,    // its keys with modes
-                                int            rope     = -1) {     // HERESY 2359: SheetSage2's angles, 1 bf16, 0 exact, -1 as loaded
+                                int            rope     = -1,       // HERESY 2359: SheetSage2's angles, 1 bf16, 0 exact, -1 as loaded
+                                bool           small    = false) {  // HERESY 2625: the Q8_0 pair instead of the F32 one
     if (refined && p->transcriber_refined_path.empty()) {
         *error = "SheetSage2-Refined is not installed (models/SheetSage2-Refined-F16.gguf)";
         return false;
     }
-    SheetSage2 * m = require_ss2(p, refined);
+    SheetSage2 * m = require_ss2(p, refined, small);
     if (!m) {
         *error = "transcriber unavailable";
         return false;
@@ -1097,7 +1155,19 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         // HERESY 2433: a missing key line alone is a warning, said in the log, the take's meta and the job's status, guard on or off
         for (int i = 0; i < B; i++) {
             std::string why = yue2_score_broken(scores[i], &score_warn[i]);
-            if (!score_warn[i].empty()) {
+            // HERESY 2631 (after timoncool/yue2.cpp 11551dc, MIT): asked, a score whose fault is its header gets the learnt defaults and is sung
+            if (r.score_fill && (!why.empty() || !score_warn[i].empty())) {
+                std::string filled = yue2_score_fill_header(scores[i]), warn2;
+                if (filled != scores[i] && yue2_score_broken(filled, &warn2).empty() && warn2.empty()) {
+                    fprintf(stderr, "[Pipeline] the score of song %d had a broken header (%s): M:/L:/K: filled in with the learnt defaults\n", i,
+                            why.empty() ? score_warn[i].c_str() : why.c_str());
+                    scores[i]  = filled;
+                    abc_ids[i] = encode(scores[i]);
+                    why.clear();
+                    score_warn[i] = "header filled: M:4/4, L:1/16, K:C where they were missing or not values";
+                }
+            }
+            if (!score_warn[i].empty() && score_warn[i] == YUE2_SCORE_NO_KEY) {
                 fprintf(stderr, "[Pipeline] WARNING: the score of song %d has no key line (K:): sung as written\n", i);
             }
             if (r.score_guard && !why.empty()) {

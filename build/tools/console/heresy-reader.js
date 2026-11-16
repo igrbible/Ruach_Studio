@@ -151,10 +151,12 @@
     // HERESY 2562 (the UIX audit, item 47): the quant a picker, as the voice and the card (its six long names were cut in two columns); its grade's colour on its face
     "#rdTierBox > .field { flex: 1 1 100%; }",
     // the go bar: the title and Read, as the Musician's Generate
-    ".rd-go { position: sticky; bottom: 0; z-index: 3; display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border-radius: var(--r-lg);" +
+    // HERESY 2613 (Viktor 13.11.2026: «стики блок с НАЗВАНИЕ СЕМПЛА и с кнопкой генерации раздут по высоте. Выстрой всё в одну строку»)
+    ".rd-go { position: sticky; bottom: 0; z-index: 3; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 6px 12px; border-radius: var(--r-lg);" +
       " background: color-mix(in srgb, var(--panel) 70%, var(--ground)); border: 1px solid var(--line-soft); box-shadow: 0 -10px 24px -18px var(--shadow-lg); }",
-    ".rd-go > .field { flex: 1 1 260px; margin: 0; }",
-    ".rd-go-btn { display: inline-flex; align-items: center; gap: 8px; min-width: 10em; justify-content: center; }",
+    "#view-read .rd-go > .field { flex: 0 1 560px; margin: 0; display: flex; flex-direction: row; align-items: center; gap: 10px; min-width: 0; }",
+    "#view-read .rd-go > .field > .label { margin: 0; white-space: nowrap; text-align: left; } #view-read .rd-go > .field > input { flex: 1 1 auto; min-width: 120px; height: var(--ctl-h, 36px); }",
+    ".rd-go-btn { display: inline-flex; align-items: center; gap: 8px; min-width: 10em; justify-content: center; margin-left: auto; height: var(--ctl-h, 36px); }",
     ".rd-go-btn svg { width: 17px; height: 17px; }",
     // the breath under the room's name: still while nothing reads, breathing while a run reads
     ".rd-head { position: relative; }",
@@ -193,7 +195,12 @@
     ".rd-pal-g { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }",
     ".rd-pal-g > b { flex: 0 0 100%; font-weight: 500; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }",
     ".rd-tag { font-family: var(--mono); font-size: 11.5px; white-space: nowrap; }",
-    ".rd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px 12px; margin-top: 10px; }",
+    ".rd-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; margin-top: 10px; align-items: end; }",
+    // HERESY 2613 (Viktor 13.11.2026: «Хаотично размещены поля и названия. Организуй красиво»): three numbers a row, the inputs on one line
+    // whatever their labels wrap to, the switches together under them
+    ".rd-grid > .field { margin: 0; } .rd-grid > .field > .label { min-height: 2.6em; display: flex; align-items: flex-end; }",
+    ".rd-checks { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: center; padding-top: 2px; }",
+    "@media (max-width: 420px) { .rd-grid { grid-template-columns: minmax(0, 1fr); } }",
     ".rd-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }",
     ".rd-actions #rdGo { min-width: 9em; }",
     ".rd-say { color: var(--dim); font-size: 12px; }",
@@ -237,6 +244,21 @@
     ".rd-reread .ui-ico { width: 15px; height: 15px; }",
     ".rd-own { display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--bad-line); border-radius: var(--r-md); padding: 12px 14px; }",
     ".rd-own h3 { margin: 0; font: 500 15px/1.4 var(--heading); }",
+    // HERESY 2624: the voice of one's own and the voice builder as windows over the room; the clip's wave to choose the piece
+    ".rd-ovl[hidden] { display: none !important; }",
+    ".hd-box.rd-own, .hd-box.rd-design { width: min(860px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 16px 18px 14px; }",
+    ".hd-box.rd-own { border-color: var(--bad-line); }",
+    ".rd-ovl-head { display: flex; align-items: center; gap: 8px; } .rd-ovl-head h3 { flex: 1 1 auto; }",
+    ".rd-wave-box { position: relative; }",
+    ".rd-wave { display: block; width: 100%; height: 120px; border: 1px solid var(--line-soft); border-radius: 6px; background: var(--sunk); cursor: crosshair; touch-action: none; }",
+    ".rd-wave-box.is-over .rd-wave { outline: 2px dashed var(--amber); outline-offset: 2px; }",
+    ".rd-wave-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 16px; text-align: center; color: var(--muted); font-size: 13px; pointer-events: none; }",
+    ".rd-wave-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }",
+    ".rd-wave-t { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }",
+    ".rd-wave-t input { width: 86px; height: var(--ctl-h, 36px); box-sizing: border-box; }",
+    ".rd-wave-len { font-size: 12px; color: var(--muted); } .rd-wave-len.is-bad { color: var(--bad-ink); }",
+    ".rd-wave-name { flex: 1 1 160px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: end; }",
+    ".rd-wave-short { margin: 0; color: var(--bad-ink); }",
     // HERESY 2455: the voice builder
     ".rd-design { display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--line-a); border-radius: var(--r-md); padding: 12px 14px; }",
     ".rd-design h3 { margin: 0; font: 500 15px/1.4 var(--heading); }",
@@ -265,6 +287,7 @@
     "select.rd-g-green, select.rd-g-yellow, select.rd-g-red { font-weight: 600; }",
     ".rd-credit { font-weight: 600; }",
     ".rd-cer { color: var(--warn, #c9a227); font-size: 11px; white-space: nowrap; }",
+    ":root[data-tone=light] .rd-cer { color: #7a5a00; }",   // HERESY 2617 (UIX 103): the day themes' warning ink at 4.5:1 and more
     ".rd-tr { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; }",
     ".rd-gmap-text { min-height: 220px; font-size: 12px; font-family: var(--mono, monospace); tab-size: 14; white-space: pre; overflow-wrap: normal; }",
     ".rd-tr-go { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }",
@@ -318,6 +341,7 @@
     // fields at their height (the glyph map's table cells and a piece's pause keep their own)
     "#view-read input:is([type=text], [type=number], [type=search]):not(.rd-gm-table input):not(.rd-gap) { height: var(--ctl-h, 36px); box-sizing: border-box; }",
     "#view-read :is(.rd-dict-row, .rd-gm-bar, .rd-voice, .rd-tr-go, .rd-cand-keep, .rd-spk) > .rd-ib { height: var(--ctl-h, 36px); min-width: var(--ctl-h, 36px); }",
+    "#view-read .field .hc-pick { height: var(--ctl-h, 36px); box-sizing: border-box; }",   // HERESY 2619 (UIX 103): the voice and card pickers 36 px as every field, not 38
     "#logDockBody[data-only=\"reader\"] > .log-line:not([data-src=\"reader\"]), .log-pop [data-body=\"server\"][data-only=\"reader\"] > .log-line:not([data-src=\"reader\"]) { display: none; }"
   ].join("\n");
 
@@ -373,7 +397,7 @@
       ib("wand-sparkles", "rdDesignOpen", E("reader.design.open"), E("reader.design.open.tip")) + "</span></div>" +
       '<div class="field" id="rdVoiceBox"><span class="label">' + esc(E("reader.voice")) + '</span><div class="rd-voice">' +
       '<select id="rdVoice" data-hc-pick="1" data-tip="' + esc(E("reader.voice.tip")) + '"></select>' +
-      ib("vol-hi", "rdListen", E("reader.listen"), E("reader.listen.tip")) + "</div></div>" +
+      ib("vol-hi", "rdListen", E("reader.listen"), E("reader.listen.tip")) + ib("trash-2", "rdVoiceDel", E("reader.voice.del"), E("reader.voice.del.tip")) + "</div></div>" +   // HERESY 2645
       '<div class="field" id="rdCastBox" hidden><span class="label">' + esc(E("reader.speakers")) + '</span><div class="rd-cast" id="rdCast"></div></div>' +
       '<div class="rd-row"><label class="field"><span class="label">' + esc(E("reader.lang")) + '</span><select id="rdLang" data-tip="' + esc(E("reader.lang.tip")) + '">' +
       '<option value="auto">' + esc(E("reader.lang.auto")) + "</option>" + LANG_CODES.map(function (l) { return '<option value="' + l + '" translate="no">' + l + "</option>"; }).join("") + "</select></label>" +
@@ -413,15 +437,18 @@
       '<p class="rd-tier-say" id="rdTierSay" hidden></p>' +
       '<details class="rd-box" id="rdMore"><summary>' + esc(E("reader.settings")) + '</summary><div class="rd-grid">' +
       '<label class="field"><span class="label">' + esc(E("reader.temp")) + lim("0.1", "1.5") + '</span><input type="number" id="rdTemp" min="0.1" max="1.5" step="0.05" value="0.8" data-tip="' + esc(E("reader.temp.tip")) + '" /></label>' +
-      '<label class="check" data-tip="' + esc(E("reader.hear.tip")) + '"><input type="checkbox" id="rdHear" checked /> <span>' + esc(E("reader.hear")) + "</span></label>" +
-      '<label class="check" data-tip="' + esc(E("reader.acutesOff.tip")) + '"><input type="checkbox" id="rdAcutesOff" /> <span>' + esc(E("reader.acutesOff")) + "</span></label>" +   // HERESY 2343: a test, never kept
-      '<label class="field"><span class="label">' + esc(E("reader.topk")) + lim("1", "200") + '</span><input type="number" id="rdTopk" min="1" max="200" step="1" value="50" data-tip="' + esc(E("reader.topk.tip")) + '" /></label>' +
       '<label class="field"><span class="label">' + esc(E("reader.seed")) + '</span><input type="number" id="rdSeed" min="0" max="2147483000" step="1" placeholder="' + esc(E("reader.seed.ph")) + '" data-tip="' + esc(E("reader.seed.tip")) + '" /></label>' +
       '<label class="field"><span class="label">' + esc(E("reader.gap")) + lim("0.05", "3") + '</span><input type="number" id="rdGap" min="0.05" max="3" step="0.05" value="0.35" data-tip="' + esc(E("reader.gap.tip")) + '" /></label>' +
       '<label class="field"><span class="label">' + esc(E("reader.turngap")) + lim("0.05", "3") + '</span><input type="number" id="rdTurnGap" min="0.05" max="3" step="0.05" value="0.45" data-tip="' + esc(E("reader.turngap.tip")) + '" /></label>' +
+      '<label class="field"><span class="label">' + esc(E("reader.topk")) + lim("1", "200") + '</span><input type="number" id="rdTopk" min="1" max="200" step="1" value="50" data-tip="' + esc(E("reader.topk.tip")) + '" /></label>' +
+      '<div class="rd-checks">' +   // HERESY 2613: the two switches in a row of their own, under the numbers
+      '<label class="check" data-tip="' + esc(E("reader.hear.tip")) + '"><input type="checkbox" id="rdHear" checked /> <span>' + esc(E("reader.hear")) + "</span></label>" +
+      '<label class="check" data-tip="' + esc(E("reader.acutesOff.tip")) + '"><input type="checkbox" id="rdAcutesOff" /> <span>' + esc(E("reader.acutesOff")) + "</span></label>" +   // HERESY 2343: a test, never kept
+      '</div>' +
       "</div></details>" +
       "</section></div>" +
-      '<div class="rd-design" id="rdDesign" hidden><h3>' + esc(E("reader.design.title")) + '</h3><p class="rd-design-note">' + esc(E("reader.design.note")) + "</p>" +
+      '<div class="rd-ovl" id="rdDesignBack" hidden><div class="rd-design" id="rdDesign" role="dialog" aria-modal="true" aria-label="' + esc(E("reader.design.title")) + '">' +   // HERESY 2624
+      '<div class="rd-ovl-head"><h3>' + esc(E("reader.design.title")) + '</h3></div><p class="rd-design-note">' + esc(E("reader.design.note")) + "</p>" +
       '<label class="field"><span class="label">' + esc(E("reader.design.describe")) + '</span><textarea id="rdDsDescribe" rows="2" maxlength="160" spellcheck="false" placeholder="' +
       esc(E("reader.design.describe.ph")) + '" data-tip="' + esc(E("reader.design.describe.tip")) + '"></textarea></label>' +
       '<div class="rd-design-row"><label class="field"><span class="label">' + esc(E("reader.own.lang")) + '</span><select id="rdDsLang" data-hc-pick="1" data-tip="' + esc(E("reader.design.lang.tip")) + '"></select></label>' +
@@ -434,16 +461,29 @@
       '<div class="rd-actions"><button type="button" class="btn small" id="rdDsGo" data-tip="' + esc(E("reader.design.make.tip")) + '">' + esc(E("reader.design.make")) + "</button>" +
       ib("stop-circle", "rdDsStop", E("reader.design.stop"), E("reader.design.stop"), " hidden") +
       '<button type="button" class="btn ghost small" id="rdDsClose">' + esc(E("reader.own.cancel")) + '</button><span class="rd-say mono" id="rdDsSay"></span></div>' +
-      '<div class="rd-cands" id="rdDsCands"></div><p class="rd-design-credit" id="rdDsCredit" hidden></p></div>' +
-      '<div class="rd-own" id="rdOwn" hidden><h3>' + esc(E("reader.own.title")) + '</h3><p class="rd-warn" role="alert">' + esc(E("reader.own.warn")) + "</p>" +
+      '<div class="rd-cands" id="rdDsCands"></div><p class="rd-design-credit" id="rdDsCredit" hidden></p></div></div>' +
+      '<div class="rd-ovl" id="rdOwnBack" hidden><div class="rd-own" id="rdOwn" role="dialog" aria-modal="true" aria-label="' + esc(E("reader.own.title")) + '">' +   // HERESY 2624
+      '<div class="rd-ovl-head"><h3>' + esc(E("reader.own.title")) + '</h3></div>' +
+      '<p class="rd-warn" role="alert">' + esc(E("reader.own.warn")) + "</p>" +
       '<label class="check" data-tip="' + esc(E("reader.own.consent.tip")) + '"><input type="checkbox" id="rdOwnOk" /> <span>' + esc(E("reader.own.consent")) + "</span></label>" +
       '<div class="rd-row"><label class="field"><span class="label">' + esc(E("reader.own.name")) + '</span><input type="text" id="rdOwnName" maxlength="60" data-tip="' + esc(E("reader.own.name.tip")) + '" /></label>' +
       '<label class="field"><span class="label">' + esc(E("reader.own.lang")) + '</span><select id="rdOwnLang" data-hc-pick="1" data-tip="' + esc(E("reader.own.lang.tip")) + '"></select></label></div>' +
-      '<label class="field"><span class="label">' + esc(E("reader.own.text")) + '</span><textarea id="rdOwnText" rows="2" spellcheck="false" data-tip="' + esc(E("reader.own.text.tip")) + '"></textarea></label>' +
-      '<div class="rd-actions"><label class="btn ghost small icon-only rd-ib" aria-label="' + esc(E("reader.own.file")) + '" data-tip="' + esc(E("reader.own.file.tip")) + '">' + (UI("upload") || esc(E("reader.own.file"))) +
+      '<div class="rd-wave-box" id="rdOwnWaveBox"><canvas class="rd-wave" id="rdOwnWave" tabindex="0" aria-label="' + esc(E("reader.own.wave")) + '" data-tip="' + esc(E("reader.own.wave")) + '"></canvas>' +
+      '<div class="rd-wave-empty" id="rdOwnEmpty">' + esc(E("reader.own.drop")) + "</div></div>" +
+      '<div class="rd-wave-bar"><label class="btn ghost small icon-only rd-ib" aria-label="' + esc(E("reader.own.file")) + '" data-tip="' + esc(E("reader.own.file.tip")) + '">' + (UI("upload") || esc(E("reader.own.file"))) +
       '<input type="file" id="rdOwnFile" accept="audio/*" hidden /></label>' +
-      '<span class="rd-say mono" id="rdOwnFileName" translate="no"></span><button type="button" class="btn small" id="rdOwnKeep">' + esc(E("reader.own.keep")) + "</button>" +
-      '<button type="button" class="btn ghost small" id="rdOwnCancel">' + esc(E("reader.own.cancel")) + "</button></div></div>" +
+      ib("waveform", "rdOwnAll", E("reader.own.playAll"), E("reader.own.playAll")) + ib("play", "rdOwnSel", E("reader.own.playSel"), E("reader.own.playSel")) +
+      ib("stop-circle", "rdOwnStop", E("reader.own.stop"), E("reader.own.stop")) +
+      '<button type="button" class="btn small rd-own-trim" id="rdOwnTrim" data-tip="' + esc(E("reader.own.trim.tip")) + '">' + esc(E("reader.own.trim")) + "</button>" +   // HERESY 2643b
+      '<label class="rd-wave-t"><span>' + esc(E("reader.own.from")) + '</span><input type="text" id="rdOwnA" class="mono" inputmode="decimal" spellcheck="false" data-tip="' + esc(E("reader.own.ab.tip")) + '" /></label>' +
+      '<label class="rd-wave-t"><span>' + esc(E("reader.own.to")) + '</span><input type="text" id="rdOwnB" class="mono" inputmode="decimal" spellcheck="false" data-tip="' + esc(E("reader.own.ab.tip")) + '" /></label>' +
+      '<span class="rd-wave-len mono" id="rdOwnLen" translate="no"></span><span class="rd-say mono rd-wave-name" id="rdOwnFileName" translate="no"></span></div>' +
+      '<p class="rd-wave-short" id="rdOwnShort" hidden>' + esc(E("reader.own.short")) + "</p>" +
+      '<div class="field"><span class="label">' + esc(E("reader.own.text")) + ' <button type="button" class="btn ghost small rd-own-hear" id="rdOwnHear" data-tip="' +
+        esc(E("reader.own.hear.tip")) + '">' + esc(E("reader.own.hear")) + '</button></span><textarea id="rdOwnText" rows="2" spellcheck="false" aria-label="' +
+        esc(E("reader.own.text")) + '" data-tip="' + esc(E("reader.own.text.tip")) + '"></textarea></div>' +   // HERESY 2643: a div, so the label does not take the button
+      '<div class="hd-acts"><span class="hd-spacer"></span><button type="button" class="btn ghost small" id="rdOwnCancel">' + esc(E("reader.own.cancel")) + "</button>" +
+      '<button type="button" class="btn small" id="rdOwnKeep">' + esc(E("reader.own.keep")) + "</button></div></div></div>" +
       "</div>" + GO + '</div><div class="rd-side"><div class="rd-fix" id="rdFix" hidden></div><div class="rd-side-head"><h3 class="rd-h3">' + esc(E("reader.runs")) + '</h3><span class="rd-say mono" id="rdRunsN"></span>' +
       ib("alert", "rdRunsFailed", E("reader.runs.failed"), E("reader.runs.failed.tip"), ' aria-pressed="true"') + "</div>" +   // HERESY 2514: a toggle, not a box
       '<div class="rd-runs" id="rdRuns"></div></div></div>';
@@ -527,6 +567,7 @@
     sel.value = cur;
     if (sel.selectedIndex < 0) sel.selectedIndex = 0;
   }
+  function voiceDelFace() { var b = $("rdVoiceDel"); if (b) b.hidden = !/^v:own-/.test($("rdVoice").value || ""); }   // HERESY 2645: own voices alone
   function paintVoice() {
     var cur = recall("yue2.readerVoice") || "", o = voiceOpts(cur);
     setOpts($("rdVoice"), o.html, o.ok ? cur : "");
@@ -778,6 +819,7 @@
       if (nd) h += '<div class="rd-run-err">' + esc(fill("reader.check.nodict", { 0: nd[2] })) + "</div>";
       if (r.glyphs) h += '<div class="mono">' + esc(fill("reader.glyphs.sum", { "#0": r.glyphs.hits || 0, 1: E(r.glyphs.source === "user" ? "reader.glyphs.user" : "reader.glyphs.his") })) + "</div>" +
         '<div class="rd-say" translate="no">' + esc(String(r.text || "").slice(0, 600)) + (String(r.text || "").length > 600 ? " …" : "") + "</div>";   // HERESY 2270
+      if ((r.homographs || []).length && /drama/i.test($("rdEngine").value || "")) h += '<div class="rd-tier-say">' + esc(E("reader.check.homo.drama")) + "</div>";   // HERESY 2630
       if ((r.homographs || []).length) h += "<div>" + esc(E("reader.check.homo")) + "</div>" + r.homographs.map(function (x) {
         return '<div class="rd-homo"><b translate="no">' + esc(x.word) + "</b>" + x.forms.map(function (f) {
           return '<button type="button" class="btn ghost small" translate="no" data-homo="' + esc(x.word) + '" data-form="' + esc(f) + '">' + esc(f) + "</button>";
@@ -1379,23 +1421,324 @@
   window.ruachReaderTr = { prompt: function (mode) { return trPrompt(engine(), mode); }, chunks: trChunks };   // HERESY 2269: for the checks
 
   // ---------------------------------------------------------------- one's own voice, under the red warning
+  // HERESY 2624 (Viktor 13.11.2026: «редактора волны с выборкой начала и конца, прослушкой всего семпла и триммингом… максимум 30 секунд фрагмент»):
+  // the clip decoded in the page and drawn; the piece chosen on its wave (30 s at most, its quiet edges left out to begin with), heard whole or as
+  // chosen; only the chosen piece goes to the lab, at the 24 kHz mono the lab keeps, with 10 ms fades at its cuts. A file the browser cannot decode
+  // goes as it is, and the lab keeps its first 30 s as before.
+  var OWN_MAX = 30, OWN_MIN = 1, OWN_SHORT = 6;
+  var OW = { file: null, buf: null, peaks: null, a: 0, b: 0, ac: null, src: null, at: 0, from: 0, to: 0, raf: 0, drag: null };
+  function ownAc() {
+    if (!OW.ac) { var C = window.AudioContext || window.webkitAudioContext; OW.ac = C ? new C() : null; }
+    return OW.ac;
+  }
+  function ownClock(t) { t = Math.round(Math.max(0, t || 0) * 10) / 10; var m = Math.floor(t / 60), x = t - 60 * m; return m + ":" + (x < 10 ? "0" : "") + x.toFixed(1); }
+  function ownParse(v) {
+    v = String(v || "").trim().replace(",", ".");
+    var m = v.match(/^(\d+):(\d+(?:\.\d+)?)$/), t = m ? 60 * +m[1] + +m[2] : parseFloat(v);
+    return isFinite(t) ? t : null;
+  }
+  function ownLen() { return OW.buf ? OW.buf.duration : 0; }
+  function ownTimes() {
+    var d = OW.b - OW.a, len = $("rdOwnLen");
+    $("rdOwnA").value = OW.buf ? ownClock(OW.a) : ""; $("rdOwnB").value = OW.buf ? ownClock(OW.b) : "";
+    len.textContent = OW.buf ? tw("reader.own.len", { 0: d.toFixed(1), 1: OWN_MAX, 2: ownClock(ownLen()) }) : "";
+    len.classList.toggle("is-bad", !!OW.buf && d < OWN_SHORT);
+    $("rdOwnShort").hidden = !OW.buf || d >= OWN_SHORT;
+    ["rdOwnA", "rdOwnB", "rdOwnAll", "rdOwnSel"].forEach(function (id) { $(id).disabled = !OW.buf; });
+    $("rdOwnStop").disabled = !OW.src;
+    if (OW.buf) $("rdOwnEmpty").hidden = true;
+    ownPlayFace();   // HERESY 2643c: one play button, a stop while it plays
+    // HERESY 2643b: step 1 (the piece trimmed) before step 2 (its words); a choice moved after the trim asks for it again
+    if ($("rdOwnTrim")) $("rdOwnTrim").disabled = !OW.buf || d < OWN_MIN || d > OWN_MAX + 0.01;
+    if ($("rdOwnHear")) $("rdOwnHear").disabled = !ownCut() || !!OW.hearing;
+  }
+  function ownPlayFace() {
+    var b = $("rdOwnSel");
+    if (!b) return;
+    var on = !!OW.src, k = on ? "reader.own.stop" : "reader.own.playSel";
+    b.innerHTML = UI(on ? "square" : "play") || UI(on ? "stop-circle" : "play") || esc(E(k));
+    b.setAttribute("aria-label", E(k)); b.dataset.tip = E(k); b.classList.toggle("is-on", on);
+  }
+  function ownCut() { return !!(OW.buf && OW.trimmed && OW.a <= 0.001 && Math.abs(OW.b - ownLen()) < 0.02); }
+  function ownTrim() {
+    var ac = ownAc(), d = OW.b - OW.a;
+    if (!OW.buf || !ac || d < OWN_MIN || d > OWN_MAX + 0.01) { toast(E("reader.own.needTrim"), "bad"); return; }
+    ownStop();
+    var sr = OW.buf.sampleRate, a = Math.round(OW.a * sr), n = Math.max(1, Math.round(d * sr)), out = ac.createBuffer(OW.buf.numberOfChannels, n, sr);
+    for (var c = 0; c < OW.buf.numberOfChannels; c++) out.copyToChannel(OW.buf.getChannelData(c).subarray(a, a + n), c);
+    OW.buf = out; OW.peaks = ownPeaks(out); OW.a = 0; OW.b = out.duration; OW.trimmed = true;
+    ownTimes(); ownDraw();
+    toast(E("reader.own.trimmed"));   // HERESY 2643c: Whisper only when asked
+  }
+  function ownPeaks(buf) {
+    var n = 4000, out = new Float32Array(n), chs = [], len = buf.length, step = len / n, top = 0, c, i, j;
+    for (c = 0; c < buf.numberOfChannels; c++) chs.push(buf.getChannelData(c));
+    for (i = 0; i < n; i++) {
+      var s0 = Math.floor(i * step), s1 = Math.min(len, Math.floor((i + 1) * step)), m = 0;
+      for (c = 0; c < chs.length; c++) { var d = chs[c]; for (j = s0; j < s1; j++) { var v = d[j] < 0 ? -d[j] : d[j]; if (v > m) m = v; } }
+      out[i] = m; if (m > top) top = m;
+    }
+    if (top > 0) for (i = 0; i < n; i++) out[i] /= top;
+    return out;
+  }
+  // the piece to begin with: from the first 20 ms louder than 40 dB under the loudest to the last, 0.15 s of air either side, 30 s at most
+  function ownVoiced(buf) {
+    var sr = buf.sampleRate, win = Math.max(1, Math.round(0.02 * sr)), n = Math.floor(buf.length / win), chs = [], rms = new Float32Array(n), top = 0, c, i;
+    for (c = 0; c < buf.numberOfChannels; c++) chs.push(buf.getChannelData(c));
+    for (i = 0; i < n; i++) {
+      var sum = 0;
+      for (c = 0; c < chs.length; c++) { var d = chs[c]; for (var j = i * win, e = j + win; j < e; j++) sum += d[j] * d[j]; }
+      rms[i] = Math.sqrt(sum / (win * chs.length)); if (rms[i] > top) top = rms[i];
+    }
+    var th = Math.max(top * 0.01, 1e-4), a = 0, b = n - 1;
+    while (a < n && rms[a] < th) a++;
+    while (b > a && rms[b] < th) b--;
+    var A = Math.max(0, a * win / sr - 0.15), B = Math.min(buf.duration, (b + 1) * win / sr + 0.15);
+    if (!(B - A >= OWN_MIN)) { A = 0; B = buf.duration; }
+    return [A, Math.min(B, A + OWN_MAX)];
+  }
+  function ownDraw() {
+    var cv = $("rdOwnWave");
+    if (!cv || $("rdOwnBack").hidden) return;
+    var r = cv.getBoundingClientRect(), w = Math.max(100, Math.round(r.width)), h = Math.max(60, Math.round(r.height)), dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    var g = cv.getContext("2d"), css = getComputedStyle(cv), L = ownLen();
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+    if (!OW.buf || !L) return;
+    var ink = css.getPropertyValue("--ink").trim() || "#ddd", dim = css.getPropertyValue("--dim").trim() || "#888", acc = css.getPropertyValue("--amber").trim() || "#d99d10",
+      X = function (t) { return t / L * w; }, pk = OW.peaks, x, i;
+    g.fillStyle = dim;
+    for (x = 0; x < w; x++) {
+      var i0 = Math.floor(x / w * pk.length), i1 = Math.max(i0 + 1, Math.floor((x + 1) / w * pk.length)), m = 0;
+      for (i = i0; i < i1 && i < pk.length; i++) if (pk[i] > m) m = pk[i];
+      var y = Math.max(1, m * (h / 2 - 4)); g.fillRect(x, h / 2 - y, 1, 2 * y);
+    }
+    var xa = Math.round(X(OW.a)), xb = Math.round(X(OW.b));
+    g.fillStyle = "rgba(217,157,16,.32)"; g.fillRect(xa, 0, xb - xa, h);
+    g.fillStyle = acc; g.fillRect(xa - 1, 0, 2, h); g.fillRect(xb - 1, 0, 2, h);
+    g.fillRect(xa - 4, h / 2 - 10, 8, 20); g.fillRect(xb - 4, h / 2 - 10, 8, 20);   // the grips
+    if (OW.src && OW.ac) { g.fillStyle = ink; g.fillRect(Math.round(X(Math.min(OW.to, OW.from + OW.ac.currentTime - OW.at))), 0, 1, h); }
+    g.fillStyle = ink; g.font = "10px " + (css.getPropertyValue("--mono").trim() || "monospace"); g.textBaseline = "top";
+    var la = ownClock(OW.a), lb = ownClock(OW.b);
+    g.fillText(la, Math.min(w - g.measureText(la).width - 2, xa + 6), 3); g.fillText(lb, Math.max(2, xb - g.measureText(lb).width - 6), h - 13);
+  }
+  function ownStop() {
+    var s0 = OW.src;
+    OW.src = null;
+    if (s0) { try { s0.onended = null; s0.stop(); } catch (e) { /* ended already */ } }
+    if (OW.raf) cancelAnimationFrame(OW.raf);
+    OW.raf = 0;
+    if ($("rdOwnStop")) $("rdOwnStop").disabled = true;
+    ownPlayFace();   // HERESY 2643c
+    ownDraw();
+  }
+  function ownPlay(a, b) {
+    var ac = ownAc();
+    if (!ac || !OW.buf) return;
+    ownStop();
+    if (ac.state === "suspended") ac.resume();
+    var src = ac.createBufferSource();
+    src.buffer = OW.buf; src.connect(ac.destination);
+    src.onended = function () { if (OW.src === src) ownStop(); };
+    OW.src = src; OW.from = a; OW.to = b; OW.at = ac.currentTime;
+    src.start(0, a, Math.max(0.05, b - a));
+    $("rdOwnStop").disabled = false;
+    ownPlayFace();   // HERESY 2643c
+    var tick = function () { if (OW.src !== src) return; ownDraw(); OW.raf = requestAnimationFrame(tick); };
+    OW.raf = requestAnimationFrame(tick);
+  }
+  function ownLoad(f) {
+    ownStop();
+    OW.file = f || null; OW.buf = null; OW.peaks = null; OW.trimmed = false;   // HERESY 2643b
+    $("rdOwnFileName").textContent = f ? f.name : "";
+    $("rdOwnEmpty").textContent = tr(f ? E("reader.own.reading") : E("reader.own.drop"));
+    $("rdOwnEmpty").hidden = false;
+    ownTimes(); ownDraw();
+    var ac = ownAc();
+    if (!f || !ac) { if (f) $("rdOwnEmpty").textContent = tr(E("reader.own.raw")); return; }
+    f.arrayBuffer().then(function (bytes) {
+      return new Promise(function (ok, no) { var q = ac.decodeAudioData(bytes, ok, no); if (q && q.then) q.then(ok, no); });
+    }).then(function (buf) {
+      if (OW.file !== f) return;
+      OW.buf = buf; OW.peaks = ownPeaks(buf);
+      var ab = ownVoiced(buf);
+      OW.a = ab[0]; OW.b = ab[1];
+      ownTimes(); ownDraw();   // HERESY 2643b: nothing heard on load: the piece is chosen and trimmed first
+    }).catch(function () {
+      if (OW.file !== f) return;
+      $("rdOwnEmpty").textContent = tr(E("reader.own.raw")); $("rdOwnEmpty").hidden = false;   // the lab's ffmpeg may read what the browser cannot
+      ownTimes();
+    });
+  }
+  function ownB64(bytes) { var t = "", k = 0x8000; for (var i = 0; i < bytes.length; i += k) t += String.fromCharCode.apply(null, bytes.subarray(i, i + k)); return btoa(t); }
+  function ownWav(buf, a, b) {
+    var sr = 24000, n = Math.max(1, Math.round((b - a) * sr)), C = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    var oc = new C(1, n, sr), src = oc.createBufferSource();
+    src.buffer = buf; src.connect(oc.destination); src.start(0, a, b - a);
+    return oc.startRendering().then(function (r) {
+      var x = r.getChannelData(0), fade = Math.min(Math.round(0.01 * sr), Math.floor(n / 4)), i;
+      for (i = 0; i < fade; i++) { var gn = i / fade; x[i] *= gn; x[n - 1 - i] *= gn; }
+      var dv = new DataView(new ArrayBuffer(44 + 2 * n)), w = function (o, t) { for (var k = 0; k < t.length; k++) dv.setUint8(o + k, t.charCodeAt(k)); };
+      w(0, "RIFF"); dv.setUint32(4, 36 + 2 * n, true); w(8, "WAVE"); w(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+      dv.setUint32(24, sr, true); dv.setUint32(28, 2 * sr, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); w(36, "data"); dv.setUint32(40, 2 * n, true);
+      for (i = 0; i < n; i++) { var v = Math.max(-1, Math.min(1, x[i])); dv.setInt16(44 + 2 * i, v < 0 ? v * 32768 : v * 32767, true); }
+      return ownB64(new Uint8Array(dv.buffer));
+    });
+  }
+  function ownBind() {
+    var cv = $("rdOwnWave"), box = $("rdOwnWaveBox");
+    var tAt = function (ev) { var r = cv.getBoundingClientRect(); return Math.max(0, Math.min(ownLen(), (ev.clientX - r.left) / r.width * ownLen())); };
+    var px = function (t) { return t / ownLen() * cv.getBoundingClientRect().width; };
+    cv.addEventListener("pointerdown", function (ev) {
+      if (ev.button !== 0) return;
+      if (!OW.buf) { if (!OW.file) $("rdOwnFile").click(); return; }
+      ev.preventDefault();
+      var x = ev.clientX - cv.getBoundingClientRect().left, t = tAt(ev);
+      OW.drag = Math.abs(x - px(OW.a)) <= 7 ? { k: "a" } : Math.abs(x - px(OW.b)) <= 7 ? { k: "b" } : { k: "new", t0: t, x0: ev.clientX, a: OW.a, b: OW.b };
+      try { cv.setPointerCapture(ev.pointerId); } catch (e) { /* gone */ }
+    });
+    cv.addEventListener("pointermove", function (ev) {
+      if (!OW.buf) return;
+      var x = ev.clientX - cv.getBoundingClientRect().left;
+      if (!OW.drag) { cv.style.cursor = Math.abs(x - px(OW.a)) <= 7 || Math.abs(x - px(OW.b)) <= 7 ? "ew-resize" : "crosshair"; return; }
+      var t = tAt(ev), L = ownLen(), dr = OW.drag;
+      if (dr.k === "a") OW.a = Math.max(0, OW.b - OWN_MAX, Math.min(t, OW.b - OWN_MIN));
+      else if (dr.k === "b") OW.b = Math.min(L, OW.a + OWN_MAX, Math.max(t, OW.a + OWN_MIN));
+      else {
+        if (Math.abs(ev.clientX - dr.x0) < 3) return;   // not yet a drag: a click listens from there
+        var lo = Math.min(dr.t0, t), hi = Math.max(dr.t0, t);
+        if (hi - lo > OWN_MAX) { if (t >= dr.t0) hi = lo + OWN_MAX; else lo = hi - OWN_MAX; }
+        OW.a = lo; OW.b = hi; dr.moved = true;
+      }
+      ownTimes(); ownDraw();
+    });
+    var up = function (ev) {
+      var dr = OW.drag;
+      OW.drag = null;
+      if (!dr || !OW.buf) return;
+      if (dr.k === "new" && !dr.moved) { ownPlay(tAt(ev), ownLen()); return; }   // a click: the clip from there
+      if (OW.b - OW.a < OWN_MIN) { OW.b = Math.min(ownLen(), OW.a + OWN_MIN); OW.a = Math.max(0, OW.b - OWN_MIN); }
+      ownTimes(); ownDraw();
+    };
+    cv.addEventListener("pointerup", up);
+    cv.addEventListener("pointercancel", function () { OW.drag = null; });
+    cv.addEventListener("keydown", function (e) {
+      if (e.key === " " || e.key === "Enter") { e.preventDefault(); if (OW.src) ownStop(); else ownPlay(OW.a, OW.b); }
+    });
+    ["rdOwnA", "rdOwnB"].forEach(function (id) {
+      $(id).addEventListener("change", function () {
+        var t = ownParse(this.value), L = ownLen();
+        if (t == null || !OW.buf) { ownTimes(); return; }
+        if (id === "rdOwnA") { OW.a = Math.max(0, Math.min(t, L - OWN_MIN)); if (OW.b - OW.a > OWN_MAX) OW.b = OW.a + OWN_MAX; if (OW.b - OW.a < OWN_MIN) OW.b = Math.min(L, OW.a + OWN_MIN); }
+        else { OW.b = Math.min(L, Math.max(t, OWN_MIN)); if (OW.b - OW.a > OWN_MAX) OW.a = OW.b - OWN_MAX; if (OW.b - OW.a < OWN_MIN) OW.a = Math.max(0, OW.b - OWN_MIN); }
+        ownTimes(); ownDraw();
+      });
+    });
+    $("rdOwnAll").addEventListener("click", function () { if (OW.src) ownStop(); else ownPlay(0, ownLen()); });   // HERESY 2643: pressed again, it stops
+    $("rdOwnSel").addEventListener("click", function () { if (OW.src) ownStop(); else ownPlay(OW.a, OW.b); });
+    $("rdOwnHear").addEventListener("click", function (e) { e.preventDefault(); ownHear(false); });
+    $("rdOwnTrim").addEventListener("click", ownTrim);   // HERESY 2643b
+    $("rdOwnBack").addEventListener("keydown", function (e) {   // HERESY 2643: Space plays and stops the piece here, never the main player
+      if (e.key !== " " || /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(e.target.tagName)) return;
+      e.preventDefault(); e.stopPropagation();
+      if (OW.src) ownStop(); else if (OW.buf) ownPlay(OW.a, OW.b);
+    });
+    $("rdOwnStop").addEventListener("click", ownStop);
+    var files = function (e) { return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "Files") >= 0; };
+    ["dragenter", "dragover"].forEach(function (k) { box.addEventListener(k, function (e) { if (files(e)) { e.preventDefault(); box.classList.add("is-over"); } }); });
+    box.addEventListener("dragleave", function () { box.classList.remove("is-over"); });
+    box.addEventListener("drop", function (e) {
+      box.classList.remove("is-over");
+      var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!f) return;
+      e.preventDefault(); ownLoad(f);
+    });
+    window.addEventListener("resize", function () { if (!$("rdOwnBack").hidden) ownDraw(); });
+  }
+  // HERESY 2624: a window over the room (the voice of one's own, the voice builder): Esc or a click beside it closes it
+  function ovlOpen(id, first) {
+    var back = $(id);
+    if (!back) return;
+    back.classList.add("hd-back");                   // the Studio's dialog while open (its shortcuts wait), never while hidden
+    if (back.firstElementChild) back.firstElementChild.classList.add("hd-box");   // HERESY 2624c: its box too, only while open
+    back.hidden = false;
+    requestAnimationFrame(function () { back.classList.add("is-on"); });
+    var f = first && $(first);
+    if (f) setTimeout(function () { try { f.focus(); } catch (e) { /* not shown */ } }, 40);
+  }
+  function ovlClose(id) {
+    var back = $(id);
+    if (!back || back.hidden) return;
+    back.classList.remove("is-on", "hd-back"); back.hidden = true;
+    if (back.firstElementChild) back.firstElementChild.classList.remove("hd-box");   // HERESY 2624c
+    if (id === "rdOwnBack") ownStop();
+  }
+  function ovlBind(id) {
+    var back = $(id);
+    back.addEventListener("pointerdown", function (e) { if (e.target === back) ovlClose(id); });
+    back.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.stopPropagation(); ovlClose(id); } });
+  }
+  // HERESY 2643: the chosen piece heard by the Narrator's Whisper (on the processor), its words into the text field when it is empty
+  function ownHear(auto) {
+    if (!OW.buf || OW.hearing) return;
+    if (!ownCut()) { if (!auto) toast(E("reader.own.needTrim"), "bad"); return; }   // HERESY 2643b: the trimmed piece alone, never the whole recording
+    var f = OW.file, btn = $("rdOwnHear"), lang = $("rdOwnLang").value || "auto";
+    OW.hearing = true; btn.disabled = true; btn.textContent = E("reader.own.hearing");
+    var done = function () { OW.hearing = false; btn.disabled = false; btn.textContent = E("reader.own.hear"); };
+    ownWav(OW.buf, OW.a, OW.b).then(function (b64) {
+      var bin = atob(b64), u = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+      return fetch("/lab/reader/transcribe?file=voice-piece.wav&lang=" + encodeURIComponent(lang), { method: "POST", body: u }).then(function (r) {
+        return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || ("HTTP " + r.status)); return j; });
+      });
+    }).then(function (j) {
+      var t0 = Date.now();
+      return new Promise(function (ok, no) {
+        (function poll() {
+          api("/reader/transcript?id=" + encodeURIComponent(j.id)).then(function (t) {
+            if (t.status === "done" || t.text) { ok({ id: j.id, text: String(t.text || "").trim() }); return; }
+            if (t.status === "failed" || t.status === "error" || Date.now() - t0 > 180000) { no(new Error(t.error || t.status || "Whisper")); return; }
+            setTimeout(poll, 1500);
+          }).catch(no);
+        })();
+      });
+    }).then(function (r) {
+      api("/reader/transcript-remove", { id: r.id }).catch(function () { /* left in the list, said nowhere */ });
+      if (OW.file !== f) return;
+      if (r.text && !$("rdOwnText").value.trim()) { $("rdOwnText").value = r.text; toast(E("reader.own.heard")); }
+      else if (!auto && !r.text) toast(E("reader.own.heard.none"), "bad");
+    }).catch(function (x) { if (!auto) toast(x.message, "bad"); }).then(done);
+  }
   function ownSend() {
-    var f = $("rdOwnFile").files && $("rdOwnFile").files[0], name = $("rdOwnName").value.trim();
+    var f = OW.file, name = $("rdOwnName").value.trim();
     if (!$("rdOwnOk").checked || !f || !name) { toast(E("reader.own.need"), "bad"); return; }
+    if (!ownCut()) { toast(E("reader.own.needTrim"), "bad"); return; }   // HERESY 2643b: step 1 first
+    if (!$("rdOwnText").value.trim()) { toast(E("reader.own.needText"), "bad"); $("rdOwnText").focus(); return; }   // HERESY 2643: its words, or the overlay stays
     if (window.HeresyNames && window.HeresyNames.refusal(name, { max: 60 })) {   // HERESY 2462: a voice's name keeps the names' rule
       window.HeresyNames.ask(name, { max: 60 }).then(function (v) { if (v) { $("rdOwnName").value = v; ownSend(); } });
       return;
     }
-    var rd = new FileReader();
-    rd.onload = function () {
-      var b64 = String(rd.result || "").replace(/^data:[^,]*,/, ""), ext = (f.name.split(".").pop() || "wav").toLowerCase();
-      api("/reader/voice", { name: name, lang: $("rdOwnLang").value, text: $("rdOwnText").value.trim(), consent: true, audio_b64: b64, ext: ext }).then(function (v) {
+    var btn = $("rdOwnKeep");
+    var go = function (b64, ext) {
+      return api("/reader/voice", { name: name, lang: $("rdOwnLang").value, text: $("rdOwnText").value.trim(), consent: true, audio_b64: b64, ext: ext }).then(function (v) {
         toast(fill("reader.own.kept", { 0: v.name || name }));
-        $("rdOwn").hidden = true; $("rdOwnOk").checked = false; $("rdOwnFile").value = ""; $("rdOwnFileName").textContent = "";
+        ovlClose("rdOwnBack"); $("rdOwnOk").checked = false; $("rdOwnFile").value = ""; ownLoad(null);
+        $("rdOwnName").value = ""; $("rdOwnText").value = "";   // HERESY 2643c: the next opening is a new voice's
         keep("yue2.readerVoice", "v:" + v.id);
         return voicesAgain();
-      }).catch(function (e) { toast(e.message, "bad"); });
+      });
     };
+    btn.disabled = true;
+    var done = function () { btn.disabled = false; };
+    if (OW.buf) {   // the chosen piece only
+      ownWav(OW.buf, OW.a, OW.b).then(function (b64) { return go(b64, "wav"); }).catch(function (e) { toast(e.message || String(e), "bad"); }).then(done);
+      return;
+    }
+    var rd = new FileReader();
+    rd.onload = function () {
+      go(String(rd.result || "").replace(/^data:[^,]*,/, ""), (f.name.split(".").pop() || "wav").toLowerCase()).catch(function (e) { toast(e.message, "bad"); }).then(done);
+    };
+    rd.onerror = function () { toast(E("reader.own.raw"), "bad"); done(); };
     rd.readAsDataURL(f);
   }
 
@@ -1504,15 +1847,15 @@
   }
   function designBind() {
     $("rdDsDescribe").value = recall("yue2.readerDesignDescribe") || "";
-    $("rdDesignOpen").addEventListener("click", function () {
-      $("rdDesign").hidden = !$("rdDesign").hidden;
-      if ($("rdDesign").hidden) return;
+    $("rdDesignOpen").addEventListener("click", function () {   // HERESY 2624: a window over the room
+      if (!$("rdDesignBack").hidden) { ovlClose("rdDesignBack"); return; }
+      ovlOpen("rdDesignBack", "rdDsDescribe");
       designForm();
-      $("rdDesign").scrollIntoView({ block: "nearest", behavior: "smooth" });
       var rid = recall("yue2.readerDesignRun");
       if (rid && !st.design) api("/reader/design?id=" + encodeURIComponent(rid)).then(function (d) { st.design = d; designPaint(); designWatch(); }).catch(function () { keep("yue2.readerDesignRun", ""); });
     });
-    $("rdDsClose").addEventListener("click", function () { $("rdDesign").hidden = true; });
+    $("rdDsClose").addEventListener("click", function () { ovlClose("rdDesignBack"); });
+    ovlBind("rdDesignBack");
     $("rdDsLang").addEventListener("change", function () { keep("yue2.readerDesignLang", this.value); designWords(); });
     $("rdDsGo").addEventListener("click", designSend);
     $("rdDsStop").addEventListener("click", function () { if (st.design) api("/reader/stop", { id: st.design.id }).catch(function (x) { toast(x.message, "bad"); }); });
@@ -1653,11 +1996,33 @@
     return byTake(name).then(function (r) {
       var f = r.form || {};
       return api(scoped("/writer"), { op: "from_reader", text: f.text || "", title: f.title || "", doc: (r.facts || {}).doc || "" });
-    }).then(function (d) {
+    }).then(landInWriter).catch(function (e) { toast(e.message, "bad"); });
+  }
+  function landInWriter(d) {
       var doc = (d && d.doc) || {}, W = window.HeresyWriter;
       toast(fill("reader.toWriter.done", { 0: doc.title || "" }), "good");
       if (W && W.reload) W.reload();
       if (W && typeof W.open === "function" && doc.id) { var tab = document.querySelector('#tabs [data-tab="write"]'); if (tab) tab.click(); W.open(doc.id); }
+  }
+  // HERESY 2608 (Viktor 13.11.2026: the Writer's «Из Чтеца» and «Версии Чтеца»): the form's text now, or any reading's, into the notebook
+  function formToWriter() {
+    var t = $("rdText"), ti = $("rdTitle"), text = t ? t.value : "";
+    if (!text.trim()) { toast(E("reader.toWriter.empty"), "bad"); return Promise.resolve(null); }
+    return api(scoped("/writer"), { op: "from_reader", text: text, title: ti ? ti.value : "", doc: "" }).then(landInWriter).catch(function (e) { toast(e.message, "bad"); });
+  }
+  function runsToWriter() {
+    return api("/reader/runs").then(function (d) {
+      var runs = (d.runs || []).filter(function (r) { return r.form && (r.form.text || "").trim(); });
+      if (!runs.length) { toast(E("reader.versions.none"), "bad"); return null; }
+      var label = function (r) { var f = r.form, s = (f.title || "").trim() || f.text.replace(/\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim().slice(0, 60); return s; };
+      var when = function (r) { var m = /^(\d{4})(\d\d)(\d\d)-(\d\d)(\d\d)/.exec(r.id || ""); return m ? m[3] + "." + m[2] + "." + m[1] + " " + m[4] + ":" + m[5] : ""; };
+      return window.HeresyDialog.choose(E("reader.versions.title"), runs.map(function (r) {
+        return { value: r.id, label: label(r), note: when(r) + " · " + r.form.text.length + " " + E("reader.versions.chars") };
+      }), { filter: runs.length > 8 }).then(function (id) {
+        var r = runs.filter(function (x) { return x.id === id; })[0];
+        if (!r) return null;
+        return api(scoped("/writer"), { op: "from_reader", text: r.form.text, title: r.form.title || "", doc: (r.facts || {}).doc || "" }).then(landInWriter);
+      });
     }).catch(function (e) { toast(e.message, "bad"); });
   }
   // the take's menu in the Library (app.js takeMenu asks for these on a reading's take)
@@ -1763,7 +2128,18 @@
       if (recall(PREV_KEY)) { keep(PREV_KEY, ""); paintBack(); }   // HERESY 2511: the text changed by hand, the form's way back let go
     });
     $("rdText").addEventListener("keydown", function (e) { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); } });
-    $("rdVoice").addEventListener("change", function () { keep("yue2.readerVoice", this.value); });
+    $("rdVoice").addEventListener("change", function () { keep("yue2.readerVoice", this.value); voiceDelFace(); });
+    $("rdVoiceDel").addEventListener("click", function () {   // HERESY 2645: one's own voice put aside, asked first, recoverable
+      var v = $("rdVoice").value, id = v.replace(/^v:/, ""), it = (st.voices || []).filter(function (x) { return x.id === id; })[0];
+      if (!/^own-/.test(id) || !it) return;
+      var ask = fill("reader.voice.del.ask", { 0: it.name });
+      (window.HeresyDialog ? window.HeresyDialog.confirm(ask, { ok: E("reader.voice.del"), cancel: E("reader.own.cancel") }) : Promise.resolve(window.confirm(ask))).then(function (yes) {
+        if (!yes) return;
+        api("/reader/voice-remove", { id: id }).then(function () { toast(fill("reader.voice.del.done", { 0: it.name })); return voicesAgain(); }).then(voiceDelFace)
+          .catch(function (x) { toast(x.message, "bad"); });
+      });
+    });
+    voiceDelFace();
     $("rdEngine").addEventListener("change", function () { keep("yue2.readerEngine", this.value); paintCards(); paintPalette(); paintEngineExtras(); paintGo(); paintVoice(); paintCast(); designForm(); });
     $("rdLang").value = recall("yue2.readerLang") || "auto";
     if ($("rdLang").selectedIndex < 0) $("rdLang").value = "auto";
@@ -1908,13 +2284,17 @@
       insertTag(en.tags.groups[+b.dataset.g], b.dataset.t);
     });
     $("rdGo").addEventListener("click", send);
-    $("rdOwnOpen").addEventListener("click", function () {
-      $("rdOwn").hidden = !$("rdOwn").hidden;
-      if (!$("rdOwn").hidden) $("rdOwn").scrollIntoView({ block: "nearest", behavior: "smooth" });   // the warning in sight first
+    $("rdOwnOpen").addEventListener("click", function () {   // HERESY 2624: a window over the room, the warning first in it
+      if (!$("rdOwnBack").hidden) { ovlClose("rdOwnBack"); return; }
+      ovlOpen("rdOwnBack", "rdOwnName");
+      ownTimes();
+      requestAnimationFrame(ownDraw);
     });
-    $("rdOwnCancel").addEventListener("click", function () { $("rdOwn").hidden = true; });
-    $("rdOwnFile").addEventListener("change", function () { var f = this.files && this.files[0]; $("rdOwnFileName").textContent = f ? f.name : ""; });
+    $("rdOwnCancel").addEventListener("click", function () { ovlClose("rdOwnBack"); });
+    $("rdOwnFile").addEventListener("change", function () { ownLoad(this.files && this.files[0]); });
     $("rdOwnKeep").addEventListener("click", ownSend);
+    ownBind();
+    ovlBind("rdOwnBack");
     $("rdRuns").addEventListener("click", function (e) {
       var b = e.target.closest("[data-act]"), card = e.target.closest(".rd-run");
       if (card && !b && !e.target.closest("a, button, input, select, textarea, audio, summary")) {   // HERESY 2381: the card itself
@@ -2023,5 +2403,5 @@
   window.HeresyReader = { reload: reload, poll: poll, state: function () { return st; }, speakers: speakers, insertTag: insertTag, mounted: function () { return !!$("view-read"); },
     fixOpen: fixOpen, detectLang: detectLang, withCase: withCase, take: intoReader };   // HERESY 2344: take(text, title)
   // HERESY 2511–2513: the Library's menu and passport ask the Narrator for a reading's own acts
-  window.RuachReaderMirror = { pour: pour, regen: regen, intoForm: intoForm, toWriter: toWriter, fixFrom: fixFrom, passport: passport, menu: menuItems, play: playTake };
+  window.RuachReaderMirror = { pour: pour, regen: regen, intoForm: intoForm, toWriter: toWriter, formToWriter: formToWriter, runsToWriter: runsToWriter, fixFrom: fixFrom, passport: passport, menu: menuItems, play: playTake };
 })();

@@ -246,6 +246,8 @@ RS x3 v1 · ours: Standard grown three times and trained on music, the default
 RS x3 v2 · its second branch, trained with a gentler weight on the highs
 Standard · m-a-p's decoder, released with YuE2
 Ours run in float32 only, slower than Standard"></select></label>
+        <!-- HERESY 2625 (Viktor 15.11.2026: «можешь прикрутить селектор прямо в бар Студии под VAE»): the transcriber's precision, F32 the default -->
+        <label class="head-more-row" id="ssPrecRow" hidden><span>Ear</span><select id="ssPrecPick" class="theme-pick" aria-label="Transcriber precision" data-tip="SheetSage2 and MERT, the ear that writes a score from a recording (covers, the Library's sheet, the Trainer's set): F32 as m-a-p made them, the default; Q8_0 is 1.6 GB lighter on the card, its notes 95 % alike on our Ring of twenty, the tempo a beat apart at times. Refined always reads on F32"><option value="f32">F32</option><option value="q8">Q8_0 · lighter</option></select></label>
         <div class="head-more-items">
           <!-- HERESY 2064 (Viktor 04.11.2026: «Строку "Экспорт в DAW" к хуям. Эта команда дублируется у нас в контекстном меню… Три строки Движок,
                Тема, Руководство в одну строку тремя равномерными колонками. Слово Руководство замени на Гайд»): Export to DAW out of ☰ (a take's menu
@@ -426,6 +428,8 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
            VAE here too; the preset hidden, its Auto kept underneath: a card's VRAM limit (Engine → GPUs) sets the knobs below -->
       <label class="field"><span class="label" data-head="the ☰ menu's own: the decoder for the songs to come">VAE</span>
         <select id="setVae" aria-label="VAE"></select></label>
+      <label class="field" id="setSsPrecField" hidden><span class="label" data-head="the ☰ menu's own: the transcriber's precision">Transcriber</span>
+        <select id="setSsPrec" aria-label="Transcriber precision" data-tip="SheetSage2 and MERT, the ear that writes a score from a recording (covers, the Library's sheet, the Trainer's set): F32 as m-a-p made them, the default; Q8_0 is 1.6 GB lighter on the card, its notes 95 % alike on our Ring of twenty, the tempo a beat apart at times. Refined always reads on F32"><option value="f32">F32</option><option value="q8">Q8_0 · lighter</option></select></label>
       <label class="field" id="memPresetField" hidden><span class="label">GPU memory preset</span>
         <select id="memPreset"><option value="auto">Auto (detect)</option><option value="manual">Manual: the knobs below are yours</option></select></label>
       <div class="field-row bottom">
@@ -567,7 +571,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
           <input type="range" min="30" max="100" step="5" data-def="yue2.pbRest" data-def-is="60" data-tip="How solid the player's buttons, marks and times stand while the pointer is not on them; under the pointer they are always whole. The Studio's own: 60 %" /></label>
         <!-- HERESY 2299: the system bar under the header: in every room (2302: the Studio's own), in the three rooms, nowhere -->
         <label class="field"><span class="label">The system bar under the header</span>
-          <select data-def="yue2.sysbar" data-def-is="all" data-tip="A thin bar under the header: the processor, the memory, each card and each disk of the Studio's machine, and the room's running jobs; the pointer on an item shows its numbers and its last minute and ten minutes drawn"><option value="all">in every room</option><option value="rooms">in the Artist, the Refiner and the Videographer</option><option value="off">nowhere</option></select></label>
+          <select data-def="yue2.sysbar" data-def-is="all" data-tip="A thin bar under the header: the processor, the memory, each card and each disk of the Studio's machine, and the room's running jobs; the pointer on an item shows its numbers and its last minute and ten minutes drawn"><option value="all">in every room</option><option value="rooms">in the Artist, the Refiner, the Videographer and the Trainer</option><option value="off">nowhere</option></select></label>
         <!-- HERESY 2319: how long a song or a reading may wait behind long work before the Studio asks -->
         <label class="field"><span class="label">Ask before music or speech waits longer than</span>
           <select data-def="yue2.waitAsk" data-def-is="10" data-tip="When a song or a reading would wait behind long work (the Videographer, the Artist, a training, an upscale) longer than this, the Studio asks first: wait, and the music and speech asked after it wait behind it, or take it off the queue. The wait is reckoned from the running jobs' own progress; when it cannot be, the question says so"><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="0">never ask</option></select></label>
@@ -1663,15 +1667,17 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
     <!-- HERESY 2490 (Viktor 12.11.2026: «В верхней полосе-баре ПИСАТЕЛЬ оформи переключатель миров… для глобальных действий… всё SVG иконками»): the Writer's
          bar: the worlds' knob (the Library's own), the world's name, the notebook's acts as icons -->
     <div class="col-head wr-bar"><h2>Writer</h2>
+      <span class="spacer"></span>   <!-- HERESY 2608: the worlds and the search on the right, as in the Librarian -->
       <span class="coll-realm wr-worlds" id="wrWorlds" tabindex="0" role="slider" aria-label="The Writer's world" aria-valuemin="0" aria-valuemax="2" data-pos="both" data-tip="The Writer's world: the Musician's songs on the left, both in the middle, the Narrator's readings on the right (click a position or press ← →). A new document is born in the world shown."><svg class="rs-svg" viewBox="0 0 88 22" width="88" height="22" aria-hidden="true" focusable="false"><rect class="rs-track" x="1" y="3" width="86" height="16" rx="8"/><circle class="rs-dot" cx="14" cy="11" r="1.7"/><circle class="rs-dot" cx="44" cy="11" r="1.7"/><circle class="rs-dot" cx="74" cy="11" r="1.7"/><g class="rs-knob"><circle class="rs-ball" cx="14" cy="11" r="7.5"/><path class="rs-i rs-i-creator" d="M15 6.6v5.7a1.6 1.6 0 1 1-1-1.5V6.6zM15 6.6l2.2 1.1v1.3L15 7.9z"/><path class="rs-i rs-i-both" d="M10.6 9h6.8M10.6 13h6.8"/><path class="rs-i rs-i-reader" d="M10.4 7.6h7.2a.9.9 0 0 1 .9.9v3.4a.9.9 0 0 1-.9.9h-3.9l-2 1.6v-1.6h-1.3a.9.9 0 0 1-.9-.9V8.5a.9.9 0 0 1 .9-.9z"/></g></svg><span class="rs-hit" data-realm="creator" style="left:0%"></span><span class="rs-hit" data-realm="both" style="left:33.333%"></span><span class="rs-hit" data-realm="reader" style="left:66.667%"></span></span>
       <span class="wr-world-name" id="wrWorldName" aria-hidden="true"></span>
       <input type="search" id="wrSearch" class="wr-bar-find" placeholder="Search all four parts · * and ?" autocomplete="off" />   <!-- HERESY 2568 (item 56): the search in the bar, as the Librarian's -->
-      <span class="spacer"></span>
       <span class="wr-bar-acts">
         <button type="button" class="btn ghost small icon-btn wr-bar-ico" id="wrHome" data-ui="layout-grid" aria-label="The notebook's start" data-tip="Close the document and go back to the notebook's start: what you can do here and how it works" hidden></button>
         <button type="button" class="btn primary small icon-btn wr-bar-ico" id="wrNew" data-ui="folder-plus" aria-label="＋ New" data-tip="A new document in the world shown: a song for the Musician, or a reading for the Narrator"></button>
-        <button type="button" class="btn ghost small icon-btn wr-bar-ico" id="wrFromCreate" data-ui="music" aria-label="＋ From the Musician" data-tip="A new document from the song in the Musician, with every knob"></button>
-        <button type="button" class="btn ghost small icon-btn wr-bar-ico" id="wrCreatorVersions" data-ui="list" aria-label="Musician's versions" data-tip="Every Generate's words, kept under their title apart from the takes: a take deleted never takes them along"></button>
+        <button type="button" class="btn ghost small icon-btn wr-bar-ico" id="wrFromCreate" data-world="creator" data-ui="music" aria-label="＋ From the Musician" data-tip="A new document from the song in the Musician, with every knob"></button>
+        <button type="button" class="btn ghost small icon-btn wr-bar-ico" id="wrCreatorVersions" data-world="creator" data-ui="list" aria-label="Musician's versions" data-tip="Every Generate's words, kept under their title apart from the takes: a take deleted never takes them along"></button>
+        <button type="button" class="btn ghost small icon-btn wr-bar-ico" id="wrFromReader" data-world="reader" data-ui="mic-vocal" aria-label="From the Narrator" data-tip="The text in the Narrator now: a new reading, or a new version of the document it was read from"></button>
+        <button type="button" class="btn ghost small icon-btn wr-bar-ico" id="wrReaderVersions" data-world="reader" data-ui="scroll-text" aria-label="Narrator's versions" data-tip="Every reading's text, kept with its run: pick one into the notebook"></button>
         <span class="wr-bar-sep" aria-hidden="true"></span>
         <!-- HERESY 2568 (the UIX audit of 13.11.2026, item 55): the order and the filter in the bar as the Librarian's, their choices in a menu; the selects stay, hidden, the ones the Writer reads -->
         <button type="button" class="btn ghost small icon-btn wr-bar-ico" id="wrSortBtn" data-ui="arrow-down-up" aria-haspopup="menu" aria-label="Sort the documents" data-tip="The order of the documents"></button>
@@ -1703,14 +1709,25 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
         <!-- HERESY 2479 (Viktor 11.11.2026: a short guide instead of the documents the list already shows) -->
         <div class="wr-recent wr-guide" id="wrRecent" hidden>
           <!-- HERESY 2490 (Viktor 12.11.2026: «Там набор красивых кнопок-карточек по действиям»): what can be done here, as cards -->
+          <!-- HERESY 2608 (Viktor 13.11.2026: «на первой полосе… корзину во вторую полосу самой последней… две новые карточки «Из Чтеца» и «Версии Чтеца».
+               Также применял бы к ним фильтр пространств миров»): a row for each world, the world's own cards only; the last row the notebook's
+               own acts, Import and Export over the width and the Trash last -->
           <div class="wr-acts" id="wrActs">
-            <button type="button" class="wr-act" data-wr-act="new-song"><span class="wr-act-ico" data-ui="folder-plus"></span><span class="wr-act-name">New song</span><span class="wr-act-say">A song for the Musician: its style, its lyrics and the knobs</span></button>
-            <button type="button" class="wr-act" data-wr-act="new-reading"><span class="wr-act-ico" data-ui="type"></span><span class="wr-act-name">New reading</span><span class="wr-act-say">A text for the Narrator to read, with no length limit</span></button>
-            <button type="button" class="wr-act" data-wr-act="from"><span class="wr-act-ico" data-ui="music"></span><span class="wr-act-name">From the Musician</span><span class="wr-act-say">The song in the Musician now, with every knob, as a new document</span></button>
-            <button type="button" class="wr-act" data-wr-act="vers"><span class="wr-act-ico" data-ui="list"></span><span class="wr-act-name">Musician's versions</span><span class="wr-act-say">Every Generate's words, kept under their title apart from the takes</span></button>
-            <button type="button" class="wr-act" data-wr-act="trash"><span class="wr-act-ico" data-ui="trash"></span><span class="wr-act-name">Trash</span><span class="wr-act-say">Documents deleted from the notebook, to bring back</span></button>
+           <div class="wr-acts-row" data-world="creator">
+            <button type="button" class="wr-act" data-wr-act="new-song" data-world="creator"><span class="wr-act-ico" data-ui="folder-plus"></span><span class="wr-act-name">New song</span><span class="wr-act-say">A song for the Musician: its style, its lyrics and the knobs</span></button>
+            <button type="button" class="wr-act" data-wr-act="from" data-world="creator"><span class="wr-act-ico" data-ui="music"></span><span class="wr-act-name">From the Musician</span><span class="wr-act-say">The song in the Musician now, with every knob, as a new document</span></button>
+            <button type="button" class="wr-act" data-wr-act="vers" data-world="creator"><span class="wr-act-ico" data-ui="list"></span><span class="wr-act-name">Musician's versions</span><span class="wr-act-say">Every Generate's words, kept under their title apart from the takes</span></button>
+           </div>
+           <div class="wr-acts-row" data-world="reader">
+            <button type="button" class="wr-act" data-wr-act="new-reading" data-world="reader"><span class="wr-act-ico" data-ui="type"></span><span class="wr-act-name">New reading</span><span class="wr-act-say">A text for the Narrator to read, with no length limit</span></button>
+            <button type="button" class="wr-act" data-wr-act="from-reader" data-world="reader"><span class="wr-act-ico" data-ui="mic-vocal"></span><span class="wr-act-name">From the Narrator</span><span class="wr-act-say">The text in the Narrator now: a new reading, or a new version of the document it was read from</span></button>
+            <button type="button" class="wr-act" data-wr-act="reader-vers" data-world="reader"><span class="wr-act-ico" data-ui="scroll-text"></span><span class="wr-act-name">Narrator's versions</span><span class="wr-act-say">Every reading's text, kept with its run: pick one into the notebook</span></button>
+           </div>
+           <div class="wr-acts-row wr-acts-util">
             <button type="button" class="wr-act" data-wr-act="import"><span class="wr-act-ico" data-ui="file-up"></span><span class="wr-act-name">Import a backup</span><span class="wr-act-say">A Writer backup: what is missing here comes in, nothing is written over</span></button>
             <button type="button" class="wr-act" data-wr-act="export"><span class="wr-act-ico" data-ui="file-down"></span><span class="wr-act-name">Export all</span><span class="wr-act-say">Every document with its versions and takes, in one file</span></button>
+            <button type="button" class="wr-act" data-wr-act="trash"><span class="wr-act-ico" data-ui="trash"></span><span class="wr-act-name">Trash</span><span class="wr-act-say">Documents deleted from the notebook, to bring back</span></button>
+           </div>
           </div>
           <h3 class="wr-cap">How the notebook works</h3>
           <ul>

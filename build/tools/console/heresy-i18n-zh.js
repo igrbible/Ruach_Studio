@@ -253,6 +253,29 @@ RuachI18n.add("zh", {
 "Load an example: a random official demo, or one of ours by name (Readings…)": "载入示例：随机一个官方演示，或按名称选我们的（朗读…）",
 "A random official demo": "随机官方演示",
 "Readings": "朗读",
+"All the curves in one chart, each in its own scale": "所有曲线画在一张图上,各用各的刻度",
+"The curves together": "曲线合在一起",
+"Each curve is drawn in its own scale, so their shapes lie one over another: the chips say each one's value now and hide it or show it again; under the cursor, every curve's value at that step.": "每条曲线按各自的刻度绘制,因此形状可以叠在一起比较:标签显示每条曲线的当前值,点击可隐藏或重新显示;光标下显示该步所有曲线的值。",
+"the dots: the held-out tracks at each save": "圆点:每次保存时的留出曲目",
+"The ring": "擂台",
+"Rock ballad": "摇滚抒情曲",
+"Synth-pop": "合成器流行",
+"Folk-pop with a bandura": "班杜拉民谣流行",
+"Gospel": "福音",
+"Britpop, a British accent": "英伦摇滚，英式口音",
+"Liquid drum and bass": "液态鼓打贝斯",
+"Chicago drill": "芝加哥 Drill",
+"Chicago blues": "芝加哥布鲁斯",
+"Chanson, a waltz": "香颂，华尔兹",
+"Pop opera, a tenor": "流行歌剧，男高音",
+"Rebetiko, a bouzouki": "雷贝蒂卡，布祖基琴",
+"J-pop, an anime opening": "J-pop，动画片头曲",
+"City pop": "城市流行",
+"Mandarin ballad": "华语抒情曲",
+"Chinese folk fusion": "中国民乐融合",
+"Samba": "桑巴",
+"Duduk, our own field": "杜杜克，我们自己的领域",
+"Industrial metal": "工业金属",
 "Engine": "引擎",
 "Engine: model, memory, chat server, log, look": "引擎：模型、显存、聊天服务器、日志、外观",
 "The guide: every room, what each thing does": "指南：每个房间，每样东西做什么",
@@ -8784,7 +8807,7 @@ RuachI18n.add("zh", {
 "writing": "写入",
 "Writing now": "当前写入",
 "The system bar under the header": "标题栏下的系统栏",
-"in the Artist, the Refiner and the Videographer": "在艺人、精修室和影像室",
+"in the Artist, the Refiner, the Videographer and the Trainer": "在画室、精修室、影像室和训练室",
 "in every room": "在所有房间",
 "nowhere": "不显示",
 "A thin bar under the header: the processor, the memory, each card and each disk of the Studio's machine, and the room's running jobs; the pointer on an item shows its numbers and its last minute and ten minutes drawn": "标题栏下的一条细栏：工作室机器的处理器、内存、每块显卡和每个磁盘，以及房间中正在运行的任务；指针停在某项上会显示它的数值以及最近一分钟和十分钟的曲线",
@@ -9263,4 +9286,67 @@ RuachI18n.add("zh", {
 // UIX frame lane 13.11.2026 (HERESY 2532): Engine Hardware, the VAE default tip whole
 RuachI18n.add("zh", {
 "The VAE a song is decoded with when its request names none (saved prompts, other clients). The VAE buttons in the form choose per song, and a finished song can get another from its page.": "当歌曲的请求没有指定 VAE 时，用来解码它的 VAE（已保存的提示词、其他客户端）。表单中的 VAE 按钮按每首歌选择，已完成的歌曲可在其页面换用另一个。"
+});
+
+// HERESY 2625: the transcriber's precision (the ☰ menu under the VAE, Engine → Compute)
+RuachI18n.add("zh", {
+"SheetSage2 and MERT, the ear that writes a score from a recording (covers, the Library's sheet, the Trainer's set): F32 as m-a-p made them, the default; Q8_0 is 1.6 GB lighter on the card, its notes 95 % alike on our Ring of twenty, the tempo a beat apart at times. Refined always reads on F32": "SheetSage2 和 MERT 是从录音写出乐谱的耳朵(翻唱、资料库的乐谱、训练器的数据集):默认是 m-a-p 原样的 F32;Q8_0 在显卡上少占 1.6 GB,在我们二十首的 Ring 上音符 95% 一致,节拍偶尔相差一拍。Refined 始终以 F32 读取",
+"Q8_0 · lighter": "Q8_0 · 更轻",
+"The transcriber reads in Q8_0, lighter on the card": "扒谱器以 Q8_0 读取,显卡更轻松",
+"The transcriber reads in F32": "扒谱器以 F32 读取",
+"Transcriber precision": "扒谱器精度",
+"the ☰ menu's own: the transcriber's precision": "与 ☰ 菜单相同：扒谱器精度"
+});
+
+// HERESY 2627: the compare window takes 24
+RuachI18n.add("zh", {
+"2 to 24 of the checked": "勾选中的2到24条",
+"Tick 2 at least, 24 at most": "至少勾选2个，最多24个",
+"24 at most: the first 24": "最多24条：前24条",
+"24 at most to compare: uncheck {0}": "最多比较24个：请取消勾选 {0} 个",
+"Compare the checked ones, 2 to 24, in one player from the same second": "在一个播放器中从同一秒比较勾选的2至24个",
+"Waiting for the whole version": "正在等待完整版本"
+});
+
+// HERESY 2629: the compare sheet's empty difference
+RuachI18n.add("zh", {
+"No difference: under ±0.1 dB everywhere": "没有差别:各处都小于 ±0.1 dB"
+});
+
+// HERESY 2632: the datasheet's track ID
+RuachI18n.add("zh", {
+"Copy the track ID": "复制曲目 ID",
+"Track ID copied": "已复制曲目 ID",
+"Not copied": "未复制"
+});
+
+// HERESY 2637: the stress dictionaries in the lyrics
+RuachI18n.add("zh", {
+"Stress dictionaries": "重音词典",
+"Set the dictionaries' stresses now": "立即按词典标重音",
+"Before every song in the Musician": "在音乐家中每首歌之前",
+"off by default": "默认关闭",
+"Stresses from the dictionaries ({0}): {1} set": "按词典标重音（{0}）：{1} 处",
+"Nothing to set: every word the dictionaries know already has its stress": "无需标注：词典认识的词都已有重音",
+"Homographs left to you: {0}": "同形异音词留给你：{0}",
+"The stress dictionaries are Russian, Ukrainian and Belarusian; these lyrics read as {0}": "重音词典为俄语、乌克兰语和白俄罗斯语；这段歌词识别为 {0}",
+"The dictionaries did not answer (the lab is away): the lyrics go as they are": "词典未响应（实验室不在）：歌词按原样发送",
+"The stress dictionaries (ru, uk, be) in the lyrics: their acutes set where a word has none, now or before every song (off by default); the base dictionaries alone, the Narrator's own word list stays the Narrator's": "重音词典（ru、uk、be）用于歌词：在没有重音的词上标出重音，立即或每首歌之前（默认关闭）；仅用基础词典，朗读者自己的词表留在朗读者"
+});
+
+// HERESY 2638: the More menu's precision row
+RuachI18n.add("zh", {
+"Ear": "听写"
+});
+
+// HERESY 2640: the comparison sheet's wait
+RuachI18n.add("zh", {
+"Building the comparison sheet": "正在生成对比表",
+"Each version is measured against the first at equal loudness: loudness and peaks, the tone zone by zone, the stereo width and the dynamics; then their spectrograms and difference curves are drawn.": "在相同响度下将每个版本与第一个对比测量：响度与峰值、分区音色、立体声宽度和动态；然后绘制频谱图和差异曲线。",
+"Two to four versions take 10 to 60 seconds. The sheet fills this window when its charts are ready; Close leaves it unmade.": "两到四个版本需要 10 到 60 秒。图表就绪后对比表会填满此窗口；“关闭”则不再生成。"
+});
+
+// HERESY 2641: the in-page picture
+RuachI18n.add("zh", {
+"The picture could not be read: {0}": "无法读取图片：{0}"
 });

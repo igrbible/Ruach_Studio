@@ -88,3 +88,67 @@ static std::string yue2_score_broken(const std::string & abc, std::string * warn
     }
     return out;
 }
+
+
+// HERESY 2631 (after timoncool/yue2.cpp 11551dc and 84dae70, MIT, Nerual Dreming): score_fill, asked by the request (off by default). A score
+// whose fault is its header gets the defaults the model learnt: a malformed M:/L: line becomes M:4/4 / L:1/16 in its own place (one meter, one
+// length, never two), a missing one goes in at the top (after an X: line), a missing K: goes in as K:C before the first line with a bar line.
+// A malformed K: is left as it is. The caller asks yue2_score_broken again, so a score wrong in other ways still fails.
+static std::string yue2_score_fill_header(const std::string & abc) {
+    std::vector<std::string> lines;
+    size_t                   pos = 0;
+    while (pos <= abc.size()) {
+        size_t e = abc.find('\n', pos);
+        if (e == std::string::npos) {
+            lines.push_back(abc.substr(pos));
+            break;
+        }
+        lines.push_back(abc.substr(pos, e - pos));
+        pos = e + 1;
+    }
+    auto value = [](const std::string & line) {
+        std::string v = line.substr(2);
+        while (!v.empty() && (v[0] == ' ' || v[0] == '\t')) {
+            v.erase(0, 1);
+        }
+        while (!v.empty() && (v.back() == '\r' || v.back() == ' ' || v.back() == '\t')) {
+            v.pop_back();
+        }
+        return v;
+    };
+    int iM = -1, iL = -1, iK = -1, bar = -1;
+    for (int n = 0; n < (int) lines.size(); n++) {
+        const std::string & l = lines[n];
+        if (iK < 0 && n < 40 && l.size() >= 2 && l[1] == ':') {
+            if (l[0] == 'M' && iM < 0) iM = n;
+            if (l[0] == 'L' && iL < 0) iL = n;
+            if (l[0] == 'K') iK = n;
+        }
+        if (bar < 0 && l.find('|') != std::string::npos && !(l.size() >= 2 && l[1] == ':' && l[0] != '|')) {
+            bar = n;
+        }
+    }
+    bool okM = iM >= 0 && std::regex_match(value(lines[iM]), std::regex(R"(^(\d{1,2}/\d{1,2}|C\|?)$)"));
+    bool okL = iL >= 0 && std::regex_match(value(lines[iL]), std::regex(R"(^1/\d{1,3}$)"));
+    if (okM && okL && iK >= 0) {
+        return abc;
+    }
+    if (iM >= 0 && !okM) lines[iM] = "M:4/4";
+    if (iL >= 0 && !okL) lines[iL] = "L:1/16";
+    std::vector<std::string> top;
+    if (iM < 0) top.push_back("M:4/4");
+    if (iL < 0) top.push_back("L:1/16");
+    int at = !lines.empty() && lines[0].compare(0, 2, "X:") == 0 ? 1 : 0;
+    if (iK < 0) {
+        if (bar < 0) {
+            return abc;                                  // no bar line: nothing to sing, the guard says so
+        }
+        lines.insert(lines.begin() + bar, "K:C");
+    }
+    lines.insert(lines.begin() + at, top.begin(), top.end());
+    std::string out;
+    for (size_t i = 0; i < lines.size(); i++) {
+        out += (i ? "\n" : "") + lines[i];
+    }
+    return out;
+}

@@ -24,7 +24,8 @@
     set: recall("yue2.trSet") || "", pane: recall("yue2.trPane") || "", sel: recall("yue2.trRun") || "", epoch: "", cmp: "",
     filter: recall("yue2.trFilter") || "all", search: "", folded: recall("yue2.trFolded") === "1", timer: 0, first: true,
     st: recall("yue2.trState") || "",              // HERESY 1659: a state the runs are seen by
-    stacked: recall("yue2.trStacked") === "1"      // HERESY 1299: the Telemetry's curves one under the other
+    stacked: recall("yue2.trStacked") === "1",      // HERESY 1299: the Telemetry's curves one under the other
+    view: ({ "1": "stacked", "2": "combined" })[recall("yue2.trStacked")] || "side"   // HERESY 2623: side by side, one under the other, together
   };
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
@@ -632,6 +633,9 @@
     };
     var cmpAvg = oc.length > 1 ? (plain ? oc : ema(oc, 0.08)) : [];
     lines.forEach(function (l) { l.s.curve.concat(cmpAvg).forEach(function (p) { if (p[0] >= x0 && p[0] <= x1) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); } }); });
+    // HERESY 2622: the held-out tracks at each save, dots over the curve (flow, ar_ce, KL), in the y range too
+    var HOK = { flow: "flow", ar_ce: "ar_ce", ar_kl: "kl" }[key], hist = HOK ? ((r.val || {}).history || []).filter(function (h) { return h && h.step && h[HOK] != null; }) : [];
+    hist.forEach(function (h) { if (h.step >= x0 && h.step <= x1) { lo = Math.min(lo, h[HOK]); hi = Math.max(hi, h[HOK]); } });
     if (!isFinite(lo)) lines.forEach(function (l) { clip(l.s.curve).forEach(function (p) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); }); });
     if (multi || key === "lr" || key === "step_s") lo = Math.min(lo, 0);   // memory, a rate and a time read from zero
     var pad = (hi - lo) * 0.06 || Math.abs(hi) * 0.05 || 0.05; hi += pad; if (lo !== 0) lo -= pad;
@@ -644,8 +648,11 @@
       return '<line class="t' + (k.lora ? " on" : "") + (cand[k.file] ? " cand" : "") + (k.file === state.epoch ? " sel" : "") + '" x1="' + xx + '" x2="' + xx + '" y1="' + (k.file === state.epoch ? 0 : cand[k.file] ? H - 18 : H - 6) + '" y2="' + H + '"/>';
     }).join("");
     var labels = [hi, (hi + lo) / 2, lo].map(function (v, i) { return '<span style="top:' + [2, 46, 90][i] + '%">' + fmtV(v) + "</span>"; }).join("");
-    var s = lines[0].s, said = multi ? lines.map(function (l, i) { return '<span class="tr-ck k' + (i % 4) + '"><i></i>' + esc(cardName(r, l.k)) + " " + fmtV(l.s.last) + " GB</span>"; }).join("")
-      : '<span class="mono">' + fmtV(s.first) + " → " + fmtV(s.last) + " · min " + fmtV(s.min) + (key === "grad_norm" || key === "step_s" ? " · max " + fmtV(s.max) : "") + "</span>";
+    var s = lines[0].s, av = multi || plain ? null : ema(s.curve, 0.08);   // HERESY 2622: the head read off the bold line, as the eye reads it
+    var hd = av ? { first: av[0][1], last: av[av.length - 1][1], min: Math.min.apply(null, av.map(function (p) { return p[1]; })), max: Math.max.apply(null, av.map(function (p) { return p[1]; })) } : s;
+    var said = multi ? lines.map(function (l, i) { return '<span class="tr-ck k' + (i % 4) + '"><i></i>' + esc(cardName(r, l.k)) + " " + fmtV(l.s.last) + " GB</span>"; }).join("")
+      : '<span class="mono">' + fmtV(hd.first) + " → " + fmtV(hd.last) + " · min " + fmtV(hd.min) + (key === "grad_norm" || key === "step_s" ? " · max " + fmtV(hd.max) : "") + "</span>" +
+        (hist.length ? '<span class="tr-ho-key"><i></i>' + esc(tr("the dots: the held-out tracks at each save")) + "</span>" : "");
     var paths = multi ? lines.map(function (l, i) { return '<path class="card k' + (i % 4) + '" d="' + path(l.s.curve) + '"/>'; }).join("")
       : plain ? '<path class="avg" d="' + path(s.curve) + '"/>' : '<path class="raw" d="' + path(s.curve) + '"/>';
     return '<figure class="tr-chart" data-key="' + key + '" data-last="' + last + '" data-x0="' + x0 + '" data-x1="' + x1 + '" data-lo="' + lo + '" data-hi="' + hi + '">' +
@@ -653,9 +660,70 @@
       '<div class="tr-plot"><div class="tr-ylab mono">' + labels + "</div>" +
       '<svg viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none">' + grid + ticks + paths +
         (cmpAvg.length ? '<path class="cmp" d="' + path(cmpAvg) + '"/>' : "") +
-        (multi || plain ? "" : '<path class="avg" d="' + path(ema(s.curve, 0.08)) + '"/>') + '<line class="cur" x1="-10" x2="-10" y1="0" y2="' + H + '"/></svg></div>' +
+        (multi || plain ? "" : '<path class="avg" d="' + path(av) + '"/>') +
+        hist.filter(function (h) { return h.step >= x0 && h.step <= x1; }).map(function (h) { return '<path class="ho" d="M' + x(h.step).toFixed(1) + " " + y(h[HOK]).toFixed(1) + 'h0.01"/>'; }).join("") +
+        '<line class="cur" x1="-10" x2="-10" y1="0" y2="' + H + '"/></svg></div>' +
       (cmpAvg.length ? '<div class="tr-cmpkey"><span class="k-this"></span>' + esc(r.name) + '<span class="k-cmp"></span>' + esc(other.name) + " (its average, dashed)</div>" : "") +
       '<p class="tr-say">' + esc(tr(say)) + "</p></figure>";
+  }
+  // HERESY 2623 (Viktor 14.11.2026: «объединить все шесть карточек с кривыми в одну единую, с наложениями в разных цветах, выключением слоёв…
+  // А LR и пик по памяти оставить как есть»): the Telemetry's third view. The six curves over one another, each in its own scale (their numbers
+  // differ by tens: a loss near 3, a KL near 0.3), each its running average in its own colour, the held-out dots in it; a chip per curve says its
+  // value now and hides it or shows it again (kept in this browser); the cursor reads every curve at its step; the zoom is the others'. LR and
+  // the memory stay charts of their own beside it.
+  var VIEWS = { side: ["stacked", "The curves one under the other, each the whole width", "rows-2"],
+                stacked: ["combined", "All the curves in one chart, each in its own scale", "layers"],
+                combined: ["side", "The curves side by side", "cols-2"] };
+  var LAYERS = [["loss", "#d0573c"], ["flow", "#3fa35a"], ["ar_ce", "#4f86d0"], ["ar_kl", "#b06ad0"], ["grad_norm", "#c9971f"], ["step_s", "#8f8f8f"]];
+  var CW = 1200, CH = 320;
+  function layersOff() { var o = {}; (recall("yue2.trLayersOff") || "").split(",").forEach(function (k) { if (k) o[k] = 1; }); return o; }
+  function titleOf(key) { var c = CHARTS.filter(function (x) { return x[0] === key; })[0]; return c ? c[1] : key; }
+  function combined(ser, r) {
+    var off = layersOff(), have = LAYERS.filter(function (l) { return ser[l[0]] && ser[l[0]].curve && ser[l[0]].curve.length > 1; });
+    if (!have.length) return emptyChart("combined", ser, r, "The curves together", "Each curve is drawn in its own scale, so their shapes lie one over another: the chips say each one's value now and hide it or show it again; under the cursor, every curve's value at that step.", []);
+    var last = Math.max(r.steps || 0, have.reduce(function (m, l) { var c = ser[l[0]].curve; return Math.max(m, c[c.length - 1][0]); }, 0)) || 1;
+    var z = zoomOf(r, last), x0 = z[0], x1 = z[1], x = function (st) { return CW * (st - x0) / (x1 - x0); };
+    var paths = "", chips = "", HO = { flow: "flow", ar_ce: "ar_ce", ar_kl: "kl" };
+    have.forEach(function (l) {
+      var key = l[0], col = l[1], av = ema(ser[key].curve, 0.08);
+      var i0 = 0, i1 = av.length - 1;
+      for (var i = 0; i < av.length; i++) { if (av[i][0] <= x0) i0 = i; if (av[i][0] >= x1) { i1 = i; break; } }
+      var pts = av.slice(i0, i1 + 1), lo = Infinity, hi = -Infinity;
+      var hist = HO[key] ? ((r.val || {}).history || []).filter(function (h) { return h && h.step >= x0 && h.step <= x1 && h[HO[key]] != null; }) : [];
+      pts.forEach(function (p) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); });
+      hist.forEach(function (h) { lo = Math.min(lo, h[HO[key]]); hi = Math.max(hi, h[HO[key]]); });
+      var pad = (hi - lo) * 0.06 || Math.abs(hi) * 0.05 || 0.05; lo -= pad; hi += pad;
+      var y = function (v) { return CH - 8 - (CH - 16) * (v - lo) / (hi - lo); };
+      if (!off[key]) {
+        paths += '<path class="cl" style="stroke:' + col + '" d="' + pts.map(function (p, j) { return (j ? "L" : "M") + x(p[0]).toFixed(1) + " " + y(p[1]).toFixed(1); }).join(" ") + '"/>' +
+          hist.map(function (h) { return '<path class="hod" style="stroke:' + col + '" d="M' + x(h.step).toFixed(1) + " " + y(h[HO[key]]).toFixed(1) + 'h0.01"/>'; }).join("");
+      }
+      chips += '<button type="button" class="tr-layer" data-layer="' + key + '" aria-pressed="' + !off[key] + '" style="--lc:' + col + '" data-tip="' + esc(tr(titleOf(key))) + '">' +
+        "<i></i>" + esc(tr(titleOf(key))) + ' <span class="mono">' + fmtV(av[av.length - 1][1]) + "</span></button>";
+    });
+    var grid = [0.08, 0.5, 0.92].map(function (f) { var yy = (CH * f).toFixed(1); return '<line class="g" x1="0" x2="' + CW + '" y1="' + yy + '" y2="' + yy + '"/>'; }).join("");
+    var ticks = (r.checkpoints || []).filter(function (k) { return k.step && k.step >= x0 && k.step <= x1; }).map(function (k) {
+      var xx = x(k.step).toFixed(1); return '<line class="t" x1="' + xx + '" x2="' + xx + '" y1="' + (CH - 10) + '" y2="' + CH + '"/>';
+    }).join("");
+    return '<figure class="tr-chart tr-combined" data-key="combined" data-last="' + last + '" data-x0="' + x0 + '" data-x1="' + x1 + '">' +
+      "<figcaption><b>" + esc(tr("The curves together")) + "</b>" + zoomBar(z, last) + '<span class="tr-read mono is-hint">over the curve: the step, its epoch, the value there</span></figcaption>' +
+      '<div class="tr-layers">' + chips + "</div>" +
+      '<div class="tr-plot"><svg viewBox="0 0 ' + CW + " " + CH + '" preserveAspectRatio="none">' + grid + ticks + paths +
+      '<line class="cur" x1="-10" x2="-10" y1="0" y2="' + CH + '"/></svg></div><p class="tr-say">' + esc(tr("Each curve is drawn in its own scale, so their shapes lie one over another: the chips say each one's value now and hide it or show it again; under the cursor, every curve's value at that step.")) + "</p></figure>";
+  }
+  function combinedRead(g, r, step) {
+    var ser = r.series || {}, off = layersOff(), parts = [], at = null;
+    LAYERS.forEach(function (l) {
+      var s = ser[l[0]]; if (!s || !s.curve || s.curve.length < 2 || off[l[0]]) return;
+      var av = ema(s.curve, 0.08), p = av.reduce(function (b, q) { return Math.abs(q[0] - step) < Math.abs(b[0] - step) ? q : b; }, av[0]);
+      if (at == null) at = p[0];
+      parts.push(l[0] + " " + fmtV(p[1]));
+    });
+    if (at == null) return;
+    var xx = (CW * (at - +g.dataset.x0) / (+g.dataset.x1 - +g.dataset.x0)).toFixed(1), line = g.querySelector("line.cur");
+    line.setAttribute("x1", xx); line.setAttribute("x2", xx);
+    var rd = g.querySelector(".tr-read"); rd.classList.remove("is-hint");
+    rd.textContent = "step " + at + (r.tracks ? " · e" + (at / r.tracks).toFixed(1) : "") + " · " + parts.join(" · ");
   }
   function paintRun() {
     var el = $("trRunPane"), r = runOf(state.sel);
@@ -682,10 +750,9 @@
           (live ? '<button type="button" class="btn ghost small danger" data-act="stop" data-run="' + esc(r.name) + '">Stop</button>' : "") +
           '<button type="button" class="btn ghost small tr-hico" data-act="log" data-run="' + esc(r.name) + '" aria-label="The log" data-tip="The log">' + ZI("scroll-text", "The log") + "</button>" +   // HERESY 2572   // HERESY 1167
           // HERESY 1299 (Viktor: «выстраивать в одну колонку оба блока живого графа»): the face shows what a click makes
-          '<button type="button" class="btn ghost small tr-stack" data-stack aria-pressed="' + state.stacked + '" data-tip="' +
-            esc(tr(state.stacked ? "The curves side by side" : "The curves one under the other, each the whole width")) + '" aria-label="' +
-            esc(tr(state.stacked ? "The curves side by side" : "The curves one under the other, each the whole width")) + '">' +
-            (window.HeresyIcons ? window.HeresyIcons.ui(state.stacked ? "cols-2" : "rows-2") : "") + "</button>" +
+          '<button type="button" class="btn ghost small tr-stack" data-stack aria-pressed="' + (state.view !== "side") + '" data-tip="' +   // HERESY 2623: three views
+            esc(tr(VIEWS[state.view][1])) + '" aria-label="' + esc(tr(VIEWS[state.view][1])) + '">' +
+            (window.HeresyIcons ? window.HeresyIcons.ui(VIEWS[state.view][2]) : "") + "</button>" +
           '<button type="button" class="btn ghost small tr-hico" data-menu="' + esc(r.name) + '" aria-label="More" data-tip="More">' + ZI("ellipsis", "\u22ef") + "</button></div></div>" +
       (r.note ? '<p class="row-hint tr-note" translate="no">' + esc(r.note) + "</p>" : "") +
       '<div class="tr-prog' + (live ? " is-live" : "") + '"><div class="tr-pbar"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
@@ -706,8 +773,9 @@
       "</div>" +
       (memo ? '<p class="tr-err">ar_ce ' + Number(ar).toFixed(3) + ": the music half is learning the songs by heart; an earlier epoch may be the better adapter.</p>" : "") +
       (ser.error ? '<p class="tr-err">' + esc(ser.error) + "</p>" : "") + (r.error ? '<p class="tr-err">' + esc(r.error) + "</p>" : "") +
-      '<div class="tr-charts' + (state.stacked ? " is-stacked" : "") + '">' +
-        CHARTS.map(function (c) { return chart(c[0], ser, r, c[1], c[2]); }).join("") +   // HERESY 2442: the eight, for every run
+      '<div class="tr-charts' + (state.view === "stacked" ? " is-stacked" : state.view === "combined" ? " is-combined" : "") + '">' +
+        (state.view === "combined" ? combined(ser, r) + CHARTS.filter(function (c) { return c[0] === "lr" || c[0] === "vram"; }).map(function (c) { return chart(c[0], ser, r, c[1], c[2]); }).join("")
+          : CHARTS.map(function (c) { return chart(c[0], ser, r, c[1], c[2]); }).join("")) +   // HERESY 2442: the eight, for every run; 2623: or the six together, LR and memory beside
       "</div>" +
       (cks.length || (r.gone || []).length ? '<div class="tr-epochs"><div class="tr-ehead"><span class="label">Epochs · ' + cks.length + " saved · " + gb(bytes) + "</span>" +
           ((r.gone || []).length ? '<span class="tr-gone-n">' + r.gone.length + " deleted from disk</span>" : "") +   // HERESY 1816
@@ -761,6 +829,7 @@
     var f = Math.max(0, Math.min(1, (e.clientX - box.left) / box.width)), step = +fig.dataset.x0 + f * (+fig.dataset.x1 - +fig.dataset.x0);   // HERESY 1855: in view
     var near = function (cc) { return cc.reduce(function (b, p) { return Math.abs(p[0] - step) < Math.abs(b[0] - step) ? p : b; }, cc[0]); };
     Array.prototype.forEach.call(document.querySelectorAll("#trRunPane .tr-chart:not(.is-empty)"), function (g) {
+      if (g.dataset.key === "combined") return combinedRead(g, r, step);   // HERESY 2623
       var ls = curvesOf(r.series || {}, g.dataset.key);
       if (!ls.length) return;
       var pt = near(ls[0].s.curve), line = g.querySelector("line.cur");
@@ -1299,7 +1368,9 @@
       if (t.id === "trListenGo") return listenGo();
       if (t.id === "trLApply") return listenApply();
       if ((b = t.closest("[data-menu]"))) { e.stopPropagation(); return menu(b); }
-      if (t.closest("[data-stack]")) { state.stacked = !state.stacked; keep("yue2.trStacked", state.stacked ? "1" : null); return paintRun(); }   // HERESY 1299
+      if (t.closest("[data-stack]")) { state.view = VIEWS[state.view][0]; state.stacked = state.view === "stacked"; keep("yue2.trStacked", state.view === "stacked" ? "1" : state.view === "combined" ? "2" : null); return paintRun(); }   // HERESY 1299; 2623 three views
+      var lay = t.closest("[data-layer]");
+      if (lay) { var lo2 = layersOff(); if (lo2[lay.dataset.layer]) delete lo2[lay.dataset.layer]; else lo2[lay.dataset.layer] = 1; keep("yue2.trLayersOff", Object.keys(lo2).join(",") || null); return paintRun(); }   // HERESY 2623
       if ((b = t.closest("[data-zoom]"))) {               // HERESY 1855: −, +, the whole run
         var zf = b.closest(".tr-chart"), za = +zf.dataset.x0, zb = +zf.dataset.x1, zm = (za + zb) / 2, zs = zb - za;
         if (b.dataset.zoom === "reset") { state.zoom = null; return paintRun(); }

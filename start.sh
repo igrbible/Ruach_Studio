@@ -121,8 +121,13 @@ BIN="$ROOT/build/build/yue-server"
 MODEL="$(bb "$QUANT")"
 VAE="$RS_ENGINE_VAE/YuE2-Vae-F32.gguf"
 OUTPUTS="$ROOT/outputs"
-TRANSCRIBER="$RS_MISC/SheetSage2-Q8_0.gguf"     # downloaded; convert-models.sh makes F32
+# HERESY 2625 (Viktor 15.11.2026: «SheetSage2 и MERT-v2-FullSong весят копейки в f32. Форсионно переводи обе модели в F32»): the F32 pair is the
+# transcriber, the Q8_0 pair the lighter choice beside it (a request asks it with precision=q8); an install with one pair runs on that one
+TRANSCRIBER="$RS_MISC/SheetSage2-F32.gguf"
+[ -f "$TRANSCRIBER" ] && [ -f "$RS_MISC/MERT-v2-FullSong-F32.gguf" ] || TRANSCRIBER="$RS_MISC/SheetSage2-Q8_0.gguf"
 [ -f "$TRANSCRIBER" ] || TRANSCRIBER="$RS_MISC/SheetSage2-F32.gguf"
+SMALL=""
+[ "$TRANSCRIBER" = "$RS_MISC/SheetSage2-F32.gguf" ] && [ -f "$RS_MISC/SheetSage2-Q8_0.gguf" ] && [ -f "$RS_MISC/MERT-v2-FullSong-Q8_0.gguf" ] && SMALL="$RS_MISC/SheetSage2-Q8_0.gguf"
 
 missing=0
 for f in "$BIN" "$MODEL" "$VAE"; do
@@ -235,6 +240,10 @@ MERT="$RS_MISC/MERT-v2-FullSong-${TRANSCRIBER##*-}"
 if [ -f "$TRANSCRIBER" ] && [ -f "$MERT" ] && [ "$(wc -c < "$TRANSCRIBER" | tr -d ' ')" -lt 500000000 ]; then
     args+=(--transcriber "$TRANSCRIBER")
     row transcriber "$(basename "$TRANSCRIBER") ${D}· $(size "$TRANSCRIBER"), MERT beside it $(size "$MERT") · covers from a recording${X}"
+    if [ -n "$SMALL" ]; then                          # HERESY 2625: the lighter pair, asked per request
+        args+=(--transcriber-small "$SMALL")
+        row "" "${D}$(basename "$SMALL") · $(size "$SMALL"), MERT $(size "$RS_MISC/MERT-v2-FullSong-Q8_0.gguf") · the lighter choice${X}"
+    fi
     # HERESY 2328: anime-song's SheetSage2-Refined, the second transcriber, an overlay on SheetSage2's GGUF beside it
     REFINED="$RS_MISC/SheetSage2-Refined-F16.gguf"
     if [ -f "$REFINED" ]; then

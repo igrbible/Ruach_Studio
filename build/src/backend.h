@@ -5,7 +5,11 @@
 // keep CPU as fallback. This avoids duplicating init logic across
 // qwen3-lm.h, nar.h and vae.h.
 
+#include "ggml-alloc.h"
 #include "ggml-backend.h"
+#include <chrono>
+#include <cmath>
+#include <string>
 
 #include <cstdio>
 #include <cstdlib>
@@ -17,6 +21,59 @@ struct BackendPair {
     ggml_backend_t cpu_backend;
     bool           has_gpu;
 };
+
+// HERESY 2635 (after timoncool/yue2.cpp c4a9224, MIT): a device that initialises can still fail its first kernel (a CUDA driver older than
+// the toolkit rejects the PTX, a broken Vulkan or SYCL driver faults). Rows gathered from an F16 table and a matrix product, the kernels
+// every model starts with, run on the device before the engine takes work; every table value is 1/64, so each gathered row sums to 1 and
+// each product element is 1: 4 + 16 * 8 = 132. Empty when it held; otherwise why, and the engine runs on the processor (an exit would
+// loop under systemd's Restart=always, the page gone with the server).
+static std::string g_backend_self_test;
+
+static std::string backend_self_test(ggml_backend_t backend) {
+    auto                    start  = std::chrono::steady_clock::now();
+    struct ggml_init_params params = { 16 * ggml_tensor_overhead() + ggml_graph_overhead(), NULL, true };
+    struct ggml_context *   ctx    = ggml_init(params);
+    struct ggml_tensor *    table  = ggml_new_tensor_2d(ctx, GGML_TYPE_F16, 64, 16);
+    struct ggml_tensor *    rows   = ggml_new_tensor_1d(ctx, GGML_TYPE_I32, 4);
+    struct ggml_tensor *    x      = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, 64, 8);
+    struct ggml_tensor *    total =
+        ggml_add(ctx, ggml_sum(ctx, ggml_get_rows(ctx, table, rows)), ggml_sum(ctx, ggml_mul_mat(ctx, table, x)));
+    struct ggml_cgraph *  graph  = ggml_new_graph(ctx);
+    ggml_build_forward_expand(graph, total);
+    ggml_backend_buffer_t buffer = ggml_backend_alloc_ctx_tensors(ctx, backend);
+    if (!buffer) {
+        ggml_free(ctx);
+        return "its memory could not be allocated";
+    }
+    uint16_t h = ggml_fp32_to_fp16(1.0f / 64.0f);
+    uint16_t table_data[64 * 16];
+    for (int i = 0; i < 64 * 16; i++) {
+        table_data[i] = h;
+    }
+    int32_t row_data[4] = { 0, 3, 7, 15 };
+    float   x_data[64 * 8];
+    for (int i = 0; i < 64 * 8; i++) {
+        x_data[i] = 1.0f;
+    }
+    ggml_backend_tensor_set(table, table_data, 0, sizeof(table_data));
+    ggml_backend_tensor_set(rows, row_data, 0, sizeof(row_data));
+    ggml_backend_tensor_set(x, x_data, 0, sizeof(x_data));
+    enum ggml_status status = ggml_backend_graph_compute(backend, graph);
+    float            result = 0.0f;
+    if (status == GGML_STATUS_SUCCESS) {
+        ggml_backend_tensor_get(total, &result, 0, sizeof(result));
+    }
+    ggml_backend_buffer_free(buffer);
+    ggml_free(ctx);
+    if (status != GGML_STATUS_SUCCESS || !std::isfinite(result) || std::fabs(result - 132.0f) > 0.5f) {
+        char why[160];
+        snprintf(why, sizeof why, "its first kernels failed (status %d, sum %g where 132 was due)", (int) status, (double) result);
+        return why;
+    }
+    double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
+    fprintf(stderr, "[Load] Self-test on %s: ok (%.1f ms)\n", ggml_backend_name(backend), ms);
+    return "";
+}
 
 // Cached backend state (shared across all modules in the same binary)
 static BackendPair g_backend_cache = {};
@@ -162,6 +219,21 @@ static BackendPair backend_init(const char * label) {
         exit(1);
     }
     bool best_is_cpu = (strcmp(ggml_backend_name(bp.backend), "CPU") == 0);
+    if (!best_is_cpu) {   // HERESY 2635: the device's first kernels, before any work
+        std::string why = backend_self_test(bp.backend);
+        if (!why.empty()) {
+            g_backend_self_test = std::string(ggml_backend_name(bp.backend)) + ": " + why;
+            fprintf(stderr, "[Load] WARNING: the self-test on %s failed, %s: the engine runs on the processor (slowly); a driver to "
+                            "update, or GGML_BACKEND to name another device\n", ggml_backend_name(bp.backend), why.c_str());
+            ggml_backend_free(bp.backend);
+            bp.backend  = ggml_backend_init_by_name("CPU", nullptr);
+            best_is_cpu = true;
+            if (!bp.backend) {
+                fprintf(stderr, "[Load] FATAL: no backend available\n");
+                exit(1);
+            }
+        }
+    }
     int  n_threads   = backend_cpu_n_threads();
     if (best_is_cpu) {
         ggml_backend_free(bp.backend);

@@ -3366,6 +3366,8 @@ const st99 = await ev(`(async () => {
   btn().click(); await wait(150);
   o.stacked = figs(); o.kept = localStorage.getItem("yue2.trStacked"); o.tip2 = btn().dataset.tip; o.face2 = btn().querySelector(".ui-ico").getAttribute("class");
   o.pressed = btn().getAttribute("aria-pressed");
+  btn().click(); await wait(200);   // HERESY 2623: the third view, the six curves together, LR and memory beside
+  o.comb = { n: figs().length, one: !!document.querySelector("#trRunPane .tr-combined"), kept: localStorage.getItem("yue2.trStacked"), face: btn().querySelector(".ui-ico").getAttribute("class"), chips: document.querySelectorAll("#trRunPane .tr-layer").length };
   btn().click(); await wait(150);
   o.back = figs(); o.kept2 = localStorage.getItem("yue2.trStacked");
   window.fetch = real;
@@ -3376,9 +3378,11 @@ const st99 = await ev(`(async () => {
 check("side by side at first (one row: the same top, the second to the right); the button says it stacks them, its face two rows",
   st99.side.length === 8 && st99.side[0].t === st99.side[1].t && st99.side[1].l > st99.side[0].l + st99.side[0].w &&
   st99.tip1 === "The curves one under the other, each the whole width" && /ui-rows-2/.test(st99.face1 || ""), JSON.stringify(st99));
-check("  clicked: one under the other, each the whole width; remembered; the button now offers side by side (two columns); clicked again: back, forgotten",
+check("  clicked: one under the other, each the whole width; remembered; the button now offers the curves together (2623)",
   st99.stacked[0].l === st99.stacked[1].l && st99.stacked[1].t > st99.stacked[0].t && Math.abs(st99.stacked[0].w - st99.pane) <= 1 && st99.kept === "1" &&
-  st99.tip2 === "The curves side by side" && /ui-cols-2/.test(st99.face2) && st99.pressed === "true" &&
+  st99.tip2 === "All the curves in one chart, each in its own scale" && /ui-layers/.test(st99.face2) && st99.pressed === "true", JSON.stringify(st99));
+check("  clicked again: the curves together in one chart (a chip a curve) with LR and memory beside it, remembered, the button offering side by side; once more: back, forgotten",
+  st99.comb.one && st99.comb.n === 3 && st99.comb.chips >= 2 && st99.comb.kept === "2" && /ui-cols-2/.test(st99.comb.face) &&
   st99.back[0].t === st99.back[1].t && st99.kept2 === null, JSON.stringify(st99));
 
 // HERESY 1855: the Telemetry's curves zoomed
@@ -5246,7 +5250,7 @@ const pm36 = await ev(`(async () => {
   document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
   return o; })()`);
 check("a right click on a run's picture opens its menu (the browser's own does not): over the page, the stage, the form, all of it, reference, compare, cover, upscale, star, pick, copy, download, its run, the trash",
-  pm36.prevented && ["Over the page", "To the stage", "To the form", "All of it to the form", "As reference", "Compare…", "Set as cover", "Upscale", "Star it", "Pick it", "Copy the prompt", "Copy the seed · 501", "Download · PNG 1024×1024", "The file in a new tab", "Its run", "To the trash"]
+  pm36.prevented && ["Over the page", "To the stage", "To the form", "All of it to the form", "As reference", "Compare…", "Set as cover", "Upscale", "Star it", "Pick it", "Copy the prompt", "Copy the seed · 501", "Download · PNG 1024×1024", "Full screen", "Its run", "To the trash"]
     .every((x) => pm36.labels.indexOf(x) >= 0), JSON.stringify(pm36.labels));
 check("  Star it stars that picture; To the form: its prompt, seed and shape; All of it: its sampling as well",
   !!pm36.star && pm36.star.id === "20261010-230500-1336" && pm36.star.file === "01-1x1-s501.png" && pm36.star.star === true &&
@@ -5449,7 +5453,7 @@ const tr39 = await ev(`(async () => {
   return o; })()`);
 check("a count says itself in each language's forms: 1 картинка, 3 картинки, 5 картинок, 21 картинка; 3 малюнкі, 3 εικόνες, 3 imágenes, 3 immagini",
   JSON.stringify(tr39.forms.ru.slice(0, 4)) === JSON.stringify(["1 картинка", "3 картинки", "5 картинок", "21 картинка"]) && tr39.forms.be[1] === "3 малюнкі" &&
-  tr39.forms.el[1] === "3 εικόνες" && tr39.forms.es[1] === "3 imágenes" && tr39.forms.it[1] === "3 immagini" && /^2 прогона в корзине$/.test(tr39.forms.ru[4]), JSON.stringify(tr39.forms));
+  tr39.forms.el[1] === "3 εικόνες" && tr39.forms.es[1] === "3 imágenes" && tr39.forms.it[1] === "3 immagini" && /^2 прогона в мусорке$/.test(tr39.forms.ru[4]), JSON.stringify(tr39.forms));
 check("  a dialog in Russian: its title, its buttons, and its paragraphs kept apart (pre-line: «\\n\\n» between them)",
   tr39.title === "Перезагрузить страницу?" && tr39.stay === "Остаться" && /^Она заберёт:/.test(tr39.body) && /\n\nОна сохранит:/.test(tr39.body) && /\n\nCtrl\+F5/.test(tr39.body), JSON.stringify([tr39.title, tr39.stay, tr39.body.slice(0, 80)]));
 check("  the lyrics' mirror keeps the typed word though the catalog knows it («" + tr39.known + "»); the gutter's section names as tagged, never translated (1732)",
@@ -8149,8 +8153,8 @@ const cm15 = await ev(`(async () => {
   return o; })()`);
 check("a title's base: past « · …», (edit), a version, «take 2», «#3»; the namesakes of «01. МАНИФЕСТ_ Крик» are one, Dual CFG's all one",
   JSON.stringify(cm15.base) === JSON.stringify(["01. манифест_ крик", "01. манифест_ крик", "я - буратино не воцерковленный", "dual cfg", "sunrise", "sunrise", "sunrise"]), JSON.stringify(cm15.base));
-check("  the Librarian's Compare: off for one checked, on for two to twelve (2043; six in 1621), its tip says so; it opens the one player with the checked takes",
-  cm15.n >= 2 && cm15.one && !cm15.two && cm15.seven && /two to twelve/.test(cm15.tip) && cm15.rows === Math.min(6, cm15.n) && /^Compare · /.test(cm15.title), JSON.stringify(cm15));
+check("  the Librarian's Compare: off for one checked, on for 2 to 24 (2043, 2627; six in 1621), its tip says so; it opens the one player with the checked takes",
+  cm15.n >= 2 && cm15.one && !cm15.two && cm15.seven && /2 to 24/.test(cm15.tip) && cm15.rows === Math.min(6, cm15.n) && /^Compare · /.test(cm15.title), JSON.stringify(cm15));
 
 // HERESY 1169 · 1416 (Viktor 13.10.2026: «Мой Буратино реп без Q ожил»; «запихнуть его прямо в строку заголовка между STYLE и иконками выбора пола… Если есть BPM в стиле, честное предупреждение»)
 section("Free tempo: in the Style's head between its name and the voice's toggles; sent as free_tempo with a score, not in Direct; on by itself when the Style comes to ask for rubato without a BPM, not again once turned off; the honest word with a BPM; kept in the draft");
@@ -10069,7 +10073,9 @@ check("The bar's ☰ anew (2064): no Export to DAW in it; from the top GPU and V
 check("  Engine · Theme · Guide: one row of three equal columns as wide as the menu, one height; every word whole on its line (the button's «Guide», «Гайд», «Guide»)",
   !!hm64 && hm64L((x, L) => x.ids === "engineToggle|themeButton|guideOpenMenu" && x.equal && x.full && x.heights === "32,32,32" && x.engine && x.engine.fits && x.theme && x.theme.fits &&
     x.guide && x.guide.fits && x.guide.word === { en: "Guide", ru: "Гайд", de: "Guide" }[L] && x.broken.length === 0),
-  JSON.stringify(hm64 && hm64.langs && Object.keys(hm64.langs).map((L) => [L, hm64.langs[L].ids, hm64.langs[L].widths, hm64.langs[L].heights, hm64.langs[L].equal, hm64.langs[L].full, hm64.langs[L].engine, hm64.langs[L].theme, hm64.langs[L].guide, hm64.langs[L].broken])));
+  // 2624c: the detail only for the languages that fail, the failing parts first (the line is cut at 220 characters)
+  JSON.stringify(hm64 && hm64.langs && Object.keys(hm64.langs).filter((L) => { const x = hm64.langs[L]; return !(x.ids === "engineToggle|themeButton|guideOpenMenu" && x.equal && x.full && x.heights === "32,32,32" && x.engine && x.engine.fits && x.theme && x.theme.fits && x.guide && x.guide.fits && x.guide.word === { en: "Guide", ru: "Гайд", de: "Guide" }[L] && x.broken.length === 0); })
+    .map((L) => { const x = hm64.langs[L]; return [L, x.broken, x.equal ? "" : "unequal " + x.widths, x.full ? "" : "not full", x.heights, x.ids, x.engine && x.engine.fits ? "" : x.engine, x.theme && x.theme.fits ? "" : x.theme, x.guide && x.guide.fits && x.guide.word ? "" : x.guide]; })));
 check("  Own plugins: its box where the fields start (under Model's and VAE's), its word after it with the row's gap, level with it and whole",
   !!hm64 && hm64L((x) => !!x.pro && x.pro.boxAtField && x.pro.gap >= 6 && x.pro.level && x.pro.whole), JSON.stringify(hm64 && hm64.langs && Object.keys(hm64.langs).map((L) => [L, hm64.langs[L].pro])));
 check("  Ctrl+Alt+8 opens the Librarian, not the DAW window (2365); the DAW's button out of ☰", !!hm64 && !hm64.key8 && hm64.key8tab === "collection", JSON.stringify(hm64 && [hm64.key8, hm64.key8tab]));
@@ -15528,7 +15534,7 @@ const fu69 = await ev(`(async () => {
     const f = node && node.querySelector("#dbSource");
     if (f) f.dispatchEvent(new MouseEvent("click", { bubbles: true })); await wait(300);
     o.fieldStays = !P.opened();
-    node.querySelector(".pcv-name").click(); await wait(500);
+    document.querySelector('#postCanvas .pcv-node[data-node="debuzzPanel"] .pcv-name').click(); await wait(500);   // 2646b: afresh, the canvas may have drawn itself again
     const box = document.getElementById("ndBox");
     o.opened = P.opened() === "debuzzPanel" && box.querySelector(".nd-tabs").hidden && !box.querySelector(".nd-out").hidden && !!document.querySelector('#postCanvas .pcv-node[data-node="debuzzPanel"] .pcv-face #debuzzPanel');
     P.close(); await wait(300);
@@ -17342,7 +17348,7 @@ const lg30 = await ev(`(async () => { const wait = (ms) => new Promise((r) => se
   o.src = [S("[NAR] Step 54/64, 426 ms"), S("[Plan] the adapters' music half 1.5 together", true), S("[Lab] 17:24:42 LoRA training · voice-x-r32 · started on GPU 2"),
     S("[Lab] 19:24:17 the engine's models left its card for artwork · x (6956 MB): they load again with the next song"), S("[Lab] 19:23:23 artwork · 20261020-170502 · started on GPU 0"),
     S("[Lab] 10:00:00 stems (BS-Roformer, htdemucs) · x · done"), S("[Lab] 10:00:01 refined · x · into “Refined” of “Фосфорида”"), S("[Lab] 10:00:02 DAW mix · x · stopped"),
-    S("[Lab] 10:00:03 regenerate · x · queued"), S("[Lab] 10:00:04 lyrics timing (Whisper) · x · done"), S("[Lab] 10:00:05 the Writer · its model ready in 12 s")].join(",");   // HERESY 1990
+    S("[Lab] 10:00:03 regenerate · x · queued"), S("[Lab] 10:00:04 lyrics timing (Whisper) · x · done"), S("[Lab] 10:00:05 the Writer · its model ready in 12 s"), S("[Lab] 00:25:08 Training · run-x · step 31207 of 77196 (40 %)")].join(",");   // HERESY 1990, 2615
   const was = localStorage.getItem("yue2.logView.create"), db = $("logDockBody");
   document.querySelector('.topbar [data-tab="create"]').click(); await wait(150);
   const rows = ["creator", "trainer", "refiner", "artist"].map((s) => { const r = document.createElement("div"); r.className = "log-line"; r.dataset.src = s; r.textContent = "1630 · a " + s + " line"; db.appendChild(r); return r; });
@@ -17362,7 +17368,7 @@ const lg30 = await ev(`(async () => { const wait = (ms) => new Promise((r) => se
 const LG30 = JSON.parse(lg30);
 check("seven views in the dock's head in the rooms' order: Server, Musician, Writer (1990), Refiner, Artist, Videographer (1865), Trainer", LG30.views === "server,creator,writer,refiner,artist,video,trainer", lg30);
 check("  each line to its room: the engine's and the page's the Musician's, a training run the Trainer's, artwork the Artist's, stems, refined and the DAW's mix the Refiner's, regenerate and Whisper's timing the Musician's, the Writer's model the Writer's (1990)",
-  LG30.src === "creator,creator,trainer,artist,artist,refiner,refiner,refiner,creator,creator,writer", lg30);
+  LG30.src === "creator,creator,trainer,artist,artist,refiner,refiner,refiner,creator,creator,writer,trainer", lg30);
 check("  Trainer, Refiner, Musician show their own lines only (kept for the room); Server all of them; Artist its own log",
   LG30.trainer === "true|trainer|trainer|trainer" && LG30.refiner === "refiner" && LG30.creator === "creator" && LG30.server === "true|-|creator+trainer+refiner+artist" && LG30.artist === "true|true", lg30);
 check("  a room with nothing in the log says so", LG30.none === "(lines there)" || LG30.none === "Nothing from this room in the log yet", lg30);
@@ -30781,4 +30787,11 @@ check("  Look again asks the lab again; the panel in the page's language (ru)", 
 
 section("page health");
 check("no script errors during the whole run", errors.length === 0, errors.slice(0, 3).join(" | ") || "none");
+{   // HERESY 2624b (15.11.2026: every shortcut of the Studio fell silent: two hidden Narrator windows held .hd-back, which the shortcuts read as a dialog open)
+  const hb = await ev(`(() => { document.querySelectorAll(".hd-back.is-on").forEach((b) => { const no = b.querySelector(".hd-no, [data-cmp=close]"); if (no) no.click(); }); return Array.from(document.querySelectorAll(".hd-back")).filter((b) => !b.classList.contains("is-leaving")).map((b) => b.id || b.className).join(", "); })()`);
+  check("no dialog backdrop stands in the page with no dialog open, so the shortcuts keep working (2624b)", hb === "", hb || "none");
+  // HERESY 2624c: nor a dialog's box outside an open dialog, which «the dialog's box» (querySelector(".hd-box")) would find first
+  const bx = await ev(`Array.from(document.querySelectorAll(".hd-box")).filter((b) => !b.closest(".hd-back")).map((b) => b.id || b.className).join(", ")`);
+  check("no dialog box stands outside an open dialog (2624c)", bx === "", bx || "none");
+}
 await finish(failed ? 1 : 0);   // prints the report, stops Chrome and the mock

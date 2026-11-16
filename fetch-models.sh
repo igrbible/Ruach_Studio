@@ -94,7 +94,8 @@ pack_entries() {
   # HERESY 2329: the extra decoder is ours, RS x3 v2 (v1 comes with every song's least)
   has extras && add $RS "$RSR" "VAE-RS/YuE2-VAE-RS-x3_v2-F32.gguf" "" extras
   has whisper && add $V2 "$V2R" "whisper/whisper-large-v3-ct2-float16/*" "" whisper   # paths: repo
-  if has transcriber; then add $V2 "$V2R" "models/SheetSage2-Q8_0.gguf" "" transcriber; add $V2 "$V2R" "models/MERT-v2-FullSong-Q8_0.gguf" "" transcriber; fi   # paths: repo
+  # HERESY 2625: the transcriber in F32 (Viktor 15.11.2026: «Форсионно переводи обе модели в F32»); an install that has the Q8_0 pair keeps it as the lighter choice
+  if has transcriber; then add $V2 "$V2R" "models/SheetSage2-F32.gguf" "" transcriber; add $V2 "$V2R" "models/MERT-v2-FullSong-F32.gguf" "" transcriber; fi   # paths: repo
   if has upscale; then add $V2 "$V2R" "universr/*" "" upscale; add $V2 "$V2R" "models/upbundle/apollo/*" "" upscale; fi   # paths: repo
   if has fw && [ "$QUANT" != Q5_K_M ]; then add $FT "$FTR" "YuE2-3B-RS-TW-2.0x0.75-$QUANT.gguf" models fw; fi
   if has loras; then   # the Studio's own and the Kit's library as v2 holds them (loras/<folder>/<file>), and the Kit's three from their authors

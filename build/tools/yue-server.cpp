@@ -589,6 +589,7 @@ static std::string  g_model_path;
 static std::string  g_vae_path;
 static std::string  g_transcriber_path;
 static std::string  g_transcriber_refined_path;  // HERESY 2328: SheetSage2-Refined's overlay
+static std::string  g_transcriber_small_path;    // HERESY 2625: SheetSage2 with MERT in Q8_0, asked with precision=q8
 static std::string  g_tokenizer_path;
 
 // Local additions: named decoders, the slider catalog and the song library
@@ -608,6 +609,7 @@ struct EngineSettings {
     int         vae_core;     // VAE tile core frames
     int         unload_after_min;  // HERESY 1167: idle minutes before the models leave VRAM, 15..240 by 15
     bool        unload_at_once;    // HERESY 1167: or 15 s after a song
+    bool        kv_q8;             // HERESY 2633b: the music cache in Q8_0, where every reader takes it
 };
 
 static EngineSettings      g_settings;
@@ -1224,6 +1226,8 @@ static std::string settings_json(const EngineSettings & st) {
     yyjson_mut_obj_add_int(doc, root, "max_seq", st.max_seq);
     yyjson_mut_obj_add_int(doc, root, "max_seq_full", YUE2_CONTEXT);
     yyjson_mut_obj_add_int(doc, root, "vae_core", st.vae_core);
+    yyjson_mut_obj_add_bool(doc, root, "kv_q8", st.kv_q8);   // HERESY 2633b: asked; kv_cache says what the cache is
+    yyjson_mut_obj_add_str(doc, root, "kv_cache", g_pipeline.configured ? ggml_type_name(g_pipeline.kv.type) : "f16");
     char *      json = yyjson_mut_write(doc, YYJSON_WRITE_PRETTY, NULL);
     std::string out  = json ? json : "{}";
     if (json) {
@@ -1273,6 +1277,9 @@ static bool settings_parse(const std::string & body, EngineSettings * st, std::s
     }
     if ((v = yyjson_obj_get(root, "unload_at_once")) && yyjson_is_bool(v)) {
         st->unload_at_once = yyjson_get_bool(v);
+    }
+    if ((v = yyjson_obj_get(root, "kv_q8")) && yyjson_is_bool(v)) {   // HERESY 2633b
+        st->kv_q8 = yyjson_get_bool(v);
     }
     if ((v = yyjson_obj_get(root, "max_seq")) && yyjson_is_int(v)) {
         int n = (int) yyjson_get_int(v);
@@ -1337,6 +1344,11 @@ static void settings_apply(const EngineSettings & next) {
         g_pipeline.params.max_seq       = next.max_seq;
         g_pipeline.kv.cfg.max_seq_len = next.max_seq > 0 ? next.max_seq : YUE2_CONTEXT;
         fprintf(stderr, "[Server] Context now %d rows\n", g_pipeline.kv.cfg.max_seq_len);
+    }
+    if (next.kv_q8 != g_pipeline.params.kv_q8) {   // HERESY 2633b: freed, the type decided again, the next run allocates it
+        qw3lm_kv_free(&g_pipeline.kv);
+        g_pipeline.params.kv_q8 = next.kv_q8;
+        pipeline_kv_q8_set(&g_pipeline, next.kv_q8);
     }
     refresh_loaded();
     {
@@ -2215,6 +2227,31 @@ static void handle_props(const httplib::Request &, httplib::Response & res) {
     yyjson_mut_obj_add_int(doc, root, "max_batch", g_pipeline.params.max_batch);
     yyjson_mut_obj_add_bool(doc, root, "transcriber", !g_transcriber_path.empty());
     yyjson_mut_obj_add_bool(doc, root, "transcriber_refined", !g_transcriber_path.empty() && !g_transcriber_refined_path.empty());
+    yyjson_mut_obj_add_str(doc, root, "kv_cache", g_pipeline.configured ? ggml_type_name(g_pipeline.kv.type) : "f16");   // HERESY 2633: F16, or Q8_0 under --kv-q8
+    yyjson_mut_obj_add_strcpy(doc, root, "self_test", g_backend_self_test.c_str());   // HERESY 2635: empty when the device held
+    {   // HERESY 2636 (UIX №34): what yue2_sampling_valid refuses past, [low, high], null where it sets no bound (top_p and the penalty
+        // above zero, the floor not above the ceiling: the page keeps its own saner bounds inside these)
+        yyjson_mut_val * lim  = yyjson_mut_obj(doc);
+        auto             pair = [&](const char * key, double lo, double hi, bool has_hi) {
+            yyjson_mut_val * a = yyjson_mut_arr(doc);
+            yyjson_mut_arr_add_real(doc, a, lo);
+            if (has_hi) {
+                yyjson_mut_arr_add_real(doc, a, hi);
+            } else {
+                yyjson_mut_arr_add_null(doc, a);
+            }
+            yyjson_mut_obj_add_val(doc, lim, key, a);
+        };
+        pair("temperature", 0, YUE2_SAMPLING_TEMPERATURE_MAX, true);
+        pair("top_p", 0, 1, true);
+        pair("top_k", 1, 0, false);
+        pair("repetition_penalty", 0, 0, false);
+        pair("penalty_window", 1, YUE2_SAMPLING_WINDOW_MAX, true);
+        pair("min_tokens", 0, 0, false);
+        pair("max_tokens", 1, 0, false);
+        yyjson_mut_obj_add_val(doc, root, "sampling_limits", lim);
+    }
+    yyjson_mut_obj_add_bool(doc, root, "transcriber_small", !g_transcriber_path.empty() && !g_transcriber_small_path.empty());   // HERESY 2625
     yyjson_mut_obj_add_bool(doc, root, "outputs", !g_outputs_dir.empty());
     // The adapter directory, each entry with the halves it changes
     yyjson_mut_val * adapters = yyjson_mut_arr(doc);
@@ -2418,15 +2455,16 @@ static const char * transcriber_mode(bool refined, int rope) {
                                                                        "Standard (SheetSage2, exact angles: the sheets before 2.0.7)";
 }
 
-static void run_transcribe(std::shared_ptr<Job> job, std::vector<float> audio, bool melody_only, bool refined, bool key_mode, int rope) {
+static void run_transcribe(std::shared_ptr<Job> job, std::vector<float> audio, bool melody_only, bool refined, bool key_mode, int rope,
+                           bool small) {
     job->started.store(true);
     active_job_set(job);
-    fprintf(stderr, "[Server] Transcribe job %s: %.1f s of audio, %s, %s%s\n", job->id.c_str(),
+    fprintf(stderr, "[Server] Transcribe job %s: %.1f s of audio, %s, %s%s, %s\n", job->id.c_str(),
             (double) audio.size() / MERT_SAMPLE_RATE, melody_only ? "melody only" : "full score",
             transcriber_mode(refined, rope),
-            refined && key_mode ? " with modes" : "");
+            refined && key_mode ? " with modes" : "", small ? "Q8_0" : "F32 (or as started)");
     std::string abc, error;
-    bool ok = pipeline_transcribe(&g_pipeline, audio.data(), (int) audio.size(), melody_only, &abc, &error, refined, key_mode, rope);
+    bool ok = pipeline_transcribe(&g_pipeline, audio.data(), (int) audio.size(), melody_only, &abc, &error, refined, key_mode, rope, small);
     active_job_set(nullptr);
     if (!ok) {
         fprintf(stderr, "[Server] Transcribe job %s failed: %s\n", job->id.c_str(), error.c_str());
@@ -2436,6 +2474,7 @@ static void run_transcribe(std::shared_ptr<Job> job, std::vector<float> audio, b
     // HERESY 2328: the answer says which transcriber wrote the score; HERESY 2359: and with which angles SheetSage2 wrote it
     std::string body = json_string("abc", abc);
     body.insert(body.size() - 1, std::string(",\"transcriber\":\"") + transcriber_name(refined, rope) + "\"");
+    body.insert(body.size() - 1, std::string(",\"precision\":\"") + (small ? "Q8_0" : "F32") + "\"");   // HERESY 2625
     job->result_body = body;
     job->result_mime = "application/json";
     job->status.store(JobStatus::DONE);
@@ -2758,6 +2797,8 @@ static void print_usage(const char * prog) {
             "  --device <name>        Compute device: CUDA0, Vulkan0, MTL0, CPU...\n"
             "                         (default: best available)\n"
             "  --transcriber <gguf>   SheetSage2 GGUF, MERT beside it, enables /transcribe\n"
+            "  --transcriber-small <gguf>    SheetSage2 in Q8_0 with its MERT beside it, the lighter choice:\n"
+            "                         /transcribe?precision=q8 (the F32 --transcriber otherwise)\n"
             "  --transcriber-refined <gguf>  SheetSage2-Refined's overlay, SheetSage2's GGUF beside it:\n"
             "                         /transcribe?transcriber=refined\n"
             "                         (transcriber=heretical or sheetsage2-bf16: SheetSage2 with bf16 angles, the page's\n"
@@ -2782,6 +2823,7 @@ static void print_usage(const char * prog) {
             "  --vae-core <N>         VAE tile core frames (default: 512)\n"
             "  --vae-halo <N>         VAE tile halo frames (default: 16)\n"
             "  --no-fa                Disable flash attention\n"
+            "  --kv-q8                The music cache in Q8_0, about half the memory (a GPU with flash attention; HERESY 2633)\n"
             "  --no-fa-nar            Flash attention off in the sound half (NAR) only (ggml Vulkan on an Intel Arc)\n"
             "  --clamp-fp16           Clamp hidden states to FP16 range\n",
             prog);
@@ -2854,6 +2896,8 @@ int main(int argc, char ** argv) {
             g_transcriber_path = argv[++i];
         } else if (!strcmp(argv[i], "--transcriber-refined") && !last) {
             g_transcriber_refined_path = argv[++i];
+        } else if (!strcmp(argv[i], "--transcriber-small") && !last) {   // HERESY 2625
+            g_transcriber_small_path = argv[++i];
         } else if (!strcmp(argv[i], "--tokenizer") && !last) {
             g_tokenizer_path = argv[++i];
         } else if (!strcmp(argv[i], "--adapters") && !last) {
@@ -2877,6 +2921,8 @@ int main(int argc, char ** argv) {
             params.vae_halo = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "--no-fa")) {
             params.no_fa = true;
+        } else if (!strcmp(argv[i], "--kv-q8")) {   // HERESY 2633
+            params.kv_q8 = true;
         } else if (!strcmp(argv[i], "--no-fa-nar")) {   // HERESY 2450
             params.no_fa_nar = true;
         } else if (!strcmp(argv[i], "--clamp-fp16")) {
@@ -2922,7 +2968,7 @@ int main(int argc, char ** argv) {
     }
 
     // Local addition: engine settings, from --settings over the boot flags
-    g_settings = { g_models.empty() ? "" : g_models[0].first, g_keep_loaded, params.max_seq, params.vae_core, 60, false };
+    g_settings = { g_models.empty() ? "" : g_models[0].first, g_keep_loaded, params.max_seq, params.vae_core, 60, false, params.kv_q8 };
     if (!g_settings_path.empty() && std::filesystem::is_regular_file(g_settings_path)) {
         std::string why;
         if (!settings_parse(read_file(g_settings_path), &g_settings, &why)) {
@@ -2936,6 +2982,7 @@ int main(int argc, char ** argv) {
         g_keep_loaded   = g_settings.keep_loaded;
         params.max_seq  = g_settings.max_seq;
         params.vae_core = g_settings.vae_core;
+        params.kv_q8    = g_settings.kv_q8;   // HERESY 2633b: the Engine's word over the boot flag
         fprintf(stderr, "[Server] Settings: model %s, keep loaded %s, context %d, VAE tiles %d, idle unload %s\n",
                 g_settings.model.c_str(), g_keep_loaded ? "yes" : "no", params.max_seq, params.vae_core,
                 g_settings.unload_at_once ? "at once (15 s)" : (std::to_string(g_settings.unload_after_min) + " min").c_str());
@@ -2947,6 +2994,7 @@ int main(int argc, char ** argv) {
     g_pipeline.store            = store_create(g_keep_loaded ? EVICT_NEVER : EVICT_STRICT);
     g_pipeline.transcriber_path = g_transcriber_path;
     g_pipeline.transcriber_refined_path = g_transcriber_refined_path;
+    g_pipeline.transcriber_small_path   = g_transcriber_small_path;   // HERESY 2625
     g_pipeline.vaes             = g_vaes;
     for (const auto & v : g_vaes) {
         fprintf(stderr, "[Server] Decoder %s: %s\n", v.first.c_str(), v.second.c_str());
@@ -3283,7 +3331,10 @@ int main(int argc, char ** argv) {
                 return;
             }
             auto job = job_create();
-            work_push([job, audio, melody_only, refined, key_mode, rope] { run_transcribe(job, audio, melody_only, refined, key_mode, rope); });
+            // HERESY 2625: precision=q8 (or small) asks SheetSage2 with MERT in Q8_0, where the server was given them; F32 otherwise
+            std::string prec  = field("precision");
+            bool        small = !refined && (prec == "q8" || prec == "Q8_0" || prec == "small") && !g_transcriber_small_path.empty();
+            work_push([job, audio, melody_only, refined, key_mode, rope, small] { run_transcribe(job, audio, melody_only, refined, key_mode, rope, small); });
             res.set_content(json_string("id", job->id), "application/json");
         });
     }

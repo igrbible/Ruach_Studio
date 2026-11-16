@@ -75,6 +75,8 @@ struct Qw3lmKvCache {
     ggml_backend_t        backend;
     struct ggml_context * ctx;
     ggml_backend_buffer_t buf;
+    // HERESY 2633 (after timoncool/yue2.cpp 6ee292c, MIT): F16, or Q8_0 where every reader is flash attention on a backend that runs it
+    enum ggml_type        type;
     // 4D batched: per-layer [D, max_seq, Nkv, n_sets] for batched flash_attn
     struct ggml_tensor *  k4[QW3LM_MAX_LAYERS];
     struct ggml_tensor *  v4[QW3LM_MAX_LAYERS];
@@ -223,6 +225,7 @@ static void qw3lm_kv_init(Qw3lmKvCache * kv, const Qwen3LMConfig & cfg, ggml_bac
     *kv         = {};
     kv->cfg     = cfg;
     kv->backend = backend;
+    kv->type    = GGML_TYPE_F16;   // HERESY 2633
 }
 
 // Free the sets, the binding stays
@@ -257,8 +260,8 @@ static bool qw3lm_kv_alloc(Qw3lmKvCache * kv, int n_sets) {
 
     for (int l = 0; l < L; l++) {
         // 4D batched tensors (allocated by backend)
-        kv->k4[l] = ggml_new_tensor_4d(kv->ctx, GGML_TYPE_F16, D, S, Nkv, n_sets);
-        kv->v4[l] = ggml_new_tensor_4d(kv->ctx, GGML_TYPE_F16, D, S, Nkv, n_sets);
+        kv->k4[l] = ggml_new_tensor_4d(kv->ctx, kv->type, D, S, Nkv, n_sets);   // HERESY 2633: F16 or Q8_0
+        kv->v4[l] = ggml_new_tensor_4d(kv->ctx, kv->type, D, S, Nkv, n_sets);
         char name[64];
         snprintf(name, sizeof(name), "kv_k4_%d", l);
         ggml_set_name(kv->k4[l], name);
@@ -267,7 +270,7 @@ static bool qw3lm_kv_alloc(Qw3lmKvCache * kv, int n_sets) {
 
         // 3D views per set
         for (int s = 0; s < n_sets; s++) {
-            size_t off  = (size_t) s * D * S * Nkv * ggml_type_size(GGML_TYPE_F16);
+            size_t off  = (size_t) s * kv->k4[l]->nb[3];   // HERESY 2633: the tensor's own stride (the same bytes for F16)
             kv->k[s][l] = ggml_view_3d(kv->ctx, kv->k4[l], D, S, Nkv, kv->k4[l]->nb[1], kv->k4[l]->nb[2], off);
             kv->v[s][l] = ggml_view_3d(kv->ctx, kv->v4[l], D, S, Nkv, kv->v4[l]->nb[1], kv->v4[l]->nb[2], off);
         }
@@ -287,8 +290,8 @@ static bool qw3lm_kv_alloc(Qw3lmKvCache * kv, int n_sets) {
     // bit patterns that can decode to NaN.
     ggml_backend_buffer_clear(kv->buf, 0);
 
-    size_t kv_bytes = (size_t) n_sets * L * 2 * D * S * Nkv * ggml_type_size(GGML_TYPE_F16);
-    fprintf(stderr, "[LM-KV] Allocated %d sets x %d layers (4D batched), %.1f MB\n", n_sets, L,
+    size_t kv_bytes = (size_t) L * 2 * ggml_nbytes(kv->k4[0]);   // HERESY 2633
+    fprintf(stderr, "[LM-KV] Allocated %d sets x %d layers (4D batched, %s), %.1f MB\n", n_sets, L, ggml_type_name(kv->type),
             (float) kv_bytes / (1024 * 1024));
     return true;
 }

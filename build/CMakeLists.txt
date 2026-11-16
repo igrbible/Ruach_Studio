@@ -56,6 +56,12 @@ endif()
 if(NOT DEFINED GGML_CUDA_GRAPHS)
     set(GGML_CUDA_GRAPHS_DEFAULT ON)
 endif()
+# HERESY 2634 (after timoncool/yue2.cpp 397c60e, MIT): tinyBLAS (llamafile sgemm) on by default, the CPU matrix kernel of F32, F16, BF16,
+# Q8_0 and Q4_0 weights; standalone ggml ships it off, llama.cpp on. Measured 15.11.2026 on the transcriber, CPU, 16 threads: F32 108 -> 85 s
+# with the score byte for byte, Q8_0 97 -> 89 s and nearer the F32 score (96.2 % against 93.7 %). -DGGML_LLAMAFILE=OFF turns it off.
+if(NOT DEFINED GGML_LLAMAFILE)
+    set(GGML_LLAMAFILE_DEFAULT ON)
+endif()
 set(GGML_SOURCE_DIR "${CMAKE_SOURCE_DIR}/ggml" CACHE PATH "ggml source tree")
 add_subdirectory(${GGML_SOURCE_DIR} ggml)
 

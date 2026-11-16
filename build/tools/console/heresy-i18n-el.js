@@ -254,6 +254,29 @@ RuachI18n.add("el", {
 "Load an example: a random official demo, or one of ours by name (Readings…)": "Φόρτωση παραδείγματος: ένα τυχαίο επίσημο demo, ή ένα από τα δικά μας με το όνομά του (Αναγνώσεις…)",
 "A random official demo": "Ένα τυχαίο επίσημο demo",
 "Readings": "Αναγνώσεις",
+"All the curves in one chart, each in its own scale": "Όλες οι καμπύλες σε ένα γράφημα, η καθεμιά στη δική της κλίμακα",
+"The curves together": "Οι καμπύλες μαζί",
+"Each curve is drawn in its own scale, so their shapes lie one over another: the chips say each one's value now and hide it or show it again; under the cursor, every curve's value at that step.": "Κάθε καμπύλη σχεδιάζεται στη δική της κλίμακα, ώστε τα σχήματά τους να πέφτουν το ένα πάνω στο άλλο: τα κουμπιά λένε την τιμή καθεμιάς τώρα και την κρύβουν ή την ξαναδείχνουν· κάτω από τον κέρσορα, οι τιμές όλων σε αυτό το βήμα.",
+"the dots: the held-out tracks at each save": "κουκκίδες: τα κομμάτια εκτός εκπαίδευσης σε κάθε αποθήκευση",
+"The ring": "Ρινγκ",
+"Rock ballad": "Ροκ μπαλάντα",
+"Synth-pop": "Synth-pop",
+"Folk-pop with a bandura": "Φολκ-ποπ με μπαντούρα",
+"Gospel": "Γκόσπελ",
+"Britpop, a British accent": "Britpop, βρετανική προφορά",
+"Liquid drum and bass": "Liquid drum and bass",
+"Chicago drill": "Chicago drill",
+"Chicago blues": "Μπλουζ του Σικάγου",
+"Chanson, a waltz": "Σανσόν, βαλς",
+"Pop opera, a tenor": "Ποπ όπερα, τενόρος",
+"Rebetiko, a bouzouki": "Ρεμπέτικο, μπουζούκι",
+"J-pop, an anime opening": "J-pop, εισαγωγή anime",
+"City pop": "City pop",
+"Mandarin ballad": "Μπαλάντα στα μανδαρινικά",
+"Chinese folk fusion": "Κινέζικο folk fusion",
+"Samba": "Σάμπα",
+"Duduk, our own field": "Ντουντούκ, το δικό μας πεδίο",
+"Industrial metal": "Industrial metal",
 "Engine": "Μηχανή",
 "Engine: model, memory, chat server, log, look": "Μηχανή: μοντέλο, μνήμη, διακομιστής συνομιλίας, αρχείο καταγραφής, εμφάνιση",
 "The guide: every room, what each thing does": "Ο οδηγός: κάθε δωμάτιο, τι κάνει το καθένα",
@@ -8898,7 +8921,7 @@ RuachI18n.add("el", {
 "writing": "εγγραφή",
 "Writing now": "Εγγραφή τώρα",
 "The system bar under the header": "Η γραμμή συστήματος κάτω από την κεφαλίδα",
-"in the Artist, the Refiner and the Videographer": "στον Καλλιτέχνη, τον Γυαλιστή και τον Βιντεογράφο",
+"in the Artist, the Refiner, the Videographer and the Trainer": "στον Καλλιτέχνη, τον Γυαλιστή, τον Βιντεογράφο και τον Εκπαιδευτή",
 "in every room": "σε κάθε δωμάτιο",
 "nowhere": "πουθενά",
 "A thin bar under the header: the processor, the memory, each card and each disk of the Studio's machine, and the room's running jobs; the pointer on an item shows its numbers and its last minute and ten minutes drawn": "Μια λεπτή γραμμή κάτω από την κεφαλίδα: ο επεξεργαστής, η μνήμη, κάθε κάρτα και κάθε δίσκος του μηχανήματος του Στούντιο και οι εργασίες που τρέχουν στο δωμάτιο· ο δείκτης πάνω σε ένα στοιχείο δείχνει τους αριθμούς του και τα γραφήματα του τελευταίου λεπτού και των δέκα λεπτών",
@@ -9383,4 +9406,67 @@ RuachI18n.add("el", {
 // UIX frame lane 13.11.2026 (HERESY 2532): Engine Hardware, the VAE default tip whole
 RuachI18n.add("el", {
 "The VAE a song is decoded with when its request names none (saved prompts, other clients). The VAE buttons in the form choose per song, and a finished song can get another from its page.": "Το VAE με το οποίο αποκωδικοποιείται ένα τραγούδι όταν το αίτημά του δεν ορίζει κανένα (αποθηκευμένα prompts, άλλοι πελάτες). Τα κουμπιά VAE στη φόρμα το επιλέγουν για κάθε τραγούδι, και ένα έτοιμο τραγούδι μπορεί να πάρει άλλο από τη σελίδα του."
+});
+
+// HERESY 2625: the transcriber's precision (the ☰ menu under the VAE, Engine → Compute)
+RuachI18n.add("el", {
+"SheetSage2 and MERT, the ear that writes a score from a recording (covers, the Library's sheet, the Trainer's set): F32 as m-a-p made them, the default; Q8_0 is 1.6 GB lighter on the card, its notes 95 % alike on our Ring of twenty, the tempo a beat apart at times. Refined always reads on F32": "Το SheetSage2 και το MERT είναι το αυτί που γράφει παρτιτούρα από ηχογράφηση (διασκευές, το φύλλο της Βιβλιοθήκης, το σετ του Εκπαιδευτή): F32 όπως τα έφτιαξε η m-a-p, η προεπιλογή· το Q8_0 είναι 1,6 GB ελαφρύτερο στην κάρτα, οι νότες του ταιριάζουν κατά 95 % στο Ring μας των είκοσι, το τέμπο διαφέρει ενίοτε κατά έναν χτύπο. Το Refined διαβάζει πάντα σε F32",
+"Q8_0 · lighter": "Q8_0 · ελαφρύτερο",
+"The transcriber reads in Q8_0, lighter on the card": "Ο Μεταγραφέας διαβάζει σε Q8_0, ελαφρύτερος για την κάρτα",
+"The transcriber reads in F32": "Ο Μεταγραφέας διαβάζει σε F32",
+"Transcriber precision": "Ακρίβεια Μεταγραφέα",
+"the ☰ menu's own: the transcriber's precision": "το ίδιο με το μενού ☰: η ακρίβεια του Μεταγραφέα"
+});
+
+// HERESY 2627: the compare window takes 24
+RuachI18n.add("el", {
+"2 to 24 of the checked": "από 2 έως 24 από τα επιλεγμένα",
+"Tick 2 at least, 24 at most": "Τσέκαρε τουλάχιστον 2, το πολύ 24",
+"24 at most: the first 24": "24 το πολύ: οι πρώτες 24",
+"24 at most to compare: uncheck {0}": "Το πολύ 24 για σύγκριση: ξετσέκαρε {0}",
+"Compare the checked ones, 2 to 24, in one player from the same second": "Σύγκρινε τα επιλεγμένα, 2 έως 24, σε έναν player από το ίδιο δευτερόλεπτο",
+"Waiting for the whole version": "Περιμένω ολόκληρη την εκδοχή"
+});
+
+// HERESY 2629: the compare sheet's empty difference
+RuachI18n.add("el", {
+"No difference: under ±0.1 dB everywhere": "Καμία διαφορά: παντού κάτω από ±0,1 dB"
+});
+
+// HERESY 2632: the datasheet's track ID
+RuachI18n.add("el", {
+"Copy the track ID": "Αντιγραφή του ID του κομματιού",
+"Track ID copied": "Το ID του κομματιού αντιγράφηκε",
+"Not copied": "Δεν αντιγράφηκε"
+});
+
+// HERESY 2637: the stress dictionaries in the lyrics
+RuachI18n.add("el", {
+"Stress dictionaries": "Λεξικά τονισμού",
+"Set the dictionaries' stresses now": "Τονισμός από τα λεξικά τώρα",
+"Before every song in the Musician": "Πριν από κάθε τραγούδι στον Μουσικό",
+"off by default": "απενεργοποιημένο εξ ορισμού",
+"Stresses from the dictionaries ({0}): {1} set": "Τόνοι από τα λεξικά ({0}): {1}",
+"Nothing to set: every word the dictionaries know already has its stress": "Τίποτα να μπει: κάθε λέξη που ξέρουν τα λεξικά έχει ήδη τόνο",
+"Homographs left to you: {0}": "Ομόγραφα για σένα: {0}",
+"The stress dictionaries are Russian, Ukrainian and Belarusian; these lyrics read as {0}": "Τα λεξικά τονισμού είναι ρωσικά, ουκρανικά και λευκορωσικά· αυτοί οι στίχοι διαβάζονται ως {0}",
+"The dictionaries did not answer (the lab is away): the lyrics go as they are": "Τα λεξικά δεν απάντησαν (το εργαστήριο λείπει): οι στίχοι πάνε όπως είναι",
+"The stress dictionaries (ru, uk, be) in the lyrics: their acutes set where a word has none, now or before every song (off by default); the base dictionaries alone, the Narrator's own word list stays the Narrator's": "Τα λεξικά τονισμού (ru, uk, be) στους στίχους: οι τόνοι τους όπου μια λέξη δεν έχει, τώρα ή πριν από κάθε τραγούδι (απενεργοποιημένο εξ ορισμού)· μόνο τα βασικά λεξικά, ο δικός κατάλογος του Αφηγητή μένει στον Αφηγητή"
+});
+
+// HERESY 2638: the More menu's precision row
+RuachI18n.add("el", {
+"Ear": "Αυτί"
+});
+
+// HERESY 2640: the comparison sheet's wait
+RuachI18n.add("el", {
+"Building the comparison sheet": "Φτιάχνεται το φύλλο σύγκρισης",
+"Each version is measured against the first at equal loudness: loudness and peaks, the tone zone by zone, the stereo width and the dynamics; then their spectrograms and difference curves are drawn.": "Κάθε εκδοχή μετριέται απέναντι στην πρώτη σε ίση ένταση: ένταση και κορυφές, ο τόνος ανά ζώνη, το στερεοφωνικό πλάτος και η δυναμική· μετά σχεδιάζονται τα φασματογραφήματα και οι καμπύλες διαφοράς.",
+"Two to four versions take 10 to 60 seconds. The sheet fills this window when its charts are ready; Close leaves it unmade.": "Δύο έως τέσσερις εκδοχές θέλουν 10 έως 60 δευτερόλεπτα. Το φύλλο γεμίζει αυτό το παράθυρο όταν είναι έτοιμα τα γραφήματα· το Κλείσιμο το αφήνει ημιτελές."
+});
+
+// HERESY 2641: the in-page picture
+RuachI18n.add("el", {
+"The picture could not be read: {0}": "Η εικόνα δεν διαβάστηκε: {0}"
 });

@@ -437,5 +437,17 @@
  "Why our own Studio, not a ComfyUI plugin bundle": "Γιατί δικό μας Στούντιο και όχι πακέτο πρόσθετων για το ComfyUI",
  "Viktor Zhuromskyy · 13 November 2026": "Viktor Zhuromskyy · 13 Νοεμβρίου 2026",
  "Many of the people who make songs with us came from ComfyUI. A professional workflow there takes weeks to build, and the next core or node update can break it. What's left behind are private forks whose fixes too often never go back upstream. I call that a forkblow. Ruach Studio goes the other way: eight rooms on one page, one music engine we patch ourselves, and every model pinned to a room. Here's why, what it costs, where we still meet ComfyUI, and my farewell letter to its community.": "Πολλοί από όσους φτιάχνουν τραγούδια μαζί μας ήρθαν από το ComfyUI. Ένα επαγγελματικό workflow εκεί θέλει εβδομάδες για να στηθεί, και η επόμενη ενημέρωση του πυρήνα ή των κόμβων μπορεί να το σπάσει. Πίσω μένουν ιδιωτικά forks, που οι διορθώσεις τους πολύ συχνά δεν επιστρέφουν ποτέ στο upstream. Εγώ το λέω forkblow. Το Ροῦαχ Στούντιο παίρνει τον αντίθετο δρόμο: οκτώ δωμάτια σε μία σελίδα, μία μουσική μηχανή που την μπαλώνουμε μόνοι μας, και κάθε μοντέλο δεμένο με ένα δωμάτιο. Παρακάτω το γιατί, τι κοστίζει, πού συναντιόμαστε ακόμα με το ComfyUI, και το αποχαιρετιστήριο γράμμα μου στην κοινότητά του.",
- "Read the article": "Διάβασε το άρθρο"
+ "Read the article": "Διάβασε το άρθρο",
+ "Read as PDF": "Ανάγνωση ως PDF",
+ "Download PDF": "Λήψη PDF",
+ "Previous page": "Προηγούμενη σελίδα",
+ "Next page": "Επόμενη σελίδα",
+ "Page number": "Αριθμός σελίδας",
+ "of": "από",
+ "Page": "Σελίδα",
+ "Smaller": "Μικρότερα",
+ "Larger": "Μεγαλύτερα",
+ "Opening the PDF…": "Ανοίγει το PDF…",
+ "The PDF reader did not start": "Ο αναγνώστης PDF δεν ξεκίνησε",
+ "A page of the article": "Σελίδα του άρθρου"
 }

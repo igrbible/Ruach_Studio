@@ -318,11 +318,17 @@ static struct ggml_tensor * nar_build_attn(struct ggml_context * ctx,
     k = ggml_cast(ctx, k, GGML_TYPE_F16);
     v = ggml_cast(ctx, v, GGML_TYPE_F16);
 
-    // AR prefix rows in the f16 layout of the cache, repeated per variation
-    struct ggml_tensor * k_ar =
-        ggml_cont(ctx, ggml_view_3d(ctx, cache_k, D, ar_len, Nkv, cache_k->nb[1], cache_k->nb[2], 0));
-    struct ggml_tensor * v_ar =
-        ggml_cont(ctx, ggml_view_3d(ctx, cache_v, D, ar_len, Nkv, cache_v->nb[1], cache_v->nb[2], 0));
+    // AR prefix rows of the cache as f16, repeated per variation. HERESY 2633 (after timoncool/yue2.cpp 6ee292c, MIT): a Q8_0 cache is read
+    // back through f32, the concat below taking one type; an F16 cache takes the old path, byte for byte
+    struct ggml_tensor * k_ar = ggml_view_3d(ctx, cache_k, D, ar_len, Nkv, cache_k->nb[1], cache_k->nb[2], 0);
+    struct ggml_tensor * v_ar = ggml_view_3d(ctx, cache_v, D, ar_len, Nkv, cache_v->nb[1], cache_v->nb[2], 0);
+    if (cache_k->type == GGML_TYPE_F16) {
+        k_ar = ggml_cont(ctx, k_ar);
+        v_ar = ggml_cont(ctx, v_ar);
+    } else {
+        k_ar = ggml_cast(ctx, ggml_cast(ctx, k_ar, GGML_TYPE_F32), GGML_TYPE_F16);
+        v_ar = ggml_cast(ctx, ggml_cast(ctx, v_ar, GGML_TYPE_F32), GGML_TYPE_F16);
+    }
     if (M > 1) {
         struct ggml_tensor * shape = ggml_new_tensor_4d(ctx, GGML_TYPE_F16, D, ar_len, Nkv, M);
         k_ar                       = ggml_repeat(ctx, k_ar, shape);
@@ -553,9 +559,29 @@ static bool nar_velocity(Yue2NAR *            n,
     nar_time_features(nar_shift_t(n, raw_t), feats);
     ggml_backend_tensor_set(n->in_time, feats, 0, sizeof(feats));
 
-    ggml_backend_sched_graph_compute(n->sched, n->graph);
-    ggml_backend_tensor_get(n->out_v, v_out, 0, block * M * sizeof(float));
-    return true;
+    // HERESY 2626 (after timoncool/yue2.cpp 915fac4 and a34b0e4, MIT): a failed compute stops the song instead of leaving zeros; a
+    // velocity that is not finite is evaluated again (one evaluation can come out NaN where the next is clean), three times at most
+    for (int attempt = 1;; attempt++) {
+        const enum ggml_status status = ggml_backend_sched_graph_compute(n->sched, n->graph);
+        if (status != GGML_STATUS_SUCCESS) {
+            fprintf(stderr, "[NAR] FATAL: graph compute failed (status %d) for T_lat=%d\n", (int) status, T_lat);
+            return false;
+        }
+        ggml_backend_tensor_get(n->out_v, v_out, 0, block * M * sizeof(float));
+        const size_t count = block * (size_t) M;
+        size_t       bad   = 0;
+        for (size_t i = 0; i < count; i++) {
+            bad += !std::isfinite(v_out[i]);
+        }
+        if (!bad) {
+            return true;
+        }
+        fprintf(stderr, "[NAR] the velocity at t=%.4f is not finite (%zu of %zu values), attempt %d of 3\n", raw_t, bad, count, attempt);
+        if (attempt >= 3) {
+            fprintf(stderr, "[NAR] FATAL: the velocity at t=%.4f stayed not finite three times\n", raw_t);
+            return false;
+        }
+    }
 }
 
 // Reads each named probe of the last computed graph and dumps its first

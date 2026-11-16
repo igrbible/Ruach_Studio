@@ -253,6 +253,29 @@ RuachI18n.add("ja", {
 "Load an example: a random official demo, or one of ours by name (Readings…)": "サンプルを読み込む：公式デモをランダムに、または私たちのものを名前で（朗読…）",
 "A random official demo": "ランダムな公式デモ",
 "Readings": "朗読",
+"All the curves in one chart, each in its own scale": "すべての曲線を一つのグラフに、それぞれ独自の目盛りで",
+"The curves together": "曲線をまとめて",
+"Each curve is drawn in its own scale, so their shapes lie one over another: the chips say each one's value now and hide it or show it again; under the cursor, every curve's value at that step.": "各曲線はそれぞれの目盛りで描かれるので、形を重ねて比べられます。チップは各曲線の現在値を示し、クリックで隠したり再表示したりします。カーソルの下には、そのステップでの全曲線の値が出ます。",
+"the dots: the held-out tracks at each save": "点: 各保存時の検証用トラック",
+"The ring": "リング",
+"Rock ballad": "ロックバラード",
+"Synth-pop": "シンセポップ",
+"Folk-pop with a bandura": "バンドゥーラのフォークポップ",
+"Gospel": "ゴスペル",
+"Britpop, a British accent": "ブリットポップ、英国訛り",
+"Liquid drum and bass": "リキッド・ドラムンベース",
+"Chicago drill": "シカゴ・ドリル",
+"Chicago blues": "シカゴ・ブルース",
+"Chanson, a waltz": "シャンソン、ワルツ",
+"Pop opera, a tenor": "ポップ・オペラ、テノール",
+"Rebetiko, a bouzouki": "レベーティカ、ブズーキ",
+"J-pop, an anime opening": "J-POP、アニメのオープニング",
+"City pop": "シティポップ",
+"Mandarin ballad": "中国語バラード",
+"Chinese folk fusion": "中国フォーク・フュージョン",
+"Samba": "サンバ",
+"Duduk, our own field": "ドゥドゥク、私たち自身の領域",
+"Industrial metal": "インダストリアル・メタル",
 "Engine": "エンジン",
 "Engine: model, memory, chat server, log, look": "エンジン：モデル、メモリ、チャットサーバー、ログ、外観",
 "The guide: every room, what each thing does": "ガイド：各ルームと、それぞれの機能",
@@ -8784,7 +8807,7 @@ RuachI18n.add("ja", {
 "writing": "書き込み",
 "Writing now": "現在の書き込み",
 "The system bar under the header": "ヘッダー下のシステムバー",
-"in the Artist, the Refiner and the Videographer": "アーティスト、仕上げ師、映像師で",
+"in the Artist, the Refiner, the Videographer and the Trainer": "絵師、仕上げ師、映像師、トレーナーで",
 "in every room": "すべてのルームで",
 "nowhere": "表示しない",
 "A thin bar under the header: the processor, the memory, each card and each disk of the Studio's machine, and the room's running jobs; the pointer on an item shows its numbers and its last minute and ten minutes drawn": "ヘッダーの下の細いバー：スタジオのマシンのプロセッサ、メモリ、各カード、各ディスク、そしてルームで実行中のジョブ。項目にポインターを置くと、その数値と直近1分・10分のグラフを表示します",
@@ -9263,4 +9286,67 @@ RuachI18n.add("ja", {
 // UIX frame lane 13.11.2026 (HERESY 2532): Engine Hardware, the VAE default tip whole
 RuachI18n.add("ja", {
 "The VAE a song is decoded with when its request names none (saved prompts, other clients). The VAE buttons in the form choose per song, and a finished song can get another from its page.": "曲のリクエストが VAE を指定していないときに、その曲のデコードに使う VAE（保存したプロンプト、他のクライアント）。フォームの VAE ボタンで曲ごとに選べます。完成した曲はそのページから別の VAE に変えられます。"
+});
+
+// HERESY 2625: the transcriber's precision (the ☰ menu under the VAE, Engine → Compute)
+RuachI18n.add("ja", {
+"SheetSage2 and MERT, the ear that writes a score from a recording (covers, the Library's sheet, the Trainer's set): F32 as m-a-p made them, the default; Q8_0 is 1.6 GB lighter on the card, its notes 95 % alike on our Ring of twenty, the tempo a beat apart at times. Refined always reads on F32": "SheetSage2 と MERT は録音から楽譜を書く耳です(カバー、ライブラリの楽譜、トレーナーのセット)。既定は m-a-p が作ったままの F32。Q8_0 はカード上で 1.6 GB 軽く、私たちの 20 曲の Ring では音符が 95 % 一致し、テンポがときどき 1 拍ずれます。Refined は常に F32 で読みます",
+"Q8_0 · lighter": "Q8_0 · 軽量",
+"The transcriber reads in Q8_0, lighter on the card": "採譜器は Q8_0 で読みます(カードに軽い)",
+"The transcriber reads in F32": "採譜器は F32 で読みます",
+"Transcriber precision": "採譜器の精度",
+"the ☰ menu's own: the transcriber's precision": "☰ メニューと同じ：採譜器の精度"
+});
+
+// HERESY 2627: the compare window takes 24
+RuachI18n.add("ja", {
+"2 to 24 of the checked": "チェックしたものから 2〜24 件",
+"Tick 2 at least, 24 at most": "2 個以上、24 個までチェックしてください",
+"24 at most: the first 24": "最大 24 件：最初の 24 件",
+"24 at most to compare: uncheck {0}": "比較は 24 個までです。{0} 個のチェックを外してください",
+"Compare the checked ones, 2 to 24, in one player from the same second": "チェックしたもの（2〜24 個）を同じ秒から 1 つのプレーヤーで比較",
+"Waiting for the whole version": "バージョン全体を待っています"
+});
+
+// HERESY 2629: the compare sheet's empty difference
+RuachI18n.add("ja", {
+"No difference: under ±0.1 dB everywhere": "差はありません:どこでも ±0.1 dB 未満"
+});
+
+// HERESY 2632: the datasheet's track ID
+RuachI18n.add("ja", {
+"Copy the track ID": "トラック ID をコピー",
+"Track ID copied": "トラック ID をコピーしました",
+"Not copied": "コピーできませんでした"
+});
+
+// HERESY 2637: the stress dictionaries in the lyrics
+RuachI18n.add("ja", {
+"Stress dictionaries": "アクセント辞書",
+"Set the dictionaries' stresses now": "辞書のアクセントを今すぐ付ける",
+"Before every song in the Musician": "ミュージシャンで毎回の曲の前に",
+"off by default": "既定はオフ",
+"Stresses from the dictionaries ({0}): {1} set": "辞書のアクセント（{0}）：{1} 個",
+"Nothing to set: every word the dictionaries know already has its stress": "付けるものはありません：辞書が知る語にはすべてアクセントがあります",
+"Homographs left to you: {0}": "同綴異音語はあなたに：{0}",
+"The stress dictionaries are Russian, Ukrainian and Belarusian; these lyrics read as {0}": "アクセント辞書はロシア語・ウクライナ語・ベラルーシ語です。この歌詞は {0} と読まれます",
+"The dictionaries did not answer (the lab is away): the lyrics go as they are": "辞書が応答しません（ラボが不在）：歌詞はそのまま送られます",
+"The stress dictionaries (ru, uk, be) in the lyrics: their acutes set where a word has none, now or before every song (off by default); the base dictionaries alone, the Narrator's own word list stays the Narrator's": "アクセント辞書（ru、uk、be）を歌詞に：アクセントのない語に今すぐ、または毎回の曲の前に付ける（既定はオフ）；基本辞書のみで、ナレーター自身の語リストはナレーターに残ります"
+});
+
+// HERESY 2638: the More menu's precision row
+RuachI18n.add("ja", {
+"Ear": "耳"
+});
+
+// HERESY 2640: the comparison sheet's wait
+RuachI18n.add("ja", {
+"Building the comparison sheet": "比較シートを作成中",
+"Each version is measured against the first at equal loudness: loudness and peaks, the tone zone by zone, the stereo width and the dynamics; then their spectrograms and difference curves are drawn.": "各バージョンを同じラウドネスで最初のものと比較測定します：ラウドネスとピーク、帯域ごとの音色、ステレオ幅、ダイナミクス。その後スペクトログラムと差分曲線を描きます。",
+"Two to four versions take 10 to 60 seconds. The sheet fills this window when its charts are ready; Close leaves it unmade.": "2〜4 バージョンで 10〜60 秒かかります。グラフができるとこのウィンドウに表示されます。「閉じる」で中断します。"
+});
+
+// HERESY 2641: the in-page picture
+RuachI18n.add("ja", {
+"The picture could not be read: {0}": "画像を読み込めませんでした：{0}"
 });

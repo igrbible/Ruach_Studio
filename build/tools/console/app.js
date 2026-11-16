@@ -507,7 +507,8 @@
     if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.code === "KeyA" && !typingField(event.target)) { event.preventDefault(); return; }
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
     if (event.key === "Escape") { leaveEngine(); closeMenus(); }
-    if (event.key === " " && (audio.getAttribute("src") || STATE.take) && !event.target.closest(".menu-pop")) { event.preventDefault(); togglePlay(); }
+    if (event.key === " " && (audio.getAttribute("src") || STATE.take) && !event.target.closest(".menu-pop") &&
+        !document.querySelector(".hd-back:not(.is-leaving)")) { event.preventDefault(); togglePlay(); }   // HERESY 2643: never under an open dialog
     // HERESY 1111: seek and mute from the keyboard, outside text fields and menus; 1169: to the marks of 5 s (Shift: 30) from 0:00
     if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && audio.getAttribute("src") && isFinite(audio.duration) && !event.target.closest(".menu-pop, [role=menu], .col-grip")) {
       event.preventDefault();
@@ -1034,6 +1035,39 @@
       if (input && document.activeElement !== shown) shown.value = clock(parseFloat(input.value) / FRAME_RATE);
     });
   }
+  // HERESY 2636 (UIX №34): every sampling field shows its bounds, grey beside its name, and its arrows stop at the top: the page's own saner
+  // bounds held inside what the engine refuses past (/props sampling_limits, else KNOB_MAX). Never min on a knob: it would become the step
+  // base and move the arrows off the defaults' grid (1.005 on 0.005, 6144 on 100); the guards pull a value under the floor back
+  function limitTop(key, hi) {
+    var l = STATE.limits && STATE.limits[key];
+    var top = l && l[1] !== null && l[1] !== undefined ? l[1] : KNOB_MAX[key];
+    return top !== undefined && hi > top ? top : hi;
+  }
+  function rangeSpan(host, text) {
+    if (!host) return;
+    var r = host.querySelector(".knob-range");
+    if (!r) { r = document.createElement("span"); r.className = "knob-range mono"; r.setAttribute("translate", "no"); host.appendChild(r); }
+    r.textContent = text;
+  }
+  function paintRanges() {
+    all('.knobs input[data-group][data-key]').forEach(function (input) {
+      var g = input.dataset.group, k = input.dataset.key, b = knobBounds(g, k), w = input.closest(".knob");
+      if (!b || !w) return;
+      var hi = limitTop(k, b[1]);
+      if (g === "semantic" && k === "min_tokens") hi = Math.min(hi, lengthCap() * FRAME_RATE);   // the floor never above the mode's top
+      input.max = String(hi);
+      var secs = g === "semantic" && /_tokens$/.test(k);   // the music's floor and ceiling are shown in time (HERESY 1167)
+      rangeSpan(w.querySelector("span"), secs ? clock(b[0] / FRAME_RATE) + "–" + clock(hi / FRAME_RATE) : b[0] + "–" + hi);
+    });
+    Object.keys(FIELD_GUARDS).forEach(function (id) {
+      var el = $(id), g = FIELD_GUARDS[id], f = el && el.closest(".field");
+      if (!el || el.type !== "number") return;
+      var hi = id === "maxLength" ? lengthCap() : g[1];   // HERESY 1468: the mode's top
+      el.max = String(hi);
+      if (id !== "maxLength") el.min = String(g[0]);       // their step base holds: 0 on tenths, 1 on wholes
+      rangeSpan(f && f.querySelector(".label"), id === "maxLength" ? clock(g[0]) + "–" + clock(hi) : g[0] + "–" + hi);
+    });
+  }
   function syncMusicCeiling() {
     var hi = knobInput("semantic", "max_tokens"), lo = knobInput("semantic", "min_tokens");
     if (!hi) return;
@@ -1047,6 +1081,7 @@
       else if (held) { lo.value = floor; delete lo.dataset.floor; delete lo.dataset.held; }
     }
     paintTokenTimes();
+    paintRanges();   // HERESY 2636
   }
 
   function samplingOverrides(group) {
@@ -1133,7 +1168,7 @@
   ["cfg", "cfgLyrics"].forEach(function (id) { $(id).addEventListener("input", cfgLights); });   // HERESY 1400
   window.addEventListener("ruach-lang", cfgLights);
   all('input[name="cot"]').forEach(function (radio) { radio.addEventListener("change", fillCfg); });
-  all('input[name="cot"]').forEach(function (radio) { radio.addEventListener("change", function () { clampLength(); }); });   // HERESY 1468
+  all('input[name="cot"]').forEach(function (radio) { radio.addEventListener("change", function () { clampLength(); paintRanges(); }); });   // HERESY 1468, 2636
   fillCfg();
   // HERESY 1419 (Viktor 13.10.2026: «Может ползунками сделаем как с LoRA адаптерами? Места в горизонтали хватает»): a road before each
   // guidance, red under 1, green in Viktor's range, amber past it, red far past. The number stays the truth (an empty Guidance: the
@@ -1390,6 +1425,7 @@
   $("mp3Bitrate").addEventListener("change", function () { saveOutputChoice(); paintOutput(); });
   ["odeSteps", "maxLength"].forEach(function (id) { $(id).addEventListener("input", paintOutput); });
   ["narLong", "narDecode"].forEach(function (id) { $(id).addEventListener("change", paintOutput); });   // HERESY 2509: the window's note follows
+  $("narLong").addEventListener("change", function () { this.dataset.chosen = "1"; });   // HERESY 2607: his choice stands over the card's default
   // HERESY 2509: one window of the sound half on this engine's context, for a long prompt and a short one (6000 and 1000 rows: about the
   // 95th and 5th percentiles of the prefixes of 407 songs of 30 days); the pipeline's own count, (context - prefix - 3) / 2 frames
   function wholeWindow() {
@@ -1871,8 +1907,8 @@
       });
       $("exampleMenu").innerHTML = rows.join("") +
         Object.keys(groups).map(function (g) {
-          return '<div class="menu-cap">' + escape(g) + "</div>" + groups[g].map(function (i) {
-            return '<button type="button" role="menuitem" data-example="' + i + '">' + escape(examples[i].title || "untitled") + "</button>";
+          return '<div class="menu-cap">' + escape(tr(g)) + "</div>" + groups[g].map(function (i) {   // HERESY 2618: a group and its titles through the catalogs
+            return '<button type="button" role="menuitem" data-example="' + i + '">' + escape(tr(examples[i].title || "untitled")) + "</button>";
           }).join("");
         }).join("");
     }
@@ -2389,6 +2425,7 @@
   // them; Generate on a fixed music seed whose adapters or backbone moved since, or that broke a plan the model is about to write again, asks first:
   // a new seed, or keep it
   var seedAnswered = false;
+  var stressAnswered = false;                         // HERESY 2637
   function seedRecipe(loras) { return { model: (STATE.settings && STATE.settings.model) || "", loras: arOf(loras) }; }
   function sameRecipe(a, b) { return !!a && !!b && a.model === b.model && JSON.stringify(a.loras || []) === JSON.stringify(b.loras || []); }
   function seedRuns() { try { var v = JSON.parse(localStorage.getItem("yue2.seedRuns") || "{}"); return v && typeof v === "object" ? v : {}; } catch (e) { return {}; } }
@@ -2476,6 +2513,16 @@
       });
       return;
     }
+    // HERESY 2637 (decision №8, Viktor 15.11.2026: «отключенными по дефолту, но на усмотрение пользователя включать в пайплайне Музыканта»):
+    // switched on in the lyrics' book menu, the dictionaries' acutes go into the lyrics before the song (in the box: what is sung is seen)
+    if (!stressAnswered && window.HeresyLyrics && window.HeresyLyrics.stressAuto && window.HeresyLyrics.stressAuto() && $("lyrics").value.trim() && !$("instrumental").checked) {
+      $("generateBtn").disabled = true;
+      window.HeresyLyrics.stressApply($("lyrics"), $("style").value, true).then(function () {
+        $("generateBtn").disabled = false; stressAnswered = true; $("generateBtn").click();
+      });
+      return;
+    }
+    stressAnswered = false;
     scoreAnswered = false;
     lintAnswered = false;
     seedAnswered = false;
@@ -2714,7 +2761,8 @@
     else { $("odeSteps").value = String(engineSteps()); syncStepsRange(); }   // HERESY 1710: a request without steps was made at the engine's
     $("odeSolver").value = ["midpoint", "multistep", "heun", "euler"].indexOf(req.solver) >= 0 ? req.solver : "midpoint";
     $("narDecode").value = req.nar_ladder === true ? "ladder" : "standard";   // HERESY 1768: a take's own, the draft's, a profile's
-    $("narLong").value = req.nar_pieces === true ? "pieces" : "whole";         // HERESY 2509: the same
+    $("narLong").value = req.nar_pieces === true ? "pieces" : req.nar_pieces === false ? "whole" : narLongDefault();   // HERESY 2509, 2607
+    if (typeof req.nar_pieces === "boolean") $("narLong").dataset.chosen = "1"; else delete $("narLong").dataset.chosen;   // HERESY 2607
     if (typeof req.duration === "number") $("maxLength").value = round(req.duration, 3);
     $("variations").value = typeof req.synth_batch_size === "number" ? Math.max(1, Math.min(9, req.synth_batch_size)) : 1;
     if (FORMAT_LABELS[req.output_format]) $("outFormat").value = req.output_format;
@@ -3984,7 +4032,7 @@
     if (client || !/^\[Lab\]/.test(t)) return "creator";
     if (/^\[Lab\]\s*(\d\d:\d\d:\d\d\s+)?the Writer\b/.test(t)) return "writer";   // HERESY 1990: its model's start, answers and leaving
     var w = t.replace(/^\[Lab\]\s*(\d\d:\d\d:\d\d\s+)?/, ""), card = (/left its card for ([^(·]+)/.exec(w) || [])[1] || "";
-    if (/^(LoRA training|the Trainer|dataset|prepare|pack)\b/i.test(w) || /training/i.test(card)) return "trainer";
+    if (/^(LoRA training|Training|the Trainer|dataset|prepare|pack)\b/i.test(w) || /training/i.test(card)) return "trainer";   // HERESY 2615: «Training · <run> · step …» is the Trainer's, not the Musician's
     if (/^(artwork|the Artist)\b/.test(w) || /artwork|artist/i.test(card)) return "artist";
     if (/^(stems|remaster|upscale|debuzz|digital gateway|spectrum|inspection|listener|refined|DAW mix|Edit)\b/.test(w) || /stems|remaster|upscale|debuzz|refin|listener/i.test(card)) return "refiner";
     if (/^the Videographer\b/.test(w) || /videographer/i.test(card)) return "video";   // HERESY 1865
@@ -4930,7 +4978,11 @@
     STATE.maxBatch = Math.max(1, parseInt(props.max_batch, 10) || 1);
     STATE.transcriber = !!props.transcriber;
     STATE.transcriberRefined = !!props.transcriber_refined;   // HERESY 2328
+    STATE.transcriberSmall = !!props.transcriber_small;       // HERESY 2625: the lighter Q8_0 pair beside the F32 one
+    STATE.limits = props.sampling_limits || null;             // HERESY 2636: what the engine refuses past
+    paintRanges();
     paintTranscribers();
+    paintSsPrec();
     STATE.library = props.outputs !== false;
     if (props.frame_rate) FRAME_RATE = props.frame_rate;
     $("versions").max = "10";
@@ -4976,6 +5028,10 @@
   var SETTING_KEYS = ["model", "keep_loaded", "max_seq", "vae_core", "unload_after_min", "unload_at_once"];   // HERESY 1167: the idle unload
   var GIB = 1073741824;
 
+  // HERESY 2607 (Viktor 13.11.2026, his yes to «на картах 8–12 ГБ Auto сам выбирает «Кусками»»): one window of 12,288 rows or less holds a song
+  // of 2–4 minutes, so on such a card the long songs go in pieces unless he chose; the field says what will be sent
+  function narLongDefault() { var c = STATE.settings && +STATE.settings.max_seq ? +STATE.settings.max_seq : fullContext(); return c <= 12288 ? "pieces" : "whole"; }
+  function syncNarLong() { var s = $("narLong"); if (s && !s.dataset.chosen) s.value = narLongDefault(); }
   function fullContext() { return (STATE.settings && STATE.settings.max_seq_full) || (STATE.props && STATE.props.context) || 24576; }
 
   function modelThere(m) { return ((STATE.settings && STATE.settings.models) || []).indexOf(m) >= 0; }
@@ -5141,6 +5197,7 @@
   function paintSettings(settings, force) {
     var newContext = !STATE.settings || STATE.settings.max_seq !== settings.max_seq;   // HERESY 2509: the window's note follows it
     STATE.settings = settings;
+    syncNarLong();   // HERESY 2607
     if (newContext) setTimeout(paintOutput, 0);
     paintModelPick(settings);
     // A background refresh must not wipe fields you are still editing; Save repaints them.
@@ -8366,7 +8423,10 @@
   // past what came, waits on the bar as the hold did and goes on from where it stood. A fast line (the whole within 3 s) waits for the whole, as before.
   // Engine → Defaults → Start playing: «when the whole take is in» is 1746 as it was.
   var EARLY = { url: "", take: null, part: null, next: null, timer: 0, resumeAt: null, swaps: 0 };
-  function earlyOn() { return recall("yue2.holdStart") !== "whole"; }
+  // HERESY 2606 (Viktor 13.11.2026, on a slow line with Opus chosen: clicks in twos and threes while a take first plays, none after a step back):
+  // each early swap is a seam. Opus is small (about 5 MB for five minutes), so with it the player waits for the whole take unless he chose otherwise
+  function holdDefault() { return recall("yue2.listenCodec") === "opus" ? "whole" : "minute"; }   // HERESY 2606: the one default, the card says it too
+  function earlyOn() { return (recall("yue2.holdStart") || holdDefault()) !== "whole"; }
   function earlySecs() { var s = +(EARLY.take && EARLY.take.seconds) || 0; return s > 0 ? s : (isFinite(audio.duration) ? audio.duration : 0); }
   function earlyDrop(p) { if (p && p.mine) { try { URL.revokeObjectURL(p.src); } catch (e) { /* gone */ } } }
   function earlyReset(url, take) {
@@ -8636,10 +8696,11 @@
     root.classList.toggle("no-keycaps", recall("yue2.keyHints") === "off");   // HERESY 2302
     if ($("pbRestSay")) $("pbRestSay").textContent = r + " %";
   }
+  function defIsOf(sel) { return sel.dataset.def === "yue2.holdStart" ? holdDefault() : sel.dataset.defIs; }   // HERESY 2606
   function paintDefaults() {
     applyLookDefaults();
     if (!$("defaultsCard")) return;
-    Array.prototype.forEach.call(document.querySelectorAll("#defaultsCard [data-def]"), function (sel) { sel.value = recall(sel.dataset.def) || sel.dataset.defIs; });
+    Array.prototype.forEach.call(document.querySelectorAll("#defaultsCard [data-def]"), function (sel) { sel.value = recall(sel.dataset.def) || defIsOf(sel); });
     Array.prototype.forEach.call(document.querySelectorAll("#defaultsCard [data-def-check]"), function (c) {
       var v = recall(c.dataset.defCheck);
       c.checked = c.dataset.defOn ? v === c.dataset.defOn : v !== c.dataset.defOff;
@@ -8655,7 +8716,7 @@
       var va = e.target.closest("[data-vae-active]");   // HERESY 2307: the decoders offered
       if (va) { setVaeActive(va); return; }
       var sel = e.target.closest("[data-def]"), c = e.target.closest("[data-def-check]");
-      if (sel) store(sel.dataset.def, sel.value === sel.dataset.defIs ? null : sel.value);
+      if (sel) store(sel.dataset.def, sel.value === defIsOf(sel) ? null : sel.value);
       if (c) store(c.dataset.defCheck, c.dataset.defOn ? (c.checked ? c.dataset.defOn : null) : (c.checked ? null : c.dataset.defOff));
       defaultsChanged();
     });
@@ -10578,8 +10639,25 @@
   }
   function transcriberQuery(which) {
     which = which || selectedTranscriber();
-    return "&transcriber=" + which + (refinedMode(which) && $("transcriberModes").checked ? "&modes=1" : "");
+    return "&transcriber=" + which + (refinedMode(which) && $("transcriberModes").checked ? "&modes=1" : "") +
+      (!refinedMode(which) && ssPrec() === "q8" ? "&precision=q8" : "");   // HERESY 2625: the lighter pair when asked
   }
+  // HERESY 2625 (Viktor 15.11.2026: «Форсионно переводи обе модели в F32… В Движке можешь дать опцию выбора меньшего кванта… селектор прямо в бар
+  // Студии под VAE»): SheetSage2 with MERT in F32 by default, Q8_0 when chosen here, kept per browser; offered when the engine holds both pairs
+  function ssPrec() { return STATE.transcriberSmall && recall("yue2.transcriberPrec") === "q8" ? "q8" : "f32"; }
+  function paintSsPrec() {
+    var can = !!(STATE.transcriber && STATE.transcriberSmall);
+    if ($("ssPrecRow")) $("ssPrecRow").hidden = !can;
+    if ($("setSsPrecField")) $("setSsPrecField").hidden = !can;
+    ["ssPrecPick", "setSsPrec"].forEach(function (id) { if ($(id)) $(id).value = ssPrec(); });
+  }
+  ["ssPrecPick", "setSsPrec"].forEach(function (id) {
+    if ($(id)) $(id).addEventListener("change", function () {
+      store("yue2.transcriberPrec", this.value === "q8" ? "q8" : "f32");
+      paintSsPrec();
+      toast(this.value === "q8" ? "The transcriber reads in Q8_0, lighter on the card" : "The transcriber reads in F32");
+    });
+  });
   // HERESY 2377: the Library's sheet asks with the same choice (heresy-collection.js), read from what this browser keeps
   window.RuachTranscriber = { query: function () { return transcriberQuery($("transcribers") ? selectedTranscriber() : keptTranscriber()); }, name: transcriberName };
   $("transcribers").addEventListener("change", function () {
@@ -12842,7 +12920,7 @@
       !take.session && !bulk && row && row.realm === "reader" && row.no_train && window.RuachReaderCheck && window.RuachReaderWords
         ? { icon: "\ud83c\udfa7", label: window.RuachReaderWords.en("reader.wcheck"), hint: window.RuachReaderWords.en("reader.wcheck.hint"), action: function () { window.RuachReaderCheck(name); } } : null,
       // HERESY 1415: its namesakes in one player, two to four of them
-      bulk && bulk.length > 1 ? { icon: "\u2261", label: "Compare the selected\u2026", hint: "two to twelve of the checked", action: function () { compareTakes(bulk.slice(0, 12)); } } : null,   // HERESY 1716; 1724: twelve
+      bulk && bulk.length > 1 ? { icon: "\u2261", label: "Compare the selected\u2026", hint: "2 to 24 of the checked", action: function () { compareTakes(bulk.slice(0, 24)); } } : null,   // HERESY 1716; 1724: twelve
       // HERESY 2281 · 2286: two to four checked: First and second on them (1991's analyzer), each against the first checked
       bulk && bulk.length >= 2 && bulk.length <= 4 && window.HeresyAB ? { icon: "\u25e7", label: "Compare: first and second", hint: "two to four, each against the first checked", action: function () {
         var side = function (n) { var t = findTake(n); return { name: n, path: "", label: t ? displayTitle(t) : n }; }, all = bulk.map(side);
@@ -14635,8 +14713,8 @@
   }
   function compareTakes(names) {                             // two to four takes in the Refiner's compare player
     var list = names.map(findTake).filter(Boolean);
-    if (list.length < 2) return toast("Tick two at least, twelve at most", "bad");   // HERESY 1621; 2043: twelve
-    if (list.length > 12) { toast("Twelve at most: the first twelve"); list = list.slice(0, 12); }   // HERESY 1724 («можно смело 12 вместо 6»)
+    if (list.length < 2) return toast("Tick 2 at least, 24 at most", "bad");   // HERESY 1621; 2043: twelve; 2627: 24
+    if (list.length > 24) { toast("24 at most: the first 24"); list = list.slice(0, 24); }   // HERESY 1724 («можно смело 12 вместо 6»)
     if (!window.HeresyDerived || !window.HeresyDerived.compareList) return;
     window.HeresyDerived.compareList(baseShown(displayTitle(list[0])) || displayTitle(list[0]), list.map(function (t) {   // HERESY 2057: its case kept
       return { label: displayTitle(t), path: "take:" + t.name, seconds: t.seconds, url: playerAudioUrl(t), flac: takeAudioUrl(t), take: t.name,   // HERESY 1871
@@ -14645,7 +14723,7 @@
   }
   function compareNamesakes(take) {
     var all = namesakes(take);
-    window.HeresyDialog.pick("Compare with its namesakes\n\nTwo to twelve, played in one player from the same second: a click (or its number) switches.",   // HERESY 1621
+    window.HeresyDialog.pick("Compare with its namesakes\n\n2 to 24, played in one player from the same second: a click (or its number) switches.",   // HERESY 1621
       [{ label: "Its namesakes", items: all.map(function (t) {
         return { value: t.name, label: displayTitle(t), checked: t.name === take.name, note: (t.seconds ? clock(t.seconds) + " \u00b7 " : "") + takeWhen(t.created) };   // HERESY 1619
       }) }], { ok: "Compare", wide: true, count: function (v) { return v.length; } })
@@ -14749,8 +14827,13 @@
     }).join("\n");
     host.remove();
     var title = ($("takeTitle").textContent || "Score").replace(/[<&>]/g, function (c) { return { "<": "&lt;", "&": "&amp;", ">": "&gt;" }[c]; });
-    var win = window.open("", "_blank");
-    if (!win) { toast("The browser blocked the print window: allow pop-ups for this page", "bad"); return; }
+    // HERESY 2641 (Viktor 15.11.2026: «чтобы нигде Студия не открывала отсоединённые окна»): the print goes through a hidden frame of the page
+    var pf = document.createElement("iframe");
+    pf.setAttribute("aria-hidden", "true");
+    pf.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+    document.body.appendChild(pf);
+    var win = pf.contentWindow;
+    setTimeout(function () { if (pf.isConnected) pf.remove(); }, 120000);
     win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + title + '</title><style>' +
       '@page { size: ' + page.size + '; margin: 0.5in; }' +
       'html, body { margin: 0; background: #fff; color: #000; font: 12px/1.4 "IBM Plex Sans", sans-serif; }' +

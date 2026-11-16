@@ -455,7 +455,46 @@ def _name_at(m, w):
 
 
 # ---------------------------------------------------------------- the pass
+# HERESY 2639 (Viktor 15.11.2026: «Словарь украинских ударений не учитывает γ… Зафикси»): his soft «г» written as γ (Drama 3 reads it [ɦ])
+# is looked up as г and given back where it stood: γарний takes гарний's stress, γа́рний
+GAMMA = str.maketrans({"γ": "г", "Γ": "Г"})
+MARKS = "\u0301\u0300"
+
+
+def _gamma_back(orig, t2, out):
+    bare = lambda x: "".join(c for c in x if c not in MARKS)
+    if bare(out) == bare(t2):                            # the pass only added marks: walk both
+        res, j = [], 0
+        for c in out:
+            if c in MARKS and (j >= len(t2) or t2[j] != c):
+                res.append(c)
+                continue
+            res.append(orig[j] if j < len(orig) and orig[j] in "γΓ" else c)
+            j += 1
+        return "".join(res)
+    if len(t2) > 30000:                                  # a respelling moved the letters, and the text is long: г stays (the sound the same)
+        return out
+    import difflib
+    res = list(out)
+    for tag, i1, i2, j1, _j2 in difflib.SequenceMatcher(None, t2, out, autojunk=False).get_opcodes():
+        if tag == "equal":
+            for k in range(i2 - i1):
+                if orig[i1 + k] in "γΓ":
+                    res[j1 + k] = orig[i1 + k]
+    return "".join(res)
+
+
 def stress(text, lang, how="acute", skip=None, user=None):
+    """(the text with its stresses, as the engine takes them; the report). HERESY 2639: γ read as г in uk, ru and be, and given back."""
+    text = str(text or "")
+    if _lang(lang) not in ("uk", "ru", "be") or ("γ" not in text and "Γ" not in text):
+        return _stress_plain(text, lang, how, skip, user)
+    t2 = text.translate(GAMMA)
+    out, rep = _stress_plain(t2, lang, how, skip, user)
+    return _gamma_back(text, t2, out), rep
+
+
+def _stress_plain(text, lang, how="acute", skip=None, user=None):
     """(the text with its stresses, as the engine takes them; the report). skip: a pattern whose matches (an engine's tags) are never touched."""
     lang = _lang(lang)
     user = user_dict(lang) if user is None else user

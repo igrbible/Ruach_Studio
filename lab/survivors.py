@@ -1,7 +1,7 @@
 """HERESY 2367 (Viktor 11.11.2026, «Пока что делай как советуешь там» on the mega report's advice «KillMode=process для юнита лабы: воркеры H3 и
 SeedVR2 переживут перезапуск лабы, новая лаба подберёт их кадры»): the lab's unit kills only the lab itself now (KillMode=process), and this module
 ends the rest of what the lab started, as the unit's cgroup kill did before, sparing the Videographer's MiniMax H3 workers (lab/h3_worker.py) and
-its SeedVR2 upscales (lab/upscale_job.py) with whatever they started. Both work through their folders: a worker's pid and state in its spool's
+its SeedVR2 upscales (lab/shot_upscale_job.py) with whatever they started. Both work through their folders: a worker's pid and state in its spool's
 worker.json (user/videos/.h3/gpuN-KIND/), what it made left as a .done; an upscale's pid in its job folder, its done.json at the end. A new lab
 reads them there and sets what they made into their shots (h3_shots.collect, upscale_shots.collect), so a restart loses no shot.
 
@@ -16,7 +16,7 @@ import signal
 import time
 from pathlib import Path
 
-KEEP = ("h3_worker.py", "upscale_job.py")          # the survivors: the first words of their command name one of these scripts
+KEEP = ("h3_worker.py", "shot_upscale_job.py")   # HERESY 2646: the SeedVR2 runner's own name          # the survivors: the first words of their command name one of these scripts
 GRACE_S = 3.0
 
 

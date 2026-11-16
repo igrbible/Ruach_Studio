@@ -385,5 +385,17 @@
  "Why our own Studio, not a ComfyUI plugin bundle": "למה נפחות משלנו, ולא חבילת תוספים ל-ComfyUI",
  "Viktor Zhuromskyy · 13 November 2026": "ויקטור ז'ורומסקי · 13 בנובמבר 2026",
  "Many of the people who make songs with us came from ComfyUI. A professional workflow there takes weeks to build, and the next core or node update can break it. What's left behind are private forks whose fixes too often never go back upstream. I call that a forkblow. Ruach Studio goes the other way: eight rooms on one page, one music engine we patch ourselves, and every model pinned to a room. Here's why, what it costs, where we still meet ComfyUI, and my farewell letter to its community.": "רבים מאלה שיוצרים איתנו שירים הגיעו מ-ComfyUI. בניית זרימת עבודה מקצועית שם לוקחת שבועות, והעדכון הבא של הליבה או של הנודים עלול לשבור אותה. מה שנשאר מאחור הם פורקים פרטיים, שהתיקונים שלהם לעיתים קרובות מדי לעולם לא חוזרים לאפסטרים. לזה אני קורא forkblow. נפחות רוח הולכת בדרך ההפוכה: שמונה חדרים בדף אחד, מנוע מוזיקה אחד שאנחנו מטליאים בעצמנו, וכל מודל מוצמד לחדר שלו. הנה למה, כמה זה עולה, איפה אנחנו עדיין נפגשים עם ComfyUI, ומכתב הפרידה שלי לקהילה שלו.",
- "Read the article": "קריאת המאמר"
+ "Read the article": "קריאת המאמר",
+ "Read as PDF": "קריאה כ-PDF",
+ "Download PDF": "הורדת PDF",
+ "Previous page": "העמוד הקודם",
+ "Next page": "העמוד הבא",
+ "Page number": "מספר עמוד",
+ "of": "מתוך",
+ "Page": "עמוד",
+ "Smaller": "קטן יותר",
+ "Larger": "גדול יותר",
+ "Opening the PDF…": "פותחים את ה-PDF…",
+ "The PDF reader did not start": "קורא ה-PDF לא עלה",
+ "A page of the article": "עמוד של המאמר"
 }

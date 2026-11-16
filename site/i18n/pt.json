@@ -431,5 +431,17 @@
  "Why our own Studio, not a ComfyUI plugin bundle": "Por que um Estúdio próprio, e não um pacote de plugins para o ComfyUI",
  "Viktor Zhuromskyy · 13 November 2026": "Viktor Zhuromskyy · 13 de novembro de 2026",
  "Many of the people who make songs with us came from ComfyUI. A professional workflow there takes weeks to build, and the next core or node update can break it. What's left behind are private forks whose fixes too often never go back upstream. I call that a forkblow. Ruach Studio goes the other way: eight rooms on one page, one music engine we patch ourselves, and every model pinned to a room. Here's why, what it costs, where we still meet ComfyUI, and my farewell letter to its community.": "Muitas das pessoas que fazem canções com a gente vieram do ComfyUI. Lá, um workflow profissional leva semanas para ficar pronto, e a próxima atualização do núcleo ou dos nós pode quebrá-lo. O que sobra são forks privados cujas correções, com frequência demais, nunca voltam para o upstream. Eu chamo isso de forkblow. O Ruach Estúdio vai pelo caminho oposto: oito salas numa só página, um único motor de música que nós mesmos remendamos, e cada modelo vinculado a uma sala. Aqui está o porquê, quanto isso custa, onde ainda nos encontramos com o ComfyUI e a minha carta de despedida à comunidade dele.",
- "Read the article": "Ler o artigo"
+ "Read the article": "Ler o artigo",
+ "Read as PDF": "Ler como PDF",
+ "Download PDF": "Baixar o PDF",
+ "Previous page": "Página anterior",
+ "Next page": "Próxima página",
+ "Page number": "Número da página",
+ "of": "de",
+ "Page": "Página",
+ "Smaller": "Menor",
+ "Larger": "Maior",
+ "Opening the PDF…": "Abrindo o PDF…",
+ "The PDF reader did not start": "O leitor de PDF não iniciou",
+ "A page of the article": "Uma página do artigo"
 }

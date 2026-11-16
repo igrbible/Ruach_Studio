@@ -338,6 +338,94 @@
     return lat ? latinOf(text, style) : "";                         // HERESY 1168: English, Spanish or Italian
   }
 
+  // HERESY 2637 (Viktor 15.11.2026: «Словари акутов ru/uk/be прикручивай к редакторам лирики Музыканта»; decision №8: off by default, the
+  // user's to switch on): the Narrator's stress dictionaries in the lyrics. /reader/stress reads the lyrics; only its acutes are carried onto the
+  // same words of the lyrics as they are (a word with an acute of its own is left; a [tag] is never touched; its numbers said as words are
+  // skipped, the digits stay); homographs stay unmarked and are named
+  var STRESS_AUTO = "yue2.lyrStressAuto", STRESS_LANGS = { ru: 1, uk: 1, be: 1 }, ACUTE_RE = /́/g;
+  function stressAuto() { return recall(STRESS_AUTO) === "on"; }
+  function toastL(msg, bad) { if (window.HeresyToast) window.HeresyToast(msg, bad ? "bad" : ""); }
+  function lab(path, body) {
+    return fetch("/lab" + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (b) { if (!r.ok) throw new Error(b.error || ("HTTP " + r.status)); return b; });
+    });
+  }
+  function bare(w) { return w.replace(ACUTE_RE, "").toLowerCase(); }
+  function tokens(text) {
+    var out = [], re = /[\p{L}́]+/gu, m;
+    while ((m = re.exec(text))) out.push({ w: m[0], at: m.index });
+    return out;
+  }
+  function graft(word, stressed) {                    // the acutes of «stressed» onto «word», letter by letter (its own case kept)
+    var marks = {}, k = 0;
+    for (var i = 0; i < stressed.length; i++) { if (stressed[i] === "́") marks[k - 1] = true; else k++; }
+    var out = "", n = 0;
+    for (var j = 0; j < word.length; j++) { out += word[j]; if (word[j] !== "́") { if (marks[n]) out += "́"; n++; } }
+    return out;
+  }
+  function carry(orig, stressed, skipWords) {
+    var A = tokens(orig), B = tokens(stressed), tags = [], m, re = /\[[^\]\n]*\]/g;
+    while ((m = re.exec(orig))) tags.push([m.index, m.index + m[0].length]);
+    var inTag = function (at) { return tags.some(function (t) { return at >= t[0] && at < t[1]; }); };
+    var put = [], i = 0, j = 0, n = 0;
+    var find = function (L, from, w) { for (var k = from; k < Math.min(L.length, from + 12); k++) if (bare(L[k].w) === w) return k; return -1; };
+    while (i < A.length && j < B.length) {
+      var a = A[i], b = B[j];
+      if (bare(a.w) === bare(b.w)) {
+        if (a.w.indexOf("́") < 0 && b.w.indexOf("́") >= 0 && !inTag(a.at) && !(skipWords && skipWords[bare(a.w)])) { put.push([a.at, a.w.length, graft(a.w, b.w)]); n++; }
+        i++; j++;
+        continue;
+      }
+      var jb = find(B, j + 1, bare(a.w)), ia = find(A, i + 1, bare(b.w));
+      if (jb >= 0 && (ia < 0 || jb - j <= ia - i)) j = jb; else if (ia >= 0) i = ia; else { i++; j++; }
+    }
+    var text = orig;
+    for (var p = put.length - 1; p >= 0; p--) text = text.slice(0, put[p][0]) + put[p][2] + text.slice(put[p][0] + put[p][1]);
+    return { text: text, n: n };
+  }
+  function stressApply(area, style, quiet) {
+    var lang = langOf(area.value, style || "");
+    if (!STRESS_LANGS[lang]) {
+      if (!quiet) toastL(tr("The stress dictionaries are Russian, Ukrainian and Belarusian; these lyrics read as {0}").replace("{0}", lang || "?"), true);
+      return Promise.resolve(0);
+    }
+    var was = area.value, own = {};
+    // HERESY 2637b: the base dictionaries alone ("user": false); a lab not restarted since still mixes the Narrator's own list in, so its
+    // words are known first and their acutes dropped here
+    return fetch("/lab/reader/dict?lang=" + encodeURIComponent(lang)).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }).then(function (d) {
+      ((d && d.words) || []).forEach(function (w) { own[bare(w.word)] = true; });
+      return lab("/reader/stress", { text: was, lang: lang, user: false });
+    }).then(function (r) {
+      if (area.value !== was) return 0;               // typed over meanwhile: left as it is
+      var c = carry(was, String(r.text || ""), own), homo = (r.homographs || []).map(function (h) { return h.word; });
+      if (c.n) {
+        var at = area.selectionStart;
+        area.focus();
+        area.setSelectionRange(0, area.value.length);
+        var ok = false;
+        try { ok = document.execCommand("insertText", false, c.text); } catch (e) { ok = false; }   // the box's own undo keeps it (Ctrl+Z)
+        if (!ok || area.value !== c.text) { area.value = c.text; area.dispatchEvent(new Event("input", { bubbles: true })); }
+        try { area.setSelectionRange(at, at); } catch (e) { /* not shown */ }
+      }
+      toastL((c.n ? tr("Stresses from the dictionaries ({0}): {1} set").replace("{0}", lang + " · " + (r.dict || "")).replace("{1}", c.n)
+        : tr("Nothing to set: every word the dictionaries know already has its stress")) +
+        (homo.length ? " · " + tr("Homographs left to you: {0}").replace("{0}", homo.slice(0, 8).join(", ") + (homo.length > 8 ? "…" : "")) : ""));
+      return c.n;
+    }).catch(function () {
+      toastL(tr("The dictionaries did not answer (the lab is away): the lyrics go as they are"), true);
+      return 0;
+    });
+  }
+  function stressMenu(area, style, b) {
+    if (!window.HeresyMenu) return stressApply(area, style);
+    var r = b.getBoundingClientRect();
+    window.HeresyMenu.open(r.left, r.bottom + 4, [
+      { label: "Set the dictionaries' stresses now", ui: "book-open", action: function () { stressApply(area, style); } },
+      { label: "Before every song in the Musician", checked: stressAuto(), hint: tr("off by default"),
+        action: function () { store(STRESS_AUTO, stressAuto() ? null : "on"); } }
+    ]);
+  }
+
   // HERESY 1169 (Viktor 08.10.2026: «В редактор лирики можно как в кодовом редакторе отображение номера строки? И вообще…
   // по Alt+K маркировать строки, а по Alt+J прыгать на них. И подсвечивать тонким альфа слоем все музыкальные теги»): a code
   // editor's aids in a lyrics box (the Creator's, beside its meter, and the Writer's). Each line's number in the box's left
@@ -717,8 +805,8 @@
       var mk = ax ? ax.marks().length : 0;
       if (mk) parts.push('<button type="button" class="lyr-tog lyr-marks" data-lyr="mark" data-tip="' + esc(tr("Marked lines: Alt+K marks the cursor's line or unmarks it, Alt+J goes to the next, Alt+Shift+J to the one before, Alt+Shift+K clears them. Press to go to the next one.")) + '">' +
         esc(tr("Marks: {0}").replace("{0}", num(mk))) + "</button>");
-      if (window.HeresyWorn) parts.push('<button type="button" class="lyr-tog" data-lyr="wornList" data-tip="' + esc(tr("The list of worn words for the lyrics' language: see it, edit it, take the Studio's own back, or mark none")) + '">' + esc(tr("Worn words")) + "</button>");   // HERESY 2350
-      parts.push('<button type="button" class="lyr-tog lyr-keys" data-lyr="keys" data-tip="' + esc(tr(KEYS)) + '">' + esc(tr("Keys")) + "</button>");   // HERESY 1169
+      if (window.HeresyWorn) parts.push('<button type="button" class="lyr-tog" data-lyr="wornList" data-tip="' + esc(tr("The list of worn words for the lyrics' language: see it, edit it, take the Studio's own back, or mark none")) + '" aria-label="' + esc(tr("Worn words")) + '">' + (window.HeresyIcons ? window.HeresyIcons.ui("list-x") : esc(tr("Worn words"))) + "</button>");   // HERESY 2350; 2620 an icon
+      parts.push('<button type="button" class="lyr-tog lyr-keys" data-lyr="keys" data-tip="' + esc(tr(KEYS)) + '" aria-label="' + esc(tr("Keys")) + '">' + (window.HeresyIcons ? window.HeresyIcons.ui("keyboard") : esc(tr("Keys"))) + "</button>");   // HERESY 1169; 2620 an icon
       if (!head) {
       parts.push('<button type="button" class="lyr-tog" data-lyr="nums" aria-pressed="' + (recall("yue2.lyrNums") !== "off") + '" data-tip="' + esc(tr("The lines' numbers in the box, as a code editor shows them (Alt+K marks a line, Alt+J goes to the next mark)")) + '">' + esc(tr("Line numbers")) + "</button>");
       parts.push('<button type="button" class="lyr-tog" data-lyr="spell" aria-pressed="' + spell + '" data-tip="' + esc(tr("The browser's spelling check in the lyrics' language; press to switch it off or on")) + '">' + esc(tr("Spelling")) + "</button>");
@@ -849,7 +937,8 @@
       head = document.createElement("span");
       head.className = "label-end lyr-head-togs";
       [["nums", "list-ordered", "Line numbers", "The lines' numbers in the box, as a code editor shows them (Alt+K marks a line, Alt+J goes to the next mark)"],
-       ["spell", "spell-check", "Spelling", "The browser's spelling check in the lyrics' language; press to switch it off or on"]].forEach(function (d) {
+       ["spell", "spell-check", "Spelling", "The browser's spelling check in the lyrics' language; press to switch it off or on"],
+       ["stressdict", "book-open", "Stress dictionaries", "The stress dictionaries (ru, uk, be) in the lyrics: their acutes set where a word has none, now or before every song (off by default); the base dictionaries alone, the Narrator's own word list stays the Narrator's"]].forEach(function (d) {   // HERESY 2637
         var b = document.createElement("button");
         b.type = "button";
         b.className = "btn ghost small icon-btn lyr-head-tog";
@@ -895,6 +984,7 @@
         draw();
         return goTo(al[visit.arc]);
       }
+      if (b.dataset.lyr === "stressdict") return stressMenu(area, styleBox ? styleBox.value : "", b);   // HERESY 2637
       if (b.dataset.lyr === "keys") { if (window.HeresyGuide) window.HeresyGuide.open("creator", "The lyrics' meter and the phonetic hand"); return; }
       if (b.dataset.lyr === "nums" && ax) ax.numbers(recall("yue2.lyrNums") === "off");
       if (b.dataset.lyr === "spell") store("yue2.lyrSpell", recall("yue2.lyrSpell") === "off" ? null : "off");
@@ -910,5 +1000,6 @@
     return { draw: draw, aids: ax, lintNext: lintNext, measure: function () { return last || measure(area.value, latinOf(area.value, styleBox ? styleBox.value : "")); } };
   }
 
-  window.HeresyLyrics = { attach: attach, aids: aids, lint: lint, arc: arc, arcSays: arcSays, measure: measure, syllables: syllables, consonantBeats: consonantBeats, groupOf: groupOf, stressFaults: stressFaults, latinOf: latinOf };
+  window.HeresyLyrics = { stressApply: stressApply, stressAuto: stressAuto, stressCarry: carry,   // HERESY 2637
+    attach: attach, aids: aids, lint: lint, arc: arc, arcSays: arcSays, measure: measure, syllables: syllables, consonantBeats: consonantBeats, groupOf: groupOf, stressFaults: stressFaults, latinOf: latinOf };
 })();

@@ -1597,6 +1597,15 @@
     if (on === null) on = au.paused;
     if (on) au.play().catch(function () {}); else au.pause();
   }
+  // HERESY 2644: after an F5 the program window asks the page loaded anew to take it back (as the log's, 1958)
+  var PROGRAM_EPOCH = Date.now() + "-" + Math.random().toString(36).slice(2);
+  window.ruachProgramEpoch = PROGRAM_EPOCH;
+  window.ruachProgramAdopt = function (w) {
+    if (!w || w.closed || (TL.win && !TL.win.closed && TL.win !== w)) return false;
+    TL.win = w; TL.mirror = ""; w.__ruachEpoch = PROGRAM_EPOCH;
+    try { tlHead(); } catch (e) { /* the timeline not drawn yet: the next frame mirrors */ }
+    return true;
+  };
   function tlScreen() {
     if (TL.win && !TL.win.closed) { try { TL.win.focus(); } catch (e) { /* over the others already */ } return; }
     var open = function (feat) {
@@ -1610,6 +1619,13 @@
         '<div id="pw" style="position:fixed;left:6%;right:6%;bottom:6%;text-align:center;color:#fff;font:600 2.6vw system-ui,sans-serif;text-shadow:0 2px 8px #000"></div>' +
         '<div id="pt" style="position:fixed;right:12px;top:10px;color:#ddd;font:13px ui-monospace,monospace;text-shadow:0 1px 3px #000"></div>';
       d.addEventListener("dblclick", function () { if (d.fullscreenElement) d.exitFullscreen().catch(function () {}); else d.documentElement.requestFullscreen().catch(function () {}); });
+      w.__ruachEpoch = PROGRAM_EPOCH;                    // HERESY 2644: its own watch, in its own realm, outliving the page that opened it
+      if (!w.__ruachAdopt) {
+        var sc = d.createElement("script");
+        sc.textContent = "window.__ruachAdopt = setInterval(function () { try { var o = window.opener; if (o && !o.closed && o.ruachProgramAdopt && " +
+          "o.ruachProgramEpoch && o.ruachProgramEpoch !== window.__ruachEpoch) o.ruachProgramAdopt(window); } catch (e) {} }, 1500);";
+        d.body.appendChild(sc);
+      }
       tlHead();
     };
     var plain = "popup,width=1280,height=760";

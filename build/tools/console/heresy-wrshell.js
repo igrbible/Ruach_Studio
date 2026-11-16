@@ -27,6 +27,7 @@
     if (k) k.style.transform = "translateX(" + i * STEP + "px)";
     var n = $("wrWorldName"), say = tr(NAME[w]);
     if (n && n.textContent !== say) n.textContent = say;
+    var v = $("view-write"); if (v) v.dataset.wrWorld = w;   // HERESY 2608: the cards and the bar's acts of this world
   }
   function setWorld(w) {
     var f = $("wrFilter");
@@ -138,8 +139,12 @@
       var a = b.dataset.wrAct, click = function (id) { if ($(id)) $(id).click(); };
       if (a === "new-song") { setWorld("creator"); click("wrNew"); }
       else if (a === "new-reading") { setWorld("reader"); click("wrNew"); }
-      else click({ from: "wrFromCreate", vers: "wrCreatorVersions", trash: "wrTrashBtn", "import": "wrImport", "export": "wrExport" }[a]);
+      else click({ from: "wrFromCreate", vers: "wrCreatorVersions", "from-reader": "wrFromReader", "reader-vers": "wrReaderVersions", trash: "wrTrashBtn", "import": "wrImport", "export": "wrExport" }[a]);
     });
+    // HERESY 2608: the Narrator's text and its readings into the notebook (heresy-reader.js does it, as for a reading's take)
+    var RM = function () { return window.RuachReaderMirror || {}; };
+    if ($("wrFromReader")) $("wrFromReader").addEventListener("click", function () { if (RM().formToWriter) RM().formToWriter(); });
+    if ($("wrReaderVersions")) $("wrReaderVersions").addEventListener("click", function () { if (RM().runsToWriter) RM().runsToWriter(); });
     if ($("wrHome")) $("wrHome").addEventListener("click", function () {
       if (window.HeresyWriter && window.HeresyWriter.close) window.HeresyWriter.close().then(sync);
     });

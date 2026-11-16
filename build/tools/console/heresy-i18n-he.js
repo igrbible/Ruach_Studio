@@ -255,6 +255,29 @@ RuachI18n.add("he", {
 "Load an example: a random official demo, or one of ours by name (Readings…)": "טעינת דוגמה: דמו רשמי אקראי, או אחת משלנו לפי שם (קריאות…)",
 "A random official demo": "דמו רשמי אקראי",
 "Readings": "קריאות",
+"All the curves in one chart, each in its own scale": "כל העקומות בגרף אחד, כל אחת בקנה המידה שלה",
+"The curves together": "העקומות יחד",
+"Each curve is drawn in its own scale, so their shapes lie one over another: the chips say each one's value now and hide it or show it again; under the cursor, every curve's value at that step.": "כל עקומה מצוירת בקנה המידה שלה, כך שהצורות שלהן מונחות זו על זו: השבבים אומרים את הערך הנוכחי של כל אחת ומסתירים או מחזירים אותה; מתחת לסמן — ערכי כולן בצעד הזה.",
+"the dots: the held-out tracks at each save": "נקודות: הרצועות שהוצאו מהאימון בכל שמירה",
+"The ring": "הזירה",
+"Rock ballad": "בלדת רוק",
+"Synth-pop": "סינת׳־פופ",
+"Folk-pop with a bandura": "פולק־פופ עם בנדורה",
+"Gospel": "גוספל",
+"Britpop, a British accent": "בריטפופ, מבטא בריטי",
+"Liquid drum and bass": "ליקוויד דראם אנד בייס",
+"Chicago drill": "דריל שיקגו",
+"Chicago blues": "בלוז שיקגו",
+"Chanson, a waltz": "שנסון, ואלס",
+"Pop opera, a tenor": "אופרה־פופ, טנור",
+"Rebetiko, a bouzouki": "רבטיקו, בוזוקי",
+"J-pop, an anime opening": "ג׳יי־פופ, פתיח של אנימה",
+"City pop": "סיטי פופ",
+"Mandarin ballad": "בלדה במנדרינית",
+"Chinese folk fusion": "פיוז׳ן עממי סיני",
+"Samba": "סמבה",
+"Duduk, our own field": "דודוק, השדה שלנו",
+"Industrial metal": "מטאל תעשייתי",
 "Engine": "מנוע",
 "Engine: model, memory, chat server, log, look": "מנוע: מודל, זיכרון, שרת צ'אט, יומן, מראה",
 "The guide: every room, what each thing does": "המדריך: כל חדר, ומה כל דבר בו עושה",
@@ -8632,7 +8655,7 @@ RuachI18n.add("he", {
 "writing": "כתיבה",
 "Writing now": "כותב עכשיו",
 "The system bar under the header": "סרגל המערכת מתחת לכותרת העליונה",
-"in the Artist, the Refiner and the Videographer": "בצייר, במלטש ובווידאוגרף",
+"in the Artist, the Refiner, the Videographer and the Trainer": "בצייר, במלטש, בווידאוגרף ובמאמן",
 "in every room": "בכל החדרים",
 "nowhere": "בשום מקום",
 "A thin bar under the header: the processor, the memory, each card and each disk of the Studio's machine, and the room's running jobs; the pointer on an item shows its numbers and its last minute and ten minutes drawn": "סרגל דק מתחת לכותרת העליונה: המעבד, הזיכרון, כל כרטיס וכל דיסק של המכונה של הנפחות, והמשימות שרצות בחדר; הסמן על פריט מציג את המספרים שלו ואת הדקה האחרונה ועשר הדקות האחרונות בגרף",
@@ -9167,4 +9190,67 @@ RuachI18n.add("he", {
 // UIX frame lane 13.11.2026 (HERESY 2532): Engine Hardware, the VAE default tip whole
 RuachI18n.add("he", {
 "The VAE a song is decoded with when its request names none (saved prompts, other clients). The VAE buttons in the form choose per song, and a finished song can get another from its page.": "ה-VAE שבו מפוענח שיר כשהבקשה שלו לא נוקבת באף אחד (פרומפטים שמורים, לקוחות אחרים). כפתורי ה-VAE בטופס בוחרים אותו לכל שיר, ושיר גמור יכול לקבל אחר מהעמוד שלו."
+});
+
+// HERESY 2625: the transcriber's precision (the ☰ menu under the VAE, Engine → Compute)
+RuachI18n.add("he", {
+"SheetSage2 and MERT, the ear that writes a score from a recording (covers, the Library's sheet, the Trainer's set): F32 as m-a-p made them, the default; Q8_0 is 1.6 GB lighter on the card, its notes 95 % alike on our Ring of twenty, the tempo a beat apart at times. Refined always reads on F32": "SheetSage2 ו־MERT הם האוזן שכותבת תווים מהקלטה (קאברים, דף התווים בספרייה, הסט של המאמן): F32 כפי ש־m-a-p יצרו אותם, ברירת המחדל; Q8_0 קל ב־1.6 GB בכרטיס, התווים שלו זהים ב־95% ב־Ring שלנו של עשרים, הקצב לפעמים שונה בפעימה. Refined קורא תמיד ב־F32",
+"Q8_0 · lighter": "Q8_0 · קל יותר",
+"The transcriber reads in Q8_0, lighter on the card": "המתעתק קורא ב־Q8_0, קל יותר לכרטיס",
+"The transcriber reads in F32": "המתעתק קורא ב־F32",
+"Transcriber precision": "דיוק המתעתק",
+"the ☰ menu's own: the transcriber's precision": "זה של תפריט ☰: דיוק המתעתק"
+});
+
+// HERESY 2627: the compare window takes 24
+RuachI18n.add("he", {
+"2 to 24 of the checked": "2 עד 24 מהמסומנים",
+"Tick 2 at least, 24 at most": "סמן 2 לפחות, 24 לכל היותר",
+"24 at most: the first 24": "24 לכל היותר: 24 הראשונים",
+"24 at most to compare: uncheck {0}": "24 לכל היותר להשוואה: בטל את הסימון של {0}",
+"Compare the checked ones, 2 to 24, in one player from the same second": "השוואת המסומנים, מ־2 עד 24, בנגן אחד מאותה שנייה",
+"Waiting for the whole version": "ממתין לגרסה כולה"
+});
+
+// HERESY 2629: the compare sheet's empty difference
+RuachI18n.add("he", {
+"No difference: under ±0.1 dB everywhere": "אין הבדל: בכל מקום פחות מ־±0.1 dB"
+});
+
+// HERESY 2632: the datasheet's track ID
+RuachI18n.add("he", {
+"Copy the track ID": "העתק את מזהה הרצועה",
+"Track ID copied": "מזהה הרצועה הועתק",
+"Not copied": "לא הועתק"
+});
+
+// HERESY 2637: the stress dictionaries in the lyrics
+RuachI18n.add("he", {
+"Stress dictionaries": "מילוני הטעמה",
+"Set the dictionaries' stresses now": "להציב עכשיו את ההטעמות מהמילונים",
+"Before every song in the Musician": "לפני כל שיר אצל המוזיקאי",
+"off by default": "כבוי כברירת מחדל",
+"Stresses from the dictionaries ({0}): {1} set": "הטעמות מהמילונים ({0}): {1} הוצבו",
+"Nothing to set: every word the dictionaries know already has its stress": "אין מה להציב: לכל מילה שהמילונים מכירים כבר יש הטעמה",
+"Homographs left to you: {0}": "הומוגרפים נשארו לך: {0}",
+"The stress dictionaries are Russian, Ukrainian and Belarusian; these lyrics read as {0}": "מילוני ההטעמה הם רוסית, אוקראינית ובלארוסית; המילים האלה נקראות כ־{0}",
+"The dictionaries did not answer (the lab is away): the lyrics go as they are": "המילונים לא ענו (המעבדה אינה זמינה): המילים יוצאות כמו שהן",
+"The stress dictionaries (ru, uk, be) in the lyrics: their acutes set where a word has none, now or before every song (off by default); the base dictionaries alone, the Narrator's own word list stays the Narrator's": "מילוני ההטעמה (ru, uk, be) במילים: סימני ההטעמה שלהם היכן שאין למילה, עכשיו או לפני כל שיר (כבוי כברירת מחדל); רק המילונים הבסיסיים, רשימת המילים של הקורא נשארת אצל הקורא"
+});
+
+// HERESY 2638: the More menu's precision row
+RuachI18n.add("he", {
+"Ear": "אוזן"
+});
+
+// HERESY 2640: the comparison sheet's wait
+RuachI18n.add("he", {
+"Building the comparison sheet": "בונה את גיליון ההשוואה",
+"Each version is measured against the first at equal loudness: loudness and peaks, the tone zone by zone, the stereo width and the dynamics; then their spectrograms and difference curves are drawn.": "כל גרסה נמדדת מול הראשונה בעוצמה שווה: עוצמה ושיאים, הגוון לפי אזורים, רוחב הסטריאו והדינמיקה; אחר כך נשרטטים הספקטרוגרמות ועקומות ההבדל.",
+"Two to four versions take 10 to 60 seconds. The sheet fills this window when its charts are ready; Close leaves it unmade.": "שתיים עד ארבע גרסאות לוקחות 10 עד 60 שניות. הגיליון ימלא את החלון כשהגרפים יהיו מוכנים; «סגור» משאיר אותו לא גמור."
+});
+
+// HERESY 2641: the in-page picture
+RuachI18n.add("he", {
+"The picture could not be read: {0}": "לא ניתן לקרוא את התמונה: {0}"
 });

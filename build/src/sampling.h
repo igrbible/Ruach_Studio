@@ -31,10 +31,14 @@ struct Yue2Sampling {
     int   max_tokens;
 };
 
-// The bounds the protocol enforces on an overridden preset
+// The bounds the protocol enforces on an overridden preset. HERESY 2636 (UIX №34): named once, and sent on /props ("sampling_limits") so the
+// page's fields offer nothing the engine refuses
+#define YUE2_SAMPLING_TEMPERATURE_MAX 5.0f
+#define YUE2_SAMPLING_WINDOW_MAX      100
+
 static bool yue2_sampling_valid(const Yue2Sampling & s, const char * stage) {
-    bool ok = s.temperature >= 0.0f && s.temperature <= 5.0f && s.top_p > 0.0f && s.top_p <= 1.0f && s.top_k >= 1 &&
-              s.repetition_penalty > 0.0f && s.penalty_window >= 1 && s.penalty_window <= 100 && s.min_tokens >= 0 &&
+    bool ok = s.temperature >= 0.0f && s.temperature <= YUE2_SAMPLING_TEMPERATURE_MAX && s.top_p > 0.0f && s.top_p <= 1.0f && s.top_k >= 1 &&
+              s.repetition_penalty > 0.0f && s.penalty_window >= 1 && s.penalty_window <= YUE2_SAMPLING_WINDOW_MAX && s.min_tokens >= 0 &&
               s.min_tokens <= s.max_tokens && s.max_tokens >= 1;
     if (!ok) {
         fprintf(stderr, "[Sampling] FATAL: %s preset outside the protocol bounds\n", stage);

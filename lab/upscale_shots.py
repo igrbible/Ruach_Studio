@@ -1,6 +1,6 @@
 """HERESY 1876b (Viktor 29.10.2026: «если апскейлер на финал прикрутишь, то с ним сможем вытянуть клип и в 2-4K»; «SeedVR2 обе 3B и 7B просчитай по ресурсам
 и прогони 7B на предмет на OOM под 24GB VRAM»): the Videographer's shots made larger by SeedVR2 (lab/seedvr2rt, models/misc/seedvr2). The shots asked for are
-dealt among the free cards (by their frames), one job a card: lab/upscale_job.py runs SeedVR2 once over the card's shots (the model loaded once, kept for
+dealt among the free cards (by their frames), one job a card: lab/shot_upscale_job.py runs SeedVR2 once over the card's shots (the model loaded once, kept for
 all of them) in the Artist's environment and leaves done.json; collect() sets each into its shot (NAME.shots/STEM-upRES.mp4, the shot's «video_up»), a
 shot whose video changed meanwhile keeps it aside. 7B sharp with 16 of its blocks in RAM (20 GB of a card at 1080p, 21 at 1440p) or 3B (18.6 GB)."""
 import json
@@ -17,7 +17,7 @@ import videographer as vg
 
 HERE = Path(__file__).resolve().parent
 RT = HERE / "seedvr2rt"
-JOB = HERE / "upscale_job.py"
+JOB = HERE / "shot_upscale_job.py"   # HERESY 2646
 # HERESY 2356 (the diagnosis of «Буратино», 10.11.2026: in batches of 21 frames with no overlap SeedVR2 drew each face anew at every batch's seam,
 # 1.2–2.9 times the change inside a batch): batches of 45 with 4 frames of overlap, blended (7B sharp then with 32 of its blocks in RAM: 24.1 GB at
 # the peak, measured 10.11); 7B sharp fp8, not measured at 45, stays at 21, with the overlap too. SeedVR2 is a choice now: the clip takes a shot's

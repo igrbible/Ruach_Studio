@@ -411,7 +411,8 @@ def verdict12(R, a, b):
 PIC_BA = {"eq": "{0} (at equal loudness)", "diff": "after − before (red: louder after, blue: quieter after; ±6 dB)", "time": "seconds",
           "spec": "Average spectrum at equal loudness", "tone": "What changed in the tone (grey: ±1 dB) · blue: what no filter makes",
           "nolin": "no filter makes it, dB under the music", "dynx": "the before's 50 ms level, dBFS", "dyny": "after − before, dB",
-          "dyn": "Dynamics: glue {0} dB, peaks {1} dB", "st": "Short-term loudness"}
+          "dyn": "Dynamics: glue {0} dB, peaks {1} dB", "st": "Short-term loudness",
+          "same": "No difference: under ±0.1 dB everywhere"}   # HERESY 2629
 PIC_12 = dict(PIC_BA, diff="{1} − {0}: red where it is louder, blue where it is quieter (±6 dB)", time="time, s",
               dynx="the level of {0} in 50 ms windows, dBFS", dyny="{1} − {0}, dB")
 
@@ -543,6 +544,9 @@ def pictures(A, Bm, sr, R, cen, da, db_, sa, sb, ncen, incoh, out, W=None):
     im = ax[2].imshow(D, origin="lower", aspect="auto", extent=ext, cmap="RdBu_r", norm=TwoSlopeNorm(0, -6, 6), interpolation="nearest")
     ax[2].set_title(W["diff"].format(*sides))
     fig.colorbar(im, ax=ax[2], pad=0.01, label="dB")
+    if np.isfinite(D).any() and float(np.nanmax(np.abs(D))) < 0.1:   # HERESY 2629: an empty picture says why
+        ax[2].text(0.5, 0.5, W["same"], transform=ax[2].transAxes, ha="center", va="center", fontsize=15, color="#374151",
+                   bbox=dict(facecolor="white", alpha=0.9, edgecolor="#9ca3af", boxstyle="round,pad=0.5"))
     for a_ in ax:
         a_.set_yticks(yi)
         a_.set_yticklabels(yl)
@@ -554,8 +558,8 @@ def pictures(A, Bm, sr, R, cen, da, db_, sa, sb, ncen, incoh, out, W=None):
 
     plt.rcParams.update({"axes.grid": True, "grid.alpha": 0.25})
     fig, ax = plt.subplots(2, 2, figsize=(14, 8), dpi=110)
-    ax[0, 0].semilogx(cen, da - R["before"]["lufs"], color="#6b7280", lw=1.4, label=nb)
     ax[0, 0].semilogx(cen, db_ - R["before"]["lufs"], color="#b5163a", lw=1.4, label=na)
+    ax[0, 0].semilogx(cen, da - R["before"]["lufs"], color="#374151", lw=1.4, ls="--", label=nb, zorder=3)   # HERESY 2629: dashed, on top
     ax[0, 0].set_xlim(25, 20000)
     ax[0, 0].set_title(W["spec"])
     ax[0, 0].legend(loc="lower left")
@@ -579,8 +583,8 @@ def pictures(A, Bm, sr, R, cen, da, db_, sa, sb, ncen, incoh, out, W=None):
     ax[1, 0].set_xlabel(W["dynx"].format(*sides))
     ax[1, 0].set_ylabel(W["dyny"].format(*sides))
     ax[1, 0].set_title(W["dyn"].format(f"{R['dynamics']['glue_db']:+.2f}", f"{R['dynamics']['peak_shave_db']:+.2f}"))
-    ax[1, 1].plot(np.arange(len(sa)), sa, color="#6b7280", lw=1.0, label=nb)
     ax[1, 1].plot(np.arange(len(sb)), sb, color="#b5163a", lw=1.0, label=W["eq"].format(na))
+    ax[1, 1].plot(np.arange(len(sa)), sa, color="#374151", lw=1.0, ls="--", label=nb, zorder=3)   # HERESY 2629: dashed, on top
     ax[1, 1].set_ylim(max(-50, float(np.percentile(sa, 2)) - 6), float(np.max(sa)) + 3)
     ax[1, 1].set_xlabel(W["time"])
     ax[1, 1].set_ylabel("LUFS (3 s)")
