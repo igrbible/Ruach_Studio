@@ -1,6 +1,7 @@
 # The Studio's engine for Windows, native (no WSL): yue-server.exe and its tools under MSVC, CPU and CUDA.
 # HERESY 2649 (Viktor 16.11.2026: «Поставь в приоритет сборку Студии как нативное приложение Windows… добей этот Викноуз порт»).
 # The recipe follows timoncool/yue2.cpp's release workflow (MIT): Jimver's CUDA toolkit on windows-latest. No card is needed to build;
+# windows-2022 on purpose: windows-latest carries Visual Studio 2026, which CUDA 12.8 does not install into, and CUDA 13 drops Pascal (sm_61).
 # the CUDA kernels are compiled for Pascal (sm_61) to Blackwell (sm_120), PTX for what comes after; linked whole, as on Linux (no backend DLLs). Nothing here is signed (his word, 08.11).
 name: Windows engine
 
@@ -17,7 +18,7 @@ concurrency:
 jobs:
   cpu:
     name: Engine · windows-x64 · CPU
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
       - name: Configure and build (CPU)
@@ -47,7 +48,7 @@ jobs:
 
   cuda:
     name: Engine · windows-x64 · CUDA 12.8
-    runs-on: windows-latest
+    runs-on: windows-2022
     timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
