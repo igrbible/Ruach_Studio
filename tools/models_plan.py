@@ -20,6 +20,7 @@ Exit 0, or 2 when a pinned list could not be read (nothing is then known of that
 import fnmatch
 import hashlib
 import os
+import shutil
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -121,8 +122,7 @@ def main():
     for repo in offline:
         print(f"#offline\t{repo}")
     try:
-        st = os.statvfs(root)
-        free = st.f_bavail * st.f_frsize
+        free = shutil.disk_usage(root).free             # HERESY 2649: Windows has no os.statvfs
     except OSError:
         free = -1
     print(f"#total\t{get_bytes}\t{get_files}\t{free}")
