@@ -109,7 +109,7 @@ py += ["\t".join(paths.hf_place(i)) for i in ("artwork/Qwen-Image-2512/scheduler
                                              "models/upbundle/apollo/*")]
 check(f"the shell's map is Python's ({len(CORPUS)} paths, engine_gguf, hf_place)" + (" (Windows: no shell twin, passed by)" if out is None else ""),
       out is None or out == py,
-      [(a, b) for a, b in zip(out, py) if a != b][:4] or (len(out), len(py)))
+      "" if out is None else ([(a, b) for a, b in zip(out, py) if a != b][:4] or (len(out), len(py))))   # 2649: no shell twin on Windows
 
 print("the map")
 check("every place of the new tree is a fixed point", all(paths.new_of(v + "/x") is None for v in paths.PLACES.values()))
