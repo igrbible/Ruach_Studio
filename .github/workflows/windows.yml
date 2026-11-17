@@ -128,3 +128,30 @@ jobs:
         run: |
           $env:PYTHONUTF8 = "1"
           foreach ($t in "test_places.py", "test_paths.py") { "== $t"; python lab/$t 2>&1 | Select-Object -Last 15 }
+
+  macos:
+    # 16.11.2026 (a tester on an Apple M1): the engine on Apple Silicon with Metal, after timoncool/yue2.cpp's macOS job (MIT)
+    name: Engine · macos-arm64 · Metal
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure and build (Metal)
+        run: |
+          cmake -S build -B build-mac -DCMAKE_BUILD_TYPE=Release -DGGML_METAL=ON -DGGML_METAL_EMBED_LIBRARY=ON
+          cmake --build build-mac --config Release -j "$(sysctl -n hw.ncpu)" --target yue-server yue-synth quantize
+      - name: Smoke test
+        run: |
+          exe=$(find build-mac -name yue-server -type f -perm -u+x | head -1)
+          test -n "$exe" || { echo "no yue-server"; exit 1; }
+          "$exe" --help 2>&1 | head -8 || true
+          otool -L "$exe" | head -12
+      - name: Package
+        run: |
+          mkdir -p dist && find build-mac -type f -perm -u+x \( -name yue-server -o -name yue-synth -o -name quantize \) -exec cp {} dist/ \;
+          find build-mac -name "*.dylib" -exec cp {} dist/ \; 2>/dev/null || true
+          (cd dist && zip -q -r ../ruach-engine-macos-arm64-metal.zip .)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ruach-engine-macos-arm64-metal
+          path: ruach-engine-macos-arm64-metal.zip
+          retention-days: 14
