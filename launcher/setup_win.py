@@ -24,6 +24,9 @@ def uv():
     return shutil.which("uv")
 
 
+MAC = sys.platform == "darwin"
+
+
 def requirements(cpu):
     """lab/requirements.txt for this machine: the CUDA index and +cu128 pins, or the CPU index and plain pins; Linux-only lines out."""
     out = []
@@ -32,8 +35,10 @@ def requirements(cpu):
         if not s or s.startswith("-e "):
             continue
         if s.startswith("--extra-index-url"):
+            if MAC:
+                continue                                # a Mac: PyPI's torch (MPS), no CUDA index
             s = "--extra-index-url https://download.pytorch.org/whl/cpu" if cpu else s
-        elif cpu:
+        elif cpu or MAC:
             s = re.sub(r"\+cu\d+", "", s).replace("audio-separator[gpu]", "audio-separator[cpu]")
         out.append(s)
     out += ["psutil"]

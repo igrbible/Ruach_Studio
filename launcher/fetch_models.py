@@ -34,6 +34,15 @@ def rev(repo):
     return "main"
 
 
+def mac_quant():
+    """A Mac's backbone by its unified memory (the card and the processor share it): 16 GB and up Q8_0, 8 GB Q6_K, less Q5_K_M."""
+    try:
+        gb = int(subprocess.run(["sysctl", "-n", "hw.memsize"], capture_output=True, text=True, timeout=10).stdout.strip()) / 2 ** 30
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return "Q6_K"
+    return "Q8_0" if gb >= 15 else "Q6_K" if gb >= 7.5 else "Q5_K_M"
+
+
 def card_quant():
     """launcher/env.sh's ruach_quant: BF16 from 23 GB of the first card, Q8_0 from 7, Q6_K from 4.5, else Q5_K_M (no card too)."""
     smi = shutil.which("nvidia-smi") or (str(Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "nvidia-smi.exe") if NT else None)
@@ -91,7 +100,7 @@ def main(argv):
     ap.add_argument("--plan", action="store_true")
     ap.add_argument("--yes", "-y", action="store_true")
     a = ap.parse_args(argv)
-    quant = a.quant or card_quant()
+    quant = a.quant or (mac_quant() if sys.platform == "darwin" else card_quant())
     v2r, ftr = rev(V2), rev(FT)
     entries = []
     if quant != "Q5_K_M":                              # the Studio's default, RS-TW 2.0x0.75, else RS-FW 2.4x0.75, at the quant

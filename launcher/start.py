@@ -214,6 +214,8 @@ def main(argv):
         say(f"  gpu          {gpu_name} · {gpu_used / 1024:.1f} of {gpu_total / 1024:.1f} GiB in use · compute {cc}")
     elif gpu_name:
         say("  gpu          hidden: this run uses the CPU (GGML_BACKEND=CPU or an empty CUDA_VISIBLE_DEVICES)")
+    elif sys.platform == "darwin":
+        say("  gpu          Apple GPU (Metal) · memory shared with macOS")
     else:
         say("  gpu          no NVIDIA GPU found: runs on the CPU (slow)")
     if fp16 == "1":
