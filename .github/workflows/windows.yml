@@ -132,7 +132,7 @@ jobs:
   macos:
     # 16.11.2026 (a tester on an Apple M1): the engine on Apple Silicon with Metal, after timoncool/yue2.cpp's macOS job (MIT)
     name: Engine · macos-arm64 · Metal
-    runs-on: macos-14
+    runs-on: macos-15                    # macos-14 retired by GitHub ("macos-14-arm64 is not supported", 17.11.2026)
     steps:
       - uses: actions/checkout@v4
       - name: Configure and build (Metal)
