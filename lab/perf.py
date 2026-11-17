@@ -126,7 +126,8 @@ def _size(p):
                         if e.is_dir(follow_symlinks=False):
                             stack.append(e.path)
                         elif e.is_file(follow_symlinks=False):
-                            total += e.stat(follow_symlinks=False).st_blocks * 512
+                            st = e.stat(follow_symlinks=False)   # 2649: Windows has no st_blocks: the size itself
+                            total += st.st_blocks * 512 if hasattr(st, "st_blocks") else st.st_size
                     except OSError:
                         continue
         except OSError:
