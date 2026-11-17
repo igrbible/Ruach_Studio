@@ -1,3 +1,12 @@
+> [!CAUTION]
+> **This branch is not a release. Do not install from it, do not fork it, do not deploy it.**
+>
+> `win-native` is our workshop for the native Windows build of Ruach Studio (no WSL): the GitHub Windows builder compiles the engine here while
+> we try each step on a clean Windows. Things here break on purpose, change several times a day and are not tested as a whole. The branch will
+> be deleted as soon as the Windows build reaches `main` with a release.
+>
+> **Use [`main`](https://github.com/igrbible/Ruach_Studio) and its [releases](https://github.com/igrbible/Ruach_Studio/releases).**
+
 # Ruach Studio · the YuE2 Studio · songs from words, on your own machine
 
 <p align="center"><img src="src/brand/ruach-banner.png" alt="Ruach Studio · OSEM: Open Source, Engaged &amp; Musical" width="860"></p>
