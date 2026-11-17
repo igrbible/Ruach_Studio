@@ -137,7 +137,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Configure and build (Metal)
         run: |
-          cmake -S build -B build-mac -DCMAKE_BUILD_TYPE=Release -DGGML_METAL=ON -DGGML_METAL_EMBED_LIBRARY=ON
+          cmake -S build -B build-mac -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DGGML_METAL=ON -DGGML_METAL_EMBED_LIBRARY=ON
           cmake --build build-mac --config Release -j "$(sysctl -n hw.ncpu)" --target yue-server yue-synth quantize
       - name: Smoke test
         run: |
@@ -145,6 +145,8 @@ jobs:
           test -n "$exe" || { echo "no yue-server"; exit 1; }
           "$exe" --help 2>&1 | head -8 || true
           otool -L "$exe" | head -12
+          # 17.11.2026: one file on the tester's Mac, no @rpath into the runner's build folder
+          if otool -L "$exe" | grep -q "libggml"; then echo "yue-server still links ggml's dylibs"; exit 1; fi
       - name: Package
         run: |
           mkdir -p dist && find build-mac -type f -perm -u+x \( -name yue-server -o -name yue-synth -o -name quantize \) -exec cp {} dist/ \;
