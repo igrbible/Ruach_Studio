@@ -1,9 +1,11 @@
 """HERESY 2649 (Viktor 16.11.2026: «добей этот Викноуз порт»): what the lab asks of Linux, said once for Windows too.
 
-On Linux and macOS every function here does exactly what the lab's own lines did before (the same calls, the same numbers): the native
-Windows build gets its own answers through psutil and the Windows API, nothing else changes. One place instead of forty files.
+On Linux every function here does exactly what the lab's own lines did before (the same calls, the same numbers): the native Windows
+build gets its own answers through psutil and the Windows API, nothing else changes. One place instead of forty files. macOS is POSIX
+(fcntl, process groups, nice as on Linux) but has no /proc: CPU and memory come from psutil there, as on Windows.
 
     NT                     True on Windows
+    PROC                   True where /proc/stat exists (Linux); False on Windows and macOS
     group_kwargs()         Popen's own process group (start_new_session; CREATE_NEW_PROCESS_GROUP on Windows)
     kill_group(pid, sig)   the group ended (os.killpg; the process tree by taskkill on Windows)
     nice(n)                a command's niceness prefix (["nice", "-n", n]; nothing on Windows, the priority set after start)
@@ -17,6 +19,7 @@ import subprocess
 import time
 
 NT = os.name == "nt"
+PROC = os.path.isfile("/proc/stat")
 
 if NT:
     import msvcrt
@@ -77,8 +80,8 @@ def nice(n):
 
 
 def cpu_times():
-    """{"cpu": (busy, total, iowait), "cpu0": …}: from /proc/stat on Linux; psutil's times on Windows (no iowait there: 0)."""
-    if not NT:
+    """{"cpu": (busy, total, iowait), "cpu0": …}: from /proc/stat on Linux; psutil's times on Windows and macOS (no iowait there: 0)."""
+    if PROC:
         out = {}
         with open("/proc/stat") as f:
             for line in f:
@@ -103,8 +106,8 @@ def cpu_times():
 
 
 def meminfo_mb():
-    """(used, total, cache, swap used, swap total) in MB: /proc/meminfo on Linux, psutil on Windows (no page cache there: 0)."""
-    if not NT:
+    """(used, total, cache, swap used, swap total) in MB: /proc/meminfo on Linux, psutil on Windows and macOS (no page cache there: 0)."""
+    if PROC:
         m = {}
         with open("/proc/meminfo") as f:
             for line in f:

@@ -50,7 +50,7 @@ def beat(kind):
 
 
 def _cpu():
-    if winx.NT:                                       # HERESY 2649: Windows has no /proc: psutil's times through winx
+    if not winx.PROC:                                 # HERESY 2649: Windows and macOS have no /proc: psutil's times through winx
         busy, total, _io = winx.cpu_times()["cpu"]
         idle = total - busy
     else:
@@ -64,7 +64,7 @@ def _cpu():
 
 
 def _ram():
-    if winx.NT:                                       # HERESY 2649: the same share, from psutil through winx
+    if not winx.PROC:                                 # HERESY 2649: the same share, from psutil through winx
         used, total, _c, _su, _st = winx.meminfo_mb()
         return 100.0 * used / max(1, total)
     info = {}
