@@ -8,6 +8,8 @@ native Windows Studio (and any machine without bash). Linux keeps start.sh; this
                 m-a-p's own (BF16, Q8_0, Q6_K, Q5_K_M); a named one gone starts the default, said
   the decoders  RS x3 v1 first (the default), v2, then Standard; every other backbone present, by its file's name
   the rest      the transcriber pair (F32, the Q8_0 one beside it), SheetSage2-Refined, LoRAs, FP16 matmul on compute 7.x, the batch
+  the engine    HERESY 2686: the Windows package brings two, engine\\cuda when nvidia-smi answers with a card, else engine\\cpu (YUE2_ENGINE=cpu
+                or cuda chooses); else engine/ itself (the Mac package, an engine unpacked by hand), else what was built here (build/build)
 
     python launcher/start.py            run the engine (its log in this window)
     python launcher/start.py --dry-run  print the command only (YUE2CPP_DRY_RUN=1 too)
@@ -55,13 +57,18 @@ def size(p):
         n /= 1024
 
 
-def engine_bin():
-    """The engine: build/build/yue-server (Linux, built here), else the Windows build's folders (the packaged engine/ first)."""
-    for p in (ROOT / "engine" / f"yue-server{EXE}", ROOT / "build" / "build" / f"yue-server{EXE}",
-              ROOT / "build" / "build" / "Release" / f"yue-server{EXE}", ROOT / "build" / "build" / "bin" / f"yue-server{EXE}"):
+def engine_bin(card=False):
+    """The engine. HERESY 2686: the Windows package's engine\\cuda when a card answers (card), else its engine\\cpu; YUE2_ENGINE=cpu or
+    cuda takes that one only. Then engine/ itself (the Mac package, an engine unpacked by hand), then build/build (Linux, built here) and
+    the Windows build's folders."""
+    want = os.environ.get("YUE2_ENGINE", "").strip().lower()
+    kinds = (want,) if want in ("cpu", "cuda") else ("cuda", "cpu") if card else ("cpu", "cuda")
+    for p in [ROOT / "engine" / k / f"yue-server{EXE}" for k in kinds] + [
+              ROOT / "engine" / f"yue-server{EXE}", ROOT / "build" / "build" / f"yue-server{EXE}",
+              ROOT / "build" / "build" / "Release" / f"yue-server{EXE}", ROOT / "build" / "build" / "bin" / f"yue-server{EXE}"]:
         if p.is_file():
             return p
-    return ROOT / "engine" / f"yue-server{EXE}"
+    return ROOT / "engine" / kinds[0] / f"yue-server{EXE}" if NT else ROOT / "engine" / f"yue-server{EXE}"
 
 
 def smi():
@@ -73,6 +80,17 @@ def smi():
     if not s and Path("/usr/lib/wsl/lib/nvidia-smi").is_file():
         s = "/usr/lib/wsl/lib/nvidia-smi"
     return s
+
+
+def card_answers(s):
+    """HERESY 2686: nvidia-smi lists a card (a driver left behind without its card answers with an error, and gets the CPU engine)."""
+    if not s:
+        return False
+    try:
+        r = subprocess.run([s, "-L"], capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return r.returncode == 0 and "GPU " in r.stdout
 
 
 def main(argv):
@@ -96,14 +114,16 @@ def main(argv):
         studio_gpu = "0"                                # an Arc's index (SYCL is the Linux engine's for now)
     guard_say = ""
     s = smi()
-    if not env.get("YUE2CPP_GPU") and s:
+    binp = engine_bin(card_answers(s))
+    cpu_engine = binp.parent.name == "cpu"              # HERESY 2686: the package's CPU engine takes no card, so no guard and no CUDAn
+    if not env.get("YUE2CPP_GPU") and s and not cpu_engine:
         r = subprocess.run([py, str(ROOT / "lab" / "gpu_guard.py"), "--pick", studio_gpu or "0", "8000"], capture_output=True, text=True)
         pick, told = r.stdout.strip(), r.stderr.strip()
         if pick and pick != (studio_gpu or "0"):
             guard_say, studio_gpu = f"GPU{studio_gpu or 0} did not pass the guard; GPU{pick} instead · {told}", pick
         elif not pick:
             guard_say = f"no card passes the guard; GPU{studio_gpu or 0} all the same, it may run out of memory · {told}"
-    if studio_gpu and studio_gpu != "0" and not env.get("GGML_BACKEND"):
+    if studio_gpu and studio_gpu != "0" and not env.get("GGML_BACKEND") and not cpu_engine:
         env["GGML_BACKEND"] = "CUDA" + studio_gpu
 
     port = env.get("YUE2CPP_PORT", "7777")
@@ -130,7 +150,7 @@ def main(argv):
         if wanted and quant != wanted:
             say(f"no {bb(wanted).name}: using {quant}")
 
-    binp, model = engine_bin(), bb(quant)
+    model = bb(quant)
     vae_dir, misc = Path(paths.at(paths.ENGINE_VAE, ROOT)), Path(paths.at(paths.MISC, ROOT))
     vae = vae_dir / "YuE2-Vae-F32.gguf"
     outputs = ROOT / "outputs"
@@ -145,7 +165,7 @@ def main(argv):
     for p in missing:
         say(f"missing {p.relative_to(ROOT) if ROOT in p.parents else p}")
     if missing:
-        say("the engine comes with the Windows package (engine\\), the models from the installer or Engine -> Models")
+        say("the engine comes with the package (engine\\cuda and engine\\cpu on Windows, engine/ on a Mac), the models from the installer or Engine -> Models")
         return 1
 
     args = ["--host", "0.0.0.0", "--port", port, "--model", f"{quant}={model}"]
@@ -181,7 +201,7 @@ def main(argv):
                 gpu_used, gpu_total = float(parts[1]), float(parts[2])
             except ValueError:
                 pass
-    on_gpu = env.get("CUDA_VISIBLE_DEVICES", "all") != "" and not env.get("GGML_BACKEND", "").startswith("CPU")
+    on_gpu = env.get("CUDA_VISIBLE_DEVICES", "all") != "" and not env.get("GGML_BACKEND", "").startswith("CPU") and not cpu_engine
     fp16 = env.get("YUE2CPP_FP16_MATMUL", "auto")
     if fp16 == "auto":
         fp16 = "1" if (on_gpu and cc.startswith("7.")) else "0"
@@ -213,7 +233,8 @@ def main(argv):
     if gpu_name and on_gpu:
         say(f"  gpu          {gpu_name} · {gpu_used / 1024:.1f} of {gpu_total / 1024:.1f} GiB in use · compute {cc}")
     elif gpu_name:
-        say("  gpu          hidden: this run uses the CPU (GGML_BACKEND=CPU or an empty CUDA_VISIBLE_DEVICES)")
+        say("  gpu          hidden: this run uses the CPU (" + ("the CPU engine, YUE2_ENGINE=cpu" if cpu_engine else
+                                                               "GGML_BACKEND=CPU or an empty CUDA_VISIBLE_DEVICES") + ")")
     elif sys.platform == "darwin":
         say("  gpu          Apple GPU (Metal) · memory shared with macOS")
     else:
@@ -221,7 +242,8 @@ def main(argv):
     if fp16 == "1":
         say(f"  matmul       FP16 tensor cores (compute {cc} has no BF16 tensor cores; YUE2CPP_FP16_MATMUL=0 turns it off)")
     say("  backbones    " + ", ".join(models))
-    say("  engine       up to " + (f"{batch} songs" if batch != "1" else "1 song") + " per pass")
+    kind = binp.parent.name if binp.parent.name in ("cuda", "cpu") else ""   # HERESY 2686: which of the package's two runs
+    say("  engine       " + (f"engine{os.sep}{kind} · " if kind else "") + "up to " + (f"{batch} songs" if batch != "1" else "1 song") + " per pass")
     page = ROOT / "build" / "tools" / "public" / "index.html"
     env["RUACH_PAGE"] = str(page)
     if not page.is_file():

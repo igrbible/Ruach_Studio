@@ -3,19 +3,33 @@
 # The recipe follows timoncool/yue2.cpp's release workflow (MIT): Jimver's CUDA toolkit on windows-latest. No card is needed to build;
 # windows-2022 on purpose: windows-latest carries Visual Studio 2026, which CUDA 12.8 does not install into, and CUDA 13 drops Pascal (sm_61).
 # the CUDA kernels are compiled for Pascal (sm_61) to Blackwell (sm_120), PTX for what comes after; linked whole, as on Linux (no backend DLLs). Nothing here is signed (his word, 08.11).
+# HERESY 2685, 2687 (Viktor 16.11.2026: «Пообещал ему к концу недели нативное приложение»): the engines go on into two packages, one zip each for a
+# person to unpack and double-click: Windows (the CUDA engine, the CPU one beside it, the page, the lab, RuachStudio.cmd) and macOS on Apple Silicon
+# (the Metal engine, the page, the lab, RuachStudio.command). Each package is unpacked again on its own system and tried before anyone gets it.
+# A run by hand may take the engines of an earlier run (engines_from, within their 14 days) and make the packages in minutes, not in two hours.
 name: Windows engine
 
 on:
   workflow_dispatch:
+    inputs:
+      engines_from:
+        description: "Package the engines of this earlier run (its id) instead of building them; empty builds them here"
+        required: false
+        default: ""
   push:
     branches: [win-native]
-    paths: ["build/**", "lab/**", ".github/workflows/windows.yml"]
+    paths: ["build/**", "lab/**", "launcher/**", "tools/**", "RuachStudio.cmd", "RuachStudio.command", ".github/workflows/windows.yml"]
 
 # no shared concurrency: a push for the lab must not cancel the CUDA build an hour into its kernels
+
+permissions:
+  contents: read
+  actions: read          # the engines of an earlier run (engines_from)
 
 jobs:
   cpu:
     name: Engine · windows-x64 · CPU
+    if: ${{ !inputs.engines_from }}
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
@@ -53,6 +67,7 @@ jobs:
 
   cuda:
     name: Engine · windows-x64 · CUDA 12.8
+    if: ${{ !inputs.engines_from }}
     runs-on: windows-2022
     timeout-minutes: 300
     steps:
@@ -132,6 +147,7 @@ jobs:
   macos:
     # 16.11.2026 (a tester on an Apple M1): the engine on Apple Silicon with Metal, after timoncool/yue2.cpp's macOS job (MIT)
     name: Engine · macos-arm64 · Metal
+    if: ${{ !inputs.engines_from }}
     runs-on: macos-15                    # macos-14 retired by GitHub ("macos-14-arm64 is not supported", 17.11.2026)
     steps:
       - uses: actions/checkout@v4
@@ -157,3 +173,274 @@ jobs:
           name: ruach-engine-macos-arm64-metal
           path: ruach-engine-macos-arm64-metal.zip
           retention-days: 14
+
+  page:
+    # HERESY 2685: the page as build.sh makes it (bash and Python's standard library), once for both packages. Empty stand-ins for the engine
+    # and for MuScriptor, newer than their sources, keep build.sh to the page alone
+    name: The page · build.sh
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the page
+        run: |
+          set -euo pipefail
+          mkdir -p build/build build/build-muscriptor
+          for b in build/build/yue-server build/build-muscriptor/ruach-muscriptor; do : > "$b"; chmod +x "$b"; done
+          NO_COLOR=1 bash build.sh --no-restart
+          ls -la build/tools/public
+          test -s build/tools/public/index.html && test -s build/tools/public/manifest.webmanifest
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ruach-page
+          path: |
+            build/tools/public/index.html
+            build/tools/public/manifest.webmanifest
+          retention-days: 14
+
+  package-windows:
+    # HERESY 2685: one zip for Windows. The tree as git holds it, without the engine's sources, the visiting card and the WSL guide; the page
+    # built above; engine\cuda (CUDA 12.8) and engine\cpu (AVX2) side by side, launcher\start.py picking by nvidia-smi (HERESY 2686). Its one
+    # folder is called RuachStudio, short on purpose: Windows' 260-character paths reach into .venv's deepest files
+    name: Package · windows-x64 · one zip
+    needs: [cpu, cuda, page]
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') }}
+    runs-on: ubuntu-24.04
+    outputs:
+      file: ${{ steps.pack.outputs.file }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v8
+        with:
+          name: ruach-page
+          path: page
+      - uses: actions/download-artifact@v8
+        if: ${{ !inputs.engines_from }}
+        with:
+          pattern: ruach-engine-windows-x64-*
+          path: engines
+      - uses: actions/download-artifact@v8
+        if: ${{ inputs.engines_from }}
+        with:
+          pattern: ruach-engine-windows-x64-*
+          path: engines
+          run-id: ${{ inputs.engines_from }}
+          github-token: ${{ github.token }}
+      - name: Assemble
+        id: pack
+        env:
+          ENGINES_FROM: ${{ inputs.engines_from }}
+        run: |
+          set -euo pipefail
+          sha=$(git rev-parse --short=7 HEAD)
+          when=$(date -u +%Y-%m-%d)
+          run="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          src="built in this run"; [ -z "$ENGINES_FROM" ] || src="from run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$ENGINES_FROM"
+          file="RuachStudio-windows-x64-$sha.zip"
+          S=stage/RuachStudio
+          mkdir -p "$S"
+          git archive --format=tar HEAD | tar -x -C "$S"
+          rm -rf "$S/build" "$S/site" "$S/.github" "$S/RuachStudio.command" "$S/INSTALL_WINDOWS.md"
+          git archive --format=tar HEAD build/tools/console/pwa | tar -x -C "$S"
+          mkdir -p "$S/build/tools/public" "$S/engine/cuda" "$S/engine/cpu"
+          cp page/index.html page/manifest.webmanifest "$S/build/tools/public/"
+          unzip -q "$(find engines -name ruach-engine-windows-x64-cuda12.zip | head -1)" -d "$S/engine/cuda"
+          unzip -q "$(find engines -name ruach-engine-windows-x64-cpu.zip | head -1)" -d "$S/engine/cpu"
+          for k in cuda cpu; do test -f "$S/engine/$k/yue-server.exe" || { echo "no engine/$k/yue-server.exe"; exit 1; }; done
+          cat > note.md <<'EOF'
+          > [!NOTE]
+          > **A beta package of Ruach Studio for Windows 11 (x64), native, without WSL**, made by GitHub's builder from the `win-native` workshop branch (commit @SHA@, @DATE@). Double-click **RuachStudio.cmd**: the first start brings the Studio's own Python and the models a song needs into this folder (nothing is installed for the whole machine); every start runs the lab and the engine, each in its own window, and opens the Studio in the browser. With an NVIDIA card the engine runs on it (engine\cuda), without one on the processor (engine\cpu, slowly). Nothing here is signed: SmartScreen asks once (More info, then Run anyway).
+
+          EOF
+          { sed -e "s/@SHA@/$sha/" -e "s/@DATE@/$when/" note.md; awk 'skip && /^>/ {next} skip && /^$/ {skip=0; next} {skip=0; print}' skip=1 README.md; } > "$S/README.md"
+          printf 'Ruach Studio, the native Windows package (beta)\ncommit   %s (win-native)\nbuilt    %s by %s\nengines  %s\n         engine\\cuda: CUDA 12.8, compute 6.1 (Pascal) to 12.0 (Blackwell) · engine\\cpu: x64 with AVX2\n' \
+            "$(git rev-parse HEAD)" "$when" "$run" "$src" > "$S/BUILD.txt"
+          (cd stage && zip -q -r "../$file" RuachStudio)
+          ls -la "$file"; unzip -l "$file" | tail -1; du -sh "$S" "$S/engine/cuda" "$S/engine/cpu"
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        with:
+          path: ${{ steps.pack.outputs.file }}
+          archive: false
+          retention-days: 30
+
+  check-windows:
+    # HERESY 2685: the zip as a Windows person gets it: unpacked by Expand-Archive, both engines start from their own folders (no DLL missing),
+    # start.py picks engine\cuda when a card answers and engine\cpu when none does, and the lab from the package starts and answers
+    name: Package · windows-x64 · unpacked and tried
+    needs: package-windows
+    if: ${{ !cancelled() && needs.package-windows.result == 'success' }}
+    runs-on: windows-2022
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.package-windows.outputs.file }}
+          path: pkg
+          skip-decompress: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Unpacked; both engines start; start.py picks each
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem pkg -Recurse -Filter *.zip | Select-Object -First 1
+          if (-not $zip) { throw "the package did not come down" }
+          "{0}: {1:N0} MB" -f $zip.Name, ($zip.Length / 1MB)
+          Expand-Archive $zip.FullName -DestinationPath unpacked
+          $R = (Resolve-Path unpacked\RuachStudio).Path
+          foreach ($k in "cuda", "cpu") {
+            $out = & "$R\engine\$k\yue-server.exe" --help 2>&1 | Out-String
+            $code = $LASTEXITCODE
+            "== engine\$k\yue-server.exe --help: exit $code"
+            ($out -split "`n" | Select-Object -First 3) -join "`n"
+            if (($code -ne 0 -and $code -ne 1) -or -not $out.Trim()) { throw "engine\$k\yue-server.exe did not start (exit $code)" }
+          }
+          $env:PYTHONUTF8 = "1"
+          python -I -c "import sys; sys.path.insert(0, sys.argv[1]); import start; c, n = start.engine_bin(True), start.engine_bin(False); print('a card answers:', c); print('no card:       ', n); print('this runner:    nvidia-smi', start.smi(), '· a card answers:', start.card_answers(start.smi())); assert c.parent.name == 'cuda' and c.is_file() and n.parent.name == 'cpu' and n.is_file()" "$R\launcher"
+          if ($LASTEXITCODE) { throw "start.py does not pick the package's engines" }
+          Get-Content "$R\BUILD.txt"
+      - name: The lab from the package starts and answers /health
+        shell: pwsh
+        run: |
+          python -m pip install -q numpy soundfile psutil
+          $R = (Resolve-Path unpacked\RuachStudio).Path
+          $env:PYTHONUTF8 = "1"
+          $p = Start-Process python -ArgumentList "lab/lab.py" -WorkingDirectory $R -PassThru -NoNewWindow -RedirectStandardOutput lab-out.txt -RedirectStandardError lab-err.txt
+          $ok = $false
+          foreach ($i in 1..30) {
+            Start-Sleep 2
+            try { $r = Invoke-WebRequest http://127.0.0.1:41870/health -UseBasicParsing -TimeoutSec 5; "health: " + $r.Content.Substring(0, [Math]::Min(300, $r.Content.Length)); $ok = $true; break } catch { if ($p.HasExited) { break } }
+          }
+          if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+          "---- the lab's log (last 30 lines)"
+          Get-Content lab-err.txt -Tail 30
+          if (-not $ok) { throw "the packaged lab did not answer on Windows" }
+
+  package-macos:
+    # HERESY 2687: one zip for a Mac with Apple Silicon: the tree as git holds it, without the engine's sources, the visiting card and the
+    # Windows files at its top; the page built above; the Metal engine in engine/ (one file each, ggml inside). zip keeps the files' modes and
+    # Archive Utility gives them back, so RuachStudio.command and the engine stay executable
+    name: Package · macos-arm64 · one zip
+    needs: [macos, page]
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') }}
+    runs-on: ubuntu-24.04
+    outputs:
+      file: ${{ steps.pack.outputs.file }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v8
+        with:
+          name: ruach-page
+          path: page
+      - uses: actions/download-artifact@v8
+        if: ${{ !inputs.engines_from }}
+        with:
+          name: ruach-engine-macos-arm64-metal
+          path: engines
+      - uses: actions/download-artifact@v8
+        if: ${{ inputs.engines_from }}
+        with:
+          name: ruach-engine-macos-arm64-metal
+          path: engines
+          run-id: ${{ inputs.engines_from }}
+          github-token: ${{ github.token }}
+      - name: Assemble
+        id: pack
+        env:
+          ENGINES_FROM: ${{ inputs.engines_from }}
+        run: |
+          set -euo pipefail
+          sha=$(git rev-parse --short=7 HEAD)
+          when=$(date -u +%Y-%m-%d)
+          run="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          src="built in this run"; [ -z "$ENGINES_FROM" ] || src="from run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$ENGINES_FROM"
+          file="RuachStudio-macos-arm64-$sha.zip"
+          S=stage/RuachStudio
+          mkdir -p "$S"
+          git archive --format=tar HEAD | tar -x -C "$S"
+          rm -rf "$S/build" "$S/site" "$S/.github" "$S/RuachStudio.cmd" "$S/INSTALL_WINDOWS.md"
+          git archive --format=tar HEAD build/tools/console/pwa | tar -x -C "$S"
+          mkdir -p "$S/build/tools/public" "$S/engine"
+          cp page/index.html page/manifest.webmanifest "$S/build/tools/public/"
+          unzip -q "$(find engines -name ruach-engine-macos-arm64-metal.zip | head -1)" -d "$S/engine"
+          test -f "$S/engine/yue-server" || { echo "no engine/yue-server"; exit 1; }
+          find "$S/engine" -type f -exec chmod 755 {} +
+          chmod 755 "$S/RuachStudio.command"
+          cat > note.md <<'EOF'
+          > [!NOTE]
+          > **A beta package of Ruach Studio for macOS on Apple Silicon (M1 and later)**, made by GitHub's builder from the `win-native` workshop branch (commit @SHA@, @DATE@). Double-click **RuachStudio.command**: the first start brings the Studio's own Python and the models a song needs into this folder (the backbone sized by the Mac's memory); every start runs the lab in the background and the engine (Metal) in that window, and opens the Studio in the browser. Nothing here is signed: the first time macOS refuses it, open System Settings, Privacy & Security, and press Open Anyway (or, in Terminal, `xattr -dr com.apple.quarantine` on this folder).
+
+          EOF
+          { sed -e "s/@SHA@/$sha/" -e "s/@DATE@/$when/" note.md; awk 'skip && /^>/ {next} skip && /^$/ {skip=0; next} {skip=0; print}' skip=1 README.md; } > "$S/README.md"
+          printf 'Ruach Studio, the macOS package for Apple Silicon (beta)\ncommit   %s (win-native)\nbuilt    %s by %s\nengine   %s\n         engine/: Metal, ggml linked in, arm64\n' \
+            "$(git rev-parse HEAD)" "$when" "$run" "$src" > "$S/BUILD.txt"
+          (cd stage && zip -q -r "../$file" RuachStudio)
+          ls -la "$file"; unzip -l "$file" | tail -1; unzip -Z "$file" RuachStudio/RuachStudio.command "RuachStudio/engine/*"
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        with:
+          path: ${{ steps.pack.outputs.file }}
+          archive: false
+          retention-days: 30
+
+  check-macos:
+    # HERESY 2687: the zip as a Mac person gets it, opened as Archive Utility opens it (ditto): every Mach-O in it arm64 alone, linked to
+    # macOS' own libraries alone, signed ad hoc (Apple Silicon runs nothing unsigned) and executable; RuachStudio.command executable and
+    # sound to bash 3.2; the engine starts; start.py picks engine/yue-server; the lab from the package starts on macOS and answers
+    name: Package · macos-arm64 · unpacked and looked through
+    needs: package-macos
+    if: ${{ !cancelled() && needs.package-macos.result == 'success' }}
+    runs-on: macos-15
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.package-macos.outputs.file }}
+          path: pkg
+          skip-decompress: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Every binary arm64, linked to macOS alone, signed ad hoc; the engine starts; start.py picks it
+        run: |
+          set -euo pipefail
+          zip=$(find pkg -name "*.zip" | head -1)
+          test -n "$zip" || { echo "the package did not come down"; exit 1; }
+          ls -la "$zip"
+          ditto -x -k "$zip" unpacked
+          R=unpacked/RuachStudio
+          test -x "$R/RuachStudio.command" || { echo "RuachStudio.command is not executable"; exit 1; }
+          /bin/bash -n "$R/RuachStudio.command"
+          n=0
+          while IFS= read -r f; do
+            n=$((n + 1))
+            archs=$(lipo -archs "$f")
+            libs=$(otool -L "$f" | tail -n +2 | awk '{print $1}')
+            bad=$(printf '%s\n' "$libs" | grep -vE '^(/usr/lib/|/System/Library/)' || true)
+            sig=$(codesign -dv "$f" 2>&1 | grep -E '^Signature=' || true)
+            echo "${f#"$R"/}: $archs · $(printf '%s\n' "$libs" | grep -c .) libraries: $(printf '%s ' $libs) · ${sig:-no signature}"
+            [ "$archs" = arm64 ] || { echo "  not arm64 alone"; exit 1; }
+            [ -z "$bad" ] || { echo "  links outside macOS: $bad"; exit 1; }
+            codesign -v "$f" || { echo "  its signature does not hold"; exit 1; }
+            [ -x "$f" ] || { echo "  not executable"; exit 1; }
+          done < <(find "$R" -type f -print0 | xargs -0 file | grep "Mach-O" | cut -d: -f1)
+          [ "$n" -ge 3 ] || { echo "only $n Mach-O files in the package"; exit 1; }
+          set +e; out=$("$R/engine/yue-server" --help 2>&1); code=$?; set -e
+          printf '%s\n' "$out" | head -3; echo "engine/yue-server --help: exit $code"
+          [ "$code" -le 1 ] && [ -n "$out" ] || { echo "the engine did not start"; exit 1; }
+          python3 -I -c "import sys; sys.path.insert(0, sys.argv[1]); import start; e = start.engine_bin(False); print('start.py picks:', e); assert e.parent.name == 'engine' and e.is_file()" "$R/launcher"
+          cat "$R/BUILD.txt"
+      - name: The lab from the package starts on macOS and answers /health
+        run: |
+          python3 -m pip install -q numpy soundfile psutil
+          cd unpacked/RuachStudio
+          PYTHONUTF8=1 python3 lab/lab.py > "$RUNNER_TEMP/lab-out.txt" 2> "$RUNNER_TEMP/lab-err.txt" &
+          pid=$!
+          ok=0
+          for i in $(seq 1 30); do
+            sleep 2
+            if curl -fs -m 5 -o "$RUNNER_TEMP/health.json" http://127.0.0.1:41870/health; then ok=1; break; fi
+            kill -0 "$pid" 2>/dev/null || break
+          done
+          kill "$pid" 2>/dev/null || true
+          echo "---- the lab's log (last 30 lines)"; tail -30 "$RUNNER_TEMP/lab-err.txt"
+          [ "$ok" = 1 ] || { echo "the packaged lab did not answer on macOS"; exit 1; }
+          echo "health: $(head -c 300 "$RUNNER_TEMP/health.json")"
