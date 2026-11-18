@@ -266,8 +266,10 @@ jobs:
           retention-days: 30
 
   check-windows:
-    # HERESY 2685: the zip as a Windows person gets it: unpacked by Expand-Archive, both engines start from their own folders (no DLL missing),
-    # start.py picks engine\cuda when a card answers and engine\cpu when none does, and the lab from the package starts and answers
+    # HERESY 2685: the zip as a Windows person gets it: unpacked by Expand-Archive; engine\cpu starts from its folder; engine\cuda finds every
+    # DLL it loads in its own folder or in Windows, all but nvcuda.dll, the NVIDIA driver's own (a runner has no driver, so this engine cannot
+    # start here: its first run is on a card); start.py picks engine\cuda when a card answers and engine\cpu when none does; the lab from the
+    # package starts and answers
     name: Package · windows-x64 · unpacked and tried
     needs: package-windows
     if: ${{ !cancelled() && needs.package-windows.result == 'success' }}
@@ -281,7 +283,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Unpacked; both engines start; start.py picks each
+      - name: Unpacked; engine\cpu starts; engine\cuda has every DLL but the driver's; start.py picks each
         shell: pwsh
         run: |
           $zip = Get-ChildItem pkg -Recurse -Filter *.zip | Select-Object -First 1
@@ -289,13 +291,28 @@ jobs:
           "{0}: {1:N0} MB" -f $zip.Name, ($zip.Length / 1MB)
           Expand-Archive $zip.FullName -DestinationPath unpacked
           $R = (Resolve-Path unpacked\RuachStudio).Path
-          foreach ($k in "cuda", "cpu") {
-            $out = & "$R\engine\$k\yue-server.exe" --help 2>&1 | Out-String
-            $code = $LASTEXITCODE
-            "== engine\$k\yue-server.exe --help: exit $code"
-            ($out -split "`n" | Select-Object -First 3) -join "`n"
-            if (($code -ne 0 -and $code -ne 1) -or -not $out.Trim()) { throw "engine\$k\yue-server.exe did not start (exit $code)" }
+          $out = & "$R\engine\cpu\yue-server.exe" --help 2>&1 | Out-String
+          $code = $LASTEXITCODE
+          "== engine\cpu\yue-server.exe --help: exit $code"
+          ($out -split "`n" | Select-Object -First 3) -join "`n"
+          if (($code -ne 0 -and $code -ne 1) -or -not $out.Trim()) { throw "engine\cpu\yue-server.exe did not start (exit $code)" }
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationPath
+          $dumpbin = (Get-ChildItem "$vs\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" | Select-Object -First 1).FullName
+          $dir = "$R\engine\cuda"
+          $seen = @{}; $todo = [System.Collections.Queue]::new(); $todo.Enqueue("yue-server.exe"); $missing = @(); $own = @(); $driver = @()
+          while ($todo.Count) {
+            $n = $todo.Dequeue()
+            if ($seen.ContainsKey($n.ToLower())) { continue }
+            $seen[$n.ToLower()] = 1; $own += $n
+            foreach ($d in (& $dumpbin /nologo /dependents (Join-Path $dir $n) | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^[\w.-]+\.dll$' })) {
+              if (Test-Path (Join-Path $dir $d)) { $todo.Enqueue($d) }
+              elseif ($d -ieq "nvcuda.dll") { $driver += $n }
+              elseif ($d -notmatch '^(api|ext)-ms-' -and -not (Test-Path (Join-Path $env:SystemRoot "System32\$d"))) { $missing += "$n needs $d" }
+            }
           }
+          "== engine\cuda: yue-server.exe loads {0} files of its own ({1}); nvcuda.dll, the NVIDIA driver's, from {2}" -f $own.Count, ($own -join ", "), ($driver -join ", ")
+          if ($missing) { throw "engine\cuda is missing: $($missing -join '; ')" }
+          if ($own -notcontains "cudart64_12.dll" -or $own -notcontains "cublas64_12.dll") { throw "engine\cuda does not load CUDA's runtime from its folder" }
           $env:PYTHONUTF8 = "1"
           python -I -c "import sys; sys.path.insert(0, sys.argv[1]); import start; c, n = start.engine_bin(True), start.engine_bin(False); print('a card answers:', c); print('no card:       ', n); print('this runner:    nvidia-smi', start.smi(), '· a card answers:', start.card_answers(start.smi())); assert c.parent.name == 'cuda' and c.is_file() and n.parent.name == 'cpu' and n.is_file()" "$R\launcher"
           if ($LASTEXITCODE) { throw "start.py does not pick the package's engines" }
