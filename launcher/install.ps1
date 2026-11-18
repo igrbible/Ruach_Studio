@@ -27,12 +27,25 @@ if (-not (Test-Path $Py)) {
     & $Uv venv --python 3.12 --seed (Join-Path $Root ".venv")
     if ($LASTEXITCODE) { Write-Host "ruach install stopped: uv could not make .venv"; exit 1 }
 }
+$TorchCpu = $false
 if (-not $Cpu) {
     $smi = Join-Path $env:SystemRoot "System32\nvidia-smi.exe"
     if (-not (Test-Path $smi)) { Write-Host "no NVIDIA card answers: the CPU packages (the Studio runs on the processor, slowly)"; $Cpu = $true }
+    else {
+        # HERESY 2686: PyTorch's CUDA 12.8 wheels carry kernels for compute 7.5 and up (sm_75 to sm_120); on an older card (Pascal, Volta) the
+        # lab's torch would see the card and fail at its first kernel. Such a card gets the lab's PyTorch for the processor, and the models and
+        # the engine for the card (engine\cuda has kernels from compute 6.1)
+        $caps = @()
+        try { $caps = @(& $smi --query-gpu=compute_cap --format=csv,noheader | ForEach-Object { [double]::Parse("$_".Trim(), [Globalization.CultureInfo]::InvariantCulture) }) } catch { $caps = @() }
+        if ($caps.Count -and -not ($caps | Where-Object { $_ -ge 7.5 })) {
+            Write-Host "the card (compute $($caps -join ', ')) is older than PyTorch's CUDA 12.8 (7.5 and up): the lab's PyTorch for the processor; the engine sings on the card"
+            $TorchCpu = $true
+        }
+    }
 }
 $a = @()
 if ($Cpu) { $a += "--cpu" }
+if ($TorchCpu) { $a += "--torch-cpu" }
 if ($Yes) { $a += "--yes" }
 if ($NoModels) { $a += "--no-models" }
 & $Py (Join-Path $Root "launcher\setup_win.py") @a

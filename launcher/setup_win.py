@@ -4,7 +4,10 @@
 (tools/downloader-requirements.txt), psutil (lab/winx.py reads the processor and memory through it), then the models a song needs
 (launcher/fetch_models.py). Safe to run again: what is here stays.
 
-    .venv\\Scripts\\python launcher\\setup_win.py [--cpu] [--yes] [--no-models]
+    .venv\\Scripts\\python launcher\\setup_win.py [--cpu | --torch-cpu] [--yes] [--no-models]
+
+--torch-cpu (HERESY 2686): the lab's packages for the processor and the models for the card, for a card older than PyTorch's CUDA 12.8
+wheels (compute below 7.5, Pascal and Volta: install.ps1 asks nvidia-smi); the engine sings on the card all the same.
 """
 import argparse
 import os
@@ -51,6 +54,7 @@ def requirements(cpu):
 def main(argv):
     ap = argparse.ArgumentParser()
     ap.add_argument("--cpu", action="store_true", help="the CPU wheels (no NVIDIA card)")
+    ap.add_argument("--torch-cpu", action="store_true", help="the CPU wheels, the card's models (a card below compute 7.5)")
     ap.add_argument("--yes", action="store_true", help="download the models without asking")
     ap.add_argument("--no-models", action="store_true")
     a = ap.parse_args(argv)
@@ -58,8 +62,8 @@ def main(argv):
     if not u:
         print("ruach install stopped: no uv (launcher/install.ps1 brings it into tmp/uv)")
         return 1
-    req = requirements(a.cpu)
-    print(f"── the Studio's Python packages ({'CPU' if a.cpu else 'CUDA 12.8'}): a few GB the first time", flush=True)
+    req = requirements(a.cpu or a.torch_cpu)
+    print(f"── the Studio's Python packages ({'CPU' if a.cpu or a.torch_cpu else 'CUDA 12.8'}): a few GB the first time", flush=True)
     env = dict(os.environ, UV_CACHE_DIR=str(ROOT / "tmp" / "uv-cache"), UV_LINK_MODE="copy", PYTHONUTF8="1")
     cmd = [u, "pip", "install", "--python", sys.executable, "--index-strategy", "unsafe-best-match", "-r", str(req),
            "-r", str(ROOT / "tools" / "downloader-requirements.txt")]
