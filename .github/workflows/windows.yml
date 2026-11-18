@@ -6,14 +6,15 @@
 # HERESY 2685, 2687 (Viktor 16.11.2026: «Пообещал ему к концу недели нативное приложение»): the engines go on into two packages, one zip each for a
 # person to unpack and double-click: Windows (the CUDA engine, the CPU one beside it, the page, the lab, RuachStudio.cmd) and macOS on Apple Silicon
 # (the Metal engine, the page, the lab, RuachStudio.command). Each package is unpacked again on its own system and tried before anyone gets it.
-# A run by hand may take the engines of an earlier run (engines_from, within their 14 days) and make the packages in minutes, not in two hours.
+# A run by hand may take the Windows engines of an earlier run (engines_from, within their 14 days) and make the packages in minutes, not in
+# two hours; the Mac engine is built every time (two minutes).
 name: Windows engine
 
 on:
   workflow_dispatch:
     inputs:
       engines_from:
-        description: "Package the engines of this earlier run (its id) instead of building them; empty builds them here"
+        description: "Package the Windows engines of this earlier run (its id) instead of building them; empty builds them here (the Mac engine is built anyway)"
         required: false
         default: ""
   push:
@@ -24,7 +25,7 @@ on:
 
 permissions:
   contents: read
-  actions: read          # the engines of an earlier run (engines_from)
+  actions: read          # the Windows engines of an earlier run (engines_from)
 
 jobs:
   cpu:
@@ -147,13 +148,14 @@ jobs:
   macos:
     # 16.11.2026 (a tester on an Apple M1): the engine on Apple Silicon with Metal, after timoncool/yue2.cpp's macOS job (MIT)
     name: Engine · macos-arm64 · Metal
-    if: ${{ !inputs.engines_from }}
     runs-on: macos-15                    # macos-14 retired by GitHub ("macos-14-arm64 is not supported", 17.11.2026)
     steps:
       - uses: actions/checkout@v4
       - name: Configure and build (Metal)
         run: |
-          cmake -S build -B build-mac -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DGGML_METAL=ON -DGGML_METAL_EMBED_LIBRARY=ON
+          # HERESY 2687 (18.11.2026): without a deployment target the runner's SDK set the floor at macOS 15.0, and a Mac on 13 or 14 would refuse
+          # the engine; 13.3 as llama.cpp's own releases (std::to_chars for floats needs it)
+          cmake -S build -B build-mac -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_DEPLOYMENT_TARGET=13.3 -DBUILD_SHARED_LIBS=OFF -DGGML_METAL=ON -DGGML_METAL_EMBED_LIBRARY=ON
           cmake --build build-mac --config Release -j "$(sysctl -n hw.ncpu)" --target yue-server yue-synth quantize
       - name: Smoke test
         run: |
@@ -351,27 +353,17 @@ jobs:
           name: ruach-page
           path: page
       - uses: actions/download-artifact@v8
-        if: ${{ !inputs.engines_from }}
         with:
           name: ruach-engine-macos-arm64-metal
           path: engines
-      - uses: actions/download-artifact@v8
-        if: ${{ inputs.engines_from }}
-        with:
-          name: ruach-engine-macos-arm64-metal
-          path: engines
-          run-id: ${{ inputs.engines_from }}
-          github-token: ${{ github.token }}
       - name: Assemble
         id: pack
-        env:
-          ENGINES_FROM: ${{ inputs.engines_from }}
         run: |
           set -euo pipefail
           sha=$(git rev-parse --short=7 HEAD)
           when=$(date -u +%Y-%m-%d)
           run="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-          src="built in this run"; [ -z "$ENGINES_FROM" ] || src="from run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$ENGINES_FROM"
+          src="built in this run, for macOS 13.3 and later"
           file="RuachStudio-macos-arm64-$sha.zip"
           S=stage/RuachStudio
           mkdir -p "$S"
@@ -402,8 +394,8 @@ jobs:
           retention-days: 30
 
   check-macos:
-    # HERESY 2687: the zip as a Mac person gets it, opened as Archive Utility opens it (ditto): every Mach-O in it arm64 alone, linked to
-    # macOS' own libraries alone, signed ad hoc (Apple Silicon runs nothing unsigned) and executable; RuachStudio.command executable and
+    # HERESY 2687: the zip as a Mac person gets it, opened as Archive Utility opens it (ditto): every Mach-O in it arm64 alone, for macOS 13.3
+    # and later, linked to macOS' own libraries alone, signed ad hoc (Apple Silicon runs nothing unsigned) and executable; RuachStudio.command executable and
     # sound to bash 3.2; the engine starts; start.py picks engine/yue-server; the lab from the package starts on macOS and answers
     name: Package · macos-arm64 · unpacked and looked through
     needs: package-macos
@@ -432,11 +424,13 @@ jobs:
           while IFS= read -r f; do
             n=$((n + 1))
             archs=$(lipo -archs "$f")
+            minos=$(otool -l "$f" | awk '/LC_BUILD_VERSION/ {b = 1} b && $1 == "minos" {print $2; exit}')
             libs=$(otool -L "$f" | tail -n +2 | awk '{print $1}')
             bad=$(printf '%s\n' "$libs" | grep -vE '^(/usr/lib/|/System/Library/)' || true)
             sig=$(codesign -dv "$f" 2>&1 | grep -E '^Signature=' || true)
-            echo "${f#"$R"/}: $archs · $(printf '%s\n' "$libs" | grep -c .) libraries: $(printf '%s ' $libs) · ${sig:-no signature}"
+            echo "${f#"$R"/}: $archs · macOS $minos and later · $(printf '%s\n' "$libs" | grep -c .) libraries: $(printf '%s ' $libs) · ${sig:-no signature}"
             [ "$archs" = arm64 ] || { echo "  not arm64 alone"; exit 1; }
+            [ "${minos%%.*}" -le 13 ] || { echo "  asks for macOS $minos: a Mac on 13 or 14 would refuse it"; exit 1; }
             [ -z "$bad" ] || { echo "  links outside macOS: $bad"; exit 1; }
             codesign -v "$f" || { echo "  its signature does not hold"; exit 1; }
             [ -x "$f" ] || { echo "  not executable"; exit 1; }

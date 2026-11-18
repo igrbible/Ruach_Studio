@@ -14,6 +14,11 @@ stop() { echo; echo "Ruach Studio: $1"; read -r -p "Press Enter to close this wi
 up() { curl -fs -m 2 -o /dev/null "$1"; }
 
 [ "$(uname -m)" = arm64 ] || stop "this kit is for Apple Silicon (M1 and later); an Intel Mac is not supported yet."
+# HERESY 2687: the engine is built for macOS 13.3 and later; an older macOS hears it here, not from dyld
+MACOS="$(sw_vers -productVersion 2>/dev/null)"; MAJ="${MACOS%%.*}"
+case "$MACOS" in *.*) MIN="${MACOS#*.}"; MIN="${MIN%%.*}" ;; *) MIN=0 ;; esac
+[ -z "$MACOS" ] || [ "$MAJ" -gt 13 ] 2>/dev/null || { [ "$MAJ" -eq 13 ] 2>/dev/null && [ "$MIN" -ge 3 ] 2>/dev/null; } \
+    || stop "this kit needs macOS 13.3 or newer; this Mac has $MACOS: update macOS in System Settings, General, Software Update."
 # A browser's download carries Apple's quarantine mark: the engine is not signed (by decision), so the mark comes off this folder alone
 xattr -dr com.apple.quarantine "$ROOT" 2>/dev/null
 
