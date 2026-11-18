@@ -176,7 +176,8 @@ jobs:
 
   page:
     # HERESY 2685: the page as build.sh makes it (bash and Python's standard library), once for both packages. Empty stand-ins for the engine
-    # and for MuScriptor, newer than their sources, keep build.sh to the page alone
+    # and for MuScriptor, newer than their sources, keep build.sh to the page alone; so does the absence of ggml's patches here: in a clone where
+    # ggml has no git of its own, git apply --check passes on a patch it skips, build.sh says «put on» and asks for the server (18.11.2026)
     name: The page · build.sh
     runs-on: ubuntu-24.04
     steps:
@@ -186,6 +187,7 @@ jobs:
           set -euo pipefail
           mkdir -p build/build build/build-muscriptor
           for b in build/build/yue-server build/build-muscriptor/ruach-muscriptor; do : > "$b"; chmod +x "$b"; done
+          rm -rf build/ggml-patches
           NO_COLOR=1 bash build.sh --no-restart
           ls -la build/tools/public
           test -s build/tools/public/index.html && test -s build/tools/public/manifest.webmanifest
