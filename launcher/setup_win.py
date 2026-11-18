@@ -51,6 +51,33 @@ def requirements(cpu):
     return p
 
 
+def msvc_runtime():
+    """HERESY 2685 (found 18.11.2026 on a clean Windows 11: «Error loading torch\\lib\\c10.dll… Microsoft Visual C++ Redistributable is not
+    installed»): a fresh Windows has no msvcp140.dll, and PyTorch's DLLs (any C++ extension) need it. The package's engine carries the MSVC
+    runtime app-local, as Microsoft lets it be redistributed; the same files go beside the Studio's own python.exe, the folder Windows
+    searches for every DLL the lab loads. The missing ones only, never over Python's own, and never into a Python outside the Studio."""
+    if os.name != "nt":
+        return
+    base = Path(sys.base_prefix)
+    if not str(base).lower().startswith(str(ROOT).lower() + os.sep):
+        print(f"the MSVC runtime: {base} is not the Studio's own Python; PyTorch needs Microsoft's Visual C++ Redistributable there", flush=True)
+        return
+    for d in (ROOT / "engine" / "cpu", ROOT / "engine" / "cuda", ROOT / "engine"):
+        dlls = [f for f in (d.glob("*.dll") if d.is_dir() else [])
+                if re.fullmatch(r"(msvcp140.*|vcruntime140.*|concrt140|vcomp140|vccorlib140)\.dll", f.name, re.I)]
+        if not dlls:
+            continue
+        put = []
+        for f in dlls:
+            if not (base / f.name).exists():
+                shutil.copy2(f, base / f.name)
+                put.append(f.name)
+        if put:
+            print(f"── the MSVC runtime beside the Studio's python.exe ({len(put)} files from {d.relative_to(ROOT)})", flush=True)
+        return
+    print("the MSVC runtime: no engine folder here carries it; PyTorch needs Microsoft's Visual C++ Redistributable", flush=True)
+
+
 def main(argv):
     ap = argparse.ArgumentParser()
     ap.add_argument("--cpu", action="store_true", help="the CPU wheels (no NVIDIA card)")
@@ -71,6 +98,7 @@ def main(argv):
     if r.returncode:
         print("ruach install stopped: the Python packages did not install (the lines above say which)")
         return 1
+    msvc_runtime()
     if a.no_models:
         return 0
     print("── the models a song needs", flush=True)
