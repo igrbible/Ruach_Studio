@@ -639,7 +639,7 @@ static bool nar_solve(Yue2NAR *            n,
                       const DebugDumper *  dbg,
                       bool (*cancelled)(void *) = nullptr,
                       void * cancel_data        = nullptr,
-                      const std::string & solver = "midpoint") {
+                      const std::string & solver = "multistep") {   // HERESY 2670
     size_t             count = (size_t) n->latent_dim * T_lat * M;
     std::vector<float> first(count), mid(count), second(count);
     float              dt = 1.0f / (float) steps;

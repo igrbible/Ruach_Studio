@@ -505,7 +505,7 @@
   /* 12.11.2026 (Viktor: «на визитке тизер блоком с кнопкой на полноэкранный оверлей»): the article's teaser, and its window over the whole screen */
   .why-call .why-by { color: var(--faint); font-size: 14px; margin: 0 0 6px; }
   .why-modal .vocab-panel { width: min(1240px, 100%); }   /* 15.11.2026 (Viktor: «Ужми оверлей… в ту же ширину, что и оверлей словарей»): the vocabularies' width, no longer the whole screen */
-  /* 15.11.2026: the article as a PDF in a window of its own, igr.bible's reader (PdfReader.svelte) in the card's colours: the bar stays, the pages scroll */
+  /* 15–16.11.2026: the paper of YuE2-VAE-RS x3 as a PDF in a window of its own, igr.bible's reader (PdfReader.svelte) in the card's colours: the bar stays, the pages scroll */
   .pdf-reader { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .pdf-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 12px; background: var(--paper); border-bottom: 1px solid var(--rule); }
   .pdf-nav, .pdf-zoom { display: flex; align-items: center; gap: 6px; }
@@ -701,7 +701,7 @@
     <p class="lead">オープンな歌モデル <b>YuE2</b> を中心にした本格的なスタジオ。スタイルと歌詞を書けば、スタジオが<b>あなた自身の GPU</b> で作曲し、歌い、曲をレンダリングします。あなたの歌、言葉、設定がそこから出ることはありません。</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">GitHub で入手</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.ja.md">ガイドを読む</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face のモデル</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Viktor と Claude に 24 時間コーヒーを</a></div>
     <p class="star">⭐ スタジオが気に入ったら、<a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub の YuE2 Studio リポジトリ</a>にスターをどうぞ。</p>
-    <span class="rc"><b>2.0.8</b> · オールインワンのリリース：二つの世界を持つライター、朗読の二つ目のエンジン、映像師の二つのビューア · 2026 年 11 月</span>
+    <span class="rc"><b>2.0.9</b> · 自分のオケに歌声を、Windows と Mac で動く Studio（ベータ）、あなたが休むと休むページ · 2026 年 11 月</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -856,8 +856,6 @@
         </div>
         <div class="vocab-btns">
           <button class="vocab-open" id="why-open" type="button" aria-haspopup="dialog" aria-controls="why-modal">記事を読む</button>
-          <button class="vocab-open vocab-open-2" id="whypdf-open" type="button" aria-haspopup="dialog" aria-controls="whypdf-modal">PDF で読む</button>
-          <a class="vocab-open vocab-open-2" id="whypdf-dl" href="/article/why-own-studio.ja.pdf" download type="application/pdf">PDF をダウンロード</a>   <!-- 15.11.2026: read on the card and downloaded, the page's own language -->
         </div>
       </div>
     </div>
@@ -1024,7 +1022,7 @@
         <div class="vocab-btns">
           <button class="vocab-open" id="vae-study-open" type="button">研究を読む</button>
           <button class="vocab-open vocab-open-2" id="vae-tracks-open" type="button">聴く：20 曲 × 3 つのデコーダー</button>
-          <a class="vocab-open vocab-open-2" id="vae-paper-open" href="/vae/YuE2-VAE-RS-x3-paper.pdf" download="YuE2-VAE-RS-x3-paper.pdf" type="application/pdf">論文（PDF）</a>   <!-- 12.11.2026 (Viktor: «Твой PDF — Огонь. Его можно и на визитку для скачивания и распечатки»); a download: the web server serves .pdf as octet-stream on purpose (mime.types «Force PDFs to download») -->
+          <button class="vocab-open vocab-open-2" id="vae-paper-open" type="button" aria-haspopup="dialog" aria-controls="paper-modal">論文（PDF）</button>   <!-- 12.11.2026 (Viktor: «Твой PDF — Огонь. Его можно и на визитку для скачивания и распечатки»); 16.11.2026: read in his pdf.js reader, downloaded from its bar -->
         </div>
       </div>   <!-- 11.11.2026 (Viktor: «таблицу с треками унеси в оверлей, чтобы не насиловать визитку. В блоке исследования второй кнопкой вызовем её») -->
       <p class="ring-note">重みは CC BY-NC 4.0、コードは Apache-2.0 です。どちらも Hugging Face の私たちのファインチューンのリポジトリ、<a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-RS-Finetunes/tree/main/VAE-RS">VAE-RS</a> にあり、研究と<a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-RS-Finetunes/blob/main/docs/VAE-RS-x3-integration.md">プログラマー向けのガイド</a>も一緒です。同じファイルは論文とあわせて、専用のリポジトリ <a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-VAE-RS-x3">goldhub/YuE2-VAE-RS-x3</a> にもあります。</p>
@@ -1037,7 +1035,7 @@
       <div class="cols need-two">   <!-- 11.11.2026 (Viktor: «три карточки неравномерны по наполнению текстом… две колонки. Во второй колонке вторую и третью одну под другой») -->
         <div class="card"><h3>マシン</h3><ul>
           <li><b>NVIDIA の GPU</b>：フル精度ですべてに 24 GB。12–16 GB と 8 GB でも小さいコピーで動きます（映像師は 24 GB が必要）</li>
-          <li><b>Linux</b>（Ubuntu 24.04、CUDA 12.8 で作成）</li>
+          <li><b>Linux</b>（Ubuntu 24.04、CUDA 12.8 で作成）。2.0.9 からは <b>Windows 11</b> と <b>Apple Silicon の Mac</b> もベータ版で</li>
           <li>ディスク<b>約 23–26 GB</b>、新規インストールで計測：プログラムとその Python（17 GB）、モデル（カードにより 5.1〜8.5 GB、<code>fetch-models.sh</code> が取得し、固定し、検証）。絵師のモデルはさらに 39–43 GB、💎 セットは 5.6 GB、どちらも求めたときだけ</li></ul></div>
         <div class="need-side">
         <div class="card"><h3>画面</h3><ul>
@@ -1088,12 +1086,13 @@
   <section id="next">
     <div class="wrap">
       <h2>これから</h2>
-      <p class="sub">2.0.8 は、私たちが毎日自分の曲と朗読を作っている Studio です。2.1.0 以降に向けて進んでいる大きな部分はこちら。</p>
+      <p class="sub">2.0.9 は、私たちが毎日自分の曲と朗読を作っている Studio です。2.1.0 以降に向けて進んでいる大きな部分はこちら。</p>
       <ul class="feats">
         <li><b>朗読、さらに。</b>章付きの一つのファイルとしてダウンロードできる本、一部だけの編集と本全体を仕上げ師へ、そして文脈から母音を補って読むヘブライ語。</li>
         <li><b>DAW、さらに。</b>MIDI キーボードの演奏を譜面に書き込むピアノロール、そして DAW 用プロジェクトにまだ必要な REAPER、Waveform、Bitwig でのクラッシュテスト。</li>
         <li><b>映像師、さらに。</b>10〜15 秒のショット、シーンをまたいで顔が変わらない登場人物、タイトルとカラオケのデザイン済みテンプレート、より多くのフォーマットと書き出し。</li>
         <li><b>Tsunami Wave の次の波。</b>次のファインチューンは YuE2 が最も苦手に歌うものから学び、公開前にブラインドで聴き比べます。</li>
+        <li><b>Windows と Mac、ベータを卒業。</b>Windows 11 と Apple Silicon の Mac で、すべての部屋を Linux と同じように、一部屋ずつ。そして専用のインストーラー。</li>
         <li>REAPER、Waveform、Bitwig 用の<b>ネイティブプラグイン</b>。スタジオが仲間を見つけたら。</li>
       </ul>
     </div>
@@ -1424,7 +1423,7 @@
     </div>
   </div>
   <div class="wrap">
-    <span>Ruach Studio · 2.0.8 · a work of <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="Our curated list of everything the YuE2 community has made">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changelog</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24/7 coffee</a></span>
+    <div class="foot-by">ルアハ・スタジオ · 2.0.9 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> の作品</div> <div class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="YuE2 コミュニティが作ったものすべてを集めた、私たちの厳選リスト">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">変更履歴</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24時間コーヒー</a></div>
   </div>
 </footer>
 
@@ -1783,10 +1782,10 @@
     <iframe id="why-frame" title="ComfyUI のプラグイン詰め合わせではなく、なぜ自前の Studio なのか"></iframe>
   </div>
 </div>
-<div class="vocab-modal why-modal" id="whypdf-modal" hidden role="dialog" aria-modal="true" aria-label="ComfyUI のプラグイン詰め合わせではなく、なぜ自前の Studio なのか">
+<div class="vocab-modal" id="paper-modal" hidden role="dialog" aria-modal="true" aria-label="YuE2-VAE-RS x3 · 論文">
   <div class="vocab-panel">
-    <div class="vocab-head"><b>ComfyUI のプラグイン詰め合わせではなく、なぜ自前の Studio なのか</b><button type="button" id="whypdf-close" aria-label="閉じる">×</button></div>
-    <div class="pdf-reader" id="whypdf">
+    <div class="vocab-head"><b>YuE2-VAE-RS x3 · 論文</b><button type="button" id="paper-close" aria-label="閉じる">×</button></div>
+    <div class="pdf-reader" id="paperpdf">
       <div class="pdf-bar">
         <div class="pdf-nav">
           <button type="button" data-pdf="prev" aria-label="前のページ">‹</button>
@@ -1801,13 +1800,13 @@
           <span class="pdf-scale">100%</span>
           <button type="button" data-pdf="in" aria-label="拡大">+</button>
         </div>
-        <a class="pdf-dl" href="/article/why-own-studio.ja.pdf" download type="application/pdf">PDF をダウンロード</a>
+        <a class="pdf-dl" href="/vae/YuE2-VAE-RS-x3-paper.pdf" download="YuE2-VAE-RS-x3-paper.pdf" type="application/pdf">PDF をダウンロード</a>
       </div>
       <div class="pdf-stage">
         <p class="pdf-state" data-pdf-state="load">PDF を開いています…</p>
         <p class="pdf-state bad" data-pdf-state="bad" hidden>PDF リーダーを起動できませんでした</p>
         <p class="pdf-why" hidden></p>
-        <canvas class="pdf-canvas" aria-label="記事のページ"></canvas>
+        <canvas class="pdf-canvas" aria-label="論文のページ"></canvas>
       </div>
     </div>
   </div>
@@ -1923,14 +1922,15 @@
     if (location.hash === "#why-own-studio") open();
     window.addEventListener("hashchange", function () { if (location.hash === "#why-own-studio") open(); });
   })();
-  // 15.11.2026 (Viktor: «для статьи PDF возьми у меня уже готовый PDF ридер с суб-проекта igr.bible… Читать на сайте и скачать»): igr.bible's reader
+  // 15–16.11.2026 (Viktor: «PDF ридер с суб-проекта igr.bible… Читать на сайте и скачать»; 16.11: «наш RS-VAE стади документ, где у нас ссылка на
+  // скачивание PDF, вот там поставить мой pdf.js»): the paper of YuE2-VAE-RS x3 in igr.bible's reader
   // (PdfReader.svelte) in plain JS: pdf.js 6.3.289 from assets/pdfjs, loaded on the first open, its worker apart; the page fit to the window's
   // width, ‹ › and the number, a slider (drawn on release), − + from 60 to 300 %, ← → PageUp PageDown; ✕, Esc and the backdrop close it,
-  // #why-own-studio-pdf opens it. Its two lessons kept: a render already under way for the same page, width and scale is left alone (a resize
+  // #vae-paper opens it. Its two lessons kept: a render already under way for the same page, width and scale is left alone (a resize
   // that answers its own redraw never lets one finish), and a failure says so aloud beside the download, which works without the reader.
   (function () {
-    var m = document.getElementById("whypdf-modal"), b = document.getElementById("whypdf-open"), x = document.getElementById("whypdf-close"),
-        R = document.getElementById("whypdf");
+    var m = document.getElementById("paper-modal"), b = document.getElementById("vae-paper-open"), x = document.getElementById("paper-close"),
+        R = document.getElementById("paperpdf");
     if (!m || !b || !x || !R) return;
     var q = function (s) { return R.querySelector(s); };
     var stage = q(".pdf-stage"), cv = q(".pdf-canvas"), num = q(".pdf-num"), total = q(".pdf-total"), slide = q(".pdf-slide input"),
@@ -1989,7 +1989,7 @@
     function close() {
       if (m.hidden) return;
       m.hidden = true; document.body.style.overflow = "";
-      if (location.hash === "#why-own-studio-pdf") history.replaceState(null, "", location.pathname + location.search);
+      if (location.hash === "#vae-paper") history.replaceState(null, "", location.pathname + location.search);
       (back && back !== document.body && back.focus ? back : b).focus();
     }
     b.addEventListener("click", open);
@@ -2010,8 +2010,8 @@
       if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); go(page + 1); }
       else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); go(page - 1); }
     });
-    if (location.hash === "#why-own-studio-pdf") open();
-    window.addEventListener("hashchange", function () { if (location.hash === "#why-own-studio-pdf") open(); });
+    if (location.hash === "#vae-paper") open();
+    window.addEventListener("hashchange", function () { if (location.hash === "#vae-paper") open(); });
   })();
 </script>
 </body>

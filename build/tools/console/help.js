@@ -38,7 +38,8 @@
       "instruments, mood, tempo (e.g. 92 BPM). Both the score planner and the music read it; it goes in as the prompt's tag list, verbatim.\n" +
       "✓ Agreement with the score first (HERESY 1012, measured 30.09.2026): the same style with key, meter and tempo set to the score " +
       "sang clearer (0.74 against 0.60 on lyric recognition), most of all in the first minute. Tempo, meter and key live in the score.\n" +
-      "✓ Length: up to about 1,600 characters reads well; a long style that agreed with the score did as well as a 292-character one. " +
+      "✓ Length, counted without spaces (the number beside the label): up to 200 characters is the ideal; over 400 is not endorsed; " +
+      "800 is the ceiling: past it nothing sings until the style is shortened, and nothing is ever cut. " +
       "The 110 official examples run 4 to 999 characters, median 124.\n" +
       "⚠ Plain ASCII arrows (->) read cleanly; the Unicode arrow (→) is a rare token, write -> instead. " +
       "Dynamics marks (p, f, ff) and \"Label:\" fields are in none of the official styles; the counter under the box flags them.\n" +
@@ -84,7 +85,7 @@
     odeSolver: "How the sound stage walks from noise to audio (HERESY 1004). Measured on one song against a 160-step " +
       "reference, error at the same cost of 64 network calls: Midpoint 32 steps 3.8e-3 (the release), Multistep 64 steps " +
       "3.5e-3, Heun 32 steps 6.5e-3, Euler 64 steps 3.0e-2.\n" +
-      "Midpoint: two network calls a step, second order — the release, and a strong default.\n" +
+      "Midpoint: two network calls a step, second order — the original YuE2's; the Studio no longer offers it (the API keeps it for old requests and the tests), and Multistep is the default.\n" +
       "Multistep: one call a step, second order (Adams-Bashforth 2, the idea behind DPM++ 2M): the same accuracy per call, " +
       "and any step count, not only doubled ones.\n" +
       "Heun: two calls, second order; less accurate than Midpoint at 32–64 steps, catches up only at many steps.\n" +
@@ -125,6 +126,12 @@
       "Vocal melody only: just the sung line.\n" +
       "Melody and chords: melody plus chord symbols (use Full mode).",
     coverTake: "One of your own takes whose score becomes the melody of a new song; the style and lyrics can change completely.",
+    // HERESY 2805: the controls 2675 and 2677 left without a tip (the suite's «every form and engine setting has an (i) or a tip»)
+    setAskBusy: "Before a song joins the runs already on the engine, a window lists them: cancel it, add it to the queue, or stop the running one. Kept in this browser.",
+    backFile: "Your own instrumental to sing over (WAV, FLAC, MP3, M4A, AAC, OGG, Opus); it is never changed.",
+    backTake: "Or a take from the Library as the backing: the take itself or its instrumental stem.",
+    backPick: "Which part of that take is the backing: its instrumental stem when it has one, else the whole take.",
+    backSplit: "A guide vocal heard on the backing is split off before it is read (BS-Roformer); a faint trace of it may stay.",
     coverMelodyOnly: "Removes the chord symbols so the new style can build its own harmony (the run then uses Melody only). " +
       "Untick to keep the original chords and render in Full mode.",
     idea: "One line about the song you want (a story, a mood, a genre). The writer model drafts the title, style prompt and lyrics from it, " +
@@ -376,14 +383,17 @@
   }
 
   // HERESY 1009: what the style holds that YuE2 never saw under [Tags]. Measured on the
-  // 110 official example styles: 4 to 999 characters (half within 69..399), no arrows (ASCII -> accepted, 1012),
+  // 110 official example styles: 4 to 999 characters (half within 69..399; the length rule is 2799's, 2800), no arrows (ASCII -> accepted, 1012),
   // no dynamics marks, "Label:" fields in 5. The engine passes the style verbatim; past
   // what the model learned, a line of it can come out sung. The official skill also
   // keeps notes out of the lyrics: section tags and the sung words only.
   function styleWarnings(style, lyrics) {
     var w = [];
-    // HERESY 1012 (Viktor): 1,000–1,600 characters are fine, ASCII -> is fine; Unicode arrows are rare tokens.
-    if (style.length > 1600) w.push("longer than 1,600 characters (the official examples stop at 999)");
+    // HERESY 1012 (Viktor): ASCII -> is fine; Unicode arrows are rare tokens. HERESY 2800: the length by 2799's rule and its own count
+    // (app.js HeresyStyleCap, without spaces), so the meter and the number beside the label say one length: over 400 not endorsed, past 800 refused
+    var cap = root.HeresyStyleCap, n = cap ? cap.count(style) : 0;
+    if (cap && n > cap.CAP) w.push("longer than 800 characters without spaces: past the ceiling nothing sings until the style is shortened");
+    else if (cap && n > cap.WARN) w.push("longer than 400 characters without spaces (over 400 is not endorsed; half of the official examples are within 69–399)");
     var uni = (style.match(/[\u2192\u2190\u21d2\u27f6]/g) || []).length;
     if (uni) w.push(uni + " Unicode arrow" + (uni > 1 ? "s" : "") + " (\u2192): write -> instead");
     // p f ff mp \u2026 standing alone or chained by arrows and dashes: "p\u2192f\u2192ff", "mp\u2013f", "(ff)"
@@ -433,10 +443,11 @@
   }
   function paintMeter() {
     var style = document.getElementById("style"), lyrics = document.getElementById("lyrics"), out = document.getElementById("styleMeter");
-    if (!style || !out) return;
+    var cap = root.HeresyStyleCap;                       // HERESY 2800: its characters counted as 2799 counts them, without spaces (app.js)
+    if (!style || !out || !cap) return false;            // app.js not in yet: the next tick paints
     var s = estimateTokens(style.value), both = s + (lyrics ? estimateTokens(lyrics.value) : 0), budget = promptBudget();
     var warn = styleWarnings(style.value, lyrics ? lyrics.value : ""), full = budget <= 0;   // the knobs alone fill the window
-    out.textContent = tr("Characters: " + style.value.length.toLocaleString(loc()) + " \u00b7 tokens: \u2248" + s.toLocaleString(loc()) +
+    out.textContent = tr("Characters: " + cap.count(style.value).toLocaleString(loc()) + " \u00b7 tokens: \u2248" + s.toLocaleString(loc()) +
       " \u00b7 with the lyrics: \u2248" + both.toLocaleString(loc()) + " of " + Math.max(0, budget).toLocaleString(loc()));
     out.classList.toggle("is-warn", (both > budget * 0.75 && both <= budget) || warn.length > 0);
     out.classList.toggle("is-over", both > budget);
@@ -477,14 +488,15 @@
       if (now === last) return;
       last = now;
       if (!sized) growBox(style);
-      paintMeter();
+      if (paintMeter() === false) last = null;   // HERESY 2800: painted again once the count is there
     }
     // browsers without field-sizing: the idea box grows by hand too
     if (!sized && idea) idea.addEventListener("input", function () { growBox(idea); });
     style.addEventListener("input", tick);
     if (lyrics) lyrics.addEventListener("input", tick);
     window.addEventListener("ruach-lang", function () { last = null; tick(); });   // HERESY 1167: written again in it
-    setInterval(tick, 700);     // values set by the page itself (examples, reuse, the writer) fire no input event
+    // values set by the page itself (examples, reuse, the writer) fire no input event; HERESY 2728: looked for while the Musician is in front (2721)
+    if (window.HeresyIdle) window.HeresyIdle.every(700, tick, { room: "create" }); else setInterval(tick, 700);
     tick();
   }
 

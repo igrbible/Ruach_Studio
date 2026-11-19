@@ -70,7 +70,7 @@ The rooms open the bar in the order of the work: Musician, Narrator, Writer, Ref
 
 ![The server log, unfolded](guide/log-dock.png)
 
-## Musician
+## Musician <!-- #creator -->
 
 ### Compose: The Song Form
 
@@ -93,6 +93,32 @@ The ♪ beside the style opens a table of 200 instruments the Studio probed: the
 **Heard, but not as real as a live one.** Many instruments do play, yet less clearly and less true than the real thing: that is what YuE2 knows of them. The verdicts say whether YuE2 plays an instrument at all, not how real it sounds. Making it real is the work of an **instrument LoRA**: a few dozen clean recordings of it, trained in the LoRA Trainer.
 
 ![The instruments cheat-sheet](guide/instruments.png)
+
+### Negative Prompting, or How Not to Prompt
+
+**Name what you want, never what you do not.** YuE2 is a clean model: an instrument nobody asked for comes in seldom. The habit of the sound services, a long style piled with instruments, effects and production words and then «no this, no that», does not make a song cleaner; it chokes it. Negative prompts belong to the past of the DiT-era models, and the Studio neither offers nor teaches one: the Writer's instructions carry no «no …» advice, and the Instrumental switch puts *Instrumental,* in front of the style and adds nothing after it.
+
+**What the probe heard.** On 18.11.2026 the Studio sang 75 blind takes on three cards: a piano ballad (6 seeds), a fingerpicked guitar ballad (4 seeds) and a flamenco instrumental (5 seeds). Each seed was sung five times with the same music seed, sound seed and lyrics; only the end of the style changed: plain, then the unwanted instruments as `-x`, `no x`, `avoid x` and `without x` (guitar, drums and drones against the piano; drums, piano and synth pads against the guitar; vocals, singing, choir and spoken words against the flamenco). An ear rated 51 of them without knowing which tail was which:
+
+| Tail | Takes rated | Clean of the unwanted sound |
+|---|---|---|
+| plain style | 10 | 2 |
+| `-x` | 10 | 2 |
+| `no x` | 10 | 4 |
+| `avoid x` | 11 | 0 |
+| `without x` | 10 | 0 |
+
+**What it means.** The plain style already let in what we would forbid: the guitar ballad brought drums, synth pads or a piano on 2 of its 4 seeds, the flamenco instrumental a vocal or choral drone on all 5. No tail took the leak away: «no» came out clean on 4 takes against the plain style's 2, too few to call it a cure; «avoid» and «without» let the unwanted sound in on every seed of the two cards heard whole, so they may even call it. And the words cost the song: with a negative tail the singing is choked and the diction slurs, as if someone stepped on the singer's ear.
+
+**How to prompt instead.**
+
+- **Keep the style short**: 200 characters without spaces is the aim, 400 the most (past 800 the Studio refuses to sing). A short style sings clean; a long one blurs the composition.
+- **Choose the genre for its ensemble.** A genre's name brings the instruments usual in that genre: a rock ballad brings drums and an electric guitar, a chamber piece brings strings. When you do not want what a genre brings, choose a genre that does not bring it rather than forbid it.
+- **Name the lead first.** The instrument named first takes its place in front; the voice and two or three companions follow it.
+- **Let the lyrics carry the form.** The arrangement belongs to the lyrics' section tags ([Intro], [Verse], [Chorus], [Interlude], [Outro]), not to sentences in the style.
+- **Give the voice an ensemble.** A voice over one solo instrument comes out thinner than over an ensemble that carries it: the singing suffers on a lone instrument too.
+- **Change the seed, not the words.** An instrument comes in where the model's training says the song wants it, and the seed decides much of that: hear several seeds before you rewrite the style.
+- **Mute it afterwards.** An unwanted instrument that still comes out is caught in the Refiner's stems and muted in the DAW. Do not force the model at the render.
 
 ### The First Wave's Vocabulary
 
@@ -282,6 +308,15 @@ A chat model reads your style, lyrics and score, then drafts or revises them. **
 - **Where the draft goes** (2471): into the document open in the notebook, unless it is the Musician's song in hand, else into the Musician's song; the line above the button says which, and one click turns it the other way. Apply writes into the document and keeps the version before among its versions.
 - **Send the request to LLM** (Ctrl+Enter). With the Studio's own writer the room first counts the question and says what is left for the answer (it reads 32 768 tokens); **Stop** or Esc cuts the answer off, and nothing changes in your song.
 - The draft: **Apply draft**, **Use lyrics** or **Use style**; *Undo* takes it back. A field the model left as it was is dashed and marked unchanged; an all-empty draft is said over the page, never shown as ready. When the draft changes your lyrics, it says how many lines and shows them, old above new, and Apply asks first: with the lyrics, without them, or not at all. A draft asked for the style only never touches the lyrics, and the structure goes only with the tasks that write lyrics.
+
+### SOUL: What the Model Reads
+
+Each of the Writer's two worlds, the Musician's and the Narrator's, has its **SOUL**: your standing word to the chat model, read in every draft right after that world's built-in instructions. It is the field **Your writing preferences** under the brief: with a reading open in the notebook it holds the Narrator's SOUL, otherwise the Musician's.
+
+- **Where it lives**: in the Studio, not in the browser, in the Writer's folder: `writer/soul-creator.md` (the Musician) and `writer/soul-reader.md` (the Narrator). Preferences an older Studio kept in the browser move into the Musician's SOUL by themselves, once, while it is empty (2842).
+- **What it can do**: it stands over the built-in instructions; where the two disagree, the model follows the SOUL. Save the length limits: a song's style stays within 200 characters without spaces and never past 400, a reading's voice within 160 with its spaces, whatever the SOUL asks.
+- **Versions**: every save keeps the text before it as a version (the newest 30 per world). **Export all** and **Import** carry both SOULs with the notebook; an imported SOUL fills only an empty one, and one that differs from yours is kept beside it as a version, never written over it.
+- **Do not edit the SOUL files by hand.** Write in the field: the Studio keeps versions only of what passes through it. A SOUL broken by hand (half a sentence, a pasted log, a rule against the form of the answer) is read whole in every draft and quietly spoils each one, with no error to show it. *Read the complete songwriting instructions* under the field shows exactly what the model reads.
 
 ## Refiner
 
@@ -686,7 +721,7 @@ A LoRA is a small adapter over both halves. **The style comes mostly from the so
 
 ### A Voice of Your Own: Questions from the Field
 
-Answers given on GitHub (issue #2) to someone after a lead vocal alone, kept here.
+Answers given on GitHub ([issue #2](https://github.com/igrbible/Ruach_Studio/issues/2)) to Steven Altsman (manchuwook), who was after a lead vocal alone, kept here.
 
 - **A take with the voice alone.** YuE2 learned to sing from whole songs, and its phrasing leans on the music under it: «a cappella» in the style makes it reach for harmonies or for the band. Ask for one quiet thing under the voice instead (a soft pad, a single acoustic guitar) with `solo lead, single voice, no harmonies, no backing vocals, dry vocal, close mic`, then split the take in the Refiner (eight stems): *Whole lead* brings back what the split put among the backing voices, *Voice upscale* redraws the air the separator dulled. The less there is under the voice, the cleaner the stem.
 - **A voice adapter from your own recordings.** Dry lead vocals of one singer with their lyrics, at 44.1 or 48 kHz from lossless sources. The same light room on every clip harms less than rooms that differ, and a clip with heavy reverb is better left out than half cleaned: what a de-reverb leaves behind is learned as part of the voice.
@@ -865,7 +900,7 @@ The Engine opens over the room you are in (☰ › Engine, or Ctrl+Alt+9), its c
 
 On a machine with several cards, give each its work: the **studio** (synthesis) on one card, **training** on the cards you give it, the lab's **jobs** (the listener, Whisper, stems, remaster, upscale) on theirs. While a run trains on the Studio's own card, a synthesis waits, and the page says why. With one card, that is how it works: train, then create. A new card for the Studio takes effect after a restart (the button appears when it is needed). The lab's jobs keep to the cards ticked for them, the Artist among them: when those are full, a job waits for one of them (Whisper turns to the processor) and never takes a card not ticked for the lab. An Artist run goes to the card where its painter is kept from the run before, the weights already in RAM.
 
-**Intel Arc (beta).** The Studio's synthesis also runs on an Intel Arc card, with its engine built by `./build.sh --sycl` (INSTALL.md, «Intel Arc (beta)»): songs, adapters, Full, Extend. The cards listed here are NVIDIA's; the Arc engine computes on its own card, while training and the covers stay on NVIDIA's. An Intel card is listed in Engine → GPUs too: choose it in the studio column and the Studio runs its SYCL engine there after a restart (and back on a CUDA card the same way), with a VRAM limit as any card; training and the lab's jobs are PyTorch on CUDA, so its other two columns say why they stay empty.
+**Intel Arc (beta).** The Studio's synthesis also runs on an Intel Arc card, with its engine built by `./build.sh --sycl` (INSTALL.md, «Intel Arc (beta)»): songs, adapters, Full, Extend. The cards listed here are NVIDIA's; the Arc engine computes on its own card, while training and the covers stay on NVIDIA's. An Intel card is listed in Engine → GPUs too: choose it in the studio column and the Studio runs its SYCL engine there after a restart (and back on a CUDA card the same way), with a VRAM limit as any card; training and the lab's jobs are PyTorch on CUDA, so its other two columns say why they stay empty. The page names it as it names every processor (2733): an Intel Arc is XPU (XPU0 · Arc Pro B50), an NVIDIA card GPU (GPU0 · RTX 3090), an AMD Radeon GPU · Radeon and its model, and the backend goes by its own name (CUDA, SYCL, Vulkan).
 
 **One look for many asks** (2060): Engine → GPUs, the check before a synthesis and the LoRA Trainer each ask the lab about the cards, often at once as the page opens; the lab looks at them once (nvidia-smi, the guard, the Intel cards) and answers every ask of the next 2 s from that look: the cards are looked at once for all the asks, not once per ask, so none times out.
 

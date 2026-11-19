@@ -5,25 +5,25 @@
 // peaks stopping 5 px under the wave; 25 Hz on the left to 20 kHz on the right on a log axis, rising only upward from the foot, in the player's own
 // accent, faint, so it reads as air and not as a meter. The buttons stay over it and take every click (it lies under them and takes no pointer).
 //
-// Fed by the player's own sound without touching what is heard: Chrome's captureStream() of the <audio> into an analysing context of its own that
-// plays to no device (the element still plays to the speakers exactly as before). Where the browser has no captureStream (Firefox, Safari), the
-// analyser hangs off the volume boost's one MediaElementSource (app.js, HERESY 1700), beside its gain, once app.js has made that graph; never made
-// here: an element has one MediaElementSource for life, and a graph made for a picture would move the sound itself through Web Audio.
+// HERESY 2849 (18.11.2026: with this switch off Viktor heard not one click in four takes, on it dull clicks in a take's first quarter): it no longer
+// listens to the sound at all. 2354 to 2357 fed it Chrome's captureStream() of the <audio> into an AudioContext of its own, and that tap alone
+// disturbed Chrome's playback of the element. Now it reads the TAKE ITSELF at the element's currentTime: the lab's spectrogram that the wave's
+// scope already fetches (heresy-spectrum.js, /lab/spectrum, one fetch and one cache for both), or, with no lab, the same spectrogram computed in a
+// worker from the bytes the page already holds (the whole take kept in the page, decoded once; a streamed take «at once» waits for the lab alone:
+// nothing is fetched beside the element's own stream). No captureStream, no MediaElementSource, no MediaStreamSource, no context near the element:
+// what is heard is the element alone. Pause, seek and rate follow, as currentTime does. The level reads as the analyser read it: the last 0.17 s
+// of the take (the old analyser's 8192 samples) averaged and 9 dB under the lab's scaling (measured 18.11 on three takes, old and new side by side:
+// the frame's highest point 0.82/0.77/0.81 against 0.81/0.76/0.81 in the median, the top third 0.58/0.33/0.36 against 0.59/0.35/0.37).
 //
 // One requestAnimationFrame loop, only while a take plays, the page is in sight and the switch is on (Engine → Defaults, «Live spectrum behind the
 // player», on by default); paused or stopped, the curve breathes out in about a second and the loop ends. Reduced motion: nothing is drawn.
 // Right to left (Hebrew): the lows stay on the left; a spectrum is a scale of frequency, not a line of text (heresy-rtl.js keeps the player ltr).
 //
 // HERESY 2357 (Viktor 11.11.2026: «Та живая волна спектральная, которую добавили ночью, а увидел её всего лишь на одном треке. После выхода из
-// сравнителя её также нет в плеере. И можно расширить её по бокам на 100 пикселов с каждой стороны.»): why it died after the first take, measured
-// headless (Chrome 148): the element's captureStream() stream does not end the track of a source gone by; at each new source's loadedmetadata it
-// adds a new track and keeps the old one «live» and silent beside it (after three takes: three live tracks, two of them mute). The first version
-// took the first live track, so from the second take on it listened to the first take's dead track, and the compare window's hand-back (a new
-// source too) the same. Now the newest live track is the sound (the stream's addtrack moves to it), the ones gone by are removed and stopped, and
-// where none is live with the element's metadata in (an older Chrome ends them all at the element's end) the element is captured anew. It follows
-// whatever the player plays: the footer's <audio> looked up again at each event (a new element is followed as well), and the compare window's
-// version while that window has the player's sound (app.js's one-sound says which element starts: the «ruach-sound» event), given back when the
-// footer plays again. It reaches 100 px further into each side group, under them (no pointer, under their buttons), faded at its new ends.
+// сравнителя её также нет в плеере. И можно расширить её по бокам на 100 пикселов с каждой стороны.»): it follows whatever the player plays: the
+// footer's <audio> looked up again at each event, and the compare window's version while that window has the player's sound (app.js's one-sound
+// says which element starts: the «ruach-sound» event), given back when the footer plays again. It reaches 100 px further into each side group,
+// under them (no pointer, under their buttons), faded at its new ends.
 (function () {
   "use strict";
 
@@ -34,22 +34,28 @@
   var STEP = 3;                       // px between the curve's points
   // the level at the foot and at full height, after the tilt (measured on the takes of 01.11 as this file computes them: the highest point of a
   // frame at 0.76–0.81 of the height in the median, 0.87–0.91 at the 95th percentile, never clipped; the 6–20 kHz third at 0.26–0.43)
-  var DB_LO = -98, DB_HI = -30;
+  var DB_LO = -98, DB_HI = -30, DB_FLOOR = -110;
   var TILT = 4.5;                     // dB an octave about 1 kHz, as the mixing analysers show it: music falls about so, untilted the highs lie on the floor
   var RISE = 0.05, FALL = 0.32;       // s: up quickly, down slowly, so it breathes and never flickers
+  var WIN = 0.17;                     // HERESY 2849: s of the take each picture reads, back from the playhead (the old analyser's 8192 samples)
+  var OFFSET = -9;                    // HERESY 2849: dB from the lab's scaling (|X|/sum(Hann 2048)) to the old analyser's (Blackman 8192, |X|/N)
+  var KEEP = 4;                       // HERESY 2849: spectrograms made here kept (about 9 MB for 7 minutes each)
   var KEY = "yue2.liveSpectrum";      // Engine → Defaults: "off" turns it off, nothing kept means on
   var ALPHA = { dark: [0.30, 0.05, 0.46], light: [0.20, 0.035, 0.34] };   // the fill at the top and at the foot, the edge's line
 
   var bar = null, cv = null, cx = null;
-  // HERESY 2357: el the element heard now; caps the elements captured ({el, stream}: the footer's for as long as it is the footer, a compare
-  // version's while it is followed); other the compare window's version that has the player's sound
-  var S = { run: false, raf: 0, falling: false, last: 0, mode: "", ctx: null, el: null, ms: null, track: null, an: null, gsrc: null, capFail: false,
-            bins: null, P: null, live: null, tgt: null, geo: null, dirty: true, measured: 0, rgb: null, dark: false, grad: null, line: "",
-            peak: 0, frames: 0, work: 0, since: 0, retaps: 0, retired: 0 };
-  var caps = [], other = null, known = typeof WeakSet === "function" ? new WeakSet() : null;
-  var MEDIA = ["play", "playing", "pause", "ended", "emptied"];
+  var S = { run: false, raf: 0, falling: false, last: 0, el: null, gdb: 0, mag: null, at: -1,
+            P: null, live: null, tgt: null, geo: null, dirty: true, measured: 0, rgb: null, dark: false, grad: null, line: "",
+            peak: 0, frames: 0, work: 0, since: 0 };
+  // HERESY 2849: the spectrogram of the take heard: D.key its address, D.data when in hand ({sr, hop, frames, bins, db: Float32Array dB, or
+  // q: Uint8Array 0.5 dB steps from -120}), D.where whence ("lab", "page"), D.why when there is none
+  var D = { key: "", token: 0, data: null, where: "", why: "", retry: 0 };
+  var made = [];                      // HERESY 2849: the ones made here, {key, data}, the newest first
+  var other = null, known = typeof WeakSet === "function" ? new WeakSet() : null;
+  var MEDIA = ["play", "playing", "pause", "ended", "emptied", "seeked"];
   var reduce = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
-  function noop() {}
+  var LUT = new Float32Array(256);    // a 0.5 dB step's magnitude
+  for (var li = 0; li < 256; li++) LUT[li] = Math.pow(10, (-120 + li * 0.5) / 20);
 
   function recall(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function enabled() { return recall(KEY) !== "off" && !(reduce && reduce.matches); }
@@ -57,84 +63,126 @@
   function sounding(a) { return !!a && !!(a.currentSrc || a.getAttribute("src")) && !a.paused && !a.ended; }
   function heard() { var f = footer(); return sounding(f) ? f : sounding(other) ? other : null; }   // the footer's own first, else the compare's that has its sound
   function wanted() { return !!cv && enabled() && !document.hidden && !!heard(); }
-  function sameOrigin(el) { try { return !el.currentSrc || new URL(el.currentSrc, location.href).origin === location.origin; } catch (e) { return false; } }
 
-  // ------------------------------------------------------------ the sound, as it plays
-  function analyser(ctx) {
-    var an = ctx.createAnalyser();
-    an.fftSize = 8192;                  // about 5.9 Hz a bin at 48 kHz: the lows at 25 Hz still have bins of their own
-    an.smoothingTimeConstant = 0.5;
-    an.minDecibels = -110; an.maxDecibels = -10;
-    return an;
+  // ------------------------------------------------------------ the take's own spectrum (HERESY 2849)
+  // which take an element plays: the footer's from app.js (its name for the lab, the whole take when the page holds it, whether it streams);
+  // a compare version's from what heresy-derived.js wrote on it
+  function takeOf(el) {
+    if (!el) return null;
+    if (el === footer()) return typeof window.ruachSpecTake === "function" ? window.ruachSpecTake() : null;
+    var url = el.dataset.specUrl || el.getAttribute("src") || "";
+    if (!url) return null;
+    return { name: el.dataset.take || "", url: url, whole: /^blob:/.test(url) ? url : "", streamed: false };
   }
-  // HERESY 2357: one capture an element, its newest live track the sound. Chrome keeps a source's track live and silent in the stream after the
-  // element moves on to another source and adds the new source's track after it (measured 11.11: three takes, three live tracks), so the first
-  // live one is the first take's for ever; the newest is what plays, and the others are taken out of the stream and stopped
-  function newest(c) { var ts = c.stream.getAudioTracks(); for (var i = ts.length - 1; i >= 0; i--) if (ts[i].readyState === "live") return ts[i]; return null; }
-  function retire(c, keep) {
-    c.stream.getAudioTracks().forEach(function (t) { if (t === keep) return; try { c.stream.removeTrack(t); t.stop(); S.retired++; } catch (e) { /* ended already */ } });
+  function keep(key, data) {
+    made = made.filter(function (m) { return m.key !== key; });
+    made.unshift({ key: key, data: data });
+    if (made.length > KEEP) made.length = KEEP;
   }
-  function detach() {                  // the analyser's input let go; the captures and the boost's graph stay as they are
-    if (S.ms) { try { S.ms.disconnect(); } catch (e) { /* gone with its track */ } S.ms = null; }
-    if (S.gsrc && S.an) { try { S.gsrc.disconnect(S.an); } catch (e) { /* gone */ } }   // only the branch to the analyser: src.disconnect() whole would cut the sound
-    S.gsrc = null; S.track = null; S.mode = "";
+  // in a worker: the take's samples in, the spectrogram out as the lab makes it (lab/spectrum_job.py: periodic Hann 2048, hop 2048, half a window
+  // of zeros at both ends, |X|/sum(window), 0.5 dB steps from -120 dB), so both sources read alike
+  function work() {
+    var N = 2048, HOP = 2048, BINS = N / 2 + 1, LOG2N = 11;
+    self.onmessage = function (e) {
+      var x = e.data.x, n = x.length, i, b, f, k;
+      var w = new Float64Array(N), ws = 0, rev = new Uint32Array(N), cs = new Float64Array(N / 2), sn = new Float64Array(N / 2);
+      for (i = 0; i < N; i++) { w[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N); ws += w[i]; }
+      for (i = 0; i < N; i++) { var r = 0, v = i; for (b = 0; b < LOG2N; b++) { r = (r << 1) | (v & 1); v >>= 1; } rev[i] = r; }
+      for (i = 0; i < N / 2; i++) { cs[i] = Math.cos(2 * Math.PI * i / N); sn[i] = -Math.sin(2 * Math.PI * i / N); }
+      var frames = Math.floor(n / HOP) + 1, q = new Uint8Array(frames * BINS), re = new Float64Array(N), im = new Float64Array(N);
+      for (f = 0; f < frames; f++) {
+        var at = f * HOP - N / 2;
+        for (i = 0; i < N; i++) { var j = at + i; re[rev[i]] = (j >= 0 && j < n ? x[j] : 0) * w[i]; im[rev[i]] = 0; }
+        for (var size = 2; size <= N; size <<= 1) {
+          var h = size >> 1, st = N / size;
+          for (var s0 = 0; s0 < N; s0 += size) for (var m = 0; m < h; m++) {
+            var tc = cs[m * st], ts = sn[m * st], p = s0 + m, o = p + h, tr = re[o] * tc - im[o] * ts, ti = re[o] * ts + im[o] * tc;
+            re[o] = re[p] - tr; im[o] = im[p] - ti; re[p] += tr; im[p] += ti;
+          }
+        }
+        for (k = 0; k < BINS; k++) {
+          var q2 = Math.round((20 * Math.log10(Math.sqrt(re[k] * re[k] + im[k] * im[k]) / ws + 1e-10) + 120) * 2);
+          q[f * BINS + k] = q2 < 0 ? 0 : q2 > 255 ? 255 : q2;
+        }
+      }
+      self.postMessage({ q: q, frames: frames, bins: BINS, hop: HOP, sr: e.data.sr }, [q.buffer]);
+    };
   }
-  function drop(c) {                   // a capture let go: its tracks stopped (the element plays on as before)
-    var i = caps.indexOf(c);
-    if (i >= 0) caps.splice(i, 1);
-    if (S.el === c.el) { if (S.mode === "capture") detach(); S.el = null; }
-    c.stream.getTracks().forEach(function (t) { try { t.stop(); } catch (e) { /* ended */ } });
-  }
-  function capOf(el) {
-    for (var i = 0; i < caps.length; i++) if (caps[i].el === el) return caps[i];
-    var c = { el: el, stream: null };
-    try { c.stream = el.captureStream(); } catch (e) { return null; }   // not this element now (a source of another origin), another may still be
-    c.stream.addEventListener("addtrack", function () {   // a new source's track: the sound moves to it
-      setTimeout(function () { if (caps.indexOf(c) >= 0 && heard() === el) { if (S.run) tap(el); else start(); } }, 0);
+  // the bytes the page holds, decoded once (decodeAudioData of an offline context: a decoder, joined to nothing), measured in the worker
+  function inPage(url) {
+    var rate = 48000;
+    return fetch(url).then(function (r) { if (!r.ok) throw new Error("the page's copy answered " + r.status); return r.arrayBuffer(); }).then(function (buf) {
+      var OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      if (!OAC) throw new Error("no decoder");
+      return new OAC(1, 2, rate).decodeAudioData(buf);
+    }).then(function (au) {
+      var n = au.length, ch = au.numberOfChannels, x = new Float32Array(n);
+      for (var c = 0; c < ch; c++) { var d = au.getChannelData(c); for (var i = 0; i < n; i++) x[i] += d[i] / ch; }
+      return new Promise(function (resolve, reject) {
+        var wk;
+        try { wk = new Worker("data:text/javascript;charset=utf-8," + encodeURIComponent("(" + work.toString() + ")();")); } catch (e) { reject(e); return; }
+        wk.onmessage = function (e) { wk.terminate(); resolve(e.data); };
+        wk.onerror = function (e) { wk.terminate(); reject(new Error(e && e.message || "the worker failed")); };
+        wk.postMessage({ x: x, sr: au.sampleRate }, [x.buffer]);
+      });
     });
-    caps.push(c);
-    return c;
   }
-  function tapCapture(el) {
-    if (S.capFail || typeof el.captureStream !== "function" || !sameOrigin(el)) return false;
-    var AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return false;
-    if (!S.ctx) {
-      // to no device at all where the browser can (Chrome 110+), else to the default one, though nothing is ever connected to its destination
-      try { try { S.ctx = new AC({ latencyHint: "playback", sinkId: { type: "none" } }); } catch (e) { S.ctx = new AC({ latencyHint: "playback" }); } } catch (e) { return false; }
+  function resolve(el) {
+    var s = takeOf(el);
+    if (!s || !s.url) { if (D.key) { D.key = ""; D.data = null; D.where = ""; } D.why = s ? "no address" : "no take"; return; }
+    if (D.key === s.url && (D.data || D.why === "coming" || performance.now() < D.retry)) return;
+    var token = ++D.token;
+    D.key = s.url; D.data = null; D.where = ""; D.why = "coming"; D.retry = 0;
+    for (var i = 0; i < made.length; i++) if (made[i].key === s.url) { D.data = made[i].data; D.where = "page"; D.why = ""; return; }
+    var got = function (data, where) {
+      if (token !== D.token) return;
+      D.data = data; D.where = where; D.why = "";
+      S.dirty = true;
+      if (heard() && !S.run) start();
+    };
+    var none = function (why, later) { if (token === D.token) { D.why = why; D.retry = performance.now() + (later ? 2000 : 1e9); } };
+    var here = function (why) {
+      if (s.whole) return inPage(s.whole).then(function (d) {
+        var data = { sr: d.sr, hop: d.hop, frames: d.frames, bins: d.bins, q: d.q, db: null };
+        keep(s.url, data); got(data, "page");
+      }, function (e) { none("not measured here: " + (e && e.message || e), false); });
+      // a take streamed «at once» (2837): nothing is fetched beside the element's own stream; a whole take not in the page yet: asked again soon
+      none(why + (s.streamed ? "; streamed, nothing fetched beside it" : "; the whole take not in the page yet"), !s.streamed);
+    };
+    var H = window.HeresySpectrum;
+    if (s.name && H && typeof H.labData === "function") {
+      H.labData({ name: s.name, url: s.url }).then(function (d) {
+        got({ sr: d.sr || 48000, hop: d.spec.hop, frames: d.spec.frames, bins: d.spec.bins, db: d.spec.db, q: null }, "lab");
+      }, function (e) { if (token === D.token) here("no lab spectrum (" + (e && e.message || e) + ")"); });
+    } else here("no lab name");
+  }
+  // the take's magnitudes over the last WIN seconds before t, each frame weighted by how much of the window it covers (a frame spans half a hop
+  // each side of its centre), into S.mag up to the plan's highest bin
+  function read(t) {
+    var d = D.data, P = S.P;
+    if (!d || !P) return false;
+    var fh = d.hop / d.sr, a = t - WIN, k0 = Math.max(0, Math.floor(a / fh + 0.5)), k1 = Math.min(d.frames - 1, Math.floor(t / fh + 0.5));
+    if (k1 < k0) return false;
+    var top = Math.min(d.bins - 1, P.top), mag = S.mag, k, f, wsum = 0;
+    if (!mag || mag.length < d.bins) mag = S.mag = new Float32Array(d.bins);
+    for (k = 0; k <= top; k++) mag[k] = 0;
+    for (f = k0; f <= k1; f++) {
+      var w = Math.min(t, (f + 0.5) * fh) - Math.max(a, (f - 0.5) * fh);
+      if (!(w > 0)) continue;
+      wsum += w;
+      var o = f * d.bins;
+      if (d.q) { for (k = 0; k <= top; k++) mag[k] += w * LUT[d.q[o + k]]; }
+      else { for (k = 0; k <= top; k++) mag[k] += w * Math.pow(10, d.db[o + k] / 20); }
     }
-    var c = capOf(el), t = c ? newest(c) : null;
-    if (c && !t && el.readyState >= 1) { drop(c); c = capOf(el); t = c ? newest(c) : null; }   // none live with its metadata in (ended by its end): caught anew
-    if (!t) return S.mode === "capture" && S.el === el;      // the source's track not there yet: its addtrack brings it
-    if (!(S.mode === "capture" && S.track === t)) {
-      var ms;
-      try { ms = S.ctx.createMediaStreamSource(new MediaStream([t])); } catch (e) { return false; }
-      detach();
-      if (!S.an || S.an.context !== S.ctx) { S.an = analyser(S.ctx); S.bins = null; }
-      ms.connect(S.an);
-      S.ms = ms; S.track = t; S.mode = "capture"; S.retaps++;
-    }
-    S.el = el;
-    retire(c, t);
-    caps.slice().forEach(function (x) { if (x.el !== el && x.el !== footer()) drop(x); });   // a compare version no longer heard, a footer replaced
+    if (!(wsum > 0)) return false;
+    for (k = 0; k <= top; k++) mag[k] /= wsum;
+    S.at = k1;
     return true;
   }
-  function tapGraph() {                // the footer's only: the boost's graph is made for its element alone
-    var g = typeof window.ruachPlayerGraph === "function" ? window.ruachPlayerGraph() : null;
-    if (!g || !g.ctx || !g.src) return false;
-    if (S.mode === "graph" && S.gsrc === g.src) { S.el = footer(); return true; }
-    detach();
-    if (!S.an || S.an.context !== g.ctx) { S.an = analyser(g.ctx); S.bins = null; }
-    try { g.src.connect(S.an); } catch (e) { return false; }   // a branch beside the gain that leads nowhere: what is heard stays the same
-    S.gsrc = g.src; S.mode = "graph"; S.el = footer();
-    return true;
-  }
-  function tap(el) { return tapCapture(el) || (el === footer() && tapGraph()); }
-  function untap() {
-    detach();
-    caps.slice().forEach(drop);
-    S.an = null; S.bins = null; S.el = null;
-    if (S.ctx && S.ctx.state === "running") S.ctx.suspend().catch(noop);
+  function gainDb(el) {               // a lifted take (2835) plays a copy raised by its gain: the picture rises with it
+    var c = null;
+    try { c = window.RuachStudioAudio && el ? window.RuachStudioAudio.of(el.getAttribute("src") || "") : null; } catch (e) { c = null; }
+    return c && c.g > 0 ? 20 * Math.log10(c.g) : 0;
   }
 
   // ------------------------------------------------------------ where: the empty room around the transport
@@ -170,11 +218,11 @@
   }
   function plan(w, rate, nb, key) {     // each point's frequency and the bins it reads: a band of bins where it has some, else between two
     var n = Math.max(2, Math.round(w / STEP) + 1), hz = rate / (2 * nb), span = Math.log(F_HI / F_LO), half = Math.exp(span / (n - 1) / 2);
-    var P = { key: key, n: n, dx: w / (n - 1), a: new Int32Array(n), b: new Int32Array(n), f: new Float32Array(n), t: new Float32Array(n) };
+    var P = { key: key, n: n, dx: w / (n - 1), a: new Int32Array(n), b: new Int32Array(n), f: new Float32Array(n), t: new Float32Array(n), top: 1 };
     for (var i = 0; i < n; i++) {
-      var f = F_LO * Math.exp(span * i / (n - 1)), ka = Math.ceil(f / half / hz), kb = Math.min(nb - 1, Math.floor(f * half / hz));
-      if (kb >= ka) { P.a[i] = ka; P.b[i] = kb; }
-      else { var kf = f / hz; P.a[i] = Math.min(nb - 2, Math.floor(kf)); P.b[i] = -1; P.f[i] = kf - Math.floor(kf); }
+      var f = F_LO * Math.exp(span * i / (n - 1)), ka = Math.ceil(f / half / hz), kb = Math.min(nb, Math.floor(f * half / hz));
+      if (kb >= ka) { P.a[i] = ka; P.b[i] = kb; P.top = Math.max(P.top, kb); }
+      else { var kf = f / hz; P.a[i] = Math.min(nb - 1, Math.floor(kf)); P.b[i] = -1; P.f[i] = kf - Math.floor(kf); P.top = Math.max(P.top, P.a[i] + 1); }
       P.t[i] = TILT * Math.log(f / 1000) / Math.LN2;
     }
     S.P = P;
@@ -207,9 +255,13 @@
       cx.setTransform(cv.width / g.w, 0, 0, cv.height / g.h, 0, 0);
       S.grad = null;
     }
-    var rate = S.an ? S.an.context.sampleRate : 48000, nb = S.an ? S.an.frequencyBinCount : 4096, pk = g.w + "|" + rate + "|" + nb;
-    if (!S.P || S.P.key !== pk) plan(g.w, rate, nb, pk);
+    replan();
     return true;
+  }
+  function replan() {                   // the points read the bins of the spectrogram in hand (HERESY 2849: its rate and its bins, 1025 for both sources)
+    if (!S.geo) return;
+    var d = D.data, rate = d ? d.sr : 48000, nb = d ? d.bins - 1 : 1024, pk = S.geo.w + "|" + rate + "|" + nb;
+    if (!S.P || S.P.key !== pk) plan(S.geo.w, rate, nb, pk);
   }
 
   // ------------------------------------------------------------ the loop
@@ -223,6 +275,28 @@
     }
     cx.lineTo(x0, y0);
   }
+  // HERESY 2856 (Viktor 19.11.2026: «В самый подвал полупрозрачно очерти семь зон… рисочки с их меточками, чтобы они не сливались с плеером, но
+  // были видны как разделители диапазонов… сверх верха… вынеси вправо»): sub to 60 Hz, low to 250, low-mid to 500, mid to 2 kHz, high-mid to 4 kHz,
+  // highs to 20 kHz on the curve's own log axis (nothing of the curve moves); every other zone a faint floor band, a tick and its number at each
+  // border; above 20 kHz only said at the right, inside the edge's fade, since it almost never shows
+  var ZONE_EDGES = [60, 250, 500, 2000, 4000], ZONE_SAID = { 60: "60", 250: "250", 500: "500", 2000: "2k", 4000: "4k" };
+  function zones(g) {
+    var span = Math.log(F_HI / F_LO), X = function (f) { return g.w * Math.log(f / F_LO) / span; }, all = [F_LO].concat(ZONE_EDGES, [F_HI]);
+    cx.save();
+    cx.fillStyle = S.line; cx.strokeStyle = S.line; cx.lineWidth = 1;
+    cx.globalAlpha = 0.07;
+    for (var i = 1; i < all.length - 1; i += 2) cx.fillRect(X(all[i]), g.h - 5, X(all[i + 1]) - X(all[i]), 5);
+    cx.globalAlpha = 0.38;
+    cx.font = "9px " + (getComputedStyle(bar).fontFamily || "sans-serif"); cx.textBaseline = "bottom";
+    cx.textAlign = "left";
+    ZONE_EDGES.forEach(function (f) {
+      var x = Math.round(X(f)) + 0.5;
+      cx.beginPath(); cx.moveTo(x, g.h); cx.lineTo(x, g.h - 7); cx.stroke();
+      cx.fillText(ZONE_SAID[f], x + 2, g.h - 1);
+    });
+    cx.textAlign = "right"; cx.fillText("20k \u203a", g.w - 50, g.h - 1);
+    cx.restore();
+  }
   function draw() {
     var g = S.geo;
     cx.clearRect(0, 0, g.w, g.h);
@@ -231,6 +305,7 @@
     cx.fillStyle = S.grad; cx.fill();
     cx.beginPath(); trace(false);
     cx.lineWidth = 1; cx.lineJoin = "round"; cx.strokeStyle = S.line; cx.stroke();
+    zones(g);
   }
   function frame(now) {
     S.raf = 0;
@@ -241,21 +316,23 @@
     S.last = now;
     if (dt > 0.1) dt = 0.1;
     var t0 = performance.now();
+    var el = heard();
+    if (el && el !== S.el) { S.el = el; S.dirty = true; }
     if (S.dirty || now - S.measured > 1000) {   // the room measured again once a second, or when a box it hangs on changed
       S.measured = now; S.dirty = false;
       if (!enabled() || !place()) { halt(); return; }
+      if (S.el) { resolve(S.el); replan(); S.gdb = gainDb(S.el); }
     }
     if (!S.rgb) tone();
     if (!S.grad) paintGrad();
     var P = S.P, n = P.n, live = S.live, tgt = S.tgt, i, k, v, peak = 0;
-    if (!S.falling && S.an) {
-      if (!S.bins || S.bins.length !== S.an.frequencyBinCount) S.bins = new Uint8Array(S.an.frequencyBinCount);
-      S.an.getByteFrequencyData(S.bins);
-      var b = S.bins, lo = S.an.minDecibels, step = (S.an.maxDecibels - lo) / 255, nb = b.length - 1, x;
+    if (!S.falling && el && read(el.currentTime || 0)) {
+      var m = S.mag, add = OFFSET + S.gdb, x;
       for (i = 0; i < n; i++) {
-        if (P.b[i] < 0) { k = P.a[i]; v = k >= nb ? b[nb] : b[k] + (b[k + 1] - b[k]) * P.f[i]; }
-        else { v = 0; for (k = P.a[i]; k <= P.b[i]; k++) if (b[k] > v) v = b[k]; }
-        x = v > 0 ? (lo + v * step + P.t[i] - DB_LO) / (DB_HI - DB_LO) : 0;
+        if (P.b[i] < 0) { k = P.a[i]; v = m[k] + (m[k + 1] - m[k]) * P.f[i]; }
+        else { v = 0; for (k = P.a[i]; k <= P.b[i]; k++) if (m[k] > v) v = m[k]; }
+        v = v > 0 ? 20 * Math.log10(v) + add : -999;
+        x = v > DB_FLOOR ? (v + P.t[i] - DB_LO) / (DB_HI - DB_LO) : 0;
         tgt[i] = x < 0 ? 0 : x > 1 ? 1 : x;
       }
     } else tgt.fill(0);
@@ -274,8 +351,10 @@
     if (S.falling && peak < 0.004) halt();
   }
   function start() {
-    if (!wanted() || !tap(heard())) return;
-    if (S.mode === "capture" && S.ctx && S.ctx.state !== "running") S.ctx.resume().catch(noop);
+    if (!wanted()) return;
+    var el = heard();
+    if (el !== S.el) { S.el = el; S.dirty = true; }
+    resolve(el);
     S.falling = false;
     if (!S.run) { S.run = true; S.last = 0; S.dirty = true; S.raf = requestAnimationFrame(frame); }
   }
@@ -286,11 +365,10 @@
     S.raf = 0;
     if (S.live) S.live.fill(0);
     if (cx) { cx.save(); cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, cv.width, cv.height); cx.restore(); }
-    if (S.mode === "capture" && S.ctx && S.ctx.state === "running") S.ctx.suspend().catch(noop);   // its thread rests with the picture
   }
   function sync() {
     if (enabled()) { start(); return; }
-    halt(); untap();
+    halt();
   }
 
   // ------------------------------------------------------------ set up
@@ -306,8 +384,9 @@
       if (!known || !known.has(el)) return;                 // the page's other players (a stem, a preview) are theirs, not the player's
       if (e.type === "play" || e.type === "playing") other = el;
       else if (el !== other) return;
-      else if (e.type === "emptied") { other = null; caps.slice().forEach(function (c) { if (c.el === el) drop(c); }); }   // the window closed: its capture let go
+      else if (e.type === "emptied") other = null;          // the window closed
     }
+    if (e.type === "emptied" || e.type === "play") S.dirty = true;   // HERESY 2849: a new source may be a new take: its spectrum looked up again
     if (heard()) start(); else breatheOut();
   }
   function adopt(el) {                  // a compare window's version starts: the player's sound is there until the footer plays again
@@ -352,28 +431,23 @@
     });
     document.addEventListener("click", function (e) { if (e.target && e.target.closest && e.target.closest("#defaultsReset")) setTimeout(sync, 0); });
     window.addEventListener("storage", function (e) { if (e.key === KEY) sync(); });
-    window.addEventListener("ruach-player-graph", function () { setTimeout(function () { if (S.mode !== "capture") start(); }, 0); });   // HERESY 2357: started, not only re-tapped
-    ["pointerdown", "keydown"].forEach(function (ev) {   // a context made before the page had a hand waits for one
-      document.addEventListener(ev, function () { if (S.run && S.mode === "capture" && S.ctx && S.ctx.state === "suspended") S.ctx.resume().catch(noop); }, true);
-    });
     if (heard()) start();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 
   window.HeresyLiveSpec = {             // for the checks
     state: function () {
-      var c = null, f = footer();
-      for (var i = 0; i < caps.length; i++) if (caps[i].el === S.el) c = caps[i];
-      return { on: enabled(), run: S.run, falling: S.falling, mode: S.mode, ctx: S.ctx ? S.ctx.state : "", peak: S.peak, points: S.P ? S.P.n : 0,
+      var f = footer(), sig = 0;
+      if (S.live) for (var i = 0; i < S.live.length; i++) sig += S.live[i];
+      return { on: enabled(), run: S.run, falling: S.falling, peak: S.peak, points: S.P ? S.P.n : 0,
                geo: S.geo ? { x: S.geo.x, y: S.geo.y, w: S.geo.w, h: S.geo.h, dpr: S.geo.dpr } : null, canvas: cv ? [cv.width, cv.height] : null,
-               // HERESY 2357: whose sound, the tracks of its capture (one, the newest), how often it moved to a new source's track, the old ones let go
-               el: !S.el ? "" : S.el === f ? "footer" : S.el === other ? "compare" : "other", caps: caps.length,
-               tracks: c ? c.stream.getAudioTracks().map(function (t) { return t.readyState; }).join(",") : "", newest: !!(c && S.track && newest(c) === S.track),
-               retaps: S.retaps, retired: S.retired };
+               el: !S.el ? "" : S.el === f ? "footer" : S.el === other ? "compare" : "other",
+               // HERESY 2849: whence the take's spectrum (lab, page), its address, why there is none, the frame read last, the sum of the curve, the lift's dB
+               source: D.where, key: D.key, why: D.why, frames: D.data ? D.data.frames : 0, at: S.at, sig: sig, gainDb: S.gdb, made: made.length,
+               t: S.el ? S.el.currentTime : 0, paused: S.el ? S.el.paused : true };
     },
     resetStats: function () { S.frames = 0; S.work = 0; S.since = performance.now(); },
     stats: function () { var t = (performance.now() - S.since) / 1000; return { frames: S.frames, seconds: t, fps: t > 0 ? S.frames / t : 0, msPerFrame: S.frames ? S.work / S.frames : 0 }; },
-    sync: sync,
-    useGraph: function () { untap(); S.capFail = true; halt(); start(); }   // the path a browser without captureStream takes, tried in Chrome
+    sync: sync
   };
 })();

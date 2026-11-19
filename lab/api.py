@@ -147,7 +147,7 @@ def openapi():
     s, i, b, a = {"type": "string"}, {"type": "integer"}, {"type": "boolean"}, {"type": "array"}
     song = {"style": s, "lyrics": s, "title": s, "mode": {"type": "string", "enum": ["direct", "full", "melody"]},
             "instrumental": b, "duration": {"type": "number"}, "min_seconds": {"type": "number"}, "music_seed": i, "sound_seed": i, "abc": s, "loras": a,
-            "vae": s, "workspace": s, "midi_b64": s, "midi_key": s, "midi_ins": {"type": "string", "enum": ["auto", "keep", "none"]}}
+            "vae": s, "workspace": s, "cfg_scale": {"type": "number"}, "cfg_lyrics": {"type": "number"}, "midi_b64": s, "midi_key": s, "midi_ins": {"type": "string", "enum": ["auto", "keep", "none"]}}
     return {"openapi": "3.1.0",
             "info": {"title": "Ruach Studio API", "version": VERSION,
                      "description": "Songs from words on this machine. Private networks only; a token when RUACH_API_TOKEN is set."},
@@ -258,7 +258,7 @@ def handle(method, path, query, body, headers, ctx):
         if data.get("min_seconds") is not None:
             req["semantic_sampling"] = {"min_tokens": int(max(0.0, min(float(data["min_seconds"]), float(duration))) * 25)}
         req["output_format"] = str(data.get("output_format") or "wav24")   # lossless, as the page asks: the Refiner and the exports want it
-        for k in ("abc", "loras", "vae", "steps", "solver", "cfg_scale"):
+        for k in ("abc", "loras", "vae", "steps", "solver", "cfg_scale", "cfg_lyrics"):   # HERESY 2761: the lyrics' own guidance too
             if data.get(k) is not None:
                 req[k] = data[k]
         if data.get("workspace"):                        # HERESY 2284: a workspace the takes could not go into is refused before the job, not after it

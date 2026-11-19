@@ -261,7 +261,8 @@
   }
   function paintSizes() {
     var lyr = $("wrLyrics").value, sty = $("wrStyle").value;
-    $("wrStyleSize").textContent = sty ? sty.length + " chars" : "";
+    if (window.HeresyStyleCap) window.HeresyStyleCap.paint($("wrStyle"), $("wrStyleSize"));   // HERESY 2799: without spaces, by the ceiling
+    else $("wrStyleSize").textContent = sty ? sty.length + " chars" : "";
     $("wrLyricsSize").textContent = lyr ? lyr.split(/\r?\n/).filter(function (l) { return l.trim(); }).length + " lines · " + lyr.length + " chars" : "";
     // HERESY 2480: a song's lyrics near the Musician's 10 000 say so (red past it, which only a text that came in whole can be); a reading says it has no limit
     var song = realmOf(state.doc) === "creator", lim = $("wrLyricsLimit");
@@ -472,6 +473,11 @@
     }).catch(function (e) { toast(e.message, true); });
   }
   function intoCreate(doc) {   // HERESY 1167: true when the document went into the Creator
+    // HERESY 2799: a style past 800 characters without spaces stays here to be shortened; nothing goes into the Musician
+    if (window.HeresyStyleCap && window.HeresyStyleCap.over(doc.style)) {
+      return window.HeresyDialog.alert(tr("“{0}”: its style has {1} characters without spaces; the Musician's style holds 800. Shorten it here first. Nothing was put into the Musician.")
+        .replace("{0}", doc.title).replace("{1}", window.HeresyStyleCap.num(window.HeresyStyleCap.count(doc.style)))).then(function () { return false; });
+    }
     if ((doc.lyrics || "").length > LYR_MAX) {           // HERESY 2480: its «Save to Writer» would bring back a cut text: said, and nothing loaded
       return window.HeresyDialog.alert("“{0}” is {1} characters long; the Musician's lyrics hold 10 000.\n\nA reading goes to the Narrator: Read in the Narrator. Nothing was put into the Musician."
         .replace("{0}", doc.title).replace("{1}", (doc.lyrics || "").length.toLocaleString())).then(function () { return false; });

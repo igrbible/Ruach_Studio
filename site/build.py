@@ -157,7 +157,6 @@ def page_for(code, template, units, catalog):
             .replace("{{LANG}}", code.upper()).replace("{{LANGS}}", links).replace("{{ALTERNATES}}", alternates)
             .replace("{{VAE_STUDY}}", "/vae/study.%s.html" % code if code != "en" and (here / "vae" / ("study.%s.html" % code)).is_file() else "/vae/study.html")   # 11.11.2026: the study in the page's language once translated
             .replace("{{WHY_ARTICLE}}", "/article/why-own-studio.%s.html" % code if code != "en" and (here / "article" / ("why-own-studio.%s.html" % code)).is_file() else "/article/why-own-studio.html")   # 12–13.11.2026: the article «Why our own Studio…» in the page's language, the English where none is
-            .replace("{{WHY_PDF}}", "/article/why-own-studio.%s.pdf" % code if code != "en" and (here / "article" / ("why-own-studio.%s.pdf" % code)).is_file() else "/article/why-own-studio.pdf")   # 15.11.2026: the article's PDF in the page's language
             .replace("{{FIRST_VISIT}}", FIRST_VISIT.replace("{{HAVE}}", json.dumps([c for c, _ in LANGS])) if code == "en" else ""))
     page = page.replace('content="assets/og.jpg"', 'content="%s/assets/og.jpg"' % SITE)
     # HERESY 1393 (Viktor 12.10.2026: «девиз OSEM как есть, но `Simply` можно на другие языки. И `AWESOME` всё заглавными»): the

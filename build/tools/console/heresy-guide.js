@@ -24,6 +24,11 @@
   }
   function pageLang() { return window.RuachI18n ? window.RuachI18n.lang() : "en"; }
   function src(u) { return /^(https?:|data:|\/)/.test(u) ? u : "/lab/guide/" + u.replace(/^\.?\//, ""); }
+  // HERESY 2648: docs/<name>.md, relative or at its address on GitHub's main: {file, at} (the anchor without its #), else null
+  function ownDoc(u) {
+    var m = /^(?:https:\/\/github\.com\/igrbible\/Ruach_Studio\/blob\/main\/docs\/|(?:\.\/|docs\/)?)([\w.-]+\.md)(?:#([\w-]+))?$/.exec(String(u).replace(/&amp;/g, "&"));
+    return m ? { file: m[1], at: m[2] || "" } : null;
+  }
 
   // ---- a small Markdown: headings, paragraphs, lists, tables, quotes, code, pictures, links, bold, italic
   function inline(t) {
@@ -32,16 +37,28 @@
     t = t.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g, function (_, alt, u, cap) {
       return '<figure class="hg-fig"><img src="' + esc(src(u)) + '" alt="' + alt + '" loading="lazy" />' + (cap || alt ? "<figcaption>" + (cap || alt) + "</figcaption>" : "") + "</figure>";
     });
-    t = t.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (_, x, u) { return '<a href="' + esc(/^(https?:|#)/.test(u) ? u : src(u)) + '" target="_blank" rel="noopener">' + x + "</a>"; });
+    t = t.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (_, x, u) {
+      var own = ownDoc(u);                               // HERESY 2648: one of our own documents opens inside the Guide
+      if (own) return '<a href="' + esc(src(own.file)) + '" data-hg-doc="' + esc(own.file) + '"' + (own.at ? ' data-hg-at="' + esc(own.at) + '"' : "") + ">" + x + "</a>";
+      return '<a href="' + esc(/^(https?:|#)/.test(u) ? u : src(u)) + '" target="_blank" rel="noopener">' + x + "</a>";
+    });
     t = t.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/(^|[\s(])\*([^*\s][^*]*)\*/g, "$1<i>$2</i>");
     t = t.replace(/\u26a0\ufe0f?[ \u00a0]?/g, '<span class="warn-ico" role="img" aria-label="Warning"></span>');   // HERESY 1169 · 1247
-    return t.replace(/\u0000(\d+)\u0000/g, function (_, i) { return "<code>" + code[+i] + "</code>"; });
+    return hebrew(t.replace(/\u0000(\d+)\u0000/g, function (_, i) { return "<code>" + code[+i] + "</code>"; }));
+  }
+  // HERESY 2791 (Viktor 18.11.2026: «Иврит в гайде везде нужно в порядок привести»): each Hebrew run (its letters and points, words joined
+  // by a maqaf, a hyphen or a space) in a <bdi dir="rtl" lang="he">: it reads right to left and never reorders the parentheses, commas and
+  // numbers beside it; a Hebrew letter inside a Russian or Latin word (кעмо́рка, הaaaaaaa) is isolated alone and the word stays as written.
+  // Only the text between tags: an alt or a link's address keeps its letters
+  var HEB = /[\u0590-\u05FF\uFB1D-\uFB4F]+(?:[-\u05BE ][\u0590-\u05FF\uFB1D-\uFB4F]+)*/g;
+  function hebrew(html) {
+    return html.split(/(<[^>]*>)/).map(function (s, i) { return i % 2 ? s : s.replace(HEB, '<bdi dir="rtl" lang="he">$&</bdi>'); }).join("");
   }
   function render(md) {
     var out = [], lines = md.split("\n"), i = 0;
     while (i < lines.length) {
       var l = lines[i];
-      if (/^```/.test(l)) { var buf = []; i++; while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]); i++; out.push("<pre><code>" + esc(buf.join("\n")) + "</code></pre>"); continue; }
+      if (/^```/.test(l)) { var buf = []; i++; while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]); i++; out.push("<pre><code>" + hebrew(esc(buf.join("\n"))) + "</code></pre>"); continue; }
       var h = l.match(/^(#{3,4})\s+(.*)$/);
       if (h) { var hd = heading(h[2]); out.push("<h" + h[1].length + ' id="hg-' + hd.id + '">' + inline(hd.text) + "</h" + h[1].length + ">"); i++; continue; }
       if (/^---+\s*$/.test(l)) { out.push("<hr />"); i++; continue; }
@@ -180,7 +197,8 @@
     paintTools();
   }
   function show(id, stop) {
-    var tab = state.tabs.filter(function (t) { return t.id === id; })[0] || state.tabs[0];
+    var tab = state.tabs.filter(function (t) { return t.id === id; })[0] ||
+      (stop && state.tabs.filter(function (t) { return t.stops.some(function (s) { return s.id === slug(stop); }); })[0]) || state.tabs[0];   // HERESY 2847: the tab holding the stop (the English guide's Musician is «musician», ROOM_TAB's «creator»)
     keep(LAST, tab.id);
     var el = state.el;
     var box = el.querySelector(".hg-box"), ml = state.mdLang || "en";   // HERESY 2413: the guide's own language and direction, whatever the page's
@@ -200,6 +218,25 @@
     body.scrollTop = 0;
     var h = stop && body.querySelector("#hg-" + slug(stop));   // HERESY 1101: straight to one stop
     if (h) h.scrollIntoView({ block: "start" });
+  }
+  // HERESY 2648: one of our own documents inside the Guide, in its language when it has one, «Back» to the tab it came from
+  function doc(file, at) {
+    var el = state.el, body = el && el.querySelector(".hg-body");
+    if (!body) return;
+    var on = el.querySelector(".hg-tabs [aria-selected=true]"), from = on ? on.dataset.hgTab : null, top = body.scrollTop;
+    var ml = state.mdLang || "en", base = file.replace(/\.md$/, "");
+    var get = function (f) { return fetch(src(f), { cache: "no-cache" }).then(function (r) { if (!r.ok) throw new Error(f + ": " + r.status); return r.text(); }); };
+    (ml === "en" ? get(file) : get(base + "." + ml + ".md").catch(function () { return get(file); })).then(function (md) {
+      var tr = window.RuachI18n ? window.RuachI18n.t : function (s) { return s; };
+      body.innerHTML = '<div class="hg-doc hg-own"><button type="button" class="btn ghost small hg-back" data-hg-back="' + esc(from || "") + '">← ' + esc(tr("Back")) + "</button>" +
+        render(md.replace(/^# .*\n/, function (h) { return "### " + h.slice(2); })) + "</div>";
+      body.scrollTop = 0;
+      var h = at && body.querySelector("#hg-" + slug(at));
+      if (h) h.scrollIntoView({ block: "start" });
+      body.querySelector(".hg-back").addEventListener("click", function () { show(from); body.scrollTop = top; });
+    }, function (e) {
+      body.insertAdjacentHTML("afterbegin", '<p class="hg-own-err">⚠ ' + esc(e.message) + "</p>");   // said where it is read, the tab left as it was
+    });
   }
   function open(id, stop) {
     keep(SEEN, "1");
@@ -235,6 +272,13 @@
     // a browser that has never seen the Studio: the guide comes by itself, once, a minute after the start
     if (!recall(SEEN)) setTimeout(function () { if (!recall(SEEN)) open("start"); }, 60000);
   }
-  window.HeresyGuide = { open: open, close: close, render: render };   // HERESY 2281: its Markdown for Before and after's page too
+  // HERESY 2648: a click on one of our own documents opens it inside the Guide (a middle click or Ctrl still takes a tab of its own)
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest(".hg-body a[data-hg-doc]");
+    if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    doc(a.dataset.hgDoc, a.dataset.hgAt || "");
+  });
+  window.HeresyGuide = { open: open, close: close, render: render, doc: doc };   // HERESY 2281: its Markdown for Before and after's page too
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 })();

@@ -933,7 +933,7 @@
     if (main && main.playing) versions.forEach(function (v, i) { if (mainAt < 0 && v.take && v.take === main.name) mainAt = i; });
     if (hk.pauseMain) hk.pauseMain();
     active = Math.max(0, Math.min(versions.length - 1, mainAt >= 0 ? mainAt : active || 0));
-    var audios = versions.map(function (v) { var a = new Audio(); a.preload = "metadata"; a.src = v.url; a.dataset.oneSound = "compare"; return a; });   // HERESY 1476: they hand over among themselves
+    var audios = versions.map(function (v) { var a = new Audio(); a.preload = "metadata"; a.src = v.url; a.dataset.oneSound = "compare"; a.dataset.take = v.take || ""; a.dataset.specUrl = v.url; return a; });   // HERESY 1476: they hand over among themselves; HERESY 2849: the take and its address for the live spectrum
     // HERESY 1871: a take's Opus the lab cannot make: its FLAC, as the footer's player does
     audios.forEach(function (a, i) {
       a.addEventListener("error", function () {
@@ -988,14 +988,14 @@
     var BLIND_TIP = "Blind: the versions shuffled and named A, B, C…, all that tells them apart hidden; off, their names come back";
     var LOUD_WAVE = '<svg class="loud-wave" viewBox="0 0 44 18" preserveAspectRatio="none" aria-hidden="true"><path class="loud-body" d="M0 18 L0 13 L2 10 L4 12 L6 8 L8 11 L10 6 L12 10 L14 3 L16 9 L18 7 L20 11 L22 5 L24 9 L26 8 L28 12 L30 2 L32 8 L34 6 L36 10 L38 4 L40 9 L42 7 L44 12 L44 18Z"/><path class="loud-tips" d="M13.43 5 L14 3 L14.67 5Z M29.4 5 L30 2 L31 5Z M37.67 5 L38 4 L38.4 5Z"/></svg>';   // HERESY 2044b: the top of a wave, its tips red
     var TALL_WAVE = '<svg class="loud-wave" viewBox="0 0 44 18" preserveAspectRatio="none" aria-hidden="true"><path class="loud-body" d="M0 9 L0 7 L2 5.5 L4 6.5 L6 4.5 L8 6 L10 3 L12 5 L14 1.5 L16 4 L18 2.5 L20 5.5 L22 3.5 L24 4.5 L26 2 L28 5 L30 1 L32 4 L34 3 L36 6 L38 4.5 L40 6.5 L42 5.5 L44 7.5 L44 9 L44 10.5 L42 12.5 L40 11.5 L38 13.5 L36 12 L34 15 L32 14 L30 17 L28 13 L26 16 L24 13.5 L22 14.5 L20 12.5 L18 15.5 L16 14 L14 16.5 L12 13 L10 15 L8 12 L6 13.5 L4 11.5 L2 12.5 L0 11 Z"/></svg>';   // HERESY 2045: the whole wave, mirrored
-    var LOUD_TIP = "As loud as before the cut came out: each take raised by its own measure (the level the old Peak clip raised to full scale, about 2 dB), a limiter holding the few peaks over it; the file stays as it is";   // HERESY 2037
+    var LOUD_TIP = "As loud as before the cut came out: each take raised by its own measure (the level the old Peak clip raised to full scale, about 2 dB), the few peaks over it cut flat at full scale as that clip cut them; nothing else touches the sound, and the file stays as it is";   // HERESY 2037; 2835: no limiter
     // HERESY 2044 (Viktor 03.11.2026, «Для попапа сравнения»): Play on, Ring, Shuffle (off until lit, remembered), the window's volume to 150 %,
     // the wave twice as tall, the window up to 2000 px, the wave coloured by its bands, the memory a graph
     var CMP_ON = "yue2.cmpPlayOn", CMP_RING = "yue2.cmpRing", CMP_SHUF = "yue2.cmpShuffle", CMP_VOL = "yue2.cmpVol", CMP_TALL = "yue2.cmpTall", CMP_WIDE = "yue2.cmpWide", CMP_SPEC = "yue2.cmpSpec";
     var ON_TIP = "Play on: when a version ends, the next one in the list plays from its start. Off by default; remembered";
     var RING_TIP = "Ring: after the last version the first comes again (Play on lights with it)";
     var SHUF_TIP = "Shuffle: each version once, by chance, then it stops; with Ring it goes round again (Play on lights with it)";
-    var VOL_TIP = "Volume of this window, to 150 %: past 100 % it turns red, a limiter holding the peaks; a drag from below stops at 100 %, let go and drag again to go past it";
+    var VOL_TIP = "Volume of this window, to 150 %: past 100 % it turns red and is heard once you let go, the peaks over full scale cut flat there as the old Peak clip cut them; a drag from below stops at 100 %, let go and drag again to go past it";   // HERESY 2835
     var TALL_TIP = "The wave twice as tall, for the peaks and the fades; remembered";
     var WIDE_TIP = "Wide: the window up to 2000 px, 20 px from the screen's edges, for a longer wave and ruler; remembered";
     // HERESY 2057 (Viktor 04.11.2026: «убери регулировку скорости воспроизведения. Для того оно и сравнение, чтобы углы не срезать»): every version at its own pace
@@ -1121,31 +1121,100 @@
     var order = versions.map(function (v, i) { return i; });
     var peaks = [];
     // HERESY 2037: +dB here too, the player's setting: a version that is a take played as loud as the old Peak clip made it (its own measure),
-    // its peaks over that level red at the wave's edges; the graph made at the first touch inside the window while it is on
-    var LD = { on: cmpGet("yue2.oldLoud") === "1", db: versions.map(function () { return 0; }), hot: versions.map(function () { return null; }), ctx: null, lim: null, gains: [] };
-    // HERESY 2044: the window's volume, to 150 %: to 100 % the elements' own, past it the graph's gain with the limiter on
+    // its peaks over that level red at the wave's edges
+    // HERESY 2835 (Viktor 18.11.2026: «Не режь наш плеер как маньяк!… к хуям выключая все обработки»): no graph any more (each version's
+    // MediaElementSource and gain into one DynamicsCompressor, for the window's life once lifted): a version raised past its file plays a copy of its
+    // whole copy in memory, every sample times its gain and cut flat at full scale as the old Peak clip cut (heresy-rsaudio.js), through its own <audio>
+    // as before. The one playing is made first and put in at the same second; another when it is played (each version made ahead while there are
+    // four or fewer); Play and a switch wait for a version's copy as they wait for its whole (2627); up to 100 % the elements' own volume
+    var LD = { on: cmpGet("yue2.oldLoud") === "1", db: versions.map(function () { return 0; }), hot: versions.map(function () { return null; }),
+               known: versions.map(function (v) { return !v.take; }), copies: versions.map(function () { return null; }), stale: [], used: versions.map(function () { return 0; }),
+               making: {}, swaps: 0, why: "", timer: 0 };
+    var LD_KEEP = 4;                                    // copies kept at most (a 6-minute take's is about 105 MB)
+    // HERESY 2044: the window's volume, to 150 %: to 100 % the elements' own, past it the lift's (2835)
     var VOL = { v: 1, from: null }, volKept = parseFloat(cmpGet(CMP_VOL));
     if (isFinite(volKept)) VOL.v = Math.max(0, Math.min(1.5, volKept));
     audios.forEach(function (a) { a.volume = Math.min(1, VOL.v); });
-    function ldGains() {
-      LD.gains.forEach(function (g, i) { g.gain.value = (LD.on ? Math.pow(10, LD.db[i] / 20) : 1) * Math.max(1, VOL.v); });
-      var held = LD.on || VOL.v > 1;
-      if (LD.lim) { LD.lim.threshold.value = held ? -1 : 0; LD.lim.ratio.value = held ? 20 : 1; }
+    function ldGain(i) { return (LD.on ? Math.pow(10, (LD.db[i] || 0) / 20) : 1) * Math.max(1, VOL.v); }
+    // HERESY 2838 (Viktor 18.11.2026: «волна при переключении плашки в сравнителе не изменяется»): the wave drawn as the version is heard: its peaks
+    // times its gain, cut at full scale as its copy cuts them (none when the lift cannot be made); the scale is the one the lifted versions need, lit or
+    // dark, so +dB grows and shrinks the bars against marks that stay where they are (a take's +dB brings its loudest peaks to full scale: 0 dB, the scale +2)
+    function ldLevel(i) { return window.RuachStudioAudio && !LD.why ? ldGain(i) : 1; }
+    function ldReach(i) { return window.RuachStudioAudio && !LD.why ? Math.pow(10, (LD.db[i] || 0) / 20) * Math.max(1, VOL.v) : 1; }
+    function ldSrc(i) {                                 // what version i plays: its whole copy, or that lifted (null while the lift is made or its +dB asked)
+      var u = cached[i], g = ldGain(i), c = LD.copies[i];
+      if (!u) return null;
+      if (!window.RuachStudioAudio || LD.why) return u;
+      if (LD.on && !LD.known[i]) return null;          // its +dB still on its way
+      if (!(g > 1 + 1e-6)) return u;
+      return c && c.src === u && Math.abs(c.g - g) < 1e-9 ? c.url : null;
     }
-    function ldWire() {
-      if (LD.ctx || !(LD.on || VOL.v > 1)) return;
-      var AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return;
-      try {
-        LD.ctx = new AC();
-        LD.lim = LD.ctx.createDynamicsCompressor();
-        LD.lim.knee.value = 0; LD.lim.attack.value = 0.002; LD.lim.release.value = 0.12;
-        LD.lim.connect(LD.ctx.destination);
-        LD.gains = audios.map(function (a) { var s = LD.ctx.createMediaElementSource(a), g = LD.ctx.createGain(); s.connect(g); g.connect(LD.lim); return g; });
-      } catch (e) { LD.ctx = null; LD.gains = []; return; }
-      ldGains();
+    function ldTrim() {                                 // past four copies the least played one goes (never the one playing, nor one waited for)
+      LD.stale = LD.stale.filter(function (c) {
+        var used = audios.some(function (a) { return a.getAttribute("src") === c.url; });
+        if (!used) window.RuachStudioAudio.revoke(c.url);
+        return used;
+      });
+      var have = [];
+      LD.copies.forEach(function (c, i) { if (c) have.push(i); });
+      have.sort(function (x, y) { return LD.used[x] - LD.used[y]; });
+      while (have.length > LD_KEEP) {
+        var j = have.filter(function (x) { return x !== active && x !== waitFor; })[0];
+        if (j == null) break;
+        have.splice(have.indexOf(j), 1);
+        LD.stale.push(LD.copies[j]); LD.copies[j] = null;
+      }
     }
-    function ldTouch() { if (LD.on || VOL.v > 1) ldWire(); if (LD.ctx && LD.ctx.state === "suspended") LD.ctx.resume(); }
+    function ldMake(i) {                                // version i's copy at its gain now, one at a time, then put in (ldLanded)
+      var u = cached[i], g = ldGain(i), key = i + "|" + g, c0 = LD.copies[i];
+      if (!u || !window.RuachStudioAudio || LD.why || (LD.on && !LD.known[i]) || !(g > 1 + 1e-6)) return;
+      if (c0 && c0.src === u && Math.abs(c0.g - g) < 1e-9) return;
+      if (LD.making[key]) return;
+      LD.making[key] = true;
+      window.RuachStudioAudio.render(u, g).then(function (c) {
+        delete LD.making[key];
+        if (!back.isConnected) { window.RuachStudioAudio.revoke(c.url); return; }
+        if (LD.copies[i]) LD.stale.push(LD.copies[i]);
+        LD.copies[i] = c; LD.used[i] = Date.now();
+        ldLanded(i); ldTrim(); ldAhead();
+      }, function (e) {                                 // said, never silent: the versions play as they are
+        delete LD.making[key];
+        LD.why = String((e && e.message) || e);
+        (window.HeresyToast || say)(tt("The take plays as it is, without its lift: {0}").replace("{0}", LD.why));
+        ldLanded(i);
+      });
+    }
+    function ldAhead() {                                // with four versions or fewer, each made ahead in the list's order once the one playing has its own
+      if (versions.length > LD_KEEP || Object.keys(LD.making).length) return;
+      for (var k = 0; k < order.length; k++) { var i = order[k]; if (cached[i] && (!LD.on || LD.known[i]) && ldSrc(i) === null) return ldMake(i); }
+    }
+    function ldPut(i, at, play) {                       // version i on its sound now, at a second, played on when it was
+      var a = audios[i], u = ldSrc(i);
+      if (!u || a.getAttribute("src") === u) return false;
+      LD.swaps++;
+      if (play) wantPlay = true;                        // playing: the window means to play on (a pause meanwhile says otherwise)
+      a.src = u; a.dataset.cached = "1";
+      a.addEventListener("loadedmetadata", function () {
+        try { a.currentTime = at; } catch (e) { /* not seekable yet */ }
+        if (play && a === cur() && wantPlay) a.play().catch(function () {});
+      }, { once: true });
+      paintCached(); ldTrim();
+      return true;
+    }
+    function ldLanded(i) {                              // a copy made, or its +dB known: where it is waited for, it plays; the version playing goes on with it
+      var a = audios[i];
+      if (waitFor === i) return wholeIn(i);
+      if (a === cur() && !a.paused) { if (!ldPut(i, a.currentTime || 0, true) && ldSrc(i) === null) ldMake(i); }
+      else useCached(i);
+      ldAhead();
+    }
+    function ldSync() {                                 // after +dB or the volume: the one playing at its new gain first, the others as they are played
+      clearTimeout(LD.timer); LD.timer = 0;
+      ldPaint(); drawWave();                            // HERESY 2838: the wave at its new level at once
+      if (cached[active]) ldLanded(active);
+      audios.forEach(function (x, j) { if (j !== active) useCached(j); });
+      ldAhead();
+    }
     function ldPaint() {
       var b = box.querySelector('[data-cmp="loud"]'), db = LD.db[active] || 0;
       if (!b) return;
@@ -1158,8 +1227,12 @@
         if (!w) return;
         LD.hot[i] = { n: 600, hot: w.hot || [], flats: w.over > 0 ? [] : (w.flats || []) };
         LD.db[i] = w.cut > 0 && w.cut < 1 ? Math.min(6, -20 * Math.log10(w.cut)) : 0;
-        ldGains(); ldPaint(); drawWave();
-      }, function () { /* no lab: no marks, no +dB */ });
+        ldPaint(); drawWave();
+      }, function () { /* no lab: no marks, no +dB */ }).then(function () {
+        if (LD.known[i] || !back.isConnected) return;
+        LD.known[i] = true; ldLanded(i);                // HERESY 2835: known (or not to come): its sound now
+      });
+      setTimeout(function () { if (!LD.known[i] && back.isConnected) { LD.known[i] = true; ldLanded(i); } }, 5000);   // HERESY 2835: five seconds at most
     });
     function cur() { return audios[active]; }
     function dur() { var a = cur(); return isFinite(a.duration) && a.duration > 0 ? a.duration : (versions[active].seconds || 0); }
@@ -1176,12 +1249,13 @@
     // network: Play (or a switch while playing) waits until the copy is in, the button pulsing; a copy that cannot come streams as before
     var noWhole = versions.map(function () { return false; }), waitFor = -1;
     function useCached(i) {
-      var a = audios[i], u = cached[i];
-      if (!u || a.dataset.cached === "1" || (a === cur() && !a.paused)) return;
+      var a = audios[i], u = ldSrc(i);                 // HERESY 2835: its lifted copy when one is asked (none yet: it keeps what it has)
+      if (!u || a.getAttribute("src") === u || (a === cur() && !a.paused)) return;
       var t = a.currentTime || 0;
       a.src = u; a.dataset.cached = "1";
       if (t) a.addEventListener("loadedmetadata", function () { try { a.currentTime = t; } catch (e) { /* not seekable yet */ } }, { once: true });
       paintCached();
+      if (window.RuachStudioAudio) ldTrim();
     }
     function paintCached() {
       var n = audios.filter(function (a) { return a.dataset.cached === "1"; }).length, el = box.querySelector(".cmp-mem-t");   // HERESY 2044: the words under the graph, in its tip
@@ -1238,7 +1312,7 @@
         while (running < 3 && k < order.length && back.isConnected) {
           (function (i) {
             running++;
-            fetchWhole(i).then(function (b) { if (!back.isConnected) return; cached[i] = URL.createObjectURL(b); useCached(i); wantPeaks(i); wholeIn(i); },
+            fetchWhole(i).then(function (b) { if (!back.isConnected) return; cached[i] = URL.createObjectURL(b); useCached(i); wantPeaks(i); wholeIn(i); if (window.RuachStudioAudio) ldAhead(); },   // HERESY 2835: lifted ahead
               function () { noWhole[i] = true; wholeIn(i); })   // this one streams as before
               .then(function () { running--; paintCached(); paintLoad(); go(); });
           })(order[k++]);
@@ -1314,7 +1388,7 @@
     // снизу»): the top 2 to 3 dB over the loudest peak (was 4 to 5): in the double-height box its bars reach 10 to 15 px further each way
     function scaleTop() {
       var top = 0;
-      peaks.forEach(function (p) { if (p && p !== "none") for (var k = 0; k < p.length; k++) if (p[k] > top) top = p[k]; });
+      peaks.forEach(function (p, i) { if (p && p !== "none") { var g = ldReach(i); for (var k = 0; k < p.length; k++) if (Math.min(1, p[k] * g) > top) top = Math.min(1, p[k] * g); } });   // HERESY 2838
       if (!(top > 0)) return { amp: 1, db: 0 };
       var db = Math.ceil(20 * Math.log10(top) + 2);   // HERESY 2096
       return { amp: Math.pow(10, db / 20), db: db };
@@ -1354,14 +1428,14 @@
         ctx.fillStyle = dim; ctx.fillRect(0, h / 2 - 0.5, w, 1);
         ctx.fillStyle = lit; ctx.fillRect(0, h / 2 - 1, w * at, 2);
       } else {
-        var k, top = scaleTop(), max = top.amp;   // HERESY 2094: one scale for every version, its marks under the bars
+        var k, top = scaleTop(), max = top.amp, lv = ldLevel(active);   // HERESY 2094: one scale for every version, its marks under the bars; 2838: its level as heard
         dbMarks(ctx, w, h, top, dim);
         var bars = Math.max(1, Math.floor(w / 3)), SB = cmpGet(CMP_SPEC) === "1" ? bands[active] : null;   // HERESY 2044: the bands' colours
         if (SB === "none") SB = null;
         for (var x = 0; x < bars; x++) {
           var k0 = Math.floor(x * p.length / bars), k1 = Math.max(k0 + 1, Math.floor((x + 1) * p.length / bars)), m = 0;
           for (k = k0; k < k1 && k < p.length; k++) if (p[k] > m) m = p[k];
-          var bh = Math.max(1, m / max * (h - 6)), played = (x + 0.5) / bars <= at, col = null;
+          var bh = Math.max(1, Math.min(1, m * lv) / max * (h - 6)), played = (x + 0.5) / bars <= at, col = null;
           if (SB) {
             var q0 = Math.floor(x * SB.length / bars), q1 = Math.max(q0 + 1, Math.floor((x + 1) * SB.length / bars)), cl = 0, cm = 0, ch = 0, cn = 0;
             for (var q = q0; q < q1 && q < SB.length; q++) if (SB[q]) { cl += SB[q][0]; cm += SB[q][1]; ch += SB[q][2]; cn++; }
@@ -1589,10 +1663,13 @@
       }
       lastT = t;
       var place = function () { try { to.currentTime = Math.min(t, isFinite(to.duration) ? Math.max(0, to.duration - 0.05) : t); } catch (e) { /* not seekable yet */ } };
-      active = i;
+      active = i; LD.used[i] = Date.now();
+      var want = cached[i] ? ldSrc(i) : null;          // HERESY 2835: its sound for now (its whole, or that lifted) in before its second
+      if (want && to.getAttribute("src") !== want) { to.src = want; to.dataset.cached = "1"; paintCached(); }
       if (to.readyState >= 1) place(); else to.addEventListener("loadedmetadata", place, { once: true });
-      if (playing && !cached[i] && !noWhole[i]) {      // HERESY 2627: the switch waits for the copy, the one it leaves silent meanwhile
+      if (playing && ((!cached[i] && !noWhole[i]) || (cached[i] && !want))) {   // HERESY 2627: the switch waits for the copy (2835: or its lift), the one it leaves silent meanwhile
         from.pause(); wantPlay = true; waitFor = i;
+        if (cached[i]) ldMake(i);
       } else if (playing) {
         to.play().then(settle, settle);
       } else { from.pause(); }
@@ -1606,6 +1683,7 @@
     var wantPlay = false;
     function wholeIn(i) {                            // HERESY 2627: the copy a Play waited for is in (or will not come): play it now
       if (waitFor !== i) return;
+      if (cached[i] && !ldSrc(i)) { ldMake(i); return; }   // HERESY 2835: and its lift, when one is asked
       waitFor = -1;
       if (wantPlay && audios[i] === cur()) playNow(audios[i]); else paint();
     }
@@ -1613,7 +1691,14 @@
       wantPlay = true;
       var i = audios.indexOf(a);
       if (i >= 0 && !cached[i] && !noWhole[i]) { waitFor = i; paint(); return; }   // HERESY 2627: from memory only
-      if (a.error || a.networkState === 3) {
+      if (i >= 0 && cached[i] && !ldSrc(i)) { waitFor = i; ldMake(i); paint(); return; }   // HERESY 2835: lifted, when one is asked
+      var want = i >= 0 && cached[i] ? ldSrc(i) : null;
+      if (want && a.getAttribute("src") !== want) {    // HERESY 2835: its sound now, at the second it stood, then played
+        var t1 = a.readyState >= 1 ? (a.currentTime || 0) : lastT;
+        LD.swaps++;
+        a.src = want; a.dataset.cached = "1"; paintCached();
+        a.addEventListener("loadedmetadata", function () { try { a.currentTime = isFinite(a.duration) && t1 >= a.duration - 0.25 ? 0 : t1; } catch (e) { /* not seekable yet */ } }, { once: true });
+      } else if (a.error || a.networkState === 3) {
         if (i >= 0 && cached[i] && a.getAttribute("src") !== cached[i]) {
           var t0 = lastT;
           a.src = cached[i]; a.dataset.cached = "1";
@@ -1629,6 +1714,11 @@
       });
     }
     function toggle() { var a = cur(); if (waitFor >= 0) { waitFor = -1; wantPlay = false; } else if (a.paused) playNow(a); else { wantPlay = false; a.pause(); } paint(); }
+    function hear(i) {                                  // HERESY 2835: after a switch: as before, or through playNow when the version is to be lifted (its copy first)
+      var a = audios[i];
+      if (cached[i] && ldSrc(i) !== cached[i]) { var p = playNow(a); if (p && p.then) p.then(settle, settle); return; }
+      a.play().then(settle, settle);
+    }
     function close() {
       var v0 = versions[active], a0 = cur(), on0 = !a0.paused && !a0.ended,   // HERESY 2044: a take playing goes on in the player (not blind: its name would say which)
           handBack = v0 && v0.take && hk.takeOver && !box.classList.contains("is-blind") && (on0 || hk.follow) ? { name: v0.take, at: a0.readyState >= 1 ? (a0.currentTime || 0) : lastT, play: on0 } : null;   // HERESY 2362: a paused one too, paused there
@@ -1639,6 +1729,7 @@
       sheet = null;
       setTimeout(function () {                           // HERESY 2362: after the hand-over's task, so the player's start waits for none of it
         audios.forEach(function (a) { a.pause(); a.removeAttribute("src"); a.load(); });
+        if (window.RuachStudioAudio) { LD.copies.concat(LD.stale).forEach(function (c) { if (c) window.RuachStudioAudio.revoke(c.url); }); cached.forEach(function (u) { if (u) window.RuachStudioAudio.forget(u); }); }   // HERESY 2835
         cached.forEach(function (u) { if (u) URL.revokeObjectURL(u); });   // HERESY 1621: the memory given back
       }, 0);
       document.removeEventListener("keydown", key, true);
@@ -1647,7 +1738,6 @@
       back.remove();
     }
     function key(e) {
-      ldTouch();                                         // HERESY 2037
       if (document.querySelector(".hd-back")) return;   // HERESY 1724: a dialog over the window (the note) has the keys
       var shOver = document.getElementById("collSheet");   // HERESY 2043: the sheet or the datasheet opened over it close first
       if (document.querySelector(".ds-back") || (shOver && !shOver.hidden)) return;
@@ -1878,11 +1968,10 @@
     document.addEventListener("keydown", key, true);
     back.addEventListener("mousedown", function (e) { if (e.target === back) close(); });
     box.addEventListener("click", function (e) {
-      ldTouch();                                         // HERESY 2037
       if (e.target.closest('[data-cmp="loud"]')) {        // HERESY 2037: the player's setting, from here
         LD.on = !LD.on;
         cmpPut("yue2.oldLoud", LD.on ? "1" : null);
-        ldWire(); ldGains(); ldPaint();
+        ldSync();                                        // HERESY 2835: the version playing at its new gain, the same second
         window.dispatchEvent(new Event("ruach-loud"));
         return;
       }
@@ -1918,7 +2007,7 @@
         if (i === active) return toggle();
         var wasPaused = cur().paused;
         pick(i);
-        if (wasPaused) audios[i].play().then(settle, settle);   // a click on a version means: hear it
+        if (wasPaused) hear(i);                         // a click on a version means: hear it
         return;
       }
       if (b && b.dataset.cmp === "close") return close();
@@ -1945,7 +2034,7 @@
         if (modeOn(CMP_ON) && loopA == null) {           // HERESY 2044: on to the next one, from its start
           var nx = nextUp();
           if (nx === active) { a.currentTime = 0; a.play().catch(function () {}); return paint(); }
-          if (nx != null) { pick(nx); audios[nx].play().then(settle, settle); return; }
+          if (nx != null) { pick(nx); hear(nx); return; }
         }
         useCached(i);                                    // HERESY 2044d: its copy in now that it has ended (2044c kept it off the «pause»)
         paint();
@@ -1971,12 +2060,19 @@
       VOL.v = Math.max(0, Math.min(1.5, isFinite(v) ? v : 1));
       cmpPut(CMP_VOL, Math.abs(VOL.v - 1) < 0.005 ? null : String(VOL.v));
       audios.forEach(function (a) { a.volume = Math.min(1, VOL.v); });
-      if (VOL.v > 1) ldWire();
-      ldTouch(); ldGains(); volPaint();
+      volPaint();
     });
+    volEl.addEventListener("change", function () { clearTimeout(LD.timer); LD.timer = setTimeout(ldSync, 250); });   // HERESY 2835: the lift past 100 % once the hand lets go
     volPaint();
     var tick = setInterval(paint, 250);
-    back.cmpChecks = { audio: function () { return cur(); }, wants: function () { return wantPlay; }, scale: function () { return typeof scaleTop === "function" ? scaleTop() : null; } };   // HERESY 2092 · 2094: for the checks
+    back.cmpChecks = { audio: function () { return cur(); }, wants: function () { return wantPlay; }, scale: function () { return typeof scaleTop === "function" ? scaleTop() : null; },   // HERESY 2092 · 2094: for the checks
+      level: function () { return { level: ldLevel(active), reach: ldReach(active), scale: scaleTop() }; },   // HERESY 2838: for the checks
+      lift: function () {                               // HERESY 2835: for the checks
+        var a = cur(), src = a.getAttribute("src") || "", c = window.RuachStudioAudio ? window.RuachStudioAudio.of(src) : null;
+        return { on: LD.on, v: VOL.v, active: active, gain: ldGain(active), db: LD.db[active], known: LD.known[active], volume: a.volume, plays: c ? "copy" : src && src === cached[active] ? "file" : src ? "other" : "",
+                 copy: c ? { g: c.g, clipped: c.clipped, over: c.over, bytes: c.bytes, ms: c.ms, decodeMs: c.decodeMs, packMs: c.packMs, src: c.src === cached[active] } : null, copies: LD.copies.filter(Boolean).length, making: Object.keys(LD.making).length,
+                 swaps: LD.swaps, waitFor: waitFor, why: LD.why, cached: cached.map(Boolean) };
+      } };
     if (cmpGet(CMP_BLIND) === "1") setBlind(true);       // HERESY 2009: blind as it was left
     paintRates();
     paint();

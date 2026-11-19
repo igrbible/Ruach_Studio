@@ -505,7 +505,7 @@
   /* 12.11.2026 (Viktor: «на визитке тизер блоком с кнопкой на полноэкранный оверлей»): the article's teaser, and its window over the whole screen */
   .why-call .why-by { color: var(--faint); font-size: 14px; margin: 0 0 6px; }
   .why-modal .vocab-panel { width: min(1240px, 100%); }   /* 15.11.2026 (Viktor: «Ужми оверлей… в ту же ширину, что и оверлей словарей»): the vocabularies' width, no longer the whole screen */
-  /* 15.11.2026: the article as a PDF in a window of its own, igr.bible's reader (PdfReader.svelte) in the card's colours: the bar stays, the pages scroll */
+  /* 15–16.11.2026: the paper of YuE2-VAE-RS x3 as a PDF in a window of its own, igr.bible's reader (PdfReader.svelte) in the card's colours: the bar stays, the pages scroll */
   .pdf-reader { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .pdf-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 12px; background: var(--paper); border-bottom: 1px solid var(--rule); }
   .pdf-nav, .pdf-zoom { display: flex; align-items: center; gap: 6px; }
@@ -700,7 +700,7 @@
     <p class="lead">Ένα ολόκληρο Στούντιο γύρω από το <b>YuE2</b>, το ανοιχτό μοντέλο τραγουδιών. Γράφεις το ύφος και τους στίχους, και το Στούντιο συνθέτει, τραγουδά και αποδίδει το τραγούδι στη <b>δική σου GPU</b>. Τα τραγούδια, οι λέξεις και οι ρυθμίσεις σου δεν φεύγουν ποτέ από εκεί.</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Πάρ' το από το GitHub</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.el.md">Διάβασε τον οδηγό</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Μοντέλα στο Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ καφές 24/7 για τον Viktor και τον Claude</a></div>
     <p class="star">⭐ Αν σου αρέσει το Στούντιο, δώσε ένα αστέρι <a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">στο αποθετήριο του YuE2 Studio στο GitHub</a>.</p>
-    <span class="rc"><b>2.0.8</b> · η έκδοση «όλα σε ένα»: ο Συγγραφέας σε δύο κόσμους, δεύτερη μηχανή για τον Αναγνώστη, δύο οθόνες προβολής για τον Βιντεογράφο · Νοέμβριος 2026</span>
+    <span class="rc"><b>2.0.9</b> · φωνή πάνω στο δικό σου ορχηστρικό, το Στούντιο σε Windows και σε Mac (beta), μια σελίδα που ξεκουράζεται μαζί σου · Νοέμβριος 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -855,8 +855,6 @@
         </div>
         <div class="vocab-btns">
           <button class="vocab-open" id="why-open" type="button" aria-haspopup="dialog" aria-controls="why-modal">Διάβασε το άρθρο</button>
-          <button class="vocab-open vocab-open-2" id="whypdf-open" type="button" aria-haspopup="dialog" aria-controls="whypdf-modal">Ανάγνωση ως PDF</button>
-          <a class="vocab-open vocab-open-2" id="whypdf-dl" href="/article/why-own-studio.el.pdf" download type="application/pdf">Λήψη PDF</a>   <!-- 15.11.2026: read on the card and downloaded, the page's own language -->
         </div>
       </div>
     </div>
@@ -1023,7 +1021,7 @@
         <div class="vocab-btns">
           <button class="vocab-open" id="vae-study-open" type="button">Διάβασε τη μελέτη</button>
           <button class="vocab-open vocab-open-2" id="vae-tracks-open" type="button">Άκου: 20 τραγούδια × 3 αποκωδικοποιητές</button>
-          <a class="vocab-open vocab-open-2" id="vae-paper-open" href="/vae/YuE2-VAE-RS-x3-paper.pdf" download="YuE2-VAE-RS-x3-paper.pdf" type="application/pdf">Άρθρο (PDF)</a>   <!-- 12.11.2026 (Viktor: «Твой PDF — Огонь. Его можно и на визитку для скачивания и распечатки»); a download: the web server serves .pdf as octet-stream on purpose (mime.types «Force PDFs to download») -->
+          <button class="vocab-open vocab-open-2" id="vae-paper-open" type="button" aria-haspopup="dialog" aria-controls="paper-modal">Άρθρο (PDF)</button>   <!-- 12.11.2026 (Viktor: «Твой PDF — Огонь. Его можно и на визитку для скачивания и распечатки»); 16.11.2026: read in his pdf.js reader, downloaded from its bar -->
         </div>
       </div>   <!-- 11.11.2026 (Viktor: «таблицу с треками унеси в оверлей, чтобы не насиловать визитку. В блоке исследования второй кнопкой вызовем её») -->
       <p class="ring-note">Τα βάρη είναι υπό CC BY-NC 4.0, ο κώδικας υπό Apache-2.0. Και τα δύο βρίσκονται στο αποθετήριο των fine-tunes μας στο Hugging Face, στο <a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-RS-Finetunes/tree/main/VAE-RS">VAE-RS</a>, μαζί με τη μελέτη και <a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-RS-Finetunes/blob/main/docs/VAE-RS-x3-integration.md">έναν οδηγό για προγραμματιστές</a>. Τα ίδια αρχεία, μαζί με το άρθρο, βρίσκονται και σε δικό τους αποθετήριο: <a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-VAE-RS-x3">goldhub/YuE2-VAE-RS-x3</a>.</p>
@@ -1036,7 +1034,7 @@
       <div class="cols need-two">   <!-- 11.11.2026 (Viktor: «три карточки неравномерны по наполнению текстом… две колонки. Во второй колонке вторую и третью одну под другой») -->
         <div class="card"><h3>Το μηχάνημα</h3><ul>
           <li><b>Μια κάρτα NVIDIA</b>: 24 GB για όλα σε πλήρη ακρίβεια· με 12–16 GB και 8 GB τρέχει με μικρότερα αντίγραφα (ο Βιντεογράφος θέλει 24 GB)</li>
-          <li><b>Linux</b> (φτιαγμένο σε Ubuntu 24.04, CUDA 12.8)</li>
+          <li><b>Linux</b> (φτιαγμένο σε Ubuntu 24.04, CUDA 12.8), και από το 2.0.9 <b>Windows 11</b> και <b>Mac με Apple Silicon</b> ως beta</li>
           <li><b>Περίπου 23–26 GB</b> δίσκου, μετρημένα σε καινούργιες εγκαταστάσεις: το πρόγραμμα και η Python του (17 GB), τα μοντέλα (5,1 έως 8,5 GB ανάλογα με την κάρτα, κατεβασμένα, κλειδωμένα σε έκδοση και ελεγμένα από το <code>fetch-models.sh</code>)· τα μοντέλα του Καλλιτέχνη άλλα 39–43 GB, τα σετ 💎 5,6 GB, το καθένα μόνο όταν το ζητήσετε</li></ul></div>
         <div class="need-side">
         <div class="card"><h3>Η οθόνη</h3><ul>
@@ -1087,12 +1085,13 @@
   <section id="next">
     <div class="wrap">
       <h2>Τι ακολουθεί</h2>
-      <p class="sub">Το 2.0.8 είναι το Στούντιο όπου φτιάχνουμε κάθε μέρα τα δικά μας τραγούδια και τις αναγνώσεις μας. Αυτά είναι τα μεγαλύτερα κομμάτια που έρχονται, για το 2.1.0 και μετά.</p>
+      <p class="sub">Το 2.0.9 είναι το Στούντιο όπου φτιάχνουμε κάθε μέρα τα δικά μας τραγούδια και τις αναγνώσεις μας. Αυτά είναι τα μεγαλύτερα κομμάτια που έρχονται, για το 2.1.0 και μετά.</p>
       <ul class="feats">
         <li><b>Ο Αναγνώστης, παραπέρα.</b> Ένα βιβλίο που κατεβαίνει ως ένα αρχείο με τα κεφάλαιά του, ένα μέρος που διορθώνεται και όλο το βιβλίο στον Γυαλιστή, και εβραϊκά που διαβάζονται με τα φωνήεντά τους από τα συμφραζόμενα.</li>
         <li><b>Το DAW, παραπέρα.</b> Ένα piano roll που γράφει στην παρτιτούρα ό,τι παίζεις στο πληκτρολόγιο MIDI, και οι δοκιμές αντοχής που χρειάζονται ακόμη τα έργα DAW στο REAPER, στο Waveform και στο Bitwig.</li>
         <li><b>Ο Βιντεογράφος, παραπέρα.</b> Πλάνα 10 έως 15 δευτερολέπτων, χαρακτήρες που κρατούν το πρόσωπό τους από σκηνή σε σκηνή, σχεδιασμένα πρότυπα για τίτλους και καραόκε, περισσότερες μορφές και εξαγωγές.</li>
         <li><b>Το κύμα μετά το Tsunami Wave.</b> Το επόμενο fine-tune μας μαθαίνει από ό,τι το YuE2 τραγουδά χειρότερα, και ακούγεται τυφλά πριν κυκλοφορήσει.</li>
+        <li><b>Windows και Mac, έξω από τη beta.</b> Κάθε δωμάτιο σε Windows 11 και σε Mac με Apple Silicon όπως είναι στο Linux, δωμάτιο με δωμάτιο, και ένα δικό τους πρόγραμμα εγκατάστασης.</li>
         <li><b>Εγγενή πρόσθετα</b> για REAPER, Waveform και Bitwig, όταν το Στούντιο βρει τους ανθρώπους του.</li>
       </ul>
     </div>
@@ -1423,7 +1422,7 @@
     </div>
   </div>
   <div class="wrap">
-    <span>Ruach Studio · 2.0.8 · a work of <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="Our curated list of everything the YuE2 community has made">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changelog</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24/7 coffee</a></span>
+    <div class="foot-by">Ροῦαχ Στούντιο · 2.0.9 · ένα έργο του <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></div> <div class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="Η επιμελημένη λίστα μας με ό,τι έχει φτιάξει η κοινότητα του YuE2">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Αλλαγές</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ καφές 24/7</a></div>
   </div>
 </footer>
 
@@ -1782,10 +1781,10 @@
     <iframe id="why-frame" title="Γιατί δικό μας Στούντιο και όχι πακέτο πρόσθετων για το ComfyUI"></iframe>
   </div>
 </div>
-<div class="vocab-modal why-modal" id="whypdf-modal" hidden role="dialog" aria-modal="true" aria-label="Γιατί δικό μας Στούντιο και όχι πακέτο πρόσθετων για το ComfyUI">
+<div class="vocab-modal" id="paper-modal" hidden role="dialog" aria-modal="true" aria-label="YuE2-VAE-RS x3 · άρθρο">
   <div class="vocab-panel">
-    <div class="vocab-head"><b>Γιατί δικό μας Στούντιο και όχι πακέτο πρόσθετων για το ComfyUI</b><button type="button" id="whypdf-close" aria-label="Κλείσιμο">×</button></div>
-    <div class="pdf-reader" id="whypdf">
+    <div class="vocab-head"><b>YuE2-VAE-RS x3 · άρθρο</b><button type="button" id="paper-close" aria-label="Κλείσιμο">×</button></div>
+    <div class="pdf-reader" id="paperpdf">
       <div class="pdf-bar">
         <div class="pdf-nav">
           <button type="button" data-pdf="prev" aria-label="Προηγούμενη σελίδα">‹</button>
@@ -1800,7 +1799,7 @@
           <span class="pdf-scale">100%</span>
           <button type="button" data-pdf="in" aria-label="Μεγαλύτερα">+</button>
         </div>
-        <a class="pdf-dl" href="/article/why-own-studio.el.pdf" download type="application/pdf">Λήψη PDF</a>
+        <a class="pdf-dl" href="/vae/YuE2-VAE-RS-x3-paper.pdf" download="YuE2-VAE-RS-x3-paper.pdf" type="application/pdf">Λήψη PDF</a>
       </div>
       <div class="pdf-stage">
         <p class="pdf-state" data-pdf-state="load">Ανοίγει το PDF…</p>
@@ -1922,14 +1921,15 @@
     if (location.hash === "#why-own-studio") open();
     window.addEventListener("hashchange", function () { if (location.hash === "#why-own-studio") open(); });
   })();
-  // 15.11.2026 (Viktor: «для статьи PDF возьми у меня уже готовый PDF ридер с суб-проекта igr.bible… Читать на сайте и скачать»): igr.bible's reader
+  // 15–16.11.2026 (Viktor: «PDF ридер с суб-проекта igr.bible… Читать на сайте и скачать»; 16.11: «наш RS-VAE стади документ, где у нас ссылка на
+  // скачивание PDF, вот там поставить мой pdf.js»): the paper of YuE2-VAE-RS x3 in igr.bible's reader
   // (PdfReader.svelte) in plain JS: pdf.js 6.3.289 from assets/pdfjs, loaded on the first open, its worker apart; the page fit to the window's
   // width, ‹ › and the number, a slider (drawn on release), − + from 60 to 300 %, ← → PageUp PageDown; ✕, Esc and the backdrop close it,
-  // #why-own-studio-pdf opens it. Its two lessons kept: a render already under way for the same page, width and scale is left alone (a resize
+  // #vae-paper opens it. Its two lessons kept: a render already under way for the same page, width and scale is left alone (a resize
   // that answers its own redraw never lets one finish), and a failure says so aloud beside the download, which works without the reader.
   (function () {
-    var m = document.getElementById("whypdf-modal"), b = document.getElementById("whypdf-open"), x = document.getElementById("whypdf-close"),
-        R = document.getElementById("whypdf");
+    var m = document.getElementById("paper-modal"), b = document.getElementById("vae-paper-open"), x = document.getElementById("paper-close"),
+        R = document.getElementById("paperpdf");
     if (!m || !b || !x || !R) return;
     var q = function (s) { return R.querySelector(s); };
     var stage = q(".pdf-stage"), cv = q(".pdf-canvas"), num = q(".pdf-num"), total = q(".pdf-total"), slide = q(".pdf-slide input"),
@@ -1988,7 +1988,7 @@
     function close() {
       if (m.hidden) return;
       m.hidden = true; document.body.style.overflow = "";
-      if (location.hash === "#why-own-studio-pdf") history.replaceState(null, "", location.pathname + location.search);
+      if (location.hash === "#vae-paper") history.replaceState(null, "", location.pathname + location.search);
       (back && back !== document.body && back.focus ? back : b).focus();
     }
     b.addEventListener("click", open);
@@ -2009,8 +2009,8 @@
       if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); go(page + 1); }
       else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); go(page - 1); }
     });
-    if (location.hash === "#why-own-studio-pdf") open();
-    window.addEventListener("hashchange", function () { if (location.hash === "#why-own-studio-pdf") open(); });
+    if (location.hash === "#vae-paper") open();
+    window.addEventListener("hashchange", function () { if (location.hash === "#vae-paper") open(); });
   })();
 </script>
 </body>

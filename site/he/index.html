@@ -505,7 +505,7 @@
   /* 12.11.2026 (Viktor: «на визитке тизер блоком с кнопкой на полноэкранный оверлей»): the article's teaser, and its window over the whole screen */
   .why-call .why-by { color: var(--faint); font-size: 14px; margin: 0 0 6px; }
   .why-modal .vocab-panel { width: min(1240px, 100%); }   /* 15.11.2026 (Viktor: «Ужми оверлей… в ту же ширину, что и оверлей словарей»): the vocabularies' width, no longer the whole screen */
-  /* 15.11.2026: the article as a PDF in a window of its own, igr.bible's reader (PdfReader.svelte) in the card's colours: the bar stays, the pages scroll */
+  /* 15–16.11.2026: the paper of YuE2-VAE-RS x3 as a PDF in a window of its own, igr.bible's reader (PdfReader.svelte) in the card's colours: the bar stays, the pages scroll */
   .pdf-reader { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .pdf-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 12px; background: var(--paper); border-bottom: 1px solid var(--rule); }
   .pdf-nav, .pdf-zoom { display: flex; align-items: center; gap: 6px; }
@@ -747,7 +747,7 @@
     <p class="lead">אולפן שלם סביב <b>YuE2</b>, מודל השירים הפתוח. כתוב את הסגנון ואת המילים, והנפחות מלחינה, שרה ומרנדרת את השיר על <b>ה-⁠GPU שלך</b>. השירים, המילים וההגדרות שלך לעולם לא יוצאים ממנו.</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">הורדה מ-⁠GitHub</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.md">קריאת המדריך (באנגלית)</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">מודלים ב-⁠Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ קפה 24/7 לוויקטור ולקלוד</a></div>
     <p class="star">⭐ אם הנפחות מצאה חן בעיניך, תן כוכב <a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">למאגר YuE2 Studio ב-⁠GitHub</a>.</p>
-    <span class="rc"><b>2.0.8</b> · גרסת הכול-באחד: הכותב בשני עולמות, מנוע שני לקריין, שני מסכי צפייה לווידאוגרף · נובמבר 2026</span>
+    <span class="rc"><b>2.0.9</b> · שירה מעל הפלייבק שלך, הנפחות ב-⁠Windows וב-⁠Mac (בטא), ודף שנח כשאתה נח · נובמבר 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -902,8 +902,6 @@
         </div>
         <div class="vocab-btns">
           <button class="vocab-open" id="why-open" type="button" aria-haspopup="dialog" aria-controls="why-modal">קריאת המאמר</button>
-          <button class="vocab-open vocab-open-2" id="whypdf-open" type="button" aria-haspopup="dialog" aria-controls="whypdf-modal">קריאה כ-⁠PDF</button>
-          <a class="vocab-open vocab-open-2" id="whypdf-dl" href="/article/why-own-studio.he.pdf" download type="application/pdf">הורדת PDF</a>   <!-- 15.11.2026: read on the card and downloaded, the page's own language -->
         </div>
       </div>
     </div>
@@ -1070,7 +1068,7 @@
         <div class="vocab-btns">
           <button class="vocab-open" id="vae-study-open" type="button">לקריאת המחקר</button>
           <button class="vocab-open vocab-open-2" id="vae-tracks-open" type="button">להאזנה: 20 שירים × 3 מפענחים</button>
-          <a class="vocab-open vocab-open-2" id="vae-paper-open" href="/vae/YuE2-VAE-RS-x3-paper.pdf" download="YuE2-VAE-RS-x3-paper.pdf" type="application/pdf">מאמר (PDF)</a>   <!-- 12.11.2026 (Viktor: «Твой PDF — Огонь. Его можно и на визитку для скачивания и распечатки»); a download: the web server serves .pdf as octet-stream on purpose (mime.types «Force PDFs to download») -->
+          <button class="vocab-open vocab-open-2" id="vae-paper-open" type="button" aria-haspopup="dialog" aria-controls="paper-modal">מאמר (PDF)</button>   <!-- 12.11.2026 (Viktor: «Твой PDF — Огонь. Его можно и на визитку для скачивания и распечатки»); 16.11.2026: read in his pdf.js reader, downloaded from its bar -->
         </div>
       </div>   <!-- 11.11.2026 (Viktor: «таблицу с треками унеси в оверлей, чтобы не насиловать визитку. В блоке исследования второй кнопкой вызовем её») -->
       <p class="ring-note">המשקלים תחת CC BY-NC 4.0, הקוד תחת Apache-2.0. שניהם במאגר הפיינטיונים שלנו ב-⁠Hugging Face, בתיקייה <a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-RS-Finetunes/tree/main/VAE-RS">VAE-RS</a>, יחד עם המחקר ו<a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-RS-Finetunes/blob/main/docs/VAE-RS-x3-integration.md">מדריך למתכנתים</a>. אותם קבצים, יחד עם המאמר, נמצאים גם במאגר משלהם: <a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-VAE-RS-x3">goldhub/YuE2-VAE-RS-x3</a>.</p>
@@ -1083,7 +1081,7 @@
       <div class="cols need-two">   <!-- 11.11.2026 (Viktor: «три карточки неравномерны по наполнению текстом… две колонки. Во второй колонке вторую и третью одну под другой») -->
         <div class="card"><h3>המחשב</h3><ul>
           <li><b>כרטיס NVIDIA</b>: 24 GB כדי שהכול ירוץ בדיוק מלא; על 12–16 GB ועל 8 GB הנפחות רצה עם עותקים קטנים יותר (הווידאוגרף צריך 24 GB)</li>
-          <li><b>Linux</b> (נבנתה על Ubuntu 24.04, CUDA 12.8)</li>
+          <li><b>Linux</b> (נבנתה על Ubuntu 24.04, CUDA 12.8); מ-⁠2.0.9 גם <b>Windows 11</b> ו-⁠<b>Mac עם Apple Silicon</b> בגרסת בטא</li>
           <li><b>כ-⁠23–26 GB</b> בדיסק, לפי מדידות על התקנות טריות: התוכנה וה-⁠Python שלה (17 GB), המודלים (5.1 עד 8.5 GB לפי הכרטיס; <code>fetch-models.sh</code> מוריד, מצמיד ובודק אותם); המודלים של הצייר עוד 39–43 GB, סטי ה-⁠💎 5.6 GB, כל אחד רק כשתבקש</li></ul></div>
         <div class="need-side">
         <div class="card"><h3>המסך</h3><ul>
@@ -1134,12 +1132,13 @@
   <section id="next">
     <div class="wrap">
       <h2>מה הלאה</h2>
-      <p class="sub">2.0.8 היא הנפחות שבה אנחנו יוצרים את השירים ואת הקריאות שלנו בכל יום. אלה החלקים הגדולים שבדרך, ל-⁠2.1.0 ואחריה.</p>
+      <p class="sub">2.0.9 היא הנפחות שבה אנחנו יוצרים את השירים ואת הקריאות שלנו בכל יום. אלה החלקים הגדולים שבדרך, ל-⁠2.1.0 ואחריה.</p>
       <ul class="feats">
         <li><b>הקריין, צעד קדימה.</b> ספר שיורד כקובץ אחד עם הפרקים שלו, עריכה של חלק אחד ושליחת הספר כולו למלטש, ועברית שנקראת עם הניקוד שלה מתוך ההקשר.</li>
         <li><b>ה-⁠DAW, צעד קדימה.</b> פיאנו רול שכותב לפרטיטורה את מה שאתה מנגן במקלדת ה-⁠MIDI שלך, ומבחני העמידות שפרויקטי ה-⁠DAW עוד צריכים ב-⁠REAPER, ב-⁠Waveform וב-⁠Bitwig.</li>
         <li><b>הווידאוגרף, צעד קדימה.</b> שוטים של 10 עד 15 שניות, דמויות ששומרות על פניהן מסצנה לסצנה, תבניות מעוצבות לכותרות ולקריוקי, עוד פורמטים וייצואים.</li>
         <li><b>הגל שאחרי ה-⁠Tsunami Wave.</b> הפיינטיון הבא שלנו מאומן על מה ש-⁠YuE2 שר הכי גרוע, ועובר האזנה עיוורת לפני שהוא יוצא.</li>
+        <li><b>Windows ו-⁠Mac, מחוץ לבטא.</b> כל חדר ב-⁠Windows 11 וב-⁠Mac עם Apple Silicon כמו ב-⁠Linux, חדר אחר חדר, ומתקין משלהם.</li>
         <li><b>פלאגינים נייטיב</b> ל-⁠REAPER, ל-⁠Waveform ול-⁠Bitwig, כשהנפחות תמצא את האנשים שלה.</li>
       </ul>
     </div>
@@ -1490,7 +1489,7 @@
     </div>
   </div>
   <div class="wrap">
-    <span>Ruach Studio · 2.0.8 · a work of <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="Our curated list of everything the YuE2 community has made">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changelog</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24/7 coffee</a></span>
+    <div class="foot-by">נפחות רוח · 2.0.9 · יצירה של <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></div> <div class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="הרשימה שלנו, שנבחרה בקפידה, של כל מה שקהילת YuE2 יצרה">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">יומן שינויים</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ קפה 24/7</a></div>
   </div>
 </footer>
 
@@ -1849,10 +1848,10 @@
     <iframe id="why-frame" title="למה נפחות משלנו, ולא חבילת תוספים ל-ComfyUI"></iframe>
   </div>
 </div>
-<div class="vocab-modal why-modal" id="whypdf-modal" hidden role="dialog" aria-modal="true" aria-label="למה נפחות משלנו, ולא חבילת תוספים ל-ComfyUI">
+<div class="vocab-modal" id="paper-modal" hidden role="dialog" aria-modal="true" aria-label="YuE2-VAE-RS x3 · מאמר">
   <div class="vocab-panel">
-    <div class="vocab-head"><b>למה נפחות משלנו, ולא חבילת תוספים ל-ComfyUI</b><button type="button" id="whypdf-close" aria-label="סגירה">×</button></div>
-    <div class="pdf-reader" id="whypdf">
+    <div class="vocab-head"><b>YuE2-VAE-RS x3 · מאמר</b><button type="button" id="paper-close" aria-label="סגירה">×</button></div>
+    <div class="pdf-reader" id="paperpdf">
       <div class="pdf-bar">
         <div class="pdf-nav">
           <button type="button" data-pdf="prev" aria-label="העמוד הקודם">‹</button>
@@ -1867,7 +1866,7 @@
           <span class="pdf-scale">100%</span>
           <button type="button" data-pdf="in" aria-label="גדול יותר">+</button>
         </div>
-        <a class="pdf-dl" href="/article/why-own-studio.he.pdf" download type="application/pdf">הורדת PDF</a>
+        <a class="pdf-dl" href="/vae/YuE2-VAE-RS-x3-paper.pdf" download="YuE2-VAE-RS-x3-paper.pdf" type="application/pdf">הורדת PDF</a>
       </div>
       <div class="pdf-stage">
         <p class="pdf-state" data-pdf-state="load">פותחים את ה-PDF…</p>
@@ -1989,14 +1988,15 @@
     if (location.hash === "#why-own-studio") open();
     window.addEventListener("hashchange", function () { if (location.hash === "#why-own-studio") open(); });
   })();
-  // 15.11.2026 (Viktor: «для статьи PDF возьми у меня уже готовый PDF ридер с суб-проекта igr.bible… Читать на сайте и скачать»): igr.bible's reader
+  // 15–16.11.2026 (Viktor: «PDF ридер с суб-проекта igr.bible… Читать на сайте и скачать»; 16.11: «наш RS-VAE стади документ, где у нас ссылка на
+  // скачивание PDF, вот там поставить мой pdf.js»): the paper of YuE2-VAE-RS x3 in igr.bible's reader
   // (PdfReader.svelte) in plain JS: pdf.js 6.3.289 from assets/pdfjs, loaded on the first open, its worker apart; the page fit to the window's
   // width, ‹ › and the number, a slider (drawn on release), − + from 60 to 300 %, ← → PageUp PageDown; ✕, Esc and the backdrop close it,
-  // #why-own-studio-pdf opens it. Its two lessons kept: a render already under way for the same page, width and scale is left alone (a resize
+  // #vae-paper opens it. Its two lessons kept: a render already under way for the same page, width and scale is left alone (a resize
   // that answers its own redraw never lets one finish), and a failure says so aloud beside the download, which works without the reader.
   (function () {
-    var m = document.getElementById("whypdf-modal"), b = document.getElementById("whypdf-open"), x = document.getElementById("whypdf-close"),
-        R = document.getElementById("whypdf");
+    var m = document.getElementById("paper-modal"), b = document.getElementById("vae-paper-open"), x = document.getElementById("paper-close"),
+        R = document.getElementById("paperpdf");
     if (!m || !b || !x || !R) return;
     var q = function (s) { return R.querySelector(s); };
     var stage = q(".pdf-stage"), cv = q(".pdf-canvas"), num = q(".pdf-num"), total = q(".pdf-total"), slide = q(".pdf-slide input"),
@@ -2055,7 +2055,7 @@
     function close() {
       if (m.hidden) return;
       m.hidden = true; document.body.style.overflow = "";
-      if (location.hash === "#why-own-studio-pdf") history.replaceState(null, "", location.pathname + location.search);
+      if (location.hash === "#vae-paper") history.replaceState(null, "", location.pathname + location.search);
       (back && back !== document.body && back.focus ? back : b).focus();
     }
     b.addEventListener("click", open);
@@ -2076,8 +2076,8 @@
       if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); go(page + 1); }
       else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); go(page - 1); }
     });
-    if (location.hash === "#why-own-studio-pdf") open();
-    window.addEventListener("hashchange", function () { if (location.hash === "#why-own-studio-pdf") open(); });
+    if (location.hash === "#vae-paper") open();
+    window.addEventListener("hashchange", function () { if (location.hash === "#vae-paper") open(); });
   })();
 </script>
 </body>

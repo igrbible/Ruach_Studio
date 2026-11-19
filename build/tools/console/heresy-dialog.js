@@ -95,12 +95,12 @@
       var back = document.createElement("div"), before = document.activeElement;
       back.className = "hd-back";
       back.innerHTML = '<div class="hd-box' + (opts.cls ? " " + esc(opts.cls) : "") + '" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +   // HERESY 1825: a class of its own
-        '<div class="hd-title">' + esc(title) + "</div>" + (body ? '<div class="hd-body">' + esc(body) + "</div>" : "") + waveHtml(opts) +
+        '<div class="hd-title">' + esc(title) + "</div>" + (opts.html ? '<div class="hd-body hd-html">' + opts.html + "</div>" : body ? '<div class="hd-body">' + esc(body) + "</div>" : "") + waveHtml(opts) +   // HERESY 2847: opts.html, a body its caller built and escaped
         (kind === "prompt" && opts.area ? '<textarea class="hd-input hd-area" rows="' + (opts.rows || 8) + '" maxlength="' + (opts.max || 4000) + '" placeholder="' + esc(opts.placeholder || "") + '"></textarea>' + (opts.max && opts.max <= 1000 ? '<div class="hd-count" aria-live="polite"></div>' : "")   // HERESY 1428: lines, Ctrl+Enter keeps; 1802: a short one counts
           : kind === "prompt" ? '<input type="text" class="hd-input" maxlength="' + (opts.max || 200) + '" placeholder="' + esc(opts.placeholder || "") + '" />' +
             (opts.name ? '<div class="hd-name-bad" role="alert" hidden><span class="hd-name-say"></span><span class="hd-name-rule">' + esc(NAME_SAID) + '</span>' +
               '<button type="button" class="btn ghost small hd-name-use"></button></div>' : "") : "") +   // HERESY 2462
-        '<div class="hd-acts">' + (kind === "alert" ? "" : '<button type="button" class="btn ghost small hd-no">' + esc(opts.cancel || "Cancel") + "</button>") +
+        '<div class="hd-acts">' + (kind === "alert" || opts.cancel === false ? "" : '<button type="button" class="btn ghost small hd-no">' + esc(opts.cancel || "Cancel") + "</button>") +
         (opts.alt && kind === "confirm" ? '<button type="button" class="btn ghost small hd-alt">' + esc(opts.alt) + "</button>" : "") +
         '<button type="button" class="btn small ' + (opts.danger ? "danger-fill" : "primary") + ' hd-yes">' + esc(opts.ok || (kind === "prompt" ? "OK" : opts.danger ? "Delete" : "OK")) + "</button></div></div>";
       document.body.appendChild(back);
@@ -188,6 +188,7 @@
       var no = back.querySelector(".hd-no"), alt = back.querySelector(".hd-alt");
       if (no) no.addEventListener("click", function () { dismiss(); });
       if (alt) alt.addEventListener("click", function () { done("alt"); });
+      if (opts.onBox) opts.onBox(back, done);             // HERESY 2847: the caller's own links in its body (opts.cancel false: two buttons, no Cancel)
       requestAnimationFrame(function () { back.classList.add("is-on"); waveDraw(back, opts); (input || back.querySelector(".hd-yes")).focus(); if (input && !opts.area) input.select(); });
     });
   }

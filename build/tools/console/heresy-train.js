@@ -50,6 +50,7 @@
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
   function when(t) { var d = new Date((t || 0) * 1000); return t ? d.toLocaleDateString(window.RuachI18n ? window.RuachI18n.locales() : undefined) + " " + d.toTimeString().slice(0, 5) : ""; }   // 1165, 1166
   function runs() { return (state.data && state.data.runs) || []; }
+  function procs(g) { return window.HeresyProc ? window.HeresyProc.short(g) : "GPU" + (Array.isArray(g) ? g.join("+") : g); }   // HERESY 2733: GPU0, XPU0
   function runOf(name) { return runs().filter(function (r) { return r.name === name; })[0] || null; }
   function isLive(r) { return r && (r.status === "running" || r.status === "stopping" || r.status === "pausing"); }   // HERESY 1659: pausing too
   function stateOf(r) { return isLive(r) ? "running" : r.status; }
@@ -81,6 +82,21 @@
   }
 
   // ------------------------------------------------------------------ loading
+  // HERESY 2726 (the resource audit of 18.11.2026, R2: while a run trained the room took the whole list every 5.7 s, 751 KB and 0.76 s of the lab's
+  // time each, about 100 MB an hour for one window left open; Viktor 17.11.2026: «каскадно прогоны подгружались в тренер: активный, пачками со свежего
+  // до старого завершённые (в архиве), а затем только удалённые»): the room is read in a cascade, each part painted as it comes: the runs training now,
+  // the folders and sets, the other runs three at a time newest first, the trash last. While a run trains the room asks only for the live runs every
+  // 5 s; the rest once a minute, and at once when a run stops training
+  var PAGE = 3;
+  function byStart(a, b) { return (b.started || 0) - (a.started || 0); }
+  function liveInto(list) {                          // the live runs as given, the others as last read; true when a run that trained is not among them
+    var on = {}, was = runs();
+    (list || []).forEach(function (r) { on[r.name] = 1; });
+    state.data = state.data || {};
+    state.data.runs = (list || []).concat(was.filter(function (r) { return !on[r.name] && !isLive(r); })).sort(byStart);
+    return was.some(function (r) { return isLive(r) && !on[r.name]; });
+  }
+  function setsInto(d) { Object.keys(d || {}).forEach(function (k) { if (k !== "part" && k !== "runs") state.data[k] = d[k]; }); }
   function load() {
     // HERESY 2573 (the UIX audit, item 85): the first look says the runs are being read (the lab's list takes 3 to 4 s), never an empty room
     if (!state.data) {
@@ -88,48 +104,97 @@
       if ($("trRunList")) $("trRunList").innerHTML = lw;
       if ($("trRunPane") && state.pane === "run") { $("trRunPane").innerHTML = lw; var rp = $("trRunPane").closest(".tr-pane"); if (rp) rp.classList.add("is-on"); }
     }
-    // HERESY 2208: a trash the lab could not list is said so, never «The trash is empty»
-    return Promise.all([api("/train/datasets"), api("/train/trash").catch(function (e) { return { trash: [], error: e.message || String(e) }; })]).then(function (d) {
-      state.data = d[0]; state.trash = d[1].trash || []; state.trashErr = d[1].error || "";
+    var seen = {};
+    state.reading = true; state.fullAt = Date.now();
+    return api("/train/datasets?part=live").then(function (d) {
+      var first = !state.data;
+      liveInto(d.runs);
       if (state.first) {                       // the first look: a training run comes to the front
         state.first = false;
         var live = runs().filter(isLive)[0];
-        if (live && (!state.sel || !runOf(state.sel))) state.sel = live.name;
+        // HERESY 2656: the remembered run gives way to a training one unless it trains itself
+        if (live && (!state.sel || !runOf(state.sel) || !isLive(runOf(state.sel)))) state.sel = live.name;
         if (!state.pane) state.pane = live ? "run" : "raw";
       }
+      if (first) { paintLive(); if (state.pane === "run" && isLive(runOf(state.sel))) paintRun(); }   // 2726: the training run before the rest is read
+      return api("/train/datasets?part=sets");
+    }).then(function (d) {
+      setsInto(d);
+      paint();
+      var next = function (start) {                  // 2726: the other runs, newest first, a page at a time, each page painted
+        return api("/train/datasets?part=done&start=" + start + "&count=" + PAGE).then(function (p) {
+          var fresh = {};
+          (p.runs || []).forEach(function (r) { fresh[r.name] = seen[r.name] = 1; });
+          if (!p.part) state.data.runs = (p.runs || []).slice().sort(byStart);   // a lab of before 2726: it gave every run at once
+          else state.data.runs = runs().filter(function (r) { return !fresh[r.name]; }).concat(p.runs || []).sort(byStart);
+          paintList();
+          if (state.pane === "run" && fresh[state.sel]) paintRun();
+          return p.part && start + PAGE < (p.total || 0) ? next(start + PAGE) : null;
+        });
+      };
+      return next(0);
+    }).then(function () {
+      state.data.runs = runs().filter(function (r) { return isLive(r) || seen[r.name]; });   // a run deleted elsewhere leaves the list
+      // HERESY 2208: a trash the lab could not list is said so, never «The trash is empty»
+      return api("/train/trash").catch(function (e) { return { trash: [], error: e.message || String(e) }; });
+    }).then(function (t) {
+      state.reading = false;
+      state.trash = t.trash || []; state.trashErr = t.error || "";
       if (state.sel && !runOf(state.sel)) state.sel = "";
       paint();
     }).catch(function (e) {
+      state.reading = false;
       state.loadFailed = true;                         // HERESY 2339: the room is painted whole once the lab answers (a tick only refreshed its lists)
       $("trWarn").innerHTML = '<p class="tr-warn">The lab does not answer: ' + esc(e.message) + "</p>";
     }).then(schedule);
   }
-  // while the room is open: every 5 s when something trains, else every 30 s; nothing when another room is open
+  function reread() {                                // 2726: the whole room again in its parts, side by side, painted once all is in
+    state.fullAt = Date.now();
+    return Promise.all([api("/train/datasets?part=live"), api("/train/datasets?part=sets"), api("/train/datasets?part=done"),
+                        api("/train/trash").catch(function (e) { return { trash: state.trash, error: e.message || String(e) }; })]).then(function (d) {
+      var all = {}, list = (d[0].runs || []).concat(d[0].part ? d[2].runs || [] : []);   // a lab of before 2726 gives every run in each answer
+      state.data = {};
+      setsInto(d[1]);
+      state.data.runs = list.filter(function (r) { if (all[r.name]) return false; all[r.name] = 1; return true; }).sort(byStart);
+      state.trash = d[3].trash || []; state.trashErr = d[3].error || "";
+    });
+  }
+  // while the room is open: every 5 s when something trains (2726: the live runs; the rest once a minute), else all every 30 s; nothing when another room is open.
+  // HERESY 2721: by the page's mode: the room in front as said; the page seen but untouched (idle_ui) once a minute; hidden, or the Engine over the room
+  // (unfocused_room), nothing; awake again or in front again, looked at once
   function schedule() {
     clearTimeout(state.timer);
     if (document.body.dataset.tab !== "train") return;
-    state.timer = setTimeout(function () {
-      if (document.hidden || document.body.dataset.tab !== "train") return schedule();
-      var wasLive = runs().filter(isLive).map(function (r) { return r.name; });   // HERESY 1275: a run that ends while the room looks on
-      Promise.all([api("/train/datasets"), api("/train/trash").catch(function (e) { return { trash: state.trash, error: e.message || String(e) }; })]).then(function (d) {
-        state.data = d[0]; state.trash = d[1].trash || []; state.trashErr = d[1].error || "";
-        wasLive.forEach(function (name) {
-          var r = runOf(name);
-          if (!r || isLive(r) || (r.status !== "done" && r.status !== "failed")) return;   // stopped by hand: nothing to say
-          toast(r.status === "done" ? "Training " + name + " is done" : "Training " + name + " failed" + (r.error ? ": " + r.error : ""), r.status !== "done");
-          if (window.RuachChime) window.RuachChime.ring(r.status === "done");
-        });
-        paintEngines(); paintLive(); paintList(); paintPills(); gate();
-        if (state.pane === "run") paintRun();
-        // HERESY 2339 (the neutral-value pass): the room read again after a refusal: painted whole (the sets and the trainer's warnings too), and the
-        // line saying the numbers were old goes
-        if (state.loadFailed || state.staleSince) { state.loadFailed = false; state.staleSince = 0; paint(); }
-      }).catch(function () {                         // the next tick tries again; HERESY 2339: meanwhile the room says its numbers stopped
-        if (state.staleSince || !$("trWarn")) return;
-        state.staleSince = Date.now();
-        $("trWarn").insertAdjacentHTML("afterbegin", '<p class="tr-warn tr-stale">' + esc(tr("The lab does not answer since {0}: what you see is from then").replace("{0}", new Date(state.staleSince).toTimeString().slice(0, 5))) + "</p>");
-      }).then(schedule);
-    }, runs().some(isLive) ? 5000 : 30000);
+    var M = window.HeresyIdle ? window.HeresyIdle.mode("train") : "focused_room";
+    state.timer = setTimeout(look, M === "idle_ui" && !document.hidden ? 60000 : runs().some(isLive) ? 5000 : 30000);
+  }
+  if (window.HeresyIdle) window.HeresyIdle.on(function (why, before) {
+    if ((why === "awake" || (why === "room" && before === "engine")) && document.body.dataset.tab === "train" && state.data && !state.reading && !state.asking &&
+        window.HeresyIdle.mode("train") === "focused_room") { clearTimeout(state.timer); look(); }
+  });
+  function look() {
+    if (document.hidden || document.body.dataset.tab !== "train" || state.asking || (window.HeresyIdle && window.HeresyIdle.mode("train") === "unfocused_room")) return schedule();
+    state.asking = true;
+    var wasLive = runs().filter(isLive).map(function (r) { return r.name; });   // HERESY 1275: a run that ends while the room looks on
+    var ask = !wasLive.length || Date.now() - (state.fullAt || 0) >= 60000 ? reread()
+      : api("/train/datasets?part=live").then(function (d) { return d.part && liveInto(d.runs) ? reread() : d.part ? null : reread(); });
+    ask.then(function () {
+      wasLive.forEach(function (name) {
+        var r = runOf(name);
+        if (!r || isLive(r) || (r.status !== "done" && r.status !== "failed")) return;   // stopped by hand: nothing to say
+        toast(r.status === "done" ? "Training " + name + " is done" : "Training " + name + " failed" + (r.error ? ": " + r.error : ""), r.status !== "done");
+        if (window.RuachChime) window.RuachChime.ring(r.status === "done");
+      });
+      paintEngines(); paintLive(); paintList(); paintPills(); gate();
+      if (state.pane === "run") paintRun();
+      // HERESY 2339 (the neutral-value pass): the room read again after a refusal: painted whole (the sets and the trainer's warnings too), and the
+      // line saying the numbers were old goes
+      if (state.loadFailed || state.staleSince) { state.loadFailed = false; state.staleSince = 0; paint(); }
+    }).catch(function () {                         // the next tick tries again; HERESY 2339: meanwhile the room says its numbers stopped
+      if (state.staleSince || !$("trWarn")) return;
+      state.staleSince = Date.now();
+      $("trWarn").insertAdjacentHTML("afterbegin", '<p class="tr-warn tr-stale">' + esc(tr("The lab does not answer since {0}: what you see is from then").replace("{0}", new Date(state.staleSince).toTimeString().slice(0, 5))) + "</p>");
+    }).then(function () { state.asking = false; schedule(); });
   }
 
   window.addEventListener("ruach-lang", function () { if (state.data) paint(); });   // HERESY 1165: its tips in the new language
@@ -279,10 +344,10 @@
       }).join("") : '<p class="row-hint tr-empty">' + (state.trashErr ? esc(tr("The trash could not be read: {0}").replace("{0}", state.trashErr)) : "The trash is empty.") + "</p>";
     } else {
       var list = runs().filter(inFilter).filter(function (r) { return !q || (r.name + " " + (r.dataset || "") + " " + (r.kind || "") + " " + (r.note || "")).toLowerCase().indexOf(q) >= 0; });
-      html = list.length ? list.map(card).join("") : '<p class="row-hint tr-empty">' + (state.filter === "active" ? "Nothing trains now." : state.filter === "archived" ? "Nothing archived." : "No runs yet: steps 1 to 3.") + "</p>";
+      html = list.length ? list.map(card).join("") : '<p class="row-hint tr-empty">' + (state.reading ? esc(tr("Reading the runs…")) : state.filter === "active" ? "Nothing trains now." : state.filter === "archived" ? "Nothing archived." : "No runs yet: steps 1 to 3.") + "</p>";
     }
     $("trRunList").innerHTML = html;
-    var n = state.data ? runs().filter(function (r) { return !r.archived; }).length : "\u2026";   // HERESY 2034: not 0 before the runs are known
+    var n = state.data && !state.reading ? runs().filter(function (r) { return !r.archived; }).length : "\u2026";   // HERESY 2034: not 0 before the runs are known (2726: all of them)
     $("trRunCount").textContent = n;
     $("trUnfoldCount").textContent = n;
     $("trLayout").classList.toggle("is-folded", state.folded);
@@ -604,41 +669,54 @@
     var idx = (r.gpus || [])[+rank];
     if (idx == null && +rank === 0 && r.gpu != null) idx = r.gpu;
     var g = (((state.data || {}).gpus) || []).filter(function (x) { return x && x.index === idx; })[0];
-    return (idx != null ? "GPU" + idx : tr("card {0}").replace("{0}", rank)) + (g && g.name ? " · " + String(g.name).replace(/^NVIDIA (GeForce )?/, "") : "");
+    return (idx != null ? (window.HeresyProc ? window.HeresyProc.short(idx) : "GPU" + idx) : tr("card {0}").replace("{0}", rank)) + (g && g.name ? " · " + String(g.name).replace(/^NVIDIA (GeForce )?/, "") : "");
   }
   function curvesOf(ser, key) {
     if (key !== "vram") return ser[key] && ser[key].curve && ser[key].curve.length ? [{ k: "", s: ser[key] }] : [];
     return Object.keys(ser.vram || {}).sort(function (a, b) { return a - b; }).map(function (k) { return { k: k, s: ser.vram[k] }; })
       .filter(function (x) { return x.s && x.s.curve && x.s.curve.length; });
   }
-  function emptyChart(key, ser, r, title, say, lines) {
-    var why = ser.error ? "The step log could not be read (said above): nothing to draw"
+  function whyEmpty(key, ser, r, lines) {                 // HERESY 2657: said by an empty chart and by a multigraph's box for a curve not logged
+    return ser.error ? "The step log could not be read (said above): nothing to draw"
       : lines.length ? tr("One step logged so far: {0}").replace("{0}", fmtV(lines[0].s.curve[0][1]))
       : key === "vram" && !(r.options || {}).vram_meter && !r.plugin ? "Not logged: the run's VRAM meter was off (step 3, “Measure each card's VRAM”)"
       : "Not in this run's logs: its trainer did not record it. An empty chart, not a zero";
-    return '<figure class="tr-chart is-empty" data-key="' + key + '"><figcaption><b>' + esc(tr(title)) + "</b></figcaption>" +
-      '<p class="tr-none">' + esc(tr(why)) + '</p><p class="tr-say">' + esc(tr(say)) + "</p></figure>";
   }
-  function chart(key, ser, r, title, say) {
-    var lines = curvesOf(ser, key), multi = key === "vram", plain = !!PLAIN[key];
-    if (lines.reduce(function (m, l) { return Math.max(m, l.s.curve.length); }, 0) < 2) return emptyChart(key, ser, r, title, say, lines);
-    var other = multi ? null : runOf(state.cmp), oc = other && other !== r ? (((other.series || {})[key] || {}).curve || []) : [];
-    var W = 600, H = 150, L = 0, lo = Infinity, hi = -Infinity;
-    var last = Math.max(r.steps || 0, other ? other.steps || 0 : 0, lines.reduce(function (m, l) { var c = l.s.curve; return Math.max(m, c[c.length - 1][0]); }, 0)) || 1;
-    var z = zoomOf(r, last), x0 = z[0], x1 = z[1];        // HERESY 1855: the steps in view
-    var clip = function (pts) {                            // the points in view, and one on each side for the line to run out of it
-      var i0 = 0, i1 = pts.length - 1;
-      for (var i = 0; i < pts.length; i++) { if (pts[i][0] <= x0) i0 = i; if (pts[i][0] >= x1) { i1 = i; break; } }
-      return pts.slice(i0, i1 + 1);
-    };
+  function emptyChart(key, ser, r, title, say, lines) {
+    return '<figure class="tr-chart is-empty" data-key="' + key + '"><figcaption><b>' + esc(tr(title)) + "</b></figcaption>" +
+      '<p class="tr-none">' + esc(tr(whyEmpty(key, ser, r, lines))) + '</p><p class="tr-say">' + esc(tr(say)) + "</p></figure>";
+  }
+  function clipTo(pts, x0, x1) {                          // the points in view, and one on each side for the line to run out of it
+    var i0 = 0, i1 = pts.length - 1;
+    for (var i = 0; i < pts.length; i++) { if (pts[i][0] <= x0) i0 = i; if (pts[i][0] >= x1) { i1 = i; break; } }
+    return pts.slice(i0, i1 + 1);
+  }
+  // HERESY 2657: a chart's last step (the run's, the compare run's, its curves' last) and the y range it draws its curve in, each in one place:
+  // the together view's curves take the very same, so each lies there at the height it has in its own chart
+  function lastOf(key, ser, r) {
+    var lines = curvesOf(ser, key), other = key === "vram" ? null : runOf(state.cmp);
+    return Math.max(r.steps || 0, other ? other.steps || 0 : 0, lines.reduce(function (m, l) { var c = l.s.curve; return Math.max(m, c[c.length - 1][0]); }, 0)) || 1;
+  }
+  function scaleOf(key, ser, r, x0, x1) {
+    var lines = curvesOf(ser, key), plain = !!PLAIN[key], lo = Infinity, hi = -Infinity;
+    var other = key === "vram" ? null : runOf(state.cmp), oc = other && other !== r ? (((other.series || {})[key] || {}).curve || []) : [];
     var cmpAvg = oc.length > 1 ? (plain ? oc : ema(oc, 0.08)) : [];
     lines.forEach(function (l) { l.s.curve.concat(cmpAvg).forEach(function (p) { if (p[0] >= x0 && p[0] <= x1) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); } }); });
     // HERESY 2622: the held-out tracks at each save, dots over the curve (flow, ar_ce, KL), in the y range too
     var HOK = { flow: "flow", ar_ce: "ar_ce", ar_kl: "kl" }[key], hist = HOK ? ((r.val || {}).history || []).filter(function (h) { return h && h.step && h[HOK] != null; }) : [];
     hist.forEach(function (h) { if (h.step >= x0 && h.step <= x1) { lo = Math.min(lo, h[HOK]); hi = Math.max(hi, h[HOK]); } });
-    if (!isFinite(lo)) lines.forEach(function (l) { clip(l.s.curve).forEach(function (p) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); }); });
-    if (multi || key === "lr" || key === "step_s") lo = Math.min(lo, 0);   // memory, a rate and a time read from zero
+    if (!isFinite(lo)) lines.forEach(function (l) { clipTo(l.s.curve, x0, x1).forEach(function (p) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); }); });
+    if (key === "vram" || key === "lr" || key === "step_s") lo = Math.min(lo, 0);   // memory, a rate and a time read from zero
     var pad = (hi - lo) * 0.06 || Math.abs(hi) * 0.05 || 0.05; hi += pad; if (lo !== 0) lo -= pad;
+    return { lo: lo, hi: hi, other: other, cmpAvg: cmpAvg, HOK: HOK, hist: hist };
+  }
+  function chart(key, ser, r, title, say) {
+    var lines = curvesOf(ser, key), multi = key === "vram", plain = !!PLAIN[key];
+    if (lines.reduce(function (m, l) { return Math.max(m, l.s.curve.length); }, 0) < 2) return emptyChart(key, ser, r, title, say, lines);
+    var W = 600, H = 150, L = 0, last = lastOf(key, ser, r);
+    var z = zoomOf(r, last), x0 = z[0], x1 = z[1];        // HERESY 1855: the steps in view
+    var clip = function (pts) { return clipTo(pts, x0, x1); };
+    var sc = scaleOf(key, ser, r, x0, x1), lo = sc.lo, hi = sc.hi, other = sc.other, cmpAvg = sc.cmpAvg, HOK = sc.HOK, hist = sc.hist;
     var x = function (st) { return L + (W - L) * (st - x0) / (x1 - x0); }, y = function (v) { return H - 6 - (H - 14) * (v - lo) / (hi - lo); };
     var path = function (pts) { return clip(pts).map(function (p, i) { return (i ? "L" : "M") + x(p[0]).toFixed(1) + " " + y(p[1]).toFixed(1); }).join(" "); };
     var grid = [0, 0.5, 1].map(function (f) { var v = lo + (hi - lo) * (1 - f), yy = y(v); return '<line class="g" x1="0" x2="' + W + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '"/>'; }).join("");
@@ -667,57 +745,117 @@
       '<p class="tr-say">' + esc(tr(say)) + "</p></figure>";
   }
   // HERESY 2623 (Viktor 14.11.2026: «объединить все шесть карточек с кривыми в одну единую, с наложениями в разных цветах, выключением слоёв…
-  // А LR и пик по памяти оставить как есть»): the Telemetry's third view. The six curves over one another, each in its own scale (their numbers
-  // differ by tens: a loss near 3, a KL near 0.3), each its running average in its own colour, the held-out dots in it; a chip per curve says its
-  // value now and hides it or shows it again (kept in this browser); the cursor reads every curve at its step; the zoom is the others'. LR and
-  // the memory stay charts of their own beside it.
+  // А LR и пик по памяти оставить как есть»): the Telemetry's third view, the curves over one another in their colours, the held-out dots in
+  // them, the zoom the others'. HERESY 2657 (Viktor 17.11.2026: «кривые в совмещённом графе держались своих индивидуальных отметок шкал, а не
+  // упирались каждый в потолок… LR и VRAM… объединить отдельной парой… чекбоксы»): two multigraphs, the six curves, and LR with each card's
+  // memory. Each curve is drawn in the y range of its own chart (scaleOf), no longer stretched floor to ceiling, so it lies at the height it has
+  // there; each shown scale's numbers stand in a column of its colour left of the plot, one gutter for both charts, so their steps line up; the
+  // cards share the memory chart's one scale, from zero. A box a curve, its colour and its value now, shows it or hides it, kept in this browser
+  // (yue2.trLayersOff, yue2.trLayersOff2); a curve the run did not log is a box that cannot be ticked and says why
   var VIEWS = { side: ["stacked", "The curves one under the other, each the whole width", "rows-2"],
-                stacked: ["combined", "All the curves in one chart, each in its own scale", "layers"],
+                stacked: ["combined", "All the curves in two charts, each in its own chart's scale", "layers"],
                 combined: ["side", "The curves side by side", "cols-2"] };
   var LAYERS = [["loss", "#d0573c"], ["flow", "#3fa35a"], ["ar_ce", "#4f86d0"], ["ar_kl", "#b06ad0"], ["grad_norm", "#c9971f"], ["step_s", "#8f8f8f"]];
-  var CW = 1200, CH = 320;
-  function layersOff() { var o = {}; (recall("yue2.trLayersOff") || "").split(",").forEach(function (k) { if (k) o[k] = 1; }); return o; }
+  var LR_COL = "#3fa35a", CARD_COL = ["var(--ink)", "var(--amber)", "#4fa3c7", "#b07cc6"];   // the memory chart's own colours (k0 to k3)
+  var CW = 1200;
+  var MULTI = [   // its key, its title, the words under it, its height, the key its hidden curves are kept under
+    ["combined", "The curves together", "Each curve keeps the scale of its own chart, its numbers in its colour on the left: the boxes show a curve or hide it (kept in this browser); under the cursor, every shown curve's value at that step.", 320, "yue2.trLayersOff"],
+    ["combined2", "Learning rate and memory", "The learning rate and each card's peak memory, each in the scale of its own chart (the cards share one, from zero): the boxes show a curve or hide it; under the cursor, every shown curve's value at that step.", 220, "yue2.trLayersOff2"]];
+  function multiOf(id) { return MULTI.filter(function (m) { return m[0] === id; })[0] || MULTI[0]; }
+  function layersOff(id) { var o = {}; (recall(multiOf(id)[4]) || "").split(",").forEach(function (k) { if (k) o[k] = 1; }); return o; }
   function titleOf(key) { var c = CHARTS.filter(function (x) { return x[0] === key; })[0]; return c ? c[1] : key; }
-  function combined(ser, r) {
-    var off = layersOff(), have = LAYERS.filter(function (l) { return ser[l[0]] && ser[l[0]].curve && ser[l[0]].curve.length > 1; });
-    if (!have.length) return emptyChart("combined", ser, r, "The curves together", "Each curve is drawn in its own scale, so their shapes lie one over another: the chips say each one's value now and hide it or show it again; under the cursor, every curve's value at that step.", []);
-    var last = Math.max(r.steps || 0, have.reduce(function (m, l) { var c = ser[l[0]].curve; return Math.max(m, c[c.length - 1][0]); }, 0)) || 1;
-    var z = zoomOf(r, last), x0 = z[0], x1 = z[1], x = function (st) { return CW * (st - x0) / (x1 - x0); };
-    var paths = "", chips = "", HO = { flow: "flow", ar_ce: "ar_ce", ar_kl: "kl" };
-    have.forEach(function (l) {
-      var key = l[0], col = l[1], av = ema(ser[key].curve, 0.08);
-      var i0 = 0, i1 = av.length - 1;
-      for (var i = 0; i < av.length; i++) { if (av[i][0] <= x0) i0 = i; if (av[i][0] >= x1) { i1 = i; break; } }
-      var pts = av.slice(i0, i1 + 1), lo = Infinity, hi = -Infinity;
-      var hist = HO[key] ? ((r.val || {}).history || []).filter(function (h) { return h && h.step >= x0 && h.step <= x1 && h[HO[key]] != null; }) : [];
-      pts.forEach(function (p) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); });
-      hist.forEach(function (h) { lo = Math.min(lo, h[HO[key]]); hi = Math.max(hi, h[HO[key]]); });
-      var pad = (hi - lo) * 0.06 || Math.abs(hi) * 0.05 || 0.05; lo -= pad; hi += pad;
-      var y = function (v) { return CH - 8 - (CH - 16) * (v - lo) / (hi - lo); };
-      if (!off[key]) {
-        paths += '<path class="cl" style="stroke:' + col + '" d="' + pts.map(function (p, j) { return (j ? "L" : "M") + x(p[0]).toFixed(1) + " " + y(p[1]).toFixed(1); }).join(" ") + '"/>' +
-          hist.map(function (h) { return '<path class="hod" style="stroke:' + col + '" d="M' + x(h.step).toFixed(1) + " " + y(h[HO[key]]).toFixed(1) + 'h0.01"/>'; }).join("");
-      }
-      chips += '<button type="button" class="tr-layer" data-layer="' + key + '" aria-pressed="' + !off[key] + '" style="--lc:' + col + '" data-tip="' + esc(tr(titleOf(key))) + '">' +
-        "<i></i>" + esc(tr(titleOf(key))) + ' <span class="mono">' + fmtV(av[av.length - 1][1]) + "</span></button>";
+  // a multigraph's curves, each with the points its own chart draws (the running average; LR and memory as logged), the key of its scale, its
+  // colour and the name the cursor gives it; one the run did not log, a box with why
+  function layersOf(id, ser, r) {
+    var none = function (key, col) { return { key: key, col: col, name: tr(titleOf(key)), none: whyEmpty(key, ser, r, curvesOf(ser, key)) }; };
+    var logged = function (key) { var s = ser[key]; return !!(s && s.curve && s.curve.length > 1); };
+    if (id === "combined") return LAYERS.map(function (l) {
+      return logged(l[0]) ? { key: l[0], scale: l[0], col: l[1], name: tr(titleOf(l[0])), read: l[0], pts: ema(ser[l[0]].curve, 0.08) } : none(l[0], l[1]);
     });
-    var grid = [0.08, 0.5, 0.92].map(function (f) { var yy = (CH * f).toFixed(1); return '<line class="g" x1="0" x2="' + CW + '" y1="' + yy + '" y2="' + yy + '"/>'; }).join("");
-    var ticks = (r.checkpoints || []).filter(function (k) { return k.step && k.step >= x0 && k.step <= x1; }).map(function (k) {
-      var xx = x(k.step).toFixed(1); return '<line class="t" x1="' + xx + '" x2="' + xx + '" y1="' + (CH - 10) + '" y2="' + CH + '"/>';
-    }).join("");
-    return '<figure class="tr-chart tr-combined" data-key="combined" data-last="' + last + '" data-x0="' + x0 + '" data-x1="' + x1 + '">' +
-      "<figcaption><b>" + esc(tr("The curves together")) + "</b>" + zoomBar(z, last) + '<span class="tr-read mono is-hint">over the curve: the step, its epoch, the value there</span></figcaption>' +
-      '<div class="tr-layers">' + chips + "</div>" +
-      '<div class="tr-plot"><svg viewBox="0 0 ' + CW + " " + CH + '" preserveAspectRatio="none">' + grid + ticks + paths +
-      '<line class="cur" x1="-10" x2="-10" y1="0" y2="' + CH + '"/></svg></div><p class="tr-say">' + esc(tr("Each curve is drawn in its own scale, so their shapes lie one over another: the chips say each one's value now and hide it or show it again; under the cursor, every curve's value at that step.")) + "</p></figure>";
+    var cards = curvesOf(ser, "vram"), out = [logged("lr") ? { key: "lr", scale: "lr", col: LR_COL, name: tr(titleOf("lr")), read: "lr", pts: ser.lr.curve } : none("lr", LR_COL)];
+    if (cards.reduce(function (m, l) { return Math.max(m, l.s.curve.length); }, 0) < 2) return out.concat([none("vram", CARD_COL[0])]);
+    return out.concat(cards.map(function (l, i) {
+      var n = cardName(r, l.k); return { key: "vram" + l.k, scale: "vram", col: CARD_COL[i % 4], name: n, read: n.split(" · ")[0], pts: l.s.curve, gb: true };
+    }));
   }
-  function combinedRead(g, r, step) {
-    var ser = r.series || {}, off = layersOff(), parts = [], at = null;
-    LAYERS.forEach(function (l) {
-      var s = ser[l[0]]; if (!s || !s.curve || s.curve.length < 2 || off[l[0]]) return;
-      var av = ema(s.curve, 0.08), p = av.reduce(function (b, q) { return Math.abs(q[0] - step) < Math.abs(b[0] - step) ? q : b; }, av[0]);
+  function valOf(it, v) { return it.gb ? tr("{0} GB").replace("{0}", fmtV(v)) : fmtV(v); }   // a card in the page's own GB, whole
+  function together(ser, r) {
+    state.multi = {};
+    return MULTI.map(function (m) {
+      var items = layersOf(m[0], ser, r), drawn = items.filter(function (it) { return it.pts; }), off = layersOff(m[0]);
+      if (!drawn.length) return emptyChart(m[0], ser, r, m[1], m[2], []);
+      var last = drawn.reduce(function (a, it) { return Math.max(a, lastOf(it.scale, ser, r)); }, 1), z = zoomOf(r, last), sc = {}, axes = [];
+      drawn.forEach(function (it) {
+        if (!sc[it.scale]) sc[it.scale] = scaleOf(it.scale, ser, r, z[0], z[1]);
+        it.on = !off[it.key];
+        if (it.on && axes.indexOf(it.scale) < 0) axes.push(it.scale);
+      });
+      return multiFig({ m: m, items: items, drawn: drawn, last: last, z: z, sc: sc, axes: axes }, r);
+    }).join("");
+  }
+  // HERESY 2657b (Viktor 17.11.2026, on the first look: «Давай чище сделаем: значения с равномерным отступом сверху и снизу расположим в их
+  // цветовых окрасках. Одна короткая полоска сверху и снизу. Те, что посередине, оставить также горизонтально как и верхние, нижние. Под самими
+  // этими тремя блоками со значениями полупрозрачный белый бекграунд с размытием, поверх самих графов»): the shown scales as three rows over the
+  // plot, at its top, middle and floor, as far from the top as from the floor, each value in its curve's colour (the memory's shared one muted), a
+  // short tick at the top and at the floor; a box under the mouse lights its curve and its values and dims the rest (state.hot, kept through a repaint)
+  var EDGE = 18;
+  function multiFig(f, r) {
+    var id = f.m[0], H = f.m[3], x0 = f.z[0], x1 = f.z[1], top = EDGE, bot = EDGE;
+    var x = function (st) { return CW * (st - x0) / (x1 - x0); };
+    var yIn = function (s) { return function (v) { return H - bot - (H - top - bot) * (v - s.lo) / (s.hi - s.lo); }; };
+    var hot = state.hot && state.hot.fig === id ? hotOf(f.drawn.filter(function (it) { return it.on; }), state.hot.key) : null;
+    var lit = function (k) { return hot && hot[k] ? " is-hot" : ""; };
+    var paths = "", boxes = "";
+    f.items.forEach(function (it) {
+      var s = it.pts && f.sc[it.scale], on = !!s && it.on, y = s && yIn(s);
+      if (on) paths += '<path class="cl' + lit(it.key) + '" data-k="' + esc(it.key) + '" style="--lc:' + it.col + '" d="' + clipTo(it.pts, x0, x1).map(function (p, j) { return (j ? "L" : "M") + x(p[0]).toFixed(1) + " " + y(p[1]).toFixed(1); }).join(" ") + '"/>' +
+        (s.HOK ? s.hist.filter(function (h) { return h.step >= x0 && h.step <= x1; }).map(function (h) { return '<path class="hod' + lit(it.key) + '" data-k="' + esc(it.key) + '" style="--lc:' + it.col + '" d="M' + x(h.step).toFixed(1) + " " + y(h[s.HOK]).toFixed(1) + 'h0.01"/>'; }).join("") : "");
+      boxes += '<label class="check tr-layer' + (on ? "" : " is-off") + (s ? "" : " is-none") + '" style="--lc:' + it.col + '" data-tip="' + esc(s ? it.name + " · " + fmtV(s.lo) + " – " + fmtV(s.hi) : tr(it.none)) + '">' +
+        '<input type="checkbox" data-layer="' + esc(it.key) + '" data-fig="' + id + '"' + (on ? " checked" : "") + (s ? "" : " disabled") + " /><i></i><span>" + esc(it.name) + "</span>" +
+        '<span class="mono">' + (s ? valOf(it, it.pts[it.pts.length - 1][1]) : "—") + "</span></label>";
+    });
+    var levels = [top, (H - bot + top) / 2, H - bot];
+    var row = function (i) {                              // the shown scales' values at one height, in the boxes' order
+      return f.axes.map(function (k) {
+        var s = f.sc[k], of = f.drawn.filter(function (it) { return it.scale === k; });
+        return '<b class="' + (lit(k) + (of.length > 1 ? " is-shared" : "")).trim() + '" data-k="' + k + '"' + (i ? "" : ' data-scale="' + k + '" data-lo="' + s.lo + '" data-hi="' + s.hi + '"') +
+          ' style="--lc:' + of[0].col + '">' + fmtV([s.hi, (s.hi + s.lo) / 2, s.lo][i]) + "</b>";
+      }).join("");
+    };
+    var scales = f.axes.length ? levels.map(function (yy, i) { return '<div class="tr-scl mono" style="top:' + yy.toFixed(1) + 'px">' + row(i) + "</div>"; }).join("") +
+      '<i class="tr-tick" style="top:' + top + 'px"></i><i class="tr-tick" style="top:' + (H - bot) + 'px"></i>' : "";
+    var grid = levels.map(function (yy) { return '<line class="g" x1="0" x2="' + CW + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '"/>'; }).join("");
+    var ticks = (r.checkpoints || []).filter(function (k) { return k.step && k.step >= x0 && k.step <= x1; }).map(function (k) {
+      var xx = x(k.step).toFixed(1); return '<line class="t" x1="' + xx + '" x2="' + xx + '" y1="' + (H - 10) + '" y2="' + H + '"/>';
+    }).join("");
+    state.multi[id] = f.drawn.filter(function (it) { return it.on; });
+    return '<figure class="tr-chart tr-combined' + (hot ? " has-hot" : "") + '" data-key="' + id + '" data-last="' + f.last + '" data-x0="' + x0 + '" data-x1="' + x1 + '" style="--ch:' + H + 'px">' +
+      "<figcaption><b>" + esc(tr(f.m[1])) + "</b>" + zoomBar(f.z, f.last) + '<span class="tr-read mono is-hint">over the curve: the step, its epoch, the value there</span></figcaption>' +
+      '<div class="tr-layers">' + boxes + "</div>" +
+      '<div class="tr-plot"><svg viewBox="0 0 ' + CW + " " + H + '" preserveAspectRatio="none">' + grid + ticks + paths +
+      '<line class="cur" x1="-10" x2="-10" y1="0" y2="' + H + '"/></svg>' + scales + '</div><p class="tr-say">' + esc(tr(f.m[2])) + "</p></figure>";
+  }
+  // HERESY 2657b, 2664: what a key lights among the shown curves: a box's curve and its scale; a value in the scale rows (its key a scale's), the
+  // curves drawn in that scale (the cards share the memory's one) and the scale; nothing lit, null
+  function hotOf(shown, key) {
+    var its = shown.filter(function (it) { return it.key === key; }), o = null;
+    if (!its.length) its = shown.filter(function (it) { return it.scale === key; });
+    its.forEach(function (it) { o = o || {}; o[it.key] = o[it.scale] = 1; });
+    return o;
+  }
+  function lightLayer(fig, key) {                         // HERESY 2657b, 2664: a box's or a value's curve and its values lit, the rest dimmed; no key, all as drawn
+    var hot = key ? hotOf((state.multi || {})[fig.dataset.key] || [], key) : null;
+    state.hot = hot ? { fig: fig.dataset.key, key: key } : null;
+    fig.classList.toggle("has-hot", !!hot);
+    Array.prototype.forEach.call(fig.querySelectorAll("[data-k]"), function (el) { el.classList.toggle("is-hot", !!hot && !!hot[el.dataset.k]); });
+  }
+  function unlight() { var f = state.hot && document.querySelector('#trRunPane .tr-combined[data-key="' + state.hot.fig + '"]'); if (f) lightLayer(f, null); else state.hot = null; }
+  function combinedRead(g, r, step) {                     // HERESY 2623, 2657: every shown curve of a multigraph at the step, as it is drawn
+    var parts = [], at = null;
+    ((state.multi || {})[g.dataset.key] || []).forEach(function (it) {
+      var p = it.pts.reduce(function (b, q) { return Math.abs(q[0] - step) < Math.abs(b[0] - step) ? q : b; }, it.pts[0]);
       if (at == null) at = p[0];
-      parts.push(l[0] + " " + fmtV(p[1]));
+      parts.push(it.read + " " + valOf(it, p[1]));
     });
     if (at == null) return;
     var xx = (CW * (at - +g.dataset.x0) / (+g.dataset.x1 - +g.dataset.x0)).toFixed(1), line = g.querySelector("line.cur");
@@ -727,6 +865,7 @@
   }
   function paintRun() {
     var el = $("trRunPane"), r = runOf(state.sel);
+    if (!r && state.reading && state.sel) { el.innerHTML = '<p class="row-hint tr-empty">' + esc(tr("Reading the runs…")) + "</p>"; return; }   // 2726: its page not in yet
     if (!r) { el.innerHTML = '<p class="row-hint">No run chosen: pick one in the column on the right, or start one in step 3.</p>'; return; }
     var o = r.options || {}, ser = r.series || {}, live = isLive(r);
     var cks = (r.checkpoints || []).slice().sort(function (a, b) {        // by step; the run's final file after its last numbered one
@@ -766,7 +905,7 @@
         tile("ar_ce now", ar != null ? Number(ar).toFixed(3) : "—", "the music half's loss, averaged over the last 25 steps") +
         tile("ar_kl now", ser.ar_kl ? ser.ar_kl.last.toFixed(4) : "—", "how far the music half has moved from the base model") +
         tile("VRAM peak", r.vram_peak_mb ? (r.vram_peak_mb / 1024).toFixed(1) + " GB" : "—", "the card's peak while it ran") +
-        tile("GPU", r.gpus && r.gpus.length > 1 ? "GPU" + esc(r.gpus.join("+")) : r.gpu != null ? "GPU" + esc(r.gpu) : "—") +   // HERESY 1631
+        tile("GPU", r.gpus && r.gpus.length > 1 ? esc(procs(r.gpus)) : r.gpu != null ? esc(procs(r.gpu)) : "—") +   // HERESY 2733: GPU0+1+2, XPU0   // HERESY 1631
         // HERESY 1736: the held-out best (1497), its epoch
         (r.val && r.val.best && r.val.best.flow != null ? tile("held-out best", Number(r.val.best.flow).toFixed(4) + (r.tracks && r.val.best.step ? " · e" + epochSaid(r.val.best.step / r.tracks) : ""),
           "The sound half's loss on " + ((r.val.held_out || []).length || 16) + " tracks it never trains on, measured at each save: the lowest so far, and the epoch it came at", true) : "") +   // HERESY 1833: two tiles wide
@@ -774,8 +913,8 @@
       (memo ? '<p class="tr-err">ar_ce ' + Number(ar).toFixed(3) + ": the music half is learning the songs by heart; an earlier epoch may be the better adapter.</p>" : "") +
       (ser.error ? '<p class="tr-err">' + esc(ser.error) + "</p>" : "") + (r.error ? '<p class="tr-err">' + esc(r.error) + "</p>" : "") +
       '<div class="tr-charts' + (state.view === "stacked" ? " is-stacked" : state.view === "combined" ? " is-combined" : "") + '">' +
-        (state.view === "combined" ? combined(ser, r) + CHARTS.filter(function (c) { return c[0] === "lr" || c[0] === "vram"; }).map(function (c) { return chart(c[0], ser, r, c[1], c[2]); }).join("")
-          : CHARTS.map(function (c) { return chart(c[0], ser, r, c[1], c[2]); }).join("")) +   // HERESY 2442: the eight, for every run; 2623: or the six together, LR and memory beside
+        (state.view === "combined" ? together(ser, r)
+          : CHARTS.map(function (c) { return chart(c[0], ser, r, c[1], c[2]); }).join("")) +   // HERESY 2442: the eight, for every run; 2623, 2657: or the two multigraphs
       "</div>" +
       (cks.length || (r.gone || []).length ? '<div class="tr-epochs"><div class="tr-ehead"><span class="label">Epochs · ' + cks.length + " saved · " + gb(bytes) + "</span>" +
           ((r.gone || []).length ? '<span class="tr-gone-n">' + r.gone.length + " deleted from disk</span>" : "") +   // HERESY 1816
@@ -807,7 +946,7 @@
         (guardSaid(o) ? "<span><em>guard</em> " + esc(guardSaid(o)) + "</span>" : "")) +   // HERESY 1832
         (ser.vram_cards ? "<span><em>VRAM peaks</em> " + Object.keys(ser.vram_cards).map(function (k) {
           var c = ser.vram_cards[k], card = (r.gpus || [])[+k];
-          return "GPU" + (card != null ? card : k) + " " + esc(tr("{0} GB at step {1}").replace("{0}", c.gb).replace("{1}", c.step));
+          return procs(card != null ? card : k) + " " + esc(tr("{0} GB at step {1}").replace("{0}", c.gb).replace("{1}", c.step));
         }).join(" · ") + "</span>" : "") +
         "<span><em>started</em> " + esc(when(r.first_started || r.started)) + "</span>" +
         (r.first_started && r.first_started !== r.started ? "<span><em>resumed</em> " + esc(when(r.started)) + "</span>" : "") +   // HERESY 2209
@@ -825,11 +964,13 @@
   function readout(e) {
     var fig = e.target.closest(".tr-chart"), r = runOf(state.sel);
     if (!fig || !r || fig.classList.contains("is-empty")) return;
-    var svg = fig.querySelector("svg"), box = svg.getBoundingClientRect();
+    // HERESY 2653: the plot's own svg; the caption's zoom icons are svgs too (since 13.11), and the first of them is 14 px wide
+    var svg = fig.querySelector(".tr-plot svg"), box = svg && svg.getBoundingClientRect();
+    if (!box || !box.width) return;
     var f = Math.max(0, Math.min(1, (e.clientX - box.left) / box.width)), step = +fig.dataset.x0 + f * (+fig.dataset.x1 - +fig.dataset.x0);   // HERESY 1855: in view
     var near = function (cc) { return cc.reduce(function (b, p) { return Math.abs(p[0] - step) < Math.abs(b[0] - step) ? p : b; }, cc[0]); };
     Array.prototype.forEach.call(document.querySelectorAll("#trRunPane .tr-chart:not(.is-empty)"), function (g) {
-      if (g.dataset.key === "combined") return combinedRead(g, r, step);   // HERESY 2623
+      if (g.classList.contains("tr-combined")) return combinedRead(g, r, step);   // HERESY 2623, 2657: both multigraphs
       var ls = curvesOf(r.series || {}, g.dataset.key);
       if (!ls.length) return;
       var pt = near(ls[0].s.curve), line = g.querySelector("line.cur");
@@ -1061,7 +1202,7 @@
     // HERESY 1166: each sentence translated whole where it is made
     if (!Array.isArray(d.gpus)) say = '<span class="tr-err">' + esc(tr(d.gpus && d.gpus.error || "the cards could not be read")) + "</span>";
     else if (shut) say = '<span class="tr-err">' + esc(tr(quant + " needed " + gbm(need) + " on one card (measured); the largest here has " + gbm(big.total_mb) + (quant === "bf16" ? ": choose int8 weights" : "") + ".")) + "</span>";
-    else if (need) say = esc(tr(quant + " · " + gbm(need) + " at the peak (measured).")) + " " + esc(free.length ? tr("Free enough now: " + free.map(function (c) { return "GPU" + c.index; }).join(", ")) : tr("No card has that free now (" + cards.map(function (c) { return "GPU" + c.index + " " + gbm(c.free_mb); }).join(", ") + ")"));
+    else if (need) say = esc(tr(quant + " · " + gbm(need) + " at the peak (measured).")) + " " + esc(free.length ? tr("Free enough now: " + free.map(function (c) { return procs(c.index); }).join(", ")) : tr("No card has that free now (" + cards.map(function (c) { return "GPU" + c.index + " " + gbm(c.free_mb); }).join(", ") + ")"));
     else say = esc(tr(quant + " · not measured yet for this trainer: the first run measures its peak"));
     $("trRunSay").innerHTML = say;
   }
@@ -1369,8 +1510,7 @@
       if (t.id === "trLApply") return listenApply();
       if ((b = t.closest("[data-menu]"))) { e.stopPropagation(); return menu(b); }
       if (t.closest("[data-stack]")) { state.view = VIEWS[state.view][0]; state.stacked = state.view === "stacked"; keep("yue2.trStacked", state.view === "stacked" ? "1" : state.view === "combined" ? "2" : null); return paintRun(); }   // HERESY 1299; 2623 three views
-      var lay = t.closest("[data-layer]");
-      if (lay) { var lo2 = layersOff(); if (lo2[lay.dataset.layer]) delete lo2[lay.dataset.layer]; else lo2[lay.dataset.layer] = 1; keep("yue2.trLayersOff", Object.keys(lo2).join(",") || null); return paintRun(); }   // HERESY 2623
+      if (t.closest(".tr-layer")) return;                  // HERESY 2657: a curve's box is a checkbox, kept by its change (below)
       if ((b = t.closest("[data-zoom]"))) {               // HERESY 1855: −, +, the whole run
         var zf = b.closest(".tr-chart"), za = +zf.dataset.x0, zb = +zf.dataset.x1, zm = (za + zb) / 2, zs = zb - za;
         if (b.dataset.zoom === "reset") { state.zoom = null; return paintRun(); }
@@ -1437,7 +1577,27 @@
         { label: tr("IN or OUT\u2026"), action: function () { epochAsk(c.file); } }
       ]);
     });
-    $("trRunPane").addEventListener("change", function (e) { if (e.target.id === "trCmp") { state.cmp = e.target.value; paintRun(); } });
+    $("trRunPane").addEventListener("change", function (e) {
+      if (e.target.id === "trCmp") { state.cmp = e.target.value; paintRun(); }
+      var lay = e.target.dataset && e.target.dataset.layer, fig = lay && e.target.dataset.fig;   // HERESY 2657: a curve's box, kept for its chart
+      if (!lay) return;
+      var off = layersOff(fig);
+      if (e.target.checked) delete off[lay]; else off[lay] = 1;
+      keep(multiOf(fig)[4], Object.keys(off).join(",") || null);
+      paintRun();
+      var back = document.querySelector('#trRunPane input[data-layer="' + lay + '"][data-fig="' + fig + '"]');
+      if (back) back.focus({ preventScroll: true });     // the keyboard stays on the box it ticked
+    });
+    // HERESY 2657b: a box under the mouse lights its curve and its values; the mouse anywhere else in the pane, or out of it, puts the light out.
+    // HERESY 2664 (Viktor 17.11.2026: «Можно таким же макаром и на маркеры значений, что в строках»): so does a value in the three scale rows
+    $("trRunPane").addEventListener("mouseover", function (e) {
+      var lab = e.target.closest(".tr-combined .tr-layer"), inp = lab && lab.querySelector("input[data-layer]:not(:disabled)");
+      if (inp) { if (!state.hot || state.hot.key !== inp.dataset.layer || state.hot.fig !== inp.dataset.fig) lightLayer(lab.closest(".tr-combined"), inp.dataset.layer); return; }
+      var val = e.target.closest(".tr-combined .tr-scl b[data-k]"), vf = val && val.closest(".tr-combined");
+      if (val) { if (!state.hot || state.hot.key !== val.dataset.k || state.hot.fig !== vf.dataset.key) lightLayer(vf, val.dataset.k); return; }
+      if (state.hot) unlight();
+    });
+    $("trRunPane").addEventListener("mouseleave", function () { if (state.hot) unlight(); });
     $("trFilters").addEventListener("click", function (e) { var b = e.target.closest("[data-filter]"); if (b) { state.filter = b.dataset.filter; keep("yue2.trFilter", state.filter); paintList(); } });
     $("trStates").addEventListener("click", function (e) {   // HERESY 1659: one state at a time; the lit one again: all
       var b = e.target.closest("[data-state]");

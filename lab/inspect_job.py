@@ -7,6 +7,9 @@
              corner in the waveform, not a loud sound); clustered within 50 ms.
   clipping   runs of 3+ samples at full scale.
   dropouts   the level falling 30+ dB for 10–300 ms between sound on both sides.
+  holes      near silence for 20 s or more (HERESY 2833): the 5 s running median of each second's level 20+ dB under the take's
+             95th percentile; inside (5 s of music, within 15 dB of that level, before and after it), at the end or at the start, with its
+             dead seconds (under -80 dBFS). The 2509 window probe's 4:16–5:13 was one: a floor that never let the song end past its score.
   dc         offset of zero per channel.
   stereo     correlation of left and right per band, and the stretches where it goes negative.
   loudness   integrated LUFS, loudness range and true peak (ffmpeg ebur128).
@@ -127,6 +130,33 @@ while i < m10 - 1:
         i = j
     i += 1
 R["dropouts"] = drops[:30]
+
+# ---- holes (HERESY 2833, the silent hole of 18.11.2026): near silence for 20 s or more. Each whole second's RMS in dBFS, its 5 s running
+#      median against the take's 95th percentile: 20+ dB under it is quiet, within 15 dB of it is music. On the 801 takes asked 300 s or more
+#      it found exactly the three takes of the 2509 window probe (a floor past the plan's end) and nothing in any other
+HOLE_REL, HOLE_LOUD, HOLE_LEN, HOLE_AROUND = 20.0, 15.0, 20, 5
+m1 = len(mono) // sr
+holes, ref95 = [], None
+if m1 >= HOLE_LEN:
+    db1 = 20 * np.log10(np.maximum(np.sqrt((mono[:m1 * sr].reshape(m1, sr) ** 2).mean(1)), 1e-9))
+    ref95 = float(np.percentile(db1, 95))
+    med = np.array([np.median(db1[max(0, i - 2):i + 3]) for i in range(m1)])
+    quiet, loud = med < ref95 - HOLE_REL, med >= ref95 - HOLE_LOUD
+    i = 0
+    while i < m1:
+        if not quiet[i]:
+            i += 1
+            continue
+        j = i
+        while j < m1 and quiet[j]:
+            j += 1
+        if j - i >= HOLE_LEN:
+            before, after = int(loud[:i].sum()), int(loud[j:].sum())
+            holes.append({"at": i, "until": j, "seconds": j - i,
+                          "where": "inside" if before >= HOLE_AROUND and after >= HOLE_AROUND else "end" if before >= HOLE_AROUND else "start",
+                          "median_db": round(float(np.median(db1[i:j])), 1), "dead": int((db1[i:j] < -80).sum())})
+        i = j
+R["holes"] = {"ref_db": round(ref95, 1) if ref95 is not None else None, "stretches": holes[:20]}
 
 # ---- dc offset
 R["dc"] = [round(float(x[:, c].mean()), 6) for c in range(ch)]

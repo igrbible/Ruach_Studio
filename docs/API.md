@@ -53,7 +53,7 @@ POST /api/v1/songs
 - `abc`: your own score, in YuE2's two-voice dialect (what the Creator's score drawer holds).
 - `midi_b64`: a standard MIDI file, base64, as the song's melody (below). `midi_key`: the key to write it in when the file has none (`Em`, `Bb`, `F#m`…); `midi_ins`: `auto`, `keep` or `none` (below).
 - `duration`: seconds; left out, 180, or the MIDI file's own length.
-- Also passed on as they are: `loras`, `vae`, `steps`, `solver`, `cfg_scale`, `output_format` (WAV 24-bit unless asked otherwise).
+- Also passed on as they are: `loras`, `vae`, `steps`, `solver`, `cfg_scale`, `cfg_lyrics` (the lyrics' own guidance), `output_format` (WAV 24-bit unless asked otherwise).
 - `workspace`: the take lands there when it is done.
 
 ### A melody as a MIDI file

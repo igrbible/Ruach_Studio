@@ -8,7 +8,7 @@
 (function () {
   "use strict";
   var KEEP = 120, COLORS = ["#3f9a4a", "#e0b030", "#c8372d"];          // the level meter's green, yellow and red
-  var S = { rings: {}, names: {}, roles: null, since: 0, busy: false, error: "", seen: false };
+  var S = { rings: {}, names: {}, roles: null, since: 0, busy: false, error: "", seen: false, asked: 0 }, IDLE_EVERY = 50000;   // HERESY 2727
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
@@ -84,12 +84,41 @@
       draw(box.querySelector("canvas"), ring, true);
     });
   }
-  // HERESY 1680: a card's label: GPUn for NVIDIA's, Arcn for an Intel card (the lab numbers them from 100), each with its short name
-  function gpuLabel(i, name) {
-    return (i >= 100 ? "Arc" + (i - 100) : "GPU" + i) + " · " + String(name || "").replace(/^NVIDIA GeForce /, "").replace(/^Intel\(R\) /, "")
-      .replace(/\(TM\)/g, "").replace(/ Graphics$/, "");
+  // HERESY 1680: a card's label with its short name. HERESY 2733 (Viktor 18.11.2026: «XPU для Arc. GPU для геймерских RTX… GPU для всех Nvidia…
+  // осторожно — Nvidia GPU, «GPU · RTX 3090» и «GPU · A100»… AMD Radeon своим кагалем… CUDA, SYCL, Vulkan, etc.»): one way to name a processor in
+  // the whole page: an NVIDIA card GPUn · its model (GPU0 · RTX 3090, GPU · A100), an Intel Arc XPUn · its model (XPU0 · Arc Pro B50: the lab
+  // numbers them from 100, shown from 0), an AMD Radeon GPUn · Radeon its model (a family of its own), the processor CPU; the backend by its
+  // own name where it is said (CUDA, SYCL, Vulkan, ROCm, Metal, CPU). Only what is shown: the lab's indices (0, 1, 100) and the engine's
+  // devices (CUDA0, SYCL0) stay what they are underneath
+  function procModel(name) {
+    return String(name || "").replace(/\((R|TM|tm)\)/g, "").replace(/^\s*NVIDIA\s+(GeForce\s+)?/i, "").replace(/^\s*Intel\s+/i, "").replace(/^\s*AMD\s+/i, "")
+      .replace(/\s+Graphics\b.*$/i, "").replace(/\s*\([^)]*\)\s*$/, "").replace(/\s+/g, " ").trim();   // a driver's own word in brackets goes
+  }
+  function procShort(g, name) {                      // a card (or the lab's "0+1+2", or a list) as GPU0, XPU0, GPU0+1+2; "cpu" CPU, "arc" XPU
+    if (Array.isArray(g)) return procShort(g.join("+"));
+    var s = String(g == null ? "" : g).trim();
+    if (/[+,]/.test(s)) { var p = s.split(/[+,]\s*/).filter(Boolean), k = procShort(p[0]); return k + p.slice(1).map(function (x) { return "+" + procShort(x).replace(/^[A-Z]+/, ""); }).join(""); }
+    if (/^cpu$/i.test(s)) return "CPU";
+    if (/^(arc|xpu)$/i.test(s)) return "XPU";
+    var i = parseInt(s, 10);
+    if (isNaN(i)) return s;
+    return i >= 100 ? "XPU" + (i - 100) : (/\b(Arc|Intel)\b/i.test(String(name || "")) ? "XPU" : "GPU") + i;
+  }
+  function gpuLabel(i, name) { var m = procModel(name); return procShort(i, name) + (m ? " · " + m : ""); }
+  function procBackend(dev) {                        // the engine's device (CUDA0, SYCL0, Vulkan0, ROCm0, Metal, CPU): its backend's own name
+    var m = /^(CUDA|SYCL|Vulkan|ROCm|HIP|Metal|CPU)/i.exec(String(dev || ""));
+    return m ? { cuda: "CUDA", sycl: "SYCL", vulkan: "Vulkan", rocm: "ROCm", hip: "ROCm", metal: "Metal", cpu: "CPU" }[m[1].toLowerCase()] : "";
+  }
+  function procKind(dev, description) {            // what an engine's device is: XPU (an Intel Arc), CPU, else GPU
+    var b = procBackend(dev);
+    return b === "CPU" ? "CPU" : b === "SYCL" || /\b(Arc|Intel)\b/i.test(String(description || "")) ? "XPU" : "GPU";
+  }
+  function procDevice(dev, description) {          // the engine's device by the same rule: XPU · Arc Pro B50 · SYCL, GPU · RTX 3090 · CUDA
+    var k = procKind(dev, description), m = procModel(description || dev), b = procBackend(dev);
+    return k === "CPU" ? "CPU" : k + (m ? " · " + m : "") + (b ? " · " + b : "");
   }
   window.HeresyGpuLabel = gpuLabel;
+  window.HeresyProc = { label: gpuLabel, short: procShort, model: procModel, backend: procBackend, kind: procKind, device: procDevice };
   function shown() {                                  // the cards with a role, else all of them
     var ids = Object.keys(S.rings).map(Number).sort(function (a, b) { return a - b; });
     var withRole = ids.filter(function (i) { return roleOf(i); });
@@ -141,6 +170,11 @@
   function tick() {
     var on = where();
     if (S.busy) return;                                // HERESY 1625: the samples come in all the while; drawn where in sight
+    // HERESY 2727 (the resource audit of 18.11.2026, R3: a tab in the background asked every 2 s too, 5 400 times in three night hours; Viktor's rule
+    // of the modes, 2721: the cards' sampling is the one job awake in every mode): the page idle (hidden, or untouched) asks once in 50 s, inside the
+    // lab's minute and its four minutes of samples, so the lab's sampler goes on and the rings get every sample; awake again, at once and every 2 s
+    if (window.HeresyIdle && window.HeresyIdle.mode() === "idle_ui" && !popOpen() && Date.now() - S.asked < IDLE_EVERY) return;
+    S.asked = Date.now();
 
     S.busy = true;
     fetch("/lab/gpus/live?since=" + S.since).then(function (r) {
@@ -163,7 +197,8 @@
   // unfolded or the Engine room shown draws at once what came in meanwhile
   var EVERY = 2000;
   setInterval(tick, EVERY);
-  document.addEventListener("visibilitychange", tick);
+  if (window.HeresyIdle) window.HeresyIdle.on(function (why) { if (why === "awake") tick(); });   // HERESY 2727: awake again (the tab seen, a hand), at once
+  else document.addEventListener("visibilitychange", tick);
   function seen() { var on = where(); if (on.length) paint(on); }
   function watch() {
     if (!window.MutationObserver) return;

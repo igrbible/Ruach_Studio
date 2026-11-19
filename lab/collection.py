@@ -445,6 +445,78 @@ def albums_out(marks, here):
     return out
 
 
+def _own_stamp(d):
+    """HERESY 2729: what says a take's own files changed: meta.json and request.json (mtime, size), derived/ and each folder in it (a manifest
+    written there moves its folder's mtime); stats only, nothing opened; None where missing"""
+    out = []
+    for f in ("meta.json", "request.json"):
+        try:
+            st = os.stat(os.path.join(d, f))
+            out.append((st.st_mtime_ns, st.st_size))
+        except OSError:
+            out.append(None)
+    try:
+        with os.scandir(os.path.join(d, "derived")) as it:
+            out.append(tuple(sorted((e.name, e.stat().st_mtime_ns) for e in it if e.is_dir())))
+    except OSError:
+        out.append(None)
+    return tuple(out)
+
+
+def _own_part(d):
+    """HERESY 2729: a take's row as its own files say it (the Librarian's marks are laid on each time); None when its meta.json does not read"""
+    try:
+        meta = json.load(open(d / "meta.json", encoding="utf-8"))
+    except ValueError:
+        return None
+    req = {}
+    rp = d / "request.json"
+    if rp.is_file():
+        try:
+            r = json.load(open(rp, encoding="utf-8"))
+            req = {k: r.get(k) for k in ("cot", "parent", "plan_only") if k in r}
+            req["reader"] = bool(r.get("reader"))   # HERESY 2294: the Reader's speech (take_kind's «narrated» never came: the block was not read)
+            req["semantic_keep"] = bool(r.get("semantic_keep"))
+            req["semantic_tokens"] = bool(r.get("semantic_tokens"))
+            req["lyrics_len"] = len(r.get("lyrics") or "")
+            # HERESY 2402: a Narrator's book's part (reader.py writes {run, title, k, of}): the Library shows the book as one card
+            bk = r.get("book")
+            if isinstance(bk, dict) and isinstance(bk.get("run"), str) and isinstance(bk.get("k"), int):
+                req["book"] = {"run": bk["run"], "title": str(bk.get("title") or "")[:120], "k": bk["k"], "of": int(bk.get("of") or 0)}
+            # HERESY 2058 (Viktor 03.11.2026: «План (Full/Direct/Instrumental)»): an instrumental: its style begins with «Instrumental» (the Creator's
+            # switch writes it so) or its lyrics hold no word to sing (only [section] tags, or nothing); a request without lyrics at all says nothing
+            req["instrumental"] = bool(re.match(r"\s*instrumental\b", str(r.get("style") or ""), re.I)) or (
+                "lyrics" in r and not re.sub(r"\[[^\]]*\]", "", str(r.get("lyrics") or "")).strip())
+            # HERESY 2170 (D06, Viktor's yes of 06.11.2026): a take that keeps the Creator's Instrumental box (the engine writes it since 2.0.6) says it
+            # as the box was; a take from before, without the field, by 2058's rule above
+            if isinstance(r.get("instrumental"), bool):
+                req["instrumental"] = r["instrumental"]
+            # HERESY 1156 (Viktor: «В шпаргалке указываем seed на каждый A/B»): the music and sound seeds, as text:
+            # 64-bit seeds are past what a page's numbers hold exact (2^53), and a seed rounded is another seed
+            if r.get("lm_seed") is not None or r.get("seed") is not None:
+                req["seeds"] = [str(r.get("lm_seed", "")), str(r.get("seed", ""))]
+        except ValueError:
+            pass
+    kinds = set()
+    der = d / "derived"
+    if der.is_dir():
+        for m in der.glob("*/manifest.json"):
+            try:
+                kinds.add(json.load(open(m, encoding="utf-8")).get("kind"))
+            except ValueError:
+                pass
+    return {"name": d.name, "title": meta.get("title") or d.name, "created": meta.get("created"), "seconds": meta.get("seconds"),
+            "favorite": bool(meta.get("favorite")), "kind": take_kind(d.name, meta, req), "cot": req.get("cot"), "derived": sorted(k for k in kinds if k),
+            "seeds": req.get("seeds"), "parent": req.get("parent") or "",           # HERESY 1988: what it was made from, for its card's family tree
+            "no_train": bool(meta.get("no_train")),   # HERESY 2241: never for training (lab/no_train.py)
+            "instrumental": bool(req.get("instrumental")),   # HERESY 2058
+            "book": req.get("book"),   # HERESY 2402: a part of a Narrator's book, or None
+            "own_realm": own_realm(meta, req),   # HERESY 2294
+            "fixed_realm": meta.get("realm") in REALMS}   # HERESY 2298: written on it, it anchors its line
+
+
+_OWN = {}       # HERESY 2729: a take's folder name -> (its _own_stamp, its _own_part), read again only when a stamp changed
+
 def catalog(outputs, config_dir):
     marks = load(config_dir)
     prune_pins(marks)                            # HERESY 1166: shown as they stand (the file heals on the next change)
@@ -461,66 +533,29 @@ def catalog(outputs, config_dir):
     blind = blind_takes(marks)                              # HERESY 1874
     arch = archived_takes(marks)                            # HERESY 2049
     react_of = lambda v: v if v in REACTIONS else (v[0] if isinstance(v, list) and v and v[0] in REACTIONS else "")   # noqa: E731
+    seen = set()
     for d in sorted(outputs.iterdir()) if outputs.is_dir() else []:
-        mp = d / "meta.json"
-        if not mp.is_file():
+        # HERESY 2729 (the resource audit of 18.11.2026, R4: 4 782 takes read whole at every load of the page, 9 696 files parsed, 5 s of the lab
+        # on average and up to 29 s, while every other window's light question waited on the same lock): a take's own part is kept by the
+        # stamp of its files and read again only when one changed; the marks are laid on every time
+        stamp, n = _own_stamp(str(d)), d.name
+        if stamp[0] is None:                     # no meta.json: not a take
             continue
-        try:
-            meta = json.load(open(mp, encoding="utf-8"))
-        except ValueError:
+        seen.add(n)
+        hit = _OWN.get(n)
+        if hit is None or hit[0] != stamp:
+            hit = _OWN[n] = (stamp, _own_part(d))
+        own = hit[1]
+        if own is None:
             continue
-        req = {}
-        rp = d / "request.json"
-        if rp.is_file():
-            try:
-                r = json.load(open(rp, encoding="utf-8"))
-                req = {k: r.get(k) for k in ("cot", "parent", "plan_only") if k in r}
-                req["reader"] = bool(r.get("reader"))   # HERESY 2294: the Reader's speech (take_kind's «narrated» never came: the block was not read)
-                req["semantic_keep"] = bool(r.get("semantic_keep"))
-                req["semantic_tokens"] = bool(r.get("semantic_tokens"))
-                req["lyrics_len"] = len(r.get("lyrics") or "")
-                # HERESY 2402: a Narrator's book's part (reader.py writes {run, title, k, of}): the Library shows the book as one card
-                bk = r.get("book")
-                if isinstance(bk, dict) and isinstance(bk.get("run"), str) and isinstance(bk.get("k"), int):
-                    req["book"] = {"run": bk["run"], "title": str(bk.get("title") or "")[:120], "k": bk["k"], "of": int(bk.get("of") or 0)}
-                # HERESY 2058 (Viktor 03.11.2026: «План (Full/Direct/Instrumental)»): an instrumental: its style begins with «Instrumental» (the Creator's
-                # switch writes it so) or its lyrics hold no word to sing (only [section] tags, or nothing); a request without lyrics at all says nothing
-                req["instrumental"] = bool(re.match(r"\s*instrumental\b", str(r.get("style") or ""), re.I)) or (
-                    "lyrics" in r and not re.sub(r"\[[^\]]*\]", "", str(r.get("lyrics") or "")).strip())
-                # HERESY 2170 (D06, Viktor's yes of 06.11.2026): a take that keeps the Creator's Instrumental box (the engine writes it since 2.0.6) says it
-                # as the box was; a take from before, without the field, by 2058's rule above
-                if isinstance(r.get("instrumental"), bool):
-                    req["instrumental"] = r["instrumental"]
-                # HERESY 1156 (Viktor: «В шпаргалке указываем seed на каждый A/B»): the music and sound seeds, as text:
-                # 64-bit seeds are past what a page's numbers hold exact (2^53), and a seed rounded is another seed
-                if r.get("lm_seed") is not None or r.get("seed") is not None:
-                    req["seeds"] = [str(r.get("lm_seed", "")), str(r.get("seed", ""))]
-            except ValueError:
-                pass
-        kinds = set()
-        der = d / "derived"
-        if der.is_dir():
-            for m in der.glob("*/manifest.json"):
-                try:
-                    kinds.add(json.load(open(m, encoding="utf-8")).get("kind"))
-                except ValueError:
-                    pass
-        rows.append({"name": d.name, "title": meta.get("title") or d.name, "created": meta.get("created"),
-                     "seconds": meta.get("seconds"), "favorite": bool(meta.get("favorite")),
-                     "kind": take_kind(d.name, meta, req), "cot": req.get("cot"), "derived": sorted(k for k in kinds if k),
-                     "hidden": d.name in hidden, "workspaces": sorted(ws_of.get(d.name, [])),
-                     "rating": marks["ratings"].get(d.name, 0), "note": marks["notes"].get(d.name, ""), "seeds": req.get("seeds"),
-                     "fresh": (meta.get("created") or 0) >= since and d.name not in played,     # HERESY 1162
-                     "regen_of": marks["regen_of"].get(d.name, ""), "frozen": d.name in ice, "protected": d.name in shield,
-                     "parent": req.get("parent") or "",           # HERESY 1988: what it was made from, for its card's family tree
-                     "fire": d.name in fire, "gem": d.name in gems,   # HERESY 1802
-                     "no_train": bool(meta.get("no_train")),   # HERESY 2241: never for training (lab/no_train.py)
-                     "react": react_of(reacts.get(d.name, "")),   # HERESY 1873
-                     "blind": d.name in blind, "archived": d.name in arch,   # HERESY 1874; 2049
-                     "instrumental": bool(req.get("instrumental")),   # HERESY 2058
-                     "book": req.get("book"),   # HERESY 2402: a part of a Narrator's book, or None
-                     "own_realm": own_realm(meta, req),   # HERESY 2294
-                     "fixed_realm": meta.get("realm") in REALMS})   # HERESY 2298: written on it, it anchors its line
+        rows.append(dict(own, hidden=n in hidden, workspaces=sorted(ws_of.get(n, [])), rating=marks["ratings"].get(n, 0), note=marks["notes"].get(n, ""),
+                         fresh=(own["created"] or 0) >= since and n not in played,     # HERESY 1162
+                         regen_of=marks["regen_of"].get(n, ""), frozen=n in ice, protected=n in shield,
+                         fire=n in fire, gem=n in gems,   # HERESY 1802
+                         react=react_of(reacts.get(n, "")),   # HERESY 1873
+                         blind=n in blind, archived=n in arch))   # HERESY 1874; 2049
+    for gone in set(_OWN) - seen:                # a take gone from outputs/ leaves the cache
+        _OWN.pop(gone, None)
     here = {r["name"] for r in rows}
     roots = root_realms(rows)                    # HERESY 2294: a take's realm is its root's, the Refiner's and every derived take with it
     for r in rows:

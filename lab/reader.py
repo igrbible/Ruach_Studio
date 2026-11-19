@@ -80,6 +80,7 @@ import subprocess
 import threading
 
 import name_rule                                    # HERESY 2462: one rule for every name
+import upload_guard                                 # HERESY 2659: the gate every sound brought in passes
 import time
 from pathlib import Path
 
@@ -264,6 +265,69 @@ def _python(spec, device):
     return p if p.is_absolute() else kit() / p
 
 
+def _window_of(w):
+    """HERESY 2698: an engine's window mode from its manifest ({context, frames, history_rows, piece_chars}, kept in bounds), or None."""
+    if not isinstance(w, dict):
+        return None
+    try:
+        return {"context": max(4096, min(int(w["context"]), 262144)), "frames": max(256, min(int(w["frames"]), 8192)),
+                "history_rows": max(512, min(int(w["history_rows"]), 131072)), "piece_chars": max(80, min(int(w.get("piece_chars") or 1200), 2000))}
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def scenes_of(ps, most, chars, style=""):
+    """HERESY 2699: a dialog's turns gathered into scenes, each read in one pass, as Drama 3 is built to read (Fish itself cuts a scene at
+    three speakers): consecutive turns while the scene holds at most `most` voices and `chars` characters (a turn is never cut); a turn with
+    a pause after it ends its scene (the pause follows the scene). Each turn's words follow its speaker's tag <|speaker:N|>, N the voice's
+    place in the scene, the style once in front. A scene keeps its turns' speakers in order (speakers) and their indices (turns)."""
+    out, cur, pre = [], None, (style + " ") if style else ""
+    for p in ps:
+        spk = p["speaker"]
+        if cur is not None and (len(set(cur["speakers"]) | {spk}) > most or len(cur["plain"]) + len(p["plain"]) + 1 > chars):
+            out.append(cur)
+            cur = None
+        if cur is None:
+            cur = {"i": len(out), "speaker": spk, "speakers": [], "turns": [], "text": "", "said": "", "plain": "", "gap": p["gap"]}
+        if spk not in cur["speakers"]:
+            cur["speakers"].append(spk)
+        tag = f"<|speaker:{cur['speakers'].index(spk)}|> "
+        s = p.get("said") or p["text"]
+        s = s[len(pre):] if pre and s.startswith(pre) else s
+        cur["turns"].append(p["i"])
+        cur["text"] = (cur["text"] + " " if cur["text"] else "") + tag + p["text"]
+        cur["said"] = (cur["said"] + " " if cur["said"] else pre) + tag + s
+        cur["plain"] = (cur["plain"] + " " if cur["plain"] else "") + p["plain"]
+        cur["gap"] = p["gap"]
+        if p.get("pause") is not None:
+            cur["pause"] = p["pause"]
+            out.append(cur)
+            cur = None
+    if cur is not None:
+        out.append(cur)
+    return out
+
+
+def window_history(items, win, ref_rows, cur_chars):
+    """HERESY 2698: the pieces before that go into the engine's window with the next one: the reading's first piece pinned, then as many of
+    the latest as the prompt's budget holds (win["history_rows"] for the voice's sample, the history and the new piece's words; a piece
+    costs its codec frames and its words, about two characters a row), in their order. items: [(index, words, codes file, frames)]."""
+    budget = int(win["history_rows"]) - int(ref_rows) - (int(cur_chars) + 1) // 2
+    cost = lambda it: int(it[3]) + (len(it[1]) + 1) // 2  # noqa: E731
+    if not items or budget <= 0:
+        return []
+    out, tail = [], []
+    if cost(items[0]) <= budget:
+        out.append(items[0])
+        budget -= cost(items[0])
+    for it in reversed(items[1:]):
+        if cost(it) > budget:
+            break
+        tail.append(it)
+        budget -= cost(it)
+    return out + tail[::-1]
+
+
 def _engine_of(d, own):
     m = _json(d / "engine.json")
     if not isinstance(m, dict) or not ID_RE.match(str(m.get("id") or "")):
@@ -294,7 +358,10 @@ def _engine_of(d, own):
             "need_mb": int(m.get("need_mb") or 12000), "sample_rate": int(m.get("sample_rate") or 24000),
             "max_chars": max(80, min(int(m.get("max_chars") or 400), 2000)), "langs": [str(x) for x in m.get("langs") or []][:120],
             "tags": tags, "tag_re": tag_re, "note": str(m.get("note") or "")[:400], "tiers": tiers, "tier_auto": _auto_of(m.get("auto"), tiers),
-            "missing": _missing(m.get("needs"), tiers), "setup": _setup_of(m.get("setup"))}
+            "missing": _missing(m.get("needs"), tiers), "setup": _setup_of(m.get("setup")),
+            "bridge": "narration" if m.get("bridge") == "narration" else "",   # HERESY 2695/2698: the manifest's own, which never reached here
+            "window": _window_of(m.get("window")),
+            "scene": {"voices": max(2, min(int((m.get("scene") or {}).get("voices") or 3), 16))} if isinstance(m.get("scene"), dict) else None}   # HERESY 2699
 
 
 def _dev_ready(m, x, tiers):
@@ -394,7 +461,7 @@ def engines():
 
 def engines_public():
     return {"engines": [dict({k: e[k] for k in ("id", "label", "own", "devices", "ready", "need_mb", "langs", "tags", "note", "max_chars", "stress", "seed",
-                                                "top_k", "style", "license", "first_run", "missing", "setup", "voice_set")},   # HERESY 2374: missing, setup; 2456
+                                                "top_k", "style", "license", "first_run", "missing", "setup", "voice_set", "window", "scene")},   # HERESY 2374: missing, setup; 2456
                              tiers=[{k: t[k] for k in ("id", "quant", "device", "need_mb", "ram_gb", "rtf", "load_s", "ready", "grade")} for t in e["tiers"]
                                     if t["named"]])
                         for e in engines()]}
@@ -532,12 +599,9 @@ def voice_add(body):
         raise ValueError("the clip did not come whole")
     if not 2000 < len(raw) <= 40 * 2 ** 20:
         raise ValueError("a clip of a few seconds, up to 40 MB")
-    ext = str(body.get("ext") or "wav").lower().strip(".")
-    if ext not in ("wav", "flac", "mp3", "m4a", "ogg", "opus", "aiff", "aif", "webm"):
-        raise ValueError("WAV, FLAC, MP3, M4A, OGG, Opus or AIFF")
+    head = upload_guard.inspect(raw, 40)                # HERESY 2659: WAV, FLAC, OGG, MP3 or a phone's M4A, AAC, 3GP, AMR by its bytes, not by the extension the page names
     vid = "own-" + time.strftime("%Y%m%d-%H%M%S-") + os.urandom(2).hex()
-    src = voices_home() / (vid + ".source." + ext)
-    src.write_bytes(raw)
+    src, _ = upload_guard.keep(raw, voices_home(), vid + ".source", head)
     out = voices_home() / (vid + ".wav")
     p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-t", "30", "-ac", "1", "-ar", "24000", "-c:a", "pcm_s16le", str(out)],
                        capture_output=True, text=True, timeout=300)
@@ -1469,8 +1533,6 @@ def _tail_pass(d, run, hearer):
 
 
 # ---------------------------------------------------------------- HERESY 2269: a recording into a script
-TR_EXT = (".wav", ".flac", ".mp3", ".m4a", ".ogg", ".opus", ".aac", ".wma", ".webm", ".mp4", ".mkv", ".mov", ".avi", ".aiff", ".aif")
-TR_MAX = 4 * 1024 ** 3              # a recording's bytes, at most
 TR_RE = re.compile(r"^tr-\d{8}-\d{6}-[0-9a-f]{4}$")
 TR_PAUSE_S = 1.2                    # a pause this long between Whisper's segments starts a new paragraph
 SCRIPT_MAX = 400_000
@@ -1484,13 +1546,9 @@ def transcripts_home():
 def transcribe(body, q):
     """The recording kept as it came and heard in its own thread; {id, status}."""
     name = Path(str(q.get("file") or "recording.wav")).name[:160]
-    ext = Path(name).suffix.lower()
-    if ext not in TR_EXT:
-        raise ValueError("a recording: " + ", ".join(x[1:].upper() for x in TR_EXT))
-    if not body:
-        raise ValueError("the file came empty")
-    if len(body) > TR_MAX:
-        raise ValueError(f"the recording is too large: {TR_MAX // 1024 ** 3} GB at most")
+    # HERESY 2659 (Viktor 17.11.2026: «Остальные форматы в бездну»): WAV, FLAC, OGG, MP3 or a phone's M4A, AAC, 3GP, AMR by its bytes, up to 200 MB (a video's sound saved as
+    # one of them first); its body checked whole as it is kept
+    head = upload_guard.inspect(body)
     lang = str(q.get("lang") or "auto").lower()
     lang = "" if lang == "auto" else lang if re.fullmatch(r"[a-z]{2,3}", lang) else ""
     with H["lock"]:
@@ -1499,7 +1557,11 @@ def transcribe(body, q):
     tid = "tr-" + time.strftime("%Y%m%d-%H%M%S-") + os.urandom(2).hex()
     d = transcripts_home() / tid
     d.mkdir(parents=True)
-    (d / ("source" + ext)).write_bytes(body)
+    try:
+        upload_guard.keep(body, d, "source", head)
+    except ValueError:
+        shutil.rmtree(d, ignore_errors=True)
+        raise
     meta = {"id": tid, "name": name, "lang": lang, "status": "queued", "created": time.time(), "bytes": len(body)}
     _write(d / "meta.json", meta)
     job = {"status": "queued", "started": time.time(), "label": "Transcribe · " + name[:48], "seconds": 0}
@@ -1888,6 +1950,44 @@ def _voice(ref, groups, rows):
     return vid, next(r["name"] for r in rows if r["id"] == vid)
 
 
+def _stalled(wav):
+    """HERESY 2700: the seconds of silence inside a piece when more than 4 (reader_tail.stalled), else 0.0; a guard that cannot look never stops a reading."""
+    try:
+        import reader_tail as rt
+        return rt.stalled(wav)
+    except Exception:                                # noqa: BLE001
+        return 0.0
+
+
+def said_of(rid, run, p, codes, hist, words):
+    """HERESY 2698: what a piece's codes say of it, aloud and on the piece: the engine's frame budget reached (its end may be cut), the prompt
+    that left it less room than asked; and its frames, for the window's history. A piece without codes keeps out of the history."""
+    try:
+        import numpy as np
+        with np.load(str(codes)) as z:
+            c, meta = np.asarray(z["codes"]), json.loads(str(z["meta"])) if "meta" in z.files else {}
+    except (OSError, ValueError, KeyError):
+        return
+    frames = int(c.shape[1] if c.ndim == 2 and c.shape[0] <= 16 else c.shape[0])
+    hist.append((p["i"], words, codes, frames))
+    if meta.get("reached_limit"):
+        p["limit"] = int(meta.get("max_tokens") or 0)
+        run["limits"] = run.get("limits", 0) + 1
+        _say(f"{rid} · piece {p['i'] + 1} reached the engine's frame budget ({p['limit']}): its end may be cut; Fix reads it again")
+    if meta.get("reduced"):
+        p["reduced"] = meta["reduced"]
+        _say(f"{rid} · piece {p['i'] + 1}: the window left it less room than asked ({meta['reduced']} frames)")
+
+
+def bridge_default(body, eng, mode):
+    """HERESY 2695: whether a run reads each piece with the one before it (2474). A run that says true or false has it so; else the engine's
+    manifest decides ("bridge": "narration" for Higgs v3, by Viktor's ear on the long-text blind set of 13.11.2026: alone, a foreign
+    voice broke in at high emotion; with the piece before, the same voice), off for every other engine and every dialog."""
+    if isinstance(body.get("bridge"), bool):
+        return body["bridge"]
+    return eng.get("bridge") == "narration" and mode == "narration"
+
+
 def say(body, design=None):
     """A run asked for and queued; its thread waits for a card, then its turn, and reads it piece by piece. design (HERESY 2455): the voice
     builder's run, its candidates the speakers, each its own seed, no take in the Library."""
@@ -1898,6 +1998,8 @@ def say(body, design=None):
     if len(text) > TEXT_MAX:
         raise ValueError(f"the text is too long: {TEXT_MAX} characters at most")
     eng = _engine(str(body.get("engine") or ""))
+    if body.get("greek") in ("polytonic", "monotonic", "h"):   # HERESY 2696: the Greek as written (the default) or monotonic; h a probe's
+        eng = dict(eng, el_greek=body["greek"])
     read_text, glyphs = _glyphs(text) if body.get("glyphs") is True else (text, None)    # HERESY 2270: LCV's letters by the map
     split = body.get("split") if body.get("split") in SPLITS else "sentence"
     tags_on = bool(body["tags"]) if isinstance(body.get("tags"), bool) else mode == "dialog"
@@ -1907,9 +2009,17 @@ def say(body, design=None):
     # codes, kept beside it since 2419), as upstream reads a long text; the first piece is the reference already (the anchor), so it is
     # never sent twice. piece_chars: a narration's pieces gathered up to this many characters (80–1200) instead of the engine's own,
     # where the length probes of 10–11.11 heard Drama 3 hold (1200 characters in one call, CER 4 %)
-    bridge = body.get("bridge") is True
+    bridge = bridge_default(body, eng, mode)            # HERESY 2695: Higgs's narration with it unless the run says no
     pc = body.get("piece_chars")
     pc = max(80, min(int(pc), 1200)) if isinstance(pc, int) and not isinstance(pc, bool) else None
+    scene = body.get("scene") is True and mode == "dialog"   # HERESY 2699: a dialog a scene a pass
+    if scene and not eng.get("scene"):
+        raise ValueError(f"{eng['label']} reads no scene: a voice a turn")
+    win = eng.get("window") if body.get("window") is True or (scene and eng.get("window")) else None   # HERESY 2698: the window mode, asked, of an engine that has one
+    if body.get("window") is True and not win:
+        raise ValueError(f"{eng['label']} has no window mode")
+    if win:
+        bridge, pc = False, pc or win["piece_chars"]   # the pieces before are its window's; a narration in whole paragraphs
     peng = dict(eng, max_chars=pc) if pc else eng
     gap = _num(body, "gap", 0.05, 3.0, 0.35)
     turn_gap = _num(body, "turn_gap", 0.05, 3.0, 0.45)
@@ -1956,6 +2066,10 @@ def say(body, design=None):
         asked = body.get("voices") if isinstance(body.get("voices"), dict) else {}
         for spk in sorted({p["speaker"] for p in ps if p["speaker"]}):
             cast[spk], labels[spk] = _voice(asked.get(spk), gs, vs["voices"])
+    if scene:                                            # HERESY 2699: after each turn's own words were made ready (stresses, numbers)
+        if book:
+            raise ValueError("the scene reads a dialog without [split]")
+        ps = scenes_of(ps, eng["scene"]["voices"], (win or {}).get("piece_chars") or 1200, style)
     card = body.get("card", "auto")
     if card not in ("auto", "cpu"):
         try:
@@ -2007,6 +2121,10 @@ def say(body, design=None):
            "pauses": sum(1 for p in ps if p.get("pause") is not None) + (1 if ps and ps[0].get("lead_pause") else 0)}   # HERESY 2334
     if bridge or pc:                                     # HERESY 2474: the trials asked, said in the run and its note
         run.update(bridge=bridge, piece_chars=pc)
+    if win:                                              # HERESY 2698
+        run["window"] = win
+    if scene:                                            # HERESY 2699
+        run["scene"] = eng["scene"]["voices"]
     if book:                                             # HERESY 2344: the book's name and its parts
         run["book"] = dict(book, title=title)
     par = " ".join(str(body.get("parent") or "").split())   # HERESY 2510: a take read again (or reread exactly), a child of its take in the family tree
@@ -2090,8 +2208,9 @@ def said(text, eng, lang, style, stress_on, user=None):
     rep = None
     text, _moved = furtive(text)                         # HERESY 2375
     text = sane_ends(text)                               # HERESY 2422
-    if lang == "el" and eng.get("el_monotonic", True):   # HERESY 2460: polytonic Greek read as monotonic (the stress kept, the silent marks out)
-        text, _poly = rs.el_monotonic(text)
+    if lang == "el":                                     # HERESY 2696: as written, only the iota subscript out (Viktor's rule); 2460's
+        how_el = eng.get("el_greek") or ("monotonic" if eng.get("el_monotonic") else "polytonic")   # monotonic when asked
+        text, _poly = rs.el_monotonic(text) if how_el == "monotonic" else rs.el_polytonic(text, breath_h=how_el == "h")
     text, nrep = rn.expand(text, lang, eng["tag_re"], _known(lang))   # HERESY 2397: «на 6650 часах» in words, in its case
     how = (eng.get("stress_lang") or {}).get(lang) or eng["stress"]   # HERESY 2398: the mark as the engine heeds it in this language
     if stress_on:
@@ -2232,6 +2351,8 @@ def _work(d, run, job):
         while True:
             tier = _tier_for(run, eng)
             dev, card = _place(run, job, eng, tier)
+            if tier and run.get("window"):                # HERESY 2698: its server starts with the window; a worker of its own
+                tier = dict(tier, id=tier["id"] + "+window", window=True)
             with H["turn"](job):
                 if dev == "cuda":
                     try:
@@ -2265,6 +2386,7 @@ def _work(d, run, job):
                 w, fresh = _worker(eng, dev, card, tier)
                 t1, anchors, said_s, gen, drifts, reqs = time.time(), {}, 0.0, 0.0, 0, {}
                 last = {}                                # HERESY 2474: a speaker's piece before: (its index, its words as sent, its codes)
+                hist = {}                                # HERESY 2698: a speaker's pieces read so far: (index, words, codes, frames)
                 # HERESY 2266: heard while the next piece is read; twice the threads when the engine leaves the processor free (a card, few banks in RAM)
                 ear_threads = HEAR_THREADS * 2 if tier and tier["device"] == "cuda" and tier.get("cel", 40) <= 16 else HEAR_THREADS
                 hearer = Hearer(run["lang"], eng["tag_re"], ear_threads) if run.get("hear") else None
@@ -2273,6 +2395,10 @@ def _work(d, run, job):
                         raise H["cancelled"]("stopped")
                     spk, vid = p["speaker"], run["voices"].get(p["speaker"]) or ""
                     hold = run["mode"] == "narration" or not vid      # the voice held by its first long piece
+                    if run.get("window") and vid in vs:          # HERESY 2698: in the window each piece hears its voice's own sample
+                        hold = False
+                    if p.get("speakers"):                     # HERESY 2699: a scene: its voices' samples, one window for the scene
+                        hold, vid, spk = False, "", "\u0000scene"
                     akey = f"anchor:{rid}:{spk}"
                     ref = None
                     if hold and anchors.get(spk):
@@ -2282,8 +2408,21 @@ def _work(d, run, job):
                     req = {"op": "say", "text": p.get("said") or p["text"], "plain": p["plain"], "ref": ref, "out": str(d / f"piece-{p['i']:03d}.wav"),
                            "opts": {"temperature": run["temperature"], "top_k": run["top_k"],
                                     "seed": p["seed"] if p.get("seed") is not None else run["seed"] + p["i"]}}   # HERESY 2455: a candidate's own
+                    if p.get("speakers"):                     # HERESY 2699
+                        sv = [run["voices"].get(s) or run["voices"].get("") or "" for s in p["speakers"]]
+                        req["opts"]["references"] = [{"text": f"<|speaker:{k}|> " + str((vs.get(v) or {}).get("text") or ""),
+                                                      "audio_path": str(voices_home() / (v + ".wav"))} for k, v in enumerate(sv) if v in vs]
+                        if len(req["opts"]["references"]) != len(sv):
+                            raise RuntimeError(f"piece {p['i'] + 1}: a voice of the scene is not here ({', '.join(s for s, v in zip(p['speakers'], sv) if v not in vs)})")
                     if hold and not anchors.get(spk):
                         req["keep"] = akey
+                    if run.get("window"):                      # HERESY 2698: the first piece and the latest the window holds
+                        refs_of = [vid] if not p.get("speakers") else [run["voices"].get(s) or "" for s in p["speakers"]]   # HERESY 2699: a scene's every sample
+                        rows = sum(int(float((vs.get(v) or {}).get("seconds") or 15.0) * 21.5) + (len((vs.get(v) or {}).get("text") or "") + 1) // 2 for v in refs_of)
+                        hx = window_history(hist.get(spk) or [], run["window"], rows, len(req["text"]))
+                        if hx:
+                            req["opts"]["previous"] = [{"text": x[1], "codes": str(x[2])} for x in hx]
+                            p["window"] = [x[0] for x in hx]
                     pv = last.get(spk) if run.get("bridge") else None
                     if pv and pv[0] != (run.get("anchors") or {}).get(spk):   # HERESY 2474: the anchor is the reference already
                         if pv[2].is_file():
@@ -2293,13 +2432,20 @@ def _work(d, run, job):
                             _say(f"{rid} · piece {p['i'] + 1}: no codes kept for the piece before it, read without the bridge")
                     held = anchors.get(spk)
                     target = held if hold and isinstance(held, float) else (vs.get(vid) or {}).get("f0") if vid else None
+                    if p.get("speakers"):                     # HERESY 2699: several voices in one pass: no single pitch to hold it to
+                        target = None
                     req["pitch"] = True
                     for k in range(RETRIES + 1):         # a voice that drifted across the line of gender read again with another seed
                         m = _ask_again(w, req, rid, p, run)   # HERESY 2422
-                        if k == RETRIES or not drifted(target, m.get("f0")):
+                        hole = _stalled(d / f"piece-{p['i']:03d}.wav")   # HERESY 2700: an engine that stalled inside the piece
+                        if k == RETRIES or not (drifted(target, m.get("f0")) or hole):
                             break
-                        drifts += 1
-                        _say(f"{rid} · piece {p['i'] + 1} read at {m['f0']:.0f} Hz, its voice is {target:.0f} Hz: read again with another seed")
+                        if hole:
+                            run["stalls"] = run.get("stalls", 0) + 1
+                            _say(f"{rid} · piece {p['i'] + 1}: {hole:.1f} s of silence inside it (the engine stalled), read again with another seed")
+                        else:
+                            drifts += 1
+                            _say(f"{rid} · piece {p['i'] + 1} read at {m['f0']:.0f} Hz, its voice is {target:.0f} Hz: read again with another seed")
                         req["opts"]["seed"] += 1000
                     p["f0"], p["tries"] = m.get("f0"), k + 1
                     if req.get("keep") and m.get("seconds", 0) >= ANCHOR_MIN_S:
@@ -2309,8 +2455,9 @@ def _work(d, run, job):
                     said_s, gen = said_s + float(m.get("seconds") or 0), gen + float(m.get("gen_s") or 0)
                     reqs[p["i"]] = req
                     last[spk] = (p["i"], req["text"], d / f"piece-{p['i']:03d}.codes.npz")   # HERESY 2474
+                    said_of(rid, run, p, d / f"piece-{p['i']:03d}.codes.npz", hist.setdefault(spk, []), req["text"])   # HERESY 2698
                     if hearer:
-                        hearer.put(p["i"], d / f"piece-{p['i']:03d}.wav", p.get("said") or p["text"])
+                        hearer.put(p["i"], d / f"piece-{p['i']:03d}.wav", p["plain"] if p.get("speakers") else (p.get("said") or p["text"]))   # HERESY 2699: a scene heard by its words
                     run["done"] = p["i"] + 1
                     el = time.time() - job["since"]
                     job["expect"] = round(el / run["done"] * run["of"] + 2, 1)
@@ -2439,6 +2586,10 @@ def _land(d, run, eng):
             + (f"top-k {run['top_k']} · " if eng.get("top_k", True) else "") + f"seed {run['seed']} · inline tags {('read, each piece in its paragraph’s mood' if run.get('carry') else 'read') if run['tags'] else 'taken out'} · by {run['split'] if run['mode'] == 'narration' else 'turns'}"
             f" · {run['of']} pieces · {run.get('where', '')}"
             + (" · each piece read after the one before it (history)" if run.get("bridge") else "")   # HERESY 2474
+            + (" · the window: whole paragraphs, each with its voice's sample, the first piece and the latest in the window" if run.get("window") else "")
+            + (f" · {run['limits']} pieces reached the frame budget" if run.get("limits") else "")   # HERESY 2698
+            + (f" · a scene a pass, up to {run['scene']} voices" if run.get("scene") else "")   # HERESY 2699
+            + (f" · {run['stalls']} pieces read again after a silence of more than 4 s inside" if run.get("stalls") else "")   # HERESY 2700
             + (f" · pieces up to {run['piece_chars']} characters" if run.get("piece_chars") else "") + (f" · {run['tier']['quant']}" if run.get("tier") else "") +
             f" · {secs:.1f} s read in {run.get('read_s', 0):.0f} s" + _heard_note(run) + " · never for training" +
             (f" · {eng['license']['credit']}" if (eng.get("license") or {}).get("credit") else "") + "\n—\n")
@@ -2889,6 +3040,8 @@ def _fix_work(d, rid, i, text, plain, words, seed, job):
         while True:
             tier = _tier_for(run, eng)
             dev, card = _place(run, job, eng, tier)
+            if tier and run.get("window"):                # HERESY 2698: its server starts with the window; a worker of its own
+                tier = dict(tier, id=tier["id"] + "+window", window=True)
             with H["turn"](job):
                 if dev == "cuda":
                     try:

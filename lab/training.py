@@ -111,8 +111,11 @@ def _raw_count(d):
     return out
 
 
-def datasets(kit):
-    """The raw folders and the prepared sets, with what the trainer needs to know."""
+_MANIFEST_ROWS = {}     # HERESY 2655: str(dataset.json) -> ((mtime_ns, size), its row without the transcriber)
+
+
+def datasets(kit, with_runs=True):
+    """The raw folders and the prepared sets, with what the trainer needs to know (HERESY 2726: without the runs when the page asks them apart)."""
     P = paths(kit)
     raw = []
     for d in sorted(P["raw"].iterdir()) if P["raw"].is_dir() else []:
@@ -122,16 +125,25 @@ def datasets(kit):
     for d in sorted(P["prepared"].iterdir()) if P["prepared"].is_dir() else []:
         man = d / "dataset.json"
         if man.is_file():
-            m = json.load(open(man, encoding="utf-8"))
-            prepared.append({"name": d.name, "tracks": len(m.get("tracks", [])), "from": m.get("from"), "made": m.get("made"),
-                             "seconds": round(sum(t.get("seconds") or 0 for t in m.get("tracks", []))),
-                             "sheets_by": set_transcriber(d)})   # HERESY 2359: the transcriber whose sheets the set holds, "" for none yet
+            st = man.stat()                                # HERESY 2655: a set's row kept by its manifest's mtime and size
+            hit = _MANIFEST_ROWS.get(str(man))
+            if hit and hit[0] == (st.st_mtime_ns, st.st_size):
+                row = dict(hit[1])
+            else:
+                m = json.load(open(man, encoding="utf-8"))
+                row = {"name": d.name, "tracks": len(m.get("tracks", [])), "from": m.get("from"), "made": m.get("made"),
+                       "seconds": round(sum(t.get("seconds") or 0 for t in m.get("tracks", [])))}
+                _MANIFEST_ROWS[str(man)] = ((st.st_mtime_ns, st.st_size), dict(row))
+            row["sheets_by"] = set_transcriber(d)          # HERESY 2359: the transcriber whose sheets the set holds, "" for none yet
+            prepared.append(row)
     # HERESY 1086: what the Studio's own trainer needs, each said by name (heresy/fetch-heresy.sh --trainer fetches it)
     own = {q: (P["models"] / "checkpoints" / f).is_file() for q, f in OWN_CKPT.items()}
     own.update(mert=(studio_paths.at(studio_paths.MISC, kit) / "MERT-v2-FullSong" / "model.safetensors").is_file(),
                head=(P["head"] / "tokenizer_head_joint_v4.pt").is_file())
-    return {"raw": raw, "prepared": prepared, "own": own,
-            "head": P["head"].is_dir(), "runs": runs(kit)["runs"], "gpus": gpus(), "engines": plugin_engines(kit)}   # HERESY 2321
+    out = {"raw": raw, "prepared": prepared, "own": own, "head": P["head"].is_dir(), "gpus": gpus(), "engines": plugin_engines(kit)}   # HERESY 2321
+    if with_runs:
+        out["runs"] = runs(kit)["runs"]
+    return out
 
 
 # ---- HERESY 2359 (Viktor 11.11.2026: «Захерачим три режима SheetSage2 для FULL и Instrumental?»; the lead's advice he took: a set keeps the
@@ -1034,10 +1046,19 @@ def checkpoint_file(kit, run, file):
     raise FileNotFoundError(f"no checkpoint {file} in {run}")
 
 
-def runs(kit):
-    """Every run, newest first, with what its card shows: options, outcome, curves, checkpoints."""
+LIVE = ("running", "stopping", "pausing")             # HERESY 2726: a run training now, as the Trainer's page says it (isLive)
+
+
+def runs(kit, part="", start=0, count=0):
+    """Every run, newest first, with what its card shows: options, outcome, curves, checkpoints.
+    HERESY 2726 (the resource audit of 18.11.2026, R2; Viktor 17.11.2026: «каскадно прогоны подгружались в тренер: активный, пачками со свежего до
+    старого завершённые (в архиве), а затем только удалённые»): part "live" gives only the runs training now (the Trainer's look every 5 s, one run's
+    curves instead of every run's), part "done" the others, newest first, `count` of them from `start` (0: all), with how many there are. Each run's
+    run.json is read first; its curves, checkpoints and the rest only for the runs given."""
     P = paths(kit)
     out = []
+    adopt(kit)                                            # HERESY 2654: a live unit no watcher follows is taken first
+    heads = []
     for d in sorted(P["runs"].iterdir(), reverse=True) if P["runs"].is_dir() else []:
         f = d / "run.json"
         if f.is_file():
@@ -1045,26 +1066,35 @@ def runs(kit):
             live = RUNS.get(d.name)
             if live:
                 r.update({k: live.get(k) for k in ("status", "step", "steps", "loss", "ar_ce", "error", "lora", "vram_peak_mb")})
-            r["series"] = _series(d)
-            vj = d / "output" / d.name / "val.json"               # HERESY 1497: the held-out measures and the best of them
-            if vj.is_file():
-                try:
-                    r["val"] = json.load(open(vj, encoding="utf-8"))
-                except (OSError, ValueError):
-                    r["val"] = {"error": "val.json unreadable"}
-            r["checkpoints"] = checkpoints(kit, d.name, d)
-            r["gone"] = gone(kit, d.name, d, r["checkpoints"])   # HERESY 1816
-            r["protected"] = protected(d)                         # HERESY 1817
-            if live and r.get("plugin"):                  # HERESY 2321: a plugin's run, from its own step log
-                r.update({k: live.get(k) for k in ("elapsed_s", "eta_s", "sec_per_step")})
-            elif live and live.get("tail"):               # HERESY 1090: the time it has run and has left, from tqdm's line
-                m = ETA_RE.search(live["tail"][-1])
-                if m:
-                    r["elapsed_s"], r["eta_s"] = _hms(m.group(1)), _hms(m.group(2))
-            r["loras"] = sorted(f.name for f in (P["loras"] / d.name).glob("*.safetensors")) if (P["loras"] / d.name).is_dir() else []
-            out.append(r)
+            heads.append((d, r, live))
+    total = 0
+    if part:
+        heads = [h for h in heads if (h[1].get("status") in LIVE) == (part == "live")]
+        heads.sort(key=lambda h: h[1].get("started") or 0, reverse=True)
+        total = len(heads)
+        if count > 0:
+            heads = heads[max(0, start):max(0, start) + count]
+    for d, r, live in heads:
+        r["series"] = _series(d)
+        vj = d / "output" / d.name / "val.json"               # HERESY 1497: the held-out measures and the best of them
+        if vj.is_file():
+            try:
+                r["val"] = json.load(open(vj, encoding="utf-8"))
+            except (OSError, ValueError):
+                r["val"] = {"error": "val.json unreadable"}
+        r["checkpoints"] = checkpoints(kit, d.name, d)
+        r["gone"] = gone(kit, d.name, d, r["checkpoints"])   # HERESY 1816
+        r["protected"] = protected(d)                         # HERESY 1817
+        if live and r.get("plugin"):                  # HERESY 2321: a plugin's run, from its own step log
+            r.update({k: live.get(k) for k in ("elapsed_s", "eta_s", "sec_per_step")})
+        elif live and live.get("tail"):               # HERESY 1090: the time it has run and has left, from tqdm's line
+            m = ETA_RE.search(live["tail"][-1])
+            if m:
+                r["elapsed_s"], r["eta_s"] = _hms(m.group(1)), _hms(m.group(2))
+        r["loras"] = sorted(f.name for f in (P["loras"] / d.name).glob("*.safetensors")) if (P["loras"] / d.name).is_dir() else []
+        out.append(r)
     out.sort(key=lambda r: r.get("started") or 0, reverse=True)
-    return {"runs": out}
+    return {"runs": out, "total": total} if part else {"runs": out}
 
 
 STEP_RE = re.compile(r"(\d+)/(\d+) \[")
@@ -1215,9 +1245,47 @@ def _watch(kit, run):
     _save_meta(d, meta)
 
 
+_ADOPT = {"lock": threading.Lock(), "at": 0.0}
+
+
+def _live_units():
+    """HERESY 2654: the runs whose unit (ruach-train-RUN) is alive now, by one systemctl call; None when systemctl does not answer."""
+    try:
+        out = _systemctl("list-units", "--type=service", "--state=active,activating", "--no-legend", "--plain", "ruach-train-*").stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    names = set()
+    for line in out.splitlines():
+        unit = (line.split() or [""])[0]
+        if unit.startswith("ruach-train-") and unit.endswith(".service"):
+            names.add(unit[len("ruach-train-"):-len(".service")])
+    return names
+
+
+def adopt(kit, every=20.0):
+    """HERESY 2654: every run whose unit is alive and that no watcher follows (started by hand in its unit, or before the lab came up while its
+    run.json said otherwise) is watched from now, as if the room had started it. At most once in `every` seconds."""
+    with _ADOPT["lock"]:
+        if time.time() - _ADOPT["at"] < every:
+            return
+        _ADOPT["at"] = time.time()
+        live = _live_units()
+        if not live:
+            return
+        P = paths(kit)
+        for run in sorted(live):
+            if run in RUNS or not (P["runs"] / run / "run.json").is_file():
+                continue
+            threading.Thread(target=_watch, args=(kit, run), daemon=True).start()
+            for _ in range(50):                                # the watcher puts its job in RUNS at once; wait for it, so a second call sees it
+                if run in RUNS:
+                    break
+                time.sleep(0.02)
+
+
 def resume(kit):
     """At the lab's start: every run its run.json calls running is watched again (or closed, if it ended
-    while no one watched)."""
+    while no one watched); HERESY 2654: and every run whose unit is alive, whatever its run.json says."""
     P = paths(kit)
     for d in sorted(P["runs"].iterdir()) if P["runs"].is_dir() else []:
         try:
@@ -1225,6 +1293,7 @@ def resume(kit):
                 threading.Thread(target=_watch, args=(kit, d.name), daemon=True).start()
         except (ValueError, OSError):
             continue
+    adopt(kit, every=0)
 
 
 def run_cards(meta):

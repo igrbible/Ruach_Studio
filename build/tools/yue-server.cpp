@@ -11,6 +11,7 @@
 
 #include "asset-cache.h"   // HERESY 2139: the assets' keys and validators
 #include "audio-io.h"
+#include "upload-guard.h"   // HERESY 2659: the gate before a sent sound is decoded
 #include "flac-enc.h"
 #include "backend.h"
 #include "httplib.h"
@@ -209,8 +210,12 @@ struct Job {
     int                      made         = 0;      // HERESY 2011 (P2): the tracks it made, beside takes (those of them in the library)
     std::string              score_warning;         // HERESY 2433: a song of it sung by a score without a key line (said, not refused)
     double                   window_held  = 0.0;    // HERESY 2509: a song of it held whole to one window of the sound half (its seconds)
+    double                   floor_lowered_from = 0.0, floor_lowered_to = 0.0, floor_plan = 0.0;   // HERESY 2830: its music's floor lowered to the plan's end
+    double                   floor_bound = 0.0, floor_bound_cap = 0.0;   // HERESY 2831: a song of it never let end before a cap it did not ask
+    std::string              floor_bound_by;
     std::string              library_error;         // HERESY 2132: the first track the library could not keep, and why (the job is done all the same)
     bool                     result_freed = false;  // its result_body let go, its takes in the library (under mtx_results)
+    int                      tracks       = 0;      // HERESY 2674: the tracks a song's job makes (versions × variations), for the queue's limit
     int64_t                  lm_seed = -1;      // resolved seeds of a synth job
     int64_t                  seed    = -1;
 
@@ -610,6 +615,7 @@ struct EngineSettings {
     int         unload_after_min;  // HERESY 1167: idle minutes before the models leave VRAM, 15..240 by 15
     bool        unload_at_once;    // HERESY 1167: or 15 s after a song
     bool        kv_q8;             // HERESY 2633b: the music cache in Q8_0, where every reader takes it
+    int         queue_max = 12;    // HERESY 2674: the tracks the queue holds at once (waiting and running), 12 by default, 20 at most
 };
 
 static EngineSettings      g_settings;
@@ -943,6 +949,28 @@ static bool listen_flac_fresh(const std::string & dir) {
     return !ec && f >= w;
 }
 
+// HERESY 2830, 2831: what the music's floor did, in a take's meta.json and its job's status alike (nothing when it did nothing to say):
+// floor_lowered {asked, to, plan} when it was lowered to its plan's end, floor_bound {floor, cap, by} when it stood at a cap the request
+// did not set (by: window, context), so the song was never let end
+static void floor_said_json(yyjson_mut_doc * doc, yyjson_mut_val * root, double from, double to, double plan, double bound, double cap,
+                            const std::string & by) {
+    auto tenth = [](double v) { return std::round(v * 10.0) / 10.0; };
+    if (to > 0.0) {
+        yyjson_mut_val * o = yyjson_mut_obj(doc);
+        yyjson_mut_obj_add_real(doc, o, "asked", tenth(from));
+        yyjson_mut_obj_add_real(doc, o, "to", tenth(to));
+        yyjson_mut_obj_add_real(doc, o, "plan", tenth(plan));
+        yyjson_mut_obj_add_val(doc, root, "floor_lowered", o);
+    }
+    if (bound > 0.0) {
+        yyjson_mut_val * o = yyjson_mut_obj(doc);
+        yyjson_mut_obj_add_real(doc, o, "floor", tenth(bound));
+        yyjson_mut_obj_add_real(doc, o, "cap", tenth(cap));
+        yyjson_mut_obj_add_strcpy(doc, o, "by", by.c_str());
+        yyjson_mut_obj_add_val(doc, root, "floor_bound", o);
+    }
+}
+
 // One library entry: meta.json plus the prompt fields of request.json
 static yyjson_mut_val * library_entry(yyjson_mut_doc * out, const std::string & name) {
     std::string  dir      = g_outputs_dir + "/" + name;
@@ -1121,6 +1149,11 @@ static std::string library_save(const Yue2Request & replay,
     if (song.window_held > 0.0) {   // HERESY 2509: the take's card says the window ended it
         yyjson_mut_obj_add_real(doc, root, "window_held", std::round(song.window_held * 10.0) / 10.0);
     }
+    floor_said_json(doc, root, song.floor_lowered_from, song.floor_lowered_to, song.floor_plan, song.floor_bound, song.floor_bound_cap,
+                    song.floor_bound_by);   // HERESY 2830, 2831
+    if (song.plan_seconds > 0.0) {   // HERESY 2830: the length of its score at the score's own tempo, for the take's card
+        yyjson_mut_obj_add_real(doc, root, "plan_seconds", std::round(song.plan_seconds * 10.0) / 10.0);
+    }
     yyjson_mut_obj_add_real(doc, root, "render_seconds", render_seconds);
     yyjson_mut_obj_add_int(doc, root, "song", song_index);
     yyjson_mut_obj_add_int(doc, root, "variation", variation);
@@ -1210,16 +1243,41 @@ static std::string model_name_of(const std::string & path) {
     return dash == std::string::npos ? base : base.substr(dash + 1);
 }
 
+// HERESY 2662 (Viktor 17.11.2026: «если вдруг модель исчезла, как будет у нас с линками, чтобы Студия не упала, а предложила выбор другой
+// модели?»): a backbone is a file (often a hard link, or a symlink) that may go while the engine runs; is_regular_file follows a symlink to
+// its file, so a link whose file is gone is no backbone. Asked each time, never cached: the file may go or come back at any moment
+static bool backbone_present(const std::string & path) {
+    std::error_code ec;
+    return std::filesystem::is_regular_file(path, ec);
+}
+
+static std::string backbones_present() {
+    std::string have;
+    for (const auto & m : g_models) {
+        if (backbone_present(m.second)) {
+            have += (have.empty() ? "" : ", ") + m.first;
+        }
+    }
+    return have.empty() ? "none" : have;
+}
+
+static std::string backbone_gone(const std::string & name, const std::string & path) {
+    return "the backbone \"" + name + "\" is missing: its file " + std::filesystem::path(path).filename().string() +
+           " is gone; choose another model: " + backbones_present();
+}
+
 static std::string settings_json(const EngineSettings & st) {
     yyjson_mut_doc * doc  = yyjson_mut_doc_new(NULL);
     yyjson_mut_val * root = yyjson_mut_obj(doc);
     yyjson_mut_doc_set_root(doc, root);
     yyjson_mut_obj_add_strcpy(doc, root, "model", st.model.c_str());
     yyjson_mut_val * models = yyjson_mut_arr(doc);
+    yyjson_mut_val * gone   = yyjson_mut_arr(doc);   // HERESY 2662: the page offers what is here; what went is said apart
     for (const auto & m : g_models) {
-        yyjson_mut_arr_add_strcpy(doc, models, m.first.c_str());
+        yyjson_mut_arr_add_strcpy(doc, backbone_present(m.second) ? models : gone, m.first.c_str());
     }
     yyjson_mut_obj_add_val(doc, root, "models", models);
+    yyjson_mut_obj_add_val(doc, root, "models_gone", gone);
     yyjson_mut_obj_add_bool(doc, root, "keep_loaded", st.keep_loaded);
     yyjson_mut_obj_add_int(doc, root, "unload_after_min", st.unload_after_min);
     yyjson_mut_obj_add_bool(doc, root, "unload_at_once", st.unload_at_once);
@@ -1227,6 +1285,7 @@ static std::string settings_json(const EngineSettings & st) {
     yyjson_mut_obj_add_int(doc, root, "max_seq_full", YUE2_CONTEXT);
     yyjson_mut_obj_add_int(doc, root, "vae_core", st.vae_core);
     yyjson_mut_obj_add_bool(doc, root, "kv_q8", st.kv_q8);   // HERESY 2633b: asked; kv_cache says what the cache is
+    yyjson_mut_obj_add_int(doc, root, "queue_max", st.queue_max);   // HERESY 2674
     yyjson_mut_obj_add_str(doc, root, "kv_cache", g_pipeline.configured ? ggml_type_name(g_pipeline.kv.type) : "f16");
     char *      json = yyjson_mut_write(doc, YYJSON_WRITE_PRETTY, NULL);
     std::string out  = json ? json : "{}";
@@ -1253,11 +1312,18 @@ static bool settings_parse(const std::string & body, EngineSettings * st, std::s
     if ((v = yyjson_obj_get(root, "model")) && yyjson_is_str(v)) {
         std::string name  = yyjson_get_str(v);
         bool        known = false;
+        std::string path;
         for (const auto & m : g_models) {
-            known = known || m.first == name;
+            if (m.first == name) {
+                known = true;
+                path  = m.second;
+            }
         }
-        if (known) {
+        if (known && backbone_present(path)) {
             st->model = name;
+        } else if (known) {               // HERESY 2662: its file went since the start
+            *why = backbone_gone(name, path);
+            ok   = false;
         } else {
             *why = "unknown model";
             ok   = false;
@@ -1280,6 +1346,15 @@ static bool settings_parse(const std::string & body, EngineSettings * st, std::s
     }
     if ((v = yyjson_obj_get(root, "kv_q8")) && yyjson_is_bool(v)) {   // HERESY 2633b
         st->kv_q8 = yyjson_get_bool(v);
+    }
+    if ((v = yyjson_obj_get(root, "queue_max")) && yyjson_is_int(v)) {   // HERESY 2674
+        int n = (int) yyjson_get_int(v);
+        if (n >= 1 && n <= 20) {
+            st->queue_max = n;
+        } else {
+            *why = "the queue's limit must be 1 to 20 tracks";
+            ok   = false;
+        }
     }
     if ((v = yyjson_obj_get(root, "max_seq")) && yyjson_is_int(v)) {
         int n = (int) yyjson_get_int(v);
@@ -1329,7 +1404,9 @@ static void kv_reshape_for(const std::string & path) {
 // Runs on the worker thread, between jobs: nothing is held while it acts
 static void settings_apply(const EngineSettings & next) {
     for (const auto & m : g_models) {
-        if (m.first == next.model && g_pipeline.model_path != m.second) {
+        if (m.first == next.model && g_pipeline.model_path != m.second && !backbone_present(m.second)) {   // HERESY 2662: gone since it was chosen
+            fprintf(stderr, "[Server] Backbone %s: its file is gone (%s), the loaded one stays\n", m.first.c_str(), m.second.c_str());
+        } else if (m.first == next.model && g_pipeline.model_path != m.second) {
             fprintf(stderr, "[Server] Backbone now %s (%s)\n", m.first.c_str(), m.second.c_str());
             g_pipeline.model_path = m.second;
             g_model_path          = m.second;
@@ -1561,6 +1638,8 @@ static std::string job_status_json(const Job & job) {
         if (job.window_held > 0.0) {   // HERESY 2509
             yyjson_mut_obj_add_real(doc, root, "window_held", std::round(job.window_held * 10.0) / 10.0);
         }
+        floor_said_json(doc, root, job.floor_lowered_from, job.floor_lowered_to, job.floor_plan, job.floor_bound, job.floor_bound_cap,
+                        job.floor_bound_by);   // HERESY 2830, 2831
     }
     if (status == JobStatus::FAILED && !job.error.empty()) {
         yyjson_mut_obj_add_strncpy(doc, root, "error", job.error.c_str(), job.error.size());
@@ -2301,10 +2380,11 @@ static bool validate(const std::string & json, httplib::Response & res, Yue2Requ
         res.set_content(json_string("error", "unknown output format"), "application/json");
         return false;
     }
-    // HERESY 1004: only the solvers nar_solve knows; anything else would silently run midpoint
+    // HERESY 1004: only the solvers nar_solve knows; anything else would silently run midpoint. HERESY 2670: multistep (AB2) the default,
+    // midpoint kept for the original YuE2's requests and the tests, euler the draft
     if (r->solver != "midpoint" && r->solver != "euler" && r->solver != "heun" && r->solver != "multistep") {
         res.status = 400;
-        res.set_content(json_string("error", "solver must be midpoint, euler, heun or multistep"), "application/json");
+        res.set_content(json_string("error", "solver must be multistep (the default), heun, euler (a draft) or midpoint (the original YuE2's)"), "application/json");
         return false;
     }
     // HERESY 1003: a ceiling of 160. Before it only "at least 1" was checked, so a slip
@@ -2456,15 +2536,15 @@ static const char * transcriber_mode(bool refined, int rope) {
 }
 
 static void run_transcribe(std::shared_ptr<Job> job, std::vector<float> audio, bool melody_only, bool refined, bool key_mode, int rope,
-                           bool small) {
+                           bool q8) {   // HERESY 2649: not «small» (Windows defines it as char)
     job->started.store(true);
     active_job_set(job);
     fprintf(stderr, "[Server] Transcribe job %s: %.1f s of audio, %s, %s%s, %s\n", job->id.c_str(),
             (double) audio.size() / MERT_SAMPLE_RATE, melody_only ? "melody only" : "full score",
             transcriber_mode(refined, rope),
-            refined && key_mode ? " with modes" : "", small ? "Q8_0" : "F32 (or as started)");
+            refined && key_mode ? " with modes" : "", q8 ? "Q8_0" : "F32 (or as started)");
     std::string abc, error;
-    bool ok = pipeline_transcribe(&g_pipeline, audio.data(), (int) audio.size(), melody_only, &abc, &error, refined, key_mode, rope, small);
+    bool ok = pipeline_transcribe(&g_pipeline, audio.data(), (int) audio.size(), melody_only, &abc, &error, refined, key_mode, rope, q8);
     active_job_set(nullptr);
     if (!ok) {
         fprintf(stderr, "[Server] Transcribe job %s failed: %s\n", job->id.c_str(), error.c_str());
@@ -2474,7 +2554,7 @@ static void run_transcribe(std::shared_ptr<Job> job, std::vector<float> audio, b
     // HERESY 2328: the answer says which transcriber wrote the score; HERESY 2359: and with which angles SheetSage2 wrote it
     std::string body = json_string("abc", abc);
     body.insert(body.size() - 1, std::string(",\"transcriber\":\"") + transcriber_name(refined, rope) + "\"");
-    body.insert(body.size() - 1, std::string(",\"precision\":\"") + (small ? "Q8_0" : "F32") + "\"");   // HERESY 2625
+    body.insert(body.size() - 1, std::string(",\"precision\":\"") + (q8 ? "Q8_0" : "F32") + "\"");   // HERESY 2625
     job->result_body = body;
     job->result_mime = "application/json";
     job->status.store(JobStatus::DONE);
@@ -2650,8 +2730,9 @@ static void run_vae_decode(std::shared_ptr<Job> job, Yue2Request request, std::v
 }
 
 // HERESY 1661: the job's backbone (its own name, else the Engine's) made the one the pipeline loads; on the worker, between jobs, as
-// settings_apply does; false for a name that is none of --model's
-static bool backbone_for(const std::string & named) {
+// settings_apply does; the reason it cannot be ("" when it is): a name that is none of --model's, or (HERESY 2662) one whose file is gone,
+// said by name with the backbones that are here, before anything loads, so the engine never reaches for a file that is not there
+static std::string backbone_for(const std::string & named) {
     std::string want = named;
     if (want.empty()) {
         std::lock_guard<std::mutex> lock(mtx_settings);
@@ -2659,6 +2740,10 @@ static bool backbone_for(const std::string & named) {
     }
     for (const auto & m : g_models) {
         if (m.first == want) {
+            if (!backbone_present(m.second)) {
+                fprintf(stderr, "[Server] Backbone %s: its file is gone (%s)\n", m.first.c_str(), m.second.c_str());
+                return backbone_gone(m.first, m.second);
+            }
             if (g_pipeline.model_path != m.second) {
                 fprintf(stderr, "[Server] Backbone for this job: %s (%s)\n", m.first.c_str(), m.second.c_str());
                 g_pipeline.model_path = m.second;
@@ -2666,10 +2751,16 @@ static bool backbone_for(const std::string & named) {
                 store_unload_idle(g_pipeline.store);
                 kv_reshape_for(m.second);   // HERESY 2090
             }
-            return true;
+            return "";
         }
     }
-    return named.empty();   // an Engine choice the server does not have: as before, the loaded one
+    if (!named.empty()) {
+        return "no backbone \"" + named + "\" here; this engine has " + backbones_present();
+    }
+    if (!backbone_present(g_pipeline.model_path)) {   // an Engine choice the server does not have: as before, the loaded one, while it is there
+        return backbone_gone(std::filesystem::path(g_pipeline.model_path).stem().string(), g_pipeline.model_path);
+    }
+    return "";
 }
 
 static void run_job(std::shared_ptr<Job> job, Yue2Request request) {
@@ -2678,19 +2769,22 @@ static void run_job(std::shared_ptr<Job> job, Yue2Request request) {
     } refresh_after;
     job->started.store(true);
     active_job_set(job);
+    if (job->cancel.load()) {   // HERESY 2676: taken off while it waited (one ✕, or Stop all): it ends here, nothing loaded for it
+        active_job_set(nullptr);
+        job->status.store(JobStatus::CANCELLED);
+        fprintf(stderr, "[Server] Job %s: cancelled while it waited\n", job->id.c_str());
+        return;
+    }
     fprintf(stderr, "[Server] Job %s: %s\n", job->id.c_str(), request_to_json(&request).c_str());
     if (!request.decode_from.empty()) {   // HERESY 1168: a take's kept latents, another decoder
         decode_job(job, request);
         return;
     }
 
-    if (!backbone_for(request.backbone)) {   // HERESY 1661
-        std::string have;
-        for (const auto & m : g_models) {
-            have += (have.empty() ? "" : ", ") + m.first;
-        }
+    std::string no_backbone = backbone_for(request.backbone);   // HERESY 1661; 2662: a file gone said by name
+    if (!no_backbone.empty()) {
         active_job_set(nullptr);
-        job->error = "no backbone \"" + request.backbone + "\" here; this engine has " + have;
+        job->error = no_backbone;
         job->status.store(JobStatus::FAILED);
         return;
     }
@@ -2706,6 +2800,16 @@ static void run_job(std::shared_ptr<Job> job, Yue2Request request) {
         }
         if (ok && song.window_held > 0.0 && job->window_held == 0.0) {   // HERESY 2509
             job->window_held = song.window_held;
+        }
+        if (ok && song.floor_lowered_to > 0.0 && job->floor_lowered_to == 0.0) {   // HERESY 2830
+            job->floor_lowered_from = song.floor_lowered_from;
+            job->floor_lowered_to   = song.floor_lowered_to;
+            job->floor_plan         = song.floor_plan;
+        }
+        if (ok && song.floor_bound > 0.0 && job->floor_bound == 0.0) {   // HERESY 2831
+            job->floor_bound     = song.floor_bound;
+            job->floor_bound_cap = song.floor_bound_cap;
+            job->floor_bound_by  = song.floor_bound_by;
         }
     }
     if (!ok) {
@@ -2965,6 +3069,30 @@ int main(int argc, char ** argv) {
         fprintf(stderr, "[Server] Access: %s%s\n", access_public() ? "anyone (RUACH_ALLOW_PUBLIC)" : g_access.mode.c_str(),
                 g_access_path.empty() ? " (no settings file: private networks)"
                 : g_access.acknowledged.empty() ? " (not decided yet: the page asks)" : "");
+    }
+
+    // HERESY 2662: a --model whose file is not there at the start (removed, a link whose file went) is left out, said; the first present one
+    // is the boot backbone, so a remembered model that went starts the next one (start.sh passes only present files and says which)
+    {
+        std::vector<std::pair<std::string, std::string>> here;
+        for (const auto & m : g_models) {
+            if (backbone_present(m.second)) {
+                here.push_back(m);
+            } else {
+                fprintf(stderr, "[Server] Backbone %s: no file at %s, left out\n", m.first.c_str(), m.second.c_str());
+            }
+        }
+        if (here.empty() && !g_models.empty()) {
+            fprintf(stderr, "[Server] No backbone file is here (%zu named, all gone): nothing to load\n", g_models.size());
+            return 1;
+        }
+        if (!here.empty() && here[0].second != g_models[0].second) {
+            fprintf(stderr, "[Server] Backbone %s is gone: starting %s\n", g_models[0].first.c_str(), here[0].first.c_str());
+        }
+        g_models = here;
+        if (!g_models.empty()) {
+            g_model_path = g_models[0].second;
+        }
     }
 
     // Local addition: engine settings, from --settings over the boot flags
@@ -3261,9 +3389,46 @@ int main(int argc, char ** argv) {
         if (!validate(req.body, res, &request)) {
             return;
         }
+        // HERESY 2674 (Viktor 17.11.2026): the queue holds queue_max tracks at once (12 by default, the Engine's settings up to 20); a song past
+        // it is refused with the numbers and where the limit is changed, never taken and lost
+        int tracks = std::max(1, request.lm_batch_size) * std::max(1, request.synth_batch_size), held = 0, limit = 12;
+        {
+            std::lock_guard<std::mutex> lock(mtx_settings);
+            limit = g_settings.queue_max;
+        }
+        {
+            std::lock_guard<std::mutex> lock(mtx_jobs);
+            for (const auto & kv : g_jobs) {
+                if (kv.second->status.load() == JobStatus::RUNNING && !kv.second->cancel.load()) {   // one asked to stop holds no room
+                    held += kv.second->tracks;
+                }
+            }
+        }
+        if (held + tracks > limit) {
+            res.status = 429;
+            std::string words = "The queue is full: " + std::to_string(held) + " track" + (held == 1 ? "" : "s") + " wait or run, its limit is " +
+                                std::to_string(limit) + ", and this song would add " + std::to_string(tracks) +
+                                ". Wait until some finish, or raise the limit (up to 20) in Engine → Engine settings → Queue limit.";
+            yyjson_mut_doc * doc  = yyjson_mut_doc_new(NULL);
+            yyjson_mut_val * root = yyjson_mut_obj(doc);
+            yyjson_mut_doc_set_root(doc, root);
+            yyjson_mut_obj_add_strcpy(doc, root, "error", words.c_str());
+            yyjson_mut_obj_add_int(doc, root, "queued", held);
+            yyjson_mut_obj_add_int(doc, root, "queue_limit", limit);
+            yyjson_mut_obj_add_int(doc, root, "tracks", tracks);
+            char * json = yyjson_mut_write(doc, 0, NULL);
+            res.set_content(json ? json : "{}", "application/json");
+            if (json) {
+                free(json);
+            }
+            yyjson_mut_doc_free(doc);
+            fprintf(stderr, "[Server] Song refused: the queue holds %d of %d tracks, it would add %d\n", held, limit, tracks);
+            return;
+        }
         auto job     = job_create();
         job->lm_seed = request.lm_seed;
         job->seed    = request.seed;
+        job->tracks  = tracks;
         work_push([job, request] { run_job(job, request); });
         res.set_content(json_string("id", job->id), "application/json");
     });
@@ -3300,12 +3465,18 @@ int main(int argc, char ** argv) {
             }
             bool                melody_only = req.has_param("melody_only") || (req.is_multipart_form_data() && req.form.has_field("melody_only"));
             const std::string & file        = from_take.empty() ? req.form.get_file("audio").content : from_take;
-            int                 T = 0, sr = 0;
-            float *             planar = audio_read_buf((const uint8_t *) file.data(), file.size(), &T, &sr);
-            std::vector<float>  audio;
+            // HERESY 2659: a sound sent here passes the gate before it is decoded (src/upload-guard.h); a take of the library is the Studio's own
+            std::string why = from_take.empty() ? upload_guard::refusal((const uint8_t *) file.data(), file.size()) : std::string();
+            int         T = 0, sr = 0;
+            float *     planar = why.empty() ? audio_read_buf((const uint8_t *) file.data(), file.size(), &T, &sr) : nullptr;
+            if (planar && from_take.empty() && !(why = upload_guard::bounds(file, T, sr)).empty()) {
+                free(planar);
+                planar = nullptr;
+            }
+            std::vector<float> audio;
             if (!planar || !mert_mono_24k(planar, T, sr, &audio)) {
                 res.status = 400;
-                res.set_content(json_string("error", "cannot decode audio"), "application/json");
+                res.set_content(json_string("error", why.empty() ? std::string("cannot decode audio") : why), "application/json");
                 return;
             }
             // HERESY 2328: transcriber=refined (query or form field) writes it with SheetSage2-Refined, modes=1 with keys
@@ -3333,8 +3504,8 @@ int main(int argc, char ** argv) {
             auto job = job_create();
             // HERESY 2625: precision=q8 (or small) asks SheetSage2 with MERT in Q8_0, where the server was given them; F32 otherwise
             std::string prec  = field("precision");
-            bool        small = !refined && (prec == "q8" || prec == "Q8_0" || prec == "small") && !g_transcriber_small_path.empty();
-            work_push([job, audio, melody_only, refined, key_mode, rope, small] { run_transcribe(job, audio, melody_only, refined, key_mode, rope, small); });
+            bool        q8    = !refined && (prec == "q8" || prec == "Q8_0" || prec == "small") && !g_transcriber_small_path.empty();
+            work_push([job, audio, melody_only, refined, key_mode, rope, q8] { run_transcribe(job, audio, melody_only, refined, key_mode, rope, q8); });
             res.set_content(json_string("id", job->id), "application/json");
         });
     }
@@ -3349,12 +3520,17 @@ int main(int argc, char ** argv) {
                 return;
             }
             const std::string & file = req.form.get_file("audio").content;
+            std::string         why  = upload_guard::refusal((const uint8_t *) file.data(), file.size());   // HERESY 2659
             int                 T = 0, sr = 0;
-            float *             planar = audio_read_buf((const uint8_t *) file.data(), file.size(), &T, &sr);
-            std::vector<float>  audio;
+            float *             planar = why.empty() ? audio_read_buf((const uint8_t *) file.data(), file.size(), &T, &sr) : nullptr;
+            if (planar && !(why = upload_guard::bounds(file, T, sr)).empty()) {
+                free(planar);
+                planar = nullptr;
+            }
+            std::vector<float> audio;
             if (!planar || !mert_mono_24k(planar, T, sr, &audio)) {
                 res.status = 400;
-                res.set_content(json_string("error", "cannot decode audio"), "application/json");
+                res.set_content(json_string("error", why.empty() ? std::string("cannot decode audio") : why), "application/json");
                 return;
             }
             auto job = job_create();
@@ -3395,11 +3571,16 @@ int main(int argc, char ** argv) {
         }
         if (has_audio) {
             const std::string & file = req.form.get_file("audio").content;
+            std::string         why  = upload_guard::refusal((const uint8_t *) file.data(), file.size());   // HERESY 2659
             int                 T = 0, sr = 0;
-            float *             planar = audio_read_buf((const uint8_t *) file.data(), file.size(), &T, &sr);
+            float *             planar = why.empty() ? audio_read_buf((const uint8_t *) file.data(), file.size(), &T, &sr) : nullptr;
+            if (planar && !(why = upload_guard::bounds(file, T, sr)).empty()) {
+                free(planar);
+                planar = nullptr;
+            }
             if (!planar) {
                 res.status = 400;
-                res.set_content(json_string("error", "cannot decode audio"), "application/json");
+                res.set_content(json_string("error", why.empty() ? std::string("cannot decode audio") : why), "application/json");
                 return;
             }
             std::vector<float> audio(planar, planar + (size_t) 2 * T);
@@ -3454,6 +3635,31 @@ int main(int argc, char ** argv) {
             return;
         }
         res.set_content(job->result_body, job->result_mime.c_str());
+    });
+
+    // HERESY 2676 (Viktor 17.11.2026: the lamp by the logo offers «Stop all Musician tasks»): every song the engine holds asked to stop, the
+    // waiting first so none of them begins, then the one running (it stops at its next step); what was made stays. {stopped, running, waiting}
+    svr.Post("/jobs/stop-all", [](const httplib::Request &, httplib::Response & res) {
+        std::vector<std::shared_ptr<Job>> waiting, running;
+        {
+            std::lock_guard<std::mutex> lock(mtx_jobs);
+            for (const auto & id : g_job_order) {
+                auto it = g_jobs.find(id);
+                if (it == g_jobs.end() || it->second->tracks <= 0 || it->second->status.load() != JobStatus::RUNNING || it->second->cancel.load()) {
+                    continue;
+                }
+                (it->second->started.load() ? running : waiting).push_back(it->second);
+            }
+        }
+        for (auto & j : waiting) {
+            j->cancel.store(true);
+        }
+        for (auto & j : running) {
+            j->cancel.store(true);
+        }
+        fprintf(stderr, "[Server] Stop all: %zu waiting and %zu running songs asked to stop\n", waiting.size(), running.size());
+        res.set_content("{\"stopped\": " + std::to_string(waiting.size() + running.size()) + ", \"running\": " + std::to_string(running.size()) +
+                        ", \"waiting\": " + std::to_string(waiting.size()) + "}", "application/json");
     });
 
     svr.Post("/job", [](const httplib::Request & req, httplib::Response & res) {

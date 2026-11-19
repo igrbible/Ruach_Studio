@@ -1,0 +1,62 @@
+// HERESY 2675: a song started while others run or wait: the overlay lists the runs, Cancel sends nothing, Add to the queue sends it, «Do not show
+// this warning again» is kept in this browser and the Engine settings bring it back, Stop the running one stops it and sends the new one.
+// Against the mock (its songs slowed so they stay running), muted, its own profile.
+import { B, G, R, X, finish, guard, launchChrome, onReport, sleep, startMock } from "../../tools/cdp-common.mjs";
+guard(240);
+let passed = 0, failed = 0;
+const check = (name, ok, detail) => { ok ? passed++ : failed++; console.log(`  ${ok ? G + "PASS" : R + "FAIL"}${X}  ${name}${!ok && detail ? "  (" + detail + ")" : ""}`); };
+onReport(() => console.log(`\n${B}check-busy-warning${X}  ${failed ? R : G}${passed} passed, ${failed} failed${X}`));
+const BASE = (await startMock(process.cwd() + "/tmp/mock-outputs/check-busy-warning", ["--speed", "0.02"])).base;
+const { send, ev, waitFor } = await launchChrome("profile-busy-warning");
+await send("Page.enable"); await send("Runtime.enable");
+await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
+await send("Page.navigate", { url: BASE });
+await waitFor(`document.readyState === "complete" && !!document.getElementById("composeForm")`, 20000);
+await ev(`localStorage.removeItem("yue2.askBusy"); localStorage.setItem("yue2.askScore", "off"); localStorage.setItem("yue2.askSeed", "off"); true`);
+await send("Page.reload", {});
+await waitFor(`document.readyState === "complete" && !!document.getElementById("composeForm")`, 20000);
+await sleep(1500);
+const synths = async () => ev(`fetch("/mock/requests").then(r => r.json()).then(d => (Array.isArray(d) ? d : d.requests || []).filter(x => x.path === "/synth").length)`);
+const submit = async () => ev(`(() => { document.getElementById("style").value = "pop, female vocal"; document.getElementById("lyrics").value = "[Verse]\\nla la la\\n";
+  document.getElementById("composeForm").requestSubmit(); return true; })()`);
+const overlay = () => ev(`!!document.querySelector(".busy-back")`);
+await submit();
+await waitFor(`fetch("/mock/requests").then(r => r.json()).then(d => (Array.isArray(d) ? d : d.requests || []).some(x => x.path === "/synth"))`, 20000);
+const n1 = await synths();
+check("the first song goes without a question (nothing ran)", n1 >= 1 && !(await overlay()), `synths ${n1}`);
+await sleep(1500);
+await submit();
+await waitFor(`!!document.querySelector(".busy-back.is-on")`, 8000);
+const o = await ev(`(() => { const b = document.querySelector(".busy-back"), box = b.querySelector(".hd-box").getBoundingClientRect(), r = b.getBoundingClientRect();
+  return { rows: b.querySelectorAll(".busy-row").length, run: b.querySelectorAll(".busy-row.is-run").length, text: b.querySelector(".busy-row") && b.querySelector(".busy-row").textContent,
+    queue: !!b.querySelector('[data-busy="queue"]'), stop: !!b.querySelector('[data-busy="stop"]'), cancel: !!b.querySelector('[data-busy="cancel"]'), off: !!b.querySelector(".busy-off"),
+    cover: r.width >= innerWidth - 1 && r.height >= innerHeight - 1, inside: box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight }; })()`);
+check("a second song while one runs: the overlay with the runs (title, stage, time)", o.rows >= 1 && o.run >= 1, JSON.stringify(o));
+check("its three answers and the checkbox", o.queue && o.stop && o.cancel && o.off, JSON.stringify(o));
+check("an overlay over the page, its box whole in the window", o.cover && o.inside, JSON.stringify(o));
+await ev(`document.querySelector('[data-busy="cancel"]').click(); true`);
+await sleep(1500);
+check("Cancel: nothing sent, the overlay gone", (await synths()) === n1 && !(await overlay()), `synths ${await synths()}`);
+await submit();
+await waitFor(`!!document.querySelector(".busy-back.is-on")`, 8000);
+await ev(`document.querySelector(".busy-off").click(); document.querySelector('[data-busy="queue"]').click(); true`);
+await sleep(2500);
+const n2 = await synths();
+check("Add to the queue: the song sent", n2 > n1, `synths ${n1} → ${n2}`);
+check("«Do not show this warning again» kept in this browser", (await ev(`localStorage.getItem("yue2.askBusy")`)) === "off");
+await submit();
+await sleep(2500);
+const n3 = await synths();
+check("then no question: the song goes at once", n3 > n2 && !(await overlay()), `synths ${n2} → ${n3}`);
+await ev(`(() => { const c = document.getElementById("setAskBusy"); c.checked = true; c.dispatchEvent(new Event("change", { bubbles: true })); return true; })()`);
+check("Engine settings bring it back", (await ev(`localStorage.getItem("yue2.askBusy")`)) === "on");
+await submit();
+await waitFor(`!!document.querySelector(".busy-back.is-on")`, 8000);
+await ev(`document.querySelector('[data-busy="stop"]').click(); true`);
+await sleep(3000);
+const n4 = await synths();
+const cancels = await ev(`fetch("/mock/requests").then(r => r.json()).then(d => JSON.stringify(d).match(/cancel/g) || []).then(m => m.length)`);
+check("Stop the running one and start this: the song sent", n4 > n3, `synths ${n3} → ${n4}`);
+const toastText = await ev(`[...document.querySelectorAll(".toast, .toasts *")].map(t => t.textContent).join(" | ")`);
+check("and the running one asked to stop (said)", /stops/.test(toastText), toastText.slice(0, 300) + " cancels " + cancels);
+await finish(failed ? 1 : 0);

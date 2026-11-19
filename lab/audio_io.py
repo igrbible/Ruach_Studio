@@ -6,10 +6,13 @@
             PipeWire/Pulse sinks and sources (pactl) and JACK ports (jack_lsp), where they run; a tool missing is said, never «none»;
   the gateway: the output and the input it plays through and records from, and its rate, kept in user/audio.json;
   the floor: an input's own noise, measured by a short recording (arecord through plughw), said in dBFS per channel."""
-import grp
+try:                     # HERESY 2649: Windows has neither; needs_sg() ends before them where there is no /dev/snd
+    import grp
+    import pwd
+except ImportError:
+    grp = pwd = None
 import json
 import os
-import pwd
 import re
 import shlex
 import subprocess

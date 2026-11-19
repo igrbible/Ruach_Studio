@@ -1197,6 +1197,7 @@
       sh.setAttribute("data-tip", "The adapters hidden from the list (a right-click on one hides it), back in sight, marked");
       sh.innerHTML = '<input type="checkbox" /> <span>Show hidden</span> <span class="lora-hidden-n mono"></span>';
       sh.addEventListener("click", function (e) { e.stopPropagation(); });   // not the LoRAs' fold
+      sh.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") e.stopPropagation(); });   // HERESY 2688: Space ticks the box, not the label's fold
       sh.querySelector("input").addEventListener("change", function () { S.showHidden = this.checked; paint(); });
       head.appendChild(sh);
       S.showBox = sh;
@@ -1678,7 +1679,7 @@
   function paint() { document.body.classList.toggle("vshift-ok", ok()); }
   document.addEventListener("input", function (e) { if (e.target && e.target.id === "abc") paint(); });
   document.addEventListener("change", function (e) { if (e.target && e.target.name === "cot") paint(); });
-  setInterval(paint, 1000);
+  if (window.HeresyIdle) window.HeresyIdle.every(1000, paint, { room: "create" }); else setInterval(paint, 1000);   // HERESY 2728: while the Musician is in front (2721)
   paint();
   document.addEventListener("click", function (e) {
     var b = e.target && e.target.closest && e.target.closest("[data-vshift]");

@@ -41,7 +41,7 @@ with tempfile.TemporaryDirectory() as tmp:
     check("creator: no charter of the lab's (the page keeps it)", c["charter"] == "" and c["system"] == "" and "tags" not in c)
     check("creator: the five-string schema", c["schema"]["required"] == ["title", "style", "style_tags", "lyrics", "notes"])
     check("reader: its own tasks", [t["id"] for t in r["tasks"]][:4] == ["chapter", "scene", "dialog", "narration"], r["tasks"])
-    check("reader: a charter, marked a draft, its comment left out", r["charter"].startswith("You are") and r["charter_draft"] is True
+    check("reader: a charter, no longer a draft (2842), no comment", r["charter"].startswith("You are") and r["charter_draft"] is False
           and "<!--" not in r["charter"], r["charter"][:80])
     check("reader: the charter names no transliteration and capital stresses", "Never transliterate" in r["charter"] and "capital letter" in r["charter"])
     check("reader: system = charter while the SOUL is empty", r["system"] == r["charter"])

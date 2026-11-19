@@ -9,6 +9,7 @@
 - The disks: the Studio's folders' sizes (links not followed: what lives on another disk is said by that disk) and the free space of each disk they are on,
   every six hours.
 """
+import winx   # HERESY 2649: what the lab asks of Linux, said for Windows too
 import json
 import os
 import shutil
@@ -49,9 +50,13 @@ def beat(kind):
 
 
 def _cpu():
-    with open("/proc/stat") as f:
-        v = [int(x) for x in f.readline().split()[1:]]
-    idle, total = v[3] + (v[4] if len(v) > 4 else 0), sum(v)
+    if not winx.PROC:                                 # HERESY 2649: Windows and macOS have no /proc: psutil's times through winx
+        busy, total, _io = winx.cpu_times()["cpu"]
+        idle = total - busy
+    else:
+        with open("/proc/stat") as f:
+            v = [int(x) for x in f.readline().split()[1:]]
+        idle, total = v[3] + (v[4] if len(v) > 4 else 0), sum(v)
     was, STATE["cpu"] = STATE["cpu"], (idle, total)
     if not was or total == was[1]:
         return None
@@ -59,6 +64,9 @@ def _cpu():
 
 
 def _ram():
+    if not winx.PROC:                                 # HERESY 2649: the same share, from psutil through winx
+        used, total, _c, _su, _st = winx.meminfo_mb()
+        return 100.0 * used / max(1, total)
     info = {}
     with open("/proc/meminfo") as f:
         for line in f:
@@ -118,7 +126,8 @@ def _size(p):
                         if e.is_dir(follow_symlinks=False):
                             stack.append(e.path)
                         elif e.is_file(follow_symlinks=False):
-                            total += e.stat(follow_symlinks=False).st_blocks * 512
+                            st = e.stat(follow_symlinks=False)   # 2649: Windows has no st_blocks: the size itself
+                            total += st.st_blocks * 512 if hasattr(st, "st_blocks") else st.st_size
                     except OSError:
                         continue
         except OSError:

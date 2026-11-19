@@ -397,7 +397,11 @@
   // show them (the Librarian's box, the column's ⋯: one setting); the 👎 chip shows them whatever it says
   var DISLIKED_KEY = "yue2.showDisliked";
   var DIS_TIP = "Dislike: the take leaves the lists while «Show disliked takes in the lists» is off (Engine → Defaults); «Only the disliked» still finds it";   // HERESY 1820
-  function showDis() { return recall(DISLIKED_KEY) === "1"; }
+  // HERESY 2647: the Library follows its own eye (state.reveal, remembered), no longer the Engine's default, which still rules the rooms' columns
+  // (with it on, the disliked were always here and the eye could take nothing away)
+  function showDis() { return false; }
+  var REVEAL_KEY = "yue2.collReveal";
+  function revealAtStart() { var v = recall(REVEAL_KEY); return v === null ? recall(DISLIKED_KEY) === "1" : v === "1"; }
   // HERESY 1167 (Viktor: «В Библиотеке переход по воркспейсам не синхронизирует выбор в баре»): a workspace opened here is
   // the one in hand in the bar too (new takes land in it, the rooms' column shows it); All Workspaces is All again; the
   // studio's own views and a frozen workspace leave the bar as it is
@@ -1066,6 +1070,10 @@
       .map(function (p) { return [tr(p[1]), cnt(function (r) { return planOf(r) === p[0]; })]; }).filter(function (p) { return p[1]; });
     var kinds = [["generated", "made here"], ["imported", "imported"], ["regenerated", "regenerated"], ["rerendered", "re-rendered"]]
       .map(function (k) { return [tr(k[1]), cnt(function (r) { return r.kind === k[0]; })]; }).filter(function (k) { return k[1]; });
+    // HERESY 2846: a kind the four above do not name (a reading's take, a derived file) is counted too, by the bar's old words
+    var named = { generated: 1, imported: 1, regenerated: 1, rerendered: 1 }, other = {};
+    all.forEach(function (r) { if (r.kind && !named[r.kind]) other[r.kind] = (other[r.kind] || 0) + 1; });
+    Object.keys(other).sort(function (a, b) { return other[b] - other[a]; }).forEach(function (k) { kinds.push([tr(KINDS[k] || DERIVED[k] || k), other[k]]); });
     var marks = [["\ud83d\udc4d", cnt(function (r) { return r.rating > 0; })], ["\ud83d\udc4e", cnt(function (r) { return r.rating < 0; })], ["\u2b50", cnt(function (r) { return r.favorite; })],
       ["\ud83d\udd25", cnt(function (r) { return markOf(r.name, "fire"); })], ["\ud83d\udc8e", cnt(function (r) { return markOf(r.name, "gem"); })],
       ["\ud83d\udee1", cnt(function (r) { return r.protected; })], ["\u270e", cnt(function (r) { return !!(r.note || "").trim(); })]].filter(function (m) { return m[1]; });
@@ -1078,11 +1086,13 @@
     var list = function (xs) { return xs.map(function (x) { return '<span class="cs-i">' + esc(x[0]) + ' <b class="mono">' + x[1] + "</b></span>"; }).join(""); };
     return '<div class="cs-head">' + esc(placeName()) + "</div>" + '<div class="cs-grid">' +
       row("Takes", '<b class="mono">' + n + "</b>" + (hid ? " \u00b7 " + esc((hidDis ? tr("{0} shown, {1} hidden ({2} by hand, {3} disliked)") : tr("{0} shown, {1} hidden")).replace("{0}", n - hid).replace("{1}", hid)
-        .replace("{2}", hidHand).replace("{3}", hidDis)) : "") + aways) +   // HERESY 2078b: the rest, after the number
+        .replace("{2}", hidHand).replace("{3}", hidDis)) : "") + aways +   // HERESY 2078b: the rest, after the number
+        (state.shownN != null && state.shownN !== n - hid ? " \u00b7 <span>" + esc(n + " take" + (n === 1 ? "" : "s") + " (" + state.shownN + " shown)") + "</span>" : "")) +   // 2846: the search's and the filters' count
       row("Plan", list(plans)) +
       row("Time", n ? esc(tr("{0} in all · {1} on average").replace("{0}", hms(sec)).replace("{1}", clock(sec / n))) : "") +
       row("Marks", list(marks)) + row("Reactions", list(reacts)) + row("Made", list(kinds)) +
-      row("Days", days.length ? esc(day(days[0]) + (day(days[0]) !== day(days[days.length - 1]) ? " \u2192 " + day(days[days.length - 1]) : "")) : "") + "</div>";
+      row("Days", days.length ? esc(day(days[0]) + (day(days[0]) !== day(days[days.length - 1]) ? " \u2192 " + day(days[days.length - 1]) : "")) : "") +
+      row("Library", "<span>" + esc(state.rows.length + " in the library") + "</span>") + "</div>";   // HERESY 2846: the bar's last number, here
   }
   function placeName() {
     var own = { "": "All Workspaces", __fav: "Favourites", __pinned: "Pinned", __none: "Not in a workspace", __hidden: "Hidden", __archived: "Archived" };
@@ -1160,6 +1170,33 @@
   if (window.ResizeObserver && $("collWhere") && $("collWhere").parentNode) {
     new ResizeObserver(function () { cancelAnimationFrame(headFit); headFit = requestAnimationFrame(fitHead); }).observe($("collWhere").parentNode.parentNode);
   }
+  // HERESY 2792 (Viktor 18.11.2026: «урезать так же, как и имена пространств в узкой колонке и по наведению мыши это перечисление со статистикой
+  // разворачивать вниз, не трогая высоты этой полосы»): the numbers' line knows whether it is cut; only a cut line unfolds and takes the keyboard's
+  // focus; a tap opens it on a touch screen, a tap elsewhere or Esc closes it. Measured only while closed (an open one is never cut)
+  (function () {
+    var box = $("collNoteBox"), note = $("collNote");
+    if (!box || !note) return;
+    var isOpen = function () { return box.classList.contains("is-open") || box.matches(":hover, :focus-visible"); };
+    var fit = function () {
+      if (isOpen()) return;
+      var cut = note.scrollWidth > note.clientWidth + 1;
+      box.classList.toggle("is-cut", cut);
+      if (cut) box.tabIndex = 0; else box.removeAttribute("tabindex");
+    };
+    var later = 0, refit = function () { cancelAnimationFrame(later); later = requestAnimationFrame(fit); };
+    if (window.MutationObserver) new MutationObserver(refit).observe(note, { childList: true, subtree: true, characterData: true });
+    if (window.ResizeObserver) new ResizeObserver(refit).observe(box);
+    box.addEventListener("mouseleave", refit);
+    box.addEventListener("focusout", refit);
+    box.addEventListener("pointerup", function (e) { if (e.pointerType !== "mouse" && box.classList.contains("is-cut")) box.classList.toggle("is-open"); });
+    box.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && isOpen()) { e.stopPropagation(); box.classList.remove("is-open"); box.blur(); }
+    });
+    document.addEventListener("pointerdown", function (e) {
+      if (box.classList.contains("is-open") && !box.contains(e.target)) { box.classList.remove("is-open"); refit(); }
+    }, true);
+    refit();
+  })();
   function paintHead(rows) {
     paintRealm();                                    // HERESY 2294: the switch, shown where the realms are on
     if (idQuery(state.q)) {                          // HERESY 2058: a search by ID is the whole library's, and the heading says so
@@ -1196,9 +1233,11 @@
     parts.push(state.rows.length + " in the library");
     paintFilterBtn();   // HERESY 1169 · 1241
     // HERESY 1166: every piece its own text, so each translates (the kinds of take as a list of their own)
-    $("collNote").innerHTML = parts.filter(function (p) { return p && p.length; }).map(function (p) {
-      return Array.isArray(p) ? p.map(function (k) { return "<span>" + esc(k) + "</span>"; }).join(", ") : "<span>" + esc(p) + "</span>";
-    }).join(" \u00b7 ");
+    // HERESY 2846 (Viktor 18.11.2026: «статистика несколькими строками вообще не нужна. У Библиотекаря есть иконка, и в ней уже подсчитывается
+    // пространство. Перенеси в этого свидетеля недостающее»): no numbers on the bar; ⓘ holds them all, with what only this line said (how many the
+    // search and the filters show, the library's total, every kind of take)
+    state.shownN = rows.length;
+    $("collNote").innerHTML = "";
     paintBulk(rows);
   }
 
@@ -1920,9 +1959,12 @@
       paint();
     });
     if ($("collReveal")) {
-      $("collReveal").innerHTML = ico("eye");
+      state.reveal = revealAtStart();                    // HERESY 2647: remembered, no longer this session's only
+      $("collReveal").setAttribute("aria-pressed", String(state.reveal));
+      $("collReveal").innerHTML = ico(state.reveal ? "eye-off" : "eye");
       $("collReveal").addEventListener("click", function () {
         state.reveal = !state.reveal;
+        store(REVEAL_KEY, state.reveal ? "1" : "0");
         this.setAttribute("aria-pressed", String(state.reveal));
         this.innerHTML = ico(state.reveal ? "eye-off" : "eye");
         paint();
@@ -2507,7 +2549,7 @@
     var rows = list.map(rowOf).filter(Boolean), all = rows.length && rows.every(function (r) { return r.rating === value; });
     var v = all ? 0 : value, before = rows.map(function (r) { return r.rating; });
     rows.forEach(function (r) { r.rating = v; });
-    if (v < 0 && !showDis()) list.forEach(function (n) { delete state.sel[n]; });   // HERESY 1169 · 1239: a dislike sends them out of the lists, so out of the choice
+    if (v < 0 && !showDis() && !state.reveal) list.forEach(function (n) { delete state.sel[n]; });   // 2647: the eye open, they stay, dimmed   // HERESY 1169 · 1239: a dislike sends them out of the lists, so out of the choice
     paint();
     list.forEach(function (n) { remember(n, v); });
     var asked = rateSeq;
@@ -2574,7 +2616,7 @@
     // HERESY 1107: seen at once, confirmed by the lab; a refusal takes it back (and the caller says why)
     var r = rowOf(name), before = r ? r.rating : 0;
     if (r) { r.rating = value; paint(); }
-    if (value < 0 && !showDis()) {                       // HERESY 1167: it leaves the lists; said where it went
+    if (value < 0 && !showDis() && !state.reveal) {      // HERESY 1167: it leaves the lists; said where it went (2647: the eye open, it stays, dimmed)
       toast("“" + (r ? r.title : name) + "” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)");
     }
     var told = function () { if (state.hooks.libraryChanged) state.hooks.libraryChanged(); };   // HERESY 1167: the column too
@@ -2794,8 +2836,58 @@
   }
   function wsTip(w) {
     var n = (state.wsNotes || {})[w];
-    return n ? 'data-tip="' + esc(n.length > NOTE_MAX ? n.slice(0, NOTE_MAX - 1) + "…" : n) + '" data-has-note="1" ' : "";
+    return n ? 'data-note-tip="' + esc(n.length > NOTE_MAX ? n.slice(0, NOTE_MAX - 1) + "…" : n) + '" data-has-note="1" ' : "";
   }
+
+  // HERESY 2844 (Viktor 18.11.2026: «Тултип с заметкой по пространству перекрывает всё… прямо справа возле мыши, высоту макс 500px, ширину
+  // макс 600px, прокрутка внутри тултипа, 600ms задержка исчезновения при движении мыши. Если мышь поверх тултипа, ESC прячет его. Размер
+  // текста заметки на 2pt крупнее»): a workspace's note gets its own tip, right beside the pointer, never over the workspace column; it shows
+  // after the page's 400 ms rest, stays while the pointer is on it (so a long note scrolls), goes 600 ms after the pointer leaves, and Esc
+  // hides it while the pointer is on it
+  var NT = { el: null, on: null, show: 0, hide: 0, x: 0, y: 0 };
+  function ntHide() { clearTimeout(NT.show); clearTimeout(NT.hide); if (NT.el) NT.el.classList.remove("is-on"); NT.on = null; }
+  function ntLater() { clearTimeout(NT.hide); NT.hide = setTimeout(ntHide, 600); }
+  function ntShow(t) {
+    if (document.documentElement.classList.contains("no-tips") || !t.isConnected) return;   // Engine → Defaults → Hints, as every tip
+    if (!NT.el) {
+      NT.el = document.createElement("div");
+      NT.el.className = "tip ws-note-tip";
+      NT.el.setAttribute("role", "tooltip");
+      NT.el.addEventListener("mouseenter", function () { clearTimeout(NT.hide); });
+      NT.el.addEventListener("mouseleave", ntLater);
+      document.body.appendChild(NT.el);
+    }
+    clearTimeout(NT.hide);
+    NT.el.textContent = t.getAttribute("data-note-tip");
+    NT.el.scrollTop = 0;
+    NT.el.classList.add("is-on");
+    var w = NT.el.offsetWidth, h = NT.el.offsetHeight;
+    // HERESY 2850 (Viktor 18.11.2026: «не прижимать к указателю мыши, а стабильно к разделителю фреймов, но на 10–15 пунктов на сторону списка
+    // пространств»): standing at the divider of the workspaces' column, 12 px into it, level with the row; by the pointer only outside that column
+    var side = t.closest ? t.closest("#collSide") : null, row = t.getBoundingClientRect(), left, top;
+    if (side) { left = side.getBoundingClientRect().right - 12; top = row.top - 4; }
+    else { left = NT.x + 16; top = NT.y - 12; }
+    NT.el.style.left = Math.max(8, Math.min(left, window.innerWidth - w - 8)) + "px";
+    NT.el.style.top = Math.max(8, Math.min(top, window.innerHeight - h - 8)) + "px";
+    NT.on = t;
+  }
+  document.addEventListener("mousemove", function (e) { NT.x = e.clientX; NT.y = e.clientY; }, { passive: true });
+  document.addEventListener("mouseover", function (e) {
+    var t = e.target && e.target.closest ? e.target.closest("[data-note-tip]") : null;
+    if (!t) return;
+    if (NT.on === t) { clearTimeout(NT.hide); return; }
+    clearTimeout(NT.show);
+    NT.show = setTimeout(function () { ntShow(t); }, 400);
+  });
+  document.addEventListener("mouseout", function (e) {
+    var t = e.target && e.target.closest ? e.target.closest("[data-note-tip]") : null;
+    if (!t || (e.relatedTarget && t.contains(e.relatedTarget))) return;
+    clearTimeout(NT.show);
+    if (NT.on) ntLater();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && NT.on && NT.el && NT.el.matches(":hover")) { ntHide(); e.stopPropagation(); e.preventDefault(); }
+  }, true);
 
   // HERESY 2042: a whole workspace into the playlist, one entry, after a question (a slip of the hand would pour hundreds of takes in)
   function plWsItem(w, n) {
@@ -3150,6 +3242,12 @@
         '<div class="ds-cols"><div class="ds-texts"><div class="peek-cap">Style <em>' + (q.style || "").length + ' chars</em></div><pre class="sheet-text">' + esc(q.style || "") + "</pre>" +
         '<div class="peek-cap">Lyrics</div><pre class="sheet-text ds-lyrics">' + esc(q.lyrics || "") + "</pre>" +
         (String(q.lyrics || "").trim() ? '<div class="ds-sung"></div>' : "") +   // HERESY 1842: sung to the end?
+        // HERESY 2690 (the plan after 2.0.8: «Перегенерить, разрезая токены на проигрыше около N:NN»; Viktor's ear 17.11: past 3:00–3:30 the model
+        // drifts off the lyrics): the song cut at the rest of its voice nearest a moment and sung anew from there (Regenerate from), joined in one stream
+        (String(q.lyrics || "").trim() && q.semantic_tokens && (t.seconds || 0) > 20 ? '<div class="ds-resing"><span class="ds-resing-cap">' + esc(tr("Re-sing from the break near")) + "</span>" +
+          '<input type="text" class="ds-resing-at mono" inputmode="decimal" spellcheck="false" translate="no" value="' + h.clock(t.seconds >= 200 ? 180 : Math.round(t.seconds * 0.12) * 5) + '" aria-label="' + esc(tr("Near which moment (m:ss)")) + '" data-tip="' + esc(tr("Near which moment (m:ss)")) + '" />' +
+          '<button type="button" class="btn ghost small icon-btn" data-ds="resing" aria-label="' + esc(tr("Re-sing from the break near this moment")) + '" data-tip="' + esc(tr("The song is cut at the rest of its voice nearest this moment (the timing of its lines by Whisper, run once if the take was never timed) and sung anew from there with a new music seed: everything before stays as it is, its music codes kept, and the new part is joined in one stream. The Regenerate from dialog shows the cut first.")) + '">' +
+          (window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui("scissors") : "\u2702") + '</button><span class="ds-resing-say"></span></div>' : "") +
         // HERESY 1131 (Viktor: «нотный ряд ABC… сложенный аккордеон не нужен»): the score open and drawn, its ABC under it;
         // a Direct take writes none: the one written from its sound, or the way to write it
         '<div class="peek-cap">Score <em class="ds-score-say"></em></div><div class="ds-staff"></div>' +
@@ -3164,6 +3262,13 @@
         '<div class="ds-group"><div class="peek-cap">Sound</div>' + kv("guidance", q.cfg_scale) + kv("steps", q.steps) + kv("solver", q.solver) +
         kv("batch", (q.lm_batch_size || 1) + " \u00d7 " + (q.synth_batch_size || 1)) + "</div>" +
         '<div class="ds-group"><div class="peek-cap">Seeds</div>' + kv("music", q.lm_seed) + kv("sound", q.seed) + "</div>" +
+        // HERESY 2692: what its sound half was fed, kept with it: its music codes and seed (the request), its latents; made again from them alone
+        (q.semantic_tokens || t.latents ? '<div class="ds-group ds-kept"><div class="peek-cap">' + esc(tr("Kept for its sound")) + "</div>" +
+          kv(tr("music codes"), q.edited ? (q.edited.op === "speed" ? tr("none: stretched by Speed ×{0}").replace("{0}", q.edited.factor) : tr("from «{0}», as it was edited: {1} pieces").replace("{0}", q.edited.from).replace("{1}", ((q.edited.op === "arrange" ? q.edited.spans : q.edited.kept) || []).length))
+            : q.semantic_tokens ? String(q.semantic_tokens).split(",").filter(function (x) { return x.trim(); }).length + " \u00b7 request.json" : tr("none")) +   // HERESY 2692: an edit's from its source's map
+          kv(tr("latents"), t.latents ? "latents.f32" : tr("none (made before they were kept)")) +
+          '<div class="ds-kept-acts">' + (q.semantic_tokens ? '<button type="button" class="btn ghost small" data-ds="redenoise" data-tip="' + esc(tr("The same music codes and sound seed through another solver and its steps; the AR is not run again")) + '">' + esc(tr("Re-denoise…")) + "</button>" : "") +
+          '<button type="button" class="btn ghost small" data-ds="redecode" data-tip="' + esc(tr(t.latents ? "Its latents through another VAE, in seconds" : "Another VAE renders its sound again (it kept no latents)")) + '">' + esc(tr("Re-decode…")) + "</button></div></div>" : "") +
         samplingTable("Score sampling", q.abc_sampling) + samplingTable("Music sampling", q.semantic_sampling) +
         '<div class="ds-group"><div class="peek-cap">' + ((q.sliders || []).length ? "Sliders and LoRAs" : "LoRAs") + "</div>" +   // HERESY 1451: sliders only where an old take had them
           // HERESY 1128: as a take keeps them: sliders {id, strength}, LoRAs {id, ar, nar} (the music half's strength and the
@@ -3319,6 +3424,25 @@
           .catch(function (err) { if (run) sungBox.innerHTML = '<span class="ds-sung-say is-bad">' + esc(err.message) + "</span>"; else sungPaint(null); });
       }
       sungLoad(false);
+      // HERESY 2690: the rest of the voice nearest the moment asked (the take's timing), the cut in it, then Regenerate from there with the reason in its dialog
+      var resBox = back.querySelector(".ds-resing");
+      function resFmt(s) { var a = arguments; return tr(s).replace(/\{(\d)\}/g, function (m, i) { return a[+i + 1]; }); }
+      function resCut(x) { return x.a === 0 ? Math.max(0.5, x.b - Math.min(2, x.b / 2)) : x.a + Math.min(2, (x.b - x.a) / 2); }   // up to 2 s past the voice; before the first line, 2 s before it
+      function resing(b) {
+        var say = resBox.querySelector(".ds-resing-say"), m = String(resBox.querySelector(".ds-resing-at").value || "").trim().match(/^(?:(\d+):)?(\d+(?:\.\d+)?)$/);
+        var at = m ? (m[1] ? +m[1] * 60 : 0) + parseFloat(m[2]) : NaN, len = t.seconds || 0;
+        if (!isFinite(at) || at < 5 || at > len - 5) { say.className = "ds-resing-say is-bad"; say.textContent = resFmt("A moment between {0} and {1}", h.clock(5), h.clock(len - 5)); return; }
+        if (!window.ruachRests) return;
+        b.disabled = true; say.className = "ds-resing-say mono"; say.textContent = tr("Whisper listens…");
+        window.ruachRests(name).then(function (r) {
+          var best = null;
+          r.rests.forEach(function (x) { var c = resCut(x); if (!best || Math.abs(c - at) < Math.abs(best.cut - at)) best = { a: x.a, b: x.b, cut: Math.round(c * 10) / 10 }; });
+          if (!best) throw new Error(resFmt("No rest of the voice in this take: Whisper heard no gap of 1.5 s or more between its {0} lines", r.heard));
+          say.className = "ds-resing-say"; say.textContent = resFmt("The break {0}–{1}, cut at {2}", sungClock(best.a), sungClock(best.b), sungClock(best.cut));
+          var note = resFmt("The rest of the voice nearest {0}: {1}–{2}. Everything before {3} stays as it is; from there the song is sung anew and joined.", h.clock(at), sungClock(best.a), sungClock(best.b), sungClock(best.cut));
+          close(); h.openTake(name, "create"); if (window.ruachRegenFrom) window.ruachRegenFrom(best.cut, name, note);
+        }).catch(function (err) { say.className = "ds-resing-say is-bad"; say.textContent = err.message; b.disabled = false; });
+      }
       // HERESY 1848 (TODO: «версии картинки дубля»): the take's cover and its earlier ones, each to put back (the one it had goes among the earlier)
       var covWrap = back.querySelector(".ds-covers-wrap"), covBox = back.querySelector(".ds-covers");
       function covLoad() {
@@ -3358,6 +3482,8 @@
             .then(covLoad, function (err) { b.disabled = false; toast(err.message, true); });
           return;
         }
+        if (b.dataset.ds === "resing") return resing(b);   // HERESY 2690
+        if (b.dataset.ds === "redenoise" || b.dataset.ds === "redecode") { close(); var fn = b.dataset.ds === "redenoise" ? window.ruachRedenoise : window.ruachRedecode; if (fn) fn(name); return; }   // HERESY 2692
         if (b.dataset.ds === "sung-regen") { var at = +b.dataset.at; close(); h.openTake(name, "create"); if (window.ruachRegenFrom) window.ruachRegenFrom(at, name); return; }
         if (b.dataset.ds === "midi-roll") {             // HERESY 1835: the set's MIDI as the form's score, the roll on it
           midiLab("/midi/score?name=" + encodeURIComponent(name) + "&id=" + encodeURIComponent(b.dataset.id)).then(function (sc) {

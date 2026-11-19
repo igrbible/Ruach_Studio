@@ -29,7 +29,7 @@ HPY="$ROOT/.venv/bin/python"; [ -x "$HPY" ] || HPY=python3   # HERESY 1080: the 
 # user/migration-2.0.7.hold keeps it for its owner's word)
 source "$ROOT/launcher/paths.sh"
 "$HPY" "$ROOT/lab/migrate_models.py" --auto || echo "the move of the weights into their rooms stopped: user/migration-2.0.7.log says where"
-bb() { rs_engine_gguf "YuE2-3B-$1.gguf"; }            # a backbone's file by its name (Q8_0, RS-TW-2.0x0.75-Q8_0, IRA-Q8_0)
+bb() { case $1 in 4.6B-*) rs_engine_gguf "YuE2-$1.gguf" ;; *) rs_engine_gguf "YuE2-3B-$1.gguf" ;; esac; }   # a backbone's file by its name (Q8_0, RS-TW-2.0x0.75-Q8_0, IRA-Q8_0; HERESY 2660: 4.6B-<name>)
 # HERESY 1656 (Viktor 21.10.2026: «выпускай бета поддержку для интеловских карт»): Intel Arc (beta). YUE2_ENGINE=sycl, or a SYCL engine with no
 # CUDA one beside it (./build.sh --sycl), runs build/build-sycl/yue-server under oneAPI's runtime, NVIDIA's guard and card left out.
 # SYCL_CACHE_PERSISTENT stays 0: with the kernels' disk cache, libsycl (oneAPI 2026.1) dies at the first kernel it runs, a fresh cache
@@ -156,7 +156,7 @@ args=(--host 0.0.0.0 --port "$PORT" --model "$QUANT=$MODEL" "${rsfirst[@]}" --va
 # under models/engine/ its file lies (yue2/, finetunes/<merge>/, finetunes/legacy/)
 models="${B}$QUANT${X} $(size "$MODEL") ${G}starts${X}"
 others=(BF16 Q8_0 Q6_K Q5_K_M)
-while IFS= read -r f; do f=${f##*/YuE2-3B-}; f=${f%.gguf}; [[ $f == *-* ]] && others+=("$f"); done < <(rs_backbones)
+while IFS= read -r f; do f=${f##*/}; f=${f#YuE2-3B-}; f=${f#YuE2-}; f=${f%.gguf}; [[ $f == *-* ]] && others+=("$f"); done < <(rs_backbones)   # HERESY 2660: YuE2-4.6B-X is «4.6B-X»
 for q in "${others[@]}"; do
     if [ "$q" != "$QUANT" ] && [ -f "$(bb "$q")" ]; then
         args+=(--model "$q=$(bb "$q")")

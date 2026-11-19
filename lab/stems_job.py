@@ -46,9 +46,15 @@ rate = sf.info(str(audio)).samplerate
 frames = sf.info(str(audio)).frames                 # HERESY 1463: every stem as long as what was split
 
 
+# HERESY 2677: a split on the processor (a voice over a backing, when no card can take it) asks the Roformers for fewer overlapping
+# windows (LAB_SPLIT_OVERLAP=2: half of ep317's four, half the time); unset, each model's own, as before
+OVERLAP = int(os.environ.get("LAB_SPLIT_OVERLAP") or 0)
+
+
 def run(model_dir, model, source, sr=None):        # HERESY 1463: sr, a model's own rate (UVR's VR models: 44.1 kHz)
+    more = {"mdxc_params": {"segment_size": 256, "override_model_segment_size": False, "batch_size": None, "overlap": OVERLAP, "pitch_shift": 0}} if OVERLAP else {}
     sep = Separator(model_file_dir=model_dir, output_dir=str(work), output_format="FLAC",
-                    sample_rate=sr or rate, log_level=30)
+                    sample_rate=sr or rate, log_level=30, **more)
     sep.load_model(model_filename=model)
     return [Path(work / Path(f).name) if not Path(f).is_absolute() else Path(f) for f in sep.separate(str(source))]
 

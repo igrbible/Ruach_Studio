@@ -51,7 +51,8 @@
   window.HeresyNet = { far: function () { return S.far; }, rtt: function () { return S.rtt; }, patience: patience, ping: ping, paint: paint };
   function start() {
     paint(); ping();
-    setInterval(function () { if (!document.hidden) ping(); }, 20000);
+    var tick = function () { if (!document.hidden) ping(); };
+    if (window.HeresyIdle) window.HeresyIdle.every(20000, tick); else setInterval(tick, 20000);   // HERESY 2721: none in idle_ui, at once awake
     document.addEventListener("visibilitychange", function () { if (!document.hidden) ping(); });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();

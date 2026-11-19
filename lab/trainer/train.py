@@ -127,6 +127,17 @@ DEFAULTS = {"steps": 1500, "rank": 32, "rank_ar": 0, "rank_nar": 0, "lr": 1e-4, 
 LAZY_OVER = 4000
 
 
+def sheetless_why(cot, tracks, sheets):
+    """HERESY 2762 (the idea from leeQzz's fork, PR #2): why a score-mode run cannot start ("" when it can). With not one sheet
+    among its tracks (the transcriber made none, or refused every one) it would teach Direct alone under the score mode's name, said
+    only in the log: the adapter would then be taken for a Full or Melody one."""
+    if cot == "off" or tracks < 1 or sheets > 0:
+        return ""
+    return (f"score mode {cot}: not one of the {tracks} track{'s' if tracks != 1 else ''} has a sheet (the transcriber made none, or "
+            "refused every one: its reasons in the .fail files beside the latents), so the run would teach Direct alone. "
+            "Start it as Direct, or give the tracks their sheets")
+
+
 def spike_why(cfg, ms=None, loss=None, flow=None):
     """HERESY 2084: why a track leaves the step ("" when it stays): its window's latent mean square before the forward, its loss and flow after."""
     if ms is not None and cfg.get("latent_ms_max") and not ms <= cfg["latent_ms_max"]:
@@ -380,6 +391,9 @@ def main():
                 raise ValueError(f"the sheet of {name} leaves the ordinary text vocabulary")
             abcs[name] = torch.tensor(ids, dtype=torch.long)
             heads_cot[name] = torch.tensor(tok.prefix_head_ids(**parse_caption(cap), cot=cot), dtype=torch.long)
+        why = sheetless_why(cot, len(items), len(abcs))    # HERESY 2762: not one sheet is Direct alone, refused aloud
+        if why:
+            raise ValueError(why)
         say(f"score mode {cot}: {len(abcs)} of {len(items)} tracks with a sheet" +
             (f" ({len(items) - len(abcs)} without: Direct always)" if len(abcs) < len(items) else "") +
             f"; a sheet dropped on {cfg['abc_dropout']:.0%} of the steps")

@@ -76,14 +76,14 @@ struct Yue2Request {
     // after rd().
     int64_t lm_seed;  // -1 = random
     int64_t seed;     // -1 = random
-    int     steps;    // 32, midpoint steps of the flow matching ODE
+    int     steps;    // 48 (HERESY 2663), the steps of the flow matching ODE
 
     // HERESY 1004: the flow matching solver. "midpoint" is the release (two
     // network calls a step, second order). "euler" is one call, first order.
     // "heun" is two calls, second order, velocity at the step's end instead of
     // its middle. "multistep" is one call, second order: Adams-Bashforth 2,
     // reusing the previous step's velocity, the idea behind DPM++ 2M.
-    std::string solver;  // "midpoint"
+    std::string solver;  // "multistep" (HERESY 2670: AB2 the default; midpoint, the original YuE2's, only when a request names it)
 
     // batching: number of songs generated from this prompt. Song i draws
     // its tokens with lm_seed + i, consecutive seeds.

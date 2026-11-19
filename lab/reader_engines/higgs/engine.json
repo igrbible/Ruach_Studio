@@ -10,6 +10,7 @@
  "sample_rate": 24000,
  "max_chars": 400,
  "seed": true,
+ "bridge": "narration",
  "stress": "acute",
  "style": {
   "kind": "tags",

@@ -19,6 +19,7 @@ user/ links back by itself. Under WSL a Windows path (D:\\Music) is read as the 
 import json
 import os
 import re
+import winx   # HERESY 2649: native Windows takes its own paths
 import shutil
 import threading
 import time
@@ -55,6 +56,11 @@ def norm(raw):
     s = str(raw or "").strip().strip('"').strip("'").strip()
     if not s:
         return ""
+    if winx.NT:                                       # HERESY 2649: on Windows itself a C:\ path is the folder, ~ and %VARS% too
+        s = os.path.expandvars(os.path.expanduser(s))
+        if not os.path.isabs(s) or not re.match(r"^([A-Za-z]:[\\/]|\\\\)", s):
+            raise ValueError("a full path, from a drive (C:\\…) or a share (\\\\server\\…), or ~ for your home")
+        return os.path.normpath(s)
     m = re.match(r"^([A-Za-z]):(?:[\\/](.*))?$", s)
     if m:
         if not _wsl():

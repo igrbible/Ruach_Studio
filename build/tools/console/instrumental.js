@@ -13,7 +13,7 @@
      parse(text)            -> score (voices Vocal/Ins: notes [t, pitch, d], bars, chords, keys)
      convert(text)          -> { abc, check }   vocal notes moved to Ins, chords kept
      lyricTags(abc)         -> "[Intro]\n\n[Verse]\n"   the only lyrics an instrumental takes
-     style(text)            -> "Instrumental, ..., no vocals, no singing, no choir, no spoken words."
+     style(text)            -> "Instrumental, ..."   (HERESY 2845: nothing appended, no «no vocals…» words)
      mode(abc)              -> "full" when the score carries chords, else "melody"
      planningLyrics         -> section skeleton used when the form has no lyrics */
 (function (root) {
@@ -34,7 +34,6 @@
   ["Cb", "Gb", "Db", "Ab", "Eb", "Bb", "F", "C", "G", "D", "A", "E", "B", "F#", "C#"].forEach(function (k, i) { KEYS[k] = i - 7; });
   ["Abm", "Ebm", "Bbm", "Fm", "Cm", "Gm", "Dm", "Am", "Em", "Bm", "F#m", "C#m", "G#m", "D#m", "A#m"].forEach(function (k, i) { KEYS[k] = i - 7; });
   var SECTIONS = { intro: 1, verse: 1, "pre-chorus": 1, chorus: 1, bridge: 1, interlude: 1, outro: 1, instrumental: 1 };
-  var CONDITIONS = ["no vocals", "no singing", "no choir", "no spoken words"];
 
   function AbcError(message) { this.name = "AbcError"; this.message = message; }
   AbcError.prototype = Object.create(Error.prototype);
@@ -486,7 +485,8 @@
     var s = String(text || "").trim().replace(/[.,]+$/, "");
     if (!s) s = "Expressive instrumental music";
     if (!/^instrumental\b/i.test(s)) s = "Instrumental, " + s;
-    CONDITIONS.forEach(function (c) { if (s.toLowerCase().indexOf(c) < 0) s += ", " + c; });
+    // HERESY 2845 (Viktor 18.11.2026): the recipe's «no vocals, no singing, no choir, no spoken words» no longer appended: on the probe of 18.11
+    // a flamenco instrumental let a vocal drone in on 5 seeds of 5 with or without them; «Instrumental» in front says what is wanted
     return s + ".";
   }
 

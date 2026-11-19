@@ -121,7 +121,9 @@ const navigate = async (libraryRows) => {
   // written for a click that opens and a take that stops at its end, so both are off for them (heresy/tools/check-player.mjs
   // checks the Studio's own player, on a fresh page)
   // HERESY 1167: and a song made here plays when it is done (Play new takes): off for them too
-  await ev(`localStorage.setItem("yue2.playOn", "off"); localStorage.setItem("yue2.clickPlay", "off"); localStorage.setItem("yue2.playNew", "off"); localStorage.setItem("yue2.askScore", "off"); localStorage.setItem("yue2.cardTools", "on"); true`);
+  // HERESY 2675: and the warning before a song while others run or wait (it has no Yes to answer): off for them too, as the score's question is;
+  // heresy/tools/check-busy-warning.mjs checks the warning itself on a page of its own
+  await ev(`localStorage.setItem("yue2.playOn", "off"); localStorage.setItem("yue2.clickPlay", "off"); localStorage.setItem("yue2.playNew", "off"); localStorage.setItem("yue2.askScore", "off"); localStorage.setItem("yue2.askBusy", "off"); localStorage.setItem("yue2.cardTools", "on"); true`);
 await ev(`["create", "write", "post", "artist", "video", "collection", "train"].forEach((r) => localStorage.setItem("yue2.logChipOpen." + r, "1")); window.ruachLogChip && window.ruachLogChip(false); true`);   // HERESY 1862: the dock as the checks before it knew it; 1862's own check folds it
 await ev(`(window.HeresyPost && HeresyPost.canvas && HeresyPost.canvas.on() && HeresyPost.canvas.set(false), true)`);   // HERESY 1581: the panels' insides read in the list they live in; the canvas's checks set it on
   return ready;
@@ -1938,6 +1940,7 @@ const rowsOf = async (tab) => {
   return ev(`(() => { const p = document.getElementById("playbar").getBoundingClientRect(), w = document.getElementById("wave").getBoundingClientRect(),
     c = document.querySelector("#playbar .pb-ctrl").getBoundingClientRect(); return Math.abs((w.top + w.bottom) / 2 - (c.top + c.bottom) / 2) < 8 ? 1 : 2; })()`);
 };
+await ev(`localStorage.setItem("yue2.holdStart", "whole"); true`);   // HERESY 2837: «at once» streams through the element now; the sections of 1746, 1803 and 2835 hold the whole
 await ev(`localStorage.removeItem("yue2.libFolded.artist"); true`);
 const pr8 = { create: await rowsOf("create"), post: await rowsOf("post"), collection: await rowsOf("collection"), write: await rowsOf("write"), artist: await rowsOf("artist") };
 pr8.artistFolded = await ev(`document.getElementById("library").classList.contains("is-folded")`);
@@ -3361,13 +3364,18 @@ const st99 = await ev(`(async () => {
   const figs = () => [...document.querySelectorAll("#trRunPane .tr-chart")].map((f) => { const b = f.getBoundingClientRect(); return { l: Math.round(b.left), t: Math.round(b.top), w: Math.round(b.width) }; });
   await until(() => figs().length === 8, 4000);   // HERESY 2442: eight charts (the mock logs flow and ar_ce; the first two side by side all the same)
   const o = { side: figs(), pane: Math.round(document.querySelector("#trRunPane .tr-charts").getBoundingClientRect().width) };
+  // HERESY 2657: the single charts' y ranges, for the multigraph to keep
+  o.single = ["flow", "ar_ce"].map((k) => { const g = document.querySelector('#trRunPane .tr-chart[data-key="' + k + '"]'); return k + " " + (+g.dataset.lo).toPrecision(6) + " " + (+g.dataset.hi).toPrecision(6); }).join(" · ");
   const btn = () => document.querySelector("#trRunPane [data-stack]");
   o.tip1 = btn() && btn().dataset.tip; o.face1 = btn() && btn().querySelector(".ui-ico") && btn().querySelector(".ui-ico").getAttribute("class");
   btn().click(); await wait(150);
   o.stacked = figs(); o.kept = localStorage.getItem("yue2.trStacked"); o.tip2 = btn().dataset.tip; o.face2 = btn().querySelector(".ui-ico").getAttribute("class");
   o.pressed = btn().getAttribute("aria-pressed");
   btn().click(); await wait(200);   // HERESY 2623: the third view, the six curves together, LR and memory beside
-  o.comb = { n: figs().length, one: !!document.querySelector("#trRunPane .tr-combined"), kept: localStorage.getItem("yue2.trStacked"), face: btn().querySelector(".ui-ico").getAttribute("class"), chips: document.querySelectorAll("#trRunPane .tr-layer").length };
+  o.comb = { n: figs().length, one: !!document.querySelector("#trRunPane .tr-combined"), kept: localStorage.getItem("yue2.trStacked"), face: btn().querySelector(".ui-ico").getAttribute("class"), chips: document.querySelectorAll("#trRunPane .tr-layer").length,
+    // HERESY 2657: a box a curve (the two the mock logs ticked, the four it does not, disabled), each shown curve in its own chart's y range
+    ticked: document.querySelectorAll("#trRunPane .tr-combined input[data-layer]:checked").length, off: document.querySelectorAll("#trRunPane .tr-combined input[data-layer]:disabled").length,
+    axes: [...document.querySelectorAll("#trRunPane .tr-scl b[data-scale]")].map((a) => a.dataset.scale + " " + (+a.dataset.lo).toPrecision(6) + " " + (+a.dataset.hi).toPrecision(6)).join(" · ") };
   btn().click(); await wait(150);
   o.back = figs(); o.kept2 = localStorage.getItem("yue2.trStacked");
   window.fetch = real;
@@ -3380,9 +3388,9 @@ check("side by side at first (one row: the same top, the second to the right); t
   st99.tip1 === "The curves one under the other, each the whole width" && /ui-rows-2/.test(st99.face1 || ""), JSON.stringify(st99));
 check("  clicked: one under the other, each the whole width; remembered; the button now offers the curves together (2623)",
   st99.stacked[0].l === st99.stacked[1].l && st99.stacked[1].t > st99.stacked[0].t && Math.abs(st99.stacked[0].w - st99.pane) <= 1 && st99.kept === "1" &&
-  st99.tip2 === "All the curves in one chart, each in its own scale" && /ui-layers/.test(st99.face2) && st99.pressed === "true", JSON.stringify(st99));
-check("  clicked again: the curves together in one chart (a chip a curve) with LR and memory beside it, remembered, the button offering side by side; once more: back, forgotten",
-  st99.comb.one && st99.comb.n === 3 && st99.comb.chips >= 2 && st99.comb.kept === "2" && /ui-cols-2/.test(st99.comb.face) &&
+  st99.tip2 === "All the curves in two charts, each in its own chart's scale" && /ui-layers/.test(st99.face2) && st99.pressed === "true", JSON.stringify(st99));
+check("  clicked again: the curves together, two charts (2657: a box a curve, the unlogged ones disabled, each curve in its own chart's y range; LR and memory the second, empty here), remembered, the button offering side by side; once more: back, forgotten",
+  st99.comb.one && st99.comb.n === 2 && st99.comb.chips === 6 && st99.comb.ticked === 2 && st99.comb.off === 4 && st99.comb.axes === st99.single && st99.comb.kept === "2" && /ui-cols-2/.test(st99.comb.face) &&
   st99.back[0].t === st99.back[1].t && st99.kept2 === null, JSON.stringify(st99));
 
 // HERESY 1855: the Telemetry's curves zoomed
@@ -6825,8 +6833,8 @@ const lay66 = await ev(`(async () => {
 check("the prompt's column 25–30 % of the window, the library's 20–35 % (dragged past them from the keys, they stop there)",
   lay66.at[0] >= 24.9 && lay66.at[0] <= 30.1 && lay66.at[1] >= 19.9 && lay66.at[1] <= 35.1 && Math.abs(lay66.wide[0] - 30) < 0.3 && Math.abs(lay66.wide[1] - 35) < 0.3 &&
   Math.abs(lay66.narrow[0] - 25) < 0.3 && Math.abs(lay66.narrow[1] - 20) < 0.3, JSON.stringify(lay66));
-check("  at the narrowest every field and select one height (36 px), nothing wider than the column, the brushes a row of their own",
-  lay66.heights.length === 1 && lay66.heights[0] === 36 && lay66.past.length === 0 && lay66.rows >= 90, JSON.stringify(lay66));
+check("  at the narrowest every field and select one height (34 px, the token since HERESY 2793), nothing wider than the column, the brushes a row of their own",
+  lay66.heights.length === 1 && lay66.heights[0] === 34 && lay66.past.length === 0 && lay66.rows >= 90, JSON.stringify(lay66));
 
 // HERESY 1169 · 1367 (Viktor 11.10.2026: «добавь Protect опцию для картинок. Такое нельзя ни в коем случае упустить в корзину, а потом
 // ненароком в бездну»)
@@ -7001,8 +7009,8 @@ const pt68 = await ev(`(async () => {
   if ($("collUndo")) $("collUndo").hidden = true;
   document.querySelector('.topbar [data-tab="' + tabWas + '"]').click(); await wait(300);
   return o; })()`);
-check("the Librarian: a protected take's shield lit, the other's not; «1 protected» in the head; the filter's «protected» counts one and shows it alone",
-  !pt68.err && JSON.stringify(pt68.shields) === '["true","false"]' && /1 protected/.test(pt68.head) && pt68.filterNote === "1" && pt68.filtered === "A",
+check("the Librarian: a protected take's shield lit, the other's not; no numbers in the head (2846: the ⓘ panel holds them); the filter's «protected» counts one and shows it alone",
+  !pt68.err && JSON.stringify(pt68.shields) === '["true","false"]' && !/\d/.test(pt68.head || "") && pt68.filterNote === "1" && pt68.filtered === "A",
   JSON.stringify({ err: pt68.err, shields: pt68.shields, head: pt68.head, note: pt68.filterNote, filtered: pt68.filtered }));
 check("  a card's shield protects it (lit at once); the bar's with all protected takes it off them all",
   !!pt68.cardProt && pt68.cardProt.on === true && pt68.cardProt.names.length === 1 && pt68.cardLit === "true" && !!pt68.barProt && pt68.barProt.on === false && pt68.barProt.names.length === 2,
@@ -7088,7 +7096,7 @@ const un70 = await ev(`(async () => {
     o.seen = !!(await until(() => /kept between runs on GPU 2/.test($("unloadModel").dataset.tip || ""), 8000));
     o.lit = $("unloadModel").classList.contains("is-loaded"); o.on = !$("unloadModel").disabled;
     o.tip = $("unloadModel").dataset.tip;
-    o.card = /a painter kept between runs · GPU 2/.test(($("hwCard") || {}).textContent || "");
+    o.card = /a painter kept between runs · GPU ?2/.test(($("hwCard") || {}).textContent || "");
     $("unloadModel").click();
     await until(() => sent.includes("lab"), 4000); await wait(600);
     o.sent = sent.slice();
@@ -7100,7 +7108,7 @@ const un70 = await ev(`(async () => {
   window.fetch = real;
   document.querySelectorAll("#toasts .toast").forEach((t) => t.remove());
   return o; })()`);
-check("a painter kept on GPU 2 (the lab's activity): Unload lit and enabled, its tip says it, the Engine's card has a row for it",
+check("a painter kept on GPU 2 (the lab's activity): Unload lit and enabled, its tip says it, the Engine's card has a row for it (the card named as 2733 names it, GPU2 · its name)",
   !un70.err && un70.seen && un70.lit && un70.on && /^Unload/.test(un70.tip || "") && un70.card, JSON.stringify({ err: un70.err, seen: un70.seen, lit: un70.lit, on: un70.on, tip: un70.tip, card: un70.card }));
 check("  a click asks the lab to let it go (the engine too when it holds models), says it, and the tip forgets it",
   (un70.sent || []).includes("lab") && un70.said === 1 && un70.gone, JSON.stringify({ sent: un70.sent, said: un70.said, gone: un70.gone }));
@@ -9470,9 +9478,9 @@ check("The tree counts as ⓘ does (2058b): a disliked take the Engine keeps out
   !!lb58b && !lb58b.few && !!lb58b.off && lb58b.off.w === "/4" && lb58b.off.wTip === "Shown: 2\nHidden by hand: 1\nHidden as disliked: 1" && /2 shown, 2 hidden \(1 by hand, 1 disliked\)/.test(lb58b.statsW || "") &&
   lb58b.off.x === "/2" && lb58b.off.xTip === "Shown: 0\nHidden by hand: 1\nHidden as disliked: 1" && lb58b.off.arch === "/2" && lb58b.off.archTip === lb58b.off.xTip &&
   lb58b.off.all === "3" && lb58b.off.none === "1", JSON.stringify([lb58b && lb58b.off, lb58b && lb58b.statsW, lb58b && lb58b.few]));
-check("  with the disliked shown (the shared setting) they count as shown: W58b «/4» with «Shown: 3», X58b and Archived «/2» with «Shown: 1», All Workspaces 4",
-  !!lb58b && !!lb58b.on && lb58b.on.w === "/4" && lb58b.on.wTip === "Shown: 3\nHidden by hand: 1" && lb58b.on.x === "/2" && lb58b.on.xTip === "Shown: 1\nHidden by hand: 1" &&
-  lb58b.on.arch === "/2" && lb58b.on.archTip === lb58b.on.xTip && lb58b.on.all === "4", JSON.stringify(lb58b && lb58b.on));
+// HERESY 2647: the Library follows its own eye (yue2.collReveal), no longer the Engine's «Show disliked takes in the lists», which still rules the rooms' columns
+check("  the Engine's «Show disliked» on, the Library's tree counts as before (2647: the Library follows its own eye): W58b «/4», X58b and Archived «/2», the same tips",
+  !!lb58b && !!lb58b.on && !!lb58b.off && JSON.stringify(lb58b.on) === JSON.stringify(lb58b.off), JSON.stringify(lb58b && [lb58b.on, lb58b.off]));
 check("Show the hidden again in Hidden's ⋯ (2058b): what its list shows, 2 takes and not the archived one, «Show the hidden again (2)» (the count in its name since 2089b), sent so and said «Shown again: 2»; the archived workspace's ⋯ keeps its own (1), the disliked it leaves out said beside it",
   !!lb58b && lb58b.hiddenList === "n2,n5" && lb58b.hidLabel === "Show the hidden again (2)" && lb58b.hidHint === "" && lb58b.hidShown === JSON.stringify([["n2", "n5"]]) && /Shown again: 2/.test(lb58b.toast || "") &&
   lb58b.archLabel === "Show the hidden again (1)" && lb58b.archHint === "1 disliked stay out: the eye shows them",
@@ -9967,7 +9975,7 @@ const pl32 = await ev(`(() => {
 // HERESY 1628: 44 px in a column of its own under the take's icons (Viktor: «Немного уже… Туда узкой колонкой кнопку Play/Pause»)
 check("Play this song: no words, a filled ▶, coloured, 44 px, in its own column under the take's icons; Save style and Delete: icons with their names for screen readers",
   pl32.svg && pl32.fill !== "none" && pl32.text === "" && pl32.label === "Play this song" && pl32.w === 44 && pl32.primary &&
-  (pl32.icon === undefined || pl32.below) && pl32.style.join("|") === ":true:Save style…:36|:true:Delete:36", JSON.stringify(pl32));
+  (pl32.icon === undefined || pl32.below) && pl32.style.join("|") === ":true:Save style…:34|:true:Delete:34", JSON.stringify(pl32));
 
 section("The takes' ⋯ menu: its words on one line, its items on one indent; the lyrics' «[» list never scrolled sideways");
 const mn32 = await ev(`(async () => {
@@ -11669,10 +11677,10 @@ const mn83 = await ev(`(async () => {
   cardOf(firstName).click(); await wait(300);
   o.back = idNow() === o.first;
   return o; })()`);
-check("the take's menu (1727): Edit (Crop…, Remove a section…, Repeat a section…, Insert a part…, Speed…, Extend…, End at…, Fade in…, Trim to the text), Regenerate under it (Regenerate with a new seed, Retake, Reuse, Re-render sound, Regenerate from…, Edit and re-render), both before the Library's Marks; Refiner (Spectrum, Lyrics check, Into the Refiner's bucket (1955), Write it from the sound)",
+check("the take's menu (1727): Edit (Crop…, Remove a section…, Repeat a section…, Insert a part…, Speed…, Extend…, End at…, Fade in…, Trim to the text; 2692: Re-denoise…, Re-decode…), Regenerate under it (Regenerate with a new seed, Retake, Reuse, Re-render sound, Regenerate from…, Edit and re-render), both before the Library's Marks; Refiner (Spectrum, Lyrics check, Into the Refiner's bucket (1955), Write it from the sound)",
   mn83.n >= 2 && /\|Edit\|Regenerate\|/.test(mn83.top) && /\|Refiner\|/.test(mn83.top) && mn83.top.indexOf("|Regenerate|") < mn83.top.indexOf("|Library|") && mn83.top.indexOf("|Marks|") < 0 &&   /* 1727; 2001: no Marks */
   mn83.again === "Regenerate with a new seed|Retake|Reuse|Re-render sound|Regenerate from…|Edit and re-render" &&   /* 1488: the regeneration first */
-  mn83.edit === "Crop…|Remove a section…|Repeat a section…|Insert a part…|Speed…|Extend…|End at…|Fade in…|Trim to the text" && mn83.refiner === "Spectrum|Lyrics check|Into the Refiner's bucket|Write it from the sound", JSON.stringify(mn83));
+  mn83.edit === "Crop…|Remove a section…|Repeat a section…|Insert a part…|Speed…|Extend…|End at…|Fade in…|Trim to the text|Re-denoise…|Re-decode…" &&   /* 2692: the sound's two, a section of their own */ mn83.refiner === "Spectrum|Lyrics check|Into the Refiner's bucket|Write it from the sound", JSON.stringify(mn83));
 check("  Download holds the card's files too: FLAC, the request, the score, MIDI, the markers, a loop",
   /\|FLAC\|/.test("|" + mn83.download + "|") && /Request\|Score\|MIDI\|Markers\|Loop…$/.test(mn83.download), mn83.download);
 check("  Make again › Retake on a take not in hand opens it into the card, in the Musician, and presses the card's own Retake once; Download › Request presses the card's Request",
@@ -12420,8 +12428,9 @@ const st98 = await ev(`(async () => {
 check("Denoising steps: a slider of nine stops (8 16 24 32 48 64 96 128 160), 48 at first (AB2's default since 1710; 32 before); a stop sets the field; a count the page sets (92) shown as it is, the thumb at its nearest stop; the road amber, green, amber, red",
   st98.stops === "0,8,1" && /^4@48$/.test(st98.first) && st98.five === "64@64" && st98.own === "6@92" && /linear-gradient/.test(st98.road) && st98.hidden &&
   /64 the sweet spot; 128 likely overburn; 160 overburn/.test(st98.tip), JSON.stringify(st98));
-check("  the solvers short by name, their calls a step in the selector's tip (Midpoint and Heun two, Multistep and Euler one); the guard counts 3 KV sets with the lyrics' own CFG: two probes of 2 min do not fit on 24 GB with BF16 (IRA-BF16 as BF16), a shorter context makes room",
-  st98.solvers === "Midpoint · release|Multistep · AB2|Heun|Euler · draft" && /Heun take two network calls a step/.test(st98.solverTip) && /Multistep one call a step/.test(st98.solverTip) && st98.fit === "1,2,2", JSON.stringify(st98));
+check("  the solvers short by name (2670: Multistep · AB2, Heun, Euler · draft; Midpoint in the API alone), their calls a step in the selector's tip (Heun two, Multistep and Euler one); the guard counts 3 KV sets with the lyrics' own CFG: two probes of 2 min do not fit on 24 GB with BF16 (IRA-BF16 as BF16), a shorter context makes room",
+  st98.solvers === "Multistep · AB2|Heun|Euler · draft" && /Heun two calls a step/.test(st98.solverTip) && /Multistep \(AB2, the default\) one call a step/.test(st98.solverTip) &&
+  /Midpoint, the original YuE2's, is no longer offered here/.test(st98.solverTip) && st98.fit === "1,2,2", JSON.stringify(st98));
 
 section("Also render with: each take of a run rendered again by the solvers ticked, from its own codes and sound seed; the titles say whose sound");
 const al98before = (await synthBodies()).length;
@@ -12430,7 +12439,7 @@ const al98 = await ev(`(async () => {
   const keep = { also: localStorage.getItem("yue2.alsoSolvers"), title: $("title").value, style: $("style").value, lyrics: $("lyrics").value, abc: $("abc").value, solver: $("odeSolver").value, steps: $("odeSteps").value,
                  versions: $("versions").value, variations: $("variations").value, cot: (document.querySelector('input[name="cot"]:checked') || {}).value };
   localStorage.setItem("yue2.alsoSolvers", JSON.stringify({ heun: { on: true, steps: 64 } }));
-  $("odeSolver").value = "midpoint"; $("odeSolver").dispatchEvent(new Event("change", { bubbles: true })); await wait(50);
+  $("odeSolver").value = "multistep"; $("odeSolver").dispatchEvent(new Event("change", { bubbles: true })); await wait(50);
   o.rows = [...$("alsoSolvers").querySelectorAll(".also-row")].map((x) => x.querySelector("span").textContent + (x.querySelector("input").checked ? "+" : "") + "@" + x.querySelector("select").value).join("|");
   const off = document.querySelector('input[name="cot"][value="off"]'); if (off) off.click();
   $("odeSteps").value = "32"; $("title").value = "Also 1498"; $("style").value = "folk, male vocals"; $("lyrics").value = "[verse]\\nla la la la"; $("abc").value = "";
@@ -12448,10 +12457,10 @@ await ev(`(async () => { const k = window.__al98keep, $ = (id) => document.getEl
   const c = k.cot && document.querySelector('input[name="cot"][value="' + k.cot + '"]'); if (c) c.click();
   await new Promise((r) => setTimeout(r, 300)); return true; })()`);
 const al98a = al98b[0] || {}, al98r = al98b[1] || {};
-const al98seed = await ev(`fetch("/library").then((r) => r.json()).then((d) => { const t = (d.takes || d.library || d || []).find ? (d.takes || d.library || d).find((x) => x.title === "Also 1498 · Midpoint 32") : null; return t ? fetch("/library/request?name=" + encodeURIComponent(t.name)).then((r) => r.json()).then((q) => String(q.seed)) : "no take"; })`);
-check("the other solvers listed beside the run's own (Heun ticked at 64); the run goes as Midpoint 32, titled so; then its take again by Heun 64: the take's own codes, the same sound seed, titled «· Heun 64»",
-  al98.rows === "Multistep@32|Heun+@64|Euler@32" &&
-  al98a.title === "Also 1498 · Midpoint 32" && !al98a.semantic_tokens && al98r.solver === "heun" && al98r.steps === 64 && !!String(al98r.semantic_tokens || "").trim() &&
+const al98seed = await ev(`fetch("/library").then((r) => r.json()).then((d) => { const t = (d.takes || d.library || d || []).find ? (d.takes || d.library || d).find((x) => x.title === "Also 1498 · Multistep 32") : null; return t ? fetch("/library/request?name=" + encodeURIComponent(t.name)).then((r) => r.json()).then((q) => String(q.seed)) : "no take"; })`);
+check("the other solvers listed beside the run's own (Heun ticked at 64; 2670: Euler · draft beside it, no Midpoint); the run goes as Multistep 32, titled so; then its take again by Heun 64: the take's own codes, the same sound seed, titled «· Heun 64»",
+  al98.rows === "Heun+@64|Euler · draft@32" &&
+  al98a.title === "Also 1498 · Multistep 32" && !al98a.semantic_tokens && al98r.solver === "heun" && al98r.steps === 64 && !!String(al98r.semantic_tokens || "").trim() &&
   String(al98r.seed) === al98seed && al98r.title === "Also 1498 · Heun 64",
   JSON.stringify({ rows: al98.rows, first: { title: al98a.title, takeSeed: al98seed }, again: { title: al98r.title, solver: al98r.solver, steps: al98r.steps, seed: al98r.seed, codes: !!al98r.semantic_tokens } }));
 
@@ -13408,7 +13417,10 @@ const vr19 = await ev(`(async () => {
   o.merged = b2.versions.length === 1 && b2.versions[0].takes.join() === "s1519-a,s1519-b" && b3.versions.length === 2;
   const s = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event("input", { bubbles: true })); };
   s("title", T); s("style", "something else");
-  document.getElementById("crVersions").click();
+  document.getElementById("crVersions").click();   // HERESY 2689: the song's history in the take column; its «Every kept version» opens this window
+  await until(() => document.querySelector('#songHist [data-sh="book"]'));
+  o.hist = !!document.querySelector('#songHist [data-sh="book"]');
+  (document.querySelector('#songHist [data-sh="book"]') || { click() {} }).click();
   for (let i = 0; i < 40 && !document.querySelector("#vrList .vr-row[data-n]"); i++) await wait(50);
   const rows = () => [...document.querySelectorAll("#vrList .vr-row[data-n]")];
   o.open = !document.getElementById("vrBack").hidden && document.querySelector("#vrBack .vr-title").textContent === T;
@@ -16942,7 +16954,7 @@ const tb17 = await ev(`(async () => {
   if (unf) document.getElementById("pbLog").click();   /* HERESY 2522: folded back, the player's button again */
   return o; })()`);
 check("a training run over the Server log: its name, GPU, step, %, about how long it has left; the bar's bottom at the dock's top, as wide",
-  tb17.shown && /voice-test-r32/.test(tb17.text) && /GPU 1/.test(tb17.text) && /500/.test(tb17.text) && /25%/.test(tb17.text) && /1:00:00/.test(tb17.text) && tb17.over, JSON.stringify(tb17));
+  tb17.shown && /voice-test-r32/.test(tb17.text) && /GPU ?1/.test(tb17.text) && /500/.test(tb17.text) && /25%/.test(tb17.text) && /1:00:00/.test(tb17.text) && tb17.over, JSON.stringify(tb17));
 check("  the strip above the player keeps the rest, not the training; nothing running, the bar gone", !/voice-test-r32/.test(tb17.strip) && /take-1/.test(tb17.strip) && tb17.gone, JSON.stringify(tb17));
 
 // HERESY 1169 · 1620 (Viktor 20.10.2026: «предохранитель при генерации партитуры, понижая общее адаптеров до безопасного уровня»)
@@ -17827,7 +17839,7 @@ check("the fog: 48 px past each end of the logo, blurred, at 0.9 on a full beat 
 check("  the Librarian's counts: each piece whole (no break inside «18 generated»)", LF66.nowrap && (LF66.spans === 0 || LF66.spans > 1), lf66);
 
 // HERESY 1680 (Viktor 21.10.2026: «В Engine>Hardware вообще реально прикрутить метрику Arc карт ка у нас с CUDA?»)
-section("Engine → GPUs with an Intel card: its row and live graph below the CUDA ones, the Studio on it said, no restart on a CUDA card offered; Arc0 in the graphs");
+section("Engine → GPUs with an Intel card: its row and live graph below the CUDA ones, the Studio on it said, no restart on a CUDA card offered; XPU0 in the graphs (2733)");
 const arc1680 = await evg61(`(async () => { const wait = (ms) => new Promise((r) => setTimeout(r, ms)), o = {}, real = window.fetch;
   const stub = { cards: [{ index: 0, name: "NVIDIA GeForce RTX 3090", total_mb: 24576, free_mb: 20000, compute: "8.6" }],
     roles: { studio: 100, train: [0], jobs: [0], limits: {} }, saved: true, studio_now: 100, guard: [], training: {}, studio_training: null,   // HERESY 2029: the Arc the Studio's by the table
@@ -17843,9 +17855,9 @@ const arc1680 = await evg61(`(async () => { const wait = (ms) => new Promise((r)
   } finally { window.fetch = real; }
   HeresyGpus.paint(); await wait(300);
   return o; })()`);
-check("an Intel card below the CUDA ones, framed as the Studio's, its live box there; the hint says the Studio runs on the Arc; no restart offered; Arc0 · Arc Pro B50",
-  /^Arc0/.test(arc1680.row) && /Arc Pro B50/.test(arc1680.row) && arc1680.studio && arc1680.live && /Intel Arc/.test(arc1680.hint) && arc1680.restart === true &&
-  arc1680.label === "Arc0 · Arc Pro B50", JSON.stringify(arc1680));
+check("an Intel card below the CUDA ones, framed as the Studio's, its live box there; the hint says the Studio runs on the Arc; no restart offered; XPU0 · Arc Pro B50 (2733)",
+  /^XPU0/.test(arc1680.row) && /Arc Pro B50/.test(arc1680.row) && arc1680.studio && arc1680.live && /Intel Arc/.test(arc1680.hint) && arc1680.restart === true &&
+  arc1680.label === "XPU0 · Arc Pro B50", JSON.stringify(arc1680));
 
 // HERESY 1683 (Viktor 21.10.2026: «B, но дай растворение на 40-60%, чтобы не было резкости на этих вертикальных полосках»)
 section("The chapter mark B: a dissolved tick before each chapter heading (40 % at its ends, 60 % in the middle); a field's caption has none");
@@ -18054,6 +18066,8 @@ const cb86 = await ev(`(async () => {
     for (let i = 0; i < 40 && !document.querySelector('#collSide [data-place=""]'); i++) await wait(50);
     document.querySelector('#collSide [data-place=""]').click();
     for (let i = 0; i < 60 && !card("t1686-none"); i++) await wait(50);
+    const eye86 = document.getElementById("collReveal");   /* HERESY 2647: the Library follows its own eye: the disliked card shown by it */
+    if (eye86 && eye86.getAttribute("aria-pressed") !== "true") { eye86.click(); window.__eye86 = true; for (let i = 0; i < 40 && !card("t1686-dis"); i++) await wait(50); }
     const look = () => { const c = card("t1686-none"), cs = getComputedStyle(c), acts = c.querySelector(".coll-acts"), post = c.querySelector(".coll-act.post");
       return { bgA: alpha(cs.backgroundColor), img: cs.backgroundImage, left: cs.borderLeftWidth, hair: getComputedStyle(acts).borderTopWidth,
         post: post ? getComputedStyle(post).borderTopWidth : "gone", ring: getComputedStyle(c.querySelector(".coll-play")).borderRadius }; };
@@ -18069,6 +18083,7 @@ const cb86 = await ev(`(async () => {
   } finally {
     window.fetch = real;
     if (toneWas) document.documentElement.dataset.tone = toneWas; else delete document.documentElement.dataset.tone;
+    if (window.__eye86) { delete window.__eye86; const e = document.getElementById("collReveal"); if (e && e.getAttribute("aria-pressed") === "true") e.click(); }
     for (const k of ["yue2.collView", "yue2.showDisliked", "yue2.workspace"]) localStorage.removeItem(k);
     for (const k in kept) localStorage.setItem(k, kept[k]);
     window.dispatchEvent(new Event("ruach-catalog")); await wait(300);
@@ -18190,40 +18205,105 @@ check("  the labels keep a merge's own name whole: YuE2 BF16, YuE2 IRAE-IR BF16,
   MO89.labels.join("|") === "YuE2 BF16|YuE2 IRAE-IR BF16|YuE2 IRAEv2 Q8_0|YuE2 RS-FW Q6_K_L", mo89);
 
 // HERESY 1700 (Viktor 21.10.2026: «Можешь в плеер Студии добавить к регулятору звука через стопорный барьер усиление в промежутке 100-150? Постусиление»)
-section("The player's volume to 150 %: a detent at 100 % on the way up, a gain past it (a limiter after it only then), the element itself never above 1");
+// HERESY 2835 (Viktor 18.11.2026: «Не режь наш плеер как маньяк!… к хуям выключая все обработки. Мы просто вернёмся к старому корыту»): past 100 % and
+// with +dB the player plays a copy of the take raised by the gain, cut flat at full scale as the old Peak clip cut (±8388607 in 24 bits), through the
+// element itself: no Web Audio context, no MediaElementSource, no limiter; at a gain of 1 the take's own file
+section("The player's volume to 150 % and +dB (2835): a detent at 100 % on the way up; past it, and with +dB, a copy of the take raised and clipped at full scale, played by the element itself, no Web Audio; the element never above 1");
 const vb00 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), vol = document.getElementById("volume"), audio = document.getElementById("audio"), o = {};
-  const keptVol = localStorage.getItem("yue2.volume"), keptA = audio.volume, keptAC = window.AudioContext;
-  // a stand-in for the Web Audio graph: the real one would take the page's player for good (a check must not reroute it)
-  const node = () => ({ connect() {}, disconnect() {} }), param = (v) => ({ value: v });
-  window.AudioContext = function () { this.state = "running"; this.destination = {}; };
-  window.AudioContext.prototype = { resume() {}, createMediaElementSource() { return node(); }, createGain() { return Object.assign(node(), { gain: param(1) }); },
-    createDynamicsCompressor() { return Object.assign(node(), { threshold: param(0), knee: param(0), ratio: param(1), attack: param(0), release: param(0) }); } };
+  const keptVol = localStorage.getItem("yue2.volume"), keptA = audio.volume, keptLoud = localStorage.getItem("yue2.oldLoud"), keptAC = window.AudioContext, keptFetch = window.fetch;
+  const keptHold = localStorage.getItem("yue2.holdStart"); localStorage.setItem("yue2.holdStart", "whole");   // HERESY 2837: the copy is the held whole's lift (a stream's is the lab's)
+  const keptMES = window.AudioContext && AudioContext.prototype.createMediaElementSource;
+  // every context the player could make, counted (the live spectrum's own, which plays to no device, apart); every element taken into Web Audio
+  o.made = 0; o.mes = 0;
+  if (keptAC) {
+    window.AudioContext = function (opt) { if (!(opt && opt.sinkId && opt.sinkId.type === "none")) o.made++; return new keptAC(opt); };
+    window.AudioContext.prototype = keptAC.prototype;
+    AudioContext.prototype.createMediaElementSource = function () { o.mes++; return keptMES.apply(this, arguments); };
+  }
+  // the lab's measure of a take (the mock has none): a cut at 0.5, so +dB is +6 dB (× 1.9953)
+  window.fetch = function (u, opt) {
+    if (/^\\/lab\\/take\\/wave\\?/.test(String(u && u.url || u))) return Promise.resolve(new Response(JSON.stringify({ peaks: [], seconds: 4, cut: 0.5, over: 1, places: 1, flat: 0, hot: [], flats: [] }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    return keptFetch.call(this, u, opt);
+  };
   const put = (v) => { vol.value = String(v); vol.dispatchEvent(new Event("input", { bubbles: true })); };
   const press = (v) => { vol.value = String(v); vol.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })); };
-  const lift = () => document.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+  const lift = () => { document.dispatchEvent(new PointerEvent("pointerup", { bubbles: true })); vol.dispatchEvent(new Event("change", { bubbles: true })); };
+  const until = async (f, n) => { for (let i = 0; i < (n || 150) && !f(); i++) await wait(100); return f(); };
+  // the copy read back: each sample against clamp(file × g) at 24 bits
+  const readBack = async () => {
+    const c = window.RuachStudioAudio.of(audio.getAttribute("src"));
+    if (!c) return null;
+    const ab = await (await keptFetch(c.src)).arrayBuffer(), dec = await new OfflineAudioContext(2, 1, window.RuachStudioAudio.rateOf(ab)).decodeAudioData(ab);
+    const u8 = new Uint8Array(await (await keptFetch(c.url)).arrayBuffer()), C = dec.numberOfChannels, x = [];
+    for (let k = 0; k < C; k++) x.push(dec.getChannelData(k));
+    let same = 0, off = 0, clip = 0, clipFS = 0;
+    for (let i = 0; i < dec.length; i++) for (let k = 0; k < C; k++) {
+      const p = 44 + (i * C + k) * 3, q = (u8[p] | (u8[p + 1] << 8) | (u8[p + 2] << 16)) << 8 >> 8, y = x[k][i] * c.g;
+      if (y >= 1 || y <= -1) { clip++; if (q === Math.sign(y) * 8388607) clipFS++; } else if (q === Math.round(y * 8388608)) same++; else off++;
+    }
+    return { g: c.g, frames: dec.length, rate: dec.sampleRate, bits: u8[34], same, off, clip, clipFS, said: c.clipped };
+  };
   try {
     o.max = vol.max; o.tip = /150 %/.test(vol.dataset.tip || "");
     o.track = /linear-gradient/.test(getComputedStyle(vol).backgroundImage);
-    press(0.8); put(0.8); o.low = { el: audio.volume, boost: window.ruachVolumeBoost() };
-    put(1.3); o.detent = { slider: +vol.value, el: audio.volume, boost: window.ruachVolumeBoost() }; lift();
-    press(1); put(1.3); o.past = { slider: +vol.value, el: audio.volume, boost: window.ruachVolumeBoost(), cls: vol.classList.contains("is-boost"), kept: localStorage.getItem("yue2.volume") }; lift();
-    press(1.3); put(0.9); o.back = { el: audio.volume, boost: window.ruachVolumeBoost(), cls: vol.classList.contains("is-boost") }; lift();
+    localStorage.removeItem("yue2.oldLoud"); window.dispatchEvent(new Event("ruach-loud"));
+    press(0.8); put(0.8); o.low = { el: audio.volume, lift: window.ruachLift() };
+    put(1.3); o.detent = { slider: +vol.value, el: audio.volume, lift: window.ruachLift() }; lift();
+    press(1); put(1.3); o.past = { slider: +vol.value, el: audio.volume, lift: window.ruachLift(), cls: vol.classList.contains("is-boost"), kept: localStorage.getItem("yue2.volume") }; lift();
+    press(1.3); put(0.9); o.back = { el: audio.volume, lift: window.ruachLift(), cls: vol.classList.contains("is-boost") }; lift();
+    press(0.9); put(1); lift();
+    // a take in the player, whole: its own file at 100 %; at 130 % a copy at × 1.3; with +dB at 100 % a copy at × 1.9953; dark again, its file
+    const now = ((window.ruachPlayerTake && window.ruachPlayerTake()) || {}).name;
+    const t = (window.ruachTakes() || []).filter((x) => x.name !== now && !(window.ruachFindTakeFull(x.name) || {}).session)[0];
+    o.take = !!t;
+    if (t) {
+      window.ruachPlayNamed(t.name);
+      await until(() => window.ruachLift().plays === "file" && !audio.paused);
+      o.file = window.ruachLift();
+      press(1); put(1.3); lift();
+      await until(() => window.ruachLift().plays === "copy" && Math.abs(window.ruachLift().copy.g - 1.3) < 1e-9 && !audio.paused);
+      o.copy = window.ruachLift(); o.copyEl = audio.volume; o.read13 = await readBack();
+      press(1.3); put(1); lift();
+      await until(() => window.ruachLift().plays === "file");
+      o.again = window.ruachLift();
+      document.getElementById("loudBtn").click();
+      await until(() => window.ruachLift().plays === "copy" && !audio.paused);
+      o.loud = window.ruachLift(); o.loudBtn = document.getElementById("loudBtn").textContent.trim(); o.readLoud = await readBack();
+      document.getElementById("loudBtn").click();
+      await until(() => window.ruachLift().plays === "file");
+      o.dark = window.ruachLift();
+      audio.pause();
+    }
   } finally {
     press(1); put(keptA); lift();
     if (keptVol === null) localStorage.removeItem("yue2.volume"); else localStorage.setItem("yue2.volume", keptVol);
-    window.AudioContext = keptAC;
+    if (keptHold === null) localStorage.removeItem("yue2.holdStart"); else localStorage.setItem("yue2.holdStart", keptHold);
+    if (keptLoud === null) localStorage.removeItem("yue2.oldLoud"); else localStorage.setItem("yue2.oldLoud", keptLoud);
+    window.dispatchEvent(new Event("ruach-loud"));
+    window.fetch = keptFetch;
+    if (keptAC) { window.AudioContext = keptAC; AudioContext.prototype.createMediaElementSource = keptMES; }
   }
   return JSON.stringify(o); })()`);
 const VB00 = JSON.parse(vb00);
 check("the slider reaches 150 % and says so; its track marks the detent and the boost zone",
   VB00.max === "1.5" && VB00.tip && VB00.track, vb00);
-check("up to 100 % only the element's own volume (no graph made); a drag from below stops at 100 %",
-  VB00.low.el === 0.8 && !VB00.low.boost.made && VB00.detent.slider === 1 && VB00.detent.el === 1 && VB00.detent.boost.want === 1, vb00);
-check("a drag from 100 % goes on: the element at 1, a gain of 1.3 with the limiter after it, the slider ringed, 1.3 kept for the next visit",
-  VB00.past.slider === 1.3 && VB00.past.el === 1 && VB00.past.boost.made && Math.abs(VB00.past.boost.gain - 1.3) < 1e-6 && VB00.past.boost.limiter && VB00.past.cls && VB00.past.kept === "1.3", vb00);
-check("back below 100 %: the gain at 1, no limiter, the element's own volume again",
-  VB00.back.el === 0.9 && VB00.back.boost.gain === 1 && !VB00.back.boost.limiter && !VB00.back.cls, vb00);
+check("up to 100 % only the element's own volume; a drag from below stops at 100 %",
+  VB00.low.el === 0.8 && VB00.low.lift.gain === 1 && VB00.detent.slider === 1 && VB00.detent.el === 1 && VB00.detent.lift.v === 1, vb00);
+check("a drag from 100 % goes on: the element at 1, the take to be lifted × 1.3, the slider ringed, 1.3 kept for the next visit",
+  VB00.past.slider === 1.3 && VB00.past.el === 1 && Math.abs(VB00.past.lift.gain - 1.3) < 1e-9 && VB00.past.cls && VB00.past.kept === "1.3", vb00);
+check("back below 100 %: no lift, the element's own volume again",
+  VB00.back.el === 0.9 && VB00.back.lift.gain === 1 && !VB00.back.cls, vb00);
+check("  a take at 100 %, +dB dark: the element plays the take's own file",
+  VB00.take && VB00.file.plays === "file" && !VB00.file.copy, vb00);
+check("  at 130 %: a copy at × 1.3, the element at 1; read back, every sample the nearest 24-bit step of file × 1.3, every clipped one at ±8388607",
+  VB00.copy.plays === "copy" && Math.abs(VB00.copy.copy.g - 1.3) < 1e-9 && VB00.copyEl === 1 && VB00.read13 && VB00.read13.off === 0 && VB00.read13.same > 0 && VB00.read13.clip === VB00.read13.clipFS && VB00.read13.bits === 24, vb00);
+check("  +dB at 100 %: a copy at the take's own measure (a cut at 0.5: +6.0 dB, × 1.9953), said on the button; read back the same way",
+  VB00.loud.plays === "copy" && Math.abs(VB00.loud.copy.g - Math.pow(10, 6 / 20)) < 1e-9 && /\+6\.0 dB/.test(VB00.loudBtn) && VB00.readLoud && VB00.readLoud.off === 0 && VB00.readLoud.clip === VB00.readLoud.clipFS, vb00);
+check("  back at 100 % and +dB dark: the take's own file again",
+  VB00.again.plays === "file" && VB00.dark.plays === "file", vb00);
+check("  no Web Audio context made for the player, no element taken into Web Audio (no graph, no limiter)",
+  VB00.made === 0 && VB00.mes === 0, vb00);
 
 // HERESY 1701 (Viktor 21.10.2026: «Замки выровняй, бро»)
 section("The workspaces' column: the locks stand in one column whatever the counts after them (0, 7, 120)");
@@ -18436,7 +18516,9 @@ const vr07 = await ev(`(async () => {
     await HeresyVersions.keep({ title: T, style: "1707 two", lyrics: "[verse]\\ntwo", abc: "" }, [], "off");
     await HeresyVersions.keep({ title: T, style: "1707 three", lyrics: "[verse]\\nthree", abc: "" }, [], "off");
     tEl.value = T; tEl.dispatchEvent(new Event("input", { bubbles: true }));
-    document.getElementById("crVersions").click();
+    document.getElementById("crVersions").click();   // HERESY 2689: the song's history in the take column; its «Every kept version» opens the Versions window
+    await until(() => document.querySelector('#songHist [data-sh="book"]'));
+    (document.querySelector('#songHist [data-sh="book"]') || { click() {} }).click();
     await until(() => document.querySelectorAll("#vrList .vr-row[data-n]").length >= 3);
     const rows = () => [...document.querySelectorAll("#vrList .vr-row[data-n]")];
     o.start = JSON.stringify(HeresyVersions.picked());
@@ -19769,8 +19851,8 @@ await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 1, y: 1 });
 await send("Emulation.setDeviceMetricsOverride", { width: was1741[0], height: was1741[1], deviceScaleFactor: 1, mobile: false }); await new Promise((r) => setTimeout(r, 300));
 check("mirrored: at 1920 the gap left of the controls equals the gap right of them (within 1 px), at 2560 too; the controls at the middle",
   Math.abs(g1920.left - g1920.right) <= 1 && Math.abs(g2560.left - g2560.right) <= 1 && Math.abs(g1920.mid - 960) <= 1 && Math.abs(g2560.mid - 1280) <= 1, JSON.stringify({ g1920, g2560 }));
-check("the style line: cut short in place, unfolded on hover (wider, 800 px at most), no tip over it",
-  hov1741.w > sub1741.w && hov1741.w <= 800 && !hov1741.tip, JSON.stringify({ sub1741, hov1741 }));
+check("no style line under the title (2855): the player shows the take's title only, and no tip over the place it stood",
+  sub1741.w === 0 && hov1741.w === 0 && !hov1741.tip, JSON.stringify({ sub1741, hov1741 }));
 
 
 // HERESY 1742 (Viktor 22.10.2026, night: «на твои золотые SVG кляксы добавь нехилый блюр… гони их все динамично на все типы состояний карточек, в разных пастельных цветах»)
@@ -19789,10 +19871,13 @@ const sd1742 = await ev(`(async () => {
     await HC.reload(); await wait(100);
     document.querySelector('.topbar [data-tab="collection"]').click(); await wait(500);
     document.querySelector('#collSide [data-place=""]').click(); await wait(600);
+    const eye42 = document.getElementById("collReveal");   /* HERESY 2647: the Library follows its own eye: the disliked card shown by it */
+    if (eye42 && eye42.getAttribute("aria-pressed") !== "true") { eye42.click(); window.__eye42 = true; await wait(400); }
     root.dataset.tone = "light"; await wait(100); o.day = read();
     root.dataset.tone = "dark"; await wait(100); o.night = read();
   } finally {
     if (toneWas === undefined) delete root.dataset.tone; else root.dataset.tone = toneWas;
+    if (window.__eye42) { delete window.__eye42; const e = document.getElementById("collReveal"); if (e && e.getAttribute("aria-pressed") === "true") e.click(); }
     if (disWas === null) localStorage.removeItem("yue2.showDisliked"); else localStorage.setItem("yue2.showDisliked", disWas);
     window.fetch = real; await HC.reload(); await wait(80);
     const b = document.querySelector('#collSide [data-place="' + CSS.escape(placeWas || "") + '"]'); if (b) b.click();
@@ -20870,7 +20955,7 @@ await ev(`(async () => {
     cot: (document.querySelector('input[name="cot"]:checked') || {}).value, landable: window.HeresyCollection.landable };
   window.HeresyCollection.landable = () => "Suite 1768";   // a workspace for the new takes, lent for this run
   localStorage.setItem("yue2.alsoSolvers", JSON.stringify({ heun: { on: true, steps: 64 } }));
-  $("odeSolver").value = "midpoint"; $("odeSolver").dispatchEvent(new Event("change", { bubbles: true })); await wait(50);
+  $("odeSolver").value = "multistep"; $("odeSolver").dispatchEvent(new Event("change", { bubbles: true })); await wait(50);
   const off = document.querySelector('input[name="cot"][value="off"]'); if (off) off.click();
   $("odeSteps").value = "32"; $("title").value = "Ladder 1768"; $("style").value = "folk, male vocals"; $("lyrics").value = "[verse]\\nla la la la"; $("abc").value = "";
   $("versions").value = "1"; $("variations").value = "1";
@@ -20882,14 +20967,14 @@ await waitFor(`fetch("/mock/requests").then((r) => r.json()).then((a) => a.filte
 const nd68b = (await synthBodies()).slice(nd68before).map((b) => (typeof b === "string" ? JSON.parse(b.replace(/("(?:lm_seed|seed)"\s*:\s*)(\d+)/g, '$1"$2"')) : b));
 const nd68run = nd68b[0] || {}, nd68also = nd68b[1] || {};
 check("a run on the ladder sends nar_ladder; its take again by Heun 64 (Also render with, the Musician's own) goes on the ladder too",
-  nd68run.nar_ladder === true && nd68run.title === "Ladder 1768 · Midpoint 32" && nd68also.nar_ladder === true && nd68also.solver === "heun" && !!String(nd68also.semantic_tokens || "").trim(),
+  nd68run.nar_ladder === true && nd68run.title === "Ladder 1768 · Multistep 32" && nd68also.nar_ladder === true && nd68also.solver === "heun" && !!String(nd68also.semantic_tokens || "").trim(),
   JSON.stringify({ run: { title: nd68run.title, ladder: nd68run.nar_ladder }, also: { title: nd68also.title, solver: nd68also.solver, ladder: nd68also.nar_ladder } }));
-const nd68name = await waitFor(`fetch("/library").then((r) => r.json()).then((d) => { const a = d.takes || d.library || d; const t = Array.isArray(a) ? a.find((x) => x.title === "Ladder 1768 · Midpoint 32") : null; return t ? t.name : null; })`, 15000, 300);
+const nd68name = await waitFor(`fetch("/library").then((r) => r.json()).then((d) => { const a = d.takes || d.library || d; const t = Array.isArray(a) ? a.find((x) => x.title === "Ladder 1768 · Multistep 32") : null; return t ? t.name : null; })`, 15000, 300);
 if (nd68name) {
   await ev(`(window.ruachRefreshLibrary ? window.ruachRefreshLibrary() : null, true)`);
   await waitFor(`!!document.querySelector('#libList .take[data-name="${nd68name}"]')`, 6000, 100);
   await click(`#libList .take[data-name="${nd68name}"]`);
-  await waitFor(`document.getElementById("takeTitle").textContent === "Ladder 1768 · Midpoint 32"`, 4000);
+  await waitFor(`document.getElementById("takeTitle").textContent === "Ladder 1768 · Multistep 32"`, 4000);
 }
 const nd68cell = await waitFor(`(() => { const c = document.querySelector('[data-field="Sound decode"]'); return c ? c.dataset.value || c.textContent : null; })()`, 4000, 100);
 check("  the take's run panel says its decode: Ladder · experimental", /Ladder · experimental/.test(String(nd68cell || "")), String(nd68cell));
@@ -20901,7 +20986,7 @@ check("  a new sound for it in the player goes on the standard decode: the take'
   nd68snd ? JSON.stringify({ parent: nd68snd.parent, keys: Object.keys(nd68snd).filter((k) => /ladder|solver|seed/.test(k)) }) : "none");
 await mockClear();
 await click(`#libList .take[data-name="${nd68name}"]`);   // the take reopened: a job that ended meanwhile may have shown another (29.10, twice under load)
-await waitFor(`document.getElementById("takeTitle").textContent === "Ladder 1768 · Midpoint 32"`, 4000);
+await waitFor(`document.getElementById("takeTitle").textContent === "Ladder 1768 · Multistep 32"`, 4000);
 const nd68ext = await ev(`(async () => { const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
   document.getElementById("extendTake").click();
@@ -21339,7 +21424,7 @@ const cramped = await ev(`(async () => { window.ruachEngineTab("rooms"); await n
     pill: Math.round(p.querySelector(".pane-head .pill").getBoundingClientRect().height) }));
   window.ruachEngineTab("server"); return heads; })()`);
 check("Writer card has room: each host's tick, name and state on one line, its Test button unbroken (five hosts)", cramped.length === 5 &&
-  cramped.every((x) => x.head < 34 && x.h < 22 && x.b < 40 && x.pill < 22), JSON.stringify(cramped));
+  cramped.every((x) => x.head < 34 && x.h < 30 && x.b < 40 && x.pill < 22), JSON.stringify(cramped));   /* the name one line: 17 px a line, its h4 21.6 px since 18.11 (20.1 before); two lines would be 34 */
 const logText = await ev(`document.getElementById("logBody").innerText`);
 check("server log card streams /logs (the server's own lines in the card, the banner or what came after it)", /^\[(Server|Store|Prompt|AR|NAR|VAE|Pipeline|Library)\] /m.test(logText) && (await ev(`document.getElementById("logState").textContent`)) === "live");
 check("no PyTorch-only settings (device, backend, quantization dtype, budget)", (await ev(`!document.getElementById("setBackend") && !document.getElementById("setQuant") && !document.getElementById("setBudget") && !document.getElementById("setDevice")`)) === true);
@@ -21383,8 +21468,12 @@ check("the menu's tip names the three as 2378 has them (RS x3 v1 the default, RS
 // HERESY 1449: no slider chips, no Sliders (i)
 await ev(`(() => { const d = document.getElementById("advDrawer"); d.open = true; d.querySelector('[data-tip-ref="tip-seeds"]').scrollIntoView({ block: "center" }); return true; })()`);
 await sleep(200);
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 5, y: 700 }); await sleep(150);   /* the hand comes from elsewhere, as for the tips after it */
 t = await hoverOn('[data-tip-ref="tip-seeds"]');
-check("(i) beside the seeds explains music vs sound", t?.on && /Music/.test(t.text) && /Sound/.test(t.text), t?.text.split("\n")[0]);
+if (!t?.on && await waitFor(tipOn, 2500, 50)) t = await ev(`(() => { const e = document.querySelector(".tip"); return { on: e.classList.contains("is-on") && getComputedStyle(e).visibility === "visible", text: e.innerText }; })()`);   /* right after a reload under load the rich tip's ~0.6 s can outrun hoverOn's 1 s (probe 18.11: 0.58 s on an idle page, 16.11's and this one alike) */
+const seedsUnder = t?.on ? "" : await ev(`(() => { const e = document.querySelector('[data-tip-ref="tip-seeds"]'), b = e.getBoundingClientRect(), u = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+  return JSON.stringify({ under: u ? (u.id || String(u.className) || u.tagName) : null, same: u === e, idle: document.documentElement.classList.contains("is-idle-ui"), tab: document.body.dataset.tab, frame: document.body.dataset.frame || "", dlg: !!document.querySelector(".hd-back.is-on"), w: innerWidth, h: innerHeight }); })()`);
+check("(i) beside the seeds explains music vs sound", t?.on && /Music/.test(t.text) && /Sound/.test(t.text), (t?.text || "").split("\n")[0] + " " + seedsUnder);
 await ev(`document.getElementById("coverDrawer").open = true; document.getElementById("advDrawer").open = true; true`);
 const cover = await ev(`(() => { const body = document.querySelector("#coverDrawer .drawer-body"), parts = [...body.querySelectorAll(".cover-part")];
   const w = (id) => { let e = document.getElementById(id); if (e.classList.contains("hc-src") && e.nextElementSibling && e.nextElementSibling.classList.contains("hc-box")) e = e.nextElementSibling;   // HERESY 2544: the picker stands for the list
@@ -21393,9 +21482,9 @@ const cover = await ev(`(() => { const body = document.querySelector("#coverDraw
   return { parts: parts.length, full: ["coverFile", "coverTask", "coverTake"].map(w), sizes: b.map(r => Math.round(r.width) + "x" + Math.round(r.height)),
     left: b.map((r, i) => Math.round(r.left - parts[i].getBoundingClientRect().left)), hints: body.querySelectorAll(".hint").length,
     infos: parts.map(p => !!p.querySelector(".mini .info")).join() }; })()`);
-check("Cover or remix: two parts of one shape, each control on its own full line, both buttons the same size on the left, no long paragraphs",
-  cover.parts === 2 && cover.full.every((x) => x >= 95) && cover.sizes[0] === "172x30" && cover.sizes[1] === "172x30" && cover.left.every((x) => x <= 1) &&
-  cover.hints === 0 && cover.infos === "true,true", JSON.stringify(cover));
+check("Cover or remix: three parts of one shape (2677: Vocal over My Backing the third), each control on its own full line, the buttons the same size on the left, no long paragraphs",
+  cover.parts === 3 && cover.full.every((x) => x >= 95) && cover.sizes.every((s) => s === "172x30") && cover.left.every((x) => x <= 1) &&
+  cover.hints === 0 && cover.infos === "true,true,true", JSON.stringify(cover));
 await ev(`document.getElementById("scoreDrawer").open = true; true`);
 const scoreBox = await ev(`(() => { const d = document.getElementById("scoreDrawer"), rm = document.getElementById("abcRemove"), mi = document.getElementById("abcInstrumental");
   const body = d.querySelector(".drawer-body").getBoundingClientRect(), r = rm.getBoundingClientRect(), m = mi.getBoundingClientRect();
@@ -21485,8 +21574,8 @@ const layout = await ev(`(() => { const h = document.getElementById("takeActions
 check("header: Favourite, Rename and Delete (red) as icons on the title line", layout.icons === "true,true,true" && layout.danger && layout.oldDelete === 1, JSON.stringify(layout));
 check("  the line under the title says age, length and render time, no seed", /long/.test(layout.eyebrow) && /made in/.test(layout.eyebrow) && !/seed/i.test(layout.eyebrow), layout.eyebrow);
 check("  the buttons sit in Download, Make again, Edit, Refiner and Files", layout.groups === "Download,Make again,Edit,Refiner,Files", layout.groups);   // HERESY 1356: Edit   // the Refiner room's door
-check("  the details are one compact card: Song | Sound | Shape, LoRAs, then the seeds with copy buttons, then the medcard (HERESY 1399: Score Planner | Music Tokens | The run)",
-  layout.sections === "Song,Sound,Shape,LoRAs,Score Planner,Music Tokens,The run" && layout.copies === 2, layout.sections);
+check("  the details are one compact card: Song | Sound | Shape, LoRAs, the Licence (2658), then the seeds with copy buttons, then the medcard (HERESY 1399: Score Planner | Music Tokens | The run)",
+  layout.sections === "Song,Sound,Shape,LoRAs,Licence,Score Planner,Music Tokens,The run" && layout.copies === 2, layout.sections);
 check("song info: model from the library entry, no precision row on a new song", meta?.Model === "BF16" && !("Precision" in meta) && !("Score" in meta));
 const shapesMeta = await waitFor(`(() => { const m = Object.fromEntries([...document.querySelectorAll("#metaGrid [data-field]")].map(d => [d.dataset.field, d.dataset.value]));
   return m.Composition && m.Composition !== "…" ? m : null; })()`, 5000, 100);
@@ -22533,7 +22622,7 @@ check("top bar: the logo, the rooms first, the workspace in hand, the engine's l
 const strip = await ev(`document.getElementById("hwStats").textContent.replace(/\\s+/g, " ").trim()`);
 const stripTip = await ev(`document.getElementById("hwStats").dataset.tip`);
 check("  under ⋯ it reads the GPU and its memory from /hardware, beside the Model menu; the rest is in its tip", topbarNow.inMore &&
-  /Mock GPU/.test(strip) && /\d+\.\d \/ 31\.8 GB/.test(strip) && /Mock GPU \(32 GB\) · backbone BF16 · context whole · batch 4/.test(stripTip), strip + " | " + stripTip);
+  /Mock GPU/.test(strip) && /\d+\.\d \/ 31\.8 GB/.test(strip) && /GPU · Mock GPU · CUDA · backbone BF16 · context whole · batch 4/.test(stripTip), strip + " | " + stripTip);   /* 2733: the device as XPU/GPU · model · backend */
 check("Unload model is off while nothing is loaded", (await ev(`document.getElementById("unloadModel").disabled && document.getElementById("unloadNow").disabled`)) === true);
 t = await hoverOn('[data-tip-ref="tip-model"]');
 check("(i) beside Model explains BF16 and the quantized copies", t?.on && /BF16/.test(t.text) && /quantized/.test(t.text));
@@ -23016,7 +23105,7 @@ const oddForm = await ev(`({ temp: document.querySelector('input[data-group="abc
 const oddSaid = (oddToast?.lines || []).join("\n");
 check("Open says what of a file the form could not hold (a field, the mode, a seed, steps, solver, VAE, slider, adapter, a knob, values past bounds); a saved one says nothing",
   /^Prompt loaded from odd\.json; 11 not as in the file:$/.test(oddToast?.head || "") && /\bgood\b/.test(cleanToast) && !/not as in the file/.test(cleanToast) &&
-  ["colour: no such field in a prompt", "Mode «weird» unknown: Full plan", "Music seed «12a» is no whole number", "Steps «many» is no number", "Solver «rk9» unknown: midpoint",
+  ["colour: no such field in a prompt", "Mode «weird» unknown: Full plan", "Music seed «12a» is no whole number", "Steps «many» is no number", "Solver «rk9» unknown: Multistep",
    "VAE «no-such-vae» is not installed", "Slider «no-such-slider» is not installed", "is not in loras/: the run cannot load it", "Score planner: warmth unknown",
    "Score planner · Temperature 9 kept within 0.1–2", "Variations 40 kept within 1–9"].every(s => oddSaid.includes(s)) &&
   oddForm.temp === "2" && oddForm.cot === "full" && oddForm.vars === "9", JSON.stringify({ oddToast, oddForm, cleanToast }));
@@ -23222,18 +23311,29 @@ await meterSays(`/^Characters: 3 /.test(m.textContent)`);
 const small = await styleBox();
 await ev(`(() => { const s = document.getElementById("style"); s.value = Array(60).fill("dark cinematic synthwave with a slow build, analog pads, gated drums").join(", ");
   s.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`);
-await meterSays(`/^Characters: 4,198 /.test(m.textContent)`);
+await meterSays(`/^Characters: 3,539 /.test(m.textContent)`);   // HERESY 2800: without spaces (4,198 with)
 const big = await styleBox();
 check("the style box grows with a long prompt set by the page", big.h > small.h + 60, `${small.h}px -> ${big.h}px`);
 // HERESY 1031: the engine's score budget is 6,144 (Viktor's set), so style and lyrics share 24,576 - 6,144 - 9,000 - 80 = 9,352
-// and, past 1,600 characters, the flag of a style unlike the model's training ones (help.js)
+// and, past 800 characters without spaces (2799's count; HERESY 2800), the flag of a style unlike the model's training ones (help.js)
 // HERESY 1167: the counter one grey line; what is wrong behind a WARNING at the end of the heading's line, its tip large
-check("  the counter under it shows its size and the shared budget, on one grey line", big.meter === "Characters: 4,198 · tokens: ≈1,167 · with the lyrics: ≈1,170 of 9,352" &&
+check("  the counter under it shows its size and the shared budget, on one grey line", big.meter === "Characters: 3,539 · tokens: ≈1,167 · with the lyrics: ≈1,170 of 9,352" &&
   big.oneLine && big.grey, JSON.stringify(big));
 check("  a style unlike the model's training ones: a WARNING beside the cheat-sheet's ?, its tip large, saying what to expect", big.badge && big.big === "big" &&
-  /^Unlike the model's training styles:\n• longer than 1,600 characters/.test(big.badgeTip) && /What to expect: YuE2 learned from styles without these/.test(big.badgeTip) &&
+  /^Unlike the model's training styles:\n• longer than 800 characters without spaces/.test(big.badgeTip) && /What to expect: YuE2 learned from styles without these/.test(big.badgeTip) &&
   (await ev(`(() => { const e = document.getElementById("styleLabelEnd"); return !!e && e.lastElementChild && e.lastElementChild.id === "hiOpen" && !!e.querySelector("#hiOpen svg"); })()`)) === true,
   big.badgeTip.slice(0, 120));
+// HERESY 2800: the meter counts as the number beside the label does (2799, without spaces) and says over 400 from 401, not at 400
+await ev(`(() => { const s = document.getElementById("style"); s.value = "abcd ".repeat(100).trim(); s.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`);
+await meterSays(`/^Characters: 400 /.test(m.textContent)`);
+const at400 = await styleBox(), size400 = await ev(`document.getElementById("styleSize").textContent`);
+await ev(`(() => { const s = document.getElementById("style"); s.value = "abcd ".repeat(100) + "e"; s.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`);
+await meterSays(`/^Characters: 401 /.test(m.textContent)`);
+const at401 = await styleBox();
+check("  the meter and the label say one length, without spaces (400 / 800); over 400 is said from 401, not at 400 (2800)", size400 === "400 / 800" &&
+  !/longer than/.test(at400.badgeTip) && /• longer than 400 characters without spaces \(over 400 is not endorsed/.test(at401.badgeTip), at401.badgeTip.slice(0, 160));
+await ev(`(() => { const s = document.getElementById("style"); s.value = Array(60).fill("dark cinematic synthwave with a slow build, analog pads, gated drums").join(", "); s.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`);
+await meterSays(`/^Characters: 3,539 /.test(m.textContent)`);
 await ev(`document.getElementById("lyrics").value = "la la la ".repeat(5000); true`);
 await meterSays(`m.classList.contains("is-over")`);
 const over = await styleBox();
@@ -23450,7 +23550,7 @@ await waitFor(`!document.querySelector(".hd-back")`, 2000, 50);   // HERESY 1167
 
 section("instrumental (the official recipe)");
 t = await hoverOn('[data-tip-ref="tip-instrumental"]');
-check("(i) beside Instrumental explains the recipe", t?.on && /vocal note/.test(t.text) && /no spoken words/.test(t.text) && /Melody mode/.test(t.text), t?.text.slice(0, 70));
+check("(i) beside Instrumental explains the recipe", t?.on && /vocal note/.test(t.text) && /Instrumental, added to your style/.test(t.text) && /Melody mode/.test(t.text), t?.text.slice(0, 70));
 await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 5, y: 5 });
 await mockClear();
 await ev(`(() => { const set = (id, v) => { document.getElementById(id).value = v; }; set("title", "Inst Song"); set("style", "dark synthwave, 100 BPM");
@@ -23464,8 +23564,8 @@ check("with no score, Generate plans one first (your lyrics shape it)", !!instPl
 const renderScore = instRender ? await ev(nativeCheck(instRender.abc)) : {};
 check("  then renders it with the vocal line moved to the instrument", !!instRender && !instRender.plan_only && renderScore.vocal === 0 && renderScore.ins > 0,
   JSON.stringify(renderScore));
-check("  instrumental style, section-only lyrics, Full mode (the score has chords)", !!instRender &&
-  instRender.style === "Instrumental, dark synthwave, 100 BPM, no vocals, no singing, no choir, no spoken words." &&
+check("  instrumental style (Instrumental in front, nothing appended), section-only lyrics, Full mode (the score has chords)", !!instRender &&
+  instRender.style === "Instrumental, dark synthwave, 100 BPM." &&   // HERESY 2845: nothing appended
   instRender.lyrics === "[Intro]\n\n[Verse]\n\n[Chorus]\n" && instRender.cot === "full" && renderScore.chords > 0,
   JSON.stringify(instRender && { style: instRender.style.slice(0, 40), lyrics: instRender.lyrics, cot: instRender.cot }));
 check("  it keeps the plan's music seed", !!instRender && !!instPlan && instRender.lm_seed !== undefined, instRender && instRender.lm_seed);
@@ -23532,7 +23632,7 @@ const ik1 = await ev(`(async () => {
   const was = { title: $("title").value, style: $("style").value, lyrics: $("lyrics").value, abc: $("abc").value, cot: (document.querySelector('input[name="cot"]:checked') || {}).value,
                 inst: $("instrumental").checked, versions: $("versions").value, lm: $("lmSeed").value, sound: $("soundSeed").value, askSeed: localStorage.getItem("yue2.askSeed") };
   try {
-    const ins = await make("zz ins 2153", { style: "Instrumental, test 2153, no vocals.", lyrics: "[Intro]\\n\\n[Verse]\\n", instrumental: true });
+    const ins = await make("zz ins 2153", { style: "Instrumental, test 2153, dark ambient.", lyrics: "[Intro]\\n\\n[Verse]\\n", instrumental: true });
     const voc = await make("zz voc 2153", { instrumental: false });
     const old = await make("zz old 2153", {});
     o.made = [!!ins, !!voc, !!old];
@@ -27182,8 +27282,8 @@ const ga29 = await ev(`(async () => {
     o.restart = document.getElementById("gpuRestart").hidden ? "" : document.getElementById("gpuRestart").textContent;
   } finally { window.fetch = real; window.HeresyGpus.paint(); }
   return o; })()`);
-check("an Arc row holds the Studio's radio (100, chosen), its VRAM limit (12 of 16 GB), «—» for training and the lab's jobs with the reason (PyTorch on CUDA); the hint says the Arc; named Arc0",
-  ga29.radio && ga29.limit && ga29.why === "—|true,—|true" && /Intel Arc/.test(ga29.hint) && ga29.restartHidden && ga29.name === "Arc0,GPU1", JSON.stringify(ga29));
+check("an Arc row holds the Studio's radio (100, chosen), its VRAM limit (12 of 16 GB), «—» for training and the lab's jobs with the reason (PyTorch on CUDA); the hint says the Arc; named XPU0 (2733)",
+  ga29.radio && ga29.limit && ga29.why === "—|true,—|true" && /Intel Arc/.test(ga29.hint) && ga29.restartHidden && ga29.name === "XPU0,GPU1", JSON.stringify(ga29));
 check("  GPU1 chosen: the hint is the CUDA card's, saved as 1, and the restart offered «on GPU1» while the Studio still runs on the Arc",
   /GPU1/.test(ga29.hintCuda) && ga29.sent === 1 && ga29.restart === "Restart the Studio on GPU1", JSON.stringify({ hint: ga29.hintCuda, sent: ga29.sent, restart: ga29.restart }));
 
@@ -27470,9 +27570,9 @@ const lb74 = await ev(`(async () => {
 check("Hidden's number, list and ⋯ agree (2074; 2058b): the Engine keeping the disliked out, the eye off: Hidden says 2 and lists n1 and n5 (not the archived n2, the frozen n3 or the disliked n0); its ⋯ › Show the hidden again (2) (2089b) sends those two",
   !!lb74 && !lb74.few && !lb74.error && !!lb74.off && lb74.off.row === "2" && lb74.off.list === "n1,n5" && lb74.off.label === "Show the hidden again (2)" && lb74.off.hint === "" && lb74.off.sent === JSON.stringify([["n1", "n5"]]),
   JSON.stringify(lb74));
-check("  the eye on: the disliked n0 back in all three (3; n0, n1, n5; Show the hidden again (3); 3 sent); the eye off with the Engine showing the disliked: the same",
+check("  the eye on: the disliked n0 back in all three (3; n0, n1, n5; Show the hidden again (3); 3 sent); the eye off with the Engine showing the disliked: as with it off (2647: the Library follows its own eye)",
   !!lb74 && !!lb74.eye && lb74.eye.row === "3" && lb74.eye.list === "n0,n1,n5" && lb74.eye.label === "Show the hidden again (3)" && lb74.eye.hint === "" && lb74.eye.sent === JSON.stringify([["n0", "n1", "n5"]]) &&
-  !!lb74.engine && lb74.engine.row === "3" && lb74.engine.list === "n0,n1,n5" && lb74.engine.label === "Show the hidden again (3)" && lb74.engine.hint === "" && lb74.engine.sent === JSON.stringify([["n0", "n1", "n5"]]),
+  !!lb74.engine && lb74.engine.row === "2" && lb74.engine.list === "n1,n5" && lb74.engine.label === "Show the hidden again (2)" && lb74.engine.hint === "" && lb74.engine.sent === JSON.stringify([["n1", "n5"]]),
   JSON.stringify(lb74 && [lb74.eye, lb74.engine]));
 
 // HERESY 2074 (Viktor 05.11.2026: «Давай, быстрецом гоним всё до и для среза 2.0.6»): the compare window's sheet as Blind turns on (2057 keeps it when every version has
@@ -27742,7 +27842,7 @@ check("ⓘ counts what its list shows (2078b): Favourites says 2 in the tree, li
   !!lb78 && !lb78.few && !lb78.error && !!lb78.fav && lb78.fav.tree === "2" && lb78.fav.list === "n0,n1" && lb78.fav.info === "2 · 1 more in a frozen workspace · 1 more in the archive", JSON.stringify(lb78));
 check("  Pinned: the tree 1 (the archived pinned n3 no longer counted: its list never showed it), the list n0, ⓘ «1 · 1 more in a frozen workspace · 1 more in the archive»; Hidden: the tree 1, the list n4, ⓘ «1 · 0 shown, 1 hidden · 1 more in a frozen workspace»",
   !!lb78 && !!lb78.pin && lb78.pin.tree === "1" && lb78.pin.list === "n0" && lb78.pin.info === "1 · 1 more in a frozen workspace · 1 more in the archive" &&
-  !!lb78.hid && lb78.hid.tree === "1" && lb78.hid.list === "n4" && lb78.hid.info === "1 · 0 shown, 1 hidden · 1 more in a frozen workspace", JSON.stringify(lb78 && [lb78.pin, lb78.hid]));
+  !!lb78.hid && lb78.hid.tree === "1" && lb78.hid.list === "n4" && lb78.hid.info.startsWith("1 · 0 shown, 1 hidden · 1 more in a frozen workspace"), JSON.stringify(lb78 && [lb78.pin, lb78.hid]));
 check("  a workspace's ⓘ as before: W78 «3 · 2 shown, 1 hidden», the tree «/3» with its tip «Shown: 2» and «Hidden by hand: 1» (2089), the list n0 and n1; in Russian Favourites' ⓘ reads «2 · ещё 1 в замороженном · ещё 1 в архиве»",
   !!lb78 && !!lb78.ws && lb78.ws.info === "3 · 2 shown, 1 hidden" && lb78.ws.tree === "/3" && lb78.ws.tip === "Shown: 2\nHidden by hand: 1" && lb78.ws.list === "n0,n1" && !!lb78.ruFav && lb78.ruFav.info === "2 · ещё 1 в замороженном · ещё 1 в архиве",
   JSON.stringify(lb78 && [lb78.ws, lb78.ruFav]));
@@ -28134,7 +28234,7 @@ check("  in the Hardware tab under the GPUs, the whole width: its title and note
   tp85.title === t85[0] && tp85.note === t85[1] && JSON.stringify(tp85.heads) === JSON.stringify(["GPU", t85[2], t85[3], t85[4], t85[5], t85[6]]), JSON.stringify(tp85 && [tp85.served, tp85.card, tp85.under, tp85.fresh, tp85.title, tp85.note, tp85.heads]));
 check("  the four cards: GPU0 numa0 Gen1 x16 now, Gen4 x16 its most, Gen3 x16 the slot's; GPU1, GPU2 numa1 at Gen3; the Arc numa0, Gen3 x8 · Gen5 x8 · Gen3 x8 behind its own bridge 0000:01:00.0",
   !!tp85 && !!tp85.rows && tp85.rows.length === 4 && JSON.stringify(tp85.rows[0]) === JSON.stringify(["GPU0 · RTX 3090", "0", "Gen1 x16", "Gen4 x16", "Gen3 x16", "0000:05:00.0"]) &&
-  tp85.rows[1][1] === "1" && tp85.rows[2][1] === "1" && tp85.rows[2][2] === "Gen3 x16" && tp85.rows[3][0] === "Arc0 · Arc Pro B50" && tp85.rows[3][1] === "0" &&
+  tp85.rows[1][1] === "1" && tp85.rows[2][1] === "1" && tp85.rows[2][2] === "Gen3 x16" && tp85.rows[3][0] === "XPU0 · Arc Pro B50" && tp85.rows[3][1] === "0" &&
   JSON.stringify(tp85.rows[3].slice(2)) === JSON.stringify(["Gen3 x8", "Gen5 x8", "Gen3 x8", "0000:03:00.0 " + t85[7].replace("{0}", "0000:01:00.0")]), JSON.stringify(tp85 && tp85.rows));
 check("  NVIDIA's matrix as nvidia-smi prints it, in the mono face, SYS across the sockets and PHB between GPU1 and GPU2 tinted; its legend; P2P (TNS, CNS) under its own legend",
   !!tp85 && JSON.stringify(tp85.cols) === JSON.stringify(["", "GPU0", "GPU1", "GPU2", "CPU Affinity", "NUMA Affinity", "GPU NUMA ID"]) &&
@@ -30530,7 +30630,7 @@ check("  P (Russian з) opens Add to playlist, E waits while it is open, P again
 
 // HERESY 2299 (Viktor 09.11.2026: «минипанель под хедером студии с реальными метриками по утилизации CPU/GPU/RAM/VRAM/NVMe/HDD… При наведении мышкой на
 // каждую позицию — тултипом вывод метрик и графов»): the system bar under the header; /lab/sys/live and /lab/gpus/live answered in the page
-section("The system bar (2299, 2302): under the header in every room as the Studio's own, in the Artist, the Refiner and the Videographer alone as a choice; the machine, the cards, the disks, the room's jobs; tooltips with numbers and two graphs; Engine → Defaults; the friends' door's refusal");
+section("The system bar (2299, 2302): under the header in every room as the Studio's own, in the Artist, the Refiner and the Videographer alone as a choice; the machine, the cards, the disks, the room's jobs; tooltips with numbers and two graphs; Engine → Defaults; a proxy's refusal");
 const sb = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), o = {};
   const GL = window.HeresyGpuLive.state, glWas = JSON.stringify({ rings: GL.rings, names: GL.names, since: GL.since, roles: GL.roles });
@@ -30626,7 +30726,7 @@ const sb = await ev(`(async () => {
     o.rooms = bar.hidden && localStorage.getItem("yue2.sysbar") === "rooms";
     await pick("all");
     o.own = !bar.hidden && localStorage.getItem("yue2.sysbar") === null;   // HERESY 2302: every room is the Studio's own, its key removed
-    // the friends' door refuses: the bar leaves the page and asks no more
+    // a proxy in front of the Studio refuses it (403): the bar leaves the page and asks no more
     await tab("video");
     refuse = true; await wait(1600);
     const a1 = asked; await wait(2200);
@@ -30653,7 +30753,7 @@ check("  a disk's tooltip (where it is mounted, USB, its rate, drawn) and a card
 check("  the room's own jobs as bars: the Artist's artwork here, the Refiner's stems there", /artwork/.test(sb.artJobs) && !/stems/.test(sb.artJobs) && /stems/.test(sb.postJobs) && /50%/.test(sb.postJobs), sb.artJobs + " · " + sb.postJobs);
 check("  Engine → Defaults: in every room (the Studio's own, its key removed), in the three rooms (none in the Musician), nowhere", sb.select === "all,rooms,off" && sb.off && sb.rooms && sb.own,
   JSON.stringify({ select: sb.select, off: sb.off, rooms: sb.rooms, own: sb.own }));
-check("  the friends' door refuses /lab/sys/live: the bar leaves and asks no more", sb.door && !sb.err, sb.err || JSON.stringify(sb));
+check("  a proxy refuses /lab/sys/live (403): the bar leaves and asks no more", sb.door && !sb.err, sb.err || JSON.stringify(sb));
 
 // HERESY 2350 (Timon's cherry ⑥, the plan of 08.11.2026: «список заезженных слов»): the worn words of each language
 section("Worn words (2350): a list for each language of the lyrics; marked under a dotted line, counted under the Musician's box with a press to the next; the list edited, emptied and given back; the Writer's charter told to leave them out");

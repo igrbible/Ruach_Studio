@@ -309,7 +309,7 @@
   function init(hooks) {
     st.hooks = hooks || {};
     var cb = $("crVersions"), wb = $("wrCreatorVersions");
-    if (cb) cb.addEventListener("click", function () { open({ title: st.hooks.title ? st.hooks.title() : "" }); });
+    if (cb && !window.HeresySongHist) cb.addEventListener("click", function () { open({ title: st.hooks.title ? st.hooks.title() : "" }); });   // HERESY 2689: the song's history takes it
     if (wb) wb.addEventListener("click", pickTitle);
   }
 

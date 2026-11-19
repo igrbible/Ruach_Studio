@@ -22,6 +22,7 @@
 #include "generate.h"
 #include "model-store.h"
 #include "nar.h"
+#include "nar-ladder.h"   // HERESY 2851
 #include "request.h"
 #include "score-guard.h"
 #include "sliders.h"
@@ -111,6 +112,12 @@ struct Yue2Song {
     bool               truncated;  // a stage hit its budget before its end token
     std::string        score_warning;  // HERESY 2433: sung by its score as written with this to say (no key line), "" when whole
     double             window_held = 0.0;   // HERESY 2509: the seconds one window of the sound half held the song to (0: it ended by itself)
+    // HERESY 2830: the music's floor lowered to its plan's end (seconds: the floor asked, the one it ran under, the plan's end; 0: not lowered)
+    double             floor_lowered_from = 0.0, floor_lowered_to = 0.0, floor_plan = 0.0;
+    double             plan_seconds       = 0.0;   // HERESY 2830: its score's length at the score's own tempo (0: no score, or no tempo written)
+    // HERESY 2831: the floor at a cap the request did not set, so the song was never let end (seconds of the floor and of the cap; 0: not)
+    double             floor_bound = 0.0, floor_bound_cap = 0.0;
+    std::string        floor_bound_by;   // "window" (one window of the sound half, 2509) or "context" (the model's context beside the prompt)
     // HERESY 1399: the take's medcard, stage by stage (seconds of the whole batch's stage; tokens of this song)
     int    score_tokens    = 0;      // the plan written here (0: supplied, or no score)
     double score_seconds   = 0.0;
@@ -123,6 +130,54 @@ struct Yue2Song {
     double sound_seconds   = 0.0;    // the acoustic stage
     double vae_seconds     = 0.0;    // this track's decoding
 };
+
+// HERESY 2830, 2831: what the music's floor did in a run, for the log, the take's meta and the job's status
+struct Yue2FloorSaid {
+    int    floor        = 0;                                    // the floor the music ran under (frames, after 2830)
+    double lowered_from = 0.0, lowered_to = 0.0, plan = 0.0;    // 2830: seconds of the floor asked, the one it ran under, the plan's end
+};
+
+static std::string pipeline_clock(double s) {   // m:ss.s, as the page says lengths
+    char buf[32];
+    int  m = (int) (s / 60.0);
+    snprintf(buf, sizeof buf, "%d:%04.1f", m, s - 60.0 * m);
+    return buf;
+}
+
+// HERESY 2830: the music's floor never past the plan's end (score-guard.h, yue2_floor_for_plan): the shortest plan of the batch whose tempo
+// is written sets it (a floor lowered for one song is never past another's end), a plan of unknown length is said and leaves it as asked.
+// plans: the batch's score lengths, or nullptr when the music follows no score (Direct, a replay)
+static int pipeline_floor_for_plans(int floor, const std::vector<Yue2ScoreLength> * plans, Yue2FloorSaid * said) {
+    said->floor = floor;
+    if (!plans) {
+        return floor;
+    }
+    const Yue2ScoreLength * shortest = nullptr;
+    int                     unknown  = 0;
+    for (const Yue2ScoreLength & l : *plans) {
+        if (l.seconds < 0.0) {
+            unknown++;
+        } else if (!shortest || l.seconds < shortest->seconds) {
+            shortest = &l;
+        }
+    }
+    if (unknown > 0 && floor > YUE2_FLOOR_FUSE) {
+        fprintf(stderr, "[AR] Floor %d (%s) not checked against %d of the %zu plans: %s no tempo (free tempo), so where %s is not known\n", floor,
+                pipeline_clock(floor / (double) YUE2_FRAME_RATE).c_str(), unknown, plans->size(), unknown > 1 ? "they write" : "it writes",
+                unknown > 1 ? "they end" : "it ends");
+    }
+    int to = yue2_floor_for_plan(floor, shortest ? shortest->seconds : -1.0, YUE2_FRAME_RATE);
+    if (to < floor) {
+        fprintf(stderr, "[AR] Floor %d (%s) lowered to %d (%s): the plan ends at %s (%d bars at %.0f a minute), and past its end the music has "
+                        "no plan to follow\n", floor, pipeline_clock(floor / (double) YUE2_FRAME_RATE).c_str(), to,
+                pipeline_clock(to / (double) YUE2_FRAME_RATE).c_str(), pipeline_clock(shortest->seconds).c_str(), shortest->bars, shortest->bpm);
+        said->lowered_from = floor / (double) YUE2_FRAME_RATE;
+        said->lowered_to   = to / (double) YUE2_FRAME_RATE;
+        said->plan         = shortest->seconds;
+        said->floor        = to;
+    }
+    return to;
+}
 
 // Parses the CSV interchange of a semantic stream
 static bool pipeline_parse_tokens(const std::string & csv, std::vector<int> * out) {
@@ -624,9 +679,9 @@ static AudioTokenizer * require_atok(Yue2Pipeline * p) {
     return m;
 }
 
-static SheetSage2 * require_ss2(Yue2Pipeline * p, bool refined = false, bool small = false) {
+static SheetSage2 * require_ss2(Yue2Pipeline * p, bool refined = false, bool q8 = false) {   // HERESY 2649: not «small» (Windows defines it as char)
     ModelKey     k = { MODEL_SS2, refined ? p->transcriber_refined_path
-                                          : small && !p->transcriber_small_path.empty() ? p->transcriber_small_path : p->transcriber_path, {} };
+                                          : q8 && !p->transcriber_small_path.empty() ? p->transcriber_small_path : p->transcriber_path, {} };
     SheetSage2 * m = store_require_ss2(p->store, k);
     if (m) {
         m->use_flash_attn = m->use_flash_attn && !p->params.no_fa;
@@ -646,12 +701,12 @@ static bool pipeline_transcribe(Yue2Pipeline * p,
                                 bool           refined  = false,    // HERESY 2328: SheetSage2-Refined instead of SheetSage2
                                 bool           key_mode = false,    // its keys with modes
                                 int            rope     = -1,       // HERESY 2359: SheetSage2's angles, 1 bf16, 0 exact, -1 as loaded
-                                bool           small    = false) {  // HERESY 2625: the Q8_0 pair instead of the F32 one
+                                bool           q8       = false) {  // HERESY 2625: the Q8_0 pair instead of the F32 one (2649: not «small»)
     if (refined && p->transcriber_refined_path.empty()) {
         *error = "SheetSage2-Refined is not installed (models/SheetSage2-Refined-F16.gguf)";
         return false;
     }
-    SheetSage2 * m = require_ss2(p, refined, small);
+    SheetSage2 * m = require_ss2(p, refined, q8);
     if (!m) {
         *error = "transcriber unavailable";
         return false;
@@ -756,6 +811,10 @@ static bool pipeline_continue_codes(Yue2Pipeline *           p,
         return false;
     }
     sampling.max_tokens = budget;
+    if (sampling.min_tokens >= budget) {   // HERESY 2831: said, never silent
+        fprintf(stderr, "[Continue] Floor %d at the budget of %d frames (%s): the end token is banned for the whole run, the music runs to it\n",
+                sampling.min_tokens, budget, *window_bound ? "one window of the sound half" : "the length asked");
+    }
     sampling.min_tokens = std::min(sampling.min_tokens, budget);
     fprintf(stderr, "[Continue] Source %d frames, section [%d, %d), budget %d\n", T_src, a, b, budget);
 
@@ -776,7 +835,9 @@ static bool pipeline_continue_codes(Yue2Pipeline *           p,
     }
     codes->tokens = section;
     codes->tokens.insert(codes->tokens.end(), drawn[0].tokens.begin(), drawn[0].tokens.end());
-    codes->truncated = drawn[0].truncated;
+    codes->truncated   = drawn[0].truncated;
+    codes->floor_bound = drawn[0].floor_bound;   // HERESY 2831
+    codes->context_cut = drawn[0].context_cut;
     return true;
 }
 
@@ -923,9 +984,7 @@ static std::string yue2_score_vocal_octave(const std::string & abc, int octaves,
 // HERESY 1087, 2433: yue2_score_broken lives in score-guard.h
 
 
-// HERESY 1768: the decode ladder: pieces of about 20 s (25 frames a second), each hearing 2 s past its edges
-static const int YUE2_LADDER_PIECE  = 500;
-static const int YUE2_LADDER_MARGIN = 50;
+// HERESY 1768, 2851: the decode ladder lives in nar-ladder.h
 
 // HERESY 2352: the seam of a song longer than one window of the sound half. The window holds the prefix, the piece's codes and its latent block
 // (chunk_sizes below), so a song past it (about 340-410 s, by the prefix) was solved in two pieces butted together, the first one's window
@@ -1169,6 +1228,8 @@ static bool pipeline_generate(Yue2Pipeline *          p,
             }
             if (!score_warn[i].empty() && score_warn[i] == YUE2_SCORE_NO_KEY) {
                 fprintf(stderr, "[Pipeline] WARNING: the score of song %d has no key line (K:): sung as written\n", i);
+            } else if (score_warn[i].find(YUE2_SCORE_NO_NOTE) != std::string::npos) {   // HERESY 2832
+                fprintf(stderr, "[Pipeline] WARNING: the score of song %d: %s: sung as written, the music follows no plan\n", i, score_warn[i].c_str());
             }
             if (r.score_guard && !why.empty()) {
                 fprintf(stderr, "[Pipeline] FATAL: the score of song %d is broken: %s\n", i, why.c_str());
@@ -1197,6 +1258,12 @@ static bool pipeline_generate(Yue2Pipeline *          p,
             fprintf(stderr, "[Score] Vocal line %+d octave%s: song %d, %d notes moved\n", r.vocal_octave,
                     r.vocal_octave == 1 || r.vocal_octave == -1 ? "" : "s", i, moved);
         }
+    }
+    // HERESY 2830: each sung score's own length at its own tempo (score-guard.h), for the music's floor below and the take's meta; -1 when it
+    // writes no tempo (free tempo took it out above) or holds no bar
+    std::vector<Yue2ScoreLength> plan_len(B);
+    for (int i = 0; i < B && has_score; i++) {
+        plan_len[i] = yue2_score_seconds(scores[i]);
     }
     // Local addition: the score alone, no music and no audio
     if (r.plan_only) {
@@ -1251,7 +1318,9 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         }
         whole_cap = std::max(whole_cap, 1);
     }
-    bool window_bound = false;   // the window, not the requested length or the stage's cap, set the budget
+    bool          window_bound = false;   // the window, not the requested length or the stage's cap, set the budget
+    Yue2FloorSaid floor_said;             // HERESY 2830, 2831: what the music's floor did
+    floor_said.floor = r.semantic_sampling.min_tokens;
 
     std::vector<Yue2Generation> codes(B);
     SliderSet                   sliders;
@@ -1276,6 +1345,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
     } else {
         // The requested length caps the budget of the stage, never raises it
         Yue2Sampling semantic = r.semantic_sampling;
+        semantic.min_tokens   = pipeline_floor_for_plans(semantic.min_tokens, has_score ? &plan_len : nullptr, &floor_said);   // HERESY 2830
         int          budget   = (int) (r.duration * (float) YUE2_FRAME_RATE);
         if (budget > 0 && budget < semantic.max_tokens) {
             fprintf(stderr, "[AR] Frame budget clamped to %d by the requested duration (%.1f s)\n", budget,
@@ -1352,6 +1422,14 @@ static bool pipeline_generate(Yue2Pipeline *          p,
             fprintf(stderr, "[AR] Continuing after %zu kept frames (%.1f s), budget %d\n", keep.size(),
                     keep.size() / (double) YUE2_FRAME_RATE, semantic.max_tokens);
         }
+        // HERESY 2831: a floor at the cap offers the end token at no step: said, never silent (the 2509 window probe's floor of 8:00 went
+        // to its window of 7:16 with nothing said, and its card said «held whole at 7:16» of a song never let end)
+        if (semantic.min_tokens >= semantic.max_tokens) {
+            fprintf(stderr, "[AR] Floor %d (%s) at the cap of %d frames (%s, %s): the end token is banned for the whole run, the music runs to the "
+                            "cap whether its plan has ended or not\n", floor_said.floor, pipeline_clock(floor_said.floor / (double) YUE2_FRAME_RATE).c_str(),
+                    (int) keep.size() + semantic.max_tokens, pipeline_clock(((int) keep.size() + semantic.max_tokens) / (double) YUE2_FRAME_RATE).c_str(),
+                    window_bound ? "one window of the sound half" : "the length asked");
+        }
         sliders.kept     = (int) keep.size();     // HERESY 1166: a curve runs over the whole song, the kept part too
         p->lora_rt[0].kept = (int) keep.size();   // HERESY 1447: and a LoRA's wave
         lora_span          = (int) keep.size() + semantic.max_tokens;
@@ -1384,6 +1462,7 @@ static bool pipeline_generate(Yue2Pipeline *          p,
     std::vector<float> probe((size_t) rows);
     std::vector<int>   chunk_sizes(B);
     std::vector<int>   seam_margin(B, 0);   // HERESY 2352: what a song's windows hear past an inner edge (0: one window, or the ladder)
+    std::vector<int>   lad_margin(B, 0);    // HERESY 2851: what a ladder's windows hear past a piece's edges (0: no ladder for this song)
 
     songs->assign((size_t) B * M, {});
     for (int i = 0; i < B; i++) {
@@ -1394,9 +1473,10 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         }
         chunk_sizes[i] = nar_window(context, prefixes[i].size());   // HERESY 2509: said once, the budget reads it too
         if (r.nar_ladder) {                           // HERESY 1768: even pieces of about 20 s, room for their windows' 2 s either side
-            const int n = (T_lat + YUE2_LADDER_PIECE - 1) / YUE2_LADDER_PIECE, even = (T_lat + n - 1) / n;
-            if (n > 1 && even + 2 * YUE2_LADDER_MARGIN <= chunk_sizes[i]) {
-                chunk_sizes[i] = even;
+            const int piece = yue2_ladder_piece(T_lat, chunk_sizes[i]);   // HERESY 2851: capped to the window less both margins
+            if (piece > 0) {
+                chunk_sizes[i] = piece;
+                lad_margin[i]  = YUE2_LADDER_MARGIN;
             }
         } else if (T_lat > chunk_sizes[i] && seam_on() && seam_env("YUE2_T_SEAM", 1)) {   // HERESY 2352: even pieces whose windows hear the margin past an inner edge
             const int window = chunk_sizes[i], margin = seam_env("YUE2_T_MARGIN", YUE2_SEAM_MARGIN);
@@ -1419,9 +1499,21 @@ static bool pipeline_generate(Yue2Pipeline *          p,
             song.score      = scores[i];
             song.score_warning = score_warn[i];   // HERESY 2433
             song.T_lat      = T_lat;
-            if (window_bound && codes[i].truncated) {   // HERESY 2509: the window, not the song, ended it
+            // HERESY 2831: a floor at the cap never let the song end, so neither the window nor the song ended it: window_held is said only
+            // of a song free to end before the window (2509), and floor_bound of one held there by a cap the request did not set (the window,
+            // the context); the length asked below the floor is the fuse's own rule (1088), said in the log only
+            if (window_bound && codes[i].truncated && !codes[i].floor_bound) {   // HERESY 2509: the window, not the song, ended it
                 song.window_held = (double) T_lat / YUE2_FRAME_RATE;
             }
+            if (!replay && codes[i].floor_bound && (window_bound || codes[i].context_cut)) {
+                song.floor_bound     = floor_said.floor / (double) YUE2_FRAME_RATE;
+                song.floor_bound_cap = (double) T_lat / YUE2_FRAME_RATE;
+                song.floor_bound_by  = codes[i].context_cut ? "context" : "window";
+            }
+            song.floor_lowered_from = floor_said.lowered_from;   // HERESY 2830
+            song.floor_lowered_to   = floor_said.lowered_to;
+            song.floor_plan         = floor_said.plan;
+            song.plan_seconds       = has_score && plan_len[i].seconds > 0.0 ? plan_len[i].seconds : 0.0;
             song.truncated  = truncated[i] || codes[i].truncated;
             song.tokens.reserve(codes[i].tokens.size());
             for (size_t k = 0; k < codes[i].tokens.size(); k++) {
@@ -1476,8 +1568,8 @@ static bool pipeline_generate(Yue2Pipeline *          p,
         // crossfade of their latents half a margin either side of their common edge. The noise stays in the latents until every piece is solved.
         // HERESY 2352: a song past one window joins its pieces the same way, with the seam's margin and crossfade; its first window is sealed
         const bool seam  = !r.nar_ladder && seam_margin[i] > 0 && chunks > 1;
-        const bool lad   = (r.nar_ladder || seam) && chunks > 1;
-        const int  lad_m = !lad ? 0 : (seam ? seam_margin[i] : YUE2_LADDER_MARGIN);
+        const bool lad   = (lad_margin[i] > 0 || seam) && chunks > 1;   // HERESY 2851: a song the ladder cannot fit is solved in plain pieces
+        const int  lad_m = !lad ? 0 : (seam ? seam_margin[i] : lad_margin[i]);
         const int  lad_x = !seam ? YUE2_LADDER_MARGIN / 2 : std::max(1, std::min(lad_m, seam_env("YUE2_T_XFADE", YUE2_SEAM_XFADE)));
         std::vector<std::vector<float>> lad_acc(lad ? M : 0, std::vector<float>(lad ? (size_t) T_lat * YUE2_LATENT_DIM : 0, 0.0f));
         std::vector<std::vector<float>> seam_prev(seam ? M : 0);   // HERESY 2352: the window before, where it overlaps the next one, to say how they agree

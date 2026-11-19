@@ -372,7 +372,7 @@
       '<label class="field" id="rdSplitBox"><span class="label">' + esc(E("reader.split")) + '</span><select id="rdSplit" data-tip="' + esc(E("reader.split.tip")) + '">' +
       '<option value="sentence">' + esc(E("reader.sentences")) + '</option><option value="verse">' + esc(E("reader.verses")) + "</option></select></label></div>" +
       '<details class="rd-box" id="rdTr"><summary data-tip="' + esc(E("reader.tr.tip")) + '">' + esc(E("reader.tr")) + '</summary><div class="rd-tr">' +
-      '<div class="rd-tr-go"><input type="file" id="rdTrFile" accept="audio/*,video/*" data-tip="' + esc(E("reader.tr.file.tip")) + '" />' +
+      '<div class="rd-tr-go"><input type="file" id="rdTrFile" accept=".wav,.flac,.ogg,.opus,.mp3,.m4a,.aac,.3gp,.amr" data-tip="' + esc(E("reader.tr.file.tip")) + '" />' +
       '<select id="rdTrLang" data-tip="' + esc(E("reader.lang.tip")) + '"><option value="auto">' + esc(E("reader.lang.auto")) + "</option>" +
       LANG_CODES.map(function (l) { return '<option value="' + l + '" translate="no">' + l + "</option>"; }).join("") + "</select>" +
       ib("ear", "rdTrGo", E("reader.tr.go"), E("reader.tr.go.tip")) + "</div>" +   // HERESY 2514
@@ -386,7 +386,8 @@
       '<textarea id="rdText" class="rd-text" rows="14" spellcheck="false" data-tip="' + esc(E("reader.text.tip")) + '"></textarea></label>' +
       '<div class="rd-actions rd-tools">' + (window.HeresyCase ? window.HeresyCase.buttons("rdText", "rdMode") : "") +   // HERESY 2453
       ib("timer", "rdPause", E("reader.pause"), E("reader.pause.tip")) +   // HERESY 2334; 2514: icons
-      ib("scissors", "rdSplitAdd", E("reader.split.add"), E("reader.split.tip")) + "</div>" +   // HERESY 2344 +
+      ib("scissors", "rdSplitAdd", E("reader.split.add"), E("reader.split.tip")) +
+      ib("sparkles", "rdTagSuggest", E("reader.tagSuggest"), E("reader.tagSuggest.tip")) + "</div>" +   // HERESY 2694   // HERESY 2344 +
       '<label class="check" data-tip="' + esc(E("reader.tags.tip")) + '"><input type="checkbox" id="rdTags" /> <span>' + esc(E("reader.tags")) + "</span></label>" +
       '<details class="rd-box" id="rdPal"><summary data-tip="' + esc(E("reader.palette.tip")) + '">' + esc(E("reader.palette")) + '</summary><div id="rdPalBody"></div></details>' +
       "</section>" +
@@ -401,9 +402,13 @@
       '<div class="field" id="rdCastBox" hidden><span class="label">' + esc(E("reader.speakers")) + '</span><div class="rd-cast" id="rdCast"></div></div>' +
       '<div class="rd-row"><label class="field"><span class="label">' + esc(E("reader.lang")) + '</span><select id="rdLang" data-tip="' + esc(E("reader.lang.tip")) + '">' +
       '<option value="auto">' + esc(E("reader.lang.auto")) + "</option>" + LANG_CODES.map(function (l) { return '<option value="' + l + '" translate="no">' + l + "</option>"; }).join("") + "</select></label>" +
+      '<label class="field" id="rdGreekBox" hidden><span class="label">' + esc(E("reader.greek")) + '</span><select id="rdGreek" data-tip="' + esc(E("reader.greek.tip")) + '">' +   // HERESY 2696
+      '<option value="polytonic">' + esc(E("reader.greek.poly")) + '</option><option value="monotonic">' + esc(E("reader.greek.mono")) + "</option></select></label>" +
       '<label class="field" id="rdStyleBox"><span class="label">' + esc(E("reader.style")) + '</span><input type="text" id="rdStyle" maxlength="400" spellcheck="false" data-tip="' + esc(E("reader.style.tip")) + '" /></label></div>' +
       '<div class="rd-actions"><label class="check" data-tip="' + esc(E("reader.stress.tip")) + '"><input type="checkbox" id="rdStress" checked /> <span>' + esc(E("reader.stress")) + "</span></label>" +
       '<label class="check" data-tip="' + esc(E("reader.glyphs.tip")) + '"><input type="checkbox" id="rdGlyphs" /> <span>' + esc(E("reader.glyphs")) + "</span></label>" +
+      '<label class="check" id="rdWindowBox" hidden data-tip="' + esc(E("reader.window.tip")) + '"><input type="checkbox" id="rdWindow" /> <span>' + esc(E("reader.window")) + "</span></label>" +   // HERESY 2698
+      '<label class="check" id="rdSceneBox" hidden data-tip="' + esc(E("reader.scene.tip")) + '"><input type="checkbox" id="rdScene" /> <span>' + esc(E("reader.scene")) + "</span></label>" +   // HERESY 2699
       ib("stress", "rdCheck", E("reader.check"), E("reader.check.tip")) +
       "</div>" +
       '<div class="rd-box rd-check" id="rdCheckOut" hidden></div>' +
@@ -471,7 +476,7 @@
       '<div class="rd-wave-box" id="rdOwnWaveBox"><canvas class="rd-wave" id="rdOwnWave" tabindex="0" aria-label="' + esc(E("reader.own.wave")) + '" data-tip="' + esc(E("reader.own.wave")) + '"></canvas>' +
       '<div class="rd-wave-empty" id="rdOwnEmpty">' + esc(E("reader.own.drop")) + "</div></div>" +
       '<div class="rd-wave-bar"><label class="btn ghost small icon-only rd-ib" aria-label="' + esc(E("reader.own.file")) + '" data-tip="' + esc(E("reader.own.file.tip")) + '">' + (UI("upload") || esc(E("reader.own.file"))) +
-      '<input type="file" id="rdOwnFile" accept="audio/*" hidden /></label>' +
+      '<input type="file" id="rdOwnFile" accept=".wav,.flac,.ogg,.opus,.mp3,.m4a,.aac,.3gp,.amr" hidden /></label>' +
       ib("waveform", "rdOwnAll", E("reader.own.playAll"), E("reader.own.playAll")) + ib("play", "rdOwnSel", E("reader.own.playSel"), E("reader.own.playSel")) +
       ib("stop-circle", "rdOwnStop", E("reader.own.stop"), E("reader.own.stop")) +
       '<button type="button" class="btn small rd-own-trim" id="rdOwnTrim" data-tip="' + esc(E("reader.own.trim.tip")) + '">' + esc(E("reader.own.trim")) + "</button>" +   // HERESY 2643b
@@ -724,7 +729,7 @@
   function paintForm() {
     $("rdOff").hidden = !st.absent;
     if (st.absent) $("rdOff").textContent = E("reader.absent");
-    paintEngines(); paintCards(); paintVoice(); paintPalette(); paintEngineExtras(); paintMode(); paintGo(); designForm();
+    paintEngines(); paintCards(); paintVoice(); paintPalette(); paintEngineExtras(); paintMode(); paintGo(); designForm(); paintWindow();   // HERESY 2698
     var langs = (engine() || {}).langs || [], lsel = $("rdOwnLang");
     setOpts(lsel, langs.map(function (l) { return '<option value="' + esc(l) + '" translate="no">' + esc(l) + "</option>"; }).join(""), recall("yue2.readerOwnLang") || langs[0] || "");
   }
@@ -782,6 +787,12 @@
     return "en";
   }
   function lang() { var v = $("rdLang").value; return v === "auto" ? detectLang($("rdText").value) : v; }
+  function paintWindow() {                               // HERESY 2698: only an engine with a window; 2699: the scene for its dialog
+    var b = $("rdWindowBox"), s = $("rdSceneBox");
+    if (b) b.hidden = !(engine() && engine().window);
+    if (s) s.hidden = !(engine() && engine().scene && st.mode === "dialog");
+  }
+  function paintGreek() { var b = $("rdGreekBox"); if (b) b.hidden = lang() !== "el"; }   // HERESY 2696: the Greek's choice only for a Greek reading
   function paintEngineExtras() {
     var e = engine(), note = $("rdEngNote"), parts = [];
     if (e && e.license) parts.push((e.license.url ? '<a href="' + esc(e.license.url) + '" target="_blank" rel="noopener" data-tip="' + esc(e.license.terms) + '">' + esc(e.license.name) + "</a>" : esc(e.license.name)) +
@@ -1014,6 +1025,9 @@
       split: $("rdSplit").value, temperature: num("rdTemp"), top_k: num("rdTopk"), hear: $("rdHear").checked, seed: $("rdSeed").value.trim(), gap: num("rdGap"), turn_gap: num("rdTurnGap"),
       card: $("rdCard").value || "auto", title: $("rdTitle").value.trim(), workspace: C && C.currentIn ? C.currentIn("reader") : C && C.current ? C.current() : "",
       lang: $("rdLang").value, stress: $("rdStress").checked, style: engine() && engine().style ? $("rdStyle").value.trim() : "" };
+    if (lang() === "el") body.greek = $("rdGreek").value === "monotonic" ? "monotonic" : "polytonic";   // HERESY 2696
+    if (engine() && engine().window && $("rdWindow").checked) body.window = true;   // HERESY 2698
+    if (engine() && engine().scene && st.mode === "dialog" && $("rdScene").checked) body.scene = true;   // HERESY 2699
     if (engine() && (engine().tiers || []).length) body.tier = $("rdTier").value || "auto-quality";
     body.glyphs = $("rdGlyphs").checked;
     if ($("rdAcutesOff") && $("rdAcutesOff").checked) body.acutes_off = true;   // HERESY 2343: a test only
@@ -1208,6 +1222,111 @@
       (tags.length ? "Where the tone is plain from the words, you may begin a sentence with one of these tags, and only these: " + tags.join(" ") + ". " : "") +
       "Return the script only: no title, no comments, no notes about what you changed.";
   }
+  // HERESY 2694 (the plan after 2.0.8, the Writer's «Подсказчик тегов эмоций на модели Писателя для Чтеца», the room's rest of 07.11.2026): the
+  // Writer's model puts this engine's own tags into the text (the selection, else the whole), a tone where the words make it plain or where it
+  // changes, a sound where the words say it ([sighs] where someone sighs: Viktor's ear on «глубоко вздохнул» 12.11, «Он реально вздохнул здесь!»).
+  // Its answer is taken only when it added tags of the engine and changed nothing else, word for word and tag for tag; the tags then go into the
+  // text as it is written (its spaces, its lines); a part whose words the model changed is kept as it was, and said. Ctrl+Z takes it back
+  function tagKey(s) { var m = /^(\[|<\|)\s*([\s\S]*?)\s*(\]|\|>)$/.exec(String(s)); return m ? m[1] + m[2].toLowerCase().replace(/\s+/g, " ") + m[3] : String(s).toLowerCase(); }
+  function tagVocab(e) {
+    var t = (e && e.tags) || {}, v = {};
+    (t.groups || []).forEach(function (g) {
+      (g.items || []).forEach(function (x) { var tag = (t.open || "[") + (t.form === "bare" ? "" : (g.cat || g.id) + ":") + x + (t.close || "]"); v[tagKey(tag)] = { tag: tag, place: g.place || "sentence" }; });
+    });
+    return v;
+  }
+  function tagToks(s) {                                  // a text's tags and words with where each starts; the space between them is not kept
+    var out = [], re = /\[[^\[\]\n]{1,80}\]|<\|[^|\n]{1,80}\|>/g, last = 0, m;
+    function words(a, b) { var w = /\S+/g, x, seg = s.slice(a, b); while ((x = w.exec(seg))) out.push({ t: x[0], at: a + x.index, tag: false }); }
+    while ((m = re.exec(s))) { words(last, m.index); out.push({ t: m[0], at: m.index, tag: true }); last = m.index + m[0].length; }
+    words(last, s.length);
+    return out;
+  }
+  // the answer's added tags put into the original as it is written, or null when the answer changed, dropped or moved anything else
+  function tagGraft(orig, ans, vocab, dialog) {
+    var O = tagToks(orig), A = tagToks(ans), i = 0, adds = [];
+    for (var j = 0; j < A.length; j++) {
+      if (i < O.length && A[j].t === O[i].t) { i++; continue; }
+      var v = A[j].tag ? vocab[tagKey(A[j].t)] : null;
+      if (!v) return null;
+      adds.push({ at: i, tag: v.tag });
+    }
+    if (i < O.length) return null;
+    if (dialog) adds.forEach(function (a) {             // a tag before a speaker's name goes after it: «Name: [sad] words»
+      if (a.at >= O.length || !/(^|\n)[ \t]*$/.test(orig.slice(0, O[a.at].at))) return;
+      for (var n = a.at; n < Math.min(O.length, a.at + 3); n++) if (/[:：]$/.test(O[n].t)) { a.at = n + 1; return; }
+    });
+    adds.sort(function (x, y) { return x.at - y.at; });
+    var out = "", pos = 0;
+    adds.forEach(function (a) {
+      var at = a.at < O.length ? O[a.at].at : orig.length;
+      out += orig.slice(pos, at) + (a.at < O.length ? a.tag + " " : (/\s$/.test(orig.slice(0, at)) ? "" : " ") + a.tag);
+      pos = at;
+    });
+    return { text: out + orig.slice(pos), n: adds.length };
+  }
+  function tagPrompt(e, dialog) {
+    var t = (e && e.tags) || {}, sent = [], inl = [];
+    (t.groups || []).forEach(function (g) {
+      (g.items || []).forEach(function (x) { (g.place === "inline" ? inl : sent).push((t.open || "[") + (t.form === "bare" ? "" : (g.cat || g.id) + ":") + x + (t.close || "]")); });
+    });
+    return "You mark a text for a text-to-speech reader with the reader's own tags, and you change nothing else. " +
+      "Copy the text exactly: every word, every punctuation mark, every accent mark, every line break and every tag already in it, in the same order; never add, drop, fix, translate or reorder a word. " +
+      "Your only change: insert tags from these lists, written exactly as listed. " +
+      (sent.length ? "Tags of tone and manner, each at the start of a sentence: " + sent.join(" ") + ". " : "") +
+      (inl.length ? "Tags of a sound or a pause, right where it happens: " + inl.join(" ") + ". " : "") +
+      "Put a tone tag only where the words make the feeling plain or where it changes, and leave the sentences after it untagged while the tone holds: most sentences carry none. " +
+      "Where the words say that someone sighs, laughs, cries or hums, put the matching sound tag right there. " +
+      (dialog ? "Each line begins with the speaker's name and a colon: keep it first, and put a tag after the colon, never before the name. " : "") +
+      "Return the text only, with the tags in it: no title, no comments, no notes.";
+  }
+  function tagSuggest() {
+    var ta = $("rdText"), e = engine(), vocab = tagVocab(e), dialog = st.mode === "dialog";
+    if (typeof window.HeresyWriterAsk !== "function") { toast(E("reader.tr.noWriter"), "bad"); return; }
+    if (!Object.keys(vocab).length) { toast(E("reader.tagSuggest.none"), "bad"); return; }
+    var a = ta.selectionStart || 0, b = ta.selectionEnd || 0;
+    if (b <= a) { a = 0; b = ta.value.length; }
+    var whole = ta.value, part = whole.slice(a, b);
+    if (!part.trim()) return;
+    var bits = part.split(/(\n[ \t]*\n\s*)/), chunks = [], cur = null;   // paragraphs in parts, each part's own separator kept as written
+    for (var k = 0; k < bits.length; k += 2) {
+      if (cur && cur.text.length + bits[k].length > TR_CHUNK) { chunks.push(cur); cur = null; }
+      if (!cur) cur = { text: "", tail: "" };
+      cur.text += cur.tail + bits[k]; cur.tail = bits[k + 1] || "";
+    }
+    if (cur) chunks.push(cur);
+    var btn = $("rdTagSuggest"), out = [], n = 0, added = 0, kept = 0, sys = tagPrompt(e, dialog);
+    btn.disabled = true;
+    toast(fill("reader.tagSuggest.asking", { "#0": chunks.length }));
+    (function next() {
+      if (n >= chunks.length) {
+        btn.disabled = false;
+        if (ta.value !== whole) { toast(E("reader.tagSuggest.moved"), "bad"); return; }   // edited while the model wrote: nothing put in
+        if (added) {
+          var text = out.map(function (c, x) { return c + chunks[x].tail; }).join(""), done = false;
+          ta.focus();
+          ta.setSelectionRange(a, b);
+          try { done = document.execCommand("insertText", false, text) && ta.value === whole.slice(0, a) + text + whole.slice(b); } catch (x) { done = false; }
+          if (!done) ta.value = whole.slice(0, a) + text + whole.slice(b);   // no undo step where the browser gives none
+          ta.dispatchEvent(new Event("input", { bubbles: true }));
+          if (!$("rdTags").checked) { $("rdTags").checked = true; keep("yue2.readerTags." + st.mode, "1"); }
+        }
+        toast(fill("reader.tagSuggest.done", { "#0": added, "#1": chunks.length }) + (kept ? " · " + fill("reader.tagSuggest.kept", { "#0": kept }) : ""), kept && !added ? "bad" : "");
+        return;
+      }
+      var c = chunks[n];
+      if (!c.text.trim()) { out.push(c.text); n++; next(); return; }
+      window.HeresyWriterAsk([{ role: "system", content: sys }, { role: "user", content: c.text }], Math.min(16384, Math.round(c.text.length * 1.5) + 512), 0.3,
+        "the Narrator's tags, part " + (n + 1) + " of " + chunks.length).then(function (r) {
+        var ans = (r && typeof r.text === "string" ? r.text : ((((r && r.choices) || [])[0] || {}).message || {}).content) || "";
+        ans = String(ans).replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+        var g = ans ? tagGraft(c.text, ans, vocab, dialog) : null;
+        if (g) { out.push(g.text); added += g.n; } else { out.push(c.text); kept++; }
+        n++; next();
+      }).catch(function (x) { btn.disabled = false; toast(x.message || String(x), "bad"); });
+    })();
+  }
+  window.HeresyReaderTags = { graft: tagGraft, vocab: tagVocab, prompt: tagPrompt, toks: tagToks };
   function trClean() {
     var raw = $("rdTrText").value.trim();
     if (!raw) return;
@@ -2142,6 +2261,17 @@
     voiceDelFace();
     $("rdEngine").addEventListener("change", function () { keep("yue2.readerEngine", this.value); paintCards(); paintPalette(); paintEngineExtras(); paintGo(); paintVoice(); paintCast(); designForm(); });
     $("rdLang").value = recall("yue2.readerLang") || "auto";
+    $("rdGreek").value = recall("yue2.readerGreek") === "monotonic" ? "monotonic" : "polytonic";   // HERESY 2696
+    $("rdGreek").addEventListener("change", function () { keep("yue2.readerGreek", this.value === "monotonic" ? "monotonic" : null); });
+    $("rdLang").addEventListener("change", paintGreek);
+    $("rdWindow").checked = recall("yue2.readerWindow") === "1";   // HERESY 2698
+    $("rdWindow").addEventListener("change", function () { keep("yue2.readerWindow", this.checked ? "1" : null); });
+    $("rdEngine").addEventListener("change", paintWindow);
+    $("rdMode").addEventListener("change", paintWindow);   // HERESY 2699
+    $("rdScene").checked = recall("yue2.readerScene") === "1";
+    $("rdScene").addEventListener("change", function () { keep("yue2.readerScene", this.checked ? "1" : null); });
+    $("rdText").addEventListener("input", function () { if ($("rdLang").value === "auto") paintGreek(); });
+    setTimeout(paintGreek, 0);
     if ($("rdLang").selectedIndex < 0) $("rdLang").value = "auto";
     $("rdLang").addEventListener("change", function () { keep("yue2.readerLang", this.value); if ($("rdDict").open) loadDict(); });
     $("rdStress").checked = recall("yue2.readerStress") !== "0";
@@ -2236,6 +2366,7 @@
       var at = ta.value.indexOf(tag, Math.max(0, a - 4)) + tag.length;
       ta.setSelectionRange(at, at);
     });
+    $("rdTagSuggest").addEventListener("click", tagSuggest);   // HERESY 2694
     $("rdPause").addEventListener("click", function () {   // HERESY 2334: a pause tag at the cursor, its seconds selected to type over
       var ta = $("rdText"), a = ta.selectionStart || 0, b = ta.selectionEnd || a, pre = a > 0 && !/\s$/.test(ta.value.slice(0, a)) ? " " : "";
       ta.value = ta.value.slice(0, a) + pre + "[pause:1s]" + ta.value.slice(b);

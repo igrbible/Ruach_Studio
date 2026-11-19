@@ -56,7 +56,7 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
   GET /activity?since=SEQ          HERESY 1157: the lab's GPU work as it starts and ends, and what runs now
   POST /regen {names}              HERESY 1160: made again with new seeds; the new take takes the old one's places
   GET /remaster?name=TAKE&s=JSON   the Debunker v6 pipeline (remaster_job.py) on the take or its stems
-  POST /import?file=NAME&title=T   a track from elsewhere (WAV, FLAC, MP3: a SUNO track…) as the body:
+  POST /import?file=NAME&title=T   a track from elsewhere (WAV, FLAC, OGG, MP3 or a phone's M4A, AAC, 3GP, AMR by its bytes, up to 200 MB: a SUNO track…) as the body:
                                    becomes an ordinary take in the library, 48 kHz 24-bit, marked imported
   POST /lyrics?name=TAKE           the body (text) becomes the take's lyrics, for the lyrics check
   GET /upscale?name=TAKE&mode=subtle|normal|high|extreme[&source=derived/…][&variants=1|2][&keep=0]
@@ -178,6 +178,7 @@ sys.path.insert(0, str(HERE))
 import gloss_core  # noqa: E402
 import collection  # noqa: E402   HERESY 1041
 import name_rule  # noqa: E402   HERESY 2462: one rule for every name
+from proc_name import proc_name  # noqa: E402   HERESY 2733: GPU0, XPU0, CPU in what the user reads
 import writer  # noqa: E402   HERESY 1047
 import timing  # noqa: E402   HERESY 1056
 import training  # noqa: E402   HERESY 1063
@@ -198,8 +199,10 @@ import migrate_models  # noqa: E402   HERESY 2330: 2.0.6's folders moved into mo
 import plugins as plugin_kit  # noqa: E402   HERESY 1460: the Refiner's steps of one's own (user/plugins/)
 import lamp  # noqa: E402   HERESY 2301: one stream through the analog gateway at a time on the machine, and its line
 import daw as daw_kit  # noqa: E402   HERESY 1470: the Refiner's DAW (Plenio's stem mixer, plenio_core/)
+import upload_guard  # noqa: E402   HERESY 2659: the gate every sound brought in passes (its header and its body)
 import daw_mix  # noqa: E402   HERESY 1531: the Refiner's mixer, its render (ruach.mix/1)
 import bargrid  # noqa: E402   HERESY 2313: a take's bar grid, the DAW's and the Videographer's
+import backing  # noqa: E402   HERESY 2677: a voice over the user's own backing
 import daw_mixes  # noqa: E402   HERESY 1533: the DAW's mixes kept beside their set
 import merges  # noqa: E402   HERESY 1494: what a merged backbone carries, read from its file
 import derived_marks  # noqa: E402   HERESY 1504: likes, dislikes and stars on the files made from a take
@@ -208,6 +211,7 @@ import banks as bank_shelf  # noqa: E402   HERESY 2006: the shelf of banks (bank
 import bankbuilder  # noqa: E402   HERESY 2031: the Bank Builder (recordings of one wind instrument into an SFZ bank)
 import relay as chat_relay  # noqa: E402   HERESY 2005: a chat server on the local network, for a page over https
 import origin_gate  # noqa: E402   HERESY 2011: a page of another site, or a name of the attacker's, refused on the lab's own port
+import lift_stream  # noqa: E402   HERESY 2837: the player's lifted take streamed, made on the fly, never kept
 import audio_io  # noqa: E402   HERESY 1512: the audio interfaces, physical and virtual, and the analog gateway's choice
 import refiner_profiles  # noqa: E402   HERESY 1515: the Refiner's setups by name
 import creator_versions  # noqa: E402   HERESY 1519: the Creator's words on each Generate, apart from the takes
@@ -958,20 +962,19 @@ def timing_recording(data):
         raise ValueError("the recording: base64, please")
     if len(raw) < 4096:
         raise ValueError("no recording")
-    ext = Path(str(data.get("file") or "x.wav")).suffix.lower()
-    ext = ext if ext in (".wav", ".mp3", ".flac", ".m4a", ".ogg", ".opus", ".aac") else ".wav"
+    head = upload_guard.inspect(raw)                   # HERESY 2659: WAV, FLAC, OGG, MP3 or a phone's M4A, AAC, 3GP, AMR by its bytes, its body checked whole before a job is made
     rid = hashlib.sha256(raw).hexdigest()[:16]         # the recording: its words, heard once
     sid = rid + "-" + hashlib.sha256(lyrics.encode("utf-8")).hexdigest()[:8]   # HERESY 1719b: the job, the recording with these lyrics
     CACHE.mkdir(exist_ok=True)
-    src, words = CACHE / f"rec-{rid}{ext}", CACHE / f"rec-{rid}.words.json"
+    src, words = CACHE / f"rec-{rid}{head.ext}", CACHE / f"rec-{rid}.words.json"
+    if not src.is_file():
+        upload_guard.keep(raw, CACHE, f"rec-{rid}", head)
     with jobs_lock:
         job = REC_JOBS.get(sid)
         if job and job["status"] in ("queued", "running"):
             return dict({k: v for k, v in job.items() if k != "lyrics"}, id=sid)
         job = {"status": "queued", "started": time.time(), "kind": "timing", "lyrics": lyrics}
         REC_JOBS[sid] = job
-    if not src.is_file():
-        src.write_bytes(raw)
 
     def work():
         try:
@@ -1458,6 +1461,383 @@ def stems_async(name, mode, source=""):
     return dict(job, name=name)
 
 
+# HERESY 2677 (Viktor 18.11.2026: «Голос поверх своей минусовки … строй, раз сам предложил, и строй основательно, чтобы не возвращаться к
+# этому позже»): a voice over the user's own backing; backing.py says the way and does the sound's work. Read: the backing (a take of the
+# Library, a file of its tree, or an import through the gate) has its guide vocal split off when one is heard there, its score written by
+# SheetSage2 (the engine's /transcribe), the bed made of that score, its bar grid heard; kept beside the backing (backing-read.json, by its
+# file, its time and size and the choices). Finish: the song the page sang on that bed (an engine job, waited for here, or a take already
+# sung) has its voice split off, laid on the backing bar by bar, levelled against it as the model levelled it against its own band, mixed,
+# and kept as a new take with both stems (derived/stems-vocals), its family tree under the song, filed where the page said
+BACKING_KEEP = "backing-read.json"
+BACKING_DONE = {}                                    # the finished ones by their key, for the page that asks after them (until a restart)
+BACKING_TRANSCRIBERS = ("heretical", "refined", "sheetsage2", "sheetsage2-bf16", "sheetsage2-refined", "sheetsage2-exact")   # the page's names and the engine's
+
+
+def _backing_card(why):
+    """A card for a split, or None for the processor: a card of the lab's jobs the guard gives (8 GB, as the Refiner's stems; the idle
+    engine's models make room when the engine is on CUDA, as for the Refiner: on the Intel Arc they hold no CUDA card), never one a
+    training run holds."""
+    held = set()
+    for rname, run in list(training.RUNS.items()):
+        if run.get("status") in ("running", "stopping"):
+            held.update(training.run_cards(training._meta(training.paths(KIT)["runs"] / rname)))
+    unload = True
+    try:
+        unload = any(str(g.get("name", "")).startswith("CUDA") for g in _engine_ask("/hardware", timeout=5).get("gpus") or [])
+    except (OSError, ValueError):
+        pass
+    try:
+        gpu, _free = free_gpu(8000, why=why, unload=unload)
+    except RuntimeError:
+        return None
+    return None if gpu in held else gpu
+
+
+def _backing_split(name, source, job, what):
+    """(voice, band, how) of a take or a file of its tree: a set of stems of that sound already made (each mode keeps vocals and instrumental),
+    else split now (stems_job.py vocals, as the Refiner splits) on a card the guard gives, or on a share of the processor when none can."""
+    d = take_dir(name)
+    want = source or "the take"
+    for man in sorted(d.glob("derived/stems-*/manifest.json")):
+        try:
+            m = json.load(open(man, encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if (m.get("source") or "the take") != want:
+            continue
+        files = {f.get("name"): d / (f.get("path") or f"derived/{m.get('id')}/{f.get('file')}") for f in m.get("files") or []}
+        if files.get("vocals") and files.get("instrumental") and files["vocals"].is_file() and files["instrumental"].is_file():
+            return files["vocals"], files["instrumental"], "split before (" + str(m.get("id")) + ")"
+    audio = source_of(name, source)[0]
+    if not audio:
+        raise FileNotFoundError(f"no audio in {name}")
+    did = "stems-vocals" if not source else "stems-vocals-" + time.strftime("%Y%m%d-%H%M%S")
+    target, tmp = d / "derived" / did, d / "derived" / (did + ".part")
+    with turn(job):
+        job["stage"] = what
+        gpu = _backing_card("a voice over a backing: " + what)
+        job["gpu"] = gpu
+        env = dict(os.environ, CUDA_DEVICE_ORDER="PCI_BUS_ID", CUDA_VISIBLE_DEVICES="" if gpu is None else str(gpu))
+        if gpu is None:                              # on the processor: a quarter of its cores at most, behind everything else
+            n = str(max(2, min(16, (os.cpu_count() or 8) // 4)))
+            env.update(OMP_NUM_THREADS=n, MKL_NUM_THREADS=n, OPENBLAS_NUM_THREADS=n, LAB_SPLIT_OVERLAP="2")   # half the windows, half the time
+        shutil.rmtree(tmp, ignore_errors=True)
+        t0 = time.time()
+        p = subprocess.run([str(LAB_PY), str(HERE / "stems_job.py"), str(audio), str(tmp), "vocals"], env=env, capture_output=True, text=True,
+                           timeout=7200, preexec_fn=(lambda: os.nice(10)) if gpu is None and os.name == "posix" else None)
+        if p.returncode != 0:
+            shutil.rmtree(tmp, ignore_errors=True)
+            raise RuntimeError("the split failed: " + (p.stderr.strip().splitlines() or ["no output"])[-1][-300:])
+        r = json.loads(p.stdout.strip().splitlines()[-1])
+    manifest = {"id": did, "kind": "stems", "parent": name, "mode": "vocals", "source": want, "models": r["models"],
+                "files": [dict(s, path=f"derived/{did}/{s['file']}") for s in r["stems"]], "took": r["took"],
+                "gpu": "processor" if gpu is None else gpu, "created": time.strftime("%Y-%m-%d %H:%M"), "made_for": "a voice over a backing"}
+    json.dump(manifest, open(tmp / "manifest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    shutil.rmtree(target, ignore_errors=True)
+    tmp.rename(target)
+    where = "on the processor" if gpu is None else f"on {proc_name(gpu)}"
+    return target / "vocals.flac", target / "instrumental.flac", f"split now {where}, {round(time.time() - t0)} s"
+
+
+def _backing_run(args, timeout=1800):
+    """backing.py in the Studio's environment, behind everything else; its one line of JSON."""
+    p = subprocess.run([str(LAB_PY), str(HERE / "backing.py")] + [str(a) for a in args], capture_output=True, text=True, timeout=timeout, cwd=str(HERE),
+                       preexec_fn=(lambda: os.nice(10)) if os.name == "posix" else None)
+    if p.returncode != 0:
+        raise RuntimeError((p.stderr.strip().splitlines() or ["backing.py said nothing"])[-1][-300:])
+    return json.loads(p.stdout.strip().splitlines()[-1])
+
+
+def _engine_ask(path, data=None, ctype="application/json", timeout=60):
+    import urllib.request
+    req = urllib.request.Request(ENGINE_URL + path, data=data, method="POST" if data is not None else "GET",
+                                 headers={"Content-Type": ctype} if data is not None else {})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode() or "{}")
+
+
+def _engine_wait(jid, job, every=2.0):
+    """An engine job waited for: its status when done; refused aloud when it failed, was stopped, or the engine forgot it."""
+    lost = 0
+    while True:
+        if job.get("cancel"):
+            raise Cancelled(OFF_QUEUE)
+        try:
+            st = _engine_ask(f"/job?id={urllib.parse.quote(str(jid))}")
+            lost = 0
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                raise RuntimeError("the engine does not know the song (restarted?): nothing will come of it")
+            st = {}
+        except OSError:
+            lost += 1
+            if lost > 150:                           # five minutes without the engine
+                raise RuntimeError("the engine stopped answering")
+            st = {}
+        s = st.get("status")
+        if s == "done":
+            job.pop("engine", None)
+            return st
+        if s in ("failed", "cancelled"):
+            raise RuntimeError("the song " + ("was stopped" if s == "cancelled" else "failed: " + str(st.get("error") or "the engine said no more")))
+        if s:
+            job["engine"] = s
+        time.sleep(every)
+
+
+def _backing_transcribe(name, path, audio, transcriber, job):
+    """The backing's score by SheetSage2 (the engine's /transcribe, its queue like a song's): melody and chords. The take's own sound goes by
+    its name; anything else as a mono WAV at 24 kHz, the rate the transcriber hears (a few MB for minutes)."""
+    form = {"transcriber": transcriber}
+    if not path and audio.name == "audio.wav" and audio.parent == take_dir(name):
+        r = _engine_ask("/transcribe?take=" + urllib.parse.quote(name) + "&transcriber=" + urllib.parse.quote(transcriber), b"", "application/octet-stream")
+    else:
+        p = subprocess.run(["ffmpeg", "-v", "error", "-nostdin", "-i", str(audio), "-ac", "1", "-ar", "24000", "-c:a", "pcm_s16le", "-f", "wav", "-"],
+                           capture_output=True, timeout=600)
+        if p.returncode != 0:
+            raise RuntimeError("the backing could not be read for its score: " + (p.stderr.decode("utf-8", "replace").strip().splitlines() or ["?"])[-1])
+        b = "----ruach-backing-" + os.urandom(12).hex()
+        parts = [f'--{b}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode() for k, v in form.items()]
+        parts += [f'--{b}\r\nContent-Disposition: form-data; name="audio"; filename="backing.wav"\r\nContent-Type: audio/wav\r\n\r\n'.encode(), p.stdout, b"\r\n",
+                  f"--{b}--\r\n".encode()]
+        r = _engine_ask("/transcribe", b"".join(parts), "multipart/form-data; boundary=" + b, timeout=300)
+    if not r.get("id"):
+        raise RuntimeError("the engine did not take the transcription: " + str(r.get("error") or r))
+    job["engine_job"] = r["id"]
+    _engine_wait(r["id"], job)
+    res = _engine_ask(f"/job?id={urllib.parse.quote(str(r['id']))}&result=1")
+    if not res.get("abc"):
+        raise RuntimeError("SheetSage2 wrote no score of the backing")
+    return res["abc"], res.get("transcriber") or transcriber
+
+
+def _backing_kept(d):
+    try:
+        return json.load(open(d / BACKING_KEEP, encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _backing_key(name, path, transcriber, split):
+    if transcriber not in BACKING_TRANSCRIBERS:
+        raise ValueError("transcriber is one of " + ", ".join(BACKING_TRANSCRIBERS))
+    audio = source_of(name, path)[0]
+    if not audio:
+        raise FileNotFoundError(f"no audio in {name}")
+    st = audio.stat()
+    return audio, f"{path or 'the take'}|{transcriber}|{'split' if split else 'whole'}", [int(st.st_mtime), int(st.st_size)]
+
+
+def backing_read_of(name, path="", transcriber="heretical", split=True):
+    """What the read of this backing found, kept; None when it is not read (or its file changed since)."""
+    d = take_dir(name)
+    _audio, k, stamp = _backing_key(name, path, transcriber, split)
+    hit = _backing_kept(d).get(k)
+    return hit["read"] if hit and hit.get("of") == stamp else None
+
+
+def backing_read_async(name, path="", transcriber="heretical", split=True):
+    d = take_dir(name)
+    audio, k, stamp = _backing_key(name, path, transcriber, split)
+    got = backing_read_of(name, path, transcriber, split)
+    if got:
+        return got
+    key = f"backing:{name}:read:{k}"
+    with jobs_lock:
+        job = jobs.get(key)
+        if job and job["status"] in ("queued", "running"):
+            return dict(job, name=name)
+        if job and job["status"] == "failed":
+            jobs.pop(key)
+            return dict(job, name=name)
+        job = {"status": "queued", "started": time.time(), "kind": "backing", "label": "Read the backing", "stage": "queued"}
+        jobs[key] = job
+
+    def work():
+        try:
+            job["status"] = "running"
+            clean, said = audio, {"split": False, "how": "kept whole, as asked"}
+            if split:
+                voc, inst, how = _backing_split(name, path, job, "the guide vocal split off")
+                job["stage"] = "the guide vocal measured"
+                lv = _backing_run(["level", voc, inst], timeout=900)
+                g = backing.guide(lv["a"], lv["b"])
+                said = {"split": bool(g["guide"]), "gap": g["gap"], "voice_lufs": lv["a"]["lufs"], "band_lufs": lv["b"]["lufs"], "how": how}
+                if g["guide"]:
+                    clean = inst
+            job["stage"] = "its chords and bars written (SheetSage2)"
+            abc, wrote = _backing_transcribe(name, path, clean, transcriber, job)
+            b = backing.bed(abc)
+            job["stage"] = "its beats heard"
+            import tempfile
+            import soundfile as sf
+            fd, sp = tempfile.mkstemp(suffix=".abc", dir=str(KIT / "tmp"))
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(abc)
+            try:
+                g = _backing_run(["grid", clean, sp], timeout=900)
+            finally:
+                os.unlink(sp)
+            bars = g.get("bars") or []
+            at = dict(zip(g.get("bar_numbers") or [], bars))   # the score's bar n at its second (bars before the sound's start are not in the grid)
+            info = sf.info(str(clean))
+            secs = info.frames / info.samplerate
+            form = []
+            for f in b["form"]:
+                a, z = at.get(f["first"] + 1), at.get(f["first"] + f["bars"] + 1)
+                form.append(dict(f, start=None if a is None else round(a, 2), end=round(z if z is not None else secs, 2)))
+            read = {"name": name, "path": path, "split": said, "clean": os.path.relpath(clean.resolve(), d.resolve()), "transcriber": wrote, "seconds": round(secs, 2),
+                    "key": b["key"], "meter": b["meter"], "bpm": b["bpm"], "bars": b["bars"], "chords": b["chords"], "notes": b["notes"], "form": form,
+                    "score": abc, "bed": b["abc"], "grid": {"bars": bars, "num": g.get("num"), "den": g.get("den"), "bpm": g.get("bpm"), "said": g.get("said"),
+                                                         "sure": g.get("phase_sure")},
+                    "made": time.strftime("%Y-%m-%d %H:%M")}
+            # the bed is sung at the transcriber's tempo, the voice laid on the beats heard: apart by more than 4 % they are said (the
+            # stretch holds a bar to 15 %, past it the voice drifts)
+            hb, wb = g.get("bpm"), b["bpm"]
+            drift = round((hb / wb - 1) * 100, 1) if hb and wb else None
+            read["tempo"] = {"score": wb, "heard": hb, "drift": drift, "agree": drift is not None and abs(drift) <= 4.0}
+            kept = _backing_kept(d)
+            kept[k] = {"of": stamp, "read": read}
+            tmpf = d / (BACKING_KEEP + ".part")
+            json.dump(kept, open(tmpf, "w", encoding="utf-8"), ensure_ascii=False)
+            os.replace(tmpf, d / BACKING_KEEP)
+            with jobs_lock:
+                jobs.pop(key, None)
+        except Exception as e:
+            job.update(status="failed", error=str(e) or e.__class__.__name__)
+    _spawn(work)                                        # HERESY 1962: owned as its starter
+    return dict(job, name=name)
+
+
+def _backing_take(sung, read, rep, made, title, ws):
+    """The new take: the mix as its audio.wav, its two stems as a set the DAW opens (written at the mix's level, their sum the take), the
+    song's request with what was done, its family tree under the song, its realm the song's; filed in ws when one is given."""
+    sd = take_dir(sung)
+    req = json.load(open(sd / "request.json", encoding="utf-8"))
+    try:
+        meta0 = json.load(open(sd / "meta.json", encoding="utf-8"))
+    except (OSError, ValueError):
+        meta0 = {}
+    base = str(meta0.get("title") or req.get("title") or sung)
+    # the page's name for it (in its language) kept to the names' rule as cleaned, never refused at the end of a long job
+    title = (name_rule.cleaned(title, 200) if (title or "").strip() else "") or name_rule.cleaned(base + " over the backing", 200) or "voice over the backing"
+    stamp, k = time.strftime("%Y%m%d-%H%M%S"), 1
+    while True:
+        name = f"{stamp}-{k:02d}-backing-" + slug(title)
+        d = OUTPUTS / name
+        try:
+            d.mkdir(parents=True)
+            break
+        except FileExistsError:
+            if k >= 99:
+                raise
+            k += 1
+    try:
+        os.replace(made / "audio.wav", d / "audio.wav")
+        sdir = d / "derived" / "stems-vocals"
+        sdir.mkdir(parents=True)
+        os.replace(made / "vocals.flac", sdir / "vocals.flac")
+        os.replace(made / "instrumental.flac", sdir / "instrumental.flac")
+        secs = rep["seconds"]
+        files = [{"name": "vocals", "title": "Voice", "file": "vocals.flac", "seconds": secs, "rate": backing.RATE, "path": "derived/stems-vocals/vocals.flac"},
+                 {"name": "instrumental", "title": "Backing", "file": "instrumental.flac", "seconds": secs, "rate": backing.RATE,
+                  "path": "derived/stems-vocals/instrumental.flac"}]
+        json.dump({"id": "stems-vocals", "kind": "stems", "parent": name, "mode": "vocals", "source": "the take", "models": ["backing.py (HERESY 2677)"],
+                   "files": files, "took": rep.get("took"), "gpu": None, "created": time.strftime("%Y-%m-%d %H:%M"),
+                   "made_for": "a voice over a backing: the voice as laid and levelled, the backing as it came; their sum is the take"},
+                  open(sdir / "manifest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+        meta = {"title": title, "created": int(time.time()), "seconds": secs, "format": "wav24", "favorite": False, "truncated": False,
+                "render_seconds": rep.get("took") or 0, "song": 0, "variation": 0, "provided_score": True, "model": meta0.get("model") or "import"}
+        try:
+            meta["realm"] = collection.take_realms(OUTPUTS, [sung])[sung]   # HERESY 2298: of its song's realm, written when made
+        except (OSError, ValueError, KeyError) as e:
+            print(f"[lab] {name}: its realm not written, it follows its song's: {e}", file=sys.stderr, flush=True)
+        json.dump(meta, open(d / "meta.json", "w", encoding="utf-8"), ensure_ascii=False, indent=4)
+        req = dict(req, title=title, parent=sung, what="voice over the backing",
+                   backing={"take": read["name"], "path": read["path"], "clean": read["clean"], "transcriber": read["transcriber"], "split": read["split"],
+                            "key": read["key"], "meter": read["meter"], "bpm": read["bpm"], "bars": read["bars"]}, alignment=rep)
+        json.dump(req, open(d / "request.json", "w", encoding="utf-8"), ensure_ascii=False)
+    except Exception:
+        shutil.rmtree(d, ignore_errors=True)
+        raise
+    out = {"name": name, "title": title, "seconds": secs}
+    if ws:
+        try:
+            collection.collection_post(config_dir(), OUTPUTS, {"op": "ws-add", "workspace": ws, "names": [sung, name]})
+            out["workspace"] = ws
+        except (OSError, ValueError) as e:
+            out["workspace_error"] = str(e)[:200]
+    return out
+
+
+def backing_finish_async(name, path="", transcriber="heretical", split=True, engine_job="", sung="", ws="", title=""):
+    """The voice of a song sung on the backing's bed laid on the backing: the song is an engine job (waited for) or a take already sung."""
+    if not engine_job and not sung:
+        raise ValueError("finish what: an engine job (job) or a sung take (take)")
+    if sung:
+        take_dir(sung)
+    read = backing_read_of(name, path, transcriber, split)
+    if not read:
+        raise ValueError("read the backing first: its bars are what the voice is laid on")
+    key = f"backing:{name}:finish:{engine_job or sung}"
+    with jobs_lock:
+        job = jobs.get(key)
+        if job and job["status"] in ("queued", "running"):
+            return dict(job, name=name)
+        if job and job["status"] == "failed":
+            jobs.pop(key)
+        job = {"status": "queued", "started": time.time(), "kind": "backing", "label": "Voice over the backing", "stage": "the song sung",
+               "engine_job": engine_job, "sung": sung}
+        jobs[key] = job
+    BACKING_DONE.pop(key, None)
+
+    def work():
+        made = None
+        try:
+            job["status"] = "running"
+            take = sung
+            if engine_job:
+                st = _engine_wait(engine_job, job)
+                if not st.get("takes"):
+                    raise RuntimeError("the song made no take")
+                take = st["takes"][0]
+                job["sung"] = take
+            voc, band, how = _backing_split(take, "", job, "the song's voice split off")
+            job["stage"] = "the voice laid on the backing, bar by bar"
+            import tempfile
+            made = Path(tempfile.mkdtemp(prefix=".backing-", dir=str(OUTPUTS)))   # beside the takes (one disk, a rename), hidden from the Library
+            spec = {"backing": str(take_dir(name) / read["clean"]), "take_vocals": str(voc), "take_band": str(band), "bars": read["grid"]["bars"],
+                    "num": read["grid"].get("num") or 4, "limit": backing.LIMIT}
+            json.dump(spec, open(made / "spec.json", "w", encoding="utf-8"))
+            with cpu:
+                rep = _backing_run(["voice", made / "spec.json", made], timeout=3600)
+            rep["split"] = how
+            job["stage"] = "kept as a new take"
+            out = _backing_take(take, read, rep, made, title, ws)
+            out.update(sung=take, report=rep, status="done")
+            BACKING_DONE[key] = out
+            with jobs_lock:
+                jobs.pop(key, None)
+        except Exception as e:
+            job.update(status="failed", error=str(e) or e.__class__.__name__)
+        finally:
+            if made is not None:
+                shutil.rmtree(made, ignore_errors=True)
+    _spawn(work)                                        # HERESY 1962: owned as its starter
+    return dict(job, name=name)
+
+
+def backing_finish_of(name, engine_job="", sung=""):
+    key = f"backing:{name}:finish:{engine_job or sung}"
+    with jobs_lock:
+        job = jobs.get(key)
+        if job:
+            return dict(job, name=name)
+    if key in BACKING_DONE:
+        return BACKING_DONE[key]
+    raise FileNotFoundError("no such voice over a backing here (the lab was restarted since?)")
+
+
 # HERESY 1834 (Viktor 28.10.2026: «вживляй MuScriptor в Студию — в паспорт треков и в самого Огранщика»): the take, or a file of its tree (a
 # stem, a mix, a remaster), into multi-instrument MIDI: a set of its own under derived/ (midi-SIZE-STAMP: song.mid, notes.json, manifest.json),
 # as the stems are. The same sound at the same size and choice again answers with the set it gave. On the processor, one at a time
@@ -1870,15 +2250,23 @@ def slug(text):
 IMPORTED = "\U0001f6a8 IMPORTED"                     # HERESY 1481: where every import lands
 
 
-def import_track(filename, title, body, parent="", what="", realm="", workspace=""):   # HERESY 1988: and what it is a version of, for the take's family tree
+def imported_shelf(scope=""):
+    """HERESY 2661 (Viktor 17.11.2026: «Обязательно разводим «🚨 IMPORTED»»): the shelf an import lands on: the default scope's 🚨 IMPORTED as
+    ever, and a page opened with ?scope=NAME (a test page, a second profile) its own «🚨 IMPORTED · NAME», so a profile's imports stay in it"""
+    scope = (scope or "").strip()
+    if scope and not re.fullmatch(r"[A-Za-z0-9_-]{1,32}", scope):
+        raise ValueError("bad scope")
+    return f"{IMPORTED} · {scope}" if scope else IMPORTED
+
+
+def import_track(filename, title, body, parent="", what="", realm="", workspace="", scope=""):   # HERESY 1988: and what it is a version of, for the take's family tree
     # HERESY 2437 (Viktor 12.11.2026: «Эти пространства TTS ты по ошибке импортнул в мир Музыканта»): realm=reader for speech brought in (a TTS
     # file, a probe's take): its realm written on it when made (the root rule sees it as the Narrator's, as 2298 marked the first 117), and it lands
     # in the workspace named (made in the Narrator's realm when new), not in the Musician's 🚨 IMPORTED
     if realm and realm not in collection.REALMS:
         raise ValueError("realm is creator or reader")
-    ext = Path(filename).suffix.lower()
-    if ext not in (".wav", ".flac", ".mp3", ".m4a", ".ogg", ".aiff", ".aif"):
-        raise ValueError("WAV, FLAC, MP3, M4A, OGG or AIFF")
+    shelf = imported_shelf(scope)                      # HERESY 2661: the scope's own shelf, its name checked before anything is made
+    head = upload_guard.inspect(body)                  # HERESY 2659: what it is by its bytes, refused aloud before a take's folder is made
     # HERESY 2462: a title given keeps the names' rule (refused aloud, before anything is made); one taken from the file's name is the Studio's
     # naming, kept to the rule (a SUNO file «Где Ты?.mp3» is the take «Где Ты»); the workspace it lands in is checked before it is made, as api.py does (2284)
     title = name_rule.check(title, 200) if (title or "").strip() else name_rule.cleaned(Path(filename).stem, 200) or "import"
@@ -1895,8 +2283,11 @@ def import_track(filename, title, body, parent="", what="", realm="", workspace=
             if k >= 99:
                 raise
             k += 1
-    original = d / ("original" + ext)
-    original.write_bytes(body)
+    try:                                              # HERESY 2659: kept as original.<what its bytes are> only when its body decodes whole
+        original, _ = upload_guard.keep(body, d, "original", head)
+    except ValueError:
+        shutil.rmtree(d, ignore_errors=True)
+        raise
     p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(original), "-ac", "2", "-ar", "48000",
                         "-c:a", "pcm_s24le", str(d / "audio.wav")], capture_output=True, text=True, timeout=600)
     if p.returncode != 0:
@@ -1927,12 +2318,12 @@ def import_track(filename, title, body, parent="", what="", realm="", workspace=
     json.dump(req, open(d / "request.json", "w", encoding="utf-8"), ensure_ascii=False)
     out = {"name": name, "title": title, "seconds": round(secs, 2)}
     land = str(workspace or "").strip()[:200] if realm == "reader" else ""
-    try:                                                 # HERESY 1481: every import lands in 🚨 IMPORTED; said only when it did
-        collection.collection_post(config_dir(), OUTPUTS, {"op": "ws-add", "workspace": land or IMPORTED, "names": [name],
+    try:                                                 # HERESY 1481: every import lands in 🚨 IMPORTED (2661: its scope's own); said only when it did
+        collection.collection_post(config_dir(), OUTPUTS, {"op": "ws-add", "workspace": land or shelf, "names": [name],
                                                            "realm": "reader" if land else ""})   # HERESY 2437: a Narrator's import where it was asked to land
-        out["workspace"] = land or IMPORTED
+        out["workspace"] = land or shelf
     except (OSError, ValueError) as e:
-        print(f"[lab] {name} imported, not put in {land or IMPORTED}: {e}", file=sys.stderr, flush=True)
+        print(f"[lab] {name} imported, not put in {land or shelf}: {e}", file=sys.stderr, flush=True)
     return out
 
 
@@ -2924,14 +3315,32 @@ def art_pair(name):
     return out
 
 
+_ARTS = {"lock": threading.Lock(), "at": 0.0, "val": None}   # HERESY 2669: one /arts for everyone waiting, kept 4 s
+
+
+def arts_shared(fresh=False, ttl=4.0):
+    """HERESY 2669: arts() computed once for every caller waiting on it and kept ttl seconds; fresh=True (a page that has just drawn or removed
+    a cover) computes it anew."""
+    with _ARTS["lock"]:
+        if not fresh and _ARTS["val"] is not None and time.time() - _ARTS["at"] < ttl:
+            return _ARTS["val"]
+        v = arts()
+        _ARTS["val"], _ARTS["at"] = v, time.time()
+        return v
+
+
 def arts():
     """Every take that has artwork: name -> the file's key (the page's cache key; HERESY 2139: the start of its SHA-256, was its time, so a
     cover is kept a year under it and a cover drawn anew has a new one at once). HERESY 1156: and "unseen", the
     pictures whose named subject the critic did not find in any try (the painter does not know it: a guess, which the
     page says, so a violin is not taken for a morin khuur). HERESY 1166: and "credits", the pictures someone made."""
     out, unseen, credits = {}, [], {}
-    for f in OUTPUTS.glob("*/artwork.jpg"):
-        name = f.parent.name
+    # HERESY 2730 (the resource audit of 18.11.2026, R5: 680 ms of the lab a question on average, every 20 s a window): a stat a take, not
+    # pathlib's glob (a third of its time)
+    for e in os.scandir(OUTPUTS) if OUTPUTS.is_dir() else []:
+        if not os.path.isfile(os.path.join(e.path, "artwork.jpg")):
+            continue
+        f, name = Path(e.path) / "artwork.jpg", e.name
         try:
             out[name] = byte_ranges.key(f)               # HERESY 2139: read once for each size and time, then remembered
         except OSError:                                  # taken off between the listing and the read: no artwork
@@ -3060,7 +3469,7 @@ def art_async(name, again=False, seed=None, painter=None):
             for sib in art_pair(name):                 # HERESY 1162: the pair's other letter gets it too, when it has none
                 art_copy(d, sib, "the other letter of its A/B pair")
             took = sum((r.get("took") or {}).values())
-            act_say(f"artwork ({r.get('painter') or painter}) · {name} · done in {took:.0f} s on GPU {gpu}" +
+            act_say(f"artwork ({r.get('painter') or painter}) · {name} · done in {took:.0f} s on {proc_name(gpu)}" +
                     ("" if r.get("seen") is None else f" · the critic {'found' if r['seen'] else 'did not find'} its subject"
                      f" in {len(r.get('tries') or [])} picture(s)") + (f" · {r['why']}" if r.get("why") else ""))
             with jobs_lock:
@@ -3142,15 +3551,49 @@ ACT_LOCK = threading.Lock()
 ACT_SAY = {"art": "artwork", "stems": "stems (BS-Roformer, htdemucs)", "midi": "sound to MIDI (MuScriptor)", "video": "the Videographer (animatic, clip)", "remaster": "remaster", "upscale": "upscale (UniverSR)",
            "debuzz": "debuzz", "gate": "digital gateway", "timing": "lyrics timing (Whisper)", "textend": "lyrics check (Whisper)", "spectrum": "spectrum",
            "inspect": "inspection", "train": "LoRA training", "listen": "listener (Omni)", "artist": "the Artist"}
+ACT_SAY["backing"] = "a voice over a backing"   # HERESY 2677
 if reader:
     ACT_SAY.update(reader.ACT_SAY)                   # HERESY 2241: «the Reader» in the strip above the player
+
+
+ACT_FILE = KIT / "tmp" / "lab-activity.jsonl"   # HERESY 2652: the activity log lives on past a restart of the lab
+
+
+def _act_load():
+    """The last 400 lines of the activity log on disk, their numbers kept: the rooms' tabs keep their days after a restart."""
+    try:
+        rows = ACT_FILE.read_text(encoding="utf-8").splitlines()[-400:]
+    except OSError:
+        return
+    for row in rows:
+        try:
+            r = json.loads(row)
+            ACT["lines"].append([int(r["seq"]), time.strftime("%H:%M:%S", time.localtime(float(r["t"]))) + " " + str(r["text"])])
+            ACT["seq"] = max(ACT["seq"], int(r["seq"]))
+        except (ValueError, KeyError, TypeError):
+            continue
 
 
 def act_say(text):
     with ACT_LOCK:
         ACT["seq"] += 1
         ACT["lines"].append([ACT["seq"], time.strftime("%H:%M:%S") + " " + text])
+        try:                                          # HERESY 2652: on disk too; the file kept to its last 400 lines past 2000
+            ACT_FILE.parent.mkdir(parents=True, exist_ok=True)
+            with open(ACT_FILE, "a", encoding="utf-8") as f:
+                f.write(json.dumps({"seq": ACT["seq"], "t": round(time.time(), 1), "text": text}, ensure_ascii=False) + "\n")
+            if ACT["seq"] % 200 == 0:
+                rows = ACT_FILE.read_text(encoding="utf-8").splitlines()
+                if len(rows) > 2000:
+                    tmp = ACT_FILE.with_suffix(".part")
+                    tmp.write_text("\n".join(rows[-400:]) + "\n", encoding="utf-8")
+                    tmp.replace(ACT_FILE)
+        except OSError:
+            pass                                      # the page still has the line from memory
     print("[lab] " + text, file=sys.stderr, flush=True)
+
+
+_act_load()
 
 
 # HERESY 2358 (Viktor 11.11.2026: «Для Сторожа Arc дай мне команду для добавления в sudo.»): a watchdog (on the Forge,
@@ -3400,7 +3843,7 @@ def act_now():
     if flag:
         since = flag.get("since") or now
         out.append({"key": "arc:reset", "what": "The Arc hung: it waits for a reset by hand" if flag.get("stage") == "held" else "The Arc is being reset",
-                    "name": "Intel Arc", "status": "running", "gpu": None, "since": since, "kind": "arc", "label": None,
+                    "name": "XPU (Intel Arc)", "status": "running", "gpu": None, "since": since, "kind": "arc", "label": None,   # HERESY 2733
                     "elapsed": round(now - since, 1)})
     return out
 
@@ -3415,7 +3858,7 @@ def act_watch():
                 old = seen.get(k)
                 age = time.time() - (r.get("since") or time.time())
                 if r["status"] == "running" and (old is None or old.get("status") != "running") and (r.get("gpu") is not None or age > 3 or k.startswith(("train:", "listen:"))):
-                    act_say(f"{r['what']} · {r['name']} · started" + (f" on GPU {r['gpu']}" if r.get("gpu") not in (None, "cpu") else " on the CPU" if r.get("gpu") == "cpu" else ""))
+                    act_say(f"{r['what']} · {r['name']} · started" + (f" on {proc_name(r['gpu'])}" if r.get("gpu") not in (None, "cpu") else " on the CPU" if r.get("gpu") == "cpu" else ""))
                     seen[k] = r
                 elif old is None and r["status"] == "queued":
                     act_say(f"{r['what']} · {r['name']} · waits for a card")
@@ -3857,6 +4300,14 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/perf":                         # HERESY 1821: Engine → Performance
                 return self.send(200, perf.report())
             if url.path == "/listen":                       # HERESY 1851: the player's stream in Opus 128 (codec=opus), with Range
+                if q.get("lift"):                           # HERESY 2837: the take raised and cut flat at full scale on the fly (lift_stream.py)
+                    src = source_of(q.get("name", ""), "")[0]
+                    if not src:
+                        return self.send(404, {"error": "no audio in this take"})
+                    try:
+                        return lift_stream.send(self, src, q.get("lift"), byte_ranges.span, q.get("codec", ""))
+                    except ValueError as e:
+                        return self.send(415, {"error": str(e)})
                 if q.get("codec") != "opus":
                     return self.send(400, {"error": "codec=opus, the FLAC is the engine's own /library/listen"})
                 return self.send_file(listen_opus(q.get("name", "")), "audio/ogg", cache="no-cache")
@@ -4058,7 +4509,8 @@ class Handler(BaseHTTPRequestHandler):
                 since = q.get("since", "0")
                 return self.send(200, activity(int(since) if since.isdigit() else 0))
             if url.path == "/arts":                          # HERESY 1120: which takes have artwork
-                return self.send(200, arts())
+                # HERESY 2669; 2730: with the validator of its bytes, a page that has this very answer gets a 304 of a few bytes
+                return byte_ranges.send_bytes(self, json.dumps(arts_shared(fresh=q.get("fresh") == "1"), ensure_ascii=False).encode(), "application/json; charset=utf-8")
             if url.path == "/art":
                 f = take_dir(q.get("name", "")) / "artwork.jpg"
                 if not f.is_file():
@@ -4147,6 +4599,11 @@ class Handler(BaseHTTPRequestHandler):
                 seed = q.get("seed", "")
                 r = art_async(q.get("name", ""), q.get("again") == "1", int(seed) if seed.isdigit() else None, q.get("painter"))
                 return self.send(500 if r.get("status") == "failed" else 202 if r.get("status") else 200, r)
+            if url.path == "/backing/read":                  # HERESY 2677: the backing read (its guide vocal off, its score, its grid), or what it found
+                r = backing_read_async(q.get("name", ""), q.get("path", ""), q.get("transcriber", "heretical"), q.get("split", "1") != "0")
+                return self.send(500 if r.get("status") == "failed" else 202 if r.get("status") else 200, r)
+            if url.path == "/backing/finish":                # HERESY 2677: how far the voice over a backing is, or the take it made
+                return self.send(200, backing_finish_of(q.get("name", ""), q.get("job", ""), q.get("take", "")))
             if url.path == "/stems":
                 r = stems_async(q.get("name", ""), q.get("mode", "four"), q.get("source", ""))
                 return self.send(500 if r.get("status") == "failed" else 202 if r.get("status") else 200, r)
@@ -4232,6 +4689,8 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/pianoteq/catalog":             # HERESY 1977: the Pianoteq here: its presets, small presets and parameters in its words
                 return self.send(200, modartt.live(q.get("product")).catalog(KIT, refresh=q.get("refresh") == "1"))
             if url.path == "/pianoteq/preset":              # HERESY 1977: one preset's values and small presets
+                if not q.get("name"):                         # HERESY 2736 (the resource audit of 18.11.2026, §3.4): no name is the asker's fault, said at once
+                    return self.send(400, {"error": "which preset? (?name=)"})
                 small = json.loads(q.get("small") or "{}")    # HERESY 1981: as these small presets leave it
                 return self.send(200, modartt.live(q.get("product")).preset(KIT, q.get("name", ""), q.get("bank", ""), small if isinstance(small, dict) else {}))
             if url.path == "/pianoteq/listen":              # HERESY 1977: a phrase heard with a state
@@ -4273,6 +4732,11 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/stereo/guard":                 # HERESY 2340: a workspace's takes against the base on the same cards, by their stereo
                 return self.send(*stereo_guard.guard(KIT, OUTPUTS, CACHE, config_dir(), q))
             if url.path == "/train/datasets":               # HERESY 1063: LoRA training
+                part = q.get("part", "")                    # HERESY 2726: in parts: the live runs, the others a page at a time, the sets
+                if part in ("live", "done"):
+                    return self.send(200, dict(training.runs(KIT, part, int(q.get("start") or 0), int(q.get("count") or 0)), part=part))
+                if part == "sets":
+                    return self.send(200, dict(training.datasets(KIT, with_runs=False), part=part))
                 return self.send(200, training.datasets(KIT))
             if url.path == "/train/scan":
                 return self.send(200, training.scan(KIT, q.get("name", "")))
@@ -4488,7 +4952,8 @@ class Handler(BaseHTTPRequestHandler):
                     cat["clips"] = videographer.clips_index(KIT)
                 except (OSError, ValueError):
                     cat["clips"] = {}
-                return self.send(200, cat)
+                # HERESY 2729: with the validator of its bytes: a page that has this very catalog gets a 304 of a few bytes, not 4 MB again
+                return byte_ranges.send_bytes(self, json.dumps(cat, ensure_ascii=False).encode(), "application/json; charset=utf-8")
             if url.path == "/trash":
                 return self.send(200, collection.trash_list(KIT))
             if url.path == "/section/live":              # HERESY 1414: the sections being replaced
@@ -5144,6 +5609,11 @@ class Handler(BaseHTTPRequestHandler):
                 if "delete" in data:
                     return self.send(200, daw_mixes.delete(sd, data["delete"]))
                 return self.send(400, {"error": "working, save_as or delete"})
+            if url.path == "/backing/finish":                # HERESY 2677: {name, path, transcriber, split, job | take, ws, title}
+                data = json.loads(body.decode("utf-8") or "{}")
+                return self.send(202, backing_finish_async(str(data.get("name", "")), str(data.get("path", "")), str(data.get("transcriber") or "heretical"),
+                                                           data.get("split") is not False, str(data.get("job") or ""), str(data.get("take") or ""),
+                                                           str(data.get("ws") or ""), str(data.get("title") or "")))
             if url.path == "/daw/grid":                      # HERESY 2313: {name, factor | downbeat | num | reset}: what the hand sets, kept
                 data = json.loads(body.decode("utf-8") or "{}")
                 return self.send(200, take_grid(str(data.get("name", "")), {k: data[k] for k in ("factor", "downbeat", "num", "reset") if k in data}))
@@ -5202,7 +5672,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, creator_versions.post(KIT, json.loads(body.decode("utf-8")), q.get("scope", "")))
             if url.path == "/import":
                 return self.send(200, import_track(q.get("file", "track.wav"), q.get("title", ""), body, q.get("parent", ""), q.get("what", ""),
-                                                   q.get("realm", ""), q.get("workspace", "")))   # HERESY 2437
+                                                   q.get("realm", ""), q.get("workspace", ""), q.get("scope", "")))   # HERESY 2437; 2661: its scope's shelf
             if url.path in ("/backups", "/backups/now", "/backups/seen"):   # HERESY 2083 (Viktor 05.11.2026: «в Движок умолчанием пропиши ежесуточный/ежечасовой бекап json данных пользователя, с предвыбранной ротацией gz бекапов…»):
                 data = json.loads(body.decode("utf-8") or "{}")         # the switches and the counts, Back up now, the notices said; a test page changes nothing
                 if q.get("scope"):

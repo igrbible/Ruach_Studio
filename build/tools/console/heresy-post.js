@@ -1617,6 +1617,17 @@
     var id = nd.clone || nd.id, st = nd.step, n = NODE_ICO[id] || (st && st.builtin && STEP_ICO[st.pstep]) || (st && GROUP_ICO[st.group || "finish"]) || "";
     return n && window.HeresyIcons && window.HeresyIcons.ui ? '<span class="pcv-ico" aria-hidden="true">' + window.HeresyIcons.ui(n) + "</span>" : "";
   }
+  // HERESY 2725 (the resource audit of 18.11.2026, R1a: the canvas drawn whole every second while nothing ran, 43 ms a tick, 4.8 s of the
+  // browser's minute): the pulses' second paints only while something runs (the chain's job, a step's panel), once more when a node is still
+  // drawn running (its pulse put out), and once when the take's length comes in from the Library (that sends no event of its own)
+  function cvLive() {
+    var box = $("postCanvas"), row = state.take && window.HeresyCollection && window.HeresyCollection.row ? window.HeresyCollection.row(state.take.name) : null;
+    var k = (state.take ? state.take.name : "") + "|" + (row ? row.seconds : "");
+    if (k !== CV.liveKey) { CV.liveKey = k; return true; }
+    return !!((chain.job && chain.job.status === "running") || document.querySelector("#postSteps [data-step-panel].is-running") ||
+      (box && box.querySelector(".pcv-node.is-running")));
+  }
+  function cvPulse() { if (CV.on && !document.hidden && $("view-post") && !$("view-post").classList.contains("is-hidden") && cvLive()) cvPaint(); }
   function cvPaint() {
     var box = $("postCanvas");
     if (!box || box.hidden || CV.drag) return;
@@ -1961,8 +1972,9 @@
       btn.dataset.tip = CV.on ? "The Refiner as its list of steps" : "The Refiner as a canvas of nodes: where the work flows, what each step takes and makes; a click on a node opens it";
     }
     cvPaint();
-    clearInterval(CV.timer);
-    if (CV.on) CV.timer = setInterval(function () { if (!document.hidden && $("view-post") && !$("view-post").classList.contains("is-hidden")) cvPaint(); }, 1000);   // the pulses
+    // the pulses: a job of the page's modes (HERESY 2721), set once: every second while the Refiner is the room in front, every 15 s seen but untouched,
+    // never in another room or hidden; 2725: only while something runs
+    if (!CV.timer) CV.timer = window.HeresyIdle ? window.HeresyIdle.every(1000, cvPulse, { room: "post", idle: 15000 }) : setInterval(cvPulse, 1000);
     window.dispatchEvent(new Event("resize"));
   }
   function cvOrder() {                               // 1510: the chain second; 1516: a clone after its own
@@ -2334,6 +2346,7 @@
         if (id !== "take" && !wait && lastAt(wayNow(), id) >= 0) items.push({ label: "Off the way", icon: "\u2702", action: function () { ownOff(id); },
                      hint: "This step out of your way, the steps around it joined; Ctrl+Z gives it back" });
       }
+      if (id === "take" && state.take && window.ruachSoundItems) { var sx = window.ruachSoundItems(state.take.name); if (sx.length) items.push({ sep: true }, { label: "Edit", icon: "\u2702", items: sx }); }   // HERESY 2692: Re-denoise and Re-decode here too
       if (faceKind(id)) items.push({ label: CV.fold[id] ? "Unfold" : "Fold", icon: CV.fold[id] ? "\u25b8" : "\u25be", action: function () { foldToggle(id); } });   // HERESY 1971
       items.push({ sep: true }, { label: "Arrange", icon: "\u2316", action: arrange });
       window.HeresyMenu.open(e.clientX, e.clientY, items);

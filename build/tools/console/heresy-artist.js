@@ -1937,8 +1937,9 @@
     if (r.letters) meta.push(tr("lettered") + " \u201c" + r.letters.title + "\u201d");   // HERESY 1394
     if (p && p.letters && !p.letters.exact) meta.push(tr("misspelled: it reads") + " \u201c" + String(p.letters.read || "").replace(/\n/g, " / ") + "\u201d");
     if (r.inject) meta.push(tr("extra noise " + (+r.inject).toFixed(2)));   // HERESY 1385
-    if (r.gpus && r.gpus.length > 1) meta.push("GPU " + r.gpus.join(", "));   // HERESY 1354: on the lab's cards at once
-    else if (r.gpu != null) meta.push("GPU " + r.gpu);
+    var P = window.HeresyProc;                       // HERESY 2733: GPU0, XPU0
+    if (r.gpus && r.gpus.length > 1) meta.push(P ? r.gpus.map(function (g) { return P.short(g); }).join(", ") : "GPU " + r.gpus.join(", "));   // HERESY 1354: on the lab's cards at once
+    else if (r.gpu != null) meta.push(P ? P.short(r.gpu) : "GPU " + r.gpu);
     // HERESY 1342 (Viktor: «Адаптивный offload на CPU можно предусмотреть в таких случаях?»): its painter streamed from RAM, and the card's peak
     if (r.streamed) meta.push(r.streamed.kept ? tr("streamed from RAM: " + r.streamed.kept + " of its " + r.streamed.of + " blocks on the card") : tr("streamed from RAM, block by block"));
     if (r.peak_gb) meta.push(tr("VRAM peak " + r.peak_gb + " GB"));

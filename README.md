@@ -52,7 +52,7 @@ If you came looking for a **YuE2 WebUI** or a **YuE studio**: this is one, grown
 > | into a DAW | a REAPER project with the score, sections and lyrics (experimental) | audio stems |
 > | the code | open, every change documented | closed |
 > | **polish out of the box** | **less**: a mix can buzz (Debuzz helps), lyrics can drift (the lyrics check finds where), some instruments YuE2 plays thinly or not at all (a LoRA teaches them) | **more** |
-> | **what you need** | **an NVIDIA GPU (24 GB for everything at full precision), Linux, 22.5 to 25.9 GB of disk for the install, 122 to 240 GB with every room ([what it downloads](#what-it-downloads))** | a browser |
+> | **what you need** | **an NVIDIA GPU (24 GB for everything at full precision), Linux (Windows 11 and a Mac with Apple Silicon as a beta), 22.5 to 25.9 GB of disk for the install, 122 to 240 GB with every room ([what it downloads](#what-it-downloads))** | a browser |
 > | **the licence of the songs** | the YuE2 weights are CC BY-NC 4.0 with an individual creator permission (M-A-P, 16.09.2026): a musician, a creator or a personal user acting on their own may publish, sell and license the songs, free of charge; a company needs the authors' licence ([MODEL_LICENSE](https://github.com/multimodal-art-projection/YuE/blob/main/MODEL_LICENSE)) | SUNO's terms per plan |
 >
 > Every week a video says some model *KILLS* SUNO. This is not a model: it is a workstation around one, open to the bone.
@@ -220,27 +220,34 @@ What it needs:
 - The CUDA toolkit 12.8, `git`, `cmake`, `gcc`/`g++`, `python3.12`, `ffmpeg`, `curl`. FLAC needs nothing more: the engine encodes it itself, the Refiner and the exports through ffmpeg.
 - Only for the tests: `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test, which checks the engine's encoder against the reference; Node.js 22+ and Chrome or Chromium for the page tests.
 
-**The Studio answers on port 7777**: http://127.0.0.1:7777 on its machine, http://ITS-ADDRESS:7777 from your network. Over https or on its own machine, Chrome and Edge install it as an app from the address bar: a web app (PWA) with its own window and icon, the same Studio, nothing of it kept offline. [INSTALL.md](INSTALL.md) installs it step by step (on Windows 11, through WSL2: [INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)); [INSTALL_by_LLM_Agent.md](INSTALL_by_LLM_Agent.md) is the same for an AI agent. With [Pinokio](https://pinokio.co) the install and the start are buttons of its menu, on Linux ([INSTALL.md › With Pinokio](INSTALL.md#with-pinokio)).
+**The Studio answers on port 7777**: http://127.0.0.1:7777 on its machine, http://ITS-ADDRESS:7777 from your network. Over https or on its own machine, Chrome and Edge install it as an app from the address bar: a web app (PWA) with its own window and icon, the same Studio, nothing of it kept offline. [INSTALL.md](INSTALL.md) installs it step by step (on Windows 11 and on a Mac with Apple Silicon the native beta: [Windows and macOS](#windows-and-macos-native-beta)); [INSTALL_by_LLM_Agent.md](INSTALL_by_LLM_Agent.md) is the same for an AI agent. With [Pinokio](https://pinokio.co) the install and the start are buttons of its menu, on Linux ([INSTALL.md › With Pinokio](INSTALL.md#with-pinokio)).
 
 ## Linux: AppImage
 
-One file and nothing to build: the Studio with its engine, its Python, ffmpeg and its own C library inside, for Linux on x86-64. Since 2.0.7 it runs whatever glibc the system has: it carries its own (measured on Debian 10 and CentOS 7, offline, as well as on Ubuntu 22.04 and 24.04, Debian 12 and Fedora 41).
+One file and nothing to build: the Studio with its engine, its Python, ffmpeg and its own C library inside, for Linux on x86-64. Since 2.0.7 it runs whatever glibc the system has: it carries its own (measured on Debian 10 and CentOS 7, offline, as well as on Ubuntu 22.04 and 24.04, Debian 12 and Fedora 41). Since 2.0.9 it takes no library from the system but the NVIDIA driver, so a system whose libraries are built for a newer glibc (Arch, CachyOS, Fedora's newest) no longer stops it ([#10](https://github.com/igrbible/Ruach_Studio/issues/10)).
 
-Download `RuachStudio-2.0.8-core-x86_64.AppImage` (1.3 GB) and its `.sha256` from the [v2.0.8 release](https://github.com/igrbible/Ruach_Studio/releases/tag/v2.0.8), then:
+Download `RuachStudio-2.0.9-core-x86_64.AppImage` (1.3 GB) and its `.sha256` from the [v2.0.9 release](https://github.com/igrbible/Ruach_Studio/releases/tag/v2.0.9), then:
 
 ```bash
-sha256sum -c RuachStudio-2.0.8-core-x86_64.AppImage.sha256
-chmod +x RuachStudio-2.0.8-core-x86_64.AppImage
-./RuachStudio-2.0.8-core-x86_64.AppImage
+sha256sum -c RuachStudio-2.0.9-core-x86_64.AppImage.sha256
+chmod +x RuachStudio-2.0.9-core-x86_64.AppImage
+./RuachStudio-2.0.9-core-x86_64.AppImage
 ```
 
 **A window of its own comes up first**, offline too: it says what the Studio is doing, what is missing and whether there is a network, opens the page when the Studio answers (*Open the Studio*), and stops the Studio when you close it. Without a desktop, or with `RUACH_NO_WINDOW=1`, the AppImage speaks in the terminal as before.
 
 **The first start** names each model it needs with its size, the total and the free disk, and downloads nothing until you say so: *Fetch the models* in the window (it wakes only when there is a network), `[Y/n]` in a terminal. It brings only what a song needs: the Studio's default backbone, RS-TW 2.0 ×0.75, at your card's quant, m-a-p's decoder (0.53 GB, which also encodes covers and uploads) and ours, YuE2-VAE-RS x3 v1 (0.8 GB). That is 8.5 GB on a 24 GB card (BF16), 5.1 GB on 7 to 16 GB (Q8_0), 4.3 GB below (Q6_K), and 4.0 GB on the processor or a card under 4.5 GB (m-a-p's YuE2-3B Q5_K_M). Everything else comes from **Engine → Models** when you want it: Whisper for the lyrics check, the transcriber for covers from a recording, our second decoder, upscale, the LoRAs. The stems need the full Python with PyTorch (`lab/install-venv.sh`), which the AppImage does not carry. The page opens at http://127.0.0.1:7777; the Studio keeps its things in `~/.local/share/ruach-studio` (`RUACH_HOME=/another/disk` puts them elsewhere).
 
-**The GPU** is NVIDIA's, with the driver 570 or newer: the RTX 20xx, 30xx, 40xx and 50xx, the GTX 16xx, Quadro RTX and the RTX A and Ada cards, the A100 and the other Ampere cards, the H100 and H200, the B200 and B300. Pascal and Volta run as an experiment (the GTX 10xx, Quadro P, Tesla P4 and P40, Titan V, V100). On any other card, or with none, the Studio computes on the processor, slowly; `CUDA_VISIBLE_DEVICES= ./RuachStudio-2.0.8-core-x86_64.AppImage` makes it do so on any card.
+**The GPU** is NVIDIA's, with the driver 570 or newer: the RTX 20xx, 30xx, 40xx and 50xx, the GTX 16xx, Quadro RTX and the RTX A and Ada cards, the A100 and the other Ampere cards, the H100 and H200, the B200 and B300. Pascal and Volta run as an experiment (the GTX 10xx, Quadro P, Tesla P4 and P40, Titan V, V100). On any other card, or with none, the Studio computes on the processor, slowly; `CUDA_VISIBLE_DEVICES= ./RuachStudio-2.0.9-core-x86_64.AppImage` makes it do so on any card.
 
 **An update** is the next AppImage started in place of this one: your models, songs and settings stay where they are, and its first start asks only for what changed among the models you have. `--fetch-models --only whisper,transcriber` (or `--help` after `--fetch-models`) fetches the packs from a terminal.
+
+## Windows and macOS: Native (Beta)
+
+Since 2.0.9 the Studio comes as one zip for **Windows 11** (x64) and one for a **Mac with Apple Silicon** (macOS 13.3 and later), from the [v2.0.9 release](https://github.com/igrbible/Ruach_Studio/releases/tag/v2.0.9): no WSL2, no Docker, nothing to build. They are a beta: made and tried for the Musician and the Librarian, the other rooms following one by one, and not signed. A new beta is a new zip; there is no update in place yet.
+
+- **Windows 11**: unpack into a short folder (for example `C:\RuachStudio`: Windows' 260-character paths reach into the Studio's Python) and double-click `RuachStudio.cmd`. The first start brings Python 3.12, the lab's packages and the models a song needs into that folder only, then opens the Studio in your browser. The zip carries two engines, CUDA 12.8 for NVIDIA cards from Pascal (compute 6.1) to Blackwell and one for the processor (AVX2), and the start picks by what `nvidia-smi` sees. On a Pascal or Volta card the songs sing on the card while the lab's own work runs on the processor, as PyTorch's CUDA wheels start at compute 7.5. SmartScreen asks once: *More info → Run anyway*.
+- **A Mac with Apple Silicon**: unpack it and open `RuachStudio.command`; the engine runs on Metal, its quant chosen by the Mac's memory. Gatekeeper stops the first start: right-click → *Open*, or System Settings → Privacy & Security → *Open Anyway*.
 
 ## Dependencies
 
@@ -534,6 +541,21 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
+### Done › 2.0.9 (November 2026)
+
+- **The Studio on Windows 11 and on a Mac with Apple Silicon, natively (beta)**: one zip each, no WSL2 and no Docker; on Windows `RuachStudio.cmd` with the CUDA engine for NVIDIA cards from Pascal to Blackwell and the processor's beside it, on a Mac `RuachStudio.command` with the Metal engine for macOS 13.3 and later; made and tried for the Musician and the Librarian, the other rooms following one by one; unsigned, so SmartScreen and Gatekeeper ask once ([Windows and macOS](#windows-and-macos-native-beta)).
+- **The AppImage on the newest Linux libraries**: it takes no library from the system but the NVIDIA driver, so Arch, CachyOS and Fedora's newest no longer stop it ([#10](https://github.com/igrbible/Ruach_Studio/issues/10)); its window light unless the desktop is dark.
+- **Vocal over My Backing**: the Musician's Cover or Remix reads an instrumental of yours (its key, tempo, bars, chords and parts), sings your lyrics over its chords and lays the voice onto your backing bar by bar, both stems kept; your backing never changed.
+- **The Musician grows**: a song's history with every version and its takes; re-sing from the break nearest a moment; several scores side by side before any sound; Re-denoise and Re-decode from what a take kept; the lyrics' density against their genre; a style's ceiling of 800 characters without spaces, 200 the ideal; a queue of 12 songs (up to 20) and a question before Generate jumps it; Multistep the sound solver everywhere.
+- **The players play a take as it is**: no compressor or limiter in any player, so the low end no longer pumps on loud passages.
+- **The Narrator**: your own voice cut on its wave; Higgs v3 holding its voice through a long narration; Greek read polytonic as written; Drama 3's Window and Scene; a stalled or cut piece read again; tags suggested by the Writer's model.
+- **The Trainer**: its curves together on their own scales, values under the cursor, a run started by hand shown and steered, its list in a blink while a run trains, a score-mode run without sheets stopped aloud; the Studio ready for a grown 4.6B backbone beside the 3B ones.
+- **A page that rests when you do**: a tab at rest asks for the cards once in 50 s, the bars and canvases redraw only what moved, the Library and the covers' list answer from what did not change.
+- **One gate for every sound brought in**, by its bytes, never its name; a take's datasheet says its licence part by part; a failed computation stops a song instead of making silence; the GPU tested at start, the processor taken when it fails.
+- **Around the rooms**: one field height of 34 px, the Studio's own checkboxes and radios, the Library's eye that remembers, the Guide's Hebrew right to left, one name for each processor, the audio upscale working again; from Timon's yue2.cpp the music cache in Q8_0 and tinyBLAS; from leeQzz's fork the lyrics' guidance in the API.
+
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
 ### To Do › After 2.0.0
 
 2.0.0 is the Studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:
@@ -541,7 +563,7 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 - **Right-to-left languages beyond Hebrew** (Arabic, Urdu): the page runs right to left since 2.0.7.
 - **The Videographer** (2.1.0): several takes a shot with the best kept, and a shot's last frame carried into the next.
 - **The Narrator, further**: a book downloaded as one file with its chapters, a part edited and the whole book sent into the Refiner; Hebrew read with its vowels from the context.
-- **Windows 11 through WSL2, by Pinokio**: the launcher's steps run inside WSL2 (Ubuntu 24.04), which Pinokio is to set up where it is missing, the path of INSTALL_WINDOWS.md (asked for in [#1](https://github.com/igrbible/Ruach_Studio/issues/1)). A native Windows build is not our initiative: it comes in only as a fork or a pull request made whole, turnkey. In Viktor's words (01.11.2026): «Нейро-ересь вселенская изначально под UNIX/BSD/Linux, и портирование под Виндоуз — это сломанный костыль и имитация жизни» (the universal neuro-heresy was born for UNIX, BSD and Linux, and a port to Windows is a broken crutch and an imitation of life).
+- **Windows and the Mac, out of beta**: the native packages of 2.0.9 grown room by room until every room runs on Windows 11 and on a Mac with Apple Silicon as it does on Linux, with an installer of their own and an update in place (asked for in [#1](https://github.com/igrbible/Ruach_Studio/issues/1)).
 - **Native plugins** for REAPER, Waveform and Bitwig, once the Studio has found its people.
 
 Issues and pull requests are welcome: they are read and answered.

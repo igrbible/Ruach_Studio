@@ -38,6 +38,7 @@ RS_MAP_OLD=(
   '^models/(YuE2-3B-RS-(FW|TW)-(.+)-(BF16|F16|F32|Q8_0|Q6_K|Q5_K_M|Q4_K_M|Q4_0)\.gguf)$'
   '^models/(YuE2-3B-IRA[^/]*\.gguf)$'
   '^models/(YuE2-3B-[^/]*\.gguf)$'
+  '^models/(YuE2-4\.6B-[^/]*\.gguf)$'
   '^models/(YuE2-(Vae|VAE)[^/]*\.gguf)$'
   '^models/(yue2-mothersuperior-realaudio-tokenizer[^/]*\.gguf)$'
   '^models/((MERT|SheetSage)[^/]*\.gguf)$'
@@ -72,6 +73,7 @@ RS_MAP_NEW=(
   'models/engine/finetunes/RS-\2-\3/\1'
   'models/engine/finetunes/legacy/\1'
   'models/engine/finetunes/own/\1'
+  'models/engine/finetunes/4.6B/\1'
   'models/engine/vae/\1'
   'models/engine/tokenizers/\1'
   'models/misc/\1'
@@ -126,7 +128,7 @@ rs_hf_place() {
   while [[ $a == */* && $b == */* && ${a##*/} == "${b##*/}" ]]; do a="${a%/*}"; b="${b%/*}"; done
   printf '%s/\t%s\n' "$a" "$b"
 }
-# rs_backbones: every YuE2-3B-*.gguf the engine may sing with, a path a line, sorted by name (lab/paths.py backbones)
+# rs_backbones: every YuE2-3B-*.gguf (and grown YuE2-4.6B-*.gguf) the engine may sing with, a path a line, sorted by name (lab/paths.py backbones)
 rs_backbones() {
-  local f; for f in "$RS_ENGINE_YUE2"/YuE2-3B-*.gguf "$RS_ENGINE_FINETUNES"/*/YuE2-3B-*.gguf; do [ -f "$f" ] && printf '%s\t%s\n' "${f##*/}" "$f"; done | LC_ALL=C sort | cut -f2
+  local f; for f in "$RS_ENGINE_YUE2"/YuE2-3B-*.gguf "$RS_ENGINE_FINETUNES"/*/YuE2-3B-*.gguf "$RS_ENGINE_YUE2"/YuE2-4.6B-*.gguf "$RS_ENGINE_FINETUNES"/*/YuE2-4.6B-*.gguf; do [ -f "$f" ] && printf '%s\t%s\n' "${f##*/}" "$f"; done | LC_ALL=C sort | cut -f2
 }

@@ -223,6 +223,18 @@
     });
   }
 
+  // HERESY 2849: the lab's spectrum alone, for the live spectrum behind the player: the same cache as the scope's (one fetch for both), and never
+  // the take fetched whole beside the element when there is no lab (heresy-livespec.js measures the page's own copy itself, or waits)
+  function labData(take, say) {
+    for (var j = 0; j < cache.length; j++) if (cache[j].url === take.url) return cache[j].promise;
+    if (!take.name) return Promise.reject(new Error("no take name"));
+    var p = fromLab(take.name, say || function () {}, take.source, "");
+    cache.unshift({ url: take.url, promise: p });
+    if (cache.length > 6) cache.length = 6;
+    p.catch(function () { cache = cache.filter(function (c) { return c.promise !== p; }); });
+    return p;
+  }
+
   function analyse(take, say, mode) {
     mode = mode && mode !== "mono" ? mode : "";          // HERESY 1740: each view kept apart
     var key0 = take.url + (mode ? "|" + mode : "");
@@ -530,18 +542,27 @@
   }
 
   // The playhead: a line over the first spectrogram while this take is in the player.
-  var ticking = false;
+  // HERESY 2724 (the resource audit of 18.11.2026, R1e: a tick every 100 ms from the first visit to the Refiner on, paused, in every other room and
+  // in a hidden tab too, 2 879 ticks in five minutes): it moves while the player plays and the Refiner is the room in front (2721); paused, away or
+  // idle it stops where it stands, and a play, a seek, the room in front again or the page awake again start it anew
+  var ticking = false, lastT = null;
+  function away() {                                  // HERESY 2721: the Refiner not the room in front (or the page idle), or the panel not in it
+    return (window.HeresyIdle ? window.HeresyIdle.mode("post") !== "focused_room" : document.hidden) || !panel || panel.closest(".is-hidden") !== null;
+  }
   function tick() {
     if (ticking) return;
     ticking = true;
     (function frame() {
       var head = $("specHead"), mark = state.marks[0];
       var t = panel && panel.open && mark && state.hooks ? state.hooks.time(state.take) : null;
-      if (t === null || t === undefined) { head.hidden = true; ticking = false; return; }
-      head.hidden = false;
+      if (t === null || t === undefined) { head.hidden = true; ticking = false; lastT = null; return; }
+      if (head.hidden) head.hidden = false;
       head.style.left = (mark.x + mark.w * Math.min(1, t / mark.seconds)) + "px";
       head.style.top = PAD.t + "px";
       head.style.height = (250 - PAD.t - PAD.b) + "px";
+      var still = t === lastT;                     // two frames at one time: the player is paused (its time moves while it plays)
+      lastT = t;
+      if (still || away()) { ticking = false; return; }
       setTimeout(frame, 100);
     })();
   }
@@ -584,6 +605,11 @@
     panel = $("spectrumPanel");
     if (!panel) return;
     state.hooks = hooks;
+    ["play", "playing", "seeked", "loadedmetadata"].forEach(function (ev) {   // HERESY 2724: the playhead woken; a media event does not bubble, heard on its way down
+      document.addEventListener(ev, function (e) { if (e.target && /^(AUDIO|VIDEO)$/.test(e.target.tagName)) tick(); }, true);
+    });
+    if (window.HeresyIdle) window.HeresyIdle.on(function () { if (!away()) tick(); });   // the room in front again, the page awake again
+    else document.addEventListener("visibilitychange", function () { if (!document.hidden) tick(); });
     panel.addEventListener("toggle", function () { if (panel.open) { paintCompare(); render(); } });
     $("specCompare").addEventListener("change", function () { state.other = this.value; render(); });
     window.addEventListener("heresy-derived", function () { if (panel.open) paintCompare(); });   // HERESY 1021
@@ -631,5 +657,5 @@
   // HERESY 1169 · 1374: the measuring and the palette for the wave's scope (heresy-wavescope.js), one cache with the card's; drop: a take
   // measured anew when next asked
   function drop(url) { cache = cache.filter(function (c) { return c.url !== url && c.url.indexOf(url + "|") !== 0; }); }   // HERESY 1740: its views too
-  window.HeresySpectrum = { init: init, setTake: setTake, compareWith: compareWith, data: analyse, lut: LUT, drop: drop, mode: specMode, setMode: setSpecMode, panPixel: panPixel };
+  window.HeresySpectrum = { init: init, setTake: setTake, compareWith: compareWith, data: analyse, labData: labData, lut: LUT, drop: drop, mode: specMode, setMode: setSpecMode, panPixel: panPixel };
 })();

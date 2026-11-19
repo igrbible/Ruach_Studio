@@ -49,6 +49,11 @@ link_ggml_backends(test-tokenizer)
 add_executable(test-notation test-notation.cpp)
 target_include_directories(test-notation PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
-# Local addition: test-score-guard, the score guard (HERESY 1087) and its key-line warning (HERESY 2433), pure CPU, no model.
+# Local addition: test-score-guard, the score guard (HERESY 1087), its key-line warning (HERESY 2433), a score's length and the music's floor
+# never past the plan's end (HERESY 2830) and a plan with no note (HERESY 2832), pure CPU, no model; score-guard-cases.h holds real plans.
 add_executable(test-score-guard test-score-guard.cpp)
 target_include_directories(test-score-guard PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+# Local addition: test-nar-ladder, the decode ladder (HERESY 1768) never past the window of the sound half (HERESY 2851), pure CPU, no model.
+add_executable(test-nar-ladder test-nar-ladder.cpp)
+target_include_directories(test-nar-ladder PRIVATE ${CMAKE_SOURCE_DIR}/src)

@@ -437,6 +437,14 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
           <input type="number" id="setMaxSeq" step="1024" placeholder="0 = whole" /></label>
         <label class="field grow"><span class="label">VAE tile frames</span>
           <input type="number" id="setVaeCore" step="64" /></label>
+        <!-- HERESY 2674 (Viktor 17.11.2026): the tracks the engine's queue holds at once, 12 by default, 20 at most -->
+        <label class="field grow"><span class="label">Queue limit</span>
+          <input type="number" id="setQueueMax" min="1" max="20" step="1" value="12"
+            data-tip="How many tracks may wait or run on the engine at once: 12 by default, up to 20. A song past it is refused with the numbers, never dropped." /></label>
+      </div>
+      <div class="check-row">
+        <!-- HERESY 2675: the warning before a song while others run or wait (this browser's own) -->
+        <label class="check"><input type="checkbox" id="setAskBusy" /> <span>Warn before a song starts while others run or wait</span></label>
       </div>
       <div class="check-row">
         <label class="check"><input type="checkbox" id="setKeepLoaded" /> <span>Keep models loaded between songs</span></label>
@@ -562,7 +570,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
           <select data-def="yue2.seekKeyShift" data-def-is="30" aria-label="Shift + ← →"><option value="10">10 s</option><option value="15">15 s</option><option value="30">30 s</option><option value="60">60 s</option></select></label>
         </div>
         <label class="field"><span class="label">Start playing</span>
-          <select data-def="yue2.holdStart" data-def-is="minute" data-tip="On a slow line (the Studio far away), a take can start before all of it has come: once its first minute is in and the rest will come before the playing reaches it; where it changes to the whole, it does so at a quiet moment. At home the whole comes within seconds, and it waits for it either way."><option value="minute">when its first minute is in and the rest will come in time</option><option value="whole">when the whole take is in</option></select></label>
+          <select data-def="yue2.holdStart" data-def-is="minute" data-tip="At once: the player streams the take itself and starts when a few seconds are in, buffering ahead as a video player does; nothing else is downloaded beside it and the sound is never switched while it plays. With +dB or the volume past 100 %, the Studio's machine streams the take raised and cut flat at full scale on the fly (a 24-bit WAV, nothing saved). When the whole take is in: all of it comes into the page first (the bar shows how much), then it plays from memory, and +dB is made in the browser."><option value="minute">at once, streamed with the browser's own buffer</option><option value="whole">when the whole take is in</option></select></label>
         <!-- HERESY 1851: the player's stream: FLAC, or Opus 128 for a slow line -->
         <label class="field"><span class="label">The player's stream</span>
           <select data-def="yue2.listenCodec" data-def-is="flac" data-tip="What the player in the rooms' footer and the window comparing takes stream: FLAC is the take itself, lossless (about 30 MB for a song of four minutes); Opus at 128 kbit/s is about 4 MB, made on the Studio's machine the first time a take plays, for a slow line (a phone, a VPN). Everywhere else the Studio hears and measures the lossless FLAC, and downloads stay WAV and FLAC."><option value="flac">FLAC (lossless)</option><option value="opus">Opus 128 kbit/s (a slow line)</option></select></label>
@@ -584,7 +592,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
           <label class="check"><input type="checkbox" data-def-check="yue2.tailGuard" data-def-on="on" /> <span>New takes have their end checked (tail guards)</span></label>   <!-- HERESY 2056 -->
           <label class="check"><input type="checkbox" data-def-check="yue2.dblPlay" data-def-off="off" /> <span>A double-click on a card plays or stops it</span></label>
           <label class="check"><input type="checkbox" data-def-check="yue2.reactMark" data-def-on="on" /> <span>A take's reaction faint in its card's background</span></label>   <!-- HERESY 1877 -->
-          <label class="check" data-tip="A live spectrum of what plays, faint behind the player's buttons: the lows on the left (25 Hz), the highs on the right (20 kHz), rising from the player's foot; it rests when nothing plays"><input type="checkbox" data-def-check="yue2.liveSpectrum" data-def-off="off" /> <span>Live spectrum behind the player</span></label>   <!-- HERESY 2354 -->
+          <label class="check" data-tip="A live spectrum of what plays, faint behind the player's buttons: the lows on the left (25 Hz), the highs on the right (20 kHz), rising from the player's foot; drawn from the take's own spectrum in step with the playhead, it never touches the sound; it rests when nothing plays"><input type="checkbox" data-def-check="yue2.liveSpectrum" data-def-off="off" /> <span>Live spectrum behind the player</span></label>   <!-- HERESY 2354 -->
         </div>
       </section>
       <section class="look-part">
@@ -1086,7 +1094,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
               <select id="wrHandPick" aria-label="Load a document from the Writer" data-tip="A song from the Writer into this form: its title, style and lyrics. It stays in hand, so the takes made from it are linked to it in the Writer."></select>
               <!-- HERESY 2542 (the UIX audit of 13.11.2026, №25): the Writer's card in icons, their words their labels and tips -->
               <button type="button" class="btn ghost small icon-btn mu-ico" id="wrHandSave" data-ui="book-plus" aria-label="Save to Writer…" data-tip="Keep the song as it is now (title, style, lyrics and every knob) as a document in the Writer"></button>
-              <button type="button" class="btn ghost small icon-btn mu-ico" id="crVersions" data-ui="history" aria-label="Versions" data-tip="Every Generate keeps this title's style, lyrics and score apart from the takes: its versions, a diff of two, one back into the form"></button>
+              <button type="button" class="btn ghost small icon-btn mu-ico" id="crVersions" data-ui="history" aria-label="Song history" data-tip="The song's history: every version of this title that was sung, its lyrics and style, with its takes under it; two compared line by line, one back into the form"></button>
             </span>
           </div>
           <!-- HERESY 1006: the title on its own line at full width, the two seeds side by side below it -->
@@ -1113,7 +1121,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
           <label class="field" data-fold="style">
             <!-- HERESY 1168 (Viktor 06.10.2026: «В STYLE полосе ненужный текст подсказки. При свёртывании на две строки рубится»):
                  the box's own placeholder says it; the bar keeps its name, its marks and its buttons -->
-            <span class="label">Style</span>
+            <span class="label">Style <span class="sty-n" id="styleSize"></span><span class="info" tabindex="-1" role="img" aria-label="About the style's length" data-tip="A style is counted without its spaces. Up to 200 characters is the ideal; over 400 is not endorsed; 800 is the ceiling: past it nothing sings until the style is shortened, and nothing is ever cut. Why: YuE2 learned from styles of 4 to 999 characters, half of them within 69–399; a long style blurs the composition."></span></span>
             <textarea id="style" rows="3" data-max-rows="8" placeholder="Language, genre, voice, instruments, tempo"></textarea>
             <span class="row-hint size-meter" id="styleMeter"></span>
             <!-- HERESY 1357 (from SUNO v6: the ✦ and ↻ under its Styles): tags the Writer's model suggests for this song; a click puts one in -->
@@ -1237,7 +1245,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
               <section class="cover-part">
                 <h4 class="mini">From a Recording <span class="info" tabindex="-1" role="img" aria-label="About transcription" data-tip-ref="tip-transcribe" data-tip-head="its tune only, not the words or the singer"></span></h4>
                 <label class="field"><span class="label">Recording</span>
-                  <input type="file" id="coverFile" accept=".wav,.mp3,.flac,.m4a,.ogg,.opus,.aac" /></label>
+                  <input type="file" id="coverFile" accept=".wav,.flac,.ogg,.opus,.mp3,.m4a,.aac" /></label>
                 <label class="field"><span class="label">Transcribe</span>
                   <select id="coverTask">
                     <option value="melody-full">Lead melody (voice + instruments)</option>
@@ -1274,6 +1282,27 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
                   <button type="button" class="btn ghost" id="coverFromTake">Use this melody</button>
                   <p class="cover-status" id="coverStatus"></p>
                 </div>
+              </section>
+              <!-- HERESY 2677 (Viktor 18.11.2026: «Голос поверх своей минусовки … строй основательно»): a vocal over your own backing; the lyrics
+                   and the style are the form's, the engine's settings too -->
+              <section class="cover-part" id="backPart">
+                <h4 class="mini">Vocal over My Backing <span class="info" tabindex="-1" role="img" aria-label="About a vocal over your backing"
+                    data-tip="Bring an instrumental of your own, or take one from the Library (a take or its instrumental stem), and write your lyrics and style in the form. Read the backing: a guide vocal on it is split off when one is heard (BS-Roformer), and SheetSage2 writes its key, tempo, bars, chords and sections. Sing over it: the model writes its own melody over those chords and bars and sings your lyrics in a full take; its voice is then split off, stretched bar by bar onto your backing's beats and mixed over it as a new take, both stems kept for the Refiner's DAW. Your backing itself is never changed." data-tip-head="your instrumental, the model's melody, your words"></span></h4>
+                <label class="field"><span class="label">Backing</span>
+                  <input type="file" id="backFile" accept=".wav,.flac,.ogg,.opus,.mp3,.m4a,.aac" /></label>
+                <label class="field"><span class="label">or from the Library</span>
+                  <select data-hc-pick="1" id="backTake"></select></label>
+                <label class="field" id="backPartRow" hidden style="display:none"><span class="label">Its part</span>
+                  <select data-hc-pick="1" id="backPick"></select></label>
+                <label class="check"><input type="checkbox" id="backSplit" checked />
+                  <span>Split off a guide vocal when one is heard</span></label>
+                <p class="row-hint">The melody is the model's own. Its voice is stretched bar by bar onto your backing's beats, at most 15&nbsp;% a bar, and said where it needed more. A guide vocal split off leaves a faint trace of itself.</p>
+                <div class="cover-act">
+                  <button type="button" class="btn ghost" id="backRead"><span class="cl-ico" data-ui="scan" aria-hidden="true"></span><span>Read the backing</span></button>
+                  <button type="button" class="btn ghost" id="backSing"><span class="cl-ico" data-ui="mic" aria-hidden="true"></span><span>Sing over it</span></button>
+                  <p class="cover-status" id="backStatus"></p>
+                </div>
+                <p class="row-hint" id="backFound" hidden></p>
               </section>
             </div>
           </details>
@@ -1433,8 +1462,8 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
                       data-tip="Denoising steps of the sound half, by Viktor's ear on Heun (16.10.2026): 8 to 24 thin, sand, the voice hurries; 32 where it starts to come; 48 the default with AB2 (22.10.2026); 64 the sweet spot; 128 likely overburn; 160 overburn and wasted GPU time. Midpoint and Heun take two network calls a step, Multistep and Euler one." /><output id="odeStepsOut" class="mono">32</output></span>
                     <input type="number" id="odeSteps" step="1" min="1" max="160" hidden /></label>
                   <label class="field"><span class="label" data-head="sound ODE">Solver</span>
-                    <select id="odeSolver" data-tip="The sound half's solver. Midpoint (the release) and Heun take two network calls a step, second order; Multistep one call a step, second order (it reuses the velocity of the step before); Euler one call, first order, a draft. With one take's codes and one sound seed, Midpoint, Multistep and Euler close in on the same sound as the steps grow (16.10.2026): Midpoint by 64, Multistep by 128, Euler slowly.">   <!-- HERESY 1498b: the calls a step in the tip, the names short -->
-                      <option value="midpoint">Midpoint · release</option>
+                    <select id="odeSolver" data-tip="The sound half's solver. Multistep (AB2, the default) one call a step, second order (it reuses the velocity of the step before); Heun two calls a step, second order; Euler one call, first order, a draft. Midpoint, the original YuE2's, is no longer offered here: the API still takes it, and an old take or preset that asks for it sings Multistep.">   <!-- HERESY 1498b: the calls a step in the tip, the names short -->
+                      <!-- HERESY 2670 (Viktor 17.11.2026: «multistep (AB2) жёстко вшить как дефолтный семплер везде… В API оставить midpoint… Euler остаётся как черновой»): Midpoint no longer offered -->
                       <option value="multistep" selected>Multistep · AB2</option><!-- HERESY 1710: the default -->
                       <option value="heun">Heun</option>
                       <option value="euler">Euler · draft</option>
@@ -1499,6 +1528,9 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
             <input type="range" id="variations" min="1" max="9" step="1" value="1" /><output class="cs-val" id="variationsOut" for="variations">1</output></label>
           <span class="cs-total" aria-live="polite">= <span id="takesTotal">1 take</span></span>
           <!-- HERESY 2543 (the UIX audit of 13.11.2026, №31): the score an icon beside the room's one action in words; that one says what it does in its tip, its ▸ drawn -->
+          <!-- HERESY 2691: several scores before any sound, on seeds of their own, side by side in the take column (heresy-scores.js) -->
+          <button type="button" class="btn ghost icon-btn mu-ico plan-ico" id="scoresBtn" data-ui="layers" aria-label="Several scores"
+            data-tip="Several scores before any sound: 2 to 4 plans of this form at once (as many as Probes, 3 when it is 1), each on a music seed of its own, side by side in the take column with their bars, sections and instrumental breaks; the longest that sings every section is offered, and one goes into the form with its seed"></button>
           <button type="button" class="btn ghost icon-btn mu-ico plan-ico" id="planBtn" data-ui="music-4" aria-label="Create ABC Score"
             data-tip="Write only the score (seconds, no audio). Check its sections, then Generate renders exactly that score."></button>
           <button type="submit" class="btn primary" id="generateBtn" data-tip="Make the song from this form; what it makes lands in Takes">
@@ -1534,6 +1566,8 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
       </span>
     </div>
 
+    <div class="score-set" id="scoreSet" hidden></div>   <!-- HERESY 2691: several scores to choose from (heresy-scores.js) -->
+    <div class="song-hist" id="songHist" hidden></div>   <!-- HERESY 2689: the song's history (heresy-songhist.js), in the run's and the take's place while open -->
     <div class="chain" id="chain" hidden>
       <div class="chain-head">
         <span class="run-state" id="runState">Queued</span>
@@ -1769,7 +1803,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
             <div class="draft-diff-body mono" id="wrCompareBody" translate="no"></div>
           </div>
           <div class="wr-parts">
-            <label class="field wr-part"><span class="label">STYLE <em id="wrStyleSize"></em></span><textarea id="wrStyle" rows="4" spellcheck="false"></textarea><span class="lib-row wr-style-lib">   <!-- HERESY 2498: the saved styles, as under the Musician's Style --><select id="wrStyleLib" aria-label="Saved styles" data-tip="Your saved styles, kept on Forge: picking one puts it in the Style box (it asks before replacing what is there)."><option value="">Saved styles…</option></select><button type="button" class="btn ghost small icon-btn style-ico" id="wrStyleSave" data-ui="floppy" aria-label="Save style…" data-tip="Keep this style under a name, on Forge: every browser sees it"></button><button type="button" class="btn ghost small icon-btn style-ico danger" id="wrStyleDel" data-ui="trash" aria-label="Delete" data-tip="Delete the saved style picked" disabled></button></span></label>
+            <label class="field wr-part"><span class="label">STYLE <em id="wrStyleSize"></em><span class="info" tabindex="-1" role="img" aria-label="About the style's length" data-tip="A style is counted without its spaces. Up to 200 characters is the ideal; over 400 is not endorsed; 800 is the ceiling: past it nothing sings until the style is shortened, and nothing is ever cut. Why: YuE2 learned from styles of 4 to 999 characters, half of them within 69–399; a long style blurs the composition."></span></span><textarea id="wrStyle" rows="4" spellcheck="false"></textarea><span class="lib-row wr-style-lib">   <!-- HERESY 2498: the saved styles, as under the Musician's Style --><select id="wrStyleLib" aria-label="Saved styles" data-tip="Your saved styles, kept on Forge: picking one puts it in the Style box (it asks before replacing what is there)."><option value="">Saved styles…</option></select><button type="button" class="btn ghost small icon-btn style-ico" id="wrStyleSave" data-ui="floppy" aria-label="Save style…" data-tip="Keep this style under a name, on Forge: every browser sees it"></button><button type="button" class="btn ghost small icon-btn style-ico danger" id="wrStyleDel" data-ui="trash" aria-label="Delete" data-tip="Delete the saved style picked" disabled></button></span></label>
             <div class="wr-lyr-col">   <!-- HERESY 2490 (Viktor 12.11.2026: «Статистику по редактору лирики… вниз, точь-в-точь как в Музыканте») -->
               <label class="field wr-part"><span class="label">LYRICS <em id="wrLyricsSize"></em> <em class="wr-limit" id="wrLyricsLimit"></em> <span class="case-slot" data-case-slot="wrLyrics"></span></span><textarea id="wrLyrics" rows="16" spellcheck="false" maxlength="10000"></textarea></label>
               <div class="lyr-meter wr-meter" id="wrLyricsMeter"></div>   <!-- HERESY 2478 -->
@@ -1850,7 +1884,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
             <details class="assist-prefs">
               <summary>Your writing preferences <span class="dim" id="assistPrefsSize"></span></summary>
               <textarea id="assistPrefs" rows="5" placeholder="Standing instructions added to every draft: language, phonetics, spelling, names, what to keep…"></textarea>
-              <p class="row-hint">Added to the built-in YuE2 songwriting instructions for every draft. Kept with your settings in the Studio, so every browser of yours has them.</p>
+              <p class="row-hint">The SOUL of the Writer's world you are in, the Musician's or the Narrator's: your standing word, read over the built-in instructions in every draft, save the length limits. The Studio keeps it with its versions, and it travels with Export all and Import.</p>
               <details class="assist-system"><summary>Read the complete songwriting instructions</summary><pre class="mono" id="assistSystem"></pre></details>
             </details>
             <div class="assist-go">
@@ -1878,9 +1912,9 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
         <section class="assist-draft is-hidden" id="assistDraft">
           <div class="assist-draft-head"><strong>Your draft</strong><span class="dim mono" id="assistModel"></span></div>
           <label class="field"><span class="label">Title</span><input type="text" id="draftTitle" /></label>
-          <label class="field"><span class="label">Style <em id="draftStyleSize"></em> <em class="draft-same is-hidden" id="draftStyleSame">unchanged: your current style</em></span><textarea id="draftStyle" rows="4"></textarea></label>
+          <label class="field"><span class="label">Style <em id="draftStyleSize"></em> <em class="draft-same is-hidden" id="draftStyleSame">unchanged: your current style</em><span class="info" tabindex="-1" role="img" aria-label="About the style's length" data-tip="A style is counted without its spaces. Up to 200 characters is the ideal; over 400 is not endorsed; 800 is the ceiling: past it nothing sings until the style is shortened, and nothing is ever cut. Why: YuE2 learned from styles of 4 to 999 characters, half of them within 69–399; a long style blurs the composition."></span></span><textarea id="draftStyle" rows="4"></textarea></label>
           <!-- HERESY 1167 (Viktor: «Промптинг как в SD/SDXL… Но как опцию. Пусть LLM выдаёт полный читабельный и тегированный») -->
-          <label class="field"><span class="label" data-head="the most important first">Style as tags</span><textarea id="draftStyleTags" rows="2"></textarea></label>
+          <label class="field"><span class="label" data-head="the most important first">Style as tags <em id="draftStyleTagsSize"></em></span><textarea id="draftStyleTags" rows="2"></textarea></label>
           <div class="field-row draft-style-form"><span class="label">Into the form</span>
             <label class="check"><input type="radio" name="draftStyleForm" value="tags" checked /> <span>the tags</span></label>
             <label class="check"><input type="radio" name="draftStyleForm" value="readable" /> <span>the readable style</span></label></div>
@@ -1938,7 +1972,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
       <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Import a Track</span><span class="sum-say">WAV, FLAC, MP3… from anywhere: it becomes a take in the library (48 kHz 24-bit), marked imported, ready for stems, remaster and the rest.</span></span></summary>
       <div class="drawer-body imp-body">
         <div class="rm-grid">
-          <label class="field" data-tip="The sound to bring in: WAV, FLAC, MP3, M4A, OGG or AIFF; it becomes a take of its own (48 kHz 24-bit), marked imported"><span class="label">File</span><input type="file" id="impFile" accept=".wav,.flac,.mp3,.m4a,.ogg,.aif,.aiff,audio/*" /></label>
+          <label class="field" data-tip="The sound to bring in: WAV, FLAC, OGG, MP3 or a phone's voice note (M4A, AAC, 3GP, AMR), up to 200 MB; it becomes a take of its own (48 kHz 24-bit), marked imported"><span class="label">File</span><input type="file" id="impFile" accept=".wav,.flac,.ogg,.opus,.mp3,.m4a,.aac,.3gp,.amr" /></label>
           <label class="field" data-tip="The take's name in the Library; left blank, the file's name"><span class="label">Title <em>blank: the file's name</em></span><input type="text" id="impTitle" autocomplete="off" /></label>
         </div>
         <label class="field" data-tip="Its words, if you have them, with section tags: the lyrics check matches what Whisper hears against them"><span class="label">Lyrics <em>optional: the lyrics check matches against them</em></span>
@@ -2687,7 +2721,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
   </section>
 
   <section class="col coll-col is-hidden" id="view-collection">
-    <div class="col-head coll-head"><h2>Librarian<span class="coll-where" id="collWhere"></span></h2><span class="col-note" id="collNote"></span>
+    <div class="col-head coll-head"><h2>Librarian<span class="coll-where" id="collWhere"></span></h2><span class="coll-note-box" id="collNoteBox"><span class="col-note" id="collNote"></span></span>
       <div class="coll-headtools" id="collHeadTools">
         <input type="search" id="collSearch" placeholder="Search: words, * and ?, !to leave out" autocomplete="off" data-tip="Words found anywhere, in any order. A number is a whole number: «1» never finds 12 or 01; typed after a word, it goes with that word where a take has the word followed by a number: «seed 1» finds seed 1, never seed 2. * any letters and ? one letter, the words then kept in their order: «милости * 0.6». !word leaves out the takes that have it: «милост * !0.75». An ID, or a part of it («180155», «1e53bb»), finds a take wherever it lives: in any workspace or none, hidden, archived, frozen." />   <!-- HERESY 2028; 2058: an ID finds a take wherever it lives; 2130: the number's rule -->
         <!-- HERESY 2004: the sort a button with arrows, its choices in a menu; the select stays, hidden, the one the Librarian reads -->
@@ -2697,7 +2731,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
         <span class="coll-views"><button type="button" class="btn ghost small icon-btn" data-coll-view="tiles" aria-label="Tiles" data-tip="Tiles"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
           <button type="button" class="btn ghost small icon-btn" data-coll-view="list" aria-label="List" data-tip="List"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6.5h10M9.5 12h10M9.5 17.5h10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M5 6.5h.01M5 12h.01M5 17.5h.01" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></button></span>
         <!-- HERESY 2046: the hidden and the disliked shown here too; the place's numbers in an overlay -->
-        <button type="button" class="btn ghost small icon-btn coll-reveal" id="collReveal" aria-pressed="false" aria-label="Show the hidden and the disliked" data-tip="Show the hidden and the disliked here too, dimmed; off, they stay out (this session only)"></button>
+        <button type="button" class="btn ghost small icon-btn coll-reveal" id="collReveal" aria-pressed="false" aria-label="Show the hidden and the disliked" data-tip="Show the hidden and the disliked here too, dimmed; off, they stay out (remembered)"></button>
         <span class="coll-stats-wrap"><button type="button" class="btn ghost small icon-btn" id="collStats" aria-haspopup="dialog" aria-expanded="false" aria-label="About this place" data-tip="About this place: its takes, plans, time, marks and reactions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 11v6M12 7.6h.01" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></button>
           <div class="coll-stats-pop" id="collStatsPop" role="dialog" aria-label="About this place" hidden></div></span>
         <!-- HERESY 1169 · 1241 (Viktor 08.10.2026: «Фильтр прикрути как кнопку в ту же строку с поиском и сортировкой - в самый конец справа»): the filters in a window, as the workspace's chooser; the button says how many are on and how they join -->
@@ -2898,8 +2932,8 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
     </select>
     <div class="volume">
       <button class="icon-btn" id="muteBtn" aria-label="Mute"><span id="muteGlyph">🔊</span></button>
-      <input type="range" id="volume" min="0" max="1.5" step="0.01" value="1" aria-label="Volume" data-tip="Volume. Past 100 % a boost up to 150 % for a quiet take: the slider stops at 100 % first; let go and drag again to go past it" />   <!-- HERESY 1700: to 150 % -->
-      <button type="button" class="vol-loud mono" id="loudBtn" aria-pressed="false" aria-label="As loud as before the cut" data-tip="As loud as before the cut came out: each take raised by its own measure (the level the old Peak clip raised to full scale, about 2 dB), a limiter holding the few peaks over it; the file stays as it is"><svg class="loud-wave" viewBox="0 0 44 18" preserveAspectRatio="none" aria-hidden="true"><path class="loud-body" d="M0 18 L0 13 L2 10 L4 12 L6 8 L8 11 L10 6 L12 10 L14 3 L16 9 L18 7 L20 11 L22 5 L24 9 L26 8 L28 12 L30 2 L32 8 L34 6 L36 10 L38 4 L40 9 L42 7 L44 12 L44 18Z"/><path class="loud-tips" d="M13.43 5 L14 3 L14.67 5Z M29.4 5 L30 2 L31 5Z M37.67 5 L38 4 L38.4 5Z"/></svg><span class="loud-t">+dB</span></button>   <!-- HERESY 2037; 2044b: its wave under it -->
+      <input type="range" id="volume" min="0" max="1.5" step="0.01" value="1" aria-label="Volume" data-tip="Volume. Past 100 % a boost up to 150 % for a quiet take, heard once you let go (the peaks over full scale cut flat, as the old Peak clip cut them): the slider stops at 100 % first; let go and drag again to go past it" />   <!-- HERESY 1700: to 150 %; 2835: heard as you let go -->
+      <button type="button" class="vol-loud mono" id="loudBtn" aria-pressed="false" aria-label="As loud as before the cut" data-tip="As loud as before the cut came out: each take raised by its own measure (the level the old Peak clip raised to full scale, about 2 dB), the few peaks over it cut flat at full scale as that clip cut them; nothing else touches the sound, and the file stays as it is"><svg class="loud-wave" viewBox="0 0 44 18" preserveAspectRatio="none" aria-hidden="true"><path class="loud-body" d="M0 18 L0 13 L2 10 L4 12 L6 8 L8 11 L10 6 L12 10 L14 3 L16 9 L18 7 L20 11 L22 5 L24 9 L26 8 L28 12 L30 2 L32 8 L34 6 L36 10 L38 4 L40 9 L42 7 L44 12 L44 18Z"/><path class="loud-tips" d="M13.43 5 L14 3 L14.67 5Z M29.4 5 L30 2 L31 5Z M37.67 5 L38 4 L38.4 5Z"/></svg><span class="loud-t">+dB</span></button>   <!-- HERESY 2037; 2044b: its wave under it -->
     </div>
     <button type="button" class="status-pill" id="statusPill" data-s="idle" data-tip="Nothing is being made or played"><span class="status-dot" aria-hidden="true"></span><span id="statusText" aria-live="polite">Idle</span></button>
     <!-- HERESY 2522 (the UIX audit 13.11.2026, №2): the server log folded lives here, not over a room; its lamp, its training percent -->
@@ -2967,7 +3001,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
   <ul>
     <li>A score is planned as usual: your lyrics shape the melody and sections (with no lyrics, a plain Intro, Verse, Chorus, Outro).</li>
     <li>Every vocal note then moves to the instrument voice, keeping its pitch and timing; instrument notes under it give way.</li>
-    <li>The song renders from that score with only the section tags as lyrics, and <i>Instrumental, … no vocals, no singing, no choir, no spoken words</i> added to your style.</li>
+    <li>The song renders from that score with only the section tags as lyrics, and <i translate="no">Instrumental,</i> added to your style.</li>
     <li>Full mode when the score has chords, Melody mode when it has none (a melody transcription).</li>
   </ul>
   With a score already under <i>Supply your own score</i> (planned, pasted or transcribed from a recording), that score is converted instead.
@@ -3069,6 +3103,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
   <p>Probes &times; Variations is how many takes come out: 2 &times; 4 = 8, music m and m&nbsp;+&nbsp;1, each with sounds s to s&nbsp;+&nbsp;3.</p>
 </template>
 <script src="heresy-debug.js"></script>   <!-- HERESY 2054: the debug journal, first of ours: its watch on the requests and errors up early -->
+<script src="heresy-idle.js"></script>   <!-- HERESY 2721: the page's modes (idle_ui, focused_room, unfocused_room), before every module whose jobs repeat -->
 <script src="heresy-dialog.js"></script>
 <script src="heresy-lease.js"></script>   <!-- HERESY 2081: one Studio at a time (the lab's lease), before any module that writes -->
 <script src="heresy-link.js"></script>   <!-- HERESY 2098–2101: the writes counted, sent again, refused aloud; the line stuck said -->
@@ -3108,6 +3143,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
 <script src="heresy-collection.js"></script>
 <script src="heresy-textprep.js"></script>
 <script src="heresy-lyrics.js"></script>
+<script src="heresy-density.js"></script>   <!-- HERESY 2693: the lyrics' density against their genre (Valkyrie's gauges, D21) -->
 <script src="heresy-worn.js"></script>   <!-- HERESY 2350: the worn words of each language (Timon's cherry ⑥) -->
 <script src="heresy-recite.js"></script>
 <script src="heresy-find.js"></script>
@@ -3116,6 +3152,8 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
 <script src="heresy-writer.js"></script>
 <script src="heresy-wrshell.js"></script>   <!-- HERESY 2490: the Writer's shell: the worlds' knob, the start canvas, the three steps -->
 <script src="heresy-versions.js"></script>
+<script src="heresy-songhist.js"></script>
+<script src="heresy-scores.js"></script>
 <script src="heresy-train.js"></script>
 <script src="heresy-traindoc.js"></script>   <!-- HERESY 2351: the dataset doctor under the picked folder (Timon's cherry ③) -->
 <script src="heresy-bankbuilder.js"></script>
@@ -3131,6 +3169,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
 <script src="heresy-assist.js"></script>
 <script src="heresy-gloss.js"></script>
 <script src="heresy-inspect.js"></script>
+<script src="heresy-rsaudio.js"></script>   <!-- HERESY 2835 · 2837: RuachStudioAudio, the players' sound: the take, or it raised and clipped as the old Peak clip did; no Web Audio in the players -->
 <script src="heresy-derived.js"></script>
 <script src="heresy-post.js"></script>
 <script src="heresy-pianoteq.js"></script>
@@ -3157,6 +3196,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
 <script src="heresy-reader-i18n.js"></script>   <!-- HERESY 2241: the Reader's words by stable ids, thirteen languages (kept home with the room) -->
 <script src="heresy-reader.js"></script>   <!-- HERESY 2241: the Reader, its tab, view and log view its own, before app.js binds the bar (kept home until turnkey) -->
 <script src="themes.js"></script>
+<script src="heresy-negwords.js"></script>   <!-- HERESY 2847: negative words in a style, before app.js -->
 <script src="app.js"></script>
 </body>
 </html>

@@ -62,6 +62,7 @@ MAP = (
     (r"^models/(YuE2-3B-RS-(FW|TW)-(.+)-(" + QUANTS + r")\.gguf)$", r"models/engine/finetunes/RS-\2-\3/\1"),
     (r"^models/(YuE2-3B-IRA[^/]*\.gguf)$", r"models/engine/finetunes/legacy/\1"),
     (r"^models/(YuE2-3B-[^/]*\.gguf)$", r"models/engine/finetunes/own/\1"),   # a merge of the user's own, as start.sh offered it
+    (r"^models/(YuE2-4\.6B-[^/]*\.gguf)$", r"models/engine/finetunes/4.6B/\1"),   # HERESY 2660: a grown backbone (38 layers)
     (r"^models/(YuE2-(Vae|VAE)[^/]*\.gguf)$", r"models/engine/vae/\1"),
     (r"^models/(yue2-mothersuperior-realaudio-tokenizer[^/]*\.gguf)$", r"models/engine/tokenizers/\1"),
     (r"^models/((MERT|SheetSage)[^/]*\.gguf)$", r"models/misc/\1"),
@@ -150,9 +151,9 @@ def narrator_file(rel, kit=None):
 
 
 def backbones(kit=None):
-    """Every YuE2-3B-*.gguf the engine may sing with: m-a-p's and every merge's, sorted by name."""
+    """Every YuE2-3B-*.gguf the engine may sing with: m-a-p's and every merge's, sorted by name; HERESY 2660: and every grown YuE2-4.6B-*.gguf."""
     base = Path(kit or ROOT)
-    found = list((base / ENGINE_YUE2).glob("YuE2-3B-*.gguf")) + list((base / ENGINE_FINETUNES).glob("*/YuE2-3B-*.gguf"))
+    found = [f for pat in ("YuE2-3B-*.gguf", "YuE2-4.6B-*.gguf") for f in list((base / ENGINE_YUE2).glob(pat)) + list((base / ENGINE_FINETUNES).glob("*/" + pat))]
     return sorted(found, key=lambda p: p.name)
 
 
@@ -196,9 +197,9 @@ def shell():
         '  while [[ $a == */* && $b == */* && ${a##*/} == "${b##*/}" ]]; do a="${a%/*}"; b="${b%/*}"; done',
         '  printf \'%s/\\t%s\\n\' "$a" "$b"',
         "}",
-        "# rs_backbones: every YuE2-3B-*.gguf the engine may sing with, a path a line, sorted by name (lab/paths.py backbones)",
+        "# rs_backbones: every YuE2-3B-*.gguf (and grown YuE2-4.6B-*.gguf) the engine may sing with, a path a line, sorted by name (lab/paths.py backbones)",
         "rs_backbones() {",
-        '  local f; for f in "$RS_ENGINE_YUE2"/YuE2-3B-*.gguf "$RS_ENGINE_FINETUNES"/*/YuE2-3B-*.gguf; do [ -f "$f" ] && printf \'%s\\t%s\\n\' "${f##*/}" "$f"; done | LC_ALL=C sort | cut -f2',
+        '  local f; for f in "$RS_ENGINE_YUE2"/YuE2-3B-*.gguf "$RS_ENGINE_FINETUNES"/*/YuE2-3B-*.gguf "$RS_ENGINE_YUE2"/YuE2-4.6B-*.gguf "$RS_ENGINE_FINETUNES"/*/YuE2-4.6B-*.gguf; do [ -f "$f" ] && printf \'%s\\t%s\\n\' "${f##*/}" "$f"; done | LC_ALL=C sort | cut -f2',
         "}",
     ]
     return "\n".join(out) + "\n"

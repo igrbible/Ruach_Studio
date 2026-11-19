@@ -172,4 +172,13 @@ target_link_libraries(mp3-codec PRIVATE Threads::Threads)
 add_executable(quantize tools/quantize.cpp)
 link_ggml_backends(quantize)
 
+# HERESY 2649: on Windows every executable runs in UTF-8 (its manifest's activeCodePage), so a model under C:\Users\<a Cyrillic name> opens
+if(WIN32)
+    foreach(t yue-plan yue-transcribe yue-tokenize yue-synth yue-server neural-codec mp3-codec quantize)
+        if(TARGET ${t})
+            target_sources(${t} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tools/utf8.manifest)
+        endif()
+    endforeach()
+endif()
+
 add_subdirectory(tests)

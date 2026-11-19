@@ -120,7 +120,7 @@ int main(int argc, char ** argv) {
     debug_init(&quiet, nullptr);
     if (solve) {
         result = x_t;
-        ok     = nar_solve(&nar, &kv, result.data(), T_lat, M, ar_len, 0, steps, &quiet);
+        ok     = nar_solve(&nar, &kv, result.data(), T_lat, M, ar_len, 0, steps, &quiet, nullptr, nullptr, "midpoint");   // HERESY 2670: the reference's own solver, named
     } else {
         ok = nar_velocity(&nar, &kv, x_t.data(), T_lat, M, ar_len, 0, raw_t, result.data());
     }

@@ -298,19 +298,15 @@ def refs_add(refs_dir, filename, body, title=""):
     """A song of your own kept as a reference: FLAC, 48 kHz, two sides; the same bytes twice are one reference. Its entry."""
     import hashlib
     import subprocess
-    ext = Path(str(filename or "")).suffix.lower()
-    if ext not in REF_EXT:
-        raise ValueError("WAV, FLAC, MP3, M4A, OGG, OPUS or AIFF")
-    if not body:
-        raise ValueError("no file in the body")
+    import upload_guard
+    head = upload_guard.inspect(body)                  # HERESY 2659: WAV, FLAC, OGG, MP3 or a phone's M4A, AAC, 3GP, AMR by its bytes, never by its name
     rid = hashlib.sha256(body).hexdigest()[:12]
     rd = Path(refs_dir)
     rd.mkdir(parents=True, exist_ok=True)
     out, meta = rd / f"{rid}.flac", rd / f"{rid}.json"
     if out.is_file() and meta.is_file():
         return next((r for r in refs_list(rd) if r["id"] == rid), {"id": rid, "spec": "own:" + rid})
-    src = rd / f".{rid}{ext}.part"
-    src.write_bytes(body)
+    src, _ = upload_guard.keep(body, rd, f".{rid}.source", head)   # HERESY 2659: its body checked whole, under the Studio's own name
     part = rd / f".{rid}.part.flac"
     try:
         p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-t", str(REF_MAX_S), "-ac", "2", "-ar", "48000", "-c:a", "flac",

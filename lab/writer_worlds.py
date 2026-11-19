@@ -18,9 +18,11 @@ SOUL_KEEP = 30
 LONG = 10000                     # the Musician's lyrics hold 10 000 (2480): past it a text is a reading's
 HERE = Path(__file__).resolve().parent
 CHARTER = HERE / "writer_worlds" / "reader-charter.md"
-CHARTER_DRAFT = True             # until Viktor has read the Narrator world's charter (his «???» of 12.11 evening: a first draft asked)
+CHARTER_DRAFT = False            # HERESY 2842 (SOUL-8): Viktor's word 18.11.2026 «Одобряю обеими ступнями»; a DRAFT since 12.11 (his «???»: a first draft asked)
+# HERESY 2840 (Viktor 18.11.2026: «перепроверь лимиты, даже если человек будет просить описательный длинный промпт»): a SOUL is the author's standing
+# word over the charter, save the length limits: a song's style (2799) and a reading's voice (the Narrator's field and the lab take 160) hold over it
 SOUL_HEADING = ("THE AUTHOR'S SOUL FOR THIS WORLD (his own standing word: it stands over everything above; where the two disagree, "
-                "follow this)")
+                "follow this, except the length limits above, of a song's style and of a reading's voice, which hold over it)")
 
 CREATOR = {
     "tasks": [["song", "Lyrics + musical style"], ["lyrics", "Lyrics only"], ["style", "Musical style only"],
@@ -28,7 +30,7 @@ CREATOR = {
     "chips": [["Find the hook", "Give this song a stronger, more memorable chorus while keeping its story."],
               ["Make it personal", "Make the lyrics more personal and specific, with natural conversational phrasing."],
               ["Polish a draft", "Review the lyrics for singability, natural stress, rhyme, and story development. Revise weak lines."],
-              ["Style for YuE2", "Rewrite the style for YuE2: keep every audible detail, drop what it cannot hear, and make key, meter and tempo agree with the score."]],
+              ["Style for YuE2", "Rewrite the style for YuE2 within 200 characters without spaces, never over 400: keep its most telling audible details, drop what it cannot hear, and make key, meter and tempo agree with the score."]],   # HERESY 2840: the page's own
     "templates": [["simple", "Verse · Chorus"], ["bridge", "Verse · Chorus · Bridge"], ["prechorus", "With a pre-chorus"],
                   ["full", "Full arc — intro, pre-chorus, bridge, outro"]],
     "lyric_tasks": ["song", "lyrics", "adapt"],

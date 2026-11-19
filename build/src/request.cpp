@@ -27,8 +27,8 @@ void request_init(Yue2Request * r) {
     r->duration         = 480.0f;  // HERESY 1001: 8:00 = 12000 токенов звука
     r->lm_seed          = -1;
     r->seed             = -1;
-    r->steps            = 32;
-    r->solver           = "midpoint";
+    r->steps            = 48;   // HERESY 2663 (Viktor 17.11.2026: «По умолчанию… бери 48 шагов. 32 может быть маловато.»): the page's own count
+    r->solver           = "multistep";   // HERESY 2670 (Viktor 17.11.2026): AB2 the default everywhere; midpoint only when named
     r->lm_batch_size    = 1;
     r->synth_batch_size = 1;
     r->peak_clip        = 0;     // HERESY 2007: read and ignored, nothing is cut (upstream 10)

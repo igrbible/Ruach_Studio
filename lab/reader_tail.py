@@ -115,6 +115,33 @@ def _last_end(words, fold, last_key):
     return None
 
 
+STALL_S = 4.0           # HERESY 2700: more silence than this inside a piece: the engine stalled (Fish's own Space reads such a pass again)
+
+
+def stalled(path, most=STALL_S):
+    """HERESY 2700 (the longform plan §7, day 3: «сторож тишины (больше 4 с тишины внутри прохода — перечитать, как в Space у Fish)»): the
+    longest silence between the piece's first and last sound (frames UNDER_DB under its speech), in seconds, when it is longer than most;
+    else 0.0 (a file that cannot be read: 0.0, the reading goes on as before)."""
+    try:
+        x, sr = _mono(path)
+    except (OSError, RuntimeError, ValueError):
+        return 0.0
+    if len(x) < sr:
+        return 0.0
+    db, _hop = frames_db(x, sr)
+    thr = max(speech_db(db) - UNDER_DB, -60.0)
+    on = np.where(db >= thr)[0]
+    if len(on) < 2:
+        return 0.0
+    quiet = db[on[0]:on[-1] + 1] < thr
+    best = cur = 0
+    for q in quiet:
+        cur = cur + 1 if q else 0
+        best = max(best, cur)
+    s = best * HOP_S
+    return round(s, 2) if s > most else 0.0
+
+
 def check(path, said, words, fold, tag_end=False):
     x, sr = _mono(path)
     db, hop = frames_db(x, sr)

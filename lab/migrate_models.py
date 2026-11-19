@@ -37,7 +37,7 @@ Held: user/migration-2.0.7.hold, or RUACH_MODELS_MIGRATION=hold in the environme
 waits); a machine whose models a training reads keeps it until its owner's word. Standard library only.
 """
 import argparse
-import fcntl
+from winx import fcntl   # HERESY 2649: the fcntl module on Linux, its flock over msvcrt on Windows
 import hashlib
 import json
 import os

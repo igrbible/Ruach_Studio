@@ -1357,6 +1357,7 @@ pre.paper { font-size: 12.5px; line-height: 1.65; white-space: pre-wrap; word-br
 .lib-toggle[aria-pressed="true"] { color: var(--amber); border-color: var(--amber-dim); background: color-mix(in srgb, var(--amber) 10%, transparent); }
 
 .lib-list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+.lib-more { flex: none; height: 1px; }   /* HERESY 2671: the sentinel under the rendered rows; in sight, the next 50 */
 
 .take {
   position: relative;
@@ -1507,6 +1508,9 @@ pre.paper { font-size: 12.5px; line-height: 1.65; white-space: pre-wrap; word-br
 .meta-rows.addons .name { color: var(--ink); font-size: 13.5px; font-weight: 500; overflow-wrap: anywhere; }
 .meta-rows.addons .amt { color: var(--muted); font: 12px/1.35 var(--mono); white-space: nowrap; }
 .meta-rows.addons .none { color: var(--dim); font-size: 12.5px; }
+/* HERESY 2658: the take's licence by what made it, beside its LoRAs: a part's name, its licence wrapping in the column */
+.meta-rows.addons.lic { grid-template-columns: auto minmax(0, 1fr); }
+.meta-rows.addons.lic .amt { white-space: normal; font: 12.5px/1.4 var(--sans); }
 .meta-rows.seeds { grid-template-columns: auto auto auto; gap: 4px 10px; }
 .dots { display: inline-flex; gap: 4px; margin-right: 8px; }
 .dots i { width: 8px; height: 8px; border: 1px solid var(--amber-dim); border-radius: 50%; }
@@ -3238,14 +3242,31 @@ table.tr-sg tr.is-note td:last-child { color: var(--amber); }
 .tr-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(340px, calc(50% - 6px)), 1fr)); gap: 12px; }   /* HERESY 2621: side by side is two a row (five on a 2K screen read as a strip), one where the pane is narrow */
 /* HERESY 1299 (Viktor 10.10.2026: «выстраивать в одну колонку оба блока живого графа»): one under the other, each the whole width */
 .tr-charts.is-stacked { grid-template-columns: minmax(0, 1fr); }
-.tr-charts.is-combined > .tr-combined { grid-column: 1 / -1; }   /* HERESY 2623: the six together the whole width, LR and memory under it */
-.tr-combined .tr-plot svg { height: 320px; }
-.tr-combined svg .cl { fill: none; stroke-width: 2px; vector-effect: non-scaling-stroke; }
-.tr-combined svg .hod { fill: none; stroke-width: 7px; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.tr-charts.is-combined > .tr-chart { grid-column: 1 / -1; }   /* HERESY 2623, 2657: the two multigraphs the whole width, one under the other */
+.tr-combined .tr-plot svg { height: var(--ch, 320px); }
+.tr-combined svg .cl { fill: none; stroke: var(--lcd); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.tr-combined svg .hod { fill: none; stroke: var(--lcd); stroke-width: 7px; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+/* HERESY 2665 (Viktor 17.11.2026: «В тёмной теме графы, конечно же, менее чёткие. Я бы сделал их белыми с оттенком их дневных цветов, 10% прозрачности»): a multigraph's curve, its value in the rows and its box's swatch in its day colour (--lc); in a dark theme (each theme's color-scheme) near-white tinted with it, at 90 % */
+.tr-combined [data-k], .tr-combined .tr-layer { --lcd: light-dark(var(--lc), color-mix(in srgb, color-mix(in srgb, var(--lc) 30%, white) 90%, transparent)); }
 .tr-layers { display: flex; flex-wrap: wrap; gap: 6px; }
-.tr-layer { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid var(--line-a); border-radius: var(--r-pill, 999px); background: transparent; color: var(--ink); font: inherit; font-size: 12px; cursor: pointer; }
-.tr-layer i { width: 16px; height: 3px; border-radius: 2px; background: var(--lc); }
-.tr-layer[aria-pressed="false"] { opacity: .5; } .tr-layer[aria-pressed="false"] i { height: 0; background: none; border-top: 2px dashed var(--lc); }
+/* HERESY 2657: a box a curve (the Studio's checkbox), its colour and its value now */
+.tr-layer { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border: 1px solid var(--line-a); border-radius: var(--r-pill, 999px); background: transparent; color: var(--ink); font-size: 12px; cursor: pointer; }
+.tr-layer input { margin: 0; }
+.tr-layer i { width: 16px; height: 3px; border-radius: 2px; background: var(--lcd, var(--lc)); }
+.tr-layer.is-off { opacity: .55; } .tr-layer.is-off i { height: 0; background: none; border-top: 2px dashed var(--lcd, var(--lc)); }
+.tr-layer.is-none { cursor: default; }
+/* HERESY 2657b (Viktor 17.11.2026: «значения с равномерным отступом сверху и снизу… Одна короткая полоска сверху и снизу… полупрозрачный белый
+   бекграунд с размытием, поверх самих графов»): the shown scales as three rows over the plot, at its top, middle and floor, each value in its curve's
+   colour on a translucent ground of the theme, blurred behind; a short tick at the top and at the floor; a box under the mouse lights its curve */
+.tr-combined .tr-plot { padding-left: 0; }
+.tr-scl { position: absolute; left: 16px; transform: translateY(-50%); display: flex; gap: 12px; padding: 1px 8px; border-radius: var(--r-sm, 6px); background: color-mix(in srgb, var(--ground) 70%, transparent); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); font-size: 11px; line-height: 16px; white-space: nowrap; pointer-events: none; }
+.tr-scl b { font-weight: 600; color: var(--lcd); transition: opacity .15s; pointer-events: auto; cursor: default; }   /* HERESY 2664: a value under the mouse lights its curve */
+.tr-scl b.is-shared { color: var(--muted); }
+.tr-tick { position: absolute; left: 0; width: 10px; border-top: 2px solid var(--muted); transform: translateY(-1px); pointer-events: none; }
+.tr-combined svg .cl, .tr-combined svg .hod { transition: opacity .15s; }
+.tr-combined.has-hot svg .cl:not(.is-hot), .tr-combined.has-hot svg .hod:not(.is-hot), .tr-combined.has-hot .tr-scl b:not(.is-hot) { opacity: .2; }
+.tr-combined.has-hot svg .cl.is-hot { stroke-width: 3px; }
+.tr-combined .tr-band { height: auto; bottom: 0; }
 .tr-rhead > .tr-racts { flex: 0 0 auto; flex-wrap: nowrap; }   /* HERESY 2623: the run's buttons in one row on a 2K screen */
 @media (max-width: 1100px) { .tr-rhead > .tr-racts { flex: 0 1 auto; flex-wrap: wrap; } }
 .tr-chart svg .ho { fill: none; stroke: var(--good, #2e7a36); stroke-width: 7px; stroke-linecap: round; vector-effect: non-scaling-stroke; }   /* HERESY 2622: a held-out dot, round on a stretched plot */
@@ -3637,7 +3658,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--check, var(--a
 input[type="search"] { -webkit-appearance: none; appearance: none; }
 input[type="search"]::-webkit-search-cancel-button { cursor: pointer; }
 /* the Librarian's heading: the search and the sort one height */
-.coll-headtools input[type="search"], .coll-headtools select { height: 34px; box-sizing: border-box; padding-top: 0; padding-bottom: 0; }
+.coll-headtools input[type="search"], .coll-headtools select { height: var(--ctl-h); box-sizing: border-box; padding-top: 0; padding-bottom: 0; }
 
 /* ---------------------------------------------------------------- HERESY 1118: rubato, and the last hard lines
    The sounding card's glow follows the song's peaks: the page sets --beat (0…1) each frame. The base glow stays
@@ -4686,7 +4707,7 @@ body[data-frame="compose"] #view-compose, body[data-frame="take"] #view-take {
    height and one dress (the text profile's rules table keeps its compact cells); the OpenRouter key wide, Remember beside it */
 #view-write :is(input[type="text"], input[type="search"], input[type="number"], input[type="password"], select):not(.tp-rules input) {
   height: var(--ctl-h, 36px); box-sizing: border-box; padding-top: 0; padding-bottom: 0; font-size: 14px; line-height: normal; }   /* HERESY 2569 (the UIX audit, item 98): the one height, the Studio's */
-#view-write #wrSearch.wr-bar-find { height: 34px; }   /* the search in the bar at its icons' height (item 56) */
+#view-write #wrSearch.wr-bar-find { height: var(--ctl-h); }   /* the search in the bar at its icons' height (item 56) */
 /* HERESY 1169: the chosen OpenRouter model's price and context, under its field; amber for a name not in the list */
 .or-price { flex: 1 1 100%; margin: -4px 0 0; font-size: 12px; color: var(--muted); }
 .or-price:empty { display: none; }
@@ -5529,7 +5550,7 @@ body.ar-cmp-picking #arRuns .ar-thumb, body.ar-cmp-picking #arRuns .ar-gpic butt
 /* HERESY 2585 (UIX audit №72): the room's lists as the Studio's picker, as high as the room's fields */
 #view-artist .hc-box { display: block; min-width: 0; }
 #view-artist select.hc-src { display: none; }
-#view-artist .hc-pick { min-width: 0; width: 100%; height: 36px; box-sizing: border-box; }
+#view-artist .hc-pick { min-width: 0; width: 100%; height: var(--ctl-h); box-sizing: border-box; }
 /* HERESY 2586 (UIX audit №69): the LoRA rows' ✕ and ⏱ as icons */
 .ar-lora .ar-lora-x .ui-ico, .ar-lora .ar-lora-kb .ui-ico { width: 15px; height: 15px; }
 /* a picture over the page keeps its own shape (the takes' artwork is square) */
@@ -5760,8 +5781,8 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
    seed's mode at 33); the sampling block narrows with the column (its summary's line, a flex item that never wraps, held it at 382 px:
    the block may be narrower than that line, which ends in «…», and its fields wrap), and so do the painter's and the fine-tune's selects
    (their longest name held them) */
-#view-artist .ar-left :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not(.ar-lora-k), select) { height: 36px; padding-top: 0; padding-bottom: 0; }
-#view-artist .ar-left #arSeedNew { height: 36px; min-width: 36px; }
+#view-artist .ar-left :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not(.ar-lora-k), select) { height: var(--ctl-h); padding-top: 0; padding-bottom: 0; }
+#view-artist .ar-left #arSeedNew { height: var(--ctl-h); min-width: var(--ctl-h); }
 .ar-left .ar-sampling { min-width: 0; }
 .ar-left .ar-sampling > summary { min-width: 0; }
 .ar-left .ar-knobs > .ar-painter, .ar-left .ar-knobs > .ar-model { flex: 1 1 100%; min-width: 0; }   /* 1345: each a row of its own */
@@ -5894,7 +5915,7 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
 .hw-wave { display: block; width: 100%; height: 96px; border: 1px solid var(--line-soft); border-radius: 6px; background: var(--sunk); cursor: crosshair; touch-action: none; }
 .hw-times, .hw-row { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
 .hw-times label, .hw-row label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
-.hw-times input, .hw-row input, .hw-row select { height: 32px; box-sizing: border-box; padding-top: 0; padding-bottom: 0; }
+.hw-times input, .hw-row input, .hw-row select { height: var(--ctl-h); box-sizing: border-box; padding-top: 0; padding-bottom: 0; }
 .hw-times input { width: 96px; }
 .hw-row input { width: 76px; }
 .hw-row label:first-child { flex: 1 1 220px; }
@@ -8231,7 +8252,7 @@ html.booting.veil-wait .boot-veil .boot-line i { width: 100%; transform: none; a
 #view-video .hc-box { display: block; min-width: 0; }
 #view-video select.hc-src { display: none; }
 #view-video .vd-bar .hc-pick, #view-video .vd-panebar .hc-pick { min-width: 0; height: 30px; padding: 4px 10px; gap: 8px; font-size: 12.5px; }
-#view-video .vd-look .hc-pick { min-width: 0; width: 100%; height: 36px; }
+#view-video .vd-look .hc-pick { min-width: 0; width: 100%; height: var(--ctl-h); }
 #view-video .vd-cutson.is-on + .hc-box .hc-pick { border-color: var(--amber); color: var(--amber); }
 /* HERESY 2593 (UIX audit №78: «ЧТО ВИДНО» two lines in a row of one, its second line under «КАМЕРА»): a shot's four fields as tall as their
    words, up to three lines, one under the other; the column scrolls when they are more */
@@ -8838,9 +8859,9 @@ html.booting .boot-veil .boot-words { bottom: 212px; }   /* over the scope's 40 
    the counts given the room, two lines where they took four */
 .coll-col .col-head h2 { max-width: min(42%, 620px); line-height: 1.3; }
 .coll-where .coll-sub { display: block; margin-top: 1px; font: 500 13px/1.3 var(--sans); letter-spacing: .01em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.coll-headtools .icon-btn { width: 34px; min-width: 34px; height: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.coll-headtools .icon-btn { width: var(--ctl-h); min-width: var(--ctl-h); height: var(--ctl-h); padding: 0; display: inline-flex; align-items: center; justify-content: center; flex: none; }
 .coll-headtools .icon-btn svg { width: 18px; height: 18px; }
-.coll-headtools .coll-filter-btn { min-width: 34px; height: 34px; padding: 0 8px; justify-content: center; }
+.coll-headtools .coll-filter-btn { min-width: var(--ctl-h); height: var(--ctl-h); padding: 0 8px; justify-content: center; }
 .coll-head #collNote { flex: 1 3 640px; min-width: 440px; }
 
 /* HERESY 2006: the DAW's Layer: the shelf of banks in a window, a bank's card, how it plays */
@@ -9370,7 +9391,11 @@ body.has-sysbar .topbar, body.has-sysbar .topbar .brand { height: var(--top-h); 
 .sb-meter { display: inline-flex; flex-direction: column; justify-content: center; gap: 2px; width: 44px; height: 12px; }
 .sb-meter > b { display: block; height: 8px; border-radius: 2px; overflow: hidden; background: color-mix(in oklab, var(--ink) 11%, transparent); }
 .sb-meter.is-two > b { height: 4px; }
-.sb-meter > b > i { display: block; height: 100%; width: 0; background: var(--good); transition: width .35s ease; }
+.sb-meter > b > i { display: block; height: 100%; width: 100%; transform: scaleX(0); transform-origin: left center; background: var(--good); transition: transform .35s ease; }   /* HERESY 2722: scaled, not laid out */
+.sb-meter > b > i:dir(rtl) { transform-origin: right center; }
+/* HERESY 2721: the page idle (hidden, or untouched five minutes while nothing plays): every animation stands still, the bar's numbers rest dimmed */
+html.is-idle-ui *, html.is-idle-ui *::before, html.is-idle-ui *::after { animation-play-state: paused !important; }
+html.is-idle-ui #sysBar .sb-val { opacity: .55; }
 .sb-meter > b.lv-mid > i { background: var(--star-gold, var(--amber)); }
 .sb-meter > b.lv-hot > i { background: var(--bad); }
 .sysbar.is-quiet .sb-val { opacity: .6; }
@@ -9544,7 +9569,7 @@ html[data-motion="reduced"] .sb-job.is-open .sb-jbar > i { animation: none; }
 /* HERESY 2479: the notebook list's tools (the order, the filter, a song's versions together, the trash), its groups, the trash, the guide */
 .wr-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .wr-tools select { width: auto; flex: 1 1 120px; min-width: 0; padding: 4px 8px; font-size: 13px; }
-.wr-tools select, .wr-tools .btn { height: 34px; box-sizing: border-box; }   /* one height, the filters and the toggles alike */
+.wr-tools select, .wr-tools .btn { height: var(--ctl-h); box-sizing: border-box; }   /* one height, the filters and the toggles alike */
 .wr-tools .btn { white-space: nowrap; }
 .wr-tools .btn.is-on { border-color: var(--amber); color: var(--ink); box-shadow: inset 0 -2px 0 var(--amber); }
 .wr-group { display: flex; flex-direction: column; gap: 4px; }
@@ -9735,7 +9760,19 @@ body:has(.hm-menu) .toasts { z-index: 89; }
 /* HERESY 2530 (the UIX audit 13.11.2026, №98: input heights 29…44 px across the rooms): the Studio's one scale. A field (input, select, the picker)
    is --ctl-h; a control in a bar or a row of icons is --bar-ctl-h; a button standing in a row of fields takes the field's height. The rooms take
    these as each is looked at (the rooms' lanes); here the shared picker and the Engine take them */
-:root { --ctl-h: 36px; --bar-ctl-h: 30px; }
+:root { --ctl-h: 34px; --bar-ctl-h: 30px; }   /* HERESY 2793: 34 px, Viktor 18.11.2026 (was 36) */
+/* HERESY 2735 (the UIX audit of 18.11.2026, part B): every native slider in the theme's colour, not the browser's blue (G2: the Videographer's
+   zoom, Engine → Machine's unload); in a row of fields with their labels above, standing on their foot line, a button is the field's height and a
+   box's line as tall as a field (G3: the Artist's Guidance with Reset, the Title with its button; G5, G6: the boxes beside the Artist's and the
+   text preparation's numbers); the Reader's runs head and Engine → Models' part head on one centre line (G4, G8); a hint in the Artist's foot
+   rows without the hint's own lift of 6 px, on the buttons' centre (G7: «9 pictures») */
+input[type="range"] { accent-color: var(--amber); }
+:is(.ar-samp-row, .ar-let-row) > .btn { height: var(--ctl-h); box-sizing: border-box; }
+:is(.ar-samp-row, .ar-let-row) > .btn.icon-only { width: var(--ctl-h); }
+:is(.ar-samp-row, .tp-shape) > label.check { min-height: var(--ctl-h); }
+#rdCols .rd-side-head { align-items: center; }
+.wt-head { align-items: center; }
+.ar-reg-foot > .row-hint { margin: 0; }
 /* HERESY 2527 (№97): a select marked data-hc-pick="1" anywhere is the Studio's button and list (heresy-menu.js); the select stays, unseen */
 select.hc-src[data-hc-pick="1"] { display: none !important; }
 select.hc-src[data-hc-pick="1"] + .hc-box { display: block; min-width: 0; }
@@ -9781,11 +9818,14 @@ select.hc-src[data-hc-pick="1"] + .hc-box { display: block; min-width: 0; }
 .pick-btn .pick-caret .ui-ico { width: 14px; height: 14px; }
 .pick-ico .pick-name { display: none; }
 /* №29 · №31: the score an icon as high as Generate; Generate's ▸ and Listen's ▶ drawn; Tighten at work */
-#planBtn.mu-ico { width: 32px; height: 32px; min-width: 0; padding: 0; }   /* the go bar's one-size rule (6392) is for two buttons of words; this one is an icon now */
+#planBtn.mu-ico, #scoresBtn.mu-ico { width: 32px; height: 32px; min-width: 0; padding: 0; }   /* the go bar's one-size rule (6392) is for two buttons of words; this one is an icon now; HERESY 2803: Several scores (2691) too */
 #generateBtn .btn-glyph { display: inline-flex; vertical-align: -1px; }
 #generateBtn .btn-glyph .ui-ico { width: 11px; height: 11px; fill: currentColor; }
 #coverListen { display: inline-flex; align-items: center; gap: 6px; }
 #coverListen .ui-ico { width: 14px; height: 14px; }
+/* HERESY 2677: a vocal over your backing: its two acts drawn as Listen is */
+#backRead, #backSing { display: inline-flex; align-items: center; gap: 6px; }
+#backRead .ui-ico, #backSing .ui-ico { width: 14px; height: 14px; }
 #lyricsTighten.is-busy .ui-ico { animation: mu-busy 1.1s ease-in-out infinite; }
 @keyframes mu-busy { 50% { opacity: .3; } }
 @media (prefers-reduced-motion: reduce) { #lyricsTighten.is-busy .ui-ico { animation: none; opacity: .5; } }
@@ -9880,3 +9920,208 @@ button.ab-pic, button.dv-pic { display: block; padding: 0; border: 0; background
 /* HERESY 2643c: play and stop one button in the own voice's bar */
 #rdOwnStop { display: none !important; }
 #rdOwnSel.is-on { color: var(--amber); border-color: var(--amber); }
+/* HERESY 2673 (Viktor 17.11.2026: «Слайдер шагов вертикально в top смотрит. Выровняй его по middle, чтобы он с селектором семплера был отцентрирован»):
+   the steps' road takes the height its field has under the label (the solver's select beside it sets the row), its slider on that height's middle */
+.steps-field > .steps-road { flex: 1 1 auto; }
+/* HERESY 2675: the warning before a song while others run or wait: the runs as the lamp's list says them */
+.busy-box { width: min(560px, calc(100vw - 32px)); }
+.busy-list { list-style: none; margin: 10px 0; padding: 0; max-height: 40vh; overflow: auto; border: 1px solid var(--line); border-radius: var(--r-md, 8px); }
+.busy-row { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px 10px; border-top: 1px solid var(--line); }
+.busy-row:first-child { border-top: 0; }
+.busy-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+.busy-state { color: var(--dim); font-size: 12px; white-space: nowrap; }
+.busy-never { margin: 2px 0 10px; color: var(--dim); }
+/* HERESY 2676: Stop all under the lamp's list */
+.q-foot { display: flex; justify-content: flex-end; margin: 6px 4px 2px; }
+.q-foot [hidden] { display: none; }
+.busy-row.is-run .q-dot { background: var(--good); }
+.busy-row.is-wait .q-dot { background: var(--amber); }
+/* HERESY 2688 (Viktor 17.11.2026: «в наш стиль Студии, а не браузерную рисовалку… или один тип, адаптируемый под цветовые раскраски тем»; the UIX
+   audit's item 43): the Studio's own checkbox and radio in every room, never the browser's: one box of 16 px drawn by the theme (its field, its dim
+   line, its accent), the tick an SVG mask in the colour that stands on the accent, the radio's dot the accent's; the pointer, Space and a click on its
+   words as before, the focus ring the accent's. Display, position and margins stay the rooms' own, so a box a room hides stays hidden; the Refiner's
+   node faces keep their switches (8545), an icon's box stays unseen (5258), the Artist's shapes keep theirs hidden (5475) */
+:root {
+  --sbox-tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.4 6.3 4.9 8.8 9.6 3.3'/%3E%3C/svg%3E");
+  --sbox-dash: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M3 6h6'/%3E%3C/svg%3E");
+}
+:is(input[type="checkbox"], input[type="radio"]):not(.pcv-face input, .icon-check > input, .ar-shape input) {
+  -webkit-appearance: none; appearance: none; box-sizing: border-box; flex: none; width: 16px; height: 16px; padding: 0; vertical-align: middle;
+  border: 1.5px solid var(--dim); border-radius: var(--r-xs, 3px); background: var(--field); color: var(--on-amber); cursor: pointer;
+  transition: background-color .12s ease-out, border-color .12s ease-out; }
+:is(input[type="checkbox"], input[type="radio"]):not(.pcv-face input, .icon-check > input, .ar-shape input)::before {
+  content: ""; display: block; width: 100%; height: 100%; background: currentColor; }
+input[type="checkbox"]:not(.pcv-face input, .icon-check > input, .ar-shape input)::before {
+  -webkit-mask: var(--sbox-tick) center / 100% 100% no-repeat; mask: var(--sbox-tick) center / 100% 100% no-repeat;
+  clip-path: inset(0 100% 0 0); transition: clip-path .14s ease-out; }
+input[type="checkbox"]:not(.pcv-face input, .icon-check > input, .ar-shape input):is(:checked, :indeterminate) { border-color: var(--amber); background: var(--amber); }
+input[type="checkbox"]:not(.pcv-face input, .icon-check > input, .ar-shape input):checked::before { clip-path: inset(0); }
+input[type="checkbox"]:not(.pcv-face input, .icon-check > input, .ar-shape input):indeterminate::before {
+  -webkit-mask-image: var(--sbox-dash); mask-image: var(--sbox-dash); clip-path: inset(0); }
+input[type="radio"]:not(.pcv-face input, .icon-check > input, .ar-shape input) { border-radius: 50%; }
+input[type="radio"]:not(.pcv-face input, .icon-check > input, .ar-shape input)::before { border-radius: 50%; color: var(--amber); transform: scale(0); transition: transform .12s ease-out; }
+input[type="radio"]:not(.pcv-face input, .icon-check > input, .ar-shape input):checked { border-color: var(--amber); }
+input[type="radio"]:not(.pcv-face input, .icon-check > input, .ar-shape input):checked::before { transform: scale(.6); }
+:is(input[type="checkbox"], input[type="radio"]):not(.pcv-face input, .icon-check > input, .ar-shape input):not(:disabled):is(:hover, label:hover *) { border-color: var(--amber); }
+:is(input[type="checkbox"], input[type="radio"]):not(.pcv-face input, .icon-check > input, .ar-shape input):focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+:is(input[type="checkbox"], input[type="radio"]):not(.pcv-face input, .icon-check > input, .ar-shape input):disabled { opacity: .5; cursor: not-allowed; }
+@media (forced-colors: active) { :is(input[type="checkbox"], input[type="radio"]):not(.pcv-face input, .icon-check > input, .ar-shape input) { -webkit-appearance: auto; appearance: auto; } }
+.ar-grid-chip { display: inline-flex; align-items: center; }   /* the box on its name's centre line, not 1.5 px under it */
+/* HERESY 2689: the song's history in the take column (heresy-songhist.js): open, it stands where the run or the take was, under the column's head;
+   a version a row, its number, its day and what changed, its takes as small chips; the two picked framed in the accent (①) and the patina (②), the
+   comparison over the list with the diff of 1519 (.vr-diff, .vr-words) */
+#view-take.is-hist > :not(.col-head, #songHist) { display: none !important; }
+#view-take.is-hist > .col-head > :is(#takeTitle, #takeMore, #playHere, #takeEyebrow, #takeActions) { display: none !important; }   /* the take in hand's head steps aside; the frame's tools and the run's way back stay */
+.song-hist[hidden] { display: none; }
+.song-hist { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.sh-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sh-ico .ui-ico { width: 18px; height: 18px; color: var(--amber); display: block; }
+.sh-title { margin: 0; font: 600 14px/1.3 var(--heading); color: var(--ink); }
+.sh-base { font-weight: 600; color: var(--amber); overflow-wrap: anywhere; }
+.sh-count { font-size: 12px; color: var(--dim); }
+.sh-hint, .sh-empty { margin: 0; }
+.sh-list { display: flex; flex-direction: column; gap: 4px; }
+.sh-row { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px solid var(--line-a); border-radius: var(--r-md); background: var(--panel); cursor: pointer; }
+.sh-row:hover { background: var(--hover); }
+.sh-row:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
+.sh-row.is-a { border-color: var(--amber); background: color-mix(in srgb, var(--amber) 10%, var(--panel)); }
+.sh-row.is-b { border-color: var(--patina, var(--good)); background: color-mix(in srgb, var(--patina, var(--good)) 10%, var(--panel)); }
+.sh-row.is-formrow { border-style: dashed; }
+.sh-line { display: flex; align-items: center; gap: 8px; min-height: 20px; }
+.sh-pick { font-size: 15px; line-height: 1; color: var(--amber); }
+.sh-row.is-b .sh-pick { color: var(--patina, var(--good)); }
+.sh-n { min-width: 20px; height: 20px; padding: 0 5px; display: inline-grid; place-items: center; box-sizing: border-box; border-radius: var(--r-pill); background: var(--raise); color: var(--ink); font: 600 11.5px/1 var(--sans); }
+.sh-n .ui-ico { width: 12px; height: 12px; }
+.sh-when { font-size: 12.5px; color: var(--muted); }
+.sh-note { font-size: 11.5px; color: var(--dim); padding: 1px 7px; border: 1px solid var(--line-a); border-radius: var(--r-pill); }
+.sh-note.is-form { color: var(--amber); border-color: color-mix(in srgb, var(--amber) 55%, transparent); }
+.sh-what { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.sh-what b { font-weight: 600; color: var(--ink); }
+.sh-chg { margin-left: 6px; color: var(--dim); }
+.sh-takes { display: flex; flex-wrap: wrap; gap: 4px; }
+.sh-take { display: inline-flex; align-items: center; gap: 3px; height: 22px; padding: 0 8px; border: 1px solid var(--line-a); border-radius: var(--r-pill); background: var(--raise);
+  color: var(--muted); font: 11.5px/1 var(--mono); cursor: pointer; }
+.sh-take:hover { color: var(--ink); border-color: var(--amber); }
+.sh-take.is-down { opacity: .6; }
+.sh-marks { font-family: var(--sans); font-size: 11px; }
+.sh-cmp { display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--line-a); border-radius: var(--r-md); background: var(--panel); }
+.sh-cmp-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.sh-acts { display: inline-flex; align-items: center; gap: 4px; }
+.sh-tabs { display: flex; gap: 6px; }
+.sh-diff .vr-diff, .sh-diff .vr-words { max-height: 46vh; overflow: auto; }
+.sh-same { margin: 4px 0; }
+/* HERESY 2690: «Re-sing from the break near» in the song's passport: its words, its moment and its act on one centre line, the field and the button one height */
+.ds-resing { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 10px; font-size: 12.5px; color: var(--muted); }
+.ds-resing .ds-resing-at { flex: none; width: 72px; height: var(--bar-ctl-h, 30px); box-sizing: border-box; padding: 0 8px; text-align: center; }   /* over the fields' whole width */
+.ds-resing .icon-btn { width: var(--bar-ctl-h, 30px); height: var(--bar-ctl-h, 30px); padding: 0; display: inline-grid; place-items: center; }
+.ds-resing .icon-btn .ui-ico { width: 16px; height: 16px; }
+.ds-resing-say.is-bad { color: var(--bad); }
+/* HERESY 2691: several scores to choose from in the take column (heresy-scores.js), as the song's history stands there: a score a card, its seed, bars
+   and sections, the instrumental ones in the patina, a short one in the warning's colour; the one offered framed in the accent */
+#view-take.is-scores > :not(.col-head, #scoreSet) { display: none !important; }
+#view-take.is-scores > .col-head > :is(#takeTitle, #takeMore, #playHere, #takeEyebrow, #takeActions) { display: none !important; }
+.score-set[hidden] { display: none; }
+.score-set { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.sc-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sc-ico .ui-ico { width: 18px; height: 18px; color: var(--amber); display: block; }
+.sc-title { margin: 0; font: 600 14px/1.3 var(--heading); color: var(--ink); }
+.sc-base { font-weight: 600; color: var(--amber); overflow-wrap: anywhere; }
+.sc-hint { margin: 0; }
+.sc-list { display: flex; flex-direction: column; gap: 6px; }
+.sc-item { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid var(--line-a); border-radius: var(--r-md); background: var(--panel); }
+.sc-item.is-offer { border-color: var(--amber); background: color-mix(in srgb, var(--amber) 8%, var(--panel)); }
+.sc-item.is-wait, .sc-item.is-bad { flex-direction: row; align-items: center; gap: 8px; }
+.sc-item.is-bad .sc-state { color: var(--bad); }
+.sc-line { display: flex; align-items: center; gap: 8px; min-height: var(--bar-ctl-h, 30px); }
+.sc-seed, .sc-bars, .sc-offer { white-space: nowrap; }
+.sc-offer-line { display: flex; }
+.sc-n { min-width: 20px; height: 20px; padding: 0 5px; display: inline-grid; place-items: center; box-sizing: border-box; border-radius: var(--r-pill); background: var(--raise); color: var(--ink); font: 600 11.5px/1 var(--sans); }
+.sc-seed { font-size: 12px; color: var(--dim); }
+.sc-bars { font-size: 12.5px; color: var(--ink); }
+.sc-state { font-size: 12.5px; color: var(--dim); }
+.sc-offer { font-size: 11.5px; color: var(--amber); padding: 1px 7px; border: 1px solid color-mix(in srgb, var(--amber) 55%, transparent); border-radius: var(--r-pill); }
+.sc-strip { display: flex; flex-wrap: wrap; gap: 3px; }
+.sc-sec { padding: 1px 7px; border-radius: var(--r-pill); background: var(--raise); color: var(--muted); font: 11.5px/18px var(--mono); }
+.sc-sec.is-inst { background: color-mix(in srgb, var(--patina, var(--good)) 22%, var(--raise)); color: var(--ink); }
+.sc-sec.is-short { outline: 1px solid var(--bad); }
+.sc-flags { display: flex; flex-wrap: wrap; gap: 6px; }
+.sc-flag { font-size: 12px; }
+.sc-flag.is-bad, .sc-flag.is-warn { color: var(--bad); }
+/* HERESY 2692: the passport's «Kept for its sound» and its two acts */
+.ds-kept-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+
+/* HERESY 2693: the density gauges (heresy-density.js): a line's genre p90 a dashed mark in its track and its number amber or red past p75
+   or p90; a section's small gauge by its name; the song's figure under the box, amber or red past p75 or p90 of its genre */
+.lyr-gen { position: absolute; top: -2px; bottom: -2px; width: 0; margin-left: -1px; border-left: 1px dashed var(--muted); opacity: .75; }
+.lyr-n.lyr-dz-amber { color: var(--amber); font-weight: 700; }
+.lyr-n.lyr-dz-red { color: var(--bad); font-weight: 700; }
+.lyr-dz { position: relative; display: inline-block; width: 22px; height: 5px; margin-left: 6px; vertical-align: 1px; overflow: hidden;
+  border-radius: var(--r-pill); background: color-mix(in srgb, var(--line-strong, var(--line)) 45%, transparent); }
+.lyr-dz > span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: var(--r-pill); background: var(--muted); }
+.lyr-dz.lyr-dz-amber > span { background: var(--amber); }
+.lyr-dz.lyr-dz-red > span { background: var(--bad); }
+.lyr-meter .lyr-dz-song.lyr-dz-amber { color: var(--amber); }
+.lyr-meter .lyr-dz-song.lyr-dz-red { color: var(--bad); }
+
+/* HERESY 2792 (Viktor 18.11.2026: «Полоса Библиотекаря по высоте раздувается на "Все пространства". Предлагаю урезать так же, как и имена пространств
+   в узкой колонке и по наведению мыши это перечисление со статистикой разворачивать вниз, не трогая высоты этой полосы»): the place's numbers on one
+   line, cut with «…» as a workspace's name is in the narrow column; the pointer, the keyboard's focus or a tap unfolds them whole downward over the
+   cards, dressed as ⓘ's overlay, the first line where it stood; the strip keeps its height (the box one line tall, the unfolded list out of the flow) */
+.coll-head #collNoteBox { position: relative; flex: 1 3 640px; min-width: 300px; align-self: center; font-size: 11px; line-height: 1.35; height: 1lh; }
+.coll-head #collNoteBox > #collNote { display: block; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+.coll-head #collNoteBox.is-cut { outline: 0; }
+.coll-head #collNoteBox.is-cut:is(:hover, :focus-visible, .is-open) > #collNote { position: absolute; z-index: 30; top: -7px; inset-inline: -10px; padding: 6px 9px 8px;
+  white-space: normal; overflow: visible; border: 1px solid var(--line-strong-a); border-radius: var(--r-md); background: var(--panel); box-shadow: 0 12px 40px var(--shadow-lg); }
+.coll-head #collNoteBox.is-cut:focus-visible > #collNote { border-color: var(--amber); }
+@media (max-width: 900px) { .coll-head #collNoteBox { flex: 1 1 100%; min-width: 0; } }
+/* HERESY 2793 (Viktor 18.11.2026: «36px для всех полей? Не высоко ли при краудинге на странице. 32.5px — это неправильно в плане пикселов. 36px — много.
+   Что, если сделаем глобально 34px»): one height for every field of the page through the one token, --ctl-h (34 px): a one-line input, a select and the
+   Studio's picker, in every room, drawer and window; the buttons standing in their rows already take the token. Of no weight (:where), so a field kept
+   at a height of its own by a rule of its own keeps it: the bars' 30 px (--bar-ctl-h), the Refiner's canvas faces, an adapter's small number box. The
+   text profile's compact rules table (1168), the player's speed and the Videographer's search (its frame is the field) stand outside it */
+:where(input:is(:not([type]), [type="text"], [type="search"], [type="number"], [type="password"], [type="url"], [type="email"], [type="tel"]), select:not([multiple]):not([size]), .hc-pick):not(:where(.tp-rules, .pcv-face, #playbar, .vd-findhead) *) { height: var(--ctl-h); box-sizing: border-box; }
+:is(input:is(:not([type]), [type="text"], [type="search"], [type="number"], [type="password"], [type="url"], [type="email"], [type="tel"]), select:not([multiple]):not([size])):not(:where(.tp-rules, .pcv-face, #playbar, .vd-findhead) *) { padding-top: 0; padding-bottom: 0; }
+.vd-findhead { height: var(--ctl-h); box-sizing: border-box; }
+.vd-findhead input { height: 100%; padding-top: 0; padding-bottom: 0; }
+.tr-racts > .hc-box > .hc-pick { height: var(--bar-ctl-h); padding-top: 0; padding-bottom: 0; }   /* a run's head is a row of icons: its picker at the bar's height */
+.transpose-row > .btn { height: var(--ctl-h); box-sizing: border-box; padding-top: 0; padding-bottom: 0; }   /* the Musician's score rows: Write, Transpose, Export beside their fields */
+.vd-headtools > .vd-fullbtn { height: var(--ctl-h); min-width: var(--ctl-h); box-sizing: border-box; padding-top: 0; padding-bottom: 0; justify-content: center; }   /* beside its search, as the Librarian's icons beside theirs */
+
+/* HERESY 2799 (Viktor 18.11.2026: «Делай сразу 400 символов у Музыканта с amber, игнорируя пробелы. Что выше — red»; «до 200 знаков — идеал»; past 800
+   «подсветить всё поле красноватым»): the style's count without spaces by its label, green to 200, amber to 400, red past it; past 800 the whole field
+   reddish and its line under it, in the three style fields (the Musician's, the Writer's, the Draft's) */
+.sty-n { font-style: normal; font-variant-numeric: tabular-nums; margin-left: 6px; color: var(--dim); }
+.sty-n.is-ideal { color: var(--good); }
+.sty-n.is-warn { color: var(--amber); }
+.sty-n.is-over, .sty-n.is-cap { color: var(--bad); }
+.sty-n + .info { margin-left: 6px; }
+:is(#style, #wrStyle, #draftStyle).is-style-cap, :is(#style, #wrStyle, #draftStyle).is-style-cap:is(:hover, :focus) { border-color: var(--bad); background-color: color-mix(in srgb, var(--bad) 12%, var(--field)); }
+.row-hint.sty-cap-say { display: block; margin: 4px 0 0; color: var(--bad); }
+.row-hint.sty-cap-say[hidden] { display: none; }
+
+/* HERESY 2844: a workspace's note, right beside the pointer: up to 600 × 500 px, scrolling inside, 2 pt larger than a tip; the pointer may rest
+   on it (pointer events on), so a long note scrolls */
+.tip.ws-note-tip { max-width: min(600px, calc(100vw - 16px)); max-height: min(500px, calc(100vh - 16px)); overflow-y: auto; pointer-events: auto; font-size: calc(14px + 2pt); }
+
+/* HERESY 2846 (Viktor 18.11.2026): no numbers on the Librarian's bar (ⓘ holds them); a section's path under its workspace in a small type, one line, cut
+   with an ellipsis like the workspace's name, so the bar never grows */
+.coll-head #collNoteBox:has(> #collNote:empty) { display: none; }
+.coll-col .col-head h2:not(.is-one) .coll-where .coll-sub { font: 600 13px/1.3 var(--heading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* HERESY 2847: negative words in a style: the field's soft amber line and the note under it (typing never stopped), the dialog's style with its words marked */
+:is(#style, #wrStyle, #draftStyle, #draftStyleTags).is-style-neg:not(.is-style-cap) { box-shadow: inset 0 -2px 0 var(--amber); }
+.sty-neg-say { color: var(--amber); }
+.sty-neg-say a { color: inherit; text-decoration: underline; }
+.neg-box .hd-html { white-space: normal; }
+.neg-box .hd-html p { margin: 0 0 8px; }
+.neg-box .neg-style { white-space: pre-wrap; overflow-wrap: break-word; max-height: 10em; overflow: auto; padding: 8px 10px; margin: 0 0 10px; border-radius: 6px; background: var(--field); color: var(--ink); }
+.neg-box mark.neg-word { white-space: nowrap; background: color-mix(in srgb, var(--amber) 30%, transparent); color: var(--ink); border-radius: 3px; padding: 0 2px; text-decoration: underline wavy var(--amber); text-underline-offset: 3px; }
+.neg-box .neg-guide { color: var(--amber); text-decoration: underline; }
+
+/* HERESY 2848 (Viktor 18.11.2026, two screenshots: the player's line jumped and the title broke onto two lines when +dB turned on and off): the pill keeps
+   one width, «+dB» and «+2.9 дБ» alike, so nothing beside it moves */
+.vol-loud { min-width: 64px; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* HERESY 2855 (Viktor 18.11.2026: «Убери ту самую строчку стиля из-под названия трека. Она нахрен никому не нужна и ломает высоты плеера и
+   отображение заголовка трека»): the player shows the take's title only; its style stays on the card and in the take's column */
+#playbar .pb-sub, #playbar .pb-names:hover .pb-sub { display: none; }

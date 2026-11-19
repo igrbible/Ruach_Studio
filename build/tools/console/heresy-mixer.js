@@ -2846,7 +2846,7 @@
   }
   function refUpload() {
     var inp = document.createElement("input");
-    inp.type = "file"; inp.accept = "audio/*,.wav,.flac,.mp3,.m4a,.ogg,.opus,.aif,.aiff";
+    inp.type = "file"; inp.accept = ".wav,.flac,.ogg,.opus,.mp3,.m4a,.aac,.3gp,.amr";   // HERESY 2659: what the gate takes
     inp.addEventListener("change", function () {
       var f = inp.files && inp.files[0];
       if (!f) return;

@@ -94,6 +94,32 @@ Il ♪ accanto allo stile apre una tabella di 200 strumenti che lo Studio ha pro
 
 ![Il prontuario degli strumenti](guide/instruments.png)
 
+### Prompting negativo, o come non scrivere un prompt <!-- #negative-prompting-or-how-not-to-prompt -->
+
+**Nomina ciò che vuoi, mai ciò che non vuoi.** YuE2 è un modello pulito: uno strumento che nessuno ha chiesto arriva di rado. L'abitudine dei servizi audio, uno stile lungo carico di strumenti, effetti e parole di produzione e poi «no questo, no quello», non rende la canzone più pulita; la soffoca. I prompt negativi appartengono al passato dei modelli dell'era DiT, e lo Studio non li offre né li insegna: le istruzioni dello Scrittore non portano alcun consiglio di parole «no …», e l'interruttore Instrumental mette *Instrumental,* davanti allo stile e non aggiunge nulla dopo.
+
+**Che cosa ha sentito la prova.** Il 18.11.2026 lo Studio ha cantato 75 take alla cieca su tre schede: una ballata di pianoforte (6 semi), una ballata di chitarra fingerpicking (4 semi) e uno strumentale flamenco (5 semi). Ogni seme è stato cantato cinque volte con lo stesso seme musicale, seme sonoro e testo; cambiava solo la coda dello stile: pulito, poi gli strumenti indesiderati come `-x`, `no x`, `avoid x` e `without x` (chitarra, batteria e drone contro il pianoforte; batteria, pianoforte e pad di synth contro la chitarra; voci, canto, coro e parlato contro il flamenco). Un orecchio ne ha valutati 51 senza sapere quale coda fosse quale:
+
+| Coda | Take valutati | Puliti dal suono indesiderato |
+|---|---|---|
+| stile pulito | 10 | 2 |
+| `-x` | 10 | 2 |
+| `no x` | 10 | 4 |
+| `avoid x` | 11 | 0 |
+| `without x` | 10 | 0 |
+
+**Che cosa significa.** Lo stile pulito lasciava già entrare ciò che vorremmo vietare: la ballata di chitarra ha portato batteria, pad di synth o un pianoforte su 2 dei suoi 4 semi, lo strumentale flamenco un drone vocale o corale su tutti e 5. Nessuna coda ha tolto la perdita: «no» è uscito pulito su 4 take contro i 2 dello stile pulito, troppo pochi per chiamarlo un rimedio; «avoid» e «without» hanno lasciato entrare il suono indesiderato su ogni seme delle due schede ascoltate per intero, quindi forse lo chiamano perfino. E le parole costano alla canzone: con una coda negativa il canto è soffocato e la dizione si impasta, come se qualcuno avesse pestato l'orecchio al cantante.
+
+**Come scrivere il prompt invece.**
+
+- **Tieni lo stile corto**: 200 caratteri senza spazi è l'obiettivo, 400 il massimo (oltre 800 lo Studio si rifiuta di cantare). Uno stile corto si canta pulito; uno lungo sfoca la composizione.
+- **Scegli il genere per il suo organico.** Il nome di un genere porta gli strumenti abituali in quel genere: una ballata rock porta batteria e chitarra elettrica, un pezzo da camera porta gli archi. Quando non vuoi ciò che un genere porta, scegli un genere che non lo porta invece di vietarlo.
+- **Nomina per primo lo strumento guida.** Lo strumento nominato per primo prende il posto davanti; la voce e due o tre compagni lo seguono.
+- **Lascia che il testo porti la forma.** L'arrangiamento appartiene ai tag di sezione del testo ([Intro], [Verse], [Chorus], [Interlude], [Outro]), non a frasi nello stile.
+- **Dai alla voce un organico.** Una voce su un solo strumento esce più sottile che su un organico che la regge: anche il canto soffre su uno strumento solitario.
+- **Cambia il seme, non le parole.** Uno strumento entra dove l'addestramento del modello dice che la canzone lo vuole, e il seme decide molto di questo: ascolta diversi semi prima di riscrivere lo stile.
+- **Silenzialo dopo.** Uno strumento indesiderato che esce comunque si cattura negli stem del Rifinitore e si silenzia nella DAW. Non forzare il modello nel render.
+
 ### Il vocabolario della Prima Onda <!-- #the-first-wave-s-vocabulary -->
 
 **YuE2-RS-FW**, il primo fine-tune dello Studio (*Engine → Models and LoRAs → RS-FW merge*), ha imparato da 32.633 brani, e ogni parola delle loro righe di stile è contata nel **[suo vocabolario](fw-vocabulary/index.html?lang=it&set=fw)**: generi, strumenti, voce, umore, le parole d'emozione date dall'audio stesso, tonalità e BPM, e le chiavi delle partiture (sezioni, tempi, metronomi, accordi). Cercalo, filtralo per tipo e per fonte, guarda con quali parole andava ognuna. Un clic mette una parola in una riga di stile nell'ordine che il modello ha imparato; *Copia* prende la riga per il campo Style. Una parola vista in centinaia di brani il modello la capisce; vista due volte, è un indizio. Lo stesso riferimento come documento è sulla [pagina del modello](https://huggingface.co/goldhub/YuE2-RS-Finetunes/blob/main/FW-VOCABULARY.md).
@@ -282,6 +308,15 @@ Un modello di chat legge il tuo stile, il tuo testo e la tua partitura, poi li a
 - **Dove va la bozza** (2471): nel documento aperto nel taccuino, a meno che non sia la canzone che il Musicista ha in mano, altrimenti nella canzone del Musicista; la riga sopra il pulsante dice dove, e un clic la gira dall'altra parte. Applica scrive nel documento e tiene la versione precedente tra le sue versioni.
 - **Invia la richiesta all'LLM** (Ctrl+Invio). Con lo scrittore dello Studio la stanza prima conta la domanda e dice quanto resta per la risposta (legge 32 768 token); **Ferma** o Esc interrompono la risposta, e nella tua canzone non cambia nulla.
 - La bozza: **Applica la bozza**, **Usa il testo** o **Usa lo stile**; *Annulla* la riporta indietro. Un campo che il modello ha lasciato com'era è tratteggiato e segnato invariato; una bozza del tutto vuota è detta sopra la pagina, mai mostrata pronta. Quando la bozza cambia il tuo testo, dice quante righe e le mostra, la vecchia sopra la nuova, e Applica chiede prima: con il testo, senza o per niente. Una bozza chiesta solo per lo stile non tocca mai il testo, e la struttura va solo con i compiti che scrivono testo.
+
+### SOUL: cosa legge il modello <!-- #soul-what-the-model-reads -->
+
+Ciascuno dei due mondi dello Scrittore, quello del Musicista e quello del Lettore, ha il suo **SOUL**: la tua parola stabile al modello di chat, letta in ogni bozza subito dopo le istruzioni incluse di quel mondo. È il campo **Le tue preferenze di scrittura** sotto la richiesta: con una lettura aperta nel quaderno tiene il SOUL del Lettore, altrimenti quello del Musicista.
+
+- **Dove vive**: nello Studio, non nel browser, nella cartella dello Scrittore: `writer/soul-creator.md` (il Musicista) e `writer/soul-reader.md` (il Lettore). Le preferenze che uno Studio più vecchio teneva nel browser passano da sole nel SOUL del Musicista, una volta e solo finché è vuoto (2842).
+- **Cosa può**: sta sopra le istruzioni incluse; dove le due divergono, il modello segue il SOUL. Tranne i limiti di lunghezza: lo stile di una canzone resta entro 200 caratteri senza spazi e mai oltre 400, la voce di una lettura entro 160 spazi compresi, qualunque cosa chieda il SOUL.
+- **Versioni**: ogni salvataggio conserva il testo di prima come versione (le 30 più recenti per mondo). **Esporta tutto** e **Importa** portano entrambi i SOUL con il quaderno; un SOUL importato riempie solo uno vuoto, e uno diverso dal tuo resta accanto come versione, mai scritto sopra.
+- **Non modificare a mano i file SOUL.** Scrivi nel campo: lo Studio tiene le versioni solo di ciò che passa da lì. Un SOUL rotto a mano (mezza frase, un log incollato, una regola contro la forma della risposta) viene letto intero in ogni bozza e le guasta tutte in silenzio, senza un errore che lo mostri. *Leggi le istruzioni di scrittura complete* sotto il campo mostra esattamente cosa legge il modello.
 
 ## Rifinitore <!-- #refiner -->
 
@@ -686,7 +721,7 @@ Una LoRA è un piccolo adattatore sopra entrambe le metà. **Lo stile viene sopr
 
 ### Una voce tutta tua: domande dal campo <!-- #a-voice-of-your-own-questions-from-the-field -->
 
-Risposte date su GitHub (issue #2) a chi cercava la sola voce principale, conservate qui.
+Risposte date su GitHub ([issue #2](https://github.com/igrbible/Ruach_Studio/issues/2)) a Steven Altsman (manchuwook), che cercava la sola voce principale, conservate qui.
 
 - **Una ripresa con la sola voce.** YuE2 ha imparato a cantare da canzoni intere, e il suo fraseggio poggia sulla musica sotto la voce: «a cappella» nello stile lo spinge verso cori o verso tutta la band. Meglio chiedere una sola cosa quieta sotto la voce (un pad morbido, una sola chitarra acustica) con `solo lead, single voice, no harmonies, no backing vocals, dry vocal, close mic`, poi separare la ripresa nel Rifinitore (otto stem): *Voce principale intera* riporta ciò che la separazione ha messo tra i cori, *Upscale delle voci* ridisegna l'aria che il separatore ha spento. Meno c'è sotto la voce, più pulito è lo stem.
 - **Un adattatore di voce dalle tue registrazioni.** Voci principali asciutte di un solo cantante con il testo, a 44,1 o 48 kHz da sorgenti senza perdita. La stessa stanza leggera su ogni clip fa meno danno di stanze diverse, e un clip con molto riverbero è meglio lasciarlo fuori che pulirlo a metà: ciò che un de-reverb lascia dietro di sé viene appreso come parte della voce.
@@ -865,7 +900,7 @@ Il Motore si apre sopra la stanza in cui ti trovi (☰ › Motore, oppure Ctrl+A
 
 Su una macchina con più schede, dai a ciascuna il suo lavoro: lo **Studio** (la sintesi) su una scheda, l'**addestramento** sulle schede che gli assegni, i **lavori** del laboratorio (l'ascoltatore, Whisper, stem, remaster, upscale) sulle loro. Mentre un'esecuzione si addestra sulla scheda dello Studio stesso, una sintesi aspetta, e la pagina dice perché. Con una sola scheda funziona così: addestra, poi crea. Una nuova scheda per lo Studio ha effetto dopo un riavvio (il pulsante compare quando serve). I lavori del laboratorio restano sulle schede spuntate per loro, l'Artista compreso: quando sono piene, un lavoro aspetta una di esse (Whisper passa al processore) e non prende mai una scheda non spuntata per il laboratorio. Un'esecuzione dell'Artista va sulla scheda dove il suo modello è tenuto dall'esecuzione precedente, con i pesi già nella RAM.
 
-**Intel Arc (beta).** La sintesi dello Studio gira anche su una scheda Intel Arc, con il suo motore compilato da `./build.sh --sycl` (INSTALL.md, «Intel Arc (beta)»): canzoni, adattatori, Full, Extend. Le schede di questo elenco sono NVIDIA; il motore Arc calcola sulla propria scheda, mentre l'addestramento e le copertine restano sulle NVIDIA. Anche una scheda Intel compare in Motore → GPU: sceglila nella colonna «studio» e, dopo un riavvio, lo Studio vi fa girare il suo motore SYCL (di nuovo su una scheda CUDA allo stesso modo), con un limite di VRAM come ogni scheda; l'addestramento e i compiti del laboratorio girano in PyTorch su CUDA, perciò le sue altre due colonne dicono perché restano vuote.
+**Intel Arc (beta).** La sintesi dello Studio gira anche su una scheda Intel Arc, con il suo motore compilato da `./build.sh --sycl` (INSTALL.md, «Intel Arc (beta)»): canzoni, adattatori, Full, Extend. Le schede di questo elenco sono NVIDIA; il motore Arc calcola sulla propria scheda, mentre l'addestramento e le copertine restano sulle NVIDIA. Anche una scheda Intel compare in Motore → GPU: sceglila nella colonna «studio» e, dopo un riavvio, lo Studio vi fa girare il suo motore SYCL (di nuovo su una scheda CUDA allo stesso modo), con un limite di VRAM come ogni scheda; l'addestramento e i compiti del laboratorio girano in PyTorch su CUDA, perciò le sue altre due colonne dicono perché restano vuote. La pagina la chiama come ogni processore (2733): una Intel Arc è XPU (XPU0 · Arc Pro B50), una scheda NVIDIA è GPU (GPU0 · RTX 3090), una AMD Radeon è GPU · Radeon con il suo modello, e il backend ha il suo nome (CUDA, SYCL, Vulkan).
 
 **Uno sguardo per molte domande** (2060): Motore → GPU, il controllo prima di una sintesi e l'Addestratore LoRA chiedono al laboratorio delle schede, spesso tutti insieme mentre la pagina si apre; il laboratorio le guarda una volta (nvidia-smi, la guardia, le schede Intel) e risponde a ogni domanda dei 2 s successivi da quello sguardo: le schede vengono guardate una sola volta per tutte le domande, non una volta per domanda, così nessuna va in timeout.
 

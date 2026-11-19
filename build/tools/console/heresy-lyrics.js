@@ -724,7 +724,8 @@
     mirror.className = "lyr-mirror";
     mirror.setAttribute("aria-hidden", "true");
     wrap.appendChild(mirror);
-    var last = null, queued = false;
+    var last = null, queued = false, lastDz = null;   // HERESY 2693: the density gauges of the same text (heresy-density.js)
+    function lengthNow() { var s = opts.length ? parseFloat(opts.length()) : 0; return s > 0 ? s : 0; }
     var ax = aids(area, function () { if (meter) paintMeter(last || measure(area.value, latinOf(area.value, styleBox ? styleBox.value : ""))); }, opts.tipAt);   // HERESY 1169; 2478: a label that says the keys
     // HERESY 1453 (Viktor 15.10.2026: «По F5… Нули, пока не развернул свёрнутый блок»): the text the page itself puts into the
     // box (the form back after a reload, a take, a document) sends no input event, and a folded box sends no resize either, so the
@@ -801,6 +802,34 @@
         parts.push('<button type="button" class="lyr-tog lyr-warn near" data-lyr="worn" data-tip="' + esc(tr("Words worn out in songs, from the list of the lyrics' language: the Writer's model is told to leave them out. Press to go to the next one.") +
           "\n" + wsays.slice(0, 24).join(", ") + (wsays.length > 24 ? " …" : "")) + '">' + esc(tr("Worn words: {0}").replace("{0}", num(wf.length))) + "</button>");
       }
+      // HERESY 2693: the density against the genre's usual (heresy-density.js): the song's figure, its tip the norm, the length, each section;
+      // the lines past their genre's p90 a press to the next
+      var dzBlk = [];
+      if (lastDz) {
+        var D = lastDz, S = D.song, f1 = function (x) { return num(Math.round(x * 10) / 10); };
+        var band = function (b) { return f1(b[0]) + "–" + f1(b[1]); }, mmss = function (s) { s = Math.round(s); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+        var gname = D.pick.genre || tr("written lyrics");
+        var dtip = [tr("The lyrics' density against the usual of their genre in the training set's written lyrics: the song over its length, each section over its estimated time, each line by its beats. It shows and never changes the text."),
+          D.pick.by === "word" ? tr("Norm: {0}, by the style's word «{1}»").replace("{0}", gname).replace("{1}", D.pick.word)
+            : D.pick.by === "instrument" ? tr("Norm: {0}, by the style's instrument «{1}»").replace("{0}", gname).replace("{1}", D.pick.word)
+            : tr("Norm: written lyrics as a whole (no genre word in the style)"),
+          tr("Song: {0} beats/s, {1} words/s over {2} (usual {3}, high above {4})").replace("{0}", f1(S.bps)).replace("{1}", f1(S.wps)).replace("{2}", mmss(S.sec))
+            .replace("{3}", band(S.band)).replace("{4}", f1(S.band[2])),
+          tr(S.squeezed ? "Its length: the sections' usual times squeezed into the Max length, {0}" : "Its length: the sections' usual times, {0}").replace("{0}", mmss(S.sec))];
+        D.sections.forEach(function (it) {
+          dtip.push(tr("{0}: {1} beats/s over about {2} s (usual {3}, high above {4})").replace("{0}", (it.name || "#" + num(it.line + 1)) + (it.genre !== D.pick.genre ? " (" + (it.genre || tr("written lyrics")) + ")" : ""))
+            .replace("{1}", f1(it.bps)).replace("{2}", num(Math.round(it.sec))).replace("{3}", band(it.band)).replace("{4}", f1(it.band[2])));
+        });
+        dzBlk.push('<span class="lyr-c lyr-dz-song lyr-dz-' + S.lvl + '" data-tip="' + esc(dtip.join("\n")) + '">' +
+          esc(tr(S.lvl === "air" ? "Density ({0}): {1} beats/s · much air" : "Density ({0}): {1} beats/s").replace("{0}", gname).replace("{1}", f1(S.bps))) + "</span>");
+        var dlong = Object.keys(D.lines).map(Number).filter(function (r) { return D.lines[r].lvl === "red"; }).sort(function (a, b) { return a - b; });
+        if (dlong.length) {
+          var dsays = dlong.slice(0, 12).map(function (r) { return tr("line {0}: {1} beats (high above {2})").replace("{0}", num(r + 1)).replace("{1}", num(D.lines[r].beats)).replace("{2}", num(D.lines[r].p90)); });
+          if (dlong.length > 12) dsays.push(tr("and {0} more").replace("{0}", num(dlong.length - 12)));
+          parts.push('<button type="button" class="lyr-tog lyr-warn near" data-lyr="dense" data-tip="' + esc(tr("Lines past the usual of their genre (its p90 for a line of that section). Press to go to the next one. The dashed mark beside each line stands there; the bar's colour still weighs a line against its section's own ruler.") + "\n" + dsays.join("\n")) + '">' +
+            esc(tr("Long lines: {0}").replace("{0}", num(dlong.length))) + "</button>");
+        }
+      }
       // HERESY 1169: the marks (Alt+K) and the line numbers
       var mk = ax ? ax.marks().length : 0;
       if (mk) parts.push('<button type="button" class="lyr-tog lyr-marks" data-lyr="mark" data-tip="' + esc(tr("Marked lines: Alt+K marks the cursor's line or unmarks it, Alt+J goes to the next, Alt+Shift+J to the one before, Alt+Shift+K clears them. Press to go to the next one.")) + '">' +
@@ -817,13 +846,14 @@
       var look = parts.filter(function (x) { return x.indexOf("lyr-warn") >= 0; });
       var tools = parts.filter(function (x) { return x.indexOf("<button") === 0 && x.indexOf("lyr-warn") < 0; });
       meter.innerHTML = block("words", words.slice(0, words.length - 2)) + block("tags", words.slice(-2)) +
-        block("hand", counts.filter(function (x) { return x.indexOf("lyr-hand") >= 0; })) + block("look", look) + block("tools", tools);
+        block("hand", counts.filter(function (x) { return x.indexOf("lyr-hand") >= 0; })) + block("dz", dzBlk.map(bold)) + block("look", look) + block("tools", tools);
     }
 
     function draw() {
       queued = false;
       var text = area.value, m = measure(text, latinOf(text, styleBox ? styleBox.value : ""));
       last = m;
+      try { lastDz = window.HeresyDensity ? window.HeresyDensity.gauge(text, styleBox ? styleBox.value : "", lengthNow(), m) : null; } catch (e) { lastDz = null; }
       paintMeter(m);
       var spell = recall("yue2.lyrSpell") !== "off";
       area.spellcheck = spell;
@@ -841,6 +871,7 @@
       var lh = parseFloat(cs.lineHeight) || 20, scale = 12;
       m.rows.forEach(function (o) { if (!o.tag) scale = Math.max(scale, o.syl + o.bsyl); });
       Object.keys(m.rulers).forEach(function (g) { scale = Math.max(scale, Math.ceil(m.rulers[g]) + 2); });
+      if (lastDz) Object.keys(lastDz.lines).forEach(function (r) { scale = Math.max(scale, Math.ceil(lastDz.lines[r].p90) + 1); });   // HERESY 2693: the genre's mark inside the track
       var W = 64, kids = mirror.children, html = [];
       m.rows.forEach(function (o, i) {
         var y = (kids[i] ? kids[i].offsetTop : i * lh) - area.scrollTop;
@@ -853,7 +884,7 @@
           if (o.pause) { html.push('<div class="lyr-row lyr-head lyr-pause" style="top:' + y + 'px;height:' + lh + 'px">' + esc(o.pause) + "</div>"); return; }
           if (!o.section) return;
           html.push('<div class="lyr-row lyr-head" style="top:' + y + 'px;height:' + lh + 'px"><span><span>' + esc(o.group) + "</span>" +   // HERESY 1339: the name a text of its own
-            (ruler !== undefined && o.lines ? " ≈ " + esc(String(Math.round(ruler * 10) / 10)) : "") + "</span></div>");
+            (ruler !== undefined && o.lines ? " ≈ " + esc(String(Math.round(ruler * 10) / 10)) : "") + dzHead(i) + "</span></div>");
           return;
         }
         if (!o.syl && !o.bsyl && (o.fault || o.two)) {   // a line of no syllables with a mark gone astray: the mark alone
@@ -862,13 +893,15 @@
         }
         if (o.empty || (!o.syl && !o.bsyl)) return;
         var off = ruler === undefined ? null : Math.abs(o.syl - ruler), cls = off === null ? "" : off <= 1 ? " ok" : off <= 3 ? " near" : " far";
+        var dl = lastDz ? lastDz.lines[i] : null;   // HERESY 2693: the line against its genre: a dashed mark at its p90, the number amber or red past p75 or p90
         html.push('<div class="lyr-row' + cls + '" style="top:' + y + 'px;height:' + lh + 'px">' +
           '<span class="lyr-track" style="width:' + W + 'px">' +
           '<span class="lyr-bar" style="width:' + Math.round(o.syl / scale * W) + 'px"></span>' +
           (o.cb ? '<span class="lyr-cbar" style="left:' + Math.round((o.syl - o.cb) / scale * W) + "px;width:" + Math.round(o.cb / scale * W) + 'px"></span>' : "") +
           (o.bsyl ? '<span class="lyr-bbar" style="left:' + Math.round(o.syl / scale * W) + "px;width:" + Math.round(o.bsyl / scale * W) + 'px"></span>' : "") +
           (ruler !== undefined ? '<span class="lyr-ruler" style="left:' + Math.round(ruler / scale * W) + 'px;top:' + (-(lh - 6) / 2) + "px;bottom:" + (-(lh - 6) / 2) + 'px"></span>' : "") +
-          '</span><span class="lyr-n">' + (o.fault || o.two ? '<span class="lyr-x ' + (o.fault ? "bad" : "near") + '">\u00b4</span>' : "") +
+          (dl ? '<span class="lyr-gen" style="left:' + Math.round(dl.p90 / scale * W) + 'px"></span>' : "") +
+          '</span><span class="lyr-n' + (dl && dl.lvl !== "ok" ? " lyr-dz-" + dl.lvl : "") + '">' + (o.fault || o.two ? '<span class="lyr-x ' + (o.fault ? "bad" : "near") + '">\u00b4</span>' : "") +
           o.syl + (o.bsyl ? "+" + o.bsyl : "") + "</span></div>");
       });
       gutter.style.top = top0 + "px";
@@ -876,9 +909,16 @@
       gutter.style.height = area.clientHeight + "px";
       gutter.innerHTML = html.join("");
     }
+    // HERESY 2693: a section's density by its name: filled to its beats per second against its genre's p90, grey to p75, amber, red past p90
+    function dzHead(i) {
+      var it = lastDz && lastDz.heads[i];
+      if (!it) return "";
+      return '<span class="lyr-dz lyr-dz-' + it.lvl + '"><span style="width:' + Math.round(Math.min(1, it.bps / it.band[2]) * 100) + '%"></span></span>';
+    }
     function later() { if (!queued) { queued = true; requestAnimationFrame(draw); } }
 
     area.addEventListener("input", later);
+    if (opts.lengthBox) opts.lengthBox.addEventListener("input", later);   // HERESY 2693: the Max length squeezes the sections' times
     area.addEventListener("scroll", later);
     if (styleBox) styleBox.addEventListener("input", later);
     if (window.ResizeObserver) new ResizeObserver(later).observe(area);
@@ -964,6 +1004,14 @@
         return;
       }
       if (b.dataset.lyr === "mark" && ax) return ax.next();                 // HERESY 1169
+      if (b.dataset.lyr === "dense") {                    // HERESY 2693: to the next line past its genre's p90, selected
+        var dz = lastDz ? Object.keys(lastDz.lines).map(Number).filter(function (r) { return lastDz.lines[r].lvl === "red"; }).sort(function (a, b) { return a - b; }) : [];
+        if (!dz.length) return draw();
+        visit.dense = ((visit.dense == null ? -1 : visit.dense) + 1) % dz.length;
+        var dls = area.value.split("\n"), dn = dz[visit.dense], dfrom = dls.slice(0, dn).join("\n").length + (dn ? 1 : 0);
+        draw();
+        return goTo({ line: dn, from: dfrom, to: dfrom + (dls[dn] || "").length });
+      }
       if (b.dataset.lyr === "worn") {                      // HERESY 2350: to the next worn word, selected
         var wl = wornOf(area, styleBox ? styleBox.value : "");
         if (!wl.length) return draw();

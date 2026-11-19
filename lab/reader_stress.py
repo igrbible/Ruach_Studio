@@ -139,6 +139,30 @@ def _el_syllables(w):
     return n
 
 
+def el_polytonic(text, breath_h=False):
+    """HERESY 2696 (Viktor 13.11.2026, against 2460's monotonic for the Bible's readings: «придыхание оставить (как h), циркумфлекс, грейв
+    и акут тоже; снимать только подписную йоту»): (each Greek word as written, its breathings, acute, grave and circumflex kept, only its
+    iota subscript out: ᾳ ῃ ῳ, and a capital's prosgegrammeni; the lunate sigma as σ or ς, as in monotonic; how many words changed).
+    breath_h (a probe's choice, not the room's): a rough breathing spelled as a Latin h before its word, the mark itself out."""
+    import unicodedata
+    n = [0]
+
+    def one(m):
+        w = m.group(0)
+        d = unicodedata.normalize("NFD", w)
+        rough = breath_h and "\u0314" in d[:4]
+        r = "".join(c for c in d if c != "\u0345" and not (rough and c == "\u0314"))
+        if rough:
+            r = ("H" + r[:1].lower() + r[1:]) if r[:1].isupper() else ("h" + r)
+        r = re.sub("\u03f2(?=[\u0370-\u03ff\u0300-\u036f])", "σ", r).replace("\u03f2", "ς").replace("\u03f9", "Σ")
+        r = unicodedata.normalize("NFC", r)
+        if r != unicodedata.normalize("NFC", w):
+            n[0] += 1
+        return r
+
+    return EL_WORD.sub(one, str(text or "")), n[0]
+
+
 def el_monotonic(text):
     """(the text with each Greek word monotonic; how many words changed)."""
     import unicodedata

@@ -505,7 +505,7 @@
   /* 12.11.2026 (Viktor: «на визитке тизер блоком с кнопкой на полноэкранный оверлей»): the article's teaser, and its window over the whole screen */
   .why-call .why-by { color: var(--faint); font-size: 14px; margin: 0 0 6px; }
   .why-modal .vocab-panel { width: min(1240px, 100%); }   /* 15.11.2026 (Viktor: «Ужми оверлей… в ту же ширину, что и оверлей словарей»): the vocabularies' width, no longer the whole screen */
-  /* 15.11.2026: the article as a PDF in a window of its own, igr.bible's reader (PdfReader.svelte) in the card's colours: the bar stays, the pages scroll */
+  /* 15–16.11.2026: the paper of YuE2-VAE-RS x3 as a PDF in a window of its own, igr.bible's reader (PdfReader.svelte) in the card's colours: the bar stays, the pages scroll */
   .pdf-reader { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .pdf-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 12px; background: var(--paper); border-bottom: 1px solid var(--rule); }
   .pdf-nav, .pdf-zoom { display: flex; align-items: center; gap: 6px; }
@@ -701,7 +701,7 @@
     <p class="lead">围绕开放歌曲模型 <b>YuE2</b> 的完整工作室。写下风格和歌词，工作室就在<b>你自己的 GPU</b> 上作曲、演唱并渲染歌曲。你的歌曲、文字和设置永远不会离开它。</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">在 GitHub 获取</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.zh.md">阅读指南</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face 上的模型</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 给 Viktor 和 Claude 的 24/7 咖啡</a></div>
     <p class="star">⭐ 喜欢这个工作室的话，请给<a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub 上的 YuE2 Studio 仓库</a>点亮一颗星。</p>
-    <span class="rc"><b>2.0.8</b> · 一体化版本：写作室有了两个世界，朗读有了第二个引擎，影像室有了两个监视器 · 2026 年 11 月</span>
+    <span class="rc"><b>2.0.9</b> · 在你自己的伴奏上演唱，Studio 原生运行于 Windows 和 Mac（测试版），页面随你一起休息 · 2026 年 11 月</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -856,8 +856,6 @@
         </div>
         <div class="vocab-btns">
           <button class="vocab-open" id="why-open" type="button" aria-haspopup="dialog" aria-controls="why-modal">阅读全文</button>
-          <button class="vocab-open vocab-open-2" id="whypdf-open" type="button" aria-haspopup="dialog" aria-controls="whypdf-modal">以 PDF 阅读</button>
-          <a class="vocab-open vocab-open-2" id="whypdf-dl" href="/article/why-own-studio.zh.pdf" download type="application/pdf">下载 PDF</a>   <!-- 15.11.2026: read on the card and downloaded, the page's own language -->
         </div>
       </div>
     </div>
@@ -1024,7 +1022,7 @@
         <div class="vocab-btns">
           <button class="vocab-open" id="vae-study-open" type="button">阅读研究</button>
           <button class="vocab-open vocab-open-2" id="vae-tracks-open" type="button">试听：20 首歌 × 3 个解码器</button>
-          <a class="vocab-open vocab-open-2" id="vae-paper-open" href="/vae/YuE2-VAE-RS-x3-paper.pdf" download="YuE2-VAE-RS-x3-paper.pdf" type="application/pdf">论文（PDF）</a>   <!-- 12.11.2026 (Viktor: «Твой PDF — Огонь. Его можно и на визитку для скачивания и распечатки»); a download: the web server serves .pdf as octet-stream on purpose (mime.types «Force PDFs to download») -->
+          <button class="vocab-open vocab-open-2" id="vae-paper-open" type="button" aria-haspopup="dialog" aria-controls="paper-modal">论文（PDF）</button>   <!-- 12.11.2026 (Viktor: «Твой PDF — Огонь. Его можно и на визитку для скачивания и распечатки»); 16.11.2026: read in his pdf.js reader, downloaded from its bar -->
         </div>
       </div>   <!-- 11.11.2026 (Viktor: «таблицу с треками унеси в оверлей, чтобы не насиловать визитку. В блоке исследования второй кнопкой вызовем её») -->
       <p class="ring-note">权重采用 CC BY-NC 4.0，代码采用 Apache-2.0。两者都在我们 Hugging Face 上的微调仓库里，位于 <a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-RS-Finetunes/tree/main/VAE-RS">VAE-RS</a>，还有研究和<a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-RS-Finetunes/blob/main/docs/VAE-RS-x3-integration.md">给程序员的指南</a>。同样的文件连同论文，也放在它们自己的仓库里：<a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/YuE2-VAE-RS-x3">goldhub/YuE2-VAE-RS-x3</a>。</p>
@@ -1037,7 +1035,7 @@
       <div class="cols need-two">   <!-- 11.11.2026 (Viktor: «три карточки неравномерны по наполнению текстом… две колонки. Во второй колонке вторую и третью одну под другой») -->
         <div class="card"><h3>机器</h3><ul>
           <li><b>NVIDIA 显卡</b>：全精度运行全部需 24 GB；12–16 GB 和 8 GB 用较小副本也能运行（影像室需要 24 GB）</li>
-          <li><b>Linux</b>（在 Ubuntu 24.04、CUDA 12.8 上制作）</li>
+          <li><b>Linux</b>（在 Ubuntu 24.04、CUDA 12.8 上制作）；自 2.0.9 起，<b>Windows 11</b> 和 <b>Apple Silicon 的 Mac</b> 提供测试版</li>
           <li><b>约 23–26 GB</b> 磁盘，在全新安装上实测：程序及其 Python（17 GB），模型（视显卡 5.1 到 8.5 GB，由 <code>fetch-models.sh</code> 下载、固定版本并校验）；画室的模型另需 39–43 GB，💎 素材集 5.6 GB，都只在你要求时才下载</li></ul></div>
         <div class="need-side">
         <div class="card"><h3>屏幕</h3><ul>
@@ -1088,12 +1086,13 @@
   <section id="next">
     <div class="wrap">
       <h2>接下来</h2>
-      <p class="sub">2.0.8 是我们每天创作自己的歌曲和朗读所用的 Studio。以下是正在路上的较大部分，面向 2.1.0 及以后。</p>
+      <p class="sub">2.0.9 是我们每天创作自己的歌曲和朗读所用的 Studio。以下是正在路上的较大部分，面向 2.1.0 及以后。</p>
       <ul class="feats">
         <li><b>朗读，更进一步。</b>整本书作为一个带章节的文件下载，单独编辑某一部分并把整本书送进精修室，以及根据上下文带元音朗读希伯来文。</li>
         <li><b>DAW，更进一步。</b>把你在 MIDI 键盘上弹的写进乐谱的钢琴卷帘，以及 DAW 工程在 REAPER、Waveform 和 Bitwig 中仍需要的崩溃测试。</li>
         <li><b>影像室，更进一步。</b>10 到 15 秒的镜头，在场景之间保持同一张脸的角色，设计好的标题和卡拉 OK 模板，更多格式与导出。</li>
         <li><b>Tsunami Wave 之后的下一波。</b>我们的下一个微调从 YuE2 唱得最差的地方学习，发布前先盲听。</li>
+        <li><b>Windows 和 Mac，走出测试版。</b>在 Windows 11 和 Apple Silicon 的 Mac 上，每个房间都和 Linux 上一样，一个房间接一个房间，并有各自的安装程序。</li>
         <li>为 REAPER、Waveform 和 Bitwig 提供<b>原生插件</b>，等工作室找到它的用户之后。</li>
       </ul>
     </div>
@@ -1424,7 +1423,7 @@
     </div>
   </div>
   <div class="wrap">
-    <span>Ruach Studio · 2.0.8 · a work of <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></span> <span class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="Our curated list of everything the YuE2 community has made">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Changelog</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24/7 coffee</a></span>
+    <div class="foot-by">鲁阿赫工作室 · 2.0.9 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> 的作品</div> <div class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="我们精选的 YuE2 社区全部作品清单">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">更新记录</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24/7 咖啡</a></div>
   </div>
 </footer>
 
@@ -1783,10 +1782,10 @@
     <iframe id="why-frame" title="为什么是我们自己的工作室，而不是一套 ComfyUI 插件"></iframe>
   </div>
 </div>
-<div class="vocab-modal why-modal" id="whypdf-modal" hidden role="dialog" aria-modal="true" aria-label="为什么是我们自己的工作室，而不是一套 ComfyUI 插件">
+<div class="vocab-modal" id="paper-modal" hidden role="dialog" aria-modal="true" aria-label="YuE2-VAE-RS x3 · 论文">
   <div class="vocab-panel">
-    <div class="vocab-head"><b>为什么是我们自己的工作室，而不是一套 ComfyUI 插件</b><button type="button" id="whypdf-close" aria-label="关闭">×</button></div>
-    <div class="pdf-reader" id="whypdf">
+    <div class="vocab-head"><b>YuE2-VAE-RS x3 · 论文</b><button type="button" id="paper-close" aria-label="关闭">×</button></div>
+    <div class="pdf-reader" id="paperpdf">
       <div class="pdf-bar">
         <div class="pdf-nav">
           <button type="button" data-pdf="prev" aria-label="上一页">‹</button>
@@ -1801,13 +1800,13 @@
           <span class="pdf-scale">100%</span>
           <button type="button" data-pdf="in" aria-label="放大">+</button>
         </div>
-        <a class="pdf-dl" href="/article/why-own-studio.zh.pdf" download type="application/pdf">下载 PDF</a>
+        <a class="pdf-dl" href="/vae/YuE2-VAE-RS-x3-paper.pdf" download="YuE2-VAE-RS-x3-paper.pdf" type="application/pdf">下载 PDF</a>
       </div>
       <div class="pdf-stage">
         <p class="pdf-state" data-pdf-state="load">正在打开 PDF…</p>
         <p class="pdf-state bad" data-pdf-state="bad" hidden>PDF 阅读器未能启动</p>
         <p class="pdf-why" hidden></p>
-        <canvas class="pdf-canvas" aria-label="文章的一页"></canvas>
+        <canvas class="pdf-canvas" aria-label="论文的一页"></canvas>
       </div>
     </div>
   </div>
@@ -1923,14 +1922,15 @@
     if (location.hash === "#why-own-studio") open();
     window.addEventListener("hashchange", function () { if (location.hash === "#why-own-studio") open(); });
   })();
-  // 15.11.2026 (Viktor: «для статьи PDF возьми у меня уже готовый PDF ридер с суб-проекта igr.bible… Читать на сайте и скачать»): igr.bible's reader
+  // 15–16.11.2026 (Viktor: «PDF ридер с суб-проекта igr.bible… Читать на сайте и скачать»; 16.11: «наш RS-VAE стади документ, где у нас ссылка на
+  // скачивание PDF, вот там поставить мой pdf.js»): the paper of YuE2-VAE-RS x3 in igr.bible's reader
   // (PdfReader.svelte) in plain JS: pdf.js 6.3.289 from assets/pdfjs, loaded on the first open, its worker apart; the page fit to the window's
   // width, ‹ › and the number, a slider (drawn on release), − + from 60 to 300 %, ← → PageUp PageDown; ✕, Esc and the backdrop close it,
-  // #why-own-studio-pdf opens it. Its two lessons kept: a render already under way for the same page, width and scale is left alone (a resize
+  // #vae-paper opens it. Its two lessons kept: a render already under way for the same page, width and scale is left alone (a resize
   // that answers its own redraw never lets one finish), and a failure says so aloud beside the download, which works without the reader.
   (function () {
-    var m = document.getElementById("whypdf-modal"), b = document.getElementById("whypdf-open"), x = document.getElementById("whypdf-close"),
-        R = document.getElementById("whypdf");
+    var m = document.getElementById("paper-modal"), b = document.getElementById("vae-paper-open"), x = document.getElementById("paper-close"),
+        R = document.getElementById("paperpdf");
     if (!m || !b || !x || !R) return;
     var q = function (s) { return R.querySelector(s); };
     var stage = q(".pdf-stage"), cv = q(".pdf-canvas"), num = q(".pdf-num"), total = q(".pdf-total"), slide = q(".pdf-slide input"),
@@ -1989,7 +1989,7 @@
     function close() {
       if (m.hidden) return;
       m.hidden = true; document.body.style.overflow = "";
-      if (location.hash === "#why-own-studio-pdf") history.replaceState(null, "", location.pathname + location.search);
+      if (location.hash === "#vae-paper") history.replaceState(null, "", location.pathname + location.search);
       (back && back !== document.body && back.focus ? back : b).focus();
     }
     b.addEventListener("click", open);
@@ -2010,8 +2010,8 @@
       if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); go(page + 1); }
       else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); go(page - 1); }
     });
-    if (location.hash === "#why-own-studio-pdf") open();
-    window.addEventListener("hashchange", function () { if (location.hash === "#why-own-studio-pdf") open(); });
+    if (location.hash === "#vae-paper") open();
+    window.addEventListener("hashchange", function () { if (location.hash === "#vae-paper") open(); });
   })();
 </script>
 </body>

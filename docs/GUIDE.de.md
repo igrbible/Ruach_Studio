@@ -94,6 +94,32 @@ Das ♪ neben dem Stil öffnet eine Tabelle von 200 Instrumenten, die das Studio
 
 ![Der Spickzettel der Instrumente](guide/instruments.png)
 
+### Negatives Prompting, oder wie man nicht promptet <!-- #negative-prompting-or-how-not-to-prompt -->
+
+**Nenne, was du willst, nie, was du nicht willst.** YuE2 ist ein sauberes Modell: Ein Instrument, nach dem niemand gefragt hat, kommt selten. Die Gewohnheit der Sounddienste, ein langer Stil voller Instrumente, Effekte und Produktionswörter und danach «no dies, no das», macht einen Song nicht sauberer; sie erstickt ihn. Negative Prompts gehören der Vergangenheit der Modelle aus der DiT-Ära an, und das Studio bietet keine an und lehrt keine: Die Anweisungen des Schreibers enthalten keinen Rat zu «no …»-Wörtern, und der Schalter Instrumental setzt *Instrumental,* vor den Stil und hängt nichts dahinter an.
+
+**Was die Probe gehört hat.** Am 18.11.2026 sang das Studio 75 Blind-Takes auf drei Karten: eine Klavierballade (6 Seeds), eine gezupfte Gitarrenballade (4 Seeds) und ein Flamenco-Instrumental (5 Seeds). Jeder Seed wurde fünfmal gesungen, mit demselben Musik-Seed, Klang-Seed und Text; nur das Ende des Stils änderte sich: pur, dann die unerwünschten Instrumente als `-x`, `no x`, `avoid x` und `without x` (Gitarre, Schlagzeug und Drones gegen das Klavier; Schlagzeug, Klavier und Synth-Pads gegen die Gitarre; Gesang, Singen, Chor und gesprochenes Wort gegen den Flamenco). Ein Ohr bewertete 51 davon, ohne zu wissen, welcher Schwanz welcher war:
+
+| Schwanz | Bewertete Takes | Frei vom unerwünschten Klang |
+|---|---|---|
+| purer Stil | 10 | 2 |
+| `-x` | 10 | 2 |
+| `no x` | 10 | 4 |
+| `avoid x` | 11 | 0 |
+| `without x` | 10 | 0 |
+
+**Was das heißt.** Der pure Stil ließ schon herein, was wir verbieten würden: Die Gitarrenballade brachte Schlagzeug, Synth-Pads oder ein Klavier auf 2 ihrer 4 Seeds, das Flamenco-Instrumental eine Gesangs- oder Chorfläche auf allen 5. Kein Schwanz stopfte das Leck: «no» kam auf 4 Takes sauber heraus gegen 2 beim puren Stil, zu wenige, um es ein Heilmittel zu nennen; «avoid» und «without» ließen den unerwünschten Klang auf jedem Seed der beiden ganz gehörten Karten herein, rufen ihn also vielleicht sogar. Und die Wörter kosten den Song: Mit einem negativen Schwanz wird der Gesang erstickt und die Aussprache verwaschen, als hätte jemand dem Sänger aufs Ohr getreten.
+
+**Wie man stattdessen promptet.**
+
+- **Halte den Stil kurz**: 200 Zeichen ohne Leerzeichen sind das Ziel, 400 das Höchste (über 800 verweigert das Studio das Singen). Ein kurzer Stil singt sauber; ein langer verwischt die Komposition.
+- **Wähle das Genre nach seinem Ensemble.** Der Name eines Genres bringt die darin üblichen Instrumente mit: Eine Rockballade bringt Schlagzeug und E-Gitarre, ein Kammerstück Streicher. Wenn du nicht willst, was ein Genre mitbringt, wähle ein Genre, das es nicht mitbringt, statt es zu verbieten.
+- **Nenne die Führung zuerst.** Das zuerst genannte Instrument nimmt seinen Platz vorn ein; die Stimme und zwei oder drei Begleiter folgen ihm.
+- **Lass den Text die Form tragen.** Das Arrangement gehört in die Abschnitts-Tags des Textes ([Intro], [Verse], [Chorus], [Interlude], [Outro]), nicht in Sätze im Stil.
+- **Gib der Stimme ein Ensemble.** Eine Stimme über einem einzigen Soloinstrument klingt dünner als über einem Ensemble, das sie trägt: Auch der Gesang leidet auf einem einsamen Instrument.
+- **Ändere den Seed, nicht die Wörter.** Ein Instrument kommt dort, wo das Training des Modells sagt, dass der Song es will, und der Seed entscheidet viel davon: Hör mehrere Seeds, bevor du den Stil umschreibst.
+- **Schalte es danach stumm.** Ein unerwünschtes Instrument, das trotzdem kommt, wird in den Stems des Veredlers gefangen und in der DAW stummgeschaltet. Zwing das Modell nicht beim Rendern.
+
 ### Das Vokabular der Ersten Welle <!-- #the-first-wave-s-vocabulary -->
 
 **YuE2-RS-FW**, das erste Fine-Tune des Studios (*Engine → Models and LoRAs → RS-FW merge*), hat aus 32.633 Tracks gelernt, und jedes Wort ihrer Stilzeilen ist in **[seinem Vokabular](fw-vocabulary/index.html?lang=de&set=fw)** gezählt: Genres, Instrumente, Stimme, Stimmung, die Emotionswörter, die der Klang selbst bekam, Tonarten und BPM, und die Felder der Partituren (Teile, Taktarten, Tempi, Akkorde). Durchsuch es, filtere nach Art und Quelle, sieh, mit welchen Wörtern jedes ging. Ein Klick setzt ein Wort in eine Stilzeile, in der Reihenfolge, die das Modell gelernt hat; *Kopieren* nimmt die Zeile fürs Style-Feld mit. Ein Wort aus Hunderten Tracks versteht das Modell; eines, das zweimal vorkam, ist nur ein Hinweis. Dieselbe Referenz als Dokument steht auf [der Seite des Modells](https://huggingface.co/goldhub/YuE2-RS-Finetunes/blob/main/FW-VOCABULARY.md).
@@ -282,6 +308,15 @@ Ein Chat-Modell liest deinen Stil, deinen Text und deine Partitur und entwirft o
 - **Wohin der Entwurf geht** (2471): in das im Notizbuch offene Dokument, außer es ist das Lied, das der Musiker in der Hand hat, sonst in das Lied des Musikers; die Zeile über dem Knopf sagt, wohin, und ein Klick dreht es um. Übernehmen schreibt in das Dokument und behält die Version davor unter seinen Versionen.
 - **Anfrage an das LLM senden** (Strg+Enter). Mit dem eigenen Schreiber des Studios zählt der Raum zuerst die Frage und sagt, was für die Antwort bleibt (er liest 32 768 Token); **Stopp** oder Esc bricht die Antwort ab, und an deinem Lied ändert sich nichts.
 - Der Entwurf: **Entwurf übernehmen**, **Liedtext nehmen** oder **Stil nehmen**; *Rückgängig* nimmt es zurück. Ein Feld, das das Modell gelassen hat, wie es war, ist gestrichelt und als unverändert markiert; ein ganz leerer Entwurf wird über der Seite gesagt und nie als fertig gezeigt. Ändert der Entwurf deinen Liedtext, sagt er, wie viele Zeilen, und zeigt sie, die alte über der neuen, und Übernehmen fragt zuerst: mit dem Liedtext, ohne ihn oder gar nicht. Ein Entwurf nur für den Stil berührt den Liedtext nie, und die Struktur geht nur mit den Aufgaben mit, die Liedtext schreiben.
+
+### SOUL: was das Modell liest <!-- #soul-what-the-model-reads -->
+
+Jede der beiden Welten des Schreibers, die des Musikers und die des Vorlesers, hat ihr **SOUL**: dein bleibendes Wort an das Chat-Modell, gelesen in jedem Entwurf gleich nach den eingebauten Anweisungen dieser Welt. Es ist das Feld **Deine Schreibvorlieben** unter dem Auftrag: ist im Notizbuch eine Lesung offen, hält es das SOUL des Vorlesers, sonst das des Musikers.
+
+- **Wo es lebt**: im Studio, nicht im Browser, im Ordner des Schreibers: `writer/soul-creator.md` (der Musiker) und `writer/soul-reader.md` (der Vorleser). Vorlieben, die ein älteres Studio im Browser hielt, ziehen von selbst ins SOUL des Musikers um, einmal und nur solange es leer ist (2842).
+- **Was es kann**: es steht über den eingebauten Anweisungen; wo beide sich widersprechen, folgt das Modell dem SOUL. Außer den Längengrenzen: der Stil eines Songs bleibt bei 200 Zeichen ohne Leerzeichen und nie über 400, die Stimme einer Lesung bei 160 mit Leerzeichen, was immer das SOUL verlangt.
+- **Versionen**: jedes Speichern behält den Text davor als Version (die neuesten 30 je Welt). **Alles exportieren** und **Importieren** tragen beide SOULs mit dem Notizbuch; ein importiertes SOUL füllt nur ein leeres, und eines, das sich von deinem unterscheidet, wird als Version daneben gelegt, nie darüber geschrieben.
+- **Bearbeite die SOUL-Dateien nicht von Hand.** Schreib in das Feld: Versionen behält das Studio nur von dem, was durch es geht. Ein von Hand zerbrochenes SOUL (ein halber Satz, ein eingefügtes Log, eine Regel gegen die Form der Antwort) wird in jedem Entwurf ganz gelesen und verdirbt jeden still, ohne einen Fehler, der es zeigt. *Die vollständigen Songwriting-Anweisungen lesen* unter dem Feld zeigt genau, was das Modell liest.
 
 ## Veredler <!-- #refiner -->
 
@@ -686,7 +721,7 @@ Eine LoRA ist ein kleiner Adapter über beiden Hälften. **Der Stil kommt meist 
 
 ### Eine eigene Stimme: Fragen aus der Praxis <!-- #a-voice-of-your-own-questions-from-the-field -->
 
-Antworten auf GitHub (issue #2) an jemanden, der nur den Leadgesang wollte, hier festgehalten.
+Antworten auf GitHub ([issue #2](https://github.com/igrbible/Ruach_Studio/issues/2)) an Steven Altsman (manchuwook), der nur den Leadgesang wollte, hier festgehalten.
 
 - **Eine Aufnahme nur mit der Stimme.** YuE2 hat das Singen an ganzen Liedern gelernt, und seine Phrasierung stützt sich auf die Musik unter der Stimme: «a cappella» im Stil zieht es zu Chören oder zur ganzen Band. Bitte lieber um eine einzige ruhige Sache unter der Stimme (ein weiches Pad, eine einzelne Akustikgitarre) mit `solo lead, single voice, no harmonies, no backing vocals, dry vocal, close mic`, und trenne die Aufnahme dann im Veredler (acht Stems): *Ganze Leadstimme* holt zurück, was die Trennung zu den Backgroundstimmen gelegt hat, *Stimmen-Upscale* zeichnet die Luft neu, die der Separator gedämpft hat. Je weniger unter der Stimme liegt, desto sauberer der Stem.
 - **Ein Stimm-Adapter aus eigenen Aufnahmen.** Trockener Leadgesang eines einzigen Sängers mit seinem Text, in 44,1 oder 48 kHz aus verlustfreien Quellen. Derselbe leichte Raum auf jedem Clip schadet weniger als verschiedene Räume, und ein Clip mit viel Hall bleibt besser draußen, als halb gereinigt zu werden: Was ein De-Reverb zurücklässt, wird als Teil der Stimme gelernt.
@@ -865,7 +900,7 @@ Die Engine öffnet sich über dem Raum, in dem du gerade bist (☰ › Engine, o
 
 Auf einer Maschine mit mehreren Karten gib jeder ihre Arbeit: das **Studio** (die Synthese) auf einer Karte, das **Training** auf den Karten, die du ihm gibst, die **Aufgaben** des Labors (der Hörer, Whisper, Stems, Remaster, Upscale) auf ihren. Solange ein Lauf auf der eigenen Karte des Studios trainiert, wartet eine Synthese, und die Seite sagt warum. Mit einer Karte geht es so: trainieren, dann erschaffen. Eine neue Karte für das Studio wirkt nach einem Neustart (der Knopf erscheint, wenn er nötig ist). Die Aufgaben des Labors bleiben auf den für sie angehakten Karten, der Maler eingeschlossen: sind diese voll, wartet eine Aufgabe auf eine von ihnen (Whisper wechselt auf den Prozessor) und nimmt nie eine Karte, die nicht für das Labor angehakt ist. Ein Lauf des Malers geht auf die Karte, auf der sein Maler vom vorigen Lauf behalten ist, die Gewichte schon im RAM.
 
-**Intel Arc (Beta).** Die Synthese des Studios läuft auch auf einer Intel-Arc-Karte, ihre Engine gebaut mit `./build.sh --sycl` (INSTALL.md, „Intel Arc (beta)“): Songs, Adapter, Full, Extend. Die Karten in dieser Liste sind die von NVIDIA; die Arc-Engine rechnet auf ihrer eigenen Karte, Training und Cover bleiben auf denen von NVIDIA. Auch eine Intel-Karte steht in Engine → GPUs: wähle sie in der Spalte Studio, und das Studio startet seine SYCL-Engine nach einem Neustart dort (zurück auf eine CUDA-Karte genauso), mit einem VRAM-Limit wie jede Karte; Training und die Aufgaben des Labors laufen mit PyTorch auf CUDA, darum sagen ihre beiden anderen Spalten, warum sie leer bleiben.
+**Intel Arc (Beta).** Die Synthese des Studios läuft auch auf einer Intel-Arc-Karte, ihre Engine gebaut mit `./build.sh --sycl` (INSTALL.md, „Intel Arc (beta)“): Songs, Adapter, Full, Extend. Die Karten in dieser Liste sind die von NVIDIA; die Arc-Engine rechnet auf ihrer eigenen Karte, Training und Cover bleiben auf denen von NVIDIA. Auch eine Intel-Karte steht in Engine → GPUs: wähle sie in der Spalte Studio, und das Studio startet seine SYCL-Engine nach einem Neustart dort (zurück auf eine CUDA-Karte genauso), mit einem VRAM-Limit wie jede Karte; Training und die Aufgaben des Labors laufen mit PyTorch auf CUDA, darum sagen ihre beiden anderen Spalten, warum sie leer bleiben. Die Seite benennt sie wie jeden Prozessor (2733): Eine Intel Arc ist XPU (XPU0 · Arc Pro B50), eine NVIDIA-Karte GPU (GPU0 · RTX 3090), eine AMD Radeon GPU · Radeon mit ihrem Modell, und das Backend trägt seinen eigenen Namen (CUDA, SYCL, Vulkan).
 
 **Ein Blick für viele Fragen** (2060): Engine → GPUs, die Prüfung vor einer Synthese und der LoRA-Trainer fragen das Labor nach den Karten, oft alle zugleich, während sich die Seite öffnet; das Labor sieht sie einmal an (nvidia-smi, der Wächter, die Intel-Karten) und beantwortet jede Frage der nächsten 2 s aus diesem Blick: Die Karten werden einmal für alle Fragen angesehen, nicht für jede Frage aufs Neue, und so läuft keine in eine Zeitüberschreitung.
 

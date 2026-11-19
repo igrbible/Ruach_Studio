@@ -68,7 +68,7 @@ def sha256(path):
 
 
 def hf_program():
-    return os.environ.get("YUE2_HF") or os.path.join(ROOT, ".venv", "bin", "hf")
+    return os.environ.get("YUE2_HF") or (os.path.join(ROOT, ".venv", "Scripts", "hf.exe") if os.name == "nt" else os.path.join(ROOT, ".venv", "bin", "hf"))   # 2649
 
 
 def manifest_file():

@@ -94,6 +94,32 @@ Le ♪ à côté du style ouvre un tableau de 200 instruments que le Studio a so
 
 ![L'aide-mémoire des instruments](guide/instruments.png)
 
+### Prompting négatif, ou comment ne pas écrire un prompt <!-- #negative-prompting-or-how-not-to-prompt -->
+
+**Nomme ce que tu veux, jamais ce que tu ne veux pas.** YuE2 est un modèle propre : un instrument que personne n'a demandé arrive rarement. L'habitude des services audio, un long style chargé d'instruments, d'effets et de mots de production puis « no ceci, no cela », ne rend pas la chanson plus propre ; elle l'étouffe. Les prompts négatifs appartiennent au passé des modèles de l'ère DiT, et le Studio n'en propose ni n'en enseigne : les instructions de l'Écrivain ne portent aucun conseil de mots « no … », et l'interrupteur Instrumental met *Instrumental,* devant le style et n'ajoute rien après.
+
+**Ce que la sonde a entendu.** Le 18.11.2026, le Studio a chanté 75 prises à l'aveugle sur trois cartes : une ballade au piano (6 graines), une ballade à la guitare en fingerpicking (4 graines) et un instrumental flamenco (5 graines). Chaque graine a été chantée cinq fois avec la même graine musicale, la même graine sonore et les mêmes paroles ; seule la fin du style changeait : propre, puis les instruments indésirables en `-x`, `no x`, `avoid x` et `without x` (guitare, batterie et drones contre le piano ; batterie, piano et nappes de synthé contre la guitare ; voix, chant, chœur et parole contre le flamenco). Une oreille en a noté 51 sans savoir quelle queue était laquelle :
+
+| Queue | Prises notées | Propres du son indésirable |
+|---|---|---|
+| style propre | 10 | 2 |
+| `-x` | 10 | 2 |
+| `no x` | 10 | 4 |
+| `avoid x` | 11 | 0 |
+| `without x` | 10 | 0 |
+
+**Ce que cela veut dire.** Le style propre laissait déjà entrer ce que nous voudrions interdire : la ballade à la guitare a amené batterie, nappes de synthé ou piano sur 2 de ses 4 graines, l'instrumental flamenco un drone vocal ou choral sur les 5. Aucune queue n'a fermé la fuite : « no » est sorti propre sur 4 prises contre 2 pour le style propre, trop peu pour parler de remède ; « avoid » et « without » ont laissé entrer le son indésirable sur chaque graine des deux cartes écoutées en entier, au point peut-être de l'appeler. Et les mots coûtent à la chanson : avec une queue négative, le chant s'étouffe et la diction s'empâte, comme si l'on avait marché sur l'oreille du chanteur.
+
+**Comment écrire le prompt à la place.**
+
+- **Garde le style court** : 200 caractères sans espaces pour viser, 400 au plus (au-delà de 800 le Studio refuse de chanter). Un style court se chante proprement ; un long brouille la composition.
+- **Choisis le genre pour son ensemble.** Le nom d'un genre amène les instruments habituels de ce genre : une ballade rock amène batterie et guitare électrique, une pièce de chambre amène les cordes. Quand tu ne veux pas ce qu'un genre amène, choisis un genre qui ne l'amène pas plutôt que de l'interdire.
+- **Nomme le meneur en premier.** L'instrument nommé en premier prend sa place devant ; la voix et deux ou trois compagnons le suivent.
+- **Laisse les paroles porter la forme.** L'arrangement appartient aux balises de section des paroles ([Intro], [Verse], [Chorus], [Interlude], [Outro]), pas à des phrases dans le style.
+- **Donne un ensemble à la voix.** Une voix sur un seul instrument soliste sort plus mince que sur un ensemble qui la porte : le chant souffre aussi sur un instrument seul.
+- **Change la graine, pas les mots.** Un instrument entre là où l'apprentissage du modèle dit que la chanson le veut, et la graine en décide beaucoup : écoute plusieurs graines avant de réécrire le style.
+- **Coupe-le après.** Un instrument indésirable qui sort quand même se rattrape dans les stems de l'Affineur et se coupe dans la DAW. Ne force pas le modèle au rendu.
+
 ### Le vocabulaire de la Première Vague <!-- #the-first-wave-s-vocabulary -->
 
 **YuE2-RS-FW**, le premier fine-tune du Studio (*Engine → Models and LoRAs → RS-FW merge*), a appris de 32 633 morceaux, et chaque mot de leurs lignes de style est compté dans **[son vocabulaire](fw-vocabulary/index.html?lang=fr&set=fw)** : genres, instruments, voix, humeur, les mots d'émotion donnés par l'audio lui-même, tonalités et BPM, et les clés des partitions (sections, mesures, tempos, accords). Cherche, filtre par sorte et par source, vois avec quels mots chacun allait. Un clic place un mot dans une ligne de style dans l'ordre que le modèle a appris ; *Copier* emporte la ligne pour le champ Style. Un mot vu dans des centaines de morceaux, le modèle le comprend ; vu deux fois, c'est un indice. La même référence en document est sur [la page du modèle](https://huggingface.co/goldhub/YuE2-RS-Finetunes/blob/main/FW-VOCABULARY.md).
@@ -282,6 +308,15 @@ Un modèle de chat lit ton style, tes paroles et ta partition, puis les rédige 
 - **Où va le brouillon** (2471) : dans le document ouvert dans le carnet, sauf s'il s'agit de la chanson que le Musicien a en main, sinon dans la chanson du Musicien ; la ligne au-dessus du bouton dit où, et un clic l'inverse. Appliquer écrit dans le document et garde la version d'avant parmi ses versions.
 - **Envoyer la requête au LLM** (Ctrl+Entrée). Avec l'écrivain du Studio, la salle compte d'abord la question et dit ce qui reste pour la réponse (il lit 32 768 jetons) ; **Arrêter** ou Échap coupe la réponse, et rien ne change dans ta chanson.
 - Le brouillon : **Appliquer le brouillon**, **Prendre les paroles** ou **Prendre le style** ; *Annuler* le reprend. Un champ que le modèle a laissé tel quel est en pointillé et marqué inchangé ; un brouillon entièrement vide est dit par-dessus la page, jamais montré comme prêt. Quand le brouillon change tes paroles, il dit combien de lignes et les montre, l'ancienne au-dessus de la nouvelle, et Appliquer demande d'abord : avec les paroles, sans elles ou pas du tout. Un brouillon demandé pour le style seul ne touche jamais les paroles, et la structure ne part qu'avec les tâches qui écrivent des paroles.
+
+### SOUL : ce que lit le modèle <!-- #soul-what-the-model-reads -->
+
+Chacun des deux mondes de l'Écrivain, celui du Musicien et celui du Lecteur, a son **SOUL** : ta parole constante au modèle de chat, lue dans chaque brouillon juste après les consignes intégrées de ce monde. C'est le champ **Tes préférences d'écriture** sous la demande : quand une lecture est ouverte dans le carnet, il porte le SOUL du Lecteur, sinon celui du Musicien.
+
+- **Où il vit** : dans le Studio, pas dans le navigateur, dans le dossier de l'Écrivain : `writer/soul-creator.md` (le Musicien) et `writer/soul-reader.md` (le Lecteur). Les préférences qu'un Studio plus ancien gardait dans le navigateur passent d'elles-mêmes dans le SOUL du Musicien, une fois et seulement tant qu'il est vide (2842).
+- **Ce qu'il peut** : il se tient au-dessus des consignes intégrées ; là où les deux divergent, le modèle suit le SOUL. Sauf les limites de longueur : le style d'une chanson reste dans 200 caractères sans espaces et jamais au-delà de 400, la voix d'une lecture dans 160 espaces compris, quoi que demande le SOUL.
+- **Versions** : chaque enregistrement garde le texte d'avant comme version (les 30 plus récentes par monde). **Tout exporter** et **Importer** emportent les deux SOUL avec le carnet ; un SOUL importé ne remplit qu'un SOUL vide, et celui qui diffère du tien est rangé à côté comme version, jamais écrit par-dessus.
+- **Ne modifie pas les fichiers SOUL à la main.** Écris dans le champ : le Studio ne garde de versions que de ce qui passe par lui. Un SOUL cassé à la main (une demi-phrase, un journal collé, une règle contre la forme de la réponse) est lu en entier dans chaque brouillon et les gâte tous en silence, sans erreur pour le montrer. *Lire les instructions complètes d'écriture de chansons* sous le champ montre exactement ce que lit le modèle.
 
 ## Affineur <!-- #refiner -->
 
@@ -686,7 +721,7 @@ Une LoRA est un petit adaptateur sur les deux moitiés. **Le style vient surtout
 
 ### Une voix à soi : questions du terrain <!-- #a-voice-of-your-own-questions-from-the-field -->
 
-Réponses données sur GitHub (issue #2) à quelqu'un qui voulait la seule voix principale, gardées ici.
+Réponses données sur GitHub ([issue #2](https://github.com/igrbible/Ruach_Studio/issues/2)) à Steven Altsman (manchuwook), qui voulait la seule voix principale, gardées ici.
 
 - **Une prise avec la voix seule.** YuE2 a appris à chanter sur des chansons entières, et son phrasé s'appuie sur la musique sous la voix : « a cappella » dans le style le pousse vers des chœurs ou vers tout le groupe. Demande plutôt une seule chose calme sous la voix (un pad doux, une seule guitare acoustique) avec `solo lead, single voice, no harmonies, no backing vocals, dry vocal, close mic`, puis sépare la prise dans l'Affineur (huit stems) : *Voix lead entière* ramène ce que la séparation a mis parmi les chœurs, *Suréchantillonnage des voix* redessine l'air que le séparateur a éteint. Moins il y a sous la voix, plus le stem est propre.
 - **Un adaptateur de voix à partir de tes enregistrements.** Des voix principales sèches d'un seul chanteur avec leurs paroles, en 44,1 ou 48 kHz depuis des sources sans perte. La même pièce légère sur chaque clip nuit moins que des pièces différentes, et un clip très réverbéré vaut mieux laissé de côté que nettoyé à moitié : ce qu'un de-reverb laisse derrière lui s'apprend comme une part de la voix.
@@ -865,7 +900,7 @@ Le Moteur s'ouvre par-dessus la salle où tu te trouves (☰ › Moteur, ou Ctrl
 
 Sur une machine à plusieurs cartes, donne à chacune son travail : le **Studio** (la synthèse) sur une carte, l'**entraînement** sur les cartes que tu lui donnes, les **tâches** du labo (l'écouteur, Whisper, stems, remaster, suréchantillonnage) sur les leurs. Pendant qu'une exécution s'entraîne sur la carte propre du Studio, une synthèse attend, et la page dit pourquoi. Avec une seule carte, c'est ainsi : entraîner, puis créer. Une nouvelle carte pour le Studio prend effet après un redémarrage (le bouton apparaît quand il faut). Les tâches du labo restent sur les cartes cochées pour elles, le Peintre compris : quand celles-ci sont pleines, une tâche attend l'une d'elles (Whisper passe au processeur) et ne prend jamais une carte non cochée pour le labo. Une exécution du Peintre va sur la carte où son peintre est gardé depuis l'exécution précédente, les poids déjà en RAM.
 
-**Intel Arc (bêta).** La synthèse du Studio tourne aussi sur une carte Intel Arc, son moteur compilé par `./build.sh --sycl` (INSTALL.md, « Intel Arc (beta) ») : chansons, adaptateurs, Full, Extend. Les cartes de cette liste sont des NVIDIA ; le moteur Arc calcule sur sa propre carte, l'entraînement et les pochettes restent sur les NVIDIA. Une carte Intel figure aussi dans Moteur → GPU : choisis-la dans la colonne « studio » et, après un redémarrage, le Studio y fait tourner son moteur SYCL (retour sur une carte CUDA de la même façon), avec une limite de VRAM comme toute carte ; l'entraînement et les tâches du labo tournent en PyTorch sur CUDA, donc ses deux autres colonnes disent pourquoi elles restent vides.
+**Intel Arc (bêta).** La synthèse du Studio tourne aussi sur une carte Intel Arc, son moteur compilé par `./build.sh --sycl` (INSTALL.md, « Intel Arc (beta) ») : chansons, adaptateurs, Full, Extend. Les cartes de cette liste sont des NVIDIA ; le moteur Arc calcule sur sa propre carte, l'entraînement et les pochettes restent sur les NVIDIA. Une carte Intel figure aussi dans Moteur → GPU : choisis-la dans la colonne « studio » et, après un redémarrage, le Studio y fait tourner son moteur SYCL (retour sur une carte CUDA de la même façon), avec une limite de VRAM comme toute carte ; l'entraînement et les tâches du labo tournent en PyTorch sur CUDA, donc ses deux autres colonnes disent pourquoi elles restent vides. La page la nomme comme tout processeur (2733) : une Intel Arc est un XPU (XPU0 · Arc Pro B50), une carte NVIDIA un GPU (GPU0 · RTX 3090), une AMD Radeon un GPU · Radeon avec son modèle, et le backend porte son propre nom (CUDA, SYCL, Vulkan).
 
 **Un regard pour beaucoup de questions** (2060) : Moteur → GPU, la vérification avant une synthèse et l'Entraîneur LoRA interrogent le labo sur les cartes, souvent tous à la fois pendant que la page s'ouvre ; le labo les regarde une fois (nvidia-smi, le gardien, les cartes Intel) et répond à chaque question des 2 s suivantes d'après ce regard : les cartes sont examinées une seule fois pour toutes les questions, et non une fois par question, si bien qu'aucune ne dépasse le délai d'attente.
 

@@ -181,11 +181,16 @@ ask() {
   [ "$(printf '%s' "$TEXT" | wc -l)" -gt 14 ] && body+=$'\n'"… and $(( $(printf '%s' "$TEXT" | wc -l) - 14 )) more"
   body="Ruach Studio needs these files:"$'\n\n'"$body"$'\n\n'"$SUM"$'\n\n'"Download them now?"
   if [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
-    if command -v zenity >/dev/null 2>&1; then
-      ASKED=zenity; zenity --question --no-markup --title="Ruach Studio" --width=640 --ok-label="Download" --cancel-label="Not now" --text="$body" 2>/dev/null; return $?
-    elif command -v kdialog >/dev/null 2>&1; then
+    # HERESY 2650: KDE's own dialog first on a KDE desktop, zenity after; elsewhere zenity first, as before
+    local tools="zenity kdialog"
+    case "${XDG_CURRENT_DESKTOP:-}:${KDE_FULL_SESSION:-}" in *KDE*|*:true) tools="kdialog zenity" ;; esac
+    for t in $tools; do
+      command -v "$t" >/dev/null 2>&1 || continue
+      if [ "$t" = zenity ]; then
+        ASKED=zenity; zenity --question --no-markup --title="Ruach Studio" --width=640 --ok-label="Download" --cancel-label="Not now" --text="$body" 2>/dev/null; return $?
+      fi
       ASKED=kdialog; kdialog --title "Ruach Studio" --yes-label "Download" --no-label "Not now" --yesno "$body" 2>/dev/null; return $?
-    fi
+    done
   fi
   local say="Ruach Studio needs $(hs "$TOTAL") of models and cannot ask: no terminal, and neither zenity nor kdialog to show a dialog. Start it once from a terminal (it asks there), or install zenity."
   echo "${R}$say${X}" >&2

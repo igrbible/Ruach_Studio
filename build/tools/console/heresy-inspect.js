@@ -17,6 +17,23 @@
     return '<span class="in-chip is-' + level + '" data-tip="' + esc(tip || "") + '"><span class="in-chip-k">' + esc(label) + "</span>" + value + "</span>";
   }
 
+  // HERESY 2852: the frame buzz's thresholds above the measure's own floor. The statistic (the highest bin within 0.6 Hz of a multiple of 25 Hz
+  // against the median of its neighbours) reads high on any sound: at in-between frequencies (37.5, 62.5 … 162.5 Hz), where the VAE puts
+  // nothing, it gave 7.8 dB (median of the take's mean), 10.3 (p90) and 11.9 (max) on the 30 latest takes and up to 15.1 in one window;
+  // debuzzed files 8.3 at 25 Hz and its multiples. The old 5 and 10 dB marked plain music amber. A take with a buzz heard stood 7-8 dB over
+  // its own control (15.6 against 7.1). heresy/MISC/claude-arc/day-2026-11-18/buzz-2852/
+  var BUZZ_WARN = 13, BUZZ_BAD = 15, BUZZ_WIN_WARN = 16, BUZZ_WIN_BAD = 19;
+
+  // HERESY 2833 (the silent hole of 18.11.2026): near silence of 20 s or more (lab/inspect_job.py «holes»): inside the song a hole, red; at its
+  // start or its end amber. A take measured before 2833 has no such count, and nothing is said of it either way
+  var HOLE_TIP = "20 s or more at 20 dB under the take's own level: inside the song, a hole";
+  function holesChip(r) {
+    var hs = (r.holes || {}).stretches;
+    if (!hs) return "";
+    var inside = hs.some(function (h) { return h.where === "inside"; });
+    return chip("Near silence", String(hs.length), inside ? "bad" : hs.length ? "warn" : "ok", HOLE_TIP);
+  }
+
   function paint(r) {
     var L = r.loudness || {}, fb = r.framebuzz || {}, st = r.stereo || {}, clip = r.clipping || {};
     var tp = L.true_peak, buzz = fb.mean_db;
@@ -26,9 +43,10 @@
       chip("True peak", tp != null ? (tp > 0 ? "+" : "") + tp.toFixed(1) + " dBTP" : "—", tp > 0 ? "bad" : tp > -1 ? "warn" : "ok",
            "Above 0 dBTP the take clips on most players; the Remaster's -1 dBTP fixes it") +
       chip("Clipping", (clip.runs || 0) + " runs", clip.runs ? "bad" : "ok", "Runs of 3+ samples at full scale") +
-      chip("Frame buzz", buzz != null ? buzz.toFixed(1) + " dB" : "—", buzz > 10 ? "bad" : buzz > 5 ? "warn" : "ok",
-           "The 4–12 kHz envelope at 25, 50 … 150 Hz above its neighbours, mean of all windows: the VAE's 25 frames a second heard as an electric buzz in the highs") +
+      chip("Frame buzz", buzz != null ? buzz.toFixed(1) + " dB" : "—", buzz > BUZZ_BAD ? "bad" : buzz > BUZZ_WARN ? "warn" : "ok",
+           "The 4–12 kHz envelope at 25, 50 … 150 Hz above its neighbours, mean of all windows: the VAE's 25 frames a second heard as an electric buzz in the highs. Music with no buzz reads about 8 dB here and up to 12 (the measure's own floor, at in-between frequencies on 30 takes): amber past 13 dB, red past 15") +
       chip("DC", (r.dc || []).map(function (v) { return v.toFixed(4); }).join(" / "), (r.dc || []).some(function (v) { return Math.abs(v) > 0.002; }) ? "warn" : "ok", "Offset of zero per channel") +
+      holesChip(r) +
       "</div>";
 
     // tones
@@ -46,7 +64,7 @@
       var max = Math.max.apply(null, fb.windows.map(function (w) { return w.mean_db; }).concat([12]));
       html += '<h4 class="in-h">Frame buzz per 30 s <em>25–150 Hz in the highs\' envelope, dB above the neighbours</em></h4><div class="in-bars">' +
         fb.windows.map(function (w) {
-          var lv = w.mean_db > 10 ? "bad" : w.mean_db > 5 ? "warn" : "ok";
+          var lv = w.mean_db > BUZZ_WIN_BAD ? "bad" : w.mean_db > BUZZ_WIN_WARN ? "warn" : "ok";   // HERESY 2852
           return '<button type="button" class="in-bar is-' + lv + '" data-in-seek="' + w.at + '" data-tip="' + clock(w.at) + ": " + w.by_hz.map(function (v, i) { return fb.hz[i] + " Hz " + v.toFixed(1); }).join(" · ") +
             '"><span style="height:' + Math.max(4, Math.round(Math.max(0, w.mean_db) / max * 100)) + '%"></span><em>' + clock(w.at) + "</em></button>";
         }).join("") + "</div>";
@@ -58,6 +76,12 @@
       (clicks.length ? '<div class="in-list">' + clicks.map(function (c) { return '<span class="in-item">' + at(c.at) + " ×" + Math.round(c.strength) + "</span>"; }).join("") + "</div>" : "");
     var drops = r.dropouts || [];
     if (drops.length) html += '<h4 class="in-h">Dropouts</h4><div class="in-list">' + drops.map(function (d) { return '<span class="in-item">' + at(d.at) + " " + d.ms + " ms, −" + d.depth_db + " dB</span>"; }).join("") + "</div>";
+    // HERESY 2833: each stretch of near silence: where it starts and ends, where in the song, how long, its median level, its dead seconds
+    var holes = (r.holes || {}).stretches || [];
+    if (holes.length) html += '<h4 class="in-h">Near silence <em>' + esc(HOLE_TIP) + '</em></h4><div class="in-list">' + holes.map(function (h) {
+      return '<span class="in-item">' + at(h.at) + "\u2013" + clock(h.until) + " <span>" + esc(h.where === "inside" ? "inside the song" : h.where === "end" ? "at the end" : "at the start") +
+        '</span> <span class="mono">' + h.seconds + " s \u00b7 " + h.median_db + " dBFS \u00b7 " + h.dead + " s &lt; \u221280 dBFS</span></span>";
+    }).join("") + "</div>";
     if (st.bands) {
       html += '<h4 class="in-h">Stereo <em>left–right correlation per band; below 0, the channels work against each other</em></h4><div class="in-chips">' +
         st.bands.map(function (b) { return chip(b.band, b.correlation.toFixed(2), b.correlation < 0 ? "bad" : b.correlation < 0.3 ? "warn" : "ok", ""); }).join("") + "</div>" +

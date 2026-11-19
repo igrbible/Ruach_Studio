@@ -94,6 +94,32 @@ El ♪ junto al estilo abre una tabla de 200 instrumentos que el Estudio probó:
 
 ![La chuleta de instrumentos](guide/instruments.png)
 
+### Prompting negativo, o cómo no escribir un prompt <!-- #negative-prompting-or-how-not-to-prompt -->
+
+**Nombra lo que quieres, nunca lo que no quieres.** YuE2 es un modelo limpio: un instrumento que nadie pidió llega pocas veces. La costumbre de los servicios de sonido, un estilo largo cargado de instrumentos, efectos y palabras de producción y después «no esto, no aquello», no limpia la canción; la ahoga. Los prompts negativos pertenecen al pasado de los modelos de la era DiT, y el Studio ni los ofrece ni los enseña: las instrucciones del Escritor no traen ningún consejo de palabras «no …», y el interruptor Instrumental pone *Instrumental,* delante del estilo y no añade nada detrás.
+
+**Lo que oyó la prueba.** El 18.11.2026 el Studio cantó 75 tomas a ciegas en tres tarjetas: una balada de piano (6 semillas), una balada de guitarra punteada (4 semillas) y un instrumental flamenco (5 semillas). Cada semilla se cantó cinco veces con la misma semilla musical, semilla sonora y letra; solo cambiaba el final del estilo: limpio, y luego los instrumentos no deseados como `-x`, `no x`, `avoid x` y `without x` (guitarra, batería y drones frente al piano; batería, piano y pads de sintetizador frente a la guitarra; voces, canto, coro y palabra hablada frente al flamenco). Un oído puntuó 51 de ellas sin saber qué cola era cuál:
+
+| Cola | Tomas puntuadas | Limpias del sonido no deseado |
+|---|---|---|
+| estilo limpio | 10 | 2 |
+| `-x` | 10 | 2 |
+| `no x` | 10 | 4 |
+| `avoid x` | 11 | 0 |
+| `without x` | 10 | 0 |
+
+**Qué significa.** El estilo limpio ya dejaba entrar lo que querríamos prohibir: la balada de guitarra trajo batería, pads de sintetizador o un piano en 2 de sus 4 semillas, el instrumental flamenco un drone vocal o coral en las 5. Ninguna cola quitó la fuga: «no» salió limpio en 4 tomas frente a las 2 del estilo limpio, demasiado pocas para llamarlo remedio; «avoid» y «without» dejaron entrar el sonido no deseado en cada semilla de las dos tarjetas escuchadas enteras, así que quizá hasta lo llaman. Y las palabras le cuestan a la canción: con una cola negativa el canto se ahoga y la dicción se traba, como si alguien le hubiera pisado el oído al cantante.
+
+**Cómo escribir el prompt en su lugar.**
+
+- **Mantén el estilo corto**: 200 caracteres sin espacios es la meta, 400 el máximo (pasados 800 el Studio se niega a cantar). Un estilo corto se canta limpio; uno largo difumina la composición.
+- **Elige el género por su conjunto.** El nombre de un género trae los instrumentos habituales en él: una balada rock trae batería y guitarra eléctrica, una pieza de cámara trae cuerdas. Cuando no quieres lo que trae un género, elige un género que no lo traiga en vez de prohibirlo.
+- **Nombra primero al protagonista.** El instrumento nombrado primero ocupa el frente; la voz y dos o tres acompañantes lo siguen.
+- **Deja que la letra lleve la forma.** El arreglo pertenece a las etiquetas de sección de la letra ([Intro], [Verse], [Chorus], [Interlude], [Outro]), no a frases en el estilo.
+- **Dale a la voz un conjunto.** Una voz sobre un solo instrumento sale más delgada que sobre un conjunto que la sostiene: el canto también sufre sobre un instrumento solitario.
+- **Cambia la semilla, no las palabras.** Un instrumento entra donde el entrenamiento del modelo dice que la canción lo quiere, y la semilla decide mucho de eso: escucha varias semillas antes de reescribir el estilo.
+- **Silénciala después.** Un instrumento no deseado que aun así sale se atrapa en los stems del Pulidor y se silencia en la DAW. No fuerces al modelo en el render.
+
 ### El vocabulario de la Primera Ola <!-- #the-first-wave-s-vocabulary -->
 
 **YuE2-RS-FW**, el primer fine-tune del Estudio (*Engine → Models and LoRAs → RS-FW merge*), aprendió de 32.633 pistas, y cada palabra de sus líneas de estilo está contada en **[su vocabulario](fw-vocabulary/index.html?lang=es&set=fw)**: géneros, instrumentos, voz, ánimo, las palabras de emoción que el propio audio recibió, tonalidades y BPM, y las claves de las partituras (secciones, compases, tempos, acordes). Búscalo, fíltralo por tipo y por fuente, mira con qué palabras iba cada una. Un clic pone una palabra en una línea de estilo en el orden que aprendió el modelo; *Copiar* se lleva la línea para el campo Style. Una palabra vista en cientos de pistas el modelo la entiende; vista dos veces, es una pista. La misma referencia como documento está en [la página del modelo](https://huggingface.co/goldhub/YuE2-RS-Finetunes/blob/main/FW-VOCABULARY.md).
@@ -282,6 +308,15 @@ Un modelo de chat lee tu estilo, tu letra y tu partitura, y luego los redacta o 
 - **Adónde va el borrador** (2471): al documento abierto en el cuaderno, salvo que sea la canción que el Músico tiene en la mano, y si no a la canción del Músico; la línea sobre el botón dice adónde, y un clic lo invierte. Aplicar escribe en el documento y guarda la versión anterior entre sus versiones.
 - **Enviar la petición al LLM** (Ctrl+Enter). Con el escritor propio del Estudio la sala primero cuenta la pregunta y dice cuánto queda para la respuesta (lee 32 768 tokens); **Detener** o Esc cortan la respuesta, y nada cambia en tu canción.
 - El borrador: **Aplicar el borrador**, **Usar la letra** o **Usar el estilo**; *Deshacer* lo devuelve. Un campo que el modelo dejó como estaba aparece punteado y marcado sin cambios; un borrador del todo vacío se dice sobre la página y nunca se muestra como listo. Cuando el borrador cambia tu letra, dice cuántas líneas y las muestra, la vieja sobre la nueva, y Aplicar pregunta antes: con la letra, sin ella o nada. Un borrador pedido solo para el estilo nunca toca la letra, y la estructura va solo con las tareas que escriben letra.
+
+### SOUL: lo que lee el modelo <!-- #soul-what-the-model-reads -->
+
+Cada uno de los dos mundos del Escritor, el del Músico y el del Lector, tiene su **SOUL**: tu palabra permanente al modelo de chat, leída en cada borrador justo después de las instrucciones integradas de ese mundo. Es el campo **Tus preferencias de escritura** bajo el encargo: con una lectura abierta en el cuaderno guarda el SOUL del Lector; si no, el del Músico.
+
+- **Dónde vive**: en el Estudio, no en el navegador, en la carpeta del Escritor: `writer/soul-creator.md` (el Músico) y `writer/soul-reader.md` (el Lector). Las preferencias que un Estudio anterior guardaba en el navegador pasan solas al SOUL del Músico, una vez y solo mientras está vacío (2842).
+- **Qué puede**: está por encima de las instrucciones integradas; donde las dos discrepan, el modelo sigue el SOUL. Salvo los límites de longitud: el estilo de una canción se queda en 200 caracteres sin espacios y nunca pasa de 400, la voz de una lectura en 160 con sus espacios, pida lo que pida el SOUL.
+- **Versiones**: cada guardado conserva el texto anterior como versión (las 30 más recientes por mundo). **Exportar todo** e **Importar** llevan los dos SOUL con el cuaderno; un SOUL importado solo llena uno vacío, y uno distinto del tuyo queda a su lado como versión, nunca escrito encima.
+- **No edites los archivos SOUL a mano.** Escribe en el campo: el Estudio guarda versiones solo de lo que pasa por él. Un SOUL roto a mano (media frase, un registro pegado, una regla contra la forma de la respuesta) se lee entero en cada borrador y los estropea todos en silencio, sin un error que lo muestre. *Leer las instrucciones de composición completas* bajo el campo muestra exactamente lo que lee el modelo.
 
 ## Pulidor <!-- #refiner -->
 
@@ -686,7 +721,7 @@ Una LoRA es un adaptador pequeño sobre ambas mitades. **El estilo viene sobre t
 
 ### Una voz propia: preguntas desde el terreno <!-- #a-voice-of-your-own-questions-from-the-field -->
 
-Respuestas dadas en GitHub (issue #2) a alguien que buscaba solo la voz principal, guardadas aquí.
+Respuestas dadas en GitHub ([issue #2](https://github.com/igrbible/Ruach_Studio/issues/2)) a Steven Altsman (manchuwook), que buscaba solo la voz principal, guardadas aquí.
 
 - **Una toma solo con la voz.** YuE2 aprendió a cantar con canciones enteras, y su fraseo se apoya en la música bajo la voz: «a cappella» en el estilo lo empuja hacia coros o hacia la banda entera. Mejor pide una sola cosa tranquila bajo la voz (un pad suave, una sola guitarra acústica) con `solo lead, single voice, no harmonies, no backing vocals, dry vocal, close mic`, y separa la toma en el Pulidor (ocho stems): *Voz principal entera* devuelve lo que la separación dejó entre los coros, *Reescalado de voces* redibuja el aire que el separador apagó. Cuanto menos haya bajo la voz, más limpio el stem.
 - **Un adaptador de voz con tus propias grabaciones.** Voces principales secas de un solo cantante con su letra, a 44,1 o 48 kHz de fuentes sin pérdida. La misma sala ligera en cada clip hace menos daño que salas distintas, y un clip con mucha reverberación es mejor dejarlo fuera que limpiarlo a medias: lo que deja un de-reverb se aprende como parte de la voz.
@@ -865,7 +900,7 @@ El Motor se abre sobre la sala en la que estás (☰ › Motor, o Ctrl+Alt+9), c
 
 En una máquina con varias tarjetas, dale a cada una su trabajo: el **Estudio** (síntesis) en una tarjeta, el **entrenamiento** en las tarjetas que le des, los **trabajos** del laboratorio (el oyente, Whisper, stems, remasterización, reescalado) en las suyas. Mientras una ejecución entrena en la tarjeta del propio Estudio, una síntesis espera, y la página dice por qué. Con una sola tarjeta, así funciona: entrena, luego crea. Una tarjeta nueva para el Estudio surte efecto tras un reinicio (el botón aparece cuando hace falta). Los trabajos del laboratorio se quedan en las tarjetas marcadas para ellos, el Artista entre ellos: cuando están llenas, un trabajo espera a una de ellas (Whisper pasa al procesador) y nunca toma una tarjeta no marcada para el laboratorio. Una ejecución del Artista va a la tarjeta donde su modelo se mantiene desde la ejecución anterior, con los pesos ya en la RAM.
 
-**Intel Arc (beta).** La síntesis del Estudio también corre en una tarjeta Intel Arc, con su motor compilado por `./build.sh --sycl` (INSTALL.md, «Intel Arc (beta)»): canciones, adaptadores, Full, Extend. Las tarjetas de esta lista son de NVIDIA; el motor de Arc calcula en su propia tarjeta, y el entrenamiento y las portadas se quedan en las de NVIDIA. Una tarjeta Intel también aparece en Motor → GPU: elígela en la columna «studio» y, tras reiniciar, el Estudio corre allí su motor SYCL (de vuelta a una tarjeta CUDA del mismo modo), con un límite de VRAM como cualquier tarjeta; el entrenamiento y las tareas del laboratorio corren en PyTorch sobre CUDA, así que sus otras dos columnas dicen por qué quedan vacías.
+**Intel Arc (beta).** La síntesis del Estudio también corre en una tarjeta Intel Arc, con su motor compilado por `./build.sh --sycl` (INSTALL.md, «Intel Arc (beta)»): canciones, adaptadores, Full, Extend. Las tarjetas de esta lista son de NVIDIA; el motor de Arc calcula en su propia tarjeta, y el entrenamiento y las portadas se quedan en las de NVIDIA. Una tarjeta Intel también aparece en Motor → GPU: elígela en la columna «studio» y, tras reiniciar, el Estudio corre allí su motor SYCL (de vuelta a una tarjeta CUDA del mismo modo), con un límite de VRAM como cualquier tarjeta; el entrenamiento y las tareas del laboratorio corren en PyTorch sobre CUDA, así que sus otras dos columnas dicen por qué quedan vacías. La página la nombra como a todo procesador (2733): una Intel Arc es XPU (XPU0 · Arc Pro B50), una tarjeta NVIDIA es GPU (GPU0 · RTX 3090), una AMD Radeon es GPU · Radeon con su modelo, y el backend lleva su propio nombre (CUDA, SYCL, Vulkan).
 
 **Una mirada para muchas preguntas** (2060): Motor → GPU, la comprobación antes de una síntesis y el Entrenador LoRA preguntan al laboratorio por las tarjetas, a menudo todos a la vez mientras se abre la página; el laboratorio las mira una vez (nvidia-smi, el guardián, las tarjetas Intel) y responde a cada pregunta de los 2 s siguientes con esa mirada: las tarjetas se miran una sola vez para todas las preguntas, no una vez por pregunta, así ninguna agota el tiempo de espera.
 

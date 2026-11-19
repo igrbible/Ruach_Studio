@@ -32,3 +32,7 @@ MISC/Fosforida_Novel_Transcription/
 MISC/watch-rivals/YuE2-Studio/
 MISC/watch-rivals/.timon-seen
 MISC/watch-rivals/digest/.fetch.err
+
+# 18.11.2026: Python's caches and the page checks' scratch under root/ (chrome homes, mock outputs) are never ours to keep
+__pycache__/
+/root/tmp/

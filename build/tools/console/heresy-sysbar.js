@@ -5,8 +5,8 @@
 // and the Videographer (Engine → Defaults: in every room, or nowhere): the processor, the memory, each card (NVIDIA's and an Intel Arc), each disk
 // something is mounted from, and the room's running jobs as bars. Each item's tooltip: its numbers, its last minute and its last ten minutes drawn.
 // The machine's numbers come from the lab's /lab/sys/live (the kernel's /proc, once a second while a page looks, nothing at all when none does),
-// the cards' from what heresy-gpulive.js already asks (/lab/gpus/live, one nvidia-smi), the jobs from the page's own «heresy-activity». Through the
-// friends' door the machine is not a friend's to see: the door refuses /lab/sys/live, and the bar leaves the page for good on that refusal.
+// the cards' from what heresy-gpulive.js already asks (/lab/gpus/live, one nvidia-smi), the jobs from the page's own «heresy-activity». A proxy in
+// front of the Studio may refuse /lab/sys/live (403): on that refusal the bar leaves the page for good.
 // HERESY 2302 (Viktor 09.11.2026: «Бар до такой степени тонкий, что я бы во все комнаты открыл его, абсолютно во все. И в комнате Тренера он точно
 // нужен… по умолчанию пусть везде будет включён. А чтобы глаза не мозолил… можно сворачивать плашкой вправо вверху в его вертикальной позиции»):
 // every room is the Studio's own (the three rooms a choice now; a choice made stays); the tab at the bar's right end folds it to a strip with the tab
@@ -18,7 +18,7 @@
   var KINDS = { artist: /^(art|artist)$/, post: /^(stems|midi|remaster|upscale|debuzz|gate|timing|textend|spectrum|inspect)$/, video: /^video$/ };
   var KEEP = 600, GKEEP = 300, CORE_KEEP = 60;      // ten minutes of the machine (a second each), of the cards (two seconds each); the cores' minute
   var S = { since: 0, ring: [], cores: [], disks: [], cpu: null, load: [], skew: 0, busy: false, gone: false, missing: 0, error: "",
-            g: {}, gsince: {}, jobs: [], jobsAt: 0, hover: null, keys: "", hideT: 0, tight: 0, fitSig: "",
+            g: {}, gsince: {}, jobs: [], jobsAt: 0, hover: null, keys: "", hideT: 0, tight: 0, fitSig: "", vw: 0,
             fold: (function () { try { return localStorage.getItem("ruach.sysbarFold") === "1"; } catch (e) { return false; } })() };
   function $(id) { return document.getElementById(id); }
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
@@ -84,12 +84,13 @@
     });
   }
   function tick() {
+    gpus();                                         // HERESY 2722: the cards' samples kept in every mode (2721), so the bar's ten minutes lose none
     if (!apply() || S.fold || document.visibilityState !== "visible") return;   // HERESY 2302: folded, nothing asked
-    gpus();
+    if (window.HeresyIdle && window.HeresyIdle.mode() === "idle_ui") return;   // 2721: seen but untouched, the machine's own numbers rest (the lab's /proc sampler too)
     if (S.busy || (S.missing && Date.now() < S.missing)) { paint(); return; }
     S.busy = true;
     fetch("/lab/sys/live?since=" + S.since).then(function (r) {
-      if (r.status === 403) { S.gone = true; apply(); throw null; }      // the friends' door: not a friend's to see, and no asking again
+      if (r.status === 403) { S.gone = true; apply(); throw null; }      // a proxy refused it: not ours to see, and no asking again
       if (r.status === 404) { S.missing = Date.now() + 30000; S.error = tr("This lab does not report the machine yet (restart it)"); throw null; }
       return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || "HTTP " + r.status); return d; });
     }).then(function (d) {
@@ -109,7 +110,7 @@
   function last() { return S.ring[S.ring.length - 1] || null; }
   function gLast(i) { var r = S.g[i] || []; return r[r.length - 1] || null; }
   function cards() { return Object.keys(S.g).map(Number).sort(function (a, b) { return a - b; }); }
-  function gpuShort(i) { return i >= 100 ? "Arc" + (i - 100) : "GPU" + i; }
+  function gpuShort(i) { return window.HeresyProc ? window.HeresyProc.short(i) : (i >= 100 ? "XPU" + (i - 100) : "GPU" + i); }   // HERESY 2733: XPU0 for the Arc
   function gpuName(i) {
     var L = window.HeresyGpuLive && window.HeresyGpuLive.state, n = L && L.names ? L.names[i] : "";
     return window.HeresyGpuLabel ? window.HeresyGpuLabel(i, n) : gpuShort(i) + " · " + (n || "");
@@ -128,16 +129,19 @@
       '<span class="sb-name" translate="no">' + esc(name) + "</span>" +
       (sub ? '<span class="sb-sub mono" translate="no">' + esc(sub) + "</span>" : "") + meter(lanes) + '<span class="sb-val mono"></span></div>';
   }
+  // HERESY 2722 (the resource audit of 18.11.2026, R1b: the meters' width eased over 0.35 s laid the page out 21 times a second, 2.4 to 4 s of the
+  // browser's minute): a meter's fill is scaled (the compositor's work, no layout), and nothing is written that did not change
   function setMeter(el, fracs) {
     var bs = el.querySelectorAll(".sb-meter > b");
     fracs.forEach(function (f, k) {
       var b = bs[k];
       if (!b) return;
-      var w = f == null ? 0 : Math.max(0, Math.min(1, f)) * 100;
-      b.firstChild.style.width = w.toFixed(1) + "%";
-      b.className = lv(f);
+      var w = "scaleX(" + (f == null ? 0 : Math.max(0, Math.min(1, f))).toFixed(3) + ")", c = lv(f);
+      if (b.firstChild.style.transform !== w) b.firstChild.style.transform = w;
+      if (b.className !== c) b.className = c;
     });
   }
+  function say(el, text) { if (el && el.textContent !== text) el.textContent = text; }   // HERESY 2722: the same words are not written again
   function build() {
     var host = $("sbItems"), ks = ["cpu", "ram"].concat(cards().map(function (i) { return "gpu:" + i; }), S.disks.map(function (d) { return "disk:" + d.id; }));
     var sig = ks.join(",") + "|" + (window.RuachI18n ? window.RuachI18n.lang() : "en");
@@ -154,32 +158,33 @@
     var host = build();
     paintJobs();
     // as tight as the window needs: first the disks' folders and the cards' temperatures go, then the disks' rates (their tooltips keep all)
-    var sig = S.keys + "|" + document.documentElement.clientWidth + "|" + $("sbJobs").childElementCount + "|" + !!S.error;
+    if (!S.vw) S.vw = document.documentElement.clientWidth;   // HERESY 2722: measured once a room or a size, not read (a layout forced) every second
+    var sig = S.keys + "|" + S.vw + "|" + $("sbJobs").childElementCount + "|" + !!S.error;
     if (S.fitSig !== sig) {
       S.fitSig = sig;
       for (var t = 0; t <= 4; t++) { S.tight = t; el.dataset.tight = t; texts(host); if (host.scrollWidth <= host.clientWidth + 1) break; }   // HERESY 2523: 3, the disks' marks; 4, the cards' percent alone
     } else texts(host);
     var note = $("sbNote");
-    if (note) { note.hidden = !S.error; note.textContent = S.error; }
+    if (note) { if (note.hidden !== !S.error) note.hidden = !S.error; say(note, S.error); }
     if (S.hover) paintPop();
   }
   function texts(host) {
     var s = last();
     var cpu = host.querySelector('[data-sb="cpu"]'), ram = host.querySelector('[data-sb="ram"]');
     bar().classList.toggle("is-quiet", !s);
-    if (cpu) { setMeter(cpu, [s ? s[1] / 100 : null]); cpu.querySelector(".sb-val").textContent = s ? pct(s[1]) : "—"; }
-    if (ram) { setMeter(ram, [s && s[4] ? s[3] / s[4] : null]); ram.querySelector(".sb-val").textContent = s ? gb(s[3], 0) + "/" + gb(s[4], 0) + " GB" : "—"; }
+    if (cpu) { setMeter(cpu, [s ? s[1] / 100 : null]); say(cpu.querySelector(".sb-val"), s ? pct(s[1]) : "—"); }
+    if (ram) { setMeter(ram, [s && s[4] ? s[3] / s[4] : null]); say(ram.querySelector(".sb-val"), s ? gb(s[3], 0) + "/" + gb(s[4], 0) + " GB" : "—"); }
     cards().forEach(function (i) {
       var it = host.querySelector('[data-sb="gpu:' + i + '"]'), g = gLast(i);
       if (!it) return;
       setMeter(it, [g ? (g[1] || 0) / 100 : null, g && g[3] ? (g[2] || 0) / g[3] : null]);
-      it.querySelector(".sb-val").textContent = g ? pct(g[1]) + (S.tight >= 4 ? "" : " · " + gb(g[2]) + "/" + gb(g[3], 0) + " GB") + (g[4] != null && !S.tight ? " · " + Math.round(g[4]) + "°" : "") : "—";
+      say(it.querySelector(".sb-val"), g ? pct(g[1]) + (S.tight >= 4 ? "" : " · " + gb(g[2]) + "/" + gb(g[3], 0) + " GB") + (g[4] != null && !S.tight ? " · " + Math.round(g[4]) + "°" : "") : "—");
     });
     S.disks.forEach(function (d) {
       var it = host.querySelector('[data-sb="disk:' + d.id + '"]'), r = s && s[8] ? s[8][d.id] : null;
       if (!it) return;
       setMeter(it, [r ? r[2] / 100 : null, d.total ? 1 - d.free / d.total : null]);
-      it.querySelector(".sb-val").textContent = r ? "⇣" + rate(r[0]) + " ⇡" + rate(r[1]) : "—";
+      say(it.querySelector(".sb-val"), r ? "⇣" + rate(r[0]) + " ⇡" + rate(r[1]) : "—");
     });
   }
 
@@ -390,7 +395,7 @@
         [tr("Progress"), st[1] + (st[0] != null ? " · " + Math.round(st[0] * 100) + "%" : "")],
         r.gpu != null ? (function () {
           var g = String(r.gpu).split("+").filter(Boolean);
-          return [tr(g.length > 1 ? "Cards" : "Card"), r.gpu === "cpu" ? "CPU" : g.map(function (c) { return gpuName(+c); }).join(" · ")];
+          return [tr(g.length > 1 ? "Cards" : "Card"), r.gpu === "cpu" ? "CPU" : g.map(function (c) { return isNaN(+c) ? gpuShort(c) : gpuName(+c); }).join(" · ")];   // 2733: "arc" XPU
         })() : null]), null];
     }
     return null;
@@ -430,15 +435,16 @@
     };
     el.addEventListener("click", toTrain); el.addEventListener("keydown", toTrain);
     window.addEventListener("scroll", function () { if (S.hover) paintPop(); }, { passive: true });
-    if (window.MutationObserver) new MutationObserver(function () { if (apply()) tick(); }).observe(document.body, { attributes: true, attributeFilter: ["data-tab"] });
+    if (window.MutationObserver) new MutationObserver(function () { S.vw = 0; if (apply()) tick(); }).observe(document.body, { attributes: true, attributeFilter: ["data-tab"] });
     var dc = $("defaultsCard");
     if (dc) dc.addEventListener("change", function (e) { if (e.target.closest('[data-def="' + KEY + '"]')) setTimeout(function () { if (apply()) tick(); }, 0); });
     window.addEventListener("ruach-lang", function () { S.keys = ""; paint(); });
-    window.addEventListener("resize", function () { if (!bar().hidden) paint(); });
+    window.addEventListener("resize", function () { S.vw = 0; if (!bar().hidden) paint(); });
     window.addEventListener("storage", function (e) { if (e.key === KEY) apply(); if (e.key === FOLD) { S.fold = e.newValue === "1"; S.fitSig = ""; if (apply()) tick(); } });
     var fb = $("sbFold");
     if (fb) fb.addEventListener("click", function () { setFold(!S.fold); });   // HERESY 2302
-    document.addEventListener("visibilitychange", tick);
+    if (window.HeresyIdle) window.HeresyIdle.on(function (why) { if (why === "awake") tick(); });   // HERESY 2721: awake again (the tab seen, a hand), at once
+    else document.addEventListener("visibilitychange", tick);
     apply();
     tick();
   }

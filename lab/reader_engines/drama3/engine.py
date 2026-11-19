@@ -54,6 +54,8 @@ SR = 44100
 FPS = 21.5                          # the codec's frames a second
 FRAMES_MAX = 1400                   # about 65 s a piece
 CONTEXT = 4096                      # prompt, reference and frames
+WINDOW_CONTEXT, WINDOW_FRAMES = 16384, 2048   # HERESY 2698: the window mode, as Fish's own server reads (a pass up to 95 s)
+REDUCED_RE = re.compile(r"max_tokens reduced from (\d+) to (\d+)")
 BANKS = 40                          # expert banks of Drama 3
 UP_S = 1200                         # a server's start and its first piece, at most
 PIECE_S = 1800                      # one piece at most (a long one on the processor)
@@ -147,7 +149,7 @@ def config(h, port):
             "models": [{"id": MODEL_ID, "family": "fish_drama3", "path": str(h["model"]), "task": "tts",
                         "mode": "streaming" if back == "vulkan" else "offline",   # HERESY 2516
                         "session_options": dict(h.get("opts") or {}, **{"fish_drama3.cpu_expert_layers": h["cel"],
-                                                                         "fish_drama3.context_length": CONTEXT})}]}
+                                                                         "fish_drama3.context_length": h.get("ctx") or CONTEXT})}]}
 
 
 def _opts(t):
@@ -158,9 +160,9 @@ def _opts(t):
             and k not in ("fish_drama3.cpu_expert_layers", "fish_drama3.context_length")}
 
 
-def frames(text):
-    """Frames for a piece: its length with room to spare (Russian reads about 14 characters a second), never above FRAMES_MAX."""
-    return max(80, min(FRAMES_MAX, int((len(text) / 9.0 + 4.0) * FPS)))
+def frames(text, cap=FRAMES_MAX):
+    """Frames for a piece: its length with room to spare (Russian reads about 14 characters a second), never above cap (the window's 2048)."""
+    return max(80, min(cap, int((len(text) / 9.0 + 4.0) * FPS)))
 
 
 def body(text, ref, opts):
@@ -172,6 +174,9 @@ def body(text, ref, opts):
     if ref:
         b["voice_ref"] = ref["path"]
         b["reference_text"] = ref["text"] or ""
+    if opts.get("references"):                          # HERESY 2699: a scene's voices, each sample bound to its <|speaker:N|>
+        b["options"]["references"] = json.dumps([{"text": str(r["text"]), "audio_path": str(r["audio_path"])} for r in opts["references"]],
+                                                ensure_ascii=False, separators=(",", ":"))
     if opts.get("previous"):                            # HERESY 2474: the pieces before as audio.cpp's history (previous_takes)
         b["options"]["previous_takes"] = json.dumps(previous_takes(opts["previous"]), separators=(",", ":"))
     return b
@@ -223,6 +228,8 @@ def load(device, kit):
     h = {"kit": Path(kit), "device": device, "model": model, "cel": cel, "tier": str(t.get("id") or ""),
          "opts": _opts(t) if device in ("cuda", "xpu") else {}, "threads": int(t.get("threads") or (32 if device == "cpu" else 16)), "bin": server_bin(kit, device),
          "log": logs / "drama3-server.log", "refs": tmp, "proc": None, "url": "", "retries": 0, "vk": vk_index() if device == "xpu" else 0}
+    if t.get("window"):                                # HERESY 2698: the run asked for the window; the lab keeps such a worker apart
+        h["ctx"], h["fcap"] = WINDOW_CONTEXT, WINDOW_FRAMES
     signal.signal(signal.SIGTERM, lambda *_: (_stop(h), os._exit(0)))
     atexit.register(_stop, h)
     _up(h)
@@ -398,11 +405,23 @@ def say(h, text, ref, opts):
     import numpy as np
     import soundfile as sf
     b = body(text, ref, opts)
+    cap = h.get("fcap") or FRAMES_MAX
+    b["max_tokens"] = frames(text, cap)
+    try:
+        at = h["log"].stat().st_size
+    except OSError:
+        at = 0
+    limited, retried = False, False
     while True:
         try:
             if h.get("tasks", True):
                 try:
                     res = json.loads(_post(h, task(b), path="/v1/tasks/run"))
+                    limited = reached(res)
+                    if limited and not retried and b["max_tokens"] < cap:   # HERESY 2698: its budget ran out: once more with the whole cap
+                        print(f"drama3: the piece reached its {b['max_tokens']} frames, read again with {cap}", flush=True)
+                        b["max_tokens"], retried = cap, True
+                        continue
                     data = base64.b64decode(res["audio"])
                     try:
                         h["last_codes"] = codes_of(res)
@@ -419,8 +438,32 @@ def say(h, text, ref, opts):
             if not _more_banks(h, e):
                 raise
             _up(h)
+    if isinstance(h.get("last_codes"), dict):          # HERESY 2698: what the lab says of the piece (kept in its codes' meta)
+        h["last_codes"].update(reached_limit=bool(limited), max_tokens=b["max_tokens"], retried=retried, reduced=reduced_since(h, at))
     w, sr = sf.read(io.BytesIO(data), dtype="float32", always_2d=True)
     return np.ascontiguousarray(w.mean(1)), int(sr)
+
+
+def reached(res):
+    """HERESY 2698: whether audio.cpp's result says the generation ran out of frames (drama3_generation_v1's reached_limit), anywhere in it."""
+    if isinstance(res, dict):
+        if res.get("reached_limit") is True:
+            return True
+        return any(reached(v) for k, v in res.items() if k not in ("audio", "artifacts"))
+    if isinstance(res, list):
+        return any(reached(v) for v in res)
+    return False
+
+
+def reduced_since(h, at):
+    """HERESY 2698: «max_tokens reduced from A to B» in the server's log since at: the prompt left the piece less room than asked."""
+    try:
+        with open(h["log"], "rb") as f:
+            f.seek(at)
+            m = REDUCED_RE.findall(f.read(1 << 20).decode("utf-8", "replace"))
+    except OSError:
+        return None
+    return f"{m[-1][0]}→{m[-1][1]}" if m else None
 
 
 def state(h):

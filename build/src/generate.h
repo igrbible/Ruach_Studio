@@ -24,6 +24,10 @@
 struct Yue2Generation {
     std::vector<int> tokens;     // emitted content, end token excluded
     bool             truncated;  // the budget ran out before the end token
+    // HERESY 2831: the floor stood at the budget (the end token offered at no step: the stage ran to its budget, not to an end it chose),
+    // and whether the context's cut below set that budget
+    bool             floor_bound = false;
+    bool             context_cut = false;
 };
 
 // Prefill set s with a prefix, or copy the set of an equal prefix already
@@ -88,7 +92,8 @@ static bool yue2_generate(Qwen3LM *                             lm,
     // HERESY 1032: a budget that does not fit beside the prefix is cut to what does, instead of a
     // FATAL: a long speech asks for 15 minutes and gets what the context holds (a song that runs
     // into the cut is marked truncated, as at any budget). Only a prefix with no room left fails.
-    Yue2Sampling s = s_in;
+    Yue2Sampling s   = s_in;
+    bool         cut = false;   // HERESY 2831
     for (int i = 0; i < B; i++) {
         size_t longest = guided && negatives[i].size() > prefixes[i].size() ? negatives[i].size() : prefixes[i].size();
         if (split && (*lyricless)[i].size() > longest) {
@@ -103,6 +108,11 @@ static bool yue2_generate(Qwen3LM *                             lm,
             fprintf(stderr, "[AR] Budget %d cut to %d: prefix %zu + end fill the rest of context %d\n", s.max_tokens, room,
                     longest, context);
             s.max_tokens = room;
+            cut          = true;
+            if (s.min_tokens >= s.max_tokens && s_in.min_tokens < s_in.max_tokens) {   // HERESY 2831: said, never silent
+                fprintf(stderr, "[AR] Floor %d at the cut budget %d: the end token is banned for the whole run, the stage runs to the context's end\n",
+                        s.min_tokens, s.max_tokens);
+            }
             if (s.min_tokens > s.max_tokens) {
                 s.min_tokens = s.max_tokens;
             }
@@ -158,6 +168,10 @@ static bool yue2_generate(Qwen3LM *                             lm,
             s.top_k, s.max_tokens, B, N);
 
     out->assign((size_t) B, { {}, true });
+    for (Yue2Generation & g : *out) {   // HERESY 2831
+        g.floor_bound = s.min_tokens >= s.max_tokens;
+        g.context_cut = cut;
+    }
 
     // Forwards a sequence still owes once it stops drawing: one for its end
     // token, two when the budget cut it on a content token. Negative while
