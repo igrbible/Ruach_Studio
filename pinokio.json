@@ -1,0 +1,31 @@
+{
+  "title": "Ruach Studio",
+  "description": "Ruach Studio: The Ultimate YuE2 Studio for local AI music generation. YuE2 Musician, Drama 3 & Higgs v3 Narrator, QWEN Writer, Refiner (30+ nodes, Piano Roll, DAW), QWEN IMAGE Cover Artist, MiniMax H3 Videographer, LoRA Trainer, Librarian. SUNO AI alternative.",
+  "icon": "src/brand/ruach-icon-512.png",
+  "posts": [
+    "https://pinokio.co/posts/01m77zrbsp33p8n7g57sy2mmkr",
+    "https://pinokio.co/posts/01m7skf8w4qc7abyxppcskqe18"
+  ],
+  "links": [
+    {
+      "title": "Ruach Studio on GitHub",
+      "value": "https://github.com/igrbible/Ruach_Studio"
+    },
+    {
+      "title": "The Studio's page",
+      "value": "https://ruachstudio.art"
+    },
+    {
+      "title": "Our fine-tunes and decoders",
+      "value": "https://huggingface.co/goldhub/YuE2-RS-Finetunes"
+    },
+    {
+      "title": "Awesome YuE2",
+      "value": "https://github.com/igrbible/Awesome-YUE2"
+    },
+    {
+      "title": "YuE2 (m-a-p)",
+      "value": "https://huggingface.co/m-a-p/YuE2-3B"
+    }
+  ]
+}
