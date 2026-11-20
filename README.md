@@ -1,4 +1,4 @@
-# Ruach Studio · the YuE2 Studio · songs from words, on your own machine
+# All-in-One Ruach Studio · The Ultimate YuE2 Studio · Full-fledged Music Production Suite · Your own on-premises multi-GPU workhorse
 
 <p align="center"><img src="src/brand/ruach-banner.png" alt="Ruach Studio · OSEM: Open Source, Engaged &amp; Musical" width="860"></p>
 
