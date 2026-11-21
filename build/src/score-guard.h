@@ -383,15 +383,18 @@ static Yue2ScoreLength yue2_score_seconds(const std::string & abc) {
 // HERESY 2830 (Viktor 18.11.2026, on «Окно 2509 · 9:00 спрошено»: «Аномалия с пустотой. Или ты специально так запромптил?»): the music's floor
 // never past the plan's end. The floor is a fuse against broken early ends (1088), not a length asked: past the end of the score the music
 // follows, it can only force music with no plan (that take: a floor of 8:00, a plan of 4:26, near silence from 4:16 and fragments to 7:16).
-// A floor more than YUE2_FLOOR_PAST_PLAN_S past the plan's end is lowered to YUE2_FLOOR_BEFORE_END_S before it, never under the default
+// A floor more than YUE2_FLOOR_PAST_PLAN_S past the plan's end was lowered to YUE2_FLOOR_BEFORE_END_S before it, never under the default
 // fuse and never raised. On the studio's 450 long plans with a written tempo the music ended a median 8 s before the plan's end (p90 at it).
 // A plan of unknown length (-1) leaves the floor as asked.
+// HERESY 2897 (GitHub issue 13, 20.11.2026, a user on 2.0.9: «if an outro is about to given it restarts it some how and does not fade out at
+// all»): 2830 left a floor up to 20 s past the plan's end as asked, so the music had to go on up to half a minute past the Outro with no plan
+// to follow, and it began again. Now every floor past YUE2_FLOOR_BEFORE_END_S before the plan's end goes down to it: the plan's end is the
+// song's end, the fuse as before (never under 30 s), never raised.
 #define YUE2_FLOOR_FUSE          750     // the music's default floor (HERESY 1088, sampling.h): 30 s
-#define YUE2_FLOOR_PAST_PLAN_S   20.0
 #define YUE2_FLOOR_BEFORE_END_S  10.0
 
 static int yue2_floor_for_plan(int floor, double plan_seconds, int fps) {
-    if (plan_seconds < 0.0 || (double) floor <= (plan_seconds + YUE2_FLOOR_PAST_PLAN_S) * fps) {
+    if (plan_seconds < 0.0) {
         return floor;
     }
     int to = std::max(YUE2_FLOOR_FUSE, (int) ((plan_seconds - YUE2_FLOOR_BEFORE_END_S) * fps));

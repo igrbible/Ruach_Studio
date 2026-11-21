@@ -1220,6 +1220,8 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
               <button type="button" class="chip" data-harmony="1" aria-pressed="true">Gentle</button>
               <button type="button" class="chip" data-harmony="2" aria-pressed="false">Varied</button>
               <button type="button" class="chip" data-harmony="3" aria-pressed="false">Bold</button>
+              <!-- HERESY 2896: the lyrics' own sections, in order, the plan's to write (the engine's harmony.follow) -->
+              <button type="button" class="chip harmony-follow" id="followSections" aria-pressed="true" data-tip="The planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): no section dropped, none made up, and the song does not end before its last section has begun and played a few chords. With no [Intro] in the lyrics an intro is planned first, with no [Outro] an outro last, so the song ends rather than stops. Only when the model writes the score (Full or Melody, no score of yours), with Chords off too">Follow my sections</button>
             </div>
           </fieldset>
 

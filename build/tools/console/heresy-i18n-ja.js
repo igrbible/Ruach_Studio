@@ -9647,3 +9647,21 @@ RuachI18n.add("ja", {
 "Nothing sung: the style holds negative words. Fix it, or sing it anyway.": "何も歌っていません：スタイルに否定語があります。直すか、このまま歌ってください。",
 "The 4–12 kHz envelope at 25, 50 … 150 Hz above its neighbours, mean of all windows: the VAE's 25 frames a second heard as an electric buzz in the highs. Music with no buzz reads about 8 dB here and up to 12 (the measure's own floor, at in-between frequencies on 30 takes): amber past 13 dB, red past 15": "4–12 kHz の包絡線の 25、50 … 150 Hz が近傍よりどれだけ高いか、全ウィンドウの平均：VAE の毎秒 25 フレームが高域の電気的なうなりとして聞こえるもの。うなりのない音楽でもここは約 8 dB、最大 12 になる（中間の周波数で 30 テイクから測った、この計測自体の床）：13 dB を超えると黄、15 を超えると赤",
 });
+// HERESY 2896: the lyrics' own sections followed by the planner
+RuachI18n.add("ja", {
+"Follow my sections": "自分のセクションに従う",
+"The planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): no section dropped, none made up, and the song does not end before its last section has begun and played a few chords. With no [Intro] in the lyrics an intro is planned first, with no [Outro] an outro last, so the song ends rather than stops. Only when the model writes the score (Full or Melody, no score of yours), with Chords off too": "計画される楽譜が、歌詞のセクションをその順に書きます(Intro、Verse、Pre-Chorus、Chorus、Bridge、Interlude、Outro。プランナーの呼び名で):抜けも作り足しもなく、最後のセクションが始まって数コード鳴るまで曲は終わりません。歌詞に [Intro] がなければ最初にイントロを、[Outro] がなければ最後にアウトロを計画し、曲が途切れずに終わるようにします。モデルが楽譜を書くとき(Full か Melody、自分の楽譜なし)だけ、コードがオフでも有効です"
+});
+// HERESY 2898: the Writer's model leaves the song's CUDA card
+RuachI18n.add("ja", {
+"The Writer's model left the card the song sings on, so the song has its memory; it loads again when the Writer is asked": "ライターのモデルが曲の歌うカードから外れ、曲にメモリが回るようにしました。ライターに尋ねると再び読み込まれます"
+});
+// HERESY 2899: the bar's Unload over every room's models
+RuachI18n.add("ja", {
+"Unload: {0}": "アンロード:{0}",
+"busy: it waits": "使用中:待機",
+"Busy, it waits: {0}": "使用中のため待機:{0}",
+"Freed: {0}": "解放:{0}",
+"Sure you want to unload this model from VRAM?": "このモデルを VRAM からアンロードしますか?",
+"Sure you want to unload these models from VRAM?": "これらのモデルを VRAM からアンロードしますか?"
+});

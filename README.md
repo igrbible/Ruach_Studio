@@ -226,25 +226,25 @@ What it needs:
 
 One file and nothing to build: the Studio with its engine, its Python, ffmpeg and its own C library inside, for Linux on x86-64. Since 2.0.7 it runs whatever glibc the system has: it carries its own (measured on Debian 10 and CentOS 7, offline, as well as on Ubuntu 22.04 and 24.04, Debian 12 and Fedora 41). Since 2.0.9 it takes no library from the system but the NVIDIA driver, so a system whose libraries are built for a newer glibc (Arch, CachyOS, Fedora's newest) no longer stops it ([#10](https://github.com/igrbible/Ruach_Studio/issues/10)).
 
-Download `RuachStudio-2.0.9-core-x86_64.AppImage` (1.3 GB) and its `.sha256` from the [v2.0.9 release](https://github.com/igrbible/Ruach_Studio/releases/tag/v2.0.9), then:
+Download `RuachStudio-2.0.10-core-x86_64.AppImage` (1.3 GB) and its `.sha256` from the [v2.0.10 release](https://github.com/igrbible/Ruach_Studio/releases/tag/v2.0.10), then:
 
 ```bash
-sha256sum -c RuachStudio-2.0.9-core-x86_64.AppImage.sha256
-chmod +x RuachStudio-2.0.9-core-x86_64.AppImage
-./RuachStudio-2.0.9-core-x86_64.AppImage
+sha256sum -c RuachStudio-2.0.10-core-x86_64.AppImage.sha256
+chmod +x RuachStudio-2.0.10-core-x86_64.AppImage
+./RuachStudio-2.0.10-core-x86_64.AppImage
 ```
 
 **A window of its own comes up first**, offline too: it says what the Studio is doing, what is missing and whether there is a network, opens the page when the Studio answers (*Open the Studio*), and stops the Studio when you close it. Without a desktop, or with `RUACH_NO_WINDOW=1`, the AppImage speaks in the terminal as before.
 
 **The first start** names each model it needs with its size, the total and the free disk, and downloads nothing until you say so: *Fetch the models* in the window (it wakes only when there is a network), `[Y/n]` in a terminal. It brings only what a song needs: the Studio's default backbone, RS-TW 2.0 ×0.75, at your card's quant, m-a-p's decoder (0.53 GB, which also encodes covers and uploads) and ours, YuE2-VAE-RS x3 v1 (0.8 GB). That is 8.5 GB on a 24 GB card (BF16), 5.1 GB on 7 to 16 GB (Q8_0), 4.3 GB below (Q6_K), and 4.0 GB on the processor or a card under 4.5 GB (m-a-p's YuE2-3B Q5_K_M). Everything else comes from **Engine → Models** when you want it: Whisper for the lyrics check, the transcriber for covers from a recording, our second decoder, upscale, the LoRAs. The stems need the full Python with PyTorch (`lab/install-venv.sh`), which the AppImage does not carry. The page opens at http://127.0.0.1:7777; the Studio keeps its things in `~/.local/share/ruach-studio` (`RUACH_HOME=/another/disk` puts them elsewhere).
 
-**The GPU** is NVIDIA's, with the driver 570 or newer: the RTX 20xx, 30xx, 40xx and 50xx, the GTX 16xx, Quadro RTX and the RTX A and Ada cards, the A100 and the other Ampere cards, the H100 and H200, the B200 and B300. Pascal and Volta run as an experiment (the GTX 10xx, Quadro P, Tesla P4 and P40, Titan V, V100). On any other card, or with none, the Studio computes on the processor, slowly; `CUDA_VISIBLE_DEVICES= ./RuachStudio-2.0.9-core-x86_64.AppImage` makes it do so on any card.
+**The GPU** is NVIDIA's, with the driver 570 or newer: the RTX 20xx, 30xx, 40xx and 50xx, the GTX 16xx, Quadro RTX and the RTX A and Ada cards, the A100 and the other Ampere cards, the H100 and H200, the B200 and B300. Pascal and Volta run as an experiment (the GTX 10xx, Quadro P, Tesla P4 and P40, Titan V, V100). On any other card, or with none, the Studio computes on the processor, slowly; `CUDA_VISIBLE_DEVICES= ./RuachStudio-2.0.10-core-x86_64.AppImage` makes it do so on any card.
 
 **An update** is the next AppImage started in place of this one: your models, songs and settings stay where they are, and its first start asks only for what changed among the models you have. `--fetch-models --only whisper,transcriber` (or `--help` after `--fetch-models`) fetches the packs from a terminal.
 
 ## Windows and macOS: Native (Beta)
 
-Since 2.0.9 the Studio comes as one zip for **Windows 11** (x64) and one for a **Mac with Apple Silicon** (macOS 13.3 and later), from the [v2.0.9 release](https://github.com/igrbible/Ruach_Studio/releases/tag/v2.0.9): no WSL2, no Docker, nothing to build. They are a beta: made and tried for the Musician and the Librarian, the other rooms following one by one, and not signed. A new beta is a new zip; there is no update in place yet.
+Since 2.0.9 the Studio comes as one zip for **Windows 11** (x64) and one for a **Mac with Apple Silicon** (macOS 13.3 and later), from the [v2.0.10 release](https://github.com/igrbible/Ruach_Studio/releases/tag/v2.0.10): no WSL2, no Docker, nothing to build. They are a beta: made and tried for the Musician and the Librarian, the other rooms following one by one, and not signed. A new beta is a new zip; there is no update in place yet.
 
 - **Windows 11**: unpack into a short folder (for example `C:\RuachStudio`: Windows' 260-character paths reach into the Studio's Python) and double-click `RuachStudio.cmd`. The first start brings Python 3.12, the lab's packages and the models a song needs into that folder only, then opens the Studio in your browser. The zip carries two engines, CUDA 12.8 for NVIDIA cards from Pascal (compute 6.1) to Blackwell and one for the processor (AVX2), and the start picks by what `nvidia-smi` sees. On a Pascal or Volta card the songs sing on the card while the lab's own work runs on the processor, as PyTorch's CUDA wheels start at compute 7.5. SmartScreen asks once: *More info → Run anyway*.
 - **A Mac with Apple Silicon**: unpack it and open `RuachStudio.command`; the engine runs on Metal, its quant chosen by the Mac's memory. Gatekeeper stops the first start: right-click → *Open*, or System Settings → Privacy & Security → *Open Anyway*.
@@ -553,6 +553,17 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 - **A page that rests when you do**: a tab at rest asks for the cards once in 50 s, the bars and canvases redraw only what moved, the Library and the covers' list answer from what did not change.
 - **One gate for every sound brought in**, by its bytes, never its name; a take's datasheet says its licence part by part; a failed computation stops a song instead of making silence; the GPU tested at start, the processor taken when it fails.
 - **Around the rooms**: one field height of 34 px, the Studio's own checkboxes and radios, the Library's eye that remembers, the Guide's Hebrew right to left, one name for each processor, the audio upscale working again; from Timon's yue2.cpp the music cache in Q8_0 and tinyBLAS; from leeQzz's fork the lyrics' guidance in the API.
+
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
+### Done › 2.0.10 (November 2026)
+
+A hotfix for 2.0.9, from [#13](https://github.com/igrbible/Ruach_Studio/issues/13):
+
+- **Songs follow your sections**: in Full and Melody the planned score now writes the lyrics' own sections in order (no Bridge or Outro dropped, no Interlude made up) and the song does not end before the last one; «Follow my sections» beside Chords, on by default.
+- **No restart after the Outro**: the engine no longer makes the music run past the planned end; the song ends with its plan.
+- **No out-of-memory from the Writer's model**: when you press Generate, the Writer's local model leaves the CUDA card the song sings on, and the page tells you.
+- **Unload frees every room's models**: the bar's Unload now lights for and lets go of the Writer's, the Narrator's, the Artist's and the Videographer's models too, not only the song engine's; the heavy Artist and Videographer models ask first.
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 

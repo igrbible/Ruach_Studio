@@ -183,8 +183,12 @@ int main(int argc, char ** argv) {
     // HERESY 2830: the floor never past the plan's end
     check(yue2_floor_for_plan(12000, -1.0, 25) == 12000, "a plan of unknown length leaves the floor as asked", "");
     check(yue2_floor_for_plan(750, 200.0, 25) == 750, "the default floor under a long plan stays", "");
-    check(yue2_floor_for_plan(5500, 200.0, 25) == 5500, "a floor 20 s past the plan's end stays (only more is lowered)", "");
+    check(yue2_floor_for_plan(5500, 200.0, 25) == 4750, "a floor 20 s past the plan's end goes to 10 s before it (2897: 2830 left it)", "");
     check(yue2_floor_for_plan(5501, 200.0, 25) == 4750, "a floor more than 20 s past the plan's end goes to 10 s before it", "");
+    check(yue2_floor_for_plan(5000, 200.0, 25) == 4750, "a floor at the plan's end goes to 10 s before it (2897)", "");
+    check(yue2_floor_for_plan(4751, 200.0, 25) == 4750, "a floor a frame past 10 s before the end goes there (2897)", "");
+    check(yue2_floor_for_plan(4750, 200.0, 25) == 4750, "a floor at 10 s before the end stays", "");
+    check(yue2_floor_for_plan(4000, 200.0, 25) == 4000, "a floor well before the end stays", "");
     check(yue2_floor_for_plan(800, 5.0, 25) == 750, "never under the default fuse of 30 s", "");
     check(yue2_floor_for_plan(700, 1.0, 25) == 700, "never raised", "");
 

@@ -9651,3 +9651,21 @@ RuachI18n.add("pt", {
 "Nothing sung: the style holds negative words. Fix it, or sing it anyway.": "Nada cantado: o estilo tem palavras negativas. Corrige-o ou canta-o mesmo assim.",
 "The 4–12 kHz envelope at 25, 50 … 150 Hz above its neighbours, mean of all windows: the VAE's 25 frames a second heard as an electric buzz in the highs. Music with no buzz reads about 8 dB here and up to 12 (the measure's own floor, at in-between frequencies on 30 takes): amber past 13 dB, red past 15": "O envelope de 4–12 kHz em 25, 50 … 150 Hz acima das frequências vizinhas, média de todas as janelas: os 25 quadros por segundo do VAE, ouvidos como um zumbido elétrico nos agudos. Música sem zumbido marca aqui cerca de 8 dB e até 12 (o piso próprio da medida, em frequências intermédias em 30 takes): âmbar acima de 13 dB, vermelho acima de 15",
 });
+// HERESY 2896: the lyrics' own sections followed by the planner
+RuachI18n.add("pt", {
+"Follow my sections": "Seguir as minhas secções",
+"The planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): no section dropped, none made up, and the song does not end before its last section has begun and played a few chords. With no [Intro] in the lyrics an intro is planned first, with no [Outro] an outro last, so the song ends rather than stops. Only when the model writes the score (Full or Melody, no score of yours), with Chords off too": "A partitura planeada escreve as secções da letra pela sua ordem (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, como o planeador as nomeia): nenhuma se perde, nenhuma se inventa, e a canção não acaba antes de a última secção começar e tocar alguns acordes. Sem [Intro] na letra planeia-se primeiro uma intro, sem [Outro] um outro no fim, para a canção acabar em vez de se cortar. Só quando o modelo escreve a partitura (Full ou Melody, sem uma sua), também com os acordes desligados"
+});
+// HERESY 2898: the Writer's model leaves the song's CUDA card
+RuachI18n.add("pt", {
+"The Writer's model left the card the song sings on, so the song has its memory; it loads again when the Writer is asked": "O modelo do Escritor deixou a placa onde a canção canta, para que ela tenha a sua memória; volta a carregar quando o Escritor for chamado"
+});
+// HERESY 2899: the bar's Unload over every room's models
+RuachI18n.add("pt", {
+"Unload: {0}": "Descarregar: {0}",
+"busy: it waits": "ocupado: espera",
+"Busy, it waits: {0}": "Ocupados, esperam: {0}",
+"Freed: {0}": "Libertado: {0}",
+"Sure you want to unload this model from VRAM?": "Tem a certeza de que quer descarregar este modelo da VRAM?",
+"Sure you want to unload these models from VRAM?": "Tem a certeza de que quer descarregar estes modelos da VRAM?"
+});

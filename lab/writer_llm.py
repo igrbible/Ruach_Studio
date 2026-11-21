@@ -411,6 +411,41 @@ def yield_arc(why):
     return True
 
 
+def _cuda_apps():
+    """HERESY 2898: the CUDA processes and their cards, {pid: (name, card's uuid)}, by nvidia-smi; {} when it does not answer"""
+    try:
+        p = subprocess.run(["nvidia-smi", "--query-compute-apps=pid,process_name,gpu_uuid", "--format=csv,noheader"], capture_output=True, text=True, timeout=8)
+    except (OSError, subprocess.SubprocessError):
+        return {}
+    out = {}
+    for line in (p.stdout or "").splitlines():
+        parts = [x.strip() for x in line.split(",")]
+        if len(parts) >= 3 and parts[0].isdigit():
+            out[int(parts[0])] = (parts[1], parts[2])
+    return out
+
+
+def yield_cuda(why, apps=None):
+    """HERESY 2898 (GitHub issue 13, 20.11.2026, a user on 2.0.9: «there is none auto unload of the used local model it stay's loaded and blocks the
+    main model from generating... it OOM's out»): on a CUDA card the writer stayed IDLE_S (10 min) after its last answer, and a song on that same
+    card ran out of memory. Now the page's Generate asks it to leave that card, and it does only when the songs' engine (yue-server) holds memory on
+    the very card the writer holds (nvidia-smi's own pids and cards): a writer on another card stays, and so does one the engine is not beside.
+    True when it left, said in the lab's log and to the page."""
+    if S["where"] != "cuda" or not _alive():
+        return False
+    pid = S["pid"] or (S["proc"] and S["proc"].pid)
+    apps = _cuda_apps() if apps is None else apps
+    mine = {u for p, (n, u) in apps.items() if p == pid}
+    engine = {u for p, (n, u) in apps.items() if "yue-server" in str(n)}
+    if not mine or not (mine & engine):
+        return False
+    S["yielded"] = {"at": time.time(), "why": why}
+    _cut(why)
+    stop("it gave its card to " + why)
+    time.sleep(1.5)                                    # the driver hands the memory back
+    return True
+
+
 def _watch_arc(kit, pid):
     """While the writer is on the Arc: every two seconds the engine (a song there) and the watchdog's flag, every six xpu-smi (someone else on the card,
     twice running); the first that comes, it leaves."""

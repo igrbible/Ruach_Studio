@@ -6,6 +6,17 @@ Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): 
 
 After 2.0.9: the Musician's Section editor (HERESY 2810–2829, built beside 2.0.9 and merged after its cut) and every patch after the cut.
 
+## 2.0.10 · 2026-11-20
+
+2.0.10 is a hotfix for 2.0.9, from issue #13: Full songs stopped near 4:20 with no real ending, a Bridge or an Outro dropped and an interlude made up in their place; the music began again after the Outro instead of ending; a song ran out of memory while the Writer's own model sat on the same card; and the bar's eject button stood greyed and did nothing while another room's model held the card. Four changes and nothing else: no 2.1.0 work rides in it (HERESY 2896–2899).
+
+- **Songs follow your sections** (HERESY 2896): in Full and Melody the planned score now writes the lyrics' own sections in order (no Bridge or Outro dropped, no Interlude made up) and the song does not end before the last one; «Follow my sections» beside Chords, on by default.
+- **No restart after the Outro** (HERESY 2897): the engine no longer makes the music run past the planned end; the song ends with its plan.
+- **No out-of-memory from the Writer's model** (HERESY 2898): when you press Generate, the Writer's local model leaves the CUDA card the song sings on, and the page tells you.
+- **Unload frees every room's models** (HERESY 2899): the bar's Unload now lights for and lets go of the Writer's, the Narrator's, the Artist's and the Videographer's models too, not only the song engine's; the heavy Artist and Videographer models ask first.
+
+Thanks to @cynic2012 for issue #13: a clear report with screenshots that pinned it down within the hour.
+
 ## 2.0.9 · 2026-11-19
 
 2.0.9 takes the Studio off Linux for the first time: **native packages for Windows 11 and for a Mac with Apple Silicon**, as a beta beside the Linux Studio, with no WSL2 and no Docker, and the **AppImage** runs on the newest Linux libraries (issue #10). The **Musician** sings a voice over an instrumental of your own, keeps a song's history, re-sings from the break nearest a moment, plans several scores before a sound and makes a take's sound again from what it kept; the **Narrator** cuts your own voice on its wave and keeps Higgs v3's voice through a long narration; the **Trainer** draws its curves together on their own scales; the page rests when you do; and the players play a take as it is, with no compressor or limiter in the way (HERESY 2605–2855).

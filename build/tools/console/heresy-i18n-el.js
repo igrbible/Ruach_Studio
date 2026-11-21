@@ -9767,3 +9767,21 @@ RuachI18n.add("el", {
 "Nothing sung: the style holds negative words. Fix it, or sing it anyway.": "Τίποτα δεν τραγουδήθηκε: το στυλ έχει αρνητικές λέξεις. Διόρθωσέ το ή τραγούδησέ το όπως είναι.",
 "The 4–12 kHz envelope at 25, 50 … 150 Hz above its neighbours, mean of all windows: the VAE's 25 frames a second heard as an electric buzz in the highs. Music with no buzz reads about 8 dB here and up to 12 (the measure's own floor, at in-between frequencies on 30 takes): amber past 13 dB, red past 15": "Η περιβάλλουσα 4–12 kHz στα 25, 50 … 150 Hz πάνω από τις γειτονικές, μέσος όρος όλων των παραθύρων: τα 25 καρέ το δευτερόλεπτο του VAE, που ακούγονται σαν ηλεκτρικός βόμβος στα πρίμα. Μουσική χωρίς βόμβο δίνει εδώ περίπου 8 dB και έως 12 (το δάπεδο της ίδιας της μέτρησης, σε ενδιάμεσες συχνότητες σε 30 λήψεις): κίτρινο πάνω από 13 dB, κόκκινο πάνω από 15",
 });
+// HERESY 2896: the lyrics' own sections followed by the planner
+RuachI18n.add("el", {
+"Follow my sections": "Ακολούθα τα τμήματά μου",
+"The planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): no section dropped, none made up, and the song does not end before its last section has begun and played a few chords. With no [Intro] in the lyrics an intro is planned first, with no [Outro] an outro last, so the song ends rather than stops. Only when the model writes the score (Full or Melody, no score of yours), with Chords off too": "Η σχεδιασμένη παρτιτούρα γράφει τα τμήματα των στίχων με τη σειρά τους (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, όπως τα ονομάζει ο σχεδιαστής): κανένα δεν χάνεται, κανένα δεν επινοείται, και το τραγούδι δεν τελειώνει πριν αρχίσει το τελευταίο τμήμα και παίξει μερικές συγχορδίες. Χωρίς [Intro] στους στίχους σχεδιάζεται πρώτα μια εισαγωγή, χωρίς [Outro] ένα outro στο τέλος, ώστε το τραγούδι να τελειώνει και όχι να κόβεται. Μόνο όταν το μοντέλο γράφει την παρτιτούρα (Full ή Melody, χωρίς δική σου), και με τις συγχορδίες κλειστές"
+});
+// HERESY 2898: the Writer's model leaves the song's CUDA card
+RuachI18n.add("el", {
+"The Writer's model left the card the song sings on, so the song has its memory; it loads again when the Writer is asked": "Το μοντέλο του Συγγραφέα άφησε την κάρτα όπου τραγουδά το τραγούδι, ώστε να έχει τη μνήμη του· φορτώνεται ξανά όταν ρωτηθεί ο Συγγραφέας"
+});
+// HERESY 2899: the bar's Unload over every room's models
+RuachI18n.add("el", {
+"Unload: {0}": "Εκφόρτωση: {0}",
+"busy: it waits": "απασχολημένο: περιμένει",
+"Busy, it waits: {0}": "Απασχολημένα, περιμένουν: {0}",
+"Freed: {0}": "Ελευθερώθηκαν: {0}",
+"Sure you want to unload this model from VRAM?": "Σίγουρα θέλεις να εκφορτώσεις αυτό το μοντέλο από τη VRAM;",
+"Sure you want to unload these models from VRAM?": "Σίγουρα θέλεις να εκφορτώσεις αυτά τα μοντέλα από τη VRAM;"
+});

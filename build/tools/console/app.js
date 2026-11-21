@@ -2068,7 +2068,11 @@
     }
     if (freeTempoOn() && cot !== "off") body.free_tempo = true;   // HERESY 1416: with a score only
     if (cot !== "off" && String(body.abc || "").trim() && $("abcOpening") && $("abcOpening").checked) body.abc_continue = true;   // HERESY 1609: an opening, planned on from
-    if (cot !== "off" && (!String(body.abc || "").trim() || body.abc_continue) && harmonyBody()) body.harmony = harmonyBody();   // HERESY 1607: when the model plans the score
+    if (cot !== "off" && (!String(body.abc || "").trim() || body.abc_continue)) {   // HERESY 1607: when the model plans the score; 2896: its sections followed
+      var hb = harmonyBody(), fol = followOn() ? sectionFollow(body.lyrics, body.abc_continue ? body.abc : "") : [];
+      if (fol.length) { hb = hb || { strength: 0, section_strength: 0, outside_bonus: 0 }; hb.follow = fol; }   // Chords off: the sections alone (the engine's follow)
+      if (hb) body.harmony = hb;
+    }
     if (cot === "full" && !instrumental && !String(body.abc || "").trim() && !STATE.codes && fullOctave()) body.vocal_octave = fullOctave();   // HERESY 1743: the planned Vocal line
     var abcSampling = samplingOverrides("abc"), semanticSampling = samplingOverrides("semantic");
     if (Object.keys(abcSampling).length) body.abc_sampling = abcSampling;
@@ -3433,8 +3437,12 @@
       if (sent.seed === undefined || sent.seed === null || sent.seed === "") sent.seed = shortSeed();
       // HERESY 2463: one process on the Intel Arc at a time: the Studio's own writer leaves it before the song (the lab says when it did)
       return fetch("/lab/llm/yield" + (LLM_SCOPE ? "?scope=" + encodeURIComponent(LLM_SCOPE) : ""), { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })   // the lab takes no POST without a body
-        .catch(function () { return null; })
-        .then(function () { return post("/synth", sent); });
+        .then(function (r) { return r && r.ok ? r.json() : null; }).catch(function () { return null; })
+        .then(function (y) {
+          // HERESY 2898: on a CUDA card the songs' engine shares with it, the writer's model leaves it too (the lab checks it is that very card), said
+          if (y && y.yielded && y.card === "cuda") toast(tr("The Writer's model left the card the song sings on, so the song has its memory; it loads again when the Writer is asked"));
+          return post("/synth", sent);
+        });
     }).then(function (data) {
       var job = registerJob(data.id, meta, body);
       paintAllRuns();
@@ -5979,10 +5987,29 @@
       if (STATE.settings && !STATE.settingsDirty) $("memPreset").value = shownPreset(STATE.settings);   // 1071b: Auto needs the GPU's size
       STATE.noHardware = false;
       paintHardware();
+      refreshVram();                                     // HERESY 2899: and what every room holds, now and then
     }).catch(function (error) {
       if (error.status === 404) { STATE.noHardware = true; STATE.hardware = null; paintHardware(); }
     });
   }
+  // HERESY 2899 (GitHub issue 13, 20.11.2026, a user on 2.0.9: the bar's Unload «greyed out and non functional» while the Writer's model held the card;
+  // Viktor: «Добавь выгрузку любой модели в кнопку в студийном хедере. Но… модели Художника и Видеографа, так как они реально тяжёлые, лучше со
+  // сторожем и небольшим оверлеем в той зоне: "Уверен, что хочешь выгрузить эту/эти модели из VRAM?"»): the bar's Unload and Engine's are over
+  // everything the Studio holds in a card's memory, in any room (lab/vram.py: the engine, the Writer, the Narrator, the Artist's painters, the
+  // Videographer's H3 workers, each with its card, memory and whether it works), read every 15 s and again before a press; null where the lab
+  // cannot say (the old way then: the engine and the Artist's painters)
+  var VRAM_EVERY = 15000, vramAt = 0, vramOut = null;
+  function refreshVram(now) {
+    if (vramOut) return vramOut;
+    if (!now && Date.now() - vramAt < VRAM_EVERY) return Promise.resolve(STATE.vram);
+    vramAt = Date.now();
+    vramOut = fetch("/lab/vram").then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      STATE.vram = d && Array.isArray(d.held) ? d.held : null;
+    }, function () { STATE.vram = null; }).then(function () { vramOut = null; paintHardware(); return STATE.vram; });
+    return vramOut;
+  }
+  function heldGb(mb) { return (mb / 1024).toFixed(1); }
+  function heldWord(h) { return tr(h.room) + " · " + h.name + " · " + h.device + (h.mb ? " · " + heldGb(h.mb) + " GB" : "") + (h.busy ? " (" + tr("busy: it waits") + ")" : ""); }
 
   function gpuOf() { return STATE.hardware && (STATE.hardware.gpus || [])[0] || null; }
   // HERESY 2733: the engine's device named as the whole page names a processor (XPU · Arc Pro B50 · SYCL, GPU · RTX 3090 · CUDA); its kind for the row's word
@@ -6009,10 +6036,12 @@
       : (loaded && !hw.busy ? "Unload model frees it now; the next song loads it again." : "");
     // Unload only makes sense with a model loaded and nothing running on it.
     var canUnload = (!STATE.noHardware && loaded > 0 && !hw.busy) || held.some(function (p) { return !p.busy; });   // HERESY 1370: or a painter idle
+    var V = STATE.vram;                                  // HERESY 2899: every room's, where the lab says them
+    if (V) canUnload = V.some(function (h) { return !h.busy; });
     $("unloadModel").disabled = !canUnload;
     $("unloadNow").disabled = !canUnload;
-    $("unloadModel").classList.toggle("is-loaded", loaded > 0 || held.length > 0);   // HERESY 1113: a loaded model, seen in the bar
-    $("unloadModel").dataset.tip = held.length
+    $("unloadModel").classList.toggle("is-loaded", V ? V.length > 0 : loaded > 0 || held.length > 0);   // HERESY 1113: a loaded model, seen in the bar
+    $("unloadModel").dataset.tip = V ? (V.length ? tr("Unload: {0}").replace("{0}", V.map(heldWord).join("; ")) : "Unload model: nothing is loaded") : held.length
       ? (loaded > 0 ? "Unload model: " + gib(hw.loaded_bytes || 0) + " GB in the card\u2019s memory now" + (hw.busy ? " (busy: it waits)" : "") + ", and the Artist\u2019s painter kept between runs on GPU " + heldOn
                     : "Unload: the Artist\u2019s painter kept between runs on GPU " + heldOn + ": let it go now")
       : loaded > 0 ? "Unload model: " + gib(hw.loaded_bytes || 0) + " GB in the card\u2019s memory now" + (hw.busy ? " (busy: it waits)" : "; drop it now")
@@ -6079,8 +6108,65 @@
     }).catch(function (error) { toast(error.message, "bad"); refreshHardware(); });
   }
 
-  $("unloadModel").addEventListener("click", unloadModels);
-  $("unloadNow").addEventListener("click", unloadModels);
+  // HERESY 2899: the light ones (the engine, the Writer, the Narrator) let go at once; the Artist's and the Videographer's, heavy, after a question at
+  // the button; a busy one never (the toast says it waits); what was freed said by room in MB
+  function unloadAll(e) {
+    var btn = e && e.currentTarget;
+    refreshVram(true).then(function (V) {
+      if (!V) return unloadModels();
+      var idle = V.filter(function (h) { return !h.busy; }), busy = V.filter(function (h) { return h.busy; });
+      var light = idle.filter(function (h) { return !h.heavy; }), heavy = idle.filter(function (h) { return h.heavy; });
+      if (busy.length) toast(tr("Busy, it waits: {0}").replace("{0}", busy.map(function (h) { return tr(h.room) + " · " + h.name; }).join("; ")));
+      return letGo(light).then(function () {
+        if (!heavy.length) return null;
+        return askHeavy(btn || $("unloadModel"), heavy).then(function (yes) { return yes ? letGo(heavy) : null; });
+      });
+    }).then(function () { refreshHardware(); });
+  }
+  function letGo(list) {
+    if (!list.length) return Promise.resolve(null);
+    $("unloadModel").disabled = true; $("unloadNow").disabled = true;
+    return post("/lab/vram/unload", { ids: list.map(function (h) { return h.id; }) }).then(function (r) {
+      var by = {};
+      (r && r.freed || []).forEach(function (f) { by[f.room] = (by[f.room] || 0) + (f.mb || 0); });
+      var said = Object.keys(by).map(function (room) { return tr(room) + " " + Math.round(by[room]).toLocaleString(loc()) + " MB"; });
+      if (said.length) toast(tr("Freed: {0}").replace("{0}", said.join(" · ")), "good");
+      var stay = (r && r.busy || []).map(function (h) { return tr(h.room) + " · " + h.name; });
+      if (stay.length) toast(tr("Busy, it waits: {0}").replace("{0}", stay.join("; ")));
+      vramAt = 0;
+      if (typeof pollActivity === "function") pollActivity();
+      return r;
+    }).catch(function (error) { toast(error.message, "bad"); return null; });
+  }
+  function askHeavy(btn, list) {
+    return new Promise(function (done) {
+      var old = document.getElementById("unloadAsk");
+      if (old) old.remove();
+      var box = document.createElement("div"), r = btn.getBoundingClientRect(), total = list.reduce(function (n, h) { return n + (h.mb || 0); }, 0);
+      box.id = "unloadAsk"; box.className = "unl-ask"; box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "false");
+      var q = tr(list.length === 1 ? "Sure you want to unload this model from VRAM?" : "Sure you want to unload these models from VRAM?");
+      box.setAttribute("aria-label", q);
+      box.innerHTML = '<p class="unl-q">' + escape(q) + '</p><ul class="unl-list">' + list.map(function (h) {
+        return '<li><span translate="no">' + escape(tr(h.room) + " · " + h.name) + '</span><span class="mono">' + escape(h.device + (h.mb ? " · " + heldGb(h.mb) + " GB" : "")) + "</span></li>";
+      }).join("") + "</ul>" + (list.length > 1 && total ? '<p class="unl-total mono">' + escape(heldGb(total) + " GB") + "</p>" : "") +
+        '<div class="unl-acts"><button type="button" class="btn small danger" data-unl="yes">' + escape(tr("Unload")) + '</button><button type="button" class="btn ghost small" data-unl="no">' +
+        escape(tr("Cancel")) + "</button></div>";
+      document.body.appendChild(box);
+      var w = box.offsetWidth;
+      box.style.top = Math.round(r.bottom + 6) + "px";
+      box.style.left = Math.round(Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w))) + "px";
+      var end = function (yes) { document.removeEventListener("keydown", key, true); document.removeEventListener("pointerdown", away, true); box.remove(); done(yes); };
+      var key = function (e) { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); end(false); } };
+      var away = function (e) { if (!box.contains(e.target)) end(false); };
+      box.addEventListener("click", function (e) { var b = e.target.closest("[data-unl]"); if (b) end(b.dataset.unl === "yes"); });
+      document.addEventListener("keydown", key, true);
+      setTimeout(function () { document.addEventListener("pointerdown", away, true); }, 0);
+      box.querySelector('[data-unl="no"]').focus();
+    });
+  }
+  window.ruachUnloadAll = unloadAll; window.ruachRefreshVram = refreshVram;   // for the checks
+  $("unloadModel").addEventListener("click", unloadAll);
+  $("unloadNow").addEventListener("click", unloadAll);
 
   /* ---------------------------------------------------------------- take */
 
@@ -6561,7 +6647,8 @@
       cell("Free tempo", "Free tempo", rq.free_tempo === true ? tr("on") : "\u2014", "") +   // HERESY 1416 («off» is Direct's name in the catalogs)
       cell("Sound decode", "Sound decode", rq.nar_ladder === true ? tr("Ladder · experimental") : "\u2014", "") +   // HERESY 1768
       cell("Long songs", "Long songs", rq.nar_pieces === true ? tr("Pieces · experimental") : "\u2014", "") +   // HERESY 2509
-      cell("Chords", "Chords", rq.harmony ? tr(HARMONY_NAMES[harmonyLevelOf(rq.harmony)] || "custom") : "\u2014", "");   // HERESY 1607
+      cell("Chords", "Chords", rq.harmony ? tr(HARMONY_NAMES[harmonyLevelOf(rq.harmony)] || "custom") : "\u2014", "") +   // HERESY 1607
+      cell("Follow my sections", "Follow my sections", rq.harmony && Array.isArray(rq.harmony.follow) && rq.harmony.follow.length ? rq.harmony.follow.length + " · " + rq.harmony.follow.join(" ") : "\u2014", "");   // HERESY 2896
     return '<div class="meta-row trio medcard">' + column("Score Planner", '<dl class="meta-rows">' + plan + "</dl>") +
       column("Music Tokens", '<dl class="meta-rows">' + mus + "</dl>") + column("The run", '<dl class="meta-rows">' + run + "</dl>") + "</div>";
   }
@@ -14579,6 +14666,64 @@
   var HARMONY_DEFAULT = 1;   // HERESY 1613 (Viktor 20.10.2026: «Выставь Gentle в дефолт»)
   function harmonyLevel() { var b = document.querySelector('#harmonyRow [data-harmony][aria-pressed="true"]'); return b ? +b.dataset.harmony : 0; }
   function harmonyBody() { var h = HARMONY[harmonyLevel()]; return h ? JSON.parse(JSON.stringify(h)) : null; }
+  // HERESY 2896 (GitHub issue 13, 20.11.2026, a user on 2.0.9: Full songs cut off at about 4:20 with no real ending, «bridge was fully dropped outro
+  // was also dropped it implemented interlude's on it's own»; Viktor: «Разберись с этим срочно»): the planner drew its own sections and its own end
+  // (on 814 of the Studio's plans: a Bridge in the lyrics dropped 197 times of 227, a Pre-Chorus 98 of 125, an Outro 316 of 756), and since 2830
+  // the song stops where the plan does. The engine has the cure since 1606 (harmony.follow, timoncool's): the section names the plan must write,
+  // in order, and no end before the last has begun and has a few chords. The page sends the lyrics' own sections, named as the planner names them
+  // (intro, verse, pre-chorus, chorus, bridge, interlude, outro, the only seven its plans write), whenever the model plans the score, Chords off
+  // too; «Follow my sections» beside Chords, on unless turned off. With no [Intro] in the lyrics an intro is planned first (the planner wrote one
+  // 66 times of 75 there), with no [Outro] or [End] an outro last (a song that ends rather than stops); an opening planned on from (1609) has its
+  // own sections taken off the list's start
+  var FOLLOW_KEY = "yue2.followSections";
+  var FOLLOW_MAP = [
+    [/^(instrumental\s+)?intro(duction)?\b/, "intro"],
+    [/^(instrumental\s+)?(outro|ending|end|coda|fade[\s-]?out)\b/, "outro"],
+    [/^(pre[\s-]?chorus|build[\s-]?up|build|lift|climb|ramp)\b/, "pre-chorus"],
+    [/^((final|last|double)\s+)?(chorus|refrain|hook)\b|^post[\s-]?chorus\b/, "chorus"],
+    [/^(verse|rap)\b/, "verse"],
+    [/^(bridge|middle\s*8|middle\s+eight)\b/, "bridge"],
+    // HERESY 2896c: «[Solo Male Vocal: Passionate…]», «[Solo Female Voice]» name a voice inside a section (his ФОСФОРИДА, 68 such tags in the Studio's
+    // lyrics, each with its words under it), no section of their own: skipped, as «[Female Vocals]» is; a «[Solo Flute…]» stays the band's interlude
+    [/^solo\s+((male|female)\s+)?(vocals?|voice|singer|vox)\b/, ""],
+    [/^(instrumental|interlude|break|breakdown|drop|solo|(guitar|piano|sax|synth|violin|flute)\s+solo|skit|segue)\b/, "interlude"]];
+  var FOLLOW_ALONE = { intro: 1, interlude: 1, outro: 1 };   // two of these in a row are one: «[Instrumental] [Break]», «[Outro] [End]»
+  function followOn() { var b = $("followSections"); return !b || b.getAttribute("aria-pressed") !== "false"; }
+  function setFollow(on) {
+    var b = $("followSections");
+    if (b) b.setAttribute("aria-pressed", on ? "true" : "false");
+    try { if (on) localStorage.removeItem(FOLLOW_KEY); else localStorage.setItem(FOLLOW_KEY, "0"); } catch (e) { /* a private window */ }
+  }
+  // HERESY 2896b (Viktor's «Как закалялся кремний» 1.0.1, 20.11.2026: a [Breakdown] of four sung lines of dialogue): a tag of the interlude's family
+  // whose block holds words (anything but blanks before the next tag) is a sung section, told to the planner as a bridge; told «interlude», the
+  // planner may write rests over those lines, and the words go missing or slide into the next section. An intro or an outro stays itself with words
+  // HERESY 2896c: words to sing, not directions: a block's «(Interlude)», «(Music swells - ff)», «[Pause: 8 bars]» and «... ...» say how it is played
+  // (his ФОСФОРИДА writes them under an [Interlude] the band plays); a letter left outside parentheses and brackets is a word sung
+  function sungBlock(s) { return /\p{L}/u.test(String(s).replace(/\([^)]*\)/g, " ").replace(/\[[^\]]*\]/g, " ")); }
+  function sectionFollow(lyrics, opening) {
+    var out = [], text = String(lyrics || ""), re = /^[ \t]*\[([^\]\n]+)\]/gm, tags = [], m;
+    while ((m = re.exec(text))) tags.push({ tag: m[1], at: m.index, end: m.index + m[0].length });
+    tags.forEach(function (t, i) {
+      var tag = t.tag.toLowerCase().replace(/[\d#.:]+.*$/, "").replace(/\s+/g, " ").trim(), name = "";
+      FOLLOW_MAP.some(function (r) { if (r[0].test(tag)) { name = r[1]; return true; } return false; });
+      if (name === "interlude" && sungBlock(text.slice(t.end, i + 1 < tags.length ? tags[i + 1].at : text.length))) name = "bridge";   // HERESY 2896b, 2896c
+      if (!name || (FOLLOW_ALONE[name] && out[out.length - 1] === name)) return;
+      out.push(name);
+    });
+    if (!out.length) return [];
+    if (out[0] !== "intro") out.unshift("intro");
+    if (out[out.length - 1] !== "outro") out.push("outro");
+    var had = (String(opening || "").match(/^% /gm) || []).length;   // an opening planned on from: its sections are written already
+    return out.slice(had, had + 64);
+  }
+  window.ruachSectionFollow = sectionFollow;   // for the checks
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("#followSections");
+    if (!b) return;
+    setFollow(b.getAttribute("aria-pressed") === "false");
+    if (typeof queueDraft === "function") queueDraft();
+  });
+  try { if (localStorage.getItem(FOLLOW_KEY) === "0") setTimeout(function () { setFollow(false); }, 0); } catch (e) { /* a private window */ }
   function harmonyLevelOf(h) {
     if (!h || typeof h !== "object" || !(h.strength > 0 || h.section_strength > 0 || h.outside_bonus > 0)) return 0;
     var best = 1;

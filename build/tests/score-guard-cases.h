@@ -8,7 +8,7 @@ struct Yue2GuardCase {
     const char * abc;        // the score
     int          floor;      // the music's floor its request asked (frames, 25 a second)
     double       seconds;    // its length at its own tempo (-1: no tempo written)
-    int          floor_to;   // the floor after 2830 (the same when not lowered)
+    int          floor_to;   // the floor after 2830 and 2897 (the same when not lowered)
     const char * broken;     // the guard's verdict on it as a plan the model wrote ("": whole; nullptr: supplied, never guarded)
     const char * warning;    // and what the take says of it, sung ("": nothing)
 };
@@ -340,7 +340,7 @@ V: Vocal
 "Bm"z16|"Bm"z16|"G"z16|"G"z16|
 V: Ins
 Z4|)YUE2CASE",
-      1475, 61.053, 1475, nullptr, nullptr },   // abc_tools, 29 bars
+      1475, 61.053, 1276, nullptr, nullptr },   // abc_tools, 29 bars
     { "an instrumental in 6/8: the Vocal line rests, the Ins line plays: whole",
       R"YUE2CASE(X:1
 T:

@@ -9551,3 +9551,21 @@ RuachI18n.add("he", {
 "Nothing sung: the style holds negative words. Fix it, or sing it anyway.": "שום דבר לא הושר: בסגנון יש מילים שליליות. תקן אותו או שיר אותו בכל זאת.",
 "The 4–12 kHz envelope at 25, 50 … 150 Hz above its neighbours, mean of all windows: the VAE's 25 frames a second heard as an electric buzz in the highs. Music with no buzz reads about 8 dB here and up to 12 (the measure's own floor, at in-between frequencies on 30 takes): amber past 13 dB, red past 15": "המעטפת של 4–12 kHz ב־25, 50 … 150 Hz מעל התדרים השכנים, ממוצע כל החלונות: 25 הפריימים לשנייה של ה־VAE, הנשמעים כזמזום חשמלי בגבוהים. מוזיקה בלי זמזום מראה כאן כ־8 dB ועד 12 (רצפת המדידה עצמה, בתדרי ביניים על 30 טייקים): ענבר מעל 13 dB, אדום מעל 15",
 });
+// HERESY 2896: the lyrics' own sections followed by the planner
+RuachI18n.add("he", {
+"Follow my sections": "לפי החלקים שלי",
+"The planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): no section dropped, none made up, and the song does not end before its last section has begun and played a few chords. With no [Intro] in the lyrics an intro is planned first, with no [Outro] an outro last, so the song ends rather than stops. Only when the model writes the score (Full or Melody, no score of yours), with Chords off too": "התווים המתוכננים כותבים את חלקי המילים לפי סדרם (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, כפי שהמתכנן קורא להם): שום חלק לא נשמט, שום חלק לא מומצא, והשיר לא נגמר לפני שהחלק האחרון התחיל ונוגנו בו כמה אקורדים. בלי [Intro] במילים מתוכננת קודם פתיחה, בלי [Outro] — סיום בסוף, כדי שהשיר יסתיים ולא ייקטע. רק כשהמודל כותב את התווים (Full או Melody, בלי תווים שלך), גם כשהאקורדים כבויים"
+});
+// HERESY 2898: the Writer's model leaves the song's CUDA card
+RuachI18n.add("he", {
+"The Writer's model left the card the song sings on, so the song has its memory; it loads again when the Writer is asked": "המודל של הכותב עזב את הכרטיס שעליו השיר שר, כדי שלשיר יהיה זיכרון; הוא ייטען שוב כשישאלו את הכותב"
+});
+// HERESY 2899: the bar's Unload over every room's models
+RuachI18n.add("he", {
+"Unload: {0}": "פריקה: {0}",
+"busy: it waits": "תפוס: ממתין",
+"Busy, it waits: {0}": "תפוסים, ממתינים: {0}",
+"Freed: {0}": "שוחרר: {0}",
+"Sure you want to unload this model from VRAM?": "בטוח שאתה רוצה לפרוק את המודל הזה מה־VRAM?",
+"Sure you want to unload these models from VRAM?": "בטוח שאתה רוצה לפרוק את המודלים האלה מה־VRAM?"
+});

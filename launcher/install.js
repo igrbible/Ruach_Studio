@@ -5,6 +5,12 @@
 // models the Studio runs on, each from its own Hugging Face repository into models/misc/cards/ (a few KB each): their licences and
 // credits beside the weights, readable offline. Pinokio's app page names these steps under «Powered by». The weights themselves come
 // through install.sh (fetch-models.sh: pinned, checked, asked first), from goldhub's repositories; m-a-p's are where they come from.
+// HERESY 2879b (the guard of 2330, lab/test_paths.py: every place from lab/paths.py or launcher/paths.sh, never by hand): the cards'
+// folder is RS_MISC as launcher/paths.sh beside this file says it, the place several rooms share
+const fs = require("fs")
+const path = require("path")
+const MISC = (fs.readFileSync(path.join(__dirname, "paths.sh"), "utf8").match(/^RS_MISC="\$ROOT\/([^"\n]+)"$/m) || [])[1]
+if (!MISC) throw new Error("launcher/paths.sh names no RS_MISC: the model cards have no place")
 const CARDS = [
   "goldhub/YuE2-RS-Finetunes",        // Ruach Studio's own fine-tunes and decoders (YuE2-VAE-RS), CC BY-NC-SA 4.0
   "goldhub/Ruach_Studio_Models_v2",   // m-a-p's models as GGUF (Serveurperso's, byte for byte), the Standard decoder, Whisper and the rest
@@ -28,6 +34,6 @@ module.exports = {
     }
   }].concat(CARDS.map((repo) => ({
     method: "hf.download",
-    params: { path: "..", _: [repo, "README.md"], "local-dir": "models/misc/cards/" + repo.replace("/", "--") }
+    params: { path: "..", _: [repo, "README.md"], "local-dir": MISC + "/cards/" + repo.replace("/", "--") }
   })))
 }

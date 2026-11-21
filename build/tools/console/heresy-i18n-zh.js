@@ -9647,3 +9647,21 @@ RuachI18n.add("zh", {
 "Nothing sung: the style holds negative words. Fix it, or sing it anyway.": "什么也没唱：风格中有否定词。修改它，或者照样演唱。",
 "The 4–12 kHz envelope at 25, 50 … 150 Hz above its neighbours, mean of all windows: the VAE's 25 frames a second heard as an electric buzz in the highs. Music with no buzz reads about 8 dB here and up to 12 (the measure's own floor, at in-between frequencies on 30 takes): amber past 13 dB, red past 15": "4–12 kHz 包络在 25、50 … 150 Hz 处高出相邻频率多少，所有窗口的平均：VAE 每秒 25 帧在高频听起来的电流嗡声。没有嗡声的音乐在这里也约有 8 dB，最高到 12（这项测量自身的底噪，在 30 个样本的中间频率上测得）：超过 13 dB 为黄色，超过 15 为红色",
 });
+// HERESY 2896: the lyrics' own sections followed by the planner
+RuachI18n.add("zh", {
+"Follow my sections": "按我的段落",
+"The planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): no section dropped, none made up, and the song does not end before its last section has begun and played a few chords. With no [Intro] in the lyrics an intro is planned first, with no [Outro] an outro last, so the song ends rather than stops. Only when the model writes the score (Full or Melody, no score of yours), with Chords off too": "规划的乐谱按歌词自己的段落依次写出(Intro、Verse、Pre-Chorus、Chorus、Bridge、Interlude、Outro,按规划器的叫法):不丢段落,不另造段落,最后一段开始并奏完几个和弦之前歌曲不会结束。歌词里没有 [Intro] 时先规划一段前奏,没有 [Outro] 时最后规划一段尾奏,让歌曲收尾而不是戛然而止。仅当模型自己写乐谱时(Full 或 Melody,没有你的乐谱),和弦关闭时也生效"
+});
+// HERESY 2898: the Writer's model leaves the song's CUDA card
+RuachI18n.add("zh", {
+"The Writer's model left the card the song sings on, so the song has its memory; it loads again when the Writer is asked": "写作室的模型已离开歌曲所用的显卡,让歌曲有足够显存;再问写作室时会重新加载"
+});
+// HERESY 2899: the bar's Unload over every room's models
+RuachI18n.add("zh", {
+"Unload: {0}": "卸载:{0}",
+"busy: it waits": "忙碌:等待",
+"Busy, it waits: {0}": "忙碌中,等待:{0}",
+"Freed: {0}": "已释放:{0}",
+"Sure you want to unload this model from VRAM?": "确定要从 VRAM 卸载这个模型吗?",
+"Sure you want to unload these models from VRAM?": "确定要从 VRAM 卸载这些模型吗?"
+});

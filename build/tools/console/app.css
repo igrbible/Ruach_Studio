@@ -5947,6 +5947,16 @@ body:has(.ar-view) .hm-tip { z-index: 131; }
 /* HERESY 1609: Only the opening, under the score */
 .opening-check { margin: 6px 0 2px; }
 .harmony-row .label { margin: 0 6px 0 0; }
+/* HERESY 2899: the bar's Unload asks first at the button for the Artist's and the Videographer's heavy models */
+.unl-ask { position: fixed; z-index: 60; min-width: 300px; max-width: min(460px, calc(100vw - 16px)); padding: 12px 14px; background: var(--panel); color: var(--ink);
+  border: 1px solid var(--line-a); border-radius: var(--r-md); box-shadow: 0 12px 30px -10px var(--shadow-lg); display: grid; gap: 8px; }
+.unl-q { margin: 0; font-weight: 600; }
+.unl-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13px; }
+.unl-list li { display: flex; justify-content: space-between; gap: 14px; }
+.unl-list .mono, .unl-total { color: var(--muted); }
+.unl-total { margin: 0; text-align: end; font-size: 12px; }
+.unl-acts { display: flex; gap: 8px; justify-content: flex-end; }
+.harmony-row .harmony-follow { margin-inline-start: 10px; }   /* HERESY 2896: apart from the Chords' four */
 .harmony-row .chip[aria-pressed="true"] { border-color: var(--amber); color: var(--ink); background: color-mix(in srgb, var(--amber) 16%, var(--panel)); }
 .free-tempo { white-space: nowrap; flex: none; }   /* HERESY 1602 (Viktor 20.10.2026: «Добавь в кнопку Free tempo неразрыв»): one line in every language */
 .style-tempo-warn { margin: 2px 0 0; color: var(--amber); }

@@ -219,6 +219,7 @@ import derived_trash  # noqa: E402   HERESY 1527: a branch into its take's trash
 import c2pa_sign  # noqa: E402   HERESY 1489: Content Credentials on the downloads
 import playback_marks  # noqa: E402   HERESY 1852: where the player left each take
 import h3_shots  # noqa: E402   HERESY 1868: the Videographer's shots made alive by MiniMax H3
+import vram  # noqa: E402   HERESY 2899: everything the Studio holds in a card's memory, in any room, listed and let go from the bar
 import frames_job  # noqa: E402   HERESY 1913: the Artist draws a plan's shots
 import upscale_shots  # noqa: E402   HERESY 1876b: and made larger by SeedVR2
 import file_tags  # noqa: E402   HERESY 1635: the song's tags on the downloads, before the signature
@@ -4459,6 +4460,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, lease.state(q.get("scope", ""), q.get("id", "")))
             if url.path == "/backups":                   # HERESY 2083: the card: the switches, the counts, the last snapshot, the notices unsaid
                 return self.send(200, backups.status())
+            if url.path == "/vram":                      # HERESY 2899: what each room holds in a card's memory, for the bar's Unload
+                return self.send(200, {"held": vram.held(KIT)})
             if url.path == "/health":
                 with jobs_lock:
                     active = {k: v["status"] for k, v in jobs.items()}
@@ -5063,6 +5066,11 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/llm/variant":                  # HERESY 1811: quality or compact; a test page changes nothing
                 v = str(json.loads(body.decode("utf-8")).get("variant") or "")
                 return self.send(200, writer_llm.status(KIT) if q.get("scope") else writer_llm.choose(KIT, v))
+            if url.path == "/vram/unload":                  # HERESY 2899: {ids} (or all): let go, a busy one never; said back by room with its memory
+                if q.get("scope"):
+                    return self.send(200, {"freed": [], "busy": [], "unknown": []})
+                ids = json.loads(body.decode("utf-8") or "{}").get("ids")
+                return self.send(200, vram.release(KIT, [str(i) for i in ids] if isinstance(ids, list) else None))
             if url.path == "/llm/stop":                     # HERESY 1811: its card back now; the next question starts it again
                 if not q.get("scope"):
                     writer_llm.stop("asked")
@@ -5075,7 +5083,11 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/llm/cancel":                   # HERESY 2469: Stop in the Writing room: the answer in flight, or the wait for the Arc
                 return self.send(200, writer_llm.cancel())
             if url.path == "/llm/yield":                    # HERESY 2463: the page's Generate: the writer leaves the Intel Arc first; a test page changes nothing
-                return self.send(200, {"yielded": False if q.get("scope") else writer_llm.yield_arc("the Studio's song")})
+                if q.get("scope"):
+                    return self.send(200, {"yielded": False})
+                arc = writer_llm.yield_arc("the Studio's song")   # HERESY 2898: and a CUDA card the song's engine shares with it
+                cuda = False if arc else writer_llm.yield_cuda("the Studio's song")
+                return self.send(200, {"yielded": arc or cuda, "card": "arc" if arc else "cuda" if cuda else ""})
             if url.path == "/llm/hosts":                    # HERESY 2097: a host's switch, address or model; or, once, what a browser held before
                 return self.send(200, llm_hosts.put(config_dir(), q.get("scope", ""), json.loads(body.decode("utf-8")), writer_llm.status(KIT)))
             if url.path == "/llm/key":                      # HERESY 2097: the OpenRouter key kept (or forgotten); the answer says only that one is kept

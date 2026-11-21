@@ -9763,3 +9763,21 @@ RuachI18n.add("uk", {
 "Nothing sung: the style holds negative words. Fix it, or sing it anyway.": "Нічого не заспівано: у стилі негативні слова. Виправ його або заспівай все одно.",
 "The 4–12 kHz envelope at 25, 50 … 150 Hz above its neighbours, mean of all windows: the VAE's 25 frames a second heard as an electric buzz in the highs. Music with no buzz reads about 8 dB here and up to 12 (the measure's own floor, at in-between frequencies on 30 takes): amber past 13 dB, red past 15": "Обвідна 4–12 кГц на 25, 50 … 150 Гц над сусідніми частотами, середнє за всіма вікнами: 25 кадрів на секунду VAE, чутні як електричне гудіння на верхах. Музика без гудіння дає тут близько 8 дБ і до 12 (власна підлога виміру, на проміжних частотах за 30 семплами): жовтий понад 13 дБ, червоний понад 15",
 });
+// HERESY 2896: the lyrics' own sections followed by the planner
+RuachI18n.add("uk", {
+"Follow my sections": "За моїми секціями",
+"The planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): no section dropped, none made up, and the song does not end before its last section has begun and played a few chords. With no [Intro] in the lyrics an intro is planned first, with no [Outro] an outro last, so the song ends rather than stops. Only when the model writes the score (Full or Melody, no score of yours), with Chords off too": "Партитура пише власні секції лірики по черзі (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro — як їх зве планувальник): жодна не випадає, зайвих не з’являється, і пісня не закінчується, доки остання секція не почалася й не прозвучало кілька акордів. Немає [Intro] у ліриці — вступ планується першим, немає [Outro] — аутро останнім, щоб пісня закінчувалася, а не обривалася. Лише коли модель сама пише партитуру (Full або Melody, без твоєї), і з вимкненими акордами теж"
+});
+// HERESY 2898: the Writer's model leaves the song's CUDA card
+RuachI18n.add("uk", {
+"The Writer's model left the card the song sings on, so the song has its memory; it loads again when the Writer is asked": "Модель Письменника пішла з карти, на якій співає пісня, і пам’яті пісні вистачить; вона завантажиться знову, коли Письменника спитають"
+});
+// HERESY 2899: the bar's Unload over every room's models
+RuachI18n.add("uk", {
+"Unload: {0}": "Вивантажити: {0}",
+"busy: it waits": "зайнята: чекає",
+"Busy, it waits: {0}": "Зайняті, чекають: {0}",
+"Freed: {0}": "Звільнено: {0}",
+"Sure you want to unload this model from VRAM?": "Певен, що хочеш вивантажити цю модель з VRAM?",
+"Sure you want to unload these models from VRAM?": "Певен, що хочеш вивантажити ці моделі з VRAM?"
+});

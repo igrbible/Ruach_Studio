@@ -7113,6 +7113,67 @@ check("a painter kept on GPU 2 (the lab's activity): Unload lit and enabled, its
 check("  a click asks the lab to let it go (the engine too when it holds models), says it, and the tip forgets it",
   (un70.sent || []).includes("lab") && un70.said === 1 && un70.gone, JSON.stringify({ sent: un70.sent, said: un70.said, gone: un70.gone }));
 
+// HERESY 2899 (GitHub issue 13, 20.11.2026): the Bar's Unload over every room's models (lab/vram.py): the Writer's alone enables it; the light ones
+// go at once, the Artist's and the Videographer's after a question at the button; a busy one never
+section("the Bar's Unload over every room's models (2899): the Writer's model alone lights it; the light go at once, a busy one waits, the heavy ask first at the button");
+const vr99 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, $ = (id) => document.getElementById(id), posts = [], o = {};
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { status: 200, headers: { "Content-Type": "application/json" } }));
+  const H = { writer: { id: "writer", room: "Writer", name: "Qwen3.5-9B", device: "GPU 0", mb: 5120, busy: false, heavy: false },
+    engine: { id: "engine", room: "Musician", name: "YuE2", device: "Intel Arc", mb: 4096, busy: true, heavy: false },
+    artist: { id: "artist:1", room: "Artist", name: "Qwen Image", device: "GPU 1", mb: 22630, busy: false, heavy: true } };
+  let held = [H.writer, H.engine];
+  window.fetch = (u, opt) => { const s = String(u && u.url || u);
+    if (s.startsWith("/lab/vram/unload")) { const ids = JSON.parse(opt.body).ids; posts.push(ids.join(",")); const f = held.filter((h) => ids.includes(h.id) && !h.busy);
+      held = held.filter((h) => !f.includes(h)); return json({ freed: f.map((h) => ({ id: h.id, room: h.room, name: h.name, mb: h.mb })), busy: [], unknown: [] }); }
+    if (s.startsWith("/lab/vram")) return json({ held });
+    return real(u, opt); };
+  const toasts = () => [...document.querySelectorAll("#toasts .toast")].map((t) => t.textContent);
+  try {
+    document.querySelectorAll("#toasts .toast").forEach((t) => t.remove());
+    await window.ruachRefreshVram(true); await wait(50);
+    o.lit = { on: !$("unloadModel").disabled && !$("unloadNow").disabled, loaded: $("unloadModel").classList.contains("is-loaded"), tip: $("unloadModel").dataset.tip };
+    window.ruachUnloadAll({ currentTarget: $("unloadModel") });
+    await until(() => posts.length >= 1, 3000); await wait(300);
+    o.light = { posts: posts.slice(), toasts: toasts() };
+    document.querySelectorAll("#toasts .toast").forEach((t) => t.remove());
+    held = [Object.assign({}, H.engine, { busy: false }), H.artist];
+    window.ruachUnloadAll({ currentTarget: $("unloadModel") });
+    await until(() => document.getElementById("unloadAsk"), 3000); await wait(100);
+    const ask = document.getElementById("unloadAsk");
+    o.ask = { posts: posts.slice(), shown: !!ask, q: ask ? ask.querySelector(".unl-q").textContent : "", rows: ask ? [...ask.querySelectorAll(".unl-list li")].map((l) => l.textContent) : [],
+      near: ask ? Math.abs(ask.getBoundingClientRect().top - $("unloadModel").getBoundingClientRect().bottom) <= 10 : false };
+    if (ask) ask.querySelector('[data-unl="no"]').click(); await wait(200);
+    o.cancel = { gone: !document.getElementById("unloadAsk"), posts: posts.length };
+    window.ruachUnloadAll({ currentTarget: $("unloadModel") });
+    await until(() => document.getElementById("unloadAsk"), 3000); await wait(100);
+    document.querySelector('#unloadAsk [data-unl="yes"]').click();
+    await until(() => posts.length >= 3, 3000); await wait(300);
+    o.yes = { posts: posts.slice(), toasts: toasts() };
+    held = [Object.assign({}, H.artist, { busy: true })];
+    await window.ruachRefreshVram(true); await wait(50);
+    o.busyOnly = { off: $("unloadModel").disabled, tip: $("unloadModel").dataset.tip };
+    held = [];
+    await window.ruachRefreshVram(true); await wait(50);
+    o.none = { off: $("unloadModel").disabled, loaded: $("unloadModel").classList.contains("is-loaded") };
+  } catch (e) { o.err = String(e && e.stack || e); }
+  window.fetch = real;
+  await window.ruachRefreshVram(true);
+  document.querySelectorAll("#toasts .toast").forEach((t) => t.remove());
+  const a = document.getElementById("unloadAsk"); if (a) a.remove();
+  return o; })()`);
+check("the Writer's model alone lights Unload and Engine's; its tip names each room's holder, its card and GB, a busy one «busy: it waits»",
+  !vr99.err && vr99.lit.on && vr99.lit.loaded && /^Unload: Writer · Qwen3\.5-9B · GPU 0 · 5\.0 GB; Musician · YuE2 · Intel Arc · 4\.0 GB \(busy: it waits\)$/.test(vr99.lit.tip || ""), JSON.stringify({ err: vr99.err, lit: vr99.lit }));
+check("  a click lets the idle light one go at once and says it by room in MB; the busy engine is never asked, its toast says it waits",
+  vr99.light.posts.join("|") === "writer" && vr99.light.toasts.some((t) => /^Freed: Writer 5,120 MB$/.test(t)) && vr99.light.toasts.some((t) => /^Busy, it waits: Musician · YuE2$/.test(t)), JSON.stringify(vr99.light));
+check("  with the Artist's painter held: the engine goes at once, the painter asks first at the button, its GB listed; Cancel keeps it; Unload lets it go, said",
+  vr99.ask.posts.join("|") === "writer|engine" && vr99.ask.shown && vr99.ask.q === "Sure you want to unload this model from VRAM?" && vr99.ask.near &&
+  vr99.ask.rows.length === 1 && /Artist · Qwen Image/.test(vr99.ask.rows[0]) && /GPU 1 · 22\.1 GB/.test(vr99.ask.rows[0]) && vr99.cancel.gone && vr99.cancel.posts === 2 &&
+  vr99.yes.posts.join("|") === "writer|engine|artist:1" && vr99.yes.toasts.some((t) => /^Freed: Artist 22,630 MB$/.test(t)), JSON.stringify({ ask: vr99.ask, cancel: vr99.cancel, yes: vr99.yes }));
+check("  only a busy painter held: Unload off, its tip says it waits; nothing held: off and unlit",
+  vr99.busyOnly.off && /busy: it waits/.test(vr99.busyOnly.tip || "") && vr99.none.off && !vr99.none.loaded, JSON.stringify({ busyOnly: vr99.busyOnly, none: vr99.none }));
+
 // HERESY 1169 · 1372 (Viktor 11.10.2026: «Если стоит обложкой на треке то, что у Художника, при удалении изображения из галлереи спрашивать, или снимать, или оставить»)
 section("a picture that is a take's cover, to the trash: asked whether its cover comes off the take too, is left, or nothing happens; a run's trash asks the same; no cover, no question");
 const cv72 = await ev(`(async () => {
@@ -16910,6 +16971,57 @@ check("  sent only when the model plans the score: Full with no score yes; Direc
 check("Only the opening: off by default; with a score in Full or Melody it sends abc_continue and the chords (the model plans on); never in Direct",
   hm07.openingOff && j07(hm07.fullOpening) === j07({ harmony: 8, cont: true }) && j07(hm07.melodyOpening) === j07({ harmony: 8, cont: true }) && j07(hm07.directOpening) === j07({ harmony: null, cont: false }),
   JSON.stringify({ fullOpening: hm07.fullOpening, melodyOpening: hm07.melodyOpening, directOpening: hm07.directOpening }));
+// HERESY 2896 (GitHub issue 13, 20.11.2026): the lyrics' own sections followed by the planner (the engine's harmony.follow), Chords off too
+const fo96 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), o = {};
+  const keep = { abc: $("abc").value, lyrics: $("lyrics").value, cot: (document.querySelector('input[name="cot"]:checked') || {}).value, level: HeresyHarmony.level(), opening: $("abcOpening").checked,
+    ls: localStorage.getItem("yue2.followSections") };
+  document.querySelector('.topbar [data-tab="create"]').click(); await wait(200);
+  const chip = $("followSections");
+  o.chip = !!chip && chip.closest("#harmonyRow") !== null && chip.getAttribute("aria-pressed") === "true" && chip.textContent === "Follow my sections";
+  const F = window.ruachSectionFollow;
+  o.map = F("[Verse 1]\\nla\\n[Pre-Chorus]\\nx\\n[Chorus]\\ny\\n[Verse 2]\\nz\\n[Chorus]\\ny\\n[Bridge]\\nb\\n[Instrumental Break]\\n[Final Chorus]\\ny\\n[Outro]\\n[End]\\n").join(" ");
+  o.skips = F("[Intro]\\n[Verse]\\na\\n[Chorus] [Female Vocals]\\nb\\n[Spoken: hi]\\n[Guitar Solo]\\n[Chorus x2]\\nc\\n").join(" ");
+  o.none = F("no tags at all").length;
+  o.voice = F("[Verse]\\na\\n[Solo Male Vocal: Passionate, Expressive]\\nb\\n[Chorus]\\nc\\n[Solo Female Voice]\\nd\\n[Solo Flute - airy whispers]\\n\\n[Verse]\\ne\\n").join(" ");   // HERESY 2896c
+  o.dirs = F("[Verse]\\na\\n[Interlude]\\n(Interlude)\\n[Verse]\\nb\\n[Break]\\n... ...\\n(Music swells - ff)\\n[Chorus]\\nc\\n[Interlude]\\n«Где же ты?»\\n").join(" ");   // HERESY 2896c
+  o.sung = F("[Verse]\\na\\n[Breakdown]\\n— Who goes there?\\n— Yirmiyahu!\\n[Instrumental Break]\\n\\n[Chorus]\\nb\\n[Outro]\\nfading words\\n").join(" ");   // HERESY 2896b
+  o.opening = F("[Intro]\\n[Verse]\\na\\n[Chorus]\\nb\\n", "X:1\\n% intro\\nA|\\n% verse\\nB|\\n").join(" ");
+  $("lyrics").value = "[Verse]\\nOne line\\n\\n[Chorus]\\nTwo line\\n\\n[Bridge]\\nThree\\n\\n[Chorus]\\nTwo line\\n"; $("lyrics").dispatchEvent(new Event("input", { bubbles: true }));
+  document.querySelector('input[name="cot"][value="full"]').click(); await wait(40);
+  $("abc").value = ""; $("abc").dispatchEvent(new Event("input", { bubbles: true })); $("abcOpening").checked = false; await wait(40);
+  const body = () => { try { const b = window.ruachBuildRequest(); return b.harmony || null; } catch (e) { return "err " + e.message; } };
+  HeresyHarmony.set(0); await wait(20);
+  o.offFollow = body();
+  HeresyHarmony.set(1); await wait(20);
+  o.gentleFollow = body();
+  chip.click(); await wait(30);
+  o.stored = localStorage.getItem("yue2.followSections"); o.pressed = chip.getAttribute("aria-pressed");
+  HeresyHarmony.set(0); await wait(20);
+  o.offNone = body();
+  chip.click(); await wait(30);
+  o.back = localStorage.getItem("yue2.followSections") === null && chip.getAttribute("aria-pressed") === "true";
+  document.querySelector('input[name="cot"][value="off"]').click(); await wait(40);
+  o.direct = body();
+  $("abc").value = keep.abc; $("abc").dispatchEvent(new Event("input", { bubbles: true })); $("abcOpening").checked = keep.opening;
+  $("lyrics").value = keep.lyrics; $("lyrics").dispatchEvent(new Event("input", { bubbles: true }));
+  const c = document.querySelector('input[name="cot"][value="' + (keep.cot || "full") + '"]'); if (c) c.click();
+  HeresyHarmony.set(keep.level);
+  if (keep.ls === null) localStorage.removeItem("yue2.followSections"); else localStorage.setItem("yue2.followSections", keep.ls);
+  return o; })()`);
+check("Follow my sections (2896): beside Chords, on by default; the lyrics' tags named as the planner names them, merged and skipped where they are no section, an intro first and an outro last when missing",
+  fo96.chip && fo96.map === "intro verse pre-chorus chorus verse chorus bridge interlude chorus outro" && fo96.skips === "intro verse chorus interlude chorus outro" && fo96.none === 0 &&
+  fo96.opening === "chorus outro", JSON.stringify(fo96));
+check("  sent when the model plans the score: Chords off, the sections alone at strength 0; Gentle, its strength and the sections; turned off (kept), nothing with Chords off; Direct nothing",
+  !!fo96.offFollow && fo96.offFollow.strength === 0 && JSON.stringify(fo96.offFollow.follow) === JSON.stringify(["intro", "verse", "chorus", "bridge", "chorus", "outro"]) &&
+  !!fo96.gentleFollow && fo96.gentleFollow.strength === 4 && fo96.gentleFollow.follow.length === 6 && fo96.stored === "0" && fo96.pressed === "false" && fo96.offNone === null && fo96.back &&
+  fo96.direct === null, JSON.stringify({ off: fo96.offFollow, gentle: fo96.gentleFollow, stored: fo96.stored, offNone: fo96.offNone, back: fo96.back, direct: fo96.direct }));
+check("  a [Breakdown] with sung lines under it told as a bridge (the planner sings it); an [Instrumental Break] with none stays an interlude; an [Outro] with words stays the outro (2896b)",
+  fo96.sung === "intro verse bridge interlude chorus outro", fo96.sung);
+check("  a [Solo Male Vocal: …] or [Solo Female Voice] over sung lines names a voice, no section: skipped; a [Solo Flute…] with no words stays an interlude (2896c)",
+  fo96.voice === "intro verse chorus interlude verse outro", fo96.voice);
+check("  under an [Interlude] or a [Break] only directions — «(Interlude)», «... ...», «(Music swells - ff)» — it stays an interlude; words outside parentheses make it a bridge (2896c)",
+  fo96.dirs === "intro verse interlude verse interlude chorus bridge outro", fo96.dirs);
 
 // HERESY 1169 · 1614 (Viktor 19.10.2026: «завести второе поле ввода в навес к Title… Version… сторож только по числам и точкам»)
 section("Version beside Title: digits and dots only; the request, the draft and the Writer get «Title vN.N»; a title with its version splits into the two");
