@@ -1,0 +1,2 @@
+# go-winres writes it from ruach.ico and the version at each build (build.sh, the Windows workflow)
+cmd/ruachstudio/rsrc_windows_amd64.syso

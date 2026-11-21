@@ -50,7 +50,7 @@
     p.hidden = !name;
     if (!name) return;
     if (st.status === "running") {
-      p.innerHTML = head('<span class="row-hint">' + esc(tr("Looking at the tracks: {0} of {1}…").replace("{0}", num(st.done || 0)).replace("{1}", num(st.total || 0))) + "</span>");
+      p.innerHTML = head('<span class="row-hint">' + (window.HeresyWait ? window.HeresyWait.wave() : "") + esc(tr("Looking at the tracks: {0} of {1}…").replace("{0}", num(st.done || 0)).replace("{1}", num(st.total || 0))) + "</span>");
       return;
     }
     var r = st.report;

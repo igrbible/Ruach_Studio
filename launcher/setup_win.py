@@ -28,6 +28,10 @@ def uv():
 
 
 MAC = sys.platform == "darwin"
+# HERESY 2933 (the 2.1.0-rc1 Windows soak: no gguf, no mido in the VM's venv): what lab/install-venv.sh puts in beside lab/requirements.txt
+# on Linux, the same pins (lab/test_win_extras_2933.py holds the two lists equal): gguf for the LoRA's measure (lora_alchemy) and the painter's
+# GGUF, pretty_midi (mido with it) for the score's MIDI (2927), mir_eval for the transcriber's measures
+EXTRA = ["gguf==0.19.0", "mir_eval==0.8.2", "pretty_midi==0.2.10"]
 
 
 def requirements(cpu):
@@ -44,7 +48,7 @@ def requirements(cpu):
         elif cpu or MAC:
             s = re.sub(r"\+cu\d+", "", s).replace("audio-separator[gpu]", "audio-separator[cpu]")
         out.append(s)
-    out += ["psutil"]
+    out += EXTRA + ["psutil"]
     p = ROOT / "tmp" / ("requirements-win-cpu.txt" if cpu else "requirements-win.txt")
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text("\n".join(out) + "\n", encoding="utf-8")

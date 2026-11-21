@@ -151,7 +151,9 @@ def source_loudness(d, info):
     k = round(0.1 * rate)
     z = p[: len(p) // k * k].reshape(-1, k).mean(axis=1)
     whole = pl.integrated_from_blocks(pl._block_powers(p, rate, pl.BLOCK_S, pl.STEP_S))
-    return {"block": 0.1, "rate": rate, "z": [float(f"{v:.5g}") for v in z], "integrated": round(whole, 2) if whole is not None else None}
+    # HERESY 2835: its loudest sample too, so the page raises it to the mix's loudness no further than its peak allows
+    return {"block": 0.1, "rate": rate, "z": [float(f"{v:.5g}") for v in z], "integrated": round(whole, 2) if whole is not None else None,
+            "peak": round(float(np.abs(x).max()), 5) if x.size else 0.0}
 
 
 def file_peaks(d, rel, n=400):
@@ -228,7 +230,7 @@ def file_loudness(path):
     z = p[: len(p) // k * k].reshape(-1, k).mean(axis=1)
     whole = pl.integrated_from_blocks(pl._block_powers(p, rate, pl.BLOCK_S, pl.STEP_S))
     return {"block": 0.1, "rate": rate, "seconds": round(x.shape[1] / rate, 3), "z": [float(f"{v:.5g}") for v in z],
-            "integrated": round(whole, 2) if whole is not None else None}
+            "integrated": round(whole, 2) if whole is not None else None, "peak": round(float(np.abs(x).max()), 5) if x.size else 0.0}   # HERESY 2835
 
 
 def file_chunk(path, start, seconds):

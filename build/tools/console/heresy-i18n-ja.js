@@ -2422,6 +2422,7 @@ RuachI18n.add("ja", {
 "{#0} captions written": "{#0} 個のキャプションを書き込みました",
 "drafts here by {0}": "ここの下書き：{0}",
 "The Studio’s trainer is missing {0}:": "スタジオのトレーナーに {0} がありません：",
+"Training runs on Linux for now: the Trainer starts each run as a systemd unit, and this machine (Windows, macOS) has none.": "学習は今のところ Linux でのみ動きます。トレーナーは各ランを systemd ユニットとして起動しますが、このマシン（Windows、macOS）にはありません。",
 "Comfy-Org's YuE2 {0} weights": "Comfy-Org の YuE2 {0} の重み",
 "the realaudio tokenizer head": "realaudio トークナイザーのヘッド",
 "and": "と",
@@ -9646,6 +9647,205 @@ RuachI18n.add("ja", {
 "Sing anyway": "このまま歌う",
 "Nothing sung: the style holds negative words. Fix it, or sing it anyway.": "何も歌っていません：スタイルに否定語があります。直すか、このまま歌ってください。",
 "The 4–12 kHz envelope at 25, 50 … 150 Hz above its neighbours, mean of all windows: the VAE's 25 frames a second heard as an electric buzz in the highs. Music with no buzz reads about 8 dB here and up to 12 (the measure's own floor, at in-between frequencies on 30 takes): amber past 13 dB, red past 15": "4–12 kHz の包絡線の 25、50 … 150 Hz が近傍よりどれだけ高いか、全ウィンドウの平均：VAE の毎秒 25 フレームが高域の電気的なうなりとして聞こえるもの。うなりのない音楽でもここは約 8 dB、最大 12 になる（中間の周波数で 30 テイクから測った、この計測自体の床）：13 dB を超えると黄、15 を超えると赤",
+// HERESY 2858 (19.11.2026): Engine → Compute, the music cache in 8 bits (Q8_0)
+"Music cache in 8 bits (Q8_0) — about half the memory, for smaller cards": "音楽キャッシュを 8 ビットで (Q8_0) — メモリは約半分、小さめのカード向け",
+"About the music cache in 8 bits": "8 ビットの音楽キャッシュについて",
+"Music cache in 8 bits": "8 ビットの音楽キャッシュ",
+"now F16": "現在 F16",
+"now Q8_0": "現在 Q8_0",
+"applies before the next song": "次の曲の前に適用されます",
+"asked, but this card keeps F16: its flash attention does not read an 8-bit cache": "オンですが、このカードは F16 のままです: その flash attention は 8 ビットのキャッシュを読めません",
+"this engine has no 8-bit cache": "このエンジンには 8 ビットのキャッシュがありません",
+"the music cache in 8 bits (Engine → Compute) frees about 2.5 GB on a long song; it stays off until you turn it on": "8 ビットの音楽キャッシュ (エンジン → 計算) は長い曲で約 2.5 GB を空けます。自分でオンにするまでオフのままです",
+"The engine keeps what the song has sung so far in a cache on the card. In 8 bits (Q8_0) the cache takes about half the room of the usual 16 bits (F16), so a card of 8–12 GB fits longer songs or a bigger model.": "エンジンは曲がここまで歌った内容をカード上のキャッシュに保持します。8 ビット (Q8_0) ではキャッシュが通常の 16 ビット (F16) の約半分の場所で済むため、8–12 GB のカードでもより長い曲や大きなモデルが入ります。",
+"Measured on an RTX 3090, a 150 s song: the cache 5.3 → 2.8 GB, the card's peak 16.6 → 14.2 GB, the sound stage 3 % slower.": "RTX 3090 で計測、150 秒の曲: キャッシュ 5.3 → 2.8 GB、カードのピーク 16.6 → 14.2 GB、音の段階は 3 % 遅くなります。",
+"On the Arc B50 (16 GB), the same song at 75 s: the cache 5.3 → 2.8 GB, the card's peak 13.1 → 10.7 GB; the score stage 20 → 37 s, the sound stage as fast as before.": "Arc B50 (16 GB) で同じ曲を 75 秒: キャッシュ 5.3 → 2.8 GB、カードのピーク 13.1 → 10.7 GB。スコアの段階は 20 → 37 秒、音の段階は変わらない速さです。",
+"The same seed sings a slightly different take with it (other notes, not a worse sound). Off by default; it applies before the next song. A card that cannot read an 8-bit cache keeps F16, and this switch says so.": "同じシードでも少し違うテイクになります (音が悪くなるのではなく、別の音符になります)。既定ではオフで、次の曲の前に適用されます。8 ビットのキャッシュを読めないカードは F16 のままで、このスイッチがそう表示します。",
+});
+// HERESY 2862: the Writer's version beside its name, its versions kept at every new number
+RuachI18n.add("ja", {
+"The version beside the name, digits and dots only (1.2.8). Another number keeps the text before it in the versions below, with what differs from now": "名前の横のバージョン、数字とドットのみ (1.2.8)。番号を変えると、それまでの本文が下のバージョンに残り、今との違いも見られます",
+"A version is kept at every new version number, at every save after a pause, and whenever you keep one.": "新しいバージョン番号のたび、間をおいた保存のたび、そして自分で残すたびにバージョンが保存されます。",
+"{0} kept in the versions; now {1}": "{0} をバージョンに保存。現在は {1}"
+});
+// HERESY 2863: the Musician's Ctrl+S into the Writer's document in hand
+RuachI18n.add("ja", {
+"The Writer's “{0}” now holds the song as the Musician has it (the version before is kept)": "ライターの「{0}」はミュージシャンの今の曲を保持しています（前のバージョンは保存済み）"
+});
+// HERESY 2865: the DAW's two ways to play, Live and Forge
+RuachI18n.add("ja", {
+"How the DAW plays": "DAW の再生方法",
+"Live": "ライブ",
+"Forge": "Forge",
+"Live in this browser: every knob heard at once, through the browser's audio with larger buffers. Remembered in this browser": "このブラウザでライブ再生：つまみの変化はすぐに聞こえます（ブラウザのオーディオ、バッファは大きめ）。このブラウザに記憶されます",
+"Rendered on Forge by the mix's own code, in pieces from the playhead, and played as a file: nothing in the browser between the sound and the speakers. A change is heard a second or two later. Remembered in this browser": "ミックス自身のコードで Forge 上にレンダリングし、再生位置から分割して、ファイルとして再生：音とスピーカーの間にブラウザの処理はありません。変更は 1〜2 秒後に聞こえます。このブラウザに記憶されます",
+"The mix is rendered on Forge…": "Forge でミックスをレンダリング中…",
+"Forge could not play the mix: {0}": "Forge でミックスを再生できませんでした：{0}",
+});
+
+// HERESY 2869: the version fields say that an empty one is saved as 1.0
+RuachI18n.add("ja", {
+"The song's version beside its name, digits and dots only (4.2.3). A take is called «Title v4.2.3», as your tracks are, and the Musician's versions keep one tree per title, a branch per version. A title typed with its version («Song v1.2») splits into the two. Left empty, a save (Ctrl+S) gives it 1.0": "曲名の横に置く曲のバージョン。数字とドットだけ（4.2.3）。テイクはあなたのトラックと同じく「タイトル v4.2.3」と名付けられ、ミュージシャンのバージョンはタイトルごとに1本のツリー、バージョンごとに1本のブランチを保ちます。バージョン付きで入力したタイトル（「曲 v1.2」）は自動で2つの欄に分かれます。空欄のまま保存 (Ctrl+S) すると 1.0 になります",
+"The version beside the name, digits and dots only (1.2.8). Another number keeps the text before it in the versions below, with what differs from now. Left empty, a save gives it 1.0": "名前の横のバージョン、数字とドットのみ (1.2.8)。番号を変えると、それまでの本文が下のバージョンに残り、今との違いも見られます。空欄のまま保存すると 1.0 になります"
+});
+
+// HERESY 2815: the Section editor (heresy-seceditor.js, HERESY 2810–2817)
+RuachI18n.add("ja", {
+"Section editor…": "セクションエディター…",
+"the song by its sections: edits in a queue, one new take": "セクションごとの曲：編集をキューに、新しいテイクを一つ",
+"Section editor": "セクションエディター",
+"About the Section editor": "セクションエディターについて",
+"the song by its sections": "セクションごとの曲",
+"Close (Esc): the queue stays": "閉じる (Esc)：キューは残ります",
+"The song's sections": "曲のセクション",
+"← → between sections · Space plays it": "← → でセクション間を移動・スペースで再生",
+"instrumental": "インスト",
+"added": "追加",
+"sung anew to the end": "最後まで歌い直し",
+"by ear": "耳で",
+"by the score": "楽譜から",
+"Sections placed by Whisper's timing of the lyrics, as on the player's wave": "Whisper の歌詞タイミングで配置したセクション（プレーヤーの波形と同じ）",
+"Sections from the score's marks: the take's lyrics are not timed yet": "楽譜の目印によるセクション：テイクの歌詞にはまだタイミングがありません",
+"{0} of {1} lines heard": "{1} 行中 {0} 行を聞き取り",
+"The lyrics as they will be sung": "歌われるとおりの歌詞",
+"Queue": "キュー",
+"Re-sing from here to the end…": "ここから最後まで歌い直す…",
+"Re-sing from here to the end": "ここから最後まで歌い直す",
+"Its words changed or kept, sung anew on a new music seed; the rest stays": "歌詞は変えても同じでも、新しい音楽シードで歌い直し、ほかはそのまま",
+"One line sung anew, cut halfway to the lines around it": "1 行だけ歌い直し、前後の行との中間で切る",
+"The section once more right after itself: a variation on the music seed + 1": "セクションをすぐ後にもう一度：音楽シード + 1 によるバリエーション",
+"Music the model writes after the section, nothing sung again": "セクションの後にモデルが書く音楽（歌い直しはなし）",
+"A copy of the parts right after them, on the score's bar lines, in seconds": "パートのコピーをすぐ後に、楽譜の小節線で、数秒で",
+"The parts taken out on the score's bar lines, in seconds": "楽譜の小節線でパートを取り除く、数秒で",
+"Everything before the break before it stays; from there to the end the song is sung anew": "その前の切れ目より前はすべてそのまま、そこから最後までを歌い直します",
+"The music goes on past the take's end, with new lines or without": "テイクの終わりの先へ音楽が続きます（新しい行ありでもなしでも）",
+"An instrumental part: no words to sing anew": "インストのパートです：歌い直す歌詞がありません",
+"The rest of a part after a break: pick the part itself": "切れ目の後に続くパートの残りです：そのパート自体を選んでください",
+"These are the score's marks: find the sections by ear first": "これは楽譜の目印です：先に耳でセクションを探してください",
+"Its words were not found in the lyrics": "その言葉が歌詞の中に見つかりません",
+"No line of it was heard clearly for two seconds or more": "2 秒以上はっきり聞き取れた行がありません",
+"No score part lies under this section": "このセクションの下に楽譜のパートがありません",
+"Its score has one section only": "楽譜のセクションが一つしかありません",
+"No break of the voice before it": "この前に声の切れ目がありません",
+"The break is under 5 seconds from an end of the take": "切れ目がテイクの端から 5 秒未満です",
+"Only past the take's end, 15:00 at most in all": "テイクの終わりの後だけ、全体で最大 15:00",
+"Its words as the lyrics have them: change what you will, or keep them and let only the music be new.": "歌詞にあるとおりの言葉です：好きに変えるか、そのままにして音楽だけを新しくします。",
+"Which line?": "どの行？",
+"not heard clearly": "はっきり聞き取れず",
+"under two seconds": "2 秒未満",
+"By how much (m:ss)?": "どれだけ (m:ss)？",
+"No sections: the lyrics are not timed and there is no score.": "セクションがありません：歌詞のタイミングがなく、楽譜もありません。",
+"Take it out of the queue": "キューから外す",
+"Clear the queue": "キューを空にする",
+"Clear the queue: {0} edits?": "キューを空にしますか：編集 {0} 個",
+"anew, words changed": "新たに、歌詞を変更",
+"anew, the same words": "新たに、同じ歌詞",
+"line {0} anew": "{0} 行目を新たに",
+"once more, straight on": "もう一度、すぐに",
+"once more after ~{0} s of music": "~{0} 秒の音楽の後にもう一度",
+"an interlude of ~{0} s after it": "後に ~{0} 秒の間奏",
+"twice, on the bar lines": "2 回、小節線で",
+"taken out, on the bar lines": "削除、小節線で",
+"from {0} to the end, anew": "{0} から最後まで新たに",
+"+{0} after the end": "終わりの後に +{0}",
+"{0} has an edit in the queue already: ✕ it first": "{0} にはすでにキューの編集があります：先に ✕ で外してください",
+"It overlaps {0} in the queue ({1}–{2})": "キュー内の {0}（{1}–{2}）と重なります",
+"It would go in inside {0} ({1}–{2})": "{0}（{1}–{2}）の内側に入ってしまいます",
+"One ending at a time: re-sing to the end, or extend": "終わり方は一つ：最後まで歌い直すか、延長するか",
+"Nothing can go after the re-sing to the end ({0})": "最後までの歌い直し（{0}）の後には何も置けません",
+"Extend goes on from the end this Remove takes away": "延長はこの削除が取り除く終わりから続きます",
+"cut at the bar line {0}": "小節線 {0} で切る",
+"Eight sung edits at most in one take": "1 テイクで歌う編集は最大 8 個まで",
+"Twelve edits at most in one queue": "1 つのキューに編集は最大 12 個まで",
+"The new take would run past 15:00": "新しいテイクが 15:00 を超えてしまいます",
+"The sections were heard anew: add this edit again": "セクションを聞き直しました：この編集をもう一度追加してください",
+"Drafts sung on the engine: {0}, then the whole take once": "エンジンで歌うドラフト：{0}、そのあとテイク全体を一度に",
+"Drafts sung on the engine: {0}, then the ending, which is the take": "エンジンで歌うドラフト：{0}、そのあと終わりの部分（それがテイクになります）",
+"about {0} of music rendered in all": "合計で約 {0} の音楽をレンダリング",
+"Only cuts on the bar lines: seconds, nothing sung": "小節線での切り貼りだけ：数秒、歌はなし",
+"One new take; this one stays.": "新しいテイクが一つ。これは残ります。",
+"Assemble the take": "テイクを組み立てる",
+"Assemble again": "もう一度組み立てる",
+"Another version of the same queue, on new seeds": "同じキューの別バージョン（新しいシードで）",
+"Step {0} of {1}": "ステップ {0} / {1}",
+"waits for the engine": "エンジン待ち",
+"the engine's queue is full: waiting": "エンジンのキューが満杯：待機中",
+"the Arc is being reset: waiting": "Arc をリセット中：待機中",
+"the draft is sung": "ドラフトを歌唱中",
+"the voice is found": "声を探しています",
+"laid in": "はめ込み済み",
+"the whole take is rendered": "テイク全体をレンダリング中",
+"cut on the bar lines": "小節線で切り貼り",
+"placed": "配置済み",
+"Stop the assembly": "組み立てを止める",
+"Assembled: {0}": "組み立て完了：{0}",
+"Resume from step {0}": "ステップ {0} から再開",
+"Discard": "破棄",
+"Stopped at step {0}: {1}": "ステップ {0} で停止：{1}",
+"Cut short by a restart of the lab at step {0}": "ステップ {0} でラボの再起動により中断",
+"The queue of {0} was put away: five takes keep theirs": "「{0}」のキューを片付けました：キューを保てるのは 5 テイクまでです",
+"Each block is a section as the player's wave shows it: the lyrics' tags placed by Whisper's timing, a break, an intro or an outro where no voice sings, or the score's marks for a take never timed. The tags stay in English, as the model reads them.": "各ブロックはプレーヤーの波形が示すとおりのセクションです：Whisper のタイミングで置いた歌詞のタグ、声のない切れ目・イントロ・アウトロ、またはタイミングのないテイクでは楽譜の目印。タグはモデルが読むとおり英語のままです。",
+"Click a block (← → walk them, Space plays it), pick an edit under the strip and add it to the queue: one edit a section. The queue lists them in the song's order, each with ✕.": "ブロックをクリックし（← → で移動、スペースで再生）、帯の下で編集を選んでキューに追加します：1 セクションにつき編集は一つ。キューは曲の順に並び、それぞれに ✕ があります。",
+"Assemble the take sings the queue as one new take, a child of this one, which stays as it is. The sung edits go one after another on the engine (a draft each, then the whole take once); Repeat and Remove are cut on the score's bar lines in seconds. Songs you queue in the Musician meanwhile go first.": "「テイクを組み立てる」はキューを新しいテイク一つとして歌います。このテイクの子で、これはそのまま残ります。歌う編集はエンジンで順番に進み（それぞれドラフト一つ、最後にテイク全体を一度）、繰り返しと削除は楽譜の小節線で数秒で切ります。その間にミュージシャンでキューに入れた曲が先に歌われます。",
+"The new take lands where this one is; its note lists the edits, and the player tints what was sung anew.": "新しいテイクはこのテイクと同じ場所に入ります。メモに編集の一覧があり、プレーヤーは歌い直した部分に色を付けます。",
+});
+
+// HERESY 2871: a DAW lane as a spectrogram
+RuachI18n.add("ja", {
+"Spectrum: the lane's sound as a spectrogram in place of its wave, the low notes at the bottom and the high at the top, measured once on Forge; remembered in this browser": "スペクトラム: レーンの音を波形の代わりにスペクトログラムで表示 (低音が下、高音が上)。Forge で一度だけ測定し、このブラウザーが覚えます",
+"The rest is the source less the stems, worked out as it plays: it has no file of its own to measure": "残りはソースからステムを引いたもので、再生しながら計算されます。測定できる自分のファイルはありません",
+"Forge is measuring the spectrum of {0}…": "Forge が {0} のスペクトラムを測定中…",
+"The spectrum of {0} could not be measured: {1}": "{0} のスペクトラムを測定できませんでした: {1}"
+});
+
+// HERESY 2872: the Library card's workspaces button and its list, the menu's sections folded
+RuachI18n.add("ja", {
+"In {0} workspaces:": "{0} 個のワークスペースに:",
+"In the workspace:": "このワークスペースに:",
+"Take it out of this workspace": "このワークスペースから外す",
+"open now": "いま開いている",
+"Its workspaces": "このテイクのワークスペース",
+"“{0}” is in these. A click on one opens it; ✕ takes the take out of it (it stays in the library and in the others).": "「{0}」はこれらにあります。クリックで開き、✕ でそこからテイクを外します (ライブラリと他のワークスペースには残ります)。",
+"Take “{0}” out of “{1}”?": "「{0}」を「{1}」から外しますか?",
+"It stays in the library and in any other workspace; only this workspace lets it go.": "ライブラリと他のワークスペースには残ります。手放すのはこのワークスペースだけです。",
+"Taken out of “{0}”": "「{0}」から外しました",
+"the workspace itself, not its sections": "ワークスペースそのもの (セクションを除く)"
+});
+
+// HERESY 2875: the Trainer's run card: both towers' rates, the absolute epochs, the VRAM of now, the run's now line
+RuachI18n.add("ja", {
+"this run": "このラン",
+"Music half · AR": "音楽側 · AR",
+"Sound half · NAR": "音響側 · NAR",
+"Its note from its start": "開始時のメモ",
+"the highest over the whole run, all its sittings; now: the highest of each card over the last 25 steps": "ラン全体 (すべてのセッション) での最大値。いま: 直近 25 ステップでの各カードの最大値",
+"epoch {0}": "エポック {0}"
+});
+
+// HERESY 2876: a run's command line and base on its card; the new-run form said as such beside a run
+RuachI18n.add("ja", {
+"runs as": "実行コマンド",
+"new run": "新しいラン",
+"base": "ベース"
+});
+// HERESY 2883: the Narrator's text with the lyrics editor's hands: its count line
+RuachI18n.add("ja", {
+"Text: {0} characters · {1} syllables · {2} lines": "テキスト：{0} 文字 · {1} 音節 · {2} 行"
+});
+// HERESY 2887: the Section editor's ninth edit, Insert a part after it
+RuachI18n.add("ja", {
+"Insert a part after it…": "この後にパートを挿入…",
+"A copy of one of the score's parts put in after this section, on its bar line, in seconds; the section itself may keep an edit of its own": "スコアのパートの一つのコピーを、このセクションの後ろ、その小節線に秒単位で入れます。このセクション自体にも別の編集ができます",
+"Which part goes in?": "どのパートを入れますか?",
+"It goes in after {0}, at {1}": "{0} の後、{1} に入ります",
+"a copy after {0}": "{0} の後にコピー"
+});
+// HERESY 2895: the Section editor writes a take's score from its sound first
+RuachI18n.add("ja", {
+"Its score is being written from its sound: every edit waits for it": "音から楽譜を書いています。どの編集もそれを待ちます",
+"Writing its score from its sound ({0})… {1}": "音から楽譜を書いています({0})… {1}",
+"Its score could not be written from its sound: {0}": "音から楽譜を書けませんでした:{0}",
+"A take with no score of its own (Direct, or brought in) gets one written from its sound first, by the transcriber chosen in the Engine, through the Studio's queue: Repeat, Remove and Insert cut on its bar lines, and a section sung anew follows it.": "自分の楽譜がないテイク(Direct や持ち込み)は、まずエンジンで選んだ採譜器が音から楽譜を書きます(スタジオのキュー経由)。リピート、削除、挿入はその小節線で切り、歌い直すセクションもそれに従います。"
 });
 // HERESY 2896: the lyrics' own sections followed by the planner
 RuachI18n.add("ja", {
@@ -9664,4 +9864,217 @@ RuachI18n.add("ja", {
 "Freed: {0}": "解放:{0}",
 "Sure you want to unload this model from VRAM?": "このモデルを VRAM からアンロードしますか?",
 "Sure you want to unload these models from VRAM?": "これらのモデルを VRAM からアンロードしますか?"
+});
+// HERESY 2900: the program monitor's and the console's windows by the screens
+RuachI18n.add("ja", {
+"One screen: the program monitor stays in the page. With a second screen it opens there in a window of its own": "画面が1つ：プログラムモニターはページ内に残ります。2つ目の画面があれば、そこで専用ウィンドウとして開きます",
+"One screen: the console stays in the page. With a second screen it opens there in a window of its own": "画面が1つ：コンソールはページ内に残ります。2つ目の画面があれば、そこで専用ウィンドウとして開きます"
+});
+// HERESY 2901: the installed app kept awake
+RuachI18n.add("ja", {
+"Keep the installed app awake": "インストールしたアプリをスリープさせない",
+"Only in the installed app (a window of its own, not a browser tab): a 12 Hz tone at -60 dBFS, far under hearing, that Chrome counts as sound, so it does not freeze or discard the Studio while it is in the background and the card and the player are as you left them. It starts with your first click or key. Off: the browser may put the app to sleep": "インストールしたアプリ（ブラウザーのタブではなく専用ウィンドウ）のときだけ：-60 dBFS の 12 Hz のトーン。聞こえる範囲をはるかに下回りますが、Chrome はこれを音として扱うため、バックグラウンドでスタジオを凍結も破棄もせず、カードとプレーヤーは離れたときのままです。最初のクリックかキーで始まります。オフ：ブラウザーがアプリをスリープさせることがあります"
+});
+// HERESY 2902: the reactions linked
+RuachI18n.add("ja", {
+"🔥 and 💎 like the take; 👎 takes them off": "🔥 と 💎 で 👍 も付く。👎 でそれらを外す",
+"On: switching 🔥 or 💎 on likes the take too, and 👎 takes off the like, 🔥 and 💎 together, wherever those buttons are (the cards, the Library, the compare window, the player). The reaction faces are never touched. Off: each button stands alone": "オン：🔥 か 💎 をオンにするとテイクに 👍 も付き、👎 は 👍・🔥・💎 をまとめて外します。これらのボタンがどこにあっても同じです（カード、ライブラリ、比較ウィンドウ、プレーヤー）。リアクションの顔は変わりません。オフ：各ボタンは独立して動きます"
+});
+// HERESY 2906: the lyrics' tags explained, with what Follow my sections makes of each
+RuachI18n.add("ja", {
+"The body of the song: new words each time over the same music, the story moving on. Numbered (Verse 1, Verse 2…); the Studio offers the next number. Sung; Follow my sections: verse.": "曲の本体：同じ音楽に毎回新しい言葉、物語が先へ進みます。番号を付けます（Verse 1、Verse 2…）。スタジオが次の番号を提案します。歌われます。「自分のセクションに従う」：verse。",
+"The part the song comes back to, the same words and melody each time, with the line people remember and sing along. Sung; Follow my sections: chorus.": "曲が戻ってくる部分。毎回同じ言葉とメロディで、人が覚えて一緒に歌う一節があります。歌われます。「自分のセクションに従う」：chorus。",
+"The climb from a verse into the chorus: a melody and words of its own that raise the tension, always followed by the chorus. Sung; Follow my sections: pre-chorus.": "ヴァースからサビへの上昇：緊張を高める独自のメロディと言葉で、必ずサビが続きます。歌われます。「自分のセクションに従う」：pre-chorus。",
+"Once, late in the song, everything turns (melody, chords, words) before the song comes home to its chorus. Sung; Follow my sections: bridge (Middle 8 too).": "曲の終盤に一度だけ、すべて（メロディ、コード、言葉）が転じてから、曲はサビに帰ります。歌われます。「自分のセクションに従う」：bridge（Middle 8 も）。",
+"The ending: a last line repeated as the music fades, or the chorus once more, resolved. Words under it are sung; Follow my sections: outro, always the plan's last section.": "終わり：音楽が消えていく間に繰り返される最後の一行、または解決したサビをもう一度。下の言葉は歌われます。「自分のセクションに従う」：outro、常にプランの最後のセクション。",
+"The opening before the first verse, mostly music. Follow my sections: intro, always the plan's first (one is added when the lyrics have none). YuE2 seldom sings its lines: put a spoken intro under [Verse].": "最初のヴァースの前の導入、主に音楽。「自分のセクションに従う」：intro、常にプランの最初（歌詞になければ一つ加えます）。YuE2 はここの行をあまり歌いません：語りのイントロは [Verse] の下に。",
+"A passage of another feel between parts: the band alone, or ad-libs and calls over it. Viktor's use: a pause in rap that brakes speech running ahead. Follow my sections: interlude, with words under it or without.": "パートの間の雰囲気の違うパッセージ：バンドだけ、またはその上のアドリブや掛け声。Viktor の使い方：先走る言葉にブレーキをかけるラップの間。「自分のセクションに従う」：interlude、下に言葉があってもなくても。",
+"The last chorus, usually the biggest: more voices, more power, now and then a key change. Sung; Follow my sections: chorus.": "最後のサビ、たいてい一番大きい：声が増え、力が増し、時に転調。歌われます。「自分のセクションに従う」：chorus。",
+"The instruments alone between sections, for variety or to build into the next one; name what plays: «Instrumental Break - Horns». Follow my sections: interlude, no voice.": "セクションの間の楽器だけの部分。変化のため、または次へ盛り上げるため。何が鳴るかを書きます：「Instrumental Break - Horns」。「自分のセクションに従う」：interlude、声なし。",
+"One instrument steps forward with a long melody of its own while the rest backs it (Drum Solo, Keyboard Solo, plain Solo too). Instrumental; Follow my sections: interlude.": "一つの楽器が前に出て独自の長いメロディを弾き、他が支えます（Drum Solo、Keyboard Solo、ただの Solo も）。インスト。「自分のセクションに従う」：interlude。",
+"The song's last mark: the music stops here (SUNO's [END] is the same tag). Follow my sections: outro; [Outro] [End] in a row are one.": "曲の最後の印：ここで音楽が止まります（SUNO の [END] も同じタグ）。「自分のセクションに従う」：outro。[Outro] [End] が続けば一つです。",
+"An opening played without voices. Follow my sections: intro.": "声なしで演奏される始まり。「自分のセクションに従う」：intro。",
+"A line or two repeated unchanged, often at the end of each verse. Sung; Follow my sections: chorus.": "変わらずに繰り返される一、二行。各ヴァースの終わりによく置かれます。歌われます。「自分のセクションに従う」：chorus。",
+"A short part right after the chorus that carries its energy on: a chant, a riff, a tag line. Sung; Follow my sections: chorus.": "サビの直後の短い部分で、その勢いを運びます：掛け声、リフ、決めの一行。歌われます。「自分のセクションに従う」：chorus。",
+"The arrangement stripped to its bones to build tension before the last chorus. Metal and hardcore: a heavy half-time chug, the voice a shout, a chant or nothing. EDM: the quiet part, the drums gone, pads left, one line or none. Ballad and rock: bass and kick or one instrument, sometimes whispered or spoken. Empty: an interlude; with words under it the Studio plans a sung section (a bridge). For speech add «spoken word breakdown» to the style.": "最後のサビの前に緊張を作るため、アレンジを骨だけに削ったもの。メタルとハードコア：ハーフテンポの重いチャグ、声は叫び、シャウト、または無し。EDM：静かな部分、ドラムが消え、パッドが残り、一行か無し。バラードとロック：ベースとキック、または楽器一つ、時にささやきや語り。空なら interlude。下に言葉があれば、スタジオは歌うセクション（bridge）として計画します。語りにはスタイルに「spoken word breakdown」を加えます。",
+"The music fades to silence (Fadeout too). Follow my sections: outro.": "音楽が静寂まで消えていきます（Fadeout も）。「自分のセクションに従う」：outro。",
+"The catchiest line or riff of the song; Genius writes it [Chorus] or [Refrain] now. Sung; Follow my sections: chorus.": "曲で一番キャッチーな一行やリフ。Genius は今 [Chorus] か [Refrain] と書きます。歌われます。「自分のセクションに従う」：chorus。",
+"Dance and electronic music: the moment beat and bass hit after a build-up, mostly without a voice. Follow my sections: interlude; with words under it, a sung bridge.": "ダンス・エレクトロニック：ビルドアップの後にビートとベースが打ち込まれる瞬間、たいてい声なし。「自分のセクションに従う」：interlude。下に言葉があれば、歌われる bridge。",
+"A part, or a whole song, played without singing. Follow my sections: interlude.": "歌なしで演奏される部分、または曲全体。「自分のセクションに従う」：interlude。",
+"An ending played without voices. Follow my sections: outro.": "声なしで演奏される終わり。「自分のセクションに従う」：outro。",
+"The rising part before a drop or a chorus: snare rolls, risers, the filter opening, the energy climbing. Follow my sections: pre-chorus, a sung section.": "ドロップやサビの前に高まっていく部分：スネアロール、ライザー、開いていくフィルター、上がるエネルギー。「自分のセクションに従う」：pre-chorus、歌うセクション。",
+"A woman sings the lines that follow, until another voice is named; after the dash how she sings: Deep, Warm; Soft, Breathy. Not a section: Follow my sections passes it by, as it does the ФОСФОРИДА form [Solo Female Voice].": "別の声が指定されるまで、女性が続く行を歌います。ダッシュの後に歌い方：Deep, Warm、Soft, Breathy。セクションではありません：「自分のセクションに従う」は飛ばします。FOSFORIDA の形 [Solo Female Voice] も同じです。",
+"A man sings the lines that follow; after the dash how he sings: Bari-tenor, Calm; Low, Raspy. Not a section: Follow my sections passes it by, as it does the ФОСФОРИДА form [Solo Male Vocal: …].": "男性が続く行を歌います。ダッシュの後に歌い方：Bari-tenor, Calm、Low, Raspy。セクションではありません：「自分のセクションに従う」は飛ばします。FOSFORIDA の形 [Solo Male Vocal: …] も同じです。"
+});
+// HERESY 2905: the Musician's song kept in the Writer from its first save
+RuachI18n.add("ja", {
+"The Writer keeps this song from now on: “{0}”, a new document, in hand": "ライターがこの曲を今後保存します：「{0}」、新しいドキュメント、手元に",
+"The song was not kept in the Writer: {0}": "曲はライターに保存されませんでした：{0}"
+});
+// HERESY 2912: the history of plays and downloads (Ctrl+H, Ctrl+J)
+RuachI18n.add("ja", {
+"History": "履歴",
+"Downloads": "ダウンロード",
+"Yesterday": "昨日",
+"Nothing found": "見つかりません",
+"Loading…": "読み込み中…",
+"Older": "さらに前",
+"Find a title": "タイトルを検索",
+"Find a title or a file": "タイトルまたはファイルを検索",
+"1 play": "1 回再生",
+"{#0} plays": "{0} 回再生",
+"1 download": "1 件のダウンロード",
+"{#0} downloads": "{0} 件のダウンロード",
+"to the end": "最後まで",
+"{0} heard": "{0} 再生",
+"stopped at {0} of {1}": "{1} 中 {0} で停止",
+"not in the Studio any more": "もうスタジオにありません",
+"a file of no take": "どのテイクでもないファイル",
+"Clear history": "履歴を消去",
+"Clear downloads": "ダウンロード履歴を消去",
+"The last {0} days, at most {1} plays: kept by the Studio, the same in every browser that opens it": "直近 {0} 日、最大 {1} 回の再生：スタジオが保管し、開くどのブラウザでも同じ",
+"The last {0} days, at most {1} downloads: kept by the Studio, the same in every browser that opens it": "直近 {0} 日、最大 {1} 件のダウンロード：スタジオが保管し、開くどのブラウザでも同じ",
+"(for now in this browser: the Studio's lab learns the history at its next restart)": "（今はこのブラウザ内：スタジオのラボは次の再起動で履歴を覚えます）",
+"Nothing played yet": "まだ何も再生していません",
+"Nothing downloaded yet": "まだ何もダウンロードしていません",
+"Not in the Studio any more: “{0}”": "もうスタジオにありません：「{0}」",
+"The history of plays is cleared": "再生履歴を消去しました",
+"The history of downloads is cleared": "ダウンロード履歴を消去しました",
+"Clear the history of plays?\n\nEvery play it keeps goes ({0}); the takes themselves stay.": "再生履歴を消去しますか？\n\n保管しているすべての再生（{0}）が消えます。テイク自体は残ります。",
+"Clear the history of downloads?\n\nEvery download it keeps goes ({0}); the files you saved stay where you saved them.": "ダウンロード履歴を消去しますか？\n\n保管しているすべてのダウンロード（{0}）が消えます。保存したファイルは保存した場所に残ります。",
+"History: what the player played, day by day; a title takes to its card": "履歴：プレーヤーで再生したもの、日ごと。タイトルからカードへ",
+"History: what the player played, the last 30 days, day by day": "履歴：直近 30 日にプレーヤーで再生したもの、日ごと",
+"Downloads: what was saved from the Studio, the last 90 days": "ダウンロード：直近 90 日にスタジオから保存したもの",
+"The history's button in the full player (between the take's reactions and the transport); the one-row player has none, ☰ has History and Downloads either way": "フルプレーヤーの履歴ボタン（テイクのリアクションと再生ボタンの間）。1 行プレーヤーにはなく、☰ には履歴とダウンロードが常にあります",
+"A history button in the player": "プレーヤーの履歴ボタン",
+"History and downloads": "履歴とダウンロード",
+"Clear the history of plays (asks first); the takes stay": "再生履歴を消去（先に確認）。テイクは残ります",
+"Clear the history of downloads (asks first); the saved files stay": "ダウンロード履歴を消去（先に確認）。保存したファイルは残ります"
+});
+// HERESY 2913: the take's MIDI window (the score's, MuScriptor on the mix or per stem)
+RuachI18n.add("ja", {
+"about {0} here": "ここで約 {0}",
+"A training runs: the transcriber goes behind it ({0} threads), slower than the estimate.": "トレーニング中：転写はその後ろで動きます（{0} スレッド）、見積もりより遅くなります。",
+"Fetch {0} ({1}) and transcribe": "{0}（{1}）を取得して転写",
+"fetched first, {0}": "先に取得、{0}",
+"Fetching MuScriptor {0}…": "MuScriptor {0} を取得中…",
+"for a card of 8 GB": "8 GB のカード向け",
+"its stems are here ({0}): each transcribed with its own instruments, each note's velocity from its stem": "ステムはここにあります（{0}）：それぞれを自分の楽器で転写、各ノートの強さはそのステムから",
+"its stems first (a card, a minute or two), then each transcribed with its own instruments, each note's velocity from its stem": "まずステム（カード、1〜2 分）、次にそれぞれを自分の楽器で転写、各ノートの強さはそのステムから",
+"Made {0}: it downloads at once.": "{0} に作成済み：すぐにダウンロードします。",
+"MIDI: {0} parts, {1} notes, on the take's beats ({2})": "MIDI：{0} パート、{1} ノート、テイク自身の拍の上（{2}）",
+"Laying the score on the take's heard beats…": "スコアを聞こえた拍に合わせています…",
+"MIDI of the score on the take's beats ({0})": "テイク自身の拍に合わせたスコアの MIDI（{0}）",
+"MIDI of the score at its own tempo: the take's beats could not be read ({0})": "スコア自身のテンポの MIDI：テイクの拍を読めませんでした（{0}）",
+"MuScriptor on the mix": "ミックスに MuScriptor",
+"MuScriptor per stem": "ステムごとに MuScriptor",
+"MuScriptor's weights are CC BY-NC 4.0: non-commercial use only.": "MuScriptor の重みは CC BY-NC 4.0：非商用のみ。",
+"no beats heard: 120 bpm": "拍が聞き取れません：120 bpm",
+"No card for the stems here: MuScriptor on the mix runs on the processor.": "ステム用のカードがありません：ミックスへの MuScriptor はプロセッサで動きます。",
+"No score": "楽譜がありません",
+"not offered: {0}": "提供されません：{0}",
+"one pass: 34 instrument groups and the drums, every note at one velocity": "1 パス：34 の楽器グループとドラム、すべてのノートは同じ強さ",
+"Open a take of the library first": "まずライブラリのテイクを開いてください",
+"Quantize": "クオンタイズ",
+"Reading the score…": "楽譜を読んでいます…",
+"Tempo from the heard beats (the score's Q drifts from what is sung); bars and beats fall on the song's own.": "テンポは聞き取った拍から（楽譜の Q は歌からずれます）：小節と拍は曲自身のものに合います。",
+"the fetch ended without the model": "モデルなしで取得が終わりました",
+"the plan's melody and its instrument line, two tracks; at once": "プランのメロディとその楽器ライン、2 トラック、すぐに",
+"the score of “{0}”, whose music codes it keeps: the plan's melody and its instrument line, two tracks; at once": "音楽コードを受け継ぐ「{0}」の楽譜：プランのメロディとその楽器ライン、2 トラック、すぐに",
+"The score's MIDI": "楽譜の MIDI",
+"the Studio's lab learns it at its next restart": "スタジオのラボは次の再起動でこれを覚えます",
+"Transcribe again": "もう一度転写",
+"Waits its turn": "順番待ち",
+"the take's beats": "テイクの拍",
+"the stems (a card)": "ステム（カード）",
+"MuScriptor on {0}": "{0} に MuScriptor",
+"the velocities of {0}": "{0} の強さ",
+"the file": "ファイル",
+"Export MIDI…": "MIDI を書き出す…",
+"one file on the take's own beats: the score's, MuScriptor on the mix or per stem": "テイク自身の拍の上の 1 ファイル：楽譜、ミックスまたはステムごとの MuScriptor",
+"MIDI: the score's (its melody and its instrument line), or MuScriptor's transcription of the mix or of each stem, on the take's own beats": "MIDI：楽譜（メロディと楽器ライン）、またはミックスか各ステムの MuScriptor 転写、テイク自身の拍の上",
+"One MIDI file of the take on its own beats: the score's, MuScriptor on the mix or per stem": "テイク自身の拍の上の MIDI ファイル 1 つ：楽譜、ミックスまたはステムごとの MuScriptor"
+});
+// HERESY 2913: the stems need a card with room
+RuachI18n.add("ja", {
+"The stems need a card with room, and none has it now: MuScriptor on the mix runs on the processor, or ask for the stems later.": "ステムには空きのあるカードが必要ですが、今はどれにもありません：ミックスへの MuScriptor はプロセッサで動きます。ステムは後でどうぞ。"
+});
+// HERESY 2913, 2915: a Direct take's score MIDI after SheetSage2; ☰'s bug report
+RuachI18n.add("ja", {
+"Report a bug on GitHub": "GitHub にバグを報告",
+"A new issue on GitHub, in a new tab. Attach the debug journal (Engine → Debugging: turn it on, do what goes wrong, then Download) so the bug can be followed": "GitHub の新しい issue を新しいタブで開きます。デバッグ記録（エンジン → Debugging：オンにして、問題の操作をもう一度、それからダウンロード）を添えると追跡できます",
+"the score written from its sound before (SheetSage2): its melody and its instrument line, two tracks; at once": "以前に音から書いた楽譜（SheetSage2）：メロディと楽器ライン、2 トラック、すぐに",
+"no score of its own (a Direct take): SheetSage2 writes one from its sound first, on the Studio's card in the queue, a minute or two and more for a long song; then its MIDI": "自分の楽譜がありません（Direct テイク）：まず SheetSage2 が音から楽譜を書きます。スタジオのカードでキューに入り、1〜2 分、長い曲はそれ以上；その後に MIDI",
+"Write its score (SheetSage2), then download": "楽譜を書いて（SheetSage2）ダウンロード",
+"SheetSage2 writes its score from its sound…": "SheetSage2 が音から楽譜を書いています…"
+});
+// HERESY 2916: Follow my sections off by default, its guard
+RuachI18n.add("ja", {
+"{0} sections, {1} breaks: a plan of about {2} to {3}": "{0} セクション、{1} ブレイク：プランは約 {2}〜{3}",
+"past {0}, where long plans have fallen apart": "{0} を超えると、長いプランは崩れてきました",
+"Follow {0} sections?": "{0} セクションに従いますか？",
+"{0} sections followed, {1} of them breaks: measured on the Studio's lyrics, such a plan runs about {2} to {3}.": "従うセクション {0}、うちブレイク {1}：スタジオの歌詞での測定では、こうしたプランは約 {2}〜{3}。",
+"It may not fit the length asked ({0}): the song is cut there.": "指定の長さ（{0}）に収まらないかもしれません：曲はそこで切れます。",
+"Long plans have fallen apart past about {0}: lines repeated, the phonetics broken (26 sections with 7 breaks planned past the 8:00 cap). Without following, the planner writes its own sections and the plan stays shorter; it may drop a Bridge or an Outro.": "長いプランは約 {0} を過ぎると崩れてきました：行の繰り返し、崩れた発音（7 つのブレイクを含む 26 セクションは上限 8:00 を超えるプランに）。従わなければプランナーは自分のセクションを書き、プランは短くなります。Bridge や Outro を落とすことがあります。",
+"Sing without following": "従わずに歌う",
+"Follow them anyway": "それでも従う",
+"Off unless you turn it on. On, the planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): none dropped, none made up, and the song does not end before its last section has begun. It helps when the planner drops a Bridge or an Outro you wrote. It costs length: each section followed is a stretch of the plan, so many sections and breaks make a long plan, and long plans have fallen apart past about 6:00 (26 sections with 7 breaks planned 6:30 to 8:24, past the 8:00 cap). Its line beside it says what these lyrics would plan. Only when the model writes the score (Full or Melody, no score of yours)": "オンにするまでオフ。オンにすると、プランの楽譜は歌詞のセクションを順に書きます（Intro、Verse、Pre-Chorus、Chorus、Bridge、Interlude、Outro、プランナーの呼び方で）：抜けも作り足しもなく、最後のセクションが始まる前に曲は終わりません。あなたが書いた Bridge や Outro をプランナーが落とすときに役立ちます。代わりに長さがかかります：従うセクションはそれぞれプランの一区間なので、セクションとブレイクが多いとプランが長くなり、長いプランは約 6:00 を過ぎると崩れてきました（7 つのブレイクを含む 26 セクション：プランは 6:30〜8:24、上限 8:00 超え）。横の行がこの歌詞でのプランを示します。モデルが楽譜を書くときだけ（Full か Melody、あなたの楽譜なし）"
+});
+// HERESY 2917: the Trainer's charts: the saves as ticks under the grid, no dots
+RuachI18n.add("ja", {
+"the ticks under the grid: the saves (green worth hearing, amber in loras/); the pointer on one says its held-out values": "グリッド下の目盛り：保存（緑は聴く価値あり、琥珀は loras/ にあるもの）。目盛りにポインタを置くと取り置きトラックでの値を表示",
+"Saved at step {0}": "ステップ {0} で保存",
+"held out:": "取り置き：",
+"worth hearing": "聴く価値あり"
+});
+// HERESY 2918: the Writer's text over everything (Alt+E)
+RuachI18n.add("ja", {
+"The text over everything": "テキストを全面に",
+"The text over everything, four tenths larger, with its meter, rulers and stress marks: Esc, Alt+E or this button puts it back": "テキストを全面に、4割大きく、拍の計測・ルーラー・アクセント記号ごと：Esc、Alt+E またはこのボタンで元に戻す",
+"Back into the notebook": "ノートに戻す",
+"Back into the notebook (Esc or Alt+E)": "ノートに戻す（Esc または Alt+E）"
+});
+// HERESY 2919: the workspaces' emoji (the grid, the name dialogs, the tree's chooser)
+RuachI18n.add("ja", {
+"The workspace's emoji": "ワークスペースの絵文字",
+"No emoji": "絵文字なし",
+"No emoji: a faint leaf": "絵文字なし：薄い葉",
+"No emoji: the workspace's faint icon": "絵文字なし：ワークスペースの薄いアイコン",
+"Recent": "最近",
+"Ours": "私たちの",
+"Feeling": "気持ち",
+"Message": "メッセージ",
+"Making": "制作",
+"Nature": "自然",
+"The Studio's own marks are not offered: 💎 a published set and 🙈 a blind one stay in the name; ❄ 👁‍🗨 🔒 are states": "スタジオ自身のマークは選べません：💎（公開セット）と 🙈（ブラインドセット）は名前に残り、❄ 👁‍🗨 🔒 は状態です",
+"The emoji before its name: one, any but the Studio's own marks; none shows the faint icon": "名前の前の絵文字：一つ、スタジオ自身のマーク以外なら何でも。なしなら薄いアイコン",
+"{0} holds the emoji's place: one of the Studio's own marks (a 💎 set, a 🙈 blind set), kept in the name": "{0} が絵文字の位置を占めています：スタジオ自身のマーク（💎 セット、🙈 ブラインドセット）で、名前に残ります",
+"The tree of workspaces: its order and what it shows": "ワークスペースのツリー：並び順と表示内容",
+"The tree of workspaces": "ワークスペースのツリー",
+"Grouped by emoji": "絵文字でグループ化",
+"The default: each emoji's workspaces together, the ones with none first, A to Z inside a group; the 💎 sets stay at the foot": "既定：同じ絵文字のワークスペースをまとめ、絵文字なしを先頭に、各グループ内は A から Z 順。💎 セットは一番下",
+"A to Z, emoji aside": "A から Z 順（絵文字は無視）",
+"By name alone, whatever emoji each wears; the 💎 sets stay at the foot": "名前だけで並べる（絵文字は問わない）。💎 セットは一番下",
+"Most takes first": "テイクの多い順",
+"The fuller first, its sections the same way; the 💎 sets stay at the foot": "多いものを先に、セクションも同様。💎 セットは一番下",
+"Show the archived in the tree": "アーカイブ済みをツリーに表示",
+"Each in its place, dimmed, instead of under Archived": "「アーカイブ済み」の下ではなく、それぞれの場所に薄く表示",
+"Hide the frozen": "凍結したものを隠す",
+"Out of the tree until shown again; the one open stays": "再び表示するまでツリーから外す。開いているものは残る",
+"Hide the empty ones": "空のものを隠す",
+"A workspace with no take in it or its sections; the one open and the one in hand stay": "本体にもセクションにもテイクがないワークスペース。開いているものと使用中のものは残る",
+"Fold every section": "すべてのセクションを折りたたむ",
+"Unfold every section": "すべてのセクションを展開",
+"Emoji…": "絵文字…",
+"The emoji before its name": "名前の前の絵文字",
+"Emoji set: “{0}”": "絵文字を設定：「{0}」",
+"Emoji taken off: “{0}”": "絵文字を外しました：「{0}」"
+});
+// HERESY 2916b: Follow my sections for short songs, up to about 4 minutes
+RuachI18n.add("ja", {
+"Off unless you turn it on. For short songs, up to about 4 minutes: there it is worth it. On, the planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): none dropped, none made up, and the song does not end before its last section has begun. It helps when the planner drops a Bridge or an Outro you wrote. It costs length: each section followed is a stretch of the plan, so many sections and breaks make a long plan; past about 4:00 Generate asks first (long plans have fallen apart: 26 sections with 7 breaks planned 6:30 to 8:24, past the 8:00 cap). Its line beside it says what these lyrics would plan. Only when the model writes the score (Full or Melody, no score of yours)": "オンにするまでオフ。短い曲（約 4 分まで）向けで、そこで効果があります。オンにすると、プランの楽譜は歌詞のセクションを順に書きます（Intro、Verse、Pre-Chorus、Chorus、Bridge、Interlude、Outro、プランナーの呼び方で）：抜けも作り足しもなく、最後のセクションが始まる前に曲は終わりません。あなたが書いた Bridge や Outro をプランナーが落とすときに役立ちます。代わりに長さがかかります：従うセクションはそれぞれプランの一区間なので、セクションとブレイクが多いとプランが長くなります。約 4:00 を超えると「曲を生成」がまず確認します（長いプランは崩れてきました：7 つのブレイクを含む 26 セクションで、プランは 6:30〜8:24、上限 8:00 超え）。横の行がこの歌詞でのプランを示します。モデルが楽譜を書くときだけ（Full か Melody、あなたの楽譜なし）"
+});
+// HERESY 2919c: the workspaces' emoji upgrade, said once
+RuachI18n.add("ja", {
+"{0} workspaces now show their emoji in its own column": "{0} 個のワークスペースが絵文字を専用の列に表示するようになりました"
 });

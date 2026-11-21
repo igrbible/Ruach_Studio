@@ -5,6 +5,7 @@ module.exports = {
     params: {
       path: "..",
       message: "bash launcher/update.sh",
+      input: true,   // HERESY 2929: its questions answered here (the models' [Y/n]); Pinokio takes no keyboard without it
       on: [{ event: "/ruach update stopped:[^\\n]*/", break: true }, { event: "/error:/i", break: false }, { event: "/errno /i", break: false }]
     }
   }]

@@ -2421,6 +2421,7 @@ RuachI18n.add("es", {
 "{#0} captions written": {"one": "{0} descripción escrita", "many": "{0} descripciones escritas", "other": "{0} descripciones escritas"},
 "drafts here by {0}": "borradores aquí de {0}",
 "The Studio’s trainer is missing {0}:": "Al entrenador del Estudio le falta {0}:",
+"Training runs on Linux for now: the Trainer starts each run as a systemd unit, and this machine (Windows, macOS) has none.": "Por ahora el entrenamiento solo corre en Linux: el Entrenador lanza cada ejecución como una unidad de systemd, y esta máquina (Windows, macOS) no la tiene.",
 "Comfy-Org's YuE2 {0} weights": "los pesos {0} de YuE2 de Comfy-Org",
 "the realaudio tokenizer head": "la cabeza del tokenizador realaudio",
 "and": "y",
@@ -9766,6 +9767,205 @@ RuachI18n.add("es", {
 "Sing anyway": "Cantar igualmente",
 "Nothing sung: the style holds negative words. Fix it, or sing it anyway.": "Nada cantado: el estilo tiene palabras negativas. Corrígelo o cántalo igualmente.",
 "The 4–12 kHz envelope at 25, 50 … 150 Hz above its neighbours, mean of all windows: the VAE's 25 frames a second heard as an electric buzz in the highs. Music with no buzz reads about 8 dB here and up to 12 (the measure's own floor, at in-between frequencies on 30 takes): amber past 13 dB, red past 15": "La envolvente de 4–12 kHz en 25, 50 … 150 Hz sobre sus vecinas, media de todas las ventanas: los 25 fotogramas por segundo del VAE, oídos como un zumbido eléctrico en los agudos. La música sin zumbido marca aquí unos 8 dB y hasta 12 (el suelo propio de la medida, en frecuencias intermedias sobre 30 tomas): ámbar por encima de 13 dB, rojo por encima de 15",
+// HERESY 2858 (19.11.2026): Engine → Compute, the music cache in 8 bits (Q8_0)
+"Music cache in 8 bits (Q8_0) — about half the memory, for smaller cards": "Caché de música en 8 bits (Q8_0) — cerca de la mitad de memoria, para tarjetas pequeñas",
+"About the music cache in 8 bits": "Sobre la caché de música en 8 bits",
+"Music cache in 8 bits": "Caché de música en 8 bits",
+"now F16": "ahora F16",
+"now Q8_0": "ahora Q8_0",
+"applies before the next song": "se aplica antes de la próxima canción",
+"asked, but this card keeps F16: its flash attention does not read an 8-bit cache": "activada, pero esta tarjeta se queda en F16: su flash attention no lee una caché de 8 bits",
+"this engine has no 8-bit cache": "este motor no tiene caché de 8 bits",
+"the music cache in 8 bits (Engine → Compute) frees about 2.5 GB on a long song; it stays off until you turn it on": "la caché de música en 8 bits («Motor → Cómputo») libera unos 2,5 GB en una canción larga; queda apagada hasta que la enciendas",
+"The engine keeps what the song has sung so far in a cache on the card. In 8 bits (Q8_0) the cache takes about half the room of the usual 16 bits (F16), so a card of 8–12 GB fits longer songs or a bigger model.": "El motor guarda lo que la canción lleva cantado en una caché en la tarjeta. En 8 bits (Q8_0) la caché ocupa cerca de la mitad que con los 16 bits habituales (F16), así que en una tarjeta de 8–12 GB caben canciones más largas o un modelo mayor.",
+"Measured on an RTX 3090, a 150 s song: the cache 5.3 → 2.8 GB, the card's peak 16.6 → 14.2 GB, the sound stage 3 % slower.": "Medido en una RTX 3090, una canción de 150 s: la caché 5,3 → 2,8 GB, el pico de la tarjeta 16,6 → 14,2 GB, la etapa de sonido un 3 % más lenta.",
+"On the Arc B50 (16 GB), the same song at 75 s: the cache 5.3 → 2.8 GB, the card's peak 13.1 → 10.7 GB; the score stage 20 → 37 s, the sound stage as fast as before.": "En la Arc B50 (16 GB), la misma canción en 75 s: la caché 5,3 → 2,8 GB, el pico de la tarjeta 13,1 → 10,7 GB; la etapa de la partitura 20 → 37 s, la etapa de sonido igual de rápida.",
+"The same seed sings a slightly different take with it (other notes, not a worse sound). Off by default; it applies before the next song. A card that cannot read an 8-bit cache keeps F16, and this switch says so.": "La misma semilla canta con ella una toma algo distinta (otras notas, no un sonido peor). Apagada por defecto; se aplica antes de la próxima canción. Una tarjeta que no lee una caché de 8 bits se queda en F16, y este interruptor lo dice.",
+});
+// HERESY 2862: the Writer's version beside its name, its versions kept at every new number
+RuachI18n.add("es", {
+"The version beside the name, digits and dots only (1.2.8). Another number keeps the text before it in the versions below, with what differs from now": "La versión junto al nombre, solo cifras y puntos (1.2.8). Otro número guarda el texto anterior en las versiones de abajo, con lo que difiere de ahora",
+"A version is kept at every new version number, at every save after a pause, and whenever you keep one.": "Se guarda una versión con cada nuevo número de versión, con cada guardado tras una pausa y siempre que guardes una.",
+"{0} kept in the versions; now {1}": "{0} guardada en las versiones; ahora {1}"
+});
+// HERESY 2863: the Musician's Ctrl+S into the Writer's document in hand
+RuachI18n.add("es", {
+"The Writer's “{0}” now holds the song as the Musician has it (the version before is kept)": "«{0}» en el Escritor guarda ahora la canción tal como está en el Músico (la versión anterior se conserva)"
+});
+// HERESY 2865: the DAW's two ways to play, Live and Forge
+RuachI18n.add("es", {
+"How the DAW plays": "Cómo suena el DAW",
+"Live": "En vivo",
+"Forge": "Forge",
+"Live in this browser: every knob heard at once, through the browser's audio with larger buffers. Remembered in this browser": "En vivo en este navegador: cada perilla se oye al instante, por el audio del navegador con búferes más grandes. Se recuerda en este navegador",
+"Rendered on Forge by the mix's own code, in pieces from the playhead, and played as a file: nothing in the browser between the sound and the speakers. A change is heard a second or two later. Remembered in this browser": "Renderizado en Forge con el propio código de la mezcla, por trozos desde el cabezal, y reproducido como archivo: nada del navegador entre el sonido y los altavoces. Un cambio se oye uno o dos segundos después. Se recuerda en este navegador",
+"The mix is rendered on Forge…": "La mezcla se renderiza en Forge…",
+"Forge could not play the mix: {0}": "Forge no pudo reproducir la mezcla: {0}",
+});
+
+// HERESY 2869: the version fields say that an empty one is saved as 1.0
+RuachI18n.add("es", {
+"The song's version beside its name, digits and dots only (4.2.3). A take is called «Title v4.2.3», as your tracks are, and the Musician's versions keep one tree per title, a branch per version. A title typed with its version («Song v1.2») splits into the two. Left empty, a save (Ctrl+S) gives it 1.0": "La versión de la canción junto a su nombre, solo dígitos y puntos (4.2.3). Una toma se llama «Título v4.2.3», como tus pistas, y las Versiones del Músico guardan un árbol por título y una rama por versión. Un título escrito con su versión («Canción v1.2») se divide solo en los dos campos. Si se deja vacío, al guardar (Ctrl+S) recibe 1.0",
+"The version beside the name, digits and dots only (1.2.8). Another number keeps the text before it in the versions below, with what differs from now. Left empty, a save gives it 1.0": "La versión junto al nombre, solo cifras y puntos (1.2.8). Otro número guarda el texto anterior en las versiones de abajo, con lo que difiere de ahora. Si se deja vacío, al guardar recibe 1.0"
+});
+
+// HERESY 2815: the Section editor (heresy-seceditor.js, HERESY 2810–2817)
+RuachI18n.add("es", {
+"Section editor…": "Editor por secciones…",
+"the song by its sections: edits in a queue, one new take": "la canción por secciones: ediciones en cola, una toma nueva",
+"Section editor": "Editor por secciones",
+"About the Section editor": "Acerca del editor por secciones",
+"the song by its sections": "la canción por secciones",
+"Close (Esc): the queue stays": "Cerrar (Esc): la cola se queda",
+"The song's sections": "Las secciones de la canción",
+"← → between sections · Space plays it": "← → entre secciones · Espacio la reproduce",
+"instrumental": "instrumental",
+"added": "se añade",
+"sung anew to the end": "de nuevo hasta el final",
+"by ear": "de oído",
+"by the score": "por la partitura",
+"Sections placed by Whisper's timing of the lyrics, as on the player's wave": "Secciones colocadas por la sincronización de la letra de Whisper, como en la onda del reproductor",
+"Sections from the score's marks: the take's lyrics are not timed yet": "Secciones de las marcas de la partitura: la letra de la toma aún no está sincronizada",
+"{0} of {1} lines heard": "{0} de {1} líneas oídas",
+"The lyrics as they will be sung": "La letra tal como se cantará",
+"Queue": "Cola",
+"Re-sing from here to the end…": "Volver a cantar desde aquí hasta el final…",
+"Re-sing from here to the end": "Volver a cantar desde aquí hasta el final",
+"Its words changed or kept, sung anew on a new music seed; the rest stays": "Sus palabras, cambiadas o no, cantadas de nuevo con una semilla musical nueva; el resto se queda",
+"One line sung anew, cut halfway to the lines around it": "Una línea cantada de nuevo, cortada a medio camino de las líneas vecinas",
+"The section once more right after itself: a variation on the music seed + 1": "La sección otra vez justo detrás de sí misma: una variación con la semilla musical + 1",
+"Music the model writes after the section, nothing sung again": "Música que el modelo escribe tras la sección, nada cantado otra vez",
+"A copy of the parts right after them, on the score's bar lines, in seconds": "Una copia de las partes justo detrás de ellas, en las barras de compás de la partitura, en segundos",
+"The parts taken out on the score's bar lines, in seconds": "Las partes se quitan en las barras de compás de la partitura, en segundos",
+"Everything before the break before it stays; from there to the end the song is sung anew": "Todo lo anterior a la pausa previa se queda; desde ahí hasta el final la canción se canta de nuevo",
+"The music goes on past the take's end, with new lines or without": "La música sigue tras el final de la toma, con líneas nuevas o sin ellas",
+"An instrumental part: no words to sing anew": "Una parte instrumental: no hay palabras que volver a cantar",
+"The rest of a part after a break: pick the part itself": "El resto de una parte tras una pausa: elige la parte misma",
+"These are the score's marks: find the sections by ear first": "Son las marcas de la partitura: encuentra antes las secciones de oído",
+"Its words were not found in the lyrics": "Sus palabras no se encontraron en la letra",
+"No line of it was heard clearly for two seconds or more": "Ninguna de sus líneas se oyó con claridad durante dos segundos o más",
+"No score part lies under this section": "Ninguna parte de la partitura cae bajo esta sección",
+"Its score has one section only": "Su partitura tiene una sola sección",
+"No break of the voice before it": "Ninguna pausa de la voz antes de ella",
+"The break is under 5 seconds from an end of the take": "La pausa está a menos de 5 segundos de un extremo de la toma",
+"Only past the take's end, 15:00 at most in all": "Solo tras el final de la toma, 15:00 como máximo en total",
+"Its words as the lyrics have them: change what you will, or keep them and let only the music be new.": "Sus palabras tal como están en la letra: cambia lo que quieras, o déjalas y que solo la música sea nueva.",
+"Which line?": "¿Qué línea?",
+"not heard clearly": "no se oyó con claridad",
+"under two seconds": "menos de dos segundos",
+"By how much (m:ss)?": "¿Cuánto (m:ss)?",
+"No sections: the lyrics are not timed and there is no score.": "Sin secciones: la letra no está sincronizada y no hay partitura.",
+"Take it out of the queue": "Quitarla de la cola",
+"Clear the queue": "Vaciar la cola",
+"Clear the queue: {0} edits?": "¿Vaciar la cola: {0} ediciones?",
+"anew, words changed": "de nuevo, con palabras cambiadas",
+"anew, the same words": "de nuevo, las mismas palabras",
+"line {0} anew": "línea {0} de nuevo",
+"once more, straight on": "otra vez, enseguida",
+"once more after ~{0} s of music": "otra vez tras ~{0} s de música",
+"an interlude of ~{0} s after it": "un interludio de ~{0} s después",
+"twice, on the bar lines": "dos veces, en las barras de compás",
+"taken out, on the bar lines": "quitada, en las barras de compás",
+"from {0} to the end, anew": "desde {0} hasta el final, de nuevo",
+"+{0} after the end": "+{0} tras el final",
+"{0} has an edit in the queue already: ✕ it first": "{0} ya tiene una edición en la cola: quítala antes con ✕",
+"It overlaps {0} in the queue ({1}–{2})": "Se solapa con {0} en la cola ({1}–{2})",
+"It would go in inside {0} ({1}–{2})": "Entraría dentro de {0} ({1}–{2})",
+"One ending at a time: re-sing to the end, or extend": "Un solo final: volver a cantar hasta el final, o extender",
+"Nothing can go after the re-sing to the end ({0})": "Nada puede ir tras el volver a cantar hasta el final ({0})",
+"Extend goes on from the end this Remove takes away": "Extender sigue desde el final que este Quitar se lleva",
+"cut at the bar line {0}": "corte en la barra de compás {0}",
+"Eight sung edits at most in one take": "Ocho ediciones cantadas como máximo en una toma",
+"Twelve edits at most in one queue": "Doce ediciones como máximo en una cola",
+"The new take would run past 15:00": "La toma nueva pasaría de 15:00",
+"The sections were heard anew: add this edit again": "Las secciones se oyeron de nuevo: añade otra vez esta edición",
+"Drafts sung on the engine: {0}, then the whole take once": "Borradores cantados en el motor: {0}, después la toma entera de una vez",
+"Drafts sung on the engine: {0}, then the ending, which is the take": "Borradores cantados en el motor: {0}, después el final, que es la toma",
+"about {0} of music rendered in all": "unos {0} de música renderizada en total",
+"Only cuts on the bar lines: seconds, nothing sung": "Solo cortes en las barras de compás: segundos, nada cantado",
+"One new take; this one stays.": "Una toma nueva; esta se queda.",
+"Assemble the take": "Ensamblar la toma",
+"Assemble again": "Ensamblar otra vez",
+"Another version of the same queue, on new seeds": "Otra versión de la misma cola, con semillas nuevas",
+"Step {0} of {1}": "Paso {0} de {1}",
+"waits for the engine": "espera al motor",
+"the engine's queue is full: waiting": "la cola del motor está llena: esperando",
+"the Arc is being reset: waiting": "la Arc se está reiniciando: esperando",
+"the draft is sung": "se canta el borrador",
+"the voice is found": "se busca la voz",
+"laid in": "colocado",
+"the whole take is rendered": "la toma entera se renderiza",
+"cut on the bar lines": "corte en las barras de compás",
+"placed": "colocada",
+"Stop the assembly": "Detener el ensamblaje",
+"Assembled: {0}": "Ensamblada: {0}",
+"Resume from step {0}": "Reanudar desde el paso {0}",
+"Discard": "Descartar",
+"Stopped at step {0}: {1}": "Detenido en el paso {0}: {1}",
+"Cut short by a restart of the lab at step {0}": "Cortado por un reinicio del lab en el paso {0}",
+"The queue of {0} was put away: five takes keep theirs": "La cola de «{0}» se descartó: cinco tomas guardan la suya",
+"Each block is a section as the player's wave shows it: the lyrics' tags placed by Whisper's timing, a break, an intro or an outro where no voice sings, or the score's marks for a take never timed. The tags stay in English, as the model reads them.": "Cada bloque es una sección tal como la muestra la onda del reproductor: las etiquetas de la letra colocadas por la sincronización de Whisper, una pausa, una intro o un outro donde no canta ninguna voz, o las marcas de la partitura para una toma nunca sincronizada. Las etiquetas quedan en inglés, como las lee el modelo.",
+"Click a block (← → walk them, Space plays it), pick an edit under the strip and add it to the queue: one edit a section. The queue lists them in the song's order, each with ✕.": "Haz clic en un bloque (← → los recorren, Espacio lo reproduce), elige una edición bajo la franja y añádela a la cola: una edición por sección. La cola las muestra en el orden de la canción, cada una con ✕.",
+"Assemble the take sings the queue as one new take, a child of this one, which stays as it is. The sung edits go one after another on the engine (a draft each, then the whole take once); Repeat and Remove are cut on the score's bar lines in seconds. Songs you queue in the Musician meanwhile go first.": "Ensamblar la toma canta la cola como una toma nueva, hija de esta, que se queda como está. Las ediciones cantadas pasan una tras otra por el motor (un borrador cada una, después la toma entera de una vez); Repetir y Quitar se cortan en las barras de compás de la partitura en segundos. Las canciones que pongas en cola en el Músico mientras tanto van primero.",
+"The new take lands where this one is; its note lists the edits, and the player tints what was sung anew.": "La toma nueva llega donde está esta; su nota enumera las ediciones, y el reproductor tiñe lo que se cantó de nuevo.",
+});
+
+// HERESY 2871: a DAW lane as a spectrogram
+RuachI18n.add("es", {
+"Spectrum: the lane's sound as a spectrogram in place of its wave, the low notes at the bottom and the high at the top, measured once on Forge; remembered in this browser": "Espectro: el sonido de la pista como espectrograma en lugar de su onda, los graves abajo y los agudos arriba; se mide una vez en Forge; este navegador lo recuerda",
+"The rest is the source less the stems, worked out as it plays: it has no file of its own to measure": "El resto es la fuente menos los stems, calculado mientras suena: no tiene un archivo propio que medir",
+"Forge is measuring the spectrum of {0}…": "Forge mide el espectro de {0}…",
+"The spectrum of {0} could not be measured: {1}": "No se pudo medir el espectro de {0}: {1}"
+});
+
+// HERESY 2872: the Library card's workspaces button and its list, the menu's sections folded
+RuachI18n.add("es", {
+"In {0} workspaces:": "En {0} espacios:",
+"In the workspace:": "En el espacio:",
+"Take it out of this workspace": "Sacarla de este espacio",
+"open now": "abierto ahora",
+"Its workspaces": "Sus espacios",
+"“{0}” is in these. A click on one opens it; ✕ takes the take out of it (it stays in the library and in the others).": "«{0}» está en estos. Un clic en uno lo abre; ✕ saca la toma de él (sigue en la biblioteca y en los demás).",
+"Take “{0}” out of “{1}”?": "¿Sacar «{0}» de «{1}»?",
+"It stays in the library and in any other workspace; only this workspace lets it go.": "Sigue en la biblioteca y en cualquier otro espacio; solo este espacio la suelta.",
+"Taken out of “{0}”": "Sacada de «{0}»",
+"the workspace itself, not its sections": "el espacio en sí, sin sus secciones"
+});
+
+// HERESY 2875: the Trainer's run card: both towers' rates, the absolute epochs, the VRAM of now, the run's now line
+RuachI18n.add("es", {
+"this run": "esta ejecución",
+"Music half · AR": "Mitad musical · AR",
+"Sound half · NAR": "Mitad sonora · NAR",
+"Its note from its start": "Su nota del inicio",
+"the highest over the whole run, all its sittings; now: the highest of each card over the last 25 steps": "la más alta de toda la ejecución, todas sus sesiones; ahora: la más alta de cada tarjeta en los últimos 25 pasos",
+"epoch {0}": "época {0}"
+});
+
+// HERESY 2876: a run's command line and base on its card; the new-run form said as such beside a run
+RuachI18n.add("es", {
+"runs as": "se ejecuta como",
+"new run": "nueva ejecución",
+"base": "base"
+});
+// HERESY 2883: the Narrator's text with the lyrics editor's hands: its count line
+RuachI18n.add("es", {
+"Text: {0} characters · {1} syllables · {2} lines": "Texto: {0} caracteres · {1} sílabas · {2} líneas"
+});
+// HERESY 2887: the Section editor's ninth edit, Insert a part after it
+RuachI18n.add("es", {
+"Insert a part after it…": "Insertar una parte después…",
+"A copy of one of the score's parts put in after this section, on its bar line, in seconds; the section itself may keep an edit of its own": "Una copia de una de las partes de la partitura entra después de esta sección, en su barra de compás, en segundos; la sección misma puede tener su propia edición",
+"Which part goes in?": "¿Qué parte entra?",
+"It goes in after {0}, at {1}": "Entra después de {0}, en {1}",
+"a copy after {0}": "una copia después de {0}"
+});
+// HERESY 2895: the Section editor writes a take's score from its sound first
+RuachI18n.add("es", {
+"Its score is being written from its sound: every edit waits for it": "Su partitura se está escribiendo desde su sonido: cada edición la espera",
+"Writing its score from its sound ({0})… {1}": "Escribiendo su partitura desde su sonido ({0})… {1}",
+"Its score could not be written from its sound: {0}": "No se pudo escribir su partitura desde su sonido: {0}",
+"A take with no score of its own (Direct, or brought in) gets one written from its sound first, by the transcriber chosen in the Engine, through the Studio's queue: Repeat, Remove and Insert cut on its bar lines, and a section sung anew follows it.": "Una toma sin partitura propia (Direct, o traída) recibe primero una, escrita desde su sonido por el transcriptor elegido en el Motor, por la cola del Estudio: Repetir, Quitar e Insertar cortan en sus líneas de compás, y una sección cantada de nuevo la sigue."
 });
 // HERESY 2896: the lyrics' own sections followed by the planner
 RuachI18n.add("es", {
@@ -9784,4 +9984,217 @@ RuachI18n.add("es", {
 "Freed: {0}": "Liberado: {0}",
 "Sure you want to unload this model from VRAM?": "¿Seguro que quieres descargar este modelo de la VRAM?",
 "Sure you want to unload these models from VRAM?": "¿Seguro que quieres descargar estos modelos de la VRAM?"
+});
+// HERESY 2900: the program monitor's and the console's windows by the screens
+RuachI18n.add("es", {
+"One screen: the program monitor stays in the page. With a second screen it opens there in a window of its own": "Una sola pantalla: el monitor de programa se queda en la página. Con una segunda pantalla se abre allí en una ventana propia",
+"One screen: the console stays in the page. With a second screen it opens there in a window of its own": "Una sola pantalla: la consola se queda en la página. Con una segunda pantalla se abre allí en una ventana propia"
+});
+// HERESY 2901: the installed app kept awake
+RuachI18n.add("es", {
+"Keep the installed app awake": "Mantener despierta la app instalada",
+"Only in the installed app (a window of its own, not a browser tab): a 12 Hz tone at -60 dBFS, far under hearing, that Chrome counts as sound, so it does not freeze or discard the Studio while it is in the background and the card and the player are as you left them. It starts with your first click or key. Off: the browser may put the app to sleep": "Solo en la app instalada (una ventana propia, no una pestaña del navegador): un tono de 12 Hz a -60 dBFS, muy por debajo de lo audible, que Chrome cuenta como sonido, así que no congela ni descarta el Estudio en segundo plano y la tarjeta y el reproductor quedan como los dejaste. Empieza con tu primer clic o tecla. Apagado: el navegador puede dormir la app"
+});
+// HERESY 2902: the reactions linked
+RuachI18n.add("es", {
+"🔥 and 💎 like the take; 👎 takes them off": "🔥 y 💎 dan 👍; 👎 los quita",
+"On: switching 🔥 or 💎 on likes the take too, and 👎 takes off the like, 🔥 and 💎 together, wherever those buttons are (the cards, the Library, the compare window, the player). The reaction faces are never touched. Off: each button stands alone": "Activado: encender 🔥 o 💎 también da 👍 a la toma, y 👎 quita juntos el 👍, el 🔥 y el 💎, dondequiera que estén esos botones (las tarjetas, la Biblioteca, la ventana de comparación, el reproductor). Las caras de reacción nunca se tocan. Desactivado: cada botón va por su cuenta"
+});
+// HERESY 2906: the lyrics' tags explained, with what Follow my sections makes of each
+RuachI18n.add("es", {
+"The body of the song: new words each time over the same music, the story moving on. Numbered (Verse 1, Verse 2…); the Studio offers the next number. Sung; Follow my sections: verse.": "El cuerpo de la canción: letra nueva cada vez sobre la misma música, la historia avanza. Se numera (Verse 1, Verse 2…); el Estudio ofrece el número siguiente. Cantado; «Seguir mis secciones»: verse.",
+"The part the song comes back to, the same words and melody each time, with the line people remember and sing along. Sung; Follow my sections: chorus.": "La parte a la que la canción vuelve, cada vez la misma letra y melodía, con la línea que se recuerda y se canta. Cantado; «Seguir mis secciones»: chorus.",
+"The climb from a verse into the chorus: a melody and words of its own that raise the tension, always followed by the chorus. Sung; Follow my sections: pre-chorus.": "La subida de la estrofa al estribillo: una melodía y una letra propias que suben la tensión, siempre seguida del estribillo. Cantado; «Seguir mis secciones»: pre-chorus.",
+"Once, late in the song, everything turns (melody, chords, words) before the song comes home to its chorus. Sung; Follow my sections: bridge (Middle 8 too).": "Una vez, tarde en la canción, todo gira (melodía, acordes, letra) antes de que la canción vuelva a su estribillo. Cantado; «Seguir mis secciones»: bridge (también Middle 8).",
+"The ending: a last line repeated as the music fades, or the chorus once more, resolved. Words under it are sung; Follow my sections: outro, always the plan's last section.": "El final: una última línea repetida mientras la música se apaga, o el estribillo una vez más, resuelto. La letra bajo él se canta; «Seguir mis secciones»: outro, siempre la última sección del plan.",
+"The opening before the first verse, mostly music. Follow my sections: intro, always the plan's first (one is added when the lyrics have none). YuE2 seldom sings its lines: put a spoken intro under [Verse].": "La apertura antes de la primera estrofa, casi toda música. «Seguir mis secciones»: intro, siempre la primera del plan (se añade una si la letra no la tiene). YuE2 rara vez canta sus líneas: pon una intro hablada bajo [Verse].",
+"A passage of another feel between parts: the band alone, or ad-libs and calls over it. Viktor's use: a pause in rap that brakes speech running ahead. Follow my sections: interlude, with words under it or without.": "Un pasaje de otro aire entre partes: la banda sola, o ad-libs y llamadas encima. El uso de Viktor: una pausa en el rap que frena el habla que se adelanta. «Seguir mis secciones»: interlude, con letra debajo o sin ella.",
+"The last chorus, usually the biggest: more voices, more power, now and then a key change. Sung; Follow my sections: chorus.": "El último estribillo, normalmente el más grande: más voces, más fuerza, a veces un cambio de tonalidad. Cantado; «Seguir mis secciones»: chorus.",
+"The instruments alone between sections, for variety or to build into the next one; name what plays: «Instrumental Break - Horns». Follow my sections: interlude, no voice.": "Los instrumentos solos entre secciones, por variedad o para crecer hacia la siguiente; nombra lo que suena: «Instrumental Break - Horns». «Seguir mis secciones»: interlude, sin voz.",
+"One instrument steps forward with a long melody of its own while the rest backs it (Drum Solo, Keyboard Solo, plain Solo too). Instrumental; Follow my sections: interlude.": "Un instrumento pasa al frente con una larga melodía propia mientras el resto lo acompaña (también Drum Solo, Keyboard Solo, Solo a secas). Instrumental; «Seguir mis secciones»: interlude.",
+"The song's last mark: the music stops here (SUNO's [END] is the same tag). Follow my sections: outro; [Outro] [End] in a row are one.": "La última marca de la canción: aquí se detiene la música (el [END] de SUNO es la misma etiqueta). «Seguir mis secciones»: outro; [Outro] [End] seguidos son una.",
+"An opening played without voices. Follow my sections: intro.": "Una apertura tocada sin voces. «Seguir mis secciones»: intro.",
+"A line or two repeated unchanged, often at the end of each verse. Sung; Follow my sections: chorus.": "Una o dos líneas repetidas sin cambios, a menudo al final de cada estrofa. Cantado; «Seguir mis secciones»: chorus.",
+"A short part right after the chorus that carries its energy on: a chant, a riff, a tag line. Sung; Follow my sections: chorus.": "Una parte breve justo después del estribillo que lleva su energía: un cántico, un riff, una línea gancho. Cantado; «Seguir mis secciones»: chorus.",
+"The arrangement stripped to its bones to build tension before the last chorus. Metal and hardcore: a heavy half-time chug, the voice a shout, a chant or nothing. EDM: the quiet part, the drums gone, pads left, one line or none. Ballad and rock: bass and kick or one instrument, sometimes whispered or spoken. Empty: an interlude; with words under it the Studio plans a sung section (a bridge). For speech add «spoken word breakdown» to the style.": "El arreglo reducido a los huesos para crear tensión antes del último estribillo. Metal y hardcore: un chug pesado a medio tempo, la voz un grito, un cántico o nada. EDM: la parte tranquila, se van los tambores, quedan los pads, una línea o ninguna. Balada y rock: bajo y bombo o un instrumento, a veces susurrado o hablado. Vacío: un interlude; con letra debajo el Estudio planea una sección cantada (un bridge). Para la voz hablada añade «spoken word breakdown» al estilo.",
+"The music fades to silence (Fadeout too). Follow my sections: outro.": "La música se apaga hasta el silencio (también Fadeout). «Seguir mis secciones»: outro.",
+"The catchiest line or riff of the song; Genius writes it [Chorus] or [Refrain] now. Sung; Follow my sections: chorus.": "La línea o el riff más pegadizo de la canción; Genius ahora lo escribe [Chorus] o [Refrain]. Cantado; «Seguir mis secciones»: chorus.",
+"Dance and electronic music: the moment beat and bass hit after a build-up, mostly without a voice. Follow my sections: interlude; with words under it, a sung bridge.": "Música de baile y electrónica: el momento en que golpean el ritmo y el bajo tras una subida, casi siempre sin voz. «Seguir mis secciones»: interlude; con letra debajo, un bridge cantado.",
+"A part, or a whole song, played without singing. Follow my sections: interlude.": "Una parte, o una canción entera, tocada sin cantar. «Seguir mis secciones»: interlude.",
+"An ending played without voices. Follow my sections: outro.": "Un final tocado sin voces. «Seguir mis secciones»: outro.",
+"The rising part before a drop or a chorus: snare rolls, risers, the filter opening, the energy climbing. Follow my sections: pre-chorus, a sung section.": "La parte que sube antes de un drop o un estribillo: redobles de caja, risers, el filtro que se abre, la energía que crece. «Seguir mis secciones»: pre-chorus, una sección cantada.",
+"A woman sings the lines that follow, until another voice is named; after the dash how she sings: Deep, Warm; Soft, Breathy. Not a section: Follow my sections passes it by, as it does the ФОСФОРИДА form [Solo Female Voice].": "Una mujer canta las líneas que siguen, hasta que se nombre otra voz; tras el guion cómo canta: Deep, Warm; Soft, Breathy. No es una sección: «Seguir mis secciones» lo salta, como la forma de FOSFORIDA [Solo Female Voice].",
+"A man sings the lines that follow; after the dash how he sings: Bari-tenor, Calm; Low, Raspy. Not a section: Follow my sections passes it by, as it does the ФОСФОРИДА form [Solo Male Vocal: …].": "Un hombre canta las líneas que siguen; tras el guion cómo canta: Bari-tenor, Calm; Low, Raspy. No es una sección: «Seguir mis secciones» lo salta, como la forma de FOSFORIDA [Solo Male Vocal: …]."
+});
+// HERESY 2905: the Musician's song kept in the Writer from its first save
+RuachI18n.add("es", {
+"The Writer keeps this song from now on: “{0}”, a new document, in hand": "El Escritor guarda esta canción desde ahora: «{0}», un documento nuevo, en mano",
+"The song was not kept in the Writer: {0}": "La canción no se guardó en el Escritor: {0}"
+});
+// HERESY 2912: the history of plays and downloads (Ctrl+H, Ctrl+J)
+RuachI18n.add("es", {
+"History": "Historial",
+"Downloads": "Descargas",
+"Yesterday": "Ayer",
+"Nothing found": "No se encontró nada",
+"Loading…": "Cargando…",
+"Older": "Anteriores",
+"Find a title": "Buscar un título",
+"Find a title or a file": "Buscar un título o un archivo",
+"1 play": "1 escucha",
+"{#0} plays": {"one": "{0} escucha", "other": "{0} escuchas"},
+"1 download": "1 descarga",
+"{#0} downloads": {"one": "{0} descarga", "other": "{0} descargas"},
+"to the end": "hasta el final",
+"{0} heard": "{0} escuchado",
+"stopped at {0} of {1}": "detenida en {0} de {1}",
+"not in the Studio any more": "ya no está en el Estudio",
+"a file of no take": "un archivo de ninguna toma",
+"Clear history": "Borrar historial",
+"Clear downloads": "Borrar descargas",
+"The last {0} days, at most {1} plays: kept by the Studio, the same in every browser that opens it": "Los últimos {0} días, como mucho {1} escuchas: las guarda el Estudio, las mismas en cada navegador que lo abre",
+"The last {0} days, at most {1} downloads: kept by the Studio, the same in every browser that opens it": "Los últimos {0} días, como mucho {1} descargas: las guarda el Estudio, las mismas en cada navegador que lo abre",
+"(for now in this browser: the Studio's lab learns the history at its next restart)": "(por ahora en este navegador: el laboratorio del Estudio aprende el historial en su próximo reinicio)",
+"Nothing played yet": "Aún no ha sonado nada",
+"Nothing downloaded yet": "Aún no se ha descargado nada",
+"Not in the Studio any more: “{0}”": "Ya no está en el Estudio: «{0}»",
+"The history of plays is cleared": "El historial de escuchas está borrado",
+"The history of downloads is cleared": "El historial de descargas está borrado",
+"Clear the history of plays?\n\nEvery play it keeps goes ({0}); the takes themselves stay.": "¿Borrar el historial de escuchas?\n\nSe van todas las escuchas que guarda ({0}); las tomas mismas se quedan.",
+"Clear the history of downloads?\n\nEvery download it keeps goes ({0}); the files you saved stay where you saved them.": "¿Borrar el historial de descargas?\n\nSe van todas las descargas que guarda ({0}); los archivos que guardaste se quedan donde los guardaste.",
+"History: what the player played, day by day; a title takes to its card": "Historial: lo que sonó en el reproductor, día a día; un título lleva a su tarjeta",
+"History: what the player played, the last 30 days, day by day": "Historial: lo que sonó en el reproductor los últimos 30 días, día a día",
+"Downloads: what was saved from the Studio, the last 90 days": "Descargas: lo guardado desde el Estudio los últimos 90 días",
+"The history's button in the full player (between the take's reactions and the transport); the one-row player has none, ☰ has History and Downloads either way": "El botón del historial en el reproductor completo (entre las reacciones de la toma y los controles); el reproductor de una fila no lo tiene, ☰ tiene Historial y Descargas siempre",
+"A history button in the player": "Un botón de historial en el reproductor",
+"History and downloads": "Historial y descargas",
+"Clear the history of plays (asks first); the takes stay": "Borrar el historial de escuchas (pregunta antes); las tomas se quedan",
+"Clear the history of downloads (asks first); the saved files stay": "Borrar el historial de descargas (pregunta antes); los archivos guardados se quedan"
+});
+// HERESY 2913: the take's MIDI window (the score's, MuScriptor on the mix or per stem)
+RuachI18n.add("es", {
+"about {0} here": "unos {0} aquí",
+"A training runs: the transcriber goes behind it ({0} threads), slower than the estimate.": "Hay un entrenamiento en marcha: el transcriptor va detrás ({0} hilos), más lento que la estimación.",
+"Fetch {0} ({1}) and transcribe": "Descargar {0} ({1}) y transcribir",
+"fetched first, {0}": "se descarga primero, {0}",
+"Fetching MuScriptor {0}…": "Descargando MuScriptor {0}…",
+"for a card of 8 GB": "para una tarjeta de 8 GB",
+"its stems are here ({0}): each transcribed with its own instruments, each note's velocity from its stem": "sus stems están aquí ({0}): cada uno se transcribe con sus propios instrumentos, la fuerza de cada nota según su stem",
+"its stems first (a card, a minute or two), then each transcribed with its own instruments, each note's velocity from its stem": "primero sus stems (una tarjeta, uno o dos minutos), luego cada uno se transcribe con sus propios instrumentos, la fuerza de cada nota según su stem",
+"Made {0}: it downloads at once.": "Hecho {0}: se descarga al instante.",
+"MIDI: {0} parts, {1} notes, on the take's beats ({2})": "MIDI: {0} partes, {1} notas, sobre los pulsos de la propia toma ({2})",
+"Laying the score on the take's heard beats…": "Colocando la partitura sobre los pulsos que se oyen…",
+"MIDI of the score on the take's beats ({0})": "MIDI de la partitura sobre los pulsos de la propia toma ({0})",
+"MIDI of the score at its own tempo: the take's beats could not be read ({0})": "MIDI de la partitura a su propio tempo: no se pudieron leer los pulsos de la toma ({0})",
+"MuScriptor on the mix": "MuScriptor sobre la mezcla",
+"MuScriptor per stem": "MuScriptor por stem",
+"MuScriptor's weights are CC BY-NC 4.0: non-commercial use only.": "Los pesos de MuScriptor son CC BY-NC 4.0: solo uso no comercial.",
+"no beats heard: 120 bpm": "no se oyeron pulsos: 120 bpm",
+"No card for the stems here: MuScriptor on the mix runs on the processor.": "Aquí no hay tarjeta para los stems: MuScriptor sobre la mezcla va en el procesador.",
+"No score": "Sin partitura",
+"not offered: {0}": "no se ofrece: {0}",
+"one pass: 34 instrument groups and the drums, every note at one velocity": "una pasada: 34 grupos de instrumentos y la batería, todas las notas con la misma fuerza",
+"Open a take of the library first": "Abre primero una toma de la biblioteca",
+"Quantize": "Cuantizar",
+"Reading the score…": "Leyendo la partitura…",
+"Tempo from the heard beats (the score's Q drifts from what is sung); bars and beats fall on the song's own.": "Tempo de los pulsos oídos (el Q de la partitura se desvía de lo cantado): compases y pulsos caen sobre los de la propia canción.",
+"the fetch ended without the model": "la descarga terminó sin el modelo",
+"the plan's melody and its instrument line, two tracks; at once": "la melodía del plan y su línea instrumental, dos pistas; al instante",
+"the score of “{0}”, whose music codes it keeps: the plan's melody and its instrument line, two tracks; at once": "la partitura de «{0}», cuyos códigos musicales conserva: la melodía del plan y su línea instrumental, dos pistas; al instante",
+"The score's MIDI": "El MIDI de la partitura",
+"the Studio's lab learns it at its next restart": "el laboratorio del Estudio lo aprende en su próximo reinicio",
+"Transcribe again": "Transcribir de nuevo",
+"Waits its turn": "Espera su turno",
+"the take's beats": "los pulsos de la toma",
+"the stems (a card)": "los stems (una tarjeta)",
+"MuScriptor on {0}": "MuScriptor sobre {0}",
+"the velocities of {0}": "las fuerzas de {0}",
+"the file": "el archivo",
+"Export MIDI…": "Exportar MIDI…",
+"one file on the take's own beats: the score's, MuScriptor on the mix or per stem": "un archivo sobre los pulsos de la propia toma: el de la partitura, MuScriptor sobre la mezcla o por stem",
+"MIDI: the score's (its melody and its instrument line), or MuScriptor's transcription of the mix or of each stem, on the take's own beats": "MIDI: el de la partitura (su melodía y su línea instrumental), o la transcripción de MuScriptor de la mezcla o de cada stem, sobre los pulsos de la propia toma",
+"One MIDI file of the take on its own beats: the score's, MuScriptor on the mix or per stem": "Un archivo MIDI de la toma sobre sus propios pulsos: el de la partitura, MuScriptor sobre la mezcla o por stem"
+});
+// HERESY 2913: the stems need a card with room
+RuachI18n.add("es", {
+"The stems need a card with room, and none has it now: MuScriptor on the mix runs on the processor, or ask for the stems later.": "Los stems necesitan una tarjeta con espacio y ahora ninguna lo tiene: MuScriptor sobre la mezcla va en el procesador, o pide los stems más tarde."
+});
+// HERESY 2913, 2915: a Direct take's score MIDI after SheetSage2; ☰'s bug report
+RuachI18n.add("es", {
+"Report a bug on GitHub": "Informar de un error en GitHub",
+"A new issue on GitHub, in a new tab. Attach the debug journal (Engine → Debugging: turn it on, do what goes wrong, then Download) so the bug can be followed": "Un issue nuevo en GitHub, en una pestaña nueva. Adjunta el diario de depuración (Motor → Debugging: actívalo, repite lo que falla y luego Descargar) para poder seguir el error",
+"the score written from its sound before (SheetSage2): its melody and its instrument line, two tracks; at once": "la partitura escrita antes desde su sonido (SheetSage2): su melodía y su línea instrumental, dos pistas; al instante",
+"no score of its own (a Direct take): SheetSage2 writes one from its sound first, on the Studio's card in the queue, a minute or two and more for a long song; then its MIDI": "sin partitura propia (una toma Direct): SheetSage2 escribe una desde su sonido primero, en la tarjeta del Estudio en la cola, uno o dos minutos y más para una canción larga; luego su MIDI",
+"Write its score (SheetSage2), then download": "Escribir su partitura (SheetSage2) y descargar",
+"SheetSage2 writes its score from its sound…": "SheetSage2 escribe su partitura desde su sonido…"
+});
+// HERESY 2916: Follow my sections off by default, its guard
+RuachI18n.add("es", {
+"{0} sections, {1} breaks: a plan of about {2} to {3}": "{0} secciones, {1} pausas: un plan de unos {2} a {3}",
+"past {0}, where long plans have fallen apart": "más de {0}, donde los planes largos se han desmoronado",
+"Follow {0} sections?": "¿Seguir {0} secciones?",
+"{0} sections followed, {1} of them breaks: measured on the Studio's lyrics, such a plan runs about {2} to {3}.": "{0} secciones seguidas, {1} de ellas pausas: medido sobre las letras del Estudio, un plan así dura unos {2} a {3}.",
+"It may not fit the length asked ({0}): the song is cut there.": "Puede no caber en la duración pedida ({0}): la canción se corta ahí.",
+"Long plans have fallen apart past about {0}: lines repeated, the phonetics broken (26 sections with 7 breaks planned past the 8:00 cap). Without following, the planner writes its own sections and the plan stays shorter; it may drop a Bridge or an Outro.": "Los planes largos se han desmoronado pasados unos {0}: versos repetidos, la fonética rota (26 secciones con 7 pausas planearon más allá del tope de 8:00). Sin seguirlas, el planificador escribe sus propias secciones y el plan queda más corto; puede soltar un Bridge o un Outro.",
+"Sing without following": "Cantar sin seguirlas",
+"Follow them anyway": "Seguirlas de todos modos",
+"Off unless you turn it on. On, the planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): none dropped, none made up, and the song does not end before its last section has begun. It helps when the planner drops a Bridge or an Outro you wrote. It costs length: each section followed is a stretch of the plan, so many sections and breaks make a long plan, and long plans have fallen apart past about 6:00 (26 sections with 7 breaks planned 6:30 to 8:24, past the 8:00 cap). Its line beside it says what these lyrics would plan. Only when the model writes the score (Full or Melody, no score of yours)": "Apagado salvo que lo enciendas. Encendido, la partitura planeada escribe las secciones propias de la letra en su orden (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, como las nombra el planificador): ninguna se pierde, ninguna se inventa, y la canción no acaba antes de que empiece su última sección. Ayuda cuando el planificador suelta un Bridge o un Outro que escribiste. Cuesta duración: cada sección seguida es un tramo del plan, así que muchas secciones y pausas dan un plan largo, y los planes largos se han desmoronado pasados unos 6:00 (26 secciones con 7 pausas planearon 6:30 a 8:24, más allá del tope de 8:00). Su línea al lado dice qué plan harían estas letras. Solo cuando el modelo escribe la partitura (Full o Melody, sin partitura tuya)"
+});
+// HERESY 2917: the Trainer's charts: the saves as ticks under the grid, no dots
+RuachI18n.add("es", {
+"the ticks under the grid: the saves (green worth hearing, amber in loras/); the pointer on one says its held-out values": "las marcas bajo la rejilla: los guardados (verdes vale la pena oírlos, ámbar en loras/); el puntero sobre una dice sus valores en las pistas reservadas",
+"Saved at step {0}": "Guardado en el paso {0}",
+"held out:": "reservadas:",
+"worth hearing": "vale la pena oírlo"
+});
+// HERESY 2918: the Writer's text over everything (Alt+E)
+RuachI18n.add("es", {
+"The text over everything": "El texto sobre todo",
+"The text over everything, four tenths larger, with its meter, rulers and stress marks: Esc, Alt+E or this button puts it back": "El texto sobre todo, cuatro décimas más grande, con su métrica, sus reglas y sus acentos: Esc, Alt+E o este botón lo devuelven",
+"Back into the notebook": "De vuelta al cuaderno",
+"Back into the notebook (Esc or Alt+E)": "De vuelta al cuaderno (Esc o Alt+E)"
+});
+// HERESY 2919: the workspaces' emoji (the grid, the name dialogs, the tree's chooser)
+RuachI18n.add("es", {
+"The workspace's emoji": "El emoji del espacio",
+"No emoji": "Sin emoji",
+"No emoji: a faint leaf": "Sin emoji: una hoja tenue",
+"No emoji: the workspace's faint icon": "Sin emoji: el icono tenue del espacio",
+"Recent": "Recientes",
+"Ours": "Nuestros",
+"Feeling": "Sentimiento",
+"Message": "Mensaje",
+"Making": "Creación",
+"Nature": "Naturaleza",
+"The Studio's own marks are not offered: 💎 a published set and 🙈 a blind one stay in the name; ❄ 👁‍🗨 🔒 are states": "Las marcas propias del Estudio no se ofrecen: 💎 un conjunto publicado y 🙈 uno a ciegas se quedan en el nombre; ❄ 👁‍🗨 🔒 son estados",
+"The emoji before its name: one, any but the Studio's own marks; none shows the faint icon": "El emoji delante del nombre: uno, cualquiera salvo las marcas propias del Estudio; sin él, el icono tenue",
+"{0} holds the emoji's place: one of the Studio's own marks (a 💎 set, a 🙈 blind set), kept in the name": "{0} ocupa el lugar del emoji: es una marca propia del Estudio (un conjunto 💎, un conjunto a ciegas 🙈) y se queda en el nombre",
+"The tree of workspaces: its order and what it shows": "El árbol de espacios: su orden y lo que muestra",
+"The tree of workspaces": "El árbol de espacios",
+"Grouped by emoji": "Agrupados por emoji",
+"The default: each emoji's workspaces together, the ones with none first, A to Z inside a group; the 💎 sets stay at the foot": "Por defecto: los espacios de cada emoji juntos, los que no tienen primero, de la A a la Z dentro de cada grupo; los conjuntos 💎 quedan al final",
+"A to Z, emoji aside": "De la A a la Z, sin emoji",
+"By name alone, whatever emoji each wears; the 💎 sets stay at the foot": "Solo por nombre, lleve el emoji que lleve; los conjuntos 💎 quedan al final",
+"Most takes first": "Primero los de más tomas",
+"The fuller first, its sections the same way; the 💎 sets stay at the foot": "Los más llenos primero, sus secciones igual; los conjuntos 💎 quedan al final",
+"Show the archived in the tree": "Mostrar los archivados en el árbol",
+"Each in its place, dimmed, instead of under Archived": "Cada uno en su sitio, atenuado, en vez de bajo Archivadas",
+"Hide the frozen": "Ocultar los congelados",
+"Out of the tree until shown again; the one open stays": "Fuera del árbol hasta que se muestren de nuevo; el abierto se queda",
+"Hide the empty ones": "Ocultar los vacíos",
+"A workspace with no take in it or its sections; the one open and the one in hand stay": "Un espacio sin tomas ni en él ni en sus secciones; el abierto y el que está en uso se quedan",
+"Fold every section": "Plegar todas las secciones",
+"Unfold every section": "Desplegar todas las secciones",
+"Emoji…": "Emoji…",
+"The emoji before its name": "El emoji delante del nombre",
+"Emoji set: “{0}”": "Emoji puesto: «{0}»",
+"Emoji taken off: “{0}”": "Emoji quitado: «{0}»"
+});
+// HERESY 2916b: Follow my sections for short songs, up to about 4 minutes
+RuachI18n.add("es", {
+"Off unless you turn it on. For short songs, up to about 4 minutes: there it is worth it. On, the planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): none dropped, none made up, and the song does not end before its last section has begun. It helps when the planner drops a Bridge or an Outro you wrote. It costs length: each section followed is a stretch of the plan, so many sections and breaks make a long plan; past about 4:00 Generate asks first (long plans have fallen apart: 26 sections with 7 breaks planned 6:30 to 8:24, past the 8:00 cap). Its line beside it says what these lyrics would plan. Only when the model writes the score (Full or Melody, no score of yours)": "Apagado salvo que lo enciendas. Para canciones cortas, hasta unos 4 minutos: ahí vale la pena. Encendido, la partitura planeada escribe las secciones propias de la letra en su orden (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, como las nombra el planificador): ninguna se pierde, ninguna se inventa, y la canción no acaba antes de que empiece su última sección. Ayuda cuando el planificador suelta un Bridge o un Outro que escribiste. Cuesta duración: cada sección seguida es un tramo del plan, así que muchas secciones y pausas dan un plan largo; pasados unos 4:00, Generar canción pregunta primero (los planes largos se han desmoronado: 26 secciones con 7 pausas planearon 6:30 a 8:24, más allá del tope de 8:00). Su línea al lado dice qué plan harían estas letras. Solo cuando el modelo escribe la partitura (Full o Melody, sin partitura tuya)"
+});
+// HERESY 2919c: the workspaces' emoji upgrade, said once
+RuachI18n.add("es", {
+"{0} workspaces now show their emoji in its own column": "{0} espacios muestran ahora su emoji en su propia columna"
 });

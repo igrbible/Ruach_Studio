@@ -188,7 +188,7 @@
     if (st.tab === "lyrics") { box.innerHTML = diffLines(p.a.lyrics, p.b.lyrics); return; }
     if (st.tab === "style") { box.innerHTML = diffWords(p.a.style, p.b.style); return; }
     var n = ++st.n;
-    box.innerHTML = '<p class="row-hint">' + esc(tr("Reading the scores…")) + "</p>";
+    box.innerHTML = '<p class="row-hint">' + (window.HeresyWait ? window.HeresyWait.wave() : "") + esc(tr("Reading the scores…")) + "</p>";
     Promise.all([scoreOf(p.a), scoreOf(p.b)]).then(function (s) {
       if (n !== st.n || !$("shDiff")) return;
       if (s[0] == null || s[1] == null) { $("shDiff").innerHTML = '<p class="row-hint">' + esc(fmt("No score in the takes of version {0}", (s[0] == null ? p.a : p.b).n)) + "</p>"; return; }

@@ -29,6 +29,7 @@
     if (!line || S.busy) return Promise.resolve();
     line.textContent = tr("Asking Pianoteq…");
     line.className = "upd-line ptq-line";
+    if (window.HeresyWait) window.HeresyWait.lead(line);   // HERESY 2892
     return lab("/pianoteq/status" + (S.product !== "pianoteq" ? "?product=" + S.product : "")).then(paint).catch(function (e) {
       line.textContent = tr("The lab does not answer:") + " " + e.message;
       line.className = "upd-line ptq-line is-bad";

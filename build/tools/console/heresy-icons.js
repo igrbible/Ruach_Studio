@@ -107,6 +107,8 @@
     // HERESY 1168: a Creator frame back into the room, and the other frame (Lucide's minimize and arrow-left-right, ISC)
     minimize: '<path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/>',
     swap: '<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
+    // HERESY 2873 (Viktor 19.11.2026, about 23:20: every player button of the Studio in the mega-player's one style): ▶ and ⏸ here are the only
+    // drawing of them; the player bar's own (index.html #playBtn, data-ui-paths), the cards, the sheets, the video player draw these
     play: '<polygon points="7 4 19 12 7 20 7 4"/>',
     pause: '<rect x="7" y="5" width="3.2" height="14" rx="1"/><rect x="13.8" y="5" width="3.2" height="14" rx="1"/>',
     prev: '<polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/>',
@@ -316,7 +318,9 @@
   function ui(name, cls) {
     return UI[name] ? '<svg class="ui-ico ui-' + name + (cls ? " " + cls : "") + '" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + UI[name] + "</svg>" : "";
   }
-  window.HeresyIcons = { svg: svg, dress: dress, ui: ui, names: Object.keys(ICONS) };
+  function paths(name) { return UI[name] || ""; }   // HERESY 2873: a drawing's inside, for an <svg> that keeps its own classes
+  window.HeresyIcons = { svg: svg, dress: dress, ui: ui, paths: paths, names: Object.keys(ICONS) };
+  Array.prototype.forEach.call(document.querySelectorAll("svg[data-ui-paths]"), function (el) { el.innerHTML = paths(el.dataset.uiPaths); });   // HERESY 2873
   // anything marked data-ui="name" gets the drawing (the player's buttons in index.html)
   Array.prototype.forEach.call(document.querySelectorAll("[data-ui]"), function (el) { el.innerHTML = ui(el.dataset.ui); });
   dress();

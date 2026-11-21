@@ -98,6 +98,22 @@ con.commit()
 con.close()
 p = training._plugin_progress(out / "loss_log.db")
 check("its progress from its step log: the step, the loss, the seconds a step (a pause in it says nothing)", p and p[0] == 40 and abs(p[1] - 2.0) < 1e-9 and p[3] == 8.0, p)
+# HERESY 2878: the pace is the clock's mean over the last stretch, an eval in it: quick NAR-only steps (4 s) among slow ones (16 s) and an eval
+# of 40 s read 13.98 s a step by the clock, where the median said 16 (the 4.6B's «left» said 89 h for 79)
+out2 = kit / "training" / "r2" / "output" / "r2"
+out2.mkdir(parents=True)
+con = sqlite3.connect(out2 / "loss_log.db")
+con.execute("CREATE TABLE steps (step INTEGER PRIMARY KEY, wall_time REAL)")
+con.execute("CREATE TABLE metrics (step INTEGER, key TEXT, value_real REAL, value_text TEXT, PRIMARY KEY (step, key))")
+w = 1000.0
+for s in range(1, 101):
+    w += (4 if s % 5 == 0 else 16) + (40 if s == 50 else 0)
+    con.execute("INSERT INTO steps VALUES(?, ?)", (s, w))
+    con.execute("INSERT INTO metrics VALUES(?, 'loss/loss', ?, NULL)", (s, 2.0))
+con.commit()
+con.close()
+p = training._plugin_progress(out2 / "loss_log.db")
+check("its pace by the clock over its last stretch, an eval in it, not the middle step", p and p[0] == 100 and abs(p[3] - 13.98) < 0.011, p)
 # Pause: its stop file, not SIGINT
 sysd = []
 training._systemctl = lambda *a: (sysd.append(a), type("R", (), {"stdout": "inv1", "stderr": "", "returncode": 0})())[1]

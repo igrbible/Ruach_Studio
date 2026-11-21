@@ -141,7 +141,24 @@ for (const [name, s] of Object.entries(scripts)) {
     check(`  pip's and cmake's «error:» lines do not stop it`, breaks(on, "ERROR: pip's dependency resolver does not currently take into account all the packages that are installed.\r\nOSError: [Errno 2] No such file\r\n").length === 0);
   }
 }
+// HERESY 2929 (@arkinou on Pinokio, 21.11.2026: «impossible de lui dire Y en console»): a step whose script asks takes the keyboard
+for (const n of ["install", "update", "extras"]) check(`${n}.js opens its terminal to the keyboard (input: true): its script asks about the models`, scripts[n].run.filter((r) => r.method === "shell.run").every((r) => r.params.input === true));
 check("install.js asks for Pinokio's AI bundle (its CUDA 12.8 where the machine has none)", scripts.install.requires && scripts.install.requires.bundle === "ai");
+// HERESY 2879: the model cards after install.sh, which Pinokio's page names under «Powered by»: each one README.md of a repository, from
+// the studio's folder into models/misc/cards/ (a room the models' move leaves alone), never before install.sh's own step
+const cards = scripts.install.run.filter((r) => r.method === "hf.download");
+check("install.js brings the model cards (Pinokio's «Powered by») after install.sh, each a README.md into models/misc/cards/",
+  cards.length >= 3 && scripts.install.run[0].method === "shell.run" && cards.every((r) => r.params.path === ".." && r.params._.length === 2 &&
+    /^[\w.-]+\/[\w.-]+$/.test(r.params._[0]) && r.params._[1] === "README.md" && r.params["local-dir"] === "models/misc/cards/" + r.params._[0].replace("/", "--")),
+  JSON.stringify(cards.map((r) => r.params._[0])));
+let meta = null;
+try { meta = JSON.parse(readFileSync(join(ROOT, "pinokio.json"), "utf8")); } catch (e) {}
+const menu = require(join(ROOT, "pinokio.js"));
+check("pinokio.json: the page's title, description and icon as pinokio.js says them",
+  !!meta && meta.title === menu.title && meta.description === menu.description && meta.icon === menu.icon && existsSync(join(ROOT, meta.icon)));
+check("  its posts are Pinokio posts and its links are https",
+  !!meta && Array.isArray(meta.posts) && meta.posts.length > 0 && meta.posts.every((u) => /^https:\/\/pinokio\.co\/posts\/[0-9a-z]+$/.test(u)) &&
+    (meta.links || []).every((l) => l.title && /^https:\/\//.test(l.value)));
 check("start.js stays up as a daemon and gives the menu the studio's address", scripts.start.daemon === true && scripts.start.run.at(-1).method === "local.set" && /input\.event\[1\]/.test(scripts.start.run.at(-1).params.url));
 
 console.log(`\n${B}the lines start.js waits for${X}`);

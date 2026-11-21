@@ -15,8 +15,15 @@ WORDS = len(sys.argv) > 5 and sys.argv[5] == "words"
 t0 = time.time()
 import os                                          # HERESY 1141: the CPU when the lab found no card for it (int8 there)
 DEVICE = os.environ.get("WHISPER_DEVICE", "cuda")
+# HERESY 2914 (the lead 20.11.2026: the timing at 1400 % CPU beside a training; the rule since 23.10: CPU work beside a training at nice 19,
+# 8 threads at most): the lab says so through WHISPER_CPU_THREADS and WHISPER_NICE (lab.py whisper_env)
+if os.environ.get("WHISPER_NICE"):
+    try:
+        os.nice(int(os.environ["WHISPER_NICE"]))
+    except (OSError, ValueError):
+        pass
 model = WhisperModel(MODEL, device=DEVICE, compute_type="float16" if DEVICE == "cuda" else "int8",
-                     cpu_threads=min(16, os.cpu_count() or 4))
+                     cpu_threads=int(os.environ.get("WHISPER_CPU_THREADS") or min(16, os.cpu_count() or 4)))
 t1 = time.time()
 # condition_on_previous_text=False: with it Whisper loops on its own hallucination over
 # music ("Субтитры подогнал «Симон»" ×15) — four of six measurements on 30.09 were that.

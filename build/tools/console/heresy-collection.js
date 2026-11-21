@@ -162,6 +162,24 @@
     return window.HeresyDialog.prompt(text, value, opts).then(function (v) { return (v || "").trim(); });
   }
   function toast(t, bad) { state.hooks && state.hooks.toast(t, bad ? "bad" : ""); }
+  // HERESY 2919 (Viktor 20.11.2026, the mockup's variant A: «мой выбор — A»): a workspace's name asked with its emoji, a button inside the field before
+  // the name (heresy-dialog.js, heresy-wsemoji.js) -> {name, emoji} or null. An emoji typed at the name's start with none chosen is taken as the
+  // emoji (one at the start: the rule of the mockup); one of the Studio's own marks stays in the name
+  function wsUsed() {
+    var seen = {}, out = [];
+    Object.keys(state.wsEmoji || {}).map(function (k) { return state.wsEmoji[k]; }).concat(state.ws.map(function (w) { return window.HeresyWsEmoji ? window.HeresyWsEmoji.lead(wsLeaf(w)).emoji : ""; }))
+      .forEach(function (e) { var b = e && window.HeresyWsEmoji ? window.HeresyWsEmoji.bare(e) : ""; if (b && !window.HeresyWsEmoji.reserved(e)) { seen[b] = (seen[b] || 0) + 1; if (seen[b] === 1) out.push(e); } });
+    return out.sort(function (a, b) { return seen[window.HeresyWsEmoji.bare(b)] - seen[window.HeresyWsEmoji.bare(a)]; }).slice(0, 24);
+  }
+  function askWs(text, name, emoji, opts) {
+    var em = { value: emoji || "", section: !!(opts && opts.section), used: wsUsed() };
+    return askName(text, name, Object.assign({}, opts || {}, { emoji: em })).then(function (v) {
+      if (!v) return null;
+      var e = em.value || "", HEm = window.HeresyWsEmoji;
+      if (!e && HEm) { var ld = HEm.lead(v); if (ld.emoji && ld.rest && !HEm.reserved(ld.emoji)) { e = ld.emoji; v = ld.rest.trim(); } }
+      return { name: v, emoji: e };
+    });
+  }
   // HERESY 2181 (the cache stage's «For Viktor»): /lab/catalog was asked twice at every load, here and by the instruments' sheet, at the same moment:
   // one ask shared while it is on its way, never kept after it answers (a load after a move must read the lab anew); its failure is each caller's own
   // (the integration's suite: an ask that never answers, a stalled link, held every load after it for good: the Librarian stopped reading the lab
@@ -261,7 +279,7 @@
     return /\d{6}/.test(s) || /(^|-)(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{6}(-|$)/.test(s) ? s : "";
   }
   function foundAt(r) {
-    var at = r.workspaces.map(function (w) { return [w, (archivedWs(w) ? "🗄 " : frozenWs(w) ? "❄ " : "") + w, true]; });
+    var at = r.workspaces.map(function (w) { return [w, (archivedWs(w) ? "🗄 " : frozenWs(w) ? "❄ " : "") + wsShow(w), true]; });   // HERESY 2919: with their emoji
     if (!r.workspaces.length) at.push(["__none", "Not in a workspace", false]);
     if (r.hidden && !r.frozen && !r.archived) at.push(["__hidden", "Hidden", false]);
     return '<div class="coll-found"><span class="coll-found-cap">Where it lives:</span>' + at.map(function (a) {
@@ -335,6 +353,14 @@
       state.blind = d.blind || [];                 // HERESY 1874
       state.playlist = d.playlist || [];   // HERESY 1731; 2019 (D1): its crossfade gone, as from the player in 1990
       state.wsNotes = d.ws_notes || {};            // HERESY 1802
+      state.wsEmoji = d.ws_emoji || {};            // HERESY 2919: each workspace's own emoji
+      // HERESY 2919c: the one-time upgrade (the lab's migration) said once on this device (a ruach.* key: never mirrored to the others), when it moved any
+      var up = d.ws_emoji_upgraded;
+      if (up && up.at && up.emoji > 0 && recall("ruach.wsEmojiSaid") !== String(up.at)) {
+        store("ruach.wsEmojiSaid", String(up.at));
+        toast(tr("{0} workspaces now show their emoji in its own column").replace("{0}", up.emoji));
+      }
+      followMoved(d.ws_moved);                     // HERESY 2919: the names the upgrade moved, followed here before anything says one is gone
       state.clips = d.clips || {};                 // HERESY 2327: each take's finished clips, a card beside its song
       // HERESY 2130 (the audit of 06.11.2026: «Библиотекарь открывает пространство, которого нет»): the place kept from before (yue2.workspace, which other
       // windows and devices share) gone, renamed or deleted elsewhere: All Workspaces opens and says why, instead of «Nothing here» under the old name
@@ -380,16 +406,83 @@
   // «И суфиксные `💎 ... LoRA` гони в самый низ как вечное правило. Мы на будущее проектируем»: a 💎 one named «… LoRA» lower still
   var DIAMOND = /^\s*\uD83D\uDC8E\s*/, LORA_END = /\bLoRAs?\s*$/i;
   function treeRank(top) { return !DIAMOND.test(top) ? 0 : LORA_END.test(top) ? 2 : 1; }
-  function treeOrder(list) {                     // a parent, then its sections, whatever names stand between them
+  // HERESY 2919 (Viktor 20.11.2026: «Не сортировка, а сортировочная группировка по эмоджи как и сейчас, и за ними сортировка по первой букве алфавитно по
+  // возрастанию… Наши 💎 пространства так и остаются внизу»): each level of the tree grouped by the emoji it shows (none first, then each emoji as the names'
+  // first signs ordered them before), A to Z inside a group (case and accents aside, numbers as numbers: 1.0.9 before 1.0.10, Latin before Cyrillic as
+  // before); the 💎 sets at the foot and the 💎 … LoRA ones lowest (1169). «A to Z» leaves the groups aside; «Most takes» puts the fuller first
+  var HE = window.HeresyWsEmoji || { lead: function (s) { return { emoji: "", rest: String(s) }; }, reserved: function () { return false; }, bare: function (e) { return e; }, faint: function () { return ""; } };
+  var COLL = window.Intl && window.Intl.Collator ? new window.Intl.Collator("en", { sensitivity: "base", numeric: true }) : null;
+  function nameCmp(a, b) { var c = COLL ? COLL.compare(a, b) : 0; return c || (a < b ? -1 : a > b ? 1 : 0); }
+  // the emoji a workspace (or a section) shows and its name beside it: a leading 💎 or 🙈 (the Studio's own marks, kept in the name) first, then its own
+  // field, then one its name still begins with (a name not upgraded yet); sys: a mark of the Studio's, own: the field, fromName: read off the name
+  function wsEm(w) {
+    var lvl = wsLeaf(w), ld = HE.lead(lvl), own = (state.wsEmoji || {})[w] || "";
+    if (ld.emoji && HE.reserved(ld.emoji)) return { em: ld.emoji, name: ld.rest, sys: true, own: "" };
+    if (own) return { em: own, name: lvl, own: own };
+    if (ld.emoji && ld.rest) return { em: ld.emoji, name: ld.rest, fromName: true, own: "" };
+    return { em: "", name: lvl, own: "" };
+  }
+  function lvlShow(w) { var e = wsEm(w); return (e.own ? e.own + " " : "") + wsLeaf(w); }   // a level as one line shows it: its own emoji before its name
+  function wsShow(w) { var p = wsParts(w); return p.map(function (x, i) { return lvlShow(p.slice(0, i + 1).join(SEP)); }).join(SEP); }
+  function pathShow(w) { var p = wsParts(w); return p.slice(0, -1).map(function (x, i) { return lvlShow(p.slice(0, i + 1).join(SEP)); }).join(" › "); }
+  var SORT_SVG = '<svg class="ui-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/><path d="M11 12h4"/><path d="M11 16h7"/><path d="M11 20h10"/></svg>';   // Lucide's arrow-up-narrow-wide (ISC)
+  var TREE_KEY = "yue2.wsTree";                   // {sort: group | az | count, arch, ice, empty}: the tree's order and what it shows, kept per viewer
+  function treeOpts() {
+    var o = {};
+    try { o = JSON.parse(recall(TREE_KEY) || "{}") || {}; } catch (e) { o = {}; }
+    return { sort: { az: "az", count: "count" }[o.sort] || "group", arch: !!o.arch, ice: !!o.ice, empty: !!o.empty };
+  }
+  function treeOptsPut(o) { var d = treeOpts(); Object.keys(o).forEach(function (k) { d[k] = o[k]; }); var def = d.sort === "group" && !d.arch && !d.ice && !d.empty; try { if (def) localStorage.removeItem(TREE_KEY); else localStorage.setItem(TREE_KEY, JSON.stringify(d)); } catch (e) { /* private */ } }
+  function treeOrder(list, mode, countOf) {        // a parent, then its sections, whatever names stand between them
+    mode = mode || "group";
     return list.slice().sort(function (a, b) {
       var A = wsParts(a), B = wsParts(b), rA = treeRank(A[0]), rB = treeRank(B[0]);
       if (rA !== rB) return rA - rB;
-      if (rA) { A[0] = A[0].replace(DIAMOND, ""); B[0] = B[0].replace(DIAMOND, ""); }
-      for (var i = 0; i < Math.min(A.length, B.length); i++) if (A[i] !== B[i]) return A[i] < B[i] ? -1 : 1;
+      for (var i = 0; i < Math.min(A.length, B.length); i++) {
+        if (A[i] === B[i]) continue;
+        var ka = A.slice(0, i + 1).join(SEP), kb = B.slice(0, i + 1).join(SEP), ea = wsEm(ka), eb = wsEm(kb);
+        if (mode === "group") {
+          var ga = HE.bare(ea.em), gb = HE.bare(eb.em);
+          if (ga !== gb) return !ga ? -1 : !gb ? 1 : ga < gb ? -1 : 1;
+        }
+        if (mode === "count" && countOf) { var dn = countOf(kb) - countOf(ka); if (dn) return dn; }
+        return nameCmp(ea.name.replace(DIAMOND, ""), eb.name.replace(DIAMOND, "")) || (A[i] < B[i] ? -1 : 1);
+      }
       return A.length - B.length;
     });
   }
   window.ruachTreeOrder = treeOrder;   // for the checks
+  window.ruachWsEm = function (w) { return wsEm(w); };
+  // HERESY 2919: the upgrade moved names (lab/ws_emoji.py; ws_moved, old → new): every name this browser keeps (the workspace in hand, each realm's, the
+  // places open, the folded sections) follows, so a move made by the lab's op from anywhere is never said as «not here any more»
+  var movedSeen = "";
+  function followMoved(mv) {
+    if (!mv || typeof mv !== "object") return;
+    var sig = JSON.stringify(mv);
+    if (sig === movedSeen) return;
+    movedSeen = sig;
+    var to = function (w) {
+      if (typeof w !== "string" || !w || state.ws.indexOf(w) >= 0) return null;
+      var p = w.split(SEP);
+      for (var i = p.length; i > 0; i--) { var h = p.slice(0, i).join(SEP); if (mv[h]) return [mv[h]].concat(p.slice(i)).join(SEP); }
+      return null;
+    };
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (!k || k.indexOf("yue2.") !== 0) continue;
+        var v = localStorage.getItem(k), n = to(v);
+        if (n) { localStorage.setItem(k, n); continue; }
+        if (v && v.charAt(0) === "[") {
+          var arr = null;
+          try { arr = JSON.parse(v); } catch (e) { arr = null; }
+          if (Array.isArray(arr) && arr.some(function (x) { return to(x); })) localStorage.setItem(k, JSON.stringify(arr.map(function (x) { return to(x) || x; })));
+        }
+      }
+    } catch (e) { /* storage off */ }
+    var pl = to(state.place);
+    if (pl) state.place = pl;
+  }
   // HERESY 1166 (Viktor: «Деактивация воркспейса. Замораживаются все треки в этом представлении, никаких действий по ним,
   // в `All Workspaces` и в поиске не отображаются. Сам деактивированный воркспейс немного засЕривается»): a take frozen with
   // its workspace (the lab says which: in no workspace that is not frozen) shows only inside it, greyed, heard and read
@@ -482,7 +575,7 @@
   function shown() {
     var m = matcher(state.q), on = filterOn(), logic = state.logic || "and", idq = idQuery(state.q);
     var rows = state.rows.filter(function (r) {
-      if (idq) return m([r.title, r.name, r.note || ""].concat(r.workspaces));   // HERESY 2058: an ID: every take, wherever it lives
+      if (idq) return m([r.title, r.name, r.note || ""].concat(r.workspaces.map(wsShow)));   // HERESY 2058: an ID: every take, wherever it lives; 2919b: with their emoji
       if (!iceHere(r)) return false;               // HERESY 1166
       if ((!state.place || state.place.charAt(0) === "_") && !inRealm(r)) return false;   // HERESY 2294: the realm's own; a workspace shows its links too
       if (state.place === "__fav" && !r.favorite) return false;
@@ -494,7 +587,9 @@
       if (state.place && state.place.charAt(0) !== "_" && !inTree(r, state.place)) return false;   // its sections too (1161)
       if (!passes(r, on, logic)) return false;   // HERESY 1169 · 1241: the ticked filters, joined AND, OR or NOR
       // HERESY 1167: a take's workspaces and sections are searched too (a section's name finds its takes)
-      return m([r.title, r.name, r.note || ""].concat(r.workspaces));   // HERESY 2028: all its fields at once, so «!word» leaves a take out whichever has it
+      // HERESY 2919b (the mockup's special cases, confirmed: «Поиск находит и по имени, и по эмоджи (набрал 🧪 — видишь все 🧪)»): a workspace's own emoji is
+      // searched with its name, so 🧪 still finds the takes of the 🧪 workspaces once the upgrade has moved the emoji out of their names
+      return m([r.title, r.name, r.note || ""].concat(r.workspaces.map(wsShow)));   // HERESY 2028: all its fields at once, so «!word» leaves a take out whichever has it
     });
     var sort = recall(SORT_KEY) || "new";
     rows.sort(function (a, b) {
@@ -572,7 +667,17 @@
     };
     // HERESY 2049: Archived, and under it each archived workspace whole (its ⋯: back, or to the trash)
     // (HERESY 2163: 2058's archN, archHid and frac went too: Archived and its workspaces count by tallyN since 2089)
-    var arch = treeOrder(state.ws.filter(function (w) { return archivedWs(w) && realmWs(w); }));   // HERESY 2294: the realm's
+    // HERESY 2919: the tree's order and what it shows (the chooser by «Workspaces»); each row's emoji in a column of its own, the names on one line
+    var TO = treeOpts(), total = function (k) { var c = tallyN[k]; return c ? c.shown + c.hand + c.dis + c.ice + c.arch : 0; };
+    var emCell = function (w) {
+      var e = wsEm(w), sub = wsParts(w).length > 1;
+      return '<i class="coll-em' + (e.em ? "" : " is-faint") + (sub ? " is-sec" : "") + '" aria-hidden="true">' + (e.em ? esc(e.em) : HE.faint(sub)) + "</i>";
+    };
+    var withEm = function (html, w) {
+      var i = html.indexOf('<span class="coll-pname"'), j = html.indexOf(">", i);
+      return i < 0 ? html : html.slice(0, i) + '<span class="coll-pname has-em"' + html.slice(i + 24, j + 1) + emCell(w) + html.slice(j + 1);
+    };
+    var arch = TO.arch ? [] : treeOrder(state.ws.filter(function (w) { return archivedWs(w) && realmWs(w); }), TO.sort, total);   // HERESY 2294: the realm's; 2919: in the tree when asked
     // HERESY 2445 (Viktor 12.11.2026: «В Библиотеке пространство "В архиве" нужно уметь сворачивать»): Archived folds its workspaces away as a
     // workspace folds its sections (1685), with the same handle, kept per viewer in the same list (yue2.collSecFold, the key __archived); folded,
     // the row says so when the place in hand is inside it
@@ -582,7 +687,7 @@
       .replace('class="coll-place', 'class="coll-place' + (archShut && archivedWs(state.place) ? " has-on-inside" : ""))
       .replace('<span class="coll-n">', archHandle + nSpan("__archived")) + arch.map(function (w) {
       var dp = wsParts(w).length;
-      return item(w, dp > 1 ? wsLeaf(w) : w, nText(w), true).replace('class="coll-place', 'class="coll-place is-sub d' + (dp + 1) + " is-archived" + (archShut ? " is-sec-away" : ""))
+      return withEm(item(w, wsEm(w).name, nText(w), true), w).replace('class="coll-place', 'class="coll-place is-sub d' + (dp + 1) + " is-archived" + (archShut ? " is-sec-away" : ""))
         .replace('<span class="coll-n">', '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Bring it back, or send it to the trash" role="button">' + ico("ellipsis") + '</span><span class="coll-n">').replace('<span class="coll-n">', nSpan(w));
     }).join("") : "";
     // HERESY 2078b (Viktor 05.11.2026, to the proposal «277 · ещё 1 в замороженном»: «Да, делай как предложил»): Pinned counts by its list's own test (iceAt), as ⓘ
@@ -596,13 +701,20 @@
       item("", "All Workspaces", counts[""], false, "horn").replace('<span class="coll-n">', sysMore("", hidSys[""])) + item("__fav", "Favourites", counts.__fav, false, "star") +
       item("__pinned", "Pinned", pinN, false, "pin") +
       item("__none", "Not in a workspace", counts.__none, false, "folder-minus").replace('<span class="coll-n">', sysMore("__none", hidSys.__none)) +
-      '<div class="coll-cap">Workspaces</div>' + treeOrder(state.ws.filter(function (w) { return !archivedWs(w) && realmWs(w); })).map(function (w) {   // HERESY 2049: the archived under Archived
+      '<div class="coll-cap coll-cap-ws">Workspaces<button type="button" class="coll-ws-sort' + (TO.sort !== "group" || TO.arch || TO.ice || TO.empty ? " is-set" : "") + '" data-ws-sort="1" aria-label="The tree of workspaces: its order and what it shows" data-tip="The tree of workspaces: its order and what it shows">' + SORT_SVG + "</button></div>" +
+      treeOrder(state.ws.filter(function (w) {   // HERESY 2049: the archived under Archived (2919: or in the tree, when asked)
+        if (!realmWs(w) || (archivedWs(w) && !TO.arch)) return false;
+        var here = w === state.place || String(state.place || "").indexOf(w + SEP) === 0 || w === current();
+        if (TO.ice && frozenWs(w) && !here) return false;                 // HERESY 2919: the frozen out of sight when asked
+        if (TO.empty && !total(w) && !here) return false;                 // and the empty ones (none of its sections holds a take)
+        return true;
+      }), TO.sort, total).map(function (w) {
         var ice = (frozenWs(w) ? '<span class="coll-ice" title="Frozen: its takes are heard, never changed">\u2744</span>' : "") +   // HERESY 1166
           ((state.blind || []).indexOf(w) >= 0 ? '<span class="coll-blind" data-tip="Blind: what made its takes is hidden">' + ico("blind") + "</span>" : "");   // HERESY 1874
         var lk = (state.locks || {})[w] || {}, lock = ice + (lk.workspace || lk.tracks ?   // HERESY 1070
           '<span class="coll-lock" title="' + (lk.workspace ? "the workspace is locked against deletion" : "") + (lk.workspace && lk.tracks ? "; " : "") + (lk.tracks ? "its takes are locked against deletion" : "") + '">\ud83d\udd12</span>' : "");
         var depth = wsParts(w).length;               // a section: its own name, indented under its parent (1161)
-        return item(w, depth > 1 ? wsLeaf(w) : w, nText(w), depth < 2 || !STUDIO_SECTIONS[wsLeaf(w)]).replace('class="coll-place', 'class="coll-place' + (depth > 1 ? " is-sub d" + depth : "") + (frozenWs(w) ? " is-frozen" : "") +
+        return withEm(item(w, wsEm(w).name, nText(w), depth < 2 || !STUDIO_SECTIONS[wsLeaf(w)]), w).replace('class="coll-place', 'class="coll-place' + (depth > 1 ? " is-sub d" + depth : "") + (frozenWs(w) ? " is-frozen" : "") + (archivedWs(w) ? " is-archived" : "") +
             (secAway(w) ? " is-sec-away" : "") + (secShut.indexOf(w) >= 0 && String(state.place || "").indexOf(w + SEP) === 0 ? " has-on-inside" : ""))
           .replace('<button type="button" ', '<button type="button" ' + wsTip(w))   // HERESY 1802: its note under the pointer
           .replace('<span class="coll-n">', lock + secHandle(w) + '<span class="coll-ws-more" data-ws-menu="' + esc(w) + '" title="Rename, delete, lock, a section…" role="button">' + ico("ellipsis") + '</span><span class="coll-n">').replace('<span class="coll-n">', nSpan(w));
@@ -667,8 +779,10 @@
   // HERESY 1906 (Viktor 29.10.2026: «Как мне понять по меткам на карточках, какая реально — рефайн?»): a workspace's badge as the heading draws it: the name
   // kept as typed, the Studio's own sections («Refined» → «Огранённые») in the page's language
   function wsBadge(w) {
-    return '<span class="coll-badge w">' + wsParts(w).map(function (p, i) {
-      return "<span" + (i && STUDIO_SECTIONS[p] ? "" : ' translate="no"') + ">" + esc(p) + "</span>";
+    var parts = wsParts(w);
+    return '<span class="coll-badge w">' + parts.map(function (p, i) {
+      var own = (state.wsEmoji || {})[parts.slice(0, i + 1).join(SEP)];   // HERESY 2919
+      return "<span" + (i && STUDIO_SECTIONS[p] ? "" : ' translate="no"') + ">" + (own ? esc(own) + " " : "") + esc(p) + "</span>";
     }).join(esc(SEP)) + "</span>";
   }
   function sungMark(name, done) {                     // HERESY 1854: what a timing found, on the cards and in the player at once
@@ -701,7 +815,10 @@
     }
     return !!(r.parent || r.regen_of || (r.derived && r.derived.length) || KIDS[r.name]);
   }
-  var TREE_ICO = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 2.5v11M5 8c3.5 0 6-1.6 6-5M5 11c3 0 6 .8 6 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  // HERESY 2904 (Viktor 20.11.2026, a card of a test workspace: «a bare К between 👎 and the workspaces»): the family tree's button drew a stem with two
+  // branches off its right side, which at 14 px reads as the letter К; now a tree as a diagram reads it: a parent above, two children under it
+  var TREE_ICO = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+    '<rect x="9" y="2.5" width="6" height="5.5" rx="1.2"/><rect x="2.5" y="16" width="6" height="5.5" rx="1.2"/><rect x="15.5" y="16" width="6" height="5.5" rx="1.2"/><path d="M12 8v4M5.5 16v-2.5a1.5 1.5 0 0 1 1.5-1.5h10a1.5 1.5 0 0 1 1.5 1.5V16"/></svg>';
   function dbadge(k) {                               // HERESY 1802: what the Refiner made from it, by its name, the why under the pointer
     var name = DERIVED[k] || k;
     return '<span class="coll-badge d" data-tip="Made from it in the Refiner: ' + esc(name) + '">' + esc(name) + "</span>";
@@ -847,7 +964,40 @@
     });
     reactPaint(name);                                  // HERESY 1873
   }
+  // HERESY 2902 (Viktor 20.11.2026, the take card's reactions): linked, a user default on (Engine → Defaults, yue2.reactLink "off" to unlink): 🔥 or 💎
+  // switched on likes the take too; 👎 switched on takes off the like, 🔥 and 💎; the faces (1873) untouched. Wherever the buttons live (the cards, the
+  // Library's rows, the compare window, the player): they all come here. One write to the lab (op marks), never a rate and two marks racing
+  function linked() { try { return localStorage.getItem("yue2.reactLink") !== "off"; } catch (e) { return true; } }
+  function linkedWrite(name, s) {
+    var r = rowOf(name), asked = rateSeq, before = { rating: rating(name), fire: markOf(name, "fire"), gem: markOf(name, "gem") };
+    var put = function (v) {
+      if ("rating" in v) { remember(name, v.rating); if (r) r.rating = v.rating; }
+      ["fire", "gem"].forEach(function (m) { if (m in v) { hold(name, m, v[m]); if (r) r[m] = v[m]; } });
+      paint(); paintMarks(name);
+      if (state.hooks.libraryChanged) state.hooks.libraryChanged();
+    };
+    put(s);
+    return marksWrite([name], s).then(function (d) {
+      state.rows = d.takes ? fresh(d.takes, asked) : state.rows; paint(); paintMarks(name);
+      if (state.hooks.libraryChanged) state.hooks.libraryChanged();
+      return s.rating;
+    }, function (e) { put(before); throw e; });
+  }
+  // a lab older than the page (its lab not reloaded yet, a page served before its lab) answers op marks «unknown op»: then the same, as the writes
+  // it knows, one after the other (the rate first, the marks after it), never a refusal for what it can do
+  function marksWrite(names, s) {
+    return api("/collection", Object.assign({ op: "marks", names: names }, s)).catch(function (e) {
+      if (!/unknown op/i.test(String(e && e.message))) throw e;
+      var p = "rating" in s ? api("/collection", { op: "rate", names: names, value: s.rating }) : Promise.resolve(null);
+      ["fire", "gem"].forEach(function (m) { if (m in s) p = p.then(function () { return api("/collection", { op: "mark", mark: m, names: names, on: !!s[m] }); }); });
+      return p;
+    });
+  }
   function setMark(name, m, on) {
+    if (on && linked() && rating(name) !== 1) {          // HERESY 2902: 🔥 or 💎 on likes it too, in the same write
+      var s = { rating: 1 }; s[m] = true;
+      return linkedWrite(name, s).catch(function (e) { toast(e.message, true); });
+    }
     var r = rowOf(name), asked = rateSeq;
     hold(name, m, on);
     if (r) r[m] = on;
@@ -865,7 +1015,16 @@
   }, true);
 
   // HERESY 1166: a frozen card's check, rename and actions answer nothing; its play button and its title still do
+  // HERESY 2872 (Viktor 19.11.2026, about 23:05): a title past its two lines is cut with «…»; its whole text in its tip then (and only then)
+  function clampTips() {
+    Array.prototype.forEach.call($("collGrid").querySelectorAll(".coll-title-text"), function (t) {
+      var cut = t.scrollHeight > t.clientHeight + 1;
+      if (cut) { t.dataset.tip = t.textContent; t.dataset.tipCut = "1"; }
+      else if (t.dataset.tipCut) { delete t.dataset.tip; delete t.dataset.tipCut; }
+    });
+  }
   function iceCards() {
+    if (!$("collGrid").classList.contains("list")) requestAnimationFrame(clampTips);   // HERESY 2872
     Array.prototype.forEach.call($("collGrid").querySelectorAll(".coll-card.is-frozen"), function (c) {
       c.setAttribute("draggable", "false");
       Array.prototype.forEach.call(c.querySelectorAll(".coll-check input, .coll-ren, .coll-act"), function (b) { b.disabled = true; });
@@ -940,21 +1099,72 @@
     var i = LAZY.rows.map(function (r) { return r.name; }).indexOf(name), per = perRow();
     if (i >= LAZY.shown) { LAZY.shown = (Math.ceil((i + 1) / per) + 1) * per; paint(); }
   }
+  // HERESY 2872 (Viktor 19.11.2026, about 23:20: the ring round ▶ «реально уродская»): a card's ▶ and ⏸ are the player's own (index.html #playBtn),
+  // drawn as it draws them, no ring and no ground
+  function cardGlyph(on) {                           // HERESY 2873: the one drawing (heresy-icons.js), the player's classes
+    var k = on ? "pause" : "play", H = window.HeresyIcons;
+    return H && H.paths ? '<svg class="play-icon play-icon-' + k + '" viewBox="0 0 24 24" aria-hidden="true">' + H.paths(k) + "</svg>" : (on ? "\u275a\u275a" : "\u25b6");
+  }
+  // HERESY 2872 (Viktor 19.11.2026: «Слепое» под кнопкой Play, глаз, закрытый рукой, заметно больше, прозрачность 30–40 %): our own drawing, an eye
+  // with a hand held over it, at the card's left under ▶
+  var BLIND_SAY = "Blind: what made its takes is hidden";
+  var BLIND_SVG = '<svg class="coll-blind-ico" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M3 16c3-5.2 7.6-8 13-8s10 2.8 13 8c-3 5.2-7.6 8-13 8S6 21.2 3 16z"/><circle cx="12.5" cy="16" r="3.4"/><circle cx="12.5" cy="16" r="1" fill="currentColor"/>' +
+    '<path class="coll-blind-hand" d="M15.5 30v-6.2l-2.6-3.6a1.7 1.7 0 0 1 2.7-2l1.7 2.1V9.6a1.6 1.6 0 0 1 3.2 0v7.2V7.4a1.6 1.6 0 0 1 3.2 0v9.4V8.6a1.6 1.6 0 0 1 3.2 0v8.4-5.2a1.6 1.6 0 0 1 3.2 0V21c0 5-3.4 9-8 9z"/></svg>';
+  // HERESY 2872: a take's workspaces as one button in the bottom bar: the glyph (WS_GLYPH, to swap), a count when there are more than one,
+  // the names in its tip, a click opens them in the Studio's own list: a click on one goes there, its ✕ takes the take out of it after the usual question
+  // Viktor's choice (19.11.2026, about 23:00): a database, discs stacked one above another (Lucide's database, ISC); no other icon of the Studio is a
+  // cylinder (the nearest: disc, hard-drive, archive, layers)
+  var WS_GLYPH = '<svg class="coll-ws-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+    '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></svg>';
+  function wsBtn(r) {
+    var ws = r.workspaces || [];
+    if (!ws.length) return "";
+    var tip = tl(ws.length > 1 ? "In {0} workspaces:" : "In the workspace:").replace("{0}", ws.length) + "\n" + ws.map(wsShow).join("\n");   // HERESY 2919
+    return '<button type="button" class="coll-act coll-wsbtn" data-cws="1" aria-label="' + esc(tip.replace(/\n/g, "; ")) + '" data-tip="' + esc(tip) + '" translate="no">' + WS_GLYPH +
+      (ws.length > 1 ? '<b class="coll-ws-n">' + ws.length + "</b>" : "") + "</button>";
+  }
+  function wsList(name) {
+    var r = rowOf(name), t = state.hooks.findTake ? state.hooks.findTake(name) : null, title = r ? r.title : name;
+    if (!r || !window.HeresyDialog || !window.HeresyDialog.choose) return Promise.resolve();
+    var here = state.place, out = tl("Take it out of this workspace");
+    var items = (r.workspaces || []).map(function (w) {
+      return { value: { go: w }, label: w, current: w === here, note: w === here ? tl("open now") : "", act: frozenWs(w) ? null : { value: { out: w }, label: "\u2715", tip: out } };
+    });
+    return window.HeresyDialog.choose(tl("Its workspaces") + "\n\n" + tl("“{0}” is in these. A click on one opens it; ✕ takes the take out of it (it stays in the library and in the others).").replace("{0}", title),
+      items, { cancel: tl("Close"), closeTop: true }).then(function (v) {
+      if (!v) return;
+      // HERESY 2910 (Viktor 20.11.2026, in «All workspaces»: «Нажал на пространство. Показывает, что уже здесь, но не переместило в само пространство…
+      // Переместилось только с обновлением страницы»): openPlace() only set the place and the bar; nothing painted the grid, so the list stayed
+      // All's while the place had changed (the second try said «open now»). Now the Library goes there as a found take does: the place, the grid,
+      // the rows up to the take brought in (the lazy grid's batches), and the take in view and lit
+      if (v.go) { setTimeout(function () { openFound(name, v.go); }, 150); return; }   // once the list's window has gone (120 ms): its focus given back scrolled the view to the top
+      if (!v.out) return;
+      return ask(tl("Take “{0}” out of “{1}”?").replace("{0}", title).replace("{1}", v.out) + "\n\n" + tl("It stays in the library and in any other workspace; only this workspace lets it go."), { ok: tl("Take it out"), danger: true }).then(function (yes) {
+        if (yes) return act({ op: "ws-remove", workspace: v.out, names: [name] }, tl("Taken out of “{0}”").replace("{0}", v.out));
+      });
+    });
+  }
   function cardHtml(r) {
-    var clock = state.hooks.clock, ago = state.hooks.ago;
+    var clock = state.hooks.clock, ago = state.hooks.ago, blindRow = !!r.blind;
     {
       var sel = !!state.sel[r.name], now = state.hooks.playing ? state.hooks.playing() : {};
       var mine = now.name === r.name;
       var art = window.HeresyArt ? window.HeresyArt.url(r.name) : "";   // HERESY 1154: beside the title, not in the play button
-      return '<article class="coll-card' + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden-take" : "") + (!r.hidden && state.reveal && r.rating < 0 && !showDis() ? " is-dis-hidden" : "") /* HERESY 2058 */ + (r.frozen ? " is-frozen" : "") + (r.fresh ? " is-fresh" : "") + (window.HeresyRegen && window.HeresyRegen.has(r.name) ? " is-regenerating" : "") + (mine ? " is-current" : "") + (mine && now.playing ? " is-sounding" : "") + (art ? " has-art" : "") + '" data-name="' + esc(r.name) + '"' + sandAt(r.name) + ' draggable="true">' + reactMark(r.name) +   // HERESY 1877
-        '<label class="coll-check"><input type="checkbox" data-sel="' + esc(r.name) + '"' + (sel ? " checked" : "") + ' aria-label="Select" /></label>' +
-        '<button type="button" class="coll-play' + (mine && now.playing ? " is-playing" : "") + '" data-play="' + esc(r.name) + '" aria-label="' + (mine && now.playing ? "Pause" : "Play") + '">' + ico(mine && now.playing ? "pause" : "play") + "</button>" +
+      return '<article class="coll-card' + (blindRow ? " is-blind" : "") + (sel ? " is-sel" : "") + (r.hidden ? " is-hidden-take" : "") + (!r.hidden && state.reveal && r.rating < 0 && !showDis() ? " is-dis-hidden" : "") /* HERESY 2058 */ + (r.frozen ? " is-frozen" : "") + (r.fresh ? " is-fresh" : "") + (window.HeresyRegen && window.HeresyRegen.has(r.name) ? " is-regenerating" : "") + (mine ? " is-current" : "") + (mine && now.playing ? " is-sounding" : "") + (art ? " has-art" : "") + '" data-name="' + esc(r.name) + '"' + sandAt(r.name) + ' draggable="true">' + reactMark(r.name) +   // HERESY 1877
+        '<label class="coll-check"><input type="checkbox" name="collSel" data-sel="' + esc(r.name) + '"' + (sel ? " checked" : "") + ' aria-label="Select" /></label>' +
+        '<button type="button" class="coll-play' + (mine && now.playing ? " is-playing" : "") + '" data-play="' + esc(r.name) + '" aria-label="' + (mine && now.playing ? "Pause" : "Play") + '">' + cardGlyph(mine && now.playing) + "</button>" +
+        (blindRow ? '<span class="coll-blindmark" role="img" aria-label="' + esc(tl(BLIND_SAY)) + '" data-tip="' + BLIND_SAY + '">' + BLIND_SVG + "</span>" : "") +   // HERESY 2872: in the background, top right
         '<div class="coll-body"><div class="coll-title"><span class="coll-title-text" data-open="' + esc(r.name) + '">' + esc(r.title) + "</span>" +
         '<button type="button" class="coll-ren" data-ren="' + esc(r.name) + '" title="Rename" aria-label="Rename">✎</button></div>' +
         // HERESY 1165: each piece its own text, so the words among the numbers translate (heresy-i18n.js matches whole texts)
-        '<div class="coll-meta">' + (state.hooks.when ? state.hooks.when(r.created, r.name) : "<span>" + esc(r.created ? ago(r.created) : "") + "</span>") + (r.seconds ? " · <span>" + clock(r.seconds) + "</span>" : "") /* HERESY 1720 */ + (r.cot ? " · <span>" + esc(cotWord(r.cot)) + "</span>" : "") + "</div>" +
-        '<div class="coll-badges">' + badge(KINDS[r.kind] || r.kind, "k-" + r.kind) + realmBadge(r) /* HERESY 2294 */ + (r.no_train ? badge("never for training", "k-notrain") : "") /* HERESY 2333: the Reader's takes, never for training */ + r.derived.map(dbadge).join("") +
-        r.workspaces.map(function (w) { return wsBadge(w); }).join("") +
+        // HERESY 2872 (Viktor 19.11.2026, the night order on the cards): the time, the length, the way it was made and how it was made in one row, 2 pt
+        // larger; a blind take's time is its mark under ▶, so its row starts at the length
+        '<div class="coll-meta">' + [blindRow ? "" : state.hooks.when ? state.hooks.when(r.created, r.name) : "<span>" + esc(r.created ? ago(r.created) : "") + "</span>",
+          r.seconds ? "<span>" + clock(r.seconds) + "</span>" : "" /* HERESY 1720 */, r.cot ? "<span>" + esc(cotWord(r.cot)) + "</span>" : ""].filter(Boolean).join('<span class="coll-dot"> · </span>') +
+          badge(KINDS[r.kind] || r.kind, "k-" + r.kind + " coll-kind") + "</div>" +
+        '<div class="coll-badges">' + realmBadge(r) /* HERESY 2294 */ + (r.no_train ? badge("never for training", "k-notrain") : "") /* HERESY 2333: the Reader's takes, never for training */ + r.derived.map(dbadge).join("") +
+        // HERESY 2872: the workspaces are one button in the bottom bar now (one per line, they swelled the card)
         // HERESY 1162: what it was made again from, on its card
         (r.regen_of ? '<span class="coll-badge rg" data-tip="Regenerated with a new seed from ' + esc(r.regen_of) + '">regen</span>' : "") + unsungBadge(r.name) + tailBadge(r.name) + "</div>" +
         (idQuery(state.q) ? foundAt(r) : "") +            // HERESY 2058: where a take found by its ID lives, each place a button
@@ -970,6 +1180,7 @@
         '<button type="button" class="coll-act coll-dis" data-crate="-1" aria-pressed="' + (r.rating < 0) + '" aria-label="Dislike" data-tip="' + DIS_TIP + '">' + ico("dislike") + '</button>' +
         // HERESY 1058: a note is a mark at the row's end (its words on hover, the sheet to edit), so cards keep one height; 1825: on every card, a click writes it
         (family(r) ? '<button type="button" class="coll-act coll-tree" data-ctree="1" aria-label="Family tree" data-tip="Its family tree: where it came from and what came of it">' + TREE_ICO + "</button>" : "") +   // HERESY 1988
+        wsBtn(r) +                                     // HERESY 2872: its workspaces, 10 px before the note
         noteBtn(r, 'data-cnote="' + esc(r.name) + '"') +
         // HERESY 1900 («уведи вправо троеточие… иконку заметки поставь перед троеточием с небольшим отступом»): ⋯ last, at the strip's right end
         '<button type="button" class="coll-act coll-more-btn" data-cmenu="1" title="More (or right-click the card)" aria-label="More">' + ico("ellipsis") + "</button>" + "</div></article>" +   // HERESY 2550: drawn
@@ -1212,7 +1423,10 @@
     // HERESY 1165: the Studio's places translate; a workspace's name is kept as typed (its studio-made sections translate)
     // HERESY 2004 (Viktor: «Поддиректорию… второй строкой меньшим кеглем прямо под названием её корневого пространства»): the workspace on the
     // heading's line, its sections under it in a smaller type; the whole path the heading's tip
-    var wp = placeName ? [] : wsParts(state.place), wsp = function (p, i) { return "<span" + (i && STUDIO_SECTIONS[p] ? "" : ' translate="no"') + ">" + esc(p) + "</span>"; };
+    var wp = placeName ? [] : wsParts(state.place), wsp = function (p, i) {
+      var k = wp.slice(0, i + 1).join(SEP), own = (state.wsEmoji || {})[k];   // HERESY 2919: each level's own emoji before its name
+      return "<span" + (i && STUDIO_SECTIONS[p] ? "" : ' translate="no"') + ">" + (own ? '<span class="coll-where-em">' + esc(own) + "</span> " : "") + esc(p) + "</span>";
+    };
     // HERESY 2023 (Viktor 02.11.2026: «Текст пошёл на вторую строку. Ты убрал ячейки здесь»): the path on the heading's line, its parts as before
     // 2004, while it fits; under it only when that line would be cut
     $("collWhere").innerHTML = " \u203a " + (placeName ? "<span>" + esc(placeName) + "</span>" : wsp(wp[0], 0) +
@@ -1618,7 +1832,7 @@
     var btn = $("wsCurrent");
     if (!btn) return;
     var cur = current(), name = btn.querySelector(".ws-btn-name");
-    name.textContent = cur || "Choose a workspace";
+    name.textContent = cur ? wsShow(cur) : "Choose a workspace";   // HERESY 2919: with each level's own emoji
     name.setAttribute("translate", cur ? "no" : "yes");                    // a name is the user's; the call is the page's
     btn.classList.toggle("is-set", !!cur);
     btn.classList.toggle("is-none", !cur && state.loaded);
@@ -1631,9 +1845,9 @@
   // question, when a run asks first.
   function chooseCurrent(why) {
     var cur = current();
-    var items = state.ws.filter(function (w) { return !closedWs(w) && wsLeaf(w) !== SOURCED; }).map(function (w) {   // 1434: no 💎 set
+    var items = treeOrder(state.ws.filter(function (w) { return !closedWs(w) && wsLeaf(w) !== SOURCED; }), treeOpts().sort === "az" ? "az" : "group").map(function (w) {   // 1434: no 💎 set; 2919: the tree's order
       var n = state.rows.filter(function (r) { return inTree(r, w); }).length;
-      return { value: w, label: wsParts(w).length > 1 ? wsLeaf(w) : w, depth: wsParts(w).length - 1, path: wsParts(w).slice(0, -1).join(" \u203a "), current: w === cur, note: String(n) };   // 1853: path
+      return { value: w, label: lvlShow(w), depth: wsParts(w).length - 1, path: pathShow(w), current: w === cur, note: String(n) };   // 1853: path; 2919: their emoji
     });
     var more = [{ label: "+ New workspace\u2026", value: "__new" }];
     if (cur && wsParts(cur).length < DEPTH) more.push({ label: "+ New section of \u201c" + wsLeaf(cur) + "\u201d\u2026", value: "__section" });
@@ -1641,12 +1855,12 @@
     return window.HeresyDialog.choose(text, items, { more: more, cancel: why ? "Send nothing" : "Cancel", filter: "Filter the workspaces" }).then(function (v) {
       if (v === "__new" || v === "__section") {
         var parent = v === "__section" ? cur : "";
-        return askName(parent ? "A new section of \u201c" + parent + "\u201d\n\nIt is in hand at once: new takes land in it."
-                              : "A new workspace\n\nIt is in hand at once: new takes land in it.", "", { ok: "Make it", placeholder: "its name" }).then(function (name) {
-          name = String(name || "").trim();   // HERESY 2462: a / is refused in the dialog, never taken out quietly
+        return askWs(parent ? "A new section of \u201c" + parent + "\u201d\n\nIt is in hand at once: new takes land in it."
+                            : "A new workspace\n\nIt is in hand at once: new takes land in it.", "", "", { ok: "Make it", placeholder: "its name", section: !!parent }).then(function (v) {   // HERESY 2919
+          var name = String((v && v.name) || "").trim();   // HERESY 2462: a / is refused in the dialog, never taken out quietly
           if (!name) return why ? chooseCurrent(why) : "";
           var w = parent ? parent + SEP + name : name;
-          return act({ op: "ws-create", workspace: w }, (parent ? "Section" : "Workspace") + " \u201c" + name + "\u201d made and in hand: new takes land in it").then(function (ok) {
+          return act(Object.assign({ op: "ws-create", workspace: w }, v.emoji ? { emoji: v.emoji } : {}), (parent ? "Section" : "Workspace") + " \u201c" + name + "\u201d made and in hand: new takes land in it").then(function (ok) {
             if (!ok) return why ? chooseCurrent(why) : "";
             setCurrent(w, true);
             return w;
@@ -1814,6 +2028,8 @@
       if (d.albums) state.albums = d.albums;
       if (d.playlist) state.playlist = d.playlist;     // HERESY 1731: a take gone from the library is gone from the playlist
       if (d.ws_notes) state.wsNotes = d.ws_notes;      // HERESY 1802
+      if (d.ws_emoji) state.wsEmoji = d.ws_emoji;      // HERESY 2919
+      if (d.ws_moved) followMoved(d.ws_moved);
       if (done) { if (undo) undoable(done, undo); else toast(done); }
       paint();
       paintCurrent();
@@ -1928,7 +2144,9 @@
     if (how && (how.format === "flac" || how.format === "wav")) { $("collExportFmt").value = how.format; $("collExportDer").checked = !!how.derived; }
     var fmt = $("collExportFmt").value, derived = $("collExportDer").checked;
     toast("Packing " + n.length + " take" + (n.length > 1 ? "s" : "") + " as " + fmt.toUpperCase() + (derived ? " with what is made from them" : "") + "…");
-    api("/export", { names: n, format: fmt, derived: derived }).then(function (j) {
+    // HERESY 2877: the room it is asked from names the ZIP (ruach-studio-musician-…); the lab knows the eight
+    var ROOM = { create: "musician", read: "reader", write: "writer", post: "refiner", artist: "artist", video: "videographer", train: "trainer", collection: "librarian" };
+    api("/export", { names: n, format: fmt, derived: derived, room: ROOM[document.body.dataset.tab] || "" }).then(function (j) {
       var id = j.id, poll = function () {
         return api("/export?id=" + id).then(function (s) {
           if (s.status === "running") { $("collSelCount").textContent = "packing " + s.done + " / " + s.total + "…"; return new Promise(function (r) { setTimeout(r, 1500); }).then(poll); }
@@ -2006,13 +2224,15 @@
       if (sf) { e.stopPropagation(); secFold(sf.dataset.secFold); return; }
       var sysm = e.target.closest("[data-sys-menu]");         // HERESY 2058: All Workspaces, Not in a workspace, Hidden: their hidden shown again
       if (sysm) { e.stopPropagation(); var rs = sysm.getBoundingClientRect(); sysMenu(sysm.dataset.sysMenu, rs.left, rs.bottom + 2); return; }
+      var srt = e.target.closest("[data-ws-sort]");          // HERESY 2919: the tree's order and what it shows
+      if (srt) { e.stopPropagation(); var rt = srt.getBoundingClientRect(); treeMenu(rt.left, rt.bottom + 2); return; }
       var more = e.target.closest("[data-ws-menu]");          // HERESY 1050
       if (more) { e.stopPropagation(); var rc = more.getBoundingClientRect(); wsMenu(more.dataset.wsMenu, rc.left, rc.bottom + 2); return; }
       if (e.target.closest("[data-ws-hub]")) return void hubOpen();   // HERESY 1166: the published 💎 sets
       var nw = e.target.closest("[data-ws-new]");
       if (nw) {
-        askName("A new workspace", "", { ok: "Make it", placeholder: "its name" }).then(function (name) {
-          if (name) act({ op: "ws-create", workspace: name }, "Workspace “" + name + "” made");
+        askWs("A new workspace", "", "", { ok: "Make it", placeholder: "its name" }).then(function (v) {   // HERESY 2919: with its emoji
+          if (v && v.name) act(Object.assign({ op: "ws-create", workspace: v.name }, v.emoji ? { emoji: v.emoji } : {}), "Workspace “" + v.name + "” made");
         });
         return;
       }
@@ -2193,6 +2413,7 @@
         }
         return;
       }
+      if (e.target.closest("[data-cws]")) { wsList(cname); return; }   // HERESY 2872
       var cgo = e.target.closest("[data-cgo]");
       if (cgo) { hooks.openTake(cname, cgo.dataset.cgo); return; }
       if (e.target.closest("[data-ctree]")) { if (window.HeresyLineage) window.HeresyLineage.open(cname); return; }   // HERESY 1988
@@ -2398,16 +2619,16 @@
     if ($("collProtect")) $("collProtect").addEventListener("click", function () { protectMany(names()); });   // HERESY 1368
     // HERESY 2048: add and move through the Studio's own chooser (the tree, its filter, a new one)
     var wsChoose = function (title, but) {
-      var items = state.ws.filter(function (w) { return w !== but && !closedWs(w) && wsLeaf(w) !== SOURCED; }).map(function (w) {
-        return { value: w, label: wsParts(w).length > 1 ? wsLeaf(w) : w, depth: wsParts(w).length - 1, path: wsParts(w).slice(0, -1).join(" \u203a "),
+      var items = treeOrder(state.ws.filter(function (w) { return w !== but && !closedWs(w) && wsLeaf(w) !== SOURCED; }), treeOpts().sort === "az" ? "az" : "group").map(function (w) {   // HERESY 2919
+        return { value: w, label: lvlShow(w), depth: wsParts(w).length - 1, path: pathShow(w),
                  note: String(state.rows.filter(function (r) { return inTree(r, w); }).length) };
       });
       return window.HeresyDialog.choose(title, items, { more: [{ label: "+ New workspace\u2026", value: "__new" }], cancel: "Cancel", filter: "Filter the workspaces" })
         .then(function (v) {
           if (v !== "__new") return v || "";
-          return askName("A new workspace for the selected", "", { ok: "Make it", placeholder: "its name" }).then(function (n) {
-            n = String(n || "").trim();   // HERESY 2462: a / is refused in the dialog, never taken out quietly
-            return n ? act({ op: "ws-create", workspace: n }, null, true).then(function (ok) { return ok ? n : ""; }) : "";
+          return askWs("A new workspace for the selected", "", "", { ok: "Make it", placeholder: "its name" }).then(function (v) {   // HERESY 2919
+            var n = String((v && v.name) || "").trim();   // HERESY 2462: a / is refused in the dialog, never taken out quietly
+            return n ? act(Object.assign({ op: "ws-create", workspace: n }, v.emoji ? { emoji: v.emoji } : {}), null, true).then(function (ok) { return ok ? n : ""; }) : "";
           });
         });
     };
@@ -2548,13 +2769,32 @@
   function rateMany(list, value) {
     var rows = list.map(rowOf).filter(Boolean), all = rows.length && rows.every(function (r) { return r.rating === value; });
     var v = all ? 0 : value, before = rows.map(function (r) { return r.rating; });
+    // HERESY 2902: disliked with 🔥 or 💎 among them (linked): one write takes the marks off too; its undo gives each take its own three back
+    var link = v < 0 && linked() && list.some(function (n) { return markOf(n, "fire") || markOf(n, "gem"); });
+    var prev = link ? list.map(function (n) { return [rating(n), markOf(n, "fire"), markOf(n, "gem")]; }) : null;
+    var unmark = function (back) {
+      list.forEach(function (n, i) { var x = rowOf(n), f = back ? prev[i][1] : false, g = back ? prev[i][2] : false; hold(n, "fire", f); hold(n, "gem", g); if (x) { x.fire = f; x.gem = g; } paintMarks(n); });
+    };
+    if (link) unmark(false);
     rows.forEach(function (r) { r.rating = v; });
     if (v < 0 && !showDis() && !state.reveal) list.forEach(function (n) { delete state.sel[n]; });   // 2647: the eye open, they stay, dimmed   // HERESY 1169 · 1239: a dislike sends them out of the lists, so out of the choice
     paint();
     list.forEach(function (n) { remember(n, v); });
     var asked = rateSeq;
-    return api("/collection", { op: "rate", names: list, value: v }).then(function (d) {
+    return (link ? marksWrite(list, { rating: v, fire: false, gem: false }) : api("/collection", { op: "rate", names: list, value: v })).then(function (d) {
       state.rows = d.takes ? fresh(d.takes, asked) : state.rows; paint();
+      if (link) {                                         // HERESY 2902: undone as it was, the three of each take together
+        var back = {};
+        list.forEach(function (n, i) { var k = prev[i].join("|"); (back[k] = back[k] || []).push(n); });
+        undoable("Disliked: " + list.length, function () {
+          return Object.keys(back).reduce(function (p, k) {
+            var t3 = k.split("|");
+            return p.then(function () { return marksWrite(back[k], { rating: +t3[0], fire: t3[1] === "true", gem: t3[2] === "true" }); });
+          }, Promise.resolve()).then(function (d2) { if (d2) state.rows = d2.takes || state.rows; list.forEach(function (n) { paintMarks(n); }); paint(); if (state.hooks.libraryChanged) state.hooks.libraryChanged(); });
+        });
+        if (state.hooks.libraryChanged) state.hooks.libraryChanged();
+        return;
+      }
       var was = {};                                       // HERESY 1135: each take's own mark back
       rows.forEach(function (r, i) { (was[before[i]] = was[before[i]] || []).push(r.name); });
       undoable((v > 0 ? "Liked: " : v < 0 ? "Disliked: " : "Neither liked nor disliked: ") + list.length, function () {
@@ -2563,7 +2803,7 @@
         }, Promise.resolve()).then(function (d2) { if (d2) state.rows = d2.takes || state.rows; paint(); if (state.hooks.libraryChanged) state.hooks.libraryChanged(); });
       });
       if (state.hooks.libraryChanged) state.hooks.libraryChanged();
-    }, function (e) { rows.forEach(function (r, i) { r.rating = before[i]; remember(r.name, before[i]); }); paint(); toast(e.message, true); });
+    }, function (e) { rows.forEach(function (r, i) { r.rating = before[i]; remember(r.name, before[i]); }); if (link) unmark(true); paint(); toast(e.message, true); });
   }
   function favMany(list) {
     var takes = list.map(hk().findTake).filter(Boolean), on = takes.some(function (t) { return !t.favorite; });
@@ -2615,6 +2855,10 @@
   function rate(name, value) {
     // HERESY 1107: seen at once, confirmed by the lab; a refusal takes it back (and the caller says why)
     var r = rowOf(name), before = r ? r.rating : 0;
+    if (value < 0 && linked() && (markOf(name, "fire") || markOf(name, "gem"))) {   // HERESY 2902: 👎 takes 🔥 and 💎 off with the like, one write
+      if (!showDis() && !state.reveal) toast("“" + (r ? r.title : name) + "” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)");
+      return linkedWrite(name, { rating: -1, fire: false, gem: false });
+    }
     if (r) { r.rating = value; paint(); }
     if (value < 0 && !showDis() && !state.reveal) {      // HERESY 1167: it leaves the lists; said where it went (2647: the eye open, it stays, dimmed)
       toast("“" + (r ? r.title : name) + "” disliked: it leaves the lists; nothing is deleted (the 👎 filter shows it)");
@@ -2767,7 +3011,12 @@
     if (ta && body.dataset.sheetFor === r.name && !$("collSheet").hidden) {
       var head = body.querySelector(".sheet-head"), was = body.querySelector(".sheet-head + .coll-badges");
       if (was) was.remove();
-      if (head) { head.insertAdjacentHTML("afterend", sheetBadges(r)); head.outerHTML = sheetHead(r, req); }
+      if (head) {
+        var x = head.querySelector(".hd-x");                // HERESY 2909c: the ✕ the head holds since 2909 goes on into the head drawn anew
+        head.insertAdjacentHTML("afterend", sheetBadges(r)); head.outerHTML = sheetHead(r, req);
+        var nh = body.querySelector(".sheet-head");
+        if (x && nh && !nh.querySelector(".hd-x")) nh.appendChild(x);
+      }
       if (document.activeElement !== ta && !notePend[r.name]) ta.value = r.note || "";
       return;
     }
@@ -2788,7 +3037,7 @@
   function sheetBadges(r) { return r.workspaces.length ? '<div class="coll-badges">' + r.workspaces.map(function (w) { return wsBadge(w); }).join("") + "</div>" : ""; }
   function sheetHead(r, req) {
     var now = state.hooks.playing(), mine = now.name === r.name && now.playing;
-    return '<div class="sheet-head"><button type="button" class="coll-play' + (mine ? " is-playing" : "") + '" data-sheet-play="1">' + ico(mine ? "pause" : "play") + "</button>" +
+    return '<div class="sheet-head"><button type="button" class="coll-play' + (mine ? " is-playing" : "") + '" data-sheet-play="1">' + cardGlyph(mine) + "</button>" +   // HERESY 2872: as the card's
       '<div><div class="sheet-title"><span class="coll-title-text" data-sheet-ren="1" title="Click to rename">' + esc(r.title) + '</span></div><div class="coll-meta"><span>' + esc(state.hooks.ago(r.created, r.name)) + "</span>" +
       (r.seconds ? " \u00b7 <span>" + state.hooks.clock(r.seconds) + "</span>" : "") + (req.cot ? " \u00b7 <span>" + esc(cotWord(req.cot)) + "</span>" : "") + " \u00b7 <span>" + esc(KINDS[r.kind] || r.kind) + "</span>" +
       (r.derived.length ? " \u00b7 <span>made from it: " + esc(r.derived.join(", ")) + "</span>" : "") + "</div></div>" +
@@ -2805,7 +3054,7 @@
     if ($("collPins") && !$("collPins").hidden && state.loaded) paintPins();   // HERESY 1103
     plPlaying(now);                                   // HERESY 1731
     var sp = document.querySelector("[data-sheet-play]");
-    if (sp && sheetName) { var on0 = now.name === sheetName && now.playing; sp.innerHTML = ico(on0 ? "pause" : "play"); sp.classList.toggle("is-playing", on0); }
+    if (sp && sheetName) { var on0 = now.name === sheetName && now.playing; sp.innerHTML = cardGlyph(on0); sp.classList.toggle("is-playing", on0); }   // HERESY 2872
     Array.prototype.forEach.call(document.querySelectorAll("#collGrid .coll-card[data-name]"), function (card) {
       var mine = card.dataset.name === now.name, b = card.querySelector(".coll-play");
       card.classList.toggle("is-current", mine);
@@ -2813,7 +3062,7 @@
       if (!b) return;
       var on = mine && now.playing;
       b.classList.toggle("is-playing", on);
-      b.innerHTML = ico(on ? "pause" : "play");
+      b.innerHTML = cardGlyph(on);                     // HERESY 2872: the player's own glyphs
       b.setAttribute("aria-label", on ? "Pause" : "Play");
     });
   }
@@ -2996,12 +3245,17 @@
       { sep: true },
       // HERESY 1161: a section inside it, two levels below a workspace at most
       wsParts(w).length < DEPTH ? { icon: "+", label: "New section\u2026", hint: "inside \u201c" + wsLeaf(w) + "\u201d", action: function () {
-        askName("A new section of \u201c" + w + "\u201d", "", { ok: "Make it", placeholder: "its name", max: WS_PART }).then(function (name) {
-          name = String(name || "").trim();   // HERESY 2462: a / is refused in the dialog, never taken out quietly
-          if (name) act({ op: "ws-create", workspace: w + SEP + name }, "Section \u201c" + name + "\u201d made in \u201c" + w + "\u201d");
+        askWs("A new section of \u201c" + w + "\u201d", "", "", { ok: "Make it", placeholder: "its name", max: WS_PART, section: true }).then(function (v) {   // HERESY 2919
+          var name = String((v && v.name) || "").trim();   // HERESY 2462: a / is refused in the dialog, never taken out quietly
+          if (name) act(Object.assign({ op: "ws-create", workspace: w + SEP + name }, v.emoji ? { emoji: v.emoji } : {}), "Section \u201c" + name + "\u201d made in \u201c" + w + "\u201d");
         });
       } } : null,
       { icon: "Aa", label: "Rename\u2026", action: function () { renameWs(w); } },
+      (function () {                                   // HERESY 2919: the emoji alone
+        var e = wsEm(w);
+        return { icon: e.em || "☺", label: "Emoji\u2026", disabled: !!e.sys, hint: e.sys ? tr("{0} holds the emoji's place: one of the Studio's own marks (a 💎 set, a 🙈 blind set), kept in the name").replace("{0}", e.em) : "The emoji before its name",
+                 action: function () { emojiWs(w, [].filter.call(document.querySelectorAll("#collSide [data-place]"), function (b) { return b.dataset.place === w; })[0]); } };
+      })(),
       { icon: "✎", label: "Note…", hint: (state.wsNotes || {})[w] ? "✓" : "", action: function () { wsNote(w); } },   // HERESY 1802
       { icon: "↳", label: "Move into…", action: function () { moveWs(w); } },   // HERESY 1808
       { sep: true },                                   // HERESY 1070: the safety catches
@@ -3075,13 +3329,57 @@
   }
   function renameWs(w) {
     var parent = wsParts(w).slice(0, -1).join(SEP);                       // HERESY 1161: a section keeps its parent
-    askName((parent ? "Rename the section \u201c" + wsLeaf(w) + "\u201d of \u201c" + parent + "\u201d" : "Rename the workspace \u201c" + w + "\u201d"),
-            parent ? wsLeaf(w) : w, { ok: "Rename", max: WS_PART, guard: true }).then(function (to) {   // HERESY 2039: a slip of the hand asks first
-      if (to && parent) to = parent + SEP + String(to).trim();   // HERESY 2462: a / is refused in the dialog, never taken out quietly
-      if (!to || to === w) return;
+    // HERESY 2919: the field holds the name without the emoji it begins with, the emoji in its button; OK with nothing changed changes nothing
+    var e = wsEm(w), leaf = wsLeaf(w), shown = e.fromName ? e.name : leaf, em0 = e.own || (e.fromName ? e.em : "");
+    askWs((parent ? "Rename the section \u201c" + leaf + "\u201d of \u201c" + parent + "\u201d" : "Rename the workspace \u201c" + w + "\u201d"),
+          shown, em0, { ok: "Rename", max: WS_PART, guard: true, section: !!parent }).then(function (v) {   // HERESY 2039: a slip of the hand asks first
+      if (!v || !v.name) return;
+      var nm = String(v.name).trim(), em = v.emoji || "";
+      if (nm === shown && em === em0) return;                              // nothing changed
+      var to = parent ? parent + SEP + nm : nm;                            // HERESY 2462: a / is refused in the dialog, never taken out quietly
+      if (to === w) {                                                      // the name as it was: the emoji alone
+        if (em !== (e.own || "")) act({ op: "ws-emoji", workspace: w, emoji: em }, em ? "Emoji set: \u201c" + w + "\u201d" : "Emoji taken off: \u201c" + w + "\u201d");
+        return;
+      }
       if (state.ws.indexOf(to) >= 0) return toast("There is a workspace \u201c" + to + "\u201d already", true);
-      act({ op: "ws-rename", workspace: w, to: to }, "Workspace renamed").then(function (ok) { if (ok) { followRename(w, to); paint(); paintCurrent(); } });
+      act({ op: "ws-rename", workspace: w, to: to, emoji: em }, "Workspace renamed").then(function (ok) { if (ok) { followRename(w, to); paint(); paintCurrent(); } });
     });
+  }
+  // HERESY 2919: the emoji alone, from the workspace's menu: the grid under its row
+  function emojiWs(w, at) {
+    var e = wsEm(w);
+    if (e.sys || !window.HeresyWsEmoji) return;
+    window.HeresyWsEmoji.pick(at || $("collSide"), { current: e.own || (e.fromName ? e.em : ""), section: wsParts(w).length > 1, used: wsUsed() }).then(function (em) {
+      if (em === null || em === (e.own || "") && !e.fromName) return;
+      if (e.fromName) {                                                    // a name that still begins with an emoji: it leaves the name for the field
+        var to = wsParts(w).slice(0, -1).concat([e.name]).join(SEP);
+        if (state.ws.indexOf(to) < 0) {
+          act({ op: "ws-rename", workspace: w, to: to, emoji: em }, em ? "Emoji set: \u201c" + to + "\u201d" : "Emoji taken off: \u201c" + to + "\u201d").then(function (ok) { if (ok) { followRename(w, to); paint(); paintCurrent(); } });
+          return;
+        }
+      }
+      act({ op: "ws-emoji", workspace: w, emoji: em }, em ? "Emoji set: \u201c" + w + "\u201d" : "Emoji taken off: \u201c" + w + "\u201d");
+    });
+  }
+  // HERESY 2919 (Viktor 20.11.2026: «в сам выбор сортировки пространств пользовательских… несколько опций: группировка по эмоджи (умолчание), сортировка
+  // без учёта групп эмоджи, показать в общем дереве те, что в архиве, спрятать замороженные, и ещё несколько опций»): the tree's chooser by «Workspaces»
+  function treeMenu(x, y) {
+    if (!window.HeresyMenu) return;
+    var o = treeOpts(), put = function (v) { treeOptsPut(v); paint(); };
+    var folds = state.ws.filter(function (w) { return state.ws.some(function (x2) { return x2.indexOf(w + SEP) === 0; }); });
+    window.HeresyMenu.open(x, y, [
+      { head: "The tree of workspaces" },
+      { icon: "☰", label: "Grouped by emoji", checked: o.sort === "group", hint: "The default: each emoji's workspaces together, the ones with none first, A to Z inside a group; the 💎 sets stay at the foot", action: function () { put({ sort: "group" }); } },
+      { icon: "Az", label: "A to Z, emoji aside", checked: o.sort === "az", hint: "By name alone, whatever emoji each wears; the 💎 sets stay at the foot", action: function () { put({ sort: "az" }); } },
+      { icon: "#", label: "Most takes first", checked: o.sort === "count", hint: "The fuller first, its sections the same way; the 💎 sets stay at the foot", action: function () { put({ sort: "count" }); } },
+      { sep: true },
+      { icon: "🗄", label: "Show the archived in the tree", checked: o.arch, hint: "Each in its place, dimmed, instead of under Archived", action: function () { put({ arch: !o.arch }); } },
+      { icon: "❄", label: "Hide the frozen", checked: o.ice, hint: "Out of the tree until shown again; the one open stays", action: function () { put({ ice: !o.ice }); } },
+      { icon: "∅", label: "Hide the empty ones", checked: o.empty, hint: "A workspace with no take in it or its sections; the one open and the one in hand stay", action: function () { put({ empty: !o.empty }); } },
+      { sep: true },
+      { icon: "▸", label: "Fold every section", disabled: !folds.length, action: function () { store(SECFOLD_KEY, JSON.stringify(folds.concat(secFolded().filter(function (k) { return k === "__archived"; })))); paint(); } },
+      { icon: "▾", label: "Unfold every section", disabled: !folds.length, action: function () { store(SECFOLD_KEY, JSON.stringify(secFolded().filter(function (k) { return k === "__archived"; }))); paint(); } }
+    ]);
   }
   // HERESY 1808 (Viktor 28.10.2026: «добавь в функционал воркспейсов Move into ... Workspace > Move as a subfolder / Move just the samples»): another
   // workspace chosen, then as a section of it (a rename under it: its sections and takes go along, its name kept; two levels of sections at most) or only
@@ -3090,9 +3388,9 @@
     if (!window.HeresyDialog) return;
     var subs = state.ws.filter(function (x) { return x.indexOf(w + SEP) === 0; });
     var height = Math.max.apply(null, [w].concat(subs).map(function (x) { return wsParts(x).length; })) - wsParts(w).length;
-    var items = state.ws.filter(function (x) { return x !== w && x.indexOf(w + SEP) !== 0 && !closedWs(x) && wsLeaf(x) !== SOURCED; }).map(function (x) {
+    var items = treeOrder(state.ws.filter(function (x) { return x !== w && x.indexOf(w + SEP) !== 0 && !closedWs(x) && wsLeaf(x) !== SOURCED; }), treeOpts().sort === "az" ? "az" : "group").map(function (x) {   // HERESY 2919
       var n = state.rows.filter(function (r) { return inTree(r, x); }).length;
-      return { value: x, label: wsParts(x).length > 1 ? wsLeaf(x) : x, depth: wsParts(x).length - 1, path: wsParts(x).slice(0, -1).join(" \u203a "), note: String(n) };   // 1853: path
+      return { value: x, label: lvlShow(x), depth: wsParts(x).length - 1, path: pathShow(x), note: String(n) };   // 1853: path; 2919: their emoji
     });
     // HERESY 2363 (Viktor 11.11.2026: «Нечаянно переместил в пространство как подпространство VLA. А вот вернуть или в корень его обратно — никак»): a
     // section is offered the top level first (a workspace of its own again, its sections and takes along, its name kept); the workspace it stands in
@@ -3382,6 +3680,8 @@
             '<span class="ds-midi-run mono">' + (run ? esc(run.status === "queued" ? tr("waits its turn") : tr("{0} % · {1} notes").replace("{0}", Math.round((run.progress || 0) * 100)).replace("{1}", run.notes || 0)) :
               failed ? esc(failed.error || "") : "") + "</span></div>";
         }
+        html = '<div class="ds-midi-export"><button type="button" class="btn ghost small" data-midi-export data-name="' + esc(name) + '">' + esc(tr("Export MIDI…")) +
+          '</button><span class="row-hint">' + esc(tr("one file on the take's own beats: the score's, MuScriptor on the mix or per stem")) + "</span></div>" + html;   // HERESY 2913
         midiBox.innerHTML = html;
       }
       function midiLoad() {
@@ -4283,11 +4583,16 @@
   }
 
   window.HeresyCollection = { init: init, reload: load, hubOpen: hubOpen, repaint: paint, paintArts: paintArts, isHidden: isHidden, isFresh: isFresh, markPlayed: markPlayed, takeLocked: takeLocked, cardExtras: cardExtras, matcher: matcher, landed: landed, inCurrent: inCurrent,
-                              current: function () { return currentIn("creator"); }, currentIn: currentIn, realm: realmNow, /* HERESY 2294: the Creator's own in hand */ landable: landable, closedWs: closedWs, firstWs: firstWs, absent: function () { return state.loadStatus === 404; }, readFailed: function () { return state.loadStatus === 404 ? "" : state.loadError || ""; }, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, rateMany: rateMany, favMany: favMany, exportChecked: exportZip, exportHow: exportHow, note: note, setNote: setNote, editNote: editNote, playlist: function () { return (state.playlist || []).slice(); }, playlistOrder: plPlayOrder, playlistOnly: function () { return state.plOnly; }, playlistAdd: plAdd, openPlaylist: plOpen, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
+                              current: function () { return currentIn("creator"); }, currentIn: currentIn, realm: realmNow, /* HERESY 2294: the Creator's own in hand */ landable: landable, closedWs: closedWs, firstWs: firstWs, absent: function () { return state.loadStatus === 404; }, readFailed: function () { return state.loadStatus === 404 ? "" : state.loadError || ""; }, chooseCurrent: chooseCurrent, setCurrent: setCurrent, rating: rating, rate: rate, rateMany: rateMany, markOf: markOf, setMark: setMark, reactLinked: linked, favMany: favMany, exportChecked: exportZip, exportHow: exportHow, note: note, setNote: setNote, editNote: editNote, playlist: function () { return (state.playlist || []).slice(); }, playlistOrder: plPlayOrder, playlistOnly: function () { return state.plOnly; }, playlistAdd: plAdd, openPlaylist: plOpen, paintPlaying: paintPlaying, loaded: function () { return state.loaded; },
                               order: function () { var b = bookOrder(); if (b) return b; return state.place === "__trash" ? [] : state.place === "__playlist" ? plList() : shown().map(function (r) { return r.name; }); },   // HERESY 2402: a book plays through its parts
                               bookOpen: bookOpen, bookParts: function (run) { return bookParts(run).map(function (r) { return r.name; }); }, books: function () { return books(state.rows).filter(function (x) { return x.bookCard; }).map(function (x) { return x.run; }); },
                               deal: function (names) { if (!names) { DEAL = {}; return []; } return names.slice().sort(function (x, y) { return dealt(x) - dealt(y); }); },   // HERESY 1863: for the checks
                               notesLeft: notesLeftCheck, noteHash: noteHash,   // HERESY 2158: for the checks
+                              // HERESY 2912b (the checks): the Library as a section of the suite found it, given back after it; a section that stubs
+                              // /lab/catalog left its takes, its workspaces and the workspace in hand to every section after it (20.11: 2909's and
+                              // 2910's, and «Replace a section», Compare, Archive and the albums failed behind them)
+                              keepState: function () { return { s: Object.assign({}, state), ws: recall(WS_KEY) }; },
+                              putState: function (k) { Object.keys(k.s).forEach(function (x) { state[x] = k.s[x]; }); store(WS_KEY, k.ws || ""); paint(); paintCurrent(); },
                               datasheet: openDatasheet, sung: sungMany, sungOf: function (n) { return (state.sung || {})[n]; }, sungMark: sungMark, tailOf: function (n) { return (state.tail || {})[n] || null; }, tailMark: tailMark, modelLine: modelLine, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
                               row: rowOf, workspaces: function () { return state.ws.slice(); }, act: act, openSheet: openSheet, requestOf: requestOf, fitHead: fitHead, matcher: matcher,   // 2028: for the checks   // 2023: fitHead for the checks
                               selected: names, place: function () { return state.place; }, moveTo: moveTo,

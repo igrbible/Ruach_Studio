@@ -5,18 +5,23 @@ page's system bar, the cards aside (those are gpu_live's).
 
 Read from the kernel itself, once a second and only while a page looks (a thread started by the first ask, ended IDLE seconds after the last):
 /proc/stat (the processor in all and each core), /proc/meminfo (the memory and the swap), /proc/diskstats (each disk's reads, writes and busy
-time) and statvfs of what each disk has mounted (its free space, every ten seconds). The last ten minutes kept, the cores' last minute. Nothing
-runs, nothing is read, when no page looks.
+time) and the free space of what each disk has mounted (its free space, every ten seconds). The last ten minutes kept, the cores' last minute. Nothing
+runs, nothing is read, when no page looks. On Windows and macOS (no /proc) the processor and memory come through winx (psutil), on
+Windows the disks are its drives (HERESY 2924).
 """
 import collections
 import os
+import platform
+import shutil
 import threading
 import time
+
+import winx   # HERESY 2924 (issue 15): Windows has no /proc, os.statvfs nor os.uname
 
 KEEP = 600                       # ten minutes at one a second
 CORE_KEEP = 60                   # the cores' last minute
 IDLE = 15                        # seconds without a look before the sampler stops
-FREE_EVERY = 10                  # statvfs this often
+FREE_EVERY = 10                  # the disks' free space this often
 LOCK = threading.Lock()
 RING = collections.deque(maxlen=KEEP)        # [t, cpu %, iowait %, mem used MB, mem total MB, cache MB, swap used MB, swap total MB, {disk: [read B/s, write B/s, busy %]}]
 CORES = collections.deque(maxlen=CORE_KEEP)  # [t, [core %, ...]]
@@ -32,6 +37,8 @@ def watch(*paths):
 
 def _cpu_times():
     """{"cpu": (busy, total), "cpu0": …} from /proc/stat; busy leaves out idle and iowait, iowait is kept apart for the total."""
+    if not winx.PROC:                                    # HERESY 2924: Windows and macOS, psutil's times through winx (no iowait there)
+        return winx.cpu_times()
     out = {}
     with open("/proc/stat") as f:
         for line in f:
@@ -46,6 +53,8 @@ def _cpu_times():
 
 
 def _meminfo():
+    if not winx.PROC:                                    # HERESY 2924: psutil's through winx
+        return winx.meminfo_mb()
     m = {}
     with open("/proc/meminfo") as f:
         for line in f:
@@ -84,6 +93,8 @@ def _disks():
     Network, loop, RAM and virtual filesystems are not disks; the system's disk first, then the Studio's, then the rest by name."""
     if DISKS["list"] and time.time() - DISKS["at"] < 60:
         return DISKS["list"]
+    if winx.NT:                                          # HERESY 2924: no /proc on Windows: its drives
+        return _disks_nt()
     found = {}
     try:
         with open("/proc/self/mounts") as f:
@@ -138,6 +149,30 @@ def _disks():
     return out
 
 
+def _disks_nt():
+    """HERESY 2924 (issue 15): Windows' local drives as disks, one a letter (psutil's partitions; no CD, no network share): the system's
+    drive first, then the Studio's."""
+    sysdrive = (os.environ.get("SystemDrive") or "C:").upper()
+    studio = {os.path.splitdrive(os.path.abspath(p))[0].upper() for p in WATCH}
+    out = []
+    try:
+        import psutil                                    # the Windows install brings it (launcher/setup_win.py), as winx needs
+        parts = psutil.disk_partitions(all=False)
+    except Exception:  # noqa: BLE001   a drive that will not say leaves the bar without disks, never the lab without its bar
+        parts = []
+    for p in parts:
+        if "cdrom" in (p.opts or "") or not p.fstype:
+            continue
+        letter = os.path.splitdrive(p.mountpoint)[0].upper() or p.mountpoint
+        role = " ".join(r for r, ok in (("system", letter == sysdrive), ("studio", letter in studio)) if ok)
+        out.append({"id": letter, "kind": "", "usb": "removable" in (p.opts or ""), "model": f"{letter} {p.fstype}", "mounts": [p.mountpoint],
+                    "role": role, "devs": [letter]})
+    rank = {"system studio": 0, "system": 0, "studio": 1, "": 2}
+    out.sort(key=lambda d: (rank.get(d["role"], 2), d["id"]))
+    DISKS.update(list=out, at=time.time())
+    return out
+
+
 def _free(disks):
     """Free and total bytes of each disk (all it has mounted, each filesystem once), every FREE_EVERY seconds."""
     if DISKS["free"] and time.time() - DISKS["free_at"] < FREE_EVERY:
@@ -147,15 +182,15 @@ def _free(disks):
         seen, free, total = set(), 0, 0
         for m in d["mounts"]:
             try:
-                st = os.statvfs(m)
+                st = shutil.disk_usage(m)                # HERESY 2924: statvfs is POSIX only; on Linux the same f_bavail and f_blocks × f_frsize
                 dev = os.stat(m).st_dev
             except OSError:
                 continue
             if dev in seen:
                 continue
             seen.add(dev)
-            free += st.f_bavail * st.f_frsize
-            total += st.f_blocks * st.f_frsize
+            free += st.free
+            total += st.total
         out[d["id"]] = [free, total]
     DISKS.update(free=out, free_at=time.time())
     return out
@@ -183,7 +218,9 @@ def _info():
         if line.startswith("model name"):
             name = " ".join(line.split(":", 1)[1].split())
             break
-    INFO.update(cpu=name or os.uname().machine, threads=os.cpu_count() or 0)
+    if not name:                                         # HERESY 2924: Windows has no os.uname (nor /proc/cpuinfo)
+        name = os.uname().machine if hasattr(os, "uname") else (platform.processor() or platform.machine())
+    INFO.update(cpu=name, threads=os.cpu_count() or 0)
     return INFO
 
 

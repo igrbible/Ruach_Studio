@@ -41,8 +41,11 @@
     if (POPW) { try { POPW.win.focus(); } catch (e) { /* in front already */ } return; }
     var from = document.getElementById("mxDock"), r = from && !from.hidden ? from.getBoundingClientRect() : null;
     var size = { width: Math.max(720, Math.round(r && r.width ? r.width : 900) + 40), height: Math.max(520, Math.min(980, Math.round(r && r.height ? r.height : 640) + 60)) };
-    var pip = window.documentPictureInPicture && window.documentPictureInPicture.requestWindow;   // over every other (https or localhost only)
-    (pip ? window.documentPictureInPicture.requestWindow(size) : new Promise(function (ok, no) {   // else a window of the browser's own, as the log's
+    if (window.HeresyScreens && window.HeresyScreens.many() === false) return;   // HERESY 2900: one screen: the console stays in the page (its button greyed)
+    // HERESY 2900 (Viktor 20.11.2026, №70: the console's window as large as what it shows, no empty room under it or on its right): a popup window of the
+    // browser's own, no longer Picture-in-Picture: Chrome lets a script size a popup it opened and refuses resizeTo in a Picture-in-Picture window
+    // without a click in it, which left that window as large as it opened, empty below and on the right
+    (new Promise(function (ok, no) {
       var w = window.open("", "ruach-console", "popup,width=" + size.width + ",height=" + size.height);
       if (w) ok(w); else no(new Error(tr("The browser kept the console's window from opening: allow pop-ups for the Studio")));
     })).then(function (win) {
@@ -58,6 +61,7 @@
         d.body.appendChild(el);
         POPW = { win: win, doc: d, el: el };
         FIT = "";                                    // HERESY 1987: fitted to what it shows at once
+        [400, 1200].forEach(function (ms) { setTimeout(function () { if (POPW && POPW.win === win) fitPop(); }, ms); });   // HERESY 2900: and once its styles have come
         wire(d.body);
         var back = function () { if (POPW && POPW.win === win) { POPW = null; paint(); window.dispatchEvent(new Event("resize")); } };
         win.addEventListener("pagehide", back);
@@ -65,18 +69,24 @@
         paint(); window.dispatchEvent(new Event("resize"));
       }).catch(function (e) { if (window.HeresyDialog && window.HeresyDialog.alert) window.HeresyDialog.alert(e.message); });
   }
+  if (window.HeresyScreens) window.HeresyScreens.on(function () { if (document.getElementById("mxDock")) paint(); });   // HERESY 2900: a screen added or gone
+  window.ruachConsoleFit = function () { return POPW ? { fit: POPW.fit || null, inner: [POPW.win.innerWidth, POPW.win.innerHeight] } : null; };   // for the checks
   function popClose() { var p = POPW; if (!p) return; POPW = null; try { p.win.close(); } catch (e) { /* gone already */ } }
   // HERESY 1987 (Viktor 01.11.2026: «По окну микшера DAW убедись, что оно в авто ресайзе»): the window as large as what it shows, measured at its natural
   // size (max-content), when it opens and whenever that changes; between those a size the hand gave it stays; never past the screen's free room
   var FIT = "";
-  function fitPop(key) {
+  // HERESY 2900: keyed by the size it needs, measured, no longer by a list of what it shows: a change of the content that the list missed (a device
+  // opened, a longer name) refits it, and the size a hand gave it stays until the content asks another
+  function fitPop() {
     var p = POPW;
-    if (!p || key === FIT) return;
-    FIT = key;
+    if (!p) return;
     var el = p.el, w = p.win, keep = [el.style.width, el.style.height, el.style.overflow];
     el.style.width = "max-content"; el.style.height = "auto"; el.style.overflow = "visible";
     var needW = Math.ceil(el.getBoundingClientRect().width), needH = Math.ceil(el.getBoundingClientRect().height);
     el.style.width = keep[0]; el.style.height = keep[1]; el.style.overflow = keep[2];
+    if (needW + "x" + needH === FIT) return;
+    FIT = needW + "x" + needH;
+    p.fit = [needW, needH];
     var dw = Math.max(0, (w.outerWidth || 0) - (w.innerWidth || 0)), dh = Math.max(0, (w.outerHeight || 0) - (w.innerHeight || 0));
     var sw = (w.screen && w.screen.availWidth) || 1920, sh = (w.screen && w.screen.availHeight) || 1080;
     try { w.resizeTo(Math.min(sw, Math.max(480, needW + dw)), Math.min(sh, Math.max(300, needH + dh))); } catch (e) { /* a window that may not be sized: as it is */ }
@@ -412,6 +422,10 @@
         '<button type="button" class="btn ghost small" data-act="loudreset" data-tip="' + esc(tr("Clear the loudness, the true peak and every peak held")) + '">' + icon("refresh", "↺") + "</button></div>" +
       '<div class="mc-btns mc-mon" role="group" aria-label="' + esc(tr("Monitor")) + '">' + [["mono", "Mono", "Listen in mono, never in the mix: the two sides summed, as one speaker hears it"], ["dim", "Dim", "Listen 20 dB lower, never in the mix"]].map(function (x) {   // HERESY 1536
         var on = !!M.monitor()[x[0]]; return '<button type="button" class="mx-ms mc-monb' + (on ? " is-on" : "") + '" data-act="mon" data-v="' + x[0] + '" aria-pressed="' + on + '" data-tip="' + esc(tr(x[2])) + '">' + esc(tr(x[1])) + "</button>"; }).join("") + "</div>" +
+      // HERESY 2865: how the DAW plays, Live in the browser or rendered on Forge; kept in this browser
+      '<div class="mc-btns mc-way" role="radiogroup" aria-label="' + esc(tr("How the DAW plays")) + '">' + [["live", "Live", "Live in this browser: every knob heard at once, through the browser's audio with larger buffers. Remembered in this browser"],
+        ["forge", "Forge", "Rendered on Forge by the mix's own code, in pieces from the playhead, and played as a file: nothing in the browser between the sound and the speakers. A change is heard a second or two later. Remembered in this browser"]].map(function (x) {
+        var on = (M.way ? M.way() : "live") === x[0]; return '<button type="button" class="mx-ms mc-wayb' + (on ? " is-on" : "") + '" role="radio" data-act="way" data-v="' + x[0] + '" aria-checked="' + on + '" data-tip="' + esc(tr(x[2])) + '">' + esc(tr(x[1])) + "</button>"; }).join("") + "</div>" +
       fader("b", "", "master.gain_db", -24, 12, "*") +
       '<div class="mc-read"><output class="mc-db mono">' + esc(fdb(M.S.buses.master.gain_db)) + '</output><button type="button" class="mc-pk mono" data-act="peaks" data-meter-max="*">−∞</button></div></div>';
   }
@@ -462,6 +476,11 @@
         ["float", "Floating", "A panel of its own, moved by this row; it stays with the page and hides with its room"],
         ["window", "In a window", "A window of its own, to carry to another monitor; closed, the console is back where it stood"]].map(function (m) {   // HERESY 1983
         var on = POPW ? m[0] === "window" : dockMode() === m[0];
+        if (m[0] === "window") {                     // HERESY 2900: the detach a small icon; greyed with one screen, its tip says why
+          var one = !POPW && window.HeresyScreens && window.HeresyScreens.many() === false;
+          return '<button type="button" class="mc-tab mc-dm mc-detach' + (on ? " is-on" : "") + '" data-act="dockmode" data-v="window" aria-pressed="' + on + '" aria-label="' + esc(tr(m[1])) +
+            '" data-tip="' + esc(tr(one ? "One screen: the console stays in the page. With a second screen it opens there in a window of its own" : m[2])) + '"' + (one ? " disabled" : "") + ">" + icon("monitor-up", esc(tr(m[1]))) + "</button>";
+        }
         return '<button type="button" class="mc-tab mc-dm' + (on ? " is-on" : "") + '" data-act="dockmode" data-v="' + m[0] + '" aria-pressed="' + (dockMode() === m[0]) + '" data-tip="' + esc(tr(m[2])) + '">' + esc(tr(m[1])) + "</button>"; }).join("") + "</span></div>";
     var body = C.tab === "mixes" ? mixesHtml() : C.tab === "devices" && C.sel ? devicesHtml(C.sel)
       : '<div class="mc" role="group" aria-label="' + esc(tr("Console")) + '">' + ns.map(stripHtml).join("") + '<span class="mc-gap"></span>' +
@@ -477,7 +496,7 @@
     M.subs().forEach(function (x) { eqMini("%" + x.id); });   // HERESY 1563
     if (C.tab === "devices" && C.sel) { drawEq(); drawComp(); }
     frame(true);
-    if (POPW) fitPop([C.tab, C.sel || "", ns.length, M.groups().length, M.subs().length, M.mixes.list().length].join("|"));   // HERESY 1987
+    if (POPW) fitPop();                               // HERESY 1987, 2900: by the size it needs
   }
   // HERESY 1533: the mixes of this set, kept on Forge beside its stems
   function when(ms) { var d = new Date(ms), z = function (n) { return (n < 10 ? "0" : "") + n; }; return z(d.getDate()) + "." + z(d.getMonth() + 1) + " " + z(d.getHours()) + ":" + z(d.getMinutes()); }
@@ -969,6 +988,7 @@
     }
     var dm = e.target.closest && e.target.closest('[data-act="dockmode"]');   // HERESY 1967
     if (dm) {
+      if (dm.disabled) return;                         // HERESY 2900: one screen
       if (dm.dataset.v === "window") { popOpen(); return; }   // HERESY 1983: the hand's click opens it (the browser asks for one)
       popClose();
       try { localStorage.setItem("yue2.mixer.dockMode", dm.dataset.v); } catch (x) { /* a private window */ }
@@ -998,6 +1018,7 @@
       return;
     }
     if (act === "mon") { M.monitor(v); Array.prototype.forEach.call(D().querySelectorAll('#mxDock [data-act="mon"][data-v="' + v + '"]'), function (x) { var on2 = !!M.monitor()[v]; x.classList.toggle("is-on", on2); x.setAttribute("aria-pressed", on2); }); return; }   // HERESY 1536
+    if (act === "way") { M.way(v); Array.prototype.forEach.call(D().querySelectorAll('#mxDock [data-act="way"]'), function (x) { var on3 = x.dataset.v === M.way(); x.classList.toggle("is-on", on3); x.setAttribute("aria-checked", on3); }); return; }   // HERESY 2865
     if (act === "peaks") { M.resetLoud(); return; }
     if (act === "loudreset") { M.resetLoud(); return; }
     if (act === "target") { targetOpen(b); return; }   // HERESY 2013

@@ -137,10 +137,25 @@ jobs:
             Start-Sleep 2
             try { $r = Invoke-WebRequest http://127.0.0.1:41870/health -UseBasicParsing -TimeoutSec 5; "health: " + $r.Content.Substring(0, [Math]::Min(400, $r.Content.Length)); $ok = $true; break } catch { if ($p.HasExited) { break } }
           }
+          # HERESY 2924 (GitHub issue 15): the system bar and the Weights panel answer on Windows (no os.statvfs, os.uname nor /proc there)
+          $bad = @()
+          if ($ok) {
+            try { Invoke-WebRequest "http://127.0.0.1:41870/sys/live?since=0" -UseBasicParsing -TimeoutSec 30 | Out-Null } catch { }
+            Start-Sleep 3                                  # the first ask starts the sampler; its drives and numbers are there on the next
+            foreach ($u in "/sys/live?since=0", "/weights") {
+              try {
+                $j = (Invoke-WebRequest ("http://127.0.0.1:41870" + $u) -UseBasicParsing -TimeoutSec 30).Content | ConvertFrom-Json
+                if ($u -eq "/weights" -and $j.free -isnot [long] -and $j.free -isnot [int]) { $bad += "$u gave no free space: $($j.free)" }
+                if ($u -ne "/weights" -and (-not $j.cpu.cpu -or $j.disks.Count -lt 1 -or $j.error)) { $bad += "$u gave no processor or no drive, or an error: $($j.error)" }
+                $t = $j | ConvertTo-Json -Depth 3 -Compress; "$u answers: " + $t.Substring(0, [Math]::Min(300, $t.Length))
+              } catch { $bad += "$u failed: $($_.Exception.Message)" }
+            }
+          }
           if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
           "---- the lab's log (last 60 lines)"
           Get-Content lab-err.txt -Tail 60
           if (-not $ok) { throw "the lab did not answer on Windows" }
+          if ($bad.Count) { throw ($bad -join "; ") }
       - name: The standard-library tests
         shell: pwsh
         continue-on-error: true
@@ -216,6 +231,10 @@ jobs:
       file: ${{ steps.pack.outputs.file }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: launcher/win/go.mod
+          cache-dependency-path: launcher/win/go.sum
       - uses: actions/download-artifact@v8
         with:
           name: ruach-page
@@ -255,9 +274,21 @@ jobs:
           unzip -q "$(find engines -name ruach-engine-windows-x64-cuda12.zip | head -1)" -d "$S/engine/cuda"
           unzip -q "$(find engines -name ruach-engine-windows-x64-cpu.zip | head -1)" -d "$S/engine/cpu"
           for k in cuda cpu; do test -f "$S/engine/$k/yue-server.exe" || { echo "no engine/$k/yue-server.exe"; exit 1; }; done
+          # HERESY 2880: RuachStudio.exe, the launcher (launcher/win, Go): the lab and the engine kept as two services, the page opened, their
+          # output in logs\, a tester's report in one zip. Its tests first: both packages' decisions, and the real binary on a made-up
+          # native Studio (install, two services, a killed engine started again, Ctrl-C, status, report, a failing engine given up, self-test)
+          fv=$(printf '%s' "$ver" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*/\1.0/')
+          ( cd launcher/win
+            go test ./...
+            bash testdata/e2e-native.sh | tail -1
+            go run github.com/tc-hib/go-winres@v0.3.3 simply --arch amd64 --out cmd/ruachstudio/rsrc --icon cmd/ruachstudio/ruach.ico --manifest gui \
+              --product-name "Ruach Studio" --file-description "Ruach Studio launcher" --original-filename RuachStudio.exe --file-version "$fv" --product-version "$fv"
+            GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -H windowsgui -X main.version=$ver" -o "$GITHUB_WORKSPACE/$S/RuachStudio.exe" ./cmd/ruachstudio )
+          rm -rf "$S/launcher/win"
+          ls -la "$S/RuachStudio.exe"
           cat > note.md <<'EOF'
           > [!NOTE]
-          > **A beta package of Ruach Studio @VER@ for Windows 11 (x64), native, without WSL**, made by GitHub's builder from `@REF@` (commit @SHA@, @DATE@). Double-click **RuachStudio.cmd**: the first start brings the Studio's own Python and the models a song needs into this folder (nothing is installed for the whole machine); every start runs the lab and the engine, each in its own window, and opens the Studio in the browser. With an NVIDIA card the engine runs on it (engine\cuda), without one on the processor (engine\cpu, slowly). Nothing here is signed: SmartScreen asks once (More info, then Run anyway).
+          > **A beta package of Ruach Studio @VER@ for Windows 11 (x64), native, without WSL**, made by GitHub's builder from `@REF@` (commit @SHA@, @DATE@). Double-click **RuachStudio.exe**: the first start brings the Studio's own Python and the models a song needs into this folder, in a console window that shows each step (nothing is installed for the whole machine); every start runs the lab and the engine in the background, opens the Studio, and puts its icon beside the clock, whose menu holds the logs, a tester's report in one .zip, a restart, a stop and Quit. RuachStudio.cmd does the same with the lab and the engine in console windows of their own. With an NVIDIA card the engine runs on it (engine\cuda), without one on the processor (engine\cpu, slowly). Nothing here is signed: SmartScreen asks once (More info, then Run anyway).
 
           EOF
           { sed -e "s/@SHA@/$sha/" -e "s/@DATE@/$when/" -e "s|@REF@|$ref|" -e "s/@VER@/$ver/" note.md; awk 'skip && /^>/ {next} skip && /^$/ {skip=0; next} {skip=0; print}' skip=1 README.md; } > "$S/README.md"
@@ -340,6 +371,32 @@ jobs:
           "---- the lab's log (last 30 lines)"
           Get-Content lab-err.txt -Tail 30
           if (-not $ok) { throw "the packaged lab did not answer on Windows" }
+      - name: RuachStudio.exe finds the package, says its status, makes a tester's report, and keeps the lab and the engine as services
+        # HERESY 2880: the launcher's Windows half on Windows: its status and report without a running Studio, then --selftest with this
+        # runner's Python: the lab and the engine started hidden in job objects, the lab's health, the engine's lines in logs\engine.log (it
+        # stops at once here, with no models, and is started again), both ended at the stop and the lab's port free after it
+        shell: pwsh
+        run: |
+          $R = (Resolve-Path unpacked\RuachStudio).Path
+          $env:PYTHONUTF8 = "1"
+          $p = Start-Process "$R\RuachStudio.exe" -ArgumentList "--status" -Wait -PassThru -NoNewWindow -RedirectStandardOutput status.txt -RedirectStandardError status-err.txt
+          Get-Content status.txt, status-err.txt
+          if ($p.ExitCode -or -not (Select-String -Path status.txt -Pattern "· native" -SimpleMatch -Quiet)) { throw "RuachStudio.exe --status did not find the native package (exit $($p.ExitCode))" }
+          $rep = Join-Path $env:RUNNER_TEMP "reports"
+          $p = Start-Process "$R\RuachStudio.exe" -ArgumentList "--report", "--report-dir", $rep -Wait -PassThru -NoNewWindow -RedirectStandardOutput report.txt -RedirectStandardError report-err.txt
+          Get-Content report.txt, report-err.txt
+          $z = Get-ChildItem $rep -Filter "RuachStudio-report-*.zip" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($p.ExitCode -or -not $z) { throw "RuachStudio.exe --report made no report (exit $($p.ExitCode))" }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zip = [IO.Compression.ZipFile]::OpenRead($z.FullName); $names = @($zip.Entries.FullName); $zip.Dispose()
+          "the report: " + ($names -join ", ")
+          if ($names -notcontains "report.txt") { throw "the tester's report has no report.txt" }
+          $py = (Get-Command python).Source
+          $p = Start-Process "$R\RuachStudio.exe" -ArgumentList "--selftest", "--python", $py -Wait -PassThru -NoNewWindow -RedirectStandardOutput self.txt -RedirectStandardError self-err.txt
+          Get-Content self.txt, self-err.txt
+          "---- logs\launcher.log"
+          Get-Content "$R\logs\launcher.log" -Tail 20
+          if ($p.ExitCode) { throw "the launcher's self-test failed (exit $($p.ExitCode))" }
 
   package-macos:
     # HERESY 2687: one zip for a Mac with Apple Silicon: the tree as git holds it, without the engine's sources, the visiting card and the
@@ -375,7 +432,7 @@ jobs:
           S=stage/RuachStudio
           mkdir -p "$S"
           git archive --format=tar HEAD | tar -x -C "$S"
-          rm -rf "$S/build" "$S/site" "$S/.github" "$S/RuachStudio.cmd" "$S/INSTALL_WINDOWS.md"
+          rm -rf "$S/build" "$S/site" "$S/.github" "$S/RuachStudio.cmd" "$S/INSTALL_WINDOWS.md" "$S/launcher/win"
           git archive --format=tar HEAD build/tools/console/pwa | tar -x -C "$S"
           mkdir -p "$S/build/tools/public" "$S/engine"
           cp page/index.html page/manifest.webmanifest "$S/build/tools/public/"

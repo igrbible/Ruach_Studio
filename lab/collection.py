@@ -14,6 +14,7 @@ import json, os, random, re, shutil, subprocess, threading, time, uuid, zipfile
 from pathlib import Path
 
 import name_rule                                    # HERESY 2462: one rule for every name
+import ws_emoji                                     # HERESY 2919: a workspace's emoji, its own field
 
 LOCK = threading.Lock()
 
@@ -67,6 +68,7 @@ def load(config_dir):
     d.setdefault("ws_notes", {})
     d.setdefault("lora_notes", {})
     d.setdefault("ws_realm", {})               # HERESY 2294: {top workspace: "reader"}; a workspace not named here is the Creator's
+    d.setdefault("ws_emoji", {})               # HERESY 2919: {workspace: emoji}, each level its own (lab/ws_emoji.py)
     with_parents(d)                              # HERESY 1935: an orphan section of before gets its parents back
     if "fresh_since" not in d:                   # from the day this came: the takes before it are not all fresh at once
         d["fresh_since"] = int(time.time())
@@ -168,7 +170,7 @@ def forget_ws(d, gone, to=""):
         return
     for key in ("archived", "blind", "frozen"):
         d[key] = [w for w in d.get(key, []) if w not in gone]
-    for key in ("locks", "pins", "ws_notes", "ws_realm"):   # HERESY 2294: and a top's realm
+    for key in ("locks", "pins", "ws_notes", "ws_realm", "ws_emoji"):   # HERESY 2294: and a top's realm; 2919: and its emoji
         for w in gone:
             d.get(key, {}).pop(w, None)
 
@@ -294,7 +296,7 @@ def blind_takes(d):
 
 def _frozen_guard(d, op, ws, names, data):
     ice = frozen_takes(d)
-    if op in ("hide", "show", "rate", "note", "pin", "ws-add", "ws-move", "ws-remove", "protect", "mark", "react"):
+    if op in ("hide", "show", "rate", "note", "pin", "ws-add", "ws-move", "ws-remove", "protect", "mark", "react", "marks"):   # 2902: marks as rate and mark
         n = sum(1 for x in names if x in ice)
         if n:
             raise ValueError(f"{n} take{'s' if n > 1 else ''} frozen with {'their' if n > 1 else 'its'} workspace: unfreeze it first")
@@ -517,7 +519,41 @@ def _own_part(d):
 
 _OWN = {}       # HERESY 2729: a take's folder name -> (its _own_stamp, its _own_part), read again only when a stamp changed
 
+SAY = None                                         # HERESY 2919c: the lab's log, given by lab.py (a line in the journal)
+_MIGRATED = set()
+
+
+def migrate_once(config_dir, say=None):
+    """HERESY 2919c (Viktor 21.11.2026: «Апгрейд с его типами и 🌿 как полупрозрачный дефолт в подпространства вшивай в публичный код»): the workspaces'
+    emoji moved into their own field once, on every install by itself, at the lab's start or the first read after the update: a copy of collection.json
+    first, beside it with the day and time in its name (collection.before-emoji-YYYYmmdd-HHMMSS.json), then lab/ws_emoji.py's plan applied and the flag
+    (ws_emoji_upgraded) set in the same write, whole on the disk before it takes the file's place (save); never twice. Returns what it did, or None."""
+    key = str(config_dir)
+    if key in _MIGRATED:
+        return None
+    with LOCK:
+        d = load(config_dir)
+        if d.get(ws_emoji.FLAG):
+            _MIGRATED.add(key)
+            return None
+        p, snap = _store(config_dir), None
+        if p.is_file() and d.get("workspaces"):
+            snap = p.with_name("collection.before-emoji-" + time.strftime("%Y%m%d-%H%M%S") + ".json")
+            shutil.copy2(p, snap)
+        did = ws_emoji.migrate(d)
+        if snap:
+            did["snapshot"] = snap.name
+        prune_pins(d)
+        save(config_dir, d)
+        _MIGRATED.add(key)
+    if did and (did["renamed"] or did["kept"]) and say:
+        say(f"collection: the workspaces' emoji in their own field: {did['emoji']} moved, {did['renamed']} names changed, "
+            f"{len(did['kept'])} left as they were; the copy before it {did.get('snapshot') or '(none)'}")
+    return did
+
+
 def catalog(outputs, config_dir):
+    migrate_once(config_dir, SAY)                # HERESY 2919c: the upgrade once, before the first catalog after the update
     marks = load(config_dir)
     prune_pins(marks)                            # HERESY 1166: shown as they stand (the file heals on the next change)
     hidden = set(marks["hidden"])
@@ -568,7 +604,17 @@ def catalog(outputs, config_dir):
             "blind": [b for b in marks["blind"] if b in marks["workspaces"]],   # HERESY 1874; 2057: out of 2049's comment again
             "albums": albums_out(marks, {r["name"] for r in rows}),   # HERESY 2050; 2058: a whole workspace in one, and the cover chosen
             "playlist": (lambda here: [n for n in marks["playlist"] if n in here or pl_ws(n) in marks["workspaces"]])({r["name"] for r in rows}),   # HERESY 1730, 2042
-            "ws_notes": marks["ws_notes"]}   # HERESY 1802: the workspaces' notes; 2019 (D1): the playlist's crossfade, gone from the player in 1990, gone here
+            "ws_notes": marks["ws_notes"],   # HERESY 1802: the workspaces' notes; 2019 (D1): the playlist's crossfade, gone from the player in 1990, gone here
+            "ws_emoji": {w: e for w, e in marks["ws_emoji"].items() if w in marks["workspaces"]},   # HERESY 2919: each workspace's own emoji
+            "ws_moved": {o: n for o, n in (marks.get("ws_moved") or {}).items() if n in marks["workspaces"]},   # HERESY 2919: the upgrade's moves, for the page's kept names
+            "ws_emoji_upgraded": {k: v for k, v in (marks.get(ws_emoji.FLAG) or {}).items() if k in ("at", "renamed", "emoji")}}   # HERESY 2919c: the page says it once
+
+
+def _emoji_fits(ws, emo):
+    """HERESY 2919: a name that begins with one of the Studio's own marks (a 💎 set, a 🙈 one) keeps it in the emoji's place"""
+    e = ws_emoji.lead(ws.split(SEP)[-1])[0]
+    if e and ws_emoji.reserved(e):
+        raise ValueError(f"“{ws.split(SEP)[-1]}” keeps {e} in its emoji's place: take {e} out of its name first")
 
 
 def trashed(outputs):
@@ -610,12 +656,43 @@ NOTE_MAX = 6000  # HERESY 1802: a workspace's or an adapter's note (Viktor: «50
 TAKE_NOTE_MAX = 6000  # HERESY 2438: a take's own note (4000 before), every note of the Studio's alike
 
 
+def emoji_upgrade(config_dir, outputs, data):
+    """HERESY 2919: the one-time upgrade of the names that begin with an emoji (lab/ws_emoji.py plan and apply). dry (the default): the plan alone,
+    nothing written. Else the migration itself (2919c, migrate_once: the copy beside collection.json, the flag), which does nothing a second time."""
+    if data.get("dry") is not False:
+        with LOCK:
+            return {"upgrade": dict(ws_emoji.plan(load(config_dir)), dry=True)}
+    _MIGRATED.discard(str(config_dir))
+    did = migrate_once(config_dir, SAY)
+    out = catalog(outputs, config_dir)
+    out["upgrade"] = dict(did or {}, dry=False, done_before=did is None)
+    return out
+
+
 def collection_post(config_dir, outputs, data):
     op = data.get("op")
+    if op == "ws-emoji-upgrade":                   # HERESY 2919: its own lock and write, a dry run by default
+        return emoji_upgrade(config_dir, outputs, data)
+    migrate_once(config_dir, SAY)                  # HERESY 2919c: the upgrade once, before the first write after the update
     names = [n for n in (data.get("names") or []) if isinstance(n, str) and ((str(op).startswith(("playlist-", "album-")) and pl_ws(n)) or ("/" not in n and not n.startswith(".") and not pl_ws(n)))]   # HERESY 2042: a playlist's own entry, there only; 2058: and an album's
     ws = ws_name(data.get("workspace"))
     with LOCK:
         d = load(config_dir)
+        # HERESY 2919c (Viktor's scripts and probes file takes under the names as they were, «🧪 X · 20.11 / Y»): a name that comes with its emoji first
+        # means the workspace that keeps that emoji in its field, through the upgrade's moves or its emoji taken off; an add, a move or a making
+        # into one not there makes it by the name without the emoji, the emoji in its field: never a second workspace under the old name
+        made_em = {}
+        ws, made_em = ws_emoji.resolve(d, ws, make=op in ("ws-create", "ws-add", "ws-move"))
+        data = dict(data)
+        if op == "ws-move" and data.get("from"):
+            data["from"] = ws_emoji.resolve(d, ws_name(data.get("from")))[0]
+        if op in ("ws-merge", "ws-pour") and data.get("to"):
+            data["to"], more = ws_emoji.resolve(d, ws_name(data.get("to")), make=op == "ws-merge")
+            made_em.update(more)
+        if op == "pin" and data.get("place") and not str(data["place"]).startswith("__"):
+            data["place"] = ws_emoji.resolve(d, str(data["place"]))[0]
+        # HERESY 2919: an emoji given with a name (create, rename) or alone: one, never the Studio's own mark, read before anything changes
+        emo = ws_emoji.check(data.get("emoji")) if op in ("ws-create", "ws-rename", "ws-emoji") and "emoji" in data else None
         _frozen_guard(d, op, ws, names, data)      # HERESY 1166: nothing reaches a frozen workspace but its thaw
         # HERESY 2294: a top that an add, a move, a merge or a making brings into being from the Readers realm is the Readers (marked once it is there)
         made = (ws_name(data.get("to")) if op == "ws-merge" else ws if op in ("ws-create", "ws-add", "ws-move") else "") or ""
@@ -670,6 +747,9 @@ def collection_post(config_dir, outputs, data):
             parts = ws.split(SEP)
             for i in range(1, len(parts) + 1):         # a section's parents come with it
                 d["workspaces"].setdefault(SEP.join(parts[:i]), [])
+            if emo:                                    # HERESY 2919: its emoji, chosen beside its name
+                _emoji_fits(ws, emo)
+                d["ws_emoji"][ws] = emo
         elif op == "ws-rename":
             new = ws_name(data.get("to"))
             if not ws or not new or ws not in d["workspaces"] or new in d["workspaces"]:
@@ -694,6 +774,8 @@ def collection_post(config_dir, outputs, data):
                     d["pins"][to] = d["pins"].pop(old)
                 if old in d["ws_notes"]:           # HERESY 1802: and the note
                     d["ws_notes"][to] = d["ws_notes"].pop(old)
+                if old in d["ws_emoji"]:           # HERESY 2919: and the emoji
+                    d["ws_emoji"][to] = d["ws_emoji"].pop(old)
                 if old in d["blind"]:              # HERESY 1874: and the blindness
                     d["blind"] = sorted((set(d["blind"]) - {old}) | {to})
                 if old in d["archived"]:           # HERESY 2049: and the archive
@@ -703,8 +785,18 @@ def collection_post(config_dir, outputs, data):
                 if SEP not in to and realm == "reader":
                     d["ws_realm"][to] = "reader"
                 d["playlist"] = [PL_WS + to if n == PL_WS + old else n for n in d["playlist"]]   # HERESY 2042: and its place in the playlist
+                mv = d.get("ws_moved") or {}               # HERESY 2919c: an old name the upgrade moved follows it on
+                for o2, n2 in list(mv.items()):
+                    if n2 == old:
+                        mv[o2] = to
                 for al in d["albums"]:                 # HERESY 2058: and in the albums
                     al["items"] = [PL_WS + to if n == PL_WS + old else n for n in al["items"]]
+            if emo is not None:                        # HERESY 2919: the emoji chosen in the rename's field ("" takes it off)
+                if emo:
+                    _emoji_fits(new, emo)
+                    d["ws_emoji"][new] = emo
+                else:
+                    d["ws_emoji"].pop(new, None)
         elif op == "pin":                          # HERESY 1103: place = a workspace, "" (All), __fav, __none; on = true | false
             place = str(data.get("place") or "")[:200]
             # HERESY 2129 (the audit of 06.11.2026: «Призрачные пины»): a pin of a take not in the library (deleted for good, or in the trash) holds
@@ -800,6 +892,8 @@ def collection_post(config_dir, outputs, data):
             d["workspaces"][to] = sorted(set(d["workspaces"].get(to, [])) | set(d["workspaces"].pop(ws)))
             if ws in d["ws_notes"]:                # HERESY 1802: its note goes to the other when that one has none
                 d["ws_notes"].setdefault(to, d["ws_notes"].pop(ws))
+            if ws in d["ws_emoji"]:                # HERESY 2919: its emoji too, the same way
+                d["ws_emoji"].setdefault(to, d["ws_emoji"].pop(ws))
             forget_ws(d, [ws], to)                     # HERESY 2129: its other marks go; its entries in the playlist and albums are the other's now
         elif op == "ws-remove":
             wss = [ws]
@@ -834,6 +928,22 @@ def collection_post(config_dir, outputs, data):
             if not key:
                 raise ValueError("mark: fire or gem")
             d[key] = sorted(set(d[key]) | set(names)) if data.get("on") else sorted(set(d[key]) - set(names))
+        elif op == "marks":                        # HERESY 2902: {names, rating?, fire?, gem?}: a take's like and its 🔥 💎 in one write (the linked
+            #                                        reactions: 🔥 or 💎 on likes it, 👎 takes the like, 🔥 and 💎 off), never a rate and two marks racing
+            v = data.get("rating")
+            if v is not None and (isinstance(v, bool) or v not in (-1, 0, 1)):
+                raise ValueError("marks: rating is 1, -1 or 0")
+            sets = [(k, data[m]) for m, k in (("fire", "fire"), ("gem", "gems")) if data.get(m) is not None]
+            if v is None and not sets:
+                raise ValueError("marks: a rating, fire or gem to set")
+            for n in names:
+                if v is not None:
+                    if v:
+                        d["ratings"][n] = v
+                    else:
+                        d["ratings"].pop(n, None)
+            for key, on in sets:
+                d[key] = sorted(set(d[key]) | set(names)) if on else sorted(set(d[key]) - set(names))
         elif op == "blind":                        # HERESY 1874: {workspace, on}: blind listening, its sections with it
             if ws not in d["workspaces"]:
                 raise ValueError("blind listening in an existing workspace")
@@ -861,6 +971,14 @@ def collection_post(config_dir, outputs, data):
                 d["ws_notes"][ws] = text
             else:
                 d["ws_notes"].pop(ws, None)
+        elif op == "ws-emoji":                     # HERESY 2919: {workspace, emoji}: a workspace's or a section's emoji, "" takes it off
+            if ws not in d["workspaces"]:
+                raise ValueError("an emoji on an existing workspace")
+            if emo:
+                _emoji_fits(ws, emo)
+                d["ws_emoji"][ws] = emo
+            else:
+                d["ws_emoji"].pop(ws, None)
         elif op == "lora-note":                    # HERESY 1802: the user's note on an adapter, under a line in its tip in the Creator
             lid = str(data.get("id") or "").strip()
             if not lid or len(lid) > 300 or ".." in lid or lid.startswith("/"):
@@ -969,6 +1087,11 @@ def collection_post(config_dir, outputs, data):
             raise ValueError("unknown op")
         if made and made in d["workspaces"]:
             d["ws_realm"][made] = "reader"
+        if made_em:
+            with_parents(d)                        # a parent made by an add of its section is there before its emoji is set
+        for k, e in made_em.items():               # HERESY 2919c: a level made from a name with its emoji first keeps that emoji in its field
+            if k in d["workspaces"] and not d["ws_emoji"].get(k):
+                d["ws_emoji"][k] = e
         prune_pins(d)                              # HERESY 1166: no pin left where its take is not
         save(config_dir, d)
     return catalog(outputs, config_dir)
@@ -1072,23 +1195,145 @@ def trash_restore(kit, outputs, items, config_dir=None):
     return out
 
 
-def forget_takes(config_dir, outputs, names):
-    """HERESY 2129 (the audit of 06.11.2026): takes deleted for good leave no name behind where a name holds a place: the pins (a slot of four),
-    the workspaces, the playlist and the albums. A take of the same name back in the library keeps its own."""
-    gone = {n for n in names if not (outputs / n).exists()}
-    if not gone:
+# HERESY 2866 (the disk inventory of 19.11.2026): every mark a take holds by its name. The lists and the maps keyed by a take; regen_of by its
+# new take only (a parent gone stays its value: lineage.tree says it as the gone parent). hidden, protected and the rest of the take's own marks
+# with them. The workspace-keyed marks (locks, frozen, blind, archived, ws_notes, ws_realm) name workspaces, not takes.
+TAKE_LISTS = ("hidden", "played", "protected", "fire", "gems")
+TAKE_MAPS = ("ratings", "notes", "reacts", "regen_of")
+DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def trash_names(kit):
+    """HERESY 2866: the names of the takes in the trash, any day (the day folders only: the Trainer's and the Artist's trash hold no takes)."""
+    base, out = trash_dir(kit), set()
+    for day in base.iterdir() if base.is_dir() else []:
+        if day.is_dir() and DAY_RE.match(day.name):
+            out.update(p.name for p in day.iterdir() if p.is_dir())
+    return out
+
+
+def gone_for_good(kit, outputs, names):
+    """HERESY 2866: of these names, the takes neither in the library nor in the trash. A take only in the trash keeps its marks, so a
+    restore brings them back."""
+    inbin = trash_names(kit) if kit else set()
+    return {n for n in names if isinstance(n, str) and n and n not in inbin and not (outputs / n).exists()}
+
+
+def named_takes(d):
+    """HERESY 2866: every take name the marks hold (the playlist's whole-workspace entries are workspaces, left out)."""
+    out = set()
+    for k in TAKE_LISTS:
+        out.update(n for n in d.get(k) or [] if isinstance(n, str))
+    for k in TAKE_MAPS:
+        out.update(n for n in d.get(k) or {} if isinstance(n, str))
+    for ns in (d.get("pins") or {}).values():
+        out.update(n for n in ns if isinstance(n, str))
+    for ns in (d.get("workspaces") or {}).values():
+        out.update(n for n in ns if isinstance(n, str))
+    out.update(n for n in d.get("playlist") or [] if isinstance(n, str) and pl_ws(n) is None)
+    for al in d.get("albums") or []:
+        out.update(n for n in al.get("items") or [] if isinstance(n, str))
+        if isinstance(al.get("cover"), str):
+            out.add(al["cover"])
+    return out
+
+
+def drop_names(d, gone):
+    """HERESY 2866: the names in gone out of every mark a take holds; {key: [names dropped]}, a map's as {name: its value} (a note, a rating),
+    the workspaces' as {workspace: [names]}."""
+    said = {}
+
+    def note(k, ns):
+        if ns:
+            said.setdefault(k, set()).update(ns)
+    for k in TAKE_LISTS:
+        v = d.get(k)
+        if isinstance(v, list):
+            note(k, [n for n in v if n in gone])
+            d[k] = [n for n in v if n not in gone]
+    maps = {}
+    for k in TAKE_MAPS:
+        v = d.get(k)
+        if isinstance(v, dict):
+            out = {n: x for n, x in v.items() if n in gone}
+            if out:
+                maps[k] = out                            # with their values: a note or a rating dropped is still in the log
+            d[k] = {n: x for n, x in v.items() if n not in gone}
+    for ns in d["pins"].values():
+        note("pins", [n for n in ns if n in gone])
+    d["pins"] = {p: [n for n in ns if n not in gone] for p, ns in d["pins"].items() if any(n not in gone for n in ns)}
+    ws = {}
+    for w in d["workspaces"]:
+        out = [n for n in d["workspaces"][w] if n in gone]
+        if out:
+            ws[w] = sorted(out)
+            d["workspaces"][w] = [n for n in d["workspaces"][w] if n not in gone]
+    note("playlist", [n for n in d["playlist"] if n in gone])
+    d["playlist"] = [n for n in d["playlist"] if n not in gone]
+    for al in d["albums"]:
+        note("albums", [n for n in al["items"] if n in gone])
+        al["items"] = [n for n in al["items"] if n not in gone]
+        if al.get("cover") in gone:
+            note("albums", [al.pop("cover")])
+    out = {k: sorted(v) for k, v in said.items()}
+    out.update(maps)
+    if ws:
+        out["workspaces"] = ws
+    return out
+
+
+DROPPED_LOG = "collection-dropped.jsonl"
+
+
+def log_dropped(config_dir, why, said):
+    """HERESY 2866: what left the marks, a line in user/collection-dropped.jsonl ({at, why, dropped}): a note or a rating of a take gone for
+    good can still be read there. A log that cannot be written never stops the deletion."""
+    if not said:
         return
+    try:
+        with open(config_dir / DROPPED_LOG, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"at": time.strftime("%Y-%m-%d %H:%M:%S"), "why": why, "dropped": said}, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
+
+def forget_takes(config_dir, outputs, names, kit=None):
+    """HERESY 2129 (the audit of 06.11.2026): takes deleted for good leave no name behind where a name holds a place: the pins (a slot of four),
+    the workspaces, the playlist and the albums. A take of the same name back in the library keeps its own. HERESY 2866: and every other mark
+    of the take's own (TAKE_LISTS, TAKE_MAPS); with kit, a take of that name still in the trash keeps them too. What was dropped, by key."""
+    gone = gone_for_good(kit, outputs, names)
+    if not gone:
+        return {}
     with LOCK:
         d = load(config_dir)
-        d["pins"] = {p: [n for n in ns if n not in gone] for p, ns in d["pins"].items() if any(n not in gone for n in ns)}
-        for w in d["workspaces"]:
-            d["workspaces"][w] = [n for n in d["workspaces"][w] if n not in gone]
-        d["playlist"] = [n for n in d["playlist"] if n not in gone]
-        for al in d["albums"]:
-            al["items"] = [n for n in al["items"] if n not in gone]
-            if al.get("cover") in gone:
-                al.pop("cover", None)
+        said = drop_names(d, gone)
         save(config_dir, d)
+    log_dropped(config_dir, "emptied from the trash", said)
+    return said
+
+
+def tidy_marks(kit, config_dir, outputs):
+    """HERESY 2866 (19.11.2026: 798 workspace entries named takes long gone): the names of takes that are neither in the library nor in the
+    trash dropped from every mark, once when the lab starts and every hour; what was dropped, by key (the workspaces' by workspace). Nothing
+    when the library cannot be seen (no folder, or an empty one): never empty the marks for that. Each name is looked for again on its own
+    just before it goes, so a take moving between the library and the trash meanwhile is not taken for gone."""
+    try:
+        here = {p.name for p in outputs.iterdir()} if outputs.is_dir() else set()
+    except OSError:
+        return {}
+    if not here:
+        return {}
+    cand = {n for n in named_takes(load(config_dir)) if n not in here}
+    gone = gone_for_good(kit, outputs, cand)
+    if not gone:
+        return {}
+    with LOCK:
+        d = load(config_dir)
+        said = drop_names(d, gone_for_good(kit, outputs, gone))
+        if said:
+            save(config_dir, d)
+    log_dropped(config_dir, "neither in the library nor in the trash", said)
+    return said
 
 
 def trash_empty(kit, items=None, older_than_days=None, config_dir=None):
@@ -1118,7 +1363,7 @@ def trash_empty(kit, items=None, older_than_days=None, config_dir=None):
         if day.is_dir() and not any(day.iterdir()):
             day.rmdir()
     if config_dir and gone:
-        forget_takes(config_dir, kit / "outputs", gone)
+        forget_takes(config_dir, kit / "outputs", gone, kit)    # HERESY 2866: every mark of theirs, unless one of that name is still in the trash
     out = {"emptied": gone, "protected": kept}
     if absent:
         out["absent"] = absent
@@ -1140,7 +1385,17 @@ def _fname(title, used, ext):
     return name
 
 
-def export_start(kit, outputs, names, fmt, derived, sign=None):
+# HERESY 2877 (Viktor 19.11.2026, about 23:45: an export is named for the Studio and its room, not «yue2-os»): the room a page asked from, one of
+# these slugs; an older page that names none packs as the library
+EXPORT_ROOMS = ("musician", "reader", "writer", "refiner", "artist", "videographer", "trainer", "librarian")
+
+
+def export_name(room, stamp, xid):
+    room = room if room in EXPORT_ROOMS else "library"
+    return f"ruach-studio-{room}-{stamp}-{xid}.zip"
+
+
+def export_start(kit, outputs, names, fmt, derived, sign=None, room=""):
     """HERESY 1489: sign(take_dir, bytes, fmt, rel) -> (bytes, said), the lab's Content Credentials; each audio file goes into the
     ZIP as it says, and the job counts the signed ones."""
     if fmt not in ("flac", "wav"):
@@ -1153,7 +1408,7 @@ def export_start(kit, outputs, names, fmt, derived, sign=None):
 
     def work():
         try:
-            path = out_dir / f"yue2-os-{time.strftime('%Y%m%d-%H%M')}-{xid}.zip"
+            path = out_dir / export_name(str(room or ""), time.strftime('%Y%m%d-%H%M'), xid)   # HERESY 2877
             used = set()
             with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED, allowZip64=True) as z:
                 for n in names:

@@ -86,8 +86,19 @@ def pick(kit, size=""):
 
 
 def threads():
-    """Half the processor at most (the lab's own rule for its CPU work), 16 at most: past 16 it went no faster (28.10.2026, 64 threads)."""
-    return max(2, min(16, (os.cpu_count() or 4) // 2))
+    """Half the processor at most (the lab's own rule for its CPU work), 16 at most: past 16 it went no faster (28.10.2026, 64 threads); beside a
+    training 8 (HERESY 2914, BESIDE)."""
+    return max(2, min(8 if _beside() else 16, (os.cpu_count() or 4) // 2))
+
+
+BESIDE = None                      # HERESY 2914: lab.py sets it: is a training under way? Then nice 19 and 8 threads at most
+
+
+def _beside():
+    try:
+        return bool(BESIDE and BESIDE())
+    except Exception:
+        return False
 
 
 def status(kit):
@@ -115,8 +126,10 @@ def run(kit, audio, out, size, only="", job=None):
     with _ONE:
         if job is not None:
             job["status"] = "running"
+        behind = _beside()
         proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace",
-                                env=dict(os.environ, CUDA_VISIBLE_DEVICES=""))
+                                env=dict(os.environ, CUDA_VISIBLE_DEVICES=""),
+                                preexec_fn=(lambda: os.nice(19)) if behind and os.name == "posix" else None)   # HERESY 2914
         for line in proc.stdout:
             parts = line.split()
             if job is not None:

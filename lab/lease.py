@@ -35,7 +35,8 @@ TTL = 30               # a lease without a beat lapses after this
 TTL_HIDDEN = 150       # a page its browser hides beats once a minute at most
 TTL_SLOW = 90          # HERESY 2100: a holder whose last beat said beats went unanswered (a bad line) keeps it this long
 OPEN = frozenset(("/lease", "/lora/bases", "/pianoteq/preview", "/audio/monitor/tone", "/audio/monitor/play", "/audio/monitor/stop",
-                  "/audio/probe", "/audio/loop", "/handoff",
+                  "/audio/probe", "/audio/loop", "/handoff", "/daw/play", "/daw/play/stop",   # HERESY 2865: listening
+                  "/history",                                                 # HERESY 2912: what was heard and saved, from any window
                   "/debug/bundle", "/debug/send", "/debug/clear"))   # reads and listening sent as POSTs (HERESY 2102: and the debug journal, which writes
                                                                     # nothing of the user's: a read-only window's journal is the one most wanted); the
                                                                     # page's own list is the same

@@ -30,7 +30,8 @@
             ref: refReset(),                             // HERESY 1755: the reference, the sound as it came
             marks: [],                                   // HERESY 2016: the markers of your own
             grid: { on: recallFlag("yue2.mixer.grid", true), chords: recallFlag("yue2.mixer.chords", true), wait: false, err: "", lit: null },   // HERESY 2313–2314
-            aud: null };                                 // HERESY 2317: the lane auditioned while Alt is held on it
+            aud: null,                                   // HERESY 2317: the lane auditioned while Alt is held on it
+            way: wayRecall(), fx: fxReset() };           // HERESY 2865: Live or Forge, and the Forge way's element and session
   function $(id) { return document.getElementById(id); }
   var UNDO_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 3 2 6l3 3M2.5 6H10a4 4 0 0 1 0 8H7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var GRID_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2 3v10M6 6v7M10 6v7M14 3v10M1.5 13h13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';   // HERESY 2313
@@ -50,6 +51,7 @@
   var keepTimer = 0;
   function keepNow() {
     clearTimeout(keepTimer); keepTimer = 0;
+    fxDirty();                                        // HERESY 2865: the Forge way renders the mix as it now is
     if (!S.take || !S.set || S.owner !== keyOf()) return;   // HERESY 1545: kept only as whose it is
     S.t = Date.now();
     try { localStorage.setItem(keyOf(), JSON.stringify({ strips: S.strips, versions: S.versions, buses: S.buses, ab: S.ab, t: S.t, marks: S.marks })); } catch (e) { /* private mode */ }   // 2016: marks
@@ -462,6 +464,7 @@
   function setTake(take) {
     if (S.take && take && S.take.name === take.name) return;
     stop();
+    fxDrop();                                         // HERESY 2865: the last take's Forge session let go
     keepNow(); closeGraph();   // HERESY 1531
     clearTimeout(S.watch); S.busy = ""; S.mixId = "";   // HERESY 1536: a mix watched for another take is no longer this one's
     S.owner = "";                                     // HERESY 1545: the mix in hand was the last take's
@@ -498,7 +501,7 @@
     paint();
     if (!S.take || !S.set) return;
     var token = ++S.token;
-    say(tr("Reading the set…"));
+    say(tr("Reading the set…")); if (window.HeresyWait) window.HeresyWait.lead($("mxState"));   // HERESY 2892
     getJson("/daw/set?" + q({ name: S.take.name, set: S.set })).then(function (info) {
       if (token !== S.token) return;
       S.info = info;
@@ -654,6 +657,9 @@
         esc(tr("Automation: the lane's volume drawn over time. On, a click on the wave puts a point there and drags it, a right-click takes it away, a double-click sets it to 0 dB; heard and mixed after the fader")) + '">A</button>' +
       '<button type="button" class="mx-ms mx-autop" data-mx="autop"' + (S.autoShow[n] ? "" : " hidden") + ' data-tip="' +   // HERESY 1559
         esc(tr("Which knob the line draws: volume, pan, width, the room's send or the delay's; a click goes to the next. A knob drawn plays its line in place of its own value")) + '">' + esc(tr(AUTO_P[autoParam(n)].short)) + "</button>" +
+      // HERESY 2871: the lane as a spectrogram in place of its wave (the rest has no file of its own)
+      '<button type="button" class="mx-ms mx-spec' + (specOn(n) ? " is-on" : "") + '" data-mx="spec" aria-pressed="' + specOn(n) + '"' + (n === REST ? " disabled" : "") +
+        ' aria-label="' + esc(tr("Spectrum")) + '" data-tip="' + esc(tr(n === REST ? "The rest is the source less the stems, worked out as it plays: it has no file of its own to measure" : "Spectrum: the lane's sound as a spectrogram in place of its wave, the low notes at the bottom and the high at the top, measured once on Forge; remembered in this browser")) + '">' + icon("spectrum", "F") + "</button>" +
       offHtml(s) +   // HERESY 1989: the level in the console alone; the lane's shift, when it has one
       '<button type="button" class="mx-fold" data-mx-fold="1" aria-expanded="' + !LANE_F[n] + '" data-tip="' + esc(tr("Fold the lane to its controls, or unfold it")) + '">' + (LANE_F[n] ? "\u25b8" : "\u25be") + "</button>" +
       "</div>" +   // HERESY 1531: the compressor, the sends and the rest of the strip in the console
@@ -798,6 +804,80 @@
   }
   function waveBox() { var c = document.querySelector("#mxLanes canvas[data-mx-wave]"); return c ? c.parentNode : null; }
 
+  // HERESY 2871 (the plan after 2.0.8: «Спектральный вид полосы, потом comping по версиям стема», Viktor 11.11.2026: «Делай как советуешь»): a lane
+  // can show its stem as a spectrogram in place of its wave, to see where a version differs before comping. The lab measures the version's own
+  // file once (/lab/spectrum with its source, the take card's measure, kept in the lab's cache); the page draws it on the lane's own time (its
+  // view, its shift, a stretch laid elsewhere), log frequency from 20 Hz, louder as the level's line is high, the quiet parts see-through so the
+  // lane's ground (day or night) shows under them. Which stems show it is kept in this browser by the stem's name (yue2.mixer.spec), never in the
+  // mix. The current take's spectra only are held (a stem's is some megabytes).
+  var SPEC_KEY = "yue2.mixer.spec", SPECS = {}, SPECS_TAKE = "", specSaid = "";
+  var SPEC_ON = (function () { try { var v = JSON.parse(localStorage.getItem(SPEC_KEY) || "[]"); return Array.isArray(v) ? v.filter(function (x) { return typeof x === "string"; }) : []; } catch (e) { return []; } })();
+  function specOn(n) { return n !== REST && SPEC_ON.indexOf(n) >= 0; }
+  function specKeep() { try { if (SPEC_ON.length) localStorage.setItem(SPEC_KEY, JSON.stringify(SPEC_ON)); else localStorage.removeItem(SPEC_KEY); } catch (e) { /* private mode */ } }
+  function specKey(n) { return (S.take ? S.take.name : "") + "|" + n + "|" + versionOf(n); }
+  function stripTitle(n) { var st = S.info ? S.info.strips.filter(function (x) { return x.name === n; })[0] : null; return st ? st.title : n; }
+  function specPaint(n) {
+    var b = document.querySelector('.mx-lane[data-strip="' + n + '"] [data-mx="spec"]');
+    if (!b) return;
+    var on = specOn(n), sp = on ? SPECS[specKey(n)] : null;
+    b.classList.toggle("is-on", on); b.setAttribute("aria-pressed", on);
+    b.classList.toggle("is-busy", !!(sp && sp.busy)); b.classList.toggle("is-bad", !!(sp && sp.err));
+  }
+  function specLoad(n) {
+    var H = window.HeresySpectrum;
+    if (!S.take) return null;
+    if (SPECS_TAKE !== S.take.name) { SPECS = {}; SPECS_TAKE = S.take.name; }
+    var k = specKey(n), path = versionOf(n), take = S.take.name;
+    if (SPECS[k]) return SPECS[k];
+    if (!H || typeof H.labData !== "function" || !path) return (SPECS[k] = { err: "no lab" });
+    SPECS[k] = { busy: true };
+    specSaid = tr("Forge is measuring the spectrum of {0}\u2026").replace("{0}", stripTitle(n));
+    say(specSaid);
+    H.labData({ name: take, source: path, url: "/lab/spectrum?name=" + encodeURIComponent(take) + "&source=" + encodeURIComponent(path) }).then(function (d) {
+      var db = d.spec.db, hi = -1e9;
+      for (var i = 0; i < db.length; i += 7) if (db[i] > hi) hi = db[i];
+      SPECS[k] = { data: d, lo: -80, hi: Math.max(hi, -40) };
+      if (S.take && S.take.name === take && $("mxState") && $("mxState").textContent === specSaid) say("");
+    }, function (e) {
+      SPECS[k] = { err: (e && e.message) || String(e) };
+      if (S.take && S.take.name === take) say(tr("The spectrum of {0} could not be measured: {1}").replace("{0}", stripTitle(n)).replace("{1}", SPECS[k].err), true);
+    }).then(function () { if (S.take && S.take.name === take && S.info) { specPaint(n); draw(n); } });
+    return SPECS[k];
+  }
+  // the spectrogram's pixel columns x0…x1 of a lane w wide; at(px) is the stem file's second under a pixel's left edge. Built at the canvas's own
+  // pixels and laid over what is drawn (the grid shows through the quiet); the whole lane's picture kept until its view, size or level line changes
+  function specCols(c, g, n, x0, x1, w, at, cache) {
+    var sp = SPECS[specKey(n)], d = sp.data, s = d.spec, sr = d.sr || 48000, nyq = sr / 2, fs = s.hop / sr, lut = window.HeresySpectrum.lut;
+    var dpr = c.width / w, X0 = Math.round(x0 * dpr), W = Math.round(x1 * dpr) - X0, H = c.height;
+    if (W <= 0 || H <= 0 || !lut) return;
+    var vp = linePts(n, "volume"), key = cache ? [X0, W, H, at(0).toFixed(4), at(w).toFixed(4), JSON.stringify(vp)].join("|") : "";
+    var off = cache && sp.img && sp.img.key === key ? sp.img.canvas : null;
+    if (!off) {
+      off = document.createElement("canvas"); off.width = W; off.height = H;
+      var og = off.getContext("2d"), img = og.createImageData(W, H), px = img.data, rowBin = new Float64Array(H), y;
+      for (y = 0; y < H; y++) rowBin[y] = Math.min(s.bins - 1, 20 * Math.pow(nyq / 20, 1 - (y + 0.5) / H) / nyq * (s.bins - 1));
+      var lo = sp.lo, span = Math.max(1e-6, sp.hi - sp.lo);
+      for (var X = 0; X < W; X++) {
+        var p0 = (X0 + X) / dpr, p1 = (X0 + X + 1) / dpr, f0 = Math.floor(at(p0) / fs), f1 = Math.max(f0 + 1, Math.floor(at(p1) / fs));
+        if (f1 <= 0 || f0 >= s.frames) continue;
+        f0 = Math.max(0, f0); f1 = Math.min(s.frames, f1);
+        var gdb = vp.length ? autoDb(vp, xt((p0 + p1) / 2, w)) : 0;   // the level's line, as the wave is drawn by it (1968)
+        if (!isFinite(gdb)) continue;
+        for (y = 0; y < H; y++) {
+          var b = rowBin[y], k = Math.floor(b), t = b - k, v = -1e9;
+          for (var f = f0; f < f1; f++) { var o0 = f * s.bins + k, a = s.db[o0], z = k + 1 < s.bins ? s.db[o0 + 1] : a, here = a + (z - a) * t; if (here > v) v = here; }
+          var i = Math.max(0, Math.min(255, Math.round((v + gdb - lo) / span * 255)));
+          if (i < 6) continue;                          // the quiet: see-through
+          var o = (y * W + X) * 4;
+          px[o] = lut[i * 3]; px[o + 1] = lut[i * 3 + 1]; px[o + 2] = lut[i * 3 + 2]; px[o + 3] = Math.min(255, (i - 6) * 3);
+        }
+      }
+      og.putImageData(img, 0, 0);
+      if (cache) sp.img = { key: key, canvas: off };
+    }
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(off, X0, 0); g.restore();
+  }
+
   // ---- the wave: its upper half; the whole one under the pointer (the lane grows); silence drawn dark; the playhead over all
   function draw(n) {
     var c = document.querySelector('canvas[data-mx-wave="' + n + '"]');
@@ -810,7 +890,9 @@
     gridLines(g, w, h, false);                        // HERESY 2313: the bar grid under the wave
     var css = getComputedStyle(c), on = css.getPropertyValue("--mx-wave").trim() || "#d99d10", off = css.getPropertyValue("--mx-quiet").trim() || "rgba(0,0,0,.45)";
     var L = S.info.seconds || 1;
-    if (pk) {
+    var sp = specOn(n) ? specLoad(n) : null;           // HERESY 2871: the spectrogram once Forge has measured it; the wave until then
+    if (sp && sp.data) specCols(c, g, n, 0, w, w, function (px) { return xt(px, w) - (strip(n).offset_s || 0); }, true);
+    else if (pk) {
       g.fillStyle = on;
       var base = full ? h / 2 : h - 1, amp = full ? h / 2 - 1 : h - 2;
       var vp = linePts(n, "volume"), vg = function (px) { return vp.length ? db(autoDb(vp, xt(px + 0.5, w))) : 1; };   // HERESY 1968: the wave as the level's line makes it; 2318: laid out
@@ -848,7 +930,8 @@
       if (xb < 0 || xa > w) return;
       g.clearRect(xa, 0, xb - xa, h);
       g.fillStyle = acc; g.globalAlpha = 0.12; g.fillRect(xa, 0, xb - xa, h); g.globalAlpha = 1;
-      if (pk) {
+      if (sp && sp.data) specCols(c, g, n, Math.max(0, Math.floor(xa)), Math.min(w, Math.ceil(xb)), w, function (px) { return e2.a + (xt(px, w) - e2.to); }, false);   // 2871
+      else if (pk) {
         g.fillStyle = on;
         var base2 = h / 2, amp2 = h / 2 - 1;
         for (var px2 = Math.max(0, Math.floor(xa)); px2 < Math.min(w, Math.ceil(xb)); px2++) {
@@ -939,7 +1022,10 @@
   function ensureCtx() {
     if (S.ctx) return S.ctx;
     var AC = window.AudioContext || window.webkitAudioContext;
-    S.ctx = new AC({ sampleRate: S.info.rate || 48000 });
+    // HERESY 2865 (Viktor 19.11.2026: «Делаем оба как переключаемые опции прямо в миксере DAW»): the Live way asks the browser for its playback
+    // buffers (about 40–80 ms in Chrome, where «interactive», the default, took the smallest the device allows): far fewer under-runs, the
+    // playhead set back by the output's own latency (heard)
+    try { S.ctx = new AC({ sampleRate: S.info.rate || 48000, latencyHint: "playback" }); } catch (e) { S.ctx = new AC({ sampleRate: S.info.rate || 48000 }); }
     return S.ctx;
   }
   function graphKey() { return S.set + "|" + names().join(",") + "|" + (S.info.channels || 2) + "|" + subsKey(); }   // 1563: the buses' members
@@ -1174,6 +1260,157 @@
     g.mon.w[0].gain.setTargetAtTime(a, t, 0.01); g.mon.w[3].gain.setTargetAtTime(a, t, 0.01); g.mon.w[1].gain.setTargetAtTime(b, t, 0.01); g.mon.w[2].gain.setTargetAtTime(b, t, 0.01);
     g.mon.dim.gain.setTargetAtTime(S.mon.dim ? 0.1 : 1, t, 0.01);
   }
+  // HERESY 2865 (Viktor 19.11.2026: «Делаем оба как переключаемые опции прямо в миксере DAW. Что человеку по душе, то и выберет»; the audit of
+  // 19.11, heresy/MISC/claude-arc/day-2026-11-19/daw-webaudio/AUDIT.md, its A and C1): the way the DAW plays, a switch in the console's master
+  // strip, kept in this browser. Live: Web Audio, every knob heard at once (with the playback buffers, above). Forge: the lab renders the mix
+  // with the bounce's own code in pieces of 5 s from the playhead (lab/daw_play.py) and one <audio> plays it as the players play a take
+  // (2835–2837): no AudioContext between the sound and the speakers. A change goes to the lab 0.2 s after the hand stops and is heard from a
+  // new element that takes over 0.8 s ahead, once it is ready at that moment; the meters and the loudness are the lab's, a 100 ms block a key.
+  function wayRecall() { try { return localStorage.getItem("yue2.mixer.way") === "forge" ? "forge" : "live"; } catch (e) { return "live"; } }
+  function fxReset() { return { id: "", rev: 0, el: null, live: false, next: null, meters: {}, t: 0, mAt: 0, last: -1, gone: false }; }
+  function setWay(w) {
+    w = w === "forge" ? "forge" : "live";
+    if (w === S.way) return S.way;
+    var was = S.playing, t = pos();
+    stop();
+    S.way = w;
+    try { localStorage.setItem("yue2.mixer.way", w); } catch (e) { /* a private window: this page only */ }
+    if (was) play(t);
+    emit("change", { bus: "way" });
+    return S.way;
+  }
+  function fxBody(at) {
+    var versions = {};
+    S.info.strips.forEach(function (s) { var v = versionOf(s.name); if (v !== s.path) versions[s.name] = v; });
+    var on = !!(S.ref.on && S.ref.armed && !S.aud), mx = value();
+    if (S.aud) {                                      // HERESY 2317: the lane auditioned alone, rendered so (the Live way gates the others)
+      mx = JSON.parse(JSON.stringify(mx)); mx.strips = mx.strips || {};
+      names().forEach(function (n) { mx.strips[n] = Object.assign({}, mx.strips[n] || {}, { solo: n === S.aud.n, mute: false }); });
+      (mx.groups || []).forEach(function (x) { x.solo = false; x.mute = false; });
+    }
+    return { id: S.fx.id, name: S.take.name, set: S.set, mix: mx, versions: versions, mono: !!S.mon.mono, at: at,
+             ref: { on: on, spec: on ? S.ref.spec || "" : "", gain: on ? db(S.ref.match || 0) : 1 } };
+  }
+  function fxPost(at) {
+    return fetch("/lab/daw/play", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(fxBody(at)) })
+      .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); })
+      .then(function (b) { S.fx.id = b.id; return b; });
+  }
+  function fxEl(url) {
+    var el = new Audio();
+    el.preload = "auto";
+    el.dataset.oneSound = "daw";                      // app.js's one sound at a time: the DAW's own, never the one that stops the DAW
+    el.volume = S.mon.dim ? 0.1 : 1;                  // HERESY 1536: Dim is the element's; Mono is rendered
+    el.src = url;
+    el.addEventListener("ended", function () { if (S.fx.el === el && S.playing) { S.at = 0; stop(false); } });
+    el.addEventListener("error", function () { if (S.fx.el === el && S.playing) { stop(); say(tr("Forge could not play the mix: {0}").replace("{0}", el.error ? el.error.message || el.error.code : "?"), true); } });
+    return el;
+  }
+  function fxHalt() {
+    var f = S.fx;
+    f.live = false;
+    if (f.el) try { f.el.pause(); } catch (e) { /* gone */ }
+    if (f.next) { try { f.next.el.pause(); f.next.el.removeAttribute("src"); f.next.el.load(); } catch (e) { /* gone */ } f.next = null; }
+  }
+  function fxDrop() {                                 // another set or take: the session let go on Forge
+    fxHalt();
+    if (S.fx.el) { try { S.fx.el.removeAttribute("src"); S.fx.el.load(); } catch (e) { /* gone */ } }
+    if (S.fx.id) fetch("/lab/daw/play/stop", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: S.fx.id }) }).catch(function () {});
+    S.fx = fxReset();
+  }
+  function fxPlay(from) {
+    var f = S.fx, token = S.token;
+    if (window.ruachOneSound) window.ruachOneSound();   // HERESY 1476: one sound at a time
+    S.at = Math.max(0, Math.min(S.info.seconds - 0.05, from == null ? S.at : from));
+    S.playing = true;
+    S.startAt = S.at;
+    S.loud = loudReset();
+    say(tr("The mix is rendered on Forge…"));
+    fxPost(S.at).then(function (r) {
+      if (token !== S.token) return;
+      var el = f.el && f.rev === r.rev && !f.gone ? f.el : fxEl(r.url);
+      if (el !== f.el && f.el) { try { f.el.removeAttribute("src"); f.el.load(); } catch (e) { /* gone */ } }
+      f.el = el; f.rev = r.rev; f.gone = false;
+      el.volume = S.mon.dim ? 0.1 : 1;
+      var go = function () {
+        if (token !== S.token) return;
+        el.currentTime = S.startAt;
+        el.play().then(function () { if (token !== S.token) { el.pause(); return; } f.live = true; say(""); },
+                       function (e) { if (token === S.token) { stop(); say(tr("Forge could not play the mix: {0}").replace("{0}", e.message || e), true); } });
+      };
+      if (el.readyState >= 1) go(); else el.addEventListener("loadedmetadata", go, { once: true });
+    }, function (e) { if (token === S.token) { stop(); say(tr("Forge could not play the mix: {0}").replace("{0}", e.message || e), true); } });
+    var tick = function () {
+      if (token !== S.token) return;
+      fxSwapCheck(); fxMeters();
+      paintPlayhead();
+      meters();                                       // HERESY 1501
+      var p = pos();
+      if (S.loopOn && S.loop && S.at < S.loop[1] && p >= S.loop[1]) { play(S.loop[0]); return; }   // the loop played round
+      if (S.view.zoom > 1 && (p > S.view.t0 + span() * 0.97 || p < S.view.t0)) { S.view.t0 = p - span() * 0.05; clampView(); redrawAll(); }   // the view follows
+      if (p >= S.info.seconds - 0.01) { S.at = 0; stop(false); return; }
+      S.raf = requestAnimationFrame(tick);
+    };
+    S.raf = requestAnimationFrame(tick);
+    paintHead();
+  }
+  function fxDirty() {
+    if (S.way !== "forge" || !S.info || !S.take) return;
+    if (!S.playing) { S.fx.gone = true; return; }   // the next play sends the mix anew
+    clearTimeout(S.fx.t);
+    S.fx.t = setTimeout(function () {
+      var f = S.fx, token = S.token;
+      if (!S.playing || !f.el || !f.live) return;
+      fxPost(pos()).then(function (r) {
+        if (token !== S.token || r.rev === f.rev || (f.next && f.next.rev === r.rev)) return;
+        if (f.next) { try { f.next.el.pause(); f.next.el.removeAttribute("src"); f.next.el.load(); } catch (e) { /* gone */ } }
+        var nel = fxEl(r.url), nx = { el: nel, rev: r.rev, at: Math.min(S.info.seconds - 0.05, f.el.currentTime + 0.8), ready: false };
+        nel.addEventListener("seeked", function () { nx.ready = true; });
+        nel.addEventListener("loadedmetadata", function () { nel.currentTime = nx.at; }, { once: true });
+        f.next = nx;
+      }, function (e) { say(tr("Forge could not play the mix: {0}").replace("{0}", e.message || e), true); });
+    }, 200);
+  }
+  function fxSwapCheck() {                            // the new mix's element takes over at its moment, once it is ready there
+    var f = S.fx, nx = f.next;
+    if (!nx || !f.el) return;
+    var t = f.el.currentTime;
+    if (!nx.ready) return;
+    if (t > nx.at + 0.25) { nx.ready = false; nx.at = Math.min(S.info.seconds - 0.05, t + 0.8); nx.el.currentTime = nx.at; return; }   // came too late: a later moment
+    if (t < nx.at - 0.004) return;
+    var old = f.el;
+    nx.el.play().catch(function () {});
+    try { old.pause(); old.removeAttribute("src"); old.load(); } catch (e) { /* gone */ }
+    f.el = nx.el; f.rev = nx.rev; f.next = null; f.live = true;
+  }
+  function fxMeters() {                               // the next seconds' meters asked about once a second
+    var f = S.fx, now = performance.now();
+    if (!f.id || now - f.mAt < 1000) return;
+    f.mAt = now;
+    var t = pos(), rev = f.rev;
+    fetch("/lab/daw/play/meters?" + q({ id: f.id, rev: rev, from: Math.max(0, t - 1), to: t + 6 }))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (b) { if (!b) return; var m = f.meters[rev] || (f.meters[rev] = {}); Object.keys(b.pieces).forEach(function (k) { m[k] = b.pieces[k]; });
+        Object.keys(f.meters).forEach(function (r2) { if (+r2 < rev - 1) delete f.meters[r2]; }); }, function () {});
+  }
+  function fxRead() {                                 // the lab's blocks at the element's time, in the console's order (its kernel's read())
+    var f = S.fx, ns = names(), subs = S.buses.subs || [], t = pos(), k = Math.floor(t / 5), m = (f.meters[f.rev] || {})[k];
+    var keys = ns.concat(["~room", "~delay", "*"], subs.map(function (b) { return "%" + b.id; }));
+    var out = { m: [], gr: [], gg: [], mg: null }, bi = m ? Math.min(m.blocks - 1, Math.max(0, Math.floor((t - k * 5) / 0.1 + 1e-6))) : -1, gb = m ? m.b0 + bi : -1;
+    keys.forEach(function (key) {
+      var x = m && m.m[key];
+      if (!x || bi < 0) { out.m.push({ n: 0 }); return; }
+      var o = { n: x.n, pk: x.pk[bi], ss: x.ss[bi] };
+      if (key === "*") {
+        o.tp = Math.max(x.pk[bi][0], x.pk[bi][1]); o.xy = x.xy[bi];
+        o.blocks = gb > f.last && f.last >= gb - 10 ? x.kw.slice(Math.max(0, bi - (gb - f.last) + 1), bi + 1) : gb !== f.last ? [x.kw[bi]] : [];   // each block once
+        f.last = gb;
+      }
+      out.m.push(o);
+    });
+    ns.concat(subs).forEach(function () { out.gr.push(0); });
+    return out;
+  }
   var IRS = {};
   function setCut(q, type, hz, rate) {               // HERESY 1762: the render's RBJ band at Q 1/√2 (in dB, as the EQ's cuts); Off, a 0 dB bell
     var on = type === "highpass" ? +hz > 20 : +hz < 20000, t = S.ctx.currentTime;
@@ -1240,9 +1477,16 @@
     if (!l.an) { l.an = S.ctx.createAnalyser(); l.an.fftSize = 8192; l.an.smoothingTimeConstant = 0.75; g.all.push(l.an); if (l.tap) l.tap.connect(l.an); }
     return l.an;
   }
-  function pos() { return S.playing && S.ctx ? Math.min(S.info.seconds, Math.max(S.startAt, S.startAt + (S.ctx.currentTime - S.startCtx))) : S.at; }
+  function pos() {
+    if (S.way === "forge") return S.playing && S.fx.el && S.fx.live ? Math.min(S.info.seconds, S.fx.el.currentTime) : S.playing ? S.startAt : S.at;   // HERESY 2865
+    return S.playing && S.ctx ? Math.min(S.info.seconds, Math.max(S.startAt, S.startAt + (S.ctx.currentTime - S.startCtx))) : S.at;
+  }
   function latency(g) { return g && g.eng ? g.eng.latency + (g.mOn ? g.eng.masterLatency || 0 : 0) : 0; }   // HERESY 1544: with the master's node when it is in
-  function heard() { var g = S.graph; return S.playing && g && g.eng ? Math.max(S.startAt, pos() - latency(g)) : pos(); }   // HERESY 1531: as it reaches the ears
+  function heard() {                                 // HERESY 1531: as it reaches the ears; 2865: and after the output's own buffer (Forge: the element's own time)
+    var g = S.graph;
+    if (S.way === "forge") return pos();
+    return S.playing && g && g.eng ? Math.max(S.startAt, pos() - latency(g) - ((S.ctx && S.ctx.outputLatency) || 0)) : pos();
+  }
   function stop(keepAt) {
     if (S.playing && keepAt !== false) S.at = pos();
     S.playing = false;
@@ -1250,12 +1494,14 @@
     clearTimeout(S.timer); cancelAnimationFrame(S.raf);
     S.srcs.forEach(function (s) { try { s.stop(); } catch (e) { /* not started */ } });
     S.srcs = [];
+    fxHalt();                                         // HERESY 2865
     paintHead(); paintPlayhead();
     if (S.graph) { S.fall = performance.now() + 1500; fallMeters(); }   // HERESY 1531: the meters fall back to rest
   }
   function play(from) {
     if (!S.info) return;
     stop(false);
+    if (S.way === "forge") return fxPlay(from);       // HERESY 2865
     var ctx = ensureCtx();
     if (ctx.state === "suspended") ctx.resume();
     if (window.ruachOneSound) window.ruachOneSound();   // HERESY 1476: one sound at a time
@@ -1450,13 +1696,14 @@
     return v;
   }
   function meters() {
-    var g = S.graph;
-    if (!g || !g.eng || !g.on) return;
-    var rd = g.eng.read(), ns = names(), now = performance.now();
+    var g = S.graph, fxm = S.way === "forge";        // HERESY 2865: the Forge way's meters are the lab's, a 100 ms block at the element's time
+    if (!fxm && (!g || !g.eng || !g.on)) return;
+    var rd = fxm ? fxRead() : g.eng.read(), ns = names(), now = performance.now();
+    if (!rd) return;
     ns.forEach(function (n, i) { level(n, rd.m[i], rd.gr[i], now); });
     ns.forEach(function (n, i) { var v = S.lv[n], gg = (rd.gg && rd.gg[i]) || 0; if (v) v.gg = gg >= (v.gg || 0) ? gg : Math.max(gg, (v.gg || 0) - 0.4); });   // HERESY 1760: the gates' reduction, falling back
     level("~room", rd.m[ns.length], 0, now); level("~delay", rd.m[ns.length + 1], 0, now);
-    (S.buses.subs || []).forEach(function (b, j) { if (g.subs && g.subs[b.id]) level("%" + b.id, rd.m[ns.length + 3 + j], rd.gr[ns.length + j], now); });   // HERESY 1563
+    (S.buses.subs || []).forEach(function (b, j) { if (fxm || (g.subs && g.subs[b.id])) level("%" + b.id, rd.m[ns.length + 3 + j], rd.gr[ns.length + j], now); });   // HERESY 1563
     var mt = S.lv["*"] ? S.lv["*"].t : 0, mv = level("*", rd.m[ns.length + 2], rd.mg ? rd.mg[0] : (S.lv["*"] ? S.lv["*"].gr : 0), now);   // HERESY 1544: the master's compressor and limiter
     if (rd.mg) { var lg = rd.mg[1], ldt = mt ? Math.min(0.25, (now - mt) / 1000) : 0.016; mv.lim = lg >= (mv.lim || 0) ? lg : Math.max(lg, (mv.lim || 0) - 20 * ldt); }
     loudness(rd.m[ns.length + 2]);
@@ -1488,6 +1735,7 @@
     if (row) {
       var s = strip(n);
       Array.prototype.forEach.call(row.querySelectorAll(".mx-ms"), function (b) {
+        if (b.dataset.mx === "spec") return;             // HERESY 2871: this browser's, not the strip's (specPaint)
         if (b.dataset.mx === "auto") { b.classList.toggle("is-on", !!S.autoShow[n]); b.setAttribute("aria-pressed", !!S.autoShow[n]); b.classList.toggle("has-auto", hasAuto(n)); return; }   // HERESY 1536; 1559
         var on = !!s[b.dataset.mx]; b.classList.toggle("is-on", on); b.setAttribute("aria-pressed", on); });
       var o = row.querySelector(".mx-fader output"), f = row.querySelector('.mx-fader input[data-mx="gain_db"]');
@@ -1508,7 +1756,7 @@
   }
   function onChange(e) {
     var el = e.target;
-    if (el.id === "mxSet") { keepNow(); S.owner = ""; S.set = el.value; open(); return; }   // HERESY 1545
+    if (el.id === "mxSet") { keepNow(); fxDrop(); S.owner = ""; S.set = el.value; open(); return; }   // HERESY 1545; 2865: its Forge session let go
     if (el.dataset && el.dataset.mx === "gain_db") S.gesture = false;
     var row = el.closest && el.closest(".mx-lane");
     if (row && el.dataset.mx === "version") setVersion(row.dataset.strip, el.value);
@@ -1573,6 +1821,13 @@
     if (row && k === "vercycle") {                    // HERESY 1538: the next version
       var vn = row.dataset.strip, vs = (S.info.strips.filter(function (x) { return x.name === vn; })[0] || { versions: [] }).versions.map(function (x) { return x.path; });
       if (vs.length > 1) setVersion(vn, vs[(vs.indexOf(versionOf(vn)) + 1) % vs.length]);
+      return;
+    }
+    if (row && k === "spec") {                        // HERESY 2871: the lane's spectrogram on or off, kept in this browser by the stem's name
+      var sn = row.dataset.strip, si = SPEC_ON.indexOf(sn);
+      if (sn === REST) return;
+      if (si >= 0) SPEC_ON.splice(si, 1); else SPEC_ON.push(sn);
+      specKeep(); specPaint(sn); draw(sn); specPaint(sn);
       return;
     }
     if (row && k === "auto") { var an = row.dataset.strip; S.autoShow[an] = !S.autoShow[an]; lanePaintAuto(an); draw(an); return; }   // HERESY 1535
@@ -2182,7 +2437,7 @@
     document.addEventListener("keydown", layerKey, true);
     if (LAYER.banks) layerList();
     else {
-      back.querySelector(".mxl-list").innerHTML = '<li class="mxl-wait">' + esc(tr("Reading the shelf…")) + "</li>";
+      back.querySelector(".mxl-list").innerHTML = '<li class="mxl-wait">' + (window.HeresyWait ? window.HeresyWait.wave() : "") + esc(tr("Reading the shelf…")) + "</li>";
       getJson("/banks").then(function (d) { LAYER.banks = d.banks || []; layerList(); },
         function (e) { var b = $("mxLayer"); if (b) b.querySelector(".mxl-list").innerHTML = '<li class="mxl-wait is-bad">' + esc(e.message) + "</li>"; });
     }
@@ -2850,7 +3105,7 @@
     inp.addEventListener("change", function () {
       var f = inp.files && inp.files[0];
       if (!f) return;
-      say(tr("Sending «{0}» to Forge…").replace("{0}", f.name));
+      say(tr("Sending «{0}» to Forge…").replace("{0}", f.name)); if (window.HeresyWait) window.HeresyWait.lead($("mxState"));   // HERESY 2892
       fetch("/lab/daw/ref?" + q({ file: f.name, title: f.name.replace(/\.[^.]+$/, "") }), { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: f })
         .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); })
         .then(function (r) { refChoose(r.spec, r.title); }, function (e) { say(tr("The song did not reach Forge: {0}").replace("{0}", e.message || e), true); });
@@ -3196,7 +3451,7 @@
     var versions = {};
     S.info.strips.forEach(function (s) { var v = versionOf(s.name); if (v !== s.path) versions[s.name] = v; });
     S.busy = "mixing"; paintHead();
-    say(tr("Mixing on Forge…"));
+    say(tr("Mixing on Forge…")); if (window.HeresyWait) window.HeresyWait.lead($("mxState"));   // HERESY 2892
     fetch("/lab/daw/mix", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: S.take.name, set: S.set, mix: value(), versions: versions, print: S.print }) })
       .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); })
       .then(function (job) { S.mixId = job.id; S.mixGone = 0; paintHead(); watch(job.id); })
@@ -3282,13 +3537,15 @@
       peaks: Object.keys(S.peaks).length, ctx: S.ctx ? S.ctx.state : "",
       graph: g ? { kind: g.eng.kind, on: !!g.on, lanes: Object.keys(g.lanes).length, room: !!g.rv.conv, latency: latency(g), master: !!g.mOn } : null,   // HERESY 1531; 1544: master
       levels: Object.keys(S.lv).length, loud: S.loud ? { m: S.loud.m, s: S.loud.s, i: S.loud.i, tp: S.loud.tp, lra: S.loud.lra } : null, undo: S.undo.length, redo: S.redo.length, ab: S.ab.cur,
+      way: S.way, fx: { id: S.fx.id, rev: S.fx.rev, live: S.fx.live, next: !!S.fx.next, at: S.fx.el ? S.fx.el.currentTime : null, pieces: Object.keys(S.fx.meters[S.fx.rev] || {}).length },   // HERESY 2865
       dock: S.dock, print: S.print, auto: Object.keys(S.autoShow).filter(function (k2) { return S.autoShow[k2]; }), mon: Object.assign({}, S.mon),
       ref: { armed: S.ref.armed, on: S.ref.on, match: S.ref.match, blocks: S.ref.z ? S.ref.z.length : 0, spec: S.ref.spec }, fade: S.info ? fadeOf() : null,   // HERESY 1755, 1756; 2315: spec
       grid: { on: S.grid.on, chords: S.grid.chords, wait: S.grid.wait, err: S.grid.err, bars: gridData() ? gridData().bars.length : 0 }, aud: S.aud ? S.aud.n : null }; },   // HERESY 2313, 2317
     // HERESY 1531: the console's way in (heresy-console.js)
     k: { S: S, names: names, strip: strip, set: setStrip, setBus: setBus, mark: mark, on: on, select: select, setVersion: setVersion, versionOf: versionOf, refresh: refreshVersions,   // 1561
          mixes: { list: function () { return S.named; }, lab: function () { return S.lab; }, saveAs: saveAs, load: loadNamed, del: delNamed },   // HERESY 1533
-         monitor: function (k2, on) { if (k2) { S.mon[k2] = on == null ? !S.mon[k2] : !!on; applyMon(S.graph); emit("change", { bus: "monitor" }); } return S.mon; },   // HERESY 1536
+         monitor: function (k2, on) { if (k2) { S.mon[k2] = on == null ? !S.mon[k2] : !!on; applyMon(S.graph); if (S.fx.el) S.fx.el.volume = S.mon.dim ? 0.1 : 1; if (k2 === "mono") fxDirty(); emit("change", { bus: "monitor" }); } return S.mon; },   // HERESY 1536; 2865
+         way: function (w) { return w ? setWay(w) : S.way; },   // HERESY 2865: Live or Forge
          groups: function () { return S.buses.groups || []; }, groupSet: groupSet, groupAdd: groupAdd, groupDel: groupDel, vcaDb: vcaDb,   // HERESY 1543
          subs: function () { return S.buses.subs || []; }, subAdd: subAdd, subSet: subSet, subDel: subDel, subOfStrip: subOfStrip,   // HERESY 1563
          clearSolo: clearSolo, refToggle: refToggle, fadeDb: fadeDb, clock: clock,   // HERESY 1754–1756

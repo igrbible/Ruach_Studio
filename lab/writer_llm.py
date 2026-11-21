@@ -917,7 +917,7 @@ def _end(pid):
                 return
             time.sleep(0.1)
         if _is_writer(pid):
-            os.kill(pid, signal.SIGKILL)
+            os.kill(pid, getattr(signal, "SIGKILL", signal.SIGTERM))   # HERESY 2924b: Windows has no SIGKILL (its SIGTERM ends it outright)
     except OSError:
         pass                                            # gone already, or not this user's to end
 

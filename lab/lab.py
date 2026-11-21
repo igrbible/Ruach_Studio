@@ -26,6 +26,9 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
                                    the stem played by the instrument (none: each group as the map says) as a version of it in the
                                    Refiner's DAW (derived/orchestra-…), transcribed first when the take has no MIDI of it: 202 while
                                    it runs, then the branch's manifest; the same render asked again is the one made
+  GET /midi/export?name=TAKE&way=mix|stems[&size=][&quantize=off|1/8|1/16][&again=1][&title=]   HERESY 2913: the take transcribed (the mix, or
+                                   each stem with its own groups) into one MIDI file on the take's beats: 202 while it runs, then its set
+                                   (derived/midi-export-…: export.mid, stems-midi.zip) · GET /midi/export/plan?name= · POST /midi/export/cancel {name}
   GET /midi/sets?name=TAKE         HERESY 1834: the take's MIDI sets, newest first · GET /midi/status: the program, the sizes here, the suggested
   GET /midi/score?name=TAKE&id=midi-…   HERESY 1835: a MIDI set's file as the Creator's score (midi_score.py)
   GET /debug/download?id=ID        HERESY 2054: the scrubbed debug journal (POST /debug/bundle makes it, /debug/send posts it, /debug/clear)
@@ -53,6 +56,9 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
   POST /regen {names, same_seeds}  HERESY 1160: made again, new seeds; same_seeds (1165): its own, at a probe's full length
   POST /section {name, a, b, lyrics, versions, section, parts}  HERESY 1414: a section sung anew (GET /section/live, /section/job?id=, /section/mark?name=)
   POST /section/window {name, a, b, lyrics, versions, pre, post, loras}  HERESY 1757: a window sung anew with adapters of its own, ramps round it
+  POST /section/chain {name, v, title, lyrics, lyrics_a, ws, codes, abc_render, abc_after, bar, window_held, ops} | {resume: id} | {discard: id}
+                                   HERESY 2811: the Section editor's queue sung as one take (202 {id}; 409 {id}: one of that take runs);
+                                   POST /section/cancel {id} (2812) · GET /section/chains?name= (its chains, the done ones 7 days)
   GET /activity?since=SEQ          HERESY 1157: the lab's GPU work as it starts and ends, and what runs now
   POST /regen {names}              HERESY 1160: made again with new seeds; the new take takes the old one's places
   GET /remaster?name=TAKE&s=JSON   the Debunker v6 pipeline (remaster_job.py) on the take or its stems
@@ -91,6 +97,7 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
                                    Generate, one file per base title in KIT/writer-versions/ (1519)
   POST /refiner/profiles           {op: save|delete, name, setup} (1515)
   GET /file?name=TAKE&path=derived/…     a derived file, with Range (the page's players seek)
+  GET /history · POST /history     what was played and downloaded, the last 30 and 90 days (play_history.py, HERESY 2912)
   GET /settings · POST /settings   the page's own settings (its yue2.* keys) kept on disk in the
                                    studio's user/ folder (user/settings.json), so a cleared
                                    browser or another device gets them back
@@ -148,6 +155,9 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
   POST /daw/mix {…, mix: ruach.mix/1, print}  HERESY 1531: the Refiner's mixer (daw_mix.py); print: each strip and return its own file
   POST /daw/mix/stop {name, id}    HERESY 1539: a mix off the queue, or its process ended; no branch, its folder gone
   GET /daw/ir?preset=room|plate|hall&rate=48000   HERESY 1531: the room's impulse (WAV, float), the one the render convolves with
+  POST /daw/play {id?, name, set, mix, versions, ref, mono, at}   HERESY 2865: the DAW's Forge way: the mix rendered in pieces (daw_play.py)
+  GET /daw/play.wav?id=&rev=       HERESY 2865: that mix as a 24-bit WAV with Range, a piece an answer; /daw/play/meters?id=&rev=&from=&to=
+  POST /daw/play/stop {id}         HERESY 2865: the session let go
   GET /daw/mixes?name=&set=        HERESY 1533: the set's working mix and its named mixes (derived/<set>/mixes.json)
   POST /daw/mixes {name, set, working} | {…, save_as, state} | {…, delete}   the working mix kept, a mix kept by name, one deleted
 
@@ -212,18 +222,21 @@ import bankbuilder  # noqa: E402   HERESY 2031: the Bank Builder (recordings of 
 import relay as chat_relay  # noqa: E402   HERESY 2005: a chat server on the local network, for a page over https
 import origin_gate  # noqa: E402   HERESY 2011: a page of another site, or a name of the attacker's, refused on the lab's own port
 import lift_stream  # noqa: E402   HERESY 2837: the player's lifted take streamed, made on the fly, never kept
+import daw_play  # noqa: E402   HERESY 2865: the DAW's Forge way, the mix rendered in pieces and played as a file
 import audio_io  # noqa: E402   HERESY 1512: the audio interfaces, physical and virtual, and the analog gateway's choice
 import refiner_profiles  # noqa: E402   HERESY 1515: the Refiner's setups by name
 import creator_versions  # noqa: E402   HERESY 1519: the Creator's words on each Generate, apart from the takes
 import derived_trash  # noqa: E402   HERESY 1527: a branch into its take's trash and back
 import c2pa_sign  # noqa: E402   HERESY 1489: Content Credentials on the downloads
 import playback_marks  # noqa: E402   HERESY 1852: where the player left each take
+import play_history  # noqa: E402   HERESY 2912: what was played and downloaded, the last days of each
 import h3_shots  # noqa: E402   HERESY 1868: the Videographer's shots made alive by MiniMax H3
 import vram  # noqa: E402   HERESY 2899: everything the Studio holds in a card's memory, in any room, listed and let go from the bar
 import frames_job  # noqa: E402   HERESY 1913: the Artist draws a plan's shots
 import upscale_shots  # noqa: E402   HERESY 1876b: and made larger by SeedVR2
 import file_tags  # noqa: E402   HERESY 1635: the song's tags on the downloads, before the signature
 import gpu_live  # noqa: E402   HERESY 1264: the cards second by second, for the page's live graphs
+import winx  # noqa: E402   HERESY 2924b: a process group ended on Windows too (taskkill /T there, os.killpg here)
 import sys_live  # noqa: E402   HERESY 2299: the machine's processor, memory and disks second by second, for the page's system bar
 sys_live.watch(KIT, OUTPUTS)
 import topology  # noqa: E402   HERESY 2085: how the cards sit on the bus (Engine → Hardware → Topology)
@@ -245,6 +258,8 @@ import videographer  # noqa: E402   HERESY 1824: the Videographer's plan of a ta
 import luts  # noqa: E402   HERESY 2010: the clip's looks (3D LUTs)
 import video_fonts  # noqa: E402   HERESY 2394: the Videographer's own fonts
 import muscriptor  # noqa: E402   HERESY 1834: a take, a stem or any sound into multi-instrument MIDI (MuScriptor)
+import midi_export  # noqa: E402   HERESY 2913: a take's transcription as one MIDI file on its own beats
+muscriptor.BESIDE = lambda: training_now()   # HERESY 2914: its program behind a training (nice 19, 8 threads)
 import orchestra  # noqa: E402   HERESY 1881–1884: the MIDI orchestra: a stem's MIDI with its dynamics, played by sampled instruments
 import byte_ranges  # noqa: E402   HERESY 2088: the lab's files sent as a file server sends them
 import debugbundle  # noqa: E402   HERESY 2054: the debug journal's bundle (scrubbed, guarded; sent only on the user's word)
@@ -630,7 +645,38 @@ def whisper_env(gpu=None):
             gpu, _ = free_gpu()
         return dict(base, CUDA_VISIBLE_DEVICES=str(gpu), CUDA_DEVICE_ORDER="PCI_BUS_ID", WHISPER_DEVICE="cuda"), gpu, ""
     except RuntimeError as e:
-        return dict(base, CUDA_VISIBLE_DEVICES="", WHISPER_DEVICE="cpu"), "cpu", f"on the CPU: {e}"
+        cpu = dict(base, CUDA_VISIBLE_DEVICES="", WHISPER_DEVICE="cpu")
+        if training_now():                              # HERESY 2914: beside a training, behind it: nice 19, 8 threads
+            cpu.update(WHISPER_CPU_THREADS=str(CPU_BESIDE_TRAINING), WHISPER_NICE="19", OMP_NUM_THREADS=str(CPU_BESIDE_TRAINING),
+                       MKL_NUM_THREADS=str(CPU_BESIDE_TRAINING))
+            return cpu, "cpu", f"on the CPU behind the training ({CPU_BESIDE_TRAINING} threads, nice 19): {e}"
+        return cpu, "cpu", f"on the CPU: {e}"
+
+
+# HERESY 2914 (the lead 20.11.2026, after the timing ran at 1400 % CPU beside a training: «CPU work beside the training goes at nice 19 with
+# a thread cap (OMP_NUM_THREADS / cpu_threads ≤ 8), which is the rule after 23.10's stalled chain»): a training under way on this machine, the
+# Trainer's own runs or a ruach-train-* unit (the long runs outside the Studio), asked at most every 10 s
+CPU_BESIDE_TRAINING = 8
+_TRAINING = {"at": 0.0, "now": False}
+
+
+def training_now():
+    if time.time() - _TRAINING["at"] < 10:
+        return _TRAINING["now"]
+    now = False
+    try:
+        now = any(j.get("status") in ("running", "stopping") for j in training.RUNS.values())
+    except Exception:                                    # the units below say it then
+        now = False
+    if not now:
+        try:
+            p = subprocess.run(["systemctl", "--user", "list-units", "ruach-train-*", "--state=active", "--no-legend", "--plain"],
+                               capture_output=True, text=True, timeout=5)
+            now = bool(p.stdout.strip())
+        except (OSError, subprocess.SubprocessError):
+            now = False
+    _TRAINING.update(at=time.time(), now=now)
+    return now
 
 
 LIVE_ROLES = {"at": 0.0, "value": None}
@@ -743,9 +789,9 @@ def studio_restart():
         raise ValueError("the Studio is rendering now: restart it when the run is done")
     # HERESY 1259: only a studio that runs as its systemd unit is restarted from here. Under Pinokio or by hand (./start.sh) there is
     # no unit: «restarting» was a word for nothing, and the page then said the Studio was back. The card is saved all the same.
-    if subprocess.run(["systemctl", "--user", "is-active", "--quiet", "ruach-studio"], timeout=10).returncode != 0:
-        raise ValueError("the Studio does not run as a service here (Pinokio, or ./start.sh by hand): stop it and start it again "
-                         "there to move it; the card is saved")
+    if not shutil.which("systemctl") or subprocess.run(["systemctl", "--user", "is-active", "--quiet", "ruach-studio"], timeout=10).returncode != 0:
+        raise ValueError("the Studio does not run as a service here (RuachStudio.exe, Pinokio, or ./start.sh by hand): stop it and start it "
+                         "again there to move it; the card is saved")   # HERESY 2930: no systemctl on Windows and macOS
 
     # HERESY 2063: the cards' look shared for 2 s let go as the restart is asked and again when it is done, so the page's next ask sees the
     # Studio where it runs now
@@ -1843,7 +1889,7 @@ def backing_finish_of(name, engine_job="", sung=""):
 # stem, a mix, a remaster), into multi-instrument MIDI: a set of its own under derived/ (midi-SIZE-STAMP: song.mid, notes.json, manifest.json),
 # as the stems are. The same sound at the same size and choice again answers with the set it gave. On the processor, one at a time
 # (muscriptor.py's own lock), never waiting for a card
-def midi_async(name, size="", source="", only=""):
+def midi_async(name, size="", source="", only="", fresh=False):   # HERESY 2913: fresh: transcribed again, the set made kept beside the new
     d = take_dir(name)
     if not muscriptor.binary(KIT).is_file():
         raise FileNotFoundError("the MIDI transcriber is not built: ./build.sh builds it")
@@ -1856,7 +1902,7 @@ def midi_async(name, size="", source="", only=""):
     if not audio:
         raise FileNotFoundError(f"no audio in {name}")
     said = source or "the take"
-    for man in sorted(d.glob(f"derived/midi-{size}-*/manifest.json"), reverse=True):
+    for man in ([] if fresh else sorted(d.glob(f"derived/midi-{size}-*/manifest.json"), reverse=True)):
         try:
             made = json.load(open(man, encoding="utf-8"))
         except (OSError, ValueError):
@@ -1896,6 +1942,191 @@ def midi_async(name, size="", source="", only=""):
     _spawn(work)                                        # HERESY 1962: owned as its starter
     return dict(job, name=name)
 
+
+
+# HERESY 2913 (Viktor 20.11.2026: «экспорт в MIDI из всего, к чему он прикручен, поднимать модальное окно с диалогом… либо пусть прямо здесь запускает
+# профессиональное стемирование через MuScriptor, и дожидается результата. Все такие стемы сразу привязываем к этому родительскому треку»): the take
+# transcribed (way mix: MuScriptor on the mix; way stems: the take's stems, split first when it has none, each transcribed with its own groups and its
+# notes' velocities from its own attacks) and written as one MIDI file on the take's own beats (midi_export.py), with the stems' own files in a zip.
+# Each pass is a MIDI set of the tree as before (midi_async), the stems a stems set, the export a set of its own (derived/midi-export-STAMP); the
+# same way, size and grid asked again answers with the export made, unless again. One at a time a take; stop between and inside the passes
+EXPORT_STEMS = ("drums", "bass", "piano", "guitar", "winds", "other", "lead_vocal", "vocals")
+
+
+def midi_export_plan(name):
+    """What the dialog offers: the program and the sizes, the stems the take has, the estimates on this machine, the exports made, a run going"""
+    d = take_dir(name)
+    st = muscriptor.status(KIT)
+    sets = midi_sets(name)["sets"]
+    stems = _export_stems(d)
+    seconds = 0.0
+    try:
+        seconds = float(json.load(open(d / "meta.json", encoding="utf-8")).get("seconds") or 0)
+    except (OSError, ValueError):
+        pass
+    if not seconds:
+        try:
+            import soundfile as sf                      # as the lab's other readers take it, at the use
+            seconds = sf.info(str(d / "audio.wav")).duration
+        except Exception:                               # an import's sound under another name: the estimate says nothing then
+            seconds = 0.0
+    n = len(stems["files"]) if stems else 6
+    with jobs_lock:
+        run = jobs.get(f"midiexport:{name}")
+        run = dict(run) if run else None
+    return {"status": st, "seconds": round(seconds, 2), "stems": stems, "bytes": muscriptor.BYTES,
+            "estimate": {s: {"mix": midi_export.estimate(sets, s, seconds), "stems": midi_export.estimate(sets, s, seconds, n)} for s in muscriptor.SIZES},
+            "made": [m for m in sets if m.get("kind") == "midi-export"], "job": run, "quantize": list(midi_export.QUANT),
+            "behind": training_now(), "threads": muscriptor.threads(), "cards": _cards()}   # HERESY 2914: behind a training it takes longer
+
+
+def _cards():
+    """the CUDA cards the stems could split on (0: MuScriptor on the mix, on the processor, is what is left)"""
+    try:
+        cards = training.gpus()                         # HERESY 2930: {"error"} where nvidia-smi does not answer: len() said «one card»
+        return len(cards) if isinstance(cards, list) else None
+    except Exception:
+        return None
+
+
+def _export_stems(d):
+    """The take's newest stems set that MuScriptor's groups can read (orchestra.STEMS), or None"""
+    for man in sorted(d.glob("derived/stems-*/manifest.json"), key=lambda m: m.stat().st_mtime, reverse=True):
+        try:
+            m = json.load(open(man, encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        files = [f for f in m.get("files") or [] if f.get("name") in orchestra.STEMS and f.get("name") in EXPORT_STEMS]
+        if m.get("mode") != "vocals" and len(files) >= 3:
+            return {"id": m.get("id"), "mode": m.get("mode"), "files": files}
+    return None
+
+
+def midi_export_async(name, way="mix", size="", quant="off", again=False, title=""):
+    d = take_dir(name)
+    if way not in ("mix", "stems"):
+        raise ValueError("way is mix or stems")
+    if (quant or "off") not in midi_export.QUANT:
+        raise ValueError("quantize is off, 1/8 or 1/16")
+    if not muscriptor.binary(KIT).is_file():
+        raise FileNotFoundError("the MIDI transcriber is not built: ./build.sh builds it")
+    size = muscriptor.pick(KIT, size)
+    if not size:
+        raise FileNotFoundError("no MuScriptor model here: Engine → Models → Sound to MIDI fetches one")
+    if not again:
+        made = midi_export.kept(d, way, size, quant)
+        if made:
+            return made
+    key = f"midiexport:{name}"
+    with jobs_lock:
+        job = jobs.get(key)
+        if job and job["status"] in ("queued", "running"):
+            return dict(job, name=name)
+        if job and job["status"] in ("failed", "cancelled"):
+            jobs.pop(key)
+            if job.get("way") == way and job.get("size") == size and not again:
+                return dict(job, name=name)
+        did = "midi-export-" + time.strftime("%Y%m%d-%H%M%S")
+        job = {"status": "queued", "started": time.time(), "kind": "midi", "way": way, "size": size, "quantize": quant, "id": did,
+               "stage": "waits its turn", "progress": 0.0, "step": 0, "steps": 1}
+        jobs[key] = job
+
+    def follow(ask, share0, share1):
+        """a pass asked of midi_async or stems_async again and again until it answers with its set; its progress into the export's"""
+        while True:
+            if job.get("cancel"):
+                for k, v in list(jobs.items()):
+                    if k.startswith(f"midi:{name}:") and v.get("status") in ("queued", "running"):
+                        v["cancel"] = True             # muscriptor.run kills its program on it
+                raise RuntimeError("stopped")
+            r = ask()
+            if r.get("status") == "failed":
+                raise RuntimeError(r.get("error") or "the pass failed")
+            if not r.get("status"):
+                return r
+            job["progress"] = round(share0 + (share1 - share0) * float(r.get("progress") or 0), 4)
+            job["label"] = job.get("stage")                   # the strip says the stage (act_now)
+            if r.get("notes"):
+                job["notes"] = r["notes"]
+            time.sleep(1.0)
+
+    def work():
+        try:
+            job["status"] = "running"
+            grid = {}
+            try:
+                job["stage"] = "the take's beats"
+                grid = take_grid(name)
+            except Exception as e:                      # said in the file's conductor and the manifest: no beats heard is 120 bpm from 0
+                grid = {"said": f"no beats heard ({e}): 120 bpm from 0"}
+            clock = midi_export.Clock(grid.get("beats"), int(grid.get("den") or 4), grid.get("bpm"))
+            parts, per, sources = {}, {}, []
+            if way == "mix":
+                job.update(stage="MuScriptor on the mix", steps=1, step=1)
+                m = follow(lambda: midi_async(name, size, "", "", fresh=bool(again) and not job.get("asked")), 0.0, 1.0)
+                job["asked"] = True
+                notes = json.load(open(d / m["files"][1]["path"], encoding="utf-8")).get("notes") or []
+                parts.update(midi_export.parts_of(notes))
+                sources.append(m["id"])
+            else:
+                stems = _export_stems(d)
+                if not stems:
+                    job["stage"] = "the stems (a card)"
+                    s = follow(lambda: stems_async(name, "six"), 0.0, 0.15)
+                    stems = _export_stems(d) or {"id": s.get("id"), "files": [f for f in s.get("files") or [] if f.get("name") in orchestra.STEMS]}
+                files = [f for f in stems["files"] if f.get("name") in orchestra.STEMS]
+                job["steps"] = len(files)
+                for i, f in enumerate(files):
+                    stem = f["name"]
+                    job.update(stage=f"MuScriptor on {stem}", step=i + 1)
+                    only = ",".join(orchestra.STEMS[stem])
+                    lo, hi = 0.15 + 0.85 * i / len(files), 0.15 + 0.85 * (i + 1) / len(files)
+                    m = follow(lambda: midi_async(name, size, f["path"], only, fresh=bool(again) and f"asked:{stem}" not in job), lo, hi)
+                    job[f"asked:{stem}"] = True
+                    notes = json.load(open(d / m["files"][1]["path"], encoding="utf-8")).get("notes") or []
+                    job["stage"] = f"the velocities of {stem}"
+                    vel = orchestra.velocities(notes, d / f["path"]) if notes else []
+                    mine = midi_export.parts_of(notes, vel, stem=f.get("title") or stem)
+                    parts.update(mine)
+                    per[stem] = mine
+                    sources.append(m["id"])
+            if job.get("cancel"):
+                raise RuntimeError("stopped")
+            job["stage"] = "the file"
+            tmp, target = d / "derived" / (did + ".part"), d / "derived" / did
+            shutil.rmtree(tmp, ignore_errors=True)
+            tmp.mkdir(parents=True)
+            head = title or name
+            (tmp / "export.mid").write_bytes(midi_export.write(parts, clock, quant, grid.get("num") or 4, grid.get("den") or 4, head))
+            files = [{"file": "export.mid", "path": f"derived/{did}/export.mid", "kind": "midi", "title": "MIDI"}]
+            if per:
+                z = {f"{k}.mid": midi_export.write(v, clock, quant, grid.get("num") or 4, grid.get("den") or 4, f"{head} · {k}") for k, v in per.items() if v}
+                (tmp / "stems-midi.zip").write_bytes(midi_export.zip_of(z))
+                files.append({"file": "stems-midi.zip", "path": f"derived/{did}/stems-midi.zip", "kind": "zip", "title": "each stem's MIDI"})
+            manifest = {"id": did, "kind": "midi-export", "parent": name, "way": way, "size": size, "quantize": quant, "source": "the take",
+                        "sources": sources, "tempo": {"bpm": grid.get("bpm"), "beats": len(grid.get("beats") or []), "num": grid.get("num"),
+                                                      "den": grid.get("den"), "said": grid.get("said", "")},
+                        "parts": sorted(p["name"] for p in parts.values()), "notes": sum(len(p["notes"]) for p in parts.values()),
+                        "instruments": [{"label": p["name"], "notes": len(p["notes"])} for p in parts.values()],
+                        "took": round(time.time() - job["started"], 1), "files": files, "created": time.strftime("%Y-%m-%d %H:%M")}
+            json.dump(manifest, open(tmp / "manifest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+            shutil.rmtree(target, ignore_errors=True)
+            tmp.rename(target)
+            with jobs_lock:
+                jobs.pop(key, None)
+        except Exception as e:
+            job.update(status="cancelled" if job.get("cancel") else "failed", error=str(e), stage="")
+    _spawn(work)                                        # owned as its starter
+    return dict(job, name=name)
+
+
+def midi_export_cancel(name):
+    with jobs_lock:
+        job = jobs.get(f"midiexport:{name}")
+        if not job or job["status"] not in ("queued", "running"):
+            return {"cancelled": False}
+        job["cancel"] = True
+    return {"cancelled": True}
 
 def animatic_async(name, labels):
     """HERESY 1837: the Videographer's animatic of a take as a job (videographer.animatic): drawn again on each ask, one at a time a take."""
@@ -2888,7 +3119,7 @@ def chain_stop(name):
         procs = [p for p in OWNED.get(owner, []) if p.poll() is None]
     for p in procs:
         try:
-            os.killpg(p.pid, 15)
+            winx.kill_group(p.pid, 15)                  # HERESY 2924b: os.killpg on Linux as before; Windows has none (AttributeError)
         except (ProcessLookupError, PermissionError, OSError):
             try:
                 p.terminate()
@@ -3553,6 +3784,7 @@ ACT_SAY = {"art": "artwork", "stems": "stems (BS-Roformer, htdemucs)", "midi": "
            "debuzz": "debuzz", "gate": "digital gateway", "timing": "lyrics timing (Whisper)", "textend": "lyrics check (Whisper)", "spectrum": "spectrum",
            "inspect": "inspection", "train": "LoRA training", "listen": "listener (Omni)", "artist": "the Artist"}
 ACT_SAY["backing"] = "a voice over a backing"   # HERESY 2677
+ACT_SAY["midiexport"] = "MIDI export (MuScriptor)"   # HERESY 2913: the stage it is at in its label
 if reader:
     ACT_SAY.update(reader.ACT_SAY)                   # HERESY 2241: «the Reader» in the strip above the player
 
@@ -4128,7 +4360,10 @@ artist.setup(kit=KIT, jobs=jobs, lock=jobs_lock, wait_card=wait_card, turn=turn,
 # HERESY 1414: Replace a section reaches the engine through api, the takes' trash for its drafts, the collection for its places
 section.setup(kit=KIT, outputs=OUTPUTS, engine=api._engine, say=act_say, config_dir=config_dir, collection=collection, py=LAB_PY,   # 1717: vocal_rest.py's
               frozen=lambda: collection.frozen_takes(collection.load(config_dir())),
-              trash=lambda names: collection.trash_move(KIT, OUTPUTS, names, config_dir()))
+              trash=lambda names: collection.trash_move(KIT, OUTPUTS, names, config_dir()),
+              # HERESY 2811: the Section editor's chain: the writer off the Arc before each step (2463), the cpu lock and 1714's arrange for
+              # Repeat and Remove, its ledgers in cache/section-chain/
+              yield_arc=writer_llm.yield_arc, cpu=cpu, take_dir=take_dir, takeedit=takeedit, cache=CACHE)
 
 # HERESY 2241: the Reader's runs reach the lab's queue, cards, activity and takes through these (nothing when lab/reader.py is not here)
 if reader:
@@ -4314,6 +4549,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_file(listen_opus(q.get("name", "")), "audio/ogg", cache="no-cache")
             if url.path == "/playback":                     # HERESY 1852: where the player left each take (the takes gone are dropped)
                 return self.send(200, {"marks": playback_marks.listing(config_dir(), OUTPUTS)})
+            if url.path == "/history":                      # HERESY 2912: the plays and the downloads kept (history.json, or history-SCOPE.json)
+                return self.send(200, play_history.listing(scoped("history", q.get("scope", ""))))
             if url.path == "/sung/marks":                   # HERESY 1846: the takes timed already, sung to their end or not
                 return self.send(200, sung_marks())
             if url.path == "/debug/download":               # HERESY 2054: the scrubbed journal, as the guard saw it
@@ -4577,7 +4814,8 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/artist/bin-file":               # HERESY 1337: a cover taken off, seen in the trash
                 return self.send_file(artist.bin_file(q.get("take", ""), q.get("stamp", "")), "image/jpeg", cache="private, max-age=600")
             if url.path == "/artist/sizes":                  # HERESY 2278: the Advanced sizes' floor, ceiling and the estimate's parts
-                return self.send(200, artist.size_limits([c.get("total_mb") for c in (gpus_state().get("cards") or [])]))
+                cs = gpus_state().get("cards")              # HERESY 2930: {"error"} with no NVIDIA card (the Windows soak: a 500)
+                return self.send(200, artist.size_limits([c.get("total_mb") for c in cs] if isinstance(cs, list) else []))
             if url.path == "/artist/painters":               # HERESY 1318: the painters as this machine has them
                 return self.send(200, artist.painters())
             if url.path == "/artist/civitai-fetch":          # HERESY 1360: the fetch from Civitai under way, or the last one
@@ -4614,6 +4852,15 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     return self.send(200, tail_of(q.get("name", "")))   # HERESY 2056: kept beside the take
                 except (ValueError, FileNotFoundError, RuntimeError) as e:
+                    return self.send(400, {"error": str(e)})
+            if url.path in ("/midi/export", "/midi/export/plan"):   # HERESY 2913: the take transcribed into one MIDI file on its beats
+                try:
+                    if url.path == "/midi/export/plan":
+                        return self.send(200, midi_export_plan(q.get("name", "")))
+                    r = midi_export_async(q.get("name", ""), q.get("way", "mix"), q.get("size", ""), q.get("quantize", "off"), q.get("again") == "1",
+                                          q.get("title", ""))
+                    return self.send(500 if r.get("status") == "failed" else 202 if r.get("status") else 200, r)
+                except (ValueError, FileNotFoundError) as e:
                     return self.send(400, {"error": str(e)})
             if url.path in ("/midi", "/midi/sets", "/midi/status", "/midi/score"):   # HERESY 1834: sound to MIDI (MuScriptor); 1835: as a score
                 try:
@@ -4904,6 +5151,13 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
                 return
+            if url.path == "/daw/play.wav":                 # HERESY 2865: the DAW's Forge way, the mix rendered in pieces
+                try:
+                    return daw_play.send_wav(self, q.get("id", ""), q.get("rev", ""), byte_ranges.span)
+                except TimeoutError as e:
+                    return self.send(503, {"error": str(e)})
+            if url.path == "/daw/play/meters":              # HERESY 2865: the meters of the pieces made
+                return self.send(200, daw_play.meters(q.get("id", ""), q.get("rev", ""), q.get("from", "0"), q.get("to", "0")))
             if url.path == "/daw/chunk":
                 d, info = daw_info(q.get("name", ""), q.get("set", ""))
                 data = daw_kit.chunk(d, info, q.get("strip", ""), q.get("path", ""), float(q.get("start", "0")), float(q.get("seconds", "10")))
@@ -4966,6 +5220,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, st) if st else self.send(404, {"error": "no such job (ended more than ten minutes ago, or the lab restarted)"})
             if url.path == "/section/mark":              # HERESY 1414: what of a take was sung anew, for the player's mark
                 return self.send(200, section.mark(q.get("name", "")) or {})
+            if url.path == "/section/chains":            # HERESY 2812: a take's Section editor chains (failed, stopped, cut, done 7 days)
+                return self.send(200, section.chains(q.get("name", "")))
             if url.path == "/collection/diamonds":       # HERESY 1166: the 💎 workspaces on Hugging Face
                 return self.send(200, diamond.listing(KIT, OUTPUTS, config_dir(), refresh=q.get("refresh") == "1"))
             if url.path == "/update":                     # HERESY 1169: this version, the last look at GitHub's releases
@@ -5141,6 +5397,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(200, reader.voice_add(data))
                 if url.path == "/reader/voice-remove":
                     return self.send(200, reader.voice_remove(data))
+                if url.path == "/reader/voice-edit":     # HERESY 2885
+                    return self.send(200, reader.voice_edit(data))
                 if url.path == "/reader/unload":
                     return self.send(200, reader.unload())
                 if url.path == "/reader/stress":          # HERESY 2256: the stresses an engine would read, shown before it reads
@@ -5240,6 +5498,10 @@ class Handler(BaseHTTPRequestHandler):
                 data = json.loads(body.decode("utf-8"))
                 return self.send(202, section.window(data.get("name"), data.get("a"), data.get("b"), data.get("lyrics"), data.get("versions") or 2,
                                                      data.get("pre", 2.0), data.get("post", 2.0), data.get("loras") or []))
+            if url.path == "/section/chain":                 # HERESY 2811: the Section editor's queue as one take; {resume} · {discard} (2812)
+                return self.send(*section.chain(json.loads(body.decode("utf-8") or "{}")))
+            if url.path == "/section/cancel":                # HERESY 2812: {id}: the chain stopped at its step
+                return self.send(200, section.cancel(str(json.loads(body.decode("utf-8") or "{}").get("id") or "")))
             if url.path == "/section":                       # HERESY 1414: {name, a, b, lyrics, versions, section}: a section sung anew
                 data = json.loads(body.decode("utf-8"))
                 return self.send(202, section.start(data.get("name"), data.get("a"), data.get("b"), data.get("lyrics"),
@@ -5258,6 +5520,27 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(*diamond.fetch(KIT, OUTPUTS, config_dir(), str(data.get("name", "")), bool(data.get("restore"))))
             if url.path == "/c2pa":                          # HERESY 1489: the switch, the author, one's own certificate
                 return self.send(200, dict(c2pa_sign.save(config_dir(), json.loads(body.decode("utf-8"))), **c2pa_sign.status(config_dir())))
+            if url.path == "/history":                      # HERESY 2912: {op: play|heard|download|clear|drop|import, …}
+                try:
+                    return self.send(200, play_history.act(scoped("history", q.get("scope", "")), json.loads(body.decode("utf-8"))))
+                except ValueError as e:
+                    return self.send(400, {"error": str(e)})
+            if url.path == "/midi/score":                   # HERESY 2927: {name, midi (base64), title}: the score's MIDI laid on the take's heard beats
+                d = json.loads(body.decode("utf-8") or "{}")
+                name = str(d.get("name") or "")
+                raw = base64.b64decode(str(d.get("midi") or ""))
+                if not name or not raw:
+                    return self.send(400, {"error": "say the take and send its score's MIDI"})
+                grid, why = None, ""
+                try:
+                    grid = take_grid(name)
+                except Exception as e:                      # said with the answer: the score's own tempo, never a silent «as before»
+                    why = str(e) or e.__class__.__name__
+                data, said = midi_export.retime(raw, grid, str(d.get("title") or "")[:120])
+                return self.send(200, {"midi": base64.b64encode(data).decode("ascii"), "said": (why + "; " if why else "") + said,
+                                       "bpm": (grid or {}).get("bpm") if grid and len(grid.get("beats") or []) >= 2 else None})
+            if url.path == "/midi/export/cancel":           # HERESY 2913: {name}: the export under way stops (its pass too)
+                return self.send(200, midi_export_cancel(str(json.loads(body.decode("utf-8")).get("name") or "")))
             if url.path == "/playback":                     # HERESY 1852: {name, at, seconds}; at null forgets the take
                 data = json.loads(body.decode("utf-8"))
                 return self.send(200, {"mark": playback_marks.mark(config_dir(), OUTPUTS, data.get("name"), data.get("at"), data.get("seconds") or 0)})
@@ -5274,7 +5557,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(200, collection.collection_post(config_dir(), OUTPUTS, data))
                 if url.path == "/export":
                     return self.send(202, collection.export_start(KIT, OUTPUTS, [str(n) for n in data.get("names") or []],
-                                                                  data.get("format", "flac"), bool(data.get("derived")), sign=c2pa_for))   # 1489
+                                                                  data.get("format", "flac"), bool(data.get("derived")), sign=c2pa_for,
+                                                                  room=str(data.get("room") or "")))   # 1489; 2877: the room it was asked from
                 op = data.get("op")
                 if op == "move":
                     moved = collection.trash_move(KIT, OUTPUTS, [str(n) for n in data.get("names") or []], config_dir())
@@ -5286,7 +5570,10 @@ class Handler(BaseHTTPRequestHandler):
                     items = [{"day": i["day"], "name": i["name"]} for i in collection.trash_list(KIT)["items"]]
                     return self.send(200, collection.trash_restore(KIT, OUTPUTS, items, config_dir()))
                 if op == "empty":                      # the page asks first; items or everything
-                    return self.send(200, collection.trash_empty(KIT, data.get("items"), config_dir=config_dir()))     # 1368: the protected stay
+                    out = collection.trash_empty(KIT, data.get("items"), config_dir=config_dir())     # 1368: the protected stay
+                    if out["emptied"]:
+                        forget_gone(out["emptied"])      # HERESY 2866: its Narrator run and the Artist's run drawn for it go with it
+                    return self.send(200, out)
                 raise ValueError("move, restore, restore-all or empty")
             if url.path == "/score":                         # HERESY 1131: keep what the transcriber wrote
                 d = take_dir(q.get("name", ""))
@@ -5310,13 +5597,15 @@ class Handler(BaseHTTPRequestHandler):
                 data = json.loads(body.decode("utf-8"))
                 name = str(data.get("name", ""))
                 midi = base64.b64decode(data["midi"]) if data.get("midi") else None
-                path, info = dawproject.build(KIT, OUTPUTS, name, midi=midi, cache=CACHE, marks=data.get("marks"))   # HERESY 2201: your markers
+                path, info = dawproject.build(KIT, OUTPUTS, name, midi=midi, cache=CACHE, marks=data.get("marks"),   # HERESY 2201: your markers
+                                              midi_label="MuScriptor" if data.get("midi_from") == "muscriptor" else "Score")   # HERESY 2913
                 return self.send(200, dict(info, path=str(path.relative_to(OUTPUTS / name)), bytes=path.stat().st_size))
             if url.path == "/daw/reaper":                 # HERESY 1104: the take as a REAPER project
                 data = json.loads(body.decode("utf-8"))
                 name = str(data.get("name", ""))
                 midi = base64.b64decode(data["midi"]) if data.get("midi") else None
-                path, info = rpp.build(KIT, OUTPUTS, name, midi=midi, cache=CACHE, marks=data.get("marks"))   # HERESY 2201: your markers
+                path, info = rpp.build(KIT, OUTPUTS, name, midi=midi, cache=CACHE, marks=data.get("marks"),   # HERESY 2201: your markers
+                                       midi_label="MuScriptor" if data.get("midi_from") == "muscriptor" else "Score")   # HERESY 2913
                 return self.send(200, dict(info, path=str(path.relative_to(OUTPUTS / name)), bytes=path.stat().st_size))
             if url.path == "/lora/delete":                  # HERESY 1496: adapter files out of loras/ for good, a dry run first
                 data = json.loads(body.decode("utf-8"))
@@ -5641,6 +5930,13 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/daw/mix/stop":                  # HERESY 1539: {name, id}
                 data = json.loads(body.decode("utf-8"))
                 return self.send(200, daw_stop(str(data.get("name", "")), str(data.get("id", ""))))
+            if url.path == "/daw/play":                      # HERESY 2865: {id?, name, set, mix, versions, ref, mono, at}
+                data = json.loads(body.decode("utf-8"))
+                d, info = daw_info(str(data.get("name", "")), str(data.get("set", "")))
+                return self.send(200, daw_play.open_session(d, info, data, lambda spec: daw_kit.ref_path(OUTPUTS, config_dir() / "references", spec),
+                                                            sys.executable))
+            if url.path == "/daw/play/stop":                 # HERESY 2865: {id}
+                return self.send(200, daw_play.close_session(json.loads(body.decode("utf-8")).get("id")))
             if url.path == "/daw/mix":                       # HERESY 1470: {name, set, mix, versions}
                 data = json.loads(body.decode("utf-8"))
                 return self.send(202, daw_async(str(data.get("name", "")), str(data.get("set", "")), data.get("mix"), data.get("versions"),
@@ -5730,6 +6026,47 @@ def prune_cache():
     return gone
 
 
+# HERESY 2866 (the disk inventory of 19.11.2026): a take emptied from the trash left behind its Narrator run (reader/runs/<id>/: its pieces
+# and its joined take), the Artist's run drawn for it, and its marks in collection.json (ratings, notes, 🔥, 💎, played…). Now they go with
+# it: at once when the trash is emptied, and every hour (once at the lab's start) for whatever no take in the library or in the trash names.
+def forget_gone(emptied=None):
+    """emptied: the takes just emptied (their runs at once); None: the hourly pass (runs older than a day, the marks tidied). Said in the log."""
+    inbin = collection.trash_names(KIT)
+
+    def present(n):
+        return n in inbin or (OUTPUTS / n).exists()
+    said = []
+    if reader:
+        try:
+            ids = reader.prune_runs(present, emptied)
+            if ids:
+                said.append(f"{len(ids)} Narrator run(s) deleted ({', '.join(ids[:4])}{'…' if len(ids) > 4 else ''})")
+        except Exception as e:  # noqa: BLE001 - the rest goes on; the log says what stopped it
+            said.append(f"the Narrator's runs not pruned: {e}")
+    try:
+        roots = [OUTPUTS] + [d for d in collection.trash_dir(KIT).iterdir() if d.is_dir() and collection.DAY_RE.match(d.name)]
+        ids = artist.prune_for_takes(present, roots, emptied)
+        if ids:
+            said.append(f"{len(ids)} Artist run(s) drawn for them to the Artist's trash ({', '.join(ids[:4])}{'…' if len(ids) > 4 else ''})")
+    except Exception as e:  # noqa: BLE001
+        said.append(f"the Artist's runs not pruned: {e}")
+    if emptied is None:
+        try:
+            got = collection.tidy_marks(KIT, config_dir(), OUTPUTS)
+            if got:
+                ws = got.get("workspaces") or {}
+                parts = [f"{k} {len(v)}" for k, v in got.items() if k != "workspaces"]
+                if ws:
+                    parts.append(f"workspaces {sum(len(v) for v in ws.values())} in {len(ws)}")
+                said.append("marks of takes neither in the library nor in the trash dropped: " + ", ".join(parts) +
+                            f" (every name and value in user/{collection.DROPPED_LOG})")
+        except Exception as e:  # noqa: BLE001
+            said.append(f"the marks not tidied: {e}")
+    for line in said:
+        print(f"[lab] gone for good: {line}", file=sys.stderr, flush=True)
+    return said
+
+
 def prune_loop():
     while True:
         try:
@@ -5742,8 +6079,13 @@ def prune_loop():
                 gone = collection.trash_empty(KIT, older_than_days=days, config_dir=config_dir())["emptied"]   # 1368
                 if gone:
                     print(f"[lab] trash: {len(gone)} take(s) older than {days} days emptied", file=sys.stderr, flush=True)
+                    forget_gone(gone)                  # HERESY 2866: their runs at once, whatever their age
         except Exception as e:
             print(f"[lab] cache prune: {e}", file=sys.stderr, flush=True)
+        try:
+            forget_gone()                              # HERESY 2866: the hourly pass, the first one at the lab's start
+        except Exception as e:  # noqa: BLE001
+            print(f"[lab] gone for good: {e}", file=sys.stderr, flush=True)
         time.sleep(3600)
 
 
@@ -5759,6 +6101,11 @@ if __name__ == "__main__":
     perf.start(KIT, OUTPUTS)         # HERESY 1821: the machine once a minute, the folders every six hours
     places.boot()                    # HERESY 1261: a folder linked back from the record, a missing one made, a dangling one said
     backups.start(KIT, OUTPUTS)      # HERESY 2083: the user's files checked (a broken one put back), then a snapshot every hour and every day
+    collection.SAY = lambda s: print("[lab] " + s, file=sys.stderr, flush=True)
+    try:                             # HERESY 2919c: the workspaces' emoji into their own field, once, before the first catalog
+        collection.migrate_once(config_dir(), collection.SAY)
+    except Exception as e:  # noqa: BLE001 - the lab starts all the same; the log says what stopped it
+        print(f"[lab] the workspaces' emoji upgrade stopped: {e}", file=sys.stderr, flush=True)
     modartt.sweep(KIT)               # HERESY 1977, 2036: a Modartt server's folder left by a crash (its copy of the preferences) goes
     https_door.start(KIT)            # HERESY 1985: the https door beside the lab, unless something answers on its port already
     threading.Thread(target=lambda: training.datasets(KIT), daemon=True).start()   # HERESY 2034: the raw folders counted once, ahead of the Trainer

@@ -120,9 +120,11 @@
       var s = getComputedStyle(veil), v = function (n, d) { return (s.getPropertyValue(n) || "").trim() || d; };
       return { lit: v("--amber", "#c8102e"), dim: v("--dim", "#8b8b8b"), grid: v("--line-a", "rgba(255,255,255,.14)") };
     }
+    /* HERESY 2892 (Viktor 15.11.2026: «корявая и неуклюжая»): slender. One clean sine of three and a half waves, no ripple on it, tapered to the
+       line at both ends, a thin line and a narrow glow, the graticule fainter; the colour still fills it as the page loads, the beam still leads */
     function y(x, t, W, H) {
-      var u = x / W, env = 0.5 + 0.5 * Math.sin(Math.PI * u), a = (0.66 + 0.2 * Math.sin(t * 1.6)) * env;
-      return H / 2 - (H / 2 - 5) * a * (0.8 * Math.sin(u * Math.PI * 9 - t * 4.8) + 0.2 * Math.sin(u * Math.PI * 23 - t * 7.7));
+      var u = x / W, s = Math.sin(Math.PI * u), a = (0.82 + 0.1 * Math.sin(t * 1.3)) * s * s;
+      return H / 2 - (H / 2 - 3) * a * Math.sin(u * Math.PI * 7 - t * 2.6);
     }
     function trace(x0, x1, t, W, H) { g.beginPath(); g.moveTo(x0, y(x0, t, W, H)); for (var x = x0 + 2; x < x1; x += 2) g.lineTo(x, y(x, t, W, H)); g.lineTo(x1, y(x1, t, W, H)); g.stroke(); }
     function draw(p, t) {
@@ -133,21 +135,21 @@
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.clearRect(0, 0, W, H);
       g.lineCap = "round"; g.lineJoin = "round";
-      g.globalAlpha = 0.5; g.strokeStyle = col.grid; g.lineWidth = Math.max(1, dpr * 0.6);   /* the graticule */
+      g.globalAlpha = 0.32; g.strokeStyle = col.grid; g.lineWidth = Math.max(1, dpr * 0.5);   /* the graticule */
       g.beginPath();
       for (k = 1; k < 10; k++) { x = Math.round(W * k / 10) + 0.5; g.moveTo(x, 0); g.lineTo(x, H); }
       g.moveTo(0, Math.round(H / 2) + 0.5); g.lineTo(W, Math.round(H / 2) + 0.5); g.stroke();
-      g.lineWidth = 1.6 * dpr;
-      if (px < W) { g.globalAlpha = 0.55; g.strokeStyle = col.dim; trace(px, W, t, W, H); }   /* ahead of the beam */
-      g.strokeStyle = col.lit; g.shadowColor = col.lit; g.shadowBlur = 8 * dpr;
+      g.lineWidth = 1.1 * dpr;
+      if (px < W) { g.globalAlpha = 0.4; g.strokeStyle = col.dim; trace(px, W, t, W, H); }   /* ahead of the beam */
+      g.strokeStyle = col.lit; g.shadowColor = col.lit; g.shadowBlur = 4 * dpr;
       for (k = 0; k < 24 && px > 0; k++) {                 /* behind it, brighter toward it */
         var a0 = px * k / 24, a1 = px * (k + 1) / 24;
         g.globalAlpha = (0.35 + 0.65 * (k + 1) / 24) * breathe;
         trace(a0, a1, t, W, H);
       }
       if (px > 0 && px < W) {                               /* the beam */
-        g.globalAlpha = 1; g.fillStyle = col.lit; g.shadowBlur = 14 * dpr;
-        g.beginPath(); g.arc(px, y(px, t, W, H), 2.6 * dpr, 0, Math.PI * 2); g.fill();
+        g.globalAlpha = 1; g.fillStyle = col.lit; g.shadowBlur = 10 * dpr;
+        g.beginPath(); g.arc(px, y(px, t, W, H), 2.1 * dpr, 0, Math.PI * 2); g.fill();
       }
       g.shadowBlur = 0; g.globalAlpha = 1;
     }
@@ -257,6 +259,13 @@ Ours run in float32 only, slower than Standard"></select></label>
             <button type="button" class="btn ghost small theme-button" id="themeButton">Theme</button>
             <button type="button" class="btn ghost small" id="guideOpenMenu" data-icon="question" data-tip="The guide: every room, what each thing does">Guide</button>
           </div>
+          <!-- HERESY 2912 (Viktor 20.11.2026: «В ниспадающем MORE строкой в две колонки туда же эти две кнопки с надписями и подсказкой шорткатов») -->
+          <div class="hm-two" data-no-icon>
+            <button type="button" class="btn ghost small" id="hmHist" data-hist-open="plays" data-tip="History: what the player played, the last 30 days, day by day"><span class="hm-ico" data-ui="history" aria-hidden="true"></span><span>History</span><kbd class="hm-kbd" aria-hidden="true">Ctrl+H</kbd></button>
+            <button type="button" class="btn ghost small" id="hmDl" data-hist-open="downloads" data-tip="Downloads: what was saved from the Studio, the last 90 days"><span class="hm-ico" data-ui="download" aria-hidden="true"></span><span>Downloads</span><kbd class="hm-kbd" aria-hidden="true">Ctrl+J</kbd></button>
+          </div>
+          <!-- HERESY 2915 (Viktor 20.11.2026): the bottom row, a bug reported where the Studio lives; the debug journal to attach -->
+          <a class="btn ghost small hm-bug" id="hmBug" href="https://github.com/igrbible/Ruach_Studio/issues/new" target="_blank" rel="noopener" data-tip="A new issue on GitHub, in a new tab. Attach the debug journal (Engine → Debugging: turn it on, do what goes wrong, then Download) so the bug can be followed"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg><span>Report a bug on GitHub</span></a>
           <!-- HERESY 1169 (Viktor 07.10.2026: «глобальный скейл шрифтов с минус 2 и плюс до 4… Три кнопочки глобального -=R в спадающее
                меню в баре»): the page's text, smaller or larger, the layout as it is -->
           <div class="hm-fs" data-tip="The whole page's text smaller or larger (−2 to +4 pt): the layout stays; a lifted frame has its own on top">
@@ -450,6 +459,13 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
         <label class="check"><input type="checkbox" id="setKeepLoaded" /> <span>Keep models loaded between songs</span></label>
         <span class="info" tabindex="-1" role="img" aria-label="About keeping models loaded" data-tip-ref="tip-keep"></span>
       </div>
+      <!-- HERESY 2858 (Viktor 19.11.2026: «Да, гони KV кеш адаптацию для дешманов, и по умолчанию она выключена»): the music cache in Q8_0 (2633b), off
+           unless chosen; beside it what the engine keeps now (its kv_cache) -->
+      <div class="check-row kvq8-row">
+        <label class="check"><input type="checkbox" id="setKvQ8" /> <span>Music cache in 8 bits (Q8_0) — about half the memory, for smaller cards</span></label>
+        <span class="info" tabindex="-1" role="img" aria-label="About the music cache in 8 bits" data-tip-ref="tip-kvq8"></span>
+        <span class="lora-card-note kvq8-say" id="setKvQ8Say"></span>
+      </div>
       <!-- HERESY 1167 (Viktor: «таймер вбить для `Models auto unload`. Дефолт 60 минут. И в Engine ползунок от 15 минут до 4
            часов, с инкрементом в 15 минут. И чекбокс - мгновенная выгрузка моделей (15 секунд grace)») -->
       <div class="field eg-unload">
@@ -590,15 +606,25 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
           <label class="check"><input type="checkbox" data-def-check="yue2.clickPlay" data-def-off="off" /> <span>A click on a take plays it</span></label>
           <label class="check"><input type="checkbox" data-def-check="yue2.playNew" data-def-off="off" /> <span>New takes play when they are done</span></label>
           <label class="check"><input type="checkbox" data-def-check="yue2.tailGuard" data-def-on="on" /> <span>New takes have their end checked (tail guards)</span></label>   <!-- HERESY 2056 -->
+          <label class="check" data-tip="Only in the installed app (a window of its own, not a browser tab): a 12 Hz tone at -60 dBFS, far under hearing, that Chrome counts as sound, so it does not freeze or discard the Studio while it is in the background and the card and the player are as you left them. It starts with your first click or key. Off: the browser may put the app to sleep"><input type="checkbox" data-def-check="yue2.pwaPulse" data-def-off="off" /> <span>Keep the installed app awake</span></label>   <!-- HERESY 2901 -->
           <label class="check"><input type="checkbox" data-def-check="yue2.dblPlay" data-def-off="off" /> <span>A double-click on a card plays or stops it</span></label>
           <label class="check"><input type="checkbox" data-def-check="yue2.reactMark" data-def-on="on" /> <span>A take's reaction faint in its card's background</span></label>   <!-- HERESY 1877 -->
           <label class="check" data-tip="A live spectrum of what plays, faint behind the player's buttons: the lows on the left (25 Hz), the highs on the right (20 kHz), rising from the player's foot; drawn from the take's own spectrum in step with the playhead, it never touches the sound; it rests when nothing plays"><input type="checkbox" data-def-check="yue2.liveSpectrum" data-def-off="off" /> <span>Live spectrum behind the player</span></label>   <!-- HERESY 2354 -->
         </div>
+        <!-- HERESY 2912: the history of plays and downloads, opened and cleared from here too -->
+        <div class="field hist-defs" data-no-icon><span class="label">History and downloads</span>
+          <div class="hist-defs-row">
+            <button type="button" class="btn ghost small" data-hist-open="plays">History <kbd class="hm-kbd" aria-hidden="true">Ctrl+H</kbd></button>
+            <button type="button" class="btn ghost small" data-hist-clear-now="plays" data-tip="Clear the history of plays (asks first); the takes stay">Clear history</button>
+            <button type="button" class="btn ghost small" data-hist-open="downloads">Downloads <kbd class="hm-kbd" aria-hidden="true">Ctrl+J</kbd></button>
+            <button type="button" class="btn ghost small" data-hist-clear-now="downloads" data-tip="Clear the history of downloads (asks first); the saved files stay">Clear downloads</button>
+          </div></div>
       </section>
       <section class="look-part">
         <h4 class="mini">Library</h4>
         <div class="look-checks">
           <label class="check"><input type="checkbox" data-def-check="yue2.showDisliked" data-def-on="1" /> <span>Show disliked takes in the lists</span></label>
+          <label class="check" data-tip="On: switching 🔥 or 💎 on likes the take too, and 👎 takes off the like, 🔥 and 💎 together, wherever those buttons are (the cards, the Library, the compare window, the player). The reaction faces are never touched. Off: each button stands alone"><input type="checkbox" data-def-check="yue2.reactLink" data-def-off="off" /> <span>🔥 and 💎 like the take; 👎 takes them off</span></label>   <!-- HERESY 2902 -->
         </div>
         <!-- HERESY 1996: the trash emptying itself, the same as the Librarian's own choice in its trash -->
         <label class="field"><span class="label">The trash empties itself</span>
@@ -1105,7 +1131,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
               <input type="text" id="title" placeholder="Song title" autocomplete="off" maxlength="80" />
             </label>
             <!-- HERESY 1614: the version beside the title -->
-            <label class="field versionfield" data-tip="The song's version beside its name, digits and dots only (4.2.3). A take is called «Title v4.2.3», as your tracks are, and the Musician's versions keep one tree per title, a branch per version. A title typed with its version («Song v1.2») splits into the two">
+            <label class="field versionfield" data-tip="The song's version beside its name, digits and dots only (4.2.3). A take is called «Title v4.2.3», as your tracks are, and the Musician's versions keep one tree per title, a branch per version. A title typed with its version («Song v1.2») splits into the two. Left empty, a save (Ctrl+S) gives it 1.0">
               <span class="label">Version</span>
               <input type="text" id="titleVersion" placeholder="1.0" autocomplete="off" maxlength="24" inputmode="decimal" spellcheck="false" translate="no" />
             </label>
@@ -1213,6 +1239,13 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
                 </span>
               </label>
             </div>
+            <!-- HERESY 2916 (Viktor 20.11.2026: «эту опцию иметь автоматически отключенной во фронтэнде, на видном месте под плашками режимов, с тултипом и
+                 пояснениями, и вдобавок Сторожа…»): the lyrics' own sections, in order, the plan's to write (the engine's harmony.follow, 2896); off by default,
+                 its line the guard's word on these lyrics -->
+            <div class="follow-row" id="followRow">
+              <button type="button" class="chip harmony-follow" id="followSections" aria-pressed="false" data-tip="Off unless you turn it on. For short songs, up to about 4 minutes: there it is worth it. On, the planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): none dropped, none made up, and the song does not end before its last section has begun. It helps when the planner drops a Bridge or an Outro you wrote. It costs length: each section followed is a stretch of the plan, so many sections and breaks make a long plan; past about 4:00 Generate asks first (long plans have fallen apart: 26 sections with 7 breaks planned 6:30 to 8:24, past the 8:00 cap). Its line beside it says what these lyrics would plan. Only when the model writes the score (Full or Melody, no score of yours)">Follow my sections</button>
+              <span class="follow-say" id="followSay" aria-live="polite"></span>
+            </div>
             <!-- HERESY 1607 (Viktor 20.10.2026 on timoncool's fork: «Всё забирай»): the engine's harmony (1606) for the score the model plans -->
             <div class="harmony-row" id="harmonyRow" role="group" aria-label="Chords" data-tip="How far the planned chords may wander. The planner tends to loop one progression through the whole song: Gentle, Varied and Bold make a chord heard among the recent changes come back later, and keep a section's opening chords apart from the one before; Bold also lets a chord step outside the key now and then. Only when the model writes the score (Full or Melody, no score of yours). After Yeufonic, through timoncool's yue2.cpp">
               <span class="label">Chords</span>
@@ -1220,8 +1253,6 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
               <button type="button" class="chip" data-harmony="1" aria-pressed="true">Gentle</button>
               <button type="button" class="chip" data-harmony="2" aria-pressed="false">Varied</button>
               <button type="button" class="chip" data-harmony="3" aria-pressed="false">Bold</button>
-              <!-- HERESY 2896: the lyrics' own sections, in order, the plan's to write (the engine's harmony.follow) -->
-              <button type="button" class="chip harmony-follow" id="followSections" aria-pressed="true" data-tip="The planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): no section dropped, none made up, and the song does not end before its last section has begun and played a few chords. With no [Intro] in the lyrics an intro is planned first, with no [Outro] an outro last, so the song ends rather than stops. Only when the model writes the score (Full or Melody, no score of yours), with Chords off too">Follow my sections</button>
             </div>
           </fieldset>
 
@@ -1680,7 +1711,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
               <button type="button" class="btn ghost small icon-btn sheet-side" id="staffPortrait" aria-pressed="true" aria-label="Portrait" data-tip="Portrait: the sheet upright"></button>
               <button type="button" class="btn ghost small icon-btn sheet-side" id="staffLandscape" aria-pressed="false" aria-label="Landscape" data-tip="Landscape: the sheet on its side"></button>
             </span>
-            <button type="button" class="btn ghost small icon-btn" id="takeMidi" data-ui="file-music" aria-label="MIDI" data-tip="The score as a MIDI file: tempo, meter, key, a track per voice and the sections as markers, for a DAW"></button>
+            <button type="button" class="btn ghost small icon-btn" id="takeMidi" data-ui="file-music" aria-label="MIDI" data-tip="MIDI: the score's (its melody and its instrument line), or MuScriptor's transcription of the mix or of each stem, on the take's own beats"></button>
             <button type="button" class="btn ghost small icon-btn" id="takeMarkers" aria-label="Markers" data-tip="The sections (% verse …) as a marker list in seconds (CSV, as Reaper imports it)"></button>
             <button class="btn ghost small icon-btn" id="reuseScore" aria-label="Edit and re-render" data-tip="Edit and re-render: the score into the form, to change it and render it again"></button>
             <button type="button" class="btn ghost small icon-btn" id="staffFull" aria-label="Full screen" data-tip="The staff over the whole screen: zoom and scroll (or double-click the staff)"></button>
@@ -1781,6 +1812,8 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
         <div class="wr-doc" id="wrDoc" hidden>
           <div class="wr-head">
             <input type="text" id="wrTitle" class="wr-title" maxlength="120" placeholder="Untitled" aria-label="Title" />
+            <!-- HERESY 2862: the version beside the name, as the Musician's Composer -->
+            <input type="text" id="wrTitleVersion" class="wr-title-ver" maxlength="24" placeholder="1.0" autocomplete="off" inputmode="decimal" spellcheck="false" translate="no" aria-label="Version" data-tip="The version beside the name, digits and dots only (1.2.8). Another number keeps the text before it in the versions below, with what differs from now. Left empty, a save gives it 1.0" />
             <span class="wr-state" id="wrState"></span>
             <!-- HERESY 2480: whose document it is, as a Library take's realm; a song's lyrics hold 10 000 characters, a reading has no limit -->
             <span class="wr-realm" id="wrRealm" role="group" aria-label="Whose document" data-tip="Whose document: a song for the Musician (its lyrics hold 10 000 characters, as the Musician's) or a reading for the Narrator (no limit)"><button type="button" class="wr-realm-btn" data-realm="creator">Musician</button><button type="button" class="wr-realm-btn" data-realm="reader">Narrator</button></span>
@@ -1804,10 +1837,12 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
               <button type="button" class="btn ghost small" id="wrCompareClose">Close</button></div>
             <div class="draft-diff-body mono" id="wrCompareBody" translate="no"></div>
           </div>
+          <!-- HERESY 2862 (Viktor 19.11.2026: «куда исчезла из Писателя версионность, диффы»): the versions under the head, not under the knobs -->
+          <details class="wr-vers-box" id="wrVersBox" open><summary class="wr-cap">Versions <span class="dim" id="wrVersionsN"></span></summary><div class="wr-versions" id="wrVersions"></div></details>
           <div class="wr-parts">
             <label class="field wr-part"><span class="label">STYLE <em id="wrStyleSize"></em><span class="info" tabindex="-1" role="img" aria-label="About the style's length" data-tip="A style is counted without its spaces. Up to 200 characters is the ideal; over 400 is not endorsed; 800 is the ceiling: past it nothing sings until the style is shortened, and nothing is ever cut. Why: YuE2 learned from styles of 4 to 999 characters, half of them within 69–399; a long style blurs the composition."></span></span><textarea id="wrStyle" rows="4" spellcheck="false"></textarea><span class="lib-row wr-style-lib">   <!-- HERESY 2498: the saved styles, as under the Musician's Style --><select id="wrStyleLib" aria-label="Saved styles" data-tip="Your saved styles, kept on Forge: picking one puts it in the Style box (it asks before replacing what is there)."><option value="">Saved styles…</option></select><button type="button" class="btn ghost small icon-btn style-ico" id="wrStyleSave" data-ui="floppy" aria-label="Save style…" data-tip="Keep this style under a name, on Forge: every browser sees it"></button><button type="button" class="btn ghost small icon-btn style-ico danger" id="wrStyleDel" data-ui="trash" aria-label="Delete" data-tip="Delete the saved style picked" disabled></button></span></label>
             <div class="wr-lyr-col">   <!-- HERESY 2490 (Viktor 12.11.2026: «Статистику по редактору лирики… вниз, точь-в-точь как в Музыканте») -->
-              <label class="field wr-part"><span class="label">LYRICS <em id="wrLyricsSize"></em> <em class="wr-limit" id="wrLyricsLimit"></em> <span class="case-slot" data-case-slot="wrLyrics"></span></span><textarea id="wrLyrics" rows="16" spellcheck="false" maxlength="10000"></textarea></label>
+              <label class="field wr-part"><span class="label">LYRICS <em id="wrLyricsSize"></em> <em class="wr-limit" id="wrLyricsLimit"></em> <span class="case-slot" data-case-slot="wrLyrics"></span><!-- HERESY 2918: the text over everything, as the Musician's lyrics --><button type="button" class="btn ghost small icon-btn lyr-big wr-lyr-big" id="wrLyricsBig" data-ui="maximize" aria-pressed="false" aria-label="The text over everything" data-tip="The text over everything, four tenths larger, with its meter, rulers and stress marks: Esc, Alt+E or this button puts it back"></button></span><textarea id="wrLyrics" rows="16" spellcheck="false" maxlength="10000"></textarea></label>
               <div class="lyr-meter wr-meter" id="wrLyricsMeter"></div>   <!-- HERESY 2478 -->
             </div>
             <div class="field wr-part"><span class="label">NOTES <em>Markdown</em> <button type="button" class="btn ghost small icon-btn" id="wrNotesMode" data-ui="eye" aria-label="Preview" data-tip="Preview"></button></span>
@@ -1820,7 +1855,6 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
           </div>
           <div class="wr-lower">
             <section><h3 class="wr-cap">Takes Made from It <span class="dim" id="wrTakesN"></span></h3><div id="wrTakes"></div></section>
-            <section><h3 class="wr-cap">Versions <span class="dim" id="wrVersionsN"></span></h3><div class="wr-versions" id="wrVersions"></div></section>
           </div>
         </div>
         </details>
@@ -2108,6 +2142,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
           </div>
           <div class="dv-actions">
             <button type="button" class="btn primary small" id="mdRun" data-tip="MuScriptor writes the chosen source out as notes; each run is a set of the tree">Transcribe to MIDI</button>
+            <button type="button" class="btn ghost small" id="mdExport" data-midi-export data-tip="One MIDI file of the take on its own beats: the score's, MuScriptor on the mix or per stem">Export MIDI…</button>
             <span class="row-hint mono" id="mdState"></span>
           </div>
           <p class="row-hint">On the processor here a song of four minutes takes about a minute and a half small, three minutes medium, eleven large. MuScriptor&#39;s weights are CC BY-NC 4.0: non-commercial use only.</p>
@@ -2712,7 +2747,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
     </div>
     <!-- HERESY 1861: the Videographer's mini library: the plans, their films and their pictures; folded to a strip, or half the screen as tiles -->
     <aside class="vd-side" id="vdSide" aria-label="Clips">
-      <button type="button" class="lib-unfold vd-unfold" id="vdUnfold" data-tip="Unfold the clips"><span class="lib-unfold-name">Clips</span><span class="lib-unfold-count mono" id="vdUnfoldCount"></span></button>
+      <button type="button" class="lib-unfold vd-unfold" id="vdUnfold" data-tip="Unfold the clips"><span class="lib-unfold-icon"></span><span class="lib-unfold-name">Clips</span><span class="lib-unfold-count mono" id="vdUnfoldCount"></span></button>
       <header class="lib-head"><h3>Clips</h3><span class="count mono" id="vdSideCount">0</span><div class="spacer"></div>
         <button type="button" class="icon-btn vd-wide" id="vdWide" aria-pressed="false" aria-label="Half the screen, as tiles" data-tip="Half the screen, as tiles"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 5.5h17v13h-17zM12 5.5v13M15 9.5h3M15 12h3M15 14.5h3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
         <button type="button" class="icon-btn lib-fold" id="vdFold" data-icon="collapse" data-tip="Fold the clips to the right">Fold</button></header>
@@ -2894,8 +2929,9 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
          видеоплеерах по аналогу ключевых фреймов… в чистой кратности с 0:00»): to the last or the next quarter-minute mark -->
     <button type="button" class="icon-btn skip-btn" id="pbRew" aria-label="Back 15 s" data-tip="Back to the last quarter-minute mark (0:15, 0:30…). The ← key: to the last 5 s mark" data-ui="rewind">⏪</button>
     <button class="play" id="playBtn" aria-label="Play"><span id="playGlyph">▶</span>
-      <svg class="play-icon play-icon-play" viewBox="0 0 24 24" aria-hidden="true"><polygon points="7 4 19 12 7 20 7 4" /></svg>
-      <svg class="play-icon play-icon-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="5" width="3.2" height="14" rx="1" /><rect x="13.8" y="5" width="3.2" height="14" rx="1" /></svg></button>
+      <!-- HERESY 2873: drawn from heresy-icons.js (play, pause), the one drawing of ▶ and ⏸ in the Studio -->
+      <svg class="play-icon play-icon-play" viewBox="0 0 24 24" aria-hidden="true" data-ui-paths="play"></svg>
+      <svg class="play-icon play-icon-pause" viewBox="0 0 24 24" aria-hidden="true" data-ui-paths="pause"></svg></button>
     <button type="button" class="icon-btn skip-btn" id="pbFwd" aria-label="On 15 s" data-tip="On to the next quarter-minute mark. The → key: to the next 5 s mark" data-ui="forward">⏩</button>
     <button type="button" class="icon-btn skip-btn" id="nextTake" aria-label="Next take" data-tip="The take below in the list" data-ui="next">⏭</button>
     <button type="button" class="icon-btn pb-tog" id="pbRepeat" aria-pressed="false" data-mode="off" aria-label="Repeat" data-tip="Repeat: off · the list again from the top · this take again and again" data-ui="repeat">⟳</button>
@@ -3063,6 +3099,13 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
   </dl>
   <p>The C++ counterpart of the other console's "offload" choice.</p>
 </template>
+<template id="tip-kvq8">
+  <span class="tip-kind">Music cache in 8 bits</span>
+  <p>The engine keeps what the song has sung so far in a cache on the card. In 8 bits (Q8_0) the cache takes about half the room of the usual 16 bits (F16), so a card of 8–12 GB fits longer songs or a bigger model.</p>
+  <p>Measured on an RTX 3090, a 150 s song: the cache 5.3 → 2.8 GB, the card's peak 16.6 → 14.2 GB, the sound stage 3 % slower.</p>
+  <p>On the Arc B50 (16 GB), the same song at 75 s: the cache 5.3 → 2.8 GB, the card's peak 13.1 → 10.7 GB; the score stage 20 → 37 s, the sound stage as fast as before.</p>
+  <p>The same seed sings a slightly different take with it (other notes, not a worse sound). Off by default; it applies before the next song. A card that cannot read an 8-bit cache keeps F16, and this switch says so.</p>
+</template>
 <template id="tip-transcribe">
   <span class="tip-kind">Transcription models</span>
   <dl>
@@ -3092,6 +3135,12 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
     <dt>Peak clip</dt><dd>none any more: the song is written at the decoder's own level, never raised and never cut (turned down only when a peak would pass full scale in 16 or 24 bits); an MP3 alone is normalized; loudness is the master's work, in the Refiner</dd>
   </dl>
 </template>
+<template id="tip-seceditor">
+  <p>Each block is a section as the player's wave shows it: the lyrics' tags placed by Whisper's timing, a break, an intro or an outro where no voice sings, or the score's marks for a take never timed. The tags stay in English, as the model reads them.</p>
+  <p>Click a block (← → walk them, Space plays it), pick an edit under the strip and add it to the queue: one edit a section. The queue lists them in the song's order, each with ✕.</p>
+  <p>Assemble the take sings the queue as one new take, a child of this one, which stays as it is. The sung edits go one after another on the engine (a draft each, then the whole take once); Repeat and Remove are cut on the score's bar lines in seconds. Songs you queue in the Musician meanwhile go first.</p>
+  <p>The new take lands where this one is; its note lists the edits, and the player tints what was sung anew.</p>
+</template>
 <template id="tip-versions">
   <span class="tip-kind">Probes</span>
   <p>How many probes Generate makes from this prompt: each one is the music written anew, with its own music seed (seed, seed&nbsp;+&nbsp;1&hellip;).
@@ -3105,7 +3154,11 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
   <p>Probes &times; Variations is how many takes come out: 2 &times; 4 = 8, music m and m&nbsp;+&nbsp;1, each with sounds s to s&nbsp;+&nbsp;3.</p>
 </template>
 <script src="heresy-debug.js"></script>   <!-- HERESY 2054: the debug journal, first of ours: its watch on the requests and errors up early -->
+<script src="heresy-pulse.js"></script>   <!-- HERESY 2901: the installed app kept awake; its waking told (ruach-wake) before app.js listens -->
+<script src="heresy-wait.js"></script>   <!-- HERESY 2892: a wait says itself with the Studio's small sound wave -->
+<script src="heresy-screens.js"></script>   <!-- HERESY 2900: one screen or more, asked of nobody -->
 <script src="heresy-idle.js"></script>   <!-- HERESY 2721: the page's modes (idle_ui, focused_room, unfocused_room), before every module whose jobs repeat -->
+<script src="heresy-wsemoji.js"></script>   <!-- HERESY 2919: the workspaces' emoji (their grid, the faint icons), before the dialogs that offer it -->
 <script src="heresy-dialog.js"></script>
 <script src="heresy-lease.js"></script>   <!-- HERESY 2081: one Studio at a time (the lab's lease), before any module that writes -->
 <script src="heresy-link.js"></script>   <!-- HERESY 2098–2101: the writes counted, sent again, refused aloud; the line stuck said -->
@@ -3155,6 +3208,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
 <script src="heresy-wrshell.js"></script>   <!-- HERESY 2490: the Writer's shell: the worlds' knob, the start canvas, the three steps -->
 <script src="heresy-versions.js"></script>
 <script src="heresy-songhist.js"></script>
+<script src="heresy-seceditor.js"></script>   <!-- HERESY 2810: the Section editor, an overlay over the Musician -->
 <script src="heresy-scores.js"></script>
 <script src="heresy-train.js"></script>
 <script src="heresy-traindoc.js"></script>   <!-- HERESY 2351: the dataset doctor under the picked folder (Timon's cherry ③) -->
@@ -3199,6 +3253,8 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
 <script src="heresy-reader.js"></script>   <!-- HERESY 2241: the Reader, its tab, view and log view its own, before app.js binds the bar (kept home until turnkey) -->
 <script src="themes.js"></script>
 <script src="heresy-negwords.js"></script>   <!-- HERESY 2847: negative words in a style, before app.js -->
+<script src="heresy-midiexport.js"></script>   <!-- HERESY 2913: one window for every MIDI export: the score's, MuScriptor on the mix or per stem -->
+<script src="heresy-history.js"></script>   <!-- HERESY 2912: the history of plays and downloads (Ctrl+H, Ctrl+J), before app.js hands it its hooks -->
 <script src="app.js"></script>
 </body>
 </html>

@@ -359,7 +359,7 @@
     var back = document.createElement("div");
     back.className = "cmp-back ln-back";
     back.innerHTML = '<div class="cmp-box ln-box" role="dialog" aria-modal="true" aria-label="' + esc(tr("Family tree")) + '" tabindex="-1">' +
-      '<div class="cmp-head"><div class="ln-headtext"><div class="cmp-title">' + esc(tr("Family tree")) + '</div><div class="row-hint ln-hint">' + esc(tr("Asking the lab…")) + "</div></div>" +
+      '<div class="cmp-head"><div class="ln-headtext"><div class="cmp-title">' + esc(tr("Family tree")) + '</div><div class="row-hint ln-hint">' + (window.HeresyWait ? window.HeresyWait.wave() : "") + esc(tr("Asking the lab…")) + "</div></div>" +
       '<div class="ln-acts"><button type="button" class="btn ghost small" data-ln-compare="1" hidden data-tip="' + esc(tr("The family's takes in the compare player, played from the same second (twelve at most there)")) + '"></button>' +
       '<button type="button" class="btn ghost small" data-ln-close="1">' + esc(tr("Close")) + "</button></div></div>" +
       // HERESY 2022: the wave, the whole width, and its ruler

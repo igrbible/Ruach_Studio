@@ -91,6 +91,7 @@
     paint($("takeScoreCheck"), takeAbc);
     var ok = !!takeAbc.trim();
     ["takeMidi", "takeMarkers"].forEach(function (id) { if ($(id)) $(id).disabled = !ok; });
+    if ($("takeMidi") && window.HeresyMidiExport) $("takeMidi").disabled = false;   // HERESY 2913: MuScriptor needs no score
   }
 
   // ---- the form's score
@@ -108,7 +109,11 @@
   function init(hooks) {
     window.HeresyScore.toast = hooks.toast;
     var set = hooks.setAbc;
-    if ($("takeMidi")) $("takeMidi").addEventListener("click", function () { midiOut(takeAbc, takeTitle); });
+    if ($("takeMidi")) $("takeMidi").addEventListener("click", function () {
+      var n = hooks.takeName ? hooks.takeName() : "";                 // HERESY 2913: its window: the score's, MuScriptor's on the mix or per stem
+      if (window.HeresyMidiExport && n) return window.HeresyMidiExport.open(n);
+      midiOut(takeAbc, takeTitle);
+    });
     if ($("takeMarkers")) $("takeMarkers").addEventListener("click", function () { markersOut(takeAbc, takeTitle); });
     if (!$("abc")) return;
     $("abc").addEventListener("input", form);

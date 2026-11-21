@@ -89,6 +89,7 @@
           return '<label class="field"><span class="label">' + esc(tr(LABEL[k])) + '</span><textarea rows="2" data-vdi="' + i + '" data-vdk="' + k + '" translate="no">' + esc(sc[k] || "") + "</textarea></label>";
         }).join("") + "</div></div></article>";
     }).join("");
+    Array.prototype.forEach.call($("vdShots").querySelectorAll("video.vd-shotvid"), function (v) { vpAttach(v, true); });   // HERESY 2890
     shotCur(state.cur || 0);                              // HERESY 1940: one shot in sight
     nowAt = -2; follow();
     vpRefresh();                                          // HERESY 1860: the shots as the films' chapters
@@ -769,7 +770,7 @@
         return '<label class="vdl-s" data-tip="' + esc(tr(x[2])) + '"><span>' + esc(tr(x[1])) + '</span><input type="range" min="-100" max="100" step="5" class="vdl-prim" data-prim="' + x[0] +
           '" value="' + Math.round(v * 100) + '" /><b class="vdl-fv mono">' + Math.round(v * 100) + "</b></label>"; }).join("") +
       '<button type="button" class="btn ghost small vdl-x" data-vdl="close" aria-label="' + esc(tr("Close")) + '" data-tip="' + esc(tr("Close")) + '">×</button></div>' +
-      '<div class="vdl-grid" role="listbox"><p class="vdl-wait">' + esc(tr("Reading the looks…")) + "</p></div>" +
+      '<div class="vdl-grid" role="listbox"><p class="vdl-wait">' + (window.HeresyWait ? window.HeresyWait.wave() : "") + esc(tr("Reading the looks…")) + "</p></div>" +
       '<div class="vdl-foot"><span class="vdl-about row-hint"></span><span class="vdl-fetch"></span></div></div>';
     document.body.appendChild(back);
     back.addEventListener("click", function (e) {
@@ -957,7 +958,8 @@
     full: '<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
     unfull: '<path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
   };
-  function vpSvg(k) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + VPI[k] + "</svg>"; }
+  // HERESY 2873: ▶ ⏸ ⏮ ⏭ the player bar's own (heresy-icons.js), its sound and screen buttons its own
+  function vpSvg(k) { var H = window.HeresyIcons; if (H && H.paths && H.paths(k) && /^(play|pause|prev|next)$/.test(k)) return H.ui(k); return '<svg viewBox="0 0 24 24" aria-hidden="true">' + VPI[k] + "</svg>"; }
   function vpBtn(k, label) { return '<button type="button" class="vp-btn" data-vp="' + k + '" aria-label="' + esc(tr(label)) + '" data-tip="' + esc(tr(label)) + '">' + vpSvg(k) + "</button>"; }
   function vpClock(t) { t = Math.max(0, Math.floor(t || 0)); var m = Math.floor(t / 60), s = t % 60; return m + ":" + (s < 10 ? "0" : "") + s; }
   function vpShots() { var p = state.plan; return p && p.exists && p.shots ? p.shots : []; }
@@ -973,11 +975,15 @@
     try { if (on) localStorage.setItem("yue2.vdTheatre", "1"); else localStorage.removeItem("yue2.vdTheatre"); } catch (e) { /* private window */ }
     Array.prototype.forEach.call(f.querySelectorAll(".vp"), function (b) { if (b._vp) b._vp.paint(); });
   }
-  function vpAttach(v) {
+  // HERESY 2890 (the UIX audit of 13.11, №77: a shot's card showed the browser's own <video controls>, ▶ 0:00, ⛶ and ⋮, a look not the Studio's):
+  // mini, the card's own small player: ▶ and the time, the rail, the sound and the full screen; no shots as chapters (the card is one shot), no
+  // theatre, no speed. The box takes the video's place and its class (vd-shotvid), so the card's grid holds it as it held the video
+  function vpAttach(v, mini) {
     if (!v || v.dataset.vp) return;
     v.dataset.vp = "1"; v.removeAttribute("controls");
     var box = document.createElement("div");
-    box.className = "vp is-paused"; box.tabIndex = 0;
+    box.className = "vp is-paused" + (mini ? " is-mini vd-shotvid" : ""); box.tabIndex = 0;
+    if (mini) { v.classList.remove("vd-shotvid"); v.classList.add("vd-shotvid-v"); if (v.dataset.tip) { box.dataset.tip = v.dataset.tip; v.removeAttribute("data-tip"); } }
     v.parentNode.insertBefore(box, v); box.appendChild(v);
     box.insertAdjacentHTML("beforeend",
       '<button type="button" class="vp-big" data-vp="play" aria-label="' + esc(tr("Play")) + '">' + vpSvg("play") + "</button>" +
@@ -999,7 +1005,7 @@
       for (var i = 0; i < v.buffered.length; i++) if (v.buffered.start(i) <= t + 0.5) got = Math.max(got, v.buffered.end(i));
       q(".vp-buf").style.width = (d ? Math.min(100, 100 * got / d) : 0).toFixed(3) + "%";
       q(".vp-time").textContent = vpClock(t) + " / " + vpClock(d);
-      var at = vpShotAt(t), sh = vpShots()[at];
+      var at = mini ? -1 : vpShotAt(t), sh = vpShots()[at];
       q(".vp-chap").textContent = sh ? "· " + (at + 1) + " · " + (sh.section || "") + (sh.words ? " · " + sh.words : "") : "";
       var hush = v.muted || v.volume === 0, vb = q('[data-vp="vol"]');
       vb.innerHTML = vpSvg(hush ? "mute" : "vol"); label(vb, hush ? "Unmute (m)" : "Mute (m)");
@@ -1010,7 +1016,7 @@
       label(q('[data-vp="theatre"]'), th ? "Default view (t)" : "Theatre (t)");
     }
     function chaps() {
-      var d = isFinite(v.duration) ? v.duration : 0, sh = vpShots();
+      var d = isFinite(v.duration) ? v.duration : 0, sh = mini ? [] : vpShots();
       q(".vp-chaps").innerHTML = d && sh.length > 1 ? sh.slice(1).map(function (s) { return '<i style="left:' + (100 * s.t0 / d).toFixed(3) + '%"></i>'; }).join("") : "";
     }
     function seek(t) { var d = isFinite(v.duration) ? v.duration : 0; if (d) v.currentTime = Math.max(0, Math.min(d - 0.05, t)); paint(); }
@@ -1040,7 +1046,7 @@
     });
     v.addEventListener("click", toggle);
     v.addEventListener("dblclick", full);
-    document.addEventListener("fullscreenchange", paint);
+    if (mini) box.addEventListener("fullscreenchange", paint); else document.addEventListener("fullscreenchange", paint);   // 2890: a card's player, drawn anew with its card, leaves no listener on the page
     box.addEventListener("mousemove", wake);
     box.addEventListener("mouseleave", function () { if (!v.paused && !drag) box.classList.remove("is-awake"); });
     box.addEventListener("click", function (e) {
@@ -1058,7 +1064,7 @@
     q(".vp-volr").addEventListener("input", function () { v.volume = +this.value; v.muted = +this.value === 0; });
     rail.addEventListener("pointerdown", function (e) { drag = true; box.classList.add("is-dragging"); try { rail.setPointerCapture(e.pointerId); } catch (x) { /* gone */ } seek(at(e) * (v.duration || 0)); });
     rail.addEventListener("pointermove", function (e) {
-      var d = isFinite(v.duration) ? v.duration : 0, t = at(e) * d, i = vpShotAt(t), sh = vpShots()[i], tip = q(".vp-tip"), r = rail.getBoundingClientRect();
+      var d = isFinite(v.duration) ? v.duration : 0, t = at(e) * d, i = mini ? -1 : vpShotAt(t), sh = vpShots()[i], tip = q(".vp-tip"), r = rail.getBoundingClientRect();
       tip.querySelector("b").textContent = vpClock(t);
       tip.querySelector("span").textContent = sh ? (i + 1) + " · " + (sh.words || sh.section || "") : "";
       tip.style.left = Math.max(60, Math.min(r.width - 60, at(e) * r.width)) + "px";
@@ -1078,9 +1084,9 @@
       else if (k === "ArrowDown") v.volume = Math.max(0, Math.round((v.volume - 0.05) * 100) / 100);
       else if (k === "m" || k === "M") v.muted = !v.muted;
       else if (k === "f" || k === "F") full();
-      else if (k === "t" || k === "T") vpTheatre(!(box.closest(".vd-monitors") && box.closest(".vd-monitors").classList.contains("is-theatre")));
-      else if (k === "N" && e.shiftKey) shot(1);
-      else if (k === "P" && e.shiftKey) shot(-1);
+      else if ((k === "t" || k === "T") && !mini) vpTheatre(!(box.closest(".vd-monitors") && box.closest(".vd-monitors").classList.contains("is-theatre")));
+      else if (k === "N" && e.shiftKey && !mini) shot(1);
+      else if (k === "P" && e.shiftKey && !mini) shot(-1);
       else if (/^[0-9]$/.test(k)) seek(d * +k / 10);
       else if (k === "Home") seek(0);
       else if (k === "End") seek(d);
@@ -1606,8 +1612,22 @@
     try { tlHead(); } catch (e) { /* the timeline not drawn yet: the next frame mirrors */ }
     return true;
   };
+  // HERESY 2900 (Viktor 20.11.2026, №70): with one screen the program monitor stays in the page and its button is greyed, its tip says why; with two
+  // or more it opens in a popup window of its own, sized freely, its size and place kept and given back at the next opening (on the screen it stood on,
+  // when that screen is still there)
+  var PROGRAM_KEY = "yue2.programWin", ONE_SCREEN_PROGRAM = "One screen: the program monitor stays in the page. With a second screen it opens there in a window of its own";
+  function tlScreenPaint() {
+    var b = document.querySelector('[data-tlact="screen"]'), m = window.HeresyScreens ? window.HeresyScreens.many() : null;
+    if (!b) return;
+    if (b.dataset.tipMany === undefined) b.dataset.tipMany = window.RuachI18n ? window.RuachI18n.enAttr(b, "data-tip") : b.dataset.tip || "";
+    b.disabled = m === false && !(TL.win && !TL.win.closed);
+    b.dataset.tip = tr(b.disabled ? ONE_SCREEN_PROGRAM : b.dataset.tipMany);
+  }
+  function tlKept() { try { var g = JSON.parse(localStorage.getItem(PROGRAM_KEY) || "null"); return g && g.w > 200 && g.h > 150 ? g : null; } catch (e) { return null; } }
+  window.ruachProgramScreenPaint = tlScreenPaint;     // for the checks
   function tlScreen() {
     if (TL.win && !TL.win.closed) { try { TL.win.focus(); } catch (e) { /* over the others already */ } return; }
+    if (window.HeresyScreens && window.HeresyScreens.many() === false) return say(tr(ONE_SCREEN_PROGRAM));
     var open = function (feat) {
       var w = window.open("", "ruach-program", feat);
       if (!w) return say(tr("The browser kept the window from opening: allow pop-ups for the Studio"), true);
@@ -1626,15 +1646,26 @@
           "o.ruachProgramEpoch && o.ruachProgramEpoch !== window.__ruachEpoch) o.ruachProgramAdopt(window); } catch (e) {} }, 1500);";
         d.body.appendChild(sc);
       }
+      if (!w.__ruachKeep) {                              // HERESY 2900: the window keeps its own size and place (a move says nothing: looked at
+        var kp = d.createElement("script");               // every 2 s), in its own realm, so a reload of the page loses none of it; full screen not kept
+        kp.textContent = "window.__ruachKeep = 1; (function () { var t = 0; function keep() { try { if (document.fullscreenElement || innerWidth < 200 || innerHeight < 150) return; " +
+          "localStorage.setItem(" + JSON.stringify(PROGRAM_KEY) + ", JSON.stringify({ x: screenX, y: screenY, w: innerWidth, h: innerHeight })); } catch (e) {} } " +
+          "addEventListener('resize', function () { clearTimeout(t); t = setTimeout(keep, 300); }); addEventListener('pagehide', keep); setInterval(keep, 2000); })();";
+        d.body.appendChild(kp);
+      }
       tlHead();
+      tlScreenPaint();
     };
-    var plain = "popup,width=1280,height=760";
-    if (window.getScreenDetails) {
+    var plain = "popup,width=1280,height=760", kept = tlKept();
+    var at = function (g) { return "popup,left=" + g.x + ",top=" + g.y + ",width=" + g.w + ",height=" + g.h; };
+    if (window.getScreenDetails) {                       // asked only to place the window on a screen (the count of screens asked nobody)
       window.getScreenDetails().then(function (sd) {
+        var on = kept && sd.screens.filter(function (s) { return kept.x >= s.availLeft - 16 && kept.x < s.availLeft + s.availWidth && kept.y >= s.availTop - 16 && kept.y < s.availTop + s.availHeight; })[0];
+        if (on) return open(at(kept));                   // HERESY 2900: where it stood, its screen still there
         var other = sd.screens.filter(function (s) { return s !== sd.currentScreen; })[0];
-        open(other ? "popup,left=" + other.availLeft + ",top=" + other.availTop + ",width=" + other.availWidth + ",height=" + other.availHeight : plain);
-      }).catch(function () { open(plain); });
-    } else open(plain);
+        open(other ? "popup,left=" + other.availLeft + ",top=" + other.availTop + ",width=" + other.availWidth + ",height=" + other.availHeight : kept ? at(kept) : plain);
+      }).catch(function () { open(kept ? at(kept) : plain); });
+    } else open(kept ? at(kept) : plain);
   }
   function tlMirror(src, words, tc) {
     var w = TL.win;
@@ -1750,7 +1781,7 @@
   function shotThumb(f) { return "/lab/video/shot.jpg?name=" + encodeURIComponent(state.take.name) + "&f=" + encodeURIComponent(f); }
   function vidSlot(s) {
     if (!s.video) return "";
-    return '<video class="vd-shotvid" src="' + esc(shotVid(s.video)) + '" poster="' + esc(shotThumb(s.video)) + '" controls preload="none" playsinline data-tip="' +
+    return '<video class="vd-shotvid" src="' + esc(shotVid(s.video)) + '" poster="' + esc(shotThumb(s.video)) + '" preload="none" playsinline data-tip="' +   // 2890: its player the Studio's (vpAttach mini)
       esc(tr("This shot's video by MiniMax H3")) + (s.video_from && s.video_from.mode ? " · " + esc(tr(s.video_from.mode)) : "") + '"></video>';
   }
   function h3Load() {
@@ -1992,7 +2023,9 @@
   var ASK_ALL = "Shoot all {0} shots with MiniMax H3 as drafts?\n\nOn the free cards, a few minutes a shot; the clip takes each shot's video as it comes.";
   var DRAW_TIP = "The Artist draws every shot that has no picture yet, two at a time on the free cards: the hero's shots from the hero's picture (Qwen-Image 2.1, then 2512 over it), the others by 2512 from their scene; each picture goes into its shot as it comes";   // HERESY 2588: #vdDrawAll's own
   var ASK_LONG = "{0} of them are longer than one pass of H3 at 1280 × 704 (about 5 s): each would get a seam every 5 s. «✂ Cut the long shots» first cuts them cleanly.";
+  if (window.HeresyScreens) window.HeresyScreens.on(tlScreenPaint);   // HERESY 2900: a screen added or gone
   function wire() {
+    tlScreenPaint();                                     // HERESY 2900: the program monitor's button by the screens
     if (!$("view-video") || wire.done) return;
     wire.done = true;
     vpAttach($("vdAnimVideo")); vpAttach($("vdClipVideo"));   // HERESY 1860
@@ -2019,6 +2052,19 @@
     $("vdSideSearch").addEventListener("input", function () { SIDE.q = this.value; sidePaint(); });
     $("vdWide").addEventListener("click", function () { SIDE.wide = !SIDE.wide; sideKeep("yue2.vdSideWide", SIDE.wide ? "1" : ""); sidePaint(); });
     $("vdFold").addEventListener("click", function () { sideShow(false); });
+    var vdIco = $("vdUnfold").querySelector(".lib-unfold-icon");   // HERESY 2893: the rail's arrow, as the Takes rail has it
+    if (vdIco && window.HeresyIcons) vdIco.innerHTML = window.HeresyIcons.svg("expand");
+    // HERESY 2893: the rail spans the workspace from under the bar to its foot, as the takes' rail does, whatever the room below holds
+    var railFit = function () {
+      var ws = document.querySelector(".workspace"), s = $("vdSide");
+      if (!ws || !s) return;
+      var r = ws.getBoundingClientRect();
+      s.style.setProperty("--vd-rail-t", Math.round(r.top) + "px");
+      s.style.setProperty("--vd-rail-b", Math.max(0, Math.round(window.innerHeight - r.bottom)) + "px");
+    };
+    window.addEventListener("resize", railFit);
+    if (window.ResizeObserver && document.querySelector(".workspace")) new ResizeObserver(railFit).observe(document.querySelector(".workspace"));
+    railFit();
     $("vdUnfold").addEventListener("click", function () { sideShow(true); });
     $("vdSide").addEventListener("mouseenter", function () { clearTimeout(SIDE.hide); if (SIDE.folded) SIDE.show = setTimeout(function () { sideShow(true); }, 160); });   // HERESY 1940
     $("vdSide").addEventListener("mouseleave", function () {

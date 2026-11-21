@@ -227,28 +227,31 @@
   // sections, recounted on the 110 examples (build/tools/webui/example: a header's name before a dash, a colon or its number,
   // any case; Prechorus, Ends, Fadeout and Instrumental Introduction with theirs). Genius's sections none of them writes
   // come last with 0: TEST, YuE2 may sing them as words or pass them by
+  // HERESY 2906 (Viktor 20.11.2026: «В наши стилевые подсказки в редакторе лирики вот такие бы объяснения были бы кстати»): each section's note says what it
+  // is musically and what the planner makes of it: sung or played, and what «Follow my sections» (2896, 2896b–d) tells it; a voice's tag is no section
   var LYRIC_TAGS = [
     { group: "Sections (×: how often the 110 official examples write one; TEST: none does, Genius's guide to song sections names it)", rows: [
-      ["[Verse]", 163, "The body of the song: new words each time over the same music, the story moving on. Numbered (Verse 1, Verse 2…); the Studio offers the next number."],
-      ["[Chorus]", 201, "The part the song comes back to, the same words and melody each time, with the line people remember and sing along."],
-      ["[Pre-Chorus]", 63, "The climb from a verse into the chorus: a melody and words of its own that raise the tension, always followed by the chorus. Also written Prechorus."],
-      ["[Bridge]", 56, "Once, late in the song, everything turns (melody, chords, words) before the song comes home to its chorus. The meter counts it with the verses."],
-      ["[Outro]", 46, "The ending: a last line repeated as the music fades, or the chorus once more with a change that resolves the song."],
-      ["[Intro]", 34, "The opening before the first verse, mostly music. YuE2 seldom sings its lines: put a spoken intro under [Interlude] or [Verse]."],
-      ["[Interlude]", 18, "A passage of another feel between parts, often without words. Viktor's use: a pause in rap that brakes speech running ahead."],
-      ["[Final Chorus]", 11, "The last chorus, usually the biggest: more voices, more power, now and then a key change."],
-      ["[Instrumental Break]", 11, "The instruments alone between sections, for variety or to build into the next one. Name what plays: «Instrumental Break - Horns»."],
-      ["[Guitar Solo]", 8, "One instrument steps forward with a long melody of its own while the rest backs it. The examples also write Drum Solo, Keyboard Solo and plain Solo."],
-      ["[End]", 7, "The song's last mark: the music stops here. The examples also write Ends; SUNO's [END] is the same tag."],
-      ["[Instrumental Intro]", 5, "An opening played without voices. Also written Instrumental Introduction."],
-      ["[Refrain]", 4, "A line or two repeated unchanged at the end of each verse: part of the verse, not a section of its own as a chorus is."],
-      ["[Post-Chorus]", 3, "A short part right after the chorus that carries its energy on (a chant, a riff, a tag line) before the next verse."],
-      ["[Breakdown]", 2, "The music cut to its bones: heavy, simple riffs and pounding drums (metal and its kin), or a stripped beat in dance music."],
-      ["[Fade Out]", 2, "The music fades to silence. Also written Fadeout; Instrumental Fade Out once."],
-      ["[Hook]", 1, "The catchiest line or riff of the song; Genius writes it [Chorus] or [Refrain] now."],
-      ["[Drop]", 1, "Dance and electronic music: the moment beat and bass hit after a build-up."],
-      ["[Instrumental]", 1, "A part, or a whole song, played without singing."],
-      ["[Instrumental Outro]", 0, "An ending played without voices."],
+      ["[Verse]", 163, "The body of the song: new words each time over the same music, the story moving on. Numbered (Verse 1, Verse 2…); the Studio offers the next number. Sung; Follow my sections: verse."],
+      ["[Chorus]", 201, "The part the song comes back to, the same words and melody each time, with the line people remember and sing along. Sung; Follow my sections: chorus."],
+      ["[Pre-Chorus]", 63, "The climb from a verse into the chorus: a melody and words of its own that raise the tension, always followed by the chorus. Sung; Follow my sections: pre-chorus."],
+      ["[Bridge]", 56, "Once, late in the song, everything turns (melody, chords, words) before the song comes home to its chorus. Sung; Follow my sections: bridge (Middle 8 too)."],
+      ["[Outro]", 46, "The ending: a last line repeated as the music fades, or the chorus once more, resolved. Words under it are sung; Follow my sections: outro, always the plan's last section."],
+      ["[Intro]", 34, "The opening before the first verse, mostly music. Follow my sections: intro, always the plan's first (one is added when the lyrics have none). YuE2 seldom sings its lines: put a spoken intro under [Verse]."],
+      ["[Interlude]", 18, "A passage of another feel between parts: the band alone, or ad-libs and calls over it. Viktor's use: a pause in rap that brakes speech running ahead. Follow my sections: interlude, with words under it or without."],
+      ["[Final Chorus]", 11, "The last chorus, usually the biggest: more voices, more power, now and then a key change. Sung; Follow my sections: chorus."],
+      ["[Instrumental Break]", 11, "The instruments alone between sections, for variety or to build into the next one; name what plays: «Instrumental Break - Horns». Follow my sections: interlude, no voice."],
+      ["[Guitar Solo]", 8, "One instrument steps forward with a long melody of its own while the rest backs it (Drum Solo, Keyboard Solo, plain Solo too). Instrumental; Follow my sections: interlude."],
+      ["[End]", 7, "The song's last mark: the music stops here (SUNO's [END] is the same tag). Follow my sections: outro; [Outro] [End] in a row are one."],
+      ["[Instrumental Intro]", 5, "An opening played without voices. Follow my sections: intro."],
+      ["[Refrain]", 4, "A line or two repeated unchanged, often at the end of each verse. Sung; Follow my sections: chorus."],
+      ["[Post-Chorus]", 3, "A short part right after the chorus that carries its energy on: a chant, a riff, a tag line. Sung; Follow my sections: chorus."],
+      ["[Breakdown]", 2, "The arrangement stripped to its bones to build tension before the last chorus. Metal and hardcore: a heavy half-time chug, the voice a shout, a chant or nothing. EDM: the quiet part, the drums gone, pads left, one line or none. Ballad and rock: bass and kick or one instrument, sometimes whispered or spoken. Empty: an interlude; with words under it the Studio plans a sung section (a bridge). For speech add «spoken word breakdown» to the style."],
+      ["[Fade Out]", 2, "The music fades to silence (Fadeout too). Follow my sections: outro."],
+      ["[Hook]", 1, "The catchiest line or riff of the song; Genius writes it [Chorus] or [Refrain] now. Sung; Follow my sections: chorus."],
+      ["[Drop]", 1, "Dance and electronic music: the moment beat and bass hit after a build-up, mostly without a voice. Follow my sections: interlude; with words under it, a sung bridge."],
+      ["[Build-up]", 0, "The rising part before a drop or a chorus: snare rolls, risers, the filter opening, the energy climbing. Follow my sections: pre-chorus, a sung section."],   // HERESY 2906: Follow my sections maps it (pre-chorus)
+      ["[Instrumental]", 1, "A part, or a whole song, played without singing. Follow my sections: interlude."],
+      ["[Instrumental Outro]", 0, "An ending played without voices. Follow my sections: outro."],
       ["[Skit]", 0, "A short scene acted out apart from the song: voices and something happening, not singing."],
       ["[Segue]", 0, "A spoken or played passage that joins two songs within one track."],
       ["[Part]", 0, "One of the songs a long track is made of, numbered in Roman numerals (Part I, Part II); the verses keep counting across the parts."],
@@ -263,8 +266,8 @@
     // HERESY 1426 (Viktor 14.10.2026: «Пометь их особо как не структурные»; «правильнее будет писать `[Vocal: Female/Male ... ]`, `[Spoken:
     // Female/Male ... ]`. Без Solo»): the voices in his form: sung or said, who, then how after a dash; no section (the meter's own reading)
     { group: "Voices (not a section: the lines stay in the section before; Viktor's form: sung or said, who, then how after a dash; no Solo)", voice: true, rows: [
-      ["[Vocal: Female - …]", 0, "A woman sings the lines that follow, until another voice is named; after the dash how she sings: Deep, Warm; Soft, Breathy."],
-      ["[Vocal: Male - …]", 0, "A man sings the lines that follow; after the dash how he sings: Bari-tenor, Calm; Low, Raspy."],
+      ["[Vocal: Female - …]", 0, "A woman sings the lines that follow, until another voice is named; after the dash how she sings: Deep, Warm; Soft, Breathy. Not a section: Follow my sections passes it by, as it does the ФОСФОРИДА form [Solo Female Voice]."],
+      ["[Vocal: Male - …]", 0, "A man sings the lines that follow; after the dash how he sings: Bari-tenor, Calm; Low, Raspy. Not a section: Follow my sections passes it by, as it does the ФОСФОРИДА form [Solo Male Vocal: …]."],
       ["[Spoken: Female - …]", 0, "A woman says the lines that follow instead of singing them; after the dash how: Soft Whisper, Intimate, Sacred."],
       ["[Spoken: Male - …]", 0, "A man says the line instead of singing it; after the dash how: Soft Whisper; Calm."],
       ["[Spoken: Female - Soft Whisper, Intimate, Sacred]", 0, "Heard on a long ballad (written there «Female Voice - …»): a narrator's whisper between sung verses."],

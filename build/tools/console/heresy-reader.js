@@ -44,6 +44,12 @@
   function toast(t, kind) { if (window.HeresyToast) window.HeresyToast(tr(t), kind || ""); }
   function fill(id, parts) { var s = E(id); Object.keys(parts).forEach(function (k) { s = s.split("{" + k + "}").join(String(parts[k])); }); return s; }
   // HERESY 2566: a key's words in the page's language with its parts put in after, as they are (a word heard, a tag: never looked up in a catalog)
+  // HERESY 2862 (Viktor 19.11.2026: «И в Чтеце такой же версионный контроль и номер версии отдельным полем»): the version beside the title, as the
+  // Musician's Composer (1614): what goes out is «Name vN.N»; a reading sent with a title is kept in the Writer under it (lab writer.py reader_keep)
+  var VER_TAIL = /^(.*\S)\s+v(\d+(?:\.\d+)*)$/i;
+  function cleanVer(v) { return String(v || "").replace(/[^0-9.]/g, "").replace(/\.{2,}/g, ".").replace(/^\.+/, ""); }
+  function fullTitle() { var t = $("rdTitle").value.trim(), v = $("rdTitleVer") ? cleanVer($("rdTitleVer").value).replace(/\.+$/, "") : ""; return t && v ? t + " v" + v : t; }
+  function setTitle(full) { var t = String(full || ""), m = VER_TAIL.exec(t.trim()); $("rdTitle").value = m ? m[1] : t; if ($("rdTitleVer")) $("rdTitleVer").value = m ? m[2] : ""; }
   function tw(id, parts) { var s = tr(E(id)); Object.keys(parts).forEach(function (k) { s = s.split("{" + k + "}").join(String(parts[k])); }); return s; }
   function api(path, body) {
     var opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
@@ -78,7 +84,7 @@
         return d;
       });
     };
-    return api("/reader/check", { take: take }).then(look).then(function (d) {
+    return api("/reader/check", { take: take, ui: (window.RuachI18n && window.RuachI18n.lang ? window.RuachI18n.lang() : "en") }).then(look).then(function (d) {
       delete checking[take];
       toast(checkSaid(d), d.cer == null ? "bad" : d.flagged_n ? "warn" : "");
       if ($("rdRuns")) poll(true);
@@ -105,24 +111,29 @@
     "#rdMoreRoom { display: none !important; }",
     "#rdMoreRoom svg { width: 15px; height: 15px; flex: none; }",
     "@media (max-width: 1150px) { #tabRead { display: none !important; } #rdMoreRoom { display: flex !important; } }",
-    // HERESY 2401: the frame. The form's three cards and the runs beside them: from 1600 px the lectern beside the voice and the engine, the runs a
-    // third column (his 2K and 4K: everything in sight, nothing under the fold); below, the cards one under another beside the runs; under 1180 px
-    // a single column
-    ".rd-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 400px); gap: 18px; align-items: start; }",
-    // HERESY 2560: the form's cards; from 1600 px the lectern and, beside it, the voice and the engine in a column of their own
-    ".rd-form-body { display: flex; flex-direction: column; gap: 12px; min-width: 0; }", ".rd-form-side { display: contents; }",
-    "@media (min-width: 1600px) { .rd-cols { grid-template-columns: minmax(0, 2.15fr) minmax(360px, 1fr); } .rd-form-body { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: start; }" +
-      " .rd-form-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; } .rd-own, .rd-design { grid-column: 1 / -1; } }",
-    // HERESY 2560 (the UIX audit of 13.11.2026, items 49 and 52): the room in the window, as the Musician's. The form's cards scroll in their own box and the go bar
-    // stands under it, never over a card (it lay over the lectern's tools and the quants); the runs scroll in theirs; the room itself no longer scrolls (its bar and the
-    // runs' stood side by side). The lectern's page takes the height left, never under eight lines. A window under 1181 px wide or 700 px high scrolls as before
-    "@media (min-width: 1181px) and (min-height: 700px) { .reader-col { overflow: hidden; } .rd-cols { flex: 1 1 auto; min-height: 0; align-items: stretch; } .rd-cols > .rd-form { min-height: 0; }" +
-      " .rd-form-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding-inline-end: 4px; } .rd-go { position: static; flex: none; } .rd-side { position: static; max-height: none; min-height: 0; overflow: auto; } }",
-    "@media (min-width: 1600px) and (min-height: 700px) { .rd-form-body { grid-template-rows: 100%; } .rd-form-body > .rd-lect { align-self: stretch; min-height: 0; overflow: auto; }" +
-      " .rd-form-side { align-self: stretch; min-height: 0; overflow: auto; padding-inline-end: 4px; } .rd-lect > .rd-page { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }" +
-      " .rd-lect .rd-page .rd-text { flex: 1 1 auto; min-height: calc(var(--rd-lh) * 6 + 24px); } }",
-    "@media (min-width: 2300px) { .rd-cols { grid-template-columns: minmax(0, 2.3fr) minmax(420px, 1fr); } }",
-    "@media (max-width: 1180px) { .rd-cols { grid-template-columns: 1fr; } }",
+    // HERESY 2881 (Viktor 15.11.2026: «левая — редактор текста на всю высоту; средняя, узкая (или продолжение редактора) — подсказки, что сейчас под
+    // ним; правая — настройки синтеза. Лепестки ширины между колонками»): once the form is 1040 px wide (its own width: a container query), three
+    // columns: the text on the whole height; a narrow one of what stood under it (the mode and the cut, From a recording, the text's tools, the
+    // tags and their palette); the voice and the engine. Two grips between them, dragged (the third column takes what is left), moved by the
+    // arrow keys, put back by a double-click, kept per browser. Narrower, the cards one under another as before. The runs («Read so far», 2882)
+    // are the Studio's right column now, so the form has the room's whole width
+    ".rd-cols { display: block; }",
+    ".rd-form { container: rdform / inline-size; }",
+    ".rd-form-body { display: flex; flex-direction: column; gap: 12px; min-width: 0; }", ".rd-form-side, .rd-form-aid { display: contents; }",
+    ".rd-grip { display: none; align-self: stretch; justify-content: center; cursor: col-resize; touch-action: none; outline: none; min-height: 120px; }",
+    ".rd-grip::before { content: \"\"; width: 2px; height: 100%; border-radius: 1px; background: transparent; transition: background .12s; }",
+    ".rd-grip:hover::before, .rd-grip.is-drag::before, .rd-grip:focus-visible::before { background: var(--line-strong-a); }",
+    "body.rd-resizing, body.rd-resizing * { cursor: col-resize !important; user-select: none !important; }",
+    "@container rdform (min-width: 1040px) { .rd-form-body { display: grid; grid-template-columns: minmax(300px, var(--rd-c1, 1.5fr)) 14px minmax(220px, var(--rd-c2, .6fr)) 14px minmax(320px, 1fr); gap: 12px 0; align-items: start; }" +
+      " .rd-form-side, .rd-form-aid { display: flex; flex-direction: column; gap: 12px; min-width: 0; } .rd-grip { display: flex; } .rd-own, .rd-design { grid-column: 1 / -1; } }",
+    // HERESY 2560 (the UIX audit of 13.11.2026, items 49 and 52): the room in the window, as the Musician's: the go bar under the form, never over a
+    // card; the room itself never scrolls. 2881: in three columns each scrolls on its own and the text's page takes the whole height, never under six
+    // lines; one under another, the form's cards scroll together. A window under 1181 px wide or 700 px high scrolls as before
+    "@media (min-width: 1181px) and (min-height: 700px) { .reader-col { overflow: hidden; } .rd-cols { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; } .rd-cols > .rd-form { flex: 1 1 auto; min-height: 0; }" +
+      " .rd-form-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding-inline-end: 4px; } .rd-go { position: static; flex: none; }" +
+      " @container rdform (min-width: 1040px) { .rd-form-body { grid-template-rows: 100%; overflow: hidden; padding-inline-end: 0; } .rd-form-body > .rd-lect, .rd-form-aid, .rd-form-side { align-self: stretch; min-height: 0; overflow: auto; }" +
+      " .rd-form-aid, .rd-form-side { padding-inline-end: 4px; } .rd-lect > .rd-page, .rd-lect > .rd-page > .lyr-wrap { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }" +
+      " .rd-lect .rd-page .rd-text { flex: 1 1 auto; min-height: calc(var(--rd-lh) * 6 + 24px); resize: none; } } }",
     ".rd-card { gap: 12px; }",
     ".rd-card-head { display: flex; align-items: baseline; gap: 10px; padding: 0 2px 9px; border-bottom: 1px solid var(--line-a); }",
     ".rd-card-head > .label { margin: 0; flex: 1 1 auto; }",
@@ -132,6 +143,8 @@
     // the lectern: a reader's page, ruled, its margin in the accent; the words in the room's face at a reading size (his letters with their
     // acutes and his Ѓ Ђ Љ need the face the rooms use, so the heresy is the page, not the font)
     ".rd-page { position: relative; margin: 0; }",
+    // HERESY 2883: the lyrics editor's hands: the box in their wrap, its numbers in its margin (as the Musician's, 40 px past the page's own), the counts under it
+    ".rd-page > .lyr-wrap { display: block; } #rdText.lyr-numbered { padding-left: 46px; } .rd-meter { margin: 4px 2px 0; }",
     ".rd-page .rd-text { --rd-lh: 27px; min-height: calc(var(--rd-lh) * 14 + 24px); font-size: 15.5px; line-height: var(--rd-lh); padding: 12px 18px 12px 26px; resize: vertical;" +
       " background-color: color-mix(in srgb, var(--ground) 82%, var(--panel)); background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--rd-lh) - 1px)," +
       " color-mix(in srgb, var(--line-a) 70%, transparent) calc(var(--rd-lh) - 1px), color-mix(in srgb, var(--line-a) 70%, transparent) var(--rd-lh));" +
@@ -156,6 +169,9 @@
       " background: color-mix(in srgb, var(--panel) 70%, var(--ground)); border: 1px solid var(--line-soft); box-shadow: 0 -10px 24px -18px var(--shadow-lg); }",
     "#view-read .rd-go > .field { flex: 0 1 560px; margin: 0; display: flex; flex-direction: row; align-items: center; gap: 10px; min-width: 0; }",
     "#view-read .rd-go > .field > .label { margin: 0; white-space: nowrap; text-align: left; } #view-read .rd-go > .field > input { flex: 1 1 auto; min-width: 120px; height: var(--ctl-h, 36px); }",
+    // HERESY 2862: the version beside the title, as narrow as its number
+    "#view-read .rd-go > .field.rd-ver { flex: 0 0 auto; } #view-read .rd-go > .field.rd-ver > input { flex: none; width: 6.5em; min-width: 5em; font-family: var(--mono, monospace); }",
+    "#view-read .rd-ver-btn { height: var(--ctl-h, 36px); min-width: 34px; display: inline-grid; place-items: center; } #view-read .rd-ver-btn svg { width: 17px; height: 17px; }",
     ".rd-go-btn { display: inline-flex; align-items: center; gap: 8px; min-width: 10em; justify-content: center; margin-left: auto; height: var(--ctl-h, 36px); }",
     ".rd-go-btn svg { width: 17px; height: 17px; }",
     // the breath under the room's name: still while nothing reads, breathing while a run reads
@@ -171,9 +187,20 @@
     "@keyframes rdBreathe { 0%, 100% { transform: scaleY(.45); } 45% { transform: scaleY(1); } 60% { transform: scaleY(.92); } }",
     "@media (max-width: 1300px) { .rd-breath { display: none; } }",
     // the runs' head: how many read and failed, and whether the failed ones are shown
-    ".rd-side { position: sticky; top: 0; max-height: calc(100vh - var(--playbar-h, 124px) - 120px); overflow: auto; padding-inline-end: 4px; }",
-    ".rd-side-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; position: sticky; top: 0; z-index: 2; background: var(--ground); padding: 2px 0 8px; }",
-    ".rd-side-head .rd-h3 { flex: 1 1 auto; }",
+    // HERESY 2882 (Viktor 15.11.2026: «"Прочитано" — в сворачиваемую правую колонку вместо "Семплов" Музыканта, с реакциями, как на мини-карточках
+    // Музыканта»): in the Narrator the Studio's right column is the runs, where the Musician has its takes: folded and unfolded as that column is (the
+    // room's own fold, open at first), its grip and its peek the same, the folded strip saying «Read so far» and how many; each finished card
+    // with the take's marks as the Musician's mini cards have them (like, on fire, a gem, the reaction, dislike, the star, the shield, the note)
+    "#library > .rd-side { display: none; } .rd-side [hidden] { display: none !important; }",
+    "body[data-tab=read] #library > :not(.lib-unfold):not(.rd-side) { display: none !important; }",
+    "body[data-tab=read] #library > .rd-side { display: flex; flex: 1 1 auto; min-height: 0; overflow: auto; padding: 8px 12px 14px; }",
+    ".rd-unfold-name, .rd-unfold-count { display: none; }",
+    "body[data-tab=read] .lib-unfold > .lib-unfold-name:not(.rd-unfold-name), body[data-tab=read] .lib-unfold > #libUnfoldCount { display: none; }",
+    "body[data-tab=read] .lib-unfold > .rd-unfold-name, body[data-tab=read] .lib-unfold > .rd-unfold-count { display: block; }",
+    ".rd-side-head { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; position: sticky; top: -8px; z-index: 2; background: var(--panel); padding: 2px 0 8px; }",
+    ".rd-side-head > #rdRunsN { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }",
+    ".rd-run .take-extra { margin-top: 0; } .rd-run .take-extra .coll-badges { display: none; } .rd-run .take-rate { margin-inline-start: auto; }",
+    ".rd-side-head .rd-h3 { flex: 1 0 auto; }",
     ".rd-failed { font-size: 12px; margin: 0; }",
     ".rd-run { border-inline-start: 3px solid color-mix(in srgb, var(--patina) 55%, transparent); }",
     ".rd-run[data-status=failed], .rd-run[data-status=stopped] { border-inline-start-color: var(--bad-line); }",
@@ -298,6 +325,18 @@
     ".rd-tr-text { min-height: 160px; font-size: 13px; }",
     // HERESY 2376: the glyph map as a table
     ".rd-gm-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }",
+    // HERESY 2884: the two windows and the rows that open them; a run of comments one field
+    ".rd-opens { display: flex; flex-direction: column; gap: 8px; }",
+    ".rd-open-row { display: flex; align-items: center; gap: 8px; width: 100%; text-align: start; border: 1px solid var(--line-a); border-radius: var(--r-md); padding: 8px 12px; background: none;" +
+      " color: var(--muted); font: inherit; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }",
+    ".rd-open-row:hover, .rd-open-row:focus-visible { border-color: var(--muted); color: var(--ink); } .rd-open-row .ui-ico { width: 15px; height: 15px; flex: none; } .rd-open-row .mono { text-transform: none; letter-spacing: 0; }",
+    ".rd-win { display: flex; flex-direction: column; gap: 10px; } .rd-win h3 { margin: 0; font: 500 15px/1.4 var(--heading); } .rd-win-lang { font-size: 12px; color: var(--dim); margin-inline-start: 6px; }",
+    ".rd-win-note { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; }",
+    ".hd-box.rd-dictw { width: min(720px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 16px 18px 14px; }",
+    ".hd-box.rd-gmapw { width: min(1180px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 16px 18px 14px; }",
+    ".rd-gmapw .rd-gm-wrap { max-height: calc(100vh - 360px); } .rd-dictw .rd-dict-list { max-height: calc(100vh - 300px); }",
+    ".rd-gm-table tr.is-block textarea { width: 100%; min-width: 0; resize: vertical; font-family: var(--mono, monospace); font-size: 12px; color: var(--dim); line-height: 1.45; white-space: pre; overflow-x: auto; }",
+    ".rd-gm-table tr.is-block td.n { vertical-align: top; padding-top: 6px; }",
     ".rd-gm-bar input[type=search] { flex: 1 1 180px; min-width: 0; }",
     ".rd-gm-wrap { max-height: 420px; overflow: auto; border: 1px solid var(--line-a); border-radius: var(--r-sm, 6px); }",
     ".rd-gm-table { width: 100%; border-collapse: collapse; font-size: 12px; }",
@@ -355,9 +394,17 @@
   // under the room's name, still while nothing reads and breathing while a run reads, and the lectern ruled like a reader's page, its margin
   // in the accent. Every id the room binds is where it was: only the frame changed.
   function roomHtml() {
-    var RDTITLE = '<label class="field"><span class="label">' + esc(E("reader.title")) + '</span><input type="text" id="rdTitle" maxlength="120" placeholder="' + esc(E("reader.title.ph")) + '" data-tip="' + esc(E("reader.title.tip")) + '" /></label>';
+    var RDTITLE = '<label class="field"><span class="label">' + esc(E("reader.title")) + '</span><input type="text" id="rdTitle" maxlength="120" placeholder="' + esc(E("reader.title.ph")) + '" data-tip="' + esc(E("reader.title.tip")) + '" /></label>' +
+      // HERESY 2862: the version beside the title, and this title's versions in the Writer
+      '<label class="field rd-ver"><span class="label">' + esc(E("reader.ver.field")) + '</span><input type="text" id="rdTitleVer" maxlength="24" placeholder="1.0" autocomplete="off" inputmode="decimal" spellcheck="false" translate="no" data-tip="' + esc(E("reader.ver.tip")) + '" /></label>' +
+      '<button type="button" class="btn ghost small icon-btn rd-ver-btn" id="rdVersions" aria-label="' + esc(E("reader.ver.list")) + '" data-tip="' + esc(E("reader.ver.list.tip")) + '">' + UI("history") + "</button>";
     // HERESY 2560: the go bar under the form's cards, never over them
-    var GO = '<div class="rd-actions rd-go">' + RDTITLE + '<button type="button" class="btn primary rd-go-btn" id="rdGo" data-tip="' + esc(E("reader.go.tip")) + '">' + MIC + "<span>" + esc(E("reader.go")) + "</span></button>" +
+    // HERESY 2903 (Viktor's «да» to the mockup of 18.11, «Начальный отрезок и версии»): the first minutes of the text, and up to four versions at once
+    var CUT = '<label class="field rd-cut"><span class="label">' + esc(E("reader.cut")) + '</span><select id="rdCut" data-hc-pick="1" data-tip="' + esc(E("reader.cut.tip")) + '">' +
+      '<option value="0">' + esc(E("reader.cut.all")) + "</option>" + [2, 3, 5].map(function (m) { return '<option value="' + m + '">' + esc(fill("reader.cut.min", { "#0": m })) + "</option>"; }).join("") + "</select></label>" +
+      '<label class="field rd-vers"><span class="label">' + esc(E("reader.vers")) + '</span><select id="rdVers" data-hc-pick="1" data-tip="' + esc(E("reader.vers.tip")) + '">' +
+      [1, 2, 3, 4].map(function (n) { return "<option>" + n + "</option>"; }).join("") + "</select></label>";
+    var GO = '<div class="rd-actions rd-go">' + RDTITLE + CUT + '<button type="button" class="btn primary rd-go-btn" id="rdGo" data-tip="' + esc(E("reader.go.tip")) + '">' + MIC + "<span>" + esc(E("reader.go")) + "</span></button>" +
       '<span class="rd-say mono" id="rdSay"></span></div>';
     return '<div class="col-head post-head rd-head"><h2>' + esc(E("reader.room")) + ' <span class="tag" id="rdPro" hidden data-tip="' + esc(E("reader.pro.tip")) + '">Pro</span>' +
       '<span class="info" tabindex="-1" role="img" aria-label="' + esc(E("reader.about")) + '" data-tip="' + esc(E("reader.note.tip")) + '"></span></h2>' +   // HERESY 2560
@@ -367,6 +414,13 @@
       // the lectern
       '<section class="k-card rd-card rd-lect"><div class="rd-card-head"><span class="label">' + esc(E("reader.text")) + '</span><em class="mono rd-count" id="rdCount"></em>' +
       '<em class="mono rd-dur" id="rdDur"></em>' + ib("undo-2", "rdFormBack", E("reader.formBack"), E("reader.formBack.tip"), " hidden") + "</div>" +   // HERESY 2511
+      '<label class="field rd-page"><span class="label rd-sr">' + esc(E("reader.text")) + "</span>" +
+      '<textarea id="rdText" class="rd-text" rows="14" spellcheck="false" data-tip="' + esc(E("reader.text.tip")) + '"></textarea></label>' +
+      '<div class="lyr-meter rd-meter" id="rdTextMeter"></div>' +   // HERESY 2883: the counts, the slips and the editor's switches under the text
+      "</section>" +
+      // HERESY 2881: what stood under the text, in a narrow column of its own between two grips
+      '<div class="rd-grip" id="rdGrip1" role="separator" aria-orientation="vertical" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-label="' + esc(E("reader.grip")) + '" data-tip="' + esc(E("reader.grip.tip")) + '"></div>' +
+      '<div class="rd-form-aid"><section class="k-card rd-card rd-aid"><div class="rd-card-head"><span class="label">' + esc(E("reader.aid")) + '</span></div>' +
       '<div class="rd-row"><label class="field"><span class="label">' + esc(E("reader.mode")) + '</span><select id="rdMode" data-tip="' + esc(E("reader.mode.tip")) + '">' +
       '<option value="narration">' + esc(E("reader.narration")) + '</option><option value="dialog">' + esc(E("reader.dialog")) + "</option></select></label>" +
       '<label class="field" id="rdSplitBox"><span class="label">' + esc(E("reader.split")) + '</span><select id="rdSplit" data-tip="' + esc(E("reader.split.tip")) + '">' +
@@ -382,15 +436,14 @@
       '<option value="every">' + esc(E("reader.tr.mode.every")) + '</option><option value="proof">' + esc(E("reader.tr.mode.proof")) + "</option></select>" +
       ib("sparkles", "rdTrClean", E("reader.tr.clean"), E("reader.tr.clean.tip")) + ib("import", "rdTrUse", E("reader.tr.use"), E("reader.tr.use.tip")) +
       '<span class="rd-say" id="rdTrSay"></span></div></div></div></details>' +
-      '<label class="field rd-page"><span class="label rd-sr">' + esc(E("reader.text")) + "</span>" +
-      '<textarea id="rdText" class="rd-text" rows="14" spellcheck="false" data-tip="' + esc(E("reader.text.tip")) + '"></textarea></label>' +
       '<div class="rd-actions rd-tools">' + (window.HeresyCase ? window.HeresyCase.buttons("rdText", "rdMode") : "") +   // HERESY 2453
       ib("timer", "rdPause", E("reader.pause"), E("reader.pause.tip")) +   // HERESY 2334; 2514: icons
       ib("scissors", "rdSplitAdd", E("reader.split.add"), E("reader.split.tip")) +
       ib("sparkles", "rdTagSuggest", E("reader.tagSuggest"), E("reader.tagSuggest.tip")) + "</div>" +   // HERESY 2694   // HERESY 2344 +
       '<label class="check" data-tip="' + esc(E("reader.tags.tip")) + '"><input type="checkbox" id="rdTags" /> <span>' + esc(E("reader.tags")) + "</span></label>" +
       '<details class="rd-box" id="rdPal"><summary data-tip="' + esc(E("reader.palette.tip")) + '">' + esc(E("reader.palette")) + '</summary><div id="rdPalBody"></div></details>' +
-      "</section>" +
+      "</section></div>" +
+      '<div class="rd-grip" id="rdGrip2" role="separator" aria-orientation="vertical" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-label="' + esc(E("reader.grip")) + '" data-tip="' + esc(E("reader.grip.tip")) + '"></div>' +
       // the voice
       '<div class="rd-form-side">' +   // HERESY 2560: the voice and the engine, one column from 1600 px
       '<section class="k-card rd-card rd-vox"><div class="rd-card-head"><span class="label">' + esc(E("reader.voice")) + '</span><span class="rd-head-ico">' +
@@ -398,13 +451,15 @@
       ib("wand-sparkles", "rdDesignOpen", E("reader.design.open"), E("reader.design.open.tip")) + "</span></div>" +
       '<div class="field" id="rdVoiceBox"><span class="label">' + esc(E("reader.voice")) + '</span><div class="rd-voice">' +
       '<select id="rdVoice" data-hc-pick="1" data-tip="' + esc(E("reader.voice.tip")) + '"></select>' +
-      ib("vol-hi", "rdListen", E("reader.listen"), E("reader.listen.tip")) + ib("trash-2", "rdVoiceDel", E("reader.voice.del"), E("reader.voice.del.tip")) + "</div></div>" +   // HERESY 2645
+      ib("vol-hi", "rdListen", E("reader.listen"), E("reader.listen.tip")) + ib("square-pen", "rdVoiceEdit", E("reader.voice.edit"), E("reader.voice.edit.tip")) +   // HERESY 2885
+      ib("trash-2", "rdVoiceDel", E("reader.voice.del"), E("reader.voice.del.tip")) + "</div></div>" +   // HERESY 2645
       '<div class="field" id="rdCastBox" hidden><span class="label">' + esc(E("reader.speakers")) + '</span><div class="rd-cast" id="rdCast"></div></div>' +
       '<div class="rd-row"><label class="field"><span class="label">' + esc(E("reader.lang")) + '</span><select id="rdLang" data-tip="' + esc(E("reader.lang.tip")) + '">' +
       '<option value="auto">' + esc(E("reader.lang.auto")) + "</option>" + LANG_CODES.map(function (l) { return '<option value="' + l + '" translate="no">' + l + "</option>"; }).join("") + "</select></label>" +
       '<label class="field" id="rdGreekBox" hidden><span class="label">' + esc(E("reader.greek")) + '</span><select id="rdGreek" data-tip="' + esc(E("reader.greek.tip")) + '">' +   // HERESY 2696
       '<option value="polytonic">' + esc(E("reader.greek.poly")) + '</option><option value="monotonic">' + esc(E("reader.greek.mono")) + "</option></select></label>" +
-      '<label class="field" id="rdStyleBox"><span class="label">' + esc(E("reader.style")) + '</span><input type="text" id="rdStyle" maxlength="400" spellcheck="false" data-tip="' + esc(E("reader.style.tip")) + '" /></label></div>' +
+      '<label class="field" id="rdStyleBox"><span class="label">' + esc(E("reader.style")) + ib("sparkles", "rdStyleWrite", E("reader.dir"), E("reader.dir.tip"), " hidden") +   // HERESY 2922: the director's line
+      '</span><input type="text" id="rdStyle" maxlength="400" spellcheck="false" data-tip="' + esc(E("reader.style.tip")) + '" /></label></div>' +
       '<div class="rd-actions"><label class="check" data-tip="' + esc(E("reader.stress.tip")) + '"><input type="checkbox" id="rdStress" checked /> <span>' + esc(E("reader.stress")) + "</span></label>" +
       '<label class="check" data-tip="' + esc(E("reader.glyphs.tip")) + '"><input type="checkbox" id="rdGlyphs" /> <span>' + esc(E("reader.glyphs")) + "</span></label>" +
       '<label class="check" id="rdWindowBox" hidden data-tip="' + esc(E("reader.window.tip")) + '"><input type="checkbox" id="rdWindow" /> <span>' + esc(E("reader.window")) + "</span></label>" +   // HERESY 2698
@@ -412,23 +467,9 @@
       ib("stress", "rdCheck", E("reader.check"), E("reader.check.tip")) +
       "</div>" +
       '<div class="rd-box rd-check" id="rdCheckOut" hidden></div>' +
-      '<details class="rd-box" id="rdDict"><summary data-tip="' + esc(E("reader.dict.tip")) + '">' + esc(E("reader.dict")) + ' <span class="mono" id="rdDictLang" translate="no"></span></summary><div class="rd-dict">' +
-      '<div class="rd-dict-row"><input type="text" id="rdDictWord" data-tip="' + esc(E("reader.dict.word.tip")) + '" maxlength="60" spellcheck="false" placeholder="' + esc(E("reader.dict.word")) + '" />' +
-      '<input type="text" id="rdDictForm" data-tip="' + esc(E("reader.dict.form.tip")) + '" maxlength="80" spellcheck="false" placeholder="' + esc(E("reader.dict.form")) + '" />' +
-      ib("plus", "rdDictAdd", E("reader.dict.add"), E("reader.dict.add.tip")) + '</div><div class="rd-dict-list" id="rdDictList"></div></div></details>' +
-      '<details class="rd-box" id="rdGmap"><summary data-tip="' + esc(E("reader.gmap.tip")) + '">' + esc(E("reader.gmap")) + ' <span class="mono" id="rdGmapN"></span></summary><div class="rd-tr">' +
-      '<div class="rd-say" id="rdGmapSrc" translate="no"></div>' +
-      '<div class="rd-gm-bar"><input type="search" id="rdGmFind" spellcheck="false" placeholder="' + esc(E("reader.gmap.find")) + '" data-tip="' + esc(E("reader.gmap.find.tip")) + '" />' +   // HERESY 2376; 2391: its tip
-      ib("plus", "rdGmAdd", E("reader.gmap.add"), E("reader.gmap.add.tip")) + ib("type", "rdGmView", E("reader.gmap.asText"), E("reader.gmap.asText"), ' aria-pressed="false"') + "</div>" +
-      '<div class="rd-gm-wrap" id="rdGmWrap"><table class="rd-gm-table"><thead><tr><th>#</th><th>' + esc(E("reader.gmap.kind")) + "</th><th>" + esc(E("reader.gmap.what")) +
-      "</th><th>" + esc(E("reader.gmap.with")) + "</th><th>" + esc(E("reader.gmap.note")) + '</th><th></th></tr></thead><tbody id="rdGmRows"></tbody></table></div>' +
-      '<textarea id="rdGmapText" class="rd-gmap-text" rows="14" spellcheck="false" hidden data-tip="' + esc(E("reader.gmap.text.tip")) + '"></textarea>' +   // HERESY 2391
-      '<div class="rd-gm-try"><input type="text" id="rdGmTry" spellcheck="false" placeholder="' + esc(E("reader.gmap.tryPh")) + '" data-tip="' + esc(E("reader.gmap.try")) + '" />' +
-      '<div class="rd-gm-out" id="rdGmTryOut" translate="no"></div></div>' +
-      '<div class="rd-actions"><button type="button" class="btn small" id="rdGmapSave">' + esc(E("reader.gmap.save2")) + "</button>" +
-      ib("undo-2", "rdGmapUndo", E("reader.gmap.undo"), E("reader.gmap.undo.tip")) + ib("text-reset", "rdGmapReset", E("reader.gmap.reset"), E("reader.gmap.reset.tip")) +
-      '<span class="rd-say" id="rdGmapSay"></span></div>' +
-      '<div class="rd-say" id="rdGmapKept" translate="no"></div></div></details>' +
+      // HERESY 2884 (Viktor 15.11.2026: «Словарь ударений и карта глифов — красивыми модалками»): each opens a window of its own over the room
+      '<div class="rd-opens"><button type="button" class="rd-open-row" id="rdDictOpen" aria-haspopup="dialog" data-tip="' + esc(E("reader.dict.tip")) + '">' + UI("book-open") + '<span>' + esc(E("reader.dict")) + '</span></button>' +
+      '<button type="button" class="rd-open-row" id="rdGmapOpen" aria-haspopup="dialog" data-tip="' + esc(E("reader.gmap.tip")) + '">' + UI("grid-3x3") + '<span>' + esc(E("reader.gmap")) + '</span> <span class="mono" id="rdGmapN"></span></button></div>' +
       "</section>" +
       // the engine
       '<section class="k-card rd-card rd-mach"><div class="rd-card-head"><span class="label">' + esc(E("reader.engine")) +
@@ -446,6 +487,9 @@
       '<label class="field"><span class="label">' + esc(E("reader.gap")) + lim("0.05", "3") + '</span><input type="number" id="rdGap" min="0.05" max="3" step="0.05" value="0.35" data-tip="' + esc(E("reader.gap.tip")) + '" /></label>' +
       '<label class="field"><span class="label">' + esc(E("reader.turngap")) + lim("0.05", "3") + '</span><input type="number" id="rdTurnGap" min="0.05" max="3" step="0.05" value="0.45" data-tip="' + esc(E("reader.turngap.tip")) + '" /></label>' +
       '<label class="field"><span class="label">' + esc(E("reader.topk")) + lim("1", "200") + '</span><input type="number" id="rdTopk" min="1" max="200" step="1" value="50" data-tip="' + esc(E("reader.topk.tip")) + '" /></label>' +
+      // HERESY 2921 (the Narrator's mockup of 18.11.2026, «Ручки выборки… top_p 0,1–1 · умолч. 0,9», Viktor's «обеими руками и ногами»; the lab's side in
+      // dc1b345): the nucleus for an engine that takes one (Drama 3 through audio.cpp, its own 0.9), hidden for the others
+      '<label class="field" hidden><span class="label">' + esc(E("reader.topp")) + lim("0.1", "1") + '</span><input type="number" id="rdTopp" min="0.1" max="1" step="0.05" value="0.9" data-tip="' + esc(E("reader.topp.tip")) + '" /></label>' +
       '<div class="rd-checks">' +   // HERESY 2613: the two switches in a row of their own, under the numbers
       '<label class="check" data-tip="' + esc(E("reader.hear.tip")) + '"><input type="checkbox" id="rdHear" checked /> <span>' + esc(E("reader.hear")) + "</span></label>" +
       '<label class="check" data-tip="' + esc(E("reader.acutesOff.tip")) + '"><input type="checkbox" id="rdAcutesOff" /> <span>' + esc(E("reader.acutesOff")) + "</span></label>" +   // HERESY 2343: a test, never kept
@@ -468,11 +512,19 @@
       '<button type="button" class="btn ghost small" id="rdDsClose">' + esc(E("reader.own.cancel")) + '</button><span class="rd-say mono" id="rdDsSay"></span></div>' +
       '<div class="rd-cands" id="rdDsCands"></div><p class="rd-design-credit" id="rdDsCredit" hidden></p></div></div>' +
       '<div class="rd-ovl" id="rdOwnBack" hidden><div class="rd-own" id="rdOwn" role="dialog" aria-modal="true" aria-label="' + esc(E("reader.own.title")) + '">' +   // HERESY 2624
-      '<div class="rd-ovl-head"><h3>' + esc(E("reader.own.title")) + '</h3></div>' +
+      '<div class="rd-ovl-head"><h3 id="rdOwnTitle">' + esc(E("reader.own.title")) + '</h3></div>' +
       '<p class="rd-warn" role="alert">' + esc(E("reader.own.warn")) + "</p>" +
       '<label class="check" data-tip="' + esc(E("reader.own.consent.tip")) + '"><input type="checkbox" id="rdOwnOk" /> <span>' + esc(E("reader.own.consent")) + "</span></label>" +
       '<div class="rd-row"><label class="field"><span class="label">' + esc(E("reader.own.name")) + '</span><input type="text" id="rdOwnName" maxlength="60" data-tip="' + esc(E("reader.own.name.tip")) + '" /></label>' +
-      '<label class="field"><span class="label">' + esc(E("reader.own.lang")) + '</span><select id="rdOwnLang" data-hc-pick="1" data-tip="' + esc(E("reader.own.lang.tip")) + '"></select></label></div>' +
+      '<label class="field"><span class="label">' + esc(E("reader.own.lang")) + '</span><select id="rdOwnLang" data-hc-pick="1" data-tip="' + esc(E("reader.own.lang.tip")) + '"></select></label>' +
+      // HERESY 2891 (Viktor 15.11.2026: a high man's voice was taken for a woman's): the voice's profile by its pitch, or set by hand
+      '<label class="field"><span class="label">' + esc(E("reader.own.sex")) + '</span><select id="rdOwnSex" data-hc-pick="1" data-tip="' + esc(E("reader.own.sex.tip")) + '">' +
+      '<option value="auto">' + esc(E("reader.own.sex.auto")) + '</option><option value="male">' + esc(E("reader.own.sex.male")) + '</option><option value="female">' +
+      esc(E("reader.own.sex.female")) + "</option></select></label>" +
+      // HERESY 2894 (Viktor 15.11.2026: «Шумодав и апскейлер для донорских семплов в блоке своих голосов (опция)»): the clip cleaned before it is kept
+      '<label class="field"><span class="label">' + esc(E("reader.own.clean")) + '</span><select id="rdOwnClean" data-hc-pick="1" data-tip="' + esc(E("reader.own.clean.tip")) + '">' +
+      '<option value="off">' + esc(E("reader.own.clean.off")) + '</option><option value="clean">' + esc(E("reader.own.clean.clean")) + '</option><option value="restore">' +
+      esc(E("reader.own.clean.restore")) + "</option></select></label></div>" +
       '<div class="rd-wave-box" id="rdOwnWaveBox"><canvas class="rd-wave" id="rdOwnWave" tabindex="0" aria-label="' + esc(E("reader.own.wave")) + '" data-tip="' + esc(E("reader.own.wave")) + '"></canvas>' +
       '<div class="rd-wave-empty" id="rdOwnEmpty">' + esc(E("reader.own.drop")) + "</div></div>" +
       '<div class="rd-wave-bar"><label class="btn ghost small icon-only rd-ib" aria-label="' + esc(E("reader.own.file")) + '" data-tip="' + esc(E("reader.own.file.tip")) + '">' + (UI("upload") || esc(E("reader.own.file"))) +
@@ -489,8 +541,30 @@
         esc(E("reader.own.text")) + '" data-tip="' + esc(E("reader.own.text.tip")) + '"></textarea></div>' +   // HERESY 2643: a div, so the label does not take the button
       '<div class="hd-acts"><span class="hd-spacer"></span><button type="button" class="btn ghost small" id="rdOwnCancel">' + esc(E("reader.own.cancel")) + "</button>" +
       '<button type="button" class="btn small" id="rdOwnKeep">' + esc(E("reader.own.keep")) + "</button></div></div></div>" +
+      // HERESY 2884: the stress dictionary and the glyph map as the Studio's windows (Esc, the backdrop or ✕ close them; what was typed stays)
+      '<div class="rd-ovl" id="rdDictBack" hidden><div class="rd-win rd-dictw" id="rdDictWin" role="dialog" aria-modal="true" aria-label="' + esc(E("reader.dict")) + '">' +
+      '<div class="rd-ovl-head"><h3>' + esc(E("reader.dict")) + ' <span class="mono rd-win-lang" id="rdDictLang" translate="no"></span></h3>' + ib("x", "rdDictClose", E("reader.win.close"), E("reader.win.close")) + '</div>' +
+      '<p class="rd-win-note">' + esc(E("reader.dict.tip")) + '</p><div class="rd-dict">' +
+      '<div class="rd-dict-row"><input type="text" id="rdDictWord" data-tip="' + esc(E("reader.dict.word.tip")) + '" maxlength="60" spellcheck="false" placeholder="' + esc(E("reader.dict.word")) + '" />' +
+      '<input type="text" id="rdDictForm" data-tip="' + esc(E("reader.dict.form.tip")) + '" maxlength="80" spellcheck="false" placeholder="' + esc(E("reader.dict.form")) + '" />' +
+      ib("plus", "rdDictAdd", E("reader.dict.add"), E("reader.dict.add.tip")) + '</div><div class="rd-dict-list" id="rdDictList"></div></div></div></div>' +
+      '<div class="rd-ovl" id="rdGmapBack" hidden><div class="rd-win rd-gmapw" id="rdGmapWin" role="dialog" aria-modal="true" aria-label="' + esc(E("reader.gmap")) + '">' +
+      '<div class="rd-ovl-head"><h3>' + esc(E("reader.gmap")) + '</h3>' + ib("x", "rdGmapClose", E("reader.win.close"), E("reader.win.close")) + '</div><div class="rd-tr">' +
+      '<div class="rd-say" id="rdGmapSrc" translate="no"></div>' +
+      '<div class="rd-gm-bar"><input type="search" id="rdGmFind" spellcheck="false" placeholder="' + esc(E("reader.gmap.find")) + '" data-tip="' + esc(E("reader.gmap.find.tip")) + '" />' +   // HERESY 2376; 2391: its tip
+      ib("plus", "rdGmAdd", E("reader.gmap.add"), E("reader.gmap.add.tip")) + ib("type", "rdGmView", E("reader.gmap.asText"), E("reader.gmap.asText"), ' aria-pressed="false"') + "</div>" +
+      '<div class="rd-gm-wrap" id="rdGmWrap"><table class="rd-gm-table"><thead><tr><th>#</th><th>' + esc(E("reader.gmap.kind")) + "</th><th>" + esc(E("reader.gmap.what")) +
+      "</th><th>" + esc(E("reader.gmap.with")) + "</th><th>" + esc(E("reader.gmap.note")) + '</th><th></th></tr></thead><tbody id="rdGmRows"></tbody></table></div>' +
+      '<textarea id="rdGmapText" class="rd-gmap-text" rows="14" spellcheck="false" hidden data-tip="' + esc(E("reader.gmap.text.tip")) + '"></textarea>' +   // HERESY 2391
+      '<div class="rd-gm-try"><input type="text" id="rdGmTry" spellcheck="false" placeholder="' + esc(E("reader.gmap.tryPh")) + '" data-tip="' + esc(E("reader.gmap.try")) + '" />' +
+      '<div class="rd-gm-out" id="rdGmTryOut" translate="no"></div></div>' +
+      '<div class="rd-actions"><button type="button" class="btn small" id="rdGmapSave">' + esc(E("reader.gmap.save2")) + "</button>" +
+      ib("undo-2", "rdGmapUndo", E("reader.gmap.undo"), E("reader.gmap.undo.tip")) + ib("text-reset", "rdGmapReset", E("reader.gmap.reset"), E("reader.gmap.reset.tip")) +
+      '<span class="rd-say" id="rdGmapSay"></span></div>' +
+      '<div class="rd-say" id="rdGmapKept" translate="no"></div></div></div></div>' +
       "</div>" + GO + '</div><div class="rd-side"><div class="rd-fix" id="rdFix" hidden></div><div class="rd-side-head"><h3 class="rd-h3">' + esc(E("reader.runs")) + '</h3><span class="rd-say mono" id="rdRunsN"></span>' +
-      ib("alert", "rdRunsFailed", E("reader.runs.failed"), E("reader.runs.failed.tip"), ' aria-pressed="true"') + "</div>" +   // HERESY 2514: a toggle, not a box
+      ib("alert", "rdRunsFailed", E("reader.runs.failed"), E("reader.runs.failed.tip"), ' aria-pressed="true"') +   // HERESY 2514: a toggle, not a box
+      ib("chevrons-right", "rdFold", E("reader.fold"), E("reader.fold")) + "</div>" +   // HERESY 2882: the column folds as the Musician's takes do
       '<div class="rd-runs" id="rdRuns"></div></div></div>';
   }
   // the breath line: a speaking voice's envelope drawn once, phrases and the pauses between them (its own seed, the same line every time)
@@ -521,6 +595,10 @@
     var v = document.createElement("section");
     v.className = "col reader-col is-hidden"; v.id = "view-read"; v.innerHTML = roomHtml();
     video.parentNode.insertBefore(v, video.nextSibling);
+    // HERESY 2882: the runs are the Studio's right column in the Narrator (where the Musician has its takes); the folded strip says «Read so far» and how many
+    var lib = $("library"), side = v.querySelector(".rd-side"), unf = $("libUnfold");
+    if (lib && side) lib.appendChild(side);
+    if (unf) unf.insertAdjacentHTML("beforeend", '<span class="lib-unfold-name rd-unfold-name">' + esc(E("reader.runs")) + '</span><span class="lib-unfold-count mono rd-unfold-count" id="rdUnfoldCount"></span>');
     var items = document.querySelector("#headMorePop .head-more-items");
     if (items) {
       var mr = document.createElement("button");
@@ -549,6 +627,7 @@
       guide: "GUIDE-READER", guideAfter: "videographer", guideTab: "reader",   // HERESY 2292: its own part of the guide (F1), kept home with the room
       logSrc: function (w, card) { return /^the (Reader|Narrator)\b/.test(w) || /\bthe (Reader|Narrator)\b/.test(card || "") ? "reader" : ""; } };
     if (window.HeresyChoices) window.HeresyChoices.scope(v);
+    if (window.HeresyChoices && side && side.parentNode === lib) window.HeresyChoices.scope(side);   // HERESY 2882: the runs' column in the room's style, outside its view now
     bind();
     writerButton();                                      // HERESY 2344
     return true;
@@ -572,7 +651,7 @@
     sel.value = cur;
     if (sel.selectedIndex < 0) sel.selectedIndex = 0;
   }
-  function voiceDelFace() { var b = $("rdVoiceDel"); if (b) b.hidden = !/^v:own-/.test($("rdVoice").value || ""); }   // HERESY 2645: own voices alone
+  function voiceDelFace() { var own = !/^v:own-/.test($("rdVoice").value || ""); ["rdVoiceDel", "rdVoiceEdit"].forEach(function (id) { var b = $(id); if (b) b.hidden = own; }); }   // HERESY 2645, 2885: own voices alone
   function paintVoice() {
     var cur = recall("yue2.readerVoice") || "", o = voiceOpts(cur);
     setOpts($("rdVoice"), o.html, o.ok ? cur : "");
@@ -759,6 +838,104 @@
     ta.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
+  // ---------------------------------------------------------------- HERESY 2889: «[» offers the engine's tags and the voices, as the Musician's lyrics offer theirs
+  // (Viktor 15.11.2026: «автодополнение по эмотегам и голосам чтецов прикрути на примере автодополнения музыкальных разметок через набор `[`. И сюда
+  // же по автодополнениям с голосами вправо раскрывающийся список самых используемых, разделённый на реальные донорские и синтетику»). A «[»
+  // anywhere in the text opens heresy-complete.js's list with this room's provider: Voices first (its side list in the right column: the most used
+  // first, by the runs listed, live donors apart from the synthetic; picking one gives it to the speaker of the caret's line in a dialog, else to
+  // the reading, and nothing goes into the text), then the engine's tags as the palette writes them ([sad], <|emotion:awe|>), narrowed by what is
+  // typed after the «[» (a Russian or Ukrainian layout too). A tag goes in where the «[» was typed; in a dialog, never before a speaker's name
+  var AC_SPK = /^\s*([^\s:<>|\d[][^:<>|\n]{0,39}?)\s*[:：]\s*/;
+  function acContext(ta) {
+    var v = ta.value, c = ta.selectionStart, ls = c > 0 ? v.lastIndexOf("\n", c - 1) + 1 : 0, le = v.indexOf("\n", c);
+    var m = /\[([^\[\]\n<>|]{0,40})$/.exec(v.slice(ls, c));
+    if (!m) return null;
+    var rest = v.slice(c, le < 0 ? v.length : le), nb = rest.search(/[\[\]]/), to = c;
+    if (nb >= 0 && rest.charAt(nb) === "]") { if (/\S/.test(rest.slice(0, nb))) return null; to = c + nb + 1; }   // inside a tag closed already: none
+    return { from: ls + m.index, q: m[1], to: to, ls: ls };
+  }
+  function acUse() {                                   // how often each voice read in the runs listed, by the labels they keep
+    var n = {};
+    st.runs.forEach(function (r) {
+      var vl = r.voice_labels || {};
+      Object.keys(vl).forEach(function (s) {
+        var l = String(vl[s] || "");
+        st.voices.forEach(function (v) { if (l === v.name || l.indexOf(v.name + " · ") === 0) n[v.id] = (n[v.id] || 0) + 1; });
+      });
+    });
+    return n;
+  }
+  function acVoices(q) {
+    var use = acUse(), low = String(q || "").trim().toLowerCase(), HC = window.HeresyComplete, fq = HC && HC.fold ? HC.fold(low) : low;
+    var hit = st.voices.map(function (v, k) { return { v: v, k: k, n: use[v.id] || 0 }; }).filter(function (x) {
+      var nm = String(x.v.name || "").toLowerCase();
+      return !low || nm.indexOf(low) >= 0 || nm.indexOf(fq) >= 0;
+    });
+    var order = function (a, b) { return (b.n - a.n) || (a.k - b.k); };
+    return { own: hit.filter(function (x) { return x.v.kind === "own"; }).sort(order).slice(0, 8),
+      syn: hit.filter(function (x) { return x.v.kind !== "own"; }).sort(order).slice(0, 8) };
+  }
+  function acOffer(text, q) {
+    var e = engine(), t = (e && e.tags) || {}, HC = window.HeresyComplete, head = HC ? HC.fold(q) : q, out = [], vs = acVoices(q);
+    if (vs.own.length + vs.syn.length) out.push({ tag: E("reader.ac.voices"), say: "›", side: true, vs: vs, rank: 0, k: -1 });
+    (t.groups || []).forEach(function (g) {
+      var gname = E("reader.g." + g.id);
+      if (gname === "reader.g." + g.id) gname = g.id;
+      (g.items || []).forEach(function (x) {
+        var word = String(x).replace(/_/g, " "), r = HC ? HC.rank(word, head) : 1;
+        if (!r) return;
+        var tag = (t.open || "<|") + (t.form === "bare" ? "" : (g.cat || g.id) + ":") + x + (t.close || "|>");
+        out.push({ tag: tag, put: tag + (g.say && g.say[x] ? g.say[x] : ""), say: gname, rank: r, k: out.length,
+          about: tw(g.place === "inline" ? "reader.ac.tag.inline" : "reader.ac.tag.sentence", { 0: word }) });
+      });
+    });
+    return out.sort(function (a, b) { return (a.rank - b.rank) || (a.k - b.k); });
+  }
+  function acFlat(it) { return it.vs.own.concat(it.vs.syn); }
+  function acSide(it, j) {
+    var row = function (x, i) {
+      return '<div class="tc-item tc-side-item' + (i === j ? " is-on" : "") + '" role="option" data-j="' + i + '"><span class="tc-tag" translate="no">' + esc(x.v.name) +
+        '</span><span class="tc-say">' + (x.n ? "×" + x.n : "") + "</span></div>";
+    };
+    var own = it.vs.own, syn = it.vs.syn;
+    return '<p class="tc-about-n">' + esc(E("reader.ac.voices.about")) + "</p>" +
+      '<div class="tc-side"><div class="tc-side-h">' + esc(E("reader.ac.donors")) + "</div>" +
+      (own.length ? own.map(function (x, i) { return row(x, i); }).join("") : '<div class="tc-side-none">' + esc(E("reader.ac.noDonors")) + "</div>") +
+      '<div class="tc-side-h">' + esc(E("reader.ac.synth")) + "</div>" + syn.map(function (x, i) { return row(x, own.length + i); }).join("") + "</div>";
+  }
+  function acPick(it, j, cx, put) {
+    var x = acFlat(it)[j];
+    if (!x) return;
+    var v = x.v, ref = "v:" + v.id, val = $("rdText").value, le = val.indexOf("\n", cx.ls), line = val.slice(cx.ls, le < 0 ? val.length : le);
+    var m = st.mode === "dialog" ? AC_SPK.exec(line.slice(0, cx.from - cx.ls) + line.slice(cx.to - cx.ls)) : null, who = m ? m[1].trim() : "";
+    put("");
+    if (who) { $("rdCast").dataset.key = ""; paintCast(); }   // the cast as the text stands now: its own paint waits 300 ms after the typing
+    if (who && castValues()[who] !== undefined) {
+      st.cast[who] = ref; keep("yue2.readerCast", JSON.stringify(st.cast));
+      $("rdCast").dataset.key = ""; paintCast();
+      toast(fill("reader.ac.voice.cast", { 0: who, 1: v.name }));
+    } else {
+      keep("yue2.readerVoice", ref); paintVoice(); voiceDelFace();
+      $("rdVoice").dispatchEvent(new Event("change", { bubbles: true }));
+      toast(fill("reader.ac.voice.main", { 0: v.name }));
+    }
+  }
+  function acAccept(it, cx, put) {
+    var ta = $("rdText"), v = ta.value, before = cx.from > cx.ls ? v.charAt(cx.from - 1) : "", after = v.charAt(cx.to), s = it.put;
+    var lineEnd = v.indexOf("\n", cx.ls), line = v.slice(cx.ls, lineEnd < 0 ? v.length : lineEnd);
+    var m = st.mode === "dialog" ? AC_SPK.exec(line.slice(0, cx.from - cx.ls) + line.slice(cx.to - cx.ls)) : null;
+    if (m && cx.from - cx.ls < m[0].length) {        // a dialog's line: the tag goes after the speaker's name, never before it
+      put("");
+      var at = cx.ls + m[0].length, nx = ta.value.charAt(at);
+      ta.setSelectionRange(at, at);
+      document.execCommand("insertText", false, s + (nx && !/\s/.test(nx) ? " " : ""));
+    } else put((before && !/\s/.test(before) ? " " : "") + s + (after && !/\s/.test(after) ? " " : ""));
+    if (!$("rdTags").checked) { $("rdTags").checked = true; keep("yue2.readerTags." + st.mode, "1"); }   // as the palette: tags read once put in
+  }
+  var acProvider = { label: "", tip: "", context: acContext, offer: acOffer, accept: acAccept, side: acSide, pick: acPick,
+    sideCount: function (it) { return it && it.vs ? acFlat(it).length : 0; },
+    foot: function (it, inSide) { return E(inSide ? "reader.ac.keys.side" : it && it.side ? "reader.ac.keys.voices" : "reader.ac.keys"); } };
+
   // ---------------------------------------------------------------- listening to a voice's own clip
   function voiceOf(ref) {
     if (/^g:/.test(ref)) { var g = vgroups().filter(function (x) { return "g:" + x.id === ref; })[0]; return g ? g.centre : ""; }
@@ -813,8 +990,10 @@
         esc(fill("reader.setup.go", { 0: how.size || "" })) + '">' + UI("download") + '<span class="mono" translate="no">' + esc(how.size || "") + "</span></button>" : "") +   // HERESY 2514
       (how.command ? '<span class="rd-say">' + esc(E("reader.setup.or")) + ' <code translate="no">' + esc(how.command) + "</code></span>" : "") + "</div>" : "";
     $("rdTopk").closest(".field").hidden = !!(e && e.top_k === false);   // HERESY 2263: Drama 3 through audio.cpp takes no top-k
+    $("rdTopp").closest(".field").hidden = !(e && e.top_p === true);      // HERESY 2921: top-p for the engines that take it
     var sty = e && e.style;
     $("rdStyleBox").hidden = !sty;
+    $("rdStyleWrite").hidden = !(sty && sty.kind === "bracket");          // HERESY 2922: a free-form line only (an engine of tags takes its own tags)
     if (sty) {
       $("rdStyle").placeholder = sty.ph || "";
       $("rdStyle").maxLength = sty.max || 160;
@@ -988,7 +1167,7 @@
     if (act === "gaps" || act === "gapsCopy") {          // HERESY 2334: the pauses shaped, in place (Undo takes it back) or into a copy, a child take
       var gaps = st.gapEdits || {};
       if (!Object.keys(gaps).length) return;
-      api("/reader/fix-gaps", { id: r.id, gaps: gaps, copy: act === "gapsCopy" }).then(function (d) {
+      api("/reader/fix-gaps", { id: r.id, gaps: gaps, copy: act === "gapsCopy", ui: (window.RuachI18n && window.RuachI18n.lang ? window.RuachI18n.lang() : "en") }).then(function (d) {
         st.gapEdits = {};
         if (act === "gapsCopy") toast(fill("reader.fix.copied", { 0: d.title || d.take || "" }));
         else st.fix = d;
@@ -1010,22 +1189,43 @@
 
   // ---------------------------------------------------------------- sending a run
   function num(id) { var v = $(id).value.trim(); return v === "" ? "" : Number(v); }
+  // HERESY 2903: the text's first paragraphs up to the length nearest the budget (characters at the engine's pace, tags and pauses not read, as count());
+  // a dialog's turns stand a line each, so a text of one block is cut by its lines
+  function cutText(text, budget) {
+    var paras = text.split(/\n\s*\n/), byLine = paras.length < 2;
+    if (byLine) paras = text.split("\n");
+    var sum = 0, best = 1, bestD = Infinity;
+    for (var k = 0; k < paras.length; k++) {
+      sum += paras[k].replace(/\[[^\[\]\n]{1,80}\]/g, "").replace(/\s+/g, " ").trim().length;
+      if (Math.abs(sum - budget) < bestD) { bestD = Math.abs(sum - budget); best = k + 1; }
+      if (sum > budget) break;
+    }
+    return { text: paras.slice(0, best).join(byLine ? "\n" : "\n\n").trim(), n: best, of: paras.length };
+  }
+  window.ruachReaderCut = cutText;                     // for the checks
   function send() {
     if (st.sending || st.absent) return;
+    // HERESY 2869 (Viktor 19.11.2026: «Каждое прочтение. И автоматом присваиваем версию 1.0, если не выставлена»): a titled reading with no
+    // version goes out as version 1.0, the field showing it
+    if ($("rdTitle").value.trim() && $("rdTitleVer") && !cleanVer($("rdTitleVer").value).replace(/\.+$/, "")) { $("rdTitleVer").value = "1.0"; $("rdTitleVer").dispatchEvent(new Event("input", { bubbles: true })); }
     // HERESY 2462: the reading's title is its take's name: the names' rule before anything is sent, the cleaned one offered
-    var rt = $("rdTitle").value.trim();
+    var rt = fullTitle();
     if (rt && window.HeresyNames && window.HeresyNames.refusal(rt, { max: 120 })) {
-      window.HeresyNames.ask(rt, { max: 120 }).then(function (v) { if (v) { $("rdTitle").value = v; send(); } });
+      window.HeresyNames.ask(rt, { max: 120 }).then(function (v) { if (v) { setTitle(v); send(); } });
       return;
     }
     var text = $("rdText").value.trim();
     if (!text) { toast(E("reader.empty"), "bad"); return; }
+    var cutMin = +($("rdCut") ? $("rdCut").value : 0) || 0, nVer = Math.max(1, Math.min(4, +($("rdVers") ? $("rdVers").value : 1) || 1));   // HERESY 2903
+    if (cutMin) { var cut = cutText(text, cutMin * 60 * 14); text = cut.text; if (cut.n < cut.of) toast(fill("reader.cut.said", { "#0": cutMin, "#1": cut.n, "#2": cut.of })); }
     var C = window.HeresyCollection;
     var body = { mode: st.mode, text: text, engine: $("rdEngine").value, voice: $("rdVoice").value, voices: castValues(), tags: $("rdTags").checked,
       split: $("rdSplit").value, temperature: num("rdTemp"), top_k: num("rdTopk"), hear: $("rdHear").checked, seed: $("rdSeed").value.trim(), gap: num("rdGap"), turn_gap: num("rdTurnGap"),
-      card: $("rdCard").value || "auto", title: $("rdTitle").value.trim(), workspace: C && C.currentIn ? C.currentIn("reader") : C && C.current ? C.current() : "",
+      top_p: engine() && engine().top_p === true ? num("rdTopp") : undefined,   // HERESY 2921: none for an engine without it (the lab keeps its own)
+      card: $("rdCard").value || "auto", title: fullTitle(), workspace: C && C.currentIn ? C.currentIn("reader") : C && C.current ? C.current() : "",
       lang: $("rdLang").value, stress: $("rdStress").checked, style: engine() && engine().style ? $("rdStyle").value.trim() : "" };
     if (lang() === "el") body.greek = $("rdGreek").value === "monotonic" ? "monotonic" : "polytonic";   // HERESY 2696
+    body.ui = window.RuachI18n && window.RuachI18n.lang ? window.RuachI18n.lang() : "en";   // HERESY 2860: the take's note in the page's language
     if (engine() && engine().window && $("rdWindow").checked) body.window = true;   // HERESY 2698
     if (engine() && engine().scene && st.mode === "dialog" && $("rdScene").checked) body.scene = true;   // HERESY 2699
     if (engine() && (engine().tiers || []).length) body.tier = $("rdTier").value || "auto-quality";
@@ -1036,11 +1236,17 @@
     // for, its hold is bound to the run, so the later music and speech wait behind it until it begins
     var WG = window.HeresyWaitGuard, label = body.title || text.split(/\s+/).slice(0, 8).join(" ");
     (WG ? WG.ask("reader", { label: label, engine: body.engine, tier: body.tier || "", card: body.card }) : Promise.resolve({ hold: null })).then(function (g) {
-      return api("/reader/say", body).then(function (r) {
-        if (g && g.hold) WG.bind(g.hold, r.id);
-        st.watch[r.id] = true;
+      // HERESY 2903: versions, each a run of its own with its seed in a row (the Seed field's, else a random start), one after another into the queue
+      var seeds = [body.seed];
+      if (nVer > 1) { var base = /^\d+$/.test(body.seed) ? +body.seed : Math.floor(Math.random() * 2e9); seeds = []; for (var i = 0; i < nVer; i++) seeds.push(String(base + i)); }
+      return seeds.reduce(function (p, sd, i) {
+        return p.then(function (acc) { return api("/reader/say", Object.assign({}, body, { seed: sd })).then(function (x) { if (i === 0 && g && g.hold) WG.bind(g.hold, x.id); st.watch[x.id] = true; acc.push(x); return acc; }); });
+      }, Promise.resolve([])).then(function (rs) {
+        var r = rs[0];
         keep(PREV_KEY, ""); paintBack();                 // HERESY 2511
-        toast(fill("reader.sent", { "#0": r.of }));
+        toast(rs.length > 1 ? fill("reader.sent.vers", { "#0": rs.length, 1: seeds.join(", ") }) : fill("reader.sent", { "#0": r.of }));
+        // HERESY 2862; 2869: every reading kept in the Writer: an untitled one under the title the Studio gave it from its text, version 1.0
+        keepVersion(body.title || (r.title ? (VER_TAIL.test(r.title) ? r.title : r.title + " v1.0") : ""), body.text, body.style);
         poll(true);
       }, function (e) { if (g && g.hold) WG.drop(g.hold); throw e; });
     }).catch(function (e) { toast(e.message, "bad"); }).then(function () { st.sending = false; paintGo(); });
@@ -1097,7 +1303,7 @@
         [r.tails ? "<span>" + esc(fill("reader.guard.tails", { "#0": r.tails })) + "</span>" : "", (r.tones || 0) + (r.holes || 0) + (r.level_off || 0) ? "<span>" + esc(fill("reader.guard.listen", { "#0": (r.tones || 0) + (r.holes || 0) + (r.level_off || 0) })) + "</span>" : "",
           r.tail_error ? '<span class="rd-cer" data-tip="' + esc(r.tail_error) + '">' + esc(E("reader.guard.failed")) + "</span>" : ""].filter(Boolean).join(" · ") + "</div>" : "") +
       (r.error ? '<div class="rd-run-err" translate="no">' + esc(r.error) + "</div>" : "") +
-      (acts ? '<div class="rd-run-acts">' + acts + "</div>" : "") + "</article>";
+      (acts ? '<div class="rd-run-acts">' + acts + "</div>" : "") + marks(r) + "</article>";
   }
   function whyHtml(x) {   // HERESY 2295: «piece 1: inserted “пуво” at 0:11.2 · kept reading 2 of 3», the time in the take
     var parts = (x.why || []).map(function (w) {
@@ -1110,6 +1316,12 @@
     return '<div class="rd-run-meta mono" translate="no">' + esc(tr(fill("reader.why.piece", { "#0": x.piece }))) + ": " + parts.join(", ") + " · " +
       esc(tr(fill("reader.why.kept", { "#0": x.kept, "#1": x.reads }))) + "</div>";
   }
+  // HERESY 2882: a finished card carries its take's marks as the Musician's mini cards do (like, on fire, a gem, the reaction, dislike, the star,
+  // the shield, the note), drawn by the Librarian (HeresyCollection.cardExtras) once it knows the take; shut or open, always in sight
+  function marks(r) {
+    var HC = window.HeresyCollection;
+    return r.status === "done" && r.take && HC && HC.cardExtras ? HC.cardExtras(r.take) : "";
+  }
   function paintRuns() {
     var box = $("rdRuns");
     if (!box) return;
@@ -1117,6 +1329,7 @@
     var bad = st.runs.filter(function (r) { return r.status === "failed" || r.status === "stopped"; }).length, all = recall("yue2.readerRunsFailed") !== "0";
     var shownRuns = all ? st.runs : st.runs.filter(function (r) { return r.status !== "failed" && r.status !== "stopped"; });
     if ($("rdRunsN")) $("rdRunsN").textContent = st.runs.length ? fill("reader.runs.count", { "#0": st.runs.length - bad, "#1": bad }) : "";
+    if ($("rdUnfoldCount")) $("rdUnfoldCount").textContent = st.runs.length ? String(st.runs.length - bad) : "";   // HERESY 2882: the folded strip's count
     if ($("rdRunsFailed")) $("rdRunsFailed").setAttribute("aria-pressed", all ? "true" : "false");   // HERESY 2514
     var b = $("rdBreath");
     if (b) b.classList.toggle("is-live", st.runs.some(live));   // the breath line breathes while a run reads
@@ -1367,7 +1580,7 @@
     });
     var want = Object.keys(names).length >= 2 && turns >= 0.6 * lines.length ? "dialog" : "narration";
     if (st.mode !== want) { $("rdMode").value = want; $("rdMode").dispatchEvent(new Event("change")); }
-    if (title) $("rdTitle").value = String(title).slice(0, 120);
+    if (title) setTitle(String(title).slice(0, 120));
     var tb = document.querySelector('.topbar [data-tab="read"]');
     if (tb) tb.click();
     toast(fill("reader.toReader.done", { 0: title || "" }));
@@ -1440,30 +1653,47 @@
   }
   function gmText() { return gm.text ? $("rdGmapText").value : gm.rows.map(gmLine).join("\n") + (gm.rows.length ? "\n" : ""); }
   function gmClean(v) { return String(v || "").replace(/[\t\r\n]/g, " "); }   // a field never carries the separator
+  // HERESY 2884 (Viktor 15.11.2026: «строки-комментарии "#" карты одним многострочным полем»): a run of comment and blank lines is one field of
+  // as many lines, numbered by its first and last; what is typed there stays those lines byte for byte, a rule written into it is read as one
+  // when the field is left; ✕ takes the whole run away
+  function gmRange(a, n) { return (a + 1) + (n > 1 ? "–" + (a + n) : ""); }
+  function gmBlockErr(a, n) { var out = []; for (var k = a + 1; k <= a + n; k++) if (gm.errs[k]) out.push(fill("reader.gmap.lineErr", { "#0": k, 1: gm.errs[k] })); return out.join("\n"); }
   function gmDraw() {
-    var q = $("rdGmFind").value.trim().toLowerCase();
-    $("rdGmRows").innerHTML = gm.rows.map(function (r, i) {
-      var hay = (r.rule ? [r.kind, r.what, r["with"], r.note].join(" ") : r.raw).toLowerCase();
-      if (q && hay.indexOf(q) < 0) return "";
-      var err = gm.errs[i + 1], cls = (r.rule ? "" : "is-comment") + (err ? " is-bad" : "") + (gm.hits[i + 1] ? " is-hit" : "");
-      var head = '<tr data-i="' + i + '" class="' + cls + '"' + (err ? ' data-tip="' + esc(err) + '"' : "") + '><td class="n">' + (i + 1) + (gm.hits[i + 1] ? " ·" + gm.hits[i + 1] : "") + "</td>";
-      var del = '<td class="x"><button type="button" class="btn ghost small" data-gm-del="' + i + '" aria-label="' + esc(E("reader.gmap.del")) + '" data-tip="' + esc(E("reader.gmap.del")) + '">' + (UI("x") || "✕") + '</button></td></tr>';
-      if (!r.rule) return head + '<td colspan="4"><input type="text" data-gm="raw" value="' + esc(r.raw) + '" spellcheck="false" /></td>' + del;
-      return head + '<td><select data-gm="kind">' + GM_KINDS.concat(GM_KINDS.indexOf(r.kind) < 0 ? [r.kind] : []).map(function (k) {
-        return '<option value="' + esc(k) + '"' + (k === r.kind ? " selected" : "") + ">" + esc(k) + "</option>"; }).join("") + "</select></td>" +
-        '<td><input type="text" data-gm="what" value="' + esc(r.what) + '" spellcheck="false" /></td>' +
-        '<td><input type="text" data-gm="with" value="' + esc(r["with"]) + '" spellcheck="false" /></td>' +
-        '<td><input type="text" data-gm="note" value="' + esc(r.note) + '" spellcheck="false" /></td>' + del;
-    }).join("");
+    var q = $("rdGmFind").value.trim().toLowerCase(), out = [];
+    var del = '<td class="x"><button type="button" class="btn ghost small" data-gm-del="1" aria-label="' + esc(E("reader.gmap.del")) + '" data-tip="' + esc(E("reader.gmap.del")) + '">' + (UI("x") || "✕") + '</button></td></tr>';
+    for (var i = 0; i < gm.rows.length; i++) {
+      var r = gm.rows[i];
+      if (!r.rule) {
+        var j = i; while (j < gm.rows.length && !gm.rows[j].rule) j++;
+        var text = gm.rows.slice(i, j).map(function (x) { return x.raw; }).join("\n"), n = j - i, berr = gmBlockErr(i, n);
+        if (!q || text.toLowerCase().indexOf(q) >= 0) out.push('<tr data-i="' + i + '" data-n="' + n + '" class="is-comment is-block' + (berr ? " is-bad" : "") + '"' + (berr ? ' data-tip="' + esc(berr) + '"' : "") +
+          '><td class="n">' + gmRange(i, n) + '</td><td colspan="4"><textarea data-gm="block" rows="' + Math.min(12, n) + '" spellcheck="false" aria-label="' + esc(E("reader.gmap.comments")) + '">' + esc(text) + "</textarea></td>" + del);
+        i = j - 1;
+        continue;
+      }
+      out.push(gmRow(r, i, q, del));
+    }
+    $("rdGmRows").innerHTML = out.join("");
+  }
+  function gmRow(r, i, q, del) {
+    var hay = [r.kind, r.what, r["with"], r.note].join(" ").toLowerCase();
+    if (q && hay.indexOf(q) < 0) return "";
+    var err = gm.errs[i + 1], cls = (err ? "is-bad" : "") + (gm.hits[i + 1] ? " is-hit" : "");
+    var head = '<tr data-i="' + i + '" class="' + cls + '"' + (err ? ' data-tip="' + esc(err) + '"' : "") + '><td class="n">' + (i + 1) + (gm.hits[i + 1] ? " ·" + gm.hits[i + 1] : "") + "</td>";
+    return head + '<td><select data-gm="kind">' + GM_KINDS.concat(GM_KINDS.indexOf(r.kind) < 0 ? [r.kind] : []).map(function (k) {
+      return '<option value="' + esc(k) + '"' + (k === r.kind ? " selected" : "") + ">" + esc(k) + "</option>"; }).join("") + "</select></td>" +
+      '<td><input type="text" data-gm="what" value="' + esc(r.what) + '" spellcheck="false" /></td>' +
+      '<td><input type="text" data-gm="with" value="' + esc(r["with"]) + '" spellcheck="false" /></td>' +
+      '<td><input type="text" data-gm="note" value="' + esc(r.note) + '" spellcheck="false" /></td>' + del;
   }
   function gmMark() {                                    // the rows' marks redrawn without losing the field being typed in
     Array.prototype.forEach.call($("rdGmRows").querySelectorAll("tr[data-i]"), function (tr) {
-      var n = +tr.dataset.i + 1, err = gm.errs[n];
+      var n = +tr.dataset.i + 1, err = tr.dataset.n ? gmBlockErr(n - 1, +tr.dataset.n) : gm.errs[n];   // HERESY 2884: a run of comments, its lines' errors together
       tr.classList.toggle("is-bad", !!err);
-      tr.classList.toggle("is-hit", !!gm.hits[n]);
+      tr.classList.toggle("is-hit", !tr.dataset.n && !!gm.hits[n]);
       if (err) tr.dataset.tip = err; else tr.removeAttribute("data-tip");
       var c = tr.querySelector("td.n");
-      if (c) c.textContent = n + (gm.hits[n] ? " ·" + gm.hits[n] : "");
+      if (c) c.textContent = tr.dataset.n ? gmRange(n - 1, +tr.dataset.n) : n + (gm.hits[n] ? " ·" + gm.hits[n] : "");
     });
   }
   function gmSay() {
@@ -1545,7 +1775,7 @@
   // chosen; only the chosen piece goes to the lab, at the 24 kHz mono the lab keeps, with 10 ms fades at its cuts. A file the browser cannot decode
   // goes as it is, and the lab keeps its first 30 s as before.
   var OWN_MAX = 30, OWN_MIN = 1, OWN_SHORT = 6;
-  var OW = { file: null, buf: null, peaks: null, a: 0, b: 0, ac: null, src: null, at: 0, from: 0, to: 0, raf: 0, drag: null };
+  var OW = { file: null, buf: null, peaks: null, a: 0, b: 0, ac: null, src: null, at: 0, from: 0, to: 0, raf: 0, drag: null, edit: null };   // HERESY 2885: edit, one's own voice in hand
   function ownAc() {
     if (!OW.ac) { var C = window.AudioContext || window.webkitAudioContext; OW.ac = C ? new C() : null; }
     return OW.ac;
@@ -1790,7 +2020,7 @@
     if (!back || back.hidden) return;
     back.classList.remove("is-on", "hd-back"); back.hidden = true;
     if (back.firstElementChild) back.firstElementChild.classList.remove("hd-box");   // HERESY 2624c
-    if (id === "rdOwnBack") ownStop();
+    if (id === "rdOwnBack") { ownStop(); ownEditEnd(); }
   }
   function ovlBind(id) {
     var back = $(id);
@@ -1828,7 +2058,82 @@
       else if (!auto && !r.text) toast(E("reader.own.heard.none"), "bad");
     }).catch(function (x) { if (!auto) toast(x.message, "bad"); }).then(done);
   }
+  // HERESY 2885 (Viktor 15.11.2026: «Свои голоса: правка… переименовать, перезаписать отрезок и слова»): one's own voice in the same window,
+  // filled: its name, its language, its words and its clip on the wave. Saved with the clip as it was, only what was changed goes (no word of
+  // consent asked); a new file or a piece trimmed anew is a new clip, kept only on the word of consent and after the trim, as a new voice is
+  function ownEdit(id) {
+    var it = (st.voices || []).filter(function (x) { return x.id === id; })[0];
+    if (!/^own-/.test(id) || !it) return;
+    ownEditEnd();
+    OW.edit = { id: id, name: it.name, lang: it.lang || "", text: it.text || "", file: null };
+    ownSexSet(it.gender_set || "auto", it.gender_heard);   // HERESY 2891
+    ownCleanSet("off");                                  // HERESY 2894: a cleaning is asked anew each time
+    $("rdOwnTitle").textContent = fill("reader.own.editTitle", { 0: it.name });
+    $("rdOwnKeep").textContent = E("reader.own.save");
+    $("rdOwnName").value = it.name; $("rdOwnText").value = it.text || ""; $("rdOwnOk").checked = false;
+    ownLangSet(it.lang);                                 // shown, not kept as the language of the next new voice
+    ovlOpen("rdOwnBack", "rdOwnName");
+    ownTimes(); requestAnimationFrame(ownDraw);
+    fetch("/lab/reader/voice-file?id=" + encodeURIComponent(id)).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.blob(); }).then(function (b) {
+      if (!OW.edit || OW.edit.id !== id) return;
+      var f = new File([b], it.name + ".wav", { type: "audio/wav" });
+      OW.edit.file = f;
+      ownLoad(f);
+    }).catch(function (e) { toast(e.message, "bad"); });
+  }
+  function ownLangSet(l) {
+    var ls = $("rdOwnLang");
+    if (!l || ![].some.call(ls.options, function (o) { return o.value === l; })) return;
+    ls.value = l;
+    if (ls._hcPaint) ls._hcPaint();
+  }
+  // HERESY 2891: the profile picker, its «by the pitch» saying what the pitch gave where it is known
+  function ownCleanSet(v) { var s = $("rdOwnClean"); if (!s) return; s.value = v || "off"; if (s._hcPaint) s._hcPaint(); }   // HERESY 2894
+  function ownBusy(btn, on, word) {                      // HERESY 2894: a clip being cleaned says so on its button, with the Studio's wave (2892)
+    if (on) { btn.dataset.word = btn.textContent; btn.textContent = word; if (window.HeresyWait) window.HeresyWait.lead(btn); }
+    else if (btn.dataset.word) { btn.textContent = btn.dataset.word; delete btn.dataset.word; }
+  }
+  function ownSexSet(v, heard) {
+    var s = $("rdOwnSex");
+    if (!s) return;
+    s.options[0].textContent = heard ? fill("reader.own.sex.heard", { 0: E(heard === "female" ? "reader.own.sex.female" : "reader.own.sex.male") }) : E("reader.own.sex.auto");
+    s.value = /^(male|female)$/.test(v) ? v : "auto";
+    if (s._hcPaint) s._hcPaint();
+  }
+  function ownEditEnd() {
+    if (!OW.edit) return;
+    OW.edit = null;
+    ownSexSet("auto"); ownCleanSet("off");
+    ownLangSet(recall("yue2.readerOwnLang"));
+    $("rdOwnTitle").textContent = E("reader.own.title");
+    $("rdOwnKeep").textContent = E("reader.own.keep");
+    $("rdOwnName").value = ""; $("rdOwnText").value = ""; $("rdOwnOk").checked = false; $("rdOwnFile").value = ""; ownLoad(null);
+  }
+  function ownSave() {
+    var ed = OW.edit, name = $("rdOwnName").value.trim(), text = $("rdOwnText").value.trim(), clip = !!OW.file && (OW.file !== ed.file || !!OW.trimmed);
+    if (!name) { toast(E("reader.own.need"), "bad"); $("rdOwnName").focus(); return; }
+    if (!text) { toast(E("reader.own.needText"), "bad"); $("rdOwnText").focus(); return; }
+    if (clip && !$("rdOwnOk").checked) { toast(E("reader.own.clipConsent"), "bad"); return; }
+    if (clip && !ownCut()) { toast(E("reader.own.needTrim"), "bad"); return; }
+    if (window.HeresyNames && window.HeresyNames.refusal(name, { max: 60 })) {   // HERESY 2462
+      window.HeresyNames.ask(name, { max: 60 }).then(function (v) { if (v) { $("rdOwnName").value = v; ownSave(); } });
+      return;
+    }
+    var body = { id: ed.id, name: name, lang: $("rdOwnLang").value, text: text, gender: $("rdOwnSex").value, clean: $("rdOwnClean").value }, btn = $("rdOwnKeep");   // 2891, 2894
+    btn.disabled = true;
+    if (body.clean !== "off") ownBusy(btn, true, E("reader.own.cleaning"));
+    (clip ? ownWav(OW.buf, OW.a, OW.b) : Promise.resolve("")).then(function (b64) {
+      if (b64) { body.audio_b64 = b64; body.ext = "wav"; body.consent = true; }
+      return api("/reader/voice-edit", body);
+    }).then(function (v) {
+      toast(v.changed && v.changed.length ? fill("reader.own.saved", { 0: v.name || name }) : E("reader.own.sameAll"));
+      ovlClose("rdOwnBack");
+      keep("yue2.readerVoice", "v:" + ed.id);
+      return voicesAgain();
+    }).catch(function (e) { toast(e.message || String(e), "bad"); }).then(function () { ownBusy(btn, false); btn.disabled = false; });
+  }
   function ownSend() {
+    if (OW.edit) return ownSave();
     var f = OW.file, name = $("rdOwnName").value.trim();
     if (!$("rdOwnOk").checked || !f || !name) { toast(E("reader.own.need"), "bad"); return; }
     if (!ownCut()) { toast(E("reader.own.needTrim"), "bad"); return; }   // HERESY 2643b: step 1 first
@@ -1839,16 +2144,18 @@
     }
     var btn = $("rdOwnKeep");
     var go = function (b64, ext) {
-      return api("/reader/voice", { name: name, lang: $("rdOwnLang").value, text: $("rdOwnText").value.trim(), consent: true, audio_b64: b64, ext: ext }).then(function (v) {
+      var clean = $("rdOwnClean").value;                 // HERESY 2894
+      if (clean !== "off") ownBusy(btn, true, E("reader.own.cleaning"));
+      return api("/reader/voice", { name: name, lang: $("rdOwnLang").value, text: $("rdOwnText").value.trim(), consent: true, audio_b64: b64, ext: ext, gender: $("rdOwnSex").value, clean: clean }).then(function (v) {   // 2891
         toast(fill("reader.own.kept", { 0: v.name || name }));
         ovlClose("rdOwnBack"); $("rdOwnOk").checked = false; $("rdOwnFile").value = ""; ownLoad(null);
-        $("rdOwnName").value = ""; $("rdOwnText").value = "";   // HERESY 2643c: the next opening is a new voice's
+        $("rdOwnName").value = ""; $("rdOwnText").value = ""; ownSexSet("auto"); ownCleanSet("off");   // HERESY 2643c: the next opening is a new voice's (2891, 2894)
         keep("yue2.readerVoice", "v:" + v.id);
         return voicesAgain();
       });
     };
     btn.disabled = true;
-    var done = function () { btn.disabled = false; };
+    var done = function () { ownBusy(btn, false); btn.disabled = false; };   // 2894
     if (OW.buf) {   // the chosen piece only
       ownWav(OW.buf, OW.a, OW.b).then(function (b64) { return go(b64, "wav"); }).catch(function (e) { toast(e.message || String(e), "bad"); }).then(done);
       return;
@@ -1993,6 +2300,35 @@
   // was kept once before it is poured over (↶ in the lectern's head); its passport and its menu speak of a reading, not of a song. What the run
   // had and this machine has not (a voice removed, an engine or a tier not here) is said aloud, never quietly replaced (the lab's form.missing)
   function UI(n) { return window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(n) : ""; }
+  // HERESY 2922 (the Narrator's mockup of 18.11.2026, Viktor's «обеими руками и ногами»: «Режиссёрская строка от Писателя. Одна строка на окно: о чём весь
+  // текст и как его читать. Пишет модель Писателя по всему тексту кнопкой ✨, правишь ты. Drama получает её как стиль в начале каждого прохода»): ✨ by the
+  // style of an engine with a free-form line (Drama 3): the Writer's pick (window.ruachChat, Engine → Writer) reads the whole text and writes one line on
+  // how to read it, in English (the engine's own placeholder is English), at most the style's length; it goes into the style, kept for the engine as a
+  // line typed is, and the engine hears it before every piece as before (lab/reader.py said). A style there already is replaced only when asked
+  function writeDirection() {
+    var e = engine(), chat = window.ruachChat, text = $("rdText").value.trim(), sty = e && e.style, max = (sty && sty.max) || 160, b = $("rdStyleWrite");
+    if (!sty || sty.kind !== "bracket" || b.disabled) return;
+    if (!text) { toast(E("reader.empty"), "bad"); return; }
+    if (!chat || !chat.complete) { toast(E("reader.dir.none"), "bad"); return; }
+    var had = $("rdStyle").value.trim();
+    b.disabled = true; b.classList.add("is-wait");
+    var sys = "You direct an audiobook reading. Read the whole text and write ONE line in English, at most " + max + " characters, telling the narrator how to read it: " +
+      "the mood, the pace, the colour of the voice and what the text is about. Plain words separated by commas; no quotes, no brackets, no explanation, nothing else.";
+    Promise.resolve(chat.refresh ? chat.refresh() : null).then(function (s) {
+      if (!s || !s.configured || !s.available || !s.use) throw new Error(E("reader.dir.none"));
+      return chat.complete([{ role: "system", content: sys }, { role: "user", content: text.slice(0, 24000) }], s.use, 400, null, 0.6);
+    }).then(function (r) {
+      var c = r && r.choices && r.choices[0] && r.choices[0].message ? String(r.choices[0].message.content || "") : "";
+      var got = (c.replace(/<think>[\s\S]*?<\/think>/g, "").split("\n").map(function (l) { return l.trim(); }).filter(Boolean)[0] || "")
+        .replace(/^["'«“\[(]+|["'»”\])]+$/g, "").trim().slice(0, max).trim();
+      if (!got) throw new Error(E("reader.dir.empty"));
+      var put = function () { $("rdStyle").value = got; keep("yue2.readerStyle." + e.id, got); $("rdStyle").focus(); toast(E("reader.dir.done")); };
+      if (had && had !== got && window.HeresyDialog) return window.HeresyDialog.confirm(fill("reader.dir.replace", { 0: had, 1: got }), { ok: E("reader.dir.use") }).then(function (yes) { if (yes) put(); });
+      put();
+    }).catch(function (err) { toast(fill("reader.dir.fail", { 0: (err && err.message) || err }), "bad"); })
+      .then(function () { b.disabled = false; b.classList.remove("is-wait"); });
+  }
+  window.ruachReaderDirection = writeDirection;   // for the checks
   function ib(icon, id, label, tip, extra) {
     var g = UI(icon);
     return '<button type="button" class="btn ghost small icon-only rd-ib"' + (id ? ' id="' + id + '"' : "") + ' aria-label="' + esc(label) + '" data-tip="' + esc(tip || label) + '"' + (extra || "") + ">" +
@@ -2013,9 +2349,9 @@
   var PREV_KEY = "yue2.readerFormPrev";
   function formNow() {
     var e = engine();
-    return { text: $("rdText").value, title: $("rdTitle").value, mode: st.mode, split: $("rdSplit").value, tags: $("rdTags").checked, engine: e ? e.id : "",
+    return { text: $("rdText").value, title: fullTitle(), mode: st.mode, split: $("rdSplit").value, tags: $("rdTags").checked, engine: e ? e.id : "",
       voice: $("rdVoice").value, cast: JSON.parse(JSON.stringify(st.cast || {})), lang: $("rdLang").value, style: $("rdStyle").value, stress: $("rdStress").checked,
-      glyphs: $("rdGlyphs").checked, card: $("rdCard").value, tier: $("rdTier").value, temperature: $("rdTemp").value, top_k: $("rdTopk").value, seed: $("rdSeed").value,
+      glyphs: $("rdGlyphs").checked, card: $("rdCard").value, tier: $("rdTier").value, temperature: $("rdTemp").value, top_k: $("rdTopk").value, top_p: $("rdTopp").value, seed: $("rdSeed").value,
       gap: $("rdGap").value, turn_gap: $("rdTurnGap").value, hear: $("rdHear").checked };
   }
   // the form from what is kept: every picker the room paints from the browser's memory (engine, card, tier, voice, style, mode and its tags,
@@ -2032,8 +2368,8 @@
     if (f.tier && eid) keep("yue2.readerTier." + eid, f.tier);
     if (f.style != null && eid) keep("yue2.readerStyle." + eid, f.style);
     if (f.text != null) { $("rdText").value = f.text; keep("yue2.readerText", String(f.text).slice(0, 200000)); }
-    if (f.title != null) $("rdTitle").value = f.title;
-    [["split", "rdSplit"], ["temperature", "rdTemp"], ["top_k", "rdTopk"], ["gap", "rdGap"], ["turn_gap", "rdTurnGap"]].forEach(function (p) {
+    if (f.title != null) setTitle(f.title);
+    [["split", "rdSplit"], ["temperature", "rdTemp"], ["top_k", "rdTopk"], ["top_p", "rdTopp"], ["gap", "rdGap"], ["turn_gap", "rdTurnGap"]].forEach(function (p) {   // 2921: top_p
       if (f[p[0]] == null || f[p[0]] === "") return;
       $(p[1]).value = String(f[p[0]]);
       keep("yue2.reader." + p[1], $(p[1]).value);
@@ -2066,7 +2402,7 @@
           v.engine = f.engine; v.style = f.style; v.card = f.card;
           if (miss.tier) said.push(fill("reader.tierGone", { 0: miss.tier })); else v.tier = f.tier;
         }
-        ["mode", "split", "tags", "lang", "stress", "glyphs", "hear", "temperature", "top_k", "gap", "turn_gap"].forEach(function (k) { v[k] = f[k]; });
+        ["mode", "split", "tags", "lang", "stress", "glyphs", "hear", "temperature", "top_k", "top_p", "gap", "turn_gap"].forEach(function (k) { v[k] = f[k]; });   // 2921: top_p
         var ref = function (id, who) { var x = voiceRef(id); if (x === null) { said.push(fill("reader.voiceGone", { 0: labels[who] || id })); x = ""; } return x; };
         v.voice = ref(f.voice, "");
         v.cast = {};
@@ -2117,6 +2453,25 @@
       return api(scoped("/writer"), { op: "from_reader", text: f.text || "", title: f.title || "", doc: (r.facts || {}).doc || "" });
     }).then(landInWriter).catch(function (e) { toast(e.message, "bad"); });
   }
+  // HERESY 2862: a reading sent with a title kept in the Writer under it, the text before it a version (never written over); a refusal said
+  function keepVersion(title, text, style) {
+    if (!String(title || "").trim() || !String(text || "").trim()) return;
+    api(scoped("/writer"), { op: "reader_keep", title: title, text: text, style: style || "" }).then(function (d) {
+      if (d && d.kept) toast(tw("reader.ver.kept", { "#0": title }), "good");
+      var W = window.HeresyWriter;
+      if (W && W.reload) W.reload();
+    }).catch(function (e) { toast(tw("reader.ver.err", { "#0": e.message }), "bad"); });
+  }
+  function openVersions() {
+    var t = fullTitle();
+    if (!t) { toast(tw("reader.ver.none", { "#0": E("reader.title") }), "bad"); return; }
+    api(scoped("/writer"), { op: "reader_find", title: t }).then(function (d) {
+      if (!d || !d.doc) { toast(tw("reader.ver.none", { "#0": t }), "bad"); return; }
+      var W = window.HeresyWriter, tab = document.querySelector('#tabs [data-tab="write"]');
+      if (tab) tab.click();
+      if (W && W.open) Promise.resolve(W.open(d.doc.id)).then(function () { if (W.showVersions) W.showVersions(); });
+    }).catch(function (e) { toast(e.message, "bad"); });
+  }
   function landInWriter(d) {
       var doc = (d && d.doc) || {}, W = window.HeresyWriter;
       toast(fill("reader.toWriter.done", { 0: doc.title || "" }), "good");
@@ -2127,7 +2482,7 @@
   function formToWriter() {
     var t = $("rdText"), ti = $("rdTitle"), text = t ? t.value : "";
     if (!text.trim()) { toast(E("reader.toWriter.empty"), "bad"); return Promise.resolve(null); }
-    return api(scoped("/writer"), { op: "from_reader", text: text, title: ti ? ti.value : "", doc: "" }).then(landInWriter).catch(function (e) { toast(e.message, "bad"); });
+    return api(scoped("/writer"), { op: "from_reader", text: text, title: ti ? fullTitle() : "", doc: "" }).then(landInWriter).catch(function (e) { toast(e.message, "bad"); });
   }
   function runsToWriter() {
     return api("/reader/runs").then(function (d) {
@@ -2197,7 +2552,7 @@
           kv("reader.glyphs", yes(val("glyphs") == null ? null : !!val("glyphs")), true)]) +
         grp("reader.engine", [kv("reader.engine", (r && r.engine_label) || rq.engine_label || val("engine")), kv("reader.tier", tier), kv("reader.ps.where", x.where || rq.where, true),
           kv("reader.ps.credit", rq.credit)]) +
-        grp("reader.ps.seed", [kv("reader.seed", val("seed")), kv("reader.temp", val("temperature")), kv("reader.topk", val("top_k")), kv("reader.gap", val("gap")),
+        grp("reader.ps.seed", [kv("reader.seed", val("seed")), kv("reader.temp", val("temperature")), kv("reader.topk", val("top_k")), kv("reader.topp", val("top_p")), kv("reader.gap", val("gap")),   // 2921
           mode === "dialog" ? kv("reader.turngap", val("turn_gap")) : "", f.bridge ? kv("reader.ps.bridge", yes(true), true) : "", kv("reader.ps.pieceChars", f.piece_chars)]) +
         grp("reader.ps.ear", [kv("reader.hear", yes(val("hear")), true), kv("reader.ps.cer", x.cer != null ? (100 * x.cer).toFixed(1) + " %" : ""), kv("reader.ps.rereads", x.rereads),
           kv("reader.ps.fixes", r && (r.fixes || []).length ? r.fixes.length : ""), kv("reader.ps.tails", x.tails)]) +
@@ -2221,9 +2576,15 @@
   // ---------------------------------------------------------------- the room's hands
   function bind() {
     designBind();
+    // HERESY 2883 (Viktor 15.11.2026: «Редактор текста Чтеца: спеллчекер и всё, что есть в редакторе лирики Музыканта»): the lyrics editor's hands
+    // on the text, as a text read aloud (heresy-lyrics.js { reading: true }): the line numbers and marks, mcedit's keys, the spelling in the
+    // text's language, the stress marks astray, the brackets linted, the [tags] drawn, the counts under the box; nothing a song alone has
+    if (window.HeresyLyrics && !$("rdText").dataset.reading) window.HeresyLyrics.attach($("rdText"), { meter: $("rdTextMeter"), reading: true });
+    acProvider.label = E("reader.ac.list");
+    if (window.HeresyComplete) window.HeresyComplete.attach($("rdText"), acProvider);   // HERESY 2889
     $("rdText").value = recall("yue2.readerText") || "";
-    $("rdTitle").value = "";
-    ["rdTemp", "rdTopk", "rdGap", "rdTurnGap", "rdSplit"].forEach(function (id) {
+    $("rdTitle").value = ""; if ($("rdTitleVer")) $("rdTitleVer").value = "";   // HERESY 2862
+    ["rdTemp", "rdTopk", "rdTopp", "rdGap", "rdTurnGap", "rdSplit"].forEach(function (id) {   // HERESY 2921: top_p kept as the others
       var v = recall("yue2.reader." + id);
       if (v != null && v !== "") $(id).value = v;
       $(id).addEventListener("change", function () { keep("yue2.reader." + id, $(id).value); });
@@ -2248,6 +2609,7 @@
     });
     $("rdText").addEventListener("keydown", function (e) { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); } });
     $("rdVoice").addEventListener("change", function () { keep("yue2.readerVoice", this.value); voiceDelFace(); });
+    $("rdVoiceEdit").addEventListener("click", function () { ownEdit(($("rdVoice").value || "").replace(/^v:/, "")); });   // HERESY 2885
     $("rdVoiceDel").addEventListener("click", function () {   // HERESY 2645: one's own voice put aside, asked first, recoverable
       var v = $("rdVoice").value, id = v.replace(/^v:/, ""), it = (st.voices || []).filter(function (x) { return x.id === id; })[0];
       if (!/^own-/.test(id) || !it) return;
@@ -2273,17 +2635,20 @@
     $("rdText").addEventListener("input", function () { if ($("rdLang").value === "auto") paintGreek(); });
     setTimeout(paintGreek, 0);
     if ($("rdLang").selectedIndex < 0) $("rdLang").value = "auto";
-    $("rdLang").addEventListener("change", function () { keep("yue2.readerLang", this.value); if ($("rdDict").open) loadDict(); });
+    $("rdLang").addEventListener("change", function () { keep("yue2.readerLang", this.value); if (!$("rdDictBack").hidden) loadDict(); });
     $("rdStress").checked = recall("yue2.readerStress") !== "0";
     $("rdHear").checked = recall("yue2.readerHear") !== "0";
     $("rdHear").addEventListener("change", function () { keep("yue2.readerHear", this.checked ? "" : "0"); });
     $("rdStress").addEventListener("change", function () { keep("yue2.readerStress", this.checked ? "" : "0"); });
     $("rdStyle").addEventListener("change", function () { var e = engine(); if (e) keep("yue2.readerStyle." + e.id, this.value.trim()); });
+    $("rdStyleWrite").addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); writeDirection(); });   // HERESY 2922
     $("rdCheck").addEventListener("click", checkStress);
     $("rdTr").addEventListener("toggle", function () { if (this.open) trList(); });
     $("rdGlyphs").checked = recall("yue2.readerGlyphs") === "1";
     $("rdGlyphs").addEventListener("change", function () { keep("yue2.readerGlyphs", this.checked ? "1" : ""); });
-    $("rdGmap").addEventListener("toggle", function () { if (this.open) gmapLoad(); });
+    $("rdGmapOpen").addEventListener("click", function () { ovlOpen("rdGmapBack", "rdGmFind"); if (!gm.dirty) gmapLoad(); });
+    $("rdGmapClose").addEventListener("click", function () { ovlClose("rdGmapBack"); });
+    ovlBind("rdGmapBack");
     $("rdGmapSave").addEventListener("click", gmapSave);
     $("rdGmapUndo").addEventListener("click", gmapUndo);   // HERESY 2376
     $("rdGmapReset").addEventListener("click", gmapReset);
@@ -2301,17 +2666,29 @@
     $("rdGmRows").addEventListener("input", function (e) {
       var tr = e.target.closest("tr[data-i]"), k = e.target.dataset.gm;
       if (!tr || !k) return;
+      if (k === "block") {                                 // HERESY 2884: the run's lines replaced by the field's, the rows after it renumbered
+        var a = +tr.dataset.i, n = +tr.dataset.n, lines = e.target.value.replace(/\r/g, "").split("\n"), d = lines.length - n;
+        gm.rows.splice.apply(gm.rows, [a, n].concat(lines.map(function (l) { return { raw: l, rule: false }; })));
+        tr.dataset.n = lines.length;
+        e.target.rows = Math.min(12, lines.length);
+        if (d) for (var nx = tr.nextElementSibling; nx; nx = nx.nextElementSibling) nx.dataset.i = +nx.dataset.i + d;
+        gmMark(); gmEdited();
+        return;
+      }
       var r = gm.rows[+tr.dataset.i];
       if (k === "raw") r.raw = gmClean(e.target.value).replace(/^ +$/, "");
       else r[k] = gmClean(e.target.value);
       r.edited = true;
       gmEdited();
     });
-    $("rdGmRows").addEventListener("change", function (e) { if (e.target.dataset.gm === "kind") { var r = gm.rows[+e.target.closest("tr").dataset.i]; r.kind = e.target.value; r.edited = true; gmEdited(); } });
+    $("rdGmRows").addEventListener("change", function (e) {   // HERESY 2884: a rule written into a run of comments becomes a row when the field is left
+      if (e.target.dataset.gm === "block") { var bt = e.target.closest("tr"), ba = +bt.dataset.i, bn = +bt.dataset.n, parsed = gmRows(e.target.value + "\n");
+        if (parsed.some(function (x) { return x.rule; })) { gm.rows.splice.apply(gm.rows, [ba, bn].concat(parsed)); gmDraw(); gmEdited(); } return; }
+      if (e.target.dataset.gm === "kind") { var r = gm.rows[+e.target.closest("tr").dataset.i]; r.kind = e.target.value; r.edited = true; gmEdited(); } });
     $("rdGmRows").addEventListener("click", function (e) {
-      var b = e.target.closest("[data-gm-del]");
-      if (!b) return;
-      gm.rows.splice(+b.dataset.gmDel, 1);
+      var b = e.target.closest("[data-gm-del]"), btr = b && b.closest("tr[data-i]");
+      if (!b || !btr) return;
+      gm.rows.splice(+btr.dataset.i, +(btr.dataset.n || 1));   // HERESY 2884: a run of comments goes whole
       gm.errs = {}; gm.hits = {};
       gmDraw(); gmEdited();
     });
@@ -2351,7 +2728,10 @@
       });
     });
     $("rdCheckOut").addEventListener("click", function (e) { var b = e.target.closest("[data-homo]"); if (b) placeHomograph(b.dataset.homo, b.dataset.form); });
-    $("rdDict").addEventListener("toggle", function () { if (this.open) loadDict(); });
+    // HERESY 2884: the two windows; the glyph map read again when opened unless it holds edits not saved
+    $("rdDictOpen").addEventListener("click", function () { ovlOpen("rdDictBack", "rdDictWord"); loadDict(); });
+    $("rdDictClose").addEventListener("click", function () { ovlClose("rdDictBack"); });
+    ovlBind("rdDictBack");
     $("rdDictAdd").addEventListener("click", function () {
       var w = $("rdDictWord").value.trim(), f = $("rdDictForm").value.trim();
       if (!w || !f) return;
@@ -2415,8 +2795,23 @@
       insertTag(en.tags.groups[+b.dataset.g], b.dataset.t);
     });
     $("rdGo").addEventListener("click", send);
+    ["rdCut", "rdVers"].forEach(function (id) {          // HERESY 2903: kept in this browser
+      var s = $(id), k = "yue2.reader." + id, v = recall(k);
+      if (!s) return;
+      if (v && Array.prototype.some.call(s.options, function (o) { return o.value === v; })) { s.value = v; if (s._hcPaint) s._hcPaint(); }
+      s.addEventListener("change", function () { keep(k, s.value === s.options[0].value ? "" : s.value); });
+    });
+    // HERESY 2862: the version guarded as typed (digits and dots); a title typed with its version splits into the two; the title's versions in the Writer
+    $("rdTitleVer").addEventListener("input", function () {
+      var c = cleanVer(this.value);
+      if (c !== this.value) { var at = Math.max(0, (this.selectionStart || 0) - (this.value.length - c.length)); this.value = c; this.setSelectionRange(at, at); }
+    });
+    $("rdTitleVer").addEventListener("change", function () { this.value = cleanVer(this.value).replace(/\.+$/, ""); });
+    $("rdTitle").addEventListener("change", function () { var m = VER_TAIL.exec(this.value.trim()); if (m && !$("rdTitleVer").value) { this.value = m[1]; $("rdTitleVer").value = m[2]; } });
+    $("rdVersions").addEventListener("click", openVersions);
     $("rdOwnOpen").addEventListener("click", function () {   // HERESY 2624: a window over the room, the warning first in it
       if (!$("rdOwnBack").hidden) { ovlClose("rdOwnBack"); return; }
+      ownEditEnd();                                       // HERESY 2885: a new voice's window, never an edit's left over
       ovlOpen("rdOwnBack", "rdOwnName");
       ownTimes();
       requestAnimationFrame(ownDraw);
@@ -2428,6 +2823,18 @@
     ovlBind("rdOwnBack");
     $("rdRuns").addEventListener("click", function (e) {
       var b = e.target.closest("[data-act]"), card = e.target.closest(".rd-run");
+      // HERESY 2882: like and dislike, the star, the shield and the note of the card's take, as the Musician's column does them (🔥 💎 and the
+      // reaction are the Librarian's own, answered wherever they stand)
+      var HCx = window.HeresyCollection, mk = e.target.closest("[data-lrate], [data-lfav], [data-lprot], [data-lnote]");
+      if (mk && HCx) {
+        e.stopPropagation();
+        var nm = mk.dataset.name || mk.dataset.lnote, again = function () { paintRuns(); };
+        if (mk.dataset.lrate) { var v = Number(mk.dataset.lrate); HCx.rate(nm, HCx.rating(nm) === v ? 0 : v).then(again, function (x) { again(); toast(x.message, "bad"); }); }
+        else if (mk.dataset.lfav && HCx.favMany) HCx.favMany([nm]).then(again);
+        else if (mk.dataset.lprot && HCx.protect) HCx.protect([nm], !HCx.isProtected(nm)).then(again);
+        else if (mk.dataset.lnote && HCx.editNote) HCx.editNote(nm, ((card && card.querySelector(".rd-run-title")) || {}).textContent || "").then(again);
+        return;
+      }
       if (card && !b && !e.target.closest("a, button, input, select, textarea, audio, summary")) {   // HERESY 2381: the card itself
         if (card.classList.contains("is-shut")) openRun(card.dataset.id);
         else if (e.target.closest(".rd-run-head")) openRun("");
@@ -2464,10 +2871,80 @@
     });
     $("rdRuns").addEventListener("focusin", function (e) {
       var card = e.target.closest(".rd-run");
-      if (card && card.classList.contains("is-shut") && !e.target.closest(".rd-run-head")) openRun(card.dataset.id);
+      if (card && card.classList.contains("is-shut") && !e.target.closest(".rd-run-head") && !e.target.closest(".take-extra")) openRun(card.dataset.id);   // 2882: a mark keeps it shut
     });
+    $("rdFold").addEventListener("click", function () { var f = $("libFold"); if (f) f.click(); });   // HERESY 2882: the Studio's own fold
+    gripsBind();
     paintMode();
     paintBack();
+  }
+  // HERESY 2881: the two grips between the form's three columns. The widths are kept as shares of the third column (fr), so a window of another
+  // width keeps the proportions and never pushes a column under its least (the text 300 px, the narrow one 220, the voice and the engine 320)
+  var COLS_KEY = "yue2.readerCols";
+  function colsSet(f1, f2) {
+    var body = $("rdFormBody");
+    if (!body) return;
+    if (!(f1 > 0 && f2 > 0)) { body.style.removeProperty("--rd-c1"); body.style.removeProperty("--rd-c2"); }
+    else { body.style.setProperty("--rd-c1", f1.toFixed(3) + "fr"); body.style.setProperty("--rd-c2", f2.toFixed(3) + "fr"); }
+    colsSay();
+  }
+  function colsNow() {   // the three columns as they are drawn
+    var body = $("rdFormBody"), a = body && body.querySelector(".rd-lect"), b = body && body.querySelector(".rd-form-aid"), c = body && body.querySelector(".rd-form-side");
+    if (!a || !b || !c) return null;
+    var w = [a, b, c].map(function (x) { return x.getBoundingClientRect().width; });
+    return w[0] > 0 && w[2] > 0 ? { c1: w[0], c2: w[1], c3: w[2], all: w[0] + w[1] + w[2] } : null;
+  }
+  function colsFit(c1, c2, all) {   // each its least; what the first two give up or take, the third gives or takes
+    c1 = Math.max(300, c1); c2 = Math.max(220, c2);
+    var over = c1 + c2 + 320 - all;
+    if (over > 0) { var k = Math.min(over, c2 - 220); c2 -= k; over -= k; c1 = Math.max(300, c1 - over); }
+    var c3 = Math.max(320, all - c1 - c2);
+    return [c1 / c3, c2 / c3];
+  }
+  function colsSay() {
+    var n = colsNow();
+    [["rdGrip1", n ? n.c1 : 0], ["rdGrip2", n ? n.c1 + n.c2 : 0]].forEach(function (g) { var el = $(g[0]); if (el && n) el.setAttribute("aria-valuenow", String(Math.round(100 * g[1] / n.all))); });
+  }
+  function gripsBind() {
+    var saved = String(recall(COLS_KEY) || "").split(",").map(Number);
+    if (saved.length === 2) colsSet(saved[0], saved[1]);
+    ["rdGrip1", "rdGrip2"].forEach(function (id, k) {
+      var g = $(id), drag = null;
+      if (!g) return;
+      function move(from, dx) {   // the first grip moves the line after the text, the second the line after the narrow column; Hebrew mirrors it
+        if (!from) return null;
+        var d = getComputedStyle(g).direction === "rtl" ? -dx : dx;
+        var f = k === 0 ? colsFit(from.c1 + d, from.c2 - d, from.all) : colsFit(from.c1, from.c2 + d, from.all);
+        colsSet(f[0], f[1]);
+        return f;
+      }
+      function end() {
+        if (!drag) return;
+        if (drag.f) keep(COLS_KEY, drag.f[0].toFixed(3) + "," + drag.f[1].toFixed(3));
+        drag = null;
+        g.classList.remove("is-drag"); document.body.classList.remove("rd-resizing");
+      }
+      g.addEventListener("pointerdown", function (e) {
+        if (e.button !== 0) return;
+        var n = colsNow();
+        if (!n) return;
+        e.preventDefault();
+        drag = n; drag.x = e.clientX;
+        try { g.setPointerCapture(e.pointerId); } catch (x) { /* a pointer the browser no longer has */ }
+        g.classList.add("is-drag"); document.body.classList.add("rd-resizing");
+      });
+      g.addEventListener("pointermove", function (e) { if (drag) drag.f = move(drag, e.clientX - drag.x); });
+      g.addEventListener("pointerup", end); g.addEventListener("pointercancel", end); g.addEventListener("lostpointercapture", end);
+      g.addEventListener("dblclick", function () { keep(COLS_KEY, ""); colsSet(0, 0); });
+      g.addEventListener("keydown", function (e) {
+        var dx = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+        if (!dx) return;
+        e.preventDefault();
+        var f = move(colsNow(), dx * (e.shiftKey ? 64 : 16));
+        if (f) keep(COLS_KEY, f[0].toFixed(3) + "," + f[1].toFixed(3));
+      });
+    });
+    window.addEventListener("resize", colsSay);
   }
   function openRun(id) {   // HERESY 2381: the accordion; the next paint of the runs draws the same (runHtml reads st.openRun)
     st.openRun = id || "";

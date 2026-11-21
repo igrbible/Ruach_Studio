@@ -5,6 +5,9 @@
 // HeresyDialog.prompt(text, value, {ok, placeholder, max, name}) -> Promise<string|null>; name (HERESY 2462): true (its length left to max, the field's own, as before) or {max, file}: the field is a name,
 // held to HeresyNames' rule: a name it refuses is said under the field, with the cleaned one to take, and the dialog stays open
 // HeresyNames.refusal(name, {max, file}) -> "" or what is wrong · cleaned(name, {max, file}) · ask(name, {max, file}) -> Promise<name|null> (HERESY 2462)
+// prompt's emoji (HERESY 2919): {value, section, used}: a button with the workspace's emoji inside the field, before the name; a click opens the grid
+// (heresy-wsemoji.js); the choice is left in opts.emoji.value ("" none). A name that begins with one of the Studio's own marks (💎, 🙈) keeps it there:
+// the button stands aside while it does
 // HeresyDialog.choose(text, items, {cancel, more, filter}) -> Promise<value|null> (HERESY 1167): a list to pick from, one
 // click picks; items [{value, label, depth, current, note}]; more [{label, value}]: buttons under the list; a filter
 // field above the list when it is long
@@ -97,7 +100,8 @@
       back.innerHTML = '<div class="hd-box' + (opts.cls ? " " + esc(opts.cls) : "") + '" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +   // HERESY 1825: a class of its own
         '<div class="hd-title">' + esc(title) + "</div>" + (opts.html ? '<div class="hd-body hd-html">' + opts.html + "</div>" : body ? '<div class="hd-body">' + esc(body) + "</div>" : "") + waveHtml(opts) +   // HERESY 2847: opts.html, a body its caller built and escaped
         (kind === "prompt" && opts.area ? '<textarea class="hd-input hd-area" rows="' + (opts.rows || 8) + '" maxlength="' + (opts.max || 4000) + '" placeholder="' + esc(opts.placeholder || "") + '"></textarea>' + (opts.max && opts.max <= 1000 ? '<div class="hd-count" aria-live="polite"></div>' : "")   // HERESY 1428: lines, Ctrl+Enter keeps; 1802: a short one counts
-          : kind === "prompt" ? '<input type="text" class="hd-input" maxlength="' + (opts.max || 200) + '" placeholder="' + esc(opts.placeholder || "") + '" />' +
+          : kind === "prompt" ? (opts.emoji ? '<div class="hd-emfield"><button type="button" class="hd-em" aria-label="The workspace\'s emoji" data-tip="The emoji before its name: one, any but the Studio\'s own marks; none shows the faint icon"></button>' : "") +
+            '<input type="text" class="hd-input" maxlength="' + (opts.max || 200) + '" placeholder="' + esc(opts.placeholder || "") + '" />' + (opts.emoji ? "</div>" : "") +
             (opts.name ? '<div class="hd-name-bad" role="alert" hidden><span class="hd-name-say"></span><span class="hd-name-rule">' + esc(NAME_SAID) + '</span>' +
               '<button type="button" class="btn ghost small hd-name-use"></button></div>' : "") : "") +   // HERESY 2462
         '<div class="hd-acts">' + (kind === "alert" || opts.cancel === false ? "" : '<button type="button" class="btn ghost small hd-no">' + esc(opts.cancel || "Cancel") + "</button>") +
@@ -124,6 +128,29 @@
         nameBox.querySelector(".hd-name-use").addEventListener("click", function () { input.value = this.dataset.clean || ""; nameCheck(); input.focus(); });
         nameCheck();
       }
+      var emBtn = back.querySelector(".hd-em"), HE = window.HeresyWsEmoji;   // HERESY 2919: the workspace's emoji beside its name
+      function emPaint() {
+        if (!emBtn || !HE) return;
+        var v = opts.emoji.value || "", sys = HE.lead(input.value).emoji;
+        sys = sys && HE.reserved(sys) ? sys : "";
+        emBtn.innerHTML = v && !sys ? '<span class="hd-em-e">' + esc(v) + "</span>" : sys ? '<span class="hd-em-e">' + esc(sys) + "</span>" : HE.faint(!!opts.emoji.section);
+        emBtn.classList.toggle("is-faint", !v && !sys);
+        emBtn.disabled = !!sys;
+        var tl = function (s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; };
+        emBtn.dataset.tip = sys ? tl("{0} holds the emoji's place: one of the Studio's own marks (a 💎 set, a 🙈 blind set), kept in the name").replace("{0}", sys)
+                                : tl("The emoji before its name: one, any but the Studio's own marks; none shows the faint icon");
+      }
+      if (emBtn && HE) {
+        emBtn.addEventListener("click", function () {
+          HE.pick(emBtn, { current: opts.emoji.value || "", section: !!opts.emoji.section, used: opts.emoji.used || [] }).then(function (v) {
+            if (v !== null) opts.emoji.value = v;
+            emPaint();
+            input.focus();
+          });
+        });
+        input.addEventListener("input", emPaint);
+        emPaint();
+      } else if (emBtn) emBtn.hidden = true;
       var count = back.querySelector(".hd-count");       // HERESY 1802: how much of the note's room is taken
       if (count && input) {
         var said = function () { count.textContent = input.value.length + " / " + opts.max; count.classList.toggle("is-full", input.value.length >= opts.max); };
@@ -177,6 +204,7 @@
         }
         else if (e.key === "Enter" && opts.area && document.activeElement === input && !(e.ctrlKey || e.metaKey)) { /* a new line */ }
         else if (e.key === "Enter" && document.activeElement && document.activeElement.classList.contains("hd-name-use")) { e.preventDefault(); e.stopPropagation(); document.activeElement.click(); }   // HERESY 2462
+        else if (e.key === "Enter" && document.activeElement && document.activeElement.classList.contains("hd-em")) { e.preventDefault(); e.stopPropagation(); document.activeElement.click(); }   // HERESY 2919: the emoji's grid
         else if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault(); e.stopPropagation();
           if (at >= 0 && !buttons[at].classList.contains("hd-yes")) buttons[at].click(); else done(true);
@@ -205,18 +233,23 @@
       var back = document.createElement("div"), before = document.activeElement, long = items.length > 8;
       back.className = "hd-back";
       back.innerHTML = '<div class="hd-box hd-choose" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
-        '<div class="hd-title">' + esc(title) + "</div>" + (body ? '<div class="hd-body">' + esc(body) + "</div>" : "") +
+        // HERESY 2872 (opts.closeTop: Viktor 19.11.2026, about 23:20): the close ✕ in the title row, right, and no footer when nothing else is in it
+        (opts.closeTop ? '<div class="hd-title hd-title-x"><span>' + esc(title) + '</span><button type="button" class="hd-x hd-no" aria-label="' + esc(opts.cancel || "Cancel") + '" data-tip="' + esc(opts.cancel || "Cancel") + '">\u2715</button></div>'
+          : '<div class="hd-title">' + esc(title) + "</div>") + (body ? '<div class="hd-body">' + esc(body) + "</div>" : "") +
         waveHtml(opts) + (long ? '<input type="search" class="hd-input hd-filter" placeholder="' + esc(opts.filter || "Filter") + '" />' : "") +
         '<div class="hd-list" role="listbox">' + items.map(function (it, i) {
           return '<button type="button" role="option" class="hd-item' + (it.current ? " is-current" : "") + '" data-i="' + i +
             '" data-q="' + esc((String(it.label || "") + " " + (it.note == null ? "" : String(it.note))).toLowerCase()) +
             '" style="--depth:' + (it.depth || 0) + '"' + tipAttrs(it, opts) + (it.current ? ' aria-selected="true"' : "") + '>' + (it.path ? '<span class="hd-item-path" translate="no">' + esc(it.path) + " \u203a </span>" : "") + '<span class="hd-item-label"' + (it.words ? "" : ' translate="no"') + '>' +   // HERESY 1853: the parents before the name   // HERESY 1379b: words: true, a word to translate, not a name
             esc(it.label) + "</span>" + (it.note != null && it.note !== "" ? '<span class="hd-item-note">' + esc(it.note) + "</span>" : "") +
-            (it.current ? '<span class="hd-item-tick" aria-hidden="true">\u2713</span>' : "") + "</button>";
-        }).join("") + "</div>" +
-        '<div class="hd-acts">' + (opts.more || []).map(function (m, i) {
+            (it.current ? '<span class="hd-item-tick" aria-hidden="true">\u2713</span>' : "") + "</button>" +
+            // HERESY 2872: an item's own second action, a small button at its row's end ({value, label, tip}): the answer is its value
+            (it.act ? '<button type="button" class="btn ghost small hd-item-act" data-a="' + i + '" aria-label="' + esc(it.act.tip || it.act.label) + '"' +
+              (it.act.tip ? ' data-tip="' + esc(it.act.tip) + '"' : "") + ">" + esc(it.act.label) + "</button></div>" : "");
+        }).map(function (h, i) { return items[i].act ? '<div class="hd-row">' + h : h; }).join("") + "</div>" +
+        (opts.closeTop && !(opts.more || []).length ? "" : '<div class="hd-acts">' + (opts.more || []).map(function (m, i) {
           return '<button type="button" class="btn ghost small hd-more" data-m="' + i + '">' + esc(m.label) + "</button>";
-        }).join("") + '<span class="hd-spacer"></span><button type="button" class="btn ghost small hd-no">' + esc(opts.cancel || "Cancel") + "</button></div></div>";
+        }).join("") + '<span class="hd-spacer"></span>' + (opts.closeTop ? "" : '<button type="button" class="btn ghost small hd-no">' + esc(opts.cancel || "Cancel") + "</button>") + "</div>") + "</div>";
       document.body.appendChild(back);
       var filter = back.querySelector(".hd-filter"), rows = Array.prototype.slice.call(back.querySelectorAll(".hd-item"));
       function shown() { return rows.filter(function (r) { return !r.hidden; }); }
@@ -243,6 +276,7 @@
       document.addEventListener("keydown", key, true);
       back.addEventListener("mousedown", function (e) { if (e.target === back) done(null); });
       rows.forEach(function (r) { r.addEventListener("click", function () { done(items[+r.dataset.i].value); }); });
+      Array.prototype.forEach.call(back.querySelectorAll(".hd-item-act"), function (b) { b.addEventListener("click", function () { done(items[+b.dataset.a].act.value); }); });   // HERESY 2872
       if (opts.wave && opts.wave.forItem) rows.forEach(function (r) {   // HERESY 1729: the row under the pointer (or in focus) marks its own
         var mark = function () { waveDraw(back, opts, opts.wave.forItem(items[+r.dataset.i].value)); };
         r.addEventListener("mouseenter", mark); r.addEventListener("focus", mark);
@@ -251,7 +285,7 @@
       back.querySelector(".hd-no").addEventListener("click", function () { done(null); });
       if (filter) filter.addEventListener("input", function () {
         var q = filter.value.trim().toLowerCase();
-        rows.forEach(function (r) { r.hidden = !!q && r.dataset.q.indexOf(q) < 0; });   // HERESY 1853: its own name and note, not its parents'
+        rows.forEach(function (r) { r.hidden = !!q && r.dataset.q.indexOf(q) < 0; if (r.parentNode.classList.contains("hd-row")) r.parentNode.hidden = r.hidden; });   // HERESY 1853: its own name and note, not its parents'
         back.querySelector(".hd-list").classList.toggle("is-filtering", !!q);          // HERESY 1853: a section found says where it stands
       });
       requestAnimationFrame(function () {

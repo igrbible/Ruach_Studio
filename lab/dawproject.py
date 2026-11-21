@@ -67,7 +67,7 @@ def _seconds(p):
     return float(out or 0)
 
 
-def build(kit, outputs, name, midi=None, cache=None, marks=None):
+def build(kit, outputs, name, midi=None, cache=None, marks=None, midi_label="Score"):   # HERESY 2913: «MuScriptor» for a transcription
     """The take NAME as derived/dawproject/TITLE.dawproject inside the take (one, made again on each ask):
     the engine serves derived/ files itself (/library/file), whole and seekable, where the lab's proxy
     fails on files this big. Returns its path and what went in."""
@@ -156,7 +156,7 @@ def build(kit, outputs, name, midi=None, cache=None, marks=None):
             notes.sort()
             end = max(n[0] + n[1] for n in notes)
             tid, cid = nid(), nid()
-            label = "Score · " + v["name"]
+            label = midi_label + " · " + v["name"]
             tracks.append(
                 f'        <Track contentType="notes" loaded="true" id="{tid}" name={quoteattr(label)} color="#a078c8" comment="">\n'
                 f'            <Channel audioChannels="2" destination="{master_ch}" role="regular" solo="false" id="{cid}">\n'

@@ -10,6 +10,7 @@
  "scene": {"voices": 3},
  "window": {"context": 16384, "frames": 2048, "history_rows": 8192, "piece_chars": 1200},
  "top_k": false,
+ "top_p": true,
  "stress": "acute",
  "stress_lang": {"uk": "caps+acute", "ru": "caps"},
  "voice_set": "stock",

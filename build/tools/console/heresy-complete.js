@@ -23,15 +23,23 @@
 // with the tags that are no section only: who sings (the examples'), and Female Vocals, Break and Silence (his; TEST). «][»
 // gets its space by itself, Ctrl+Space there types « [»; a chained tag stays on its line, a «…» in it left selected.
 //
-//   HeresyComplete.attach(textarea) · HeresyComplete.state()   (the last for the checks)
+//
+// HERESY 2889 (Viktor 15.11.2026, the Narrator: «автодополнение по эмотегам и голосам чтецов прикрути на примере автодополнения музыкальных
+// разметок через набор `[`»): a box may bring its own provider (attach(area, provider)): where a «[» opens the list, what it offers, what goes
+// in; the same list, keys and columns. A row may carry a side list (its words in the right column): → enters it, ↑ ↓ choose there, Enter
+// picks, ← and Esc go back to the rows. A provider: { label, tip, context(box), offer(text, q, cx), accept(it, cx, put), foot(it, inSide),
+// side(it, j) (the right column's HTML, its rows .tc-side-item[data-j]), sideCount(it), pick(it, j, cx, put) }
+//
+//   HeresyComplete.attach(textarea[, provider]) · HeresyComplete.state()   (the last for the checks)
 (function () {
   "use strict";
   // HERESY 1169 (Viktor 07.10.2026: «Вычисти оттуда то, чего нет в оф примерах YuE2»): no Break, the examples never write it
   // HERESY 1169 (Viktor 08.10.2026: «отсортируй их по стандартной арке произведения, начиная с Intro и заканчивая End»): the
   // sections in the order a song goes through them, the TEST ones where they would stand; FIRST is the fallback's order
   var ARC = ["Intro", "Instrumental Intro", "Verse", "Pre-Chorus", "Chorus", "Post-Chorus", "Refrain", "Hook", "Interlude", "Instrumental Break",
-    "Guitar Solo", "Scatting", "Yodeling", "Non-Lyrical Vocals", "Bridge", "Breakdown", "Drop", "Instrumental", "Skit", "Segue", "Part",
+    "Guitar Solo", "Scatting", "Yodeling", "Non-Lyrical Vocals", "Bridge", "Breakdown", "Build-up", "Drop", "Instrumental", "Skit", "Segue", "Part",
     "Final Chorus", "Outro", "Fade Out", "Instrumental Outro", "End"];
+  // HERESY 2906: [Build-up] (TEST) where it stands, after a breakdown and before the drop (outside the arc it fell after [End])
   var FIRST = ["Verse", "Chorus", "Pre-Chorus", "Bridge", "Interlude"], ONCE = ["Intro", "Outro", "End"];
   // as Viktor writes it (thirty songs of his end so; «Да, измени»), where the official examples write [End]
   // HERESY 1169 (Viktor 08.10.2026: «Конечный тег изменил из суновского `[END]` на `[End]`»): as the official examples write it
@@ -41,6 +49,8 @@
   // the keys of a Russian (and Ukrainian) layout, as the Latin letters on the same keys
   var RU = "йцукенгшщзхъфывапролджэячсмитьбюё", EN = "qwertyuiop[]asdfghjkl;'zxcvbnm,.`", UK = { "і": "s", "ї": "]", "є": "'", "ґ": "`" };
   var pop = null, list = null, about = null, foot = null, box = null, items = [], at = -1, from = -1, shut = -1, query = null, mirror = null, queued = false;
+  var sideAt = -1;                                   // HERESY 2889: the row in hand in the side list (-1: the rows)
+  function P() { var i = boxes.indexOf(box); return i >= 0 ? provs[i] : null; }   // the box's own provider, if it brought one
 
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
   // HERESY 2409 (Viktor 11.11.2026, A9): the column of our words about a tag names sections in the page's language; its tip says the tags never are
@@ -137,6 +147,7 @@
   // Inside a tag already closed further on («[Int|ro]») there is none; a «]» right after the cursor is taken in
   function context() {
     if (!box || box.readOnly || box.disabled || box.selectionStart !== box.selectionEnd) return null;
+    if (P()) return P().context(box);                                   // HERESY 2889
     var v = box.value, c = box.selectionStart, ls = c > 0 ? v.lastIndexOf("\n", c - 1) + 1 : 0, le = v.indexOf("\n", c);
     var m = v.slice(ls, c).match(/^(\s*)\[([^\[\]\n]*)$/), rest = v.slice(c, le < 0 ? v.length : le), chain = false;
     if (!m) { m = v.slice(ls, c).match(/^(\s*(?:\[[^\[\]\n]+\]\s*){1,2})\[([^\[\]\n]*)$/); chain = !!m; }   // HERESY 1278
@@ -158,10 +169,14 @@
     foot = pop.querySelector(".tc-foot");
     pop.addEventListener("mousedown", function (e) { e.preventDefault(); });   // the box keeps the cursor
     pop.addEventListener("click", function (e) {
+      var sd = e.target.closest(".tc-side-item");                       // HERESY 2889: a row of the side list
+      if (sd && P() && items[at] && items[at].side) return pickSide(+sd.dataset.j);
       var o = e.target.closest(".tc-item");
       if (o && !o.classList.contains("is-there")) accept(+o.dataset.i);
     });
     pop.addEventListener("mousemove", function (e) {           // HERESY 1169: a once-tag there already is read too, not put in
+      var sd = e.target.closest(".tc-side-item");
+      if (sd) { if (+sd.dataset.j !== sideAt) { sideAt = +sd.dataset.j; mark(false); } return; }   // HERESY 2889
       var o = e.target.closest(".tc-item");
       if (o && +o.dataset.i !== at) { at = +o.dataset.i; mark(false); }
     });
@@ -169,6 +184,7 @@
 
   // what the examples say of it, under its words in the column beside the list
   function count(it) {
+    if (it.about != null) return it.about;                              // HERESY 2889: a provider's own words
     if (it.there !== undefined) return tr("Already in the lyrics, line {0}: a song has one").replace("{0}", it.there + 1);
     if (it.next) return tr("The lyrics number their verses: this is the next one");
     if (it.voice) return tr("Not a section: who sings and how; the lines stay in the section before. Viktor's form; on a long ballad YuE2 followed such tags about 95 % of the time. «Solo» is not heard in a voice's tag: name the voice.");
@@ -181,7 +197,7 @@
   function render() {
     list.innerHTML = items.map(function (it, i) {
       var there = it.there !== undefined;
-      var say = there ? tr("already at line {0}").replace("{0}", it.there + 1) : it.next ? tr("the next verse") : it.voice ? tr("not a section") : it.test ? "TEST" : it.n ? "×" + it.n : "";
+      var say = it.say != null ? it.say : there ? tr("already at line {0}").replace("{0}", it.there + 1) : it.next ? tr("the next verse") : it.voice ? tr("not a section") : it.test ? "TEST" : it.n ? "×" + it.n : "";
       return '<div class="tc-item' + (there ? " is-there" : "") + '" role="option" id="tcOpt' + i + '" data-i="' + i + '" aria-selected="false"' +
         (there ? ' aria-disabled="true"' : "") + '><span class="tc-tag" translate="no">' + esc(it.tag) + '</span><span class="tc-say' + (it.test && !there && !it.next ? " tc-test" : "") + (it.voice ? " tc-voice" : "") + '">' + esc(say) + "</span></div>";
     }).join("");
@@ -189,11 +205,13 @@
   }
   function mark(scroll) {
     Array.prototype.forEach.call(list.children, function (o, i) { o.classList.toggle("is-on", i === at); o.setAttribute("aria-selected", i === at ? "true" : "false"); });
-    var cur = items[at], said = cur ? count(cur) : "";
-    about.innerHTML = cur ? '<div class="tc-about-tag" translate="no">' + esc(cur.tag) + "</div>" +
+    var cur = items[at], said = cur ? count(cur) : "", pv = P();
+    if (!cur || !cur.side || !pv) sideAt = -1;
+    about.innerHTML = cur && cur.side && pv ? pv.side(cur, sideAt) : cur ? '<div class="tc-about-tag" translate="no">' + esc(cur.tag) + "</div>" +
       (cur.note ? '<p class="tc-about-say">' + esc(cur.note) + "</p>" : "") +
       (said ? '<p class="tc-about-n' + (cur.test && !cur.next ? " tc-test" : "") + '">' + esc(said) + "</p>" : "") : "";
-    foot.innerHTML = '<span class="tc-keys">' + esc(tr("↑ ↓ choose · Enter or Tab puts it in · Esc closes")) + "</span>";
+    foot.innerHTML = '<span class="tc-keys">' + esc(pv && pv.foot ? pv.foot(cur, sideAt >= 0) : tr("↑ ↓ choose · Enter or Tab puts it in · Esc closes")) + "</span>";
+    if (sideAt >= 0) { var sOn = about.querySelector('.tc-side-item[data-j="' + sideAt + '"]'); if (sOn && scroll !== false) sOn.scrollIntoView({ block: "nearest" }); }
     box.setAttribute("aria-expanded", "true");
     if (cur) box.setAttribute("aria-activedescendant", "tcOpt" + at); else box.removeAttribute("aria-activedescendant");
     var on = list.children[at];
@@ -257,13 +275,18 @@
     var keep = cx.q === query && items[at] ? items[at].tag : null;
     from = cx.from;
     query = cx.q;
-    items = cx.chain ? offerChain(cx.q) : offer(box.value, cx.q);
+    var pv = P();
+    items = pv ? pv.offer(box.value, cx.q, cx) : cx.chain ? offerChain(cx.q) : offer(box.value, cx.q);   // HERESY 2889
     if (!items.length) return hide();
     at = -1;
+    sideAt = -1;
     if (keep) items.forEach(function (it, i) { if (at < 0 && it.tag === keep && it.there === undefined) at = i; });
     if (at < 0) items.some(function (it, i) { if (it.next) { at = i; return true; } return false; });   // HERESY 1169: the next verse first
     if (at < 0) items.some(function (it, i) { if (it.there === undefined) { at = i; return true; } return false; });
     build();
+    list.setAttribute("aria-label", pv ? pv.label : "Section tags");    // HERESY 2889: the column's word and tip are the provider's
+    if (pv) { if (pv.tip) about.setAttribute("data-tip", pv.tip); else about.removeAttribute("data-tip"); } else about.setAttribute("data-tip", SECTION_WORDS_TIP);
+    pop.classList.toggle("tc-own", !!pv);
     pop.hidden = false;
     render();
     place();
@@ -271,6 +294,7 @@
   function hide() {
     items = [];
     at = -1;
+    sideAt = -1;
     query = null;
     if (pop) pop.hidden = true;
     if (box) { box.setAttribute("aria-expanded", "false"); box.removeAttribute("aria-activedescendant"); }
@@ -298,12 +322,29 @@
   function accept(i) {
     var it = items[i], cx = context();
     if (!it || it.there !== undefined || !cx) return;
+    if (P()) {                                                          // HERESY 2889: the provider says what goes in
+      var pv = P();
+      if (it.side) { if (pv.sideCount(it)) { sideAt = 0; mark(true); } return; }   // a row with a side list: Enter goes into it
+      hide();
+      box.focus({ preventScroll: true });
+      pv.accept(it, cx, function (s) { box.setSelectionRange(cx.from, cx.to); if (s) insert(s); else document.execCommand("delete"); });
+      shut = -1;
+      return;
+    }
     hide();
     box.focus({ preventScroll: true });
     box.setSelectionRange(cx.from, cx.to);
     insert(it.tag + (cx.chain ? "" : "\n"));                       // HERESY 1278: a chained tag stays on its line
     var dots = it.tag.indexOf("…");
     if (dots >= 0) box.setSelectionRange(cx.from + dots, cx.from + dots + 1);   // [Spoken: …]: the words typed in its place
+    shut = -1;
+  }
+  function pickSide(j) {                                               // HERESY 2889: a row of the side list picked
+    var it = items[at], cx = context(), pv = P();
+    if (!it || !it.side || !cx || !pv || j < 0 || j >= pv.sideCount(it)) return;
+    hide();
+    box.focus({ preventScroll: true });
+    pv.pick(it, j, cx, function (s) { box.setSelectionRange(cx.from, cx.to); if (s) insert(s); else document.execCommand("delete"); });
     shut = -1;
   }
   function move(d) {
@@ -317,12 +358,23 @@
     if (e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey && e.code === "Space") {
       var cx = context();
       if (cx) { e.preventDefault(); shut = -1; return fill(cx); }
+      if (P()) { if (box.selectionStart === box.selectionEnd && !box.readOnly) { e.preventDefault(); shut = -1; insert("["); } return; }   // HERESY 2889: anywhere
       var v = box.value, c = box.selectionStart, ls = c > 0 ? v.lastIndexOf("\n", c - 1) + 1 : 0;
       if (box.selectionStart === box.selectionEnd && !box.readOnly && /^\s*$/.test(v.slice(ls, c))) { e.preventDefault(); shut = -1; insert("["); }
       else if (box.selectionStart === box.selectionEnd && !box.readOnly && CHAINED.test(v.slice(ls, c))) { e.preventDefault(); shut = -1; insert(/\]$/.test(v.slice(ls, c)) ? " [" : "["); }   // HERESY 1278
       return;
     }
     if (!visible()) return;
+    var plain = !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey, cur = items[at], pv = P();
+    if (pv && cur && cur.side && plain) {                               // HERESY 2889: the side list by the keys
+      var sn = pv.sideCount(cur);
+      if (sideAt < 0 && e.key === "ArrowRight" && sn) { e.preventDefault(); sideAt = 0; return mark(true); }
+      if (sideAt >= 0) {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); sideAt = (sideAt + (e.key === "ArrowDown" ? 1 : -1) + sn) % sn; return mark(true); }
+        if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); return pickSide(sideAt); }
+        if (e.key === "ArrowLeft" || e.key === "Escape") { e.preventDefault(); e.stopPropagation(); sideAt = -1; return mark(true); }
+      }
+    }
     if ((e.key === "ArrowDown" || e.key === "ArrowUp") && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) { e.preventDefault(); move(e.key === "ArrowDown" ? 1 : -1); }
     else if ((e.key === "Enter" || e.key === "Tab") && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
       if (at >= 0) { e.preventDefault(); accept(at); } else hide();
@@ -339,20 +391,21 @@
     insert(" [");
   }
 
-  var boxes = [];
-  function attach(area) {
+  var boxes = [], provs = [];
+  function attach(area, provider) {
     if (!area || boxes.indexOf(area) >= 0) return;
     boxes.push(area);
+    provs.push(provider || null);                                       // HERESY 2889
     area.setAttribute("aria-autocomplete", "list");
     area.setAttribute("aria-controls", "tcList");
     area.setAttribute("aria-expanded", "false");
     area.addEventListener("input", function (e) {
       box = area;
-      if (e.inputType === "insertText" && e.data === "[") spaceBefore();   // HERESY 1278: «][» gets its space
+      if (e.inputType === "insertText" && e.data === "[" && !P()) spaceBefore();   // HERESY 1278: «][» gets its space (the lyrics' tags only)
       check(/^insert(Text|CompositionText)$/.test(e.inputType || ""));
     });
     area.addEventListener("keydown", function (e) { box = area; onKey(e); });
-    area.addEventListener("keyup", function (e) { if (box === area && visible() && !/^(ArrowUp|ArrowDown|Enter|Tab|Escape)$/.test(e.key)) check(false); });
+    area.addEventListener("keyup", function (e) { if (box === area && visible() && !/^(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Enter|Tab|Escape)$/.test(e.key)) check(false); });
     area.addEventListener("mouseup", function () { if (box === area && visible()) check(false); });
     area.addEventListener("blur", function () { if (box === area) hide(); });
     area.addEventListener("scroll", function () { if (box === area) later(); });
@@ -361,9 +414,9 @@
   window.addEventListener("resize", later);
   ["lyrics", "wrLyrics"].forEach(function (id) { attach(document.getElementById(id)); });
 
-  window.HeresyComplete = { attach: attach, offer: offer,
+  window.HeresyComplete = { attach: attach, offer: offer, rank: rank, fold: fold,   // HERESY 2889: rank and fold for a provider
     state: function () {
-      return { open: visible(), box: box ? box.id : null, at: at, active: items[at] ? items[at].tag : null, chain: !!(items[0] && items[0].chain),
+      return { open: visible(), box: box ? box.id : null, at: at, active: items[at] ? items[at].tag : null, chain: !!(items[0] && items[0].chain), side: sideAt,
         tags: items.map(function (it) { return it.tag + (it.there !== undefined ? "@" + (it.there + 1) : ""); }) };
     } };
 })();

@@ -67,6 +67,8 @@ def can_run(root):
     # packaged (Claude, 07.11.2026, the WSL2 and AppImage trials): the Studio is not a clone there; its launcher brings the next version
     if os.environ.get("RUACH_LAUNCHER") == "appimage":
         return False, "this Studio is an AppImage: download the new RuachStudio AppImage and start it in place of this one (models, songs and settings stay in " + str(Path(root)) + ")"
+    if os.environ.get("RUACH_LAUNCHER") == "native":    # HERESY 2930: RuachStudio.exe on Windows and macOS, from the release's zip
+        return False, "this Studio runs from RuachStudio.exe: the tray menu's Check for updates opens the new release's page to download it"
     if os.environ.get("RUACH_LAUNCHER") == "wsl":
         return False, "this Studio runs in WSL from RuachStudio.exe: the tray menu's Check for updates brings the new version"
     if not shutil.which("systemd-run"):
@@ -114,9 +116,19 @@ def status(root, config_dir):
     latest = state.get("latest")
     newer = bool(latest and version_key(latest["tag"]) and version_key(here) and version_key(latest["tag"]) > version_key(here))
     ok, why = can_run(root)
-    running = subprocess.run(["systemctl", "--user", "is-active", "--quiet", UNIT], timeout=10).returncode == 0
+    running = _unit_active()
     return {"current": here, "latest": latest, "newer": newer, "checked": state.get("checked", 0), "error": state.get("error", ""),
             "rc": state.get("rc"), "can_run": ok, "why": why, "running": running, "repo": REPO}
+
+
+def _unit_active():
+    """HERESY 2930: the update's unit runs now; no systemctl here (Windows, macOS): no unit can run, so none does (the Windows soak: /update was a 404)"""
+    if not shutil.which("systemctl"):
+        return False
+    try:
+        return subprocess.run(["systemctl", "--user", "is-active", "--quiet", UNIT], timeout=10).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
 
 
 def run(root, config_dir, tag, busy):

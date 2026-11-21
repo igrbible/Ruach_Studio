@@ -86,7 +86,7 @@ def end(pids, grace=GRACE_S):
         left = [p for p in left if _alive(p)]
     for p in left:
         try:
-            os.kill(p, signal.SIGKILL)
+            os.kill(p, getattr(signal, "SIGKILL", signal.SIGTERM))   # HERESY 2924b: Windows has no SIGKILL
         except OSError:
             pass
     return pids

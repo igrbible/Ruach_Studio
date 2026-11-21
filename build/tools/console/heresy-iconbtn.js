@@ -66,7 +66,29 @@
     b.dataset.iconized = MAP[key];
     b.innerHTML = '<svg class="ib-svg" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' + SVG[MAP[key]] + '</svg><span class="ib-label">' + esc(key) + "</span>";
     if (!b.hasAttribute("data-tip")) b.setAttribute("data-tip", key);
-    b.classList.add("btn-icon");
+    b.classList.add("btn-icon");    if (MAP[key] === "x") xTop(b);                       // HERESY 2909
+  }
+  // HERESY 2909 (Viktor 20.11.2026: «Проверить все диалоговые окна и перенести крестик кнопки закрытия окна вверх вправо на уровень заголовка окна»): a
+  // dialog's ✕ (its Cancel or Close, drawn as ✕ since 1593) leaves the row of answers under the dialog for the title's line, at its right end, one rule
+  // for every window built as the Studio's dialog (.hd-box: HeresyDialog's confirm, prompt, choose and pick, and the page's own windows in that
+  // frame): the button moves, its word, tip, aria-label and its answer (Cancel) with it, Esc as before; the named answers (OK, Later, Sing it anew…)
+  // stay in their row, and a row left empty goes. HERESY 2909b: the ✕ stays the box's last child (after the answers' row, where it stood in the
+  // box's order) and is drawn on the title's line by the style (.hd-has-x), so the title's words stay the title alone and the dialog reads as
+  // before: its title, its text, then Cancel (inside the title its hidden word «Cancel» ran into the title for everything that reads it)
+  // the frames: a dialog (its title), and the Library's sheet (its head row, the take's title in it)
+  var X_FRAMES = [{ acts: ".hd-acts", box: ".hd-box", head: ":scope > .hd-title", wrap: true }, { acts: ".sheet-acts", box: "#collSheet", head: ".sheet-head", wrap: false }];
+  function xTop(b) {
+    var acts = b.parentElement, f = acts && X_FRAMES.filter(function (x) { return acts.matches(x.acts); })[0], box = f && b.closest(f.box);
+    if (!f || !box || (f.wrap && acts.parentElement !== box)) return;
+    var title = box.querySelector(f.head);
+    if (!title || title.querySelector(".hd-x")) return;
+    if (!f.wrap) { b.classList.remove("btn", "ghost", "small"); b.classList.add("hd-x", "x-head"); title.appendChild(b); return; }
+    if (box.querySelector(":scope > .hd-x")) return;
+    b.classList.remove("btn", "ghost", "small");
+    b.classList.add("hd-x", "x-box");
+    box.classList.add("hd-has-x");
+    box.appendChild(b);
+    if (!Array.prototype.some.call(acts.children, function (c) { return c.tagName === "BUTTON" || c.tagName === "INPUT" || c.tagName === "LABEL"; })) acts.hidden = true;
   }
   function scan(root) {
     if (!root || root.nodeType !== 1) return;

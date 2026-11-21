@@ -567,6 +567,20 @@ A hotfix for 2.0.9, from [#13](https://github.com/igrbible/Ruach_Studio/issues/1
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
+### Done › 2.1.0-rc1 (November 2026)
+
+- **The Section editor**: a take's sections as a strip over the whole Musician room; queue one edit a section (replace it, re-sing a line, sing it once more, insert an interlude or a part, repeat, remove, re-sing to the end, extend) and assemble them into one new take, the source kept; a take with no score of its own gets one written from its sound first.
+- **The Narrator in three columns**: the text, «At hand» and the voice side by side; the lyrics editor's tools and «[» for tags and voices; its readings on the right with reactions; the first 2, 3 or 5 minutes and up to four versions at once; Top-p; a director's line for Drama 3 written by the Writer's model; your own voice renamed, cleaned or given a profile.
+- **Versions everywhere**: the Writer, the Narrator and the Musician keep every version, 1.0 when none is set; a song lives in the Writer from its first save, and Ctrl+S in the Musician reaches it.
+- **Workspaces and the Library**: an emoji for each workspace and section in an even column of the tree, its order and filters in a chooser, a card's workspaces opened in one click; lower, tidier cards; a history of plays and downloads (Ctrl+H, Ctrl+J); play-on from 0:00 in the list's own order.
+- **MIDI export in one window**: the score's MIDI at once, or MuScriptor on the mix or per stem, on the take's own beats.
+- **The DAW**: «Live» in the browser or «Forge» rendered by the Studio; a lane as a spectrogram; detached windows that follow your screens.
+- **Songs**: «Follow my sections» (2.0.10) off by default under the planning modes, with a guard that asks before a plan past 4:00; [Interlude] with words stays an interlude; the music cache in 8 bits for smaller cards.
+- **Windows**: `RuachStudio.exe` starts the Studio without console windows and makes a tester's report; the Weights panel and the system bar work natively ([#15](https://github.com/igrbible/Ruach_Studio/issues/15)).
+- **Around the rooms**: one play button everywhere, ✕ at the top right of every dialog, the Trainer's honest cards and clock, a deleted take freeing all of its files, Pinokio's page listing what the Studio stands on.
+
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
 ### To Do › After 2.0.0
 
 2.0.0 is the Studio we make our own songs in every day. These are the larger pieces on their way, planned or put off until their time:

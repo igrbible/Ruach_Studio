@@ -140,7 +140,8 @@ def datasets(kit, with_runs=True):
     own = {q: (P["models"] / "checkpoints" / f).is_file() for q, f in OWN_CKPT.items()}
     own.update(mert=(studio_paths.at(studio_paths.MISC, kit) / "MERT-v2-FullSong" / "model.safetensors").is_file(),
                head=(P["head"] / "tokenizer_head_joint_v4.pt").is_file())
-    out = {"raw": raw, "prepared": prepared, "own": own, "head": P["head"].is_dir(), "gpus": gpus(), "engines": plugin_engines(kit)}   # HERESY 2321
+    out = {"raw": raw, "prepared": prepared, "own": own, "head": P["head"].is_dir(), "gpus": gpus(), "engines": plugin_engines(kit),   # HERESY 2321
+           "no_runs": no_runs()}                    # HERESY 2932: no systemd here, the room says so
     if with_runs:
         out["runs"] = runs(kit)["runs"]
     return out
@@ -211,7 +212,8 @@ def plugin_trainers(kit):
                 tid = str((t or {}).get("id") or "")
                 script = (folder / str(t.get("script") or "")).resolve()
                 if PLUGIN_ID.match(tid) and tid != "ruach" and tid not in out and script.is_file() and folder in script.parents:
-                    out[tid] = {"id": tid, "plugin": str(raw.get("id") or folder.name), "folder": str(folder), "script": str(script), "python": str(py)}
+                    out[tid] = {"id": tid, "plugin": str(raw.get("id") or folder.name), "folder": str(folder), "script": str(script), "python": str(py),
+                                "base": str(t.get("base") or "")[:300]}   # HERESY 2876: the model its runs learn on, as the plugin says it
         except (OSError, ValueError, TypeError, AttributeError):
             continue
     return out
@@ -599,7 +601,7 @@ def _jsonl_step(ln):
     if r.get("kind") != "step" or not isinstance(r.get("step"), int):
         return []
     out, st = [], r["step"]
-    for k in ("lr", "grad_norm", "s"):
+    for k in ("lr", "grad_norm", "s", "lr_ar", "lr_nar"):     # HERESY 2875: a run's towers' own rates (the 4.6B's), drawn each by its tower
         v = r.get(k)
         if isinstance(v, (int, float)):
             out.append((k, st, float(v)))
@@ -1049,6 +1051,50 @@ def checkpoint_file(kit, run, file):
 LIVE = ("running", "stopping", "pausing")             # HERESY 2726: a run training now, as the Trainer's page says it (isLive)
 
 
+# HERESY 2876 (Viktor 19.11.2026, about 23:35: «Я хочу видеть правильные данные и точно ту базовую модель, на которой мы обучаем»; 00:25: «чтобы
+# не лгал на горящем ране ни на одной карточке»): a live run's own command line, as its unit runs it (the truth the card's facts are checked
+# against: the flags a run took on a resume are only there), read once a process; and a plugin run's base model, as its plugin.json says it
+CMDLINES = {}
+LOG_SET = {}
+LOG_SET_RE = re.compile(r"\bset (\S+): (\d+) rows, epoch (\d+) rows = (\d+) steps of (\d+)")
+
+
+def _log_set(d):
+    """HERESY 2876: the set as the trainer itself said it in train.log (the tracks it trains on, the held-out left out), the newest such line;
+    a plugin's plan counted the held-out in (the 4.6B's 108,193 against the 108,111 it trains on)"""
+    p = d / "train.log"
+    try:
+        st = p.stat()
+        hit = LOG_SET.get(str(p))
+        if hit and hit[0] == (st.st_ino, st.st_size):
+            return hit[1]
+        found = None
+        with open(p, "rb") as f:
+            for ln in f:
+                if b"rows, epoch" in ln:
+                    m = LOG_SET_RE.search(ln.decode("utf-8", "replace"))
+                    if m:
+                        found = m.groups()
+        LOG_SET[str(p)] = ((st.st_ino, st.st_size), found)
+        return found
+    except OSError:
+        return None
+
+
+def _cmdline(run):
+    try:
+        pid = _systemctl("show", _unit(run) + ".service", "-p", "MainPID", "--value").stdout.strip()
+        if not pid or pid == "0":
+            return None
+        if pid not in CMDLINES:
+            raw = open(f"/proc/{pid}/cmdline", "rb").read().split(b"\0")
+            CMDLINES.clear()
+            CMDLINES[pid] = [a.decode("utf-8", "replace") for a in raw if a]
+        return CMDLINES[pid]
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
 def runs(kit, part="", start=0, count=0):
     """Every run, newest first, with what its card shows: options, outcome, curves, checkpoints.
     HERESY 2726 (the resource audit of 18.11.2026, R2; Viktor 17.11.2026: «каскадно прогоны подгружались в тренер: активный, пачками со свежего до
@@ -1085,6 +1131,17 @@ def runs(kit, part="", start=0, count=0):
         r["checkpoints"] = checkpoints(kit, d.name, d)
         r["gone"] = gone(kit, d.name, d, r["checkpoints"])   # HERESY 1816
         r["protected"] = protected(d)                         # HERESY 1817
+        if r.get("plugin"):                                   # HERESY 2876: its base model, and a live one's command line
+            t = plugin_trainers(kit).get(str((r.get("options") or {}).get("engine") or ""))
+            if t and t.get("base") and not any((f or [""])[0] == "base" for f in r.get("facts") or []):
+                r["facts"] = [["base", t["base"]]] + list(r.get("facts") or [])
+            if live and r.get("status") in LIVE:
+                r["cmdline"] = _cmdline(d.name)
+            said = _log_set(d)
+            if said:
+                name, n, ep_rows, spe, per = said
+                r["facts"] = [["set", f"{name.rsplit('/', 1)[-1]} · {int(n):,} tracks · {int(ep_rows):,} rows an epoch = {int(spe):,} steps of {per} (its train.log)"] if (f or [""])[0] == "set" else f
+                              for f in r.get("facts") or []]
         if live and r.get("plugin"):                  # HERESY 2321: a plugin's run, from its own step log
             r.update({k: live.get(k) for k in ("elapsed_s", "eta_s", "sec_per_step")})
         elif live and live.get("tail"):               # HERESY 1090: the time it has run and has left, from tqdm's line
@@ -1302,9 +1359,20 @@ def run_cards(meta):
     return [int(x) for x in g]
 
 
+NO_RUNS = ("the Trainer runs each training as a systemd unit of its own, and this machine has no systemd (Windows, macOS): "
+           "training runs on Linux for now")
+
+
+def no_runs():
+    """HERESY 2932: why no run can start on this machine, or \"\" where one can (the room says it in place of the weights it lacks)"""
+    return "" if shutil.which("systemd-run") else NO_RUNS
+
+
 def train(kit, spec, gpu_picker, more_cards=None):
     """spec: {dataset, name, steps, save_epochs, rank, lr, cot, ar_loss_weight, ar_kl_weight, ar_lr_multiplier,
     do_separation, quant, gpu, kind, note}. A run of the same name goes on from its last checkpoint."""
+    if no_runs():                                       # HERESY 2930: said before a run is written, not «[WinError 2]» after
+        raise ValueError(NO_RUNS)
     P = paths(kit)
     dataset = str(spec.get("dataset", ""))
     _safe_dir(P["prepared"], dataset)
@@ -1508,13 +1576,16 @@ def _train_plugin(kit, spec, t, gpu_picker, more_cards):
     return dict(meta)
 
 
+PAUSE_S = 120      # HERESY 2878: the shortest step that may be a pause between two sittings (and ten middle steps at least)
+
+
 def _plugin_progress(db):
     """HERESY 2321: a plugin's run as its step log says it: (step, loss, ar_ce, seconds a step over its last steps), or None"""
     if not db.is_file():
         return None
     try:
         con = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=5)
-        rows = con.execute("SELECT step, wall_time FROM steps ORDER BY step DESC LIMIT 41").fetchall()
+        rows = con.execute("SELECT step, wall_time FROM steps ORDER BY step DESC LIMIT 479").fetchall()
         if not rows:
             con.close()
             return None
@@ -1523,8 +1594,19 @@ def _plugin_progress(db):
         con.close()
     except sqlite3.Error:
         return None
+    # HERESY 2878 (20.11.2026, the live 4.6B: «осталось 89 ч» for 79 by the clock): the seconds a step are the mean over the last stretch of up
+    # to 478 steps (one save apart on the 4.6B), its evals and saves in it (35-45 s on the 4.6B), stopped at a pause: a step longer than ten
+    # middle steps and than PAUSE_S (a resume took 301 s, the reboot 783 s). The median of 40 steps read 15.2 s: the 4.6B's NAR-only batches are
+    # quick, so its middle step is a slow one, and the median is no clock for «left»; it only tells a pause
     gaps = sorted((a[1] - b[1]) / (a[0] - b[0]) for a, b in zip(rows, rows[1:]) if a[0] > b[0] and a[1] > b[1])
-    return last, got.get("loss/loss"), got.get("loss/ar_ce"), (gaps[len(gaps) // 2] if gaps else None)   # the median: a pause in the window says nothing
+    pause = max(PAUSE_S, 10 * gaps[len(gaps) // 2]) if gaps else PAUSE_S
+    span = rows[:1]
+    for a, b in zip(rows, rows[1:]):
+        if not (a[0] > b[0] and a[1] > b[1]) or (a[1] - b[1]) / (a[0] - b[0]) > pause:
+            break
+        span.append(b)
+    sps = (span[0][1] - span[-1][1]) / (span[0][0] - span[-1][0]) if len(span) > 1 else None
+    return last, got.get("loss/loss"), got.get("loss/ar_ce"), (round(sps, 2) if sps else None)
 
 
 def _watch_plugin(kit, run):
@@ -1585,8 +1667,8 @@ def run_status(kit, run):
         ser = _series(paths(kit)["runs"] / run)        # ar_ce is not on tqdm's line: from the step log
         if ser.get("ar_ce"):
             out["ar_ce"] = ser["ar_ce"]["last"]
-        if ser.get("sec_per_step"):
-            out["sec_per_step"] = ser["sec_per_step"]
+        if job.get("sec_per_step") or ser.get("sec_per_step"):      # HERESY 2878: a live plugin run's pace now, else the run's average
+            out["sec_per_step"] = job.get("sec_per_step") or ser["sec_per_step"]
         return out
     f = paths(kit)["runs"] / run / "run.json"
     if f.is_file():

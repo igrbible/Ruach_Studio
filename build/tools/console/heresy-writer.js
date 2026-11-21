@@ -12,7 +12,7 @@
   var HAND_KEY = "yue2.writerDoc", SCOPE = (new URLSearchParams(location.search).get("scope") || "").replace(/[^a-z0-9_-]/gi, "");
   var state = { docs: [], doc: null, dirty: false, saving: null, timer: 0, q: "", view: null, hooks: null, preview: false,
                 // HERESY 2479: the list's sort, filter and grouping (kept in this browser), the trash shown instead, the groups unfolded
-                sort: recall("yue2.wrSort") || "changed", filter: recall("yue2.wrFilter") || "all", group: recall("yue2.wrGroup") !== "0",
+                sort: recall("yue2.wrSort") || "changed", filter: recall("yue2.wrFilter") || "all", group: recall("yue2.wrGroup2") !== "0",   // HERESY 2862: on by default for everyone again (a key of its own; the old one held «off»)
                 trashView: false, trash: [], openGroups: (function () { try { return JSON.parse(recall("yue2.wrOpenGroups") || "{}") || {}; } catch (e) { return {}; } })() };
   var LYR_MAX = 10000;                                   // HERESY 2480: a song's lyrics, as the Musician's form holds them
   function $(id) { return document.getElementById(id); }
@@ -21,6 +21,13 @@
   function store(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* private */ } }
   function toast(t, bad) { state.hooks && state.hooks.toast(t, bad ? "bad" : ""); }
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
+  // HERESY 2862 (Viktor 19.11.2026: «единое поле для названия трека вместе с версией — это неправильно. Нужно так же сделать, как и в Композиторе
+  // Музыканта»): the version beside the name, as the Composer's (1614): what is saved is «Name vN.N», as his titles are, and comes back split
+  var VER_TAIL = /^(.*\S)\s+v(\d+(?:\.\d+)*)$/i;
+  function cleanVer(v) { return String(v || "").replace(/[^0-9.]/g, "").replace(/\.{2,}/g, ".").replace(/^\.+/, ""); }
+  function titleNow() { var t = $("wrTitle").value.trim(), v = cleanVer($("wrTitleVersion") ? $("wrTitleVersion").value : "").replace(/\.+$/, ""); return t && v ? t + " v" + v : t; }
+  function setTitle(full) { var t = String(full || ""), m = VER_TAIL.exec(t.trim()); $("wrTitle").value = m ? m[1] : t; if ($("wrTitleVersion")) $("wrTitleVersion").value = m ? m[2] : ""; }
+  function verLabel(title) { var m = VER_TAIL.exec(String(title || "").trim()); return m ? "v" + m[2] : ""; }
   function api(body, id) {
     var q = [];
     if (id) q.push("id=" + encodeURIComponent(id));
@@ -221,11 +228,11 @@
     $("wrEmpty").hidden = !!doc; $("wrDoc").hidden = !doc;
     if ($("wrRecent")) $("wrRecent").hidden = !!doc;     // HERESY 1858; 2479: the guide shows with no document too
     if (!doc) return;
-    $("wrTitle").value = src.title || "";
+    setTitle(src.title || "");                           // HERESY 2862
     $("wrStyle").value = src.style || "";
     $("wrLyrics").value = src.lyrics || "";
     $("wrNotes").value = src.notes || "";
-    ["wrTitle", "wrStyle", "wrLyrics", "wrNotes"].forEach(function (id) { $(id).readOnly = !!v; });
+    ["wrTitle", "wrTitleVersion", "wrStyle", "wrLyrics", "wrNotes"].forEach(function (id) { if ($(id)) $(id).readOnly = !!v; });
     $("wrVersionBar").hidden = !v;
     if (v) $("wrVersionSay").textContent = "Version of " + when(v.at) + (v.label ? " — " + v.label : "") + ". Read only.";
     paintVersionDiff(v, doc);
@@ -340,11 +347,11 @@
     var vs = state.doc.versions || [];
     $("wrVersionsN").textContent = vs.length ? "(" + vs.length + ")" : "";
     $("wrVersions").innerHTML = vs.length ? vs.map(function (v, i) { return { v: v, i: i }; }).reverse().map(function (x) {
-      var v = x.v, n = (v.lyrics || "").split(/\r?\n/).filter(function (l) { return l.trim(); }).length;
-      return '<button type="button" class="wr-ver' + (state.view === x.i ? " is-on" : "") + '" data-ver="' + x.i + '"><span>' + esc(when(v.at)) + "</span>" +
+      var v = x.v, n = (v.lyrics || "").split(/\r?\n/).filter(function (l) { return l.trim(); }).length, vl = verLabel(v.title);   // HERESY 2862: its number first
+      return '<button type="button" class="wr-ver' + (state.view === x.i ? " is-on" : "") + '" data-ver="' + x.i + '">' + (vl ? '<b class="wr-ver-v" translate="no">' + esc(vl) + "</b>" : "") + "<span>" + esc(when(v.at)) + "</span>" +
         (v.label ? '<span class="wr-ver-label">' + esc(v.label) + "</span>" : "") +
         '<span class="dim">' + esc((v.title || "").slice(0, 40)) + " · " + n + " lines · style " + (v.style || "").length + "</span></button>";
-    }).join("") : '<p class="row-hint">A version is kept at every save after a pause, and whenever you keep one.</p>';
+    }).join("") : '<p class="row-hint">' + esc(tr("A version is kept at every new version number, at every save after a pause, and whenever you keep one.")) + "</p>";
   }
   function paintState() {
     $("wrState").textContent = state.saving ? "saving…" : state.cutHeld ? tr("unsaved: a big cut waits for your choice") : state.dirty ? "unsaved" : state.doc ? "saved " + when(state.doc.updated) : "";   // HERESY 2492
@@ -352,8 +359,14 @@
   }
 
   // ---- saving: typing autosaves after a pause; a sitting is one version
+  // HERESY 2869 (Viktor 19.11.2026: «И автоматом присваиваем версию 1.0, если не выставлена»): a named document saved with no version is 1.0,
+  // the field showing it; only on a save (fields() is read by the compare and the cut guard too, which change nothing)
+  function defaultVer() {
+    var vf = $("wrTitleVersion");
+    if (vf && !vf.readOnly && $("wrTitle").value.trim() && !cleanVer(vf.value).replace(/\.+$/, "")) vf.value = "1.0";
+  }
   function fields() {
-    return { title: $("wrTitle").value.trim() || "Untitled", style: $("wrStyle").value, lyrics: $("wrLyrics").value, notes: $("wrNotes").value };
+    return { title: titleNow() || "Untitled", style: $("wrStyle").value, lyrics: $("wrLyrics").value, notes: $("wrNotes").value };
   }
   function changed() {
     if (!state.doc || state.view !== null) return;
@@ -422,7 +435,7 @@
     if (v === "keep") { state.cutOk = true; state.cutHeld = false; paintCut(null); return flush(); }
     if (v === "undo") {
       var d = state.doc || {};
-      $("wrTitle").value = d.title || ""; $("wrStyle").value = d.style || ""; $("wrLyrics").value = d.lyrics || ""; $("wrNotes").value = d.notes || "";
+      setTitle(d.title || ""); $("wrStyle").value = d.style || ""; $("wrLyrics").value = d.lyrics || ""; $("wrNotes").value = d.notes || "";
       state.dirty = false; state.cutHeld = false; paintCut(null); paintState(); paintSizes(); paintNotes();
       return Promise.resolve();
     }
@@ -433,6 +446,7 @@
     clearTimeout(state.timer);
     if (state.saving) return state.saving.then(flush);
     if (!state.doc || !state.dirty) return Promise.resolve();
+    defaultVer();                                        // HERESY 2869
     var f = fields(), cut = state.cutOk ? null : bigCut(f, state.doc);
     if (cut) return askCut(cut);                         // HERESY 2492
     var body = Object.assign({ op: "put", id: state.doc.id, autosave: true }, f, state.cutOk ? { label: tr("before a big cut"), autosave: false } : {});   // not an autosave: the lab keeps the text before as a version, now
@@ -457,7 +471,8 @@
   }
 
   // ---- Create, both ways
-  function fromCreate(asNew) {
+  function fromCreate(asNew, quiet) {
+    if (state.hooks.defaultVersion) state.hooks.defaultVersion();   // HERESY 2869: a named song saved with no version is 1.0
     var f = state.hooks.form(), hand = recall(HAND_KEY);
     var id = asNew ? null : hand;
     var body = { op: "put", title: f.title || "Untitled", style: f.style, lyrics: f.lyrics, params: f.params };
@@ -467,10 +482,51 @@
       throw e;
     }).then(function (doc) {
       store(HAND_KEY, doc.id);
-      toast((id ? "Saved to “" : "A new document in the Writer: “") + doc.title + "”" + (id ? " (the version before is kept)" : ""));
+      if (!quiet) toast((id ? "Saved to “" : "A new document in the Writer: “") + doc.title + "”" + (id ? " (the version before is kept)" : ""));
       if (state.doc && state.doc.id === doc.id) { state.doc = doc; state.dirty = false; paintDoc(); }
       return loadList().then(function () { return doc; });
     }).catch(function (e) { toast(e.message, true); });
+  }
+  // HERESY 2863 (19.11.2026: a typo fixed in the Musician and kept with Ctrl+S reached only the Musician's versions; the Writer's document in hand
+  // kept «Nb» though the Writer said «In hand in the Musician»): Ctrl+S in the Musician puts the song in its form into the document in hand, when
+  // it is the same song (its title without the version) and its title, style or lyrics differ; the lab keeps the document's text before as a
+  // version (a save, not an autosave). Another song in the form leaves the document alone. {saved, same, other} or null with nothing in hand
+  function syncHand() {
+    var hand = recall(HAND_KEY);
+    if (!hand || !state.hooks) return Promise.resolve(null);
+    var f = state.hooks.form();
+    if (!String(f.style || "").trim() && !String(f.lyrics || "").trim()) return Promise.resolve(null);
+    return flush().then(function () { return api(undefined, hand); }).then(function (doc) {
+      if (groupKey(doc.title) !== groupKey(f.title || "Untitled")) return { other: true, doc: doc };
+      if ((f.title || "Untitled") === doc.title && f.style === doc.style && f.lyrics === doc.lyrics) return { same: true, doc: doc };
+      return fromCreate(false, true).then(function (d2) { return d2 ? { saved: true, doc: d2 } : null; });
+    }, function (e) {
+      if (/no such document/.test(e.message)) { store(HAND_KEY, null); paintHand(); return null; }
+      throw e;
+    });
+  }
+  // HERESY 2905 (Viktor 19.11.2026 and 20.11.2026: «всё из Музыканта автоматом синхронизировать с Писателем и создавать документ по первому же
+  // сохранению в Музыканте… Писатель у нас — также полнейший протокол всего промптинга в Музыканте и Чтеце»): the Musician's titled song, at its
+  // Ctrl+S and at every Generate, kept by the lab in the Writer's document of that song (op song_keep: the same title without its version, the
+  // Musician's realm; made on the first save; a changed text keeps the one before as a version; a Generate's takes linked), and that document is the
+  // one in hand from then on. words: {title (with its version), style, lyrics}; params: the form's knobs. {doc, created, kept} or null
+  function keepSong(words, takes, params) {
+    var title = String(words && words.title || "").trim();
+    if (!title || /^untitled$/i.test(title) || !(String(words.style || "").trim() || String(words.lyrics || "").trim())) return Promise.resolve(null);
+    var body = { op: "song_keep", title: title, style: words.style || "", lyrics: words.lyrics || "", takes: takes || [] };
+    if (params && typeof params === "object") body.params = params;
+    return flush().then(function () { return api(body); }).then(function (d) {
+      if (!d || !d.doc) return null;
+      var was = recall(HAND_KEY);
+      store(HAND_KEY, d.doc.id);
+      if (d.created) toast(tr("The Writer keeps this song from now on: “{0}”, a new document, in hand").replace("{0}", d.doc.title));
+      if (d.created || d.kept || was !== d.doc.id) { if (state.listOk) loadList(); else paintHand(); }   // the list first: paintHand drops a hand it cannot find there
+      if (state.doc && state.doc.id === d.doc.id && !state.dirty) api(undefined, d.doc.id).then(function (doc) { state.doc = doc; paintDoc(); }).catch(function () {});
+      return d;
+    }, function (e) {
+      if (/unknown op/i.test(String(e && e.message))) return syncHand();   // a lab older than the page: the document in hand, as 2863 did
+      toast(tr("The song was not kept in the Writer: {0}").replace("{0}", e.message), true); return null;
+    });
   }
   function intoCreate(doc) {   // HERESY 1167: true when the document went into the Creator
     // HERESY 2799: a style past 800 characters without spaces stays here to be shortened; nothing goes into the Musician
@@ -612,6 +668,8 @@
   }
 
   function init(hooks) {
+    var big = $("wrLyricsBig");                         // HERESY 2918: ⤢ last in the text's head, after the toggles HeresyLyrics put there
+    if (big && big.parentNode) big.parentNode.appendChild(big);
     state.hooks = hooks;
     // HERESY 1268 (Viktor 09.10.2026: «В комнате Писателя дай возможность регулировать ширину левой колонки со списком документов»): the
     // documents column's edge dragged (its width kept in this browser), ← → from the keyboard, Home or a double click for its own 280 px
@@ -676,7 +734,7 @@
         }));
       });
     });
-    $("wrGroupBtn").addEventListener("click", function () { state.group = !state.group; store("yue2.wrGroup", state.group ? null : "0"); paintList(); });
+    $("wrGroupBtn").addEventListener("click", function () { state.group = !state.group; store("yue2.wrGroup2", state.group ? null : "0"); paintList(); });
     $("wrTrashBtn").addEventListener("click", function () { state.trashView = !state.trashView; if (state.trashView) loadTrash(); else paintList(); });
     // HERESY 2480: the document's world, the limits it brings, and «Read in the Narrator» making a document of no world yet a reading
     $("wrRealm").addEventListener("click", function (e) { var b = e.target.closest("[data-realm]"); if (b && !b.disabled) setRealm(b.dataset.realm); });
@@ -809,6 +867,28 @@
         });
       }).catch(function (e) { toast(e.message, true); });
     });
+    // HERESY 2862: the version guarded as typed (digits and dots) and saved when it is left: another number keeps the one before, said aloud
+    $("wrTitleVersion").addEventListener("input", function () {
+      var c = cleanVer(this.value);
+      if (c !== this.value) { var at = Math.max(0, (this.selectionStart || 0) - (this.value.length - c.length)); this.value = c; this.setSelectionRange(at, at); }
+    });
+    $("wrTitleVersion").addEventListener("change", function () {
+      this.value = cleanVer(this.value).replace(/\.+$/, "");
+      if (!state.doc || state.view !== null) return;
+      var was = state.doc.title, n = (state.doc.versions || []).length;
+      changed();
+      flush().then(function () {
+        var now = state.doc ? state.doc.title : "";
+        if (state.doc && (state.doc.versions || []).length > n && verLabel(was) !== verLabel(now))
+          toast(tr("{0} kept in the versions; now {1}").replace("{0}", verLabel(was) || was).replace("{1}", verLabel(now) || tr("no version")));
+      });
+    });
+    $("wrTitle").addEventListener("change", function () {   // a name typed with its version splits into the two, as in the Composer
+      var m = VER_TAIL.exec(this.value.trim()), f = $("wrTitleVersion");
+      if (m && f && !f.value && !this.readOnly) { this.value = m[1]; f.value = m[2]; f.dispatchEvent(new Event("change")); }
+    });
+    var vbox = $("wrVersBox");                           // HERESY 2862: the versions under the head, open unless folded by hand
+    if (vbox) { vbox.open = recall("yue2.wrVersOpen") !== "0"; vbox.addEventListener("toggle", function () { store("yue2.wrVersOpen", vbox.open ? null : "0"); }); }
     $("wrVersions").addEventListener("click", function (e) {
       var b = e.target.closest("[data-ver]");
       if (!b) return;
@@ -854,7 +934,92 @@
     loadList();
   }
 
+  // HERESY 2918 (Viktor 21.11.2026, at «Как закалялся кремний» 1.0.5 in the Writer: «Писатель. В редактор лирики прикрути Full Screen с Alt+E как в
+  // Музыканте»): the notebook's text over everything, as the Musician's lyrics are lifted (1169, 1269): 60 % of the screen and four tenths larger, the
+  // box itself moved there with its meter (the numbers, the rulers, the stress marks and the counts go with it) and back where it stood; ⤢ in the
+  // text's head, Alt+E in the Writer, Esc (unless a list, a find bar or a question has it), its own ⤡ or another room put it back. The text sizes
+  // are the Musician's (yue2.lyricsZoom): one setting for both lifts
+  var wrOver = null;
+  function wrZoomStep() { var k = parseInt(recall("yue2.lyricsZoom") || "0", 10); return isFinite(k) ? Math.max(-2, Math.min(2, k)) : 0; }
+  function wrZoomPaint() {
+    if (!wrOver) return;
+    var k = wrZoomStep(), box = wrOver.back.querySelector(".lyr-over-box");
+    box.style.setProperty("--lyr-t", String(Math.round(Math.pow(1.1, k) * 1000) / 1000));
+    box.querySelector('[data-lyr-z="-1"]').disabled = k <= -2;
+    box.querySelector('[data-lyr-z="1"]').disabled = k >= 2;
+    box.querySelector('[data-lyr-z="0"]').disabled = k === 0;
+  }
+  function wrLift(on) {
+    var area = $("wrLyrics");
+    if (!area) return;
+    if (on && !wrOver) {
+      var wrap = area.closest(".lyr-wrap") || area, meter = $("wrLyricsMeter"), back = document.createElement("div");
+      var ui = function (n) { return window.HeresyIcons ? window.HeresyIcons.ui(n) : ""; }, t = titleNow();
+      back.className = "lyr-over wr-lyr-over";
+      back.id = "wrLyrOver";
+      back.innerHTML = '<div class="lyr-over-box" role="dialog" aria-label="Lyrics"><div class="lyr-over-head"><b>' + esc(tr("Lyrics")) + "</b>" +
+        (t ? '<span class="wr-over-title" translate="no">' + esc(t) + "</span>" : "") + '<span class="spacer"></span>' +
+        '<span class="lyr-over-fs" role="group" aria-label="Text size"><button type="button" class="btn ghost small icon-btn" data-lyr-z="-1" aria-label="Smaller text" data-tip="Smaller text here">' + ui("text-smaller") +
+        '</button><button type="button" class="btn ghost small icon-btn" data-lyr-z="1" aria-label="Larger text" data-tip="Larger text here">' + ui("text-larger") +
+        '</button><button type="button" class="btn ghost small icon-btn" data-lyr-z="0" aria-label="The text as it starts" data-tip="The text as it starts: four tenths larger than in the form">' + ui("text-reset") + "</button></span>" +
+        '<button type="button" class="btn ghost small icon-btn" id="wrLyricsBack" aria-label="Back into the notebook" data-tip="Back into the notebook (Esc or Alt+E)">' + ui("minimize") +
+        '</button></div><div class="lyr-over-body"></div></div>';
+      document.body.appendChild(back);
+      wrOver = { back: back, wrap: wrap, wrapParent: wrap.parentNode, wrapNext: wrap.nextSibling, meter: meter, meterParent: meter && meter.parentNode, meterNext: meter && meter.nextSibling };
+      var body = back.querySelector(".lyr-over-body");
+      body.appendChild(wrap);
+      if (meter) body.appendChild(meter);
+      back.addEventListener("click", function (e) { if (e.target === back) wrLift(false); });
+      $("wrLyricsBack").addEventListener("click", function () { wrLift(false); });
+      back.querySelector(".lyr-over-fs").addEventListener("click", function (e) {
+        var b = e.target.closest("[data-lyr-z]");
+        if (!b) return;
+        var k = +b.dataset.lyrZ === 0 ? 0 : Math.max(-2, Math.min(2, wrZoomStep() + +b.dataset.lyrZ));
+        store("yue2.lyricsZoom", k ? String(k) : null);
+        wrZoomPaint();
+        window.dispatchEvent(new Event("resize"));
+      });
+      wrZoomPaint();
+      document.body.classList.add("lyr-over-on");
+      area.focus({ preventScroll: true });
+    } else if (!on && wrOver) {
+      var o = wrOver;
+      wrOver = null;
+      o.wrapParent.insertBefore(o.wrap, o.wrapNext);
+      if (o.meter) o.meterParent.insertBefore(o.meter, o.meterNext);
+      o.back.remove();
+      if (!document.getElementById("lyrOver")) document.body.classList.remove("lyr-over-on");
+    }
+    if ($("wrLyricsBig")) $("wrLyricsBig").setAttribute("aria-pressed", wrOver ? "true" : "false");
+    window.dispatchEvent(new Event("resize"));   // the meter, the numbers and the marks measure their box again
+  }
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest || !e.target.closest("#wrLyricsBig")) return;
+    e.preventDefault(); e.stopPropagation();
+    wrLift(!wrOver);
+  });
+  window.addEventListener("keydown", function (e) {
+    if (!(e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.code === "KeyE") || document.body.dataset.tab !== "write") return;
+    if (document.querySelector(".hd-back.is-on, #seBack")) return;          // never over a question or the Section editor
+    var area = $("wrLyrics");
+    if (!area || (!wrOver && !area.offsetParent)) return;                     // the notebook's text not in sight: nothing to lift
+    e.preventDefault(); e.stopImmediatePropagation();
+    wrLift(!wrOver);
+  }, true);
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape" || !wrOver) return;
+    if (document.querySelector(".hd-back.is-on, .tc-pop:not([hidden]), .find-bar:not([hidden]), .hi-back:not([hidden])")) return;
+    e.preventDefault(); e.stopPropagation();
+    wrLift(false);
+  }, true);
+  new MutationObserver(function () { if (wrOver && document.body.dataset.tab !== "write") wrLift(false); }).observe(document.body, { attributes: true, attributeFilter: ["data-tab"] });
+
   window.HeresyWriter = { init: init, landed: landed, reload: loadList, open: open, fromCreate: fromCreate, md: md, flush: flush,   // HERESY 1269: Ctrl+S
+                          lifted: function () { return !!wrOver; }, lift: wrLift,   // HERESY 2918: the text over everything (for the checks too)
+                          // HERESY 2862: the open document's versions unfolded and in view (the Narrator's Versions)
+                          syncHand: syncHand,   // HERESY 2863: the Musician's Ctrl+S into the document in hand
+                          keepSong: keepSong,   // HERESY 2905: the Musician's titled song into its own document, made on the first save
+                          showVersions: function () { var b = $("wrVersBox"); if (b) { b.open = true; b.scrollIntoView({ block: "nearest", behavior: "smooth" }); } },
                           // HERESY 2490 (Viktor 12.11.2026: «С открытой карточки переход на изначальный чистый канвас»): the document closed, the start canvas back
                           close: function () { state.leaving = true; return flush().then(function () { state.leaving = false; state.doc = null; state.view = null; state.cutHeld = false; paintCut(null); paintDoc(); paintList(); },
                             function (e) { state.leaving = false; toast(e.message, true); }); },
@@ -869,6 +1034,7 @@
                           applyDraft: function (f, id) {
                             if (!state.doc || state.doc.id !== id || state.view !== null) return Promise.reject(new Error("The document the draft was written for is not open in the notebook now"));
                             return flush().then(function () {
+                              defaultVer();                // HERESY 2869
                               return api(Object.assign({ op: "put", id: id, label: "before the Writing room's draft" }, fields(), f));
                             }).then(function (doc) { state.doc = doc; state.dirty = false; state.view = null; paintDoc(); patchListRow(doc); return doc; });
                           },

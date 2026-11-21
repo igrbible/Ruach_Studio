@@ -2422,6 +2422,7 @@ RuachI18n.add("zh", {
 "{#0} captions written": "已写入 {#0} 条描述",
 "drafts here by {0}": "这里的草稿出自 {0}",
 "The Studio’s trainer is missing {0}:": "工作室的训练器缺少 {0}：",
+"Training runs on Linux for now: the Trainer starts each run as a systemd unit, and this machine (Windows, macOS) has none.": "训练目前只能在 Linux 上进行：训练室把每次运行作为 systemd 单元启动，而这台机器（Windows、macOS）没有它。",
 "Comfy-Org's YuE2 {0} weights": "Comfy-Org 的 YuE2 {0} 权重",
 "the realaudio tokenizer head": "realaudio 分词器头",
 "and": "和",
@@ -9646,6 +9647,205 @@ RuachI18n.add("zh", {
 "Sing anyway": "照样演唱",
 "Nothing sung: the style holds negative words. Fix it, or sing it anyway.": "什么也没唱：风格中有否定词。修改它，或者照样演唱。",
 "The 4–12 kHz envelope at 25, 50 … 150 Hz above its neighbours, mean of all windows: the VAE's 25 frames a second heard as an electric buzz in the highs. Music with no buzz reads about 8 dB here and up to 12 (the measure's own floor, at in-between frequencies on 30 takes): amber past 13 dB, red past 15": "4–12 kHz 包络在 25、50 … 150 Hz 处高出相邻频率多少，所有窗口的平均：VAE 每秒 25 帧在高频听起来的电流嗡声。没有嗡声的音乐在这里也约有 8 dB，最高到 12（这项测量自身的底噪，在 30 个样本的中间频率上测得）：超过 13 dB 为黄色，超过 15 为红色",
+// HERESY 2858 (19.11.2026): Engine → Compute, the music cache in 8 bits (Q8_0)
+"Music cache in 8 bits (Q8_0) — about half the memory, for smaller cards": "8 位音乐缓存 (Q8_0) — 约一半显存，适合较小的显卡",
+"About the music cache in 8 bits": "关于 8 位音乐缓存",
+"Music cache in 8 bits": "8 位音乐缓存",
+"now F16": "当前 F16",
+"now Q8_0": "当前 Q8_0",
+"applies before the next song": "在下一首歌之前生效",
+"asked, but this card keeps F16: its flash attention does not read an 8-bit cache": "已开启，但这张显卡保持 F16：它的 flash attention 读不了 8 位缓存",
+"this engine has no 8-bit cache": "这个引擎没有 8 位缓存",
+"the music cache in 8 bits (Engine → Compute) frees about 2.5 GB on a long song; it stays off until you turn it on": "8 位音乐缓存 (引擎 → 计算) 在长歌上省出约 2.5 GB；在你亲自打开之前它一直关闭",
+"The engine keeps what the song has sung so far in a cache on the card. In 8 bits (Q8_0) the cache takes about half the room of the usual 16 bits (F16), so a card of 8–12 GB fits longer songs or a bigger model.": "引擎把歌曲已唱出的内容保存在显卡上的缓存里。用 8 位 (Q8_0) 时缓存约占通常 16 位 (F16) 的一半，所以 8–12 GB 的显卡能放下更长的歌或更大的模型。",
+"Measured on an RTX 3090, a 150 s song: the cache 5.3 → 2.8 GB, the card's peak 16.6 → 14.2 GB, the sound stage 3 % slower.": "在 RTX 3090 上测得，一首 150 秒的歌：缓存 5.3 → 2.8 GB，显卡峰值 16.6 → 14.2 GB，声音阶段慢 3 %。",
+"On the Arc B50 (16 GB), the same song at 75 s: the cache 5.3 → 2.8 GB, the card's peak 13.1 → 10.7 GB; the score stage 20 → 37 s, the sound stage as fast as before.": "在 Arc B50 (16 GB) 上，同一首歌的 75 秒：缓存 5.3 → 2.8 GB，显卡峰值 13.1 → 10.7 GB；乐谱阶段 20 → 37 秒，声音阶段速度不变。",
+"The same seed sings a slightly different take with it (other notes, not a worse sound). Off by default; it applies before the next song. A card that cannot read an 8-bit cache keeps F16, and this switch says so.": "同一个种子用它唱出的会是略有不同的一版 (不同的音符，而不是更差的声音)。默认关闭；在下一首歌之前生效。读不了 8 位缓存的显卡保持 F16，这个开关会如实显示。",
+});
+// HERESY 2862: the Writer's version beside its name, its versions kept at every new number
+RuachI18n.add("zh", {
+"The version beside the name, digits and dots only (1.2.8). Another number keeps the text before it in the versions below, with what differs from now": "名称旁的版本号，只含数字和点 (1.2.8)。换一个编号，之前的文本会保存在下方的版本中，并显示与现在的差异",
+"A version is kept at every new version number, at every save after a pause, and whenever you keep one.": "每次换新的版本号、每次停顿后保存、以及每次你手动保留时，都会保存一个版本。",
+"{0} kept in the versions; now {1}": "{0} 已保存到版本中；现在是 {1}"
+});
+// HERESY 2863: the Musician's Ctrl+S into the Writer's document in hand
+RuachI18n.add("zh", {
+"The Writer's “{0}” now holds the song as the Musician has it (the version before is kept)": "写作室中的“{0}”现在保存着音乐人里的这首歌（之前的版本已保留）"
+});
+// HERESY 2865: the DAW's two ways to play, Live and Forge
+RuachI18n.add("zh", {
+"How the DAW plays": "DAW 的播放方式",
+"Live": "实时",
+"Forge": "Forge",
+"Live in this browser: every knob heard at once, through the browser's audio with larger buffers. Remembered in this browser": "在此浏览器中实时播放：每个旋钮立即可闻，经由浏览器音频，缓冲更大。在此浏览器中记住",
+"Rendered on Forge by the mix's own code, in pieces from the playhead, and played as a file: nothing in the browser between the sound and the speakers. A change is heard a second or two later. Remembered in this browser": "在 Forge 上用混音自身的代码渲染，从播放头起分段，作为文件播放：声音与音箱之间没有浏览器的处理。改动在一两秒后可闻。在此浏览器中记住",
+"The mix is rendered on Forge…": "正在 Forge 上渲染混音…",
+"Forge could not play the mix: {0}": "Forge 无法播放混音：{0}",
+});
+
+// HERESY 2869: the version fields say that an empty one is saved as 1.0
+RuachI18n.add("zh", {
+"The song's version beside its name, digits and dots only (4.2.3). A take is called «Title v4.2.3», as your tracks are, and the Musician's versions keep one tree per title, a branch per version. A title typed with its version («Song v1.2») splits into the two. Left empty, a save (Ctrl+S) gives it 1.0": "歌名旁边的歌曲版本，只能是数字和点（4.2.3）。录音会像你的曲目那样命名为“标题 v4.2.3”，音乐人的版本为每个标题保留一棵树，每个版本一个分支。带版本输入的标题（“歌曲 v1.2”）会自动拆分到两个栏位。留空时，保存 (Ctrl+S) 会设为 1.0",
+"The version beside the name, digits and dots only (1.2.8). Another number keeps the text before it in the versions below, with what differs from now. Left empty, a save gives it 1.0": "名称旁的版本号，只含数字和点 (1.2.8)。换一个编号，之前的文本会保存在下方的版本中，并显示与现在的差异。留空时，保存会设为 1.0"
+});
+
+// HERESY 2815: the Section editor (heresy-seceditor.js, HERESY 2810–2817)
+RuachI18n.add("zh", {
+"Section editor…": "分段编辑器…",
+"the song by its sections: edits in a queue, one new take": "按段落编辑歌曲：修改排成队列，生成一条新录音",
+"Section editor": "分段编辑器",
+"About the Section editor": "关于分段编辑器",
+"the song by its sections": "按段落看歌曲",
+"Close (Esc): the queue stays": "关闭（Esc）：队列保留",
+"The song's sections": "歌曲的段落",
+"← → between sections · Space plays it": "← → 在段落间移动 · 空格键播放",
+"instrumental": "器乐",
+"added": "加入",
+"sung anew to the end": "重唱到结尾",
+"by ear": "凭耳朵",
+"by the score": "按乐谱",
+"Sections placed by Whisper's timing of the lyrics, as on the player's wave": "按 Whisper 对歌词的对时放置的段落，与播放器波形上一致",
+"Sections from the score's marks: the take's lyrics are not timed yet": "按乐谱标记的段落：这条录音的歌词还没有对时",
+"{0} of {1} lines heard": "听到 {1} 行中的 {0} 行",
+"The lyrics as they will be sung": "将要演唱的歌词",
+"Queue": "队列",
+"Re-sing from here to the end…": "从这里重唱到结尾…",
+"Re-sing from here to the end": "从这里重唱到结尾",
+"Its words changed or kept, sung anew on a new music seed; the rest stays": "它的词改或不改，都用新的音乐种子重新演唱；其余不变",
+"One line sung anew, cut halfway to the lines around it": "重唱一行，在与相邻行的中间处切开",
+"The section once more right after itself: a variation on the music seed + 1": "这个段落紧接着再来一遍：用音乐种子 + 1 的变奏",
+"Music the model writes after the section, nothing sung again": "模型在这个段落之后写的音乐，不再重复演唱",
+"A copy of the parts right after them, on the score's bar lines, in seconds": "在这些部分之后紧接一份副本，按乐谱的小节线，几秒完成",
+"The parts taken out on the score's bar lines, in seconds": "按乐谱的小节线去掉这些部分，几秒完成",
+"Everything before the break before it stays; from there to the end the song is sung anew": "它前面那处停顿之前的一切保留；从那里到结尾重新演唱",
+"The music goes on past the take's end, with new lines or without": "音乐在录音结尾之后继续，可加新歌词也可不加",
+"An instrumental part: no words to sing anew": "器乐部分：没有可以重唱的词",
+"The rest of a part after a break: pick the part itself": "停顿之后某部分的余下部分：请选那个部分本身",
+"These are the score's marks: find the sections by ear first": "这些是乐谱的标记：先凭耳朵找出段落",
+"Its words were not found in the lyrics": "在歌词里找不到它的词",
+"No line of it was heard clearly for two seconds or more": "没有哪一行被清楚地听到两秒或更长",
+"No score part lies under this section": "这个段落下面没有乐谱部分",
+"Its score has one section only": "它的乐谱只有一个段落",
+"No break of the voice before it": "它之前人声没有停顿",
+"The break is under 5 seconds from an end of the take": "停顿离录音的一端不到 5 秒",
+"Only past the take's end, 15:00 at most in all": "只能在录音结尾之后，总长最多 15:00",
+"Its words as the lyrics have them: change what you will, or keep them and let only the music be new.": "它在歌词里的词：想改就改，或者保留，只让音乐换新。",
+"Which line?": "哪一行？",
+"not heard clearly": "没有听清",
+"under two seconds": "不到两秒",
+"By how much (m:ss)?": "延长多少（m:ss）？",
+"No sections: the lyrics are not timed and there is no score.": "没有段落：歌词没有对时，也没有乐谱。",
+"Take it out of the queue": "从队列中移除",
+"Clear the queue": "清空队列",
+"Clear the queue: {0} edits?": "清空队列：{0} 处修改？",
+"anew, words changed": "重唱，词已修改",
+"anew, the same words": "重唱，词不变",
+"line {0} anew": "第 {0} 行重唱",
+"once more, straight on": "再唱一遍，紧接着",
+"once more after ~{0} s of music": "~{0} 秒音乐之后再唱一遍",
+"an interlude of ~{0} s after it": "之后 ~{0} 秒的间奏",
+"twice, on the bar lines": "两遍，在小节线上",
+"taken out, on the bar lines": "去掉，在小节线上",
+"from {0} to the end, anew": "从 {0} 到结尾重新来过",
+"+{0} after the end": "结尾之后 +{0}",
+"{0} has an edit in the queue already: ✕ it first": "{0} 在队列里已经有修改：先用 ✕ 去掉它",
+"It overlaps {0} in the queue ({1}–{2})": "与队列中的 {0}（{1}–{2}）重叠",
+"It would go in inside {0} ({1}–{2})": "它会插进 {0}（{1}–{2}）的中间",
+"One ending at a time: re-sing to the end, or extend": "结尾只能有一种：重唱到结尾，或延长",
+"Nothing can go after the re-sing to the end ({0})": "重唱到结尾（{0}）之后不能再有任何修改",
+"Extend goes on from the end this Remove takes away": "延长要从这次删除去掉的结尾接着走",
+"cut at the bar line {0}": "在小节线 {0} 处切开",
+"Eight sung edits at most in one take": "一条录音最多八处演唱修改",
+"Twelve edits at most in one queue": "一个队列最多十二处修改",
+"The new take would run past 15:00": "新录音会超过 15:00",
+"The sections were heard anew: add this edit again": "段落已重新识别：请再次添加这处修改",
+"Drafts sung on the engine: {0}, then the whole take once": "在引擎上演唱的草稿：{0}，然后整条录音一次完成",
+"Drafts sung on the engine: {0}, then the ending, which is the take": "在引擎上演唱的草稿：{0}，然后是结尾，它就是这条录音",
+"about {0} of music rendered in all": "总共渲染约 {0} 的音乐",
+"Only cuts on the bar lines: seconds, nothing sung": "只在小节线上剪接：几秒钟，不演唱",
+"One new take; this one stays.": "生成一条新录音；这条保留。",
+"Assemble the take": "组装录音",
+"Assemble again": "再组装一次",
+"Another version of the same queue, on new seeds": "同一队列的另一个版本，使用新种子",
+"Step {0} of {1}": "第 {0} 步，共 {1} 步",
+"waits for the engine": "等待引擎",
+"the engine's queue is full: waiting": "引擎队列已满：等待中",
+"the Arc is being reset: waiting": "Arc 正在重置：等待中",
+"the draft is sung": "正在演唱草稿",
+"the voice is found": "正在找出人声",
+"laid in": "已嵌入",
+"the whole take is rendered": "整条录音正在渲染",
+"cut on the bar lines": "在小节线上剪接",
+"placed": "已放置",
+"Stop the assembly": "停止组装",
+"Assembled: {0}": "已组装：{0}",
+"Resume from step {0}": "从第 {0} 步继续",
+"Discard": "丢弃",
+"Stopped at step {0}: {1}": "停在第 {0} 步：{1}",
+"Cut short by a restart of the lab at step {0}": "在第 {0} 步因实验室重启而中断",
+"The queue of {0} was put away: five takes keep theirs": "“{0}”的队列已移除：只有五条录音保留各自的队列",
+"Each block is a section as the player's wave shows it: the lyrics' tags placed by Whisper's timing, a break, an intro or an outro where no voice sings, or the score's marks for a take never timed. The tags stay in English, as the model reads them.": "每个块都是播放器波形上显示的段落：按 Whisper 对时放置的歌词标签、没有人声的停顿、前奏或尾奏，或者从未对时的录音所用的乐谱标记。标签保持英文，就像模型读取的那样。",
+"Click a block (← → walk them, Space plays it), pick an edit under the strip and add it to the queue: one edit a section. The queue lists them in the song's order, each with ✕.": "点击一个块（← → 在块间移动，空格键播放），在条带下方选一种修改并加入队列：每个段落一处修改。队列按歌曲顺序排列，每处都有 ✕。",
+"Assemble the take sings the queue as one new take, a child of this one, which stays as it is. The sung edits go one after another on the engine (a draft each, then the whole take once); Repeat and Remove are cut on the score's bar lines in seconds. Songs you queue in the Musician meanwhile go first.": "“组装录音”把整个队列唱成一条新录音，是这一条的子录音，这条保持原样。演唱的修改在引擎上一个接一个进行（每处一份草稿，最后整条录音一次完成）；重复和删除按乐谱的小节线剪接，几秒完成。期间你在音乐家里排队的歌曲先唱。",
+"The new take lands where this one is; its note lists the edits, and the player tints what was sung anew.": "新录音会放在这一条所在的位置；它的备注列出各处修改，播放器会给重唱的部分着色。",
+});
+
+// HERESY 2871: a DAW lane as a spectrogram
+RuachI18n.add("zh", {
+"Spectrum: the lane's sound as a spectrogram in place of its wave, the low notes at the bottom and the high at the top, measured once on Forge; remembered in this browser": "频谱：用频谱图代替波形显示这条轨道的声音，低音在下、高音在上；在 Forge 上测量一次；此浏览器会记住",
+"The rest is the source less the stems, worked out as it plays: it has no file of its own to measure": "剩余部分是源音频减去各分轨，在播放时算出：它没有可供测量的自身文件",
+"Forge is measuring the spectrum of {0}…": "Forge 正在测量 {0} 的频谱…",
+"The spectrum of {0} could not be measured: {1}": "无法测量 {0} 的频谱：{1}"
+});
+
+// HERESY 2872: the Library card's workspaces button and its list, the menu's sections folded
+RuachI18n.add("zh", {
+"In {0} workspaces:": "在 {0} 个工作区中：",
+"In the workspace:": "在工作区中：",
+"Take it out of this workspace": "从这个工作区移出",
+"open now": "当前打开",
+"Its workspaces": "它的工作区",
+"“{0}” is in these. A click on one opens it; ✕ takes the take out of it (it stays in the library and in the others).": "「{0}」在这些工作区中。点击其中一个即可打开；✕ 将录音从中移出（它仍留在库中和其他工作区里）。",
+"Take “{0}” out of “{1}”?": "把「{0}」从「{1}」移出？",
+"It stays in the library and in any other workspace; only this workspace lets it go.": "它仍留在库中和任何其他工作区里；只有这个工作区放开它。",
+"Taken out of “{0}”": "已从「{0}」移出",
+"the workspace itself, not its sections": "工作区本身，不含其分区"
+});
+
+// HERESY 2875: the Trainer's run card: both towers' rates, the absolute epochs, the VRAM of now, the run's now line
+RuachI18n.add("zh", {
+"this run": "本次运行",
+"Music half · AR": "音乐部分 · AR",
+"Sound half · NAR": "声音部分 · NAR",
+"Its note from its start": "开始时的备注",
+"the highest over the whole run, all its sittings; now: the highest of each card over the last 25 steps": "整个运行（所有会话）中的最高值；当前：每张卡最近 25 步的最高值",
+"epoch {0}": "轮次 {0}"
+});
+
+// HERESY 2876: a run's command line and base on its card; the new-run form said as such beside a run
+RuachI18n.add("zh", {
+"runs as": "运行命令",
+"new run": "新运行",
+"base": "基础模型"
+});
+// HERESY 2883: the Narrator's text with the lyrics editor's hands: its count line
+RuachI18n.add("zh", {
+"Text: {0} characters · {1} syllables · {2} lines": "文本：{0} 个字符 · {1} 个音节 · {2} 行"
+});
+// HERESY 2887: the Section editor's ninth edit, Insert a part after it
+RuachI18n.add("zh", {
+"Insert a part after it…": "在其后插入一个段落…",
+"A copy of one of the score's parts put in after this section, on its bar line, in seconds; the section itself may keep an edit of its own": "把乐谱中某个段落的副本放在这一段之后,落在它的小节线上,按秒计;这一段本身仍可有自己的修改",
+"Which part goes in?": "插入哪个段落?",
+"It goes in after {0}, at {1}": "放在 {0} 之后,于 {1}",
+"a copy after {0}": "{0} 之后的副本"
+});
+// HERESY 2895: the Section editor writes a take's score from its sound first
+RuachI18n.add("zh", {
+"Its score is being written from its sound: every edit waits for it": "正在从声音写出它的乐谱:每处修改都等它",
+"Writing its score from its sound ({0})… {1}": "正在从声音写出乐谱({0})… {1}",
+"Its score could not be written from its sound: {0}": "未能从声音写出乐谱:{0}",
+"A take with no score of its own (Direct, or brought in) gets one written from its sound first, by the transcriber chosen in the Engine, through the Studio's queue: Repeat, Remove and Insert cut on its bar lines, and a section sung anew follows it.": "没有自带乐谱的录音(Direct 或导入的)会先由引擎中选定的扒谱器从声音写出一份,经工作室的队列:重复、移除和插入按它的小节线切,重唱的段落也照它来。"
 });
 // HERESY 2896: the lyrics' own sections followed by the planner
 RuachI18n.add("zh", {
@@ -9664,4 +9864,217 @@ RuachI18n.add("zh", {
 "Freed: {0}": "已释放:{0}",
 "Sure you want to unload this model from VRAM?": "确定要从 VRAM 卸载这个模型吗?",
 "Sure you want to unload these models from VRAM?": "确定要从 VRAM 卸载这些模型吗?"
+});
+// HERESY 2900: the program monitor's and the console's windows by the screens
+RuachI18n.add("zh", {
+"One screen: the program monitor stays in the page. With a second screen it opens there in a window of its own": "只有一块屏幕：节目监视器留在页面中。有第二块屏幕时，它会在那里以独立窗口打开",
+"One screen: the console stays in the page. With a second screen it opens there in a window of its own": "只有一块屏幕：控制台留在页面中。有第二块屏幕时，它会在那里以独立窗口打开"
+});
+// HERESY 2901: the installed app kept awake
+RuachI18n.add("zh", {
+"Keep the installed app awake": "让已安装的应用保持唤醒",
+"Only in the installed app (a window of its own, not a browser tab): a 12 Hz tone at -60 dBFS, far under hearing, that Chrome counts as sound, so it does not freeze or discard the Studio while it is in the background and the card and the player are as you left them. It starts with your first click or key. Off: the browser may put the app to sleep": "仅在已安装的应用中（独立窗口，而非浏览器标签页）：一个 -60 dBFS 的 12 Hz 音，远低于听觉阈值，但 Chrome 会把它算作声音，因此不会在后台冻结或丢弃工作室，卡片和播放器保持你离开时的样子。它在你第一次点击或按键时开始。关闭：浏览器可能让应用休眠"
+});
+// HERESY 2902: the reactions linked
+RuachI18n.add("zh", {
+"🔥 and 💎 like the take; 👎 takes them off": "🔥 和 💎 同时点 👍；👎 将它们取消",
+"On: switching 🔥 or 💎 on likes the take too, and 👎 takes off the like, 🔥 and 💎 together, wherever those buttons are (the cards, the Library, the compare window, the player). The reaction faces are never touched. Off: each button stands alone": "开启：打开 🔥 或 💎 时也会给这条录音点 👍，而 👎 会同时取消 👍、🔥 和 💎，无论这些按钮在哪里（卡片、资料库、对比窗口、播放器）。表情反应不受影响。关闭：每个按钮各自独立"
+});
+// HERESY 2906: the lyrics' tags explained, with what Follow my sections makes of each
+RuachI18n.add("zh", {
+"The body of the song: new words each time over the same music, the story moving on. Numbered (Verse 1, Verse 2…); the Studio offers the next number. Sung; Follow my sections: verse.": "歌曲的主体：每次在同样的音乐上唱新的歌词，故事向前推进。会编号（Verse 1、Verse 2…）；工作室会建议下一个编号。演唱；“按我的段落”：verse。",
+"The part the song comes back to, the same words and melody each time, with the line people remember and sing along. Sung; Follow my sections: chorus.": "歌曲一再回到的部分，每次歌词和旋律都相同，有让人记住并跟唱的那一句。演唱；“按我的段落”：chorus。",
+"The climb from a verse into the chorus: a melody and words of its own that raise the tension, always followed by the chorus. Sung; Follow my sections: pre-chorus.": "从主歌爬升到副歌：有自己的旋律和歌词，推高张力，后面总是接副歌。演唱；“按我的段落”：pre-chorus。",
+"Once, late in the song, everything turns (melody, chords, words) before the song comes home to its chorus. Sung; Follow my sections: bridge (Middle 8 too).": "在歌曲后段出现一次，一切都转向（旋律、和弦、歌词），然后歌曲回到副歌。演唱；“按我的段落”：bridge（Middle 8 也是）。",
+"The ending: a last line repeated as the music fades, or the chorus once more, resolved. Words under it are sung; Follow my sections: outro, always the plan's last section.": "结尾：音乐渐弱时重复的最后一句，或再来一次已解决的副歌。下面的歌词会被演唱；“按我的段落”：outro，总是方案的最后一段。",
+"The opening before the first verse, mostly music. Follow my sections: intro, always the plan's first (one is added when the lyrics have none). YuE2 seldom sings its lines: put a spoken intro under [Verse].": "第一段主歌之前的开头，大多是音乐。“按我的段落”：intro，总是方案的第一段（歌词里没有时会加上一段）。YuE2 很少唱它下面的歌词：口白开头请放在 [Verse] 下。",
+"A passage of another feel between parts: the band alone, or ad-libs and calls over it. Viktor's use: a pause in rap that brakes speech running ahead. Follow my sections: interlude, with words under it or without.": "各部分之间换一种感觉的段落：乐队单独演奏，或在其上加即兴和呼喊。Viktor 的用法：说唱里的一个停顿，给跑在前面的念白踩刹车。“按我的段落”：interlude，下面有没有歌词都一样。",
+"The last chorus, usually the biggest: more voices, more power, now and then a key change. Sung; Follow my sections: chorus.": "最后一遍副歌，通常最宏大：更多人声、更多力量，有时转调。演唱；“按我的段落”：chorus。",
+"The instruments alone between sections, for variety or to build into the next one; name what plays: «Instrumental Break - Horns». Follow my sections: interlude, no voice.": "各段之间只有乐器，用来变化或推向下一段；写明演奏什么：“Instrumental Break - Horns”。“按我的段落”：interlude，无人声。",
+"One instrument steps forward with a long melody of its own while the rest backs it (Drum Solo, Keyboard Solo, plain Solo too). Instrumental; Follow my sections: interlude.": "一件乐器走到前面，奏出自己的长旋律，其余伴奏（也有 Drum Solo、Keyboard Solo、单写 Solo）。器乐；“按我的段落”：interlude。",
+"The song's last mark: the music stops here (SUNO's [END] is the same tag). Follow my sections: outro; [Outro] [End] in a row are one.": "歌曲的最后标记：音乐在这里停止（SUNO 的 [END] 是同一个标签）。“按我的段落”：outro；[Outro] [End] 连写算一段。",
+"An opening played without voices. Follow my sections: intro.": "不带人声演奏的开头。“按我的段落”：intro。",
+"A line or two repeated unchanged, often at the end of each verse. Sung; Follow my sections: chorus.": "原样重复的一两句，常在每段主歌的结尾。演唱；“按我的段落”：chorus。",
+"A short part right after the chorus that carries its energy on: a chant, a riff, a tag line. Sung; Follow my sections: chorus.": "紧接副歌的短小部分，延续它的能量：口号、即兴段、记忆句。演唱；“按我的段落”：chorus。",
+"The arrangement stripped to its bones to build tension before the last chorus. Metal and hardcore: a heavy half-time chug, the voice a shout, a chant or nothing. EDM: the quiet part, the drums gone, pads left, one line or none. Ballad and rock: bass and kick or one instrument, sometimes whispered or spoken. Empty: an interlude; with words under it the Studio plans a sung section (a bridge). For speech add «spoken word breakdown» to the style.": "编曲削减到只剩骨架，在最后一遍副歌前积蓄张力。金属与硬核：半速的厚重 chug，人声是嘶吼、口号或没有。EDM：安静的部分，鼓退出，留下铺底音色，一句或没有。抒情歌与摇滚：贝斯和底鼓或单一乐器，有时耳语或念白。空着：interlude；下面有歌词时，工作室把它当作演唱段落来规划（bridge）。如要念白，在风格里加上“spoken word breakdown”。",
+"The music fades to silence (Fadeout too). Follow my sections: outro.": "音乐渐弱直到无声（也写作 Fadeout）。“按我的段落”：outro。",
+"The catchiest line or riff of the song; Genius writes it [Chorus] or [Refrain] now. Sung; Follow my sections: chorus.": "全曲最抓耳的一句或一段即兴；Genius 现在写作 [Chorus] 或 [Refrain]。演唱；“按我的段落”：chorus。",
+"Dance and electronic music: the moment beat and bass hit after a build-up, mostly without a voice. Follow my sections: interlude; with words under it, a sung bridge.": "舞曲与电子音乐：铺垫之后节拍和贝斯砸下来的那一刻，多半没有人声。“按我的段落”：interlude；下面有歌词时，就是演唱的 bridge。",
+"A part, or a whole song, played without singing. Follow my sections: interlude.": "不唱歌、只演奏的一部分或整首歌。“按我的段落”：interlude。",
+"An ending played without voices. Follow my sections: outro.": "不带人声演奏的结尾。“按我的段落”：outro。",
+"The rising part before a drop or a chorus: snare rolls, risers, the filter opening, the energy climbing. Follow my sections: pre-chorus, a sung section.": "在 drop 或副歌前不断升高的部分：军鼓滚奏、上升音效、滤波器打开、能量攀升。“按我的段落”：pre-chorus，演唱段落。",
+"A woman sings the lines that follow, until another voice is named; after the dash how she sings: Deep, Warm; Soft, Breathy. Not a section: Follow my sections passes it by, as it does the ФОСФОРИДА form [Solo Female Voice].": "女声演唱后面的歌词行，直到指定另一个嗓音；破折号后写她怎么唱：Deep, Warm；Soft, Breathy。不是段落：“按我的段落”会跳过它，FOSFORIDA 的写法 [Solo Female Voice] 也一样。",
+"A man sings the lines that follow; after the dash how he sings: Bari-tenor, Calm; Low, Raspy. Not a section: Follow my sections passes it by, as it does the ФОСФОРИДА form [Solo Male Vocal: …].": "男声演唱后面的歌词行；破折号后写他怎么唱：Bari-tenor, Calm；Low, Raspy。不是段落：“按我的段落”会跳过它，FOSFORIDA 的写法 [Solo Male Vocal: …] 也一样。"
+});
+// HERESY 2905: the Musician's song kept in the Writer from its first save
+RuachI18n.add("zh", {
+"The Writer keeps this song from now on: “{0}”, a new document, in hand": "写作室从现在起保存这首歌：“{0}”，新文档，已在手中",
+"The song was not kept in the Writer: {0}": "这首歌没有保存到写作室：{0}"
+});
+// HERESY 2912: the history of plays and downloads (Ctrl+H, Ctrl+J)
+RuachI18n.add("zh", {
+"History": "历史",
+"Downloads": "下载",
+"Yesterday": "昨天",
+"Nothing found": "没有找到",
+"Loading…": "加载中…",
+"Older": "更早",
+"Find a title": "查找标题",
+"Find a title or a file": "查找标题或文件",
+"1 play": "1 次播放",
+"{#0} plays": "{0} 次播放",
+"1 download": "1 次下载",
+"{#0} downloads": "{0} 次下载",
+"to the end": "播放到结尾",
+"{0} heard": "听了 {0}",
+"stopped at {0} of {1}": "停在 {0} / {1}",
+"not in the Studio any more": "已不在工作室中",
+"a file of no take": "不属于任何录音的文件",
+"Clear history": "清除历史",
+"Clear downloads": "清除下载记录",
+"The last {0} days, at most {1} plays: kept by the Studio, the same in every browser that opens it": "最近 {0} 天，最多 {1} 次播放：由工作室保存，打开它的每个浏览器看到的都一样",
+"The last {0} days, at most {1} downloads: kept by the Studio, the same in every browser that opens it": "最近 {0} 天，最多 {1} 次下载：由工作室保存，打开它的每个浏览器看到的都一样",
+"(for now in this browser: the Studio's lab learns the history at its next restart)": "（暂存于此浏览器：工作室的实验室在下次重启后接管历史）",
+"Nothing played yet": "还没有播放过",
+"Nothing downloaded yet": "还没有下载过",
+"Not in the Studio any more: “{0}”": "已不在工作室中：“{0}”",
+"The history of plays is cleared": "播放历史已清除",
+"The history of downloads is cleared": "下载历史已清除",
+"Clear the history of plays?\n\nEvery play it keeps goes ({0}); the takes themselves stay.": "清除播放历史？\n\n其中保存的所有播放（{0}）都会删除；录音本身保留。",
+"Clear the history of downloads?\n\nEvery download it keeps goes ({0}); the files you saved stay where you saved them.": "清除下载历史？\n\n其中保存的所有下载（{0}）都会删除；你保存的文件仍在原处。",
+"History: what the player played, day by day; a title takes to its card": "历史：播放器播放过的内容，按天排列；点标题进入它的卡片",
+"History: what the player played, the last 30 days, day by day": "历史：最近 30 天播放器播放过的内容，按天排列",
+"Downloads: what was saved from the Studio, the last 90 days": "下载：最近 90 天从工作室保存的内容",
+"The history's button in the full player (between the take's reactions and the transport); the one-row player has none, ☰ has History and Downloads either way": "完整播放器中的历史按钮（在录音的反应与播放按钮之间）；单行播放器没有它，☰ 中始终有历史和下载",
+"A history button in the player": "播放器中的历史按钮",
+"History and downloads": "历史和下载",
+"Clear the history of plays (asks first); the takes stay": "清除播放历史（先询问）；录音保留",
+"Clear the history of downloads (asks first); the saved files stay": "清除下载历史（先询问）；已保存的文件保留"
+});
+// HERESY 2913: the take's MIDI window (the score's, MuScriptor on the mix or per stem)
+RuachI18n.add("zh", {
+"about {0} here": "此处约 {0}",
+"A training runs: the transcriber goes behind it ({0} threads), slower than the estimate.": "训练正在运行：转写排在它后面（{0} 个线程），比估计慢。",
+"Fetch {0} ({1}) and transcribe": "获取 {0}（{1}）并转写",
+"fetched first, {0}": "先获取，{0}",
+"Fetching MuScriptor {0}…": "正在获取 MuScriptor {0}…",
+"for a card of 8 GB": "适合 8 GB 显卡",
+"its stems are here ({0}): each transcribed with its own instruments, each note's velocity from its stem": "它的分轨已在（{0}）：每条用自己的乐器转写，每个音符的力度取自它的分轨",
+"its stems first (a card, a minute or two), then each transcribed with its own instruments, each note's velocity from its stem": "先分轨（一张显卡，一两分钟），再每条用自己的乐器转写，每个音符的力度取自它的分轨",
+"Made {0}: it downloads at once.": "已于 {0} 做好：立即下载。",
+"MIDI: {0} parts, {1} notes, on the take's beats ({2})": "MIDI：{0} 个声部，{1} 个音符，落在录音本身的拍子上（{2}）",
+"Laying the score on the take's heard beats…": "正在把乐谱放到听到的拍点上…",
+"MIDI of the score on the take's beats ({0})": "落在音轨自身拍点上的乐谱 MIDI（{0}）",
+"MIDI of the score at its own tempo: the take's beats could not be read ({0})": "按乐谱自身速度的 MIDI：未能读出音轨的拍点（{0}）",
+"MuScriptor on the mix": "MuScriptor 处理混音",
+"MuScriptor per stem": "MuScriptor 逐分轨",
+"MuScriptor's weights are CC BY-NC 4.0: non-commercial use only.": "MuScriptor 的权重采用 CC BY-NC 4.0：仅限非商业用途。",
+"no beats heard: 120 bpm": "未听出拍子：120 bpm",
+"No card for the stems here: MuScriptor on the mix runs on the processor.": "这里没有可做分轨的显卡：MuScriptor 处理混音在处理器上运行。",
+"No score": "没有乐谱",
+"not offered: {0}": "不提供：{0}",
+"one pass: 34 instrument groups and the drums, every note at one velocity": "一遍：34 个乐器组和鼓，所有音符同一力度",
+"Open a take of the library first": "请先打开资料馆里的一个录音",
+"Quantize": "量化",
+"Reading the score…": "正在读取乐谱…",
+"Tempo from the heard beats (the score's Q drifts from what is sung); bars and beats fall on the song's own.": "速度取自听到的拍子（乐谱的 Q 会偏离演唱）：小节和拍子落在歌曲自己的拍子上。",
+"the fetch ended without the model": "获取结束但没有模型",
+"the plan's melody and its instrument line, two tracks; at once": "计划的旋律及其乐器线，两条音轨；立即",
+"the score of “{0}”, whose music codes it keeps: the plan's melody and its instrument line, two tracks; at once": "保留其音乐代码的「{0}」的乐谱：计划的旋律及其乐器线，两条音轨；立即",
+"The score's MIDI": "乐谱的 MIDI",
+"the Studio's lab learns it at its next restart": "工作室的实验室会在下次重启后学会",
+"Transcribe again": "重新转写",
+"Waits its turn": "等待轮到它",
+"the take's beats": "录音的拍子",
+"the stems (a card)": "分轨（一张显卡）",
+"MuScriptor on {0}": "MuScriptor 处理 {0}",
+"the velocities of {0}": "{0} 的力度",
+"the file": "文件",
+"Export MIDI…": "导出 MIDI…",
+"one file on the take's own beats: the score's, MuScriptor on the mix or per stem": "落在录音本身拍子上的一个文件：乐谱的、MuScriptor 处理混音或逐分轨",
+"MIDI: the score's (its melody and its instrument line), or MuScriptor's transcription of the mix or of each stem, on the take's own beats": "MIDI：乐谱的（其旋律和乐器线），或 MuScriptor 对混音或每条分轨的转写，落在录音本身的拍子上",
+"One MIDI file of the take on its own beats: the score's, MuScriptor on the mix or per stem": "录音在其自身拍子上的一个 MIDI 文件：乐谱的、MuScriptor 处理混音或逐分轨"
+});
+// HERESY 2913: the stems need a card with room
+RuachI18n.add("zh", {
+"The stems need a card with room, and none has it now: MuScriptor on the mix runs on the processor, or ask for the stems later.": "分轨需要一张有空间的显卡，现在都没有：MuScriptor 处理混音在处理器上运行，或稍后再做分轨。"
+});
+// HERESY 2913, 2915: a Direct take's score MIDI after SheetSage2; ☰'s bug report
+RuachI18n.add("zh", {
+"Report a bug on GitHub": "在 GitHub 上报告错误",
+"A new issue on GitHub, in a new tab. Attach the debug journal (Engine → Debugging: turn it on, do what goes wrong, then Download) so the bug can be followed": "在新标签页中打开 GitHub 新 issue。附上调试日志（引擎 → Debugging：打开它，重复出错的操作，然后下载），以便跟踪错误",
+"the score written from its sound before (SheetSage2): its melody and its instrument line, two tracks; at once": "之前从声音写出的乐谱（SheetSage2）：旋律和乐器线，两条音轨；立即",
+"no score of its own (a Direct take): SheetSage2 writes one from its sound first, on the Studio's card in the queue, a minute or two and more for a long song; then its MIDI": "没有自己的乐谱（Direct 录音）：先由 SheetSage2 从声音写出乐谱，在工作室的显卡上排队，一两分钟，长歌更久；然后是它的 MIDI",
+"Write its score (SheetSage2), then download": "写出乐谱（SheetSage2）后下载",
+"SheetSage2 writes its score from its sound…": "SheetSage2 正在从声音写出乐谱…"
+});
+// HERESY 2916: Follow my sections off by default, its guard
+RuachI18n.add("zh", {
+"{0} sections, {1} breaks: a plan of about {2} to {3}": "{0} 个段落，{1} 个间奏：计划约 {2} 至 {3}",
+"past {0}, where long plans have fallen apart": "超过 {0}，长计划在那之后崩坏过",
+"Follow {0} sections?": "跟随 {0} 个段落？",
+"{0} sections followed, {1} of them breaks: measured on the Studio's lyrics, such a plan runs about {2} to {3}.": "跟随的段落 {0} 个，其中间奏 {1} 个：按工作室歌词的测量，这样的计划约 {2} 至 {3}。",
+"It may not fit the length asked ({0}): the song is cut there.": "可能放不进所要求的长度（{0}）：歌曲会在那里被截断。",
+"Long plans have fallen apart past about {0}: lines repeated, the phonetics broken (26 sections with 7 breaks planned past the 8:00 cap). Without following, the planner writes its own sections and the plan stays shorter; it may drop a Bridge or an Outro.": "长计划在约 {0} 之后崩坏过：歌词重复、发音破损（含 7 个间奏的 26 个段落，计划超过了 8:00 上限）。不跟随时，计划器写自己的段落，计划更短；它可能丢掉 Bridge 或 Outro。",
+"Sing without following": "不跟随地演唱",
+"Follow them anyway": "仍然跟随",
+"Off unless you turn it on. On, the planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): none dropped, none made up, and the song does not end before its last section has begun. It helps when the planner drops a Bridge or an Outro you wrote. It costs length: each section followed is a stretch of the plan, so many sections and breaks make a long plan, and long plans have fallen apart past about 6:00 (26 sections with 7 breaks planned 6:30 to 8:24, past the 8:00 cap). Its line beside it says what these lyrics would plan. Only when the model writes the score (Full or Melody, no score of yours)": "默认关闭，除非你打开。打开后，计划的乐谱按顺序写出歌词自己的段落（Intro、Verse、Pre-Chorus、Chorus、Bridge、Interlude、Outro，按计划器的叫法）：不丢失、不编造，歌曲也不会在最后一个段落开始之前结束。当计划器丢掉你写的 Bridge 或 Outro 时有帮助。代价是长度：每个跟随的段落都是计划的一段，所以段落和间奏多，计划就长，而长计划在约 6:00 之后崩坏过（含 7 个间奏的 26 个段落：计划 6:30 至 8:24，超过 8:00 上限）。旁边的一行说明这份歌词会得到什么样的计划。仅当模型写乐谱时（Full 或 Melody，没有你自己的乐谱）"
+});
+// HERESY 2917: the Trainer's charts: the saves as ticks under the grid, no dots
+RuachI18n.add("zh", {
+"the ticks under the grid: the saves (green worth hearing, amber in loras/); the pointer on one says its held-out values": "网格下方的刻度：各次保存（绿色值得一听，琥珀色在 loras/ 中）；指针放在刻度上显示它在留出曲目上的数值",
+"Saved at step {0}": "在第 {0} 步保存",
+"held out:": "留出曲目：",
+"worth hearing": "值得一听"
+});
+// HERESY 2918: the Writer's text over everything (Alt+E)
+RuachI18n.add("zh", {
+"The text over everything": "文本置于最上",
+"The text over everything, four tenths larger, with its meter, rulers and stress marks: Esc, Alt+E or this button puts it back": "文本置于最上，放大四成，连同拍数统计、标尺和重音符号：按 Esc、Alt+E 或此按钮放回原处",
+"Back into the notebook": "放回笔记本",
+"Back into the notebook (Esc or Alt+E)": "放回笔记本（Esc 或 Alt+E）"
+});
+// HERESY 2919: the workspaces' emoji (the grid, the name dialogs, the tree's chooser)
+RuachI18n.add("zh", {
+"The workspace's emoji": "工作区的表情符号",
+"No emoji": "无表情符号",
+"No emoji: a faint leaf": "无表情符号：一片淡淡的叶子",
+"No emoji: the workspace's faint icon": "无表情符号：工作区的淡色图标",
+"Recent": "最近",
+"Ours": "我们的",
+"Feeling": "情感",
+"Message": "寓意",
+"Making": "创作",
+"Nature": "自然",
+"The Studio's own marks are not offered: 💎 a published set and 🙈 a blind one stay in the name; ❄ 👁‍🗨 🔒 are states": "工作室自己的标记不在此列：💎（已发布的合集）和 🙈（盲听合集）保留在名称中；❄ 👁‍🗨 🔒 是状态",
+"The emoji before its name: one, any but the Studio's own marks; none shows the faint icon": "名称前的表情符号：一个，除工作室自己的标记外均可；不选则显示淡色图标",
+"{0} holds the emoji's place: one of the Studio's own marks (a 💎 set, a 🙈 blind set), kept in the name": "{0} 占据表情符号的位置：它是工作室自己的标记（💎 合集、🙈 盲听合集），保留在名称中",
+"The tree of workspaces: its order and what it shows": "工作区树：排序与显示内容",
+"The tree of workspaces": "工作区树",
+"Grouped by emoji": "按表情符号分组",
+"The default: each emoji's workspaces together, the ones with none first, A to Z inside a group; the 💎 sets stay at the foot": "默认：同一表情符号的工作区放在一起，没有表情符号的排在最前，组内按 A 到 Z；💎 合集留在底部",
+"A to Z, emoji aside": "按 A 到 Z，不看表情符号",
+"By name alone, whatever emoji each wears; the 💎 sets stay at the foot": "只按名称，不论表情符号；💎 合集留在底部",
+"Most takes first": "录音最多的在前",
+"The fuller first, its sections the same way; the 💎 sets stay at the foot": "内容多的在前，其分区同样；💎 合集留在底部",
+"Show the archived in the tree": "在树中显示已归档的",
+"Each in its place, dimmed, instead of under Archived": "各在原位，变淡显示，而不是放在“已归档”下",
+"Hide the frozen": "隐藏已冻结的",
+"Out of the tree until shown again; the one open stays": "从树中隐去，直到再次显示；已打开的保留",
+"Hide the empty ones": "隐藏空的",
+"A workspace with no take in it or its sections; the one open and the one in hand stay": "本身及其分区都没有录音的工作区；已打开的和正在使用的保留",
+"Fold every section": "折叠所有分区",
+"Unfold every section": "展开所有分区",
+"Emoji…": "表情符号…",
+"The emoji before its name": "名称前的表情符号",
+"Emoji set: “{0}”": "已设置表情符号：“{0}”",
+"Emoji taken off: “{0}”": "已移除表情符号：“{0}”"
+});
+// HERESY 2916b: Follow my sections for short songs, up to about 4 minutes
+RuachI18n.add("zh", {
+"Off unless you turn it on. For short songs, up to about 4 minutes: there it is worth it. On, the planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): none dropped, none made up, and the song does not end before its last section has begun. It helps when the planner drops a Bridge or an Outro you wrote. It costs length: each section followed is a stretch of the plan, so many sections and breaks make a long plan; past about 4:00 Generate asks first (long plans have fallen apart: 26 sections with 7 breaks planned 6:30 to 8:24, past the 8:00 cap). Its line beside it says what these lyrics would plan. Only when the model writes the score (Full or Melody, no score of yours)": "默认关闭，除非你打开。适合短歌，约 4 分钟以内：在那里才值得。打开后，计划的乐谱按顺序写出歌词自己的段落（Intro、Verse、Pre-Chorus、Chorus、Bridge、Interlude、Outro，按计划器的叫法）：不丢失、不编造，歌曲也不会在最后一个段落开始之前结束。当计划器丢掉你写的 Bridge 或 Outro 时有帮助。代价是长度：每个跟随的段落都是计划的一段，所以段落和间奏多，计划就长；超过约 4:00 时，“生成歌曲”会先询问（长计划崩坏过：含 7 个间奏的 26 个段落，计划 6:30 至 8:24，超过 8:00 上限）。旁边的一行说明这份歌词会得到什么样的计划。仅当模型写乐谱时（Full 或 Melody，没有你自己的乐谱）"
+});
+// HERESY 2919c: the workspaces' emoji upgrade, said once
+RuachI18n.add("zh", {
+"{0} workspaces now show their emoji in its own column": "{0} 个工作区现在把表情符号显示在单独的一列中"
 });

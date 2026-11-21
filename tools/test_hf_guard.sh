@@ -145,7 +145,7 @@ if [ "${1:-}" = "--scripts" ]; then
   cp "$ROOT"/tools/{hf-env.sh,hf_guard.py,hf_expect.py,models_plan.py,downloader-requirements.txt} "$S3/tools/"; : > "$S3/tools/hf-revisions.txt"
   cp "$(over tools/download-loras.sh)" "$S3/tools/download-loras.sh"
   cp "$(over heresy/fetch-heresy.sh)" "$S3/heresy/fetch-heresy.sh"
-  cp "$ROOT"/lab/{migrate_models.py,paths.py} "$S3/lab/"
+  cp "$ROOT"/lab/{migrate_models.py,paths.py,winx.py} "$S3/lab/"   # winx: migrate_models imports it since 2649
   NV=3333333333333333333333333333333333333333; NF=4444444444444444444444444444444444444444; OLDF=5555555555555555555555555555555555555555
   M3="$T/mirror3"; mkdir -p "$M3/goldhub__Ruach_Studio_Models_v2/models" "$M3/goldhub__YuE2-RS-Finetunes/VAE-RS"
   head -c 70000 /dev/urandom > "$M3/goldhub__Ruach_Studio_Models_v2/models/YuE2-Vae-F32.gguf"

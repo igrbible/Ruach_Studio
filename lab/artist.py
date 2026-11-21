@@ -924,6 +924,13 @@ RAM_NEED_GB = {"qwen2512-q4": 31, "qwen2512-q6": 34, "qwen2512-fp8": 58, "qwen21
 
 
 def _ram_free_gb():
+    import winx
+    if not winx.PROC:                                    # HERESY 2930: Windows and macOS, through psutil (it was 0 GB there)
+        try:
+            used, total, _c, _su, _st = winx.meminfo_mb()
+            return (total - used) / 1024
+        except (ImportError, OSError, ValueError):
+            return 0.0
     try:
         with open("/proc/meminfo", encoding="utf-8") as f:
             for line in f:
@@ -2014,6 +2021,59 @@ def trash(rid):
         raise ValueError("the trash has a run of this name already")
     shutil.move(str(d), str(to))
     return {"trashed": rid}
+
+
+RUN_KEEP_S = 86400                                       # HERESY 2866: a run younger than a day is never taken for an orphan
+
+
+def cover_refs(roots):
+    """HERESY 2866: the Artist's runs a take's cover was made from, by every artwork.json under these folders of takes (its cover now and the
+    ones it keeps in artwork-removed/)."""
+    refs = set()
+    for root in roots:
+        for a in list(root.glob("*/artwork.json")) + list(root.glob("*/artwork-removed/*.json")) if root.is_dir() else []:
+            try:
+                rid = json.load(open(a, encoding="utf-8")).get("run")
+            except (OSError, ValueError, AttributeError):
+                continue
+            if rid:
+                refs.add(str(rid))
+    return refs
+
+
+def prune_for_takes(present, roots, names=None, now=None):
+    """HERESY 2866 (the disk inventory of 19.11.2026): a run drawn for a take (its "take") whose take is gone for good goes to the Artist's
+    trash with it, when nothing else points at it: no take it gave a cover to is here (its "covers"), no take's artwork names it (cover_refs
+    over roots: the library and the trash's days). present(name): a take of that name is in the library or in the trash. names: the takes
+    just emptied, at once; None: the hourly pass, never a run younger than a day. A run drawing, one holding a protected picture, or a run
+    of the Artist's own (no take) stays. It lies in the Artist's trash, given back from there or emptied with it. The ids moved."""
+    if not home().is_dir():
+        return []
+    want = None if names is None else {str(n) for n in names}
+    now, refs, moved = now or time.time(), None, []
+    for d in sorted(x for x in home().iterdir() if x.is_dir() and RUN_RE.match(x.name)):
+        run = read(d)
+        take = str((run or {}).get("take") or "")
+        if not take or (want is not None and take not in want) or present(take):
+            continue
+        if any(present(str(c.get("take") or "")) for c in run.get("covers") or [] if isinstance(c, dict) and c.get("take")):
+            continue
+        if want is None:
+            try:
+                if now - max(float(run.get("created") or 0), (d / "run.json").stat().st_mtime) < RUN_KEEP_S:
+                    continue
+            except (OSError, TypeError, ValueError):
+                continue
+        if refs is None:
+            refs = cover_refs(roots)
+        if d.name in refs or protected_in(run):
+            continue
+        try:
+            trash(d.name)
+        except (OSError, ValueError):                      # drawing now, or one of its name in the trash already: it stays, next hour again
+            continue
+        moved.append(d.name)
+    return moved
 
 
 def restore(rid):

@@ -35,6 +35,11 @@
 // a group of their own, as before). A line still being written as a tag («[Ver», the tags offered under it) is not counted.
 //
 //   HeresyLyrics.attach(textarea, { meter: element, fit: function (area) {…} })
+//
+// HERESY 2883 (Viktor 15.11.2026: «Редактор текста Чтеца: спеллчекер и всё, что есть в редакторе лирики Музыканта»): { reading: true } gives a
+// text that is read aloud the editor's hands (the line numbers and marks, mcedit's keys, the spelling in the text's language, the stress marks
+// astray, the brackets linted, the [tags] drawn, the counts under the box) without what only a song has: no syllable ruler beside the lines,
+// no arc of sections, no density against a genre, no worn words of songs; its count line says «Text», not «Lyrics»
 (function () {
   "use strict";
   function tr(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
@@ -131,6 +136,7 @@
   // line under it, never inside a [tag]; the style beside the box tells Ukrainian or Belarusian Cyrillic, and the language of Latin lyrics
   function wornOf(area, style) {
     var W = window.HeresyWorn;
+    if (area.dataset.reading) return [];             // HERESY 2883: a text read aloud is no song
     return W ? W.find(area.value, W.lang(area.value, style)) : [];
   }
   function wornStyle(area) {
@@ -711,7 +717,8 @@
 
   function attach(area, opts) {
     opts = opts || {};
-    var meter = opts.meter, styleBox = opts.style;
+    var meter = opts.meter, styleBox = opts.style, reading = !!opts.reading;   // HERESY 2883
+    if (reading) area.dataset.reading = "1";
     var wrap = document.createElement("div");
     wrap.className = "lyr-wrap";
     area.parentNode.insertBefore(wrap, area);
@@ -755,12 +762,12 @@
       if (!meter) return;
       var spell = recall("yue2.lyrSpell") !== "off", manual = !!area.dataset.manual;
       var parts = [
-        '<span class="lyr-c">' + esc(tr("Lyrics: {0} characters · {1} syllables · {2} lines")
+        '<span class="lyr-c">' + esc(tr(reading ? "Text: {0} characters · {1} syllables · {2} lines" : "Lyrics: {0} characters · {1} syllables · {2} lines")
           .replace("{0}", num(m.lyrics.chars)).replace("{1}", num(m.lyrics.syl)).replace("{2}", num(m.lyrics.lines))) + "</span>",
         '<span class="lyr-c">' + esc(tr("Tags: {0} characters in {1}").replace("{0}", num(m.tags.chars)).replace("{1}", num(m.tags.n))) + "</span>",
         '<span class="lyr-c">' + esc(tr("In brackets: {0} characters in {1}").replace("{0}", num(m.brackets.chars)).replace("{1}", num(m.brackets.n))) + "</span>"
       ];
-      if (m.lyrics.cb) parts.splice(1, 0, '<span class="lyr-c" data-tip="' + esc(tr("Beats no vowel carries, counted with the syllables in each line's bar (drawn lighter): a word with no vowel (с, в, к, з, й, ў) and a stop closed against an affricate inside a word (глу-п-цо́в)")) + '">' +
+      if (m.lyrics.cb && !reading) parts.splice(1, 0, '<span class="lyr-c" data-tip="' + esc(tr("Beats no vowel carries, counted with the syllables in each line's bar (drawn lighter): a word with no vowel (с, в, к, з, й, ў) and a stop closed against an affricate inside a word (глу-п-цо́в)")) + '">' +
         esc(tr("Consonant beats: {0}").replace("{0}", num(m.lyrics.cb))) + "</span>");
       if (m.hand.stress || m.hand.ayin || m.hand.latin) {
         parts.push('<span class="lyr-c lyr-hand" data-tip="' + esc(tr("The phonetic hand: stress marks (U+0301), ayins inside Russian words (a soft о/а), Latin letters inside Russian words (a hard o)")) + '">' +
@@ -787,7 +794,7 @@
           esc(tr(k[3]).replace("{0}", num(k[0].length))) + "</button>");
       });
       // HERESY 1436: the arc's slips and the verses' numbers, a press to the next
-      var ar = arc(area.value);
+      var ar = reading ? [] : arc(area.value);
       if (ar.length) {
         var asays = ar.slice(0, 12).map(function (f) { return tr("line {0}: {1}").replace("{0}", num(f.line + 1)).replace("{1}", arcSays(f)); });
         if (ar.length > 12) asays.push(tr("and {0} more").replace("{0}", num(ar.length - 12)));
@@ -834,7 +841,7 @@
       var mk = ax ? ax.marks().length : 0;
       if (mk) parts.push('<button type="button" class="lyr-tog lyr-marks" data-lyr="mark" data-tip="' + esc(tr("Marked lines: Alt+K marks the cursor's line or unmarks it, Alt+J goes to the next, Alt+Shift+J to the one before, Alt+Shift+K clears them. Press to go to the next one.")) + '">' +
         esc(tr("Marks: {0}").replace("{0}", num(mk))) + "</button>");
-      if (window.HeresyWorn) parts.push('<button type="button" class="lyr-tog" data-lyr="wornList" data-tip="' + esc(tr("The list of worn words for the lyrics' language: see it, edit it, take the Studio's own back, or mark none")) + '" aria-label="' + esc(tr("Worn words")) + '">' + (window.HeresyIcons ? window.HeresyIcons.ui("list-x") : esc(tr("Worn words"))) + "</button>");   // HERESY 2350; 2620 an icon
+      if (window.HeresyWorn && !reading) parts.push('<button type="button" class="lyr-tog" data-lyr="wornList" data-tip="' + esc(tr("The list of worn words for the lyrics' language: see it, edit it, take the Studio's own back, or mark none")) + '" aria-label="' + esc(tr("Worn words")) + '">' + (window.HeresyIcons ? window.HeresyIcons.ui("list-x") : esc(tr("Worn words"))) + "</button>");   // HERESY 2350; 2620 an icon
       parts.push('<button type="button" class="lyr-tog lyr-keys" data-lyr="keys" data-tip="' + esc(tr(KEYS)) + '" aria-label="' + esc(tr("Keys")) + '">' + (window.HeresyIcons ? window.HeresyIcons.ui("keyboard") : esc(tr("Keys"))) + "</button>");   // HERESY 1169; 2620 an icon
       if (!head) {
       parts.push('<button type="button" class="lyr-tog" data-lyr="nums" aria-pressed="' + (recall("yue2.lyrNums") !== "off") + '" data-tip="' + esc(tr("The lines' numbers in the box, as a code editor shows them (Alt+K marks a line, Alt+J goes to the next mark)")) + '">' + esc(tr("Line numbers")) + "</button>");
@@ -853,13 +860,13 @@
       queued = false;
       var text = area.value, m = measure(text, latinOf(text, styleBox ? styleBox.value : ""));
       last = m;
-      try { lastDz = window.HeresyDensity ? window.HeresyDensity.gauge(text, styleBox ? styleBox.value : "", lengthNow(), m) : null; } catch (e) { lastDz = null; }
+      try { lastDz = window.HeresyDensity && !reading ? window.HeresyDensity.gauge(text, styleBox ? styleBox.value : "", lengthNow(), m) : null; } catch (e) { lastDz = null; }
       paintMeter(m);
       var spell = recall("yue2.lyrSpell") !== "off";
       area.spellcheck = spell;
       var lang = langOf(text, styleBox ? styleBox.value : "");
       if (lang) area.setAttribute("lang", lang); else area.removeAttribute("lang");
-      if (!area.offsetParent) { gutter.innerHTML = ""; return; }
+      if (!area.offsetParent || reading) { gutter.innerHTML = ""; return; }   // HERESY 2883: no syllable ruler beside a text read aloud
       // the mirror wraps the lines as the box does, so each row of the meter stands beside its line
       var cs = getComputedStyle(area);
       ["fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",

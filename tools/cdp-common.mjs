@@ -280,12 +280,17 @@ export async function launchChrome(name, extraArgs = []) {
   const profile = freshProfile(HOME, name), tmpdir = chromeTmp(TMP);
   // HERESY 1145: muted: a test never plays into anyone's speakers, and on a machine with no sound card an unmuted headless
   // Chrome's audio clock stands still (a take "plays" at one second forever); muted, it runs on a silent output
-  const chrome = spawn("nice", ["-n", "15", path, "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
-    "--disable-extensions", "--mute-audio", ...extraArgs, "--user-data-dir=" + profile, "--remote-debugging-port=0", "about:blank"],
-    { env: { ...env, TMPDIR: tmpdir }, stdio: ["ignore", "ignore", "pipe"] });
+  // HERESY 2867 (the disk inventory of 19.11.2026: fifteen test browsers of probes that ended with process.exit() ran on for hours): on Linux
+  // Chrome is started under setpriv --pdeathsig KILL, so it dies with the test even when the test is killed outright (SIGKILL, a unit's stop
+  // after its time); and a test that leaves by process.exit() past finish() still kills it on the way out (the exit handler below)
+  const deathsig = process.platform === "linux" && existsSync("/usr/bin/setpriv") ? ["/usr/bin/setpriv", "--pdeathsig", "KILL"] : [];
+  const argv = [...deathsig, "nice", "-n", "15", path, "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
+    "--disable-extensions", "--mute-audio", ...extraArgs, "--user-data-dir=" + profile, "--remote-debugging-port=0", "about:blank"];
+  const chrome = spawn(argv[0], argv.slice(1), { env: { ...env, TMPDIR: tmpdir }, stdio: ["ignore", "ignore", "pipe"] });
   let said = "";
   chrome.stderr.on("data", (d) => { said = (said + d).slice(-4000); });
   onCleanup(() => stopChrome(chrome, profile, tmpdir));
+  process.once("exit", () => { try { chrome.kill("SIGKILL"); } catch { /* already gone */ } });
   const exited = () => chrome.exitCode !== null || chrome.signalCode !== null;
 
   let port = null;
@@ -316,5 +321,9 @@ export async function launchChrome(name, extraArgs = []) {
   });
   ws.addEventListener("close", () => { for (const [id, done] of pending) { pending.delete(id); done({ closed: true }); } });
   const send = makeSend(ws, pending, () => ++seq);   // every command gives up after 60 s, naming itself
+  // HERESY 2867: a file the page saves (the Writer's backup, an export) lands in this run's profile and goes with it; it went into the
+  // shared tmp/chrome-home/Downloads, where 323 Writer backups of 28 MB had gathered since 17.10.2026
+  const downloads = { behavior: "allow", downloadPath: join(profile, "Downloads") };
+  await send("Browser.setDownloadBehavior", downloads, 10000).catch(() => send("Page.setDownloadBehavior", downloads, 10000)).catch(() => {});
   return { chrome, send, errors, on: (fn) => { listeners.push(fn); }, ...pageHelpers(send) };
 }

@@ -1012,7 +1012,7 @@
       '<button type="button" class="cmp-loud mono" data-cmp="loud" aria-pressed="' + (cmpGet("yue2.oldLoud") === "1") + '" aria-label="As loud as before the cut" data-tip="' + LOUD_TIP + '">' +   // HERESY 2044b: in the head, its wave under it
       LOUD_WAVE + '<span class="loud-t">+dB</span></button></span>' +
       '<button type="button" class="btn ghost small" data-cmp="close">Close</button></span></div>' +
-      '<div class="cmp-wavebox"><canvas class="cmp-wave" role="slider" aria-label="Position" tabindex="-1"></canvas><span class="cmp-hover mono" hidden></span><span class="cmp-db mono" aria-hidden="true" translate="no"></span>' +
+      '<div class="cmp-wavebox"><canvas class="cmp-wave" role="slider" aria-label="Position" tabindex="-1"></canvas><canvas class="cmp-over" aria-hidden="true"></canvas><span class="cmp-hover mono" hidden></span><span class="cmp-db mono" aria-hidden="true" translate="no"></span>' +
         '<span class="cmp-grip" data-grip="a" role="slider" tabindex="0" hidden aria-label="Loop start" data-tip="The loop\'s start: drag it, or ← → while it has the focus (0.1 s, with Shift 1 s)"></span>' +
         '<span class="cmp-grip" data-grip="b" role="slider" tabindex="0" hidden aria-label="Loop end" data-tip="The loop\'s end: drag it, or ← → while it has the focus (0.1 s, with Shift 1 s)"></span></div>' +   // HERESY 2289: the loop's grips   // HERESY 1995: the second under the pointer
       '<canvas class="cmp-ruler" aria-hidden="true"></canvas>' +   // HERESY 1995: a minute, 30 s, 15 s, a second
@@ -1425,12 +1425,26 @@
       ctx.clearRect(0, 0, w, h);
       if (!p || p === "none") {
         if (dbKey) { dbKey = ""; var dbEl = box.querySelector(".cmp-db"); if (dbEl) dbEl.innerHTML = ""; }   // HERESY 2094: no wave, no marks
+        var ocx = box.querySelector(".cmp-over");                           // HERESY 2920: nothing past full scale without a wave
+        if (ocx && ocx.width) { ocx.getContext("2d").clearRect(0, 0, ocx.width, ocx.height); ocx.dataset.over = "0"; ocx.dataset.past = "0"; }
         ctx.fillStyle = dim; ctx.fillRect(0, h / 2 - 0.5, w, 1);
         ctx.fillStyle = lit; ctx.fillRect(0, h / 2 - 1, w * at, 2);
       } else {
         var k, top = scaleTop(), max = top.amp, lv = ldLevel(active);   // HERESY 2094: one scale for every version, its marks under the bars; 2838: its level as heard
         dbMarks(ctx, w, h, top, dim);
         var bars = Math.max(1, Math.floor(w / 3)), SB = cmpGet(CMP_SPEC) === "1" ? bands[active] : null;   // HERESY 2044: the bands' colours
+        // HERESY 2920 (Viktor 20.11.2026, his screenshot of the window at ×2 and +2.4 dB: «Можно ли, не увеличивая высоту полоски, в которой волна,
+        // выносить её пики, которые обрезаются, за пределы полосы?»): a peak the lift takes past full scale (the part the copy cuts flat as it plays) is
+        // drawn whole, its part past full scale in the warning's colour, past the lane's own edges too, over what stands above and below it (.cmp-over, a
+        // canvas OVER_E px taller each way that takes no click); the lane, its scale and its marks stay as they were
+        var oc = box.querySelector(".cmp-over"), OVER_E = 40, octx = null, bad = css.getPropertyValue("--bad").trim() || "#d0563c", overN = 0, overMax = 0;
+        if (oc) {
+          var ow = w, oh = h + 2 * OVER_E;
+          if (oc.width !== Math.round(ow * dpr) || oc.height !== Math.round(oh * dpr)) { oc.width = Math.round(ow * dpr); oc.height = Math.round(oh * dpr); }
+          octx = oc.getContext("2d");
+          octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          octx.clearRect(0, 0, ow, oh);
+        }
         if (SB === "none") SB = null;
         for (var x = 0; x < bars; x++) {
           var k0 = Math.floor(x * p.length / bars), k1 = Math.max(k0 + 1, Math.floor((x + 1) * p.length / bars)), m = 0;
@@ -1445,7 +1459,15 @@
           ctx.globalAlpha = col && !played ? 0.45 : 1;
           ctx.fillRect(x * 3, (h - bh) / 2, 2, bh);
           ctx.globalAlpha = 1;
+          if (octx && m * lv > 1) {                       // HERESY 2920: past full scale, the part the lift cuts: drawn on, past the lane if it reaches
+            var full = m * lv / max * (h - 6), y0 = (h - full) / 2 + OVER_E, y1 = (h - bh) / 2 + OVER_E, top0 = Math.max(0, y0);
+            octx.fillStyle = bad; octx.globalAlpha = played ? 0.95 : 0.6;
+            if (y1 - top0 > 0.5) { octx.fillRect(x * 3, top0, 2, y1 - top0); octx.fillRect(x * 3, h + 2 * OVER_E - y1, 2, y1 - top0); }
+            octx.globalAlpha = 1;
+            overN++; overMax = Math.max(overMax, Math.max(0, OVER_E - y0));
+          }
         }
+        if (oc) { oc.dataset.over = String(overN); oc.dataset.past = String(Math.round(overMax)); }   // for the checks: bars cut, how far past the lane
         var H = LD.hot[active];                           // HERESY 2037: over the old cut's level, red at the top (2053); a flat top cut before 2007, amber
         if (H) {
           var hw = Math.max(1, Math.ceil(w / H.n)), bad = css.getPropertyValue("--bad").trim() || "#d0563c";

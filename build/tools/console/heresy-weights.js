@@ -117,7 +117,7 @@
       return '<div class="wt-part' + (ok ? " is-whole" : "") + (now ? " is-going" : "") + '" data-part="' + esc(p.part) + '">' +
         '<div class="wt-head"><b>' + esc(tr(p.label)) + '</b><span class="wt-size">' + esc(p.size) + '</span><span class="wt-sum">' + esc(sum) + "</span>" +
         (ok && !now ? "" : '<button type="button" class="btn ghost small' + (now ? "" : " btn-icon") + '" data-wt-part="' + esc(p.part) + '"' + (busy ? " disabled" : "") + (now ? "" : ' data-tip="' + esc(tr("Fetch") + " · " + p.size) + '"') + ">" +
-          (now ? esc(tr("Fetching…")) : wtIco("download", tr("Fetch"))) + "</button>") + "</div>" +   // HERESY 2528: an icon, its word kept for a reader
+          (now ? (window.HeresyWait ? window.HeresyWait.wave() : "") + esc(tr("Fetching…")) : wtIco("download", tr("Fetch"))) + "</button>") + "</div>" +   // HERESY 2528: an icon, its word kept for a reader
         (now ? progress() : "") +
         (bad.length ? '<ul class="wt-rows">' + bad.map(function (r) {
           return '<li class="wt-row"><span class="wt-st is-' + esc(r.state) + '">' + esc(tr(r.state)) + '</span><code translate="no">' + esc(r.text) + "</code></li>";
@@ -138,7 +138,7 @@
           return '<option value="' + esc(x.id) + '"' + (x.id === v.id ? " selected" : "") + ">" + esc((x.label || x.id) + " · " + x.size + (x.here ? " · " + tr("here") : "")) + "</option>";
         }).join("") + "</select>" +
         // HERESY 2528 (the UIX audit 13.11.2026, №12: «Есть» and «Скачать» as buttons in every row): here a check, else a download, the size in the tip
-        (going({ extra: e.name, variant: v.id }) ? '<button type="button" class="btn ghost small" data-wt-extra="' + esc(e.name) + '" disabled>' + esc(tr("Fetching…")) + "</button>" :
+        (going({ extra: e.name, variant: v.id }) ? '<button type="button" class="btn ghost small" data-wt-extra="' + esc(e.name) + '" disabled>' + (window.HeresyWait ? window.HeresyWait.wave() : "") + esc(tr("Fetching…")) + "</button>" :
           '<button type="button" class="btn ghost small btn-icon' + (v.here ? " is-here" : "") + '" data-wt-extra="' + esc(e.name) + '"' + (busy || v.here || !d.script ? " disabled" : "") +
           ' data-tip="' + esc(v.here ? tr("here") + " · " + v.size : tr("Fetch") + " · " + (v.label || v.id) + " · " + v.size) + '">' + wtIco(v.here ? "check" : "download", tr(v.here ? "Here" : "Fetch")) + "</button>") +
         (going({ extra: e.name }) ? progress() : "") + "</div>";      // HERESY 1302
@@ -167,7 +167,7 @@
         '<div class="wt-head"><b>' + esc(tr(t.label)) + '</b><span class="wt-size wt-sum">' + esc(size) + "</span>" +
         (can ? '<button type="button" class="btn ghost small' + (now ? "" : " btn-icon") + '" data-wt-tier="' + esc(t.id) + '"' + (busy || short || !d.script ? " disabled" : "") +
           (now ? "" : ' data-tip="' + esc(tr(short ? "Not enough room" : "Fetch the tier") + " · " + size) + '"') + ">" +
-          (now ? esc(tr("Fetching…")) : wtIco(short ? "triangle-alert" : "download", tr(short ? "Not enough room" : "Fetch the tier"))) + "</button>" : "") + "</div>" +   // HERESY 2528
+          (now ? (window.HeresyWait ? window.HeresyWait.wave() : "") + esc(tr("Fetching…")) : wtIco(short ? "triangle-alert" : "download", tr(short ? "Not enough room" : "Fetch the tier"))) + "</button>" : "") + "</div>" +   // HERESY 2528
         '<div class="wt-t-what">' + esc(tr(t.what)) + "</div>" +
         (items ? '<ul class="wt-t-items">' + items + "</ul>" : "") +
         (short ? '<div class="wt-t-short">' + esc(tr("Not enough room on this disk: up to {0} and 2 GB to spare, {1} free; {2} short.")

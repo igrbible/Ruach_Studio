@@ -18,14 +18,30 @@ const OFF = {
   pt: ["O Ruach Studio não está a correr", "O Estúdio desta máquina não responde. Inicie-o (pelo lançador ou systemctl --user start ruach-studio); esta janela tenta de novo a cada cinco segundos."],
   zh: ["Ruach Studio 未在运行", "这台机器上的 Studio 没有响应。请启动它（用启动器，或 systemctl --user start ruach-studio）；此窗口每五秒重试一次。"],
 };
+// HERESY 2928c (the 2.1.0-rc1 Windows soak): on Windows the Studio is started by RuachStudio.exe; systemctl is Linux's
+const OFF_WIN = {
+  en: "The Studio on this machine does not answer. Start it with RuachStudio.exe in its folder; this window tries again every five seconds.",
+  ru: "Студия на этой машине не отвечает. Её нужно запустить: RuachStudio.exe в её папке; окно пробует снова каждые пять секунд.",
+  uk: "Студія на цій машині не відповідає. Її треба запустити: RuachStudio.exe у її теці; вікно пробує знову кожні п'ять секунд.",
+  be: "Студыя на гэтай машыне не адказвае. Яе трэба запусціць: RuachStudio.exe у яе тэчцы; акно спрабуе зноў кожныя пяць секунд.",
+  de: "Das Studio auf diesem Rechner antwortet nicht. Starte es mit RuachStudio.exe in seinem Ordner; dieses Fenster versucht es alle fünf Sekunden erneut.",
+  el: "Το Στούντιο σε αυτό το μηχάνημα δεν απαντά. Ξεκίνησέ το με το RuachStudio.exe στον φάκελό του· αυτό το παράθυρο ξαναδοκιμάζει κάθε πέντε δευτερόλεπτα.",
+  es: "El Estudio de esta máquina no responde. Ponlo en marcha con RuachStudio.exe en su carpeta; esta ventana lo intenta de nuevo cada cinco segundos.",
+  fr: "Le Studio de cette machine ne répond pas. Lance-le avec RuachStudio.exe dans son dossier ; cette fenêtre réessaie toutes les cinq secondes.",
+  it: "Lo Studio su questa macchina non risponde. Avvialo con RuachStudio.exe nella sua cartella; questa finestra riprova ogni cinque secondi.",
+  ja: "このマシンの Studio が応答しません。フォルダー内の RuachStudio.exe で起動してください。このウィンドウは 5 秒ごとに再試行します。",
+  pt: "O Estúdio desta máquina não responde. Inicie-o com o RuachStudio.exe na sua pasta; esta janela tenta de novo a cada cinco segundos.",
+  zh: "这台机器上的 Studio 没有响应。请用其文件夹中的 RuachStudio.exe 启动它；此窗口每五秒重试一次。",
+};
 function offline() {
-  const lang = String((self.navigator && self.navigator.language) || "en").slice(0, 2).toLowerCase(), t = OFF[lang] || OFF.en;
+  const lang = String((self.navigator && self.navigator.language) || "en").slice(0, 2).toLowerCase(), t0 = OFF[lang] || OFF.en;
+  const win = /Windows/.test(String((self.navigator && self.navigator.userAgent) || "")), t = win ? [t0[0], OFF_WIN[lang] || OFF_WIN.en] : t0;
   const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
   return "<!doctype html><html lang=\"" + (OFF[lang] ? lang : "en") + "\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" +
     "<title>" + esc(t[0]) + "</title><style>html,body{margin:0;height:100%;background:#14110e;color:#efe6da;font:16px/1.5 system-ui,sans-serif}" +
     "main{max-width:none;height:100%;display:grid;place-content:center;padding:0 24px;text-align:center}h1{font-weight:600;font-size:22px;color:#e8a33d;margin:0 0 8px}" +
     "p{margin:0;color:#b9ad9f}code{font:14px ui-monospace,monospace;color:#efe6da}</style></head><body><main><h1>" + esc(t[0]) + "</h1><p>" +
-    esc(t[1]).replace("systemctl --user start ruach-studio", "<code>systemctl --user start ruach-studio</code>") + "</p></main><script>" +
+    esc(t[1]).replace("systemctl --user start ruach-studio", "<code>systemctl --user start ruach-studio</code>").replace("RuachStudio.exe", "<code>RuachStudio.exe</code>") + "</p></main><script>" +
     "setInterval(function(){fetch(\"/health\",{cache:\"no-store\"}).then(function(r){if(r.ok)location.reload();},function(){});},5000);</script></body></html>";
 }
 self.addEventListener("install", () => self.skipWaiting());

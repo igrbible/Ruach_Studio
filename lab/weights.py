@@ -23,6 +23,7 @@ decoders and sliders at its next start (it reads them when it starts), which the
 import json
 import os
 import re
+import shutil
 import subprocess
 import threading
 import time
@@ -383,10 +384,28 @@ def _last_run(kit):
 
 def _free(kit):
     try:
-        st = os.statvfs(kit)
-        return st.f_bavail * st.f_frsize
+        return shutil.disk_usage(kit).free      # HERESY 2924 (issue 15): os.statvfs is POSIX only; on Linux this is its f_bavail × f_frsize
     except OSError:
         return None
+
+
+def _bash():
+    """HERESY 2924 (GitHub issue 15): the bash fetch-heresy.sh runs under. Linux and macOS: bash. Windows: Git for Windows' own (the git on PATH,
+    then its usual homes), never C:\\Windows\\System32\\bash.exe nor WindowsApps' (those are WSL's door: the script would run in Linux against
+    Windows paths); None when there is none."""
+    if os.name != "nt":
+        return "bash"
+    seen = []
+    git = shutil.which("git")
+    if git:                                     # ...\Git\cmd\git.exe or ...\Git\bin\git.exe: its bash in ...\Git\bin
+        seen.append(os.path.join(os.path.dirname(os.path.dirname(git)), "bin", "bash.exe"))
+    for v, tail in (("ProgramFiles", "Git"), ("ProgramW6432", "Git"), ("ProgramFiles(x86)", "Git"), ("LOCALAPPDATA", os.path.join("Programs", "Git"))):
+        if os.environ.get(v):
+            seen.append(os.path.join(os.environ[v], tail, "bin", "bash.exe"))
+    w = shutil.which("bash")
+    if w and not any(x in w.lower().replace("/", "\\") for x in ("\\system32\\", "\\windowsapps\\")):   # either slash
+        seen.append(w)
+    return next((b for b in seen if os.path.isfile(b)), None)
 
 
 def _job_view(kit):
@@ -609,7 +628,14 @@ def _say(kit, args, token=None):
     env = dict(os.environ, NO_COLOR="1", HF_HUB_DISABLE_TELEMETRY="1")
     if token:                                       # else whatever the user's own environment holds, as before
         env["HF_TOKEN"] = token
-    p = subprocess.Popen(["bash", str(kit / "heresy" / "fetch-heresy.sh")] + args, cwd=str(kit), env=env, stdin=subprocess.DEVNULL,
+    bash = _bash()
+    if bash is None:                                # HERESY 2924: Windows without Git for Windows; said, not a crash
+        with LOCK:
+            JOB["lines"] += ["On Windows the Weights panel downloads through the bash of Git for Windows, and none is installed here.",
+                             "Install Git for Windows (https://git-scm.com/download/win), then press again. The models a song needs come without it too:",
+                             "    .venv\\Scripts\\python launcher\\fetch_models.py"]
+        return 1
+    p = subprocess.Popen([bash, str(kit / "heresy" / "fetch-heresy.sh")] + args, cwd=str(kit), env=env, stdin=subprocess.DEVNULL,
                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
     for line in p.stdout:
         line = hf_access.scrub(_strip(kit, line.rstrip("\n")))

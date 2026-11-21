@@ -2422,6 +2422,7 @@ RuachI18n.add("uk", {
 "{#0} captions written": {"one": "Записано {0} підпис", "few": "Записано {0} підписи", "many": "Записано {0} підписів", "other": "Записано {0} підпису"},
 "drafts here by {0}": "накиди тут — {0}",
 "The Studio’s trainer is missing {0}:": "Тренеру Студії бракує: {0}:",
+"Training runs on Linux for now: the Trainer starts each run as a systemd unit, and this machine (Windows, macOS) has none.": "Навчання поки що йде лише на Linux: Тренер запускає кожен прогін юнітом systemd, а на цій машині (Windows, macOS) його немає.",
 "Comfy-Org's YuE2 {0} weights": "ваг YuE2 {0} від Comfy-Org",
 "the realaudio tokenizer head": "голови токенізатора realaudio",
 "and": "і",
@@ -9762,6 +9763,205 @@ RuachI18n.add("uk", {
 "Sing anyway": "Все одно заспівати",
 "Nothing sung: the style holds negative words. Fix it, or sing it anyway.": "Нічого не заспівано: у стилі негативні слова. Виправ його або заспівай все одно.",
 "The 4–12 kHz envelope at 25, 50 … 150 Hz above its neighbours, mean of all windows: the VAE's 25 frames a second heard as an electric buzz in the highs. Music with no buzz reads about 8 dB here and up to 12 (the measure's own floor, at in-between frequencies on 30 takes): amber past 13 dB, red past 15": "Обвідна 4–12 кГц на 25, 50 … 150 Гц над сусідніми частотами, середнє за всіма вікнами: 25 кадрів на секунду VAE, чутні як електричне гудіння на верхах. Музика без гудіння дає тут близько 8 дБ і до 12 (власна підлога виміру, на проміжних частотах за 30 семплами): жовтий понад 13 дБ, червоний понад 15",
+// HERESY 2858 (19.11.2026): Engine → Compute, the music cache in 8 bits (Q8_0)
+"Music cache in 8 bits (Q8_0) — about half the memory, for smaller cards": "Кеш музики у 8 бітах (Q8_0) — близько половини пам'яті, для менших карт",
+"About the music cache in 8 bits": "Про кеш музики у 8 бітах",
+"Music cache in 8 bits": "Кеш музики у 8 бітах",
+"now F16": "зараз F16",
+"now Q8_0": "зараз Q8_0",
+"applies before the next song": "застосується перед наступною піснею",
+"asked, but this card keeps F16: its flash attention does not read an 8-bit cache": "увімкнено, але ця карта тримає F16: її flash attention не читає 8-бітний кеш",
+"this engine has no 8-bit cache": "у цього рушія немає 8-бітного кешу",
+"the music cache in 8 bits (Engine → Compute) frees about 2.5 GB on a long song; it stays off until you turn it on": "кеш музики у 8 бітах («Рушій → Обчислення») звільняє близько 2,5 ГБ на довгій пісні; він вимкнений, доки ти сам його не ввімкнеш",
+"The engine keeps what the song has sung so far in a cache on the card. In 8 bits (Q8_0) the cache takes about half the room of the usual 16 bits (F16), so a card of 8–12 GB fits longer songs or a bigger model.": "Рушій зберігає проспіване піснею на карті, у кеші. У 8 бітах (Q8_0) кеш займає близько половини місця звичайних 16 біт (F16), і на карту у 8–12 ГБ вміщаються довші пісні або більша модель.",
+"Measured on an RTX 3090, a 150 s song: the cache 5.3 → 2.8 GB, the card's peak 16.6 → 14.2 GB, the sound stage 3 % slower.": "Замір на RTX 3090, пісня на 150 с: кеш 5,3 → 2,8 ГБ, пік карти 16,6 → 14,2 ГБ, стадія звуку на 3 % повільніша.",
+"On the Arc B50 (16 GB), the same song at 75 s: the cache 5.3 → 2.8 GB, the card's peak 13.1 → 10.7 GB; the score stage 20 → 37 s, the sound stage as fast as before.": "На Arc B50 (16 ГБ), та сама пісня на 75 с: кеш 5,3 → 2,8 ГБ, пік карти 13,1 → 10,7 ГБ; стадія партитури 20 → 37 с, стадія звуку така ж швидка.",
+"The same seed sings a slightly different take with it (other notes, not a worse sound). Off by default; it applies before the next song. A card that cannot read an 8-bit cache keeps F16, and this switch says so.": "З тим самим сидом він співає трохи інший дубль (інші ноти, а не гірший звук). Типово вимкнений; застосовується перед наступною піснею. Карта, що не читає 8-бітний кеш, лишається на F16, і цей перемикач так і скаже.",
+});
+// HERESY 2862: the Writer's version beside its name, its versions kept at every new number
+RuachI18n.add("uk", {
+"The version beside the name, digits and dots only (1.2.8). Another number keeps the text before it in the versions below, with what differs from now": "Версія поруч із назвою, лише цифри й крапки (1.2.8). Інший номер зберігає текст до нього у версіях нижче, з тим, чим він відрізняється від нинішнього",
+"A version is kept at every new version number, at every save after a pause, and whenever you keep one.": "Версія зберігається з кожним новим номером версії, з кожним збереженням після паузи і щоразу, коли ти зберігаєш її сам.",
+"{0} kept in the versions; now {1}": "{0} збережено у версіях; тепер {1}"
+});
+// HERESY 2863: the Musician's Ctrl+S into the Writer's document in hand
+RuachI18n.add("uk", {
+"The Writer's “{0}” now holds the song as the Musician has it (the version before is kept)": "«{0}» у Письменнику тепер зберігає пісню такою, як вона в Музиканті (попередню версію збережено)"
+});
+// HERESY 2865: the DAW's two ways to play, Live and Forge
+RuachI18n.add("uk", {
+"How the DAW plays": "Як грає DAW",
+"Live": "Наживо",
+"Forge": "Кузня",
+"Live in this browser: every knob heard at once, through the browser's audio with larger buffers. Remembered in this browser": "Наживо в цьому браузері: кожну ручку чути одразу, через звук браузера зі збільшеними буферами. Запам'ятовується в цьому браузері",
+"Rendered on Forge by the mix's own code, in pieces from the playhead, and played as a file: nothing in the browser between the sound and the speakers. A change is heard a second or two later. Remembered in this browser": "Рендериться на Кузні кодом самого зведення, шматками від курсора, і грає файлом: між звуком і колонками нічого від браузера. Зміну чути за секунду-дві. Запам'ятовується в цьому браузері",
+"The mix is rendered on Forge…": "Мікс рендериться на Кузні…",
+"Forge could not play the mix: {0}": "Кузня не змогла зіграти мікс: {0}",
+});
+
+// HERESY 2869: the version fields say that an empty one is saved as 1.0
+RuachI18n.add("uk", {
+"The song's version beside its name, digits and dots only (4.2.3). A take is called «Title v4.2.3», as your tracks are, and the Musician's versions keep one tree per title, a branch per version. A title typed with its version («Song v1.2») splits into the two. Left empty, a save (Ctrl+S) gives it 1.0": "Версія пісні поруч з її назвою, лише цифри й крапки (4.2.3). Семпл називається «Назва v4.2.3», як твої треки, а Версії Музиканта тримають одне дерево на назву й по гілці на версію. Назва, набрана з версією («Пісня v1.2»), сама ділиться на два поля. Якщо поле порожнє, під час збереження (Ctrl+S) ставиться 1.0",
+"The version beside the name, digits and dots only (1.2.8). Another number keeps the text before it in the versions below, with what differs from now. Left empty, a save gives it 1.0": "Версія поруч із назвою, лише цифри й крапки (1.2.8). Інший номер зберігає текст до нього у версіях нижче, з тим, чим він відрізняється від нинішнього. Якщо поле порожнє, під час збереження ставиться 1.0"
+});
+
+// HERESY 2815: the Section editor (heresy-seceditor.js, HERESY 2810–2817)
+RuachI18n.add("uk", {
+"Section editor…": "Редактор за секціями…",
+"the song by its sections: edits in a queue, one new take": "пісня за секціями: правки чергою, один новий дубль",
+"Section editor": "Редактор за секціями",
+"About the Section editor": "Про редактор за секціями",
+"the song by its sections": "пісня за секціями",
+"Close (Esc): the queue stays": "Закрити (Esc): черга лишається",
+"The song's sections": "Секції пісні",
+"← → between sections · Space plays it": "← → між секціями · пробіл грає її",
+"instrumental": "програш",
+"added": "додасться",
+"sung anew to the end": "наново до кінця",
+"by ear": "на слух",
+"by the score": "за партитурою",
+"Sections placed by Whisper's timing of the lyrics, as on the player's wave": "Секції розставлено за таймінгом лірики від Whisper, як на хвилі плеєра",
+"Sections from the score's marks: the take's lyrics are not timed yet": "Секції за мітками партитури: лірику дубля ще не прив'язано",
+"{0} of {1} lines heard": "почуто рядків: {0} з {1}",
+"The lyrics as they will be sung": "Лірика, як вона проспівається",
+"Queue": "Черга",
+"Re-sing from here to the end…": "Переспівати звідси до кінця…",
+"Re-sing from here to the end": "Переспівати звідси до кінця",
+"Its words changed or kept, sung anew on a new music seed; the rest stays": "Її слова, нові чи ті самі, проспіваються наново на новому музичному сіді; решта лишається",
+"One line sung anew, cut halfway to the lines around it": "Один рядок проспівається наново, розріз посередині до сусідніх рядків",
+"The section once more right after itself: a variation on the music seed + 1": "Секція ще раз одразу за собою: варіація на музичному сіді + 1",
+"Music the model writes after the section, nothing sung again": "Музика, яку модель напише після секції, без повтору слів",
+"A copy of the parts right after them, on the score's bar lines, in seconds": "Копія частин одразу за ними, по тактових лініях партитури, за секунди",
+"The parts taken out on the score's bar lines, in seconds": "Частини прибираються по тактових лініях партитури, за секунди",
+"Everything before the break before it stays; from there to the end the song is sung anew": "Усе до програшу перед нею лишається; звідти до кінця пісня проспівається наново",
+"The music goes on past the take's end, with new lines or without": "Музика продовжиться за кінцем дубля, з новими рядками чи без",
+"An instrumental part: no words to sing anew": "Інструментальна частина: немає слів, щоб переспівати",
+"The rest of a part after a break: pick the part itself": "Продовження частини після брейку: вибери саму частину",
+"These are the score's marks: find the sections by ear first": "Це мітки партитури: спершу знайди секції на слух",
+"Its words were not found in the lyrics": "Її слова не знайдено в ліриці",
+"No line of it was heard clearly for two seconds or more": "Жоден її рядок не почуто чітко на дві секунди й довше",
+"No score part lies under this section": "Під цією секцією немає частини партитури",
+"Its score has one section only": "У партитурі дубля лише одна секція",
+"No break of the voice before it": "Перед нею голос не замовкає",
+"The break is under 5 seconds from an end of the take": "Програш ближче ніж за 5 секунд від краю дубля",
+"Only past the take's end, 15:00 at most in all": "Лише за кінцем дубля, загалом не більше 15:00",
+"Its words as the lyrics have them: change what you will, or keep them and let only the music be new.": "Її слова, як вони в ліриці: зміни що хочеш — або залиш, і новою буде лише музика.",
+"Which line?": "Який рядок?",
+"not heard clearly": "не почуто чітко",
+"under two seconds": "коротше двох секунд",
+"By how much (m:ss)?": "На скільки (х:сс)?",
+"No sections: the lyrics are not timed and there is no score.": "Секцій немає: лірику не прив'язано, партитури немає.",
+"Take it out of the queue": "Прибрати з черги",
+"Clear the queue": "Очистити чергу",
+"Clear the queue: {0} edits?": "Очистити чергу: правок {0}?",
+"anew, words changed": "наново, слова змінено",
+"anew, the same words": "наново, ті самі слова",
+"line {0} anew": "рядок {0} наново",
+"once more, straight on": "ще раз, одразу",
+"once more after ~{0} s of music": "ще раз після ~{0} с музики",
+"an interlude of ~{0} s after it": "після неї програш ~{0} с",
+"twice, on the bar lines": "двічі, по тактових лініях",
+"taken out, on the bar lines": "прибрано, по тактових лініях",
+"from {0} to the end, anew": "з {0} до кінця наново",
+"+{0} after the end": "+{0} після кінця",
+"{0} has an edit in the queue already: ✕ it first": "У {0} уже є правка в черзі: спершу прибери її ✕",
+"It overlaps {0} in the queue ({1}–{2})": "Перетинається з {0} у черзі ({1}–{2})",
+"It would go in inside {0} ({1}–{2})": "Це стане всередину {0} ({1}–{2})",
+"One ending at a time: re-sing to the end, or extend": "Кінець один: або переспівати до кінця, або подовжити",
+"Nothing can go after the re-sing to the end ({0})": "Після переспіву до кінця ({0}) нічого бути не може",
+"Extend goes on from the end this Remove takes away": "«Подовжити» йде від кінця, який ця правка прибирає",
+"cut at the bar line {0}": "розріз на тактовій лінії {0}",
+"Eight sung edits at most in one take": "Не більше восьми співаних правок на дубль",
+"Twelve edits at most in one queue": "Не більше дванадцяти правок у черзі",
+"The new take would run past 15:00": "Новий дубль вийшов би довшим за 15:00",
+"The sections were heard anew: add this edit again": "Секції почуто наново: додай цю правку знову",
+"Drafts sung on the engine: {0}, then the whole take once": "Чернеток на рушії: {0}, далі весь дубль разом",
+"Drafts sung on the engine: {0}, then the ending, which is the take": "Чернеток на рушії: {0}, далі кінцівка, вона і є дубль",
+"about {0} of music rendered in all": "загалом прозвучить близько {0} музики",
+"Only cuts on the bar lines: seconds, nothing sung": "Лише склейки по тактових лініях: секунди, без співу",
+"One new take; this one stays.": "Один новий дубль; цей лишається.",
+"Assemble the take": "Зібрати дубль",
+"Assemble again": "Зібрати ще раз",
+"Another version of the same queue, on new seeds": "Ще одна версія тієї ж черги, на нових сідах",
+"Step {0} of {1}": "Крок {0} з {1}",
+"waits for the engine": "чекає на рушій",
+"the engine's queue is full: waiting": "черга рушія повна: чекаємо",
+"the Arc is being reset: waiting": "Arc перезапускається: чекаємо",
+"the draft is sung": "співається чернетка",
+"the voice is found": "шукається голос",
+"laid in": "вкладено",
+"the whole take is rendered": "увесь дубль збирається в звук",
+"cut on the bar lines": "склейка по тактових лініях",
+"placed": "на місці",
+"Stop the assembly": "Зупинити збирання",
+"Assembled: {0}": "Зібрано: {0}",
+"Resume from step {0}": "Продовжити з кроку {0}",
+"Discard": "Відкинути",
+"Stopped at step {0}: {1}": "Зупинено на кроці {0}: {1}",
+"Cut short by a restart of the lab at step {0}": "Перервано перезапуском лабораторії на кроці {0}",
+"The queue of {0} was put away: five takes keep theirs": "Чергу «{0}» прибрано: свої черги зберігають п'ять дублів",
+"Each block is a section as the player's wave shows it: the lyrics' tags placed by Whisper's timing, a break, an intro or an outro where no voice sings, or the score's marks for a take never timed. The tags stay in English, as the model reads them.": "Кожен блок — секція, як її показує хвиля плеєра: теги лірики, розставлені за таймінгом Whisper, брейк, інтро чи аутро там, де голос мовчить, або мітки партитури в дубля без таймінгу. Теги лишаються англійською, як їх читає модель.",
+"Click a block (← → walk them, Space plays it), pick an edit under the strip and add it to the queue: one edit a section. The queue lists them in the song's order, each with ✕.": "Клацни блок (← → по блоках, пробіл грає його), вибери правку під смугою й додай її до черги: одна правка на секцію. Черга йде в порядку пісні, у кожної правки ✕.",
+"Assemble the take sings the queue as one new take, a child of this one, which stays as it is. The sung edits go one after another on the engine (a draft each, then the whole take once); Repeat and Remove are cut on the score's bar lines in seconds. Songs you queue in the Musician meanwhile go first.": "«Зібрати дубль» проспіває всю чергу одним новим дублем, дитиною цього; цей лишається як є. Співані правки йдуть на рушії одна за одною (у кожної чернетка, далі весь дубль разом); «Повторити» й «Прибрати» ріжуться по тактових лініях партитури за секунди. Пісні, поставлені тим часом у Музиканті, підуть першими.",
+"The new take lands where this one is; its note lists the edits, and the player tints what was sung anew.": "Новий дубль ляже туди ж, де цей; його нотатка перелічує правки, а плеєр підсвічує те, що проспівано наново.",
+});
+
+// HERESY 2871: a DAW lane as a spectrogram
+RuachI18n.add("uk", {
+"Spectrum: the lane's sound as a spectrogram in place of its wave, the low notes at the bottom and the high at the top, measured once on Forge; remembered in this browser": "Спектр: звук доріжки спектрограмою замість хвилі, низькі внизу, високі вгорі; міряється один раз на Кузні; запам'ятовується в цьому браузері",
+"The rest is the source less the stems, worked out as it plays: it has no file of its own to measure": "Залишок — це джерело без стемів, він рахується на ходу: свого файлу, який можна виміряти, у нього немає",
+"Forge is measuring the spectrum of {0}…": "Кузня міряє спектр {0}…",
+"The spectrum of {0} could not be measured: {1}": "Спектр {0} не вдалося виміряти: {1}"
+});
+
+// HERESY 2872: the Library card's workspaces button and its list, the menu's sections folded
+RuachI18n.add("uk", {
+"In {0} workspaces:": "У {0} просторах:",
+"In the workspace:": "У просторі:",
+"Take it out of this workspace": "Вийняти з цього простору",
+"open now": "відкритий зараз",
+"Its workspaces": "Його простори",
+"“{0}” is in these. A click on one opens it; ✕ takes the take out of it (it stays in the library and in the others).": "«{0}» лежить у них. Клік по одному відкриває його; ✕ виймає семпл із нього (він лишається в бібліотеці та в інших).",
+"Take “{0}” out of “{1}”?": "Вийняти «{0}» з «{1}»?",
+"It stays in the library and in any other workspace; only this workspace lets it go.": "Він лишається в бібліотеці та в будь-якому іншому просторі; відпускає його лише цей простір.",
+"Taken out of “{0}”": "Вийнято з «{0}»",
+"the workspace itself, not its sections": "сам простір, без його розділів"
+});
+
+// HERESY 2875: the Trainer's run card: both towers' rates, the absolute epochs, the VRAM of now, the run's now line
+RuachI18n.add("uk", {
+"this run": "цей ран",
+"Music half · AR": "Музична половина · AR",
+"Sound half · NAR": "Звукова половина · NAR",
+"Its note from its start": "Його нотатка зі старту",
+"the highest over the whole run, all its sittings; now: the highest of each card over the last 25 steps": "найбільша за весь ран, усі його сеанси; зараз: найбільша кожної карти за останні 25 кроків",
+"epoch {0}": "епоха {0}"
+});
+
+// HERESY 2876: a run's command line and base on its card; the new-run form said as such beside a run
+RuachI18n.add("uk", {
+"runs as": "запущено як",
+"new run": "новий ран",
+"base": "база"
+});
+// HERESY 2883: the Narrator's text with the lyrics editor's hands: its count line
+RuachI18n.add("uk", {
+"Text: {0} characters · {1} syllables · {2} lines": "Текст: {0} знаків · {1} складів · {2} рядків"
+});
+// HERESY 2887: the Section editor's ninth edit, Insert a part after it
+RuachI18n.add("uk", {
+"Insert a part after it…": "Вставити частину після неї…",
+"A copy of one of the score's parts put in after this section, on its bar line, in seconds; the section itself may keep an edit of its own": "Копія однієї з частин партитури стає після цієї секції, на її тактову лінію, за секунди; у самої секції може бути своя правка",
+"Which part goes in?": "Яку частину вставити?",
+"It goes in after {0}, at {1}": "Стане після {0}, на {1}",
+"a copy after {0}": "копія після {0}"
+});
+// HERESY 2895: the Section editor writes a take's score from its sound first
+RuachI18n.add("uk", {
+"Its score is being written from its sound: every edit waits for it": "Партитура пишеться зі звуку: кожна правка чекає на неї",
+"Writing its score from its sound ({0})… {1}": "Пишу партитуру зі звуку ({0})… {1}",
+"Its score could not be written from its sound: {0}": "Партитуру не вдалося написати зі звуку: {0}",
+"A take with no score of its own (Direct, or brought in) gets one written from its sound first, by the transcriber chosen in the Engine, through the Studio's queue: Repeat, Remove and Insert cut on its bar lines, and a section sung anew follows it.": "Дубль без власної партитури (Direct або привезений) спершу отримує її, написану зі звуку транскрибером, вибраним у Рушії, через чергу Студії: «Повторити», «Прибрати» і «Вставити» ріжуть по її тактах, а переспівана секція йде за нею."
 });
 // HERESY 2896: the lyrics' own sections followed by the planner
 RuachI18n.add("uk", {
@@ -9780,4 +9980,217 @@ RuachI18n.add("uk", {
 "Freed: {0}": "Звільнено: {0}",
 "Sure you want to unload this model from VRAM?": "Певен, що хочеш вивантажити цю модель з VRAM?",
 "Sure you want to unload these models from VRAM?": "Певен, що хочеш вивантажити ці моделі з VRAM?"
+});
+// HERESY 2900: the program monitor's and the console's windows by the screens
+RuachI18n.add("uk", {
+"One screen: the program monitor stays in the page. With a second screen it opens there in a window of its own": "Один екран: монітор програми лишається на сторінці. З другим екраном він відкриється там в окремому вікні",
+"One screen: the console stays in the page. With a second screen it opens there in a window of its own": "Один екран: консоль лишається на сторінці. З другим екраном вона відкриється там в окремому вікні"
+});
+// HERESY 2901: the installed app kept awake
+RuachI18n.add("uk", {
+"Keep the installed app awake": "Не давати встановленому застосунку засинати",
+"Only in the installed app (a window of its own, not a browser tab): a 12 Hz tone at -60 dBFS, far under hearing, that Chrome counts as sound, so it does not freeze or discard the Studio while it is in the background and the card and the player are as you left them. It starts with your first click or key. Off: the browser may put the app to sleep": "Лише у встановленому застосунку (власне вікно, не вкладка браузера): тон 12 Гц на рівні -60 dBFS, далеко за порогом чутності, який Chrome вважає звуком, тож не заморожує й не вивантажує Студію у фоні, і картка з плеєром лишаються такими, як ти їх залишив. Вмикається з першим кліком або клавішею. Вимкнено: браузер може приспати застосунок"
+});
+// HERESY 2902: the reactions linked
+RuachI18n.add("uk", {
+"🔥 and 💎 like the take; 👎 takes them off": "🔥 і 💎 ставлять 👍; 👎 знімає їх",
+"On: switching 🔥 or 💎 on likes the take too, and 👎 takes off the like, 🔥 and 💎 together, wherever those buttons are (the cards, the Library, the compare window, the player). The reaction faces are never touched. Off: each button stands alone": "Увімкнено: 🔥 або 💎 ставлять дублю і 👍, а 👎 знімає 👍, 🔥 і 💎 разом, де б не були ці кнопки (картки, Бібліотека, вікно порівняння, плеєр). Емодзі-реакції не чіпаються. Вимкнено: кожна кнопка сама по собі"
+});
+// HERESY 2906: the lyrics' tags explained, with what Follow my sections makes of each
+RuachI18n.add("uk", {
+"The body of the song: new words each time over the same music, the story moving on. Numbered (Verse 1, Verse 2…); the Studio offers the next number. Sung; Follow my sections: verse.": "Тіло пісні: щоразу нові слова на ту саму музику, історія рухається далі. Нумерується (Verse 1, Verse 2…); Студія пропонує наступний номер. Співається; «За моїми секціями»: verse.",
+"The part the song comes back to, the same words and melody each time, with the line people remember and sing along. Sung; Follow my sections: chorus.": "Частина, до якої пісня повертається, щоразу ті самі слова й мелодія, з рядком, який пам'ятають і підспівують. Співається; «За моїми секціями»: chorus.",
+"The climb from a verse into the chorus: a melody and words of its own that raise the tension, always followed by the chorus. Sung; Follow my sections: pre-chorus.": "Підйом від куплету до приспіву: своя мелодія й слова, що нагнітають напругу, за нею завжди приспів. Співається; «За моїми секціями»: pre-chorus.",
+"Once, late in the song, everything turns (melody, chords, words) before the song comes home to its chorus. Sung; Follow my sections: bridge (Middle 8 too).": "Один раз, ближче до кінця, усе повертає (мелодія, акорди, слова), перш ніж пісня повернеться до приспіву. Співається; «За моїми секціями»: bridge (Middle 8 теж).",
+"The ending: a last line repeated as the music fades, or the chorus once more, resolved. Words under it are sung; Follow my sections: outro, always the plan's last section.": "Кінцівка: останній рядок повторюється, поки музика згасає, або приспів ще раз, розв'язаний. Слова під нею співаються; «За моїми секціями»: outro, завжди остання секція плану.",
+"The opening before the first verse, mostly music. Follow my sections: intro, always the plan's first (one is added when the lyrics have none). YuE2 seldom sings its lines: put a spoken intro under [Verse].": "Початок до першого куплету, здебільшого музика. «За моїми секціями»: intro, завжди перша секція плану (додається, якщо в ліриці її немає). YuE2 рідко співає її рядки: мовлений вступ став під [Verse].",
+"A passage of another feel between parts: the band alone, or ad-libs and calls over it. Viktor's use: a pause in rap that brakes speech running ahead. Follow my sections: interlude, with words under it or without.": "Пасаж іншого настрою між частинами: сам гурт або ад-ліби й вигуки поверх. Як користується Віктор: пауза в репі, що гальмує мову, яка біжить уперед. «За моїми секціями»: interlude, зі словами під ним і без.",
+"The last chorus, usually the biggest: more voices, more power, now and then a key change. Sung; Follow my sections: chorus.": "Останній приспів, зазвичай найпотужніший: більше голосів, більше сили, часом зміна тональності. Співається; «За моїми секціями»: chorus.",
+"The instruments alone between sections, for variety or to build into the next one; name what plays: «Instrumental Break - Horns». Follow my sections: interlude, no voice.": "Інструменти самі між секціями, для різноманіття або для розгону до наступної; назви, що грає: «Instrumental Break - Horns». «За моїми секціями»: interlude, без голосу.",
+"One instrument steps forward with a long melody of its own while the rest backs it (Drum Solo, Keyboard Solo, plain Solo too). Instrumental; Follow my sections: interlude.": "Один інструмент виходить уперед зі своєю довгою мелодією, решта акомпанує (Drum Solo, Keyboard Solo, просто Solo теж). Інструментал; «За моїми секціями»: interlude.",
+"The song's last mark: the music stops here (SUNO's [END] is the same tag). Follow my sections: outro; [Outro] [End] in a row are one.": "Остання позначка пісні: тут музика зупиняється ([END] із SUNO — той самий тег). «За моїми секціями»: outro; [Outro] [End] поспіль — одна секція.",
+"An opening played without voices. Follow my sections: intro.": "Початок, зіграний без голосів. «За моїми секціями»: intro.",
+"A line or two repeated unchanged, often at the end of each verse. Sung; Follow my sections: chorus.": "Рядок-два, що повторюються без змін, часто в кінці кожного куплету. Співається; «За моїми секціями»: chorus.",
+"A short part right after the chorus that carries its energy on: a chant, a riff, a tag line. Sung; Follow my sections: chorus.": "Коротка частина одразу після приспіву, що несе його енергію далі: речівка, риф, рядок-тег. Співається; «За моїми секціями»: chorus.",
+"The arrangement stripped to its bones to build tension before the last chorus. Metal and hardcore: a heavy half-time chug, the voice a shout, a chant or nothing. EDM: the quiet part, the drums gone, pads left, one line or none. Ballad and rock: bass and kick or one instrument, sometimes whispered or spoken. Empty: an interlude; with words under it the Studio plans a sung section (a bridge). For speech add «spoken word breakdown» to the style.": "Аранжування, зрізане до кісток, щоб нагнітати напругу перед останнім приспівом. Метал і хардкор: важкий чаг у півтемпу, голос — крик, скандування або нічого. EDM: тиха частина, барабани пішли, лишилися педи, один рядок або жодного. Балада й рок: бас і бочка або один інструмент, часом шепіт чи мовлення. Порожній — interlude; зі словами під ним Студія планує співану секцію (bridge). Для мовлення додай у стиль «spoken word breakdown».",
+"The music fades to silence (Fadeout too). Follow my sections: outro.": "Музика затихає до тиші (Fadeout теж). «За моїми секціями»: outro.",
+"The catchiest line or riff of the song; Genius writes it [Chorus] or [Refrain] now. Sung; Follow my sections: chorus.": "Найчіпкіший рядок або риф пісні; Genius тепер пише його [Chorus] або [Refrain]. Співається; «За моїми секціями»: chorus.",
+"Dance and electronic music: the moment beat and bass hit after a build-up, mostly without a voice. Follow my sections: interlude; with words under it, a sung bridge.": "Танцювальна й електронна музика: мить, коли біт і бас ударяють після нагнітання, зазвичай без голосу. «За моїми секціями»: interlude; зі словами під ним — співаний bridge.",
+"A part, or a whole song, played without singing. Follow my sections: interlude.": "Частина або ціла пісня, зіграна без співу. «За моїми секціями»: interlude.",
+"An ending played without voices. Follow my sections: outro.": "Кінцівка, зіграна без голосів. «За моїми секціями»: outro.",
+"The rising part before a drop or a chorus: snare rolls, risers, the filter opening, the energy climbing. Follow my sections: pre-chorus, a sung section.": "Наростальна частина перед дропом або приспівом: дроби малого, райзери, фільтр, що відкривається, енергія росте. «За моїми секціями»: pre-chorus, співана секція.",
+"A woman sings the lines that follow, until another voice is named; after the dash how she sings: Deep, Warm; Soft, Breathy. Not a section: Follow my sections passes it by, as it does the ФОСФОРИДА form [Solo Female Voice].": "Жінка співає наступні рядки, доки не названо інший голос; після тире як вона співає: Deep, Warm; Soft, Breathy. Не секція: «За моїми секціями» його пропускає, як і форму ФОСФОРИДИ [Solo Female Voice].",
+"A man sings the lines that follow; after the dash how he sings: Bari-tenor, Calm; Low, Raspy. Not a section: Follow my sections passes it by, as it does the ФОСФОРИДА form [Solo Male Vocal: …].": "Чоловік співає наступні рядки; після тире як він співає: Bari-tenor, Calm; Low, Raspy. Не секція: «За моїми секціями» його пропускає, як і форму ФОСФОРИДИ [Solo Male Vocal: …]."
+});
+// HERESY 2905: the Musician's song kept in the Writer from its first save
+RuachI18n.add("uk", {
+"The Writer keeps this song from now on: “{0}”, a new document, in hand": "Письменник тепер зберігає цю пісню: «{0}», новий документ, у руках",
+"The song was not kept in the Writer: {0}": "Пісня не збереглася в Письменнику: {0}"
+});
+// HERESY 2912: the history of plays and downloads (Ctrl+H, Ctrl+J)
+RuachI18n.add("uk", {
+"History": "Історія",
+"Downloads": "Завантаження",
+"Yesterday": "Учора",
+"Nothing found": "Нічого не знайдено",
+"Loading…": "Отримую…",
+"Older": "Раніше",
+"Find a title": "Знайти за назвою",
+"Find a title or a file": "Знайти за назвою чи файлом",
+"1 play": "1 прослуховування",
+"{#0} plays": {"one": "{0} прослуховування", "few": "{0} прослуховування", "many": "{0} прослуховувань", "other": "{0} прослуховування"},
+"1 download": "1 завантаження",
+"{#0} downloads": {"one": "{0} завантаження", "few": "{0} завантаження", "many": "{0} завантажень", "other": "{0} завантаження"},
+"to the end": "до кінця",
+"{0} heard": "прослухано {0}",
+"stopped at {0} of {1}": "зупинено на {0} з {1}",
+"not in the Studio any more": "його більше немає в Студії",
+"a file of no take": "файл не з треку",
+"Clear history": "Очистити історію",
+"Clear downloads": "Очистити завантаження",
+"The last {0} days, at most {1} plays: kept by the Studio, the same in every browser that opens it": "Останні {0} днів, не більше {1} прослуховувань: зберігає Студія, одна для кожного браузера, що її відкриває",
+"The last {0} days, at most {1} downloads: kept by the Studio, the same in every browser that opens it": "Останні {0} днів, не більше {1} завантажень: зберігає Студія, одна для кожного браузера, що її відкриває",
+"(for now in this browser: the Studio's lab learns the history at its next restart)": "(поки що в цьому браузері: лабораторія Студії дізнається про історію після наступного перезапуску)",
+"Nothing played yet": "Ще нічого не звучало",
+"Nothing downloaded yet": "Ще нічого не завантажено",
+"Not in the Studio any more: “{0}”": "Його більше немає в Студії: «{0}»",
+"The history of plays is cleared": "Історію прослуховувань очищено",
+"The history of downloads is cleared": "Історію завантажень очищено",
+"Clear the history of plays?\n\nEvery play it keeps goes ({0}); the takes themselves stay.": "Очистити історію прослуховувань?\n\nПідуть усі прослуховування, що в ній є ({0}); самі треки залишаться.",
+"Clear the history of downloads?\n\nEvery download it keeps goes ({0}); the files you saved stay where you saved them.": "Очистити історію завантажень?\n\nПідуть усі завантаження, що в ній є ({0}); збережені файли залишаться там, куди ти їх зберіг.",
+"History: what the player played, day by day; a title takes to its card": "Історія: що звучало в плеєрі, по днях; назва веде до картки треку",
+"History: what the player played, the last 30 days, day by day": "Історія: що звучало в плеєрі за останні 30 днів, по днях",
+"Downloads: what was saved from the Studio, the last 90 days": "Завантаження: що збережено зі Студії за останні 90 днів",
+"The history's button in the full player (between the take's reactions and the transport); the one-row player has none, ☰ has History and Downloads either way": "Кнопка історії в повному плеєрі (між реакціями треку та кнопками відтворення); в однорядковому плеєрі її немає, у ☰ Історія та Завантаження є завжди",
+"A history button in the player": "Кнопка історії в плеєрі",
+"History and downloads": "Історія та завантаження",
+"Clear the history of plays (asks first); the takes stay": "Очистити історію прослуховувань (спершу спитає); треки залишаться",
+"Clear the history of downloads (asks first); the saved files stay": "Очистити історію завантажень (спершу спитає); збережені файли залишаться"
+});
+// HERESY 2913: the take's MIDI window (the score's, MuScriptor on the mix or per stem)
+RuachI18n.add("uk", {
+"about {0} here": "близько {0} тут",
+"A training runs: the transcriber goes behind it ({0} threads), slower than the estimate.": "Іде тренування: транскрибер стає за ним ({0} потоків), довше за оцінку.",
+"Fetch {0} ({1}) and transcribe": "Завантажити {0} ({1}) і транскрибувати",
+"fetched first, {0}": "спершу завантажиться, {0}",
+"Fetching MuScriptor {0}…": "Завантажується MuScriptor {0}…",
+"for a card of 8 GB": "для карти від 8 ГБ",
+"its stems are here ({0}): each transcribed with its own instruments, each note's velocity from its stem": "його стеми вже тут ({0}): кожен транскрибується своїми інструментами, сила кожної ноти — за її стемом",
+"its stems first (a card, a minute or two), then each transcribed with its own instruments, each note's velocity from its stem": "спершу стеми (карта, хвилина-дві), потім кожен транскрибується своїми інструментами, сила кожної ноти — за її стемом",
+"Made {0}: it downloads at once.": "Готово {0}: завантажиться одразу.",
+"MIDI: {0} parts, {1} notes, on the take's beats ({2})": "MIDI: партій {0}, нот {1}, на долях самого треку ({2})",
+"Laying the score on the take's heard beats…": "Кладу партитуру на почуті долі треку…",
+"MIDI of the score on the take's beats ({0})": "MIDI партитури на долях самого треку ({0})",
+"MIDI of the score at its own tempo: the take's beats could not be read ({0})": "MIDI партитури в її власному темпі: долі треку не прочиталися ({0})",
+"MuScriptor on the mix": "MuScriptor за міксом",
+"MuScriptor per stem": "MuScriptor за стемами",
+"MuScriptor's weights are CC BY-NC 4.0: non-commercial use only.": "Ваги MuScriptor під CC BY-NC 4.0: лише некомерційне використання.",
+"no beats heard: 120 bpm": "долі не почуто: 120 bpm",
+"No card for the stems here: MuScriptor on the mix runs on the processor.": "Тут немає карти для стемів: MuScriptor за міксом іде на процесорі.",
+"No score": "Партитури немає",
+"not offered: {0}": "не пропонується: {0}",
+"one pass: 34 instrument groups and the drums, every note at one velocity": "один прохід: 34 групи інструментів і ударні, усі ноти однієї сили",
+"Open a take of the library first": "Спершу відкрий трек із Бібліотеки",
+"Quantize": "Квантизація",
+"Reading the score…": "Читаю партитуру…",
+"Tempo from the heard beats (the score's Q drifts from what is sung); bars and beats fall on the song's own.": "Темп за почутими долями (Q партитури відпливає від проспіваного): такти й долі лягають на власні долі пісні.",
+"the fetch ended without the model": "завантаження скінчилося без моделі",
+"the plan's melody and its instrument line, two tracks; at once": "мелодія плану та його інструментальна лінія, дві доріжки; одразу",
+"the score of “{0}”, whose music codes it keeps: the plan's melody and its instrument line, two tracks; at once": "партитура «{0}», чиї музичні коди він зберігає: мелодія плану та його інструментальна лінія, дві доріжки; одразу",
+"The score's MIDI": "MIDI партитури",
+"the Studio's lab learns it at its next restart": "лабораторія Студії дізнається про це після наступного перезапуску",
+"Transcribe again": "Транскрибувати знову",
+"Waits its turn": "Чекає своєї черги",
+"the take's beats": "долі треку",
+"the stems (a card)": "стеми (карта)",
+"MuScriptor on {0}": "MuScriptor за {0}",
+"the velocities of {0}": "сила нот {0}",
+"the file": "файл",
+"Export MIDI…": "Експорт MIDI…",
+"one file on the take's own beats: the score's, MuScriptor on the mix or per stem": "один файл на долях самого треку: партитура, MuScriptor за міксом або за стемами",
+"MIDI: the score's (its melody and its instrument line), or MuScriptor's transcription of the mix or of each stem, on the take's own beats": "MIDI: партитури (її мелодія та інструментальна лінія) або транскрипція MuScriptor за міксом чи за кожним стемом, на долях самого треку",
+"One MIDI file of the take on its own beats: the score's, MuScriptor on the mix or per stem": "Один MIDI-файл треку на його власних долях: партитура, MuScriptor за міксом або за стемами"
+});
+// HERESY 2913: the stems need a card with room
+RuachI18n.add("uk", {
+"The stems need a card with room, and none has it now: MuScriptor on the mix runs on the processor, or ask for the stems later.": "Стемам потрібна карта з місцем, а зараз на жодній його немає: MuScriptor за міксом іде на процесорі, а стеми попроси пізніше."
+});
+// HERESY 2913, 2915: a Direct take's score MIDI after SheetSage2; ☰'s bug report
+RuachI18n.add("uk", {
+"Report a bug on GitHub": "Повідомити про помилку на GitHub",
+"A new issue on GitHub, in a new tab. Attach the debug journal (Engine → Debugging: turn it on, do what goes wrong, then Download) so the bug can be followed": "Новий issue на GitHub, у новій вкладці. Додай журнал налагодження (Рушій → Debugging: увімкни, повтори те, що ламається, потім Завантажити), щоб помилку можна було простежити",
+"the score written from its sound before (SheetSage2): its melody and its instrument line, two tracks; at once": "партитура, записана раніше за його звуком (SheetSage2): мелодія та інструментальна лінія, дві доріжки; одразу",
+"no score of its own (a Direct take): SheetSage2 writes one from its sound first, on the Studio's card in the queue, a minute or two and more for a long song; then its MIDI": "власної партитури немає (трек Direct): спершу SheetSage2 запише її за звуком, на карті Студії в черзі, хвилина-дві, для довгої пісні довше; потім її MIDI",
+"Write its score (SheetSage2), then download": "Записати партитуру (SheetSage2) і завантажити",
+"SheetSage2 writes its score from its sound…": "SheetSage2 записує партитуру за звуком…"
+});
+// HERESY 2916: Follow my sections off by default, its guard
+RuachI18n.add("uk", {
+"{0} sections, {1} breaks: a plan of about {2} to {3}": "{0} секцій, {1} програшів: план приблизно на {2}–{3}",
+"past {0}, where long plans have fallen apart": "довше {0}, де довгі плани розвалювалися",
+"Follow {0} sections?": "Слідувати {0} секціям?",
+"{0} sections followed, {1} of them breaks: measured on the Studio's lyrics, such a plan runs about {2} to {3}.": "Секцій за лірикою: {0}, програшів серед них: {1}. За заміром на ліриці Студії такий план виходить приблизно на {2}–{3}.",
+"It may not fit the length asked ({0}): the song is cut there.": "Він може не вкластися в задану довжину ({0}): пісня там обріжеться.",
+"Long plans have fallen apart past about {0}: lines repeated, the phonetics broken (26 sections with 7 breaks planned past the 8:00 cap). Without following, the planner writes its own sections and the plan stays shorter; it may drop a Bridge or an Outro.": "Довгі плани розвалювалися після приблизно {0}: повтори рядків, бита фонетика (26 секцій із 7 програшами дали план довший за межу 8:00). Без слідування планувальник пише свої секції, і план коротший; він може загубити Bridge чи Outro.",
+"Sing without following": "Співати без слідування",
+"Follow them anyway": "Однаково слідувати",
+"Off unless you turn it on. On, the planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): none dropped, none made up, and the song does not end before its last section has begun. It helps when the planner drops a Bridge or an Outro you wrote. It costs length: each section followed is a stretch of the plan, so many sections and breaks make a long plan, and long plans have fallen apart past about 6:00 (26 sections with 7 breaks planned 6:30 to 8:24, past the 8:00 cap). Its line beside it says what these lyrics would plan. Only when the model writes the score (Full or Melody, no score of yours)": "Вимкнено, доки не ввімкнеш. Увімкнено — партитура плану пише власні секції лірики за порядком (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro — як їх називає планувальник): жодна не випаде й не вигадається, і пісня не скінчиться раніше, ніж почнеться її остання секція. Допомагає, коли планувальник губить написані тобою Bridge чи Outro. Коштує довжини: кожна секція — відрізок плану, тож багато секцій і програшів дають довгий план, а довгі плани розвалювалися після приблизно 6:00 (26 секцій із 7 програшами — план на 6:30–8:24, довше за межу 8:00). Рядок поруч каже, який план вийде в цієї лірики. Лише коли партитуру пише модель (Full чи Melody, без твоєї партитури)"
+});
+// HERESY 2917: the Trainer's charts: the saves as ticks under the grid, no dots
+RuachI18n.add("uk", {
+"the ticks under the grid: the saves (green worth hearing, amber in loras/); the pointer on one says its held-out values": "риски під сіткою — збереження (зелені — варто послухати, бурштинова — у loras/); курсор на рисці покаже її значення на відкладених",
+"Saved at step {0}": "Збережено на кроці {0}",
+"held out:": "на відкладених:",
+"worth hearing": "варто послухати"
+});
+// HERESY 2918: the Writer's text over everything (Alt+E)
+RuachI18n.add("uk", {
+"The text over everything": "Текст поверх усього",
+"The text over everything, four tenths larger, with its meter, rulers and stress marks: Esc, Alt+E or this button puts it back": "Текст поверх усього, на чотири десятих більший, з лічильником долей, лінійками й наголосами: Esc, Alt+E або ця кнопка поверне його на місце",
+"Back into the notebook": "Назад у блокнот",
+"Back into the notebook (Esc or Alt+E)": "Назад у блокнот (Esc або Alt+E)"
+});
+// HERESY 2919: the workspaces' emoji (the grid, the name dialogs, the tree's chooser)
+RuachI18n.add("uk", {
+"The workspace's emoji": "Емодзі простору",
+"No emoji": "Без емодзі",
+"No emoji: a faint leaf": "Без емодзі: блідий листок",
+"No emoji: the workspace's faint icon": "Без емодзі: бліда іконка простору",
+"Recent": "Недавні",
+"Ours": "Наші",
+"Feeling": "Почуття",
+"Message": "Посил",
+"Making": "Творчість",
+"Nature": "Природа",
+"The Studio's own marks are not offered: 💎 a published set and 🙈 a blind one stay in the name; ❄ 👁‍🗨 🔒 are states": "Власні позначки Студії не пропонуються: 💎 опублікований набір і 🙈 сліпий лишаються в імені; ❄ 👁‍🗨 🔒 — це стани",
+"The emoji before its name: one, any but the Studio's own marks; none shows the faint icon": "Емодзі перед іменем: один, будь-який, крім власних позначок Студії; без нього — бліда іконка",
+"{0} holds the emoji's place: one of the Studio's own marks (a 💎 set, a 🙈 blind set), kept in the name": "{0} займає місце емодзі: це власна позначка Студії (набір 💎, сліпий набір 🙈), вона лишається в імені",
+"The tree of workspaces: its order and what it shows": "Дерево просторів: порядок і що в ньому видно",
+"The tree of workspaces": "Дерево просторів",
+"Grouped by emoji": "Групами за емодзі",
+"The default: each emoji's workspaces together, the ones with none first, A to Z inside a group; the 💎 sets stay at the foot": "Типово: простори з одним емодзі разом, без емодзі — першими, у групі від А до Я; набори 💎 лишаються внизу",
+"A to Z, emoji aside": "Від А до Я, без огляду на емодзі",
+"By name alone, whatever emoji each wears; the 💎 sets stay at the foot": "Лише за іменем, хай який емодзі стоїть; набори 💎 лишаються внизу",
+"Most takes first": "Спершу з більшою кількістю семплів",
+"The fuller first, its sections the same way; the 💎 sets stay at the foot": "Повніші — першими, їхні розділи так само; набори 💎 лишаються внизу",
+"Show the archived in the tree": "Показувати архівні в дереві",
+"Each in its place, dimmed, instead of under Archived": "Кожен на своєму місці, приглушеним, а не в «В архіві»",
+"Hide the frozen": "Сховати заморожені",
+"Out of the tree until shown again; the one open stays": "Поза деревом, доки не покажеш знову; відкритий лишається",
+"Hide the empty ones": "Сховати порожні",
+"A workspace with no take in it or its sections; the one open and the one in hand stay": "Простір без семплів ні в ньому, ні в його розділах; відкритий і той, що в руках, лишаються",
+"Fold every section": "Згорнути всі розділи",
+"Unfold every section": "Розгорнути всі розділи",
+"Emoji…": "Емодзі…",
+"The emoji before its name": "Емодзі перед іменем",
+"Emoji set: “{0}”": "Емодзі поставлено: «{0}»",
+"Emoji taken off: “{0}”": "Емодзі знято: «{0}»"
+});
+// HERESY 2916b: Follow my sections for short songs, up to about 4 minutes
+RuachI18n.add("uk", {
+"Off unless you turn it on. For short songs, up to about 4 minutes: there it is worth it. On, the planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): none dropped, none made up, and the song does not end before its last section has begun. It helps when the planner drops a Bridge or an Outro you wrote. It costs length: each section followed is a stretch of the plan, so many sections and breaks make a long plan; past about 4:00 Generate asks first (long plans have fallen apart: 26 sections with 7 breaks planned 6:30 to 8:24, past the 8:00 cap). Its line beside it says what these lyrics would plan. Only when the model writes the score (Full or Melody, no score of yours)": "Вимкнено, доки не ввімкнеш. Для коротких пісень, приблизно до 4 хвилин: там від нього користь. Увімкнено — партитура плану пише власні секції лірики за порядком (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro — як їх називає планувальник): жодна не випаде й не вигадається, і пісня не скінчиться раніше, ніж почнеться її остання секція. Допомагає, коли планувальник губить написані тобою Bridge чи Outro. Коштує довжини: кожна секція — відрізок плану, тож багато секцій і програшів дають довгий план; довше приблизно 4:00 «Створити пісню» спершу спитає (довгі плани розвалювалися: 26 секцій із 7 програшами — план на 6:30–8:24, довше за межу 8:00). Рядок поруч каже, який план вийде в цієї лірики. Лише коли партитуру пише модель (Full чи Melody, без твоєї партитури)"
+});
+// HERESY 2919c: the workspaces' emoji upgrade, said once
+RuachI18n.add("uk", {
+"{0} workspaces now show their emoji in its own column": "{0} просторів тепер показують свій емодзі в окремому стовпчику"
 });

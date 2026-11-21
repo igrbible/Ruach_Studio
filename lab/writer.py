@@ -25,6 +25,22 @@ QUIET = 600
 FIELDS = ("title", "style", "lyrics", "notes", "params")
 REALMS = ("creator", "reader")   # HERESY 2480: whose document it is, as a Library take's realm: a song for the Musician or a reading for the Narrator
 DRAFTS_KEEP = 60                 # HERESY 2481: the Writing room's answers kept per document (and for the Musician's song)
+# HERESY 2862 (Viktor 19.11.2026: «При изменении версии тупо перезаписывается предыдущая»): a title's version, as the page reads it
+# (heresy-writer.js VER_RE): «Царю мій v1.2.8» → "1.2.8"
+VER_RE = re.compile(r"[\s._-]*\(?\bv\.?\s*(\d+(?:[._]\d+)*)\)?\s*$", re.I)
+
+
+def version_of(title):
+    m = VER_RE.search(str(title or ""))
+    return m.group(1).replace("_", ".") if m else ""
+
+
+def stem_key(title):
+    """HERESY 2862: a title without its version, as the page's list groups it (heresy-writer.js groupKey)."""
+    t = re.sub(r"\s*·\s*from the backup$", "", str(title or ""), flags=re.I)
+    t = re.sub(r"\s*\(copy\)$", "", t, flags=re.I)
+    b = re.sub(r"[\s\-–—_.:·,]+$", "", VER_RE.sub("", t)).strip() or t.strip()
+    return " ".join(b.lower().split())
 
 
 def _dir(kit, scope=""):
@@ -87,32 +103,7 @@ def post(kit, data, scope=""):
     wd = _dir(kit, scope)
     with LOCK:
         if op == "put":                                   # create, or save over (keeping the version before)
-            did = data.get("id") or uuid.uuid4().hex[:12]
-            now = time.time()
-            try:
-                doc = _read(wd, did)
-            except FileNotFoundError:
-                if data.get("id"):
-                    raise
-                doc = {"id": did, "created": now, "takes": [], "versions": []}
-                for f in FIELDS:
-                    doc[f] = "" if f != "params" else {}
-            new = {f: data.get(f, doc.get(f)) for f in FIELDS}
-            new["title"] = str(new["title"] or "Untitled").strip()[:120]
-            changed = any(new[f] != doc.get(f) for f in FIELDS)
-            quiet = not data.get("autosave") or now - (doc.get("updated") or 0) > QUIET
-            if changed and quiet and any(doc.get(f) for f in FIELDS):
-                doc["versions"].append({"at": doc.get("updated") or now, "label": str(data.get("label") or "")[:80],
-                                        **{f: doc.get(f) for f in FIELDS}})
-                doc["versions"] = doc["versions"][-KEEP:]
-            doc.update(new)
-            if data.get("realm") in REALMS and data.get("realm") != doc.get("realm"):   # HERESY 2480: no version of its own, the text is the same
-                doc["realm"] = data["realm"]
-                changed = True
-            if changed or "updated" not in doc:
-                doc["updated"] = now
-            _write(wd, doc)
-            return doc
+            return _put(wd, data)
         if op == "snapshot":                              # the document as it stands, kept under a label
             doc = _read(wd, data.get("id"))
             doc["versions"].append({"at": time.time(), "label": str(data.get("label") or "")[:80], **{f: doc.get(f) for f in FIELDS}})
@@ -218,6 +209,13 @@ def post(kit, data, scope=""):
             return doc
         if op == "from_reader":                           # the Narrator's «Edit in the Writer»: its document, its text saved in as a version, or a new reading
             return _from_reader(kit, wd, data, scope)
+        if op == "reader_keep":                           # HERESY 2862: a titled reading kept under its title, the text before it a version
+            return _reader_keep(wd, data)
+        if op == "song_keep":                             # HERESY 2905: the Musician's song kept in its document, made on its first save
+            return _song_keep(wd, data)
+        if op == "reader_find":                           # HERESY 2862: the reading's document of a title, or none
+            d = _reading_of(wd, data.get("title"))
+            return {"doc": {"id": d["id"], "title": d.get("title"), "versions": len(d.get("versions") or [])} if d else None}
         if op == "delete":                                # into writer/.trash, never deleted here
             p = _path(wd, data.get("id"))
             if p.is_file():
@@ -226,7 +224,7 @@ def post(kit, data, scope=""):
                 shutil.move(str(p), str(t / p.name))
             return listing(kit, scope)
     raise ValueError("put, snapshot, link, restore, delete, trash, untrash, draft, drafts, export, import, world, soul, soul_version, soul_seed, "
-                     "template, candidates, migrate, to_reader or from_reader")
+                     "template, candidates, migrate, to_reader, from_reader, reader_keep, reader_find or song_keep")
 
 
 def _name_check():
@@ -273,6 +271,118 @@ def _from_reader(kit, wd, data, scope=""):
            "lyrics": text, "notes": "", "params": data.get("params") if isinstance(data.get("params"), dict) else {}}
     _write(wd, doc)
     return {"doc": doc, "created": True, "updated": False}
+
+
+# HERESY 2862 (Viktor 19.11.2026: «И в Чтеце такой же версионный контроль и номер версии отдельным полем»): the Narrator's version control
+# lives where the Writer's does. A reading sent with a title is kept in the Writer's reading of that title (the title without its version, as the
+# list groups them; the newest such reading when there are more): its text, title and style as they were before go into its versions when any
+# of them changed, a version number changed or not, so a reading is never written over; a title with no reading yet makes one. The caller
+# holds LOCK.
+def _reading_of(wd, title):
+    key = stem_key(title)
+    if not key:
+        return None
+    docs = [d for d in _all(wd) if d.get("realm") == "reader" and stem_key(d.get("title")) == key]
+    return max(docs, key=lambda d: d.get("updated") or 0) if docs else None
+
+
+def _reader_keep(wd, data):
+    title, text = " ".join(str(data.get("title") or "").split())[:120], str(data.get("text") or "")
+    if not title or not text.strip():
+        raise ValueError("a reading is kept under its title: a title and a text")
+    now, doc = time.time(), _reading_of(wd, title)
+    style = str(data.get("style") or "")[:60000]
+    if doc is None:
+        doc = {"id": uuid.uuid4().hex[:12], "created": now, "updated": now, "takes": [], "versions": [], "realm": "reader",
+               "from_reader": {"at": now, "back": now}, "title": title, "style": style, "lyrics": text, "notes": "", "params": {}}
+        _write(wd, doc)
+        return {"doc": _clean_head(doc), "created": True, "kept": False}
+    kept = text != (doc.get("lyrics") or "") or title != doc.get("title") or (style and style != (doc.get("style") or ""))
+    if kept:
+        doc["versions"].append({"at": doc.get("updated") or now, "label": "", **{f: doc.get(f) for f in FIELDS}})
+        doc["versions"] = doc["versions"][-KEEP:]
+        doc.update(title=title, lyrics=text, updated=now)
+        if style:
+            doc["style"] = style
+    doc["from_reader"] = dict(doc.get("from_reader") if isinstance(doc.get("from_reader"), dict) else {}, back=now)
+    _write(wd, doc)
+    return {"doc": _clean_head(doc), "created": False, "kept": bool(kept)}
+
+
+def _put(wd, data):
+    """HERESY 2905: the put, as a function: create, or save over keeping the version before (op put, op song_keep). The caller holds LOCK."""
+    did = data.get("id") or uuid.uuid4().hex[:12]
+    now = time.time()
+    try:
+        doc = _read(wd, did)
+    except FileNotFoundError:
+        if data.get("id"):
+            raise
+        doc = {"id": did, "created": now, "takes": [], "versions": []}
+        for f in FIELDS:
+            doc[f] = "" if f != "params" else {}
+    new = {f: data.get(f, doc.get(f)) for f in FIELDS}
+    new["title"] = str(new["title"] or "Untitled").strip()[:120]
+    changed = any(new[f] != doc.get(f) for f in FIELDS)
+    quiet = not data.get("autosave") or now - (doc.get("updated") or 0) > QUIET
+    # HERESY 2862: a new version number keeps the one before whatever the pause: v1.2.7 edited and saved as v1.2.8 within ten minutes
+    # was overwritten by the autosave's sitting rule (19.11.2026)
+    moved = version_of(new["title"]) != version_of(doc.get("title"))
+    if changed and (quiet or moved) and any(doc.get(f) for f in FIELDS):
+        doc["versions"].append({"at": doc.get("updated") or now, "label": str(data.get("label") or "")[:80],
+                                **{f: doc.get(f) for f in FIELDS}})
+        doc["versions"] = doc["versions"][-KEEP:]
+    doc.update(new)
+    if data.get("realm") in REALMS and data.get("realm") != doc.get("realm"):   # HERESY 2480: no version of its own, the text is the same
+        doc["realm"] = data["realm"]
+        changed = True
+    if changed or "updated" not in doc:
+        doc["updated"] = now
+    _write(wd, doc)
+    return doc
+
+
+# HERESY 2905 (Viktor 19.11.2026 and 20.11.2026: «всё из Музыканта автоматом синхронизировать с Писателем и создавать документ по первому же
+# сохранению в Музыканте… Писатель у нас — также полнейший протокол всего промптинга в Музыканте и Чтеце»): the Musician's song (its Ctrl+S and
+# every Generate of a titled song) kept in the Writer's document of that song: the newest of the Musician's realm under the same title without its
+# version; none yet makes one. A changed title, style, lyrics or knobs keep the text before as a version (a save, never the autosave's sitting
+# rule), as op put does; the takes a Generate made are linked to it. The caller holds LOCK.
+def _song_of(wd, title):
+    key = stem_key(title)
+    if not key:
+        return None
+    docs = [d for d in _all(wd) if (d.get("realm") or "creator") == "creator" and stem_key(d.get("title")) == key]
+    return max(docs, key=lambda d: d.get("updated") or 0) if docs else None
+
+
+def _song_keep(wd, data):
+    title = " ".join(str(data.get("title") or "").split())[:120]
+    if not title or title.lower() == "untitled":
+        raise ValueError("a song is kept in the Writer under its title: a title first")
+    if not str(data.get("style") or "").strip() and not str(data.get("lyrics") or "").strip():
+        raise ValueError("a song is kept in the Writer with its style or lyrics")
+    doc = _song_of(wd, title)
+    body = {"title": title, "style": str(data.get("style") or ""), "lyrics": str(data.get("lyrics") or "")}
+    if isinstance(data.get("params"), dict):
+        body["params"] = data["params"]
+    before = len((doc or {}).get("versions") or [])
+    if doc is None:
+        body["realm"] = "creator"
+        doc = _put(wd, body)
+        created = True
+    else:
+        body["id"] = doc["id"]
+        doc = _put(wd, body)
+        created = False
+    takes = [n for n in data.get("takes") or [] if isinstance(n, str) and n and "/" not in n]
+    if takes and set(takes) - set(doc.get("takes") or []):
+        doc["takes"] = sorted(set(doc.get("takes") or []) | set(takes))
+        _write(wd, doc)
+    return {"doc": _clean_head(doc), "created": created, "kept": len(doc.get("versions") or []) > before}
+
+
+def _clean_head(doc):
+    return {"id": doc["id"], "title": doc.get("title"), "versions": len(doc.get("versions") or [])}
 
 
 # HERESY 2487: the Narrator's takes linked to the document they were read from, by the lab when the run lands (the page may be closed by then)

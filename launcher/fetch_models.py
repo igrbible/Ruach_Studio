@@ -14,6 +14,8 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 
 ROOT = Path(os.path.abspath(__file__)).parent.parent
@@ -93,6 +95,38 @@ def hs(n):
     return f"{n / 1e9:.1f} GB" if n >= 1e9 else f"{n / 1e6:.0f} MB" if n >= 1e6 else f"{n / 1e3:.0f} KB"
 
 
+def ticker(part, size, stop, out=None, every=2.0, line_every=60.0):
+    """HERESY 2931 (the 2.1.0-rc1 Windows soak: the backbone's 2.6 GB came with no sign for minutes, a window that looks hung): while a file
+    comes, how much of it is here, from the size of the downloader's unfinished part (hf_guard's .ruach-part, its *.incomplete). In a
+    console, one line kept up to date; elsewhere (a log), a line a minute. Nothing is said before the first byte."""
+    out = out or sys.stdout
+    tty = out.isatty()
+    said, last = False, 0.0
+    while not stop.wait(every):
+        got = 0
+        for d, _, fs in os.walk(part):
+            for n in fs:
+                if n.endswith(".incomplete"):
+                    try:
+                        got += os.path.getsize(os.path.join(d, n))
+                    except OSError:
+                        pass
+        if not got:
+            continue
+        line = f"          {hs(got)} of {hs(size)}" + (f" ({100 * got // size}%)" if size else "")
+        if tty:
+            out.write("\r" + line + "   ")
+            out.flush()
+            said = True
+        elif time.time() - last >= line_every:
+            out.write(line + "\n")
+            out.flush()
+            last = time.time()
+    if said:
+        out.write("\r" + " " * 48 + "\r")
+        out.flush()
+
+
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--quant", choices=("BF16", "Q8_0", "Q6_K", "Q5_K_M"))
@@ -144,8 +178,15 @@ def main(argv):
         for attempt in (1, 2):                         # a burst earns a 429 from Hugging Face: once more after half a minute
             into = incoming / ("" if base in ("", ".") else base) if new else ROOT / ("" if base in ("", ".") else base)
             into.mkdir(parents=True, exist_ok=True)
-            g = subprocess.run([sys.executable, str(ROOT / "tools" / "hf_guard.py"), "download", "--quiet", repo, path, "--revision", r,
-                                "--local-dir", str(into)], env=env(), capture_output=True, text=True, encoding="utf-8")
+            stop = threading.Event()                   # HERESY 2931: how far the file came, while it comes
+            tick = threading.Thread(target=ticker, args=(into / ".ruach-part", size, stop), daemon=True)
+            tick.start()
+            try:
+                g = subprocess.run([sys.executable, str(ROOT / "tools" / "hf_guard.py"), "download", "--quiet", repo, path, "--revision", r,
+                                    "--local-dir", str(into)], env=env(), capture_output=True, text=True, encoding="utf-8")
+            finally:
+                stop.set()
+                tick.join()
             if g.returncode == 0:
                 if new:
                     dst = ROOT / new

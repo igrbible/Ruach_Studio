@@ -444,7 +444,7 @@
       veil.className = "ptq-back-veil";
       win.className = "ptq-win"; win.setAttribute("role", "dialog"); win.setAttribute("aria-modal", "true"); win.setAttribute("aria-label", NAME);
       var bar = '<div class="ptq-w-head"><span class="ptq-name" translate="no">' + NAME + '</span><button type="button" class="btn ghost small ptq-close" aria-label="' + esc(tr("Close")) + '">✕</button></div>';
-      win.innerHTML = bar + '<p class="row-hint ptq-wait">' + esc(tr("Asking Pianoteq…")) + "</p>";
+      win.innerHTML = bar + '<p class="row-hint ptq-wait">' + (window.HeresyWait ? window.HeresyWait.wave() : "") + esc(tr("Asking Pianoteq…")) + "</p>";
       veil.appendChild(win);
       document.body.appendChild(veil);
       W = { back: veil, win: win, from: document.activeElement };

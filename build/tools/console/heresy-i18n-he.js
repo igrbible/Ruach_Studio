@@ -2410,6 +2410,7 @@ RuachI18n.add("he", {
 "{#0} captions written": {"one": "נכתב {0} כיתוב", "two": "נכתבו {0} כיתובים", "other": "נכתבו {0} כיתובים"},
 "drafts here by {0}": "הטיוטות כאן מאת {0}",
 "The Studio’s trainer is missing {0}:": "למאמן של הנפחות חסר {0}:",
+"Training runs on Linux for now: the Trainer starts each run as a systemd unit, and this machine (Windows, macOS) has none.": "האימון רץ בינתיים רק על Linux: המאמן מפעיל כל ריצה כיחידת systemd, ולמכונה הזו (Windows, macOS) אין כזו.",
 "Comfy-Org's YuE2 {0} weights": "משקלי YuE2 {0} של Comfy-Org",
 "the realaudio tokenizer head": "ראש הטוקנייזר realaudio",
 "and": "וגם",
@@ -9550,6 +9551,205 @@ RuachI18n.add("he", {
 "Sing anyway": "לשיר בכל זאת",
 "Nothing sung: the style holds negative words. Fix it, or sing it anyway.": "שום דבר לא הושר: בסגנון יש מילים שליליות. תקן אותו או שיר אותו בכל זאת.",
 "The 4–12 kHz envelope at 25, 50 … 150 Hz above its neighbours, mean of all windows: the VAE's 25 frames a second heard as an electric buzz in the highs. Music with no buzz reads about 8 dB here and up to 12 (the measure's own floor, at in-between frequencies on 30 takes): amber past 13 dB, red past 15": "המעטפת של 4–12 kHz ב־25, 50 … 150 Hz מעל התדרים השכנים, ממוצע כל החלונות: 25 הפריימים לשנייה של ה־VAE, הנשמעים כזמזום חשמלי בגבוהים. מוזיקה בלי זמזום מראה כאן כ־8 dB ועד 12 (רצפת המדידה עצמה, בתדרי ביניים על 30 טייקים): ענבר מעל 13 dB, אדום מעל 15",
+// HERESY 2858 (19.11.2026): Engine → Compute, the music cache in 8 bits (Q8_0)
+"Music cache in 8 bits (Q8_0) — about half the memory, for smaller cards": "מטמון מוזיקה ב-8 ביט (Q8_0) — בערך חצי מהזיכרון, לכרטיסים קטנים יותר",
+"About the music cache in 8 bits": "על מטמון המוזיקה ב-8 ביט",
+"Music cache in 8 bits": "מטמון מוזיקה ב-8 ביט",
+"now F16": "עכשיו F16",
+"now Q8_0": "עכשיו Q8_0",
+"applies before the next song": "ייכנס לתוקף לפני השיר הבא",
+"asked, but this card keeps F16: its flash attention does not read an 8-bit cache": "הופעל, אבל הכרטיס הזה נשאר ב-F16: ה-flash attention שלו לא קורא מטמון של 8 ביט",
+"this engine has no 8-bit cache": "למנוע הזה אין מטמון של 8 ביט",
+"the music cache in 8 bits (Engine → Compute) frees about 2.5 GB on a long song; it stays off until you turn it on": "מטמון המוזיקה ב-8 ביט (מנוע ← חישוב) מפנה כ-2.5 GB בשיר ארוך; הוא כבוי עד שתדליק אותו",
+"The engine keeps what the song has sung so far in a cache on the card. In 8 bits (Q8_0) the cache takes about half the room of the usual 16 bits (F16), so a card of 8–12 GB fits longer songs or a bigger model.": "המנוע שומר את מה שהשיר כבר שר במטמון על הכרטיס. ב-8 ביט (Q8_0) המטמון תופס בערך חצי מהמקום של 16 הביט הרגילים (F16), כך שבכרטיס של 8–12 GB נכנסים שירים ארוכים יותר או מודל גדול יותר.",
+"Measured on an RTX 3090, a 150 s song: the cache 5.3 → 2.8 GB, the card's peak 16.6 → 14.2 GB, the sound stage 3 % slower.": "נמדד על RTX 3090, שיר של 150 שניות: המטמון 5.3 ← 2.8 GB, שיא הכרטיס 16.6 ← 14.2 GB, שלב הצליל איטי ב-3%.",
+"On the Arc B50 (16 GB), the same song at 75 s: the cache 5.3 → 2.8 GB, the card's peak 13.1 → 10.7 GB; the score stage 20 → 37 s, the sound stage as fast as before.": "על Arc B50 ‏(16 GB), אותו שיר ב-75 שניות: המטמון 5.3 ← 2.8 GB, שיא הכרטיס 13.1 ← 10.7 GB; שלב התווים 20 ← 37 שניות, שלב הצליל מהיר כמו קודם.",
+"The same seed sings a slightly different take with it (other notes, not a worse sound). Off by default; it applies before the next song. A card that cannot read an 8-bit cache keeps F16, and this switch says so.": "אותו זרע שר איתו טייק שונה מעט (תווים אחרים, לא צליל גרוע יותר). כבוי כברירת מחדל; נכנס לתוקף לפני השיר הבא. כרטיס שלא קורא מטמון של 8 ביט נשאר ב-F16, והמתג הזה אומר זאת.",
+});
+// HERESY 2862: the Writer's version beside its name, its versions kept at every new number
+RuachI18n.add("he", {
+"The version beside the name, digits and dots only (1.2.8). Another number keeps the text before it in the versions below, with what differs from now": "הגרסה ליד השם, ספרות ונקודות בלבד (1.2.8). מספר אחר שומר את הטקסט שלפניו בגרסאות למטה, עם מה ששונה מעכשיו",
+"A version is kept at every new version number, at every save after a pause, and whenever you keep one.": "גרסה נשמרת בכל מספר גרסה חדש, בכל שמירה אחרי הפסקה ובכל פעם שאתה שומר אחת.",
+"{0} kept in the versions; now {1}": "{0} נשמרה בגרסאות; עכשיו {1}"
+});
+// HERESY 2863: the Musician's Ctrl+S into the Writer's document in hand
+RuachI18n.add("he", {
+"The Writer's “{0}” now holds the song as the Musician has it (the version before is kept)": "„{0}” בכותב מחזיק עכשיו את השיר כפי שהוא במוזיקאי (הגרסה הקודמת נשמרה)"
+});
+// HERESY 2865: the DAW's two ways to play, Live and Forge
+RuachI18n.add("he", {
+"How the DAW plays": "איך ה-DAW מנגן",
+"Live": "חי",
+"Forge": "Forge",
+"Live in this browser: every knob heard at once, through the browser's audio with larger buffers. Remembered in this browser": "חי בדפדפן הזה: כל כפתור נשמע מיד, דרך השמע של הדפדפן עם מאגרים גדולים יותר. נשמר בדפדפן הזה",
+"Rendered on Forge by the mix's own code, in pieces from the playhead, and played as a file: nothing in the browser between the sound and the speakers. A change is heard a second or two later. Remembered in this browser": "מרונדר ב-Forge בקוד של המיקס עצמו, בחלקים מראש ההשמעה, ומושמע כקובץ: שום דבר של הדפדפן בין הצליל לרמקולים. שינוי נשמע שנייה-שתיים אחר כך. נשמר בדפדפן הזה",
+"The mix is rendered on Forge…": "המיקס מרונדר ב-Forge…",
+"Forge could not play the mix: {0}": "Forge לא הצליח לנגן את המיקס: {0}",
+});
+
+// HERESY 2869: the version fields say that an empty one is saved as 1.0
+RuachI18n.add("he", {
+"The song's version beside its name, digits and dots only (4.2.3). A take is called «Title v4.2.3», as your tracks are, and the Musician's versions keep one tree per title, a branch per version. A title typed with its version («Song v1.2») splits into the two. Left empty, a save (Ctrl+S) gives it 1.0": "הגרסה של השיר ליד השם שלו, ספרות ונקודות בלבד (4.2.3). טייק נקרא \"שם v4.2.3\", כמו הרצועות שלך, והגרסאות של המוזיקאי שומרות עץ אחד לכל שם וענף לכל גרסה. שם שהוקלד עם הגרסה שלו (\"שיר v1.2\") מתפצל לשניים. אם השדה ריק, השמירה (Ctrl+S) נותנת לו 1.0",
+"The version beside the name, digits and dots only (1.2.8). Another number keeps the text before it in the versions below, with what differs from now. Left empty, a save gives it 1.0": "הגרסה ליד השם, ספרות ונקודות בלבד (1.2.8). מספר אחר שומר את הטקסט שלפניו בגרסאות למטה, עם מה ששונה מעכשיו. אם השדה ריק, השמירה נותנת לו 1.0"
+});
+
+// HERESY 2815: the Section editor (heresy-seceditor.js, HERESY 2810–2817)
+RuachI18n.add("he", {
+"Section editor…": "עורך הקטעים…",
+"the song by its sections: edits in a queue, one new take": "השיר לפי קטעים: עריכות בתור, טייק חדש אחד",
+"Section editor": "עורך הקטעים",
+"About the Section editor": "על עורך הקטעים",
+"the song by its sections": "השיר לפי קטעים",
+"Close (Esc): the queue stays": "סגירה (Esc): התור נשאר",
+"The song's sections": "הקטעים של השיר",
+"← → between sections · Space plays it": "← → בין הקטעים · רווח מנגן אותו",
+"instrumental": "אינסטרומנטלי",
+"added": "יתווסף",
+"sung anew to the end": "מחדש עד הסוף",
+"by ear": "בשמיעה",
+"by the score": "לפי הפרטיטורה",
+"Sections placed by Whisper's timing of the lyrics, as on the player's wave": "קטעים שמוקמו לפי תזמון המילים של Whisper, כמו בגל של הנגן",
+"Sections from the score's marks: the take's lyrics are not timed yet": "קטעים לפי סימוני הפרטיטורה: למילים של הטייק עדיין אין תזמון",
+"{0} of {1} lines heard": "נשמעו {0} מתוך {1} שורות",
+"The lyrics as they will be sung": "המילים כפי שיושרו",
+"Queue": "תור",
+"Re-sing from here to the end…": "שירה מחדש מכאן ועד הסוף…",
+"Re-sing from here to the end": "שירה מחדש מכאן ועד הסוף",
+"Its words changed or kept, sung anew on a new music seed; the rest stays": "המילים שלו, חדשות או אותן מילים, מושרות מחדש עם זרע מוזיקה חדש; השאר נשאר",
+"One line sung anew, cut halfway to the lines around it": "שורה אחת מושרת מחדש, חיתוך באמצע הדרך לשורות שסביבה",
+"The section once more right after itself: a variation on the music seed + 1": "הקטע פעם נוספת מיד אחרי עצמו: וריאציה על זרע המוזיקה + 1",
+"Music the model writes after the section, nothing sung again": "מוזיקה שהמודל כותב אחרי הקטע, בלי לשיר שוב",
+"A copy of the parts right after them, on the score's bar lines, in seconds": "עותק של החלקים מיד אחריהם, על קווי התיבה של הפרטיטורה, בתוך שניות",
+"The parts taken out on the score's bar lines, in seconds": "החלקים מוסרים על קווי התיבה של הפרטיטורה, בתוך שניות",
+"Everything before the break before it stays; from there to the end the song is sung anew": "כל מה שלפני ההפסקה שלפניו נשאר; משם עד הסוף השיר מושר מחדש",
+"The music goes on past the take's end, with new lines or without": "המוזיקה ממשיכה אחרי סוף הטייק, עם שורות חדשות או בלעדיהן",
+"An instrumental part: no words to sing anew": "חלק אינסטרומנטלי: אין מילים לשיר מחדש",
+"The rest of a part after a break: pick the part itself": "ההמשך של חלק אחרי הפסקה: בחר את החלק עצמו",
+"These are the score's marks: find the sections by ear first": "אלה הסימונים של הפרטיטורה: קודם אתר את הקטעים בשמיעה",
+"Its words were not found in the lyrics": "המילים שלו לא נמצאו במילות השיר",
+"No line of it was heard clearly for two seconds or more": "אף שורה שלו לא נשמעה בבירור במשך שתי שניות או יותר",
+"No score part lies under this section": "אין חלק של הפרטיטורה מתחת לקטע הזה",
+"Its score has one section only": "בפרטיטורה שלו יש קטע אחד בלבד",
+"No break of the voice before it": "אין הפסקה של הקול לפניו",
+"The break is under 5 seconds from an end of the take": "ההפסקה פחות מ־5 שניות מקצה הטייק",
+"Only past the take's end, 15:00 at most in all": "רק אחרי סוף הטייק, עד 15:00 בסך הכול",
+"Its words as the lyrics have them: change what you will, or keep them and let only the music be new.": "המילים שלו כפי שהן במילות השיר: שנה מה שתרצה, או השאר אותן ותן רק למוזיקה להתחדש.",
+"Which line?": "איזו שורה?",
+"not heard clearly": "לא נשמעה בבירור",
+"under two seconds": "פחות משתי שניות",
+"By how much (m:ss)?": "בכמה (m:ss)?",
+"No sections: the lyrics are not timed and there is no score.": "אין קטעים: למילים אין תזמון ואין פרטיטורה.",
+"Take it out of the queue": "הוצא מהתור",
+"Clear the queue": "רוקן את התור",
+"Clear the queue: {0} edits?": "לרוקן את התור: {0} עריכות?",
+"anew, words changed": "מחדש, המילים שונו",
+"anew, the same words": "מחדש, אותן מילים",
+"line {0} anew": "שורה {0} מחדש",
+"once more, straight on": "פעם נוספת, מיד",
+"once more after ~{0} s of music": "פעם נוספת אחרי ~{0} שניות של מוזיקה",
+"an interlude of ~{0} s after it": "אינטרלוד של ~{0} שניות אחריו",
+"twice, on the bar lines": "פעמיים, על קווי התיבה",
+"taken out, on the bar lines": "מוסר, על קווי התיבה",
+"from {0} to the end, anew": "מ־{0} עד הסוף, מחדש",
+"+{0} after the end": "+{0} אחרי הסוף",
+"{0} has an edit in the queue already: ✕ it first": "ל־{0} כבר יש עריכה בתור: קודם הסר אותה ב־✕",
+"It overlaps {0} in the queue ({1}–{2})": "חופף ל־{0} בתור ({1}–{2})",
+"It would go in inside {0} ({1}–{2})": "זה ייכנס לתוך {0} ({1}–{2})",
+"One ending at a time: re-sing to the end, or extend": "סיום אחד בכל פעם: שירה מחדש עד הסוף, או הארכה",
+"Nothing can go after the re-sing to the end ({0})": "שום דבר לא יכול לבוא אחרי השירה מחדש עד הסוף ({0})",
+"Extend goes on from the end this Remove takes away": "ההארכה ממשיכה מהסוף שההסרה הזאת מוציאה",
+"cut at the bar line {0}": "חיתוך על קו התיבה {0}",
+"Eight sung edits at most in one take": "לכל היותר שמונה עריכות מושרות בטייק אחד",
+"Twelve edits at most in one queue": "לכל היותר שתים־עשרה עריכות בתור אחד",
+"The new take would run past 15:00": "הטייק החדש יעבור את 15:00",
+"The sections were heard anew: add this edit again": "הקטעים נשמעו מחדש: הוסף את העריכה הזאת שוב",
+"Drafts sung on the engine: {0}, then the whole take once": "טיוטות מושרות במנוע: {0}, ואז הטייק כולו בבת אחת",
+"Drafts sung on the engine: {0}, then the ending, which is the take": "טיוטות מושרות במנוע: {0}, ואז הסיום, שהוא הטייק",
+"about {0} of music rendered in all": "בסך הכול מרונדרות כ־{0} של מוזיקה",
+"Only cuts on the bar lines: seconds, nothing sung": "רק חיתוכים על קווי התיבה: שניות, בלי שירה",
+"One new take; this one stays.": "טייק חדש אחד; הטייק הזה נשאר.",
+"Assemble the take": "הרכבת הטייק",
+"Assemble again": "הרכבה נוספת",
+"Another version of the same queue, on new seeds": "גרסה נוספת של אותו תור, עם זרעים חדשים",
+"Step {0} of {1}": "שלב {0} מתוך {1}",
+"waits for the engine": "ממתין למנוע",
+"the engine's queue is full: waiting": "התור של המנוע מלא: ממתינים",
+"the Arc is being reset: waiting": "ה־Arc מאותחל: ממתינים",
+"the draft is sung": "הטיוטה מושרת",
+"the voice is found": "הקול מאותר",
+"laid in": "שובץ",
+"the whole take is rendered": "הטייק כולו מרונדר",
+"cut on the bar lines": "חיתוך על קווי התיבה",
+"placed": "הונח",
+"Stop the assembly": "עצור את ההרכבה",
+"Assembled: {0}": "הורכב: {0}",
+"Resume from step {0}": "המשך משלב {0}",
+"Discard": "השלך",
+"Stopped at step {0}: {1}": "נעצר בשלב {0}: {1}",
+"Cut short by a restart of the lab at step {0}": "נקטע בהפעלה מחדש של המעבדה בשלב {0}",
+"The queue of {0} was put away: five takes keep theirs": "התור של „{0}” הוסר: חמישה טייקים שומרים את שלהם",
+"Each block is a section as the player's wave shows it: the lyrics' tags placed by Whisper's timing, a break, an intro or an outro where no voice sings, or the score's marks for a take never timed. The tags stay in English, as the model reads them.": "כל בלוק הוא קטע כפי שהגל של הנגן מציג אותו: התגיות של המילים שמוקמו לפי התזמון של Whisper, הפסקה, אינטרו או אאוטרו במקום שבו אין קול שר, או סימוני הפרטיטורה לטייק שמעולם לא תוזמן. התגיות נשארות באנגלית, כפי שהמודל קורא אותן.",
+"Click a block (← → walk them, Space plays it), pick an edit under the strip and add it to the queue: one edit a section. The queue lists them in the song's order, each with ✕.": "לחץ על בלוק (← → עוברים ביניהם, רווח מנגן אותו), בחר עריכה מתחת לרצועה והוסף אותה לתור: עריכה אחת לכל קטע. התור מציג אותן לפי סדר השיר, לכל אחת ✕.",
+"Assemble the take sings the queue as one new take, a child of this one, which stays as it is. The sung edits go one after another on the engine (a draft each, then the whole take once); Repeat and Remove are cut on the score's bar lines in seconds. Songs you queue in the Musician meanwhile go first.": "„הרכבת הטייק” שרה את התור כטייק חדש אחד, ילד של הטייק הזה, שנשאר כמו שהוא. העריכות המושרות עוברות במנוע אחת אחרי השנייה (טיוטה לכל אחת, ואז הטייק כולו בבת אחת); חזרה והסרה נחתכות על קווי התיבה של הפרטיטורה בתוך שניות. שירים שתכניס לתור במוזיקאי בינתיים יעברו קודם.",
+"The new take lands where this one is; its note lists the edits, and the player tints what was sung anew.": "הטייק החדש נוחת היכן שהטייק הזה נמצא; ההערה שלו מפרטת את העריכות, והנגן צובע את מה שהושר מחדש.",
+});
+
+// HERESY 2871: a DAW lane as a spectrogram
+RuachI18n.add("he", {
+"Spectrum: the lane's sound as a spectrogram in place of its wave, the low notes at the bottom and the high at the top, measured once on Forge; remembered in this browser": "ספקטרום: צליל הרצועה כספקטרוגרמה במקום הגל שלו, הנמוכים למטה והגבוהים למעלה; נמדד פעם אחת ב-Forge; הדפדפן הזה זוכר",
+"The rest is the source less the stems, worked out as it plays: it has no file of its own to measure": "השארית היא המקור פחות הסטמים, מחושבת תוך כדי ניגון: אין לה קובץ משלה למדידה",
+"Forge is measuring the spectrum of {0}…": "Forge מודד את הספקטרום של {0}…",
+"The spectrum of {0} could not be measured: {1}": "לא ניתן היה למדוד את הספקטרום של {0}: {1}"
+});
+
+// HERESY 2872: the Library card's workspaces button and its list, the menu's sections folded
+RuachI18n.add("he", {
+"In {0} workspaces:": "ב-{0} מרחבים:",
+"In the workspace:": "במרחב:",
+"Take it out of this workspace": "להוציא מהמרחב הזה",
+"open now": "פתוח עכשיו",
+"Its workspaces": "המרחבים שלו",
+"“{0}” is in these. A click on one opens it; ✕ takes the take out of it (it stays in the library and in the others).": "«{0}» נמצא באלה. לחיצה על אחד פותחת אותו; ✕ מוציא ממנו את הטייק (הוא נשאר בספרייה ובאחרים).",
+"Take “{0}” out of “{1}”?": "להוציא את «{0}» מ«{1}»?",
+"It stays in the library and in any other workspace; only this workspace lets it go.": "הוא נשאר בספרייה ובכל מרחב אחר; רק המרחב הזה משחרר אותו.",
+"Taken out of “{0}”": "הוצא מ«{0}»",
+"the workspace itself, not its sections": "המרחב עצמו, בלי החלקים שלו"
+});
+
+// HERESY 2875: the Trainer's run card: both towers' rates, the absolute epochs, the VRAM of now, the run's now line
+RuachI18n.add("he", {
+"this run": "הריצה הזו",
+"Music half · AR": "החצי המוזיקלי · AR",
+"Sound half · NAR": "החצי הצלילי · NAR",
+"Its note from its start": "ההערה שלה מההתחלה",
+"the highest over the whole run, all its sittings; now: the highest of each card over the last 25 steps": "הגבוה ביותר בכל הריצה, בכל המפגשים שלה; עכשיו: הגבוה ביותר של כל כרטיס ב-25 הצעדים האחרונים",
+"epoch {0}": "תקופה {0}"
+});
+
+// HERESY 2876: a run's command line and base on its card; the new-run form said as such beside a run
+RuachI18n.add("he", {
+"runs as": "רץ כ",
+"new run": "ריצה חדשה",
+"base": "בסיס"
+});
+// HERESY 2883: the Narrator's text with the lyrics editor's hands: its count line
+RuachI18n.add("he", {
+"Text: {0} characters · {1} syllables · {2} lines": "טקסט: {0} תווים · {1} הברות · {2} שורות"
+});
+// HERESY 2887: the Section editor's ninth edit, Insert a part after it
+RuachI18n.add("he", {
+"Insert a part after it…": "הוספת חלק אחריו…",
+"A copy of one of the score's parts put in after this section, on its bar line, in seconds; the section itself may keep an edit of its own": "עותק של אחד מחלקי הפרטיטורה נכנס אחרי הקטע הזה, על קו התיבה שלו, בשניות; הקטע עצמו יכול לשמור עריכה משלו",
+"Which part goes in?": "איזה חלק נכנס?",
+"It goes in after {0}, at {1}": "נכנס אחרי {0}, ב־{1}",
+"a copy after {0}": "עותק אחרי {0}"
+});
+// HERESY 2895: the Section editor writes a take's score from its sound first
+RuachI18n.add("he", {
+"Its score is being written from its sound: every edit waits for it": "התווים נכתבים מהצליל: כל עריכה מחכה להם",
+"Writing its score from its sound ({0})… {1}": "כותב תווים מהצליל ({0})… {1}",
+"Its score could not be written from its sound: {0}": "לא ניתן היה לכתוב תווים מהצליל: {0}",
+"A take with no score of its own (Direct, or brought in) gets one written from its sound first, by the transcriber chosen in the Engine, through the Studio's queue: Repeat, Remove and Insert cut on its bar lines, and a section sung anew follows it.": "טייק בלי תווים משלו (Direct, או מיובא) מקבל קודם תווים שנכתבים מהצליל שלו בידי המתמלל שנבחר במנוע, דרך התור של נפחות: חזרה, הסרה והכנסה חותכות על קווי התיבה שלהם, וקטע שמושר מחדש הולך לפיהם."
 });
 // HERESY 2896: the lyrics' own sections followed by the planner
 RuachI18n.add("he", {
@@ -9568,4 +9768,217 @@ RuachI18n.add("he", {
 "Freed: {0}": "שוחרר: {0}",
 "Sure you want to unload this model from VRAM?": "בטוח שאתה רוצה לפרוק את המודל הזה מה־VRAM?",
 "Sure you want to unload these models from VRAM?": "בטוח שאתה רוצה לפרוק את המודלים האלה מה־VRAM?"
+});
+// HERESY 2900: the program monitor's and the console's windows by the screens
+RuachI18n.add("he", {
+"One screen: the program monitor stays in the page. With a second screen it opens there in a window of its own": "מסך אחד: מוניטור התוכנית נשאר בדף. עם מסך שני הוא נפתח שם בחלון משלו",
+"One screen: the console stays in the page. With a second screen it opens there in a window of its own": "מסך אחד: הקונסולה נשארת בדף. עם מסך שני היא נפתחת שם בחלון משלה"
+});
+// HERESY 2901: the installed app kept awake
+RuachI18n.add("he", {
+"Keep the installed app awake": "להשאיר את האפליקציה המותקנת ערה",
+"Only in the installed app (a window of its own, not a browser tab): a 12 Hz tone at -60 dBFS, far under hearing, that Chrome counts as sound, so it does not freeze or discard the Studio while it is in the background and the card and the player are as you left them. It starts with your first click or key. Off: the browser may put the app to sleep": "רק באפליקציה המותקנת (חלון משלה, לא לשונית בדפדפן): צליל של 12 Hz ב-‎-60 dBFS, הרבה מתחת לסף השמיעה, ש-Chrome סופר כצליל, ולכן הוא לא מקפיא ולא זורק את הנפחות ברקע, והכרטיס והנגן נשארים כפי שהשארת אותם. הוא מתחיל בלחיצה או במקש הראשונים שלך. כבוי: הדפדפן עלול להרדים את האפליקציה"
+});
+// HERESY 2902: the reactions linked
+RuachI18n.add("he", {
+"🔥 and 💎 like the take; 👎 takes them off": "🔥 ו-💎 נותנים 👍; 👎 מוריד אותם",
+"On: switching 🔥 or 💎 on likes the take too, and 👎 takes off the like, 🔥 and 💎 together, wherever those buttons are (the cards, the Library, the compare window, the player). The reaction faces are never touched. Off: each button stands alone": "פעיל: הדלקת 🔥 או 💎 נותנת לטייק גם 👍, ו-👎 מוריד יחד את ה-👍, ה-🔥 וה-💎, בכל מקום שבו נמצאים הכפתורים האלה (הכרטיסים, הספרייה, חלון ההשוואה, הנגן). פרצופי התגובה לעולם לא נוגעים בהם. כבוי: כל כפתור לעצמו"
+});
+// HERESY 2906: the lyrics' tags explained, with what Follow my sections makes of each
+RuachI18n.add("he", {
+"The body of the song: new words each time over the same music, the story moving on. Numbered (Verse 1, Verse 2…); the Studio offers the next number. Sung; Follow my sections: verse.": "גוף השיר: מילים חדשות בכל פעם על אותה מוזיקה, הסיפור מתקדם. ממוספר (Verse 1, Verse 2…); הנפחות מציעה את המספר הבא. מושר; «לפי החלקים שלי»: verse.",
+"The part the song comes back to, the same words and melody each time, with the line people remember and sing along. Sung; Follow my sections: chorus.": "החלק שאליו השיר חוזר, בכל פעם אותן מילים ואותה מנגינה, עם השורה שזוכרים ושרים יחד. מושר; «לפי החלקים שלי»: chorus.",
+"The climb from a verse into the chorus: a melody and words of its own that raise the tension, always followed by the chorus. Sung; Follow my sections: pre-chorus.": "העלייה מהבית אל הפזמון: מנגינה ומילים משלה שמעלות את המתח, ואחריה תמיד הפזמון. מושר; «לפי החלקים שלי»: pre-chorus.",
+"Once, late in the song, everything turns (melody, chords, words) before the song comes home to its chorus. Sung; Follow my sections: bridge (Middle 8 too).": "פעם אחת, מאוחר בשיר, הכול מסתובב (מנגינה, אקורדים, מילים) לפני שהשיר חוזר אל הפזמון שלו. מושר; «לפי החלקים שלי»: bridge (גם Middle 8).",
+"The ending: a last line repeated as the music fades, or the chorus once more, resolved. Words under it are sung; Follow my sections: outro, always the plan's last section.": "הסוף: שורה אחרונה שחוזרת בזמן שהמוזיקה דועכת, או הפזמון פעם נוספת, פתור. המילים שמתחתיו מושרות; «לפי החלקים שלי»: outro, תמיד החלק האחרון של התוכנית.",
+"The opening before the first verse, mostly music. Follow my sections: intro, always the plan's first (one is added when the lyrics have none). YuE2 seldom sings its lines: put a spoken intro under [Verse].": "הפתיחה לפני הבית הראשון, בעיקר מוזיקה. «לפי החלקים שלי»: intro, תמיד הראשון בתוכנית (נוסף אחד כשאין במילים). YuE2 מעט שר את שורותיו: שים פתיחה מדוברת תחת [Verse].",
+"A passage of another feel between parts: the band alone, or ad-libs and calls over it. Viktor's use: a pause in rap that brakes speech running ahead. Follow my sections: interlude, with words under it or without.": "קטע בתחושה אחרת בין החלקים: הלהקה לבד, או אד-ליבים וקריאות מעליה. השימוש של ויקטור: הפסקה בראפ שבולמת דיבור שרץ קדימה. «לפי החלקים שלי»: interlude, עם מילים מתחת או בלעדיהן.",
+"The last chorus, usually the biggest: more voices, more power, now and then a key change. Sung; Follow my sections: chorus.": "הפזמון האחרון, בדרך כלל הגדול ביותר: יותר קולות, יותר עוצמה, לפעמים שינוי סולם. מושר; «לפי החלקים שלי»: chorus.",
+"The instruments alone between sections, for variety or to build into the next one; name what plays: «Instrumental Break - Horns». Follow my sections: interlude, no voice.": "הכלים לבדם בין החלקים, לגיוון או כדי לבנות אל הבא; כתוב מה מנגן: «Instrumental Break - Horns». «לפי החלקים שלי»: interlude, בלי קול.",
+"One instrument steps forward with a long melody of its own while the rest backs it (Drum Solo, Keyboard Solo, plain Solo too). Instrumental; Follow my sections: interlude.": "כלי אחד יוצא קדימה עם מנגינה ארוכה משלו והשאר מלווים (גם Drum Solo, Keyboard Solo, סתם Solo). אינסטרומנטלי; «לפי החלקים שלי»: interlude.",
+"The song's last mark: the music stops here (SUNO's [END] is the same tag). Follow my sections: outro; [Outro] [End] in a row are one.": "הסימן האחרון של השיר: כאן המוזיקה נעצרת (ה-[END] של SUNO הוא אותו תג). «לפי החלקים שלי»: outro; [Outro] [End] ברצף הם אחד.",
+"An opening played without voices. Follow my sections: intro.": "פתיחה שמנוגנת בלי קולות. «לפי החלקים שלי»: intro.",
+"A line or two repeated unchanged, often at the end of each verse. Sung; Follow my sections: chorus.": "שורה או שתיים שחוזרות בלי שינוי, לרוב בסוף כל בית. מושר; «לפי החלקים שלי»: chorus.",
+"A short part right after the chorus that carries its energy on: a chant, a riff, a tag line. Sung; Follow my sections: chorus.": "חלק קצר מיד אחרי הפזמון שממשיך את האנרגיה שלו: קריאה, ריף, שורת מפתח. מושר; «לפי החלקים שלי»: chorus.",
+"The arrangement stripped to its bones to build tension before the last chorus. Metal and hardcore: a heavy half-time chug, the voice a shout, a chant or nothing. EDM: the quiet part, the drums gone, pads left, one line or none. Ballad and rock: bass and kick or one instrument, sometimes whispered or spoken. Empty: an interlude; with words under it the Studio plans a sung section (a bridge). For speech add «spoken word breakdown» to the style.": "העיבוד מופשט עד העצם כדי לבנות מתח לפני הפזמון האחרון. מטאל והארדקור: צ'אג כבד בחצי טמפו, הקול צעקה, קריאה או כלום. EDM: החלק השקט, התופים נעלמים, נשארים פדים, שורה אחת או אף אחת. בלדה ורוק: בס ובס-תוף או כלי אחד, לפעמים בלחישה או בדיבור. ריק: interlude; עם מילים מתחתיו הנפחות מתכננת חלק מושר (bridge). לדיבור הוסף לסגנון «spoken word breakdown».",
+"The music fades to silence (Fadeout too). Follow my sections: outro.": "המוזיקה דועכת עד שקט (גם Fadeout). «לפי החלקים שלי»: outro.",
+"The catchiest line or riff of the song; Genius writes it [Chorus] or [Refrain] now. Sung; Follow my sections: chorus.": "השורה או הריף הכי קליטים בשיר; Genius כותב אותם עכשיו [Chorus] או [Refrain]. מושר; «לפי החלקים שלי»: chorus.",
+"Dance and electronic music: the moment beat and bass hit after a build-up, mostly without a voice. Follow my sections: interlude; with words under it, a sung bridge.": "מוזיקת ריקודים ואלקטרונית: הרגע שבו הביט והבס נוחתים אחרי בנייה, לרוב בלי קול. «לפי החלקים שלי»: interlude; עם מילים מתחתיו, bridge מושר.",
+"A part, or a whole song, played without singing. Follow my sections: interlude.": "חלק, או שיר שלם, שמנוגן בלי שירה. «לפי החלקים שלי»: interlude.",
+"An ending played without voices. Follow my sections: outro.": "סוף שמנוגן בלי קולות. «לפי החלקים שלי»: outro.",
+"The rising part before a drop or a chorus: snare rolls, risers, the filter opening, the energy climbing. Follow my sections: pre-chorus, a sung section.": "החלק העולה לפני דרופ או פזמון: גלגולי סנר, רייזרים, הפילטר נפתח, האנרגיה מטפסת. «לפי החלקים שלי»: pre-chorus, חלק מושר.",
+"A woman sings the lines that follow, until another voice is named; after the dash how she sings: Deep, Warm; Soft, Breathy. Not a section: Follow my sections passes it by, as it does the ФОСФОРИДА form [Solo Female Voice].": "אישה שרה את השורות הבאות, עד שקול אחר נקרא בשמו; אחרי המקף איך היא שרה: Deep, Warm; Soft, Breathy. לא חלק: «לפי החלקים שלי» מדלג עליו, כמו על הצורה של פוספורידה [Solo Female Voice].",
+"A man sings the lines that follow; after the dash how he sings: Bari-tenor, Calm; Low, Raspy. Not a section: Follow my sections passes it by, as it does the ФОСФОРИДА form [Solo Male Vocal: …].": "גבר שר את השורות הבאות; אחרי המקף איך הוא שר: Bari-tenor, Calm; Low, Raspy. לא חלק: «לפי החלקים שלי» מדלג עליו, כמו על הצורה של פוספורידה [Solo Male Vocal: …]."
+});
+// HERESY 2905: the Musician's song kept in the Writer from its first save
+RuachI18n.add("he", {
+"The Writer keeps this song from now on: “{0}”, a new document, in hand": "הכותב שומר מעכשיו את השיר הזה: «{0}», מסמך חדש, ביד",
+"The song was not kept in the Writer: {0}": "השיר לא נשמר בכותב: {0}"
+});
+// HERESY 2912: the history of plays and downloads (Ctrl+H, Ctrl+J)
+RuachI18n.add("he", {
+"History": "היסטוריה",
+"Downloads": "הורדות",
+"Yesterday": "אתמול",
+"Nothing found": "לא נמצא דבר",
+"Loading…": "טוען…",
+"Older": "ישנים יותר",
+"Find a title": "חיפוש כותרת",
+"Find a title or a file": "חיפוש כותרת או קובץ",
+"1 play": "השמעה אחת",
+"{#0} plays": "{0} השמעות",
+"1 download": "הורדה אחת",
+"{#0} downloads": "{0} הורדות",
+"to the end": "עד הסוף",
+"{0} heard": "{0} הושמעו",
+"stopped at {0} of {1}": "נעצר ב־{0} מתוך {1}",
+"not in the Studio any more": "כבר לא בנפחות",
+"a file of no take": "קובץ שאינו של שום טייק",
+"Clear history": "ניקוי היסטוריה",
+"Clear downloads": "ניקוי הורדות",
+"The last {0} days, at most {1} plays: kept by the Studio, the same in every browser that opens it": "{0} הימים האחרונים, עד {1} השמעות: הנפחות שומרת אותן, זהות בכל דפדפן שפותח אותה",
+"The last {0} days, at most {1} downloads: kept by the Studio, the same in every browser that opens it": "{0} הימים האחרונים, עד {1} הורדות: הנפחות שומרת אותן, זהות בכל דפדפן שפותח אותה",
+"(for now in this browser: the Studio's lab learns the history at its next restart)": "(בינתיים בדפדפן הזה: המעבדה של הנפחות תלמד את ההיסטוריה בהפעלה הבאה שלה)",
+"Nothing played yet": "עוד לא הושמע דבר",
+"Nothing downloaded yet": "עוד לא הורד דבר",
+"Not in the Studio any more: “{0}”": "כבר לא בנפחות: „{0}”",
+"The history of plays is cleared": "היסטוריית ההשמעות נוקתה",
+"The history of downloads is cleared": "היסטוריית ההורדות נוקתה",
+"Clear the history of plays?\n\nEvery play it keeps goes ({0}); the takes themselves stay.": "לנקות את היסטוריית ההשמעות?\n\nכל ההשמעות שהיא שומרת יימחקו ({0}); הטייקים עצמם נשארים.",
+"Clear the history of downloads?\n\nEvery download it keeps goes ({0}); the files you saved stay where you saved them.": "לנקות את היסטוריית ההורדות?\n\nכל ההורדות שהיא שומרת יימחקו ({0}); הקבצים ששמרת נשארים במקום ששמרת אותם.",
+"History: what the player played, day by day; a title takes to its card": "היסטוריה: מה הנגן השמיע, יום אחר יום; כותרת מובילה לכרטיס שלה",
+"History: what the player played, the last 30 days, day by day": "היסטוריה: מה הנגן השמיע ב־30 הימים האחרונים, יום אחר יום",
+"Downloads: what was saved from the Studio, the last 90 days": "הורדות: מה שנשמר מהנפחות ב־90 הימים האחרונים",
+"The history's button in the full player (between the take's reactions and the transport); the one-row player has none, ☰ has History and Downloads either way": "כפתור ההיסטוריה בנגן המלא (בין התגובות של הטייק לכפתורי הנגינה); בנגן של שורה אחת אין אותו, ב־☰ תמיד יש היסטוריה והורדות",
+"A history button in the player": "כפתור היסטוריה בנגן",
+"History and downloads": "היסטוריה והורדות",
+"Clear the history of plays (asks first); the takes stay": "ניקוי היסטוריית ההשמעות (שואל קודם); הטייקים נשארים",
+"Clear the history of downloads (asks first); the saved files stay": "ניקוי היסטוריית ההורדות (שואל קודם); הקבצים השמורים נשארים"
+});
+// HERESY 2913: the take's MIDI window (the score's, MuScriptor on the mix or per stem)
+RuachI18n.add("he", {
+"about {0} here": "בערך {0} כאן",
+"A training runs: the transcriber goes behind it ({0} threads), slower than the estimate.": "אימון רץ: המתמלל נכנס מאחוריו ({0} תהליכונים), לאט מההערכה.",
+"Fetch {0} ({1}) and transcribe": "להוריד {0} ({1}) ולתמלל",
+"fetched first, {0}": "יורד קודם, {0}",
+"Fetching MuScriptor {0}…": "MuScriptor {0} יורד…",
+"for a card of 8 GB": "לכרטיס של 8 GB",
+"its stems are here ({0}): each transcribed with its own instruments, each note's velocity from its stem": "הסטמים שלו כאן ({0}): כל אחד מתומלל בכלים שלו, עוצמת כל תו מהסטם שלו",
+"its stems first (a card, a minute or two), then each transcribed with its own instruments, each note's velocity from its stem": "קודם הסטמים (כרטיס, דקה או שתיים), אחר כך כל אחד מתומלל בכלים שלו, עוצמת כל תו מהסטם שלו",
+"Made {0}: it downloads at once.": "נעשה {0}: יורד מיד.",
+"MIDI: {0} parts, {1} notes, on the take's beats ({2})": "MIDI: {0} תפקידים, {1} תווים, על הפעמות של הטייק עצמו ({2})",
+"Laying the score on the take's heard beats…": "מניח את התווים על הפעמות שנשמעו…",
+"MIDI of the score on the take's beats ({0})": "MIDI של התווים על הפעמות של הטייק עצמו ({0})",
+"MIDI of the score at its own tempo: the take's beats could not be read ({0})": "MIDI של התווים בטמפו שלהם: לא ניתן היה לקרוא את הפעמות של הטייק ({0})",
+"MuScriptor on the mix": "MuScriptor על המיקס",
+"MuScriptor per stem": "MuScriptor לכל סטם",
+"MuScriptor's weights are CC BY-NC 4.0: non-commercial use only.": "המשקלות של MuScriptor ברישיון CC BY-NC 4.0: לשימוש לא מסחרי בלבד.",
+"no beats heard: 120 bpm": "לא נשמעו פעמות: 120 bpm",
+"No card for the stems here: MuScriptor on the mix runs on the processor.": "אין כאן כרטיס לסטמים: MuScriptor על המיקס רץ על המעבד.",
+"No score": "אין תווים",
+"not offered: {0}": "לא מוצע: {0}",
+"one pass: 34 instrument groups and the drums, every note at one velocity": "מעבר אחד: 34 קבוצות כלים והתופים, כל תו באותה עוצמה",
+"Open a take of the library first": "פתח קודם טייק מהספרייה",
+"Quantize": "קוונטיזציה",
+"Reading the score…": "קורא את התווים…",
+"Tempo from the heard beats (the score's Q drifts from what is sung); bars and beats fall on the song's own.": "טמפו מהפעמות שנשמעו (ה־Q של התווים סוטה ממה שמושר): תיבות ופעמות נופלות על אלה של השיר עצמו.",
+"the fetch ended without the model": "ההורדה הסתיימה בלי המודל",
+"the plan's melody and its instrument line, two tracks; at once": "המנגינה של התוכנית וקו הכלים שלה, שני ערוצים; מיד",
+"the score of “{0}”, whose music codes it keeps: the plan's melody and its instrument line, two tracks; at once": "התווים של „{0}”, שאת הקודים המוזיקליים שלו הוא שומר: המנגינה של התוכנית וקו הכלים שלה, שני ערוצים; מיד",
+"The score's MIDI": "ה־MIDI של התווים",
+"the Studio's lab learns it at its next restart": "המעבדה של הנפחות תלמד את זה בהפעלה הבאה שלה",
+"Transcribe again": "לתמלל שוב",
+"Waits its turn": "ממתין לתורו",
+"the take's beats": "הפעמות של הטייק",
+"the stems (a card)": "הסטמים (כרטיס)",
+"MuScriptor on {0}": "MuScriptor על {0}",
+"the velocities of {0}": "העוצמות של {0}",
+"the file": "הקובץ",
+"Export MIDI…": "ייצוא MIDI…",
+"one file on the take's own beats: the score's, MuScriptor on the mix or per stem": "קובץ אחד על הפעמות של הטייק עצמו: של התווים, MuScriptor על המיקס או לכל סטם",
+"MIDI: the score's (its melody and its instrument line), or MuScriptor's transcription of the mix or of each stem, on the take's own beats": "MIDI: של התווים (המנגינה וקו הכלים), או התמלול של MuScriptor של המיקס או של כל סטם, על הפעמות של הטייק עצמו",
+"One MIDI file of the take on its own beats: the score's, MuScriptor on the mix or per stem": "קובץ MIDI אחד של הטייק על הפעמות שלו: של התווים, MuScriptor על המיקס או לכל סטם"
+});
+// HERESY 2913: the stems need a card with room
+RuachI18n.add("he", {
+"The stems need a card with room, and none has it now: MuScriptor on the mix runs on the processor, or ask for the stems later.": "הסטמים צריכים כרטיס עם מקום, ועכשיו לאף אחד אין: MuScriptor על המיקס רץ על המעבד, או בקש את הסטמים מאוחר יותר."
+});
+// HERESY 2913, 2915: a Direct take's score MIDI after SheetSage2; ☰'s bug report
+RuachI18n.add("he", {
+"Report a bug on GitHub": "לדווח על באג ב־GitHub",
+"A new issue on GitHub, in a new tab. Attach the debug journal (Engine → Debugging: turn it on, do what goes wrong, then Download) so the bug can be followed": "issue חדש ב־GitHub, בלשונית חדשה. צרף את יומן הניפוי (מנוע → Debugging: הפעל אותו, חזור על מה שמשתבש, ואז הורדה) כדי שאפשר יהיה לעקוב אחרי הבאג",
+"the score written from its sound before (SheetSage2): its melody and its instrument line, two tracks; at once": "התווים שנכתבו קודם מהצליל שלו (SheetSage2): המנגינה וקו הכלים, שני ערוצים; מיד",
+"no score of its own (a Direct take): SheetSage2 writes one from its sound first, on the Studio's card in the queue, a minute or two and more for a long song; then its MIDI": "אין לו תווים משלו (טייק Direct): קודם SheetSage2 כותב אותם מהצליל, בכרטיס של הנפחות בתור, דקה או שתיים ויותר לשיר ארוך; אחר כך ה־MIDI שלהם",
+"Write its score (SheetSage2), then download": "לכתוב תווים (SheetSage2) ואז להוריד",
+"SheetSage2 writes its score from its sound…": "SheetSage2 כותב את התווים מהצליל…"
+});
+// HERESY 2916: Follow my sections off by default, its guard
+RuachI18n.add("he", {
+"{0} sections, {1} breaks: a plan of about {2} to {3}": "{0} קטעים, {1} הפסקות: תוכנית של בערך {2} עד {3}",
+"past {0}, where long plans have fallen apart": "מעבר ל־{0}, שם תוכניות ארוכות התפרקו",
+"Follow {0} sections?": "לעקוב אחרי {0} קטעים?",
+"{0} sections followed, {1} of them breaks: measured on the Studio's lyrics, such a plan runs about {2} to {3}.": "{0} קטעים במעקב, {1} מהם הפסקות: לפי המדידה על המילים של הנפחות, תוכנית כזו נמשכת בערך {2} עד {3}.",
+"It may not fit the length asked ({0}): the song is cut there.": "ייתכן שהיא לא תיכנס באורך שנתבקש ({0}): השיר ייחתך שם.",
+"Long plans have fallen apart past about {0}: lines repeated, the phonetics broken (26 sections with 7 breaks planned past the 8:00 cap). Without following, the planner writes its own sections and the plan stays shorter; it may drop a Bridge or an Outro.": "תוכניות ארוכות התפרקו אחרי בערך {0}: שורות חוזרות, פונטיקה שבורה (26 קטעים עם 7 הפסקות תוכננו מעבר לתקרה של 8:00). בלי מעקב המתכנן כותב קטעים משלו והתוכנית קצרה יותר; הוא עלול להשמיט Bridge או Outro.",
+"Sing without following": "לשיר בלי מעקב",
+"Follow them anyway": "לעקוב בכל זאת",
+"Off unless you turn it on. On, the planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): none dropped, none made up, and the song does not end before its last section has begun. It helps when the planner drops a Bridge or an Outro you wrote. It costs length: each section followed is a stretch of the plan, so many sections and breaks make a long plan, and long plans have fallen apart past about 6:00 (26 sections with 7 breaks planned 6:30 to 8:24, past the 8:00 cap). Its line beside it says what these lyrics would plan. Only when the model writes the score (Full or Melody, no score of yours)": "כבוי אלא אם תדליק. דלוק, התווים המתוכננים כותבים את קטעי המילים לפי הסדר (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, כפי שהמתכנן קורא להם): אף אחד לא נשמט ואף אחד לא מומצא, והשיר לא נגמר לפני שהקטע האחרון שלו התחיל. עוזר כשהמתכנן משמיט Bridge או Outro שכתבת. עולה באורך: כל קטע במעקב הוא קטע של התוכנית, אז הרבה קטעים והפסקות עושים תוכנית ארוכה, ותוכניות ארוכות התפרקו אחרי בערך 6:00 (26 קטעים עם 7 הפסקות: תוכנית של 6:30 עד 8:24, מעבר לתקרה של 8:00). השורה לידו אומרת איזו תוכנית יצאו מהמילים האלה. רק כשהמודל כותב את התווים (Full או Melody, בלי תווים משלך)"
+});
+// HERESY 2917: the Trainer's charts: the saves as ticks under the grid, no dots
+RuachI18n.add("he", {
+"the ticks under the grid: the saves (green worth hearing, amber in loras/); the pointer on one says its held-out values": "הסימנים מתחת לרשת: השמירות (ירוקות שווה לשמוע, ענבר ב־loras/); הסמן על אחת מראה את ערכיה ברצועות שהופרשו",
+"Saved at step {0}": "נשמר בצעד {0}",
+"held out:": "ברצועות שהופרשו:",
+"worth hearing": "שווה לשמוע"
+});
+// HERESY 2918: the Writer's text over everything (Alt+E)
+RuachI18n.add("he", {
+"The text over everything": "הטקסט מעל הכול",
+"The text over everything, four tenths larger, with its meter, rulers and stress marks: Esc, Alt+E or this button puts it back": "הטקסט מעל הכול, גדול בארבע עשיריות, עם המשקל, הסרגלים וסימני ההטעמה שלו: Esc, Alt+E או הכפתור הזה מחזירים אותו למקומו",
+"Back into the notebook": "חזרה למחברת",
+"Back into the notebook (Esc or Alt+E)": "חזרה למחברת (Esc או Alt+E)"
+});
+// HERESY 2919: the workspaces' emoji (the grid, the name dialogs, the tree's chooser)
+RuachI18n.add("he", {
+"The workspace's emoji": "האימוג'י של המרחב",
+"No emoji": "בלי אימוג'י",
+"No emoji: a faint leaf": "בלי אימוג'י: עלה חיוור",
+"No emoji: the workspace's faint icon": "בלי אימוג'י: הסמל החיוור של המרחב",
+"Recent": "אחרונים",
+"Ours": "שלנו",
+"Feeling": "רגש",
+"Message": "מסר",
+"Making": "יצירה",
+"Nature": "טבע",
+"The Studio's own marks are not offered: 💎 a published set and 🙈 a blind one stay in the name; ❄ 👁‍🗨 🔒 are states": "הסימנים של הנפחות עצמה אינם מוצעים: 💎 אוסף שפורסם ו־🙈 אוסף עיוור נשארים בשם; ❄ 👁‍🗨 🔒 הם מצבים",
+"The emoji before its name: one, any but the Studio's own marks; none shows the faint icon": "האימוג'י שלפני השם: אחד, כל אחד חוץ מהסימנים של הנפחות עצמה; בלעדיו – הסמל החיוור",
+"{0} holds the emoji's place: one of the Studio's own marks (a 💎 set, a 🙈 blind set), kept in the name": "{0} תופס את מקום האימוג'י: זה סימן של הנפחות עצמה (אוסף 💎, אוסף עיוור 🙈), והוא נשאר בשם",
+"The tree of workspaces: its order and what it shows": "עץ המרחבים: הסדר שלו ומה הוא מציג",
+"The tree of workspaces": "עץ המרחבים",
+"Grouped by emoji": "מקובצים לפי אימוג'י",
+"The default: each emoji's workspaces together, the ones with none first, A to Z inside a group; the 💎 sets stay at the foot": "ברירת המחדל: המרחבים של כל אימוג'י יחד, אלה שבלי אימוג'י ראשונים, מא' עד ת' בתוך כל קבוצה; אוספי 💎 נשארים בתחתית",
+"A to Z, emoji aside": "מא' עד ת', בלי להתחשב באימוג'י",
+"By name alone, whatever emoji each wears; the 💎 sets stay at the foot": "לפי השם בלבד, יהיה האימוג'י אשר יהיה; אוספי 💎 נשארים בתחתית",
+"Most takes first": "קודם אלה עם הכי הרבה טייקים",
+"The fuller first, its sections the same way; the 💎 sets stay at the foot": "המלאים יותר ראשונים, וכך גם המדורים שלהם; אוספי 💎 נשארים בתחתית",
+"Show the archived in the tree": "להציג את שבארכיון בעץ",
+"Each in its place, dimmed, instead of under Archived": "כל אחד במקומו, מעומעם, במקום תחת „בארכיון“",
+"Hide the frozen": "להסתיר את המוקפאים",
+"Out of the tree until shown again; the one open stays": "מחוץ לעץ עד שיוצגו שוב; הפתוח נשאר",
+"Hide the empty ones": "להסתיר את הריקים",
+"A workspace with no take in it or its sections; the one open and the one in hand stay": "מרחב שאין בו טייק, לא בו ולא במדורים שלו; הפתוח וזה שביד נשארים",
+"Fold every section": "לקפל את כל המדורים",
+"Unfold every section": "לפתוח את כל המדורים",
+"Emoji…": "אימוג'י…",
+"The emoji before its name": "האימוג'י שלפני השם",
+"Emoji set: “{0}”": "האימוג'י נקבע: „{0}“",
+"Emoji taken off: “{0}”": "האימוג'י הוסר: „{0}“"
+});
+// HERESY 2916b: Follow my sections for short songs, up to about 4 minutes
+RuachI18n.add("he", {
+"Off unless you turn it on. For short songs, up to about 4 minutes: there it is worth it. On, the planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): none dropped, none made up, and the song does not end before its last section has begun. It helps when the planner drops a Bridge or an Outro you wrote. It costs length: each section followed is a stretch of the plan, so many sections and breaks make a long plan; past about 4:00 Generate asks first (long plans have fallen apart: 26 sections with 7 breaks planned 6:30 to 8:24, past the 8:00 cap). Its line beside it says what these lyrics would plan. Only when the model writes the score (Full or Melody, no score of yours)": "כבוי אלא אם תדליק. לשירים קצרים, עד כ־4 דקות: שם יש בו טעם. דלוק, התווים המתוכננים כותבים את קטעי המילים לפי הסדר (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, כפי שהמתכנן קורא להם): אף אחד לא נשמט ואף אחד לא מומצא, והשיר לא נגמר לפני שהקטע האחרון שלו התחיל. עוזר כשהמתכנן משמיט Bridge או Outro שכתבת. עולה באורך: כל קטע במעקב הוא קטע של התוכנית, אז הרבה קטעים והפסקות עושים תוכנית ארוכה; מעבר לכ־4:00 «יצירת שיר» שואל קודם (תוכניות ארוכות התפרקו: 26 קטעים עם 7 הפסקות, תוכנית של 6:30 עד 8:24, מעבר לתקרה של 8:00). השורה לידו אומרת איזו תוכנית יצאו מהמילים האלה. רק כשהמודל כותב את התווים (Full או Melody, בלי תווים משלך)"
+});
+// HERESY 2919c: the workspaces' emoji upgrade, said once
+RuachI18n.add("he", {
+"{0} workspaces now show their emoji in its own column": "{0} מרחבים מציגים עכשיו את האימוג'י שלהם בעמודה משלו"
 });

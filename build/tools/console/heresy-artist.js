@@ -542,7 +542,7 @@
     var body = back.querySelector(".ar-get-body"), say = back.querySelector(".ar-get-say");
     function paint() {
       var st = window.HeresyWeights.state(), d = st.data, j = d && d.job, going = !!(j && j.status === "running" && j.kind === "fetch");
-      if (!d) { body.innerHTML = '<p class="row-hint">' + esc(tr("Asking the lab what is here…")) + "</p>"; return; }
+      if (!d) { body.innerHTML = '<p class="row-hint">' + (window.HeresyWait ? window.HeresyWait.wave() : "") + esc(tr("Asking the lab what is here…")) + "</p>"; return; }
       say.textContent = going ? tr("Fetching:") + " " + tr(j.what) : "";
       body.innerHTML = (d.extras || []).filter(function (e) { return GET.indexOf(e.name) >= 0; }).map(function (e) {
         return '<section class="ar-get-x" data-extra="' + esc(e.name) + '"><h4>' + esc(tr(e.label)) + '</h4><p class="row-hint">' + esc(tr(e.what)) + "</p><ul>" +
@@ -1222,7 +1222,7 @@
   }
   function paintTrash() {
     var box = $("arRuns");
-    if (!state.trashed) box.innerHTML = '<p class="ar-empty">' + esc(tr("Reading the trash…")) + "</p>";   // once: a refresh keeps the list
+    if (!state.trashed) box.innerHTML = '<p class="ar-empty">' + (window.HeresyWait ? window.HeresyWait.wave() : "") + esc(tr("Reading the trash…")) + "</p>";   // once: a refresh keeps the list
     Promise.all([api("/artist/trashed"), api("/artist/asides").catch(function (e) { return e && e.status === 404 ? { pictures: [] } : { pictures: state.asidePics || [], failed: e.message || String(e) }; })]).then(function (x) {   // HERESY 1321
       var d = x[0], pics = x[1].pictures || [], asideFailed = x[1].failed;   // HERESY 2212: a failed read keeps the last list and says so, not «empty» (a lab without asides, 404, has none)
       if (state.look !== "trash") return;
@@ -1325,7 +1325,7 @@
   function upSize(p, t) { var w = +p.w || 0, h = +p.h || 0, long = Math.max(w, h); return long ? [Math.round(w * UP_TARGETS[t] / long), Math.round(h * UP_TARGETS[t] / long)] : null; }
   function upRow(p) {
     var list = fileUps(state.upscalers);
-    if (!list.length) return '<div class="ar-up-row"><span class="row-hint">' + esc(state.upscalers ? tr("No upscaler here: put .pth or .safetensors models (4x_… from OpenModelDB or Civitai) into models/artist/upscalers/") : state.upFailed ? upFailWord() : tr("Reading the upscalers…")) + "</span></div>";
+    if (!list.length) return '<div class="ar-up-row"><span class="row-hint">' + (state.upscalers || state.upFailed ? "" : (window.HeresyWait ? window.HeresyWait.wave() : "")) + esc(state.upscalers ? tr("No upscaler here: put .pth or .safetensors models (4x_… from OpenModelDB or Civitai) into models/artist/upscalers/") : state.upFailed ? upFailWord() : tr("Reading the upscalers…")) + "</span></div>";
     var names = list.map(function (u) { return u.name; }), want = recall("yue2.arUpModel");
     var pick = names.indexOf(want) >= 0 ? want : names.indexOf("4x_Nomos8kDAT.pth") >= 0 ? "4x_Nomos8kDAT.pth" : names[0];
     var cur = list.filter(function (u) { return u.name === pick; })[0];

@@ -2421,6 +2421,7 @@ RuachI18n.add("el", {
 "{#0} captions written": {"one": "Γράφτηκε {0} λεζάντα", "other": "Γράφτηκαν {0} λεζάντες"},
 "drafts here by {0}": "πρόχειρα εδώ από το {0}",
 "The Studio’s trainer is missing {0}:": "Στον εκπαιδευτή του Στούντιο λείπει {0}:",
+"Training runs on Linux for now: the Trainer starts each run as a systemd unit, and this machine (Windows, macOS) has none.": "Η εκπαίδευση τρέχει προς το παρόν μόνο σε Linux: ο Εκπαιδευτής ξεκινά κάθε εκτέλεση ως μονάδα systemd, και αυτό το μηχάνημα (Windows, macOS) δεν έχει.",
 "Comfy-Org's YuE2 {0} weights": "τα βάρη YuE2 {0} της Comfy-Org",
 "the realaudio tokenizer head": "η κεφαλή του tokenizer realaudio",
 "and": "και",
@@ -9766,6 +9767,205 @@ RuachI18n.add("el", {
 "Sing anyway": "Τραγούδησέ το όπως είναι",
 "Nothing sung: the style holds negative words. Fix it, or sing it anyway.": "Τίποτα δεν τραγουδήθηκε: το στυλ έχει αρνητικές λέξεις. Διόρθωσέ το ή τραγούδησέ το όπως είναι.",
 "The 4–12 kHz envelope at 25, 50 … 150 Hz above its neighbours, mean of all windows: the VAE's 25 frames a second heard as an electric buzz in the highs. Music with no buzz reads about 8 dB here and up to 12 (the measure's own floor, at in-between frequencies on 30 takes): amber past 13 dB, red past 15": "Η περιβάλλουσα 4–12 kHz στα 25, 50 … 150 Hz πάνω από τις γειτονικές, μέσος όρος όλων των παραθύρων: τα 25 καρέ το δευτερόλεπτο του VAE, που ακούγονται σαν ηλεκτρικός βόμβος στα πρίμα. Μουσική χωρίς βόμβο δίνει εδώ περίπου 8 dB και έως 12 (το δάπεδο της ίδιας της μέτρησης, σε ενδιάμεσες συχνότητες σε 30 λήψεις): κίτρινο πάνω από 13 dB, κόκκινο πάνω από 15",
+// HERESY 2858 (19.11.2026): Engine → Compute, the music cache in 8 bits (Q8_0)
+"Music cache in 8 bits (Q8_0) — about half the memory, for smaller cards": "Κρυφή μνήμη μουσικής σε 8 bit (Q8_0) — περίπου η μισή μνήμη, για μικρότερες κάρτες",
+"About the music cache in 8 bits": "Σχετικά με την κρυφή μνήμη μουσικής σε 8 bit",
+"Music cache in 8 bits": "Κρυφή μνήμη μουσικής σε 8 bit",
+"now F16": "τώρα F16",
+"now Q8_0": "τώρα Q8_0",
+"applies before the next song": "ισχύει πριν από το επόμενο τραγούδι",
+"asked, but this card keeps F16: its flash attention does not read an 8-bit cache": "ζητήθηκε, αλλά αυτή η κάρτα μένει σε F16: το flash attention της δεν διαβάζει κρυφή μνήμη 8 bit",
+"this engine has no 8-bit cache": "αυτή η μηχανή δεν έχει κρυφή μνήμη 8 bit",
+"the music cache in 8 bits (Engine → Compute) frees about 2.5 GB on a long song; it stays off until you turn it on": "η κρυφή μνήμη μουσικής σε 8 bit («Μηχανή → Υπολογισμός») ελευθερώνει περίπου 2,5 GB σε ένα μεγάλο τραγούδι· μένει κλειστή ώσπου να την ανοίξεις",
+"The engine keeps what the song has sung so far in a cache on the card. In 8 bits (Q8_0) the cache takes about half the room of the usual 16 bits (F16), so a card of 8–12 GB fits longer songs or a bigger model.": "Η μηχανή κρατά ό,τι έχει ήδη τραγουδήσει το τραγούδι σε μια κρυφή μνήμη στην κάρτα. Σε 8 bit (Q8_0) η κρυφή μνήμη πιάνει περίπου τον μισό χώρο από τα συνηθισμένα 16 bit (F16), έτσι σε κάρτα 8–12 GB χωρούν μεγαλύτερα τραγούδια ή μεγαλύτερο μοντέλο.",
+"Measured on an RTX 3090, a 150 s song: the cache 5.3 → 2.8 GB, the card's peak 16.6 → 14.2 GB, the sound stage 3 % slower.": "Μετρημένο σε RTX 3090, τραγούδι 150 s: η κρυφή μνήμη 5,3 → 2,8 GB, η κορυφή της κάρτας 16,6 → 14,2 GB, το στάδιο του ήχου 3 % πιο αργό.",
+"On the Arc B50 (16 GB), the same song at 75 s: the cache 5.3 → 2.8 GB, the card's peak 13.1 → 10.7 GB; the score stage 20 → 37 s, the sound stage as fast as before.": "Στην Arc B50 (16 GB), το ίδιο τραγούδι σε 75 s: η κρυφή μνήμη 5,3 → 2,8 GB, η κορυφή της κάρτας 13,1 → 10,7 GB· το στάδιο της παρτιτούρας 20 → 37 s, το στάδιο του ήχου εξίσου γρήγορο.",
+"The same seed sings a slightly different take with it (other notes, not a worse sound). Off by default; it applies before the next song. A card that cannot read an 8-bit cache keeps F16, and this switch says so.": "Ο ίδιος σπόρος τραγουδά μαζί της μια λίγο διαφορετική λήψη (άλλες νότες, όχι χειρότερο ήχο). Κλειστή από προεπιλογή· ισχύει πριν από το επόμενο τραγούδι. Μια κάρτα που δεν διαβάζει κρυφή μνήμη 8 bit μένει σε F16, και αυτός ο διακόπτης το λέει.",
+});
+// HERESY 2862: the Writer's version beside its name, its versions kept at every new number
+RuachI18n.add("el", {
+"The version beside the name, digits and dots only (1.2.8). Another number keeps the text before it in the versions below, with what differs from now": "Η έκδοση δίπλα στο όνομα, μόνο ψηφία και τελείες (1.2.8). Άλλος αριθμός κρατά το κείμενο πριν από αυτόν στις εκδόσεις παρακάτω, με ό,τι διαφέρει από το τώρα",
+"A version is kept at every new version number, at every save after a pause, and whenever you keep one.": "Μια έκδοση κρατιέται σε κάθε νέο αριθμό έκδοσης, σε κάθε αποθήκευση μετά από παύση και όποτε την κρατάς εσύ.",
+"{0} kept in the versions; now {1}": "Η {0} κρατήθηκε στις εκδόσεις· τώρα {1}"
+});
+// HERESY 2863: the Musician's Ctrl+S into the Writer's document in hand
+RuachI18n.add("el", {
+"The Writer's “{0}” now holds the song as the Musician has it (the version before is kept)": "Το «{0}» στον Συγγραφέα κρατά τώρα το τραγούδι όπως είναι στον Μουσικό (η προηγούμενη έκδοση κρατήθηκε)"
+});
+// HERESY 2865: the DAW's two ways to play, Live and Forge
+RuachI18n.add("el", {
+"How the DAW plays": "Πώς παίζει το DAW",
+"Live": "Ζωντανά",
+"Forge": "Forge",
+"Live in this browser: every knob heard at once, through the browser's audio with larger buffers. Remembered in this browser": "Ζωντανά σε αυτόν τον browser: κάθε κουμπί ακούγεται αμέσως, μέσα από τον ήχο του browser με μεγαλύτερα buffer. Το θυμάται αυτός ο browser",
+"Rendered on Forge by the mix's own code, in pieces from the playhead, and played as a file: nothing in the browser between the sound and the speakers. A change is heard a second or two later. Remembered in this browser": "Αποδίδεται στο Forge με τον ίδιο τον κώδικα της μίξης, σε κομμάτια από την κεφαλή αναπαραγωγής, και παίζει ως αρχείο: τίποτα του browser ανάμεσα στον ήχο και τα ηχεία. Μια αλλαγή ακούγεται ένα-δύο δευτερόλεπτα αργότερα. Το θυμάται αυτός ο browser",
+"The mix is rendered on Forge…": "Η μίξη αποδίδεται στο Forge…",
+"Forge could not play the mix: {0}": "Το Forge δεν μπόρεσε να παίξει τη μίξη: {0}",
+});
+
+// HERESY 2869: the version fields say that an empty one is saved as 1.0
+RuachI18n.add("el", {
+"The song's version beside its name, digits and dots only (4.2.3). A take is called «Title v4.2.3», as your tracks are, and the Musician's versions keep one tree per title, a branch per version. A title typed with its version («Song v1.2») splits into the two. Left empty, a save (Ctrl+S) gives it 1.0": "Η έκδοση του τραγουδιού δίπλα στο όνομά του, μόνο ψηφία και τελείες (4.2.3). Μια λήψη ονομάζεται «Τίτλος v4.2.3», όπως τα κομμάτια σου, και οι Εκδοχές του Μουσικού κρατούν ένα δέντρο ανά τίτλο και έναν κλάδο ανά έκδοση. Ένας τίτλος γραμμένος με την έκδοσή του («Τραγούδι v1.2») χωρίζεται μόνος του στα δύο πεδία. Αν μείνει κενό, η αποθήκευση (Ctrl+S) του δίνει 1.0",
+"The version beside the name, digits and dots only (1.2.8). Another number keeps the text before it in the versions below, with what differs from now. Left empty, a save gives it 1.0": "Η έκδοση δίπλα στο όνομα, μόνο ψηφία και τελείες (1.2.8). Άλλος αριθμός κρατά το κείμενο πριν από αυτόν στις εκδόσεις παρακάτω, με ό,τι διαφέρει από το τώρα. Αν μείνει κενό, η αποθήκευση του δίνει 1.0"
+});
+
+// HERESY 2815: the Section editor (heresy-seceditor.js, HERESY 2810–2817)
+RuachI18n.add("el", {
+"Section editor…": "Επεξεργαστής ενοτήτων…",
+"the song by its sections: edits in a queue, one new take": "το τραγούδι ανά ενότητα: αλλαγές σε ουρά, μία νέα λήψη",
+"Section editor": "Επεξεργαστής ενοτήτων",
+"About the Section editor": "Σχετικά με τον επεξεργαστή ενοτήτων",
+"the song by its sections": "το τραγούδι ανά ενότητα",
+"Close (Esc): the queue stays": "Κλείσιμο (Esc): η ουρά μένει",
+"The song's sections": "Οι ενότητες του τραγουδιού",
+"← → between sections · Space plays it": "← → ανάμεσα στις ενότητες · το Space την παίζει",
+"instrumental": "οργανικό",
+"added": "προστίθεται",
+"sung anew to the end": "ξανά ως το τέλος",
+"by ear": "με το αυτί",
+"by the score": "από την παρτιτούρα",
+"Sections placed by Whisper's timing of the lyrics, as on the player's wave": "Οι ενότητες τοποθετημένες από τον χρονισμό των στίχων του Whisper, όπως στο κύμα του player",
+"Sections from the score's marks: the take's lyrics are not timed yet": "Ενότητες από τα σημάδια της παρτιτούρας: οι στίχοι της λήψης δεν έχουν ακόμη χρονισμό",
+"{0} of {1} lines heard": "ακούστηκαν {0} από {1} στίχους",
+"The lyrics as they will be sung": "Οι στίχοι όπως θα τραγουδηθούν",
+"Queue": "Ουρά",
+"Re-sing from here to the end…": "Ξανατραγούδισμα από εδώ ως το τέλος…",
+"Re-sing from here to the end": "Ξανατραγούδισμα από εδώ ως το τέλος",
+"Its words changed or kept, sung anew on a new music seed; the rest stays": "Τα λόγια της, αλλαγμένα ή ίδια, τραγουδιούνται ξανά με νέο μουσικό σπόρο· τα υπόλοιπα μένουν",
+"One line sung anew, cut halfway to the lines around it": "Ένας στίχος τραγουδιέται ξανά, τομή στη μέση ως τους διπλανούς στίχους",
+"The section once more right after itself: a variation on the music seed + 1": "Η ενότητα άλλη μία φορά αμέσως μετά τον εαυτό της: παραλλαγή με τον μουσικό σπόρο + 1",
+"Music the model writes after the section, nothing sung again": "Μουσική που γράφει το μοντέλο μετά την ενότητα, χωρίς να ξανατραγουδηθεί τίποτα",
+"A copy of the parts right after them, on the score's bar lines, in seconds": "Αντίγραφο των μερών αμέσως μετά από αυτά, στις γραμμές μέτρου της παρτιτούρας, σε δευτερόλεπτα",
+"The parts taken out on the score's bar lines, in seconds": "Τα μέρη αφαιρούνται στις γραμμές μέτρου της παρτιτούρας, σε δευτερόλεπτα",
+"Everything before the break before it stays; from there to the end the song is sung anew": "Ό,τι βρίσκεται πριν από το διάλειμμα που προηγείται μένει· από εκεί ως το τέλος το τραγούδι τραγουδιέται ξανά",
+"The music goes on past the take's end, with new lines or without": "Η μουσική συνεχίζει μετά το τέλος της λήψης, με νέους στίχους ή χωρίς",
+"An instrumental part: no words to sing anew": "Οργανικό μέρος: δεν υπάρχουν λόγια για να τραγουδηθούν ξανά",
+"The rest of a part after a break: pick the part itself": "Η συνέχεια ενός μέρους μετά από διάλειμμα: διάλεξε το ίδιο το μέρος",
+"These are the score's marks: find the sections by ear first": "Αυτά είναι σημάδια της παρτιτούρας: βρες πρώτα τις ενότητες με το αυτί",
+"Its words were not found in the lyrics": "Τα λόγια της δεν βρέθηκαν στους στίχους",
+"No line of it was heard clearly for two seconds or more": "Κανένας στίχος της δεν ακούστηκε καθαρά για δύο δευτερόλεπτα ή περισσότερο",
+"No score part lies under this section": "Κανένα μέρος της παρτιτούρας κάτω από αυτή την ενότητα",
+"Its score has one section only": "Η παρτιτούρα της λήψης έχει μόνο ένα τμήμα",
+"No break of the voice before it": "Καμία παύση της φωνής πριν από αυτή",
+"The break is under 5 seconds from an end of the take": "Το διάλειμμα απέχει λιγότερο από 5 δευτερόλεπτα από μια άκρη της λήψης",
+"Only past the take's end, 15:00 at most in all": "Μόνο μετά το τέλος της λήψης, το πολύ 15:00 συνολικά",
+"Its words as the lyrics have them: change what you will, or keep them and let only the music be new.": "Τα λόγια της όπως τα έχουν οι στίχοι: άλλαξε ό,τι θέλεις ή κράτα τα και άσε μόνο τη μουσική να είναι καινούργια.",
+"Which line?": "Ποιος στίχος;",
+"not heard clearly": "δεν ακούστηκε καθαρά",
+"under two seconds": "κάτω από δύο δευτερόλεπτα",
+"By how much (m:ss)?": "Πόσο (λ:δδ);",
+"No sections: the lyrics are not timed and there is no score.": "Χωρίς ενότητες: οι στίχοι δεν έχουν χρονισμό και δεν υπάρχει παρτιτούρα.",
+"Take it out of the queue": "Βγάλ' το από την ουρά",
+"Clear the queue": "Άδειασε την ουρά",
+"Clear the queue: {0} edits?": "Άδειασμα της ουράς: {0} αλλαγές;",
+"anew, words changed": "ξανά, με αλλαγμένα λόγια",
+"anew, the same words": "ξανά, ίδια λόγια",
+"line {0} anew": "ο στίχος {0} ξανά",
+"once more, straight on": "άλλη μία φορά, αμέσως",
+"once more after ~{0} s of music": "άλλη μία φορά μετά από ~{0} δευτ. μουσικής",
+"an interlude of ~{0} s after it": "ιντερλούδιο ~{0} δευτ. μετά από αυτή",
+"twice, on the bar lines": "δύο φορές, στις γραμμές μέτρου",
+"taken out, on the bar lines": "αφαιρείται, στις γραμμές μέτρου",
+"from {0} to the end, anew": "από το {0} ως το τέλος, ξανά",
+"+{0} after the end": "+{0} μετά το τέλος",
+"{0} has an edit in the queue already: ✕ it first": "Το {0} έχει ήδη αλλαγή στην ουρά: πρώτα βγάλ' την με ✕",
+"It overlaps {0} in the queue ({1}–{2})": "Επικαλύπτει το {0} στην ουρά ({1}–{2})",
+"It would go in inside {0} ({1}–{2})": "Θα έμπαινε μέσα στο {0} ({1}–{2})",
+"One ending at a time: re-sing to the end, or extend": "Ένα τέλος τη φορά: ξανατραγούδισμα ως το τέλος ή επέκταση",
+"Nothing can go after the re-sing to the end ({0})": "Τίποτα δεν μπορεί να μπει μετά το ξανατραγούδισμα ως το τέλος ({0})",
+"Extend goes on from the end this Remove takes away": "Η Επέκταση συνεχίζει από το τέλος που βγάζει αυτή η Αφαίρεση",
+"cut at the bar line {0}": "τομή στη γραμμή μέτρου {0}",
+"Eight sung edits at most in one take": "Το πολύ οκτώ τραγουδισμένες αλλαγές σε μία λήψη",
+"Twelve edits at most in one queue": "Το πολύ δώδεκα αλλαγές σε μία ουρά",
+"The new take would run past 15:00": "Η νέα λήψη θα ξεπερνούσε τα 15:00",
+"The sections were heard anew: add this edit again": "Οι ενότητες ακούστηκαν ξανά: πρόσθεσε ξανά αυτή την αλλαγή",
+"Drafts sung on the engine: {0}, then the whole take once": "Πρόχειρα στη μηχανή: {0}, έπειτα ολόκληρη η λήψη μία φορά",
+"Drafts sung on the engine: {0}, then the ending, which is the take": "Πρόχειρα στη μηχανή: {0}, έπειτα το φινάλε, που είναι η λήψη",
+"about {0} of music rendered in all": "περίπου {0} μουσικής αποδίδονται συνολικά",
+"Only cuts on the bar lines: seconds, nothing sung": "Μόνο τομές στις γραμμές μέτρου: δευτερόλεπτα, τίποτα τραγουδισμένο",
+"One new take; this one stays.": "Μία νέα λήψη· αυτή μένει.",
+"Assemble the take": "Συναρμολόγηση της λήψης",
+"Assemble again": "Συναρμολόγηση ξανά",
+"Another version of the same queue, on new seeds": "Άλλη μία εκδοχή της ίδιας ουράς, με νέους σπόρους",
+"Step {0} of {1}": "Βήμα {0} από {1}",
+"waits for the engine": "περιμένει τη μηχανή",
+"the engine's queue is full: waiting": "η ουρά της μηχανής είναι γεμάτη: αναμονή",
+"the Arc is being reset: waiting": "η Arc επανεκκινείται: αναμονή",
+"the draft is sung": "τραγουδιέται το πρόχειρο",
+"the voice is found": "βρίσκεται η φωνή",
+"laid in": "μπήκε στη θέση του",
+"the whole take is rendered": "ολόκληρη η λήψη αποδίδεται σε ήχο",
+"cut on the bar lines": "κοπή στις γραμμές μέτρου",
+"placed": "τοποθετήθηκε",
+"Stop the assembly": "Σταμάτα τη συναρμολόγηση",
+"Assembled: {0}": "Συναρμολογήθηκε: {0}",
+"Resume from step {0}": "Συνέχεια από το βήμα {0}",
+"Discard": "Απόρριψη",
+"Stopped at step {0}: {1}": "Σταμάτησε στο βήμα {0}: {1}",
+"Cut short by a restart of the lab at step {0}": "Διακόπηκε από επανεκκίνηση του lab στο βήμα {0}",
+"The queue of {0} was put away: five takes keep theirs": "Η ουρά του «{0}» αποσύρθηκε: πέντε λήψεις κρατούν τη δική τους",
+"Each block is a section as the player's wave shows it: the lyrics' tags placed by Whisper's timing, a break, an intro or an outro where no voice sings, or the score's marks for a take never timed. The tags stay in English, as the model reads them.": "Κάθε μπλοκ είναι μια ενότητα όπως τη δείχνει το κύμα του player: οι ετικέτες των στίχων τοποθετημένες από τον χρονισμό του Whisper, ένα διάλειμμα, ένα intro ή ένα outro όπου δεν τραγουδά φωνή, ή τα σημάδια της παρτιτούρας για λήψη που δεν χρονίστηκε ποτέ. Οι ετικέτες μένουν στα αγγλικά, όπως τις διαβάζει το μοντέλο.",
+"Click a block (← → walk them, Space plays it), pick an edit under the strip and add it to the queue: one edit a section. The queue lists them in the song's order, each with ✕.": "Κάνε κλικ σε ένα μπλοκ (τα ← → τα διασχίζουν, το Space το παίζει), διάλεξε μια αλλαγή κάτω από τη λωρίδα και πρόσθεσέ τη στην ουρά: μία αλλαγή ανά ενότητα. Η ουρά τις δείχνει με τη σειρά του τραγουδιού, καθεμία με ✕.",
+"Assemble the take sings the queue as one new take, a child of this one, which stays as it is. The sung edits go one after another on the engine (a draft each, then the whole take once); Repeat and Remove are cut on the score's bar lines in seconds. Songs you queue in the Musician meanwhile go first.": "Η Συναρμολόγηση της λήψης τραγουδά την ουρά ως μία νέα λήψη, παιδί αυτής, που μένει όπως είναι. Οι τραγουδισμένες αλλαγές περνούν η μία μετά την άλλη από τη μηχανή (ένα πρόχειρο η καθεμία, έπειτα ολόκληρη η λήψη μία φορά)· η Επανάληψη και η Αφαίρεση κόβονται στις γραμμές μέτρου της παρτιτούρας σε δευτερόλεπτα. Τα τραγούδια που βάζεις στην ουρά στον Μουσικό στο μεταξύ πάνε πρώτα.",
+"The new take lands where this one is; its note lists the edits, and the player tints what was sung anew.": "Η νέα λήψη μπαίνει εκεί που είναι αυτή· η σημείωσή της απαριθμεί τις αλλαγές, και ο player χρωματίζει ό,τι τραγουδήθηκε ξανά.",
+});
+
+// HERESY 2871: a DAW lane as a spectrogram
+RuachI18n.add("el", {
+"Spectrum: the lane's sound as a spectrogram in place of its wave, the low notes at the bottom and the high at the top, measured once on Forge; remembered in this browser": "Φάσμα: ο ήχος του καναλιού ως φασματογράφημα στη θέση της κυματομορφής, τα μπάσα κάτω και τα πρίμα πάνω· μετριέται μία φορά στο Forge· το θυμάται αυτός ο browser",
+"The rest is the source less the stems, worked out as it plays: it has no file of its own to measure": "Το υπόλοιπο είναι η πηγή χωρίς τα stems, υπολογίζεται καθώς παίζει: δεν έχει δικό του αρχείο να μετρηθεί",
+"Forge is measuring the spectrum of {0}…": "Το Forge μετρά το φάσμα του {0}…",
+"The spectrum of {0} could not be measured: {1}": "Το φάσμα του {0} δεν μετρήθηκε: {1}"
+});
+
+// HERESY 2872: the Library card's workspaces button and its list, the menu's sections folded
+RuachI18n.add("el", {
+"In {0} workspaces:": "Σε {0} χώρους:",
+"In the workspace:": "Στον χώρο:",
+"Take it out of this workspace": "Βγάλ' το από αυτόν τον χώρο",
+"open now": "ανοιχτός τώρα",
+"Its workspaces": "Οι χώροι του",
+"“{0}” is in these. A click on one opens it; ✕ takes the take out of it (it stays in the library and in the others).": "Το «{0}» βρίσκεται σε αυτούς. Ένα κλικ σε έναν τον ανοίγει· το ✕ βγάζει τη λήψη από αυτόν (μένει στη βιβλιοθήκη και στους άλλους).",
+"Take “{0}” out of “{1}”?": "Να βγει το «{0}» από το «{1}»;",
+"It stays in the library and in any other workspace; only this workspace lets it go.": "Μένει στη βιβλιοθήκη και σε κάθε άλλο χώρο· μόνο αυτός ο χώρος το αφήνει.",
+"Taken out of “{0}”": "Βγήκε από το «{0}»",
+"the workspace itself, not its sections": "ο ίδιος ο χώρος, χωρίς τις ενότητές του"
+});
+
+// HERESY 2875: the Trainer's run card: both towers' rates, the absolute epochs, the VRAM of now, the run's now line
+RuachI18n.add("el", {
+"this run": "αυτή η εκτέλεση",
+"Music half · AR": "Μουσικό μισό · AR",
+"Sound half · NAR": "Ηχητικό μισό · NAR",
+"Its note from its start": "Η σημείωσή της από την αρχή",
+"the highest over the whole run, all its sittings; now: the highest of each card over the last 25 steps": "η μέγιστη σε όλη την εκτέλεση, όλες τις συνεδρίες της· τώρα: η μέγιστη κάθε κάρτας στα τελευταία 25 βήματα",
+"epoch {0}": "εποχή {0}"
+});
+
+// HERESY 2876: a run's command line and base on its card; the new-run form said as such beside a run
+RuachI18n.add("el", {
+"runs as": "τρέχει ως",
+"new run": "νέα εκτέλεση",
+"base": "βάση"
+});
+// HERESY 2883: the Narrator's text with the lyrics editor's hands: its count line
+RuachI18n.add("el", {
+"Text: {0} characters · {1} syllables · {2} lines": "Κείμενο: {0} χαρακτήρες · {1} συλλαβές · {2} γραμμές"
+});
+// HERESY 2887: the Section editor's ninth edit, Insert a part after it
+RuachI18n.add("el", {
+"Insert a part after it…": "Εισαγωγή μέρους μετά από αυτό…",
+"A copy of one of the score's parts put in after this section, on its bar line, in seconds; the section itself may keep an edit of its own": "Ένα αντίγραφο ενός από τα μέρη της παρτιτούρας μπαίνει μετά από αυτό το τμήμα, στη διαστολή του, σε δευτερόλεπτα· το ίδιο το τμήμα μπορεί να κρατήσει δική του αλλαγή",
+"Which part goes in?": "Ποιο μέρος μπαίνει;",
+"It goes in after {0}, at {1}": "Μπαίνει μετά το {0}, στο {1}",
+"a copy after {0}": "αντίγραφο μετά το {0}"
+});
+// HERESY 2895: the Section editor writes a take's score from its sound first
+RuachI18n.add("el", {
+"Its score is being written from its sound: every edit waits for it": "Η παρτιτούρα γράφεται από τον ήχο: κάθε αλλαγή την περιμένει",
+"Writing its score from its sound ({0})… {1}": "Γράφω την παρτιτούρα από τον ήχο ({0})… {1}",
+"Its score could not be written from its sound: {0}": "Η παρτιτούρα δεν γράφτηκε από τον ήχο: {0}",
+"A take with no score of its own (Direct, or brought in) gets one written from its sound first, by the transcriber chosen in the Engine, through the Studio's queue: Repeat, Remove and Insert cut on its bar lines, and a section sung anew follows it.": "Μια λήψη χωρίς δική της παρτιτούρα (Direct ή φερμένη) παίρνει πρώτα μία, γραμμένη από τον ήχο της με τον μεταγραφέα που διαλέξατε στη Μηχανή, μέσα από την ουρά του Στούντιο: η Επανάληψη, η Αφαίρεση και η Εισαγωγή κόβουν στις γραμμές των μέτρων της, και ένα τμήμα που τραγουδιέται ξανά την ακολουθεί."
 });
 // HERESY 2896: the lyrics' own sections followed by the planner
 RuachI18n.add("el", {
@@ -9784,4 +9984,217 @@ RuachI18n.add("el", {
 "Freed: {0}": "Ελευθερώθηκαν: {0}",
 "Sure you want to unload this model from VRAM?": "Σίγουρα θέλεις να εκφορτώσεις αυτό το μοντέλο από τη VRAM;",
 "Sure you want to unload these models from VRAM?": "Σίγουρα θέλεις να εκφορτώσεις αυτά τα μοντέλα από τη VRAM;"
+});
+// HERESY 2900: the program monitor's and the console's windows by the screens
+RuachI18n.add("el", {
+"One screen: the program monitor stays in the page. With a second screen it opens there in a window of its own": "Μία οθόνη: η οθόνη προγράμματος μένει στη σελίδα. Με δεύτερη οθόνη ανοίγει εκεί σε δικό της παράθυρο",
+"One screen: the console stays in the page. With a second screen it opens there in a window of its own": "Μία οθόνη: η κονσόλα μένει στη σελίδα. Με δεύτερη οθόνη ανοίγει εκεί σε δικό της παράθυρο"
+});
+// HERESY 2901: the installed app kept awake
+RuachI18n.add("el", {
+"Keep the installed app awake": "Η εγκατεστημένη εφαρμογή να μένει ξύπνια",
+"Only in the installed app (a window of its own, not a browser tab): a 12 Hz tone at -60 dBFS, far under hearing, that Chrome counts as sound, so it does not freeze or discard the Studio while it is in the background and the card and the player are as you left them. It starts with your first click or key. Off: the browser may put the app to sleep": "Μόνο στην εγκατεστημένη εφαρμογή (δικό της παράθυρο, όχι καρτέλα του φυλλομετρητή): ένας τόνος 12 Hz στα -60 dBFS, πολύ κάτω από την ακοή, που το Chrome τον μετρά ως ήχο, οπότε δεν παγώνει ούτε απορρίπτει το Στούντιο στο παρασκήνιο και η κάρτα και ο player μένουν όπως τα άφησες. Ξεκινά με το πρώτο σου κλικ ή πλήκτρο. Κλειστό: ο φυλλομετρητής μπορεί να κοιμίσει την εφαρμογή"
+});
+// HERESY 2902: the reactions linked
+RuachI18n.add("el", {
+"🔥 and 💎 like the take; 👎 takes them off": "Τα 🔥 και 💎 βάζουν 👍· το 👎 τα βγάζει",
+"On: switching 🔥 or 💎 on likes the take too, and 👎 takes off the like, 🔥 and 💎 together, wherever those buttons are (the cards, the Library, the compare window, the player). The reaction faces are never touched. Off: each button stands alone": "Ενεργό: το 🔥 ή το 💎 βάζουν και 👍 στη λήψη, και το 👎 βγάζει μαζί το 👍, το 🔥 και το 💎, όπου κι αν είναι αυτά τα κουμπιά (κάρτες, Βιβλιοθήκη, παράθυρο σύγκρισης, player). Τα πρόσωπα των αντιδράσεων δεν αγγίζονται. Ανενεργό: κάθε κουμπί μόνο του"
+});
+// HERESY 2906: the lyrics' tags explained, with what Follow my sections makes of each
+RuachI18n.add("el", {
+"The body of the song: new words each time over the same music, the story moving on. Numbered (Verse 1, Verse 2…); the Studio offers the next number. Sung; Follow my sections: verse.": "Το σώμα του τραγουδιού: κάθε φορά νέα λόγια πάνω στην ίδια μουσική, η ιστορία προχωρά. Αριθμείται (Verse 1, Verse 2…)· το Στούντιο προτείνει τον επόμενο αριθμό. Τραγουδιέται· «Ακολούθα τα τμήματά μου»: verse.",
+"The part the song comes back to, the same words and melody each time, with the line people remember and sing along. Sung; Follow my sections: chorus.": "Το μέρος όπου επιστρέφει το τραγούδι, κάθε φορά ίδια λόγια και μελωδία, με τη φράση που θυμάσαι και τραγουδάς μαζί. Τραγουδιέται· «Ακολούθα τα τμήματά μου»: chorus.",
+"The climb from a verse into the chorus: a melody and words of its own that raise the tension, always followed by the chorus. Sung; Follow my sections: pre-chorus.": "Η ανάβαση από την κουπλέ στο ρεφρέν: δική της μελωδία και λόγια που ανεβάζουν την ένταση, πάντα ακολουθεί το ρεφρέν. Τραγουδιέται· «Ακολούθα τα τμήματά μου»: pre-chorus.",
+"Once, late in the song, everything turns (melody, chords, words) before the song comes home to its chorus. Sung; Follow my sections: bridge (Middle 8 too).": "Μία φορά, αργά στο τραγούδι, όλα στρίβουν (μελωδία, συγχορδίες, λόγια) πριν το τραγούδι γυρίσει στο ρεφρέν. Τραγουδιέται· «Ακολούθα τα τμήματά μου»: bridge (και Middle 8).",
+"The ending: a last line repeated as the music fades, or the chorus once more, resolved. Words under it are sung; Follow my sections: outro, always the plan's last section.": "Το τέλος: μια τελευταία φράση επαναλαμβάνεται καθώς η μουσική σβήνει, ή το ρεφρέν άλλη μια φορά, λυμένο. Τα λόγια κάτω από αυτό τραγουδιούνται· «Ακολούθα τα τμήματά μου»: outro, πάντα το τελευταίο τμήμα του σχεδίου.",
+"The opening before the first verse, mostly music. Follow my sections: intro, always the plan's first (one is added when the lyrics have none). YuE2 seldom sings its lines: put a spoken intro under [Verse].": "Το άνοιγμα πριν από την πρώτη κουπλέ, κυρίως μουσική. «Ακολούθα τα τμήματά μου»: intro, πάντα το πρώτο του σχεδίου (προστίθεται όταν οι στίχοι δεν έχουν). Το YuE2 σπάνια τραγουδά τις γραμμές του: βάλε μια εισαγωγή σε λόγο κάτω από [Verse].",
+"A passage of another feel between parts: the band alone, or ad-libs and calls over it. Viktor's use: a pause in rap that brakes speech running ahead. Follow my sections: interlude, with words under it or without.": "Ένα πέρασμα άλλης διάθεσης ανάμεσα στα μέρη: η μπάντα μόνη, ή ad-libs και φωνές από πάνω. Η χρήση του Βίκτορ: μια παύση στο rap που φρενάρει τον λόγο που τρέχει μπροστά. «Ακολούθα τα τμήματά μου»: interlude, με λόγια από κάτω ή χωρίς.",
+"The last chorus, usually the biggest: more voices, more power, now and then a key change. Sung; Follow my sections: chorus.": "Το τελευταίο ρεφρέν, συνήθως το πιο μεγάλο: περισσότερες φωνές, περισσότερη δύναμη, καμιά φορά αλλαγή τονικότητας. Τραγουδιέται· «Ακολούθα τα τμήματά μου»: chorus.",
+"The instruments alone between sections, for variety or to build into the next one; name what plays: «Instrumental Break - Horns». Follow my sections: interlude, no voice.": "Τα όργανα μόνα ανάμεσα στα τμήματα, για ποικιλία ή για να χτίσουν προς το επόμενο· πες τι παίζει: «Instrumental Break - Horns». «Ακολούθα τα τμήματά μου»: interlude, χωρίς φωνή.",
+"One instrument steps forward with a long melody of its own while the rest backs it (Drum Solo, Keyboard Solo, plain Solo too). Instrumental; Follow my sections: interlude.": "Ένα όργανο βγαίνει μπροστά με μια δική του μεγάλη μελωδία ενώ τα άλλα το συνοδεύουν (και Drum Solo, Keyboard Solo, σκέτο Solo). Οργανικό· «Ακολούθα τα τμήματά μου»: interlude.",
+"The song's last mark: the music stops here (SUNO's [END] is the same tag). Follow my sections: outro; [Outro] [End] in a row are one.": "Το τελευταίο σημάδι του τραγουδιού: εδώ η μουσική σταματά (το [END] του SUNO είναι η ίδια ετικέτα). «Ακολούθα τα τμήματά μου»: outro· [Outro] [End] στη σειρά είναι ένα.",
+"An opening played without voices. Follow my sections: intro.": "Ένα άνοιγμα που παίζεται χωρίς φωνές. «Ακολούθα τα τμήματά μου»: intro.",
+"A line or two repeated unchanged, often at the end of each verse. Sung; Follow my sections: chorus.": "Μία ή δύο γραμμές που επαναλαμβάνονται αμετάβλητες, συχνά στο τέλος κάθε κουπλέ. Τραγουδιέται· «Ακολούθα τα τμήματά μου»: chorus.",
+"A short part right after the chorus that carries its energy on: a chant, a riff, a tag line. Sung; Follow my sections: chorus.": "Ένα σύντομο μέρος αμέσως μετά το ρεφρέν που κουβαλά την ενέργειά του: ένα σύνθημα, ένα riff, μια φράση-ετικέτα. Τραγουδιέται· «Ακολούθα τα τμήματά μου»: chorus.",
+"The arrangement stripped to its bones to build tension before the last chorus. Metal and hardcore: a heavy half-time chug, the voice a shout, a chant or nothing. EDM: the quiet part, the drums gone, pads left, one line or none. Ballad and rock: bass and kick or one instrument, sometimes whispered or spoken. Empty: an interlude; with words under it the Studio plans a sung section (a bridge). For speech add «spoken word breakdown» to the style.": "Η ενορχήστρωση γδυμένη ως τα κόκαλα για να χτίσει ένταση πριν από το τελευταίο ρεφρέν. Metal και hardcore: βαρύ chug σε μισό τέμπο, η φωνή κραυγή, σύνθημα ή τίποτα. EDM: το ήσυχο μέρος, τα τύμπανα φεύγουν, μένουν pads, μία γραμμή ή καμία. Μπαλάντα και rock: μπάσο και kick ή ένα όργανο, καμιά φορά ψίθυρος ή λόγος. Άδειο: interlude· με λόγια από κάτω το Στούντιο σχεδιάζει τραγουδιστό τμήμα (bridge). Για λόγο πρόσθεσε «spoken word breakdown» στο στυλ.",
+"The music fades to silence (Fadeout too). Follow my sections: outro.": "Η μουσική σβήνει ως τη σιωπή (και Fadeout). «Ακολούθα τα τμήματά μου»: outro.",
+"The catchiest line or riff of the song; Genius writes it [Chorus] or [Refrain] now. Sung; Follow my sections: chorus.": "Η πιο πιασάρικη γραμμή ή riff του τραγουδιού· το Genius τη γράφει πια [Chorus] ή [Refrain]. Τραγουδιέται· «Ακολούθα τα τμήματά μου»: chorus.",
+"Dance and electronic music: the moment beat and bass hit after a build-up, mostly without a voice. Follow my sections: interlude; with words under it, a sung bridge.": "Χορευτική και ηλεκτρονική μουσική: η στιγμή που ο ρυθμός και το μπάσο χτυπούν μετά από ένα build-up, συνήθως χωρίς φωνή. «Ακολούθα τα τμήματά μου»: interlude· με λόγια από κάτω, τραγουδιστό bridge.",
+"A part, or a whole song, played without singing. Follow my sections: interlude.": "Ένα μέρος, ή ολόκληρο τραγούδι, που παίζεται χωρίς τραγούδι. «Ακολούθα τα τμήματά μου»: interlude.",
+"An ending played without voices. Follow my sections: outro.": "Ένα τέλος που παίζεται χωρίς φωνές. «Ακολούθα τα τμήματά μου»: outro.",
+"The rising part before a drop or a chorus: snare rolls, risers, the filter opening, the energy climbing. Follow my sections: pre-chorus, a sung section.": "Το ανερχόμενο μέρος πριν από ένα drop ή ένα ρεφρέν: ρολάρισμα ταμπούρου, risers, το φίλτρο ανοίγει, η ενέργεια ανεβαίνει. «Ακολούθα τα τμήματά μου»: pre-chorus, τραγουδιστό τμήμα.",
+"A woman sings the lines that follow, until another voice is named; after the dash how she sings: Deep, Warm; Soft, Breathy. Not a section: Follow my sections passes it by, as it does the ФОСФОРИДА form [Solo Female Voice].": "Μια γυναίκα τραγουδά τους στίχους που ακολουθούν, ώσπου να ονομαστεί άλλη φωνή· μετά την παύλα πώς τραγουδά: Deep, Warm· Soft, Breathy. Όχι τμήμα: το «Ακολούθα τα τμήματά μου» το προσπερνά, όπως και τη μορφή της ΦΟΣΦΟΡΙΔΑΣ [Solo Female Voice].",
+"A man sings the lines that follow; after the dash how he sings: Bari-tenor, Calm; Low, Raspy. Not a section: Follow my sections passes it by, as it does the ФОСФОРИДА form [Solo Male Vocal: …].": "Ένας άντρας τραγουδά τους στίχους που ακολουθούν· μετά την παύλα πώς τραγουδά: Bari-tenor, Calm· Low, Raspy. Όχι τμήμα: το «Ακολούθα τα τμήματά μου» το προσπερνά, όπως και τη μορφή της ΦΟΣΦΟΡΙΔΑΣ [Solo Male Vocal: …]."
+});
+// HERESY 2905: the Musician's song kept in the Writer from its first save
+RuachI18n.add("el", {
+"The Writer keeps this song from now on: “{0}”, a new document, in hand": "Ο Συγγραφέας κρατά πλέον αυτό το τραγούδι: «{0}», νέο έγγραφο, στο χέρι",
+"The song was not kept in the Writer: {0}": "Το τραγούδι δεν κρατήθηκε στον Συγγραφέα: {0}"
+});
+// HERESY 2912: the history of plays and downloads (Ctrl+H, Ctrl+J)
+RuachI18n.add("el", {
+"History": "Ιστορικό",
+"Downloads": "Κατεβάσματα",
+"Yesterday": "Χθες",
+"Nothing found": "Δεν βρέθηκε τίποτα",
+"Loading…": "Φόρτωση…",
+"Older": "Παλαιότερα",
+"Find a title": "Βρες έναν τίτλο",
+"Find a title or a file": "Βρες έναν τίτλο ή ένα αρχείο",
+"1 play": "1 ακρόαση",
+"{#0} plays": {"one": "{0} ακρόαση", "other": "{0} ακροάσεις"},
+"1 download": "1 κατέβασμα",
+"{#0} downloads": {"one": "{0} κατέβασμα", "other": "{0} κατεβάσματα"},
+"to the end": "ως το τέλος",
+"{0} heard": "ακούστηκαν {0}",
+"stopped at {0} of {1}": "σταμάτησε στο {0} από {1}",
+"not in the Studio any more": "δεν υπάρχει πια στο Στούντιο",
+"a file of no take": "αρχείο που δεν ανήκει σε λήψη",
+"Clear history": "Καθαρισμός ιστορικού",
+"Clear downloads": "Καθαρισμός κατεβασμάτων",
+"The last {0} days, at most {1} plays: kept by the Studio, the same in every browser that opens it": "Οι τελευταίες {0} ημέρες, ως {1} ακροάσεις: τις κρατά το Στούντιο, ίδιες σε κάθε φυλλομετρητή που το ανοίγει",
+"The last {0} days, at most {1} downloads: kept by the Studio, the same in every browser that opens it": "Οι τελευταίες {0} ημέρες, ως {1} κατεβάσματα: τα κρατά το Στούντιο, ίδια σε κάθε φυλλομετρητή που το ανοίγει",
+"(for now in this browser: the Studio's lab learns the history at its next restart)": "(προς το παρόν σε αυτόν τον φυλλομετρητή: το εργαστήριο του Στούντιο μαθαίνει το ιστορικό στην επόμενη επανεκκίνησή του)",
+"Nothing played yet": "Δεν ακούστηκε τίποτα ακόμη",
+"Nothing downloaded yet": "Δεν κατέβηκε τίποτα ακόμη",
+"Not in the Studio any more: “{0}”": "Δεν υπάρχει πια στο Στούντιο: «{0}»",
+"The history of plays is cleared": "Το ιστορικό ακροάσεων καθαρίστηκε",
+"The history of downloads is cleared": "Το ιστορικό κατεβασμάτων καθαρίστηκε",
+"Clear the history of plays?\n\nEvery play it keeps goes ({0}); the takes themselves stay.": "Να καθαριστεί το ιστορικό ακροάσεων;\n\nΦεύγουν όλες οι ακροάσεις που κρατά ({0}). Οι ίδιες οι λήψεις μένουν.",
+"Clear the history of downloads?\n\nEvery download it keeps goes ({0}); the files you saved stay where you saved them.": "Να καθαριστεί το ιστορικό κατεβασμάτων;\n\nΦεύγουν όλα τα κατεβάσματα που κρατά ({0}). Τα αρχεία που αποθήκευσες μένουν εκεί που τα αποθήκευσες.",
+"History: what the player played, day by day; a title takes to its card": "Ιστορικό: τι έπαιξε ο αναπαραγωγός, μέρα με τη μέρα· ένας τίτλος οδηγεί στην κάρτα του",
+"History: what the player played, the last 30 days, day by day": "Ιστορικό: τι έπαιξε ο αναπαραγωγός τις τελευταίες 30 ημέρες, μέρα με τη μέρα",
+"Downloads: what was saved from the Studio, the last 90 days": "Κατεβάσματα: τι αποθηκεύτηκε από το Στούντιο τις τελευταίες 90 ημέρες",
+"The history's button in the full player (between the take's reactions and the transport); the one-row player has none, ☰ has History and Downloads either way": "Το κουμπί του ιστορικού στον πλήρη αναπαραγωγό (ανάμεσα στις αντιδράσεις της λήψης και στα κουμπιά αναπαραγωγής)· ο αναπαραγωγός μίας γραμμής δεν το έχει, το ☰ έχει πάντα Ιστορικό και Κατεβάσματα",
+"A history button in the player": "Κουμπί ιστορικού στον αναπαραγωγό",
+"History and downloads": "Ιστορικό και κατεβάσματα",
+"Clear the history of plays (asks first); the takes stay": "Καθαρισμός του ιστορικού ακροάσεων (ρωτά πρώτα)· οι λήψεις μένουν",
+"Clear the history of downloads (asks first); the saved files stay": "Καθαρισμός του ιστορικού κατεβασμάτων (ρωτά πρώτα)· τα αποθηκευμένα αρχεία μένουν"
+});
+// HERESY 2913: the take's MIDI window (the score's, MuScriptor on the mix or per stem)
+RuachI18n.add("el", {
+"about {0} here": "περίπου {0} εδώ",
+"A training runs: the transcriber goes behind it ({0} threads), slower than the estimate.": "Τρέχει εκπαίδευση: ο μεταγραφέας μπαίνει πίσω της ({0} νήματα), πιο αργά από την εκτίμηση.",
+"Fetch {0} ({1}) and transcribe": "Κατέβασε {0} ({1}) και μετάγραψε",
+"fetched first, {0}": "κατεβαίνει πρώτα, {0}",
+"Fetching MuScriptor {0}…": "Κατεβαίνει το MuScriptor {0}…",
+"for a card of 8 GB": "για κάρτα 8 GB",
+"its stems are here ({0}): each transcribed with its own instruments, each note's velocity from its stem": "τα stems του είναι εδώ ({0}): το καθένα μεταγράφεται με τα δικά του όργανα, η ένταση κάθε νότας από το stem της",
+"its stems first (a card, a minute or two), then each transcribed with its own instruments, each note's velocity from its stem": "πρώτα τα stems (μια κάρτα, ένα-δυο λεπτά), μετά το καθένα μεταγράφεται με τα δικά του όργανα, η ένταση κάθε νότας από το stem της",
+"Made {0}: it downloads at once.": "Έγινε {0}: κατεβαίνει αμέσως.",
+"MIDI: {0} parts, {1} notes, on the take's beats ({2})": "MIDI: {0} μέρη, {1} νότες, στους χτύπους της ίδιας της λήψης ({2})",
+"Laying the score on the take's heard beats…": "Η παρτιτούρα μπαίνει στους παλμούς που ακούστηκαν…",
+"MIDI of the score on the take's beats ({0})": "MIDI της παρτιτούρας στους παλμούς του ίδιου του κομματιού ({0})",
+"MIDI of the score at its own tempo: the take's beats could not be read ({0})": "MIDI της παρτιτούρας στο δικό της τέμπο: οι παλμοί του κομματιού δεν διαβάστηκαν ({0})",
+"MuScriptor on the mix": "MuScriptor στη μίξη",
+"MuScriptor per stem": "MuScriptor ανά stem",
+"MuScriptor's weights are CC BY-NC 4.0: non-commercial use only.": "Τα βάρη του MuScriptor είναι CC BY-NC 4.0: μόνο μη εμπορική χρήση.",
+"no beats heard: 120 bpm": "δεν ακούστηκαν χτύποι: 120 bpm",
+"No card for the stems here: MuScriptor on the mix runs on the processor.": "Δεν υπάρχει κάρτα εδώ για τα stems: το MuScriptor στη μίξη τρέχει στον επεξεργαστή.",
+"No score": "Δεν υπάρχει παρτιτούρα",
+"not offered: {0}": "δεν προσφέρεται: {0}",
+"one pass: 34 instrument groups and the drums, every note at one velocity": "ένα πέρασμα: 34 ομάδες οργάνων και τα κρουστά, κάθε νότα με την ίδια ένταση",
+"Open a take of the library first": "Άνοιξε πρώτα μια λήψη της Βιβλιοθήκης",
+"Quantize": "Κβαντισμός",
+"Reading the score…": "Διαβάζεται η παρτιτούρα…",
+"Tempo from the heard beats (the score's Q drifts from what is sung); bars and beats fall on the song's own.": "Τέμπο από τους χτύπους που ακούστηκαν (το Q της παρτιτούρας ξεφεύγει από ό,τι τραγουδιέται): μέτρα και χτύποι πέφτουν στους δικούς του τραγουδιού.",
+"the fetch ended without the model": "το κατέβασμα τελείωσε χωρίς το μοντέλο",
+"the plan's melody and its instrument line, two tracks; at once": "η μελωδία του σχεδίου και η γραμμή των οργάνων του, δύο κανάλια· αμέσως",
+"the score of “{0}”, whose music codes it keeps: the plan's melody and its instrument line, two tracks; at once": "η παρτιτούρα της «{0}», της οποίας κρατά τους μουσικούς κώδικες: η μελωδία του σχεδίου και η γραμμή των οργάνων του, δύο κανάλια· αμέσως",
+"The score's MIDI": "Το MIDI της παρτιτούρας",
+"the Studio's lab learns it at its next restart": "το εργαστήριο του Στούντιο το μαθαίνει στην επόμενη επανεκκίνησή του",
+"Transcribe again": "Μετάγραψε ξανά",
+"Waits its turn": "Περιμένει τη σειρά του",
+"the take's beats": "οι χτύποι της λήψης",
+"the stems (a card)": "τα stems (μια κάρτα)",
+"MuScriptor on {0}": "MuScriptor στο {0}",
+"the velocities of {0}": "οι εντάσεις του {0}",
+"the file": "το αρχείο",
+"Export MIDI…": "Εξαγωγή MIDI…",
+"one file on the take's own beats: the score's, MuScriptor on the mix or per stem": "ένα αρχείο στους χτύπους της ίδιας της λήψης: της παρτιτούρας, MuScriptor στη μίξη ή ανά stem",
+"MIDI: the score's (its melody and its instrument line), or MuScriptor's transcription of the mix or of each stem, on the take's own beats": "MIDI: της παρτιτούρας (η μελωδία της και η γραμμή των οργάνων) ή η μεταγραφή του MuScriptor της μίξης ή κάθε stem, στους χτύπους της ίδιας της λήψης",
+"One MIDI file of the take on its own beats: the score's, MuScriptor on the mix or per stem": "Ένα αρχείο MIDI της λήψης στους δικούς της χτύπους: της παρτιτούρας, MuScriptor στη μίξη ή ανά stem"
+});
+// HERESY 2913: the stems need a card with room
+RuachI18n.add("el", {
+"The stems need a card with room, and none has it now: MuScriptor on the mix runs on the processor, or ask for the stems later.": "Τα stems θέλουν κάρτα με χώρο και καμία δεν έχει τώρα: το MuScriptor στη μίξη τρέχει στον επεξεργαστή, ή ζήτα τα stems αργότερα."
+});
+// HERESY 2913, 2915: a Direct take's score MIDI after SheetSage2; ☰'s bug report
+RuachI18n.add("el", {
+"Report a bug on GitHub": "Αναφορά σφάλματος στο GitHub",
+"A new issue on GitHub, in a new tab. Attach the debug journal (Engine → Debugging: turn it on, do what goes wrong, then Download) so the bug can be followed": "Ένα νέο issue στο GitHub, σε νέα καρτέλα. Επισύναψε το ημερολόγιο αποσφαλμάτωσης (Μηχανή → Debugging: άνοιξέ το, κάνε ό,τι χαλάει, μετά Λήψη) ώστε να ακολουθηθεί το σφάλμα",
+"the score written from its sound before (SheetSage2): its melody and its instrument line, two tracks; at once": "η παρτιτούρα που γράφτηκε πριν από τον ήχο της (SheetSage2): η μελωδία και η γραμμή των οργάνων, δύο κανάλια· αμέσως",
+"no score of its own (a Direct take): SheetSage2 writes one from its sound first, on the Studio's card in the queue, a minute or two and more for a long song; then its MIDI": "καμία δική της παρτιτούρα (λήψη Direct): πρώτα το SheetSage2 τη γράφει από τον ήχο, στην κάρτα του Στούντιο στην ουρά, ένα-δυο λεπτά, περισσότερο για μεγάλο τραγούδι· μετά το MIDI της",
+"Write its score (SheetSage2), then download": "Γράψε την παρτιτούρα (SheetSage2) και κατέβασε",
+"SheetSage2 writes its score from its sound…": "Το SheetSage2 γράφει την παρτιτούρα από τον ήχο…"
+});
+// HERESY 2916: Follow my sections off by default, its guard
+RuachI18n.add("el", {
+"{0} sections, {1} breaks: a plan of about {2} to {3}": "{0} ενότητες, {1} διαλείμματα: σχέδιο περίπου {2} έως {3}",
+"past {0}, where long plans have fallen apart": "πέρα από {0}, όπου τα μακριά σχέδια διαλύθηκαν",
+"Follow {0} sections?": "Να ακολουθηθούν {0} ενότητες;",
+"{0} sections followed, {1} of them breaks: measured on the Studio's lyrics, such a plan runs about {2} to {3}.": "Ενότητες που ακολουθούνται: {0}, διαλείμματα ανάμεσά τους: {1}. Μετρημένο στους στίχους του Στούντιο, ένα τέτοιο σχέδιο κρατά περίπου {2} έως {3}.",
+"It may not fit the length asked ({0}): the song is cut there.": "Μπορεί να μη χωρά στη διάρκεια που ζητήθηκε ({0}): το τραγούδι κόβεται εκεί.",
+"Long plans have fallen apart past about {0}: lines repeated, the phonetics broken (26 sections with 7 breaks planned past the 8:00 cap). Without following, the planner writes its own sections and the plan stays shorter; it may drop a Bridge or an Outro.": "Τα μακριά σχέδια διαλύθηκαν μετά από περίπου {0}: στίχοι επαναλαμβάνονταν, η φωνητική χάλαγε (26 ενότητες με 7 διαλείμματα έδωσαν σχέδιο πέρα από το όριο των 8:00). Χωρίς να ακολουθεί, ο σχεδιαστής γράφει δικές του ενότητες και το σχέδιο μένει πιο σύντομο· μπορεί να χάσει ένα Bridge ή ένα Outro.",
+"Sing without following": "Τραγούδι χωρίς ακολούθηση",
+"Follow them anyway": "Να ακολουθηθούν όπως και να ’χει",
+"Off unless you turn it on. On, the planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): none dropped, none made up, and the song does not end before its last section has begun. It helps when the planner drops a Bridge or an Outro you wrote. It costs length: each section followed is a stretch of the plan, so many sections and breaks make a long plan, and long plans have fallen apart past about 6:00 (26 sections with 7 breaks planned 6:30 to 8:24, past the 8:00 cap). Its line beside it says what these lyrics would plan. Only when the model writes the score (Full or Melody, no score of yours)": "Κλειστό εκτός αν το ανοίξεις. Ανοιχτό, η σχεδιασμένη παρτιτούρα γράφει τις ενότητες των στίχων με τη σειρά τους (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, όπως τις ονομάζει ο σχεδιαστής): καμία δεν χάνεται, καμία δεν επινοείται, και το τραγούδι δεν τελειώνει πριν αρχίσει η τελευταία του ενότητα. Βοηθά όταν ο σχεδιαστής ρίχνει ένα Bridge ή ένα Outro που έγραψες. Κοστίζει σε διάρκεια: κάθε ενότητα είναι ένα κομμάτι του σχεδίου, άρα πολλές ενότητες και διαλείμματα κάνουν μακρύ σχέδιο, και τα μακριά σχέδια διαλύθηκαν μετά από περίπου 6:00 (26 ενότητες με 7 διαλείμματα: σχέδιο 6:30 έως 8:24, πέρα από το όριο των 8:00). Η γραμμή δίπλα λέει τι σχέδιο θα έβγαζαν αυτοί οι στίχοι. Μόνο όταν την παρτιτούρα τη γράφει το μοντέλο (Full ή Melody, χωρίς δική σου παρτιτούρα)"
+});
+// HERESY 2917: the Trainer's charts: the saves as ticks under the grid, no dots
+RuachI18n.add("el", {
+"the ticks under the grid: the saves (green worth hearing, amber in loras/); the pointer on one says its held-out values": "οι εγκοπές κάτω από το πλέγμα: οι αποθηκεύσεις (πράσινες αξίζει να ακουστούν, κεχριμπαρένια στο loras/)· ο δείκτης σε μία δείχνει τις τιμές της στα κρατημένα κομμάτια",
+"Saved at step {0}": "Αποθηκεύτηκε στο βήμα {0}",
+"held out:": "στα κρατημένα:",
+"worth hearing": "αξίζει να ακουστεί"
+});
+// HERESY 2918: the Writer's text over everything (Alt+E)
+RuachI18n.add("el", {
+"The text over everything": "Το κείμενο πάνω από όλα",
+"The text over everything, four tenths larger, with its meter, rulers and stress marks: Esc, Alt+E or this button puts it back": "Το κείμενο πάνω από όλα, τέσσερα δέκατα μεγαλύτερο, με τον μετρητή, τους χάρακες και τους τόνους του: Esc, Alt+E ή αυτό το κουμπί το επιστρέφει",
+"Back into the notebook": "Πίσω στο σημειωματάριο",
+"Back into the notebook (Esc or Alt+E)": "Πίσω στο σημειωματάριο (Esc ή Alt+E)"
+});
+// HERESY 2919: the workspaces' emoji (the grid, the name dialogs, the tree's chooser)
+RuachI18n.add("el", {
+"The workspace's emoji": "Το emoji του χώρου",
+"No emoji": "Χωρίς emoji",
+"No emoji: a faint leaf": "Χωρίς emoji: ένα αχνό φύλλο",
+"No emoji: the workspace's faint icon": "Χωρίς emoji: το αχνό εικονίδιο του χώρου",
+"Recent": "Πρόσφατα",
+"Ours": "Δικά μας",
+"Feeling": "Συναίσθημα",
+"Message": "Μήνυμα",
+"Making": "Δημιουργία",
+"Nature": "Φύση",
+"The Studio's own marks are not offered: 💎 a published set and 🙈 a blind one stay in the name; ❄ 👁‍🗨 🔒 are states": "Τα δικά σημάδια του Στούντιο δεν προσφέρονται: το 💎 ένα δημοσιευμένο σύνολο και το 🙈 ένα τυφλό μένουν στο όνομα· τα ❄ 👁‍🗨 🔒 είναι καταστάσεις",
+"The emoji before its name: one, any but the Studio's own marks; none shows the faint icon": "Το emoji πριν από το όνομα: ένα, οποιοδήποτε εκτός από τα δικά σημάδια του Στούντιο· χωρίς αυτό, το αχνό εικονίδιο",
+"{0} holds the emoji's place: one of the Studio's own marks (a 💎 set, a 🙈 blind set), kept in the name": "Το {0} κρατά τη θέση του emoji: είναι δικό σημάδι του Στούντιο (σύνολο 💎, τυφλό σύνολο 🙈) και μένει στο όνομα",
+"The tree of workspaces: its order and what it shows": "Το δέντρο των χώρων: η σειρά του και τι δείχνει",
+"The tree of workspaces": "Το δέντρο των χώρων",
+"Grouped by emoji": "Ομαδοποίηση κατά emoji",
+"The default: each emoji's workspaces together, the ones with none first, A to Z inside a group; the 💎 sets stay at the foot": "Η προεπιλογή: οι χώροι κάθε emoji μαζί, όσοι δεν έχουν πρώτοι, από το Α ως το Ω μέσα σε κάθε ομάδα· τα σύνολα 💎 μένουν στο κάτω μέρος",
+"A to Z, emoji aside": "Από το Α ως το Ω, χωρίς emoji",
+"By name alone, whatever emoji each wears; the 💎 sets stay at the foot": "Μόνο κατά όνομα, όποιο emoji κι αν έχει· τα σύνολα 💎 μένουν στο κάτω μέρος",
+"Most takes first": "Πρώτα όσοι έχουν τις περισσότερες λήψεις",
+"The fuller first, its sections the same way; the 💎 sets stay at the foot": "Οι πιο γεμάτοι πρώτοι, οι ενότητές τους το ίδιο· τα σύνολα 💎 μένουν στο κάτω μέρος",
+"Show the archived in the tree": "Εμφάνιση των αρχειοθετημένων στο δέντρο",
+"Each in its place, dimmed, instead of under Archived": "Ο καθένας στη θέση του, αχνός, αντί για κάτω από τις Αρχειοθετημένες",
+"Hide the frozen": "Απόκρυψη των παγωμένων",
+"Out of the tree until shown again; the one open stays": "Έξω από το δέντρο μέχρι να εμφανιστούν ξανά· ο ανοιχτός μένει",
+"Hide the empty ones": "Απόκρυψη των άδειων",
+"A workspace with no take in it or its sections; the one open and the one in hand stay": "Χώρος χωρίς λήψεις ούτε σε αυτόν ούτε στις ενότητές του· ο ανοιχτός και αυτός που είναι στο χέρι μένουν",
+"Fold every section": "Δίπλωμα όλων των ενοτήτων",
+"Unfold every section": "Ξεδίπλωμα όλων των ενοτήτων",
+"Emoji…": "Emoji…",
+"The emoji before its name": "Το emoji πριν από το όνομα",
+"Emoji set: “{0}”": "Emoji ορίστηκε: «{0}»",
+"Emoji taken off: “{0}”": "Emoji αφαιρέθηκε: «{0}»"
+});
+// HERESY 2916b: Follow my sections for short songs, up to about 4 minutes
+RuachI18n.add("el", {
+"Off unless you turn it on. For short songs, up to about 4 minutes: there it is worth it. On, the planned score writes the lyrics' own sections in their order (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, as the planner names them): none dropped, none made up, and the song does not end before its last section has begun. It helps when the planner drops a Bridge or an Outro you wrote. It costs length: each section followed is a stretch of the plan, so many sections and breaks make a long plan; past about 4:00 Generate asks first (long plans have fallen apart: 26 sections with 7 breaks planned 6:30 to 8:24, past the 8:00 cap). Its line beside it says what these lyrics would plan. Only when the model writes the score (Full or Melody, no score of yours)": "Κλειστό εκτός αν το ανοίξεις. Για σύντομα τραγούδια, έως περίπου 4 λεπτά: εκεί αξίζει. Ανοιχτό, η σχεδιασμένη παρτιτούρα γράφει τις ενότητες των στίχων με τη σειρά τους (Intro, Verse, Pre-Chorus, Chorus, Bridge, Interlude, Outro, όπως τις ονομάζει ο σχεδιαστής): καμία δεν χάνεται, καμία δεν επινοείται, και το τραγούδι δεν τελειώνει πριν αρχίσει η τελευταία του ενότητα. Βοηθά όταν ο σχεδιαστής ρίχνει ένα Bridge ή ένα Outro που έγραψες. Κοστίζει σε διάρκεια: κάθε ενότητα είναι ένα κομμάτι του σχεδίου, άρα πολλές ενότητες και διαλείμματα κάνουν μακρύ σχέδιο· πέρα από περίπου 4:00 η «Παραγωγή τραγουδιού» ρωτά πρώτα (τα μακριά σχέδια διαλύθηκαν: 26 ενότητες με 7 διαλείμματα, σχέδιο 6:30 έως 8:24, πέρα από το όριο των 8:00). Η γραμμή δίπλα λέει τι σχέδιο θα έβγαζαν αυτοί οι στίχοι. Μόνο όταν την παρτιτούρα τη γράφει το μοντέλο (Full ή Melody, χωρίς δική σου παρτιτούρα)"
+});
+// HERESY 2919c: the workspaces' emoji upgrade, said once
+RuachI18n.add("el", {
+"{0} workspaces now show their emoji in its own column": "{0} χώροι δείχνουν πλέον το emoji τους στη δική του στήλη"
 });

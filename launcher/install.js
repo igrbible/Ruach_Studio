@@ -25,6 +25,7 @@ module.exports = {
     params: {
       path: "..",
       message: "bash launcher/install.sh",
+      input: true,   // HERESY 2929: its questions answered here (the models' [Y/n]); Pinokio takes no keyboard without it
       on: [
         { event: "/ruach install stopped:[^\\n]*/", break: true },
         // pip and cmake print «error:» about things that are not a reason to stop; install.sh stops by itself, and says why

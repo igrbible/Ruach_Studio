@@ -171,6 +171,8 @@ def body(text, ref, opts):
          "options": {"temperature": round(float(opts.get("temperature", 0.8)), 3), "text_chunk_size": WHOLE}}
     if opts.get("seed") is not None:
         b["seed"] = int(opts["seed"])
+    if opts.get("top_p") is not None:                   # HERESY 2912: the nucleus (audio.cpp's own 0.9 when none is sent)
+        b["top_p"] = round(float(opts["top_p"]), 3)
     if ref:
         b["voice_ref"] = ref["path"]
         b["reference_text"] = ref["text"] or ""

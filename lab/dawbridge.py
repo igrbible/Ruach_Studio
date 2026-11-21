@@ -7,7 +7,7 @@ has. A DAW on another computer (the browser on a laptop, the Studio on a server)
 page lets the user name it.
 
     GET /daw     the DAWs known to the bridge, which are on this machine, where, which version"""
-import os, re, shutil
+import os, platform, re, shutil
 from pathlib import Path
 
 KNOWN = [
@@ -61,4 +61,4 @@ def detect():
         path = _found(d)
         out.append({k: d[k] for k in ("id", "name", "by", "state", "licence", "install")} |
                    {"here": bool(path), "path": path, "version": _version(d, path) if path else ""})
-    return {"daws": out, "host": os.uname().nodename}
+    return {"daws": out, "host": os.uname().nodename if hasattr(os, "uname") else platform.node()}   # HERESY 2924b: Windows has no os.uname

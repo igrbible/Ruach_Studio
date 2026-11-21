@@ -255,7 +255,7 @@ def chords_said(chords, why, abc):
     return f"chords: {len(chords)} as chord symbols" if chords else "no chord symbols in the score"
 
 
-def build(kit, outputs, name, midi=None, cache=None, marks=None):
+def build(kit, outputs, name, midi=None, cache=None, marks=None, midi_label="Score"):   # HERESY 2913: «MuScriptor» for a transcription
     """The take NAME as derived/reaper/TITLE.zip; returns its path and what went in. MARKS: the markers of your own
     (HERESY 2201), as user_marks reads them."""
     from dawproject import tempo_meter                   # the score's Q: and M: (or the style's bpm), as there
@@ -311,8 +311,8 @@ def build(kit, outputs, name, midi=None, cache=None, marks=None):
         for v in voices:
             lines, end = _midi_chunk(div, v)
             secs = end / PPQ * 60.0 / bpm
-            tracks.append(["<TRACK", f"NAME {_q('Score · ' + v['name'])}", f"PEAKCOL {_col('score')}", "MUTESOLO 0 0 0",
-                           "<ITEM", "POSITION 0", f"LENGTH {secs:.6f}", f"NAME {_q('Score · ' + v['name'])}", "<SOURCE MIDI", *lines, ">", ">", ">"])
+            tracks.append(["<TRACK", f"NAME {_q(midi_label + ' · ' + v['name'])}", f"PEAKCOL {_col('score')}", "MUTESOLO 0 0 0",
+                           "<ITEM", "POSITION 0", f"LENGTH {secs:.6f}", f"NAME {_q(midi_label + ' · ' + v['name'])}", "<SOURCE MIDI", *lines, ">", ">", ">"])
         said.append(f"the score: {len(voices)} voice{'s' if len(voices) != 1 else ''} as MIDI")
     else:
         said.append("no score (the take has none, or the page sent none)")
