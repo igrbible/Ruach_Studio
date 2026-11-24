@@ -22,7 +22,9 @@ ROOT = Path(__file__).resolve().parent.parent
 SKIP = {"/art/draw"}        # a GET that starts a picture when it is given a take: asked by name only, never by a sweep
 RAW = re.compile(r"\[WinError -?\d+\]|\[Errno -?\d+\]|Traceback \(most recent call last\)|module 'os' has no attribute|"
                  r"has no attribute '(killpg|getpgid|nice|fchmod|statvfs|uname|getuid)'")
-MISSING = re.compile(r"No module named '([A-Za-z0-9_.]+)'")
+# 23.11.2026 (the 2.1.0-rc2 CI): the lab's own words for a missing package too (plenio_core/errors.py: «… needs the Python package 'scipy',
+# which is not installed.»), not only Python's; scipy is in lab/requirements-lock.txt, so a real install has it and the bare runner does not
+MISSING = re.compile(r"No module named '([A-Za-z0-9_.]+)'|needs the Python package '([A-Za-z0-9_.]+)'")
 STDLIB = set(getattr(sys, "stdlib_module_names", ())) | {"winx", "paths"}
 
 
@@ -68,7 +70,8 @@ def verdict(code, body):
         return "no answer: " + text[:160]
     if code >= 500:
         m = MISSING.search(text)
-        if m and m.group(1).split(".")[0] not in STDLIB and not (ROOT / "lab" / (m.group(1).split(".")[0] + ".py")).is_file():
+        pkg = m and (m.group(1) or m.group(2)).split(".")[0]
+        if pkg and pkg not in STDLIB and not (ROOT / "lab" / (pkg + ".py")).is_file():
             return ""                                       # a package this machine lacks (the runner's bare Python), not the Studio's fault
         try:
             why = json.loads(text).get("error", "")
