@@ -52,7 +52,9 @@ check(only == want[4:], "--transcriber-only: the transcriber and Refined alone, 
 
 # ---- fetch-models.sh: the same set, written into its plan lines (read, not run: the run asks Hugging Face)
 sh = (KIT / "fetch-models.sh").read_text(encoding="utf-8")
-check(sh == (KIT / "heresy" / "root" / "fetch-models.sh").read_text(encoding="utf-8"), "the KIT's fetch-models.sh is heresy/root's")
+master = KIT / "heresy" / "root" / "fetch-models.sh"           # the dev studio's master copy; the public tree has only its own
+if master.is_file():
+    check(sh == master.read_text(encoding="utf-8"), "the KIT's fetch-models.sh is heresy/root's")
 check("yue2_full() {" in sh and 'yue2_full yue2; }' in sh, "Linux: an install's default plan calls yue2_full with the pack yue2")
 i_up, i_pack = sh.index("yue2_full newdefault"), sh.index('want="${PACKS#,}"; want="${want/,fw,/,}"; pack_entries')
 check(i_up < i_pack, "an update: yue2_full newdefault before pack_entries (whose transcriber lines would come first and not be wanted)")

@@ -39,6 +39,9 @@ PARTS = {"extras": "1.6 GB", "whisper": "3.1 GB", "stems": "1.0 GB", "upscale": 
 # 08.11.2026 (Viktor: «Пересмотри, чтобы ничего лишнего не скачивалось при первой установке»): the transcriber, SheetSage2 with MERT-v2-FullSong
 # beside it (1.0 GB), no longer comes with every install; a part of its own, for covers from a recording
 PARTS["transcriber"] = "1.0 GB"
+# HERESY 2981: what launcher/fetch_models.py --transcriber-only brings where there is no bash (the 2.1.0-rc2 Windows soak: SheetSage2-F32
+# 229 MB, MERT-v2-FullSong-F32 2.53 GB, SheetSage2-Refined-F16 156 MB and its LICENSE and NOTICE: 2.91 GB)
+TRANSCRIBER_PY_SIZE = "2.9 GB"
 # HERESY 2952 (Viktor 23.11.2026, «Весь YuE2»): an install brings the transcriber again (in F32, with its Refined mode); the part stays for an
 # install made before 2.1.0 and for the lighter Q8_0 pair
 # HERESY 1984: measured anew by the pinned file lists (01.11.2026): the decoders without the sliders (1449: 1.06 GB), UniverSR with Apollo-vocal (1583: 0.42)
@@ -66,7 +69,10 @@ def fw_quant(kit):
 def parts_of(kit):   # (not «parts»: _last_run keeps a list of that name)
     """the parts the install brings and their sizes, the fine-tune's at its quant (none on a Q5_K_M install)"""
     q = fw_quant(kit)
-    return dict(PARTS, fw=FW_SIZES[q]) if q else dict(PARTS)
+    d = dict(PARTS, fw=FW_SIZES[q]) if q else dict(PARTS)
+    if _bash() is None:                             # HERESY 2981: Windows without Git for Windows fetches the transcriber through
+        d["transcriber"] = TRANSCRIBER_PY_SIZE      # launcher/fetch_models.py (2952): the F32 pair and the Refined mode, not the Q8_0 pair
+    return d
 
 OMNI = paths.LISTENER + "/Qwen2.5-Omni-7B-GGUF/"
 PROJ = OMNI + "mradermacher/Qwen2.5-Omni-7B.mmproj-Q8_0.gguf"
@@ -699,6 +705,10 @@ def _run(kit, args, then_check, token=None):
             JOB["rc"] = rc
             if len(runs) > 1:
                 JOB["counts"] = total
+        if then_check and _bash() is None and all(_base_only(a) for a in runs):
+            # HERESY 2981 (the 2.1.0-rc2 Windows soak): the check is fetch-heresy.sh's and needs bash; without it, it printed «install Git
+            # for Windows, then press again» under a fetch that worked. fetch_models.py has already said what is here.
+            then_check = False
         if then_check:
             with LOCK:
                 JOB["lines"].append("")
