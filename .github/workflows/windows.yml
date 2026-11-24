@@ -371,7 +371,8 @@ jobs:
           $ok = $false
           foreach ($i in 1..30) {
             Start-Sleep 2
-            try { $r = Invoke-WebRequest http://127.0.0.1:41870/health -UseBasicParsing -TimeoutSec 5; "health: " + $r.Content.Substring(0, [Math]::Min(300, $r.Content.Length)); $ok = $true; break } catch { if ($p.HasExited) { break } }
+            # $hr, never $r: PowerShell names ignore case, and $r overwrote $R, the package root, so lab-sweep.py was looked for inside the health reply (2.1.0-rc2, its first CI round)
+            try { $hr = Invoke-WebRequest http://127.0.0.1:41870/health -UseBasicParsing -TimeoutSec 5; "health: " + $hr.Content.Substring(0, [Math]::Min(300, $hr.Content.Length)); $ok = $true; break } catch { if ($p.HasExited) { break } }
           }
           $swept = 0                                       # HERESY 2937: every GET route of the packaged lab once
           if ($ok) { python "$R\tools\lab-sweep.py" http://127.0.0.1:41870 --out lab-sweep-package.txt; $swept = $LASTEXITCODE }
