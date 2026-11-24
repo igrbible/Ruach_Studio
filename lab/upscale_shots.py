@@ -13,6 +13,7 @@ import time
 from pathlib import Path
 
 import paths                       # HERESY 2330: where the weights live
+import winx                        # HERESY 2934: its jobs' processes on Windows too
 import videographer as vg
 
 HERE = Path(__file__).resolve().parent
@@ -43,7 +44,7 @@ LOCK = threading.Lock()
 
 
 def _py(kit):
-    return Path(os.environ.get("LAB_ART_PY") or Path(kit) / ".venv-art/bin/python")
+    return Path(os.environ.get("LAB_ART_PY") or winx.venv_python(kit, ".venv-art"))
 
 
 def ready(kit, model="7b"):
@@ -54,6 +55,18 @@ def ready(kit, model="7b"):
     if not _py(kit).is_file():
         missing.append(str(_py(kit)))
     return {"ready": not missing, "missing": missing}
+
+
+def put_in(src, link):
+    """HERESY 2934: a shot's video set into a job's in/ by a link, as on Linux; where the system refuses one (Windows makes a link only in
+    Developer Mode) by a hard link, else a copy."""
+    try:
+        link.symlink_to(src)
+    except OSError:
+        try:
+            os.link(src, link)
+        except OSError:
+            shutil.copy2(src, link)
 
 
 def _root(kit):
@@ -72,7 +85,7 @@ def _frames(p):
 def _alive(jd):
     try:
         j = json.loads((jd / "job.json").read_text(encoding="utf-8"))
-        os.kill(int(j.get("pid") or 0), 0)
+        winx.kill0(int(j.get("pid") or 0))                 # HERESY 2934
         return int(j.get("pid") or 0) > 0 and not (jd / "done.json").is_file()
     except (OSError, ValueError):
         return False
@@ -84,7 +97,7 @@ def start(kit, name, shots, model="7b", res=1080, free_cards=()):
         raise ValueError(", ".join(MODELS) + "; 720, 1080 or 1440")
     r = ready(kit, model)
     if not r["ready"]:
-        raise FileNotFoundError("SeedVR2 is not here: " + ", ".join(r["missing"]) + " (heresy/fetch-heresy.sh --upscaler 7b)")
+        raise FileNotFoundError("SeedVR2 is not here: " + ", ".join(r["missing"]) + " (Engine → Models and LoRAs fetches them)")   # HERESY 2962: no command line
     plan = vg.get(kit, name)
     items = []
     for i in shots:
@@ -114,12 +127,13 @@ def start(kit, name, shots, model="7b", res=1080, free_cards=()):
             for it in its:
                 link = jd / "in" / f"{it['i']:03d}.mp4"
                 if not link.exists():
-                    link.symlink_to(it["src"])
+                    put_in(it["src"], link)                 # HERESY 2934
             job = {"name": name, "model": model, "res": int(res), "gpu": c, "items": its, "queued": time.time(), "pid": 0,
                    "batch": MODELS[model]["batch"], "swap": MODELS[model]["swap"]}   # HERESY 2356: its batches (45 overlapping by 4) and blocks in RAM
             (jd / "job.json").write_text(json.dumps(job, ensure_ascii=False), encoding="utf-8")
             log = open(jd / "log", "ab")
-            p = subprocess.Popen(["nice", "-n", "5", str(_py(kit)), "-u", str(JOB), str(jd)], cwd=str(kit), stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+            p = subprocess.Popen(winx.nice(5) + [str(_py(kit)), "-u", str(JOB), str(jd)], cwd=str(kit), stdout=log, stderr=subprocess.STDOUT,
+                                 **winx.group_kwargs())   # HERESY 2934: nice and a group of its own where the system has them
             job["pid"] = p.pid
             (jd / "job.json").write_text(json.dumps(job, ensure_ascii=False), encoding="utf-8")
             jobs.append({"gpu": c, "shots": [x["i"] for x in its], "frames": sum(x["frames"] for x in its)})
@@ -198,7 +212,7 @@ def cancel(kit, name):
         if _alive(jd):
             try:
                 j = json.loads((jd / "job.json").read_text(encoding="utf-8"))
-                os.killpg(os.getpgid(int(j["pid"])), signal.SIGTERM)
+                winx.kill_group_of(j["pid"], signal.SIGTERM)   # HERESY 2934: the tree on Windows
                 (jd / "done.json").write_text(json.dumps({"rc": -15, "error": "stopped"}), encoding="utf-8")
                 n += 1
             except (OSError, ValueError, KeyError):

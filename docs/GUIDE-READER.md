@@ -74,6 +74,8 @@ The Quant list paints each quant by the raw test of 09.11.2026: the first readin
 
 **Narrator's voice**: the engine's own voice, held from the first piece; or **Your own voice…**, a short clip of a voice that the engine follows, taken only under the red warning and with consent ticked (cloning a voice without its owner's consent is a crime in many countries, and the responsibility is yours). No ready-made voices come with the Studio. Each piece's pitch is measured as it is read; a piece whose voice crossed into the other gender is read again with another seed.
 
+**A voice for each paragraph.** In a narration a small ↳ chip stands in the margin by each paragraph's first line: a click picks the voice that paragraph reads in (a voice of yours, a group, or the voice above the text again), and the paragraphs after it keep it until one of them is given another; a thin band in that voice's colour runs along them. The text itself stays clean, and the voices follow their paragraphs as you edit it; a dialog has a voice for each speaker instead, and a reading by verses none.
+
 Emotions and sounds go in square brackets, as Drama 3 reads them: `[calm]`, `[sad]`, `[whispering]`, `[pause]`, `[laughs]`. **Tag palette** puts them in: an emotion, a pace or a style at the start of its sentence, a pause or a sound at the cursor. **Read the inline tags** is on by default in a dialog and off in a narration, where a clean book reading is wanted. **Style** gives the whole reading a bracket of its own, such as `calm, warm, unhurried narration`.
 
 ### Stresses and the Acute

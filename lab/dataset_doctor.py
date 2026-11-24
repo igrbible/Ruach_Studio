@@ -15,6 +15,8 @@ thread, at nice 15. GET /train/doctor?name= says where it stands and the report;
 import hashlib, json, os, re, subprocess, threading, time
 from pathlib import Path
 
+import winx   # HERESY 2934: nice where the system has it
+
 AUDIO = {".wav", ".flac", ".mp3", ".ogg", ".m4a", ".opus", ".aac", ".wma"}
 LOSSY = {"mp3", "mp2", "aac", "vorbis", "opus", "wmav1", "wmav2", "wmapro", "ac3", "eac3"}
 MAX_TRACKS = 400
@@ -44,7 +46,7 @@ def _signature(files):
 
 
 def _run(cmd, timeout=120):
-    return subprocess.run(["nice", "-n", "15"] + cmd, capture_output=True, timeout=timeout)
+    return subprocess.run(winx.nice(15) + cmd, capture_output=True, timeout=timeout)
 
 
 def _probe(f):

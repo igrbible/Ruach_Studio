@@ -25,6 +25,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
@@ -38,6 +39,8 @@ PARTS = {"extras": "1.6 GB", "whisper": "3.1 GB", "stems": "1.0 GB", "upscale": 
 # 08.11.2026 (Viktor: «Пересмотри, чтобы ничего лишнего не скачивалось при первой установке»): the transcriber, SheetSage2 with MERT-v2-FullSong
 # beside it (1.0 GB), no longer comes with every install; a part of its own, for covers from a recording
 PARTS["transcriber"] = "1.0 GB"
+# HERESY 2952 (Viktor 23.11.2026, «Весь YuE2»): an install brings the transcriber again (in F32, with its Refined mode); the part stays for an
+# install made before 2.1.0 and for the lighter Q8_0 pair
 # HERESY 1984: measured anew by the pinned file lists (01.11.2026): the decoders without the sliders (1449: 1.06 GB), UniverSR with Apollo-vocal (1583: 0.42)
 # HERESY 2329: the extras are our decoders now, YuE2-VAE-RS x3 v1 and v2 (2 × 803 MB, goldhub/YuE2-RS-Finetunes VAE-RS/ since 11.11.2026: HERESY 2330); Legacy and Blend no more (2307)
 # HERESY 1794 (Viktor 25.10.2026: «2.4 ep - самый безопасный, и пусть он будет базовой моделью»): Ruach Studio's own fine-tune, YuE2-RS-FW, its
@@ -623,12 +626,39 @@ def _pin(kit, repo):
     return "main"
 
 
+def _base_only(args):
+    """HERESY 2952: a fetch the base set's own downloader (launcher/fetch_models.py) can do alone: the transcriber or its Refined mode."""
+    return args in (["--only", "transcriber"], ["--only", "none", "--refined", "F16", "--yes"])
+
+
+def _say_py(kit, env):
+    """HERESY 2952 (Windows without Git for Windows, where fetch-heresy.sh has no bash): the transcriber and its Refined mode through
+    launcher/fetch_models.py --transcriber-only, the base set's own downloader, its lines into JOB["lines"]; its exit status."""
+    script = kit / "launcher" / "fetch_models.py"
+    if not script.is_file():
+        with LOCK:
+            JOB["lines"].append("launcher/fetch_models.py is not here: this install cannot download without Git for Windows")
+        return 1
+    p = subprocess.Popen([sys.executable, str(script), "--transcriber-only", "--yes"], cwd=str(kit), env=env, stdin=subprocess.DEVNULL,
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
+    for line in p.stdout:
+        line = hf_access.scrub(_strip(kit, line.rstrip("\n")))
+        with LOCK:
+            JOB["lines"].append(line)
+            del JOB["lines"][:-1000]
+            if JOB["kind"] == "fetch" and re.match(r"^done\s+" + re.escape(paths.MISC) + "/SheetSage", line):   # the engine lists them when it starts
+                JOB["restart"] = True
+    return p.wait()
+
+
 def _say(kit, args, token=None):
     """One run of fetch-heresy.sh into JOB["lines"]; its exit status (0: nothing failed). A token goes into its environment alone."""
     env = dict(os.environ, NO_COLOR="1", HF_HUB_DISABLE_TELEMETRY="1")
     if token:                                       # else whatever the user's own environment holds, as before
         env["HF_TOKEN"] = token
     bash = _bash()
+    if bash is None and _base_only(args):           # HERESY 2952: the transcriber and its Refined mode come without Git for Windows too
+        return _say_py(kit, env)
     if bash is None:                                # HERESY 2924: Windows without Git for Windows; said, not a crash
         with LOCK:
             JOB["lines"] += ["On Windows the Weights panel downloads through the bash of Git for Windows, and none is installed here.",

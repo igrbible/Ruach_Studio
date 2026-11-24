@@ -5619,6 +5619,11 @@ RuachI18n.add("fr", {
 "On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks.": "Sur un Wi-Fi public (un café, un hôtel, un train) ou sur un portable sans pare-feu, tout le monde sur ce réseau compte aussi comme réseau privé : choisis « Cet ordinateur seulement » ou indique tes propres réseaux.",
 "Engine → Security changes it any time. The internet at large is never let in, unless the Studio is started with RUACH_ALLOW_PUBLIC=1.": "Moteur → Sécurité le change à tout moment. L'internet en général n'entre jamais, sauf si le Studio est lancé avec RUACH_ALLOW_PUBLIC=1.",
 "My decision is a conscious one": "Ma décision est réfléchie",
+"The Studio listens on this computer alone now (port {0}): no other computer or phone can open it, and {1} has nothing to ask of its firewall. Opened to a network, whoever opens its page there can do everything you can: make and delete songs, read your lyrics, run your graphics cards, fetch models with your keys.": "Le Studio n’écoute plus que cet ordinateur (port {0}) : aucun autre ordinateur ni téléphone ne peut l’ouvrir, et {1} n’a rien à demander à son pare-feu. Ouvert à un réseau, quiconque y ouvre sa page peut tout ce que vous pouvez : créer et supprimer des chansons, lire vos paroles, occuper vos cartes graphiques, télécharger des modèles avec vos clés.",
+"{0} asks once whether to let the Studio through its firewall, when it starts again": "{0} demande une fois s’il laisse passer le Studio par son pare-feu, quand il redémarre",
+"The Studio still listens on this computer alone: restart it ({0}) to open it to your network, and {1} asks once about its firewall.": "Le Studio n’écoute toujours que cet ordinateur : redémarrez-le ({0}) pour l’ouvrir à votre réseau, et {1} demandera une fois pour son pare-feu.",
+"its icon beside the clock → Restart the Studio": "son icône près de l’horloge → Restart the Studio",
+"close it and start it again": "fermez-le et relancez-le",
 "Batch": "Lot",
 "How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked": "Combien d'images d'un coup : chacune la graine suivante (la graine, la graine + 1, …), dans chaque format choisi",
 "Delete the saved style picked": "Supprimer le style enregistré choisi",
@@ -5684,6 +5689,7 @@ RuachI18n.add("fr", {
 "Music half: {0} layers, attention {1} %, MLP {2} %": "Moitié musique : {0} couches, attention {1} %, MLP {2} %",
 "Sound half: {0} layers, attention {1} %, MLP {2} %": "Moitié son : {0} couches, attention {1} %, MLP {2} %",
 "moves a layer by up to {0} % at 1.0": "déplace une couche jusqu'à {0} % à 1.0",
+"How far it moves a layer is not measured: {0}": "De combien il déplace une couche n’est pas mesuré : {0}",
 "Where it pushes:": "Où il pousse :",
 "{0} and {1} share their layers ({2}) and pull the same way: together they push harder than their strengths say, keep them lower.": "{0} et {1} partagent leurs couches ({2}) et tirent dans le même sens : ensemble ils poussent plus fort que leurs forces ne le disent ; garde-les plus bas.",
 "{0} and {1} share their layers ({2}) and pull against each other: some of each cancels the other.": "{0} et {1} partagent leurs couches ({2}) et tirent l'un contre l'autre : une part de chacun annule l'autre.",
@@ -5914,6 +5920,7 @@ RuachI18n.add("fr", {
 "The input's floor, RMS / peak dBFS: {0}": "Le plancher de l'entrée, RMS / crête dBFS : {0}",
 "Not measured: {0}": "Pas mesuré : {0}",
 "no sound card is seen here (/proc/asound has none)": "aucune carte son n'est vue ici (/proc/asound est vide)",
+"the audio interfaces are read through ALSA, Linux's sound system: on Windows and macOS none are listed yet, and the analog gateway and the monitor run on Linux for now": "les interfaces audio sont lues via ALSA, le système son de Linux : sous Windows et macOS aucune n’est encore listée, et la passerelle analogique et le moniteur ne tournent pour l’instant que sous Linux",
 "aplay is not here: ALSA's software devices are not listed": "aplay n'est pas là : les périphériques logiciels d'ALSA ne sont pas listés",
 "arecord is not here: ALSA's software devices are not listed": "arecord n'est pas là : les périphériques logiciels d'ALSA ne sont pas listés",
 "PipeWire / Pulse do not run here (no pactl answer)": "PipeWire / Pulse ne tournent pas ici (pas de réponse de pactl)",
@@ -10082,4 +10089,177 @@ RuachI18n.add("fr", {
 // HERESY 2919c: the workspaces' emoji upgrade, said once
 RuachI18n.add("fr", {
 "{0} workspaces now show their emoji in its own column": "{0} espaces montrent désormais leur emoji dans sa propre colonne"
+});
+// HERESY 2940 · 2941: the take's menu of workspaces, the realms in a move and an add
+RuachI18n.add("fr", {
+"A move never takes a take out of its realm: these are the Musician's, and “{0}” is the Narrator's.": "Un déplacement ne sort jamais une prise de son monde : celles-ci sont au Musicien, et « {0} » est au Lecteur.",
+"A move never takes a take out of its realm: these are the Narrator's, and “{0}” is the Musician's.": "Un déplacement ne sort jamais une prise de son monde : celles-ci sont au Lecteur, et « {0} » est au Musicien.",
+"A move never takes a take out of its realm: these belong to both realms.": "Un déplacement ne sort jamais une prise de son monde : celles-ci appartiennent aux deux mondes.",
+"Link them into “{0}” instead? They stay where they are as well.": "Les lier plutôt dans « {0} » ? Elles restent aussi là où elles sont.",
+"Link them": "Les lier",
+"Linked into “{0}”: {1}": "Liées dans « {0} » : {1}",
+"The checked belong to both realms ({0} of the Musician, {1} of the Narrator): a move keeps each take in its realm, so check the takes of one realm": "Les cochées appartiennent aux deux mondes ({0} du Musicien, {1} du Lecteur) : un déplacement garde chaque prise dans son monde ; coche les prises d'un seul monde",
+"They leave every other workspace of their realm they are in (a locked one keeps its own; their links in the other realm stay).": "Elles quittent tous les autres espaces de leur monde où elles sont (un espace verrouillé garde les siennes ; leurs liens dans l'autre monde restent).",
+"Frozen: unfreeze it first (⋯ beside its name)": "Gelé : dégèle-le d'abord (⋯ à côté de son nom)",
+"Link into the Narrator's": "Lier dans les espaces du Lecteur",
+"Link into the Musician's": "Lier dans les espaces du Musicien"
+});
+// HERESY 2942: the music model's honest limits (the window of the song at hand, the floor under its ceiling, Extend's cap)
+RuachI18n.add("fr", {
+"Max length {0} is past what the window holds for this song: about {1} of music whole, after its style and lyrics ({2} tokens) and its score ({3}). The song stops where the window ends. Longer: Long songs · Pieces (experimental).": "La Durée max. {0} dépasse ce que la fenêtre contient pour cette chanson : environ {1} de musique entière, après son style et ses paroles ({2} tokens) et sa partition ({3}). La chanson s’arrête là où la fenêtre finit. Plus longue : Chansons longues · Par morceaux (expérimental).",
+"Max length {0} is past what the window holds for this song: about {1} of music whole ({4}–{5} by the score the model writes), after its style and lyrics ({2} tokens). The song stops where the window ends. Longer: Long songs · Pieces (experimental).": "La Durée max. {0} dépasse ce que la fenêtre contient pour cette chanson : environ {1} de musique entière ({4}–{5} selon la partition que le modèle écrira), après son style et ses paroles ({2} tokens). La chanson s’arrête là où la fenêtre finit. Plus longue : Chansons longues · Par morceaux (expérimental).",
+"The window holds about {0} of this song's music whole: its style and lyrics take {1} tokens, its score {2}, of the {3}.": "La fenêtre contient environ {0} de la musique de cette chanson entière : son style et ses paroles prennent {1} tokens, sa partition {2}, sur les {3}.",
+"The window holds about {0} of this song's music whole ({4}–{5} by the score the model writes): its style and lyrics take {1} tokens of the {3}.": "La fenêtre contient environ {0} de la musique de cette chanson entière ({4}–{5} selon la partition que le modèle écrira) : son style et ses paroles prennent {1} tokens sur les {3}.",
+"Max length goes past it: the song stops where the window ends.": "La Durée max. la dépasse : la chanson s’arrête là où la fenêtre finit.",
+"The music's Min length {0} stood above its Max length {1}: sent with the floor at {1}": "La Durée min de la musique {0} était au-dessus de sa Durée max. {1} : envoyée avec le plancher à {1}",
+"The score's Min tokens {0} stood above its Max tokens {1}: sent with the floor at {1}": "Les Tokens min. de la partition {0} étaient au-dessus de ses Tokens max. {1} : envoyée avec le plancher à {1}",
+"{0} long: Extend goes to {1} at most": "{0} de long : Prolonger va jusqu'à {1} au plus",
+"Music up to 10:00 (8:00 by default): past it a song loses its way (one ran on to 9:30, and that was too much). The window of 24,576 tokens may hold less: the style, the lyrics and the score take their part first.": "Musique jusqu'à 10:00 (8:00 par défaut) : au-delà, la chanson perd son chemin (une est allée jusqu'à 9:30, c'était trop). La fenêtre de 24 576 tokens peut en contenir moins : le style, les paroles et la partition prennent leur part d'abord.",
+"Text profiles make a pasted text ready to read, with a speech profile of your own (Direct, past 8:00); readings live in the Narrator": "Les profils de texte préparent un texte collé pour la lecture, avec un profil de parole à toi (Direct, au-delà de 8:00) ; les lectures vivent dans le Lecteur"
+});
+// HERESY 2943: the Trainer's curves together: the run's events, the held-out dots, a scale's span
+RuachI18n.add("fr", {
+"Step {0}": "Pas {0}",
+"the {0} frozen: its loss leaves the sum": "le {0} gelé : sa perte quitte la somme",
+"went on from its save": "reparti de sa sauvegarde",
+"the {0}'s learning-rate curve {1} → {2}": "la courbe du taux d'apprentissage du {0} : {1} → {2}",
+"The running average begins anew here.": "La moyenne glissante repart d'ici.",
+"held out at step {0}: {1} {2}": "mises de côté au pas {0} : {1} {2}",
+"span {0}": "amplitude {0}",
+"Smoothing": "Lissage",
+"The curves' smoothing, as TensorBoard's: 0 draws the logged points as they are, 0.99 the smoothest (0.92 by default); the faint line under each is the points themselves. The learning rate, the memory and the held-out dots are never smoothed, nor across the run's events. Kept in this browser.": "Le lissage des courbes, comme dans TensorBoard : 0 trace les points enregistrés tels quels, 0.99 le plus lisse (0.92 par défaut) ; la ligne pâle sous chacune, ce sont les points eux-mêmes. Le taux d'apprentissage, la mémoire et les points mis de côté ne sont jamais lissés, ni à travers les événements de l'entraînement. Gardé dans ce navigateur."
+});
+// HERESY 2945: the Writer's versions: the Section editor's sub-version and the version it came from
+RuachI18n.add("fr", {
+"the Section editor": "l'éditeur de sections",
+"from #{0}": "de #{0}"
+});
+// HERESY 2942b: the Section editor's Extend within the music model's 10:00
+RuachI18n.add("fr", {
+"Only past the take's end, 10:00 at most in all": "Seulement après la fin de la prise, 10:00 au plus en tout",
+"Extend sings on to 10:00 at most": "Prolonger chante jusqu'à 10:00 au plus"
+});
+// HERESY 2948: comping in the DAW: the selection taken from another version of its stem
+RuachI18n.add("fr", {
+"Take it from another version": "La prendre d'une autre version",
+"The rest has no versions": "Le reste n'a pas de versions",
+"This stem has one version: a file made from it (a cleaned voice…) is another": "Ce stem n'a qu'une version : un fichier fait à partir de lui (une voix nettoyée…) en est une autre",
+"The selection from another version of this stem, laid over the lane with 10 ms crossfades; the lane's own version everywhere else": "La sélection prise d'une autre version de ce stem, posée sur la piste avec des fondus de 10 ms ; partout ailleurs, la version de la piste",
+"{0}–{1} now from «{2}»": "{0}–{1} vient maintenant de « {2} »",
+"a version gone": "une version disparue"
+});
+// HERESY 2949: the Refiner's Compare node: two versions of the take, A and B, into the Compare window
+RuachI18n.add("fr", {
+"A and B side by side": "A et B côte à côte",
+"Two versions of the take side by side, A and B: the original, a step's file, a mix; Compare opens them in the Compare window, switched in the same second. A wire from the take goes to A, from a step to B": "Deux versions de la prise côte à côte, A et B : l'original, le fichier d'une étape, un mix ; Comparer les ouvre dans la fenêtre de comparaison, basculées à la même seconde. Un fil depuis la prise va vers A, depuis une étape vers B",
+"Two versions of this take side by side, A and B, in the Compare window: switched in the same second, blind if you like.": "Deux versions de cette prise côte à côte, A et B, dans la fenêtre de comparaison : basculées à la même seconde, à l'aveugle si tu veux.",
+"The first: the original or any file a step made of this take": "La première : l'original ou tout fichier qu'une étape a fait de cette prise",
+"The second, heard against A: a step's file, a mix, the original": "La seconde, entendue face à A : le fichier d'une étape, un mix, l'original",
+"A and B in the Compare window, A first: one plays, the other takes over in the same second": "A et B dans la fenêtre de comparaison, A d'abord : l'une joue, l'autre prend le relais à la même seconde",
+"Compare A and B": "Comparer A et B",
+"Pick a take: its versions come here": "Choisis une prise : ses versions viennent ici",
+"Only the original so far: make a file from it in a step, then compare the two": "Seulement l'original pour l'instant : fais-en un fichier dans une étape, puis compare les deux",
+"A and B are the same file: pick another for one of them": "A et B sont le même fichier : choisis-en un autre pour l'un d'eux"
+});
+// HERESY 2950: two-tone icons in Engine › Appearance
+RuachI18n.add("fr", {
+"Icons": "Icônes",
+"One colour": "Une couleur",
+"Two-tone, the theme's colours": "Bicolores, les couleurs du thème",
+"The Studio's line icons: ours in one colour, the text's (the default); or two-tone, the outline as always and their shapes filled faintly in the theme's own colours (the accent for what makes, red for what takes away, green for what keeps), so each theme paints them its way": "Les icônes au trait du Studio : les nôtres d'une couleur, celle du texte (par défaut) ; ou bicolores, le contour comme toujours et leurs formes remplies légèrement des couleurs du thème lui-même (l'accent pour ce qui crée, le rouge pour ce qui retire, le vert pour ce qui garde), ainsi chaque thème les peint à sa façon"
+});
+// HERESY 2955: what a control turned off for a model that is not here says, and its way to Engine → Models
+RuachI18n.add("fr", {
+"The transcriber: covers from a recording, a backing read (SheetSage2 with MERT-v2-FullSong)": "Le transcripteur : des reprises d'un enregistrement, la lecture d'un instrumental (SheetSage2 avec MERT-v2-FullSong)",
+"Whisper large-v3: the lyrics check, karaoke timing, sections by ear, a recording's words": "Whisper large-v3 : le contrôle des paroles, la synchronisation karaoké, les sections à l'oreille, les mots d'un enregistrement",
+"not in the last check here: Fetch brings it": "absent de la dernière vérification ici : « Récupérer » l'apporte",
+"Its files are here: the engine takes it in at its next start.": "Ses fichiers sont là : le moteur le prend à son prochain démarrage.",
+"Opens Engine → Models and LoRAs at its row: Fetch there brings it": "Ouvre Moteur → Modèles et LoRA à sa ligne : « Récupérer » là-bas l'apporte",
+"Engine → Models": "Moteur → Modèles",
+"not in this Studio yet": "pas encore dans ce Studio",
+"off: this server keeps none": "désactivée : ce serveur n'en garde aucune",
+"Covering a recording needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.": "Une reprise d'un enregistrement demande le transcripteur (SheetSage2 avec MERT-v2-FullSong), que ce Studio n'a pas encore.",
+"Reading a backing needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.": "Lire un instrumental demande le transcripteur (SheetSage2 avec MERT-v2-FullSong), que ce Studio n'a pas encore.",
+"Writing a score from the sound needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.": "Écrire une partition depuis le son demande le transcripteur (SheetSage2 avec MERT-v2-FullSong), que ce Studio n'a pas encore.",
+"Ready to transcribe. Match sections needs Whisper large-v3, which this Studio does not have yet.": "Prêt à transcrire. « Accorder les sections » demande Whisper large-v3, que ce Studio n'a pas encore.",
+"Refined needs SheetSage2-Refined, which this Studio does not have yet.": "Refined demande SheetSage2-Refined, que ce Studio n'a pas encore.",
+"BF16 (7.2 GB) is not in this Studio yet: Engine → Models and LoRAs fetches it under Backbone, and the Studio offers it after its next start.": "BF16 (7,2 Go) n'est pas encore dans ce Studio : Moteur → Modèles et LoRA le récupère à la ligne « Ossature », et le Studio le propose après son prochain démarrage.",
+"The server keeps no library: songs made in this tab stay until it reloads.": "Le serveur ne garde pas de bibliothèque : les chansons faites dans cet onglet restent jusqu'à son rechargement.",
+"This engine keeps no settings file, so it answers this computer and private networks; started the Studio's way (its icon, Pinokio or start.sh), it lets you choose.": "Ce moteur ne garde pas de fichier de réglages, il répond donc à cet ordinateur et aux réseaux privés ; lancé comme le Studio se lance (son icône, Pinokio ou start.sh), il te laisse choisir.",
+"it needs Whisper large-v3, which this Studio does not have yet: Engine → Models": "il faut Whisper large-v3, que ce Studio n'a pas encore : Moteur → Modèles",
+"The lyrics check and karaoke timing need Whisper large-v3, which this Studio does not have yet.": "Le contrôle des paroles et la synchronisation karaoké demandent Whisper large-v3, que ce Studio n'a pas encore.",
+"Whisper large-v3 is not in this Studio yet: Engine → Models and LoRAs fetches it (3.1 GB)": "Whisper large-v3 n'est pas encore dans ce Studio : Moteur → Modèles et LoRA le récupère (3,1 Go)",
+"{0}: not fetched.": "{0} : non récupéré.",
+"The check did not run.": "La vérification n'a pas tourné.",
+"On Windows the Weights panel downloads through the bash of Git for Windows, and none is installed here.": "Sous Windows, Modèles et LoRA télécharge par le bash de Git for Windows, et il n'est pas installé ici.",
+"Install Git for Windows (https://git-scm.com/download/win), then press again. The models a song needs come without it too.": "Installe Git for Windows (https://git-scm.com/download/win), puis appuie de nouveau. Les modèles qu'une chanson demande viennent aussi sans lui."
+});
+// HERESY 2956: why a chooser's workspace takes nothing new
+RuachI18n.add("fr", {
+"A 💎 set: nothing new lands in it": "Un ensemble 💎 : rien de nouveau n'y arrive",
+"Frozen: nothing new lands in it": "Gelé : rien de nouveau n'y arrive",
+"Archived: nothing new lands in it": "Archivé : rien de nouveau n'y arrive",
+"The regeneration's own section: nothing new lands in it": "La section propre à la régénération : rien de nouveau n'y arrive",
+"They are here already": "Ils sont déjà ici"
+});
+// HERESY 2956: why a chooser's workspace takes nothing new
+RuachI18n.add("fr", {
+"Its sections": "Ses sections"
+});
+// HERESY 2959: the chord guard's words
+RuachI18n.add("fr", {
+"The chords swing between {0} and {1} bar by bar ({#2} times): the plan may have split its key.": "Les accords oscillent entre {0} et {1} mesure après mesure ({#2} fois) : le plan a peut-être fendu sa tonalité.",
+"Chords with a double sharp or flat: {0}.": "Accords avec un double dièse ou un double bémol : {0}.",
+"Chromatic music does this on purpose too: hear it first, or rewrite the score.": "La musique chromatique le fait aussi exprès : écoute d'abord, ou réécris la partition.",
+"Rewrite the score": "Réécrire la partition",
+"A chord in the plan swallowed its notes: the model plans it again with a new music seed": "Un accord du plan a avalé ses notes : le modèle le planifie à nouveau avec une nouvelle graine musicale"
+});
+// HERESY 2960: a run's own steps 1-3 and a new run's form
+RuachI18n.add("fr", {
+"read only": "lecture seule",
+"Telemetry ›": "Télémétrie ›",
+"New run from this one": "Nouvelle exécution d'après celle-ci",
+"New run": "Nouvelle exécution",
+"The form for a new run with this run's set, kind and knobs; its name is yours to give": "Le formulaire d'une nouvelle exécution avec l'ensemble, le type et les réglages de celle-ci ; le nom, c'est toi qui le donnes",
+"The form for a new run, fresh: nothing an earlier form left": "Le formulaire d'une nouvelle exécution, à neuf : rien de ce qu'un formulaire précédent a laissé",
+"The material this run's set was made from, as the set remembers it.": "La matière dont l'ensemble de cette exécution a été fait, telle que l'ensemble s'en souvient.",
+"The set this run trains on.": "L'ensemble sur lequel s'entraîne cette exécution.",
+"What this run was given: its kind, its trainer and its knobs.": "Ce qui a été donné à cette exécution : son type, son entraîneur et ses réglages.",
+"The form for another run opens with “New run”.": "Le formulaire d'une autre exécution s'ouvre avec « Nouvelle exécution ».",
+"The form for a new run: {0} stays as it is.": "Le formulaire d'une nouvelle exécution : {0} reste tel quel.",
+"not recorded": "non noté",
+"The set {0} is no longer among the prepared sets.": "L'ensemble {0} n'est plus parmi les ensembles préparés.",
+"folder": "dossier",
+"made from": "fait à partir de",
+"made on": "fait le",
+"sheets by": "partitions par",
+"in the run": "dans l'exécution",
+"held out": "mis de côté",
+"kind": "type",
+"trainer": "entraîneur"
+});
+// HERESY 2961: the held-out bucket's tip in the Trainer's charts
+RuachI18n.add("fr", {
+"held out, {#0} saves from step {1} to {2}: {3} {4} on average": "mises de côté, {#0} sauvegardes du pas {1} au pas {2} : {3} {4} en moyenne",
+"step {0}: {1}": "pas {0} : {1}"
+});
+// HERESY 2962: the Trainer's missing weights in words
+RuachI18n.add("fr", {
+"The Studio’s trainer is missing {0}: they come with its base in Engine → Models.": "Il manque à l'entraîneur du Studio : {0}. Cela vient avec sa base dans Moteur → Modèles."
+});
+// HERESY 2963: the Videographer's voice row
+RuachI18n.add("fr", {
+"The Narrator's voice": "La voix du Lecteur",
+"Starts at": "Commence à",
+"The song under it": "La chanson dessous",
+"How far the song goes down under the voice: down in 0.3 s before it, back in 0.8 s after it": "De combien la chanson baisse sous la voix : en 0,3 s avant elle, retour en 0,8 s après",
+"Change…": "Changer…",
+"This take is not in the library now: the clip cannot be cut with it": "Cette prise n'est plus dans la bibliothèque : le clip ne peut pas être monté avec elle",
+"A take of the Narrator over the clip, by link (it stays in the Narrator's world): from the song's start, before its first sung line, unless moved; the song goes down under it and back after it; its words as titles of their own, in italics below the sung lines": "Une prise du Lecteur sur le clip, par lien (elle reste dans le monde du Lecteur) : depuis le début de la chanson, avant son premier vers chanté, sauf si tu la déplaces ; la chanson baisse sous elle et revient après ; ses mots en titres à eux, en italique sous les vers chantés",
+"Add the Narrator's voice…": "Ajouter la voix du Lecteur…",
+"The clip's voice is laid on: the next clip cut mixes it": "La voix du clip est posée : le prochain montage du clip la mixe",
+"The clip's voice is taken off": "La voix du clip est retirée",
+"No take of the Narrator in the library yet: read one in the Narrator first": "Pas encore de prise du Lecteur dans la bibliothèque : lis-en d'abord une dans le Lecteur",
+"The Narrator's voice over the clip": "La voix du Lecteur sur le clip",
+"A take of the Narrator's world, by link: it stays home, the clip only names it.": "Une prise du monde du Lecteur, par lien : elle reste chez elle, le clip ne fait que la nommer."
 });

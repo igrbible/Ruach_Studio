@@ -5,6 +5,9 @@
 param([switch]$Cpu, [switch]$Yes, [switch]$NoModels)
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
+# HERESY 2935 (a tester's console showed Cyrillic as gibberish, code page 866): this console in UTF-8, so what uv, nvidia-smi and the
+# Studio's Python print in UTF-8 reads right in it; with no console (the output redirected) it is left as it is
+try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false } catch { }
 $Root = Split-Path -Parent $PSScriptRoot
 $UvVersion = "0.6.14"
 $UvDir = Join-Path $Root "tmp\uv"

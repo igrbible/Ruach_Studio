@@ -151,6 +151,58 @@ static bool yue2_score_has_note(const std::string & abc) {
     return found;
 }
 
+// HERESY 2959 (Viktor 22.11.2026: «Будешь ставить сторожа аккордов в Студию? В продакшн»): a chord symbol that swallowed notes, its closing quote
+// never written, so the notes after it are read as its name up to the next quote ("Ea4g2f2e8-|"). A chord's name never holds a bar line, nor two
+// notes with their lengths (a lowercase a, c, d, e, f or g with a number after it, not inside a word: «add9», «aug7» and a flat's «b9» stay names).
+// The first such text of the score's music lines ("" when none), at most 24 of its characters, as the guard says it
+static std::string yue2_score_swallowed(const std::string & abc) {
+    size_t pos = 0;
+    while (pos < abc.size()) {
+        size_t e = abc.find('\n', pos);
+        if (e == std::string::npos) {
+            e = abc.size();
+        }
+        std::string s = abc.substr(pos, e - pos);
+        pos           = e + 1;
+        size_t lead   = s.find_first_not_of(" \t");
+        if (lead == std::string::npos || s[lead] == '%') {
+            continue;
+        }
+        if (lead + 1 < s.size() && std::isalpha((unsigned char) s[lead]) && s[lead + 1] == ':') {
+            continue;                                   // a field line (V:, T:, w:…): its quotes are names and words, not chords
+        }
+        for (size_t i = 0; i < s.size(); i++) {
+            if (s[i] != '"') {
+                continue;
+            }
+            size_t      j  = s.find('"', i + 1);
+            std::string in = s.substr(i + 1, j == std::string::npos ? std::string::npos : j - i - 1);
+            int         notes = 0;
+            for (size_t k = 0; k + 1 < in.size(); k++) {
+                bool start = k == 0 || !std::isalpha((unsigned char) in[k - 1]);
+                if (start && std::strchr("acdefg", in[k]) && in[k] != '\0') {
+                    size_t d = k + 1;
+                    while (d < in.size() && (in[d] == ',' || in[d] == '\'')) {
+                        d++;
+                    }
+                    if (d < in.size() && std::isdigit((unsigned char) in[d])) {
+                        notes++;
+                    }
+                }
+            }
+            if (in.find('|') != std::string::npos || notes >= 2) {
+                std::string shown = in.size() > 24 ? in.substr(0, 24) + "..." : in;
+                return "\"" + shown + (j == std::string::npos || in.size() > 24 ? "" : "\"");
+            }
+            if (j == std::string::npos) {
+                break;
+            }
+            i = j;
+        }
+    }
+    return "";
+}
+
 // HERESY 1087: why a score the AR wrote is not a score, or "" when it is one. Calibrated on the studio's own
 // takes (02.10.2026): every good score has M:, L: and K: with clean values (M:2/4, L:1/16, Q:1/4=71, K:Dm)
 // and never two colons in a row; the broken ones have no K: line, garbage for Q:, colons in runs of 3 to 13.
@@ -211,6 +263,11 @@ static std::string yue2_score_broken(const std::string & abc, std::string * warn
     }
     if (longest >= 3) {
         why.push_back("colons in a run of " + std::to_string(longest));
+    }
+    // HERESY 2959: a chord symbol that swallowed notes is a fault, never sung as written
+    const std::string swallowed = yue2_score_swallowed(abc);
+    if (!swallowed.empty()) {
+        why.push_back("a chord symbol swallowed notes (" + swallowed + ")");
     }
     // HERESY 2832 (the silent hole's scan of 18.11.2026): 50 plans sung with the guard on, every one by a 4.6B P1 checkpoint, held no bar
     // with a note in any voice (most of them floods of X:/M:/L: lines and newlines), and the take said only «no key line». Said now, by

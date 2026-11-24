@@ -145,6 +145,14 @@
     ".rd-page { position: relative; margin: 0; }",
     // HERESY 2883: the lyrics editor's hands: the box in their wrap, its numbers in its margin (as the Musician's, 40 px past the page's own), the counts under it
     ".rd-page > .lyr-wrap { display: block; } #rdText.lyr-numbered { padding-left: 46px; } .rd-meter { margin: 4px 2px 0; }",
+    // HERESY 2947: a paragraph's voice: a chip in the page's margin by its first line, a thin band in its voice's colour along it; the margin wider for them
+    "#rdText.rd-pv-on { padding-inline-start: 54px; } #rdText.rd-pv-on.lyr-numbered { padding-left: 74px; } [dir=rtl] #rdText.rd-pv-on.lyr-numbered { padding-left: 46px; padding-right: 54px; }",
+    ".rd-pv { position: absolute; width: 30px; overflow: hidden; pointer-events: none; z-index: 2; }",
+    ".rd-pv-band { position: absolute; left: 25px; width: 3px; border-radius: 2px; opacity: .8; } .rd-pv.is-rtl .rd-pv-band { left: 2px; }",
+    ".rd-pv-chip { position: absolute; left: 3px; width: 20px; height: 20px; margin-top: 3.5px; padding: 0; display: grid; place-items: center; pointer-events: auto; cursor: pointer;" +
+      " border-radius: 50%; border: 1px dashed var(--line-strong-a); background: color-mix(in srgb, var(--ground) 82%, var(--panel)); color: var(--dim); font: 11px/1 var(--mono, monospace); opacity: .55; }",
+    ".rd-pv.is-rtl .rd-pv-chip { left: 7px; } .rd-pv-chip:hover, .rd-pv-chip:focus-visible { opacity: 1; border-color: var(--amber); color: var(--amber); }",
+    ".rd-pv-chip.is-own { border: 2px solid var(--pvc, var(--amber)); background: color-mix(in srgb, var(--pvc, var(--amber)) 35%, transparent); opacity: 1; }",
     ".rd-page .rd-text { --rd-lh: 27px; min-height: calc(var(--rd-lh) * 14 + 24px); font-size: 15.5px; line-height: var(--rd-lh); padding: 12px 18px 12px 26px; resize: vertical;" +
       " background-color: color-mix(in srgb, var(--ground) 82%, var(--panel)); background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--rd-lh) - 1px)," +
       " color-mix(in srgb, var(--line-a) 70%, transparent) calc(var(--rd-lh) - 1px), color-mix(in srgb, var(--line-a) 70%, transparent) var(--rd-lh));" +
@@ -430,6 +438,7 @@
       '<select id="rdTrLang" data-tip="' + esc(E("reader.lang.tip")) + '"><option value="auto">' + esc(E("reader.lang.auto")) + "</option>" +
       LANG_CODES.map(function (l) { return '<option value="' + l + '" translate="no">' + l + "</option>"; }).join("") + "</select>" +
       ib("ear", "rdTrGo", E("reader.tr.go"), E("reader.tr.go.tip")) + "</div>" +   // HERESY 2514
+      '<p class="rd-tr-miss row-hint" id="rdTrMiss"></p>' +   // HERESY 2955: what it needs, when Whisper is not here
       '<div class="rd-tr-list" id="rdTrList"></div>' +
       '<div id="rdTrOut" hidden><textarea id="rdTrText" class="rd-tr-text" rows="8" spellcheck="false" data-tip="' + esc(E("reader.tr.text.tip")) + '"></textarea>' +   // HERESY 2391
       '<div class="rd-actions"><select id="rdTrMode" aria-label="' + esc(E("reader.tr.mode")) + '" data-tip="' + esc(E("reader.tr.mode.tip")) + '">' +   // HERESY 2376
@@ -779,6 +788,93 @@
     }).join("");
     Array.prototype.forEach.call(box.querySelectorAll("select[data-spk]"), function (sel) { sel.value = sel.dataset.cur; if (sel.selectedIndex < 0) sel.selectedIndex = 0; });
   }
+  // HERESY 2947 (Viktor's «голос по абзацам прямо в редакторе», the mockup of 18.11 approved «обеими руками и ногами», its variant A: a voice chosen
+  // left of the paragraph, the text clean): in a narration read by paragraphs, a small chip left of each paragraph's first line, «as above» by
+  // default, and a thin band along the paragraph in its voice's colour; a click picks the voice (the same list as the voice above the text), «as
+  // above», or the run's own voice again. Kept with the text by each paragraph's first words (a paragraph added or taken out above keeps the
+  // others'); sent as par_voices, one a paragraph, as the lab splits them (lab/reader.py pieces: a blank line, a [split] line)
+  var PV_KEY = "yue2.readerParVoices", PV_COLS = ["#d0573c", "#3fa35a", "#4f86d0", "#b06ad0", "#c9971f", "#3fa3a3", "#d04f8a", "#8a8f3f"];
+  var pv = { list: null, layer: null, last: null };
+  function paras(text) {                                 // [{from, to, head}]: the paragraphs as the lab counts them (a blank line, a [split] anywhere), their lines
+    var out = [], cur = null;
+    String(text || "").split("\n").forEach(function (l, i) {
+      var segs = l.split(/\[\s*split\s*\]/i);
+      segs.forEach(function (seg, s) {
+        if (s > 0 && cur) { out.push(cur); cur = null; }
+        if (!seg.trim()) { if (segs.length === 1 && cur) { out.push(cur); cur = null; } return; }
+        if (!cur) cur = { from: i, to: i, head: seg.trim().replace(/\s+/g, " ").slice(0, 48) };
+        cur.to = i;
+      });
+    });
+    if (cur) out.push(cur);
+    return out;
+  }
+  function pvOn() { return st.mode === "narration" && $("rdSplit") && $("rdSplit").value !== "verse"; }
+  function pvList() {                                    // the voices kept, aligned to the paragraphs now: by place when their number holds, else by first words
+    if (pv.list === null) { try { pv.list = JSON.parse(recall(PV_KEY) || "[]"); } catch (e) { pv.list = []; } }
+    if (!Array.isArray(pv.list)) pv.list = [];
+    var ps = paras($("rdText").value), old = pv.list.map(function (x) { return x && typeof x === "object" ? { head: String(x.head || ""), ref: typeof x.ref === "string" ? x.ref : "" } : { head: "", ref: "" }; }), out;
+    if (old.length === ps.length) out = ps.map(function (p, i) { return { head: p.head, ref: old[i].ref }; });
+    else {
+      var j = 0;
+      out = ps.map(function (p) {
+        for (var t = j; t < old.length; t++) if (old[t].head === p.head) { j = t + 1; return { head: p.head, ref: old[t].ref }; }
+        return { head: p.head, ref: "" };
+      });
+    }
+    pv.list = out;
+    return { ps: ps, refs: out.map(function (x) { return x.ref; }) };
+  }
+  function pvSave() { keep(PV_KEY, pv.list && pv.list.some(function (x) { return x.ref; }) ? JSON.stringify(pv.list) : null); }
+  function pvName(ref) {
+    if (!ref || ref === "*") return $("rdVoice").selectedOptions[0] ? tr($("rdVoice").selectedOptions[0].textContent) : tr(E("reader.pv.own"));
+    if (/^g:/.test(ref)) return tr(E("reader.g." + ref.slice(2)));
+    var v = st.voices.filter(function (x) { return "v:" + x.id === ref; })[0];
+    return v ? vlabel(v) : ref;
+  }
+  function pvColour(ref) { if (!ref || ref === "*") return ""; var h = 0; for (var i = 0; i < ref.length; i++) h = (h * 31 + ref.charCodeAt(i)) | 0; return PV_COLS[Math.abs(h) % PV_COLS.length]; }
+  function pvSend(text) {                                // the refs for the text as sent (cut to its first minutes: its first paragraphs), none when all are «as above»
+    if (!pvOn()) return undefined;
+    var refs = pvList().refs, n = paras(text).length;
+    refs = refs.slice(0, n);
+    return refs.some(Boolean) ? refs : undefined;
+  }
+  function pvPaint(d) {
+    var ta = $("rdText"), wrap = ta && ta.parentNode;
+    if (d) pv.last = d;
+    d = pv.last;
+    var on = !!(wrap && pvOn() && ta.offsetParent);
+    ta.classList.toggle("rd-pv-on", on);
+    if (!on || !d) { if (pv.layer) pv.layer.innerHTML = ""; return; }
+    if (!pv.layer || pv.layer.parentNode !== wrap) {
+      pv.layer = document.createElement("div"); pv.layer.className = "rd-pv"; wrap.appendChild(pv.layer);
+      pv.layer.addEventListener("click", function (e) { var b = e.target.closest(".rd-pv-chip"); if (b) { e.preventDefault(); pvPick(+b.dataset.pv, b); } });
+    }
+    var L = pv.layer, x = pvList(), cur = "", html = "", rtl = getComputedStyle(ta).direction === "rtl";
+    L.style.top = d.top + "px"; L.style.left = (rtl ? d.left + d.W - 30 : d.left) + "px"; L.style.height = d.H + "px";
+    L.classList.toggle("is-rtl", rtl);
+    x.ps.forEach(function (p, k) {
+      var ref = x.refs[k];
+      if (ref) cur = ref === "*" ? "" : ref;
+      var y = (d.tops[p.from] || 0) - d.scroll, y2 = (p.to + 1 < d.tops.length ? d.tops[p.to + 1] : (d.tops[p.to] || 0) + d.lh) - d.scroll;   // to its last row, wrapped or not
+      if (y2 < 0 || y > d.H) return;
+      var col = pvColour(cur), said = fill(ref ? "reader.pv.tip" : "reader.pv.tip.above", { 0: pvName(cur) });
+      if (col) html += '<i class="rd-pv-band" style="top:' + y + "px;height:" + (y2 - y) + "px;background:" + col + '"></i>';
+      html += '<button type="button" class="rd-pv-chip' + (ref ? " is-own" : "") + '" data-pv="' + k + '" style="top:' + y + "px;" + (col ? "--pvc:" + col : "") + '" aria-label="' + esc(said) + '" data-tip="' + esc(said) + '">' +
+        (ref ? "" : "\u21b3") + "</button>";
+    });
+    L.innerHTML = html;
+  }
+  function pvPick(k, el) {
+    var x = pvList(), now = x.refs[k] || "", r = el.getBoundingClientRect(), set = function (ref) { pv.list[k].ref = ref; pvSave(); pvPaint(); };
+    var items = [{ head: tr(E("reader.pv.head")) }, { label: E("reader.pv.above"), checked: now === "", action: function () { set(""); } },
+      { label: E("reader.pv.own"), checked: now === "*", action: function () { set("*"); } }, { sep: true }];
+    vgroups().forEach(function (g) { var ref = "g:" + g.id; items.push({ label: E("reader.g." + g.id), checked: now === ref, action: function () { set(ref); } }); });
+    if (vgroups().length && st.voices.length) items.push({ sep: true });
+    st.voices.forEach(function (v) { var ref = "v:" + v.id; items.push({ label: vlabel(v), raw: true, checked: now === ref, action: function () { set(ref); } }); });
+    if (window.HeresyMenu) window.HeresyMenu.open(r.right + 4, r.top, items);
+  }
+  function spkName(s, r) { return /^\u00b6/.test(s) ? "\u00b6 " + ((r && r.voice_labels && r.voice_labels[s]) || s.slice(1)) : s; }   // HERESY 2947: a paragraph's voice by its name
   function castValues() {
     var out = {};
     Array.prototype.forEach.call(document.querySelectorAll("#rdCast select[data-spk]"), function (sel) { out[sel.dataset.spk] = sel.value; });
@@ -793,6 +889,7 @@
     $("rdTags").checked = t == null ? st.mode === "dialog" : t === "1";   // his word: tags on for a dialog, plain for a narration
     paintCast();
     count();
+    pvPaint();                                           // HERESY 2947: a narration's paragraphs carry their voices, a dialog none
   }
   function count() {
     $("rdCount").textContent = fill("reader.chars", { "#0": $("rdText").value.length });
@@ -1111,7 +1208,7 @@
       '<div class="rd-pieces">' + (r.pieces || []).map(function (p) {
         var nv = (p.versions || []).length;
         return '<div class="rd-piece' + (p.i === st.fixSel ? " is-sel" : "") + '" data-piece="' + p.i + '"><button type="button" class="btn ghost small" data-fx="play" data-i="' + p.i + '" aria-label="' + esc(E("reader.fix.play")) + '" data-tip="' + esc(E("reader.fix.play")) + '">' + (UI("play") || "▶") + "</button>" +
-          '<span translate="no">' + (p.speaker ? "<b>" + esc(p.speaker) + ":</b> " : "") + esc(shown(p)) + "</span>" +
+          '<span translate="no">' + (p.speaker ? "<b>" + esc(spkName(p.speaker, r)) + ":</b> " : "") + esc(shown(p)) + "</span>" +
           (p.cer != null && p.cer >= 0.05 ? '<span class="rd-cer mono" data-tip="' + esc(fill("reader.cer.tip", { 0: p.heard || "" })) + '">' + esc((100 * p.cer).toFixed(0)) + " %</span>" : "") +
           '<span class="rd-vs mono">' + guardMarks(p) + (nv > 1 ? "v" + (p.v || 0) + "/" + (nv - 1) : "") + "</span></div>" + gapRow(p, r);   // HERESY 2335
       }).join("") + "</div>";
@@ -1203,6 +1300,7 @@
     return { text: paras.slice(0, best).join(byLine ? "\n" : "\n\n").trim(), n: best, of: paras.length };
   }
   window.ruachReaderCut = cutText;                     // for the checks
+  window.ruachReaderParas = function (t) { return paras(t); };   // HERESY 2947: the paragraphs as the lab counts them, for the checks
   function send() {
     if (st.sending || st.absent) return;
     // HERESY 2869 (Viktor 19.11.2026: «Каждое прочтение. И автоматом присваиваем версию 1.0, если не выставлена»): a titled reading with no
@@ -1224,6 +1322,8 @@
       top_p: engine() && engine().top_p === true ? num("rdTopp") : undefined,   // HERESY 2921: none for an engine without it (the lab keeps its own)
       card: $("rdCard").value || "auto", title: fullTitle(), workspace: C && C.currentIn ? C.currentIn("reader") : C && C.current ? C.current() : "",
       lang: $("rdLang").value, stress: $("rdStress").checked, style: engine() && engine().style ? $("rdStyle").value.trim() : "" };
+    var pvs = pvSend(text);                              // HERESY 2947: a voice for each paragraph, when any is chosen
+    if (pvs) body.par_voices = pvs;
     if (lang() === "el") body.greek = $("rdGreek").value === "monotonic" ? "monotonic" : "polytonic";   // HERESY 2696
     body.ui = window.RuachI18n && window.RuachI18n.lang ? window.RuachI18n.lang() : "en";   // HERESY 2860: the take's note in the page's language
     if (engine() && engine().window && $("rdWindow").checked) body.window = true;   // HERESY 2698
@@ -1394,15 +1494,28 @@
       if ($("rdTr").open && rows.some(function (t) { return t.status === "running" || t.status === "queued"; })) trTimer = setTimeout(trList, 3000);
     }).catch(function () { /* the lab away a moment */ });
   }
+  // HERESY 2955 (a tester's Windows report of 23.11.2026, the class of controls turned off for a model that is not here): the transcription is
+  // Whisper's, the lab's own; where the lab says it is not here, the file picker and the button are off and look off, and the line under them says
+  // so with its way to Engine → Models (heresy-weights.js)
+  function trWhisper() { return !window.HeresyWeights || !window.HeresyWeights.has || window.HeresyWeights.has("whisper"); }
+  function trPacks() {
+    if (!$("rdTrFile")) return;
+    var no = !trWhisper();
+    $("rdTrFile").disabled = no;
+    if (!$("rdTrGo").dataset.busy) $("rdTrGo").disabled = no;
+    if (window.HeresyWeights && window.HeresyWeights.packSay) window.HeresyWeights.packSay($("rdTrMiss"), no ? E("reader.tr.noWhisper") : "", "whisper");
+  }
+  window.addEventListener("ruach-packs", trPacks);
   function trSend() {
     var f = $("rdTrFile").files && $("rdTrFile").files[0];
     if (!f) { toast(E("reader.tr.need"), "bad"); return; }
     $("rdTrGo").disabled = true;
+    $("rdTrGo").dataset.busy = "1";
     fetch("/lab/reader/transcribe?file=" + encodeURIComponent(f.name) + "&lang=" + encodeURIComponent($("rdTrLang").value), { method: "POST", body: f })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || ("HTTP " + r.status)); return b; }); })
       .then(function () { $("rdTrFile").value = ""; toast(fill("reader.tr.queued", { 0: f.name })); return trList(); })
       .catch(function (e) { toast(e.message, "bad"); })
-      .then(function () { $("rdTrGo").disabled = false; });
+      .then(function () { delete $("rdTrGo").dataset.busy; $("rdTrGo").disabled = !trWhisper(); });   // HERESY 2955
   }
   function trShow(id) {
     api("/reader/transcript?id=" + encodeURIComponent(id)).then(function (t) {
@@ -2352,7 +2465,7 @@
     return { text: $("rdText").value, title: fullTitle(), mode: st.mode, split: $("rdSplit").value, tags: $("rdTags").checked, engine: e ? e.id : "",
       voice: $("rdVoice").value, cast: JSON.parse(JSON.stringify(st.cast || {})), lang: $("rdLang").value, style: $("rdStyle").value, stress: $("rdStress").checked,
       glyphs: $("rdGlyphs").checked, card: $("rdCard").value, tier: $("rdTier").value, temperature: $("rdTemp").value, top_k: $("rdTopk").value, top_p: $("rdTopp").value, seed: $("rdSeed").value,
-      gap: $("rdGap").value, turn_gap: $("rdTurnGap").value, hear: $("rdHear").checked };
+      gap: $("rdGap").value, turn_gap: $("rdTurnGap").value, hear: $("rdHear").checked, par_voices: pvList().refs };   // HERESY 2947
   }
   // the form from what is kept: every picker the room paints from the browser's memory (engine, card, tier, voice, style, mode and its tags,
   // the cast), the rest set in place; a field left undefined is left as it is
@@ -2368,6 +2481,10 @@
     if (f.tier && eid) keep("yue2.readerTier." + eid, f.tier);
     if (f.style != null && eid) keep("yue2.readerStyle." + eid, f.style);
     if (f.text != null) { $("rdText").value = f.text; keep("yue2.readerText", String(f.text).slice(0, 200000)); }
+    if (f.text != null && Array.isArray(f.par_voices)) {   // HERESY 2947: the paragraphs' voices with the text they were chosen for
+      pv.list = paras(f.text).map(function (p, i) { return { head: p.head, ref: String(f.par_voices[i] || "") }; });
+      pvSave();
+    }
     if (f.title != null) setTitle(f.title);
     [["split", "rdSplit"], ["temperature", "rdTemp"], ["top_k", "rdTopk"], ["top_p", "rdTopp"], ["gap", "rdGap"], ["turn_gap", "rdTurnGap"]].forEach(function (p) {   // 2921: top_p
       if (f[p[0]] == null || f[p[0]] === "") return;
@@ -2407,6 +2524,10 @@
         v.voice = ref(f.voice, "");
         v.cast = {};
         Object.keys(f.voices || {}).forEach(function (s) { v.cast[s] = ref(f.voices[s], s); });
+        if (all) v.par_voices = (f.par_voices || []).map(function (x) {   // HERESY 2947: a paragraph's voice gone from here: said, the paragraph as above
+          if (/^v:/.test(x) && !st.voices.some(function (w) { return "v:" + w.id === x; })) { said.push(fill("reader.voiceGone", { 0: labels["\u00b6" + x] || x.slice(2) })); return ""; }
+          return x;
+        });
         // the engine's own voice is born of the seed: Voice and settings keeps it then, else the voice would not be the one taken
         var own = f.mode === "dialog" ? Object.keys(f.voices || {}).some(function (s) { return !f.voices[s]; }) : !f.voice;
         v.seed = how === "retake" || (how === "base" && own) ? f.seed : "";
@@ -2528,7 +2649,7 @@
       var yes = function (b) { return b == null ? "" : E(b ? "reader.ps.yes" : "reader.ps.no"); };
       var grp = function (k, rows) { rows = rows.join(""); return rows ? '<div class="ds-group"><div class="peek-cap">' + esc(E(k)) + "</div>" + rows + "</div>" : ""; };
       var vl = (r && r.form && r.form.voice_labels) || rq.voice_labels || {}, mode = val("mode");
-      var who = Object.keys(vl).filter(function (s) { return s || mode !== "dialog"; }).map(function (s) { return (s ? s + ": " : "") + vl[s]; }).join(" · ");
+      var who = Object.keys(vl).filter(function (s) { return s || mode !== "dialog"; }).map(function (s) { return (/^\u00b6/.test(s) ? "\u00b6 " : s ? s + ": " : "") + vl[s]; }).join(" · ");
       var text = f.text != null ? f.text : (q.lyrics || ""), book = x.book, tier = r && r.tier ? r.tier.quant : (rq.tier && rq.tier.quant) || "";
       var parts = book && book.parts && book.parts.length ? '<div class="peek-cap">' + esc(E("reader.ps.parts")) + "</div>" + book.parts.map(function (p) {
         return '<div class="ds-kv"><span translate="no">' + esc(p.k + ". " + (p.title || "")) + '</span><b class="mono">' + (p.seconds ? esc(mmss(p.seconds)) : "") + "</b></div>"; }).join("") : "";
@@ -2580,6 +2701,7 @@
     // on the text, as a text read aloud (heresy-lyrics.js { reading: true }): the line numbers and marks, mcedit's keys, the spelling in the
     // text's language, the stress marks astray, the brackets linted, the [tags] drawn, the counts under the box; nothing a song alone has
     if (window.HeresyLyrics && !$("rdText").dataset.reading) window.HeresyLyrics.attach($("rdText"), { meter: $("rdTextMeter"), reading: true });
+    $("rdText").addEventListener("lyr-drawn", function (e) { pvPaint(e.detail); });   // HERESY 2947: the voices beside the paragraphs, drawn with the box's rows
     acProvider.label = E("reader.ac.list");
     if (window.HeresyComplete) window.HeresyComplete.attach($("rdText"), acProvider);   // HERESY 2889
     $("rdText").value = recall("yue2.readerText") || "";
@@ -2587,7 +2709,7 @@
     ["rdTemp", "rdTopk", "rdTopp", "rdGap", "rdTurnGap", "rdSplit"].forEach(function (id) {   // HERESY 2921: top_p kept as the others
       var v = recall("yue2.reader." + id);
       if (v != null && v !== "") $(id).value = v;
-      $(id).addEventListener("change", function () { keep("yue2.reader." + id, $(id).value); });
+      $(id).addEventListener("change", function () { keep("yue2.reader." + id, $(id).value); if (id === "rdSplit") pvPaint(); });
     });
     $("rdMode").addEventListener("change", function () {
       if (this.value === st.mode) return;
@@ -2644,6 +2766,7 @@
     $("rdStyleWrite").addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); writeDirection(); });   // HERESY 2922
     $("rdCheck").addEventListener("click", checkStress);
     $("rdTr").addEventListener("toggle", function () { if (this.open) trList(); });
+    trPacks();                                       // HERESY 2955
     $("rdGlyphs").checked = recall("yue2.readerGlyphs") === "1";
     $("rdGlyphs").addEventListener("change", function () { keep("yue2.readerGlyphs", this.checked ? "1" : ""); });
     $("rdGmapOpen").addEventListener("click", function () { ovlOpen("rdGmapBack", "rdGmFind"); if (!gm.dirty) gmapLoad(); });

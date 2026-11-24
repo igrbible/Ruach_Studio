@@ -45,13 +45,22 @@
     // HERESY 2540 (the UIX fix pass of 13.11.2026): a row may bring a drawing of the Studio's set (ui: its name, HeresyIcons.ui) in place of its glyph;
     // a menu that has drawings ticks with the drawn check too. A menu of glyphs alone is drawn as before
     var HI = window.HeresyIcons, drawn = !!(HI && HI.ui) && items.some(function (x) { return x && x.ui; });
+    // HERESY 2940 (Viktor 22.11.2026: «Эмоджи туда также»): a list of workspaces brings each row's emoji (em) in a column of its own after the icon's, even
+    // down the menu as the Librarian's column holds them; em "" draws that column's faint icon (a stack of discs, a leaf for a section: emSec); a row
+    // without em (New workspace…, Archived) keeps the cell empty, so the names stand in one line
+    var HE = window.HeresyWsEmoji, emCol = items.some(function (x) { return x && x.em !== undefined; });
+    var emCell = function (it) {
+      if (!emCol) return "";
+      if (it.em === undefined) return '<span class="hm-em" aria-hidden="true"></span>';
+      return '<span class="hm-em' + (it.em ? "" : " is-faint") + (it.emSec ? " is-sec" : "") + '" aria-hidden="true">' + (it.em ? esc(it.em) : HE && HE.faint ? HE.faint(!!it.emSec) : "") + "</span>";
+    };
     el.innerHTML = items.map(function (it, i) {
       if (it.sep) return '<div class="hm-sep" role="separator"></div>';
       if (it.head) return '<div class="hm-head">' + esc(it.head) + "</div>";
       return '<button type="button" class="hm-item' + (it.danger ? " is-danger" : "") + (it.muted ? " is-muted" : "") + '" role="menuitem" data-i="' + i + '"' +
         (it.disabled ? " disabled" : "") + (it.muted ? ' aria-disabled="true"' : "") +   /* HERESY 1734: muted, greyed and saying why (a disabled one cannot) */ (it.checked !== undefined ? ' aria-checked="' + !!it.checked + '"' : "") + (it.depth ? ' style="--hm-depth:' + (+it.depth) + '"' : "") + ">" +   // HERESY 2040: a tree's level
         // HERESY 1474: in the page's language before it is measured (a menu laid out in English grew past the window in Russian)
-        '<span class="hm-icon">' + (it.checked ? (drawn ? HI.ui("check") : "✓") : drawn && it.ui ? HI.ui(it.ui) : esc(it.icon || "")) + '</span><span class="hm-label" translate="no">' + esc(it.raw || !window.RuachI18n ? it.label : window.RuachI18n.t(it.label)) + "</span>" +
+        '<span class="hm-icon">' + (it.checked ? (drawn ? HI.ui("check") : "✓") : drawn && it.ui ? HI.ui(it.ui) : esc(it.icon || "")) + "</span>" + emCell(it) + '<span class="hm-label" translate="no">' + esc(it.raw || !window.RuachI18n ? it.label : window.RuachI18n.t(it.label)) + "</span>" +
         (it.items ? '<span class="hm-more">›</span>' : "") + "</button>";   // HERESY 1169 · 1248: the hint beside the menu (hintShow), not in the row
     }).join("");
     document.body.appendChild(el);
@@ -262,13 +271,21 @@
   function open(sel, anchor) {
     close();
     var opts = Array.prototype.slice.call(sel.options), r = anchor.getBoundingClientRect(), el = document.createElement("div");
+    // HERESY 2956: a list of workspaces (options with data-em) as the Librarian's column draws it: the emoji in a column of its own (the faint stack, a
+    // leaf for a section), each row by its level's name (data-label), indented by its level (data-depth)
+    var HE = window.HeresyWsEmoji, emCol = opts.some(function (o) { return o.dataset && o.dataset.em !== undefined; });
+    var emCell = function (o) {
+      if (!emCol) return "";
+      var e = o.dataset.em, sec = o.dataset.sec === "1";
+      return e === undefined ? '<span class="hc-em" aria-hidden="true"></span>' : '<span class="hc-em' + (e ? "" : " is-faint") + (sec ? " is-sec" : "") + '" aria-hidden="true">' + (e ? esc(e) : HE && HE.faint ? HE.faint(sec) : "") + "</span>";
+    };
     var modal = opts.length > 10, veil = null;          // HERESY 1951: a list long enough for a Find opens as the Studio's other finds do, in the middle
     el.className = "hc-pop" + (modal ? " is-modal" : "");
     el.setAttribute("role", "listbox");
     el.innerHTML = (opts.length > 10 ? '<input type="search" class="hc-find" placeholder="' + esc(trw("Find")) + '" autocomplete="off" spellcheck="false">' : "") +   // HERESY 2527
       '<div class="hc-rows">' + opts.map(function (o, i) {
-        return '<button type="button" class="hc-row' + (i === sel.selectedIndex ? " is-cur" : "") + '" role="option" data-i="' + i + '" aria-selected="' + (i === sel.selectedIndex) + '"' +
-          (o.disabled ? " disabled" : "") + (own(o) ? ' translate="no"' : "") + ">" + esc(text(o)) + "</button>";
+        return '<button type="button" class="hc-row' + (i === sel.selectedIndex ? " is-cur" : "") + (emCol ? " has-em" : "") + '" role="option" data-i="' + i + '" aria-selected="' + (i === sel.selectedIndex) + '"' +
+          (emCol ? ' style="--depth:' + (+o.dataset.depth || 0) + '"' : "") + (o.disabled ? " disabled" : "") + (own(o) ? ' translate="no"' : "") + ">" + emCell(o) + esc(emCol && o.dataset.label ? o.dataset.label : text(o)) + "</button>";   // HERESY 2956
       }).join("") + "</div>";
     if (modal) {
       veil = document.createElement("div");

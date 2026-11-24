@@ -37,7 +37,10 @@ with tempfile.TemporaryDirectory() as t:
     log.commit()
     s = training._series(run)
     check("the lab reads the log: its curves", "loss" in s and "ar_ce" in s and len(s["loss"]["curve"]) <= 400, list(s))
-    check("read twice unchanged: the same answer kept, not read again", training._series(run) is s)
+    # HERESY 2943: since 2442 every answer is a fresh dict around the cached curves (_series_extra adds the other logs), so «the same answer» is the
+    # same curves, not the same dict: red since 12.11.2026 for that alone
+    s2 = training._series(run)
+    check("read twice unchanged: the same answer kept, not read again", s2 == s and s2["loss"] is s["loss"])
     # a reader holding the old-style lock a long while: a write transaction elsewhere holds the file; the log says so and goes on
     blocker = sqlite3.connect(str(db), timeout=1)
     blocker.execute("BEGIN EXCLUSIVE")

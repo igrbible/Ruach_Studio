@@ -82,7 +82,19 @@ def msvc_runtime():
     print("the MSVC runtime: no engine folder here carries it; PyTorch needs Microsoft's Visual C++ Redistributable", flush=True)
 
 
+def utf8_out():
+    """HERESY 2935 (run by hand with its output in a file, cp1251 there, it ended on «──» with a UnicodeEncodeError): stdout and stderr in
+    UTF-8, what cannot be said replaced. (lab/winx.utf8_console's own half: this script runs before the lab's packages.)"""
+    for s in (sys.stdout, sys.stderr):
+        try:
+            if s is not None and (getattr(s, "encoding", "") or "").lower().replace("-", "").replace("_", "") != "utf8":
+                s.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError, OSError):
+            pass
+
+
 def main(argv):
+    utf8_out()
     ap = argparse.ArgumentParser()
     ap.add_argument("--cpu", action="store_true", help="the CPU wheels (no NVIDIA card)")
     ap.add_argument("--torch-cpu", action="store_true", help="the CPU wheels, the card's models (a card below compute 7.5)")

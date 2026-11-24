@@ -1555,6 +1555,7 @@
     if (L && L.way === "letter" && !refAsOk()) note = tr("Lettering a finished picture is Qwen-Image 2.1's: it is not on this machine");
     else if (L && L.way === "letter" && !state.ref) note = tr("On the reference picture: take one with «As reference» first");   // HERESY 1396: every painter of the room letters with the picture (Krea 2 too)
     $("arLetNote").textContent = note;
+    if (L && L.way === "letter" && !refAsOk() && window.HeresyWeights && window.HeresyWeights.packButton) $("arLetNote").insertAdjacentHTML("beforeend", " " + window.HeresyWeights.packButton("qwen", "2.1"));   // HERESY 2955
     $("arLetNote").hidden = !note;
     $("arLetTake").disabled = !state.take;
   }
@@ -1562,7 +1563,9 @@
   // hand) with «Outpaint v2»: the new shape asked, words of what lies beyond if wanted, a run of its own
   function outpaintOk() { return Object.keys(PAINTER_INFO).some(function (k) { return /^qwen21/.test(k) && PAINTER_INFO[k].outpaint; }); }
   function outpaintIt(r, p) {
-    if (!outpaintOk()) return toast(tr("Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine"), "bad");
+    if (!outpaintOk()) return window.HeresyToast ? window.HeresyToast(tr("Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine"), "bad",   // HERESY 2955: its way to Engine → Models
+      window.HeresyWeights && window.HeresyWeights.openAt ? { label: "Engine → Models", fn: function () { window.HeresyWeights.openAt("qwen", "2.1"); } } : null)
+      : toast(tr("Outpainting is Qwen-Image 2.1's with its «Outpaint v2» adapter: it is not on this machine"), "bad");
     if (runsFull()) return toast(tr("Two runs at a time: the next one can be asked when one of them ends"), "bad");
     var shapes = ["16:9", "9:16", "1:1"].filter(function (s) { return s !== p.shape; });
     var items = shapes.map(function (s) { return { value: s, label: s, note: tr(s === "1:1" ? "square" : s === "16:9" ? "wide" : "tall"), words: true }; });
@@ -1588,7 +1591,9 @@
     });
   }
   function letterIt(r, p) {                          // HERESY 1394: this picture lettered by Qwen-Image 2.1, the rest kept
-    if (!refAsOk()) return toast(tr("Lettering a finished picture is Qwen-Image 2.1's: it is not on this machine"), "bad");
+    if (!refAsOk()) return window.HeresyToast ? window.HeresyToast(tr("Lettering a finished picture is Qwen-Image 2.1's: it is not on this machine"), "bad",   // HERESY 2955
+      window.HeresyWeights && window.HeresyWeights.openAt ? { label: "Engine → Models", fn: function () { window.HeresyWeights.openAt("qwen", "2.1"); } } : null)
+      : toast(tr("Lettering a finished picture is Qwen-Image 2.1's: it is not on this machine"), "bad");
     setRef({ id: r.id, file: p.file, url: fileUrl(r.id, p.thumb || p.file) }, true);
     $("arLetWay").value = "letter";
     $("arLetters").open = true;

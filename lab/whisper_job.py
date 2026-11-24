@@ -19,7 +19,8 @@ DEVICE = os.environ.get("WHISPER_DEVICE", "cuda")
 # 8 threads at most): the lab says so through WHISPER_CPU_THREADS and WHISPER_NICE (lab.py whisper_env)
 if os.environ.get("WHISPER_NICE"):
     try:
-        os.nice(int(os.environ["WHISPER_NICE"]))
+        import winx                                     # HERESY 2934: Windows has no os.nice: its priority class there
+        winx.lower_priority(int(os.environ["WHISPER_NICE"]))
     except (OSError, ValueError):
         pass
 model = WhisperModel(MODEL, device=DEVICE, compute_type="float16" if DEVICE == "cuda" else "int8",

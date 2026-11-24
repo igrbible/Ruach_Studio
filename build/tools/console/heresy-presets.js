@@ -1,7 +1,9 @@
 // HERESY 1032: a library of styles and profiles, kept by the lab on Forge in the user config folder
 // (user/presets.json): every browser and device sees the same, and a cleared browser loses none.
 // A style is a text. A profile is every knob but the texts and seeds (app.js captures and applies it).
-// Three profiles are built in: Music, as the engine's defaults, Speech, for long spoken word, and Viktor's own, editable (HERESY 1401).
+// Two profiles are built in: Music, as the engine's defaults, and Viktor's own, editable (HERESY 1401). HERESY 2942 (Viktor 22.11.2026: «наши самые ранние
+// профили МУЗЫКА/НАРРАЦИЯ, их нужно подчистить. В Музыкальной модели, думаю, нужно убрать профили наррации»): Speech · up to 15:00 is gone: readings live in the
+// Narrator now, and the music model sings up to 10:00
 (function () {
   "use strict";
 
@@ -14,11 +16,6 @@
     // HERESY 1401: every built-in profile with the two guidances apart, 1.6 / 2.2 (1397, 1400)
     { name: "Music · up to 8:00", builtin: true, request: { cot: "full", duration: 480, cfg_scale: 1.6, cfg_lyrics: 2.2, abc_sampling: ABC,
       semantic_sampling: Object.assign({ max_tokens: 12000 }, SEM) } },
-    // Direct mode: no score in the context, so the music stage gets nearly all of it. 22500 tokens
-    // is 15:00 at 25 a second; the engine cuts the budget to what fits beside the style and the
-    // text (HERESY 1032), and a reading that runs into that cut is marked truncated.
-    { name: "Speech · up to 15:00", builtin: true, request: { cot: "off", duration: 900, cfg_scale: 1.6, cfg_lyrics: 2.2, abc_sampling: ABC,
-      semantic_sampling: Object.assign({ max_tokens: 22500 }, SEM) } },
     // HERESY 1169 (Viktor 08.10.2026: «Запиши эти параметры как максимально консервативные, но в русском языке весьма идеальные.
     // Нет ускорений, умеренная речь в рЕпе, просто чудеса»): Composition low, Performance low, Style influence high; 32 Midpoint
     // HERESY 1401: renamed and his to set: «Я подберу для него идеальные параметры» (was «Russian · conservative (Viktor's)», CFG 1.8)
@@ -97,7 +94,7 @@
     row.classList.toggle("is-off", !on);
     ["tpPick", "tpApply"].forEach(function (id) { if ($(id)) $(id).disabled = !on; });
     if (on) delete row.dataset.tip;
-    else row.dataset.tip = "Text profiles make a pasted text ready to read: pick a Speech profile in Profile to use them";
+    else row.dataset.tip = "Text profiles make a pasted text ready to read, with a speech profile of your own (Direct, past 8:00); readings live in the Narrator";   // HERESY 2942
   }
 
   function chosenSetup() {

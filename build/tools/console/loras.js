@@ -789,7 +789,8 @@
       return tr((half === "ar" ? "Music half" : "Sound half") + ": {0} layers, attention {1} %, MLP {2} %")
         .replace("{0}", layers).replace("{1}", Math.round(100 * attn / (tot || 1))).replace("{2}", Math.round(100 * mlp / (tot || 1))) +
         (moves ? " · " + tr("moves a layer by up to {0} % at 1.0").replace("{0}", moves.toFixed(2)) : "");
-    }).filter(Boolean).join("\n");
+    }).filter(Boolean).concat(S.profile && S.profile.base_error ? [tr("How far it moves a layer is not measured: {0}").replace("{0}", S.profile.base_error)] : [])
+      .join("\n");   /* HERESY 2934: the base's measure failed: said, not left out unsaid */
   }
   function paintBudgetTips() {
     if (!S.host) return;

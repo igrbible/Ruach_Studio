@@ -10,6 +10,7 @@ owner_first (a guest's run waits behind his); a waiting job says its place and t
 the lamp, so nobody slips past the line. An entry whose process is gone, or older than STALE_S, is dropped by the next reader.
 """
 from winx import fcntl   # HERESY 2649: the fcntl module on Linux, its flock over msvcrt on Windows
+import winx
 import json
 import os
 import threading
@@ -22,21 +23,21 @@ POLL_S = 1.0
 
 def where():
     """The lamp's folder: one for the whole machine (RUACH_LAMP_DIR for the tests)."""
-    return Path(os.environ.get("RUACH_LAMP_DIR") or "/tmp")
+    return Path(os.environ.get("RUACH_LAMP_DIR") or winx.TMP)   # HERESY 2934: /tmp; the system's temp folder on Windows
 
 
 def _open(path):
     fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o666)
     try:
         os.fchmod(fd, 0o666)                         # another instance of the Studio (another user too) waits in the same line
-    except OSError:
+    except (OSError, AttributeError):                # HERESY 2934: Windows' Python 3.12 has no os.fchmod
         pass
     return fd
 
 
 def _alive(pid):
     try:
-        os.kill(int(pid), 0)
+        winx.kill0(pid)                              # HERESY 2934: os.kill(pid, 0) on Linux, psutil on Windows
         return True
     except ProcessLookupError:
         return False

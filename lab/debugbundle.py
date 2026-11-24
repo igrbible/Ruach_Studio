@@ -205,13 +205,55 @@ def secret_keys(events):
     return keep, len(events) - len(keep)
 
 
-def journal(unit, since_s):
+# HERESY 2980 (a tester's debug journal, Windows native 2.1.0-rc1, 23.11.2026: its studio.log and lab.log said «no journal … [WinError 2]» and nothing else): where the services are not systemd's, their own log files, as each launcher writes them:
+# Windows' RuachStudio.exe logs\\lab.log and logs\\engine.log (rotated into lab.1.log, engine.1.log), macOS's RuachStudio.command and Pinokio's
+# launcher/lab.sh and studio.sh tmp/logs/lab.log and tmp/logs/engine.log. Their lines carry no time of their own: the tail is taken, at most LOG_TAIL
+# bytes a service, the rotated file's end before the current one's
+LOG_FILES = {"ruach-studio": ("engine.log", "studio.log"), "heresy-lab": ("lab.log",)}
+LOG_DIRS = ("logs", "tmp/logs")
+LOG_TAIL = 1_500_000
+
+
+def log_tail(kit, unit, cap=LOG_TAIL):
+    """HERESY 2980: (the tail of the service's own log file(s), where it was found) or ("", "") when there is none."""
+    if not kit:
+        return "", ""
+    for d in LOG_DIRS:
+        for name in LOG_FILES.get(unit, ()):
+            cur = Path(kit) / d / name
+            if not cur.is_file():
+                continue
+            parts = []
+            for p in (cur.with_name(cur.stem + ".1" + cur.suffix), cur):    # engine.1.log, then engine.log
+                try:
+                    with open(p, "rb") as f:
+                        f.seek(0, 2)
+                        n = f.tell()
+                        f.seek(max(0, n - cap))
+                        parts.append(f.read())
+                except OSError:
+                    continue
+            data = b"".join(parts)[-cap:]
+            text = data.decode("utf-8", errors="replace")
+            if len(data) == cap and "\n" in text:
+                text = text.split("\n", 1)[1]                              # no half line at the start
+            return text, f"{d}/{name}"
+    return "", ""
+
+
+def journal(unit, since_s, kit=None):
     try:
         p = subprocess.run(["journalctl", "--user", "-u", unit, "--since", f"-{int(since_s)}s", "--no-pager", "-o", "short-iso"],
                            capture_output=True, text=True, timeout=60)
-        return p.stdout if p.returncode == 0 and p.stdout.strip() else f"(journalctl had nothing for {unit}: {p.stderr.strip()[:200]})\n"
+        if p.returncode == 0 and p.stdout.strip():
+            return p.stdout
+        said = f"(journalctl had nothing for {unit}: {p.stderr.strip()[:200]})\n"
     except (OSError, subprocess.SubprocessError) as e:
-        return f"(no journal for {unit} here: {e})\n"
+        said = f"(no journal for {unit} here: " + ("no journalctl, no systemd" if isinstance(e, FileNotFoundError) else str(e)) + ")\n"   # HERESY 2934
+    text, where = log_tail(kit, unit)                                       # HERESY 2980
+    if text.strip():
+        return f"(no systemd journal for {unit}: the end of its own log, {where}, at most {LOG_TAIL // 1000} KB; its lines carry no time)\n" + text
+    return said
 
 
 def titles_of(outputs):
@@ -241,12 +283,13 @@ def bundle(kit, outputs, data, workspaces=(), machine=None):
         version = "?"
     system = {"studio": version, "python": sys.version.split()[0], "os": platform.platform(), "machine": platform.machine(),
               "cpus": os.cpu_count(), "made": time.strftime("%Y-%m-%d %H:%M:%S %Z"), "hours": round(since / 3600, 1), "gpus": machine or {}}
-    files = {"page.json": sc.text(page), "studio.log": sc.text(journal("ruach-studio", since)), "lab.log": sc.text(journal("heresy-lab", since)),
+    files = {"page.json": sc.text(page), "studio.log": sc.text(journal("ruach-studio", since, kit)), "lab.log": sc.text(journal("heresy-lab", since, kit)),
              "system.json": sc.text(json.dumps(system, ensure_ascii=False, indent=1))}
     files["README.md"] = ("# A Ruach Studio debug journal\n\nMade on " + system["made"] + " for the last " + str(system["hours"]) + " hours.\n\n"
                           "- page.json: the page's events: clicks and right-clicks (where, and what was pressed, by its id), keys pressed with Ctrl, Alt or "
                           "as commands (never what was typed), the rooms and windows opened, the requests to the Studio (method, path, status, time; no "
-                          "values), the page's errors.\n- studio.log, lab.log: the Studio's and the lab's own logs of the same hours.\n- system.json: the "
+                          "values), the page's errors.\n- studio.log, lab.log: the Studio's and the lab's own logs of the same hours (where they run without systemd: "
+                          "the end of their own log files).\n- system.json: the "
                           "Studio's version, the system, the cards.\n\nScrubbed before it was made: every style, lyrics, title, score and note cut out whole, "
                           "the home folder and the user's name, the machine's name and addresses, mails, keys and tokens, the values of every address's "
                           "query, the takes' names and titles and the workspaces' names (each a mark like take#1a2b3c, the same mark for the same name "

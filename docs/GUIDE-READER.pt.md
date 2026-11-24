@@ -74,6 +74,8 @@ A lista «Quantização» pinta cada quantização pelo teste bruto de 09.11.202
 
 **Voz do leitor**: a voz do próprio motor, mantida desde o primeiro pedaço; ou **A sua própria voz…**, um clip curto de uma voz que o motor segue, aceite só sob o aviso vermelho e com o consentimento marcado (clonar uma voz sem o consentimento do seu dono é crime em muitos países, e a responsabilidade é sua). Nenhuma voz pronta vem com o Studio. A altura de cada pedaço é medida ao ser lido; um pedaço cuja voz passou para o outro género é lido de novo com outra semente.
 
+**Uma voz para cada parágrafo.** Numa narração, um pequeno chip ↳ fica na margem junto à primeira linha de cada parágrafo: um clique escolhe a voz com que esse parágrafo é lido (uma voz sua, um grupo, ou de novo a voz acima do texto), e os parágrafos seguintes mantêm-na até que a um deles se dê outra; uma faixa fina da cor dessa voz acompanha-os. O texto em si fica limpo, e as vozes seguem os seus parágrafos enquanto você o edita; um diálogo tem antes uma voz para cada falante, e uma leitura por versículos nenhuma.
+
 As emoções e os sons vão entre parênteses retos, como o Drama 3 os lê: `[calm]`, `[sad]`, `[whispering]`, `[pause]`, `[laughs]`. **Paleta de etiquetas** insere-os: uma emoção, um andamento ou um estilo no início da sua frase, uma pausa ou um som no cursor. **Ler as etiquetas em linha** vem ligado num diálogo e desligado numa narração, onde se quer uma leitura limpa de livro. **Estilo** dá à leitura toda um parêntese próprio, como `calm, warm, unhurried narration`.
 
 ### Tónicas e o agudo <!-- #stresses-and-the-acute -->

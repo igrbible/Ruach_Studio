@@ -176,10 +176,25 @@ def main():
                 if attempt == 1:
                     print(f"{D}          failed once ({why}); once more in 30 s{X}")
                     time.sleep(30)
+        via = ""
+        # HERESY 2946 (the agent's item C12 after 2.1.0-rc1: «fetch-ruach-loras.py тоже через каналы»): Hugging Face did not give it twice: the second
+        # channels (heresy/hf-channels.tsv, tools/hf_channels.py), each held to our manifest's SHA-256 as the guard holds them, the one that gave it named
+        chans = getattr(g, "hf_channels", None)
+        if why and chans and chans.load():
+            part = os.path.join(stage, ".channels-part")
+            os.makedirs(part, exist_ok=True)
+            via, got = chans.deliver(REPO, rev, s.rfilename, s.size, want[1], part, g.hf_program())
+            if via:
+                os.makedirs(os.path.dirname(dest), exist_ok=True)
+                shutil.move(got, dest)
+                print(f"{G}via{X}       loras/{rel}  {D}(delivered by {via}, checked: {s.size} bytes, SHA-256 of our manifest; Hugging Face: {why[:120]}){X}")
+                why = ""
+            else:
+                why = why + "; tried also: " + "; ".join(got)[:300]
         if why:
             say("failed", "loras/" + rel, f"{tag}: {why}")
         else:
-            say("fetched", "loras/" + rel, f"{tag}, {s.size / 2**20:.0f} MB")
+            say("fetched", "loras/" + rel, f"{tag}, {s.size / 2**20:.0f} MB" + (f", via {via}" if via else ""))
     shutil.rmtree(stage, ignore_errors=True)                 # what the downloader kept beside the files (its own metadata)
 
 

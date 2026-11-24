@@ -82,7 +82,7 @@ kit = Path(tempfile.mkdtemp(prefix="ruach-t2104-"))
 (kit / "user").mkdir()
 outputs = kit / "outputs"
 outputs.mkdir()
-db.journal = lambda unit, since: ("2026-11-05T21:24:55-06:00 studio-box start.sh[1]: [Server] Job 0761cd5ba028f0de: {\n"
+db.journal = lambda unit, since, kit=None: ("2026-11-05T21:24:55-06:00 studio-box start.sh[1]: [Server] Job 0761cd5ba028f0de: {\n"
                                   '  "seed": 992475142,\n'
                                   f"21:37:15 [Server] Refused POST /lab/collection from {LAN}.2.77 (Host x)\n"
                                   f'23:41:46 [lab] "GET /vocab/My%20Words.json HTTP/1.1" 200 812 B · came 23:41:46.100 · 3 ms · peer {LAN}.2.5\n')

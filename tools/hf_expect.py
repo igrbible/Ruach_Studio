@@ -183,7 +183,32 @@ def write_atomic(path, data):
         raise
 
 
+class StandIn(dict):
+    """Our manifest's lines standing for a pinned list Hugging Face did not give (tools/hf_guard.py says so on its line)."""
+    stand_in = "Hugging Face's pinned list could not be read: our manifest (heresy/hf-manifest.tsv) stands for it"
+
+
 def expected_files(repo, rev):
+    """{path: {size, sha256}} of the revision: from the fixtures (tests), the cache, or Hugging Face. The second channel (Viktor
+    21.11.2026): when none of them answers, our repo's list at a pin our manifest holds comes from the manifest (tools/hf_channels.py),
+    never cached, so a Hugging Face that is down does not stop our files at the check; another's repo stays offline, as before."""
+    try:
+        return pinned_list(repo, rev)
+    except Exception:
+        here = os.path.dirname(os.path.abspath(__file__))
+        if here not in sys.path:
+            sys.path.insert(0, here)
+        try:
+            import hf_channels
+            listed = hf_channels.manifest_list(repo, rev)
+        except ImportError:
+            listed = None
+        if listed is None:
+            raise
+        return StandIn(listed)
+
+
+def pinned_list(repo, rev):
     """{path: {size, sha256}} of the revision: from the fixtures (tests), the cache, or Hugging Face."""
     fixtures, cached = os.environ.get("YUE2_HF_EXPECTED"), None
     if fixtures:

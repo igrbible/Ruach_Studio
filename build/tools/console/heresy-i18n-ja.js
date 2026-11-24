@@ -5621,6 +5621,11 @@ RuachI18n.add("ja", {
 "On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks.": "公共 Wi-Fi（カフェ、ホテル、列車）や、ファイアウォールのないノートパソコンでは、そのネットワークにいる全員がプライベートネットワークとみなされます。「このコンピューターだけ」を選ぶか、自分のネットワークを挙げてください。",
 "Engine → Security changes it any time. The internet at large is never let in, unless the Studio is started with RUACH_ALLOW_PUBLIC=1.": "エンジン → セキュリティでいつでも変えられます。RUACH_ALLOW_PUBLIC=1 で起動しない限り、インターネット全体が入ることはありません。",
 "My decision is a conscious one": "これは自分で考えて決めたことです",
+"The Studio listens on this computer alone now (port {0}): no other computer or phone can open it, and {1} has nothing to ask of its firewall. Opened to a network, whoever opens its page there can do everything you can: make and delete songs, read your lyrics, run your graphics cards, fetch models with your keys.": "スタジオは今このコンピューターだけを聞いています（ポート {0}）。ほかのコンピューターやスマートフォンからは開けず、{1} がファイアウォールについて尋ねることもありません。ネットワークに開くと、そこでページを開いた人はあなたと同じことが何でもできます。曲の作成と削除、歌詞の閲覧、グラフィックカードの使用、あなたのキーでのモデルのダウンロード。",
+"{0} asks once whether to let the Studio through its firewall, when it starts again": "スタジオを再起動したとき、{0} がファイアウォールを通すかを一度だけ尋ねます",
+"The Studio still listens on this computer alone: restart it ({0}) to open it to your network, and {1} asks once about its firewall.": "スタジオはまだこのコンピューターだけを聞いています。ネットワークに開くには再起動してください（{0}）。{1} がファイアウォールについて一度だけ尋ねます。",
+"its icon beside the clock → Restart the Studio": "時計の横のアイコン → Restart the Studio",
+"close it and start it again": "閉じてからもう一度起動",
 "Batch": "バッチ",
 "How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked": "一度に描く枚数：それぞれ次のシード（シード、シード + 1、…）、選んだ形それぞれで",
 "Delete the saved style picked": "選んだ保存済みスタイルを削除",
@@ -5686,6 +5691,7 @@ RuachI18n.add("ja", {
 "Music half: {0} layers, attention {1} %, MLP {2} %": "音楽の半分：{0} 層、アテンション {1} %、MLP {2} %",
 "Sound half: {0} layers, attention {1} %, MLP {2} %": "音の半分：{0} 層、アテンション {1} %、MLP {2} %",
 "moves a layer by up to {0} % at 1.0": "1.0 で層を最大 {0} % 動かす",
+"How far it moves a layer is not measured: {0}": "層をどれだけ動かすかは測定されていません: {0}",
 "Where it pushes:": "効いている所：",
 "{0} and {1} share their layers ({2}) and pull the same way: together they push harder than their strengths say, keep them lower.": "{0} と {1} は層を共有し（{2}）、同じ向きに引きます。合わせると強さの数値以上に効くので、低めに保ってください。",
 "{0} and {1} share their layers ({2}) and pull against each other: some of each cancels the other.": "{0} と {1} は層を共有し（{2}）、互いに逆向きに引きます。それぞれの一部が相手を打ち消します。",
@@ -5916,6 +5922,7 @@ RuachI18n.add("ja", {
 "The input's floor, RMS / peak dBFS: {0}": "入力のフロア、RMS / ピーク dBFS：{0}",
 "Not measured: {0}": "測れませんでした：{0}",
 "no sound card is seen here (/proc/asound has none)": "ここにはサウンドカードが見えません（/proc/asound が空です）",
+"the audio interfaces are read through ALSA, Linux's sound system: on Windows and macOS none are listed yet, and the analog gateway and the monitor run on Linux for now": "オーディオインターフェースは Linux のサウンドシステム ALSA を通して読まれます。Windows と macOS ではまだ一覧に出ず、アナログゲートウェイとモニターは今のところ Linux でのみ動きます",
 "aplay is not here: ALSA's software devices are not listed": "aplay がありません：ALSA のソフトウェアデバイスは一覧できません",
 "arecord is not here: ALSA's software devices are not listed": "arecord がありません：ALSA のソフトウェアデバイスは一覧できません",
 "PipeWire / Pulse do not run here (no pactl answer)": "PipeWire / Pulse はここで動いていません（pactl の応答なし）",
@@ -10077,4 +10084,177 @@ RuachI18n.add("ja", {
 // HERESY 2919c: the workspaces' emoji upgrade, said once
 RuachI18n.add("ja", {
 "{0} workspaces now show their emoji in its own column": "{0} 個のワークスペースが絵文字を専用の列に表示するようになりました"
+});
+// HERESY 2940 · 2941: the take's menu of workspaces, the realms in a move and an add
+RuachI18n.add("ja", {
+"A move never takes a take out of its realm: these are the Musician's, and “{0}” is the Narrator's.": "移動でテイクが自分の領域から出ることはありません：これらはミュージシャンのもので、「{0}」は朗読のものです。",
+"A move never takes a take out of its realm: these are the Narrator's, and “{0}” is the Musician's.": "移動でテイクが自分の領域から出ることはありません：これらは朗読のもので、「{0}」はミュージシャンのものです。",
+"A move never takes a take out of its realm: these belong to both realms.": "移動でテイクが自分の領域から出ることはありません：これらは両方の領域にまたがっています。",
+"Link them into “{0}” instead? They stay where they are as well.": "代わりに「{0}」へリンクしますか？今ある場所にも残ります。",
+"Link them": "リンクする",
+"Linked into “{0}”: {1}": "「{0}」へリンク：{1}",
+"The checked belong to both realms ({0} of the Musician, {1} of the Narrator): a move keeps each take in its realm, so check the takes of one realm": "チェックしたものは両方の領域にまたがっています（ミュージシャン {0}、朗読 {1}）：移動は各テイクを自分の領域に保ちます。一つの領域のテイクだけをチェックしてください",
+"They leave every other workspace of their realm they are in (a locked one keeps its own; their links in the other realm stay).": "自分の領域のほかのすべてのワークスペースから外れます（ロックされたものは自分のものを残します。もう一方の領域のリンクは残ります）。",
+"Frozen: unfreeze it first (⋯ beside its name)": "凍結中：先に凍結を解除してください（名前の横の ⋯）",
+"Link into the Narrator's": "朗読のワークスペースへリンク",
+"Link into the Musician's": "ミュージシャンのワークスペースへリンク"
+});
+// HERESY 2942: the music model's honest limits (the window of the song at hand, the floor under its ceiling, Extend's cap)
+RuachI18n.add("ja", {
+"Max length {0} is past what the window holds for this song: about {1} of music whole, after its style and lyrics ({2} tokens) and its score ({3}). The song stops where the window ends. Longer: Long songs · Pieces (experimental).": "最大の長さ {0} は、この曲で窓に収まる長さを超えています：スタイルと歌詞（{2} トークン）と楽譜（{3}）のあと、音楽は通しで約 {1}。曲は窓の終わりで止まります。もっと長くするには：長い曲 · 分割（実験的）。",
+"Max length {0} is past what the window holds for this song: about {1} of music whole ({4}–{5} by the score the model writes), after its style and lyrics ({2} tokens). The song stops where the window ends. Longer: Long songs · Pieces (experimental).": "最大の長さ {0} は、この曲で窓に収まる長さを超えています：スタイルと歌詞（{2} トークン）のあと、音楽は通しで約 {1}（モデルが書く楽譜しだいで {4}–{5}）。曲は窓の終わりで止まります。もっと長くするには：長い曲 · 分割（実験的）。",
+"The window holds about {0} of this song's music whole: its style and lyrics take {1} tokens, its score {2}, of the {3}.": "窓にはこの曲の音楽が通しで約 {0} 収まります：{3} のうち、スタイルと歌詞が {1} トークン、楽譜が {2}。",
+"The window holds about {0} of this song's music whole ({4}–{5} by the score the model writes): its style and lyrics take {1} tokens of the {3}.": "窓にはこの曲の音楽が通しで約 {0} 収まります（モデルが書く楽譜しだいで {4}–{5}）：{3} のうち、スタイルと歌詞が {1} トークン。",
+"Max length goes past it: the song stops where the window ends.": "最大の長さはそれを超えています：曲は窓の終わりで止まります。",
+"The music's Min length {0} stood above its Max length {1}: sent with the floor at {1}": "音楽の最小の長さ {0} が最大の長さ {1} を上回っていました：下限を {1} にして送りました",
+"The score's Min tokens {0} stood above its Max tokens {1}: sent with the floor at {1}": "楽譜の最小トークン {0} が最大トークン {1} を上回っていました：下限を {1} にして送りました",
+"{0} long: Extend goes to {1} at most": "長さ {0}：延長は最大 {1} までです",
+"Music up to 10:00 (8:00 by default): past it a song loses its way (one ran on to 9:30, and that was too much). The window of 24,576 tokens may hold less: the style, the lyrics and the score take their part first.": "音楽は 10:00 まで（標準は 8:00）。それを超えると曲は道を見失います（9:30 まで伸びた曲がありましたが、長すぎました）。24,576 トークンの窓に収まるのはもっと短いこともあります：スタイル、歌詞、楽譜が先に自分の分を取ります。",
+"Text profiles make a pasted text ready to read, with a speech profile of your own (Direct, past 8:00); readings live in the Narrator": "テキストプロファイルは貼り付けた文章を朗読用に整えます。自分の話し声プロファイル（Direct、8:00 超）で使えます。朗読は朗読ルームにあります"
+});
+// HERESY 2943: the Trainer's curves together: the run's events, the held-out dots, a scale's span
+RuachI18n.add("ja", {
+"Step {0}": "ステップ {0}",
+"the {0} frozen: its loss leaves the sum": "{0} を凍結：その損失は合計から外れます",
+"went on from its save": "保存から再開",
+"the {0}'s learning-rate curve {1} → {2}": "{0} の学習率カーブ {1} → {2}",
+"The running average begins anew here.": "移動平均はここから新しく始まります。",
+"held out at step {0}: {1} {2}": "ステップ {0} のホールドアウト：{1} {2}",
+"span {0}": "幅 {0}",
+"Smoothing": "スムージング",
+"The curves' smoothing, as TensorBoard's: 0 draws the logged points as they are, 0.99 the smoothest (0.92 by default); the faint line under each is the points themselves. The learning rate, the memory and the held-out dots are never smoothed, nor across the run's events. Kept in this browser.": "TensorBoard と同じ曲線のスムージング：0 は記録された点をそのまま、0.99 は最もなめらか（標準は 0.92）。各曲線の下の淡い線は点そのものです。学習率、メモリ、ホールドアウトの点は決して平滑化されず、ランのイベントをまたいでも平滑化されません。このブラウザに保存されます。"
+});
+// HERESY 2945: the Writer's versions: the Section editor's sub-version and the version it came from
+RuachI18n.add("ja", {
+"the Section editor": "セクションエディター",
+"from #{0}": "#{0} から"
+});
+// HERESY 2942b: the Section editor's Extend within the music model's 10:00
+RuachI18n.add("ja", {
+"Only past the take's end, 10:00 at most in all": "テイクの終わりより後のみ、全体で最大 10:00",
+"Extend sings on to 10:00 at most": "延長は最大 10:00 まで歌い続けます"
+});
+// HERESY 2948: comping in the DAW: the selection taken from another version of its stem
+RuachI18n.add("ja", {
+"Take it from another version": "別のバージョンから取る",
+"The rest has no versions": "残りにはバージョンがありません",
+"This stem has one version: a file made from it (a cleaned voice…) is another": "このステムのバージョンは一つです：そこから作ったファイル（クリーンにした声など）が別のバージョンになります",
+"The selection from another version of this stem, laid over the lane with 10 ms crossfades; the lane's own version everywhere else": "選択範囲をこのステムの別のバージョンから取り、10 ms のクロスフェードでレーンに重ねます。ほかの部分はレーン自身のバージョンのまま",
+"{0}–{1} now from «{2}»": "{0}–{1} は「{2}」から",
+"a version gone": "なくなったバージョン"
+});
+// HERESY 2949: the Refiner's Compare node: two versions of the take, A and B, into the Compare window
+RuachI18n.add("ja", {
+"A and B side by side": "A と B を並べて",
+"Two versions of the take side by side, A and B: the original, a step's file, a mix; Compare opens them in the Compare window, switched in the same second. A wire from the take goes to A, from a step to B": "テイクの二つのバージョンを A と B として並べます：オリジナル、ステップのファイル、ミックス。「比較」で比較ウィンドウに開き、同じ秒で切り替えます。テイクからのワイヤーは A へ、ステップからは B へ",
+"Two versions of this take side by side, A and B, in the Compare window: switched in the same second, blind if you like.": "このテイクの二つのバージョンを A と B として比較ウィンドウに並べます：同じ秒で切り替え、ブラインドにもできます。",
+"The first: the original or any file a step made of this take": "一つ目：オリジナル、またはこのテイクからステップが作った任意のファイル",
+"The second, heard against A: a step's file, a mix, the original": "二つ目、A と聞き比べるもの：ステップのファイル、ミックス、オリジナル",
+"A and B in the Compare window, A first: one plays, the other takes over in the same second": "A と B を比較ウィンドウで、A が先：一方が鳴り、もう一方が同じ秒から引き継ぎます",
+"Compare A and B": "A と B を比較",
+"Pick a take: its versions come here": "テイクを選んでください：そのバージョンがここに来ます",
+"Only the original so far: make a file from it in a step, then compare the two": "今はオリジナルだけです：どこかのステップでファイルを作り、二つを比べてください",
+"A and B are the same file: pick another for one of them": "A と B が同じファイルです：どちらかに別のものを選んでください"
+});
+// HERESY 2950: two-tone icons in Engine › Appearance
+RuachI18n.add("ja", {
+"Icons": "アイコン",
+"One colour": "単色",
+"Two-tone, the theme's colours": "2色、テーマの色",
+"The Studio's line icons: ours in one colour, the text's (the default); or two-tone, the outline as always and their shapes filled faintly in the theme's own colours (the accent for what makes, red for what takes away, green for what keeps), so each theme paints them its way": "Studio の線のアイコン：私たちの単色、テキストの色（既定）。または2色：輪郭はいつもどおり、形をテーマ自身の色で淡く塗ります（作るものはアクセント、取り除くものは赤、残すものは緑）。テーマごとにそれぞれの色で塗られます"
+});
+// HERESY 2955: what a control turned off for a model that is not here says, and its way to Engine → Models
+RuachI18n.add("ja", {
+"The transcriber: covers from a recording, a backing read (SheetSage2 with MERT-v2-FullSong)": "採譜器：録音からのカバー、オケの読み取り（SheetSage2 と MERT-v2-FullSong）",
+"Whisper large-v3: the lyrics check, karaoke timing, sections by ear, a recording's words": "Whisper large-v3：歌詞チェック、カラオケのタイミング、耳でのセクション、録音の言葉",
+"not in the last check here: Fetch brings it": "ここでの前回の確認にはありません：「取得」で入手できます",
+"Its files are here: the engine takes it in at its next start.": "ファイルはここにあります：エンジンは次の起動時に読み込みます。",
+"Opens Engine → Models and LoRAs at its row: Fetch there brings it": "エンジン → モデルと LoRA をその行で開きます：そこで「取得」すると入手できます",
+"Engine → Models": "エンジン → モデル",
+"not in this Studio yet": "このスタジオにはまだありません",
+"off: this server keeps none": "オフ：このサーバーは保存しません",
+"Covering a recording needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.": "録音からのカバーには採譜器（SheetSage2 と MERT-v2-FullSong）が必要ですが、このスタジオにはまだありません。",
+"Reading a backing needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.": "オケの読み取りには採譜器（SheetSage2 と MERT-v2-FullSong）が必要ですが、このスタジオにはまだありません。",
+"Writing a score from the sound needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.": "音から楽譜を書くには採譜器（SheetSage2 と MERT-v2-FullSong）が必要ですが、このスタジオにはまだありません。",
+"Ready to transcribe. Match sections needs Whisper large-v3, which this Studio does not have yet.": "採譜できます。「セクションを合わせる」には Whisper large-v3 が必要ですが、このスタジオにはまだありません。",
+"Refined needs SheetSage2-Refined, which this Studio does not have yet.": "Refined には SheetSage2-Refined が必要ですが、このスタジオにはまだありません。",
+"BF16 (7.2 GB) is not in this Studio yet: Engine → Models and LoRAs fetches it under Backbone, and the Studio offers it after its next start.": "BF16（7.2 GB）はこのスタジオにまだありません：エンジン → モデルと LoRA の「バックボーン」で取得でき、次の起動後にスタジオが提示します。",
+"The server keeps no library: songs made in this tab stay until it reloads.": "サーバーはライブラリを持っていません：このタブで作った曲は再読み込みまで残ります。",
+"This engine keeps no settings file, so it answers this computer and private networks; started the Studio's way (its icon, Pinokio or start.sh), it lets you choose.": "このエンジンは設定ファイルを持たないため、このコンピューターとプライベートネットワークに応えます。スタジオの通常の起動（アイコン、Pinokio、start.sh）で起動すれば選べます。",
+"it needs Whisper large-v3, which this Studio does not have yet: Engine → Models": "Whisper large-v3 が必要ですが、このスタジオにはまだありません：エンジン → モデル",
+"The lyrics check and karaoke timing need Whisper large-v3, which this Studio does not have yet.": "歌詞チェックとカラオケのタイミングには Whisper large-v3 が必要ですが、このスタジオにはまだありません。",
+"Whisper large-v3 is not in this Studio yet: Engine → Models and LoRAs fetches it (3.1 GB)": "Whisper large-v3 はこのスタジオにまだありません：エンジン → モデルと LoRA で取得します（3.1 GB）",
+"{0}: not fetched.": "{0}：取得できませんでした。",
+"The check did not run.": "確認は実行されませんでした。",
+"On Windows the Weights panel downloads through the bash of Git for Windows, and none is installed here.": "Windows では「モデルと LoRA」は Git for Windows の bash でダウンロードしますが、ここにはインストールされていません。",
+"Install Git for Windows (https://git-scm.com/download/win), then press again. The models a song needs come without it too.": "Git for Windows（https://git-scm.com/download/win）をインストールしてから、もう一度押してください。曲に必要なモデルはそれがなくても届きます。"
+});
+// HERESY 2956: why a chooser's workspace takes nothing new
+RuachI18n.add("ja", {
+"A 💎 set: nothing new lands in it": "💎 セット：新しいものは入りません",
+"Frozen: nothing new lands in it": "凍結中：新しいものは入りません",
+"Archived: nothing new lands in it": "アーカイブ済み：新しいものは入りません",
+"The regeneration's own section: nothing new lands in it": "再生成専用のセクション：新しいものは入りません",
+"They are here already": "すでにここにあります"
+});
+// HERESY 2956: why a chooser's workspace takes nothing new
+RuachI18n.add("ja", {
+"Its sections": "そのセクション"
+});
+// HERESY 2959: the chord guard's words
+RuachI18n.add("ja", {
+"The chords swing between {0} and {1} bar by bar ({#2} times): the plan may have split its key.": "コードが小節ごとに {0} と {1} の間で揺れています（{#2} 回）：プランの調が割れたのかもしれません。",
+"Chords with a double sharp or flat: {0}.": "ダブルシャープかダブルフラットのコード：{0}。",
+"Chromatic music does this on purpose too: hear it first, or rewrite the score.": "半音階的な音楽はわざとそうすることもあります。まず聴くか、楽譜を書き直してください。",
+"Rewrite the score": "楽譜を書き直す",
+"A chord in the plan swallowed its notes: the model plans it again with a new music seed": "プランのコードが音符を飲み込みました：新しい音楽シードでモデルがプランし直します"
+});
+// HERESY 2960: a run's own steps 1-3 and a new run's form
+RuachI18n.add("ja", {
+"read only": "閲覧のみ",
+"Telemetry ›": "テレメトリー ›",
+"New run from this one": "これを元に新しいラン",
+"New run": "新しいラン",
+"The form for a new run with this run's set, kind and knobs; its name is yours to give": "このランのセット・種類・つまみで新しいランのフォームを開きます。名前は自分で付けます",
+"The form for a new run, fresh: nothing an earlier form left": "新しいランのフォームをまっさらに開きます：以前のフォームの残りは持ち込みません",
+"The material this run's set was made from, as the set remembers it.": "このランのセットの元になった素材（セットの記録どおり）。",
+"The set this run trains on.": "このランが学習するセット。",
+"What this run was given: its kind, its trainer and its knobs.": "このランに与えたもの：種類、トレーナー、つまみ。",
+"The form for another run opens with “New run”.": "別のランのフォームは「新しいラン」で開きます。",
+"The form for a new run: {0} stays as it is.": "新しいランのフォーム：{0} はそのままです。",
+"not recorded": "記録なし",
+"The set {0} is no longer among the prepared sets.": "セット {0} は準備済みセットの中にもうありません。",
+"folder": "フォルダー",
+"made from": "元",
+"made on": "作成日",
+"sheets by": "譜面",
+"in the run": "ラン内",
+"held out": "検証用に除外",
+"kind": "種類",
+"trainer": "トレーナー"
+});
+// HERESY 2961: the held-out bucket's tip in the Trainer's charts
+RuachI18n.add("ja", {
+"held out, {#0} saves from step {1} to {2}: {3} {4} on average": "ホールドアウト、ステップ {1} から {2} までの {#0} 回の保存：{3} {4}（平均）",
+"step {0}: {1}": "ステップ {0}：{1}"
+});
+// HERESY 2962: the Trainer's missing weights in words
+RuachI18n.add("ja", {
+"The Studio’s trainer is missing {0}: they come with its base in Engine → Models.": "Studio のトレーナーに足りないもの：{0}。エンジン → モデル でベースと一緒に入ります。"
+});
+// HERESY 2963: the Videographer's voice row
+RuachI18n.add("ja", {
+"The Narrator's voice": "朗読の声",
+"Starts at": "開始",
+"The song under it": "下の曲",
+"How far the song goes down under the voice: down in 0.3 s before it, back in 0.8 s after it": "声の下で曲をどれだけ下げるか：声の 0.3 秒前に下げ、終わって 0.8 秒で戻します",
+"Change…": "変更…",
+"This take is not in the library now: the clip cannot be cut with it": "このテイクは今ライブラリにありません：これでクリップは編集できません",
+"A take of the Narrator over the clip, by link (it stays in the Narrator's world): from the song's start, before its first sung line, unless moved; the song goes down under it and back after it; its words as titles of their own, in italics below the sung lines": "クリップに重ねる朗読のテイク（リンクで、朗読の世界に置いたまま）：動かさなければ曲の頭、最初に歌われる行の前から。その下で曲は下がり、後で戻ります。言葉は独自のタイトルとして、歌詞の下に斜体で",
+"Add the Narrator's voice…": "朗読の声を追加…",
+"The clip's voice is laid on: the next clip cut mixes it": "クリップの声を載せました：次のクリップ編集でミックスされます",
+"The clip's voice is taken off": "クリップの声を外しました",
+"No take of the Narrator in the library yet: read one in the Narrator first": "ライブラリに朗読のテイクがまだありません：まず朗読で読み上げてください",
+"The Narrator's voice over the clip": "クリップに重ねる朗読の声",
+"A take of the Narrator's world, by link: it stays home, the clip only names it.": "朗読の世界のテイクをリンクで：テイクはそのまま、クリップは名前を指すだけです。"
 });

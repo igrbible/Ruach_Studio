@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 
 import paths                       # HERESY 2330: where the weights live
+import winx                        # HERESY 2934: the workers' processes on Windows too
 import videographer as vg
 from h3rt.files import needed as h3_needed
 
@@ -51,7 +52,7 @@ LOCK = threading.Lock()
 
 
 def _py(kit):
-    return Path(os.environ.get("LAB_ART_PY") or Path(kit) / ".venv-art/bin/python")      # the Artist's environment (lab/install-venv.sh --art)
+    return Path(os.environ.get("LAB_ART_PY") or winx.venv_python(kit, ".venv-art"))      # the Artist's environment (lab/install-venv.sh --art)
 
 
 def ready(kit):
@@ -76,7 +77,7 @@ def _alive(sp):
         w = json.loads((sp / "worker.json").read_text(encoding="utf-8"))
         if int(w["pid"]) == 0:                              # just spawned: alive for two minutes while it loads
             return w if time.time() - float(w.get("at", 0)) < 120 else None
-        os.kill(int(w["pid"]), 0)
+        winx.kill0(w["pid"])                                # HERESY 2934: os.kill(pid, 0) on Linux, psutil on Windows
     except (OSError, ValueError, KeyError):
         return None
     return w if w.get("status") in ("loading", "ready", "busy") else None
@@ -97,11 +98,11 @@ def workers(kit):
 def _spawn(kit, gpu, mode):
     sp = _root(kit) / f"gpu{gpu}-{_kind(mode)}"
     sp.mkdir(parents=True, exist_ok=True)
-    cmd = ["nice", "-n", "5", str(_py(kit)), "-u", str(WORKER), "--gpu", str(gpu), "--spool", str(sp), "--idle", "600"]
+    cmd = winx.nice(5) + [str(_py(kit)), "-u", str(WORKER), "--gpu", str(gpu), "--spool", str(sp), "--idle", "600"]   # HERESY 2934
     if MODES[mode]["fast"]:
         cmd += ["--fast"]
     log = open(sp / "worker.log", "ab")
-    subprocess.Popen(cmd, cwd=str(kit), stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+    subprocess.Popen(cmd, cwd=str(kit), stdout=log, stderr=subprocess.STDOUT, **winx.group_kwargs())   # HERESY 2934: its own group, on Windows too
     (sp / "worker.json").write_text(json.dumps({"status": "loading", "pid": 0, "gpu": gpu, "at": time.time(), "spawned": True}), encoding="utf-8")
 
 
@@ -135,7 +136,7 @@ def shoot(kit, name, i, prompt, mode="draft", free_cards=(), seed=None, first=Tr
         raise ValueError("draft, fast or final")
     r = ready(kit)
     if not r["ready"]:
-        raise FileNotFoundError("MiniMax H3 is not here: " + ", ".join(r["missing"]) + " (heresy/fetch-heresy.sh --h3 int8)")
+        raise FileNotFoundError("MiniMax H3 is not here: " + ", ".join(r["missing"]) + " (Engine → Models and LoRAs fetches them)")   # HERESY 2962: no command line
     plan = vg.get(kit, name)
     s = vg._shot_of(plan, i)
     prompt = str(prompt or "").strip()
@@ -254,7 +255,7 @@ def stop_workers(kit):
             sp = _root(kit) / f"gpu{x['gpu']}-{x['kind']}"
             w = _alive(sp)
             try:
-                os.killpg(os.getpgid(int(w["pid"])), signal.SIGTERM)
+                winx.kill_group_of(w["pid"], signal.SIGTERM)    # HERESY 2934: the tree on Windows
                 n += 1
             except (OSError, ValueError, KeyError, TypeError):
                 continue
@@ -280,7 +281,7 @@ def release_idle(kit, wait=45):
         w = _alive(_root(kit) / f"gpu{x['gpu']}-{x['kind']}")
         try:
             pid = int(w["pid"])
-            os.killpg(os.getpgid(pid), signal.SIGTERM)
+            winx.kill_group_of(pid, signal.SIGTERM)           # HERESY 2934
             gone.append((x["gpu"], pid))
         except (OSError, ValueError, KeyError, TypeError):
             continue
@@ -289,7 +290,7 @@ def release_idle(kit, wait=45):
         left = []
         for g, pid in gone:
             try:
-                os.kill(pid, 0)
+                winx.kill0(pid)
                 left.append(pid)
             except OSError:
                 pass

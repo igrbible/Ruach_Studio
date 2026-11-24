@@ -1,0 +1,15 @@
+# The second channel (HERESY 2946): where a model file comes from
+# when Hugging Face does not give it whole and right. tools/hf_channels.py reads this; Hugging Face (with Xet) is always first and is not listed.
+# A line is tried, in this order, only for a file Hugging Face did not deliver, and only when its SHA-256 is known before it comes (heresy/hf-manifest.tsv
+# for goldhub/*, Hugging Face's own pinned list for another's repo). What a channel sends is held to that SHA-256: no channel is trusted for content.
+#
+#   name <TAB> kind <TAB> where <TAB> split
+#   endpoint  a Hugging Face-compatible host: «hf download» again with HF_ENDPOINT=where and Xet off
+#   url       one file's address with {sha256} {sha1} {sha2} {repo} {owner} {name} {rev} {path} {file} filled in, and {part}: "" for a whole file,
+#             .part000, .part001… for the pieces of a file over split bytes (GitHub takes no file of 2 GiB)
+#   a line starting with # is off: the three below wait for accounts of their own (OWNER, REPO and DOMAIN to fill in)
+huggingface.co-plain	endpoint	https://huggingface.co	0
+#github	url	https://github.com/OWNER/REPO/releases/download/sha256-{sha1}/{sha256}{part}	2000000000
+#r2	url	https://DOMAIN/sha256/{sha256}	0
+hf-mirror.com	endpoint	https://hf-mirror.com	0
+#modelscope	url	https://modelscope.cn/api/v1/models/OWNER/{name}/repo?Revision={rev}&FilePath={path}	0

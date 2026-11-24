@@ -8,5 +8,8 @@ if curl -sf -m 3 -o /dev/null "http://127.0.0.1:$PORT/hardware"; then
     exec sleep infinity
 fi
 . "$ROOT/launcher/env.sh"
-bash "$ROOT/start.sh"
-echo "ruach start stopped: the Studio's server ended (exit $?); its last lines are above"
+# HERESY 2980 (a tester's debug journal, Windows native 2.1.0-rc1, 23.11.2026: its studio.log and lab.log said «no journal … [WinError 2]» and nothing else): the engine's lines to tmp/logs/engine.log too
+LOG="$ROOT/tmp/logs/engine.log"; mkdir -p "$ROOT/tmp/logs"
+[ "$(wc -c < "$LOG" 2>/dev/null || echo 0)" -gt 4000000 ] && mv -f "$LOG" "$ROOT/tmp/logs/engine.1.log"
+bash "$ROOT/start.sh" 2>&1 | tee -a "$LOG"
+echo "ruach start stopped: the Studio's server ended (exit ${PIPESTATUS[0]}); its last lines are above"

@@ -30,6 +30,20 @@ static const char * HEAD_NO_KEY =
     "V: Ins clef=treble name=\"Ins Melody\" snm=\"Inst.\"\n";
 static const char * BODY = "V: Vocal\n\"Dm\"z16|z16|\nV: Ins\nd16|a16|\n";
 
+// HERESY 2959: a chord symbol that swallowed notes, and chords that only look near it
+static void swallowed() {
+    const std::string head = std::string(HEAD_NO_KEY) + "K:Em\n";
+    const std::string bad  = head + "V: Vocal\n\"Ea4g2f2e8-|\"Am\"c4d4e8|\nV: Ins\nE16|A16|\n";
+    const std::string open = head + "V: Vocal\n\"Em\"e4d4c8|\"Ea4g2f2e8-|\nV: Ins\nE16|A16|\n";
+    const std::string fine = head + "V: Vocal\n\"C7(b9)\"c4\"Am7b5\"d4\"Cadd9\"e4\"Gaug7\"g4|\"F#m7b5(b13)\"f8\"Dm(add9)\"d8|\"G/B\"B16|\nV: Ins\nE16|A16|B16|\n";
+    check(yue2_score_swallowed(bad) == "\"Ea4g2f2e8-|\"", "a chord's quote never closed: the notes it swallowed found", yue2_score_swallowed(bad));
+    check(yue2_score_broken(bad).find("a chord symbol swallowed notes (\"Ea4g2f2e8-|\")") != std::string::npos, "  and the guard stops the run for it", yue2_score_broken(bad));
+    check(!yue2_score_swallowed(open).empty(), "  one left open to the line's end too", yue2_score_swallowed(open));
+    check(yue2_score_swallowed(fine).empty() && yue2_score_broken(fine).empty(), "  chords with numbers, flats and added tones (C7(b9), Am7b5, Cadd9, Gaug7, F#m7b5(b13), G/B) pass",
+          yue2_score_swallowed(fine) + " | " + yue2_score_broken(fine));
+    check(yue2_score_swallowed(std::string(HEAD_NO_KEY) + "K:C\nV: Vocal clef=treble name=\"Vocal Melody\" snm=\"a4g2|\"\n\"C\"c16|\n").empty(), "  a field line's quotes are not chords", "");
+}
+
 static std::string clock_of(double s) {
     if (s < 0.0) {
         return "unknown";
@@ -101,6 +115,7 @@ static void wide(const char * path) {
 }
 
 int main(int argc, char ** argv) {
+    swallowed();                                     // HERESY 2959
     std::string warn = "stale";
     std::string whole = std::string(HEAD_NO_KEY) + "K:D#m\n" + BODY;
     std::string why   = yue2_score_broken(whole, &warn);

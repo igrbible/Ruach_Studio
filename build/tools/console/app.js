@@ -700,7 +700,9 @@
     if (tipFor) hideTip();
   }, true);
   document.addEventListener("focusin", function (event) {
-    var target = tipTarget(event.target);
+    // HERESY 2957: a summary holds no focusable element (its info mark has no tabindex): reached by the keyboard, it shows its mark's tip
+    var mark = event.target && event.target.tagName === "SUMMARY" ? event.target.querySelector(".info[data-tip]:not([hidden]), .info[data-tip-ref]:not([hidden])") : null;
+    var target = mark || tipTarget(event.target);
     if (Date.now() - pointerAt < 800) return;   // the mouse gave this focus
     if (target) { showTip(target); tipKept = true; } else if (tipFor) hideTip();
   });
@@ -711,7 +713,7 @@
     if (!tipFor) return;
     var box = event.target;
     if (box !== document && !(box.contains && box.contains(tipFor))) return;
-    if (tipFor === document.activeElement) { showTip(tipFor); return; }
+    if (tipFor === document.activeElement || (tipFor.parentElement && tipFor.parentElement.closest("summary") === document.activeElement)) { showTip(tipFor); return; }   // HERESY 2957: a summary's mark too
     // HERESY 2859: a box that scrolls but leaves the target where it stood (the browser holding the view still while something above it
     // loads, a scroll put back to where it was) leaves the tip alone; only a target the scroll moved takes its tip away
     var b = tipFor.getBoundingClientRect();
@@ -867,7 +869,8 @@
   // and said aloud), and the token floors and ceilings locked against a stray edit: the lock opens them
   var KNOB_BOUNDS = {
     temperature: [0.1, 2], top_p: [0.5, 1], top_k: [1, 1000], repetition_penalty: [1, 2], penalty_window: [1, 100],
-    // HERESY 1167: the music up to 16:00 (Direct gives it nearly the whole window: Speech · up to 15:00)
+    // HERESY 1167: the music up to 16:00 (Direct gives it nearly the whole window: Speech · up to 15:00). HERESY 2942: the music model sings up to 10:00 in
+    // every mode (lengthCap); readings live in the Narrator
     // HERESY 1169 · 1253 (Viktor 08.10.2026: «the 6144 default score cap (8192 at max limit)»): the score's ceiling 8192, its default stays 6144
     min_tokens: { abc: [0, 8192], semantic: [0, 24000] }, max_tokens: { abc: [256, 8192], semantic: [250, 24000] }
   };
@@ -882,7 +885,7 @@
     "abc.min_tokens": "The score's window holds 8,192 tokens.",
     "abc.max_tokens": "Below 256 a score has no room for its sections; past 8,192 it overflows its window.",
     "semantic.min_tokens": "The floor never goes above the music's Max length, nor more than 20 s past the end of the score the music follows: there the engine lowers it to 10 s before that end, since past it the music has no plan.",   // HERESY 1169: Max length is beside it now; 2830: the plan's end
-    "semantic.max_tokens": "Music up to 10:00 (8:00 by default): past it a song loses its way (one ran on to 9:30, and that was too much). Speech (Direct) up to 15:00."   // HERESY 1468
+    "semantic.max_tokens": "Music up to 10:00 (8:00 by default): past it a song loses its way (one ran on to 9:30, and that was too much). The window of 24,576 tokens may hold less: the style, the lyrics and the score take their part first."   // HERESY 1468; 2942: the window said, Speech gone to the Narrator
   };
   // HERESY 1167 (Viktor: «CFG при вводе 3 не опускает его до макс. 2. Поставь сторожа на все поля в семплинге и уведомления
   // оверлеями»; «2.4 - макс стабильности. 2.6 и выше - дурдом. Может макс выставим до 4?»): Guidance and Sound and output
@@ -891,7 +894,7 @@
     cfg: [0, 10, "Viktor's range: the music 1.0 to 4.0; past it the light beside the field turns amber, then red"],   // HERESY 1400: the light, not a clamp at 4
     cfgLyrics: [0, 10, "Viktor's range: the lyrics 1.0 to 2.6; past it the light beside the field turns amber, then red. Empty: the same as Guidance"],   // HERESY 1397, 1400
     odeSteps: [1, 160, "32 is the release; 8–16 are quick drafts; 160 is the ceiling."],
-    maxLength: [10, 960, "Music up to 10:00 (8:00 by default): past it a song loses its way (one ran on to 9:30, and that was too much). Speech (Direct) up to 15:00."],   // HERESY 1468: the top is the mode's (lengthCap)
+    maxLength: [10, 600, "Music up to 10:00 (8:00 by default): past it a song loses its way (one ran on to 9:30, and that was too much). The window of 24,576 tokens may hold less: the style, the lyrics and the score take their part first."],   // HERESY 1468; 2942: 10:00 in every mode
     variations: [1, 9, "One pass renders nine at most."]
   };
   function fieldDefault(id) {
@@ -936,15 +939,17 @@
     b = b && !Array.isArray(b) ? b[group] : b;
     return group === "semantic" && key === "max_tokens" && b ? [b[0], Math.min(b[1], lengthCap() * FRAME_RATE)] : b;   // HERESY 1468
   }
-  // HERESY 1468 (Viktor 15.10.2026): the song's length at most by its mode: music 10:00 (its default 8:00), Direct's speech 15:00
-  function lengthCap() { return currentCot() === "off" ? 900 : 600; }
+  // HERESY 1468 (Viktor 15.10.2026): the song's length at most by its mode: music 10:00 (its default 8:00), Direct's speech 15:00. HERESY 2942 (Viktor 22.11.2026:
+  // «В Музыкальной модели… убрать профили наррации и предусмотреть максимальные лимиты на выхлоп модели»): speech is the Narrator's now, the music model
+  // sings 10:00 at most in every mode, Direct too; what the window holds of it for the song at hand is said beside Max length (songRoom)
+  function lengthCap() { return 600; }
   function clampLength(why) {
     var s = parseFloat($("maxLength").value), cap = lengthCap();
     if (!(s > cap)) return;
     $("maxLength").value = cap;
     syncMusicCeiling();
     paintOutput();
-    toastWhy(tr(why || "Max length") + " is kept within " + clock(cap) + (cap === 600 ? " in music" : " in Direct"), KNOB_WHY["semantic.max_tokens"], "bad");
+    toastWhy(tr(why || "Max length") + " is kept within " + clock(cap) + " in music", KNOB_WHY["semantic.max_tokens"], "bad");   // HERESY 2942: one cap
   }
   var LOCK_SVG = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/>' +
     '<path class="shackle" d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
@@ -1428,9 +1433,10 @@
     var notes = [];
     // HERESY 1167: the music's ceiling is Max length itself now; the window is the other cap (1169: said in Max length's own tip)
     if (format === "wav32") notes.push("WAV 32 is raw float: peak clip is ignored.");
-    var longOne = longNote();                         // HERESY 2509: said with its numbers, already in the page's language
-    $("outHint").textContent = notes.map(tr).concat(longOne ? [longOne] : []).join(" ");
+    STATE.outNotes = notes;
+    paintOutHint();                                   // HERESY 2509 · 2942: the window's note with its numbers, already in the page's language
     syncMusicCeiling();                               // HERESY 1167: the music's Max length follows
+    roomSoon();                                       // HERESY 2942: what the window holds of this song, asked again
     if (window.YueLoras && YueLoras.relayout) YueLoras.relayout();   // HERESY 1458: the waves' time grid follows it too
   }
 
@@ -1451,13 +1457,78 @@
     return [at(6000), at(1000)];
   }
   // said when Max length is well past what one window holds (30 s past its short-prompt end), whole and not on the ladder
+  // HERESY 2942: with the song at hand counted (songRoom), its own window: past it by half a second, said with its numbers
   function longNote() {
     if ($("narLong").value !== "whole" || $("narDecode").value === "ladder") return "";
-    var length = parseFloat($("maxLength").value), win = wholeWindow();
+    var length = parseFloat($("maxLength").value), win = wholeWindow(), R = roomNow();
+    if (R) {
+      if (!isFinite(length) || length <= R.whole + 0.5) return "";
+      return (R.score_known
+        ? tr("Max length {0} is past what the window holds for this song: about {1} of music whole, after its style and lyrics ({2} tokens) and its score ({3}). The song stops where the window ends. Longer: Long songs · Pieces (experimental).")
+        : tr("Max length {0} is past what the window holds for this song: about {1} of music whole ({4}–{5} by the score the model writes), after its style and lyrics ({2} tokens). The song stops where the window ends. Longer: Long songs · Pieces (experimental)."))
+        .replace("{0}", clock(length)).replace("{1}", clock(R.whole)).replace("{2}", R.text).replace("{3}", R.score).replace("{4}", clock(R.whole_low)).replace("{5}", clock(R.whole_high));
+    }
     if (!isFinite(length) || length <= win[1] + 30) return "";
     return tr("Max length {0} is past one window here (about {1}–{2}, by the lyrics and the score): the song stops where the window ends. Longer: Long songs · Pieces (experimental).")
       .replace("{0}", clock(length)).replace("{1}", clock(win[0])).replace("{2}", clock(win[1]));
   }
+  function paintOutHint() {
+    var longOne = longNote();
+    $("outHint").textContent = (STATE.outNotes || []).map(tr).concat(longOne ? [longOne] : []).join(" ");
+  }
+  // HERESY 2942 (Viktor 22.11.2026: «предусмотреть максимальные лимиты на выхлоп модели, в блоке семплинга подправить сторожа на макс токенов»): what the
+  // window really leaves the music of the song at hand, counted by the lab with the backbone's own BPE (lab/song_room.py): the style, the lyrics and the
+  // score (given: exact; one the model writes: at the Studio's planned scores' 8.64 tokens a second of plan) take their part of the 24,576 first, and
+  // whole (the default) the sound half holds the song in one window of what is left. Asked a moment after the texts, the mode or Max length change;
+  // said beside Max length (its chip, amber when Max length goes past it) and under Sound and output. Not counted (no backbone yet): the old range
+  var room = { key: "", asked: "", data: null, why: "", timer: 0 };
+  function roomAsk() {
+    var cot = currentCot(), style = styleOneLine($("style").value);
+    var lv = window.YueLoras && YueLoras.value ? YueLoras.value() : [];
+    var trig = lv.length && YueLoras.triggersFor ? YueLoras.triggersFor(style) : [];   // the adapters' words go into the style as buildRequest sends it
+    if (trig.length) style = (style ? style.replace(/[\s,.;]+$/, "") + ", " : "") + trig.join(", ");
+    return { style: style, lyrics: $("lyrics").value, abc: cot === "off" ? "" : $("abc").value.trim(), cot: cot, length: parseFloat($("maxLength").value) || 0,
+             context: STATE.settings && +STATE.settings.max_seq ? +STATE.settings.max_seq : fullContext() };
+  }
+  function roomNow() { return room && room.data && room.key === JSON.stringify(roomAsk()) ? room.data : null; }
+  function roomSoon() {
+    if (!room) return;                                 // a paint before this part of the page has run
+    clearTimeout(room.timer);
+    room.timer = setTimeout(function () {
+      var key = JSON.stringify(roomAsk());
+      if (key === room.key || key === room.asked) return;
+      room.asked = key;
+      fetch("/lab/song/room", { method: "POST", headers: { "Content-Type": "application/json" }, body: key })
+        .then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
+        .then(function (d) {
+          if (room.asked !== key) return;
+          room.key = key; room.data = d && d.ok ? d : null; room.why = d && !d.ok ? String(d.error || "") : "";
+          paintRoom();
+        });
+    }, 700);
+  }
+  window.ruachSongRoom = function () { return { now: roomNow(), why: room.why, ask: roomAsk() }; };   // for the checks
+  function paintRoom() {
+    var hi = knobInput("semantic", "max_tokens"), w = hi && hi.closest(".knob"), host = w && w.querySelector("span"), R = roomNow();
+    if (host) {
+      var chip = host.querySelector(".knob-room");
+      if (!R) { if (chip) chip.remove(); }
+      else {
+        if (!chip) { chip = document.createElement("span"); chip.className = "knob-room mono"; chip.setAttribute("translate", "no"); host.appendChild(chip); }
+        var length = parseFloat($("maxLength").value), over = isFinite(length) && length > R.whole + 0.5;
+        chip.textContent = "\u2248 " + clock(R.whole);
+        chip.classList.toggle("is-over", over);
+        chip.dataset.tip = (R.score_known
+          ? tr("The window holds about {0} of this song's music whole: its style and lyrics take {1} tokens, its score {2}, of the {3}.")
+          : tr("The window holds about {0} of this song's music whole ({4}–{5} by the score the model writes): its style and lyrics take {1} tokens of the {3}."))
+          .replace("{0}", clock(R.whole)).replace("{1}", R.text).replace("{2}", R.score).replace("{3}", R.context).replace("{4}", clock(R.whole_low)).replace("{5}", clock(R.whole_high)) +
+          (over ? " " + tr("Max length goes past it: the song stops where the window ends.") : "");
+      }
+    }
+    paintOutHint();
+  }
+  document.addEventListener("input", function (e) { var id = e.target && e.target.id; if (id === "style" || id === "lyrics" || id === "abc") roomSoon(); });
+  document.addEventListener("change", function (e) { if (e.target && e.target.name === "cot") roomSoon(); });
   // HERESY 1169: Songs × Sounds beside Generate, and how many takes that makes
   function paintCounts() {
     // HERESY 2137 (the audit of 06.11.2026): loaded codes render one song whatever Probes says (queueVersions), so the count says one and the slider
@@ -2167,6 +2238,23 @@
     var n = s.tokens || s.done || 0, secs = s.seconds || (s.t0 && s.t1 ? (s.t1 - s.t0) / 1000 : 0);
     return n ? { tokens: n, seconds: Math.round(secs * 10) / 10 } : null;
   }
+  // HERESY 2959 (the chord guard's first level, the plan's item M): a song the engine stopped because a chord swallowed its notes («"Ea4g2f2e8-|"»,
+  // score-guard.h) is planned again with a new music seed, once for its words; a seed the user fixed stays theirs (the Babel window then, as before)
+  var CHORD_AGAIN = {};
+  function chordAgain(job, message) {
+    var req = job && job.request;
+    if (!/swallowed notes/.test(message || "") || !req || job.kind !== "song" || job.external || /^\d+$/.test(String(req.lm_seed || "").trim())) return false;
+    var sig = [req.title, req.style, String(req.lyrics || "").length, String(req.abc || "").length].join("|");
+    if (CHORD_AGAIN[sig]) return false;
+    CHORD_AGAIN[sig] = true;
+    var body = Object.assign({}, req), versions = Math.max(1, parseInt(req.lm_batch_size, 10) || 1);
+    delete body.lm_seed; delete body.lm_batch_size;
+    toast(tr("A chord in the plan swallowed its notes: the model plans it again with a new music seed"), "warn");
+    chordAgain.last = { title: body.title, seed: body.lm_seed, batch: body.lm_batch_size, versions: versions };   // what was queued, for the checks
+    queueVersions(body, versions, null, { title: body.title, style: body.style, lyrics: body.lyrics, abc: body.abc || "" });
+    return true;
+  }
+  window.ruachChordAgain = chordAgain;           // for the checks
   function planAgainOrStop(pending, why, again, job, abc) {
     var fixed = /^\d+$/.test(String(pending.body.lm_seed || "").trim());
     addLogLine("[Plan] the planned score is broken, not sung: " + why, true);
@@ -2436,10 +2524,65 @@
     g.hidden = !diff;
     g.textContent = diff ? "\u26a0 " + diff + " " + tr("At other strengths the music may part from the score (Industrial Rock and instrumentals most): set them back, or plan it anew.") : "";
   }
+  // HERESY 2959 (Viktor 22.11.2026: «Будешь ставить сторожа аккордов в Студию? В продакшн»; the plan's item M, its second level): what a plan's chords
+  // say, without a word of automation (chromatic music does both on purpose): double sharps or flats in a chord (the transcriber spells its roots
+  // with sharps alone and a bass with at most E# B# C## F## G## Bb Eb Ab, so one in a plan the model wrote is worth a look); and the key's tonic chord
+  // swinging with its stronger semitone neighbour of the same kind bar by bar: the chords of the voice that holds the most, those two kept, repeats
+  // collapsed, more than eight switches (retx's block_or_flip.py, 22.11.2026). A block (one switch or a few: a modulation, a last chorus lifted;
+  // Viktor 22.11: «есть музыка, которая переходит с одной партии в другую») is no warning
+  var CG_NAT = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  function cgPc(n) {
+    var b = CG_NAT[n.charAt(0)], a = n.slice(1);
+    return b === undefined ? null : (b + ({ "#": 1, "##": 2, b: -1, bb: -2 }[a] || 0) + 12) % 12;
+  }
+  function chordGuard(abc) {
+    var by = {}, voice = "", doubles = [], seen = {}, CH = /^([A-G](?:##|bb|#|b)?)(m(?!aj))?/;
+    String(abc || "").split("\n").forEach(function (line) {
+      if (/^V:/.test(line)) { voice = line.slice(2).trim().split(/\s+/)[0] || ""; return; }
+      if (/^%/.test(line) || /^[A-Za-z]:/.test(line)) return;
+      (line.match(/"[^"\n]*"/g) || []).forEach(function (q) {
+        var c = q.slice(1, -1), m = CH.exec(c);
+        if (!m) return;
+        if ((/^[A-G](##|bb)/.test(c) || /\/[A-G](##|bb)/.test(c)) && !seen[c]) { seen[c] = 1; doubles.push(c); }
+        (by[voice] = by[voice] || []).push({ k: cgPc(m[1]) + (m[2] ? "m" : ""), name: m[1] + (m[2] || "") });
+      });
+    });
+    var seq = Object.keys(by).map(function (v) { return by[v]; }).sort(function (a, b) { return b.length - a.length; })[0] || [];
+    var key = /^K:\s*([A-G][b#]?)(m?)(?![a-z])/m.exec(String(abc || "")), flip = null;
+    if (key) {
+      var t = cgPc(key[1]), minor = key[2] ? "m" : "", tk = t + minor, up = ((t + 1) % 12) + minor, dn = ((t + 11) % 12) + minor, cnt = {}, name = {};
+      seq.forEach(function (c) { cnt[c.k] = (cnt[c.k] || 0) + 1; if (!name[c.k]) name[c.k] = c.name; });
+      var nk = (cnt[up] || 0) >= (cnt[dn] || 0) ? up : dn;
+      if ((cnt[tk] || 0) >= 4 && (cnt[nk] || 0) >= 4) {
+        var lab = seq.map(function (c) { return c.k; }).filter(function (k) { return k === tk || k === nk; }), sw = 0;
+        for (var i = 1; i < lab.length; i++) if (lab[i] !== lab[i - 1]) sw++;
+        if (sw > 8) flip = { a: name[tk], b: name[nk], switches: sw };
+      }
+    }
+    return { doubles: doubles, flip: flip };
+  }
+  window.ruachChordGuard = chordGuard;   // for the checks
+  function chordWords(r) {
+    var out = [];
+    if (r.flip) out.push(tr("The chords swing between {0} and {1} bar by bar ({#2} times): the plan may have split its key.").replace("{0}", r.flip.a).replace("{1}", r.flip.b).replace("{#2}", r.flip.switches));
+    if (r.doubles.length) out.push(tr("Chords with a double sharp or flat: {0}.").replace("{0}", r.doubles.slice(0, 6).join(", ")));
+    if (out.length) out.push(tr("Chromatic music does this on purpose too: hear it first, or rewrite the score."));
+    return out.join(" ");
+  }
+  function paintChordGuard() {
+    var g = $("chordGuard");
+    if (!g) return;
+    var words = currentCot() !== "off" && $("abc").value.trim() ? chordWords(chordGuard($("abc").value)) : "";
+    g.hidden = !words;
+    if (!words) { g.textContent = ""; return; }
+    g.innerHTML = '<span class="cg-say"></span> <button type="button" class="btn ghost small cg-again">' + escape(tr("Rewrite the score")) + "</button>";
+    g.firstChild.textContent = "\u26a0 " + words;
+    g.querySelector(".cg-again").addEventListener("click", function () { $("planBtn").click(); });   // the plan written anew, after its own question
+  }
   function keepScoreOpen() { if (currentCot() === "full" && $("abc").value.trim()) $("scoreDrawer").open = true; }
   function scoreSays() { if (window.YueLoras && YueLoras.scoreSays) YueLoras.scoreSays(); }   // HERESY 1623
-  $("abc").addEventListener("input", function () { keepScoreOpen(); paintScoreGuard(); scoreSays(); });
-  all('input[name="cot"]').forEach(function (radio) { radio.addEventListener("change", function () { keepScoreOpen(); paintScoreGuard(); scoreSays(); }); });
+  $("abc").addEventListener("input", function () { keepScoreOpen(); paintScoreGuard(); scoreSays(); paintChordGuard(); });   // HERESY 2959
+  all('input[name="cot"]').forEach(function (radio) { radio.addEventListener("change", function () { keepScoreOpen(); paintScoreGuard(); scoreSays(); paintChordGuard(); }); });
   $("scoreDrawer").addEventListener("toggle", function () {
     if (this.open || currentCot() !== "full" || !$("abc").value.trim()) return;
     this.open = true;
@@ -3449,6 +3592,22 @@
   }
   window.ruachWsGuard = wsGuard;
 
+  // HERESY 2942: the engine refuses a stage whose floor stands above its ceiling with a 400 («[Sampling] FATAL: semantic preset outside the protocol
+  // bounds», build/src/sampling.h: min_tokens ≤ max_tokens): every request leaves the page with each floor at most its ceiling (the engine's own
+  // defaults where the request names none), and one that was lowered is said, never sent to be refused
+  function floorsUnderCeilings(sent) {
+    ["abc", "semantic"].forEach(function (g) {
+      var k = g + "_sampling", ss = sent[k] && typeof sent[k] === "object" ? sent[k] : {};
+      var lo = ss.min_tokens !== undefined ? +ss.min_tokens : +samplingDefault(g, "min_tokens"), hi = ss.max_tokens !== undefined ? +ss.max_tokens : +samplingDefault(g, "max_tokens");
+      if (!(isFinite(lo) && isFinite(hi) && lo > hi)) return;
+      sent[k] = Object.assign({}, ss, { min_tokens: Math.max(0, Math.floor(hi)) });
+      toast(g === "semantic"
+        ? tr("The music's Min length {0} stood above its Max length {1}: sent with the floor at {1}").replace("{0}", clock(lo / FRAME_RATE)).split("{1}").join(clock(hi / FRAME_RATE))
+        : tr("The score's Min tokens {0} stood above its Max tokens {1}: sent with the floor at {1}").replace("{0}", lo).split("{1}").join(hi));
+    });
+    return sent;
+  }
+  window.ruachFloorsUnderCeilings = floorsUnderCeilings;   // for the checks
   function submitJob(body, meta) {
     // HERESY 2799: every way that sings a style (Sing, a section again, Extend, a plan, a vocal over a backing) stops past 800 characters without
     // spaces, before anything is asked or sent; the form's own words when they are the source (the adapters' words added to the request are not the field)
@@ -3469,6 +3628,7 @@
       if (!ok) throw new Error("The synthesis waits: the Studio\u2019s card is training");
       // HERESY 1877: a blank seed drawn here, as the run goes (the body kept blank: a retry or a regeneration draws again)
       var sent = Object.assign({}, body);
+      floorsUnderCeilings(sent);                        // HERESY 2942
       if (sent.lm_seed === undefined || sent.lm_seed === null || sent.lm_seed === "") sent.lm_seed = shortSeed();
       if (sent.seed === undefined || sent.seed === null || sent.seed === "") sent.seed = shortSeed();
       // HERESY 2463: one process on the Intel Arc at a time: the Studio's own writer leaves it before the song (the lab says when it did)
@@ -3613,6 +3773,7 @@
     if (/^Broken score: /.test(message) && !toasted["babel" + job.id]) {
       toasted["babel" + job.id] = true;
       if (planRefused(job, message.replace(/^Broken score: /, ""), (data && data.abc) || "")) return;   // HERESY 1623
+      if (chordAgain(job, message)) return;          // HERESY 2959
       seedBroke((job.resolved || {}).lm_seed || (job.request || {}).lm_seed, (job.request || {}).loras, message.replace(/^Broken score: /, ""));
       if (job.external) {                             // HERESY 1765: someone else's run: said, no window over this page, nothing of the form changed
         toastOnce("babel-ext:" + Math.floor(Date.now() / 60000), tr("A run started elsewhere stopped on a broken score: {0}. Nothing was sung, nothing here changed").replace("{0}", "«" + ((job.request && job.request.title) || job.title || job.id) + "»"), "bad");
@@ -3751,6 +3912,11 @@
       var watching = STATE.job === job && !STATE.take && count, playing = isPlaying();
       if (!job.lost) toastOnce(job.id, "Song complete — " + job.title + (count > 1 ? " (" + count + " takes)" : "") +
                 (watching && playing ? ". What you are playing keeps playing; ▶ Play this song when you are ready." : ""), "good");
+      // HERESY 2959: the plan's chords, said with «Rewrite the score» (the take made again with new seeds, after its own question)
+      if (data.abc && !job.lost && job.kind === "song" && job.takes.length && !toasted[job.id + ":chords"]) {
+        var cgSaid = chordWords(chordGuard(data.abc));
+        if (cgSaid) { toasted[job.id + ":chords"] = true; toast("\u26a0 " + cgSaid, "warn", { label: tr("Rewrite the score"), fn: function () { regenAsk([job.takes[0]]); } }); }
+      }
       // HERESY 2433 (Viktor 12.11.2026: «K: не будем браковать сразу, а предупреждать»): a score without its key line is sung as written, and said
       if (data.score_warning && !job.lost) toastOnce(job.id + ":nokey", /no bar of the score holds a note/.test(data.score_warning) ? "No bar of the score holds a note: sung as written, the music had no plan to follow. Another music seed writes another score." : "No key line in the score: sung as written", "warn");   // HERESY 2832: a plan with no note, said as such
       // HERESY 2509: a song the window ended, not the song itself: said, with the way past it; 2666: Extend on the take is that way too
@@ -5213,8 +5379,8 @@
       ["Sample rate", p.sample_rate ? (p.sample_rate / 1000) + " kHz" : "—", ""],
       ["Context", p.context ? p.context.toLocaleString(loc()) + " tokens" : "—", ""],
       ["Songs per pass", String(STATE.maxBatch), ""],
-      ["Transcriber", STATE.transcriber ? "loaded" : "not started with one", STATE.transcriber ? "ok" : "no"],
-      ["Library", STATE.library ? "saved on disk" : "off (no --outputs)", STATE.library ? "ok" : "no"],
+      ["Transcriber", STATE.transcriber ? "loaded" : "not in this Studio yet", STATE.transcriber ? "ok" : "no"],   // HERESY 2955: plain words, no command line
+      ["Library", STATE.library ? "saved on disk" : "off: this server keeps none", STATE.library ? "ok" : "no"],
       ["Page settings", window.HeresySettings && window.HeresySettings.reachable() ? "on disk · user/settings.json" : "this browser only (lab is down)",   // HERESY 1027
        window.HeresySettings && window.HeresySettings.reachable() ? "ok" : "no"]
     ];
@@ -5224,18 +5390,38 @@
     YueVaes.set(STATE.vaes, STATE.defaultVae);
     paintSliderCard();
     paintStrip();
-    // Transcription needs the server's transcriber.
-    $("coverFromAudio").disabled = !STATE.transcriber;
-    $("coverFile").disabled = !STATE.transcriber;
-    $("coverTask").disabled = !STATE.transcriber;
-    if (!(BACK && BACK.busy)) $("backRead").disabled = $("backSing").disabled = !STATE.transcriber;   // HERESY 2677: a backing is read by the transcriber
-    if (!STATE.transcriber) {
-      $("coverAudioStatus").textContent = "The server runs without a transcriber: start it with --transcriber to cover a recording.";
-    } else if (!$("coverAudioStatus").dataset.busy) {
-      $("coverAudioStatus").textContent = "Ready. Runs on the server, in its queue like a song.";
-    }
+    paintCoverPacks();
     paintEngine();
   }
+  // Transcription needs the server's transcriber. HERESY 2955 (a tester's Windows report of 23.11.2026: From a Recording's file picker did nothing, and
+  // its line told him to start the server with --transcriber, words for no one who starts the Studio from its icon or Pinokio): without it every
+  // control of a recording's cover and of a backing is off and looks off (app.css), and the line under them says in plain words what is missing, with
+  // its way to Engine → Models (HeresyWeights.packSay); Match sections needs Whisper too, the lab's (HeresyWeights.has)
+  var PACK_LINES = { cover: "Covering a recording needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.", back: "Reading a backing needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.",
+                     match: "Ready to transcribe. Match sections needs Whisper large-v3, which this Studio does not have yet.", score: "Writing a score from the sound needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet." };
+  function hasPack(p) { return !window.HeresyWeights || !window.HeresyWeights.has || window.HeresyWeights.has(p); }
+  function packSay(el, words, pack, v) { if (window.HeresyWeights && window.HeresyWeights.packSay) window.HeresyWeights.packSay(el, words, pack, v); else if (el && words) el.textContent = words; }
+  function packToast(words, pack) {
+    toast(words, "bad", window.HeresyWeights && window.HeresyWeights.openAt ? { label: "Engine → Models", fn: function () { window.HeresyWeights.openAt(pack); } } : null);
+  }
+  function paintCoverPacks() {
+    var noTr = !STATE.transcriber, noW = !hasPack("whisper"), st = $("coverAudioStatus"), bs = $("backStatus");
+    $("coverFile").disabled = $("coverTask").disabled = $("transcriberModes").disabled = noTr;
+    if (!st.dataset.busy) { $("coverFromAudio").disabled = noTr; $("coverMatch").disabled = noTr || noW; }
+    if (!(BACK && BACK.busy)) $("backRead").disabled = $("backSing").disabled = noTr;   // HERESY 2677: a backing is read by the transcriber
+    ["backFile", "backSplit", "backTake", "backPick"].forEach(function (id) {
+      var el = $(id);
+      if (!el || el.disabled === noTr) return;
+      el.disabled = noTr;
+      if (el.dataset.hcPick === "1" && window.HeresyChoices) window.HeresyChoices.enhance(el);   // the Studio's picker drawn again, off or on
+    });
+    if (noTr) packSay(st, PACK_LINES.cover, "transcriber");
+    else if (!st.dataset.busy && noW) packSay(st, PACK_LINES.match, "whisper");
+    else if (!st.dataset.busy) { packSay(st, ""); st.textContent = "Ready. Runs on the server, in its queue like a song."; }
+    if (noTr && !(BACK && BACK.busy)) packSay(bs, PACK_LINES.back, "transcriber");
+    else packSay(bs, "");
+  }
+  window.addEventListener("ruach-packs", function () { if (STATE.props) paintCoverPacks(); });
 
   // HERESY 1960 (Viktor 30.10.2026: «флагирование и отключение адаптеров, которые не на своих моделях/файнтюнах тренились как несовместимые»):
   // each adapter's base against the engine's model, asked of the lab when the model or the catalog changes; the lab away, nothing is flagged
@@ -5565,9 +5751,10 @@
     notes.push($("setKeepLoaded").checked ? "Models stay in GPU memory between songs." : "Each stage leaves GPU memory when it is done.");
     // HERESY 1287 (Viktor 09.10.2026: «BF16 не скачалась… можно ли будет со студии докачать BF16?»): where the full backbone comes from
     if (STATE.settings && (STATE.settings.models || []).length && (STATE.settings.models || []).indexOf("BF16") < 0) {
-      notes.push("BF16 (7.2 GB) is not on this machine: Pinokio's «More models» fetches it, or heresy/fetch-heresy.sh --backbone BF16; the Studio offers it after its next start.");
+      notes.push("BF16 (7.2 GB) is not in this Studio yet: Engine → Models and LoRAs fetches it under Backbone, and the Studio offers it after its next start.");   // HERESY 2955: no command line
     }
     $("computeHint").textContent = notes.map(tr).join(" ");   // HERESY 1166
+    if (/^BF16 \(/.test(notes[notes.length - 1]) && window.HeresyWeights && window.HeresyWeights.packButton) $("computeHint").insertAdjacentHTML("beforeend", " " + window.HeresyWeights.packButton("backbone", "BF16"));
   }
 
   function readSettingsForm() {
@@ -5869,11 +6056,20 @@
   // попапом для свежих инсталляций. С минигайдом там же, и чекбокс "Моё решение осознанное"»): who may open the Studio, the engine's
   // own gate (GET/POST /access, user/access.json): this computer only, private networks (1114's, the default) or the networks listed.
   // Engine → Security changes it; a studio whose user never decided asks at its start, before the machine's scan
-  var ACCESS = { a: null };
+  var ACCESS = { a: null, listen: null };          // HERESY 2936: listen, the lab's word on where the engine listens and on which system
   var ACCESS_MODES = [
     ["local", "This computer only", "the safest: no other machine can open it, not even your phone"],
     ["private", "This computer and private networks", "your home or office network, a VPN or Tailscale; a café's, a hotel's or a train's Wi-Fi is a private network too"],
     ["list", "This computer and the networks I list", "only the networks you trust, written as 10.0.0.0/24, a comma between them"]];
+  // HERESY 2936 (Viktor 21.11.2026: «Для Windows по умолчанию только этот компьютер, конечно… Тогда запроса нет»): Windows and macOS listen on
+  // this computer alone until private networks are chosen and the Studio starts again; their firewall then asks once
+  function accessOs() { var s = ACCESS.listen && ACCESS.listen.system; return s === "windows" ? "Windows" : s === "macos" ? "macOS" : ""; }
+  function accessLoopback() { var e = ACCESS.listen && ACCESS.listen.engine; return !!e && /^(127\.|::1$|localhost$)/.test(e.host || ""); }
+  function accessFirewall(mode) { return mode !== "local" && accessOs() ? " \u00b7 " + tr("{0} asks once whether to let the Studio through its firewall, when it starts again").replace("{0}", accessOs()) : ""; }
+  function accessStill(a) {                            // chosen open, still listening on this computer alone: a restart opens it
+    return a && a.mode !== "local" && accessOs() && accessLoopback() ? tr("The Studio still listens on this computer alone: restart it ({0}) to open it to your network, and {1} asks once about its firewall.")
+      .replace("{0}", ACCESS.listen.launcher === "native" ? tr("its icon beside the clock → Restart the Studio") : tr("close it and start it again")).replace("{1}", accessOs()) : "";
+  }
   function accessYou(a) {
     if (!a || !a.you) return "";
     return (a.you_local ? tr("You open it from {0}: this computer") : a.you_private ? tr("You open it from {0}: a private network") : tr("You open it from {0}"))
@@ -5888,7 +6084,7 @@
     return '<div class="acc-modes" role="radiogroup" aria-label="' + escape(tr("Who may open the Studio")) + '">' +
       ACCESS_MODES.map(function (m) {
         return '<label class="acc-mode"><input type="radio" name="' + name + '" value="' + m[0] + '"' + (a && a.mode === m[0] ? " checked" : "") + " />" +
-          '<span><b>' + escape(tr(m[1])) + "</b><small>" + escape(tr(m[2])) + "</small></span></label>";
+          '<span><b>' + escape(tr(m[1])) + "</b><small>" + escape(tr(m[2]) + accessFirewall(m[0])) + "</small></span></label>";   /* HERESY 2936 */
       }).join("") + "</div>" +
       '<div class="acc-nets"><input type="text" class="acc-nets-in" spellcheck="false" autocomplete="off" placeholder="10.0.0.0/24, 172.16.0.0/24" value="' +
       escape(((a && a.nets) || []).join(", ")) + '" aria-label="' + escape(tr("The networks I list")) + '" />' +
@@ -5963,7 +6159,8 @@
     $("accForm").innerHTML = accessFormHtml(a, "accMode");
     var notes = [];
     if (a.public) notes.push(tr("RUACH_ALLOW_PUBLIC=1 is set: the Studio answers anyone, whatever is chosen here."));
-    if (!a.kept) notes.push(tr("This engine keeps no settings file, so it answers this computer and private networks; start it with ./start.sh to choose."));
+    if (!a.kept) notes.push(tr("This engine keeps no settings file, so it answers this computer and private networks; started the Studio's way (its icon, Pinokio or start.sh), it lets you choose."));   // HERESY 2955
+    if (accessStill(a)) notes.push(accessStill(a));   // HERESY 2936
     why.hidden = !notes.length;
     why.textContent = notes.join(" ");
     accessWire($("accForm"), "accMode", function (v) {
@@ -5972,7 +6169,9 @@
     });
   }
   function refreshAccess() {
-    return api("/access").then(function (a) { paintAccess(a); return a; }).catch(function () { paintAccess(null); return null; });
+    var listen = fetch("/lab/engine/where").then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });   // HERESY 2936, 2936b: an older lab says nothing
+    return Promise.all([api("/access"), listen]).then(function (x) { ACCESS.listen = x[1]; paintAccess(x[0]); return x[0]; })
+      .catch(function () { paintAccess(null); return null; });
   }
   if ($("accSave")) $("accSave").addEventListener("click", function () {
     var v = accessRead($("accForm"), "accMode"), b = this;
@@ -5981,6 +6180,7 @@
       if (!a) { paintAccess(ACCESS.a); return; }
       paintAccess(a);
       toast(tr("Kept: {0}").replace("{0}", accessSay(a)), "good");
+      if (accessStill(a)) toast(accessStill(a), "warn");   // HERESY 2936
     }).catch(function (e) { toast(tr("Not kept: {0}").replace("{0}", e.message), "bad"); paintAccess(ACCESS.a); });
   });
   // the first start's question: a mini guide, the three choices, «My decision is a conscious one»; Later asks again at the next start
@@ -5991,7 +6191,8 @@
       back.innerHTML = '<div class="hd-box acc-box" role="dialog" aria-modal="true" aria-label="' + escape(tr("Who may open this Studio?")) + '">' +
         '<div class="hd-title">' + escape(tr("Who may open this Studio?")) + "</div>" +
         '<div class="acc-guide">' + [
-          tr("The Studio listens on port {0} of every network this computer is on. Whoever opens its page can do everything you can: make and delete songs, read your lyrics, run your graphics cards, fetch models with your keys.").replace("{0}", port),
+          (accessOs() && accessLoopback() ? tr("The Studio listens on this computer alone now (port {0}): no other computer or phone can open it, and {1} has nothing to ask of its firewall. Opened to a network, whoever opens its page there can do everything you can: make and delete songs, read your lyrics, run your graphics cards, fetch models with your keys.").replace("{1}", accessOs())   /* HERESY 2936: Windows, macOS */
+            : tr("The Studio listens on port {0} of every network this computer is on. Whoever opens its page can do everything you can: make and delete songs, read your lyrics, run your graphics cards, fetch models with your keys.")).replace("{0}", port),
           tr("At home behind your router, private networks are what you want: your laptop and phone reach the Studio, the internet does not."),
           tr("On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks."),
           tr("Engine → Security changes it any time. The internet at large is never let in, unless the Studio is started with RUACH_ALLOW_PUBLIC=1.")
@@ -6023,6 +6224,7 @@
           if (!got) { gate(); return; }
           paintAccess(got);
           toast(tr("Kept: {0}").replace("{0}", accessSay(got)), "good");
+          if (accessStill(got)) toast(accessStill(got), "warn");   // HERESY 2936
           close(got);
         }).catch(function (e) { toast(tr("Not kept: {0}").replace("{0}", e.message), "bad"); gate(); });
       });
@@ -6775,6 +6977,7 @@
   function transcribeTake(take) {
     var name = take.name;
     if (transcribing[name]) return transcribing[name];
+    if (!STATE.transcriber) return Promise.reject(new Error(PACK_LINES.score));   // HERESY 2955: the engine has no /transcribe without it (a bare 404)
     var p = fetch("/transcribe?take=" + encodeURIComponent(name) + transcriberQuery(), { method: "POST" })   // HERESY 2359: the chosen transcriber
       .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error(b.error || r.status); return b; }); })
       .then(function (job) {
@@ -6801,6 +7004,7 @@
   $("scoreFromSoundBtn").addEventListener("click", function () {
     var take = STATE.take, btn = this, run = $("scoreFromSoundRun"), t0 = Date.now(), tick = 0;
     if (!take) return;
+    if (!STATE.transcriber) return packToast(PACK_LINES.score, "transcriber");   // HERESY 2955
     btn.disabled = true;
     tick = setInterval(function () { run.textContent = "the transcriber is writing it… " + Math.round((Date.now() - t0) / 1000) + " s"; }, 1000);
     transcribeTake(take).then(function (res) {
@@ -7042,7 +7246,9 @@
     }).then(function (req) {
       var toks = String(req.semantic_tokens || "").split(",").filter(function (t) { return t.trim(); });
       if (!toks.length) throw new Error("This take's request carries no music codes to keep");
-      var total = Math.min(900, Math.ceil(toks.length / FRAME_RATE + more)), body = Object.assign({}, req);
+      // HERESY 2942: the music model sings 10:00 at most; a take that leaves less than 0:15 to it is not extended (its codes alone would fill the budget)
+      if (toks.length / FRAME_RATE + 15 > lengthCap()) throw new Error(tr("{0} long: Extend goes to {1} at most").replace("{0}", clock(toks.length / FRAME_RATE)).replace("{1}", clock(lengthCap())));
+      var total = Math.min(lengthCap(), Math.ceil(toks.length / FRAME_RATE + more)), body = Object.assign({}, req);   // HERESY 2942: the music's cap (900 was Speech's)
       delete body.plan_only;
       delete body.semantic_tokens;
       delete body.abc;                                 // the score ends where the take ends: what comes after is written Direct
@@ -11000,7 +11206,7 @@
       lz().rows = [];                                   // HERESY 2671: the player's order and the guard read it
       var empty = STATE.favOnly ? "No favourites yet. Tap ☆ on a take to keep it here."      // HERESY 1169: one paragraph, no break
         : (STATE.library ? "No takes yet. Every finished song lands here."
-                         : "The server keeps no library (start it with --outputs). Songs made in this tab stay until it reloads.");
+                         : "The server keeps no library: songs made in this tab stay until it reloads.");   // HERESY 2955: no command line
       list.innerHTML = running + '<div class="lib-empty">' + empty + "</div>";
       return;
     }
@@ -11568,6 +11774,7 @@
       if (refinedMode(input.value) && !STATE.transcriberRefined) input.closest("label").dataset.tip = tr("{0} is not on this machine: Engine → Models and LoRAs fetches it").replace("{0}", "SheetSage2-Refined");   // HERESY 2388: a download of its own there
     });
     $("transcriberModes").checked = recall("yue2.transcriberModes") === "1";
+    packSay($("transcriberMiss"), STATE.transcriber && !STATE.transcriberRefined ? "Refined needs SheetSage2-Refined, which this Studio does not have yet." : "", "refined");   // HERESY 2955
     $("transcriberModesRow").hidden = !refinedMode(want);
     $("transcriberModesRow").style.display = !refinedMode(want) ? "none" : "";   // a label.check is a flex box: hidden alone does not hide it
   }
@@ -11602,7 +11809,7 @@
   $("transcriberModes").addEventListener("change", function () { store("yue2.transcriberModes", this.checked ? "1" : "0"); });
 
   $("coverFromAudio").addEventListener("click", function () {
-    if (!STATE.transcriber) return toast("The server runs without a transcriber (start it with --transcriber)", "bad");
+    if (!STATE.transcriber) return packToast(PACK_LINES.cover, "transcriber");   // HERESY 2955
     var file = $("coverFile").files[0];
     if (!file) return toast("Choose a recording first", "bad");
     var task = $("coverTask").value, button = this, transcriber = selectedTranscriber();
@@ -11638,7 +11845,7 @@
   $("transcribeTake").addEventListener("click", function () {
     var take = STATE.take, button = this;
     if (!take || take.session) return;
-    if (!STATE.transcriber) return toast("The server runs without a transcriber (start it with --transcriber)", "bad");
+    if (!STATE.transcriber) return packToast(PACK_LINES.score, "transcriber");   // HERESY 2955
     var task = $("coverTask").value, name = displayTitle(take), transcriber = selectedTranscriber();
     button.disabled = true;
     $("coverDrawer").open = true;
@@ -12471,6 +12678,7 @@
     if ($("view-engine").classList.contains("is-hidden")) show("engine");
     engineTab(tab);
   }
+  window.ruachOpenEngineAt = openEngineAt;          // HERESY 2955: a missing model's button opens Models and LoRAs at its row (heresy-weights.js)
   function paintAssistLine(st) {
     var el = $("assistLine");
     if (!el) return;
@@ -13158,7 +13366,7 @@
   }
   function applyLook() {
     var look = savedLook(), root = document.documentElement;
-    ["hover", "glow", "motion", "corners"].forEach(function (key) {
+    ["hover", "glow", "motion", "corners", "icons"].forEach(function (key) {   // HERESY 2950: icons too
       if (typeof look[key] === "string") root.dataset[key] = look[key]; else delete root.dataset[key];
     });
   }
@@ -13172,6 +13380,7 @@
     var look = savedLook();
     Object.keys(LOOK_CHECKS).forEach(function (key) { $(LOOK_CHECKS[key][0]).checked = look[key] === LOOK_CHECKS[key][1]; });
     $("lookCorners").value = look.corners || "";
+    if ($("lookIcons")) $("lookIcons").value = look.icons === "duo" ? "duo" : "";   // HERESY 2950
     $("lookWhen").value = look.when || "";              // HERESY 1720
     $("lookTheme").value = YueThemes.current();
   }
@@ -13209,6 +13418,7 @@
   }
   applyScheme();
   $("lookCorners").addEventListener("change", function () { saveLook("corners", this.value || null); });
+  if ($("lookIcons")) $("lookIcons").addEventListener("change", function () { saveLook("icons", this.value === "duo" ? "duo" : null); });   // HERESY 2950
   $("lookWhen").addEventListener("change", function () { saveLook("when", this.value || null); whenFlip = {}; repaintWhen(); });   // HERESY 1720
   Object.keys(LOOK_CHECKS).forEach(function (key) {
     $(LOOK_CHECKS[key][0]).addEventListener("change", function () { saveLook(key, this.checked ? LOOK_CHECKS[key][1] : null); });
@@ -14157,7 +14367,8 @@
       !take.session && !bulk && window.HeresyLineage ? { icon: "\ud83c\udf33", label: "Family tree…", hint: "where it came from and what came of it", action: function () { window.HeresyLineage.open(name); } } : null,   // HERESY 1988
       // HERESY 1315: the lyrics' sections placed on the wave by Whisper's hearing (once; the lab keeps it)
       !take.session && !bulk && !RDT && taggedParts(take.lyrics) >= 2 ? { icon: "\u00a7", label: sectionsTimed[name] ? "Find the sections by ear again" : "Find the sections by ear",
-        hint: sectionsAsked[name] === "running" ? "being heard now" : "Whisper hears the words; about half a minute on a card", disabled: sectionsAsked[name] === "running", action: function () {
+        hint: !hasPack("whisper") ? "it needs Whisper large-v3, which this Studio does not have yet: Engine → Models" : sectionsAsked[name] === "running" ? "being heard now" : "Whisper hears the words; about half a minute on a card",
+        disabled: sectionsAsked[name] === "running" || !hasPack("whisper"), action: function () {   // HERESY 2955
           toast("Hearing the words of " + displayTitle(take) + "\u2026");
           timeSections(name, !!sectionsTimed[name]).then(function (d) { toast("The sections found by ear (" + Math.round((d.heard || 0) * 100) + " % of the lines heard)"); },
             function (e) { toast("The sections were not found: " + e.message, "bad"); });
@@ -14260,39 +14471,57 @@
         { label: "Last", action: function () { HC.playlistAdd(bulk || [name], "last"); } },
         { label: "Random", hint: "anywhere in it", action: function () { HC.playlistAdd(bulk || [name], "random"); } }
       ].concat(HC.albumMenu ? HC.albumMenu(bulk || [name]) : []) } : null,   // HERESY 2050: and its albums
-      HC ? { icon: "▦", label: bulk ? "Workspaces of " + bulk.length : "Workspaces", items: wsNest(ws, ws.map(function (w) {
-        var whom = bulk || [name], on = bulk ? bulkRows.length > 0 && bulkRows.every(function (x) { return (x.workspaces || []).indexOf(w) >= 0; }) : inWs.indexOf(w) >= 0;
-        var said = bulk ? " " + bulk.length : "";
-        return wsTreeItem(w, ws, { checked: on, action: function () {   // HERESY 2040
-          var send = function () {
-            HC.act({ op: on ? "ws-remove" : "ws-add", workspace: w, names: whom }, on ? "Taken out of “" + w + "”" + said : "Added to “" + w + "”" + said);
-            if (bulk && on && HC.unselect && HC.place && HC.place() === w) HC.unselect(bulk);   // HERESY 1169 · 1239: out of the workspace open, out of the choice
-          };
-          // HERESY 2059b (Viktor 03.11.2026: «Пройтись по бару… и добавить недостающие действия в контекстное меню»): with several checked, the open workspace's
-          // ticked row asks the bar's question first (its guard: 1108 · 1473), as «Take N out of “…”» does; another workspace's row and one take act at once
-          if (!(bulk && on && HC.guard && HC.place && HC.place() === w)) return send();
-          HC.guard(tr("Take " + bulk.length + " takes out of “" + w + "”?") + "\n\n" + tr("They stay in the library and in any other workspace; only this workspace lets them go."),
-                   tr("Take them out"), bulk, true).then(function (ok) { if (ok) send(); });
-        } });
-      })).concat([{ sep: true }, { icon: "+", label: "New workspace…", action: function () {   // HERESY 2872: sections folded (wsNest)
-        var whom = bulk || [name];
-        window.HeresyDialog.prompt(bulk ? "A new workspace for the " + bulk.length + " checked takes" : "A new workspace for “" + displayTitle(take) + "”", "", { ok: "Make it", placeholder: "its name", name: { max: 56 } }).then(function (w) {   // HERESY 2462
-          w = (w || "").trim();
-          if (w) HC.act({ op: "ws-add", workspace: w, names: whom }, "Added to “" + w + "”");
-        });
-      } }]) } : null,
+      // HERESY 2940 (Viktor 22.11.2026: «По контекстному меню список пространств нужно доделать. Эмоджи туда также, и сортировку в том же синхроне с главным
+      // списком и сортировкой пространств, как в левой колонке Библиотекаря»): both lists are the column's own tree (HC.wsTree: its order by emoji, A to Z
+      // or most takes; what its chooser hides, the frozen and the empty; the archived under «Archived»), each row's emoji in a column of its own (the menu's em).
+      // HERESY 2941 («в ПЕРЕМЕСТИТЬ в пространство, если песня… в списке не должны появляться пространства из Чтеца, и наоборот. А вот ДОБАВИТЬ в
+      // пространство — это легитимно линковать и в другой мир»): Workspaces (an add) lists the take's own realm, then the other realm's under «Link into…»;
+      // Move to lists the take's own realm alone, and with takes of both realms checked it says why it moves none
+      HC ? { icon: "▦", label: bulk ? "Workspaces of " + bulk.length : "Workspaces", items: (function () {
+        var whom = bulk || [name], said = bulk ? " " + bulk.length : "", own = takesRealm(whom) || viewRealm(), other = own === "reader" ? "creator" : "reader";
+        var tick = function (w) { return bulk ? bulkRows.length > 0 && bulkRows.every(function (x) { return (x.workspaces || []).indexOf(w) >= 0; }) : (inWs || []).indexOf(w) >= 0; };
+        var row = function (w) {
+          var on = tick(w);
+          if (HC.wsFace(w).frozen) return { checked: on, muted: true, hint: "Frozen: unfreeze it first (⋯ beside its name)" };   // HERESY 1166: the lab refuses it
+          return { checked: on, action: function () {   // HERESY 2040
+            var send = function () {
+              HC.act({ op: on ? "ws-remove" : "ws-add", workspace: w, names: whom }, on ? "Taken out of “" + w + "”" + said : "Added to “" + w + "”" + said);
+              if (bulk && on && HC.unselect && HC.place && HC.place() === w) HC.unselect(bulk);   // HERESY 1169 · 1239: out of the workspace open, out of the choice
+            };
+            // HERESY 2059b (Viktor 03.11.2026: «Пройтись по бару… и добавить недостающие действия в контекстное меню»): with several checked, the open workspace's
+            // ticked row asks the bar's question first (its guard: 1108 · 1473), as «Take N out of “…”» does; another workspace's row and one take act at once
+            if (!(bulk && on && HC.guard && HC.place && HC.place() === w)) return send();
+            HC.guard(tr("Take " + bulk.length + " takes out of “" + w + "”?") + "\n\n" + tr("They stay in the library and in any other workspace; only this workspace lets them go."),
+                     tr("Take them out"), bulk, true).then(function (ok) { if (ok) send(); });
+          } };
+        };
+        var list = wsTreeMenu(own, row);
+        if (HC.realm && HC.realm() !== "off") {
+          var links = wsTreeMenu(other, row);
+          if (links.length) list = list.concat([{ sep: true }, { icon: "🔗", label: other === "reader" ? "Link into the Narrator's" : "Link into the Musician's",
+            checked: links.some(function (x) { return !!x.checked; }) || undefined, items: links }]);
+        }
+        return list.concat([{ sep: true }, { icon: "+", label: "New workspace…", action: function () {   // HERESY 2872: sections folded (wsNest)
+          newWsFor(bulk ? "A new workspace for the " + bulk.length + " checked takes" : "A new workspace for “" + displayTitle(take) + "”", "Make it").then(function (v) {
+            if (v) HC.act(Object.assign({ op: "ws-add", workspace: v.name, names: whom, realm: own }, v.emoji ? { emoji: v.emoji } : {}), "Added to “" + v.name + "”");   // HERESY 2941: the takes' realm
+          });
+        } }]);
+      })() } : null,
       // HERESY 1154 (Viktor): Move above Pin
       // HERESY 1101 (Viktor): Move as well as pin; on a checked card in the Librarian, for every checked one
       HC && HC.moveTo ? (function () {
         var inLib = here === "collection", sel = inLib && HC.selected ? HC.selected() : [];
         var list = sel.length > 1 && sel.indexOf(name) >= 0 ? sel : [name], place = inLib ? HC.place() : "";
-        var many = list.length > 1 ? " " + list.length : "";
-        return { icon: "⇥", label: "Move" + many + " to", hint: inLib && place && place.charAt(0) !== "_" ? "out of “" + place + "”" : "out of every other", items: (function (to) { return wsNest(to, to.map(function (w) {   // HERESY 2872: sections folded
-          return wsTreeItem(w, to, { action: function () { HC.moveTo(w, list, inLib); } });   // HERESY 2040
-        })); })(ws.filter(function (w) { return !(inLib && w === place); })).concat([{ sep: true }, { icon: "+", label: "New workspace…", action: function () {
-          window.HeresyDialog.prompt("A new workspace for " + (list.length > 1 ? "the " + list.length + " checked takes" : "“" + displayTitle(take) + "”"), "", { ok: "Move there", placeholder: "its name", name: { max: 56 } }).then(function (w) {   // HERESY 2462
-            w = (w || "").trim();
-            if (w) HC.moveTo(w, list, inLib);
+        var many = list.length > 1 ? " " + list.length : "", R = takesRealm(list);
+        if (!R) return { icon: "⇥", label: "Move" + many + " to", hint: HC.mixedSaid ? HC.mixedSaid(list) : "", muted: true };   // HERESY 2941: each take stays in its realm
+        var to = wsTreeMenu(R, function (w) {
+          if (inLib && w === place) return null;
+          if (HC.wsFace(w).frozen) return { muted: true, hint: "Frozen: unfreeze it first (⋯ beside its name)" };
+          return { action: function () { HC.moveTo(w, list, inLib); } };   // HERESY 2040
+        });
+        return { icon: "⇥", label: "Move" + many + " to", hint: inLib && place && place.charAt(0) !== "_" ? "out of “" + place + "”" : "out of every other", items: to.concat([{ sep: true }, { icon: "+", label: "New workspace…", action: function () {
+          newWsFor("A new workspace for " + (list.length > 1 ? "the " + list.length + " checked takes" : "“" + displayTitle(take) + "”"), "Move there").then(function (v) {
+            if (v) HC.moveTo(v.name, list, inLib, v.emoji);
           });
         } }]) };
       })() : null,
@@ -14316,7 +14545,10 @@
         var place = HC.place(), root = place.split(" / ")[0];
         var kin = function (w) { return w === place || w === root || w.indexOf(root + " / ") === 0; };
         var rows = bulk ? bulkRows : [{ name: name, workspaces: inWs || [] }], other = {};
-        rows.forEach(function (r) { (r.workspaces || []).forEach(function (w) { if (!kin(w)) (other[w] = other[w] || []).push(r.name); }); });
+        // HERESY 2941: the other workspaces of the place's realm; a link in the other realm stays (from a Narrator's workspace a linked song left every
+        // workspace of its own, its home, and stood only as a link)
+        var sameRealm = function (w) { return !HC.wsRealm || HC.realm() === "off" || HC.wsRealm(w) === HC.wsRealm(place); };
+        rows.forEach(function (r) { (r.workspaces || []).forEach(function (w) { if (!kin(w) && sameRealm(w)) (other[w] = other[w] || []).push(r.name); }); });
         var list = Object.keys(other).sort();
         if (!list.length) return null;
         return { icon: "▦", label: "Out of the other workspaces", hint: String(list.length), action: function () {
@@ -14512,7 +14744,8 @@
     "\u2702": "scissors", "\u27f3": "refresh-cw", "\u26d3": "layers", "\ud83d\udc4d": "like", "\ud83d\udc4e": "dislike", "\u2606": "star", "\ud83d\udee1": "shield", "\u270d": "note",
     "Aa": "pencil", "\u2715": "x", "\u29c9": "copy", "\u25a6": "folder", "\u21e5": "folder-input", "\ud83d\udccc": "pin", "\ud83c\udfa4": "ear", "\u25cc": "eye-off",
     "\u2697": "sparkles", "\u2712": "notebook-pen", "\ud83c\udf9e": "film", "\u2398": "copy", "\u2913": "download", "\ud83c\udf9a": "sliders-horizontal", "\ud83d\uddd1": "trash-2",
-    "+": "plus", "\u25a4": "layout-grid", "\u2630": "list-plus", "\u2744": "snowflake" };
+    "+": "plus", "\u25a4": "layout-grid", "\u2630": "list-plus", "\u2744": "snowflake",
+    "\ud83d\udd17": "link", "\ud83d\uddc4": "archive" };   // HERESY 2940: Link into the other realm's workspaces, the archived ones
   function takeIcons(items) {
     (items || []).forEach(function (it) {
       if (!it || it.sep || it.head) return;
@@ -14552,7 +14785,7 @@
   // HERESY 2872 (Viktor 19.11.2026, the night order on the cards: with many workspaces and their sections the menu ran long): a workspace with
   // sections is one row with its own flyout, as the menu's other groups open on hover (Edit ›); in it the workspace itself first, then its sections
   // (theirs in turn). A section whose workspace is not in the list stands on its own with its whole name. items[i] is the row of list[i]
-  function wsNest(list, items) {
+  function wsNest(list, items, face) {
     var at = {}, kids = {}, top = [];
     list.forEach(function (w, i) { at[w] = items[i]; });
     list.forEach(function (w) {
@@ -14561,18 +14794,42 @@
     });
     var any = function (w) { return !!at[w].checked || (kids[w] || []).some(any); };
     var node = function (w, child) {
-      var it = Object.assign({}, at[w], { label: child ? w.split(" / ").pop() : w, depth: 0, raw: true });
+      // HERESY 2940: face(w, child) -> its label (its level's name; a section without its parent here, the parents' path first) and its emoji for the
+      // menu's emoji column (em: "" draws the faint icon the column draws, a leaf for a section)
+      var f = face ? face(w, child) : null;
+      var it = Object.assign({}, at[w], { label: f ? f.label : child ? w.split(" / ").pop() : w, depth: 0, raw: true }, f ? { em: f.em, emSec: f.sec } : {});
       if (!kids[w]) return it;
-      var self = Object.assign({}, it, { hint: "the workspace itself, not its sections" });
+      var self = Object.assign({}, it, { hint: it.muted ? it.hint : "the workspace itself, not its sections" });
       var group = { label: it.label, raw: true, items: [self, { sep: true }].concat(kids[w].map(function (k) { return node(k, true); })) };
+      if (f) { group.em = it.em; group.emSec = it.emSec; }
       if (at[w].checked !== undefined) group.checked = any(w);
       return group;
     };
     return top.map(function (w) { return node(w, false); });
   }
-  function wsTreeItem(w, all, o) {
-    var parts = w.split(" / "), parent = parts.slice(0, -1).join(" / "), under = parts.length > 1 && all.indexOf(parent) >= 0;
-    return Object.assign({ label: under ? "\u21b3 " + parts[parts.length - 1] : w, raw: true, depth: under ? parts.length - 1 : 0 }, o);
+  // HERESY 2940: a menu's list of workspaces from the Librarian's own tree (HC.wsTree, the column's source): the realm's tree nested (wsNest), each row
+  // its emoji; then «Archived» with what the column keeps under Archived. make(w) -> the row's own fields (checked, action, muted, hint), null leaves it out
+  function wsTreeMenu(realm, make) {
+    var HC = window.HeresyCollection;
+    if (!HC || !HC.wsTree) return [];
+    var T = HC.wsTree({ realm: realm });
+    var rows = function (names) {
+      var keep = [], items = [];
+      names.forEach(function (w) { var o = make(w); if (o) { keep.push(w); items.push(o); } });
+      return wsNest(keep, items, HC.wsFace);
+    };
+    var main = rows(T.main), arch = rows(T.archived);
+    if (!arch.length) return main;
+    return main.concat([{ sep: true }, { icon: "🗄", label: "Archived", items: arch, checked: arch.some(function (x) { return !!x.checked; }) || undefined }]);
+  }
+  // HERESY 2941: the realm the takes share ("creator", "reader"; "" for both), and the one the Library shows ("creator" for Both)
+  function takesRealm(list) { var HC = window.HeresyCollection; return HC && HC.takesRealm ? HC.takesRealm(list) : "creator"; }
+  function viewRealm() { var HC = window.HeresyCollection; return HC && HC.realm && HC.realm() === "reader" ? "reader" : "creator"; }
+  // HERESY 2941: a new workspace asked from a take's menu as the column asks it, with its emoji beside its name (heresy-collection.js askWs) -> {name, emoji} or null
+  function newWsFor(text, ok) {
+    var HC = window.HeresyCollection;
+    if (HC && HC.askWs) return HC.askWs(text, "", "", { ok: ok, placeholder: "its name" }).then(function (v) { var n = String((v && v.name) || "").trim(); return n ? { name: n, emoji: v.emoji || "" } : null; });
+    return window.HeresyDialog.prompt(text, "", { ok: ok, placeholder: "its name", name: { max: 32 } }).then(function (w) { w = (w || "").trim(); return w ? { name: w, emoji: "" } : null; });
   }
   function groupMenu(items, noMarks) {
     var G = { open: { icon: "\u2197", label: "Open in\u2026", items: [] }, mark: { icon: "\ud83d\udc4d", label: "Marks", items: [] },   // HERESY 2020: «Open in…»

@@ -74,6 +74,8 @@ La lista «Quantizzazione» colora ogni quantizzazione secondo la prova grezza d
 
 **Voce del lettore**: la voce del motore stesso, tenuta dal primo pezzo; oppure **La tua voce…**, un breve clip di una voce che il motore segue, accettato solo sotto l'avviso rosso e con il consenso spuntato (clonare una voce senza il consenso del suo proprietario è un reato in molti paesi, e la responsabilità è tua). Con lo Studio non arriva nessuna voce pronta. L'altezza di ogni pezzo è misurata mentre viene letto; un pezzo la cui voce è passata all'altro genere viene riletto con un altro seed.
 
+**Una voce per ogni paragrafo.** In una narrazione un piccolo chip ↳ sta nel margine accanto alla prima riga di ogni paragrafo: un clic sceglie la voce con cui si legge quel paragrafo (una voce tua, un gruppo, o di nuovo la voce sopra il testo), e i paragrafi dopo la tengono finché a uno non se ne dà un'altra; una sottile banda del colore di quella voce li accompagna. Il testo resta pulito, e le voci seguono i loro paragrafi mentre lo modifichi; un dialogo ha invece una voce per ogni personaggio, e una lettura per versetti nessuna.
+
 Emozioni e suoni vanno tra parentesi quadre, come li legge Drama 3: `[calm]`, `[sad]`, `[whispering]`, `[pause]`, `[laughs]`. **Tavolozza dei tag** li inserisce: un'emozione, un ritmo o uno stile all'inizio della sua frase, una pausa o un suono al cursore. **Leggere i tag in linea** è attivo per impostazione in un dialogo e spento in una narrazione, dove si vuole una lettura pulita da libro. **Stile** dà a tutta la lettura una parentesi propria, come `calm, warm, unhurried narration`.
 
 ### Accenti e l'acuto <!-- #stresses-and-the-acute -->

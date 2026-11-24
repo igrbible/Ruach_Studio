@@ -35,6 +35,58 @@
   function vdIco(n, glyph) { return window.HeresyIcons && window.HeresyIcons.ui ? window.HeresyIcons.ui(n) || glyph : glyph; }   // HERESY 2588
   function say(t, bad) { var el = $("vdStatus"); if (el) { el.textContent = t || ""; el.classList.toggle("bad", !!bad); } }
 
+  // HERESY 2963 (the plan's G27; question 11 of 22.11.2026 by consent: «A, −12 дБ, до первой строки, свой стиль, ссылкой»): the Narrator's voice over
+  // the clip. A take of the Narrator's world named by link (it stays home: the clip only names it), from the song's start (before its first sung line)
+  // unless moved, the song −12 dB under it (down in 0.3 s, back in 0.8 s); the clip cut next mixes it and writes its words in their own style (lab)
+  function narratorTakes() {
+    var Cn = window.HeresyCollection, all = window.ruachTakes ? window.ruachTakes() : [];
+    return all.filter(function (t) { var r = Cn && Cn.row ? Cn.row(t.name) : null; return !!r && r.realm === "reader"; });
+  }
+  function voicePaint() {
+    var box = $("vdVoice"), p = state.plan;
+    if (!box) return;
+    var v = p && p.exists && p.voice && p.voice.take ? p.voice : null, took = v ? narratorTakes().filter(function (t) { return t.name === v.take; })[0] : null;
+    box.hidden = !(p && p.exists) || !window.HeresyReader;   // the Narrator not in this Studio: no voice to lay
+    if (box.hidden) return;
+    var sig = JSON.stringify([v, took && took.title]);
+    if (box.dataset.sig === sig) return;                 // the fields in hand stay as typed while the room repaints
+    box.dataset.sig = sig;
+    box.innerHTML = '<span class="label">' + esc(tr("The Narrator's voice")) + "</span>" + (v
+      ? '<span class="vd-voice-take" translate="no" data-tip="' + esc(v.take) + '">🎙 ' + esc(took ? took.title : v.take) + "</span>" +
+        '<label class="vd-voice-k"><span>' + esc(tr("Starts at")) + '</span><input type="number" id="vdVoiceAt" min="0" step="0.1" value="' + esc(v.at || 0) + '" /><span translate="no">s</span></label>' +
+        '<label class="vd-voice-k" data-tip="' + esc(tr("How far the song goes down under the voice: down in 0.3 s before it, back in 0.8 s after it")) + '"><span>' + esc(tr("The song under it")) +
+          '</span><input type="number" id="vdVoiceDuck" min="-30" max="0" step="1" value="' + esc(v.duck != null ? v.duck : -12) + '" /><span translate="no">dB</span></label>' +
+        '<button type="button" class="btn ghost small" data-vdvoice="pick">' + esc(tr("Change…")) + '</button><button type="button" class="btn ghost small" data-vdvoice="off">' + esc(tr("Remove")) + "</button>" +
+        (took ? "" : '<span class="row-hint is-bad">' + esc(tr("This take is not in the library now: the clip cannot be cut with it")) + "</span>")
+      : '<span class="row-hint">' + esc(tr("none")) + '</span><button type="button" class="btn ghost small" data-vdvoice="pick" data-tip="' +
+        esc(tr("A take of the Narrator over the clip, by link (it stays in the Narrator's world): from the song's start, before its first sung line, unless moved; the song goes down under it and back after it; its words as titles of their own, in italics below the sung lines")) +
+        '">' + esc(tr("Add the Narrator's voice…")) + "</button>");
+  }
+  function voiceSend(body) {
+    var t = state.take;
+    if (!t) return Promise.resolve();
+    return api("/video/voice", Object.assign({ name: t.name }, body)).then(function (b) {
+      if (state.plan) { if (b.voice) state.plan.voice = b.voice; else delete state.plan.voice; }
+      voicePaint();
+      say(b.voice ? tr("The clip's voice is laid on: the next clip cut mixes it") : tr("The clip's voice is taken off"));
+    }).catch(function (e) { say(e.message, true); });
+  }
+  function voicePick() {
+    var list = narratorTakes(), v = (state.plan && state.plan.voice) || {};
+    if (!list.length) { say(tr("No take of the Narrator in the library yet: read one in the Narrator first"), true); return; }
+    window.HeresyDialog.choose(tr("The Narrator's voice over the clip") + "\n\n" + tr("A take of the Narrator's world, by link: it stays home, the clip only names it."),
+      list.map(function (t) { return { label: t.title, value: t.name, em: "🎙", on: t.name === v.take }; }), { cancel: "Cancel", filter: "Filter the takes" }).then(function (name) {
+      if (!name || name === v.take) return;
+      voiceSend({ take: name, at: v.take ? v.at : 0, duck: v.take && v.duck != null ? v.duck : -12 });
+    });
+  }
+  function voiceKnob() {
+    var v = (state.plan && state.plan.voice) || null, at = parseFloat($("vdVoiceAt") && $("vdVoiceAt").value), duck = parseFloat($("vdVoiceDuck") && $("vdVoiceDuck").value);
+    if (!v || !v.take) return;
+    voiceSend({ take: v.take, at: isFinite(at) ? Math.max(0, at) : v.at, duck: isFinite(duck) ? Math.max(-30, Math.min(0, duck)) : v.duck });
+  }
+  window.ruachVoiceTakes = narratorTakes;   // for the checks
+
   function paint() {
     var p = state.plan, t = state.take;
     $("vdTake").textContent = t ? (t.title || t.name) : "";   // HERESY 1940; 2590: no take is said in the room's middle (#vdEmpty), not with a 🔍 here
@@ -67,7 +119,7 @@
     if ($("vdClipTitle") && document.activeElement !== $("vdClipTitle")) { $("vdClipTitle").value = p.clip_title || ""; $("vdClipTitle").placeholder = p.title || ""; }   // HERESY 1948
     if ($("vdCredits") && document.activeElement !== $("vdCredits")) $("vdCredits").value = p.credits || "";
     ["author", "verse"].forEach(function (k) { var el = $(k === "author" ? "vdAuthor" : "vdVerse"); if (el && document.activeElement !== el) el.value = p[k] || ""; });   // HERESY 2246
-    heroPaint(); framesPaint();
+    heroPaint(); framesPaint(); voicePaint();   // HERESY 2963
     var total = p.seconds || (p.shots.length ? p.shots[p.shots.length - 1].t1 : 1);
     $("vdStrip").innerHTML = p.shots.map(function (s, i) {
       var written = SCENE.some(function (k) { return (s.scene || {})[k]; });
@@ -375,12 +427,22 @@
   // filters nothing then: before, every take fell out of it and the list read «no take found»
   function wsKnown() { var Cn = window.HeresyCollection; return !(Cn && Cn.loaded && !Cn.loaded()); }
   function findWs() {
-    var Cn = window.HeresyCollection, list = Cn && Cn.workspaces ? Cn.workspaces() : [], order = window.ruachTreeOrder ? window.ruachTreeOrder(list) : list.slice().sort();
+    // HERESY 2956: the Librarian's own tree (its order, its filters, the realm's), each row its emoji in a column of its own as the column draws it
+    var Cn = window.HeresyCollection, list = Cn && Cn.workspaces ? Cn.workspaces() : [], T = Cn && Cn.wsTree ? Cn.wsTree() : null;
+    var inT = T ? T.main.concat(T.archived) : [], HE = window.HeresyWsEmoji;
+    var order = T ? inT.filter(function (w) { return list.indexOf(w) >= 0; }).concat(list.filter(function (w) { return inT.indexOf(w) < 0; }))
+      : window.ruachTreeOrder ? window.ruachTreeOrder(list) : list.slice().sort();
+    var em = function (w) {
+      if (!Cn || !Cn.wsFace) return "";
+      var f = Cn.wsFace(w, true);
+      return '<i class="vd-ws-em' + (f.em ? "" : " is-faint") + (f.sec ? " is-sec" : "") + '" aria-hidden="true">' + (f.em ? esc(f.em) : HE && HE.faint ? HE.faint(f.sec) : "") + "</i>";
+    };
+    var name = function (w) { return Cn && Cn.wsFace ? Cn.wsFace(w, true).label : w.split(" / ").pop(); };
     if (FIND.ws && list.length && list.indexOf(FIND.ws) < 0) FIND.ws = "";
     var on = wsKnown() ? FIND.ws : "";
     $("vdFindWs").innerHTML = '<button type="button" class="vd-ws' + (on ? "" : " is-on") + '" data-vdws="">' + esc(tr("All takes")) + "</button>" + order.map(function (w) {
       var p = w.split(" / ");
-      return '<button type="button" class="vd-ws d' + p.length + (on === w ? " is-on" : "") + '" data-vdws="' + esc(w) + '" translate="no">' + esc(p.length > 1 ? "\u21b3 " + p[p.length - 1] : w) + "</button>";
+      return '<button type="button" class="vd-ws has-em d' + p.length + (on === w ? " is-on" : "") + '" style="--depth:' + (p.length - 1) + '" data-vdws="' + esc(w) + '" translate="no">' + em(w) + '<span class="vd-ws-name">' + esc(name(w)) + "</span></button>";   // HERESY 2956
     }).join("") + (FIND.err && !wsKnown() ? '<p class="row-hint vd-side-none vd-findfail">' + esc(tr("The workspaces could not be read: {0}").replace("{0}", FIND.err)) + "</p>" : "");
   }
   function findOpen() {
@@ -1823,7 +1885,10 @@
     list.forEach(function (i) { prompts[i] = promptOf(i); });
     settled().then(function () { return api("/video/shoot", { name: t.name, shots: list, prompts: prompts, mode: mode }); })
       .then(function (b) { say(tr("{0} shot(s) to MiniMax H3 ({1})").replace("{0}", (b.queued || []).length).replace("{1}", tr(mode))); h3Load(); })
-      .catch(function (e) { say(/is not here/.test(e.message) ? tr("MiniMax H3 is not here: {0}").replace("{0}", e.message) : e.message, true); });
+      .catch(function (e) {
+        say(/is not here/.test(e.message) ? tr("MiniMax H3 is not here: {0}").replace("{0}", e.message) : e.message, true);
+        if (/is not here/.test(e.message) && window.HeresyWeights && window.HeresyWeights.packButton && $("vdStatus")) $("vdStatus").insertAdjacentHTML("beforeend", " " + window.HeresyWeights.packButton("h3"));   // HERESY 2955
+      });
   }
   function shootMenu(i, anchor) {
     var s = state.plan && state.plan.shots[i], r = anchor.getBoundingClientRect();
@@ -2143,6 +2208,10 @@
     try { state.clipTitles = localStorage.getItem("yue2.vdClipTitles") === "1"; } catch (e) { /* private window */ }   // HERESY 1948
     if ($("vdClipTitles")) {
       $("vdClipTitles").setAttribute("aria-pressed", state.clipTitles ? "true" : "false");
+      if ($("vdVoice")) {                                 // HERESY 2963: the clip's voice, chosen, moved, taken off
+        $("vdVoice").addEventListener("click", function (e) { var b = e.target.closest("[data-vdvoice]"); if (!b) return; if (b.dataset.vdvoice === "off") voiceSend({ off: true }); else voicePick(); });
+        $("vdVoice").addEventListener("change", function (e) { if (e.target.id === "vdVoiceAt" || e.target.id === "vdVoiceDuck") voiceKnob(); });
+      }
       $("vdClipTitles").addEventListener("click", function () { state.clipTitles = !state.clipTitles; this.setAttribute("aria-pressed", state.clipTitles ? "true" : "false"); sideKeep("yue2.vdClipTitles", state.clipTitles ? "1" : ""); });
     }
     if ($("vdClipLyrics")) {

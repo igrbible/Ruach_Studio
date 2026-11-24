@@ -8,21 +8,19 @@
   "display": "standalone",
   "background_color": "#14110e",
   "theme_color": "#14110e",
-  "launch_handler": { "client_mode": "focus-existing" },
+  "launch_handler": {"client_mode": "focus-existing"},
   "icons": [
-    { "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/pwa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    {"src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/pwa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
   ],
   "shortcuts": [
-    { "name": "New song", "short_name": "New song", "description": "A new song in the Musician (it asks first when the form holds words)", "url": "/?room=create&song=new", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
-    { "name": "Musician", "short_name": "Musician", "description": "The Musician: the song form, the take, the player", "url": "/?room=create", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
-    { "name": "Narrator", "short_name": "Narrator", "description": "The Narrator: a text read aloud, a book in chapters", "url": "/?room=read", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
-    { "name": "Writer", "short_name": "Writer", "description": "The Writer: songs as documents", "url": "/?room=write", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
-    { "name": "Refiner", "short_name": "Refiner", "description": "The Refiner: steps after the render", "url": "/?room=post", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
-    { "name": "Artist", "short_name": "Artist", "description": "The Artist: pictures for the songs", "url": "/?room=artist", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
-    { "name": "Videographer", "short_name": "Videographer", "description": "The Videographer: a video's plan for a take", "url": "/?room=video", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
-    { "name": "Trainer", "short_name": "Trainer", "description": "The LoRA Trainer", "url": "/?room=train", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
-    { "name": "Librarian", "short_name": "Librarian", "description": "The Librarian: every take", "url": "/?room=collection", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
-    { "name": "Engine", "short_name": "Engine", "description": "The Engine: the server, the hardware, the models, the settings", "url": "/?room=engine", "icons": [{ "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+    {"name": "New song", "short_name": "New song", "description": "A new song in the Musician (it asks first when the form holds words)", "url": "/?room=create&song=new", "icons": [{"src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png"}]},
+    {"name": "Musician", "short_name": "Musician", "description": "The Musician: the song form, the take, the player", "url": "/?room=create", "icons": [{"src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png"}]},
+    {"name": "Narrator", "short_name": "Narrator", "description": "The Narrator: a text read aloud, a book in chapters", "url": "/?room=read", "icons": [{"src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png"}]},
+    {"name": "Librarian", "short_name": "Librarian", "description": "The Librarian: every take", "url": "/?room=collection", "icons": [{"src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png"}]}
+  ],
+  "screenshots": [
+    {"src": "/pwa/shot-wide.png", "sizes": "1920x1080", "type": "image/png", "form_factor": "wide", "label": "The Musician: a song's style, lyrics and score beside the Library, on your own machine"},
+    {"src": "/pwa/shot-narrow.png", "sizes": "860x1864", "type": "image/png", "form_factor": "narrow", "label": "The Musician on a phone: the song's form and the player"}
   ]
 }

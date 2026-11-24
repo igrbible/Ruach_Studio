@@ -5738,6 +5738,11 @@ RuachI18n.add("be", {
 "On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks.": "У публічным Wi-Fi (кавярня, гатэль, цягнік) або на ноўтбуку без файрвола ўсе ў гэтай сетцы таксама лічацца прыватнай сеткай: выберы «Толькі гэты камп'ютар» або пералічы свае сеткі.",
 "Engine → Security changes it any time. The internet at large is never let in, unless the Studio is started with RUACH_ALLOW_PUBLIC=1.": "Рухавік → Бяспека мяняе гэта ў любы момант. Інтэрнэт у цэлым не пускаецца ніколі, хіба што Студыю запусцілі з RUACH_ALLOW_PUBLIC=1.",
 "My decision is a conscious one": "Маё рашэнне ўсвядомленае",
+"The Studio listens on this computer alone now (port {0}): no other computer or phone can open it, and {1} has nothing to ask of its firewall. Opened to a network, whoever opens its page there can do everything you can: make and delete songs, read your lyrics, run your graphics cards, fetch models with your keys.": "Студыя цяпер слухае толькі гэты камп'ютар (порт {0}): ні іншы камп'ютар, ні тэлефон яе не адкрыюць, і {1} нічога не пытае пра брандмаўэр. Калі адкрыць яе сетцы, любы, хто адкрые там яе старонку, зможа ўсё, што можаце вы: ствараць і выдаляць песні, чытаць вашы тэксты, займаць вашы відэакарты, спампоўваць мадэлі з вашымі ключамі.",
+"{0} asks once whether to let the Studio through its firewall, when it starts again": "{0} адзін раз спытае, ці прапусціць Студыю праз брандмаўэр, калі яна запусціцца зноў",
+"The Studio still listens on this computer alone: restart it ({0}) to open it to your network, and {1} asks once about its firewall.": "Студыя ўсё яшчэ слухае толькі гэты камп'ютар: перазапусціце яе ({0}), каб адкрыць вашай сетцы, і {1} адзін раз спытае пра брандмаўэр.",
+"its icon beside the clock → Restart the Studio": "яе значок каля гадзінніка → Restart the Studio",
+"close it and start it again": "закрыйце яе і запусціце зноў",
 "Batch": "Батч",
 "How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked": "Колькі карцінак за раз: кожная — наступны сід (сід, сід + 1, …), ва ўсіх абраных формах",
 "Delete the saved style picked": "Выдаліць абраны захаваны стыль",
@@ -5803,6 +5808,7 @@ RuachI18n.add("be", {
 "Music half: {0} layers, attention {1} %, MLP {2} %": "Музычная палова: слаёў {0}, увага {1} %, MLP {2} %",
 "Sound half: {0} layers, attention {1} %, MLP {2} %": "Гукавая палова: слаёў {0}, увага {1} %, MLP {2} %",
 "moves a layer by up to {0} % at 1.0": "зрушвае слой да {0} % пры 1.0",
+"How far it moves a layer is not measured: {0}": "Наколькі ён зрушвае слой, не вымерана: {0}",
 "Where it pushes:": "Дзе цісне:",
 "{0} and {1} share their layers ({2}) and pull the same way: together they push harder than their strengths say, keep them lower.": "{0} і {1} дзеляць слаі ({2}) і цягнуць у адзін бок: разам яны ціснуць мацней, чым кажуць іх сілы, — трымай іх ніжэй.",
 "{0} and {1} share their layers ({2}) and pull against each other: some of each cancels the other.": "{0} і {1} дзеляць слаі ({2}) і цягнуць адно супраць аднаго: частка кожнага гасіць другога.",
@@ -6033,6 +6039,7 @@ RuachI18n.add("be", {
 "The input's floor, RMS / peak dBFS: {0}": "Парог уваходу, RMS / пік dBFS: {0}",
 "Not measured: {0}": "Не замерана: {0}",
 "no sound card is seen here (/proc/asound has none)": "гукавых карт тут не відаць (у /proc/asound пуста)",
+"the audio interfaces are read through ALSA, Linux's sound system: on Windows and macOS none are listed yet, and the analog gateway and the monitor run on Linux for now": "аўдыяінтэрфейсы чытаюцца праз ALSA, гукавую сістэму Linux: на Windows і macOS іх спіс пакуль пусты, а аналагавы шлюз і манітар пакуль ёсць толькі на Linux",
 "aplay is not here: ALSA's software devices are not listed": "aplay тут няма: праграмныя прылады ALSA не пералічаны",
 "arecord is not here: ALSA's software devices are not listed": "arecord тут няма: праграмныя прылады ALSA не пералічаны",
 "PipeWire / Pulse do not run here (no pactl answer)": "PipeWire / Pulse тут не запушчаныя (pactl не адказвае)",
@@ -10193,4 +10200,177 @@ RuachI18n.add("be", {
 // HERESY 2919c: the workspaces' emoji upgrade, said once
 RuachI18n.add("be", {
 "{0} workspaces now show their emoji in its own column": "{0} прастор цяпер паказваюць свой эмодзі ў асобным слупку"
+});
+// HERESY 2940 · 2941: the take's menu of workspaces, the realms in a move and an add
+RuachI18n.add("be", {
+"A move never takes a take out of its realm: these are the Musician's, and “{0}” is the Narrator's.": "Перамяшчэнне ніколі не выводзіць сэмпл з яго свету: гэтыя — Музыканта, а «{0}» — прастора Чытальніка.",
+"A move never takes a take out of its realm: these are the Narrator's, and “{0}” is the Musician's.": "Перамяшчэнне ніколі не выводзіць сэмпл з яго свету: гэтыя — Чытальніка, а «{0}» — прастора Музыканта.",
+"A move never takes a take out of its realm: these belong to both realms.": "Перамяшчэнне ніколі не выводзіць сэмпл з яго свету: гэтыя належаць абодвум светам.",
+"Link them into “{0}” instead? They stay where they are as well.": "Замест гэтага дадаць іх спасылкай у «{0}»? Яны застануцца і там, дзе ляжаць.",
+"Link them": "Дадаць спасылкай",
+"Linked into “{0}”: {1}": "Спасылкай у «{0}»: {1}",
+"The checked belong to both realms ({0} of the Musician, {1} of the Narrator): a move keeps each take in its realm, so check the takes of one realm": "Адзначаны сэмплы абодвух светаў ({0} Музыканта, {1} Чытальніка): перамяшчэнне трымае кожны сэмпл у яго свеце, адзнач сэмплы аднаго свету",
+"They leave every other workspace of their realm they are in (a locked one keeps its own; their links in the other realm stay).": "Яны сыходзяць з усіх іншых прастор свайго свету, дзе ляжаць (замкнёная пакідае свае; іх спасылкі ў іншым свеце застаюцца).",
+"Frozen: unfreeze it first (⋯ beside its name)": "Замарожана: спачатку размарозь яе (⋯ побач з назвай)",
+"Link into the Narrator's": "Спасылкай у прасторы Чытальніка",
+"Link into the Musician's": "Спасылкай у прасторы Музыканта"
+});
+// HERESY 2942: the music model's honest limits (the window of the song at hand, the floor under its ceiling, Extend's cap)
+RuachI18n.add("be", {
+"Max length {0} is past what the window holds for this song: about {1} of music whole, after its style and lyrics ({2} tokens) and its score ({3}). The song stops where the window ends. Longer: Long songs · Pieces (experimental).": "Макс. даўжыня {0} далей за тое, што акно ўмяшчае для гэтай песні: каля {1} музыкі цалкам, пасля яе стылю і лірыкі ({2} токенаў) і партытуры ({3}). Песня спыніцца там, дзе канчаецца акно. Даўжэй — Доўгія песні · Кавалкамі (эксперыментальна).",
+"Max length {0} is past what the window holds for this song: about {1} of music whole ({4}–{5} by the score the model writes), after its style and lyrics ({2} tokens). The song stops where the window ends. Longer: Long songs · Pieces (experimental).": "Макс. даўжыня {0} далей за тое, што акно ўмяшчае для гэтай песні: каля {1} музыкі цалкам ({4}–{5} паводле партытуры, якую напіша мадэль), пасля яе стылю і лірыкі ({2} токенаў). Песня спыніцца там, дзе канчаецца акно. Даўжэй — Доўгія песні · Кавалкамі (эксперыментальна).",
+"The window holds about {0} of this song's music whole: its style and lyrics take {1} tokens, its score {2}, of the {3}.": "Акно ўмяшчае каля {0} музыкі гэтай песні цалкам: яе стыль і лірыка займаюць {1} токенаў, партытура — {2}, з {3}.",
+"The window holds about {0} of this song's music whole ({4}–{5} by the score the model writes): its style and lyrics take {1} tokens of the {3}.": "Акно ўмяшчае каля {0} музыкі гэтай песні цалкам ({4}–{5} паводле партытуры, якую напіша мадэль): яе стыль і лірыка займаюць {1} токенаў з {3}.",
+"Max length goes past it: the song stops where the window ends.": "Макс. даўжыня далей за яго: песня спыніцца там, дзе канчаецца акно.",
+"The music's Min length {0} stood above its Max length {1}: sent with the floor at {1}": "Мін. даўжыня музыкі {0} стаяла вышэй за яе Макс. даўжыню {1}: адпраўлена з падлогай {1}",
+"The score's Min tokens {0} stood above its Max tokens {1}: sent with the floor at {1}": "Мін. токенаў партытуры {0} стаяла вышэй за яе Макс. токенаў {1}: адпраўлена з падлогай {1}",
+"{0} long: Extend goes to {1} at most": "Даўжыня {0}: «Падоўжыць» сягае найбольш да {1}",
+"Music up to 10:00 (8:00 by default): past it a song loses its way (one ran on to 9:30, and that was too much). The window of 24,576 tokens may hold less: the style, the lyrics and the score take their part first.": "Музыка да 10:00 (тыпова 8:00): далей песня губляе шлях (адна дацягнула да 9:30, і гэта было зашмат). Акно ў 24 576 токенаў можа змясціць менш: стыль, лірыка і партытура забіраюць сваю частку першымі.",
+"Text profiles make a pasted text ready to read, with a speech profile of your own (Direct, past 8:00); readings live in the Narrator": "Тэкставыя профілі рыхтуюць устаўлены тэкст да чытання — з тваім уласным маўленчым профілем (Direct, даўжэй за 8:00); чытанне жыве ў Чытальніку"
+});
+// HERESY 2943: the Trainer's curves together: the run's events, the held-out dots, a scale's span
+RuachI18n.add("be", {
+"Step {0}": "Крок {0}",
+"the {0} frozen: its loss leaves the sum": "{0} замарожаны: яго страта сыходзіць з сумы",
+"went on from its save": "працягнута са свайго захавання",
+"the {0}'s learning-rate curve {1} → {2}": "крывая хуткасці навучання {0}: {1} → {2}",
+"The running average begins anew here.": "Слізгальнае сярэдняе тут пачынаецца нанова.",
+"held out at step {0}: {1} {2}": "адкладзеныя на кроку {0}: {1} {2}",
+"span {0}": "размах {0}",
+"Smoothing": "Згладжванне",
+"The curves' smoothing, as TensorBoard's: 0 draws the logged points as they are, 0.99 the smoothest (0.92 by default); the faint line under each is the points themselves. The learning rate, the memory and the held-out dots are never smoothed, nor across the run's events. Kept in this browser.": "Згладжванне крывых, як у TensorBoard: 0 малюе запісаныя кропкі як ёсць, 0.99 — найплаўней (тыпова 0.92); бледная лінія пад кожнай крывой — самі кропкі. Хуткасць навучання, памяць і кропкі адкладзеных трэкаў не згладжваюцца ніколі, і праз падзеі рана таксама. Захоўваецца ў гэтым браўзеры."
+});
+// HERESY 2945: the Writer's versions: the Section editor's sub-version and the version it came from
+RuachI18n.add("be", {
+"the Section editor": "Рэдактар секцый",
+"from #{0}": "з #{0}"
+});
+// HERESY 2942b: the Section editor's Extend within the music model's 10:00
+RuachI18n.add("be", {
+"Only past the take's end, 10:00 at most in all": "Толькі за канцом дубля, усяго не больш за 10:00",
+"Extend sings on to 10:00 at most": "«Падоўжыць» пяе далей не больш як да 10:00"
+});
+// HERESY 2948: comping in the DAW: the selection taken from another version of its stem
+RuachI18n.add("be", {
+"Take it from another version": "Узяць з іншай версіі",
+"The rest has no versions": "У рэшты няма версій",
+"This stem has one version: a file made from it (a cleaned voice…) is another": "У гэтага стэма адна версія: файл, створаны з яго (ачышчаны голас…), — гэта іншая",
+"The selection from another version of this stem, laid over the lane with 10 ms crossfades; the lane's own version everywhere else": "Вылучанае з іншай версіі гэтага стэма, пакладзенае на дарожку з пераходамі па 10 мс; усюды астатняе гучыць уласная версія дарожкі",
+"{0}–{1} now from «{2}»": "{0}–{1} цяпер з «{2}»",
+"a version gone": "версіі больш няма"
+});
+// HERESY 2949: the Refiner's Compare node: two versions of the take, A and B, into the Compare window
+RuachI18n.add("be", {
+"A and B side by side": "A і B побач",
+"Two versions of the take side by side, A and B: the original, a step's file, a mix; Compare opens them in the Compare window, switched in the same second. A wire from the take goes to A, from a step to B": "Дзве версіі сэмпла побач, A і B: арыгінал, файл кроку, зводка; «Параўнаць» адкрывае іх у акне параўнання, пераключаючы ў тую ж секунду. Провад ад сэмпла ідзе ў A, ад кроку — у B",
+"Two versions of this take side by side, A and B, in the Compare window: switched in the same second, blind if you like.": "Дзве версіі гэтага сэмпла побач, A і B, у акне параўнання: пераключаюцца ў тую ж секунду, можна ўсляпую.",
+"The first: the original or any file a step made of this take": "Першая: арыгінал або любы файл, створаны крокам з гэтага сэмпла",
+"The second, heard against A: a step's file, a mix, the original": "Другая, чуваць супраць A: файл кроку, зводка, арыгінал",
+"A and B in the Compare window, A first: one plays, the other takes over in the same second": "A і B у акне параўнання, A першай: адна грае, другая падхоплівае ў тую ж секунду",
+"Compare A and B": "Параўнаць A і B",
+"Pick a take: its versions come here": "Выберы сэмпл: яго версіі з'явяцца тут",
+"Only the original so far: make a file from it in a step, then compare the two": "Пакуль ёсць толькі арыгінал: створы з яго файл якім-небудзь крокам, потым параўнай абодва",
+"A and B are the same file: pick another for one of them": "A і B — адзін і той жа файл: выберы іншы для адной з іх"
+});
+// HERESY 2950: two-tone icons in Engine › Appearance
+RuachI18n.add("be", {
+"Icons": "Іконкі",
+"One colour": "Адзін колер",
+"Two-tone, the theme's colours": "Двухтонавыя, колеры тэмы",
+"The Studio's line icons: ours in one colour, the text's (the default); or two-tone, the outline as always and their shapes filled faintly in the theme's own colours (the accent for what makes, red for what takes away, green for what keeps), so each theme paints them its way": "Лінейныя іконкі Студыі: нашы, у адзін колер — колер тэксту (прадвызначана); або двухтонавыя: контур як заўсёды, а іх формы злёгку заліты колерамі самой тэмы (акцэнт — для таго, што стварае, чырвоны — для таго, што прыбірае, зялёны — для таго, што захоўвае), так што кожная тэма фарбуе іх па-свойму"
+});
+// HERESY 2955: what a control turned off for a model that is not here says, and its way to Engine → Models
+RuachI18n.add("be", {
+"The transcriber: covers from a recording, a backing read (SheetSage2 with MERT-v2-FullSong)": "Транскрыбер: каверы з запісу, чытанне мінусоўкі (SheetSage2 з MERT-v2-FullSong)",
+"Whisper large-v3: the lyrics check, karaoke timing, sections by ear, a recording's words": "Whisper large-v3: праверка тэксту, таймінг караоке, секцыі на слых, словы запісу",
+"not in the last check here: Fetch brings it": "няма ў апошняй праверцы тут: «Спампаваць» прынясе яго",
+"Its files are here: the engine takes it in at its next start.": "Яго файлы тут: рухавік возьме яго пры наступным запуску.",
+"Opens Engine → Models and LoRAs at its row: Fetch there brings it": "Адкрывае «Рухавік → Мадэлі і LoRA» на яго радку: «Спампаваць» там прынясе яго",
+"Engine → Models": "Рухавік → Мадэлі",
+"not in this Studio yet": "у гэтай Студыі яго яшчэ няма",
+"off: this server keeps none": "выкл.: гэты сервер яе не захоўвае",
+"Covering a recording needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.": "Для кавера з запісу патрэбны транскрыбер (SheetSage2 з MERT-v2-FullSong), а ў гэтай Студыі яго яшчэ няма.",
+"Reading a backing needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.": "Каб прачытаць мінусоўку, патрэбны транскрыбер (SheetSage2 з MERT-v2-FullSong), а ў гэтай Студыі яго яшчэ няма.",
+"Writing a score from the sound needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.": "Каб запісаць партытуру па гуку, патрэбны транскрыбер (SheetSage2 з MERT-v2-FullSong), а ў гэтай Студыі яго яшчэ няма.",
+"Ready to transcribe. Match sections needs Whisper large-v3, which this Studio does not have yet.": "Транскрыбаваць можна. Для «Звярыць секцыі» патрэбны Whisper large-v3, а ў гэтай Студыі яго яшчэ няма.",
+"Refined needs SheetSage2-Refined, which this Studio does not have yet.": "Для Refined патрэбны SheetSage2-Refined, а ў гэтай Студыі яго яшчэ няма.",
+"BF16 (7.2 GB) is not in this Studio yet: Engine → Models and LoRAs fetches it under Backbone, and the Studio offers it after its next start.": "BF16 (7.2 ГБ) у гэтай Студыі яшчэ няма: яе спампуе «Рухавік → Мадэлі і LoRA» у радку «Асноўная мадэль», і Студыя прапануе яе пасля наступнага запуску.",
+"The server keeps no library: songs made in this tab stay until it reloads.": "Сервер не вядзе бібліятэку: песні, створаныя ў гэтай укладцы, жывуць да яе перазагрузкі.",
+"This engine keeps no settings file, so it answers this computer and private networks; started the Studio's way (its icon, Pinokio or start.sh), it lets you choose.": "Гэты рухавік не захоўвае файла налад, таму адказвае гэтаму камп'ютару і прыватным сеткам; калі запусціць яго так, як запускаецца Студыя (значком, праз Pinokio або start.sh), можна выбраць.",
+"it needs Whisper large-v3, which this Studio does not have yet: Engine → Models": "патрэбны Whisper large-v3, а ў гэтай Студыі яго яшчэ няма: «Рухавік → Мадэлі»",
+"The lyrics check and karaoke timing need Whisper large-v3, which this Studio does not have yet.": "Для праверкі тэксту і таймінгу караоке патрэбны Whisper large-v3, а ў гэтай Студыі яго яшчэ няма.",
+"Whisper large-v3 is not in this Studio yet: Engine → Models and LoRAs fetches it (3.1 GB)": "Whisper large-v3 у гэтай Студыі яшчэ няма: яго спампуе «Рухавік → Мадэлі і LoRA» (3.1 ГБ)",
+"{0}: not fetched.": "{0}: не спампавана.",
+"The check did not run.": "Праверка не запусцілася.",
+"On Windows the Weights panel downloads through the bash of Git for Windows, and none is installed here.": "На Windows «Мадэлі і LoRA» спампоўваюць праз bash з Git for Windows, а яго тут няма.",
+"Install Git for Windows (https://git-scm.com/download/win), then press again. The models a song needs come without it too.": "Усталюй Git for Windows (https://git-scm.com/download/win) і націсні зноў. Мадэлі, патрэбныя для песні, прыходзяць і без яго."
+});
+// HERESY 2956: why a chooser's workspace takes nothing new
+RuachI18n.add("be", {
+"A 💎 set: nothing new lands in it": "Набор 💎: нічога новага ў яго не кладзецца",
+"Frozen: nothing new lands in it": "Замарожана: нічога новага ў яго не кладзецца",
+"Archived: nothing new lands in it": "У архіве: нічога новага ў яго не кладзецца",
+"The regeneration's own section: nothing new lands in it": "Уласны раздзел рэгенерацыі: нічога новага ў яго не кладзецца",
+"They are here already": "Яны ўжо тут"
+});
+// HERESY 2956: why a chooser's workspace takes nothing new
+RuachI18n.add("be", {
+"Its sections": "Яго раздзелы"
+});
+// HERESY 2959: the chord guard's words
+RuachI18n.add("be", {
+"The chords swing between {0} and {1} bar by bar ({#2} times): the plan may have split its key.": "Акорды гойдаюцца паміж {0} і {1} такт за тактам ({#2} разоў): план, магчыма, раскалоў сваю танальнасць.",
+"Chords with a double sharp or flat: {0}.": "Акорды з дубль-дыезам або дубль-бемолем: {0}.",
+"Chromatic music does this on purpose too: hear it first, or rewrite the score.": "Храматычная музыка і наўмысна так гучыць: спачатку паслухай або перапішы партытуру.",
+"Rewrite the score": "Перапісаць партытуру",
+"A chord in the plan swallowed its notes: the model plans it again with a new music seed": "Акорд у плане праглынуў свае ноты: мадэль плануе яго нанова з новым сідам музыкі"
+});
+// HERESY 2960: a run's own steps 1-3 and a new run's form
+RuachI18n.add("be", {
+"read only": "толькі прагляд",
+"Telemetry ›": "Тэлеметрыя ›",
+"New run from this one": "Новы ран па гэтым",
+"New run": "Новы ран",
+"The form for a new run with this run's set, kind and knobs; its name is yours to give": "Форма новага рана з наборам, відам і ручкамі гэтага; імя даеш ты",
+"The form for a new run, fresh: nothing an earlier form left": "Форма новага рана з чыстага аркуша: нічога з таго, што пакінула ранейшая форма",
+"The material this run's set was made from, as the set remembers it.": "Матэрыял, з якога складзены набор гэтага рана, як яго памятае набор.",
+"The set this run trains on.": "Набор, на якім вучыцца гэты ран.",
+"What this run was given: its kind, its trainer and its knobs.": "Што дадзена гэтаму рану: яго від, трэнер і ручкі.",
+"The form for another run opens with “New run”.": "Форма іншага рана адкрываецца кнопкай «Новы ран».",
+"The form for a new run: {0} stays as it is.": "Форма новага рана: {0} застаецца як ёсць.",
+"not recorded": "не запісана",
+"The set {0} is no longer among the prepared sets.": "Набору {0} больш няма сярод гатовых набораў.",
+"folder": "тэчка",
+"made from": "складзены з",
+"made on": "складзены",
+"sheets by": "партытуры піша",
+"in the run": "у ране",
+"held out": "адкладзена",
+"kind": "від",
+"trainer": "трэнер"
+});
+// HERESY 2961: the held-out bucket's tip in the Trainer's charts
+RuachI18n.add("be", {
+"held out, {#0} saves from step {1} to {2}: {3} {4} on average": "адкладзеныя, захаванняў: {#0}, з кроку {1} па {2}: {3} {4} у сярэднім",
+"step {0}: {1}": "крок {0}: {1}"
+});
+// HERESY 2962: the Trainer's missing weights in words
+RuachI18n.add("be", {
+"The Studio’s trainer is missing {0}: they come with its base in Engine → Models.": "Трэнеру Студыі не стае: {0}. Усё гэта прыходзіць з яго асновай у Рухавік → Мадэлі."
+});
+// HERESY 2963: the Videographer's voice row
+RuachI18n.add("be", {
+"The Narrator's voice": "Голас Чытальніка",
+"Starts at": "Пачатак",
+"The song under it": "Песня пад ім",
+"How far the song goes down under the voice: down in 0.3 s before it, back in 0.8 s after it": "Наколькі песня сціхае пад голасам: уніз за 0,3 с да яго, назад за 0,8 с пасля",
+"Change…": "Змяніць…",
+"This take is not in the library now: the clip cannot be cut with it": "Гэтага сэмпла зараз няма ў бібліятэцы: кліп з ім не змантаваць",
+"A take of the Narrator over the clip, by link (it stays in the Narrator's world): from the song's start, before its first sung line, unless moved; the song goes down under it and back after it; its words as titles of their own, in italics below the sung lines": "Сэмпл Чытальніка паверх кліпа, спасылкай (застаецца ў свеце Чытальніка): з пачатку песні, да першага праспяванага радка, калі не зрушыць; песня сціхае пад ім і вяртаецца пасля; яго словы — уласнымі тытрамі, курсівам пад праспяванымі радкамі",
+"Add the Narrator's voice…": "Дадаць голас Чытальніка…",
+"The clip's voice is laid on: the next clip cut mixes it": "Голас кліпа пакладзены: наступны мантаж кліпа яго звядзе",
+"The clip's voice is taken off": "Голас кліпа зняты",
+"No take of the Narrator in the library yet: read one in the Narrator first": "У бібліятэцы пакуль няма сэмпла Чытальніка: спачатку начытай яго ў Чытальніку",
+"The Narrator's voice over the clip": "Голас Чытальніка паверх кліпа",
+"A take of the Narrator's world, by link: it stays home, the clip only names it.": "Сэмпл са свету Чытальніка, спасылкай: ён застаецца дома, кліп толькі называе яго."
 });

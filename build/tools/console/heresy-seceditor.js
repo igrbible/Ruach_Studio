@@ -10,7 +10,7 @@
 (function () {
   "use strict";
   var H = null;
-  var FPS = 25, MAX_LEN = 900, MAX_ALL = 12, MAX_SUNG = 8;
+  var FPS = 25, MAX_LEN = 900, MAX_ALL = 12, MAX_SUNG = 8, MAX_SING = 600;   // HERESY 2942: Extend sings on to 10:00 at most
   // HERESY 2887 (Viktor 20.11.2026 on §19 №3): the ninth, Insert a part (1714's other half): a copy of one of the score's parts put in after the block, on
   // its last part's bar line. It sits in the gap after the block, not on it, so the block keeps an edit of its own in the same assembly («replace the
   // bridge and insert an interlude after it»); the lab lays it in with Repeat and Remove (E's pass), nothing sung
@@ -115,7 +115,7 @@
       if (soundWhy() == null) return null;
       if (soundWhy()) return soundWhy();
       if (styleWhy()) return styleWhy();
-      return st.len + 15 > MAX_LEN ? tr("Only past the take's end, 15:00 at most in all") : "";
+      return st.len + 15 > MAX_SING ? tr("Only past the take's end, 10:00 at most in all") : "";   // HERESY 2942
     }
     if (!b) return tr("No sections: the lyrics are not timed and there is no score.");
     if (op === "copy" || op === "remove" || op === "insert") {
@@ -242,6 +242,7 @@
     }
     var total = st.len + q.reduce(function (n, e) { return n + addedLen(e); }, 0);   // rule 7
     if (total > MAX_LEN + 0.01) return tr("The new take would run past 15:00");
+    if (q.some(function (e) { return e.op === "extend"; }) && total > MAX_SING + 0.01) return tr("Extend sings on to 10:00 at most");   // HERESY 2942
     return "";
   }
   function orderOf(e) { var s = stretchOf(e, st.queue)[0], p = placeOf(e); return [s ? s[0] : e.op === "extend" ? st.len + 1 : e.op === "insert" ? p : 0, p || 0]; }
@@ -864,10 +865,56 @@
     }
     return lyr;
   }
+  // HERESY 2945 (the agent's list after 2.1.0-rc1, item B9: «Текст после «Повторить» и «Убрать» — подверсией в Писателе, отличия помечены»): the words as
+  // Repeat, Remove and Insert leave the music. The lyrics' blocks follow the score's parts (each part's «% name» lines find the next block of that name
+  // in the lyrics, a block no part names goes with the part before it), then are laid out as afterAbc lays the parts: a removed part's blocks out, a
+  // repeated stretch's blocks once more after its last, an inserted part's after the part it follows. A part whose name has no block (an instrumental
+  // part) carries no words. The text, or the text as it was when there is no score to follow
+  function normTag(n) { return String(n || "").toLowerCase().replace(/[\s_–—-]+/g, " ").replace(/[^\p{L}\p{N} ]/gu, "").trim(); }
+  function cutLyrics(text, q) { return wordsAfter(text, st.score && st.score.sp, q); }
+  function wordsAfter(text, sp, q) {                   // pure: the text, the score's parts ({parts: [{name, end}]}), the queue's entries
+    var cuts = (q || []).filter(function (e) { return (e.op === "remove" || e.op === "copy" || e.op === "insert") && !e.stale; });
+    if (!cuts.length || text === null || !sp || !sp.parts || !sp.parts.length) return text;
+    var raw = String(text || "").split(/\r?\n/), blocks = [], head = [];
+    raw.forEach(function (l) {
+      var tag = l.trim().match(/^\[([^\]]+)\]/);
+      if (tag) blocks.push({ norm: normTag(tag[1]), lines: [l] });
+      else if (blocks.length) blocks[blocks.length - 1].lines.push(l);
+      else head.push(l);
+    });
+    var groups = sp.parts.map(function () { return []; }), owner = blocks.map(function () { return -1; }), at = 0;
+    sp.parts.forEach(function (p, j) {
+      String(p.name || "").split(" · ").forEach(function (nm) {
+        var want = normTag(nm);
+        if (!want || want === "start") return;
+        for (var k = at; k < blocks.length; k++) if (blocks[k].norm === want) { owner[k] = j; at = k + 1; return; }
+      });
+    });
+    var last = -1;
+    blocks.forEach(function (b, k) { if (owner[k] < 0) owner[k] = last; else last = owner[k]; });   // a block no part names: with the part before it
+    blocks.forEach(function (b, k) { if (owner[k] >= 0) groups[owner[k]].push(b); else head = head.concat(b.lines); });
+    var gone = {}, copies = [], puts = [];
+    cuts.forEach(function (e) {
+      if (e.op === "remove") e.data.parts.forEach(function (j) { gone[j] = 1; });
+      if (e.op === "copy") copies.push(e.data.parts.slice().sort(function (a, b) { return a - b; }));
+      if (e.op === "insert") puts.push(e);
+    });
+    var order = [];
+    sp.parts.forEach(function (p, j) {
+      if (!gone[j]) order.push(j);
+      copies.forEach(function (c) { if (c[c.length - 1] === j) for (var k = c[0]; k <= c[c.length - 1]; k++) order.push(k); });
+      puts.forEach(function (e) { if (Math.abs(p.end - e.data.at) < 0.02) order.push(e.data.part); });
+    });
+    var trim = function (ls) { ls = ls.slice(); while (ls.length && !ls[ls.length - 1].trim()) ls.pop(); return ls; };
+    var out = trim(head), chunks = [];
+    order.forEach(function (j) { groups[j].forEach(function (b) { chunks.push(trim(b.lines)); }); });
+    chunks.forEach(function (c) { if (!c.length) return; if (out.length) out.push(""); out = out.concat(c); });
+    return out.join("\n");
+  }
   function paintLyrics() {
     var box = q1(".se-lyrics");
     if (!box || !st.take) return;
-    var live = st.queue.filter(function (e) { return !e.stale; }), now = build(live, true), was = String(st.take.lyrics || "");
+    var live = st.queue.filter(function (e) { return !e.stale; }), now = cutLyrics(build(live, true), live), was = String(st.take.lyrics || "");   // HERESY 2945: with the cuts
     if (now === null) { box.textContent = was; return; }
     var d = window.HeresyVersions && window.HeresyVersions.diff ? window.HeresyVersions.diff(was.split(/\r?\n/), now.split(/\r?\n/)) : null;
     if (!d) { box.textContent = now; return; }
@@ -993,6 +1040,13 @@
         if (!out.abc_render) delete out.abc_render;
       }
       if (hasCuts) out.abc_after = !put && !ext && sp ? afterAbc(q, sp) : "";
+      // HERESY 2945: and its words as the cuts leave them: the new take's lyrics (the lab writes them into its request) and the Writer's sub-version
+      if (hasCuts) {
+        var base = sings ? lyrics : String(take.lyrics || ""), after = cutLyrics(base, q);
+        if (after !== null && after !== base) { out.lyrics_after = after; out.lyrics_before = String(take.lyrics || ""); }
+        var scope = (new URLSearchParams(location.search).get("scope") || "").replace(/[^a-z0-9_-]/gi, "");
+        if (scope) out.scope = scope;                  // a test page keeps its versions apart, as the Writer does
+      }
       return out;
     });
   }
@@ -1291,6 +1345,7 @@
     state: function () { return { open: st.open, name: st.name, how: st.how, pick: st.pick, blocks: st.blocks.map(function (b) { return { name: b.name, a: b.a, b: b.b, cut: b.cut }; }),
       form: st.form ? st.form.op : null, chain: st.chain ? { id: st.chain.id, status: st.chain.status, step: st.chain.step } : null, len: st.len }; },
     can: function (op, i) { return canDo(op, st.blocks[i == null ? st.pick : i]); },
+    wordsAfter: wordsAfter,                              // HERESY 2945: for the checks
     toPlayer: function (made, source) { if (H) toPlayer(made, source); }   // HERESY 2886: for the checks
   };
 })();

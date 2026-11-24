@@ -24,6 +24,7 @@
     set: recall("yue2.trSet") || "", pane: recall("yue2.trPane") || "", sel: recall("yue2.trRun") || "", epoch: "", cmp: "",
     filter: recall("yue2.trFilter") || "all", search: "", folded: recall("yue2.trFolded") === "1", timer: 0, first: true,
     st: recall("yue2.trState") || "",              // HERESY 1659: a state the runs are seen by
+    newRun: false,                                 // HERESY 2960: the wizard is a new run's; never kept, a reload shows the chosen run again
     stacked: recall("yue2.trStacked") === "1",      // HERESY 1299: the Telemetry's curves one under the other
     view: ({ "1": "stacked", "2": "combined" })[recall("yue2.trStacked")] || "side"   // HERESY 2623: side by side, one under the other, together
   };
@@ -255,6 +256,93 @@
     var el = $("trStepsSay"), n = setTracks(), ep = Math.max(1, parseInt($("tr_epochs").value, 10) || 0);
     if (el) el.textContent = n ? "= " + tr(ep * n + " steps") : "";
   }
+  // HERESY 2960 (Viktor 23.11.2026, about 13:50, through the lead: with the live run chosen, steps 1–3 said a set and knobs of a voice run of a month
+  // before, the wizard's set kept in the settings): a run chosen in the column, steps 1–3 are that run's: what its set was made from, its set, what
+  // it was given; each pane its page, read only. The wizard is a new run's, begun fresh or from the run chosen, and shows only then
+  function setRec(name) { return ((state.data || {}).prepared || []).filter(function (p) { return p.name === name; })[0] || null; }
+  function num(n) { return Number(n).toLocaleString(window.RuachI18n ? window.RuachI18n.locales() : undefined); }
+  function factOf(r, k) { var f = (r.facts || []).filter(function (x) { return x[0] === k; })[0]; return f ? String(f[1]) : ""; }
+  function runEpochs(r) { var e = factOf(r, "epochs").split(" · ")[0]; return e !== "" && isFinite(+e) ? +e : +(r.options || {}).epochs || epTot(r); }
+  function runKind(r) { return KINDS[r.kind] ? tr(KINDS[r.kind].label.toLowerCase()) : r.kind || ""; }
+  function runRank(r) { var o = r.options || {}; return o.rank ? tr("rank " + (o.rank_ar || Math.max(4, Math.floor(o.rank / 2))) + " · " + (o.rank_nar || o.rank)) : ""; }
+  function runSaid(r) {
+    var o = r.options || {}, set = setRec(r.dataset), n = set ? set.tracks : r.plugin ? 0 : r.tracks, ep = runEpochs(r);
+    var parts = r.plugin ? [r.kind || "", factOf(r, "learns"), factOf(r, "LR AR") ? "LR AR " + factOf(r, "LR AR") : o.lr ? "lr " + o.lr : "", factOf(r, "LR NAR") ? "LR NAR " + factOf(r, "LR NAR") : ""]
+      : [runKind(r), runRank(r), o.lr ? "lr " + o.lr : ""];
+    parts.push(ep ? tr(fx(ep, 2) + " epochs") : "", engineName(r));
+    return { raw: set ? set.from || set.name : tr("not recorded"), set: r.dataset + (n ? " · " + tr(num(n) + " tracks") : ""), train: parts.filter(Boolean).join(" · ") };
+  }
+  var RUNOF_SAY = { raw: "The material this run's set was made from, as the set remembers it.", set: "The set this run trains on.",
+    train: "What this run was given: its kind, its trainer and its knobs." };
+  function runOfHtml(r, p) {
+    var o = r.options || {}, set = setRec(r.dataset), raw = set ? rawOf(set.from) : null, ep = runEpochs(r);
+    var row = function (k, v, keep) { return v === "" || v == null ? "" : "<span><em>" + esc(k) + "</em> " + (keep ? '<span translate="no">' + esc(v) + "</span>" : esc(v)) + "</span>"; };
+    var setRow = "<span><em>set</em> <span translate=\"no\">" + esc(r.dataset) + "</span>" + (set ? " · <span>" + esc(tr(num(set.tracks) + " tracks")) + "</span>" : "") + "</span>";
+    var gone = set ? "" : "<span>" + esc(tr("The set {0} is no longer among the prepared sets.").replace("{0}", r.dataset)) + "</span>";
+    var grid = p === "raw" ? setRow + (set ? (raw ? "<span><em>folder</em> <span translate=\"no\">datasets/raw/" + esc(set.from) + "</span> · <span>" + esc(tr(num(raw.tracks) + " tracks")) + "</span></span>"
+        : row("made from", set.from, true)) + row("made on", set.made) + row("length", set.seconds ? span(set.seconds) : "") : gone)
+      : p === "set" ? setRow + (set ? row("made on", set.made) + row("length", set.seconds ? span(set.seconds) : "") + row("sheets by", set.sheets_by, true) : gone) +
+        (r.plugin ? row("in the run", factOf(r, "set"), true) : (r.tracks && (!set || r.tracks !== set.tracks) ? row("in the run", tr(num(r.tracks) + " tracks")) : "") +
+          (r.val && (r.val.held_out || []).length ? row("held out", tr(num(r.val.held_out.length) + " tracks")) : ""))
+      : row("kind", runKind(r)) + row("trainer", engineName(r)) + (r.plugin ? "" : row("rank", runRank(r).replace(/^\S+ /, "")) + row("epochs", ep ? fx(ep, 2) : "")) + givenGrid(r);
+    var like = r.plugin ? !!extOf(o.engine) : engineOf(r) === "ruach";   // a template only for a trainer this Studio has
+    return '<div class="tr-runof-head"><span class="tag tr-ro">read only</span><b translate="no">' + esc(r.name) + '</b><span class="tag tr-st is-' + esc(r.status) + '">' + esc(r.status) + "</span>" +
+      '<span class="spacer"></span><button type="button" class="btn ghost small" data-go="run">Telemetry ›</button>' +
+      (like ? '<button type="button" class="btn ghost small" data-newrun="like" data-tip="' + esc(tr("The form for a new run with this run's set, kind and knobs; its name is yours to give")) + '">New run from this one</button>' : "") +
+      '<button type="button" class="btn small primary" data-newrun="fresh" data-tip="' + esc(tr("The form for a new run, fresh: nothing an earlier form left")) + '">New run</button></div>' +
+      '<p class="row-hint"><span>' + esc(RUNOF_SAY[p]) + "</span> <span>" + esc("The form for another run opens with “New run”.") + "</span></p>" +
+      '<div class="tr-fgrid">' + grid + "</div>";
+  }
+  var runOfSig = {};
+  function paintRunOf(shown, r) {
+    ["raw", "set", "train"].forEach(function (p) {
+      var pane = document.querySelector('#view-train .tr-pane[data-pane="' + p + '"]'), box = pane && pane.querySelector(".tr-runof");
+      if (!box) return;
+      var html = shown ? runOfHtml(shown, p) : r ? '<div class="tr-newbar"><span>' + esc(tr("The form for a new run: {0} stays as it is.").replace("{0}", r.name)) + "</span>" +
+        '<button type="button" class="btn ghost small" data-runof-back>Back to the run</button></div>' : "";
+      pane.classList.toggle("is-runof", !!shown);
+      if (runOfSig[p] !== html) { runOfSig[p] = html; box.innerHTML = html; }
+    });
+  }
+  // a new run's form: fresh (none of what an earlier form left: its folder, its tracks, its set, its knobs), or from the run chosen as a template (its
+  // set, its kind, its knobs; for a plugin's run its trainer and its knobs); its name is left to be given (the same name would go on with that run)
+  function newRun(like) {
+    state.newRun = true;
+    state.raw = null; state.rows = []; state.voiceMode = null; state.voiceSex = ""; state.transcriberFor = "";
+    state.set = ""; keep("yue2.trSet", null);
+    Array.prototype.forEach.call(document.querySelectorAll('#view-train .tr-pane[data-pane="set"] input, #trKnobs input, #trKnobs select'), function (el) {
+      if (el.type === "checkbox" || el.type === "radio") el.checked = el.defaultChecked;
+      else if (el.tagName === "SELECT") { var d0 = Array.prototype.filter.call(el.options, function (op) { return op.defaultSelected; })[0] || el.options[0]; if (d0) el.value = d0.value; }
+      else el.value = el.defaultValue;
+    });
+    var cards = recall("yue2.trCards"), c = $("tr_cards");   // the cards this browser gives a run: a habit, not a leftover
+    if (c && cards && Array.prototype.some.call(c.options, function (op) { return op.value === cards; })) c.value = cards;
+    var o = (like && like.options) || {}, ext = like && like.plugin ? extOf(o.engine) : null, sel = $("tr_engine");
+    var has = function (el, v) { return el && v != null && Array.prototype.some.call(el.options, function (op) { return op.value === String(v); }); };
+    if (ext && has(sel, o.engine)) sel.value = o.engine;
+    sel.dispatchEvent(new Event("change"));
+    if (like && setRec(like.dataset)) { state.set = like.dataset; keep("yue2.trSet", state.set); }
+    if (ext) {
+      Array.prototype.forEach.call(document.querySelectorAll("#trExtKnobs [data-ext]"), function (el) {
+        var v = o[el.dataset.ext];
+        if (v == null) return;
+        if (el.type === "checkbox") el.checked = !!v; else if (el.tagName !== "SELECT" || has(el, v)) el.value = v;
+      });
+    } else {
+      setKind(like && KINDS[like.kind] ? like.kind : "style");
+      if (like) {
+        var put = function (id, v) { var el = $(id); if (el && v != null && v !== "") el.value = v; };
+        ["save_epochs", "rank", "lr", "ar_loss_weight", "ar_kl_weight", "ar_lr_multiplier", "lr_tail_epochs", "ar_cap_tokens"].forEach(function (k) { put("tr_" + k, o[k]); });
+        if (o.lr_tail_floor != null) put("tr_lr_tail_floor", Math.round(o.lr_tail_floor * 100));
+        ["cot", "quant", "transcriber", "base", "cards"].forEach(function (k) { if (has($("tr_" + k), o[k])) $("tr_" + k).value = String(o[k]); });
+        [["tr_sep", o.do_separation], ["tr_vram_meter", o.vram_meter], ["tr_long_off_card0", o.long_off_card0], ["tr_plateau", +o.val_fraction > 0]].forEach(function (b) { if ($(b[0])) $(b[0]).checked = !!b[1]; });
+        if (like.tracks && (o.steps || like.steps)) put("tr_epochs", Math.max(1, Math.round((o.steps || like.steps) / like.tracks)));
+        engineKnobs();
+      }
+    }
+    paintRaw(); paintVoice(); paintTracks(); paintSets(); warn(); gate(); paintPills();
+  }
+
   function paintPills() {
     rankSay();
     stepsSay();
@@ -269,8 +357,15 @@
     // HERESY 2876 (Viktor 19.11.2026, about 23:35: steps 2 and 3 showed the form's set and knobs under the 4.6B run, as if they were its own): with a run
     // open, steps 1–3 say they are the form for a new run; the run's own set, trainer and model are in its Telemetry
     if (r) ["trSayRaw", "trSaySet", "trSayTrain"].forEach(function (id) { $(id).textContent = tr("new run") + ": " + $(id).textContent; });
+    // HERESY 2960: a run chosen and no new run begun: steps 1–3 are that run's, each its whole line in its tip (the step cuts it short)
+    var shown = r && !state.newRun ? r : null, said = shown ? runSaid(shown) : null;
+    [["trSayRaw", "raw"], ["trSaySet", "set"], ["trSayTrain", "train"]].forEach(function (p) {
+      if (said) { $(p[0]).textContent = said[p[1]]; $(p[0]).setAttribute("data-tip", said[p[1]]); } else $(p[0]).removeAttribute("data-tip");
+    });
     $("trSayRun").textContent = r ? r.name + (isLive(r) && r.steps ? " · " + Math.floor(100 * stepOf(r) / r.steps) + " %" : " · " + tr(r.status)) : tr("a run: its curves and epochs");
     var done = { raw: !!state.raw, set: !!set, train: runs().some(function (x) { return x.dataset === state.set; }), run: !!(r && r.status === "done") };
+    if (shown) done.raw = done.set = done.train = true;   // HERESY 2960: the run's own steps, all taken
+    paintRunOf(shown, r);
     Array.prototype.forEach.call(document.querySelectorAll("#trPills .ps-step"), function (b) {
       b.classList.toggle("is-active", b.dataset.pane === state.pane);
       b.classList.toggle("is-done", !!done[b.dataset.pane]);
@@ -291,8 +386,10 @@
     if (!own.mert) lack.push("MERT-v2-FullSong");
     if (!own.head) lack.push("the realaudio tokenizer head");
     // HERESY 1672: each name in the page's language before the join (the pattern's «{0}» is the whole list, which no key knows)
-    if (lack.length) html += '<p class="tr-warn">The Studio’s trainer is missing ' + esc(lack.map(tr).join(", ")) + ": <code>heresy/fetch-heresy.sh --trainer " + esc(q) + "</code>" +
-      (own.mert ? "" : " and <code>tools/download-checkpoints.sh</code>") + ".</p>";
+    // HERESY 2962 (2955's class: no command line for a missing model): said in words, with the button that opens Engine → Models at the trainer's
+    // base, its variant the weights asked; MERT-v2-FullSong and the tokenizer head come with it
+    if (lack.length) html += '<p class="tr-warn"><span class="pack-say">' + esc(tr("The Studio’s trainer is missing {0}: they come with its base in Engine → Models.").replace("{0}", lack.map(tr).join(", "))) +
+      "</span> " + (window.HeresyWeights ? window.HeresyWeights.packButton("trainer", q) : "") + "</p>";
     $("trWarn").innerHTML = html;
   }
 
@@ -523,7 +620,7 @@
         cot: o.cot || "off", quant: o.quant || "bf16", do_separation: !!o.do_separation, note: r.note || "" });   // HERESY 1422: the run's own separation kept
       return api("/train/run", spec).then(function () {
         toast(tr(name + " goes on to " + n + " epochs"));
-        state.sel = name; keep("yue2.trRun", name);
+        state.sel = name; keep("yue2.trRun", name); state.newRun = false;   // HERESY 2960
         return load().then(function () { showPane("run"); });
       });
     }).catch(function (e) { toast(e.message, true); });
@@ -601,7 +698,7 @@
   }
   function openRun(name) {
     if (state.sel !== name) state.cmp = "";
-    state.sel = name; state.epoch = ""; keep("yue2.trRun", name);
+    state.sel = name; state.epoch = ""; keep("yue2.trRun", name); state.newRun = false;   // HERESY 2960: a run chosen, steps 1–3 are its own
     paintList(); paintLive(); showPane("run");
   }
 
@@ -610,6 +707,67 @@
     var out = [], v = null;
     curve.forEach(function (p) { v = v == null ? p[1] : v + a * (p[1] - v); out.push([p[0], v]); });
     return out;
+  }
+  // HERESY 2943 (Viktor read the live run's curves together on 22.11.2026 and took the NAR for going bad: the AR's freeze at step 33450 took its CE out of
+  // the loss, 2.4 → 0.88 in one step, and the running average drew it as a slope of 2000 steps crossing the flow): the average begins anew at each of
+  // the run's events (lab/training.py _events: a freeze, a resume, a tower's learning rate changed), so a step change stays a step
+  // The lab's curve is averaged into at most 400 points (training.py _curve), so the point that straddles an event mixes both sides (at the freeze,
+  // 2.2 of 2.4 and 0.88): the average starts at it and again at the point after it, the first wholly past the event
+  function emaCut(curve, a, cuts) {
+    var out = [], v = null, c = 0, fresh = 0;
+    curve.forEach(function (p) {
+      while (c < cuts.length && cuts[c] <= p[0]) { fresh = 2; c++; }
+      v = v == null || fresh > 0 ? p[1] : v + a * (p[1] - v);
+      if (fresh > 0) fresh--;
+      out.push([p[0], v]);
+    });
+    return out;
+  }
+  // HERESY 2943c (Viktor 22.11.2026: «добавить глобальный ползунок для сглаживания пиков в графах. Такое все тренеры практикуют»): one smoothing for every
+  // chart of every view, as TensorBoard's: 0 the logged points as they are, up to 0.99; 0.92 by default, the look the charts had (the running average's
+  // 0.08), kept in this browser. The points themselves drawn faintly under the smoothed line; the learning rate, the memory and the held-out dots are never
+  // smoothed, nor across the run's events (emaCut)
+  var SMOOTH_KEY = "yue2.trSmooth", SMOOTH_DEF = 0.92;
+  var SMOOTH_TIP = "The curves' smoothing, as TensorBoard's: 0 draws the logged points as they are, 0.99 the smoothest (0.92 by default); the faint line under each is the points themselves. The learning rate, the memory and the held-out dots are never smoothed, nor across the run's events. Kept in this browser.";
+  function smoothK() { var v = parseFloat(recall(SMOOTH_KEY)); return isFinite(v) && v >= 0 && v <= 0.99 ? v : SMOOTH_DEF; }
+  function smoothed(curve, r) { return emaCut(curve, 1 - smoothK(), r ? cutsOf(r) : []); }
+  function cutsOf(r) {
+    var seen = {};
+    return (r.events || []).map(function (e) { return e.step; }).filter(function (st) { if (!(st > 0) || seen[st]) return false; seen[st] = 1; return true; }).sort(function (a, b) { return a - b; });
+  }
+  // HERESY 2961 (Q4 of 22.11.2026: «не больше ~120, среднее по корзине, полные значения в подсказке», by consent): the held-out dots in view, at most
+  // HELD_MAX: past that, the saves in order a bucket each dot (the bucket's mean step and value), its tip every step and value of it
+  var HELD_MAX = 120;
+  function heldDots(hist, key, x0, x1) {
+    var pts = (hist || []).filter(function (h) { return h.step >= x0 && h.step <= x1 && isFinite(+h[key]); }).sort(function (a, b) { return a.step - b.step; });
+    var size = Math.max(1, Math.ceil(pts.length / HELD_MAX)), out = [];
+    for (var i = 0; i < pts.length; i += size) {
+      var b = pts.slice(i, i + size), mean = function (f) { return b.reduce(function (s, h) { return s + f(h); }, 0) / b.length; };
+      out.push({ step: mean(function (h) { return h.step; }), v: mean(function (h) { return +h[key]; }), all: b });
+    }
+    return out;
+  }
+  function heldTip(d, key) {
+    if (d.all.length === 1) return tr("held out at step {0}: {1} {2}").replace("{0}", Number(d.all[0].step).toLocaleString()).replace("{1}", key).replace("{2}", fmtV(d.v));
+    return tr("held out, {#0} saves from step {1} to {2}: {3} {4} on average").replace("{#0}", d.all.length).replace("{1}", Number(d.all[0].step).toLocaleString())
+      .replace("{2}", Number(d.all[d.all.length - 1].step).toLocaleString()).replace("{3}", key).replace("{4}", fmtV(d.v)) + "\n" +
+      d.all.map(function (h) { return tr("step {0}: {1}").replace("{0}", Number(h.step).toLocaleString()).replace("{1}", fmtV(+h[key])); }).join("\n");
+  }
+  // HERESY 2961 (Q3 of 22.11.2026, by consent): the run's events as thin lines with their words in a chart of any view
+  function eventLines(r, x, x0, x1, H) {
+    return cutsOf(r).filter(function (st) { return st >= x0 && st <= x1; }).map(function (st) {
+      var xx = x(st).toFixed(1);
+      return '<line class="ev" x1="' + xx + '" x2="' + xx + '" y1="0" y2="' + H + '"/><line class="evh" data-tip="' + esc(eventSaid(r, st)) + '" x1="' + xx + '" x2="' + xx + '" y1="0" y2="' + H + '"/>';
+    }).join("");
+  }
+  // HERESY 2943: what happened at a step, in words: each event of the run there, one line
+  function eventSaid(r, step) {
+    var at = (r.events || []).filter(function (e) { return e.step === step; }), tw = function (t) { return String(t || "").toUpperCase(); };
+    return tr("Step {0}").replace("{0}", Number(step).toLocaleString()) + ": " + at.map(function (e) {
+      if (e.kind === "freeze") return tr("the {0} frozen: its loss leaves the sum").replace("{0}", tw(e.tower));
+      if (e.kind === "resume") return tr("went on from its save");
+      return tr("the {0}'s learning-rate curve {1} → {2}").replace("{0}", tw(e.tower)).replace("{1}", e.was || "\u2014").replace("{2}", e.now || "\u2014");
+    }).join("; ") + ". " + tr("The running average begins anew here.");
   }
   // HERESY 1736: an epoch as it is said: its tenths (0.7, 1.3), a whole one without a point (1, 2)
   function epochSaid(e) { var x = Math.round(e * 10) / 10; return Math.abs(x - Math.round(x)) < 1e-9 ? String(Math.round(x)) : x.toFixed(1); }
@@ -744,14 +902,38 @@
   }
   // HERESY 2657: a chart's last step (the run's, the compare run's, its curves' last) and the y range it draws its curve in, each in one place:
   // the together view's curves take the very same, so each lies there at the height it has in its own chart
-  function lastOf(key, ser, r) {
-    var lines = curvesOf(ser, key), other = key === "vram" ? null : runOf(state.cmp);
-    return Math.max(r.steps || 0, other ? other.steps || 0 : 0, lines.reduce(function (m, l) { var c = l.s.curve; return Math.max(m, c[c.length - 1][0]); }, 0)) || 1;
+  // HERESY 2943b (Viktor 22.11.2026: «в графиках подправь пустое место после последнего шага. Можно автоужим делать, оставляя 10% пустоты с хвоста, чтобы
+  // дорисовывались шаги, а как до конца доходит, снова на 10% ужимать кривые по ширине»): every chart's steps end in one place, for every view (side,
+  // stacked, together, the LR and memory pair): a finished or stopped run at its last logged step; a run training at its last logged step and a tenth of
+  // the span shown more (step / 0.9), kept while the new steps draw into that tail, set again when they reach its edge (at the planned last step when
+  // that comes first). It was the planned last step for every run, a live one's charts half empty. The zoom works inside it; «the whole run» comes back
+  // to it. The save ticks and the compare run's dashed average are drawn within it
+  function loggedLast(r) {
+    var ser = r.series || {}, m = 0, last = function (v) { if (v && v.curve && v.curve.length) m = Math.max(m, +v.curve[v.curve.length - 1][0] || 0); };
+    Object.keys(ser).forEach(function (k) {
+      var v = ser[k];
+      if (k === "vram" && v && typeof v === "object") Object.keys(v).forEach(function (c) { last(v[c]); });
+      else last(v);
+    });
+    return m;
   }
+  function runEnd(r) {
+    var last = loggedLast(r), plan = +r.steps || 0;
+    if (!last) return plan || 1;
+    if (!isLive(r)) return last;
+    var a = state.autoEnd && state.autoEnd.run === r.name ? state.autoEnd.end : 0;
+    if (!(a > last)) {                                    // the curve at the tail's edge (or a first look): a tenth of the span again
+      a = Math.ceil(last / 0.9);
+      if (plan > last && plan < a) a = plan;
+      state.autoEnd = { run: r.name, end: a };
+    }
+    return a;
+  }
+  function lastOf(key, ser, r) { return runEnd(r); }
   function scaleOf(key, ser, r, x0, x1) {
     var lines = curvesOf(ser, key), plain = !!PLAIN[key], lo = Infinity, hi = -Infinity;
     var other = key === "vram" ? null : runOf(state.cmp), oc = other && other !== r ? (((other.series || {})[key] || {}).curve || []) : [];
-    var cmpAvg = oc.length > 1 ? (plain ? oc : ema(oc, 0.08)) : [];
+    var cmpAvg = oc.length > 1 ? (plain ? oc : smoothed(oc, other)) : [];   // HERESY 2943c
     lines.forEach(function (l) { l.s.curve.concat(cmpAvg).forEach(function (p) { if (p[0] >= x0 && p[0] <= x1) { lo = Math.min(lo, p[1]); hi = Math.max(hi, p[1]); } }); });
     // HERESY 2622: the held-out tracks at each save, dots over the curve (flow, ar_ce, KL), in the y range too
     var HOK = { flow: "flow", ar_ce: "ar_ce", ar_kl: "kl" }[key], hist = HOK ? ((r.val || {}).history || []).filter(function (h) { return h && h.step && h[HOK] != null; }) : [];
@@ -771,9 +953,9 @@
     var path = function (pts) { return clip(pts).map(function (p, i) { return (i ? "L" : "M") + x(p[0]).toFixed(1) + " " + y(p[1]).toFixed(1); }).join(" "); };
     var grid = [0, 0.5, 1].map(function (f) { var v = lo + (hi - lo) * (1 - f), yy = y(v); return '<line class="g" x1="0" x2="' + W + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '"/>'; }).join("");
     var cand = candidates(r);
-    var ticks = saveTicks(r, x, H, cand, function (k) { return true; });
+    var ticks = saveTicks(r, x, H, cand, function (k) { return k.step >= x0 && k.step <= x1; });   // HERESY 2943b: within the range drawn
     var labels = [hi, (hi + lo) / 2, lo].map(function (v, i) { return '<span style="top:' + [2, 46, 90][i] + '%">' + fmtV(v) + "</span>"; }).join("");
-    var s = lines[0].s, av = multi || plain ? null : ema(s.curve, 0.08);   // HERESY 2622: the head read off the bold line, as the eye reads it
+    var s = lines[0].s, av = multi || plain ? null : smoothed(s.curve, r);   // HERESY 2622: the head read off the bold line, as the eye reads it; 2943c: the smoothing
     var hd = av ? { first: av[0][1], last: av[av.length - 1][1], min: Math.min.apply(null, av.map(function (p) { return p[1]; })), max: Math.max.apply(null, av.map(function (p) { return p[1]; })) } : s;
     var said = multi ? lines.map(function (l, i) { return '<span class="tr-ck k' + (i % 4) + '"' + (l.col ? ' style="--tw:' + l.col + '"' : "") + '><i' + (l.col ? ' style="border-color:' + l.col + '"' : "") + "></i>" + esc(l.name || cardName(r, l.k)) + " " + fmtV(l.s.last) + (l.name ? "" : " GB") + "</span>"; }).join("")
       : '<span class="mono">' + fmtV(hd.first) + " → " + fmtV(hd.last) + " · min " + fmtV(hd.min) + (key === "grad_norm" || key === "step_s" ? " · max " + fmtV(hd.max) : "") + "</span>" +
@@ -783,7 +965,7 @@
     return '<figure class="tr-chart" data-key="' + key + '" data-last="' + last + '" data-x0="' + x0 + '" data-x1="' + x1 + '" data-lo="' + lo + '" data-hi="' + hi + '">' +
       '<figcaption><b>' + esc(tr(title)) + '</b>' + zoomBar(z, last) + said + '<span class="tr-read mono is-hint">over the curve: the step, its epoch, the value there</span></figcaption>' +
       '<div class="tr-plot"><div class="tr-ylab mono">' + labels + "</div>" +
-      '<svg viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none">' + grid + ticks + paths +
+      '<svg viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none">' + grid + eventLines(r, x, x0, x1, H) + ticks + paths +   // HERESY 2961: the run's events (no dots on the curves still, 2917)
         (cmpAvg.length ? '<path class="cmp" d="' + path(cmpAvg) + '"/>' : "") +
         (multi || plain ? "" : '<path class="avg" d="' + path(av) + '"/>') +
         '<line class="cur" x1="-10" x2="-10" y1="0" y2="' + H + '"/></svg></div>' +
@@ -815,8 +997,9 @@
   function layersOf(id, ser, r) {
     var none = function (key, col) { return { key: key, col: col, name: tr(titleOf(key)), none: whyEmpty(key, ser, r, curvesOf(ser, key)) }; };
     var logged = function (key) { var s = ser[key]; return !!(s && s.curve && s.curve.length > 1); };
+    var cuts = cutsOf(r);                                 // HERESY 2943: no average across the run's events
     if (id === "combined") return LAYERS.map(function (l) {
-      return logged(l[0]) ? { key: l[0], scale: l[0], col: l[1], name: tr(titleOf(l[0])), read: l[0], pts: ema(ser[l[0]].curve, 0.08) } : none(l[0], l[1]);
+      return logged(l[0]) ? { key: l[0], scale: l[0], col: l[1], name: tr(titleOf(l[0])), read: l[0], pts: emaCut(ser[l[0]].curve, 1 - smoothK(), cuts), raw: ser[l[0]].curve } : none(l[0], l[1]);   // HERESY 2943c
     });
     var cards = curvesOf(ser, "vram"), out = towers(ser) ? TOWERS.map(function (t) {   // HERESY 2875: each tower's rate, its own box
       return { key: t[0], scale: "lr", col: t[2], name: tr("Learning rate") + " · " + tr(t[1]), read: "LR " + (t[0] === "lr_ar" ? "AR" : "NAR"), pts: ser[t[0]].curve };
@@ -826,15 +1009,25 @@
       var n = cardName(r, l.k); return { key: "vram" + l.k, scale: "vram", col: CARD_COL[i % 4], name: n, read: n.split(" · ")[0], pts: l.s.curve, gb: true };
     }));
   }
+  // HERESY 2943: a curve's held-out values in view (2622's dots over flow, ar_ce and KL), inside its scale: the range grows to hold them (the live run's
+  // held-out flow 0.9163–0.9178 stood above its curve's 0.882–0.916, so a dot would have been off the plot); the side and stacked views keep theirs
+  function heldIn(sc, z) {
+    var vals = (sc.hist || []).filter(function (h) { return h.step >= z[0] && h.step <= z[1]; }).map(function (h) { return +h[sc.HOK]; }).filter(isFinite);
+    if (!vals.length) return sc;
+    var lo = Math.min(sc.lo, Math.min.apply(null, vals)), hi = Math.max(sc.hi, Math.max.apply(null, vals));
+    if (lo === sc.lo && hi === sc.hi) return sc;
+    var pad = (hi - lo) * 0.04;
+    return Object.assign({}, sc, { lo: lo < sc.lo ? lo - pad : lo, hi: hi > sc.hi ? hi + pad : hi });
+  }
   function valOf(it, v) { return it.gb ? tr("{0} GB").replace("{0}", fmtV(v)) : fmtV(v); }   // a card in the page's own GB, whole
   function together(ser, r) {
     state.multi = {};
     return MULTI.map(function (m) {
       var items = layersOf(m[0], ser, r), drawn = items.filter(function (it) { return it.pts; }), off = layersOff(m[0]);
       if (!drawn.length) return emptyChart(m[0], ser, r, m[1], m[2], []);
-      var last = drawn.reduce(function (a, it) { return Math.max(a, lastOf(it.scale, ser, r)); }, 1), z = zoomOf(r, last), sc = {}, axes = [];
+      var last = runEnd(r), z = zoomOf(r, last), sc = {}, axes = [];   // HERESY 2943b: the one end of every chart
       drawn.forEach(function (it) {
-        if (!sc[it.scale]) sc[it.scale] = scaleOf(it.scale, ser, r, z[0], z[1]);
+        if (!sc[it.scale]) sc[it.scale] = heldIn(scaleOf(it.scale, ser, r, z[0], z[1]), z);   // HERESY 2943: the held-out dots in its range
         it.on = !off[it.key];
         if (it.on && axes.indexOf(it.scale) < 0) axes.push(it.scale);
       });
@@ -853,13 +1046,22 @@
     var yIn = function (s) { return function (v) { return H - bot - (H - top - bot) * (v - s.lo) / (s.hi - s.lo); }; };
     var hot = state.hot && state.hot.fig === id ? hotOf(f.drawn.filter(function (it) { return it.on; }), state.hot.key) : null;
     var lit = function (k) { return hot && hot[k] ? " is-hot" : ""; };
-    var paths = "", boxes = "";
+    var paths = "", boxes = "", dots = "";
     f.items.forEach(function (it) {
       var s = it.pts && f.sc[it.scale], on = !!s && it.on, y = s && yIn(s);
+      // HERESY 2943c: the points themselves faintly under a smoothed curve
+      if (on && it.raw && smoothK() > 0) paths += '<path class="clr' + lit(it.key) + '" data-k="' + esc(it.key) + '" style="--lc:' + it.col + '" d="' + clipTo(it.raw, x0, x1).map(function (p, j) { return (j ? "L" : "M") + x(p[0]).toFixed(1) + " " + y(p[1]).toFixed(1); }).join(" ") + '"/>';
       if (on) paths += '<path class="cl' + lit(it.key) + '" data-k="' + esc(it.key) + '" style="--lc:' + it.col + '" d="' + clipTo(it.pts, x0, x1).map(function (p, j) { return (j ? "L" : "M") + x(p[0]).toFixed(1) + " " + y(p[1]).toFixed(1); }).join(" ") + '"/>';
-      boxes += '<label class="check tr-layer' + (on ? "" : " is-off") + (s ? "" : " is-none") + '" style="--lc:' + it.col + '" data-tip="' + esc(s ? it.name + " · " + fmtV(s.lo) + " – " + fmtV(s.hi) : tr(it.none)) + '">' +
+      // HERESY 2943: its held-out dots (2622, promised by 2623 and never drawn here), each at its save's step in the curve's own scale, its values in its tip
+      if (on && s.HOK && s.hist) dots += heldDots(s.hist, s.HOK, x0, x1).map(function (d) {   // HERESY 2961: at most HELD_MAX, a bucket's mean where denser
+        return '<path class="hod' + lit(it.key) + '" data-k="' + esc(it.key) + '" style="--lc:' + it.col + '" data-tip="' + esc(heldTip(d, s.HOK)) +
+          '" d="M' + x(d.step).toFixed(1) + " " + y(d.v).toFixed(1) + 'l0.01 0"/>';
+      }).join("");
+      // HERESY 2943: the scale's span on the box and in its tip, so the eye knows how small a move is (the flow's whole height 0.034, ar_ce's 1.0)
+      var span = s ? fmtV(s.hi - s.lo) : "";
+      boxes += '<label class="check tr-layer' + (on ? "" : " is-off") + (s ? "" : " is-none") + '" style="--lc:' + it.col + '" data-tip="' + esc(s ? it.name + " · " + fmtV(s.lo) + " – " + fmtV(s.hi) + " · " + tr("span {0}").replace("{0}", span) : tr(it.none)) + '">' +
         '<input type="checkbox" data-layer="' + esc(it.key) + '" data-fig="' + id + '"' + (on ? " checked" : "") + (s ? "" : " disabled") + " /><i></i><span>" + esc(it.name) + "</span>" +
-        '<span class="mono">' + (s ? valOf(it, it.pts[it.pts.length - 1][1]) : "—") + "</span></label>";
+        '<span class="mono">' + (s ? valOf(it, it.pts[it.pts.length - 1][1]) : "—") + "</span>" + (s ? '<span class="tr-span mono">' + esc(tr("span {0}").replace("{0}", span)) + "</span>" : "") + "</label>";
     });
     var levels = [top, (H - bot + top) / 2, H - bot];
     var row = function (i) {                              // the shown scales' values at one height, in the boxes' order
@@ -873,11 +1075,13 @@
       '<i class="tr-tick" style="top:' + top + 'px"></i><i class="tr-tick" style="top:' + (H - bot) + 'px"></i>' : "";
     var grid = levels.map(function (yy) { return '<line class="g" x1="0" x2="' + CW + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '"/>'; }).join("");
     var ticks = saveTicks(r, x, H, candidates(r), function (k) { return k.step >= x0 && k.step <= x1; });
+    // HERESY 2943: the run's events as thin lines over both charts, each with its words (a wider line no one sees takes the pointer); 2961: one drawer for every view
+    var events = eventLines(r, x, x0, x1, H);
     state.multi[id] = f.drawn.filter(function (it) { return it.on; });
     return '<figure class="tr-chart tr-combined' + (hot ? " has-hot" : "") + '" data-key="' + id + '" data-last="' + f.last + '" data-x0="' + x0 + '" data-x1="' + x1 + '" style="--ch:' + H + 'px">' +
       "<figcaption><b>" + esc(tr(f.m[1])) + "</b>" + zoomBar(f.z, f.last) + '<span class="tr-read mono is-hint">over the curve: the step, its epoch, the value there</span></figcaption>' +
       '<div class="tr-layers">' + boxes + "</div>" +
-      '<div class="tr-plot"><svg viewBox="0 0 ' + CW + " " + H + '" preserveAspectRatio="none">' + grid + ticks + paths +
+      '<div class="tr-plot"><svg viewBox="0 0 ' + CW + " " + H + '" preserveAspectRatio="none">' + grid + events + ticks + paths + dots +
       '<line class="cur" x1="-10" x2="-10" y1="0" y2="' + H + '"/></svg>' + scales + '</div><p class="tr-say">' + esc(tr(f.m[2])) + "</p></figure>";
   }
   // HERESY 2657b, 2664: what a key lights among the shown curves: a box's curve and its scale; a value in the scale rows (its key a scale's), the
@@ -908,6 +1112,13 @@
     var rd = g.querySelector(".tr-read"); rd.classList.remove("is-hint");
     rd.textContent = "step " + at + (r.tracks ? " · " + epAt(r, at) : "") + " · " + parts.join(" · ");   // HERESY 2875
   }
+  function chartsHtml(ser, r) {                          // HERESY 2442: the eight, for every run; 2623, 2657: or the two multigraphs
+    return state.view === "combined" ? together(ser, r) : CHARTS.map(function (c) { return chart(c[0], ser, r, c[1], c[2]); }).join("");
+  }
+  function repaintCharts() {                             // HERESY 2943c: the charts alone, the slider in the hand left where it is
+    var r = runOf(state.sel), host = document.querySelector("#trRunPane .tr-charts");
+    if (r && host) host.innerHTML = chartsHtml(r.series || {}, r);
+  }
   function paintRun() {
     var el = $("trRunPane"), r = runOf(state.sel);
     if (!r && state.reading && state.sel) { el.innerHTML = '<p class="row-hint tr-empty">' + (window.HeresyWait ? window.HeresyWait.wave() : "") + esc(tr("Reading the runs…")) + "</p>"; return; }   // 2726: its page not in yet
@@ -933,6 +1144,9 @@
           (r.status === "paused" ? '<button type="button" class="btn ghost small" data-act="resume" data-run="' + esc(r.name) + '" data-tip="' + esc(tr("Resume: the run goes on from its last save, with the same set, knobs and cards.")) + '">' + esc(tr("Resume")) + "</button>" : "") +
           (live ? '<button type="button" class="btn ghost small danger" data-act="stop" data-run="' + esc(r.name) + '">Stop</button>' : "") +
           '<button type="button" class="btn ghost small tr-hico" data-act="log" data-run="' + esc(r.name) + '" aria-label="The log" data-tip="The log">' + ZI("scroll-text", "The log") + "</button>" +   // HERESY 2572   // HERESY 1167
+          // HERESY 2943c: the curves' smoothing, as TensorBoard's
+          '<label class="tr-smooth" data-tip="' + esc(tr(SMOOTH_TIP)) + '"><span>' + esc(tr("Smoothing")) + '</span><input type="range" id="trSmooth" min="0" max="0.99" step="0.01" value="' + smoothK() +
+            '" aria-label="' + esc(tr("Smoothing")) + '"><b class="mono" id="trSmoothV">' + smoothK().toFixed(2) + "</b></label>" +
           // HERESY 1299 (Viktor: «выстраивать в одну колонку оба блока живого графа»): the face shows what a click makes
           '<button type="button" class="btn ghost small tr-stack" data-stack aria-pressed="' + (state.view !== "side") + '" data-tip="' +   // HERESY 2623: three views
             esc(tr(VIEWS[state.view][1])) + '" aria-label="' + esc(tr(VIEWS[state.view][1])) + '">' +
@@ -960,10 +1174,7 @@
       "</div>" +
       (memo ? '<p class="tr-err">ar_ce ' + Number(ar).toFixed(3) + ": the music half is learning the songs by heart; an earlier epoch may be the better adapter.</p>" : "") +
       (ser.error ? '<p class="tr-err">' + esc(ser.error) + "</p>" : "") + (r.error ? '<p class="tr-err">' + esc(r.error) + "</p>" : "") +
-      '<div class="tr-charts' + (state.view === "stacked" ? " is-stacked" : state.view === "combined" ? " is-combined" : "") + '">' +
-        (state.view === "combined" ? together(ser, r)
-          : CHARTS.map(function (c) { return chart(c[0], ser, r, c[1], c[2]); }).join("")) +   // HERESY 2442: the eight, for every run; 2623, 2657: or the two multigraphs
-      "</div>" +
+      '<div class="tr-charts' + (state.view === "stacked" ? " is-stacked" : state.view === "combined" ? " is-combined" : "") + '">' + chartsHtml(ser, r) + "</div>" +
       (cks.length || (r.gone || []).length ? '<div class="tr-epochs"><div class="tr-ehead"><span class="label">Epochs · ' + cks.length + " saved · " + gb(bytes) + "</span>" +
           ((r.gone || []).length ? '<span class="tr-gone-n">' + r.gone.length + " deleted from disk</span>" : "") +   // HERESY 1816
           // HERESY 1817: choosing saves to delete, one by one; none for a protected or a running run
@@ -983,8 +1194,19 @@
           return '<button type="button" class="coll-chip' + (c.lora ? " is-in" : "") + (why ? " is-cand" : "") + (c.file === state.epoch ? " is-on" : "") + (pickOn(r) && state.pick.files[c.file] ? " is-pick" : "") + '" data-epoch="' + esc(c.file) + '" data-tip="' + esc([tr("step " + c.step), when(c.saved), c.lora ? tr("in loras/") : "", why ? tr("worth hearing first: " + why) : ""].filter(Boolean).join(" · ")) + '">' + (c.epoch != null ? "e" + epochSaid(c.epoch) : "final") + (c.lora ? " ✓" : "") + "</button>";
         }).join("") + "</div>" +
         "</div>" : "") +
-      '<div class="tr-facts"><div class="tr-facts-head">What it was given</div><div class="tr-fgrid">' +   // HERESY 1833: open always
-        (r.facts ? factsOf(r) :                         // HERESY 2321: a plugin's run says its own
+      '<div class="tr-facts"><div class="tr-facts-head">What it was given</div><div class="tr-fgrid">' + givenGrid(r) + "</div></div>";   // HERESY 1833: open always; 2960: drawn by givenGrid
+    // HERESY 2572 (the UIX audit, item 88): the run to compare with in the Studio's picker (51 runs: its Find); a choice made in a list opened before the
+    // card was drawn again still counts (the select it came from is no longer in the room, so its change is taken here)
+    var cmp = $("trCmp");
+    if (cmp && window.HeresyChoices) {
+      window.HeresyChoices.enhance(cmp);
+      cmp.addEventListener("change", function () { if (!cmp.isConnected) { state.cmp = cmp.value; paintRun(); } });
+    }
+  }
+  // HERESY 2960: what a run was given, the Telemetry's and step 3's page alike
+  function givenGrid(r) {
+    var o = r.options || {}, ser = r.series || {};
+    return (r.facts ? factsOf(r) :                         // HERESY 2321: a plugin's run says its own
         "<span><em>set</em> <span translate=\"no\">" + esc(r.dataset) + "</span>" + (r.tracks ? " · <span>" + r.tracks + " tracks</span>" : "") + "</span>" +   // HERESY 1166
         "<span><em>rank</em> " + esc(o.rank) + " · lr " + esc(o.lr) + "</span>" +
         (+o.lr_tail_epochs > 0 ? "<span><em>fade</em> " + esc(tr("the last {0} epochs to {1} %").replace("{0}", o.lr_tail_epochs).replace("{1}", Math.round((+o.lr_tail_floor || 0) * 100))) + "</span>" : "") +   // HERESY 1752
@@ -997,15 +1219,7 @@
           return procs(card != null ? card : k) + " " + esc(tr("{0} GB at step {1}").replace("{0}", c.gb).replace("{1}", c.step));
         }).join(" · ") + "</span>" : "") +
         "<span><em>started</em> " + esc(when(r.first_started || r.started)) + "</span>" +
-        (r.first_started && r.first_started !== r.started ? "<span><em>resumed</em> " + esc(when(r.started)) + "</span>" : "") +   // HERESY 2209
-      "</div></div>";
-    // HERESY 2572 (the UIX audit, item 88): the run to compare with in the Studio's picker (51 runs: its Find); a choice made in a list opened before the
-    // card was drawn again still counts (the select it came from is no longer in the room, so its change is taken here)
-    var cmp = $("trCmp");
-    if (cmp && window.HeresyChoices) {
-      window.HeresyChoices.enhance(cmp);
-      cmp.addEventListener("change", function () { if (!cmp.isConnected) { state.cmp = cmp.value; paintRun(); } });
-    }
+        (r.first_started && r.first_started !== r.started ? "<span><em>resumed</em> " + esc(when(r.started)) + "</span>" : "");   // HERESY 2209
   }
   // the reading under the cursor: the step, its epoch and each chart's value there (HERESY 2442: each card's on the memory chart; an empty
   // chart says nothing)
@@ -1027,7 +1241,7 @@
       var val;
       if (ls.length > 1 || g.dataset.key === "vram") val = ls.map(function (l) { return (l.name || cardName(r, l.k)) + " " + fmtV(near(l.s.curve)[1]); }).join(" · ");
       else if (PLAIN[g.dataset.key]) val = fmtV(pt[1]);
-      else { var avg = ema(ls[0].s.curve, 0.08).filter(function (p) { return p[0] === pt[0]; })[0]; val = fmtV(pt[1]) + (avg ? " (avg " + fmtV(avg[1]) + ")" : ""); }
+      else { var avg = smoothed(ls[0].s.curve, r).filter(function (p) { return p[0] === pt[0]; })[0]; val = fmtV(pt[1]) + (avg ? " (avg " + fmtV(avg[1]) + ")" : ""); }   // HERESY 2943c
       var rd = g.querySelector(".tr-read");
       rd.classList.remove("is-hint");
       rd.textContent = "step " + pt[0] + (r.tracks ? " · " + epAt(r, pt[0]) : "") + " · " + val;   // HERESY 2875
@@ -1339,7 +1553,7 @@
       .then(function (ok) {
         if (!ok) return;
         keep("yue2.trEngine", ext.id);
-        return api("/train/run", spec).then(function () { toast("Training " + spec.name); state.sel = spec.name; keep("yue2.trRun", spec.name); return load().then(function () { showPane("run"); }); });
+        return api("/train/run", spec).then(function () { toast("Training " + spec.name); state.sel = spec.name; keep("yue2.trRun", spec.name); state.newRun = false; return load().then(function () { showPane("run"); }); });
       }).catch(function (e) { toast(e.message, true); });
   }
   // HERESY 1631: the cards asked last time, kept in this browser
@@ -1392,7 +1606,7 @@
         (baseSaid ? "\n\n" + tr("On the base {0}.").replace("{0}", baseSaid) : ""), { ok: "Start training" });   // HERESY 2321   // HERESY 1752   // HERESY 1631   // 1166: "Train" is the step's name
     }).then(function (ok) {
       if (!ok) return;
-      return api("/train/run", spec).then(function () { toast("Training " + spec.name); state.sel = spec.name; keep("yue2.trRun", spec.name); return load().then(function () { showPane("run"); }); });
+      return api("/train/run", spec).then(function () { toast("Training " + spec.name); state.sel = spec.name; keep("yue2.trRun", spec.name); state.newRun = false; return load().then(function () { showPane("run"); }); });
     }).catch(function (e) { toast(e.message, true); });
   }
 
@@ -1454,7 +1668,7 @@
     if (!box || box.dataset.made) return box;
     box.dataset.made = "1";
     box.innerHTML = '<p class="row-hint">' + esc(tr("The stereo of a workspace's probes against the base model on the same cards: a fine-tune, an adapter or a merge that narrows the bass, the air or the panorama shows here.")) + "</p>" +
-      '<div class="tr-sg-form"><label class="field" data-tip="' + esc(tr("Its sections too: the probes, sung by each model on the same cards (the Ring's twenty, a probe set)")) + '"><span class="label">' + esc(tr("Workspace")) + '</span><select id="trSgWs"></select></label>' +
+      '<div class="tr-sg-form"><label class="field" data-tip="' + esc(tr("Its sections too: the probes, sung by each model on the same cards (the Ring's twenty, a probe set)")) + '"><span class="label">' + esc(tr("Workspace")) + '</span><select id="trSgWs" data-hc-pick="1"></select></label>' +
       '<label class="field" data-tip="' + esc(tr("What the others are held against: a stock YuE2 on the same cards, in this workspace or anywhere in the library, the same seed first")) + '"><span class="label">' + esc(tr("Base")) + '</span><select id="trSgBase"><option value="">' + esc(tr("auto: a stock YuE2")) + "</option></select></label>" +
       '<button type="button" class="btn primary small" id="trSgRun" data-tip="' + esc(tr("Each take measured once (its numbers kept), the takes that came since measured too")) + '">' + esc(tr("Measure")) + "</button>" +
       '<span class="row-hint mono" id="trSgSay" role="status"></span></div><div class="tr-sg-table" id="trSgTable"></div>';
@@ -1469,8 +1683,14 @@
     var ask = window.ruachCatalog ? window.ruachCatalog() : Promise.reject(new Error(tr("The Librarian is not here")));
     ask.then(function (d) {
       SG.list = (d.workspaces || []).slice();
+      // HERESY 2956: the Librarian's tree (its order), each option its emoji and level for the picker's emoji column (heresy-menu.js)
+      var Cn = window.HeresyCollection, T = Cn && Cn.wsTree ? Cn.wsTree({ realm: "both" }) : null;
+      if (T) { var inT = T.main.concat(T.archived); SG.list = inT.filter(function (w) { return SG.list.indexOf(w) >= 0; }).concat(SG.list.filter(function (w) { return inT.indexOf(w) < 0; })); }
       var sel = $("trSgWs"), was = sel.value || recall(SG_KEY) || "", probe = SG.list.filter(function (w) { return /Ринг|Ring|🧪/.test(w) && w.indexOf(" / ") < 0; })[0] || "";
-      sel.innerHTML = SG.list.map(function (w) { return '<option value="' + esc(w) + '" translate="no">' + esc(w) + "</option>"; }).join("");
+      sel.innerHTML = SG.list.map(function (w) {
+        var f = Cn && Cn.wsFace ? Cn.wsFace(w, true) : null;
+        return '<option value="' + esc(w) + '" translate="no"' + (f ? ' data-em="' + esc(f.em) + '" data-label="' + esc(f.label) + '" data-depth="' + (w.split(" / ").length - 1) + '"' + (f.sec ? ' data-sec="1"' : "") : "") + ">" + esc(w) + "</option>";
+      }).join("");
       sel.value = SG.list.indexOf(was) >= 0 ? was : probe || SG.list[0] || "";
       sgSay("");                                       // the list came: «Reading…» goes
       sgPeek();
@@ -1553,8 +1773,17 @@
     $("trReload").addEventListener("click", load);
     if ($("trGuide")) $("trGuide").addEventListener("click", function () { if (window.HeresyGuide) window.HeresyGuide.open("lora"); });   // HERESY 2571: the guide's own part for the Trainer (F1 opens the same)
     $("trPills").addEventListener("click", function (e) { var b = e.target.closest("[data-pane]"); if (b) showPane(b.dataset.pane); });
+    $("view-train").addEventListener("input", function (e) {   // HERESY 2943c: the smoothing, drawn as the slider moves
+      if (e.target.id !== "trSmooth") return;
+      var v = Math.max(0, Math.min(0.99, parseFloat(e.target.value) || 0));
+      keep(SMOOTH_KEY, v === SMOOTH_DEF ? null : String(v));
+      var out = $("trSmoothV"); if (out) out.textContent = v.toFixed(2);
+      repaintCharts();
+    });
     $("view-train").addEventListener("click", function (e) {
       var t = e.target, b;
+      if ((b = t.closest("[data-newrun]"))) return newRun(b.dataset.newrun === "like" ? runOf(state.sel) : null);   // HERESY 2960
+      if (t.closest("[data-runof-back]")) { state.newRun = false; return paintPills(); }
       if ((b = t.closest("[data-go]"))) return showPane(b.dataset.go);
       if (t.id === "trListenGo") return listenGo();
       if (t.id === "trLApply") return listenApply();
@@ -1695,5 +1924,5 @@
     engineKnobs();
   }
 
-  window.HeresyTrain = { init: init, reload: load, log: showLog, unlog: hideLog, goOn: goOn };   // HERESY 1298, 1300: for the suite
+  window.HeresyTrain = { init: init, reload: load, log: showLog, unlog: hideLog, goOn: goOn, newRun: newRun };   // HERESY 2960: newRun for the suite   // HERESY 1298, 1300: for the suite
 })();

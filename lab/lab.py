@@ -176,9 +176,19 @@ CACHE = HERE / "cache"
 sys.path.insert(0, str(HERE))
 import paths  # noqa: E402   HERESY 2330: where the weights live
 WHISPER_DIR = paths.at(paths.WHISPER, KIT) / "whisper-large-v3-ct2-float16"
+# HERESY 2955 (a tester's Windows report of 23.11.2026, the class of what a model not here leaves unsaid): a Whisper job on a machine without Whisper
+# said «Whisper failed:» and a Python error's last line, after waiting its turn for nothing; now it is said in plain words at once, with where to get it
+WHISPER_MISSING = "Whisper large-v3 is not in this Studio yet: Engine → Models and LoRAs fetches it (3.1 GB)"
+
+
+def need_whisper():
+    if not WHISPER_DIR.is_dir():
+        raise RuntimeError(WHISPER_MISSING)
 # HERESY 1021: everything inside the Kit (Viktor: «Ничего не привязываем к извне»). The lab's own
 # venv has torch, audio-separator, faster-whisper and numpy; cuDNN 9 and cuBLAS come with torch.
-LAB_PY = Path(os.environ.get("LAB_PY", HERE.parent / ".venv/bin/python"))   # HERESY 1080: the Studio's one environment
+import winx  # noqa: E402   HERESY 2934: the environment's Python as this system keeps it (read here, before the imports below)
+winx.utf8_console()   # HERESY 2935: its console (RuachStudio.cmd's window) and its output in UTF-8, before it says anything
+LAB_PY = Path(os.environ.get("LAB_PY") or winx.venv_python(HERE.parent))   # HERESY 1080: the Studio's one environment; 2934: Scripts\python.exe on Windows
 WHISPER_PY = Path(os.environ.get("LAB_WHISPER_PY", LAB_PY))
 NV = Path(os.environ.get("LAB_NVIDIA_LIBS", HERE.parent / ".venv/lib/python3.12/site-packages/nvidia"))
 PORT = int(os.environ.get("LAB_PORT", "41870"))
@@ -238,6 +248,8 @@ import file_tags  # noqa: E402   HERESY 1635: the song's tags on the downloads, 
 import gpu_live  # noqa: E402   HERESY 1264: the cards second by second, for the page's live graphs
 import winx  # noqa: E402   HERESY 2924b: a process group ended on Windows too (taskkill /T there, os.killpg here)
 import sys_live  # noqa: E402   HERESY 2299: the machine's processor, memory and disks second by second, for the page's system bar
+import listen  # noqa: E402   HERESY 2936: where the engine listens, on which system (Engine → Security's words)
+import song_room  # noqa: E402   HERESY 2942: how much music the window leaves the song at hand (its prompt counted by the backbone's own BPE)
 sys_live.watch(KIT, OUTPUTS)
 import topology  # noqa: E402   HERESY 2085: how the cards sit on the bus (Engine → Hardware → Topology)
 import section  # noqa: E402   HERESY 1414: Replace a section
@@ -850,6 +862,7 @@ def gloss(name, force=False, cached_only=False, source="", job=None):
     if not audio:
         raise FileNotFoundError(f"no audio in {name}")
     lang = lyrics_language(req.get("lyrics", ""))
+    need_whisper()                                   # HERESY 2955
     with whisper_turn(job) as wt:                        # HERESY 1165: off the queue while it waits; 1376: Whisper's own turn
         env, gpu, why = whisper_env(wt.gpu)              # HERESY 1141: a card, or the CPU when none can take it
         raw = CACHE / f"{name}{tag}.whisper.json"
@@ -943,6 +956,7 @@ def timing_async(name, force=False, cached_only=False, auto=False):
         try:
             lang = timing.language(lyrics)
             if force or not words.is_file() or words.stat().st_mtime < audio.stat().st_mtime:
+                need_whisper()                                   # HERESY 2955
                 with whisper_turn(job) as wt:            # HERESY 1376: Whisper's own turn
                     job["status"] = "running"
                     env, gpu, why = whisper_env(wt.gpu)  # HERESY 1141
@@ -1027,6 +1041,7 @@ def timing_recording(data):
         try:
             lang = timing.language(lyrics)
             if not words.is_file():
+                need_whisper()                                   # HERESY 2955
                 with whisper_turn(job) as wt:
                     job["status"] = "running"
                     if not words.is_file():              # HERESY 1719b: another job may have heard it while this one waited its turn
@@ -2173,6 +2188,7 @@ def clip_async(name, labels=None, lyrics=False, between="cut", shape="16:9", tit
 
     def work():
         try:
+            voice = clip_voice(name)                           # HERESY 2963: the Narrator's voice, when the plan names one
             rows = None
             if lyrics:                                         # HERESY 1916: the sung lines in their own time, as the plan was cut from them
                 try:
@@ -2183,13 +2199,33 @@ def clip_async(name, labels=None, lyrics=False, between="cut", shape="16:9", tit
                               lyrics=bool(lyrics), between=between, shape=shape, titles=bool(titles),   # HERESY 1948
                               look=look, look_strength=look_strength, grain=grain, vignette=vignette,   # HERESY 2010; 2017
                               halation=halation, jitter=jitter, every=bool(every), reframe=reframe, draft=bool(draft), title_style=title_style,   # 2242–2246
-                              words=bool(words), match=match, primary=primary, upscale=upscale)   # HERESY 2248–2250; 2356
+                              words=bool(words), match=match, primary=primary, upscale=upscale, voice=voice)   # HERESY 2248–2250; 2356; 2963
             with jobs_lock:
                 jobs.pop(key, None)
         except Exception as e:
             job.update(status="failed", error=str(e))
     _spawn(work)                                        # HERESY 1962: owned as its starter
     return dict(job, name=name)
+
+
+def clip_voice(name):
+    """HERESY 2963: the voice the clip's plan names, ready for the cut: {take, file, at, seconds, duck, lines}; None when it names none. A take gone
+    or no longer the Narrator's refuses the cut aloud (never a clip quietly without the voice it was given)."""
+    v = videographer.get(KIT, name).get("voice")
+    if not isinstance(v, dict) or not v.get("take"):
+        return None
+    if reader is None:
+        raise ValueError("the clip's voice is a take of the Narrator, and the Narrator is not in this Studio")
+    take, rid = reader._reader_take(v["take"])
+    f = source_of(take, "")[0]
+    if not f:
+        raise FileNotFoundError(f"the voice {take} has no audio")
+    pieces = reader._run_of(rid)[1].get("pieces") or []
+    secs = max([float(p["at"][1]) for p in pieces if isinstance(p.get("at"), list) and len(p["at"]) == 2] or [0.0]) or seconds_of(f) or 0
+    if not secs:
+        raise ValueError(f"the voice {take}: its length cannot be read")
+    return {"take": take, "file": str(f), "at": float(v.get("at") or 0), "duck": float(v.get("duck", videographer.VOICE_DUCK)), "seconds": secs,
+            "lines": videographer.voice_lines(pieces, float(v.get("at") or 0))}
 
 
 def clip_view_async(name, shape="16:9"):
@@ -3416,7 +3452,7 @@ ART_NEED = {}                                       # the Qwen painters' (below)
 # HERESY 1405: a card too small for the painter whole: its blocks stream from RAM (artist.STREAM_NEED, with its text encoder and the prompt
 # writer moving to the CPU when the card has no room for them), a little room over the streamed peak
 ART_STREAM_NEED = dict(artist.STREAM_NEED)          # HERESY 1428: the Qwen painters' streamed peaks (artist.py)
-ART_PY = Path(os.environ.get("LAB_ART_PY", HERE.parent / ".venv-art/bin/python"))
+ART_PY = Path(os.environ.get("LAB_ART_PY") or winx.venv_python(HERE.parent, ".venv-art"))   # HERESY 2934: Scripts\python.exe on Windows
 
 
 ART_NEED.update({k: v[1] for k, v in artist.QWEN.items()})   # HERESY 1338: the Qwen painters paint a take's artwork too (artist.py's peaks)
@@ -3980,7 +4016,7 @@ def ab_report(sides, names, words):
                 tmp = out.with_name(key + ".part")
                 shutil.rmtree(tmp, ignore_errors=True)
                 with access_log.took("first and second", " · ".join(str(f.relative_to(OUTPUTS)) if OUTPUTS in f.parents else f.name for f in files)):
-                    r = subprocess.run(["nice", "-n", "5", sys.executable, "-c", AB_RUN, json.dumps([[str(f) for f in files], names, str(tmp), words])],
+                    r = subprocess.run(winx.nice(5) + [sys.executable, "-c", AB_RUN, json.dumps([[str(f) for f in files], names, str(tmp), words])],
                                        cwd=str(HERE), capture_output=True, text=True, timeout=1800)
                 if r.returncode != 0 or not (tmp / "pair1" / "compare.json").is_file():
                     raise RuntimeError(((r.stderr or "").strip().splitlines() or ["ab_compare ended with " + str(r.returncode)])[-1])
@@ -4508,11 +4544,11 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             return
         except FileNotFoundError as e:
-            code, out = 404, {"error": str(e)}
+            code, out = 404, {"error": winx.said(e)}
         except (ValueError, KeyError, TypeError) as e:
             code, out = 400, {"error": str(e)}
         except OSError as e:                             # the engine did not answer
-            code, out = 502, {"error": f"the engine did not answer: {e}"}
+            code, out = 502, {"error": f"the engine did not answer: {winx.said(e)}"}   # HERESY 2934
         return self.send(code, out)
 
     # HERESY 2011 (the audit of 02.11.2026, S1): the lab answered every origin (Access-Control-Allow-Origin: *, taken out) and a page of any site
@@ -5050,7 +5086,9 @@ class Handler(BaseHTTPRequestHandler):
                     self.end_headers()
                     self.wfile.write(data)
                     return
-                return self.send_file(training.paths(KIT)["runs"] / Path(q.get("name", "")).name / "train.log", "text/plain; charset=utf-8")
+                return self.send_file(training.log_file(KIT, q.get("name", "")), "text/plain; charset=utf-8")   # HERESY 2934: a run with no log said so
+            if url.path == "/engine/where":                # HERESY 2936, 2936b: not /listen, the player's Opus stream (1851) above
+                return self.send(200, listen.state(KIT))
             if url.path == "/chain/batch":                  # HERESY 1562
                 return self.send(200, dict(BATCH))
             if url.path == "/chain":                        # HERESY 1054: the chain's state for a take
@@ -5254,11 +5292,11 @@ class Handler(BaseHTTPRequestHandler):
         except NotYet as e:                  # HERESY 2103: not made yet, said as such
             self.not_yet(e)
         except FileNotFoundError as e:
-            self.send(404, {"error": str(e)})
+            self.send(404, {"error": winx.said(e)})   # HERESY 2934: no «[Errno 2]» nor «[WinError 2]» in an answer
         except ValueError as e:
             self.send(400, {"error": str(e)})
         except Exception as e:           # the page shows it; the lab keeps running
-            self.send(500, {"error": str(e)})
+            self.send(500, {"error": winx.said(e)})   # HERESY 2934
 
     # HERESY 2099: a quick write the page sends again with the same ?wid= (no answer came in its time: the line, not the lab) is answered with the
     # first one's answer, byte for byte, and done once (lab/write_once.py); one still at work is waited for, up to a minute
@@ -5336,6 +5374,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, writer_llm.status(KIT) if q.get("scope") else writer_llm.place(KIT, d.get("device"), d.get("backend")))
             if url.path == "/llm/count":                    # HERESY 2464: a question's tokens and the room left for its answer, before it is asked
                 return self.send(200, writer_llm.count(KIT, body))
+            if url.path == "/song/room":                    # HERESY 2942: {style, lyrics, abc, cot, length, context}: the music the window leaves this song
+                return self.send(200, song_room.room(json.loads(body.decode("utf-8") or "{}"), KIT))
             if url.path == "/llm/cancel":                   # HERESY 2469: Stop in the Writing room: the answer in flight, or the wait for the Arc
                 return self.send(200, writer_llm.cancel())
             if url.path == "/llm/yield":                    # HERESY 2463: the page's Generate: the writer leaves the Intel Arc first; a test page changes nothing
@@ -5785,6 +5825,14 @@ class Handler(BaseHTTPRequestHandler):
                     rows = None
                 lyrics = json.load(open(take_dir(name) / "request.json", encoding="utf-8")).get("lyrics", "")
                 return self.send(200, videographer.split_long(KIT, name, rows, lyrics))
+            if url.path == "/video/voice":                  # HERESY 2963: the Narrator's voice over the clip {name, take, at, duck}; {name, off} takes it off
+                data = json.loads(body.decode("utf-8") or "{}")
+                if data.get("off"):
+                    return self.send(200, videographer.voice_set(KIT, str(data.get("name", "")), None))
+                if reader is None:
+                    return self.send(400, {"error": "the clip's voice is a take of the Narrator, and the Narrator is not in this Studio"})
+                reader._reader_take(str(data.get("take", "")))   # a Narrator take, or refused aloud
+                return self.send(200, videographer.voice_set(KIT, str(data.get("name", "")), data))
             if url.path == "/video/save":                   # HERESY 1824: the look and the scenes as the page edited them
                 data = json.loads(body.decode("utf-8") or "{}")
                 return self.send(200, videographer.save(KIT, str(data.get("name", "")), data))
@@ -5999,11 +6047,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, set_lyrics(q.get("name", ""), body.decode("utf-8")))
             self.send(404, {"error": "unknown path"})
         except FileNotFoundError as e:
-            self.send(404, {"error": str(e)})
+            self.send(404, {"error": winx.said(e)})   # HERESY 2934: no «[Errno 2]» nor «[WinError 2]» in an answer
         except ValueError as e:
             self.send(400, {"error": str(e)})
         except Exception as e:
-            self.send(500, {"error": str(e)})
+            self.send(500, {"error": winx.said(e)})   # HERESY 2934
 
     def log_message(self, fmt, *args):
         sys.stderr.write("%s [lab] %s\n" % (time.strftime("%H:%M:%S"), fmt % args))

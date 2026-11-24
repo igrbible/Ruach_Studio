@@ -88,6 +88,7 @@ from pathlib import Path
 import sys
 
 import no_train
+import winx                        # HERESY 2934: the workers' groups, their Python, on Windows too
 import paths                       # HERESY 2330: where the weights live
 import reader_glyphs as rg
 import reader_stress as rs
@@ -126,6 +127,7 @@ FADE_S = 0.012                      # a piece's edges faded this long into its s
 SEAM_FADE_S = 0.03                  # HERESY 2420: since 2420 this long: 12 ms cut a cycle of 40 to 60 Hz in half (Viktor 11.11: «тук»)
 ENGINE_TRIES = 3                    # HERESY 2422: a piece the engine failed on, asked this many times in all, each with another seed
 SPLITS = ("sentence", "verse")
+PAR_VOICE = re.compile(r"(\*|[gv]:[A-Za-z0-9._:-]{1,120})?")   # HERESY 2947: a paragraph's voice: «» as above, «*» the run's own, a group or a voice
 TIER_AUTO = ("auto-speed", "auto-quality")      # HERESY 2263: an engine with tiers picks by the room free now, speed or quality first
 GRADES = ("green", "yellow", "red")          # HERESY 2300: a tier's grade from the raw test of its quant (no re-read): stable, medium, undesirable
 TIER_DEV = ("cuda", "xpu", "cpu")              # HERESY 2426: xpu, an Intel card's tier (Drama 3 through Vulkan on the Arc)
@@ -273,7 +275,7 @@ def _python(spec, device):
     rel = spec.get(device) if isinstance(spec, dict) else spec
     if not rel:
         return None
-    p = Path(str(rel))
+    p = winx.native(Path(str(rel)))                  # HERESY 2934: .venv/bin/python of the manifests is .venv\Scripts\python.exe on Windows
     return p if p.is_absolute() else kit() / p
 
 
@@ -528,7 +530,7 @@ def _clean_clip(src, mode, profile, out24):
     """src (any sound ffmpeg reads) → 44.1 kHz mono → the step (mode, the voice's profile or auto) → out24, 24 kHz mono 16-bit; the step's summary"""
     import tempfile
     step = Path(__file__).resolve().parent / "builtin_steps" / "ruach" / "tts_upscale.py"
-    py = Path(CLEAN_PY) if CLEAN_PY else kit() / ".venv-read" / "bin" / "python"
+    py = Path(CLEAN_PY) if CLEAN_PY else winx.venv_python(kit(), ".venv-read")   # HERESY 2934
     if not py.is_file():
         raise ValueError("cleaning a clip needs the Narrator's own environment (.venv-read): install the Narrator's engines first")
     tmp = Path(tempfile.mkdtemp(prefix=".clean-", dir=str(voices_home())))
@@ -1034,10 +1036,11 @@ def carry_moods(parts, inline):
     return out
 
 
-def pieces(text, mode, split, eng, tags_on, gap, turn_gap, para_gap, carry=True, target=None):
+def pieces(text, mode, split, eng, tags_on, gap, turn_gap, para_gap, carry=True, target=None, par_voices=None):
     """[{i, speaker, text, plain, gap}]: what each call reads, the words without tags (a reference's own words), the silence after it.
     carry (HERESY 2439): a paragraph's mood carried to its pieces that say none. target (HERESY 2474): a narration's pieces gathered up to
-    this many characters instead of TARGET (the run's piece_chars, its cap given in eng)."""
+    this many characters instead of TARGET (the run's piece_chars, its cap given in eng). par_voices (HERESY 2947): a narration's voice for
+    each paragraph, «» as the one above, «*» the run's own voice again, else a voice («g:…», «v:…»): its pieces' speaker «¶REF»."""
     strip = lambda s: " ".join(eng["tag_re"].sub(" ", s).split())
     cap, out = eng["max_chars"], []
     inline = mood_inline(eng) if tags_on and carry else None
@@ -1086,10 +1089,14 @@ def pieces(text, mode, split, eng, tags_on, gap, turn_gap, para_gap, carry=True,
                         for part in _cap(seg.strip(), cap):
                             add("", part, gap)
     else:
-        for par in re.split(r"\n\s*\n", text):
+        cur = ""
+        for j, par in enumerate(re.split(r"\n\s*\n", text)):
+            ref = par_voices[j] if par_voices is not None and j < len(par_voices) else ""
+            if ref:                                      # HERESY 2947: a voice of its own from here on, «*» the run's own again
+                cur = "" if ref == "*" else ref
             parts = keep(_gather(sentences(" ".join(par.split())), target or min(TARGET, cap), cap))
             for k, s in enumerate(parts):
-                add("", s, gap if k < len(parts) - 1 else para_gap)
+                add(("\u00b6" + cur) if cur else "", s, gap if k < len(parts) - 1 else para_gap)
     if out and out[-1].get("pause") is None:            # HERESY 2334: a pause written at the very end stays (room for music after it)
         out[-1]["gap"] = 0.0
     if out and lead:                                     # a pause before the first words: silence before the take's first piece
@@ -1123,7 +1130,7 @@ class Worker:
         self.key, self.device, self.card, self.label = (eng["id"], device, card, (tier or {}).get("id", "")), device, card, eng["label"]
         self.p = subprocess.Popen([eng["python"][device], str(HERE / "reader_worker.py"), "--module", eng["module"], "--device", device,
                                    "--kit", str(kit())], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                                  encoding="utf-8", bufsize=1, env=env, cwd=str(kit()), start_new_session=True)
+                                  encoding="utf-8", bufsize=1, env=env, cwd=str(kit()), **winx.group_kwargs())   # HERESY 2934
         self.q, self.err, self.n, self.busy, self.used = queue.Queue(), collections.deque(maxlen=400), 0, True, time.time()
         threading.Thread(target=self._out, daemon=True).start()
         threading.Thread(target=self._errs, daemon=True).start()
@@ -1178,7 +1185,7 @@ class Worker:
             self.p.wait(timeout=20)
         except (OSError, ValueError, subprocess.TimeoutExpired):
             try:
-                os.killpg(self.p.pid, 9)                 # its own session: the worker and what it started, nothing else
+                winx.kill_group(self.p.pid, 9)           # its own session: the worker and what it started, nothing else (2934: the tree on Windows)
             except OSError:
                 pass
 
@@ -1259,7 +1266,7 @@ def _held():
 def _in_session(pid, leader):
     """HERESY 2263: a process of the worker's own session (the worker, or the server an engine started under it)."""
     try:
-        return int(pid) == leader or os.getpgid(int(pid)) == leader
+        return winx.in_group(pid, leader)                # HERESY 2934: os.getpgid on Linux, the worker's tree on Windows
     except (OSError, ValueError):
         return False
 
@@ -1500,11 +1507,11 @@ class Hearer:
         model = paths.at(paths.WHISPER, kit()) / "whisper-large-v3-ct2-float16"
         self.p = None
         if not model.is_dir():
-            self.error = "Whisper large-v3 is not in " + paths.WHISPER + "/ on this machine"
+            self.error = "Whisper large-v3 is not in this Studio yet: Engine → Models and LoRAs fetches it (3.1 GB)"   # HERESY 2955: plain words, where to get it
             return
         self.p = subprocess.Popen([sys.executable, str(HERE / "reader_hear.py"), "--model", str(model), "--threads", str(threads)],
                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", bufsize=1,
-                                  env=dict(os.environ, CUDA_VISIBLE_DEVICES="", PYTHONUNBUFFERED="1"), cwd=str(kit()), start_new_session=True)
+                                  env=dict(os.environ, CUDA_VISIBLE_DEVICES="", PYTHONUNBUFFERED="1"), cwd=str(kit()), **winx.group_kwargs())
         threading.Thread(target=self._errs, daemon=True).start()
         threading.Thread(target=self._run, daemon=True, name="reader-ear").start()
 
@@ -1588,7 +1595,7 @@ class Hearer:
                 self.p.wait(timeout=20)
             except (OSError, ValueError, subprocess.TimeoutExpired):
                 try:
-                    os.killpg(self.p.pid, 9)
+                    winx.kill_group(self.p.pid, 9)
                 except OSError:
                     pass
 
@@ -1845,6 +1852,8 @@ def _tr_work(d, meta, job):
         if dur < 0.5:
             raise RuntimeError("the recording holds no sound to hear")
         meta["seconds"] = round(dur, 1)
+        if not Path(str(H["whisper_dir"])).is_dir():    # HERESY 2955: said at once in plain words, not after a turn waited for nothing
+            raise RuntimeError("Whisper large-v3 is not in this Studio yet: Engine → Models and LoRAs fetches it (3.1 GB)")
         with H["whisper_turn"](job) as wt:               # the lab's own Whisper turn: a card when one has room, else the processor
             env, gpu, why = H["whisper_env"](wt.gpu)
             job.update(status="running", since=time.time(), gpu=gpu, expect=round(20 + dur * (0.08 if gpu != "cpu" else 1.0)))
@@ -2271,6 +2280,14 @@ def say(body, design=None):
     peng = dict(eng, max_chars=pc) if pc else eng
     gap = _num(body, "gap", 0.05, 3.0, 0.35)
     turn_gap = _num(body, "turn_gap", 0.05, 3.0, 0.45)
+    # HERESY 2947 (Viktor's «голос по абзацам прямо в редакторе», the mockup of 18.11 approved «обеими руками и ногами», its variant A: the text stays
+    # clean, a voice chosen beside a paragraph): a narration's voice for each paragraph of the text as sent (stripped), «» as the one above
+    par_voices = body.get("par_voices") if mode == "narration" and split != "verse" else None
+    if par_voices is not None:
+        if not isinstance(par_voices, list) or len(par_voices) > PIECES_MAX or not all(isinstance(x, str) and PAR_VOICE.fullmatch(x) for x in par_voices):
+            raise ValueError("par_voices: a list of voices, one a paragraph («», «*», «g:…» or «v:…»)")
+        if not any(par_voices):
+            par_voices = None
     book, shown = None, SPLIT_RE.split(text)             # HERESY 2344: [split] makes a book, its parts read in one run and landed apart
     said_parts = SPLIT_RE.split(read_text)
     if len(said_parts) > 1:
@@ -2278,9 +2295,19 @@ def say(body, design=None):
             raise ValueError("the glyph map changed a [split]: take it out of the map's rules")
         if len(said_parts) > PARTS_MAX:
             raise ValueError(f"{len(said_parts)} parts: {PARTS_MAX} at most in one book")
-        ps, parts = [], []
+        ps, parts, pv_at, pv_cur = [], [], 0, ""
         for k, (stext, rtext) in enumerate(zip(shown, said_parts)):
-            sub = pieces(rtext, mode, split, peng, tags_on, gap, turn_gap, max(gap, 0.9), carry, pc) if rtext.strip() else []
+            pv = None
+            if par_voices is not None:                   # HERESY 2947: a part's own paragraphs, the voice above it carried into its first
+                n = len(re.split(r"\n\s*\n", rtext.strip())) if rtext.strip() else 0
+                pv = list(par_voices[pv_at:pv_at + n])
+                if pv and not pv[0] and pv_cur:
+                    pv[0] = pv_cur
+                for x in par_voices[pv_at:pv_at + n]:
+                    if x:
+                        pv_cur = "" if x == "*" else x
+                pv_at += n
+            sub = pieces(rtext.strip(), mode, split, peng, tags_on, gap, turn_gap, max(gap, 0.9), carry, pc, pv) if rtext.strip() else []
             if not sub:
                 continue
             first = len(ps)
@@ -2293,7 +2320,7 @@ def say(body, design=None):
             for p in ps:
                 p.pop("part", None)
     else:
-        ps = pieces(read_text, mode, split, peng, tags_on, gap, turn_gap, max(gap, 0.9), carry, pc)
+        ps = pieces(read_text, mode, split, peng, tags_on, gap, turn_gap, max(gap, 0.9), carry, pc, par_voices)
     if not ps:
         raise ValueError("nothing to read: the text holds only tags or blank lines")
     if len(ps) > PIECES_MAX:
@@ -2310,6 +2337,8 @@ def say(body, design=None):
     gs = vs["sets"].get(eng.get("voice_set") or "") or vs["groups"]   # HERESY 2456: an engine's own set of voices forms its groups
     voice, label = _voice(body.get("voice"), gs, vs["voices"])
     cast, labels = {"": voice}, {"": label}
+    for spk in sorted({p["speaker"] for p in ps if p["speaker"].startswith("\u00b6")}):   # HERESY 2947: a paragraph's own voice
+        cast[spk], labels[spk] = _voice(spk[1:], gs, vs["voices"])
     if mode == "dialog":
         asked = body.get("voices") if isinstance(body.get("voices"), dict) else {}
         for spk in sorted({p["speaker"] for p in ps if p["speaker"]}):
@@ -2371,6 +2400,8 @@ def say(body, design=None):
            "pauses": sum(1 for p in ps if p.get("pause") is not None) + (1 if ps and ps[0].get("lead_pause") else 0)}   # HERESY 2334
     if bridge or pc:                                     # HERESY 2474: the trials asked, said in the run and its note
         run.update(bridge=bridge, piece_chars=pc)
+    if par_voices is not None:                           # HERESY 2947: kept for Reuse, Retake and Regenerate
+        run["par_voices"] = par_voices
     if win:                                              # HERESY 2698
         run["window"] = win
     if scene:                                            # HERESY 2699
@@ -2819,7 +2850,7 @@ def _land(d, run, eng):
             "render_seconds": run.get("read_s", 0), "song": 0, "variation": 0, "provided_score": False, "model": "reader"}
     no_train.mark(meta, by, why)
     json.dump(meta, open(t / "meta.json", "w", encoding="utf-8"), ensure_ascii=False, indent=4)
-    voices_said = ", ".join((f"{s}: " if s else "") + run["voice_labels"].get(s, "") for s in run["voice_labels"]
+    voices_said = ", ".join(("\u00b6 " if s.startswith("\u00b6") else f"{s}: " if s else "") + run["voice_labels"].get(s, "") for s in run["voice_labels"]
                             if s or run["mode"] == "narration" or any(p["speaker"] == "" for p in run["pieces"]))
     settings = {k: run[k] for k in ("mode", "split", "tags", "engine", "engine_label", "voices", "voice_labels", "temperature", "top_k", "top_p", "seed",
                                     "gap", "turn_gap", "card", "where", "of", "gen_s", "read_s", "tier") if k in run}
@@ -3187,7 +3218,8 @@ def form_of(r):
     tier = r.get("tier_ask")
     gone_tier = bool(eng and tier and tier not in TIER_AUTO and not any(t["id"] == tier and t["ready"] for t in eng.get("tiers") or []))
     f = {"title": r.get("title") or "", "text": r.get("text") or "", "mode": r.get("mode"), "split": r.get("split"), "tags": r.get("tags"),
-         "carry": r.get("carry"), "engine": r.get("engine"), "voice": cast.get("", ""), "voices": {k: v for k, v in cast.items() if k},
+         "carry": r.get("carry"), "engine": r.get("engine"), "voice": cast.get("", ""), "voices": {k: v for k, v in cast.items() if k and not k.startswith("\u00b6")},
+         "par_voices": r.get("par_voices") if isinstance(r.get("par_voices"), list) else None,   # HERESY 2947: the paragraphs' voices, their cast derived again
          "voice_labels": r.get("voice_labels") or {}, "temperature": r.get("temperature"), "top_k": r.get("top_k"), "top_p": r.get("top_p"), "seed": r.get("seed"),
          "gap": r.get("gap"), "turn_gap": r.get("turn_gap"), "lang": r.get("lang"), "style": style, "stress": r.get("stress") is not False,
          "glyphs": bool(r.get("glyphs")), "tier": tier, "card": r.get("card"), "hear": r.get("hear") is not False,

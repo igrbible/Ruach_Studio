@@ -23,6 +23,7 @@ import ipaddress
 import json
 import os
 import re
+import shutil
 import socket
 import ssl
 import subprocess
@@ -63,6 +64,12 @@ def say(*a):
 # ---- the certificate: the Studio's own, made once, for the names and addresses it is reached by
 def own_names():
     names, ips = {"localhost", socket.gethostname()}, {"127.0.0.1", "::1"}
+    if not sys.platform.startswith("linux"):           # HERESY 2935: «hostname -I» is Linux's; Windows' hostname refuses it in the console's
+        try:                                           # code page, a UnicodeDecodeError under PYTHONUTF8: the addresses by the resolver there
+            ips.update(i[4][0].split("%")[0] for i in socket.getaddrinfo(socket.gethostname(), None))
+        except OSError:
+            pass
+        return sorted(names), sorted(ips)
     try:
         for a in subprocess.run(["hostname", "-I"], capture_output=True, text=True, timeout=5).stdout.split():
             ips.add(a)
@@ -76,6 +83,10 @@ def own_names():
 # The door's certificate lives 825 days (the longest Apple's browsers take) and is made anew 30 days before its end, or when the machine's names change.
 CA_CERT, CA_KEY, LEAF = TLS / "ca.pem", TLS / "ca-key.pem", TLS / "leaf.json"
 LEAF_DAYS = 825
+
+
+NO_OPENSSL = ("the https door makes its certificates with openssl, and this machine has none on its PATH (on Windows it comes with Git for "
+              "Windows, in its usr\\bin): the door stays shut, the Studio answers over http")   # HERESY 2934
 
 
 def make_ca():
@@ -709,15 +720,32 @@ async def visit(r, w):
         sw.close()
 
 
+def listen_hosts():
+    """HERESY 2936: the door's addresses: every one (None) on Linux and wherever the Studio is open to a network; on Windows and macOS with
+    «this computer only» (their default) the loopback ones alone, so their firewall asks nothing for the door either."""
+    if sys.platform.startswith("linux") or access()[0] != "local":
+        return None
+    return ["127.0.0.1", "::1"]
+
+
 async def main():
     why = "asked" if "--make-cert" in args else stale()       # HERESY 1985
     if why:
         say("the certificate made anew:", why)
+        if not shutil.which("openssl"):              # HERESY 2934: said once, not «[WinError 2]» in a traceback at every lab start
+            say(NO_OPENSSL)
+            return
         make_cert()
         if "--make-cert" in args:
             return
     ctx = context(CERT, KEY)
-    server = await asyncio.start_server(visit, host=None, port=PORT, ssl=ctx, reuse_address=True)   # every address, IPv4 and IPv6 (on "::" asyncio serves IPv6 alone)
+    hosts = listen_hosts()                              # HERESY 2936: None, every address, IPv4 and IPv6 (on "::" asyncio serves IPv6 alone)
+    try:
+        server = await asyncio.start_server(visit, host=hosts, port=PORT, ssl=ctx, reuse_address=True)
+    except OSError:
+        if not hosts:
+            raise
+        server = await asyncio.start_server(visit, host="127.0.0.1", port=PORT, ssl=ctx, reuse_address=True)   # no IPv6 loopback here
     names, ips = own_names()
     say(f"https on :{PORT} → the Studio at {TO_HOST}:{TO_PORT}; for", ", ".join(names + ips), "· who may: user/access.json,", access()[0])
     say("HTTP/2 offered (h2 " + h2.__version__ + "), http/1.1 kept" if h2_on() else

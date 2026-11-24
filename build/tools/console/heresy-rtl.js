@@ -27,8 +27,9 @@
     ".cmp-transport", ".cmp-wavebox", ".cmp-ruler",   // HERESY 2408 (Viktor 11.11.2026, A8): the compare window's transport, wave and ruler, as the player's
     ".se-strip", ".se-ruler"                          // HERESY 2815: the Section editor's strip (its wave, its blocks, its ruler) runs in time
   ];
-  var KEEP_MARK = /\.playbar|#wave|\.wave-wrap|\.loud-wave|\.boot-|\.pcv|#postCanvas|\.post-canvas|\.mxl?-|\.vp\b|\.vp-|#tl[A-Z]|\.tl-|\.roll|#roll|#scoreStaff|#scoreAbc|\.abcjs|#spectrumPanel|\.spec-|\.coll-realm|\.rs-|\.lyr-|\.tc-mirror|#lyrics|#logBody|#logDockBody|#logDockLast|\.log-dock-body|\.log-dock-last|#wtLog|#tpTestLog|knobs|input\[type=.?range|\.cmp-transport|\.cmp-wavebox|\.cmp-ruler|\.se-strip|\.se-ruler|\.hg-/;   // HERESY 2408; 2413: the guide (.hg-) is English until docs/GUIDE.he.md comes (Viktor 11.11.2026, 27): its rules
-  // never mirrored, its box says lang en and ltr (heresy-guide.js); with a Hebrew guide, take «|\.hg-» out of here and the box reads right to left by itself
+  var KEEP_MARK = /\.playbar|#wave|\.wave-wrap|\.loud-wave|\.boot-|\.pcv|#postCanvas|\.post-canvas|\.mxl?-|\.vp\b|\.vp-|#tl[A-Z]|\.tl-|\.roll|#roll|#scoreStaff|#scoreAbc|\.abcjs|#spectrumPanel|\.spec-|\.coll-realm|\.rs-|\.lyr-|\.tc-mirror|#lyrics|#logBody|#logDockBody|#logDockLast|\.log-dock-body|\.log-dock-last|#wtLog|#tpTestLog|knobs|input\[type=.?range|\.cmp-transport|\.cmp-wavebox|\.cmp-ruler|\.se-strip|\.se-ruler/;   // HERESY 2408; 2413: the guide (.hg-) was English then (Viktor 11.11.2026, 27) and its rules were kept from mirroring here
+  // HERESY 2953: docs/GUIDE.he.md came, «|\.hg-» is out: the guide's rules mirror as the page's do, and its box takes the direction of the guide's own
+  // language (heresy-guide.js: rtl for the Hebrew guide, ltr for any other, whatever the page's)
   // what the user wrote, or the machine said, shown as it is: its own direction from its first letters (heresy-i18n.js keeps the same untranslated)
   var OWN_TEXT = [".take-title", ".take-style", ".coll-title-text", ".peek-title", ".peek-style", ".peek-note", ".pb-sub", ".coll-badge.w",
     ".wr-item-title", ".wr-take-title", ".hi-tag", ".hi-prompt", "textarea", "input[type=text]", "input[type=search]", "input:not([type])",

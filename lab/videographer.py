@@ -175,7 +175,7 @@ def make(kit, name, meta, request, timing_rows):
         s.update(pics.get((s["t0"], s["t1"])) or {})                    # HERESY 1838: its own picture kept too
     plan = {"name": name, "title": meta.get("title") or name, "style": request.get("style", ""), "seconds": round(float(meta.get("seconds") or 0), 2),
             "made": time.time(), "look": old.get("look") or {k: "" for k in LOOK_KEYS}, "shots": cut, "model": "MiniMax H3"}
-    plan.update({k: old[k] for k in ("hero", "brief", "seed", "rhythm", "places") if old.get(k)})   # HERESY 1913: the clip's hero, its brief and its seed stay; 2262: the beats heard; 2356: the places
+    plan.update({k: old[k] for k in ("hero", "brief", "seed", "rhythm", "places", "voice") if old.get(k)})   # HERESY 1913: the clip's hero, its brief and its seed stay; 2262: the beats heard; 2356: the places; 2963: the voice
     if old.get("exists"):                                 # HERESY 2268: cut again, a step of the history: the plan before it one Undo away
         plan["undo"] = (old.get("undo") or [])[-(UNDO - 1):] + [_state(old, "remake")]
     _write(kit, name, plan)
@@ -1209,6 +1209,98 @@ def lyrics_ass(rows, out, end, w=CW, h=CH, words=False, font="DejaVu Sans"):
     return (len(lines), heard) if words else len(lines)
 
 
+# ---- HERESY 2963 (G27, question 11 of 22.11.2026 by consent: «A, −12 дБ, до первой строки, свой стиль, ссылкой»): the Narrator's voice over the
+# song's clip. The plan names the take (a link: the take stays in its own world), where it starts in the song and how far the song goes down under it;
+# the clip mixes it so and writes its words in their own style. Never a history step: the voice is laid over the clip, not a cut of it
+VOICE_DUCK, VOICE_DOWN, VOICE_UP = -12.0, 0.3, 0.8      # dB under the voice; seconds down before it and back after it
+VOICE_DUCK_MIN = -30.0
+
+
+def voice_set(kit, name, voice):
+    """The clip's voice: {take, at, duck} (the take a Narrator take, checked by the caller; at in seconds of the song, duck in dB, −30 to 0);
+    None takes it off. The plan back."""
+    plan = get(kit, name)
+    if not plan.get("exists"):
+        raise ValueError("no plan for this take yet")
+    plan.pop("exists", None)
+    if voice is None:
+        plan.pop("voice", None)
+    else:
+        take = str(voice.get("take") or "").strip()
+        if not take or "/" in take or "\\" in take or take.startswith("."):
+            raise ValueError("the voice: a take of the Narrator")
+        try:
+            at = max(0.0, min(float(plan.get("seconds") or 0) or 1e9, float(voice.get("at") or 0)))
+            duck = max(VOICE_DUCK_MIN, min(0.0, float(voice.get("duck", VOICE_DUCK))))
+        except (TypeError, ValueError):
+            raise ValueError("the voice: its start in seconds, its duck in dB")
+        plan["voice"] = {"take": take, "at": round(at, 2), "duck": round(duck, 1)}
+    _write(kit, name, plan)
+    return _auto(dict(plan, exists=True))
+
+
+def duck_volume(at, seconds, duck=VOICE_DUCK, down=VOICE_DOWN, up=VOICE_UP):
+    """ffmpeg's volume filter for the song under a voice from at for seconds: down by duck dB over `down` seconds before it starts, back over `up`
+    seconds after it ends; the song as it is elsewhere."""
+    g = 10 ** (float(duck) / 20.0)
+    a, b = float(at), float(at) + float(seconds)
+    a0, b1 = max(0.0, a - down), b + up
+    e = (f"if(lt(t,{a0:.3f}),1,if(lt(t,{a:.3f}),1-(1-{g:.5f})*(t-{a0:.3f})/{max(a - a0, 1e-3):.3f},"
+         f"if(lt(t,{b:.3f}),{g:.5f},if(lt(t,{b1:.3f}),{g:.5f}+(1-{g:.5f})*(t-{b:.3f})/{up:.3f},1))))")
+    return f"volume='{e}':eval=frame"
+
+
+def voice_mix(voice, song=1):
+    """The voice's input and the sound's map for the clip's last ffmpeg (the song its input `song`, the voice the next): ([-i, file,
+    -filter_complex, graph], [-map, [mix]]); the song's length kept (the voice never makes the clip longer)."""
+    ms = int(round(float(voice["at"]) * 1000))
+    graph = (f"[{song}:a]{duck_volume(voice['at'], voice['seconds'], voice.get('duck', VOICE_DUCK))}[song];[{song + 1}:a]adelay={ms}:all=1[said];"
+             "[song][said]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[mix]")
+    return ["-i", str(voice["file"]), "-filter_complex", graph], ["-map", "[mix]"]
+
+
+def voice_lines(pieces, at=0.0):
+    """The voice's words as lines in the song's time: each piece's sentences, sharing the time the piece was read (its «at», start and end in the
+    take) by their letters; (start, end, text), in order. Pieces with no time of their own are left out (a take of before its pieces knew them)."""
+    out = []
+    for p in pieces or []:
+        span, text = p.get("at"), " ".join(str(p.get("plain") or p.get("text") or "").split())
+        if not (isinstance(span, (list, tuple)) and len(span) == 2 and text):
+            continue
+        t0, t1 = float(span[0]), float(span[1])
+        if t1 - t0 < 0.2:
+            continue
+        sents = [s.strip() for s in re.split(r"(?<=[.!?…])\s+", text) if s.strip()]
+        total = sum(len(s) for s in sents) or 1
+        t = t0
+        for s in sents:
+            d = (t1 - t0) * len(s) / total
+            out.append((round(at + t, 3), round(at + t + d, 3), s))
+            t += d
+    return out
+
+
+def voice_ass(lines, out, end, w=CW, h=CH, font="DejaVu Sans"):
+    """The voice's words as an ASS file in their own style: italic, a little smaller than the sung lines and a line below them, fading in and out;
+    the lines written, or 0."""
+    font = _ass_font(font)
+    side, foot = round(w * 0.06), round(h * (0.16 if h > w else 0.08))
+    size = round(min(w, h) * 0.042)
+    head = ["[Script Info]", "ScriptType: v4.00+", f"PlayResX: {w}", f"PlayResY: {h}", "WrapStyle: 0", "ScaledBorderAndShadow: yes", "",
+            "[V4+ Styles]", "Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, "
+            "Alignment, MarginL, MarginR, MarginV", f"Style: Voice,{font},{size},&H00F0F0F0,&H00101010,&H80000000,0,1,1,3,1,2,{side},{side},"
+            f"{max(8, foot - round(size * 1.5))}", "", "[Events]", "Format: Layer, Start, End, Style, Text"]
+    rows = []
+    for a, b, text in lines:
+        b = min(float(b), float(end))
+        if b - float(a) < 0.3:
+            continue
+        t = str(text).replace("\\", "/").replace("{", "(").replace("}", ")").replace("\n", " ")
+        rows.append(f"Dialogue: 1,{_ass_time(float(a))},{_ass_time(b)},Voice,{{\\fad(180,220)}}{t}")
+    Path(out).write_text("\n".join(head + rows) + "\n", encoding="utf-8")
+    return len(rows)
+
+
 def _ass_font(font):
     """HERESY 2394: a family name as an ASS style field holds it (no comma, which ends the field; DejaVu Sans for none)."""
     font = " ".join(str(font or "").replace(",", " ").split())[:120]
@@ -1361,7 +1453,7 @@ def _watched(cmd, cwd, job, end, base, timeout=1800):
 
 def clip(kit, name, audio, cover=None, job=None, labels=None, rows=None, lyrics=False, between="cut", shape="16:9", titles=False, look="none", look_strength=1.0,
          grain=0.0, vignette=0.0, every=False, halation=0.0, jitter=0.0, reframe="hand", draft=False, title_style="centre", words=False, match=None,
-         match_strength=MATCH, primary=None, native=False, upscale="lanczos"):
+         match_strength=MATCH, primary=None, native=False, upscale="lanczos", voice=None):
     """The clip cut from the shots' pictures in the song's time, with its sound; {file, shots, own, seconds}. A shot with no picture of its own
     shows the take's cover; in a take with none, its words and scene (the animatic's card, held still: what is still to picture).
     HERESY 1916: lyrics burns the sung lines in (rows: the take's Whisper timing); between: «cut», «black» or «flash» where a section changes;
@@ -1528,7 +1620,10 @@ def clip(kit, name, audio, cover=None, job=None, labels=None, rows=None, lyrics=
     shown = titles_ass(tmp / "titles.ass", end, OW, OH, plan.get("clip_title") or plan.get("title") or "", plan.get("credits") or "",
                        plan.get("author") or "", plan.get("verse") or "", title_style, font=f_tit) if titles else 0   # HERESY 1948; 2246: the template, the author, the verse
     fd = ":fontsdir=fonts" if fam else ""                # HERESY 2394: libass finds the user's fonts there, the system's as before
-    subs = ",".join(x for x in ("subtitles=lyrics.ass" + fd if sung else "", "subtitles=titles.ass" + fd if shown else "") if x)
+    # HERESY 2963: the Narrator's voice ({file, at, seconds, duck, lines}): its words in their own style, over the sung lines
+    said = voice_ass(voice.get("lines") or [], tmp / "voice.ass", end, OW, OH, font=f_lyr) if voice else 0
+    subs = ",".join(x for x in ("subtitles=lyrics.ass" + fd if sung else "", "subtitles=titles.ass" + fd if shown else "",
+                                "subtitles=voice.ass" + fd if said else "") if x)
     import luts                                          # HERESY 2010: the look, under the words
     graded = luts.vf(kit, look, look_strength, tmp) if look and look != "none" else None
     film = luts.film_vf(grain, vignette, halation, jitter, W, H)   # HERESY 2017: the grain and the vignette, after the look, under the words; 2242: halation, jitter
@@ -1544,9 +1639,11 @@ def clip(kit, name, audio, cover=None, job=None, labels=None, rows=None, lyrics=
             "primary": primary if prim else None, "lyrics": bool(sung), "words": bool(lyrics and words), "titles": bool(shown), "title_style": title_style,
             "match": int(match) if ref is not None else None, "match_strength": round(float(match_strength), 3) if ref is not None else None,
             "fonts": {"titles": f_tit if shown else None, "lyrics": f_lyr if sung else None},   # HERESY 2394
+            "voice": {"take": voice.get("take"), "at": voice.get("at"), "duck": voice.get("duck"), "lines": said} if voice else None,   # HERESY 2963
             "shots": len(shots), "own": own, "live": live, "videos": used}
     meta = ["-metadata", "comment=" + json.dumps(kept, ensure_ascii=False, separators=(",", ":"))]
-    rc, err = _watched(nice + ["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", "list.txt", "-i", str(audio), "-map", "0:v", "-map", "1:a",
+    ins, amap = voice_mix(voice) if voice else ([], ["-map", "1:a"])   # HERESY 2963: the song down under the voice and back, the voice over it
+    rc, err = _watched(nice + ["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", "list.txt", "-i", str(audio), *ins, "-map", "0:v", *amap,
                                *video, "-c:a", "aac", "-b:a", abr, *meta, "-shortest", "-movflags", "+faststart", "out.mp4"], str(tmp), job, end, share)   # HERESY 2326
     if rc != 0 or not (tmp / "out.mp4").is_file():
         raise RuntimeError("ffmpeg: " + (err.strip()[-300:] or "no output"))

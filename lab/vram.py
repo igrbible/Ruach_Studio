@@ -11,7 +11,7 @@ import os
 import subprocess
 import urllib.request
 
-ENGINE_URL = "http://127.0.0.1:7777"
+ENGINE_URL = "http://127.0.0.1:" + os.environ.get("YUE2CPP_PORT", "7777")   # HERESY 2936: the port the engine was given, as everywhere else
 
 
 def _cuda():

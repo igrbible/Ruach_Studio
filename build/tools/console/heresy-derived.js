@@ -465,6 +465,7 @@
         paintDbSources();
         paintStSources();
         paintMdSources();                               // HERESY 1834
+        paintCmpSources();                              // HERESY 2949
         // while Forge works on this take, look again every three seconds
         clearTimeout(state.watch);
         if (state.running.some(function (j) { return j.status !== "failed"; })) state.watch = setTimeout(refresh, 3000);
@@ -720,6 +721,11 @@
       paintMdSizes();
     }
     if ($("dbRun")) $("dbRun").addEventListener("click", debuzz);   // HERESY 1030
+    if ($("cmpGo")) {                                   // HERESY 2949: the Compare node's two and its button
+      ["cmpA", "cmpB"].forEach(function (id) { $(id).addEventListener("change", paintCmpSay); });
+      $("cmpGo").addEventListener("click", function () { compareTwo($("cmpA").value, $("cmpB").value); });
+      paintCmpSources();
+    }
     if ($("rmRun")) {
       $("rmRun").addEventListener("click", remaster);
       $("rmSource").addEventListener("change", paintLevels);
@@ -830,28 +836,72 @@
   // branch of the tree (debuzz, remasters, upscales, stems), one transport; a click on another version (or its number)
   // plays it from the same second. Each version is its own audio element, so a switch seeks only the one coming in,
   // which starts before the one going out stops: no gap to hear, no restart.
+  // HERESY 2949: the take's own versions as the Compare window lists them (the original, then each branch's files), one code for the window and the Compare node
+  var CMP_GROUP = { debuzz: "Debuzz", remaster: "Remaster", upscale: "Upscale", stems: "Stems", daw: "DAW mix", gate: "Digital Gateway", plugin: "" };   // 1547   // 1504: the DAW's mixes
+  function takeVersions(take) {
+    var out = [{ label: "The original", group: "", url: "/library/listen?name=" + encodeURIComponent(take.name), path: "", seconds: take.seconds, take: take.name }];
+    ["debuzz", "remaster", "upscale", "stems", "daw", "gate", "plugin"].forEach(function (kind) {   // HERESY 1460: a plugin's too; 1504: the DAW's; 1547: the gateway's
+      state.list.filter(function (m) { return m.kind === kind; }).forEach(function (m) {
+        (m.files || []).forEach(function (f) {
+          if (isText(f) || isImage(f)) return;          // HERESY 1484: a report is no version (1557: nor a picture)
+          out.push({ label: title(f), group: (kind === "plugin" ? kindName(m) : CMP_GROUP[kind]) + (m.mode ? " · " + (MODE[m.mode] || m.mode) : "") + (m.created ? " · " + String(m.created).slice(11, 16) : ""),
+                     url: fileUrl(take.name, f.path), path: f.path, seconds: f.seconds, mark: { take: take.name, path: f.path }, created: String(m.created || ""), midi: isMidi(f) });   // 1504
+        });
+      });
+    });
+    return out;
+  }
   function compare(startPath) {
     var take = state.take;
     if (!take) return;
     if (state.hooks.pauseMain) state.hooks.pauseMain();
     Array.prototype.forEach.call(document.querySelectorAll("#derivedTree audio"), function (a) { a.pause(); });
-    var GROUP = { debuzz: "Debuzz", remaster: "Remaster", upscale: "Upscale", stems: "Stems", daw: "DAW mix", gate: "Digital Gateway", plugin: "" };   // 1547   // 1504: the DAW's mixes
-    var versions = [{ label: "The original", group: "", url: "/library/listen?name=" + encodeURIComponent(take.name), path: "", seconds: take.seconds, take: take.name }];
+    var own = takeVersions(take), versions = [own[0]];
     // HERESY 1311: the take's family (the same music in other takes), the disliked left out, after the original
     (state.hooks.family ? state.hooks.family(take.name) : []).forEach(function (t) {
       versions.push({ label: t.label || t.name, group: t.group || "The same music", url: t.url, path: "take:" + t.name, seconds: t.seconds, take: t.name });
     });
-    ["debuzz", "remaster", "upscale", "stems", "daw", "gate", "plugin"].forEach(function (kind) {   // HERESY 1460: a plugin's too; 1504: the DAW's; 1547: the gateway's
-      state.list.filter(function (m) { return m.kind === kind; }).forEach(function (m) {
-        (m.files || []).forEach(function (f) {
-          if (isText(f) || isImage(f)) return;          // HERESY 1484: a report is no version (1557: nor a picture)
-          versions.push({ label: title(f), group: (kind === "plugin" ? kindName(m) : GROUP[kind]) + (m.mode ? " · " + (MODE[m.mode] || m.mode) : "") + (m.created ? " · " + String(m.created).slice(11, 16) : ""),
-                          url: fileUrl(take.name, f.path), path: f.path, seconds: f.seconds, mark: { take: take.name, path: f.path } });   // 1504
-        });
-      });
-    });
+    versions = versions.concat(own.slice(1));
     var active = Math.max(0, versions.findIndex(function (v) { return v.path === startPath; }));
     openCompare(take.label || take.name, versions, active);
+  }
+  // HERESY 2949 (the agent's item E19 after 2.1.0-rc1; Viktor 05.11.2026: «две стороны одной медали в двух разных комнатах»): the Compare node, two
+  // inputs A and B, each any version of the take the Compare window lists (the original, a branch's file; MIDI none, it is not heard); Compare
+  // hands the two to the Compare window itself (openCompare), A first. A new take: A the original, B its newest file; a pick kept while it is there
+  function cmpChoices() { return state.take ? takeVersions(state.take).filter(function (v) { return !v.midi; }) : []; }
+  function cmpWord(v) { return v.path ? (v.group ? tt(v.group) + " \u00b7 " : "") + v.label : tt("The original"); }
+  function paintCmpSources() {
+    var a = $("cmpA"), b = $("cmpB");
+    if (!a || !b) return;
+    var vs = cmpChoices(), html = vs.map(function (v) { return '<option value="' + esc(v.path) + '">' + esc(cmpWord(v)) + "</option>"; }).join("");
+    var newest = vs.slice(1).sort(function (x, y) { return x.created < y.created ? 1 : x.created > y.created ? -1 : 0; })[0];
+    [[a, ""], [b, newest ? newest.path : ""]].forEach(function (p) {
+      var sel = p[0], keep = sel.dataset.take && sel.dataset.take === (state.take ? state.take.name : "") ? sel.value : null;
+      if (sel.dataset.opts !== html) { sel.innerHTML = html; sel.dataset.opts = html; }
+      sel.value = keep !== null && vs.some(function (v) { return v.path === keep; }) ? keep : p[1];
+      sel.dataset.take = state.take && !state.reading ? state.take.name : "";   // a pick is the take's once its versions are read (a paint before that leaves the defaults to come)
+    });
+    paintCmpSay();
+  }
+  function paintCmpSay() {
+    var a = $("cmpA"), b = $("cmpB"), go = $("cmpGo"), sayEl = $("cmpSay");
+    if (!a || !go) return;
+    var n = cmpChoices().length, same = a.value === b.value;
+    go.disabled = !state.take || n < 2 || same;
+    if (sayEl) sayEl.textContent = !state.take ? tt("Pick a take: its versions come here") : n < 2 ? tt("Only the original so far: make a file from it in a step, then compare the two")
+      : same ? tt("A and B are the same file: pick another for one of them") : "";
+  }
+  function compareTwo(pa, pb) {                       // the two versions (by path; «» the original) in the Compare window, A first
+    var take = state.take;
+    if (!take) return false;
+    var vs = cmpChoices(), va = vs.filter(function (v) { return v.path === (pa || ""); })[0], vb = vs.filter(function (v) { return v.path === (pb || ""); })[0];
+    if (!va || !vb || va === vb) return false;
+    if (state.hooks.pauseMain) state.hooks.pauseMain();
+    var two = [Object.assign({}, va, { label: "A \u00b7 " + tt(va.label) }), Object.assign({}, vb, { label: "B \u00b7 " + tt(vb.label) })];
+    if (cmpIsOrig(va)) two[0].label = va.label;        // HERESY 2063: «the original» stays first and named so, Blind leaves it as it is
+    if (cmpIsOrig(vb)) two[1].label = vb.label;
+    openCompare(take.label || take.name, two, 0);
+    return true;
   }
   // HERESY 1415: the same player for any takes (a take's namesakes, the Librarian's checked ones): versions [{label, group, url, path, seconds, take}]
   // HERESY 1425 (Viktor 13.10.2026: «Попап сравнения можешь сделать на 1200px ширины и с wavesurfer wave? Стяжка ширины при утирании в ширину
@@ -2277,6 +2327,7 @@
   window.HeresyAB = { open: abOpen };
   window.HeresyDerived = { cmp: { startAt: cmpStartAt, seek: cmpSeek, ticks: cmpTicks, keep: cmpKeep, hide: cmpHide, marks: cmpMarks, clockMs: clockMs, shift: cmpShift, isOrig: cmpIsOrig },   // HERESY 1995 · 2000: for the checks; 2063: isOrig
     init: init, setTake: setTake, files: files, refresh: refresh, mdSizes: paintMdSizes, remasterSettings: remasterSettings, chainDeess: chainDeess, compareList: openCompare,
+                           compareTwo: compareTwo, versions: function () { return cmpChoices(); }, cmpPaint: paintCmpSources,   // HERESY 2949: the Compare node
                            list: function () { return state.list.slice(); }, renderInto: renderInto,   // HERESY 1964   // 1506: the branches as the lab names them (kind, source), for the Refiner's canvas
                            marks: function (name) { return Object.assign({}, MARKS[name] || {}); } };   // 1415; 1504
 })();

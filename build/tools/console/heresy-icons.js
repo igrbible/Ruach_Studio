@@ -151,6 +151,7 @@
     // HERESY 2099, 2101: the changes not confirmed yet (a cloud with its arrow up) and the line stuck (a broken link), Lucide's (ISC)
     upload: '<path d="M12 13v8"/><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="m8 17 4-4 4 4"/>',
     unlink: '<path d="m18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71"/><path d="M8 2v3"/><path d="M2 8h3"/><path d="M16 19v3"/><path d="M19 16h3"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',   // HERESY 2940: Lucide's link (ISC): Link into the other realm's workspaces
     archive: '<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
     layers: '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
     trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
@@ -315,10 +316,17 @@
     "circle-check": '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
     keyboard: '<path d="M10 8h.01"/><path d="M12 12h.01"/><path d="M14 8h.01"/><path d="M16 12h.01"/><path d="M18 8h.01"/><path d="M6 8h.01"/><path d="M7 16h10"/><path d="M8 12h.01"/><rect width="20" height="16" x="2" y="4" rx="2"/>'   // HERESY 2620 (Lucide)
   });
-  function ui(name, cls) {
-    return UI[name] ? '<svg class="ui-ico ui-' + name + (cls ? " " + cls : "") + '" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + UI[name] + "</svg>" : "";
+  // HERESY 2950: a drawing's closed paths marked (class «c»: a path that ends in z), so two-tone icons fill their shapes and never an open
+  // stroke's chord (a check mark, a wave); circles, rectangles, ellipses and polygons are closed by nature (app.css html[data-icons=duo])
+  var CLOSED = {};
+  function closed(name) {
+    if (!(name in CLOSED)) CLOSED[name] = String(UI[name] || "").replace(/<path(?![^>]*\bclass=)([^>]*\bd="[^"]*[zZ]\s*")/g, '<path class="c"$1');
+    return CLOSED[name];
   }
-  function paths(name) { return UI[name] || ""; }   // HERESY 2873: a drawing's inside, for an <svg> that keeps its own classes
+  function ui(name, cls) {
+    return UI[name] ? '<svg class="ui-ico ui-' + name + (cls ? " " + cls : "") + '" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + closed(name) + "</svg>" : "";
+  }
+  function paths(name) { return UI[name] ? closed(name) : ""; }   // HERESY 2873: a drawing's inside, for an <svg> that keeps its own classes
   window.HeresyIcons = { svg: svg, dress: dress, ui: ui, paths: paths, names: Object.keys(ICONS) };
   Array.prototype.forEach.call(document.querySelectorAll("svg[data-ui-paths]"), function (el) { el.innerHTML = paths(el.dataset.uiPaths); });   // HERESY 2873
   // anything marked data-ui="name" gets the drawing (the player's buttons in index.html)

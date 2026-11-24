@@ -16,7 +16,7 @@ Test helpers that the real server does not have:
   GET  /mock/requests    every /synth and /transcribe request received, raw
   GET  /mock/info        where its library is, relative to the install ({"outputs": "tmp/..."})
   POST /mock/clear       forget them
-  POST /mock/flags       {"transcriber": bool, "outputs": bool, "peaks": bool} switches any off or on
+  POST /mock/flags       {"transcriber": bool, "outputs": bool, "peaks": bool, "whisper": bool} switches any off or on (whisper: GET /lab/health's, HERESY 2955)
   POST /mock/stall       {"ms": N} every request but the checks' own waits until N ms from now (HERESY 2101: the line stalled); 0 ends it
   POST /lab/mock-k98     {"path", "times", "ms" | "status", "error"} the next writes to path held back ms (or answered status, its {"error"} the words
                          given, HERESY 2123), each sending kept (HERESY 2099)
@@ -345,6 +345,7 @@ class Mock:
         self.models = ["BF16", "Q8_0"]
         self.settings = {"model": "BF16", "keep_loaded": False, "max_seq": 0, "vae_core": 512}
         self.peaks_on = True
+        self.whisper_on = True    # HERESY 2955: GET /lab/health says whether Whisper is here, as the lab does
         self.loaded = {}          # module -> bytes in GPU memory
         self.active = None        # the job on the worker right now
         self.outputs = Path(args.outputs).resolve() if args.outputs else TMP / "mock-outputs"
@@ -1010,6 +1011,8 @@ def make_handler(mock):
                                    else w.listing(mock.writer_kit, q.get("scope", "")))
             if path == "/health":
                 return self.send(200, {"status": "ok"})
+            if path == "/lab/health":   # HERESY 2955: as the lab answers it, Whisper here unless /mock/flags said not
+                return self.send(200, {"ok": True, "busy": False, "jobs": {}, "workers": [], "whisper": mock.whisper_on})
             if path == "/props":
                 return self.send(200, {
                     "version": mock.version, "model": _gguf("YuE2-3B-%s.gguf" % mock.settings["model"]),
@@ -1347,6 +1350,8 @@ def make_handler(mock):
                     mock.args.no_outputs = not flags["outputs"]
                 if isinstance(flags.get("peaks"), bool):
                     mock.peaks_on = flags["peaks"]
+                if isinstance(flags.get("whisper"), bool):   # HERESY 2955
+                    mock.whisper_on = flags["whisper"]
                 return self.send(200, {"transcriber": not mock.args.no_transcriber, "outputs": not mock.args.no_outputs})
             if path.startswith("/fakechat-"):
                 return self.fake_chat_post(path)

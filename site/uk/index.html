@@ -719,7 +719,7 @@
     <p class="lead">Ціла Студія довкола <b>YuE2</b>, відкритої моделі пісень. Пишеш стиль і текст, а Студія складає, співає й зводить пісню на <b>твоїй власній відеокарті</b>. Твої пісні, слова й налаштування ніколи її не покидають.</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Узяти на GitHub</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.uk.md">Читати посібник</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Моделі на Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24/7 кава Віктору й Клоду</a></div>
     <p class="star">⭐ Якщо Студія припала до душі, постав зірку <a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">репозиторію YuE2 Studio на GitHub</a>.</p>
-    <span class="rc"><b>2.1.0-rc1</b> · передреліз: редактор за секціями, Читець у три колонки, емодзі просторів, експорт MIDI в одному вікні · листопад 2026</span>
+    <span class="rc"><b>2.1.0-rc2</b> · передреліз: увесь YuE2 у встановленні, транскрайбер теж; гайд івритом; кожен вибір простору — деревом Бібліотеки; голос Читця поверх кліпу · листопад 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -856,7 +856,7 @@
             <tr><td>код</td><td>відкритий (AGPL), кожна зміна пронумерована й описана</td><td>закритий</td></tr>
             <tr><td>інтерфейс</td><td>вісім кімнат на одній сторінці, дванадцятьма мовами; підказка в кожного контрола й гайд у кожній кімнаті; плеєр і семпли в кожній кімнаті; клавіші для частих дій; ставиться як застосунок</td><td>вебзастосунок і мобільні застосунки</td></tr>
             <tr class="honest"><td>лиск з коробки</td><td><b>менше</b>: мікс може гудіти (допомагає антигул), текст може розпливатися (перевірка тексту знайде де), деякі інструменти YuE2 грає рідко або не грає зовсім (їх навчить LoRA)</td><td><b>більше</b></td></tr>
-            <tr class="honest"><td>що потрібно</td><td>відеокарта NVIDIA (24 ГБ на все в повній точності; 12–16 ГБ і 8 ГБ з меншими копіями), Linux, 22,5–25,9 ГБ диска</td><td>браузер</td></tr>
+            <tr class="honest"><td>що потрібно</td><td>відеокарта NVIDIA (24 ГБ на все в повній точності; 12–16 ГБ і 8 ГБ з меншими копіями), Linux, 29,3–36,0 ГБ диска</td><td>браузер</td></tr>
           </tbody>
         </table>
       </div>
@@ -1054,7 +1054,7 @@
         <div class="card"><h3>Машина</h3><ul>
           <li><b>Відеокарта NVIDIA</b>: 24 ГБ, щоб усе йшло в повній точності; на 12–16 ГБ і 8 ГБ працює з меншими копіями (Відеографу потрібні 24 ГБ)</li>
           <li><b>Linux</b> (створено на Ubuntu 24.04, CUDA 12.8); з 2.0.9 — <b>Windows 11</b> і <b>Мак на Apple Silicon</b> як бета</li>
-          <li><b>Близько 23–26 ГБ</b> диска, за замірами свіжих установлень: програма та її Python (17 ГБ), моделі (від 5,1 до 8,5 ГБ залежно від карти, їх завантажує, закріплює й перевіряє <code>fetch-models.sh</code>); моделі Митця ще 39–43 ГБ, набори 💎 5,6 ГБ, кожне лише коли попросиш</li></ul></div>
+          <li><b>Близько 29–36 ГБ</b> диска, за замірами свіжих установлень: програма та її Python (17 ГБ), моделі, увесь YuE2 (від 11,9 до 18,6 ГБ залежно від карти, їх завантажує, закріплює й перевіряє <code>fetch-models.sh</code>); моделі Митця ще 39–43 ГБ, набори 💎 5,6 ГБ, кожне лише коли попросиш</li></ul></div>
         <div class="need-side">
         <div class="card"><h3>Екран</h3><ul>
           <li>Створено для вікна браузера <b>1920×1080 при 100 %</b></li>
@@ -1066,17 +1066,18 @@
           <li>Більше відеокарт: навчання й завдання лабораторії поруч із піснями</li></ul></div>
         </div>   <!-- HERESY 2026 (Viktor: «Третьей в ту строку перемести карточку `По желанию`») -->
         <!-- HERESY 1807 (Viktor 28.10.2026: «на всех наших карточках чёрным по белому… предупреди… Слишком массивная она у нас») -->
-        <p class="warn-free"><b>Не для безкоштовних хмарних GPU.</b> Ruach Studio не запуститься в Google Colab, Kaggle чи на будь-якому безкоштовному GPU для блокнотів, тож не витрачай на це вечір: це ціла Студія, а не блокнот. Вона збирає свій рушій на C++/CUDA на тій машині, де живе, тримає поруч сервер і лабораторію сервісів на Python і займає близько 23–26 ГБ диска (62–69 ГБ із Митцем). Карта, пам'ять, диск, що стирається, і багатогодинний ліміт безкоштовного сеансу цього не витримають. Їй потрібен твій власний комп'ютер на Linux або орендований сервер, що лишається твоїм, із картою NVIDIA: 24 ГБ на все, 16 ГБ із меншими копіями моделі.</p>
+        <p class="warn-free"><b>Не для безкоштовних хмарних GPU.</b> Ruach Studio не запуститься в Google Colab, Kaggle чи на будь-якому безкоштовному GPU для блокнотів, тож не витрачай на це вечір: це ціла Студія, а не блокнот. Вона збирає свій рушій на C++/CUDA на тій машині, де живе, тримає поруч сервер і лабораторію сервісів на Python і займає близько 29–36 ГБ диска (69–79 ГБ із Митцем). Карта, пам'ять, диск, що стирається, і багатогодинний ліміт безкоштовного сеансу цього не витримають. Їй потрібен твій власний комп'ютер на Linux або орендований сервер, що лишається твоїм, із картою NVIDIA: 24 ГБ на все, 16 ГБ із меншими копіями моделі.</p>
       </div>
     </div>
   </section>
 
   <!-- 12.11.2026, engine-fixes lane (Viktor: «5 по размерам выравнивай повсюду»): since 2.0.7 the install is the least a song needs (fetch-models.sh); the models by the pinned lists anew, the program and its Pythons as measured on 01.11.2026 -->
   <!-- HERESY 1984 (Viktor 01.11.2026: «честную таблицу по объёмам данных, скачиваемых на машину пользователя… на сайт визиту ближе к концу») -->
+  <!-- 23.11.2026, 2.1.0-rc2 (HERESY 2952): the install brings the whole of YuE2, m-a-p's own YuE2-3B and the transcriber with its Refined mode beside our fine-tune and the two decoders; the sizes as README's «What It Downloads» (the install 36.0 / 29.3 / 29.3 GB, every room 248.8 / 132.3 / 127.6 GB) -->
   <section id="downloads">
     <div class="wrap">
       <h2>Що вона завантажує</h2>
-      <p class="sub">Заміряно пофайлово за закріпленими списками репозиторіїв Студії та на диску свіжого встановлення (1 ГБ = 10⁹ байтів). Встановлення приносить лише те, що потрібно для пісні: Музиканта й Бібліотекаря, власний файнтюн Ruach Studio і два декодери. Решта частин Музиканта приходить з Рушій → Моделі й LoRA, будь-яка інша кімната — з Рушій → Моделі й LoRA → За кімнатами: там спершу міряється вільне місце на диску, і не завантажується те, що не вміститься; усе це лише на запит.</p>
+      <p class="sub">Заміряно пофайлово за закріпленими списками репозиторіїв Студії та на диску свіжого встановлення (1 ГБ = 10⁹ байтів). Встановлення приносить Музиканта й Бібліотекаря з усім YuE2: власний файнтюн Ruach Studio і рідний YuE2-3B від m-a-p у кванті під карту, два декодери й транскрайбер із його режимом Refined, тож кавери й ремікси працюють із першого запуску. Решта частин Музиканта приходить з Рушій → Моделі й LoRA, будь-яка інша кімната — з Рушій → Моделі й LoRA → За кімнатами: там спершу міряється вільне місце на диску, і не завантажується те, що не вміститься; усе це лише на запит.</p>
       <div class="table dl-table">
         <table>
           <thead><tr><th></th><th>карта на 24 ГБ</th><th>карта на 12–16 ГБ</th><th>карта на 8 ГБ</th></tr></thead>
@@ -1084,16 +1085,18 @@
             <tr><td>програма та її рушій, зібраний тут (завантажується 0,2 ГБ)</td><td>0,9 ГБ</td><td>0,9 ГБ</td><td>0,9 ГБ</td></tr>
             <tr><td>два її Python, у кожному PyTorch для CUDA 12.8 (завантажується 8,7 ГБ)</td><td>16,5 ГБ</td><td>16,5 ГБ</td><td>16,5 ГБ</td></tr>
             <tr><td>власний файнтюн YuE2 від Ruach Studio, у кванті під карту</td><td>7,2 ГБ</td><td>3,8 ГБ</td><td>3,8 ГБ</td></tr>
+            <tr><td>рідний YuE2-3B від m-a-p поруч із ним, у тому ж кванті</td><td>7,2 ГБ</td><td>3,8 ГБ</td><td>3,8 ГБ</td></tr>
             <tr><td>два декодери: Standard від m-a-p, який ще й кодує, і наш власний</td><td>1,3 ГБ</td><td>1,3 ГБ</td><td>1,3 ГБ</td></tr>
-            <tr class="sum"><td>встановлення</td><td>25,9 ГБ</td><td>22,5 ГБ</td><td>22,5 ГБ</td></tr>
-            <tr><td>+ частини Музиканта: наш другий декодер, транскрайбер, Whisper, моделі стемів, UniverSR і Apollo-vocal, LoRA</td><td>8,8 ГБ</td><td>8,8 ГБ</td><td>8,8 ГБ</td></tr>
+            <tr><td>транскрайбер для каверів і його режим Refined</td><td>2,9 ГБ</td><td>2,9 ГБ</td><td>2,9 ГБ</td></tr>
+            <tr class="sum"><td>встановлення</td><td>36,0 ГБ</td><td>29,3 ГБ</td><td>29,3 ГБ</td></tr>
+            <tr><td>+ частини Музиканта: наш другий декодер, Whisper, моделі стемів, UniverSR і Apollo-vocal, LoRA</td><td>7,8 ГБ</td><td>7,8 ГБ</td><td>7,8 ГБ</td></tr>
             <tr><td>+ Письменник: його мовна модель через llama.cpp</td><td>7,4 ГБ</td><td>7,4 ГБ</td><td>6,2 ГБ</td></tr>
             <tr><td>+ Огранювач: MuScriptor і FlashSR</td><td>6,1 ГБ</td><td>6,1 ГБ</td><td>6,1 ГБ</td></tr>
             <tr><td>+ Читець: Fish Audio Drama 3 (Q8_0 на 24 ГБ, нижче Q4_K), наголоси та audio.cpp</td><td>42,1 ГБ</td><td>26,0 ГБ</td><td>26,0 ГБ</td></tr>
             <tr><td>+ Митець: його помічники та Qwen-Image 2512 (Q6 на 24 ГБ, Q4 нижче)</td><td>42,9 ГБ</td><td>39,3 ГБ</td><td>39,3 ГБ</td></tr>
             <tr><td>+ Відеограф: MiniMax H3 і SeedVR2</td><td>86,3 ГБ</td><td>потрібна карта на 24 ГБ</td><td>потрібна карта на 24 ГБ</td></tr>
             <tr><td>+ Тренер LoRA: його база і слухач стилю</td><td>20,2 ГБ</td><td>16,3 ГБ</td><td>12,9 ГБ</td></tr>
-            <tr class="sum"><td>усі кімнати</td><td>239,7 ГБ</td><td>126,5 ГБ</td><td>121,8 ГБ</td></tr>
+            <tr class="sum"><td>усі кімнати</td><td>248,8 ГБ</td><td>132,3 ГБ</td><td>127,6 ГБ</td></tr>
           </tbody>
         </table>
       </div>
@@ -1104,7 +1107,7 @@
   <section id="next">
     <div class="wrap">
       <h2>Що далі</h2>
-      <p class="sub">2.1.0-rc1 — Студія, у якій ми щодня творимо власні пісні й читання. Ось великі частини на підході, для 2.1.0 і далі.</p>
+      <p class="sub">2.1.0-rc2 — Студія, у якій ми щодня творимо власні пісні й читання. Ось великі частини на підході, для 2.1.0 і далі.</p>
       <ul class="feats">
         <li><b>Читець, далі.</b> Книга, завантажена одним файлом із розділами, правка окремої частини і вся книга в Огранювачі, та іврит, прочитаний з огласовками з контексту.</li>
         <li><b>DAW, далі.</b> Піано-рол, що записує в партитуру те, що ти граєш на MIDI-клавіатурі, і краш-тести, яких проєктам для DAW ще бракує в REAPER, Waveform і Bitwig.</li>
@@ -1441,7 +1444,7 @@
     </div>
   </div>
   <div class="wrap">
-    <div class="foot-by">Руах Студія · 2.1.0-rc1 · творіння <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></div> <div class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="Наш дібраний список усього, що створила спільнота YuE2">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Зміни</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24/7 кава</a></div>
+    <div class="foot-by">Руах Студія · 2.1.0-rc2 · творіння <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></div> <div class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="Наш дібраний список усього, що створила спільнота YuE2">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Зміни</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24/7 кава</a></div>
   </div>
 </footer>
 

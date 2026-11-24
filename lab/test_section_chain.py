@@ -345,6 +345,22 @@ r4 = json.load(open(out / t4 / "request.json"))
 check("Repeat and Remove alone: takeedit.make's arrange on the take itself, edited.from the source, nothing sent to the engine",
       st4["status"] == "done" and r4["edited"]["op"] == "arrange" and r4["edited"]["from"] == SRC and abs(sf.info(str(out / t4 / "audio.wav")).duration - 50) < 0.01, r4.get("edited"))
 
+# ------------------------------------------------------------------ HERESY 2945: the words the cuts leave: the new take's lyrics, the Writer's sub-version
+import creator_versions  # noqa: E402
+section.setup(kit=root)
+src_title = json.load(open(out / SRC / "request.json")).get("title") or SRC
+kept = creator_versions.post(root, {"op": "keep", "title": src_title, "lyrics": "[Verse]\nv\n\n[Chorus]\nla la", "takes": [SRC], "why": "generate"})
+n0 = kept["versions"][-1]["n"]
+time.sleep(1.1)                                  # takeedit names a take by its second: the one before was made this second
+code, rr = section.chain(body([{"op": "remove", "spans": [[10.0, 20.0]], "section": "Verse"}], lyrics="", lyrics_a="", v="L", lyrics_after="[Chorus]\nla la"))
+st45 = wait(rr["id"])
+t45 = st45["versions"][0]["take"]
+r45 = json.load(open(out / t45 / "request.json"))
+v45 = creator_versions.get(root, title=src_title)["versions"][-1]
+check("Remove with the words it leaves (2945): the new take's lyrics are them; the Writer keeps them as a sub-version from the source's version, the take with it",
+      st45["status"] == "done" and r45["lyrics"] == "[Chorus]\nla la" and v45["lyrics"] == "[Chorus]\nla la" and v45.get("from") == n0 and v45["why"] == "section" and
+      v45["takes"] == [t45] and (v45["version"].endswith(".1") or v45["version"] == "1"), {"lyrics": r45.get("lyrics"), "version": v45})
+
 # ------------------------------------------------------------------ HERESY 2887: Insert a part, the ninth edit: a copy of a score part at a gap
 ins = {"op": "insert", "spans": [[20.0, 26.0]], "at": 40.0, "section": "Bridge", "after": "Verse 2"}
 near = lambda xs, ys: len(xs) == len(ys) and all(abs(a - b) < 0.01 for x, y in zip(xs, ys) for a, b in zip(x, y))   # noqa: E731

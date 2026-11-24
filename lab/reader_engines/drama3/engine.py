@@ -296,7 +296,7 @@ def _serve(h):
     elif h["device"] != "cuda":
         env["CUDA_VISIBLE_DEVICES"] = ""
     h["proc"] = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, cwd=str(h["kit"]), env=env,
-                                 preexec_fn=(lambda: os.nice(XPU_NICE)) if h["device"] == "xpu" else None)
+                                 preexec_fn=(lambda: os.nice(XPU_NICE)) if h["device"] == "xpu" and os.name == "posix" else None)   # HERESY 2934
     h["url"] = f"http://127.0.0.1:{port}"
     t0 = time.time()
     while True:

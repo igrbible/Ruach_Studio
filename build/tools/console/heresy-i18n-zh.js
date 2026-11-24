@@ -5621,6 +5621,11 @@ RuachI18n.add("zh", {
 "On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks.": "在公共 Wi-Fi（咖啡馆、酒店、火车）上，或在没有防火墙的笔记本上，该网络里的每个人也都算作私有网络：请选择“仅此电脑”，或列出你自己的网络。",
 "Engine → Security changes it any time. The internet at large is never let in, unless the Studio is started with RUACH_ALLOW_PUBLIC=1.": "引擎 → 安全 随时可以更改。除非用 RUACH_ALLOW_PUBLIC=1 启动工作室，否则整个互联网永远进不来。",
 "My decision is a conscious one": "这是我深思熟虑的决定",
+"The Studio listens on this computer alone now (port {0}): no other computer or phone can open it, and {1} has nothing to ask of its firewall. Opened to a network, whoever opens its page there can do everything you can: make and delete songs, read your lyrics, run your graphics cards, fetch models with your keys.": "工作室现在只监听这台电脑（端口 {0}）：其他电脑和手机都打不开它，{1} 也不必为防火墙询问什么。一旦向网络开放，在那里打开其页面的任何人都能做你能做的一切：创建和删除歌曲、阅读你的歌词、占用你的显卡、用你的密钥下载模型。",
+"{0} asks once whether to let the Studio through its firewall, when it starts again": "工作室再次启动时，{0} 会询问一次是否让它通过防火墙",
+"The Studio still listens on this computer alone: restart it ({0}) to open it to your network, and {1} asks once about its firewall.": "工作室仍然只监听这台电脑：重启它（{0}）才能向你的网络开放，{1} 会就防火墙询问一次。",
+"its icon beside the clock → Restart the Studio": "时钟旁的图标 → Restart the Studio",
+"close it and start it again": "关闭后重新启动",
 "Batch": "批量",
 "How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked": "一次画几张：每张是下一个种子（种子、种子 + 1、…），在所选的每种画幅中",
 "Delete the saved style picked": "删除所选的已保存风格",
@@ -5686,6 +5691,7 @@ RuachI18n.add("zh", {
 "Music half: {0} layers, attention {1} %, MLP {2} %": "音乐一半：{0} 层，注意力 {1} %，MLP {2} %",
 "Sound half: {0} layers, attention {1} %, MLP {2} %": "声音一半：{0} 层，注意力 {1} %，MLP {2} %",
 "moves a layer by up to {0} % at 1.0": "在 1.0 时最多移动某层 {0} %",
+"How far it moves a layer is not measured: {0}": "它让某层移动多少尚未测量：{0}",
 "Where it pushes:": "作用位置：",
 "{0} and {1} share their layers ({2}) and pull the same way: together they push harder than their strengths say, keep them lower.": "{0} 和 {1} 共享它们的层（{2}），并朝同一方向拉：合在一起比各自的强度显示的更猛，请调低一些。",
 "{0} and {1} share their layers ({2}) and pull against each other: some of each cancels the other.": "{0} 和 {1} 共享它们的层（{2}），并相互反向拉：各自的一部分抵消了对方。",
@@ -5916,6 +5922,7 @@ RuachI18n.add("zh", {
 "The input's floor, RMS / peak dBFS: {0}": "输入的底噪，RMS / 峰值 dBFS：{0}",
 "Not measured: {0}": "未测量：{0}",
 "no sound card is seen here (/proc/asound has none)": "这里看不到声卡（/proc/asound 为空）",
+"the audio interfaces are read through ALSA, Linux's sound system: on Windows and macOS none are listed yet, and the analog gateway and the monitor run on Linux for now": "音频接口通过 Linux 的声音系统 ALSA 读取：在 Windows 和 macOS 上暂不列出任何接口，模拟网关和监听目前只在 Linux 上运行",
 "aplay is not here: ALSA's software devices are not listed": "这里没有 aplay：无法列出 ALSA 的软件设备",
 "arecord is not here: ALSA's software devices are not listed": "这里没有 arecord：无法列出 ALSA 的软件设备",
 "PipeWire / Pulse do not run here (no pactl answer)": "PipeWire / Pulse 未在此运行（pactl 无回应）",
@@ -10077,4 +10084,177 @@ RuachI18n.add("zh", {
 // HERESY 2919c: the workspaces' emoji upgrade, said once
 RuachI18n.add("zh", {
 "{0} workspaces now show their emoji in its own column": "{0} 个工作区现在把表情符号显示在单独的一列中"
+});
+// HERESY 2940 · 2941: the take's menu of workspaces, the realms in a move and an add
+RuachI18n.add("zh", {
+"A move never takes a take out of its realm: these are the Musician's, and “{0}” is the Narrator's.": "移动永远不会把作品带出它的领域：这些属于音乐人，而“{0}”属于朗读。",
+"A move never takes a take out of its realm: these are the Narrator's, and “{0}” is the Musician's.": "移动永远不会把作品带出它的领域：这些属于朗读，而“{0}”属于音乐人。",
+"A move never takes a take out of its realm: these belong to both realms.": "移动永远不会把作品带出它的领域：这些分属两个领域。",
+"Link them into “{0}” instead? They stay where they are as well.": "改为链接到“{0}”？它们也会留在原处。",
+"Link them": "链接",
+"Linked into “{0}”: {1}": "已链接到“{0}”：{1}",
+"The checked belong to both realms ({0} of the Musician, {1} of the Narrator): a move keeps each take in its realm, so check the takes of one realm": "勾选的作品分属两个领域（音乐人 {0} 个，朗读 {1} 个）：移动会让每个作品留在它的领域；请只勾选一个领域的作品",
+"They leave every other workspace of their realm they are in (a locked one keeps its own; their links in the other realm stay).": "它们会离开所在领域中的其他所有工作区（锁定的工作区会留下自己的；它们在另一个领域的链接保留）。",
+"Frozen: unfreeze it first (⋯ beside its name)": "已冻结：请先解冻（名字旁的 ⋯）",
+"Link into the Narrator's": "链接到朗读的工作区",
+"Link into the Musician's": "链接到音乐人的工作区"
+});
+// HERESY 2942: the music model's honest limits (the window of the song at hand, the floor under its ceiling, Extend's cap)
+RuachI18n.add("zh", {
+"Max length {0} is past what the window holds for this song: about {1} of music whole, after its style and lyrics ({2} tokens) and its score ({3}). The song stops where the window ends. Longer: Long songs · Pieces (experimental).": "最大时长 {0} 超出了窗口能为这首歌容纳的长度：在风格和歌词（{2} 个 token）以及乐谱（{3}）之后，完整的音乐约 {1}。歌曲会在窗口结束处停止。要更长：长歌曲 · 分段（实验性）。",
+"Max length {0} is past what the window holds for this song: about {1} of music whole ({4}–{5} by the score the model writes), after its style and lyrics ({2} tokens). The song stops where the window ends. Longer: Long songs · Pieces (experimental).": "最大时长 {0} 超出了窗口能为这首歌容纳的长度：在风格和歌词（{2} 个 token）之后，完整的音乐约 {1}（取决于模型写出的乐谱，{4}–{5}）。歌曲会在窗口结束处停止。要更长：长歌曲 · 分段（实验性）。",
+"The window holds about {0} of this song's music whole: its style and lyrics take {1} tokens, its score {2}, of the {3}.": "窗口可完整容纳这首歌约 {0} 的音乐：在 {3} 个 token 中，风格和歌词占 {1} 个，乐谱占 {2} 个。",
+"The window holds about {0} of this song's music whole ({4}–{5} by the score the model writes): its style and lyrics take {1} tokens of the {3}.": "窗口可完整容纳这首歌约 {0} 的音乐（取决于模型写出的乐谱，{4}–{5}）：在 {3} 个 token 中，风格和歌词占 {1} 个。",
+"Max length goes past it: the song stops where the window ends.": "最大时长超出了它：歌曲会在窗口结束处停止。",
+"The music's Min length {0} stood above its Max length {1}: sent with the floor at {1}": "音乐的最小时长 {0} 高于其最大时长 {1}：已按下限 {1} 发送",
+"The score's Min tokens {0} stood above its Max tokens {1}: sent with the floor at {1}": "乐谱的最小 token {0} 高于其最大 token {1}：已按下限 {1} 发送",
+"{0} long: Extend goes to {1} at most": "时长 {0}：延长最多到 {1}",
+"Music up to 10:00 (8:00 by default): past it a song loses its way (one ran on to 9:30, and that was too much). The window of 24,576 tokens may hold less: the style, the lyrics and the score take their part first.": "音乐最长 10:00（默认 8:00）：再长，歌曲就会迷失方向（有一首拖到 9:30，太长了）。24,576 个 token 的窗口可能容纳更少：风格、歌词和乐谱先占去它们的部分。",
+"Text profiles make a pasted text ready to read, with a speech profile of your own (Direct, past 8:00); readings live in the Narrator": "文本配置会把粘贴的文本整理好以供朗读，需配合你自己的语音配置（Direct，超过 8:00）；朗读在朗读室里"
+});
+// HERESY 2943: the Trainer's curves together: the run's events, the held-out dots, a scale's span
+RuachI18n.add("zh", {
+"Step {0}": "第 {0} 步",
+"the {0} frozen: its loss leaves the sum": "{0} 已冻结：它的损失离开总和",
+"went on from its save": "从其保存点继续",
+"the {0}'s learning-rate curve {1} → {2}": "{0} 的学习率曲线 {1} → {2}",
+"The running average begins anew here.": "滑动平均从这里重新开始。",
+"held out at step {0}: {1} {2}": "第 {0} 步的留出集：{1} {2}",
+"span {0}": "跨度 {0}",
+"Smoothing": "平滑",
+"The curves' smoothing, as TensorBoard's: 0 draws the logged points as they are, 0.99 the smoothest (0.92 by default); the faint line under each is the points themselves. The learning rate, the memory and the held-out dots are never smoothed, nor across the run's events. Kept in this browser.": "曲线的平滑，与 TensorBoard 相同：0 按原样绘制记录的点，0.99 最平滑（默认 0.92）；每条曲线下的淡线就是这些点本身。学习率、显存和留出集的点从不平滑，也不会跨过训练的事件平滑。保存在此浏览器中。"
+});
+// HERESY 2945: the Writer's versions: the Section editor's sub-version and the version it came from
+RuachI18n.add("zh", {
+"the Section editor": "段落编辑器",
+"from #{0}": "来自 #{0}"
+});
+// HERESY 2942b: the Section editor's Extend within the music model's 10:00
+RuachI18n.add("zh", {
+"Only past the take's end, 10:00 at most in all": "只能在本条结尾之后，总长最多 10:00",
+"Extend sings on to 10:00 at most": "延长最多唱到 10:00"
+});
+// HERESY 2948: comping in the DAW: the selection taken from another version of its stem
+RuachI18n.add("zh", {
+"Take it from another version": "从另一个版本取",
+"The rest has no versions": "其余部分没有版本",
+"This stem has one version: a file made from it (a cleaned voice…) is another": "这个分轨只有一个版本：由它生成的文件（清理过的人声等）就是另一个版本",
+"The selection from another version of this stem, laid over the lane with 10 ms crossfades; the lane's own version everywhere else": "选区取自这个分轨的另一个版本，以 10 毫秒交叉淡化铺在轨道上；其余部分仍是轨道自己的版本",
+"{0}–{1} now from «{2}»": "{0}–{1} 现在来自「{2}」",
+"a version gone": "已不存在的版本"
+});
+// HERESY 2949: the Refiner's Compare node: two versions of the take, A and B, into the Compare window
+RuachI18n.add("zh", {
+"A and B side by side": "A 与 B 并排",
+"Two versions of the take side by side, A and B: the original, a step's file, a mix; Compare opens them in the Compare window, switched in the same second. A wire from the take goes to A, from a step to B": "录音的两个版本并排，A 与 B：原始版、某个步骤的文件、混音；「比较」在比较窗口中打开它们，在同一秒切换。来自录音的连线接到 A，来自步骤的接到 B",
+"Two versions of this take side by side, A and B, in the Compare window: switched in the same second, blind if you like.": "这条录音的两个版本并排，A 与 B，在比较窗口中：在同一秒切换，也可以盲听。",
+"The first: the original or any file a step made of this take": "第一个：原始版，或某个步骤从这条录音生成的任意文件",
+"The second, heard against A: a step's file, a mix, the original": "第二个，与 A 对听：步骤的文件、混音、原始版",
+"A and B in the Compare window, A first: one plays, the other takes over in the same second": "A 与 B 在比较窗口中，A 在前：一个播放，另一个在同一秒接上",
+"Compare A and B": "比较 A 与 B",
+"Pick a take: its versions come here": "选择一条录音：它的版本会出现在这里",
+"Only the original so far: make a file from it in a step, then compare the two": "目前只有原始版：先在某个步骤从它生成文件，再比较两者",
+"A and B are the same file: pick another for one of them": "A 与 B 是同一个文件：为其中一个换一个"
+});
+// HERESY 2950: two-tone icons in Engine › Appearance
+RuachI18n.add("zh", {
+"Icons": "图标",
+"One colour": "单色",
+"Two-tone, the theme's colours": "双色，主题的颜色",
+"The Studio's line icons: ours in one colour, the text's (the default); or two-tone, the outline as always and their shapes filled faintly in the theme's own colours (the accent for what makes, red for what takes away, green for what keeps), so each theme paints them its way": "Studio 的线条图标：我们的单色，即文字的颜色（默认）；或双色：轮廓照旧，其形状以主题自身的颜色淡淡填充（创作的用强调色，移除的用红色，保留的用绿色），让每个主题按自己的方式着色"
+});
+// HERESY 2955: what a control turned off for a model that is not here says, and its way to Engine → Models
+RuachI18n.add("zh", {
+"The transcriber: covers from a recording, a backing read (SheetSage2 with MERT-v2-FullSong)": "扒谱器：从录音翻唱、读取伴奏（SheetSage2 与 MERT-v2-FullSong）",
+"Whisper large-v3: the lyrics check, karaoke timing, sections by ear, a recording's words": "Whisper large-v3：歌词检查、卡拉 OK 时间轴、凭耳朵找段落、录音里的话",
+"not in the last check here: Fetch brings it": "不在这里上次的检查中：「下载」会取来",
+"Its files are here: the engine takes it in at its next start.": "它的文件已在这里：引擎下次启动时载入。",
+"Opens Engine → Models and LoRAs at its row: Fetch there brings it": "在它的那一行打开引擎 → 模型与 LoRA：在那里点「下载」即可取来",
+"Engine → Models": "引擎 → 模型",
+"not in this Studio yet": "本工作室还没有",
+"off: this server keeps none": "关闭：此服务器不保存",
+"Covering a recording needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.": "从录音翻唱需要扒谱器（SheetSage2 与 MERT-v2-FullSong），本工作室还没有。",
+"Reading a backing needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.": "读取伴奏需要扒谱器（SheetSage2 与 MERT-v2-FullSong），本工作室还没有。",
+"Writing a score from the sound needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.": "根据声音写出乐谱需要扒谱器（SheetSage2 与 MERT-v2-FullSong），本工作室还没有。",
+"Ready to transcribe. Match sections needs Whisper large-v3, which this Studio does not have yet.": "可以扒谱。「匹配段落」需要 Whisper large-v3，本工作室还没有。",
+"Refined needs SheetSage2-Refined, which this Studio does not have yet.": "Refined 需要 SheetSage2-Refined，本工作室还没有。",
+"BF16 (7.2 GB) is not in this Studio yet: Engine → Models and LoRAs fetches it under Backbone, and the Studio offers it after its next start.": "本工作室还没有 BF16（7.2 GB）：引擎 → 模型与 LoRA 的「主干」一行可以下载，工作室下次启动后会提供它。",
+"The server keeps no library: songs made in this tab stay until it reloads.": "服务器不保存库：这个标签页里做的歌会保留到它重新加载为止。",
+"This engine keeps no settings file, so it answers this computer and private networks; started the Studio's way (its icon, Pinokio or start.sh), it lets you choose.": "此引擎不保存设置文件，因此回应这台电脑和私有网络；按工作室的方式启动（它的图标、Pinokio 或 start.sh）后就可以选择。",
+"it needs Whisper large-v3, which this Studio does not have yet: Engine → Models": "需要 Whisper large-v3，本工作室还没有：引擎 → 模型",
+"The lyrics check and karaoke timing need Whisper large-v3, which this Studio does not have yet.": "歌词检查和卡拉 OK 时间轴需要 Whisper large-v3，本工作室还没有。",
+"Whisper large-v3 is not in this Studio yet: Engine → Models and LoRAs fetches it (3.1 GB)": "本工作室还没有 Whisper large-v3：引擎 → 模型与 LoRA 可以下载（3.1 GB）",
+"{0}: not fetched.": "{0}：未能下载。",
+"The check did not run.": "检查没有运行。",
+"On Windows the Weights panel downloads through the bash of Git for Windows, and none is installed here.": "在 Windows 上，「模型与 LoRA」通过 Git for Windows 的 bash 下载，而这里没有安装。",
+"Install Git for Windows (https://git-scm.com/download/win), then press again. The models a song needs come without it too.": "安装 Git for Windows（https://git-scm.com/download/win）后再按一次。一首歌所需的模型不靠它也会到。"
+});
+// HERESY 2956: why a chooser's workspace takes nothing new
+RuachI18n.add("zh", {
+"A 💎 set: nothing new lands in it": "💎 合集：不会放入新的内容",
+"Frozen: nothing new lands in it": "已冻结：不会放入新的内容",
+"Archived: nothing new lands in it": "已归档：不会放入新的内容",
+"The regeneration's own section: nothing new lands in it": "再生成专用的分区：不会放入新的内容",
+"They are here already": "已经在这里"
+});
+// HERESY 2956: why a chooser's workspace takes nothing new
+RuachI18n.add("zh", {
+"Its sections": "它的分区"
+});
+// HERESY 2959: the chord guard's words
+RuachI18n.add("zh", {
+"The chords swing between {0} and {1} bar by bar ({#2} times): the plan may have split its key.": "和弦逐小节在 {0} 与 {1} 之间摇摆（{#2} 次）：这份谱也许把调性劈开了。",
+"Chords with a double sharp or flat: {0}.": "带重升或重降的和弦：{0}。",
+"Chromatic music does this on purpose too: hear it first, or rewrite the score.": "半音化的音乐也会有意这样做：先听一听，或重写乐谱。",
+"Rewrite the score": "重写乐谱",
+"A chord in the plan swallowed its notes: the model plans it again with a new music seed": "谱里的一个和弦吞掉了它的音符：模型换一个新的音乐种子重新编排"
+});
+// HERESY 2960: a run's own steps 1-3 and a new run's form
+RuachI18n.add("zh", {
+"read only": "只读",
+"Telemetry ›": "遥测 ›",
+"New run from this one": "以此为模板新建运行",
+"New run": "新建运行",
+"The form for a new run with this run's set, kind and knobs; its name is yours to give": "以此运行的数据集、类型和参数打开新运行的表单；名称由你来起",
+"The form for a new run, fresh: nothing an earlier form left": "全新打开新运行的表单：不带之前表单留下的任何内容",
+"The material this run's set was made from, as the set remembers it.": "此运行的数据集由什么素材制成（按数据集自己的记录）。",
+"The set this run trains on.": "此运行训练所用的数据集。",
+"What this run was given: its kind, its trainer and its knobs.": "此运行被给予的：类型、训练器和参数。",
+"The form for another run opens with “New run”.": "另一个运行的表单用“新建运行”打开。",
+"The form for a new run: {0} stays as it is.": "新运行的表单：{0} 保持原样。",
+"not recorded": "未记录",
+"The set {0} is no longer among the prepared sets.": "数据集 {0} 已不在已准备的数据集中。",
+"folder": "文件夹",
+"made from": "来自",
+"made on": "制成于",
+"sheets by": "乐谱来自",
+"in the run": "运行中",
+"held out": "留出",
+"kind": "类型",
+"trainer": "训练器"
+});
+// HERESY 2961: the held-out bucket's tip in the Trainer's charts
+RuachI18n.add("zh", {
+"held out, {#0} saves from step {1} to {2}: {3} {4} on average": "留出集，第 {1} 步到第 {2} 步的 {#0} 次保存：{3} 平均 {4}",
+"step {0}: {1}": "第 {0} 步：{1}"
+});
+// HERESY 2962: the Trainer's missing weights in words
+RuachI18n.add("zh", {
+"The Studio’s trainer is missing {0}: they come with its base in Engine → Models.": "Studio 的训练器缺少：{0}。它们随其基础模型在 引擎 → 模型 中获取。"
+});
+// HERESY 2963: the Videographer's voice row
+RuachI18n.add("zh", {
+"The Narrator's voice": "朗读的声音",
+"Starts at": "开始于",
+"The song under it": "其下的歌曲",
+"How far the song goes down under the voice: down in 0.3 s before it, back in 0.8 s after it": "人声之下歌曲降低多少：人声前 0.3 秒降下，之后 0.8 秒恢复",
+"Change…": "更换…",
+"This take is not in the library now: the clip cannot be cut with it": "该录音现在不在资料库中：无法用它剪辑短片",
+"A take of the Narrator over the clip, by link (it stays in the Narrator's world): from the song's start, before its first sung line, unless moved; the song goes down under it and back after it; its words as titles of their own, in italics below the sung lines": "叠在短片上的朗读录音，以链接方式（留在朗读的世界里）：若不移动，则从歌曲开头、第一句演唱之前开始；歌曲在其下降低，之后恢复；它的文字作为独立字幕，以斜体显示在歌词下方",
+"Add the Narrator's voice…": "添加朗读的声音…",
+"The clip's voice is laid on: the next clip cut mixes it": "短片的人声已放上：下次剪辑短片时会混入",
+"The clip's voice is taken off": "短片的人声已移除",
+"No take of the Narrator in the library yet: read one in the Narrator first": "资料库中还没有朗读的录音：请先在朗读中朗读一段",
+"The Narrator's voice over the clip": "叠在短片上的朗读声音",
+"A take of the Narrator's world, by link: it stays home, the clip only names it.": "来自朗读世界的录音，以链接方式：它留在原处，短片只是指向它。"
 });
